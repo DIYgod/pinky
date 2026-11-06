@@ -19,6 +19,11 @@ import (
 // 60 fps).
 const rtpClock = 24000
 
+// videoSilence is how long the stream may go without any packet before it
+// counts as stopped. Video frames stop about 7 s after the screen last
+// changed, but the phone's RTCP sender reports keep coming every second.
+const videoSilence = 5 * time.Second
+
 // media is the long-lived display stream of one device. It runs for the
 // whole session, because HID input only works while a stream runs, and fans
 // its packets out to Stream subscribers.
@@ -29,11 +34,14 @@ type media struct {
 	ans streamAnswer
 	dst *net.UDPAddr // where RTCP goes
 
-	started time.Time
-	done    chan struct{}
-	stopped atomic.Bool
-	errMu   sync.Mutex
-	err     error
+	started  time.Time
+	lastRTP  atomic.Int64 // unix nanos of the last RTP packet
+	lastRTCP atomic.Int64 // unix nanos of the last RTCP packet from the phone
+	rtcpIn   atomic.Int64 // RTCP packets received
+	done     chan struct{}
+	stopped  atomic.Bool
+	errMu    sync.Mutex
+	err      error
 
 	// rxMu guards the receive statistics that receiver reports carry.
 	rxMu      sync.Mutex
@@ -45,19 +53,20 @@ type media struct {
 	rxNeedKey bool      // a copy of needKey for the feedback loop
 
 	// Receiver state, owned by the receive loop.
-	dep     depacketizer
-	au      [][]byte
-	auTS    uint32
-	auOpen  bool
-	auBad   bool
-	haveSeq bool
-	extTS   int64
-	prevTS  uint32
-	haveTS  bool
-	needKey bool
-	transit float64
-	srNTP   time.Time // wall clock of the last SR
-	srTS    uint32    // RTP time of the last SR
+	dep         depacketizer
+	au          [][]byte
+	auTS        uint32
+	auOpen      bool
+	auBad       bool
+	haveSeq     bool
+	extTS       int64
+	prevTS      uint32
+	haveTS      bool
+	needKey     bool
+	transit     uint32 // arrival minus RTP time of the last packet, in clock units
+	haveTransit bool
+	srNTP       time.Time // wall clock of the last SR
+	srTS        uint32    // RTP time of the last SR
 
 	mu       sync.Mutex
 	subs     map[*subscriber]struct{}
@@ -134,6 +143,21 @@ func startMedia(ctx context.Context, l *link) (*media, error) {
 	go m.receive()
 	go m.feedback()
 	return m, nil
+}
+
+// lastPacket is when the last RTP or RTCP packet arrived, or the start.
+func (m *media) lastPacket() time.Time {
+	t := max(m.lastRTP.Load(), m.lastRTCP.Load())
+	if t == 0 {
+		return m.started
+	}
+	return time.Unix(0, t)
+}
+
+// alive reports whether the phone is still sending: RTCP comes every second
+// even when no frames do.
+func (m *media) alive() bool {
+	return !m.stopped.Load() && time.Since(m.lastPacket()) < 2500*time.Millisecond
 }
 
 // waitReady waits for the first keyframe, after which Size and the codec are
@@ -222,10 +246,16 @@ func (m *media) receive() {
 }
 
 func (m *media) onRTCP(b []byte) {
+	m.lastRTCP.Store(time.Now().UnixNano())
+	m.rtcpIn.Add(1)
 	// Walk the compound packet for a sender report.
 	for len(b) >= 4 {
 		l := 4 * (int(binary.BigEndian.Uint16(b[2:4])) + 1)
 		if l > len(b) {
+			return
+		}
+		if b[1] == 203 {
+			m.fail(errors.New("the phone ended the video stream (RTCP BYE)"))
 			return
 		}
 		if b[1] == 200 && l >= 28 {
@@ -250,18 +280,30 @@ func ntpTime(sec, frac uint32) time.Time {
 }
 
 func (m *media) onRTP(p rtpPacket, size int) {
+	now := time.Now()
+	m.lastRTP.Store(now.UnixNano())
 	m.mu.Lock()
 	m.stats.Packets++
 	m.stats.Bytes += int64(size)
 	m.mu.Unlock()
-	if !m.track(p, time.Now()) {
+	ok, gap := m.track(p, now)
+	if !ok {
 		return
 	}
 	if m.auOpen && p.TS != m.auTS {
-		m.finishAU() // the marker went missing
+		// The marker went missing; with a gap, so may the frame's tail.
+		if gap {
+			m.auBad = true
+		}
+		m.finishAU()
 	}
 	if !m.auOpen {
 		m.auOpen, m.auTS = true, p.TS
+	}
+	if gap {
+		// The lost packets may also have been this frame's head.
+		m.auBad = true
+		m.dep.reset()
 	}
 	m.au = m.dep.push(p.Payload, m.au)
 	if p.Marker {
@@ -270,26 +312,26 @@ func (m *media) onRTP(p rtpPacket, size int) {
 	}
 }
 
-// track updates sequence and jitter bookkeeping. It returns false for a late
-// or duplicate packet, which is dropped.
+// track updates sequence and jitter bookkeeping. It returns ok=false for a
+// late or duplicate packet, which is dropped, and gap=true when packets went
+// missing before this one.
 //
-// A gap means lost packets. The tunnel rides a reliable link, so loss only
-// happens when a buffer overflows under a burst. The access unit is lost;
-// the stream skips to the next keyframe and asks for one.
-func (m *media) track(p rtpPacket, now time.Time) bool {
+// The tunnel rides a reliable link, so loss only happens when a buffer
+// overflows under a burst. A frame that lost packets is dropped and the
+// stream skips to the next keyframe, which it asks for.
+func (m *media) track(p rtpPacket, now time.Time) (ok, gap bool) {
 	m.rxMu.Lock()
 	defer m.rxMu.Unlock()
 	if m.haveSeq {
-		gap := p.Seq - (m.lastSeq + 1)
-		if gap >= 0x8000 {
-			return false
+		d := p.Seq - (m.lastSeq + 1)
+		if d >= 0x8000 {
+			return false, false
 		}
-		if gap != 0 {
+		if d != 0 {
+			gap = true
 			m.mu.Lock()
-			m.stats.Lost += int(gap)
+			m.stats.Lost += int(d)
 			m.mu.Unlock()
-			m.auBad = true
-			m.dep.reset()
 		}
 		if p.Seq < m.lastSeq {
 			m.cycles += 1 << 16
@@ -297,18 +339,19 @@ func (m *media) track(p rtpPacket, now time.Time) bool {
 	}
 	m.lastSeq, m.haveSeq = p.Seq, true
 
-	// Interarrival jitter (RFC 3550 A.8), in clock units.
-	arrival := float64(now.Sub(m.started)) * rtpClock / float64(time.Second)
-	transit := arrival - float64(p.TS)
-	if m.transit != 0 {
-		d := transit - m.transit
-		if d < 0 {
-			d = -d
+	// Interarrival jitter (RFC 3550 A.8), in clock units, with 32-bit
+	// arithmetic so that the RTP clock's wrap does not show up as jitter.
+	ticks := uint64(float64(now.Sub(m.started).Nanoseconds()) * rtpClock / 1e9)
+	transit := uint32(ticks) - p.TS
+	if m.haveTransit {
+		dt := int32(transit - m.transit)
+		if dt < 0 {
+			dt = -dt
 		}
-		m.jitter += (d - m.jitter) / 16
+		m.jitter += (float64(dt) - m.jitter) / 16
 	}
-	m.transit = transit
-	return true
+	m.transit, m.haveTransit = transit, true
+	return true, gap
 }
 
 // finishAU turns the collected NAL units into packets.
@@ -324,7 +367,8 @@ func (m *media) finishAU() {
 	}
 	m.extTS += int64(int32(ts - m.prevTS))
 	m.prevTS = ts
-	pts := time.Duration(m.extTS * int64(time.Second) / rtpClock)
+	// Split before scaling: extTS*1e9 would overflow after about 107 hours.
+	pts := time.Duration(m.extTS/rtpClock)*time.Second + time.Duration(m.extTS%rtpClock)*time.Second/rtpClock
 
 	var cfg, frame [][]byte
 	key := false
@@ -516,6 +560,13 @@ func (m *media) feedback() {
 		case <-m.done:
 			return
 		case <-t.C:
+		}
+		// Silence on both RTP and RTCP means the phone stopped the stream:
+		// after a lost tunnel, a restarted media daemon, or receiver reports
+		// that did not arrive for 10 s. Fail, so the device restarts it.
+		if since := time.Since(m.lastPacket()); since > videoSilence {
+			m.fail(fmt.Errorf("nothing from the phone's video stream for %v", since.Round(time.Second)))
+			return
 		}
 		if m.dst == nil {
 			continue

@@ -42,11 +42,13 @@ func (d *Device) WaitSettled(ctx context.Context, limit time.Duration) (bool, er
 	}
 }
 
-// quietSince reports whether nothing moved on screen since t: every frame
-// since then has the same size, give or take 2% or 64 bytes. The size of a
-// still frame depends on the encoder's bitrate at the time, about 1–2 KB
-// when idle and a padded 10 KB for seconds after motion, so a constant size
-// is the sign, not a small one.
+// quietSince reports whether nothing moved on screen since t: either no
+// frame came while the stream is alive (the phone stops sending frames
+// about 7 s after the last change), or every frame since t has the same
+// size, give or take 2% or 64 bytes. The size of a still frame depends on
+// the encoder's bitrate at the time, about 1–2 KB when idle and a padded
+// 10 KB for seconds after motion, so a constant size is the sign, not a
+// small one.
 func (d *Device) quietSince(m *media, t time.Time) bool {
 	d.svcMu.Lock()
 	ax := d.ax
@@ -56,7 +58,7 @@ func (d *Device) quietSince(m *media, t time.Time) bool {
 	}
 	fs := m.framesSince(t)
 	if len(fs) == 0 {
-		return true
+		return m.alive()
 	}
 	if len(fs) < 3 {
 		return false

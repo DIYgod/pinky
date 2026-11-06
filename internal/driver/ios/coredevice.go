@@ -86,7 +86,11 @@ func (s *cdService) invoke(ctx context.Context, feature, action string, input ma
 	}
 	conn := s.conn
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
-	defer stop()
+	defer func() {
+		if !stop() {
+			s.drop() // ctx closed the connection; the next request reconnects
+		}
+	}()
 
 	req := coreDeviceRequest(s.devID, feature, action, input)
 	if err := conn.Send(req, xpc.HeartbeatRequestFlag); err != nil {

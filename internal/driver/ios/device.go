@@ -31,8 +31,11 @@ type Device struct {
 	inputAt time.Time // when input starts to work
 	closed  bool
 
-	inputMu   sync.Mutex // serializes gestures
-	restartMu sync.Mutex // one stream restart at a time
+	inputMu   sync.Mutex // serializes gestures and raw touches
+	restartMu sync.Mutex // one stream restart at a time; guards the two below
+
+	restartFailedAt time.Time
+	restartErr      error
 
 	svcMu   sync.Mutex
 	info2   *cdService // deviceinfo
@@ -79,8 +82,24 @@ func (d *Device) start(ctx context.Context) error {
 	return nil
 }
 
+// restartTimeout bounds a stream restart. A restart runs detached from the
+// call that noticed the dead stream: one cancelled tap must not abort a
+// restart that the next call would only start again.
+const restartTimeout = 20 * time.Second
+
+// restartBackoff spaces out failed restarts: restarting streams often can
+// wedge the phone's media daemon.
+const restartBackoff = 5 * time.Second
+
 // restartMedia (re)starts the video stream and the HID session on it.
 func (d *Device) restartMedia(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), restartTimeout)
+	defer cancel()
+	stop := func(m *media) {
+		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
+		m.stop(c)
+		cc()
+	}
 	d.mu.Lock()
 	old, oldHID := d.m, d.hid
 	d.m, d.hid = nil, nil
@@ -89,64 +108,86 @@ func (d *Device) restartMedia(ctx context.Context) error {
 		oldHID.Close()
 	}
 	if old != nil {
-		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		old.stop(c)
-		cancel()
+		stop(old)
 	}
 	m, err := startMedia(ctx, d.l)
 	if err != nil {
 		return err
 	}
-	rctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	rctx, rcancel := context.WithTimeout(ctx, 8*time.Second)
 	err = m.waitReady(rctx)
-	cancel()
+	rcancel()
 	if err != nil {
-		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
-		m.stop(c)
-		cc()
+		stop(m)
 		return err
 	}
 	h, err := newHIDSession(d.l.entry)
 	if err != nil {
-		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
-		m.stop(c)
-		cc()
+		stop(m)
 		return err
 	}
 	d.mu.Lock()
+	if d.closed {
+		// Close ran while this restart was under way; it waits on restartMu,
+		// so it is this restart's job to stop what it started.
+		d.mu.Unlock()
+		h.Close()
+		stop(m)
+		return fmt.Errorf("device closed: %w", driver.ErrOffline)
+	}
 	d.m, d.hid = m, h
 	d.inputAt = m.started.Add(inputSettle)
 	d.mu.Unlock()
 	return nil
 }
 
-// live returns the running stream and HID session, restarting the stream if
-// it died.
+// live returns the running stream and HID session. It restarts the stream
+// if the phone stopped it and reconnects HID if that connection dropped.
 func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
 	d.mu.Lock()
-	if d.closed {
-		d.mu.Unlock()
+	closed, m, h := d.closed, d.m, d.hid
+	d.mu.Unlock()
+	if closed {
 		return nil, nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
 	}
-	m, h := d.m, d.hid
-	d.mu.Unlock()
 	select {
 	case <-d.l.tunnel.Done():
 		return nil, nil, fmt.Errorf("%v: %w", d.l.tunnel.Err(), driver.ErrOffline)
 	default:
 	}
-	if m != nil && !m.stopped.Load() {
+	if m != nil && !m.stopped.Load() && h != nil && h.alive() {
 		return m, h, nil
 	}
 	d.restartMu.Lock()
 	defer d.restartMu.Unlock()
 	d.mu.Lock()
-	m, h = d.m, d.hid
+	closed, m, h = d.closed, d.m, d.hid
 	d.mu.Unlock()
+	if closed {
+		return nil, nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
+	}
 	if m != nil && !m.stopped.Load() {
-		return m, h, nil // another caller restarted it
+		if h != nil && h.alive() {
+			return m, h, nil // another caller fixed it
+		}
+		// The stream runs but the HID connection dropped: reconnect it.
+		nh, err := newHIDSession(d.l.entry)
+		if err != nil {
+			return nil, nil, err
+		}
+		d.mu.Lock()
+		d.hid = nh
+		d.mu.Unlock()
+		if h != nil {
+			h.Close()
+		}
+		return m, nh, nil
+	}
+	if time.Since(d.restartFailedAt) < restartBackoff {
+		return nil, nil, fmt.Errorf("video stream: %w", d.restartErr)
 	}
 	if err := d.restartMedia(ctx); err != nil {
+		d.restartFailedAt, d.restartErr = time.Now(), err
 		return nil, nil, err
 	}
 	d.mu.Lock()
@@ -308,6 +349,11 @@ func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.
 	if err != nil {
 		return err
 	}
+	// A finger the person left down on the mirror (its touch-up never came)
+	// would turn this gesture into a drag from there.
+	if err := h.liftHeld(); err != nil {
+		return err
+	}
 	x, y := d.panel(path[0])
 	if err := h.touchAt(true, x, y); err != nil {
 		return err
@@ -337,6 +383,8 @@ func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.
 // Touch implements driver.Toucher: raw touches for the person's drags on
 // the mirror. A move without a down is ignored.
 func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point) error {
+	d.inputMu.Lock()
+	defer d.inputMu.Unlock()
 	h, err := d.waitInput(ctx)
 	if err != nil {
 		return err
@@ -368,8 +416,14 @@ func (d *Device) Close() error {
 		return nil
 	}
 	d.closed = true
-	m, h := d.m, d.hid
 	d.mu.Unlock()
+	// A restart in flight sees closed and stops its own stream; wait for it.
+	d.restartMu.Lock()
+	d.mu.Lock()
+	m, h := d.m, d.hid
+	d.m, d.hid = nil, nil
+	d.mu.Unlock()
+	d.restartMu.Unlock()
 	var errs []error
 	if h != nil {
 		errs = append(errs, h.Close())

@@ -146,9 +146,11 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 	case "latency":
 		return latency(ctx, d, args)
 	case "screenshot":
-		fs := flag.NewFlagSet("screenshot", flag.ExitOnError)
+		fs := flag.NewFlagSet("screenshot", flag.ContinueOnError)
 		out := fs.String("out", "/tmp/pinky-shot.png", "output file")
-		fs.Parse(args)
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
 		s := time.Now()
 		b, err := d.ScreenshotPNG(ctx)
 		if err != nil {
@@ -284,10 +286,12 @@ func rsd(ctx context.Context, id string) error {
 }
 
 func observe(ctx context.Context, d *pios.Device, args []string) error {
-	fs := flag.NewFlagSet("observe", flag.ExitOnError)
+	fs := flag.NewFlagSet("observe", flag.ContinueOnError)
 	ocr := fs.Bool("ocr", false, "add OCR text the tree misses")
 	n := fs.Int("n", 1, "observations")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	refs := screen.NewRefs()
 	for i := 0; i < *n; i++ {
 		s, st, err := d.ObserveWithStats(ctx, driver.ObserveOptions{OCR: *ocr})
@@ -307,10 +311,12 @@ func observe(ctx context.Context, d *pios.Device, args []string) error {
 }
 
 func stream(ctx context.Context, d *pios.Device, args []string) error {
-	fs := flag.NewFlagSet("stream", flag.ExitOnError)
+	fs := flag.NewFlagSet("stream", flag.ContinueOnError)
 	secs := fs.Int("seconds", 10, "how long to receive")
 	out := fs.String("out", "", "write Annex B video here (keep it under /tmp/pinky-*)")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	s, err := d.Stream(ctx, driver.StreamOptions{})
 	if err != nil {
 		return err
@@ -386,10 +392,12 @@ loop:
 }
 
 func latency(ctx context.Context, d *pios.Device, args []string) error {
-	fs := flag.NewFlagSet("latency", flag.ExitOnError)
+	fs := flag.NewFlagSet("latency", flag.ContinueOnError)
 	n := fs.Int("n", 6, "swipes")
 	vertical := fs.Bool("vertical", false, "scroll the current screen up and down instead of paging the home screen")
-	fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
 	if !*vertical {
 		if err := d.Key(ctx, driver.KeyHome); err != nil {
 			return err

@@ -101,6 +101,11 @@ func dialAX(ctx context.Context, entry goios.DeviceEntry) (*axSession, error) {
 		}
 		conn = r.c
 	case <-ctx.Done():
+		go func() {
+			if r := <-ch; r.c != nil {
+				r.c.Close()
+			}
+		}()
 		return nil, ctx.Err()
 	}
 	a := &axSession{conn: conn, ch: conn.GlobalChannel(), apps: map[string]*axApp{}, done: make(chan struct{})}
@@ -411,6 +416,12 @@ func (a *axSession) walk(ctx context.Context, lim walkLimits) ([]axNode, bool, e
 	}
 	deadline := time.Now().Add(lim.Budget)
 	a.drain(ctx)
+	// The focused element shows a focus ring on the phone (and in the
+	// video) until the preview is cleared, however the walk ends.
+	defer func() {
+		a.ch.MethodCallAsync("deviceInspectorPreviewOnElement:", nskeyedarchiver.NewNSNull())
+		a.ch.MethodCallAsync("deviceInspectorShowVisuals:", false)
+	}()
 
 	a.ch.MethodCallAsync("deviceInspectorFocusOnElement:", nskeyedarchiver.NewNSNull())
 	if _, err := a.recvFocus(ctx, 3*time.Second); err != nil {
@@ -474,10 +485,6 @@ func (a *axSession) walk(ctx context.Context, lim walkLimits) ([]axNode, bool, e
 			break
 		}
 	}
-	// The focused element shows a focus ring on the phone (and in the
-	// video) until the preview is cleared.
-	a.ch.MethodCallAsync("deviceInspectorPreviewOnElement:", nskeyedarchiver.NewNSNull())
-	a.ch.MethodCallAsync("deviceInspectorShowVisuals:", false)
 	out := make([]axNode, len(nodes))
 	for i, n := range nodes {
 		out[i] = *n

@@ -156,7 +156,12 @@ func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions
 	}()
 	wg.Wait()
 	if walkErr != nil && len(nodes) == 0 {
-		return nil, st, walkErr
+		if ocrErr != nil || len(lines) == 0 {
+			return nil, st, walkErr
+		}
+		// Without the tree the screen is still worth reading: fall back to
+		// OCR text alone.
+		opt.OCR = true
 	}
 	st.WalkError = walkErr
 	st.OCRError = ocrErr
@@ -276,21 +281,23 @@ func (d *Device) appForPID(ctx context.Context, pid uint64) (driver.App, bool) {
 }
 
 // keyboardFromOCR finds an on-screen keyboard in OCR lines: at least five
-// single letters in the lower half of the screen. It returns the keyboard's
-// top edge, normalized.
+// single letters in the lower half of the screen, spread across most of its
+// width (a list's section index is a column of single letters too). It
+// returns the keyboard's top edge, normalized.
 func keyboardFromOCR(lines []ocrLine) (float64, bool) {
 	top, n := 1.0, 0
+	left, right := 1.0, 0.0
 	for _, l := range lines {
 		t := []rune(strings.TrimSpace(l.Text))
 		if l.Y < 0.5 || len(t) != 1 || !unicode.IsLetter(t[0]) {
 			continue
 		}
 		n++
-		if l.Y < top {
-			top = l.Y
-		}
+		top = min(top, l.Y)
+		left = min(left, l.X)
+		right = max(right, l.X+l.W)
 	}
-	if n < 5 {
+	if n < 5 || right-left < 0.5 {
 		return 0, false
 	}
 	return top - 0.02, true
@@ -393,6 +400,20 @@ func placeByOCR(els []screen.Element, match []string, lines []ocrLine, w, h int)
 	}
 	used := make([]bool, len(lines))
 	placed := make([]bool, len(els))
+	// Inputs go first: a field shows its placeholder, and the same word
+	// often labels a row elsewhere (Settings has a "Search" field and a
+	// "Search" row that may be off screen).
+	idx := make([]int, 0, len(els))
+	for i, e := range els {
+		if e.Role == screen.RoleInput {
+			idx = append(idx, i)
+		}
+	}
+	for i, e := range els {
+		if e.Role != screen.RoleInput {
+			idx = append(idx, i)
+		}
+	}
 	rounds := []func(label string, j int) bool{
 		func(label string, j int) bool { return normed[j] == norm(label) },
 		func(label string, j int) bool {
@@ -410,7 +431,7 @@ func placeByOCR(els []screen.Element, match []string, lines []ocrLine, w, h int)
 		},
 	}
 	for round, ok := range rounds {
-		for i := range els {
+		for _, i := range idx {
 			if placed[i] || want[i] == "" || norm(want[i]) == "" {
 				continue
 			}

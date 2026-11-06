@@ -10,7 +10,7 @@ Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found o
 | Screen stream | **Works.** HEVC over RTP through the userspace tunnel, depacketized to Annex B | 1136x2464 HEVC Main, up to 60 fps, 1–3 Mbit/s typical (cap 6), first packet 0.6 s after the start request, keyframe 70 ms after a request, 0 packets lost over USB |
 | Touch | **Works.** Tap, swipe, long press and raw touches through the universal HID service, on one long-lived session | Touch-down to the first changed video frame: 100–131 ms, median 109 ms (still Settings page) |
 | Keys | Home **works** (Indigo button event); Back is a left-edge swipe and **works**; Recents returns `unsupported` | |
-| Text | **Works for printable ASCII** through a virtual hardware keyboard, which also bypasses the phone's input method (tested with Pinyin active). Other characters return `unsupported` | 25–40 ms per character |
+| Text | **Works for printable ASCII with an English keyboard active**, through a virtual hardware keyboard. The keys go through the phone's current input method, as a real keyboard's would: with Pinyin active (as on the test phone) the letters become an uncommitted Pinyin composition. Other characters return `unsupported` | 25–40 ms per character |
 | Element tree (pass/fail) | **Fail for frames, pass for labels and roles.** No element frames over CoreDevice on iOS 27 (same as go-ios found on 18.4.1). Labels and roles in 30–60 ms per element | `Observe` with OCR: 0.8 s (Settings page, 10 elements), 1.0 s (Clock, 13), 1.3 s (Settings, 38; Calculator, 24), 1.4–1.9 s (home screen, 26) |
 | OCR placement | **Works as a stopgap.** macOS Vision through purego places elements whose label is on screen | Vision 0.1–0.4 s per screenshot; 9 of 10, 12 of 13, 18 of 26 elements placed on Settings, Clock, home screen |
 | Screenshot | **Works**, two services with fallback | 1125x2436 PNG, 0.35 s (Settings) to 0.6–0.75 s (home screen, 5–7 MB) over USB |
@@ -96,7 +96,8 @@ All of them pass on the iPhone 13 mini (inspect, stream, home screen observe, sw
 - The answer's `streamConfig`: `RxPayloadType` 100 (HEVC inside), `Framerate` 60, `KeyFrameInterval` 0 (no periodic keyframes), `RXMaxBitrate` 6000000, `RTCPTimeoutEnabled` with 10 s, `CustomWidth`x`CustomHeight` 1136x2448 while the SPS says 1136x2464 (the SPS is right; ffprobe agrees).
 - The phone also creates a virtual "Wireless" display (id 2, 1136x2448) for the stream.
 - RTCP is multiplexed on the receiver port; the phone sends a sender report about every second. Its NTP time against our arrival gives 55–95 ms one way, if both clocks agree.
-- A still screen sends identical frames, still up to 60 fps; motion sends frames of varying size (5–75 KB). The size of a still frame depends on the encoder's current bitrate: about 1–2 KB when idle, but after motion the encoder raises its bitrate and pads still frames to a constant 10 KB for seconds. So a constant frame size, not a small one, marks a still screen; the settle detector uses that (step 0 item 4).
+- After a change the phone sends 60 fps for about 5–7 s, then stops sending frames until the screen changes again (a status bar clock tick restarts them); its RTCP sender reports keep coming every second throughout. While frames do come, a still screen gives identical frame sizes and motion varying ones (5–75 KB). The size of a still frame depends on the encoder's current bitrate: about 1–2 KB when idle, but after motion the encoder raises its bitrate and pads still frames to a constant 10 KB for seconds. So "no frames, or frames of one size" marks a still screen, not small frames; the settle detector uses that (step 0 item 4). The stream's watchdog counts RTCP too: only silence on both for 5 s means the phone stopped the stream.
+- A subscriber that joins while frames have stopped gets the parameter sets and a fresh keyframe within about 25 ms of its request.
 - Settle data from Settings: tapping "General" changed the first frame 331 ms after touch-down (the tap is held 60 ms, so about 270 ms after touch-up, including the app's own response); the push animation's frames were 58–74 KB; frame sizes became constant about 2.3 s after the tap. A fling in a list keeps the picture moving for about 2.5 s (measured as frame-to-frame pixel difference in the decoded video). Home screens with widgets (Photos, Clock) never look still.
 - The audit daemon's screen and layout change notifications arrived in one session and not in others, so they are only a hint for settling.
 - Without loss there are no keyframes after the first. Subscribers that join later ask for one; the phone ignores a request that comes right after a keyframe, hence the retry.
@@ -107,6 +108,7 @@ All of them pass on the iPhone 13 mini (inspect, stream, home screen observe, sw
 - Touch positions are 0..65535 on each axis of the panel in its native (portrait) orientation. Landscape is not handled yet: the mapping assumes `rot0`.
 - `Key(back)` swipes from the left edge at mid-height over 250 ms. It starts at x=0 so the system gesture wins; a stray drag cannot select anything, but avoid screens where a drag at mid-height matters.
 - The virtual keyboard makes iOS treat the phone as having a hardware keyboard while the session lasts; the software keyboard still showed in Settings. It goes away when the HID connection closes. `Type` without `Append` sends Command-A and Delete first.
+- Keys go through the active input method. On the test phone the Pinyin keyboard was active: "clock" became a composition (Command-A did not select it, one Delete left "c lo c" with U+2006 spaces between the syllables), and Escape appeared to cancel it. On Pinyin, Return commits the letters as typed and a space picks a Chinese candidate (how the keyboard behaves; not tried here). So `Type` is right only with an English (or other Latin) keyboard active, and `Submit`'s Return only commits a composition. Fixes to choose from: paste through CoreDevice's pasteboard service and Command-V (handles CJK too, but overwrites the person's clipboard unless it is saved and restored, which means reading it: a decision for the owner), or switching the input source with the keyboard's globe or Control-Space and back (changes the person's keyboard).
 
 ### Element tree
 
@@ -119,6 +121,8 @@ All of them pass on the iPhone 13 mini (inspect, stream, home screen observe, sw
 ### Element frames: next step
 
 Xcode 27's Device Hub makes the phone's screen accessible to VoiceOver on the Mac, so it needs frames. It uses `com.apple.accessibility.axAuditDaemon.remoteAXService` (in `DeviceKit.framework`, `DeviceAccessibilityView`; the client is `AXAuditRemoteDevice` in Xcode's `AccessibilityAudit.framework`). Over the tunnel it is a DTX service (`AXAuditDevicesAppRemoteServer`) that answers `deviceAPIVersion` (26) and accepts `processDataFromHost:` with an `NSData`. The data is AccessibilityPlatformTranslation's transport (`AXPTranslatorRequest` and responses, as in iPhone Mirroring), which asks for attributes, frames included, element by element. Reverse engineering that format is the most promising way to real frames without installing anything; WebDriverAgent (installed on this phone) is the fallback the design already plans.
+
+To reach it, open the tunnel and RSD as `dialLink` does, then `dtx.NewTunnelConnection(l.entry, "com.apple.accessibility.axAuditDaemon.remoteAXService")` (go-ios `ios/dtx_codec`), send `_notifyOfPublishedCapabilities:` on the global channel and call methods there; `deviceAPIVersion` answers 26. The probe that found this was a throwaway test and is not on the branch.
 
 What the Mac's own framework shows (read at run time through the Objective-C runtime; the classes live in the dyld shared cache, `/System/Library/PrivateFrameworks/AccessibilityPlatformTranslation.framework`), all `NSSecureCoding`:
 
@@ -140,7 +144,7 @@ A suggested plan: on macOS, drive Apple's `AXPTranslator` through purego with a 
 
 - Element frames from the tree (above). OCR positions are text boxes, not element bounds.
 - Landscape: touch mapping and the screen size assume portrait.
-- Text outside printable ASCII. Options: CoreDevice's pasteboard service plus Command-V (overwrites the clipboard), or the input method through key sequences.
+- Text outside printable ASCII, and ASCII while a non-Latin input method is active (above).
 - Wi-Fi-only phones: work, untuned.
 - Lock detection for phones without a passcode, and everything about locked phones (not testable here).
 - iOS below 27 (needs WebDriverAgent), Windows, Linux (cross-compiles, untested).
@@ -156,7 +160,8 @@ A suggested plan: on macOS, drive Apple's `AXPTranslator` through purego with a 
 
 - `go.mod` gains go-ios (main), gVisor and purego; expect a merge in `go.mod`/`go.sum`.
 - No shared contract changed.
-- For the gateway and the client: `Stream` packets are HEVC Annex B; a `Config` packet (VPS, SPS, PPS) comes before every keyframe a subscriber receives; PTS counts from the stream's start on a 24 kHz clock. A new subscriber waits up to about 100 ms for a requested keyframe. Screen coordinates are screenshot pixels (1125x2436 here), not video pixels (1136x2464).
-- `WaitSettled` returns no sooner than 500 ms after the call, once the last 250 ms of frames kept one size; a fling in a list takes 2–3 s to stop, and animated widgets never stop.
+- For the gateway and the client: `Stream` packets are HEVC Annex B; a `Config` packet (VPS, SPS, PPS) comes before every keyframe a subscriber receives; PTS counts from the stream's start on a 24 kHz clock. A new subscriber waits up to about 100 ms for a requested keyframe. No frames come while the screen is still (from about 7 s after the last change), so the mirror keeps showing the last frame and recordings have gaps. Screen coordinates are screenshot pixels (1125x2436 here), not video pixels (1136x2464).
+- `WaitSettled` returns no sooner than 500 ms after the call, once the last 250 ms brought frames of one size, or no frames while the stream is alive; a fling in a list takes 2–3 s to stop, and animated widgets never stop.
 - During testing `iosctl devices` probed every phone usbmuxd listed, which included the owner's iPad (iPad13,4, over Wi-Fi): one tunnel and one RSD handshake, nothing else.
-- The phone was left on its home screen; Settings was only browsed (back navigation, scrolling, a search for "wallpaper" and "clock" that was cancelled).
+- The phone was left on its home screen; Settings was only browsed (back navigation, scrolling, searches for "wallpaper" and "clock" that were cancelled). Once a test's cleanup tap landed on a search result and opened Settings > Apps > Clock; nothing there was touched (its Mobile Data switch stayed on), and the test no longer taps after typing.
+- The on-screen keyboard check from OCR needs single letters spread across the screen: a list's alphabetical section index (Settings > Apps) fooled the first version.

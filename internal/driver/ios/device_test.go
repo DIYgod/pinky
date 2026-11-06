@@ -366,3 +366,54 @@ func TestDeviceSwipeLatency(t *testing.T) {
 		t.Fatalf("only %d of 4 swipes showed up in the video", len(lat))
 	}
 }
+
+// TestDeviceType types into Settings' search field, the one text field the
+// safety rules allow, and clears it again.
+func TestDeviceType(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, time.Minute)
+	if err := d.Launch(ctx, "com.apple.Preferences"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1500 * time.Millisecond)
+	s, err := d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var field screen.Element
+	for _, e := range s.Elements {
+		if e.Role == screen.RoleInput && e.Label == "Search" && !e.Bounds.Empty() {
+			field = e
+		}
+	}
+	if s.App.ID != "com.apple.Preferences" || field.Bounds.Empty() {
+		t.Skip("Settings' search field is not on screen")
+	}
+	defer home(ctx, d)
+	if err := d.Tap(ctx, field.Bounds.Center(), driver.TapOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1200 * time.Millisecond)
+	if err := d.Type(ctx, "clock", driver.TypeOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+	s, err = d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	typed := false
+	for _, e := range s.Elements {
+		if e.Role == screen.RoleInput && strings.ReplaceAll(e.Label, "\u2006", "") == "clock" {
+			typed = true
+		}
+	}
+	// The letters may still be an input method's composition (Pinyin, on
+	// the test phone), which Escape cancels. Settings stays in its search
+	// view, empty: the test taps nothing it has not just observed.
+	d.Key(ctx, driver.KeyEscape)
+	pause()
+	if !typed {
+		t.Fatalf("the field does not read \"clock\":\n%s", s.Render())
+	}
+}

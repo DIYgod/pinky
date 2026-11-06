@@ -193,6 +193,16 @@ func (x *xpcLink) request(ctx context.Context, m map[string]any) (map[string]any
 
 func (x *xpcLink) Close() error { return x.conn.Close() }
 
+// alive reports whether the connection still reads.
+func (x *xpcLink) alive() bool {
+	select {
+	case <-x.done:
+		return false
+	default:
+		return true
+	}
+}
+
 // hidSession owns the HID connections of one device.
 type hidSession struct {
 	entry goios.DeviceEntry
@@ -203,6 +213,24 @@ type hidSession struct {
 	keyboard uint64 // registered keyboard service id, 0 if none
 	down     bool
 	last     [2]uint16
+	held     *[2]uint64 // a button held down: usage page and usage
+}
+
+// alive reports whether the touch connection still works.
+func (h *hidSession) alive() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.touch != nil && h.touch.alive()
+}
+
+// liftHeld lifts a contact that is still down.
+func (h *hidSession) liftHeld() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if !h.down {
+		return nil
+	}
+	return h.touchLocked(false, h.last[0], h.last[1])
 }
 
 func newHIDSession(entry goios.DeviceEntry) (*hidSession, error) {
@@ -249,6 +277,10 @@ func (h *hidSession) touchLocked(down bool, x, y uint16) error {
 // button presses a hardware button by HID usage and holds it for hold.
 func (h *hidSession) button(ctx context.Context, page, usage uint64, hold time.Duration) error {
 	h.mu.Lock()
+	if h.buttons != nil && !h.buttons.alive() {
+		h.buttons.Close()
+		h.buttons = nil
+	}
 	if h.buttons == nil {
 		b, err := dialXPC(h.entry, indigoHIDService)
 		if err != nil {
@@ -258,21 +290,12 @@ func (h *hidSession) button(ctx context.Context, page, usage uint64, hold time.D
 		h.buttons = b
 	}
 	b := h.buttons
-	h.mu.Unlock()
-	ev := func(state uint64) map[string]any {
-		return map[string]any{
-			"messageType":       "IndigoButtonEvent",
-			"featureIdentifier": featureHIDButton,
-			"payload": map[string]any{
-				"state":     state,
-				"usagePage": page,
-				"usageCode": usage,
-			},
-		}
-	}
-	if err := b.send(ev(buttonDown), false); err != nil {
+	if err := b.send(buttonEvent(page, usage, buttonDown), false); err != nil {
+		h.mu.Unlock()
 		return err
 	}
+	h.held = &[2]uint64{page, usage}
+	h.mu.Unlock()
 	t := time.NewTimer(hold)
 	defer t.Stop()
 	select {
@@ -280,7 +303,25 @@ func (h *hidSession) button(ctx context.Context, page, usage uint64, hold time.D
 	case <-ctx.Done():
 	}
 	// The release goes out even when ctx ended: a held button must come up.
-	return b.send(ev(buttonUp), false)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.held == nil {
+		return nil // Close released it
+	}
+	h.held = nil
+	return b.send(buttonEvent(page, usage, buttonUp), false)
+}
+
+func buttonEvent(page, usage, state uint64) map[string]any {
+	return map[string]any{
+		"messageType":       "IndigoButtonEvent",
+		"featureIdentifier": featureHIDButton,
+		"payload": map[string]any{
+			"state":     state,
+			"usagePage": page,
+			"usageCode": usage,
+		},
+	}
 }
 
 // ensureKeyboard registers a virtual keyboard with the device, once per
@@ -329,7 +370,9 @@ func (h *hidSession) ensureKeyboard(ctx context.Context) (uint64, error) {
 			},
 		},
 	}
-	resp, err := h.touch.request(ctx, req)
+	rctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	resp, err := h.touch.request(rctx, req)
+	cancel()
 	if err != nil {
 		return 0, fmt.Errorf("register keyboard: %w", err)
 	}
@@ -362,6 +405,10 @@ func (h *hidSession) Close() error {
 	}
 	if h.keyboard != 0 {
 		errs = append(errs, h.touch.send(universalReport(h.keyboard, keyboardReport(nil, hidTimestamp())), false))
+	}
+	if h.held != nil && h.buttons != nil {
+		errs = append(errs, h.buttons.send(buttonEvent(h.held[0], h.held[1], buttonUp), false))
+		h.held = nil
 	}
 	errs = append(errs, h.touch.Close())
 	if h.buttons != nil {

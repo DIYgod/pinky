@@ -312,3 +312,64 @@ func TestMediaAccessUnits(t *testing.T) {
 		t.Fatalf("stats %+v", st)
 	}
 }
+
+// TestMediaLossAcrossFrames loses the end of one frame and the first slice
+// of the next keyframe: the keyframe must not go out without its slice.
+func TestMediaLossAcrossFrames(t *testing.T) {
+	m := &media{done: make(chan struct{}), ready: make(chan struct{}), subs: map[*subscriber]struct{}{}, needKey: true}
+	sub := &subscriber{ch: make(chan driver.Packet, 16), needKey: true}
+	m.subs[sub] = struct{}{}
+	ap := []byte{hevcAP << 1, 1}
+	for _, n := range [][]byte{hevcNAL(hevcVPS, 1), testHEVCSPS(1136, 2464, 0), hevcNAL(hevcPPS, 2)} {
+		ap = binary.BigEndian.AppendUint16(ap, uint16(len(n)))
+		ap = append(ap, n...)
+	}
+	feed := func(raw []byte) {
+		p, err := parseRTP(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		m.onRTP(p, len(raw))
+	}
+	feed(rtpPkt(false, 100, 1, 0, ap))
+	feed(rtpPkt(true, 100, 2, 0, hevcNAL(19, 0xAA))) // keyframe
+	feed(rtpPkt(false, 100, 3, 400, hevcNAL(1, 0x01)))
+	// seq 4 (the end of the TS 400 frame) and 5 (the first slice of the TS
+	// 800 keyframe) are lost.
+	feed(rtpPkt(true, 100, 6, 800, hevcNAL(19, 0xBB)))
+	got := 0
+	for {
+		select {
+		case p := <-sub.ch:
+			got++
+			if p.KeyFrame && bytes.Contains(p.Data, []byte{0xBB}) {
+				t.Fatal("a keyframe missing a slice was delivered")
+			}
+			continue
+		default:
+		}
+		break
+	}
+	if got != 2 { // the config and the first keyframe
+		t.Fatalf("%d packets", got)
+	}
+	if st := m.snapshot(); st.Lost != 2 || st.Dropped != 2 {
+		t.Fatalf("stats %+v", st)
+	}
+}
+
+func TestJitterAcrossTimestampWrap(t *testing.T) {
+	m := &media{started: time.Now().Add(-time.Second)}
+	base := uint32(0xFFFFFF00)
+	now := m.started.Add(time.Second)
+	for i := 0; i < 50; i++ {
+		ts := base + uint32(i*400)
+		at := now.Add(time.Duration(i) * time.Second / 60)
+		if ok, _ := m.track(rtpPacket{Seq: uint16(i), TS: ts}, at); !ok {
+			t.Fatal("packet dropped")
+		}
+	}
+	if m.jitter > 100 {
+		t.Fatalf("jitter %.0f clock units across the wrap", m.jitter)
+	}
+}

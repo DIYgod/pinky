@@ -77,6 +77,11 @@ func (d *Device) instrumentsShot(ctx context.Context) ([]byte, error) {
 			}()
 			return nil, fmt.Errorf("instruments: no answer in %v", dialTimeout)
 		case <-ctx.Done():
+			go func() {
+				if r := <-ch; r.s != nil {
+					r.s.Close()
+				}
+			}()
 			return nil, ctx.Err()
 		}
 	}

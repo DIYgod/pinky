@@ -130,6 +130,9 @@ func (d *Device) pressKeys(ctx context.Context, strokes []keyStroke) error {
 	if err != nil {
 		return err
 	}
+	// Whatever happens below, nothing stays pressed: a modifier left down
+	// would turn the person's next keys into shortcuts.
+	defer h.keys(id, nil)
 	const gap = 12 * time.Millisecond
 	for _, s := range strokes {
 		held := []uint8{s.usage}

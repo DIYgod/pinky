@@ -91,7 +91,9 @@ func OpenTunnel(ctx context.Context, entry goios.DeviceEntry) (*Tunnel, error) {
 	// The handshake has no deadline of its own; closing the stream ends it.
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
 	params, err := tunnelHandshake(conn, requestedMTU)
-	stop()
+	if !stop() && err == nil {
+		err = ctx.Err() // ctx ended as the handshake finished: conn is closed
+	}
 	if err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("tunnel handshake: %w", err)

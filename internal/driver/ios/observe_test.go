@@ -154,6 +154,18 @@ func TestPlaceByOCRPartOfLabel(t *testing.T) {
 	}
 }
 
+func TestPlaceByOCRInputsFirst(t *testing.T) {
+	els := []screen.Element{
+		{Role: "button", Label: "Search", Source: screen.SourceTree}, // a row, off screen
+		{Role: "input", Label: "Search", Source: screen.SourceTree},
+	}
+	lines := []ocrLine{{Text: "Search", X: 0.2, Y: 0.93, W: 0.2, H: 0.02}}
+	placeByOCR(els, nil, lines, 1000, 1000)
+	if !els[0].Bounds.Empty() || els[1].Bounds.Empty() {
+		t.Fatalf("row %+v, field %+v", els[0].Bounds, els[1].Bounds)
+	}
+}
+
 func TestScaleAxis(t *testing.T) {
 	if scaleAxis(0, 1125) > 100 || scaleAxis(1124, 1125) < 65400 || scaleAxis(-5, 1125) != scaleAxis(0, 1125) || scaleAxis(5000, 1125) != scaleAxis(1124, 1125) {
 		t.Fatal("scaleAxis bounds")
@@ -193,7 +205,7 @@ func TestHIDReports(t *testing.T) {
 func TestKeyboardFromOCR(t *testing.T) {
 	var lines []ocrLine
 	for i, l := range []string{"W", "e", "t", "y", "a", "S"} {
-		lines = append(lines, ocrLine{Text: l, X: float64(i) / 10, Y: 0.68 + float64(i%2)*0.07})
+		lines = append(lines, ocrLine{Text: l, X: float64(i) / 7, Y: 0.68 + float64(i%2)*0.07, W: 0.03})
 	}
 	lines = append(lines, ocrLine{Text: "Q clock", Y: 0.54}, ocrLine{Text: "A", Y: 0.2})
 	top, ok := keyboardFromOCR(lines)
@@ -203,12 +215,20 @@ func TestKeyboardFromOCR(t *testing.T) {
 	if _, ok := keyboardFromOCR(lines[:4]); ok {
 		t.Fatal("four letters are not a keyboard")
 	}
+	var index []ocrLine
+	for i, l := range []string{"A", "B", "C", "D", "E", "F"} {
+		index = append(index, ocrLine{Text: l, X: 0.97, Y: 0.55 + float64(i)*0.03, W: 0.02})
+	}
+	if _, ok := keyboardFromOCR(index); ok {
+		t.Fatal("a section index is not a keyboard")
+	}
 }
 
 func TestQuietSince(t *testing.T) {
 	now := time.Now()
 	frames := func(sizes ...int) *media {
-		m := &media{}
+		m := &media{started: now}
+		m.lastRTCP.Store(now.UnixNano())
 		for i, sz := range sizes {
 			m.frameLog = append(m.frameLog, frameMark{at: now.Add(time.Duration(i-len(sizes)) * 16 * time.Millisecond), size: sz})
 		}
@@ -225,11 +245,15 @@ func TestQuietSince(t *testing.T) {
 		{"padded still frames after motion", frames(10315, 10316, 10315, 10318, 10315), true},
 		{"scrolling", frames(9061, 1856, 951, 1283, 9504, 2163), false},
 		{"too few frames to tell", frames(1372, 1372), false},
-		{"no frames", frames(), true},
+		{"no frames from a live stream", frames(), true},
 	}
 	for _, c := range cases {
 		if got := d.quietSince(c.m, since); got != c.quiet {
 			t.Errorf("%s: quiet=%v, want %v", c.name, got, c.quiet)
 		}
+	}
+	dead := &media{started: now.Add(-time.Minute)}
+	if d.quietSince(dead, since) {
+		t.Error("a stream that sends nothing is not quiet")
 	}
 }
