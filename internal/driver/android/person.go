@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -82,6 +83,19 @@ func classifyInputDevices(out string) inputDevices {
 	}
 	flush()
 	return devs
+}
+
+// String lists the watched device nodes.
+func (devs inputDevices) String() string {
+	list := func(m map[string]bool) string {
+		var names []string
+		for p := range m {
+			names = append(names, strings.TrimPrefix(p, "/dev/input/"))
+		}
+		sort.Strings(names)
+		return strings.Join(names, ", ")
+	}
+	return "touchscreens [" + list(devs.touch) + "] and keys [" + list(devs.keys) + "]"
 }
 
 func hasAnyWord(s string, words []string) bool {
@@ -231,6 +245,7 @@ func (d *Device) watchPersonOnce(ctx context.Context) error {
 	if len(devs.touch)+len(devs.keys) == 0 {
 		return fmt.Errorf("no touchscreen or key device in getevent -lp")
 	}
+	d.cfg.logf("android: %s: watching the person's input on %s", d.info.ID, devs)
 	// The shell prints its pid first, so getevent can be stopped on the
 	// phone when the watch ends.
 	conn, err := d.client.Dial(ctx, d.info.ID, "shell:echo pid:$$; exec getevent -q")

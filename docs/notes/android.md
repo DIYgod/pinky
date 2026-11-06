@@ -121,7 +121,7 @@ The device tests use only the home screen, Settings search (no setting is change
 | Lock state | Yes (unlocked) | Yes (asleep, no lock screen) | Yes |
 | Wake a sleeping screen | Not needed | Yes (`KEYCODE_WAKEUP`) | Not needed |
 | Companion: Observe, events, `set_text`, settle | Yes, with the 01:43 build (0.1.0) already installed; nothing was installed tonight. The accessibility setting went back exactly to the owner's own service after every run, after Close and after a minute idle | Not tried (offline) | Not tried (the emulator was gone) |
-| Person input (`getevent`) | Yes: touchscreen `fts`, keys `qpnp_pon` and `gpio-keys`; **no signal** while Pinky tapped, long-pressed, swiped, typed and pressed Back and Home. A real touch could not be tested (nobody at the phone) | Not tried | Not tried |
+| Person input (`getevent`) | Yes: `getevent -q` runs on the phone for the watch (touchscreen `fts`, keys `qpnp_pon` and `gpio-keys`) and is gone after Close; **no signal** while Pinky tapped, long-pressed, swiped, typed and pressed Back and Home. A real touch could not be tested (nobody at the phone): run `androidctl -v run -person sleep:10000`, touch the screen or press a volume key, and expect a few `person input` lines | Not tried | Not tried |
 | Background mode (virtual display) | **Yes**: the Calculator opened on display 70+, 6 x 7 = 42 by taps and by typed keys, the main display stayed on the home screen, the display and its app were gone after Close, and with the companion its screen reads like the main one (36 elements) | Not tried | Not tried |
 
 The emulator belonged to the companion session (its app was in front); after one short run under its lock its app was put back in front.
