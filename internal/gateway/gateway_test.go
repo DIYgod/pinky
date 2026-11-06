@@ -849,3 +849,18 @@ func TestWipeHistory(t *testing.T) {
 		t.Fatalf("running task after wipe: %+v", tasks)
 	}
 }
+
+func TestPersonInputOnPhoneTakesOver(t *testing.T) {
+	g, dev := newTestGateway(t)
+	s, first := connect(t, g, "Lunch")
+	home := ref(t, first, "Dinely")
+	dev.PersonTouch()
+	deadline := time.Now().Add(2 * time.Second)
+	for g.Devices()[0].Status != DeviceInControl {
+		if time.Now().After(deadline) {
+			t.Fatalf("device status %s after a touch on the phone", g.Devices()[0].Status)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	mustStatus(t, tap(s, home), StatusTookOver)
+}

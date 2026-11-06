@@ -316,11 +316,30 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	g.mu.Unlock()
 	g.log.Info("device online", "device", d.id, "name", info.Name)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+	if w, ok := dev.(driver.PersonWatcher); ok {
+		go g.watchPerson(d.id, w.PersonInput())
+	}
 	if g.store != nil {
 		g.rec.do(func(ctx context.Context) error {
 			return g.store.SaveDevice(ctx, history.Device{ID: info.ID, Platform: string(info.Platform), Name: info.Name,
 				Model: info.Model, OSVersion: info.OSVersion, Backend: info.Backend, LastSeen: time.Now()})
 		})
+	}
+}
+
+// watchPerson takes over for the person whenever they use the phone itself,
+// until the device closes its channel.
+func (g *Gateway) watchPerson(id string, ch <-chan struct{}) {
+	for {
+		select {
+		case <-g.ctx.Done():
+			return
+		case _, ok := <-ch:
+			if !ok {
+				return
+			}
+			g.PersonTouched(id)
+		}
 	}
 }
 

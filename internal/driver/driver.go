@@ -163,9 +163,22 @@ const (
 	TouchUp   TouchAction = "up"
 )
 
-// Toucher injects raw touches, for drags on the mirror.
+// Toucher injects raw touches, for drags on the mirror. The point is in the
+// pixels of the picture the device's Stream sends (at MaxSize 0), because
+// that is all the mirror knows. Drivers whose video size differs from their
+// screen size (iOS pads its video) convert to screen pixels themselves.
 type Toucher interface {
 	Touch(ctx context.Context, a TouchAction, p screen.Point) error
+}
+
+// PersonWatcher reports input the person makes on the phone itself, so the
+// gateway can pause an agent's task when someone picks the phone up. Input
+// that Pinky injects must not be reported.
+type PersonWatcher interface {
+	// PersonInput returns a channel that receives a value, at most a few
+	// times a second, while the person touches the screen or presses a key
+	// on the phone. It is closed when the device closes.
+	PersonInput() <-chan struct{}
 }
 
 // LockReporter reports whether the phone is locked.

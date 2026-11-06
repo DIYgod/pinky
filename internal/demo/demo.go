@@ -115,6 +115,7 @@ type Device struct {
 	inputs  []Input
 	onInput func(Input)
 	slow    time.Duration
+	person  chan struct{}
 }
 
 // NewDevice returns a demo phone. Android phones use the Pixel launcher,
@@ -479,9 +480,31 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 // Close implements driver.Device.
 func (d *Device) Close() error { return nil }
 
+// PersonInput implements driver.PersonWatcher.
+func (d *Device) PersonInput() <-chan struct{} { return d.personCh() }
+
+func (d *Device) personCh() chan struct{} {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.person == nil {
+		d.person = make(chan struct{}, 1)
+	}
+	return d.person
+}
+
+// PersonTouch acts as if the person touched the phone itself.
+func (d *Device) PersonTouch() {
+	ch := d.personCh()
+	select {
+	case ch <- struct{}{}:
+	default:
+	}
+}
+
 var (
-	_ driver.Provider     = (*Provider)(nil)
-	_ driver.Device       = (*Device)(nil)
-	_ driver.Toucher      = (*Device)(nil)
-	_ driver.LockReporter = (*Device)(nil)
+	_ driver.Provider      = (*Provider)(nil)
+	_ driver.Device        = (*Device)(nil)
+	_ driver.Toucher       = (*Device)(nil)
+	_ driver.LockReporter  = (*Device)(nil)
+	_ driver.PersonWatcher = (*Device)(nil)
 )
