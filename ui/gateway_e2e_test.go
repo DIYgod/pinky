@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image/png"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/video"
 	"github.com/DIYgod/pinky/ui/demogw"
 )
 
@@ -527,4 +529,63 @@ func TestGatewayScreenshots(t *testing.T) {
 		return true
 	})
 	shoot(ga.view, 1280, 820, "activity-shots")
+}
+
+// TestMirrorFirstPicture checks that the first picture, which arrives
+// while the mirror paints, asks for the view to be built again: painting
+// does not build it, and a still phone sends nothing else that would, so
+// "Connecting…" stayed over the live picture.
+func TestMirrorFirstPicture(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("needs the ffmpeg command")
+	}
+	if err := video.Load(); err != nil {
+		t.Skip(err)
+	}
+	w, err := demogw.New(demogw.Options{Video: true, TrustNewAgents: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ga := &gwApp{w: w}
+	ga.app = newApp(w.Gateway, Options{NoTray: true, Shortcut: "-"})
+	ga.app.postHook = func(fn func()) {
+		ga.mu.Lock()
+		ga.q = append(ga.q, fn)
+		ga.mu.Unlock()
+	}
+	t.Cleanup(func() {
+		ga.closeMirrors()
+		ga.app.end()
+		w.Gateway.Close()
+	})
+	ga.waitFor(t, "the phones", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
+	ga.selectPhone(pixel)
+	tt := mg.NewTester(ga.view, 1280, 820)
+	ga.waitFor(t, "the stream", func() bool {
+		tt.Frame()
+		m := ga.mirrors[pixel]
+		return m != nil && m.state == "playing"
+	})
+	if !hasText(tt, "Connecting…") {
+		t.Fatalf("no Connecting before the first picture: %q", tt.Texts())
+	}
+	m := ga.mirrors[pixel]
+	for i := 0; m.bitmap == nil; i++ {
+		if i > 400 {
+			t.Fatalf("no picture: %+v", m.player.Stats())
+		}
+		time.Sleep(25 * time.Millisecond)
+		tt.Frame() // paints, and takes the picture once there is one
+	}
+	ga.mu.Lock()
+	posted := len(ga.q)
+	ga.mu.Unlock()
+	if posted == 0 {
+		t.Fatal("the first picture did not ask for the view to be built again")
+	}
+	ga.sync()
+	tt.Frame()
+	if hasText(tt, "Connecting…") {
+		t.Errorf("Connecting… over the live picture: %q", tt.Texts())
+	}
 }

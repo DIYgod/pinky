@@ -17,13 +17,13 @@ import (
 // Claude Code connects to Pixel 9 (fake) a moment after start, which the
 // gateway asks the person to allow, then reorders lunch and asks to pay.
 // The Demo menu starts more agents.
-func runGateway(theme, page string, dev, hidden bool, timeout time.Duration) error {
+func runGateway(theme, page string, dev, hidden, withVideo bool, timeout time.Duration) error {
 	dir, err := os.MkdirTemp("", "pinky-ui-demo-*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(dir)
-	w, err := demogw.New(demogw.Options{DataDir: dir, Video: true, ApprovalTimeout: timeout})
+	w, err := demogw.New(demogw.Options{DataDir: dir, Video: withVideo, ApprovalTimeout: timeout})
 	if err != nil {
 		return err
 	}

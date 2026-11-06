@@ -45,9 +45,10 @@ func main() {
 	page := flag.String("page", "", `open "activity", "settings" or "add-phone" at start`)
 	gw := flag.Bool("gateway", false, "run the real gateway on internal/demo's phones, with scripted agents")
 	hidden := flag.Bool("hidden", false, "start with only the menu bar icon, as when an agent starts Pinky")
+	withVideo := flag.Bool("video", true, "with -gateway, stream the demo phones' screens; false leaves them without video, as pinky --fake does")
 	flag.Parse()
 	if *gw {
-		if err := runGateway(*theme, *page, *dev, *hidden, *timeout); err != nil {
+		if err := runGateway(*theme, *page, *dev, *hidden, *withVideo, *timeout); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}

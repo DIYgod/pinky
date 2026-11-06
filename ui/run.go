@@ -157,6 +157,10 @@ type app struct {
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
 	wantScope  sync.Map // agent name → the gateway.Scope the person chose last
+
+	postMu  sync.Mutex
+	postWin *mygo.Window // the main window, once ready made it; post waits for it
+	early   []func()     // posts made before that
 }
 
 // Run starts the client and returns when it quits. It owns the main
@@ -240,6 +244,14 @@ func (a *app) ready() {
 		BackgroundColor:      "light-dark(#f7f7f8, #212125)",
 		Content:              mg.View(a.view),
 	})
+	a.postMu.Lock()
+	a.postWin = a.main
+	early := a.early
+	a.early = nil
+	a.postMu.Unlock()
+	for _, fn := range early {
+		a.post(fn)
+	}
 	if runtime.GOOS != "darwin" {
 		a.main.SetIcon(iconPNG())
 	}
@@ -292,10 +304,18 @@ func (a *app) post(fn func()) {
 		a.postHook(fn) // tests, which have no window
 		return
 	}
-	if a.main == nil {
+	// A goroutine may finish before the main window exists (a stream that
+	// fails at once, opened by the window's first frame): keep its update
+	// until ready has the window.
+	a.postMu.Lock()
+	w := a.postWin
+	if w == nil {
+		a.early = append(a.early, fn)
+		a.postMu.Unlock()
 		return
 	}
-	a.main.Update(func() {
+	a.postMu.Unlock()
+	w.Update(func() {
 		fn()
 		a.invalidate()
 	})

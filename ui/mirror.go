@@ -123,7 +123,9 @@ func (m *mirror) open() {
 				m.retry = time.Now().Add(3 * time.Second)
 				if errors.Is(err, video.ErrNotFound) {
 					a.videoErr = err
+					return
 				}
+				m.retryLater()
 				return
 			}
 			m.player, m.state = p, "playing"
@@ -133,11 +135,26 @@ func (m *mirror) open() {
 					if m.player == p && !m.closed {
 						m.state, m.err = "failed", p.Err()
 						m.retry = time.Now().Add(2 * time.Second)
+						m.retryLater()
 					}
 				})
 			}()
 		})
 	}()
+}
+
+// retryLater opens the stream again once its retry is due, whether or not
+// the view is built meanwhile: an idle window, or one on a locked screen,
+// builds nothing.
+func (m *mirror) retryLater() {
+	gen := m.gen
+	time.AfterFunc(max(time.Until(m.retry), 0), func() {
+		m.a.post(func() {
+			if !m.closed && m.gen == gen && m.state == "failed" && m.a.videoErr == nil {
+				m.open()
+			}
+		})
+	})
 }
 
 func (m *mirror) close() {
@@ -211,6 +228,10 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			if f := pl.Take(); f != nil {
 				if m.bitmap == nil {
 					m.bitmap = mg.NewBitmap(f.Image)
+					// The view was built before the first picture, with
+					// the Connecting overlay; painting does not build it
+					// again, and a still screen sends nothing else.
+					a.post(func() {})
 				} else {
 					m.bitmap.Update(f.Image)
 				}
@@ -289,6 +310,9 @@ func mirrorError(err error) string {
 	}
 	if errors.Is(err, driver.ErrOffline) {
 		return "The phone went offline."
+	}
+	if errors.Is(err, driver.ErrUnsupported) {
+		return "This phone has no live picture."
 	}
 	return "No picture: " + msg
 }

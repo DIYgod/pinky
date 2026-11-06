@@ -42,6 +42,7 @@ go run ./cmd/pinky-ui-demo -scenario handoff     # the agent asks you to sign in
 go run ./cmd/pinky-ui-demo -scenario agent       # Codex connects for the first time
 go run ./cmd/pinky-ui-demo -gateway              # the real gateway on internal/demo's phones
 go run ./cmd/pinky-ui-demo -gateway -hidden      # starts in the menu bar; the window opens on the first request
+go run ./cmd/pinky-ui-demo -gateway -video=false # demo phones without video, as pinky --fake has them
 ```
 
 With `-gateway`, Claude Code connects to Pixel 9 (fake) two seconds after start, which the gateway asks the person to allow, then opens Dinely, reorders lunch, adds a note and asks to pay. Touch the mirror to take over; it waits with `phone_handoff` until Hand back. The Demo menu starts more agents (a sign-in handoff on the iPhone, Codex for another first connection) and locks or unplugs the iPhone. History and screenshots go to a temporary folder deleted on quit.
@@ -153,6 +154,8 @@ The second pass (2026-11-07) ran the client against `internal/gateway` itself an
 7. **Step screenshots** load with `MediaPath`, `os.ReadFile` and `image.Decode` off the main thread, at most 400 kept. The target is outlined on a screenshot only when the phone's live picture size is known (the gateway scales screenshots down by a whole factor), and never on 54-point thumbnails, where it said nothing.
 8. **Read-only** calls `SetReadOnly("", on)` from the switch as well as reporting the change through `OnSettings`. If `cmd/pinky` also applies it, the two calls agree.
 9. **Demo phones get video** through `video.FrameStream`, which encodes `Screenshot()` twelve times a second with the `ffmpeg` command. `ui/demogw` wraps `internal/demo`'s provider for that, so the gateway still sees the demo's `Toucher` and `PersonWatcher`.
+
+10. **The mirror's states.** The first picture is taken while the mirror paints, and painting does not build the view again, so the "Connecting…" overlay from the build before it stayed over the live picture until something else changed (an idle iPhone sends no frames while its screen is still). Taking the first picture now asks for a build. A stream that fails shows why ("This phone has no live picture." for `ErrUnsupported`) and is opened again after 3 s (2 s after it ends) on a timer, not on the next build, which an idle window or a locked screen never makes. Updates that goroutines post before the main window exists are kept and run once it does, instead of being dropped.
 
 **For `cmd/pinky` (main session)**
 
