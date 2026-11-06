@@ -262,21 +262,27 @@ func (a *app) addIPhone(c *mg.Context) {
 			})
 			return
 		}
-		mg.Row(c).Gap(8).Role(mg.RoleGroup).Label("Pairing code").Children(func() {
-			digits := []rune(s.code)
-			for i := 0; i < 6; i++ {
-				ch := ""
-				if i < len(digits) {
-					ch = string(digits[i])
+		// Six boxes show the code; a transparent field over them takes
+		// the typing, and the box the next digit goes in is outlined.
+		var in mg.Element
+		mg.Box(c).AlignSelf(mg.Start).Children(func() {
+			mg.Row(c).Gap(8).Role(mg.RoleGroup).Label("Pairing code").PassThrough().Children(func() {
+				digits := []rune(s.code)
+				for i := 0; i < 6; i++ {
+					ch := ""
+					if i < len(digits) {
+						ch = string(digits[i])
+					}
+					box := mg.Box(c.Key(i)).Size(44, 52).Radius(10).Border(1, p.line2).Background(p.panel).Center()
+					if i == len(digits) && !s.pairing {
+						box.Border(2, p.brand)
+					}
+					box.Children(func() { mg.Text(c, ch).FontSize(22).FontWeight(600) })
 				}
-				box := mg.Box(c.Key(i)).Size(44, 52).Radius(10).Border(1, p.line2).Background(p.panel).Center()
-				if i == len(digits) && !s.pairing {
-					box.Border(2, p.brand)
-				}
-				box.Children(func() { mg.Text(c, ch).FontSize(22).FontWeight(600) })
-			}
+			})
+			in = mg.TextInputBase(c.Key("code"), &s.code).Label("Pairing code").Absolute().Top(0).Left(0).Right(0).Bottom(0).
+				Opacity(0).FontSize(22).AutoFocus()
 		})
-		in := mg.TextInputBase(c.Key("code"), &s.code).Label("Pairing code").Placeholder("Type the 6-digit code").FontSize(14).AutoFocus()
 		if in.Changed() {
 			s.code = keepDigits(s.code, 6)
 		}
