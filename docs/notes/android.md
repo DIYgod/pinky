@@ -146,6 +146,7 @@ Made without the owner, as the brief asked.
 
 - **Locked phone and virtual displays:** not tested, as agreed; to do with the owner. scrcpy creates its displays with the always-unlocked flag; whether apps there keep running while the phone is locked is step 0 item 6.
 - **Observe and Screenshot on a virtual display** return `ErrUnsupported`: `uiautomator dump` reads only the main display, and `screencap` rejects virtual display ids (also with `-a`). The gateway can decode a frame from the display's stream (the design's plan for screenshots anyway), and the companion app can read other displays.
+- **Observe suspends accessibility services.** `uiautomator dump` connects a UiAutomation that, by default, unbinds every accessibility service on the phone while it runs (about 2 s per Observe); the companion session saw the owner's own service and the companion's drop during each dump on the Mi. Someone who relies on TalkBack or another service would notice, and the companion's service is unbound exactly when its tree would be read. When the companion app is on, the gateway should read its tree instead and not call this Observe.
 - **Toasts, notifications, dialogs** (`Screen.Events`) are not reported; uiautomator cannot see toasts. Companion app.
 - **OCR:** `ObserveOptions.OCR` is ignored.
 - **Takeover from touches on the phone** (`getevent`), **files** (`phone_files`; the adb package has push and pull), **Xiaomi's "USB debugging (Security settings)" check** and **wireless pairing** are not part of this task.
