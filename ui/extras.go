@@ -31,7 +31,7 @@ type (
 		SetAgentScope(name string, scope gateway.Scope)
 	}
 	readOnlySetter interface {
-		SetReadOnly(deviceID string, on bool)
+		SetReadOnly(deviceID string, on bool) error
 	}
 	historyWiper interface {
 		WipeHistory(ctx context.Context) error

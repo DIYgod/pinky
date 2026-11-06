@@ -81,7 +81,7 @@ func startDaemon(dirs api.Dirs, fake bool) error {
 	if fake {
 		args = append(args, "--fake")
 	} else if runtime.GOOS == "darwin" {
-		args = []string{"app"}
+		args = []string{"app", "--background"}
 	}
 	cmd := exec.Command(exe, args...)
 	cmd.Stdout, cmd.Stderr = logf, logf

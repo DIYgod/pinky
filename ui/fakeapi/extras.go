@@ -140,13 +140,14 @@ func cloneScope(s gateway.Scope) gateway.Scope {
 
 // SetReadOnly turns read-only mode on or off, for one phone or ("") all.
 // The fake's agents do not change what they do; ReadOnly reports it.
-func (a *API) SetReadOnly(deviceID string, on bool) {
+func (a *API) SetReadOnly(deviceID string, on bool) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if a.readOnly == nil {
 		a.readOnly = map[string]bool{}
 	}
 	a.readOnly[deviceID] = on
+	return nil
 }
 
 // ReadOnly reports what SetReadOnly set for a phone, or ("") all.

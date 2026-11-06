@@ -10,9 +10,12 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/ui"
 )
 
@@ -23,6 +26,7 @@ func runApp(args []string) error {
 	var c gatewayConfig
 	c.flags(fs)
 	theme := fs.String("theme", "", `"light" or "dark"; empty follows the system`)
+	background := fs.Bool("background", false, "start in the menu bar without a window; it opens when something needs you")
 	verbose := fs.Bool("verbose", false, "log debug messages")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -64,16 +68,17 @@ func runApp(args []string) error {
 	}()
 
 	settingsPath := filepath.Join(dirs.Config, "settings.json")
-	settings := loadSettings(settingsPath, rg.Policy, c.Log)
-	if settings.ReadOnly {
-		rg.G.SetReadOnly("", true)
-	}
+	settings := loadSettings(settingsPath, c.Log)
+	gatewaySettings(&settings, rg)
+	current := settings
 	return ui.Run(rg.G, ui.Options{
 		Version:  version,
 		Theme:    *theme,
+		Hidden:   *background,
 		Settings: &settings,
 		OnSettings: func(s ui.Settings) {
-			rg.G.SetReadOnly("", s.ReadOnly)
+			applySettings(rg, current, s, c.Log)
+			current = s
 			if err := saveSettings(settingsPath, s); err != nil {
 				c.Log.Warn("save settings", "err", err)
 			}
@@ -93,8 +98,9 @@ func openLog(path string) (*os.File, error) {
 }
 
 // loadSettings reads the client's settings, or starts from the defaults.
-// Blocked apps always come from the rules, which decide what is blocked.
-func loadSettings(path string, pol *policy.Engine, log *slog.Logger) ui.Settings {
+// What the gateway keeps (the preset, hiding codes, read-only mode and
+// blocked apps) comes from the gateway instead; see gatewaySettings.
+func loadSettings(path string, log *slog.Logger) ui.Settings {
 	s := ui.DefaultSettings()
 	if data, err := os.ReadFile(path); err == nil {
 		if err := json.Unmarshal(data, &s); err != nil {
@@ -102,12 +108,11 @@ func loadSettings(path string, pol *policy.Engine, log *slog.Logger) ui.Settings
 			s = ui.DefaultSettings()
 		}
 	}
-	s.BlockedApps = blockedApps(pol)
 	return s
 }
 
 func saveSettings(path string, s ui.Settings) error {
-	s.BlockedApps = nil // kept in the rules
+	s.BlockedApps = nil // kept in the rules and apps files
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
@@ -119,38 +124,66 @@ func saveSettings(path string, s ui.Settings) error {
 	return os.Rename(tmp, path)
 }
 
-// blockedApps lists the rules that block whole apps or categories, which is
-// what Settings shows as blocked apps.
-func blockedApps(pol *policy.Engine) []ui.BlockedApp {
-	var out []ui.BlockedApp
-	for _, r := range pol.Rules() {
-		if r.Decision != policy.Deny || len(r.Match.Action) > 0 || len(r.Match.Label) > 0 {
-			continue
-		}
-		for _, cat := range r.Match.Category {
-			out = append(out, ui.BlockedApp{Name: r.Name, Kind: categoryTitle(cat)})
-		}
-		for _, app := range r.Match.App {
-			out = append(out, ui.BlockedApp{Name: app, Kind: r.Name})
-		}
+// gatewaySettings fills in what the policy keeps in rules.yaml and
+// apps.yaml, which are the source of truth for it.
+func gatewaySettings(s *ui.Settings, rg *runningGateway) {
+	if p := rg.Policy.Preset(); p >= policy.PresetCommits && p <= policy.PresetEvery {
+		s.Preset = int(p)
 	}
-	return out
+	s.HideCodes = rg.Policy.HideCodes()
+	s.ReadOnly = rg.Policy.ReadOnly("")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	s.BlockedApps = nil
+	for _, b := range rg.G.BlockedApps(ctx) {
+		name := b.Name
+		if name == "" {
+			name = b.ID
+		}
+		s.BlockedApps = append(s.BlockedApps, ui.BlockedApp{Name: name, Kind: policy.CategoryLabel(b.Category)})
+	}
 }
 
-func categoryTitle(cat string) string {
-	switch cat {
-	case "finance":
-		return "Banking, payments and wallets"
-	case "passwords":
-		return "Password managers"
-	case "messaging":
-		return "Messaging"
-	case "social":
-		return "Social"
-	case "stores":
-		return "App stores"
-	case "browsers":
-		return "Browsers"
+// applySettings passes what changed in Settings to the gateway.
+func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
+	warn := func(what string, err error) {
+		if err != nil {
+			log.Warn("settings: "+what, "err", err)
+		}
 	}
-	return cat
+	if s.Preset != old.Preset && s.Preset >= int(policy.PresetCommits) && s.Preset <= int(policy.PresetEvery) {
+		warn("preset", rg.Policy.SetPreset(policy.Preset(s.Preset)))
+	}
+	if s.HideCodes != old.HideCodes {
+		warn("hide codes", rg.Policy.SetHideCodes(s.HideCodes))
+	}
+	if s.ReadOnly != old.ReadOnly {
+		warn("read-only", rg.G.SetReadOnly("", s.ReadOnly))
+	}
+	was := map[string]bool{}
+	for _, b := range old.BlockedApps {
+		was[b.Name] = true
+	}
+	now := map[string]bool{}
+	for _, b := range s.BlockedApps {
+		now[b.Name] = true
+		if !was[b.Name] {
+			warn("block "+b.Name, rg.G.SetAppBlocked(appFromText(b.Name), true))
+		}
+	}
+	for name := range was {
+		if !now[name] {
+			warn("unblock "+name, rg.G.SetAppBlocked(appFromText(name), false))
+		}
+	}
+}
+
+// appFromText reads what the person typed as an app: a package or bundle
+// id when it looks like one, else a display name.
+func appFromText(text string) screen.App {
+	text = strings.TrimSpace(text)
+	if strings.Contains(text, ".") && !strings.ContainsAny(text, " \t") {
+		return screen.App{ID: text}
+	}
+	return screen.App{Name: text}
 }

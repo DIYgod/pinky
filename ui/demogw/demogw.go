@@ -8,17 +8,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"image"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/demo"
-	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
-	"github.com/DIYgod/pinky/internal/video"
 )
 
 // Options configure the gateway.
@@ -46,10 +43,8 @@ type World struct {
 // New starts the gateway on the demo phones.
 func New(opt Options) (*World, error) {
 	providers, devices := demo.World()
-	if opt.Video {
-		for i, p := range providers {
-			providers[i] = streamingProvider{p}
-		}
+	for _, d := range devices {
+		d.SetVideo(opt.Video)
 	}
 	pol := policy.Default()
 	for cat, e := range demo.PolicyApps() {
@@ -68,37 +63,6 @@ func New(opt Options) (*World, error) {
 		return nil, err
 	}
 	return &World{Gateway: g, Pixel: devices[0], IPhone: devices[1]}, nil
-}
-
-// streamingProvider opens demo phones whose Stream encodes their drawn
-// screen, so the mirror has video.
-type streamingProvider struct{ driver.Provider }
-
-func (p streamingProvider) Open(ctx context.Context, id string) (driver.Device, error) {
-	d, err := p.Provider.Open(ctx, id)
-	if dd, ok := d.(*demo.Device); ok && err == nil {
-		return streamingDevice{dd}, nil
-	}
-	return d, err
-}
-
-// streamingDevice is a demo phone with video. Embedding keeps the demo's
-// optional interfaces (Toucher, PersonWatcher) visible to the gateway.
-type streamingDevice struct{ *demo.Device }
-
-func (d streamingDevice) Stream(ctx context.Context, _ driver.StreamOptions) (driver.Stream, error) {
-	img, err := d.Screenshot(ctx)
-	if err != nil {
-		return nil, err
-	}
-	b := img.Bounds()
-	return video.FrameStream(ctx, b.Dx()&^1, b.Dy()&^1, 12, func() image.Image {
-		img, err := d.Screenshot(context.Background())
-		if err != nil {
-			return nil
-		}
-		return img
-	})
 }
 
 // Agent is a scripted agent with its own session, as an MCP client would

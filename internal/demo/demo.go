@@ -17,6 +17,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/DIYgod/pinky/internal/video"
 )
 
 // PolicyApps returns the app categories the demo apps belong to, to add to
@@ -116,6 +117,7 @@ type Device struct {
 	onInput func(Input)
 	slow    time.Duration
 	person  chan struct{}
+	noVideo bool
 }
 
 // NewDevice returns a demo phone. Android phones use the Pixel launcher,
@@ -464,8 +466,32 @@ func (d *Device) apps() []driver.App {
 }
 
 // Stream implements driver.Device. Demo phones have no video.
-func (d *Device) Stream(context.Context, driver.StreamOptions) (driver.Stream, error) {
-	return nil, driver.ErrUnsupported
+// Stream implements driver.Device: the drawn screen, encoded to H.264 by
+// the ffmpeg command at the phone's own size, so the mirror shows it and
+// its touches land in the phone's pixels. Without ffmpeg there is no video.
+func (d *Device) Stream(ctx context.Context, _ driver.StreamOptions) (driver.Stream, error) {
+	d.mu.Lock()
+	off := d.noVideo
+	d.mu.Unlock()
+	if off {
+		return nil, fmt.Errorf("video is off for this demo phone: %w", driver.ErrUnsupported)
+	}
+	img, err := d.Screenshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	b := img.Bounds()
+	s, err := video.FrameStream(ctx, b.Dx()&^1, b.Dy()&^1, 12, func() image.Image {
+		img, err := d.Screenshot(context.Background())
+		if err != nil {
+			return nil
+		}
+		return img
+	})
+	if err != nil {
+		return nil, fmt.Errorf("%v: %w", err, driver.ErrUnsupported)
+	}
+	return s, nil
 }
 
 // Touch implements driver.Toucher: a touch up taps where it lifts.
@@ -479,6 +505,14 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 
 // Close implements driver.Device.
 func (d *Device) Close() error { return nil }
+
+// SetVideo turns the phone's video stream on (the default) or off, for
+// tests of a mirror without a picture.
+func (d *Device) SetVideo(on bool) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.noVideo = !on
+}
 
 // PersonInput implements driver.PersonWatcher.
 func (d *Device) PersonInput() <-chan struct{} { return d.personCh() }
