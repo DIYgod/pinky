@@ -1,0 +1,29 @@
+# Build output
+/bin/
+/dist/
+/build/
+*.test
+*.out
+.mygo/
+
+# macOS
+.DS_Store
+
+# Captures from real devices must never be committed
+/captures/
+*.mp4
+*.h264
+*.h265
+*.hevc
+
+# Android
+android/companion/.gradle/
+android/companion/**/build/
+android/companion/local.properties
+*.apk
+*.aab
+
+# Local tools
+/tmp/
+.idea/
+.vscode/
