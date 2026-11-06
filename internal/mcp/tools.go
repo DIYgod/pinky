@@ -164,6 +164,23 @@ func bounds(s *jsonschema.Schema, min, max float64) {
 	s.Minimum, s.Maximum = &min, &max
 }
 
+// nonNull advertises optional pointer fields with their plain type instead
+// of ["null", type], which some clients handle poorly.
+func nonNull(props map[string]*jsonschema.Schema, names ...string) {
+	for _, n := range names {
+		s := props[n]
+		if s == nil {
+			continue
+		}
+		for _, t := range s.Types {
+			if t != "null" {
+				s.Type = t
+			}
+		}
+		s.Types = nil
+	}
+}
+
 var (
 	directions = []string{"up", "down", "left", "right"}
 	outcomes   = []string{"done", "failed", "partial", "cancelled"}
@@ -173,6 +190,7 @@ var (
 func patchSwipe(p map[string]*jsonschema.Schema) {
 	enum(p["direction"], directions...)
 	bounds(p["duration_ms"], 80, 1200)
+	nonNull(p, "from", "to")
 }
 
 func boolp(b bool) *bool { return &b }
@@ -215,7 +233,7 @@ func (s *Server) addTools() {
 	sdk.AddTool(s.srv, &sdk.Tool{Name: "phone_tap", Title: "Tap",
 		Description: "Tap an element by ref, or a point by x and y. Waits for the screen to settle and returns what changed. " +
 			"Taps that commit (Pay, Send, Order, Delete, ...) wait for the person's approval: up to 45 s, then approval_pending with an approval_id to repeat the call with.",
-		InputSchema: schema[tapIn](nil), Annotations: acting},
+		InputSchema: schema[tapIn](func(p map[string]*jsonschema.Schema) { nonNull(p, "x", "y") }), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in tapIn) (*sdk.CallToolResult, any, error) {
 			a := gateway.Action{Tool: "tap", Ref: in.Ref, LongPress: in.LongPress}
 			if res := pointArg(in.X, in.Y, &a.Point); res != nil {
@@ -272,6 +290,7 @@ func (s *Server) addTools() {
 			item := p["steps"].Items
 			enum(item.Properties["tool"], stepTools...)
 			patchSwipe(item.Properties)
+			nonNull(item.Properties, "x", "y")
 			enum(item.Properties["key"], gateway.KeyNames()...)
 			max := 50
 			p["steps"].MaxItems = &max

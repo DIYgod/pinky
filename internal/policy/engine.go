@@ -314,7 +314,8 @@ var codeRe = regexp.MustCompile(`(?:^|[^\d.,$€£¥₩₹])(\d{4,8}|\d{3}[ -]\d
 // that talks about a code, in any supported language: "Your code is
 // 123456" becomes "Your code is ••••••".
 func MaskCodes(text string) string {
-	if !containsAny(strings.ToLower(text), codeKeywords) {
+	lower := strings.ToLower(text)
+	if !anyWord(tokenize(lower), codeWords) && !containsAny(lower, codePhrases) && !containsAny(text, cjkCodeKeywords) {
 		return text
 	}
 	// Mask until nothing changes, since matches can touch.

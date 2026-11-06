@@ -174,6 +174,10 @@ func isCommitLabel(label string) bool {
 	if commitVerbs[ws[0]] || startsWithPhrase(ws, commitPhrases) {
 		return true
 	}
+	// "Yes, delete", "OK, send it".
+	if affirmativeWords[ws[0]] && len(ws) >= 2 && (commitVerbs[ws[1]] || startsWithPhrase(ws[1:], commitPhrases)) {
+		return true
+	}
 	// "Slide to pay", "Swipe to confirm", "Tap to send".
 	if len(ws) >= 3 && slideVerbs[ws[0]] && (ws[1] == "to" || ws[1] == "pour" || ws[1] == "para" || ws[1] == "zum") &&
 		(commitVerbs[ws[2]] || startsWithPhrase(ws[2:], commitPhrases)) {
@@ -409,7 +413,9 @@ func detect(in Input, cats []string) []Kind {
 			}
 		}
 	case OpType:
-		if in.Submit && (has(CatMessaging) || has(CatSocial)) && !IsSearchField(t) {
+		// A line break may press Enter, which sends in many chat apps.
+		submit := in.Submit || strings.ContainsAny(in.Text, "\n\r")
+		if submit && (has(CatMessaging) || has(CatSocial)) && !IsSearchField(t) {
 			add(SendMessage)
 		}
 	case OpKey:

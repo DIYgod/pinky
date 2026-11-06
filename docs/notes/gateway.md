@@ -78,13 +78,14 @@ Nobody was available to ask, so these are mine; each is easy to change.
 14. **Blocked apps**: the agent sees `app: blocked app` with no elements and no screenshot; their notifications, toasts and dialogs are dropped; their steps carry no screenshots or screen text. `home` and launching another app still work so the agent can leave.
 15. **Read-only mode** also refuses typing outside search fields, as DESIGN's definition implies; it comes from `rules.yaml` (`read_only`, `read_only_devices`) and `SetReadOnly`.
 16. **Policy extensions**: a `change_setting` kind (switches and Remove/Reset/Forget… buttons in Settings) for DESIGN's "change account or security settings"; categories beyond finance, messaging and stores (passwords, social, browsers, phone, settings, system) because the defaults need them; the app table matches display names too (iOS backends may not know bundle ids) and `com.bank.*` prefixes; `apps.yaml` adds to and excludes from the bundled table, so table updates still arrive.
-17. **Code masking** applies to notifications that mention a code (keywords in all supported languages) and masks runs of 4–8 digits.
-18. **Credential fields** are recognized by the password state, or by labels and resource ids (password words; one-time-code words, minus promo, postal and invite codes).
-19. **Screenshots** are JPEG (quality 75, scaled down by a whole factor to at most 1280 px), as the task allowed; DESIGN says WebP, which needs a non-stdlib encoder.
-20. **Wipe** deletes sessions, tasks, steps, approvals and media, and keeps agents and devices, which are settings.
-21. **Swipe direction** is where the finger moves (`up` shows content below), stated in the tool description.
-22. **`phone_type` with `ref`** must target a text field; it taps it first to focus. Typing into a button could otherwise tap a commit without the commit check.
-23. **Several phones online and no `device`**: `phone_connect` returns `invalid_argument` with the list, rather than picking one.
+17. **Code masking** applies to notifications that mention a code (whole words such as "code", "PIN", "OTP", and CJK keywords) and masks runs of 4–8 digits.
+18. **A line break typed into a chat or social app counts as sending** (`send_message`), since many keyboards send on Enter.
+19. **Credential fields** are recognized by the password state, or by labels and resource ids (password words; one-time-code words, minus promo, postal and invite codes).
+20. **Screenshots** are JPEG (quality 75, scaled down by a whole factor to at most 1280 px), as the task allowed; DESIGN says WebP, which needs a non-stdlib encoder.
+21. **Wipe** deletes sessions, tasks, steps, approvals and media, and keeps agents and devices, which are settings.
+22. **Swipe direction** is where the finger moves (`up` shows content below), stated in the tool description.
+23. **`phone_type` with `ref`** must target a text field; it taps it first to focus. Typing into a button could otherwise tap a commit without the commit check.
+24. **Several phones online and no `device`**: `phone_connect` returns `invalid_argument` with the list, rather than picking one.
 
 ## Differences from DESIGN
 

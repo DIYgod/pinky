@@ -33,7 +33,7 @@ func TestCommitDetection(t *testing.T) {
 		"发送", "立即支付 ¥12.80", "提交订单", "去结算(3)", "确认支付", "同意并支付", "删除",
 		"傳送", "結帳", "注文を確定する", "購入する", "送信", "결제하기", "보내기", "주문하기",
 		"Enviar", "Comprar ahora", "Passer la commande", "Payer", "Jetzt kaufen", "Zahlungspflichtig bestellen",
-		"Finalizar compra", "Acquista ora", "Оформить заказ", "Отправить",
+		"Finalizar compra", "Acquista ora", "Оформить заказ", "Отправить", "Yes, delete", "OK, send",
 	}
 	for _, l := range commits {
 		if !isCommitLabel(l) {
@@ -76,6 +76,7 @@ func TestDefaultRules(t *testing.T) {
 		{"send message", Input{Op: OpType, App: whatsapp, Text: "hi", Submit: true, Target: &screen.Element{Role: screen.RoleInput, Label: "Message"}}, Ask, "Messages", SendMessage},
 		{"enter in chat", Input{Op: OpKey, Key: "enter", App: whatsapp, Target: &screen.Element{Role: screen.RoleInput, Label: "Message"}}, Ask, "Messages", SendMessage},
 		{"type in chat", Input{Op: OpType, App: whatsapp, Text: "hi", Target: &screen.Element{Role: screen.RoleInput, Label: "Message"}}, Allow, "", ""},
+		{"newline in chat", Input{Op: OpType, App: whatsapp, Text: "hi\n", Target: &screen.Element{Role: screen.RoleInput, Label: "Message"}}, Ask, "Messages", SendMessage},
 		{"search submit in chat", Input{Op: OpType, App: whatsapp, Text: "sam", Submit: true, Target: &screen.Element{Role: screen.RoleInput, Label: "Search"}}, Allow, "", ""},
 		{"password", Input{Op: OpType, App: dinely, Text: "x", Target: &screen.Element{Role: screen.RoleInput, Label: "", States: []string{screen.StatePassword}}}, Deny, RuleCredentials, ""},
 		{"otp", Input{Op: OpType, App: dinely, Text: "1", Target: &screen.Element{Role: screen.RoleInput, Label: "Verification code"}}, Deny, RuleCredentials, ""},
@@ -231,10 +232,12 @@ func TestMaskCodes(t *testing.T) {
 		"Your verification code is 482913": "Your verification code is ••••••",
 		"G-123456 is your Google code":     "G-•••••• is your Google code",
 		"【银行】您的验证码为 839201，5分钟内有效":         "【银行】您的验证码为 ••••••，5分钟内有效",
-		"Code: 123 456":           "Code: ••• •••",
-		"Lunch at 12:30, see you": "Lunch at 12:30, see you",
-		"Order 1234567 shipped":   "Order 1234567 shipped",
-		"Your code costs $1234":   "Your code costs $1234",
+		"Code: 123 456":                      "Code: ••• •••",
+		"Lunch at 12:30, see you":            "Lunch at 12:30, see you",
+		"Order 1234567 shipped":              "Order 1234567 shipped",
+		"Your code costs $1234":              "Your code costs $1234",
+		"Your shopping order 123456 shipped": "Your shopping order 123456 shipped",
+		"PIN: 4821":                          "PIN: ••••",
 	}
 	for in, want := range cases {
 		if got := MaskCodes(in); got != want {

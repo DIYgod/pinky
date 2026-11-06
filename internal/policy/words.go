@@ -172,12 +172,18 @@ var otpNegatives = []string{
 	"postleitzahl", "cep", "sconto", "invito", "промокод", "купон", "индекс",
 }
 
-// codeKeywords mark notifications that carry a one-time code.
-var codeKeywords = []string{
-	"code", "otp", "passcode", "verification", "verify", "one-time", "one time", "2fa", "pin",
-	"login", "sign-in", "security",
+// codeWords and codePhrases mark notifications that carry a one-time code:
+// words are matched whole, so "shopping" does not count as "pin".
+var codeWords = words(
+	"code", "codes", "otp", "passcode", "verification", "verify", "2fa", "pin", "login", "security", "token",
+	"código", "codigo", "codice", "code", "bestätigungscode", "sicherheitscode", "код", "пароль", "tan",
+)
+
+var codePhrases = []string{"one-time", "one time", "sign-in", "sign in"}
+
+// cjkCodeKeywords are matched anywhere in CJK text.
+var cjkCodeKeywords = []string{
 	"验证码", "校验码", "动态码", "驗證碼", "認證碼", "確認碼", "确认码", "认证码", "コード", "認証", "인증",
-	"código", "codigo", "bestätigung", "sicherheit", "codice", "код", "пароль",
 }
 
 func words(ws ...string) map[string]bool {

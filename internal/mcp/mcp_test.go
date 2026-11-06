@@ -142,6 +142,10 @@ func TestToolList(t *testing.T) {
 			t.Fatalf("phone_key schema misses %s: %s", s, schema)
 		}
 	}
+	schema, _ = json.Marshal(got["phone_tap"].InputSchema)
+	if strings.Contains(string(schema), `"null"`) {
+		t.Fatalf("phone_tap schema advertises null types: %s", schema)
+	}
 	schema, _ = json.Marshal(got["phone_batch"].InputSchema)
 	if !strings.Contains(string(schema), `"maxItems":50`) || !strings.Contains(string(schema), `"launch"`) {
 		t.Fatalf("phone_batch schema: %s", schema)
