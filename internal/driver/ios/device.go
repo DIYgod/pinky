@@ -1,0 +1,397 @@
+package ios
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/danielpaulus/go-ios/ios/instruments"
+)
+
+// inputSettle is how long the device needs after a stream starts before it
+// routes HID input from this host to the screen; input sent earlier lands on
+// a surface that is not authenticated yet and is dropped. pymobiledevice3
+// measured 0.1 s to 0.4 s depending on the model.
+const inputSettle = 500 * time.Millisecond
+
+// Device is an open session with one iPhone. It keeps one tunnel, one video
+// stream and one HID connection for its whole life.
+type Device struct {
+	info driver.Info
+	l    *link
+
+	mu      sync.Mutex // guards the fields below
+	m       *media
+	hid     *hidSession
+	scr     screenInfo
+	inputAt time.Time // when input starts to work
+	closed  bool
+
+	inputMu sync.Mutex // serializes gestures
+
+	svcMu   sync.Mutex
+	info2   *cdService // deviceinfo
+	shot    *cdService // screencapture
+	inst    *instruments.ScreenshotService
+	ax      *axSession
+	apps    *appCatalog
+	pidApps map[uint64]driver.App
+
+	// preferCapture is set when the screen capture service answered and the
+	// instruments one did not.
+	preferCapture bool
+}
+
+// Open connects to a device and starts its video stream and HID session.
+func Open(ctx context.Context, info driver.Info) (*Device, error) {
+	l, err := dialLink(ctx, info.ID)
+	if err != nil {
+		return nil, err
+	}
+	d := &Device{info: info, l: l}
+	if err := d.start(ctx); err != nil {
+		l.Close()
+		return nil, err
+	}
+	return d, nil
+}
+
+func (d *Device) start(ctx context.Context) error {
+	svc, err := dialCoreDevice(d.l.entry, deviceInfoService)
+	if err != nil {
+		return err
+	}
+	scr, err := readScreenInfo(ctx, svc)
+	if err != nil {
+		svc.Close()
+		return err
+	}
+	d.info2 = svc
+	d.scr = scr
+	if err := d.restartMedia(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+// restartMedia (re)starts the video stream and the HID session on it.
+func (d *Device) restartMedia(ctx context.Context) error {
+	d.mu.Lock()
+	old, oldHID := d.m, d.hid
+	d.m, d.hid = nil, nil
+	d.mu.Unlock()
+	if oldHID != nil {
+		oldHID.Close()
+	}
+	if old != nil {
+		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		old.stop(c)
+		cancel()
+	}
+	m, err := startMedia(ctx, d.l)
+	if err != nil {
+		return err
+	}
+	rctx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	err = m.waitReady(rctx)
+	cancel()
+	if err != nil {
+		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
+		m.stop(c)
+		cc()
+		return err
+	}
+	h, err := newHIDSession(d.l.entry)
+	if err != nil {
+		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
+		m.stop(c)
+		cc()
+		return err
+	}
+	d.mu.Lock()
+	d.m, d.hid = m, h
+	d.inputAt = m.started.Add(inputSettle)
+	d.mu.Unlock()
+	return nil
+}
+
+// live returns the running stream and HID session, restarting the stream if
+// it died.
+func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
+	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return nil, nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
+	}
+	m, h := d.m, d.hid
+	d.mu.Unlock()
+	select {
+	case <-d.l.tunnel.Done():
+		return nil, nil, fmt.Errorf("%v: %w", d.l.tunnel.Err(), driver.ErrOffline)
+	default:
+	}
+	if m != nil && !m.stopped.Load() {
+		return m, h, nil
+	}
+	if err := d.restartMedia(ctx); err != nil {
+		return nil, nil, err
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.m, d.hid, nil
+}
+
+// Info implements driver.Device.
+func (d *Device) Info() driver.Info { return d.info }
+
+// Stream implements driver.Device. The device's stream runs as long as the
+// session does; each call returns a new view of it that starts at the next
+// keyframe. Closing the view does not stop the device's stream, which HID
+// input needs.
+func (d *Device) Stream(ctx context.Context, _ driver.StreamOptions) (driver.Stream, error) {
+	m, _, err := d.live(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &mediaStream{m: m, s: m.subscribe()}, nil
+}
+
+// StreamStats reports the stream's counters, for diagnostics.
+func (d *Device) StreamStats() (MediaStats, bool) {
+	d.mu.Lock()
+	m := d.m
+	d.mu.Unlock()
+	if m == nil {
+		return MediaStats{}, false
+	}
+	s := m.snapshot()
+	w, h := m.size()
+	return MediaStats{
+		Width: w, Height: h, Packets: s.Packets, Bytes: s.Bytes, Frames: s.Frames,
+		KeyFrames: s.KeyFrames, Lost: s.Lost, Dropped: s.Dropped, KeyRequests: s.FIRs,
+		Since: m.started, Delay: s.SRDelay, DelayKnown: s.SRDelaySet,
+	}, true
+}
+
+// MediaStats are a stream's counters since it started.
+type MediaStats struct {
+	Width, Height int
+	Packets       int
+	Bytes         int64
+	Frames        int
+	KeyFrames     int
+	Lost          int
+	Dropped       int
+	KeyRequests   int
+	Since         time.Time
+	// Delay is the one-way delay estimated from RTCP sender reports. It
+	// assumes the phone's and the computer's clocks agree.
+	Delay      time.Duration
+	DelayKnown bool
+}
+
+func (d *Device) screen() screenInfo {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.scr
+}
+
+// panel maps a screen pixel to the touch panel's 0..65535 range.
+func (d *Device) panel(p screen.Point) (uint16, uint16) {
+	s := d.screen()
+	return scaleAxis(p.X, s.Width), scaleAxis(p.Y, s.Height)
+}
+
+func scaleAxis(v, size int) uint16 {
+	if size <= 0 {
+		return 0
+	}
+	if v < 0 {
+		v = 0
+	}
+	if v >= size {
+		v = size - 1
+	}
+	return uint16((2*v + 1) * 65536 / (2 * size))
+}
+
+// waitInput blocks until the stream has been up long enough for input.
+func (d *Device) waitInput(ctx context.Context) (*hidSession, error) {
+	_, h, err := d.live(ctx)
+	if err != nil {
+		return nil, err
+	}
+	d.mu.Lock()
+	at := d.inputAt
+	d.mu.Unlock()
+	if wait := time.Until(at); wait > 0 {
+		t := time.NewTimer(wait)
+		defer t.Stop()
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return h, nil
+}
+
+func sleepCtx(ctx context.Context, d time.Duration) error {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// Tap implements driver.Device.
+func (d *Device) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
+	hold := 60 * time.Millisecond
+	if opt.LongPress {
+		hold = 800 * time.Millisecond
+	}
+	return d.gesture(ctx, []screen.Point{p}, hold)
+}
+
+// Swipe implements driver.Device.
+func (d *Device) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
+	return d.gesture(ctx, swipePath(from, to, dur), 10*time.Millisecond)
+}
+
+// swipePath is a straight line from from to to, one point per 10 ms.
+func swipePath(from, to screen.Point, dur time.Duration) []screen.Point {
+	if dur <= 0 {
+		dur = 300 * time.Millisecond
+	}
+	n := int(dur / (10 * time.Millisecond))
+	if n < 2 {
+		n = 2
+	}
+	path := make([]screen.Point, 0, n+1)
+	for i := 0; i <= n; i++ {
+		path = append(path, screen.Point{
+			X: from.X + (to.X-from.X)*i/n,
+			Y: from.Y + (to.Y-from.Y)*i/n,
+		})
+	}
+	return path
+}
+
+// gesture puts a finger down at path[0], moves it along the path with gap
+// between reports, and lifts it at the end. A one-point path is a tap held
+// for gap. The finger always comes up, even when ctx ends mid-gesture.
+func (d *Device) gesture(ctx context.Context, path []screen.Point, gap time.Duration) error {
+	return d.gestureHook(ctx, path, gap, nil)
+}
+
+// gestureHook is gesture with a callback right after the finger goes down.
+func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.Duration, onDown func()) error {
+	d.inputMu.Lock()
+	defer d.inputMu.Unlock()
+	h, err := d.waitInput(ctx)
+	if err != nil {
+		return err
+	}
+	x, y := d.panel(path[0])
+	if err := h.touchAt(true, x, y); err != nil {
+		return err
+	}
+	if onDown != nil {
+		onDown()
+	}
+	var gerr error
+	if len(path) == 1 {
+		gerr = sleepCtx(ctx, gap)
+	}
+	for _, p := range path[1:] {
+		if gerr = sleepCtx(ctx, gap); gerr != nil {
+			break
+		}
+		x, y = d.panel(p)
+		if gerr = h.touchAt(true, x, y); gerr != nil {
+			break
+		}
+	}
+	if err := h.touchAt(false, x, y); err != nil {
+		return errors.Join(gerr, err)
+	}
+	return gerr
+}
+
+// Touch implements driver.Toucher: raw touches for the person's drags on
+// the mirror. A move without a down is ignored.
+func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point) error {
+	h, err := d.waitInput(ctx)
+	if err != nil {
+		return err
+	}
+	x, y := d.panel(p)
+	switch a {
+	case driver.TouchDown:
+		return h.touchAt(true, x, y)
+	case driver.TouchMove:
+		h.mu.Lock()
+		down := h.down
+		h.mu.Unlock()
+		if !down {
+			return nil
+		}
+		return h.touchAt(true, x, y)
+	case driver.TouchUp:
+		return h.touchAt(false, x, y)
+	}
+	return fmt.Errorf("touch action %q: %w", a, driver.ErrUnsupported)
+}
+
+// Close implements driver.Device. It lifts any held finger, stops the
+// stream on the device and closes the tunnel.
+func (d *Device) Close() error {
+	d.mu.Lock()
+	if d.closed {
+		d.mu.Unlock()
+		return nil
+	}
+	d.closed = true
+	m, h := d.m, d.hid
+	d.mu.Unlock()
+	var errs []error
+	if h != nil {
+		errs = append(errs, h.Close())
+	}
+	if m != nil {
+		c, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		errs = append(errs, m.stop(c))
+		cancel()
+	}
+	d.svcMu.Lock()
+	for _, s := range []*cdService{d.info2, d.shot} {
+		if s != nil {
+			s.Close()
+		}
+	}
+	if d.inst != nil {
+		d.inst.Close()
+	}
+	if d.ax != nil {
+		d.ax.Close()
+	}
+	d.svcMu.Unlock()
+	errs = append(errs, d.l.Close())
+	return errors.Join(errs...)
+}
+
+var (
+	_ driver.Toucher = (*Device)(nil)
+)
+
+var (
+	_ driver.Device       = (*Device)(nil)
+	_ driver.LockReporter = (*Device)(nil)
+)

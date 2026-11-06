@@ -1,0 +1,642 @@
+package ios
+
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"net"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/DIYgod/pinky/internal/driver"
+	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
+)
+
+// rtpClock is the display stream's RTP clock rate. The answer does not
+// state it; it was measured on iOS 27 (timestamps advance 400 per frame at
+// 60 fps).
+const rtpClock = 24000
+
+// media is the long-lived display stream of one device. It runs for the
+// whole session, because HID input only works while a stream runs, and fans
+// its packets out to Stream subscribers.
+type media struct {
+	l   *link
+	svc *cdService
+	udp *gonet.UDPConn
+	ans streamAnswer
+	dst *net.UDPAddr // where RTCP goes
+
+	started time.Time
+	done    chan struct{}
+	stopped atomic.Bool
+	errMu   sync.Mutex
+	err     error
+
+	// rxMu guards the receive statistics that receiver reports carry.
+	rxMu      sync.Mutex
+	lastSeq   uint16
+	cycles    uint32
+	jitter    float64
+	lastSR    uint32    // middle 32 bits of the last SR's NTP time
+	lastSRAt  time.Time // when it arrived
+	rxNeedKey bool      // a copy of needKey for the feedback loop
+
+	// Receiver state, owned by the receive loop.
+	dep     depacketizer
+	au      [][]byte
+	auTS    uint32
+	auOpen  bool
+	auBad   bool
+	haveSeq bool
+	extTS   int64
+	prevTS  uint32
+	haveTS  bool
+	needKey bool
+	lastFIR time.Time
+	transit float64
+	srNTP   time.Time // wall clock of the last SR
+	srTS    uint32    // RTP time of the last SR
+
+	mu       sync.Mutex
+	subs     map[*subscriber]struct{}
+	codec    driver.Codec
+	width    int
+	height   int
+	config   []byte // the latest parameter sets, Annex B
+	ready    chan struct{}
+	isReady  bool
+	frameLog []frameMark // recent frames, for settle detection and stats
+	stats    mediaStats
+	keyWait  []chan struct{}
+}
+
+type frameMark struct {
+	at   time.Time
+	size int
+	key  bool
+}
+
+// mediaStats are counters since the stream started.
+type mediaStats struct {
+	Packets    int
+	Bytes      int64
+	Frames     int
+	KeyFrames  int
+	Lost       int // RTP packets missing
+	Dropped    int // access units dropped as incomplete
+	FIRs       int
+	SRDelay    time.Duration // one-way delay estimated from RTCP SR, if any
+	SRDelaySet bool
+}
+
+type subscriber struct {
+	ch      chan driver.Packet
+	needKey bool
+	closed  bool
+}
+
+func startMedia(ctx context.Context, l *link) (*media, error) {
+	udp, err := l.tunnel.ListenUDP(8 << 20)
+	if err != nil {
+		return nil, err
+	}
+	svc, err := dialCoreDevice(l.entry, displayService)
+	if err != nil {
+		udp.Close()
+		return nil, err
+	}
+	m := &media{
+		l: l, svc: svc, udp: udp, done: make(chan struct{}), ready: make(chan struct{}),
+		subs: map[*subscriber]struct{}{}, needKey: true, rxNeedKey: true,
+	}
+	port := udp.LocalAddr().(*net.UDPAddr).Port
+	opts := defaultOfferOptions()
+	opts.AllowRTCPFB = true // lets FIR request a keyframe
+	sctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	m.started = time.Now()
+	ans, err := startVideoStream(sctx, svc, l.tunnel.HostAddr().String(), port, l.tunnel.DeviceAddr().String(), 1, opts)
+	cancel()
+	if err != nil {
+		udp.Close()
+		svc.Close()
+		// The device may have started it anyway; stop on a fresh connection.
+		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
+		stopMediaStreamsFresh(c, l.entry)
+		cc()
+		return nil, fmt.Errorf("start display stream: %w", err)
+	}
+	m.ans = ans
+	if ans.SourcePort != 0 {
+		m.dst = udpAddr(l.tunnel.DeviceAddr().String(), ans.SourcePort)
+	}
+	go m.receive()
+	go m.feedback()
+	return m, nil
+}
+
+// waitReady waits for the first keyframe, after which Size and the codec are
+// known.
+func (m *media) waitReady(ctx context.Context) error {
+	select {
+	case <-m.ready:
+		return nil
+	case <-m.done:
+		return m.Err()
+	case <-ctx.Done():
+		return fmt.Errorf("no video from the device: %w", ctx.Err())
+	}
+}
+
+func (m *media) fail(err error) {
+	m.errMu.Lock()
+	if m.err == nil {
+		m.err = err
+	}
+	m.errMu.Unlock()
+	m.close()
+}
+
+// Err says why the stream ended.
+func (m *media) Err() error {
+	m.errMu.Lock()
+	defer m.errMu.Unlock()
+	if m.err == nil && m.stopped.Load() {
+		return errors.New("stream stopped")
+	}
+	return m.err
+}
+
+func (m *media) close() {
+	if m.stopped.Swap(true) {
+		return
+	}
+	close(m.done)
+	m.udp.Close()
+	m.mu.Lock()
+	for s := range m.subs {
+		if !s.closed {
+			s.closed = true
+			close(s.ch)
+		}
+	}
+	m.subs = map[*subscriber]struct{}{}
+	m.mu.Unlock()
+}
+
+// stop ends the stream on the device and closes everything.
+func (m *media) stop(ctx context.Context) error {
+	err := stopMediaStreams(ctx, m.svc)
+	if err != nil {
+		// The start connection is gone; try a fresh one so the device does
+		// not stay "observed remotely".
+		err = stopMediaStreamsFresh(ctx, m.l.entry)
+	}
+	m.close()
+	m.svc.Close()
+	return err
+}
+
+func (m *media) receive() {
+	buf := make([]byte, 65536)
+	for {
+		n, _, err := m.udp.ReadFrom(buf)
+		if err != nil {
+			if !m.stopped.Load() {
+				m.fail(fmt.Errorf("video receive: %w", err))
+			}
+			return
+		}
+		pkt := buf[:n]
+		if isRTCP(pkt) {
+			m.onRTCP(pkt)
+			continue
+		}
+		p, err := parseRTP(pkt)
+		if err != nil {
+			continue
+		}
+		m.onRTP(p, n)
+	}
+}
+
+func (m *media) onRTCP(b []byte) {
+	// Walk the compound packet for a sender report.
+	for len(b) >= 4 {
+		l := 4 * (int(binary.BigEndian.Uint16(b[2:4])) + 1)
+		if l > len(b) {
+			return
+		}
+		if b[1] == 200 && l >= 28 {
+			sec := binary.BigEndian.Uint32(b[8:12])
+			frac := binary.BigEndian.Uint32(b[12:16])
+			m.rxMu.Lock()
+			m.lastSR = sec<<16 | frac>>16
+			m.lastSRAt = time.Now()
+			m.rxMu.Unlock()
+			m.srNTP = ntpTime(sec, frac)
+			m.srTS = binary.BigEndian.Uint32(b[16:20])
+		}
+		b = b[l:]
+	}
+}
+
+// ntpTime converts an NTP timestamp to wall clock time.
+func ntpTime(sec, frac uint32) time.Time {
+	const ntpUnixOffset = 2208988800
+	ns := int64(frac) * 1e9 >> 32
+	return time.Unix(int64(sec)-ntpUnixOffset, ns)
+}
+
+func (m *media) onRTP(p rtpPacket, size int) {
+	m.mu.Lock()
+	m.stats.Packets++
+	m.stats.Bytes += int64(size)
+	m.mu.Unlock()
+	if !m.track(p, time.Now()) {
+		return
+	}
+	if m.auOpen && p.TS != m.auTS {
+		m.finishAU() // the marker went missing
+	}
+	if !m.auOpen {
+		m.auOpen, m.auTS = true, p.TS
+	}
+	m.au = m.dep.push(p.Payload, m.au)
+	if p.Marker {
+		m.finishAU()
+		m.sendReceipt(p.TS)
+	}
+}
+
+// track updates sequence and jitter bookkeeping. It returns false for a late
+// or duplicate packet, which is dropped.
+//
+// A gap means lost packets. The tunnel rides a reliable link, so loss only
+// happens when a buffer overflows under a burst. The access unit is lost;
+// the stream skips to the next keyframe and asks for one.
+func (m *media) track(p rtpPacket, now time.Time) bool {
+	m.rxMu.Lock()
+	defer m.rxMu.Unlock()
+	if m.haveSeq {
+		gap := p.Seq - (m.lastSeq + 1)
+		if gap >= 0x8000 {
+			return false
+		}
+		if gap != 0 {
+			m.mu.Lock()
+			m.stats.Lost += int(gap)
+			m.mu.Unlock()
+			m.auBad = true
+			m.dep.reset()
+		}
+		if p.Seq < m.lastSeq {
+			m.cycles += 1 << 16
+		}
+	}
+	m.lastSeq, m.haveSeq = p.Seq, true
+
+	// Interarrival jitter (RFC 3550 A.8), in clock units.
+	arrival := float64(now.Sub(m.started)) * rtpClock / float64(time.Second)
+	transit := arrival - float64(p.TS)
+	if m.transit != 0 {
+		d := transit - m.transit
+		if d < 0 {
+			d = -d
+		}
+		m.jitter += (d - m.jitter) / 16
+	}
+	m.transit = transit
+	return true
+}
+
+// finishAU turns the collected NAL units into packets.
+func (m *media) finishAU() {
+	nals, ts, bad := m.au, m.auTS, m.auBad
+	m.au, m.auOpen, m.auBad = nil, false, false
+	if len(nals) == 0 {
+		return
+	}
+	codec := m.dep.codec
+	if !m.haveTS {
+		m.prevTS, m.haveTS = ts, true
+	}
+	m.extTS += int64(int32(ts - m.prevTS))
+	m.prevTS = ts
+	pts := time.Duration(m.extTS * int64(time.Second) / rtpClock)
+
+	var cfg, frame [][]byte
+	key := false
+	for _, n := range nals {
+		c, k := nalInfo(codec, n)
+		switch {
+		case c:
+			cfg = append(cfg, n)
+		default:
+			if k {
+				key = true
+			}
+			frame = append(frame, n)
+		}
+	}
+	if bad {
+		m.mu.Lock()
+		m.stats.Dropped++
+		m.mu.Unlock()
+		m.setNeedKey(true)
+		m.requestKeyFrame()
+		return
+	}
+	if len(cfg) > 0 {
+		m.setConfig(codec, cfg)
+	}
+	if m.needKey && !key {
+		m.requestKeyFrame()
+		return
+	}
+	if key {
+		m.setNeedKey(false)
+	}
+	if len(frame) == 0 {
+		return
+	}
+	data := annexB(frame)
+	m.mu.Lock()
+	m.stats.Frames++
+	if key {
+		m.stats.KeyFrames++
+	}
+	if !m.srNTP.IsZero() {
+		// The device's wall clock for this frame, from the last SR mapping,
+		// against our arrival time. Only meaningful if both clocks are
+		// synchronized (both use NTP), so treat it as an estimate.
+		sent := m.srNTP.Add(time.Duration(int64(int32(ts-m.srTS)) * int64(time.Second) / rtpClock))
+		m.stats.SRDelay = time.Since(sent)
+		m.stats.SRDelaySet = true
+	}
+	m.frameLog = append(m.frameLog, frameMark{at: time.Now(), size: len(data), key: key})
+	if len(m.frameLog) > 600 {
+		m.frameLog = append(m.frameLog[:0], m.frameLog[len(m.frameLog)-300:]...)
+	}
+	if key && !m.isReady && m.config != nil {
+		m.isReady = true
+		close(m.ready)
+	}
+	if key {
+		for _, ch := range m.keyWait {
+			close(ch)
+		}
+		m.keyWait = nil
+	}
+	cfgData := m.config
+	pkt := driver.Packet{Data: data, PTS: pts, KeyFrame: key}
+	for s := range m.subs {
+		if s.closed {
+			continue
+		}
+		if s.needKey {
+			if !key {
+				continue
+			}
+			if !m.offer(s, driver.Packet{Data: cfgData, PTS: pts, Config: true}) {
+				continue
+			}
+			s.needKey = false
+		}
+		if !m.offer(s, pkt) {
+			s.needKey = true
+		}
+	}
+	m.mu.Unlock()
+}
+
+func (m *media) setNeedKey(v bool) {
+	m.needKey = v
+	m.rxMu.Lock()
+	m.rxNeedKey = v
+	m.rxMu.Unlock()
+}
+
+// offer hands a packet to a subscriber without blocking the receiver. A
+// subscriber that falls behind skips to the next keyframe.
+func (m *media) offer(s *subscriber, p driver.Packet) bool {
+	select {
+	case s.ch <- p:
+		return true
+	default:
+		go m.requestKeyFrame()
+		return false
+	}
+}
+
+func (m *media) setConfig(codec string, nals [][]byte) {
+	w, h := 0, 0
+	for _, n := range nals {
+		var err error
+		if codec == "hevc" && hevcType(n) == hevcSPS {
+			w, h, err = hevcSPSSize(n)
+		} else if codec == "h264" && n[0]&0x1f == h264SPS {
+			w, h, err = h264SPSSize(n)
+		}
+		if err != nil {
+			w, h = 0, 0
+		}
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.config = annexB(nals)
+	if codec == "hevc" {
+		m.codec = driver.HEVC
+	} else {
+		m.codec = driver.H264
+	}
+	if w > 0 {
+		m.width, m.height = w, h
+	}
+}
+
+// requestKeyFrame sends an RTCP picture loss indication (RFC 4585), which
+// makes the device send an IDR frame within about 70 ms. The device ignores
+// a request that comes right after a keyframe, so feedback repeats it while
+// someone still waits. At most one request per 500 ms.
+func (m *media) requestKeyFrame() {
+	m.mu.Lock()
+	if time.Since(m.lastFIR) < 500*time.Millisecond || m.dst == nil {
+		m.mu.Unlock()
+		return
+	}
+	m.lastFIR = time.Now()
+	m.stats.FIRs++
+	m.mu.Unlock()
+	b := make([]byte, 0, 12)
+	b = append(b, 0x81, 206, 0, 2)
+	b = binary.BigEndian.AppendUint32(b, m.ans.HostSSRC)
+	b = binary.BigEndian.AppendUint32(b, m.ans.DeviceSSRC)
+	m.udp.WriteTo(b, m.dst)
+}
+
+// waitingForKey reports whether a subscriber, or the receiver itself after
+// loss, waits for a keyframe.
+func (m *media) waitingForKey() bool {
+	m.rxMu.Lock()
+	need := m.rxNeedKey
+	m.rxMu.Unlock()
+	if need {
+		return true
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for s := range m.subs {
+		if s.needKey && !s.closed {
+			return true
+		}
+	}
+	return false
+}
+
+// sendReceipt acknowledges one frame, as Xcode does: an RTCP APP packet
+// (subtype 0, name 0x00000005) carrying the frame's RTP time. The device
+// paces its encoder by these.
+func (m *media) sendReceipt(ts uint32) {
+	if m.dst == nil {
+		return
+	}
+	b := make([]byte, 0, 16)
+	b = append(b, 0x80, 204, 0, 3)
+	b = binary.BigEndian.AppendUint32(b, m.ans.HostSSRC)
+	b = binary.BigEndian.AppendUint32(b, 5)
+	b = binary.BigEndian.AppendUint32(b, ts)
+	m.udp.WriteTo(b, m.dst)
+}
+
+// feedback sends receiver reports every second (the device sets an RTCP
+// timeout, 10 s on iOS 27, and stops the stream without them) and repeats
+// keyframe requests while someone waits for one.
+func (m *media) feedback() {
+	t := time.NewTicker(200 * time.Millisecond)
+	defer t.Stop()
+	var lastRR time.Time
+	for {
+		select {
+		case <-m.done:
+			return
+		case <-t.C:
+		}
+		if m.dst == nil {
+			continue
+		}
+		if time.Since(lastRR) >= time.Second {
+			lastRR = time.Now()
+			m.udp.WriteTo(m.receiverReport(), m.dst)
+		}
+		if m.waitingForKey() {
+			m.mu.Lock()
+			due := time.Since(m.lastFIR) >= 600*time.Millisecond
+			m.mu.Unlock()
+			if due {
+				m.requestKeyFrame()
+			}
+		}
+	}
+}
+
+func (m *media) receiverReport() []byte {
+	m.rxMu.Lock()
+	defer m.rxMu.Unlock()
+	var dlsr uint32
+	if !m.lastSRAt.IsZero() {
+		dlsr = uint32(time.Since(m.lastSRAt).Seconds() * 65536)
+	}
+	b := make([]byte, 0, 44)
+	b = append(b, 0x81, 201, 0, 7)
+	b = binary.BigEndian.AppendUint32(b, m.ans.HostSSRC)
+	b = binary.BigEndian.AppendUint32(b, m.ans.DeviceSSRC)
+	b = append(b, 0, 0, 0, 0) // fraction and cumulative lost
+	b = binary.BigEndian.AppendUint32(b, m.cycles|uint32(m.lastSeq))
+	b = binary.BigEndian.AppendUint32(b, uint32(m.jitter))
+	b = binary.BigEndian.AppendUint32(b, m.lastSR)
+	b = binary.BigEndian.AppendUint32(b, dlsr)
+	// SDES with an empty CNAME, as Xcode sends.
+	b = append(b, 0x81, 202, 0, 2)
+	b = binary.BigEndian.AppendUint32(b, m.ans.HostSSRC)
+	b = append(b, 1, 0, 0, 0)
+	return b
+}
+
+// subscribe adds a Stream consumer. It starts at the next keyframe, which
+// it asks the device for.
+func (m *media) subscribe() *subscriber {
+	s := &subscriber{ch: make(chan driver.Packet, 256), needKey: true}
+	m.mu.Lock()
+	if m.stopped.Load() {
+		s.closed = true
+		close(s.ch)
+	} else {
+		m.subs[s] = struct{}{}
+	}
+	m.mu.Unlock()
+	m.requestKeyFrame()
+	return s
+}
+
+func (m *media) unsubscribe(s *subscriber) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if _, ok := m.subs[s]; ok {
+		delete(m.subs, s)
+		if !s.closed {
+			s.closed = true
+			close(s.ch)
+		}
+	}
+}
+
+func (m *media) size() (int, int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.width, m.height
+}
+
+func (m *media) snapshot() mediaStats {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.stats
+}
+
+// frames returns the frames that arrived since t.
+func (m *media) framesSince(t time.Time) []frameMark {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []frameMark
+	for i := len(m.frameLog) - 1; i >= 0 && m.frameLog[i].at.After(t); i-- {
+		out = append(out, m.frameLog[i])
+	}
+	for i, j := 0, len(out)-1; i < j; i, j = i+1, j-1 {
+		out[i], out[j] = out[j], out[i]
+	}
+	return out
+}
+
+// mediaStream is the driver.Stream a subscriber sees.
+type mediaStream struct {
+	m    *media
+	s    *subscriber
+	once sync.Once
+}
+
+func (st *mediaStream) Codec() driver.Codec {
+	st.m.mu.Lock()
+	defer st.m.mu.Unlock()
+	return st.m.codec
+}
+
+func (st *mediaStream) Size() (int, int)              { return st.m.size() }
+func (st *mediaStream) Packets() <-chan driver.Packet { return st.s.ch }
+func (st *mediaStream) Err() error                    { return st.m.Err() }
+
+func (st *mediaStream) Close() error {
+	st.once.Do(func() { st.m.unsubscribe(st.s) })
+	return nil
+}
