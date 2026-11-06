@@ -144,9 +144,13 @@ func (e *Engine) Evaluate(in Input) Verdict {
 	}
 
 	v := Verdict{Decision: Allow, Kinds: kinds}
+	var asks []string
 	for _, r := range e.file.Rules {
 		if !r.matches(app, cats, kinds, in) {
 			continue
+		}
+		if r.Decision == Ask {
+			asks = append(asks, r.Name)
 		}
 		if r.Decision > v.Decision || (v.Rule == "" && r.Decision == v.Decision && r.Decision != Allow) {
 			v.Decision, v.Rule = r.Decision, r.Name
@@ -155,9 +159,15 @@ func (e *Engine) Evaluate(in Input) Verdict {
 	if v.Rule != "" {
 		v.Reason = reason(v, app)
 	}
-	if taskAsk && v.Decision < Ask {
-		v.Decision, v.Rule = Ask, RuleTaskApps
-		v.Reason = fmt.Sprintf("Typing into %s, which is not in this task's app list.", appName(app))
+	if taskAsk {
+		asks = append(asks, RuleTaskApps)
+		if v.Decision < Ask {
+			v.Decision, v.Rule = Ask, RuleTaskApps
+			v.Reason = fmt.Sprintf("Typing into %s, which is not in this task's app list.", appName(app))
+		}
+	}
+	if v.Decision == Ask {
+		v.Asks = asks
 	}
 
 	if in.ReadOnly || e.readOnlyLocked(in.Device) {

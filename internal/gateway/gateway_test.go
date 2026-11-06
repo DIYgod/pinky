@@ -589,7 +589,7 @@ func TestNewAgentNeedsApproval(t *testing.T) {
 }
 
 func TestLockedPhone(t *testing.T) {
-	g, dev := newTestGateway(t)
+	g, dev := newTestGateway(t, func(o *Options) { o.MaxBlock = 50 * time.Millisecond })
 	s, first := connect(t, g, "Lunch")
 	dinely := ref(t, first, "Dinely")
 	dev.SetLocked(true)
@@ -607,11 +607,49 @@ func TestLockedPhone(t *testing.T) {
 	if err := g.Unlock("pixel"); err != ErrNoUnlock {
 		t.Fatalf("unlock without a hook: %v", err)
 	}
+	res = s.Handoff(context.Background(), HandoffRequest{Reason: "Please unlock the phone"})
+	mustStatus(t, res, StatusPending)
+	// Unlocking on the phone does not hand back by itself: the person may be
+	// doing what the agent asked.
+	dev.SetLocked(false)
+	time.Sleep(100 * time.Millisecond)
+	res = s.Handoff(context.Background(), HandoffRequest{Call: Call{ApprovalID: res.ApprovalID}, Reason: "Please unlock the phone"})
+	mustStatus(t, res, StatusPending)
+	g.HandBack("pixel", "unlocked it")
+	res = s.Handoff(context.Background(), HandoffRequest{Call: Call{ApprovalID: res.ApprovalID}, Reason: "Please unlock the phone"})
+	mustStatus(t, res, StatusSettled)
+	if res.Note != "unlocked it" {
+		t.Fatalf("hand back note: %+v", res)
+	}
+}
+
+func TestUnlockFromComputer(t *testing.T) {
+	var g *Gateway
+	g, dev := newTestGateway(t, func(o *Options) {
+		o.Unlock = func(ctx context.Context, id string, d driver.Device) error {
+			d.(*demo.Device).SetLocked(false)
+			return nil
+		}
+	})
+	s, _ := connect(t, g, "Lunch")
+	dev.SetLocked(true)
+	mustStatus(t, s.Observe(context.Background(), ObserveRequest{}), StatusLocked)
 	done := make(chan *Result, 1)
 	go func() { done <- s.Handoff(context.Background(), HandoffRequest{Reason: "Please unlock the phone"}) }()
-	time.Sleep(30 * time.Millisecond)
-	dev.SetLocked(false)
-	res = <-done
+	for i := 0; i < 500; i++ {
+		found := false
+		for _, n := range g.Needs() {
+			found = found || n.Kind == NeedHandoff
+		}
+		if found {
+			break
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	if err := g.Decide("unlock:pixel", AllowOnce, ""); err != nil {
+		t.Fatal(err)
+	}
+	res := <-done
 	mustStatus(t, res, StatusSettled)
 	if res.Note != "The phone was unlocked." {
 		t.Fatalf("unlock handoff: %+v", res)

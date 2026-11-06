@@ -30,11 +30,16 @@ type device struct {
 	offlineSince time.Time
 	offlineWhy   string
 	lease        *lease
-	// person is true while the person is in control (took over).
+	// person is true while the person is in control (took over). It belongs
+	// to the device, not the lease: only HandBack clears it, so an agent
+	// cannot get control back by starting another task.
 	person bool
 	// personInput is true once the person used the phone during a takeover.
 	personInput bool
 	locked      bool
+	// inflight cancels the driver call of the action in progress, so a
+	// takeover interrupts it.
+	inflight context.CancelFunc
 	// events holds toasts, notifications and dialogs since the agent's last
 	// result, already filtered by the policy.
 	events []screen.Event
@@ -135,16 +140,19 @@ type lease struct {
 	baseline *screen.Screen
 	// apps is the task's app allow-list, ids and names.
 	apps []string
-	// grants holds rules the person allowed for the rest of the task.
+	// grants holds the rules the person allowed for the rest of the task,
+	// per app: grantKey(rule, app).
 	grants map[string]bool
 	// tookOverSeen is set once the agent got user_took_over for the current
 	// takeover; later calls get paused.
 	tookOverSeen bool
 	// handedBack holds the person's note when they hand back before the
 	// agent calls phone_handoff.
-	handedBack     bool
-	handBackNote   string
-	unlockHandoffs []string // handoffs that end when the phone unlocks
+	handedBack   bool
+	handBackNote string
+	// unlockHandoffs are handoffs opened while the phone was locked; Unlock
+	// from the computer ends them.
+	unlockHandoffs []string
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -213,6 +221,11 @@ func equalFold(a, b string) bool {
 
 func hasPrefixFold(s, prefix string) bool {
 	return len(s) >= len(prefix) && strings.EqualFold(s[:len(prefix)], prefix)
+}
+
+// grantKey names a task grant: a rule in an app.
+func grantKey(rule string, app screen.App) string {
+	return rule + "\x00" + app.ID + "\x00" + strings.ToLower(app.Name)
 }
 
 // mergeCtx returns a context that ends when either parent ends.

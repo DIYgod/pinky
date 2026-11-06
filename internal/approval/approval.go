@@ -210,6 +210,15 @@ func (c *Center) Open(r Request) Info {
 	e := &entry{Info: Info{ID: newID(), Request: r, Created: now, Deadline: now.Add(timeout), State: Open},
 		done: make(chan struct{})}
 	c.mu.Lock()
+	if c.closed {
+		// The gateway is stopping: the approval is withdrawn at once.
+		e.State, e.Reason = Withdrawn, "gateway stopped"
+		close(e.done)
+		c.buryLocked(e.Info, ErrUsed)
+		info := e.Info
+		c.mu.Unlock()
+		return info
+	}
 	c.all[e.ID] = e
 	id := e.ID
 	e.timer = time.AfterFunc(timeout, func() { c.expire(id) })
@@ -477,7 +486,10 @@ func (c *Center) Busy(device string) (Info, bool) {
 	return Info{}, false
 }
 
-// Close withdraws everything.
+// Close withdraws everything; approvals opened later are withdrawn at once.
 func (c *Center) Close() {
+	c.mu.Lock()
+	c.closed = true
+	c.mu.Unlock()
 	c.WithdrawWhere(func(Info) bool { return true }, "gateway stopped")
 }

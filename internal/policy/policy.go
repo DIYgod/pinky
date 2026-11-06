@@ -117,6 +117,9 @@ type Verdict struct {
 	// It is empty when nothing matched and the action is allowed.
 	Rule  string
 	Kinds []Kind
+	// Asks lists every rule that asked, Rule first, when the decision is
+	// Ask. Skipping the question (Allow for this task) needs all of them.
+	Asks []string
 	// Scope marks a denial because the app is outside the agent's scope or
 	// the task's allow-list; the gateway reports it as scope_denied.
 	Scope bool

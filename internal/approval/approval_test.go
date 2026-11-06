@@ -133,3 +133,15 @@ func TestHuman(t *testing.T) {
 		}
 	}
 }
+
+func TestOpenAfterClose(t *testing.T) {
+	c := New(Options{Timeout: time.Second})
+	c.Close()
+	a := c.Open(Request{Kind: KindAction, Binding: bind})
+	if len(c.List(true)) != 0 {
+		t.Fatal("approval opened after Close")
+	}
+	if _, err := c.Wait(context.Background(), a.ID, time.Second); !errors.Is(err, ErrUsed) {
+		t.Fatalf("wait after close: %v", err)
+	}
+}

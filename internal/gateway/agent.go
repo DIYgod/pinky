@@ -287,7 +287,11 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 	name := l.dev.name()
 	g.mu.Unlock()
 	if ended && by == OutcomeStopped {
+		ran := r.Status == StatusSettled || r.Status == StatusUncertain
 		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
+		if ran {
+			r.Message += " The last action may have happened before the stop."
+		}
 	}
 	if r.Device == "" {
 		r.Device, r.DeviceName = l.dev.id, name
@@ -436,7 +440,11 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 		apps: append([]string(nil), apps...), grants: map[string]bool{}}
 	l.ctx, l.cancel = context.WithCancel(g.ctx)
 	d.lease = l
-	d.person, d.personInput = false, false
+	if d.person {
+		// The person is still in control from before: the task starts paused.
+		t.state = TaskPaused
+		l.tookOverSeen = true
+	}
 	d.events = nil
 	s.leases[d.id] = l
 	s.used = appendUniq(s.used, d.id)
@@ -496,7 +504,14 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 	res.Status = StatusSettled
 	res.Task = l.task.id
 	res.Message = fmt.Sprintf("Connected to %s for “%s”.", l.dev.name(), l.task.title)
-	if cur.Locked {
+	g.mu.Lock()
+	person := l.dev.person
+	g.mu.Unlock()
+	switch {
+	case person:
+		res.Status = StatusPaused
+		res.Message += " The person is in control of the phone; call phone_handoff to wait until they hand it back."
+	case cur.Locked:
 		res.Status = StatusLocked
 		res.Message += " The phone is locked; call phone_handoff so the person can unlock it."
 	}
@@ -507,8 +522,7 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 // it. It returns nil once the agent may connect.
 func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Result {
 	g := s.g
-	st := g.agentState(ctx, s.agent)
-	if st.approved {
+	if g.agentApproved(ctx, s.agent) {
 		return nil
 	}
 	if g.opt.TrustNewAgents {
@@ -597,6 +611,14 @@ func (g *Gateway) agentState(ctx context.Context, a AgentInfo) *agentState {
 	}
 	g.mu.Unlock()
 	return st
+}
+
+// agentApproved reports whether the person approved the agent.
+func (g *Gateway) agentApproved(ctx context.Context, a AgentInfo) bool {
+	st := g.agentState(ctx, a)
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return st.approved
 }
 
 func (g *Gateway) setAgentApproved(a AgentInfo, scope Scope) {
@@ -712,13 +734,15 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 	if req.Screenshot {
 		if res.Rule != "" {
 			res.Message = strings.TrimSpace(res.Message + " No screenshot: the app is blocked.")
-		} else if dev := g.driverOf(l.dev); dev != nil {
-			img, err := dev.Screenshot(ctx)
+		} else {
+			img, err := g.screenshot(ctx, l.dev, cur)
 			switch {
 			case err == nil:
 				res.Screenshot = img
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
+			case errors.Is(err, errScreenChanged):
+				res.Message = strings.TrimSpace(res.Message + " No screenshot: the screen changed while it was taken; observe again.")
 			default:
 				res.Message = strings.TrimSpace(res.Message + " The screenshot failed: " + err.Error())
 			}
@@ -947,8 +971,8 @@ func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Res
 	var info approval.Info
 	if id == "" {
 		var shot image.Image
-		if dev := g.driverOf(l.dev); dev != nil {
-			shot, _ = dev.Screenshot(ctx)
+		if cur, err := g.observe(ctx, l.dev, false); err == nil {
+			shot, _ = g.screenshot(ctx, l.dev, cur)
 		}
 		detail := s.agent.Name
 		if d := strings.TrimSpace(req.Details); d != "" {
@@ -957,12 +981,18 @@ func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Res
 		info = g.approvals.Open(approval.Request{Kind: approval.KindRequest, Binding: b, Rule: "Agent request",
 			Title: summary, Detail: detail, Agent: s.agent.Name, TaskID: l.task.id, DeviceName: l.dev.name(),
 			App: g.appName(l.dev), Screenshot: shot})
+		if res := g.afterOpen(l, info); res != nil {
+			return g.finish(l, res)
+		}
 		g.openStep(l, info, "phone_request_approval", argsJSON(map[string]any{"summary": summary, "details": req.Details}),
 			fmt.Sprintf("Asked you: “%s”", summary), screen.Rect{}, screen.Point{}, "")
 	} else {
 		info, _ = g.approvals.Get(id)
 	}
 	out, err := g.waitApproval(ctx, l, info.ID, info, req.Progress)
+	if errors.Is(err, errTaken) {
+		return g.finish(l, takenResult(info.ID))
+	}
 	if err != nil {
 		return g.finish(l, g.cancelled(l, info.ID))
 	}
@@ -1041,12 +1071,18 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 			l.unlockHandoffs = append(l.unlockHandoffs, info.ID)
 		}
 		g.mu.Unlock()
+		if res := g.afterOpen(l, info); res != nil {
+			return g.finish(l, res)
+		}
 		g.openStep(l, info, "phone_handoff", argsJSON(map[string]any{"reason": reason}),
 			fmt.Sprintf("Asked you to take over: %s", reason), screen.Rect{}, screen.Point{}, "")
 	} else {
 		info, _ = g.approvals.Get(id)
 	}
 	out, err := g.waitApproval(ctx, l, info.ID, info, req.Progress)
+	if errors.Is(err, errTaken) {
+		return g.finish(l, takenResult(info.ID))
+	}
 	if err != nil {
 		return g.finish(l, g.cancelled(l, info.ID))
 	}

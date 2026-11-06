@@ -260,3 +260,19 @@ func TestFilterEvents(t *testing.T) {
 		t.Fatalf("code not masked: %q", got[0].Text)
 	}
 }
+
+func TestAsksListsEveryRule(t *testing.T) {
+	e := Default()
+	v := e.Evaluate(Input{Op: OpTap, App: settings, Target: button("Erase all data")})
+	if v.Decision != Ask || len(v.Asks) < 2 || v.Asks[0] != v.Rule {
+		t.Fatalf("erase in Settings: %+v", v)
+	}
+	v = e.Evaluate(Input{Op: OpType, App: whatsapp, Text: "x", Submit: true, TaskApps: []string{"Chatter"},
+		Target: &screen.Element{Role: screen.RoleInput, Label: "Message"}})
+	if v.Decision != Ask || v.Rule != "Messages" || len(v.Asks) != 2 || v.Asks[1] != RuleTaskApps {
+		t.Fatalf("send outside the task's apps: %+v", v)
+	}
+	if v := e.Evaluate(tap(dinely, "Orders")); len(v.Asks) != 0 {
+		t.Fatalf("allowed action lists asks: %+v", v)
+	}
+}

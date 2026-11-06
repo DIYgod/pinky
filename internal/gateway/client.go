@@ -74,8 +74,11 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		}
 		return DeviceLocked, "Locked"
 	}
-	if d.person && l != nil {
-		return DeviceInControl, "You're in control · " + l.session.agent.Name + " is paused"
+	if d.person {
+		if l != nil {
+			return DeviceInControl, "You're in control · " + l.session.agent.Name + " is paused"
+		}
+		return DeviceInControl, "You're in control"
 	}
 	if l != nil {
 		return DeviceWorking, l.session.agent.Name + " · " + l.task.title
@@ -253,6 +256,21 @@ func (g *Gateway) Unlock(deviceID string) error {
 		return err
 	}
 	g.checkLock(ctx, d)
+	if _, ok := dev.(driver.LockReporter); !ok {
+		g.observe(ctx, d, false)
+	}
+	// The person unlocked from the computer: handoffs the agent opened for
+	// the lock are answered.
+	g.mu.Lock()
+	var ids []string
+	if !d.locked && d.lease != nil {
+		ids = d.lease.unlockHandoffs
+		d.lease.unlockHandoffs = nil
+	}
+	g.mu.Unlock()
+	for _, id := range ids {
+		_ = g.approvals.Decide(id, approval.AllowOnce, "The phone was unlocked.")
+	}
 	return nil
 }
 
@@ -277,35 +295,47 @@ func (g *Gateway) TakeOver(deviceID string) error {
 	return nil
 }
 
+// takeOver puts the person in control. Input on the mirror (byInput) does
+// so only while an agent task runs; without one it is ordinary use. The
+// Take over button always does, and control stays with the person until
+// HandBack, across leases.
 func (g *Gateway) takeOver(d *device, byInput bool) {
 	g.mu.Lock()
 	l := d.lease
-	if l == nil {
+	if l == nil && byInput {
 		g.mu.Unlock()
 		return
 	}
 	changed := !d.person
 	if changed {
 		d.person = true
-		l.tookOverSeen = false
-		l.handedBack, l.handBackNote = false, ""
-		l.task.state = TaskPaused
-		g.recordTaskLocked(l.task)
+		if l != nil {
+			l.tookOverSeen = false
+			l.handedBack, l.handBackNote = false, ""
+			l.task.state = TaskPaused
+			g.recordTaskLocked(l.task)
+		}
 		g.wakeLocked(d)
 	}
 	if byInput {
 		d.personInput = true
 	}
-	g.mu.Unlock()
-	if !changed {
-		return
+	if d.inflight != nil {
+		d.inflight()
 	}
+	g.mu.Unlock()
+	// Withdraw open approvals even when the person was already in control:
+	// one may have opened in the meantime.
 	gone := g.approvals.WithdrawWhere(func(i approval.Info) bool {
 		return i.Binding.Device == d.id && i.Kind != approval.KindHandoff
 	}, reasonTookOver)
 	g.closePendingSteps(gone, string(StatusTookOver))
-	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
-	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
+	if changed {
+		g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+		if l != nil {
+			g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
+		}
+	}
 }
 
 // HandBack implements API: control returns to the agent, and a waiting
@@ -316,12 +346,14 @@ func (g *Gateway) HandBack(deviceID, note string) error {
 		return err
 	}
 	g.mu.Lock()
+	d.person, d.personInput = false, false
 	l := d.lease
 	if l == nil {
+		g.wakeLocked(d)
 		g.mu.Unlock()
+		g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 		return nil
 	}
-	d.person, d.personInput = false, false
 	if l.task.ended.IsZero() {
 		l.task.state = TaskWorking
 		g.recordTaskLocked(l.task)
@@ -471,9 +503,6 @@ func (g *Gateway) personInput(deviceID string) (*device, driver.Device, error) {
 	}
 	g.takeOver(d, true)
 	g.mu.Lock()
-	if d.lease != nil {
-		d.personInput = true
-	}
 	dev := d.dev
 	g.mu.Unlock()
 	if dev == nil {

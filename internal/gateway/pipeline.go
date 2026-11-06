@@ -276,6 +276,9 @@ type prep struct {
 	url    bool
 	input  policy.Input
 	desc   string // plain-language description for history
+	// decider is the element whose verdict decided, which may enclose the
+	// target (a Pay button around a price label).
+	decider *screen.Element
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -310,7 +313,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		g.recordRefusal(l, c, a, p, res)
 		return res
 	}
-	v := g.policy.Evaluate(p.input)
+	v := g.evaluate(p, cur)
 	switch v.Decision {
 	case policy.Deny:
 		d.act.Unlock()
@@ -318,15 +321,52 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		g.recordRefusal(l, c, a, p, res)
 		return res
 	case policy.Ask:
-		if !g.granted(l, v.Rule) {
-			info := g.ask(ctx, l, c, a, p, v, cur)
+		if !g.granted(l, v, p) {
+			info, res := g.ask(ctx, l, c, a, p, v, cur)
 			d.act.Unlock()
+			if res != nil {
+				return res
+			}
 			return g.awaitApproval(ctx, l, c, a, info)
 		}
 	}
 	res = g.execute(ctx, l, c, a, p, cur, -1)
 	d.act.Unlock()
 	return res
+}
+
+// evaluate runs the policy on the action. A tap or swipe is checked
+// against every element under the finger, not only the smallest one, so a
+// price label inside a Pay button still counts as tapping Pay. The
+// strictest verdict wins; p.decider records which element decided.
+func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
+	v := g.policy.Evaluate(p.input)
+	p.decider = p.target
+	var pt screen.Point
+	switch p.input.Op {
+	case policy.OpTap:
+		pt = p.point
+	case policy.OpSwipe:
+		pt = p.from
+	default:
+		return v
+	}
+	for i := range cur.Elements {
+		e := cur.Elements[i]
+		if e.Source == screen.SourceOCR || e.Bounds.Empty() || !e.Bounds.Contains(pt) {
+			continue
+		}
+		if p.target != nil && e.Ref == p.target.Ref && e.Ref != 0 {
+			continue
+		}
+		in := p.input
+		in.Target = &e
+		if w := g.policy.Evaluate(in); w.Decision > v.Decision {
+			v = w
+			p.decider = &e
+		}
+	}
+	return v
 }
 
 func refusal(v policy.Verdict) *Result {
@@ -340,10 +380,30 @@ func refusal(v policy.Verdict) *Result {
 	return &Result{Status: StatusBlocked, Rule: v.Rule, Message: msg + " Nothing was done. Choose another way, or ask the person."}
 }
 
-func (g *Gateway) granted(l *lease, rule string) bool {
+// granted reports whether the person allowed, for the rest of the task,
+// every rule that asked about this action, in this app.
+func (g *Gateway) granted(l *lease, v policy.Verdict, p *prep) bool {
+	if len(v.Asks) == 0 {
+		return false
+	}
+	app := grantApp(p)
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	return rule != "" && l.grants[rule]
+	for _, r := range v.Asks {
+		if !l.grants[grantKey(r, app)] {
+			return false
+		}
+	}
+	return true
+}
+
+// grantApp is the app a task grant applies to: the app being opened for
+// phone_launch, else the foreground app.
+func grantApp(p *prep) screen.App {
+	if p.input.Op == policy.OpLaunch {
+		return p.input.Launch
+	}
+	return p.input.App
 }
 
 // prepare resolves refs, points and apps against the current screen and
@@ -413,6 +473,10 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			p.target, p.point, p.hasPt = e, e.Bounds.Center(), true
 		} else if f, ok := cur.Focused(); ok {
 			p.target = &f
+		} else if credentialOnScreen(cur) {
+			// The focused field is unknown and might be the password field.
+			return p, &Result{Status: StatusBlocked, Rule: policy.RuleCredentials,
+				Message: "This screen has a password or code field and Pinky cannot tell which field has focus. Nothing was done. Pass ref to type into a specific field, or call phone_handoff for credentials."}
 		}
 	case "swipe":
 		p.input.Op = policy.OpSwipe
@@ -456,6 +520,16 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	p.input.Target = p.target
 	p.desc = describe(a, p)
 	return p, nil
+}
+
+func credentialOnScreen(s *screen.Screen) bool {
+	for i := range s.Elements {
+		e := &s.Elements[i]
+		if (e.Role == screen.RoleInput || e.Has(screen.StateEditable)) && policy.IsCredentialField(e) {
+			return true
+		}
+	}
+	return false
 }
 
 // swipeLine returns a swipe across the middle of area, where direction is
@@ -560,15 +634,15 @@ func matchApp(apps []driver.App, name string) (driver.App, bool) {
 }
 
 // ask opens an approval for an action and records the waiting step.
-func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, v policy.Verdict, cur *screen.Screen) approval.Info {
-	var shot image.Image
-	if dev := g.driverOf(l.dev); dev != nil {
-		shot, _ = dev.Screenshot(ctx)
-	}
+func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, v policy.Verdict, cur *screen.Screen) (approval.Info, *Result) {
+	shot, _ := g.screenshot(ctx, l.dev, cur)
 	target := screen.Rect{}
-	if p.target != nil {
+	switch {
+	case p.decider != nil:
+		target = p.decider.Bounds
+	case p.target != nil:
 		target = p.target.Bounds
-	} else if p.hasPt {
+	case p.hasPt:
 		target = screen.Rect{X: p.point.X - 24, Y: p.point.Y - 24, W: 48, H: 48}
 	}
 	detail := l.session.agent.Name
@@ -580,14 +654,48 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	info := g.approvals.Open(approval.Request{
 		Kind: approval.KindAction, Binding: g.binding(l, a), Rule: v.Rule, Title: approvalTitle(a, p, v),
 		Detail: detail, App: appLabel(cur.App), Agent: l.session.agent.Name, TaskID: l.task.id,
-		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Data: takeSnapshot(cur, p),
+		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Data: takeSnapshot(cur, p, v),
 	})
+	if res := g.afterOpen(l, info); res != nil {
+		return info, res
+	}
 	before := ""
 	if shot != nil {
 		before = g.storeShot(l.dev, cur, shot)
 	}
 	g.openStep(l, info, "phone_"+a.Tool, a.args(c), "Waiting for you: "+p.desc, target, p.point, before)
-	return info
+	return info, nil
+}
+
+// afterOpen checks a just-opened approval against what happened while it
+// was being prepared: a Stop or a takeover in that moment could not
+// withdraw it yet, so it is withdrawn here.
+func (g *Gateway) afterOpen(l *lease, info approval.Info) *Result {
+	g.mu.Lock()
+	ended, by := l.ended, l.endedBy
+	person := l.dev.person && info.Kind != approval.KindHandoff
+	if person {
+		l.tookOverSeen = true
+	}
+	g.mu.Unlock()
+	switch {
+	case ended:
+		g.approvals.Withdraw(info.ID, by)
+		return statusResult(StatusStopped, "The lease ended (%s). Nothing was done.", by)
+	case person:
+		g.approvals.Withdraw(info.ID, reasonTookOver)
+		return g.withCurrentScreen(l, statusResult(StatusTookOver,
+			"The person took over the phone. Nothing was done. Call phone_handoff to wait for control and their note."))
+	}
+	return nil
+}
+
+// errTaken means another call with the same approval id received the
+// decision.
+var errTaken = errors.New("approval taken by another call")
+
+func takenResult(id string) *Result {
+	return errResult(ErrInvalidArgument, "Another call with approval_id %s received the decision; this one did nothing.", id)
 }
 
 func (g *Gateway) binding(l *lease, a Action) approval.Binding {
@@ -596,7 +704,10 @@ func (g *Gateway) binding(l *lease, a Action) approval.Binding {
 
 func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 	label := ""
-	if p.target != nil {
+	switch {
+	case p.decider != nil:
+		label = p.decider.Label
+	case p.target != nil:
 		label = p.target.Label
 	}
 	switch {
@@ -670,6 +781,9 @@ func (g *Gateway) appName(d *device) string {
 // allow it.
 func (g *Gateway) awaitApproval(ctx context.Context, l *lease, c Call, a Action, info approval.Info) *Result {
 	out, err := g.waitApproval(ctx, l, info.ID, info, c.Progress)
+	if errors.Is(err, errTaken) {
+		return takenResult(info.ID)
+	}
 	if err != nil {
 		return g.cancelled(l, info.ID)
 	}
@@ -683,9 +797,11 @@ func (g *Gateway) awaitApproval(ctx context.Context, l *lease, c Call, a Action,
 	g.recordDecision(info, out)
 	switch {
 	case out.Decision.Allows():
-		if out.Decision != approval.AllowOnce && info.Rule != "" {
+		if snap, ok := info.Data.(*snapshot); ok && out.Decision != approval.AllowOnce {
 			g.mu.Lock()
-			l.grants[info.Rule] = true
+			for _, r := range snap.asks {
+				l.grants[grantKey(r, snap.grantApp)] = true
+			}
 			g.mu.Unlock()
 		}
 		return g.runApproved(ctx, l, c, a, info, out)
@@ -726,13 +842,17 @@ func (g *Gateway) waitApproval(ctx context.Context, l *lease, id string, info ap
 		if err != nil {
 			if l != nil {
 				g.mu.Lock()
-				ended := l.ended
+				ended, by := l.ended, l.endedBy
 				g.mu.Unlock()
 				if ended {
-					return approval.Outcome{State: approval.Withdrawn, Reason: OutcomeStopped}, nil
+					g.approvals.Withdraw(id, by)
+					return approval.Outcome{State: approval.Withdrawn, Reason: by}, nil
 				}
 			}
-			if errors.Is(err, approval.ErrUsed) || errors.Is(err, approval.ErrExpired) || errors.Is(err, approval.ErrUnknown) {
+			if errors.Is(err, approval.ErrUsed) {
+				return out, errTaken
+			}
+			if errors.Is(err, approval.ErrExpired) || errors.Is(err, approval.ErrUnknown) {
 				return approval.Outcome{State: approval.Withdrawn, Reason: "expired"}, nil
 			}
 			return out, err
@@ -822,17 +942,14 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 	d.act.Lock()
 	defer d.act.Unlock()
 	if res := g.gate(l, info.ID, true); res != nil {
-		status := string(res.Status)
-		if res.Error != "" {
-			status = string(res.Error)
-		}
-		g.closeStep(info.ID, status, out.Waited)
+		g.closeStep(info.ID, notRunStatus(res), out.Waited)
 		return res
 	}
 	cur, err := g.observe(ctx, d, false)
 	if err != nil {
-		g.closeStep(info.ID, string(StatusUncertain), out.Waited)
-		return g.readError(l, err)
+		res := g.readError(l, err)
+		g.closeStep(info.ID, notRunStatus(res), out.Waited)
+		return res
 	}
 	if cur.Locked {
 		g.closeStep(info.ID, string(StatusLocked), out.Waited)
@@ -846,10 +963,10 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 		return g.attachScreen(l, statusResult(StatusStale,
 			"The screen changed while the approval waited, so nothing was done. Observe and decide again."), cur)
 	}
-	v := g.policy.Evaluate(p.input)
+	v := g.evaluate(p, cur)
 	if v.Decision == policy.Deny {
 		res := refusal(v)
-		g.closeStep(info.ID, string(res.Status), out.Waited)
+		g.closeStep(info.ID, notRunStatus(res), out.Waited)
 		return res
 	}
 	g.mu.Lock()
@@ -871,6 +988,30 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 	return res
 }
 
+// notRunStatus is the step status for an approved action that did not run.
+func notRunStatus(res *Result) string {
+	switch {
+	case res.Error != "":
+		return string(res.Error)
+	case res.Status == StatusPending:
+		return "cancelled"
+	}
+	return string(res.Status)
+}
+
+// preflight checks, right before the driver acts, that nothing changed
+// since the gate: the lease is still there, the person did not take over,
+// no approval opened and the call was not cancelled.
+func (g *Gateway) preflight(ctx context.Context, l *lease) *Result {
+	if res := g.gate(l, "", true); res != nil {
+		return res
+	}
+	if ctx.Err() != nil {
+		return errResult(ErrInternal, "The call was cancelled. Nothing was done.")
+	}
+	return nil
+}
+
 // execute performs an allowed action, settles, reads the screen and records
 // the step. It runs with d.act held. step is the index of a step opened by
 // an approval, or -1.
@@ -878,11 +1019,28 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	d := l.dev
 	start := time.Now()
 	before := g.shot(ctx, d, cur)
-	dev := g.driverOf(d)
-	if dev == nil {
-		return errResult(ErrDeviceOffline, "%s is offline. Nothing was done.", d.name())
+	if res := g.preflight(ctx, l); res != nil {
+		g.recordStep(l, step, a, c, p, res, start, before, "", "")
+		return res
 	}
-	if err := g.perform(ctx, dev, a, p); err != nil {
+	// The person taking over cancels the driver call in progress.
+	actx, cancel := context.WithCancel(ctx)
+	g.mu.Lock()
+	dev := d.dev
+	d.inflight = cancel
+	g.mu.Unlock()
+	if dev == nil {
+		cancel()
+		res := errResult(ErrDeviceOffline, "%s is offline. Nothing was done.", d.name())
+		g.recordStep(l, step, a, c, p, res, start, before, "", "")
+		return res
+	}
+	err := g.perform(actx, dev, a, p)
+	g.mu.Lock()
+	d.inflight = nil
+	g.mu.Unlock()
+	cancel()
+	if err != nil {
 		res := g.actionError(l, err)
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
@@ -994,6 +1152,10 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	}
 	d.refs.Assign(s)
 	evs := g.policy.FilterEvents(s.Events)
+	if _, blocked := g.policy.Blocked(s.App); blocked {
+		// Toasts and dialogs on a blocked app's screen are the app's own.
+		evs = notificationsOnly(evs)
+	}
 	s.Events = nil
 	g.mu.Lock()
 	d.events = append(d.events, evs...)
@@ -1007,6 +1169,45 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		g.setLocked(d, s.Locked)
 	}
 	return s, nil
+}
+
+func notificationsOnly(evs []screen.Event) []screen.Event {
+	var keep []screen.Event
+	for _, ev := range evs {
+		if ev.Kind == screen.EventNotification {
+			keep = append(keep, ev)
+		}
+	}
+	return keep
+}
+
+// errScreenChanged means the screen changed while a screenshot was taken.
+var errScreenChanged = errors.New("the screen changed while the screenshot was taken")
+
+// screenshot takes a screenshot of the screen s describes. It reads the
+// screen again afterwards and drops the image when the foreground app
+// changed or is blocked, so a blocked app that comes to the front in
+// between is never captured.
+func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (image.Image, error) {
+	dev := g.driverOf(d)
+	if dev == nil {
+		return nil, driver.ErrOffline
+	}
+	if _, blocked := g.policy.Blocked(s.App); blocked {
+		return nil, errScreenChanged
+	}
+	img, err := dev.Screenshot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	after, err := g.observe(ctx, d, false)
+	if err != nil {
+		return nil, err
+	}
+	if _, blocked := g.policy.Blocked(after.App); blocked || after.App != s.App {
+		return nil, errScreenChanged
+	}
+	return img, nil
 }
 
 // agentView hides a blocked app's screen.
@@ -1030,14 +1231,7 @@ func (g *Gateway) screenResult(l *lease, raw *screen.Screen, full bool) *Result 
 	evs := d.events
 	d.events = nil
 	if rule != "" {
-		// Toasts and dialogs belong to the blocked foreground app.
-		var keep []screen.Event
-		for _, ev := range evs {
-			if ev.Kind == screen.EventNotification {
-				keep = append(keep, ev)
-			}
-		}
-		evs = keep
+		evs = notificationsOnly(evs)
 	}
 	view.Events = evs
 	prev := l.baseline
@@ -1113,10 +1307,14 @@ type snapshot struct {
 	target *screen.Element
 	point  screen.Point
 	text   []string
+	// asks and grantApp say what "Allow for this task" grants.
+	asks     []string
+	grantApp screen.App
 }
 
-func takeSnapshot(s *screen.Screen, p *prep) *snapshot {
-	snap := &snapshot{app: s.App.ID + "\x00" + s.App.Name, point: p.point, text: screenText(s)}
+func takeSnapshot(s *screen.Screen, p *prep, v policy.Verdict) *snapshot {
+	snap := &snapshot{app: s.App.ID + "\x00" + s.App.Name, point: p.point, text: screenText(s),
+		asks: append([]string(nil), v.Asks...), grantApp: grantApp(p)}
 	if p.target != nil {
 		t := *p.target
 		snap.target = &t
@@ -1135,7 +1333,7 @@ func (snap *snapshot) changed(cur *screen.Screen, p *prep) bool {
 	}
 	if snap.target != nil {
 		a, b := snap.target, p.target
-		if a.Role != b.Role || a.Label != b.Label || !near(a.Bounds, b.Bounds) {
+		if a.Role != b.Role || a.Label != b.Label || !near(a.Bounds, b.Bounds) || states(*a) != states(*b) {
 			return true
 		}
 	}
@@ -1166,18 +1364,38 @@ func near(a, b screen.Rect) bool {
 	return abs(a.X-b.X) <= tol && abs(a.Y-b.Y) <= tol && abs(a.W-b.W) <= tol && abs(a.H-b.H) <= tol
 }
 
-// screenText lists the labels of tree elements outside the status bar,
-// sorted.
+// screenText lists the labels and states of tree elements outside the
+// status bar, sorted. A screen with no tree text (a canvas app) uses its
+// OCR text instead.
 func screenText(s *screen.Screen) []string {
-	var out []string
+	var out, ocr []string
 	for _, e := range s.Elements {
-		if e.Source == screen.SourceOCR || e.Label == "" || inStatusBar(s, e) {
+		if e.Label == "" || inStatusBar(s, e) {
 			continue
 		}
-		out = append(out, e.Role+"\x00"+e.Label)
+		if e.Source == screen.SourceOCR {
+			ocr = append(ocr, e.Label)
+			continue
+		}
+		out = append(out, e.Role+"\x00"+e.Label+"\x00"+states(e))
+	}
+	if len(out) == 0 {
+		out = ocr
 	}
 	sort.Strings(out)
 	return out
+}
+
+// states lists an element's states except focus, which a tap changes.
+func states(e screen.Element) string {
+	var out []string
+	for _, st := range e.States {
+		if st != screen.StateFocused {
+			out = append(out, st)
+		}
+	}
+	sort.Strings(out)
+	return strings.Join(out, ",")
 }
 
 func inStatusBar(s *screen.Screen, e screen.Element) bool {

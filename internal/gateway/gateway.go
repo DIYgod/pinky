@@ -245,7 +245,7 @@ func (g *Gateway) discover(ctx context.Context) {
 				wg.Add(1)
 				go func() {
 					defer wg.Done()
-					g.open(ctx, d)
+					g.open(ctx, d, p)
 				}()
 			}
 		}
@@ -295,8 +295,8 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	return nil
 }
 
-func (g *Gateway) open(ctx context.Context, d *device) {
-	dev, err := d.provider.Open(ctx, d.id)
+func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
+	dev, err := p.Open(ctx, d.id)
 	g.mu.Lock()
 	d.opening = false
 	if err != nil || g.closed {
@@ -382,8 +382,8 @@ func (g *Gateway) expireIdle() {
 }
 
 // pollLocks asks lock-reporting drivers about devices that have an agent.
-// A device waiting to be unlocked whose driver cannot report locks is read
-// instead, so a handoff for the unlock still ends when the person unlocks.
+// A locked device whose driver cannot report locks is read instead, so the
+// unlock card goes away when the person unlocks.
 func (g *Gateway) pollLocks(ctx context.Context) {
 	g.mu.Lock()
 	var report, read []*device
@@ -393,7 +393,7 @@ func (g *Gateway) pollLocks(ctx context.Context) {
 		}
 		if _, ok := d.dev.(driver.LockReporter); ok {
 			report = append(report, d)
-		} else if d.locked && len(d.lease.unlockHandoffs) > 0 {
+		} else if d.locked {
 			read = append(read, d)
 		}
 	}
@@ -423,7 +423,10 @@ func (g *Gateway) checkLock(ctx context.Context, d *device) {
 	g.setLocked(d, locked)
 }
 
-// setLocked records the lock state and updates Needs.
+// setLocked records the lock state and updates Needs. An unlock seen on
+// the phone does not end a handoff by itself: the person may unlock to do
+// what the agent asked, so they hand back explicitly. Unlock from the
+// computer does end the handoffs opened for the lock (see Unlock).
 func (g *Gateway) setLocked(d *device, locked bool) {
 	g.mu.Lock()
 	if d.locked == locked {
@@ -432,15 +435,7 @@ func (g *Gateway) setLocked(d *device, locked bool) {
 	}
 	d.locked = locked
 	g.wakeLocked(d)
-	var unlockHandoffs []string
-	if !locked && d.lease != nil {
-		unlockHandoffs = d.lease.unlockHandoffs
-		d.lease.unlockHandoffs = nil
-	}
 	g.mu.Unlock()
-	for _, id := range unlockHandoffs {
-		_ = g.approvals.Decide(id, approval.AllowOnce, "The phone was unlocked.")
-	}
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	g.emit(Event{Kind: EventNeeds, DeviceID: d.id})
 }

@@ -129,14 +129,25 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		ln.Close()
 	}()
 	var err error
+	backoff := 5 * time.Millisecond
 	for {
 		c, aerr := ln.Accept()
 		if aerr != nil {
-			if ctx.Err() == nil && !errors.Is(aerr, net.ErrClosed) {
-				err = aerr
+			if ctx.Err() != nil || errors.Is(aerr, net.ErrClosed) {
+				break
 			}
-			break
+			// Out of file descriptors and the like: wait and keep serving.
+			s.Log.Warn("accept failed", "err", aerr)
+			select {
+			case <-time.After(backoff):
+			case <-ctx.Done():
+			}
+			if backoff < time.Second {
+				backoff *= 2
+			}
+			continue
 		}
+		backoff = 5 * time.Millisecond
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()

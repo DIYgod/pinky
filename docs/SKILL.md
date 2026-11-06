@@ -45,7 +45,7 @@ The first line of every result is its status (or `error: <code>`), with details 
 | `approval_denied` | The person said no, or nobody answered in time | Read `note`; do not try the same thing another way |
 | `blocked_by_policy` | A rule refused it; the result names the rule | Choose another way, or ask the person with `phone_request_approval` |
 | `stale` | The screen changed while the approval waited; nothing happened | Observe and decide again |
-| `user_took_over` / `paused` | The person is using the phone | `phone_handoff` to wait for control and their note |
+| `user_took_over` / `paused` | The person is using the phone (`phone_connect` can return `paused` too) | `phone_handoff` to wait for control and their note |
 | `device_locked` | The phone is locked | `phone_handoff { reason: "Please unlock the phone" }` |
 | `stopped` | The person pressed Stop; your lease is gone | End the task. Do not reconnect |
 

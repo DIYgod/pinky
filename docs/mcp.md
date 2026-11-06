@@ -91,7 +91,7 @@ Leases a phone for a task and returns its first screen.
 | `device` | string | Optional when exactly one phone is online, or the session already holds one |
 | `apps` | string[] | Optional app allow-list for the task (names or ids). Launching another app returns `scope_denied`; typing into one asks the person. Launchers and system UI are always allowed |
 
-The first connection of an agent the person has not approved yet returns `approval_pending` (rule `New agent`); repeat with `approval_id`. Another session's phone returns `lease_held`. Calling again with the same task keeps the lease; another task name ends the previous task (outcome `replaced`) and starts a new one. After the person pressed Stop, the session cannot connect to that phone again.
+The first connection of an agent the person has not approved yet returns `approval_pending` (rule `New agent`); repeat with `approval_id`. Another session's phone returns `lease_held`. Calling again with the same task keeps the lease; another task name ends the previous task (outcome `replaced`) and starts a new one. After the person pressed Stop, the session cannot connect to that phone again. While the person is in control of the phone (they took over and have not handed back, whichever task was running), the lease starts paused and the result is `paused`: call `phone_handoff`.
 
 ### phone_release
 
@@ -122,6 +122,8 @@ Works while the person is in control and while an approval is open.
 | `x`, `y` | integers | A point instead of a ref (both or neither) |
 | `long_press` | boolean | Press and hold |
 
+The policy checks every element under the finger, not only the smallest: tapping a price label inside a Pay button counts as tapping Pay.
+
 ### phone_type
 
 | Argument | Type | Meaning |
@@ -131,7 +133,7 @@ Works while the person is in control and while an approval is open.
 | `append` | boolean | Keep the field's text |
 | `submit` | boolean | Press Enter afterwards |
 
-Typing into password and one-time-code fields is always refused (`blocked_by_policy`, rule `credentials`).
+Typing into password and one-time-code fields is always refused (`blocked_by_policy`, rule `credentials`). So is typing without `ref` when no field reports focus and the screen has such a field.
 
 ### phone_swipe
 
@@ -204,7 +206,7 @@ Returns `settled` with `decision: allow`, or `approval_denied`, with the person'
 | --- | --- | --- |
 | `reason` | string, required | What the person should do |
 
-Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone is locked ends by itself when the phone unlocks. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
+Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer; after an unlock on the phone itself, the person hands back explicitly. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
 
 ## Approvals
 
@@ -213,7 +215,8 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 - After 45 s the call returns `approval_pending` with the id. The panel stays open. A decision made while no call waits is kept for the next call with that id, for as long as the timeout again; later the id is gone and a call with it asks anew.
 - The id is single-use and bound to the session, device, lease, tool and arguments (`intent` excluded). Another call with it returns `invalid_argument`.
 - While an approval is open on a phone, other actions on it return `approval_pending` with that approval's id; reads still work.
-- Before acting on Allow, Pinky reads the screen again and compares the target's role, label and position (a few pixels of tolerance) and the screen text (status bar and OCR excluded). Any change returns `stale`.
+- Before acting on Allow, Pinky reads the screen again and compares the target's role, label, states and position (a few pixels of tolerance) and the screen's text and states (status bar excluded; OCR text only when the screen has no element text). Any change returns `stale`.
+- "Allow for this task" covers the rules that asked, in that app, for the rest of the task. An action that another rule also asks about still asks.
 - An MCP cancellation of the blocked call, a closed session, Stop and Take over all withdraw the panel without acting.
 - Only the client's `Decide` answers approvals. No tool can.
 

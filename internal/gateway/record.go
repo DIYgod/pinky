@@ -30,12 +30,8 @@ func (g *Gateway) shot(ctx context.Context, d *device, s *screen.Screen) string 
 		g.mu.Unlock()
 		return id
 	}
-	dev := d.dev
 	g.mu.Unlock()
-	if dev == nil {
-		return ""
-	}
-	img, err := dev.Screenshot(ctx)
+	img, err := g.screenshot(ctx, d, s)
 	if err != nil {
 		return ""
 	}
@@ -173,7 +169,9 @@ func (g *Gateway) openStep(l *lease, info approval.Info, tool, args, text string
 	idx := g.addStepLocked(t, StepView{Text: text, Tool: tool, Args: args, Status: string(StatusPending), At: info.Created,
 		Before: before, Target: target, Point: point}, "", "")
 	t.approvals++
-	t.state = TaskWaiting
+	if t.ended.IsZero() && t.state == TaskWorking {
+		t.state = TaskWaiting
+	}
 	g.apSteps[info.ID] = stepRef{task: t, index: idx, tool: tool, args: args, start: info.Created}
 	g.recordTaskLocked(t)
 	if g.store != nil {
@@ -306,9 +304,12 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 	l.ended, l.endedBy = true, outcome
 	d := l.dev
 	if d.lease == l {
+		// Person control stays with the device until HandBack.
 		d.lease = nil
-		d.person, d.personInput = false, false
 		d.events = nil
+		if d.inflight != nil {
+			d.inflight()
+		}
 	}
 	if l.session.leases[d.id] == l {
 		delete(l.session.leases, d.id)
