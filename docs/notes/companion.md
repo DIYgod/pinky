@@ -2,7 +2,7 @@
 
 The companion is a small Kotlin app with an accessibility service, plus its Go client. It gives the Android driver a fast element tree, events (window changes, toasts, notifications, content changes), text input with `ACTION_SET_TEXT` and a settle signal. The wire protocol is in [companion-protocol.md](companion-protocol.md).
 
-Status, 2026-11-07: built and tested on the Pixel (Android 10) and on an Android 16 emulator. **Not verified on the Mi 10 Pro**: installing the APK there brought up a Google Play Protect dialog, and per the safety rules nobody answered it (see [What does not work yet](#what-does-not-work-yet)).
+Status, 2026-11-07: built and tested on the Pixel (Android 10), the Mi 10 Pro (Android 17) and an Android 16 emulator. The Mi 10 Pro runs the build from 01:43, before the last fixes (toast text, an API-level guard, the themed icon), because installing a new build there makes Google Play Protect ask the owner again (see [What does not work yet](#what-does-not-work-yet)).
 
 ## What is where
 
@@ -78,9 +78,22 @@ The device test installs the APK if it changed, turns the service on, reads Sett
 | Events | Toast with CJK text, notification (title and text) |
 | Tree time, phone side | Settings 53 to 60 ms when the screen has not changed, 167 ms on the first read after it changed; Calculator 42 to 46 ms |
 
+### Mi 10 Pro (3e8be48e), LineageOS, Android 17
+
+Checked with `companionctl` against the build installed at 01:43, without reinstalling.
+
+| Check | Result |
+| --- | --- |
+| Enable, Disable | `enabled_accessibility_services` was the owner's `com.wangzan101.mika/.a11y.MikaAccessibilityService`, became `…MikaAccessibilityService:app.pinky.companion/.PinkyAccessibilityService` during the run and went back to exactly the original text |
+| Tree: Settings | 12 elements ("网络和互联网, 移动网络、WLAN、热点", …), 397 ms on the first read after the launch |
+| Tree: Calculator | 37 elements (scientific keys included: "平方根", "正弦", digits, "等于"), 121 ms |
+| `set_text` into the debug page | "你好，Pinky 世界 🎉" verified; the debug page's echo (another process) shows 13 characters |
+| Toast event | Arrives, but this build reports "Toast 测试 ✓ Pinky Companion": SystemUI adds the app's name, which the current build drops (fixed and tested on the emulator) |
+| Other accessibility services | Mika's floating button is an accessibility overlay window and shows up as `button "Mika"` above the app, as on screen |
+
 ### Android 16 emulator (API 36, Google Play image, arm64 on the Mac)
 
-The Pixel lost power before the final test run and the Mi 10 Pro was blocked, so the device test suite ran on a temporary emulator (created for this, then deleted).
+The Pixel went offline before the final test run, and a new build cannot go onto the Mi 10 Pro without Play Protect asking, so the full device test suite ran on a temporary emulator (created for this, then deleted).
 
 | Check | Result |
 | --- | --- |
@@ -100,9 +113,10 @@ Round trip from the computer: the companion's time includes adb forwarding and J
 | Pixel, Android 10 | Settings | median 70 ms (phone side 63 ms), 31 nodes | median 2118 ms (min 1983, max 2892), 33 nodes | 30x |
 | Emulator, Android 16 | Settings | median 4 ms (phone side 2 ms), 29 nodes | median 1975 ms (min 1946, max 2004), 63 nodes | ~500x |
 | Emulator, Android 16 | Launcher | median 6 ms, 15 nodes | median 1956 ms, 30 nodes | ~300x |
-| Mi 10 Pro, Android 17 | | not measured (blocked) | not measured | |
+| Mi 10 Pro, Android 17 | Settings | median 29 ms (phone side 24 ms), 36 nodes | median 2402 ms (min 2344, max 2451), 70 nodes | 83x |
+| Mi 10 Pro, Android 17 | Calculator | median 30 ms (phone side 25 ms), 41 nodes | median 2314 ms (min 2286, max 2337), 50 nodes | 77x |
 
-`uiautomator dump` pays about 2 s for starting `app_process`, connecting a UiAutomation and waiting for the app to go idle, whatever the screen. The companion pays one round trip to the app for the root of each window (20 to 40 ms on the Pixel, under 1 ms on the emulator) and reads the rest from Android's node cache. By default it walks only views that are important for accessibility; `uiautomator dump` walks all views, which roughly doubles the node count but adds no labels or actions.
+`uiautomator dump` pays about 2 s for starting `app_process`, connecting a UiAutomation and waiting for the app to go idle, whatever the screen. The companion pays one round trip to the app for the root of each window it walks (20 to 40 ms on the Pixel, under 1 ms on the emulator; the whole tree takes about 25 ms on the Mi 10 Pro) and reads the rest from Android's node cache. By default it walks only views that are important for accessibility; `uiautomator dump` walks all views, which roughly doubles the node count but adds no labels or actions.
 
 ## Decisions
 
@@ -124,8 +138,8 @@ Round trip from the computer: the companion's time includes adb forwarding and J
 
 ## What does not work yet
 
-- **Mi 10 Pro not verified.** `adb install -r` there opened Google Play Protect's "Send app for a security check?" dialog (always send / send this time / don't send) at about 01:44, and the install waits for it. Per the safety rules it was left alone and the phone was not used again; the Android driver session was told. The owner needs to answer it once; after that, `install` skips unchanged APKs, so it should not come back for the same build. The companion was never enabled there, and `enabled_accessibility_services` there is unchanged (the owner's Mika service). To finish: answer the dialog, then run the device test and `companionctl bench 10` on Settings and the Calculator (`com.android.calculator2/.Calculator`).
-- **The Pixel went offline** at about 02:00 and is no longer on the USB bus. Most likely its battery ran flat: Settings showed it discharging while plugged in, at 21% and seven minutes later 17%, with the screen kept on by the tests. It needs charging before more tests. The APK changes made after that (toast text, one refactor in the tree dumper) ran on the emulator only.
+- **Play Protect on the Mi 10 Pro.** The first `adb install -r` there, at about 01:43, opened Google Play Protect's "Send app for a security check?" dialog (always send / send this time / don't send), and the install waited for it. Per the safety rules nobody answered it and the companion session stopped using the phone. At about 01:54 the Android driver session's tests began with a Home key press, which hid the dialog, and the install completed; at 02:08 the phone showed the launcher with nothing unusual in the activity stack. The owner may want to check Play Protect's settings. A newer build would ask again, so the Mi 10 Pro still runs the 01:43 build; install the current one (`companionctl install`) while the owner is around, then run the device test there.
+- **The Pixel went offline** at about 01:45, during the Android driver session's tests, and macOS no longer sees it on USB. The cause is unknown: its old battery may have browned out with the screen on (Settings showed it discharging while plugged in, 21% and seven minutes later 17%), or a reboot did not finish, or the cable. Someone has to look at it. The APK changes made after that ran on the emulator only.
 - **Play Protect on other phones.** Any phone with Google Play and "verify apps over USB" will ask the person once for an unknown APK. Setup should explain it, and a release build signed with a stable key would help Play recognize the app.
 - **`uiautomator dump` turns the companion off while it runs** (Android unbinds every other accessibility service for a UiAutomation), so a driver must not mix the two; the client reconnects once by itself afterwards.
 - **Screen off.** With the screen off, Android lists only the status bar window, so the tree is empty. The driver should check the power state itself.
