@@ -363,6 +363,8 @@ type statser interface {
 var trace = os.Getenv("ANDROIDCTL_TRACE") != ""
 
 func runSteps(ctx context.Context, d stepper, st statser, steps []string) error {
+	runStart := time.Now()
+	defer videoSummary(ctx, st, runStart)
 	var settleTimes []time.Duration
 	for i, step := range steps {
 		if i > 0 {
@@ -479,6 +481,47 @@ func runSteps(ctx context.Context, d stepper, st statser, steps []string) error 
 			sorted[len(sorted)/2].Round(time.Millisecond), sorted[0].Round(time.Millisecond), sorted[len(sorted)-1].Round(time.Millisecond))
 	}
 	return nil
+}
+
+// videoSummary prints the frame rate and bit rate of the video since
+// start: the average over the whole run and the busiest second.
+func videoSummary(ctx context.Context, st statser, start time.Time) {
+	vs, err := st.VideoStats(ctx, start)
+	if err != nil {
+		return
+	}
+	elapsed := time.Since(start)
+	var frames, bytes int
+	var times []time.Time
+	var sizes []int
+	for _, p := range vs.Packets {
+		if p.Config {
+			continue
+		}
+		frames++
+		bytes += p.Size
+		times = append(times, p.At)
+		sizes = append(sizes, p.Size)
+	}
+	if frames == 0 || elapsed <= 0 {
+		return
+	}
+	// Busiest one-second window.
+	var peakFrames, peakBytes, j, wbytes int
+	for i := range times {
+		wbytes += sizes[i]
+		for times[i].Sub(times[j]) >= time.Second {
+			wbytes -= sizes[j]
+			j++
+		}
+		if n := i - j + 1; n > peakFrames {
+			peakFrames = n
+		}
+		peakBytes = max(peakBytes, wbytes)
+	}
+	fmt.Printf("video %dx%d %s over %v: %d frames, %.1f fps and %.2f Mbit/s on average; busiest second %d fps, %.2f Mbit/s\n",
+		vs.Width, vs.Height, vs.Codec, elapsed.Round(time.Millisecond), frames,
+		float64(frames)/elapsed.Seconds(), float64(bytes)*8/elapsed.Seconds()/1e6, peakFrames, float64(peakBytes)*8/1e6)
 }
 
 func background(ctx context.Context, d *android.Device, args []string) error {

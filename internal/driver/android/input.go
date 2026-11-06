@@ -2,6 +2,7 @@ package android
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -83,7 +84,12 @@ func (d *Device) wake(ctx context.Context, l *live) error {
 	}
 	awake, err := d.screenOn(ctx)
 	if err != nil {
-		return err
+		if errors.Is(err, driver.ErrOffline) || ctx.Err() != nil {
+			return err
+		}
+		// A failed check should not block the action itself.
+		d.cfg.logf("android: %s: screen state: %v", d.info.ID, err)
+		return nil
 	}
 	if !awake {
 		d.cfg.logf("android: %s: screen is off, waking it", d.info.ID)
