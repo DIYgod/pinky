@@ -22,6 +22,11 @@ const minIOS = 27
 // Provider discovers iPhones through usbmuxd (Apple Devices on Windows,
 // usbmuxd on Linux, built in on macOS).
 type Provider struct {
+	// Wireless also lists devices usbmuxd reaches over Wi-Fi. It is off by
+	// default: those include every iPad and iPhone ever paired with Xcode
+	// or Finder over the network, and the gateway opens whatever it lists.
+	Wireless bool
+
 	mu    sync.Mutex
 	ddi   map[string]ddiCheck // by UDID
 	setup func(ctx context.Context, e goios.DeviceEntry) (bool, error)
@@ -51,6 +56,9 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	// A phone on USB and Wi-Fi at once is listed twice; USB wins.
 	byID := map[string]goios.DeviceEntry{}
 	for _, e := range list.DeviceList {
+		if e.Properties.ConnectionType == "Network" && !p.Wireless {
+			continue
+		}
 		id := e.Properties.SerialNumber
 		if prev, ok := byID[id]; ok && prev.Properties.ConnectionType == "USB" {
 			continue

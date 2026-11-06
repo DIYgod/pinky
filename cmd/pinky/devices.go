@@ -71,7 +71,7 @@ func runDevices(args []string) error {
 	if len(devs) == 0 {
 		fmt.Printf("No phones (%s).\n", source)
 		if source != "gateway" && !*fake {
-			fmt.Println("Device drivers are not built into this binary yet; try `pinky devices --fake`.")
+			fmt.Println("Connect a phone with USB debugging on (Android) or an iPhone on iOS 27 or later; `pinky devices --fake` lists the fake phones.")
 		}
 		return nil
 	}

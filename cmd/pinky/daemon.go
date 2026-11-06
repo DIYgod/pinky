@@ -65,7 +65,7 @@ func runDaemon(args []string) error {
 	} else {
 		providers = realProviders(log)
 		if len(providers) == 0 {
-			log.Warn("no device drivers are built into this binary yet; use --fake to try Pinky with fake phones")
+			log.Warn("no device provider could start (adb server, usbmuxd); use --fake to try Pinky with fake phones")
 		}
 	}
 
