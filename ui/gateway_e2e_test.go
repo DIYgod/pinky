@@ -589,3 +589,51 @@ func TestMirrorFirstPicture(t *testing.T) {
 		t.Errorf("Connecting… over the live picture: %q", tt.Texts())
 	}
 }
+
+// TestMirrorRetryKeepsError checks that trying a failed stream again keeps
+// showing why it failed: a phone without a picture used to flip to the
+// Connecting spinner every few seconds.
+func TestMirrorRetryKeepsError(t *testing.T) {
+	w, err := demogw.New(demogw.Options{TrustNewAgents: true}) // no video: Stream fails
+	if err != nil {
+		t.Fatal(err)
+	}
+	ga := &gwApp{w: w}
+	ga.app = newApp(w.Gateway, Options{NoTray: true, Shortcut: "-"})
+	ga.app.postHook = func(fn func()) {
+		ga.mu.Lock()
+		ga.q = append(ga.q, fn)
+		ga.mu.Unlock()
+	}
+	t.Cleanup(func() {
+		ga.closeMirrors()
+		ga.app.end()
+		w.Gateway.Close()
+	})
+	ga.waitFor(t, "the phones", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
+	ga.selectPhone(pixel)
+	tt := mg.NewTester(ga.view, 1280, 820)
+	ga.waitFor(t, "the failure", func() bool {
+		tt.Frame()
+		m := ga.mirrors[pixel]
+		return m != nil && m.state == "failed" && !m.opening
+	})
+	if !hasText(tt, "This phone has no live picture.") {
+		t.Fatalf("no reason shown: %q", tt.Texts())
+	}
+	m := ga.mirrors[pixel]
+	m.retry = time.Now().Add(-time.Second)
+	tt.Frame() // the retry is due: mirrorFor opens the stream again
+	if !m.opening {
+		t.Fatal("the stream was not tried again")
+	}
+	if m.state != "failed" || hasText(tt, "Connecting…") {
+		t.Errorf("while trying again: state %q, texts %q", m.state, tt.Texts())
+	}
+	tt.Frame()
+	ga.waitFor(t, "the second failure", func() bool { return !m.opening })
+	tt.Frame()
+	if !hasText(tt, "This phone has no live picture.") || hasText(tt, "Connecting…") {
+		t.Errorf("after trying again: %q", tt.Texts())
+	}
+}

@@ -23,18 +23,19 @@ import (
 // shown by the Phone screen or a tile of All phones. Its fields are used
 // on the main thread.
 type mirror struct {
-	a      *app
-	id     string
-	gen    int
-	cancel context.CancelFunc
-	player *video.Player
-	bitmap *mg.Bitmap
-	frame  *video.Frame // the picture the bitmap shows
-	state  string       // "connecting", "playing", "failed"
-	err    error
-	retry  time.Time
-	used   int
-	closed bool
+	a       *app
+	id      string
+	gen     int
+	cancel  context.CancelFunc
+	player  *video.Player
+	bitmap  *mg.Bitmap
+	frame   *video.Frame // the picture the bitmap shows
+	state   string       // "connecting", "playing", "failed"
+	opening bool         // a try to open the stream is under way
+	err     error
+	retry   time.Time
+	used    int
+	closed  bool
 
 	picW, picH int     // the stream's picture size: the device's pixels
 	boxW, boxH float32 // the screen's size on the window, in DIPs
@@ -57,7 +58,7 @@ func (a *app) mirrorFor(id string) *mirror {
 		m.open()
 	}
 	m.used = a.buildSeq
-	if m.state == "failed" && time.Now().After(m.retry) && a.videoErr == nil {
+	if m.state == "failed" && !m.opening && time.Now().After(m.retry) && a.videoErr == nil {
 		m.open()
 	}
 	return m
@@ -97,7 +98,13 @@ func (m *mirror) open() {
 	gen := m.gen
 	ctx, cancel := context.WithCancel(m.a.ctx)
 	m.cancel = cancel
-	m.state, m.err = "connecting", nil
+	// A retry keeps showing why the last try failed until this one is
+	// done, rather than a spinner every few seconds for a phone that has
+	// no picture.
+	if m.state != "failed" {
+		m.state, m.err = "connecting", nil
+	}
+	m.opening = true
 	a := m.a
 	go func() {
 		logf("pinky: mirror %s: opening the stream (gen %d)", m.id, gen)
@@ -118,6 +125,7 @@ func (m *mirror) open() {
 				}
 				return
 			}
+			m.opening = false
 			if err != nil {
 				m.state, m.err = "failed", err
 				m.retry = time.Now().Add(3 * time.Second)
@@ -150,7 +158,7 @@ func (m *mirror) retryLater() {
 	gen := m.gen
 	time.AfterFunc(max(time.Until(m.retry), 0), func() {
 		m.a.post(func() {
-			if !m.closed && m.gen == gen && m.state == "failed" && m.a.videoErr == nil {
+			if !m.closed && m.gen == gen && m.state == "failed" && !m.opening && m.a.videoErr == nil {
 				m.open()
 			}
 		})
