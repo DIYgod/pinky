@@ -155,6 +155,7 @@ func (d *Device) longPressHold(ctx context.Context) time.Duration {
 
 // Tap implements driver.Device.
 func (d *Device) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
+	d.used()
 	l, err := d.inputSession(ctx)
 	if err != nil {
 		return err
@@ -166,12 +167,16 @@ func (d *Device) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions)
 	err = l.tap(ctx, p, hold)
 	if err == nil {
 		d.markAwake()
+		d.stateMu.Lock()
+		d.tapPoint, d.tapAt = p, time.Now()
+		d.stateMu.Unlock()
 	}
 	return err
 }
 
 // Swipe implements driver.Device.
 func (d *Device) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
+	d.used()
 	l, err := d.inputSession(ctx)
 	if err != nil {
 		return err
@@ -185,6 +190,7 @@ func (d *Device) Swipe(ctx context.Context, from, to screen.Point, dur time.Dura
 
 // Touch implements driver.Toucher, for the person's drags on the mirror.
 func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point) error {
+	d.used()
 	var l *live
 	var err error
 	if a == driver.TouchDown {
@@ -200,6 +206,7 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 
 // Key implements driver.Device.
 func (d *Device) Key(ctx context.Context, k driver.Key) error {
+	d.used()
 	code, ok := keycodes[k]
 	if !ok {
 		return fmt.Errorf("android: key %q: %w", k, driver.ErrUnsupported)
@@ -211,16 +218,25 @@ func (d *Device) Key(ctx context.Context, k driver.Key) error {
 	return l.key(code, 0)
 }
 
-// Type implements driver.Device. Printable ASCII is typed as key events,
-// unless the phone's keyboard may turn letters into a composition (pinyin
-// and other CJK input methods) and is showing; that text, and anything
-// that is not printable ASCII (CJK, emoji, newlines), is set as the
-// clipboard and pasted, which replaces the clipboard's content. Without
-// Append the field's text is selected first (Ctrl+A) and replaced.
+// Type implements driver.Device. With the companion app it writes the
+// text with ACTION_SET_TEXT into the focused field (or the field under the
+// last tap): any script, no keyboard, no clipboard. Otherwise, or when the
+// companion refuses, printable ASCII is typed as key events, unless the
+// phone's keyboard may turn letters into a composition (pinyin and other
+// CJK input methods) and is showing; that text, and anything that is not
+// printable ASCII (CJK, emoji, newlines), is set as the clipboard and
+// pasted, which replaces the clipboard's content. Without Append the
+// field's text is selected first (Ctrl+A) and replaced.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
+	d.used()
 	l, err := d.inputSession(ctx)
 	if err != nil {
 		return err
+	}
+	if c := d.companionClient(ctx); c != nil {
+		if done, err := d.typeCompanion(ctx, c, l, text, opt.Append, opt.Submit); done {
+			return err
+		}
 	}
 	return l.typeText(ctx, text, opt, plainASCII(text) && d.keysReachField(ctx))
 }

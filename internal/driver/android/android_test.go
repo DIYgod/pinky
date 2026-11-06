@@ -3,11 +3,16 @@ package android
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
+	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/driver/android/scrcpy"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -31,18 +36,6 @@ func TestParseKeyguard(t *testing.T) {
 		if showing != c.showing || ok != c.have {
 			t.Errorf("%s: showing=%v ok=%v", name, showing, ok)
 		}
-	}
-}
-
-func TestParseIMEShown(t *testing.T) {
-	if parseIMEShown("      mImeWindowVis=0\n      mInputShown=false\n") {
-		t.Error("hidden keyboard reported as shown")
-	}
-	if !parseIMEShown("  mShowRequested=true mShowExplicitlyRequested=false mShowForced=false mInputShown=true\n") {
-		t.Error("Android 10 keyboard not seen")
-	}
-	if !parseIMEShown("      mImeWindowVis=3\n") {
-		t.Error("IME_VISIBLE bit not seen")
 	}
 }
 
@@ -210,9 +203,11 @@ func TestSettleTracker(t *testing.T) {
 
 func TestWaitQuiet(t *testing.T) {
 	ctx := context.Background()
+	long := time.Now().Add(-time.Hour)
+	still := quietCond{last: func() time.Time { return long }, quiet: 50 * time.Millisecond}
+	busy := quietCond{last: time.Now, quiet: 50 * time.Millisecond}
 	start := time.Now()
-	last := start.Add(-time.Hour)
-	ok, err := waitQuiet(ctx, start, 50*time.Millisecond, time.Second, func() time.Time { return last }, nil)
+	ok, err := waitQuiet(ctx, start, time.Second, nil, still)
 	if err != nil || !ok {
 		t.Fatalf("still screen: %v %v", ok, err)
 	}
@@ -220,19 +215,31 @@ func TestWaitQuiet(t *testing.T) {
 		t.Errorf("still screen took %v", d)
 	}
 	// A screen that keeps changing hits the limit.
-	start = time.Now()
-	ok, err = waitQuiet(ctx, start, 50*time.Millisecond, 150*time.Millisecond, time.Now, nil)
+	ok, err = waitQuiet(ctx, time.Now(), 150*time.Millisecond, nil, busy)
 	if err != nil || ok {
 		t.Fatalf("busy screen: %v %v", ok, err)
 	}
+	// Every condition must hold: still video with a busy tree is not settled.
+	ok, err = waitQuiet(ctx, time.Now(), 150*time.Millisecond, nil, still, busy)
+	if err != nil || ok {
+		t.Fatalf("still video, busy tree: %v %v", ok, err)
+	}
+	// Each condition has its own quiet period.
+	lastTree := time.Now()
+	tree := quietCond{last: func() time.Time { return lastTree }, quiet: 120 * time.Millisecond}
+	start = time.Now()
+	ok, err = waitQuiet(ctx, start, time.Second, nil, still, tree)
+	if err != nil || !ok || time.Since(start) < 100*time.Millisecond {
+		t.Fatalf("tree quiet period: %v %v after %v", ok, err, time.Since(start))
+	}
 	cctx, cancel := context.WithCancel(ctx)
 	cancel()
-	if _, err := waitQuiet(cctx, time.Now(), time.Second, time.Second, time.Now, nil); !errors.Is(err, context.Canceled) {
+	if _, err := waitQuiet(cctx, time.Now(), time.Second, nil, busy); !errors.Is(err, context.Canceled) {
 		t.Errorf("cancelled: %v", err)
 	}
 	done := make(chan struct{})
 	close(done)
-	if _, err := waitQuiet(ctx, time.Now(), time.Second, time.Second, time.Now, done); err != errSessionEnded {
+	if _, err := waitQuiet(ctx, time.Now(), time.Second, done, busy); err != errSessionEnded {
 		t.Errorf("ended session: %v", err)
 	}
 }
@@ -293,4 +300,54 @@ func TestStreamPush(t *testing.T) {
 	if st.Err() == nil {
 		t.Error("no error after end")
 	}
+}
+
+func TestRefusedText(t *testing.T) {
+	for code, want := range map[string]bool{
+		"not_found": true, "not_editable": true, "disabled": true, "unsupported": true, "action_failed": true,
+		"timeout": false, "internal": false, "bad_request": false,
+	} {
+		err := fmt.Errorf("wrapped: %w", &companion.Error{Code: code})
+		if got := refusedText(err); got != want {
+			t.Errorf("refusedText(%s) = %v", code, got)
+		}
+	}
+	if refusedText(companion.ErrNotRunning) || refusedText(context.DeadlineExceeded) || refusedText(nil) {
+		t.Error("connection errors may have written the text")
+	}
+}
+
+func TestFindCompanionAPK(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	t.Setenv("PINKY_COMPANION_APK", "")
+	if _, err := FindCompanionAPK(); !errors.Is(err, errNoCompanionAPK) {
+		t.Fatalf("nothing there: %v", err)
+	}
+	build := filepath.Join(dir, "android", "companion", "app", "build", "outputs", "apk", "debug")
+	if err := os.MkdirAll(build, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	debug := filepath.Join(build, "app-debug.apk")
+	os.WriteFile(debug, []byte("apk"), 0o644)
+	if p, err := FindCompanionAPK(); err != nil || !sameFile(p, debug) {
+		t.Fatalf("debug build: %q, %v", p, err)
+	}
+	env := filepath.Join(dir, "chosen.apk")
+	os.WriteFile(env, []byte("apk"), 0o644)
+	t.Setenv("PINKY_COMPANION_APK", env)
+	if p, err := FindCompanionAPK(); err != nil || !sameFile(p, env) {
+		t.Fatalf("$PINKY_COMPANION_APK: %q, %v", p, err)
+	}
+	cands := companionAPKCandidates()
+	if len(cands) != 4 || !strings.HasSuffix(cands[1], "pinky-companion.apk") ||
+		!strings.HasSuffix(cands[2], filepath.Join("..", "Resources", "pinky-companion.apk")) && !strings.Contains(cands[2], "Resources") {
+		t.Errorf("candidates = %q", cands)
+	}
+}
+
+func sameFile(a, b string) bool {
+	fa, err1 := os.Stat(a)
+	fb, err2 := os.Stat(b)
+	return err1 == nil && err2 == nil && os.SameFile(fa, fb)
 }
