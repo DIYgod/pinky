@@ -44,7 +44,7 @@ func axRole(bits uint64, names []string, value string) (role string, states []st
 		}
 	case has(names, "tab") || bits&traitTabBar != 0:
 		role = screen.RoleTab
-	case bits&traitButton != 0 || has(names, "button") || has(names, "back button") || has(names, "menu item") || has(names, "keyboard key"):
+	case bits&(traitButton|traitKeyboardKey) != 0 || has(names, "button") || has(names, "back button") || has(names, "menu item") || has(names, "keyboard key"):
 		role = screen.RoleButton
 	case bits&traitLink != 0 || has(names, "link"):
 		role = screen.RoleLink
@@ -89,8 +89,9 @@ func (d *Device) axReady(ctx context.Context) (*axSession, error) {
 
 // ObserveStats describe the last Observe, for diagnostics.
 type ObserveStats struct {
+	Source    string // "remoteax" (frames from the phone) or "inspector" (OCR places elements)
 	Elements  int
-	Placed    int // elements given a position by OCR
+	Placed    int // elements with a position: from the phone, or by OCR on the inspector path
 	OCRLines  int
 	Walk      time.Duration
 	Shot      time.Duration
@@ -99,13 +100,15 @@ type ObserveStats struct {
 	Complete  bool // the walk came back to its start
 	WalkError error
 	OCRError  error
+	RAXError  error // why the remoteax path was not used
 }
 
-// Observe implements driver.Device. The accessibility walk gives each
-// element's label, role and identifier; iOS 27 gives no element frames over
-// CoreDevice, so a screenshot and OCR place the elements whose label is on
-// screen. Text the walk did not report comes back as ocr lines when
-// opt.OCR is set.
+// Observe implements driver.Device. It reads the screen through the
+// accessibility daemon's remoteAXService, which gives every element with
+// its frame (see observeRAX). When that service fails, it falls back to the
+// inspector walk, which gives labels, roles and identifiers but no frames,
+// and places the elements whose label is on screen by OCR. Text the tree did
+// not report comes back as ocr lines when opt.OCR is set.
 func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	scr, _, err := d.ObserveWithStats(ctx, opt)
 	return scr, err
@@ -113,8 +116,22 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 
 // ObserveWithStats is Observe with timings.
 func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ObserveStats, error) {
-	start := time.Now()
 	var st ObserveStats
+	s, err := d.observeRAX(ctx, opt, &st)
+	if err == nil {
+		return s, st, nil
+	}
+	if ctx.Err() != nil {
+		return nil, st, ctx.Err()
+	}
+	st = ObserveStats{RAXError: err}
+	return d.observeInspector(ctx, opt, st)
+}
+
+// observeInspector is Observe through the inspector walk and OCR.
+func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions, st ObserveStats) (*screen.Screen, ObserveStats, error) {
+	start := time.Now()
+	st.Source = "inspector"
 	si := d.screen()
 	ax, err := d.axReady(ctx)
 	if err != nil {

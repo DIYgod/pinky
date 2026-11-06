@@ -29,7 +29,35 @@ type Provider struct {
 
 	mu    sync.Mutex
 	ddi   map[string]ddiCheck // by UDID
+	known map[string]known    // by UDID, what List last found
 	setup func(ctx context.Context, e goios.DeviceEntry) (bool, error)
+
+	// For tests: how a phone is inspected, and the clock.
+	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
+	now       func() time.Time
+}
+
+// recheckOffline is how often List asks a phone that is not online again.
+// An online phone is asked again only when its usbmuxd entry changes, which
+// it does when the phone reconnects or restarts.
+const recheckOffline = 30 * time.Second
+
+// known is an inspected phone and the usbmuxd entry it was seen through.
+type known struct {
+	key  entryKey
+	info driver.Info
+	at   time.Time
+}
+
+// entryKey identifies one usbmuxd connection to a phone. usbmuxd gives a
+// phone a new DeviceID each time it attaches.
+type entryKey struct {
+	deviceID   int
+	connection string
+}
+
+func keyOf(e goios.DeviceEntry) entryKey {
+	return entryKey{deviceID: e.DeviceID, connection: e.Properties.ConnectionType}
 }
 
 type ddiCheck struct {
@@ -40,22 +68,40 @@ type ddiCheck struct {
 
 // NewProvider returns an iOS provider.
 func NewProvider() *Provider {
-	return &Provider{ddi: map[string]ddiCheck{}, setup: probeServices}
+	return &Provider{ddi: map[string]ddiCheck{}, known: map[string]known{}, setup: probeServices}
 }
 
 // Platform implements driver.Provider.
 func (p *Provider) Platform() driver.Platform { return driver.IOS }
 
 // List implements driver.Provider. It checks what Pinky needs and says in
-// Detail how to fix what is missing.
+// Detail how to fix what is missing. A gateway calls it every few seconds,
+// so it asks each phone again only when needed (see recheckOffline).
 func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	list, err := goios.ListDevices()
 	if err != nil {
 		return nil, fmt.Errorf("usbmuxd: %w (on Windows install Apple Devices, on Linux the usbmuxd package)", err)
 	}
-	// A phone on USB and Wi-Fi at once is listed twice; USB wins.
+	entries := p.entries(list.DeviceList)
+	out := make([]driver.Info, len(entries))
+	var wg sync.WaitGroup
+	for i, e := range entries {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			out[i] = p.info(ctx, e)
+		}()
+	}
+	wg.Wait()
+	p.forgetExcept(entries)
+	return out, nil
+}
+
+// entries picks one usbmuxd entry per phone, sorted by UDID. A phone on USB
+// and Wi-Fi at once is listed twice; USB wins.
+func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 	byID := map[string]goios.DeviceEntry{}
-	for _, e := range list.DeviceList {
+	for _, e := range list {
 		if e.Properties.ConnectionType == "Network" && !p.Wireless {
 			continue
 		}
@@ -65,22 +111,62 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		}
 		byID[id] = e
 	}
-	ids := make([]string, 0, len(byID))
-	for id := range byID {
-		ids = append(ids, id)
+	out := make([]goios.DeviceEntry, 0, len(byID))
+	for _, e := range byID {
+		out = append(out, e)
 	}
-	sort.Strings(ids)
-	out := make([]driver.Info, len(ids))
-	var wg sync.WaitGroup
-	for i, id := range ids {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			out[i] = p.inspect(ctx, byID[id])
-		}()
+	sort.Slice(out, func(i, j int) bool { return out[i].Properties.SerialNumber < out[j].Properties.SerialNumber })
+	return out
+}
+
+// info returns what is known about the phone behind e. It inspects the
+// phone again only when its entry changed, or every recheckOffline while it
+// is not online, so a phone that stays attached costs no lockdown round trip.
+func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
+	id, key := e.Properties.SerialNumber, keyOf(e)
+	p.mu.Lock()
+	k, ok := p.known[id]
+	p.mu.Unlock()
+	if ok && k.key == key && (k.info.State == driver.StateOnline || p.clock().Sub(k.at) < recheckOffline) {
+		return k.info
 	}
-	wg.Wait()
-	return out, nil
+	inspect := p.inspectFn
+	if inspect == nil {
+		inspect = p.inspect
+	}
+	info := inspect(ctx, e)
+	if ctx.Err() != nil {
+		return info // cut short; do not remember it
+	}
+	p.mu.Lock()
+	if p.known == nil {
+		p.known = map[string]known{}
+	}
+	p.known[id] = known{key: key, info: info, at: p.clock()}
+	p.mu.Unlock()
+	return info
+}
+
+// forgetExcept drops what List knew about phones that are gone.
+func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
+	listed := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		listed[e.Properties.SerialNumber] = true
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for id := range p.known {
+		if !listed[id] {
+			delete(p.known, id)
+		}
+	}
+}
+
+func (p *Provider) clock() time.Time {
+	if p.now != nil {
+		return p.now()
+	}
+	return time.Now()
 }
 
 func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info {
@@ -166,13 +252,17 @@ func probeServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 	return l.has(displayService) && l.has(universalHIDService), nil
 }
 
-// Open implements driver.Provider. It checks only the phone it opens.
+// Open implements driver.Provider. It checks only the phone it opens, and
+// reuses what List found when the phone's entry has not changed.
 func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 	entry, err := findEntry(id)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %w", err, driver.ErrNotFound)
 	}
-	info := p.inspect(ctx, entry)
+	if entry.Properties.ConnectionType == "Network" && !p.Wireless {
+		return nil, fmt.Errorf("%s is reachable only over Wi-Fi and Wireless is off: %w", id, driver.ErrNotFound)
+	}
+	info := p.info(ctx, entry)
 	if info.State != driver.StateOnline {
 		return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
 	}

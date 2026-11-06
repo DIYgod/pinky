@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -29,7 +31,9 @@ type Device struct {
 	hid     *hidSession
 	scr     screenInfo
 	inputAt time.Time // when input starts to work
-	closed  bool
+
+	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
+	closed    bool
 
 	inputMu   sync.Mutex // serializes gestures and raw touches
 	restartMu sync.Mutex // one stream restart at a time; guards the two below
@@ -37,13 +41,16 @@ type Device struct {
 	restartFailedAt time.Time
 	restartErr      error
 
-	svcMu   sync.Mutex
-	info2   *cdService // deviceinfo
-	shot    *cdService // screencapture
-	inst    *instruments.ScreenshotService
-	ax      *axSession
-	apps    *appCatalog
-	pidApps map[uint64]driver.App
+	svcMu       sync.Mutex
+	info2       *cdService // deviceinfo
+	shot        *cdService // screencapture
+	inst        *instruments.ScreenshotService
+	ax          *axSession
+	rax         *raxSession
+	raxErr      error // why rax could not connect, until raxFailedAt+raxRecheckFailures
+	raxFailedAt time.Time
+	apps        *appCatalog
+	pidApps     map[uint64]driver.App
 
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.
@@ -61,6 +68,13 @@ func Open(ctx context.Context, info driver.Info) (*Device, error) {
 		l.Close()
 		return nil, err
 	}
+	// Connect the accessibility service now: the phone answers its first
+	// requests slowly while it builds the first tree it pushes.
+	go func() {
+		c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		d.raxReady(c)
+	}()
 	return d, nil
 }
 
@@ -287,7 +301,19 @@ func (d *Device) waitInput(ctx context.Context) (*hidSession, error) {
 			return nil, ctx.Err()
 		}
 	}
+	d.markInput()
 	return h, nil
+}
+
+// markInput records that Pinky is about to change the screen.
+func (d *Device) markInput() { d.lastInput.Store(time.Now().UnixNano()) }
+
+// lastInputAt is when Pinky last sent input or launched an app.
+func (d *Device) lastInputAt() time.Time {
+	if n := d.lastInput.Load(); n != 0 {
+		return time.Unix(0, n)
+	}
+	return time.Time{}
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {
@@ -380,8 +406,37 @@ func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.
 	return gerr
 }
 
+// videoSize is the size of the stream's picture, or 0, 0 before its first
+// parameter sets.
+func (d *Device) videoSize() (int, int) {
+	d.mu.Lock()
+	m := d.m
+	d.mu.Unlock()
+	if m == nil {
+		return 0, 0
+	}
+	return m.size()
+}
+
+// fromVideo converts a point in the stream's picture to screen pixels. The
+// phone puts its screen at 1:1 in the picture's top-left corner and pads the
+// rest with black: 1125x2436 inside 1136x2464 on the 13 mini, measured by
+// matching decoded frames against screenshots. So a point keeps its
+// coordinates, and one in the padding ends up on the screen's edge (panel
+// clamps it). A picture smaller than the screen would mean the phone scaled
+// its screen down to fit, which no tested phone did; the point is then
+// scaled back up, assuming a uniform fit in the top-left corner.
+func fromVideo(p screen.Point, vw, vh, sw, sh int) screen.Point {
+	if vw <= 0 || vh <= 0 || sw <= 0 || sh <= 0 || (vw >= sw && vh >= sh) {
+		return p
+	}
+	c := min(float64(vw)/float64(sw), float64(vh)/float64(sh))
+	return screen.Point{X: int(math.Round(float64(p.X) / c)), Y: int(math.Round(float64(p.Y) / c))}
+}
+
 // Touch implements driver.Toucher: raw touches for the person's drags on
-// the mirror. A move without a down is ignored.
+// the mirror, at points in the stream's picture (see fromVideo). A move
+// without a down is ignored.
 func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point) error {
 	d.inputMu.Lock()
 	defer d.inputMu.Unlock()
@@ -389,7 +444,9 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 	if err != nil {
 		return err
 	}
-	x, y := d.panel(p)
+	s := d.screen()
+	vw, vh := d.videoSize()
+	x, y := d.panel(fromVideo(p, vw, vh, s.Width, s.Height))
 	switch a {
 	case driver.TouchDown:
 		return h.touchAt(true, x, y)
@@ -444,6 +501,9 @@ func (d *Device) Close() error {
 	}
 	if d.ax != nil {
 		d.ax.Close()
+	}
+	if d.rax != nil {
+		d.rax.Close()
 	}
 	d.svcMu.Unlock()
 	errs = append(errs, d.l.Close())
