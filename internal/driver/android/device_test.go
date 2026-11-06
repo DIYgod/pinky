@@ -62,11 +62,20 @@ func act(t *testing.T, ctx context.Context, d *Device, what string, f func() err
 
 func observe(t *testing.T, ctx context.Context, d *Device) *screen.Screen {
 	t.Helper()
+	start := time.Now()
 	s, err := d.Observe(ctx, driver.ObserveOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	screen.NewRefs().Assign(s)
+	// Toasts and notifications may hold the owner's messages: keep their
+	// kinds, never their text, in test logs.
+	kinds := make([]string, len(s.Events))
+	for i, ev := range s.Events {
+		kinds[i] = string(ev.Kind)
+	}
+	s.Events = nil
+	t.Logf("observe: %d elements in %v (events: %v)", len(s.Elements), time.Since(start).Round(time.Millisecond), kinds)
 	return s
 }
 
@@ -220,9 +229,18 @@ func TestDeviceTypeAndClipboard(t *testing.T) {
 		t.Errorf("after typing CJK the input shows %q", got)
 	}
 	clip, err := d.Clipboard(ctx)
-	if err != nil || clip != "\u663e\u793a" {
-		t.Errorf("clipboard after paste = %q, %v", clip, err)
+	switch {
+	case err != nil:
+		t.Errorf("clipboard: %v", err)
+	case d.companionOn():
+		// ACTION_SET_TEXT leaves the clipboard alone.
+		if clip != saved {
+			t.Errorf("typing through the companion changed the clipboard")
+		}
+	case clip != "\u663e\u793a":
+		t.Errorf("clipboard after paste = %q", clip)
 	}
+	t.Logf("typed through the companion: %v", d.companionOn())
 	act(t, ctx, d, "clear", func() error { return d.Type(ctx, "", driver.TypeOptions{}) })
 	act(t, ctx, d, "back", func() error { return d.Key(ctx, driver.KeyBack) })
 	act(t, ctx, d, "back", func() error { return d.Key(ctx, driver.KeyBack) })
@@ -339,12 +357,69 @@ func TestDeviceBackground(t *testing.T) {
 	if _, err := b.Screenshot(ctx); !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("screenshot of a virtual display: %v", err)
 	}
-	if _, err := b.Observe(ctx, driver.ObserveOptions{}); !errors.Is(err, driver.ErrUnsupported) {
+	if s, err := b.Observe(ctx, driver.ObserveOptions{}); err == nil {
+		// Through the companion app: the calculator is on this display.
+		if s.App.ID != pkg || len(s.Elements) == 0 {
+			t.Errorf("virtual display screen: %s, %d elements", s.Header(), len(s.Elements))
+		}
+		t.Logf("virtual display: %s, %d elements", s.Header(), len(s.Elements))
+	} else if !errors.Is(err, driver.ErrUnsupported) {
 		t.Errorf("observe of a virtual display: %v", err)
 	}
 	b.Close()
 	time.Sleep(time.Second)
 	if out := displays(); strings.Contains(out, fmt.Sprintf("mDisplayId=%d ", b.DisplayID())) {
 		t.Errorf("display %d still exists after Close:\n%s", b.DisplayID(), out)
+	}
+}
+
+// companionOn reports whether the driver is using the companion app.
+func (d *Device) companionOn() bool {
+	d.comp.mu.Lock()
+	defer d.comp.mu.Unlock()
+	return d.comp.on
+}
+
+func TestDevicePersonQuietWhileInjecting(t *testing.T) {
+	d, ctx := openTestDevice(t)
+	pkg := calculatorPackage(t, ctx, d)
+	signals := d.PersonInput()
+	var n int
+	counted := make(chan struct{})
+	go func() {
+		defer close(counted)
+		for range signals {
+			n++
+		}
+	}()
+	time.Sleep(2 * time.Second) // let getevent start
+	act(t, ctx, d, "home", func() error { return d.Key(ctx, driver.KeyHome) })
+	act(t, ctx, d, "launch", func() error { return d.Launch(ctx, pkg) })
+	s := observe(t, ctx, d)
+	if len(s.Elements) < 10 {
+		t.Fatalf("calculator not on screen:\n%s", s.Render())
+	}
+	// Taps, a long press, a swipe, typed keys and hardware-like keys: all
+	// injected, none may look like the person.
+	for _, e := range s.Elements[len(s.Elements)-4:] {
+		act(t, ctx, d, "tap "+e.Label, func() error { return d.Tap(ctx, e.Bounds.Center(), driver.TapOptions{}) })
+	}
+	mid := screen.Point{X: s.Width / 2, Y: s.Height / 2}
+	act(t, ctx, d, "long press", func() error { return d.Tap(ctx, mid, driver.TapOptions{LongPress: true}) })
+	act(t, ctx, d, "swipe", func() error {
+		return d.Swipe(ctx, screen.Point{X: mid.X, Y: mid.Y + 200}, screen.Point{X: mid.X, Y: mid.Y - 200}, 300*time.Millisecond)
+	})
+	act(t, ctx, d, "type", func() error { return d.Type(ctx, "12", driver.TypeOptions{Append: true}) })
+	act(t, ctx, d, "back", func() error { return d.Key(ctx, driver.KeyBack) })
+	act(t, ctx, d, "home", func() error { return d.Key(ctx, driver.KeyHome) })
+	time.Sleep(time.Second)
+	d.Close()
+	select {
+	case <-counted:
+	case <-time.After(10 * time.Second):
+		t.Fatal("PersonInput was not closed with the device")
+	}
+	if n != 0 {
+		t.Errorf("%d person signals while only Pinky gave input", n)
 	}
 }

@@ -73,20 +73,21 @@ func realProviders(log *slog.Logger) []driver.Provider {
 			continue
 		}
 		if only != nil {
-			p = onlyProvider{Provider: p, only: only}
+			p = &onlyProvider{Provider: p, only: only}
 		}
 		out = append(out, p)
 	}
 	return out
 }
 
-// onlyProvider hides every device not in only.
+// onlyProvider hides every device not in only. It is used as a pointer,
+// since the gateway compares providers.
 type onlyProvider struct {
 	driver.Provider
 	only map[string]bool
 }
 
-func (p onlyProvider) List(ctx context.Context) ([]driver.Info, error) {
+func (p *onlyProvider) List(ctx context.Context) ([]driver.Info, error) {
 	infos, err := p.Provider.List(ctx)
 	out := infos[:0]
 	for _, info := range infos {
@@ -97,7 +98,7 @@ func (p onlyProvider) List(ctx context.Context) ([]driver.Info, error) {
 	return out, err
 }
 
-func (p onlyProvider) Open(ctx context.Context, id string) (driver.Device, error) {
+func (p *onlyProvider) Open(ctx context.Context, id string) (driver.Device, error) {
 	if !p.only[id] {
 		return nil, fmt.Errorf("%s is not in PINKY_DEVICES: %w", id, driver.ErrNotFound)
 	}

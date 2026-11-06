@@ -1,0 +1,13 @@
+{
+  "name": "Pinky",
+  "slug": "pinky",
+  "identifier": "app.pinky.desktop",
+  "version": "0.1.0",
+  "copyright": "Copyright © 2026 DIYgod",
+  "icon": "../../assets/icon/pinky-macos-1024.png",
+  "out": "../../build/pinky",
+  "macos": {
+    "icon": "../../assets/icon/Pinky.icns",
+    "minimumSystemVersion": "12.0"
+  }
+}

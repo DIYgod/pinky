@@ -13,7 +13,8 @@
 //	androidctl [-s serial] locked
 //	androidctl [-s serial] stream [-seconds N] [-max-size N] [-out FILE.h264]
 //	androidctl [-s serial] settle [-max MS]  (time until the screen is still)
-//	androidctl [-s serial] run STEP...       (steps with action and settle timings)
+//	androidctl [-s serial] run [-person] STEP...  (steps with action and settle timings)
+//	androidctl [-s serial] companion-install (install or update the companion app)
 //	androidctl [-s serial] bg [-app APP] [-out FILE.h264] [-seconds N] [STEP...]
 //
 // Steps for run and bg: tap:X,Y  longtap:X,Y  swipe:X1,Y1,X2,Y2[,MS]  key:NAME
@@ -82,7 +83,9 @@ commands:
   stream [-seconds N] [-max-size N] [-out FILE.h264]
                                   video statistics, optionally saving the stream
   settle [-max MS]                time until the screen stops changing
-  run STEP...                     run steps, timing each action and its settle
+  run [-person] STEP...           run steps, timing each action and its settle;
+                                  -person counts PersonWatcher signals meanwhile
+  companion-install               install or update the companion app (setup only)
   bg [-app APP] [-seconds N] [-out FILE.h264] [STEP...]
                                   open a virtual display and run steps on it
 
@@ -215,7 +218,40 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 		fmt.Printf("settled=%v after %v\n", ok, time.Since(start).Round(time.Millisecond))
 		return nil
 	case "run":
-		return runSteps(ctx, d, d, args)
+		fs := flag.NewFlagSet("run", flag.ExitOnError)
+		person := fs.Bool("person", false, "count PersonWatcher signals during the steps")
+		fs.Parse(args)
+		if !*person {
+			return runSteps(ctx, d, d, fs.Args())
+		}
+		signals := d.PersonInput()
+		var n int
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for range signals {
+				n++
+				fmt.Printf("\u00b7 person input at %s\n", time.Now().Format("15:04:05.000"))
+			}
+		}()
+		time.Sleep(2 * time.Second) // let getevent start
+		err := runSteps(ctx, d, d, fs.Args())
+		time.Sleep(time.Second)
+		d.Close()
+		<-done
+		fmt.Printf("person input signals during the run: %d\n", n)
+		return err
+	case "companion-install":
+		res, err := d.InstallCompanion(ctx)
+		if err != nil {
+			return err
+		}
+		if res.Installed {
+			fmt.Printf("installed %s\n", res.APK)
+		} else {
+			fmt.Printf("already up to date with %s\n", res.APK)
+		}
+		return nil
 	case "bg":
 		return background(ctx, d, args)
 	}
@@ -245,6 +281,7 @@ func observe(ctx context.Context, d *android.Device, asJSON bool) error {
 	}
 	took := time.Since(start)
 	screen.NewRefs().Assign(s)
+	redact(s)
 	if asJSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -414,6 +451,7 @@ func runSteps(ctx context.Context, d stepper, st statser, steps []string) error 
 			s, err = d.Observe(ctx, driver.ObserveOptions{})
 			if err == nil {
 				screen.NewRefs().Assign(s)
+				redact(s)
 				fmt.Println(s.Render())
 				fmt.Printf("(observe took %v)\n", time.Since(start).Round(time.Millisecond))
 			}
@@ -572,6 +610,19 @@ func background(ctx context.Context, d *android.Device, args []string) error {
 		<-done
 	}
 	return nil
+}
+
+// redact hides notification text, which may hold the owner's messages,
+// unless ANDROIDCTL_NOTIFICATIONS=1.
+func redact(s *screen.Screen) {
+	if os.Getenv("ANDROIDCTL_NOTIFICATIONS") != "" {
+		return
+	}
+	for i, ev := range s.Events {
+		if ev.Kind == screen.EventNotification {
+			s.Events[i].Text = "(text hidden)"
+		}
+	}
 }
 
 func ints2(args []string) (int, int, error) {
