@@ -23,7 +23,9 @@ android/companion/local.properties
 *.apk
 *.aab
 
-# Local tools
+# Local tools and worktrees
 /tmp/
+/.worktrees/
+/.claude/
 .idea/
 .vscode/

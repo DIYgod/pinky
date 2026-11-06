@@ -101,6 +101,11 @@ type StepView struct {
 	Elapsed time.Duration
 	Before  string // media id of the screenshot before the step, may be empty
 	After   string // media id of the screenshot after the step, may be empty
+	// Target is the element the step acted on and Point where it touched,
+	// in the device's screen pixels; the mirror draws its overlay from them.
+	// Both are zero for steps without a position.
+	Target screen.Rect
+	Point  screen.Point
 }
 
 // NeedKind is what a Needs you card asks for.

@@ -179,6 +179,13 @@ type Clipboard interface {
 	Clipboard(ctx context.Context) (string, error)
 }
 
+// Settler waits until the screen stops changing after an action, using
+// whatever signal the backend has (encoded frame sizes, accessibility
+// events). It returns settled=false when max passed first.
+type Settler interface {
+	WaitSettled(ctx context.Context, max time.Duration) (settled bool, err error)
+}
+
 // Errors drivers return. Wrap them with fmt.Errorf("...: %w", err).
 var (
 	ErrUnsupported = errors.New("not supported by this device or backend")
