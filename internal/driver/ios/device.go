@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -30,7 +31,9 @@ type Device struct {
 	hid     *hidSession
 	scr     screenInfo
 	inputAt time.Time // when input starts to work
-	closed  bool
+
+	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
+	closed    bool
 
 	inputMu   sync.Mutex // serializes gestures and raw touches
 	restartMu sync.Mutex // one stream restart at a time; guards the two below
@@ -38,13 +41,16 @@ type Device struct {
 	restartFailedAt time.Time
 	restartErr      error
 
-	svcMu   sync.Mutex
-	info2   *cdService // deviceinfo
-	shot    *cdService // screencapture
-	inst    *instruments.ScreenshotService
-	ax      *axSession
-	apps    *appCatalog
-	pidApps map[uint64]driver.App
+	svcMu       sync.Mutex
+	info2       *cdService // deviceinfo
+	shot        *cdService // screencapture
+	inst        *instruments.ScreenshotService
+	ax          *axSession
+	rax         *raxSession
+	raxErr      error // why rax could not connect, until raxFailedAt+raxRecheckFailures
+	raxFailedAt time.Time
+	apps        *appCatalog
+	pidApps     map[uint64]driver.App
 
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.
@@ -62,6 +68,13 @@ func Open(ctx context.Context, info driver.Info) (*Device, error) {
 		l.Close()
 		return nil, err
 	}
+	// Connect the accessibility service now: the phone answers its first
+	// requests slowly while it builds the first tree it pushes.
+	go func() {
+		c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		d.raxReady(c)
+	}()
 	return d, nil
 }
 
@@ -288,7 +301,19 @@ func (d *Device) waitInput(ctx context.Context) (*hidSession, error) {
 			return nil, ctx.Err()
 		}
 	}
+	d.markInput()
 	return h, nil
+}
+
+// markInput records that Pinky is about to change the screen.
+func (d *Device) markInput() { d.lastInput.Store(time.Now().UnixNano()) }
+
+// lastInputAt is when Pinky last sent input or launched an app.
+func (d *Device) lastInputAt() time.Time {
+	if n := d.lastInput.Load(); n != 0 {
+		return time.Unix(0, n)
+	}
+	return time.Time{}
 }
 
 func sleepCtx(ctx context.Context, d time.Duration) error {
@@ -476,6 +501,9 @@ func (d *Device) Close() error {
 	}
 	if d.ax != nil {
 		d.ax.Close()
+	}
+	if d.rax != nil {
+		d.rax.Close()
 	}
 	d.svcMu.Unlock()
 	errs = append(errs, d.l.Close())

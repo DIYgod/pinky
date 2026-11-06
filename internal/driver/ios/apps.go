@@ -200,6 +200,7 @@ func (d *Device) Launch(ctx context.Context, app string) error {
 	if err != nil {
 		return err
 	}
+	d.markInput()
 	var opts bytes.Buffer
 	if err := plist.NewBinaryEncoder(&opts).Encode(map[string]any{}); err != nil {
 		return err

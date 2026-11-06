@@ -410,11 +410,124 @@ func TestDeviceType(t *testing.T) {
 		}
 	}
 	// The letters may still be an input method's composition (Pinyin, on
-	// the test phone), which Escape cancels. Settings stays in its search
-	// view, empty: the test taps nothing it has not just observed.
+	// the test phone), which Escape cancels. Then leave the search through
+	// its close button, found where Observe says it is.
 	d.Key(ctx, driver.KeyEscape)
 	pause()
 	if !typed {
-		t.Fatalf("the field does not read \"clock\":\n%s", s.Render())
+		t.Errorf("the field does not read \"clock\":\n%s", s.Render())
+	}
+	time.Sleep(time.Second)
+	s, err = d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range s.Elements {
+		if e.Role == screen.RoleButton && (e.Label == "close" || e.Label == "Cancel") && !e.Bounds.Empty() {
+			if err := d.Tap(ctx, e.Bounds.Center(), driver.TapOptions{}); err != nil {
+				t.Fatal(err)
+			}
+			time.Sleep(time.Second)
+			break
+		}
 	}
 }
+
+// TestDeviceObserveFrames taps a Calculator key where Observe places it and
+// reads the display back, then clears it.
+func TestDeviceObserveFrames(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, time.Minute)
+	defer home(ctx, d)
+	if err := d.Launch(ctx, "com.apple.calculator"); err != nil {
+		t.Fatal(err)
+	}
+	observe := func(what string) *screen.Screen {
+		t.Helper()
+		settled, err := d.WaitSettled(ctx, 3*time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s, st, err := d.ObserveWithStats(ctx, driver.ObserveOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%s: settled %v, source %s, %d elements (%d with bounds), walk %v, total %v",
+			what, settled, st.Source, st.Elements, st.Placed, st.Walk.Round(time.Millisecond), st.Total.Round(time.Millisecond))
+		if !strings.HasPrefix(st.Source, "remoteax") {
+			t.Fatalf("Observe fell back to %s: %v", st.Source, st.RAXError)
+		}
+		return s
+	}
+	find := func(s *screen.Screen, labels ...string) screen.Element {
+		for _, e := range s.Elements {
+			for _, l := range labels {
+				if e.Label == l && !e.Bounds.Empty() {
+					return e
+				}
+			}
+		}
+		t.Fatalf("no %q on screen:\n%s", labels, s.Render())
+		return screen.Element{}
+	}
+	s := observe("launch")
+	for _, e := range s.Elements {
+		if e.Bounds.Empty() {
+			t.Errorf("element without bounds: %s", e.Line())
+		}
+	}
+	if err := d.Tap(ctx, find(s, "7").Bounds.Center(), driver.TapOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	s = observe("after 7")
+	shows := false
+	for _, e := range s.Elements {
+		if strings.Contains(e.Label, "value:7") || e.Label == "7, 7" {
+			shows = true
+		}
+	}
+	if !shows {
+		t.Errorf("the display does not show 7:\n%s", s.Render())
+	}
+	if err := d.Tap(ctx, find(s, "Clear", "All Clear").Bounds.Center(), driver.TapOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	observe("after clear")
+}
+
+// TestDeviceObserveTiming measures Observe the way an agent uses it: act,
+// wait for the screen to settle, observe.
+func TestDeviceObserveTiming(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, 2*time.Minute)
+	defer home(ctx, d)
+	for _, app := range []string{"com.apple.Preferences", "com.apple.calculator"} {
+		for i := 0; i < 3; i++ {
+			home(ctx, d)
+			if err := d.Launch(ctx, app); err != nil {
+				t.Fatal(err)
+			}
+			start := time.Now()
+			settled, err := d.WaitSettled(ctx, 3*time.Second)
+			if err != nil {
+				t.Fatal(err)
+			}
+			waited := time.Since(start)
+			s, st, err := d.ObserveWithStats(ctx, driver.ObserveOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("%s #%d: settle %v (%v), observe %v via %s, %d elements, %d with bounds",
+				app, i+1, waited.Round(time.Millisecond), settled, st.Total.Round(time.Millisecond), st.Source, len(s.Elements), st.Placed)
+			// Observe again with no input in between: a walk.
+			time.Sleep(pauseBetween)
+			_, st, err = d.ObserveWithStats(ctx, driver.ObserveOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("%s #%d again: observe %v via %s", app, i+1, st.Total.Round(time.Millisecond), st.Source)
+		}
+	}
+}
+
+const pauseBetween = 400 * time.Millisecond

@@ -300,9 +300,12 @@ func observe(ctx context.Context, d *pios.Device, args []string) error {
 		}
 		refs.Assign(s)
 		fmt.Println(s.Render())
-		fmt.Fprintf(os.Stderr, "elements %d (placed by OCR %d), OCR lines %d, walk %v, screenshot %v, OCR %v, total %v, complete %v\n",
-			st.Elements, st.Placed, st.OCRLines, st.Walk.Round(time.Millisecond), st.Shot.Round(time.Millisecond),
+		fmt.Fprintf(os.Stderr, "source %s: elements %d (with bounds %d), OCR lines %d, walk %v, screenshot %v, OCR %v, total %v, complete %v\n",
+			st.Source, st.Elements, st.Placed, st.OCRLines, st.Walk.Round(time.Millisecond), st.Shot.Round(time.Millisecond),
 			st.OCR.Round(time.Millisecond), st.Total.Round(time.Millisecond), st.Complete)
+		if st.RAXError != nil {
+			fmt.Fprintf(os.Stderr, "remoteax not used: %v\n", st.RAXError)
+		}
 		if st.WalkError != nil || st.OCRError != nil {
 			fmt.Fprintf(os.Stderr, "walk error: %v; OCR error: %v\n", st.WalkError, st.OCRError)
 		}
