@@ -1,0 +1,76 @@
+// Command pinky-ui-demo runs Pinky's desktop client against a scripted fake
+// gateway, with ffmpeg test patterns in place of phone screens.
+//
+//	go run ./cmd/pinky-ui-demo                    # one phone
+//	go run ./cmd/pinky-ui-demo -scenario three    # three phones
+//	go run ./cmd/pinky-ui-demo bench              # measure video decoding
+//
+// The Demo menu switches scenarios, plugs in a new phone and restarts.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/egoist/mygo"
+
+	"github.com/DIYgod/pinky/ui"
+	"github.com/DIYgod/pinky/ui/fakeapi"
+)
+
+func main() {
+	if len(os.Args) > 1 && os.Args[1] == "bench" {
+		if err := bench(os.Args[2:]); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	var names []string
+	for _, s := range fakeapi.Scenarios {
+		names = append(names, string(s))
+	}
+	scenario := flag.String("scenario", "one", "what to start with: "+strings.Join(names, ", "))
+	speed := flag.Float64("speed", 1, "how fast the agents work; 2 is twice as fast")
+	theme := flag.String("theme", "", `"light" or "dark"; empty follows the system`)
+	timeout := flag.Duration("approval-timeout", 60*time.Second, "how long an approval waits before it denies")
+	dev := flag.Bool("dev", false, "start with Developer mode on")
+	page := flag.String("page", "", `open "activity", "settings" or "add-phone" at start`)
+	flag.Parse()
+
+	api := fakeapi.New(fakeapi.Options{
+		Scenario:        fakeapi.Scenario(*scenario),
+		Speed:           *speed,
+		ApprovalTimeout: *timeout,
+	})
+	settings := ui.DefaultSettings()
+	settings.DeveloperMode = *dev
+
+	var items []*mygo.MenuItem
+	for _, s := range fakeapi.Scenarios {
+		s := s
+		items = append(items, &mygo.MenuItem{
+			Label: s.Title(),
+			Click: func(*mygo.MenuItem, *mygo.Window) { api.Play(s) },
+		})
+	}
+	items = append(items,
+		mygo.Separator(),
+		&mygo.MenuItem{Label: "Restart Scenario", Accelerator: "CmdOrCtrl+Shift+R", Click: func(*mygo.MenuItem, *mygo.Window) { api.Play(api.Scenario()) }},
+		&mygo.MenuItem{Label: "Plug In a New Phone", Click: func(*mygo.MenuItem, *mygo.Window) { api.ConnectPhone() }},
+	)
+	err := ui.Run(api, ui.Options{
+		Version:   "0.0.0-demo",
+		Theme:     *theme,
+		Settings:  &settings,
+		StartPage: *page,
+		Menus:     []*mygo.MenuItem{{Label: "Demo", Submenu: items}},
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}

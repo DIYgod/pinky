@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/danielpaulus/go-ios v1.3.3-0.20261103131045-6910f3b585ad
 	github.com/ebitengine/purego v0.11.3
+	github.com/egoist/mygo v0.7.4
 	github.com/google/jsonschema-go v0.4.3
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
@@ -19,6 +20,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
+	github.com/go-text/typesetting v0.3.5 // indirect
 	github.com/google/btree v1.1.2 // indirect
 	github.com/grandcat/zeroconf v1.0.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
@@ -32,6 +34,7 @@ require (
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.mozilla.org/pkcs7 v0.9.0 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
+	golang.org/x/image v0.46.0 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.61.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
@@ -44,3 +47,5 @@ require (
 	modernc.org/memory v1.12.1 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.7.2 // indirect
 )
+
+tool github.com/egoist/mygo/cmd/mygo
