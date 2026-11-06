@@ -29,11 +29,13 @@ const (
 	ThreePhones Scenario = "three"    // and an iPhone in an onboarding test, and an offline Galaxy
 	Locked      Scenario = "locked"   // Pixel 9 is locked while the agent replies to Sam
 	Takeover    Scenario = "takeover" // the person took over Pixel 9 to change the note
+	Handoff     Scenario = "handoff"  // the agent asks the person to sign in to Dinely
+	NewAgent    Scenario = "agent"    // Codex connects for the first time and waits to be allowed
 	NoPhones    Scenario = "empty"    // nothing connected: the client opens Add phone
 )
 
 // Scenarios lists them in menu order.
-var Scenarios = []Scenario{OnePhone, ThreePhones, Locked, Takeover, NoPhones}
+var Scenarios = []Scenario{OnePhone, ThreePhones, Locked, Takeover, Handoff, NewAgent, NoPhones}
 
 // Title names a scenario for menus.
 func (s Scenario) Title() string {
@@ -46,6 +48,10 @@ func (s Scenario) Title() string {
 		return "Locked phone"
 	case Takeover:
 		return "You're in control"
+	case Handoff:
+		return "Handoff"
+	case NewAgent:
+		return "New agent"
 	case NoPhones:
 		return "No phones"
 	}
@@ -91,6 +97,11 @@ type API struct {
 	inputs    []Input
 	nextID    int
 	shotCache map[string]image.Image
+
+	agents     map[string]*agent
+	readOnly   map[string]bool
+	mediaDir   string            // where MediaPath writes screenshots
+	mediaFiles map[string]string // media id → file
 }
 
 type device struct {
@@ -138,7 +149,8 @@ func New(opt Options) *API {
 	if opt.Scenario == "" {
 		opt.Scenario = OnePhone
 	}
-	a := &API{opt: opt, subs: map[chan gateway.Event]struct{}{}, shotCache: map[string]image.Image{}}
+	a := &API{opt: opt, subs: map[chan gateway.Event]struct{}{}, shotCache: map[string]image.Image{},
+		agents: defaultAgents(), mediaFiles: map[string]string{}}
 	a.history = seedHistory(opt.Now())
 	a.Play(opt.Scenario)
 	return a
@@ -196,6 +208,12 @@ func (a *API) Play(s Scenario) {
 	case Takeover:
 		a.devices = []*device{pixel}
 		scripts = append(scripts, a.lunch(gen, pixel, true))
+	case Handoff:
+		a.devices = []*device{pixel}
+		scripts = append(scripts, a.signIn(gen, pixel))
+	case NewAgent:
+		a.devices = []*device{pixel}
+		scripts = append(scripts, a.newAgent(gen, pixel))
 	case NoPhones:
 	}
 	a.mu.Unlock()
@@ -265,7 +283,7 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Offline"
 	case d.info.State != driver.StateOnline:
 		v.Status, v.StatusLine = gateway.DeviceNeedsYou, "Needs setup"
-	case running && a.hasNeed(d, gateway.NeedApproval):
+	case running && (a.hasNeed(d, gateway.NeedApproval) || a.hasNeed(d, gateway.NeedHandoff)):
 		v.Status, v.StatusLine = gateway.DeviceNeedsYou, d.statusLine
 	case d.locked && running:
 		v.Status, v.StatusLine = gateway.DeviceLocked, "Locked"
@@ -378,24 +396,34 @@ func (a *API) emit(ev gateway.Event) {
 	}
 }
 
-// Decide implements gateway.API.
+// Decide implements gateway.API, for approvals and handoffs. Take over
+// pauses the task for the person, as TakeOver does.
 func (a *API) Decide(needID string, d gateway.Decision, note string) error {
 	a.mu.Lock()
 	var n *need
+	idx := -1
 	for i, x := range a.needs {
 		if x.view.ID == needID {
-			n = x
-			a.needs = append(a.needs[:i], a.needs[i+1:]...)
+			n, idx = x, i
 			break
 		}
 	}
-	a.mu.Unlock()
 	if n == nil {
+		a.mu.Unlock()
 		return fmt.Errorf("fakeapi: no approval %q", needID)
 	}
-	if n.view.Kind != gateway.NeedApproval {
+	if n.view.Kind != gateway.NeedApproval && n.view.Kind != gateway.NeedHandoff {
+		a.mu.Unlock()
 		return fmt.Errorf("fakeapi: %q is not an approval", needID)
 	}
+	if dev := a.device(n.view.DeviceID); d == gateway.TakeOver && dev != nil && dev.task != nil && !isFinished(dev.task.view.State) {
+		a.takeOverLocked(dev) // answers this need and the phone's others
+		a.mu.Unlock()
+		a.emitAll(n.view.DeviceID)
+		return nil
+	}
+	a.needs = append(a.needs[:idx], a.needs[idx+1:]...)
+	a.mu.Unlock()
 	n.decision <- decision{d: d, note: note}
 	a.emit(gateway.Event{Kind: gateway.EventNeeds, NeedID: needID, DeviceID: n.view.DeviceID})
 	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: n.view.DeviceID})
@@ -455,15 +483,18 @@ func (a *API) takeOverLocked(d *device) bool {
 	if t == nil || isFinished(t.view.State) {
 		return true
 	}
+	handoff := false
 	for i := 0; i < len(a.needs); i++ {
-		if n := a.needs[i]; n.view.DeviceID == d.info.ID && n.view.Kind == gateway.NeedApproval {
+		if n := a.needs[i]; n.view.DeviceID == d.info.ID && (n.view.Kind == gateway.NeedApproval || n.view.Kind == gateway.NeedHandoff) {
 			a.needs = append(a.needs[:i], a.needs[i+1:]...)
 			i--
+			handoff = handoff || n.view.Kind == gateway.NeedHandoff
 			n.decision <- decision{d: gateway.TakeOver}
 		}
 	}
-	// The agent's pending step is withdrawn with its approval.
-	if n := len(t.view.Steps); n > 0 && t.view.Steps[n-1].Status == "approval_pending" {
+	// The agent's pending step is withdrawn with its approval; a handoff's
+	// stays, and settles when the person hands back.
+	if n := len(t.view.Steps); n > 0 && t.view.Steps[n-1].Status == "approval_pending" && !handoff {
 		t.view.Steps = t.view.Steps[:n-1]
 	}
 	t.view.State = gateway.TaskPaused
@@ -493,6 +524,11 @@ func (a *API) HandBack(deviceID, note string) error {
 		text := "You handed back control"
 		if note != "" {
 			text += "\nYour note: “" + note + "”"
+		}
+		for i := range t.view.Steps {
+			if st := &t.view.Steps[i]; st.Status == "approval_pending" && strings.HasPrefix(st.Text, "Asked you to take over: ") {
+				st.Status = "settled"
+			}
 		}
 		t.finishCurrent()
 		t.addStep(a.opt.Now(), gateway.StepView{Text: text, Status: "user"})

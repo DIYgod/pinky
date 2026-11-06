@@ -38,6 +38,9 @@ func seedHistory(now time.Time) []gateway.TaskView {
 		for i, s := range steps {
 			s.Index = i
 			s.At = start.Add(step * time.Duration(i+1))
+			if s.Status == "settled" && s.Tool != "" {
+				s.After = mediaID(t.DeviceID)
+			}
 			t.Steps = append(t.Steps, s)
 		}
 		return t

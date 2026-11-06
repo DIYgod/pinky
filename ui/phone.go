@@ -5,6 +5,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -107,13 +108,26 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	}
 
 	t := a.taskOf(d.Info.ID)
-	agent := "The agent"
-	if t != nil && t.Agent != "" {
-		agent = t.Agent
+	agent := ""
+	if t != nil && running(t.State) {
+		agent = nonEmpty(t.Agent, "The agent")
 	}
 	inControl := d.Status == gateway.DeviceInControl
-	if inControl {
-		a.controlBanner(c, d.Info.ID, agent)
+	ho, handoff := a.handoffFor(d.Info.ID)
+	switch {
+	case handoff && !a.isLocked(d) && t != nil && t.State == gateway.TaskPaused:
+		// The person took over and the agent waits with phone_handoff.
+		inControl = true
+		a.controlBanner(c, d.Info.ID, "You're in control. ", agentOf(ho)+" is paused.")
+	case handoff && !a.isLocked(d):
+		// The agent asked for the person: the phone is theirs until they
+		// hand it back, here or with Done on the card.
+		inControl = true
+		a.controlBanner(c, d.Info.ID, "Your turn. ", agentOf(ho)+" waits for you: "+lowerFirst(strings.TrimSuffix(ho.Title, ".")))
+	case inControl && agent != "":
+		a.controlBanner(c, d.Info.ID, "You're in control. ", agent+" is paused.")
+	case inControl:
+		a.controlBanner(c, d.Info.ID, "You're in control. ", "Hand back to let agents use this phone again.")
 	}
 
 	// Size the phone to the room the window gives it.
@@ -169,8 +183,10 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	})
 }
 
-// controlBanner is the "You're in control" banner over the mirror.
-func (a *app) controlBanner(c *mg.Context, id, agent string) {
+// controlBanner is the "You're in control" banner over the mirror, with
+// Hand back. The person keeps control after the agent left, until they
+// hand the phone back.
+func (a *app) controlBanner(c *mg.Context, id, bold, rest string) {
 	p := pal(c)
 	w, _ := c.Size()
 	b := mg.Row(c).Attach(mg.AnchorTop, mg.AnchorTop).Top(16).Width(min(460, w-220-320-32)).
@@ -179,8 +195,8 @@ func (a *app) controlBanner(c *mg.Context, id, agent string) {
 	shadow(c, b).Children(func() {
 		mg.Icon(c, icHand).FontSize(18).TextColor(p.ink2)
 		mg.RichText(c,
-			mg.Span{Text: "You're in control. ", Weight: 650, Color: p.ink},
-			mg.Span{Text: agent + " is paused.", Color: p.ink2},
+			mg.Span{Text: bold, Weight: 650, Color: p.ink},
+			mg.Span{Text: rest, Color: p.ink2},
 		).Grow(1).MinWidth(0)
 		if button(c, "Hand back", btnOpt{kind: btnPrimary}).Clicked() {
 			a.handBack(id)
@@ -262,7 +278,7 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 		for _, d := range a.devices {
 			d := d
 			t := a.taskOf(d.Info.ID)
-			asks := d.Status == gateway.DeviceNeedsYou || d.Status == gateway.DeviceLocked
+			asks := d.Status == gateway.DeviceNeedsYou || a.isLocked(d)
 			offline := d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline
 			tile := mg.Box(c.Key("tile-"+d.Info.ID)).Basis(200).Grow(1).MaxWidth(232).MinWidth(196).Radius(14).Border(1, p.line).Background(p.panel)
 			if asks {
@@ -305,16 +321,24 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 						mg.Text(c, d.StatusLine).FontSize(13).TextColor(p.ink2).SingleLine()
 					})
 				})
-				if t != nil && running(t.State) && !offline {
+				run := t != nil && running(t.State)
+				_, handoff := a.handoffFor(d.Info.ID)
+				inControl := d.Status == gateway.DeviceInControl || (handoff && !a.isLocked(d))
+				if (run || inControl) && !offline {
 					act := mg.Row(c).Absolute().Left(0).Right(0).Top(150).Justify(mg.Center).Gap(6)
 					act.IgnoreInput(!hovered).Opacity(act.Animate("show", b2f(hovered), 150*time.Millisecond))
 					act.Children(func() {
-						if d.Status != gateway.DeviceInControl {
+						switch {
+						case inControl:
+							if button(c, "Hand back", btnOpt{small: true, dark: true}).Clicked() {
+								a.handBack(d.Info.ID)
+							}
+						case !a.isLocked(d):
 							if button(c, "Take over", btnOpt{small: true, dark: true}).Clicked() {
 								a.takeOver(d.Info.ID)
 							}
 						}
-						if button(c, "Stop", btnOpt{small: true, kind: btnRed, dark: true}).Clicked() {
+						if run && button(c, "Stop", btnOpt{small: true, kind: btnRed, dark: true}).Clicked() {
 							a.stop(d.Info.ID)
 						}
 					})

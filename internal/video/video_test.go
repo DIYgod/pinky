@@ -162,6 +162,62 @@ func TestDecodeTestStream(t *testing.T) {
 	}
 }
 
+func TestFrameStream(t *testing.T) {
+	needFFmpeg(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	// A picture whose left half is red and right half blue.
+	src := image.NewRGBA(image.Rect(0, 0, 320, 640))
+	for y := 0; y < 640; y++ {
+		for x := 0; x < 320; x++ {
+			i := src.PixOffset(x, y)
+			if x < 160 {
+				src.Pix[i], src.Pix[i+3] = 255, 255
+			} else {
+				src.Pix[i+2], src.Pix[i+3] = 255, 255
+			}
+		}
+	}
+	s, err := FrameStream(ctx, 320, 640, 15, func() image.Image { return src })
+	if err != nil {
+		t.Fatal(err)
+	}
+	frames := make(chan struct{}, 8)
+	p, err := NewPlayer(s, PlayerOptions{OnFrame: func() {
+		select {
+		case frames <- struct{}{}:
+		default:
+		}
+	}})
+	if err != nil {
+		s.Close()
+		t.Fatal(err)
+	}
+	defer p.Close()
+	var f *Frame
+	for f == nil {
+		select {
+		case <-frames:
+			f = p.Take()
+		case <-ctx.Done():
+			t.Fatalf("no picture: %+v", p.Stats())
+		}
+	}
+	if f.Width != 320 || f.Height != 640 {
+		t.Fatalf("picture %dx%d, want 320x640", f.Width, f.Height)
+	}
+	at := func(x, y int) (r, b byte) {
+		i := f.Image.PixOffset(x, y)
+		return f.Image.Pix[i], f.Image.Pix[i+2]
+	}
+	if r, b := at(40, 320); r < 200 || b > 60 {
+		t.Errorf("left half is r=%d b=%d, want red", r, b)
+	}
+	if r, b := at(280, 320); b < 200 || r > 60 {
+		t.Errorf("right half is r=%d b=%d, want blue", r, b)
+	}
+}
+
 // Some phones tag their stream with a matrix swscale cannot convert, such
 // as the YCgCo matrix of the Mi 10 Pro's encoder; the picture must still
 // show.

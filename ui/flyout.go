@@ -121,7 +121,7 @@ func (a *app) flyoutView(c *mg.Context) {
 					if a.flyout != nil {
 						a.flyout.Close()
 					}
-					if n.Kind == gateway.NeedApproval {
+					if n.Kind != gateway.NeedUnlock {
 						a.showPanel(true)
 					} else {
 						a.openNeed(n.ID)

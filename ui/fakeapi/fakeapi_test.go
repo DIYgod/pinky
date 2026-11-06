@@ -132,3 +132,132 @@ func TestThreePhones(t *testing.T) {
 		t.Errorf("Play did not reset: %d devices, %d needs", len(a.Devices()), len(a.Needs()))
 	}
 }
+
+func needOf(a *API, kind gateway.NeedKind) (gateway.NeedView, bool) {
+	for _, n := range a.Needs() {
+		if n.Kind == kind {
+			return n, true
+		}
+	}
+	return gateway.NeedView{}, false
+}
+
+func TestHandoffDone(t *testing.T) {
+	a := New(Options{Scenario: Handoff, Speed: 50})
+	var n gateway.NeedView
+	waitFor(t, "the handoff", func() (ok bool) { n, ok = needOf(a, gateway.NeedHandoff); return })
+	if n.Title != "Sign in to Dinely, please" || n.DeviceID != "pixel-9" {
+		t.Fatalf("handoff = %+v", n)
+	}
+	if d := a.Devices()[0]; d.Status != gateway.DeviceNeedsYou {
+		t.Errorf("device status %q during the handoff", d.Status)
+	}
+	if err := a.Decide(n.ID, gateway.AllowOnce, "Signed in as Kim"); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the task to finish", func() bool {
+		ts := a.Tasks()
+		return len(ts) == 1 && ts[0].State == gateway.TaskDone
+	})
+	var found bool
+	for _, s := range a.Tasks()[0].Steps {
+		if s.Tool == "phone_handoff" {
+			found = true
+			if s.Status != "settled" || s.Text != "Asked you to take over: Sign in to Dinely, please\nYour note: “Signed in as Kim”" {
+				t.Errorf("handoff step %q (%s)", s.Text, s.Status)
+			}
+		}
+	}
+	if !found {
+		t.Error("no handoff step")
+	}
+}
+
+func TestHandoffTakeOver(t *testing.T) {
+	a := New(Options{Scenario: Handoff, Speed: 50})
+	var n gateway.NeedView
+	waitFor(t, "the handoff", func() (ok bool) { n, ok = needOf(a, gateway.NeedHandoff); return })
+	if err := a.Decide(n.ID, gateway.TakeOver, ""); err != nil {
+		t.Fatal(err)
+	}
+	if d := a.Devices()[0]; d.Status != gateway.DeviceInControl {
+		t.Fatalf("device status %q after Take over", d.Status)
+	}
+	if _, open := needOf(a, gateway.NeedHandoff); open {
+		t.Error("the handoff is still open")
+	}
+	if err := a.HandBack("pixel-9", ""); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the task to finish", func() bool {
+		ts := a.Tasks()
+		return len(ts) == 1 && ts[0].State == gateway.TaskDone
+	})
+	for _, s := range a.Tasks()[0].Steps {
+		if s.Tool == "phone_handoff" && s.Status != "settled" {
+			t.Errorf("handoff step status %q after hand back", s.Status)
+		}
+	}
+}
+
+func TestNewAgent(t *testing.T) {
+	a := New(Options{Scenario: NewAgent, Speed: 50})
+	ctx := context.Background()
+	n, ok := approval(a)
+	if !ok || n.Rule != "New agent" || n.Agent != "Codex" || n.DeviceID != "" {
+		t.Fatalf("approval = %+v", n)
+	}
+	agents, _ := a.Agents(ctx)
+	if len(agents) != 2 || agents[1].Name != "Codex" || agents[1].Approved {
+		t.Fatalf("agents = %+v", agents)
+	}
+	scope := gateway.Scope{Mode: gateway.ScopeApps, Apps: []string{"Weather"}}
+	a.SetAgentScope("Codex", scope)
+	if err := a.Decide(n.ID, gateway.AllowOnce, ""); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "Codex's task to finish", func() bool {
+		ts := a.Tasks()
+		return len(ts) == 1 && ts[0].Agent == "Codex" && ts[0].State == gateway.TaskDone
+	})
+	agents, _ = a.Agents(ctx)
+	if !agents[1].Approved || agents[1].Scope.Mode != gateway.ScopeApps || len(agents[1].Scope.Apps) != 1 {
+		t.Errorf("Codex after approval = %+v", agents[1])
+	}
+}
+
+func TestMediaAndWipe(t *testing.T) {
+	a := New(Options{Scenario: OnePhone, Speed: 50, FFmpeg: "no-such-ffmpeg"})
+	ctx := context.Background()
+	hist, _ := a.History(ctx, gateway.HistoryQuery{})
+	var id string
+	for _, s := range hist[0].Steps {
+		if s.After != "" {
+			id = s.After
+			break
+		}
+	}
+	if id == "" {
+		t.Fatal("no step screenshot in history")
+	}
+	path, err := a.MediaPath(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if path2, _ := a.MediaPath(ctx, id); path2 != path {
+		t.Errorf("second MediaPath %q, want %q", path2, path)
+	}
+	if _, err := a.MediaPath(ctx, "nope"); err == nil {
+		t.Error("MediaPath of an unknown id worked")
+	}
+	a.SetReadOnly("", true)
+	if !a.ReadOnly("") {
+		t.Error("read-only not set")
+	}
+	if err := a.WipeHistory(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if hist, _ := a.History(ctx, gateway.HistoryQuery{}); len(hist) != 0 {
+		t.Errorf("%d tasks after WipeHistory", len(hist))
+	}
+}

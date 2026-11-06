@@ -138,7 +138,11 @@ func (a *app) panelView(c *mg.Context) {
 	}
 	n := asks[a.panelIdx]
 	noting := a.noting[n.ID]
-	if !noting {
+	plain := n.Kind == gateway.NeedApproval && !newAgentNeed(n)
+	if !plain {
+		// Handoffs and agent requests have no Return and Esc: their
+		// buttons are not Allow and Deny.
+	} else if !noting {
 		if c.Shortcut(0, mg.KeyEnter) {
 			a.decide(n, gateway.AllowOnce, "")
 		}
@@ -178,13 +182,32 @@ func (a *app) panelView(c *mg.Context) {
 				mg.Spacer(c)
 				if !n.Deadline.IsZero() {
 					secs := time.Duration(math.Ceil(max(0, left.Seconds()))) * time.Second
-					mg.Text(c, "Denies in "+elapsed(secs)).FontSize(12.5).TextColor(p.ink2)
+					word := "Denies in "
+					if n.Kind == gateway.NeedHandoff {
+						word = "Ends in "
+					}
+					mg.Text(c, word+elapsed(secs)).FontSize(12.5).TextColor(p.ink2)
 				}
 			})
 			needEyebrow(c, n)
 			mg.Text(c, n.Title).FontSize(16).FontWeight(650).LineHeight(1.3).Margin(6, 0, 0, 0).Role(mg.RoleHeading)
-			if n.Detail != "" {
-				mg.Text(c, n.Detail).FontSize(13.5).TextColor(p.ink2).MaxLines(2)
+			detail := n.Detail
+			if newAgentNeed(n) {
+				_, picker := a.api.(agentScoper)
+				detail = agentRequestDetail(n, picker)
+			}
+			if detail != "" {
+				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2).MaxLines(2)
+			}
+			switch {
+			case n.Kind == gateway.NeedHandoff:
+				mg.Spacer(c)
+				a.handoffControls(c, n)
+				return
+			case newAgentNeed(n):
+				mg.Spacer(c)
+				a.agentRequestControls(c, n)
+				return
 			}
 			if !noting {
 				a.screenshotCrop(c, n)
@@ -243,21 +266,44 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 			title, detail := "", ""
 			ic, col := icCheck, p.green
 			kind, app := x.need.Rule, x.need.App
-			switch x.d {
-			case gateway.AllowOnce:
-				title, detail = "Allowed once", "Pinky checks the button is still on screen, then taps it."
-			case gateway.AllowTask:
-				title = "Allowed for this task"
-				detail = fmt.Sprintf("%s in %s are allowed until this task ends.", nonEmpty(kind, "Actions like this"), nonEmpty(app, "this app"))
-			case gateway.AllowAlways:
-				title = "Always allowed"
-				detail = fmt.Sprintf("%s in %s no longer ask. Change it in Settings.", nonEmpty(kind, "Actions like this"), nonEmpty(app, "this app"))
-			default:
-				ic, col = icX, p.ink2
-				title = "Denied"
-				detail = "Nothing was tapped. " + agentOf(x.need) + " was told no."
+			agent := agentOf(x.need)
+			withNote := func(s string) string {
 				if x.note != "" {
-					detail = "Nothing was tapped. " + agentOf(x.need) + " was told no, with your note: “" + x.note + "”"
+					return s + " Your note: “" + x.note + "”"
+				}
+				return s
+			}
+			switch {
+			case x.need.Kind == gateway.NeedHandoff && x.d == gateway.AllowOnce:
+				title, detail = "Handed back", withNote(agent+" goes on from here.")
+			case x.need.Kind == gateway.NeedHandoff:
+				ic, col = icX, p.ink2
+				title, detail = "Declined", withNote(agent+" was told no.")
+			case newAgentNeed(x.need) && x.d == gateway.Deny:
+				ic, col = icX, p.ink2
+				title, detail = "Denied", agent+" can't use your phones."
+			case newAgentNeed(x.need):
+				title, detail = "Allowed", agent+" can use your phones. Change what it may do in Settings › Agents."
+			}
+			switch {
+			case title != "":
+			default:
+				switch x.d {
+				case gateway.AllowOnce:
+					title, detail = "Allowed once", "Pinky checks the button is still on screen, then taps it."
+				case gateway.AllowTask:
+					title = "Allowed for this task"
+					detail = fmt.Sprintf("%s in %s are allowed until this task ends.", nonEmpty(kind, "Actions like this"), nonEmpty(app, "this app"))
+				case gateway.AllowAlways:
+					title = "Always allowed"
+					detail = fmt.Sprintf("%s in %s no longer ask. Change it in Settings.", nonEmpty(kind, "Actions like this"), nonEmpty(app, "this app"))
+				default:
+					ic, col = icX, p.ink2
+					title = "Denied"
+					detail = "Nothing was tapped. " + agentOf(x.need) + " was told no."
+					if x.note != "" {
+						detail = "Nothing was tapped. " + agentOf(x.need) + " was told no, with your note: “" + x.note + "”"
+					}
 				}
 			}
 			mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {

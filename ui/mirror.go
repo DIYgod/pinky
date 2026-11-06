@@ -23,18 +23,19 @@ import (
 // shown by the Phone screen or a tile of All phones. Its fields are used
 // on the main thread.
 type mirror struct {
-	a      *app
-	id     string
-	gen    int
-	cancel context.CancelFunc
-	player *video.Player
-	bitmap *mg.Bitmap
-	frame  *video.Frame // the picture the bitmap shows
-	state  string       // "connecting", "playing", "failed"
-	err    error
-	retry  time.Time
-	used   int
-	closed bool
+	a       *app
+	id      string
+	gen     int
+	cancel  context.CancelFunc
+	player  *video.Player
+	bitmap  *mg.Bitmap
+	frame   *video.Frame // the picture the bitmap shows
+	state   string       // "connecting", "playing", "failed"
+	opening bool         // a try to open the stream is under way
+	err     error
+	retry   time.Time
+	used    int
+	closed  bool
 
 	picW, picH int     // the stream's picture size: the device's pixels
 	boxW, boxH float32 // the screen's size on the window, in DIPs
@@ -57,7 +58,7 @@ func (a *app) mirrorFor(id string) *mirror {
 		m.open()
 	}
 	m.used = a.buildSeq
-	if m.state == "failed" && time.Now().After(m.retry) && a.videoErr == nil {
+	if m.state == "failed" && !m.opening && time.Now().After(m.retry) && a.videoErr == nil {
 		m.open()
 	}
 	return m
@@ -97,7 +98,13 @@ func (m *mirror) open() {
 	gen := m.gen
 	ctx, cancel := context.WithCancel(m.a.ctx)
 	m.cancel = cancel
-	m.state, m.err = "connecting", nil
+	// A retry keeps showing why the last try failed until this one is
+	// done, rather than a spinner every few seconds for a phone that has
+	// no picture.
+	if m.state != "failed" {
+		m.state, m.err = "connecting", nil
+	}
+	m.opening = true
 	a := m.a
 	go func() {
 		logf("pinky: mirror %s: opening the stream (gen %d)", m.id, gen)
@@ -118,12 +125,15 @@ func (m *mirror) open() {
 				}
 				return
 			}
+			m.opening = false
 			if err != nil {
 				m.state, m.err = "failed", err
 				m.retry = time.Now().Add(3 * time.Second)
 				if errors.Is(err, video.ErrNotFound) {
 					a.videoErr = err
+					return
 				}
+				m.retryLater()
 				return
 			}
 			m.player, m.state = p, "playing"
@@ -133,11 +143,26 @@ func (m *mirror) open() {
 					if m.player == p && !m.closed {
 						m.state, m.err = "failed", p.Err()
 						m.retry = time.Now().Add(2 * time.Second)
+						m.retryLater()
 					}
 				})
 			}()
 		})
 	}()
+}
+
+// retryLater opens the stream again once its retry is due, whether or not
+// the view is built meanwhile: an idle window, or one on a locked screen,
+// builds nothing.
+func (m *mirror) retryLater() {
+	gen := m.gen
+	time.AfterFunc(max(time.Until(m.retry), 0), func() {
+		m.a.post(func() {
+			if !m.closed && m.gen == gen && m.state == "failed" && !m.opening && m.a.videoErr == nil {
+				m.open()
+			}
+		})
+	})
 }
 
 func (m *mirror) close() {
@@ -195,7 +220,7 @@ func overlayStep(t *gateway.TaskView) (gateway.StepView, stepKind, bool) {
 // tile.
 func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gateway.TaskView, radius float32, tile bool) {
 	p := pal(c)
-	locked := d.Status == gateway.DeviceLocked
+	locked := a.isLocked(d)
 	step, kind, outline := overlayStep(t)
 	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
 	if !tile {
@@ -211,6 +236,10 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			if f := pl.Take(); f != nil {
 				if m.bitmap == nil {
 					m.bitmap = mg.NewBitmap(f.Image)
+					// The view was built before the first picture, with
+					// the Connecting overlay; painting does not build it
+					// again, and a still screen sends nothing else.
+					a.post(func() {})
 				} else {
 					m.bitmap.Update(f.Image)
 				}
@@ -225,7 +254,12 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			pt.Clip(r, radius, func() { pt.Image(m.bitmap, r, mg.Contain) })
 		}
 		if outline && !locked && m.picW > 0 {
-			drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
+			// Clipped to the screen: targets are in screen pixels, which on
+			// an iPhone differ from the picture's by about 1%, so an
+			// outline at the edge may reach a little past it.
+			pt.Clip(r, radius, func() {
+				drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
+			})
 		}
 	})
 	scr.Children(func() {
@@ -284,6 +318,9 @@ func mirrorError(err error) string {
 	}
 	if errors.Is(err, driver.ErrOffline) {
 		return "The phone went offline."
+	}
+	if errors.Is(err, driver.ErrUnsupported) {
+		return "This phone has no live picture."
 	}
 	return "No picture: " + msg
 }

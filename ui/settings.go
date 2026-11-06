@@ -1,10 +1,12 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
@@ -73,7 +75,11 @@ func (a *app) settingsPage(c *mg.Context) {
 				})
 			}
 			tab(secPhones, "Phones", false)
-			tab(secAgents, "Agents", false)
+			agentsWait := false
+			for _, n := range a.needs {
+				agentsWait = agentsWait || newAgentNeed(n)
+			}
+			tab(secAgents, "Agents", agentsWait)
 			tab(secSafety, "Safety", false)
 			tab(secPrivacy, "Privacy", false)
 			tab(secAdvanced, "Advanced", false)
@@ -240,7 +246,12 @@ func (a *app) settingsSafety(c *mg.Context) {
 		})
 	})
 	mg.Column(c).Label("Protections").Children(func() {
-		a.toggleRow(c, "ro", "Read-only mode", "Agents can browse, not commit", false, &st.ReadOnly)
+		if a.toggleRow(c, "ro", "Read-only mode", "Agents can browse, not commit", false, &st.ReadOnly) {
+			if ro, ok := a.api.(readOnlySetter); ok {
+				on := st.ReadOnly
+				go ro.SetReadOnly("", on) // every phone
+			}
+		}
 		_, keep := unlockWords()
 		desc := "Save your phone PIN in the Keychain; unlock with Touch ID"
 		if runtime.GOOS != "darwin" {
@@ -299,53 +310,242 @@ func (a *app) settingsPhones(c *mg.Context) {
 	})
 }
 
+// agentsState is Settings › Agents': the gateway's agents and the scopes
+// being chosen.
+type agentsState struct {
+	list     []gateway.AgentView
+	loaded   bool
+	err      error
+	seq      int
+	lastLoad time.Time
+	asks     int               // open first-connection requests, when last read
+	editing  string            // the agent whose scope is being changed
+	choice   map[string]string // scope label being chosen, by agent or need id
+	apps     map[string]string // apps typed for "Use only the apps I choose"
+}
+
+func (s *agentsState) load(a *app) {
+	al, ok := a.api.(agentLister)
+	if !ok {
+		return
+	}
+	s.seq++
+	seq := s.seq
+	s.lastLoad = time.Now()
+	go func() {
+		ctx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
+		defer cancel()
+		list, err := al.Agents(ctx)
+		a.post(func() {
+			if seq != s.seq {
+				return
+			}
+			sort.Slice(list, func(i, j int) bool { return list[i].Name < list[j].Name })
+			s.list, s.err, s.loaded = list, err, true
+		})
+	}()
+}
+
+func splitApps(s string) []string {
+	var out []string
+	for _, a := range strings.Split(s, ",") {
+		if a = strings.TrimSpace(a); a != "" {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// scopePicker is the select of what an agent may do, with the apps field
+// for "Use only the apps I choose". It returns the scope chosen.
+func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scope) gateway.Scope {
+	st := &a.agents
+	if st.choice == nil {
+		st.choice, st.apps = map[string]string{}, map[string]string{}
+	}
+	choice, ok := st.choice[key]
+	if !ok {
+		choice = scopeLabel(initial.Mode)
+		st.apps[key] = strings.Join(initial.Apps, ", ")
+	}
+	labels := make([]string, len(scopeChoices))
+	for i, sc := range scopeChoices {
+		labels[i] = sc.label
+	}
+	mg.Select(c.Key("scope-"+key), &choice, labels).Label(label).MaxWidth(360)
+	st.choice[key] = choice
+	scope := gateway.Scope{Mode: scopeOf(choice)}
+	if scope.Mode == gateway.ScopeApps {
+		apps := st.apps[key]
+		mg.TextInput(c.Key("apps-"+key), &apps).Placeholder("Apps, separated by commas: Dinely, Chatter").Label("Apps").MaxWidth(360)
+		st.apps[key] = apps
+		scope.Apps = splitApps(apps)
+	}
+	return scope
+}
+
+// approveAgent allows an agent's first connection with the chosen scope:
+// SetAgentScope, which also approves the agent, then Decide, so the
+// gateway keeps the person's choice when the agent picks up the answer.
+func (a *app) approveAgent(n gateway.NeedView, scope gateway.Scope) {
+	a.remember(n, gateway.AllowOnce, "")
+	scoper, ok := a.api.(agentScoper)
+	name := n.Agent
+	a.call(n.DeviceID, "approve the agent", func() error {
+		if ok && name != "" {
+			scoper.SetAgentScope(name, scope)
+		}
+		return a.api.Decide(n.ID, gateway.AllowOnce, "")
+	})
+}
+
 func (a *app) settingsAgents(c *mg.Context) {
 	p := pal(c)
+	st := &a.agents
 	settingsTitle(c, "Agents", "Agents connect to Pinky on this computer. Each one only gets what you allow.")
-	agents := a.opt.Agents
-	if agents == nil {
+	_, canList := a.api.(agentLister)
+	_, canScope := a.api.(agentScoper)
+	if canList {
+		if !st.loaded || time.Since(st.lastLoad) > 5*time.Second || st.lastLoad.IsZero() {
+			st.load(a)
+		}
+		c.After(5 * time.Second)
+	}
+	// First connections waiting for the person, as the prototype's request.
+	for _, n := range a.needs {
+		if !newAgentNeed(n) {
+			continue
+		}
+		n := n
+		mg.Column(c.Key("req-"+n.ID)).Padding(18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(10).
+			Label("Connection request").Children(func() {
+			mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
+				dot(c, p.amberDot, false)
+				mg.Text(c, "Needs you").FontSize(13).FontWeight(600).TextColor(p.amber)
+			})
+			mg.Column(c).Children(func() {
+				mg.Text(c, n.Title).FontSize(16).FontWeight(650)
+				if d := agentRequestDetail(n, canScope); d != "" {
+					mg.Text(c, d).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
+				}
+			})
+			a.agentRequestControls(c, n)
+		})
+	}
+	type row struct {
+		name, line string
+		state      string // "working", "allowed", "waiting"
+		scope      gateway.Scope
+		known      bool
+	}
+	var rows []row
+	working := map[string]bool{}
+	for _, t := range a.tasks {
+		if running(t.State) && t.Agent != "" {
+			working[t.Agent] = true
+		}
+	}
+	switch {
+	case canList && st.loaded:
+		for _, ag := range st.list {
+			r := row{name: ag.Name, line: scopeLine(ag.Scope), scope: ag.Scope, known: true, state: "allowed"}
+			if !ag.Approved {
+				r.line, r.state = "Not allowed yet", "waiting"
+			}
+			if working[ag.Name] {
+				r.state = "working"
+			}
+			rows = append(rows, r)
+		}
+	case a.opt.Agents != nil:
+		for _, ag := range a.opt.Agents {
+			r := row{name: ag.Name, line: nonEmpty(ag.Scope, "Connected through MCP"), state: "allowed"}
+			if ag.Connected {
+				r.state = "working"
+			}
+			rows = append(rows, r)
+		}
+	default:
 		seen := map[string]bool{}
 		for _, t := range append(append([]gateway.TaskView(nil), a.tasks...), a.act.tasks...) {
 			if t.Agent != "" && !seen[t.Agent] {
 				seen[t.Agent] = true
-				agents = append(agents, AgentInfo{Name: t.Agent, Connected: running(t.State)})
+				r := row{name: t.Agent, line: "Connected through MCP", state: "allowed"}
+				if working[t.Agent] {
+					r.state = "working"
+				}
+				rows = append(rows, r)
 			}
 		}
-		sort.Slice(agents, func(i, j int) bool { return agents[i].Name < agents[j].Name })
+		sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 	}
 	mg.Column(c).Label("Connected agents").Children(func() {
-		if len(agents) == 0 {
+		if len(rows) == 0 {
 			mg.Text(c, "No agent has connected yet. Point an agent at `pinky mcp` to start.").TextColor(p.ink2).Padding(10, 0)
 		}
-		for i, ag := range agents {
-			ag := ag
-			scope := ag.Scope
-			if scope == "" {
-				scope = "Connected through MCP"
+		for i, r := range rows {
+			r := r
+			last := i == len(rows)-1
+			box := mg.Column(c.Key("agent-"+r.name)).Padding(10, 0).Gap(10)
+			if !last {
+				box.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
 			}
-			r := mg.Row(c.Key(ag.Name)).Gap(16).Padding(10, 0).AlignItems(mg.Center)
-			if i < len(agents)-1 {
-				r.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
-			}
-			r.Children(func() {
-				appIcon(c, ag.Name, 28, 8, 13, "#5450d6")
-				mg.Column(c).Grow(1).Gap(2).Children(func() {
-					mg.Text(c, ag.Name).FontWeight(600)
-					mg.Text(c, scope).FontSize(13.5).TextColor(p.ink2)
-				})
-				mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
-					if ag.Connected {
-						dot(c, p.green, false)
-						mg.Text(c, "Connected").FontSize(13).TextColor(p.ink2)
-					} else {
-						dot(c, p.ink3, false)
-						mg.Text(c, "Not connected").FontSize(13).TextColor(p.ink2)
+			box.Children(func() {
+				mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+					appIcon(c, r.name, 28, 8, 13, "#5450d6")
+					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+						mg.Text(c, r.name).FontWeight(600)
+						mg.Text(c, r.line).FontSize(13.5).TextColor(p.ink2)
+					})
+					mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
+						switch r.state {
+						case "working":
+							dot(c, p.green, false)
+							mg.Text(c, "Working").FontSize(13).TextColor(p.ink2)
+						case "waiting":
+							dot(c, p.amberDot, false)
+							mg.Text(c, "Waiting for you").FontSize(13).TextColor(p.ink2)
+						default:
+							dot(c, p.ink3, false)
+							mg.Text(c, "Allowed").FontSize(13).TextColor(p.ink2)
+						}
+					})
+					if canScope && r.known && r.state != "waiting" {
+						label := "Change"
+						if st.editing == r.name {
+							label = "Close"
+						}
+						if button(c, label, btnOpt{}).Label("Change what " + r.name + " may do").Clicked() {
+							if st.editing == r.name {
+								st.editing = ""
+							} else {
+								st.editing = r.name
+								delete(st.choice, r.name)
+							}
+						}
 					}
 				})
+				if st.editing == r.name && canScope {
+					mg.Column(c).Gap(8).Padding(0, 0, 0, 44).Children(func() {
+						scope := a.scopePicker(c, r.name, "What "+r.name+" may do", r.scope)
+						if button(c, "Save", btnOpt{kind: btnPrimary}).AlignSelf(mg.Start).Clicked() {
+							if sc, ok := a.api.(agentScoper); ok {
+								name := r.name
+								go func() {
+									sc.SetAgentScope(name, scope)
+									a.post(func() { a.agents.load(a) })
+								}()
+							}
+							st.editing = ""
+						}
+					})
+				}
 			})
 		}
 	})
-	mg.Text(c, "Approving a new agent and choosing its scope arrive with the gateway's agent methods.").FontSize(12.5).TextColor(p.ink3)
+	if !canList {
+		mg.Text(c, "This gateway does not list its agents; these are the ones seen in tasks.").FontSize(12.5).TextColor(p.ink3)
+	}
 }
 
 func (a *app) settingsPrivacy(c *mg.Context) {
@@ -362,11 +562,46 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 		})
 		a.toggleRow(c, "rec", "Record the screen during tasks", "Used for replays in Activity", false, &st.Record)
 		settingRow(c, "Delete all activity", "Removes every task, step and recording", true, func() {
-			b := button(c, "Delete…", btnOpt{}).Disabled(true).Tooltip("The gateway has no way to delete history yet")
-			_ = b
+			b := button(c, "Delete…", btnOpt{})
+			if _, ok := a.api.(historyWiper); !ok {
+				b.Disabled(true).Tooltip("This gateway cannot delete its history")
+			} else if b.Clicked() {
+				a.set.confirm = true
+			}
 		})
 	})
+	if a.set.confirm {
+		switch mg.AlertDialog(c, &a.set.confirm, "Delete all activity?",
+			"Every finished task, its steps, approvals and screenshots are removed from this computer. Running tasks go on.",
+			"Cancel", "Delete") {
+		case 1:
+			a.wipeHistory()
+		}
+	}
 	_ = p
+}
+
+// wipeHistory deletes the gateway's history, from Settings › Privacy.
+func (a *app) wipeHistory() {
+	w, ok := a.api.(historyWiper)
+	if !ok {
+		return
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(a.ctx, 30*time.Second)
+		defer cancel()
+		err := w.WipeHistory(ctx)
+		a.post(func() {
+			if err != nil {
+				a.toasts = append(a.toasts, "Couldn't delete the activity: "+err.Error())
+				return
+			}
+			a.mediaCache = map[string]*mediaEntry{}
+			a.act.tasks, a.act.sel = nil, ""
+			a.act.load(a)
+			a.toasts = append(a.toasts, "Deleted all activity")
+		})
+	}()
 }
 
 func (a *app) settingsAdvanced(c *mg.Context) {
