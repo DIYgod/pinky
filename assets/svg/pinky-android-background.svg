@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108"><title>Pinky background</title><defs>
+<linearGradient id="pkand-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#FFBE1A"/></linearGradient>
+<radialGradient id="pkand-lift" cx="0.5" cy="0.56" r="0.5"><stop offset="0" stop-color="#FFF7C9" stop-opacity=".5"/><stop offset="1" stop-color="#FFF7C9" stop-opacity="0"/></radialGradient>
+<radialGradient id="pkand-body" cx="0.3" cy="0.18" r="0.95"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#FCF9F4"/><stop offset="1" stop-color="#EFE4D3"/></radialGradient>
+<linearGradient id="pkand-ring" gradientUnits="userSpaceOnUse" x1="636" y1="198" x2="764" y2="326"><stop offset="0" stop-color="#FF8A9B"/><stop offset="1" stop-color="#EE4D6C"/></linearGradient>
+<linearGradient id="pkand-screen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B3144"/><stop offset="1" stop-color="#151923"/></linearGradient>
+<filter id="pkand-soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="26"/></filter>
+</defs><g transform="scale(0.10546875)"><rect width="1024" height="1024" fill="url(#pkand-bg)"/><rect width="1024" height="1024" fill="url(#pkand-lift)"/></g></svg>
