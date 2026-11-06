@@ -3,9 +3,13 @@
 //
 //	go run ./cmd/pinky-ui-demo                    # one phone
 //	go run ./cmd/pinky-ui-demo -scenario three    # three phones
+//	go run ./cmd/pinky-ui-demo -gateway           # the real gateway on demo phones
 //	go run ./cmd/pinky-ui-demo bench              # measure video decoding
 //
 // The Demo menu switches scenarios, plugs in a new phone and restarts.
+// With -gateway, the client runs against internal/gateway itself, on
+// internal/demo's drawn phones, and its Demo menu starts scripted agents
+// that call the gateway as an MCP client would.
 package main
 
 import (
@@ -39,7 +43,16 @@ func main() {
 	timeout := flag.Duration("approval-timeout", 60*time.Second, "how long an approval waits before it denies")
 	dev := flag.Bool("dev", false, "start with Developer mode on")
 	page := flag.String("page", "", `open "activity", "settings" or "add-phone" at start`)
+	gw := flag.Bool("gateway", false, "run the real gateway on internal/demo's phones, with scripted agents")
+	hidden := flag.Bool("hidden", false, "start with only the menu bar icon, as when an agent starts Pinky")
 	flag.Parse()
+	if *gw {
+		if err := runGateway(*theme, *page, *dev, *hidden, *timeout); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	api := fakeapi.New(fakeapi.Options{
 		Scenario:        fakeapi.Scenario(*scenario),
@@ -67,6 +80,7 @@ func main() {
 		Theme:     *theme,
 		Settings:  &settings,
 		StartPage: *page,
+		Hidden:    *hidden,
 		Menus:     []*mygo.MenuItem{{Label: "Demo", Submenu: items}},
 	})
 	if err != nil {
