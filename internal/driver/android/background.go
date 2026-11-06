@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/driver/android/scrcpy"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -36,10 +37,11 @@ type BackgroundOptions struct {
 // work in an app while the main screen stays free for the person. It has
 // its own scrcpy session, video and input, and implements driver.Device.
 //
-// Limits: Observe returns driver.ErrUnsupported, since uiautomator dumps
-// only the main display (the companion app will read other displays).
-// Screenshot works where screencap accepts the display id. Some apps
-// refuse secondary displays and open on the main display instead.
+// Limits: Observe needs the companion app, since uiautomator dumps only
+// the main display. Screenshot returns driver.ErrUnsupported, since
+// screencap rejects virtual display ids; decode a frame from Stream
+// instead. Some apps refuse secondary displays and open on the main
+// display instead.
 type Background struct {
 	d       *Device
 	l       *live
@@ -120,10 +122,29 @@ func (b *Background) Info() driver.Info {
 	return info
 }
 
-// Observe implements driver.Device; it is not supported on virtual
-// displays yet.
-func (b *Background) Observe(context.Context, driver.ObserveOptions) (*screen.Screen, error) {
-	return nil, fmt.Errorf("android: observing a virtual display needs the companion app: %w", driver.ErrUnsupported)
+// Observe implements driver.Device through the companion app, which reads
+// any display; uiautomator reads only the main one, so without the
+// companion this returns driver.ErrUnsupported.
+func (b *Background) Observe(ctx context.Context, _ driver.ObserveOptions) (*screen.Screen, error) {
+	b.d.used()
+	c := b.d.companionClient(ctx)
+	if c == nil {
+		return nil, fmt.Errorf("android: observing a virtual display needs the companion app: %w", driver.ErrUnsupported)
+	}
+	t, err := c.Dump(ctx, companion.DumpOptions{Display: b.display})
+	if err != nil {
+		if ctx.Err() == nil {
+			b.d.companionFailed(err)
+		}
+		return nil, err
+	}
+	s := t.Screen(companion.ScreenOptions{})
+	s.CapturedAt = c.HostTime(t.Time)
+	s.App.Name = b.d.companionAppName(s.App)
+	// scrcpy creates the display always unlocked; the phone's own lock
+	// screen is on the main display.
+	s.Locked = false
+	return s, nil
 }
 
 // Screenshot implements driver.Device with `screencap -d`.

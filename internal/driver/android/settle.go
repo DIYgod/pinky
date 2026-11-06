@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/driver/android/companion"
 )
 
 // Settle detection reads only the timing and sizes of encoded video
@@ -87,19 +89,34 @@ func (t *settleTracker) bytes() int {
 	return t.small
 }
 
-// waitQuiet returns true once lastChange (or start, if later) is at least
-// quiet in the past, or false when max has passed since start.
-func waitQuiet(ctx context.Context, start time.Time, quiet, max time.Duration, lastChange func() time.Time, done <-chan struct{}) (bool, error) {
+// quietCond is one signal settle waits on: the time of its last change,
+// and how long it must stay quiet.
+type quietCond struct {
+	last  func() time.Time
+	quiet time.Duration
+}
+
+// waitQuiet returns true once every condition's last change (or start, if
+// later) is at least its quiet period in the past, or false when max has
+// passed since start.
+func waitQuiet(ctx context.Context, start time.Time, max time.Duration, done <-chan struct{}, conds ...quietCond) (bool, error) {
 	deadline := start.Add(max)
 	tick := time.NewTicker(10 * time.Millisecond)
 	defer tick.Stop()
 	for {
 		now := time.Now()
-		last := lastChange()
-		if last.Before(start) {
-			last = start
+		settled := true
+		for _, c := range conds {
+			last := c.last()
+			if last.Before(start) {
+				last = start
+			}
+			if now.Sub(last) < c.quiet {
+				settled = false
+				break
+			}
 		}
-		if now.Sub(last) >= quiet {
+		if settled {
 			return true, nil
 		}
 		if !now.Before(deadline) {
@@ -115,9 +132,10 @@ func waitQuiet(ctx context.Context, start time.Time, quiet, max time.Duration, l
 	}
 }
 
-// waitSettled waits until the session's video has been still for quiet,
-// for at most max (or the configured default).
-func (l *live) waitSettled(ctx context.Context, max time.Duration) (bool, error) {
+// waitSettled waits until the session's video has been still for the
+// quiet period, and every extra condition holds, for at most max (or the
+// configured default).
+func (l *live) waitSettled(ctx context.Context, max time.Duration, extra ...quietCond) (bool, error) {
 	if max <= 0 {
 		max = l.cfg.SettleMax
 	}
@@ -125,22 +143,45 @@ func (l *live) waitSettled(ctx context.Context, max time.Duration) (bool, error)
 	if _, _, err := l.videoSize(ctx); err != nil {
 		return false, err
 	}
-	ok, err := waitQuiet(ctx, start, l.cfg.SettleQuiet, max, l.settle.lastChange, l.done)
+	conds := append([]quietCond{{last: l.settle.lastChange, quiet: l.cfg.SettleQuiet}}, extra...)
+	ok, err := waitQuiet(ctx, start, max, l.done, conds...)
 	if err == errSessionEnded {
 		return false, l.failure()
 	}
 	return ok, err
 }
 
-// WaitSettled implements driver.Settler. It waits until the main display
-// has not changed for the quiet period (400 ms by default), or max passes
-// (3 s when max is 0).
+// WaitSettled implements driver.Settler. It waits until the main display's
+// video has not changed for the quiet period (400 ms by default) and, while
+// the companion app is on, no window or content event has arrived for
+// 300 ms, or until max passes (3 s when max is 0).
+//
+// Both must hold, as the design asks. The video sees animations,
+// transitions and ripples that send no accessibility events; the events
+// see tree changes that hardly move a pixel (a label's text, a node that
+// appears under an overlay). A screen whose tree is still but whose
+// pixels keep moving (a spinner, a live wallpaper) still runs to max:
+// "still loading" is what an agent should hear for a spinner.
 func (d *Device) WaitSettled(ctx context.Context, max time.Duration) (bool, error) {
+	d.used()
 	l, err := d.session(ctx)
 	if err != nil {
 		return false, err
 	}
-	return l.waitSettled(ctx, max)
+	var extra []quietCond
+	if _, live := d.comp.lastChange(); live {
+		extra = append(extra, quietCond{
+			last: func() time.Time {
+				last, live := d.comp.lastChange()
+				if !live {
+					return time.Time{} // the subscription ended: video alone
+				}
+				return last
+			},
+			quiet: companion.DefaultQuiet,
+		})
+	}
+	return l.waitSettled(ctx, max, extra...)
 }
 
 // streamStats counts video packets, for androidctl and measurements.
