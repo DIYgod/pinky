@@ -93,7 +93,7 @@ The device tests use only the home screen, Settings search (no setting is change
 | What | Result |
 | --- | --- |
 | Action to settled, median | **1.31 s** over 21 actions (min 0.40 s, max 1.53 s): 11 Calculator taps, Home, Back, two launches, four Settings scrolls. An earlier run of 19 gave the same median. A Calculator tap animates for about 0.86 s, then 0.4 s of quiet. The first action after opening a device adds about 0.5 s to start the scrcpy session. |
-| `uiautomator dump` (whole `Observe`) | 2.11 to 2.27 s on the home screen, Calculator and Settings (32 to 40 elements). Almost all of it is uiautomator waiting for 1 s of UI idle plus its JVM start; it cannot be made faster without the companion app. |
+| `uiautomator dump` (whole `Observe`) | 2.11 to 2.27 s on the home screen, Calculator and Settings (32 to 40 elements). Almost all of it is uiautomator waiting for 1 s of UI idle plus its JVM start; it cannot be made faster without the companion app. For comparison, the companion session measured its accessibility tree at 29 to 30 ms on the same phone, against 2.3 to 2.4 s for `uiautomator dump` in its own runs. |
 | Video | H.264 at native 1080x2340, 8 Mbit/s target. While in use (the 21 actions over 31 s): 45.7 fps and 5.8 Mbit/s on average; the busiest second 88 fps and 27.9 Mbit/s (scrolling Settings). Calculator taps alone: 56 fps, 2.8 Mbit/s. A still home screen: 4.7 fps, 1.2 Mbit/s, from status-bar updates and their refinements; a truly still screen sends nothing. |
 | Session start | 0.47 to 0.53 s (push, start, connect); 0.9 s on the Pixel. |
 | Other | `screencap -p` 0.75 s; app list 0.53 s for 56 apps (Pixel 1.8 s for 22); a `dumpsys` query such as `Locked` 40 to 49 ms through the Go client; virtual display ready in 1.1 s. |
