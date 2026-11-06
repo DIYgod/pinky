@@ -66,7 +66,7 @@ func TestControlMessages(t *testing.T) {
 		"03"+"0000000a"+"00000014"+"0064"+"00c8"+"0000"+"8000"+"00000000")
 	check("back", BackOrScreenOn(ActionUp), "0401")
 	check("get clipboard", GetClipboard(CopyKeyNone), "0800")
-	msg, err = SetClipboard(5, "é", true)
+	msg, err = SetClipboard(5, "\u00e9", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestFixedPoint(t *testing.T) {
 }
 
 func TestSplitText(t *testing.T) {
-	s := strings.Repeat("a", 299) + "é" + strings.Repeat("b", 10)
+	s := strings.Repeat("a", 299) + "\u00e9" + strings.Repeat("b", 10)
 	parts := SplitText(s, MaxInjectText)
 	if len(parts) != 2 || strings.Join(parts, "") != s {
 		t.Fatalf("parts = %d", len(parts))
@@ -215,10 +215,10 @@ func TestParseAppList(t *testing.T) {
 		"[server] INFO: Processing Android apps... (this may take some time)\n" +
 		"[server] INFO: List of apps:\n" +
 		" * Calculator                     com.android.calculator2\n" +
-		" * 设置                           com.android.settings\n" +
+		" * \u8bbe\u7f6e                           com.android.settings\n" +
 		" - A very long application name indeed\n" +
 		"                                  com.example.longname\n" +
-		" - Play 商店                        com.android.vending\n" +
+		" - Play \u5546\u5e97                        com.android.vending\n" +
 		" - X                              com.twitter.android\n"
 	apps, ok := ParseAppList(out)
 	if !ok {
@@ -226,9 +226,9 @@ func TestParseAppList(t *testing.T) {
 	}
 	want := []App{
 		{"Calculator", "com.android.calculator2", true},
-		{"设置", "com.android.settings", true},
+		{"\u8bbe\u7f6e", "com.android.settings", true},
 		{"A very long application name indeed", "com.example.longname", false},
-		{"Play 商店", "com.android.vending", false},
+		{"Play \u5546\u5e97", "com.android.vending", false},
 		{"X", "com.twitter.android", false},
 	}
 	if !reflect.DeepEqual(apps, want) {

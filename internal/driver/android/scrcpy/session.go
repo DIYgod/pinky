@@ -426,6 +426,43 @@ func (s *Session) StartApp(ctx context.Context, name string) (StartedApp, error)
 	}
 }
 
+// WaitLog returns the first server log line, recent or new, for which
+// match is true.
+func (s *Session) WaitLog(ctx context.Context, match func(line string) bool) (string, error) {
+	lines, cancel := s.logs.subscribe()
+	defer cancel()
+	for _, l := range s.logs.recent() {
+		if match(l) {
+			return l, nil
+		}
+	}
+	for {
+		select {
+		case l := <-lines:
+			if l != "" && match(l) {
+				return l, nil
+			}
+		case <-s.done:
+			return "", s.Err()
+		case <-ctx.Done():
+			return "", ctx.Err()
+		}
+	}
+}
+
+var newDisplayRE = regexp.MustCompile(`New display: .*\(id=(-?\d+)\)`)
+
+// DisplayID waits for the id of the virtual display the server created
+// for Options.Virtual.
+func (s *Session) DisplayID(ctx context.Context) (int, error) {
+	line, err := s.WaitLog(ctx, func(l string) bool { return newDisplayRE.MatchString(l) })
+	if err != nil {
+		return 0, err
+	}
+	id, _ := strconv.Atoi(newDisplayRE.FindStringSubmatch(line)[1])
+	return id, nil
+}
+
 // logMessage strips the "[server] LEVEL: " prefix.
 func logMessage(line string) string {
 	if i := strings.Index(line, ": "); i >= 0 && strings.HasPrefix(line, "[server]") {
