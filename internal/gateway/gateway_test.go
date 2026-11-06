@@ -780,3 +780,34 @@ func TestEvents(t *testing.T) {
 	for range events {
 	}
 }
+
+func TestWipeHistory(t *testing.T) {
+	g, _ := newTestGateway(t, func(o *Options) { o.DataDir = t.TempDir(); o.NoScreenshots = false })
+	old, _ := connect(t, g, "Old task")
+	mustStatus(t, old.Act(context.Background(), Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	old.Release(context.Background(), ReleaseRequest{})
+	s, _ := connect(t, g, "Running task")
+	res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "Chatter"})
+	mustStatus(t, res, StatusSettled)
+	tasks, _ := g.History(context.Background(), HistoryQuery{})
+	if len(tasks) != 2 {
+		t.Fatalf("before wipe: %d tasks", len(tasks))
+	}
+	media := tasks[0].Steps[len(tasks[0].Steps)-1].After
+	if err := g.WipeHistory(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.MediaPath(context.Background(), media); err == nil {
+		t.Fatal("media survived the wipe")
+	}
+	tasks, _ = g.History(context.Background(), HistoryQuery{})
+	if len(tasks) != 1 || tasks[0].Title != "Running task" {
+		t.Fatalf("after wipe: %+v", tasks)
+	}
+	// The running task keeps recording.
+	mustStatus(t, s.Act(context.Background(), Call{}, Action{Tool: "key", Key: "home"}), StatusSettled)
+	tasks, _ = g.History(context.Background(), HistoryQuery{Search: "running"})
+	if len(tasks) != 1 || len(tasks[0].Steps) == 0 {
+		t.Fatalf("running task after wipe: %+v", tasks)
+	}
+}
