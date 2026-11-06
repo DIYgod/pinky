@@ -354,6 +354,77 @@ func TestSameApprovalIDTwice(t *testing.T) {
 	}
 }
 
+// The client sets the scope the person picked on a New agent card, then
+// allows it; the agent picking up the answer must not reset the scope.
+func TestAgentScopeChosenBeforeAllow(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	g, _ := newTestGateway(t, func(o *Options) { o.TrustNewAgents = false; o.DataDir = dir })
+	narrow := Scope{Mode: ScopeApps, Apps: []string{"Dinely"}}
+	allow := func(name string, scope *Scope) {
+		n := waitNeed(t, g)
+		if n.Rule != "New agent" || n.Agent != name {
+			t.Errorf("need %+v", n)
+			return
+		}
+		if scope != nil {
+			g.SetAgentScope(name, *scope)
+		}
+		if err := g.Decide(n.ID, AllowOnce, ""); err != nil {
+			t.Error(err)
+		}
+	}
+
+	s := g.OpenSession(AgentInfo{Name: "Codex", Client: "codex 1.0"})
+	defer s.Close()
+	go allow("Codex", &narrow)
+	mustStatus(t, s.Connect(ctx, ConnectRequest{Task: "Lunch"}), StatusSettled)
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	if res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "Chatter"}); res.Error != ErrScopeDenied {
+		t.Fatalf("launch outside the chosen scope: %+v", res)
+	}
+
+	// Without a chosen scope, an allowed agent gets the default.
+	s.Release(ctx, ReleaseRequest{})
+	other := g.OpenSession(AgentInfo{Name: "Other"})
+	defer other.Close()
+	go allow("Other", nil)
+	mustStatus(t, other.Connect(ctx, ConnectRequest{Task: "Chat"}), StatusSettled)
+	mustStatus(t, other.Act(ctx, Call{}, Action{Tool: "launch", App: "Chatter"}), StatusSettled)
+
+	// History keeps the chosen scope, after the approval was written too.
+	g.Flush()
+	agents, err := g.Agents(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]AgentView{}
+	for _, a := range agents {
+		got[a.Name] = a
+	}
+	if a := got["Codex"]; !a.Approved || a.Scope.String() != narrow.String() {
+		t.Fatalf("Codex: %+v", a)
+	}
+	if a := got["Other"]; !a.Approved || a.Scope.Mode != ScopeEverything {
+		t.Fatalf("Other: %+v", a)
+	}
+	g.Close()
+	g2, err := New(Options{Providers: nil, DataDir: dir, DiscoverEvery: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g2.Close()
+	stored, err := g2.Agents(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range stored {
+		if a.Name == "Codex" && (!a.Approved || a.Scope.String() != narrow.String()) {
+			t.Fatalf("stored: %+v", a)
+		}
+	}
+}
+
 func TestAgentApprovalRace(t *testing.T) {
 	g, _ := newTestGateway(t, func(o *Options) { o.TrustNewAgents = false; o.MaxBlock = time.Second })
 	a := AgentInfo{Name: "Racer"}

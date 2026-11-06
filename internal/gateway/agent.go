@@ -534,7 +534,7 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Resul
 		return nil
 	}
 	if g.opt.TrustNewAgents {
-		g.setAgentApproved(s.agent, g.opt.DefaultScope)
+		g.allowAgent(s.agent)
 		return nil
 	}
 	b := approval.Binding{Session: s.id, Tool: "phone_connect", Args: "agent"}
@@ -573,7 +573,7 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Resul
 		return &Result{Status: StatusPending, ApprovalID: id, Rule: "New agent",
 			Message: fmt.Sprintf("This is %s's first connection, and the person must allow it in Pinky. Repeat phone_connect with approval_id %q.", s.agent.Name, id)}
 	case out.State == approval.Used && out.Decision.Allows():
-		g.setAgentApproved(s.agent, g.opt.DefaultScope)
+		g.allowAgent(s.agent)
 		return nil
 	}
 	return &Result{Status: StatusDenied, Rule: "New agent", Note: denyNote(out),
@@ -629,29 +629,56 @@ func (g *Gateway) agentApproved(ctx context.Context, a AgentInfo) bool {
 	return st.approved
 }
 
+// setAgentApproved approves an agent with scope.
 func (g *Gateway) setAgentApproved(a AgentInfo, scope Scope) {
+	g.approveAgentWith(a, func(*agentState) Scope { return scope })
+}
+
+// allowAgent approves an agent whose first connection the person allowed.
+// A scope the person chose meanwhile is kept: the client calls
+// SetAgentScope, which also approves, right before Decide. Otherwise the
+// agent gets DefaultScope.
+func (g *Gateway) allowAgent(a AgentInfo) {
+	g.approveAgentWith(a, func(st *agentState) Scope {
+		if st.approved {
+			return st.scope
+		}
+		return g.opt.DefaultScope
+	})
+}
+
+// approveAgentWith approves an agent with the scope pick returns, chosen
+// and saved under the lock so a concurrent SetAgentScope cannot be undone
+// by a stale value.
+func (g *Gateway) approveAgentWith(a AgentInfo, pick func(*agentState) Scope) {
 	g.mu.Lock()
+	defer g.mu.Unlock()
 	st, ok := g.agents[a.Name]
 	if !ok {
 		st = &agentState{name: a.Name}
 		g.agents[a.Name] = st
 	}
+	scope := pick(st)
 	st.approved, st.scope = true, scope
-	g.mu.Unlock()
-	if g.store != nil {
-		g.rec.do(func(ctx context.Context) error {
-			now := time.Now()
-			rec, found, err := g.store.Agent(ctx, a.Name)
-			if err != nil {
-				return err
-			}
-			if !found {
-				rec = history.Agent{Name: a.Name, CreatedAt: now}
-			}
-			rec.Client, rec.Scope, rec.ApprovedAt, rec.LastSeen = a.Client, scope.String(), now, now
-			return g.store.SaveAgent(ctx, rec)
-		})
+	if g.store == nil {
+		return
 	}
+	// Queued under the lock, so history keeps the order of the changes.
+	g.rec.do(func(ctx context.Context) error {
+		now := time.Now()
+		rec, found, err := g.store.Agent(ctx, a.Name)
+		if err != nil {
+			return err
+		}
+		if !found {
+			rec = history.Agent{Name: a.Name, CreatedAt: now}
+		}
+		if a.Client != "" {
+			rec.Client = a.Client
+		}
+		rec.Scope, rec.ApprovedAt, rec.LastSeen = scope.String(), now, now
+		return g.store.SaveAgent(ctx, rec)
+	})
 }
 
 func (g *Gateway) scopeOf(s *Session) Scope {
