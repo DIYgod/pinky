@@ -72,7 +72,7 @@ open build/pinky/darwin-arm64/Pinky.app --args --fake    # quit the real Pinky f
 ## Decisions waiting for you
 
 - **Typing on an iPhone with Pinyin active.** Letters go through the phone's input method, so with Pinyin on they end up as an uncommitted composition. Two fixes: paste through the clipboard (replaces your clipboard), or switch the keyboard to English for the task. Android already pastes in that case.
-- **Installing the companion on the Mi 10 Pro.** A new build makes Google Play Protect ask "Send app for a security check?" on the phone; nobody answered it overnight. Install the current build while you are there (`make companion`, then the install command in [notes/companion.md](notes/companion.md)).
+- **Installing the companion on the Mi 10 Pro.** The Mi runs the 01:43 build, which works; installing a newer one makes Google Play Protect ask "Send app for a security check?" on the phone, which nobody could answer overnight. Install the current build while you are at the phone: `make companion && make app`, then `build/pinky/darwin-arm64/Pinky.app/Contents/MacOS/Pinky companion install "Mi 10 Pro"`.
 - **How to ship the companion APK**: bundled in Pinky.app (done for local builds), or downloaded from GitHub releases.
 - **Keeping Android phones awake while plugged in** (scrcpy's stay-awake changes a setting while Pinky runs); off for now.
 

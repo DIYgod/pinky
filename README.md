@@ -28,7 +28,7 @@ No phone at hand? `go run ./cmd/pinky --fake` runs the app with two scripted pho
 
 ### Phones
 
-- **Android:** turn on USB debugging, plug the phone in and accept the computer's key. Pinky works over adb and a bundled scrcpy server; nothing has to be installed on the phone. The optional companion app (`make companion`; installing is described in [docs/notes/companion.md](docs/notes/companion.md)) reads the screen in about 30 ms instead of 2 s.
+- **Android:** turn on USB debugging, plug the phone in and accept the computer's key. Pinky works over adb and a bundled scrcpy server; nothing has to be installed on the phone. The optional companion app reads the screen in about 70 ms instead of 2 s: `make companion && make app`, then `pinky companion install` with the phone plugged in (the phone may ask you to allow an unknown app once).
 - **iPhone:** iOS 27 or later, Developer Mode on, connected over USB and trusted once in Xcode's Devices window. Nothing is installed on the phone.
 
 ## Layout
