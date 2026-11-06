@@ -897,3 +897,24 @@ func TestGatewayBlockedApps(t *testing.T) {
 		t.Fatalf("after blocking Dinely: %+v", got)
 	}
 }
+
+func TestAgentViewDropsStatusBarOCR(t *testing.T) {
+	g, _ := newTestGateway(t)
+	raw := &screen.Screen{Width: 1125, Height: 2436, App: screen.App{Name: "Calculator", ID: "com.apple.calculator"}, Elements: []screen.Element{
+		{Source: screen.SourceOCR, Label: "5:05", Bounds: screen.Rect{X: 120, Y: 70, W: 90, H: 36}},
+		{Source: screen.SourceOCR, Label: "100", Bounds: screen.Rect{X: 990, Y: 72, W: 60, H: 34}},
+		{Source: screen.SourceOCR, Label: "6x7", Bounds: screen.Rect{X: 950, Y: 640, W: 100, H: 44}},
+		{Role: screen.RoleButton, Label: "Equals", Bounds: screen.Rect{X: 840, Y: 2100, W: 230, H: 230}},
+	}}
+	view, _ := g.agentView(raw)
+	var labels []string
+	for _, e := range view.Elements {
+		labels = append(labels, e.Label)
+	}
+	if strings.Join(labels, ",") != "6x7,Equals" {
+		t.Fatalf("agent sees %q", labels)
+	}
+	if len(raw.Elements) != 4 {
+		t.Fatal("the raw screen was changed")
+	}
+}

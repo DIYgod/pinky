@@ -1300,7 +1300,15 @@ func (g *Gateway) agentView(raw *screen.Screen) (*screen.Screen, string) {
 			Orientation: raw.Orientation, Locked: raw.Locked, CapturedAt: raw.CapturedAt}, rule
 	}
 	cp := *raw
-	cp.Elements = append([]screen.Element(nil), raw.Elements...)
+	cp.Elements = make([]screen.Element, 0, len(raw.Elements))
+	for _, e := range raw.Elements {
+		// Text read from the status bar's pixels (clock, signal and battery
+		// icons as OCR sees them) only adds noise to every diff.
+		if e.Source == screen.SourceOCR && inStatusBar(raw, e) {
+			continue
+		}
+		cp.Elements = append(cp.Elements, e)
+	}
 	cp.Events = nil
 	return &cp, ""
 }
