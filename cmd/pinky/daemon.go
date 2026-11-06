@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -22,41 +23,88 @@ import (
 
 func runDaemon(args []string) error {
 	fs := flag.NewFlagSet("pinky daemon", flag.ContinueOnError)
-	fake := fs.Bool("fake", false, "use scripted fake phones; their history goes to a separate folder")
-	approvalTimeout := fs.Duration("approval-timeout", 60*time.Second, "how long the person has to answer an approval")
-	idle := fs.Duration("idle-timeout", 10*time.Minute, "end a lease after this long without calls")
-	noShots := fs.Bool("no-screenshots", false, "do not store before and after screenshots of each step")
+	var c gatewayConfig
+	c.flags(fs)
 	verbose := fs.Bool("v", false, "log debug messages")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	level := slog.LevelInfo
-	if *verbose {
-		level = slog.LevelDebug
-	}
-	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
+	c.Log = newLogger(os.Stderr, *verbose)
 
-	dirs, err := api.DefaultDirs()
+	rg, err := startGateway(c)
 	if err != nil {
 		return err
+	}
+	defer rg.Close()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	err = rg.Serve(ctx)
+	c.Log.Info("gateway stopping")
+	return err
+}
+
+// gatewayConfig is what the daemon and the app share.
+type gatewayConfig struct {
+	Fake            bool
+	ApprovalTimeout time.Duration
+	IdleTimeout     time.Duration
+	NoScreenshots   bool
+	Log             *slog.Logger
+}
+
+func (c *gatewayConfig) flags(fs *flag.FlagSet) {
+	fs.BoolVar(&c.Fake, "fake", false, "use scripted fake phones; their history goes to a separate folder")
+	fs.DurationVar(&c.ApprovalTimeout, "approval-timeout", 60*time.Second, "how long the person has to answer an approval")
+	fs.DurationVar(&c.IdleTimeout, "idle-timeout", 10*time.Minute, "end a lease after this long without calls")
+	fs.BoolVar(&c.NoScreenshots, "no-screenshots", false, "do not store before and after screenshots of each step")
+}
+
+func newLogger(w *os.File, verbose bool) *slog.Logger {
+	level := slog.LevelInfo
+	if verbose {
+		level = slog.LevelDebug
+	}
+	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: level}))
+}
+
+// runningGateway is a gateway with its socket, ready to serve agents and
+// clients.
+type runningGateway struct {
+	Dirs    api.Dirs
+	DataDir string
+	Policy  *policy.Engine
+	G       *gateway.Gateway
+
+	ln  net.Listener
+	srv *api.Server
+	log *slog.Logger
+}
+
+// startGateway takes the per-user socket, loads the rules and starts the
+// gateway with real or fake phones.
+func startGateway(c gatewayConfig) (*runningGateway, error) {
+	log := c.Log
+	dirs, err := api.DefaultDirs()
+	if err != nil {
+		return nil, err
 	}
 	ln, err := api.Listen(dirs)
 	if err != nil {
 		var running *api.RunningError
 		if errors.As(err, &running) {
-			return err
+			return nil, err
 		}
-		return fmt.Errorf("listen on %s: %w", dirs.Socket(), err)
+		return nil, fmt.Errorf("listen on %s: %w", dirs.Socket(), err)
 	}
-	defer ln.Close()
-
 	pol, err := policy.Load(dirs.Rules(), dirs.Apps())
 	if err != nil {
-		return fmt.Errorf("rules: %w", err)
+		ln.Close()
+		return nil, fmt.Errorf("rules: %w", err)
 	}
 	var providers []driver.Provider
 	dataDir := dirs.Data
-	if *fake {
+	if c.Fake {
 		providers, _ = demo.World()
 		for cat, e := range demo.PolicyApps() {
 			pol.AddApps(cat, e)
@@ -71,26 +119,33 @@ func runDaemon(args []string) error {
 
 	g, err := gateway.New(gateway.Options{
 		Providers: providers, DataDir: dataDir, Policy: pol, Logger: log,
-		ApprovalTimeout: *approvalTimeout, IdleTimeout: *idle, NoScreenshots: *noShots,
+		ApprovalTimeout: c.ApprovalTimeout, IdleTimeout: c.IdleTimeout, NoScreenshots: c.NoScreenshots,
 		// Fake phones cannot hurt anything, so agents need no first approval
 		// and socket clients may answer approvals (for scripted tests).
-		TrustNewAgents: *fake,
+		TrustNewAgents: c.Fake,
 	})
 	if err != nil {
-		return err
+		ln.Close()
+		return nil, err
 	}
-	defer g.Close()
-
 	tok, err := api.EnsureToken(dirs.TokenFile())
 	if err != nil {
-		return fmt.Errorf("agent token: %w", err)
+		g.Close()
+		ln.Close()
+		return nil, fmt.Errorf("agent token: %w", err)
 	}
-	srv := &api.Server{Gateway: g, MCP: mcp.New(g, version), Token: tok, Trusted: *fake, Version: version, Log: log}
+	srv := &api.Server{Gateway: g, MCP: mcp.New(g, version), Token: tok, Trusted: c.Fake, Version: version, Log: log}
+	log.Info("gateway ready", "socket", dirs.Socket(), "data", dataDir, "devices", len(g.Devices()), "fake", c.Fake, "pid", os.Getpid())
+	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, ln: ln, srv: srv, log: log}, nil
+}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-	log.Info("gateway ready", "socket", dirs.Socket(), "data", dataDir, "devices", len(g.Devices()), "fake", *fake, "pid", os.Getpid())
-	err = srv.Serve(ctx, ln)
-	log.Info("gateway stopping")
-	return err
+// Serve answers agents and clients on the socket until ctx ends.
+func (r *runningGateway) Serve(ctx context.Context) error {
+	return r.srv.Serve(ctx, r.ln)
+}
+
+// Close stops the gateway and releases the socket.
+func (r *runningGateway) Close() {
+	r.G.Close()
+	r.ln.Close()
 }

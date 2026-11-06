@@ -161,3 +161,49 @@ func TestDecodeTestStream(t *testing.T) {
 		})
 	}
 }
+
+// Some phones tag their stream with a matrix swscale cannot convert, such
+// as the YCgCo matrix of the Mi 10 Pro's encoder; the picture must still
+// show.
+func TestDecodeYCgCoStream(t *testing.T) {
+	needFFmpeg(t)
+	for _, software := range []bool{false, true} {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		s, err := StartTestStream(ctx, TestStreamOptions{Width: 360, Height: 800, FPS: 30, Matrix: 8})
+		if err != nil {
+			cancel()
+			t.Fatal(err)
+		}
+		frames := make(chan struct{}, 64)
+		p, err := NewPlayer(s, PlayerOptions{
+			Decoder: DecoderOptions{Software: software},
+			OnFrame: func() {
+				select {
+				case frames <- struct{}{}:
+				default:
+				}
+			},
+		})
+		if err != nil {
+			s.Close()
+			cancel()
+			t.Fatal(err)
+		}
+		p.SetSize(180, 400)
+		var got *Frame
+		for got == nil || got.Seq < 3 {
+			select {
+			case <-frames:
+				if f := p.Take(); f != nil {
+					got = f
+				}
+			case <-p.Done():
+				t.Fatalf("software=%v: stream ended: %v", software, p.Err())
+			case <-ctx.Done():
+				t.Fatalf("software=%v: no pictures: %+v", software, p.Stats())
+			}
+		}
+		p.Close()
+		cancel()
+	}
+}
