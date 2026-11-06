@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -274,5 +275,195 @@ func TestAsksListsEveryRule(t *testing.T) {
 	}
 	if v := e.Evaluate(tap(dinely, "Orders")); len(v.Asks) != 0 {
 		t.Fatalf("allowed action lists asks: %+v", v)
+	}
+}
+
+func TestThirdPartyLaunchersAreSystem(t *testing.T) {
+	e := Default()
+	for _, id := range []string{"app.lawnchair.play", "app.lawnchair", "com.teslacoilsw.launcher", "com.apple.springboard"} {
+		if !e.IsSystem(screen.App{ID: id}) {
+			t.Errorf("%s is not a system app", id)
+		}
+	}
+}
+
+func TestPresets(t *testing.T) {
+	dir := t.TempDir()
+	rules, apps := filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml")
+	e, err := Load(rules, apps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e.Preset() != PresetCommits {
+		t.Fatalf("default preset %d", e.Preset())
+	}
+	send := Input{Op: OpType, App: whatsapp, Text: "hi", Submit: true, Target: &screen.Element{Role: screen.RoleInput, Label: "Message"}}
+
+	if err := e.SetPreset(PresetPayments); err != nil {
+		t.Fatal(err)
+	}
+	if v := e.Evaluate(tap(dinely, "Place order · $12.80")); v.Decision != Ask || v.Rule != "Payments" {
+		t.Fatalf("payments only, payment: %+v", v)
+	}
+	for name, in := range map[string]Input{"delete": tap(dinely, "Delete"), "send": send} {
+		if v := e.Evaluate(in); v.Decision != Allow {
+			t.Fatalf("payments only, %s: %+v", name, v)
+		}
+	}
+	if v := e.Evaluate(tap(chase, "Accounts")); v.Decision != Deny {
+		t.Fatalf("payments only still blocks finance apps: %+v", v)
+	}
+
+	if err := e.SetPreset(PresetEvery); err != nil {
+		t.Fatal(err)
+	}
+	if v := e.Evaluate(tap(dinely, "Orders")); v.Decision != Ask || v.Rule != RuleEvery {
+		t.Fatalf("every action, navigation: %+v", v)
+	}
+	if v := e.Evaluate(tap(dinely, "Pay $3")); v.Rule != "Payments" {
+		t.Fatalf("every action names the specific rule first: %+v", v)
+	}
+	e.SetReadOnly("", true)
+	if v := e.Evaluate(tap(dinely, "Orders")); v.Decision != Ask {
+		t.Fatalf("read-only with every action: navigation should still ask: %+v", v)
+	}
+	if v := e.Evaluate(tap(dinely, "Pay $3")); v.Decision != Deny || v.Rule != RuleReadOnly {
+		t.Fatalf("read-only with every action: a payment is denied: %+v", v)
+	}
+	e.SetReadOnly("", false)
+
+	if err := e.SetHideCodes(false); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.FilterEvents([]screen.Event{{Kind: screen.EventNotification, Text: "Your code is 556677"}}); got[0].Text != "Your code is 556677" {
+		t.Fatalf("codes masked with HideCodes off: %q", got[0].Text)
+	}
+	if err := e.SetReadOnly("", true); err != nil {
+		t.Fatal(err)
+	}
+	// The settings survive a restart.
+	e2, err := Load(rules, apps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e2.Preset() != PresetEvery || e2.HideCodes() || !e2.ReadOnly("") || !e2.ReadOnly("any device") {
+		t.Fatalf("after reload: preset %d hide codes %v read-only %v", e2.Preset(), e2.HideCodes(), e2.ReadOnly(""))
+	}
+	if st, _ := os.Stat(rules); st.Mode().Perm() != 0o600 {
+		t.Fatalf("rules file mode %v", st.Mode().Perm())
+	}
+	if err := e.SetPreset(Preset(7)); err == nil {
+		t.Fatal("unknown preset accepted")
+	}
+}
+
+func TestLegacyRulesFile(t *testing.T) {
+	dir := t.TempDir()
+	rules := filepath.Join(dir, "rules.yaml")
+	legacy := `rules:
+  - { name: Finance apps, match: { category: finance }, decision: deny }
+  - { name: Password managers, match: { category: passwords }, decision: deny }
+  - { name: Payments, match: { action: payment }, decision: ask }
+  - { name: Messages, match: { action: send_message }, decision: ask }
+  - { name: Commits, match: { action: commit }, decision: ask }
+  - { name: Installs and links, match: { action: [install_app, open_url] }, decision: ask }
+  - { name: Calls, match: { action: call }, decision: ask }
+  - { name: Settings changes, match: { action: change_setting }, decision: ask }
+`
+	os.WriteFile(rules, []byte(legacy), 0o600)
+	e, err := Load(rules, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e.Preset() != PresetCommits || len(e.Rules()) != len(commitRules)+2+len(builtinRules) {
+		t.Fatalf("migrated: preset %d, %d rules", e.Preset(), len(e.Rules()))
+	}
+	// A hand-edited file without the Commits rule keeps exactly its rules.
+	os.WriteFile(rules, []byte(strings.Replace(legacy, "  - { name: Commits, match: { action: commit }, decision: ask }\n", "", 1)), 0o600)
+	e, _ = Load(rules, "")
+	if e.Preset() != PresetNone {
+		t.Fatalf("custom legacy file got preset %d", e.Preset())
+	}
+	if v := e.Evaluate(tap(dinely, "Delete")); v.Decision != Allow {
+		t.Fatalf("custom legacy file asks for commits: %+v", v)
+	}
+}
+
+func TestBlockAndUnblockApps(t *testing.T) {
+	dir := t.TempDir()
+	rules, apps := filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml")
+	e, err := Load(rules, apps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.SetAppBlocked(dinely, true); err != nil {
+		t.Fatal(err)
+	}
+	if rule, ok := e.Blocked(dinely); !ok || rule != RuleBlocked {
+		t.Fatalf("blocked app: %q %v", rule, ok)
+	}
+	if err := e.SetAppBlocked(screen.App{Name: "My Bank"}, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := e.Blocked(screen.App{ID: "com.mybank", Name: "my bank"}); !ok {
+		t.Fatal("app blocked by name not blocked")
+	}
+	installed := []screen.App{dinely, chase, whatsapp, {ID: "com.1password.1password", Name: "1Password"}}
+	got := e.BlockedApps(installed)
+	byID := map[string]BlockedApp{}
+	for _, b := range got {
+		byID[b.ID+"|"+b.Name] = b
+	}
+	if b := byID["com.dinely.app|Dinely"]; !b.ByPerson || b.Category != CatBlocked {
+		t.Fatalf("Dinely: %+v (all %+v)", b, got)
+	}
+	if b := byID["com.chase.sig.android|Chase"]; b.ByPerson || b.Category != CatFinance || b.Rule != "Finance apps" {
+		t.Fatalf("Chase: %+v", b)
+	}
+	if b := byID["com.1password.1password|1Password"]; b.Category != CatPasswords {
+		t.Fatalf("1Password: %+v", b)
+	}
+	if b := byID["|My Bank"]; !b.ByPerson {
+		t.Fatalf("My Bank: %+v (all %+v)", b, got)
+	}
+	if _, ok := byID["com.whatsapp|WhatsApp"]; ok {
+		t.Fatal("WhatsApp listed as blocked")
+	}
+
+	// Unblocking: one the person blocked, and a bundled banking app.
+	if err := e.SetAppBlocked(dinely, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.SetAppBlocked(chase, false); err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range []screen.App{dinely, chase} {
+		if _, ok := e.Blocked(a); ok {
+			t.Fatalf("%s still blocked", a.Name)
+		}
+	}
+	// It all survives a restart.
+	e2, err := Load(rules, apps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := e2.Blocked(chase); ok {
+		t.Fatal("unblocked Chase blocked again after reload")
+	}
+	if _, ok := e2.Blocked(screen.App{Name: "My Bank"}); !ok {
+		t.Fatal("My Bank unblocked after reload")
+	}
+	if err := e2.SetAppBlocked(chase, true); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := e2.Blocked(chase); !ok {
+		t.Fatal("blocking Chase again failed")
+	}
+
+	// An app named by a deny rule in rules.yaml cannot be unblocked here.
+	f, _ := ParseFile([]byte("preset: 1\nrules:\n  - { name: No Dinely, match: { app: com.dinely.app }, decision: deny }\n"))
+	e3 := New(f, nil)
+	if err := e3.SetAppBlocked(dinely, false); !errors.Is(err, ErrBlockedByRule) {
+		t.Fatalf("unblock an app a rule names: %v", err)
 	}
 }

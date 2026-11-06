@@ -13,48 +13,27 @@ import (
 // reasonTookOver withdraws approvals when the person takes over.
 const reasonTookOver = "took_over"
 
-// shot stores a screenshot of the current screen for history and returns
-// its media id. It reuses the last one when the screen did not change, and
-// never records a blocked app.
-func (g *Gateway) shot(ctx context.Context, d *device, s *screen.Screen) string {
-	if g.store == nil || g.opt.NoScreenshots || s == nil {
-		return ""
+// rawShot takes a screenshot of the screen s describes, for the approval
+// panel, which the person needs at once: s must come from a read just
+// before, and a blocked app is never captured. It costs no extra read,
+// unlike screenshot, which agents get. History screenshots are taken in
+// the background instead (shots.go).
+func (g *Gateway) rawShot(ctx context.Context, d *device, s *screen.Screen) image.Image {
+	if s == nil {
+		return nil
 	}
 	if _, blocked := g.policy.Blocked(s.App); blocked {
-		return ""
+		return nil
 	}
-	key := body(s)
-	g.mu.Lock()
-	if d.shotKey == key && d.shotID != "" {
-		id := d.shotID
-		g.mu.Unlock()
-		return id
+	dev := g.driverOf(d)
+	if dev == nil {
+		return nil
 	}
-	g.mu.Unlock()
-	img, err := g.screenshot(ctx, d, s)
+	img, err := dev.Screenshot(ctx)
 	if err != nil {
-		return ""
+		return nil
 	}
-	return g.storeShot(d, s, img)
-}
-
-// storeShot saves an image taken of screen s in the background.
-func (g *Gateway) storeShot(d *device, s *screen.Screen, img image.Image) string {
-	if g.store == nil || g.opt.NoScreenshots || img == nil {
-		return ""
-	}
-	if _, blocked := g.policy.Blocked(s.App); blocked {
-		return ""
-	}
-	id := history.NewID("m_")
-	g.mu.Lock()
-	d.shotKey, d.shotID = body(s), id
-	g.mu.Unlock()
-	g.rec.do(func(ctx context.Context) error {
-		_, err := g.store.SaveScreenshotAs(ctx, id, img)
-		return err
-	})
-	return id
+	return img
 }
 
 // addStep appends a step to the lease's task.
@@ -86,6 +65,9 @@ func (g *Gateway) updateStepLocked(t *task, st StepView, intent, screenText stri
 			if st.Before == "" {
 				st.Before = t.steps[i].Before
 			}
+			if st.After == "" {
+				st.After = t.steps[i].After
+			}
 			t.steps[i] = st
 			break
 		}
@@ -104,9 +86,9 @@ func (g *Gateway) saveStepLocked(t *task, st StepView, intent, screenText string
 	g.rec.do(func(ctx context.Context) error { return g.store.SaveStep(ctx, rec) })
 }
 
-// recordStep records an executed (or failed) action. step is the index of a
-// step an approval opened, or -1 for a new one.
-func (g *Gateway) recordStep(l *lease, step int, a Action, c Call, p *prep, res *Result, start time.Time, before, after, screenText string) {
+// recordStep records an executed (or failed) action and returns its index.
+// step is the index of a step an approval opened, or -1 for a new one.
+func (g *Gateway) recordStep(l *lease, step int, a Action, c Call, p *prep, res *Result, start time.Time, before, after, screenText string) int {
 	status := string(res.Status)
 	if res.Error != "" {
 		status = string(res.Error)
@@ -128,9 +110,9 @@ func (g *Gateway) recordStep(l *lease, step int, a Action, c Call, p *prep, res 
 	if step >= 0 {
 		st.Index = step
 		g.updateStepLocked(l.task, st, c.Intent, screenText)
-		return
+		return step
 	}
-	g.addStepLocked(l.task, st, c.Intent, screenText)
+	return g.addStepLocked(l.task, st, c.Intent, screenText)
 }
 
 // recordRefusal records an action that policy or the screen refused.
@@ -328,6 +310,10 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 	g.ended = append(g.ended, t)
 	if n := len(g.ended); n > 50 {
 		g.ended = append([]*task(nil), g.ended[n-50:]...)
+	}
+	if outcome != OutcomeStopped {
+		// After Stop the gateway leaves the phone alone, reads included.
+		g.confirmAtEndLocked(d)
 	}
 	g.wakeLocked(d)
 	g.recordTaskLocked(t)

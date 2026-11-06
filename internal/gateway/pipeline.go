@@ -279,6 +279,8 @@ type prep struct {
 	// decider is the element whose verdict decided, which may enclose the
 	// target (a Pay button around a price label).
 	decider *screen.Element
+	// unplaced is set when the ref is on the screen without a position.
+	unplaced bool
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -297,7 +299,13 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		d.act.Unlock()
 		return res
 	}
-	cur, err := g.observe(ctx, d, false)
+	if a.Tool == "launch" {
+		if res := g.launchUnread(ctx, l, c, a); res != nil {
+			d.act.Unlock()
+			return res
+		}
+	}
+	cur, err := g.startScreen(ctx, l, c)
 	if err != nil {
 		d.act.Unlock()
 		return g.readError(l, err)
@@ -308,6 +316,14 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 			"The phone is locked. Nothing was done. Call phone_handoff so the person can unlock it."), cur)
 	}
 	p, res := g.prepare(ctx, l, a, cur)
+	if res != nil && p.unplaced {
+		// The element is there but has no position in this read, as happens
+		// with OCR-placed elements (iOS): one more read usually places it.
+		if again, err := g.observe(ctx, d, false); err == nil && !again.Locked {
+			cur = again
+			p, res = g.prepare(ctx, l, a, cur)
+		}
+	}
 	if res != nil {
 		d.act.Unlock()
 		g.recordRefusal(l, c, a, p, res)
@@ -333,6 +349,54 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	res = g.execute(ctx, l, c, a, p, cur, -1)
 	d.act.Unlock()
 	return res
+}
+
+// startScreen reads the screen an action starts from. A phone_batch step
+// may start from the read that ended the step before, if that settled less
+// than reuseAge ago: the steps run back to back, and a read costs seconds
+// on some phones.
+func (g *Gateway) startScreen(ctx context.Context, l *lease, c Call) (*screen.Screen, error) {
+	if c.reuse {
+		g.mu.Lock()
+		after, at := l.after, l.afterAt
+		g.mu.Unlock()
+		if after != nil && time.Since(at) < reuseAge {
+			return after, nil
+		}
+	}
+	return g.observe(ctx, l.dev, false)
+}
+
+// launchUnread runs phone_launch without reading the screen first, when it
+// can: whether an app may be opened depends on the app and the task, not
+// on the screen, and a driver that reports locks keeps d.locked current
+// (gate checked it). It returns nil when the launch takes the usual path:
+// the driver reports locks only through reads, a step's picture waits for
+// the read to confirm it (see shots.go), or the policy asks and the person
+// has not allowed it for the task.
+func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) *Result {
+	g.mu.Lock()
+	_, reports := l.dev.dev.(driver.LockReporter)
+	waits := g.stepWaitsLocked(l.dev)
+	g.mu.Unlock()
+	if !reports || waits {
+		return nil
+	}
+	p, res := g.prepare(ctx, l, a, nil)
+	if res != nil {
+		g.recordRefusal(l, c, a, p, res)
+		return res
+	}
+	v := g.evaluate(p, nil)
+	switch {
+	case v.Decision == policy.Deny:
+		res := refusal(v)
+		g.recordRefusal(l, c, a, p, res)
+		return res
+	case v.Decision == policy.Ask && !g.granted(l, v, p):
+		return nil
+	}
+	return g.execute(ctx, l, c, a, p, nil, -1)
 }
 
 // evaluate runs the policy on the action. A tap or swipe is checked
@@ -407,7 +471,8 @@ func grantApp(p *prep) screen.App {
 }
 
 // prepare resolves refs, points and apps against the current screen and
-// builds the policy input. A non-nil result refuses the action.
+// builds the policy input. A non-nil result refuses the action. cur may be
+// nil for phone_launch only, which does not depend on the screen.
 func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.Screen) (*prep, *Result) {
 	d := l.dev
 	p := &prep{}
@@ -415,13 +480,17 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	g.mu.Lock()
 	apps := append([]string(nil), l.apps...)
 	g.mu.Unlock()
-	p.input = policy.Input{Device: d.id, App: cur.App, Screen: cur, TaskApps: apps, LongPress: a.LongPress,
+	var fg screen.App
+	if cur != nil {
+		fg = cur.App
+	}
+	p.input = policy.Input{Device: d.id, App: fg, Screen: cur, TaskApps: apps, LongPress: a.LongPress,
 		ReadOnly: scope.Mode == ScopeReadOnly}
 	if scope.Mode == ScopeApps {
 		p.input.ScopeApps = scope.Apps
 	}
 
-	if rule, blocked := g.policy.Blocked(cur.App); blocked && a.Tool != "launch" && !(a.Tool == "key" && a.Key == "home") {
+	if rule, blocked := g.policy.Blocked(fg); blocked && a.Tool != "launch" && !(a.Tool == "key" && a.Key == "home") {
 		p.desc = describe(a, p)
 		res := &Result{Status: StatusBlocked, Rule: rule,
 			Message: fmt.Sprintf("The foreground app is blocked by the rule %q, so Pinky hides it and takes no action there. Nothing was done. Press home or launch another app.", rule)}
@@ -434,6 +503,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			return nil, g.attachScreen(l, errResult(ErrNotFound, "[%d] is not on the screen anymore. Nothing was done.", ref), cur)
 		}
 		if e.Bounds.Empty() {
+			p.unplaced = true
 			return nil, errResult(ErrNotFound, "[%d] has no position on the screen; tap by x and y instead.", ref)
 		}
 		return &e, nil
@@ -635,7 +705,7 @@ func matchApp(apps []driver.App, name string) (driver.App, bool) {
 
 // ask opens an approval for an action and records the waiting step.
 func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, v policy.Verdict, cur *screen.Screen) (approval.Info, *Result) {
-	shot, _ := g.screenshot(ctx, l.dev, cur)
+	shot := g.rawShot(ctx, l.dev, cur)
 	target := screen.Rect{}
 	switch {
 	case p.decider != nil:
@@ -659,10 +729,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	if res := g.afterOpen(l, info); res != nil {
 		return info, res
 	}
-	before := ""
-	if shot != nil {
-		before = g.storeShot(l.dev, cur, shot)
-	}
+	before := g.shotID(g.keepImage(l.dev, cur, shot))
 	g.openStep(l, info, "phone_"+a.Tool, a.args(c), "Waiting for you: "+p.desc, target, p.point, before)
 	return info, nil
 }
@@ -720,6 +787,8 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 		return "Send the message?"
 	case a.Tool == "launch":
 		return fmt.Sprintf("Open %s?", p.launch.Name)
+	case v.Has(policy.ChangeSetting) && label != "":
+		return fmt.Sprintf("Change “%s”?", label)
 	case label != "":
 		return fmt.Sprintf("%s “%s”?", capitalize(verbFor(a)), label)
 	}
@@ -1014,11 +1083,14 @@ func (g *Gateway) preflight(ctx context.Context, l *lease) *Result {
 
 // execute performs an allowed action, settles, reads the screen and records
 // the step. It runs with d.act held. step is the index of a step opened by
-// an approval, or -1.
+// an approval, or -1. cur is the screen the action starts from, nil for a
+// launch that did not read it. Screenshots never hold the result up: the
+// before picture is the kept one when it shows cur, and the after picture
+// is taken in the background (see shots.go).
 func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *prep, cur *screen.Screen, step int) *Result {
 	d := l.dev
 	start := time.Now()
-	before := g.shot(ctx, d, cur)
+	before := g.shotID(g.beforeShot(d, cur))
 	if res := g.preflight(ctx, l); res != nil {
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
@@ -1028,6 +1100,7 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	g.mu.Lock()
 	dev := d.dev
 	d.inflight = cancel
+	g.inputLocked(d)
 	g.mu.Unlock()
 	if dev == nil {
 		cancel()
@@ -1054,14 +1127,21 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	}
 	res := g.screenResult(l, next, false)
 	res.Status = StatusSettled
+	g.mu.Lock()
+	l.after, l.afterAt = nil, time.Time{}
+	if settled {
+		l.after, l.afterAt = next, time.Now()
+	}
+	g.mu.Unlock()
 	if !settled {
 		res.Settle = "timeout"
 	}
 	if next.Locked {
 		res.Message = strings.TrimSpace(res.Message + " The phone is locked now.")
 	}
-	after := g.shot(ctx, d, next)
-	g.recordStep(l, step, a, c, p, res, start, before, after, body(res.Screen))
+	shot := g.startShot(d, next)
+	idx := g.recordStep(l, step, a, c, p, res, start, before, "", body(res.Screen))
+	g.useShot(shot, l.task, idx, true)
 	return res
 }
 
@@ -1129,8 +1209,9 @@ func (g *Gateway) readError(l *lease, err error) *Result {
 }
 
 // observeTimeout bounds one screen read, so a stuck driver cannot hold a
-// call forever.
-const observeTimeout = 20 * time.Second
+// call forever. It is generous: the first read on an iPhone loads the OCR
+// model (15 s measured, about a minute the first time on a new Mac).
+const observeTimeout = 60 * time.Second
 
 // observe reads the screen, assigns refs and collects events.
 func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Screen, error) {
@@ -1140,6 +1221,7 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	}
 	ctx, cancel := context.WithTimeout(ctx, observeTimeout)
 	defer cancel()
+	start := time.Now()
 	s, err := dev.Observe(ctx, driver.ObserveOptions{OCR: ocr})
 	if err != nil {
 		if errors.Is(err, driver.ErrOffline) {
@@ -1163,6 +1245,7 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		d.events = append([]screen.Event(nil), d.events[n-50:]...)
 	}
 	d.last = s
+	g.confirmShotLocked(d, s, start)
 	_, reporter := dev.(driver.LockReporter)
 	g.mu.Unlock()
 	if s.Locked || !reporter {

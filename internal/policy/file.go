@@ -16,6 +16,9 @@ var defaultRulesYAML []byte
 
 // File is the rules file, rules.yaml in the config directory.
 type File struct {
+	// Preset adds a ready-made set of Ask rules (see Preset). Nil in files
+	// from before presets, which Load migrates.
+	Preset *int `yaml:"preset,omitempty"`
 	// ReadOnly turns on read-only mode for every device.
 	ReadOnly bool `yaml:"read_only"`
 	// ReadOnlyDevices turns on read-only mode for these device ids.
@@ -91,8 +94,10 @@ func Load(rulesPath, appsPath string) (*Engine, error) {
 			if f, err = ParseFile(data); err != nil {
 				return nil, fmt.Errorf("%s: %w", rulesPath, err)
 			}
+			migrateLegacy(&f)
 		}
 	}
+	var overrides AppOverrides
 	apps := BundledApps()
 	if appsPath != "" {
 		data, err := os.ReadFile(appsPath)
@@ -104,19 +109,44 @@ func Load(rulesPath, appsPath string) (*Engine, error) {
 		case err != nil:
 			return nil, err
 		default:
-			var o AppOverrides
-			if err := yaml.Unmarshal(data, &o); err != nil {
+			if err := yaml.Unmarshal(data, &overrides); err != nil {
 				return nil, fmt.Errorf("%s: %w", appsPath, err)
 			}
-			apps.Apply(o)
+			apps.Apply(overrides)
 		}
 	}
 	e := New(f, apps)
+	e.overrides = overrides
 	e.rulesPath, e.appsPath = rulesPath, appsPath
 	return e, nil
 }
 
-// Reload reads the files again, keeping runtime read-only switches.
+// migrateLegacy gives a rules file from before presets a preset. A file
+// that spells out all six old default Ask rules becomes preset 1 without
+// them; any other file keeps its rules as they are, with no preset.
+func migrateLegacy(f *File) {
+	if f.Preset != nil {
+		return
+	}
+	have := 0
+	for _, want := range commitRules {
+		for _, r := range f.Rules {
+			if r.Name == want.Name && r.Decision == Ask {
+				have++
+				break
+			}
+		}
+	}
+	if have == len(commitRules) {
+		migrate(f)
+		return
+	}
+	none := int(PresetNone)
+	f.Preset = &none
+}
+
+// Reload reads the files again, keeping runtime read-only switches and apps
+// added with AddApps.
 func (e *Engine) Reload() error {
 	n, err := Load(e.rulesPath, e.appsPath)
 	if err != nil {
@@ -124,7 +154,8 @@ func (e *Engine) Reload() error {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.file, e.apps = n.file, n.apps
+	e.file = n.file
+	e.setOverridesLocked(n.overrides)
 	return nil
 }
 

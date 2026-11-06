@@ -14,6 +14,9 @@ type Engine struct {
 	mu   sync.RWMutex
 	file File
 	apps *Apps
+	// overrides is apps.yaml; extra holds apps added at run time.
+	overrides AppOverrides
+	extra     map[string]CategoryEntries
 	// Runtime read-only switches from the client, on top of the file's.
 	readOnlyAll     *bool
 	readOnlyDevices map[string]bool
@@ -27,23 +30,28 @@ func New(f File, apps *Apps) *Engine {
 	if apps == nil {
 		apps = BundledApps()
 	}
-	return &Engine{file: f, apps: apps, readOnlyDevices: map[string]bool{}}
+	return &Engine{file: f, apps: apps, readOnlyDevices: map[string]bool{}, extra: map[string]CategoryEntries{}}
 }
 
 // Default returns an engine with the bundled rules and app table.
 func Default() *Engine { return New(DefaultFile(), nil) }
 
-// Rules returns a copy of the rules.
+// Rules returns every rule in evaluation order: the preset's, the rules
+// file's, then the built-in ones.
 func (e *Engine) Rules() []Rule {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	return append([]Rule(nil), e.file.Rules...)
+	return e.rulesLocked()
 }
 
 // AddApps puts apps into a category at run time, for tests and fake devices.
 func (e *Engine) AddApps(cat string, entries CategoryEntries) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	x := e.extra[cat]
+	x.IDs = append(x.IDs, entries.IDs...)
+	x.Names = append(x.Names, entries.Names...)
+	e.extra[cat] = x
 	e.apps.Add(cat, entries)
 }
 
@@ -60,16 +68,19 @@ func (e *Engine) IsSystem(app screen.App) bool {
 	return contains(e.Categories(app), CatSystem)
 }
 
-// SetReadOnly turns read-only mode on or off for one device, or for every
-// device when deviceID is empty. It overrides the rules file until restart.
-func (e *Engine) SetReadOnly(deviceID string, on bool) {
+// SetReadOnly turns read-only mode on or off. With an empty deviceID it
+// applies to every device and is saved in the rules file (Settings); for
+// one device it lasts until the gateway restarts (the device card).
+func (e *Engine) SetReadOnly(deviceID string, on bool) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if deviceID == "" {
-		e.readOnlyAll = &on
-		return
+		e.readOnlyAll = nil
+		e.file.ReadOnly = on
+		return e.saveRulesLocked()
 	}
 	e.readOnlyDevices[deviceID] = on
+	return nil
 }
 
 // ReadOnly reports whether read-only mode applies to the device.
@@ -102,13 +113,7 @@ func (e *Engine) Blocked(app screen.App) (rule string, blocked bool) {
 	}
 	e.mu.RLock()
 	defer e.mu.RUnlock()
-	cats := e.apps.Categories(app)
-	for _, r := range e.file.Rules {
-		if r.Decision == Deny && r.Match.appLevel() && r.matchesApp(app, cats) {
-			return r.Name, true
-		}
-	}
-	return "", false
+	return e.blockedLocked(app)
 }
 
 // Evaluate decides one action.
@@ -145,7 +150,7 @@ func (e *Engine) Evaluate(in Input) Verdict {
 
 	v := Verdict{Decision: Allow, Kinds: kinds}
 	var asks []string
-	for _, r := range e.file.Rules {
+	for _, r := range e.rulesLocked() {
 		if !r.matches(app, cats, kinds, in) {
 			continue
 		}
@@ -172,6 +177,9 @@ func (e *Engine) Evaluate(in Input) Verdict {
 
 	if in.ReadOnly || e.readOnlyLocked(in.Device) {
 		switch {
+		case v.Decision == Ask && onlyEvery(v.Asks):
+			// Read-only still lets the agent look around; with "every
+			// action asks" those steps keep asking.
 		case v.Decision == Ask:
 			v.Decision = Deny
 			v.Reason = fmt.Sprintf("Read-only mode is on, and this would need approval (%s).", v.Rule)
@@ -182,6 +190,12 @@ func (e *Engine) Evaluate(in Input) Verdict {
 		}
 	}
 	return v
+}
+
+// onlyEvery reports whether PresetEvery's catch-all is the only rule that
+// asked.
+func onlyEvery(asks []string) bool {
+	return len(asks) == 1 && asks[0] == RuleEvery
 }
 
 func reason(v Verdict, app screen.App) string {

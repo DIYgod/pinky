@@ -354,6 +354,77 @@ func TestSameApprovalIDTwice(t *testing.T) {
 	}
 }
 
+// The client sets the scope the person picked on a New agent card, then
+// allows it; the agent picking up the answer must not reset the scope.
+func TestAgentScopeChosenBeforeAllow(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	g, _ := newTestGateway(t, func(o *Options) { o.TrustNewAgents = false; o.DataDir = dir })
+	narrow := Scope{Mode: ScopeApps, Apps: []string{"Dinely"}}
+	allow := func(name string, scope *Scope) {
+		n := waitNeed(t, g)
+		if n.Rule != "New agent" || n.Agent != name {
+			t.Errorf("need %+v", n)
+			return
+		}
+		if scope != nil {
+			g.SetAgentScope(name, *scope)
+		}
+		if err := g.Decide(n.ID, AllowOnce, ""); err != nil {
+			t.Error(err)
+		}
+	}
+
+	s := g.OpenSession(AgentInfo{Name: "Codex", Client: "codex 1.0"})
+	defer s.Close()
+	go allow("Codex", &narrow)
+	mustStatus(t, s.Connect(ctx, ConnectRequest{Task: "Lunch"}), StatusSettled)
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	if res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "Chatter"}); res.Error != ErrScopeDenied {
+		t.Fatalf("launch outside the chosen scope: %+v", res)
+	}
+
+	// Without a chosen scope, an allowed agent gets the default.
+	s.Release(ctx, ReleaseRequest{})
+	other := g.OpenSession(AgentInfo{Name: "Other"})
+	defer other.Close()
+	go allow("Other", nil)
+	mustStatus(t, other.Connect(ctx, ConnectRequest{Task: "Chat"}), StatusSettled)
+	mustStatus(t, other.Act(ctx, Call{}, Action{Tool: "launch", App: "Chatter"}), StatusSettled)
+
+	// History keeps the chosen scope, after the approval was written too.
+	g.Flush()
+	agents, err := g.Agents(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]AgentView{}
+	for _, a := range agents {
+		got[a.Name] = a
+	}
+	if a := got["Codex"]; !a.Approved || a.Scope.String() != narrow.String() {
+		t.Fatalf("Codex: %+v", a)
+	}
+	if a := got["Other"]; !a.Approved || a.Scope.Mode != ScopeEverything {
+		t.Fatalf("Other: %+v", a)
+	}
+	g.Close()
+	g2, err := New(Options{Providers: nil, DataDir: dir, DiscoverEvery: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g2.Close()
+	stored, err := g2.Agents(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range stored {
+		if a.Name == "Codex" && (!a.Approved || a.Scope.String() != narrow.String()) {
+			t.Fatalf("stored: %+v", a)
+		}
+	}
+}
+
 func TestAgentApprovalRace(t *testing.T) {
 	g, _ := newTestGateway(t, func(o *Options) { o.TrustNewAgents = false; o.MaxBlock = time.Second })
 	a := AgentInfo{Name: "Racer"}
@@ -385,5 +456,82 @@ func TestTypeWithUnknownFocusNearPassword(t *testing.T) {
 	mustStatus(t, res, StatusBlocked)
 	if res.Rule != policy.RuleCredentials {
 		t.Fatalf("rule %q", res.Rule)
+	}
+}
+
+type countingDevice struct {
+	*demo.Device
+	mu       sync.Mutex
+	observes int
+}
+
+func (d *countingDevice) Observe(ctx context.Context, o driver.ObserveOptions) (*screen.Screen, error) {
+	d.mu.Lock()
+	d.observes++
+	d.mu.Unlock()
+	return d.Device.Observe(ctx, o)
+}
+
+func (d *countingDevice) WaitSettled(context.Context, time.Duration) (bool, error) { return true, nil }
+
+type countingProvider struct {
+	*demo.Provider
+	d *countingDevice
+}
+
+func (p countingProvider) Open(context.Context, string) (driver.Device, error) { return p.d, nil }
+
+func TestBatchReusesTheLastRead(t *testing.T) {
+	cd := &countingDevice{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android)}
+	g, err := New(Options{Providers: []driver.Provider{countingProvider{demo.NewProvider(driver.Android, cd.Device), cd}},
+		TrustNewAgents: true, NoScreenshots: true, DiscoverEvery: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	s, _ := connect(t, g, "Batch")
+	cd.mu.Lock()
+	cd.observes = 0
+	cd.mu.Unlock()
+	res := s.Batch(context.Background(), BatchRequest{Steps: []Action{
+		{Tool: "launch", App: "Dinely"}, {Tool: "key", Key: "back"}, {Tool: "key", Key: "home"},
+	}})
+	mustStatus(t, res, StatusSettled)
+	cd.mu.Lock()
+	n := cd.observes
+	cd.mu.Unlock()
+	// One read after each step: the launch needs none before it, and the
+	// steps after it start from the read that ended the step before.
+	if n != 3 {
+		t.Fatalf("%d reads for a three-step batch, want 3", n)
+	}
+	// A separate call reads the screen again.
+	mustStatus(t, s.Act(context.Background(), Call{}, Action{Tool: "key", Key: "home"}), StatusSettled)
+	cd.mu.Lock()
+	n = cd.observes
+	cd.mu.Unlock()
+	if n != 5 {
+		t.Fatalf("%d reads after a separate call, want 5", n)
+	}
+}
+
+func TestUnplacedRefReadsAgain(t *testing.T) {
+	g, hd := newHookGateway(t)
+	s, first := connect(t, g, "Lunch")
+	dinely := ref(t, first, "Dinely")
+	// The next read loses the row's position, as OCR placement can.
+	var once sync.Once
+	hd.setObserve(func(sc *screen.Screen) {
+		once.Do(func() {
+			for i := range sc.Elements {
+				if sc.Elements[i].Label == "Dinely" {
+					sc.Elements[i].Bounds = screen.Rect{}
+				}
+			}
+		})
+	})
+	mustStatus(t, tap(s, dinely), StatusSettled)
+	if hd.Current() != "dinely" {
+		t.Fatalf("tap did not land: %s", hd.Current())
 	}
 }

@@ -44,10 +44,14 @@ type device struct {
 	// result, already filtered by the policy.
 	events []screen.Event
 	last   *screen.Screen // the last raw observation
-	// shotKey is the screen text of the last stored after-screenshot, so the
-	// next step can reuse it as its before-screenshot.
-	shotKey, shotID string
-	touch           *touchState
+	// inputs counts input sent to the phone, by the agent or the person. A
+	// history screenshot is dropped when input came while it was taken.
+	inputs uint64
+	// shot is the history screenshot being taken, or waiting for a read to
+	// confirm it; kept is the last one kept, which steps reuse while the
+	// screen matches (see shots.go).
+	shot, kept *bgShot
+	touch      *touchState
 	// wake is closed and replaced on every state change, to wake waiting calls.
 	wake chan struct{}
 }
@@ -153,6 +157,10 @@ type lease struct {
 	// unlockHandoffs are handoffs opened while the phone was locked; Unlock
 	// from the computer ends them.
 	unlockHandoffs []string
+	// after is the read that ended the last action, if it settled; the next
+	// step of a phone_batch reuses it while it is fresh.
+	after   *screen.Screen
+	afterAt time.Time
 
 	ctx    context.Context
 	cancel context.CancelFunc

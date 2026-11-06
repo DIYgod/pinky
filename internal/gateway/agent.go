@@ -104,7 +104,14 @@ type Call struct {
 	Intent     string
 	ApprovalID string
 	Progress   Progress
+
+	// reuse lets a batch step start from the previous step's read.
+	reuse bool
 }
+
+// reuseAge is how old the previous step's read may be for the next batch
+// step to start from it instead of reading the screen again.
+const reuseAge = time.Second
 
 // ConnectRequest is phone_connect.
 type ConnectRequest struct {
@@ -501,6 +508,7 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 		return g.finish(l, g.readError(l, err))
 	}
 	res := g.screenResult(l, cur, true)
+	g.startShot(l.dev, cur)
 	res.Status = StatusSettled
 	res.Task = l.task.id
 	res.Message = fmt.Sprintf("Connected to %s for “%s”.", l.dev.name(), l.task.title)
@@ -526,7 +534,7 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Resul
 		return nil
 	}
 	if g.opt.TrustNewAgents {
-		g.setAgentApproved(s.agent, g.opt.DefaultScope)
+		g.allowAgent(s.agent)
 		return nil
 	}
 	b := approval.Binding{Session: s.id, Tool: "phone_connect", Args: "agent"}
@@ -565,7 +573,7 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Resul
 		return &Result{Status: StatusPending, ApprovalID: id, Rule: "New agent",
 			Message: fmt.Sprintf("This is %s's first connection, and the person must allow it in Pinky. Repeat phone_connect with approval_id %q.", s.agent.Name, id)}
 	case out.State == approval.Used && out.Decision.Allows():
-		g.setAgentApproved(s.agent, g.opt.DefaultScope)
+		g.allowAgent(s.agent)
 		return nil
 	}
 	return &Result{Status: StatusDenied, Rule: "New agent", Note: denyNote(out),
@@ -621,29 +629,56 @@ func (g *Gateway) agentApproved(ctx context.Context, a AgentInfo) bool {
 	return st.approved
 }
 
+// setAgentApproved approves an agent with scope.
 func (g *Gateway) setAgentApproved(a AgentInfo, scope Scope) {
+	g.approveAgentWith(a, func(*agentState) Scope { return scope })
+}
+
+// allowAgent approves an agent whose first connection the person allowed.
+// A scope the person chose meanwhile is kept: the client calls
+// SetAgentScope, which also approves, right before Decide. Otherwise the
+// agent gets DefaultScope.
+func (g *Gateway) allowAgent(a AgentInfo) {
+	g.approveAgentWith(a, func(st *agentState) Scope {
+		if st.approved {
+			return st.scope
+		}
+		return g.opt.DefaultScope
+	})
+}
+
+// approveAgentWith approves an agent with the scope pick returns, chosen
+// and saved under the lock so a concurrent SetAgentScope cannot be undone
+// by a stale value.
+func (g *Gateway) approveAgentWith(a AgentInfo, pick func(*agentState) Scope) {
 	g.mu.Lock()
+	defer g.mu.Unlock()
 	st, ok := g.agents[a.Name]
 	if !ok {
 		st = &agentState{name: a.Name}
 		g.agents[a.Name] = st
 	}
+	scope := pick(st)
 	st.approved, st.scope = true, scope
-	g.mu.Unlock()
-	if g.store != nil {
-		g.rec.do(func(ctx context.Context) error {
-			now := time.Now()
-			rec, found, err := g.store.Agent(ctx, a.Name)
-			if err != nil {
-				return err
-			}
-			if !found {
-				rec = history.Agent{Name: a.Name, CreatedAt: now}
-			}
-			rec.Client, rec.Scope, rec.ApprovedAt, rec.LastSeen = a.Client, scope.String(), now, now
-			return g.store.SaveAgent(ctx, rec)
-		})
+	if g.store == nil {
+		return
 	}
+	// Queued under the lock, so history keeps the order of the changes.
+	g.rec.do(func(ctx context.Context) error {
+		now := time.Now()
+		rec, found, err := g.store.Agent(ctx, a.Name)
+		if err != nil {
+			return err
+		}
+		if !found {
+			rec = history.Agent{Name: a.Name, CreatedAt: now}
+		}
+		if a.Client != "" {
+			rec.Client = a.Client
+		}
+		rec.Scope, rec.ApprovedAt, rec.LastSeen = scope.String(), now, now
+		return g.store.SaveAgent(ctx, rec)
+	})
 }
 
 func (g *Gateway) scopeOf(s *Session) Scope {
@@ -731,7 +766,9 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		res.Status = StatusLocked
 		res.Message = "The phone is locked; call phone_handoff so the person can unlock it."
 	}
-	if req.Screenshot {
+	if !req.Screenshot {
+		g.startShot(l.dev, cur)
+	} else {
 		if res.Rule != "" {
 			res.Message = strings.TrimSpace(res.Message + " No screenshot: the app is blocked.")
 		} else {
@@ -739,6 +776,8 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 			switch {
 			case err == nil:
 				res.Screenshot = img
+				// Checked against reads on both sides: steps may reuse it.
+				g.keepImage(l.dev, cur, img)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
 			case errors.Is(err, errScreenChanged):
@@ -842,6 +881,7 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 		}
 	}
 	res = g.screenResult(l, cur, false)
+	g.startShot(l.dev, cur)
 	res.Status = StatusSettled
 	res.Matched = &matched
 	verb := "appeared"
@@ -971,8 +1011,11 @@ func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Res
 	var info approval.Info
 	if id == "" {
 		var shot image.Image
-		if cur, err := g.observe(ctx, l.dev, false); err == nil {
-			shot, _ = g.screenshot(ctx, l.dev, cur)
+		g.mu.Lock()
+		last := l.dev.last
+		g.mu.Unlock()
+		if last != nil && time.Since(last.CapturedAt) < 10*time.Second {
+			shot = g.rawShot(ctx, l.dev, last)
 		}
 		detail := s.agent.Name
 		if d := strings.TrimSpace(req.Details); d != "" {
@@ -1111,6 +1154,7 @@ func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *
 		return g.finish(l, g.readError(l, err))
 	}
 	res := g.screenResult(l, cur, true)
+	g.startShot(l.dev, cur)
 	res.Status = StatusSettled
 	res.Note = note
 	res.Message = "The person handed control back."
@@ -1145,8 +1189,8 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 	ctx, cancel := mergeCtx(ctx, l.ctx)
 	defer cancel()
 	out := &Result{Status: StatusSettled}
-	for _, a := range req.Steps {
-		c := Call{Device: req.Device, Intent: req.Intent, ApprovalID: a.ApprovalID, Progress: req.Progress}
+	for i, a := range req.Steps {
+		c := Call{Device: req.Device, Intent: req.Intent, ApprovalID: a.ApprovalID, Progress: req.Progress, reuse: i > 0}
 		if a.Intent != "" {
 			c.Intent = a.Intent
 		}

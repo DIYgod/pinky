@@ -393,6 +393,20 @@ system:
     - net.oneplus.launcher
     - com.teslacoilsw.launcher
     - com.lineageos.trebuchet
+    - app.lawnchair*                       # Lawnchair
+    - bitpit.launcher                      # Niagara
+    - ginlemon.flowerfree                  # Smart Launcher
+    - com.microsoft.launcher
+    - com.actionlauncher.playstore
+    - com.mi.android.globallauncher        # POCO Launcher
+    - projekt.launcher                     # Hyperion
+    - de.mm20.launcher2                    # Kvaesitso
+    - com.motorola.launcher3
+    - com.nothing.launcher
+    - com.asus.launcher
+    - com.sonymobile.home
+    - com.hihonor.android.launcher
+    - com.transsion.hilauncher
     - com.apple.springboard
   names:
     - Home screen
