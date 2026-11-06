@@ -279,6 +279,8 @@ type prep struct {
 	// decider is the element whose verdict decided, which may enclose the
 	// target (a Pay button around a price label).
 	decider *screen.Element
+	// unplaced is set when the ref is on the screen without a position.
+	unplaced bool
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -308,6 +310,14 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 			"The phone is locked. Nothing was done. Call phone_handoff so the person can unlock it."), cur)
 	}
 	p, res := g.prepare(ctx, l, a, cur)
+	if res != nil && p.unplaced {
+		// The element is there but has no position in this read, as happens
+		// with OCR-placed elements (iOS): one more read usually places it.
+		if again, err := g.observe(ctx, d, false); err == nil && !again.Locked {
+			cur = again
+			p, res = g.prepare(ctx, l, a, cur)
+		}
+	}
 	if res != nil {
 		d.act.Unlock()
 		g.recordRefusal(l, c, a, p, res)
@@ -450,6 +460,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			return nil, g.attachScreen(l, errResult(ErrNotFound, "[%d] is not on the screen anymore. Nothing was done.", ref), cur)
 		}
 		if e.Bounds.Empty() {
+			p.unplaced = true
 			return nil, errResult(ErrNotFound, "[%d] has no position on the screen; tap by x and y instead.", ref)
 		}
 		return &e, nil

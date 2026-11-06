@@ -11,9 +11,20 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/ios"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
 )
+
+// lastStats returns the newest n read statistics.
+func (g *guardDevice) lastStats(n int) []string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if len(g.stats) < n {
+		n = len(g.stats)
+	}
+	return append([]string(nil), g.stats[len(g.stats)-n:]...)
+}
 
 // guardDevice wraps a real phone for the device tests. It is the last line
 // of defence for the owner's phone and holds whatever the gateway decides:
@@ -36,6 +47,7 @@ type guardDevice struct {
 	refused  []string
 	inputs   []string
 	timings  map[string][]time.Duration
+	stats    []string // iOS read statistics, newest last
 	settleOK int
 	settleTO int
 }
@@ -112,9 +124,26 @@ func isToggle(e screen.Element) bool {
 	return e.Role == screen.RoleSwitch || e.Role == screen.RoleCheckbox || e.Has(screen.StateChecked)
 }
 
+// statsObserver is the iOS driver's Observe with timings and OCR counts.
+type statsObserver interface {
+	ObserveWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ios.ObserveStats, error)
+}
+
 func (g *guardDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	start := time.Now()
-	s, err := g.Device.Observe(ctx, opt)
+	var s *screen.Screen
+	var err error
+	if so, ok := g.Device.(statsObserver); ok {
+		var st ios.ObserveStats
+		s, st, err = so.ObserveWithStats(ctx, opt)
+		g.mu.Lock()
+		g.stats = append(g.stats, fmt.Sprintf("elements %d placed %d ocr lines %d walk %v shot %v ocr %v ocrErr %v walkErr %v",
+			st.Elements, st.Placed, st.OCRLines, st.Walk.Round(time.Millisecond), st.Shot.Round(time.Millisecond),
+			st.OCR.Round(time.Millisecond), st.OCRError, st.WalkError))
+		g.mu.Unlock()
+	} else {
+		s, err = g.Device.Observe(ctx, opt)
+	}
 	what := "observe"
 	if opt.OCR {
 		what = "observe+ocr"

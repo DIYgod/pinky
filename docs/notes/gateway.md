@@ -1,6 +1,6 @@
 # Gateway, MCP and local API
 
-Branch `claude/gateway-core-da93b5`. This covers the packages the main session owned in [WORKING.md](../WORKING.md): `internal/gateway` (except the shared `api.go`), `internal/policy`, `internal/approval`, `internal/history`, `internal/mcp` and `cmd/pinky`, plus two new packages, `internal/api` (the local socket, listed in DESIGN's repository layout) and `internal/demo` (scripted fake phones). No real phone was used.
+Branch `claude/gateway-core-da93b5`. This covers the packages the main session owned in [WORKING.md](../WORKING.md): `internal/gateway` (except the shared `api.go`), `internal/policy`, `internal/approval`, `internal/history`, `internal/mcp` and `cmd/pinky`, plus two new packages, `internal/api` (the local socket, listed in DESIGN's repository layout) and `internal/demo` (scripted fake phones). The first round used fake phones only; the second ran the gateway on the Mi 10 Pro and the iPhone (see "Real phones") and added the Settings API.
 
 ## What works
 
@@ -44,9 +44,69 @@ Then ask the agent to "reorder last week's lunch on the fake Pixel". The Pay tap
 /tmp/pinky decide <id> allow "enjoy"
 ```
 
-Without `--fake`, the daemon starts with no device providers (none are registered on this branch) and says so.
+Real phones (build tag `device`): `internal/gateway/device_test.go` runs the gateway in-process with the real provider for one phone and drives a session like an agent: Calculator (6 × 7 = 42, one tap at a time and as one `phone_batch`), Settings (scroll, open a sub-page, back, home), a Settings switch that must ask and is denied, ref stability, take over, hand back, Stop mid-action, and the stored screenshots. Every input passes `guardDevice` (`guard_test.go`), which refuses anything outside Calculator keys and Settings navigation and any tap on a switch, whatever the gateway decides, and stops without input when the phone shows anything unexpected or is locked. Build once, then hold the phone's lock only for the run:
+
+```sh
+go test -c -tags device -o /tmp/pinky-gw/gateway.test ./internal/gateway
+scripts/devlock.sh 3e8be48e env PINKY_DEVICE=3e8be48e /tmp/pinky-gw/gateway.test -test.run 'TestDevice$' -test.v
+scripts/devlock.sh 00008110-001E30C9262A801E env PINKY_DEVICE=00008110-001E30C9262A801E /tmp/pinky-gw/gateway.test -test.run 'TestDevice$' -test.v
+```
 
 Folders: `$PINKY_HOME/{config,data,run}` when set; otherwise `~/Library/Application Support/Pinky` on macOS, XDG folders on Linux. Config holds `rules.yaml`, `apps.yaml` (both written with defaults on first start) and `agent-token` (0600). Data holds `pinky.db`, `media/` and `daemon.log`; a `--fake` gateway keeps its history in `data/fake`.
+
+## Real phones
+
+On 2026-11-07, the gateway ran in-process with the real drivers through the device test above, one phone at a time under its lock, using only the home screen, the Calculator and Settings. Last runs: the Mi at 04:06, the iPhone at 04:09; both passed every part.
+
+| | Mi 10 Pro (Android 17, LineageOS) | iPhone 13 mini (iOS 27.0.1) |
+| --- | --- | --- |
+| Connect (first screen) | 2.2 s | 2.1 s (15 s once, while OCR loaded in a new process) |
+| Calculator 6 × 7 = 42, tap by tap | Yes, by ref | Yes: digits by ref; ×, = by x and y (they have no position, see below) |
+| The same five taps as one `phone_batch` | 21.6 s, 4.3 s a step | 11.9 s, 2.4 s a step |
+| Settings: open, sub-page, back, scroll, home | Yes (Display) | Yes (Bluetooth) |
+| A Settings switch asks, Deny, unchanged | Yes: Adaptive brightness asked under "Settings changes" after 2.7 s; still on afterwards (also `settings get system screen_brightness_mode` = 1 before and after) | Yes: Airplane Mode asked after 2.0 s; unchanged |
+| Refs on two reads of one screen | 32 of 32 kept | 26 of 26 kept |
+| Take over, then `user_took_over`, then `paused`; hand back | Yes | Yes |
+| Stop while an action reads the screen | `stopped`, no input reached the phone | Same |
+| History | 22 steps, 41 screenshot references, all readable JPEG | 22 steps, 39 |
+| Lock state (`LockReporter`) | Unlocked, 55 to 70 ms | Unlocked, 17 to 32 ms |
+| Read (`Observe`), median | 2.24 s (`uiautomator dump`) | 1.40 s (walk and OCR); 0.7 s in the Calculator |
+| Settle (`Settler`), median | 1.25 s, never hit the 3 s limit | 1.19 s; hit the limit 4 times in 19 (launches, scrolls, the home screen) |
+| Screenshot, median | 0.35 s | 0.34 s |
+| Action from call to result, median | 6.1 s (read 2.2, settle 1.3, screenshot 0.35, read 2.2) | 6.0 s |
+
+What the runs changed in the gateway:
+
+- **Third-party launchers count as system apps.** The Mi's launcher is Lawnchair (`app.lawnchair.play`), which the app table did not know; agent scopes and task app lists would have treated its home screen as an app outside the list. Lawnchair, Niagara, Smart Launcher, Microsoft Launcher, POCO, Hyperion, Kvaesitso and some vendor launchers are added.
+- **History screenshots no longer cost a screen read.** The check that no blocked app was captured used one more `Observe` per screenshot, 2.2 s a step on the Mi. History and approval-panel screenshots now come right before the step's own read, which checks them; only screenshots an agent receives keep the extra read.
+- **`phone_batch` steps start from the previous step's read** when it settled less than a second before, which saves one read a step (Mi: 4.3 s instead of 6.1 s a step). Separate tool calls always read again, since the agent's thinking time leaves room for the screen to change.
+- **The read limit is 60 s** (was 20 s): the iPhone's first read took 15 s while OCR loaded.
+- **A ref that is on the screen without a position gets one more read** before `not_found`, because OCR placement on the iPhone varies from read to read.
+- Switch approvals read "Change “Adaptive brightness”?" instead of "Tap …".
+- Defaults stay: `SettleMax` 3 s fits both phones' settle times; `PollInterval` only matters for drivers without a `Settler` and for `phone_wait_for`.
+
+A note for whoever runs the device test: one Mi run reported "the switch changed after Deny". It was the test's own check comparing a different element with the same label; the switch had not changed (the setting read 1 before and after, and the guard saw no tap on it). The check now compares the same element.
+
+## Driver issues seen from the gateway
+
+Found while running the gateway on the phones; not changed here, since the driver sessions own that code.
+
+iPhone 13 mini (iOS driver):
+
+- **OCR placement changes between two reads of the same still screen.** The Settings "Battery" row had a position in one read and none in the next (twice in three runs); the Calculator's "7" key lost its position once "6×7" showed on the display (the text "7" was on screen twice). An agent then gets `not_found` for a ref it has just seen. The gateway now reads once more before answering `not_found`, which helps when the placement flips back; a steadier placement (keep a row's position while the screen does not scroll, or skip ambiguous matches more carefully) would fix it at the source.
+- **Positions can be wrong, not only missing.** Airplane Mode was placed at y 627 in one read and at y 1511 in the next, with no input in between (Settings had just opened). A tap on a misplaced ref lands on whatever is really there; the gateway checks every element under the finger against the policy, but an element without a position cannot be checked. This matters most of all the iOS findings.
+- **A swipe that did not scroll**: in one run a swipe up through the middle of Settings (562,1948 to 562,488 in 300 ms) settled at the 3 s limit and the next two reads still showed the top of the list; the same swipe on the Mi scrolls Settings to its end. In other runs the list did move. After a scroll the list also kept changing for seconds after the settle signal (43 elements, then 38, rows losing their positions).
+- **Keys that show a symbol never get a position**: the Calculator's Multiply, Divide, Add, Subtract, Equals, Clear, Delete, Per cent and Point have labels that OCR cannot match to their glyphs (×, ÷, +, −, =, C, ⌫, %, .), and digits 1, 3 and 0 were missed in some reads. Agents have to tap by x and y from a screenshot. A small table of symbol labels in the OCR matcher would place most of them.
+- The Calculator's display reads `other "StandardInputView;value:6×7"`: the identifier and value joined, instead of the value as the label.
+- OCR turns the status bar into lines such as `ocr "3:42イ"` and `ocr "三の"` (clock and signal icons) on every screen; dropping OCR lines inside the status bar would save agents the noise.
+- go-ios logs `ERROR no connection dispatcher registered for global channel module=go-ios/dtx_codec` on stderr when the device opens.
+- The first read in a new process took 15 s once (OCR loading); later processes read in 0.7 to 2 s. The gateway's read limit is now 60 s.
+- Settling hits the 3 s limit after most launches and scrolls and on the home screen (widgets), so those actions take 6 to 7 s.
+
+Mi 10 Pro (Android driver):
+
+- Each read is a `uiautomator dump` of 2.2 s, and an action needs two (before and after), so 4.4 s of the median 6.1 s per action is reading. The companion app's tree (about 30 ms) is not wired into the driver yet; that is the biggest speed-up available.
+- No toasts or notifications reach `Screen.Events` without the companion (known).
 
 ## Settings API (for the client)
 
@@ -107,6 +167,8 @@ Nobody was available to ask, so these are mine; each is easy to change.
 25. **Swipe direction** is where the finger moves (`up` shows content below), stated in the tool description.
 26. **`phone_type` with `ref`** must target a text field; it taps it first to focus. Typing into a button could otherwise tap a commit without the commit check.
 27. **Several phones online and no `device`**: `phone_connect` returns `invalid_argument` with the list, rather than picking one.
+28. **Presets are rules generated from a number** in `rules.yaml` (`preset: 1`), added before the file's own rules; the file stays the one source of truth, as DESIGN asks, and keeps working when edited by hand. Preset 2 means what the client's text says: only payments ask, so sends, deletions, installs, calls and settings changes go through. Preset 3 asks before every tap, type, swipe, key and launch; with read-only on, looking around still asks rather than being denied.
+29. **"Hide codes" is the notification code mask** (it does not blur screenshots); **blocked apps** the person adds go to a `blocked` category in `apps.yaml` with a built-in deny rule, and unblocking a bundled banking app excludes it by id and by name.
 
 ## Differences from DESIGN
 
@@ -155,4 +217,5 @@ An independent review of the pipeline, approvals and socket (after the first com
 | `internal/gateway` | approval allow (with history and media), deny, timeout, pending then repeat (busy phone, mismatched and reused ids), stale (screen text and target), take over and handoff, take over during an approval, stop and stop all (cancelling a slow action), lease conflict, session close, MCP-style cancellation, read-only, blocked app, credential fields, send message, batch, offline and reconnect, idle expiry, new-agent approval, locked phone and unlock from the computer, wait_for and diffs, `Settler`, watch-only scope, task app list, unclaimed approvals, events, wipe. Regression tests from a review: takeover kept across tasks and sessions, take over and Stop while an action is in flight, no orphan approvals, blocked-app events and screenshots, a price label inside a Pay button, per-app task grants, one approval id used twice, agent approval race, typing with unknown focus |
 | `internal/mcp` | over the SDK's in-memory transport: the 14 tools and their schemas, a full flow with approval and progress notifications, pending and errors, session close releasing the lease, batch and screenshots, handoff |
 | `internal/api` | single gateway per user, socket and token modes, MCP over the socket with the token, control methods and the trust rule |
+| `internal/gateway` (tag `device`) | the real Mi 10 Pro and iPhone, see "Real phones" |
 | `cmd/pinky` | end to end with real processes: `daemon --fake`, a refused second daemon, `devices`, two `pinky mcp` agents (approval answered through `needs`/`decide`, credentials, `lease_held`, iPhone `recents` unsupported, release, history), stdin close releasing leases, SIGTERM; and `pinky mcp --fake` starting the daemon itself |

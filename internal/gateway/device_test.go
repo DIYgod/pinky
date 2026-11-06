@@ -38,6 +38,8 @@ import (
 var navRows = []string{
 	"Battery", "电池", "Display", "显示", "Storage", "存储", "General", "通用",
 	"Display & Brightness", "显示与亮度", "Sound & vibration", "提示音和振动", "Sounds & Haptics", "声音与触感",
+	// The top of a small iPhone's list, under its banners.
+	"Bluetooth", "蓝牙",
 }
 
 func isIOSID(id string) bool { return strings.Contains(id, "-") && len(id) >= 24 }
@@ -331,7 +333,7 @@ func calcKey(s *screen.Screen, key string) (screen.Point, bool) {
 	case "×":
 		return screen.Point{X: x0 + 3*dx, Y: y0}, true
 	case "=":
-		return screen.Point{X: x0 + 3*dx, Y: y0 + 4*dy}, true
+		return screen.Point{X: x0 + 3*dx, Y: y0 + 3*dy}, true
 	case "6":
 		return screen.Point{X: x0 + 2*dx, Y: y0 + dy}, true
 	case "7":
@@ -347,6 +349,15 @@ func (r *deviceRun) settings(t *testing.T) {
 		t.Fatalf("launch Settings: %+v", res)
 	}
 	top := r.observe()
+	// Settings may resume on a sub-page: go back to its main page, which
+	// has the search field, without leaving Settings.
+	for i := 0; i < 3 && !hasSearch(top.Screen); i++ {
+		res = r.act("back to the main page", Action{Tool: "key", Key: "back"})
+		if !isSettings(screenOf(res).App) {
+			res = r.launch("com.android.settings", "com.apple.Preferences")
+		}
+		top = r.observe()
+	}
 	t.Logf("Settings: %d elements, roles %v", len(top.Screen.Elements), roles(top.Screen))
 	switchChecked := false
 	if sw, ok := firstToggle(top.Screen); ok {
@@ -354,16 +365,30 @@ func (r *deviceRun) settings(t *testing.T) {
 		switchChecked = true
 	}
 
-	// Scroll down and back up.
-	res = r.act("swipe up", Action{Tool: "swipe", Direction: "up"})
-	if res.Status != StatusSettled {
-		t.Fatalf("scroll: %+v", res)
+	// Find an allowed row: Settings may open where it was left, so look at
+	// this screen, then scroll towards the top, then down. Read until two
+	// reads agree each time: on the iPhone, rows lost their positions while
+	// the list still moved.
+	cur := r.waitStill()
+	visible := func(s *screen.Screen) bool {
+		for _, e := range s.Elements {
+			c := e.Bounds.Center()
+			if !e.Bounds.Empty() && e.Role == screen.RoleButton && matchesRow(e, navRows) && c.Y > s.Height*12/100 && c.Y < s.Height*88/100 {
+				return true
+			}
+		}
+		return false
 	}
-	res = r.act("swipe down", Action{Tool: "swipe", Direction: "down"})
-	if res.Status != StatusSettled {
-		t.Fatalf("scroll back: %+v", res)
+	for _, dir := range []string{"down", "down", "up", "up", "up"} {
+		if visible(cur.Screen) {
+			break
+		}
+		res = r.act("swipe "+dir, Action{Tool: "swipe", Direction: dir})
+		if res.Status != StatusSettled {
+			t.Fatalf("scroll %s: %+v", dir, res)
+		}
+		cur = r.waitStill()
 	}
-	cur := r.observe()
 
 	// Open a sub-page, Battery first: it has a switch for the next check.
 	// Only rows in the middle of the screen. On iOS, positions come from OCR
@@ -371,8 +396,26 @@ func (r *deviceRun) settings(t *testing.T) {
 	// then read again and try the next row.
 	mid := func(s *screen.Screen, e screen.Element) bool {
 		c := e.Bounds.Center()
-		return c.Y > s.Height*15/100 && c.Y < s.Height*80/100
+		return c.Y > s.Height*12/100 && c.Y < s.Height*88/100
 	}
+	logRows := func(s *screen.Screen) {
+		var out []string
+		for _, e := range s.Elements {
+			if matchesRow(e, navRows) {
+				out = append(out, fmt.Sprintf("[%d] %s %q %v", e.Ref, e.Role, e.Label, e.Bounds))
+			}
+		}
+		t.Logf("allowed rows in this read: %v", out)
+		var placed []string
+		for _, e := range s.Elements {
+			if !e.Bounds.Empty() && e.Source != screen.SourceOCR {
+				name, _, _ := strings.Cut(e.Label, ", ")
+				placed = append(placed, fmt.Sprintf("%s@%d", name, e.Bounds.Center().Y))
+			}
+		}
+		t.Logf("placed elements: %v", placed)
+	}
+	logRows(cur.Screen)
 	tried := map[string]bool{}
 	opened := false
 	for attempt := 0; attempt < 4 && !opened; attempt++ {
@@ -380,7 +423,7 @@ func (r *deviceRun) settings(t *testing.T) {
 		ok := false
 		for _, want := range navRows {
 			for _, e := range cur.Screen.Elements {
-				if !ok && !tried[e.Label] && !isToggle(e) && e.Ref != 0 && !e.Bounds.Empty() && mid(cur.Screen, e) && matchesRow(e, []string{want}) {
+				if !ok && !tried[e.Label] && e.Role == screen.RoleButton && e.Ref != 0 && !e.Bounds.Empty() && mid(cur.Screen, e) && matchesRow(e, []string{want}) {
 					row, ok = e, true
 				}
 			}
@@ -391,9 +434,10 @@ func (r *deviceRun) settings(t *testing.T) {
 		res = r.act("open "+strings.SplitN(row.Label, " · ", 2)[0], Action{Tool: "tap", Ref: row.Ref})
 		switch {
 		case res.Error == ErrNotFound:
-			t.Logf("%s had a position in one read and none in the next; reading again", row.Label)
+			t.Logf("%s had a position in one read and none in the next; reading again. Last reads: %q", row.Label, r.guard().lastStats(4))
 			tried[row.Label] = true
 			cur = r.observe()
+			logRows(cur.Screen)
 		case res.Status != StatusSettled || !res.Full && len(res.Diff) == 0:
 			t.Fatalf("open the row: %+v", res)
 		default:
@@ -424,7 +468,46 @@ func (r *deviceRun) settings(t *testing.T) {
 	if res.Status != StatusSettled {
 		t.Fatalf("back: %+v", res)
 	}
+
+	// Scroll down and back up.
+	res = r.act("swipe up", Action{Tool: "swipe", Direction: "up"})
+	if res.Status != StatusSettled {
+		t.Fatalf("scroll: %+v", res)
+	}
+	res = r.act("swipe down", Action{Tool: "swipe", Direction: "down"})
+	if res.Status != StatusSettled {
+		t.Fatalf("scroll back: %+v", res)
+	}
 	r.act("home", Action{Tool: "key", Key: "home"})
+}
+
+// waitStill reads the screen until two reads in a row agree, at most six
+// times, and logs how many it took.
+func (r *deviceRun) waitStill() *Result {
+	r.t.Helper()
+	prev := r.observe()
+	for i := 1; i < 6; i++ {
+		cur := r.observe()
+		if body(cur.Screen) == body(prev.Screen) {
+			r.t.Logf("the screen was still after %d reads", i+1)
+			return cur
+		}
+		prev = cur
+	}
+	r.t.Logf("the screen kept changing over six reads")
+	return prev
+}
+
+// hasSearch reports whether Settings shows its main page, by its search
+// field.
+func hasSearch(s *screen.Screen) bool {
+	for _, e := range s.Elements {
+		l := strings.ToLower(e.Label)
+		if strings.Contains(l, "search") || strings.Contains(e.Label, "搜索") {
+			return true
+		}
+	}
+	return false
 }
 
 func firstToggle(s *screen.Screen) (screen.Element, bool) {
@@ -470,9 +553,22 @@ func (r *deviceRun) denySwitch(t *testing.T, sw screen.Element) {
 		t.Fatalf("denied switch: %+v", res)
 	}
 	page := r.observe()
-	now, ok := find(page.Screen, sw.Label)
-	if ok && now.Has(screen.StateChecked) != before {
-		t.Fatalf("the switch changed after Deny")
+	// Compare the same element: same ref, or else the same role and label.
+	var same []screen.Element
+	for _, e := range page.Screen.Elements {
+		if e.Ref == sw.Ref || (e.Role == sw.Role && e.Label == sw.Label) {
+			same = append(same, e)
+		}
+	}
+	var lines []string
+	for _, e := range same {
+		lines = append(lines, e.Line())
+	}
+	t.Logf("switch before: %s; after: %v", sw.Line(), lines)
+	for _, e := range same {
+		if e.Has(screen.StateChecked) != before {
+			t.Fatalf("the switch changed after Deny: %s, then %s", sw.Line(), e.Line())
+		}
 	}
 	for _, in := range r.guard().Inputs() {
 		if strings.HasPrefix(in, "tap ") && sw.Bounds.Contains(parsePoint(in)) {

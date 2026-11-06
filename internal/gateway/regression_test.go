@@ -442,3 +442,24 @@ func TestBatchReusesTheLastRead(t *testing.T) {
 		t.Fatalf("%d reads after a separate call, want 6", n)
 	}
 }
+
+func TestUnplacedRefReadsAgain(t *testing.T) {
+	g, hd := newHookGateway(t)
+	s, first := connect(t, g, "Lunch")
+	dinely := ref(t, first, "Dinely")
+	// The next read loses the row's position, as OCR placement can.
+	var once sync.Once
+	hd.setObserve(func(sc *screen.Screen) {
+		once.Do(func() {
+			for i := range sc.Elements {
+				if sc.Elements[i].Label == "Dinely" {
+					sc.Elements[i].Bounds = screen.Rect{}
+				}
+			}
+		})
+	})
+	mustStatus(t, tap(s, dinely), StatusSettled)
+	if hd.Current() != "dinely" {
+		t.Fatalf("tap did not land: %s", hd.Current())
+	}
+}
