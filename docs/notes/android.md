@@ -1,6 +1,6 @@
 # Android driver
 
-Status: working on the Mi 10 Pro (LineageOS, Android 17); partly verified on the Pixel (Android 10) before it dropped off USB. Branch `claude/android-driver-1aff78`.
+Status: working on the Mi 10 Pro (LineageOS, Android 17) and an Android 16 emulator; partly verified on the Pixel (Android 10) before it dropped off USB during the night. Branch `claude/android-driver-1aff78`.
 
 ## What was built
 
@@ -19,7 +19,7 @@ No shared contract was changed.
 - **Server options Pinky always sets:** `audio=false`, `tunnel_forward=true`, `clipboard_autosync=false` (the phone's clipboard is read only when asked), and `power_on=false`: scrcpy would press POWER to wake the screen, which toggles it. Pinky wakes the screen itself with `KEYCODE_WAKEUP`, which can only turn it on: before an action, if the screen was not seen on in the last 10 s, it checks `dumpsys power` and wakes it if needed.
 - **Stream** turns scrcpy packets into `driver.Packet` (Annex B, PTS, `Config`, `KeyFrame`). A new stream asks the encoder for a fresh configuration and key frame (`reset_video`) and starts at the configuration packet. Options that differ from the running session restart it. A consumer that falls 256 packets behind loses packets until it catches up, then gets a fresh key frame.
 - **Input:** taps (finger down 50 ms), long presses (the phone's `long_press_timeout` plus 400 ms, at least 800 ms), swipes (a move every 8 ms) and raw touches go through scrcpy's touch messages, mapped from screen pixels onto the video frame. Keys map onto Android key codes; `recents` is `KEYCODE_APP_SWITCH`.
-- **Type:** printable ASCII is typed as key events (`inject_text`, 300 bytes per message). Anything else, including newlines (which typed would press Enter), is set as the clipboard and pasted with one `set_clipboard` message, so **non-ASCII typing replaces the phone's clipboard** until the companion app's `ACTION_SET_TEXT` takes over. Without `Append`, Ctrl+A selects the field's text first so the new text replaces it; empty text with Ctrl+A then Delete clears the field. `Submit` presses Enter.
+- **Type:** printable ASCII is typed as key events (`inject_text`, 300 bytes per message), unless the keyboard is a composing one (pinyin and other CJK input methods) and is showing, because such a keyboard turns letters into a composition. That text, and anything that is not printable ASCII (CJK, emoji, newlines, which typed would press Enter), is set as the clipboard and pasted with one `set_clipboard` message, so **pasted typing replaces the phone's clipboard** until the companion app's `ACTION_SET_TEXT` takes over. Decision 6 below has the details. Without `Append`, Ctrl+A selects the field's text first so the new text replaces it; empty text with Ctrl+A then Delete clears the field. `Submit` presses Enter.
 - **Launch and Apps:** the app list comes from the server's `list_apps` (launcher apps, named in the phone's language; 0.5 s on the Mi), cached for 5 minutes. `Launch` takes a package or a display name, matched ignoring case: exactly, then by prefix, then by substring; more than one hit is an error that lists them. The app starts with `start_app`, like a tap on its icon; the server's log says whether it started.
 - **Lock state:** `dumpsys window policy` (`showing=` under `KeyguardServiceDelegate` on Android 10 and 17; older field names too). `Locked` is true while the lock screen shows, even if an app such as an alarm covers it.
 
@@ -55,7 +55,7 @@ dev.(driver.Settler).WaitSettled(ctx, 0) // 0 means Config.SettleMax (3 s)
 
 - Errors that mean the phone or the adb server is gone wrap `driver.ErrOffline`; an unknown app or package wraps `driver.ErrNotFound`; an ambiguous app name is a plain error listing the candidates; unmapped keys wrap `driver.ErrUnsupported`.
 - `Provider.OpenDevice` returns the concrete `*android.Device` for `OpenBackground` and `VideoStats`.
-- `Locked` costs one adb shell round trip; `Observe` already fills `Screen.Locked`.
+- `Locked` costs one adb shell round trip (about 45 ms); `Observe` already fills `Screen.Locked`.
 - The driver does not refuse input on a locked phone; the gateway decides (`device_locked`).
 - `Config.StayAwake` turns on scrcpy's stay-awake (it changes `stay_on_while_plugged_in` for the session and scrcpy restores it). It is off by default because Pinky's test rules forbid changing settings.
 
@@ -65,16 +65,17 @@ dev.(driver.Settler).WaitSettled(ctx, 0) // 0 means Config.SettleMax (3 s)
 go build -o /tmp/pinky-android/androidctl ./internal/driver/android/cmd/androidctl
 A=/tmp/pinky-android/androidctl
 scripts/devlock.sh 3e8be48e $A -s 3e8be48e observe
-scripts/devlock.sh 3e8be48e $A -s 3e8be48e launch Calculator
+scripts/devlock.sh 3e8be48e $A -s 3e8be48e launch com.android.calculator2   # or the name the phone shows for it
 scripts/devlock.sh 3e8be48e $A -s 3e8be48e tap 151 1990
+scripts/devlock.sh 3e8be48e $A -s 3e8be48e tap 669 2209 -long
 scripts/devlock.sh 3e8be48e $A -s 3e8be48e type hello
 scripts/devlock.sh 3e8be48e $A -s 3e8be48e key back
 scripts/devlock.sh 3e8be48e $A -s 3e8be48e stream -seconds 5 -out /tmp/pinky-android/x.h264
 scripts/devlock.sh 3e8be48e $A -s 3e8be48e run launch:com.android.settings swipe:540,1800,540,900 key:back
-scripts/devlock.sh 3e8be48e $A -s 3e8be48e bg -app com.android.calculator2 tap:151,1990
+scripts/devlock.sh 3e8be48e $A -s 3e8be48e bg -app com.android.calculator2 -out /tmp/pinky-android/bg.h264 'type:6*7' key:enter
 ```
 
-`run` performs steps with person-like pacing and prints, for each, the action time, the settle time and the frames seen; set `ANDROIDCTL_TRACE=1` to list every video packet with its PTS gap and whether it counted as a change. `devices` needs no lock.
+`bg` opens a virtual display, starts the app there and runs the steps on it; decode the recorded stream with `ffmpeg -i bg.h264 -vf setparams=colorspace=bt709 f%03d.png` to see it. `run` performs steps with person-like pacing and prints, for each, the action time, the settle time and the frames seen; set `ANDROIDCTL_TRACE=1` to list every video packet with its PTS gap and whether it counted as a change. `devices` needs no lock.
 
 Tests:
 
@@ -87,12 +88,62 @@ The device tests use only the home screen, Settings search (no setting is change
 
 ## Measurements on the Mi 10 Pro
 
-(Filled in below from `androidctl` runs.)
+1080x2340, 90 Hz, USB. From `androidctl run` and the device tests, 2026-11-07.
+
+| What | Result |
+| --- | --- |
+| Action to settled, median | **1.31 s** over 21 actions (min 0.40 s, max 1.53 s): 11 Calculator taps, Home, Back, two launches, four Settings scrolls. An earlier run of 19 gave the same median. A Calculator tap animates for about 0.86 s, then 0.4 s of quiet. The first action after opening a device adds about 0.5 s to start the scrcpy session. |
+| `uiautomator dump` (whole `Observe`) | 2.11 to 2.27 s on the home screen, Calculator and Settings (32 to 40 elements). Almost all of it is uiautomator waiting for 1 s of UI idle plus its JVM start; it cannot be made faster without the companion app. |
+| Video | H.264 at native 1080x2340, 8 Mbit/s target. While in use (the 21 actions over 31 s): 45.7 fps and 5.8 Mbit/s on average; the busiest second 88 fps and 27.9 Mbit/s (scrolling Settings). Calculator taps alone: 56 fps, 2.8 Mbit/s. A still home screen: 4.7 fps, 1.2 Mbit/s, from status-bar updates and their refinements; a truly still screen sends nothing. |
+| Session start | 0.47 to 0.53 s (push, start, connect); 0.9 s on the Pixel. |
+| Other | `screencap -p` 0.75 s; app list 0.53 s for 56 apps (Pixel 1.8 s for 22); a `dumpsys` query such as `Locked` 40 to 49 ms through the Go client; virtual display ready in 1.1 s. |
 
 ## What works where
 
-(Filled in below.)
+| | Mi 10 Pro, Android 17 (LineageOS) | Pixel, Android 10 | Emulator, Android 16 |
+| --- | --- | --- | --- |
+| List devices, model, name, version | Yes | Yes | Yes |
+| Observe in the screen format | Yes | Yes (home screen) | Yes |
+| Screenshot, same size as Observe | Yes | Yes | Yes |
+| Tap, long press, swipe | Yes (long press: holding Delete cleared the Calculator) | Taps yes (Calculator) | Taps and swipes yes |
+| Keys (home, back, enter, ...) | Yes | Yes | Yes |
+| Type ASCII | Yes (pasted while the Doubao keyboard shows; as keys otherwise) | **Failed** under the first rule: letters typed as keys did not reach the Settings search field (see below); not retested | Yes (Gboard, English: keys) |
+| Type CJK (paste) and clipboard | Yes | Not reached | Yes |
+| Launch Settings and Calculator by package or name | Yes | Yes | Settings yes (no Calculator app) |
+| Stream and settle | Yes | Stream yes (scrcpy test); settle hit the 3 s limit on its home screen | Yes |
+| Lock state | Yes (unlocked) | Yes (asleep, no lock screen) | Yes |
+| Wake a sleeping screen | Not needed | Yes (`KEYCODE_WAKEUP`) | Not needed |
+| Background mode (virtual display) | **Yes**: the Calculator opened on display 70+, 6 x 7 = 42 by taps and by typed keys, the main display stayed on the home screen, and the display and its app were gone after Close | Not tried | Not tried |
+
+The emulator belonged to the companion session (its app was in front); after one short run under its lock its app was put back in front.
+
+### The Pixel
+
+The Pixel dropped off USB at about 01:45 during the typing test, while this session held its lock: adb said "closed" mid-command, then "device not found", and macOS stopped listing it as a USB device (the Mi and the iPhone stayed). Nothing sent could reboot or power it off (the driver had woken it with `KEYCODE_WAKEUP`, opened Settings search and typed). It had not come back by the end of the night. Likely causes: an old battery browning out with the screen on, a reboot that did not finish, or the cable. **Please check it in the morning.** A note is in the shared notes folder.
+
+Before it dropped, typing "pinky" as key events into the Settings search left the field empty. The likeliest cause: on a Chinese-locale phone Gboard was in pinyin mode, so the letters went into a composition instead of the field. The rule was changed after that (paste while a composing keyboard shows), and the Mi, whose keyboard is ByteDance's Doubao pinyin keyboard, now types ASCII correctly either way. The Pixel still needs a run of `TestDeviceTypeAndClipboard`.
+
+## Decisions
+
+Made without the owner, as the brief asked.
+
+1. **Direct abstract-socket connections, no `adb forward`.** The adb server can open `localabstract:` on the device itself, so there is no host port to pick or clean up. The adb package still implements forwards for other users (the companion client).
+2. **A jar per session, deleted by the server.** Pushing 734 KB takes about 50 ms over USB; in exchange nothing stays on the phone and concurrent server runs (a session plus `list_apps`) cannot delete each other's jar.
+3. **`power_on=false`, wake with `KEYCODE_WAKEUP`.** scrcpy's own wake presses POWER, which toggles the screen and could turn it off in a race; WAKEUP can only turn it on. The check runs only when the screen has not been seen on for 10 s (40 ms).
+4. **`clipboard_autosync=false`.** Otherwise scrcpy streams every clipboard change to the computer. Pinky reads the clipboard only when asked, which the design treats as an Ask action.
+5. **Settle on capture cadence, not size.** See above. Quiet period 400 ms: 300 ms would shave 0.1 s off every action, but apps that start reacting after 300 to 400 ms would look settled too early.
+6. **Typing: keys when they reach the field, paste otherwise.** Key events never touch the clipboard but a pinyin keyboard swallows them into a composition, and paste works in every text field but not in apps without one (the Calculator ignores it). So ASCII goes as keys unless the keyboard is a composing one (a known CJK input method, or any keyboard on a Chinese, Japanese or Korean phone except AOSP-style Latin ones) and is showing (40 ms check). Non-ASCII and newlines always paste. Pasting replaces the clipboard, and the driver does not put the old content back: restoring it races with the app reading the paste and could paste the person's own clipboard into a field. The companion app's `ACTION_SET_TEXT` removes the problem.
+7. **Merging rows into one element.** The spec says label = text, else description, else resource id. A clickable row with no text of its own would then show as `button "item_layout"` next to loose text lines, so a row takes its children's labels (`button "Display · Dark theme, font size"`), which matches the design's own example (`button "Place order · $12.80"`), keeps commit detection on the element that is tapped, and halves the element count on list screens. Nodes with their own label keep it.
+8. **`App` is the dumped window's package,** not the focused activity: what the agent sees (the notification shade shows as System UI).
+9. **Background displays without system decorations, keyboard kept local.** With decorations, the taskbar appeared and hid during the first seconds and moved the Calculator's keys between taps (a tap meant for 6 hit 3). Without them the app fills the display. `display_ime_policy=local` keeps any soft keyboard on the virtual display, off the person's screen. `SystemDecorations` turns them back on.
+10. **Background mode is a separate method** (`Device.OpenBackground`, returning a `driver.Device`) rather than a `StreamOptions` field, so the shared contract stays as it is and the gateway can treat the display as a device of its own.
 
 ## Not done, and open questions
 
-(Filled in below.)
+- **Locked phone and virtual displays:** not tested, as agreed; to do with the owner. scrcpy creates its displays with the always-unlocked flag; whether apps there keep running while the phone is locked is step 0 item 6.
+- **Observe and Screenshot on a virtual display** return `ErrUnsupported`: `uiautomator dump` reads only the main display, and `screencap` rejects virtual display ids (also with `-a`). The gateway can decode a frame from the display's stream (the design's plan for screenshots anyway), and the companion app can read other displays.
+- **Toasts, notifications, dialogs** (`Screen.Events`) are not reported; uiautomator cannot see toasts. Companion app.
+- **OCR:** `ObserveOptions.OCR` is ignored.
+- **Takeover from touches on the phone** (`getevent`), **files** (`phone_files`; the adb package has push and pull), **Xiaomi's "USB debugging (Security settings)" check** and **wireless pairing** are not part of this task.
+- **Screens that never stop moving** (video, live wallpapers, spinners, a busy status bar) always reach the settle limit; `uiautomator dump` fails on them after about 10 s ("could not get idle state"), which Observe reports as an error.
+- An H.264 quirk for the client session: the Mi's encoder marks its stream with the YCgCo matrix, which FFmpeg 8 refuses to convert to RGB unless told the color space (`setparams=colorspace=bt709`). The desktop decoder may need the same override.

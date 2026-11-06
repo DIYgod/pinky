@@ -24,6 +24,10 @@ type BackgroundOptions struct {
 	// KeepContent moves the display's apps to the main display when the
 	// background session closes, instead of closing them.
 	KeepContent bool
+	// SystemDecorations shows the status bar, the taskbar and a launcher
+	// on the display. Off by default: the app fills the display, and its
+	// layout does not shift when a taskbar appears and hides.
+	SystemDecorations bool
 	// MaxSize and MaxFPS tune the display's video stream.
 	MaxSize, MaxFPS int
 }
@@ -73,8 +77,12 @@ func (d *Device) OpenBackground(ctx context.Context, opt BackgroundOptions) (*Ba
 		VideoBitRate: d.cfg.VideoBitRate,
 		Virtual: &scrcpy.VirtualDisplay{
 			Width: opt.Width, Height: opt.Height, DPI: opt.DPI,
-			KeepContent: opt.KeepContent,
+			KeepContent:         opt.KeepContent,
+			NoSystemDecorations: !opt.SystemDecorations,
 		},
+		// Keep the soft keyboard on the virtual display, off the person's
+		// main screen.
+		DisplayIMEPolicy: "local",
 	}
 	l, err := startLive(ctx, &d.cfg, d.client, d.info.ID, sopt, func(vw, vh int) (int, int) {
 		if b.w > 0 && b.h > 0 {
@@ -152,7 +160,7 @@ func (b *Background) Touch(ctx context.Context, a driver.TouchAction, p screen.P
 
 // Type implements driver.Device.
 func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
-	return b.l.typeText(ctx, text, opt)
+	return b.l.typeText(ctx, text, opt, plainASCII(text) && b.d.keysReachField(ctx))
 }
 
 // Key implements driver.Device.

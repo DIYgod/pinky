@@ -184,11 +184,13 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 		}
 		return nil
 	case "locked":
+		start := time.Now()
 		l, err := d.Locked(ctx)
 		if err != nil {
 			return err
 		}
 		fmt.Println(l)
+		fmt.Fprintf(os.Stderr, "(%v)\n", time.Since(start).Round(time.Millisecond))
 		return nil
 	case "stream":
 		fs := flag.NewFlagSet("stream", flag.ExitOnError)
@@ -529,9 +531,10 @@ func background(ctx context.Context, d *android.Device, args []string) error {
 	app := fs.String("app", "", "app to start on the virtual display")
 	out := fs.String("out", "", "write the display's H.264 stream to this file")
 	secs := fs.Float64("seconds", 2, "seconds to keep streaming after the steps")
+	decor := fs.Bool("decorations", false, "show the status bar, taskbar and launcher on the display")
 	fs.Parse(args)
 	start := time.Now()
-	b, err := d.OpenBackground(ctx, android.BackgroundOptions{App: *app})
+	b, err := d.OpenBackground(ctx, android.BackgroundOptions{App: *app, SystemDecorations: *decor})
 	if err != nil {
 		return err
 	}

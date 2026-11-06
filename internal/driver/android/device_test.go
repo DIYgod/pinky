@@ -10,6 +10,8 @@ package android
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -293,4 +295,56 @@ func TestDeviceLaunchUnknown(t *testing.T) {
 		t.Error("launching a missing package succeeded")
 	}
 	t.Logf("missing package: %v", err)
+}
+
+func TestDeviceBackground(t *testing.T) {
+	d, ctx := openTestDevice(t)
+	pkg := calculatorPackage(t, ctx, d)
+	act(t, ctx, d, "home", func() error { return d.Key(ctx, driver.KeyHome) })
+	b, err := d.OpenBackground(ctx, BackgroundOptions{App: pkg})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	if b.DisplayID() <= 0 {
+		t.Fatalf("display id %d", b.DisplayID())
+	}
+	if _, err := b.WaitSettled(ctx, 0); err != nil {
+		t.Fatal(err)
+	}
+	displays := func() string {
+		out, err := d.client.Shell(ctx, d.info.ID, "dumpsys window displays | grep -E 'Display: mDisplayId|mFocusedApp='")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(out)
+	}
+	// The calculator runs on the virtual display; the main display keeps
+	// its own app.
+	out := displays()
+	i := strings.Index(out, fmt.Sprintf("mDisplayId=%d ", b.DisplayID()))
+	if i < 0 || parseFocusedApp(out[i:]) != pkg {
+		t.Fatalf("calculator not on display %d:\n%s", b.DisplayID(), out)
+	}
+	if main := parseFocusedApp(out); main == pkg {
+		t.Errorf("the calculator took over the main display:\n%s", out)
+	}
+	// No text field is focused, so typed keys reach the calculator.
+	if err := b.Type(ctx, "6*7", driver.TypeOptions{Submit: true}); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := b.WaitSettled(ctx, 0); err != nil || !ok {
+		t.Errorf("settle on the virtual display: %v %v", ok, err)
+	}
+	if _, err := b.Screenshot(ctx); !errors.Is(err, driver.ErrUnsupported) {
+		t.Errorf("screenshot of a virtual display: %v", err)
+	}
+	if _, err := b.Observe(ctx, driver.ObserveOptions{}); !errors.Is(err, driver.ErrUnsupported) {
+		t.Errorf("observe of a virtual display: %v", err)
+	}
+	b.Close()
+	time.Sleep(time.Second)
+	if out := displays(); strings.Contains(out, fmt.Sprintf("mDisplayId=%d ", b.DisplayID())) {
+		t.Errorf("display %d still exists after Close:\n%s", b.DisplayID(), out)
+	}
 }

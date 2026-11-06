@@ -47,6 +47,19 @@ func parseIMEShown(out string) bool {
 	return false
 }
 
+var imeWindowRE = regexp.MustCompile(`\b(isVisible|isOnScreen)=(true|false)\b`)
+
+// parseIMEWindowVisible reports whether `dumpsys window InputMethod` shows
+// a visible keyboard window.
+func parseIMEWindowVisible(out string) bool {
+	for _, m := range imeWindowRE.FindAllStringSubmatch(out, -1) {
+		if m[2] == "true" {
+			return true
+		}
+	}
+	return false
+}
+
 var focusedAppRE = regexp.MustCompile(`mFocusedApp=.*?ActivityRecord\{[0-9a-f]+ u\d+ ([A-Za-z0-9_.]+)/`)
 
 // parseFocusedApp returns the package of the focused activity, from

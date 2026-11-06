@@ -211,16 +211,123 @@ func (d *Device) Key(ctx context.Context, k driver.Key) error {
 	return l.key(code, 0)
 }
 
-// Type implements driver.Device. Printable ASCII is typed as key events;
-// anything else (CJK, emoji, newlines) is set as the clipboard and pasted,
-// which replaces the clipboard's content. Without Append the field's text
-// is selected first (Ctrl+A) and replaced.
+// Type implements driver.Device. Printable ASCII is typed as key events,
+// unless the phone's keyboard may turn letters into a composition (pinyin
+// and other CJK input methods) and is showing; that text, and anything
+// that is not printable ASCII (CJK, emoji, newlines), is set as the
+// clipboard and pasted, which replaces the clipboard's content. Without
+// Append the field's text is selected first (Ctrl+A) and replaced.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	l, err := d.inputSession(ctx)
 	if err != nil {
 		return err
 	}
-	return l.typeText(ctx, text, opt)
+	return l.typeText(ctx, text, opt, plainASCII(text) && d.keysReachField(ctx))
+}
+
+// keysReachField reports whether typed letters reach the app as they are:
+// the keyboard commits them directly, or it is hidden, so no editor takes
+// them (a calculator or a game handles keys itself).
+func (d *Device) keysReachField(ctx context.Context) bool {
+	if d.keyTyping(ctx) {
+		return true
+	}
+	visible, err := d.imeVisible(ctx)
+	return err == nil && !visible
+}
+
+// imeVisible reports whether a soft keyboard window is showing, on any
+// display. It reads the window manager, which is much faster than
+// `dumpsys input_method` (that also dumps the keyboard app: 1.7 s on the
+// Pixel).
+func (d *Device) imeVisible(ctx context.Context) (bool, error) {
+	out, err := d.client.Shell(ctx, d.info.ID, `dumpsys window InputMethod | grep -E 'isVisible=|isOnScreen='`)
+	if err != nil {
+		return false, wrapErr(err)
+	}
+	return parseIMEWindowVisible(string(out)), nil
+}
+
+// Input methods whose keyboards commit letters typed on a hardware
+// keyboard directly, without a composition.
+var directIMEs = map[string]bool{
+	"com.android.inputmethod.latin":         true, // AOSP keyboard, LineageOS
+	"helium314.keyboard":                    true, // HeliBoard
+	"org.dslul.openboard.inputmethod.latin": true, // OpenBoard
+	"dev.patrickgold.florisboard":           true,
+	"com.menny.android.anysoftkeyboard":     true,
+}
+
+// Input methods that compose letters into CJK text.
+var composingIMEs = map[string]bool{
+	"com.google.android.inputmethod.pinyin":   true,
+	"com.google.android.inputmethod.japanese": true,
+	"com.google.android.inputmethod.korean":   true,
+	"com.sohu.inputmethod.sogou":              true,
+	"com.sohu.inputmethod.sogouoem":           true,
+	"com.baidu.input":                         true,
+	"com.baidu.input_mi":                      true,
+	"com.baidu.input_huawei":                  true,
+	"com.baidu.input_oppo":                    true,
+	"com.baidu.input_vivo":                    true,
+	"com.iflytek.inputmethod":                 true,
+	"com.tencent.wetype":                      true,
+	"com.justsystems.atokmobile.service":      true,
+	"jp.co.omronsoft.openwnn":                 true,
+}
+
+const keyTypingTTL = 30 * time.Second
+
+// keyTyping reports whether the keyboard commits typed letters directly:
+// the current input method is known to, or it is not known to compose
+// them and the phone's language is not Chinese, Japanese or Korean.
+func (d *Device) keyTyping(ctx context.Context) bool {
+	d.stateMu.Lock()
+	if time.Since(d.imeAt) < keyTypingTTL {
+		v := d.imeKeys
+		d.stateMu.Unlock()
+		return v
+	}
+	d.stateMu.Unlock()
+	out, err := d.client.Shell(ctx, d.info.ID,
+		"settings get secure default_input_method; getprop persist.sys.locale; getprop ro.product.locale")
+	if err != nil {
+		return false // pasting always works
+	}
+	f := strings.Split(strings.ReplaceAll(string(out), "\r", ""), "\n")
+	for len(f) < 3 {
+		f = append(f, "")
+	}
+	locale := strings.TrimSpace(f[1])
+	if locale == "" {
+		locale = strings.TrimSpace(f[2])
+	}
+	keys := keyTypingFor(strings.TrimSpace(f[0]), locale)
+	d.stateMu.Lock()
+	d.imeKeys, d.imeAt = keys, time.Now()
+	d.stateMu.Unlock()
+	d.cfg.logf("android: %s: input method %q, locale %q: composing keyboard: %v", d.info.ID,
+		strings.TrimSpace(f[0]), locale, !keys)
+	return keys
+}
+
+// keyTypingFor decides keyTyping from the input method id
+// ("package/class") and the system locale ("zh-Hans-CN", "en-US").
+func keyTypingFor(ime, locale string) bool {
+	pkg, _, _ := strings.Cut(ime, "/")
+	if directIMEs[pkg] {
+		return true
+	}
+	if composingIMEs[pkg] {
+		return false
+	}
+	lang, _, _ := strings.Cut(strings.ToLower(locale), "-")
+	lang, _, _ = strings.Cut(lang, "_")
+	switch lang {
+	case "zh", "ja", "ko":
+		return false
+	}
+	return true
 }
 
 // SetClipboard implements driver.Clipboard.
@@ -343,7 +450,9 @@ func (l *live) key(code, meta int32) error {
 	return l.send(scrcpy.InjectKeycode(scrcpy.ActionUp, code, 0, meta))
 }
 
-func (l *live) typeText(ctx context.Context, text string, opt driver.TypeOptions) error {
+// typeText types text into the focused field; keys says whether printable
+// ASCII may go as key events (see Device.keyTyping).
+func (l *live) typeText(ctx context.Context, text string, opt driver.TypeOptions, keys bool) error {
 	if !opt.Append {
 		// Select the field's text so the new text replaces it.
 		if err := l.key(keycodeA, metaCtrlOn|metaCtrlLeftOn); err != nil {
@@ -356,7 +465,7 @@ func (l *live) typeText(ctx context.Context, text string, opt driver.TypeOptions
 		}
 	}
 	if text != "" {
-		if plainASCII(text) {
+		if keys && plainASCII(text) {
 			for _, part := range scrcpy.SplitText(text, scrcpy.MaxInjectText) {
 				msg, err := scrcpy.InjectText(part)
 				if err != nil {

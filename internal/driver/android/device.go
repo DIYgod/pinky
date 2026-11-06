@@ -35,6 +35,8 @@ type Device struct {
 	sizeAt    time.Time
 	awakeAt   time.Time // when the screen was last seen on
 	longPress time.Duration
+	imeKeys   bool      // ASCII may be typed as key events
+	imeAt     time.Time // when imeKeys was decided
 
 	appsMu sync.Mutex
 	apps   []driver.App

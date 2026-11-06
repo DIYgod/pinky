@@ -131,6 +131,35 @@ func TestMatchApp(t *testing.T) {
 	}
 }
 
+func TestKeyTypingFor(t *testing.T) {
+	gboard := "com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME"
+	for _, c := range []struct {
+		ime, locale string
+		keys        bool
+	}{
+		{"com.android.inputmethod.latin/.LatinIME", "zh-Hans-CN", true}, // AOSP keyboard: letters commit directly
+		{gboard, "en-US", true},
+		{gboard, "zh-Hans-CN", false}, // Gboard on a Chinese phone may be in pinyin mode
+		{gboard, "ja_JP", false},
+		{"com.sohu.inputmethod.sogou/.SogouIME", "en-US", false},
+		{"com.example.ime/.Ime", "", true},
+		{"", "ko-KR", false},
+	} {
+		if got := keyTypingFor(c.ime, c.locale); got != c.keys {
+			t.Errorf("keyTypingFor(%q, %q) = %v", c.ime, c.locale, got)
+		}
+	}
+}
+
+func TestParseIMEWindowVisible(t *testing.T) {
+	if parseIMEWindowVisible("    mHasSurface=false isReadyForDisplay()=false\n    isOnScreen=false\n    isVisible=false\n") {
+		t.Error("hidden keyboard reported as visible")
+	}
+	if !parseIMEWindowVisible("    isOnScreen=true\n    isVisible=true\n") {
+		t.Error("visible keyboard not seen")
+	}
+}
+
 func TestPlainASCII(t *testing.T) {
 	if !plainASCII("hello, World! 123 ~") {
 		t.Error("printable ASCII rejected")
