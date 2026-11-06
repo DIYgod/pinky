@@ -97,6 +97,7 @@ type Gateway struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+	shots  running // history screenshots being taken or confirmed
 	closed bool
 }
 
@@ -185,8 +186,12 @@ func (g *Gateway) Close() error {
 // Policy returns the policy engine, for settings screens.
 func (g *Gateway) Policy() *policy.Engine { return g.policy }
 
-// Flush waits until history writes queued so far are done.
-func (g *Gateway) Flush() { g.rec.flush() }
+// Flush waits until the history screenshots being taken and the history
+// writes queued so far are done.
+func (g *Gateway) Flush() {
+	g.shots.wait()
+	g.rec.flush()
+}
 
 func (g *Gateway) discoverLoop() {
 	defer g.wg.Done()
@@ -357,6 +362,8 @@ func (g *Gateway) setOffline(d *device, why string) {
 	if why != "" {
 		d.offlineWhy = why
 	}
+	// Anything may happen on the phone while it is away.
+	g.inputLocked(d)
 	g.wakeLocked(d)
 	g.mu.Unlock()
 	if dev != nil {

@@ -57,6 +57,7 @@ type deviceRun struct {
 
 type actTiming struct {
 	what   string
+	tool   string
 	took   time.Duration
 	status string
 	settle string
@@ -72,7 +73,7 @@ func (r *deviceRun) act(what string, a Action) *Result {
 	start := time.Now()
 	res := r.s.Act(context.Background(), Call{Device: r.id}, a)
 	took := time.Since(start)
-	r.acts = append(r.acts, actTiming{what: what, took: took, status: string(res.Status) + string(res.Error), settle: res.Settle})
+	r.acts = append(r.acts, actTiming{what: what, tool: a.Tool, took: took, status: string(res.Status) + string(res.Error), settle: res.Settle})
 	if res.Screen != nil {
 		if res.Full {
 			r.fulls++
@@ -636,15 +637,17 @@ func (r *deviceRun) takeOverAndStop(t *testing.T) {
 	}
 
 	// Stop while an action is still reading the screen: nothing reaches the
-	// phone.
+	// phone. The guard holds the read, since a read can take 50 ms.
 	before := len(r.guard().Inputs())
 	done := make(chan *Result, 1)
+	r.guard().setHoldRead(time.Second)
 	go func() { done <- r.s.Act(context.Background(), Call{Device: r.id}, Action{Tool: "key", Key: "home"}) }()
 	time.Sleep(200 * time.Millisecond)
 	if err := r.g.Stop(r.id); err != nil {
 		t.Fatal(err)
 	}
 	res = <-done
+	r.guard().setHoldRead(0)
 	t.Logf("stop mid-action: %s %q", res.Status, res.Message)
 	if res.Status != StatusStopped {
 		t.Fatalf("stop: %+v", res)
@@ -687,7 +690,24 @@ func (r *deviceRun) history(t *testing.T) {
 			shots++
 		}
 	}
-	t.Logf("history: task %q %s, %d steps, %d screenshot references", tasks[0].Title, tasks[0].State, steps, shots)
+	acts, befores, afters := 0, 0, 0
+	for _, st := range tasks[0].Steps {
+		switch st.Tool {
+		case "phone_tap", "phone_swipe", "phone_key", "phone_launch":
+			if st.Status != string(StatusSettled) {
+				continue
+			}
+			acts++
+			if st.Before != "" {
+				befores++
+			}
+			if st.After != "" {
+				afters++
+			}
+		}
+	}
+	t.Logf("history: task %q %s, %d steps, %d screenshot references; %d settled actions, %d with a before picture, %d with an after picture",
+		tasks[0].Title, tasks[0].State, steps, shots, acts, befores, afters)
 	if shots == 0 {
 		t.Error("no screenshots in history")
 	}
@@ -705,16 +725,29 @@ func (r *deviceRun) report() {
 			ds[0].Seconds(), ds[len(ds)/2].Seconds(), ds[len(ds)-1].Seconds()))
 	}
 	sort.Strings(lines)
-	var acts []time.Duration
+	// What the agent waits for, per tool: settled actions only, so an
+	// approval's wait does not count.
+	byTool := map[string][]time.Duration{}
 	for _, a := range r.acts {
 		if a.status == string(StatusSettled) {
-			acts = append(acts, a.took)
+			byTool["action"] = append(byTool["action"], a.took)
+			byTool["action "+a.tool] = append(byTool["action "+a.tool], a.took)
 		}
 	}
-	sort.Slice(acts, func(i, j int) bool { return acts[i] < acts[j] })
-	if len(acts) > 0 {
-		lines = append(lines, fmt.Sprintf("%-12s n=%-3d min %.2fs median %.2fs max %.2fs", "action", len(acts),
-			acts[0].Seconds(), acts[len(acts)/2].Seconds(), acts[len(acts)-1].Seconds()))
+	var kinds []string
+	for k := range byTool {
+		kinds = append(kinds, k)
+	}
+	sort.Strings(kinds)
+	for _, k := range kinds {
+		ds := byTool[k]
+		sort.Slice(ds, func(i, j int) bool { return ds[i] < ds[j] })
+		var sum time.Duration
+		for _, d := range ds {
+			sum += d
+		}
+		lines = append(lines, fmt.Sprintf("%-12s n=%-3d min %.2fs median %.2fs mean %.2fs max %.2fs", k, len(ds),
+			ds[0].Seconds(), ds[len(ds)/2].Seconds(), (sum/time.Duration(len(ds))).Seconds(), ds[len(ds)-1].Seconds()))
 	}
 	lines = append(lines, fmt.Sprintf("settled %d, settle timeouts %d; results as diffs %d, whole screens %d; inputs %d, refused %d",
 		g.settleOK, g.settleTO, r.diffs, r.fulls, len(g.inputs), len(g.refused)))

@@ -508,6 +508,7 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 		return g.finish(l, g.readError(l, err))
 	}
 	res := g.screenResult(l, cur, true)
+	g.startShot(l.dev, cur)
 	res.Status = StatusSettled
 	res.Task = l.task.id
 	res.Message = fmt.Sprintf("Connected to %s for “%s”.", l.dev.name(), l.task.title)
@@ -738,7 +739,9 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		res.Status = StatusLocked
 		res.Message = "The phone is locked; call phone_handoff so the person can unlock it."
 	}
-	if req.Screenshot {
+	if !req.Screenshot {
+		g.startShot(l.dev, cur)
+	} else {
 		if res.Rule != "" {
 			res.Message = strings.TrimSpace(res.Message + " No screenshot: the app is blocked.")
 		} else {
@@ -746,6 +749,8 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 			switch {
 			case err == nil:
 				res.Screenshot = img
+				// Checked against reads on both sides: steps may reuse it.
+				g.keepImage(l.dev, cur, img)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
 			case errors.Is(err, errScreenChanged):
@@ -849,6 +854,7 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 		}
 	}
 	res = g.screenResult(l, cur, false)
+	g.startShot(l.dev, cur)
 	res.Status = StatusSettled
 	res.Matched = &matched
 	verb := "appeared"
@@ -1121,6 +1127,7 @@ func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *
 		return g.finish(l, g.readError(l, err))
 	}
 	res := g.screenResult(l, cur, true)
+	g.startShot(l.dev, cur)
 	res.Status = StatusSettled
 	res.Note = note
 	res.Message = "The person handed control back."

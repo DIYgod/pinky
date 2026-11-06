@@ -140,6 +140,9 @@ func TestApprovalAllow(t *testing.T) {
 	}
 
 	// History has the task, the approval step finished in place, and media.
+	// The after picture is kept once a read confirms it: here the one the
+	// gateway makes when the task ends.
+	s.Release(context.Background(), ReleaseRequest{})
 	g.Flush()
 	tasks, err := g.History(context.Background(), HistoryQuery{})
 	if err != nil || len(tasks) != 1 {
@@ -823,15 +826,27 @@ func TestWipeHistory(t *testing.T) {
 	g, _ := newTestGateway(t, func(o *Options) { o.DataDir = t.TempDir(); o.NoScreenshots = false })
 	old, _ := connect(t, g, "Old task")
 	mustStatus(t, old.Act(context.Background(), Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	g.Flush() // the screenshot is taken before the next input, as agents think
 	old.Release(context.Background(), ReleaseRequest{})
 	s, _ := connect(t, g, "Running task")
 	res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "Chatter"})
 	mustStatus(t, res, StatusSettled)
+	g.Flush()
 	tasks, _ := g.History(context.Background(), HistoryQuery{})
 	if len(tasks) != 2 {
 		t.Fatalf("before wipe: %d tasks", len(tasks))
 	}
-	media := tasks[0].Steps[len(tasks[0].Steps)-1].After
+	media := ""
+	for _, task := range tasks {
+		for _, st := range task.Steps {
+			if st.After != "" {
+				media = st.After
+			}
+		}
+	}
+	if media == "" {
+		t.Fatal("no step has a screenshot")
+	}
 	if err := g.WipeHistory(context.Background()); err != nil {
 		t.Fatal(err)
 	}

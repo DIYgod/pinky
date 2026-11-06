@@ -253,6 +253,9 @@ func (g *Gateway) Unlock(deviceID string) error {
 	}
 	ctx, cancel := context.WithTimeout(g.ctx, 30*time.Second)
 	defer cancel()
+	g.mu.Lock()
+	g.inputLocked(d)
+	g.mu.Unlock()
 	if err := g.opt.Unlock(ctx, deviceID, dev); err != nil {
 		return err
 	}
@@ -302,6 +305,8 @@ func (g *Gateway) TakeOver(deviceID string) error {
 // HandBack, across leases.
 func (g *Gateway) takeOver(d *device, byInput bool) {
 	g.mu.Lock()
+	// The person may change the screen from now on, task or not.
+	g.inputLocked(d)
 	l := d.lease
 	if l == nil && byInput {
 		g.mu.Unlock()
@@ -597,7 +602,10 @@ func (g *Gateway) WipeHistory(ctx context.Context) error {
 	g.mu.Lock()
 	g.ended = nil
 	for _, d := range g.devices {
-		d.shotKey, d.shotID = "", ""
+		d.kept = nil
+		if p := d.shot; p != nil {
+			g.dropShotLocked(d, p)
+		}
 		if d.lease != nil {
 			// Running tasks are written again so they keep showing up.
 			g.recordTaskLocked(d.lease.task)

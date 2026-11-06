@@ -429,17 +429,18 @@ func TestBatchReusesTheLastRead(t *testing.T) {
 	cd.mu.Lock()
 	n := cd.observes
 	cd.mu.Unlock()
-	// One read before the first step and one after each step.
-	if n != 4 {
-		t.Fatalf("%d reads for a three-step batch, want 4", n)
+	// One read after each step: the launch needs none before it, and the
+	// steps after it start from the read that ended the step before.
+	if n != 3 {
+		t.Fatalf("%d reads for a three-step batch, want 3", n)
 	}
 	// A separate call reads the screen again.
 	mustStatus(t, s.Act(context.Background(), Call{}, Action{Tool: "key", Key: "home"}), StatusSettled)
 	cd.mu.Lock()
 	n = cd.observes
 	cd.mu.Unlock()
-	if n != 6 {
-		t.Fatalf("%d reads after a separate call, want 6", n)
+	if n != 5 {
+		t.Fatalf("%d reads after a separate call, want 5", n)
 	}
 }
 

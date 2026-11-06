@@ -50,6 +50,15 @@ type guardDevice struct {
 	stats    []string // iOS read statistics, newest last
 	settleOK int
 	settleTO int
+	// holdRead delays reads, untimed, so a test can act while one runs.
+	holdRead time.Duration
+}
+
+// setHoldRead delays every read by d until set back to 0.
+func (g *guardDevice) setHoldRead(d time.Duration) {
+	g.mu.Lock()
+	g.holdRead = d
+	g.mu.Unlock()
 }
 
 func newGuard(dev driver.Device, navRows []string) *guardDevice {
@@ -130,6 +139,16 @@ type statsObserver interface {
 }
 
 func (g *guardDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
+	g.mu.Lock()
+	hold := g.holdRead
+	g.mu.Unlock()
+	if hold > 0 {
+		select {
+		case <-time.After(hold):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 	start := time.Now()
 	var s *screen.Screen
 	var err error

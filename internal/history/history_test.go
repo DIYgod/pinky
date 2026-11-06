@@ -79,6 +79,13 @@ func TestStoreRoundTrip(t *testing.T) {
 	if got := steps[0]; got.Status != "settled" || got.Before != m.ID || got.After != "m_after" || got.Target.W != 3 || got.Point.Y != 4 {
 		t.Fatalf("updated step lost data: %+v", got)
 	}
+	// A screenshot taken in the background is set later, alone.
+	if err := s.SetStepMedia(ctx, "t1", 0, "", "m_later"); err != nil {
+		t.Fatal(err)
+	}
+	if steps, _ = s.Steps(ctx, "t1"); steps[0].After != "m_later" || steps[0].Before != m.ID || steps[0].Status != "settled" {
+		t.Fatalf("SetStepMedia: %+v", steps[0])
+	}
 	if err := s.SaveApproval(ctx, Approval{ID: "ap_1", TaskID: "t1", StepIndex: 0, Kind: "action", Rule: "Payments", Created: now}); err != nil {
 		t.Fatal(err)
 	}

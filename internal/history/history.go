@@ -351,6 +351,18 @@ func (s *Store) SaveStep(ctx context.Context, st Step) error {
 	return err
 }
 
+// SetStepMedia sets a step's before or after screenshot, or both, and leaves
+// the rest of the step as it is. An empty id leaves that picture unchanged.
+func (s *Store) SetStepMedia(ctx context.Context, taskID string, index int, before, after string) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, err := s.db.ExecContext(ctx, `UPDATE steps SET
+			before_media=CASE WHEN ? != '' THEN ? ELSE before_media END,
+			after_media=CASE WHEN ? != '' THEN ? ELSE after_media END
+		WHERE task_id = ? AND idx = ?`, before, before, after, after, taskID, index)
+	return err
+}
+
 // Approval is one approval and its answer.
 type Approval struct {
 	ID        string
