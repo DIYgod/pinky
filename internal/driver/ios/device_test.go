@@ -211,7 +211,8 @@ func TestDeviceSwipeAndTouch(t *testing.T) {
 	}
 	pause()
 
-	// The same gesture back, as raw touches.
+	// The same gesture back, as raw touches. Their points are in video pixels,
+	// which on iPhone equal screen pixels inside the screen.
 	at = time.Now()
 	if err := d.Touch(ctx, driver.TouchDown, right); err != nil {
 		t.Fatal(err)

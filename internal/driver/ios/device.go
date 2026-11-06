@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -380,8 +381,37 @@ func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.
 	return gerr
 }
 
+// videoSize is the size of the stream's picture, or 0, 0 before its first
+// parameter sets.
+func (d *Device) videoSize() (int, int) {
+	d.mu.Lock()
+	m := d.m
+	d.mu.Unlock()
+	if m == nil {
+		return 0, 0
+	}
+	return m.size()
+}
+
+// fromVideo converts a point in the stream's picture to screen pixels. The
+// phone puts its screen at 1:1 in the picture's top-left corner and pads the
+// rest with black: 1125x2436 inside 1136x2464 on the 13 mini, measured by
+// matching decoded frames against screenshots. So a point keeps its
+// coordinates, and one in the padding ends up on the screen's edge (panel
+// clamps it). A picture smaller than the screen would mean the phone scaled
+// its screen down to fit, which no tested phone did; the point is then
+// scaled back up, assuming a uniform fit in the top-left corner.
+func fromVideo(p screen.Point, vw, vh, sw, sh int) screen.Point {
+	if vw <= 0 || vh <= 0 || sw <= 0 || sh <= 0 || (vw >= sw && vh >= sh) {
+		return p
+	}
+	c := min(float64(vw)/float64(sw), float64(vh)/float64(sh))
+	return screen.Point{X: int(math.Round(float64(p.X) / c)), Y: int(math.Round(float64(p.Y) / c))}
+}
+
 // Touch implements driver.Toucher: raw touches for the person's drags on
-// the mirror. A move without a down is ignored.
+// the mirror, at points in the stream's picture (see fromVideo). A move
+// without a down is ignored.
 func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point) error {
 	d.inputMu.Lock()
 	defer d.inputMu.Unlock()
@@ -389,7 +419,9 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 	if err != nil {
 		return err
 	}
-	x, y := d.panel(p)
+	s := d.screen()
+	vw, vh := d.videoSize()
+	x, y := d.panel(fromVideo(p, vw, vh, s.Width, s.Height))
 	switch a {
 	case driver.TouchDown:
 		return h.touchAt(true, x, y)
