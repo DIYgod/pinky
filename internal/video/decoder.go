@@ -44,6 +44,7 @@ type Decoder struct {
 	hwPixFmt int32          // the hardware pixel format, -1 without one
 	hwName   string         // "videotoolbox", "d3d11va", "vaapi"
 
+	asBT709  bool   // the stream's own color description cannot be converted
 	config   []byte // a configuration packet waiting for the next frame
 	have     bool   // frame holds a picture
 	hwFrames int    // pictures that came from the hardware decoder
@@ -313,7 +314,19 @@ func (d *Decoder) Convert(dst *image.RGBA) error {
 	putInt32(d.dst, frameWidth, int32(b.Dx()))
 	putInt32(d.dst, frameHeight, int32(b.Dy()))
 	putInt32(d.dst, frameFormat, l.pixRGBA)
+	if d.asBT709 {
+		tagBT709(src)
+	}
 	r := l.sws_scale_frame(d.sws, d.dst, src)
+	if r < 0 && !d.asBT709 {
+		// Some encoders tag their stream with a color description swscale
+		// cannot convert, such as the YCgCo matrix of the Mi 10 Pro's
+		// encoder. Read the pictures as BT.709 from now on, as players
+		// do, rather than show nothing.
+		d.asBT709 = true
+		tagBT709(src)
+		r = l.sws_scale_frame(d.sws, d.dst, src)
+	}
 	putPtr(d.dst, frameData, nil)
 	putInt32(d.dst, frameLinesize, 0)
 	runtime.KeepAlive(dst)
@@ -321,6 +334,15 @@ func (d *Decoder) Convert(dst *image.RGBA) error {
 		return l.averror("convert picture", r)
 	}
 	return nil
+}
+
+// tagBT709 relabels a picture's matrix, primaries and transfer as BT.709,
+// keeping its range and pixels.
+func tagBT709(frame unsafe.Pointer) {
+	const bt709 = 1 // AVCOL_SPC_BT709, AVCOL_PRI_BT709 and AVCOL_TRC_BT709
+	putInt32(frame, frameColorspace, bt709)
+	putInt32(frame, frameColorPrim, bt709)
+	putInt32(frame, frameColorTRC, bt709)
 }
 
 // noMap forces copying hardware pictures, to compare with mapping them.

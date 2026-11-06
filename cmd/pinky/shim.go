@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
@@ -59,8 +60,10 @@ func runMCP(args []string) error {
 	return nil
 }
 
-// startDaemon starts `pinky daemon` in the background, detached from this
-// process, logging to the data folder.
+// startDaemon starts the gateway in the background, detached from this
+// process, logging to the data folder. On macOS that is the desktop app,
+// since only the app can answer approvals for real phones; elsewhere, and
+// with fake phones, it is `pinky daemon`.
 func startDaemon(dirs api.Dirs, fake bool) error {
 	if err := dirs.Ensure(); err != nil {
 		return err
@@ -77,6 +80,8 @@ func startDaemon(dirs api.Dirs, fake bool) error {
 	args := []string{"daemon"}
 	if fake {
 		args = append(args, "--fake")
+	} else if runtime.GOOS == "darwin" {
+		args = []string{"app"}
 	}
 	cmd := exec.Command(exe, args...)
 	cmd.Stdout, cmd.Stderr = logf, logf

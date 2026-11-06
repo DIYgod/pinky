@@ -33,6 +33,10 @@ type TestStreamOptions struct {
 	FFmpeg string
 	// GOP is the key frame interval in frames; default one second.
 	GOP int
+	// Matrix tags the stream's VUI with these matrix coefficients (ITU-T
+	// H.273) without converting the pixels; 8 (YCgCo) reproduces the Mi 10
+	// Pro's encoder. Zero leaves the tag unset.
+	Matrix int
 }
 
 // TestStream is a driver.Stream of an ffmpeg test source, encoded live and
@@ -86,17 +90,21 @@ func StartTestStream(ctx context.Context, opt TestStreamOptions) (*TestStream, e
 	args := []string{"-hide_banner", "-loglevel", "error", "-nostdin",
 		"-re", "-f", "lavfi", "-i", src, "-pix_fmt", "yuv420p", "-g", strconv.Itoa(opt.GOP), "-bf", "0",
 		"-b:v", strconv.Itoa(opt.Bitrate), "-maxrate", strconv.Itoa(opt.Bitrate), "-bufsize", strconv.Itoa(opt.Bitrate / 2)}
+	tag := ""
+	if opt.Matrix > 0 {
+		tag = ":matrix_coefficients=" + strconv.Itoa(opt.Matrix)
+	}
 	switch opt.Codec {
 	case driver.H264:
 		args = append(args, "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-			"-bsf:v", "h264_metadata=aud=insert", "-f", "h264", "-")
+			"-bsf:v", "h264_metadata=aud=insert"+tag, "-f", "h264", "-")
 	case driver.HEVC:
 		if runtime.GOOS == "darwin" {
 			args = append(args, "-c:v", "hevc_videotoolbox", "-realtime", "1", "-prio_speed", "1")
 		} else {
 			args = append(args, "-c:v", "libx265", "-preset", "ultrafast", "-tune", "zerolatency", "-x265-params", "log-level=error")
 		}
-		args = append(args, "-bsf:v", "hevc_metadata=aud=insert", "-f", "hevc", "-")
+		args = append(args, "-bsf:v", "hevc_metadata=aud=insert"+tag, "-f", "hevc", "-")
 	default:
 		return nil, fmt.Errorf("video: unsupported codec %q", opt.Codec)
 	}
