@@ -24,9 +24,9 @@ type link struct {
 // large replies such as screenshots. iOS 27.2 accepts that announcement only
 // once per tunnel, so later handshakes must not repeat it.
 func dialLink(ctx context.Context, udid string) (*link, error) {
-	base, err := goios.GetDevice(udid)
+	base, err := findEntry(udid)
 	if err != nil {
-		return nil, fmt.Errorf("find %s on usbmuxd: %w", udid, err)
+		return nil, err
 	}
 	t, err := OpenTunnel(ctx, base)
 	if err != nil {
@@ -42,6 +42,29 @@ func dialLink(ctx context.Context, udid string) (*link, error) {
 	l.rsd = rsd
 	l.entry = t.Entry(base, rsd)
 	return l, nil
+}
+
+// findEntry returns the usbmuxd entry for a device, preferring USB: a phone
+// that also syncs over Wi-Fi is listed twice, and a tunnel over Wi-Fi is
+// several times slower and loses video packets.
+func findEntry(udid string) (goios.DeviceEntry, error) {
+	list, err := goios.ListDevices()
+	if err != nil {
+		return goios.DeviceEntry{}, fmt.Errorf("usbmuxd: %w", err)
+	}
+	var found *goios.DeviceEntry
+	for i, e := range list.DeviceList {
+		if e.Properties.SerialNumber != udid {
+			continue
+		}
+		if found == nil || e.Properties.ConnectionType == "USB" {
+			found = &list.DeviceList[i]
+		}
+	}
+	if found == nil {
+		return goios.DeviceEntry{}, fmt.Errorf("iPhone %s is not connected", udid)
+	}
+	return *found, nil
 }
 
 func (l *link) handshake(ctx context.Context, asHost bool) (goios.RsdHandshakeResponse, error) {

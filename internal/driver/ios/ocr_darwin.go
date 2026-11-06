@@ -147,7 +147,7 @@ func recognizeText(img []byte, opt ocrOptions) ([]ocrLine, error) {
 		}
 		req.Send(v.setLanguages, langs)
 	}
-	if objc.Send[bool](req, v.respondsTo, v.setAutoLanguage) {
+	if opt.AutoLanguage && objc.Send[bool](req, v.respondsTo, v.setAutoLanguage) {
 		req.Send(v.setAutoLanguage, true)
 	}
 	reqs := objc.ID(v.nsArray).Send(v.array)

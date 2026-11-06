@@ -28,33 +28,47 @@ func Services(ctx context.Context, udid string) ([]string, string, error) {
 	return names, info, nil
 }
 
-// SwipeLatency swipes between the first two home screen pages n times and
-// returns, for each swipe, how long after the touch went down the first
-// changed video frame arrived: input, rendering, encoding and transport
-// together. Call it on the home screen.
-func (d *Device) SwipeLatency(ctx context.Context, n int) ([]time.Duration, error) {
+// SwipeLatency swipes back and forth n times and returns, for each swipe,
+// how long after the touch went down the first changed video frame
+// arrived: input, rendering, encoding and transport together. Horizontal
+// swipes page the home screen; vertical ones scroll a list such as
+// Settings. Measure on a screen that is otherwise still: animated widgets
+// make frames that look like changes.
+func (d *Device) SwipeLatency(ctx context.Context, n int, vertical bool) ([]time.Duration, error) {
 	s := d.screen()
 	left := screen.Point{X: s.Width * 8 / 10, Y: s.Height / 2}
 	right := screen.Point{X: s.Width * 2 / 10, Y: s.Height / 2}
+	if vertical {
+		left = screen.Point{X: s.Width / 2, Y: s.Height * 6 / 10}
+		right = screen.Point{X: s.Width / 2, Y: s.Height * 4 / 10}
+	}
 	var out []time.Duration
 	for i := 0; i < n; i++ {
 		from, to := left, right
 		if i%2 == 1 {
 			from, to = right, left
 		}
+		// Start from a still screen: a list keeps scrolling for seconds
+		// after a fling.
+		if _, err := d.WaitSettled(ctx, 5*time.Second); err != nil {
+			return out, err
+		}
 		m, _, err := d.live(ctx)
 		if err != nil {
 			return out, err
 		}
-		base := 0
-		for _, f := range m.framesSince(time.Now().Add(-time.Second)) {
-			if base == 0 || f.size < base {
-				base = f.size
-			}
+		var before []int
+		for _, f := range m.framesSince(time.Now().Add(-300 * time.Millisecond)) {
+			before = append(before, f.size)
 		}
-		limit := 4 * base
-		if limit < 4096 {
-			limit = 4096
+		sort.Ints(before)
+		base := 1500
+		if len(before) > 0 {
+			base = before[len(before)/2]
+		}
+		limit := 2 * base
+		if limit < base+2000 {
+			limit = base + 2000
 		}
 		var down time.Time
 		err = d.gestureHook(ctx, swipePath(from, to, 300*time.Millisecond), 10*time.Millisecond, func() { down = time.Now() })

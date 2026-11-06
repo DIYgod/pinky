@@ -158,26 +158,17 @@ func probeServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 	return l.has(displayService) && l.has(universalHIDService), nil
 }
 
-// Open implements driver.Provider.
+// Open implements driver.Provider. It checks only the phone it opens.
 func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
-	list, err := p.List(ctx)
+	entry, err := findEntry(id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%v: %w", err, driver.ErrNotFound)
 	}
-	for _, info := range list {
-		if info.ID != id {
-			continue
-		}
-		if info.State != driver.StateOnline {
-			return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
-		}
-		d, err := Open(ctx, info)
-		if err != nil {
-			return nil, err
-		}
-		return d, nil
+	info := p.inspect(ctx, entry)
+	if info.State != driver.StateOnline {
+		return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
 	}
-	return nil, fmt.Errorf("iPhone %s: %w", id, driver.ErrNotFound)
+	return Open(ctx, info)
 }
 
 func isPairingError(err error) bool {

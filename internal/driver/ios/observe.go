@@ -198,6 +198,19 @@ func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions
 		})
 		match = append(match, cp.first)
 	}
+	// The on-screen keyboard is drawn by another process (InputUI), so the
+	// walk does not see it; its keys show up in OCR as single letters.
+	kbTop, kb := keyboardFromOCR(lines)
+	if kb {
+		s.Keyboard = true
+		kept := lines[:0:0]
+		for _, l := range lines {
+			if l.Y < kbTop {
+				kept = append(kept, l)
+			}
+		}
+		lines = kept
+	}
 	used := placeByOCR(s.Elements, match, lines, si.Width, si.Height)
 	for _, e := range s.Elements {
 		if !e.Bounds.Empty() {
@@ -262,6 +275,27 @@ func (d *Device) appForPID(ctx context.Context, pid uint64) (driver.App, bool) {
 	return app, true
 }
 
+// keyboardFromOCR finds an on-screen keyboard in OCR lines: at least five
+// single letters in the lower half of the screen. It returns the keyboard's
+// top edge, normalized.
+func keyboardFromOCR(lines []ocrLine) (float64, bool) {
+	top, n := 1.0, 0
+	for _, l := range lines {
+		t := []rune(strings.TrimSpace(l.Text))
+		if l.Y < 0.5 || len(t) != 1 || !unicode.IsLetter(t[0]) {
+			continue
+		}
+		n++
+		if l.Y < top {
+			top = l.Y
+		}
+	}
+	if n < 5 {
+		return 0, false
+	}
+	return top - 0.02, true
+}
+
 // ownerPID is the process that owns most of the walked elements: the app
 // on screen.
 func ownerPID(nodes []axNode) uint64 {
@@ -323,10 +357,12 @@ func truncated(s string) (string, bool) {
 }
 
 // placeByOCR gives tree elements the box of the OCR line that shows their
-// label. Lines are used once, in reading order, so that repeated labels map
-// onto repeated text from top to bottom. When a line holds several labels
-// (OCR merges neighbours), the element gets the part of the box its label
-// covers. It returns which lines were used.
+// label, in rounds so that a loose match never takes a line another element
+// matches exactly: equal text first, then text truncated with an ellipsis,
+// then a line that holds the label as whole words (OCR merges neighbouring
+// labels into one line; the element then gets its share of the box), and
+// last a line that is part of the label. Lines are taken in reading order, so repeated labels map onto
+// repeated text from top to bottom. It returns which lines were used.
 func placeByOCR(els []screen.Element, match []string, lines []ocrLine, w, h int) []bool {
 	order := make([]int, len(lines))
 	for i := range order {
@@ -339,74 +375,107 @@ func placeByOCR(els []screen.Element, match []string, lines []ocrLine, w, h int)
 		}
 		return la.X < lb.X
 	})
-	used := make([]bool, len(lines))
 	normed := make([]string, len(lines))
 	for i, l := range lines {
 		normed[i] = norm(l.Text)
 	}
-	for i := range els {
-		e := &els[i]
+	want := make([]string, len(els))
+	for i, e := range els {
 		if e.Source != screen.SourceTree {
 			continue
 		}
-		want := ""
 		if i < len(match) {
-			want = norm(match[i])
+			want[i] = match[i]
 		}
-		if want == "" {
-			want = norm(e.Label)
+		if norm(want[i]) == "" {
+			want[i] = e.Label
 		}
-		if want == "" {
-			continue
-		}
-		best, bestScore := -1, 0
-		for _, j := range order {
-			if used[j] || normed[j] == "" {
+	}
+	used := make([]bool, len(lines))
+	placed := make([]bool, len(els))
+	rounds := []func(label string, j int) bool{
+		func(label string, j int) bool { return normed[j] == norm(label) },
+		func(label string, j int) bool {
+			pre, ok := truncated(lines[j].Text)
+			p := norm(pre)
+			return ok && len([]rune(p)) >= 3 && strings.HasPrefix(norm(label), p)
+		},
+		func(label string, j int) bool {
+			return len([]rune(norm(label))) >= 3 && containsWords(lines[j].Text, label)
+		},
+		// Last, a line that is a whole-word part of the label: a home
+		// screen folder reads "Wallets folder" and shows "Wallets".
+		func(label string, j int) bool {
+			return len([]rune(normed[j])) >= 4 && containsWords(label, lines[j].Text)
+		},
+	}
+	for round, ok := range rounds {
+		for i := range els {
+			if placed[i] || want[i] == "" || norm(want[i]) == "" {
 				continue
 			}
-			got := normed[j]
-			score := 0
-			switch {
-			case got == want:
-				score = 3
-			case len(want) >= 3 && strings.Contains(got, want):
-				score = 2
-			default:
-				if pre, ok := truncated(lines[j].Text); ok {
-					if p := norm(pre); len(p) >= 3 && strings.HasPrefix(want, p) {
-						score = 2
-					}
+			for _, j := range order {
+				if used[j] || normed[j] == "" || !ok(want[i], j) {
+					continue
 				}
-			}
-			if score > bestScore {
-				best, bestScore = j, score
-				if score == 3 {
-					break
+				r := ocrRect(lines[j], w, h)
+				if round == 2 {
+					r = shareOf(r, lines[j].Text, want[i])
 				}
+				els[i].Bounds = r
+				placed[i] = true
+				used[j] = true
+				break
 			}
 		}
-		if best < 0 {
-			continue
-		}
-		l := lines[best]
-		r := ocrRect(l, w, h)
-		if bestScore == 2 && normed[best] != want {
-			// Narrow the box to the label's share of the line.
-			if k := strings.Index(normed[best], want); k >= 0 {
-				n := float64(len([]rune(normed[best])))
-				off := float64(len([]rune(normed[best][:k])))
-				share := float64(len([]rune(want)))
-				r.X += int(float64(r.W) * off / n)
-				r.W = int(float64(r.W) * share / n)
-			}
-			// A line holding several labels stays available for the others.
-			if !strings.HasPrefix(normed[best], want) || len(normed[best]) > len(want)+2 {
-				e.Bounds = r
-				continue
-			}
-		}
-		e.Bounds = r
-		used[best] = true
 	}
 	return used
+}
+
+// containsWords reports whether text holds label as whole words, ignoring
+// case.
+func containsWords(text, label string) bool {
+	t, l := strings.ToLower(text), strings.ToLower(strings.TrimSpace(label))
+	for start := 0; ; {
+		k := strings.Index(t[start:], l)
+		if k < 0 {
+			return false
+		}
+		k += start
+		before := k == 0 || !isWordRune(lastRune(t[:k]))
+		after := k+len(l) == len(t) || !isWordRune(firstRune(t[k+len(l):]))
+		if before && after {
+			return true
+		}
+		start = k + 1
+	}
+}
+
+func isWordRune(r rune) bool { return unicode.IsLetter(r) || unicode.IsDigit(r) }
+
+func lastRune(s string) rune {
+	r := []rune(s)
+	return r[len(r)-1]
+}
+
+func firstRune(s string) rune {
+	for _, r := range s {
+		return r
+	}
+	return 0
+}
+
+// shareOf narrows a line's box to the part that shows label, by character
+// position.
+func shareOf(r screen.Rect, text, label string) screen.Rect {
+	t := []rune(strings.ToLower(text))
+	l := []rune(strings.ToLower(strings.TrimSpace(label)))
+	k := strings.Index(string(t), string(l))
+	if k < 0 || len(t) == 0 {
+		return r
+	}
+	off := len([]rune(string(t)[:k]))
+	r.X += r.W * off / len(t)
+	r.W = r.W * len(l) / len(t)
+	return r
 }

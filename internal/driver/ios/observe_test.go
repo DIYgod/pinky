@@ -3,6 +3,7 @@ package ios
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -109,6 +110,50 @@ func TestPlaceByOCR(t *testing.T) {
 	}
 }
 
+// A back button labelled "Settings" shows only a chevron; the word in a
+// longer line belongs to the element that matches that line exactly.
+func TestPlaceByOCRPrefersExact(t *testing.T) {
+	els := []screen.Element{
+		{Role: "button", Label: "Settings", Source: screen.SourceTree},
+		{Role: "button", Label: "More in Accessibility Settings…", Source: screen.SourceTree},
+		{Role: "other", Label: "Search", Source: screen.SourceTree},
+	}
+	lines := []ocrLine{
+		{Text: "More in Accessibility Settings…", X: 0.2, Y: 0.7, W: 0.6, H: 0.02},
+		{Text: "Q Search", X: 0.4, Y: 0.8, W: 0.2, H: 0.02},
+		{Text: "Searchlight", X: 0.4, Y: 0.9, W: 0.2, H: 0.02},
+	}
+	placeByOCR(els, nil, lines, 1000, 1000)
+	if !els[0].Bounds.Empty() {
+		t.Errorf("back button placed at %+v", els[0].Bounds)
+	}
+	if els[1].Bounds.Empty() || els[1].Bounds.Y != 700 {
+		t.Errorf("exact line not placed: %+v", els[1].Bounds)
+	}
+	if b := els[2].Bounds; b.Empty() || b.Y != 800 || b.X <= 400 {
+		t.Errorf("word match: %+v", b)
+	}
+}
+
+func TestPlaceByOCRPartOfLabel(t *testing.T) {
+	els := []screen.Element{
+		{Role: "other", Label: "💸 Wallets folder, 20 apps", Source: screen.SourceTree},
+		{Role: "other", Label: "App Store", Source: screen.SourceTree},
+	}
+	match := []string{"💸 Wallets folder", "App Store"}
+	lines := []ocrLine{
+		{Text: "Wallets", X: 0.1, Y: 0.5, W: 0.1, H: 0.02},
+		{Text: "App", X: 0.5, Y: 0.4, W: 0.1, H: 0.02},
+	}
+	placeByOCR(els, match, lines, 1000, 1000)
+	if els[0].Bounds.Empty() || els[0].Bounds.Y != 500 {
+		t.Errorf("folder not placed: %+v", els[0].Bounds)
+	}
+	if !els[1].Bounds.Empty() {
+		t.Errorf("a three-letter fragment placed %q: %+v", els[1].Label, els[1].Bounds)
+	}
+}
+
 func TestScaleAxis(t *testing.T) {
 	if scaleAxis(0, 1125) > 100 || scaleAxis(1124, 1125) < 65400 || scaleAxis(-5, 1125) != scaleAxis(0, 1125) || scaleAxis(5000, 1125) != scaleAxis(1124, 1125) {
 		t.Fatal("scaleAxis bounds")
@@ -142,5 +187,49 @@ func TestHIDReports(t *testing.T) {
 	}
 	if _, _, ok := asciiUsage('é'); ok {
 		t.Fatal("non-ASCII mapped")
+	}
+}
+
+func TestKeyboardFromOCR(t *testing.T) {
+	var lines []ocrLine
+	for i, l := range []string{"W", "e", "t", "y", "a", "S"} {
+		lines = append(lines, ocrLine{Text: l, X: float64(i) / 10, Y: 0.68 + float64(i%2)*0.07})
+	}
+	lines = append(lines, ocrLine{Text: "Q clock", Y: 0.54}, ocrLine{Text: "A", Y: 0.2})
+	top, ok := keyboardFromOCR(lines)
+	if !ok || top < 0.6 || top > 0.68 {
+		t.Fatalf("keyboard %v top %v", ok, top)
+	}
+	if _, ok := keyboardFromOCR(lines[:4]); ok {
+		t.Fatal("four letters are not a keyboard")
+	}
+}
+
+func TestQuietSince(t *testing.T) {
+	now := time.Now()
+	frames := func(sizes ...int) *media {
+		m := &media{}
+		for i, sz := range sizes {
+			m.frameLog = append(m.frameLog, frameMark{at: now.Add(time.Duration(i-len(sizes)) * 16 * time.Millisecond), size: sz})
+		}
+		return m
+	}
+	d := &Device{}
+	since := now.Add(-time.Second)
+	cases := []struct {
+		name  string
+		m     *media
+		quiet bool
+	}{
+		{"idle skip frames", frames(1372, 1372, 1373, 1372, 1373), true},
+		{"padded still frames after motion", frames(10315, 10316, 10315, 10318, 10315), true},
+		{"scrolling", frames(9061, 1856, 951, 1283, 9504, 2163), false},
+		{"too few frames to tell", frames(1372, 1372), false},
+		{"no frames", frames(), true},
+	}
+	for _, c := range cases {
+		if got := d.quietSince(c.m, since); got != c.quiet {
+			t.Errorf("%s: quiet=%v, want %v", c.name, got, c.quiet)
+		}
 	}
 }

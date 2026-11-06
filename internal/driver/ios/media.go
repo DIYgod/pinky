@@ -55,7 +55,6 @@ type media struct {
 	prevTS  uint32
 	haveTS  bool
 	needKey bool
-	lastFIR time.Time
 	transit float64
 	srNTP   time.Time // wall clock of the last SR
 	srTS    uint32    // RTP time of the last SR
@@ -70,7 +69,7 @@ type media struct {
 	isReady  bool
 	frameLog []frameMark // recent frames, for settle detection and stats
 	stats    mediaStats
-	keyWait  []chan struct{}
+	lastFIR  time.Time // the last keyframe request
 }
 
 type frameMark struct {
@@ -114,7 +113,7 @@ func startMedia(ctx context.Context, l *link) (*media, error) {
 	}
 	port := udp.LocalAddr().(*net.UDPAddr).Port
 	opts := defaultOfferOptions()
-	opts.AllowRTCPFB = true // lets FIR request a keyframe
+	opts.AllowRTCPFB = true // lets keyframe requests through
 	sctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	m.started = time.Now()
 	ans, err := startVideoStream(sctx, svc, l.tunnel.HostAddr().String(), port, l.tunnel.DeviceAddr().String(), 1, opts)
@@ -383,12 +382,6 @@ func (m *media) finishAU() {
 	if key && !m.isReady && m.config != nil {
 		m.isReady = true
 		close(m.ready)
-	}
-	if key {
-		for _, ch := range m.keyWait {
-			close(ch)
-		}
-		m.keyWait = nil
 	}
 	cfgData := m.config
 	pkt := driver.Packet{Data: data, PTS: pts, KeyFrame: key}

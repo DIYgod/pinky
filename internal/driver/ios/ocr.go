@@ -11,4 +11,7 @@ type ocrLine struct {
 type ocrOptions struct {
 	Fast      bool     // the fast recognizer: lower accuracy, no language correction
 	Languages []string // in priority order, e.g. "zh-Hans", "en-US"
+	// AutoLanguage lets Vision detect the language. It can load extra
+	// models on the fly, which has taken over ten seconds.
+	AutoLanguage bool
 }

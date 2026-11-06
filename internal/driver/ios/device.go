@@ -31,7 +31,8 @@ type Device struct {
 	inputAt time.Time // when input starts to work
 	closed  bool
 
-	inputMu sync.Mutex // serializes gestures
+	inputMu   sync.Mutex // serializes gestures
+	restartMu sync.Mutex // one stream restart at a time
 
 	svcMu   sync.Mutex
 	info2   *cdService // deviceinfo
@@ -136,6 +137,14 @@ func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
 	}
 	if m != nil && !m.stopped.Load() {
 		return m, h, nil
+	}
+	d.restartMu.Lock()
+	defer d.restartMu.Unlock()
+	d.mu.Lock()
+	m, h = d.m, d.hid
+	d.mu.Unlock()
+	if m != nil && !m.stopped.Load() {
+		return m, h, nil // another caller restarted it
 	}
 	if err := d.restartMedia(ctx); err != nil {
 		return nil, nil, err

@@ -45,9 +45,15 @@ const (
 
 var hidEpoch = time.Now()
 
-// hidTimestamp is a monotonic 48-bit timestamp; the device reads only its
-// deltas.
-func hidTimestamp() uint64 { return uint64(time.Since(hidEpoch).Nanoseconds()) & (1<<48 - 1) }
+// hidTimestamp stamps a report in the phone's mach time units: 24 MHz ticks
+// on every iPhone that runs iOS 27. Nanoseconds would make every interval
+// look 41.7 times longer: a 12 ms key press reads as half a second and opens
+// the press-and-hold accent menu. Only deltas matter, so the origin is the
+// first report. The field is 48 bits wide.
+func hidTimestamp() uint64 {
+	ns := uint64(time.Since(hidEpoch).Nanoseconds())
+	return (ns / 125 * 3) & (1<<48 - 1)
+}
 
 func put48(b []byte, v uint64) {
 	var full [8]byte

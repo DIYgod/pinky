@@ -18,12 +18,13 @@ const (
 	actionCaptureScreenshot  = "com.apple.coredevice.action.capturescreenshot"
 )
 
-// Two services take screenshots. The instruments one (DTServiceHub, what
-// Xcode's Instruments uses) returns an 8-bit PNG; CoreDevice's screen
-// capture service returns a 16-bit one, about six times larger for a busy
-// screen (6.7 MB for a home screen with a photo widget, 2 to 5 s). Both are
-// 1125x2436 on an iPhone 13 mini. Either can get stuck on the device and stop
-// answering until it restarts, so each call falls back to the other.
+// Two services take screenshots, both as 1125x2436 PNGs on an iPhone 13 mini:
+// the instruments one (DTServiceHub, what Xcode's Instruments uses) and
+// CoreDevice's screen capture service, which encodes 16 bits per channel.
+// Over USB a busy home screen takes about 0.6 s (5.4 MB) and 0.75 s
+// (6.9 MB); a plain Settings page 0.35 s. Either service can get stuck on the
+// device and stop answering until it restarts, so each call falls back to
+// the other.
 
 // ScreenshotPNG returns a PNG of the main display at the size UIKit renders
 // (1125x2436 on an iPhone 13 mini), which is the driver's coordinate space.

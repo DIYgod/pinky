@@ -8,7 +8,7 @@
 //	iosctl [-udid U] key home|back|enter|delete|...
 //	iosctl [-udid U] type TEXT [-append] [-submit]
 //	iosctl [-udid U] stream [-seconds 10] [-out /tmp/pinky-stream.hevc]
-//	iosctl [-udid U] latency [-n 6]
+//	iosctl [-udid U] latency [-n 6] [-vertical]
 //	iosctl [-udid U] screenshot [-out /tmp/pinky-shot.png]
 //	iosctl [-udid U] launch APP
 //	iosctl [-udid U] apps
@@ -65,7 +65,8 @@ commands:
   key KEY                       home, back, enter, delete, tab, escape, dpad_*
   type TEXT [-append] [-submit] type ASCII text into the focused field
   stream [-seconds 10] [-out F] video statistics; -out writes Annex B HEVC
-  latency [-n 6]                swipe between home screen pages and time the video
+  latency [-n 6] [-vertical]    swipe and time the video: home screen pages, or
+                                with -vertical scroll the current screen
   screenshot [-out F]           save a PNG
   launch APP                    open an app by bundle id or name
   apps                          list installed apps
@@ -100,7 +101,7 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 	case "observe":
 		return observe(ctx, d, args)
 	case "tap":
-		fs := flag.NewFlagSet("tap", flag.ExitOnError)
+		fs := flag.NewFlagSet("tap", flag.ContinueOnError)
 		long := fs.Bool("long", false, "long press")
 		pts, err := ints(fs, args, 2)
 		if err != nil {
@@ -108,7 +109,7 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 		}
 		return d.Tap(ctx, screen.Point{X: pts[0], Y: pts[1]}, driver.TapOptions{LongPress: *long})
 	case "swipe":
-		fs := flag.NewFlagSet("swipe", flag.ExitOnError)
+		fs := flag.NewFlagSet("swipe", flag.ContinueOnError)
 		ms := fs.Int("ms", 300, "duration in milliseconds")
 		pts, err := ints(fs, args, 4)
 		if err != nil {
@@ -121,14 +122,25 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 		}
 		return d.Key(ctx, driver.Key(args[0]))
 	case "type":
-		fs := flag.NewFlagSet("type", flag.ExitOnError)
+		fs := flag.NewFlagSet("type", flag.ContinueOnError)
 		appendText := fs.Bool("append", false, "keep the field's text")
 		submit := fs.Bool("submit", false, "press return afterwards")
-		fs.Parse(args)
-		if fs.NArg() != 1 {
-			return errors.New("type: one text argument")
+		var text []string
+		var flags []string
+		for _, a := range args {
+			if a == "-append" || a == "-submit" || a == "--append" || a == "--submit" {
+				flags = append(flags, a)
+			} else {
+				text = append(text, a)
+			}
 		}
-		return d.Type(ctx, fs.Arg(0), driver.TypeOptions{Append: *appendText, Submit: *submit})
+		if err := fs.Parse(flags); err != nil {
+			return err
+		}
+		if len(text) != 1 {
+			return errors.New("type: one text argument (quote text with spaces)")
+		}
+		return d.Type(ctx, text[0], driver.TypeOptions{Append: *appendText, Submit: *submit})
 	case "stream":
 		return stream(ctx, d, args)
 	case "latency":
@@ -195,19 +207,33 @@ func pick(ctx context.Context, p *pios.Provider, udid string) (string, error) {
 	return list[0].ID, nil
 }
 
+// ints parses n numbers and the command's flags, in any order.
 func ints(fs *flag.FlagSet, args []string, n int) ([]int, error) {
-	// Flags may follow the numbers.
-	var nums, rest []string
-	for _, a := range args {
-		if strings.HasPrefix(a, "-") && len(nums) >= n {
-			rest = append(rest, a)
-		} else if strings.HasPrefix(a, "-") {
-			rest = append(rest, a)
-		} else {
+	var nums, flags []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if !strings.HasPrefix(a, "-") || isNumber(a) {
 			nums = append(nums, a)
+			continue
+		}
+		flags = append(flags, a)
+		name := strings.TrimLeft(a, "-")
+		if strings.Contains(name, "=") {
+			continue
+		}
+		if f := fs.Lookup(name); f != nil {
+			if b, ok := f.Value.(interface{ IsBoolFlag() bool }); ok && b.IsBoolFlag() {
+				continue
+			}
+			if i+1 < len(args) {
+				i++
+				flags = append(flags, args[i])
+			}
 		}
 	}
-	fs.Parse(rest)
+	if err := fs.Parse(flags); err != nil {
+		return nil, err
+	}
 	if len(nums) != n {
 		return nil, fmt.Errorf("%s: want %d numbers", fs.Name(), n)
 	}
@@ -220,6 +246,11 @@ func ints(fs *flag.FlagSet, args []string, n int) ([]int, error) {
 		out[i] = v
 	}
 	return out, nil
+}
+
+func isNumber(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
 }
 
 func devices(ctx context.Context, p *pios.Provider) error {
@@ -357,12 +388,15 @@ loop:
 func latency(ctx context.Context, d *pios.Device, args []string) error {
 	fs := flag.NewFlagSet("latency", flag.ExitOnError)
 	n := fs.Int("n", 6, "swipes")
+	vertical := fs.Bool("vertical", false, "scroll the current screen up and down instead of paging the home screen")
 	fs.Parse(args)
-	if err := d.Key(ctx, driver.KeyHome); err != nil {
-		return err
+	if !*vertical {
+		if err := d.Key(ctx, driver.KeyHome); err != nil {
+			return err
+		}
+		time.Sleep(1500 * time.Millisecond)
 	}
-	time.Sleep(1500 * time.Millisecond)
-	lat, err := d.SwipeLatency(ctx, *n)
+	lat, err := d.SwipeLatency(ctx, *n, *vertical)
 	if err != nil {
 		return err
 	}
