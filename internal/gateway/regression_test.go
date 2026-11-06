@@ -387,3 +387,58 @@ func TestTypeWithUnknownFocusNearPassword(t *testing.T) {
 		t.Fatalf("rule %q", res.Rule)
 	}
 }
+
+type countingDevice struct {
+	*demo.Device
+	mu       sync.Mutex
+	observes int
+}
+
+func (d *countingDevice) Observe(ctx context.Context, o driver.ObserveOptions) (*screen.Screen, error) {
+	d.mu.Lock()
+	d.observes++
+	d.mu.Unlock()
+	return d.Device.Observe(ctx, o)
+}
+
+func (d *countingDevice) WaitSettled(context.Context, time.Duration) (bool, error) { return true, nil }
+
+type countingProvider struct {
+	*demo.Provider
+	d *countingDevice
+}
+
+func (p countingProvider) Open(context.Context, string) (driver.Device, error) { return p.d, nil }
+
+func TestBatchReusesTheLastRead(t *testing.T) {
+	cd := &countingDevice{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android)}
+	g, err := New(Options{Providers: []driver.Provider{countingProvider{demo.NewProvider(driver.Android, cd.Device), cd}},
+		TrustNewAgents: true, NoScreenshots: true, DiscoverEvery: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	s, _ := connect(t, g, "Batch")
+	cd.mu.Lock()
+	cd.observes = 0
+	cd.mu.Unlock()
+	res := s.Batch(context.Background(), BatchRequest{Steps: []Action{
+		{Tool: "launch", App: "Dinely"}, {Tool: "key", Key: "back"}, {Tool: "key", Key: "home"},
+	}})
+	mustStatus(t, res, StatusSettled)
+	cd.mu.Lock()
+	n := cd.observes
+	cd.mu.Unlock()
+	// One read before the first step and one after each step.
+	if n != 4 {
+		t.Fatalf("%d reads for a three-step batch, want 4", n)
+	}
+	// A separate call reads the screen again.
+	mustStatus(t, s.Act(context.Background(), Call{}, Action{Tool: "key", Key: "home"}), StatusSettled)
+	cd.mu.Lock()
+	n = cd.observes
+	cd.mu.Unlock()
+	if n != 6 {
+		t.Fatalf("%d reads after a separate call, want 6", n)
+	}
+}

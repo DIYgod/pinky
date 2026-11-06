@@ -13,6 +13,31 @@ import (
 // reasonTookOver withdraws approvals when the person takes over.
 const reasonTookOver = "took_over"
 
+// rawShot takes a screenshot of the screen s describes, for the person's
+// eyes only (history, the approval panel): s must come from a read just
+// before, and a blocked app is never captured. It costs no extra read,
+// unlike screenshot, which agents get.
+func (g *Gateway) rawShot(ctx context.Context, d *device, s *screen.Screen) image.Image {
+	if s == nil {
+		return nil
+	}
+	if _, blocked := g.policy.Blocked(s.App); blocked {
+		return nil
+	}
+	dev := g.driverOf(d)
+	if dev == nil {
+		return nil
+	}
+	img, err := dev.Screenshot(ctx)
+	if err != nil {
+		return nil
+	}
+	return img
+}
+
+// recording reports whether steps get screenshots.
+func (g *Gateway) recording() bool { return g.store != nil && !g.opt.NoScreenshots }
+
 // shot stores a screenshot of the current screen for history and returns
 // its media id. It reuses the last one when the screen did not change, and
 // never records a blocked app.
@@ -31,8 +56,8 @@ func (g *Gateway) shot(ctx context.Context, d *device, s *screen.Screen) string 
 		return id
 	}
 	g.mu.Unlock()
-	img, err := g.screenshot(ctx, d, s)
-	if err != nil {
+	img := g.rawShot(ctx, d, s)
+	if img == nil {
 		return ""
 	}
 	return g.storeShot(d, s, img)

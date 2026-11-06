@@ -297,7 +297,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		d.act.Unlock()
 		return res
 	}
-	cur, err := g.observe(ctx, d, false)
+	cur, err := g.startScreen(ctx, l, c)
 	if err != nil {
 		d.act.Unlock()
 		return g.readError(l, err)
@@ -333,6 +333,22 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	res = g.execute(ctx, l, c, a, p, cur, -1)
 	d.act.Unlock()
 	return res
+}
+
+// startScreen reads the screen an action starts from. A phone_batch step
+// may start from the read that ended the step before, if that settled less
+// than reuseAge ago: the steps run back to back, and a read costs seconds
+// on some phones.
+func (g *Gateway) startScreen(ctx context.Context, l *lease, c Call) (*screen.Screen, error) {
+	if c.reuse {
+		g.mu.Lock()
+		after, at := l.after, l.afterAt
+		g.mu.Unlock()
+		if after != nil && time.Since(at) < reuseAge {
+			return after, nil
+		}
+	}
+	return g.observe(ctx, l.dev, false)
 }
 
 // evaluate runs the policy on the action. A tap or swipe is checked
@@ -635,7 +651,7 @@ func matchApp(apps []driver.App, name string) (driver.App, bool) {
 
 // ask opens an approval for an action and records the waiting step.
 func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, v policy.Verdict, cur *screen.Screen) (approval.Info, *Result) {
-	shot, _ := g.screenshot(ctx, l.dev, cur)
+	shot := g.rawShot(ctx, l.dev, cur)
 	target := screen.Rect{}
 	switch {
 	case p.decider != nil:
@@ -720,6 +736,8 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 		return "Send the message?"
 	case a.Tool == "launch":
 		return fmt.Sprintf("Open %s?", p.launch.Name)
+	case v.Has(policy.ChangeSetting) && label != "":
+		return fmt.Sprintf("Change “%s”?", label)
 	case label != "":
 		return fmt.Sprintf("%s “%s”?", capitalize(verbFor(a)), label)
 	}
@@ -1046,6 +1064,14 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		return res
 	}
 	settled := g.settle(ctx, d)
+	// The history screenshot comes just before the read, so the read checks
+	// which app it shows (storeShot skips a blocked app) at no extra cost.
+	var img image.Image
+	if g.recording() {
+		if dev := g.driverOf(d); dev != nil {
+			img, _ = dev.Screenshot(ctx)
+		}
+	}
 	next, err := g.observe(ctx, d, true)
 	if err != nil {
 		res := statusResult(StatusUncertain, "The action was sent, but the screen could not be read afterwards (%v). Observe before anything else; do not repeat it blindly.", err)
@@ -1054,13 +1080,22 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	}
 	res := g.screenResult(l, next, false)
 	res.Status = StatusSettled
+	g.mu.Lock()
+	l.after, l.afterAt = nil, time.Time{}
+	if settled {
+		l.after, l.afterAt = next, time.Now()
+	}
+	g.mu.Unlock()
 	if !settled {
 		res.Settle = "timeout"
 	}
 	if next.Locked {
 		res.Message = strings.TrimSpace(res.Message + " The phone is locked now.")
 	}
-	after := g.shot(ctx, d, next)
+	after := ""
+	if img != nil {
+		after = g.storeShot(d, next, img)
+	}
 	g.recordStep(l, step, a, c, p, res, start, before, after, body(res.Screen))
 	return res
 }
@@ -1129,8 +1164,9 @@ func (g *Gateway) readError(l *lease, err error) *Result {
 }
 
 // observeTimeout bounds one screen read, so a stuck driver cannot hold a
-// call forever.
-const observeTimeout = 20 * time.Second
+// call forever. It is generous: the first read on an iPhone loads the OCR
+// model (15 s measured, about a minute the first time on a new Mac).
+const observeTimeout = 60 * time.Second
 
 // observe reads the screen, assigns refs and collects events.
 func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Screen, error) {

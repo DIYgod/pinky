@@ -11,6 +11,7 @@ import (
 	"github.com/DIYgod/pinky/internal/approval"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/history"
+	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -514,11 +515,46 @@ func (g *Gateway) personInput(deviceID string) (*device, driver.Device, error) {
 // The methods below are for the client but not part of API yet: settings,
 // history files and agents.
 
-// SetReadOnly turns read-only mode on or off for one device, or for every
-// device when deviceID is empty, until the gateway restarts.
-func (g *Gateway) SetReadOnly(deviceID string, on bool) {
-	g.policy.SetReadOnly(deviceID, on)
+// SetReadOnly turns read-only mode on or off: for every device when
+// deviceID is empty (saved in the rules file), else for one device until
+// the gateway restarts.
+func (g *Gateway) SetReadOnly(deviceID string, on bool) error {
+	err := g.policy.SetReadOnly(deviceID, on)
 	g.emit(Event{Kind: EventDevices, DeviceID: deviceID})
+	return err
+}
+
+// BlockedApps lists the apps agents may not use, for Settings › Safety: the
+// apps the person blocked, and the apps on the connected phones that a rule
+// blocks (banking, wallets, password managers). Phones that cannot list
+// their apps are skipped.
+func (g *Gateway) BlockedApps(ctx context.Context) []policy.BlockedApp {
+	g.mu.Lock()
+	var devs []driver.Device
+	for _, d := range g.devices {
+		if d.dev != nil {
+			devs = append(devs, d.dev)
+		}
+	}
+	g.mu.Unlock()
+	var installed []screen.App
+	for _, dev := range devs {
+		apps, err := dev.Apps(ctx)
+		if err != nil {
+			continue
+		}
+		for _, a := range apps {
+			installed = append(installed, screen.App{ID: a.ID, Name: a.Name})
+		}
+	}
+	return g.policy.BlockedApps(installed)
+}
+
+// SetAppBlocked blocks or unblocks an app for agents and saves apps.yaml.
+func (g *Gateway) SetAppBlocked(app screen.App, blocked bool) error {
+	err := g.policy.SetAppBlocked(app, blocked)
+	g.emit(Event{Kind: EventDevices})
+	return err
 }
 
 // SetTaskApps replaces the app allow-list of the task running on a device.

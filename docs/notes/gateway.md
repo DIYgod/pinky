@@ -48,6 +48,23 @@ Without `--fake`, the daemon starts with no device providers (none are registere
 
 Folders: `$PINKY_HOME/{config,data,run}` when set; otherwise `~/Library/Application Support/Pinky` on macOS, XDG folders on Linux. Config holds `rules.yaml`, `apps.yaml` (both written with defaults on first start) and `agent-token` (0600). Data holds `pinky.db`, `media/` and `daemon.log`; a `--fake` gateway keeps its history in `data/fake`.
 
+## Settings API (for the client)
+
+Everything Settings › Safety shows maps onto the policy engine (`g.Policy()`) and two gateway helpers. Each setter saves its file at once (`rules.yaml` or `apps.yaml` in the config directory, mode 0600, written atomically); agents cannot reach any of it.
+
+| Client setting (`ui.Settings`) | Read | Change |
+| --- | --- | --- |
+| `Preset int` (1, 2, 3) | `g.Policy().Preset()` returns `policy.Preset` | `g.Policy().SetPreset(policy.Preset(n)) error` |
+| `HideCodes bool` | `g.Policy().HideCodes()` | `g.Policy().SetHideCodes(on) error` |
+| `ReadOnly bool` | `g.Policy().ReadOnly("")` | `g.SetReadOnly("", on) error` (a device id instead of `""` sets one phone until restart) |
+| `BlockedApps []BlockedApp{Name, Kind}` | `g.BlockedApps(ctx) []policy.BlockedApp` | `g.SetAppBlocked(screen.App{ID: id, Name: name}, blocked) error` |
+
+- `policy.Preset`: `PresetCommits` (1, the default: payments, messages, deletions and other commits ask, and so do calls, installs, links that leave the app and settings changes), `PresetPayments` (2: only payments ask), `PresetEvery` (3: every tap, type, swipe, key and launch asks), `PresetNone` (0: only the rules in the file). Blocked apps and the credentials rule apply under every preset. With read-only on and preset 3, looking around still asks (it is not denied), and commits are denied.
+- `HideCodes` masks four-to-eight-digit codes in notifications that mention a code. It does not blur screenshots: agents get screenshots only on request (`phone_observe { screenshot: true }`), and blocked apps never.
+- `policy.BlockedApp{ID, Name, Category, Rule, ByPerson}`: `g.BlockedApps` returns the apps the person blocked, plus the apps on the connected phones that a rule blocks (banking, wallets, password managers), sorted by name. For the client's `Kind`, use `policy.CategoryLabel(b.Category)` ("Finance", "Passwords", "Blocked by you"); for its name, `b.Name`, or `b.ID` when the name is unknown (an app blocked by package name that no phone has).
+- `SetAppBlocked(app, true)` adds the app to the `blocked` category in `apps.yaml` (rule "Blocked by you"); the client's free-text field can pass `screen.App{Name: text}`, or `{ID: text}` when the text looks like a package or bundle id. `SetAppBlocked(app, false)` removes it, and for a bundled banking or password app adds it to `exclude`. It returns `policy.ErrBlockedByRule` when a rule in `rules.yaml` names the app.
+- `rules.yaml` gets `preset: 1` on first run. A rules file from before presets that spells out the six old default Ask rules becomes preset 1 without them; any other old file keeps exactly its rules (preset 0).
+
 ## Integration (for the main session)
 
 - **Real drivers.** Append factories to `providerFactories` in `cmd/pinky/providers.go`; `realProviders` skips one that fails to start. `--fake` uses only `demo.World()`.

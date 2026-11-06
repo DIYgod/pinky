@@ -864,3 +864,21 @@ func TestPersonInputOnPhoneTakesOver(t *testing.T) {
 	}
 	mustStatus(t, tap(s, home), StatusTookOver)
 }
+
+func TestGatewayBlockedApps(t *testing.T) {
+	g, _ := newTestGateway(t)
+	got := g.BlockedApps(context.Background())
+	if len(got) != 1 || got[0].ID != "com.google.android.apps.walletnfcrel" || got[0].Category != policy.CatFinance {
+		t.Fatalf("blocked apps on the demo phone: %+v", got)
+	}
+	if err := g.SetAppBlocked(screen.App{ID: "com.dinely.app", Name: "Dinely"}, true); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := connect(t, g, "Lunch")
+	if res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "Dinely"}); res.Status != StatusBlocked || res.Rule != policy.RuleBlocked {
+		t.Fatalf("launch a blocked app: %+v", res)
+	}
+	if got := g.BlockedApps(context.Background()); len(got) != 2 {
+		t.Fatalf("after blocking Dinely: %+v", got)
+	}
+}

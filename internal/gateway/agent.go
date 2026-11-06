@@ -104,7 +104,14 @@ type Call struct {
 	Intent     string
 	ApprovalID string
 	Progress   Progress
+
+	// reuse lets a batch step start from the previous step's read.
+	reuse bool
 }
+
+// reuseAge is how old the previous step's read may be for the next batch
+// step to start from it instead of reading the screen again.
+const reuseAge = time.Second
 
 // ConnectRequest is phone_connect.
 type ConnectRequest struct {
@@ -971,8 +978,11 @@ func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Res
 	var info approval.Info
 	if id == "" {
 		var shot image.Image
-		if cur, err := g.observe(ctx, l.dev, false); err == nil {
-			shot, _ = g.screenshot(ctx, l.dev, cur)
+		g.mu.Lock()
+		last := l.dev.last
+		g.mu.Unlock()
+		if last != nil && time.Since(last.CapturedAt) < 10*time.Second {
+			shot = g.rawShot(ctx, l.dev, last)
 		}
 		detail := s.agent.Name
 		if d := strings.TrimSpace(req.Details); d != "" {
@@ -1145,8 +1155,8 @@ func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
 	ctx, cancel := mergeCtx(ctx, l.ctx)
 	defer cancel()
 	out := &Result{Status: StatusSettled}
-	for _, a := range req.Steps {
-		c := Call{Device: req.Device, Intent: req.Intent, ApprovalID: a.ApprovalID, Progress: req.Progress}
+	for i, a := range req.Steps {
+		c := Call{Device: req.Device, Intent: req.Intent, ApprovalID: a.ApprovalID, Progress: req.Progress, reuse: i > 0}
 		if a.Intent != "" {
 			c.Intent = a.Intent
 		}

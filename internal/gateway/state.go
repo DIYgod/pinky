@@ -153,6 +153,10 @@ type lease struct {
 	// unlockHandoffs are handoffs opened while the phone was locked; Unlock
 	// from the computer ends them.
 	unlockHandoffs []string
+	// after is the read that ended the last action, if it settled; the next
+	// step of a phone_batch reuses it while it is fresh.
+	after   *screen.Screen
+	afterAt time.Time
 
 	ctx    context.Context
 	cancel context.CancelFunc
