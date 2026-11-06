@@ -123,6 +123,10 @@ The Pixel dropped off USB at about 01:45 during the typing test, while this sess
 
 Before it dropped, typing "pinky" as key events into the Settings search left the field empty. The likeliest cause: on a Chinese-locale phone Gboard was in pinyin mode, so the letters went into a composition instead of the field. The rule was changed after that (paste while a composing keyboard shows), and the Mi, whose keyboard is ByteDance's Doubao pinyin keyboard, now types ASCII correctly either way. The Pixel still needs a run of `TestDeviceTypeAndClipboard`.
 
+### A Play Protect dialog on the Mi
+
+At about 01:44 the companion session's `adb install` of Pinky Companion made Google Play Protect show "Send app for security check?" on the Mi; that session left it alone, as the rules ask, and released the Mi's lock when its install returned at about 01:54. This session's tests were queued behind that lock, and their first action at about 01:54 was a Home key press, so if the dialog was still up, the Home press moved it out of view. Nothing on it was tapped: every later tap on the main display followed an observe or a launch, and the first observe a few minutes later showed the launcher. A read-only check at 02:08 found no Play Store or verifier activity left in the activity stack, no lock screen, and `app.pinky.companion` installed. Lesson for test scripts and for the gateway: observe before the first action on a phone someone else may have used.
+
 ## Decisions
 
 Made without the owner, as the brief asked.
