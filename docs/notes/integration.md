@@ -38,6 +38,7 @@ All through `scripts/devlock.sh`, with Calculator, Settings (read only) and the 
 | App window, Mi 10 Pro | Live H.264 mirror, correct colors after the YCgCo fix |
 | Agent → `pinky mcp` → app → Mi 10 Pro | First connection asked "New agent" in the app; Allow answered it. Calculator AC, 6, ×, 7, = gave 42 with correct diffs; home; release |
 | Agent → `pinky mcp` → app → iPhone | Connected, launched Calculator, read the screen |
+| Claude Code (`claude -p`) on the Mi 10 Pro, through the app, companion in the driver | Asked to work out 6 × 7 in the Calculator only: connected, launched it, saw the old result and used `phone_batch` to clear and tap 6 × 7 =, read 42, pressed home and released, in 37 s and 7 turns |
 | Claude Code (`claude -p`) with fake phones | Found last week's order, reordered, reached the payment, which Pinky held for approval; with no answer it was denied after 60 s and Claude stopped without paying. It also used `phone_request_approval` on its own to ask which order was lunch |
 
 Timing on the Mi through the app, the same Calculator flow:
