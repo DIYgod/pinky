@@ -18,6 +18,7 @@ The five branches merged into `main` cleanly except `go.mod` and `go.sum`, which
 - **The iOS provider ignores Wi-Fi devices** unless `ios.Provider.Wireless` is set: the gateway opens everything it lists, and usbmuxd lists every iPad and iPhone ever paired over the network.
 - **App mode** (`app.go`): `pinky` with no command runs the gateway, the agent socket and the client window in one process, so approvals are answered in the app (the socket refuses them for real phones). Settings persist in `config/settings.json`; read-only mode reaches the gateway; blocked apps shown in Settings come from the deny rules in `rules.yaml`. The log goes to `data/pinky.log` as well as stderr.
 - **The MCP shim** starts the app on macOS when no gateway runs, instead of a headless daemon that could not answer approvals for real phones. Fake phones and other platforms still get `pinky daemon`.
+- **`pinky companion install [phone]`** installs or updates the Android companion from the APK `android.FindCompanionAPK` finds (inside Pinky.app after `make app`). Pinky never installs it on its own.
 - **Packaging**: `cmd/pinky/mygo.json` and `make app` build `Pinky.app` (binary `Contents/MacOS/Pinky`, version from `mygo.json`) and a `.dmg`; the companion APK is copied into `Contents/Resources` when built. The `.dmg` is made before that copy, so only the `.app` carries the APK.
 - **Checks**: the `e2e` build tag links MyGo's automation socket (`MYGO_AUTOMATION=/path/sock`), which can read, press and capture the app's windows even while the Mac's screen is locked. `scripts/mcpcall` drives `pinky mcp` as an agent: tools in order in one session, with `$ref:LABEL` resolved from the screens seen so far.
 
@@ -39,7 +40,16 @@ All through `scripts/devlock.sh`, with Calculator, Settings (read only) and the 
 | Agent → `pinky mcp` → app → iPhone | Connected, launched Calculator, read the screen |
 | Claude Code (`claude -p`) with fake phones | Found last week's order, reordered, reached the payment, which Pinky held for approval; with no answer it was denied after 60 s and Claude stopped without paying. It also used `phone_request_approval` on its own to ask which order was lunch |
 
-Timing on the Mi with `uiautomator` (before the companion is wired in): about 8.3 s per tap and 10.8 s per launch. Each step settles (median 1.3 s), reads the screen (2.2 s), takes a history screenshot (0.75 s) and reads the screen again to make sure no blocked app came to the front (2.2 s). The companion's 30 ms tree removes most of this; moving the history screenshot off the agent's path removes the rest.
+Timing on the Mi through the app, the same Calculator flow:
+
+| | `uiautomator` (first merge) | Companion in the driver (second round) |
+| --- | --- | --- |
+| `phone_connect` | 2.7 s | 1.0 s |
+| `phone_launch` | 10.8 s | 1.1 s (already in front) to 2.4 s |
+| `phone_tap` | 8.3 s | 1.8–2.2 s |
+| `phone_observe` | 2.2 s | 73 ms |
+
+With `uiautomator`, each step settled (median 1.3 s), read the screen (2.2 s), took a history screenshot (0.75 s) and read the screen again to make sure no blocked app came to the front (2.2 s). With the companion the reads are about 70 ms; what is left is mostly the settle (the Calculator animates for about 0.9 s, then 0.4 s of quiet) and the screenshot. The companion labels elements the way TalkBack reads them, so the Calculator's keys are 清除, 乘 and 等于 on this phone rather than AC, × and =; the owner's own floating accessibility button shows up as `button "Mika"`. The accessibility setting was back to exactly the owner's service after every run.
 
 ## Open issues found tonight
 
