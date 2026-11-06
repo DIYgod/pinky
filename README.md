@@ -4,7 +4,7 @@ Let AI agents use your phone, with you in the loop.
 
 Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
 
-**Status:** pre-alpha. It runs end to end on real phones (an Android phone over USB, an iPhone on iOS 27), but expect rough edges. See [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) for what works today and how to try it.
+**Status:** pre-alpha. Claude Code has used real phones through it end to end (an Android phone over USB and an iPhone on iOS 27), but expect rough edges. See [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) for what works today and how to try it.
 
 ## Try it
 
