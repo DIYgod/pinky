@@ -42,6 +42,8 @@ func main() {
 		err = runMCP(args)
 	case "devices":
 		err = runDevices(args)
+	case "companion":
+		err = runCompanion(args)
 	case "needs":
 		err = runNeeds(args)
 	case "decide":
@@ -78,6 +80,8 @@ Commands:
   mcp       run the MCP server on stdio (agents launch this); starts the
             gateway when none is running
   devices   list connected phones
+  companion install [phone]
+            install or update the Android companion app
   version   print the version
 
 Flags:

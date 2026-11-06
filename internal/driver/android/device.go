@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -38,9 +39,16 @@ type Device struct {
 	imeKeys   bool      // ASCII may be typed as key events
 	imeAt     time.Time // when imeKeys was decided
 
-	appsMu sync.Mutex
-	apps   []driver.App
-	appsAt time.Time
+	tapPoint screen.Point // the last tap, for typing into the field under it
+	tapAt    time.Time
+
+	appsMu      sync.Mutex
+	apps        []driver.App
+	appsAt      time.Time
+	appsLoading atomic.Bool
+
+	comp   companionLink
+	person personWatch
 }
 
 func newDevice(cfg Config, info driver.Info, props deviceProps) *Device {
@@ -61,6 +69,8 @@ func (d *Device) Close() error {
 	l := d.main
 	d.main = nil
 	d.mu.Unlock()
+	d.closeCompanion()
+	d.person.close()
 	if l != nil {
 		l.close(errors.New("android: device closed"))
 	}
@@ -298,9 +308,10 @@ func (l *live) send(msg []byte) error {
 }
 
 var (
-	_ driver.Device       = (*Device)(nil)
-	_ driver.Toucher      = (*Device)(nil)
-	_ driver.LockReporter = (*Device)(nil)
-	_ driver.Clipboard    = (*Device)(nil)
-	_ driver.Settler      = (*Device)(nil)
+	_ driver.Device        = (*Device)(nil)
+	_ driver.Toucher       = (*Device)(nil)
+	_ driver.LockReporter  = (*Device)(nil)
+	_ driver.Clipboard     = (*Device)(nil)
+	_ driver.Settler       = (*Device)(nil)
+	_ driver.PersonWatcher = (*Device)(nil)
 )

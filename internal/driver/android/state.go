@@ -25,28 +25,6 @@ func parseKeyguard(out string) (showing, ok bool) {
 	return false, ok
 }
 
-var (
-	inputShownRE = regexp.MustCompile(`\bmInputShown=(true|false)\b`)
-	imeVisRE     = regexp.MustCompile(`\bmImeWindowVis=(\d+)`)
-)
-
-// parseIMEShown reports whether the soft keyboard is showing, from
-// `dumpsys input_method`.
-func parseIMEShown(out string) bool {
-	for _, m := range inputShownRE.FindAllStringSubmatch(out, -1) {
-		if m[1] == "true" {
-			return true
-		}
-	}
-	for _, m := range imeVisRE.FindAllStringSubmatch(out, -1) {
-		// IME_VISIBLE is bit 1 of the window visibility flags.
-		if v, err := strconv.Atoi(m[1]); err == nil && v&2 != 0 {
-			return true
-		}
-	}
-	return false
-}
-
 var imeWindowRE = regexp.MustCompile(`\b(isVisible|isOnScreen)=(true|false)\b`)
 
 // parseIMEWindowVisible reports whether `dumpsys window InputMethod` shows

@@ -18,15 +18,36 @@ import (
 
 const (
 	keyguardCmd = `dumpsys window policy | grep -E 'showing=|mIsShowing=|isKeyguardShowing=|mShowingLockscreen=|isStatusBarKeyguard='`
-	imeCmd      = `dumpsys input_method | grep -E 'mInputShown=|mImeWindowVis='`
+	// imeWindowCmd reads the keyboard window from the window manager,
+	// which is much faster than `dumpsys input_method` (that also dumps
+	// the keyboard app: 1.7 s on the Pixel).
+	imeWindowCmd = `dumpsys window InputMethod | grep -E 'isVisible=|isOnScreen='`
 )
 
-// Observe implements driver.Device. It reads the element tree with
-// `uiautomator dump` (about 2.4 s, most of it uiautomator waiting for the
-// UI to idle), and the lock and keyboard state with dumpsys, in parallel.
-// Element bounds use the screenshot's pixel space. OCR is not done here;
-// opt.OCR is ignored.
+// Observe implements driver.Device. With the companion app it reads the
+// element tree, toasts and notifications from the app (about 50 ms);
+// otherwise from `uiautomator dump` (about 2.2 s, most of it uiautomator
+// waiting for the UI to idle). Either way the lock and keyboard state come
+// from the window manager, in parallel. Element bounds use the
+// screenshot's pixel space. OCR is not done here; opt.OCR is ignored.
 func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
+	d.used()
+	if c := d.companionClient(ctx); c != nil {
+		s, err := d.observeCompanion(ctx, c)
+		if err == nil {
+			return s, nil
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		// Turn it off before uiautomator runs, and fall back.
+		d.companionFailed(err)
+	}
+	return d.observeDump(ctx)
+}
+
+// observeDump reads the screen with `uiautomator dump`.
+func (d *Device) observeDump(ctx context.Context) (*screen.Screen, error) {
 	captured := time.Now()
 	type dumpResult struct {
 		tree *uiTree
@@ -39,7 +60,7 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 	}()
 	statec := make(chan string, 1)
 	go func() {
-		out, err := d.client.Shell(ctx, d.info.ID, keyguardCmd+"; echo --ime--; "+imeCmd)
+		out, err := d.client.Shell(ctx, d.info.ID, keyguardCmd+"; echo --ime--; "+imeWindowCmd)
 		if err != nil {
 			d.cfg.logf("android: %s: read state: %v", d.info.ID, err)
 		}
@@ -68,7 +89,7 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 		Width:       w,
 		Height:      h,
 		Orientation: "portrait",
-		Keyboard:    parseIMEShown(sec["ime"]),
+		Keyboard:    parseIMEWindowVisible(sec["ime"]),
 		Locked:      locked,
 		Elements:    convertTree(r.tree, w, h),
 		CapturedAt:  captured,
@@ -144,6 +165,7 @@ func firstLine(out []byte) string {
 // Screenshot implements driver.Device with `screencap -p`, in the same
 // pixel space as Observe.
 func (d *Device) Screenshot(ctx context.Context) (image.Image, error) {
+	d.used()
 	out, err := d.client.Exec(ctx, d.info.ID, "screencap -p")
 	if err != nil {
 		return nil, wrapErr(err)
