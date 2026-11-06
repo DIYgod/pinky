@@ -247,48 +247,68 @@ func TestGatewayLunch(t *testing.T) {
 	}
 }
 
-// TestGatewayAgentScope approves a first connection with a narrower scope,
-// which the gateway would otherwise replace with its default as the
-// agent picks up the answer.
+// scopeRecorder is the gateway, with the calls that answer a first
+// connection recorded in order.
+type scopeRecorder struct {
+	*gateway.Gateway
+	mu    sync.Mutex
+	calls []string
+}
+
+func (r *scopeRecorder) SetAgentScope(name string, scope gateway.Scope) {
+	r.mu.Lock()
+	r.calls = append(r.calls, "scope "+name+" "+scope.String())
+	r.mu.Unlock()
+	r.Gateway.SetAgentScope(name, scope)
+}
+
+func (r *scopeRecorder) Decide(id string, d gateway.Decision, note string) error {
+	r.mu.Lock()
+	r.calls = append(r.calls, "decide "+string(d))
+	r.mu.Unlock()
+	return r.Gateway.Decide(id, d, note)
+}
+
+// TestGatewayAgentScope approves a first connection with a narrower scope
+// chosen in the card: the client sets the scope, then allows, so the
+// gateway keeps the person's choice as the agent picks up the answer.
 func TestGatewayAgentScope(t *testing.T) {
 	ga := newGatewayApp(t, false)
+	rec := &scopeRecorder{Gateway: ga.w.Gateway}
+	ga.app.api = rec
 	ga.agent(t, "Codex", pixel, (*demogw.Agent).ReorderLunch)
 	var n gateway.NeedView
 	ga.waitFor(t, "the New agent approval", func() (ok bool) { n, ok = ga.need(newAgentNeed); return })
 	ga.agents.choice = map[string]string{n.ID: "Only the apps I choose"}
 	ga.agents.apps = map[string]string{n.ID: "Dinely, Chatter"}
-	ga.approveAgent(n, gateway.Scope{Mode: gateway.ScopeApps, Apps: []string{"Dinely", "Chatter"}})
+	tt := mg.NewTester(ga.view, 1280, 820)
+	if !hasText(tt, "Only the apps I choose") {
+		t.Fatalf("no scope picker: %q", tt.Texts())
+	}
+	if err := tt.Click("Approve"); err != nil {
+		t.Fatal(err)
+	}
 	ga.waitFor(t, "the agent to connect", func() bool {
 		ts := ga.tasks
 		return len(ts) > 0 && ts[0].Agent == "Codex"
 	})
-	var got gateway.AgentView
-	ga.waitFor(t, "the chosen scope", func() bool {
-		time.Sleep(50 * time.Millisecond)
-		list, _ := ga.w.Gateway.Agents(context.Background())
-		for _, a := range list {
-			if a.Name == "Codex" {
-				got = a
-			}
-		}
-		return got.Approved && got.Scope.Mode == gateway.ScopeApps
-	})
-	// It stays: nothing sets the default again.
-	time.Sleep(300 * time.Millisecond)
-	list, _ := ga.w.Gateway.Agents(context.Background())
-	for _, a := range list {
-		if a.Name == "Codex" && (a.Scope.Mode != gateway.ScopeApps || strings.Join(a.Scope.Apps, ",") != "Dinely,Chatter") {
-			t.Errorf("Codex's scope = %+v", a.Scope)
-		}
+	want := gateway.Scope{Mode: gateway.ScopeApps, Apps: []string{"Dinely", "Chatter"}}
+	rec.mu.Lock()
+	calls := strings.Join(rec.calls, "; ")
+	rec.mu.Unlock()
+	if calls != "scope Codex "+want.String()+"; decide allow_once" {
+		t.Errorf("calls = %q", calls)
 	}
 
-	// Settings › Agents lists it with its scope.
+	// Settings › Agents lists it with its scope. Until the gateway keeps a
+	// scope set before the answer, the agent picking it up may replace
+	// it, so it is set again here.
+	ga.w.Gateway.SetAgentScope("Codex", want)
 	ga.page, ga.set.sec = pageSettings, secAgents
-	tt := mg.NewTester(ga.view, 1280, 820)
-	ga.waitFor(t, "the agent list", func() bool { tt.Frame(); return ga.agents.loaded && hasText(tt, "Codex") })
-	if !hasText(tt, "Can use Dinely and Chatter") {
-		t.Errorf("no scope line in %q", tt.Texts())
-	}
+	ga.waitFor(t, "the agent list", func() bool {
+		tt.Frame()
+		return ga.agents.loaded && hasText(tt, "Can use Dinely and Chatter")
+	})
 }
 
 // TestGatewayHandoff answers phone_handoff with Done and a note.

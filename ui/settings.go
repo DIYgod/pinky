@@ -384,79 +384,19 @@ func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scop
 	return scope
 }
 
-// approveAgent allows an agent's first connection with the chosen scope.
-// SetAgentScope approves the agent, so a call that comes back for the
-// answer later finds it allowed with that scope. A call still waiting
-// when the answer arrives sets the gateway's default scope as it goes on,
-// so keepScope puts the chosen one back.
+// approveAgent allows an agent's first connection with the chosen scope:
+// SetAgentScope, which also approves the agent, then Decide, so the
+// gateway keeps the person's choice when the agent picks up the answer.
 func (a *app) approveAgent(n gateway.NeedView, scope gateway.Scope) {
 	a.remember(n, gateway.AllowOnce, "")
 	scoper, ok := a.api.(agentScoper)
 	name := n.Agent
-	if ok && name != "" {
-		a.wantScope.Store(name, scope)
-	}
 	a.call(n.DeviceID, "approve the agent", func() error {
 		if ok && name != "" {
 			scoper.SetAgentScope(name, scope)
 		}
 		return a.api.Decide(n.ID, gateway.AllowOnce, "")
 	})
-	if ok && name != "" {
-		go a.keepScope(name)
-	}
-}
-
-// keepScope watches a newly approved agent for a few minutes and sets the
-// scope the person chose again if the gateway replaced it.
-func (a *app) keepScope(name string) {
-	al, ok := a.api.(agentLister)
-	scoper, _ := a.api.(agentScoper)
-	if !ok || scoper == nil {
-		return
-	}
-	start := time.Now()
-	for time.Since(start) < 3*time.Minute {
-		wait := 100 * time.Millisecond
-		if time.Since(start) > 10*time.Second {
-			wait = time.Second
-		}
-		select {
-		case <-a.ctx.Done():
-			return
-		case <-time.After(wait):
-		}
-		v, ok := a.wantScope.Load(name)
-		if !ok {
-			return
-		}
-		want := v.(gateway.Scope)
-		ctx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
-		list, err := al.Agents(ctx)
-		cancel()
-		if err != nil {
-			continue
-		}
-		for _, ag := range list {
-			if ag.Name == name && ag.Approved && !sameScope(ag.Scope, want) {
-				scoper.SetAgentScope(name, want)
-				a.post(func() { a.agents.load(a) })
-				return
-			}
-		}
-	}
-}
-
-func sameScope(x, y gateway.Scope) bool {
-	if x.Mode != y.Mode || len(x.Apps) != len(y.Apps) {
-		return false
-	}
-	for i := range x.Apps {
-		if x.Apps[i] != y.Apps[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func (a *app) settingsAgents(c *mg.Context) {
@@ -591,7 +531,6 @@ func (a *app) settingsAgents(c *mg.Context) {
 						if button(c, "Save", btnOpt{kind: btnPrimary}).AlignSelf(mg.Start).Clicked() {
 							if sc, ok := a.api.(agentScoper); ok {
 								name := r.name
-								a.wantScope.Store(name, scope)
 								go func() {
 									sc.SetAgentScope(name, scope)
 									a.post(func() { a.agents.load(a) })

@@ -156,7 +156,6 @@ type app struct {
 	mediaCache map[string]*mediaEntry // step screenshots by media id
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
-	wantScope  sync.Map // agent name → the gateway.Scope the person chose last
 
 	postMu  sync.Mutex
 	postWin *mygo.Window // the main window, once ready made it; post waits for it
