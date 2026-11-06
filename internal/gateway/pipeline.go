@@ -1304,7 +1304,7 @@ func (g *Gateway) agentView(raw *screen.Screen) (*screen.Screen, string) {
 	for _, e := range raw.Elements {
 		// Text read from the status bar's pixels (clock, signal and battery
 		// icons as OCR sees them) only adds noise to every diff.
-		if e.Source == screen.SourceOCR && inStatusBar(raw, e) {
+		if e.Source == screen.SourceOCR && ocrInStatusBar(raw, e) {
 			continue
 		}
 		cp.Elements = append(cp.Elements, e)
@@ -1496,6 +1496,16 @@ func inStatusBar(s *screen.Screen, e screen.Element) bool {
 		return true
 	}
 	return s.Height > 0 && !e.Bounds.Empty() && e.Bounds.Y >= 0 && e.Bounds.Y+e.Bounds.H <= s.Height*45/1000
+}
+
+// ocrInStatusBar reports whether an OCR line sits in the status bar: its
+// center in the top 6% of the screen, which covers the taller status bars
+// of iPhones with a notch or Dynamic Island (150 px of 2436 on a 13 mini).
+func ocrInStatusBar(s *screen.Screen, e screen.Element) bool {
+	if s.Height <= 0 || e.Bounds.Empty() {
+		return false
+	}
+	return e.Bounds.Center().Y < s.Height*6/100
 }
 
 // describe says what an action does, in plain words for history.
