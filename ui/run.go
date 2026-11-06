@@ -538,9 +538,13 @@ func (a *app) call(deviceID, what string, fn func() error) {
 
 // --- actions ---
 
+// selectPhone shows a phone, or the Phones page as it was for a need
+// about no phone (an agent's first connection).
 func (a *app) selectPhone(id string) {
 	a.page = pagePhones
-	a.sel = id
+	if id != "" {
+		a.sel = id
+	}
 }
 
 func (a *app) decide(n gateway.NeedView, d gateway.Decision, note string) {
