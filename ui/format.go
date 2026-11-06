@@ -14,7 +14,7 @@ import (
 // How the client reads a step. The gateway writes steps in plain words;
 // these conventions decide the mark beside each (see docs/notes/client.md):
 //
-//   - status "approval_pending" or "device_locked": waiting for the person
+//   - status "approval_pending": waiting for the person
 //   - status "user", or no tool and text starting "You ": the person's own step
 //   - status "" or "running" on the last step of a running task: in progress
 //   - anything else: done
@@ -32,7 +32,7 @@ const (
 func kindOf(t gateway.TaskView, i int) stepKind {
 	s := t.Steps[i]
 	switch {
-	case s.Status == "approval_pending" || s.Status == "device_locked":
+	case s.Status == "approval_pending":
 		return stepWait
 	case s.Status == "user" || (s.Tool == "" && strings.HasPrefix(s.Text, "You ")):
 		return stepYou

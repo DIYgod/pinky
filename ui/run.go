@@ -49,6 +49,10 @@ type Options struct {
 	// StartPage opens "activity", "settings" or "add-phone" at start
 	// instead of the phones.
 	StartPage string
+	// Hidden starts with only the menu bar icon and no window, as when an
+	// agent launches Pinky through `pinky mcp`. The window opens by itself
+	// when the first Needs you item arrives, and from the menu bar icon.
+	Hidden bool
 }
 
 // Settings are what the Settings screen changes.
@@ -114,6 +118,7 @@ type app struct {
 	devices []gateway.DeviceView
 	tasks   []gateway.TaskView
 	needs   []gateway.NeedView
+	unlocks map[string]bool // phones with an open unlock need, by id
 	loaded  bool
 
 	page page
@@ -146,6 +151,12 @@ type app struct {
 	callMu    sync.Mutex
 	callQueue map[string]chan func()
 	postHook  func(func()) // tests run posted functions themselves
+	shownOnce bool         // the main window has shown (Options.Hidden)
+
+	mediaCache map[string]*mediaEntry // step screenshots by media id
+	previews   map[string]bool        // steps whose screenshot shows in a task card
+	agents     agentsState
+	wantScope  sync.Map // agent name → the gateway.Scope the person chose last
 }
 
 // Run starts the client and returns when it quits. It owns the main
@@ -165,6 +176,10 @@ func Run(api gateway.API, opt Options) error {
 	case "dark":
 		mygo.Theme.SetSource(mygo.ThemeDark)
 	}
+	if opt.Hidden && runtime.GOOS == "darwin" {
+		// No Dock icon until the window first shows.
+		mygo.App.SetActivationPolicy(mygo.ActivationPolicyAccessory)
+	}
 	mygo.App.OnBeforeQuit(func(*mygo.QuitEvent) { a.quitting = true })
 	mygo.App.OnWindowAllClosed(func() {}) // closing the window keeps the gateway in the menu bar
 	mygo.App.OnActivate(func(bool) { a.showMain() })
@@ -182,8 +197,9 @@ func newApp(api gateway.API, opt Options) *app {
 		sel:     "",
 		mirrors: map[string]*mirror{}, shots: map[string]*mg.Bitmap{},
 		noting: map[string]bool{}, notes: map[string]string{}, details: map[string]bool{},
-		notified: map[string]bool{}, seenNeed: map[string]bool{}, more: map[string]bool{},
-		callQueue: map[string]chan func(){},
+		notified: map[string]bool{}, seenNeed: map[string]bool{}, unlocks: map[string]bool{}, more: map[string]bool{},
+		callQueue:  map[string]chan func(){},
+		mediaCache: map[string]*mediaEntry{}, previews: map[string]bool{},
 	}
 	if opt.Settings != nil {
 		a.settings = *opt.Settings
@@ -203,6 +219,7 @@ func newApp(api gateway.API, opt Options) *app {
 }
 
 func (a *app) ready() {
+	keepAppAwake()
 	// Load FFmpeg now, so a missing one is reported at start rather than
 	// as the first mirror opens.
 	if err := video.Load(); err != nil {
@@ -218,7 +235,7 @@ func (a *app) ready() {
 
 	a.main = mygo.NewWindow(mygo.WindowOptions{
 		Title: "Pinky", Width: 1280, Height: 820, MinWidth: 960, MinHeight: 620,
-		StateKey: "main", TitleBarStyle: mygo.TitleBarHidden,
+		StateKey: "main", TitleBarStyle: mygo.TitleBarHidden, Hidden: a.opt.Hidden,
 		TrafficLightPosition: &mygo.Point{X: 18, Y: 17},
 		BackgroundColor:      "light-dark(#f7f7f8, #212125)",
 		Content:              mg.View(a.view),
@@ -249,6 +266,11 @@ func (a *app) ready() {
 	a.registerShortcut()
 	a.setMenu()
 	a.updateTray()
+	// Started hidden while something already waits (an agent's first
+	// connection, say): open for it now.
+	if len(a.needs) > 0 {
+		a.openForNeed(a.needs[0])
+	}
 	if a.opt.OnReady != nil {
 		a.opt.OnReady(a.main)
 	}
@@ -381,6 +403,36 @@ func (a *app) afterRefresh(first bool) {
 
 func (a *app) setNeeds(n []gateway.NeedView) {
 	sort.SliceStable(n, func(i, j int) bool { return n[i].Created.Before(n[j].Created) })
+	// A handoff on a locked phone shows as one card, with the unlock
+	// button in it, rather than as a handoff and an unlock card.
+	a.unlocks = map[string]bool{}
+	handoff := map[string]bool{}
+	for _, x := range n {
+		switch x.Kind {
+		case gateway.NeedUnlock:
+			a.unlocks[x.DeviceID] = true
+		case gateway.NeedHandoff:
+			handoff[x.DeviceID] = true
+		}
+	}
+	shown := n[:0:0]
+	for _, x := range n {
+		if x.Kind != gateway.NeedUnlock || !handoff[x.DeviceID] {
+			shown = append(shown, x)
+		}
+	}
+	n = shown
+	// Settings › Agents reads the agents again when a first connection is
+	// asked or answered.
+	asks := 0
+	for _, x := range n {
+		if newAgentNeed(x) {
+			asks++
+		}
+	}
+	if asks != a.agents.asks {
+		a.agents.asks, a.agents.lastLoad = asks, time.Time{}
+	}
 	a.needs = n
 	live := map[string]bool{}
 	for _, x := range n {
@@ -388,6 +440,7 @@ func (a *app) setNeeds(n []gateway.NeedView) {
 		if !a.seenNeed[x.ID] {
 			a.seenNeed[x.ID] = true
 			a.notify(x)
+			a.openForNeed(x)
 		}
 	}
 	for id := range a.shots {
@@ -433,10 +486,12 @@ func (a *app) taskOf(deviceID string) *gateway.TaskView {
 	return best
 }
 
+// approvals are the needs the floating panel shows: approvals and
+// handoffs, everything but unlocks.
 func (a *app) approvals() []gateway.NeedView {
 	var out []gateway.NeedView
 	for _, n := range a.needs {
-		if n.Kind == gateway.NeedApproval {
+		if n.Kind != gateway.NeedUnlock {
 			out = append(out, n)
 		}
 	}
@@ -524,11 +579,31 @@ func (a *app) showMain() {
 	if a.main == nil {
 		return
 	}
+	a.regularApp()
 	if a.main.IsMinimized() {
 		a.main.Restore()
 	}
 	a.main.Show()
 	a.main.Focus()
+}
+
+// openForNeed opens the window of an app started hidden when something
+// first needs the person, without taking the keyboard from the app in use.
+func (a *app) openForNeed(n gateway.NeedView) {
+	if !a.opt.Hidden || a.main == nil || a.main.IsVisible() || a.shownOnce {
+		return
+	}
+	a.selectPhone(n.DeviceID)
+	a.regularApp()
+	a.main.ShowInactive()
+}
+
+// regularApp gives a hidden-started app its Dock icon once a window shows.
+func (a *app) regularApp() {
+	if a.opt.Hidden && !a.shownOnce && runtime.GOOS == "darwin" {
+		mygo.App.SetActivationPolicy(mygo.ActivationPolicyRegular)
+	}
+	a.shownOnce = true
 }
 
 // openNeed brings the main window up at the phone a need is about.
@@ -558,7 +633,7 @@ func (a *app) notify(n gateway.NeedView) {
 	}
 	nt := mygo.NewNotification(mygo.NotificationOptions{ID: n.ID, Group: "needs", Title: title, Subtitle: sub, Body: n.Detail})
 	nt.OnClick(func() {
-		if n.Kind == gateway.NeedApproval {
+		if n.Kind != gateway.NeedUnlock {
 			a.showPanel(true)
 		} else {
 			a.openNeed(n.ID)

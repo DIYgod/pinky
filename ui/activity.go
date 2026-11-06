@@ -23,6 +23,9 @@ type activityState struct {
 	asked   string // the query of the last load
 	sel     string
 	replay  bool
+	at      int // the step the replay shows
+	playing bool
+	nextAt  time.Time
 	seq     int
 	lastRun time.Time
 }
@@ -255,7 +258,7 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 		})
 		mg.Row(c).Gap(8).Children(func() {
 			if button(c, "Watch replay", btnOpt{icon: icPlay}).Clicked() {
-				a.act.replay = true
+				a.act.replay, a.act.at, a.act.playing = true, 0, false
 			}
 			more := button(c, "", btnOpt{icon: icMore, label: "More actions"}).Width(34).Padding(0)
 			more.PopoverMenuButton(func(m *mg.Menu) {
@@ -281,31 +284,47 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 		mg.Text(c, "Steps").FontSize(13).FontWeight(600).TextColor(p.ink3)
 		mg.Column(c).Gap(10).Role(mg.RoleList).Children(func() {
 			for i, s := range t.Steps {
-				you := kindOf(t, i) == stepYou
-				text, sub := splitStep(s.Text)
+				text, sub, kind := stepDisplay(t, i)
+				you := kind == stepYou
 				if sub == "" && you && s.Elapsed >= time.Second && strings.HasPrefix(text, "You ") &&
 					(strings.Contains(text, "allowed") || strings.Contains(text, "denied")) {
 					sub = "Answered in " + elapsed(s.Elapsed)
 				}
-				mg.Row(c.Key(i)).Gap(14).AlignItems(mg.Center).Role(mg.RoleListItem).Children(func() {
-					if you {
-						mg.Box(c).Size(28, 54).Center().Shrink(0).Children(func() {
-							mg.Box(c).Size(28, 28).Radius(14).Background(p.bg3).Center().Children(func() {
-								mg.Icon(c, icPerson).FontSize(15).TextColor(p.ink2)
+				key := fmt.Sprintf("act/%s/%d", t.ID, s.Index)
+				shot := a.hasShot(s)
+				open := shot && a.previews[key]
+				mg.Column(c.Key(i)).Gap(10).Role(mg.RoleListItem).Children(func() {
+					mg.Row(c).Gap(14).AlignItems(mg.Center).Children(func() {
+						switch {
+						case you:
+							mg.Box(c).Size(28, 54).Center().Shrink(0).Children(func() {
+								mg.Box(c).Size(28, 28).Radius(14).Background(p.bg3).Center().Children(func() {
+									mg.Icon(c, icPerson).FontSize(15).TextColor(p.ink2)
+								})
 							})
+						case shot:
+							b := mg.ButtonBase(c).Radius(6).Shrink(0).Label("Screenshot of “" + text + "”").Expanded(open).
+								Tooltip("Show the screenshot")
+							if b.Clicked() {
+								a.previews[key] = !open
+							}
+							b.Children(func() { a.shotView(c, t, s, 54) })
+						default:
+							stepThumb(c, col)
+						}
+						mg.Column(c).Gap(1).Children(func() {
+							tx := mg.Text(c, text).FontSize(14)
+							if you {
+								tx.FontWeight(600)
+							}
+							if sub != "" {
+								mg.Text(c, sub).FontSize(13).TextColor(p.ink2)
+							}
 						})
-					} else {
-						stepThumb(c, col)
-					}
-					mg.Column(c).Gap(1).Children(func() {
-						tx := mg.Text(c, text).FontSize(14)
-						if you {
-							tx.FontWeight(600)
-						}
-						if sub != "" {
-							mg.Text(c, sub).FontSize(13).TextColor(p.ink2)
-						}
 					})
+					if open {
+						a.shotView(c, t, s, 420).Margin(0, 0, 6, 42)
+					}
 				})
 			}
 		})
@@ -325,20 +344,77 @@ func stepThumb(c *mg.Context, col string) {
 		})
 }
 
-// replayView is Watch replay: the task's steps on a timeline. Recordings
-// arrive with the history store (M2); until then it has no video.
+// replayView is Watch replay: the task's steps one at a time, with the
+// screenshot of each, on a timeline. Video recordings are not kept yet.
 func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 	p := pal(c)
+	st := &a.act
+	n := len(t.Steps)
+	if st.at >= n {
+		st.at = max(0, n-1)
+	}
+	if st.playing {
+		now := c.Now()
+		if !now.Before(st.nextAt) {
+			if st.at < n-1 {
+				st.at++
+				st.nextAt = now.Add(1500 * time.Millisecond)
+			} else {
+				st.playing = false
+			}
+		}
+		c.After(100 * time.Millisecond)
+	}
 	mg.Column(c).Gap(18).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label("Replay").Children(func() {
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, "Replay · "+t.Title).FontSize(16).FontWeight(650).Grow(1)
 			if button(c, "Close", btnOpt{}).Clicked() {
-				a.act.replay = false
+				a.act.replay, a.act.playing = false, false
 			}
 		})
-		mg.Text(c, "No recording of this task yet. Screen recording comes with the history store; the steps are on the timeline below.").
-			FontSize(13.5).TextColor(p.ink2)
-		n := len(t.Steps)
+		if n == 0 {
+			mg.Text(c, "This task has no steps.").FontSize(13.5).TextColor(p.ink2)
+			return
+		}
+		s := t.Steps[st.at]
+		text, sub, _ := stepDisplay(t, st.at)
+		mg.Row(c).Gap(20).AlignItems(mg.Start).Wrap().Children(func() {
+			a.shotView(c, t, s, 420)
+			mg.Column(c).Basis(200).Grow(1).MinWidth(0).Gap(6).Children(func() {
+				mg.Text(c, fmt.Sprintf("Step %d of %d", st.at+1, n)).FontSize(12.5).FontWeight(600).TextColor(p.ink3)
+				mg.Text(c, text).FontSize(16).FontWeight(600).LineHeight(1.35)
+				if sub != "" {
+					mg.Text(c, sub).FontSize(13.5).TextColor(p.ink2)
+				}
+				if !s.At.IsZero() {
+					mg.Text(c, s.At.Format("15:04:05")).FontSize(13).TextColor(p.ink3)
+				}
+				mg.Row(c).Gap(8).Margin(10, 0, 0, 0).Children(func() {
+					if button(c, "", btnOpt{icon: icChevL, label: "Previous step"}).Width(34).Padding(0).Disabled(st.at == 0).Clicked() {
+						st.at--
+						st.playing = false
+					}
+					play := "Play"
+					if st.playing {
+						play = "Pause"
+					}
+					if button(c, play, btnOpt{icon: icPlay}).Clicked() {
+						st.playing = !st.playing
+						if st.playing {
+							if st.at >= n-1 {
+								st.at = 0
+							}
+							st.nextAt = c.Now().Add(1500 * time.Millisecond)
+						}
+					}
+					if button(c, "", btnOpt{icon: icChevR, label: "Next step"}).Width(34).Padding(0).Disabled(st.at >= n-1).Clicked() {
+						st.at++
+						st.playing = false
+					}
+				})
+			})
+		})
+		at := st.at
 		mg.Box(c).Height(30).FillWidth().Draw(func(pt *mg.Painter, r mg.Rect) {
 			pt.Fill(mg.Rect{X: r.X, Y: r.Y + 13, W: r.W, H: 4}, p.bg3, 2)
 			for i := range t.Steps {
@@ -347,6 +423,9 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 				col := p.ink3
 				if you {
 					size, col = 14, p.ink
+				}
+				if i == at {
+					col = p.accent
 				}
 				x := r.X + r.W*(float32(i)+0.5)/float32(max(n, 1))
 				var dotPath mg.Path

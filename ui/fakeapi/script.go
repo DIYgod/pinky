@@ -38,16 +38,20 @@ type run struct {
 
 // newTask creates a task on the device; a.mu must be held.
 func (a *API) newTask(d *device, title, short string) *task {
+	return a.newTaskBy(d, agentName, title, short)
+}
+
+func (a *API) newTaskBy(d *device, agent, title, short string) *task {
 	a.nextID++
 	t := &task{
 		view: gateway.TaskView{
 			ID: fmt.Sprintf("task-%d", a.nextID), DeviceID: d.info.ID, DeviceName: d.info.Name,
-			Agent: agentName, Title: title, State: gateway.TaskWorking, Started: a.opt.Now(),
+			Agent: agent, Title: title, State: gateway.TaskWorking, Started: a.opt.Now(),
 		},
 		short: short, dev: d, wake: make(chan struct{}, 1),
 	}
 	d.task = t
-	d.statusLine = agentName + " · " + short
+	d.statusLine = agent + " · " + short
 	a.tasks = append(a.tasks, t)
 	return t
 }
@@ -132,6 +136,9 @@ func (r *run) do(doing, done, tool, args string, target screen.Rect, d time.Dura
 	if n := len(r.t.view.Steps); n > 0 && r.t.view.Steps[n-1].Text == doing {
 		s := &r.t.view.Steps[n-1]
 		s.Text, s.Status, s.Elapsed = done, "settled", r.a.opt.Now().Sub(start)
+		if tool != "" {
+			s.After = mediaID(r.t.dev.info.ID)
+		}
 	}
 	r.a.mu.Unlock()
 	r.a.emit(gateway.Event{Kind: gateway.EventTasks, TaskID: r.t.view.ID, DeviceID: r.t.dev.info.ID})
@@ -172,7 +179,7 @@ func (r *run) ask(s askSpec) (dec decision, ok bool) {
 	r.t.finishCurrent()
 	now := a.opt.Now()
 	r.t.addStep(now, gateway.StepView{Text: s.step, Tool: s.tool, Args: s.args, Status: "approval_pending",
-		Target: s.target, Point: s.target.Center()})
+		Target: s.target, Point: s.target.Center(), Before: mediaID(r.t.dev.info.ID)})
 	stepIndex := len(r.t.view.Steps) - 1
 	a.nextID++
 	n := &need{
@@ -255,7 +262,7 @@ func (r *run) waitUnlock(detail string) bool {
 	}
 	r.t.finishCurrent()
 	now := a.opt.Now()
-	r.t.addStep(now, gateway.StepView{Text: "Waiting for you: unlock the phone", Status: "device_locked"})
+	r.t.addStep(now, gateway.StepView{Text: "Waiting for you: unlock the phone", Status: "approval_pending"})
 	idx := len(r.t.view.Steps) - 1
 	a.nextID++
 	n := &need{
@@ -461,6 +468,153 @@ func (a *API) replyToSam(gen int, d *device) func() {
 				}
 				return
 			}
+		}
+	}
+}
+
+// handoff asks the person to do something on the phone, as phone_handoff
+// does, and waits: Done hands the phone back, Deny declines, and Take over
+// leaves the step open until the person hands back.
+func (r *run) handoff(reason, app string) (dec decision, ok bool) {
+	a := r.a
+	a.mu.Lock()
+	if !r.alive() {
+		a.mu.Unlock()
+		return decision{}, false
+	}
+	r.t.finishCurrent()
+	now := a.opt.Now()
+	r.t.addStep(now, gateway.StepView{Text: "Asked you to take over: " + reason, Tool: "phone_handoff",
+		Args: `{"reason":"` + reason + `"}`, Status: "approval_pending", Before: mediaID(r.t.dev.info.ID)})
+	idx := len(r.t.view.Steps) - 1
+	a.nextID++
+	n := &need{
+		view: gateway.NeedView{
+			ID: fmt.Sprintf("handoff-%d", a.nextID), Kind: gateway.NeedHandoff,
+			DeviceID: r.t.dev.info.ID, DeviceName: r.t.dev.info.Name, App: app, Agent: r.t.view.Agent,
+			TaskID: r.t.view.ID, Title: reason, Detail: r.t.view.Agent + " · " + r.t.view.Title, Rule: "Handoff",
+			Created: now, Deadline: now.Add(15 * time.Minute),
+		},
+		decision: make(chan decision, 1),
+	}
+	a.needs = append(a.needs, n)
+	r.t.view.State = gateway.TaskWaiting
+	a.mu.Unlock()
+	a.emitAll(r.t.dev.info.ID)
+
+	dec, open := <-n.decision
+	if !open {
+		return decision{}, false
+	}
+	a.mu.Lock()
+	defer func() {
+		a.mu.Unlock()
+		a.emitAll(r.t.dev.info.ID)
+	}()
+	if !r.alive() {
+		return decision{}, false
+	}
+	if dec.d == gateway.TakeOver {
+		return dec, true // HandBack settles the step
+	}
+	st := &r.t.view.Steps[idx]
+	st.Elapsed = a.opt.Now().Sub(now)
+	st.Status = "settled"
+	if dec.d == gateway.Deny {
+		st.Status = "approval_denied"
+	}
+	if dec.note != "" {
+		st.Text += "\nYour note: “" + dec.note + "”"
+	}
+	r.t.view.State = gateway.TaskWorking
+	return dec, true
+}
+
+// signIn is the handoff scenario: Dinely wants the person to sign in,
+// which the agent leaves to them.
+func (a *API) signIn(gen int, d *device) func() {
+	t := a.newTask(d, "Reorder last week's lunch", "Reorder lunch")
+	return func() {
+		r := &run{a: a, gen: gen, t: t}
+		if !r.do("Opening Dinely", "Opened Dinely", "phone_launch", `{"app":"Dinely"}`, pixelDinelyIcon, 1500*time.Millisecond) ||
+			!r.do("Reading the screen", "Dinely asks to sign in", "phone_observe", `{}`, screen.Rect{}, 1200*time.Millisecond) {
+			return
+		}
+		dec, ok := r.handoff("Sign in to Dinely, please", "Dinely")
+		if !ok {
+			return
+		}
+		switch dec.d {
+		case gateway.Deny:
+			if r.do("Ending the task", agentName+" ended the task", "phone_release", `{"outcome":"denied"}`, screen.Rect{}, 800*time.Millisecond) {
+				r.finish(gateway.TaskDone)
+			}
+			return
+		case gateway.TakeOver:
+			if !r.sleep(0) { // until the person hands back
+				return
+			}
+		}
+		if r.do("Finding last week's order", "Found last week's order", "phone_tap", `{"ref":7,"label":"Orders"}`, pixelOrdersTab, 1800*time.Millisecond) &&
+			r.do("Adding 1 chicken rice bowl", "Added 1 chicken rice bowl", "phone_tap", `{"ref":21}`, pixelReorder, 1500*time.Millisecond) &&
+			r.do("Checking the cart", "Checked the cart: $12.80", "phone_observe", `{}`, screen.Rect{}, time.Second) {
+			r.finish(gateway.TaskDone)
+		}
+	}
+}
+
+// newAgent is the first-connection scenario: Codex asks to use the phones
+// and, once allowed, checks the weather on Pixel 9. a.mu must be held.
+func (a *API) newAgent(gen int, d *device) func() {
+	const name = "Codex"
+	a.agents[name] = &agent{name: name, scope: gateway.Scope{Mode: gateway.ScopeEverything}}
+	now := a.opt.Now()
+	a.nextID++
+	n := &need{
+		view: gateway.NeedView{
+			ID: fmt.Sprintf("agent-%d", a.nextID), Kind: gateway.NeedApproval, Agent: name, Rule: "New agent",
+			Title:   "Let " + name + " use your phones?",
+			Detail:  name + " wants to connect for “Check tomorrow's weather”. Allowing gives it everything access.",
+			Created: now, Deadline: now.Add(a.opt.ApprovalTimeout),
+		},
+		decision: make(chan decision, 1),
+	}
+	a.needs = append(a.needs, n)
+	return func() {
+		timer := time.NewTimer(a.opt.ApprovalTimeout)
+		defer timer.Stop()
+		var dec decision
+		select {
+		case d, open := <-n.decision:
+			if !open {
+				return
+			}
+			dec = d
+		case <-timer.C:
+			a.mu.Lock()
+			for i, x := range a.needs {
+				if x == n {
+					a.needs = append(a.needs[:i], a.needs[i+1:]...)
+					break
+				}
+			}
+			a.mu.Unlock()
+			a.emitAll("")
+			return
+		}
+		a.mu.Lock()
+		if a.gen != gen || dec.d == gateway.Deny {
+			a.mu.Unlock()
+			return
+		}
+		a.agents[name].approved = true // the scope stays what SetAgentScope set
+		t := a.newTaskBy(d, name, "Check tomorrow's weather", "Check the weather")
+		a.mu.Unlock()
+		a.emitAll(d.info.ID)
+		r := &run{a: a, gen: gen, t: t}
+		if r.do("Opening Weather", "Opened Weather", "phone_launch", `{"app":"Weather"}`, pixelDinelyIcon, 1500*time.Millisecond) &&
+			r.do("Reading tomorrow's forecast", "Tomorrow: 18–24 °C, light rain", "phone_observe", `{}`, screen.Rect{}, 2*time.Second) {
+			r.finish(gateway.TaskDone)
 		}
 	}
 }

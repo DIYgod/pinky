@@ -195,7 +195,7 @@ func overlayStep(t *gateway.TaskView) (gateway.StepView, stepKind, bool) {
 // tile.
 func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gateway.TaskView, radius float32, tile bool) {
 	p := pal(c)
-	locked := d.Status == gateway.DeviceLocked
+	locked := a.isLocked(d)
 	step, kind, outline := overlayStep(t)
 	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
 	if !tile {
@@ -225,7 +225,12 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			pt.Clip(r, radius, func() { pt.Image(m.bitmap, r, mg.Contain) })
 		}
 		if outline && !locked && m.picW > 0 {
-			drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
+			// Clipped to the screen: targets are in screen pixels, which on
+			// an iPhone differ from the picture's by about 1%, so an
+			// outline at the edge may reach a little past it.
+			pt.Clip(r, radius, func() {
+				drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
+			})
 		}
 	})
 	scr.Children(func() {

@@ -61,18 +61,24 @@ func (a *app) taskList(c *mg.Context) {
 	}
 }
 
-// needCard is the prototype's .ncard, for an approval or an unlock.
-// In the floating panel (floating true) it has no outer card.
+// needCard is the prototype's .ncard, for an approval, a handoff or an
+// unlock. In the floating panel (floating true) it has no outer card.
 func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 	p := pal(c)
 	card := mg.Column(c).Padding(14).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(2)
 	card.Children(func() {
 		needEyebrow(c, n)
 		mg.Text(c, n.Title).FontSize(16).FontWeight(650).Margin(6, 0, 0, 0)
-		if n.Detail != "" {
-			mg.Text(c, n.Detail).FontSize(13.5).TextColor(p.ink2)
+		detail := n.Detail
+		if newAgentNeed(n) {
+			_, picker := a.api.(agentScoper)
+			detail = agentRequestDetail(n, picker)
 		}
-		if n.Kind == gateway.NeedUnlock {
+		if detail != "" {
+			mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2)
+		}
+		switch {
+		case n.Kind == gateway.NeedUnlock:
 			label, keep := unlockWords()
 			b := button(c, label, btnOpt{kind: btnPrimary, icon: icTouchID}).Margin(12, 0, 0, 0).FillWidth()
 			if b.Clicked() {
@@ -80,9 +86,13 @@ func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 			}
 			mg.Text(c, "or unlock it on the phone").FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
 			mg.Text(c, keep).FontSize(12).TextColor(p.ink3).TextAlign(mg.Center).Margin(6, 0, 0, 0)
-			return
+		case n.Kind == gateway.NeedHandoff:
+			a.handoffControls(c, n)
+		case newAgentNeed(n):
+			a.agentRequestControls(c, n)
+		default:
+			a.approvalControls(c, n)
 		}
-		a.approvalControls(c, n)
 	})
 }
 
@@ -92,10 +102,100 @@ func needEyebrow(c *mg.Context, n gateway.NeedView) {
 	if n.App != "" {
 		text += " · " + n.App
 	}
+	if text == "" {
+		text = "First connection" // a New agent request is about no phone
+	}
 	mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 		dot(c, p.amberDot, false)
 		mg.Text(c, text).FontSize(12.5).FontWeight(600).TextColor(p.amber).SingleLine()
 	})
+}
+
+// handoffControls answer a handoff: the agent asked the person to do
+// something on the phone and waits. Done hands the phone back with the
+// note, Take over gives the person the mirror, Decline tells the agent no.
+// On a locked phone, unlocking from the computer is the first step.
+func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
+	p := pal(c)
+	agent := agentOf(n)
+	locked := a.unlocks[n.DeviceID]
+	// The person took over and the agent waits for them to hand back.
+	holding := false
+	for _, t := range a.tasks {
+		holding = holding || (t.ID == n.TaskID && t.State == gateway.TaskPaused)
+	}
+	switch {
+	case holding && !locked:
+		mg.Text(c, "You're in control. Click Done to hand the phone back to "+agent+".").FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+	case locked:
+		label, _ := unlockWords()
+		if button(c, label, btnOpt{kind: btnPrimary, icon: icTouchID}).Margin(12, 0, 0, 0).FillWidth().Clicked() {
+			a.unlock(n.DeviceID)
+		}
+		mg.Text(c, "The phone is locked. Unlocking it here hands it back to "+agent+". If you unlock it on the phone, click Done when you're finished.").
+			FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+	default:
+		mg.Text(c, "Do it on the phone and click Done, or take over to do it here.").FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+	}
+	noting := a.noting[n.ID]
+	if noting {
+		mg.Text(c, "Note for "+agent).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
+		note := a.notes[n.ID]
+		mg.TextArea(c.Key("hnote-"+n.ID), &note).Label("Note for "+agent).Placeholder("What you did, or what to do next").
+			Lines(2, 4).Margin(6, 0, 0, 0).AutoFocus()
+		a.notes[n.ID] = note
+	}
+	note := strings.TrimSpace(a.notes[n.ID])
+	declineButton := locked || holding
+	mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {
+		if declineButton {
+			if button(c, "Decline", btnOpt{}).Tooltip("Tell " + agent + " no").Clicked() {
+				a.decide(n, gateway.Deny, note)
+			}
+		} else if button(c, "Take over", btnOpt{}).Tooltip("Do it here, in the mirror").Clicked() {
+			a.decide(n, gateway.TakeOver, "")
+		}
+		done := btnOpt{kind: btnPrimary}
+		if locked {
+			done = btnOpt{}
+		}
+		if button(c, "Done", done).Tooltip("Hand the phone back to " + agent).Clicked() {
+			a.decide(n, gateway.AllowOnce, note)
+		}
+	})
+	mg.Row(c).Gap(16).Margin(10, 0, 0, 0).Children(func() {
+		if !noting && linkButton(c, "Add a note").Clicked() {
+			a.noting[n.ID] = true
+		}
+		if !declineButton && linkButton(c, "Decline").Tooltip("Tell "+agent+" no").Clicked() {
+			a.decide(n, gateway.Deny, note)
+		}
+	})
+}
+
+// agentRequestControls answer an agent's first connection: what it may do,
+// then Deny or Approve.
+func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
+	p := pal(c)
+	scope := gateway.Scope{Mode: gateway.ScopeEverything}
+	if _, ok := a.api.(agentScoper); ok {
+		mg.Text(c, "Let "+agentOf(n)).FontSize(13).FontWeight(600).Margin(12, 0, 6, 0)
+		scope = a.scopePicker(c, n.ID, "Let "+agentOf(n), scope)
+	}
+	noApps := scope.Mode == gateway.ScopeApps && len(scope.Apps) == 0
+	mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {
+		if button(c, "Deny", btnOpt{}).Clicked() {
+			a.decide(n, gateway.Deny, "")
+		}
+		ok := button(c, "Approve", btnOpt{kind: btnPrimary}).Disabled(noApps)
+		if noApps {
+			ok.Tooltip("Name at least one app")
+		}
+		if ok.Clicked() {
+			a.approveAgent(n, scope)
+		}
+	})
+	_ = p
 }
 
 // approvalControls are Deny, Allow and More options, or the note editor
@@ -161,12 +261,12 @@ func (a *app) taskStatus(c *mg.Context, t gateway.TaskView) (string, mg.Color, b
 	d := a.device(t.DeviceID)
 	switch t.State {
 	case gateway.TaskWorking:
-		if d != nil && d.Status == gateway.DeviceLocked {
+		if d != nil && a.isLocked(*d) {
 			return "Locked", p.amberDot, false
 		}
 		return "Working", p.green, true
 	case gateway.TaskWaiting:
-		if d != nil && d.Status == gateway.DeviceLocked {
+		if d != nil && a.isLocked(*d) {
 			return "Locked", p.amberDot, false
 		}
 		return "Waiting for you", p.amberDot, false
@@ -186,7 +286,7 @@ func (a *app) taskStatus(c *mg.Context, t gateway.TaskView) (string, mg.Color, b
 }
 
 // stepWord is the short state at the end of a collapsed task row.
-func stepWord(t gateway.TaskView, d gateway.DeviceView) string {
+func (a *app) stepWord(t gateway.TaskView, d gateway.DeviceView) string {
 	switch {
 	case t.State == gateway.TaskPaused:
 		return "paused"
@@ -198,7 +298,7 @@ func stepWord(t gateway.TaskView, d gateway.DeviceView) string {
 		return "stopped"
 	case t.State == gateway.TaskFailed:
 		return "failed"
-	case d.Status == gateway.DeviceLocked:
+	case a.isLocked(d):
 		return "locked"
 	case t.State == gateway.TaskWaiting:
 		return "waiting"
@@ -218,7 +318,7 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 				dot(c, col, live)
 				mg.Text(c, status).FontSize(13).TextColor(p.ink2).SingleLine()
 			})
-			canTake := run && t.State != gateway.TaskPaused && d != nil && d.Status != gateway.DeviceLocked
+			canTake := run && t.State != gateway.TaskPaused && d != nil && !a.isLocked(*d) && d.Status != gateway.DeviceInControl
 			if canTake && button(c, "Take over", btnOpt{small: true}).Clicked() {
 				a.takeOver(t.DeviceID)
 			}
@@ -240,7 +340,7 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 		if tech {
 			techList(c, t)
 		} else {
-			stepList(c, t, 8)
+			a.stepList(c, t, 8)
 		}
 		if a.settings.DeveloperMode {
 			mg.Row(c).Margin(12, 0, 0, 0).Padding(10, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).
@@ -258,8 +358,9 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 	})
 }
 
-// stepList lists a task's last steps with their marks.
-func stepList(c *mg.Context, t gateway.TaskView, last int) {
+// stepList lists a task's last steps with their marks. A step with a
+// screenshot opens it under the step on a click.
+func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 	p := pal(c)
 	from := max(0, len(t.Steps)-last)
 	mg.Column(c).Gap(10).Margin(14, 0, 0, 0).Role(mg.RoleList).Children(func() {
@@ -267,37 +368,61 @@ func stepList(c *mg.Context, t gateway.TaskView, last int) {
 			mg.Text(c, plural(from, "earlier step", "earlier steps")).FontSize(12.5).TextColor(p.ink3).Padding(0, 0, 0, 28)
 		}
 		for i := from; i < len(t.Steps); i++ {
-			kind := kindOf(t, i)
-			text, sub := splitStep(t.Steps[i].Text)
-			mg.Row(c.Key(i)).Gap(10).AlignItems(mg.Start).Role(mg.RoleListItem).Children(func() {
-				mg.Box(c).Size(18, 20).Shrink(0).Center().Children(func() {
-					switch kind {
-					case stepWait:
-						dot(c, p.amberDot, false)
-					case stepNow:
-						dot(c, p.green, true)
-					case stepYou:
-						mg.Icon(c, icPerson).FontSize(16).TextColor(p.ink2)
-					default:
-						mg.Icon(c, icCheck).FontSize(16).TextColor(p.ink3)
+			s := t.Steps[i]
+			text, sub, kind := stepDisplay(t, i)
+			key := fmt.Sprintf("%s/%d", t.ID, s.Index)
+			shot := a.hasShot(s)
+			open := shot && a.previews[key]
+			mg.Column(c.Key(i)).Gap(8).Role(mg.RoleListItem).Children(func() {
+				var row mg.Element
+				if shot {
+					row = mg.ButtonBase(c).Radius(6).Gap(10).AlignItems(mg.Start).Justify(mg.Start).
+						Label(text + ", screenshot").Expanded(open)
+					if row.Hovered() {
+						row.Background(p.bg2)
 					}
-				})
-				mg.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
-					tx := mg.Text(c, text).FontSize(14)
-					switch kind {
-					case stepWait:
-						tx.TextColor(p.amber).FontWeight(600)
-					case stepNow:
-						tx.FontWeight(600)
-					case stepYou:
-						if i == len(t.Steps)-1 && running(t.State) {
-							tx.FontWeight(600)
+					if row.Clicked() {
+						a.previews[key] = !open
+					}
+				} else {
+					row = mg.Row(c).Gap(10).AlignItems(mg.Start)
+				}
+				row.Children(func() {
+					mg.Box(c).Size(18, 20).Shrink(0).Center().Children(func() {
+						switch kind {
+						case stepWait:
+							dot(c, p.amberDot, false)
+						case stepNow:
+							dot(c, p.green, true)
+						case stepYou:
+							mg.Icon(c, icPerson).FontSize(16).TextColor(p.ink2)
+						default:
+							mg.Icon(c, icCheck).FontSize(16).TextColor(p.ink3)
 						}
-					}
-					if sub != "" {
-						mg.Text(c, sub).FontSize(13).TextColor(p.ink2)
+					})
+					mg.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
+						tx := mg.Text(c, text).FontSize(14)
+						switch kind {
+						case stepWait:
+							tx.TextColor(p.amber).FontWeight(600)
+						case stepNow:
+							tx.FontWeight(600)
+						case stepYou:
+							if i == len(t.Steps)-1 && running(t.State) {
+								tx.FontWeight(600)
+							}
+						}
+						if sub != "" {
+							mg.Text(c, sub).FontSize(13).TextColor(p.ink2)
+						}
+					})
+					if shot {
+						mg.Icon(c, icCamera).FontSize(14).TextColor(p.ink3).Margin(3, 0, 0, 0).Shrink(0)
 					}
 				})
+				if open {
+					a.shotView(c, t, s, 300).Margin(0, 0, 4, 28)
+				}
 			})
 		}
 	})
@@ -355,6 +480,6 @@ func (a *app) taskRow(c *mg.Context, t gateway.TaskView, d gateway.DeviceView) {
 			mg.Span{Text: d.Info.Name, Weight: 600, Size: 13.5},
 			mg.Span{Text: " · " + t.Title, Size: 13.5},
 		).Grow(1).MinWidth(0).SingleLine()
-		mg.Text(c, stepWord(t, d)).FontSize(12.5).TextColor(p.ink3).Shrink(0)
+		mg.Text(c, a.stepWord(t, d)).FontSize(12.5).TextColor(p.ink3).Shrink(0)
 	})
 }
