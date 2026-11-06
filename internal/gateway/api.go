@@ -115,6 +115,10 @@ type NeedKind string
 const (
 	NeedApproval NeedKind = "approval"
 	NeedUnlock   NeedKind = "unlock"
+	// NeedHandoff: the agent called phone_handoff and waits for the person.
+	// Answer it with TakeOver and HandBack, or Decide (allow = hand back
+	// with the note, Deny = decline, TakeOver = take over).
+	NeedHandoff NeedKind = "handoff"
 )
 
 // NeedView is a Needs you card.

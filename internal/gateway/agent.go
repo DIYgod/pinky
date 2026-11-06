@@ -1,0 +1,1143 @@
+package gateway
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"image"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/DIYgod/pinky/internal/approval"
+	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/history"
+	"github.com/DIYgod/pinky/internal/screen"
+)
+
+// This file is the gateway's agent-facing side. The MCP server opens one
+// Session per MCP session and calls these methods; nothing here can approve,
+// stop or take over, which only the client API can do.
+
+// AgentInfo identifies the agent behind a session.
+type AgentInfo struct {
+	Name   string // display name, such as "Claude Code"
+	Client string // the MCP client's own name and version
+}
+
+// Status is the outcome of a call, from DESIGN.md's Results table.
+type Status string
+
+// Statuses.
+const (
+	StatusSettled   Status = "settled"
+	StatusUncertain Status = "uncertain"
+	StatusBlocked   Status = "blocked_by_policy"
+	StatusDenied    Status = "approval_denied"
+	StatusPending   Status = "approval_pending"
+	StatusStale     Status = "stale"
+	StatusTookOver  Status = "user_took_over"
+	StatusPaused    Status = "paused"
+	StatusStopped   Status = "stopped"
+	StatusLocked    Status = "device_locked"
+)
+
+// ErrorCode is an error a call returns instead of a status.
+type ErrorCode string
+
+// Error codes. The first five are DESIGN.md's; invalid_argument covers bad
+// arguments and misused approval ids, internal covers gateway failures.
+const (
+	ErrDeviceOffline   ErrorCode = "device_offline"
+	ErrLeaseHeld       ErrorCode = "lease_held"
+	ErrScopeDenied     ErrorCode = "scope_denied"
+	ErrNotFound        ErrorCode = "not_found"
+	ErrUnsupported     ErrorCode = "unsupported"
+	ErrInvalidArgument ErrorCode = "invalid_argument"
+	ErrInternal        ErrorCode = "internal"
+)
+
+// Result is what an agent call returns. Either Error or Status is set.
+type Result struct {
+	Status     Status
+	Error      ErrorCode
+	Message    string // one or two plain sentences for the agent
+	Device     string
+	DeviceName string
+	// Screen is the screen after the call as the agent may see it: blocked
+	// apps are hidden and events are filtered.
+	Screen *screen.Screen
+	// Diff holds the lines that changed since the agent's last screen; when
+	// Full is set, send Screen whole instead.
+	Diff       []string
+	Full       bool
+	Settle     string // "timeout" when settling hit its limit
+	ApprovalID string
+	Rule       string
+	Note       string
+	Decision   string // phone_request_approval: "allow" or "deny"
+	Holder     string // lease_held: who holds the device
+	Matched    *bool  // phone_wait_for
+	Apps       []driver.App
+	Screenshot image.Image
+	Steps      []*Result // phone_batch, one per step that ran
+	Task       string    // phone_connect: the task id
+}
+
+// IsError reports whether the result is an error rather than a status.
+func (r *Result) IsError() bool { return r.Error != "" }
+
+func errResult(code ErrorCode, format string, args ...any) *Result {
+	return &Result{Error: code, Message: fmt.Sprintf(format, args...)}
+}
+
+func statusResult(st Status, format string, args ...any) *Result {
+	return &Result{Status: st, Message: fmt.Sprintf(format, args...)}
+}
+
+// Progress reports progress of a blocking call: done and total in seconds.
+type Progress func(done, total float64, message string)
+
+// Call holds the arguments every action tool takes.
+type Call struct {
+	Device     string
+	Intent     string
+	ApprovalID string
+	Progress   Progress
+}
+
+// ConnectRequest is phone_connect.
+type ConnectRequest struct {
+	Call
+	Task string
+	// Apps is the task's app allow-list, ids or names. Launching any other
+	// app is refused and typing into one asks the person.
+	Apps []string
+}
+
+// ReleaseRequest is phone_release.
+type ReleaseRequest struct {
+	Call
+	Outcome string // done, failed, partial or cancelled
+	Summary string
+}
+
+// ObserveRequest is phone_observe.
+type ObserveRequest struct {
+	Call
+	WaitMS     int
+	Screenshot bool
+}
+
+// WaitForRequest is phone_wait_for.
+type WaitForRequest struct {
+	Call
+	Text      string
+	Gone      bool
+	TimeoutMS int
+}
+
+// AppsRequest is phone_apps.
+type AppsRequest struct {
+	Call
+	Query string
+}
+
+// ApprovalRequest is phone_request_approval.
+type ApprovalRequest struct {
+	Call
+	Summary string
+	Details string
+}
+
+// HandoffRequest is phone_handoff.
+type HandoffRequest struct {
+	Call
+	Reason string
+}
+
+// BatchRequest is phone_batch.
+type BatchRequest struct {
+	Call
+	Steps []Action
+}
+
+// Limits from DESIGN.md's tool table.
+const (
+	MaxTextLen     = 16384
+	MaxObserveWait = 30 * time.Second
+	MaxWaitFor     = 45 * time.Second
+	MaxBatchSteps  = 50
+)
+
+// Session is one agent connection. It may hold several devices.
+type Session struct {
+	g       *Gateway
+	id      string
+	agent   AgentInfo
+	started time.Time
+
+	// Guarded by Gateway.mu.
+	leases  map[string]*lease // by device id
+	barred  map[string]bool   // devices the person stopped this session on
+	used    []string          // every device it leased
+	closed  bool
+	stopped bool // the person pressed Stop all
+}
+
+// OpenSession starts a session for an agent connection.
+func (g *Gateway) OpenSession(a AgentInfo) *Session {
+	if strings.TrimSpace(a.Name) == "" {
+		a.Name = "Agent"
+	}
+	s := &Session{g: g, id: history.NewID("s_"), agent: a, started: time.Now(),
+		leases: map[string]*lease{}, barred: map[string]bool{}}
+	g.mu.Lock()
+	g.sessions[s.id] = s
+	g.mu.Unlock()
+	g.recordSession(s)
+	return s
+}
+
+// ID returns the session id.
+func (s *Session) ID() string { return s.id }
+
+// Agent returns who the session belongs to.
+func (s *Session) Agent() AgentInfo { return s.agent }
+
+// Close ends the session: its leases end and its open approvals are
+// withdrawn without acting.
+func (s *Session) Close() { s.end(OutcomeDisconnected) }
+
+func (s *Session) end(outcome string) {
+	g := s.g
+	g.mu.Lock()
+	if s.closed {
+		g.mu.Unlock()
+		return
+	}
+	s.closed = true
+	delete(g.sessions, s.id)
+	for _, l := range s.leases {
+		g.endLeaseLocked(l, outcome, "")
+	}
+	g.mu.Unlock()
+	gone := g.approvals.WithdrawWhere(func(i approval.Info) bool { return i.Binding.Session == s.id }, "the agent disconnected")
+	g.closePendingSteps(gone, "withdrawn")
+	g.recordSession(s)
+}
+
+// acquire finds the lease a call acts on and marks it busy.
+func (s *Session) acquire(ref string) (*lease, *Result) {
+	g := s.g
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if s.closed {
+		return nil, errResult(ErrInternal, "This session is closed.")
+	}
+	var l *lease
+	if ref != "" {
+		d := g.findDeviceLocked(ref)
+		if d == nil {
+			return nil, errResult(ErrInvalidArgument, "No phone matches %q. Connected phones: %s.", ref, g.deviceListLocked())
+		}
+		if s.barred[d.id] {
+			return nil, statusResult(StatusStopped, "The person stopped the task on %s and its lease is gone. End the task.", d.name())
+		}
+		if l = s.leases[d.id]; l == nil {
+			return nil, errResult(ErrInvalidArgument, "This session is not connected to %s; call phone_connect with device %q first.", d.name(), d.id)
+		}
+	} else {
+		switch len(s.leases) {
+		case 0:
+			if len(s.barred) > 0 || s.stopped {
+				return nil, statusResult(StatusStopped, "The person pressed Stop and the lease is gone. End the task.")
+			}
+			return nil, errResult(ErrInvalidArgument, "No phone is connected in this session; call phone_connect first.")
+		case 1:
+			for _, x := range s.leases {
+				l = x
+			}
+		default:
+			var names []string
+			for _, x := range s.leases {
+				names = append(names, fmt.Sprintf("%s (%s)", x.dev.name(), x.dev.id))
+			}
+			sort.Strings(names)
+			return nil, errResult(ErrInvalidArgument, "This session holds %d phones: %s. Pass device.", len(names), strings.Join(names, ", "))
+		}
+	}
+	l.inflight++
+	l.lastUsed = time.Now()
+	return l, nil
+}
+
+func (s *Session) done(l *lease) {
+	s.g.mu.Lock()
+	l.inflight--
+	l.lastUsed = time.Now()
+	s.g.mu.Unlock()
+}
+
+// finish turns any result of a lease the person stopped meanwhile into
+// stopped, and fills in the device.
+func (g *Gateway) finish(l *lease, r *Result) *Result {
+	g.mu.Lock()
+	ended, by := l.ended, l.endedBy
+	name := l.dev.name()
+	g.mu.Unlock()
+	if ended && by == OutcomeStopped {
+		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
+	}
+	if r.Device == "" {
+		r.Device, r.DeviceName = l.dev.id, name
+	}
+	return r
+}
+
+func (g *Gateway) findDeviceLocked(ref string) *device {
+	if d, ok := g.devices[ref]; ok {
+		return d
+	}
+	var match []*device
+	for _, d := range g.devices {
+		if equalFold(d.name(), ref) {
+			match = append(match, d)
+		}
+	}
+	if len(match) == 0 && len(ref) >= 4 {
+		for _, d := range g.devices {
+			if hasPrefixFold(d.id, ref) {
+				match = append(match, d)
+			}
+		}
+	}
+	if len(match) == 1 {
+		return match[0]
+	}
+	return nil
+}
+
+func (g *Gateway) deviceListLocked() string {
+	var out []string
+	for _, d := range g.sortedDevicesLocked() {
+		state := "online"
+		if !d.online {
+			state = "offline"
+		}
+		out = append(out, fmt.Sprintf("%s (device %q, %s)", d.name(), d.id, state))
+	}
+	if len(out) == 0 {
+		return "none"
+	}
+	return strings.Join(out, ", ")
+}
+
+// Connect implements phone_connect: it leases a device for a task and
+// returns the first screen.
+func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
+	g := s.g
+	title := strings.TrimSpace(req.Task)
+	if title == "" {
+		return errResult(ErrInvalidArgument, "task is required: one line naming the task, shown to the person.")
+	}
+	if r := []rune(title); len(r) > 200 {
+		title = string(r[:200])
+	}
+	if res := s.approveAgent(ctx, req.Call, title); res != nil {
+		return res
+	}
+
+	g.mu.Lock()
+	if s.closed {
+		g.mu.Unlock()
+		return errResult(ErrInternal, "This session is closed.")
+	}
+	var d *device
+	if req.Device != "" {
+		if d = g.findDeviceLocked(req.Device); d == nil {
+			list := g.deviceListLocked()
+			g.mu.Unlock()
+			return errResult(ErrInvalidArgument, "No phone matches %q. Connected phones: %s.", req.Device, list)
+		}
+	} else if len(s.leases) == 1 {
+		for _, l := range s.leases {
+			d = l.dev
+		}
+	} else {
+		var online []*device
+		for _, x := range g.devices {
+			if x.online {
+				online = append(online, x)
+			}
+		}
+		switch len(online) {
+		case 0:
+			g.mu.Unlock()
+			return errResult(ErrDeviceOffline, "No phone is connected to Pinky. Ask the person to connect one.")
+		case 1:
+			d = online[0]
+		default:
+			list := g.deviceListLocked()
+			g.mu.Unlock()
+			return errResult(ErrInvalidArgument, "Several phones are connected: %s. Pass device.", list)
+		}
+	}
+	if s.barred[d.id] || s.stopped {
+		g.mu.Unlock()
+		return statusResult(StatusStopped, "The person stopped this agent's task on %s; this session may not use it again. End the task.", d.name())
+	}
+	if !d.online {
+		g.mu.Unlock()
+		return errResult(ErrDeviceOffline, "%s is offline.", d.name())
+	}
+	if l := d.lease; l != nil && l.session != s {
+		holder := fmt.Sprintf("%s · %s", l.session.agent.Name, l.task.title)
+		g.mu.Unlock()
+		res := errResult(ErrLeaseHeld, "%s is in use by %s.", d.name(), holder)
+		res.Holder = holder
+		return res
+	}
+	if l := d.lease; l != nil && l.task.title == title {
+		// The same task again: keep the lease, refresh the app list.
+		if len(req.Apps) > 0 {
+			l.apps = append([]string(nil), req.Apps...)
+		}
+		l.inflight++
+		g.mu.Unlock()
+		defer s.done(l)
+		return g.firstScreen(ctx, l)
+	} else if l != nil {
+		g.endLeaseLocked(l, OutcomeReplaced, "")
+	}
+	l := g.newLeaseLocked(s, d, title, req.Apps)
+	l.inflight++
+	g.mu.Unlock()
+	defer s.done(l)
+
+	g.resolveTaskApps(ctx, l)
+	g.recordSession(s)
+	args := map[string]any{"task": title}
+	if len(req.Apps) > 0 {
+		args["apps"] = req.Apps
+	}
+	g.addStep(l, StepView{Tool: "phone_connect", Args: argsJSON(args),
+		Text: fmt.Sprintf("Connected to %s for “%s”", d.name(), title), Status: string(StatusSettled), At: time.Now()})
+	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
+	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+	return g.firstScreen(ctx, l)
+}
+
+func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []string) *lease {
+	now := time.Now()
+	t := &task{id: history.NewID("t_"), sessionID: s.id, title: title, agent: s.agent.Name, deviceID: d.id,
+		deviceName: d.name(), state: TaskWorking, started: now}
+	l := &lease{id: history.NewID("l_"), session: s, dev: d, task: t, created: now, lastUsed: now,
+		apps: append([]string(nil), apps...), grants: map[string]bool{}}
+	l.ctx, l.cancel = context.WithCancel(g.ctx)
+	d.lease = l
+	d.person, d.personInput = false, false
+	d.events = nil
+	s.leases[d.id] = l
+	s.used = appendUniq(s.used, d.id)
+	g.recordTaskLocked(t)
+	return l
+}
+
+func appendUniq(list []string, s string) []string {
+	for _, x := range list {
+		if x == s {
+			return list
+		}
+	}
+	return append(list, s)
+}
+
+// resolveTaskApps adds the ids and names of installed apps that the task's
+// allow-list names, so the list matches either.
+func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) {
+	g.mu.Lock()
+	want := append([]string(nil), l.apps...)
+	g.mu.Unlock()
+	if len(want) == 0 {
+		return
+	}
+	dev := g.driverOf(l.dev)
+	if dev == nil {
+		return
+	}
+	apps, err := dev.Apps(ctx)
+	if err != nil {
+		return
+	}
+	out := append([]string(nil), want...)
+	for _, w := range want {
+		if a, ok := matchApp(apps, w); ok {
+			out = appendUniq(out, a.ID)
+			if a.Name != "" {
+				out = appendUniq(out, a.Name)
+			}
+		}
+	}
+	g.mu.Lock()
+	l.apps = out
+	g.mu.Unlock()
+}
+
+// firstScreen reads the whole screen for a new lease.
+func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
+	ctx, cancel := mergeCtx(ctx, l.ctx)
+	defer cancel()
+	cur, err := g.observe(ctx, l.dev, true)
+	if err != nil {
+		return g.finish(l, g.readError(l, err))
+	}
+	res := g.screenResult(l, cur, true)
+	res.Status = StatusSettled
+	res.Task = l.task.id
+	res.Message = fmt.Sprintf("Connected to %s for “%s”.", l.dev.name(), l.task.title)
+	if cur.Locked {
+		res.Status = StatusLocked
+		res.Message += " The phone is locked; call phone_handoff so the person can unlock it."
+	}
+	return g.finish(l, res)
+}
+
+// approveAgent holds an agent's first connection until the person allows
+// it. It returns nil once the agent may connect.
+func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Result {
+	g := s.g
+	st := g.agentState(ctx, s.agent)
+	if st.approved {
+		return nil
+	}
+	if g.opt.TrustNewAgents {
+		g.setAgentApproved(s.agent, g.opt.DefaultScope)
+		return nil
+	}
+	b := approval.Binding{Session: s.id, Tool: "phone_connect", Args: "agent"}
+	id := c.ApprovalID
+	if id != "" {
+		if err := g.approvals.Check(id, b); err != nil {
+			if errors.Is(err, approval.ErrMismatch) {
+				return errResult(ErrInvalidArgument, "approval_id %s belongs to another call.", id)
+			}
+			id = ""
+		}
+	}
+	if id == "" {
+		for _, info := range g.approvals.List(true) {
+			if info.Binding == b {
+				id = info.ID
+			}
+		}
+	}
+	if id == "" {
+		info := g.approvals.Open(approval.Request{
+			Kind: approval.KindAgent, Binding: b, Rule: "New agent", Agent: s.agent.Name,
+			Title:  fmt.Sprintf("Let %s use your phones?", s.agent.Name),
+			Detail: fmt.Sprintf("%s wants to connect for “%s”. Allowing gives it %s access.", s.agent.Name, title, g.opt.DefaultScope.Mode),
+		})
+		id = info.ID
+	}
+	info, _ := g.approvals.Get(id)
+	out, err := g.waitApproval(ctx, nil, id, info, c.Progress)
+	if err != nil {
+		g.approvals.Withdraw(id, "the agent cancelled the call")
+		return errResult(ErrInternal, "The call was cancelled.")
+	}
+	switch {
+	case out.State == approval.Open:
+		return &Result{Status: StatusPending, ApprovalID: id, Rule: "New agent",
+			Message: fmt.Sprintf("This is %s's first connection, and the person must allow it in Pinky. Repeat phone_connect with approval_id %q.", s.agent.Name, id)}
+	case out.State == approval.Used && out.Decision.Allows():
+		g.setAgentApproved(s.agent, g.opt.DefaultScope)
+		return nil
+	}
+	return &Result{Status: StatusDenied, Rule: "New agent", Note: denyNote(out),
+		Message: "The person did not allow this agent to use Pinky."}
+}
+
+func denyNote(out approval.Outcome) string {
+	switch {
+	case out.Note != "":
+		return out.Note
+	case out.TimedOut:
+		return "No answer."
+	case out.State == approval.Withdrawn && out.Reason != "":
+		return "Withdrawn: " + out.Reason + "."
+	}
+	return ""
+}
+
+// agentState returns what the person allowed an agent, loading it from
+// history the first time.
+func (g *Gateway) agentState(ctx context.Context, a AgentInfo) *agentState {
+	g.mu.Lock()
+	st, ok := g.agents[a.Name]
+	g.mu.Unlock()
+	if ok {
+		return st
+	}
+	st = &agentState{name: a.Name, scope: g.opt.DefaultScope}
+	if g.store != nil {
+		if rec, found, err := g.store.Agent(ctx, a.Name); err == nil && found {
+			st.approved = !rec.ApprovedAt.IsZero()
+			st.scope = ParseScope(rec.Scope)
+		} else if err == nil {
+			now := time.Now()
+			_ = g.store.SaveAgent(ctx, history.Agent{Name: a.Name, Client: a.Client, Scope: st.scope.String(), CreatedAt: now, LastSeen: now})
+		}
+	}
+	g.mu.Lock()
+	if cur, ok := g.agents[a.Name]; ok {
+		st = cur
+	} else {
+		g.agents[a.Name] = st
+	}
+	g.mu.Unlock()
+	return st
+}
+
+func (g *Gateway) setAgentApproved(a AgentInfo, scope Scope) {
+	g.mu.Lock()
+	st, ok := g.agents[a.Name]
+	if !ok {
+		st = &agentState{name: a.Name}
+		g.agents[a.Name] = st
+	}
+	st.approved, st.scope = true, scope
+	g.mu.Unlock()
+	if g.store != nil {
+		g.rec.do(func(ctx context.Context) error {
+			now := time.Now()
+			rec, found, err := g.store.Agent(ctx, a.Name)
+			if err != nil {
+				return err
+			}
+			if !found {
+				rec = history.Agent{Name: a.Name, CreatedAt: now}
+			}
+			rec.Client, rec.Scope, rec.ApprovedAt, rec.LastSeen = a.Client, scope.String(), now, now
+			return g.store.SaveAgent(ctx, rec)
+		})
+	}
+}
+
+func (g *Gateway) scopeOf(s *Session) Scope {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if st, ok := g.agents[s.agent.Name]; ok {
+		return st.scope
+	}
+	return g.opt.DefaultScope
+}
+
+// Release implements phone_release.
+func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
+	g := s.g
+	outcome := strings.ToLower(strings.TrimSpace(req.Outcome))
+	switch outcome {
+	case "":
+		outcome = OutcomeDone
+	case OutcomeDone, OutcomeFailed, "partial", "cancelled", "canceled":
+	default:
+		return errResult(ErrInvalidArgument, "outcome must be done, failed, partial or cancelled.")
+	}
+	if outcome == "canceled" {
+		outcome = "cancelled"
+	}
+	g.mu.Lock()
+	var ls []*lease
+	if req.Device != "" {
+		d := g.findDeviceLocked(req.Device)
+		if d == nil || s.leases[d.id] == nil {
+			g.mu.Unlock()
+			return errResult(ErrInvalidArgument, "This session does not hold %q.", req.Device)
+		}
+		ls = append(ls, s.leases[d.id])
+	} else {
+		for _, l := range s.leases {
+			ls = append(ls, l)
+		}
+	}
+	var names []string
+	for _, l := range ls {
+		names = append(names, l.dev.name())
+		g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"outcome": outcome, "summary": req.Summary}),
+			Text: "Finished: " + outcome, Status: string(StatusSettled), At: time.Now()}, "", "")
+		g.endLeaseLocked(l, outcome, req.Summary)
+	}
+	g.mu.Unlock()
+	if len(ls) == 0 {
+		return &Result{Status: StatusSettled, Message: "Nothing to release."}
+	}
+	sort.Strings(names)
+	res := &Result{Status: StatusSettled, Message: fmt.Sprintf("Released %s.", strings.Join(names, ", "))}
+	if len(ls) == 1 {
+		res.Device, res.DeviceName = ls[0].dev.id, ls[0].dev.name()
+	}
+	return res
+}
+
+// Observe implements phone_observe.
+func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
+	if req.WaitMS < 0 || time.Duration(req.WaitMS)*time.Millisecond > MaxObserveWait {
+		return errResult(ErrInvalidArgument, "wait_ms must be between 0 and 30000.")
+	}
+	l, res := s.acquire(req.Device)
+	if res != nil {
+		return res
+	}
+	defer s.done(l)
+	g := s.g
+	ctx, cancel := mergeCtx(ctx, l.ctx)
+	defer cancel()
+	if res := g.gate(l, req.ApprovalID, false); res != nil {
+		return g.finish(l, res)
+	}
+	if req.WaitMS > 0 {
+		g.waitChange(ctx, l, time.Duration(req.WaitMS)*time.Millisecond, req.Progress)
+	}
+	cur, err := g.observe(ctx, l.dev, true)
+	if err != nil {
+		return g.finish(l, g.readError(l, err))
+	}
+	res = g.screenResult(l, cur, true)
+	res.Status = StatusSettled
+	if cur.Locked {
+		res.Status = StatusLocked
+		res.Message = "The phone is locked; call phone_handoff so the person can unlock it."
+	}
+	if req.Screenshot {
+		if res.Rule != "" {
+			res.Message = strings.TrimSpace(res.Message + " No screenshot: the app is blocked.")
+		} else if dev := g.driverOf(l.dev); dev != nil {
+			img, err := dev.Screenshot(ctx)
+			switch {
+			case err == nil:
+				res.Screenshot = img
+			case errors.Is(err, driver.ErrUnsupported):
+				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
+			default:
+				res.Message = strings.TrimSpace(res.Message + " The screenshot failed: " + err.Error())
+			}
+		}
+	}
+	return g.finish(l, res)
+}
+
+// waitChange waits until the screen differs from what the agent last saw
+// and settles, or until wait passes.
+func (g *Gateway) waitChange(ctx context.Context, l *lease, wait time.Duration, progress Progress) {
+	g.mu.Lock()
+	base := l.baseline
+	wake := l.dev.wake
+	g.mu.Unlock()
+	start := time.Now()
+	deadline := start.Add(wait)
+	lastProgress := start
+	for time.Now().Before(deadline) {
+		if !sleepCtx(ctx, g.opt.PollInterval, wake) {
+			return
+		}
+		cur, err := g.observe(ctx, l.dev, false)
+		if err != nil {
+			return
+		}
+		view, _ := g.agentView(cur)
+		if base == nil || body(view) != body(base) {
+			g.settle(ctx, l.dev)
+			return
+		}
+		if progress != nil && time.Since(lastProgress) >= 5*time.Second {
+			lastProgress = time.Now()
+			progress(time.Since(start).Seconds(), wait.Seconds(), "Waiting for the screen to change")
+		}
+	}
+}
+
+// WaitFor implements phone_wait_for.
+func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
+	text := strings.TrimSpace(req.Text)
+	if text == "" {
+		return errResult(ErrInvalidArgument, "text is required.")
+	}
+	timeout := time.Duration(req.TimeoutMS) * time.Millisecond
+	switch {
+	case req.TimeoutMS < 0 || timeout > MaxWaitFor:
+		return errResult(ErrInvalidArgument, "timeout_ms must be between 0 and 45000.")
+	case timeout == 0:
+		timeout = 10 * time.Second
+	}
+	l, res := s.acquire(req.Device)
+	if res != nil {
+		return res
+	}
+	defer s.done(l)
+	g := s.g
+	ctx, cancel := mergeCtx(ctx, l.ctx)
+	defer cancel()
+	if res := g.gate(l, req.ApprovalID, false); res != nil {
+		return g.finish(l, res)
+	}
+	start := time.Now()
+	deadline := start.Add(timeout)
+	lastProgress := start
+	var cur *screen.Screen
+	matched := false
+	for {
+		var err error
+		cur, err = g.observe(ctx, l.dev, false)
+		if err != nil {
+			return g.finish(l, g.readError(l, err))
+		}
+		view, _ := g.agentView(cur)
+		g.mu.Lock()
+		evs := append([]screen.Event(nil), l.dev.events...)
+		g.mu.Unlock()
+		found := screenHas(view, evs, text)
+		if found != req.Gone {
+			matched = true
+			break
+		}
+		if !time.Now().Before(deadline) {
+			break
+		}
+		g.mu.Lock()
+		wake := l.dev.wake
+		g.mu.Unlock()
+		if !sleepCtx(ctx, g.opt.PollInterval, wake) {
+			if ctx.Err() != nil {
+				return g.finish(l, errResult(ErrInternal, "The call was cancelled."))
+			}
+		}
+		if req.Progress != nil && time.Since(lastProgress) >= 5*time.Second {
+			lastProgress = time.Now()
+			req.Progress(time.Since(start).Seconds(), timeout.Seconds(), fmt.Sprintf("Waiting for “%s”", text))
+		}
+	}
+	res = g.screenResult(l, cur, false)
+	res.Status = StatusSettled
+	res.Matched = &matched
+	verb := "appeared"
+	if req.Gone {
+		verb = "disappeared"
+	}
+	if matched {
+		res.Message = fmt.Sprintf("“%s” %s after %s.", text, verb, approval.Human(time.Since(start)))
+	} else {
+		res.Message = fmt.Sprintf("“%s” has not %s after %s.", text, verb, approval.Human(timeout))
+	}
+	g.addStep(l, StepView{Tool: "phone_wait_for", Args: argsJSON(map[string]any{"text": text, "gone": req.Gone, "timeout_ms": req.TimeoutMS}),
+		Text: fmt.Sprintf("Waited for “%s”", text), Status: string(StatusSettled), At: start, Elapsed: time.Since(start)})
+	return g.finish(l, res)
+}
+
+func screenHas(s *screen.Screen, evs []screen.Event, text string) bool {
+	t := strings.ToLower(text)
+	for _, e := range s.Elements {
+		if strings.Contains(strings.ToLower(e.Label), t) {
+			return true
+		}
+	}
+	for _, ev := range evs {
+		if strings.Contains(strings.ToLower(ev.Text), t) {
+			return true
+		}
+	}
+	return false
+}
+
+// Apps implements phone_apps: installed apps inside the agent's scope.
+// Blocked apps are not listed.
+func (s *Session) Apps(ctx context.Context, req AppsRequest) *Result {
+	l, res := s.acquire(req.Device)
+	if res != nil {
+		return res
+	}
+	defer s.done(l)
+	g := s.g
+	ctx, cancel := mergeCtx(ctx, l.ctx)
+	defer cancel()
+	if res := g.gate(l, req.ApprovalID, false); res != nil {
+		return g.finish(l, res)
+	}
+	dev := g.driverOf(l.dev)
+	if dev == nil {
+		return g.finish(l, errResult(ErrDeviceOffline, "%s is offline.", l.dev.name()))
+	}
+	apps, err := dev.Apps(ctx)
+	if err != nil {
+		return g.finish(l, g.readError(l, err))
+	}
+	scope := g.scopeOf(s)
+	q := strings.ToLower(strings.TrimSpace(req.Query))
+	var out []driver.App
+	for _, a := range apps {
+		app := screen.App{ID: a.ID, Name: a.Name}
+		if _, blocked := g.policy.Blocked(app); blocked {
+			continue
+		}
+		if scope.Mode == ScopeApps && !g.policy.IsSystem(app) && !appListed(app, scope.Apps) {
+			continue
+		}
+		if q != "" && !strings.Contains(strings.ToLower(a.Name), q) && !strings.Contains(strings.ToLower(a.ID), q) {
+			continue
+		}
+		out = append(out, a)
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].System != out[j].System {
+			return !out[i].System
+		}
+		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
+	})
+	res = &Result{Status: StatusSettled, Apps: out}
+	if len(out) == 0 {
+		res.Message = "No apps match."
+	}
+	return g.finish(l, res)
+}
+
+func appListed(app screen.App, list []string) bool {
+	for _, x := range list {
+		if x == app.ID || (app.Name != "" && strings.EqualFold(x, app.Name)) {
+			return true
+		}
+	}
+	return false
+}
+
+// Files implements phone_files, which this version does not offer.
+func (s *Session) Files(ctx context.Context, c Call) *Result {
+	return errResult(ErrUnsupported, "phone_files is not available in this version of Pinky.")
+}
+
+// RequestApproval implements phone_request_approval: it asks the person a
+// question and records the answer. It grants nothing; a later commit still
+// asks.
+func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Result {
+	summary := strings.TrimSpace(req.Summary)
+	if summary == "" {
+		return errResult(ErrInvalidArgument, "summary is required.")
+	}
+	l, res := s.acquire(req.Device)
+	if res != nil {
+		return res
+	}
+	defer s.done(l)
+	g := s.g
+	ctx, cancel := mergeCtx(ctx, l.ctx)
+	defer cancel()
+	if res := g.gate(l, req.ApprovalID, true); res != nil {
+		return g.finish(l, res)
+	}
+	b := approval.Binding{Session: s.id, Device: l.dev.id, Lease: l.id, Tool: "phone_request_approval",
+		Args: digest(summary + "\x00" + req.Details)}
+	id := req.ApprovalID
+	if id != "" {
+		if res := g.checkApproval(id, b); res != nil {
+			if res.Error != "" {
+				return g.finish(l, res)
+			}
+			id = ""
+		}
+	}
+	var info approval.Info
+	if id == "" {
+		var shot image.Image
+		if dev := g.driverOf(l.dev); dev != nil {
+			shot, _ = dev.Screenshot(ctx)
+		}
+		detail := s.agent.Name
+		if d := strings.TrimSpace(req.Details); d != "" {
+			detail += " · " + d
+		}
+		info = g.approvals.Open(approval.Request{Kind: approval.KindRequest, Binding: b, Rule: "Agent request",
+			Title: summary, Detail: detail, Agent: s.agent.Name, TaskID: l.task.id, DeviceName: l.dev.name(),
+			App: g.appName(l.dev), Screenshot: shot})
+		g.openStep(l, info, "phone_request_approval", argsJSON(map[string]any{"summary": summary, "details": req.Details}),
+			fmt.Sprintf("Asked you: “%s”", summary), screen.Rect{}, screen.Point{}, "")
+	} else {
+		info, _ = g.approvals.Get(id)
+	}
+	out, err := g.waitApproval(ctx, l, info.ID, info, req.Progress)
+	if err != nil {
+		return g.finish(l, g.cancelled(l, info.ID))
+	}
+	switch {
+	case out.State == approval.Open:
+		return g.finish(l, g.pendingResult(l, info))
+	case out.State == approval.Withdrawn:
+		g.closeStep(info.ID, string(StatusDenied), 0)
+		return g.finish(l, g.withdrawnResult(l, out))
+	}
+	g.recordDecision(info, out)
+	if out.Decision.Allows() {
+		g.closeStep(info.ID, string(StatusSettled), out.Waited)
+		res := &Result{Status: StatusSettled, Decision: "allow", Note: out.Note,
+			Message: "The person said yes. This grants nothing by itself: a later commit still asks."}
+		return g.finish(l, res)
+	}
+	g.closeStep(info.ID, string(StatusDenied), out.Waited)
+	return g.finish(l, &Result{Status: StatusDenied, Decision: "deny", Note: denyNote(out), Message: "The person said no."})
+}
+
+// Handoff implements phone_handoff: the agent waits until the person hands
+// control back, with their note.
+func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
+	reason := strings.TrimSpace(req.Reason)
+	if reason == "" {
+		return errResult(ErrInvalidArgument, "reason is required: tell the person what you need.")
+	}
+	l, res := s.acquire(req.Device)
+	if res != nil {
+		return res
+	}
+	defer s.done(l)
+	g := s.g
+	ctx, cancel := mergeCtx(ctx, l.ctx)
+	defer cancel()
+	if res := g.gate(l, req.ApprovalID, false); res != nil {
+		return g.finish(l, res)
+	}
+	b := approval.Binding{Session: s.id, Device: l.dev.id, Lease: l.id, Tool: "phone_handoff"}
+	g.mu.Lock()
+	if l.handedBack && req.ApprovalID == "" {
+		note := l.handBackNote
+		l.handedBack, l.handBackNote = false, ""
+		g.mu.Unlock()
+		return g.handedBackResult(ctx, l, note)
+	}
+	g.mu.Unlock()
+
+	id := req.ApprovalID
+	if id != "" {
+		if res := g.checkApproval(id, b); res != nil {
+			if res.Error != "" {
+				return g.finish(l, res)
+			}
+			id = ""
+		}
+	}
+	if id == "" {
+		for _, info := range g.approvals.List(true) {
+			if info.Binding == b {
+				id = info.ID
+			}
+		}
+	}
+	var info approval.Info
+	if id == "" {
+		g.mu.Lock()
+		locked := l.dev.locked
+		g.mu.Unlock()
+		info = g.approvals.Open(approval.Request{Kind: approval.KindHandoff, Binding: b, Rule: "Handoff",
+			Title: reason, Detail: fmt.Sprintf("%s · %s", s.agent.Name, l.task.title), Agent: s.agent.Name,
+			TaskID: l.task.id, DeviceName: l.dev.name(), App: g.appName(l.dev), Timeout: g.opt.HandoffTimeout})
+		g.mu.Lock()
+		if locked {
+			l.unlockHandoffs = append(l.unlockHandoffs, info.ID)
+		}
+		g.mu.Unlock()
+		g.openStep(l, info, "phone_handoff", argsJSON(map[string]any{"reason": reason}),
+			fmt.Sprintf("Asked you to take over: %s", reason), screen.Rect{}, screen.Point{}, "")
+	} else {
+		info, _ = g.approvals.Get(id)
+	}
+	out, err := g.waitApproval(ctx, l, info.ID, info, req.Progress)
+	if err != nil {
+		return g.finish(l, g.cancelled(l, info.ID))
+	}
+	switch {
+	case out.State == approval.Open:
+		return g.finish(l, g.pendingResult(l, info))
+	case out.State == approval.Withdrawn:
+		g.closeStep(info.ID, string(StatusDenied), 0)
+		return g.finish(l, g.withdrawnResult(l, out))
+	}
+	g.recordDecision(info, out)
+	if out.Decision == approval.Deny {
+		g.closeStep(info.ID, string(StatusDenied), out.Waited)
+		return g.finish(l, &Result{Status: StatusDenied, Note: denyNote(out), Message: "The person declined the handoff."})
+	}
+	g.closeStep(info.ID, string(StatusSettled), out.Waited)
+	g.mu.Lock()
+	l.handedBack, l.handBackNote = false, ""
+	g.mu.Unlock()
+	return g.handedBackResult(ctx, l, out.Note)
+}
+
+func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *Result {
+	cur, err := g.observe(ctx, l.dev, true)
+	if err != nil {
+		return g.finish(l, g.readError(l, err))
+	}
+	res := g.screenResult(l, cur, true)
+	res.Status = StatusSettled
+	res.Note = note
+	res.Message = "The person handed control back."
+	if cur.Locked {
+		res.Status = StatusLocked
+		res.Message = "The person handed control back, but the phone is locked."
+	}
+	return g.finish(l, res)
+}
+
+// Batch implements phone_batch: steps run in order and stop at the first
+// one that does not settle.
+func (s *Session) Batch(ctx context.Context, req BatchRequest) *Result {
+	if len(req.Steps) == 0 {
+		return errResult(ErrInvalidArgument, "steps is empty.")
+	}
+	if len(req.Steps) > MaxBatchSteps {
+		return errResult(ErrInvalidArgument, "phone_batch takes at most %d steps.", MaxBatchSteps)
+	}
+	for i, a := range req.Steps {
+		if res := a.check(); res != nil {
+			res.Message = fmt.Sprintf("step %d: %s", i+1, res.Message)
+			return res
+		}
+	}
+	l, res := s.acquire(req.Device)
+	if res != nil {
+		return res
+	}
+	defer s.done(l)
+	g := s.g
+	ctx, cancel := mergeCtx(ctx, l.ctx)
+	defer cancel()
+	out := &Result{Status: StatusSettled}
+	for _, a := range req.Steps {
+		c := Call{Device: req.Device, Intent: req.Intent, ApprovalID: a.ApprovalID, Progress: req.Progress}
+		if a.Intent != "" {
+			c.Intent = a.Intent
+		}
+		r := g.finish(l, g.act(ctx, l, c, a))
+		out.Steps = append(out.Steps, r)
+		if r.IsError() || r.Status != StatusSettled {
+			break
+		}
+	}
+	last := out.Steps[len(out.Steps)-1]
+	out.Status, out.Error, out.ApprovalID, out.Rule, out.Note = last.Status, last.Error, last.ApprovalID, last.Rule, last.Note
+	out.Screen = last.Screen
+	if n, total := len(out.Steps), len(req.Steps); n < total {
+		out.Message = fmt.Sprintf("Stopped at step %d of %d.", n, total)
+	}
+	return g.finish(l, out)
+}
+
+func sleepCtx(ctx context.Context, d time.Duration, wake <-chan struct{}) bool {
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		return true
+	case <-ctx.Done():
+		return false
+	case <-wake:
+		return false
+	}
+}
