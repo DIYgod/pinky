@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image"
+	"image/draw"
 	"io"
 	"os/exec"
 	"runtime"
@@ -99,10 +101,25 @@ func StartTestStream(ctx context.Context, opt TestStreamOptions) (*TestStream, e
 		return nil, fmt.Errorf("video: unsupported codec %q", opt.Codec)
 	}
 
+	return startFFmpeg(ctx, path, args, opt, nil)
+}
+
+// startFFmpeg runs ffmpeg with args, which write an Annex B stream with
+// access unit delimiters to stdout, and turns it into packets. feed, when
+// set, writes ffmpeg's input to its stdin until it fails or ctx ends.
+func startFFmpeg(ctx context.Context, path string, args []string, opt TestStreamOptions, feed func(ctx context.Context, w io.Writer) error) (*TestStream, error) {
 	cctx, cancel := context.WithCancel(ctx)
 	s := &TestStream{opt: opt, cancel: cancel, packets: make(chan driver.Packet, 120), done: make(chan struct{})}
 	s.cmd = exec.CommandContext(cctx, path, args...)
 	s.cmd.Stderr = &s.stderr
+	var in io.WriteCloser
+	if feed != nil {
+		var err error
+		if in, err = s.cmd.StdinPipe(); err != nil {
+			cancel()
+			return nil, err
+		}
+	}
 	out, err := s.cmd.StdoutPipe()
 	if err != nil {
 		cancel()
@@ -112,8 +129,64 @@ func StartTestStream(ctx context.Context, opt TestStreamOptions) (*TestStream, e
 		cancel()
 		return nil, fmt.Errorf("video: start ffmpeg: %w", err)
 	}
+	if feed != nil {
+		go func() {
+			defer in.Close()
+			_ = feed(cctx, in)
+		}()
+	}
 	go s.read(out)
 	return s, nil
+}
+
+// FrameStream encodes the pictures frame returns, fps times a second, into
+// a live H.264 stream through the ffmpeg command, at w×h pixels. Phones
+// that draw their screen rather than stream it (internal/demo) use it, so
+// the mirror shows them and its touches land in their pixels. It fails at
+// once when ffmpeg is missing.
+func FrameStream(ctx context.Context, w, h, fps int, frame func() image.Image) (*TestStream, error) {
+	if w <= 0 || h <= 0 || w%2 != 0 || h%2 != 0 {
+		return nil, fmt.Errorf("video: frame stream size %dx%d must be positive and even", w, h)
+	}
+	if fps <= 0 {
+		fps = 15
+	}
+	path, err := exec.LookPath("ffmpeg")
+	if err != nil {
+		return nil, fmt.Errorf("video: the frame stream needs the ffmpeg command: %w", err)
+	}
+	opt := TestStreamOptions{Codec: driver.H264, Width: w, Height: h, FPS: fps}
+	args := []string{"-hide_banner", "-loglevel", "error", "-nostdin",
+		"-f", "rawvideo", "-pix_fmt", "rgba", "-s", fmt.Sprintf("%dx%d", w, h), "-r", strconv.Itoa(fps), "-i", "-",
+		"-pix_fmt", "yuv420p", "-g", strconv.Itoa(fps * 2), "-bf", "0",
+		"-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+		"-bsf:v", "h264_metadata=aud=insert", "-f", "h264", "-"}
+	// -nostdin only stops ffmpeg reading commands from the terminal; the
+	// pictures still come on stdin as the input "-".
+	feed := func(ctx context.Context, out io.Writer) error {
+		buf := image.NewRGBA(image.Rect(0, 0, w, h))
+		tick := time.NewTicker(time.Second / time.Duration(fps))
+		defer tick.Stop()
+		for {
+			if img := frame(); img != nil {
+				pix := buf.Pix
+				if rgba, ok := img.(*image.RGBA); ok && rgba.Rect == buf.Rect && rgba.Stride == 4*w {
+					pix = rgba.Pix
+				} else {
+					draw.Draw(buf, buf.Rect, img, img.Bounds().Min, draw.Src)
+				}
+				if _, err := out.Write(pix); err != nil {
+					return err
+				}
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-tick.C:
+			}
+		}
+	}
+	return startFFmpeg(ctx, path, args, opt, feed)
 }
 
 func (s *TestStream) read(out io.Reader) {
