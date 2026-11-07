@@ -32,6 +32,10 @@ No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pink
 - **iPhone:** iOS 27 or later, Developer Mode on, connected over USB and trusted once in Xcode's Devices window. Nothing is installed on the phone. Typing pastes the text and puts your clipboard back.
 - **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN.
 
+### Updates
+
+Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free, keeping its accessibility service as it was. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md)). On macOS Pinky.app replaces itself after checking the download's checksum and that it is signed by Pinky's developer, and goes back to the old version if the new one does not start; a copy installed with Homebrew, run from the disk image or from a folder you cannot write to says how to update it instead. On Windows and Linux Pinky downloads the release for you to install. `pinky update` installs an update from the terminal while Pinky is not running; `pinky daemon` only logs that one is out. Details: [docs/notes/updates.md](docs/notes/updates.md).
+
 ## Layout
 
 ```text
@@ -44,6 +48,7 @@ internal/history/             task history (SQLite)
 internal/mcp/                 the MCP server
 internal/api/                 the local socket for agents and clients
 internal/demo/                scripted fake phones
+internal/update/              new versions: the feed, checks, the swap, What's new
 internal/video/, ui/          the desktop client (MyGo native UI, FFmpeg decoding)
 android/companion/            the Android companion app (Kotlin)
 scripts/                      device locks and an MCP call script for checks
@@ -105,7 +110,8 @@ CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) builds, vets and tests
 - [Design](docs/DESIGN.md)
 - [Agent guide (SKILL.md)](docs/SKILL.md) and [MCP reference](docs/mcp.md)
 - [Working on Pinky](docs/WORKING.md)
-- Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md)
+- Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md), [updates](docs/notes/updates.md)
+- [Changelog](CHANGELOG.md)
 
 ## License
 

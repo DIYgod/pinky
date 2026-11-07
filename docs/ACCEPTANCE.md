@@ -79,10 +79,18 @@ open build/pinky/darwin-arm64/Pinky.app --args --fake    # quit the real Pinky f
 
 - [ ] Two fake phones with drawn screens. Ask Claude Code to *"reorder last week's lunch (the chicken rice bowl) on the fake Pixel"*: it reaches a **Pay** approval.
 
+## 10. Updates
+
+- [x] **Pinky updates itself** *(checked on the 7th against a local feed, with two builds signed with the Developer ID in a temporary folder: `TestUpdateEndToEnd`)*: the older Pinky, left alone in the menu bar, found the newer one within a minute, downloaded and checked it, quit, and the newer one started in its place, removed the old bundle and showed **Pinky was updated** with What's new.
+- [ ] **With the real feed**, once the release pipeline publishes `latest.json`: in an installed Pinky.app the sidebar shows **Pinky … is available**; **What's new** shows the notes; **Update now** restarts into the new version; **What's new** after the restart lists the changes since the version you had. Settings › Advanced › **Check now** says *Up to date* afterwards.
+- [ ] **Not while you work**: during an agent task, an approval or with the window in use, nothing restarts; **Update now** then asks first.
+- [x] **Pinky Companion** *(checked on the Android 10 emulator)*: a phone with an older companion is updated while it is free, its accessibility service stays as it was (Android keeps it on across the update), and a toast and What's new say so. On phones where Play Protect checks USB installs it waits for your click instead, since the phone would ask.
+
 ## Decisions
 
 - **Typing on an iPhone** (yours to decide, decided here): paste through the iPhone's pasteboard and put the clipboard back; typing by keys only as a fallback.
-- **The companion app** ships inside Pinky.app and installs when you click Install; Pinky never installs anything by itself.
+- **The companion app** ships inside Pinky.app and installs when you click Install. With Update automatically on, Pinky updates an installed companion by itself while the phone is free (only Pinky's own package, and not where the phone would ask); it never installs anything else.
+- **Updates** are automatic by default (Settings › Advanced), only while nothing is going on, and the old version comes back if the new one does not start.
 - **No keeping phones awake**: Pinky wakes a phone before a step and lets its own timeout and lock apply; Android 13+ works on a background display by default so the screen can stay off.
 - **The Mac** stays awake while an agent task runs, and only then.
 - **Remote agents** are off by default and listen on this computer only unless you change the address.
