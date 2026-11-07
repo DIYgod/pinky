@@ -3,16 +3,13 @@ package ios
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"image"
 	"image/png"
-	"sync"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
-	"github.com/danielpaulus/go-ios/ios/nskeyedarchiver"
 )
 
 // AXDevice drives an iPhone on iOS 17.4 to 26 without anything installed on
@@ -23,27 +20,17 @@ import (
 //     H.264 for the mirror;
 //   - the elements: the accessibility inspector's walk, placed on the
 //     screen by OCR (the inspector gives no frames);
-//   - input: the inspector's Activate action on an element, which is what
-//     VoiceOver's double tap does, so Tap presses the element it lands on.
-//     There is no touch at a free point, no swipe, no Home and no typing;
-//     those need the WebDriverAgent helper;
+//   - no input at all. The inspector offers an Activate action (what
+//     VoiceOver's double tap does), but on iOS 27.0.1 it returned at once
+//     and pressed nothing in Calculator, also with the inspector's focus
+//     on the key; values are not settable. So taps, swipes, keys and typing
+//     return unsupported and name the WebDriverAgent helper;
 //   - apps: CoreDevice's app service launches them.
 //
 // It shares Device's services code through an inner Device that never
 // starts the stream or HID.
 type AXDevice struct {
 	d *Device
-
-	mu   sync.Mutex
-	last []axTarget // what the last Observe found, for Tap
-	at   time.Time
-}
-
-// axTarget is an element Tap can press: where it is and its handle.
-type axTarget struct {
-	bounds screen.Rect
-	handle []byte
-	label  string
 }
 
 // OpenAccessibility opens a phone on iOS 17.4 to 26 through its developer
@@ -87,20 +74,8 @@ func (a *AXDevice) Info() driver.Info { return a.d.info }
 
 // Observe implements driver.Device: the inspector's walk, placed by OCR.
 func (a *AXDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
-	s, from, _, err := a.d.observeInspectorNodes(ctx, opt, ObserveStats{})
-	if err != nil {
-		return nil, err
-	}
-	var last []axTarget
-	for i, e := range s.Elements {
-		if i < len(from) && from[i] != nil && !e.Bounds.Empty() {
-			last = append(last, axTarget{bounds: e.Bounds, handle: from[i].handle, label: e.Label})
-		}
-	}
-	a.mu.Lock()
-	a.last, a.at = last, time.Now()
-	a.mu.Unlock()
-	return s, nil
+	s, _, err := a.d.observeInspector(ctx, opt, ObserveStats{})
+	return s, err
 }
 
 // Screenshot implements driver.Device.
@@ -108,55 +83,14 @@ func (a *AXDevice) Screenshot(ctx context.Context) (image.Image, error) {
 	return a.d.Screenshot(ctx)
 }
 
-// axTargetMaxAge is how long an Observe's elements stay pressable: the
-// gateway observes before every action, and an old handle may point at an
-// element that moved.
-const axTargetMaxAge = 2 * time.Minute
-
-// targetAt returns the element under p from the last Observe: the smallest
-// one that contains it.
-func targetAt(targets []axTarget, p screen.Point) (axTarget, bool) {
-	var best axTarget
-	found := false
-	for _, t := range targets {
-		if !t.bounds.Contains(p) {
-			continue
-		}
-		if !found || t.bounds.W*t.bounds.H < best.bounds.W*best.bounds.H {
-			best, found = t, true
-		}
-	}
-	return best, found
-}
-
 // errNeedsHelper explains what this path cannot do.
 func errNeedsHelper(what string) error {
 	return fmt.Errorf("%s needs the WebDriverAgent helper on iPhones below iOS 27 (docs/notes/ios.md): %w", what, driver.ErrUnsupported)
 }
 
-// Tap implements driver.Device by pressing the element at p (the
-// accessibility Activate action, as a VoiceOver double tap). A point with
-// no element from the last Observe cannot be pressed.
+// Tap implements driver.Device.
 func (a *AXDevice) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
-	if opt.LongPress {
-		return errNeedsHelper("a long press")
-	}
-	a.mu.Lock()
-	targets, at := a.last, a.at
-	a.mu.Unlock()
-	if time.Since(at) > axTargetMaxAge {
-		targets = nil
-	}
-	t, ok := targetAt(targets, p)
-	if !ok {
-		return fmt.Errorf("nothing Pinky can press at %d,%d: without the WebDriverAgent helper it presses only elements of the last observation: %w", p.X, p.Y, driver.ErrNotFound)
-	}
-	ax, err := a.d.axReady(ctx)
-	if err != nil {
-		return err
-	}
-	a.d.markInput()
-	return ax.activate(ctx, t.handle)
+	return errNeedsHelper("tapping")
 }
 
 // Swipe implements driver.Device.
@@ -232,36 +166,6 @@ func (s *shotSource) next(ctx context.Context) (frame, error) {
 }
 
 func (s *shotSource) Close() error { return nil }
-
-// activate performs an element's default action, as VoiceOver's double tap
-// does (the inspector's "Activate", AXAction-2010).
-func (a *axSession) activate(ctx context.Context, handle []byte) error {
-	if len(handle) == 0 {
-		return errors.New("accessibility: no element") // a null handle breaks the daemon's connection
-	}
-	pass := func(v any) any {
-		return nskeyedarchiver.NewNSMutableDictionary(map[string]any{"ObjectType": "passthrough", "Value": v})
-	}
-	action := nskeyedarchiver.NewNSMutableDictionary(map[string]any{
-		"ObjectType": "AXAuditElementAttribute_v1",
-		"Value": pass(nskeyedarchiver.NewNSMutableDictionary(map[string]any{
-			"AttributeNameValue_v1":     pass("AXAction-2010"),
-			"HumanReadableNameValue_v1": pass("Activate"),
-			"PerformsActionValue_v1":    pass(true),
-			"SettableValue_v1":          pass(false),
-			"DisplayAsTree_v1":          pass(false),
-			"DisplayInlineValue_v1":     pass(false),
-			"IsInternal_v1":             pass(false),
-			"ValueTypeValue_v1":         pass(int32(1)),
-		})),
-	})
-	c, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	if _, err := a.ch.MethodCallWithContext(c, "deviceElement:performAction:withValue:", elementArg(handle), action, nskeyedarchiver.NewNSMutableDictionary(map[string]any{})); err != nil {
-		return fmt.Errorf("accessibility: activate: %w", err)
-	}
-	return nil
-}
 
 var (
 	_ driver.Device       = (*AXDevice)(nil)

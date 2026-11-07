@@ -46,7 +46,7 @@ No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pink
   | --- | --- | --- | --- |
   | 27 and later | Xcode's Device Hub protocol; nothing installed on the phone | Everything. Typing pastes the text and puts your clipboard back | iPhone 13 mini, iOS 27.0.1 |
   | 17.4 to 26, with the helper | The WebDriverAgent helper, installed once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)) | Everything but unlocking from the computer; the live picture needs macOS | iOS 18.5 and 26.5 Simulators; not yet on a phone |
-  | 17.4 to 26, without it | The developer services alone; nothing installed | Watching (a few frames a second, macOS only), reading the screen (placed by OCR, macOS only), pressing what Pinky read, opening apps. No swiping, typing or Home | Not yet on a phone below iOS 27 |
+  | 17.4 to 26, without it | The developer services alone; nothing installed | Watching (a few frames a second, macOS only), reading the screen (placed by OCR, macOS only) and opening apps. No tapping, swiping, typing or Home: the phone offers no input without the helper | The same services on iOS 27.0.1; not yet on a phone below iOS 27 |
   | 17.3 and earlier | | Not supported: before 17.4 the connection needs administrator rights, and iOS 16 and earlier need a developer disk image that current Xcode no longer includes | |
 
   The helper is Appium's WebDriverAgent, signed with your own Apple ID; with a free Apple ID it has to be installed again every 7 days.
