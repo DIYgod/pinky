@@ -3893,6 +3893,30 @@ func (msgs Messages) GwStatusWaiting(title string) string {
 	return Catalog.Format(msgs.locale, "gwStatusWaiting", map[string]any{"title": title})
 }
 
+// GwStepAlwaysAllowed says "Always allowed: “{rule}” in {app}"
+// in the language the app shows.
+//
+// The second line of a step that ran without asking the person, because on
+// an earlier approval they chose Always allow for such steps in this app
+// (Settings › Safety › Always allowed lists it). rule is the rule's
+// name (rulePayments and the like); app is the app's name. Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepAlwaysAllowed(rule string, app string) string {
+	return In(i18n.Locale()).GwStepAlwaysAllowed(rule, app)
+}
+
+// GwStepAlwaysAllowed says "Always allowed: “{rule}” in {app}"
+// in the language of msgs.
+//
+// The second line of a step that ran without asking the person, because on
+// an earlier approval they chose Always allow for such steps in this app
+// (Settings › Safety › Always allowed lists it). rule is the rule's
+// name (rulePayments and the like); app is the app's name. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepAlwaysAllowed(rule string, app string) string {
+	return Catalog.Format(msgs.locale, "gwStepAlwaysAllowed", map[string]any{"rule": rule, "app": app})
+}
+
 // GwStepAskedTakeOver says "Asked you to take over: {reason}"
 // in the language the app shows.
 //

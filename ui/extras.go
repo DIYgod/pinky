@@ -233,12 +233,7 @@ func stepDisplay(t gateway.TaskView, i int) (text, sub string, kind stepKind) {
 	handoff, isHandoff := strings.CutPrefix(text, "Asked you to take over: ")
 	asked, isAsk := strings.CutPrefix(text, "Asked you: ")
 	sub = stepSub(sub)
-	asked2 := func(why string) string {
-		if sub != "" {
-			return locales.StepAsked(why) + "\n" + sub
-		}
-		return locales.StepAsked(why)
-	}
+	asked2 := func(why string) string { return withSub(locales.StepAsked(why), sub) }
 	said := false // text is the client's words, not the gateway's
 	set := func(s string) { text, said = s, true }
 	switch s.Status {
@@ -288,7 +283,9 @@ func stepDisplay(t gateway.TaskView, i int) (text, sub string, kind stepKind) {
 	case "stale":
 		sub = locales.StepNotDoneStale()
 	case "uncertain":
-		sub = locales.StepMayHaveHappened()
+		// The gateway's line under it stays: an Always allow that let the
+		// step run without asking.
+		sub = withSub(locales.StepMayHaveHappened(), sub)
 	case "expired":
 		if waiting {
 			set(upperFirst(action))

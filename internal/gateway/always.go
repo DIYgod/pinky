@@ -87,6 +87,15 @@ func exemptedNote(res *Result, v policy.Verdict, p *prep) *Result {
 	return res
 }
 
+// exemptedLine is the second line of the step of an action that ran
+// without asking because the person always allows it in the app, so that
+// whoever reviews the task can tell a standing answer from one given then:
+// "Always allowed: “Payments” in Dinely". It names the rule exemptedNote
+// names; the client reads the line back by its pattern (ui/gwtext.go).
+func exemptedLine(p *prep) string {
+	return fmt.Sprintf("Always allowed: “%s” in %s", p.exempted[0], exemptionApp(grantApp(p)))
+}
+
 func exemptionApp(a screen.App) string {
 	if l := appLabel(a); l != "" {
 		return l

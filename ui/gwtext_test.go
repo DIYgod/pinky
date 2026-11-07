@@ -61,6 +61,16 @@ func TestGatewayWordsInEnglish(t *testing.T) {
 	if needTitle(n) != n.Title || needDetail(n) != n.Detail {
 		t.Errorf("need changed in English: %q, %q", needTitle(n), needDetail(n))
 	}
+	// A step that ran on the person's Always allow says so on its second
+	// line, also under the client's words for a step that may have
+	// happened.
+	const always = "Always allowed: “Payments” in Dinely"
+	for status, want := range map[string]string{"settled": always, "uncertain": "May have happened\n" + always} {
+		task := gateway.TaskView{State: gateway.TaskDone, Steps: []gateway.StepView{{Text: "Tapped “Pay”\n" + always, Status: status, Tool: "phone_tap"}}}
+		if text, sub, _ := stepDisplay(task, 0); text != "Tapped “Pay”" || sub != want {
+			t.Errorf("%s step: %q | %q, want %q", status, text, sub, want)
+		}
+	}
 }
 
 func TestGatewayWordsInChinese(t *testing.T) {
@@ -194,6 +204,13 @@ func TestStepDisplayInChinese(t *testing.T) {
 		{"Tapped “Reorder”", "settled", gateway.TaskDone, zh.GwDidTap("Reorder")},
 		{"Tapped “Reorder”", "not_found", gateway.TaskDone, zh.GwDidTap("Reorder") + " | " + zh.StepFailedCode(zh.StepCodeNotFound())},
 		{"Opened Dinely\nYour note: “No”", "settled", gateway.TaskDone, zh.GwDidOpen("Dinely") + " | " + zh.GwStepYourNote("“No”")},
+		{"Tapped “Pay”\nAlways allowed: “Payments” in Dinely", "settled", gateway.TaskDone,
+			zh.GwDidTap("Pay") + " | " + zh.GwStepAlwaysAllowed(zh.RulePayments(), "Dinely")},
+		{"Tapped “Pay”\nAlways allowed: “Payments” in Dinely", "uncertain", gateway.TaskDone,
+			zh.GwDidTap("Pay") + " | " + zh.StepMayHaveHappened() + "\n" + zh.GwStepAlwaysAllowed(zh.RulePayments(), "Dinely")},
+		// A rule of the person's own keeps its name, " in " and all.
+		{"Tapped “Go”\nAlways allowed: “Sign in” in Dinely", "settled", gateway.TaskDone,
+			zh.GwDidTap("Go") + " | " + zh.GwStepAlwaysAllowed("Sign in", "Dinely")},
 	} {
 		if got := step(c.text, c.status, c.state); got != c.want {
 			t.Errorf("%q (%s, %s) = %q, want %q", c.text, c.status, c.state, got, c.want)

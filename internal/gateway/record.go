@@ -87,7 +87,9 @@ func (g *Gateway) saveStepLocked(t *task, st StepView, intent, screenText string
 }
 
 // recordStep records an executed (or failed) action and returns its index.
-// step is the index of a step an approval opened, or -1 for a new one.
+// step is the index of a step an approval opened, or -1 for a new one. An
+// action that ran, or may have, without asking because of the person's
+// Always allow says so on a second line (exemptedLine).
 func (g *Gateway) recordStep(l *lease, step int, a Action, c Call, p *prep, res *Result, start time.Time, before, after, screenText string) int {
 	status := string(res.Status)
 	if res.Error != "" {
@@ -103,6 +105,9 @@ func (g *Gateway) recordStep(l *lease, step int, a Action, c Call, p *prep, res 
 			st.Point = p.point
 		} else if a.Tool == "swipe" {
 			st.Point = p.from
+		}
+		if len(p.exempted) > 0 && (res.Status == StatusSettled || res.Status == StatusUncertain) {
+			st.Text += "\n" + exemptedLine(p)
 		}
 	}
 	g.mu.Lock()

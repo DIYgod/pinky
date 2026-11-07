@@ -116,5 +116,5 @@ type RecordingView struct {
 type RecordingMark struct {
 	At   time.Duration // from Start
 	Step int           // StepView.Index
-	Text string
+	Text string        // the step's first line
 }

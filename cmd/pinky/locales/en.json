@@ -1562,6 +1562,20 @@
       }
     }
   },
+  "gwStepAlwaysAllowed": "Always allowed: “{rule}” in {app}",
+  "@gwStepAlwaysAllowed": {
+    "description": "The second line of a step that ran without asking the person, because on an earlier approval they chose Always allow for such steps in this app (Settings › Safety › Always allowed lists it). rule is the rule's name (rulePayments and the like); app is the app's name. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Payments"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
   "gwStepAskedTakeOver": "Asked you to take over: {reason}",
   "@gwStepAskedTakeOver": {
     "description": "A step: the agent asked the person to do something on the phone; reason is the agent's own words. Shown only in other languages; in English the gateway's own words show.",
