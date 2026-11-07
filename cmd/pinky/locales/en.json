@@ -544,6 +544,38 @@
   "@companionUpdatingTitle": {
     "description": "The companion card's title while Pinky updates the app by itself."
   },
+  "connectClaudeHint": "Run this in a terminal.",
+  "@connectClaudeHint": {
+    "description": "Settings › Agents › Add an agent: under the heading Claude Code, above the claude mcp add command that adds Pinky to Claude Code."
+  },
+  "connectCommandLabel": "Command that starts Pinky for an agent",
+  "@connectCommandLabel": {
+    "description": "Settings › Agents › Add an agent: the accessibility label of the command shown under Other agents."
+  },
+  "connectCopyClaude": "Copy the command for Claude Code",
+  "@connectCopyClaude": {
+    "description": "Settings › Agents › Add an agent: the accessibility label of the copy button next to the claude mcp add command."
+  },
+  "connectCopyOther": "Copy the command for other agents",
+  "@connectCopyOther": {
+    "description": "Settings › Agents › Add an agent: the accessibility label of the copy button next to the command under Other agents."
+  },
+  "connectIntro": "Agents on this computer start Pinky with a command, and you allow each one the first time it connects.",
+  "@connectIntro": {
+    "description": "Settings › Agents › Add an agent: the line under the heading."
+  },
+  "connectOtherHint": "Set this as the command of an MCP server over stdio.",
+  "@connectOtherHint": {
+    "description": "Settings › Agents › Add an agent: under Other agents, above the command (Pinky's path and the argument mcp) that agents' MCP settings take. Keep MCP and stdio."
+  },
+  "connectOtherTitle": "Other agents",
+  "@connectOtherTitle": {
+    "description": "Settings › Agents › Add an agent: the heading above the command other agents (Codex, Cursor…) run to reach Pinky."
+  },
+  "connectTitle": "Add an agent",
+  "@connectTitle": {
+    "description": "Settings › Agents: the heading of the part that says how to add an agent on this computer, and its accessibility label."
+  },
   "connectionOffline": "{platform} · offline",
   "@connectionOffline": {
     "description": "The phone page header's second line and Settings › Phones, for an offline phone. platform is Android, iPhone or a version such as Android 16.",
@@ -3058,11 +3090,11 @@
   },
   "remoteCommandLabel": "Command to add Pinky to Claude Code",
   "@remoteCommandLabel": {
-    "description": "Settings › Agents › Remote agents: the accessibility label of the claude mcp add command shown under Claude Code."
+    "description": "Settings › Agents (Add an agent and Remote agents): the accessibility label of the claude mcp add command shown under Claude Code."
   },
   "remoteCopiedCommand": "Copied the command",
   "@remoteCopiedCommand": {
-    "description": "A toast once the claude mcp add command is copied."
+    "description": "A toast once a command in Settings › Agents is copied."
   },
   "remoteCopiedToken": "Copied the agent token",
   "@remoteCopiedToken": {
@@ -3074,7 +3106,7 @@
   },
   "remoteCopyCommand": "Copy the command",
   "@remoteCopyCommand": {
-    "description": "Settings › Agents › Remote agents: the accessibility label of the copy button next to the claude mcp add command."
+    "description": "Settings › Agents (Add an agent and Remote agents): the accessibility label of the copy button next to a command."
   },
   "remoteCopyToken": "Copy the agent token",
   "@remoteCopyToken": {
@@ -3096,9 +3128,9 @@
   "@remoteHostInvalid": {
     "description": "Settings › Agents › Remote agents: under the address field, when the host is a name other than localhost. Keep 127.0.0.1 and localhost."
   },
-  "remoteIntro": "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the agent token, and you allow each one, as above.",
+  "remoteIntro": "For agents that can't start Pinky on this computer, such as one in a container. They connect over HTTP with the agent token, and you allow each one, as above.",
   "@remoteIntro": {
-    "description": "Settings › Agents › Remote agents: the line under the heading. `pinky mcp` is the command local agents run, kept with its backticks; the agent token is the secret agents present; as above refers to the connection requests above."
+    "description": "Settings › Agents › Remote agents: the line under the heading. Agents on this computer start Pinky with a command (Add an agent, above it); the agent token is the secret agents present; as above refers to the connection requests above."
   },
   "remoteOthersWarning": "Other computers on your network can reach Pinky at this address. Anyone with the agent token can ask to use your phones.",
   "@remoteOthersWarning": {
@@ -3378,19 +3410,29 @@
   "@settingsAdvancedBackends": {
     "description": "Settings › Advanced, in Developer mode: the row that lists each phone's driver backend, as Pixel 9: scrcpy."
   },
-  "settingsAdvancedConnHTTP": "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}",
+  "settingsAdvancedConnHTTP": "MCP over stdio: {command}; Streamable HTTP at {endpoint}",
   "@settingsAdvancedConnHTTP": {
-    "description": "Settings › Advanced, in Developer mode: the line under Agent connection while remote agents are on: MCP over stdio, and over Streamable HTTP at endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.",
+    "description": "Settings › Advanced, in Developer mode: the line under Agent connection while remote agents are on: MCP over stdio through command, and over Streamable HTTP at endpoint, a URL. Keep MCP, stdio and Streamable HTTP.",
     "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "/Applications/Pinky.app/Contents/MacOS/Pinky mcp"
+      },
       "endpoint": {
         "type": "String",
         "example": "http://127.0.0.1:7465/mcp"
       }
     }
   },
-  "settingsAdvancedConnStdio": "MCP over stdio: pinky mcp",
+  "settingsAdvancedConnStdio": "MCP over stdio: {command}",
   "@settingsAdvancedConnStdio": {
-    "description": "Settings › Advanced, in Developer mode: the line under Agent connection: agents run the command pinky mcp, which speaks MCP over standard input and output. Keep MCP, stdio and pinky mcp."
+    "description": "Settings › Advanced, in Developer mode: the line under Agent connection: agents run command, which speaks MCP over standard input and output. Keep MCP and stdio.",
+    "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "/Applications/Pinky.app/Contents/MacOS/Pinky mcp"
+      }
+    }
   },
   "settingsAdvancedConnection": "Agent connection",
   "@settingsAdvancedConnection": {
@@ -3476,9 +3518,9 @@
   "@settingsAgentsList": {
     "description": "Settings › Agents: the accessibility label of the list of agents."
   },
-  "settingsAgentsNone": "No agent has connected yet. Point an agent at `pinky mcp` to start.",
+  "settingsAgentsNone": "No agent has connected yet. Add one with a command below.",
   "@settingsAgentsNone": {
-    "description": "Settings › Agents: in place of the list while no agent has connected. `pinky mcp` is the command agents run to reach Pinky; keep it with its backticks."
+    "description": "Settings › Agents: in place of the list while no agent has connected. The commands below are those under Add an agent (connectTitle)."
   },
   "settingsAgentsNotAllowed": "Not allowed yet",
   "@settingsAgentsNotAllowed": {

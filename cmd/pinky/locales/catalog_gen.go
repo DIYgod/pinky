@@ -1675,6 +1675,134 @@ func (msgs Messages) CompanionUpdatingTitle() string {
 	return Catalog.Format(msgs.locale, "companionUpdatingTitle", nil)
 }
 
+// ConnectClaudeHint says "Run this in a terminal."
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: under the heading Claude Code,
+// above the claude mcp add command that adds Pinky to Claude Code.
+func ConnectClaudeHint() string { return In(i18n.Locale()).ConnectClaudeHint() }
+
+// ConnectClaudeHint says "Run this in a terminal."
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: under the heading Claude Code,
+// above the claude mcp add command that adds Pinky to Claude Code.
+func (msgs Messages) ConnectClaudeHint() string {
+	return Catalog.Format(msgs.locale, "connectClaudeHint", nil)
+}
+
+// ConnectCommandLabel says "Command that starts Pinky for an agent"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the accessibility label of the
+// command shown under Other agents.
+func ConnectCommandLabel() string { return In(i18n.Locale()).ConnectCommandLabel() }
+
+// ConnectCommandLabel says "Command that starts Pinky for an agent"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the accessibility label of the
+// command shown under Other agents.
+func (msgs Messages) ConnectCommandLabel() string {
+	return Catalog.Format(msgs.locale, "connectCommandLabel", nil)
+}
+
+// ConnectCopyClaude says "Copy the command for Claude Code"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the claude mcp add command.
+func ConnectCopyClaude() string { return In(i18n.Locale()).ConnectCopyClaude() }
+
+// ConnectCopyClaude says "Copy the command for Claude Code"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the claude mcp add command.
+func (msgs Messages) ConnectCopyClaude() string {
+	return Catalog.Format(msgs.locale, "connectCopyClaude", nil)
+}
+
+// ConnectCopyOther says "Copy the command for other agents"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the command under Other agents.
+func ConnectCopyOther() string { return In(i18n.Locale()).ConnectCopyOther() }
+
+// ConnectCopyOther says "Copy the command for other agents"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the command under Other agents.
+func (msgs Messages) ConnectCopyOther() string {
+	return Catalog.Format(msgs.locale, "connectCopyOther", nil)
+}
+
+// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the line under the heading.
+func ConnectIntro() string { return In(i18n.Locale()).ConnectIntro() }
+
+// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the line under the heading.
+func (msgs Messages) ConnectIntro() string {
+	return Catalog.Format(msgs.locale, "connectIntro", nil)
+}
+
+// ConnectOtherHint says "Set this as the command of an MCP server over stdio."
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: under Other agents, above the
+// command (Pinky's path and the argument mcp) that agents' MCP settings
+// take. Keep MCP and stdio.
+func ConnectOtherHint() string { return In(i18n.Locale()).ConnectOtherHint() }
+
+// ConnectOtherHint says "Set this as the command of an MCP server over stdio."
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: under Other agents, above the
+// command (Pinky's path and the argument mcp) that agents' MCP settings
+// take. Keep MCP and stdio.
+func (msgs Messages) ConnectOtherHint() string {
+	return Catalog.Format(msgs.locale, "connectOtherHint", nil)
+}
+
+// ConnectOtherTitle says "Other agents"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the heading above the command other
+// agents (Codex, Cursor…) run to reach Pinky.
+func ConnectOtherTitle() string { return In(i18n.Locale()).ConnectOtherTitle() }
+
+// ConnectOtherTitle says "Other agents"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the heading above the command other
+// agents (Codex, Cursor…) run to reach Pinky.
+func (msgs Messages) ConnectOtherTitle() string {
+	return Catalog.Format(msgs.locale, "connectOtherTitle", nil)
+}
+
+// ConnectTitle says "Add an agent"
+// in the language the app shows.
+//
+// Settings › Agents: the heading of the part that says how to add an
+// agent on this computer, and its accessibility label.
+func ConnectTitle() string { return In(i18n.Locale()).ConnectTitle() }
+
+// ConnectTitle says "Add an agent"
+// in the language of msgs.
+//
+// Settings › Agents: the heading of the part that says how to add an
+// agent on this computer, and its accessibility label.
+func (msgs Messages) ConnectTitle() string {
+	return Catalog.Format(msgs.locale, "connectTitle", nil)
+}
+
 // ConnectionOffline says "{platform} · offline"
 // in the language the app shows.
 //
@@ -7632,15 +7760,15 @@ func (msgs Messages) RemoteChangeAddress() string {
 // RemoteCommandLabel says "Command to add Pinky to Claude Code"
 // in the language the app shows.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// claude mcp add command shown under Claude Code.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the claude mcp add command shown under Claude Code.
 func RemoteCommandLabel() string { return In(i18n.Locale()).RemoteCommandLabel() }
 
 // RemoteCommandLabel says "Command to add Pinky to Claude Code"
 // in the language of msgs.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// claude mcp add command shown under Claude Code.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the claude mcp add command shown under Claude Code.
 func (msgs Messages) RemoteCommandLabel() string {
 	return Catalog.Format(msgs.locale, "remoteCommandLabel", nil)
 }
@@ -7648,13 +7776,13 @@ func (msgs Messages) RemoteCommandLabel() string {
 // RemoteCopiedCommand says "Copied the command"
 // in the language the app shows.
 //
-// A toast once the claude mcp add command is copied.
+// A toast once a command in Settings › Agents is copied.
 func RemoteCopiedCommand() string { return In(i18n.Locale()).RemoteCopiedCommand() }
 
 // RemoteCopiedCommand says "Copied the command"
 // in the language of msgs.
 //
-// A toast once the claude mcp add command is copied.
+// A toast once a command in Settings › Agents is copied.
 func (msgs Messages) RemoteCopiedCommand() string {
 	return Catalog.Format(msgs.locale, "remoteCopiedCommand", nil)
 }
@@ -7692,15 +7820,15 @@ func (msgs Messages) RemoteCopiedURL() string {
 // RemoteCopyCommand says "Copy the command"
 // in the language the app shows.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// copy button next to the claude mcp add command.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the copy button next to a command.
 func RemoteCopyCommand() string { return In(i18n.Locale()).RemoteCopyCommand() }
 
 // RemoteCopyCommand says "Copy the command"
 // in the language of msgs.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// copy button next to the claude mcp add command.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the copy button next to a command.
 func (msgs Messages) RemoteCopyCommand() string {
 	return Catalog.Format(msgs.locale, "remoteCopyCommand", nil)
 }
@@ -7785,22 +7913,22 @@ func (msgs Messages) RemoteHostInvalid() string {
 	return Catalog.Format(msgs.locale, "remoteHostInvalid", nil)
 }
 
-// RemoteIntro says "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the…"
+// RemoteIntro says "For agents that can't start Pinky on this computer, such as one in a container. They connect over HTTP with the agent…"
 // in the language the app shows.
 //
-// Settings › Agents › Remote agents: the line under the heading. `pinky
-// mcp` is the command local agents run, kept with its backticks; the agent
-// token is the secret agents present; as above refers to the connection
-// requests above.
+// Settings › Agents › Remote agents: the line under the heading. Agents
+// on this computer start Pinky with a command (Add an agent, above it); the
+// agent token is the secret agents present; as above refers to the
+// connection requests above.
 func RemoteIntro() string { return In(i18n.Locale()).RemoteIntro() }
 
-// RemoteIntro says "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the…"
+// RemoteIntro says "For agents that can't start Pinky on this computer, such as one in a container. They connect over HTTP with the agent…"
 // in the language of msgs.
 //
-// Settings › Agents › Remote agents: the line under the heading. `pinky
-// mcp` is the command local agents run, kept with its backticks; the agent
-// token is the secret agents present; as above refers to the connection
-// requests above.
+// Settings › Agents › Remote agents: the line under the heading. Agents
+// on this computer start Pinky with a command (Add an agent, above it); the
+// agent token is the secret agents present; as above refers to the
+// connection requests above.
 func (msgs Messages) RemoteIntro() string {
 	return Catalog.Format(msgs.locale, "remoteIntro", nil)
 }
@@ -8717,42 +8845,44 @@ func (msgs Messages) SettingsAdvancedBackends() string {
 	return Catalog.Format(msgs.locale, "settingsAdvancedBackends", nil)
 }
 
-// SettingsAdvancedConnHTTP says "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}"
+// SettingsAdvancedConnHTTP says "MCP over stdio: {command}; Streamable HTTP at {endpoint}"
 // in the language the app shows.
 //
 // Settings › Advanced, in Developer mode: the line under Agent connection
-// while remote agents are on: MCP over stdio, and over Streamable HTTP at
-// endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.
-func SettingsAdvancedConnHTTP(endpoint string) string {
-	return In(i18n.Locale()).SettingsAdvancedConnHTTP(endpoint)
+// while remote agents are on: MCP over stdio through command, and over
+// Streamable HTTP at endpoint, a URL. Keep MCP, stdio and Streamable HTTP.
+func SettingsAdvancedConnHTTP(command string, endpoint string) string {
+	return In(i18n.Locale()).SettingsAdvancedConnHTTP(command, endpoint)
 }
 
-// SettingsAdvancedConnHTTP says "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}"
+// SettingsAdvancedConnHTTP says "MCP over stdio: {command}; Streamable HTTP at {endpoint}"
 // in the language of msgs.
 //
 // Settings › Advanced, in Developer mode: the line under Agent connection
-// while remote agents are on: MCP over stdio, and over Streamable HTTP at
-// endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.
-func (msgs Messages) SettingsAdvancedConnHTTP(endpoint string) string {
-	return Catalog.Format(msgs.locale, "settingsAdvancedConnHTTP", map[string]any{"endpoint": endpoint})
+// while remote agents are on: MCP over stdio through command, and over
+// Streamable HTTP at endpoint, a URL. Keep MCP, stdio and Streamable HTTP.
+func (msgs Messages) SettingsAdvancedConnHTTP(command string, endpoint string) string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedConnHTTP", map[string]any{"command": command, "endpoint": endpoint})
 }
 
-// SettingsAdvancedConnStdio says "MCP over stdio: pinky mcp"
+// SettingsAdvancedConnStdio says "MCP over stdio: {command}"
 // in the language the app shows.
 //
 // Settings › Advanced, in Developer mode: the line under Agent
-// connection: agents run the command pinky mcp, which speaks MCP over
-// standard input and output. Keep MCP, stdio and pinky mcp.
-func SettingsAdvancedConnStdio() string { return In(i18n.Locale()).SettingsAdvancedConnStdio() }
+// connection: agents run command, which speaks MCP over standard input and
+// output. Keep MCP and stdio.
+func SettingsAdvancedConnStdio(command string) string {
+	return In(i18n.Locale()).SettingsAdvancedConnStdio(command)
+}
 
-// SettingsAdvancedConnStdio says "MCP over stdio: pinky mcp"
+// SettingsAdvancedConnStdio says "MCP over stdio: {command}"
 // in the language of msgs.
 //
 // Settings › Advanced, in Developer mode: the line under Agent
-// connection: agents run the command pinky mcp, which speaks MCP over
-// standard input and output. Keep MCP, stdio and pinky mcp.
-func (msgs Messages) SettingsAdvancedConnStdio() string {
-	return Catalog.Format(msgs.locale, "settingsAdvancedConnStdio", nil)
+// connection: agents run command, which speaks MCP over standard input and
+// output. Keep MCP and stdio.
+func (msgs Messages) SettingsAdvancedConnStdio(command string) string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedConnStdio", map[string]any{"command": command})
 }
 
 // SettingsAdvancedConnection says "Agent connection"
@@ -9043,20 +9173,18 @@ func (msgs Messages) SettingsAgentsList() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsList", nil)
 }
 
-// SettingsAgentsNone says "No agent has connected yet. Point an agent at `pinky mcp` to start."
+// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
 // in the language the app shows.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// `pinky mcp` is the command agents run to reach Pinky; keep it with its
-// backticks.
+// The commands below are those under Add an agent (connectTitle).
 func SettingsAgentsNone() string { return In(i18n.Locale()).SettingsAgentsNone() }
 
-// SettingsAgentsNone says "No agent has connected yet. Point an agent at `pinky mcp` to start."
+// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
 // in the language of msgs.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// `pinky mcp` is the command agents run to reach Pinky; keep it with its
-// backticks.
+// The commands below are those under Add an agent (connectTitle).
 func (msgs Messages) SettingsAgentsNone() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsNone", nil)
 }
