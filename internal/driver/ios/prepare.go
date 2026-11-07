@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -151,27 +152,58 @@ func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check f
 }
 
 // mountOn mounts img on the phone behind e through a tunnel of its own,
-// once the phone is unlocked. A mount that ran out of time on a phone that
-// locked meanwhile is reported as the lock, so the person is asked to
-// unlock it.
+// once the phone is unlocked. A locked phone fails at once with
+// errPhoneLocked, so the person is asked to unlock it; so does a phone that
+// locks while its image is being installed, which lockWatch notices
+// within a couple of seconds, rather than after the mount's timeout.
 func mountOn(ctx context.Context, e goios.DeviceEntry, img diskImage) (mountResult, error) {
-	st, err := phoneStateOf(ctx, e)
+	return mountOnWith(ctx, e, img, phoneStateOf, func(ctx context.Context, img diskImage, major int) (mountResult, error) {
+		l, err := dialLinkEntry(ctx, e)
+		if err != nil {
+			return mountResult{}, err
+		}
+		defer l.Close()
+		return mountDiskImage(ctx, l, img, major)
+	})
+}
+
+// lockWatch is how often mountOnWith looks at the lock while it mounts.
+var lockWatch = 2 * time.Second
+
+// mountOnWith is mountOn with the lockdown reader and the mount to run.
+func mountOnWith(ctx context.Context, e goios.DeviceEntry, img diskImage,
+	state func(context.Context, goios.DeviceEntry) (phoneState, error),
+	mount func(context.Context, diskImage, int) (mountResult, error)) (mountResult, error) {
+	st, err := state(ctx, e)
 	if err != nil {
 		return mountResult{}, err
 	}
 	if st.locked {
 		return mountResult{}, errPhoneLocked
 	}
-	l, err := dialLinkEntry(ctx, e)
-	if err != nil {
-		return mountResult{}, err
-	}
-	defer l.Close()
-	r, err := mountDiskImage(ctx, l, img, st.major)
-	if errors.Is(err, context.DeadlineExceeded) {
-		if now, serr := phoneStateOf(context.Background(), e); serr == nil && now.locked {
-			return r, fmt.Errorf("%w (it locked while the image was being installed)", errPhoneLocked)
+	mctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var locked atomic.Bool
+	every := lockWatch
+	go func() {
+		t := time.NewTicker(every)
+		defer t.Stop()
+		for {
+			select {
+			case <-mctx.Done():
+				return
+			case <-t.C:
+				if now, err := state(mctx, e); err == nil && now.locked {
+					locked.Store(true)
+					cancel() // closes the mount's tunnel, which ends go-ios's wait
+					return
+				}
+			}
 		}
+	}()
+	r, err := mount(mctx, img, st.major)
+	if err != nil && locked.Load() {
+		return r, fmt.Errorf("%w (it locked while the image was being installed)", errPhoneLocked)
 	}
 	return r, err
 }

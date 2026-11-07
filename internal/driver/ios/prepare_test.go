@@ -557,3 +557,53 @@ func TestMountWay(t *testing.T) {
 		t.Error("an image without a cryptex should read as not for this iPhone")
 	}
 }
+
+// TestMountStopsWhenThePhoneLocks: a locked phone is not mounted at all,
+// and a phone that locks during the mount stops it within a lock watch,
+// both as errPhoneLocked, which asks the person to unlock it.
+func TestMountStopsWhenThePhoneLocks(t *testing.T) {
+	defer func(d time.Duration) { lockWatch = d }(lockWatch)
+	lockWatch = 20 * time.Millisecond
+	e := entry("phone", 1, "USB")
+	var mu sync.Mutex
+	locked := true
+	state := func(context.Context, goios.DeviceEntry) (phoneState, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		return phoneState{major: 27, locked: locked}, nil
+	}
+	mounts := 0
+	hang := func(ctx context.Context, _ diskImage, major int) (mountResult, error) {
+		mounts++
+		if major != 27 {
+			t.Errorf("mounted for iOS %d", major)
+		}
+		<-ctx.Done() // go-ios waiting for a phone that refuses
+		return mountResult{}, ctx.Err()
+	}
+	if _, err := mountOnWith(context.Background(), e, diskImage{}, state, hang); !errors.Is(err, errPhoneLocked) || mounts != 0 {
+		t.Fatalf("a locked phone: %v after %d mounts; want errPhoneLocked and no mount", err, mounts)
+	}
+	mu.Lock()
+	locked = false
+	mu.Unlock()
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		mu.Lock()
+		locked = true
+		mu.Unlock()
+	}()
+	start := time.Now()
+	_, err := mountOnWith(context.Background(), e, diskImage{}, state, hang)
+	if !errors.Is(err, errPhoneLocked) || mounts != 1 || time.Since(start) > 2*time.Second {
+		t.Fatalf("a phone that locked during the mount: %v after %v; want errPhoneLocked within a watch", err, time.Since(start))
+	}
+	// An unlocked phone mounts as usual.
+	mu.Lock()
+	locked = false
+	mu.Unlock()
+	ok := func(context.Context, diskImage, int) (mountResult, error) { return mountResult{How: mountCryptex}, nil }
+	if r, err := mountOnWith(context.Background(), e, diskImage{}, state, ok); err != nil || r.How != mountCryptex {
+		t.Fatalf("an unlocked phone: %+v, %v", r, err)
+	}
+}
