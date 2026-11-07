@@ -1,4 +1,4 @@
-# The version of cmd/pinky/mygo.json: 0.0.0 in the source, and the
+# The version of cmd/pinky/mygo.json: 0.0.0-dev in the source, and the
 # release's version in the checkout a release builds, which writes it there
 # (docs/RELEASING.md).
 VERSION := $(shell sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' cmd/pinky/mygo.json)

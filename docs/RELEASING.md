@@ -19,7 +19,7 @@ On this Mac the whole build, notarization included, takes about two minutes once
 
 A version is `YEAR.MDD.N`: the release's date in Asia/Shanghai (the month without a leading zero, then the two-digit day) and that day's count from 1. `2026.1107.1`, `2026.1107.2`, `2027.105.1`. Every part is an integer without leading zeros, so versions are valid semver, compare part by part, and fit macOS bundle versions and Windows version resources. Tags are `v<version>`. `scripts/release.sh next` prints the next one, counting the tags here and on `origin`.
 
-The version is not kept in the source. A release writes it into its checkout's `cmd/pinky/mygo.json` (`go run ./scripts/release stamp <version>`) before building, which gives it to the app (`Info.plist`, the Windows version resource, the packages), to `pinky version` (`-X main.version`), and to the companion APK's versionName. Builds from the source (`make app`, `go build`) say `0.0.0` or `0.0.0-dev`, which are not release versions.
+The version is not kept in the source. A release writes it into its checkout's `cmd/pinky/mygo.json` (`go run ./scripts/release stamp <version>`) before building, which gives it to the app (`Info.plist`, the Windows version resource, the packages), to `pinky version` (`-X main.version`), and to the companion APK's versionName. Builds from the source (`make app`, `go build`) say `0.0.0-dev`, which is not a release version, so they never look for updates.
 
 Go modules read a `v2026…` tag as major version 2026, which the module path does not carry, so `go install github.com/DIYgod/pinky/cmd/pinky@latest` takes the newest commit rather than a release.
 
