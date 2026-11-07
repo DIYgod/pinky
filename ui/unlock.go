@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"runtime"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -32,6 +33,7 @@ type pinState struct {
 	busy      bool
 	err       string
 	unlocking map[string]bool // phones being unlocked
+	later     map[string]bool // phones whose lock card the person put off
 }
 
 // notAvailableHere is what the client says where the system has no
@@ -300,4 +302,54 @@ func (a *app) removePIN(id, name string) {
 			a.toasts = append(a.toasts, "Removed the PIN for "+name)
 		})
 	}()
+}
+
+// lockCard is shown on a locked phone's page while nothing needs the
+// person: it tells them the phone can be unlocked from this computer, and
+// offers to save its PIN when none is saved, or to unlock it when one is.
+// Without it nobody would know the feature exists until an agent hits the
+// lock screen.
+func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
+	id := d.Info.ID
+	canUnlock, missing := a.canUnlockHere(id), a.pinMissing(d)
+	if !canUnlock && !missing {
+		return // this computer cannot unlock it: the mirror's lock says enough
+	}
+	if missing && a.pin.later[id] && a.pin.editing != id {
+		return
+	}
+	p := pal(c)
+	_, keep := unlockWords()
+	mg.Column(c.Key("lock-"+id)).Padding(14).Radius(12).Background(p.bg2).Border(1, p.line).Gap(8).
+		Label(d.Info.Name + " is locked").Children(func() {
+		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
+			mg.Icon(c, icLock).FontSize(16).TextColor(p.ink2)
+			mg.Text(c, d.Info.Name+" is locked").FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
+		})
+		if canUnlock {
+			mg.Text(c, "Unlock it from here when you or an agent need it.").FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			a.unlockButton(c, id).Margin(4, 0, 0, 0).FillWidth()
+			mg.Text(c, keep).FontSize(12).TextColor(p.ink3)
+			return
+		}
+		mg.Text(c, "Save its PIN and you can unlock it from this computer"+unlockMethod()+" when an agent needs it, without picking the phone up.").
+			FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+		mg.Column(c).Gap(8).Margin(4, 0, 0, 0).Children(func() { a.pinForm(c, d, "lock") })
+		if a.pin.editing != id {
+			if quietButton(c, "Not now").Label("Not now: hide this for " + d.Info.Name).Clicked() {
+				a.pin.later[id] = true
+			}
+		}
+	})
+}
+
+// unlockMethod is how the person confirms an unlock here, for a sentence.
+func unlockMethod() string {
+	switch runtime.GOOS {
+	case "darwin":
+		return " with Touch ID"
+	case "windows":
+		return " with Windows Hello"
+	}
+	return ""
 }

@@ -55,6 +55,8 @@ type device struct {
 	video *taskVideo
 	// wokeAt is when the gateway last woke the screen, or found it on.
 	wokeAt time.Time
+	// lockReadAt is when an idle phone's lock state was last read.
+	lockReadAt time.Time
 	// personAt is when the person last used the phone's own screen while
 	// an agent worked on a background display (which does not pause it).
 	personAt time.Time

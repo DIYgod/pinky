@@ -642,3 +642,35 @@ func TestAwakeWhileTasksRun(t *testing.T) {
 		t.Errorf("awake calls %v after the task", calls)
 	}
 }
+
+// TestLockCardOffersPIN tells the person about unlocking from this
+// computer when a phone is locked and nothing needs them: Save PIN…
+// without a saved PIN, Unlock once one is saved, and Not now hides it.
+func TestLockCardOffersPIN(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.waitFor(t, "the phones and the keychain probe", func() bool { return ta.pin.ready && len(ta.devices) > 0 })
+	d := ta.devices[0]
+	d.Status, d.Features.Unlock = gateway.DeviceLocked, true
+	ta.devices[0], ta.needs, ta.sel, ta.page = d, nil, d.Info.ID, pagePhones
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	for _, want := range []string{d.Info.Name + " is locked", "Save PIN…", "Not now"} {
+		if !hasText(tt, want) {
+			t.Errorf("no %q on a locked phone's page: %q", want, tt.Texts())
+		}
+	}
+	if err := ta.opt.Secrets.Save(secret.PINAccount(d.Info.ID), "1234"); err != nil {
+		t.Fatal(err)
+	}
+	ta.pin.saved[d.Info.ID] = true
+	tt.Frame()
+	if label, _ := unlockWords(); !hasText(tt, label) || hasText(tt, "Save PIN…") {
+		t.Errorf("with a saved PIN the card should offer to unlock: %q", tt.Texts())
+	}
+	ta.pin.saved[d.Info.ID] = false
+	ta.pin.later[d.Info.ID] = true
+	tt.Frame()
+	if hasText(tt, "Save PIN…") || hasText(tt, "Not now") {
+		t.Errorf("Not now did not hide the card: %q", tt.Texts())
+	}
+}

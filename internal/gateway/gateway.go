@@ -448,14 +448,28 @@ func (g *Gateway) expireIdle() {
 	}
 }
 
-// pollLocks asks lock-reporting drivers about devices that have an agent.
-// A locked device whose driver cannot report locks is read instead, so the
-// unlock card goes away when the person unlocks.
+// idleLockEvery is how often an idle phone's lock state is read, so the
+// client can show a locked phone, and offer to save its PIN for unlocking
+// from the computer, before an agent needs it. A variable for tests.
+var idleLockEvery = 6 * time.Second
+
+// pollLocks asks lock-reporting drivers about devices that have an agent,
+// and about idle ones every idleLockEvery. A locked device whose driver
+// cannot report locks is read instead, so the unlock card goes away when
+// the person unlocks.
 func (g *Gateway) pollLocks(ctx context.Context) {
 	g.mu.Lock()
 	var report, read []*device
+	now := time.Now()
 	for _, d := range g.devices {
-		if d.lease == nil || d.dev == nil {
+		if d.dev == nil || !d.online {
+			continue
+		}
+		if d.lease == nil {
+			if _, ok := d.dev.(driver.LockReporter); ok && now.Sub(d.lockReadAt) >= idleLockEvery {
+				d.lockReadAt = now
+				report = append(report, d)
+			}
 			continue
 		}
 		if _, ok := d.dev.(driver.LockReporter); ok {

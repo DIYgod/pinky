@@ -25,6 +25,9 @@ func (a *app) rightPanel(c *mg.Context) {
 				})
 			})
 		}
+		if d := a.device(a.sel); d != nil && a.isLocked(*d) && len(a.needsOf(d.Info.ID)) == 0 {
+			a.lockCard(c, *d)
+		}
 		if d := a.device(a.sel); d != nil && d.Features.Companion {
 			a.companionCard(c, *d)
 		}

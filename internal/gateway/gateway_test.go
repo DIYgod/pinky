@@ -960,3 +960,27 @@ func TestAgentViewDropsStatusBarOCR(t *testing.T) {
 		t.Fatal("the raw screen was changed")
 	}
 }
+
+// TestIdlePhoneLockShows reads an idle phone's lock state, so the client
+// can show it and offer to unlock from the computer before an agent needs
+// it.
+func TestIdlePhoneLockShows(t *testing.T) {
+	saved := idleLockEvery
+	idleLockEvery = 10 * time.Millisecond
+	t.Cleanup(func() { idleLockEvery = saved })
+	x := newExtraDev("pixel", "Pixel 9")
+	g := newExtraGateway(t, x)
+	status := func() DeviceStatus { return g.Devices()[0].Status }
+	x.SetLocked(true)
+	for deadline := time.Now().Add(3 * time.Second); status() != DeviceLocked; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("an idle locked phone shows %q", status())
+		}
+	}
+	x.SetLocked(false)
+	for deadline := time.Now().Add(3 * time.Second); status() != DeviceIdle; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("an idle unlocked phone shows %q", status())
+		}
+	}
+}

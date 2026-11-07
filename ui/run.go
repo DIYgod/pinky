@@ -234,7 +234,7 @@ func newApp(api gateway.API, opt Options) *app {
 		mediaCache: map[string]*mediaEntry{}, previews: map[string]bool{},
 		awake: keepMacAwake, exportTo: exportFolder, reveal: revealFile,
 	}
-	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}}
+	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{}}
 	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
 		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
