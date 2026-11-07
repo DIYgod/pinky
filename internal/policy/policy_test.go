@@ -4,11 +4,20 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/DIYgod/pinky/internal/screen"
 )
+
+// private reports whether a file is the user's alone. Windows has no Unix
+// modes (Go reports 0666 for any writable file): access there follows the
+// folder's access control list, which is the user's alone in their
+// profile.
+func private(st os.FileInfo) bool {
+	return runtime.GOOS == "windows" || st.Mode().Perm() == 0o600
+}
 
 var (
 	dinely   = screen.App{Name: "Dinely", ID: "com.dinely.app"}
@@ -210,7 +219,7 @@ func TestLoadCreatesFiles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if st.Mode().Perm() != 0o600 {
+		if !private(st) {
 			t.Errorf("%s mode %v", p, st.Mode().Perm())
 		}
 	}
@@ -349,7 +358,7 @@ func TestPresets(t *testing.T) {
 	if e2.Preset() != PresetEvery || e2.HideCodes() || !e2.ReadOnly("") || !e2.ReadOnly("any device") {
 		t.Fatalf("after reload: preset %d hide codes %v read-only %v", e2.Preset(), e2.HideCodes(), e2.ReadOnly(""))
 	}
-	if st, _ := os.Stat(rules); st.Mode().Perm() != 0o600 {
+	if st, _ := os.Stat(rules); !private(st) {
 		t.Fatalf("rules file mode %v", st.Mode().Perm())
 	}
 	if err := e.SetPreset(Preset(7)); err == nil {

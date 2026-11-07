@@ -30,6 +30,10 @@ type Store interface {
 	Reveal(ctx context.Context, account, reason string) (string, error)
 }
 
+// Service is the keychain service (the Credential Manager's target
+// prefix on Windows) Pinky's secrets are saved under.
+const Service = "app.pinky.desktop"
+
 // System returns the operating system's keychain, or a Store whose methods
 // return ErrUnsupported where Pinky has none.
 func System() Store { return system() }

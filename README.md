@@ -8,11 +8,11 @@ Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPh
 
 ## Try it
 
-Requirements: macOS (Windows and Linux build but are untested), Go 1.27.3 or later, FFmpeg 9 from Homebrew for the live mirror (`brew install ffmpeg`), Android platform tools (`adb`) for Android phones, and Xcode for iPhones (it prepares a phone for development once).
+Requirements: a Mac with macOS 12 or later (Windows and Linux: see [Build and install](#build-and-install)), Go 1.27.3 or later and Xcode's command line tools to build, Android platform tools (`adb`) for Android phones, and Xcode for iPhones (it prepares a phone for development once). Pinky.app carries its own FFmpeg, so it needs no Homebrew.
 
 ```sh
-make app                                   # build/pinky/<os>-<arch>/Pinky.app
-open build/pinky/darwin-arm64/Pinky.app    # or: go run ./cmd/pinky
+make app                                   # build/pinky/darwin-<arch>/Pinky.app and its .dmg
+open build/pinky/darwin-arm64/Pinky.app
 ```
 
 Then connect your agent. For Claude Code:
@@ -24,7 +24,7 @@ mkdir -p ~/.claude/skills/pinky && cp docs/SKILL.md ~/.claude/skills/pinky/SKILL
 
 Ask the agent to do something on your phone. The first time it connects, Pinky asks you to allow it.
 
-No phone at hand? `go run ./cmd/pinky --fake` runs the app with two scripted phones (a payment to approve, a blocked banking app, a password field).
+No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pinky --fake`) runs the app with two scripted phones (a payment to approve, a blocked banking app, a password field).
 
 ### Phones
 
@@ -49,16 +49,54 @@ scripts/                      device locks and an MCP call script for checks
 docs/                         design, agent guide, MCP reference and notes
 ```
 
+## Build and install
+
+Pinky is one Go binary without cgo; MyGo (`go tool mygo build`) packages it for each system. The live mirror and recordings use FFmpeg 9's shared libraries, which Pinky loads at run time: from `PINKY_FFMPEG_DIR`, from the app (macOS), next to the executable, then from where the system keeps libraries. Without them everything but the mirror works, and Pinky says what is missing.
+
+### macOS
+
+```sh
+make companion   # optional: the Android companion APK (Android SDK and JDK)
+make app         # build/pinky/darwin-<arch>/Pinky.app and pinky-<version>-<arch>.dmg
+```
+
+`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize: submit the final `.dmg` with `xcrun notarytool` and staple it.
+
+`go run ./cmd/pinky` does not see the app's FFmpeg: install FFmpeg 9 with Homebrew (`brew install ffmpeg`) or point at the build, `PINKY_FFMPEG_DIR=build/ffmpeg/lib go run ./cmd/pinky`.
+
+Unlocking a phone from the computer keeps its PIN in the login keychain and asks for Touch ID or the Mac's password each time.
+
+### Windows
+
+```sh
+go tool mygo build -platform windows/amd64 cmd/pinky   # build/pinky/windows-amd64/Pinky.exe (and an installer where NSIS is installed)
+go build -o pinky.exe ./cmd/pinky                      # a console build, for pinky devices and other commands in a terminal
+```
+
+Pinky.exe is a windowed program: agents that start `Pinky.exe mcp` talk to it over pipes, but a terminal shows nothing it prints, so use the console build there. Put FFmpeg 9's shared DLLs (`avcodec-63.dll`, `avutil-61.dll`, `swscale-10.dll` and the DLLs they need, as in the `ffmpeg-n9.0-…-win64-lgpl-shared` builds at [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases)) next to the executable, or set `PINKY_FFMPEG_DIR` to their folder. Android phones need `adb` on the `PATH`. iPhones are untested on Windows. PINs are kept in the Credential Manager, and each unlock asks through Windows Hello, or for the account's password where Hello is not set up.
+
+### Linux
+
+```sh
+go tool mygo build -platform linux/amd64 cmd/pinky   # build/pinky/linux-amd64/: pinky, a .deb, a .tar.gz with install.sh, a PKGBUILD
+```
+
+The window needs GTK 3 and EGL (`libgtk-3-0`, `libegl1`; Mesa draws it in software where there is no GPU). FFmpeg 9's shared libraries come from the distribution where it has FFmpeg 9, or from a shared build in a folder of its own with `PINKY_FFMPEG_DIR` (BtbN's need `libva2` and `libva-drm2` for VA-API; without them Pinky decodes in software). iPhones are untested on Linux. PINs are kept in the Secret Service (GNOME Keyring, KWallet, KeePassXC) in a keyring of Pinky's own, which the first save asks you to give a password and which Pinky locks again after each use, so every unlock asks for that password.
+
 ## Build and test
 
 ```sh
 make check          # build (CGO_ENABLED=0), vet, test
-make app            # Pinky.app and a .dmg
+make app            # Pinky.app with FFmpeg and the companion, and a .dmg (macOS)
+make ffmpeg         # FFmpeg 9 for Pinky.app, in build/ffmpeg
 make companion      # the Android companion APK (Android SDK and JDK needed)
 make e2e            # a binary with MyGo's automation socket, for UI checks
+scripts/smoke.sh    # the fake gateway, pinky devices and a task through pinky mcp
 ```
 
-Tests that need a real phone use the `device` build tag; see [docs/WORKING.md](docs/WORKING.md).
+Tests that need a real phone use the `device` build tag; see [docs/WORKING.md](docs/WORKING.md). `go run ./scripts/secretcheck` checks by hand that unlocking asks you (Touch ID, Windows Hello). `PINKY_FFMPEG_APP=build/pinky/darwin-arm64/Pinky.app go test -run TestPackagedFFmpeg ./internal/video/` checks that the app decodes with its own FFmpeg.
+
+CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) builds, vets and tests on Linux and Windows, builds and vets on macOS, runs `scripts/smoke.sh` on all three, packages for Linux and Windows, and on Linux opens the window under Xvfb and captures it through the automation socket. It runs for `main`, pull requests, by hand, and the platform session's `claude/platform-*` branches.
 
 ## Documents
 

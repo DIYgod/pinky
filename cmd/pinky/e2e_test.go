@@ -1,3 +1,8 @@
+// These tests stop daemons with SIGTERM and check Unix file modes, which
+// Windows lacks; CI's smoke run (scripts/smoke.sh) covers the daemon there.
+
+//go:build !windows
+
 package main
 
 import (
