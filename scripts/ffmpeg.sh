@@ -38,6 +38,33 @@ prefix=${1:?$usage}
 target=${2:-}
 case $prefix in /*) ;; *) prefix=$(pwd)/$prefix ;; esac
 
+src=$prefix-src
+tarball=$src/ffmpeg-$VERSION.tar.xz
+
+sha256() {
+	if command -v shasum >/dev/null 2>&1; then
+		shasum -a 256 "$1" | cut -d' ' -f1
+	else
+		sha256sum "$1" | cut -d' ' -f1
+	fi
+}
+
+# The source is downloaded here, before any container: a container may not
+# share this machine's way to the network (a proxy, say). It mounts the
+# folder that holds the source.
+mkdir -p "$src"
+if [ ! -f "$tarball" ] || [ "$(sha256 "$tarball")" != "$SHA256" ]; then
+	echo "Downloading $URL"
+	curl -fL --retry 3 -o "$tarball.part" "$URL"
+	got=$(sha256 "$tarball.part")
+	if [ "$got" != "$SHA256" ]; then
+		echo "ffmpeg-$VERSION.tar.xz has SHA-256 $got, want $SHA256" >&2
+		rm -f "$tarball.part"
+		exit 1
+	fi
+	mv "$tarball.part" "$tarball"
+fi
+
 # Windows and Linux: run this script again in a container, unless it is
 # running in one. The images and packages are here, so that the hash of
 # this file, which names the builds that scripts/dist.sh and the release
@@ -70,7 +97,7 @@ windows-amd64 | linux-amd64)
 				export DEBIAN_FRONTEND=noninteractive
 				apt-get update -qq
 				# shellcheck disable=SC2086 # the packages are split on purpose
-				apt-get install -y -qq --no-install-recommends ca-certificates curl xz-utils make nasm binutils $PACKAGES >/dev/null
+				apt-get install -y -qq --no-install-recommends xz-utils make nasm binutils $PACKAGES >/dev/null
 				status=0
 				sh /ffmpeg.sh "$OUT" "$TARGET" || status=$?
 				chown -R "$OWNER" "$OUT" "$OUT-src" 2>/dev/null || true
@@ -78,30 +105,6 @@ windows-amd64 | linux-amd64)
 	fi
 	;;
 esac
-
-src=$prefix-src
-tarball=$src/ffmpeg-$VERSION.tar.xz
-
-sha256() {
-	if command -v shasum >/dev/null 2>&1; then
-		shasum -a 256 "$1" | cut -d' ' -f1
-	else
-		sha256sum "$1" | cut -d' ' -f1
-	fi
-}
-
-mkdir -p "$src"
-if [ ! -f "$tarball" ] || [ "$(sha256 "$tarball")" != "$SHA256" ]; then
-	echo "Downloading $URL"
-	curl -fL --retry 3 -o "$tarball.part" "$URL"
-	got=$(sha256 "$tarball.part")
-	if [ "$got" != "$SHA256" ]; then
-		echo "ffmpeg-$VERSION.tar.xz has SHA-256 $got, want $SHA256" >&2
-		rm -f "$tarball.part"
-		exit 1
-	fi
-	mv "$tarball.part" "$tarball"
-fi
 
 tree=$src/ffmpeg-$VERSION
 rm -rf "$tree"
