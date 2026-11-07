@@ -973,6 +973,13 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	case p.hasPt:
 		target = screen.Rect{X: p.point.X - 24, Y: p.point.Y - 24, W: 48, H: 48}
 	}
+	var point, to screen.Point
+	switch {
+	case a.Tool == "swipe":
+		point, to = p.from, p.to
+	case p.hasPt:
+		point = p.point
+	}
 	detail := l.session.agent.Name
 	if c.Intent != "" {
 		detail += " · " + c.Intent
@@ -982,7 +989,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	info := g.approvals.Open(approval.Request{
 		Kind: approval.KindAction, Binding: g.binding(l, a), Rule: v.Rule, Title: approvalTitle(a, p, v),
 		Detail: detail, App: appLabel(cur.App), Agent: l.session.agent.Name, TaskID: l.task.id,
-		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Data: takeSnapshot(cur, p, v),
+		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Point: point, To: to, Data: takeSnapshot(cur, p, v),
 	})
 	if res := g.afterOpen(l, info); res != nil {
 		return info, res

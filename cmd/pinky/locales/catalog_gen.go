@@ -6237,20 +6237,22 @@ func (msgs Messages) PanelPrevious() string {
 	return Catalog.Format(msgs.locale, "panelPrevious", nil)
 }
 
-// PanelShotLabel says "{phone} screen: the target, outlined"
+// PanelShotLabel says "{phone} screen with the target marked"
 // in the language the app shows.
 //
-// The accessibility label of the floating approval panel's picture: the
-// part of the phone's screen around what the agent wants to tap, with that
-// element outlined.
+// The accessibility label of an approval's screenshot in the floating
+// approval panel, on a Needs you card and in its large view: the phone's
+// whole screen and the part around what the agent wants to tap, with that
+// element marked.
 func PanelShotLabel(phone string) string { return In(i18n.Locale()).PanelShotLabel(phone) }
 
-// PanelShotLabel says "{phone} screen: the target, outlined"
+// PanelShotLabel says "{phone} screen with the target marked"
 // in the language of msgs.
 //
-// The accessibility label of the floating approval panel's picture: the
-// part of the phone's screen around what the agent wants to tap, with that
-// element outlined.
+// The accessibility label of an approval's screenshot in the floating
+// approval panel, on a Needs you card and in its large view: the phone's
+// whole screen and the part around what the agent wants to tap, with that
+// element marked.
 func (msgs Messages) PanelShotLabel(phone string) string {
 	return Catalog.Format(msgs.locale, "panelShotLabel", map[string]any{"phone": phone})
 }
@@ -11323,6 +11325,38 @@ func (msgs Messages) SettingsUnlockFromComputer() string {
 	return Catalog.Format(msgs.locale, "settingsUnlockFromComputer", nil)
 }
 
+// ShotClose says "Close"
+// in the language the app shows.
+//
+// The accessibility label of the × that closes the large view of an
+// approval's screenshot.
+func ShotClose() string { return In(i18n.Locale()).ShotClose() }
+
+// ShotClose says "Close"
+// in the language of msgs.
+//
+// The accessibility label of the × that closes the large view of an
+// approval's screenshot.
+func (msgs Messages) ShotClose() string {
+	return Catalog.Format(msgs.locale, "shotClose", nil)
+}
+
+// ShotEnlarge says "Click to see it larger"
+// in the language the app shows.
+//
+// The tooltip of an approval's screenshot in the floating approval panel
+// and on a Needs you card: a click shows the screenshot larger.
+func ShotEnlarge() string { return In(i18n.Locale()).ShotEnlarge() }
+
+// ShotEnlarge says "Click to see it larger"
+// in the language of msgs.
+//
+// The tooltip of an approval's screenshot in the floating approval panel
+// and on a Needs you card: a click shows the screenshot larger.
+func (msgs Messages) ShotEnlarge() string {
+	return Catalog.Format(msgs.locale, "shotEnlarge", nil)
+}
+
 // ShotLabel says "Screenshot of {phone}"
 // in the language the app shows.
 //
@@ -11349,6 +11383,54 @@ func ShotLoading() string { return In(i18n.Locale()).ShotLoading() }
 // In place of a step's screenshot while it loads.
 func (msgs Messages) ShotLoading() string {
 	return Catalog.Format(msgs.locale, "shotLoading", nil)
+}
+
+// ShotMissing says "No screenshot of this screen"
+// in the language the app shows.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone sent none.
+func ShotMissing() string { return In(i18n.Locale()).ShotMissing() }
+
+// ShotMissing says "No screenshot of this screen"
+// in the language of msgs.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone sent none.
+func (msgs Messages) ShotMissing() string {
+	return Catalog.Format(msgs.locale, "shotMissing", nil)
+}
+
+// ShotMissingBlocked says "Pinky takes no screenshots of {app}"
+// in the language the app shows.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the app on the phone's screen is blocked: Pinky hides blocked apps.
+func ShotMissingBlocked(app string) string { return In(i18n.Locale()).ShotMissingBlocked(app) }
+
+// ShotMissingBlocked says "Pinky takes no screenshots of {app}"
+// in the language of msgs.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the app on the phone's screen is blocked: Pinky hides blocked apps.
+func (msgs Messages) ShotMissingBlocked(app string) string {
+	return Catalog.Format(msgs.locale, "shotMissingBlocked", map[string]any{"app": app})
+}
+
+// ShotMissingLocked says "{phone} is locked, so there's no screenshot"
+// in the language the app shows.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone is locked.
+func ShotMissingLocked(phone string) string { return In(i18n.Locale()).ShotMissingLocked(phone) }
+
+// ShotMissingLocked says "{phone} is locked, so there's no screenshot"
+// in the language of msgs.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone is locked.
+func (msgs Messages) ShotMissingLocked(phone string) string {
+	return Catalog.Format(msgs.locale, "shotMissingLocked", map[string]any{"phone": phone})
 }
 
 // ShotNone says "No screenshot"

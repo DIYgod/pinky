@@ -13,9 +13,73 @@ import (
 )
 
 const (
-	panelW = 360
+	panelW = 400
+	// panelH is the floating panel's height without a screenshot.
 	panelH = 330
+	// panelChrome is the room around the screenshot in the floating
+	// panel: the countdown, the phone, a title and a detail of two lines
+	// each, and the buttons or the answer under them.
+	panelChrome = 254
+	// panelFigure is the screenshot's height for a portrait screen; a
+	// landscape one takes the width, at most panelWide high, with its
+	// zoom, panelLens high, under it.
+	panelFigure = 196
+	panelWide   = 180
+	panelLens   = 96
 )
+
+// panelHeight is the floating panel's height for need n, which it asks or
+// confirms: room for words of as many lines as they may take, and the
+// screenshot, which grows into what shorter words leave.
+func panelHeight(n gateway.NeedView) int {
+	if n.Screenshot == nil || n.Kind != gateway.NeedApproval || newAgentNeed(n) {
+		return panelH
+	}
+	b := n.Screenshot.Bounds()
+	_, zoom := marksOf(n).focus(b.Dx(), b.Dy())
+	fig := figureHeight(panelW-32, panelFigure, panelWide, panelLens, b.Dx(), b.Dy(), zoom)
+	return panelChrome + int(math.Ceil(float64(fig)))
+}
+
+// panelShows returns what the floating panel shows: the last answer for a
+// moment, else the approval at panelIdx.
+func (a *app) panelShows() (gateway.NeedView, *answer, bool) {
+	asks := a.approvals()
+	answers := a.liveAnswers()
+	// The last answer shows until it times out, unless more wait.
+	if len(answers) > 0 && (len(asks) == 0 || time.Until(answers[len(answers)-1].until) > 1500*time.Millisecond) {
+		x := answers[len(answers)-1]
+		return x.need, &x, true
+	}
+	if len(asks) == 0 {
+		return gateway.NeedView{}, nil, false
+	}
+	return asks[min(max(a.panelIdx, 0), len(asks)-1)], nil, true
+}
+
+// panelSize is the floating panel's size for what it shows, within its
+// display.
+func (a *app) panelSize() (int, int) {
+	h := panelH
+	if n, _, ok := a.panelShows(); ok {
+		h = panelHeight(n)
+	}
+	if a.panelMax > 0 {
+		h = min(h, max(a.panelMax, panelH))
+	}
+	return panelW, h
+}
+
+// fitPanel keeps the floating panel at panelSize.
+func (a *app) fitPanel() {
+	if a.panel == nil {
+		return
+	}
+	w, h := a.panelSize()
+	if cw, ch := a.panel.Size(); cw != w || ch != h {
+		a.panel.SetSize(w, h)
+	}
+}
 
 // answer is an approval the person just answered, which the floating
 // panel confirms for a moment.
@@ -77,9 +141,11 @@ func (a *app) syncPanel() {
 	switch {
 	case want && !a.panel.IsVisible():
 		a.placePanel()
+		a.fitPanel()
 		a.panel.ShowInactive()
 	case !want && a.panel.IsVisible():
 		a.panel.Hide()
+		a.closeShot()
 	}
 	a.panel.Invalidate()
 }
@@ -101,6 +167,7 @@ func (a *app) showPanel(focus bool) {
 	}
 	if !a.panel.IsVisible() {
 		a.placePanel()
+		a.fitPanel()
 	}
 	if focus {
 		a.panel.Show()
@@ -114,6 +181,7 @@ func (a *app) showPanel(focus bool) {
 func (a *app) placePanel() {
 	d := mygo.Screen.DisplayNearestPoint(mygo.Screen.CursorScreenPoint())
 	wa := d.WorkArea
+	a.panelMax = wa.Height - 32
 	a.panel.SetPosition(wa.X+wa.Width-panelW-16, wa.Y+16)
 }
 
@@ -136,14 +204,26 @@ func (a *app) panelView(c *mg.Context) {
 	if a.panelIdx >= len(asks) {
 		a.panelIdx = max(0, len(asks)-1)
 	}
+	a.fitPanel()
 	card := mg.Column(c).Fill().Radius(14).Background(p.amberTint).Border(1, p.amberLine).Clip()
-	// The last answer shows until it times out, unless more wait.
-	if len(answers) > 0 && (len(asks) == 0 || answers[len(answers)-1].until.Sub(time.Now()) > 1500*time.Millisecond) {
-		x := answers[len(answers)-1]
-		card.Children(func() { a.panelAnswered(c, x) })
+	n, x, _ := a.panelShows()
+	if x != nil {
+		card.Children(func() { a.panelAnswered(c, *x) })
 		return
 	}
-	n := asks[a.panelIdx]
+	// The large view shows the approval the panel shows.
+	if a.viewing != "" && a.viewing != n.ID {
+		a.post(func() {
+			if a.viewing == "" {
+				return
+			}
+			if n.Screenshot != nil {
+				a.openShot(n)
+			} else {
+				a.closeShot()
+			}
+		})
+	}
 	noting := a.noting[n.ID]
 	plain := n.Kind == gateway.NeedApproval && !newAgentNeed(n)
 	if !plain {
@@ -197,7 +277,7 @@ func (a *app) panelView(c *mg.Context) {
 				}
 			})
 			needEyebrow(c, n)
-			mg.Text(c, needTitle(n)).FontSize(16).FontWeight(650).LineHeight(1.3).Margin(6, 0, 0, 0).Role(mg.RoleHeading)
+			mg.Text(c, needTitle(n)).FontSize(16).FontWeight(650).LineHeight(1.3).MaxLines(2).Margin(6, 0, 0, 0).Role(mg.RoleHeading)
 			detail := needDetail(n)
 			if newAgentNeed(n) {
 				_, picker := a.api.(agentScoper)
@@ -216,10 +296,17 @@ func (a *app) panelView(c *mg.Context) {
 				a.agentRequestControls(c, n)
 				return
 			}
-			if !noting {
-				a.screenshotCrop(c, n)
+			switch {
+			case noting:
+				mg.Spacer(c)
+			case n.Screenshot != nil:
+				// The screenshot takes the room the words leave.
+				a.approvalFigure(c, n, func() { a.post(func() { a.openShot(n) }) }).
+					Margin(12, 0, 0, 0).Grow(1).MinHeight(90)
+			default:
+				a.missingShotNote(c, n)
+				mg.Spacer(c)
 			}
-			mg.Spacer(c)
 			if noting {
 				mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
 				note := a.notes[n.ID]
@@ -267,10 +354,14 @@ func (a *app) panelView(c *mg.Context) {
 // states do.
 func (a *app) panelAnswered(c *mg.Context, x answer) {
 	p := pal(c)
-	mg.Column(c).Grow(1).Padding(16).Gap(2).Children(func() {
+	mg.Column(c).Grow(1).MinHeight(0).Padding(16).Gap(2).Children(func() {
 		needEyebrow(c, x.need)
-		mg.Text(c, needTitle(x.need)).FontSize(16).FontWeight(650).Margin(6, 0, 0, 0)
+		mg.Text(c, needTitle(x.need)).FontSize(16).FontWeight(650).LineHeight(1.3).MaxLines(2).Margin(6, 0, 0, 0)
 		mg.Text(c, needDetail(x.need)).FontSize(13.5).TextColor(p.ink2).MaxLines(2)
+		if x.need.Screenshot != nil && x.need.Kind == gateway.NeedApproval && !newAgentNeed(x.need) {
+			// What was answered, in the room the panel had for it.
+			a.approvalFigure(c, x.need, nil).Margin(12, 0, 0, 0).Grow(1).MinHeight(60)
+		}
 		mg.Column(c).Margin(14, 0, 0, 0).Gap(4).Children(func() {
 			title, detail := "", ""
 			ic, col := icCheck, p.green
@@ -343,51 +434,4 @@ func arrowButton(c *mg.Context, ic *mg.SVG, label string, disabled bool) mg.Elem
 	}
 	b.TextColor(col).Children(func() { mg.Icon(c, ic).FontSize(15) })
 	return b
-}
-
-// screenshotCrop shows the part of the approval's screenshot around its
-// target, with the target outlined: the mirror is out of view here.
-func (a *app) screenshotCrop(c *mg.Context, n gateway.NeedView) {
-	p := pal(c)
-	if n.Screenshot == nil {
-		return
-	}
-	bm := a.shots[n.ID]
-	if bm == nil {
-		bm = mg.NewBitmap(n.Screenshot)
-		a.shots[n.ID] = bm
-	}
-	iw, ih := bm.Size()
-	tg := n.Target
-	fig := mg.Box(c).Height(100).FillWidth().Margin(12, 0, 0, 0).Radius(10).Border(1, p.line2).Clip().Background(hex("#000000")).
-		Label(locales.PanelShotLabel(n.DeviceName))
-	fig.Draw(func(pt *mg.Painter, r mg.Rect) {
-		if iw == 0 || ih == 0 {
-			return
-		}
-		// Fit the target's width into the figure, with room around it,
-		// and center it vertically.
-		cw := float32(iw)
-		if !tg.Empty() {
-			cw = min(float32(iw), float32(tg.W)*1.12)
-		}
-		scale := r.W / cw
-		chH := r.H / scale
-		cx := float32(iw) / 2
-		cy := float32(ih) / 2
-		if !tg.Empty() {
-			cx, cy = float32(tg.X)+float32(tg.W)/2, float32(tg.Y)+float32(tg.H)/2
-		}
-		src := mg.Rect{X: cx - cw/2, Y: cy - chH/2, W: cw, H: chH}
-		src.X = max(0, min(src.X, float32(iw)-src.W))
-		src.Y = max(0, min(src.Y, float32(ih)-src.H))
-		pt.ImageRegion(bm, src, r, mg.ImageOptions{})
-		if !tg.Empty() {
-			box := mg.Rect{
-				X: r.X + (float32(tg.X)-src.X)*scale - 5, Y: r.Y + (float32(tg.Y)-src.Y)*scale - 5,
-				W: float32(tg.W)*scale + 10, H: float32(tg.H)*scale + 10,
-			}
-			pt.Stroke(box, p.ovl, min(15, box.H/2), 2)
-		}
-	})
 }

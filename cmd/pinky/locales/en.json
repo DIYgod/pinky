@@ -2504,9 +2504,9 @@
   "@panelPrevious": {
     "description": "The accessibility label of the floating approval panel's left arrow."
   },
-  "panelShotLabel": "{phone} screen: the target, outlined",
+  "panelShotLabel": "{phone} screen with the target marked",
   "@panelShotLabel": {
-    "description": "The accessibility label of the floating approval panel's picture: the part of the phone's screen around what the agent wants to tap, with that element outlined.",
+    "description": "The accessibility label of an approval's screenshot in the floating approval panel, on a Needs you card and in its large view: the phone's whole screen and the part around what the agent wants to tap, with that element marked.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -4138,6 +4138,14 @@
   "@settingsUnlockFromComputer": {
     "description": "Settings › Safety: the switch that lets Pinky unlock a locked phone with its saved PIN. Also the heading of each phone's PIN form in Settings › Phones."
   },
+  "shotClose": "Close",
+  "@shotClose": {
+    "description": "The accessibility label of the × that closes the large view of an approval's screenshot."
+  },
+  "shotEnlarge": "Click to see it larger",
+  "@shotEnlarge": {
+    "description": "The tooltip of an approval's screenshot in the floating approval panel and on a Needs you card: a click shows the screenshot larger."
+  },
   "shotLabel": "Screenshot of {phone}",
   "@shotLabel": {
     "description": "The accessibility label of a step's screenshot.",
@@ -4151,6 +4159,30 @@
   "shotLoading": "Loading…",
   "@shotLoading": {
     "description": "In place of a step's screenshot while it loads."
+  },
+  "shotMissing": "No screenshot of this screen",
+  "@shotMissing": {
+    "description": "Stands for an approval's screenshot in the floating approval panel when the phone sent none."
+  },
+  "shotMissingBlocked": "Pinky takes no screenshots of {app}",
+  "@shotMissingBlocked": {
+    "description": "Stands for an approval's screenshot in the floating approval panel when the app on the phone's screen is blocked: Pinky hides blocked apps.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Wallet"
+      }
+    }
+  },
+  "shotMissingLocked": "{phone} is locked, so there's no screenshot",
+  "@shotMissingLocked": {
+    "description": "Stands for an approval's screenshot in the floating approval panel when the phone is locked.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
   },
   "shotNone": "No screenshot",
   "@shotNone": {

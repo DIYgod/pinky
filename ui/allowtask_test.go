@@ -19,12 +19,13 @@ import (
 // ends.
 func TestGatewayAgentQuestionMenu(t *testing.T) {
 	ga := newGatewayApp(t, true)
+	panel := mg.NewTester(ga.panelView, panelW, panelH)
 	views := []struct {
 		name string
 		tt   *mg.Tester
 	}{
 		{"card", mg.NewTester(ga.view, 1280, 820)},
-		{"floating panel", mg.NewTester(ga.panelView, panelW, panelH)},
+		{"floating panel", panel},
 	}
 	questions := []string{"May I reorder last week's lunch?", "May I pay $12.80 for it?"}
 	done := ga.agent(t, "Claude Code", pixel, func(ag *demogw.Agent, ctx context.Context) error {
@@ -41,6 +42,9 @@ func TestGatewayAgentQuestionMenu(t *testing.T) {
 	// moreOptions opens More options, returns its items and closes it.
 	moreOptions := func(name string, tt *mg.Tester) []string {
 		t.Helper()
+		if tt == panel {
+			tt.SetSize(ga.panelSize()) // as fitPanel sizes the window
+		}
 		tt.Frame()
 		if err := tt.Click("More options"); err != nil {
 			t.Fatalf("%s: %v", name, err)
@@ -85,7 +89,6 @@ func TestGatewayAgentQuestionMenu(t *testing.T) {
 	if !pay.AllowTask {
 		t.Fatalf("payment approval %+v", pay)
 	}
-	panel := views[1].tt
 	for _, v := range views {
 		if texts := moreOptions(v.name, v.tt); !slices.Contains(texts, "Allow for this task") {
 			t.Fatalf("%s: More options on the payment: %q", v.name, texts)

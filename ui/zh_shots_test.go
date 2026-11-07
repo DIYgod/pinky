@@ -99,6 +99,8 @@ func TestChineseScreenshots(t *testing.T) {
 		t.Helper()
 		shoot(ta, name, ta.view, 1280, 820, before)
 	}
+	// The floating panel at the size it takes for what it shows.
+	pw, ph := panelW, func(ta *testApp) int { _, h := ta.panelSize(); return h }
 	pixel := func(ta *testApp) func() {
 		img := source(ta, "pixel-9")
 		return func() { still(ta, "pixel-9", "pixel-9", img, false) }
@@ -114,7 +116,7 @@ func TestChineseScreenshots(t *testing.T) {
 	n, _ := ta.approval()
 	ta.noting[n.ID] = true
 	main(ta, "phone-note", pixel(ta))
-	shoot(ta, "panel-one", ta.panelView, panelW, panelH, nil)
+	shoot(ta, "panel-one", ta.panelView, pw, ph(ta), nil)
 
 	// Three phones, and All phones.
 	ta = newTestAppTimeout(t, fakeapi.ThreePhones, 10*time.Minute)
@@ -122,10 +124,10 @@ func TestChineseScreenshots(t *testing.T) {
 	main(ta, "phone-three", pixel(ta))
 	ta.sel = allPhones
 	main(ta, "all-phones", nil)
-	shoot(ta, "panel-three", ta.panelView, panelW, panelH, nil)
+	shoot(ta, "panel-three", ta.panelView, pw, ph(ta), nil)
 	shoot(ta, "flyout", ta.flyoutView, 320, ta.flyoutHeight(), nil)
 	ta.remember(ta.approvals()[0], "allow_once", "")
-	shoot(ta, "panel-allowed", ta.panelView, panelW, panelH, nil)
+	shoot(ta, "panel-allowed", ta.panelView, pw, ph(ta), nil)
 
 	// The person in control, a handoff, a new agent.
 	ta = newTestAppTimeout(t, fakeapi.Takeover, 10*time.Minute)
@@ -134,7 +136,7 @@ func TestChineseScreenshots(t *testing.T) {
 	ta = newTestAppTimeout(t, fakeapi.Handoff, 10*time.Minute)
 	ta.waitFor(t, "the handoff", func() bool { return len(ta.needs) > 0 })
 	main(ta, "handoff", pixel(ta))
-	shoot(ta, "panel-handoff", ta.panelView, panelW, panelH, nil)
+	shoot(ta, "panel-handoff", ta.panelView, pw, ph(ta), nil)
 	ta = newTestAppTimeout(t, fakeapi.NewAgent, 10*time.Minute)
 	ta.waitFor(t, "the new agent", func() bool { return len(ta.needs) > 0 })
 	main(ta, "new-agent", pixel(ta))
