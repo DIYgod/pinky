@@ -15,7 +15,8 @@ package gateway
 //	scripts/devlock.sh 3e8be48e env PINKY_DEVICE=3e8be48e /tmp/pinky-gw/gateway.test -test.run TestDevice -test.v
 //
 // Screenshots go to a temporary folder under /tmp/pinky-gw-*, removed at
-// the end.
+// the end. With PINKY_RECORD=1 the task is also recorded (into the same
+// folder), and the recording is checked with ffprobe.
 
 import (
 	"context"
@@ -23,6 +24,7 @@ import (
 	"image/jpeg"
 	"log/slog"
 	"os"
+	"os/exec"
 	"sort"
 	"strings"
 	"testing"
@@ -168,6 +170,8 @@ func TestDevice(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer g.Close()
+	record := os.Getenv("PINKY_RECORD") != ""
+	g.SetRecording(record)
 
 	deadline := time.Now().Add(60 * time.Second)
 	for !deviceOnline(g, id) {
@@ -198,12 +202,42 @@ func TestDevice(t *testing.T) {
 		t.Fatalf("the phone shows %s, not the home screen, Settings or the Calculator; left as it is", screenOf(res).App.ID)
 	}
 
+	task := taskID(t, g, r.s)
 	t.Run("Calculator", r.calculator)
 	t.Run("Settings", r.settings)
 	t.Run("RefsStable", r.refsStable)
 	t.Run("TakeOverHandBackStop", r.takeOverAndStop)
 	t.Run("History", r.history)
 	r.report()
+	if record {
+		r.checkRecording(t, task)
+	}
+}
+
+// checkRecording checks the task's recording with ffprobe: the phone's
+// codec and size, and frames from the whole task.
+func (r *deviceRun) checkRecording(t *testing.T, task string) {
+	g := r.g
+	g.Flush()
+	rec, err := g.Recording(context.Background(), task)
+	if err != nil {
+		t.Fatalf("recording: %v", err)
+	}
+	out, err := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
+		"-show_entries", "stream=codec_name,width,height,nb_read_frames", "-of", "csv=p=0", rec.Path).CombinedOutput()
+	fi, _ := os.Stat(rec.Path)
+	var size int64
+	if fi != nil {
+		size = fi.Size()
+	}
+	t.Logf("recording: %s, %v long, %d marks, %d KB; ffprobe: %s %v", rec.Path, rec.Length.Round(time.Millisecond),
+		len(rec.Marks), size/1000, strings.TrimSpace(string(out)), err)
+	if err != nil {
+		t.Errorf("ffprobe: %v", err)
+	}
+	if rec.Length < 5*time.Second || len(rec.Marks) < 5 {
+		t.Errorf("a short recording: %v, %d marks", rec.Length, len(rec.Marks))
+	}
 }
 
 func deviceOnline(g *Gateway, id string) bool {
@@ -522,6 +556,9 @@ func firstToggle(s *screen.Screen) (screen.Element, bool) {
 
 func (r *deviceRun) denySwitch(t *testing.T, sw screen.Element) {
 	before := sw.Has(screen.StateChecked)
+	// Only input from here on counts: an earlier subtest's tap (a
+	// Calculator key) can fall inside where the switch is now.
+	earlier := len(r.guard().Inputs())
 	done := make(chan *Result, 1)
 	start := time.Now()
 	go func() {
@@ -571,9 +608,10 @@ func (r *deviceRun) denySwitch(t *testing.T, sw screen.Element) {
 			t.Fatalf("the switch changed after Deny: %s, then %s", sw.Line(), e.Line())
 		}
 	}
-	for _, in := range r.guard().Inputs() {
+	inputs := r.guard().Inputs()
+	for _, in := range inputs[earlier:] {
 		if strings.HasPrefix(in, "tap ") && sw.Bounds.Contains(parsePoint(in)) {
-			t.Fatalf("a tap reached the switch: %s", in)
+			t.Fatalf("a tap reached the switch: %s (input since the approval: %q)", in, inputs[earlier:])
 		}
 	}
 }

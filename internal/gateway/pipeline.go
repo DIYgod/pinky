@@ -1245,6 +1245,22 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	defer cancel()
 	start := time.Now()
 	s, err := dev.Observe(ctx, driver.ObserveOptions{OCR: ocr})
+	if err != nil && onBG && errors.Is(err, driver.ErrUnsupported) {
+		// The display cannot be read (Android keeps some virtual displays
+		// from accessibility services): the task moves to the phone's own
+		// screen, which can.
+		g.mu.Lock()
+		left := false
+		if l := d.lease; l != nil && l.bg != nil && sameDevice(l.bg, dev) {
+			g.leaveBackgroundLocked(l, fmt.Sprintf("Pinky cannot read the background display (%v), so the task runs on the phone's own screen.", err))
+			left = true
+		}
+		g.mu.Unlock()
+		if left {
+			g.wake(ctx, d)
+			return g.observe(ctx, d, ocr)
+		}
+	}
 	if err != nil {
 		if errors.Is(err, driver.ErrOffline) {
 			g.setOffline(d, "")

@@ -174,6 +174,8 @@ type lease struct {
 	// filesGranted is set when the person allowed copying files to the
 	// phone for the rest of the task.
 	filesGranted bool
+	// recorded is set once the task's recording started (video.go).
+	recorded bool
 
 	ctx    context.Context
 	cancel context.CancelFunc

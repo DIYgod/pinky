@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -187,3 +188,48 @@ func TestWakeBeforeTheAgentActs(t *testing.T) {
 		t.Fatalf("woke the phone %d times for a background task", x2.wakes)
 	}
 }
+
+// unreadable is a background display that cannot be read, like a virtual
+// display Android keeps from accessibility services.
+type unreadable struct{ *bgDisplay }
+
+func (u unreadable) Observe(context.Context, driver.ObserveOptions) (*screen.Screen, error) {
+	return nil, fmt.Errorf("display 358 is not open to accessibility services: %w", driver.ErrUnsupported)
+}
+
+type unreadableDev struct{ *extraDev }
+
+func (x unreadableDev) OpenBackground(ctx context.Context, opt driver.BackgroundOptions) (driver.Device, error) {
+	d, err := x.extraDev.OpenBackground(ctx, opt)
+	if err != nil {
+		return nil, err
+	}
+	return unreadable{d.(*bgDisplay)}, nil
+}
+
+func TestBackgroundUnreadableFallsBack(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	g := newExtraGateway(t, x, func(o *Options) {
+		o.Providers = []driver.Provider{extraProvider2{demo.NewProvider(driver.Android, x.Device), unreadableDev{x}}}
+	})
+	g.SetBackground("pixel", true)
+	s := g.OpenSession(agent)
+	defer s.Close()
+	res := s.Connect(ctx, ConnectRequest{Task: "Lunch"})
+	mustStatus(t, res, StatusSettled)
+	if !strings.Contains(res.Message, "cannot read the background display") {
+		t.Fatalf("message %q", res.Message)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	if x.Current() != "dinely" || !x.backgrounds()[0].isClosed() {
+		t.Fatalf("phone %q", x.Current())
+	}
+}
+
+type extraProvider2 struct {
+	*demo.Provider
+	d driver.Device
+}
+
+func (p extraProvider2) Open(context.Context, string) (driver.Device, error) { return p.d, nil }

@@ -59,11 +59,25 @@ func joinTest(nals [][]byte) []byte {
 
 // feedStream is a driver.Stream the test feeds.
 type feedStream struct {
-	ch     chan driver.Packet
-	once   sync.Once
-	mu     sync.Mutex
-	closed bool
-	err    error
+	ch       chan driver.Packet
+	once     sync.Once
+	mu       sync.Mutex
+	closed   bool
+	err      error
+	keyAsked int
+}
+
+// RequestKeyFrame counts requests, as an iPhone's stream would answer them.
+func (s *feedStream) RequestKeyFrame() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.keyAsked++
+}
+
+func (s *feedStream) keyRequests() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.keyAsked
 }
 
 func (s *feedStream) Codec() driver.Codec           { return driver.H264 }

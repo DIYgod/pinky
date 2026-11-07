@@ -32,6 +32,15 @@ const (
 // without one of its own.
 var errStreamEnded = errors.New("the phone's video stream ended")
 
+// keyFrameRequester is a driver.Stream that can ask the phone for a key
+// frame now (iOS can; scrcpy sends one every few seconds by itself). It is
+// optional: members that need a key frame (a recording after a pause, a
+// viewer that fell behind) ask through the hub, and wait for the next one
+// otherwise.
+type keyFrameRequester interface {
+	RequestKeyFrame()
+}
+
 // timedPacket is a packet and when the hub received it.
 type timedPacket struct {
 	p  driver.Packet
@@ -259,6 +268,16 @@ func (h *hub) end(err error) {
 	h.closeSource()
 }
 
+// requestKeyFrame asks the phone for a key frame, when its stream can.
+func (h *hub) requestKeyFrame() {
+	h.mu.Lock()
+	src := h.src
+	h.mu.Unlock()
+	if kr, ok := src.(keyFrameRequester); ok {
+		go kr.RequestKeyFrame()
+	}
+}
+
 func (h *hub) failure() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -353,6 +372,9 @@ func (v *viewer) push(tp timedPacket) {
 		v.queue, v.size = nil, 0
 		if !p.KeyFrame {
 			v.skip = true
+			if kr, ok := v.h.src.(keyFrameRequester); ok {
+				go kr.RequestKeyFrame()
+			}
 			return
 		}
 		v.queueConfigLocked()

@@ -111,6 +111,15 @@ func (g *Gateway) readyScreen(ctx context.Context, l *lease) {
 // task to the phone's screen when it cannot.
 func (g *Gateway) openBackground(ctx context.Context, l *lease, b driver.Backgrounder) {
 	d := l.dev
+	// One display per lease, whichever call gets here first.
+	d.act.Lock()
+	defer d.act.Unlock()
+	g.mu.Lock()
+	again := l.bg != nil || l.bgOff || l.ended
+	g.mu.Unlock()
+	if again {
+		return
+	}
 	octx, cancel := context.WithTimeout(ctx, bgOpenTimeout)
 	defer cancel()
 	bg, err := b.OpenBackground(octx, driver.BackgroundOptions{})
@@ -223,4 +232,15 @@ func (g *Gateway) leaveForLaunch(ctx context.Context, l *lease, p *prep, cause e
 		return nil, statusResult(StatusLocked, "%s does not run on a background display, and the phone's own screen is locked, so nothing was opened. Call phone_handoff so the person can unlock it.", name)
 	}
 	return dev, nil
+}
+
+// sameDevice compares two devices without panicking on a type that cannot
+// be compared.
+func sameDevice(a, b driver.Device) (same bool) {
+	defer func() {
+		if recover() != nil {
+			same = false
+		}
+	}()
+	return a == b
 }

@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"image"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -34,8 +35,9 @@ func (g *guardDevice) lastStats(n int) []string {
 //   - taps reach the phone only in the Calculator, and in Settings only on
 //     an allowlisted navigation row, never on a switch or checkbox;
 //   - swipes only scroll Settings vertically; keys are only back and home;
-//   - typing, raw touches, long presses, streams and launching anything but
-//     the Calculator and Settings are refused.
+//   - typing, raw touches, long presses, streams (unless the run records,
+//     PINKY_RECORD) and launching anything but the Calculator and Settings
+//     are refused.
 //
 // Every refusal is recorded, and the tests fail on any.
 type guardDevice struct {
@@ -290,7 +292,12 @@ func (g *guardDevice) Launch(ctx context.Context, app string) error {
 	return g.refuse("launch %s", app)
 }
 
-func (g *guardDevice) Stream(context.Context, driver.StreamOptions) (driver.Stream, error) {
+func (g *guardDevice) Stream(ctx context.Context, opt driver.StreamOptions) (driver.Stream, error) {
+	// A stream only reads the screen; the recording stays in the run's
+	// temporary folder.
+	if os.Getenv("PINKY_RECORD") != "" {
+		return g.Device.Stream(ctx, opt)
+	}
 	return nil, g.refuse("stream")
 }
 

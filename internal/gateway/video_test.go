@@ -89,8 +89,13 @@ func TestRecordingKeepsOnlyWhatReadsVouchFor(t *testing.T) {
 	s.Observe(ctx, ObserveRequest{})
 	st.pictures(4, false)
 
-	// Home again: writing resumes at a key frame.
+	// Home again: writing resumes at a key frame, which the recorder asks
+	// for (once at the start, once now).
 	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "key", Key: "home"}), StatusSettled)
+	time.Sleep(10 * time.Millisecond)
+	if n := st.src.keyRequests(); n < 2 {
+		t.Fatalf("%d key frame requests", n)
+	}
 	st.pictures(3, false)
 	st.pictures(5, true)
 

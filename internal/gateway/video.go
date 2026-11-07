@@ -42,7 +42,8 @@ import (
 const (
 	videoConfirm  = 10 * time.Second // held this long, the recorder reads the screen
 	maxHeldBytes  = 48 << 20         // held beyond this, packets are dropped
-	videoRetry    = 2 * time.Second  // between attempts to open the stream
+	videoRetry    = 2 * time.Second  // between attempts to open the stream, at first
+	videoRetryMax = 30 * time.Second // and at most, while it keeps failing
 	videoStopRead = 15 * time.Second // the last read, when a task ends
 )
 
@@ -72,6 +73,7 @@ type taskVideo struct {
 	cond      *sync.Cond    // ready or stopping changed
 	key       string        // the hub the recording taps
 	dev       driver.Device // its device
+	tap       *streamTap    // the current tap, nil between streams
 	moved     chan struct{} // closed when key changes
 	held      []vpacket     // waiting for a read
 	heldSize  int
@@ -82,8 +84,7 @@ type taskVideo struct {
 	reading   bool
 	stopping  bool
 	codec     driver.Codec
-	anchorAt  time.Time
-	anchorPTS time.Duration
+	base      time.Time // arrival minus PTS of the fastest picture so far
 	lastPTS   time.Duration
 
 	// What the write loop has written so far, for Recording.
@@ -101,7 +102,7 @@ type taskVideo struct {
 // startVideoLocked starts recording a lease's task. Callers hold g.mu.
 func (g *Gateway) startVideoLocked(l *lease) {
 	d := l.dev
-	if !g.recordOn || g.store == nil || d.video != nil || l.ended || g.closed {
+	if !g.recordOn || g.store == nil || d.video != nil || l.ended || l.recorded || g.closed {
 		return
 	}
 	key, dev := hubKey(d.id, false), d.dev
@@ -116,6 +117,9 @@ func (g *Gateway) startVideoLocked(l *lease) {
 	v.cond = sync.NewCond(&v.mu)
 	v.ctx, v.cancel = context.WithCancel(g.ctx)
 	d.video = v
+	// One file per task: a task whose recording was turned off is not
+	// recorded again, which would overwrite it.
+	l.recorded = true
 	g.videos.add()
 	go v.run()
 	go v.writeLoop()
@@ -157,33 +161,58 @@ func (g *Gateway) moveVideoLocked(d *device, key string, dev driver.Device) {
 func (v *taskVideo) run() {
 	defer close(v.ran)
 	g := v.g
+	wait := videoRetry
+	backoff := func() bool {
+		ok := sleepCtx(v.ctx, wait, nil)
+		if wait *= 2; wait > videoRetryMax {
+			wait = videoRetryMax
+		}
+		return ok
+	}
 	for v.ctx.Err() == nil {
 		v.mu.Lock()
 		key, dev, moved := v.key, v.dev, v.moved
 		v.mu.Unlock()
+		opened := time.Now()
 		t, err := g.tapStream(v.ctx, key, dev, v.packet)
 		if err != nil {
 			if errors.Is(err, driver.ErrUnsupported) {
 				g.log.Info("no screen recording: the phone sends no video", "device", v.d.id, "err", err)
 				return
 			}
-			if !sleepCtx(v.ctx, videoRetry, nil) {
+			g.log.Debug("screen recording: no stream", "device", v.d.id, "err", err)
+			if !backoff() {
 				return
 			}
 			continue
 		}
+		v.mu.Lock()
+		v.tap = t
+		v.mu.Unlock()
+		// The file starts at a key frame: ask for one rather than wait.
+		t.h.requestKeyFrame()
+		move := false
 		select {
 		case <-t.Done():
 		case <-moved:
+			move = true
 		case <-v.ctx.Done():
 		}
 		t.Close()
 		v.mu.Lock()
+		v.tap = nil
 		// A new stream starts over: nothing held belongs to it.
 		v.dropLocked()
-		v.anchorAt, v.lastPTS = time.Time{}, 0
+		v.base, v.lastPTS = time.Time{}, 0
 		v.mu.Unlock()
-		if !sleepCtx(v.ctx, time.Second/4, nil) {
+		if move {
+			wait = videoRetry
+			continue // the other screen's stream, at once
+		}
+		if time.Since(opened) > videoRetryMax {
+			wait = videoRetry // it ran for a while: try again soon
+		}
+		if !backoff() {
 			return
 		}
 	}
@@ -232,21 +261,19 @@ func (v *taskVideo) packet(tp timedPacket, codec driver.Codec) {
 	}
 }
 
-// timeOf places a picture on the wall clock by its PTS, counted from the
-// first picture of the stream, which is smoother than arrival times; by
-// its arrival when the PTS does not move forward or strays.
+// timeOf places a picture on the wall clock by its PTS, which is smoother
+// than arrival times: at its PTS plus the shortest delay any picture of
+// the stream took to arrive. So a picture is never placed after it
+// arrived, and a late one keeps its place. A PTS that goes back (a new
+// stream, an encoder restart) starts over.
 func (v *taskVideo) timeOf(tp timedPacket) time.Time {
 	p := tp.p
-	if v.anchorAt.IsZero() || p.PTS <= v.lastPTS {
-		v.anchorAt, v.anchorPTS = tp.at, p.PTS
+	base := tp.at.Add(-p.PTS)
+	if v.base.IsZero() || p.PTS < v.lastPTS || base.Before(v.base) {
+		v.base = base
 	}
 	v.lastPTS = p.PTS
-	at := v.anchorAt.Add(p.PTS - v.anchorPTS)
-	if d := at.Sub(tp.at); d > time.Second || d < -time.Second {
-		v.anchorAt, v.anchorPTS = tp.at, p.PTS
-		at = tp.at
-	}
-	return at
+	return v.base.Add(p.PTS)
 }
 
 // dropLocked drops what is held and waits for a recordable read.
@@ -285,6 +312,12 @@ func (v *taskVideo) read(start time.Time, recordable bool) {
 		v.heldSize -= len(vp.p.Data)
 	}
 	v.held = append([]vpacket(nil), v.held[n:]...)
+	if v.paused && v.needKey && v.tap != nil {
+		// Writing resumes at a key frame: ask for one rather than wait. On
+		// a goroutine of its own: the hub calls packet with its lock held,
+		// and asking takes that lock.
+		go v.tap.h.requestKeyFrame()
+	}
 	v.paused = false
 	v.cond.Broadcast()
 }
