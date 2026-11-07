@@ -267,6 +267,14 @@ func TestPosition(t *testing.T) {
 	if p.X != 256 || p.Y != 552 {
 		t.Errorf("scaled center = %+v", p)
 	}
+	// A background display whose video the server scaled down for its
+	// encoder takes points in display pixels too.
+	bg := &Background{w: 1080, h: 2400}
+	small := testLive(230, 512, bg.screenSize)
+	p, _ = small.position(ctx, screen.Point{X: 540, Y: 1200})
+	if p != (scrcpy.Position{X: 115, Y: 256, Width: 230, Height: 512}) {
+		t.Errorf("scaled background display = %+v", p)
+	}
 	// Without video, points are display pixels of the current rotation.
 	nov := &live{cfg: &Config{}, done: make(chan struct{}), displaySize: func(context.Context) (int, int, error) { return 1920, 1080, nil }}
 	p, _ = nov.position(ctx, screen.Point{X: 1900, Y: 1000})

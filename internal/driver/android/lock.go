@@ -25,16 +25,32 @@ import (
 // controller's mScreenOn tells about display 0 (both say "on").
 const screenCmd = `dumpsys display | grep -E 'mDisplayId=|mScreenState='; dumpsys power | grep -E 'mWakefulness='`
 
+// panelCmd reads the built-in panel's power mode from SurfaceFlinger
+// (Android 14 and later): a panel turned off with scrcpy's display power
+// control is off while the display power controller says on.
+const panelCmd = `dumpsys SurfaceFlinger --displays | grep -m 4 -E 'connectionType=|powerMode='`
+
 // ScreenOn implements driver.Waker: whether the phone's own display is on.
-// Dozing (an always-on display) counts as off.
+// Dozing (an always-on display) counts as off, and so does a panel that
+// is off while the phone is awake (dark.go).
 func (d *Device) ScreenOn(ctx context.Context) (bool, error) {
-	out, err := d.client.Shell(ctx, d.info.ID, screenCmd)
+	if d.darkPanel() {
+		return false, nil
+	}
+	cmd := screenCmd
+	if d.props.SDK >= 34 {
+		cmd += "; " + panelCmd
+	}
+	out, err := d.client.Shell(ctx, d.info.ID, cmd)
 	if err != nil {
 		return false, wrapErr(err)
 	}
 	on, ok := parseScreenOn(string(out))
 	if !ok {
 		return false, fmt.Errorf("android: cannot tell whether the screen is on from %q", firstLine(out))
+	}
+	if on && parsePhonePower(string(out)).panel == "Off" {
+		on = false
 	}
 	if on {
 		d.markAwake()
@@ -53,8 +69,13 @@ func (d *Device) Wake(ctx context.Context) error {
 }
 
 // wakeNow checks the screen without trusting an earlier check and wakes it
-// when it is off.
+// when it is off. A panel that a background display keeps off is turned
+// back on instead: the phone is awake already.
 func (d *Device) wakeNow(ctx context.Context, l *live) error {
+	if d.undark() {
+		d.markAwake()
+		return nil
+	}
 	on, err := d.ScreenOn(ctx)
 	if err != nil {
 		return err
