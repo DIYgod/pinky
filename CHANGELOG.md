@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1107.9 (2026-11-07)
 
 - Unlocking an iPhone from the computer works again after the phone locked during a long session.
 - Typing Chinese or other non-English text on an iPhone no longer fails the first time after a quiet spell.
