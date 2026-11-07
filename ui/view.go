@@ -41,6 +41,7 @@ func (a *app) view(c *mg.Context) {
 	a.telemetryDialogs(c)
 	a.updateDialogs(c)
 	a.shotDialog(c)
+	a.removeDialog(c)
 	a.sweepMirrors()
 	// A QR pairing lasts while its step shows, and a recording plays while
 	// Activity does.
@@ -93,6 +94,9 @@ func (a *app) sidebar(c *mg.Context) {
 			row := phoneRow(c.Key(d.Info.ID), on)
 			if row.Clicked() {
 				a.selectPhone(d.Info.ID)
+			}
+			if a.canRemove() {
+				row.ContextMenu(func(m *mg.Menu) { a.removeMenuItem(m, d) })
 			}
 			row.Label(locales.SidebarPhoneRow(d.Info.Name, statusLine(d))).Children(func() {
 				statusDot(c, d)

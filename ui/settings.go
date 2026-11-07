@@ -370,6 +370,10 @@ func (a *app) settingsPhones(c *mg.Context) {
 						}
 						mg.Text(c, word).FontSize(13).TextColor(p.ink2)
 					})
+					if a.canRemove() && quietButton(c.Key("remove-"+d.Info.ID), locales.RemovePhoneButton()).
+						Label(locales.RemovePhoneButtonLabel(d.Info.Name)).Clicked() {
+						a.askRemove(d)
+					}
 				})
 				// Unlocking from this computer: the phone's PIN. A saved one
 				// can be removed even with unlocking turned off.

@@ -3228,6 +3228,166 @@
   "@remoteURLTitle": {
     "description": "Settings › Agents › Remote agents: the row of the URL agents connect to, as http://127.0.0.1:7465/mcp."
   },
+  "removePhoneAddBackAndroid": "To add it back later, plug it in, or pair it again over Wi-Fi in Add phone.",
+  "@removePhoneAddBackAndroid": {
+    "description": "In the Remove phone dialog, for an Android phone that is offline now: how to add it back. Add phone is the sidebar's sidebarAddPhone."
+  },
+  "removePhoneAddBackIPhone": "To add it back later, plug it in again.",
+  "@removePhoneAddBackIPhone": {
+    "description": "In the Remove phone dialog, for an iPhone that is offline now: how to add it back."
+  },
+  "removePhoneBusy": "Removing…",
+  "@removePhoneBusy": {
+    "description": "The Remove button of the Remove phone dialog while the phone is being removed."
+  },
+  "removePhoneButton": "Remove…",
+  "@removePhoneButton": {
+    "description": "A small button on each phone's row in Settings › Phones: it opens the Remove phone dialog."
+  },
+  "removePhoneButtonLabel": "Remove {name}",
+  "@removePhoneButtonLabel": {
+    "description": "What assistive technology reads for removePhoneButton. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "removePhoneCable": "It's connected with a cable, so it shows up again right away, as a new phone. Unplug it first to keep it off the list.",
+  "@removePhoneCable": {
+    "description": "In the Remove phone dialog, for a phone connected with a USB cable now: removing it does not keep it away."
+  },
+  "removePhoneCancel": "Cancel",
+  "@removePhoneCancel": {
+    "description": "The Remove phone dialog's button that closes it without removing anything."
+  },
+  "removePhoneConfirm": "Remove",
+  "@removePhoneConfirm": {
+    "description": "The Remove phone dialog's button that removes the phone."
+  },
+  "removePhoneDone": "Removed {name}",
+  "@removePhoneDone": {
+    "description": "A notice after a phone was removed. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "removePhoneFailed": "Couldn't remove {name}: {error}",
+  "@removePhoneFailed": {
+    "description": "In the Remove phone dialog when removing failed. error is the gateway's error in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "error": {
+        "type": "String",
+        "example": "the gateway stopped"
+      }
+    }
+  },
+  "removePhoneGoesList": "It leaves Pinky's list, and agents can no longer use it.",
+  "@removePhoneGoesList": {
+    "description": "A point in the Remove phone dialog: what removing the phone does."
+  },
+  "removePhoneGoesSettings": "Its saved PIN and its settings in Pinky are deleted.",
+  "@removePhoneGoesSettings": {
+    "description": "A point in the Remove phone dialog: the PIN saved for unlocking from this computer, and the phone's settings (work in the background, how Pinky connects), are deleted."
+  },
+  "removePhoneGoesTask": "{agent}'s task on it stops: {task}.",
+  "@removePhoneGoesTask": {
+    "description": "A point in the Remove phone dialog while an agent works on the phone. task is the task's title as the agent named it.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "task": {
+        "type": "String",
+        "example": "Reorder last week's lunch"
+      }
+    }
+  },
+  "removePhoneHistory": "Also delete its history: tasks, screenshots and recordings",
+  "@removePhoneHistory": {
+    "description": "The check box in the Remove phone dialog, off by default: also delete the phone's tasks in Activity."
+  },
+  "removePhoneHistoryFailed": "Removed {name}, but its history couldn't be deleted: {error}",
+  "@removePhoneHistoryFailed": {
+    "description": "A notice when the phone was removed but deleting its history failed. error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "error": {
+        "type": "String",
+        "example": "disk full"
+      }
+    }
+  },
+  "removePhoneHistoryStays": "Its history stays in Activity.",
+  "@removePhoneHistoryStays": {
+    "description": "Under the history check box of the Remove phone dialog while it is off. Activity is the sidebar's sidebarActivity."
+  },
+  "removePhoneLink": "Remove this phone",
+  "@removePhoneLink": {
+    "description": "A link on the page of a phone that is offline or needs setup: it opens the Remove phone dialog."
+  },
+  "removePhoneMenu": "Remove this phone…",
+  "@removePhoneMenu": {
+    "description": "A menu item in a phone's ⋯ menus and right-click menus: it opens the Remove phone dialog."
+  },
+  "removePhonePINFailed": "Removed {name}, but its saved PIN couldn't be deleted: {error}",
+  "@removePhonePINFailed": {
+    "description": "A notice when the phone was removed but deleting its PIN from the system's keychain failed. error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "error": {
+        "type": "String",
+        "example": "the keychain is locked"
+      }
+    }
+  },
+  "removePhoneTileMore": "More actions for {name}",
+  "@removePhoneTileMore": {
+    "description": "The ⋯ button on a phone's tile in All phones, as assistive technology reads it and as its tooltip.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "removePhoneTitle": "Remove {name}?",
+  "@removePhoneTitle": {
+    "description": "The Remove phone dialog's title. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "removePhoneTrust": "The phone keeps trusting this computer, so other apps that use it are not affected.",
+  "@removePhoneTrust": {
+    "description": "In the Remove phone dialog: Pinky does not unpair the phone from the computer (USB debugging, wireless debugging, iPhone trust)."
+  },
+  "removePhoneWiFi": "Pinky disconnects from it and won't connect to it again by itself. To add it back, pair it again in Add phone, or plug it in.",
+  "@removePhoneWiFi": {
+    "description": "In the Remove phone dialog, for an Android phone connected over Wi-Fi now. Add phone is the sidebar's sidebarAddPhone."
+  },
+  "removePhoneWiFiIPhone": "Pinky stops using it over Wi-Fi. To add it back, plug it in.",
+  "@removePhoneWiFiIPhone": {
+    "description": "In the Remove phone dialog, for an iPhone connected over Wi-Fi now."
+  },
   "replayMenuItem": "Step-by-step replay",
   "@replayMenuItem": {
     "description": "An item of the ⋯ menu of a task that has a screen recording: shows the steps one at a time with their screenshots instead of the recording."
