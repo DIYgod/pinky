@@ -223,9 +223,9 @@ The daemons check the OS version only against iOS 18 and 26 (`__isPlatformVersio
 
 ### Two ways, chosen per phone
 
-`pathFor` (`version.go`) picks by version, and the provider by what is on the phone:
+`pathFor` (`version.go`) picks by version, and the provider by what is on the phone, unless the person chose the connection in Settings › Phones (see "Choosing the connection"):
 
-- **`wda`**, when the WebDriverAgent runner is installed (an app whose bundle id ends in `.xctrunner` and names WebDriverAgentRunner; Pinky's own build would win). Everything works but unlocking from the computer. `OpenWDA` uses WDA if it already answers (started by Xcode, say), and otherwise starts its test through testmanagerd with go-ios over the tunnel's RSD entry. Pinky reaches WDA's ports, 8100 (HTTP) and 9100 (MJPEG), through usbmuxd, one connection per request: nothing listens on the computer. Requests: `/status`, a session with Pinky's settings, `/source?format=json`, `/screenshot`, W3C `/actions` for taps, long presses, swipes and the mirror's drags, `/wda/keys`, `/element/active` + `/clear`, `/wda/homescreen`, `/wda/apps/activate` (which, unlike `launch`, never restarts a running app), `/wda/activeAppInfo`, `/wda/locked`.
+- **`wda`**, when the WebDriverAgent runner is installed (an app whose bundle id ends in `.xctrunner` and names WebDriverAgentRunner; Pinky's own build would win). Everything works, unlocking from the computer included. `OpenWDA` uses WDA if it already answers (started by Xcode, say), and otherwise starts its test through testmanagerd with go-ios over the tunnel's RSD entry. Pinky reaches WDA's ports, 8100 (HTTP) and 9100 (MJPEG), through usbmuxd, one connection per request: nothing listens on the computer. Requests: `/status`, a session with Pinky's settings, `/source?format=json`, `/screenshot`, W3C `/actions` for taps, long presses, swipes and the mirror's drags, `/wda/keys`, `/element/active` + `/clear`, `/wda/homescreen`, `/wda/pressButton` (Home while unlocking: `/wda/homescreen` brings SpringBoard to the front, which a locked phone refuses), `/wda/apps/activate` (which, unlike `launch`, never restarts a running app), `/wda/activeAppInfo`, `/wda/locked`.
 - **`accessibility`**, when it is not: nothing installed, and nothing to act with. The picture is screenshots (one every 100 ms while the screen changes, then one a second), the elements the inspector's walk placed by OCR, apps opened through the app service. Taps, swipes, typing and keys return `unsupported` with a sentence that names the helper: the inspector's only input, its Activate action, pressed nothing on a real phone (see "What ran where"). The provider asks such a phone again every 30 s, so a helper installed meanwhile is picked up.
 - iOS 17.0 to 17.3 and 16 and earlier are `needs_setup`, with the reason in the detail.
 
@@ -239,6 +239,7 @@ Both settle by the picture (`settle_frames.go`): WDA's MJPEG frames (15 a second
 | VideoToolbox encoder, frame stream, settling by frames, MJPEG parsing, WDA's tree to elements, the client against a fake WDA, the touch recorder, version paths, provider choices | Unit tests | Pass |
 | Starting WDA through testmanagerd over Pinky's tunnel, usbmuxd port forwarding to a phone | Nowhere | Built on go-ios's `RunTestWithConfig` and usbmuxd `Connect`, as `ios ui run wda` does |
 | The accessibility path | Its services on the iPhone 13 mini, iOS 27.0.1 (`TestAXProbeDump`, `TestAXProbeActivate`, `TestAXProbeFocusActivate`, device tag); nothing below iOS 27 | Reading works: Calculator's 24 elements in a 0.75 to 1.0 s walk, Settings' 49 in 1.84 s, labels, identifiers and trait words, no frame anywhere. Acting does not: Activate on Calculator's 7 and All Clear returned within 3 to 4 ms without an error and changed nothing on the display (144 before and after), also with the inspector's focus confirmed on the key first. It may act only in apps built for debugging; not tried |
+| The WDA path on a phone, chosen in place of CoreDevice (`TestDeviceConnectionWay`, `TestDeviceWDAStart`, `iosctl -connection wda`, device tag) | The iPhone 13 mini, iOS 27.0.1, with the runner the owner had installed for another tool (see "Choosing the connection") | Reading, tapping, Back, typing English and Chinese, screenshots, the live picture, the lock state and unlocking all work; timings in "Choosing the connection". The phone asked for its passcode before the runner's first start after a restart, and again half an hour later |
 | iPhone Mirroring with the inspector, for a tree with Mirroring's picture and input | The iPhone 13 mini, iOS 27.0.1, the person locking it and mirroring Settings to this Mac (macOS 27.2) | No tree: while mirrored, the inspector's focus request and remoteAXService timed out, and the app service's process list closed, twice in a row; lockdown said `PasswordProtected` false and the backlight was off. The services still timed out after Mirroring was closed and the phone unlocked: for 8 minutes, through 90 s with no client connected and through another lock and unlock, while the tunnel, display info, HID and screenshots worked. Only restarting the phone brought them back |
 
 What the inspector offers per element, read from its focus messages on iOS 27.0.1: four sections, Basic (Label, Value, Traits, Hint, Identifier, User Input Labels, none settable), Actions (Activate, plus the element's custom actions such as Copy on Calculator's display), Element (class, address, view controller) and Hierarchy (its ancestors). Nothing gives a frame.
@@ -280,12 +281,46 @@ xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
   -destination id=<udid> -allowProvisioningUpdates DEVELOPMENT_TEAM=<team id> test
 ```
 
+### Choosing the connection
+
+Settings › Phones shows each iPhone's connection: Automatic (`pathFor`, as above), CoreDevice (iOS 27 and later, nothing installed) or the WebDriverAgent helper (iOS 17.4 and later, the helper installed). The provider implements `driver.ConnectionChooser`: `Connections` lists the three ways with whether each works on the phone and why not (`os_version`, `not_installed`, `offline`), and `SetConnection` keeps the choice and forgets what List knew of the phone, so the next List inspects it again. The gateway saves the choice in the history store (`device_connections`), gives it to the provider before its first discovery, and on a change takes the phone offline and runs a discovery pass at once: the phone reconnects the chosen way without a restart. A way the phone cannot use leaves it needing setup, with the reason and what to do.
+
+Measured on the iPhone 13 mini, iOS 27.0.1, over USB, both ways (`TestDeviceConnectionWay`, the same steps each way):
+
+| | CoreDevice | WebDriverAgent |
+| --- | --- | --- |
+| Open | 0.7 s | 4 to 5 s: the runner starts each time |
+| Read the screen | 0.1 to 0.5 s | Calculator 0.5 to 0.7 s, Settings 1.8 to 2.9 s, the home screen 7.3 s, with a snapshot depth of 30 or 60 alike |
+| Tap | 0.06 s | 0.5 to 0.8 s |
+| Type `clock`, `你好` | 0.5 to 1.0 s (pasted) | 0.9 s, 1.1 to 1.3 s (XCTest's keyboard) |
+| Screenshot | 0.8 s | 0.15 to 0.18 s |
+| Live picture | The phone's HEVC display stream: 152 frames in 6 s | WDA's MJPEG (XCTest screenshots, 15 a second at half size), encoded to H.264 on the Mac: 562x1218, the first frame after 0.26 to 0.28 s |
+| Calculator's display after 7 | `7` | `Edit field, 7` |
+| Unlocking from the computer | Works | Works |
+| Banking apps that refuse screen sharing | DBS digibank warned of screen sharing while the stream ran | DBS digibank and China Merchants Bank opened without a warning, the MJPEG picture running |
+
+The banking apps were only opened, with the owner watching: nothing logged in or tapped, no screenshots. For the helper's run Pinky.app was quit, so no CoreDevice stream ran at the same time; DBS's first open while Pinky.app was still streaming had warned. iOS tells apps the screen is shared when it is mirrored or recorded (the display stream counts); XCTest's screenshots are single pictures and most likely do not count.
+
+The passcode for automation:
+
+- Before a UI test runs, iOS asks on the phone for its passcode to allow automation: here before the runner's first start after a restart, and again half an hour later, after the runner had stopped and the phone had been locked and unlocked. XCTest waits up to 60 s for it ("enabling automation mode" in the runner's log). Reports from Apple's forums and Appium say passcode-protected phones ask about once a day; when exactly iOS asks again is not known.
+- A passcode entered after the runner gave up still counts: the runner was stopped 2 s into the wait, the owner entered the passcode on the phone, and the next start, three minutes later, did not ask.
+- Pinky reads the runner's log for the wait (`runnerLog`). Once it has lasted 5 s (without a request it ends at once), the open returns `errAutomation`. The provider keeps that runner (`wdaWaits`), List reports the phone as needing setup with "Enter the passcode on the iPhone…", and once WDA answers List reports it online and the next Open takes the runner over: the gateway no longer starts a runner every discovery pass while the phone waits. When the runner gives up, Pinky waits 2 minutes before starting it again, twice as long after each request in a row nobody answered, up to 30 minutes, and at once after a reconnect or when the person chooses the connection again. On the phone, the request was detected; the takeover and the waits are unit-tested only, and what the runner does once its 60 s are up was not seen.
+
+The phone already had a runner, installed by its owner for another WebDriverAgent tool (iPhone Use; executable `WebDriverAgentRunner-Runner`, bundle id ending in `.wda.xctrunner`, signed with the owner's development certificate). `pickWDARunner` finds runners by bundle id, name or executable, so Pinky used it as it was: nothing was reinstalled or signed again. Pinky starts it with its own environment, so it listens on the phone's loopback only while Pinky runs it (see Security notes); a WDA another tool already runs is used as it is.
+
+Also found:
+
+- Through the helper, `Screen.Keyboard` stays false: on iOS 27 the keys are not in WDA's tree, and XCTest's keyboard query fails on the phone.
+- Settings' search field drops out of WDA's tree while results show; typing goes on into it.
+- The runner's test log went to Pinky's stderr; it is now read for the passcode wait and dropped (`wdaLog`, tests print it).
+
 ### Not done yet
 
 - Nothing below iOS 27 has run on a phone. The first such phone should get, in order: `iosctl devices` (the backend it picks), `TestAXProbeDump`, then `iosctl observe` and `stream` on each path and `tap` with the helper.
 - Mirroring a phone that Pinky drives on iOS 27 can leave its accessibility services stuck, so Pinky reads by OCR alone until the phone restarts (seen once, iOS 27.0.1 and macOS 27.2). Pinky does not notice it yet; a check that tells the person to restart the phone would help.
 - iPhone Mirroring as a way in: macOS 15 or later, iOS 18 or later, the same Apple Account on both, the phone locked nearby, not in the EU; window capture and mouse and keyboard events would need Screen Recording and Accessibility for Pinky. With no tree from the phone while it mirrors (above), it would read the screen by OCR alone, as DESIGN.md's planned Mirroring backend does; not built.
-- Unlocking from the computer and `Waker` below iOS 27; the lock state is reported.
+- `Waker` through the helper; `Unlock` wakes the phone by itself.
 - Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now. go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
 - The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
 - Landscape on both paths.
@@ -307,7 +342,7 @@ xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
 
 ## What the owner should try
 
-`Unlock` and waking a dark screen could not be tried on the test phone. With the iPhone connected by USB and nobody else using it:
+Done on 2026-11-08 for unlocking, both ways: the owner locked the iPhone 13 mini, ran `iosctl -connection coredevice unlock` and `iosctl -connection wda unlock` and typed the passcode in their own terminal, and the phone unlocked each time (steps 1 and 4; `unlock` woke the screen itself). Steps 2, 3 and 5 were not run; no wrong passcode was tried. Through the helper, the first try typed nothing and failed: `/wda/homescreen` is refused while the phone is locked, so Home is now `/wda/pressButton`. For another phone: with the iPhone connected by USB and nobody else using it:
 
 1. Lock it with the side button and leave it until the screen is dark.
 2. `scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> screen` should print `screen on: false`, and `locked` should print `locked: true`.
@@ -339,3 +374,5 @@ If the pad does not come up after the swipe (the phone may want Home instead wit
 - The phone was left on its home screen; Settings was only browsed (back navigation, scrolling, searches for "wallpaper" and "clock" that were cancelled, and closed again through the close button). Once a test's cleanup tap landed on a search result and opened Settings > Apps > Clock; nothing there was touched (its Mobile Data switch stayed on), and the test no longer taps after typing. Calculator was left cleared.
 - Round three: the phone's pasteboard held a Universal Clipboard item, which the phone does not let anyone read, so it could not be kept; the typing tests set their own pasteboard contents and leave it empty. The keyboard was switched to English (UK) and back to Pinyin by the keys test; it was left on Pinyin. The phone stayed unlocked and awake throughout; nothing was locked, no passcode typed, no setting changed.
 - The on-screen keyboard check from OCR needs single letters spread across the screen: a list's alphabetical section index (Settings > Apps) fooled the first version.
+- `driver.ConnectionChooser` is new and optional (additive): the iOS provider implements it, and the gateway's `Connections` and `SetConnection` serve Settings › Phones. The choice lives in the history store's `device_connections` table (schema 3).
+- With the helper, Pinky sees the phone's passcode request for automation in the runner's log and lists the phone as needing setup until it is answered (see "Choosing the connection"); an agent gets that detail when it opens the phone meanwhile.
