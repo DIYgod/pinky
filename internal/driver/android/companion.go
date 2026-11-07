@@ -354,6 +354,18 @@ func (d *Device) observeCompanion(ctx context.Context, c *companion.Client) (*sc
 	if imeWindowRE.MatchString(ime) {
 		s.Keyboard = parseIMEWindowVisible(ime)
 	}
+	if emptyWithKeyboard(s) {
+		// The keyboard covers the app with a screen of its own (Gboard's
+		// stylus tutorial, setup or a full-screen panel), whose nodes a
+		// normal read leaves out: read them too.
+		if t2, err := c.Dump(ctx, companion.DumpOptions{IME: true}); err == nil {
+			if s2 := t2.Screen(companion.ScreenOptions{Keyboard: true}); len(s2.Elements) > 0 {
+				s2.CapturedAt = c.HostTime(t2.Time)
+				s2.Locked, s2.Keyboard = s.Locked, s.Keyboard
+				s = s2
+			}
+		}
+	}
 	s.App.Name = d.companionAppName(s.App)
 	s.Events = d.comp.takeEvents()
 	return s, nil

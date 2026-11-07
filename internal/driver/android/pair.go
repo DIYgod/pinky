@@ -26,7 +26,7 @@ const (
 )
 
 // StartPairing implements driver.Pairer: the person scans QR() under
-// Developer options › Wireless debugging › Pair device with QR code, the
+// Developer options > Wireless debugging > Pair device with QR code, the
 // phone then advertises a pairing service named in the code, and Wait
 // pairs with it, connects, and returns the phone once it is online.
 func (p *Provider) StartPairing(ctx context.Context) (driver.Pairing, error) {
@@ -45,7 +45,7 @@ func (p *Provider) StartPairing(ctx context.Context) (driver.Pairing, error) {
 }
 
 // PairWithCode implements driver.Pairer with the address and six-digit
-// code the phone shows under Wireless debugging › Pair device with pairing
+// code the phone shows under Wireless debugging > Pair device with pairing
 // code. It then connects to the phone's connect service, which it finds
 // with mDNS, and returns the phone once it is online.
 func (p *Provider) PairWithCode(ctx context.Context, addr, code string) (driver.Info, error) {

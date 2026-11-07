@@ -357,3 +357,19 @@ func sameFile(a, b string) bool {
 	fb, err2 := os.Stat(b)
 	return err1 == nil && err2 == nil && os.SameFile(fa, fb)
 }
+
+func TestEmptyWithKeyboard(t *testing.T) {
+	app := screen.App{ID: "com.google.android.settings.intelligence"}
+	if !emptyWithKeyboard(&screen.Screen{App: app, Keyboard: true}) {
+		t.Error("an empty tree with the keyboard up was accepted")
+	}
+	for _, s := range []*screen.Screen{
+		{App: app, Keyboard: false},
+		{App: app, Keyboard: true, Locked: true},
+		{App: app, Keyboard: true, Elements: []screen.Element{{Role: "input"}}},
+	} {
+		if emptyWithKeyboard(s) {
+			t.Errorf("flagged %+v", s)
+		}
+	}
+}
