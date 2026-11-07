@@ -33,6 +33,12 @@ VERSION=9.0.2
 SHA256=8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
 URL=https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.xz
 
+# FFmpeg 9's x86 assembly needs a newer nasm than Ubuntu 20.04's 2.14, so
+# the Linux build makes its own (the checksum is Homebrew's too).
+NASM_VERSION=3.02
+NASM_SHA256=87336eba53b4acfe917424ab5d500d2b0054d9f5148d35c2273ccf2cfb712f0d
+NASM_URL=https://www.nasm.us/pub/nasm/releasebuilds/$NASM_VERSION/nasm-$NASM_VERSION.tar.xz
+
 usage="usage: scripts/ffmpeg.sh <prefix> [arm64|amd64|windows-amd64|linux-amd64]"
 prefix=${1:?$usage}
 target=${2:-}
@@ -50,31 +56,38 @@ sha256() {
 	fi
 }
 
-# The source is downloaded here, before any container: a container may not
-# share this machine's way to the network (a proxy, say). It mounts the
-# folder that holds the source. ffmpeg.org drops a connection now and then,
-# which curl's own retries do not cover.
-mkdir -p "$src"
-if [ ! -f "$tarball" ] || [ "$(sha256 "$tarball")" != "$SHA256" ]; then
-	echo "Downloading $URL"
+# fetch downloads a source tarball to a file, unless the file is there
+# with the right SHA-256. Sources are downloaded here, before any
+# container: a container may not share this machine's way to the network
+# (a proxy, say), so it mounts the folder that holds them. ffmpeg.org drops
+# a connection now and then, which curl's own retries do not cover.
+fetch() {
+	url=$1 want=$2 file=$3
+	if [ -f "$file" ] && [ "$(sha256 "$file")" = "$want" ]; then
+		return
+	fi
+	echo "Downloading $url"
 	tries=0
-	until curl -fsSL --retry 3 -o "$tarball.part" "$URL"; do
+	until curl -fsSL --retry 3 -o "$file.part" "$url"; do
 		tries=$((tries + 1))
 		if [ $tries -ge 5 ]; then
-			echo "ffmpeg.sh: could not download $URL" >&2
-			rm -f "$tarball.part"
+			echo "ffmpeg.sh: could not download $url" >&2
+			rm -f "$file.part"
 			exit 1
 		fi
 		sleep $((tries * 5))
 	done
-	got=$(sha256 "$tarball.part")
-	if [ "$got" != "$SHA256" ]; then
-		echo "ffmpeg-$VERSION.tar.xz has SHA-256 $got, want $SHA256" >&2
-		rm -f "$tarball.part"
+	got=$(sha256 "$file.part")
+	if [ "$got" != "$want" ]; then
+		echo "ffmpeg.sh: ${file##*/} has SHA-256 $got, want $want" >&2
+		rm -f "$file.part"
 		exit 1
 	fi
-	mv "$tarball.part" "$tarball"
-fi
+	mv "$file.part" "$file"
+}
+
+mkdir -p "$src"
+fetch "$URL" "$SHA256" "$tarball"
 
 # Windows and Linux: run this script again in a container, unless it is
 # running in one. The images and packages are here, so that the hash of
@@ -83,14 +96,17 @@ fi
 case $target in
 windows-amd64 | linux-amd64)
 	if [ -z "${FFMPEG_IN_CONTAINER:-}" ]; then
+		nasm=
 		case $target in
 		windows-amd64)
 			image=ubuntu:24.04
-			packages="gcc libc6-dev gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev"
+			packages="gcc libc6-dev nasm gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev"
 			;;
 		linux-amd64)
 			image=ubuntu:20.04
 			packages="gcc libc6-dev patchelf"
+			nasm=nasm-$NASM_VERSION.tar.xz
+			fetch "$NASM_URL" "$NASM_SHA256" "$(dirname "$prefix")/$nasm"
 			;;
 		esac
 		if ! docker info >/dev/null 2>&1; then
@@ -100,7 +116,7 @@ windows-amd64 | linux-amd64)
 		mkdir -p "$(dirname "$prefix")"
 		script=$(cd "$(dirname "$0")" && pwd)/ffmpeg.sh
 		exec docker run --rm --platform linux/amd64 \
-			-e FFMPEG_IN_CONTAINER=1 -e PACKAGES="$packages" -e TARGET="$target" \
+			-e FFMPEG_IN_CONTAINER=1 -e PACKAGES="$packages" -e TARGET="$target" -e NASM="$nasm" \
 			-e OUT="/out/$(basename "$prefix")" -e OWNER="$(id -u):$(id -g)" \
 			-v "$script:/ffmpeg.sh:ro" -v "$(dirname "$prefix"):/out" \
 			"$image" sh -c '
@@ -108,7 +124,13 @@ windows-amd64 | linux-amd64)
 				export DEBIAN_FRONTEND=noninteractive
 				apt-get update -qq
 				# shellcheck disable=SC2086 # the packages are split on purpose
-				apt-get install -y -qq --no-install-recommends xz-utils make nasm binutils $PACKAGES >/dev/null
+				apt-get install -y -qq --no-install-recommends xz-utils make binutils $PACKAGES >/dev/null
+				if [ -n "$NASM" ]; then
+					mkdir /tmp/nasm
+					tar -xJf "/out/$NASM" -C /tmp/nasm --strip-components=1
+					(cd /tmp/nasm && ./configure --prefix=/usr/local >/dev/null && make -j"$(nproc)" >/dev/null && make install >/dev/null)
+					echo "Built $(nasm -v)"
+				fi
 				status=0
 				sh /ffmpeg.sh "$OUT" "$TARGET" || status=$?
 				chown -R "$OWNER" "$OUT" "$OUT-src" 2>/dev/null || true
