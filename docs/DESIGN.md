@@ -264,12 +264,13 @@ Approvals are decided in the client and enforced in the gateway; the agent only 
 
 ### Risk tiers
 
-Defaults; the person can change each one.
+Defaults; the person can change each one. Settings › Safety › "When should agents ask you?" picks what asks: payments only (the default, recommended), payments, messages and deletions (the second Ask row too), or every action.
 
 | Tier | Actions |
 | --- | --- |
-| Allow | Observe, navigate, scroll, search, type into search fields |
-| Ask | Send a message or post; pay, order, book or transfer; delete; change account or security settings; place a call; install or uninstall an app; open a link that leaves the app; read the clipboard; write files to the phone |
+| Allow | Observe, navigate, scroll, search, type into search fields; by default also what the second Ask row lists |
+| Ask | Pay: a commit on a screen that shows an amount (Pay, Place order · $12.80, a price in a store); write files to the phone |
+| Ask, with "Ask before payments, messages and deletions" | Send a message or post; order, book or transfer; delete; change account or security settings; place a call; install or uninstall an app; open a link that leaves the app; read the clipboard |
 | Deny | Anything in a blocked app (banking, wallets and password managers by default), where the agent does not even get the screen; typing into password and one-time-code fields |
 
 ### Detecting a commit
@@ -278,14 +279,14 @@ Policy actions are tool calls in context:
 
 | Action | Detected as |
 | --- | --- |
-| `commit` | A tap whose label matches the commit words (Send, Pay, Order, Place order, Checkout, Buy, Book, Reserve, Confirm, Submit, Delete, Transfer, Post), in every supported UI language; for a button with no words of its own (an icon), what the app calls it: the resource id on Android, the accessibility identifier or SF Symbol name on iOS (`btn_send`, `sendButton`, `paperplane.fill`, `trash`), minus ids that name a state or a place (`send_status`, `payment_methods`) |
-| `payment` | A commit on a screen that shows a currency amount |
+| `commit` | A tap whose label matches the commit words (Send, Pay, Order, Place order, Checkout, Buy, Sell, Swap, Trade, Repay, Borrow, Stake, Book, Reserve, Confirm, Submit, Delete, Remove, Bin, Transfer, Post), in every supported UI language; text that only OCR reads (a web view) by the whole line and by its pieces; never a tab, which only moves between pages; for a button with no words of its own (an icon), what the app calls it: the resource id on Android, the accessibility identifier or SF Symbol name on iOS (`btn_send`, `sendButton`, `paperplane.fill`, `trash`), minus ids that name a state or a place (`send_status`, `payment_methods`) |
+| `payment` | A commit that moves money by itself (Pay, Buy, Sell, Swap, Trade, Repay, Borrow, Stake, Withdraw, Transfer, Deposit, 还款, 分期, 买入, 卖出, 赎回, 申购, 闪兑 and the like), or any commit on a screen that shows an amount, coins included (`0.5 ETH`, `1,200 USDC`). Convert, Exchange, Redeem and Claim count only next to an amount |
 | `send_message` | Enter, or `submit: true`, in an input of a messaging app |
 | `install_app` | Install, Get or Uninstall in an app store or the system's package dialog |
 | `open_url` | A tap on a link element that leaves the current app |
 | `call` | A tap on a call button, or a dialer showing a number |
 
-App categories (finance, messaging, stores) come from a bundled, editable list of package names and bundle ids. The rules file is the only source of truth, and Settings › Safety edits it:
+App categories (finance, messaging, stores) come from a bundled, editable list of package names and bundle ids; an app the list does not know whose name says bank, wallet, securities, remittance or pay (in Latin script, Chinese, Japanese or Korean) counts as finance. `apps.yaml` can exclude an id or a name, which then beats a prefix entry and the name (Settings › Safety unblocks one app that way). The rules file is the only source of truth, and Settings › Safety edits it:
 
 ```yaml
 rules:
@@ -305,7 +306,9 @@ rules:
 
 When several rules match, the strictest wins: Deny, then Ask, then Allow; among rules with the same decision, the first one names the result. An Allow rule therefore never cancels another rule's Ask or Deny (Always allow does that for asks, below).
 
-Settings › Safety › Rules lists the file's rules to add, change, move and remove, each with its name, what it matches (apps, categories, actions, words of the element's label) and what it does (Block, Ask, Allow). The rules Pinky adds show there read-only: the preset's, which come before the file's, the apps blocked in Settings, and the credentials rule. Before saving, Pinky checks a rule: a name no other rule has (the built-in ones included), something to match, known actions. Removing a rule that blocks, or changing what it matches or does, asks the person first; removing or renaming a rule drops the Always allow answers about it. Pinky reads `rules.yaml` when it starts, and Settings writes the whole file, so edits made by hand while it runs are lost at the next change in Settings.
+Settings › Safety › Rules lists the file's rules to add, change, move and remove, each with its name, what it matches (apps, categories, actions, words of the element's label) and what it does (Block, Ask, Allow). The rules Pinky adds show there read-only: the preset's, which come before the file's, the apps blocked in Settings, and the credentials rule. Before saving, Pinky checks a rule: a name no other rule has (the built-in ones included), something to match, known actions. Removing a rule that blocks, or changing what it matches or does, asks the person first; removing or renaming a rule drops the Always allow answers about it.
+
+Edits of `rules.yaml` and `apps.yaml` made by hand while Pinky runs take effect without a restart (Settings › Advanced › Edit rules file opens `rules.yaml`). The gateway looks at both files every two seconds, and again before Settings shows the rules or changes either file, and reads a file again when it changed since Pinky last read or wrote it, once it has stayed the same for a moment, so that an editor's save half done is never taken for rules. Settings › Safety then shows what the files hold, its switches and blocked apps included, and a change in Settings passes on only what the person changed. A change from Settings is made on top of the edit, so it never undoes one, though Settings writes the file in its own layout, without the person's comments. Settings › Safety › Rules saves a change only while the file's rules are still the ones the change was made from; after a hand edit of the rules it saves nothing, says so, and shows the file's rules, and the person makes the change again. An edit that does not parse, or that has a rule or an Always allow answer Pinky cannot use (a rule without a name or anything to match, an unknown action), changes nothing: Pinky keeps the rules it had, and Settings › Safety and Advanced say what is wrong. Until the person fixes the file, the controls that would change it are off (and, for `rules.yaml`, approvals do not offer Always allow), so Settings never writes over the edit. A file that is removed starts again from the one Pinky ships, as at the first start.
 
 ### Approval panel and transport
 
@@ -315,11 +318,11 @@ Settings › Safety › Rules lists the file's rules to add, change, move and re
 - While an approval is open, the device accepts no other action; `phone_observe` and `phone_wait_for` still work.
 - An `approval_id` is single-use and bound to the device, lease, tool and arguments; a call with other arguments is refused.
 - On approval the gateway re-checks the target's label and position and the screen text shown in the panel (status bar excluded). Any change returns `stale`, and nothing is done.
-- `phone_request_approval` records the person's answer but grants nothing: a later commit still asks, and so does the agent's next question. Its card offers no Allow for this task (nor Always allow): a question is the person's consent to what it says, and answering the next ones by itself would let an agent claim consent the person never gave.
+- `phone_request_approval` records the person's answer but grants nothing: a later step the rules ask about, such as a payment, still asks, and so does the agent's next question. Its card offers no Allow for this task (nor Always allow): a question is the person's consent to what it says, and answering the next ones by itself would let an agent claim consent the person never gave.
 
 ### Always allow
 
-"Always allow payments in Dinely" keeps the person's answer in the rules file, under `always_allow`, as an exemption: in that app, the rule the approval named (Payments) and the rules that asked with it (Commits, since a payment is a commit) no longer ask about the steps that rule asks about, in later tasks and after a restart. Another commit in Dinely, such as Delete, still asks, as do a payment in another app and a step that a further rule asks about.
+"Always allow payments in Dinely" keeps the person's answer in the rules file, under `always_allow`, as an exemption: in that app, the rule the approval named (Payments) and the rules that asked with it (Commits, with "Ask before payments, messages and deletions", since a payment is a commit) no longer ask about the steps that rule asks about, in later tasks and after a restart. Another commit in Dinely, such as Delete, still asks, as do a payment in another app and a step that a further rule asks about.
 
 ```yaml
 always_allow:

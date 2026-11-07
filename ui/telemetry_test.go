@@ -65,7 +65,7 @@ func newTelApp(t *testing.T, b telemetry.Backend) *telApp {
 	ta := &telApp{testApp: newTestApp(t, fakeapi.OnePhone), tel: tel, dir: dir}
 	ta.app.opt.Telemetry = tel
 	ta.app.settings.UsageStats = true
-	ta.app.opt.OnSettings = func(s Settings) {
+	ta.app.opt.OnSettings = func(_, s Settings) {
 		ta.mu.Lock()
 		ta.changes = append(ta.changes, s)
 		ta.mu.Unlock()

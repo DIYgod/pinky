@@ -37,7 +37,7 @@ Ask a new Claude Code session: *"Use my Mi 10 Pro: open the Calculator and work 
 
 ## 3. Approvals, take over, stop *(checked with the screen on, on an emulator)*
 
-Ask: *"On my Mi 10 Pro, open Settings and turn on Airplane mode."*
+First choose Settings › Safety › **Ask before payments, messages and deletions**: the default, **Ask before payments only**, lets this switch through. Then ask: *"On my Mi 10 Pro, open Settings and turn on Airplane mode."*
 
 - [ ] Pinky asks before the switch (rule **Settings changes**) with a screenshot of it; **Deny** tells the agent no. With the window in the back, the floating panel at the top right asks instead, with a countdown.
 - [ ] Clicking or dragging on the mirror takes over: **You're in control**; the agent is paused. **Hand back** lets it go on; **Stop** or **⌥⌘.** ends its task.

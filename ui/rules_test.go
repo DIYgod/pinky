@@ -2,7 +2,9 @@ package ui
 
 import (
 	"slices"
+	"sync"
 	"testing"
+	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -35,16 +37,27 @@ func TestRuleChoicesArePolicys(t *testing.T) {
 func TestGatewayRules(t *testing.T) {
 	ga := newGatewayApp(t, true)
 	g := ga.w.Gateway
+	late := &lateRules{Gateway: g}
+	ga.app.api = late
 	ga.page, ga.set.sec = pageSettings, secSafety
 	tt := mg.NewTester(ga.view, 1280, 2600)
 	ga.waitFor(t, "the rules", func() bool { tt.Frame(); return ga.rules.loaded })
 	tt.Frame()
 	for _, want := range []string{"Rules", "Your rules", "Finance apps", "Password managers", "Built in", "Payments",
-		"Installing apps, Opening links", "Blocked by you", "Passwords and codes"} {
+		"Blocked by you", "Passwords and codes"} {
 		if !hasText(tt, want) {
 			t.Errorf("no %q in Settings › Safety: %q", want, tt.Texts())
 		}
 	}
+	// The default asks before payments only; preset 1 adds its rules.
+	if hasText(tt, "Installing apps, Opening links") {
+		t.Errorf("preset 1's rules show with the default: %q", tt.Texts())
+	}
+	if err := g.Policy().SetPreset(policy.PresetCommits); err != nil {
+		t.Fatal(err)
+	}
+	ga.rules.lastLoad = time.Time{}
+	ga.waitFor(t, "preset 1's rules", func() bool { tt.Frame(); return hasText(tt, "Installing apps, Opening links") })
 	file := func() []string {
 		var out []string
 		for _, r := range g.Rules().File {
@@ -57,6 +70,13 @@ func TestGatewayRules(t *testing.T) {
 			Target: &screen.Element{Role: screen.RoleButton, Label: "Delete chat", Bounds: screen.Rect{W: 100, H: 50}}})
 	}
 	chatter := screen.App{Name: "Chatter", ID: demo.Chatter}
+	// saved waits until the gateway has the rules and the client has its
+	// answer: the gateway changes before the client's goroutine reports
+	// back, which a loaded machine may run late.
+	saved := func(what string, rules func() bool) {
+		t.Helper()
+		ga.waitFor(t, what, func() bool { tt.Frame(); return !ga.rules.saving && !ga.rules.editing && rules() })
+	}
 
 	// The form says what is missing.
 	if err := tt.Click("Add rule"); err != nil {
@@ -91,13 +111,21 @@ func TestGatewayRules(t *testing.T) {
 		t.Fatalf("no match: %q", tt.Texts())
 	}
 
-	// A rule that blocks deleting in Chatter.
+	// A rule that blocks deleting in Chatter. The gateway's answer reaches
+	// the client late: until it does, the form stays open and saving.
 	ga.rules.form.apps, ga.rules.form.labels, ga.rules.form.decision = "Chatter", "delete", "deny"
 	if err := tt.Click("Commits"); err != nil { // a check box of the form
 		t.Fatal(err)
 	}
+	release := late.hold()
 	save()
-	ga.waitFor(t, "the new rule", func() bool { return len(file()) == 3 })
+	ga.waitFor(t, "the gateway to have the rule", func() bool { return len(file()) == 3 })
+	tt.Frame()
+	if !ga.rules.saving || !ga.rules.editing {
+		t.Fatalf("the form closed before the gateway answered: saving %v, editing %v", ga.rules.saving, ga.rules.editing)
+	}
+	release()
+	saved("the new rule", func() bool { return len(file()) == 3 })
 	want := gateway.RuleView{Name: "No deleting in Chatter", Apps: []string{"Chatter"}, Actions: []string{"commit"},
 		Labels: []string{"delete"}, Decision: "deny"}
 	if got := g.Rules().File[2]; !ruleEqual(got, want) {
@@ -122,22 +150,20 @@ func TestGatewayRules(t *testing.T) {
 		t.Fatalf("no confirmation: %q", tt.Texts())
 	}
 	tt.Key(0, mg.KeyEnter) // the dialog's Change
-	ga.waitFor(t, "the change", func() bool { return g.Rules().File[2].Decision == "ask" })
+	saved("the change", func() bool { return g.Rules().File[2].Decision == "ask" })
 	if v := deleteIn(chatter); v.Decision != policy.Ask || !slices.Contains(v.Asks, "No deleting in Chatter") {
 		t.Fatalf("delete in Chatter after the change: %+v", v)
 	}
 
 	// Moved up.
-	ga.waitFor(t, "the form to close", func() bool { tt.Frame(); return !ga.rules.editing && !ga.rules.saving })
 	if err := tt.Click("Move No deleting in Chatter up"); err != nil {
 		t.Fatal(err)
 	}
-	ga.waitFor(t, "the move", func() bool {
+	saved("the move", func() bool {
 		return slices.Equal(file(), []string{"Finance apps", "No deleting in Chatter", "Password managers"})
 	})
 
 	// Removing a rule that blocks asks first; Escape keeps it.
-	ga.waitFor(t, "the save", func() bool { tt.Frame(); return !ga.rules.saving })
 	if err := tt.Click("Remove Finance apps"); err != nil {
 		t.Fatal(err)
 	}
@@ -154,9 +180,43 @@ func TestGatewayRules(t *testing.T) {
 	if err := tt.Click("Remove No deleting in Chatter"); err != nil {
 		t.Fatal(err)
 	}
-	ga.waitFor(t, "the removal", func() bool { return slices.Equal(file(), []string{"Finance apps", "Password managers"}) })
+	saved("the removal", func() bool { return slices.Equal(file(), []string{"Finance apps", "Password managers"}) })
 	if v := deleteIn(chatter); v.Rule == "No deleting in Chatter" || slices.Contains(v.Asks, "No deleting in Chatter") {
 		t.Fatalf("the removed rule still decides: %+v", v)
+	}
+}
+
+// lateRules is the gateway with its answers to SetRules held back, while
+// the test holds them, after the rules changed: a client goroutine that a
+// loaded machine runs late.
+type lateRules struct {
+	*gateway.Gateway
+	mu   sync.Mutex
+	wait chan struct{}
+}
+
+func (l *lateRules) SetRules(base, rules []gateway.RuleView) error {
+	err := l.Gateway.SetRules(base, rules)
+	l.mu.Lock()
+	wait := l.wait
+	l.mu.Unlock()
+	if wait != nil {
+		<-wait
+	}
+	return err
+}
+
+// hold holds the answers until release.
+func (l *lateRules) hold() (release func()) {
+	ch := make(chan struct{})
+	l.mu.Lock()
+	l.wait = ch
+	l.mu.Unlock()
+	return func() {
+		l.mu.Lock()
+		l.wait = nil
+		l.mu.Unlock()
+		close(ch)
 	}
 }
 

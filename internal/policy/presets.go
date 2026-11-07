@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -24,9 +22,10 @@ const (
 	PresetNone Preset = 0
 	// PresetCommits asks before payments, messages, deletions and other
 	// commits, calls, installs, links that leave the app and settings
-	// changes. The default and recommended preset.
+	// changes. The default before 2026-11-07's change to PresetPayments.
 	PresetCommits Preset = 1
-	// PresetPayments asks before payments only.
+	// PresetPayments asks before payments only. The default and
+	// recommended preset.
 	PresetPayments Preset = 2
 	// PresetEvery asks before every action.
 	PresetEvery Preset = 3
@@ -126,6 +125,12 @@ func (e *Engine) SetPreset(p Preset) error {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if err := e.syncLocked(&e.rulesDisk); err != nil {
+		return err
+	}
+	if e.file.Preset != nil && Preset(*e.file.Preset) == p {
+		return nil
+	}
 	v := int(p)
 	e.file.Preset = &v
 	return e.saveRulesLocked()
@@ -143,14 +148,21 @@ func (e *Engine) HideCodes() bool {
 func (e *Engine) SetHideCodes(on bool) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if err := e.syncLocked(&e.rulesDisk); err != nil {
+		return err
+	}
+	if e.file.MaskCodes != nil && *e.file.MaskCodes == on {
+		return nil
+	}
 	e.file.MaskCodes = &on
 	return e.saveRulesLocked()
 }
 
 // rulesHeader starts a saved rules file.
 const rulesHeader = `# Pinky policy rules. Settings writes this file; you may edit it too.
-# preset: 1 = payments, messages, deletions and other commits ask (recommended),
-# 2 = only payments ask, 3 = every action asks, 0 = only the rules below.
+# preset: 1 = payments, messages, deletions and other commits ask,
+# 2 = only payments ask (the default, recommended), 3 = every action asks,
+# 0 = only the rules below.
 # When several rules match, the strictest wins: deny, then ask, then allow.
 # always_allow holds your "Always allow" answers to approvals: in that app,
 # those rules no longer ask (never a deny or read-only mode; not with preset
@@ -161,40 +173,14 @@ const rulesHeader = `# Pinky policy rules. Settings writes this file; you may ed
 `
 
 func (e *Engine) saveRulesLocked() error {
-	if e.rulesPath == "" {
+	if e.rulesDisk.path == "" {
 		return nil
 	}
 	data, err := yaml.Marshal(e.file)
 	if err != nil {
 		return err
 	}
-	return writeFile(e.rulesPath, append([]byte(rulesHeader), data...))
-}
-
-// writeFile replaces a file atomically, readable only by the user.
-func writeFile(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*")
-	if err != nil {
-		return err
-	}
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
-	}
-	if err := tmp.Chmod(0o600); err != nil {
-		tmp.Close()
-		os.Remove(tmp.Name())
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(tmp.Name())
-		return err
-	}
-	return os.Rename(tmp.Name(), path)
+	return e.writeLocked(&e.rulesDisk, append([]byte(rulesHeader), data...))
 }
 
 // BlockedApp is an app the rules block: the agent cannot open it, see its
@@ -315,6 +301,10 @@ func (e *Engine) SetAppBlocked(app screen.App, blocked bool) error {
 		return errors.New("an app id or name is needed")
 	}
 	e.mu.Lock()
+	if err := e.syncLocked(&e.appsDisk); err != nil {
+		e.mu.Unlock()
+		return err
+	}
 	o := e.overrides
 	if o.Add == nil {
 		o.Add = map[string]CategoryEntries{}
@@ -401,7 +391,7 @@ const appsHeader = `# App categories for Pinky's rules. Settings writes this fil
 `
 
 func (e *Engine) saveAppsLocked() error {
-	if e.appsPath == "" {
+	if e.appsDisk.path == "" {
 		return nil
 	}
 	o := e.overrides
@@ -417,5 +407,5 @@ func (e *Engine) saveAppsLocked() error {
 	if err := enc.Encode(o); err != nil {
 		return err
 	}
-	return writeFile(e.appsPath, append([]byte(appsHeader), buf.Bytes()...))
+	return e.writeLocked(&e.appsDisk, append([]byte(appsHeader), buf.Bytes()...))
 }

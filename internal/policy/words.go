@@ -17,23 +17,30 @@ var commitVerbs = words(
 	"send", "pay", "order", "checkout", "buy", "book", "reserve", "confirm", "submit",
 	"delete", "transfer", "post", "purchase", "publish", "tweet", "donate", "subscribe",
 	"withdraw", "erase", "repost", "retweet", "renew", "approve", "authorize", "authorise",
+	"sell", "swap", "trade", "convert", "repay", "borrow", "lend", "stake", "unstake", "claim", "bridge",
+	"redeem", "deposit", "remove", "bin", "trash",
 	// Spanish / Portuguese
 	"enviar", "pagar", "pedir", "ordenar", "comprar", "reservar", "confirmar", "eliminar",
 	"borrar", "transferir", "publicar", "suscribirse", "suscribir", "donar", "excluir", "apagar",
-	"assinar", "finalizar", "autorizar", "aprobar", "aprovar",
+	"assinar", "finalizar", "autorizar", "aprobar", "aprovar", "vender", "intercambiar", "trocar",
+	"convertir", "converter", "canjear", "resgatar", "depositar", "retirar", "quitar", "remover",
 	// French
 	"envoyer", "payer", "commander", "acheter", "réserver", "confirmer", "supprimer",
-	"transférer", "publier", "valider", "abonner", "virer", "autoriser", "approuver",
+	"transférer", "publier", "valider", "abonner", "virer", "autoriser", "approuver", "vendre",
+	"échanger", "rembourser", "emprunter", "déposer", "retirer", "racheter", "enlever",
 	// German
 	"senden", "absenden", "bezahlen", "zahlen", "bestellen", "kaufen", "buchen", "reservieren",
 	"bestätigen", "löschen", "überweisen", "posten", "veröffentlichen", "abonnieren", "zahlungspflichtig",
-	"kostenpflichtig", "spenden", "abheben", "autorisieren", "genehmigen", "freigeben",
+	"kostenpflichtig", "spenden", "abheben", "autorisieren", "genehmigen", "freigeben", "verkaufen",
+	"tauschen", "umtauschen", "zurückzahlen", "tilgen", "einzahlen", "einlösen", "entfernen",
 	// Italian
 	"invia", "inviare", "paga", "pagare", "ordina", "acquista", "compra", "prenota", "conferma",
 	"elimina", "cancella", "trasferisci", "pubblica", "abbonati", "dona", "preleva", "autorizza", "approva",
+	"vendi", "vendere", "scambia", "converti", "rimborsa", "deposita", "riscatta", "rimuovi",
 	// Russian
 	"отправить", "оплатить", "заказать", "купить", "забронировать", "подтвердить", "удалить",
 	"перевести", "опубликовать", "оформить", "подписаться", "пожертвовать", "вывести",
+	"продать", "обменять", "конвертировать", "погасить", "занять", "внести", "убрать",
 )
 
 // commitPhrases are word sequences that make a label a commit when it starts
@@ -47,7 +54,8 @@ var commitPhrases = phrases(
 	"passer la commande", "passer commande", "faire un don", "se déconnecter",
 	"realizar pedido", "tramitar pedido", "hacer pedido", "fazer pedido", "cerrar sesión",
 	"finalizar compra", "finalizar pedido", "procedi all'acquisto", "esci dall'account",
-	"оформить заказ", "выйти из аккаунта",
+	"оформить заказ", "выйти из аккаунта", "move to bin", "move to trash", "sell all", "top up",
+	"cash out", "add funds", "send money",
 )
 
 // slideVerbs start "slide to pay"-style labels on sliders and buttons.
@@ -60,15 +68,54 @@ var cjkCommitPrefixes = []string{
 	"发送", "支付", "付款", "下单", "提交", "购买", "立即购买", "立即支付", "立即下单", "结算", "去结算",
 	"确认", "删除", "转账", "发布", "发表", "预订", "预约", "订购", "充值", "提现", "捐赠", "订阅", "买单",
 	"抢购", "马上抢", "去支付", "去付款", "立即付款", "确认收货", "退出登录", "注销", "登出", "授权", "批准",
+	"还款", "立即还款", "分期", "去分期", "立即分期", "借钱", "借款", "买入", "卖出", "赎回", "申购",
+	"兑换", "闪兑", "质押", "提币", "充币", "划转", "移除",
 	// Traditional Chinese
 	"傳送", "發送", "下單", "購買", "立即購買", "結帳", "結賬", "確認", "刪除", "轉帳", "轉賬", "發布",
 	"發佈", "發表", "預訂", "預約", "訂購", "儲值", "提領", "訂閱", "登出", "授權",
+	"還款", "立即還款", "借錢", "借款", "買入", "賣出", "贖回", "申購", "兌換", "閃兌", "質押", "提幣",
+	"充幣", "劃轉",
 	// Japanese
 	"送信", "支払", "お支払", "注文", "ご注文", "購入", "確定", "削除", "送金", "投稿", "予約", "申し込",
 	"申込", "決済", "振込", "振り込", "チェックアウト", "レジに進", "ログアウト", "退会", "寄付",
+	"売却", "売る", "両替", "返済", "借入",
 	// Korean
 	"보내기", "전송", "결제", "주문", "구매", "삭제", "송금", "이체", "게시", "등록", "예약", "제출",
-	"구독", "탈퇴", "로그아웃", "기부", "출금",
+	"구독", "탈퇴", "로그아웃", "기부", "출금", "매도", "매수", "상환", "대출", "환전", "교환", "스왑",
+}
+
+// moneyWords make a commit a payment by themselves, with or without an
+// amount on the screen: paying, buying and selling, swapping and trading,
+// lending and borrowing, moving money in and out. "Convert", "exchange",
+// "redeem", "claim" and the like are payments only next to an amount, as
+// they also convert files, exchange points and redeem coupons.
+var moneyWords = words(
+	"pay", "buy", "purchase", "checkout", "sell", "swap", "trade", "repay", "borrow", "lend", "stake",
+	"unstake", "bridge", "withdraw", "transfer", "deposit", "donate",
+	"pagar", "comprar", "vender", "transferir", "depositar",
+	"payer", "acheter", "vendre", "virer", "rembourser", "emprunter",
+	"bezahlen", "zahlen", "kaufen", "verkaufen", "überweisen", "abheben", "einzahlen", "zurückzahlen",
+	"tilgen", "zahlungspflichtig", "kostenpflichtig",
+	"paga", "pagare", "acquista", "compra", "vendi", "vendere", "preleva", "deposita", "rimborsa",
+	"оплатить", "купить", "продать", "перевести", "вывести", "погасить",
+)
+
+// moneyPhrases make a commit a payment wherever they are in its label.
+var moneyPhrases = phrases(
+	"place order", "place your order", "place my order", "check out", "complete purchase", "complete order",
+	"complete payment", "make payment", "make a payment", "top up", "cash out", "add funds", "send money",
+	"passer la commande", "passer commande", "finalizar compra", "оформить заказ",
+)
+
+// cjkMoneyKeywords make a CJK commit a payment wherever they are in it:
+// "预约还款" (schedule a repayment) as well as "还款".
+var cjkMoneyKeywords = []string{
+	"支付", "付款", "购买", "买入", "卖出", "买单", "结算", "下单", "充值", "提现", "转账", "还款", "分期", "借钱",
+	"借款", "赎回", "申购", "闪兑", "质押", "提币", "充币", "划转", "捐赠",
+	"購買", "買入", "賣出", "結帳", "結賬", "儲值", "提領", "轉帳", "轉賬", "還款", "借錢", "贖回", "申購",
+	"閃兌", "質押", "提幣", "充幣", "劃轉",
+	"支払", "購入", "決済", "送金", "振込", "振り込", "売却", "返済", "借入", "チャージ",
+	"결제", "구매", "송금", "이체", "출금", "매도", "매수", "상환", "대출", "충전",
 }
 
 // negativeWords mark labels that name a place rather than an action, such as

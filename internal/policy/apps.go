@@ -50,6 +50,10 @@ type Apps struct {
 	ids      map[string][]string // exact id -> categories
 	prefixes map[string][]string // id prefix -> categories
 	names    map[string][]string // lower-case name -> categories
+	// excluded holds the exact ids and lower-case names that apps.yaml
+	// takes out of every category. They beat a prefix entry, so one app of
+	// "com.cmbchina.*" can be unblocked, and a finance name (financeName).
+	excluded map[string]bool
 }
 
 // BundledApps returns the table that ships with Pinky.
@@ -58,7 +62,8 @@ func BundledApps() *Apps {
 	if err := yaml.Unmarshal(bundledAppsYAML, &m); err != nil {
 		panic("policy: bundled apps.yaml: " + err.Error())
 	}
-	a := &Apps{ids: map[string][]string{}, prefixes: map[string][]string{}, names: map[string][]string{}}
+	a := &Apps{ids: map[string][]string{}, prefixes: map[string][]string{}, names: map[string][]string{},
+		excluded: map[string]bool{}}
 	for cat, e := range m {
 		a.add(cat, e)
 	}
@@ -101,29 +106,52 @@ func (a *Apps) Apply(o AppOverrides) {
 		}
 		delete(a.ids, x)
 		delete(a.names, strings.ToLower(x))
+		if x != "" {
+			a.excluded[x], a.excluded[strings.ToLower(x)] = true, true
+		}
 	}
 }
 
-// Categories returns the categories of an app, sorted.
+// Categories returns the categories of an app, sorted. An app the table
+// does not know whose name says it is a bank, a wallet, a brokerage or a
+// remittance service ("DBS digibank", "Trust Wallet", "某某银行") is a
+// finance app, unless apps.yaml excludes it.
 func (a *Apps) Categories(app screen.App) []string {
 	var out []string
-	if app.ID != "" {
-		out = append(out, a.ids[app.ID]...)
+	id, name := strings.TrimSpace(app.ID), strings.ToLower(strings.TrimSpace(app.Name))
+	if id != "" && !a.excluded[id] {
+		out = append(out, a.ids[id]...)
 		for p, cats := range a.prefixes {
-			if strings.HasPrefix(app.ID, p) {
+			if strings.HasPrefix(id, p) {
 				for _, c := range cats {
 					out = appendUnique(out, c)
 				}
 			}
 		}
 	}
-	if app.Name != "" {
-		for _, c := range a.names[strings.ToLower(strings.TrimSpace(app.Name))] {
+	if name != "" && !a.excluded[name] {
+		for _, c := range a.names[name] {
 			out = appendUnique(out, c)
 		}
 	}
+	if !a.excluded[id] && !a.excluded[name] && financeName(name) {
+		out = appendUnique(out, CatFinance)
+	}
 	sort.Strings(out)
 	return out
+}
+
+// financeNameParts mark a bank, a wallet, a brokerage or a remittance
+// service in a lower-case app name.
+var financeNameParts = []string{
+	"bank", "wallet", "remit", "securities",
+	"银行", "銀行", "은행", "证券", "證券", "証券", "증권", "钱包", "錢包", "ウォレット", "지갑",
+}
+
+// financeName reports whether a lower-case app name is a finance app's:
+// it has one of financeNameParts, or the word "pay" ("Google Pay").
+func financeName(name string) bool {
+	return name != "" && (containsAny(name, financeNameParts) || anyWord(tokenize(name), words("pay")))
 }
 
 func appendUnique(list []string, s string) []string {

@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -215,15 +216,10 @@ func (a *API) keepAlwaysLocked(x gateway.Exemption) {
 	a.always = append(a.always, x)
 }
 
-// fakeBuiltIn are the rules the recommended preset and the blocked apps
-// add, as the gateway lists them.
+// fakeBuiltIn are the rules the default preset (payments only) and the
+// blocked apps add, as the gateway lists them.
 var fakeBuiltIn = []gateway.RuleView{
 	{Name: "Payments", Actions: []string{"payment"}, Decision: "ask"},
-	{Name: "Messages", Actions: []string{"send_message"}, Decision: "ask"},
-	{Name: "Commits", Actions: []string{"commit"}, Decision: "ask"},
-	{Name: "Installs and links", Actions: []string{"install_app", "open_url"}, Decision: "ask"},
-	{Name: "Calls", Actions: []string{"call"}, Decision: "ask"},
-	{Name: "Settings changes", Actions: []string{"change_setting"}, Decision: "ask"},
 	{Name: "Blocked by you", Categories: []string{"blocked"}, Decision: "deny"},
 }
 
@@ -242,8 +238,13 @@ func (a *API) Rules() gateway.RulesView {
 }
 
 // SetRules replaces the rules, refusing a rule without a name or a match,
-// or a name taken, as the gateway does; the fake's agents ask all the same.
-func (a *API) SetRules(rules []gateway.RuleView) error {
+// or a name taken, as the gateway does, and a change made from rules that
+// are not the fake's (gateway.ErrRulesChanged); the fake's agents ask all
+// the same.
+func (a *API) SetRules(base, rules []gateway.RuleView) error {
+	if cur := a.Rules().File; !slices.EqualFunc(base, cur, sameRule) {
+		return gateway.ErrRulesChanged
+	}
 	seen := map[string]bool{}
 	for _, r := range append(cloneRules(fakeBuiltIn), rules...) {
 		k := strings.ToLower(strings.TrimSpace(r.Name))
@@ -261,6 +262,26 @@ func (a *API) SetRules(rules []gateway.RuleView) error {
 	defer a.mu.Unlock()
 	a.rules, a.rulesSet = cloneRules(rules), true
 	return nil
+}
+
+func sameRule(x, y gateway.RuleView) bool {
+	return x.Name == y.Name && x.Decision == y.Decision && slices.Equal(x.Apps, y.Apps) &&
+		slices.Equal(x.Categories, y.Categories) && slices.Equal(x.Actions, y.Actions) && slices.Equal(x.Labels, y.Labels)
+}
+
+// FileProblems lists the rules files the fake was told cannot be used.
+func (a *API) FileProblems() []gateway.FileProblem {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return append([]gateway.FileProblem(nil), a.fileProblems...)
+}
+
+// SetFileProblems makes FileProblems list these, for tests and the demo:
+// rules files edited by hand that cannot be used.
+func (a *API) SetFileProblems(list []gateway.FileProblem) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.fileProblems = append([]gateway.FileProblem(nil), list...)
 }
 
 func cloneRules(rules []gateway.RuleView) []gateway.RuleView {

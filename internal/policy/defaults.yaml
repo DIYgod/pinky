@@ -7,8 +7,8 @@
 #
 # preset (Settings > Safety > "When should agents ask you?"):
 #   1  payments, messages, deletions and other commits ask; so do calls,
-#      installs, links that leave the app and settings changes (recommended)
-#   2  only payments ask
+#      installs, links that leave the app and settings changes
+#   2  only payments ask (the default, recommended)
 #   3  every action asks
 #   0  no preset: only the rules below
 #
@@ -35,15 +35,16 @@
 #
 #   always_allow:
 #     - rule: Payments          # payments in Dinely no longer ask
-#       with: [Commits]         # nor does Commits about those payments
+#       with: [Commits]         # nor does Commits (preset 1) about them
 #       app: com.dinely.app     # package name or bundle id
 #       app_name: Dinely        # matched when the phone reports no id
 #
-# Other commits in Dinely still ask. An entry never lifts a deny, read-only
-# mode, an agent's scope or a task's app list, and none applies with preset 3.
+# With preset 1, other commits in Dinely still ask. An entry never lifts a
+# deny, read-only mode, an agent's scope or a task's app list, and none
+# applies with preset 3.
 # Settings > Safety lists them and takes them back.
 
-preset: 1
+preset: 2
 
 # Read-only mode: the agent may observe, launch apps, tap, scroll and type into
 # search fields; anything that would ask is denied.

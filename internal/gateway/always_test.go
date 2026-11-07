@@ -23,6 +23,10 @@ func loadPolicy(t *testing.T, dir string) *policy.Engine {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Preset 1, as testPolicy: these tests check that Commits asks too.
+	if err := pol.SetPreset(policy.PresetCommits); err != nil {
+		t.Fatal(err)
+	}
 	for cat, e := range demo.PolicyApps() {
 		pol.AddApps(cat, e)
 	}

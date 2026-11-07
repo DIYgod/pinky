@@ -36,6 +36,19 @@ func tap(app screen.App, label string) Input {
 	return Input{Op: OpTap, App: app, Target: button(label), Screen: &screen.Screen{App: app}}
 }
 
+// commitsEngine is the bundled policy with "Ask before payments, messages
+// and deletions" (preset 1), whose rules ask about every kind detect finds,
+// so the tests of detection read its verdicts. The default, preset 2, asks
+// before payments only.
+func commitsEngine(t testing.TB) *Engine {
+	t.Helper()
+	e := Default()
+	if err := e.SetPreset(PresetCommits); err != nil {
+		t.Fatal(err)
+	}
+	return e
+}
+
 func TestCommitDetection(t *testing.T) {
 	commits := []string{
 		"Send", "Pay $12.80", "Place order · $12.80", "Checkout", "Buy now", "Book a table", "Confirm",
@@ -62,8 +75,13 @@ func TestCommitDetection(t *testing.T) {
 	}
 }
 
+// TestDefaultRules checks the bundled rules under preset 1, where every
+// kind asks, and under the default, preset 2, where only payments do; the
+// kinds are detected all the same.
 func TestDefaultRules(t *testing.T) {
-	e := Default()
+	if p := Default().Preset(); p != PresetPayments {
+		t.Fatalf("the default preset is %d, want %d (payments only)", p, PresetPayments)
+	}
 	cases := []struct {
 		name string
 		in   Input
@@ -95,13 +113,19 @@ func TestDefaultRules(t *testing.T) {
 		{"dialog ok", Input{Op: OpTap, App: dinely, Target: button("OK"), Screen: &screen.Screen{Elements: []screen.Element{{Role: screen.RoleText, Label: "Delete this message?"}, *button("OK")}}}, Ask, "Commits", Commit},
 		{"plain ok", Input{Op: OpTap, App: dinely, Target: button("OK"), Screen: &screen.Screen{Elements: []screen.Element{{Role: screen.RoleText, Label: "Saved"}}}}, Allow, "", ""},
 	}
-	for _, c := range cases {
-		v := e.Evaluate(c.in)
-		if v.Decision != c.want || v.Rule != c.rule {
-			t.Errorf("%s: got %v %q (kinds %v), want %v %q", c.name, v.Decision, v.Rule, v.Kinds, c.want, c.rule)
-		}
-		if c.kind != "" && !v.Has(c.kind) {
-			t.Errorf("%s: kinds %v miss %s", c.name, v.Kinds, c.kind)
+	for _, e := range []*Engine{commitsEngine(t), Default()} {
+		for _, c := range cases {
+			want, rule := c.want, c.rule
+			if e.Preset() == PresetPayments && want == Ask && rule != "Payments" {
+				want, rule = Allow, ""
+			}
+			v := e.Evaluate(c.in)
+			if v.Decision != want || v.Rule != rule {
+				t.Errorf("preset %d, %s: got %v %q (kinds %v), want %v %q", e.Preset(), c.name, v.Decision, v.Rule, v.Kinds, want, rule)
+			}
+			if c.kind != "" && !v.Has(c.kind) {
+				t.Errorf("preset %d, %s: kinds %v miss %s", e.Preset(), c.name, v.Kinds, c.kind)
+			}
 		}
 	}
 }
@@ -272,7 +296,7 @@ func TestFilterEvents(t *testing.T) {
 }
 
 func TestAsksListsEveryRule(t *testing.T) {
-	e := Default()
+	e := commitsEngine(t)
 	v := e.Evaluate(Input{Op: OpTap, App: settings, Target: button("Erase all data")})
 	if v.Decision != Ask || len(v.Asks) < 2 || v.Asks[0] != v.Rule {
 		t.Fatalf("erase in Settings: %+v", v)
@@ -303,14 +327,12 @@ func TestPresets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if e.Preset() != PresetCommits {
+	if e.Preset() != PresetPayments {
 		t.Fatalf("default preset %d", e.Preset())
 	}
 	send := Input{Op: OpType, App: whatsapp, Text: "hi", Submit: true, Target: &screen.Element{Role: screen.RoleInput, Label: "Message"}}
 
-	if err := e.SetPreset(PresetPayments); err != nil {
-		t.Fatal(err)
-	}
+	// Payments only, the default.
 	if v := e.Evaluate(tap(dinely, "Place order · $12.80")); v.Decision != Ask || v.Rule != "Payments" {
 		t.Fatalf("payments only, payment: %+v", v)
 	}
@@ -321,6 +343,15 @@ func TestPresets(t *testing.T) {
 	}
 	if v := e.Evaluate(tap(chase, "Accounts")); v.Decision != Deny {
 		t.Fatalf("payments only still blocks finance apps: %+v", v)
+	}
+
+	if err := e.SetPreset(PresetCommits); err != nil {
+		t.Fatal(err)
+	}
+	for name, in := range map[string]Input{"delete": tap(dinely, "Delete"), "send": send} {
+		if v := e.Evaluate(in); v.Decision != Ask {
+			t.Fatalf("payments, messages and deletions, %s: %+v", name, v)
+		}
 	}
 
 	if err := e.SetPreset(PresetEvery); err != nil {

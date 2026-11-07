@@ -129,6 +129,8 @@ type API struct {
 	always   []gateway.Exemption // Always allow answers
 	rules    []gateway.RuleView  // the rules file's rules
 	rulesSet bool
+	// fileProblems are rules files edited by hand that cannot be used.
+	fileProblems []gateway.FileProblem
 }
 
 type device struct {

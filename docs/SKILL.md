@@ -55,7 +55,7 @@ A tool result that says Pinky is not running means the person quit Pinky: tell t
 
 ## Approvals
 
-Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Confirm and the like, in every language, icon buttons included (a paper plane, a trash can); sending a message (Enter or `submit: true` in a chat app); installing apps; opening links that leave the app; calls; changing settings. Pass `intent` on such calls, one sentence the person reads on the approval panel:
+Payments wait for the person: paying, buying, selling, swapping, trading, repaying, borrowing, staking, withdrawing and transferring money, and any commit on a screen that shows an amount (coins too), in every language. The person may choose in Settings to approve more: every commit (Order, Book, Send, Post, Delete, Transfer, Confirm, icon buttons such as a paper plane or a trash can), sending a message (Enter or `submit: true` in a chat app), installing apps, opening links that leave the app, calls and changing settings; or every action. Pass `intent` on any call that may ask, one sentence the person reads on the approval panel:
 
 ```text
 → phone_tap { ref: 15, intent: "Pay $12.80 for 1 chicken rice bowl" }
