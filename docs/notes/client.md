@@ -231,6 +231,21 @@ mkdir -p /tmp/pkzh && PINKY_HOME=/tmp/pkzh MYGO_AUTOMATION=/tmp/pkzh/auto.sock M
 | Activity, the finished task | `live-activity-en.png` | `live-activity-zh.png` |
 | Settings › Advanced › Language | `live-language-en.png` | `live-language-zh.png` |
 
+## The approval's screenshot
+
+The floating panel used to show a strip 100 points high around the target, scaled to the target's width: for a small button that was the button alone, enlarged, and the person could not tell the app, the page or what the agent wanted to press. It now shows, from `ui/approvalshot.go`:
+
+- **The whole screen, small,** in the screenshot's shape, with the target outlined in the overlay's indigo (12 points at least, so a small button still shows), a tap without an element as a ring, and a swipe as an arrow from a dot where the finger goes down. It says which app and which page.
+- **Beside it, the part around the target, larger,** at about 0.85 DIP a point of the phone's interface (phones count as 400 points across and tablets, by their shape, as 800), the rest dimmed: the button's words read as on the phone. A wide target zooms out to show whole while its words still read (0.55 DIP a point), at most to the screen's width; one too large for that shows around the finger, without the outline, which would be two lines across. A portrait screen has the zoom on its right; a landscape one, phone or tablet, takes the width with the zoom under it. An action without a position (a key, opening an app, the agent's own question) shows the screen alone, on a tray.
+- **A click shows it larger:** beside the floating panel in a window of its own, a panel that floats over every app and takes the keyboard without making Pinky the active app (Esc or × closes it), or over the main window as a dialog. It follows the approval the panel shows and closes when that approval is answered or withdrawn.
+- **The panel is as tall as what it shows** (`panelHeight`): 400 wide, room for a title and a detail of two lines each (both are cut at two lines now) and the screenshot, which grows into what shorter words leave. 450 for a portrait screen, 530 to 540 for a landscape one, 330 without a screenshot, at most the display's work area. The answer keeps that height for its moment, with the screenshot it answered.
+- **Without a screenshot**, which the gateway takes of no blocked app and a phone may fail to send, an action's panel says so in a line: the phone is locked, Pinky takes no screenshots of an app Settings › Safety blocks, or there is no screenshot of the screen. Copying files and the agent's own questions say nothing.
+- **Needs you cards** in the main window show the same screenshot, smaller, where the middle does not show that phone's screen with the target marked: another phone or All phones selected, the phone locked, or its mirror without video.
+
+The gateway now says where the finger goes: `NeedView.Point` (a tap's point, a swipe's start) and `NeedView.To` (a swipe's end), which `ask` puts in `approval.Request`. Before, a swipe's approval had only the element under its start.
+
+Tests: `TestShotLayout` (the split and what the zoom shows), `TestApprovalPanelFits` (portrait and landscape phones and tablets, a swipe, a tap by point, no target, no screenshot on a locked phone and in a blocked app, in English and Chinese, with short and long words: the countdown, Deny, Allow and More options stay in the window and the screenshot keeps 150 points), `TestApprovalShotOpens`, `TestApprovalShotOnCard`, and `TestApprovalPoint` in the gateway. Their screens are a checkout page MyGo draws in the test (`ui/fakescreen_test.go`), not a phone's. `PINKY_SCREENSHOTS=dir go test ./ui -run TestApprovalShotScreenshots` draws each case in both languages (`approval-shot-en.png`, `approval-shot-zh.png`). `go test -tags e2e -run TestApprovalShotInTheApp ./cmd/pinky` runs the e2e build in English and Chinese with an MCP agent paying on the demo Pixel: the panel is taller than one without a screenshot, a press on the screenshot opens the large view left of the panel, its × closes it, and Allow pays (`live-panel-en.png`, `live-panel-zh.png`; passed on this Mac with the screen unlocked).
+
 ## Brand colors, and keeping amber and red apart
 
 The prototype's colors stay, quiet as they were: neutral grays, indigo for primary buttons, links, switches and the agent's overlay, amber for what needs the person, red for Stop, green for working. The brand appears only where the eye looks for identity:
@@ -261,7 +276,7 @@ The trade-off: amber now leans orange and red leans vermilion, so amber and red 
 - Activity's step thumbnails are the steps' screenshots where the gateway kept one, and the prototype's sketch otherwise; Watch replay is a slideshow of those screenshots, not a video.
 - Settings › Agents shows first-connection requests as the prototype does, and the same request is also a card in Needs you, so it can be answered from the phone screen and the floating panel.
 - The tray shows the number of waiting needs as its title on macOS.
-- The approval panel is 360 × 330 rather than 360 × 320, to fit the two-line detail under the crop.
+- The approval panel is 400 wide and as tall as what it shows, rather than 360 × 320: see The approval's screenshot.
 
 ## Known issues
 
@@ -293,6 +308,7 @@ Each screen was driven over MyGo's automation socket (`e2e` build) and captured 
 | Phone locked, unlock card | `locked-light.png` | `locked-dark.png` |
 | You're in control | `takeover-light.png` | `takeover-dark.png` |
 | Approval panel, 1 of 2 | `approval-panel-light.png` | `approval-panel-dark.png` |
+| Approval panel, a drawn checkout (English, Chinese) | `approval-shot-en.png` | `approval-shot-zh.png` |
 | Menu bar flyout | `flyout-light.png` | `flyout-dark.png` |
 | Activity | `activity-light.png` | `activity-dark.png` |
 | Settings › Safety | `settings-light.png` | `settings-dark.png` |

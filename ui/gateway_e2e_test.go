@@ -551,7 +551,8 @@ func TestGatewayScreenshots(t *testing.T) {
 			ga.panelIdx = i
 		}
 	}
-	shoot(ga.panelView, panelW, panelH, "handoff-panel")
+	pw, ph := ga.panelSize()
+	shoot(ga.panelView, pw, ph, "handoff-panel")
 
 	pay, _ := ga.need(isPayment)
 	ga.decide(pay, gateway.AllowOnce, "")
