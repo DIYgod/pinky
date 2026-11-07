@@ -465,3 +465,36 @@ func TestRemoveDeviceWhileOpening(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 	}
 }
+
+// TestRemoveDeviceForgetsConnection: removing a phone drops how the person
+// chose to connect it, in the provider and in the store, without
+// reconnecting it, so a phone that comes back starts with the driver's own
+// rule.
+func TestRemoveDeviceForgetsConnection(t *testing.T) {
+	dir := t.TempDir()
+	cp := &choosingProvider{Provider: demo.NewProvider(driver.Android, demo.NewDevice("pixel", "Pixel 9", driver.Android))}
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{cp}; o.DataDir = dir })
+	if err := g.SetConnection("pixel", "wda"); err != nil {
+		t.Fatal(err)
+	}
+	waitIDs(t, g, "pixel")
+	waitOnline(t, g, "pixel")
+	_, opens := cp.state()
+	if err := g.RemoveDevice(context.Background(), "pixel", RemoveOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if way, _ := cp.state(); way != driver.ConnectionAuto {
+		t.Errorf("the provider still connects it %q", way)
+	}
+	g.Flush()
+	ways, err := g.store.DeviceConnections(context.Background())
+	if err != nil || len(ways) != 0 {
+		t.Errorf("stored connections %v, %v", ways, err)
+	}
+	// A demo phone counts as plugged in: it comes back once, opened the
+	// driver's own way, and not before removal finished.
+	waitOnline(t, g, "pixel")
+	if _, now := cp.state(); now != opens+1 {
+		t.Errorf("opened %d times after the removal, want 1", now-opens)
+	}
+}

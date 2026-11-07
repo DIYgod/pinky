@@ -277,3 +277,31 @@ func TestRemovePhoneScreenshots(t *testing.T) {
 		shoot("remove-settings"+suffix, lang, false, ta, nil)
 	}
 }
+
+// TestRemovePhoneForgetsClientState: what the client keeps about a removed
+// phone goes with it, such as the connection choice Settings › Phones read,
+// so a phone that comes back at once reads it again.
+func TestRemovePhoneForgetsClientState(t *testing.T) {
+	ta := newTestApp(t, fakeapi.ThreePhones)
+	ta.sync()
+	ta.page, ta.set.sec = pageSettings, secPhones
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "the iPhone's connections", func() bool {
+		tt.Frame()
+		_, ok := ta.conn.got["iphone-17"]
+		return ok
+	})
+	ta.bg.on["iphone-17"], ta.pin.asked["iphone-17"], ta.more["tile:iphone-17"] = true, true, true
+	ta.askRemove(*ta.device("iphone-17"))
+	ta.removePhone()
+	ta.waitFor(t, "the removal", func() bool { return !ta.rm.busy && ta.device("iphone-17") == nil })
+	if _, ok := ta.conn.got["iphone-17"]; ok {
+		t.Error("the iPhone's connection choice stayed")
+	}
+	if _, ok := ta.conn.at["iphone-17"]; ok {
+		t.Error("the time it was read stayed")
+	}
+	if ta.bg.on["iphone-17"] || ta.pin.asked["iphone-17"] || ta.more["tile:iphone-17"] {
+		t.Error("other state about the iPhone stayed")
+	}
+}

@@ -39,11 +39,12 @@ const removeTimeout = time.Minute
 // RemoveDevice removes a phone from Pinky. Its task, if one runs, stops as
 // with Stop; the phone's connection closes, and its connections over the
 // network that the driver can drop go too (driver.Forgetter); its record
-// and settings (background displays, its read-only switch) are deleted. A
-// phone the providers list over the network stays off the list until the
-// person pairs it again or plugs it in. It returns ErrUnknownDevice for a
-// phone the gateway does not list, and an error wrapping
-// ErrHistoryNotDeleted when the phone went but its history did not.
+// and settings (background displays, its read-only switch, how Pinky
+// connects to it) are deleted. A phone the providers list over the network
+// stays off the list until the person pairs it again or plugs it in. It
+// returns ErrUnknownDevice for a phone the gateway does not list, and an
+// error wrapping ErrHistoryNotDeleted when the phone went but its history
+// did not.
 func (g *Gateway) RemoveDevice(ctx context.Context, deviceID string, opt RemoveOptions) error {
 	at := time.Now()
 	g.mu.Lock()
@@ -95,6 +96,15 @@ func (g *Gateway) RemoveDevice(ctx context.Context, deviceID string, opt RemoveO
 	}
 	if err := g.policy.ForgetDevice(id); err != nil {
 		g.log.Warn("remove device: read-only switch", "device", id, "err", err)
+	}
+	// How the person chose to connect it (connection.go): the provider
+	// drops the choice and what it started for it, such as an iPhone's
+	// WebDriverAgent helper waiting for the passcode. Not SetConnection,
+	// which would take the phone offline and discover it again.
+	if cc, ok := p.(driver.ConnectionChooser); ok {
+		if err := cc.SetConnection(id, driver.ConnectionAuto); err != nil {
+			g.log.Warn("remove device: connection", "device", id, "err", err)
+		}
 	}
 	ctx, cancel := context.WithTimeout(ctx, removeTimeout)
 	defer cancel()

@@ -25,6 +25,9 @@ func TestForgetDevice(t *testing.T) {
 		if err := s.SetDeviceBackground(ctx, id, true); err != nil {
 			t.Fatal(err)
 		}
+		if err := s.SetDeviceConnection(ctx, id, "wda"); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := s.SaveTask(ctx, Task{ID: "t1", DeviceID: "pixel", DeviceName: "Pixel", Started: now}); err != nil {
 		t.Fatal(err)
@@ -39,6 +42,10 @@ func TestForgetDevice(t *testing.T) {
 	bg, err := s.BackgroundDevices(ctx)
 	if err != nil || len(bg) != 1 || !bg["iphone"] {
 		t.Fatalf("background %v, %v; want only the iPhone's", bg, err)
+	}
+	ways, err := s.DeviceConnections(ctx)
+	if err != nil || len(ways) != 1 || ways["iphone"] != "wda" {
+		t.Fatalf("connections %v, %v; want only the iPhone's", ways, err)
 	}
 	// Its history stays until asked.
 	if _, ok, err := s.Task(ctx, "t1"); err != nil || !ok {

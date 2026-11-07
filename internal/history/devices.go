@@ -16,10 +16,12 @@ import (
 var deviceTables = []struct{ table, column string }{
 	{"devices", "id"},
 	{"device_settings", "device_id"},
+	{"device_connections", "device_id"},
 }
 
-// ForgetDevice deletes the phone's record and its settings, such as
-// whether agents work on its background display. Its history stays.
+// ForgetDevice deletes the phone's record and its settings: whether agents
+// work on its background display, and how Pinky connects to it. Its
+// history stays.
 func (s *Store) ForgetDevice(ctx context.Context, deviceID string) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

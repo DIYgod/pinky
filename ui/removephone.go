@@ -225,6 +225,12 @@ func (a *app) forgetPhone(id string, history bool) {
 	delete(comp.installing, id)
 	delete(comp.err, id)
 	delete(comp.later, id)
+	conn := &a.conn // Settings › Phones' connection choice, read again should it come back
+	delete(conn.got, id)
+	delete(conn.at, id)
+	delete(conn.loading, id)
+	delete(conn.busy, id)
+	delete(conn.chosen, id)
 	delete(a.more, id)
 	delete(a.more, "tile:"+id)
 	if history && a.act.loaded {
