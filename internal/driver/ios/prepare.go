@@ -363,10 +363,11 @@ func noImageDetail(ownDir string) string {
 	if ownDir != "" {
 		folder = filepath.Join(ownDir, "iOS_DDI")
 	}
+	mirror := " Add phone can also download it from a third-party mirror, " + mirrorName + "."
 	if runtime.GOOS == "darwin" {
-		return "Pinky needs Apple's developer disk image, which comes with Xcode. Install Xcode from the App Store and open it once (it installs the image; you can quit it then), or put an iOS_DDI folder in " + folder + "."
+		return "Pinky needs Apple's developer disk image, which comes with Xcode. Install Xcode from the App Store and open it once (it installs the image; you can quit it then), or put an iOS_DDI folder in " + folder + "." + mirror
 	}
-	return "Pinky needs Apple's developer disk image, which comes with Xcode. Copy /Library/Developer/DeveloperDiskImages/iOS_DDI from a Mac where Xcode was opened once to " + folder + "."
+	return "Pinky needs Apple's developer disk image, which comes with Xcode. Copy /Library/Developer/DeveloperDiskImages/iOS_DDI from a Mac where Xcode was opened once to " + folder + "." + mirror
 }
 
 // lastLine shortens a joined error to its last line, the last way tried.

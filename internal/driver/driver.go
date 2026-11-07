@@ -261,6 +261,29 @@ type Unlocker interface {
 	Unlock(ctx context.Context, pin string) error
 }
 
+// DiskImageDownloader is a Provider that can download the developer disk
+// image a computer without Xcode lacks (iPhones), from a third-party
+// mirror, when the person asks.
+type DiskImageDownloader interface {
+	// DiskImageMirror says where the download comes from.
+	DiskImageMirror() DiskImageMirror
+	// DownloadDiskImage downloads the image and checks every file;
+	// progress, when not nil, gets the bytes done and the total. A file
+	// that is not the one expected fails with ErrDiskImageMismatch.
+	DownloadDiskImage(ctx context.Context, progress func(done, total int64)) error
+}
+
+// DiskImageMirror describes what DiskImageDownloader downloads.
+type DiskImageMirror struct {
+	Name  string // where it comes from, such as "github.com/doronz88/DeveloperDiskImage"
+	Image string // which image, such as "Xcode 27.0 beta 4 (27A5228h)"
+	Size  int64  // bytes
+}
+
+// ErrDiskImageMismatch is a downloaded developer disk image file that is
+// not the one expected (its size or checksum differs); it is not used.
+var ErrDiskImageMismatch = errors.New("the downloaded file is not the one expected")
+
 // FileInfo is one entry of the phone's Pinky folder.
 type FileInfo struct {
 	Path    string // slash-separated, relative to the Pinky folder

@@ -33,9 +33,10 @@ type diskImage struct {
 
 // Where a disk image was found.
 const (
-	sourceEnv   = "env"   // PINKY_DDI
-	sourcePinky = "pinky" // Pinky's own folder
-	sourceXcode = "xcode" // installed by Xcode
+	sourceEnv    = "env"    // PINKY_DDI
+	sourcePinky  = "pinky"  // Pinky's own folder
+	sourceXcode  = "xcode"  // installed by Xcode
+	sourceMirror = "mirror" // downloaded from the third-party mirror (mirror.go)
 )
 
 // ddiEnv names a developer disk image folder to use instead of the others:
@@ -43,8 +44,8 @@ const (
 const ddiEnv = "PINKY_DDI"
 
 // xcodeDDI is where Xcode 16 and later install the iOS developer disk image,
-// on first launch.
-const xcodeDDI = "/Library/Developer/DeveloperDiskImages/iOS_DDI"
+// on first launch. Tests change it.
+var xcodeDDI = "/Library/Developer/DeveloperDiskImages/iOS_DDI"
 
 // errNoDiskImage means no developer disk image was found on this computer.
 var errNoDiskImage = errors.New("no developer disk image on this computer")
@@ -66,8 +67,10 @@ func diskImageDirs(ownDir string) []struct{ dir, source string } {
 }
 
 // findDiskImage returns the newest usable developer disk image in the
-// folders diskImageDirs lists. PINKY_DDI, when set, is the only folder
-// looked in, so a wrong path is reported rather than passed over.
+// folders diskImageDirs lists, the official copies. PINKY_DDI, when set, is
+// the only folder looked in, so a wrong path is reported rather than passed
+// over. Only when there is no official copy does it take the one the person
+// downloaded from the third-party mirror.
 func findDiskImage(ownDir string) (diskImage, error) {
 	var best diskImage
 	var errs []string
@@ -92,6 +95,12 @@ func findDiskImage(ownDir string) (diskImage, error) {
 	}
 	if best.Dir != "" {
 		return best, nil
+	}
+	if ownDir != "" {
+		if img, err := readDiskImage(filepath.Join(ownDir, mirrorFolder)); err == nil {
+			img.Source = sourceMirror
+			return img, nil
+		}
 	}
 	if len(errs) > 0 {
 		return diskImage{}, fmt.Errorf("%w (%s)", errNoDiskImage, strings.Join(errs, "; "))
