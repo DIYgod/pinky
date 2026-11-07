@@ -141,7 +141,9 @@ func TestNewAgentAsksForReadOnly(t *testing.T) {
 	s := g.OpenSession(AgentInfo{Name: "Bookkeeper", Client: "test"})
 	t.Cleanup(s.Close)
 	done := make(chan *Result, 1)
-	go func() { done <- s.Connect(context.Background(), ConnectRequest{Task: "Read the balances", ReadOnly: true}) }()
+	go func() {
+		done <- s.Connect(context.Background(), ConnectRequest{Task: "Read the balances", ReadOnly: true})
+	}()
 	n := waitNeedKind(t, g, NeedApproval)
 	if !newAgentNeedView(n) || !n.ReadOnly || !strings.Contains(n.Detail, "read_only access") {
 		t.Fatalf("first connection: %+v", n)
