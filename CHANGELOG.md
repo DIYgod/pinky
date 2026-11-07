@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1108.2 (2026-11-08)
 
 - By default, Pinky now asks only before payments (Settings › Safety › When should agents ask you?). Installs that never changed this setting move to it too; if you changed any safety setting, your choice stays.
 - Buttons that move money, such as Sell, Swap, Trade, Repay, Borrow, Stake, Withdraw, Transfer, 买入, 卖出 and 还款, now count as payments and ask, with or without an amount on the screen.
