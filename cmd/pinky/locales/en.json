@@ -3556,6 +3556,268 @@
   "@settingsPrivacyRecordDesc": {
     "description": "Settings › Privacy: the line under Record the screen during tasks. Activity is the page of finished tasks."
   },
+  "settingsRules": "Rules",
+  "@settingsRules": {
+    "description": "Settings › Safety › Rules: the heading of the rules every action is checked against, and the accessibility label of that part."
+  },
+  "settingsRulesActionCall": "Calls",
+  "@settingsRulesActionCall": {
+    "description": "Settings › Safety › Rules: the action of placing a phone call."
+  },
+  "settingsRulesActionChangeSetting": "Settings changes",
+  "@settingsRulesActionChangeSetting": {
+    "description": "Settings › Safety › Rules: the action of changing a setting."
+  },
+  "settingsRulesActionCommit": "Commits",
+  "@settingsRulesActionCommit": {
+    "description": "Settings › Safety › Rules: the action of a tap on Send, Pay, Delete and the like."
+  },
+  "settingsRulesActionInstallApp": "Installing apps",
+  "@settingsRulesActionInstallApp": {
+    "description": "Settings › Safety › Rules: the action of Install, Get or Uninstall in an app store."
+  },
+  "settingsRulesActionKey": "Keys",
+  "@settingsRulesActionKey": {
+    "description": "Settings › Safety › Rules: the operation of pressing a key such as Back or Enter."
+  },
+  "settingsRulesActionLaunch": "Opening apps",
+  "@settingsRulesActionLaunch": {
+    "description": "Settings › Safety › Rules: the operation of opening an app."
+  },
+  "settingsRulesActionOpenURL": "Opening links",
+  "@settingsRulesActionOpenURL": {
+    "description": "Settings › Safety › Rules: the action of opening a link that leaves the app."
+  },
+  "settingsRulesActionPayment": "Payments",
+  "@settingsRulesActionPayment": {
+    "description": "Settings › Safety › Rules: the action of a commit on a screen that shows an amount."
+  },
+  "settingsRulesActionSendMessage": "Sending messages",
+  "@settingsRulesActionSendMessage": {
+    "description": "Settings › Safety › Rules: the action of sending in a chat app."
+  },
+  "settingsRulesActionSwipe": "Swipes",
+  "@settingsRulesActionSwipe": {
+    "description": "Settings › Safety › Rules: the operation of swiping."
+  },
+  "settingsRulesActionTap": "Taps",
+  "@settingsRulesActionTap": {
+    "description": "Settings › Safety › Rules: the operation of tapping."
+  },
+  "settingsRulesActionType": "Typing",
+  "@settingsRulesActionType": {
+    "description": "Settings › Safety › Rules: the operation of typing text."
+  },
+  "settingsRulesActions": "Actions",
+  "@settingsRulesActions": {
+    "description": "Settings › Safety › Rules: the label of the actions a rule matches (Payments, Taps…), in its form."
+  },
+  "settingsRulesAdd": "Add rule",
+  "@settingsRulesAdd": {
+    "description": "Settings › Safety › Rules: the button that opens the form of a new rule."
+  },
+  "settingsRulesAllow": "Allow",
+  "@settingsRulesAllow": {
+    "description": "Settings › Safety › Rules: what a rule does when it matches: lets the action through (the weakest)."
+  },
+  "settingsRulesAllowHint": "An Allow rule never stops another rule from asking or blocking. To stop a rule asking in one app, choose Always allow on its approval.",
+  "@settingsRulesAllowHint": {
+    "description": "Settings › Safety › Rules: shown in a rule's form when Allow is chosen."
+  },
+  "settingsRulesApps": "Apps",
+  "@settingsRulesApps": {
+    "description": "Settings › Safety › Rules: the label of the apps field of a rule's form."
+  },
+  "settingsRulesAppsPlaceholder": "Names or package names, separated by commas",
+  "@settingsRulesAppsPlaceholder": {
+    "description": "Settings › Safety › Rules: the placeholder of the apps field of a rule's form."
+  },
+  "settingsRulesAsk": "Ask",
+  "@settingsRulesAsk": {
+    "description": "Settings › Safety › Rules: what a rule does when it matches: asks the person first."
+  },
+  "settingsRulesBlockedDesc": "The apps under Blocked apps",
+  "@settingsRulesBlockedDesc": {
+    "description": "Settings › Safety › Rules: what the built-in Blocked by you rule covers."
+  },
+  "settingsRulesBuiltIn": "Built in",
+  "@settingsRulesBuiltIn": {
+    "description": "Settings › Safety › Rules: the heading of the rules Pinky adds, which the person cannot change here."
+  },
+  "settingsRulesBuiltInDesc": "From “When should agents ask you?” and Blocked apps above; change them there.",
+  "@settingsRulesBuiltInDesc": {
+    "description": "Settings › Safety › Rules: the line under Built in: where those rules come from."
+  },
+  "settingsRulesCategories": "Categories",
+  "@settingsRulesCategories": {
+    "description": "Settings › Safety › Rules: the label of the app categories a rule matches (Finance, Messaging…), in its form."
+  },
+  "settingsRulesChangeLabel": "Change {rule}",
+  "@settingsRulesChangeLabel": {
+    "description": "Settings › Safety › Rules: the accessibility label of the Change button of a rule. rule is its name.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Send in Chatter"
+      }
+    }
+  },
+  "settingsRulesCredentials": "Passwords and codes",
+  "@settingsRulesCredentials": {
+    "description": "Settings › Safety › Rules: a built-in rule: Pinky never types into password and one-time-code fields."
+  },
+  "settingsRulesCredentialsDesc": "Typing into password and one-time-code fields",
+  "@settingsRulesCredentialsDesc": {
+    "description": "Settings › Safety › Rules: what the built-in Passwords and codes rule covers."
+  },
+  "settingsRulesDecision": "When it matches",
+  "@settingsRulesDecision": {
+    "description": "Settings › Safety › Rules: the label of the choice of Ask, Block or Allow in a rule's form."
+  },
+  "settingsRulesDeny": "Block",
+  "@settingsRulesDeny": {
+    "description": "Settings › Safety › Rules: what a rule does when it matches: refuses the action (the strictest)."
+  },
+  "settingsRulesErrMatch": "Fill in at least one of apps, categories, actions or button text.",
+  "@settingsRulesErrMatch": {
+    "description": "Settings › Safety › Rules: an error in a rule's form: a rule that matches nothing in particular would match every action."
+  },
+  "settingsRulesErrName": "Give the rule a name.",
+  "@settingsRulesErrName": {
+    "description": "Settings › Safety › Rules: an error in a rule's form: the name is empty."
+  },
+  "settingsRulesErrNameTaken": "A rule is already called “{rule}”.",
+  "@settingsRulesErrNameTaken": {
+    "description": "Settings › Safety › Rules: an error in a rule's form: another rule, the person's or a built-in one, has that name.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Send in Chatter"
+      }
+    }
+  },
+  "settingsRulesErrSave": "Couldn't save the rules: {error}",
+  "@settingsRulesErrSave": {
+    "description": "Settings › Safety › Rules: the gateway refused the rules or could not write rules.yaml. error is its message in English.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "settingsRulesHowItMatches": "A rule matches when everything you fill in matches; within a field, any one of the values does.",
+  "@settingsRulesHowItMatches": {
+    "description": "Settings › Safety › Rules: a line in a rule's form on how its fields combine."
+  },
+  "settingsRulesIntro": "Pinky checks every action against these rules. When several match, the strictest wins: Block, then Ask, then Allow.",
+  "@settingsRulesIntro": {
+    "description": "Settings › Safety › Rules: the line under Rules."
+  },
+  "settingsRulesLabels": "Button text",
+  "@settingsRulesLabels": {
+    "description": "Settings › Safety › Rules: the label of the field of words on the button or element acted on, in a rule's form."
+  },
+  "settingsRulesLabelsPlaceholder": "Words such as delete, separated by commas",
+  "@settingsRulesLabelsPlaceholder": {
+    "description": "Settings › Safety › Rules: the placeholder of the button text field of a rule's form."
+  },
+  "settingsRulesLabelsSummary": "text “{labels}”",
+  "@settingsRulesLabelsSummary": {
+    "description": "Settings › Safety › Rules: in a rule's summary, the words of the elements it matches. labels are the words, separated by commas.",
+    "placeholders": {
+      "labels": {
+        "type": "String",
+        "example": "delete, remove"
+      }
+    }
+  },
+  "settingsRulesMoveDown": "Move {rule} down",
+  "@settingsRulesMoveDown": {
+    "description": "Settings › Safety › Rules: the accessibility label of the button that moves a rule down the list. rule is its name.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Send in Chatter"
+      }
+    }
+  },
+  "settingsRulesMoveDownTip": "Move down",
+  "@settingsRulesMoveDownTip": {
+    "description": "Settings › Safety › Rules: the tooltip of the button that moves a rule down."
+  },
+  "settingsRulesMoveUp": "Move {rule} up",
+  "@settingsRulesMoveUp": {
+    "description": "Settings › Safety › Rules: the accessibility label of the button that moves a rule up the list. rule is its name.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Send in Chatter"
+      }
+    }
+  },
+  "settingsRulesMoveUpTip": "Move up",
+  "@settingsRulesMoveUpTip": {
+    "description": "Settings › Safety › Rules: the tooltip of the button that moves a rule up. Order decides which rule names the question when several ask."
+  },
+  "settingsRulesName": "Name",
+  "@settingsRulesName": {
+    "description": "Settings › Safety › Rules: the label of a rule's name field in its form."
+  },
+  "settingsRulesNamePlaceholder": "Send in Chatter",
+  "@settingsRulesNamePlaceholder": {
+    "description": "Settings › Safety › Rules: the placeholder of a rule's name field: an example of a name."
+  },
+  "settingsRulesNone": "No rules of your own yet.",
+  "@settingsRulesNone": {
+    "description": "Settings › Safety › Rules: under Your rules when there are none."
+  },
+  "settingsRulesRemove": "Remove {rule}",
+  "@settingsRulesRemove": {
+    "description": "Settings › Safety › Rules: the accessibility label of the × button of a rule. rule is its name.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Send in Chatter"
+      }
+    }
+  },
+  "settingsRulesRemoveConfirm": "Remove",
+  "@settingsRulesRemoveConfirm": {
+    "description": "Settings › Safety › Rules: the button that confirms removing a rule that blocks."
+  },
+  "settingsRulesRemoveTip": "Remove",
+  "@settingsRulesRemoveTip": {
+    "description": "Settings › Safety › Rules: the tooltip of the × button of a rule."
+  },
+  "settingsRulesRemoveTitle": "Remove “{rule}”?",
+  "@settingsRulesRemoveTitle": {
+    "description": "Settings › Safety › Rules: the title of the dialog that confirms removing a rule that blocks.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Send in Chatter"
+      }
+    }
+  },
+  "settingsRulesWeakenMessage": "It blocks agents now. Afterwards they may be able to do what it blocks.",
+  "@settingsRulesWeakenMessage": {
+    "description": "Settings › Safety › Rules: the dialog that confirms removing or changing a rule that blocks: what the change means."
+  },
+  "settingsRulesWeakenTitle": "Change “{rule}”?",
+  "@settingsRulesWeakenTitle": {
+    "description": "Settings › Safety › Rules: the title of the dialog that confirms changing a rule that blocks.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Send in Chatter"
+      }
+    }
+  },
+  "settingsRulesYours": "Your rules",
+  "@settingsRulesYours": {
+    "description": "Settings › Safety › Rules: the heading of the person's own rules, which they can change."
+  },
   "settingsSafetyAddApp": "Add app",
   "@settingsSafetyAddApp": {
     "description": "Settings › Safety: the button next to Blocked apps that opens a field to block another app."

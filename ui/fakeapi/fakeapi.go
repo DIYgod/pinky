@@ -122,7 +122,9 @@ type API struct {
 	recOpens    []time.Duration
 	exports     []Export
 
-	always []gateway.Exemption // Always allow answers
+	always   []gateway.Exemption // Always allow answers
+	rules    []gateway.RuleView  // the rules file's rules
+	rulesSet bool
 }
 
 type device struct {

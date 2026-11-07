@@ -44,6 +44,12 @@ type (
 		Exemptions() []gateway.Exemption
 		RemoveExemption(x gateway.Exemption) error
 	}
+	// rulesEditor reads and replaces the rules file's rules, for Settings ›
+	// Safety › Rules.
+	rulesEditor interface {
+		Rules() gateway.RulesView
+		SetRules(rules []gateway.RuleView) error
+	}
 
 	// Round three: pairing, the companion app, background displays,
 	// recordings, retention and export.

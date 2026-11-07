@@ -193,6 +193,7 @@ type app struct {
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
 	always     alwaysState // Settings › Safety › Always allowed
+	rules      rulesState  // Settings › Safety › Rules
 
 	postMu  sync.Mutex
 	postWin *mygo.Window // the main window, once ready made it; post waits for it

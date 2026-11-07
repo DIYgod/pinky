@@ -2,6 +2,7 @@ package fakeapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
@@ -212,4 +213,64 @@ func (a *API) keepAlwaysLocked(x gateway.Exemption) {
 		}
 	}
 	a.always = append(a.always, x)
+}
+
+// fakeBuiltIn are the rules the recommended preset and the blocked apps
+// add, as the gateway lists them.
+var fakeBuiltIn = []gateway.RuleView{
+	{Name: "Payments", Actions: []string{"payment"}, Decision: "ask"},
+	{Name: "Messages", Actions: []string{"send_message"}, Decision: "ask"},
+	{Name: "Commits", Actions: []string{"commit"}, Decision: "ask"},
+	{Name: "Installs and links", Actions: []string{"install_app", "open_url"}, Decision: "ask"},
+	{Name: "Calls", Actions: []string{"call"}, Decision: "ask"},
+	{Name: "Settings changes", Actions: []string{"change_setting"}, Decision: "ask"},
+	{Name: "Blocked by you", Categories: []string{"blocked"}, Decision: "deny"},
+}
+
+// Rules returns the rules, starting from the bundled defaults' two.
+func (a *API) Rules() gateway.RulesView {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if !a.rulesSet {
+		a.rules = []gateway.RuleView{
+			{Name: "Finance apps", Categories: []string{"finance"}, Decision: "deny"},
+			{Name: "Password managers", Categories: []string{"passwords"}, Decision: "deny"},
+		}
+		a.rulesSet = true
+	}
+	return gateway.RulesView{File: cloneRules(a.rules), BuiltIn: cloneRules(fakeBuiltIn)}
+}
+
+// SetRules replaces the rules, refusing a rule without a name or a match,
+// or a name taken, as the gateway does; the fake's agents ask all the same.
+func (a *API) SetRules(rules []gateway.RuleView) error {
+	seen := map[string]bool{}
+	for _, r := range append(cloneRules(fakeBuiltIn), rules...) {
+		k := strings.ToLower(strings.TrimSpace(r.Name))
+		switch {
+		case k == "":
+			return errors.New("fakeapi: a rule has no name")
+		case seen[k]:
+			return fmt.Errorf("fakeapi: two rules are called %q", r.Name)
+		case len(r.Apps)+len(r.Categories)+len(r.Actions)+len(r.Labels) == 0:
+			return fmt.Errorf("fakeapi: rule %q matches everything", r.Name)
+		}
+		seen[k] = true
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.rules, a.rulesSet = cloneRules(rules), true
+	return nil
+}
+
+func cloneRules(rules []gateway.RuleView) []gateway.RuleView {
+	out := make([]gateway.RuleView, len(rules))
+	for i, r := range rules {
+		r.Apps = append([]string(nil), r.Apps...)
+		r.Categories = append([]string(nil), r.Categories...)
+		r.Actions = append([]string(nil), r.Actions...)
+		r.Labels = append([]string(nil), r.Labels...)
+		out[i] = r
+	}
+	return out
 }

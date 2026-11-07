@@ -278,6 +278,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 		}
 		a.toggleRow(c, "codes", locales.SettingsSafetyHideCodes(), locales.SettingsSafetyHideCodesDesc(), true, &st.HideCodes)
 	})
+	a.rulesSection(c)
 }
 
 // blockedKinds name the kinds of blocked apps, which the settings keep in

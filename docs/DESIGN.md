@@ -285,7 +285,7 @@ Policy actions are tool calls in context:
 | `open_url` | A tap on a link element that leaves the current app |
 | `call` | A tap on a call button, or a dialer showing a number |
 
-App categories (finance, messaging, stores) come from a bundled, editable list of package names and bundle ids. The rules file is the only source of truth, and the Policies screen edits it:
+App categories (finance, messaging, stores) come from a bundled, editable list of package names and bundle ids. The rules file is the only source of truth, and Settings › Safety edits it:
 
 ```yaml
 rules:
@@ -303,7 +303,9 @@ rules:
     decision: ask
 ```
 
-When several rules match, the strictest wins: Deny, then Ask, then Allow. In M1 the Policies screen shows the defaults and toggles; the rules editor arrives in M2.
+When several rules match, the strictest wins: Deny, then Ask, then Allow; among rules with the same decision, the first one names the result. An Allow rule therefore never cancels another rule's Ask or Deny (Always allow does that for asks, below).
+
+Settings › Safety › Rules lists the file's rules to add, change, move and remove, each with its name, what it matches (apps, categories, actions, words of the element's label) and what it does (Block, Ask, Allow). The rules Pinky adds show there read-only: the preset's, which come before the file's, the apps blocked in Settings, and the credentials rule. Before saving, Pinky checks a rule: a name no other rule has (the built-in ones included), something to match, known actions. Removing a rule that blocks, or changing what it matches or does, asks the person first; removing or renaming a rule drops the Always allow answers about it. Pinky reads `rules.yaml` when it starts, and Settings writes the whole file, so edits made by hand while it runs are lost at the next change in Settings.
 
 ### Approval panel and transport
 
