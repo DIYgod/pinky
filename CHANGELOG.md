@@ -2,6 +2,15 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On iPhone, alerts and notification banners now reach the agent, and Pinky's code masking and hiding of blocked apps' notifications apply to them.
+- On iPhone, Pinky stops the live picture after 30 seconds when nobody is watching, so banking apps that refuse to run while the screen is shared, and the camera and microphone, work for you again.
+- On iPhone, the app in front is always named by its bundle id, also right after a session starts and while Face ID is on screen, so blocked apps stay blocked.
+- On iPhone, elements keep their numbers between reads, picker wheels read as their values, and rows hidden behind the tab bar are left out.
+- On iPhone, the agent is told when part of the screen, such as some apps' passcode keys, is hidden from screenshots and the mirror.
+- Unlocking an iPhone from the computer swipes again when notifications cover the lock screen.
+
 ## 2026.1108.2 (2026-11-08)
 
 - By default, Pinky now asks only before payments (Settings › Safety › When should agents ask you?). Installs that never changed this setting move to it too; if you changed any safety setting, your choice stays.
