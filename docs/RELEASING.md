@@ -13,7 +13,7 @@ Pinky releases often, several times a day when there is something to ship, and n
    - **macOS** (a macOS runner): `scripts/dist.sh darwin` builds Pinky.app for Apple silicon and Intel, each with its own FFmpeg, signs them with the Developer ID, notarizes both disk images at once and staples the tickets to the disk images and the apps.
    - **Publish** (Ubuntu): `release manifest` writes `latest.json` and `SHA256SUMS`, and `scripts/publish.sh` creates the GitHub release as a draft, uploads everything (`latest.json` last), publishes it, and updates the cask in [DIYgod/homebrew-tap](https://github.com/DIYgod/homebrew-tap).
 
-A release takes about 15 to 25 minutes from the push, mostly the macOS build and Apple's notary service.
+On this Mac the whole build, notarization included, takes about two minutes once FFmpeg is built; GitHub's runners are slower, so expect roughly 10 to 20 minutes from the push to the published release (not measured yet), the first one longer while FFmpeg is built and cached.
 
 ## Versions
 

@@ -27,3 +27,5 @@ To release:
 3. If the push is refused because `origin/main` moved, the script undoes its commit and tag: `git pull --rebase origin main`, then run it again.
 
 A push that is not a release leaves `## Unreleased` as it is. Never change a released section's heading, never move or reuse a tag, and never push a `v*` tag other than through `scripts/release.sh tag`.
+
+Working on a branch that someone else merges? Leave CHANGELOG.md alone (parallel branches would conflict there) and end your report with the bullets you suggest for the notes; whoever merges and pushes writes them.
