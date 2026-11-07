@@ -1,0 +1,114 @@
+name: CI
+
+# Builds, vets and tests Pinky on Linux and Windows (macOS builds and vets
+# only: its minutes cost ten times as much), and smoke-runs the gateway
+# with fake phones on each. On Linux the desktop window also runs under
+# Xvfb and is captured through MyGo's automation socket.
+#
+# It runs for main, pull requests, by hand, and for the platform session's
+# branches; other branches run it through a pull request, so their many
+# pushes cost no minutes.
+on:
+  push:
+    branches: [main, "claude/platform-*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CGO_ENABLED: "0"
+  # FFmpeg 9's shared libraries and the ffmpeg command for the decoder
+  # tests: BtbN's GPL builds (x264 and x265 make the test streams). They
+  # stay on the runner; Pinky.app ships its own LGPL build (make ffmpeg).
+  FFMPEG_BUILDS: https://github.com/BtbN/FFmpeg-Builds/releases/download/latest
+
+jobs:
+  check:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-latest, test: true }
+          - { name: Windows, os: windows-latest, test: true }
+          - { name: macOS, os: macos-latest, test: false }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Install FFmpeg 9 (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ffmpeg.tar.xz" "$FFMPEG_BUILDS/ffmpeg-n9.0-latest-linux64-gpl-shared-9.0.tar.xz"
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          tar -xJf "$RUNNER_TEMP/ffmpeg.tar.xz" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+          echo "PINKY_FFMPEG_DIR=$RUNNER_TEMP/ffmpeg/lib" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/ffmpeg/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/ffmpeg/bin/ffmpeg" -hide_banner -version | head -1
+
+      - name: Install FFmpeg 9 (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest "$env:FFMPEG_BUILDS/ffmpeg-n9.0-latest-win64-gpl-shared-9.0.zip" -OutFile "$env:RUNNER_TEMP\ffmpeg.zip"
+          Expand-Archive "$env:RUNNER_TEMP\ffmpeg.zip" -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
+          $bin = (Get-ChildItem "$env:RUNNER_TEMP\ffmpeg" -Directory | Select-Object -First 1).FullName + "\bin"
+          "PINKY_FFMPEG_DIR=$bin" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          $bin | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          & "$bin\ffmpeg.exe" -hide_banner -version | Select-Object -First 1
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        if: matrix.test
+        run: go test ./...
+
+      - name: Smoke run with fake phones
+        shell: bash
+        run: scripts/smoke.sh build/smoke
+
+      - name: Window under Xvfb
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends xvfb xauth dbus-x11 libegl1 libegl-mesa0 libgl1-mesa-dri libepoxy0 >/dev/null
+          sudo apt-get install -y -qq --no-install-recommends libgtk-3-0t64 >/dev/null || sudo apt-get install -y -qq --no-install-recommends libgtk-3-0 >/dev/null
+          mkdir -p build/e2e
+          go build -tags e2e -o build/e2e/pinky ./cmd/pinky
+          export PINKY_HOME=build/e2e/h MYGO_AUTOMATION="$PWD/build/e2e/ui.sock"
+          xvfb-run -a -s "-screen 0 1440x900x24" dbus-launch --exit-with-session build/e2e/pinky --fake > build/e2e/app.log 2>&1 &
+          app=$!
+          status=0
+          go run ./scripts/uicapture -socket "$MYGO_AUTOMATION" -out build/e2e -expect "Pixel 9 (fake)" -timeout 90s || status=$?
+          kill $app 2>/dev/null || true
+          pkill -f "build/e2e/pinky --fake" || true
+          echo "--- app log"; tail -40 build/e2e/app.log
+          exit $status
+
+      - name: Keep the logs and captures
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-${{ matrix.name }}
+          path: |
+            build/smoke/*.log
+            build/smoke/*.txt
+            build/e2e/*.png
+            build/e2e/*.log
+          if-no-files-found: ignore
+          retention-days: 7
