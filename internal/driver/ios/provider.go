@@ -27,6 +27,10 @@ type Provider struct {
 	// or Finder over the network, and the gateway opens whatever it lists.
 	Wireless bool
 
+	// DiskImageDir is Pinky's own folder for Apple's developer disk image
+	// (an iOS_DDI folder in it), looked in before Xcode's; "" for none.
+	DiskImageDir string
+
 	mu          sync.Mutex
 	ddi         map[string]ddiCheck // by UDID
 	known       map[string]known    // by UDID, what List last found
@@ -37,6 +41,13 @@ type Provider struct {
 	// For tests: how a phone is inspected, and the clock.
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
+
+	prep       preparer // Developer Mode and the developer disk image (prepare.go)
+	muxErr     error    // usbmuxd's answer to the last List
+	muxChecked bool
+	muxFails   int                              // Lists in a row that usbmuxd did not answer
+	muxPhones  int                              // phones the last answered List found
+	listFn     func() (goios.DeviceList, error) // for tests: usbmuxd's list
 }
 
 // recheckOffline is how often List asks a phone that is not online again,
@@ -82,11 +93,11 @@ func (p *Provider) Platform() driver.Platform { return driver.IOS }
 // Detail how to fix what is missing. A gateway calls it every few seconds,
 // so it asks each phone again only when needed (see recheckOffline).
 func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
-	list, err := goios.ListDevices()
-	if err != nil {
-		return nil, fmt.Errorf("usbmuxd: %w (on Windows install Apple Devices, on Linux the usbmuxd package)", err)
+	list, ok, err := p.listUsbmuxd()
+	if !ok {
+		return nil, err // nil without usbmuxd: CheckHost says what to install
 	}
-	entries := p.entries(list.DeviceList)
+	entries := p.entries(list)
 	out := make([]driver.Info, len(entries))
 	var wg sync.WaitGroup
 	for i, e := range entries {
@@ -131,7 +142,7 @@ func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 	p.mu.Lock()
 	k, ok := p.known[id]
 	p.mu.Unlock()
-	if ok && k.key == key && ((k.info.State == driver.StateOnline && k.info.Backend != backendAccessibility) || p.clock().Sub(k.at) < recheckOffline) {
+	if ok && k.key == key && ((k.info.State == driver.StateOnline && k.info.Backend != backendAccessibility) || p.clock().Sub(k.at) < recheckFor(k.info)) {
 		return k.info
 	}
 	inspect := p.inspectFn
@@ -186,13 +197,13 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	}
 	values, err := goios.GetValues(e)
 	if err != nil {
-		info.State = driver.StateUnauthorized
-		info.Detail = "Unlock the iPhone and tap Trust on the \"Trust This Computer?\" prompt, then enter its passcode."
 		if !isPairingError(err) {
 			info.State = driver.StateOffline
 			info.Detail = "The iPhone does not answer: " + err.Error()
+			return info
 		}
-		return info
+		p.prep.askTrust(e)
+		return trustState(info, err)
 	}
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)
@@ -201,13 +212,14 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	if kind == pathUnsupported {
 		info.State = driver.StateNeedsSetup
 		info.Detail = why
+		if parseVersion(info.OSVersion).Major != 0 {
+			info.Setup = driver.SetupUpdate
+		}
 		return info
 	}
 	dev, err := imagemounter.IsDevModeEnabled(e)
 	if err == nil && !dev {
-		info.State = driver.StateNeedsSetup
-		info.Detail = "Turn on Developer Mode on the iPhone (Settings > Privacy & Security > Developer Mode), restart it and confirm."
-		return info
+		return p.devModeOff(e, info)
 	}
 	if kind == pathLegacy {
 		return p.inspectLegacy(ctx, e, info)
@@ -218,8 +230,7 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 		info.State = driver.StateOffline
 		info.Detail = "Could not reach the iPhone's developer services: " + err.Error()
 	case !ok:
-		info.State = driver.StateNeedsSetup
-		info.Detail = "The developer disk image is not mounted. Connect the iPhone to this computer and open Xcode's Devices window (Window > Devices and Simulators) once, so Xcode prepares it for development."
+		return p.diskImageMissing(e, info, p.setup)
 	}
 	return info
 }
@@ -265,9 +276,7 @@ func (p *Provider) inspectLegacy(ctx context.Context, e goios.DeviceEntry, info 
 		info.Detail = "Could not reach the iPhone's developer services: " + err.Error()
 		return info
 	case !ok:
-		info.State = driver.StateNeedsSetup
-		info.Detail = "The developer disk image is not mounted. Connect the iPhone to this computer and open Xcode's Devices window (Window > Devices and Simulators) once, so Xcode prepares it for development."
-		return info
+		return p.diskImageMissing(e, info, p.legacySetup)
 	}
 	find := p.findRunner
 	if find == nil {

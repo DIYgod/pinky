@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
@@ -46,14 +48,18 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 	}), nil
 }
 
-func newIOSProvider(*slog.Logger) (driver.Provider, error) {
+// newIOSProvider always succeeds: without usbmuxd (Linux without the
+// package or before an iPhone is plugged in, Windows without Apple
+// Devices) it lists no phones and says what is missing (CheckHost), and it
+// finds phones once usbmuxd runs.
+func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 	p := ios.NewProvider()
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	// Fails only when usbmuxd is missing (Linux without the package,
-	// Windows without Apple Devices); phones themselves report their state.
-	if _, err := p.List(ctx); err != nil {
-		return nil, fmt.Errorf("ios: %w", err)
+	if dirs, err := api.DefaultDirs(); err == nil {
+		// Where Pinky looks for Apple's developer disk image before Xcode's.
+		p.DiskImageDir = filepath.Join(dirs.Data, "DeveloperDiskImages")
+	}
+	if c := p.CheckHost(); c.Missing != "" {
+		log.Info("iPhones need software this computer lacks", "missing", c.Missing, "detail", c.Detail)
 	}
 	return p, nil
 }
