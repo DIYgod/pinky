@@ -533,8 +533,22 @@ func TestBatchStopsAtApproval(t *testing.T) {
 	}
 }
 
+// waitUntil polls cond until it holds. Tests wait for what they expect to
+// happen rather than for a fixed time, which a stalled goroutine could
+// outlast; the deadline only ends a test that would fail anyway.
+func waitUntil(t *testing.T, what string, cond func() bool) {
+	t.Helper()
+	for deadline := time.Now().Add(10 * time.Second); !cond(); time.Sleep(2 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for %s", what)
+		}
+	}
+}
+
 func TestOfflineAndReconnect(t *testing.T) {
-	g, dev := newTestGateway(t, func(o *Options) { o.ReconnectGrace = 300 * time.Millisecond })
+	// The phone comes back well within the grace period, however slowly
+	// the test runs.
+	g, dev := newTestGateway(t, func(o *Options) { o.ReconnectGrace = time.Minute })
 	s, first := connect(t, g, "Lunch")
 	dinely := ref(t, first, "Dinely")
 	dev.SetOffline(true)
@@ -546,17 +560,19 @@ func TestOfflineAndReconnect(t *testing.T) {
 		t.Fatalf("after drop: %+v", res)
 	}
 	dev.SetOffline(false)
-	deadline := time.Now().Add(time.Second)
-	for g.Devices()[0].Status == DeviceOffline && time.Now().Before(deadline) {
-		time.Sleep(5 * time.Millisecond)
-	}
+	waitUntil(t, "the phone to come back", func() bool { return g.Devices()[0].Status != DeviceOffline })
 	mustStatus(t, s.Observe(context.Background(), ObserveRequest{}), StatusSettled)
+}
 
-	// Past the grace period the lease ends.
+// TestOfflinePastGrace ends the lease of a phone that stays away past the
+// grace period; the phone coming back does not bring the lease back.
+func TestOfflinePastGrace(t *testing.T) {
+	g, dev := newTestGateway(t, func(o *Options) { o.ReconnectGrace = 50 * time.Millisecond })
+	s, _ := connect(t, g, "Lunch")
 	dev.SetOffline(true)
-	time.Sleep(600 * time.Millisecond)
+	waitUntil(t, "the lease to end", func() bool { ts := g.Tasks(); return len(ts) == 1 && ts[0].State == TaskFailed })
 	dev.SetOffline(false)
-	time.Sleep(100 * time.Millisecond)
+	waitUntil(t, "the phone to come back", func() bool { return g.Devices()[0].Status != DeviceOffline })
 	if res := s.Observe(context.Background(), ObserveRequest{}); res.Error != ErrInvalidArgument {
 		t.Fatalf("lease survived past grace: %+v", res)
 	}
@@ -565,12 +581,9 @@ func TestOfflineAndReconnect(t *testing.T) {
 func TestIdleExpiry(t *testing.T) {
 	g, _ := newTestGateway(t, func(o *Options) { o.IdleTimeout = 60 * time.Millisecond })
 	s, _ := connect(t, g, "Lunch")
-	time.Sleep(300 * time.Millisecond)
+	waitUntil(t, "the idle lease to end", func() bool { ts := g.Tasks(); return len(ts) == 1 && ts[0].State == TaskDone })
 	if res := s.Observe(context.Background(), ObserveRequest{}); res.Error != ErrInvalidArgument {
 		t.Fatalf("lease survived idling: %+v", res)
-	}
-	if tasks := g.Tasks(); len(tasks) != 1 || tasks[0].State != TaskDone {
-		t.Fatalf("tasks: %+v", tasks)
 	}
 	g.Flush()
 }

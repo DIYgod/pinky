@@ -440,6 +440,50 @@ func TestGatewayInControlWithoutTask(t *testing.T) {
 	ga.waitFor(t, "the phone to be idle", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
 }
 
+// TestGatewayInControlAfterTheAgentLeft: the person took over during a
+// task and the agent ended it. The phone stays theirs, "You're in control"
+// with no task, and both its page and All phones offer Hand back.
+func TestGatewayInControlAfterTheAgentLeft(t *testing.T) {
+	ga := newGatewayApp(t, true)
+	ga.waitFor(t, "the phones", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
+	tookOver := make(chan struct{})
+	done := ga.agent(t, "Claude Code", pixel, func(ag *demogw.Agent, ctx context.Context) error {
+		if err := ag.Connect(ctx, "Look at the home screen"); err != nil {
+			return err
+		}
+		<-tookOver
+		ag.Release(ctx, "done", "The person took the phone.")
+		return nil
+	})
+	ga.waitFor(t, "the task", func() bool { return ga.device(pixel).Status == gateway.DeviceWorking })
+	ga.takeOver(pixel)
+	ga.waitFor(t, "control", func() bool { return ga.device(pixel).Status == gateway.DeviceInControl })
+	close(tookOver)
+	if err := wait(t, done, "the agent"); err != nil {
+		t.Fatal(err)
+	}
+	ga.waitFor(t, "the task to end", func() bool { tk := ga.taskOf(pixel); return tk != nil && !running(tk.State) })
+	if d := ga.device(pixel); d.Status != gateway.DeviceInControl || d.TaskID != "" {
+		t.Fatalf("after the agent left, the Pixel is %q with task %q", d.Status, d.TaskID)
+	}
+
+	tt := mg.NewTester(ga.view, 1280, 820)
+	if !hasText(tt, "You're in control.") || !hasText(tt, "Hand back to let agents use this phone again.") || hasText(tt, "is paused") {
+		t.Errorf("banner reads %q", tt.Texts())
+	}
+	ga.sel = allPhones
+	tt.Frame()
+	if !hasText(tt, "You're in control") || !hasText(tt, "Hand back") {
+		t.Errorf("All phones: %q", tt.Texts())
+	}
+	ga.selectPhone(pixel)
+	tt.Frame()
+	if err := tt.Click("Hand back"); err != nil {
+		t.Fatal(err)
+	}
+	ga.waitFor(t, "the phone to be idle", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
+}
+
 // TestGatewayScreenshots renders the flows above in light and dark into
 // $PINKY_SCREENSHOTS, for the notes. Tests have no video, so the mirrors
 // show still screenshots of the demo phones.

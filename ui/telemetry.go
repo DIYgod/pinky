@@ -27,10 +27,11 @@ type telState struct {
 
 func (a *app) tel() *telemetry.Client { return a.opt.Telemetry }
 
-// setUsageStats is the switch in Settings › Privacy.
+// setUsageStats is the switch in Settings › Privacy; the change goes
+// through settingsQueue, so quick changes keep their order.
 func (a *app) setUsageStats(on bool) {
 	tel := a.tel()
-	go tel.SetUsage(on)
+	a.setq.push("usage", func() { tel.SetUsage(on) })
 }
 
 // openShared shows the usage report as it would go out now.
