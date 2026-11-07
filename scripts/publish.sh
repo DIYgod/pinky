@@ -51,6 +51,7 @@ tag=v$version
 
 **macOS:** \`brew install --cask $tapname/pinky\`, or the \`.dmg\` for your Mac below (\`arm64\` for Apple silicon, \`amd64\` for Intel).
 **Windows:** \`pinky-setup-$version-amd64.exe\`. **Linux:** \`pinky_${version}_amd64.deb\`, or \`pinky-$version-linux-amd64.tar.gz\`.
+**Claude Desktop:** with Pinky installed, open \`pinky-$version.mcpb\` to add Pinky to Claude Desktop as an extension; Settings › Agents in Pinky connects Claude Code, Codex, Cursor and others with a click.
 EOF
 } >"$work/notes.md"
 

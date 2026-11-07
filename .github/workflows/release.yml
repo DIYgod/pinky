@@ -268,6 +268,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASES_REPO: ${{ github.repository }}
         run: |
+          go run ./scripts/release mcpb -version "${TAG#v}" -out "$RUNNER_TEMP/dist/pinky-${TAG#v}.mcpb"
           go run ./scripts/release manifest -dir "$RUNNER_TEMP/dist" -version "${TAG#v}" -repo "$RELEASES_REPO"
           ls -l "$RUNNER_TEMP/dist"
           scripts/publish.sh "$RUNNER_TEMP/dist"

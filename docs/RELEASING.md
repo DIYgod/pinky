@@ -34,6 +34,7 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 | `pinky-<version>-windows-amd64.zip` | People who run Pinky without installing it: the app's files (`Pinky.exe`, FFmpeg's DLLs and the companion APK) |
 | `pinky-<version>-linux-amd64.tar.gz` | The updater on Linux and `install.sh` of `mygo build`: `pinky`, FFmpeg's libraries, its desktop entry and icon, the companion APK |
 | `pinky_<version>_amd64.deb` | People on Debian and Ubuntu: the same in `/opt/pinky` |
+| `pinky-<version>.mcpb` | People with Claude Desktop: an [MCP bundle](https://github.com/modelcontextprotocol/mcpb) that a double-click installs as the extension Pinky, which starts the Pinky installed on the computer (`go run ./scripts/release mcpb`, see [mcp.md](mcp.md#claude-desktop-extension)) |
 | `latest.json` | The updater: the release's manifest, below |
 | `pinky.rb` | The Homebrew tap: the cask of this release |
 | `SHA256SUMS` | Everyone: every other file's SHA-256, as `sha256sum` writes it |
