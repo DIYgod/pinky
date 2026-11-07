@@ -198,6 +198,39 @@ The third pass (2026-11-07) built what the acceptance checklist listed as missin
 - Background tasks and the person: when the person takes over, or a handoff is open, the mirror shows the phone's own screen, and `Touch`, `Key` and `Text` go there as always. A handoff that needs the person on the agent's display (signing in inside the app it works in) has no way to send input there yet.
 - `pinky --fake` runs the real gateway on `internal/demo`'s phones, which have none of the optional drivers, so these controls stay hidden there until the demo phones gain fakes of them; `pinky-ui-demo` shows them all on `fakeapi`.
 
+## i18n
+
+The client speaks English and Simplified Chinese (2026-11-07, branch `claude/ui-zh-hans-465ea6`). Everything the person sees in the app is in the catalogs: the windows, the floating approval panel, the menu bar flyout and the tray, the menus, notifications, toasts, tooltips and accessibility labels. What agents read (MCP tool descriptions and results, `docs/SKILL.md`, `docs/mcp.md`) stays English.
+
+**How it works.** MyGo's catalogs (`docs/i18n.md` in the MyGo module): `cmd/pinky/mygo.json` has `"i18n": {"dir": "locales", "source": "en"}`, so `cmd/pinky/locales/` holds `en.json` (every message, with an `@key` description and typed placeholders) and `zh-Hans.json`, in ARB with ICU MessageFormat. `go tool mygo generate cmd/pinky` (which `mygo build` and `mygo dev` also run) writes `catalog_gen.go` there: a Go function per message, named after its key (`sidebarStopAll` → `locales.SidebarStopAll()`), which says it in the language the app shows. The `ui` package calls them; the generated code embeds the catalogs and imports MyGo's own Simplified Chinese strings (the menus by role, the Edit and Window menus, Quit, text fields' menus, dialog buttons). A packaged build declares both languages (`CFBundleLocalizations`, `zh-Hans.lproj`), so System Settings › General › Language & Region › Applications lists Pinky.
+
+**Which language.** MyGo picks the one of the app's languages the person reads best, from the system's preferred languages in order (any Chinese written in simplified characters, such as zh-Hans-CN or zh-Hans-SG, gets Chinese; Traditional Chinese and everything else get English). Settings › Advanced › Language overrides it: System, English, or Simplified Chinese (each named in its own language, as `i18n.Autonym` writes it). The choice applies at once, without a restart, and MyGo keeps it as the app's language in the macOS defaults (`AppleLanguages` of the app's domain), which System Settings shows too; System clears it. For one run, `MYGO_LOCALE=zh-Hans` forces a language and saves nothing (`go tool mygo dev -lang zh-Hans` does the same). The e2e build in Chinese:
+
+```sh
+go build -tags e2e -o build/pinky-e2e ./cmd/pinky
+mkdir -p /tmp/pkzh && PINKY_HOME=/tmp/pkzh MYGO_AUTOMATION=/tmp/pkzh/auto.sock MYGO_LOCALE=zh-Hans build/pinky-e2e --fake
+```
+
+**The gateway's words.** The gateway records steps, approval titles and status lines as finished English ("Tapped “Pay”", "Pay: “Place order · $12.80”?", "Claude Code · Reorder lunch · in the background"), and history keeps them that way. In Chinese, `ui/gwtext.go` reads them back by the patterns of `internal/gateway` (`describe`, `approvalTitle`, `statusLocked`, the files and agent steps) and says them with the catalog's `gw…` messages; `stepDisplay` words the client's own step states (`step…`), and `ruleName` and `ruleAction` name the policy's rules. Inside them, agents' words (task titles, handoff reasons, questions, notes, summaries) and the phone's (labels in quotes, app and phone names) stay as they are. Text that matches no pattern shows in English, and in English the gateway's text always shows unchanged. When the gateway words something new, add a pattern and a case to `ui/gwtext_test.go`.
+
+**Adding a message.** Add it to `en.json` with an `@key` description (where it shows, what its placeholders hold; `type` is `String`, `int` or `DateTime`), then the translation to `zh-Hans.json`, run `go tool mygo generate cmd/pinky`, and call `locales.Key(…)`. Name keys after the area they belong to (`settingsPrivacy…`, `needs…`, `tasks…`), and make one message of a sentence with placeholders rather than gluing pieces, so a translation can reorder it; counts that change the English words are ICU plurals. `go test ./cmd/pinky/locales` fails when a key lacks a translation or a translation's arguments differ; `go tool mygo i18n check cmd/pinky` reports the catalogs' errors and warnings. Strings that sessions add in English work as before and show in English in the Chinese UI until they get keys.
+
+**Chinese style.** Short, plain Simplified Chinese as in Mac apps, addressing the person informally; full-width punctuation, a single-character ellipsis, a space between Chinese and Latin letters or digits, and the terms `zh-Hans.json` already uses (look a term up there before adding one). Product and feature names that are names stay as they are (Pinky, Claude Code, Touch ID, Pinky Companion, Wi-Fi, USB).
+
+**Tests.** The `ui` tests pin the client's words to English (`ui/main_test.go`), since they find controls by their English labels; `inLanguage(t, "zh-Hans", testers…)` switches a test to Chinese, as `TestGatewayWordsInChinese`, `TestStepDisplayInChinese` and the language setting's test do. `PINKY_SCREENSHOTS_ZH=dir go test ./ui -run TestChineseScreenshots` draws every screen in Chinese (`PINKY_SCREENSHOTS_DARK=1` adds dark).
+
+**What stays English.** Agent-facing text; the gateway's error details inside a toast or a card (the words around them are translated), drivers' details (`Info.Detail`, pairing and install errors from adb); the export files (the gateway's report, and the client's fallback `report.html` and `tasks.json`); logs; the e2e build's Debug menu and the demo's Demo menu; the system's power assertion name; and the fake's scripted wording in `ui/fakeapi` (steps such as "Found last week's order"), which only the demo and tests show.
+
+**Seen for real.** The e2e build ran with `--fake` and `MYGO_LOCALE=zh-Hans`, an MCP agent (`pinky mcp`) reordering lunch on the demo Pixel through the real gateway, and every screen was captured over the automation socket: the steps and the payment approval come from `internal/gateway` and read in Chinese; the language was switched to English and back in Settings without a restart. `TestChineseScreenshots` drew the states the demo phones cannot reach (locked with the PIN form, Touch ID, handoffs, a new agent, the companion card, the agent's screen, pairing, the recording player). One layout changed for Chinese: step thumbnails no longer print "Loading…" in a box 25 points wide, which Chinese stacked a character a line. Elsewhere the Chinese is shorter than the English and fits where it does, at the window's minimum width too. A known compromise: placeholders that hold names get a space next to Chinese text, as Latin names such as "Claude Code" need, so the rare fallback names in Chinese (an agent without a name, "this app") show with a space too many. The same flow in both languages:
+
+| Screen | English | Simplified Chinese |
+| --- | --- | --- |
+| A payment waiting, the gateway's steps | `live-payment-en.png` | `live-payment-zh.png` |
+| The floating approval panel | `live-panel-en.png` | `live-panel-zh.png` |
+| In control, the step not done | `live-takeover-en.png` | `live-takeover-zh.png` |
+| Activity, the finished task | `live-activity-en.png` | `live-activity-zh.png` |
+| Settings › Advanced › Language | `live-language-en.png` | `live-language-zh.png` |
+
 ## Brand colors, and keeping amber and red apart
 
 The prototype's colors stay, quiet as they were: neutral grays, indigo for primary buttons, links, switches and the agent's overlay, amber for what needs the person, red for Stop, green for working. The brand appears only where the eye looks for identity:

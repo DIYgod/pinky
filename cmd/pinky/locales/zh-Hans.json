@@ -636,7 +636,7 @@
   "tasksDeveloperModeOn": "开发者模式已开启",
   "tasksEarlierSteps": "{count, plural, other {前面还有 # 个步骤}}",
   "tasksNoToolCalls": "还没有工具调用。",
-  "tasksNone": "没有正在运行的任务。让你的智能体用一部手机试试。",
+  "tasksNone": "没有正在运行的任务。试试让你的智能体使用手机。",
   "tasksRowDone": "已完成",
   "tasksRowEnded": "已结束",
   "tasksRowFailed": "失败",
