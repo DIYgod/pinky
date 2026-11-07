@@ -4592,6 +4592,10 @@
   "@updateErrNoAsset": {
     "description": "Why an update failed: the release has no file for this system."
   },
+  "updateErrNotarized": "Apple hasn't notarized the update, so Pinky didn't install it.",
+  "@updateErrNotarized": {
+    "description": "Why an update failed on macOS: the downloaded app is signed by Pinky's developer but carries no notarization ticket from Apple."
+  },
   "updateErrSignature": "The update isn't signed by Pinky's developer, so Pinky didn't install it.",
   "@updateErrSignature": {
     "description": "Why an update failed: its signature did not check."

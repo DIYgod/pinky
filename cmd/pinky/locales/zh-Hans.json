@@ -765,6 +765,7 @@
   "updateErrChecksum": "下载的文件已损坏，请重试。",
   "updateErrNetwork": "无法连接更新服务器。请检查网络连接后重试。",
   "updateErrNoAsset": "这个版本还没有适用于这台电脑的安装包。",
+  "updateErrNotarized": "这个更新没有经过 Apple 公证，所以 Pinky 没有安装它。",
   "updateErrSignature": "这个更新没有 Pinky 开发者的签名，所以 Pinky 没有安装它。",
   "updateErrStalled": "下载中断了。请检查网络连接后重试。",
   "updateFailedTitle": "无法更新",

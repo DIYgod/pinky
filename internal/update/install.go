@@ -50,6 +50,10 @@ type StartOptions struct {
 // ErrSignature means a downloaded Pinky.app is not signed by Pinky's team.
 var ErrSignature = errors.New("the update is not signed by Pinky's developer")
 
+// ErrNotarized means a downloaded Pinky.app, signed by Pinky's team, has
+// no notarization ticket from Apple.
+var ErrNotarized = errors.New("the update is not notarized by Apple")
+
 // Swapped is what a swap left for the version that runs now: the new
 // version, which Confirm tells that it is up, or the old one again after
 // the new one did not start (Failed).

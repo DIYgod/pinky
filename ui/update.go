@@ -413,6 +413,8 @@ func updateError(err error) string {
 		return locales.UpdateErrChecksum()
 	case errors.Is(err, update.ErrSignature):
 		return locales.UpdateErrSignature()
+	case errors.Is(err, update.ErrNotarized):
+		return locales.UpdateErrNotarized()
 	case errors.Is(err, update.ErrNoAsset):
 		return locales.UpdateErrNoAsset()
 	case errors.Is(err, update.ErrStalled):

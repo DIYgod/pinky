@@ -30,20 +30,67 @@ const requirement = `anchor apple generic and identifier "` + BundleID + `"` +
 	` and certificate leaf[field.1.2.840.113635.100.6.1.13] exists` +
 	` and certificate leaf[subject.OU] = "` + TeamID + `"`
 
-// verifySignature checks an app bundle's signature against requirement;
-// deep also checks every nested binary (FFmpeg's libraries).
-func verifySignature(ctx context.Context, app string, deep bool) error {
+// notarized is the code requirement that Apple notarized the code: its
+// ticket is stapled to the bundle, which codesign reads without a network,
+// or one the system already knows. Releases are stapled. (codesign's
+// --check-notarization would look the ticket up online, which fails where
+// Apple's servers cannot be reached.)
+const notarized = "notarized"
+
+// updateRequirement is what a downloaded Pinky.app must satisfy to be
+// swapped in: requirement and, but in the e2e build, notarized.
+func updateRequirement() string {
+	if notarizationRequired {
+		return requirement + " and " + notarized
+	}
+	return requirement
+}
+
+// codesign checks an app bundle's signature against a code requirement;
+// deep also checks every nested binary (FFmpeg's libraries). It returns
+// what codesign said when the check fails.
+func codesign(ctx context.Context, app, req string, deep bool) (string, error) {
 	args := []string{"--verify", "--strict"}
 	if deep {
 		args = append(args, "--deep")
 	}
-	args = append(args, "-R", "="+requirement, app)
+	args = append(args, "-R", "="+req, app)
 	out, err := exec.CommandContext(ctx, "/usr/bin/codesign", args...).CombinedOutput()
-	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		return fmt.Errorf("%w: %s", ErrSignature, strings.TrimSpace(string(out)))
+	if err != nil && ctx.Err() != nil {
+		return "", ctx.Err()
+	}
+	return strings.TrimSpace(string(out)), err
+}
+
+// verifySignature checks that an app bundle is signed by Pinky's team
+// (requirement); deep also checks every nested binary.
+func verifySignature(ctx context.Context, app string, deep bool) error {
+	out, err := codesign(ctx, app, requirement, deep)
+	switch {
+	case ctx.Err() != nil:
+		return ctx.Err()
+	case err != nil:
+		return fmt.Errorf("%w: %s", ErrSignature, out)
+	}
+	return nil
+}
+
+// verifyUpdate is the check a downloaded Pinky.app must pass: signed by
+// Pinky's team, every nested binary too, and notarized by Apple (but in the
+// e2e build, whose bundles the test signs and cannot notarize).
+func verifyUpdate(ctx context.Context, app string) error {
+	if err := verifySignature(ctx, app, true); err != nil {
+		return err
+	}
+	if !notarizationRequired {
+		return nil
+	}
+	out, err := codesign(ctx, app, notarized, false)
+	switch {
+	case ctx.Err() != nil:
+		return ctx.Err()
+	case err != nil:
+		return fmt.Errorf("%w: %s", ErrNotarized, out)
 	}
 	return nil
 }
@@ -52,8 +99,8 @@ func verifySignature(ctx context.Context, app string, deep bool) error {
 type BundleInstaller struct {
 	// Bundle is the installed Pinky.app.
 	Bundle string
-	// Verify checks a new bundle's signature; nil is codesign against
-	// Pinky's team (tests replace it).
+	// Verify checks a new bundle's signature; nil is codesign: Pinky's team
+	// and Apple's notarization (tests replace it).
 	Verify func(ctx context.Context, app string) error
 	// Open starts the app after a swap; nil is /usr/bin/open (tests
 	// replace it). The app's path and its arguments follow.
@@ -131,7 +178,7 @@ func (s *stagedBundle) unpack(ctx context.Context, file string) error {
 	}
 	verify := s.b.Verify
 	if verify == nil {
-		verify = func(ctx context.Context, app string) error { return verifySignature(ctx, app, true) }
+		verify = verifyUpdate
 	}
 	if err := verify(ctx, s.app); err != nil {
 		return err
@@ -213,11 +260,12 @@ func (s *stagedBundle) Swap(opt StartOptions) error {
 		wait = 3 * time.Minute
 	}
 	tenths := strconv.Itoa(int(wait / (100 * time.Millisecond)))
-	// The helper checks the signature again right before the swap: the new
-	// bundle may have waited next to the app for a while since Stage.
+	// The helper checks the signature (and the notarization) again right
+	// before the swap: the new bundle may have waited next to the app for a
+	// while since Stage.
 	req := ""
 	if b.Verify == nil {
-		req = requirement
+		req = updateRequirement()
 	}
 	args := append([]string{"-c", swapScript, "pinky-update", strconv.Itoa(pid), b.Bundle, s.app, s.work, logPath, tenths, req}, start...)
 	cmd := exec.Command("/bin/sh", args...)
