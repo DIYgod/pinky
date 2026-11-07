@@ -201,7 +201,7 @@ Round three:
 24. **Multi-touch devices count as touchscreens on a phone without a direct one** (the emulators): otherwise the watcher would see nothing there.
 25. **A background display gives the person's tasks back and destroys only the agent's.** Destroying everything (scrcpy's default) lost the person's task when the agent used an app they had open; moving everything back put the agent's last app on top of the person's screen. Given back, the person's task also lands on top, which is the smaller harm.
 26. **A no-op key keeps a background display awake** while it is open, rather than a wake lock (which would need a change to the bundled scrcpy server or the companion app) or `KEYCODE_WAKEUP` (which wakes the phone's own screen). It is sent only after 4 s without other input on the display.
-27. **The last driver to leave turns the companion off,** so two Pinky processes (or Pinky and `androidctl`) do not cut each other off and the setting still goes back: the app's three-minute backstop did not turn the service off on `emulator-5560` in a four-minute wait with no client (asked of the companion session), so the driver does not rely on it.
+27. **The last driver to leave turns the companion off,** so two Pinky processes (or Pinky and `androidctl`) do not cut each other off and the setting still goes back: the app's three-minute backstop did not turn the service off on `emulator-5560` in a four-minute wait with no client: build 73 restarted its count whenever Android bound the service again, which every `uiautomator dump` causes. Build 74 fixed that, but older builds (the Mi's) still have it, so the driver does not rely on the backstop.
 
 ## Not done, and open questions
 
