@@ -505,3 +505,29 @@ func TestUpdateScreenshots(t *testing.T) {
 		ut.upd.newsOpen = false
 	}
 }
+
+func TestAutomaticUpdateBacksOffAfterAFailure(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	ut.check(t)
+	good := ut.upd.rel.Asset
+	ut.upd.rel.Asset.SHA256 = hexenc.EncodeToString(make([]byte, 32)) // the download will not match
+	now := time.Now()
+	ut.updateTick(now)
+	ut.waitFor(t, "the failed download", func() bool { return ut.upd.phase == updIdle && ut.upd.failures == 1 })
+	if ut.quits != 0 || ut.u.State().Failed != "" {
+		t.Fatalf("a damaged download: quits %d, state %+v", ut.quits, ut.u.State())
+	}
+	if d := ut.upd.retryAt.Sub(now); d < 59*time.Minute || d > 61*time.Minute {
+		t.Errorf("retry in %v, want an hour", d)
+	}
+	ut.updateTick(now.Add(30 * time.Minute))
+	if ut.upd.phase != updIdle {
+		t.Fatal("tried again before the hour")
+	}
+	ut.upd.rel.Asset = good
+	ut.updateTick(now.Add(61 * time.Minute))
+	ut.waitFor(t, "the second try", func() bool { return ut.quits > 0 })
+	if ut.upd.failures != 0 {
+		t.Errorf("failures %d after a good install", ut.upd.failures)
+	}
+}

@@ -67,6 +67,10 @@ type updateState struct {
 
 	lastInput time.Time // the person's last input in Pinky's windows
 	comp      map[string]*compAuto
+	// An automatic install that failed (the network, a damaged download)
+	// waits until retryAt, longer after each failure.
+	retryAt  time.Time
+	failures int
 
 	// Tests replace these.
 	quit     func()
@@ -210,6 +214,9 @@ func (a *app) updateTick(now time.Time) {
 			logf("pinky: update %s waits: %s", s.rel.Version, why)
 			return
 		}
+		if now.Before(s.retryAt) {
+			return
+		}
 		a.installUpdate(true)
 	}
 }
@@ -289,12 +296,17 @@ func (a *app) prepared(p *update.Prepared, err error) {
 			return
 		}
 		log.Printf("pinky: update: %v", err)
-		s.phase, s.err = updFailed, updateError(err)
-		if s.auto && s.rel != nil {
-			a.opt.Updates.Failed(s.rel.Version, err)
+		if s.auto {
+			// Quietly, and again later: an hour, four, then a day.
+			s.failures++
+			s.retryAt = time.Now().Add(min(time.Hour<<(2*(s.failures-1)), 24*time.Hour))
+			s.phase = updIdle
+			return
 		}
+		s.phase, s.err = updFailed, updateError(err)
 		return
 	}
+	s.failures, s.retryAt = 0, time.Time{}
 	switch p.Method {
 	case update.MethodSelf:
 		s.prepared, s.phase = p, updReady
