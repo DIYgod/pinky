@@ -2,6 +2,7 @@ package android
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"sort"
 	"strings"
@@ -28,6 +29,14 @@ const (
 	reconnectFirst = 10 * time.Second
 	reconnectMax   = 2 * time.Minute // the longest wait while a paired phone stays away
 	reconnectIdle  = time.Minute     // the wait while every paired phone is connected
+
+	// A phone that refused a connection (it no longer trusts this
+	// computer, say) is tried again at the same address after these waits,
+	// tripled each time. The adb server (platform-tools 37) can crash when
+	// a TLS handshake fails, taking every other tool's connections down, so
+	// a phone it quit on is left alone for the longest wait at once.
+	refusedFirst = 5 * time.Minute
+	refusedMax   = 6 * time.Hour
 )
 
 // connectSuffix ends the serials of the server's own Wi-Fi connections,
@@ -45,10 +54,19 @@ type reconnector struct {
 	online  string            // the serials in use at the last List
 	byAddr  map[string]string // the addresses the driver connected to, with their guids
 	noted   map[string]string // the last thing logged about a guid
+	refused map[string]refusal
+}
+
+// refusal is a phone's last failed connection, by guid.
+type refusal struct {
+	addr  string
+	count int
+	until time.Time // no new try at addr before then
 }
 
 func newReconnector(p *Provider) *reconnector {
-	return &reconnector{p: p, now: time.Now, byAddr: map[string]string{}, noted: map[string]string{}}
+	return &reconnector{p: p, now: time.Now, byAddr: map[string]string{}, noted: map[string]string{},
+		refused: map[string]refusal{}}
 }
 
 // kick starts a pass in the background when one is due. A phone coming or
@@ -133,9 +151,13 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 			r.remember(addr, g) // connected by address already, by someone else
 			continue
 		}
+		if r.holdBack(g, addr) {
+			away = true
+			continue
+		}
 		r.note(g, "android: "+g+" is on the network at "+addr+", but the adb server has not connected it (its discovery stops working after the computer's network changes); connecting")
 		if err := p.cfg.Client.Connect(ctx, addr); err != nil {
-			p.cfg.logf("android: connecting to %s at %s: %v", g, addr, err)
+			r.refuse(ctx, g, addr, err)
 			away = true
 			continue
 		}
@@ -143,6 +165,42 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 		connected = true
 	}
 	return away, connected
+}
+
+// holdBack reports whether a phone refused a connection at this address
+// too recently to try again.
+func (r *reconnector) holdBack(guid, addr string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	f, ok := r.refused[guid]
+	return ok && f.addr == addr && r.now().Before(f.until)
+}
+
+// refuse notes a failed connection and when to try that address again.
+func (r *reconnector) refuse(ctx context.Context, guid, addr string, err error) {
+	_, verr := r.p.cfg.Client.Version(ctx)
+	quit := errors.Is(verr, adb.ErrServerNotRunning)
+	r.mu.Lock()
+	f := r.refused[guid]
+	if f.addr != addr {
+		f = refusal{addr: addr}
+	}
+	f.count++
+	wait := refusedFirst
+	for i := 1; i < f.count && wait < refusedMax; i++ {
+		wait *= 3
+	}
+	if quit || wait > refusedMax {
+		wait = refusedMax
+	}
+	f.until = r.now().Add(wait)
+	r.refused[guid] = f
+	r.mu.Unlock()
+	if quit {
+		r.p.cfg.logf("android: the adb server quit while connecting to %s at %s (%v); Pinky leaves that phone alone for %v", guid, addr, err, wait)
+		return
+	}
+	r.p.cfg.logf("android: connecting to %s at %s: %v; trying again in %v", guid, addr, err, wait)
 }
 
 // missing returns the paired phones' guids that have no connection in use:
@@ -196,6 +254,7 @@ func (r *reconnector) search(ctx context.Context, b Browse, want []string) map[s
 func (r *reconnector) remember(addr, guid string) {
 	r.mu.Lock()
 	r.byAddr[addr] = guid
+	delete(r.refused, guid)
 	r.mu.Unlock()
 }
 

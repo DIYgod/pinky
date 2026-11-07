@@ -116,6 +116,74 @@ func TestReconnectLeavesItToTheServer(t *testing.T) {
 	}
 }
 
+// TestReconnectRefused: a phone that refuses the connection is tried
+// again at that address only after a long wait, growing each time, and at
+// once at a new address.
+func TestReconnectRefused(t *testing.T) {
+	f, p := newReconnectFake(t)
+	ctx := context.Background()
+	now := time.Unix(1_000_000, 0)
+	p.wifi.now = func() time.Time { return now }
+	f.set(func(f *fakeADB) {
+		f.known = []string{guidPixel}
+		f.own = []string{guidPixel + "\t_adb-tls-connect._tcp\t192.168.1.42:41000"}
+		f.connectOK = map[string]bool{}
+	})
+	tries := func() int { _, c := f.counts(); return len(c) }
+	p.wifi.reconnect(ctx, nil)
+	if tries() != 1 {
+		t.Fatalf("tries = %d", tries())
+	}
+	now = now.Add(4 * time.Minute)
+	if away, _ := p.wifi.reconnect(ctx, nil); !away || tries() != 1 {
+		t.Errorf("tried again after 4 minutes: %d", tries())
+	}
+	now = now.Add(2 * time.Minute)
+	p.wifi.reconnect(ctx, nil)
+	if tries() != 2 {
+		t.Errorf("not tried again after 6 minutes: %d", tries())
+	}
+	now = now.Add(10 * time.Minute) // the second wait is 15 minutes
+	p.wifi.reconnect(ctx, nil)
+	if tries() != 2 {
+		t.Errorf("tried again 10 minutes after the second refusal: %d", tries())
+	}
+	// Wireless debugging was turned off and on: a new port.
+	f.set(func(f *fakeADB) {
+		f.own = []string{guidPixel + "\t_adb-tls-connect._tcp\t192.168.1.42:42000"}
+		f.connectOK["192.168.1.42:42000"] = true
+	})
+	if _, connected := p.wifi.reconnect(ctx, nil); !connected || tries() != 3 {
+		t.Errorf("the new address: connected %v, tries %d", connected, tries())
+	}
+	p.wifi.mu.Lock()
+	defer p.wifi.mu.Unlock()
+	if len(p.wifi.refused) != 0 {
+		t.Errorf("refusals kept after the connection: %v", p.wifi.refused)
+	}
+}
+
+// TestReconnectServerQuits: when the adb server quits on a connection (it
+// can crash on a failed TLS handshake), the phone is left alone for hours.
+func TestReconnectServerQuits(t *testing.T) {
+	f, p := newReconnectFake(t)
+	now := time.Unix(1_000_000, 0)
+	p.wifi.now = func() time.Time { return now }
+	f.set(func(f *fakeADB) {
+		f.known = []string{guidPixel}
+		f.own = []string{guidPixel + "\t_adb-tls-connect._tcp\t192.168.1.42:41000"}
+		f.quitOnConnect = true
+	})
+	if away, connected := p.wifi.reconnect(context.Background(), nil); !away || connected {
+		t.Errorf("reconnect = away %v, connected %v", away, connected)
+	}
+	p.wifi.mu.Lock()
+	defer p.wifi.mu.Unlock()
+	if r := p.wifi.refused[guidPixel]; r.until.Sub(now) != refusedMax {
+		t.Errorf("refusal = %+v", r)
+	}
+}
+
 // TestReconnectNoPairedPhones: a computer that never paired a phone over
 // Wi-Fi does not search the network.
 func TestReconnectNoPairedPhones(t *testing.T) {

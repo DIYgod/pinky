@@ -25,17 +25,18 @@ type fakeADB struct {
 	t  *testing.T
 	ln net.Listener
 
-	mu         sync.Mutex
-	services   []string // the server's mDNS services, "instance\ttype\taddr"
-	noMDNS     bool     // the server has no mDNS discovery (host:mdns:* fail)
-	code       string   // the code or password the phone accepts
-	guid       string   // reported by pair; "" for an old server
-	devices    []string // host:devices-l lines
-	connects   []string
-	pairs      int
-	autoSerial string            // a serial the server adds by itself after pairing
-	props      map[string]string // getprop output by serial; none fails the shell
-	connectOK  map[string]bool   // addresses host:connect reaches; nil: all
+	mu            sync.Mutex
+	services      []string // the server's mDNS services, "instance\ttype\taddr"
+	noMDNS        bool     // the server has no mDNS discovery (host:mdns:* fail)
+	code          string   // the code or password the phone accepts
+	guid          string   // reported by pair; "" for an old server
+	devices       []string // host:devices-l lines
+	connects      []string
+	pairs         int
+	autoSerial    string            // a serial the server adds by itself after pairing
+	props         map[string]string // getprop output by serial; none fails the shell
+	connectOK     map[string]bool   // addresses host:connect reaches; nil: all
+	quitOnConnect bool              // the server crashes on host:connect, as platform-tools 37 can
 
 	known     []string // the phones the server paired with (adb_known_hosts.pb)
 	own       []string // what the driver's search sees, as services
@@ -154,6 +155,10 @@ func (f *fakeADB) handle(c net.Conn) {
 	case strings.HasPrefix(req, "host:connect:"):
 		addr := strings.TrimPrefix(req, "host:connect:")
 		f.connects = append(f.connects, addr)
+		if f.quitOnConnect {
+			f.ln.Close()
+			return
+		}
 		if f.connectOK != nil && !f.connectOK[addr] {
 			reply("failed to connect to '" + addr + "': Connection refused")
 			return
