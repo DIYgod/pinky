@@ -191,12 +191,29 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 }
 
 // AccessibilityPlatformTranslation roles seen on iOS 27 (AXPAttributeRole).
+// Unlike AutomationType, every source has them, a first push included.
 const (
-	axpRoleButton      = 2
-	axpRoleSwitch      = 3
-	axpRoleImage       = 7
-	axpRoleSearchField = 15
+	axpRoleButton     = 2
+	axpRoleSwitch     = 3
+	axpRoleOther      = 4 // a container or a status bar item
+	axpRoleHeader     = 6 // a heading
+	axpRoleImage      = 7
+	axpRoleTab        = 9  // an item of iOS 27's floating tab bar, value 1 when selected
+	axpRoleAdjustable = 13 // a picker wheel, a page indicator
+	axpRoleText       = 14
+	axpRoleTextField  = 15 // text and search fields
 )
+
+// traitAdjustable is UIAccessibilityTraitAdjustable: picker wheels,
+// sliders and steppers change with a swipe up or down.
+const traitAdjustable = 1 << 12
+
+// stateAdjustable marks an element that a vertical swipe on it changes: a
+// picker wheel, a slider, a stepper.
+const stateAdjustable = "adjustable"
+
+// xcPickerWheel is XCUIElementTypePickerWheel.
+const xcPickerWheel = 39
 
 // traitRemoteHost marks a view that shows another process's elements (the
 // keyboard, for one). Observed on iOS 27; not public.
@@ -253,17 +270,26 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) 
 	t, next := rax.pushed()
 	var first *raxTree // a matching first push still waiting for its second
 	var second <-chan time.Time
-	// consider returns a push to use now, or remembers a first push.
-	consider := func(t *raxTree) *raxTree {
+	// consider returns the elements of a push to use now, or remembers a
+	// first push. A first push lacks every element's type and identifier:
+	// it is used only when walks or second pushes told them for all its
+	// elements, which fill puts in; else Observe waits for the second push,
+	// as it does for one that leaves an element unnamed.
+	consider := func(t *raxTree) []raxElement {
 		if t == nil || app == nil || t.appPID != app.PID || !t.start.After(input.Add(raxPushAfter)) || time.Since(input) >= raxPushTrust {
 			return nil
 		}
-		if !t.first || !t.unnamed() {
-			note("push (first %v) from %v after the input", t.first, t.start.Sub(input).Round(time.Millisecond))
-			return t
+		if !t.first {
+			note("push from %v after the input", t.start.Sub(input).Round(time.Millisecond))
+			return t.els
+		}
+		els, known := rax.fill(t.els)
+		if known && !t.unnamed() {
+			note("first push of known elements, %v after the input", t.start.Sub(input).Round(time.Millisecond))
+			return els
 		}
 		if first == nil || first.start != t.start {
-			note("first push with unnamed elements, %v after the input", t.start.Sub(input).Round(time.Millisecond))
+			note("first push with new or unnamed elements, %v after the input", t.start.Sub(input).Round(time.Millisecond))
 			first = t
 			second = time.After(raxSecondPush)
 		}
@@ -287,20 +313,21 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) 
 			rewalked = true
 		case app = <-apps:
 			note("frontmost app pid %d", app.PID)
-			if u := consider(t); u != nil {
+			if els := consider(t); els != nil {
 				stop.Store(true)
-				return u.els, true, true, nil
+				return els, true, true, nil
 			}
 		case <-next:
 			t, next = rax.pushed()
-			if u := consider(t); u != nil {
+			if els := consider(t); els != nil {
 				stop.Store(true)
-				return u.els, true, true, nil
+				return els, true, true, nil
 			}
 		case <-second:
 			note("no second push; using the first")
 			stop.Store(true)
-			return first.els, true, true, nil
+			els, _ := rax.fill(first.els)
+			return els, true, true, nil
 		case <-ctx.Done():
 			stop.Store(true)
 			return nil, false, false, ctx.Err()
@@ -364,6 +391,7 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string) 
 	inTabBar := make([]bool, len(els))
 	paths := make([]string, len(els))
 	var out []screen.Element
+	var kb screen.Rect // the keyboard's keys, in pixels
 	for i := range els {
 		e := els[i]
 		switch p := e.Parent; {
@@ -387,6 +415,7 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string) 
 		case e.Object.PID == appPID:
 			host = nil
 		}
+		placed := true // the frame is in screen points
 		if pid := e.Object.PID; pid != appPID && e.HasFrame {
 			if _, ok := offset[pid]; !ok && host != nil && fitsIn(e.Frame, host.Frame) {
 				offset[pid] = host.Frame
@@ -395,6 +424,7 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string) 
 			if !ok && !keyboardPID[pid] {
 				continue // no host to place it by
 			}
+			placed = ok
 			e.Frame.X += hf.X
 			e.Frame.Y += hf.Y
 		}
@@ -403,6 +433,9 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string) 
 		}
 		if inKeyboard[i] || keyboardPID[e.Object.PID] {
 			keyboard = true
+			if e.HasFrame && placed {
+				kb = union(kb, pixelRect(e.Frame, scale, w, h))
+			}
 			continue
 		}
 		if !e.HasFrame || e.Traits&traitRemoteHost != 0 {
@@ -422,7 +455,123 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string) 
 			Source: screen.SourceTree, Path: paths[i], ID: e.Ident,
 		})
 	}
-	return out, keyboard
+	var over []occluder
+	if !kb.Empty() {
+		over = append(over, occluder{r: kb})
+	}
+	if tb, ok := tabBar(out, scale, w, h); ok {
+		over = append(over, tb)
+	}
+	return unoccluded(out, over, int(math.Round(minVisiblePoints*scale))), keyboard
+}
+
+// An occluder is something drawn over the app's own elements: the keyboard,
+// or the tab bar that iOS 27 floats over the content. member says which
+// elements belong to it, and so are not under it.
+type occluder struct {
+	r      screen.Rect
+	member func(screen.Element) bool
+}
+
+// minVisiblePoints is the least height and width, in points, of the part
+// of a covered element that is left to tap.
+const minVisiblePoints = 8
+
+// tabBar finds a tab bar at the bottom of the screen from its tabs: iOS 27
+// lists the items of its floating tab bar without the bar, and rows scroll
+// on behind it. The bar is the tabs' box with the capsule's margin, down to
+// the bottom edge: below the capsule lies the home indicator, where a
+// swipe goes home.
+func tabBar(els []screen.Element, scale float64, w, h int) (occluder, bool) {
+	var r screen.Rect
+	for _, e := range els {
+		if e.Role == screen.RoleTab && e.Bounds.Center().Y > h*7/10 {
+			r = union(r, e.Bounds)
+		}
+	}
+	if r.Empty() {
+		return occluder{}, false
+	}
+	m := int(math.Round(tabBarMargin * scale))
+	r = clipRect(screen.Rect{X: r.X - m, Y: r.Y - m, W: r.W + 2*m, H: h - (r.Y - m)}, w, h)
+	in := r
+	return occluder{r: r, member: func(e screen.Element) bool {
+		return e.Role == screen.RoleTab && in.Contains(e.Bounds.Center())
+	}}, true
+}
+
+// tabBarMargin is how far, in points, iOS 27's tab bar capsule reaches
+// beyond its items.
+const tabBarMargin = 6
+
+// unoccluded drops the elements whose middle lies under an occluder,
+// unless a good part of them stays uncovered (a quarter of it, at least min
+// pixels each way), which then becomes their bounds: a tap by ref goes to
+// the middle of the bounds, which must not land on the tab bar or a key.
+func unoccluded(els []screen.Element, over []occluder, min int) []screen.Element {
+	if len(over) == 0 {
+		return els
+	}
+	out := make([]screen.Element, 0, len(els))
+	for _, e := range els {
+		b, keep := e.Bounds, true
+		for _, o := range over {
+			if (o.member != nil && o.member(e)) || !o.r.Contains(b.Center()) {
+				continue
+			}
+			b = largestOutside(b, o.r)
+			if b.W < min || b.H < min || 4*b.W*b.H < e.Bounds.W*e.Bounds.H {
+				keep = false
+				break
+			}
+		}
+		if keep {
+			e.Bounds = b
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// largestOutside is the largest part of b that o leaves uncovered: the
+// strip above, below, left or right of o.
+func largestOutside(b, o screen.Rect) screen.Rect {
+	cands := []screen.Rect{
+		{X: b.X, Y: b.Y, W: b.W, H: o.Y - b.Y},                     // above
+		{X: b.X, Y: o.Y + o.H, W: b.W, H: b.Y + b.H - (o.Y + o.H)}, // below
+		{X: b.X, Y: b.Y, W: o.X - b.X, H: b.H},                     // left
+		{X: o.X + o.W, Y: b.Y, W: b.X + b.W - (o.X + o.W), H: b.H}, // right
+	}
+	var best screen.Rect
+	for _, c := range cands {
+		if c.W > 0 && c.H > 0 && c.W*c.H > best.W*best.H {
+			best = c
+		}
+	}
+	return best
+}
+
+// union is the smallest rectangle holding a and b; an empty one is ignored.
+func union(a, b screen.Rect) screen.Rect {
+	switch {
+	case a.Empty():
+		return b
+	case b.Empty():
+		return a
+	}
+	x0, y0 := min(a.X, b.X), min(a.Y, b.Y)
+	x1, y1 := max(a.X+a.W, b.X+b.W), max(a.Y+a.H, b.Y+b.H)
+	return screen.Rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}
+}
+
+// clipRect clips r to a w x h screen.
+func clipRect(r screen.Rect, w, h int) screen.Rect {
+	x0, y0 := max(r.X, 0), max(r.Y, 0)
+	x1, y1 := min(r.X+r.W, w), min(r.Y+r.H, h)
+	if x1 <= x0 || y1 <= y0 {
+		return screen.Rect{}
+	}
+	return screen.Rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}
 }
 
 // isKeyChar reports whether a label is one letter or digit, as keyboard keys
@@ -527,7 +676,7 @@ func raxRole(e raxElement, inTabBar bool) (string, []string) {
 		case axpRoleSwitch:
 			role, states = screen.RoleSwitch, nil
 			checked()
-		case axpRoleSearchField:
+		case axpRoleTextField:
 			role = screen.RoleInput
 			states = appendState(states, screen.StateEditable)
 		case axpRoleImage:
@@ -538,7 +687,19 @@ func raxRole(e raxElement, inTabBar bool) (string, []string) {
 			if role == screen.RoleOther {
 				role = screen.RoleButton
 			}
+		case axpRoleText, axpRoleHeader:
+			if role == screen.RoleOther {
+				role = screen.RoleText
+			}
 		}
+	}
+	// iOS 27's floating tab bar lists its items as buttons, outside any tab
+	// bar, with the translator's tab role.
+	if e.AXRole == axpRoleTab && (role == screen.RoleButton || role == screen.RoleOther) {
+		role = screen.RoleTab
+	}
+	if e.Traits&traitAdjustable != 0 || e.Type == xcPickerWheel || e.AXRole == axpRoleAdjustable {
+		states = appendState(states, stateAdjustable)
 	}
 	if role == screen.RoleOther && e.IdentValue {
 		role = screen.RoleText // shows a value and nothing else
@@ -569,14 +730,17 @@ func appendState(states []string, s string) []string {
 
 // raxLabel is what an agent reads for the element: its label, then its
 // value as VoiceOver reads it, except for switches and check boxes whose
-// value is a state.
+// value is a state, and tabs whose value says whether they are selected.
+// The value VoiceOver reads is the value description when there is one:
+// a picker wheel's value is the index of its row in a long looping list
+// ("5003"), its description the row ("12 o’clock").
 func raxLabel(e raxElement, role string) string {
 	label := strings.TrimSpace(e.Label)
-	value := strings.TrimSpace(e.Value)
+	value := strings.TrimSpace(e.ValueText)
 	if value == "" {
-		value = strings.TrimSpace(e.ValueText)
+		value = strings.TrimSpace(e.Value)
 	}
-	if role == screen.RoleSwitch || role == screen.RoleCheckbox {
+	if role == screen.RoleSwitch || role == screen.RoleCheckbox || (role == screen.RoleTab && (value == "0" || value == "1")) {
 		value = ""
 	}
 	if label == "" {

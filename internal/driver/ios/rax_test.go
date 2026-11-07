@@ -231,7 +231,7 @@ func TestRAXRole(t *testing.T) {
 		// First pushes have no AutomationType: traits and the translator's role.
 		{raxElement{Traits: traitKeyboardKey, Enabled: true}, screen.RoleButton, nil},
 		{raxElement{AXRole: axpRoleSwitch, Value: "1", Enabled: true}, screen.RoleSwitch, []string{screen.StateChecked}},
-		{raxElement{AXRole: axpRoleSearchField, Enabled: true}, screen.RoleInput, []string{screen.StateEditable}},
+		{raxElement{AXRole: axpRoleTextField, Enabled: true}, screen.RoleInput, []string{screen.StateEditable}},
 		{raxElement{AXRole: axpRoleButton, Enabled: true}, screen.RoleButton, nil},
 		{raxElement{Traits: traitStaticText | traitHeader, Enabled: true}, screen.RoleText, nil},
 	} {
