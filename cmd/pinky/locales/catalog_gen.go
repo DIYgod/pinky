@@ -363,38 +363,404 @@ func (msgs Messages) ActivityTitle() string {
 	return Catalog.Format(msgs.locale, "activityTitle", nil)
 }
 
-// AddPhoneAndroidDetail says "Connect it to this computer with a USB cable. If the phone asks to allow USB debugging, tap Allow."
+// AddAndroidBrandQuestion says "Which phone is it?"
 // in the language the app shows.
 //
-// Add phone › Android: the line under the heading. Allow is the button of
-// the phone's "Allow USB debugging?" prompt: use Android's Simplified
-// Chinese word for it.
-func AddPhoneAndroidDetail() string { return In(i18n.Locale()).AddPhoneAndroidDetail() }
+// Add phone › Android: the label above the row of phone brands to pick
+// from; the steps below follow the brand picked.
+func AddAndroidBrandQuestion() string { return In(i18n.Locale()).AddAndroidBrandQuestion() }
 
-// AddPhoneAndroidDetail says "Connect it to this computer with a USB cable. If the phone asks to allow USB debugging, tap Allow."
+// AddAndroidBrandQuestion says "Which phone is it?"
 // in the language of msgs.
 //
-// Add phone › Android: the line under the heading. Allow is the button of
-// the phone's "Allow USB debugging?" prompt: use Android's Simplified
-// Chinese word for it.
-func (msgs Messages) AddPhoneAndroidDetail() string {
-	return Catalog.Format(msgs.locale, "addPhoneAndroidDetail", nil)
+// Add phone › Android: the label above the row of phone brands to pick
+// from; the steps below follow the brand picked.
+func (msgs Messages) AddAndroidBrandQuestion() string {
+	return Catalog.Format(msgs.locale, "addAndroidBrandQuestion", nil)
 }
 
-// AddPhoneAndroidTitle says "Plug in your Android phone"
+// AddAndroidDetail says "Pinky works with Android 10 and later. Pick your phone's brand and follow its steps: Pinky finds the phone as soon as…"
 // in the language the app shows.
 //
-// Add phone › Android: the heading of the step where the person connects
-// the phone to the computer with a USB cable.
-func AddPhoneAndroidTitle() string { return In(i18n.Locale()).AddPhoneAndroidTitle() }
+// Add phone › Android: the line under the heading.
+func AddAndroidDetail() string { return In(i18n.Locale()).AddAndroidDetail() }
 
-// AddPhoneAndroidTitle says "Plug in your Android phone"
+// AddAndroidDetail says "Pinky works with Android 10 and later. Pick your phone's brand and follow its steps: Pinky finds the phone as soon as…"
 // in the language of msgs.
 //
-// Add phone › Android: the heading of the step where the person connects
-// the phone to the computer with a USB cable.
-func (msgs Messages) AddPhoneAndroidTitle() string {
-	return Catalog.Format(msgs.locale, "addPhoneAndroidTitle", nil)
+// Add phone › Android: the line under the heading.
+func (msgs Messages) AddAndroidDetail() string {
+	return Catalog.Format(msgs.locale, "addAndroidDetail", nil)
+}
+
+// AddAndroidFoundAllow says "Found {name}. Unlock it and tap Allow on the phone."
+// in the language the app shows.
+//
+// Add phone › Android, step 3: next to a spinner once the phone shows up
+// but has not allowed this computer yet.
+func AddAndroidFoundAllow(name string) string { return In(i18n.Locale()).AddAndroidFoundAllow(name) }
+
+// AddAndroidFoundAllow says "Found {name}. Unlock it and tap Allow on the phone."
+// in the language of msgs.
+//
+// Add phone › Android, step 3: next to a spinner once the phone shows up
+// but has not allowed this computer yet.
+func (msgs Messages) AddAndroidFoundAllow(name string) string {
+	return Catalog.Format(msgs.locale, "addAndroidFoundAllow", map[string]any{"name": name})
+}
+
+// AddAndroidNamesDiffer says "Menu names change between models and system versions: where yours differ, go by the names on your phone."
+// in the language the app shows.
+//
+// Add phone › Android: a small note under the brands, since the menu
+// names in the steps may differ from the person's phone.
+func AddAndroidNamesDiffer() string { return In(i18n.Locale()).AddAndroidNamesDiffer() }
+
+// AddAndroidNamesDiffer says "Menu names change between models and system versions: where yours differ, go by the names on your phone."
+// in the language of msgs.
+//
+// Add phone › Android: a small note under the brands, since the menu
+// names in the steps may differ from the person's phone.
+func (msgs Messages) AddAndroidNamesDiffer() string {
+	return Catalog.Format(msgs.locale, "addAndroidNamesDiffer", nil)
+}
+
+// AddAndroidNoPrompt says "No prompt on the phone? Unplug it and plug it in again; if the phone asks what to use USB for, pick File transfer. St…"
+// in the language the app shows.
+//
+// Add phone › Android, step 3, and the checkup: what to try when the
+// phone shows no prompt to allow this computer. File transfer and Revoke
+// USB debugging authorizations are Android's own names: use those of
+// Android's Simplified Chinese settings.
+func AddAndroidNoPrompt() string { return In(i18n.Locale()).AddAndroidNoPrompt() }
+
+// AddAndroidNoPrompt says "No prompt on the phone? Unplug it and plug it in again; if the phone asks what to use USB for, pick File transfer. St…"
+// in the language of msgs.
+//
+// Add phone › Android, step 3, and the checkup: what to try when the
+// phone shows no prompt to allow this computer. File transfer and Revoke
+// USB debugging authorizations are Android's own names: use those of
+// Android's Simplified Chinese settings.
+func (msgs Messages) AddAndroidNoPrompt() string {
+	return Catalog.Format(msgs.locale, "addAndroidNoPrompt", nil)
+}
+
+// AddAndroidNotSeen says "Nothing yet? Check that USB debugging is on, unlock the phone, and try another cable or port."
+// in the language the app shows.
+//
+// Add phone › Android, step 3: under the spinner while no phone shows up.
+func AddAndroidNotSeen() string { return In(i18n.Locale()).AddAndroidNotSeen() }
+
+// AddAndroidNotSeen says "Nothing yet? Check that USB debugging is on, unlock the phone, and try another cable or port."
+// in the language of msgs.
+//
+// Add phone › Android, step 3: under the spinner while no phone shows up.
+func (msgs Messages) AddAndroidNotSeen() string {
+	return Catalog.Format(msgs.locale, "addAndroidNotSeen", nil)
+}
+
+// AddAndroidOffline says "{name} doesn't answer."
+// in the language the app shows.
+//
+// Add phone › Android, step 3: the phone showed up but is offline or in
+// another mode; the system's words follow.
+func AddAndroidOffline(name string) string { return In(i18n.Locale()).AddAndroidOffline(name) }
+
+// AddAndroidOffline says "{name} doesn't answer."
+// in the language of msgs.
+//
+// Add phone › Android, step 3: the phone showed up but is offline or in
+// another mode; the system's words follow.
+func (msgs Messages) AddAndroidOffline(name string) string {
+	return Catalog.Format(msgs.locale, "addAndroidOffline", map[string]any{"name": name})
+}
+
+// AddAndroidRecognized says "Pinky recognized {system} on {name}: these are its steps."
+// in the language the app shows.
+//
+// Add phone › Android: shown under the brands once the phone is connected
+// and Pinky switched the steps to its maker.
+func AddAndroidRecognized(name string, system string) string {
+	return In(i18n.Locale()).AddAndroidRecognized(name, system)
+}
+
+// AddAndroidRecognized says "Pinky recognized {system} on {name}: these are its steps."
+// in the language of msgs.
+//
+// Add phone › Android: shown under the brands once the phone is connected
+// and Pinky switched the steps to its maker.
+func (msgs Messages) AddAndroidRecognized(name string, system string) string {
+	return Catalog.Format(msgs.locale, "addAndroidRecognized", map[string]any{"name": name, "system": system})
+}
+
+// AddAndroidRecognizedPhone says "Pinky recognized {name}: these are its steps."
+// in the language the app shows.
+//
+// Add phone › Android: as addAndroidRecognized, for a phone whose system
+// has no name of its own (a Pixel).
+func AddAndroidRecognizedPhone(name string) string {
+	return In(i18n.Locale()).AddAndroidRecognizedPhone(name)
+}
+
+// AddAndroidRecognizedPhone says "Pinky recognized {name}: these are its steps."
+// in the language of msgs.
+//
+// Add phone › Android: as addAndroidRecognized, for a phone whose system
+// has no name of its own (a Pixel).
+func (msgs Messages) AddAndroidRecognizedPhone(name string) string {
+	return Catalog.Format(msgs.locale, "addAndroidRecognizedPhone", map[string]any{"name": name})
+}
+
+// AddAndroidSketchAllow says "Allow"
+// in the language the app shows.
+//
+// Add phone › Android, step 3: the drawn prompt's button to tap, as
+// Android words it.
+func AddAndroidSketchAllow() string { return In(i18n.Locale()).AddAndroidSketchAllow() }
+
+// AddAndroidSketchAllow says "Allow"
+// in the language of msgs.
+//
+// Add phone › Android, step 3: the drawn prompt's button to tap, as
+// Android words it.
+func (msgs Messages) AddAndroidSketchAllow() string {
+	return Catalog.Format(msgs.locale, "addAndroidSketchAllow", nil)
+}
+
+// AddAndroidSketchAlways says "Always allow from this computer"
+// in the language the app shows.
+//
+// Add phone › Android, step 3: the check box of the drawn prompt, as
+// Android words it: use the words of Android's Simplified Chinese prompt.
+func AddAndroidSketchAlways() string { return In(i18n.Locale()).AddAndroidSketchAlways() }
+
+// AddAndroidSketchAlways says "Always allow from this computer"
+// in the language of msgs.
+//
+// Add phone › Android, step 3: the check box of the drawn prompt, as
+// Android words it: use the words of Android's Simplified Chinese prompt.
+func (msgs Messages) AddAndroidSketchAlways() string {
+	return Catalog.Format(msgs.locale, "addAndroidSketchAlways", nil)
+}
+
+// AddAndroidSketchCancel says "Cancel"
+// in the language the app shows.
+//
+// Add phone › Android, step 3: the drawn prompt's first button, as
+// Android words it.
+func AddAndroidSketchCancel() string { return In(i18n.Locale()).AddAndroidSketchCancel() }
+
+// AddAndroidSketchCancel says "Cancel"
+// in the language of msgs.
+//
+// Add phone › Android, step 3: the drawn prompt's first button, as
+// Android words it.
+func (msgs Messages) AddAndroidSketchCancel() string {
+	return Catalog.Format(msgs.locale, "addAndroidSketchCancel", nil)
+}
+
+// AddAndroidSketchLabel says "The prompt the phone shows"
+// in the language the app shows.
+//
+// Add phone › Android, step 3: the accessible name of the drawing of the
+// phone's prompt.
+func AddAndroidSketchLabel() string { return In(i18n.Locale()).AddAndroidSketchLabel() }
+
+// AddAndroidSketchLabel says "The prompt the phone shows"
+// in the language of msgs.
+//
+// Add phone › Android, step 3: the accessible name of the drawing of the
+// phone's prompt.
+func (msgs Messages) AddAndroidSketchLabel() string {
+	return Catalog.Format(msgs.locale, "addAndroidSketchLabel", nil)
+}
+
+// AddAndroidSketchTitle says "Allow USB debugging?"
+// in the language the app shows.
+//
+// Add phone › Android, step 3: the title of the drawn prompt, as Android
+// words it: use the words of Android's Simplified Chinese prompt.
+func AddAndroidSketchTitle() string { return In(i18n.Locale()).AddAndroidSketchTitle() }
+
+// AddAndroidSketchTitle says "Allow USB debugging?"
+// in the language of msgs.
+//
+// Add phone › Android, step 3: the title of the drawn prompt, as Android
+// words it: use the words of Android's Simplified Chinese prompt.
+func (msgs Messages) AddAndroidSketchTitle() string {
+	return Catalog.Format(msgs.locale, "addAndroidSketchTitle", nil)
+}
+
+// AddAndroidStepCheck says "Check the phone"
+// in the language the app shows.
+//
+// Add phone › Android, step 4's title: the phone's checkup.
+func AddAndroidStepCheck() string { return In(i18n.Locale()).AddAndroidStepCheck() }
+
+// AddAndroidStepCheck says "Check the phone"
+// in the language of msgs.
+//
+// Add phone › Android, step 4's title: the phone's checkup.
+func (msgs Messages) AddAndroidStepCheck() string {
+	return Catalog.Format(msgs.locale, "addAndroidStepCheck", nil)
+}
+
+// AddAndroidStepCheckDetail says "Pinky checks, item by item, that it can see the screen, tap and type."
+// in the language the app shows.
+//
+// Add phone › Android, step 4: above the checkup's items.
+func AddAndroidStepCheckDetail() string { return In(i18n.Locale()).AddAndroidStepCheckDetail() }
+
+// AddAndroidStepCheckDetail says "Pinky checks, item by item, that it can see the screen, tap and type."
+// in the language of msgs.
+//
+// Add phone › Android, step 4: above the checkup's items.
+func (msgs Messages) AddAndroidStepCheckDetail() string {
+	return Catalog.Format(msgs.locale, "addAndroidStepCheckDetail", nil)
+}
+
+// AddAndroidStepDev says "Turn on Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 1's title. Developer options is Android's own
+// name: use that of Android's Simplified Chinese settings.
+func AddAndroidStepDev() string { return In(i18n.Locale()).AddAndroidStepDev() }
+
+// AddAndroidStepDev says "Turn on Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 1's title. Developer options is Android's own
+// name: use that of Android's Simplified Chinese settings.
+func (msgs Messages) AddAndroidStepDev() string {
+	return Catalog.Format(msgs.locale, "addAndroidStepDev", nil)
+}
+
+// AddAndroidStepDevTap says "Tap {item} 7 times, until the phone says you're now a developer. If it asks, enter your lock screen password."
+// in the language the app shows.
+//
+// Add phone › Android, step 1: under the menu path to the item. item is
+// the name of the item to tap, as the phone's maker calls it.
+func AddAndroidStepDevTap(item string) string { return In(i18n.Locale()).AddAndroidStepDevTap(item) }
+
+// AddAndroidStepDevTap says "Tap {item} 7 times, until the phone says you're now a developer. If it asks, enter your lock screen password."
+// in the language of msgs.
+//
+// Add phone › Android, step 1: under the menu path to the item. item is
+// the name of the item to tap, as the phone's maker calls it.
+func (msgs Messages) AddAndroidStepDevTap(item string) string {
+	return Catalog.Format(msgs.locale, "addAndroidStepDevTap", map[string]any{"item": item})
+}
+
+// AddAndroidStepPlug says "Plug in the phone and allow this computer"
+// in the language the app shows.
+//
+// Add phone › Android, step 3's title.
+func AddAndroidStepPlug() string { return In(i18n.Locale()).AddAndroidStepPlug() }
+
+// AddAndroidStepPlug says "Plug in the phone and allow this computer"
+// in the language of msgs.
+//
+// Add phone › Android, step 3's title.
+func (msgs Messages) AddAndroidStepPlug() string {
+	return Catalog.Format(msgs.locale, "addAndroidStepPlug", nil)
+}
+
+// AddAndroidStepPlugDetail says "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap {butt…"
+// in the language the app shows.
+//
+// Add phone › Android, step 3: above a drawing of the phone's "Allow USB
+// debugging?" prompt. button is the prompt's button, as the phone's maker
+// words it (Allow, or OK on HUAWEI and HONOR phones).
+func AddAndroidStepPlugDetail(button string) string {
+	return In(i18n.Locale()).AddAndroidStepPlugDetail(button)
+}
+
+// AddAndroidStepPlugDetail says "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap {butt…"
+// in the language of msgs.
+//
+// Add phone › Android, step 3: above a drawing of the phone's "Allow USB
+// debugging?" prompt. button is the prompt's button, as the phone's maker
+// words it (Allow, or OK on HUAWEI and HONOR phones).
+func (msgs Messages) AddAndroidStepPlugDetail(button string) string {
+	return Catalog.Format(msgs.locale, "addAndroidStepPlugDetail", map[string]any{"button": button})
+}
+
+// AddAndroidStepUSB says "Turn on USB debugging"
+// in the language the app shows.
+//
+// Add phone › Android, step 2's title. USB debugging is Android's own
+// name: use that of Android's Simplified Chinese settings.
+func AddAndroidStepUSB() string { return In(i18n.Locale()).AddAndroidStepUSB() }
+
+// AddAndroidStepUSB says "Turn on USB debugging"
+// in the language of msgs.
+//
+// Add phone › Android, step 2's title. USB debugging is Android's own
+// name: use that of Android's Simplified Chinese settings.
+func (msgs Messages) AddAndroidStepUSB() string {
+	return Catalog.Format(msgs.locale, "addAndroidStepUSB", nil)
+}
+
+// AddAndroidStepsLabel says "Steps to connect an Android phone"
+// in the language the app shows.
+//
+// Add phone › Android: the accessible name of the list of steps.
+func AddAndroidStepsLabel() string { return In(i18n.Locale()).AddAndroidStepsLabel() }
+
+// AddAndroidStepsLabel says "Steps to connect an Android phone"
+// in the language of msgs.
+//
+// Add phone › Android: the accessible name of the list of steps.
+func (msgs Messages) AddAndroidStepsLabel() string {
+	return Catalog.Format(msgs.locale, "addAndroidStepsLabel", nil)
+}
+
+// AddAndroidTitle says "Connect your Android phone"
+// in the language the app shows.
+//
+// Add phone › Android: the heading of the steps that prepare and connect
+// an Android phone.
+func AddAndroidTitle() string { return In(i18n.Locale()).AddAndroidTitle() }
+
+// AddAndroidTitle says "Connect your Android phone"
+// in the language of msgs.
+//
+// Add phone › Android: the heading of the steps that prepare and connect
+// an Android phone.
+func (msgs Messages) AddAndroidTitle() string {
+	return Catalog.Format(msgs.locale, "addAndroidTitle", nil)
+}
+
+// AddAndroidTurnOff says "Turn off {name}"
+// in the language the app shows.
+//
+// Add phone › Android, step 2: one switch to turn off (Samsung's Auto
+// Blocker). name is the switch's name on the phone.
+func AddAndroidTurnOff(name string) string { return In(i18n.Locale()).AddAndroidTurnOff(name) }
+
+// AddAndroidTurnOff says "Turn off {name}"
+// in the language of msgs.
+//
+// Add phone › Android, step 2: one switch to turn off (Samsung's Auto
+// Blocker). name is the switch's name on the phone.
+func (msgs Messages) AddAndroidTurnOff(name string) string {
+	return Catalog.Format(msgs.locale, "addAndroidTurnOff", map[string]any{"name": name})
+}
+
+// AddAndroidTurnOn says "Turn on {name}"
+// in the language the app shows.
+//
+// Add phone › Android, step 2: one switch to turn on in Developer
+// options. name is the switch's name on the phone.
+func AddAndroidTurnOn(name string) string { return In(i18n.Locale()).AddAndroidTurnOn(name) }
+
+// AddAndroidTurnOn says "Turn on {name}"
+// in the language of msgs.
+//
+// Add phone › Android, step 2: one switch to turn on in Developer
+// options. name is the switch's name on the phone.
+func (msgs Messages) AddAndroidTurnOn(name string) string {
+	return Catalog.Format(msgs.locale, "addAndroidTurnOn", map[string]any{"name": name})
 }
 
 // AddPhoneBack says "‹ Back"
@@ -519,28 +885,6 @@ func (msgs Messages) AddPhoneFound(name string) string {
 	return Catalog.Format(msgs.locale, "addPhoneFound", map[string]any{"name": name})
 }
 
-// AddPhoneFoundBut says "Found {name}, but {detail}"
-// in the language the app shows.
-//
-// Add phone › Android: the status line when Pinky found the phone but
-// cannot use it yet; the USB debugging steps follow. name is the phone's
-// name; detail is why, in English as the phone's driver says it, with a
-// lower-case first letter.
-func AddPhoneFoundBut(name string, detail string) string {
-	return In(i18n.Locale()).AddPhoneFoundBut(name, detail)
-}
-
-// AddPhoneFoundBut says "Found {name}, but {detail}"
-// in the language of msgs.
-//
-// Add phone › Android: the status line when Pinky found the phone but
-// cannot use it yet; the USB debugging steps follow. name is the phone's
-// name; detail is why, in English as the phone's driver says it, with a
-// lower-case first letter.
-func (msgs Messages) AddPhoneFoundBut(name string, detail string) string {
-	return Catalog.Format(msgs.locale, "addPhoneFoundBut", map[string]any{"name": name, "detail": detail})
-}
-
 // AddPhoneFoundIOS says "Found {name} · iOS {version}"
 // in the language the app shows.
 //
@@ -559,26 +903,6 @@ func AddPhoneFoundIOS(name string, version string) string {
 // version, or empty (the line then ends with "iOS").
 func (msgs Messages) AddPhoneFoundIOS(name string, version string) string {
 	return Catalog.Format(msgs.locale, "addPhoneFoundIOS", map[string]any{"name": name, "version": version})
-}
-
-// AddPhoneFoundNeedsSetup says "Found {name}, but it needs setup"
-// in the language the app shows.
-//
-// Add phone › Android: the status line when Pinky found the phone but
-// cannot use it yet and knows no more; the USB debugging steps follow. name
-// is the phone's name.
-func AddPhoneFoundNeedsSetup(name string) string {
-	return In(i18n.Locale()).AddPhoneFoundNeedsSetup(name)
-}
-
-// AddPhoneFoundNeedsSetup says "Found {name}, but it needs setup"
-// in the language of msgs.
-//
-// Add phone › Android: the status line when Pinky found the phone but
-// cannot use it yet and knows no more; the USB debugging steps follow. name
-// is the phone's name.
-func (msgs Messages) AddPhoneFoundNeedsSetup(name string) string {
-	return Catalog.Format(msgs.locale, "addPhoneFoundNeedsSetup", map[string]any{"name": name})
 }
 
 // AddPhoneIPhoneCode says "Pairing code"
@@ -887,74 +1211,6 @@ func (msgs Messages) AddPhoneTryAgain() string {
 	return Catalog.Format(msgs.locale, "addPhoneTryAgain", nil)
 }
 
-// AddPhoneUSBStep1 says "Open Settings › About phone and tap Build number 7 times."
-// in the language the app shows.
-//
-// Add phone › Android, USB debugging steps, step 1. Settings, About phone
-// and Build number are Android's own names: use those of Android's
-// Simplified Chinese settings.
-func AddPhoneUSBStep1() string { return In(i18n.Locale()).AddPhoneUSBStep1() }
-
-// AddPhoneUSBStep1 says "Open Settings › About phone and tap Build number 7 times."
-// in the language of msgs.
-//
-// Add phone › Android, USB debugging steps, step 1. Settings, About phone
-// and Build number are Android's own names: use those of Android's
-// Simplified Chinese settings.
-func (msgs Messages) AddPhoneUSBStep1() string {
-	return Catalog.Format(msgs.locale, "addPhoneUSBStep1", nil)
-}
-
-// AddPhoneUSBStep2 says "Go to Settings › System › Developer options."
-// in the language the app shows.
-//
-// Add phone › Android, USB debugging steps, step 2. Settings, System and
-// Developer options are Android's own names.
-func AddPhoneUSBStep2() string { return In(i18n.Locale()).AddPhoneUSBStep2() }
-
-// AddPhoneUSBStep2 says "Go to Settings › System › Developer options."
-// in the language of msgs.
-//
-// Add phone › Android, USB debugging steps, step 2. Settings, System and
-// Developer options are Android's own names.
-func (msgs Messages) AddPhoneUSBStep2() string {
-	return Catalog.Format(msgs.locale, "addPhoneUSBStep2", nil)
-}
-
-// AddPhoneUSBStep3 says "Turn on USB debugging, then tap Allow on the phone."
-// in the language the app shows.
-//
-// Add phone › Android, USB debugging steps, step 3. USB debugging is
-// Android's setting; Allow is the button of the phone's "Allow USB
-// debugging?" prompt.
-func AddPhoneUSBStep3() string { return In(i18n.Locale()).AddPhoneUSBStep3() }
-
-// AddPhoneUSBStep3 says "Turn on USB debugging, then tap Allow on the phone."
-// in the language of msgs.
-//
-// Add phone › Android, USB debugging steps, step 3. USB debugging is
-// Android's setting; Allow is the button of the phone's "Allow USB
-// debugging?" prompt.
-func (msgs Messages) AddPhoneUSBStep3() string {
-	return Catalog.Format(msgs.locale, "addPhoneUSBStep3", nil)
-}
-
-// AddPhoneUSBTitle says "Turn on USB debugging"
-// in the language the app shows.
-//
-// Add phone › Android: the heading of the box of three steps shown when
-// the phone needs USB debugging turned on.
-func AddPhoneUSBTitle() string { return In(i18n.Locale()).AddPhoneUSBTitle() }
-
-// AddPhoneUSBTitle says "Turn on USB debugging"
-// in the language of msgs.
-//
-// Add phone › Android: the heading of the box of three steps shown when
-// the phone needs USB debugging turned on.
-func (msgs Messages) AddPhoneUSBTitle() string {
-	return Catalog.Format(msgs.locale, "addPhoneUSBTitle", nil)
-}
-
 // AgentGeneric says "the agent"
 // in the language the app shows.
 //
@@ -1069,6 +1325,128 @@ func (msgs Messages) BackgroundUnsupported(phone string) string {
 	return Catalog.Format(msgs.locale, "backgroundUnsupported", map[string]any{"phone": phone})
 }
 
+// BrandHonor says "HONOR"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of HONOR phones in the row of brands.
+func BrandHonor() string { return In(i18n.Locale()).BrandHonor() }
+
+// BrandHonor says "HONOR"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of HONOR phones in the row of brands.
+func (msgs Messages) BrandHonor() string {
+	return Catalog.Format(msgs.locale, "brandHonor", nil)
+}
+
+// BrandHuawei says "HUAWEI"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of HUAWEI phones in the row of brands.
+func BrandHuawei() string { return In(i18n.Locale()).BrandHuawei() }
+
+// BrandHuawei says "HUAWEI"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of HUAWEI phones in the row of brands.
+func (msgs Messages) BrandHuawei() string {
+	return Catalog.Format(msgs.locale, "brandHuawei", nil)
+}
+
+// BrandOppo says "OPPO · OnePlus · realme"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of OPPO, OnePlus and realme phones in
+// the row of brands.
+func BrandOppo() string { return In(i18n.Locale()).BrandOppo() }
+
+// BrandOppo says "OPPO · OnePlus · realme"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of OPPO, OnePlus and realme phones in
+// the row of brands.
+func (msgs Messages) BrandOppo() string {
+	return Catalog.Format(msgs.locale, "brandOppo", nil)
+}
+
+// BrandOther says "Other"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of other Android phones in the row of
+// brands.
+func BrandOther() string { return In(i18n.Locale()).BrandOther() }
+
+// BrandOther says "Other"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of other Android phones in the row of
+// brands.
+func (msgs Messages) BrandOther() string {
+	return Catalog.Format(msgs.locale, "brandOther", nil)
+}
+
+// BrandPixel says "Google Pixel"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of Google Pixel phones in the row of
+// brands.
+func BrandPixel() string { return In(i18n.Locale()).BrandPixel() }
+
+// BrandPixel says "Google Pixel"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of Google Pixel phones in the row of
+// brands.
+func (msgs Messages) BrandPixel() string {
+	return Catalog.Format(msgs.locale, "brandPixel", nil)
+}
+
+// BrandSamsung says "Samsung"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of Samsung phones in the row of brands.
+func BrandSamsung() string { return In(i18n.Locale()).BrandSamsung() }
+
+// BrandSamsung says "Samsung"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of Samsung phones in the row of brands.
+func (msgs Messages) BrandSamsung() string {
+	return Catalog.Format(msgs.locale, "brandSamsung", nil)
+}
+
+// BrandVivo says "vivo · iQOO"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of vivo and iQOO phones in the row of
+// brands.
+func BrandVivo() string { return In(i18n.Locale()).BrandVivo() }
+
+// BrandVivo says "vivo · iQOO"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of vivo and iQOO phones in the row of
+// brands.
+func (msgs Messages) BrandVivo() string {
+	return Catalog.Format(msgs.locale, "brandVivo", nil)
+}
+
+// BrandXiaomi says "Xiaomi · Redmi · POCO"
+// in the language the app shows.
+//
+// Add phone › Android: the choice of Xiaomi, Redmi and POCO phones in the
+// row of brands.
+func BrandXiaomi() string { return In(i18n.Locale()).BrandXiaomi() }
+
+// BrandXiaomi says "Xiaomi · Redmi · POCO"
+// in the language of msgs.
+//
+// Add phone › Android: the choice of Xiaomi, Redmi and POCO phones in the
+// row of brands.
+func (msgs Messages) BrandXiaomi() string {
+	return Catalog.Format(msgs.locale, "brandXiaomi", nil)
+}
+
 // CallAnswer says "answer the approval"
 // in the language the app shows.
 //
@@ -1157,6 +1535,1216 @@ func (msgs Messages) CallTakeOver() string {
 	return Catalog.Format(msgs.locale, "callTakeOver", nil)
 }
 
+// CheckADBFail says "Pinky can't reach adb, the Android tools it talks to phones through."
+// in the language the app shows.
+//
+// The checkup, adb: failed.
+func CheckADBFail() string { return In(i18n.Locale()).CheckADBFail() }
+
+// CheckADBFail says "Pinky can't reach adb, the Android tools it talks to phones through."
+// in the language of msgs.
+//
+// The checkup, adb: failed.
+func (msgs Messages) CheckADBFail() string {
+	return Catalog.Format(msgs.locale, "checkADBFail", nil)
+}
+
+// CheckADBPass says "Pinky talks to the phone through adb."
+// in the language the app shows.
+//
+// The checkup, adb: passed.
+func CheckADBPass() string { return In(i18n.Locale()).CheckADBPass() }
+
+// CheckADBPass says "Pinky talks to the phone through adb."
+// in the language of msgs.
+//
+// The checkup, adb: passed.
+func (msgs Messages) CheckADBPass() string {
+	return Catalog.Format(msgs.locale, "checkADBPass", nil)
+}
+
+// CheckADBTitle says "Android tools (adb)"
+// in the language the app shows.
+//
+// The checkup: the item for adb, the tool Pinky talks to Android phones
+// through.
+func CheckADBTitle() string { return In(i18n.Locale()).CheckADBTitle() }
+
+// CheckADBTitle says "Android tools (adb)"
+// in the language of msgs.
+//
+// The checkup: the item for adb, the tool Pinky talks to Android phones
+// through.
+func (msgs Messages) CheckADBTitle() string {
+	return Catalog.Format(msgs.locale, "checkADBTitle", nil)
+}
+
+// CheckAuthorizedAndroidFail says "The phone hasn't allowed this computer yet. Unlock it, and when it asks “Allow USB debugging?”, tick “Always al…"
+// in the language the app shows.
+//
+// The checkup, debugging allowed: an Android phone that has not allowed
+// this computer. The quoted words are those of Android's prompt: use the
+// words of Android's Simplified Chinese prompt.
+func CheckAuthorizedAndroidFail() string { return In(i18n.Locale()).CheckAuthorizedAndroidFail() }
+
+// CheckAuthorizedAndroidFail says "The phone hasn't allowed this computer yet. Unlock it, and when it asks “Allow USB debugging?”, tick “Always al…"
+// in the language of msgs.
+//
+// The checkup, debugging allowed: an Android phone that has not allowed
+// this computer. The quoted words are those of Android's prompt: use the
+// words of Android's Simplified Chinese prompt.
+func (msgs Messages) CheckAuthorizedAndroidFail() string {
+	return Catalog.Format(msgs.locale, "checkAuthorizedAndroidFail", nil)
+}
+
+// CheckAuthorizedFail says "The phone hasn't allowed this computer yet."
+// in the language the app shows.
+//
+// The checkup, debugging allowed: failed, on a phone the system says no
+// more of.
+func CheckAuthorizedFail() string { return In(i18n.Locale()).CheckAuthorizedFail() }
+
+// CheckAuthorizedFail says "The phone hasn't allowed this computer yet."
+// in the language of msgs.
+//
+// The checkup, debugging allowed: failed, on a phone the system says no
+// more of.
+func (msgs Messages) CheckAuthorizedFail() string {
+	return Catalog.Format(msgs.locale, "checkAuthorizedFail", nil)
+}
+
+// CheckAuthorizedPass says "The phone allows this computer."
+// in the language the app shows.
+//
+// The checkup, debugging allowed: passed.
+func CheckAuthorizedPass() string { return In(i18n.Locale()).CheckAuthorizedPass() }
+
+// CheckAuthorizedPass says "The phone allows this computer."
+// in the language of msgs.
+//
+// The checkup, debugging allowed: passed.
+func (msgs Messages) CheckAuthorizedPass() string {
+	return Catalog.Format(msgs.locale, "checkAuthorizedPass", nil)
+}
+
+// CheckAuthorizedSkip says "Checked once the phone is connected."
+// in the language the app shows.
+//
+// The checkup, debugging allowed: not checked while the phone is not
+// connected.
+func CheckAuthorizedSkip() string { return In(i18n.Locale()).CheckAuthorizedSkip() }
+
+// CheckAuthorizedSkip says "Checked once the phone is connected."
+// in the language of msgs.
+//
+// The checkup, debugging allowed: not checked while the phone is not
+// connected.
+func (msgs Messages) CheckAuthorizedSkip() string {
+	return Catalog.Format(msgs.locale, "checkAuthorizedSkip", nil)
+}
+
+// CheckAuthorizedTitle says "Debugging allowed"
+// in the language the app shows.
+//
+// The checkup: the item for whether the phone allows this computer.
+func CheckAuthorizedTitle() string { return In(i18n.Locale()).CheckAuthorizedTitle() }
+
+// CheckAuthorizedTitle says "Debugging allowed"
+// in the language of msgs.
+//
+// The checkup: the item for whether the phone allows this computer.
+func (msgs Messages) CheckAuthorizedTitle() string {
+	return Catalog.Format(msgs.locale, "checkAuthorizedTitle", nil)
+}
+
+// CheckBackgroundFail says "Agents can't work on a hidden second screen on this phone."
+// in the language the app shows.
+//
+// The checkup, working in the background: failed.
+func CheckBackgroundFail() string { return In(i18n.Locale()).CheckBackgroundFail() }
+
+// CheckBackgroundFail says "Agents can't work on a hidden second screen on this phone."
+// in the language of msgs.
+//
+// The checkup, working in the background: failed.
+func (msgs Messages) CheckBackgroundFail() string {
+	return Catalog.Format(msgs.locale, "checkBackgroundFail", nil)
+}
+
+// CheckBackgroundOld says "Needs Android 11 or later (this phone has Android {version}): agents use the phone's own screen."
+// in the language the app shows.
+//
+// The checkup, working in the background: not on Android 10.
+func CheckBackgroundOld(version string) string { return In(i18n.Locale()).CheckBackgroundOld(version) }
+
+// CheckBackgroundOld says "Needs Android 11 or later (this phone has Android {version}): agents use the phone's own screen."
+// in the language of msgs.
+//
+// The checkup, working in the background: not on Android 10.
+func (msgs Messages) CheckBackgroundOld(version string) string {
+	return Catalog.Format(msgs.locale, "checkBackgroundOld", map[string]any{"version": version})
+}
+
+// CheckBackgroundPass says "Agents can work on a hidden second screen while the phone stays off and locked."
+// in the language the app shows.
+//
+// The checkup, working in the background: passed.
+func CheckBackgroundPass() string { return In(i18n.Locale()).CheckBackgroundPass() }
+
+// CheckBackgroundPass says "Agents can work on a hidden second screen while the phone stays off and locked."
+// in the language of msgs.
+//
+// The checkup, working in the background: passed.
+func (msgs Messages) CheckBackgroundPass() string {
+	return Catalog.Format(msgs.locale, "checkBackgroundPass", nil)
+}
+
+// CheckBackgroundTitle says "Working in the background"
+// in the language the app shows.
+//
+// The checkup: the item for agents working on a hidden second screen.
+func CheckBackgroundTitle() string { return In(i18n.Locale()).CheckBackgroundTitle() }
+
+// CheckBackgroundTitle says "Working in the background"
+// in the language of msgs.
+//
+// The checkup: the item for agents working on a hidden second screen.
+func (msgs Messages) CheckBackgroundTitle() string {
+	return Catalog.Format(msgs.locale, "checkBackgroundTitle", nil)
+}
+
+// CheckBackgroundUnlocked says "Before Android 13, agents can work on a second screen only while the phone is unlocked."
+// in the language the app shows.
+//
+// The checkup, working in the background: works on Android 11 and 12, only
+// while the phone is unlocked.
+func CheckBackgroundUnlocked() string { return In(i18n.Locale()).CheckBackgroundUnlocked() }
+
+// CheckBackgroundUnlocked says "Before Android 13, agents can work on a second screen only while the phone is unlocked."
+// in the language of msgs.
+//
+// The checkup, working in the background: works on Android 11 and 12, only
+// while the phone is unlocked.
+func (msgs Messages) CheckBackgroundUnlocked() string {
+	return Catalog.Format(msgs.locale, "checkBackgroundUnlocked", nil)
+}
+
+// CheckCompanionMissing says "Not installed. With it, Pinky reads the screen in about 70 ms instead of 2 s, and types any language without the clip…"
+// in the language the app shows.
+//
+// The checkup, Pinky Companion: not installed; an Install button follows.
+func CheckCompanionMissing() string { return In(i18n.Locale()).CheckCompanionMissing() }
+
+// CheckCompanionMissing says "Not installed. With it, Pinky reads the screen in about 70 ms instead of 2 s, and types any language without the clip…"
+// in the language of msgs.
+//
+// The checkup, Pinky Companion: not installed; an Install button follows.
+func (msgs Messages) CheckCompanionMissing() string {
+	return Catalog.Format(msgs.locale, "checkCompanionMissing", nil)
+}
+
+// CheckCompanionNone says "Pinky couldn't tell whether its companion app is installed."
+// in the language the app shows.
+//
+// The checkup, Pinky Companion: the check failed.
+func CheckCompanionNone() string { return In(i18n.Locale()).CheckCompanionNone() }
+
+// CheckCompanionNone says "Pinky couldn't tell whether its companion app is installed."
+// in the language of msgs.
+//
+// The checkup, Pinky Companion: the check failed.
+func (msgs Messages) CheckCompanionNone() string {
+	return Catalog.Format(msgs.locale, "checkCompanionNone", nil)
+}
+
+// CheckCompanionOff says "Installed, but its accessibility service is off."
+// in the language the app shows.
+//
+// The checkup, Pinky Companion: its service is off; a Turn on button
+// follows.
+func CheckCompanionOff() string { return In(i18n.Locale()).CheckCompanionOff() }
+
+// CheckCompanionOff says "Installed, but its accessibility service is off."
+// in the language of msgs.
+//
+// The checkup, Pinky Companion: its service is off; a Turn on button
+// follows.
+func (msgs Messages) CheckCompanionOff() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOff", nil)
+}
+
+// CheckCompanionOffHuawei says "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky Companion, and allow…"
+// in the language the app shows.
+//
+// The checkup, Pinky Companion, on a HUAWEI or HONOR phone whose app's
+// service is off. App launch and Manage automatically are Huawei's names:
+// use those of its Simplified Chinese settings.
+func CheckCompanionOffHuawei() string { return In(i18n.Locale()).CheckCompanionOffHuawei() }
+
+// CheckCompanionOffHuawei says "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky Companion, and allow…"
+// in the language of msgs.
+//
+// The checkup, Pinky Companion, on a HUAWEI or HONOR phone whose app's
+// service is off. App launch and Manage automatically are Huawei's names:
+// use those of its Simplified Chinese settings.
+func (msgs Messages) CheckCompanionOffHuawei() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOffHuawei", nil)
+}
+
+// CheckCompanionOffOppo says "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, …"
+// in the language the app shows.
+//
+// The checkup, Pinky Companion, on an OPPO, OnePlus or realme phone whose
+// app's service is off. Use ColorOS's Simplified Chinese names.
+func CheckCompanionOffOppo() string { return In(i18n.Locale()).CheckCompanionOffOppo() }
+
+// CheckCompanionOffOppo says "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, …"
+// in the language of msgs.
+//
+// The checkup, Pinky Companion, on an OPPO, OnePlus or realme phone whose
+// app's service is off. Use ColorOS's Simplified Chinese names.
+func (msgs Messages) CheckCompanionOffOppo() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOffOppo", nil)
+}
+
+// CheckCompanionOffOther says "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky Companion, tap ⋮ › Allow restr…"
+// in the language the app shows.
+//
+// The checkup, Pinky Companion, on other phones whose app's service is off.
+// Allow restricted settings is Android's own name: use that of Android's
+// Simplified Chinese settings.
+func CheckCompanionOffOther() string { return In(i18n.Locale()).CheckCompanionOffOther() }
+
+// CheckCompanionOffOther says "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky Companion, tap ⋮ › Allow restr…"
+// in the language of msgs.
+//
+// The checkup, Pinky Companion, on other phones whose app's service is off.
+// Allow restricted settings is Android's own name: use that of Android's
+// Simplified Chinese settings.
+func (msgs Messages) CheckCompanionOffOther() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOffOther", nil)
+}
+
+// CheckCompanionOffVivo says "If it keeps turning off: in Settings › Battery › Background power consumption management, choose Pinky Companion …"
+// in the language the app shows.
+//
+// The checkup, Pinky Companion, on a vivo phone whose app's service is off:
+// vivo turns off the service of apps that are not from its store. The
+// Chinese menu names could not be confirmed, so they are described rather
+// than quoted.
+func CheckCompanionOffVivo() string { return In(i18n.Locale()).CheckCompanionOffVivo() }
+
+// CheckCompanionOffVivo says "If it keeps turning off: in Settings › Battery › Background power consumption management, choose Pinky Companion …"
+// in the language of msgs.
+//
+// The checkup, Pinky Companion, on a vivo phone whose app's service is off:
+// vivo turns off the service of apps that are not from its store. The
+// Chinese menu names could not be confirmed, so they are described rather
+// than quoted.
+func (msgs Messages) CheckCompanionOffVivo() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOffVivo", nil)
+}
+
+// CheckCompanionOffXiaomi says "If it keeps turning off: in the app's settings, turn on Autostart and set Battery saver to No restrictions."
+// in the language the app shows.
+//
+// The checkup, Pinky Companion, on a Xiaomi phone whose app's service is
+// off: Xiaomi's cleaners stop apps, which turns their service off.
+// Autostart and Battery saver are Xiaomi's names: use those of its
+// Simplified Chinese settings.
+func CheckCompanionOffXiaomi() string { return In(i18n.Locale()).CheckCompanionOffXiaomi() }
+
+// CheckCompanionOffXiaomi says "If it keeps turning off: in the app's settings, turn on Autostart and set Battery saver to No restrictions."
+// in the language of msgs.
+//
+// The checkup, Pinky Companion, on a Xiaomi phone whose app's service is
+// off: Xiaomi's cleaners stop apps, which turns their service off.
+// Autostart and Battery saver are Xiaomi's names: use those of its
+// Simplified Chinese settings.
+func (msgs Messages) CheckCompanionOffXiaomi() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOffXiaomi", nil)
+}
+
+// CheckCompanionOutdated says "An older version is installed; Pinky carries a newer one."
+// in the language the app shows.
+//
+// The checkup, Pinky Companion: outdated; an Update button follows.
+func CheckCompanionOutdated() string { return In(i18n.Locale()).CheckCompanionOutdated() }
+
+// CheckCompanionOutdated says "An older version is installed; Pinky carries a newer one."
+// in the language of msgs.
+//
+// The checkup, Pinky Companion: outdated; an Update button follows.
+func (msgs Messages) CheckCompanionOutdated() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOutdated", nil)
+}
+
+// CheckCompanionPass says "Installed and on: Pinky reads the screen quickly and types any language."
+// in the language the app shows.
+//
+// The checkup, Pinky Companion: passed.
+func CheckCompanionPass() string { return In(i18n.Locale()).CheckCompanionPass() }
+
+// CheckCompanionPass says "Installed and on: Pinky reads the screen quickly and types any language."
+// in the language of msgs.
+//
+// The checkup, Pinky Companion: passed.
+func (msgs Messages) CheckCompanionPass() string {
+	return Catalog.Format(msgs.locale, "checkCompanionPass", nil)
+}
+
+// CheckCompanionTitle says "Pinky Companion"
+// in the language the app shows.
+//
+// The checkup: the item for Pinky's companion app on the phone. Pinky
+// Companion is the app's name: keep it as it is.
+func CheckCompanionTitle() string { return In(i18n.Locale()).CheckCompanionTitle() }
+
+// CheckCompanionTitle says "Pinky Companion"
+// in the language of msgs.
+//
+// The checkup: the item for Pinky's companion app on the phone. Pinky
+// Companion is the app's name: keep it as it is.
+func (msgs Messages) CheckCompanionTitle() string {
+	return Catalog.Format(msgs.locale, "checkCompanionTitle", nil)
+}
+
+// CheckConnectionAndroidFail says "{name} isn't connected."
+// in the language the app shows.
+//
+// The checkup, connection: an Android phone that is not connected; steps
+// follow.
+func CheckConnectionAndroidFail(name string) string {
+	return In(i18n.Locale()).CheckConnectionAndroidFail(name)
+}
+
+// CheckConnectionAndroidFail says "{name} isn't connected."
+// in the language of msgs.
+//
+// The checkup, connection: an Android phone that is not connected; steps
+// follow.
+func (msgs Messages) CheckConnectionAndroidFail(name string) string {
+	return Catalog.Format(msgs.locale, "checkConnectionAndroidFail", map[string]any{"name": name})
+}
+
+// CheckConnectionAndroidNote says "Over Wi-Fi: up to Android 16, Wireless debugging turns off when the phone leaves the Wi-Fi network (even for another …"
+// in the language the app shows.
+//
+// The checkup, connection: a note for phones used over Wi-Fi. Wireless
+// debugging is Android's own name.
+func CheckConnectionAndroidNote() string { return In(i18n.Locale()).CheckConnectionAndroidNote() }
+
+// CheckConnectionAndroidNote says "Over Wi-Fi: up to Android 16, Wireless debugging turns off when the phone leaves the Wi-Fi network (even for another …"
+// in the language of msgs.
+//
+// The checkup, connection: a note for phones used over Wi-Fi. Wireless
+// debugging is Android's own name.
+func (msgs Messages) CheckConnectionAndroidNote() string {
+	return Catalog.Format(msgs.locale, "checkConnectionAndroidNote", nil)
+}
+
+// CheckConnectionAndroidStepCable says "Plug it in with a USB cable that carries data, and unlock it."
+// in the language the app shows.
+//
+// The checkup, connection: the first step for an Android phone that is not
+// connected.
+func CheckConnectionAndroidStepCable() string {
+	return In(i18n.Locale()).CheckConnectionAndroidStepCable()
+}
+
+// CheckConnectionAndroidStepCable says "Plug it in with a USB cable that carries data, and unlock it."
+// in the language of msgs.
+//
+// The checkup, connection: the first step for an Android phone that is not
+// connected.
+func (msgs Messages) CheckConnectionAndroidStepCable() string {
+	return Catalog.Format(msgs.locale, "checkConnectionAndroidStepCable", nil)
+}
+
+// CheckConnectionAndroidStepDebugging says "Check that USB debugging is still on, in Developer options:"
+// in the language the app shows.
+//
+// The checkup, connection: the second step, above the menu path to
+// Developer options.
+func CheckConnectionAndroidStepDebugging() string {
+	return In(i18n.Locale()).CheckConnectionAndroidStepDebugging()
+}
+
+// CheckConnectionAndroidStepDebugging says "Check that USB debugging is still on, in Developer options:"
+// in the language of msgs.
+//
+// The checkup, connection: the second step, above the menu path to
+// Developer options.
+func (msgs Messages) CheckConnectionAndroidStepDebugging() string {
+	return Catalog.Format(msgs.locale, "checkConnectionAndroidStepDebugging", nil)
+}
+
+// CheckConnectionFail says "{name} isn't connected."
+// in the language the app shows.
+//
+// The checkup, connection: a phone that is not connected.
+func CheckConnectionFail(name string) string { return In(i18n.Locale()).CheckConnectionFail(name) }
+
+// CheckConnectionFail says "{name} isn't connected."
+// in the language of msgs.
+//
+// The checkup, connection: a phone that is not connected.
+func (msgs Messages) CheckConnectionFail(name string) string {
+	return Catalog.Format(msgs.locale, "checkConnectionFail", map[string]any{"name": name})
+}
+
+// CheckConnectionTitle says "Connection"
+// in the language the app shows.
+//
+// The checkup: the item for whether the phone is connected.
+func CheckConnectionTitle() string { return In(i18n.Locale()).CheckConnectionTitle() }
+
+// CheckConnectionTitle says "Connection"
+// in the language of msgs.
+//
+// The checkup: the item for whether the phone is connected.
+func (msgs Messages) CheckConnectionTitle() string {
+	return Catalog.Format(msgs.locale, "checkConnectionTitle", nil)
+}
+
+// CheckConnectionUSB says "Connected over USB."
+// in the language the app shows.
+//
+// The checkup, connection: passed, over a USB cable.
+func CheckConnectionUSB() string { return In(i18n.Locale()).CheckConnectionUSB() }
+
+// CheckConnectionUSB says "Connected over USB."
+// in the language of msgs.
+//
+// The checkup, connection: passed, over a USB cable.
+func (msgs Messages) CheckConnectionUSB() string {
+	return Catalog.Format(msgs.locale, "checkConnectionUSB", nil)
+}
+
+// CheckConnectionWiFi says "Connected over Wi-Fi."
+// in the language the app shows.
+//
+// The checkup, connection and Wi-Fi: passed, over Wi-Fi.
+func CheckConnectionWiFi() string { return In(i18n.Locale()).CheckConnectionWiFi() }
+
+// CheckConnectionWiFi says "Connected over Wi-Fi."
+// in the language of msgs.
+//
+// The checkup, connection and Wi-Fi: passed, over Wi-Fi.
+func (msgs Messages) CheckConnectionWiFi() string {
+	return Catalog.Format(msgs.locale, "checkConnectionWiFi", nil)
+}
+
+// CheckHostADBOld says "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such …"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: the adb server that runs is older
+// than Wi-Fi pairing needs.
+func CheckHostADBOld() string { return In(i18n.Locale()).CheckHostADBOld() }
+
+// CheckHostADBOld says "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such …"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: the adb server that runs is older
+// than Wi-Fi pairing needs.
+func (msgs Messages) CheckHostADBOld() string {
+	return Catalog.Format(msgs.locale, "checkHostADBOld", nil)
+}
+
+// CheckHostADBRestarts says "Another program keeps replacing the adb server, so phones drop off now and then. It's usually a program with another …"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: the adb server went away again and
+// again, as when another program with another adb replaces it.
+func CheckHostADBRestarts() string { return In(i18n.Locale()).CheckHostADBRestarts() }
+
+// CheckHostADBRestarts says "Another program keeps replacing the adb server, so phones drop off now and then. It's usually a program with another …"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: the adb server went away again and
+// again, as when another program with another adb replaces it.
+func (msgs Messages) CheckHostADBRestarts() string {
+	return Catalog.Format(msgs.locale, "checkHostADBRestarts", nil)
+}
+
+// CheckHostADBServer says "Android's adb server isn't running, and Pinky couldn't start it."
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: no adb server runs and starting
+// one failed; the system's words follow.
+func CheckHostADBServer() string { return In(i18n.Locale()).CheckHostADBServer() }
+
+// CheckHostADBServer says "Android's adb server isn't running, and Pinky couldn't start it."
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: no adb server runs and starting
+// one failed; the system's words follow.
+func (msgs Messages) CheckHostADBServer() string {
+	return Catalog.Format(msgs.locale, "checkHostADBServer", nil)
+}
+
+// CheckHostNoADB says "Pinky found no adb, the tool it talks to Android phones through. Install Android's SDK Platform-Tools, then open Pink…"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: the computer has no adb at all (a
+// build of Pinky without its own).
+func CheckHostNoADB() string { return In(i18n.Locale()).CheckHostNoADB() }
+
+// CheckHostNoADB says "Pinky found no adb, the tool it talks to Android phones through. Install Android's SDK Platform-Tools, then open Pink…"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: the computer has no adb at all (a
+// build of Pinky without its own).
+func (msgs Messages) CheckHostNoADB() string {
+	return Catalog.Format(msgs.locale, "checkHostNoADB", nil)
+}
+
+// CheckHostTitle says "This computer's software"
+// in the language the app shows.
+//
+// The checkup: the item for software this computer needs for the phone's
+// platform, on a phone that is not Android (Android's is checkADBTitle).
+func CheckHostTitle() string { return In(i18n.Locale()).CheckHostTitle() }
+
+// CheckHostTitle says "This computer's software"
+// in the language of msgs.
+//
+// The checkup: the item for software this computer needs for the phone's
+// platform, on a phone that is not Android (Android's is checkADBTitle).
+func (msgs Messages) CheckHostTitle() string {
+	return Catalog.Format(msgs.locale, "checkHostTitle", nil)
+}
+
+// CheckInputFail says "Pinky couldn't send a key to the phone."
+// in the language the app shows.
+//
+// The checkup, tapping and typing: failed for another reason; the system's
+// words follow.
+func CheckInputFail() string { return In(i18n.Locale()).CheckInputFail() }
+
+// CheckInputFail says "Pinky couldn't send a key to the phone."
+// in the language of msgs.
+//
+// The checkup, tapping and typing: failed for another reason; the system's
+// words follow.
+func (msgs Messages) CheckInputFail() string {
+	return Catalog.Format(msgs.locale, "checkInputFail", nil)
+}
+
+// CheckInputOppo says "In Developer options, turn on “Disable permission monitoring”, then restart the phone."
+// in the language the app shows.
+//
+// The checkup, tapping and typing, on an OPPO, OnePlus or realme phone.
+// Disable permission monitoring is the name of ColorOS's switch: use the
+// name of its Simplified Chinese settings.
+func CheckInputOppo() string { return In(i18n.Locale()).CheckInputOppo() }
+
+// CheckInputOppo says "In Developer options, turn on “Disable permission monitoring”, then restart the phone."
+// in the language of msgs.
+//
+// The checkup, tapping and typing, on an OPPO, OnePlus or realme phone.
+// Disable permission monitoring is the name of ColorOS's switch: use the
+// name of its Simplified Chinese settings.
+func (msgs Messages) CheckInputOppo() string {
+	return Catalog.Format(msgs.locale, "checkInputOppo", nil)
+}
+
+// CheckInputOther says "In Developer options, look for a switch that lets USB debugging simulate input, turn it on, then restart the phone."
+// in the language the app shows.
+//
+// The checkup, tapping and typing, on other phones.
+func CheckInputOther() string { return In(i18n.Locale()).CheckInputOther() }
+
+// CheckInputOther says "In Developer options, look for a switch that lets USB debugging simulate input, turn it on, then restart the phone."
+// in the language of msgs.
+//
+// The checkup, tapping and typing, on other phones.
+func (msgs Messages) CheckInputOther() string {
+	return Catalog.Format(msgs.locale, "checkInputOther", nil)
+}
+
+// CheckInputOtherNote says "Its name differs between makers."
+// in the language the app shows.
+//
+// The checkup, tapping and typing, on other phones: under checkInputOther.
+func CheckInputOtherNote() string { return In(i18n.Locale()).CheckInputOtherNote() }
+
+// CheckInputOtherNote says "Its name differs between makers."
+// in the language of msgs.
+//
+// The checkup, tapping and typing, on other phones: under checkInputOther.
+func (msgs Messages) CheckInputOtherNote() string {
+	return Catalog.Format(msgs.locale, "checkInputOtherNote", nil)
+}
+
+// CheckInputPass says "Pinky can tap, swipe and type on the phone."
+// in the language the app shows.
+//
+// The checkup, tapping and typing: passed.
+func CheckInputPass() string { return In(i18n.Locale()).CheckInputPass() }
+
+// CheckInputPass says "Pinky can tap, swipe and type on the phone."
+// in the language of msgs.
+//
+// The checkup, tapping and typing: passed.
+func (msgs Messages) CheckInputPass() string {
+	return Catalog.Format(msgs.locale, "checkInputPass", nil)
+}
+
+// CheckInputRefused says "The phone refuses taps and keys from this computer."
+// in the language the app shows.
+//
+// The checkup, tapping and typing: the phone refused the input; the maker's
+// steps follow.
+func CheckInputRefused() string { return In(i18n.Locale()).CheckInputRefused() }
+
+// CheckInputRefused says "The phone refuses taps and keys from this computer."
+// in the language of msgs.
+//
+// The checkup, tapping and typing: the phone refused the input; the maker's
+// steps follow.
+func (msgs Messages) CheckInputRefused() string {
+	return Catalog.Format(msgs.locale, "checkInputRefused", nil)
+}
+
+// CheckInputRestart says "“USB debugging (Security settings)” is on, but takes effect only after a restart. Restart the phone, then check a…"
+// in the language the app shows.
+//
+// The checkup, tapping and typing, on a Xiaomi phone that has the switch on
+// but was not restarted since. Use the name of Xiaomi's Simplified Chinese
+// settings.
+func CheckInputRestart() string { return In(i18n.Locale()).CheckInputRestart() }
+
+// CheckInputRestart says "“USB debugging (Security settings)” is on, but takes effect only after a restart. Restart the phone, then check a…"
+// in the language of msgs.
+//
+// The checkup, tapping and typing, on a Xiaomi phone that has the switch on
+// but was not restarted since. Use the name of Xiaomi's Simplified Chinese
+// settings.
+func (msgs Messages) CheckInputRestart() string {
+	return Catalog.Format(msgs.locale, "checkInputRestart", nil)
+}
+
+// CheckInputTitle says "Tapping and typing"
+// in the language the app shows.
+//
+// The checkup: the item for whether taps and keys from the computer reach
+// the phone.
+func CheckInputTitle() string { return In(i18n.Locale()).CheckInputTitle() }
+
+// CheckInputTitle says "Tapping and typing"
+// in the language of msgs.
+//
+// The checkup: the item for whether taps and keys from the computer reach
+// the phone.
+func (msgs Messages) CheckInputTitle() string {
+	return Catalog.Format(msgs.locale, "checkInputTitle", nil)
+}
+
+// CheckInputXiaomi says "In Developer options, turn on “USB debugging (Security settings)”, then restart the phone."
+// in the language the app shows.
+//
+// The checkup, tapping and typing, on a Xiaomi phone. USB debugging
+// (Security settings) is the name of Xiaomi's switch: use the name of
+// Xiaomi's Simplified Chinese settings.
+func CheckInputXiaomi() string { return In(i18n.Locale()).CheckInputXiaomi() }
+
+// CheckInputXiaomi says "In Developer options, turn on “USB debugging (Security settings)”, then restart the phone."
+// in the language of msgs.
+//
+// The checkup, tapping and typing, on a Xiaomi phone. USB debugging
+// (Security settings) is the name of Xiaomi's switch: use the name of
+// Xiaomi's Simplified Chinese settings.
+func (msgs Messages) CheckInputXiaomi() string {
+	return Catalog.Format(msgs.locale, "checkInputXiaomi", nil)
+}
+
+// CheckInputXiaomiNote says "Turning it on checks with Xiaomi online: the phone needs a network, and may ask for a SIM card or your Xiaomi account."
+// in the language the app shows.
+//
+// The checkup, tapping and typing, on a Xiaomi phone: what turning the
+// switch on needs.
+func CheckInputXiaomiNote() string { return In(i18n.Locale()).CheckInputXiaomiNote() }
+
+// CheckInputXiaomiNote says "Turning it on checks with Xiaomi online: the phone needs a network, and may ask for a SIM card or your Xiaomi account."
+// in the language of msgs.
+//
+// The checkup, tapping and typing, on a Xiaomi phone: what turning the
+// switch on needs.
+func (msgs Messages) CheckInputXiaomiNote() string {
+	return Catalog.Format(msgs.locale, "checkInputXiaomiNote", nil)
+}
+
+// CheckLocalNetworkFail says "macOS doesn't let Pinky look for phones on your network, so pairing over Wi-Fi can't find the phone. Turn on Pinky un…"
+// in the language the app shows.
+//
+// The checkup, local network: failed; a button to open the setting follows.
+// System Settings, Privacy & Security and Local Network are macOS's own
+// names: use those of macOS in Simplified Chinese.
+func CheckLocalNetworkFail() string { return In(i18n.Locale()).CheckLocalNetworkFail() }
+
+// CheckLocalNetworkFail says "macOS doesn't let Pinky look for phones on your network, so pairing over Wi-Fi can't find the phone. Turn on Pinky un…"
+// in the language of msgs.
+//
+// The checkup, local network: failed; a button to open the setting follows.
+// System Settings, Privacy & Security and Local Network are macOS's own
+// names: use those of macOS in Simplified Chinese.
+func (msgs Messages) CheckLocalNetworkFail() string {
+	return Catalog.Format(msgs.locale, "checkLocalNetworkFail", nil)
+}
+
+// CheckLocalNetworkNote says "If macOS just asked whether Pinky may find devices on your local network, click Allow, then check again."
+// in the language the app shows.
+//
+// The checkup, local network: under checkLocalNetworkFail.
+func CheckLocalNetworkNote() string { return In(i18n.Locale()).CheckLocalNetworkNote() }
+
+// CheckLocalNetworkNote says "If macOS just asked whether Pinky may find devices on your local network, click Allow, then check again."
+// in the language of msgs.
+//
+// The checkup, local network: under checkLocalNetworkFail.
+func (msgs Messages) CheckLocalNetworkNote() string {
+	return Catalog.Format(msgs.locale, "checkLocalNetworkNote", nil)
+}
+
+// CheckLocalNetworkPass says "Pinky may look for phones on this network, which pairing over Wi-Fi needs."
+// in the language the app shows.
+//
+// The checkup, local network: passed.
+func CheckLocalNetworkPass() string { return In(i18n.Locale()).CheckLocalNetworkPass() }
+
+// CheckLocalNetworkPass says "Pinky may look for phones on this network, which pairing over Wi-Fi needs."
+// in the language of msgs.
+//
+// The checkup, local network: passed.
+func (msgs Messages) CheckLocalNetworkPass() string {
+	return Catalog.Format(msgs.locale, "checkLocalNetworkPass", nil)
+}
+
+// CheckLocalNetworkTitle says "Local network"
+// in the language the app shows.
+//
+// The checkup, on a Mac: the item for macOS letting Pinky look for phones
+// on the network.
+func CheckLocalNetworkTitle() string { return In(i18n.Locale()).CheckLocalNetworkTitle() }
+
+// CheckLocalNetworkTitle says "Local network"
+// in the language of msgs.
+//
+// The checkup, on a Mac: the item for macOS letting Pinky look for phones
+// on the network.
+func (msgs Messages) CheckLocalNetworkTitle() string {
+	return Catalog.Format(msgs.locale, "checkLocalNetworkTitle", nil)
+}
+
+// CheckLocalNetworkUnknown says "Pinky couldn't tell whether it may use the local network."
+// in the language the app shows.
+//
+// The checkup, local network: the check could not run.
+func CheckLocalNetworkUnknown() string { return In(i18n.Locale()).CheckLocalNetworkUnknown() }
+
+// CheckLocalNetworkUnknown says "Pinky couldn't tell whether it may use the local network."
+// in the language of msgs.
+//
+// The checkup, local network: the check could not run.
+func (msgs Messages) CheckLocalNetworkUnknown() string {
+	return Catalog.Format(msgs.locale, "checkLocalNetworkUnknown", nil)
+}
+
+// CheckScreenFail says "The phone sends no screenshots, so agents can't see the screen. Restart the phone, then check again."
+// in the language the app shows.
+//
+// The checkup, seeing the screen: failed.
+func CheckScreenFail() string { return In(i18n.Locale()).CheckScreenFail() }
+
+// CheckScreenFail says "The phone sends no screenshots, so agents can't see the screen. Restart the phone, then check again."
+// in the language of msgs.
+//
+// The checkup, seeing the screen: failed.
+func (msgs Messages) CheckScreenFail() string {
+	return Catalog.Format(msgs.locale, "checkScreenFail", nil)
+}
+
+// CheckScreenNoVideo says "The phone's video encoder doesn't work with Pinky, so the mirror shows still pictures. Agents still see the screen."
+// in the language the app shows.
+//
+// The checkup, seeing the screen: works without the live picture.
+func CheckScreenNoVideo() string { return In(i18n.Locale()).CheckScreenNoVideo() }
+
+// CheckScreenNoVideo says "The phone's video encoder doesn't work with Pinky, so the mirror shows still pictures. Agents still see the screen."
+// in the language of msgs.
+//
+// The checkup, seeing the screen: works without the live picture.
+func (msgs Messages) CheckScreenNoVideo() string {
+	return Catalog.Format(msgs.locale, "checkScreenNoVideo", nil)
+}
+
+// CheckScreenPass says "Pinky can see the screen."
+// in the language the app shows.
+//
+// The checkup, seeing the screen: passed.
+func CheckScreenPass() string { return In(i18n.Locale()).CheckScreenPass() }
+
+// CheckScreenPass says "Pinky can see the screen."
+// in the language of msgs.
+//
+// The checkup, seeing the screen: passed.
+func (msgs Messages) CheckScreenPass() string {
+	return Catalog.Format(msgs.locale, "checkScreenPass", nil)
+}
+
+// CheckScreenTitle says "Seeing the screen"
+// in the language the app shows.
+//
+// The checkup: the item for screenshots and the live picture.
+func CheckScreenTitle() string { return In(i18n.Locale()).CheckScreenTitle() }
+
+// CheckScreenTitle says "Seeing the screen"
+// in the language of msgs.
+//
+// The checkup: the item for screenshots and the live picture.
+func (msgs Messages) CheckScreenTitle() string {
+	return Catalog.Format(msgs.locale, "checkScreenTitle", nil)
+}
+
+// CheckUSBNotReady says "This computer can't use the phone over USB yet."
+// in the language the app shows.
+//
+// The checkup and Add phone: an Android phone listed as needing setup on
+// macOS or Windows (on Windows: its USB debugging has no driver); the
+// system's words follow.
+func CheckUSBNotReady() string { return In(i18n.Locale()).CheckUSBNotReady() }
+
+// CheckUSBNotReady says "This computer can't use the phone over USB yet."
+// in the language of msgs.
+//
+// The checkup and Add phone: an Android phone listed as needing setup on
+// macOS or Windows (on Windows: its USB debugging has no driver); the
+// system's words follow.
+func (msgs Messages) CheckUSBNotReady() string {
+	return Catalog.Format(msgs.locale, "checkUSBNotReady", nil)
+}
+
+// CheckUSBPermission says "This computer isn't allowed to open the phone's USB connection."
+// in the language the app shows.
+//
+// The checkup and Add phone: an Android phone the computer may not open
+// (Linux without udev rules).
+func CheckUSBPermission() string { return In(i18n.Locale()).CheckUSBPermission() }
+
+// CheckUSBPermission says "This computer isn't allowed to open the phone's USB connection."
+// in the language of msgs.
+//
+// The checkup and Add phone: an Android phone the computer may not open
+// (Linux without udev rules).
+func (msgs Messages) CheckUSBPermission() string {
+	return Catalog.Format(msgs.locale, "checkUSBPermission", nil)
+}
+
+// CheckUSBPermissionNote says "On Linux: add yourself to the plugdev group (sudo usermod -aG plugdev $LOGNAME), log out and in again, and install yo…"
+// in the language the app shows.
+//
+// The checkup and Add phone: how to fix checkUSBPermission.
+// android-udev-rules and plugdev are names of Linux packages and groups:
+// keep them as they are.
+func CheckUSBPermissionNote() string { return In(i18n.Locale()).CheckUSBPermissionNote() }
+
+// CheckUSBPermissionNote says "On Linux: add yourself to the plugdev group (sudo usermod -aG plugdev $LOGNAME), log out and in again, and install yo…"
+// in the language of msgs.
+//
+// The checkup and Add phone: how to fix checkUSBPermission.
+// android-udev-rules and plugdev are names of Linux packages and groups:
+// keep them as they are.
+func (msgs Messages) CheckUSBPermissionNote() string {
+	return Catalog.Format(msgs.locale, "checkUSBPermissionNote", nil)
+}
+
+// CheckWiFiFail says "Pinky can't use this phone over Wi-Fi."
+// in the language the app shows.
+//
+// The checkup, Wi-Fi: failed.
+func CheckWiFiFail() string { return In(i18n.Locale()).CheckWiFiFail() }
+
+// CheckWiFiFail says "Pinky can't use this phone over Wi-Fi."
+// in the language of msgs.
+//
+// The checkup, Wi-Fi: failed.
+func (msgs Messages) CheckWiFiFail() string {
+	return Catalog.Format(msgs.locale, "checkWiFiFail", nil)
+}
+
+// CheckWiFiOld says "Pairing over Wi-Fi needs Android 11 or later (this phone has Android {version}). Use USB."
+// in the language the app shows.
+//
+// The checkup, Wi-Fi: not on Android 10.
+func CheckWiFiOld(version string) string { return In(i18n.Locale()).CheckWiFiOld(version) }
+
+// CheckWiFiOld says "Pairing over Wi-Fi needs Android 11 or later (this phone has Android {version}). Use USB."
+// in the language of msgs.
+//
+// The checkup, Wi-Fi: not on Android 10.
+func (msgs Messages) CheckWiFiOld(version string) string {
+	return Catalog.Format(msgs.locale, "checkWiFiOld", map[string]any{"version": version})
+}
+
+// CheckWiFiPass says "You can also pair this phone over Wi-Fi, from Add phone."
+// in the language the app shows.
+//
+// The checkup, Wi-Fi: the phone can be paired over Wi-Fi.
+func CheckWiFiPass() string { return In(i18n.Locale()).CheckWiFiPass() }
+
+// CheckWiFiPass says "You can also pair this phone over Wi-Fi, from Add phone."
+// in the language of msgs.
+//
+// The checkup, Wi-Fi: the phone can be paired over Wi-Fi.
+func (msgs Messages) CheckWiFiPass() string {
+	return Catalog.Format(msgs.locale, "checkWiFiPass", nil)
+}
+
+// CheckWiFiTitle says "Wi-Fi"
+// in the language the app shows.
+//
+// The checkup: the item for using the phone over Wi-Fi.
+func CheckWiFiTitle() string { return In(i18n.Locale()).CheckWiFiTitle() }
+
+// CheckWiFiTitle says "Wi-Fi"
+// in the language of msgs.
+//
+// The checkup: the item for using the phone over Wi-Fi.
+func (msgs Messages) CheckWiFiTitle() string {
+	return Catalog.Format(msgs.locale, "checkWiFiTitle", nil)
+}
+
+// CheckupAgain says "Check again"
+// in the language the app shows.
+//
+// The checkup: the button that runs it again.
+func CheckupAgain() string { return In(i18n.Locale()).CheckupAgain() }
+
+// CheckupAgain says "Check again"
+// in the language of msgs.
+//
+// The checkup: the button that runs it again.
+func (msgs Messages) CheckupAgain() string {
+	return Catalog.Format(msgs.locale, "checkupAgain", nil)
+}
+
+// CheckupAllGood says "Everything works."
+// in the language the app shows.
+//
+// The checkup: the summary line when every item passed.
+func CheckupAllGood() string { return In(i18n.Locale()).CheckupAllGood() }
+
+// CheckupAllGood says "Everything works."
+// in the language of msgs.
+//
+// The checkup: the summary line when every item passed.
+func (msgs Messages) CheckupAllGood() string {
+	return Catalog.Format(msgs.locale, "checkupAllGood", nil)
+}
+
+// CheckupBack says "Back to the phone"
+// in the language the app shows.
+//
+// The checkup page: the button that shows the phone's screen again.
+func CheckupBack() string { return In(i18n.Locale()).CheckupBack() }
+
+// CheckupBack says "Back to the phone"
+// in the language of msgs.
+//
+// The checkup page: the button that shows the phone's screen again.
+func (msgs Messages) CheckupBack() string {
+	return Catalog.Format(msgs.locale, "checkupBack", nil)
+}
+
+// CheckupFailLabel says "Failed"
+// in the language the app shows.
+//
+// The checkup: the accessible name of an item's cross.
+func CheckupFailLabel() string { return In(i18n.Locale()).CheckupFailLabel() }
+
+// CheckupFailLabel says "Failed"
+// in the language of msgs.
+//
+// The checkup: the accessible name of an item's cross.
+func (msgs Messages) CheckupFailLabel() string {
+	return Catalog.Format(msgs.locale, "checkupFailLabel", nil)
+}
+
+// CheckupFailed says "The checkup didn't finish: {error}"
+// in the language the app shows.
+//
+// The checkup: when it could not run. error is the system's reason, in
+// English.
+func CheckupFailed(error string) string { return In(i18n.Locale()).CheckupFailed(error) }
+
+// CheckupFailed says "The checkup didn't finish: {error}"
+// in the language of msgs.
+//
+// The checkup: when it could not run. error is the system's reason, in
+// English.
+func (msgs Messages) CheckupFailed(error string) string {
+	return Catalog.Format(msgs.locale, "checkupFailed", map[string]any{"error": error})
+}
+
+// CheckupFor says "Checkup: {name}"
+// in the language the app shows.
+//
+// The checkup page's heading: Pinky checks what it needs on the phone, item
+// by item.
+func CheckupFor(name string) string { return In(i18n.Locale()).CheckupFor(name) }
+
+// CheckupFor says "Checkup: {name}"
+// in the language of msgs.
+//
+// The checkup page's heading: Pinky checks what it needs on the phone, item
+// by item.
+func (msgs Messages) CheckupFor(name string) string {
+	return Catalog.Format(msgs.locale, "checkupFor", map[string]any{"name": name})
+}
+
+// CheckupIntro says "Pinky checks what it needs on the phone and on this computer, item by item, and says what to do about anything that d…"
+// in the language the app shows.
+//
+// The checkup page: the line under its heading.
+func CheckupIntro() string { return In(i18n.Locale()).CheckupIntro() }
+
+// CheckupIntro says "Pinky checks what it needs on the phone and on this computer, item by item, and says what to do about anything that d…"
+// in the language of msgs.
+//
+// The checkup page: the line under its heading.
+func (msgs Messages) CheckupIntro() string {
+	return Catalog.Format(msgs.locale, "checkupIntro", nil)
+}
+
+// CheckupPassLabel says "Passed"
+// in the language the app shows.
+//
+// The checkup: the accessible name of an item's check mark.
+func CheckupPassLabel() string { return In(i18n.Locale()).CheckupPassLabel() }
+
+// CheckupPassLabel says "Passed"
+// in the language of msgs.
+//
+// The checkup: the accessible name of an item's check mark.
+func (msgs Messages) CheckupPassLabel() string {
+	return Catalog.Format(msgs.locale, "checkupPassLabel", nil)
+}
+
+// CheckupRunning says "Checking…"
+// in the language the app shows.
+//
+// The checkup: next to a spinner while it runs.
+func CheckupRunning() string { return In(i18n.Locale()).CheckupRunning() }
+
+// CheckupRunning says "Checking…"
+// in the language of msgs.
+//
+// The checkup: next to a spinner while it runs.
+func (msgs Messages) CheckupRunning() string {
+	return Catalog.Format(msgs.locale, "checkupRunning", nil)
+}
+
+// CheckupSkipLabel says "Not checked"
+// in the language the app shows.
+//
+// The checkup: the accessible name of an item's dash.
+func CheckupSkipLabel() string { return In(i18n.Locale()).CheckupSkipLabel() }
+
+// CheckupSkipLabel says "Not checked"
+// in the language of msgs.
+//
+// The checkup: the accessible name of an item's dash.
+func (msgs Messages) CheckupSkipLabel() string {
+	return Catalog.Format(msgs.locale, "checkupSkipLabel", nil)
+}
+
+// CheckupSystem says "System: {system}"
+// in the language the app shows.
+//
+// The checkup: the system the phone runs, as Pinky read it.
+func CheckupSystem(system string) string { return In(i18n.Locale()).CheckupSystem(system) }
+
+// CheckupSystem says "System: {system}"
+// in the language of msgs.
+//
+// The checkup: the system the phone runs, as Pinky read it.
+func (msgs Messages) CheckupSystem(system string) string {
+	return Catalog.Format(msgs.locale, "checkupSystem", map[string]any{"system": system})
+}
+
+// CheckupTimeout says "the phone took too long to answer"
+// in the language the app shows.
+//
+// The checkup: the reason in checkupFailed when the phone did not answer in
+// time.
+func CheckupTimeout() string { return In(i18n.Locale()).CheckupTimeout() }
+
+// CheckupTimeout says "the phone took too long to answer"
+// in the language of msgs.
+//
+// The checkup: the reason in checkupFailed when the phone did not answer in
+// time.
+func (msgs Messages) CheckupTimeout() string {
+	return Catalog.Format(msgs.locale, "checkupTimeout", nil)
+}
+
+// CheckupToFix says "{count, plural, one {# item to fix} other {# items to fix}}"
+// in the language the app shows.
+//
+// The checkup: the summary line when items failed.
+func CheckupToFix(count int) string { return In(i18n.Locale()).CheckupToFix(count) }
+
+// CheckupToFix says "{count, plural, one {# item to fix} other {# items to fix}}"
+// in the language of msgs.
+//
+// The checkup: the summary line when items failed.
+func (msgs Messages) CheckupToFix(count int) string {
+	return Catalog.Format(msgs.locale, "checkupToFix", map[string]any{"count": count})
+}
+
+// CheckupUnsupported says "This version of Pinky can't run checkups."
+// in the language the app shows.
+//
+// The checkup, with a gateway that cannot run one.
+func CheckupUnsupported() string { return In(i18n.Locale()).CheckupUnsupported() }
+
+// CheckupUnsupported says "This version of Pinky can't run checkups."
+// in the language of msgs.
+//
+// The checkup, with a gateway that cannot run one.
+func (msgs Messages) CheckupUnsupported() string {
+	return Catalog.Format(msgs.locale, "checkupUnsupported", nil)
+}
+
+// CheckupWaitOnline says "The other checks run once the phone is connected."
+// in the language the app shows.
+//
+// The checkup of a phone that is not connected or not allowed yet.
+func CheckupWaitOnline() string { return In(i18n.Locale()).CheckupWaitOnline() }
+
+// CheckupWaitOnline says "The other checks run once the phone is connected."
+// in the language of msgs.
+//
+// The checkup of a phone that is not connected or not allowed yet.
+func (msgs Messages) CheckupWaitOnline() string {
+	return Catalog.Format(msgs.locale, "checkupWaitOnline", nil)
+}
+
+// CheckupWarnLabel says "Works, with a limit"
+// in the language the app shows.
+//
+// The checkup: the accessible name of an item's warning mark.
+func CheckupWarnLabel() string { return In(i18n.Locale()).CheckupWarnLabel() }
+
+// CheckupWarnLabel says "Works, with a limit"
+// in the language of msgs.
+//
+// The checkup: the accessible name of an item's warning mark.
+func (msgs Messages) CheckupWarnLabel() string {
+	return Catalog.Format(msgs.locale, "checkupWarnLabel", nil)
+}
+
 // CompanionAllowHint says "If the phone asks, allow the install."
 // in the language the app shows.
 //
@@ -1173,6 +2761,44 @@ func (msgs Messages) CompanionAllowHint() string {
 	return Catalog.Format(msgs.locale, "companionAllowHint", nil)
 }
 
+// CompanionAllowHintOppo says "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account."
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
+// phone, while Pinky installs the app: what to do on the phone. Continue
+// installing is the button of ColorOS's page: use its Simplified Chinese
+// name.
+func CompanionAllowHintOppo() string { return In(i18n.Locale()).CompanionAllowHintOppo() }
+
+// CompanionAllowHintOppo says "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account."
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
+// phone, while Pinky installs the app: what to do on the phone. Continue
+// installing is the button of ColorOS's page: use its Simplified Chinese
+// name.
+func (msgs Messages) CompanionAllowHintOppo() string {
+	return Catalog.Format(msgs.locale, "companionAllowHintOppo", nil)
+}
+
+// CompanionAllowHintXiaomi says "On the phone, tap Install within 10 seconds; keep it unlocked."
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, on a Xiaomi phone, while Pinky
+// installs the app: what to do on the phone. Install is the button of
+// Xiaomi's prompt: use its Simplified Chinese name.
+func CompanionAllowHintXiaomi() string { return In(i18n.Locale()).CompanionAllowHintXiaomi() }
+
+// CompanionAllowHintXiaomi says "On the phone, tap Install within 10 seconds; keep it unlocked."
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, on a Xiaomi phone, while Pinky
+// installs the app: what to do on the phone. Install is the button of
+// Xiaomi's prompt: use its Simplified Chinese name.
+func (msgs Messages) CompanionAllowHintXiaomi() string {
+	return Catalog.Format(msgs.locale, "companionAllowHintXiaomi", nil)
+}
+
 // CompanionCardLabel says "Pinky Companion on {name}"
 // in the language the app shows.
 //
@@ -1187,6 +2813,22 @@ func CompanionCardLabel(name string) string { return In(i18n.Locale()).Companion
 // name.
 func (msgs Messages) CompanionCardLabel(name string) string {
 	return Catalog.Format(msgs.locale, "companionCardLabel", map[string]any{"name": name})
+}
+
+// CompanionErrDeclined says "The install was declined on the phone. Try again, and tap Install when the phone asks."
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: the error when the person or
+// the phone declined the install (the phone's own confirmation).
+func CompanionErrDeclined() string { return In(i18n.Locale()).CompanionErrDeclined() }
+
+// CompanionErrDeclined says "The install was declined on the phone. Try again, and tap Install when the phone asks."
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: the error when the person or
+// the phone declined the install (the phone's own confirmation).
+func (msgs Messages) CompanionErrDeclined() string {
+	return Catalog.Format(msgs.locale, "companionErrDeclined", nil)
 }
 
 // CompanionErrOffline says "The phone went offline. Connect it again, then try again."
@@ -1237,22 +2879,96 @@ func (msgs Messages) CompanionErrPlayProtect() string {
 	return Catalog.Format(msgs.locale, "companionErrPlayProtect", nil)
 }
 
-// CompanionErrRestricted says "The phone blocked the install. Turn on Install via USB in Developer options, then try again."
+// CompanionErrRestricted says "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switc…"
 // in the language the app shows.
 //
-// The Pinky Companion card: the error when the phone blocked installs over
-// USB. Install via USB is the Developer options setting of Xiaomi phones:
-// use its Simplified Chinese name.
+// The Pinky Companion card and the checkup: the error when the phone
+// blocked installs over USB, on a phone whose maker Pinky does not know.
 func CompanionErrRestricted() string { return In(i18n.Locale()).CompanionErrRestricted() }
 
-// CompanionErrRestricted says "The phone blocked the install. Turn on Install via USB in Developer options, then try again."
+// CompanionErrRestricted says "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switc…"
 // in the language of msgs.
 //
-// The Pinky Companion card: the error when the phone blocked installs over
-// USB. Install via USB is the Developer options setting of Xiaomi phones:
-// use its Simplified Chinese name.
+// The Pinky Companion card and the checkup: the error when the phone
+// blocked installs over USB, on a phone whose maker Pinky does not know.
 func (msgs Messages) CompanionErrRestricted() string {
 	return Catalog.Format(msgs.locale, "companionErrRestricted", nil)
+}
+
+// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account), then try…"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, on a Xiaomi phone: the error
+// when the phone blocked installs over USB (the switch is off, or nobody
+// tapped Install in time). Install via USB and Install are Xiaomi's names:
+// use those of its Simplified Chinese settings.
+func CompanionErrRestrictedXiaomi() string { return In(i18n.Locale()).CompanionErrRestrictedXiaomi() }
+
+// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account), then try…"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, on a Xiaomi phone: the error
+// when the phone blocked installs over USB (the switch is off, or nobody
+// tapped Install in time). Install via USB and Install are Xiaomi's names:
+// use those of its Simplified Chinese settings.
+func (msgs Messages) CompanionErrRestrictedXiaomi() string {
+	return Catalog.Format(msgs.locale, "companionErrRestrictedXiaomi", nil)
+}
+
+// CompanionErrSettings says "The phone refuses to let the computer turn on the app's accessibility service: {detail}"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: turning on the app's service
+// failed because the phone refuses settings changes from the computer, on a
+// phone whose maker Pinky does not know.
+func CompanionErrSettings(detail string) string {
+	return In(i18n.Locale()).CompanionErrSettings(detail)
+}
+
+// CompanionErrSettings says "The phone refuses to let the computer turn on the app's accessibility service: {detail}"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: turning on the app's service
+// failed because the phone refuses settings changes from the computer, on a
+// phone whose maker Pinky does not know.
+func (msgs Messages) CompanionErrSettings(detail string) string {
+	return Catalog.Format(msgs.locale, "companionErrSettings", map[string]any{"detail": detail})
+}
+
+// CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, r…"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
+// phone: turning on the app's service failed because permission monitoring
+// is on. Use ColorOS's Simplified Chinese name for the switch.
+func CompanionErrSettingsOppo() string { return In(i18n.Locale()).CompanionErrSettingsOppo() }
+
+// CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, r…"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
+// phone: turning on the app's service failed because permission monitoring
+// is on. Use ColorOS's Simplified Chinese name for the switch.
+func (msgs Messages) CompanionErrSettingsOppo() string {
+	return Catalog.Format(msgs.locale, "companionErrSettingsOppo", nil)
+}
+
+// CompanionErrSettingsXiaomi says "The phone refuses to let the computer turn on the app. In Developer options, turn on USB debugging (Security settings…"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, on a Xiaomi phone: turning on
+// the app's service failed because USB debugging (Security settings) is
+// off. Use the name of Xiaomi's Simplified Chinese settings.
+func CompanionErrSettingsXiaomi() string { return In(i18n.Locale()).CompanionErrSettingsXiaomi() }
+
+// CompanionErrSettingsXiaomi says "The phone refuses to let the computer turn on the app. In Developer options, turn on USB debugging (Security settings…"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, on a Xiaomi phone: turning on
+// the app's service failed because USB debugging (Security settings) is
+// off. Use the name of Xiaomi's Simplified Chinese settings.
+func (msgs Messages) CompanionErrSettingsXiaomi() string {
+	return Catalog.Format(msgs.locale, "companionErrSettingsXiaomi", nil)
 }
 
 // CompanionErrStorage says "The phone is out of space. Free some up, then try again."
@@ -1675,6 +3391,168 @@ func (msgs Messages) CompanionUpdatingTitle() string {
 	return Catalog.Format(msgs.locale, "companionUpdatingTitle", nil)
 }
 
+// ConnectAlsoWorks says "Pinky also works with {names}."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent, when no agent is installed:
+// under the buttons, the other agents Pinky can connect. names is a list.
+func ConnectAlsoWorks(names string) string { return In(i18n.Locale()).ConnectAlsoWorks(names) }
+
+// ConnectAlsoWorks says "Pinky also works with {names}."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent, when no agent is installed:
+// under the buttons, the other agents Pinky can connect. names is a list.
+func (msgs Messages) ConnectAlsoWorks(names string) string {
+	return Catalog.Format(msgs.locale, "connectAlsoWorks", map[string]any{"names": names})
+}
+
+// ConnectByHand says "Add an agent by hand"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the link that shows the
+// commands to add Pinky to an agent yourself.
+func ConnectByHand() string { return In(i18n.Locale()).ConnectByHand() }
+
+// ConnectByHand says "Add an agent by hand"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the link that shows the
+// commands to add Pinky to an agent yourself.
+func (msgs Messages) ConnectByHand() string {
+	return Catalog.Format(msgs.locale, "connectByHand", nil)
+}
+
+// ConnectByHandHide says "Hide the commands"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the link that hides the
+// commands again (connectByHand shows them).
+func ConnectByHandHide() string { return In(i18n.Locale()).ConnectByHandHide() }
+
+// ConnectByHandHide says "Hide the commands"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the link that hides the
+// commands again (connectByHand shows them).
+func (msgs Messages) ConnectByHandHide() string {
+	return Catalog.Format(msgs.locale, "connectByHandHide", nil)
+}
+
+// ConnectCardBroken says "{agent} can't start Pinky"
+// in the language the app shows.
+//
+// The title of the sidebar's card for an agent whose entry for Pinky starts
+// something that does not work (connectWhyMissing or connectWhyCoreutils
+// under it), and its accessibility label.
+func ConnectCardBroken(agent string) string { return In(i18n.Locale()).ConnectCardBroken(agent) }
+
+// ConnectCardBroken says "{agent} can't start Pinky"
+// in the language of msgs.
+//
+// The title of the sidebar's card for an agent whose entry for Pinky starts
+// something that does not work (connectWhyMissing or connectWhyCoreutils
+// under it), and its accessibility label.
+func (msgs Messages) ConnectCardBroken(agent string) string {
+	return Catalog.Format(msgs.locale, "connectCardBroken", map[string]any{"agent": agent})
+}
+
+// ConnectCardChoose says "Choose…"
+// in the language the app shows.
+//
+// The button on the sidebar's card when several agents are installed: it
+// opens Settings › Agents to connect one.
+func ConnectCardChoose() string { return In(i18n.Locale()).ConnectCardChoose() }
+
+// ConnectCardChoose says "Choose…"
+// in the language of msgs.
+//
+// The button on the sidebar's card when several agents are installed: it
+// opens Settings › Agents to connect one.
+func (msgs Messages) ConnectCardChoose() string {
+	return Catalog.Format(msgs.locale, "connectCardChoose", nil)
+}
+
+// ConnectCardFound says "Pinky found {names} on this computer. Connect one to let it use your phones."
+// in the language the app shows.
+//
+// The sidebar's card while no agent is connected and several are installed.
+// names is a list such as “Claude Code, Codex and Cursor”.
+func ConnectCardFound(names string) string { return In(i18n.Locale()).ConnectCardFound(names) }
+
+// ConnectCardFound says "Pinky found {names} on this computer. Connect one to let it use your phones."
+// in the language of msgs.
+//
+// The sidebar's card while no agent is connected and several are installed.
+// names is a list such as “Claude Code, Codex and Cursor”.
+func (msgs Messages) ConnectCardFound(names string) string {
+	return Catalog.Format(msgs.locale, "connectCardFound", map[string]any{"names": names})
+}
+
+// ConnectCardFoundOne says "Pinky found {agent} on this computer. Connect it to let it use your phones."
+// in the language the app shows.
+//
+// The sidebar's card while no agent is connected and one agent is
+// installed, above the button that connects it.
+func ConnectCardFoundOne(agent string) string { return In(i18n.Locale()).ConnectCardFoundOne(agent) }
+
+// ConnectCardFoundOne says "Pinky found {agent} on this computer. Connect it to let it use your phones."
+// in the language of msgs.
+//
+// The sidebar's card while no agent is connected and one agent is
+// installed, above the button that connects it.
+func (msgs Messages) ConnectCardFoundOne(agent string) string {
+	return Catalog.Format(msgs.locale, "connectCardFoundOne", map[string]any{"agent": agent})
+}
+
+// ConnectCardGet says "Get one"
+// in the language the app shows.
+//
+// The button on the sidebar's card when no agent is installed: it opens
+// Settings › Agents, which links to where to get one.
+func ConnectCardGet() string { return In(i18n.Locale()).ConnectCardGet() }
+
+// ConnectCardGet says "Get one"
+// in the language of msgs.
+//
+// The button on the sidebar's card when no agent is installed: it opens
+// Settings › Agents, which links to where to get one.
+func (msgs Messages) ConnectCardGet() string {
+	return Catalog.Format(msgs.locale, "connectCardGet", nil)
+}
+
+// ConnectCardLater says "Not now"
+// in the language the app shows.
+//
+// The sidebar's card about connecting an agent: hides it until Pinky starts
+// again.
+func ConnectCardLater() string { return In(i18n.Locale()).ConnectCardLater() }
+
+// ConnectCardLater says "Not now"
+// in the language of msgs.
+//
+// The sidebar's card about connecting an agent: hides it until Pinky starts
+// again.
+func (msgs Messages) ConnectCardLater() string {
+	return Catalog.Format(msgs.locale, "connectCardLater", nil)
+}
+
+// ConnectCardNone says "Pinky lets an AI agent use your phone. Install one, such as Claude Code or Claude Desktop, then connect it."
+// in the language the app shows.
+//
+// The sidebar's card while no agent is connected and none is installed.
+// Keep the names Claude Code and Claude Desktop.
+func ConnectCardNone() string { return In(i18n.Locale()).ConnectCardNone() }
+
+// ConnectCardNone says "Pinky lets an AI agent use your phone. Install one, such as Claude Code or Claude Desktop, then connect it."
+// in the language of msgs.
+//
+// The sidebar's card while no agent is connected and none is installed.
+// Keep the names Claude Code and Claude Desktop.
+func (msgs Messages) ConnectCardNone() string {
+	return Catalog.Format(msgs.locale, "connectCardNone", nil)
+}
+
 // ConnectClaudeHint says "Run this in a terminal."
 // in the language the app shows.
 //
@@ -1705,6 +3583,40 @@ func ConnectCommandLabel() string { return In(i18n.Locale()).ConnectCommandLabel
 // command shown under Other agents.
 func (msgs Messages) ConnectCommandLabel() string {
 	return Catalog.Format(msgs.locale, "connectCommandLabel", nil)
+}
+
+// ConnectConnect says "Connect"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the button on an agent's row
+// that adds Pinky to the agent's settings.
+func ConnectConnect() string { return In(i18n.Locale()).ConnectConnect() }
+
+// ConnectConnect says "Connect"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the button on an agent's row
+// that adds Pinky to the agent's settings.
+func (msgs Messages) ConnectConnect() string {
+	return Catalog.Format(msgs.locale, "connectConnect", nil)
+}
+
+// ConnectConnectLabel says "Connect {agent}"
+// in the language the app shows.
+//
+// The accessibility label of an agent's Connect button in Settings ›
+// Agents, and the text of the button on the sidebar's card when Pinky found
+// one agent.
+func ConnectConnectLabel(agent string) string { return In(i18n.Locale()).ConnectConnectLabel(agent) }
+
+// ConnectConnectLabel says "Connect {agent}"
+// in the language of msgs.
+//
+// The accessibility label of an agent's Connect button in Settings ›
+// Agents, and the text of the button on the sidebar's card when Pinky found
+// one agent.
+func (msgs Messages) ConnectConnectLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectConnectLabel", map[string]any{"agent": agent})
 }
 
 // ConnectCopyClaude says "Copy the command for Claude Code"
@@ -1739,18 +3651,272 @@ func (msgs Messages) ConnectCopyOther() string {
 	return Catalog.Format(msgs.locale, "connectCopyOther", nil)
 }
 
-// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// ConnectDoneNow says "Connected. Ask {agent} to do something on your phone."
 // in the language the app shows.
 //
-// Settings › Agents › Add an agent: the line under the heading.
-func ConnectIntro() string { return In(i18n.Locale()).ConnectIntro() }
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads the change at once.
+func ConnectDoneNow(agent string) string { return In(i18n.Locale()).ConnectDoneNow(agent) }
 
-// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// ConnectDoneNow says "Connected. Ask {agent} to do something on your phone."
 // in the language of msgs.
 //
-// Settings › Agents › Add an agent: the line under the heading.
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads the change at once.
+func (msgs Messages) ConnectDoneNow(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneNow", map[string]any{"agent": agent})
+}
+
+// ConnectDoneOpened says "Pinky's extension is open in {agent}: click Install there."
+// in the language the app shows.
+//
+// Under Claude Desktop in Settings › Agents, and on the sidebar's card,
+// after Connect opened Pinky's extension (.mcpb) in Claude Desktop, which
+// asks the person to install it. Keep Install as Claude Desktop's button
+// says it.
+func ConnectDoneOpened(agent string) string { return In(i18n.Locale()).ConnectDoneOpened(agent) }
+
+// ConnectDoneOpened says "Pinky's extension is open in {agent}: click Install there."
+// in the language of msgs.
+//
+// Under Claude Desktop in Settings › Agents, and on the sidebar's card,
+// after Connect opened Pinky's extension (.mcpb) in Claude Desktop, which
+// asks the person to install it. Keep Install as Claude Desktop's button
+// says it.
+func (msgs Messages) ConnectDoneOpened(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneOpened", map[string]any{"agent": agent})
+}
+
+// ConnectDoneRestart says "Connected. Quit {agent} and open it again, then ask it to do something on your phone."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an app that reads its settings when it opens (Claude).
+func ConnectDoneRestart(agent string) string { return In(i18n.Locale()).ConnectDoneRestart(agent) }
+
+// ConnectDoneRestart says "Connected. Quit {agent} and open it again, then ask it to do something on your phone."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an app that reads its settings when it opens (Claude).
+func (msgs Messages) ConnectDoneRestart(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneRestart", map[string]any{"agent": agent})
+}
+
+// ConnectDoneSession says "Connected. Start a new {agent} session, then ask it to do something on your phone."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads its MCP servers when a session starts
+// (Claude Code, Codex).
+func ConnectDoneSession(agent string) string { return In(i18n.Locale()).ConnectDoneSession(agent) }
+
+// ConnectDoneSession says "Connected. Start a new {agent} session, then ask it to do something on your phone."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads its MCP servers when a session starts
+// (Claude Code, Codex).
+func (msgs Messages) ConnectDoneSession(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneSession", map[string]any{"agent": agent})
+}
+
+// ConnectFailed says "That didn't work: {error}"
+// in the language the app shows.
+//
+// Under an agent in Settings › Agents, and on the sidebar's card, when
+// connecting it or removing Pinky failed. error is Pinky's or the agent's
+// own message, in English.
+func ConnectFailed(error string) string { return In(i18n.Locale()).ConnectFailed(error) }
+
+// ConnectFailed says "That didn't work: {error}"
+// in the language of msgs.
+//
+// Under an agent in Settings › Agents, and on the sidebar's card, when
+// connecting it or removing Pinky failed. error is Pinky's or the agent's
+// own message, in English.
+func (msgs Messages) ConnectFailed(error string) string {
+	return Catalog.Format(msgs.locale, "connectFailed", map[string]any{"error": error})
+}
+
+// ConnectFix says "Fix"
+// in the language the app shows.
+//
+// The button on the sidebar's card for an agent that can't start Pinky
+// (connectCardBroken), which sets its entry right.
+func ConnectFix() string { return In(i18n.Locale()).ConnectFix() }
+
+// ConnectFix says "Fix"
+// in the language of msgs.
+//
+// The button on the sidebar's card for an agent that can't start Pinky
+// (connectCardBroken), which sets its entry right.
+func (msgs Messages) ConnectFix() string {
+	return Catalog.Format(msgs.locale, "connectFix", nil)
+}
+
+// ConnectFixLabel says "Fix Pinky in {agent}"
+// in the language the app shows.
+//
+// The accessibility label of the Fix button on the sidebar's card.
+func ConnectFixLabel(agent string) string { return In(i18n.Locale()).ConnectFixLabel(agent) }
+
+// ConnectFixLabel says "Fix Pinky in {agent}"
+// in the language of msgs.
+//
+// The accessibility label of the Fix button on the sidebar's card.
+func (msgs Messages) ConnectFixLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectFixLabel", map[string]any{"agent": agent})
+}
+
+// ConnectFoundLabel says "Agents on this computer"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// list of agents found on this computer.
+func ConnectFoundLabel() string { return In(i18n.Locale()).ConnectFoundLabel() }
+
+// ConnectFoundLabel says "Agents on this computer"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// list of agents found on this computer.
+func (msgs Messages) ConnectFoundLabel() string {
+	return Catalog.Format(msgs.locale, "connectFoundLabel", nil)
+}
+
+// ConnectGet says "Get {agent}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent, when no agent is installed: a
+// button that opens the agent's download page.
+func ConnectGet(agent string) string { return In(i18n.Locale()).ConnectGet(agent) }
+
+// ConnectGet says "Get {agent}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent, when no agent is installed: a
+// button that opens the agent's download page.
+func (msgs Messages) ConnectGet(agent string) string {
+	return Catalog.Format(msgs.locale, "connectGet", map[string]any{"agent": agent})
+}
+
+// ConnectIntro says "Connect adds Pinky to an agent's settings on this computer, after keeping a copy of them. You allow each agent the fi…"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the line under the heading,
+// above the agents found on this computer.
+func ConnectIntro() string { return In(i18n.Locale()).ConnectIntro() }
+
+// ConnectIntro says "Connect adds Pinky to an agent's settings on this computer, after keeping a copy of them. You allow each agent the fi…"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the line under the heading,
+// above the agents found on this computer.
 func (msgs Messages) ConnectIntro() string {
 	return Catalog.Format(msgs.locale, "connectIntro", nil)
+}
+
+// ConnectIntroByHand says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent, in a Pinky that cannot change
+// agents' settings: the line under the heading, above the commands.
+func ConnectIntroByHand() string { return In(i18n.Locale()).ConnectIntroByHand() }
+
+// ConnectIntroByHand says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent, in a Pinky that cannot change
+// agents' settings: the line under the heading, above the commands.
+func (msgs Messages) ConnectIntroByHand() string {
+	return Catalog.Format(msgs.locale, "connectIntroByHand", nil)
+}
+
+// ConnectKeptCopy says "Pinky kept a copy of the settings as they were."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent after Pinky
+// changed its settings file, before the Show link (connectShowCopy).
+func ConnectKeptCopy() string { return In(i18n.Locale()).ConnectKeptCopy() }
+
+// ConnectKeptCopy says "Pinky kept a copy of the settings as they were."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent after Pinky
+// changed its settings file, before the Show link (connectShowCopy).
+func (msgs Messages) ConnectKeptCopy() string {
+	return Catalog.Format(msgs.locale, "connectKeptCopy", nil)
+}
+
+// ConnectLooking says "Looking for agents on this computer…"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: in place of the list of agents
+// while Pinky looks for them.
+func ConnectLooking() string { return In(i18n.Locale()).ConnectLooking() }
+
+// ConnectLooking says "Looking for agents on this computer…"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: in place of the list of agents
+// while Pinky looks for them.
+func (msgs Messages) ConnectLooking() string {
+	return Catalog.Format(msgs.locale, "connectLooking", nil)
+}
+
+// ConnectManual says "Pinky can't change its settings here. Add it by hand."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that Pinky cannot connect on this system (Add an agent by hand below
+// shows the commands).
+func ConnectManual() string { return In(i18n.Locale()).ConnectManual() }
+
+// ConnectManual says "Pinky can't change its settings here. Add it by hand."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that Pinky cannot connect on this system (Add an agent by hand below
+// shows the commands).
+func (msgs Messages) ConnectManual() string {
+	return Catalog.Format(msgs.locale, "connectManual", nil)
+}
+
+// ConnectNoneFound says "Pinky found no agent on this computer. Install one, then connect it here."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: in place of the list when no
+// agent Pinky knows is installed, above the buttons that open where to get
+// one.
+func ConnectNoneFound() string { return In(i18n.Locale()).ConnectNoneFound() }
+
+// ConnectNoneFound says "Pinky found no agent on this computer. Install one, then connect it here."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: in place of the list when no
+// agent Pinky knows is installed, above the buttons that open where to get
+// one.
+func (msgs Messages) ConnectNoneFound() string {
+	return Catalog.Format(msgs.locale, "connectNoneFound", nil)
+}
+
+// ConnectNotHere says "Not on this computer: {names}."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under the list, the agents
+// Pinky knows how to connect that are not installed here. names is a list
+// such as “Cursor, Windsurf and Gemini CLI”.
+func ConnectNotHere(names string) string { return In(i18n.Locale()).ConnectNotHere(names) }
+
+// ConnectNotHere says "Not on this computer: {names}."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under the list, the agents
+// Pinky knows how to connect that are not installed here. names is a list
+// such as “Cursor, Windsurf and Gemini CLI”.
+func (msgs Messages) ConnectNotHere(names string) string {
+	return Catalog.Format(msgs.locale, "connectNotHere", map[string]any{"names": names})
 }
 
 // ConnectOtherHint says "Set this as the command of an MCP server over stdio."
@@ -1787,20 +3953,466 @@ func (msgs Messages) ConnectOtherTitle() string {
 	return Catalog.Format(msgs.locale, "connectOtherTitle", nil)
 }
 
-// ConnectTitle says "Add an agent"
+// ConnectProblem says "Pinky can't change its settings: {problem}"
 // in the language the app shows.
 //
-// Settings › Agents: the heading of the part that says how to add an
-// agent on this computer, and its accessibility label.
-func ConnectTitle() string { return In(i18n.Locale()).ConnectTitle() }
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings file Pinky cannot read, such as one with a mistake in it.
+// problem is the file and what is wrong with it, in English.
+func ConnectProblem(problem string) string { return In(i18n.Locale()).ConnectProblem(problem) }
 
-// ConnectTitle says "Add an agent"
+// ConnectProblem says "Pinky can't change its settings: {problem}"
 // in the language of msgs.
 //
-// Settings › Agents: the heading of the part that says how to add an
-// agent on this computer, and its accessibility label.
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings file Pinky cannot read, such as one with a mistake in it.
+// problem is the file and what is wrong with it, in English.
+func (msgs Messages) ConnectProblem(problem string) string {
+	return Catalog.Format(msgs.locale, "connectProblem", map[string]any{"problem": problem})
+}
+
+// ConnectRemove says "Remove"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the button on a connected
+// agent's row that takes Pinky out of its settings.
+func ConnectRemove() string { return In(i18n.Locale()).ConnectRemove() }
+
+// ConnectRemove says "Remove"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the button on a connected
+// agent's row that takes Pinky out of its settings.
+func (msgs Messages) ConnectRemove() string {
+	return Catalog.Format(msgs.locale, "connectRemove", nil)
+}
+
+// ConnectRemoveLabel says "Remove Pinky from {agent}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Remove button.
+func ConnectRemoveLabel(agent string) string { return In(i18n.Locale()).ConnectRemoveLabel(agent) }
+
+// ConnectRemoveLabel says "Remove Pinky from {agent}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Remove button.
+func (msgs Messages) ConnectRemoveLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectRemoveLabel", map[string]any{"agent": agent})
+}
+
+// ConnectRemoveTip says "Takes Pinky out of {file}, after keeping a copy of it"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the tooltip of an agent's
+// Remove button. file is the agent's settings file.
+func ConnectRemoveTip(file string) string { return In(i18n.Locale()).ConnectRemoveTip(file) }
+
+// ConnectRemoveTip says "Takes Pinky out of {file}, after keeping a copy of it"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the tooltip of an agent's
+// Remove button. file is the agent's settings file.
+func (msgs Messages) ConnectRemoveTip(file string) string {
+	return Catalog.Format(msgs.locale, "connectRemoveTip", map[string]any{"file": file})
+}
+
+// ConnectRemoved says "Removed."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// taken out of its settings.
+func ConnectRemoved() string { return In(i18n.Locale()).ConnectRemoved() }
+
+// ConnectRemoved says "Removed."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// taken out of its settings.
+func (msgs Messages) ConnectRemoved() string {
+	return Catalog.Format(msgs.locale, "connectRemoved", nil)
+}
+
+// ConnectRemovedRestart says "Removed. {agent} stops using Pinky once you quit it and open it again."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an app that reads its
+// settings when it opens, once Pinky is taken out of them.
+func ConnectRemovedRestart(agent string) string {
+	return In(i18n.Locale()).ConnectRemovedRestart(agent)
+}
+
+// ConnectRemovedRestart says "Removed. {agent} stops using Pinky once you quit it and open it again."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an app that reads its
+// settings when it opens, once Pinky is taken out of them.
+func (msgs Messages) ConnectRemovedRestart(agent string) string {
+	return Catalog.Format(msgs.locale, "connectRemovedRestart", map[string]any{"agent": agent})
+}
+
+// ConnectShowCopy says "Show"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the link after connectKeptCopy
+// that shows the copy of the agent's settings in Finder or the file
+// manager.
+func ConnectShowCopy() string { return In(i18n.Locale()).ConnectShowCopy() }
+
+// ConnectShowCopy says "Show"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the link after connectKeptCopy
+// that shows the copy of the agent's settings in Finder or the file
+// manager.
+func (msgs Messages) ConnectShowCopy() string {
+	return Catalog.Format(msgs.locale, "connectShowCopy", nil)
+}
+
+// ConnectShowCopyLabel says "Show the copy of {agent}'s settings"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show link.
+func ConnectShowCopyLabel(agent string) string { return In(i18n.Locale()).ConnectShowCopyLabel(agent) }
+
+// ConnectShowCopyLabel says "Show the copy of {agent}'s settings"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show link.
+func (msgs Messages) ConnectShowCopyLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectShowCopyLabel", map[string]any{"agent": agent})
+}
+
+// ConnectShowFile says "Show the file"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: a link under an agent whose
+// settings file Pinky cannot read (connectProblem), which shows the file in
+// Finder or the file manager so the person can fix it.
+func ConnectShowFile() string { return In(i18n.Locale()).ConnectShowFile() }
+
+// ConnectShowFile says "Show the file"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: a link under an agent whose
+// settings file Pinky cannot read (connectProblem), which shows the file in
+// Finder or the file manager so the person can fix it.
+func (msgs Messages) ConnectShowFile() string {
+	return Catalog.Format(msgs.locale, "connectShowFile", nil)
+}
+
+// ConnectShowFileLabel says "Show {agent}'s settings file"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show the file link.
+func ConnectShowFileLabel(agent string) string { return In(i18n.Locale()).ConnectShowFileLabel(agent) }
+
+// ConnectShowFileLabel says "Show {agent}'s settings file"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show the file link.
+func (msgs Messages) ConnectShowFileLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectShowFileLabel", map[string]any{"agent": agent})
+}
+
+// ConnectStateConnected says "Connected"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings start this Pinky.
+func ConnectStateConnected() string { return In(i18n.Locale()).ConnectStateConnected() }
+
+// ConnectStateConnected says "Connected"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings start this Pinky.
+func (msgs Messages) ConnectStateConnected() string {
+	return Catalog.Format(msgs.locale, "connectStateConnected", nil)
+}
+
+// ConnectStateExtension says "Connected as an extension. Remove it in {agent}'s Settings › Extensions."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky is installed as its extension (from Pinky's .mcpb),
+// which only Claude Desktop removes. Keep Settings › Extensions as Claude
+// Desktop names it.
+func ConnectStateExtension(agent string) string {
+	return In(i18n.Locale()).ConnectStateExtension(agent)
+}
+
+// ConnectStateExtension says "Connected as an extension. Remove it in {agent}'s Settings › Extensions."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky is installed as its extension (from Pinky's .mcpb),
+// which only Claude Desktop removes. Keep Settings › Extensions as Claude
+// Desktop names it.
+func (msgs Messages) ConnectStateExtension(agent string) string {
+	return Catalog.Format(msgs.locale, "connectStateExtension", map[string]any{"agent": agent})
+}
+
+// ConnectStateNotConnected says "Not connected"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent on
+// this computer that does not have Pinky.
+func ConnectStateNotConnected() string { return In(i18n.Locale()).ConnectStateNotConnected() }
+
+// ConnectStateNotConnected says "Not connected"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent on
+// this computer that does not have Pinky.
+func (msgs Messages) ConnectStateNotConnected() string {
+	return Catalog.Format(msgs.locale, "connectStateNotConnected", nil)
+}
+
+// ConnectTip says "Adds Pinky to {file}, after keeping a copy of it"
+// in the language the app shows.
+//
+// The tooltip of an agent's Connect, Update and Fix buttons, in Settings
+// › Agents and on the sidebar's card. file is the agent's settings file.
+func ConnectTip(file string) string { return In(i18n.Locale()).ConnectTip(file) }
+
+// ConnectTip says "Adds Pinky to {file}, after keeping a copy of it"
+// in the language of msgs.
+//
+// The tooltip of an agent's Connect, Update and Fix buttons, in Settings
+// › Agents and on the sidebar's card. file is the agent's settings file.
+func (msgs Messages) ConnectTip(file string) string {
+	return Catalog.Format(msgs.locale, "connectTip", map[string]any{"file": file})
+}
+
+// ConnectTipOpens says "Opens Pinky's extension in {agent}, which asks you to install it"
+// in the language the app shows.
+//
+// The tooltip of Claude Desktop's Connect button, in Settings › Agents
+// and on the sidebar's card: Connect opens Pinky's extension (.mcpb) in
+// Claude Desktop instead of changing a file.
+func ConnectTipOpens(agent string) string { return In(i18n.Locale()).ConnectTipOpens(agent) }
+
+// ConnectTipOpens says "Opens Pinky's extension in {agent}, which asks you to install it"
+// in the language of msgs.
+//
+// The tooltip of Claude Desktop's Connect button, in Settings › Agents
+// and on the sidebar's card: Connect opens Pinky's extension (.mcpb) in
+// Claude Desktop instead of changing a file.
+func (msgs Messages) ConnectTipOpens(agent string) string {
+	return Catalog.Format(msgs.locale, "connectTipOpens", map[string]any{"agent": agent})
+}
+
+// ConnectTitle says "Connect an agent"
+// in the language the app shows.
+//
+// Settings › Agents: the heading of the part that connects the agents on
+// this computer to Pinky (or, without that, says how to add one by hand),
+// and its accessibility label; also the title of the sidebar's card that
+// suggests connecting an agent while none is, and of the link under Tasks
+// then.
+func ConnectTitle() string { return In(i18n.Locale()).ConnectTitle() }
+
+// ConnectTitle says "Connect an agent"
+// in the language of msgs.
+//
+// Settings › Agents: the heading of the part that connects the agents on
+// this computer to Pinky (or, without that, says how to add one by hand),
+// and its accessibility label; also the title of the sidebar's card that
+// suggests connecting an agent while none is, and of the link under Tasks
+// then.
 func (msgs Messages) ConnectTitle() string {
 	return Catalog.Format(msgs.locale, "connectTitle", nil)
+}
+
+// ConnectToastConnected says "Connected {agent}"
+// in the language the app shows.
+//
+// A toast once Pinky was added to an agent's settings.
+func ConnectToastConnected(agent string) string {
+	return In(i18n.Locale()).ConnectToastConnected(agent)
+}
+
+// ConnectToastConnected says "Connected {agent}"
+// in the language of msgs.
+//
+// A toast once Pinky was added to an agent's settings.
+func (msgs Messages) ConnectToastConnected(agent string) string {
+	return Catalog.Format(msgs.locale, "connectToastConnected", map[string]any{"agent": agent})
+}
+
+// ConnectToastOpened says "Opened Pinky's extension in {agent}"
+// in the language the app shows.
+//
+// A toast once Connect opened Pinky's extension in Claude Desktop.
+func ConnectToastOpened(agent string) string { return In(i18n.Locale()).ConnectToastOpened(agent) }
+
+// ConnectToastOpened says "Opened Pinky's extension in {agent}"
+// in the language of msgs.
+//
+// A toast once Connect opened Pinky's extension in Claude Desktop.
+func (msgs Messages) ConnectToastOpened(agent string) string {
+	return Catalog.Format(msgs.locale, "connectToastOpened", map[string]any{"agent": agent})
+}
+
+// ConnectUpdate says "Update"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the button on the row of an
+// agent whose entry for Pinky is out of date (it starts a Pinky that moved,
+// say), which sets it right.
+func ConnectUpdate() string { return In(i18n.Locale()).ConnectUpdate() }
+
+// ConnectUpdate says "Update"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the button on the row of an
+// agent whose entry for Pinky is out of date (it starts a Pinky that moved,
+// say), which sets it right.
+func (msgs Messages) ConnectUpdate() string {
+	return Catalog.Format(msgs.locale, "connectUpdate", nil)
+}
+
+// ConnectUpdateLabel says "Update Pinky in {agent}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Update button.
+func ConnectUpdateLabel(agent string) string { return In(i18n.Locale()).ConnectUpdateLabel(agent) }
+
+// ConnectUpdateLabel says "Update Pinky in {agent}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Update button.
+func (msgs Messages) ConnectUpdateLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectUpdateLabel", map[string]any{"agent": agent})
+}
+
+// ConnectWhyCoreutils says "Starts “pinky”, which may be another program of that name"
+// in the language the app shows.
+//
+// The second line of an agent set up with the old command pinky mcp, which
+// many computers run as coreutils' own pinky, in Settings › Agents and on
+// the sidebar's card. Keep “pinky” as it is.
+func ConnectWhyCoreutils() string { return In(i18n.Locale()).ConnectWhyCoreutils() }
+
+// ConnectWhyCoreutils says "Starts “pinky”, which may be another program of that name"
+// in the language of msgs.
+//
+// The second line of an agent set up with the old command pinky mcp, which
+// many computers run as coreutils' own pinky, in Settings › Agents and on
+// the sidebar's card. Keep “pinky” as it is.
+func (msgs Messages) ConnectWhyCoreutils() string {
+	return Catalog.Format(msgs.locale, "connectWhyCoreutils", nil)
+}
+
+// ConnectWhyMissing says "Starts a Pinky that is no longer there"
+// in the language the app shows.
+//
+// The second line of an agent whose entry for Pinky starts a program that
+// is gone (Pinky moved), in Settings › Agents and on the sidebar's card.
+func ConnectWhyMissing() string { return In(i18n.Locale()).ConnectWhyMissing() }
+
+// ConnectWhyMissing says "Starts a Pinky that is no longer there"
+// in the language of msgs.
+//
+// The second line of an agent whose entry for Pinky starts a program that
+// is gone (Pinky moved), in Settings › Agents and on the sidebar's card.
+func (msgs Messages) ConnectWhyMissing() string {
+	return Catalog.Format(msgs.locale, "connectWhyMissing", nil)
+}
+
+// ConnectWhyOff says "Turned off in {agent}'s Settings › Extensions"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky's extension is installed but turned off there.
+func ConnectWhyOff(agent string) string { return In(i18n.Locale()).ConnectWhyOff(agent) }
+
+// ConnectWhyOff says "Turned off in {agent}'s Settings › Extensions"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky's extension is installed but turned off there.
+func (msgs Messages) ConnectWhyOff(agent string) string {
+	return Catalog.Format(msgs.locale, "connectWhyOff", map[string]any{"agent": agent})
+}
+
+// ConnectWhyOther says "Its entry named pinky starts {command}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose MCP server named pinky starts something else. command is that
+// command line.
+func ConnectWhyOther(command string) string { return In(i18n.Locale()).ConnectWhyOther(command) }
+
+// ConnectWhyOther says "Its entry named pinky starts {command}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose MCP server named pinky starts something else. command is that
+// command line.
+func (msgs Messages) ConnectWhyOther(command string) string {
+	return Catalog.Format(msgs.locale, "connectWhyOther", map[string]any{"command": command})
+}
+
+// ConnectWhyOtherPinky says "Starts another copy of Pinky"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose entry starts Pinky from another place than the one open.
+func ConnectWhyOtherPinky() string { return In(i18n.Locale()).ConnectWhyOtherPinky() }
+
+// ConnectWhyOtherPinky says "Starts another copy of Pinky"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose entry starts Pinky from another place than the one open.
+func (msgs Messages) ConnectWhyOtherPinky() string {
+	return Catalog.Format(msgs.locale, "connectWhyOtherPinky", nil)
+}
+
+// ConnectWhySkill says "Connected, with an old copy of Pinky's guide"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that has Pinky, but whose copy of Pinky's skill (the guide agents read)
+// is missing or from another version; Update installs the current one.
+func ConnectWhySkill() string { return In(i18n.Locale()).ConnectWhySkill() }
+
+// ConnectWhySkill says "Connected, with an old copy of Pinky's guide"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that has Pinky, but whose copy of Pinky's skill (the guide agents read)
+// is missing or from another version; Update installs the current one.
+func (msgs Messages) ConnectWhySkill() string {
+	return Catalog.Format(msgs.locale, "connectWhySkill", nil)
+}
+
+// ConnectWorking says "Changing {agent}'s settings"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// spinner on an agent's row while Pinky adds itself to the agent or removes
+// itself.
+func ConnectWorking(agent string) string { return In(i18n.Locale()).ConnectWorking(agent) }
+
+// ConnectWorking says "Changing {agent}'s settings"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// spinner on an agent's row while Pinky adds itself to the agent or removes
+// itself.
+func (msgs Messages) ConnectWorking(agent string) string {
+	return Catalog.Format(msgs.locale, "connectWorking", map[string]any{"agent": agent})
 }
 
 // ConnectionAuto says "Automatic"
@@ -2769,6 +5381,1012 @@ func FlyoutUnlock() string { return In(i18n.Locale()).FlyoutUnlock() }
 // a click opens the phone to unlock it.
 func (msgs Messages) FlyoutUnlock() string {
 	return Catalog.Format(msgs.locale, "flyoutUnlock", nil)
+}
+
+// GuideHonorAbout says "Settings › About phone"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on HONOR phones: where the item to tap 7
+// times is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func GuideHonorAbout() string { return In(i18n.Locale()).GuideHonorAbout() }
+
+// GuideHonorAbout says "Settings › About phone"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on HONOR phones: where the item to tap 7
+// times is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func (msgs Messages) GuideHonorAbout() string {
+	return Catalog.Format(msgs.locale, "guideHonorAbout", nil)
+}
+
+// GuideHonorAboutNote says "Only the phone's owner can turn it on: not in a second user or a private space."
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on HONOR phones: a note under the steps.
+func GuideHonorAboutNote() string { return In(i18n.Locale()).GuideHonorAboutNote() }
+
+// GuideHonorAboutNote says "Only the phone's owner can turn it on: not in a second user or a private space."
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on HONOR phones: a note under the steps.
+func (msgs Messages) GuideHonorAboutNote() string {
+	return Catalog.Format(msgs.locale, "guideHonorAboutNote", nil)
+}
+
+// GuideHonorDev says "Settings › System & updates › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HONOR phones: where Developer options is
+// once it is on. Write it as menu names joined by ›, as the phone shows
+// them in Simplified Chinese.
+func GuideHonorDev() string { return In(i18n.Locale()).GuideHonorDev() }
+
+// GuideHonorDev says "Settings › System & updates › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HONOR phones: where Developer options is
+// once it is on. Write it as menu names joined by ›, as the phone shows
+// them in Simplified Chinese.
+func (msgs Messages) GuideHonorDev() string {
+	return Catalog.Format(msgs.locale, "guideHonorDev", nil)
+}
+
+// GuideHonorNote says "If the phone asks what to use USB for, pick Transfer files."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HONOR phones: a note under the switches.
+func GuideHonorNote() string { return In(i18n.Locale()).GuideHonorNote() }
+
+// GuideHonorNote says "If the phone asks what to use USB for, pick Transfer files."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HONOR phones: a note under the switches.
+func (msgs Messages) GuideHonorNote() string {
+	return Catalog.Format(msgs.locale, "guideHonorNote", nil)
+}
+
+// GuideHonorPromptAlways says "Always allow from this computer"
+// in the language the app shows.
+//
+// Add phone › Android, step 3 on HONOR phones: the check box of HONOR's
+// prompt to allow USB debugging. Use HONOR's Simplified Chinese words.
+func GuideHonorPromptAlways() string { return In(i18n.Locale()).GuideHonorPromptAlways() }
+
+// GuideHonorPromptAlways says "Always allow from this computer"
+// in the language of msgs.
+//
+// Add phone › Android, step 3 on HONOR phones: the check box of HONOR's
+// prompt to allow USB debugging. Use HONOR's Simplified Chinese words.
+func (msgs Messages) GuideHonorPromptAlways() string {
+	return Catalog.Format(msgs.locale, "guideHonorPromptAlways", nil)
+}
+
+// GuideHonorSwitchCharge says "Allow ADB debugging in charge only mode"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HONOR phones: HONOR's switch that keeps
+// USB debugging on. Use the name of HONOR's Simplified Chinese settings, as
+// written there.
+func GuideHonorSwitchCharge() string { return In(i18n.Locale()).GuideHonorSwitchCharge() }
+
+// GuideHonorSwitchCharge says "Allow ADB debugging in charge only mode"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HONOR phones: HONOR's switch that keeps
+// USB debugging on. Use the name of HONOR's Simplified Chinese settings, as
+// written there.
+func (msgs Messages) GuideHonorSwitchCharge() string {
+	return Catalog.Format(msgs.locale, "guideHonorSwitchCharge", nil)
+}
+
+// GuideHonorSwitchChargeWhy says "Turn this on first: without it, HONOR turns USB debugging off again after a while, or when you unplug the phone."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HONOR phones: why to turn on the
+// charge-only switch, before USB debugging.
+func GuideHonorSwitchChargeWhy() string { return In(i18n.Locale()).GuideHonorSwitchChargeWhy() }
+
+// GuideHonorSwitchChargeWhy says "Turn this on first: without it, HONOR turns USB debugging off again after a while, or when you unplug the phone."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HONOR phones: why to turn on the
+// charge-only switch, before USB debugging.
+func (msgs Messages) GuideHonorSwitchChargeWhy() string {
+	return Catalog.Format(msgs.locale, "guideHonorSwitchChargeWhy", nil)
+}
+
+// GuideHonorTap says "Build number"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on HONOR phones: the item to tap 7 times,
+// as the phone names it.
+func GuideHonorTap() string { return In(i18n.Locale()).GuideHonorTap() }
+
+// GuideHonorTap says "Build number"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on HONOR phones: the item to tap 7 times,
+// as the phone names it.
+func (msgs Messages) GuideHonorTap() string {
+	return Catalog.Format(msgs.locale, "guideHonorTap", nil)
+}
+
+// GuideHuaweiAbout says "Settings › About phone"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on HUAWEI phones: where the item to tap 7
+// times is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func GuideHuaweiAbout() string { return In(i18n.Locale()).GuideHuaweiAbout() }
+
+// GuideHuaweiAbout says "Settings › About phone"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on HUAWEI phones: where the item to tap 7
+// times is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func (msgs Messages) GuideHuaweiAbout() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiAbout", nil)
+}
+
+// GuideHuaweiAboutNote says "On HarmonyOS 2 to 4, tap HarmonyOS version. Phones on HarmonyOS 5 or later (HarmonyOS NEXT) run no Android and have n…"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on HUAWEI phones: a note under the steps.
+func GuideHuaweiAboutNote() string { return In(i18n.Locale()).GuideHuaweiAboutNote() }
+
+// GuideHuaweiAboutNote says "On HarmonyOS 2 to 4, tap HarmonyOS version. Phones on HarmonyOS 5 or later (HarmonyOS NEXT) run no Android and have n…"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on HUAWEI phones: a note under the steps.
+func (msgs Messages) GuideHuaweiAboutNote() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiAboutNote", nil)
+}
+
+// GuideHuaweiDev says "Settings › System & updates › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: where Developer options
+// is once it is on. Write it as menu names joined by ›, as the phone
+// shows them in Simplified Chinese.
+func GuideHuaweiDev() string { return In(i18n.Locale()).GuideHuaweiDev() }
+
+// GuideHuaweiDev says "Settings › System & updates › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: where Developer options
+// is once it is on. Write it as menu names joined by ›, as the phone
+// shows them in Simplified Chinese.
+func (msgs Messages) GuideHuaweiDev() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiDev", nil)
+}
+
+// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky Companion is blocked, turn off Enhanc…"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: a note under the
+// switches.
+func GuideHuaweiNote() string { return In(i18n.Locale()).GuideHuaweiNote() }
+
+// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky Companion is blocked, turn off Enhanc…"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: a note under the
+// switches.
+func (msgs Messages) GuideHuaweiNote() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiNote", nil)
+}
+
+// GuideHuaweiPromptAlways says "Always allow from this computer"
+// in the language the app shows.
+//
+// Add phone › Android, step 3 on HUAWEI phones: the check box of Huawei's
+// prompt to allow USB debugging. Use Huawei's Simplified Chinese words.
+func GuideHuaweiPromptAlways() string { return In(i18n.Locale()).GuideHuaweiPromptAlways() }
+
+// GuideHuaweiPromptAlways says "Always allow from this computer"
+// in the language of msgs.
+//
+// Add phone › Android, step 3 on HUAWEI phones: the check box of Huawei's
+// prompt to allow USB debugging. Use Huawei's Simplified Chinese words.
+func (msgs Messages) GuideHuaweiPromptAlways() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiPromptAlways", nil)
+}
+
+// GuideHuaweiSwitchCharge says "Allow ADB debugging in charge only mode"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: the switch Huawei asks to
+// turn on with USB debugging. Use the name of Huawei's Simplified Chinese
+// settings, as written there.
+func GuideHuaweiSwitchCharge() string { return In(i18n.Locale()).GuideHuaweiSwitchCharge() }
+
+// GuideHuaweiSwitchCharge says "Allow ADB debugging in charge only mode"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: the switch Huawei asks to
+// turn on with USB debugging. Use the name of Huawei's Simplified Chinese
+// settings, as written there.
+func (msgs Messages) GuideHuaweiSwitchCharge() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiSwitchCharge", nil)
+}
+
+// GuideHuaweiSwitchChargeWhy says "Turn this on first: Huawei asks for it with USB debugging, which otherwise may not turn on or may turn itself off."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: why to turn on the
+// charge-only switch, before USB debugging.
+func GuideHuaweiSwitchChargeWhy() string { return In(i18n.Locale()).GuideHuaweiSwitchChargeWhy() }
+
+// GuideHuaweiSwitchChargeWhy says "Turn this on first: Huawei asks for it with USB debugging, which otherwise may not turn on or may turn itself off."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: why to turn on the
+// charge-only switch, before USB debugging.
+func (msgs Messages) GuideHuaweiSwitchChargeWhy() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiSwitchChargeWhy", nil)
+}
+
+// GuideHuaweiSwitchMonitor says "Monitor apps installed by ADB"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: the switch that makes
+// each install over USB wait for a confirmation. Use the name of Huawei's
+// Simplified Chinese settings.
+func GuideHuaweiSwitchMonitor() string { return In(i18n.Locale()).GuideHuaweiSwitchMonitor() }
+
+// GuideHuaweiSwitchMonitor says "Monitor apps installed by ADB"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: the switch that makes
+// each install over USB wait for a confirmation. Use the name of Huawei's
+// Simplified Chinese settings.
+func (msgs Messages) GuideHuaweiSwitchMonitor() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiSwitchMonitor", nil)
+}
+
+// GuideHuaweiSwitchMonitorWhy says "While it's on, each install waits for you to confirm it on the phone."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: why to turn Monitor apps
+// installed by ADB off.
+func GuideHuaweiSwitchMonitorWhy() string { return In(i18n.Locale()).GuideHuaweiSwitchMonitorWhy() }
+
+// GuideHuaweiSwitchMonitorWhy says "While it's on, each install waits for you to confirm it on the phone."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: why to turn Monitor apps
+// installed by ADB off.
+func (msgs Messages) GuideHuaweiSwitchMonitorWhy() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiSwitchMonitorWhy", nil)
+}
+
+// GuideHuaweiTap says "Build number"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on HUAWEI phones: the item to tap 7 times,
+// as the phone names it.
+func GuideHuaweiTap() string { return In(i18n.Locale()).GuideHuaweiTap() }
+
+// GuideHuaweiTap says "Build number"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on HUAWEI phones: the item to tap 7 times,
+// as the phone names it.
+func (msgs Messages) GuideHuaweiTap() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiTap", nil)
+}
+
+// GuideOppoAbout says "Settings › About device › Version"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on OPPO, OnePlus and realme phones: where
+// the item to tap 7 times is. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func GuideOppoAbout() string { return In(i18n.Locale()).GuideOppoAbout() }
+
+// GuideOppoAbout says "Settings › About device › Version"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on OPPO, OnePlus and realme phones: where
+// the item to tap 7 times is. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func (msgs Messages) GuideOppoAbout() string {
+	return Catalog.Format(msgs.locale, "guideOppoAbout", nil)
+}
+
+// GuideOppoAboutNote says "On some versions the item is named Version number; on older ones it's under Settings › About phone › Version."
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on OPPO, OnePlus and realme phones: a note
+// under the steps.
+func GuideOppoAboutNote() string { return In(i18n.Locale()).GuideOppoAboutNote() }
+
+// GuideOppoAboutNote says "On some versions the item is named Version number; on older ones it's under Settings › About phone › Version."
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on OPPO, OnePlus and realme phones: a note
+// under the steps.
+func (msgs Messages) GuideOppoAboutNote() string {
+	return Catalog.Format(msgs.locale, "guideOppoAboutNote", nil)
+}
+
+// GuideOppoDev says "Settings › System & update › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones: where
+// Developer options is once it is on. Write it as menu names joined by ›,
+// as the phone shows them in Simplified Chinese.
+func GuideOppoDev() string { return In(i18n.Locale()).GuideOppoDev() }
+
+// GuideOppoDev says "Settings › System & update › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones: where
+// Developer options is once it is on. Write it as menu names joined by ›,
+// as the phone shows them in Simplified Chinese.
+func (msgs Messages) GuideOppoDev() string {
+	return Catalog.Format(msgs.locale, "guideOppoDev", nil)
+}
+
+// GuideOppoNote says "On ColorOS 13 and 14, Developer options is under Settings › Additional settings, at the bottom; you can also search…"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones: a note
+// under the switches.
+func GuideOppoNote() string { return In(i18n.Locale()).GuideOppoNote() }
+
+// GuideOppoNote says "On ColorOS 13 and 14, Developer options is under Settings › Additional settings, at the bottom; you can also search…"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones: a note
+// under the switches.
+func (msgs Messages) GuideOppoNote() string {
+	return Catalog.Format(msgs.locale, "guideOppoNote", nil)
+}
+
+// GuideOppoSwitchMonitor says "Disable permission monitoring"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones:
+// ColorOS's switch at the bottom of Developer options. Use the name of
+// ColorOS's Simplified Chinese settings.
+func GuideOppoSwitchMonitor() string { return In(i18n.Locale()).GuideOppoSwitchMonitor() }
+
+// GuideOppoSwitchMonitor says "Disable permission monitoring"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones:
+// ColorOS's switch at the bottom of Developer options. Use the name of
+// ColorOS's Simplified Chinese settings.
+func (msgs Messages) GuideOppoSwitchMonitor() string {
+	return Catalog.Format(msgs.locale, "guideOppoSwitchMonitor", nil)
+}
+
+// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on its companion app. It's at the bottom of Developer options; restart the phone after turning it on.…"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to
+// turn on Disable permission monitoring, and how to find it on version 16.
+// Disable system optimization and Turn on anyway are the English names the
+// phone shows: keep them in English.
+func GuideOppoSwitchMonitorWhy() string { return In(i18n.Locale()).GuideOppoSwitchMonitorWhy() }
+
+// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on its companion app. It's at the bottom of Developer options; restart the phone after turning it on.…"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to
+// turn on Disable permission monitoring, and how to find it on version 16.
+// Disable system optimization and Turn on anyway are the English names the
+// phone shows: keep them in English.
+func (msgs Messages) GuideOppoSwitchMonitorWhy() string {
+	return Catalog.Format(msgs.locale, "guideOppoSwitchMonitorWhy", nil)
+}
+
+// GuideOppoTap says "Build number"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on OPPO, OnePlus and realme phones: the
+// item to tap 7 times, as the phone names it.
+func GuideOppoTap() string { return In(i18n.Locale()).GuideOppoTap() }
+
+// GuideOppoTap says "Build number"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on OPPO, OnePlus and realme phones: the
+// item to tap 7 times, as the phone names it.
+func (msgs Messages) GuideOppoTap() string {
+	return Catalog.Format(msgs.locale, "guideOppoTap", nil)
+}
+
+// GuideOtherAbout says "Settings › About phone"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on other phones: where the build number
+// usually is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func GuideOtherAbout() string { return In(i18n.Locale()).GuideOtherAbout() }
+
+// GuideOtherAbout says "Settings › About phone"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on other phones: where the build number
+// usually is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func (msgs Messages) GuideOtherAbout() string {
+	return Catalog.Format(msgs.locale, "guideOtherAbout", nil)
+}
+
+// GuideOtherAboutNote says "On some phones it's under About phone › Software information."
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on other phones: a note under the steps.
+// The Chinese adds the names of stock Android's Simplified Chinese
+// settings, which differ from most makers'.
+func GuideOtherAboutNote() string { return In(i18n.Locale()).GuideOtherAboutNote() }
+
+// GuideOtherAboutNote says "On some phones it's under About phone › Software information."
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on other phones: a note under the steps.
+// The Chinese adds the names of stock Android's Simplified Chinese
+// settings, which differ from most makers'.
+func (msgs Messages) GuideOtherAboutNote() string {
+	return Catalog.Format(msgs.locale, "guideOtherAboutNote", nil)
+}
+
+// GuideOtherDev says "Settings › System › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on other phones: where Developer options
+// usually is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func GuideOtherDev() string { return In(i18n.Locale()).GuideOtherDev() }
+
+// GuideOtherDev says "Settings › System › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on other phones: where Developer options
+// usually is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func (msgs Messages) GuideOtherDev() string {
+	return Catalog.Format(msgs.locale, "guideOtherDev", nil)
+}
+
+// GuideOtherNote says "If Developer options isn't there, search Settings for it."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on other phones: a note under the switches.
+func GuideOtherNote() string { return In(i18n.Locale()).GuideOtherNote() }
+
+// GuideOtherNote says "If Developer options isn't there, search Settings for it."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on other phones: a note under the switches.
+func (msgs Messages) GuideOtherNote() string {
+	return Catalog.Format(msgs.locale, "guideOtherNote", nil)
+}
+
+// GuideOtherTap says "Build number"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on other phones: the item to tap 7 times,
+// as most phones name it.
+func GuideOtherTap() string { return In(i18n.Locale()).GuideOtherTap() }
+
+// GuideOtherTap says "Build number"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on other phones: the item to tap 7 times,
+// as most phones name it.
+func (msgs Messages) GuideOtherTap() string {
+	return Catalog.Format(msgs.locale, "guideOtherTap", nil)
+}
+
+// GuidePixelAbout says "Settings › About phone"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Google Pixel phones: where the item to
+// tap 7 times is. Write it as menu names joined by ›, as the phone shows
+// them in Simplified Chinese.
+func GuidePixelAbout() string { return In(i18n.Locale()).GuidePixelAbout() }
+
+// GuidePixelAbout says "Settings › About phone"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Google Pixel phones: where the item to
+// tap 7 times is. Write it as menu names joined by ›, as the phone shows
+// them in Simplified Chinese.
+func (msgs Messages) GuidePixelAbout() string {
+	return Catalog.Format(msgs.locale, "guidePixelAbout", nil)
+}
+
+// GuidePixelAboutNote says "On older Android versions some names differ slightly."
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Google Pixel phones: a note under the
+// steps.
+func GuidePixelAboutNote() string { return In(i18n.Locale()).GuidePixelAboutNote() }
+
+// GuidePixelAboutNote says "On older Android versions some names differ slightly."
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Google Pixel phones: a note under the
+// steps.
+func (msgs Messages) GuidePixelAboutNote() string {
+	return Catalog.Format(msgs.locale, "guidePixelAboutNote", nil)
+}
+
+// GuidePixelDev says "Settings › System › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Google Pixel phones: where Developer
+// options is once it is on. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func GuidePixelDev() string { return In(i18n.Locale()).GuidePixelDev() }
+
+// GuidePixelDev says "Settings › System › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Google Pixel phones: where Developer
+// options is once it is on. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func (msgs Messages) GuidePixelDev() string {
+	return Catalog.Format(msgs.locale, "guidePixelDev", nil)
+}
+
+// GuidePixelTap says "Build number"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Google Pixel phones: the item to tap 7
+// times, as the phone names it.
+func GuidePixelTap() string { return In(i18n.Locale()).GuidePixelTap() }
+
+// GuidePixelTap says "Build number"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Google Pixel phones: the item to tap 7
+// times, as the phone names it.
+func (msgs Messages) GuidePixelTap() string {
+	return Catalog.Format(msgs.locale, "guidePixelTap", nil)
+}
+
+// GuidePromptOK says "OK"
+// in the language the app shows.
+//
+// Add phone › Android, step 3 on HONOR and HUAWEI phones: the button of
+// their prompt to allow USB debugging.
+func GuidePromptOK() string { return In(i18n.Locale()).GuidePromptOK() }
+
+// GuidePromptOK says "OK"
+// in the language of msgs.
+//
+// Add phone › Android, step 3 on HONOR and HUAWEI phones: the button of
+// their prompt to allow USB debugging.
+func (msgs Messages) GuidePromptOK() string {
+	return Catalog.Format(msgs.locale, "guidePromptOK", nil)
+}
+
+// GuideSamsungAbout says "Settings › About phone › Software information"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Samsung phones: where the item to tap 7
+// times is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func GuideSamsungAbout() string { return In(i18n.Locale()).GuideSamsungAbout() }
+
+// GuideSamsungAbout says "Settings › About phone › Software information"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Samsung phones: where the item to tap 7
+// times is. Write it as menu names joined by ›, as the phone shows them
+// in Simplified Chinese.
+func (msgs Messages) GuideSamsungAbout() string {
+	return Catalog.Format(msgs.locale, "guideSamsungAbout", nil)
+}
+
+// GuideSamsungAutoBlocker says "Auto Blocker"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Samsung phones: Samsung's Auto Blocker
+// (One UI 6 and later), which blocks commands over the USB cable. Use the
+// name of Samsung's Simplified Chinese settings.
+func GuideSamsungAutoBlocker() string { return In(i18n.Locale()).GuideSamsungAutoBlocker() }
+
+// GuideSamsungAutoBlocker says "Auto Blocker"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Samsung phones: Samsung's Auto Blocker
+// (One UI 6 and later), which blocks commands over the USB cable. Use the
+// name of Samsung's Simplified Chinese settings.
+func (msgs Messages) GuideSamsungAutoBlocker() string {
+	return Catalog.Format(msgs.locale, "guideSamsungAutoBlocker", nil)
+}
+
+// GuideSamsungAutoBlockerPath says "Settings › Security and privacy › Auto Blocker"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Samsung phones: where Auto Blocker is.
+// Write it as menu names joined by ›, as the phone shows them in
+// Simplified Chinese.
+func GuideSamsungAutoBlockerPath() string { return In(i18n.Locale()).GuideSamsungAutoBlockerPath() }
+
+// GuideSamsungAutoBlockerPath says "Settings › Security and privacy › Auto Blocker"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Samsung phones: where Auto Blocker is.
+// Write it as menu names joined by ›, as the phone shows them in
+// Simplified Chinese.
+func (msgs Messages) GuideSamsungAutoBlockerPath() string {
+	return Catalog.Format(msgs.locale, "guideSamsungAutoBlockerPath", nil)
+}
+
+// GuideSamsungAutoBlockerWhy says "Do this first: while Auto Blocker is on, USB debugging stays off and greyed out. Turning it off may ask for your fing…"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Samsung phones: why to turn Auto Blocker
+// off, before USB debugging.
+func GuideSamsungAutoBlockerWhy() string { return In(i18n.Locale()).GuideSamsungAutoBlockerWhy() }
+
+// GuideSamsungAutoBlockerWhy says "Do this first: while Auto Blocker is on, USB debugging stays off and greyed out. Turning it off may ask for your fing…"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Samsung phones: why to turn Auto Blocker
+// off, before USB debugging.
+func (msgs Messages) GuideSamsungAutoBlockerWhy() string {
+	return Catalog.Format(msgs.locale, "guideSamsungAutoBlockerWhy", nil)
+}
+
+// GuideSamsungDev says "Settings › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Samsung phones: where Developer options
+// is once it is on. Write it as menu names joined by ›, as the phone
+// shows them in Simplified Chinese.
+func GuideSamsungDev() string { return In(i18n.Locale()).GuideSamsungDev() }
+
+// GuideSamsungDev says "Settings › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Samsung phones: where Developer options
+// is once it is on. Write it as menu names joined by ›, as the phone
+// shows them in Simplified Chinese.
+func (msgs Messages) GuideSamsungDev() string {
+	return Catalog.Format(msgs.locale, "guideSamsungDev", nil)
+}
+
+// GuideSamsungNote says "Developer options is at the bottom of Settings; on some models it's under General."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Samsung phones: a note under the
+// switches.
+func GuideSamsungNote() string { return In(i18n.Locale()).GuideSamsungNote() }
+
+// GuideSamsungNote says "Developer options is at the bottom of Settings; on some models it's under General."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Samsung phones: a note under the
+// switches.
+func (msgs Messages) GuideSamsungNote() string {
+	return Catalog.Format(msgs.locale, "guideSamsungNote", nil)
+}
+
+// GuideSamsungTap says "Build number"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Samsung phones: the item to tap 7 times,
+// as the phone names it.
+func GuideSamsungTap() string { return In(i18n.Locale()).GuideSamsungTap() }
+
+// GuideSamsungTap says "Build number"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Samsung phones: the item to tap 7 times,
+// as the phone names it.
+func (msgs Messages) GuideSamsungTap() string {
+	return Catalog.Format(msgs.locale, "guideSamsungTap", nil)
+}
+
+// GuideSwitchUSBDebugging says "USB debugging"
+// in the language the app shows.
+//
+// Add phone › Android, step 2: Android's USB debugging switch. Use the
+// name of Android's Simplified Chinese settings.
+func GuideSwitchUSBDebugging() string { return In(i18n.Locale()).GuideSwitchUSBDebugging() }
+
+// GuideSwitchUSBDebugging says "USB debugging"
+// in the language of msgs.
+//
+// Add phone › Android, step 2: Android's USB debugging switch. Use the
+// name of Android's Simplified Chinese settings.
+func (msgs Messages) GuideSwitchUSBDebugging() string {
+	return Catalog.Format(msgs.locale, "guideSwitchUSBDebugging", nil)
+}
+
+// GuideTapTimes says "×7"
+// in the language the app shows.
+//
+// Add phone › Android: the badge on the menu item to tap 7 times.
+func GuideTapTimes() string { return In(i18n.Locale()).GuideTapTimes() }
+
+// GuideTapTimes says "×7"
+// in the language of msgs.
+//
+// Add phone › Android: the badge on the menu item to tap 7 times.
+func (msgs Messages) GuideTapTimes() string {
+	return Catalog.Format(msgs.locale, "guideTapTimes", nil)
+}
+
+// GuideVivoAbout says "Settings › About phone"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on vivo and iQOO phones: where the item to
+// tap 7 times is. Write it as menu names joined by ›, as the phone shows
+// them in Simplified Chinese.
+func GuideVivoAbout() string { return In(i18n.Locale()).GuideVivoAbout() }
+
+// GuideVivoAbout says "Settings › About phone"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on vivo and iQOO phones: where the item to
+// tap 7 times is. Write it as menu names joined by ›, as the phone shows
+// them in Simplified Chinese.
+func (msgs Messages) GuideVivoAbout() string {
+	return Catalog.Format(msgs.locale, "guideVivoAbout", nil)
+}
+
+// GuideVivoAboutNote says "On some versions it's under More settings › About phone › Version, or named Software version. Shortcut: dial *#*#…"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on vivo and iQOO phones: a note under the
+// steps.
+func GuideVivoAboutNote() string { return In(i18n.Locale()).GuideVivoAboutNote() }
+
+// GuideVivoAboutNote says "On some versions it's under More settings › About phone › Version, or named Software version. Shortcut: dial *#*#…"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on vivo and iQOO phones: a note under the
+// steps.
+func (msgs Messages) GuideVivoAboutNote() string {
+	return Catalog.Format(msgs.locale, "guideVivoAboutNote", nil)
+}
+
+// GuideVivoDev says "Settings › System management › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on vivo and iQOO phones: where Developer
+// options is once it is on. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func GuideVivoDev() string { return In(i18n.Locale()).GuideVivoDev() }
+
+// GuideVivoDev says "Settings › System management › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on vivo and iQOO phones: where Developer
+// options is once it is on. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func (msgs Messages) GuideVivoDev() string {
+	return Catalog.Format(msgs.locale, "guideVivoDev", nil)
+}
+
+// GuideVivoNote says "While Developer options is on, a notification stays in the shade: don't tap it, as that turns developer mode off. Whe…"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on vivo and iQOO phones: a note under the
+// switches.
+func GuideVivoNote() string { return In(i18n.Locale()).GuideVivoNote() }
+
+// GuideVivoNote says "While Developer options is on, a notification stays in the shade: don't tap it, as that turns developer mode off. Whe…"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on vivo and iQOO phones: a note under the
+// switches.
+func (msgs Messages) GuideVivoNote() string {
+	return Catalog.Format(msgs.locale, "guideVivoNote", nil)
+}
+
+// GuideVivoTap says "Build number"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on vivo and iQOO phones: the item to tap 7
+// times, as the phone names it.
+func GuideVivoTap() string { return In(i18n.Locale()).GuideVivoTap() }
+
+// GuideVivoTap says "Build number"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on vivo and iQOO phones: the item to tap 7
+// times, as the phone names it.
+func (msgs Messages) GuideVivoTap() string {
+	return Catalog.Format(msgs.locale, "guideVivoTap", nil)
+}
+
+// GuideWirelessDebugging says "Wireless debugging"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the last item of the menu path to Android's Wireless
+// debugging, under the brand's way to Developer options. Use the name of
+// Android's Simplified Chinese settings.
+func GuideWirelessDebugging() string { return In(i18n.Locale()).GuideWirelessDebugging() }
+
+// GuideWirelessDebugging says "Wireless debugging"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the last item of the menu path to Android's Wireless
+// debugging, under the brand's way to Developer options. Use the name of
+// Android's Simplified Chinese settings.
+func (msgs Messages) GuideWirelessDebugging() string {
+	return Catalog.Format(msgs.locale, "guideWirelessDebugging", nil)
+}
+
+// GuideXiaomiAbout says "Settings › About phone"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Xiaomi, Redmi and POCO phones: where the
+// item to tap 7 times is. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func GuideXiaomiAbout() string { return In(i18n.Locale()).GuideXiaomiAbout() }
+
+// GuideXiaomiAbout says "Settings › About phone"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Xiaomi, Redmi and POCO phones: where the
+// item to tap 7 times is. Write it as menu names joined by ›, as the
+// phone shows them in Simplified Chinese.
+func (msgs Messages) GuideXiaomiAbout() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiAbout", nil)
+}
+
+// GuideXiaomiAboutNote says "On MIUI, tap MIUI version instead. The phone says “You are now a developer!”"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Xiaomi, Redmi and POCO phones: a note
+// under the steps.
+func GuideXiaomiAboutNote() string { return In(i18n.Locale()).GuideXiaomiAboutNote() }
+
+// GuideXiaomiAboutNote says "On MIUI, tap MIUI version instead. The phone says “You are now a developer!”"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Xiaomi, Redmi and POCO phones: a note
+// under the steps.
+func (msgs Messages) GuideXiaomiAboutNote() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiAboutNote", nil)
+}
+
+// GuideXiaomiDev says "Settings › Additional settings › Developer options"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Xiaomi, Redmi and POCO phones: where
+// Developer options is once it is on. Write it as menu names joined by ›,
+// as the phone shows them in Simplified Chinese.
+func GuideXiaomiDev() string { return In(i18n.Locale()).GuideXiaomiDev() }
+
+// GuideXiaomiDev says "Settings › Additional settings › Developer options"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Xiaomi, Redmi and POCO phones: where
+// Developer options is once it is on. Write it as menu names joined by ›,
+// as the phone shows them in Simplified Chinese.
+func (msgs Messages) GuideXiaomiDev() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiDev", nil)
+}
+
+// GuideXiaomiNote says "Both switches check with Xiaomi online, so the phone needs a network; they may ask for a SIM card. You don't need to …"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Xiaomi, Redmi and POCO phones: a note
+// under the switches.
+func GuideXiaomiNote() string { return In(i18n.Locale()).GuideXiaomiNote() }
+
+// GuideXiaomiNote says "Both switches check with Xiaomi online, so the phone needs a network; they may ask for a SIM card. You don't need to …"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Xiaomi, Redmi and POCO phones: a note
+// under the switches.
+func (msgs Messages) GuideXiaomiNote() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiNote", nil)
+}
+
+// GuideXiaomiSwitchInstall says "Install via USB"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Xiaomi phones: Xiaomi's switch that lets
+// the computer install apps. Use the name of Xiaomi's Simplified Chinese
+// settings, without spaces.
+func GuideXiaomiSwitchInstall() string { return In(i18n.Locale()).GuideXiaomiSwitchInstall() }
+
+// GuideXiaomiSwitchInstall says "Install via USB"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Xiaomi phones: Xiaomi's switch that lets
+// the computer install apps. Use the name of Xiaomi's Simplified Chinese
+// settings, without spaces.
+func (msgs Messages) GuideXiaomiSwitchInstall() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiSwitchInstall", nil)
+}
+
+// GuideXiaomiSwitchInstallWhy says "Lets Pinky install its companion app. It needs your Xiaomi account signed in. Each install then asks on the phone: ta…"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Xiaomi phones: why to turn on Install
+// via USB, and what it needs.
+func GuideXiaomiSwitchInstallWhy() string { return In(i18n.Locale()).GuideXiaomiSwitchInstallWhy() }
+
+// GuideXiaomiSwitchInstallWhy says "Lets Pinky install its companion app. It needs your Xiaomi account signed in. Each install then asks on the phone: ta…"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Xiaomi phones: why to turn on Install
+// via USB, and what it needs.
+func (msgs Messages) GuideXiaomiSwitchInstallWhy() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiSwitchInstallWhy", nil)
+}
+
+// GuideXiaomiSwitchSecurity says "USB debugging (Security settings)"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Xiaomi phones: Xiaomi's switch that lets
+// the computer tap, type and change settings. Use the name of Xiaomi's
+// Simplified Chinese settings, without spaces.
+func GuideXiaomiSwitchSecurity() string { return In(i18n.Locale()).GuideXiaomiSwitchSecurity() }
+
+// GuideXiaomiSwitchSecurity says "USB debugging (Security settings)"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Xiaomi phones: Xiaomi's switch that lets
+// the computer tap, type and change settings. Use the name of Xiaomi's
+// Simplified Chinese settings, without spaces.
+func (msgs Messages) GuideXiaomiSwitchSecurity() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiSwitchSecurity", nil)
+}
+
+// GuideXiaomiSwitchSecurityWhy says "Lets Pinky tap, type and turn on its companion app. The phone shows three warnings, each with a 5-second wait. Restar…"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Xiaomi phones: why to turn on USB
+// debugging (Security settings), and what turning it on is like.
+func GuideXiaomiSwitchSecurityWhy() string { return In(i18n.Locale()).GuideXiaomiSwitchSecurityWhy() }
+
+// GuideXiaomiSwitchSecurityWhy says "Lets Pinky tap, type and turn on its companion app. The phone shows three warnings, each with a 5-second wait. Restar…"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Xiaomi phones: why to turn on USB
+// debugging (Security settings), and what turning it on is like.
+func (msgs Messages) GuideXiaomiSwitchSecurityWhy() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiSwitchSecurityWhy", nil)
+}
+
+// GuideXiaomiSwitchUSB says "USB debugging"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on Xiaomi phones: the USB debugging switch,
+// as Xiaomi names it (with a space in Chinese).
+func GuideXiaomiSwitchUSB() string { return In(i18n.Locale()).GuideXiaomiSwitchUSB() }
+
+// GuideXiaomiSwitchUSB says "USB debugging"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on Xiaomi phones: the USB debugging switch,
+// as Xiaomi names it (with a space in Chinese).
+func (msgs Messages) GuideXiaomiSwitchUSB() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiSwitchUSB", nil)
+}
+
+// GuideXiaomiTap says "OS version"
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on Xiaomi, Redmi and POCO phones: the item
+// to tap 7 times, as the phone names it.
+func GuideXiaomiTap() string { return In(i18n.Locale()).GuideXiaomiTap() }
+
+// GuideXiaomiTap says "OS version"
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on Xiaomi, Redmi and POCO phones: the item
+// to tap 7 times, as the phone names it.
+func (msgs Messages) GuideXiaomiTap() string {
+	return Catalog.Format(msgs.locale, "guideXiaomiTap", nil)
 }
 
 // GwAgentGives says " Allowing gives it {scope} access."
@@ -5775,18 +9393,20 @@ func (msgs Messages) PairingConnecting() string {
 	return Catalog.Format(msgs.locale, "pairingConnecting", nil)
 }
 
-// PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
+// PairingErrNoAdb says "Android's adb isn't working on this computer, so Pinky can't pair phones over Wi-Fi. Go back to see why, or use a USB…"
 // in the language the app shows.
 //
-// Pair over Wi-Fi: the error when this computer has no Android tools (adb)
-// to pair with.
+// Pair over Wi-Fi: the error when adb does not work on this computer (no
+// adb, or its server does not run); Add phone › Android, one step back,
+// says why.
 func PairingErrNoAdb() string { return In(i18n.Locale()).PairingErrNoAdb() }
 
-// PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
+// PairingErrNoAdb says "Android's adb isn't working on this computer, so Pinky can't pair phones over Wi-Fi. Go back to see why, or use a USB…"
 // in the language of msgs.
 //
-// Pair over Wi-Fi: the error when this computer has no Android tools (adb)
-// to pair with.
+// Pair over Wi-Fi: the error when adb does not work on this computer (no
+// adb, or its server does not run); Add phone › Android, one step back,
+// says why.
 func (msgs Messages) PairingErrNoAdb() string {
 	return Catalog.Format(msgs.locale, "pairingErrNoAdb", nil)
 }
@@ -6947,6 +10567,36 @@ func PhoneBannerYourTurn() string { return In(i18n.Locale()).PhoneBannerYourTurn
 // weight. English ends with a space before the rest.
 func (msgs Messages) PhoneBannerYourTurn() string {
 	return Catalog.Format(msgs.locale, "phoneBannerYourTurn", nil)
+}
+
+// PhoneCheckup says "Checkup"
+// in the language the app shows.
+//
+// The phone page's ⋯ menu, an offline phone's page and Settings ›
+// Phones: opens the phone's checkup.
+func PhoneCheckup() string { return In(i18n.Locale()).PhoneCheckup() }
+
+// PhoneCheckup says "Checkup"
+// in the language of msgs.
+//
+// The phone page's ⋯ menu, an offline phone's page and Settings ›
+// Phones: opens the phone's checkup.
+func (msgs Messages) PhoneCheckup() string {
+	return Catalog.Format(msgs.locale, "phoneCheckup", nil)
+}
+
+// PhoneCheckupFix says "See what's wrong"
+// in the language the app shows.
+//
+// The page of a phone that needs setup: the button that opens its checkup.
+func PhoneCheckupFix() string { return In(i18n.Locale()).PhoneCheckupFix() }
+
+// PhoneCheckupFix says "See what's wrong"
+// in the language of msgs.
+//
+// The page of a phone that needs setup: the button that opens its checkup.
+func (msgs Messages) PhoneCheckupFix() string {
+	return Catalog.Format(msgs.locale, "phoneCheckupFix", nil)
 }
 
 // PhoneConnected says "{count, plural, one {# connected} other {# connected}}"
@@ -9953,20 +13603,38 @@ func (msgs Messages) SettingsAgentsList() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsList", nil)
 }
 
-// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
+// SettingsAgentsNone says "No agent has connected yet. Connect one below."
 // in the language the app shows.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// The commands below are those under Add an agent (connectTitle).
+// Below is Connect an agent (connectTitle).
 func SettingsAgentsNone() string { return In(i18n.Locale()).SettingsAgentsNone() }
 
-// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
+// SettingsAgentsNone says "No agent has connected yet. Connect one below."
 // in the language of msgs.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// The commands below are those under Add an agent (connectTitle).
+// Below is Connect an agent (connectTitle).
 func (msgs Messages) SettingsAgentsNone() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsNone", nil)
+}
+
+// SettingsAgentsNoneYet says "No agent has used Pinky yet. Ask one you connected below to do something on your phone."
+// in the language the app shows.
+//
+// Settings › Agents: in place of the list while no agent has connected to
+// Pinky, but one is connected under Connect an agent (its settings start
+// Pinky).
+func SettingsAgentsNoneYet() string { return In(i18n.Locale()).SettingsAgentsNoneYet() }
+
+// SettingsAgentsNoneYet says "No agent has used Pinky yet. Ask one you connected below to do something on your phone."
+// in the language of msgs.
+//
+// Settings › Agents: in place of the list while no agent has connected to
+// Pinky, but one is connected under Connect an agent (its settings start
+// Pinky).
+func (msgs Messages) SettingsAgentsNoneYet() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsNoneYet", nil)
 }
 
 // SettingsAgentsNotAllowed says "Not allowed yet"
@@ -10323,6 +13991,22 @@ func SettingsPhonesAdd() string { return In(i18n.Locale()).SettingsPhonesAdd() }
 // Settings › Phones: the button under the list that opens Add phone.
 func (msgs Messages) SettingsPhonesAdd() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesAdd", nil)
+}
+
+// SettingsPhonesCheckupLabel says "Checkup of {name}"
+// in the language the app shows.
+//
+// Settings › Phones: the accessible name of a phone's Checkup link.
+func SettingsPhonesCheckupLabel(name string) string {
+	return In(i18n.Locale()).SettingsPhonesCheckupLabel(name)
+}
+
+// SettingsPhonesCheckupLabel says "Checkup of {name}"
+// in the language of msgs.
+//
+// Settings › Phones: the accessible name of a phone's Checkup link.
+func (msgs Messages) SettingsPhonesCheckupLabel(name string) string {
+	return Catalog.Format(msgs.locale, "settingsPhonesCheckupLabel", map[string]any{"name": name})
 }
 
 // SettingsPhonesConnected says "Connected"
@@ -12925,6 +16609,22 @@ func TasksEarlierSteps(count int) string { return In(i18n.Locale()).TasksEarlier
 // Above a task card's last steps: how many earlier steps are not shown.
 func (msgs Messages) TasksEarlierSteps(count int) string {
 	return Catalog.Format(msgs.locale, "tasksEarlierSteps", map[string]any{"count": count})
+}
+
+// TasksNoAgent says "No agent is connected to Pinky yet."
+// in the language the app shows.
+//
+// Under Tasks while no task runs and no agent is connected, above a link to
+// Settings › Agents (connectTitle).
+func TasksNoAgent() string { return In(i18n.Locale()).TasksNoAgent() }
+
+// TasksNoAgent says "No agent is connected to Pinky yet."
+// in the language of msgs.
+//
+// Under Tasks while no task runs and no agent is connected, above a link to
+// Settings › Agents (connectTitle).
+func (msgs Messages) TasksNoAgent() string {
+	return Catalog.Format(msgs.locale, "tasksNoAgent", nil)
 }
 
 // TasksNoToolCalls says "No tool calls yet."

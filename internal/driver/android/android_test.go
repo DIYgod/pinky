@@ -84,7 +84,7 @@ func TestInfoFromEntry(t *testing.T) {
 		t.Errorf("unauthorized = %+v", info)
 	}
 	info = infoFromEntry(adb.DeviceEntry{Serial: "x", State: "no permissions", Detail: "missing udev rules"})
-	if info.State != driver.StateNeedsSetup {
+	if info.State != driver.StateNeedsSetup || info.Setup != setupUSBPermission {
 		t.Errorf("no permissions = %+v", info)
 	}
 	if err := wrapErr(&adb.Error{Msg: "device 'x' not found"}); !errors.Is(err, driver.ErrOffline) {

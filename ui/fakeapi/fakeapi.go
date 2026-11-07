@@ -34,10 +34,11 @@ const (
 	Companion   Scenario = "companion"  // Pixel 9 lacks the companion app: its page offers to install it
 	Background  Scenario = "background" // Pixel 9 works in the background: the mirror shows the agent's display
 	NoPhones    Scenario = "empty"      // nothing connected: the client opens Add phone
+	Checkup     Scenario = "checkup"    // a Redmi on HyperOS refuses taps and installs: its checkup says what to turn on
 )
 
 // Scenarios lists them in menu order.
-var Scenarios = []Scenario{OnePhone, ThreePhones, Locked, Takeover, Handoff, NewAgent, Companion, Background, NoPhones}
+var Scenarios = []Scenario{OnePhone, ThreePhones, Locked, Takeover, Handoff, NewAgent, Companion, Background, NoPhones, Checkup}
 
 // Title names a scenario for menus.
 func (s Scenario) Title() string {
@@ -60,6 +61,8 @@ func (s Scenario) Title() string {
 		return "Background work"
 	case NoPhones:
 		return "No phones"
+	case Checkup:
+		return "Checkup of a Xiaomi phone"
 	}
 	return string(s)
 }
@@ -146,6 +149,8 @@ type device struct {
 	task       *task                 // the task running on it, if any
 	companion  driver.CompanionState // Android only; "" is on
 	background bool                  // agents work on a background display
+	checkup    *driver.Checkup       // what its own checkup finds; nil for the default
+	installErr error                 // what installing the companion app fails with
 	way        string                // iPhone: the connection the person chose
 }
 
@@ -255,6 +260,16 @@ func (a *API) Play(s Scenario) {
 		a.devices = []*device{pixel}
 		scripts = append(scripts, a.lunch(gen, pixel, false))
 	case NoPhones:
+	case Checkup:
+		redmi := &device{
+			info: driver.Info{ID: "redmi-k80", Platform: driver.Android, Name: "Redmi K80", Model: "Redmi K80",
+				OSVersion: "15", Connection: "usb", Backend: "scrcpy", State: driver.StateOnline},
+			width: 1440, height: 3200, codec: driver.H264, source: "testsrc2", companion: driver.CompanionMissing,
+			installErr: errRestricted,
+		}
+		cu := XiaomiCheckup()
+		redmi.checkup = &cu
+		a.devices = []*device{redmi}
 	}
 	a.mu.Unlock()
 	for _, run := range scripts {
@@ -266,30 +281,36 @@ func (a *API) Play(s Scenario) {
 }
 
 // ConnectPhone plugs in a new Android phone, as the Add phone flow waits
-// for: it shows up needing setup (USB debugging off), then comes online a
-// few seconds later at Speed, or at FinishSetup with Options.HoldSetup.
-func (a *API) ConnectPhone() {
+// for: it shows up waiting for the person to allow USB debugging on it,
+// then comes online a few seconds later at Speed, or at FinishSetup with
+// Options.HoldSetup.
+func (a *API) ConnectPhone() { a.ConnectPhoneAs("Pixel 8a", nil) }
+
+// ConnectPhoneAs is ConnectPhone with the phone's name and, when cu is
+// set, what its checkup finds once it is online. It returns its id.
+func (a *API) ConnectPhoneAs(name string, cu *driver.Checkup) string {
 	a.mu.Lock()
 	gen := a.gen
 	a.nextID++
-	id := fmt.Sprintf("pixel-8a-%d", a.nextID)
+	id := fmt.Sprintf("%s-%d", strings.ToLower(strings.ReplaceAll(name, " ", "-")), a.nextID)
 	d := &device{
-		info: driver.Info{ID: id, Platform: driver.Android, Name: "Pixel 8a", Model: "Pixel 8a", OSVersion: "16",
-			Connection: "usb", Backend: "scrcpy", State: driver.StateNeedsSetup,
-			Detail: "USB debugging is off"},
-		width: 1080, height: 2400, codec: driver.H264, source: "rgbtestsrc",
+		info: driver.Info{ID: id, Platform: driver.Android, Name: name, Model: name, OSVersion: "16",
+			Connection: "usb", Backend: "scrcpy", State: driver.StateUnauthorized,
+			Detail: "Unlock the phone and allow USB debugging for this computer."},
+		width: 1080, height: 2400, codec: driver.H264, source: "rgbtestsrc", checkup: cu,
 	}
 	a.devices = append(a.devices, d)
 	a.mu.Unlock()
 	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
 	if a.opt.HoldSetup {
-		return
+		return id
 	}
 	go func() {
 		if a.sleepGen(gen, 4*time.Second) {
 			a.finishSetup(d)
 		}
 	}()
+	return id
 }
 
 // FinishSetup brings the phones ConnectPhone plugged in online now, as
@@ -298,7 +319,7 @@ func (a *API) FinishSetup() {
 	a.mu.Lock()
 	var waiting []*device
 	for _, d := range a.devices {
-		if d.info.State == driver.StateNeedsSetup {
+		if d.info.State == driver.StateNeedsSetup || d.info.State == driver.StateUnauthorized {
 			waiting = append(waiting, d)
 		}
 	}
@@ -310,7 +331,7 @@ func (a *API) FinishSetup() {
 
 func (a *API) finishSetup(d *device) {
 	a.mu.Lock()
-	if d.info.State != driver.StateNeedsSetup {
+	if d.info.State != driver.StateNeedsSetup && d.info.State != driver.StateUnauthorized {
 		a.mu.Unlock()
 		return
 	}

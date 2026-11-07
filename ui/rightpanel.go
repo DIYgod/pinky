@@ -63,6 +63,13 @@ func (a *app) taskList(c *mg.Context) {
 	}
 	if shown == 0 {
 		mg.Column(c).Padding(10, 2).Gap(6).Children(func() {
+			if a.opt.AgentSetup != nil && a.setup.loaded && !a.agentsConnected() {
+				mg.Text(c, locales.TasksNoAgent()).FontSize(14).TextColor(p.ink2)
+				if linkButton(c, locales.ConnectTitle()).AlignSelf(mg.Start).Clicked() {
+					a.page, a.set.sec = pageSettings, secAgents
+				}
+				return
+			}
 			mg.Text(c, locales.TasksNone()).FontSize(14).TextColor(p.ink2)
 		})
 	}

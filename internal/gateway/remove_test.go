@@ -186,8 +186,8 @@ func waitIDs(t *testing.T, g *Gateway, want ...string) {
 	}
 }
 
-// waitOnline waits until the gateway has the phone open.
-func waitOnline(t *testing.T, g *Gateway, id string) {
+// waitOpen waits until the gateway has the phone open.
+func waitOpen(t *testing.T, g *Gateway, id string) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
@@ -214,7 +214,7 @@ func TestRemoveDevice(t *testing.T) {
 	p, _, _ := newTwoPhones()
 	g := twoPhones(t, dir, p)
 	ctx := context.Background()
-	waitOnline(t, g, "mi")
+	waitOpen(t, g, "mi")
 	if err := g.SetBackground("mi", false); err != nil {
 		t.Fatal(err)
 	}
@@ -286,7 +286,7 @@ func TestRemoveDevice(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitIDs(t, g, "mi", "pixel")
-	waitOnline(t, g, "mi")
+	waitOpen(t, g, "mi")
 	if g.Policy().ReadOnly("mi") {
 		t.Error("the Mi came back read-only")
 	}
@@ -341,7 +341,7 @@ func TestRemoveDeviceOnACable(t *testing.T) {
 	p, _, _ := newTwoPhones()
 	g := twoPhones(t, dir, p)
 	ctx := context.Background()
-	waitOnline(t, g, "pixel")
+	waitOpen(t, g, "pixel")
 	if err := g.SetBackground("pixel", true); err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +349,7 @@ func TestRemoveDeviceOnACable(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitIDs(t, g, "mi", "pixel")
-	waitOnline(t, g, "pixel")
+	waitOpen(t, g, "pixel")
 	if g.Background("pixel") {
 		t.Error("the Pixel came back with its old background choice") // the demo phone's default is off
 	}
@@ -395,8 +395,8 @@ func TestRemoveDeviceHistory(t *testing.T) {
 	p, _, _ := newTwoPhones()
 	g := twoPhones(t, t.TempDir(), p)
 	ctx := context.Background()
-	waitOnline(t, g, "mi")
-	waitOnline(t, g, "pixel")
+	waitOpen(t, g, "mi")
+	waitOpen(t, g, "pixel")
 	for _, dev := range []string{"mi", "pixel"} {
 		s := g.OpenSession(agent)
 		res := s.Connect(ctx, ConnectRequest{Call: Call{Device: dev}, Task: "Look at " + dev})
@@ -428,7 +428,7 @@ func TestRemoveDeviceWhileOpening(t *testing.T) {
 	p, _, _ := newTwoPhones()
 	p.unplugged["mi"] = true
 	g := twoPhones(t, t.TempDir(), p)
-	waitOnline(t, g, "pixel")
+	waitOpen(t, g, "pixel")
 	gate := make(chan struct{})
 	p.set(func(p *netProvider) {
 		p.gate["mi"] = gate
@@ -478,7 +478,7 @@ func TestRemoveDeviceForgetsConnection(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitIDs(t, g, "pixel")
-	waitOnline(t, g, "pixel")
+	waitOpen(t, g, "pixel")
 	_, opens := cp.state()
 	if err := g.RemoveDevice(context.Background(), "pixel", RemoveOptions{}); err != nil {
 		t.Fatal(err)
@@ -493,7 +493,7 @@ func TestRemoveDeviceForgetsConnection(t *testing.T) {
 	}
 	// A demo phone counts as plugged in: it comes back once, opened the
 	// driver's own way, and not before removal finished.
-	waitOnline(t, g, "pixel")
+	waitOpen(t, g, "pixel")
 	if _, now := cp.state(); now != opens+1 {
 		t.Errorf("opened %d times after the removal, want 1", now-opens)
 	}
