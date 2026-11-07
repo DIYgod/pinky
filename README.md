@@ -80,27 +80,18 @@ Below iOS 27, an iPhone takes taps and typing from a computer only through a hel
 
 ### 3. Add Pinky to your agent
 
-An agent starts Pinky with a command. In Pinky, **Settings › Agents › Add an agent** shows the commands for your copy of Pinky, with buttons that copy them.
+In Pinky, open **Settings › Agents** and click **Connect** next to your agent. Pinky finds Claude Code, Claude Desktop, Codex, Cursor, VS Code, Copilot CLI, Windsurf (Devin Desktop) and Gemini CLI on your computer and adds itself to the agent's MCP servers, by the app's own path: with the agent's own command where it has one, such as `claude mcp add`, or in its settings file, which Pinky copies first and changes only in Pinky's entry. It also installs Pinky's agent guide, [SKILL.md](docs/SKILL.md), where the agent reads skills. Until an agent is connected, a card in Pinky's sidebar offers to do it, or says where to get one.
 
-- **Claude Code:** run the Claude Code command in a terminal. With the Homebrew cask or a Linux package, it is:
-
-  ```sh
-  claude mcp add pinky -- pinkyctl mcp
-  ```
-
-- **Other agents:** add an MCP server (stdio) that runs the command under **Other agents**. In a JSON config, with the Homebrew cask or a Linux package:
+- **Claude Desktop:** Connect opens Pinky's extension in Claude Desktop; click **Install** there. Double-clicking `pinky-<version>.mcpb` from the [release page](https://github.com/DIYgod/pinky/releases/latest) does the same.
+- **Other agents:** **Settings › Agents › Add an agent by hand** shows the command for your copy of Pinky, with buttons that copy it. Add an MCP server (stdio) that runs it. In a JSON config, with the Homebrew cask or a Linux package:
 
   ```json
   { "mcpServers": { "pinky": { "command": "pinkyctl", "args": ["mcp"] } } }
   ```
 
-The command is `pinkyctl`, not `pinky`: many computers already have another program named `pinky`. An agent on another computer or in a container can connect over HTTP instead ([how](docs/mcp.md#over-http)).
+  Claude Code in a terminal: `claude mcp add --scope user pinky -- pinkyctl mcp`. Most agents read the guide from `~/.agents/skills/pinky/SKILL.md`, Claude Code from `~/.claude/skills/pinky/SKILL.md`.
 
-Optionally, give Claude Code Pinky's agent guide as a skill by saving [SKILL.md](docs/SKILL.md) as `~/.claude/skills/pinky/SKILL.md`. On a Mac or Linux:
-
-```sh
-mkdir -p ~/.claude/skills/pinky && curl -fsSL -o ~/.claude/skills/pinky/SKILL.md https://raw.githubusercontent.com/DIYgod/pinky/main/docs/SKILL.md
-```
+The command is `pinkyctl`, not `pinky`: many computers already have another program named `pinky`. An agent on another computer or in a container can connect over HTTP instead ([how](docs/mcp.md#over-http)). [docs/mcp.md](docs/mcp.md#connecting-an-agent) says what Connect changes for each agent.
 
 ### 4. Try it
 
@@ -149,10 +140,10 @@ make app         # build/pinky/darwin-<arch>/Pinky.app and pinky-<version>-<arch
 
 `make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, with CMake installed (`brew install cmake`) also builds Pinky's own adb (`make adb`) into `Contents/Helpers`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize. `make release` signs with the Developer ID in `RELEASE_SIGN` and notarizes the `.dmg` (`make notarize`: submit, wait, staple), with the notarytool profile in `NOTARY_PROFILE` (`pinky-notary`), which you store once with `xcrun notarytool store-credentials pinky-notary --apple-id <Apple ID> --team-id <team>`. Releases themselves are built, signed and published by a workflow for both kinds of Mac, Windows and Linux; see [docs/RELEASING.md](docs/RELEASING.md).
 
-To try your build, open it (`open build/pinky/darwin-arm64/Pinky.app`) and connect your agent to it with the command in its Settings › Agents, or for Claude Code from the checkout:
+To try your build, open it (`open build/pinky/darwin-arm64/Pinky.app`) and connect your agent to it with Connect in its Settings › Agents, which uses this build's path, or for Claude Code from the checkout:
 
 ```sh
-claude mcp add pinky -- "$PWD/build/pinky/darwin-arm64/Pinky.app/Contents/MacOS/Pinky" mcp
+claude mcp add --scope user pinky -- "$PWD/build/pinky/darwin-arm64/Pinky.app/Contents/MacOS/Pinky" mcp
 mkdir -p ~/.claude/skills/pinky && cp docs/SKILL.md ~/.claude/skills/pinky/SKILL.md
 ```
 

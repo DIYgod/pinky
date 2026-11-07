@@ -156,13 +156,14 @@ type uiApp struct {
 
 // startApp runs the e2e build of the app with fake phones, a backend at
 // backendURL, an automation socket, and the addresses it opens logged to
-// urls.
-func startApp(t *testing.T, bin, home, backendURL, urls string) *uiApp {
+// urls; extra adds to its environment.
+func startApp(t *testing.T, bin, home, backendURL, urls string, extra ...string) *uiApp {
 	t.Helper()
 	sock := filepath.Join(home, "ui.sock")
 	os.Remove(sock)
 	cmd := exec.Command(bin, "--fake")
 	cmd.Env = append(env(home), "MYGO_AUTOMATION="+sock, telemetry.EndpointEnv+"="+backendURL, "DO_NOT_TRACK=", "PINKY_E2E_URLS="+urls)
+	cmd.Env = append(cmd.Env, extra...)
 	out := &syncBuffer{}
 	cmd.Stdout, cmd.Stderr = out, out
 	if err := cmd.Start(); err != nil {

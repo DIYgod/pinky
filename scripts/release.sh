@@ -78,6 +78,7 @@ build_release() {
 	"$work/src/scripts/dist.sh" darwin "$out"
 	"$work/src/scripts/dist.sh" windows "$out"
 	"$work/src/scripts/dist.sh" linux "$out"
+	(cd "$work/src" && go run ./scripts/release mcpb -version "$version" -out "$out/pinky-$version.mcpb")
 	# A dry run's manifest leaves out what the build left out.
 	partial=
 	[ "${STRICT:-0}" = 1 ] || partial=-partial

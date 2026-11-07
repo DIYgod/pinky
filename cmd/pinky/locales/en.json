@@ -1078,6 +1078,70 @@
   "@companionUpdatingTitle": {
     "description": "The companion card's title while Pinky updates the app by itself."
   },
+  "connectAlsoWorks": "Pinky also works with {names}.",
+  "@connectAlsoWorks": {
+    "description": "Settings › Agents › Connect an agent, when no agent is installed: under the buttons, the other agents Pinky can connect. names is a list.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Codex, Cursor and VS Code"
+      }
+    }
+  },
+  "connectByHand": "Add an agent by hand",
+  "@connectByHand": {
+    "description": "Settings › Agents › Connect an agent: the link that shows the commands to add Pinky to an agent yourself."
+  },
+  "connectByHandHide": "Hide the commands",
+  "@connectByHandHide": {
+    "description": "Settings › Agents › Connect an agent: the link that hides the commands again (connectByHand shows them)."
+  },
+  "connectCardBroken": "{agent} can't start Pinky",
+  "@connectCardBroken": {
+    "description": "The title of the sidebar's card for an agent whose entry for Pinky starts something that does not work (connectWhyMissing or connectWhyCoreutils under it), and its accessibility label.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "connectCardChoose": "Choose…",
+  "@connectCardChoose": {
+    "description": "The button on the sidebar's card when several agents are installed: it opens Settings › Agents to connect one."
+  },
+  "connectCardFound": "Pinky found {names} on this computer. Connect one to let it use your phones.",
+  "@connectCardFound": {
+    "description": "The sidebar's card while no agent is connected and several are installed. names is a list such as “Claude Code, Codex and Cursor”.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Claude Code, Codex and Cursor"
+      }
+    }
+  },
+  "connectCardFoundOne": "Pinky found {agent} on this computer. Connect it to let it use your phones.",
+  "@connectCardFoundOne": {
+    "description": "The sidebar's card while no agent is connected and one agent is installed, above the button that connects it.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "connectCardGet": "Get one",
+  "@connectCardGet": {
+    "description": "The button on the sidebar's card when no agent is installed: it opens Settings › Agents, which links to where to get one."
+  },
+  "connectCardLater": "Not now",
+  "@connectCardLater": {
+    "description": "The sidebar's card about connecting an agent: hides it until Pinky starts again."
+  },
+  "connectCardNone": "Pinky lets an AI agent use your phone. Install one, such as Claude Code or Claude Desktop, then connect it.",
+  "@connectCardNone": {
+    "description": "The sidebar's card while no agent is connected and none is installed. Keep the names Claude Code and Claude Desktop."
+  },
   "connectClaudeHint": "Run this in a terminal.",
   "@connectClaudeHint": {
     "description": "Settings › Agents › Add an agent: under the heading Claude Code, above the claude mcp add command that adds Pinky to Claude Code."
@@ -1085,6 +1149,20 @@
   "connectCommandLabel": "Command that starts Pinky for an agent",
   "@connectCommandLabel": {
     "description": "Settings › Agents › Add an agent: the accessibility label of the command shown under Other agents."
+  },
+  "connectConnect": "Connect",
+  "@connectConnect": {
+    "description": "Settings › Agents › Connect an agent: the button on an agent's row that adds Pinky to the agent's settings."
+  },
+  "connectConnectLabel": "Connect {agent}",
+  "@connectConnectLabel": {
+    "description": "The accessibility label of an agent's Connect button in Settings › Agents, and the text of the button on the sidebar's card when Pinky found one agent.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
   },
   "connectCopyClaude": "Copy the command for Claude Code",
   "@connectCopyClaude": {
@@ -1094,9 +1172,117 @@
   "@connectCopyOther": {
     "description": "Settings › Agents › Add an agent: the accessibility label of the copy button next to the command under Other agents."
   },
-  "connectIntro": "Agents on this computer start Pinky with a command, and you allow each one the first time it connects.",
+  "connectDoneNow": "Connected. Ask {agent} to do something on your phone.",
+  "@connectDoneNow": {
+    "description": "Settings › Agents › Connect an agent: under an agent once Pinky is added, for an agent that reads the change at once.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Cursor"
+      }
+    }
+  },
+  "connectDoneOpened": "Pinky's extension is open in {agent}: click Install there.",
+  "@connectDoneOpened": {
+    "description": "Under Claude Desktop in Settings › Agents, and on the sidebar's card, after Connect opened Pinky's extension (.mcpb) in Claude Desktop, which asks the person to install it. Keep Install as Claude Desktop's button says it.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Desktop"
+      }
+    }
+  },
+  "connectDoneRestart": "Connected. Quit {agent} and open it again, then ask it to do something on your phone.",
+  "@connectDoneRestart": {
+    "description": "Settings › Agents › Connect an agent: under an agent once Pinky is added, for an app that reads its settings when it opens (Claude).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude"
+      }
+    }
+  },
+  "connectDoneSession": "Connected. Start a new {agent} session, then ask it to do something on your phone.",
+  "@connectDoneSession": {
+    "description": "Settings › Agents › Connect an agent: under an agent once Pinky is added, for an agent that reads its MCP servers when a session starts (Claude Code, Codex).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "connectFailed": "That didn't work: {error}",
+  "@connectFailed": {
+    "description": "Under an agent in Settings › Agents, and on the sidebar's card, when connecting it or removing Pinky failed. error is Pinky's or the agent's own message, in English.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "Pinky left ~/.cursor/mcp.json as it is: not valid JSON at byte 40"
+      }
+    }
+  },
+  "connectFix": "Fix",
+  "@connectFix": {
+    "description": "The button on the sidebar's card for an agent that can't start Pinky (connectCardBroken), which sets its entry right."
+  },
+  "connectFixLabel": "Fix Pinky in {agent}",
+  "@connectFixLabel": {
+    "description": "The accessibility label of the Fix button on the sidebar's card.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "connectFoundLabel": "Agents on this computer",
+  "@connectFoundLabel": {
+    "description": "Settings › Agents › Connect an agent: the accessibility label of the list of agents found on this computer."
+  },
+  "connectGet": "Get {agent}",
+  "@connectGet": {
+    "description": "Settings › Agents › Connect an agent, when no agent is installed: a button that opens the agent's download page.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "connectIntro": "Connect adds Pinky to an agent's settings on this computer, after keeping a copy of them. You allow each agent the first time it connects.",
   "@connectIntro": {
-    "description": "Settings › Agents › Add an agent: the line under the heading."
+    "description": "Settings › Agents › Connect an agent: the line under the heading, above the agents found on this computer."
+  },
+  "connectIntroByHand": "Agents on this computer start Pinky with a command, and you allow each one the first time it connects.",
+  "@connectIntroByHand": {
+    "description": "Settings › Agents › Connect an agent, in a Pinky that cannot change agents' settings: the line under the heading, above the commands."
+  },
+  "connectKeptCopy": "Pinky kept a copy of the settings as they were.",
+  "@connectKeptCopy": {
+    "description": "Settings › Agents › Connect an agent: under an agent after Pinky changed its settings file, before the Show link (connectShowCopy)."
+  },
+  "connectLooking": "Looking for agents on this computer…",
+  "@connectLooking": {
+    "description": "Settings › Agents › Connect an agent: in place of the list of agents while Pinky looks for them."
+  },
+  "connectManual": "Pinky can't change its settings here. Add it by hand.",
+  "@connectManual": {
+    "description": "Settings › Agents › Connect an agent: the second line of an agent that Pinky cannot connect on this system (Add an agent by hand below shows the commands)."
+  },
+  "connectNoneFound": "Pinky found no agent on this computer. Install one, then connect it here.",
+  "@connectNoneFound": {
+    "description": "Settings › Agents › Connect an agent: in place of the list when no agent Pinky knows is installed, above the buttons that open where to get one."
+  },
+  "connectNotHere": "Not on this computer: {names}.",
+  "@connectNotHere": {
+    "description": "Settings › Agents › Connect an agent: under the list, the agents Pinky knows how to connect that are not installed here. names is a list such as “Cursor, Windsurf and Gemini CLI”.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Cursor, Windsurf and Gemini CLI"
+      }
+    }
   },
   "connectOtherHint": "Set this as the command of an MCP server over stdio.",
   "@connectOtherHint": {
@@ -1106,9 +1292,203 @@
   "@connectOtherTitle": {
     "description": "Settings › Agents › Add an agent: the heading above the command other agents (Codex, Cursor…) run to reach Pinky."
   },
-  "connectTitle": "Add an agent",
+  "connectProblem": "Pinky can't change its settings: {problem}",
+  "@connectProblem": {
+    "description": "Settings › Agents › Connect an agent: the second line of an agent whose settings file Pinky cannot read, such as one with a mistake in it. problem is the file and what is wrong with it, in English.",
+    "placeholders": {
+      "problem": {
+        "type": "String",
+        "example": "~/.cursor/mcp.json: not valid JSON at line 3, column 14: expected a colon"
+      }
+    }
+  },
+  "connectRemove": "Remove",
+  "@connectRemove": {
+    "description": "Settings › Agents › Connect an agent: the button on a connected agent's row that takes Pinky out of its settings."
+  },
+  "connectRemoveLabel": "Remove Pinky from {agent}",
+  "@connectRemoveLabel": {
+    "description": "Settings › Agents › Connect an agent: the accessibility label of an agent's Remove button.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "connectRemoveTip": "Takes Pinky out of {file}, after keeping a copy of it",
+  "@connectRemoveTip": {
+    "description": "Settings › Agents › Connect an agent: the tooltip of an agent's Remove button. file is the agent's settings file.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "~/.cursor/mcp.json"
+      }
+    }
+  },
+  "connectRemoved": "Removed.",
+  "@connectRemoved": {
+    "description": "Settings › Agents › Connect an agent: under an agent once Pinky is taken out of its settings."
+  },
+  "connectRemovedRestart": "Removed. {agent} stops using Pinky once you quit it and open it again.",
+  "@connectRemovedRestart": {
+    "description": "Settings › Agents › Connect an agent: under an app that reads its settings when it opens, once Pinky is taken out of them.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude"
+      }
+    }
+  },
+  "connectShowCopy": "Show",
+  "@connectShowCopy": {
+    "description": "Settings › Agents › Connect an agent: the link after connectKeptCopy that shows the copy of the agent's settings in Finder or the file manager."
+  },
+  "connectShowCopyLabel": "Show the copy of {agent}'s settings",
+  "@connectShowCopyLabel": {
+    "description": "Settings › Agents › Connect an agent: the accessibility label of the Show link.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Cursor"
+      }
+    }
+  },
+  "connectShowFile": "Show the file",
+  "@connectShowFile": {
+    "description": "Settings › Agents › Connect an agent: a link under an agent whose settings file Pinky cannot read (connectProblem), which shows the file in Finder or the file manager so the person can fix it."
+  },
+  "connectShowFileLabel": "Show {agent}'s settings file",
+  "@connectShowFileLabel": {
+    "description": "Settings › Agents › Connect an agent: the accessibility label of the Show the file link.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Windsurf"
+      }
+    }
+  },
+  "connectStateConnected": "Connected",
+  "@connectStateConnected": {
+    "description": "Settings › Agents › Connect an agent: the second line of an agent whose settings start this Pinky."
+  },
+  "connectStateExtension": "Connected as an extension. Remove it in {agent}'s Settings › Extensions.",
+  "@connectStateExtension": {
+    "description": "Settings › Agents › Connect an agent: the second line of Claude Desktop when Pinky is installed as its extension (from Pinky's .mcpb), which only Claude Desktop removes. Keep Settings › Extensions as Claude Desktop names it.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Desktop"
+      }
+    }
+  },
+  "connectStateNotConnected": "Not connected",
+  "@connectStateNotConnected": {
+    "description": "Settings › Agents › Connect an agent: the second line of an agent on this computer that does not have Pinky."
+  },
+  "connectTip": "Adds Pinky to {file}, after keeping a copy of it",
+  "@connectTip": {
+    "description": "The tooltip of an agent's Connect, Update and Fix buttons, in Settings › Agents and on the sidebar's card. file is the agent's settings file.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "~/.cursor/mcp.json"
+      }
+    }
+  },
+  "connectTipOpens": "Opens Pinky's extension in {agent}, which asks you to install it",
+  "@connectTipOpens": {
+    "description": "The tooltip of Claude Desktop's Connect button, in Settings › Agents and on the sidebar's card: Connect opens Pinky's extension (.mcpb) in Claude Desktop instead of changing a file.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Desktop"
+      }
+    }
+  },
+  "connectTitle": "Connect an agent",
   "@connectTitle": {
-    "description": "Settings › Agents: the heading of the part that says how to add an agent on this computer, and its accessibility label."
+    "description": "Settings › Agents: the heading of the part that connects the agents on this computer to Pinky (or, without that, says how to add one by hand), and its accessibility label; also the title of the sidebar's card that suggests connecting an agent while none is, and of the link under Tasks then."
+  },
+  "connectToastConnected": "Connected {agent}",
+  "@connectToastConnected": {
+    "description": "A toast once Pinky was added to an agent's settings.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "connectToastOpened": "Opened Pinky's extension in {agent}",
+  "@connectToastOpened": {
+    "description": "A toast once Connect opened Pinky's extension in Claude Desktop.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Desktop"
+      }
+    }
+  },
+  "connectUpdate": "Update",
+  "@connectUpdate": {
+    "description": "Settings › Agents › Connect an agent: the button on the row of an agent whose entry for Pinky is out of date (it starts a Pinky that moved, say), which sets it right."
+  },
+  "connectUpdateLabel": "Update Pinky in {agent}",
+  "@connectUpdateLabel": {
+    "description": "Settings › Agents › Connect an agent: the accessibility label of an agent's Update button.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Codex"
+      }
+    }
+  },
+  "connectWhyCoreutils": "Starts “pinky”, which may be another program of that name",
+  "@connectWhyCoreutils": {
+    "description": "The second line of an agent set up with the old command pinky mcp, which many computers run as coreutils' own pinky, in Settings › Agents and on the sidebar's card. Keep “pinky” as it is."
+  },
+  "connectWhyMissing": "Starts a Pinky that is no longer there",
+  "@connectWhyMissing": {
+    "description": "The second line of an agent whose entry for Pinky starts a program that is gone (Pinky moved), in Settings › Agents and on the sidebar's card."
+  },
+  "connectWhyOff": "Turned off in {agent}'s Settings › Extensions",
+  "@connectWhyOff": {
+    "description": "Settings › Agents › Connect an agent: the second line of Claude Desktop when Pinky's extension is installed but turned off there.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Desktop"
+      }
+    }
+  },
+  "connectWhyOther": "Its entry named pinky starts {command}",
+  "@connectWhyOther": {
+    "description": "Settings › Agents › Connect an agent: the second line of an agent whose MCP server named pinky starts something else. command is that command line.",
+    "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "npx pinky-mcp"
+      }
+    }
+  },
+  "connectWhyOtherPinky": "Starts another copy of Pinky",
+  "@connectWhyOtherPinky": {
+    "description": "Settings › Agents › Connect an agent: the second line of an agent whose entry starts Pinky from another place than the one open."
+  },
+  "connectWhySkill": "Connected, with an old copy of Pinky's guide",
+  "@connectWhySkill": {
+    "description": "Settings › Agents › Connect an agent: the second line of an agent that has Pinky, but whose copy of Pinky's skill (the guide agents read) is missing or from another version; Update installs the current one."
+  },
+  "connectWorking": "Changing {agent}'s settings",
+  "@connectWorking": {
+    "description": "Settings › Agents › Connect an agent: the accessibility label of the spinner on an agent's row while Pinky adds itself to the agent or removes itself.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Cursor"
+      }
+    }
   },
   "connectionAuto": "Automatic",
   "@connectionAuto": {
@@ -4462,9 +4842,13 @@
   "@settingsAgentsList": {
     "description": "Settings › Agents: the accessibility label of the list of agents."
   },
-  "settingsAgentsNone": "No agent has connected yet. Add one with a command below.",
+  "settingsAgentsNone": "No agent has connected yet. Connect one below.",
   "@settingsAgentsNone": {
-    "description": "Settings › Agents: in place of the list while no agent has connected. The commands below are those under Add an agent (connectTitle)."
+    "description": "Settings › Agents: in place of the list while no agent has connected. Below is Connect an agent (connectTitle)."
+  },
+  "settingsAgentsNoneYet": "No agent has used Pinky yet. Ask one you connected below to do something on your phone.",
+  "@settingsAgentsNoneYet": {
+    "description": "Settings › Agents: in place of the list while no agent has connected to Pinky, but one is connected under Connect an agent (its settings start Pinky)."
   },
   "settingsAgentsNotAllowed": "Not allowed yet",
   "@settingsAgentsNotAllowed": {
@@ -5415,6 +5799,10 @@
         "example": "3"
       }
     }
+  },
+  "tasksNoAgent": "No agent is connected to Pinky yet.",
+  "@tasksNoAgent": {
+    "description": "Under Tasks while no task runs and no agent is connected, above a link to Settings › Agents (connectTitle)."
   },
   "tasksNoToolCalls": "No tool calls yet.",
   "@tasksNoToolCalls": {
