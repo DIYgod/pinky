@@ -9,8 +9,10 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -43,13 +45,13 @@ func (a *app) changed() {
 func (a *app) settingsPage(c *mg.Context) {
 	p := pal(c)
 	s := &a.set
-	pageHeader(c, func() { mg.Text(c, "Settings").FontSize(17).FontWeight(650) })
+	pageHeader(c, func() { mg.Text(c, locales.SettingsPageTitle()).FontSize(17).FontWeight(650) })
 	mg.Row(c).Grow(1).MinHeight(0).AlignItems(mg.Stretch).Children(func() {
 		mg.Column(c).Width(200).Shrink(0).Padding(16, 12).Gap(2).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
-			Role(mg.RoleTabList).Label("Settings sections").Children(func() {
+			Role(mg.RoleTabList).Label(locales.SettingsSectionsLabel()).Children(func() {
 			tab := func(sec settingsSection, name string, needs bool) {
 				on := s.sec == sec
-				b := mg.ButtonBase(c.Key(name)).Height(36).Padding(0, 12).Radius(8).Gap(8).AlignItems(mg.Center).Justify(mg.Start).
+				b := mg.ButtonBase(c.Key(sec)).Height(36).Padding(0, 12).Radius(8).Gap(8).AlignItems(mg.Center).Justify(mg.Start).
 					Role(mg.RoleTab).Selected(on).Label(name)
 				col := p.ink2
 				switch {
@@ -70,19 +72,19 @@ func (a *app) settingsPage(c *mg.Context) {
 						t.FontWeight(600)
 					}
 					if needs {
-						dot(c, p.amberDot, false).Label("Needs you")
+						dot(c, p.amberDot, false).Label(locales.SettingsNeedsYou())
 					}
 				})
 			}
-			tab(secPhones, "Phones", false)
+			tab(secPhones, locales.SettingsSectionPhones(), false)
 			agentsWait := false
 			for _, n := range a.needs {
 				agentsWait = agentsWait || newAgentNeed(n)
 			}
-			tab(secAgents, "Agents", agentsWait)
-			tab(secSafety, "Safety", false)
-			tab(secPrivacy, "Privacy", false)
-			tab(secAdvanced, "Advanced", false)
+			tab(secAgents, locales.SettingsSectionAgents(), agentsWait)
+			tab(secSafety, locales.SettingsSectionSafety(), false)
+			tab(secPrivacy, locales.SettingsSectionPrivacy(), false)
+			tab(secAdvanced, locales.SettingsSectionAdvanced(), false)
 			a.feedbackLink(c)
 		})
 		mg.Scroll(c).Grow(1).MinWidth(0).Padding(24, 40).Children(func() {
@@ -175,15 +177,15 @@ func settingRow(c *mg.Context, title, desc string, last bool, control func()) {
 func (a *app) settingsSafety(c *mg.Context) {
 	p := pal(c)
 	st := &a.settings
-	settingsTitle(c, "Safety", "Pinky checks every action before it reaches the phone. Agents can't change these settings.")
-	mg.Column(c).Gap(8).Label("When agents ask").Children(func() {
-		mg.Text(c, "When should agents ask you?").FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
+	settingsTitle(c, locales.SettingsSectionSafety(), locales.SettingsSafetyIntro())
+	mg.Column(c).Gap(8).Label(locales.SettingsSafetyAskGroup()).Children(func() {
+		mg.Text(c, locales.SettingsSafetyAskTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
 		presets := []struct{ title, desc string }{
-			{"Ask before payments, messages and deletions (Recommended)", "Also asks before calls, account changes and installing apps."},
-			{"Ask before payments only", "Messages and deletions go through without asking."},
-			{"Ask before every action", "Slower, but you see every tap first."},
+			{locales.SettingsSafetyPresetCommits(), locales.SettingsSafetyPresetCommitsDesc()},
+			{locales.SettingsSafetyPresetPayments(), locales.SettingsSafetyPresetPaymentsDesc()},
+			{locales.SettingsSafetyPresetEvery(), locales.SettingsSafetyPresetEveryDesc()},
 		}
-		mg.Column(c).Gap(8).Role(mg.RoleRadioGroup).Label("When should agents ask you?").Children(func() {
+		mg.Column(c).Gap(8).Role(mg.RoleRadioGroup).Label(locales.SettingsSafetyAskTitle()).Children(func() {
 			for i, pr := range presets {
 				v := i + 1
 				opt := mg.RadioBase(c.Key(v), &st.Preset, v).Gap(12).Padding(10, 14).Radius(10).AlignItems(mg.Start).FillWidth()
@@ -213,20 +215,20 @@ func (a *app) settingsSafety(c *mg.Context) {
 			}
 		})
 	})
-	mg.Column(c).Gap(8).Label("Blocked apps").Children(func() {
+	mg.Column(c).Gap(8).Label(locales.SettingsSafetyBlockedApps()).Children(func() {
 		mg.Row(c).Gap(12).AlignItems(mg.End).Children(func() {
 			mg.Column(c).Grow(1).Children(func() {
-				mg.Text(c, "Blocked apps").FontSize(15).FontWeight(650)
-				mg.Text(c, "Agents can't open these apps or see their screens.").FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
+				mg.Text(c, locales.SettingsSafetyBlockedApps()).FontSize(15).FontWeight(650)
+				mg.Text(c, locales.SettingsSafetyBlockedIntro()).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
 			})
-			if button(c, "Add app", btnOpt{}).Clicked() {
+			if button(c, locales.SettingsSafetyAddApp(), btnOpt{}).Clicked() {
 				a.set.adding = !a.set.adding
 			}
 		})
 		if a.set.adding {
 			mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-				in := mg.TextInput(c.Key("new-blocked"), &a.set.newApp).Placeholder("App name or package").Grow(1).AutoFocus().Label("App to block")
-				add := button(c, "Block", btnOpt{kind: btnPrimary})
+				in := mg.TextInput(c.Key("new-blocked"), &a.set.newApp).Placeholder(locales.SettingsSafetyAppPlaceholder()).Grow(1).AutoFocus().Label(locales.SettingsSafetyAppLabel())
+				add := button(c, locales.SettingsSafetyBlock(), btnOpt{kind: btnPrimary})
 				if (in.Submitted() || add.Clicked()) && strings.TrimSpace(a.set.newApp) != "" {
 					st.BlockedApps = append(st.BlockedApps, BlockedApp{Name: strings.TrimSpace(a.set.newApp), Kind: "Blocked by you"})
 					a.set.newApp, a.set.adding = "", false
@@ -240,8 +242,8 @@ func (a *app) settingsSafety(c *mg.Context) {
 				mg.Row(c.Key("b-"+b.Name)).Gap(12).Padding(7, 0).AlignItems(mg.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
 					appIcon(c, b.Name, 28, 8, 13, blockedColor(b.Name))
 					mg.Text(c, b.Name).Grow(1)
-					mg.Text(c, b.Kind).FontSize(13.5).TextColor(p.ink2)
-					rm := mg.ButtonBase(c).Size(26, 26).Radius(6).Center().Label("Unblock " + b.Name).Tooltip("Unblock")
+					mg.Text(c, blockedKind(b.Kind)).FontSize(13.5).TextColor(p.ink2)
+					rm := mg.ButtonBase(c).Size(26, 26).Radius(6).Center().Label(locales.SettingsSafetyUnblockApp(b.Name)).Tooltip(locales.SettingsSafetyUnblock())
 					if rm.Hovered() {
 						rm.Background(p.bg3)
 					}
@@ -254,26 +256,53 @@ func (a *app) settingsSafety(c *mg.Context) {
 			}
 		})
 	})
-	mg.Column(c).Label("Protections").Children(func() {
-		if a.toggleRow(c, "ro", "Read-only mode", "Agents can browse, not commit", false, &st.ReadOnly) {
+	mg.Column(c).Label(locales.SettingsSafetyProtections()).Children(func() {
+		if a.toggleRow(c, "ro", locales.SettingsSafetyReadOnly(), locales.SettingsSafetyReadOnlyDesc(), false, &st.ReadOnly) {
 			if ro, ok := a.api.(readOnlySetter); ok {
 				on := st.ReadOnly
 				go ro.SetReadOnly("", on) // every phone
 			}
 		}
-		_, keep := unlockWords()
-		desc := "Save your phone PIN in the Keychain; unlock with Touch ID. Save each phone's PIN in Settings › Phones."
-		if runtime.GOOS != "darwin" {
-			desc = strings.TrimSuffix(strings.TrimPrefix(keep, "Your PIN stays in "), ". Agents never see it.")
-			desc = "Save your phone PIN in " + desc
+		desc := locales.SettingsSafetyUnlockDescOther()
+		switch runtime.GOOS {
+		case "darwin":
+			desc = locales.SettingsSafetyUnlockDescMac()
+		case "windows":
+			desc = locales.SettingsSafetyUnlockDescWindows()
 		}
 		if a.pin.ready && !a.pin.supported {
-			settingRow(c, "Unlock from this computer", notAvailableHere, false, nil)
+			settingRow(c, locales.SettingsUnlockFromComputer(), locales.UnlockNotAvailable(), false, nil)
 		} else {
-			a.toggleRow(c, "unlock", "Unlock from this computer", desc, false, &st.UnlockFromComputer)
+			a.toggleRow(c, "unlock", locales.SettingsUnlockFromComputer(), desc, false, &st.UnlockFromComputer)
 		}
-		a.toggleRow(c, "codes", "Hide codes from agents", "Passwords and one-time codes are blurred before an agent sees the screen", true, &st.HideCodes)
+		a.toggleRow(c, "codes", locales.SettingsSafetyHideCodes(), locales.SettingsSafetyHideCodesDesc(), true, &st.HideCodes)
 	})
+}
+
+// blockedKinds name the kinds of blocked apps, which the settings keep in
+// English: policy.CategoryLabel's (cmd/pinky) and the defaults'.
+var blockedKinds = map[string]func() string{
+	"Finance":        locales.SettingsSafetyKindFinance,
+	"Passwords":      locales.SettingsSafetyKindPasswords,
+	"Blocked by you": locales.RuleBlockedByYou,
+	"Banking":        locales.SettingsSafetyKindBanking,
+	"Wallet":         locales.SettingsSafetyKindWallet,
+	"Messaging":      locales.SettingsSafetyKindMessaging,
+	"Social":         locales.SettingsSafetyKindSocial,
+	"Stores":         locales.SettingsSafetyKindStores,
+	"Browsers":       locales.SettingsSafetyKindBrowsers,
+	"Phone":          locales.SettingsSafetyKindPhone,
+	"Settings":       locales.SettingsSafetyKindSettings,
+	"System":         locales.SettingsSafetyKindSystem,
+}
+
+// blockedKind is a blocked app's kind as Settings › Safety shows it. A
+// category of the person's own app table keeps its name.
+func blockedKind(kind string) string {
+	if f := blockedKinds[kind]; f != nil {
+		return f()
+	}
+	return kind
 }
 
 func blockedColor(name string) string {
@@ -290,10 +319,10 @@ func blockedColor(name string) string {
 
 func (a *app) settingsPhones(c *mg.Context) {
 	p := pal(c)
-	settingsTitle(c, "Phones", "Phones this computer can reach.")
-	mg.Column(c).Label("Phones").Children(func() {
+	settingsTitle(c, locales.SettingsSectionPhones(), locales.SettingsPhonesIntro())
+	mg.Column(c).Label(locales.SettingsSectionPhones()).Children(func() {
 		if len(a.devices) == 0 {
-			mg.Text(c, "No phones yet.").TextColor(p.ink2).Padding(10, 0)
+			mg.Text(c, locales.SettingsPhonesNone()).TextColor(p.ink2).Padding(10, 0)
 		}
 		for i, d := range a.devices {
 			d := d
@@ -313,14 +342,14 @@ func (a *app) settingsPhones(c *mg.Context) {
 						mg.Text(c, line).FontSize(13.5).TextColor(p.ink2)
 					})
 					mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
-						word := "Connected"
+						word := locales.SettingsPhonesConnected()
 						switch {
 						case d.Status == gateway.DeviceOffline:
 							hollowDot(c)
-							word = "Offline"
+							word = locales.SettingsPhonesOffline()
 						case d.Info.State != driver.StateOnline:
 							dot(c, p.amberDot, false)
-							word = "Needs setup"
+							word = locales.SettingsPhonesNeedsSetup()
 						default:
 							dot(c, p.green, false)
 						}
@@ -331,7 +360,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 				// can be removed even with unlocking turned off.
 				if a.pin.saved[d.Info.ID] || (d.Features.Unlock && a.settings.UnlockFromComputer) {
 					mg.Column(c).Gap(6).Padding(6, 0, 0, 0).Children(func() {
-						mg.Text(c, "Unlock from this computer").FontSize(13.5).FontWeight(600)
+						mg.Text(c, locales.SettingsUnlockFromComputer()).FontSize(13.5).FontWeight(600)
 						a.pinForm(c, d, "settings")
 					})
 				}
@@ -342,7 +371,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 		}
 	})
 	mg.Row(c).Children(func() {
-		if button(c, "Add phone", btnOpt{}).Clicked() {
+		if button(c, locales.SettingsPhonesAdd(), btnOpt{}).Clicked() {
 			a.page = pageAddPhone
 			a.add.reset(a)
 		}
@@ -359,7 +388,7 @@ type agentsState struct {
 	lastLoad time.Time
 	asks     int               // open first-connection requests, when last read
 	editing  string            // the agent whose scope is being changed
-	choice   map[string]string // scope label being chosen, by agent or need id
+	choice   map[string]string // scope mode being chosen, by agent or need id
 	apps     map[string]string // apps typed for "Use only the apps I choose"
 }
 
@@ -385,9 +414,11 @@ func (s *agentsState) load(a *app) {
 	}()
 }
 
+// splitApps reads the apps field: names separated by commas, including
+// the full-width comma and the ideographic comma of Chinese text.
 func splitApps(s string) []string {
 	var out []string
-	for _, a := range strings.Split(s, ",") {
+	for _, a := range strings.FieldsFunc(s, func(r rune) bool { return r == ',' || r == '\uff0c' || r == '\u3001' }) {
 		if a = strings.TrimSpace(a); a != "" {
 			out = append(out, a)
 		}
@@ -402,21 +433,23 @@ func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scop
 	if st.choice == nil {
 		st.choice, st.apps = map[string]string{}, map[string]string{}
 	}
-	choice, ok := st.choice[key]
+	// The choice is kept as a mode, so it survives a change of language.
+	mode, ok := st.choice[key]
 	if !ok {
-		choice = scopeLabel(initial.Mode)
+		mode = string(initial.Mode)
 		st.apps[key] = strings.Join(initial.Apps, ", ")
 	}
+	choice := scopeLabel(gateway.ScopeMode(mode))
 	labels := make([]string, len(scopeChoices))
 	for i, sc := range scopeChoices {
-		labels[i] = sc.label
+		labels[i] = sc.label()
 	}
 	mg.Select(c.Key("scope-"+key), &choice, labels).Label(label).MaxWidth(360)
-	st.choice[key] = choice
 	scope := gateway.Scope{Mode: scopeOf(choice)}
+	st.choice[key] = string(scope.Mode)
 	if scope.Mode == gateway.ScopeApps {
 		apps := st.apps[key]
-		mg.TextInput(c.Key("apps-"+key), &apps).Placeholder("Apps, separated by commas: Dinely, Chatter").Label("Apps").MaxWidth(360)
+		mg.TextInput(c.Key("apps-"+key), &apps).Placeholder(locales.SettingsAgentsAppsPlaceholder()).Label(locales.SettingsAgentsApps()).MaxWidth(360)
 		st.apps[key] = apps
 		scope.Apps = splitApps(apps)
 	}
@@ -430,7 +463,7 @@ func (a *app) approveAgent(n gateway.NeedView, scope gateway.Scope) {
 	a.remember(n, gateway.AllowOnce, "")
 	scoper, ok := a.api.(agentScoper)
 	name := n.Agent
-	a.call(n.DeviceID, "approve the agent", func() error {
+	a.call(n.DeviceID, locales.SettingsAgentsApprove(), func() error {
 		if ok && name != "" {
 			scoper.SetAgentScope(name, scope)
 		}
@@ -441,7 +474,7 @@ func (a *app) approveAgent(n gateway.NeedView, scope gateway.Scope) {
 func (a *app) settingsAgents(c *mg.Context) {
 	p := pal(c)
 	st := &a.agents
-	settingsTitle(c, "Agents", "Agents connect to Pinky on this computer. Each one only gets what you allow.")
+	settingsTitle(c, locales.SettingsSectionAgents(), locales.SettingsAgentsIntro())
 	_, canList := a.api.(agentLister)
 	_, canScope := a.api.(agentScoper)
 	if canList {
@@ -457,13 +490,13 @@ func (a *app) settingsAgents(c *mg.Context) {
 		}
 		n := n
 		mg.Column(c.Key("req-"+n.ID)).Padding(18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(10).
-			Label("Connection request").Children(func() {
+			Label(locales.SettingsAgentsRequest()).Children(func() {
 			mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 				dot(c, p.amberDot, false)
-				mg.Text(c, "Needs you").FontSize(13).FontWeight(600).TextColor(p.amber)
+				mg.Text(c, locales.SettingsNeedsYou()).FontSize(13).FontWeight(600).TextColor(p.amber)
 			})
 			mg.Column(c).Children(func() {
-				mg.Text(c, n.Title).FontSize(16).FontWeight(650)
+				mg.Text(c, needTitle(n)).FontSize(16).FontWeight(650)
 				if d := agentRequestDetail(n, canScope); d != "" {
 					mg.Text(c, d).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
 				}
@@ -489,7 +522,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 		for _, ag := range st.list {
 			r := row{name: ag.Name, line: scopeLine(ag.Scope), scope: ag.Scope, known: true, state: "allowed"}
 			if !ag.Approved {
-				r.line, r.state = "Not allowed yet", "waiting"
+				r.line, r.state = locales.SettingsAgentsNotAllowed(), "waiting"
 			}
 			if working[ag.Name] {
 				r.state = "working"
@@ -498,7 +531,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 		}
 	case a.opt.Agents != nil:
 		for _, ag := range a.opt.Agents {
-			r := row{name: ag.Name, line: nonEmpty(ag.Scope, "Connected through MCP"), state: "allowed"}
+			r := row{name: ag.Name, line: nonEmpty(ag.Scope, locales.SettingsAgentsViaMCP()), state: "allowed"}
 			if ag.Connected {
 				r.state = "working"
 			}
@@ -509,7 +542,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 		for _, t := range append(append([]gateway.TaskView(nil), a.tasks...), a.act.tasks...) {
 			if t.Agent != "" && !seen[t.Agent] {
 				seen[t.Agent] = true
-				r := row{name: t.Agent, line: "Connected through MCP", state: "allowed"}
+				r := row{name: t.Agent, line: locales.SettingsAgentsViaMCP(), state: "allowed"}
 				if working[t.Agent] {
 					r.state = "working"
 				}
@@ -518,9 +551,9 @@ func (a *app) settingsAgents(c *mg.Context) {
 		}
 		sort.Slice(rows, func(i, j int) bool { return rows[i].name < rows[j].name })
 	}
-	mg.Column(c).Label("Connected agents").Children(func() {
+	mg.Column(c).Label(locales.SettingsAgentsList()).Children(func() {
 		if len(rows) == 0 {
-			mg.Text(c, "No agent has connected yet. Point an agent at `pinky mcp` to start.").TextColor(p.ink2).Padding(10, 0)
+			mg.Text(c, locales.SettingsAgentsNone()).TextColor(p.ink2).Padding(10, 0)
 		}
 		for i, r := range rows {
 			r := r
@@ -540,21 +573,21 @@ func (a *app) settingsAgents(c *mg.Context) {
 						switch r.state {
 						case "working":
 							dot(c, p.green, false)
-							mg.Text(c, "Working").FontSize(13).TextColor(p.ink2)
+							mg.Text(c, locales.SettingsAgentsWorking()).FontSize(13).TextColor(p.ink2)
 						case "waiting":
 							dot(c, p.amberDot, false)
-							mg.Text(c, "Waiting for you").FontSize(13).TextColor(p.ink2)
+							mg.Text(c, locales.SettingsAgentsWaiting()).FontSize(13).TextColor(p.ink2)
 						default:
 							dot(c, p.ink3, false)
-							mg.Text(c, "Allowed").FontSize(13).TextColor(p.ink2)
+							mg.Text(c, locales.SettingsAgentsAllowed()).FontSize(13).TextColor(p.ink2)
 						}
 					})
 					if canScope && r.known && r.state != "waiting" {
-						label := "Change"
+						label := locales.SettingsChange()
 						if st.editing == r.name {
-							label = "Close"
+							label = locales.SettingsClose()
 						}
-						if button(c, label, btnOpt{}).Label("Change what " + r.name + " may do").Clicked() {
+						if button(c, label, btnOpt{}).Label(locales.SettingsAgentsChangeLabel(r.name)).Clicked() {
 							if st.editing == r.name {
 								st.editing = ""
 							} else {
@@ -566,8 +599,8 @@ func (a *app) settingsAgents(c *mg.Context) {
 				})
 				if st.editing == r.name && canScope {
 					mg.Column(c).Gap(8).Padding(0, 0, 0, 44).Children(func() {
-						scope := a.scopePicker(c, r.name, "What "+r.name+" may do", r.scope)
-						if button(c, "Save", btnOpt{kind: btnPrimary}).AlignSelf(mg.Start).Clicked() {
+						scope := a.scopePicker(c, r.name, locales.SettingsAgentsScopeLabel(r.name), r.scope)
+						if button(c, locales.SettingsSave(), btnOpt{kind: btnPrimary}).AlignSelf(mg.Start).Clicked() {
 							if sc, ok := a.api.(agentScoper); ok {
 								name := r.name
 								go func() {
@@ -583,7 +616,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 		}
 	})
 	if !canList {
-		mg.Text(c, "This gateway does not list its agents; these are the ones seen in tasks.").FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, locales.SettingsAgentsUnlisted()).FontSize(12.5).TextColor(p.ink3)
 	}
 	a.remoteAgents(c)
 }
@@ -600,31 +633,35 @@ func keepChoices(cur int) []int {
 	return append([]int{cur}, out...)
 }
 
-func keepLabel(days int) string {
+// keepLabel is a retention limit as the select shows it, in the language
+// shown. The select maps a label back to its limit in the same frame.
+func keepLabel(days int) string { return keepLabelIn(locales.In(i18n.Locale()), days) }
+
+// keepLabelIn names a retention in the language of m; feedback's
+// diagnostics are English.
+func keepLabelIn(m locales.Messages, days int) string {
 	switch {
 	case days <= 0:
-		return "Forever"
-	case days == 1:
-		return "1 day"
+		return m.SettingsPrivacyKeepForever()
 	case days == 365:
-		return "1 year"
+		return m.SettingsPrivacyKeepYear()
 	}
-	return fmt.Sprintf("%d days", days)
+	return m.SettingsPrivacyKeepDays(days)
 }
 
 func (a *app) settingsPrivacy(c *mg.Context) {
 	p := pal(c)
 	st := &a.settings
-	settingsTitle(c, "Privacy", "Activity and recordings stay on this computer.")
-	mg.Column(c).Label("Privacy").Children(func() {
-		settingRow(c, "Keep activity for", "Older tasks, their screenshots and recordings are deleted automatically", false, func() {
+	settingsTitle(c, locales.SettingsSectionPrivacy(), locales.SettingsPrivacyIntro())
+	mg.Column(c).Label(locales.SettingsSectionPrivacy()).Children(func() {
+		settingRow(c, locales.SettingsPrivacyKeep(), locales.SettingsPrivacyKeepDesc(), false, func() {
 			choices := keepChoices(st.KeepDays)
 			labels := make([]string, len(choices))
 			for i, d := range choices {
 				labels[i] = keepLabel(d)
 			}
 			cur := keepLabel(st.KeepDays)
-			if mg.Select(c.Key("keep"), &cur, labels).Label("Keep activity for").Changed() {
+			if mg.Select(c.Key("keep"), &cur, labels).Label(locales.SettingsPrivacyKeep()).Changed() {
 				for i, l := range labels {
 					if l == cur {
 						st.KeepDays = choices[i]
@@ -637,16 +674,16 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 				}
 			}
 		})
-		if a.toggleRow(c, "rec", "Record the screen during tasks", "Used for replays in Activity. Recording pauses while a blocked app is open.", false, &st.Record) {
+		if a.toggleRow(c, "rec", locales.SettingsPrivacyRecord(), locales.SettingsPrivacyRecordDesc(), false, &st.Record) {
 			if rs, ok := a.api.(recordingSetter); ok {
 				on := st.Record
 				go rs.SetRecording(on)
 			}
 		}
-		settingRow(c, "Delete all activity", "Removes every task, step and recording", true, func() {
-			b := button(c, "Delete…", btnOpt{})
+		settingRow(c, locales.SettingsPrivacyDeleteAll(), locales.SettingsPrivacyDeleteAllDesc(), true, func() {
+			b := button(c, locales.SettingsPrivacyDeleteButton(), btnOpt{})
 			if _, ok := a.api.(historyWiper); !ok {
-				b.Disabled(true).Tooltip("This gateway cannot delete its history")
+				b.Disabled(true).Tooltip(locales.SettingsPrivacyCannotDelete())
 			} else if b.Clicked() {
 				a.set.confirm = true
 			}
@@ -654,9 +691,9 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 	})
 	a.privacyTelemetry(c)
 	if a.set.confirm {
-		switch mg.AlertDialog(c, &a.set.confirm, "Delete all activity?",
-			"Every finished task, its steps, approvals and screenshots are removed from this computer. Running tasks go on.",
-			"Cancel", "Delete") {
+		switch mg.AlertDialog(c, &a.set.confirm, locales.SettingsPrivacyDeleteTitle(),
+			locales.SettingsPrivacyDeleteMessage(),
+			locales.SettingsCancel(), locales.SettingsPrivacyDeleteConfirm()) {
 		case 1:
 			a.wipeHistory()
 		}
@@ -676,13 +713,13 @@ func (a *app) wipeHistory() {
 		err := w.WipeHistory(ctx)
 		a.post(func() {
 			if err != nil {
-				a.toasts = append(a.toasts, "Couldn't delete the activity: "+err.Error())
+				a.toasts = append(a.toasts, locales.SettingsPrivacyDeleteFailed(err.Error()))
 				return
 			}
 			a.mediaCache = map[string]*mediaEntry{}
 			a.act.tasks, a.act.sel = nil, ""
 			a.act.load(a)
-			a.toasts = append(a.toasts, "Deleted all activity")
+			a.toasts = append(a.toasts, locales.SettingsPrivacyDeleted())
 		})
 	}()
 }
@@ -690,9 +727,10 @@ func (a *app) wipeHistory() {
 func (a *app) settingsAdvanced(c *mg.Context) {
 	p := pal(c)
 	st := &a.settings
-	settingsTitle(c, "Advanced", "For people who build with Pinky.")
-	mg.Column(c).Label("Advanced").Children(func() {
-		a.toggleRow(c, "dev", "Developer mode", "Shows tool calls, element lists, timings and backends. A Details switch appears on the task card.", false, &st.DeveloperMode)
+	settingsTitle(c, locales.SettingsSectionAdvanced(), locales.SettingsAdvancedIntro())
+	mg.Column(c).Label(locales.SettingsSectionAdvanced()).Children(func() {
+		a.languageRow(c)
+		a.toggleRow(c, "dev", locales.SettingsAdvancedDevMode(), locales.SettingsAdvancedDevModeDesc(), false, &st.DeveloperMode)
 		if st.DeveloperMode {
 			var parts []string
 			for _, d := range a.devices {
@@ -702,29 +740,29 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 			}
 			backends := strings.Join(parts, ". ")
 			if backends == "" {
-				backends = "No phones connected."
+				backends = locales.SettingsAdvancedNoPhones()
 			} else {
 				backends += "."
 			}
-			settingRow(c, "Backends", backends, false, nil)
-			conn := "MCP over stdio: pinky mcp"
+			settingRow(c, locales.SettingsAdvancedBackends(), backends, false, nil)
+			conn := locales.SettingsAdvancedConnStdio()
 			if st.RemoteAgents {
-				conn += "; Streamable HTTP at " + RemoteURL(st.RemoteAddr)
+				conn = locales.SettingsAdvancedConnHTTP(RemoteURL(st.RemoteAddr))
 			}
-			settingRow(c, "Agent connection", conn, false, nil)
+			settingRow(c, locales.SettingsAdvancedConnection(), conn, false, nil)
 			if v := videoLine(a); v != "" {
-				settingRow(c, "Video", v, false, nil)
+				settingRow(c, locales.SettingsAdvancedVideo(), v, false, nil)
 			}
 		}
-		settingRow(c, "Rules file", "The rules behind Safety, as text", true, func() {
-			b := button(c, "Edit rules file", btnOpt{})
+		settingRow(c, locales.SettingsAdvancedRulesFile(), locales.SettingsAdvancedRulesFileDesc(), true, func() {
+			b := button(c, locales.SettingsAdvancedEditRules(), btnOpt{})
 			if a.opt.RulesFile == "" {
-				b.Disabled(true).Tooltip("The gateway did not say where its rules file is")
+				b.Disabled(true).Tooltip(locales.SettingsAdvancedNoRulesFile())
 			} else if b.Clicked() {
 				path := a.opt.RulesFile
 				go func() {
 					if err := mygo.Shell.OpenPath(path); err != nil {
-						a.post(func() { a.toasts = append(a.toasts, "Couldn't open the rules file: "+err.Error()) })
+						a.post(func() { a.toasts = append(a.toasts, locales.SettingsAdvancedRulesOpenFailed(err.Error())) })
 					}
 				}()
 			}

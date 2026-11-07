@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
 
@@ -50,7 +50,7 @@ func (a *app) liveAnswers() []answer {
 // over every app and shows without taking the keyboard.
 func (a *app) newPanel() {
 	a.panel = mygo.NewWindow(mygo.WindowOptions{
-		Title: "Pinky approval", Width: panelW, Height: panelH,
+		Title: locales.PanelWindowTitle(), Width: panelW, Height: panelH,
 		Hidden: true, Panel: true, Frameless: true, Transparent: true, CornerRadius: 14,
 		DisableResize: true, DisableMinimize: true, DisableMaximize: true, DisableFullScreen: true,
 		SkipTaskbar: true, AlwaysOnTop: true,
@@ -176,12 +176,12 @@ func (a *app) panelView(c *mg.Context) {
 		mg.Column(c).Grow(1).MinHeight(0).Padding(12, 16, 16, 16).Gap(2).Children(func() {
 			mg.Row(c).MinHeight(24).Gap(8).AlignItems(mg.Center).Children(func() {
 				if len(asks) > 1 {
-					mg.Row(c).Gap(2).AlignItems(mg.Center).Role(mg.RoleGroup).Label("Waiting approvals").Children(func() {
-						if arrowButton(c, icChevL, "Previous approval", a.panelIdx == 0).Clicked() {
+					mg.Row(c).Gap(2).AlignItems(mg.Center).Role(mg.RoleGroup).Label(locales.PanelWaitingApprovals()).Children(func() {
+						if arrowButton(c, icChevL, locales.PanelPrevious(), a.panelIdx == 0).Clicked() {
 							a.panelIdx--
 						}
-						mg.Text(c, fmt.Sprintf("%d of %d", a.panelIdx+1, len(asks))).FontSize(12.5).FontWeight(600).TextColor(p.ink2)
-						if arrowButton(c, icChevR, "Next approval", a.panelIdx >= len(asks)-1).Clicked() {
+						mg.Text(c, locales.PanelPosition(a.panelIdx+1, len(asks))).FontSize(12.5).FontWeight(600).TextColor(p.ink2)
+						if arrowButton(c, icChevR, locales.PanelNext(), a.panelIdx >= len(asks)-1).Clicked() {
 							a.panelIdx++
 						}
 					})
@@ -189,16 +189,16 @@ func (a *app) panelView(c *mg.Context) {
 				mg.Spacer(c)
 				if !n.Deadline.IsZero() {
 					secs := time.Duration(math.Ceil(max(0, left.Seconds()))) * time.Second
-					word := "Denies in "
+					word := locales.PanelDeniesIn(elapsed(secs))
 					if n.Kind == gateway.NeedHandoff {
-						word = "Ends in "
+						word = locales.PanelEndsIn(elapsed(secs))
 					}
-					mg.Text(c, word+elapsed(secs)).FontSize(12.5).TextColor(p.ink2)
+					mg.Text(c, word).FontSize(12.5).TextColor(p.ink2)
 				}
 			})
 			needEyebrow(c, n)
-			mg.Text(c, n.Title).FontSize(16).FontWeight(650).LineHeight(1.3).Margin(6, 0, 0, 0).Role(mg.RoleHeading)
-			detail := n.Detail
+			mg.Text(c, needTitle(n)).FontSize(16).FontWeight(650).LineHeight(1.3).Margin(6, 0, 0, 0).Role(mg.RoleHeading)
+			detail := needDetail(n)
 			if newAgentNeed(n) {
 				_, picker := a.api.(agentScoper)
 				detail = agentRequestDetail(n, picker)
@@ -221,39 +221,39 @@ func (a *app) panelView(c *mg.Context) {
 			}
 			mg.Spacer(c)
 			if noting {
-				mg.Text(c, "Note for "+agentOf(n)).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
+				mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
 				note := a.notes[n.ID]
-				mg.TextArea(c.Key("pnote-"+n.ID), &note).Label("Note for "+agentOf(n)).Lines(2, 3).Margin(6, 0, 0, 0).AutoFocus()
+				mg.TextArea(c.Key("pnote-"+n.ID), &note).Label(locales.NeedsNoteFor(agentOf(n))).Lines(2, 3).Margin(6, 0, 0, 0).AutoFocus()
 				a.notes[n.ID] = note
 				mg.Grid(c).Columns(2).Gap(8).Margin(8, 0, 0, 0).Children(func() {
-					if button(c, "Cancel", btnOpt{}).Clicked() {
+					if button(c, locales.PanelCancel(), btnOpt{}).Clicked() {
 						delete(a.noting, n.ID)
 					}
-					if button(c, "Deny with note", btnOpt{kind: btnPrimary}).Clicked() {
+					if button(c, locales.PanelDenyWithNote(), btnOpt{kind: btnPrimary}).Clicked() {
 						a.decide(n, gateway.Deny, strings.TrimSpace(note))
 					}
 				})
 				return
 			}
 			mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {
-				if button(c, "Deny", btnOpt{}).Clicked() {
+				if button(c, locales.NeedsDeny(), btnOpt{}).Clicked() {
 					a.decide(n, gateway.Deny, "")
 				}
-				if button(c, "Allow", btnOpt{kind: btnPrimary}).Clicked() {
+				if button(c, locales.NeedsAllow(), btnOpt{kind: btnPrimary}).Clicked() {
 					a.decide(n, gateway.AllowOnce, "")
 				}
 			})
-			linkButton(c, "More options").Margin(10, 0, 0, 0).AlignSelf(mg.Start).PopoverMenuButton(func(m *mg.Menu) {
-				if m.Item("Allow for this task").Chosen() {
+			linkButton(c, locales.NeedsMoreOptions()).Margin(10, 0, 0, 0).AlignSelf(mg.Start).PopoverMenuButton(func(m *mg.Menu) {
+				if m.Item(locales.NeedsAllowTask()).Chosen() {
 					a.decide(n, gateway.AllowTask, "")
 				}
-				if m.Item("Always allow this kind").Chosen() {
+				if m.Item(locales.NeedsAlwaysAllow(locales.RuleActionThisKind())).Chosen() {
 					a.decide(n, gateway.AllowAlways, "")
 				}
-				if m.Item("Take over").Chosen() {
+				if m.Item(locales.PhoneTakeOver()).Chosen() {
 					a.decide(n, gateway.TakeOver, "")
 				}
-				if m.Item("Deny with a note").Chosen() {
+				if m.Item(locales.NeedsDenyWithNote()).Chosen() {
 					a.noting[n.ID] = true
 				}
 			})
@@ -267,8 +267,8 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 	p := pal(c)
 	mg.Column(c).Grow(1).Padding(16).Gap(2).Children(func() {
 		needEyebrow(c, x.need)
-		mg.Text(c, x.need.Title).FontSize(16).FontWeight(650).Margin(6, 0, 0, 0)
-		mg.Text(c, x.need.Detail).FontSize(13.5).TextColor(p.ink2).MaxLines(2)
+		mg.Text(c, needTitle(x.need)).FontSize(16).FontWeight(650).Margin(6, 0, 0, 0)
+		mg.Text(c, needDetail(x.need)).FontSize(13.5).TextColor(p.ink2).MaxLines(2)
 		mg.Column(c).Margin(14, 0, 0, 0).Gap(4).Children(func() {
 			title, detail := "", ""
 			ic, col := icCheck, p.green
@@ -276,40 +276,40 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 			agent := agentOf(x.need)
 			withNote := func(s string) string {
 				if x.note != "" {
-					return s + " Your note: “" + x.note + "”"
+					return locales.PanelWithNote(s, x.note)
 				}
 				return s
 			}
 			switch {
 			case x.need.Kind == gateway.NeedHandoff && x.d == gateway.AllowOnce:
-				title, detail = "Handed back", withNote(agent+" goes on from here.")
+				title, detail = locales.PanelHandedBack(), withNote(locales.PanelHandedBackDetail(agent))
 			case x.need.Kind == gateway.NeedHandoff:
 				ic, col = icX, p.ink2
-				title, detail = "Declined", withNote(agent+" was told no.")
+				title, detail = locales.PanelDeclined(), withNote(locales.PanelToldNo(agent))
 			case newAgentNeed(x.need) && x.d == gateway.Deny:
 				ic, col = icX, p.ink2
-				title, detail = "Denied", agent+" can't use your phones."
+				title, detail = locales.PanelDenied(), locales.PanelAgentDenied(agent)
 			case newAgentNeed(x.need):
-				title, detail = "Allowed", agent+" can use your phones. Change what it may do in Settings › Agents."
+				title, detail = locales.PanelAllowed(), locales.PanelAgentAllowed(agent)
 			}
 			switch {
 			case title != "":
 			default:
 				switch x.d {
 				case gateway.AllowOnce:
-					title, detail = "Allowed once", "Pinky checks the button is still on screen, then taps it."
+					title, detail = locales.PanelAllowedOnce(), locales.PanelAllowedOnceDetail()
 				case gateway.AllowTask:
-					title = "Allowed for this task"
-					detail = fmt.Sprintf("%s in %s are allowed until this task ends.", nonEmpty(kind, "Actions like this"), nonEmpty(app, "this app"))
+					title = locales.PanelAllowedTask()
+					detail = locales.PanelAllowedTaskDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
 				case gateway.AllowAlways:
-					title = "Always allowed"
-					detail = fmt.Sprintf("%s in %s no longer ask. Change it in Settings.", nonEmpty(kind, "Actions like this"), nonEmpty(app, "this app"))
+					title = locales.PanelAlwaysAllowed()
+					detail = locales.PanelAlwaysAllowedDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
 				default:
 					ic, col = icX, p.ink2
-					title = "Denied"
-					detail = "Nothing was tapped. " + agentOf(x.need) + " was told no."
+					title = locales.PanelDenied()
+					detail = locales.PanelDeniedDetail(agentOf(x.need))
 					if x.note != "" {
-						detail = "Nothing was tapped. " + agentOf(x.need) + " was told no, with your note: “" + x.note + "”"
+						detail = locales.PanelDeniedDetailNote(agentOf(x.need), x.note)
 					}
 				}
 			}
@@ -358,7 +358,7 @@ func (a *app) screenshotCrop(c *mg.Context, n gateway.NeedView) {
 	iw, ih := bm.Size()
 	tg := n.Target
 	fig := mg.Box(c).Height(100).FillWidth().Margin(12, 0, 0, 0).Radius(10).Border(1, p.line2).Clip().Background(hex("#000000")).
-		Label(n.DeviceName + " screen: the target, outlined")
+		Label(locales.PanelShotLabel(n.DeviceName))
 	fig.Draw(func(pt *mg.Painter, r mg.Rect) {
 		if iw == 0 || ih == 0 {
 			return

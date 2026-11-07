@@ -14,6 +14,7 @@ import (
 	mg "github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/markdown"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/update"
@@ -167,12 +168,12 @@ func (a *app) checked(r *update.Release, err error) {
 	switch {
 	case errors.Is(err, update.ErrDevelopment):
 		if asked {
-			s.checkErr = "This is a development build, which doesn't update itself."
+			s.checkErr = locales.UpdateDevBuild()
 		}
 	case err != nil:
 		log.Printf("pinky: update check: %v", err)
 		if asked {
-			s.checkErr = "Couldn't check for updates: " + updateError(err)
+			s.checkErr = locales.UpdateCheckFailed(updateError(err))
 		}
 	default:
 		if s.phase == updReady && (r == nil || s.prepared == nil || r.Version != s.prepared.Release.Version) {
@@ -189,7 +190,7 @@ func (a *app) checked(r *update.Release, err error) {
 			s.rel = r
 		}
 		if r == nil && asked {
-			a.toasts = append(a.toasts, "Pinky is up to date")
+			a.toasts = append(a.toasts, locales.UpdateUpToDateToast())
 		}
 	}
 }
@@ -242,27 +243,27 @@ func (a *app) activity(now time.Time) update.Activity {
 	}
 	for id, on := range a.pin.unlocking {
 		if on {
-			act.Busy = append(act.Busy, "unlocking "+a.deviceName(id))
+			act.Busy = append(act.Busy, locales.UpdateBusyUnlocking(a.deviceName(id)))
 		}
 	}
 	for id := range a.comp.installing {
-		act.Busy = append(act.Busy, "installing Pinky Companion on "+a.deviceName(id))
+		act.Busy = append(act.Busy, locales.UpdateBusyInstalling(a.deviceName(id)))
 	}
 	for id, ca := range a.upd.comp {
 		if ca.running {
-			act.Busy = append(act.Busy, "updating Pinky Companion on "+a.deviceName(id))
+			act.Busy = append(act.Busy, locales.UpdateBusyUpdating(a.deviceName(id)))
 		}
 	}
 	for _, d := range a.devices {
 		if d.Status == gateway.DeviceInControl {
-			act.Busy = append(act.Busy, "you control "+d.Info.Name)
+			act.Busy = append(act.Busy, locales.UpdateBusyControl(d.Info.Name))
 		}
 	}
 	if a.add.pair.cancel != nil {
-		act.Busy = append(act.Busy, "pairing a phone")
+		act.Busy = append(act.Busy, locales.UpdateBusyPairing())
 	}
 	if a.rec.pl != nil {
-		act.Busy = append(act.Busy, "playing a recording")
+		act.Busy = append(act.Busy, locales.UpdateBusyRecording())
 	}
 	return act
 }
@@ -333,7 +334,7 @@ func (a *app) prepared(p *update.Prepared, err error) {
 	case update.MethodInstaller:
 		// The installer replaces Pinky; it must not be running then.
 		if err := mygo.Shell.OpenPath(p.File); err != nil {
-			s.phase, s.err = updFailed, "Couldn't open the installer: "+err.Error()
+			s.phase, s.err = updFailed, locales.UpdateOpenInstallerFailed(err.Error())
 			return
 		}
 		a.opt.Updates.MarkRestart()
@@ -342,7 +343,7 @@ func (a *app) prepared(p *update.Prepared, err error) {
 	default:
 		s.phase, s.file = updIdle, p.File
 		a.reveal(p.File)
-		a.toasts = append(a.toasts, "Downloaded Pinky "+p.Release.Version)
+		a.toasts = append(a.toasts, locales.UpdateDownloadedToast(p.Release.Version))
 	}
 }
 
@@ -409,15 +410,15 @@ func updateError(err error) string {
 	var ne net.Error
 	switch {
 	case errors.Is(err, update.ErrChecksum):
-		return "The download was damaged. Try again."
+		return locales.UpdateErrChecksum()
 	case errors.Is(err, update.ErrSignature):
-		return "The update isn't signed by Pinky's developer, so Pinky didn't install it."
+		return locales.UpdateErrSignature()
 	case errors.Is(err, update.ErrNoAsset):
-		return "There's no build of this version for this computer yet."
+		return locales.UpdateErrNoAsset()
 	case errors.Is(err, update.ErrStalled):
-		return "The download stopped coming in. Check the connection and try again."
+		return locales.UpdateErrStalled()
 	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &ne):
-		return "Couldn't reach the update server. Check the connection and try again."
+		return locales.UpdateErrNetwork()
 	}
 	msg := err.Error()
 	if len(msg) > 200 {
@@ -481,7 +482,7 @@ func (a *app) updateCard(c *mg.Context) {
 	if s.rel != nil {
 		v = s.rel.Version
 	}
-	sideCard(c, "update", "Update", func() {
+	sideCard(c, "update", locales.UpdateCardLabel(), func() {
 		head := func(title string) {
 			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, icUpdate).FontSize(15).TextColor(p.accentInk)
@@ -490,47 +491,47 @@ func (a *app) updateCard(c *mg.Context) {
 		}
 		switch s.phase {
 		case updDownloading:
-			head("Downloading Pinky " + v)
+			head(locales.UpdateDownloading(v))
 			frac := 0.0
 			if s.total > 0 {
 				frac = float64(s.done) / float64(s.total)
 			}
-			mg.Progress(c, frac).FillWidth().Label("Download")
+			mg.Progress(c, frac).FillWidth().Label(locales.UpdateDownloadLabel())
 			mg.Row(c).AlignItems(mg.Center).Children(func() {
-				mg.Text(c, fmt.Sprintf("%s of %s", mb(s.done), mb(s.total))).FontSize(12).TextColor(p.ink2).Grow(1)
-				if quietButton(c, "Cancel").Clicked() && s.cancel != nil {
+				mg.Text(c, locales.UpdateProgress(mb(s.done), mb(s.total))).FontSize(12).TextColor(p.ink2).Grow(1)
+				if quietButton(c, locales.UpdateCancel()).Clicked() && s.cancel != nil {
 					s.cancel()
 				}
 			})
 			c.After(250 * time.Millisecond)
 		case updReady:
-			head("Pinky " + v + " is ready")
-			mg.Text(c, "Pinky restarts to finish the update.").FontSize(12.5).TextColor(p.ink2)
+			head(locales.UpdateReady(v))
+			mg.Text(c, locales.UpdateReadyDetail()).FontSize(12.5).TextColor(p.ink2)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
-				if button(c, "Restart now", btnOpt{kind: btnPrimary, small: true}).Clicked() {
+				if button(c, locales.UpdateRestartNow(), btnOpt{kind: btnPrimary, small: true}).Clicked() {
 					a.upd.auto = false
 					a.updateNow()
 				}
 			})
 		case updRestarting:
-			head("Restarting Pinky…")
-			mg.Progress(c, -1).FillWidth().Label("Restarting")
+			head(locales.UpdateRestarting())
+			mg.Progress(c, -1).FillWidth().Label(locales.UpdateRestartingLabel())
 		case updFailed:
-			head("Couldn't update")
+			head(locales.UpdateFailedTitle())
 			mg.Text(c, s.err).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
-				if button(c, "Try again", btnOpt{small: true}).Clicked() {
+				if button(c, locales.UpdateTryAgain(), btnOpt{small: true}).Clicked() {
 					s.phase, s.err = updIdle, ""
 					a.updateNow()
 				}
-				if quietButton(c, "Later").Clicked() {
+				if quietButton(c, locales.UpdateLater()).Clicked() {
 					a.laterUpdate()
 				}
 			})
 		default:
-			head("Pinky " + v + " is available")
+			head(locales.UpdateAvailable(v))
 			if s.rel.Notes != "" {
-				if linkButton(c, "What's new").AlignSelf(mg.Start).Label("What's new in Pinky " + v).Clicked() {
+				if linkButton(c, locales.UpdateWhatsNew()).AlignSelf(mg.Start).Label(locales.UpdateWhatsNewIn(v)).Clicked() {
 					s.notesOpen = true
 				}
 			}
@@ -548,58 +549,58 @@ func (a *app) updateActions(c *mg.Context) {
 	m := a.opt.Updates.MethodFor(*s.rel)
 	switch m {
 	case update.MethodManager:
-		mg.Text(c, loc.Manager+" installed Pinky; update it there:").FontSize(12.5).TextColor(p.ink2)
+		mg.Text(c, locales.UpdateManagerInstalled(loc.Manager)).FontSize(12.5).TextColor(p.ink2)
 		mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, loc.Command).FontSize(12).Font("monospace").Grow(1).MinWidth(0).Selectable()
-			b := mg.ButtonBase(c).Size(24, 24).Radius(6).Center().Label("Copy the command").Tooltip("Copy")
+			b := mg.ButtonBase(c).Size(24, 24).Radius(6).Center().Label(locales.UpdateCopyCommandLabel()).Tooltip(locales.UpdateCopy())
 			if b.Hovered() {
 				b.Background(p.bg3)
 			}
 			if b.Clicked() {
 				mygo.Clipboard.WriteText(loc.Command)
-				a.toasts = append(a.toasts, "Copied "+loc.Command)
+				a.toasts = append(a.toasts, locales.UpdateCopiedCommand(loc.Command))
 			}
 			b.TextColor(p.ink2).Children(func() { mg.Icon(c, icCopy).FontSize(13) })
 		})
-		if quietButton(c, "Later").Clicked() {
+		if quietButton(c, locales.UpdateLater()).Clicked() {
 			a.laterUpdate()
 		}
 		return
 	case update.MethodDownload:
 		if loc.Problem != "" {
-			mg.Text(c, loc.Problem).FontSize(12).TextColor(p.ink2)
+			mg.Text(c, whereProblem(loc.Problem)).FontSize(12).TextColor(p.ink2)
 		}
 		if s.file != "" {
-			mg.Text(c, "Downloaded. Open it to install.").FontSize(12).TextColor(p.ink2)
+			mg.Text(c, locales.UpdateDownloadedHint()).FontSize(12).TextColor(p.ink2)
 		}
 	}
-	label := "Update now"
+	label := locales.UpdateNowButton()
 	switch m {
 	case update.MethodInstaller:
-		label = "Download and install"
+		label = locales.UpdateDownloadInstall()
 	case update.MethodDownload:
-		label = "Download"
+		label = locales.UpdateDownload()
 		if s.file != "" {
-			label = "Show download"
+			label = locales.UpdateShowDownload()
 		}
 	}
 	mg.Row(c).Gap(10).AlignItems(mg.Center).Margin(2, 0, 0, 0).Children(func() {
-		if button(c, label, btnOpt{kind: btnPrimary, small: true}).Label(label + " Pinky " + s.rel.Version).Clicked() {
+		if button(c, label, btnOpt{kind: btnPrimary, small: true}).Label(locales.UpdateActionLabel(label, s.rel.Version)).Clicked() {
 			if s.file != "" && m == update.MethodDownload {
 				a.reveal(s.file)
 			} else {
 				a.updateNow()
 			}
 		}
-		if quietButton(c, "Later").Clicked() {
+		if quietButton(c, locales.UpdateLater()).Clicked() {
 			a.laterUpdate()
 		}
 	})
 	if page := update.ReleasePage(s.rel.Tag); m == update.MethodDownload && page != "" {
-		if linkButton(c, "Release page").AlignSelf(mg.Start).Label("Open the release page of Pinky " + s.rel.Version).Clicked() {
+		if linkButton(c, locales.UpdateReleasePage()).AlignSelf(mg.Start).Label(locales.UpdateReleasePageLabel(s.rel.Version)).Clicked() {
 			go func() {
 				if err := mygo.Shell.OpenExternal(page); err != nil {
-					a.post(func() { a.toasts = append(a.toasts, "Couldn't open the release page: "+err.Error()) })
+					a.post(func() { a.toasts = append(a.toasts, locales.UpdateReleasePageFailed(err.Error())) })
 				}
 			}()
 		}
@@ -627,9 +628,9 @@ func (a *app) news(all bool) (title, line, md string, show bool) {
 		var b strings.Builder
 		b.WriteString("### Pinky Companion\n")
 		for _, ch := range st.Changes {
-			fmt.Fprintf(&b, "\n- Updated on %s to %s", ch.Device, ch.To)
+			b.WriteString("\n- " + locales.UpdateNewsCompanionLine(ch.Device, ch.To))
 			if !ch.At.IsZero() {
-				b.WriteString(", " + ch.At.Local().Format("Jan 2 at 15:04"))
+				b.WriteString(locales.UpdateNewsAt(ch.At.Local()))
 			}
 		}
 		parts = append(parts, b.String())
@@ -637,23 +638,23 @@ func (a *app) news(all bool) (title, line, md string, show bool) {
 	md = strings.Join(parts, "\n\n")
 	switch {
 	case all:
-		title, line = "What's new in Pinky "+a.opt.Version, ""
+		title, line = locales.UpdateWhatsNewIn(a.opt.Version), ""
 		if md == "" {
-			md = "The changelog has no notes for this version."
+			md = locales.UpdateNewsNoNotes()
 		}
 		return title, line, md, true
 	case appUpdated:
 		if md == "" {
-			md = "Pinky was updated to " + a.opt.Version + "."
+			md = locales.UpdateNewsUpdatedTo(a.opt.Version)
 		}
-		return "What's new in Pinky " + a.opt.Version, "Now " + a.opt.Version, md, true
+		return locales.UpdateWhatsNewIn(a.opt.Version), locales.UpdateNewsNow(a.opt.Version), md, true
 	case len(st.Changes) > 0:
 		last := st.Changes[len(st.Changes)-1]
-		line = "On " + last.Device
+		line = locales.UpdateNewsOnPhone(last.Device)
 		if n := len(st.Changes); n > 1 {
-			line = fmt.Sprintf("On %d phones", n)
+			line = locales.UpdateNewsOnPhones(n)
 		}
-		return "Pinky Companion was updated", line, md, true
+		return locales.UpdateNewsCompanionUpdated(), line, md, true
 	}
 	return "", "", "", false
 }
@@ -665,15 +666,15 @@ func (a *app) newsCard(c *mg.Context) {
 		return
 	}
 	p := pal(c)
-	card := "Pinky was updated"
+	card := locales.UpdateNewsCardTitle()
 	if !update.IsRelease(a.opt.Updates.State().NotesFrom) {
 		card = title
 	}
-	sideCard(c, "news", "What's new", func() {
+	sideCard(c, "news", locales.UpdateWhatsNew(), func() {
 		mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icSparkle).FontSize(15).TextColor(p.accentInk)
 			mg.Text(c, card).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
-			x := mg.ButtonBase(c).Size(22, 22).Radius(6).Center().Label("Dismiss What's new").Tooltip("Dismiss")
+			x := mg.ButtonBase(c).Size(22, 22).Radius(6).Center().Label(locales.UpdateNewsDismissLabel()).Tooltip(locales.UpdateNewsDismiss())
 			if x.Hovered() {
 				x.Background(p.bg3)
 			}
@@ -685,7 +686,7 @@ func (a *app) newsCard(c *mg.Context) {
 		if line != "" {
 			mg.Text(c, line).FontSize(12.5).TextColor(p.ink2)
 		}
-		if linkButton(c, "See what's new").AlignSelf(mg.Start).Clicked() {
+		if linkButton(c, locales.UpdateNewsSee()).AlignSelf(mg.Start).Clicked() {
 			a.upd.newsOpen, a.upd.newsAll = true, false
 		}
 	})
@@ -706,7 +707,7 @@ func (a *app) updateDialogs(c *mg.Context) {
 		mg.Modal(c.Key("release-notes"), &s.notesOpen, func() {
 			a.notesDialog(c, "Pinky "+r.Version, r.Date, r.Notes, func() {
 				if s.phase == updIdle || s.phase == updFailed {
-					if button(c, "Update now", btnOpt{kind: btnPrimary}).Clicked() {
+					if button(c, locales.UpdateNowButton(), btnOpt{kind: btnPrimary}).Clicked() {
 						s.notesOpen = false
 						a.updateNow()
 					}
@@ -733,13 +734,13 @@ func (a *app) updateDialogs(c *mg.Context) {
 		}
 	}
 	if s.confirm {
-		msg := "Pinky restarts to update."
+		msg := locales.UpdateConfirmMessage()
 		if act := a.activity(time.Now()); act.Tasks > 0 {
-			msg += " The agent task that runs now stops."
+			msg = locales.SentencePair(msg, locales.UpdateConfirmTask())
 		} else if len(act.Busy) > 0 {
-			msg += " This stops " + strings.Join(act.Busy, ", ") + "."
+			msg = locales.SentencePair(msg, locales.UpdateConfirmBusy(strings.Join(act.Busy, locales.ListSeparator())))
 		}
-		if mg.AlertDialog(c.Key("update-confirm"), &s.confirm, "Update Pinky now?", msg, "Cancel", "Update now") == 1 {
+		if mg.AlertDialog(c.Key("update-confirm"), &s.confirm, locales.UpdateConfirmTitle(), msg, locales.UpdateCancel(), locales.UpdateNowButton()) == 1 {
 			a.installUpdate(false)
 		}
 	}
@@ -751,7 +752,7 @@ func (a *app) notesDialog(c *mg.Context, title string, date time.Time, md string
 		mg.Column(c).Gap(2).Children(func() {
 			mg.Text(c, title).FontSize(18).FontWeight(650).Role(mg.RoleHeading)
 			if !date.IsZero() {
-				mg.Text(c, date.Local().Format("January 2, 2006")).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.DayOtherYear(date.Local())).FontSize(13).TextColor(p.ink2)
 			}
 		})
 		mg.Scroll(c).MaxHeight(420).Children(func() { markdown.View(c, md, nil) })
@@ -759,7 +760,7 @@ func (a *app) notesDialog(c *mg.Context, title string, date time.Time, md string
 			if extra != nil {
 				extra()
 			}
-			if button(c, "Close", btnOpt{}).Clicked() {
+			if button(c, locales.UpdateClose(), btnOpt{}).Clicked() {
 				done()
 			}
 		})
@@ -788,20 +789,20 @@ func (a *app) settingsUpdates(c *mg.Context) {
 		return
 	}
 	s := &a.upd
-	mg.Column(c).Label("Updates").Children(func() {
-		mg.Text(c, "Updates").FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
-		a.toggleRow(c, "auto-update", "Update automatically",
-			"Pinky, and Pinky Companion on your Android phones, update when no one is using them.", false, &a.settings.AutoUpdate)
+	mg.Column(c).Label(locales.UpdateSettingsTitle()).Children(func() {
+		mg.Text(c, locales.UpdateSettingsTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
+		a.toggleRow(c, "auto-update", locales.UpdateSettingsAuto(),
+			locales.UpdateSettingsAutoDesc(), false, &a.settings.AutoUpdate)
 		settingRow(c, "Pinky "+nonEmpty(a.opt.Version, update.DevVersion), a.updateLine(), false, func() {
-			b := button(c, "Check now", btnOpt{})
+			b := button(c, locales.UpdateCheckNow(), btnOpt{})
 			if s.checking {
 				b.Disabled(true)
 			} else if b.Clicked() {
 				a.checkUpdate(true)
 			}
 		})
-		settingRow(c, "What's new", "The changes in this version", true, func() {
-			if button(c, "Show", btnOpt{}).Label("Show what's new").Clicked() {
+		settingRow(c, locales.UpdateWhatsNew(), locales.UpdateSettingsNewsDesc(), true, func() {
+			if button(c, locales.UpdateShow(), btnOpt{}).Label(locales.UpdateShowLabel()).Clicked() {
 				s.newsOpen, s.newsAll = true, true
 			}
 		})
@@ -816,28 +817,28 @@ func (a *app) updateLine() string {
 	var line string
 	switch {
 	case !update.IsRelease(a.opt.Version):
-		return "Development builds don't update themselves."
+		return locales.UpdateLineDev()
 	case s.checking:
-		line = "Checking for updates…"
+		line = locales.UpdateLineChecking()
 	case s.checkErr != "":
 		line = s.checkErr
 	case s.rel != nil:
-		line = "Pinky " + s.rel.Version + " is available."
+		line = locales.UpdateLineAvailable(s.rel.Version)
 	case !st.Checked.IsZero():
-		line = "Up to date. Checked " + agoLine(st.Checked, time.Now()) + "."
+		line = locales.UpdateLineUpToDate(agoLine(st.Checked, time.Now()))
 	default:
-		line = "Pinky looks for updates every few hours."
+		line = locales.UpdateLineEvery()
 	}
 	if loc := u.Where(); !loc.CanReplace() {
 		switch {
 		case loc.Method == update.MethodManager:
-			line += " " + loc.Manager + " updates this copy: " + loc.Command + "."
+			line = locales.SentencePair(line, locales.UpdateLineManager(loc.Manager, loc.Command))
 		case loc.Problem != "":
-			line += " " + loc.Problem
+			line = locales.SentencePair(line, whereProblem(loc.Problem))
 		}
 	}
 	if st.Failed != "" && s.rel != nil && update.Compare(st.Failed, s.rel.Version) == 0 && st.FailedWhy != "" {
-		line += " The last try failed: " + st.FailedWhy
+		line = locales.SentencePair(line, locales.UpdateLineLastFailed(st.FailedWhy))
 	}
 	return line
 }
@@ -846,19 +847,13 @@ func agoLine(t, now time.Time) string {
 	d := now.Sub(t)
 	switch {
 	case d < time.Minute:
-		return "just now"
+		return locales.UpdateAgoNow()
 	case d < time.Hour:
-		if m := int(d / time.Minute); m > 1 {
-			return fmt.Sprintf("%d minutes ago", m)
-		}
-		return "a minute ago"
+		return locales.UpdateAgoMinutes(max(1, int(d/time.Minute)))
 	case d < 24*time.Hour:
-		if h := int(d / time.Hour); h > 1 {
-			return fmt.Sprintf("%d hours ago", h)
-		}
-		return "an hour ago"
+		return locales.UpdateAgoHours(max(1, int(d/time.Hour)))
 	}
-	return "on " + t.Local().Format("Jan 2")
+	return locales.UpdateAgoDay(t.Local())
 }
 
 // --- the companion app ---
@@ -941,7 +936,7 @@ func (a *app) updateCompanion(cu companionUpdater, d gateway.DeviceView, ca *com
 				ca.failedAt = time.Now()
 			case res.Updated:
 				log.Printf("pinky: updated the companion on %s: %s -> %s", name, res.From, res.To)
-				a.toasts = append(a.toasts, "Updated Pinky Companion on "+name)
+				a.toasts = append(a.toasts, locales.UpdateCompanionToast(name))
 				a.opt.Updates.Change(func(st *update.State) {
 					st.Changes = append(st.Changes, update.Change{Kind: "companion", Device: name, From: res.From, To: res.To, At: time.Now()})
 				})
@@ -963,10 +958,10 @@ func (a *app) companionAutoLine(id string) string {
 		return ""
 	}
 	if ca := a.upd.comp[id]; ca != nil && ca.needsYou {
-		return "The phone asks before apps are installed over USB, so this update needs you."
+		return locales.UpdateCompanionNeedsYou()
 	}
 	if _, ok := a.api.(companionUpdater); !ok {
 		return ""
 	}
-	return "Pinky updates it by itself when the phone is free."
+	return locales.UpdateCompanionAuto()
 }

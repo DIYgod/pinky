@@ -6,6 +6,7 @@ import (
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/assets"
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
 
@@ -72,7 +73,7 @@ func (a *app) sidebar(c *mg.Context) {
 			mg.Image(c, logo).Size(20, 20).Label("Pinky")
 			mg.Text(c, "Pinky").FontSize(14).FontWeight(650).TextColor(p.ink)
 		})
-		mg.Text(c, "Phones").FontSize(12).FontWeight(600).TextColor(p.ink3).Padding(4, 10, 6, 10)
+		mg.Text(c, locales.SidebarPhones()).FontSize(12).FontWeight(600).TextColor(p.ink3).Padding(4, 10, 6, 10)
 		phones := a.page == pagePhones
 		if len(a.devices) >= 2 {
 			on := phones && a.sel == allPhones
@@ -80,9 +81,9 @@ func (a *app) sidebar(c *mg.Context) {
 			if row.Clicked() {
 				a.selectPhone(allPhones)
 			}
-			row.Label("All phones").Children(func() {
+			row.Label(locales.SidebarAllPhones()).Children(func() {
 				mg.Icon(c, icGrid).FontSize(16).TextColor(p.ink2)
-				mg.Text(c, "All phones").FontSize(14).FontWeight(600)
+				mg.Text(c, locales.SidebarAllPhones()).FontSize(14).FontWeight(600)
 			})
 		}
 		for _, d := range a.devices {
@@ -92,14 +93,14 @@ func (a *app) sidebar(c *mg.Context) {
 			if row.Clicked() {
 				a.selectPhone(d.Info.ID)
 			}
-			row.Label(d.Info.Name + ", " + d.StatusLine).Children(func() {
+			row.Label(locales.SidebarPhoneRow(d.Info.Name, statusLine(d))).Children(func() {
 				statusDot(c, d)
 				mg.Column(c).Grow(1).MinWidth(0).Children(func() {
 					name := mg.Text(c, d.Info.Name).FontSize(14).FontWeight(600).SingleLine()
 					if d.Status == gateway.DeviceOffline {
 						name.TextColor(p.ink2)
 					}
-					mg.Text(c, d.StatusLine).FontSize(12).TextColor(p.ink2).SingleLine()
+					mg.Text(c, statusLine(d)).FontSize(12).TextColor(p.ink2).SingleLine()
 				})
 			})
 		}
@@ -108,20 +109,20 @@ func (a *app) sidebar(c *mg.Context) {
 			a.page = pageAddPhone
 			a.add.reset(a)
 		}
-		add.Label("Add phone").Children(func() {
+		add.Label(locales.SidebarAddPhone()).Children(func() {
 			mg.Icon(c, icPlus).FontSize(16)
-			mg.Text(c, "Add phone").FontSize(14).FontWeight(500)
+			mg.Text(c, locales.SidebarAddPhone()).FontSize(14).FontWeight(500)
 		})
 
 		mg.Spacer(c)
 		a.updateCards(c)
 		mg.Column(c).Gap(2).Padding(10, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).Children(func() {
-			footRow(c, icHistory, "Activity", a.page == pageActivity, func() {
+			footRow(c, icHistory, locales.SidebarActivity(), a.page == pageActivity, func() {
 				a.page = pageActivity
 				a.act.load(a)
 			})
-			footRow(c, icSettings, "Settings", a.page == pageSettings, func() { a.page = pageSettings })
-			stop := mg.ButtonBase(c).Height(34).Padding(0, 10).Radius(9).Gap(10).AlignItems(mg.Center).Justify(mg.Start).Label("Stop all")
+			footRow(c, icSettings, locales.SidebarSettings(), a.page == pageSettings, func() { a.page = pageSettings })
+			stop := mg.ButtonBase(c).Height(34).Padding(0, 10).Radius(9).Gap(10).AlignItems(mg.Center).Justify(mg.Start).Label(locales.SidebarStopAll())
 			if stop.Hovered() {
 				stop.Background(p.redTint)
 			}
@@ -129,7 +130,7 @@ func (a *app) sidebar(c *mg.Context) {
 				a.stopAll()
 			}
 			stop.Children(func() {
-				mg.Text(c, "Stop all").FontSize(13).TextColor(p.red).Grow(1)
+				mg.Text(c, locales.SidebarStopAll()).FontSize(13).TextColor(p.red).Grow(1)
 				mg.Text(c, shortcutLabel()).FontSize(12.5).TextColor(p.red).Opacity(0.8)
 			})
 		})
@@ -206,9 +207,9 @@ func pageHeader(c *mg.Context, fn func()) {
 func unlockWords() (button, keep string) {
 	switch runtime.GOOS {
 	case "darwin":
-		return "Unlock with Touch ID", "Your PIN stays in your Mac's Keychain. Agents never see it."
+		return locales.PlatformUnlockMac(), locales.PlatformUnlockKeepMac()
 	case "windows":
-		return "Unlock with Windows Hello", "Your PIN stays in Windows Credential Manager. Agents never see it."
+		return locales.PlatformUnlockWindows(), locales.PlatformUnlockKeepWindows()
 	}
-	return "Unlock from this computer", "Your PIN stays in your keyring. Agents never see it."
+	return locales.PlatformUnlockOther(), locales.PlatformUnlockKeepOther()
 }

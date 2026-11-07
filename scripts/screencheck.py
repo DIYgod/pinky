@@ -223,7 +223,9 @@ def first_line(t):
 def main():
     shutil.rmtree(HOME, ignore_errors=True)
     os.makedirs(HOME)
-    env = dict(os.environ, PINKY_HOME=HOME, PINKY_DEVICES=SERIAL, MYGO_AUTOMATION=SOCK)
+    # The check finds controls by their English labels, whatever the Mac's
+    # language is.
+    env = dict(os.environ, PINKY_HOME=HOME, PINKY_DEVICES=SERIAL, MYGO_AUTOMATION=SOCK, MYGO_LOCALE="en")
     app = subprocess.Popen([BIN, "--approval-timeout", "120s"], env=env,
                            stdout=open(os.path.join(OUT, "app.log"), "w"), stderr=subprocess.STDOUT)
     try:

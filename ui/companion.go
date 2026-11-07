@@ -8,6 +8,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -86,7 +87,7 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 				st.err[id] = companionError(err)
 				return
 			}
-			a.toasts = append(a.toasts, "Pinky Companion is on for "+name)
+			a.toasts = append(a.toasts, locales.CompanionOnToast(name))
 		})
 	}()
 }
@@ -95,17 +96,17 @@ func companionError(err error) string {
 	msg := err.Error()
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
-		return "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again."
+		return locales.CompanionErrTimeout()
 	case strings.Contains(msg, "INSTALL_FAILED_USER_RESTRICTED"):
-		return "The phone blocked the install. Turn on Install via USB in Developer options, then try again."
+		return locales.CompanionErrRestricted()
 	case strings.Contains(msg, "INSTALL_FAILED_VERIFICATION_FAILURE") || strings.Contains(msg, "Play Protect"):
-		return "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again."
+		return locales.CompanionErrPlayProtect()
 	case strings.Contains(msg, "INSTALL_FAILED_INSUFFICIENT_STORAGE"):
-		return "The phone is out of space. Free some up, then try again."
+		return locales.CompanionErrStorage()
 	case errors.Is(err, driver.ErrOffline):
-		return "The phone went offline. Connect it again, then try again."
+		return locales.CompanionErrOffline()
 	}
-	return "Couldn't install Pinky Companion: " + msg
+	return locales.CompanionErrOther(msg)
 }
 
 // companionCard offers to install, update or turn on the companion app on
@@ -121,30 +122,33 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 	if st.later[id] && !busy {
 		return
 	}
-	title, body, action, extra := "", "", "", ""
+	title, body, action, actionLabel, extra := "", "", "", "", ""
 	switch cs {
 	case driver.CompanionMissing:
-		title, action = "Install Pinky Companion", "Install"
-		body = "A small Pinky app for " + d.Info.Name + ". Agents control the phone faster and more steadily with it, and type without using its clipboard."
+		title, action = locales.CompanionInstallTitle(), locales.CompanionInstall()
+		actionLabel = locales.CompanionInstallLabel(d.Info.Name)
+		body = locales.CompanionInstallBody(d.Info.Name)
 	case driver.CompanionOutdated:
-		title, action = "Update Pinky Companion", "Update"
-		body = "This Pinky comes with a newer version of its app for the phone. Updating keeps control fast and steady."
+		title, action = locales.CompanionUpdateTitle(), locales.CompanionUpdate()
+		actionLabel = locales.CompanionUpdateLabel(d.Info.Name)
+		body = locales.CompanionUpdateBody()
 		extra = a.companionAutoLine(id)
 	case driver.CompanionOff:
-		title, action = "Turn on Pinky Companion", "Turn on"
-		body = "The app is installed, but its service is off, so agents control the phone the slower way. Pinky can turn it on."
+		title, action = locales.CompanionTurnOnTitle(), locales.CompanionTurnOn()
+		actionLabel = locales.CompanionTurnOnLabel(d.Info.Name)
+		body = locales.CompanionTurnOnBody()
 	default:
 		if !busy {
 			return // on, unknown, or no app to install
 		}
-		title = "Installing Pinky Companion"
+		title = locales.CompanionInstallingTitle()
 	}
 	if auto {
-		title = "Updating Pinky Companion"
+		title = locales.CompanionUpdatingTitle()
 	}
 	p := pal(c)
 	mg.Column(c.Key("companion-"+id)).Padding(14).Radius(12).Background(p.bg2).Border(1, p.line).Gap(8).
-		Label("Pinky Companion on " + d.Info.Name).Children(func() {
+		Label(locales.CompanionCardLabel(d.Info.Name)).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icAndroid).FontSize(16).TextColor(p.ink2)
 			mg.Text(c, title).FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
@@ -156,17 +160,17 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 			mg.Text(c, extra).FontSize(13).TextColor(p.ink2)
 		}
 		if auto {
-			mg.Progress(c, -1).FillWidth().Label("Updating")
-			mg.Text(c, "Agents can use the phone again in a few seconds.").FontSize(13).TextColor(p.ink2)
+			mg.Progress(c, -1).FillWidth().Label(locales.CompanionUpdatingLabel())
+			mg.Text(c, locales.CompanionUpdatingHint()).FontSize(13).TextColor(p.ink2)
 			c.After(time.Second)
 			return
 		}
 		if busy {
-			mg.Progress(c, -1).FillWidth().Label("Installing")
-			mg.Text(c, "If the phone asks, allow the install.").FontSize(13.5).FontWeight(600)
+			mg.Progress(c, -1).FillWidth().Label(locales.CompanionInstalling())
+			mg.Text(c, locales.CompanionAllowHint()).FontSize(13.5).FontWeight(600)
 			c.After(time.Second)
 			if time.Since(st.installing[id]) > 20*time.Second {
-				mg.Text(c, "Still waiting for the phone. Look for a prompt on its screen.").FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.CompanionStillWaiting()).FontSize(13).TextColor(p.ink2)
 			}
 			return
 		}
@@ -174,14 +178,14 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 			mg.Text(c, msg).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
 		}
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Margin(4, 0, 0, 0).Children(func() {
-			if button(c, action, btnOpt{kind: btnPrimary}).Label(action + " Pinky Companion on " + d.Info.Name).Clicked() {
+			if button(c, action, btnOpt{kind: btnPrimary}).Label(actionLabel).Clicked() {
 				a.installCompanion(d)
 			}
-			if quietButton(c, "Not now").Clicked() {
+			if quietButton(c, locales.CompanionNotNow()).Clicked() {
 				st.later[id] = true
 			}
 		})
-		mg.Text(c, "If the phone asks, allow the install.").FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, locales.CompanionAllowHint()).FontSize(12.5).TextColor(p.ink3)
 	})
 }
 
@@ -189,15 +193,15 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 func companionLine(cs driver.CompanionState) string {
 	switch cs {
 	case driver.CompanionOn:
-		return "Pinky Companion is on"
+		return locales.CompanionLineOn()
 	case driver.CompanionOff:
-		return "Pinky Companion is installed but off"
+		return locales.CompanionLineOff()
 	case driver.CompanionMissing:
-		return "Pinky Companion is not installed"
+		return locales.CompanionLineMissing()
 	case driver.CompanionOutdated:
-		return "Pinky Companion has an update"
+		return locales.CompanionLineOutdated()
 	case driver.CompanionNoAPK:
-		return "This Pinky has no companion app to install"
+		return locales.CompanionLineNoAPK()
 	}
 	return ""
 }

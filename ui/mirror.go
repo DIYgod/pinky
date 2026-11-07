@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -237,7 +239,7 @@ func agentOrTheAgent(t *gateway.TaskView) string {
 	if t != nil && t.Agent != "" {
 		return t.Agent
 	}
-	return "The agent"
+	return locales.AgentGenericStart()
 }
 
 // mirrorView draws the screen inside a phone's bezel: the video, the
@@ -252,9 +254,9 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
 	switch {
 	case m.agent:
-		scr.Label(agentOrTheAgent(t) + "'s screen on " + d.Info.Name + ", live")
+		scr.Label(locales.MirrorAgentScreenLabel(agentOrTheAgent(t), d.Info.Name))
 	case !tile:
-		scr.Focusable().FocusRing(false).Cursor(mg.CursorPointer).Label(d.Info.Name + " screen, live").
+		scr.Focusable().FocusRing(false).Cursor(mg.CursorPointer).Label(locales.MirrorScreenLabel(d.Info.Name)).
 			HandleInput(func(ev mg.InputEvent) bool { return a.mirrorInput(m, d, ev) })
 		scr.TextCaret(mg.Rect{X: m.boxW/2 - 1, Y: m.boxH * 0.8, W: 2, H: 20})
 	}
@@ -306,9 +308,9 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			}
 			pill.Children(func() {
 				mg.Icon(c, icLock).FontSize(16)
-				label := d.Info.Name + " is locked"
+				label := locales.MirrorLocked(d.Info.Name)
 				if tile {
-					label = "Locked"
+					label = locales.MirrorLockedTile()
 				}
 				mg.Text(c, label).FontSize(14).FontWeight(600).NoWrap()
 			})
@@ -316,7 +318,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(10).PassThrough().Children(func() {
 				spinner(c)
 				if !tile {
-					mg.Text(c, "Connecting…").FontSize(13).TextColor(hex("#a3a3ad"))
+					mg.Text(c, locales.MirrorConnecting()).FontSize(13).TextColor(hex("#a3a3ad"))
 				}
 			})
 		case m.state == "failed":
@@ -336,7 +338,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 
 func mirrorError(err error) string {
 	if err == nil {
-		return "The stream ended. Reconnecting…"
+		return locales.MirrorStreamEnded()
 	}
 	msg := err.Error()
 	if errors.Is(err, video.ErrNotFound) {
@@ -347,12 +349,12 @@ func mirrorError(err error) string {
 		return msg
 	}
 	if errors.Is(err, driver.ErrOffline) {
-		return "The phone went offline."
+		return locales.MirrorOffline()
 	}
 	if errors.Is(err, driver.ErrUnsupported) {
-		return "This phone has no live picture."
+		return locales.MirrorUnsupported()
 	}
-	return "No picture: " + msg
+	return locales.MirrorNoPicture(msg)
 }
 
 // drawOverlay outlines the step's target and, while the agent touches,
@@ -408,10 +410,14 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 	id := d.Info.ID
 	toDevice := m.toDevice
 	touch := func(act driver.TouchAction, pt screen.Point) {
-		a.call(id, "send the touch", func() error { return a.api.Touch(id, act, pt) })
+		a.call(id, locales.MirrorCallTouch(), func() error { return a.api.Touch(id, act, pt) })
 	}
 	key := func(k driver.Key) {
-		a.call(id, "press "+string(k), func() error { return a.api.Key(id, k) })
+		name := string(k)
+		if translated() {
+			name = keyName(name)
+		}
+		a.call(id, locales.MirrorCallKey(name), func() error { return a.api.Key(id, k) })
 	}
 	switch ev.Kind {
 	case mg.InputPointerDown:
@@ -446,7 +452,7 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 	case mg.InputKeyDown:
 		if ev.Mods&mg.Cmd != 0 && ev.Key == mg.KeyV {
 			if text := mygo.Clipboard.ReadText(); text != "" {
-				a.call(id, "paste", func() error { return a.api.Text(id, text) })
+				a.call(id, locales.MirrorCallPaste(), func() error { return a.api.Text(id, text) })
 			}
 			return true
 		}
@@ -467,7 +473,7 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		}, ev.Text)
 		m.compose = ""
 		if text != "" {
-			a.call(id, "type", func() error { return a.api.Text(id, text) })
+			a.call(id, locales.MirrorCallType(), func() error { return a.api.Text(id, text) })
 		}
 		return true
 	case mg.InputCompose:
@@ -565,21 +571,25 @@ func clampInt(v, lo, hi int) int {
 }
 
 // videoLine describes the decoder for Settings › Advanced.
-func videoLine(a *app) string {
+func videoLine(a *app) string { return videoLineIn(locales.In(i18n.Locale()), a) }
+
+// videoLineIn is videoLine in the language of m; feedback's diagnostics
+// are English.
+func videoLineIn(m locales.Messages, a *app) string {
 	if a.videoErr != nil {
 		return a.videoErr.Error()
 	}
 	line := video.Version()
-	for _, m := range a.mirrors {
-		if m.player == nil {
+	for _, mr := range a.mirrors {
+		if mr.player == nil {
 			continue
 		}
-		st := m.player.Stats()
-		dec := "software decoding"
+		st := mr.player.Stats()
+		dec := m.MirrorDecoderSoftware()
 		if st.Hardware != "" {
 			dec = st.Hardware
 		}
-		line += fmt.Sprintf(". %s: %s, %.0f fps, %v from packet to picture", m.id, dec, st.FPS, st.Latency.Round(100*time.Microsecond))
+		line = m.MirrorDecoderStats(line, mr.id, dec, fmt.Sprintf("%.0f", st.FPS), st.Latency.Round(100*time.Microsecond).String())
 	}
 	return line
 }

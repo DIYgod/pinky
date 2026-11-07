@@ -6,6 +6,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -53,9 +54,9 @@ func (a *app) setBackground(d gateway.DeviceView, on bool) {
 		a.post(func() {
 			a.bg.busy[id], a.bg.on[id] = false, now
 			if err != nil {
-				msg := "Couldn't change background work on " + name + ": " + err.Error()
+				msg := locales.BackgroundChangeFailed(name, err.Error())
 				if errors.Is(err, driver.ErrUnsupported) {
-					msg = name + " can't work in the background yet."
+					msg = locales.BackgroundUnsupported(name)
 				}
 				a.toasts = append(a.toasts, msg)
 			}
@@ -66,8 +67,7 @@ func (a *app) setBackground(d gateway.DeviceView, on bool) {
 // backgroundRow is the "Work in the background" switch with its words.
 func (a *app) backgroundRow(c *mg.Context, d gateway.DeviceView, last bool) {
 	on := a.bg.on[d.Info.ID]
-	if a.toggleRowFor(c, "bg-"+d.Info.ID, "Work in the background",
-		"Agents use a hidden second screen, so the phone stays yours and can stay locked. Applies from the next task.", last, &on) {
+	if a.toggleRowFor(c, "bg-"+d.Info.ID, locales.BackgroundTitle(), locales.BackgroundDesc(), last, &on) {
 		a.setBackground(d, on)
 	}
 }

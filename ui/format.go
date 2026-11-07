@@ -4,9 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
+	"github.com/egoist/mygo/i18n"
+
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -110,18 +116,21 @@ const nbsp = "\u00a0"
 
 // elapsed formats a duration as the prototype does: "38 s", "1 min 02 s",
 // joined with no-break spaces so it never wraps.
-func elapsed(d time.Duration) string {
+func elapsed(d time.Duration) string { return elapsedIn(locales.In(i18n.Locale()), d) }
+
+// elapsedIn formats a duration in the language of m.
+func elapsedIn(m locales.Messages, d time.Duration) string {
 	if d < 0 {
 		d = 0
 	}
 	s := int(d.Round(time.Second) / time.Second)
 	switch {
 	case s < 60:
-		return fmt.Sprintf("%d"+nbsp+"s", s)
+		return m.TimeSeconds(strconv.Itoa(s))
 	case s < 3600:
-		return fmt.Sprintf("%d"+nbsp+"min"+nbsp+"%02d"+nbsp+"s", s/60, s%60)
+		return m.TimeMinutes(strconv.Itoa(s/60), fmt.Sprintf("%02d", s%60))
 	}
-	return fmt.Sprintf("%d"+nbsp+"h"+nbsp+"%02d"+nbsp+"min", s/3600, s%3600/60)
+	return m.TimeHours(strconv.Itoa(s/3600), fmt.Sprintf("%02d", s%3600/60))
 }
 
 // clock formats a duration as a player shows it: "1:48".
@@ -144,7 +153,7 @@ func connectionLine(d gateway.DeviceView) string {
 		kind = "iPhone"
 	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
-		return kind + " · offline"
+		return locales.ConnectionOffline(kind)
 	}
 	switch d.Info.Connection {
 	case "wifi":
@@ -168,7 +177,7 @@ func osLine(d gateway.DeviceView) string {
 		if d.Info.Detail != "" {
 			return s + " · " + lowerFirst(d.Info.Detail)
 		}
-		return s + " · offline"
+		return locales.ConnectionOffline(s)
 	}
 	switch d.Info.Connection {
 	case "wifi":
@@ -180,12 +189,17 @@ func osLine(d gateway.DeviceView) string {
 }
 
 // lowerFirst lowers a sentence's first letter for use mid-sentence,
-// keeping acronyms such as "USB" as they are.
+// keeping acronyms such as "USB" as they are. It works on runes: text in
+// Chinese, Japanese or Russian keeps its first character whole.
 func lowerFirst(s string) string {
-	if s == "" || (len(s) > 1 && s[1] >= 'A' && s[1] <= 'Z') {
+	r, n := utf8.DecodeRuneInString(s)
+	if n == 0 || !unicode.IsUpper(r) {
 		return s
 	}
-	return strings.ToLower(s[:1]) + s[1:]
+	if next, _ := utf8.DecodeRuneInString(s[n:]); unicode.IsUpper(next) {
+		return s // an acronym
+	}
+	return string(unicode.ToLower(r)) + s[n:]
 }
 
 // dayLabel groups Activity by day.
@@ -193,16 +207,16 @@ func dayLabel(t, now time.Time) string {
 	y1, m1, d1 := t.Date()
 	y2, m2, d2 := now.Date()
 	if y1 == y2 && m1 == m2 && d1 == d2 {
-		return "Today"
+		return locales.DayToday()
 	}
 	yd := now.AddDate(0, 0, -1)
 	if y, m, d := yd.Date(); y1 == y && m1 == m && d1 == d {
-		return "Yesterday"
+		return locales.DayYesterday()
 	}
 	if y1 == y2 {
-		return t.Format("Monday, January 2")
+		return locales.DayThisYear(t)
 	}
-	return t.Format("January 2, 2006")
+	return locales.DayOtherYear(t)
 }
 
 func plural(n int, one, many string) string {
@@ -213,9 +227,4 @@ func plural(n int, one, many string) string {
 }
 
 // kindNoun names a rule for "Always allow …": "Payments" → "payments".
-func kindNoun(rule string) string {
-	if rule == "" {
-		return "this kind"
-	}
-	return lowerFirst(rule)
-}
+func kindNoun(rule string) string { return ruleAction(rule) }
