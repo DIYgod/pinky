@@ -16,8 +16,9 @@ import (
 // olddefaults holds every earlier defaults.yaml: before-presets.yaml from
 // before the first release (six Ask rules spelled out, which
 // migrateLegacy reads as preset 1), 2026.1107.1.yaml and 2026.1107.2.yaml
-// (also 2026.1107.3 to .5), which set preset 1. When defaults.yaml changes
-// again, add the version it replaces.
+// (also 2026.1107.3 to .8), which set preset 1. When defaults.yaml changes
+// again, add the version it replaces. The engine looks at start
+// (refreshRulesLocked in disk.go).
 //
 //go:embed olddefaults/*.yaml
 var oldDefaults embed.FS

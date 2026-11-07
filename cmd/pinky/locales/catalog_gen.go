@@ -9225,6 +9225,102 @@ func (msgs Messages) SettingsClose() string {
 	return Catalog.Format(msgs.locale, "settingsClose", nil)
 }
 
+// SettingsFileProblemDesc says "It was edited outside Settings and can't be read as it is. Pinky keeps the rules it had, and the settings kept in the…"
+// in the language the app shows.
+//
+// Under settingsFileProblemTitle: what that means. The settings kept in the
+// file are the ones Safety dims meanwhile: for rules.yaml the preset,
+// Always allowed, Read-only mode, Hide codes and the rules; for apps.yaml
+// the blocked apps.
+func SettingsFileProblemDesc() string { return In(i18n.Locale()).SettingsFileProblemDesc() }
+
+// SettingsFileProblemDesc says "It was edited outside Settings and can't be read as it is. Pinky keeps the rules it had, and the settings kept in the…"
+// in the language of msgs.
+//
+// Under settingsFileProblemTitle: what that means. The settings kept in the
+// file are the ones Safety dims meanwhile: for rules.yaml the preset,
+// Always allowed, Read-only mode, Hide codes and the rules; for apps.yaml
+// the blocked apps.
+func (msgs Messages) SettingsFileProblemDesc() string {
+	return Catalog.Format(msgs.locale, "settingsFileProblemDesc", nil)
+}
+
+// SettingsFileProblemEdit says "Edit {file}"
+// in the language the app shows.
+//
+// The button of the note under settingsFileProblemTitle: opens the file in
+// the computer's text editor. file is rules.yaml or apps.yaml.
+func SettingsFileProblemEdit(file string) string {
+	return In(i18n.Locale()).SettingsFileProblemEdit(file)
+}
+
+// SettingsFileProblemEdit says "Edit {file}"
+// in the language of msgs.
+//
+// The button of the note under settingsFileProblemTitle: opens the file in
+// the computer's text editor. file is rules.yaml or apps.yaml.
+func (msgs Messages) SettingsFileProblemEdit(file string) string {
+	return Catalog.Format(msgs.locale, "settingsFileProblemEdit", map[string]any{"file": file})
+}
+
+// SettingsFileProblemError says "What's wrong: {error}"
+// in the language the app shows.
+//
+// Under settingsFileProblemDesc: what Pinky found wrong in the file. error
+// is the YAML parser's or Pinky's message in English, often with a line
+// number.
+func SettingsFileProblemError(error string) string {
+	return In(i18n.Locale()).SettingsFileProblemError(error)
+}
+
+// SettingsFileProblemError says "What's wrong: {error}"
+// in the language of msgs.
+//
+// Under settingsFileProblemDesc: what Pinky found wrong in the file. error
+// is the YAML parser's or Pinky's message in English, often with a line
+// number.
+func (msgs Messages) SettingsFileProblemError(error string) string {
+	return Catalog.Format(msgs.locale, "settingsFileProblemError", map[string]any{"error": error})
+}
+
+// SettingsFileProblemOpenFailed says "Couldn't open {file}: {reason}"
+// in the language the app shows.
+//
+// A toast when the system could not open rules.yaml or apps.yaml from the
+// note's button. reason is the system's error in English.
+func SettingsFileProblemOpenFailed(file string, reason string) string {
+	return In(i18n.Locale()).SettingsFileProblemOpenFailed(file, reason)
+}
+
+// SettingsFileProblemOpenFailed says "Couldn't open {file}: {reason}"
+// in the language of msgs.
+//
+// A toast when the system could not open rules.yaml or apps.yaml from the
+// note's button. reason is the system's error in English.
+func (msgs Messages) SettingsFileProblemOpenFailed(file string, reason string) string {
+	return Catalog.Format(msgs.locale, "settingsFileProblemOpenFailed", map[string]any{"file": file, "reason": reason})
+}
+
+// SettingsFileProblemTitle says "Pinky can't use {file}"
+// in the language the app shows.
+//
+// Settings › Safety, and Advanced under Rules file: the heading of a note
+// shown while rules.yaml or apps.yaml has an edit made outside Settings
+// that Pinky cannot read. file is the file's name, rules.yaml or apps.yaml.
+func SettingsFileProblemTitle(file string) string {
+	return In(i18n.Locale()).SettingsFileProblemTitle(file)
+}
+
+// SettingsFileProblemTitle says "Pinky can't use {file}"
+// in the language of msgs.
+//
+// Settings › Safety, and Advanced under Rules file: the heading of a note
+// shown while rules.yaml or apps.yaml has an edit made outside Settings
+// that Pinky cannot read. file is the file's name, rules.yaml or apps.yaml.
+func (msgs Messages) SettingsFileProblemTitle(file string) string {
+	return Catalog.Format(msgs.locale, "settingsFileProblemTitle", map[string]any{"file": file})
+}
+
 // SettingsLanguage says "Language"
 // in the language the app shows.
 //
@@ -10115,6 +10211,24 @@ func SettingsRulesDeny() string { return In(i18n.Locale()).SettingsRulesDeny() }
 // the action (the strictest).
 func (msgs Messages) SettingsRulesDeny() string {
 	return Catalog.Format(msgs.locale, "settingsRulesDeny", nil)
+}
+
+// SettingsRulesErrChanged says "The rules file was changed outside Settings, so this wasn't saved. The rules below are the file's now; try again."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: a change in the rules list was not saved,
+// because rules.yaml was edited by hand since the list was read. The list
+// then shows the file's rules.
+func SettingsRulesErrChanged() string { return In(i18n.Locale()).SettingsRulesErrChanged() }
+
+// SettingsRulesErrChanged says "The rules file was changed outside Settings, so this wasn't saved. The rules below are the file's now; try again."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: a change in the rules list was not saved,
+// because rules.yaml was edited by hand since the list was read. The list
+// then shows the file's rules.
+func (msgs Messages) SettingsRulesErrChanged() string {
+	return Catalog.Format(msgs.locale, "settingsRulesErrChanged", nil)
 }
 
 // SettingsRulesErrMatch says "Fill in at least one of apps, categories, actions or button text."

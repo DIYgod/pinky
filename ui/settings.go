@@ -34,12 +34,21 @@ type settingsState struct {
 	confirm bool
 }
 
+// changed reports a change in Settings, with the settings as they were
+// before it.
 func (a *app) changed() {
+	a.changes++
+	old := a.reported
+	a.reported = a.settings.clone()
 	if a.opt.OnSettings != nil {
-		s := a.settings
-		s.BlockedApps = append([]BlockedApp(nil), s.BlockedApps...)
-		a.opt.OnSettings(s)
+		a.opt.OnSettings(old, a.settings.clone())
 	}
+}
+
+// clone returns s with a list of blocked apps of its own.
+func (s Settings) clone() Settings {
+	s.BlockedApps = append([]BlockedApp(nil), s.BlockedApps...)
+	return s
 }
 
 func (a *app) settingsPage(c *mg.Context) {
@@ -82,11 +91,13 @@ func (a *app) settingsPage(c *mg.Context) {
 				agentsWait = agentsWait || newAgentNeed(n)
 			}
 			tab(secAgents, locales.SettingsSectionAgents(), agentsWait)
-			tab(secSafety, locales.SettingsSectionSafety(), false)
+			tab(secSafety, locales.SettingsSectionSafety(), len(a.files.list) > 0)
 			tab(secPrivacy, locales.SettingsSectionPrivacy(), false)
 			tab(secAdvanced, locales.SettingsSectionAdvanced(), false)
 			a.feedbackLink(c)
 		})
+		a.watchFileProblems(c)
+		a.watchGatewaySettings(c)
 		mg.Scroll(c).Grow(1).MinWidth(0).Padding(24, 40).Children(func() {
 			mg.Column(c).MaxWidth(640).Gap(22).Children(func() {
 				switch s.sec {
@@ -178,7 +189,8 @@ func (a *app) settingsSafety(c *mg.Context) {
 	p := pal(c)
 	st := &a.settings
 	settingsTitle(c, locales.SettingsSectionSafety(), locales.SettingsSafetyIntro())
-	mg.Column(c).Gap(8).Label(locales.SettingsSafetyAskGroup()).Children(func() {
+	a.fileProblemNotes(c)
+	a.offWhile(c, rulesYAML).Gap(8).Label(locales.SettingsSafetyAskGroup()).Children(func() {
 		mg.Text(c, locales.SettingsSafetyAskTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
 		presets := []struct{ title, desc string }{
 			{locales.SettingsSafetyPresetCommits(), locales.SettingsSafetyPresetCommitsDesc()},
@@ -215,7 +227,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 			}
 		})
 	})
-	mg.Column(c).Gap(8).Label(locales.SettingsSafetyBlockedApps()).Children(func() {
+	a.offWhile(c, appsYAML).Gap(8).Label(locales.SettingsSafetyBlockedApps()).Children(func() {
 		mg.Row(c).Gap(12).AlignItems(mg.End).Children(func() {
 			mg.Column(c).Grow(1).Children(func() {
 				mg.Text(c, locales.SettingsSafetyBlockedApps()).FontSize(15).FontWeight(650)
@@ -258,9 +270,11 @@ func (a *app) settingsSafety(c *mg.Context) {
 	})
 	a.alwaysAllowed(c)
 	mg.Column(c).Label(locales.SettingsSafetyProtections()).Children(func() {
-		if a.toggleRow(c, "ro", locales.SettingsSafetyReadOnly(), locales.SettingsSafetyReadOnlyDesc(), false, &st.ReadOnly) {
-			a.applyReadOnly(st.ReadOnly)
-		}
+		a.offWhile(c, rulesYAML).Children(func() {
+			if a.toggleRow(c, "ro", locales.SettingsSafetyReadOnly(), locales.SettingsSafetyReadOnlyDesc(), false, &st.ReadOnly) {
+				a.applyReadOnly(st.ReadOnly)
+			}
+		})
 		desc := locales.SettingsSafetyUnlockDescOther()
 		switch runtime.GOOS {
 		case "darwin":
@@ -273,7 +287,9 @@ func (a *app) settingsSafety(c *mg.Context) {
 		} else {
 			a.toggleRow(c, "unlock", locales.SettingsUnlockFromComputer(), desc, false, &st.UnlockFromComputer)
 		}
-		a.toggleRow(c, "codes", locales.SettingsSafetyHideCodes(), locales.SettingsSafetyHideCodesDesc(), true, &st.HideCodes)
+		a.offWhile(c, rulesYAML).Children(func() {
+			a.toggleRow(c, "codes", locales.SettingsSafetyHideCodes(), locales.SettingsSafetyHideCodesDesc(), true, &st.HideCodes)
+		})
 	})
 	a.rulesSection(c)
 }
@@ -760,6 +776,7 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 				}()
 			}
 		})
+		a.fileProblemNotes(c)
 	})
 	a.settingsUpdates(c)
 	_ = p

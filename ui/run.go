@@ -43,9 +43,18 @@ type Options struct {
 	OnReady func(main *mygo.Window)
 	// Settings are the Safety, Privacy and Advanced choices to start with;
 	// nil is the defaults. gateway.API has no settings methods yet, so the
-	// client keeps them and reports changes through OnSettings.
+	// client keeps them and reports each change through OnSettings, with
+	// the settings as they were before it: pass on only what differs.
 	Settings   *Settings
-	OnSettings func(Settings)
+	OnSettings func(old, s Settings)
+	// GatewaySettings reads again what the gateway keeps of Settings ›
+	// Safety (Preset, HideCodes, ReadOnly and BlockedApps), which hand
+	// edits of rules.yaml and apps.yaml change while Pinky runs. since is
+	// the version of the policy it returned last, -1 at first; ok is false
+	// while the policy is still at it. The client calls it off the main
+	// thread every two seconds while Settings shows, and shows what it
+	// returns; nil keeps what Settings started with.
+	GatewaySettings func(since int) (s Settings, version int, ok bool)
 	// RulesFile is the policy rules file that Settings › Advanced opens.
 	RulesFile string
 	// Agents lists the agents for Settings › Agents; nil shows those seen
@@ -176,6 +185,11 @@ type app struct {
 	seenNeed map[string]bool
 
 	settings Settings
+	// reported is what the next change reports as the settings before it:
+	// as OnSettings last reported them, with what GatewaySettings read
+	// since. changes counts the changes, to drop a read they overtook.
+	reported Settings
+	changes  int
 	act      activityState
 	set      settingsState
 	add      addState
@@ -197,8 +211,10 @@ type app struct {
 	mediaCache map[string]*mediaEntry // step screenshots by media id
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
-	always     alwaysState // Settings › Safety › Always allowed
-	rules      rulesState  // Settings › Safety › Rules
+	always     alwaysState       // Settings › Safety › Always allowed
+	rules      rulesState        // Settings › Safety › Rules
+	files      fileProblemsState // rules files edited by hand that cannot be used
+	gwSet      gwSettingsState   // what the gateway keeps of the settings, read again after hand edits
 
 	postMu  sync.Mutex
 	postWin *mygo.Window // the main window, once ready made it; post waits for it
@@ -268,10 +284,12 @@ func newApp(api gateway.API, opt Options) *app {
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
 	a.rec = recState{views: map[string]*recEntry{}}
 	if opt.Settings != nil {
-		a.settings = *opt.Settings
+		a.settings = opt.Settings.clone()
 	} else {
 		a.settings = DefaultSettings()
 	}
+	a.reported = a.settings.clone()
+	a.gwSet.version = -1
 	a.act.init()
 	switch opt.StartPage {
 	case "activity":

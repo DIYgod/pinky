@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -134,6 +135,80 @@ func hasBlocked(s ui.Settings, name string) bool {
 		}
 	}
 	return false
+}
+
+// TestSettingsFollowHandEdits reads what the gateway keeps of the
+// settings again after hand edits of the rules files, only once the policy
+// changed, and passes on a later change from Settings without undoing
+// them.
+func TestSettingsFollowHandEdits(t *testing.T) {
+	dir := t.TempDir()
+	rules, apps := filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml")
+	pol, err := policy.Load(rules, apps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	providers, _ := demo.World()
+	g, err := gateway.New(gateway.Options{Providers: providers, Policy: pol})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	rg := &runningGateway{Policy: pol, G: g}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	blocked := func(s ui.Settings, name string) bool {
+		for _, b := range s.BlockedApps {
+			if b.Name == name {
+				return b.Kind == policy.CategoryLabel(policy.CatBlocked)
+			}
+		}
+		return false
+	}
+
+	s, v, ok := policySettings(rg, -1)
+	if !ok || s.Preset != int(policy.PresetPayments) || !s.HideCodes || s.ReadOnly || blocked(s, "Chatter") {
+		t.Fatalf("first read: %v %+v", ok, s)
+	}
+	if _, _, ok := policySettings(rg, v); ok {
+		t.Fatal("read again with the policy as it was")
+	}
+
+	// By hand: every action asks, codes show, read-only for every phone,
+	// Chatter blocked.
+	data, err := os.ReadFile(rules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	edited := strings.NewReplacer("\npreset: 2\n", "\npreset: 3\n", "\nmask_codes: true\n", "\nmask_codes: false\n",
+		"\nread_only: false\n", "\nread_only: true\n").Replace(string(data))
+	for path, text := range map[string]string{rules: edited, apps: "add:\n  blocked:\n    names: [Chatter]\n"} {
+		if err := os.WriteFile(path+".edit", []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Rename(path+".edit", path); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pol.Refresh() // as the gateway does every two seconds
+	s2, v2, ok := policySettings(rg, v)
+	if !ok || v2 == v || s2.Preset != 3 || s2.HideCodes || !s2.ReadOnly || !blocked(s2, "Chatter") {
+		t.Fatalf("after the hand edits: %v, version %d to %d, %+v", ok, v, v2, s2)
+	}
+
+	// Hide codes turned back on in Settings changes that alone.
+	next := s2
+	next.BlockedApps = append([]ui.BlockedApp(nil), s2.BlockedApps...)
+	next.HideCodes = true
+	applySettings(rg, s2, next, log)
+	if pol.Preset() != policy.PresetEvery || !pol.HideCodes() || !pol.ReadOnly("") {
+		t.Fatalf("after Hide codes: preset %d, hide codes %v, read-only %v", pol.Preset(), pol.HideCodes(), pol.ReadOnly(""))
+	}
+	if _, ok := pol.Blocked(screen.App{Name: "Chatter"}); !ok {
+		t.Fatal("Chatter is no longer blocked")
+	}
+	if data, _ := os.ReadFile(rules); !strings.Contains(string(data), "preset: 3") {
+		t.Fatalf("rules.yaml:\n%s", data)
+	}
 }
 
 func TestAppFromText(t *testing.T) {

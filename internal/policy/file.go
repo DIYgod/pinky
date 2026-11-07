@@ -2,11 +2,7 @@ package policy
 
 import (
 	_ "embed"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -95,54 +91,20 @@ func knownAction(a string) bool {
 // Load reads the rules file and the app table overrides from the given
 // paths. A missing rules file is created with the bundled defaults, and a
 // missing app file with a commented template, so the person can edit both.
-// Empty paths use the bundled defaults without touching the disk.
+// Empty paths use the bundled defaults without touching the disk. The
+// engine takes in later edits of the files (see Refresh).
 func Load(rulesPath, appsPath string) (*Engine, error) {
-	f := DefaultFile()
-	if rulesPath != "" {
-		data, err := os.ReadFile(rulesPath)
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
-			if err := writeNew(rulesPath, defaultRulesYAML); err != nil {
-				return nil, err
-			}
-		case err != nil:
-			return nil, err
-		default:
-			// A file an earlier version wrote, never changed, takes
-			// today's defaults (upgrade.go).
-			if fresh, ok := upgradeDefaults(data); ok {
-				if err := writeFile(rulesPath, fresh); err != nil {
-					return nil, err
-				}
-				data = fresh
-			}
-			if f, err = ParseFile(data); err != nil {
-				return nil, fmt.Errorf("%s: %w", rulesPath, err)
-			}
-			migrateLegacy(&f)
+	e := New(DefaultFile(), nil)
+	e.rulesDisk.path, e.appsDisk.path = rulesPath, appsPath
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.refreshLocked(true)
+	e.changes, e.version = nil, 0
+	for _, d := range []*diskFile{&e.rulesDisk, &e.appsDisk} {
+		if d.err != nil {
+			return nil, fmt.Errorf("%s: %w", d.path, d.err)
 		}
 	}
-	var overrides AppOverrides
-	apps := BundledApps()
-	if appsPath != "" {
-		data, err := os.ReadFile(appsPath)
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
-			if err := writeNew(appsPath, appsTemplate); err != nil {
-				return nil, err
-			}
-		case err != nil:
-			return nil, err
-		default:
-			if err := yaml.Unmarshal(data, &overrides); err != nil {
-				return nil, fmt.Errorf("%s: %w", appsPath, err)
-			}
-			apps.Apply(overrides)
-		}
-	}
-	e := New(f, apps)
-	e.overrides = overrides
-	e.rulesPath, e.appsPath = rulesPath, appsPath
 	return e, nil
 }
 
@@ -170,36 +132,14 @@ func migrateLegacy(f *File) {
 	f.Preset = &none
 }
 
-// Reload reads the files again, keeping runtime read-only switches and apps
-// added with AddApps.
+// Reload reads the files again, as Load does, keeping runtime read-only
+// switches and apps added with AddApps. A file that cannot be used leaves
+// the rules in force as they were, and is returned as a *FileError.
 func (e *Engine) Reload() error {
-	n, err := Load(e.rulesPath, e.appsPath)
-	if err != nil {
-		return err
-	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.file = n.file
-	e.setOverridesLocked(n.overrides)
-	return nil
-}
-
-func writeNew(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return err
-	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if errors.Is(err, fs.ErrExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if _, err := f.Write(data); err != nil {
-		f.Close()
-		return err
-	}
-	return f.Close()
+	e.refreshLocked(true)
+	return e.problemLocked()
 }
 
 // UnmarshalYAML accepts "allow", "ask" or "deny".

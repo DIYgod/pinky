@@ -531,7 +531,7 @@ func (unsupportedExport) ExportHistory(context.Context, []string, string) (strin
 func TestRetentionAndRecordingSettings(t *testing.T) {
 	ta := newTestApp(t, fakeapi.OnePhone)
 	var saved []Settings
-	ta.opt.OnSettings = func(s Settings) { saved = append(saved, s) }
+	ta.opt.OnSettings = func(_, s Settings) { saved = append(saved, s) }
 	ta.settings.KeepDays, ta.settings.Record = 90, false
 	ta.applySettings()
 	ta.waitFor(t, "the settings at start", func() bool { days, rec := ta.api.Retention(); return days == 90 && !rec })
@@ -555,7 +555,7 @@ func TestRemoteAgents(t *testing.T) {
 	ta := newTestApp(t, fakeapi.OnePhone)
 	ta.opt.AgentToken = "tok-5ecret"
 	var saved []Settings
-	ta.opt.OnSettings = func(s Settings) { saved = append(saved, s) }
+	ta.opt.OnSettings = func(_, s Settings) { saved = append(saved, s) }
 	ta.sync()
 	ta.page, ta.set.sec = pageSettings, secAgents
 	tt := mg.NewTester(ta.view, 1280, 820)

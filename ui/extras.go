@@ -45,10 +45,17 @@ type (
 		RemoveExemption(x gateway.Exemption) error
 	}
 	// rulesEditor reads and replaces the rules file's rules, for Settings ›
-	// Safety › Rules.
+	// Safety › Rules. SetRules takes the rules the change was made from,
+	// and refuses it (gateway.ErrRulesChanged) when rules.yaml was edited
+	// by hand since.
 	rulesEditor interface {
 		Rules() gateway.RulesView
-		SetRules(rules []gateway.RuleView) error
+		SetRules(base, rules []gateway.RuleView) error
+	}
+	// fileProblemLister lists the rules files edited by hand that the
+	// gateway cannot use, which Settings shows until they are fixed.
+	fileProblemLister interface {
+		FileProblems() []gateway.FileProblem
 	}
 
 	// Round three: pairing, the companion app, background displays,

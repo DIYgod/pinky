@@ -33,7 +33,7 @@ func TestEditRules(t *testing.T) {
 		Rule{Name: "No deleting", Match: Match{Label: StringList{"delete"}}, Decision: Deny},
 		Rule{Name: "Dinely is fine", Match: Match{App: StringList{"Dinely"}}, Decision: Allow},
 	)
-	if err := e.SetFileRules(rules); err != nil {
+	if err := e.SetFileRules(e.FileRules(), rules); err != nil {
 		t.Fatal(err)
 	}
 	got := e.FileRules()
@@ -72,7 +72,7 @@ func TestEditRules(t *testing.T) {
 	if err := e.SetPreset(PresetNone); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.SetFileRules(rules); err != nil {
+	if err := e.SetFileRules(e.FileRules(), rules); err != nil {
 		t.Fatal(err)
 	}
 	if v := e.Evaluate(tap(chatter, "Send")); v.Rule != "Send in Chatter" {
@@ -80,7 +80,7 @@ func TestEditRules(t *testing.T) {
 	}
 	n := len(rules)
 	rules[n-1], rules[n-4] = rules[n-4], rules[n-1]
-	if err := e.SetFileRules(rules); err != nil {
+	if err := e.SetFileRules(e.FileRules(), rules); err != nil {
 		t.Fatal(err)
 	}
 	if v := e.Evaluate(tap(chatter, "Send")); v.Rule != "Chatter commits" || len(v.Asks) != 2 {
@@ -103,14 +103,14 @@ func TestEditRulesChecks(t *testing.T) {
 		"built-in name":  {{Name: RuleCredentials, Match: Match{Action: StringList{"type"}}, Decision: Deny}},
 	}
 	for name, rules := range bad {
-		if err := e.SetFileRules(rules); err == nil {
+		if err := e.SetFileRules(e.FileRules(), rules); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
-	if err := e.SetFileRules(bad["same name"]); !errors.Is(err, ErrRuleNameTaken) {
+	if err := e.SetFileRules(e.FileRules(), bad["same name"]); !errors.Is(err, ErrRuleNameTaken) {
 		t.Errorf("same name: %v", err)
 	}
-	if err := e.SetFileRules(bad["preset's name"]); !errors.Is(err, ErrRuleNameReserved) {
+	if err := e.SetFileRules(e.FileRules(), bad["preset's name"]); !errors.Is(err, ErrRuleNameReserved) {
 		t.Errorf("preset's name: %v", err)
 	}
 	if got := e.FileRules(); !reflect.DeepEqual(got, before) {
@@ -126,7 +126,7 @@ func TestEditRulesChecks(t *testing.T) {
 	e = New(f, nil)
 	rules := e.FileRules()
 	rules[0].Match.App = StringList{"Dinely"}
-	if err := e.SetFileRules(rules); err != nil {
+	if err := e.SetFileRules(e.FileRules(), rules); err != nil {
 		t.Fatalf("keeping a legacy name: %v", err)
 	}
 }
@@ -144,7 +144,7 @@ func TestEditRulesDropsTheirAlwaysAllow(t *testing.T) {
 	}
 	// Renamed, the rule is another one: its answers go.
 	big.Name = "Large orders"
-	if err := e.SetFileRules([]Rule{big}); err != nil {
+	if err := e.SetFileRules(e.FileRules(), []Rule{big}); err != nil {
 		t.Fatal(err)
 	}
 	want := []Exemption{

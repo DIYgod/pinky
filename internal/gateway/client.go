@@ -264,13 +264,16 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 	// questions (NeedView.AlwaysAllow, NeedView.AllowTask).
 	var kept error
 	if dec == approval.AllowAlways {
-		if g.canAlwaysAllow(info) {
-			// Kept before the answer wakes the agent's call, which then
-			// finds the action no longer asks (always.go).
-			if info.State == approval.Open {
-				kept = g.alwaysAllow(info)
-			}
-		} else {
+		can := g.canAlwaysAllow(info)
+		// Kept before the answer wakes the agent's call, which then finds
+		// the action no longer asks (always.go). Where it cannot be kept,
+		// alwaysAllow keeps nothing, and says why only when rules.yaml has
+		// an edit that cannot be used: the panel may have offered Always
+		// allow before the file broke.
+		if info.State == approval.Open {
+			kept = g.alwaysAllow(info)
+		}
+		if !can {
 			dec = approval.AllowTask
 		}
 	}
