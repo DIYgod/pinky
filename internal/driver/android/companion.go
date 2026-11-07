@@ -63,6 +63,13 @@ type companionLink struct {
 // when the driver should do without it. It turns the service on at the
 // first call after the device opened or went idle.
 func (d *Device) companionClient(ctx context.Context) *companion.Client {
+	return d.companionClientFor(ctx, false)
+}
+
+// companionClientFor is companionClient; with now set it tries an
+// installed app again at once instead of after the wait that follows a
+// failure: background displays have no uiautomator to fall back on.
+func (d *Device) companionClientFor(ctx context.Context, now bool) *companion.Client {
 	k := &d.comp
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -76,7 +83,7 @@ func (d *Device) companionClient(ctx context.Context) *companion.Client {
 		// The subscription ended: the service stopped or was turned off.
 		d.companionOffLocked("its event stream ended")
 	}
-	if time.Now().Before(k.retryAt) {
+	if time.Now().Before(k.retryAt) && !(now && k.checked && k.have) {
 		return nil
 	}
 	if k.client == nil {
@@ -318,10 +325,36 @@ func (d *Device) disableLocked() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := k.client.Disable(ctx); err != nil {
+	// Another driver (another Pinky, androidctl) may be using the service
+	// this one turned on: turning it off would cut that one off. Leave it
+	// on then; the app turns itself off three minutes after its last client
+	// leaves.
+	if k.client.EnabledForTask() && othersConnected(ctx, k.client) {
+		d.cfg.logf("android: %s: another client is using the companion; leaving its service on", d.info.ID)
+	} else if err := k.client.Disable(ctx); err != nil {
 		d.cfg.logf("android: %s: turning the companion off: %v", d.info.ID, err)
 	}
 	k.client.Close()
+}
+
+// othersConnected reports whether the companion app has clients other than
+// this one's request connection. The event subscription was just closed;
+// the app may count it for a moment, so ask a few times.
+func othersConnected(ctx context.Context, c *companion.Client) bool {
+	for i := 0; i < 3; i++ {
+		if i > 0 {
+			if sleepCtx(ctx, 100*time.Millisecond) != nil {
+				return false
+			}
+		}
+		pctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		info, err := c.Ping(pctx)
+		cancel()
+		if err != nil || info.Connections <= 1 {
+			return false
+		}
+	}
+	return true
 }
 
 // observeCompanion reads the screen from the companion, with the lock and

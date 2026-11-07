@@ -154,6 +154,9 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 	if !opt.KeepContent {
 		b.theirs = map[int]bool{}
 	}
+	if d.alwaysUnlocked() {
+		go b.keepAwake()
+	}
 	if pkg != "" {
 		if err := b.startApp(ctx, pkg); err != nil {
 			l.close(err)
@@ -161,6 +164,36 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 		}
 	}
 	return b, nil
+}
+
+// keepAwakeEvery is how often an open background display gets a key that
+// does nothing (KEYCODE_UNKNOWN). While the phone is locked, Android gives
+// every display group the lock screen's short timeout (10 s on the
+// emulator: "activityTimeoutWM=10000"), and a background display whose
+// group times out puts its app to sleep: the app stops drawing and its
+// accessibility tree can no longer be read. An agent easily thinks longer
+// than that between steps. Input on the display counts as activity for its
+// group only; KEYCODE_WAKEUP cannot be used, since it wakes the phone's own
+// screen whatever display it is sent to.
+const keepAwakeEvery = 4 * time.Second
+
+// keepAwake keeps the display's group awake until the display closes.
+func (b *Background) keepAwake() {
+	t := time.NewTicker(keepAwakeEvery)
+	defer t.Stop()
+	for {
+		select {
+		case <-b.l.done:
+			return
+		case <-t.C:
+		}
+		if last := b.l.lastInput.Load(); last != 0 && time.Since(time.Unix(0, last)) < keepAwakeEvery {
+			continue // an action just counted as activity
+		}
+		if err := b.l.input(func() error { return b.l.key(keycodeUnknown, 0) }); err != nil {
+			return
+		}
+	}
 }
 
 // rootTasks lists the phone's root tasks and their displays.
@@ -187,11 +220,20 @@ func (b *Background) Info() driver.Info {
 // companion this returns driver.ErrUnsupported.
 func (b *Background) Observe(ctx context.Context, _ driver.ObserveOptions) (*screen.Screen, error) {
 	b.d.used()
-	c := b.d.companionClient(ctx)
+	c := b.d.companionClientFor(ctx, true)
 	if c == nil {
 		return nil, fmt.Errorf("android: observing a virtual display needs the companion app: %w", driver.ErrUnsupported)
 	}
 	t, err := c.Dump(ctx, companion.DumpOptions{Display: b.display})
+	if err != nil && ctx.Err() == nil && !errors.Is(err, driver.ErrUnsupported) {
+		// The service went away (another client turned it off, Android
+		// restarted it): turn it on again and read once more, since there
+		// is no other way to read this display.
+		b.d.companionFailed(err)
+		if c = b.d.companionClientFor(ctx, true); c != nil {
+			t, err = c.Dump(ctx, companion.DumpOptions{Display: b.display})
+		}
+	}
 	if err != nil {
 		if !b.started.Load() && errors.Is(err, driver.ErrUnsupported) && ctx.Err() == nil {
 			return b.emptyScreen(ctx)

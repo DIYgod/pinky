@@ -326,6 +326,19 @@ func TestEmulatorBackground(t *testing.T) {
 	if res.Status != StatusSettled {
 		t.Fatalf("launch on the background display with the screen off: %+v", res)
 	}
+	// An agent thinks between steps. While the phone is locked, Android
+	// gives every display group the lock screen's 10 s timeout, and a
+	// display whose group timed out sent empty reads: the display must
+	// stay readable through pauses longer than that.
+	for _, pause := range []time.Duration{8 * time.Second, 14 * time.Second} {
+		time.Sleep(pause)
+		obs := s.Observe(ctx, ObserveRequest{Call: Call{Device: id}})
+		sc := screenOf(obs)
+		t.Logf("read after %v idle: %s%s %s, %d elements", pause, obs.Status, obs.Error, sc.App.ID, len(sc.Elements))
+		if obs.IsError() || sc.App.ID != "com.google.android.deskclock" || len(sc.Elements) == 0 {
+			t.Fatalf("the background display was not readable after %v idle: %+v", pause, obs)
+		}
+	}
 	for _, tab := range []string{"Timer", "Stopwatch", "Clock", "Alarm", "Timer", "Stopwatch"} {
 		obs := s.Observe(ctx, ObserveRequest{Call: Call{Device: id}})
 		if e := findLabel(obs, tab); e != nil {
