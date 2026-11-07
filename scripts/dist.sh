@@ -181,7 +181,11 @@ stage_ffmpeg() {
 	esac
 	cp "$ff/COPYING.LGPLv2.1" "$dst/FFmpeg-COPYING.LGPLv2.1"
 	cp "$ff/BUILD.txt" "$dst/FFmpeg-BUILD.txt"
-	(cd "$dst" && ls -- *.dll *.so.* 2>/dev/null)
+	for f in "$dst"/*; do
+		case ${f##*/} in
+		*.dll | *.so.*) echo "${f##*/}" ;;
+		esac
+	done
 }
 
 # machine is how lipo names a processor.
