@@ -93,10 +93,7 @@ func (g *Gateway) recording() bool { return g.store != nil && !g.opt.NoScreensho
 // the background. It returns the screenshot that will show s: the kept one
 // when it still matches, a new one, or nil when there will be none.
 func (g *Gateway) startShot(d *device, s *screen.Screen) *bgShot {
-	if !g.recording() || s == nil || s.Locked {
-		return nil
-	}
-	if _, blocked := g.policy.Blocked(s.App); blocked {
+	if !g.recording() || !recordableScreen(g.policy, s) {
 		return nil
 	}
 	key := shotKey(s)
@@ -163,7 +160,7 @@ func (g *Gateway) confirmShotLocked(d *device, s *screen.Screen, start time.Time
 	if p == nil || p.state != shotWaiting || start.Before(p.doneAt) {
 		return
 	}
-	if d.inputs != p.inputs || d.person || s.Locked || s.App != p.app {
+	if d.inputs != p.inputs || d.person || !recordableScreen(g.policy, s) || s.App != p.app {
 		g.dropShotLocked(d, p)
 		return
 	}
@@ -257,10 +254,7 @@ func (g *Gateway) confirmAtEndLocked(d *device) {
 // read s (the approval panel's, or one the agent asked for), so steps can
 // reuse it. It returns nil for a blocked app or without history screenshots.
 func (g *Gateway) keepImage(d *device, s *screen.Screen, img image.Image) *bgShot {
-	if !g.recording() || img == nil || s == nil || s.Locked {
-		return nil
-	}
-	if _, blocked := g.policy.Blocked(s.App); blocked {
+	if !g.recording() || img == nil || !recordableScreen(g.policy, s) {
 		return nil
 	}
 	p := &bgShot{key: shotKey(s), app: s.App, img: img, state: shotKept}

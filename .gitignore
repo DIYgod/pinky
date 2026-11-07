@@ -2,6 +2,7 @@
 /bin/
 /dist/
 /build/
+/pinky
 *.test
 *.out
 .mygo/

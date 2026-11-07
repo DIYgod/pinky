@@ -134,8 +134,8 @@ func TestBackgroundCannotOpen(t *testing.T) {
 }
 
 func TestBackgroundSetting(t *testing.T) {
-	g, _ := newTestGateway(t)
-	if err := g.SetBackground("pixel", true); !errors.Is(err, driver.ErrUnsupported) {
+	g := newIPhoneGateway(t)
+	if err := g.SetBackground("iphone", true); !errors.Is(err, driver.ErrUnsupported) {
 		t.Fatalf("a phone without background displays: %v", err)
 	}
 	if err := g.SetBackground("nope", true); !errors.Is(err, ErrUnknownDevice) {
@@ -233,3 +233,19 @@ type extraProvider2 struct {
 }
 
 func (p extraProvider2) Open(context.Context, string) (driver.Device, error) { return p.d, nil }
+
+// The lock screen can show notifications from blocked apps: no screenshot
+// of it for the agent either.
+func TestNoScreenshotOfALockedPhone(t *testing.T) {
+	g, dev := newTestGateway(t)
+	s, _ := connect(t, g, "Lunch")
+	dev.SetLocked(true)
+	res := s.Observe(context.Background(), ObserveRequest{Screenshot: true})
+	if res.Screenshot != nil || !strings.Contains(res.Message, "No screenshot: the phone is locked") {
+		t.Fatalf("screenshot of a locked phone: %v, %q", res.Screenshot != nil, res.Message)
+	}
+	dev.SetLocked(false)
+	if res := s.Observe(context.Background(), ObserveRequest{Screenshot: true}); res.Screenshot == nil {
+		t.Fatalf("no screenshot when unlocked: %q", res.Message)
+	}
+}

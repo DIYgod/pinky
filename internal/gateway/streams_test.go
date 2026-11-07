@@ -3,58 +3,21 @@ package gateway
 import (
 	"context"
 	"errors"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
-	"github.com/DIYgod/pinky/internal/video"
+	"github.com/DIYgod/pinky/internal/recording/recordingtest"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // testPackets is a real H.264 stream (ffmpeg's test pattern, 96x64, a key
 // frame every 10 pictures) cut into packets as drivers send them.
 func testPackets(t *testing.T) []driver.Packet {
 	t.Helper()
-	data, err := os.ReadFile("../recording/testdata/testsrc.h264")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var out []driver.Packet
-	var cfg, pic [][]byte
-	key := false
-	flush := func() {
-		if len(cfg) > 0 {
-			out = append(out, driver.Packet{Data: joinTest(cfg), Config: true})
-			cfg = nil
-		}
-		if len(pic) > 0 {
-			out = append(out, driver.Packet{Data: joinTest(pic), KeyFrame: key})
-			pic, key = nil, false
-		}
-	}
-	for _, nal := range video.SplitNALs(data) {
-		switch typ := video.NALType(driver.H264, nal); typ {
-		case 9:
-			flush()
-		case 7, 8:
-			cfg = append(cfg, nal)
-		default:
-			pic = append(pic, nal)
-			key = key || typ == 5
-		}
-	}
-	flush()
-	return out
-}
-
-func joinTest(nals [][]byte) []byte {
-	var b []byte
-	for _, n := range nals {
-		b = append(append(b, 0, 0, 0, 1), n...)
-	}
-	return b
+	return recordingtest.Packets(driver.H264, recordingtest.H264())
 }
 
 // feedStream is a driver.Stream the test feeds.
@@ -129,6 +92,23 @@ type videoDev struct {
 	mu      sync.Mutex
 	streams []*feedStream
 	opened  chan *feedStream
+	noApp   bool // reads name no app, as during a hand-over between apps
+}
+
+func (v *videoDev) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
+	s, err := v.Device.Observe(ctx, opt)
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if err == nil && v.noApp {
+		s.App = screen.App{}
+	}
+	return s, err
+}
+
+func (v *videoDev) setNoApp(on bool) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	v.noApp = on
 }
 
 func newVideoDev(id string) *videoDev {

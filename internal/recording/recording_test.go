@@ -12,57 +12,22 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/recording/recordingtest"
 	"github.com/DIYgod/pinky/internal/video"
 )
 
-// The test streams in testdata are ffmpeg test patterns (testsrc), 30
-// frames at 10 frames a second with a key frame every second, made with:
-//
-//	ffmpeg -f lavfi -i testsrc=size=96x64:rate=10 -frames:v 30 -pix_fmt yuv420p -c:v libx264 \
-//	  -preset ultrafast -g 10 -bf 0 -bsf:v h264_metadata=aud=insert -f h264 testsrc.h264
-//
-// (libx265 with keyint=10 for testsrc.hevc; testsrc2 at 64x96, 10 frames,
-// for rotated.h264).
+// The test streams are ffmpeg test patterns (recordingtest): 30 frames at
+// 10 frames a second with a key frame every second, at 96x64.
 
-// packets cuts a test stream into packets the way drivers send them: a
-// configuration packet, then one packet per picture.
+// packets returns a test stream cut into packets as drivers send them.
 func packets(t *testing.T, name string, codec driver.Codec) []driver.Packet {
 	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", name))
-	if err != nil {
-		t.Fatal(err)
+	data := map[string]func() []byte{"testsrc.h264": recordingtest.H264, "testsrc.hevc": recordingtest.HEVC,
+		"rotated.h264": recordingtest.Rotated}[name]
+	if data == nil {
+		t.Fatalf("no test stream %s", name)
 	}
-	var out []driver.Packet
-	var cfg, pic [][]byte
-	key := false
-	flush := func() {
-		if len(cfg) > 0 {
-			out = append(out, driver.Packet{Data: annexB(cfg), Config: true})
-			cfg = nil
-		}
-		if len(pic) > 0 {
-			out = append(out, driver.Packet{Data: annexB(pic), KeyFrame: key})
-			pic, key = nil, false
-		}
-	}
-	for _, nal := range video.SplitNALs(data) {
-		typ := video.NALType(codec, nal)
-		switch {
-		case isAUD(codec, typ):
-			flush()
-		case isParamSet(codec, typ):
-			cfg = append(cfg, nal)
-		default:
-			pic = append(pic, nal)
-			if codec == driver.HEVC {
-				key = key || (typ >= 16 && typ <= 23)
-			} else {
-				key = key || typ == 5
-			}
-		}
-	}
-	flush()
-	return out
+	return recordingtest.Packets(codec, data())
 }
 
 // write records pkts at fps frames a second and returns the file.

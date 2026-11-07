@@ -73,9 +73,12 @@ func TestEmulatorRecording(t *testing.T) {
 	}
 	defer os.RemoveAll(data)
 	pol := policy.Default()
-	// Settings stands in for a banking app: blocked for this run only.
-	if err := pol.SetAppBlocked(screen.App{ID: "com.android.settings"}, true); err != nil {
-		t.Fatal(err)
+	// Settings stands in for a banking app: blocked for this run only. Its
+	// home page may read as its search component's package.
+	for _, id := range []string{"com.android.settings", "com.google.android.settings.intelligence"} {
+		if err := pol.SetAppBlocked(screen.App{ID: id}, true); err != nil {
+			t.Fatal(err)
+		}
 	}
 	log := slog.New(slog.NewTextHandler(testWriter{t}, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	// Only this emulator: the gateway opens every phone a provider lists.
@@ -140,7 +143,13 @@ func TestEmulatorRecording(t *testing.T) {
 	blockedFrom := time.Now()
 	adbShell(t, id, "am", "start", "-W", "-n", "com.android.settings/.Settings")
 	time.Sleep(300 * time.Millisecond)
-	res = s.Observe(ctx, ObserveRequest{Call: Call{Device: id}})
+	for i := 0; i < 10; i++ {
+		res = s.Observe(ctx, ObserveRequest{Call: Call{Device: id}})
+		if res.Rule != "" {
+			break
+		}
+		time.Sleep(200 * time.Millisecond) // still opening
+	}
 	if res.Rule == "" {
 		t.Fatalf("Settings is not reported blocked: %+v", res.Screen.App)
 	}

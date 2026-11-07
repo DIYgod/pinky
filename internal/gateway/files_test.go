@@ -2,11 +2,15 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/demo"
+	"github.com/DIYgod/pinky/internal/driver"
 )
 
 func writeLocal(t *testing.T, dir, rel, data string, mtime time.Time) {
@@ -193,9 +197,44 @@ func TestPhoneFilesReadOnly(t *testing.T) {
 }
 
 func TestPhoneFilesUnsupported(t *testing.T) {
-	g, _ := newTestGateway(t)
+	g := newIPhoneGateway(t)
 	s, _ := connect(t, g, "Files")
-	if res := s.Files(context.Background(), FilesRequest{}); res.Error != ErrUnsupported {
+	if res := s.Files(context.Background(), FilesRequest{}); res.Error != ErrUnsupported || !strings.Contains(res.Message, "Android") {
 		t.Fatalf("a phone without a Pinky folder: %+v", res)
+	}
+}
+
+// The demo's Android phones have a Pinky folder and background displays,
+// as real ones do.
+func TestDemoAndroidFeatures(t *testing.T) {
+	ctx := context.Background()
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	dev.PutFile("Notes/groceries.txt", []byte("rice"))
+	g, err := New(Options{Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)}, TrustNewAgents: true,
+		DataDir: t.TempDir(), NoScreenshots: true, DiscoverEvery: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	if f := g.Devices()[0].Features; !f.Unlock || !f.Files || !f.Background {
+		t.Fatalf("features %+v", f)
+	}
+	s, _ := connect(t, g, "Groceries")
+	mustStatus(t, s.Files(ctx, FilesRequest{Action: "pull"}), StatusSettled)
+	if b, err := os.ReadFile(filepath.Join(g.FilesDir("pixel"), "Notes", "groceries.txt")); err != nil || string(b) != "rice" {
+		t.Fatalf("pulled %q, %v", b, err)
+	}
+	s.Release(ctx, ReleaseRequest{})
+	if err := g.SetBackground("pixel", true); err != nil {
+		t.Fatal(err)
+	}
+	s2, _ := connect(t, g, "Lunch")
+	mustStatus(t, s2.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	if dev.Current() != "home" || !strings.Contains(g.Devices()[0].StatusLine, "in the background") {
+		t.Fatalf("phone %q, %q", dev.Current(), g.Devices()[0].StatusLine)
+	}
+	dev.SetLocked(true)
+	if err := g.Unlock("pixel"); !errors.Is(err, ErrNoUnlock) {
+		t.Fatalf("unlock without a PIN source: %v", err)
 	}
 }

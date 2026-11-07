@@ -66,6 +66,15 @@ Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Con
 - The id works once, only for that exact call. While an approval is open the phone takes no other action; `phone_observe` and `phone_wait_for` still work.
 - You cannot approve anything. `phone_request_approval` asks the person a question and returns their answer, but grants nothing: a later Pay still asks.
 
+## Files
+
+On Android phones, `phone_files` moves files between the phone's Pinky folder (`/sdcard/Pinky`, the only place on the phone you may reach) and a folder on this computer, which the result names. Work on the files there with your own file tools.
+
+- `phone_files {}` lists both sides: each file with its size, time and where it is (`both`, `phone`, `computer` or `differs`).
+- `phone_files { action: "pull" }` copies what the phone has and the computer lacks; pass `paths` for some files or folders.
+- `phone_files { action: "push", intent: "Put the edited photo where Gallery can open it" }` copies new and changed files to the phone. The person approves it first, like a Pay tap (`approval_pending`, then repeat with `approval_id`). Read-only agents may only list and pull.
+- iPhones return `unsupported`.
+
 ## Things you must not do
 
 - Never type passwords or one-time codes; Pinky refuses (`rule: credentials`). Call `phone_handoff { reason: "Please sign in to Dinely" }` and wait.

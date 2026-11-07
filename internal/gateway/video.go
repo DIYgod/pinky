@@ -10,6 +10,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/history"
+	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/recording"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -69,23 +70,23 @@ type taskVideo struct {
 	ran    chan struct{} // closed when run returns
 	wrote  chan struct{} // closed when writeLoop returns
 
-	mu        sync.Mutex
-	cond      *sync.Cond    // ready or stopping changed
-	key       string        // the hub the recording taps
-	dev       driver.Device // its device
-	tap       *streamTap    // the current tap, nil between streams
-	moved     chan struct{} // closed when key changes
-	held      []vpacket     // waiting for a read
-	heldSize  int
-	paused    bool // dropping until a recordable read
-	needKey   bool // the next picture moved to ready must be a key frame
-	cfg       *driver.Packet
-	ready     []vpacket
-	reading   bool
-	stopping  bool
-	codec     driver.Codec
-	base      time.Time // arrival minus PTS of the fastest picture so far
-	lastPTS   time.Duration
+	mu       sync.Mutex
+	cond     *sync.Cond    // ready or stopping changed
+	key      string        // the hub the recording taps
+	dev      driver.Device // its device
+	tap      *streamTap    // the current tap, nil between streams
+	moved    chan struct{} // closed when key changes
+	held     []vpacket     // waiting for a read
+	heldSize int
+	paused   bool // dropping until a recordable read
+	needKey  bool // the next picture moved to ready must be a key frame
+	cfg      *driver.Packet
+	ready    []vpacket
+	reading  bool
+	stopping bool
+	codec    driver.Codec
+	base     time.Time // arrival minus PTS of the fastest picture so far
+	lastPTS  time.Duration
 
 	// What the write loop has written so far, for Recording.
 	file    string
@@ -489,15 +490,24 @@ func (v *taskVideo) view() (RecordingView, bool) {
 // recordable reports whether read s of the screen the agent uses may be
 // recorded.
 func (g *Gateway) recordable(d *device, s *screen.Screen) bool {
-	if s == nil || s.Locked {
-		return false
-	}
-	if _, blocked := g.policy.Blocked(s.App); blocked {
+	if !recordableScreen(g.policy, s) {
 		return false
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return !d.person
+}
+
+// recordableScreen reports whether a read shows a screen whose pictures
+// may be kept: unlocked, and an app that is known and not blocked. A read
+// that names no app (taken while one app hands over to the next) vouches
+// for nothing: a blocked app may be on its way in.
+func recordableScreen(pol *policy.Engine, s *screen.Screen) bool {
+	if s == nil || s.Locked || (s.App.ID == "" && s.App.Name == "") {
+		return false
+	}
+	_, blocked := pol.Blocked(s.App)
+	return !blocked
 }
 
 // pauseVideoLocked drops what a device's recording holds. Callers hold

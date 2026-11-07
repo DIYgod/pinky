@@ -1292,8 +1292,7 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	person := d.person
 	g.mu.Unlock()
 	if video != nil {
-		_, blocked := g.policy.Blocked(s.App)
-		video.read(start, !s.Locked && !blocked && !person)
+		video.read(start, recordableScreen(g.policy, s) && !person)
 	}
 	// A background display is always unlocked; the phone's lock shows only
 	// on its own screen.
@@ -1316,16 +1315,23 @@ func notificationsOnly(evs []screen.Event) []screen.Event {
 // errScreenChanged means the screen changed while a screenshot was taken.
 var errScreenChanged = errors.New("the screen changed while the screenshot was taken")
 
+// errLockedShot means the phone is locked: its lock screen can show
+// notifications from blocked apps.
+var errLockedShot = errors.New("the phone is locked, and its lock screen can show notifications from blocked apps")
+
 // screenshot takes a screenshot of the screen s describes. It reads the
 // screen again afterwards and drops the image when the foreground app
-// changed or is blocked, so a blocked app that comes to the front in
-// between is never captured.
+// changed, is blocked or unknown, or the phone locked, so a blocked app
+// that comes to the front in between is never captured.
 func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (image.Image, error) {
 	dev, _ := g.screenOf(d)
 	if dev == nil {
 		return nil, driver.ErrOffline
 	}
-	if _, blocked := g.policy.Blocked(s.App); blocked {
+	if s.Locked {
+		return nil, errLockedShot
+	}
+	if !recordableScreen(g.policy, s) {
 		return nil, errScreenChanged
 	}
 	img, err := dev.Screenshot(ctx)
@@ -1336,7 +1342,7 @@ func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (
 	if err != nil {
 		return nil, err
 	}
-	if _, blocked := g.policy.Blocked(after.App); blocked || after.App != s.App {
+	if !recordableScreen(g.policy, after) || after.App != s.App {
 		return nil, errScreenChanged
 	}
 	return img, nil

@@ -792,6 +792,8 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 				g.keepImage(l.dev, cur, img)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
+			case errors.Is(err, errLockedShot):
+				res.Message = strings.TrimSpace(res.Message + " No screenshot: " + err.Error() + ".")
 			case errors.Is(err, errScreenChanged):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: the screen changed while it was taken; observe again.")
 			default:

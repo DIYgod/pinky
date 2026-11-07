@@ -220,3 +220,36 @@ func TestRecordingStartsWithTheTask(t *testing.T) {
 		t.Fatalf("recorded %d frames, want the 4 from the task's first key frame", info.Frames)
 	}
 }
+
+// A read that names no app (one app handing over to the next) vouches for
+// nothing: what was held is dropped, as for a blocked app.
+func TestRecordingDropsAnUnknownApp(t *testing.T) {
+	ctx := context.Background()
+	v := newVideoDev("pixel")
+	g := newVideoGateway(t, v)
+	g.SetRecording(true)
+	s, _ := connect(t, g, "Lunch")
+	id := taskID(t, g, s)
+	st := newStreamer(t, v.open(t))
+	st.config()
+	st.pictures(10, true)
+	mustStatus(t, s.Observe(ctx, ObserveRequest{}), StatusSettled)
+	st.pictures(5, false)
+	v.setNoApp(true)
+	s.Observe(ctx, ObserveRequest{})
+	v.setNoApp(false)
+	st.pictures(3, false)
+	mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
+	g.Flush()
+	rec, err := g.Recording(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := recording.Probe(rec.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Frames != 10 {
+		t.Fatalf("recorded %d frames, want the 10 before the unknown app", info.Frames)
+	}
+}

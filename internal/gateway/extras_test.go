@@ -249,3 +249,17 @@ func taskSteps(g *Gateway, s *Session) []StepView {
 	}
 	return nil
 }
+
+// newIPhoneGateway runs a gateway on a demo iPhone, which has neither a
+// Pinky folder nor background displays.
+func newIPhoneGateway(t *testing.T) *Gateway {
+	t.Helper()
+	dev := demo.NewDevice("iphone", "iPhone 17", driver.IOS)
+	g, err := New(Options{Providers: []driver.Provider{demo.NewProvider(driver.IOS, dev)}, TrustNewAgents: true,
+		DataDir: t.TempDir(), NoScreenshots: true, DiscoverEvery: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { g.Close() })
+	return g
+}

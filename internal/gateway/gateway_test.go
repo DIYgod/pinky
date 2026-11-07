@@ -747,7 +747,7 @@ func (p settlingProvider) Open(ctx context.Context, id string) (driver.Device, e
 	if err != nil {
 		return nil, err
 	}
-	return &settlingDevice{Device: dev.(*demo.Device)}, nil
+	return &settlingDevice{Device: demo.Of(dev)}, nil
 }
 
 func TestSettlerIsUsed(t *testing.T) {
