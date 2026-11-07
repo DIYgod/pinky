@@ -156,11 +156,9 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		Locked:      locked,
 		CapturedAt:  time.Now(),
 	}
-	if a, ok := d.appForPID(ctx, uint64(app.Object.PID)); ok {
-		s.App = screen.App{Name: a.Name, ID: a.ID}
-	} else if app.Label != "" {
-		s.App = screen.App{Name: app.Label}
-	}
+	s.App = d.screenApp(ctx, els, func(format string, args ...any) {
+		st.Trace = append(st.Trace, fmt.Sprintf(format, args...))
+	})
 	scale := si.Scale
 	if app.HasFrame && app.Frame.W > 0 {
 		scale = float64(si.Width) / app.Frame.W

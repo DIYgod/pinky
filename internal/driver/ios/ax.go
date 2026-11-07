@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -74,10 +75,12 @@ type axSession struct {
 
 	walkMu sync.Mutex // one walk at a time: the inspector focus is global
 
-	appMu   sync.Mutex
-	apps    map[string]*axApp
-	appSeq  int
-	changed atomic.Int64 // unix nanos of the last screen or layout change
+	appMu    sync.Mutex
+	apps     map[string]*axApp
+	appSeq   int
+	appsIn   chan struct{} // closed once the first app state arrived
+	appsOnce sync.Once
+	changed  atomic.Int64 // unix nanos of the last screen or layout change
 
 	done chan struct{}
 	once sync.Once
@@ -108,7 +111,7 @@ func dialAX(ctx context.Context, entry goios.DeviceEntry) (*axSession, error) {
 		}()
 		return nil, ctx.Err()
 	}
-	a := &axSession{conn: conn, ch: conn.GlobalChannel(), apps: map[string]*axApp{}, done: make(chan struct{})}
+	a := &axSession{conn: conn, ch: conn.GlobalChannel(), apps: map[string]*axApp{}, appsIn: make(chan struct{}), done: make(chan struct{})}
 	for _, sel := range axHostSelectors {
 		a.ch.RegisterMethodForRemote(sel)
 	}
@@ -224,6 +227,37 @@ func (a *axSession) onAppState(msg dtx.Message) {
 	if pid != 0 {
 		app.pid = pid
 	}
+	a.appsOnce.Do(func() { close(a.appsIn) })
+}
+
+// waitApps waits, up to wait, for the daemon's first app state: it lists
+// the running apps when app monitoring turns on, as the session connects.
+func (a *axSession) waitApps(ctx context.Context, wait time.Duration) bool {
+	t := time.NewTimer(wait)
+	defer t.Stop()
+	select {
+	case <-a.appsIn:
+		return true
+	case <-t.C:
+	case <-ctx.Done():
+	}
+	return false
+}
+
+// foregroundApps returns the apps the system has in the foreground, the one
+// that came there last first. An app stays there while something of the
+// system's covers it: Face ID's prompt, an alert, a banner.
+func (a *axSession) foregroundApps() []axApp {
+	a.appMu.Lock()
+	defer a.appMu.Unlock()
+	var out []axApp
+	for _, app := range a.apps {
+		if app.state == appForeground {
+			out = append(out, *app)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].seq > out[j].seq })
+	return out
 }
 
 // handlePID is the process that owns an element: the first four bytes of

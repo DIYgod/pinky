@@ -284,16 +284,22 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 
 // appForPID resolves the app a process belongs to, through the process list
 // and the app catalog. Results are cached for the session: a pid does not
-// change apps.
+// change apps. A process the catalog does not list (a system service, or an
+// app installed since the catalog was read, which reads it again) is not
+// looked up again for pidRecheck.
 func (d *Device) appForPID(ctx context.Context, pid uint64) (driver.App, bool) {
 	if pid == 0 {
 		return driver.App{}, false
 	}
 	d.svcMu.Lock()
 	app, ok := d.pidApps[pid]
+	missed, wasMissed := d.pidMiss[pid]
 	d.svcMu.Unlock()
 	if ok {
 		return app, true
+	}
+	if wasMissed && time.Since(missed) < pidRecheck {
+		return driver.App{}, false
 	}
 	procs, err := d.processPaths(ctx)
 	if err != nil {
@@ -309,16 +315,28 @@ func (d *Device) appForPID(ctx context.Context, pid uint64) (driver.App, bool) {
 	}
 	app, ok = c.appForExecutable(exe)
 	if !ok {
-		return driver.App{}, false
+		if c, err = d.catalogFresh(ctx); err == nil {
+			app, ok = c.appForExecutable(exe)
+		}
 	}
 	d.svcMu.Lock()
+	defer d.svcMu.Unlock()
+	if !ok {
+		if d.pidMiss == nil {
+			d.pidMiss = map[uint64]time.Time{}
+		}
+		d.pidMiss[pid] = time.Now()
+		return driver.App{}, false
+	}
 	if d.pidApps == nil {
 		d.pidApps = map[uint64]driver.App{}
 	}
 	d.pidApps[pid] = app
-	d.svcMu.Unlock()
 	return app, true
 }
+
+// pidRecheck is how long a process that is no app is not looked up again.
+const pidRecheck = 30 * time.Second
 
 // keyboardFromOCR finds an on-screen keyboard in OCR lines: at least five
 // single letters in the lower half of the screen, spread across most of its

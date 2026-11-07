@@ -55,6 +55,8 @@ type Device struct {
 	raxFailedAt time.Time
 	apps        *appCatalog
 	pidApps     map[uint64]driver.App
+	pidMiss     map[uint64]time.Time          // processes that are no app, and when that was found
+	foreground  func(context.Context) []axApp // for tests: the apps in the foreground
 	pb          *pbConn
 
 	typeStats TypeStats // guarded by mu
@@ -89,6 +91,8 @@ func Open(ctx context.Context, info driver.Info) (*Device, error) {
 		if pb := d.pasteboard(); pb != nil {
 			pb.connect()
 		}
+		// The first read names its app through the catalog.
+		d.catalog(c)
 	}()
 	return d, nil
 }
