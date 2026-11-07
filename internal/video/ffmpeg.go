@@ -183,6 +183,51 @@ func libNames() (avutil, avcodec, swscale string) {
 	}
 }
 
+// swresampleMajor is libswresample's major version in FFmpeg 9. Pinky does
+// not call it, but some builds of libavcodec (BtbN's, for one) link it.
+const swresampleMajor = 7
+
+// preloadSwresample loads libswresample from dir, the folder libavutil came
+// from, when it is there. A library's dependencies are looked for on the
+// dynamic loader's own path, not in the library's folder, so a libavcodec
+// that links libswresample fails to load from a folder of its own (such as
+// PINKY_FFMPEG_DIR) unless libswresample is loaded first.
+func preloadSwresample(dir string) {
+	if !filepath.IsAbs(dir) {
+		return
+	}
+	var name string
+	switch runtime.GOOS {
+	case "darwin":
+		name = fmt.Sprintf("libswresample.%d.dylib", swresampleMajor)
+	case "windows":
+		name = fmt.Sprintf("swresample-%d.dll", swresampleMajor)
+	default:
+		name = fmt.Sprintf("libswresample.so.%d", swresampleMajor)
+	}
+	path := filepath.Join(dir, name)
+	if _, err := os.Stat(path); err == nil {
+		openLibrary(path) // best effort: libavcodec reports what is missing
+	}
+}
+
+// hwLibrariesLoad reports whether the system libraries a hardware decoder
+// needs load. Some FFmpeg builds load them lazily and abort the process
+// without them: BtbN's Linux builds load libva on first use and fail an
+// assertion when it is missing. So Pinky asks for VA-API only where libva
+// and its DRM backend load.
+func hwLibrariesLoad(device string) bool {
+	if device != "vaapi" {
+		return true
+	}
+	for _, name := range []string{"libva.so.2", "libva-drm.so.2"} {
+		if h, err := openLibrary(name); err != nil || h == 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // LibraryDirs returns the folders Load looks in for FFmpeg's libraries, in
 // order, for code that loads more of FFmpeg (such as libavformat) from the
 // same place. An empty entry means the dynamic loader's own search path.
@@ -254,6 +299,7 @@ func load() (*lib, error) {
 	if err != nil {
 		return nil, err
 	}
+	preloadSwresample(d1)
 	hAvcodec, d2, err := open(avcodecName)
 	if err != nil {
 		return nil, err

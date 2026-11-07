@@ -136,7 +136,7 @@ func NewDecoder(codec driver.Codec, opt DecoderOptions) (*Decoder, error) {
 func (d *Decoder) initHardware(codec unsafe.Pointer) {
 	l := d.l
 	name := hwDeviceName()
-	if name == "" {
+	if name == "" || !hwLibrariesLoad(name) {
 		return
 	}
 	typ := l.av_hwdevice_find_type_by_name(name)
