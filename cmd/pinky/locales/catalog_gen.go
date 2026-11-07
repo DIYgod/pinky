@@ -763,22 +763,6 @@ func (msgs Messages) AddPhoneIPhoneStepDevModeNote() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeNote", nil)
 }
 
-// AddPhoneIPhoneStepDone says "Done"
-// in the language the app shows.
-//
-// Add phone › iPhone, the step list: the accessibility label of the check
-// mark in place of a finished step's number.
-func AddPhoneIPhoneStepDone() string { return In(i18n.Locale()).AddPhoneIPhoneStepDone() }
-
-// AddPhoneIPhoneStepDone says "Done"
-// in the language of msgs.
-//
-// Add phone › iPhone, the step list: the accessibility label of the check
-// mark in place of a finished step's number.
-func (msgs Messages) AddPhoneIPhoneStepDone() string {
-	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDone", nil)
-}
-
 // AddPhoneIPhoneStepDriver says "Install Apple's iPhone driver"
 // in the language the app shows.
 //

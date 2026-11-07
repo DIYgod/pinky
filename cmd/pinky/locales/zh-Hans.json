@@ -44,7 +44,6 @@
   "addPhoneIPhoneStepDevMode": "打开开发者模式",
   "addPhoneIPhoneStepDevModeDetail": "在 iPhone 上打开“设置 › 隐私与安全性 › 开发者模式”，打开开关后轻点“重新启动”。重启后解锁 iPhone，轻点“打开”并输入锁屏密码。",
   "addPhoneIPhoneStepDevModeNote": "Pinky 已经让“开发者模式”开关显示出来，它在“隐私与安全性”页面靠下的位置。",
-  "addPhoneIPhoneStepDone": "已完成",
   "addPhoneIPhoneStepDriver": "安装 Apple 的 iPhone 驱动",
   "addPhoneIPhoneStepDriverDetail": "从 Microsoft Store 安装“Apple 设备”App，或者从 apple.com 安装 iTunes。Pinky 通过它与 iPhone 通信。",
   "addPhoneIPhoneStepDriverWaiting": "正在等待安装完成…",

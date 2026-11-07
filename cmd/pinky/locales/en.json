@@ -244,10 +244,6 @@
   "@addPhoneIPhoneStepDevModeNote": {
     "description": "Add phone › iPhone, the step list: a small note under the Developer Mode step: iOS hides the switch until a developer tool asks for it, and Pinky did."
   },
-  "addPhoneIPhoneStepDone": "Done",
-  "@addPhoneIPhoneStepDone": {
-    "description": "Add phone › iPhone, the step list: the accessibility label of the check mark in place of a finished step's number."
-  },
   "addPhoneIPhoneStepDriver": "Install Apple's iPhone driver",
   "@addPhoneIPhoneStepDriver": {
     "description": "Add phone › iPhone, the step list: the first step on Windows, while Apple's driver (which comes with the Apple Devices app or iTunes) is missing."
