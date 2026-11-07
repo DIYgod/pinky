@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1108.7 (2026-11-08)
 
 - iPhones no longer need Xcode's Devices window: Pinky turns on what the iPhone needs for development by itself, and again after every restart. Add phone › iPhone walks you through the steps (trusting the computer, Developer Mode) and says what to do when one is stuck.
 - Pinky uses Xcode's developer disk image when Xcode is installed. Without Xcode, Add phone can download the image, when you click Download, from github.com/doronz88/DeveloperDiskImage, a third-party copy of Apple's files, and checks every file against pinned checksums.
