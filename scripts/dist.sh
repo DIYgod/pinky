@@ -323,13 +323,12 @@ darwin() {
 		fi
 		ADB="$adb" SIGN="$sign" scripts/macapp.sh "$app" "$ff" "$dmg"
 		want=$(machine "$arch")
-		bins="$app/Contents/MacOS/Pinky $app/Contents/Frameworks/*.dylib"
+		set -- "$app/Contents/MacOS/Pinky" "$app"/Contents/Frameworks/*.dylib
 		if [ -n "$adb" ]; then
 			[ -f "$app/Contents/Helpers/adb" ] || die "$app lacks adb"
-			bins="$bins $app/Contents/Helpers/adb"
+			set -- "$@" "$app/Contents/Helpers/adb"
 		fi
-		# shellcheck disable=SC2086 # bins splits, and globs, on purpose
-		for bin in $bins; do
+		for bin in "$@"; do
 			got=$(lipo -archs "$bin")
 			[ "$got" = "$want" ] || die "$bin is for $got, not $want"
 		done
