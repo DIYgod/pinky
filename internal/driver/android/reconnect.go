@@ -21,8 +21,9 @@ import (
 // phones that are not connected with the driver's own search, and connects
 // to them by address, as the server would.
 
-// reconnectSearch is how long a pass searches the network.
-var reconnectSearch = 4 * time.Second
+// reconnectSearch is how long a pass searches the network: a dozing phone
+// may take five seconds to answer.
+var reconnectSearch = 6 * time.Second
 
 const (
 	reconnectSoon  = 5 * time.Second // the wait after a phone came or went, or one was connected
