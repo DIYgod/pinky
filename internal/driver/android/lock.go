@@ -17,11 +17,12 @@ import (
 // only ever turn it on, and the phone's own screen timeout and lock apply
 // between steps.
 
-// screenCmd reads the main display's state from the device idle controller,
-// which watches display 0 only, and the overall wakefulness as a fallback.
-// With a background display in its own display group the phone can be
-// awake while its own screen is off, so wakefulness alone is not enough.
-const screenCmd = `dumpsys deviceidle | grep -E 'mScreenOn='; dumpsys power | grep -E 'mWakefulness='`
+// screenCmd reads each display's power state from the display power
+// controllers, and the overall wakefulness as a fallback. With a
+// background display in its own display group the phone stays awake while
+// its own screen is off, so neither the wakefulness nor the device idle
+// controller's mScreenOn tells about display 0 (both say "on").
+const screenCmd = `dumpsys display | grep -E 'mDisplayId=|mScreenState='; dumpsys power | grep -E 'mWakefulness='`
 
 // ScreenOn implements driver.Waker: whether the phone's own display is on.
 // Dozing (an always-on display) counts as off.

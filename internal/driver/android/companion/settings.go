@@ -102,6 +102,44 @@ func (c *Client) restoreLocked(ctx context.Context) error {
 	return nil
 }
 
+// TurnOn turns the service on for good, when the person asks for it (the
+// client's Install button): it adds only Pinky's entry to
+// enabled_accessibility_services, keeps every other entry, and waits until
+// the service answers. Unlike Enable, a later Disable leaves it on.
+func (c *Client) TurnOn(ctx context.Context) error {
+	c.setMu.Lock()
+	defer c.setMu.Unlock()
+	c.restore = nil
+	raw, _, err := c.readSetting(ctx)
+	if err != nil {
+		return err
+	}
+	list := parseServices(raw)
+	if !slices.ContainsFunc(list, isOurs) {
+		value := strings.Join(append(slices.Clone(list), Component), ":")
+		if err := c.writeSetting(ctx, value, false); err != nil {
+			return err
+		}
+	}
+	return c.waitReady(ctx, 10*time.Second)
+}
+
+// KeepEnabled makes Disable leave the service on: another client turned
+// it on for good while this one had it on for a task.
+func (c *Client) KeepEnabled() {
+	c.setMu.Lock()
+	c.restore = nil
+	c.setMu.Unlock()
+}
+
+// EnabledForTask reports whether Enable turned the service on, so that
+// Disable will turn it off again.
+func (c *Client) EnabledForTask() bool {
+	c.setMu.Lock()
+	defer c.setMu.Unlock()
+	return c.restore != nil
+}
+
 // ForceDisable removes Pinky's entry from enabled_accessibility_services
 // even when this client did not add it, for cleaning up after a crashed
 // run. Other entries stay; the key is deleted when nothing else is left.

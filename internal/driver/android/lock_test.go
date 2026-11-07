@@ -12,8 +12,13 @@ func TestParseScreenOn(t *testing.T) {
 		out    string
 		on, ok bool
 	}{
-		{"  mScreenOn=true\n  mWakefulness=Awake\n", true, true},
-		{"  mScreenOn=false\n  mWakefulness=Awake\n", false, true}, // a background display keeps the phone awake
+		// Android 16 with a background display: display 0 off, display 17 on,
+		// and the phone as a whole awake.
+		{"    mDisplayId=0\n    mDisplayId=17\n  mDisplayId=0\n  mScreenState=OFF\n  mDisplayId=17\n  mScreenState=ON\n  mWakefulness=Awake\n", false, true},
+		{"  mDisplayId=0\n  mScreenState=ON\n  mDisplayId=17\n  mScreenState=OFF\n", true, true},
+		{"  mScreenState=ON\n  mWakefulness=Awake\n", true, true}, // Android 10: one controller
+		{"  mScreenState=DOZE\n", false, true},
+		{"  mScreenState=ON_SUSPEND\n", false, true},
 		{"  mWakefulness=Dozing\n", false, true},
 		{"  mWakefulness=Awake\n", true, true},
 		{"nothing here", false, false},

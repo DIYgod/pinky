@@ -51,15 +51,25 @@ func parseFocusedApp(out string) string {
 
 var (
 	wakefulnessRE = regexp.MustCompile(`mWakefulness=(\w+)`)
-	screenOnRE    = regexp.MustCompile(`\bmScreenOn=(true|false)\b`)
+	displayIDRE   = regexp.MustCompile(`mDisplayId=\s*:?\s*(-?\d+)`)
+	screenStateRE = regexp.MustCompile(`mScreenState=(\w+)`)
 )
 
-// parseScreenOn reports whether the main display is on, from `dumpsys
-// deviceidle` (mScreenOn, which follows display 0 only), or from the
-// wakefulness in `dumpsys power` when that line is missing.
+// parseScreenOn reports whether display 0 is on, from `dumpsys display`:
+// each display power controller prints its display id before its
+// mScreenState (Android 10 has one controller and may print no id). ON
+// and VR count as on; OFF, DOZE, DOZE_SUSPEND and ON_SUSPEND (an always-on
+// display) as off. Without any mScreenState it falls back to the
+// wakefulness in `dumpsys power`.
 func parseScreenOn(out string) (on, ok bool) {
-	if m := screenOnRE.FindStringSubmatch(out); m != nil {
-		return m[1] == "true", true
+	cur := -1
+	for _, line := range strings.Split(out, "\n") {
+		if m := displayIDRE.FindStringSubmatch(line); m != nil {
+			cur, _ = strconv.Atoi(m[1])
+		}
+		if m := screenStateRE.FindStringSubmatch(line); m != nil && cur <= 0 {
+			return m[1] == "ON" || m[1] == "VR", true
+		}
 	}
 	return parseAwake(out)
 }

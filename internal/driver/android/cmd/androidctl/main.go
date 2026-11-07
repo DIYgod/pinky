@@ -20,7 +20,8 @@
 //	androidctl [-s serial] stream [-seconds N] [-max-size N] [-out FILE.h264]
 //	androidctl [-s serial] settle [-max MS]  (time until the screen is still)
 //	androidctl [-s serial] run [-person] STEP...  (steps with action and settle timings)
-//	androidctl [-s serial] companion-install (install or update the companion app)
+//	androidctl [-s serial] companion-install [-force] (install or update the companion app)
+//	androidctl [-s serial] companion-state
 //	androidctl [-s serial] bg [-app APP] [-out FILE.h264] [-seconds N] [STEP...]
 //
 // Steps for run and bg: tap:X,Y  longtap:X,Y  swipe:X1,Y1,X2,Y2[,MS]  key:NAME
@@ -100,7 +101,9 @@ commands:
   settle [-max MS]                time until the screen stops changing
   run [-person] STEP...           run steps, timing each action and its settle;
                                   -person counts PersonWatcher signals meanwhile
-  companion-install               install or update the companion app (setup only)
+  companion-install [-force]      install or update the companion app and turn
+                                  its service on (setup only)
+  companion-state                 on, off, missing, outdated or no_apk
   bg [-app APP] [-seconds N] [-out FILE.h264] [STEP...]
                                   open a virtual display and run steps on it
 
@@ -319,15 +322,34 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 		fmt.Printf("person input signals during the run: %d\n", n)
 		return err
 	case "companion-install":
-		res, err := d.InstallCompanion(ctx)
+		fs := flag.NewFlagSet("companion-install", flag.ExitOnError)
+		force := fs.Bool("force", false, "install even when the phone has the same version (a build with other changes)")
+		fs.Parse(args)
+		start := time.Now()
+		res, err := d.SetUpCompanion(ctx, *force)
 		if err != nil {
 			return err
 		}
-		if res.Installed {
-			fmt.Printf("installed %s\n", res.APK)
-		} else {
-			fmt.Printf("already up to date with %s\n", res.APK)
+		switch {
+		case res.Replaced:
+			fmt.Printf("replaced build %d (signed with another key) with %s build %d\n", res.Before.Code, res.Bundled.Name, res.Bundled.Code)
+		case res.Installed && res.Before.Code > 0:
+			fmt.Printf("updated build %d to %s build %d\n", res.Before.Code, res.Bundled.Name, res.Bundled.Code)
+		case res.Installed:
+			fmt.Printf("installed %s build %d\n", res.Bundled.Name, res.Bundled.Code)
+		default:
+			fmt.Printf("build %d is installed; the bundled one is %d\n", res.Before.Code, res.Bundled.Code)
 		}
+		fmt.Printf("its service is on (%v)\n", time.Since(start).Round(time.Millisecond))
+		return nil
+	case "companion-state":
+		start := time.Now()
+		st, err := d.CompanionState(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println(st)
+		fmt.Fprintf(os.Stderr, "(%v)\n", time.Since(start).Round(time.Millisecond))
 		return nil
 	case "bg":
 		return background(ctx, d, args)
