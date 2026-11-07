@@ -154,6 +154,31 @@ A Claude Code run on the Pixel stopped when the person watcher reported a finger
 
 - **"The lock screen showed no PIN pad"**: on the Mi 10 Pro (LineageOS, an under-display fingerprint sensor) `wm dismiss-keyguard` brings up the alternate bouncer, which waits for a finger on the sensor, and the driver's fallback swipe started on the sensor, which took it. Nothing was entered. The driver now recognizes the alternate bouncer (`alternate_bouncer`, `udfps_touch_overlay`) and taps above the sensor, which brings up the PIN pad, and swipes from above the sensor otherwise (6eed8c9). A check on the locked Mi that enters nothing found the PIN pad that way; then Unlock with Touch ID unlocked the Mi over Wi-Fi.
 
+### Unlocking other Android phones
+
+The owner asked whether unlocking from the computer works on every Android phone or needs work per ROM. Until now the driver found the PIN pad by AOSP's resource ids (`pinEntry`, `key0`..`key9`) or a focused password field, and typed the PIN as key events. OEM skins draw their own lock screens, so the driver now also reads a PIN pad from what it shows: ten keys labelled with one digit each (in their text or description, with or without the keypad letters), laid out as a phone keypad. It taps those keys, then the pad's OK key if it shows one (OK, Enter, 确定, ✓ and the like), or leaves the check to the pad, which is what MIUI, EMUI and ColorOS do with fixed-length PINs. AOSP's pad and focused password fields still get key events, as before.
+
+Safety comes first, since a wrong entry costs one of the phone's attempts and repeated ones lock it out or can erase it. Pinky taps only when it reads exactly one such keypad, all of it on one window and not under another window, in the same place in two reads in a row (a pad still sliding in reads a few dozen pixels off). It never taps a guessed position and never retries a PIN the phone refused. A screen with digit keys it cannot read with confidence gets nothing, not even the fallback swipe (`driver.ErrPINNotEntered`). Details are in the [Android notes](android.md).
+
+What is checked where:
+
+| Lock screen | How the PIN goes in | Checked |
+| --- | --- | --- |
+| LineageOS 24 (Android 17) on the Mi 10 Pro, with the fingerprint screen in front | Key events, after a tap past the fingerprint screen | **On the phone**: the owner unlocked it from the computer, before this change, which leaves that path as it was |
+| AOSP, Android 10, 16 and 17 (our emulators; Android 17 on a temporary AVD) | Key events | **On the emulators**, through the gateway (`TestEmulatorUnlock`) |
+| The same pads read as an OEM pad, ignoring AOSP's ids | Taps on the keys, then Enter | **On the emulators**, reading with the companion and with uiautomator, right and wrong PIN (`TestDeviceUnlockByTaps`); real dumps of these pads are test fixtures |
+| Pixel (Android 10) | Key events | Not tried on the phone; the Android 10 emulator stands in for it |
+| Xiaomi MIUI / HyperOS | Taps; the pad checks the PIN itself | Synthetic dump only |
+| Samsung One UI | Taps, then OK; key events if its PIN field turns out to be a focused password field | Synthetic dump only (its ids are unknown) |
+| OPPO ColorOS, OnePlus OxygenOS, realme UI | Taps (the 0 key, which has no description, by its id); the pad checks the PIN itself | Synthetic dump only |
+| vivo FuntouchOS / OriginOS | Taps (keys described "One".."Zero") | Synthetic dump only |
+| Huawei EMUI / HarmonyOS | Key events into `fixedPinEntry`, if it is a focused password field | Synthetic dump only |
+| Honor MagicOS | Taps; the pad checks the PIN itself | Synthetic dump only |
+| SystemUI's Compose bouncer (Android 15 and later, where turned on) | Taps, then Enter | Synthetic dump only: the emulators' Android 16 and 17 images still use the View bouncer |
+| LineageOS with "Scramble PIN layout" | Key events; read from its labels, taps follow the scrambled digits | Synthetic dump only |
+
+The synthetic dumps (`internal/driver/android/testdata/keyguard/synthetic-*.xml`) were made up from what is published about these lock screens (AOSP's sources, Auto.js unlock scripts with per-ROM selectors, a vivo SystemUI layout, Appium reports); each file says what it is based on and what is invented. They show that the reading logic handles those layouts, not that those phones accept the taps. Still unknown on real OEM phones: whether `wm dismiss-keyguard` or the swipe brings up their PIN pad (Auto.js scripts say MIUI may need another gesture), whether `KEYCODE_WAKEUP` wakes them, whether their lock screens show their keys to accessibility at all, and Samsung's and Honor's labels. Where any of that fails, Pinky enters nothing and says so, and the person unlocks on the phone. Pattern locks are not supported.
+
 ### Known limits found in round three
 
 - **A screenshot is one instant.** Content that blinks (Clock's paused stopwatch) may show blank; the element list still has its text.
