@@ -34,11 +34,6 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
     @Volatile
     private var socket: LocalServerSocket? = null
 
-    /** Uptime of the last connection or request, for the idle watchdog. */
-    @Volatile
-    var lastActivity = SystemClock.uptimeMillis()
-        private set
-
     val connectionCount: Int get() = connections.size
 
     fun start() {
@@ -65,9 +60,7 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
         handler.shutdown()
     }
 
-    fun touch() {
-        lastActivity = SystemClock.uptimeMillis()
-    }
+    fun touch() = IdleClock.touch()
 
     internal fun removed(c: Connection) {
         if (connections.remove(c)) touch()
@@ -219,4 +212,22 @@ class Connection(private val socket: LocalSocket, private val server: CompanionS
         CompanionServer.closeQuietly(socket)
         server.removed(this)
     }
+}
+
+/**
+ * When a client last connected, sent a request or went away, for the idle
+ * watchdog. It belongs to the process rather than to a service instance:
+ * Android unbinds the service and binds it again for every uiautomator
+ * dump, and that must not restart the count. Elapsed realtime, so that time
+ * the phone spent asleep counts too.
+ */
+object IdleClock {
+    @Volatile
+    private var last = SystemClock.elapsedRealtime()
+
+    fun touch() {
+        last = SystemClock.elapsedRealtime()
+    }
+
+    fun idleMs(): Long = SystemClock.elapsedRealtime() - last
 }
