@@ -42,19 +42,56 @@ func (s *Store) Prune(ctx context.Context, cutoff time.Time, keep []string) (Pru
 		return out, err
 	}
 	defer tx.Rollback()
+	candidates, files, err := s.dropTasks(ctx, tx, ids, &out)
+	if err != nil {
+		return out, err
+	}
+	// Screenshots no step shows any more: those of the deleted steps, and
+	// any left over from before the cutoff.
+	orphans, err := txStrings(ctx, tx, `SELECT id FROM media WHERE created_at < ?
+		AND id NOT IN (SELECT before_media FROM steps) AND id NOT IN (SELECT after_media FROM steps)`, before)
+	if err != nil {
+		return out, err
+	}
+	for _, id := range orphans {
+		candidates[id] = true
+	}
+	media, err := s.dropMedia(ctx, tx, candidates, &out)
+	if err != nil {
+		return out, err
+	}
+	files = append(files, media...)
+	res, err := tx.ExecContext(ctx, `DELETE FROM sessions WHERE ended_at != 0 AND ended_at < ?
+		AND id NOT IN (SELECT session_id FROM tasks)`, before)
+	if err != nil {
+		return out, err
+	}
+	n, _ := res.RowsAffected()
+	out.Sessions = int(n)
+	if err := tx.Commit(); err != nil {
+		return out, err
+	}
+	return out, removeFiles(files)
+}
+
+// dropTasks deletes tasks with their steps, approvals and recordings in tx,
+// counting them in out. It returns the screenshots their steps showed,
+// which may be unused now (dropMedia), and the recordings' files, to remove
+// once tx commits.
+func (s *Store) dropTasks(ctx context.Context, tx *sql.Tx, ids []string, out *Pruned) (map[string]bool, []string, error) {
 	var files []string
 	candidates := map[string]bool{}
 	for _, chunk := range chunks(ids, 500) {
 		in, cargs := inList(chunk)
 		rows, err := tx.QueryContext(ctx, `SELECT before_media, after_media FROM steps WHERE task_id IN (`+in+`)`, cargs...)
 		if err != nil {
-			return out, err
+			return nil, nil, err
 		}
 		for rows.Next() {
 			var b, a string
 			if err := rows.Scan(&b, &a); err != nil {
 				rows.Close()
-				return out, err
+				return nil, nil, err
 			}
 			for _, m := range []string{b, a} {
 				if m != "" {
@@ -65,7 +102,7 @@ func (s *Store) Prune(ctx context.Context, cutoff time.Time, keep []string) (Pru
 		rows.Close()
 		recs, err := txStrings(ctx, tx, `SELECT path FROM recordings WHERE task_id IN (`+in+`)`, cargs...)
 		if err != nil {
-			return out, err
+			return nil, nil, err
 		}
 		for _, rel := range recs {
 			if !strings.Contains(rel, "..") {
@@ -83,7 +120,7 @@ func (s *Store) Prune(ctx context.Context, cutoff time.Time, keep []string) (Pru
 			}
 			res, err := tx.ExecContext(ctx, `DELETE FROM `+del.table+` WHERE `+col+` IN (`+in+`)`, cargs...)
 			if err != nil {
-				return out, err
+				return nil, nil, err
 			}
 			if del.n != nil {
 				n, _ := res.RowsAffected()
@@ -91,20 +128,18 @@ func (s *Store) Prune(ctx context.Context, cutoff time.Time, keep []string) (Pru
 			}
 		}
 	}
-	// Screenshots no step shows any more: those of the deleted steps, and
-	// any left over from before the cutoff.
-	orphans, err := txStrings(ctx, tx, `SELECT id FROM media WHERE created_at < ?
-		AND id NOT IN (SELECT before_media FROM steps) AND id NOT IN (SELECT after_media FROM steps)`, before)
-	if err != nil {
-		return out, err
-	}
-	for _, id := range orphans {
-		candidates[id] = true
-	}
+	return candidates, files, nil
+}
+
+// dropMedia deletes the screenshots among candidates that no step shows
+// any more in tx, counting them in out, and returns their files, to remove
+// once tx commits.
+func (s *Store) dropMedia(ctx context.Context, tx *sql.Tx, candidates map[string]bool, out *Pruned) ([]string, error) {
+	var files []string
 	for id := range candidates {
 		var used int
 		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM steps WHERE before_media = ? OR after_media = ?`, id, id).Scan(&used); err != nil {
-			return out, err
+			return nil, err
 		}
 		if used > 0 {
 			continue
@@ -115,32 +150,27 @@ func (s *Store) Prune(ctx context.Context, cutoff time.Time, keep []string) (Pru
 			continue
 		}
 		if err != nil {
-			return out, err
+			return nil, err
 		}
 		if _, err := tx.ExecContext(ctx, `DELETE FROM media WHERE id = ?`, id); err != nil {
-			return out, err
+			return nil, err
 		}
 		out.Media++
 		if !strings.Contains(rel, "..") {
 			files = append(files, filepath.Join(s.mediaDir, filepath.FromSlash(rel)))
 		}
 	}
-	res, err := tx.ExecContext(ctx, `DELETE FROM sessions WHERE ended_at != 0 AND ended_at < ?
-		AND id NOT IN (SELECT session_id FROM tasks)`, before)
-	if err != nil {
-		return out, err
-	}
-	n, _ := res.RowsAffected()
-	out.Sessions = int(n)
-	if err := tx.Commit(); err != nil {
-		return out, err
-	}
+	return files, nil
+}
+
+// removeFiles removes files whose rows are gone; one already gone is fine.
+func removeFiles(files []string) error {
 	for _, f := range files {
 		if err := os.Remove(f); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return out, err
+			return err
 		}
 	}
-	return out, nil
+	return nil
 }
 
 func (s *Store) strings(ctx context.Context, q string, args ...any) ([]string, error) {

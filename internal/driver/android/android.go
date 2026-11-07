@@ -101,6 +101,9 @@ type Provider struct {
 
 	mu    sync.Mutex
 	props map[string]deviceProps // by serial and transport id
+	// forgotten holds the phones the person removed from Pinky, by id,
+	// which the driver no longer connects to by itself (forget.go).
+	forgotten map[string]bool
 
 	wifi *reconnector // nil without Config.ReconnectWiFi
 

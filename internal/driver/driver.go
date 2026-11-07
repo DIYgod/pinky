@@ -389,6 +389,23 @@ type WiFiConnector interface {
 	ConnectWiFi(ctx context.Context, addr string) (Info, error)
 }
 
+// Forgetter is a Provider that connects to phones by itself, as Android's
+// reconnects the phones paired over Wi-Fi. The gateway tells it which
+// phones the person removed from Pinky, so it leaves them alone: Forget
+// when the person removes one and, before the first List, for each one
+// removed earlier; Remember once they add it back, by pairing it again or
+// plugging it in.
+type Forgetter interface {
+	// Forget stops the provider from connecting to the phone by itself.
+	Forget(id string)
+	// Remember undoes Forget.
+	Remember(id string)
+	// Disconnect drops the phone's connections over the network that the
+	// provider can drop, as the person removes it. A cable's connection
+	// stays, and the phone with it.
+	Disconnect(ctx context.Context, id string) error
+}
+
 // ErrPairedNotFound is wrapped by PairWithCode and Pairing.Wait when the
 // phone paired but the driver could not find where to connect to it: its
 // wireless debugging service did not show up on the network.
