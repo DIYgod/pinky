@@ -32,7 +32,7 @@ Install Pinky, connect your phone and add Pinky to your agent. Then ask the agen
 | **Linux** | A 64-bit PC (x86-64) with Ubuntu 20.04, Debian 11 or a newer system (glibc 2.29 or later), and GTK 3 |
 | **Android phone** | Android 10 to 17 and a USB cable. Pinky brings its own adb; on Windows some phones need a USB driver, and on Linux USB access ([below](#usb-on-windows-and-linux)) |
 | **iPhone** | iOS 17.4 or later and a USB cable. Pinky prepares it itself, with Apple's developer disk image, which comes with Xcode or which Pinky can download from a third-party mirror when you ask ([below](#iphone)). On iOS 17.4 to 26 also a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
-| **Agent** | Any agent that can use MCP servers, such as Claude Code, Codex or Cursor |
+| **Agent** | Any agent that can use MCP servers, such as Claude Code, Claude Desktop, Codex or Cursor |
 
 ### 1. Download and install Pinky
 
