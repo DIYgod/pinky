@@ -245,7 +245,7 @@ func TestWaitQuiet(t *testing.T) {
 }
 
 func testLive(vw, vh int, screenSize func(int, int) (int, int)) *live {
-	l := &live{cfg: &Config{}, sized: make(chan struct{}), done: make(chan struct{}), screenSize: screenSize, vw: vw, vh: vh}
+	l := &live{cfg: &Config{}, video: true, sized: make(chan struct{}), done: make(chan struct{}), screenSize: screenSize, vw: vw, vh: vh}
 	close(l.sized)
 	return l
 }
@@ -266,6 +266,12 @@ func TestPosition(t *testing.T) {
 	p, _ = scaled.position(ctx, screen.Point{X: 540, Y: 1170})
 	if p.X != 256 || p.Y != 552 {
 		t.Errorf("scaled center = %+v", p)
+	}
+	// Without video, points are display pixels of the current rotation.
+	nov := &live{cfg: &Config{}, done: make(chan struct{}), displaySize: func(context.Context) (int, int, error) { return 1920, 1080, nil }}
+	p, _ = nov.position(ctx, screen.Point{X: 1900, Y: 1000})
+	if p != (scrcpy.Position{X: 1900, Y: 1000, Width: 1920, Height: 1080}) {
+		t.Errorf("without video = %+v", p)
 	}
 	// Landscape: the video is wide, so the screen is too.
 	land := testLive(2340, 1080, func(vw, vh int) (int, int) { return orient(1080, 2340, vw, vh) })

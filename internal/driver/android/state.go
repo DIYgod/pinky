@@ -49,7 +49,20 @@ func parseFocusedApp(out string) string {
 	return ""
 }
 
-var wakefulnessRE = regexp.MustCompile(`mWakefulness=(\w+)`)
+var (
+	wakefulnessRE = regexp.MustCompile(`mWakefulness=(\w+)`)
+	screenOnRE    = regexp.MustCompile(`\bmScreenOn=(true|false)\b`)
+)
+
+// parseScreenOn reports whether the main display is on, from `dumpsys
+// deviceidle` (mScreenOn, which follows display 0 only), or from the
+// wakefulness in `dumpsys power` when that line is missing.
+func parseScreenOn(out string) (on, ok bool) {
+	if m := screenOnRE.FindStringSubmatch(out); m != nil {
+		return m[1] == "true", true
+	}
+	return parseAwake(out)
+}
 
 // parseAwake reports whether the screen is on, from `dumpsys power`.
 // Dozing (always-on display) counts as off.
@@ -113,4 +126,19 @@ func splitSections(out string) map[string]string {
 	}
 	sec[name] = b.String()
 	return sec
+}
+
+var curSizeRE = regexp.MustCompile(`\bcur=(\d+)x(\d+)`)
+
+// parseCurSize returns the first display's current size, rotation
+// included, from `dumpsys window displays` ("init=1080x2400 420dpi
+// cur=1080x2400 app=...").
+func parseCurSize(out string) (w, h int, ok bool) {
+	m := curSizeRE.FindStringSubmatch(out)
+	if m == nil {
+		return 0, 0, false
+	}
+	w, _ = strconv.Atoi(m[1])
+	h, _ = strconv.Atoi(m[2])
+	return w, h, w > 0 && h > 0
 }

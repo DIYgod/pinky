@@ -29,11 +29,12 @@ func TestArgs(t *testing.T) {
 	got = Options{
 		MaxSize: 1024, MaxFPS: 30, VideoBitRate: 4_000_000, VideoCodec: "h265",
 		Virtual:   &VirtualDisplay{Width: 1080, Height: 2340, DPI: 440, NoSystemDecorations: true},
-		DisplayID: 3, StayAwake: true, PowerOn: true, LogLevel: "debug", Extra: []string{"keep_active=true", "junk"},
+		DisplayID: 3, LogLevel: "debug",
+		Extra: []string{"keep_active=true", "junk", "stay_awake=true", "power_on=true", "power_off_on_close=true", "turn_screen_off=true", "screen_off_timeout=600"},
 	}.Args(0xffffffff)
-	want = []string{"5.0.1", "scid=7fffffff", "log_level=debug", "audio=false", "tunnel_forward=true", "clipboard_autosync=false",
+	want = []string{"5.0.1", "scid=7fffffff", "log_level=debug", "audio=false", "tunnel_forward=true", "clipboard_autosync=false", "power_on=false",
 		"max_size=1024", "max_fps=30", "video_bit_rate=4000000", "video_codec=h265",
-		"new_display=1080x2340/440", "vd_system_decorations=false", "stay_awake=true", "keep_active=true"}
+		"new_display=1080x2340/440", "vd_system_decorations=false", "keep_active=true"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("args = %q", got)
 	}

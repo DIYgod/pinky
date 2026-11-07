@@ -474,6 +474,21 @@ func logMessage(line string) string {
 // Done is closed when the session ends.
 func (s *Session) Done() <-chan struct{} { return s.done }
 
+// encoderErrorRE matches the server's log lines for a video encoder that
+// fails, as the Android 10 emulator's does (so does its screenrecord).
+var encoderErrorRE = regexp.MustCompile(`Capture/encoding error|Exception on thread Thread\[video|Encoder failed|Could not open video stream|MediaCodec\.`)
+
+// VideoFailure returns the first server log line that says the video
+// capture or encoder failed, or "" when there is none.
+func (s *Session) VideoFailure() string {
+	for _, l := range s.logs.recent() {
+		if encoderErrorRE.MatchString(l) {
+			return logMessage(l)
+		}
+	}
+	return ""
+}
+
 // Err says why the session ended, or is nil while it runs.
 func (s *Session) Err() error {
 	select {

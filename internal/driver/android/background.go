@@ -15,8 +15,8 @@ import (
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
-// BackgroundOptions configure a virtual display for background work.
-type BackgroundOptions struct {
+// DisplayOptions configure a virtual display for background work.
+type DisplayOptions struct {
 	// App is started on the display once it exists: a package or a
 	// display name, as for Launch. Empty starts nothing.
 	App string
@@ -49,11 +49,27 @@ type Background struct {
 	w, h    int // display size when the stream is scaled; 0 = video size
 }
 
-// OpenBackground creates a virtual display and, if opt.App is set, starts
-// the app on it.
-func (d *Device) OpenBackground(ctx context.Context, opt BackgroundOptions) (*Background, error) {
+// OpenBackground implements driver.Backgrounder with a scrcpy virtual
+// display at the main display's size, without system decorations.
+func (d *Device) OpenBackground(ctx context.Context, opt driver.BackgroundOptions) (driver.Device, error) {
+	b, err := d.OpenDisplay(ctx, DisplayOptions{App: opt.App})
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// OpenDisplay creates a virtual display and, if opt.App is set, starts the
+// app on it.
+func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Background, error) {
 	if d.props.SDK > 0 && d.props.SDK < 29 {
 		return nil, fmt.Errorf("android: virtual displays need Android 10: %w", driver.ErrUnsupported)
+	}
+	d.mu.Lock()
+	broken := d.noVideo
+	d.mu.Unlock()
+	if broken != "" {
+		return nil, fmt.Errorf("android: the phone's video encoder fails (%s), and a virtual display needs it: %w", broken, driver.ErrUnsupported)
 	}
 	var pkg string
 	if opt.App != "" {
@@ -91,7 +107,7 @@ func (d *Device) OpenBackground(ctx context.Context, opt BackgroundOptions) (*Ba
 			return orient(b.w, b.h, vw, vh)
 		}
 		return vw, vh
-	})
+	}, nil)
 	if err != nil {
 		return nil, wrapErr(err)
 	}

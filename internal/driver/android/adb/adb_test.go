@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -98,6 +100,9 @@ func (s *fakeServer) handle(c net.Conn) {
 		rest := strings.TrimPrefix(req, "host-serial:")
 		serial, svc, _ := strings.Cut(rest, ":")
 		switch {
+		case svc == "features":
+			okay(c)
+			writeStr(c, "shell_v2,cmd,stat_v2,ls_v2,fixed_push_mkdir,apex")
 		case strings.HasPrefix(svc, "forward:"):
 			spec := strings.TrimPrefix(strings.TrimPrefix(svc, "forward:"), "norebind:")
 			local, remote, _ := strings.Cut(spec, ";")
@@ -261,6 +266,62 @@ func (s *fakeServer) sync(c net.Conn, r *bufio.Reader) {
 			s.modes[path] = uint32(mode)
 			s.mu.Unlock()
 			send("OKAY", nil)
+		case "LST2":
+			s.mu.Lock()
+			data, exists := s.files[string(arg)]
+			mode := s.modes[string(arg)]
+			s.mu.Unlock()
+			out := make([]byte, 72)
+			copy(out, "LST2")
+			if !exists {
+				binary.LittleEndian.PutUint32(out[4:], 2) // ENOENT
+			} else {
+				binary.LittleEndian.PutUint32(out[24:], mode)
+				binary.LittleEndian.PutUint64(out[40:], uint64(len(data))+1<<32)
+				binary.LittleEndian.PutUint64(out[56:], 1700000000)
+			}
+			c.Write(out)
+		case "LIST", "LIS2":
+			dir := strings.TrimSuffix(string(arg), "/") + "/"
+			s.mu.Lock()
+			var names []string
+			for p := range s.files {
+				if rest, ok := strings.CutPrefix(p, dir); ok && rest != "" && !strings.Contains(rest, "/") {
+					names = append(names, rest)
+				}
+			}
+			sort.Strings(names)
+			names = append([]string{".", ".."}, names...)
+			for _, name := range names {
+				data, mode := s.files[dir+name], s.modes[dir+name]
+				if name == "." || name == ".." {
+					mode = 0o40755
+				}
+				if id == "LIST" {
+					out := make([]byte, 20)
+					copy(out, "DENT")
+					binary.LittleEndian.PutUint32(out[4:], mode)
+					binary.LittleEndian.PutUint32(out[8:], uint32(len(data)))
+					binary.LittleEndian.PutUint32(out[12:], 1700000000)
+					binary.LittleEndian.PutUint32(out[16:], uint32(len(name)))
+					c.Write(append(out, name...))
+				} else {
+					out := make([]byte, 76)
+					copy(out, "DNT2")
+					binary.LittleEndian.PutUint32(out[24:], mode)
+					binary.LittleEndian.PutUint64(out[40:], uint64(len(data)))
+					binary.LittleEndian.PutUint64(out[56:], 1700000000)
+					binary.LittleEndian.PutUint32(out[72:], uint32(len(name)))
+					c.Write(append(out, name...))
+				}
+			}
+			s.mu.Unlock()
+			done := make([]byte, 20)
+			if id == "LIS2" {
+				done = make([]byte, 76)
+			}
+			copy(done, "DONE")
+			c.Write(done)
 		case "RECV":
 			s.mu.Lock()
 			data, exists := s.files[string(arg)]
@@ -528,4 +589,68 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func TestSyncListAndLstat(t *testing.T) {
+	s, c := newFakeServer(t)
+	ctx := context.Background()
+	s.mu.Lock()
+	s.files["/sdcard/Pinky"], s.modes["/sdcard/Pinky"] = nil, 0o40770
+	s.files["/sdcard/Pinky/a.txt"], s.modes["/sdcard/Pinky/a.txt"] = []byte("hello"), 0o100660
+	s.files["/sdcard/Pinky/sub"], s.modes["/sdcard/Pinky/sub"] = nil, 0o40770
+	s.files["/sdcard/Pinky/sub/b.bin"], s.modes["/sdcard/Pinky/sub/b.bin"] = []byte("xy"), 0o100660
+	s.files["/sdcard/Pinky/out"], s.modes["/sdcard/Pinky/out"] = nil, 0o120777
+	s.mu.Unlock()
+	f, err := c.Features(ctx, "3e8be48e")
+	if err != nil || !f["ls_v2"] || !f["stat_v2"] || f["nope"] {
+		t.Fatalf("Features = %v, %v", f, err)
+	}
+	for _, v2 := range []bool{false, true} {
+		y, err := c.OpenSync(ctx, "3e8be48e", v2)
+		if err != nil {
+			t.Fatal(err)
+		}
+		list, err := y.List("/sdcard/Pinky")
+		if err != nil {
+			t.Fatalf("v2=%v: List: %v", v2, err)
+		}
+		var got []string
+		for _, e := range list {
+			kind := "f"
+			switch {
+			case e.Mode.IsDir():
+				kind = "d"
+			case e.Mode&os.ModeSymlink != 0:
+				kind = "l"
+			}
+			got = append(got, fmt.Sprintf("%s %s %d", kind, e.Name, e.Size))
+			if e.ModTime.Unix() != 1700000000 {
+				t.Errorf("v2=%v: %s mtime = %v", v2, e.Name, e.ModTime)
+			}
+		}
+		want := []string{"f a.txt 5", "l out 0", "d sub 0"}
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Errorf("v2=%v: List = %q, want %q", v2, got, want)
+		}
+		fi, err := y.Lstat("/sdcard/Pinky/a.txt")
+		if err != nil || !fi.Exists() || !fi.Mode.IsRegular() {
+			t.Errorf("v2=%v: Lstat a.txt = %+v, %v", v2, fi, err)
+		}
+		if v2 && fi.Size != 5+1<<32 {
+			t.Errorf("LST2 size = %d, want a 64-bit size", fi.Size)
+		}
+		fi, err = y.Lstat("/sdcard/Pinky/out")
+		if err != nil || fi.Mode&os.ModeSymlink == 0 {
+			t.Errorf("v2=%v: Lstat link = %+v, %v", v2, fi, err)
+		}
+		fi, err = y.Lstat("/sdcard/Pinky/missing")
+		if err != nil || fi.Exists() {
+			t.Errorf("v2=%v: Lstat missing = %+v, %v", v2, fi, err)
+		}
+		// Several requests on one connection.
+		if list, err := y.List("/sdcard/Pinky/sub"); err != nil || len(list) != 1 || list[0].Name != "b.bin" {
+			t.Errorf("v2=%v: List sub = %+v, %v", v2, list, err)
+		}
+		y.Close()
+	}
 }

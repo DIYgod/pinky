@@ -236,6 +236,22 @@ func (c *Client) Version(ctx context.Context) (int, error) {
 	return int(v), nil
 }
 
+// Features returns the features the device and the server share, such as
+// "shell_v2", "stat_v2" and "ls_v2".
+func (c *Client) Features(ctx context.Context, serial string) (map[string]bool, error) {
+	s, err := c.query(ctx, "host-serial:"+serial+":features")
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]bool{}
+	for _, f := range strings.Split(strings.TrimSpace(s), ",") {
+		if f = strings.TrimSpace(f); f != "" {
+			out[f] = true
+		}
+	}
+	return out, nil
+}
+
 // Dial opens a service on the device with the given serial, for example
 // "shell:ls", "exec:screencap -p", "sync:", "localabstract:name" or
 // "tcp:8080". The connection carries the service's raw stream; ctx bounds

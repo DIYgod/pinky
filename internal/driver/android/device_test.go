@@ -319,7 +319,7 @@ func TestDeviceBackground(t *testing.T) {
 	d, ctx := openTestDevice(t)
 	pkg := calculatorPackage(t, ctx, d)
 	act(t, ctx, d, "home", func() error { return d.Key(ctx, driver.KeyHome) })
-	b, err := d.OpenBackground(ctx, BackgroundOptions{App: pkg})
+	b, err := d.OpenDisplay(ctx, DisplayOptions{App: pkg})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,6 +15,7 @@ import (
 
 // Android key codes and meta states (android.view.KeyEvent).
 const (
+	keycode0          = 7 // KEYCODE_0; the digits follow in order
 	keycodeHome       = 3
 	keycodeBack       = 4
 	keycodeDpadUp     = 19
@@ -82,31 +83,18 @@ func (d *Device) wake(ctx context.Context, l *live) error {
 	if fresh {
 		return nil
 	}
-	awake, err := d.screenOn(ctx)
+	on, err := d.ScreenOn(ctx)
 	if err != nil {
 		if errors.Is(err, driver.ErrOffline) || ctx.Err() != nil {
 			return err
 		}
-		// A failed check should not block the action itself.
+		// A failed check should not block the action itself, and an
+		// unknown state presses nothing.
 		d.cfg.logf("android: %s: screen state: %v", d.info.ID, err)
 		return nil
 	}
-	if !awake {
-		d.cfg.logf("android: %s: screen is off, waking it", d.info.ID)
-		if err := l.key(keycodeWakeup, 0); err != nil {
-			return err
-		}
-		// Give the display time to come on before the action lands.
-		deadline := time.Now().Add(2 * time.Second)
-		for time.Now().Before(deadline) {
-			if err := sleepCtx(ctx, 150*time.Millisecond); err != nil {
-				return err
-			}
-			if on, err := d.screenOn(ctx); err == nil && on {
-				break
-			}
-		}
-		if err := sleepCtx(ctx, 250*time.Millisecond); err != nil {
+	if !on {
+		if err := d.pressWakeup(ctx, l); err != nil {
 			return err
 		}
 	}
@@ -118,19 +106,6 @@ func (d *Device) markAwake() {
 	d.stateMu.Lock()
 	d.awakeAt = time.Now()
 	d.stateMu.Unlock()
-}
-
-// screenOn reports whether the screen is on (dozing counts as off).
-func (d *Device) screenOn(ctx context.Context) (bool, error) {
-	out, err := d.client.Shell(ctx, d.info.ID, "dumpsys power | grep mWakefulness=")
-	if err != nil {
-		return false, wrapErr(err)
-	}
-	awake, ok := parseAwake(string(out))
-	if !ok {
-		return true, nil // unknown: do not press anything
-	}
-	return awake, nil
 }
 
 // longPressHold returns how long to hold a long press: the phone's
@@ -482,14 +457,8 @@ func (l *live) typeText(ctx context.Context, text string, opt driver.TypeOptions
 	}
 	if text != "" {
 		if keys && plainASCII(text) {
-			for _, part := range scrcpy.SplitText(text, scrcpy.MaxInjectText) {
-				msg, err := scrcpy.InjectText(part)
-				if err != nil {
-					return err
-				}
-				if err := l.send(msg); err != nil {
-					return err
-				}
+			if err := l.injectText(text); err != nil {
+				return err
 			}
 		} else {
 			if len(text) > scrcpy.MaxClipboardText {
@@ -502,6 +471,21 @@ func (l *live) typeText(ctx context.Context, text string, opt driver.TypeOptions
 	}
 	if opt.Submit {
 		return l.key(keycodeEnter, 0)
+	}
+	return nil
+}
+
+// injectText types printable ASCII as key events, in messages of at most
+// scrcpy.MaxInjectText bytes.
+func (l *live) injectText(text string) error {
+	for _, part := range scrcpy.SplitText(text, scrcpy.MaxInjectText) {
+		msg, err := scrcpy.InjectText(part)
+		if err != nil {
+			return err
+		}
+		if err := l.send(msg); err != nil {
+			return err
+		}
 	}
 	return nil
 }

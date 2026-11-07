@@ -27,6 +27,9 @@ import (
 const (
 	repeatMin = 85 * time.Millisecond
 	repeatMax = 125 * time.Millisecond
+	// noVideoSettle is the settle wait of a session without video and
+	// without the companion's events.
+	noVideoSettle = time.Second
 )
 
 // settleTracker remembers when the video last changed.
@@ -143,7 +146,16 @@ func (l *live) waitSettled(ctx context.Context, max time.Duration, extra ...quie
 	if _, _, err := l.videoSize(ctx); err != nil {
 		return false, err
 	}
-	conds := append([]quietCond{{last: l.settle.lastChange, quiet: l.cfg.SettleQuiet}}, extra...)
+	video := quietCond{last: l.settle.lastChange, quiet: l.cfg.SettleQuiet}
+	if !l.video {
+		// No frames to watch: a fixed wait, shorter when the companion's
+		// events tell when the screen stops changing.
+		video = quietCond{last: func() time.Time { return time.Time{} }, quiet: noVideoSettle}
+		if len(extra) > 0 {
+			video.quiet = l.cfg.SettleQuiet
+		}
+	}
+	conds := append([]quietCond{video}, extra...)
 	ok, err := waitQuiet(ctx, start, max, l.done, conds...)
 	if err == errSessionEnded {
 		return false, l.failure()

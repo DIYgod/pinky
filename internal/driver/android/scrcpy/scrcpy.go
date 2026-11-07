@@ -72,15 +72,26 @@ type Options struct {
 	DisplayID int             // display to mirror; 0 is the main display
 	Virtual   *VirtualDisplay // create a new display instead
 
-	StayAwake        bool   // keep the phone awake while plugged in
 	ShowTouches      bool   // show touches on the phone
-	PowerOn          bool   // wake the screen at start (scrcpy presses POWER; off by default)
-	PowerOffOnClose  bool   // turn the screen off when the session ends
 	DisplayIMEPolicy string // "local", "fallback" or "hide" (Android 10+)
 	LogLevel         string // "verbose", "debug", "info" (default), "warn" or "error"
 
-	// Extra holds raw key=value options for anything not covered above.
+	// Extra holds raw key=value options for anything not covered above,
+	// except the ones in forbiddenOptions, which are dropped.
 	Extra []string
+}
+
+// forbiddenOptions are server options Pinky never passes. Pinky never
+// keeps a phone awake (burn-in and heat), never presses POWER (which locks
+// a phone whose screen is on) and leaves the screen timeout alone; it
+// wakes screens itself with KEYCODE_WAKEUP. So the session always runs
+// with power_on=false and without these.
+var forbiddenOptions = map[string]bool{
+	"stay_awake":         true, // sets "stay on while plugged in"
+	"power_on":           true, // presses POWER when the screen is off
+	"power_off_on_close": true, // presses POWER at the end
+	"turn_screen_off":    true, // keeps the phone awake with its panel off
+	"screen_off_timeout": true, // changes the screen timeout setting
 }
 
 // Args returns the server's command-line arguments for a run with the
@@ -98,11 +109,9 @@ func (o Options) Args(scid uint32) []string {
 		"tunnel_forward=true",
 		// Pinky reads the clipboard only when asked; never stream it.
 		"clipboard_autosync=false",
-	}
-	if !o.PowerOn {
 		// scrcpy would press POWER to wake a sleeping screen; Pinky wakes
 		// the screen itself with WAKEUP, which can never turn it off.
-		args = append(args, "power_on=false")
+		"power_on=false",
 	}
 	if o.NoVideo {
 		args = append(args, "video=false")
@@ -143,20 +152,14 @@ func (o Options) Args(scid uint32) []string {
 	} else if o.DisplayID != 0 {
 		args = append(args, "display_id="+strconv.Itoa(o.DisplayID))
 	}
-	if o.StayAwake {
-		args = append(args, "stay_awake=true")
-	}
 	if o.ShowTouches {
 		args = append(args, "show_touches=true")
-	}
-	if o.PowerOffOnClose {
-		args = append(args, "power_off_on_close=true")
 	}
 	if o.DisplayIMEPolicy != "" {
 		args = append(args, "display_ime_policy="+o.DisplayIMEPolicy)
 	}
 	for _, kv := range o.Extra {
-		if strings.Contains(kv, "=") {
+		if k, _, ok := strings.Cut(kv, "="); ok && !forbiddenOptions[strings.TrimSpace(k)] {
 			args = append(args, kv)
 		}
 	}
