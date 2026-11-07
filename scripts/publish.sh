@@ -1,33 +1,28 @@
 #!/bin/sh
 # Publishes a release that scripts/dist.sh built and `release manifest`
-# finished (latest.json, SHA256SUMS), for scripts/release.sh and the
-# release workflow (see docs/RELEASING.md):
+# finished (latest.json, the cask pinky.rb, SHA256SUMS), for the release
+# workflow and scripts/release.sh (see docs/RELEASING.md):
 #
 #   scripts/publish.sh <dir>
 #
-# - creates the GitHub release v<version> in RELEASES_REPO as a draft,
-#   uploads every file in <dir> to it, latest.json last, and publishes it:
-#   as the latest release, unless a newer one is out already, so that
-#   releases/latest/download/latest.json is always the newest version's;
-# - then writes the version into the Homebrew cask, Casks/pinky.rb in
-#   TAP_REPO, unless the cask has a newer one.
-#
-# A release that is published already keeps its files: running this again
-# only brings the cask up to date.
+# It creates the GitHub release v<version> in RELEASES_REPO as a draft,
+# uploads every file in <dir> to it, latest.json last, and publishes it:
+# as the latest release, unless a newer one is out already, so that
+# releases/latest/download/latest.json (and pinky.rb, which the Homebrew
+# tap takes) is always the newest version's. A release that is published
+# already keeps its files.
 #
 # Environment:
-#   RELEASES_REPO  the public repository of the releases (DIYgod/pinky-releases)
-#   TAP_REPO       the Homebrew tap (DIYgod/homebrew-tap)
+#   RELEASES_REPO  the repository of the releases (DIYgod/pinky)
+#   TAP_REPO       the Homebrew tap the release page names (DIYgod/homebrew-tap)
 #   GH_TOKEN       for gh, which must be able to write RELEASES_REPO
 #                  (default: gh's own login)
-#   TAP_TOKEN      a token that may push to TAP_REPO (default: gh's login)
-#   TAP_URL        where the tap is cloned from (default: TAP_REPO on GitHub)
 set -eu
 
 dir=${1:?usage: scripts/publish.sh <dir>}
 case $dir in /*) ;; *) dir=$(pwd)/$dir ;; esac
 cd "$(dirname "$0")/.."
-repo=${RELEASES_REPO:-DIYgod/pinky-releases}
+repo=${RELEASES_REPO:-DIYgod/pinky}
 tap=${TAP_REPO:-DIYgod/homebrew-tap}
 # brew's name of the tap: DIYgod/homebrew-tap is diygod/tap.
 tapname=$(printf '%s/%s' "${tap%%/*}" "${tap#*/homebrew-}" | tr '[:upper:]' '[:lower:]')
@@ -62,8 +57,6 @@ EOF
 state=$(gh release view "$tag" --repo "$repo" --json isDraft --jq .isDraft 2>/dev/null || echo none)
 if [ "$state" = false ]; then
 	say "$repo has published $tag already: its files stay as they are"
-	gh release download "$tag" --repo "$repo" --pattern latest.json --dir "$work/published"
-	manifest=$work/published/latest.json
 else
 	if [ "$state" = none ]; then
 		say "creating the draft release $tag in $repo"
@@ -83,43 +76,4 @@ else
 		gh release edit "$tag" --repo "$repo" --draft=false --latest=false
 	fi
 	say "published https://github.com/$repo/releases/tag/$tag"
-	manifest=$dir/latest.json
 fi
-
-# The cask. git gets its credentials from gh: TAP_TOKEN's, else gh's own.
-tapgit() {
-	if [ -n "${TAP_TOKEN:-}" ]; then
-		GH_TOKEN=$TAP_TOKEN git -c credential.helper= -c 'credential.helper=!gh auth git-credential' "$@"
-	else
-		git -c credential.helper= -c 'credential.helper=!gh auth git-credential' "$@"
-	fi
-}
-tapcommit() {
-	if [ "${CI:-}" = true ]; then
-		set -- -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" "$@"
-	fi
-	git -C "$work/tap" "$@"
-}
-release cask -repo "$repo" "$manifest" >"$work/pinky.rb"
-tapgit clone --quiet --depth 1 "${TAP_URL:-https://github.com/$tap.git}" "$work/tap"
-mkdir -p "$work/tap/Casks"
-attempt=1
-while :; do
-	current=$(sed -n 's/^ *version "\([^"]*\)".*/\1/p' "$work/tap/Casks/pinky.rb" 2>/dev/null | head -1)
-	if [ -n "$current" ] && ! release newer "$version" "$current"; then
-		say "the cask has pinky $current already; leaving it"
-		break
-	fi
-	cp "$work/pinky.rb" "$work/tap/Casks/pinky.rb"
-	git -C "$work/tap" add Casks/pinky.rb
-	tapcommit commit --quiet -m "pinky $version"
-	if tapgit -C "$work/tap" push --quiet origin HEAD; then
-		say "brew install --cask $tapname/pinky installs $version: https://github.com/$tap/blob/HEAD/Casks/pinky.rb"
-		break
-	fi
-	[ $attempt -lt 3 ] || die "pushing the cask to $tap failed $attempt times"
-	attempt=$((attempt + 1))
-	say "the tap moved; trying again"
-	git -C "$work/tap" reset --quiet --hard HEAD~1
-	tapgit -C "$work/tap" pull --quiet --rebase origin HEAD
-done

@@ -185,7 +185,7 @@ func TestManifestAndCask(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 11, 7, 8, 9, 10, 0, time.UTC)
-	m, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky-releases", "- One.", now)
+	m, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky", "- One.", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +194,7 @@ func TestManifestAndCask(t *testing.T) {
 	}
 	// SHA-256 of "darwin-arm64".
 	arm := m.Assets["darwin-arm64"]
-	if arm.URL != "https://github.com/DIYgod/pinky-releases/releases/download/v2026.1107.1/pinky-2026.1107.1-darwin-arm64.zip" ||
+	if arm.URL != "https://github.com/DIYgod/pinky/releases/download/v2026.1107.1/pinky-2026.1107.1-darwin-arm64.zip" ||
 		arm.Size != int64(len("darwin-arm64")) || arm.SHA256 != "1a349b12b50ad5b43740e0952adc33c7805ce06f091074be977624d09ed9d432" {
 		t.Errorf("darwin-arm64 = %+v", arm)
 	}
@@ -230,7 +230,7 @@ func TestManifestAndCask(t *testing.T) {
 		t.Errorf("SHA256SUMS = %s", sums)
 	}
 
-	cask, err := Cask(m, "DIYgod/pinky-releases")
+	cask, err := Cask(m, "DIYgod/pinky")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +238,7 @@ func TestManifestAndCask(t *testing.T) {
 		`version "2026.1107.1"`,
 		`sha256 arm:   "` + m.Assets["darwin-arm64"].SHA256 + `",`,
 		`intel: "` + m.Assets["darwin-amd64"].SHA256 + `"`,
-		`url "https://github.com/DIYgod/pinky-releases/releases/download/v#{version}/pinky-#{version}-darwin-#{arch}.zip"`,
+		`url "https://github.com/DIYgod/pinky/releases/download/v#{version}/pinky-#{version}-darwin-#{arch}.zip"`,
 		"auto_updates true",
 		`app "Pinky.app"`,
 		`command_wrapper "pinky",`,
@@ -255,7 +255,7 @@ func TestManifestAndCask(t *testing.T) {
 	}
 
 	os.Remove(filepath.Join(dir, archiveName("linux-amd64", "2026.1107.1")))
-	if _, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky-releases", "- One.", now); err == nil {
+	if _, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky", "- One.", now); err == nil {
 		t.Error("BuildManifest without the Linux archive: no error")
 	}
 }
@@ -438,5 +438,30 @@ func TestNewer(t *testing.T) {
 		if (err == nil) != tc.ok {
 			t.Errorf("newer %v = %v, want ok %v", tc.args, err, tc.ok)
 		}
+	}
+}
+
+func TestManifestCommand(t *testing.T) {
+	dir := t.TempDir()
+	writeArchives(t, dir, "2026.1107.1")
+	changelog := filepath.Join(t.TempDir(), changelogFile)
+	write(t, changelog, changelogHead+"## 2026.1107.1 (2026-11-07)\n\n- One.\n")
+	if err := runManifest([]string{"-dir", dir, "-version", "2026.1107.1", "-changelog", changelog}); err != nil {
+		t.Fatal(err)
+	}
+	m, err := readManifest(filepath.Join(dir, "latest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.Notes != "- One." || !strings.HasPrefix(m.Assets["linux-amd64"].URL, "https://github.com/DIYgod/pinky/releases/download/v2026.1107.1/") {
+		t.Errorf("latest.json = %+v", m)
+	}
+	cask, err := os.ReadFile(filepath.Join(dir, caskFile))
+	if err != nil || !strings.Contains(string(cask), `homepage "https://github.com/DIYgod/pinky"`) {
+		t.Errorf("%s = %s, %v", caskFile, cask, err)
+	}
+	sums, _ := os.ReadFile(filepath.Join(dir, checksumsName))
+	if !strings.Contains(string(sums), "  latest.json\n") || !strings.Contains(string(sums), "  "+caskFile+"\n") {
+		t.Errorf("SHA256SUMS = %s", sums)
 	}
 }

@@ -14,18 +14,18 @@
 #   scripts/release.sh publish <tag> build and publish a release from this
 #                                    Mac, for when the workflow cannot
 #   scripts/release.sh trigger <tag> run the release workflow for a tag again
-#   scripts/release.sh setup         copy the release workflow and the READMEs
-#                                    into the releases repository and the tap,
-#                                    and list the secrets they lack (CREATE=1
-#                                    creates the public repositories first)
+#   scripts/release.sh setup         copy the tap's workflow and README into
+#                                    the Homebrew tap (CREATE=1 creates it, as
+#                                    a public repository), and list the secrets
+#                                    the release workflow lacks
 #
-# RELEASES_REPO and TAP_REPO name the repositories (DIYgod/pinky-releases,
+# RELEASES_REPO and TAP_REPO name the repositories (DIYgod/pinky,
 # DIYgod/homebrew-tap).
 set -eu
 
 cd "$(dirname "$0")/.."
 root=$(pwd)
-repo=${RELEASES_REPO:-DIYgod/pinky-releases}
+repo=${RELEASES_REPO:-DIYgod/pinky}
 tap=${TAP_REPO:-DIYgod/homebrew-tap}
 export RELEASES_REPO=$repo TAP_REPO=$tap
 
@@ -83,12 +83,11 @@ build_release() {
 	else
 		(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo")
 	fi
-	release cask -repo "$repo" "$out/latest.json" >"$root/dist/pinky-$version.rb"
 	if [ "$publishing" = 1 ]; then
 		"$work/src/scripts/publish.sh" "$out"
 	fi
 	ls -l "$out" >&2
-	say "the release's files are in $out, its cask is dist/pinky-$version.rb"
+	say "the release's files are in $out"
 }
 
 cmd=${1:-}
@@ -115,53 +114,43 @@ trigger)
 	say "started; see https://github.com/$repo/actions/workflows/release.yml"
 	;;
 setup)
-	for r in "$repo" "$tap"; do
-		if gh repo view "$r" --json name >/dev/null 2>&1; then
-			continue
-		fi
-		[ "${CREATE:-0}" = 1 ] || die "$r does not exist; CREATE=1 scripts/release.sh setup creates it, as a public repository"
-		case $r in
-		"$repo") description="Downloads of Pinky: let AI agents use your phone, with you in the loop" ;;
-		*) description="Homebrew casks: brew install --cask $(printf '%s' "${tap%%/*}" | tr '[:upper:]' '[:lower:]')/tap/pinky" ;;
-		esac
-		say "creating the public repository $r"
-		gh repo create "$r" --public --description "$description" --disable-wiki
-	done
+	if ! gh repo view "$tap" --json name >/dev/null 2>&1; then
+		[ "${CREATE:-0}" = 1 ] || die "$tap does not exist; CREATE=1 scripts/release.sh setup creates it, as a public repository"
+		say "creating the public repository $tap"
+		gh repo create "$tap" --public --disable-wiki \
+			--description "Homebrew casks: brew install --cask $(printf '%s' "${tap%%/*}" | tr '[:upper:]' '[:lower:]')/tap/pinky"
+	fi
+	# The tap gets its files from scripts/release/homebrew-tap/.
 	work=$(mktemp -d "${TMPDIR:-/tmp}/pinky-setup.XXXXXX")
 	trap 'rm -rf "$work"' EXIT
-	# Each repository gets its files from scripts/release/<its name>/.
-	for pair in "$repo:scripts/release/pinky-releases" "$tap:scripts/release/homebrew-tap"; do
-		r=${pair%%:*}
-		src=${pair#*:}
-		dst=$work/${r#*/}
-		gh repo clone "$r" "$dst" -- --quiet
-		(cd "$src" && find . -type f) | while read -r f; do
-			mkdir -p "$dst/$(dirname "$f")"
-			cp "$src/$f" "$dst/$f"
-		done
-		git -C "$dst" add -A
-		if git -C "$dst" diff --cached --quiet; then
-			say "$r is up to date"
-			continue
-		fi
-		git -C "$dst" commit --quiet -m "chore: update from DIYgod/pinky's scripts/release"
-		git -C "$dst" push --quiet origin HEAD:refs/heads/main
-		say "updated $r"
+	src=scripts/release/homebrew-tap
+	gh repo clone "$tap" "$work/tap" -- --quiet
+	(cd "$src" && find . -type f) | while read -r f; do
+		mkdir -p "$work/tap/$(dirname "$f")"
+		cp "$src/$f" "$work/tap/$f"
 	done
-	# The secrets the workflows need, by name; docs/RELEASING.md says what
-	# each is.
-	missing=
-	have=$(gh secret list --repo "$repo" --json name --jq '.[].name' 2>/dev/null || true)
-	for s in RELEASE_TOKEN MACOS_CERTIFICATE MACOS_CERTIFICATE_PASSWORD NOTARY_API_KEY NOTARY_API_KEY_ID NOTARY_API_ISSUER; do
-		printf '%s\n' "$have" | grep -qx "$s" || missing="$missing $repo:$s"
-	done
-	source_repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
-	have=$(gh secret list --repo "$source_repo" --json name --jq '.[].name' 2>/dev/null || true)
-	printf '%s\n' "$have" | grep -qx RELEASE_TOKEN || missing="$missing $source_repo:RELEASE_TOKEN"
-	if [ -n "$missing" ]; then
-		say "secrets to add (see docs/RELEASING.md):$missing"
+	git -C "$work/tap" add -A
+	if git -C "$work/tap" diff --cached --quiet; then
+		say "$tap is up to date"
 	else
-		say "every secret is there"
+		git -C "$work/tap" commit --quiet -m "chore: update from DIYgod/pinky's scripts/release/homebrew-tap"
+		git -C "$work/tap" push --quiet origin HEAD:refs/heads/main
+		say "updated $tap"
+	fi
+	# The secrets of the release workflow, by name; docs/RELEASING.md says
+	# what each is.
+	have=$(gh secret list --repo "$repo" --json name --jq '.[].name' 2>/dev/null || true)
+	missing=
+	for s in MACOS_CERTIFICATE MACOS_CERTIFICATE_PASSWORD; do
+		printf '%s\n' "$have" | grep -qx "$s" || missing="$missing $s"
+	done
+	if ! printf '%s\n' "$have" | grep -qx NOTARY_API_KEY && ! printf '%s\n' "$have" | grep -qx APPLE_ID; then
+		missing="$missing NOTARY_API_KEY+NOTARY_API_KEY_ID+NOTARY_API_ISSUER(or APPLE_ID+APPLE_TEAM_ID+APPLE_APP_PASSWORD)"
+	fi
+	if [ -n "$missing" ]; then
+		say "secrets $repo lacks (see docs/RELEASING.md):$missing"
+	else
+		say "$repo has every secret the release workflow needs"
 	fi
 	;;
 *)

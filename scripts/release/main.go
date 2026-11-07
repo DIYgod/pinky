@@ -9,7 +9,7 @@
 //	                                 under the next version, a commit, its tag
 //	release notes <version>          a version's notes from CHANGELOG.md
 //	release stamp <version>          the version into cmd/pinky/mygo.json
-//	release manifest -dir <dir> ...  latest.json and SHA256SUMS for a release
+//	release manifest -dir <dir> ...  latest.json, the cask and SHA256SUMS
 //	release cask <latest.json>       the Homebrew cask of a release
 //	release zip <out.zip> <dir>      a zip of a directory's files
 //	release newer <a> [<b>]          whether version a is newer than b
@@ -29,9 +29,9 @@ import (
 	"time"
 )
 
-// The releases' public repository, which hosts their files, and the tap.
+// The repository whose releases hold the files.
 const (
-	defaultReleasesRepo = "DIYgod/pinky-releases"
+	defaultReleasesRepo = "DIYgod/pinky"
 	changelogFile       = "CHANGELOG.md"
 	configFile          = "cmd/pinky/mygo.json"
 )
@@ -49,7 +49,8 @@ func usage() {
                              print a release's notes from its manifest
   stamp <version>            write the version into cmd/pinky/mygo.json
   manifest -dir <dir> -version <version> [-repo owner/name]
-                             write latest.json and SHA256SUMS in dir
+                             write latest.json, the cask (pinky.rb) and
+                             SHA256SUMS in dir
   cask [-repo owner/name] <latest.json>
                              print the Homebrew cask of a release
   zip <out.zip> <dir>        zip the files in dir
@@ -412,6 +413,14 @@ func runManifest(args []string) error {
 		return err
 	}
 	if err := writeJSON(filepath.Join(*dir, "latest.json"), m); err != nil {
+		return err
+	}
+	// The tap takes the cask from the latest release.
+	cask, err := Cask(m, *repo)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(*dir, caskFile), []byte(cask), 0o644); err != nil {
 		return err
 	}
 	return WriteChecksums(*dir)

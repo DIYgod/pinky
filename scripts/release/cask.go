@@ -50,6 +50,10 @@ var caskTemplate = template.Must(template.New("cask").Parse(`cask "pinky" do
 end
 `))
 
+// caskFile is the cask's name among a release's files, from which the
+// tap's workflow takes it (scripts/release/homebrew-tap).
+const caskFile = "pinky.rb"
+
 var (
 	repoRe   = regexp.MustCompile(`^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`)
 	sha256Re = regexp.MustCompile(`^[0-9a-f]{64}$`)
