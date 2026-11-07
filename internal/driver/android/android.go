@@ -105,12 +105,15 @@ type Provider struct {
 	wifi *reconnector // nil without Config.ReconnectWiFi
 
 	server serverWatch
+	// usbNodes lists the computer's USB devices as Windows sees them, to
+	// find phones without a driver (usbdriver.go); nil elsewhere.
+	usbNodes func() ([]usbNode, error)
 }
 
 // NewProvider returns a provider with the given configuration.
 func NewProvider(cfg Config) *Provider {
 	cfg.defaults()
-	p := &Provider{cfg: cfg, props: map[string]deviceProps{}}
+	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes}
 	if cfg.ReconnectWiFi {
 		p.wifi = newReconnector(p)
 	}
@@ -129,8 +132,9 @@ type deviceProps struct {
 }
 
 // List implements driver.Provider. It reads each online device's
-// properties once per connection, and starts an adb server when none
-// runs (Config.StartServer).
+// properties once per connection, starts an adb server when none runs
+// (Config.StartServer), and on Windows adds the phones plugged in without
+// a driver for USB debugging, which adb cannot see.
 func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	entries, err := p.cfg.Client.Devices(ctx)
 	if errors.Is(err, adb.ErrServerNotRunning) && p.cfg.StartServer != nil {
@@ -170,7 +174,8 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		}()
 	}
 	wg.Wait()
-	return mergeTransports(infos), nil
+	infos = mergeTransports(infos)
+	return append(infos, p.driverlessPhones(infos)...), nil
 }
 
 // phoneID is the id Pinky knows a phone by: the adb serial, except over
@@ -269,12 +274,13 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 		info.State = driver.StateUnauthorized
 		info.Detail = "Unlock the phone and allow USB debugging for this computer."
 	case adb.StateNoPerm:
+		// Linux: adb may not open the phone's USB device.
 		info.State = driver.StateNeedsSetup
-		info.Detail = "This computer has no permission to use the phone over USB"
+		info.Detail = "Linux does not let Pinky open the phone's USB device"
 		if e.Detail != "" {
 			info.Detail += " (" + e.Detail + ")"
 		}
-		info.Detail += "."
+		info.Detail += ". Install the udev rules for Android phones (the android-udev-rules package, or android-sdk-platform-tools-common on Debian and Ubuntu), make sure you are in the plugdev group, then unplug the phone and plug it in again."
 	case adb.StateRecovery, adb.StateBootloader, adb.StateSideload, adb.StateRescue:
 		info.State = driver.StateOffline
 		info.Detail = "The phone is in " + e.State + " mode."

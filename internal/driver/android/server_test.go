@@ -94,6 +94,7 @@ func TestListStartsServer(t *testing.T) {
 		},
 		Logf: t.Logf,
 	})
+	p.usbNodes = nil
 	ctx := context.Background()
 	infos, err := p.List(ctx)
 	if err != nil {
@@ -110,5 +111,28 @@ func TestListStartsServer(t *testing.T) {
 	f.ln.Close()
 	if _, err := p.List(ctx); !errors.Is(err, driver.ErrOffline) || starts.Load() != 1 {
 		t.Errorf("without the server: %v, %d starts", err, starts.Load())
+	}
+}
+
+// TestListDriverless: phones without a driver come after adb's.
+func TestListDriverless(t *testing.T) {
+	f, p := newFakeADB(t)
+	f.set(func(f *fakeADB) {
+		f.devices = []string{"emulator-5560\tdevice product:sdk model:sdk_gphone64 device:emu64a transport_id:1"}
+		f.props = map[string]string{"emulator-5560": "sdk_gphone64\n17\n37\nnull\nEMULATOR\n"}
+	})
+	p.usbNodes = func() ([]usbNode, error) {
+		return []usbNode{{ID: `USB\VID_18D1&PID_4EE7\SERIAL1`, Compatible: []string{adbInterface}, Driverless: true}}, nil
+	}
+	infos, err := p.List(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(infos) != 2 || infos[0].ID != "emulator-5560" || infos[1].ID != driverlessPrefix+`USB\VID_18D1&PID_4EE7\SERIAL1` {
+		t.Errorf("listed %+v", infos)
+	}
+	p.usbNodes = func() ([]usbNode, error) { return nil, errors.New("no SetupAPI") }
+	if infos, err := p.List(context.Background()); err != nil || len(infos) != 1 {
+		t.Errorf("when Windows does not answer: %+v %v", infos, err)
 	}
 }
