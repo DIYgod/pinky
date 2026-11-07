@@ -12,6 +12,7 @@ These rules are for everyone working on the code, people and agents alike. Sever
 | `internal/driver/ios/` | iOS driver session | |
 | `internal/video/`, `ui/`, `assets/` | Desktop client session | |
 | `internal/gateway/` (but `api.go`), `internal/policy/`, `internal/approval/`, `internal/history/`, `internal/mcp/`, `cmd/pinky/` | Main session | Integrates everything |
+| `internal/update/`, `ui/update.go`, `cmd/pinky/update.go`, `cmd/pinky/shimconn.go` | Auto-update session | The feed contract with the release pipeline is in `docs/notes/updates.md` |
 | `docs/` | Anyone | Keep DESIGN.md as the reference; add notes under `docs/notes/<area>.md` |
 
 Do not edit files another session owns. If you need a change in a shared contract, make it additive and describe it in your final report.
