@@ -8,7 +8,7 @@ Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPh
 
 <p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator.</sub></p>
 
-- **Every platform.** One app for macOS (Apple silicon and Intel), Windows and Linux. It drives Android phones (Android 10 to 17) and iPhones on iOS 27 or later, with nothing to install on the iPhone.
+- **Every platform.** One app for macOS (Apple silicon and Intel), Windows and Linux. It drives Android phones (Android 10 to 17) and iPhones on iOS 17.4 or later: nothing to install on iOS 27 and later, and a helper installed once from Xcode on iOS 17.4 to 26, so far tried on Simulators only ([details](#phones)).
 - **Tiny and native.** The window is drawn by [MyGo](https://github.com/egoist/mygo) on the GPU, with no Electron and no webview: a 12–16 MB download that idles at about 70 MB of memory and 0% CPU on a Mac.
 - **Free and open source** under the Apache-2.0 license, with no account to create.
 - **You approve the risky steps.** Sends, payments, orders, deletions, calls, installs, links that leave the app and settings changes wait for your click; Pinky spots these buttons in 10 languages. The rules run in Pinky's gateway, so an agent can't approve itself, even when text on the screen tries to talk it into it.
