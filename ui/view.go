@@ -116,6 +116,7 @@ func (a *app) sidebar(c *mg.Context) {
 		})
 
 		mg.Spacer(c)
+		a.agentCard(c)
 		a.updateCards(c)
 		mg.Column(c).Gap(2).Padding(10, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).Children(func() {
 			footRow(c, icHistory, locales.SidebarActivity(), a.page == pageActivity, func() {

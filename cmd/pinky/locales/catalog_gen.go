@@ -1675,6 +1675,168 @@ func (msgs Messages) CompanionUpdatingTitle() string {
 	return Catalog.Format(msgs.locale, "companionUpdatingTitle", nil)
 }
 
+// ConnectAlsoWorks says "Pinky also works with {names}."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent, when no agent is installed:
+// under the buttons, the other agents Pinky can connect. names is a list.
+func ConnectAlsoWorks(names string) string { return In(i18n.Locale()).ConnectAlsoWorks(names) }
+
+// ConnectAlsoWorks says "Pinky also works with {names}."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent, when no agent is installed:
+// under the buttons, the other agents Pinky can connect. names is a list.
+func (msgs Messages) ConnectAlsoWorks(names string) string {
+	return Catalog.Format(msgs.locale, "connectAlsoWorks", map[string]any{"names": names})
+}
+
+// ConnectByHand says "Add an agent by hand"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the link that shows the
+// commands to add Pinky to an agent yourself.
+func ConnectByHand() string { return In(i18n.Locale()).ConnectByHand() }
+
+// ConnectByHand says "Add an agent by hand"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the link that shows the
+// commands to add Pinky to an agent yourself.
+func (msgs Messages) ConnectByHand() string {
+	return Catalog.Format(msgs.locale, "connectByHand", nil)
+}
+
+// ConnectByHandHide says "Hide the commands"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the link that hides the
+// commands again (connectByHand shows them).
+func ConnectByHandHide() string { return In(i18n.Locale()).ConnectByHandHide() }
+
+// ConnectByHandHide says "Hide the commands"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the link that hides the
+// commands again (connectByHand shows them).
+func (msgs Messages) ConnectByHandHide() string {
+	return Catalog.Format(msgs.locale, "connectByHandHide", nil)
+}
+
+// ConnectCardBroken says "{agent} can't start Pinky"
+// in the language the app shows.
+//
+// The title of the sidebar's card for an agent whose entry for Pinky starts
+// something that does not work (connectWhyMissing or connectWhyCoreutils
+// under it), and its accessibility label.
+func ConnectCardBroken(agent string) string { return In(i18n.Locale()).ConnectCardBroken(agent) }
+
+// ConnectCardBroken says "{agent} can't start Pinky"
+// in the language of msgs.
+//
+// The title of the sidebar's card for an agent whose entry for Pinky starts
+// something that does not work (connectWhyMissing or connectWhyCoreutils
+// under it), and its accessibility label.
+func (msgs Messages) ConnectCardBroken(agent string) string {
+	return Catalog.Format(msgs.locale, "connectCardBroken", map[string]any{"agent": agent})
+}
+
+// ConnectCardChoose says "Choose…"
+// in the language the app shows.
+//
+// The button on the sidebar's card when several agents are installed: it
+// opens Settings › Agents to connect one.
+func ConnectCardChoose() string { return In(i18n.Locale()).ConnectCardChoose() }
+
+// ConnectCardChoose says "Choose…"
+// in the language of msgs.
+//
+// The button on the sidebar's card when several agents are installed: it
+// opens Settings › Agents to connect one.
+func (msgs Messages) ConnectCardChoose() string {
+	return Catalog.Format(msgs.locale, "connectCardChoose", nil)
+}
+
+// ConnectCardFound says "Pinky found {names} on this computer. Connect one to let it use your phones."
+// in the language the app shows.
+//
+// The sidebar's card while no agent is connected and several are installed.
+// names is a list such as “Claude Code, Codex and Cursor”.
+func ConnectCardFound(names string) string { return In(i18n.Locale()).ConnectCardFound(names) }
+
+// ConnectCardFound says "Pinky found {names} on this computer. Connect one to let it use your phones."
+// in the language of msgs.
+//
+// The sidebar's card while no agent is connected and several are installed.
+// names is a list such as “Claude Code, Codex and Cursor”.
+func (msgs Messages) ConnectCardFound(names string) string {
+	return Catalog.Format(msgs.locale, "connectCardFound", map[string]any{"names": names})
+}
+
+// ConnectCardFoundOne says "Pinky found {agent} on this computer. Connect it to let it use your phones."
+// in the language the app shows.
+//
+// The sidebar's card while no agent is connected and one agent is
+// installed, above the button that connects it.
+func ConnectCardFoundOne(agent string) string { return In(i18n.Locale()).ConnectCardFoundOne(agent) }
+
+// ConnectCardFoundOne says "Pinky found {agent} on this computer. Connect it to let it use your phones."
+// in the language of msgs.
+//
+// The sidebar's card while no agent is connected and one agent is
+// installed, above the button that connects it.
+func (msgs Messages) ConnectCardFoundOne(agent string) string {
+	return Catalog.Format(msgs.locale, "connectCardFoundOne", map[string]any{"agent": agent})
+}
+
+// ConnectCardGet says "Get one"
+// in the language the app shows.
+//
+// The button on the sidebar's card when no agent is installed: it opens
+// Settings › Agents, which links to where to get one.
+func ConnectCardGet() string { return In(i18n.Locale()).ConnectCardGet() }
+
+// ConnectCardGet says "Get one"
+// in the language of msgs.
+//
+// The button on the sidebar's card when no agent is installed: it opens
+// Settings › Agents, which links to where to get one.
+func (msgs Messages) ConnectCardGet() string {
+	return Catalog.Format(msgs.locale, "connectCardGet", nil)
+}
+
+// ConnectCardLater says "Not now"
+// in the language the app shows.
+//
+// The sidebar's card about connecting an agent: hides it until Pinky starts
+// again.
+func ConnectCardLater() string { return In(i18n.Locale()).ConnectCardLater() }
+
+// ConnectCardLater says "Not now"
+// in the language of msgs.
+//
+// The sidebar's card about connecting an agent: hides it until Pinky starts
+// again.
+func (msgs Messages) ConnectCardLater() string {
+	return Catalog.Format(msgs.locale, "connectCardLater", nil)
+}
+
+// ConnectCardNone says "Pinky lets an AI agent use your phone. Install one, such as Claude Code or Claude Desktop, then connect it."
+// in the language the app shows.
+//
+// The sidebar's card while no agent is connected and none is installed.
+// Keep the names Claude Code and Claude Desktop.
+func ConnectCardNone() string { return In(i18n.Locale()).ConnectCardNone() }
+
+// ConnectCardNone says "Pinky lets an AI agent use your phone. Install one, such as Claude Code or Claude Desktop, then connect it."
+// in the language of msgs.
+//
+// The sidebar's card while no agent is connected and none is installed.
+// Keep the names Claude Code and Claude Desktop.
+func (msgs Messages) ConnectCardNone() string {
+	return Catalog.Format(msgs.locale, "connectCardNone", nil)
+}
+
 // ConnectClaudeHint says "Run this in a terminal."
 // in the language the app shows.
 //
@@ -1705,6 +1867,40 @@ func ConnectCommandLabel() string { return In(i18n.Locale()).ConnectCommandLabel
 // command shown under Other agents.
 func (msgs Messages) ConnectCommandLabel() string {
 	return Catalog.Format(msgs.locale, "connectCommandLabel", nil)
+}
+
+// ConnectConnect says "Connect"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the button on an agent's row
+// that adds Pinky to the agent's settings.
+func ConnectConnect() string { return In(i18n.Locale()).ConnectConnect() }
+
+// ConnectConnect says "Connect"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the button on an agent's row
+// that adds Pinky to the agent's settings.
+func (msgs Messages) ConnectConnect() string {
+	return Catalog.Format(msgs.locale, "connectConnect", nil)
+}
+
+// ConnectConnectLabel says "Connect {agent}"
+// in the language the app shows.
+//
+// The accessibility label of an agent's Connect button in Settings ›
+// Agents, and the text of the button on the sidebar's card when Pinky found
+// one agent.
+func ConnectConnectLabel(agent string) string { return In(i18n.Locale()).ConnectConnectLabel(agent) }
+
+// ConnectConnectLabel says "Connect {agent}"
+// in the language of msgs.
+//
+// The accessibility label of an agent's Connect button in Settings ›
+// Agents, and the text of the button on the sidebar's card when Pinky found
+// one agent.
+func (msgs Messages) ConnectConnectLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectConnectLabel", map[string]any{"agent": agent})
 }
 
 // ConnectCopyClaude says "Copy the command for Claude Code"
@@ -1739,18 +1935,272 @@ func (msgs Messages) ConnectCopyOther() string {
 	return Catalog.Format(msgs.locale, "connectCopyOther", nil)
 }
 
-// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// ConnectDoneNow says "Connected. Ask {agent} to do something on your phone."
 // in the language the app shows.
 //
-// Settings › Agents › Add an agent: the line under the heading.
-func ConnectIntro() string { return In(i18n.Locale()).ConnectIntro() }
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads the change at once.
+func ConnectDoneNow(agent string) string { return In(i18n.Locale()).ConnectDoneNow(agent) }
 
-// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// ConnectDoneNow says "Connected. Ask {agent} to do something on your phone."
 // in the language of msgs.
 //
-// Settings › Agents › Add an agent: the line under the heading.
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads the change at once.
+func (msgs Messages) ConnectDoneNow(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneNow", map[string]any{"agent": agent})
+}
+
+// ConnectDoneOpened says "Pinky's extension is open in {agent}: click Install there."
+// in the language the app shows.
+//
+// Under Claude Desktop in Settings › Agents, and on the sidebar's card,
+// after Connect opened Pinky's extension (.mcpb) in Claude Desktop, which
+// asks the person to install it. Keep Install as Claude Desktop's button
+// says it.
+func ConnectDoneOpened(agent string) string { return In(i18n.Locale()).ConnectDoneOpened(agent) }
+
+// ConnectDoneOpened says "Pinky's extension is open in {agent}: click Install there."
+// in the language of msgs.
+//
+// Under Claude Desktop in Settings › Agents, and on the sidebar's card,
+// after Connect opened Pinky's extension (.mcpb) in Claude Desktop, which
+// asks the person to install it. Keep Install as Claude Desktop's button
+// says it.
+func (msgs Messages) ConnectDoneOpened(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneOpened", map[string]any{"agent": agent})
+}
+
+// ConnectDoneRestart says "Connected. Quit {agent} and open it again, then ask it to do something on your phone."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an app that reads its settings when it opens (Claude).
+func ConnectDoneRestart(agent string) string { return In(i18n.Locale()).ConnectDoneRestart(agent) }
+
+// ConnectDoneRestart says "Connected. Quit {agent} and open it again, then ask it to do something on your phone."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an app that reads its settings when it opens (Claude).
+func (msgs Messages) ConnectDoneRestart(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneRestart", map[string]any{"agent": agent})
+}
+
+// ConnectDoneSession says "Connected. Start a new {agent} session, then ask it to do something on your phone."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads its MCP servers when a session starts
+// (Claude Code, Codex).
+func ConnectDoneSession(agent string) string { return In(i18n.Locale()).ConnectDoneSession(agent) }
+
+// ConnectDoneSession says "Connected. Start a new {agent} session, then ask it to do something on your phone."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// added, for an agent that reads its MCP servers when a session starts
+// (Claude Code, Codex).
+func (msgs Messages) ConnectDoneSession(agent string) string {
+	return Catalog.Format(msgs.locale, "connectDoneSession", map[string]any{"agent": agent})
+}
+
+// ConnectFailed says "That didn't work: {error}"
+// in the language the app shows.
+//
+// Under an agent in Settings › Agents, and on the sidebar's card, when
+// connecting it or removing Pinky failed. error is Pinky's or the agent's
+// own message, in English.
+func ConnectFailed(error string) string { return In(i18n.Locale()).ConnectFailed(error) }
+
+// ConnectFailed says "That didn't work: {error}"
+// in the language of msgs.
+//
+// Under an agent in Settings › Agents, and on the sidebar's card, when
+// connecting it or removing Pinky failed. error is Pinky's or the agent's
+// own message, in English.
+func (msgs Messages) ConnectFailed(error string) string {
+	return Catalog.Format(msgs.locale, "connectFailed", map[string]any{"error": error})
+}
+
+// ConnectFix says "Fix"
+// in the language the app shows.
+//
+// The button on the sidebar's card for an agent that can't start Pinky
+// (connectCardBroken), which sets its entry right.
+func ConnectFix() string { return In(i18n.Locale()).ConnectFix() }
+
+// ConnectFix says "Fix"
+// in the language of msgs.
+//
+// The button on the sidebar's card for an agent that can't start Pinky
+// (connectCardBroken), which sets its entry right.
+func (msgs Messages) ConnectFix() string {
+	return Catalog.Format(msgs.locale, "connectFix", nil)
+}
+
+// ConnectFixLabel says "Fix Pinky in {agent}"
+// in the language the app shows.
+//
+// The accessibility label of the Fix button on the sidebar's card.
+func ConnectFixLabel(agent string) string { return In(i18n.Locale()).ConnectFixLabel(agent) }
+
+// ConnectFixLabel says "Fix Pinky in {agent}"
+// in the language of msgs.
+//
+// The accessibility label of the Fix button on the sidebar's card.
+func (msgs Messages) ConnectFixLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectFixLabel", map[string]any{"agent": agent})
+}
+
+// ConnectFoundLabel says "Agents on this computer"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// list of agents found on this computer.
+func ConnectFoundLabel() string { return In(i18n.Locale()).ConnectFoundLabel() }
+
+// ConnectFoundLabel says "Agents on this computer"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// list of agents found on this computer.
+func (msgs Messages) ConnectFoundLabel() string {
+	return Catalog.Format(msgs.locale, "connectFoundLabel", nil)
+}
+
+// ConnectGet says "Get {agent}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent, when no agent is installed: a
+// button that opens the agent's download page.
+func ConnectGet(agent string) string { return In(i18n.Locale()).ConnectGet(agent) }
+
+// ConnectGet says "Get {agent}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent, when no agent is installed: a
+// button that opens the agent's download page.
+func (msgs Messages) ConnectGet(agent string) string {
+	return Catalog.Format(msgs.locale, "connectGet", map[string]any{"agent": agent})
+}
+
+// ConnectIntro says "Connect adds Pinky to an agent's settings on this computer, after keeping a copy of them. You allow each agent the fi…"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the line under the heading,
+// above the agents found on this computer.
+func ConnectIntro() string { return In(i18n.Locale()).ConnectIntro() }
+
+// ConnectIntro says "Connect adds Pinky to an agent's settings on this computer, after keeping a copy of them. You allow each agent the fi…"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the line under the heading,
+// above the agents found on this computer.
 func (msgs Messages) ConnectIntro() string {
 	return Catalog.Format(msgs.locale, "connectIntro", nil)
+}
+
+// ConnectIntroByHand says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent, in a Pinky that cannot change
+// agents' settings: the line under the heading, above the commands.
+func ConnectIntroByHand() string { return In(i18n.Locale()).ConnectIntroByHand() }
+
+// ConnectIntroByHand says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent, in a Pinky that cannot change
+// agents' settings: the line under the heading, above the commands.
+func (msgs Messages) ConnectIntroByHand() string {
+	return Catalog.Format(msgs.locale, "connectIntroByHand", nil)
+}
+
+// ConnectKeptCopy says "Pinky kept a copy of the settings as they were."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent after Pinky
+// changed its settings file, before the Show link (connectShowCopy).
+func ConnectKeptCopy() string { return In(i18n.Locale()).ConnectKeptCopy() }
+
+// ConnectKeptCopy says "Pinky kept a copy of the settings as they were."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent after Pinky
+// changed its settings file, before the Show link (connectShowCopy).
+func (msgs Messages) ConnectKeptCopy() string {
+	return Catalog.Format(msgs.locale, "connectKeptCopy", nil)
+}
+
+// ConnectLooking says "Looking for agents on this computer…"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: in place of the list of agents
+// while Pinky looks for them.
+func ConnectLooking() string { return In(i18n.Locale()).ConnectLooking() }
+
+// ConnectLooking says "Looking for agents on this computer…"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: in place of the list of agents
+// while Pinky looks for them.
+func (msgs Messages) ConnectLooking() string {
+	return Catalog.Format(msgs.locale, "connectLooking", nil)
+}
+
+// ConnectManual says "Pinky can't change its settings here. Add it by hand."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that Pinky cannot connect on this system (Add an agent by hand below
+// shows the commands).
+func ConnectManual() string { return In(i18n.Locale()).ConnectManual() }
+
+// ConnectManual says "Pinky can't change its settings here. Add it by hand."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that Pinky cannot connect on this system (Add an agent by hand below
+// shows the commands).
+func (msgs Messages) ConnectManual() string {
+	return Catalog.Format(msgs.locale, "connectManual", nil)
+}
+
+// ConnectNoneFound says "Pinky found no agent on this computer. Install one, then connect it here."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: in place of the list when no
+// agent Pinky knows is installed, above the buttons that open where to get
+// one.
+func ConnectNoneFound() string { return In(i18n.Locale()).ConnectNoneFound() }
+
+// ConnectNoneFound says "Pinky found no agent on this computer. Install one, then connect it here."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: in place of the list when no
+// agent Pinky knows is installed, above the buttons that open where to get
+// one.
+func (msgs Messages) ConnectNoneFound() string {
+	return Catalog.Format(msgs.locale, "connectNoneFound", nil)
+}
+
+// ConnectNotHere says "Not on this computer: {names}."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under the list, the agents
+// Pinky knows how to connect that are not installed here. names is a list
+// such as “Cursor, Windsurf and Gemini CLI”.
+func ConnectNotHere(names string) string { return In(i18n.Locale()).ConnectNotHere(names) }
+
+// ConnectNotHere says "Not on this computer: {names}."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under the list, the agents
+// Pinky knows how to connect that are not installed here. names is a list
+// such as “Cursor, Windsurf and Gemini CLI”.
+func (msgs Messages) ConnectNotHere(names string) string {
+	return Catalog.Format(msgs.locale, "connectNotHere", map[string]any{"names": names})
 }
 
 // ConnectOtherHint says "Set this as the command of an MCP server over stdio."
@@ -1787,20 +2237,466 @@ func (msgs Messages) ConnectOtherTitle() string {
 	return Catalog.Format(msgs.locale, "connectOtherTitle", nil)
 }
 
-// ConnectTitle says "Add an agent"
+// ConnectProblem says "Pinky can't change its settings: {problem}"
 // in the language the app shows.
 //
-// Settings › Agents: the heading of the part that says how to add an
-// agent on this computer, and its accessibility label.
-func ConnectTitle() string { return In(i18n.Locale()).ConnectTitle() }
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings file Pinky cannot read, such as one with a mistake in it.
+// problem is the file and what is wrong with it, in English.
+func ConnectProblem(problem string) string { return In(i18n.Locale()).ConnectProblem(problem) }
 
-// ConnectTitle says "Add an agent"
+// ConnectProblem says "Pinky can't change its settings: {problem}"
 // in the language of msgs.
 //
-// Settings › Agents: the heading of the part that says how to add an
-// agent on this computer, and its accessibility label.
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings file Pinky cannot read, such as one with a mistake in it.
+// problem is the file and what is wrong with it, in English.
+func (msgs Messages) ConnectProblem(problem string) string {
+	return Catalog.Format(msgs.locale, "connectProblem", map[string]any{"problem": problem})
+}
+
+// ConnectRemove says "Remove"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the button on a connected
+// agent's row that takes Pinky out of its settings.
+func ConnectRemove() string { return In(i18n.Locale()).ConnectRemove() }
+
+// ConnectRemove says "Remove"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the button on a connected
+// agent's row that takes Pinky out of its settings.
+func (msgs Messages) ConnectRemove() string {
+	return Catalog.Format(msgs.locale, "connectRemove", nil)
+}
+
+// ConnectRemoveLabel says "Remove Pinky from {agent}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Remove button.
+func ConnectRemoveLabel(agent string) string { return In(i18n.Locale()).ConnectRemoveLabel(agent) }
+
+// ConnectRemoveLabel says "Remove Pinky from {agent}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Remove button.
+func (msgs Messages) ConnectRemoveLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectRemoveLabel", map[string]any{"agent": agent})
+}
+
+// ConnectRemoveTip says "Takes Pinky out of {file}, after keeping a copy of it"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the tooltip of an agent's
+// Remove button. file is the agent's settings file.
+func ConnectRemoveTip(file string) string { return In(i18n.Locale()).ConnectRemoveTip(file) }
+
+// ConnectRemoveTip says "Takes Pinky out of {file}, after keeping a copy of it"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the tooltip of an agent's
+// Remove button. file is the agent's settings file.
+func (msgs Messages) ConnectRemoveTip(file string) string {
+	return Catalog.Format(msgs.locale, "connectRemoveTip", map[string]any{"file": file})
+}
+
+// ConnectRemoved says "Removed."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// taken out of its settings.
+func ConnectRemoved() string { return In(i18n.Locale()).ConnectRemoved() }
+
+// ConnectRemoved says "Removed."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an agent once Pinky is
+// taken out of its settings.
+func (msgs Messages) ConnectRemoved() string {
+	return Catalog.Format(msgs.locale, "connectRemoved", nil)
+}
+
+// ConnectRemovedRestart says "Removed. {agent} stops using Pinky once you quit it and open it again."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: under an app that reads its
+// settings when it opens, once Pinky is taken out of them.
+func ConnectRemovedRestart(agent string) string {
+	return In(i18n.Locale()).ConnectRemovedRestart(agent)
+}
+
+// ConnectRemovedRestart says "Removed. {agent} stops using Pinky once you quit it and open it again."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: under an app that reads its
+// settings when it opens, once Pinky is taken out of them.
+func (msgs Messages) ConnectRemovedRestart(agent string) string {
+	return Catalog.Format(msgs.locale, "connectRemovedRestart", map[string]any{"agent": agent})
+}
+
+// ConnectShowCopy says "Show"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the link after connectKeptCopy
+// that shows the copy of the agent's settings in Finder or the file
+// manager.
+func ConnectShowCopy() string { return In(i18n.Locale()).ConnectShowCopy() }
+
+// ConnectShowCopy says "Show"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the link after connectKeptCopy
+// that shows the copy of the agent's settings in Finder or the file
+// manager.
+func (msgs Messages) ConnectShowCopy() string {
+	return Catalog.Format(msgs.locale, "connectShowCopy", nil)
+}
+
+// ConnectShowCopyLabel says "Show the copy of {agent}'s settings"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show link.
+func ConnectShowCopyLabel(agent string) string { return In(i18n.Locale()).ConnectShowCopyLabel(agent) }
+
+// ConnectShowCopyLabel says "Show the copy of {agent}'s settings"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show link.
+func (msgs Messages) ConnectShowCopyLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectShowCopyLabel", map[string]any{"agent": agent})
+}
+
+// ConnectShowFile says "Show the file"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: a link under an agent whose
+// settings file Pinky cannot read (connectProblem), which shows the file in
+// Finder or the file manager so the person can fix it.
+func ConnectShowFile() string { return In(i18n.Locale()).ConnectShowFile() }
+
+// ConnectShowFile says "Show the file"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: a link under an agent whose
+// settings file Pinky cannot read (connectProblem), which shows the file in
+// Finder or the file manager so the person can fix it.
+func (msgs Messages) ConnectShowFile() string {
+	return Catalog.Format(msgs.locale, "connectShowFile", nil)
+}
+
+// ConnectShowFileLabel says "Show {agent}'s settings file"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show the file link.
+func ConnectShowFileLabel(agent string) string { return In(i18n.Locale()).ConnectShowFileLabel(agent) }
+
+// ConnectShowFileLabel says "Show {agent}'s settings file"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// Show the file link.
+func (msgs Messages) ConnectShowFileLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectShowFileLabel", map[string]any{"agent": agent})
+}
+
+// ConnectStateConnected says "Connected"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings start this Pinky.
+func ConnectStateConnected() string { return In(i18n.Locale()).ConnectStateConnected() }
+
+// ConnectStateConnected says "Connected"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose settings start this Pinky.
+func (msgs Messages) ConnectStateConnected() string {
+	return Catalog.Format(msgs.locale, "connectStateConnected", nil)
+}
+
+// ConnectStateExtension says "Connected as an extension. Remove it in {agent}'s Settings › Extensions."
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky is installed as its extension (from Pinky's .mcpb),
+// which only Claude Desktop removes. Keep Settings › Extensions as Claude
+// Desktop names it.
+func ConnectStateExtension(agent string) string {
+	return In(i18n.Locale()).ConnectStateExtension(agent)
+}
+
+// ConnectStateExtension says "Connected as an extension. Remove it in {agent}'s Settings › Extensions."
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky is installed as its extension (from Pinky's .mcpb),
+// which only Claude Desktop removes. Keep Settings › Extensions as Claude
+// Desktop names it.
+func (msgs Messages) ConnectStateExtension(agent string) string {
+	return Catalog.Format(msgs.locale, "connectStateExtension", map[string]any{"agent": agent})
+}
+
+// ConnectStateNotConnected says "Not connected"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent on
+// this computer that does not have Pinky.
+func ConnectStateNotConnected() string { return In(i18n.Locale()).ConnectStateNotConnected() }
+
+// ConnectStateNotConnected says "Not connected"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent on
+// this computer that does not have Pinky.
+func (msgs Messages) ConnectStateNotConnected() string {
+	return Catalog.Format(msgs.locale, "connectStateNotConnected", nil)
+}
+
+// ConnectTip says "Adds Pinky to {file}, after keeping a copy of it"
+// in the language the app shows.
+//
+// The tooltip of an agent's Connect, Update and Fix buttons, in Settings
+// › Agents and on the sidebar's card. file is the agent's settings file.
+func ConnectTip(file string) string { return In(i18n.Locale()).ConnectTip(file) }
+
+// ConnectTip says "Adds Pinky to {file}, after keeping a copy of it"
+// in the language of msgs.
+//
+// The tooltip of an agent's Connect, Update and Fix buttons, in Settings
+// › Agents and on the sidebar's card. file is the agent's settings file.
+func (msgs Messages) ConnectTip(file string) string {
+	return Catalog.Format(msgs.locale, "connectTip", map[string]any{"file": file})
+}
+
+// ConnectTipOpens says "Opens Pinky's extension in {agent}, which asks you to install it"
+// in the language the app shows.
+//
+// The tooltip of Claude Desktop's Connect button, in Settings › Agents
+// and on the sidebar's card: Connect opens Pinky's extension (.mcpb) in
+// Claude Desktop instead of changing a file.
+func ConnectTipOpens(agent string) string { return In(i18n.Locale()).ConnectTipOpens(agent) }
+
+// ConnectTipOpens says "Opens Pinky's extension in {agent}, which asks you to install it"
+// in the language of msgs.
+//
+// The tooltip of Claude Desktop's Connect button, in Settings › Agents
+// and on the sidebar's card: Connect opens Pinky's extension (.mcpb) in
+// Claude Desktop instead of changing a file.
+func (msgs Messages) ConnectTipOpens(agent string) string {
+	return Catalog.Format(msgs.locale, "connectTipOpens", map[string]any{"agent": agent})
+}
+
+// ConnectTitle says "Connect an agent"
+// in the language the app shows.
+//
+// Settings › Agents: the heading of the part that connects the agents on
+// this computer to Pinky (or, without that, says how to add one by hand),
+// and its accessibility label; also the title of the sidebar's card that
+// suggests connecting an agent while none is, and of the link under Tasks
+// then.
+func ConnectTitle() string { return In(i18n.Locale()).ConnectTitle() }
+
+// ConnectTitle says "Connect an agent"
+// in the language of msgs.
+//
+// Settings › Agents: the heading of the part that connects the agents on
+// this computer to Pinky (or, without that, says how to add one by hand),
+// and its accessibility label; also the title of the sidebar's card that
+// suggests connecting an agent while none is, and of the link under Tasks
+// then.
 func (msgs Messages) ConnectTitle() string {
 	return Catalog.Format(msgs.locale, "connectTitle", nil)
+}
+
+// ConnectToastConnected says "Connected {agent}"
+// in the language the app shows.
+//
+// A toast once Pinky was added to an agent's settings.
+func ConnectToastConnected(agent string) string {
+	return In(i18n.Locale()).ConnectToastConnected(agent)
+}
+
+// ConnectToastConnected says "Connected {agent}"
+// in the language of msgs.
+//
+// A toast once Pinky was added to an agent's settings.
+func (msgs Messages) ConnectToastConnected(agent string) string {
+	return Catalog.Format(msgs.locale, "connectToastConnected", map[string]any{"agent": agent})
+}
+
+// ConnectToastOpened says "Opened Pinky's extension in {agent}"
+// in the language the app shows.
+//
+// A toast once Connect opened Pinky's extension in Claude Desktop.
+func ConnectToastOpened(agent string) string { return In(i18n.Locale()).ConnectToastOpened(agent) }
+
+// ConnectToastOpened says "Opened Pinky's extension in {agent}"
+// in the language of msgs.
+//
+// A toast once Connect opened Pinky's extension in Claude Desktop.
+func (msgs Messages) ConnectToastOpened(agent string) string {
+	return Catalog.Format(msgs.locale, "connectToastOpened", map[string]any{"agent": agent})
+}
+
+// ConnectUpdate says "Update"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the button on the row of an
+// agent whose entry for Pinky is out of date (it starts a Pinky that moved,
+// say), which sets it right.
+func ConnectUpdate() string { return In(i18n.Locale()).ConnectUpdate() }
+
+// ConnectUpdate says "Update"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the button on the row of an
+// agent whose entry for Pinky is out of date (it starts a Pinky that moved,
+// say), which sets it right.
+func (msgs Messages) ConnectUpdate() string {
+	return Catalog.Format(msgs.locale, "connectUpdate", nil)
+}
+
+// ConnectUpdateLabel says "Update Pinky in {agent}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Update button.
+func ConnectUpdateLabel(agent string) string { return In(i18n.Locale()).ConnectUpdateLabel(agent) }
+
+// ConnectUpdateLabel says "Update Pinky in {agent}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of an
+// agent's Update button.
+func (msgs Messages) ConnectUpdateLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "connectUpdateLabel", map[string]any{"agent": agent})
+}
+
+// ConnectWhyCoreutils says "Starts “pinky”, which may be another program of that name"
+// in the language the app shows.
+//
+// The second line of an agent set up with the old command pinky mcp, which
+// many computers run as coreutils' own pinky, in Settings › Agents and on
+// the sidebar's card. Keep “pinky” as it is.
+func ConnectWhyCoreutils() string { return In(i18n.Locale()).ConnectWhyCoreutils() }
+
+// ConnectWhyCoreutils says "Starts “pinky”, which may be another program of that name"
+// in the language of msgs.
+//
+// The second line of an agent set up with the old command pinky mcp, which
+// many computers run as coreutils' own pinky, in Settings › Agents and on
+// the sidebar's card. Keep “pinky” as it is.
+func (msgs Messages) ConnectWhyCoreutils() string {
+	return Catalog.Format(msgs.locale, "connectWhyCoreutils", nil)
+}
+
+// ConnectWhyMissing says "Starts a Pinky that is no longer there"
+// in the language the app shows.
+//
+// The second line of an agent whose entry for Pinky starts a program that
+// is gone (Pinky moved), in Settings › Agents and on the sidebar's card.
+func ConnectWhyMissing() string { return In(i18n.Locale()).ConnectWhyMissing() }
+
+// ConnectWhyMissing says "Starts a Pinky that is no longer there"
+// in the language of msgs.
+//
+// The second line of an agent whose entry for Pinky starts a program that
+// is gone (Pinky moved), in Settings › Agents and on the sidebar's card.
+func (msgs Messages) ConnectWhyMissing() string {
+	return Catalog.Format(msgs.locale, "connectWhyMissing", nil)
+}
+
+// ConnectWhyOff says "Turned off in {agent}'s Settings › Extensions"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky's extension is installed but turned off there.
+func ConnectWhyOff(agent string) string { return In(i18n.Locale()).ConnectWhyOff(agent) }
+
+// ConnectWhyOff says "Turned off in {agent}'s Settings › Extensions"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of Claude
+// Desktop when Pinky's extension is installed but turned off there.
+func (msgs Messages) ConnectWhyOff(agent string) string {
+	return Catalog.Format(msgs.locale, "connectWhyOff", map[string]any{"agent": agent})
+}
+
+// ConnectWhyOther says "Its entry named pinky starts {command}"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose MCP server named pinky starts something else. command is that
+// command line.
+func ConnectWhyOther(command string) string { return In(i18n.Locale()).ConnectWhyOther(command) }
+
+// ConnectWhyOther says "Its entry named pinky starts {command}"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose MCP server named pinky starts something else. command is that
+// command line.
+func (msgs Messages) ConnectWhyOther(command string) string {
+	return Catalog.Format(msgs.locale, "connectWhyOther", map[string]any{"command": command})
+}
+
+// ConnectWhyOtherPinky says "Starts another copy of Pinky"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose entry starts Pinky from another place than the one open.
+func ConnectWhyOtherPinky() string { return In(i18n.Locale()).ConnectWhyOtherPinky() }
+
+// ConnectWhyOtherPinky says "Starts another copy of Pinky"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// whose entry starts Pinky from another place than the one open.
+func (msgs Messages) ConnectWhyOtherPinky() string {
+	return Catalog.Format(msgs.locale, "connectWhyOtherPinky", nil)
+}
+
+// ConnectWhySkill says "Connected, with an old copy of Pinky's guide"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that has Pinky, but whose copy of Pinky's skill (the guide agents read)
+// is missing or from another version; Update installs the current one.
+func ConnectWhySkill() string { return In(i18n.Locale()).ConnectWhySkill() }
+
+// ConnectWhySkill says "Connected, with an old copy of Pinky's guide"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the second line of an agent
+// that has Pinky, but whose copy of Pinky's skill (the guide agents read)
+// is missing or from another version; Update installs the current one.
+func (msgs Messages) ConnectWhySkill() string {
+	return Catalog.Format(msgs.locale, "connectWhySkill", nil)
+}
+
+// ConnectWorking says "Changing {agent}'s settings"
+// in the language the app shows.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// spinner on an agent's row while Pinky adds itself to the agent or removes
+// itself.
+func ConnectWorking(agent string) string { return In(i18n.Locale()).ConnectWorking(agent) }
+
+// ConnectWorking says "Changing {agent}'s settings"
+// in the language of msgs.
+//
+// Settings › Agents › Connect an agent: the accessibility label of the
+// spinner on an agent's row while Pinky adds itself to the agent or removes
+// itself.
+func (msgs Messages) ConnectWorking(agent string) string {
+	return Catalog.Format(msgs.locale, "connectWorking", map[string]any{"agent": agent})
 }
 
 // ConnectionOffline says "{platform} · offline"
@@ -9311,20 +10207,38 @@ func (msgs Messages) SettingsAgentsList() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsList", nil)
 }
 
-// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
+// SettingsAgentsNone says "No agent has connected yet. Connect one below."
 // in the language the app shows.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// The commands below are those under Add an agent (connectTitle).
+// Below is Connect an agent (connectTitle).
 func SettingsAgentsNone() string { return In(i18n.Locale()).SettingsAgentsNone() }
 
-// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
+// SettingsAgentsNone says "No agent has connected yet. Connect one below."
 // in the language of msgs.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// The commands below are those under Add an agent (connectTitle).
+// Below is Connect an agent (connectTitle).
 func (msgs Messages) SettingsAgentsNone() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsNone", nil)
+}
+
+// SettingsAgentsNoneYet says "No agent has used Pinky yet. Ask one you connected below to do something on your phone."
+// in the language the app shows.
+//
+// Settings › Agents: in place of the list while no agent has connected to
+// Pinky, but one is connected under Connect an agent (its settings start
+// Pinky).
+func SettingsAgentsNoneYet() string { return In(i18n.Locale()).SettingsAgentsNoneYet() }
+
+// SettingsAgentsNoneYet says "No agent has used Pinky yet. Ask one you connected below to do something on your phone."
+// in the language of msgs.
+//
+// Settings › Agents: in place of the list while no agent has connected to
+// Pinky, but one is connected under Connect an agent (its settings start
+// Pinky).
+func (msgs Messages) SettingsAgentsNoneYet() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsNoneYet", nil)
 }
 
 // SettingsAgentsNotAllowed says "Not allowed yet"
@@ -12283,6 +13197,22 @@ func TasksEarlierSteps(count int) string { return In(i18n.Locale()).TasksEarlier
 // Above a task card's last steps: how many earlier steps are not shown.
 func (msgs Messages) TasksEarlierSteps(count int) string {
 	return Catalog.Format(msgs.locale, "tasksEarlierSteps", map[string]any{"count": count})
+}
+
+// TasksNoAgent says "No agent is connected to Pinky yet."
+// in the language the app shows.
+//
+// Under Tasks while no task runs and no agent is connected, above a link to
+// Settings › Agents (connectTitle).
+func TasksNoAgent() string { return In(i18n.Locale()).TasksNoAgent() }
+
+// TasksNoAgent says "No agent is connected to Pinky yet."
+// in the language of msgs.
+//
+// Under Tasks while no task runs and no agent is connected, above a link to
+// Settings › Agents (connectTitle).
+func (msgs Messages) TasksNoAgent() string {
+	return Catalog.Format(msgs.locale, "tasksNoAgent", nil)
 }
 
 // TasksNoToolCalls says "No tool calls yet."

@@ -82,6 +82,11 @@ type Options struct {
 	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new.
 	Updates   *update.Updater
 	Changelog string
+	// AgentSetup finds the agents on this computer and adds Pinky to them
+	// when the person clicks Connect in Settings › Agents, or in the
+	// sidebar's card while no agent can reach Pinky; nil shows only the
+	// commands to add an agent by hand.
+	AgentSetup AgentSetup
 }
 
 // Settings are what the Settings screen changes.
@@ -233,6 +238,7 @@ type app struct {
 	bg     bgState        // background displays, per phone
 	rec    recState       // task recordings in Activity
 	remote remoteState    // Settings › Agents › Remote agents
+	setup  setupState     // Settings › Agents › Connect an agent, and the sidebar's card
 	upd    updateState    // new versions of Pinky and the companion app
 
 	awake    func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
