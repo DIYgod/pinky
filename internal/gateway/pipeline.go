@@ -285,6 +285,11 @@ type prep struct {
 	// let the action run without asking (policy.Verdict.Exempted); its
 	// step says so (exemptedLine).
 	exempted []string
+	// ocr lists the text that only OCR reads under or next to the finger
+	// (ocrForVerdict). It counts in the verdict like the elements under
+	// the finger but is never the target, which an approval checks again
+	// on a read without OCR.
+	ocr []screen.Element
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -334,6 +339,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		g.recordRefusal(l, c, a, p, res)
 		return res
 	}
+	g.ocrForVerdict(ctx, d, p, cur)
 	v := g.evaluate(p, cur)
 	switch v.Decision {
 	case policy.Deny:
@@ -413,28 +419,30 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 
 // evaluate runs the policy on the action. A tap or swipe is checked
 // against every element under the finger, not only the smallest one, so a
-// price label inside a Pay button still counts as tapping Pay. The
-// strictest verdict wins; p.decider records which element decided.
+// price label inside a Pay button still counts as tapping Pay, and against
+// the text only OCR reads there (p.ocr), so "Pay" on a web page without
+// accessibility elements counts too. The strictest verdict wins;
+// p.decider records which element decided.
 func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 	v := g.policy.Evaluate(p.input)
 	p.decider = p.target
-	var pt screen.Point
-	switch p.input.Op {
-	case policy.OpTap:
-		pt = p.point
-	case policy.OpSwipe:
-		pt = p.from
-	default:
+	pt, ok := p.finger()
+	if !ok {
 		return v
 	}
-	for i := range cur.Elements {
-		e := cur.Elements[i]
+	under := make([]screen.Element, 0, len(p.ocr)+8)
+	for _, e := range cur.Elements {
 		if e.Source == screen.SourceOCR || e.Bounds.Empty() || !e.Bounds.Contains(pt) {
 			continue
 		}
 		if p.target != nil && e.Ref == p.target.Ref && e.Ref != 0 {
 			continue
 		}
+		under = append(under, e)
+	}
+	under = append(under, p.ocr...)
+	for i := range under {
+		e := under[i]
 		in := p.input
 		in.Target = &e
 		switch w := g.policy.Evaluate(in); {
@@ -448,6 +456,81 @@ func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 		}
 	}
 	return v
+}
+
+// finger returns where a tap or swipe first touches the screen.
+func (p *prep) finger() (screen.Point, bool) {
+	switch p.input.Op {
+	case policy.OpTap:
+		return p.point, p.hasPt
+	case policy.OpSwipe:
+		return p.from, true
+	}
+	return screen.Point{}, false
+}
+
+// ocrForVerdict collects into p.ocr the text that only OCR reads under or
+// next to the finger of a tap or swipe: on web views and canvas apps
+// "还款" or "Pay" may be nowhere in the element tree. The read an action
+// starts from has no OCR (it would slow every action), so on phones whose
+// driver reads text (d.ocr) it reads again with OCR, but only where the
+// tree says little about the point: no element there, an unlabelled one,
+// or a large one such as a web view. Without a second read the action is
+// checked as before.
+func (g *Gateway) ocrForVerdict(ctx context.Context, d *device, p *prep, cur *screen.Screen) {
+	pt, ok := p.finger()
+	if !ok || cur == nil {
+		return
+	}
+	src := cur
+	if !hasOCR(cur) {
+		g.mu.Lock()
+		reads := d.ocr
+		g.mu.Unlock()
+		if !reads || !vagueAt(cur, p.target) {
+			return
+		}
+		o, err := g.observe(ctx, d, true)
+		if err != nil {
+			return
+		}
+		src = o
+	}
+	for _, e := range src.Elements {
+		if e.Source == screen.SourceOCR && e.Label != "" && !ocrInStatusBar(src, e) && ocrReach(e.Bounds).Contains(pt) {
+			p.ocr = append(p.ocr, e)
+		}
+	}
+}
+
+// vagueAt reports whether the tree element under the finger leaves open
+// what the finger is on: there is none, it has no label, or it covers a
+// sixth of the screen or more (a web view, a canvas, a backdrop).
+func vagueAt(s *screen.Screen, target *screen.Element) bool {
+	if target == nil || strings.TrimSpace(target.Label) == "" {
+		return true
+	}
+	return s.Width > 0 && s.Height > 0 && target.Bounds.W*target.Bounds.H*6 >= s.Width*s.Height
+}
+
+// ocrReach is the area around an OCR line where a tap counts as a tap on
+// it: OCR boxes hug the letters, while the button around them reaches
+// about a line's height further on every side.
+func ocrReach(r screen.Rect) screen.Rect {
+	m := r.H
+	return screen.Rect{X: r.X - m, Y: r.Y - m, W: r.W + 2*m, H: r.H + 2*m}
+}
+
+func hasOCR(s *screen.Screen) bool {
+	if s == nil {
+		return false
+	}
+	for _, e := range s.Elements {
+		if e.Source == screen.SourceOCR {
+			return true
+		}
+	}
+	return false
 }
 
 func refusal(v policy.Verdict) *Result {
@@ -639,7 +722,9 @@ func swipeLine(area screen.Rect, dir string) (from, to screen.Point) {
 	return screen.Point{X: c.X - dx, Y: c.Y}, screen.Point{X: c.X + dx, Y: c.Y}
 }
 
-// hitTest returns the smallest tree element under p.
+// hitTest returns the smallest tree element under p. OCR text is never the
+// target, since an approval checks its target again on a read without OCR;
+// the verdict weighs the OCR text under the finger as well (evaluate).
 func hitTest(s *screen.Screen, p screen.Point) *screen.Element {
 	var best *screen.Element
 	for i := range s.Elements {
@@ -1358,6 +1443,9 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		d.events = append([]screen.Event(nil), d.events[n-50:]...)
 	}
 	d.last = s
+	if ocr && !d.ocr {
+		d.ocr = hasOCR(s)
+	}
 	g.confirmShotLocked(d, s, start)
 	_, reporter := dev.(driver.LockReporter)
 	moved := false
