@@ -30,7 +30,7 @@ No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pink
 
 - **Android:** turn on USB debugging, plug the phone in and accept the computer's key, or pair over Wi-Fi from Add phone. Pinky works over adb and a bundled scrcpy server. Its companion app, which ships inside Pinky.app, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
 - **iPhone:** iOS 27 or later, Developer Mode on, connected over USB and trusted once in Xcode's Devices window. Nothing is installed on the phone. Typing pastes the text and puts your clipboard back.
-- **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN.
+- **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN. On Android this is checked on AOSP-style lock screens (LineageOS on a Mi 10 Pro, the Android 10, 16 and 17 emulators); the lock screens of Xiaomi, Samsung, OPPO, OnePlus, vivo, Honor and Huawei are only covered by tests made from what is known of them, and where Pinky cannot read the PIN pad with confidence it enters nothing ([details](docs/notes/integration.md#unlocking-other-android-phones)).
 
 ## Layout
 
