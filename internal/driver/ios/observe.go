@@ -126,7 +126,29 @@ func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions
 		return nil, st, ctx.Err()
 	}
 	st = ObserveStats{RAXError: err}
+	// A locked phone can stop answering accessibility requests (seen with
+	// its screen off after a long session), and the inspector walk then
+	// times out too. What matters on it is that it is locked: say so
+	// rather than fail the read, so the agent hands the phone to the
+	// person instead of retrying.
+	if locked, lerr := d.Locked(ctx); lerr == nil && locked {
+		st.Source = "lockdown"
+		return d.lockedScreen(), st, nil
+	}
 	return d.observeInspector(ctx, opt, st)
+}
+
+// lockedScreen is a locked phone whose screen could not be read: no
+// elements, since its lock screen can show any app's notifications.
+func (d *Device) lockedScreen() *screen.Screen {
+	si := d.screen()
+	return &screen.Screen{
+		Width: si.Width, Height: si.Height,
+		App:         screen.App{Name: "Home Screen", ID: springBoard},
+		Orientation: orientationName(si.Orientation),
+		Locked:      true,
+		CapturedAt:  time.Now(),
+	}
 }
 
 // observeInspector is Observe through the inspector walk and OCR.
