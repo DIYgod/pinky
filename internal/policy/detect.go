@@ -386,10 +386,10 @@ func detect(in Input, cats []string) []Kind {
 		if t == nil || isInput(t) || t.Role == screen.RoleList {
 			break
 		}
-		if isCommitLabel(label) || (isAffirmative(label) && screenAsksCommit(in.Screen, t)) {
+		if isCommitLabel(label) || (isAffirmative(label) && screenAsksCommit(in.Screen, t)) || isCommitIcon(t) {
 			add(Commit)
 		}
-		if has(CatStores) && (isInstallLabel(label) || isAffirmative(label)) {
+		if has(CatStores) && (isInstallLabel(label) || isAffirmative(label) || isInstallIcon(t)) {
 			add(InstallApp)
 		}
 		if isCallTarget(t) {
@@ -405,8 +405,9 @@ func detect(in Input, cats []string) []Kind {
 			add(Payment)
 		}
 	case OpSwipe:
-		// Sliders such as "Slide to pay".
-		if t != nil && isCommitLabel(label) {
+		// Sliders such as "Slide to pay", also by their id ("slide_to_pay");
+		// a list that scrolls is no slider.
+		if t != nil && (isCommitLabel(label) || (!t.Has(screen.StateScrollable) && t.Role != screen.RoleList && isCommitIcon(t))) {
 			add(Commit)
 			if hasCurrency(label) || screenHasCurrency(in.Screen) {
 				add(Payment)

@@ -278,7 +278,7 @@ Policy actions are tool calls in context:
 
 | Action | Detected as |
 | --- | --- |
-| `commit` | A tap whose label matches the commit words (Send, Pay, Order, Place order, Checkout, Buy, Book, Reserve, Confirm, Submit, Delete, Transfer, Post), in every supported UI language |
+| `commit` | A tap whose label matches the commit words (Send, Pay, Order, Place order, Checkout, Buy, Book, Reserve, Confirm, Submit, Delete, Transfer, Post), in every supported UI language; for a button with no words of its own (an icon), what the app calls it: the resource id on Android, the accessibility identifier or SF Symbol name on iOS (`btn_send`, `sendButton`, `paperplane.fill`, `trash`), minus ids that name a state or a place (`send_status`, `payment_methods`) |
 | `payment` | A commit on a screen that shows a currency amount |
 | `send_message` | Enter, or `submit: true`, in an input of a messaging app |
 | `install_app` | Install, Get or Uninstall in an app store or the system's package dialog |

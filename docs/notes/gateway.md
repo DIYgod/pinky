@@ -299,6 +299,8 @@ Nobody was available to ask, so these are mine; each is easy to change.
 33. **Background displays fall back to the phone's screen for the rest of the lease** whenever the display cannot be opened, read or used for an app, and say why in the next result, rather than failing the call: the person turned background on to be left alone, but the task matters more.
 34. **One HTTP endpoint for all agents with the one agent token**, as the socket has; agents are told apart by their client name, as over stdio.
 35. **Export copies the recordings next to the report** rather than inlining them (they are large) or leaving them out.
+36. **Icon buttons** (`internal/policy/icons.go`): a tap on an element with no words of its own is a commit when what the app calls it is one: the resource id on Android (uiautomator's fallback label is its last part, `btn_send`), the identifier on iOS (`sendButton`), or an SF Symbol name (`paperplane.fill`, `trash`). A label with words still decides alone. Ids name nouns as often as actions, so fewer words count than for labels (`post`, `book`, `order` only next to `btn`, `button`, `fab`, `action` or `menu`), and ids with a state or place word (`status`, `time`, `methods`, `list`, `carousel`) never count. It only adds asks.
+37. **Rules editor and Always allow** (`policy/editor.go`, `policy/exempt.go`, `gateway/rules.go`, `gateway/always.go`): Settings › Safety edits the file's rules through `SetFileRules` (checked as `ParseFile` does, plus names no other rule has); Always allow keeps exemptions under `always_allow`. See DESIGN.md › Detecting a commit and › Always allow.
 
 ## Differences from DESIGN
 

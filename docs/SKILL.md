@@ -53,7 +53,7 @@ Errors: `device_offline` (wait, it may come back within a minute), `lease_held` 
 
 ## Approvals
 
-Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Confirm and the like, in every language; sending a message (Enter or `submit: true` in a chat app); installing apps; opening links that leave the app; calls; changing settings. Pass `intent` on such calls, one sentence the person reads on the approval panel:
+Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Confirm and the like, in every language, icon buttons included (a paper plane, a trash can); sending a message (Enter or `submit: true` in a chat app); installing apps; opening links that leave the app; calls; changing settings. Pass `intent` on such calls, one sentence the person reads on the approval panel:
 
 ```text
 → phone_tap { ref: 15, intent: "Pay $12.80 for 1 chicken rice bowl" }
