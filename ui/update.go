@@ -505,7 +505,7 @@ func (a *app) updateCard(c *mg.Context) {
 		default:
 			head("Pinky " + v + " is available")
 			if s.rel.Notes != "" {
-				if linkButton(c, "What's new").Label("What's new in Pinky " + v).Clicked() {
+				if linkButton(c, "What's new").AlignSelf(mg.Start).Label("What's new in Pinky " + v).Clicked() {
 					s.notesOpen = true
 				}
 			}
@@ -651,7 +651,7 @@ func (a *app) newsCard(c *mg.Context) {
 		if line != "" {
 			mg.Text(c, line).FontSize(12.5).TextColor(p.ink2)
 		}
-		if linkButton(c, "See what's new").Clicked() {
+		if linkButton(c, "See what's new").AlignSelf(mg.Start).Clicked() {
 			a.upd.newsOpen, a.upd.newsAll = true, false
 		}
 	})

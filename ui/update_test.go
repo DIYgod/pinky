@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	hexenc "encoding/hex"
 	"fmt"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -451,5 +452,56 @@ func TestRelaunchArgs(t *testing.T) {
 	env := relaunchEnv([]string{"HOME=/Users/x", "PINKY_HOME=/tmp/h", "PINKY_UPDATE_FEED=http://127.0.0.1:1/latest.json", "MYGO_AUTOMATION=/tmp/s", "PATH=/bin"})
 	if !slices.Equal(env, []string{"PINKY_HOME=/tmp/h", "PINKY_UPDATE_FEED=http://127.0.0.1:1/latest.json", "MYGO_AUTOMATION=/tmp/s"}) {
 		t.Errorf("relaunchEnv = %q", env)
+	}
+}
+
+// TestUpdateScreenshots renders the update card, its notes and What's new
+// in light and dark into $PINKY_SCREENSHOTS, for the notes.
+func TestUpdateScreenshots(t *testing.T) {
+	dir := os.Getenv("PINKY_SCREENSHOTS")
+	if dir == "" {
+		t.Skip("set PINKY_SCREENSHOTS to a folder to write the update screenshots")
+	}
+	ut := newUpdateTest(t, fakeapi.Companion)
+	ut.check(t)
+	shot := func(name string, dark bool) {
+		t.Helper()
+		tt := mg.NewTester(ut.view, 1280, 820)
+		tt.SetScale(2)
+		tt.SetDark(dark)
+		tt.Frame()
+		tt.Frame()
+		if dark {
+			name += "-dark"
+		}
+		f, err := os.Create(filepath.Join(dir, name+".png"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		if err := png.Encode(f, tt.Image()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, dark := range []bool{false, true} {
+		shot("update-card", dark)
+		ut.upd.notesOpen = true
+		shot("update-notes", dark)
+		ut.upd.notesOpen = false
+	}
+	ut.upd.phase, ut.upd.done, ut.upd.total = updDownloading, 18<<20, 41<<20
+	shot("update-downloading", false)
+	ut.upd.phase = updIdle
+	ut.upd.rel = nil
+	ut.u.Version, ut.opt.Version, ut.opt.Changelog = "2026.1107.2", "2026.1107.2", testChangelog
+	ut.u.Change(func(s *update.State) { s.Launched("2026.1107.1"); s.Launched("2026.1107.2") })
+	ut.u.Change(func(s *update.State) {
+		s.Changes = []update.Change{{Kind: "companion", Device: "Pixel 9", From: "0.1.0 (75)", To: "0.1.0 (130)", At: time.Now()}}
+	})
+	for _, dark := range []bool{false, true} {
+		shot("whats-new-card", dark)
+		ut.upd.newsOpen = true
+		shot("whats-new", dark)
+		ut.upd.newsOpen = false
 	}
 }
