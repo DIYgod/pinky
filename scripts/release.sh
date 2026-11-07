@@ -70,8 +70,9 @@ build_release() {
 	mkdir -p "$out"
 	(cd "$work/src" && release stamp "$version")
 
-	# FFmpeg's builds outlive the worktree.
+	# FFmpeg's and adb's builds outlive the worktree.
 	export FFMPEG_CACHE="${FFMPEG_CACHE:-$HOME/Library/Caches/pinky-release/ffmpeg}"
+	export ADB_CACHE="${ADB_CACHE:-$HOME/Library/Caches/pinky-release/adb}"
 	export COMPANION_APK="$work/companion/pinky-companion.apk"
 	"$work/src/scripts/dist.sh" companion "$work/companion"
 	"$work/src/scripts/dist.sh" darwin "$out"

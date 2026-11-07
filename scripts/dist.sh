@@ -16,10 +16,12 @@
 #
 # The version is cmd/pinky/mygo.json's, which a release writes into a
 # checkout of its tag first (go run ./scripts/release stamp <version>).
-# Every app carries <out>/pinky-companion.apk, so build that first, and its
+# Every app carries <out>/pinky-companion.apk, so build that first, its
 # own FFmpeg (scripts/ffmpeg.sh): Pinky.app in Contents/Frameworks, the
 # Windows and Linux apps next to their executables, built in a Docker
-# container the first time.
+# container the first time, and its own adb (scripts/adb.sh): Pinky.app in
+# Contents/Helpers, the others next to their executables, built with CMake
+# on the Mac and in a Docker container for Windows and Linux.
 #
 # Environment:
 #   SIGN             the identity that signs Pinky.app (default: the Developer ID
@@ -28,10 +30,12 @@
 #   NOTARY_PROFILE   the notarytool keychain profile (default pinky-notary)
 #   NOTARY_KEYCHAIN  the keychain that holds it (default: the login keychain)
 #   FFMPEG_CACHE     where FFmpeg's builds are kept (default build/ffmpeg-dist)
+#   ADB_CACHE        where adb's builds are kept (default build/adb-dist)
 #   STRICT           1 stops rather than leave out what a release must have:
 #                    the companion APK, the Windows installer, notarization,
 #                    FFmpeg's assembly for Intel Macs, FFmpeg for Windows and
-#                    Linux (which needs Docker)
+#                    Linux (which needs Docker), adb (which needs CMake on the
+#                    Mac and Docker for Windows and Linux)
 set -eu
 
 # Homebrew's makensis (NSIS 3.13, which mygo build runs for the Windows
@@ -71,9 +75,9 @@ lacking() {
 }
 sha256() {
 	if command -v shasum >/dev/null 2>&1; then
-		shasum -a 256 "$1" | cut -d' ' -f1
+		shasum -a 256 "$@" | cut -d' ' -f1
 	else
-		sha256sum "$1" | cut -d' ' -f1
+		sha256sum "$@" | cut -d' ' -f1
 	fi
 }
 
@@ -153,6 +157,69 @@ ffmpeg_for() {
 		fi
 	fi
 	echo "$dir"
+}
+
+# adb_for prints the folder of the adb built for a target: a Mac's
+# processor (arm64, amd64), windows-amd64 or linux-amd64, building it the
+# first time. The builds are kept by the hash of scripts/adb.sh and
+# scripts/adb/, which change with what they hold. The Mac's need CMake,
+# Windows' and Linux's a Docker container; without them it prints nothing
+# (and a strict build stops).
+adb_for() {
+	target=$1
+	hash=$(cat scripts/adb.sh scripts/adb/* | sha256 - | cut -c1-12)
+	dir=${ADB_CACHE:-$root/build/adb-dist}/$hash-$target
+	if [ ! -f "$dir/BUILD.txt" ]; then
+		case $target in
+		windows-amd64 | linux-amd64)
+			if ! docker info >/dev/null 2>&1; then
+				lacking "Docker is not running, so the $target app carries no adb: Android phones then need Android's platform tools installed"
+				return 0
+			fi
+			;;
+		*)
+			if ! command -v cmake >/dev/null 2>&1; then
+				lacking "no CMake (brew install cmake), so Pinky.app for $target carries no adb: Android phones then need Android's platform tools installed"
+				return 0
+			fi
+			;;
+		esac
+		mkdir -p "$(dirname "$dir")"
+		say "adb for $target, in $dir (a few minutes the first time)"
+		if ! scripts/adb.sh "$dir" "$target" >"$dir.log" 2>&1; then
+			tail -30 "$dir.log" >&2
+			die "building adb for $target failed; its log is $dir.log"
+		fi
+	fi
+	echo "$dir"
+}
+
+# adb_files are the files of the adb of a target that go next to the
+# executable.
+adb_files() {
+	case $1 in
+	windows-amd64) echo "adb.exe AdbWinApi.dll AdbWinUsbApi.dll" ;;
+	*) echo adb ;;
+	esac
+}
+
+# stage_adb puts the adb of a target (windows-amd64, linux-amd64) among
+# MyGo's resources for that platform, after stage_ffmpeg, which every
+# package of it installs next to the executable, where Pinky looks for it
+# last: the executable (and the DLLs it loads on Windows), its license and
+# build notes. It prints the files' names.
+stage_adb() {
+	target=$1
+	a=$(adb_for "$target")
+	[ -n "$a" ] || return 0
+	dst=$resources/$target
+	mkdir -p "$dst"
+	for f in $(adb_files "$target"); do
+		cp "$a/$f" "$dst/$f"
+	done
+	cp "$a/NOTICE.txt" "$dst/adb-NOTICE.txt"
+	cp "$a/BUILD.txt" "$dst/adb-BUILD.txt"
+	adb_files "$target"
 }
 
 # stage_ffmpeg puts the FFmpeg of a target (windows-amd64, linux-amd64)
@@ -243,14 +310,26 @@ darwin() {
 	fi
 	ff_arm64=$(ffmpeg_for arm64)
 	ff_amd64=$(ffmpeg_for amd64)
+	adb_arm64=$(adb_for arm64)
+	adb_amd64=$(adb_for amd64)
 	build darwin/arm64,darwin/amd64 -sign "$sign" -skip-notarize
 	for arch in arm64 amd64; do
 		app=$stage/darwin-$arch/Pinky.app
 		dmg=$stage/darwin-$arch/pinky-$version-$arch.dmg
-		if [ "$arch" = arm64 ]; then ff=$ff_arm64; else ff=$ff_amd64; fi
-		SIGN="$sign" scripts/macapp.sh "$app" "$ff" "$dmg"
+		if [ "$arch" = arm64 ]; then
+			ff=$ff_arm64 adb=$adb_arm64
+		else
+			ff=$ff_amd64 adb=$adb_amd64
+		fi
+		ADB="$adb" SIGN="$sign" scripts/macapp.sh "$app" "$ff" "$dmg"
 		want=$(machine "$arch")
-		for bin in "$app/Contents/MacOS/Pinky" "$app"/Contents/Frameworks/*.dylib; do
+		bins="$app/Contents/MacOS/Pinky $app/Contents/Frameworks/*.dylib"
+		if [ -n "$adb" ]; then
+			[ -f "$app/Contents/Helpers/adb" ] || die "$app lacks adb"
+			bins="$bins $app/Contents/Helpers/adb"
+		fi
+		# shellcheck disable=SC2086 # bins splits, and globs, on purpose
+		for bin in $bins; do
 			got=$(lipo -archs "$bin")
 			[ "$got" = "$want" ] || die "$bin is for $got, not $want"
 		done
@@ -289,11 +368,15 @@ windows() {
 		skip=-skip-installer
 	fi
 	libs=$(stage_ffmpeg windows-amd64)
+	adbs=$(stage_adb windows-amd64)
 	# shellcheck disable=SC2086 # skip is one flag or none
 	build windows/amd64 $skip
 	dir=$stage/windows-amd64
 	for lib in $libs; do
 		[ -f "$dir/$lib" ] || die "the Windows app lacks FFmpeg's $lib"
+	done
+	for f in $adbs; do
+		[ -f "$dir/$f" ] || die "the Windows app lacks adb's $f"
 	done
 	files=$stage/windows-files
 	rm -rf "$files"
@@ -320,18 +403,24 @@ windows() {
 
 linux() {
 	libs=$(stage_ffmpeg linux-amd64)
+	adbs=$(stage_adb linux-amd64)
 	build linux/amd64
 	dir=$stage/linux-amd64
 	for f in "pinky-$version-linux-amd64.tar.gz" "pinky_${version}_amd64.deb"; do
 		[ -f "$dir/$f" ] || die "mygo build made no $f"
 	done
-	# FFmpeg must be next to the executable in both packages: at the
-	# archive's top, and in /opt/pinky in the Debian package.
-	archive=$(tar -tzf "$dir/pinky-$version-linux-amd64.tar.gz")
-	data=$(cd "$dir" && ar p "pinky_${version}_amd64.deb" data.tar.gz | tar -tzf -)
+	# FFmpeg and adb must be next to the executable in both packages: at
+	# the archive's top, and in /opt/pinky in the Debian package; adb
+	# executable.
+	archive=$(tar -tvzf "$dir/pinky-$version-linux-amd64.tar.gz" | awk '{ print $1, $NF }')
+	data=$(cd "$dir" && ar p "pinky_${version}_amd64.deb" data.tar.gz | tar -tvzf - | awk '{ print $1, $NF }')
 	for lib in $libs; do
-		printf '%s\n' "$archive" | grep -E -qx "(\./)?$lib" || die "the .tar.gz lacks FFmpeg's $lib"
-		printf '%s\n' "$data" | grep -E -qx "(\./)?opt/pinky/$lib" || die "the .deb lacks FFmpeg's $lib in /opt/pinky"
+		printf '%s\n' "$archive" | grep -E -q " (\./)?$lib\$" || die "the .tar.gz lacks FFmpeg's $lib"
+		printf '%s\n' "$data" | grep -E -q " (\./)?opt/pinky/$lib\$" || die "the .deb lacks FFmpeg's $lib in /opt/pinky"
+	done
+	for f in $adbs; do
+		printf '%s\n' "$archive" | grep -E -q "^-rwx.* (\./)?$f\$" || die "the .tar.gz lacks adb, executable"
+		printf '%s\n' "$data" | grep -E -q "^-rwx.* (\./)?opt/pinky/$f\$" || die "the .deb lacks adb, executable, in /opt/pinky"
 	done
 	for f in "pinky-$version-linux-amd64.tar.gz" "pinky_${version}_amd64.deb"; do
 		cp "$dir/$f" "$out/"
