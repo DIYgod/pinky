@@ -25,6 +25,9 @@ func (a *app) rightPanel(c *mg.Context) {
 				})
 			})
 		}
+		if d := a.device(a.sel); d != nil && d.Features.Companion {
+			a.companionCard(c, *d)
+		}
 		mg.Column(c).Label("Tasks").Children(func() {
 			sectionLabel(c, "Tasks")
 			mg.Column(c).Gap(8).Children(func() { a.taskList(c) })
@@ -79,13 +82,7 @@ func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 		}
 		switch {
 		case n.Kind == gateway.NeedUnlock:
-			label, keep := unlockWords()
-			b := button(c, label, btnOpt{kind: btnPrimary, icon: icTouchID}).Margin(12, 0, 0, 0).FillWidth()
-			if b.Clicked() {
-				a.unlock(n.DeviceID)
-			}
-			mg.Text(c, "or unlock it on the phone").FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
-			mg.Text(c, keep).FontSize(12).TextColor(p.ink3).TextAlign(mg.Center).Margin(6, 0, 0, 0)
+			a.unlockControls(c, n)
 		case n.Kind == gateway.NeedHandoff:
 			a.handoffControls(c, n)
 		case newAgentNeed(n):
@@ -127,13 +124,16 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 	switch {
 	case holding && !locked:
 		mg.Text(c, "You're in control. Click Done to hand the phone back to "+agent+".").FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
-	case locked:
-		label, _ := unlockWords()
-		if button(c, label, btnOpt{kind: btnPrimary, icon: icTouchID}).Margin(12, 0, 0, 0).FillWidth().Clicked() {
-			a.unlock(n.DeviceID)
-		}
+	case locked && a.canUnlockHere(n.DeviceID):
+		a.unlockButton(c, n.DeviceID).Margin(12, 0, 0, 0).FillWidth()
 		mg.Text(c, "The phone is locked. Unlocking it here hands it back to "+agent+". If you unlock it on the phone, click Done when you're finished.").
 			FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+	case locked:
+		mg.Text(c, "The phone is locked. "+a.unlockElsewhere(n.DeviceID, ", then click Done.")).
+			FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		if d := a.device(n.DeviceID); d != nil && a.pinMissing(*d) {
+			mg.Column(c).Margin(8, 0, 0, 0).Gap(8).Children(func() { a.pinForm(c, *d, "card") })
+		}
 	default:
 		mg.Text(c, "Do it on the phone and click Done, or take over to do it here.").FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	}

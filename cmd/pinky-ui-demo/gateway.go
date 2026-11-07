@@ -9,6 +9,7 @@ import (
 
 	"github.com/egoist/mygo"
 
+	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/ui"
 	"github.com/DIYgod/pinky/ui/demogw"
 )
@@ -72,5 +73,8 @@ func runGateway(theme, page string, dev, hidden, withVideo bool, timeout time.Du
 		StartPage: page,
 		Hidden:    hidden,
 		Menus:     []*mygo.MenuItem{menu},
+		Secrets:   &secret.Memory{},
+		// The demo's gateway serves no HTTP; the token only fills Settings.
+		AgentToken: demoToken,
 	})
 }

@@ -9,10 +9,9 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 )
 
-// addState is the Add phone wizard's. It finds the new phone by watching
-// Devices for one it did not know when the step began: gateway.API has
-// no pairing methods yet, so plugging in (or the gateway pairing by
-// itself) is what moves it on.
+// addState is the Add phone wizard's. Over USB it finds the new phone by
+// watching Devices for one it did not know when the step began; over
+// Wi-Fi the gateway's pairing says which phone paired.
 type addState struct {
 	step     string // "choose", "android", "qr", "iphone"
 	known    map[string]bool
@@ -21,10 +20,14 @@ type addState struct {
 	code     string // the iPhone's pairing code
 	pairing  bool
 	tryAgain bool
+	pair     pairState // pairing an Android phone over Wi-Fi
 }
 
 func (s *addState) reset(a *app) {
+	a.stopPairing()
+	seq := s.pair.seq // stays counting, so a stale pairing's answer is dropped
 	*s = addState{step: "choose"}
+	s.pair.seq = seq
 	s.snapshot(a)
 }
 
@@ -201,13 +204,52 @@ func (a *app) addAndroid(c *mg.Context) {
 func (a *app) addQR(c *mg.Context) {
 	p := pal(c)
 	s := &a.add
-	heading(c, "Pair over Wi-Fi", "On the phone, open Developer options › Wireless debugging › Pair device with QR code, then scan this code.")
-	mg.Box(c).AlignSelf(mg.Center).Size(200, 200).Padding(12).Radius(12).Background(hex("#ffffff")).Border(1, p.line).Children(func() {
-		mg.Column(c).Fill().Radius(6).Border(1.5, hex("#d9d9e0")).BorderStyle(mg.BorderDashed).Center().Gap(6).Padding(12).Children(func() {
-			mg.Icon(c, icGrid).FontSize(28).TextColor(hex("#6c6c75"))
-			mg.Text(c, "The code shows here once the gateway can start wireless pairing.").FontSize(12).TextColor(hex("#5b5b64")).TextAlign(mg.Center)
+	st := &s.pair
+	_, canPair := a.api.(pairer)
+	switch {
+	case !canPair:
+		heading(c, "Pair over Wi-Fi", "This gateway can't pair phones over Wi-Fi. Connect the phone with a USB cable instead.")
+	case st.form:
+		heading(c, "Pair with a code", "On the phone, open Developer options › Wireless debugging and tap Pair device with pairing code. Enter what it shows.")
+		a.pairCodeForm(c)
+	default:
+		if st.state == "" {
+			a.startPairing()
+		}
+		heading(c, "Pair over Wi-Fi", "On the phone, open Developer options › Wireless debugging and tap Pair device with QR code, then scan this code. Keep the phone on the same Wi-Fi as this computer.")
+		mg.Box(c).AlignSelf(mg.Center).Padding(6).Radius(16).Background(hex("#ffffff")).Border(1, p.line).Children(func() {
+			if st.code != nil {
+				qrView(c, st.code, 208)
+				return
+			}
+			mg.Column(c).Size(208, 208).Center().Gap(8).Padding(16).Children(func() {
+				if st.state == "failed" {
+					mg.Icon(c, icAlert).FontSize(26).TextColor(hex("#975800"))
+					mg.Text(c, "No code").FontSize(13).TextColor(hex("#5b5b64"))
+				} else {
+					spinner(c)
+				}
+			})
 		})
-	})
+	}
+	if canPair && !st.form {
+		statusBox(c, func() {
+			switch st.state {
+			case "failed":
+				mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot)
+				mg.Text(c, st.err).Grow(1).MinWidth(0)
+				if button(c, "Try again", btnOpt{small: true}).Clicked() {
+					a.startPairing()
+				}
+			case "waiting":
+				spinner(c)
+				mg.Text(c, "Waiting for the phone to scan the code…")
+			default:
+				spinner(c)
+				mg.Text(c, "Getting a code…")
+			}
+		})
+	}
 	if d := s.fresh(a, driver.Android); d != nil && d.Info.State == driver.StateOnline {
 		statusBox(c, func() {
 			dot(c, p.green, false)
@@ -221,14 +263,59 @@ func (a *app) addQR(c *mg.Context) {
 		})
 		return
 	}
-	statusBox(c, func() {
-		spinner(c)
-		mg.Text(c, "Waiting for the phone…")
-	})
-	mg.Row(c).Children(func() {
+	mg.Row(c).Gap(16).Wrap().Children(func() {
+		if canPair {
+			other := "Pair with a code instead"
+			if st.form {
+				other = "Use a QR code instead"
+			}
+			if linkButton(c, other).Clicked() {
+				st.form, st.formErr = !st.form, ""
+				if st.form {
+					a.stopPairing()
+				}
+			}
+		}
 		if linkButton(c, "Use a USB cable instead").Clicked() {
 			s.step = "android"
 			s.snapshot(a)
+		}
+	})
+}
+
+// pairCodeForm is Pair device with pairing code: the address and port,
+// and the six-digit code.
+func (a *app) pairCodeForm(c *mg.Context) {
+	p := pal(c)
+	st := &a.add.pair
+	mg.Column(c).Gap(12).Children(func() {
+		field := func(label string) {
+			mg.Text(c, label).FontSize(13).FontWeight(600)
+		}
+		var addr, code mg.Element
+		mg.Column(c).Gap(6).Children(func() {
+			field("IP address and port")
+			addr = mg.TextInput(c.Key("pair-addr"), &st.addr).Placeholder("192.168.1.20:37123").Label("IP address and port").AutoFocus()
+		})
+		mg.Column(c).Gap(6).Children(func() {
+			field("Wi-Fi pairing code")
+			code = mg.TextInput(c.Key("pair-code"), &st.pin).Placeholder("6 digits").Label("Wi-Fi pairing code").MaxWidth(160)
+		})
+		if code.Changed() {
+			st.pin = keepDigits(st.pin, 6)
+		}
+		mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
+			pair := button(c, "Pair", btnOpt{kind: btnPrimary}).Disabled(st.formBusy || len(st.pin) < 6 || st.addr == "")
+			if (pair.Clicked() || code.Submitted() || addr.Submitted()) && !st.formBusy && len(st.pin) == 6 {
+				a.pairWithCode()
+			}
+			if st.formBusy {
+				spinner(c)
+				mg.Text(c, "Pairing…").FontSize(13.5).TextColor(p.ink2)
+			}
+		})
+		if st.formErr != "" {
+			mg.Text(c, st.formErr).FontSize(13.5).TextColor(p.red).Role(mg.RoleStatus)
 		}
 	})
 }
