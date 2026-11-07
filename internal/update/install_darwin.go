@@ -2,7 +2,6 @@ package update
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -19,9 +18,6 @@ import (
 
 // TeamID is the Apple team whose Developer ID signs Pinky.app.
 const TeamID = "492J8Q67PF"
-
-// BundleID is Pinky.app's identifier.
-const BundleID = "app.pinky.desktop"
 
 // requirement is what a Pinky.app must satisfy to be installed: signed with
 // a Developer ID Application certificate of Pinky's team, as Pinky.app.
@@ -117,10 +113,6 @@ type BundleInstaller struct {
 	Logger     *slog.Logger
 }
 
-// workPrefix names the folders next to the bundle that updates are staged
-// in: .Pinky.app.update-*.
-func workPrefix(bundle string) string { return "." + filepath.Base(bundle) + ".update-" }
-
 // Stage unpacks a release's zip next to the installed bundle (so the swap
 // is a rename on the same volume) and checks it: one app bundle, signed by
 // Pinky's team, Pinky's identifier and the release's version.
@@ -211,13 +203,6 @@ func readBundleInfo(app string) (bundleInfo, error) {
 	return info, nil
 }
 
-// pendingSwap is what Swap leaves in the work folder for the new version.
-type pendingSwap struct {
-	From string    `json:"from"`
-	To   string    `json:"to"`
-	At   time.Time `json:"at"`
-}
-
 // Swap writes what the new version looks for (pending.json) and starts the
 // helper, in a session of its own so that it outlives this process.
 func (s *stagedBundle) Swap(opt StartOptions) error {
@@ -230,8 +215,7 @@ func (s *stagedBundle) Swap(opt StartOptions) error {
 	if info, err := readBundleInfo(b.Bundle); err == nil {
 		from = info.Version
 	}
-	data, _ := json.Marshal(pendingSwap{From: from, To: s.version, At: time.Now().UTC()})
-	if err := os.WriteFile(filepath.Join(s.work, "pending.json"), data, 0o600); err != nil {
+	if err := writePending(s.work, from, s.version); err != nil {
 		return err
 	}
 	logPath := b.Log
@@ -316,8 +300,9 @@ func (s *stagedBundle) SwapNow() error {
 // with the old bundle. A new version that exits before that, or never
 // launches, is moved to work/failed.app and the old one put back and
 // started again. Whenever the update does not happen, the helper leaves
-// rolled-back in the work folder, so the old version knows and does not try
-// the same version again by itself. It never removes a bundle that is not
+// rolled-back in the work folder, with why ("didn't start", completing
+// "Pinky <version> …"), so the old version knows and does not try the same
+// version again by itself. It never removes a bundle that is not
 // in place elsewhere: if the old one cannot be put back, both stay in the
 // work folder and the log says where.
 const swapScript = `pid=$1 target=$2 new=$3 work=$4 log=$5 wait=$6 req=$7
@@ -354,21 +339,21 @@ done
 if [ -n "$req" ] && ! /usr/bin/codesign --verify --deep --strict -R "=$req" "$new" >>"$log" 2>&1; then
 	say "the new version's signature does not check out; not installing it"
 	rm -rf "$new"
-	: >"$work/rolled-back"
+	echo "didn't pass the signature check" >"$work/rolled-back"
 	"$@" >>"$log" 2>&1
 	exit 1
 fi
 if ! mv "$target" "$old" 2>>"$log"; then
 	say "could not move $target aside; keeping it"
 	rm -rf "$new"
-	: >"$work/rolled-back"
+	echo "couldn't replace $target" >"$work/rolled-back"
 	"$@" >>"$log" 2>&1
 	exit 1
 fi
 if ! mv "$new" "$target" 2>>"$log"; then
 	say "could not move the new version to $target; putting the old one back"
 	if put_back; then
-		: >"$work/rolled-back"
+		echo "couldn't be moved to $target" >"$work/rolled-back"
 		"$@" >>"$log" 2>&1
 	else
 		say "could not put the old version back: it is at $old"
@@ -399,7 +384,7 @@ if ! mv "$target" "$work/failed.app" 2>>"$log"; then
 	exit 1
 fi
 if put_back; then
-	: >"$work/rolled-back"
+	echo "didn't start" >"$work/rolled-back"
 	"$@" >>"$log" 2>&1
 elif mv "$work/failed.app" "$target" 2>>"$log"; then
 	say "could not put the old version back (it is at $old); kept the new one"
@@ -430,57 +415,12 @@ func CheckSwap(version string) *Swapped {
 	return checkSwap(bundle, version, os.Getpid(), time.Now())
 }
 
-func checkSwap(bundle, version string, pid int, now time.Time) *Swapped {
-	exists := func(path string) bool { _, err := os.Stat(path); return err == nil }
-	dirs, _ := filepath.Glob(filepath.Join(filepath.Dir(bundle), workPrefix(bundle)+"*"))
-	var failed *Swapped
-	live, liveAt := "", time.Time{}
-	var liveP pendingSwap
-	for _, dir := range dirs {
-		data, err := os.ReadFile(filepath.Join(dir, "pending.json"))
-		var p pendingSwap
-		if err != nil || json.Unmarshal(data, &p) != nil {
-			// Staged but never swapped (the person quit before, or the
-			// helper gave up): remove it once it is a day old.
-			if fi, err := os.Stat(dir); err == nil && now.Sub(fi.ModTime()) > 24*time.Hour {
-				os.RemoveAll(dir)
-			}
-			continue
-		}
-		switch rolledBack := exists(filepath.Join(dir, "rolled-back")); {
-		case rolledBack && Compare(p.To, version) != 0:
-			// The old version again: the update did not happen.
-			failed = &Swapped{From: p.From, To: p.To, Failed: true}
-			os.RemoveAll(dir)
-		case rolledBack:
-			// This version was moved aside while it started, and may run
-			// from there: the old version cleans up.
-		case Compare(p.To, version) == 0 && exists(filepath.Join(dir, "old.app")) && !exists(filepath.Join(dir, "started")):
-			// The swap that put this version in place: its helper waits.
-			if live == "" || p.At.After(liveAt) {
-				live, liveAt, liveP = dir, p.At, p
-			}
-		case now.Sub(p.At) > 24*time.Hour:
-			os.RemoveAll(dir)
-		}
-	}
-	if failed != nil {
-		return failed
-	}
-	if live != "" && os.WriteFile(filepath.Join(live, "launched"), []byte(strconv.Itoa(pid)), 0o600) == nil {
-		return &Swapped{From: liveP.From, To: liveP.To, dir: live}
-	}
-	return nil
-}
+// cleanUpAfter has nothing to do on macOS: the helper removes the work
+// folder with the old bundle.
+func cleanUpAfter(string) {}
 
-// Confirm tells the helper that the new version is up, so it removes the
-// old one.
-func (s *Swapped) Confirm() error {
-	if s == nil || s.Failed || s.dir == "" {
-		return nil
-	}
-	return os.WriteFile(filepath.Join(s.dir, "started"), nil, 0o600)
-}
+// RunHelper is for Windows: the helper on macOS is a shell script.
+func RunHelper(string) error { return ErrHelperOS }
 
 // errNotBundle is for builds that run outside an app bundle.
 var errNotBundle = errors.New("Pinky does not run from Pinky.app")

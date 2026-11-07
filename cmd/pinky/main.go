@@ -60,6 +60,10 @@ func main() {
 		err = runQuit(args)
 	case "update":
 		err = runUpdate(args)
+	case "update-helper":
+		// Not for people: the app starts it from a copy of itself to
+		// install an update on Windows.
+		err = runUpdateHelper(args)
 	default:
 		usage()
 		os.Exit(2)

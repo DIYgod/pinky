@@ -166,7 +166,7 @@ func (u *Updater) MethodFor(r Release) Method {
 	switch {
 	case m == MethodSelf && !loc.CanReplace():
 		m = MethodDownload
-	case m == MethodInstaller && !isInstaller(r.Asset.URL):
+	case (m == MethodInstaller || m == MethodSelf && loc.Setup) && !isInstaller(r.Asset.URL):
 		m = MethodDownload
 	}
 	return m
