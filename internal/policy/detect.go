@@ -221,6 +221,31 @@ func mentionsCommit(text string) bool {
 	return false
 }
 
+// movesMoney reports whether a commit's label moves money by itself: it
+// pays, buys, sells, swaps, trades, lends, borrows or moves money in or out
+// ("Sell all", "Confirm swap", "立即还款"), with or without an amount.
+func movesMoney(label string) bool {
+	if hasCJK(label) && containsAny(cjkCore(label), cjkMoneyKeywords) {
+		return true
+	}
+	ws := labelWords(label)
+	return anyWord(ws, moneyWords) || containsPhrase(ws, moneyPhrases)
+}
+
+// ocrParts splits a line that OCR read into what a tap on it may have
+// meant: the whole line, and, when the line is CJK or short, each piece of
+// it, since OCR puts the buttons of one row on one line ("还款 分期还款
+// 去分期", "Cancel Delete"). A long line is a sentence, and a commit verb
+// inside it no button.
+func ocrParts(text string) []string {
+	parts := []string{text}
+	fields := strings.Fields(text)
+	if len(fields) > 1 && (hasCJK(text) || len(labelWords(text)) <= 4) {
+		parts = append(parts, fields...)
+	}
+	return parts
+}
+
 func isQuestion(s string) bool {
 	s = strings.TrimSpace(s)
 	return strings.ContainsAny(s, "?？") || strings.HasSuffix(s, "吗") || strings.HasSuffix(s, "嗎") ||
@@ -290,9 +315,14 @@ func isSettingLabel(label string) bool {
 	return len(ws) >= 1 && len(ws) <= maxCommitWords && settingVerbs[ws[0]]
 }
 
+// cryptoTickers are coins and stable coins whose amounts count as money,
+// as a wallet shows them: "0.5 ETH", "1,200 USDC".
+const cryptoTickers = `BTC|ETH|USDT|USDC|USDE|DAI|BNB|SOL|XRP|ADA|DOGE|TRX|TON|AVAX|DOT|MATIC|POL|LTC|BCH|SUI|APT|ARB|OP|ENA|WBTC|WETH|STETH|EURC|FDUSD|PYUSD|SATS`
+
 var currencyRe = regexp.MustCompile(
 	`(?:US\$|HK\$|NT\$|A\$|C\$|S\$|R\$|\$|€|£|¥|￥|₩|₹|₽|₺|₫|฿|₱|₪|CHF|USD|EUR|GBP|CNY|RMB|JPY|KRW|HKD|TWD|INR|RUB|AUD|CAD|SGD|BRL|MXN)\s?\d` +
-		`|\d(?:[\d.,\s]*\d)?\s?(?:€|元|円|원|₽|zł|kr|Kč|руб|USD|EUR|GBP|CNY|RMB|JPY|KRW|HKD|TWD|INR|RUB|AUD|CAD|SGD|BRL|MXN)`)
+		`|\d(?:[\d.,\s]*\d)?\s?(?:€|元|円|원|₽|zł|kr|Kč|руб|USD|EUR|GBP|CNY|RMB|JPY|KRW|HKD|TWD|INR|RUB|AUD|CAD|SGD|BRL|MXN)` +
+		`|\b(?:` + cryptoTickers + `)\s?\d|\d(?:[\d.,\s]*\d)?\s?(?:` + cryptoTickers + `)\b`)
 
 // hasCurrency reports whether s shows an amount of money.
 func hasCurrency(s string) bool { return currencyRe.MatchString(s) }
@@ -357,6 +387,23 @@ func isInput(e *screen.Element) bool {
 	return e != nil && (e.Role == screen.RoleInput || e.Has(screen.StateEditable))
 }
 
+// commitParts reports whether an element's label commits, and whether
+// that commit moves money by itself. Text that only OCR read is judged by
+// its pieces too (ocrParts).
+func commitParts(t *screen.Element) (commit, money bool) {
+	parts := []string{t.Label}
+	if t.Source == screen.SourceOCR {
+		parts = ocrParts(t.Label)
+	}
+	for _, p := range parts {
+		if isCommitLabel(p) {
+			commit = true
+			money = money || movesMoney(p)
+		}
+	}
+	return commit, money
+}
+
 // detect returns the policy kinds of an action.
 func detect(in Input, cats []string) []Kind {
 	var kinds []Kind
@@ -383,10 +430,13 @@ func detect(in Input, cats []string) []Kind {
 	}
 	switch in.Op {
 	case OpTap:
-		if t == nil || isInput(t) || t.Role == screen.RoleList {
+		// A tab only moves between pages, whatever it is called ("Trade",
+		// "Swap" in an exchange's tab bar).
+		if t == nil || isInput(t) || t.Role == screen.RoleList || t.Role == screen.RoleTab {
 			break
 		}
-		if isCommitLabel(label) || (isAffirmative(label) && screenAsksCommit(in.Screen, t)) || isCommitIcon(t) {
+		commit, money := commitParts(t)
+		if commit || (isAffirmative(label) && screenAsksCommit(in.Screen, t)) || isCommitIcon(t) {
 			add(Commit)
 		}
 		if has(CatStores) && (isInstallLabel(label) || isAffirmative(label) || isInstallIcon(t)) {
@@ -401,15 +451,22 @@ func detect(in Input, cats []string) []Kind {
 		if has(CatSettings) && (t.Role == screen.RoleSwitch || t.Role == screen.RoleCheckbox || isSettingLabel(label)) {
 			add(ChangeSetting)
 		}
-		if (hasKind(kinds, Commit) || hasKind(kinds, InstallApp)) && (hasCurrency(label) || screenHasCurrency(in.Screen)) {
+		// A payment: a commit that moves money by itself, or any commit on
+		// a screen that shows an amount.
+		if (hasKind(kinds, Commit) || hasKind(kinds, InstallApp)) &&
+			(money || isMoneyIcon(t) || hasCurrency(label) || screenHasCurrency(in.Screen)) {
 			add(Payment)
 		}
 	case OpSwipe:
 		// Sliders such as "Slide to pay", also by their id ("slide_to_pay");
 		// a list that scrolls is no slider.
-		if t != nil && (isCommitLabel(label) || (!t.Has(screen.StateScrollable) && t.Role != screen.RoleList && isCommitIcon(t))) {
+		if t == nil {
+			break
+		}
+		slider := !t.Has(screen.StateScrollable) && t.Role != screen.RoleList
+		if commit, money := commitParts(t); commit || (slider && isCommitIcon(t)) {
 			add(Commit)
-			if hasCurrency(label) || screenHasCurrency(in.Screen) {
+			if money || (slider && isMoneyIcon(t)) || hasCurrency(label) || screenHasCurrency(in.Screen) {
 				add(Payment)
 			}
 		}

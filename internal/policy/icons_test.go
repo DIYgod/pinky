@@ -93,12 +93,13 @@ func TestIconButtons(t *testing.T) {
 			el(screen.RoleButton, "square.and.arrow.up", ""),
 			el(screen.RoleButton, "ellipsis.circle", ""),
 			el(screen.RoleButton, "magnifyingglass", ""),
-			el(screen.RoleButton, "Trash", ""), // a folder
+			el(screen.RoleButton, "Bin", ""), // a delete button on a British iPhone, or a mailbox: it asks
 			el(screen.RoleButton, "trash", ""),
 			el(screen.RoleButton, "paperplane.fill", ""),
 			el(screen.RoleButton, "sendButton", "sendButton"),
 			el(screen.RoleButton, "➤", "SubmitReply"),
 		}, want: map[string]string{
+			"Bin":             "Commits",
 			"trash":           "Commits",
 			"paperplane.fill": "Commits",
 			"sendButton":      "Commits",
@@ -157,7 +158,7 @@ func TestIconSliders(t *testing.T) {
 	e := commitsEngine(t)
 	shop := screen.App{Name: "Example Shop", ID: "com.example.shop"}
 	slider := el(screen.RoleOther, "", "com.example.shop:id/slide_to_pay")
-	if v := e.Evaluate(Input{Op: OpSwipe, App: shop, Target: &slider}); v.Decision != Ask || v.Rule != "Commits" {
+	if v := e.Evaluate(Input{Op: OpSwipe, App: shop, Target: &slider}); v.Decision != Ask || v.Rule != "Payments" {
 		t.Fatalf("slide to pay: %+v", v)
 	}
 	list := el(screen.RoleList, "", "com.example.shop:id/pay_later_offers")

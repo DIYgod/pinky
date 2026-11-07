@@ -25,7 +25,15 @@ import (
 var iconCommitWords = words(
 	"send", "pay", "delete", "trash", "checkout", "purchase", "buy", "submit", "confirm",
 	"transfer", "publish", "tweet", "retweet", "repost", "donate", "subscribe", "withdraw",
-	"erase", "paperplane", "logout", "signout",
+	"erase", "paperplane", "logout", "signout", "sell", "swap", "trade", "convert", "repay",
+	"borrow", "stake", "unstake", "deposit", "remove", "bin",
+)
+
+// iconMoneyWords make an icon's commit a payment by themselves, as
+// moneyWords do a label's.
+var iconMoneyWords = words(
+	"pay", "buy", "purchase", "checkout", "sell", "swap", "trade", "repay", "borrow", "stake", "unstake",
+	"withdraw", "transfer", "deposit", "donate",
 )
 
 // iconCommitPhrases commit when an id has them in a row.
@@ -45,7 +53,7 @@ var iconNegatives = words(
 	"badge", "time", "timestamp", "date", "method", "methods", "settings", "setting", "info",
 	"summary", "title", "hint", "progress", "indicator", "preview", "receipt", "receipts",
 	"options", "option", "help", "tab", "label", "error", "placeholder", "carousel", "section", "header",
-	"banner", "recycler", "pager", "feed",
+	"banner", "recycler", "pager", "feed", "address", "rate", "rates", "price", "prices", "chart", "fee", "fees",
 )
 
 // iconInstallWords install an app from an icon in an app store.
@@ -150,6 +158,18 @@ func isCommitIcon(e *screen.Element) bool {
 		}
 		if anyWord(ws, iconCommitWords) || containsPhrase(ws, iconCommitPhrases) ||
 			(anyWord(ws, iconButtonVerbs) && anyWord(ws, iconButtonWords)) {
+			return true
+		}
+	}
+	return false
+}
+
+// isMoneyIcon reports whether an element without words of its own moves
+// money, by what the app calls it ("btn_sell", "swapButton").
+func isMoneyIcon(e *screen.Element) bool {
+	for _, name := range iconNames(e) {
+		ws := idWords(name)
+		if !anyWord(ws, iconNegatives) && anyWord(ws, iconMoneyWords) {
 			return true
 		}
 	}
