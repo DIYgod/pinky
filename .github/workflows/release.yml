@@ -55,10 +55,13 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Check the tag and its notes
-        run: |
-          go run ./scripts/release newer "${TAG#v}"
-          go run ./scripts/release notes "${TAG#v}" > /dev/null
+      - name: Check the tag
+        run: go run ./scripts/release newer "${TAG#v}"
+      - name: Check its notes
+        # A run that publishes nothing may build a branch whose CHANGELOG.md
+        # does not have the tag's notes yet.
+        if: github.event_name == 'push' || inputs.publish
+        run: go run ./scripts/release notes "${TAG#v}" > /dev/null
       - name: Build
         env:
           STRICT: "1"
