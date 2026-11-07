@@ -505,6 +505,13 @@ func TestUpdateScreenshots(t *testing.T) {
 	ut.upd.phase, ut.upd.done, ut.upd.total = updDownloading, 18<<20, 41<<20
 	shot("update-downloading", false)
 	ut.upd.phase = updIdle
+	// The companion's card: the update Pinky will make, then making it.
+	ut.comp.state["pixel-9"], ut.comp.checked["pixel-9"] = driver.CompanionOutdated, time.Now()
+	shot("companion-outdated", false)
+	ut.upd.comp = map[string]*compAuto{"pixel-9": {running: true}}
+	shot("companion-updating", false)
+	ut.upd.comp = nil
+	ut.comp.state["pixel-9"] = driver.CompanionOn
 	ut.upd.rel = nil
 	ut.u.Version, ut.opt.Version, ut.opt.Changelog = "2026.1107.2", "2026.1107.2", testChangelog
 	ut.u.Change(func(s *update.State) { s.Launched("2026.1107.1"); s.Launched("2026.1107.2") })
