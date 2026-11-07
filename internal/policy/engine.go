@@ -150,9 +150,13 @@ func (e *Engine) Evaluate(in Input) Verdict {
 
 	v := Verdict{Decision: Allow, Kinds: kinds}
 	var asks []string
+	lift := in.AllowBlocked && !contains(cats, CatPasswords)
 	for _, r := range e.rulesLocked() {
 		if !r.matches(app, cats, kinds, in) {
 			continue
+		}
+		if lift && r.Decision == Deny && r.Match.appLevel() {
+			continue // the person allowed this blocked app for the task
 		}
 		if r.Decision == Ask {
 			asks = append(asks, r.Name)

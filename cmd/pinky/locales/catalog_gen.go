@@ -4643,6 +4643,26 @@ func (msgs Messages) NeedsAddNote() string {
 	return Catalog.Format(msgs.locale, "needsAddNote", nil)
 }
 
+// NeedsAgentAskedReadOnly says "{agent} asked to only browse and read."
+// in the language the app shows.
+//
+// On an agent's first-connection card, above the menu of what it may do,
+// when the agent asked to only browse and read (phone_connect read_only).
+// The menu then starts on scopeReadOnly.
+func NeedsAgentAskedReadOnly(agent string) string {
+	return In(i18n.Locale()).NeedsAgentAskedReadOnly(agent)
+}
+
+// NeedsAgentAskedReadOnly says "{agent} asked to only browse and read."
+// in the language of msgs.
+//
+// On an agent's first-connection card, above the menu of what it may do,
+// when the agent asked to only browse and read (phone_connect read_only).
+// The menu then starts on scopeReadOnly.
+func (msgs Messages) NeedsAgentAskedReadOnly(agent string) string {
+	return Catalog.Format(msgs.locale, "needsAgentAskedReadOnly", map[string]any{"agent": agent})
+}
+
 // NeedsAllow says "Allow"
 // in the language the app shows.
 //
@@ -5003,8 +5023,8 @@ func (msgs Messages) NeedsHandoffNotePlaceholder() string {
 // On an agent's first-connection card: the label above (and the
 // accessibility label of) the menu of what the agent may do. In English it
 // reads on into the choice: "Let Claude Code" + "All apps except blocked
-// ones", "Only the apps I choose", "Browse and read, never commit" or
-// "Watch only".
+// ones", "Only the apps I choose", "Read only: browse, never commit" or
+// "Watch only: no taps or typing".
 func NeedsLetAgent(agent string) string { return In(i18n.Locale()).NeedsLetAgent(agent) }
 
 // NeedsLetAgent says "Let {agent}"
@@ -5013,8 +5033,8 @@ func NeedsLetAgent(agent string) string { return In(i18n.Locale()).NeedsLetAgent
 // On an agent's first-connection card: the label above (and the
 // accessibility label of) the menu of what the agent may do. In English it
 // reads on into the choice: "Let Claude Code" + "All apps except blocked
-// ones", "Only the apps I choose", "Browse and read, never commit" or
-// "Watch only".
+// ones", "Only the apps I choose", "Read only: browse, never commit" or
+// "Watch only: no taps or typing".
 func (msgs Messages) NeedsLetAgent(agent string) string {
 	return Catalog.Format(msgs.locale, "needsLetAgent", map[string]any{"agent": agent})
 }
@@ -5105,6 +5125,26 @@ func NeedsThenClickDone() string { return In(i18n.Locale()).NeedsThenClickDone()
 // ends the sentence. Done is the card's button (needsDone).
 func (msgs Messages) NeedsThenClickDone() string {
 	return Catalog.Format(msgs.locale, "needsThenClickDone", nil)
+}
+
+// NeedsUnblockHow says "{app} is blocked by “{rule}”. Allowing lets {agent} open it and read its screen until this task ends. What your r…"
+// in the language the app shows.
+//
+// On the card that asks whether an agent may open a blocked app for its
+// task, above Deny and needsAllowTask. rule is the rule that blocks it,
+// such as Finance apps.
+func NeedsUnblockHow(app string, rule string, agent string) string {
+	return In(i18n.Locale()).NeedsUnblockHow(app, rule, agent)
+}
+
+// NeedsUnblockHow says "{app} is blocked by “{rule}”. Allowing lets {agent} open it and read its screen until this task ends. What your r…"
+// in the language of msgs.
+//
+// On the card that asks whether an agent may open a blocked app for its
+// task, above Deny and needsAllowTask. rule is the rule that blocks it,
+// such as Finance apps.
+func (msgs Messages) NeedsUnblockHow(app string, rule string, agent string) string {
+	return Catalog.Format(msgs.locale, "needsUnblockHow", map[string]any{"app": app, "rule": rule, "agent": agent})
 }
 
 // PairingAddrField says "IP address and port"
@@ -6001,6 +6041,24 @@ func PanelToldNo(agent string) string { return In(i18n.Locale()).PanelToldNo(age
 // learned that the person won't do what it asked.
 func (msgs Messages) PanelToldNo(agent string) string {
 	return Catalog.Format(msgs.locale, "panelToldNo", map[string]any{"agent": agent})
+}
+
+// PanelUnblockedDetail says "{agent} can use {app} until this task ends."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under panelAllowedTask, after
+// the person allowed a blocked app for the agent's task.
+func PanelUnblockedDetail(agent string, app string) string {
+	return In(i18n.Locale()).PanelUnblockedDetail(agent, app)
+}
+
+// PanelUnblockedDetail says "{agent} can use {app} until this task ends."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under panelAllowedTask, after
+// the person allowed a blocked app for the agent's task.
+func (msgs Messages) PanelUnblockedDetail(agent string, app string) string {
+	return Catalog.Format(msgs.locale, "panelUnblockedDetail", map[string]any{"agent": agent, "app": app})
 }
 
 // PanelWaitingApprovals says "Waiting approvals"
@@ -8321,6 +8379,62 @@ func (msgs Messages) ScopeEverything() string {
 	return Catalog.Format(msgs.locale, "scopeEverything", nil)
 }
 
+// ScopeHintApps says "It can open only the apps you list. What Settings › Safety asks about still asks you."
+// in the language the app shows.
+//
+// Under the menu of what an agent may do, while scopeApps is chosen.
+func ScopeHintApps() string { return In(i18n.Locale()).ScopeHintApps() }
+
+// ScopeHintApps says "It can open only the apps you list. What Settings › Safety asks about still asks you."
+// in the language of msgs.
+//
+// Under the menu of what an agent may do, while scopeApps is chosen.
+func (msgs Messages) ScopeHintApps() string {
+	return Catalog.Format(msgs.locale, "scopeHintApps", nil)
+}
+
+// ScopeHintEverything says "It can open any app except blocked ones. What Settings › Safety asks about still asks you."
+// in the language the app shows.
+//
+// Under the menu of what an agent may do, while scopeEverything is chosen.
+func ScopeHintEverything() string { return In(i18n.Locale()).ScopeHintEverything() }
+
+// ScopeHintEverything says "It can open any app except blocked ones. What Settings › Safety asks about still asks you."
+// in the language of msgs.
+//
+// Under the menu of what an agent may do, while scopeEverything is chosen.
+func (msgs Messages) ScopeHintEverything() string {
+	return Catalog.Format(msgs.locale, "scopeHintEverything", nil)
+}
+
+// ScopeHintReadOnly says "It can open apps, look around and search. Anything that would ask you is refused, and it types only into search fields."
+// in the language the app shows.
+//
+// Under the menu of what an agent may do, while scopeReadOnly is chosen.
+func ScopeHintReadOnly() string { return In(i18n.Locale()).ScopeHintReadOnly() }
+
+// ScopeHintReadOnly says "It can open apps, look around and search. Anything that would ask you is refused, and it types only into search fields."
+// in the language of msgs.
+//
+// Under the menu of what an agent may do, while scopeReadOnly is chosen.
+func (msgs Messages) ScopeHintReadOnly() string {
+	return Catalog.Format(msgs.locale, "scopeHintReadOnly", nil)
+}
+
+// ScopeHintWatchOnly says "It sees the screen and touches nothing: no taps, typing or swipes."
+// in the language the app shows.
+//
+// Under the menu of what an agent may do, while scopeWatchOnly is chosen.
+func ScopeHintWatchOnly() string { return In(i18n.Locale()).ScopeHintWatchOnly() }
+
+// ScopeHintWatchOnly says "It sees the screen and touches nothing: no taps, typing or swipes."
+// in the language of msgs.
+//
+// Under the menu of what an agent may do, while scopeWatchOnly is chosen.
+func (msgs Messages) ScopeHintWatchOnly() string {
+	return Catalog.Format(msgs.locale, "scopeHintWatchOnly", nil)
+}
+
 // ScopeLineApps says "Can use {apps}"
 // in the language the app shows.
 //
@@ -8393,14 +8507,14 @@ func (msgs Messages) ScopeLineWatchOnly() string {
 	return Catalog.Format(msgs.locale, "scopeLineWatchOnly", nil)
 }
 
-// ScopeReadOnly says "Browse and read, never commit"
+// ScopeReadOnly says "Read only: browse, never commit"
 // in the language the app shows.
 //
 // A choice of what an agent may do: look and read, but never pay, send,
 // delete or change anything.
 func ScopeReadOnly() string { return In(i18n.Locale()).ScopeReadOnly() }
 
-// ScopeReadOnly says "Browse and read, never commit"
+// ScopeReadOnly says "Read only: browse, never commit"
 // in the language of msgs.
 //
 // A choice of what an agent may do: look and read, but never pay, send,
@@ -8409,13 +8523,13 @@ func (msgs Messages) ScopeReadOnly() string {
 	return Catalog.Format(msgs.locale, "scopeReadOnly", nil)
 }
 
-// ScopeWatchOnly says "Watch only"
+// ScopeWatchOnly says "Watch only: no taps or typing"
 // in the language the app shows.
 //
 // A choice of what an agent may do: see the screen, touch nothing.
 func ScopeWatchOnly() string { return In(i18n.Locale()).ScopeWatchOnly() }
 
-// ScopeWatchOnly says "Watch only"
+// ScopeWatchOnly says "Watch only: no taps or typing"
 // in the language of msgs.
 //
 // A choice of what an agent may do: see the screen, touch nothing.
@@ -11589,6 +11703,22 @@ func TasksNone() string { return In(i18n.Locale()).TasksNone() }
 // In place of the Tasks list when no agent is working on any phone.
 func (msgs Messages) TasksNone() string {
 	return Catalog.Format(msgs.locale, "tasksNone", nil)
+}
+
+// TasksReadOnly says "Read only"
+// in the language the app shows.
+//
+// On a task card's line with the agent, the phone and the time, for a task
+// the agent asked to run read-only.
+func TasksReadOnly() string { return In(i18n.Locale()).TasksReadOnly() }
+
+// TasksReadOnly says "Read only"
+// in the language of msgs.
+//
+// On a task card's line with the agent, the phone and the time, for a task
+// the agent asked to run read-only.
+func (msgs Messages) TasksReadOnly() string {
+	return Catalog.Format(msgs.locale, "tasksReadOnly", nil)
 }
 
 // TasksRowDone says "done"

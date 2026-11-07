@@ -124,6 +124,9 @@ type ConnectRequest struct {
 	// Apps is the task's app allow-list, ids or names. Launching any other
 	// app is refused and typing into one asks the person.
 	Apps []string
+	// ReadOnly runs the task read-only, whatever the agent's scope: the
+	// agent can ask for less than the person gave it, never more.
+	ReadOnly bool
 }
 
 // ReleaseRequest is phone_release.
@@ -368,7 +371,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	if r := []rune(title); len(r) > 200 {
 		title = string(r[:200])
 	}
-	if res := s.approveAgent(ctx, req.Call, title); res != nil {
+	if res := s.approveAgent(ctx, req.Call, title, req.ReadOnly); res != nil {
 		return res
 	}
 
@@ -423,22 +426,28 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		return res
 	}
 	if l := d.lease; l != nil && l.task.title == title {
-		// The same task again: keep the lease, refresh the app list.
+		// The same task again: keep the lease, refresh the app list. A
+		// task that asked for read-only stays so.
 		if len(req.Apps) > 0 {
 			l.apps = append([]string(nil), req.Apps...)
 		}
+		if req.ReadOnly {
+			l.readOnly, l.task.readOnly = true, true
+		}
 		l.inflight++
+		ro := l.readOnly
 		g.mu.Unlock()
 		defer s.done(l)
 		var unknown []string
 		if len(req.Apps) > 0 {
 			unknown = g.resolveTaskApps(ctx, l)
 		}
-		return withUnknownApps(g.firstScreen(ctx, l), unknown)
+		return readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), ro)
 	} else if l != nil {
 		g.endLeaseLocked(l, OutcomeReplaced, "")
 	}
 	l := g.newLeaseLocked(s, d, title, req.Apps)
+	l.readOnly, l.task.readOnly = req.ReadOnly, req.ReadOnly
 	l.inflight++
 	g.mu.Unlock()
 	defer s.done(l)
@@ -449,11 +458,24 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	if len(req.Apps) > 0 {
 		args["apps"] = req.Apps
 	}
-	g.addStep(l, StepView{Tool: "phone_connect", Args: argsJSON(args),
-		Text: fmt.Sprintf("Connected to %s for “%s”", d.name(), title), Status: string(StatusSettled), At: time.Now()})
+	text := fmt.Sprintf("Connected to %s for “%s”", d.name(), title)
+	if req.ReadOnly {
+		args["read_only"] = true
+		text += ", read only"
+	}
+	g.addStep(l, StepView{Tool: "phone_connect", Args: argsJSON(args), Text: text, Status: string(StatusSettled), At: time.Now()})
 	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
-	return withUnknownApps(g.firstScreen(ctx, l), unknown)
+	return readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), req.ReadOnly)
+}
+
+// readOnlyNote tells an agent that asked for read-only what that means.
+func readOnlyNote(res *Result, readOnly bool) *Result {
+	if readOnly && !res.IsError() {
+		res.Message = strings.TrimSpace(res.Message + " This task is read-only: anything the person's rules would ask about " +
+			"is refused, and you can type only into search fields.")
+	}
+	return res
 }
 
 func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []string) *lease {
@@ -583,7 +605,7 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 
 // approveAgent holds an agent's first connection until the person allows
 // it. It returns nil once the agent may connect.
-func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Result {
+func (s *Session) approveAgent(ctx context.Context, c Call, title string, readOnly bool) *Result {
 	g := s.g
 	if g.agentApproved(ctx, s.agent) {
 		return nil
@@ -610,10 +632,15 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string) *Resul
 		}
 	}
 	if id == "" {
+		mode := g.opt.DefaultScope.Mode
+		if readOnly {
+			mode = ScopeReadOnly
+		}
 		info := g.approvals.Open(approval.Request{
 			Kind: approval.KindAgent, Binding: b, Rule: "New agent", Agent: s.agent.Name,
 			Title:  fmt.Sprintf("Let %s use your phones?", s.agent.Name),
-			Detail: fmt.Sprintf("%s wants to connect for “%s”. Allowing gives it %s access.", s.agent.Name, title, g.opt.DefaultScope.Mode),
+			Detail: fmt.Sprintf("%s wants to connect for “%s”. Allowing gives it %s access.", s.agent.Name, title, mode),
+			Data:   agentRequest{readOnly: readOnly},
 		})
 		id = info.ID
 	}
@@ -822,12 +849,16 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		res.Status = StatusLocked
 		res.Message = "The phone is locked; call phone_handoff so the person can unlock it."
 	}
+	_, blocked := g.policy.Blocked(cur.App)
 	if !req.Screenshot {
 		g.startShot(l.dev, cur)
 	} else {
-		if res.Rule != "" {
+		switch {
+		case res.Rule != "":
 			res.Message = strings.TrimSpace(res.Message + " No screenshot: the app is blocked.")
-		} else {
+		case blocked:
+			res.Message = strings.TrimSpace(res.Message + " No screenshot: Pinky takes no pictures of a blocked app, also when the person allows it for the task.")
+		default:
 			img, err := g.screenshot(ctx, l.dev, cur)
 			switch {
 			case err == nil:
@@ -866,7 +897,7 @@ func (g *Gateway) waitChange(ctx context.Context, l *lease, wait time.Duration, 
 		if err != nil {
 			return
 		}
-		view, _ := g.agentView(cur)
+		view, _ := g.agentView(l, cur)
 		if base == nil || body(view) != body(base) {
 			g.settle(ctx, l.dev)
 			return
@@ -919,7 +950,7 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 		if err != nil {
 			return g.finish(l, g.readError(l, err))
 		}
-		view, _ := g.agentView(cur)
+		view, _ := g.agentView(l, cur)
 		g.mu.Lock()
 		evs := append([]screen.Event(nil), l.dev.events...)
 		g.mu.Unlock()
@@ -927,7 +958,7 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 		if !found && time.Since(lastOCR) >= waitForOCREvery {
 			if o, err := g.observe(ctx, l.dev, true); err == nil {
 				lastOCR = time.Now()
-				ov, _ := g.agentView(o)
+				ov, _ := g.agentView(l, o)
 				ocrFound = screenHas(ov, evs, text)
 				if ocrFound || req.Gone {
 					cur = o

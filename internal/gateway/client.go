@@ -137,7 +137,7 @@ func (g *Gateway) Tasks() []TaskView {
 
 func taskView(t *task) TaskView {
 	return TaskView{ID: t.id, DeviceID: t.deviceID, DeviceName: t.deviceName, Agent: t.agent, Title: t.title,
-		State: t.state, Started: t.started, Ended: t.ended, Steps: append([]StepView(nil), t.steps...)}
+		State: t.state, Started: t.started, Ended: t.ended, Steps: append([]StepView(nil), t.steps...), ReadOnly: t.readOnly}
 }
 
 // Needs implements API.
@@ -151,7 +151,8 @@ func (g *Gateway) Needs() []NeedView {
 		out = append(out, NeedView{ID: info.ID, Kind: kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
 			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
-			AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info)})
+			AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info), Unblock: isUnblock(info),
+			ReadOnly: askedReadOnly(info)})
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()

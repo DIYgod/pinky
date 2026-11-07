@@ -110,6 +110,11 @@ type Input struct {
 	ScopeApps []string
 	// ReadOnly forces read-only mode, for agents whose scope is read-only.
 	ReadOnly bool
+	// AllowBlocked is set when the person allowed the app for the task
+	// although a rule blocks it (a finance app, or one they blocked): rules
+	// that block whole apps do not apply to it. Every other rule still
+	// does, and password managers stay blocked.
+	AllowBlocked bool
 }
 
 // Verdict is the policy's answer for one action.

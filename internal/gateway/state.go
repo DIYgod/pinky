@@ -160,6 +160,13 @@ type lease struct {
 	// grants holds the rules the person allowed for the rest of the task,
 	// per app: grantKey(rule, app).
 	grants map[string]bool
+	// unblocked lists the blocked apps the person allowed for the rest of
+	// the task, and kept the apps whose opening they refused in it
+	// (unblock.go).
+	unblocked, kept []screen.App
+	// readOnly is set when the agent asked for read-only at phone_connect:
+	// the task runs read-only whatever the agent's scope.
+	readOnly bool
 	// tookOverSeen is set once the agent got user_took_over for the current
 	// takeover; later calls get paused.
 	tookOverSeen bool
@@ -209,7 +216,8 @@ type task struct {
 	steps      []StepView
 	stepCount  int
 	approvals  int
-	next       int // the next step index
+	next       int  // the next step index
+	readOnly   bool // the agent asked for read-only (TaskView.ReadOnly)
 }
 
 // maxTaskSteps bounds the steps a running task keeps in memory; history

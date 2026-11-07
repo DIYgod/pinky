@@ -91,6 +91,8 @@ func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 			a.handoffControls(c, n)
 		case newAgentNeed(n):
 			a.agentRequestControls(c, n)
+		case n.Unblock:
+			a.unblockControls(c, n)
 		default:
 			a.approvalControls(c, n)
 		}
@@ -183,11 +185,18 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 }
 
 // agentRequestControls answer an agent's first connection: what it may do,
-// then Deny or Approve.
+// then Deny or Approve. An agent that asked to only browse and read is
+// offered that first.
 func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	scope := gateway.Scope{Mode: gateway.ScopeEverything}
+	if n.ReadOnly {
+		scope.Mode = gateway.ScopeReadOnly
+	}
 	if _, ok := a.api.(agentScoper); ok {
+		if n.ReadOnly {
+			mg.Text(c, locales.NeedsAgentAskedReadOnly(agentOf(n))).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		}
 		mg.Text(c, locales.NeedsLetAgent(agentOf(n))).FontSize(13).FontWeight(600).Margin(12, 0, 6, 0)
 		scope = a.scopePicker(c, n.ID, locales.NeedsLetAgent(agentOf(n)), scope)
 	}
@@ -205,6 +214,23 @@ func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
 		}
 	})
 	_ = p
+}
+
+// unblockControls answer an agent's wish to open a blocked app: what
+// allowing it does, then Deny or Allow for this task. Any Allow counts for
+// the task (NeedView.Unblock).
+func (a *app) unblockControls(c *mg.Context, n gateway.NeedView) {
+	p := pal(c)
+	mg.Text(c, locales.NeedsUnblockHow(nonEmpty(n.App, locales.PanelThisApp()), ruleName(n.Rule), agentOf(n))).
+		FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+	mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {
+		if button(c, locales.NeedsDeny(), btnOpt{}).Clicked() {
+			a.decide(n, gateway.Deny, "")
+		}
+		if button(c, locales.NeedsAllowTask(), btnOpt{kind: btnPrimary}).Clicked() {
+			a.decide(n, gateway.AllowTask, "")
+		}
+	})
 }
 
 // approvalControls are Deny, Allow and More options, or the note editor
@@ -337,6 +363,9 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 		meta := []string{}
 		if t.Agent != "" {
 			meta = append(meta, t.Agent)
+		}
+		if t.ReadOnly {
+			meta = append(meta, locales.TasksReadOnly())
 		}
 		meta = append(meta, t.DeviceName, elapsed(taskDuration(t, c.Now())))
 		mg.Text(c, strings.Join(meta, " · ")).FontSize(13).TextColor(p.ink2)

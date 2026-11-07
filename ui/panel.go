@@ -215,6 +215,11 @@ func (a *app) panelView(c *mg.Context) {
 				mg.Spacer(c)
 				a.agentRequestControls(c, n)
 				return
+			case n.Unblock:
+				// Return and Esc still allow (for the task) and deny.
+				mg.Spacer(c)
+				a.unblockControls(c, n)
+				return
 			}
 			if !noting {
 				a.screenshotCrop(c, n)
@@ -293,6 +298,8 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 				title, detail = locales.PanelDenied(), locales.PanelAgentDenied(agent)
 			case newAgentNeed(x.need):
 				title, detail = locales.PanelAllowed(), locales.PanelAgentAllowed(agent)
+			case x.need.Unblock && x.d != gateway.Deny:
+				title, detail = locales.PanelAllowedTask(), locales.PanelUnblockedDetail(agent, nonEmpty(app, locales.PanelThisApp()))
 			}
 			switch {
 			case title != "":

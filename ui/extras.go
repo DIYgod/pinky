@@ -355,6 +355,19 @@ var scopeChoices = []struct {
 	{gateway.ScopeWatchOnly, locales.ScopeWatchOnly},
 }
 
+// scopeHint says what a scope lets an agent do, under the menu.
+func scopeHint(m gateway.ScopeMode) string {
+	switch m {
+	case gateway.ScopeApps:
+		return locales.ScopeHintApps()
+	case gateway.ScopeReadOnly:
+		return locales.ScopeHintReadOnly()
+	case gateway.ScopeWatchOnly:
+		return locales.ScopeHintWatchOnly()
+	}
+	return locales.ScopeHintEverything()
+}
+
 func scopeLabel(m gateway.ScopeMode) string {
 	for _, c := range scopeChoices {
 		if c.mode == m {
