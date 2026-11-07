@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- You can now remove a phone from Pinky: Remove this phone… in the phone's ⋯ menu, on its page while it is offline, on its tile in All phones, by right-clicking it in the sidebar, or in Settings › Phones. Its saved PIN and settings go; its history stays unless you choose to delete it too.
+- A phone you removed over Wi-Fi stays away until you pair it again or plug it in, even when adb reconnects it by itself. Pinky doesn't unpair the phone from your computer, so other apps that use it keep working.
+
 ## 2026.1108.5 (2026-11-08)
 
 - Pinky now carries its own adb on macOS, Windows and Linux, so Android phones work without installing Android's platform tools. It still uses the adb you already run, such as Android Studio's or Homebrew's, also when Pinky is opened from the Finder.
