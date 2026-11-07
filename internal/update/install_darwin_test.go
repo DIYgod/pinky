@@ -208,7 +208,11 @@ func waitUntil(t *testing.T, what string, d time.Duration, cond func() bool) {
 }
 
 func TestSwap(t *testing.T) {
-	apps := t.TempDir()
+	// A folder with spaces and quotes, as on an external disk.
+	apps := filepath.Join(t.TempDir(), `My "Apps" $HOME`)
+	if err := os.MkdirAll(apps, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	installed := fakeBundle(t, apps, "Pinky.app", BundleID, "2026.1107.1")
 	os.WriteFile(filepath.Join(installed, "Contents", "old-only"), []byte("x"), 0o644)
 	zip := zipBundle(t, fakeBundle(t, t.TempDir(), "Pinky.app", BundleID, "2026.1107.2"))
