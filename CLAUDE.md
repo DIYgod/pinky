@@ -23,7 +23,7 @@ To release:
    scripts/release.sh tag -push -trailer "Co-Authored-By: <the line your commits end with>"
    ```
 
-   It gives the notes the next version, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together. The tag starts the release workflow, which builds, signs, notarizes and publishes the release and updates the Homebrew cask; build nothing yourself. `-n` shows what it would do.
+   It gives the notes the next version, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together. The tag starts the release workflow, which builds, signs, notarizes and publishes the release, and the Homebrew tap picks up its cask; build nothing yourself. `-n` shows what it would do.
 3. If the push is refused because `origin/main` moved, the script undoes its commit and tag: `git pull --rebase origin main`, then run it again.
 
 A push that is not a release leaves `## Unreleased` as it is. Never change a released section's heading, never move or reuse a tag, and never push a `v*` tag other than through `scripts/release.sh tag`.
