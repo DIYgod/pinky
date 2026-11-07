@@ -89,6 +89,8 @@ func needFFmpeg(t *testing.T) {
 
 func TestDecodeTestStream(t *testing.T) {
 	needFFmpeg(t)
+	// Which FFmpeg decodes, for TestPackagedFFmpeg.
+	t.Logf("FFmpeg: %s", Version())
 	for _, c := range []struct {
 		name     string
 		codec    driver.Codec

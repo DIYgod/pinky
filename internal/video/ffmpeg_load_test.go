@@ -45,31 +45,36 @@ func TestSearchDirsOrder(t *testing.T) {
 	}
 }
 
-// TestPackagedFFmpeg decodes the test streams with the FFmpeg of a
-// packaged app (make app), in a process that loads no other FFmpeg:
+// TestPackagedFFmpeg decodes the test streams with the FFmpeg that a package
+// of Pinky carries, in a process that loads no other FFmpeg:
 //
 //	PINKY_FFMPEG_APP=build/pinky/darwin-arm64/Pinky.app go test -run TestPackagedFFmpeg ./internal/video/
+//	PINKY_FFMPEG_APP=<the unpacked .tar.gz or Windows zip> go test -run TestPackagedFFmpeg ./internal/video/
 //
-// It runs TestDecodeTestStream again in a child process pointed at the
-// app's Frameworks folder, and reads from dyld which libraries that
-// process loaded: every FFmpeg library must be the app's. (Making the test
-// streams still takes an ffmpeg command, in processes of its own.)
+// It runs TestDecodeTestStream again in a child process pointed at where
+// the package keeps FFmpeg (Pinky.app's Frameworks folder, else the folder
+// of the executable), and checks that the child loaded FFmpeg from there:
+// on macOS every FFmpeg library that dyld reports, elsewhere the folders
+// that Version names. (Making the test streams still takes an ffmpeg
+// command, in processes of its own.)
 func TestPackagedFFmpeg(t *testing.T) {
 	app := os.Getenv("PINKY_FFMPEG_APP")
 	if app == "" {
-		t.Skip("set PINKY_FFMPEG_APP to a Pinky.app to check the FFmpeg it carries")
+		t.Skip("set PINKY_FFMPEG_APP to a Pinky.app, or to the folder of a Windows or Linux Pinky, to check the FFmpeg it carries")
 	}
-	if runtime.GOOS != "darwin" {
-		t.Skip("app bundles are macOS's")
+	dir := app
+	if runtime.GOOS == "darwin" {
+		dir = filepath.Join(app, "Contents", "Frameworks")
 	}
-	dir, err := filepath.Abs(filepath.Join(app, "Contents", "Frameworks"))
+	dir, err := filepath.Abs(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if real, err := filepath.EvalSymlinks(dir); err == nil {
 		dir = real
 	}
-	if _, err := os.Stat(filepath.Join(dir, "libavcodec.63.dylib")); err != nil {
+	_, avcodec, _ := libNames()
+	if _, err := os.Stat(filepath.Join(dir, avcodec)); err != nil {
 		t.Fatalf("%s carries no FFmpeg: %v", app, err)
 	}
 
@@ -79,16 +84,36 @@ func TestPackagedFFmpeg(t *testing.T) {
 			cmd.Env = append(cmd.Env, kv)
 		}
 	}
-	cmd.Env = append(cmd.Env, "PINKY_FFMPEG_DIR="+dir, "DYLD_PRINT_LIBRARIES=1")
+	cmd.Env = append(cmd.Env, "PINKY_FFMPEG_DIR="+dir)
+	if runtime.GOOS == "darwin" {
+		cmd.Env = append(cmd.Env, "DYLD_PRINT_LIBRARIES=1")
+	}
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	err = cmd.Run()
 	if err != nil {
-		t.Fatalf("decode with the app's FFmpeg: %v\n%s", err, tail(out.String()))
+		t.Fatalf("decode with the package's FFmpeg: %v\n%s", err, tail(out.String()))
 	}
 	text := out.String()
 	if !strings.Contains(text, "--- PASS: TestDecodeTestStream") || strings.Contains(text, "--- SKIP: TestDecodeTestStream") {
 		t.Fatalf("TestDecodeTestStream did not decode:\n%s", tail(text))
+	}
+	for _, l := range strings.Split(text, "\n") {
+		if strings.Contains(l, "video_test.go") {
+			t.Log(strings.TrimSpace(l))
+		}
+	}
+
+	if runtime.GOOS != "darwin" {
+		// "FFmpeg: libavcodec 63.1.102 (<the folders it came from>)"
+		m := regexp.MustCompile(`FFmpeg: libavcodec [0-9.]+ \((.*)\)`).FindStringSubmatch(text)
+		if m == nil {
+			t.Fatalf("the decoding process did not say which FFmpeg it loaded:\n%s", tail(text))
+		}
+		if strings.TrimSpace(m[1]) != dir {
+			t.Errorf("the decoding process loaded FFmpeg from %s, not only from the package's %s", m[1], dir)
+		}
+		return
 	}
 
 	// dyld[<pid>]: <uuid> <path>, for the child only: the ffmpeg commands
@@ -114,11 +139,6 @@ func TestPackagedFFmpeg(t *testing.T) {
 	for _, want := range []string{"avutil", "avcodec", "swscale"} {
 		if !found[want] {
 			t.Errorf("lib%s was not loaded from %s (dyld reported %v)", want, dir, found)
-		}
-	}
-	for _, l := range strings.Split(text, "\n") {
-		if strings.Contains(l, "video_test.go") {
-			t.Log(strings.TrimSpace(l))
 		}
 	}
 }
