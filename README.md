@@ -60,7 +60,7 @@ make companion   # optional: the Android companion APK (Android SDK and JDK)
 make app         # build/pinky/darwin-<arch>/Pinky.app and pinky-<version>-<arch>.dmg
 ```
 
-`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app ad hoc and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. An ad-hoc signed app runs on the Mac that built it; another Mac's Gatekeeper refuses it until it is signed with a Developer ID (`macos.signingIdentity` in `cmd/pinky/mygo.json`).
+`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize: submit the final `.dmg` with `xcrun notarytool` and staple it.
 
 `go run ./cmd/pinky` does not see the app's FFmpeg: install FFmpeg 9 with Homebrew (`brew install ffmpeg`) or point at the build, `PINKY_FFMPEG_DIR=build/ffmpeg/lib go run ./cmd/pinky`.
 

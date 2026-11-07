@@ -6,9 +6,10 @@ GOARCH := $(shell go env GOARCH)
 FFMPEG := build/ffmpeg
 # The companion APK that make app puts in the app (make companion).
 COMPANION_APK ?= android/companion/app/build/outputs/apk/debug/app-debug.apk
-# The identity that signs Pinky.app: "-" signs ad hoc, for this Mac only;
-# a Developer ID ("Developer ID Application: …") signs for others.
-MACOS_SIGN ?= -
+# The identity that signs Pinky.app: macos.signingIdentity in
+# cmd/pinky/mygo.json, else "-", ad hoc, for this Mac only. A Developer ID
+# ("Developer ID Application: …") signs for other Macs.
+MACOS_SIGN ?= $(or $(shell sed -n 's/.*"signingIdentity": *"\([^"]*\)".*/\1/p' cmd/pinky/mygo.json),-)
 
 .PHONY: build test vet check app e2e companion ffmpeg
 
