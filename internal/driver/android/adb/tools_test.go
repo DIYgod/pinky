@@ -112,8 +112,16 @@ func toolList(tools []Tool) string {
 	return b.String()
 }
 
+// TestToolsOrder: the order of the search on each system. The macOS and
+// Linux cases use this computer's paths, which on Windows are not
+// absolute without a drive, so they run elsewhere only.
 func TestToolsOrder(t *testing.T) {
 	j := filepath.Join
+	if runtime.GOOS == "windows" {
+		t.Run("windows", testToolsWindows)
+		return
+	}
+	testToolsWindows(t)
 	home := j("/", "Users", "pat")
 	sdk := j("/", "sdk")
 	defaultSDK := j(home, "Library", "Android", "sdk", "platform-tools", "adb")
@@ -154,23 +162,6 @@ func TestToolsOrder(t *testing.T) {
 	e = fakeEnv("darwin", []string{"/opt/homebrew/bin/adb"}, map[string]string{EnvADB: "pinky"}, home, j("/", "build", "pinky"), nil)
 	if got := e.tools(); len(got) != 0 {
 		t.Errorf("PINKY_ADB=pinky in a build without it: %v", got)
-	}
-
-	// Windows: the SDK in LOCALAPPDATA, PATH, Pinky's next to Pinky.exe.
-	local := j("/", "AppData", "Local")
-	winExe := j("/", "Programs", "Pinky", "Pinky.exe")
-	e = fakeEnv("windows",
-		[]string{j(local, "Android", "Sdk", "platform-tools", "adb.exe"), j("/", "scoop", "shims", "adb.exe"), j("/", "Programs", "Pinky", "adb.exe")},
-		map[string]string{"LOCALAPPDATA": local, "PATH": j("/", "scoop", "shims") + string(filepath.ListSeparator) + j("/", "Programs", "Pinky")},
-		j("/", "Users", "pat"), winExe, nil)
-	want = strings.Join([]string{
-		FromSDK + "=" + j(local, "Android", "Sdk", "platform-tools", "adb.exe"),
-		FromPath + "=" + j("/", "scoop", "shims", "adb.exe"),
-		// Pinky's own folder is on PATH: still Pinky's, and last.
-		FromPinky + "=" + j("/", "Programs", "Pinky", "adb.exe"),
-	}, "\n") + "\n"
-	if got := toolList(e.tools()); got != want {
-		t.Errorf("Windows:\n%s\nwant\n%s", got, want)
 	}
 
 	// Linux: the SDK, Linuxbrew, the package's /usr/bin/adb, Pinky's.
@@ -442,5 +433,30 @@ func TestStartServerNone(t *testing.T) {
 		if isLoopback(host) != want {
 			t.Errorf("isLoopback(%q) = %v", host, !want)
 		}
+	}
+}
+
+// testToolsWindows: the SDK in LOCALAPPDATA, PATH, Pinky's next to
+// Pinky.exe, in this computer's paths.
+func testToolsWindows(t *testing.T) {
+	j := filepath.Join
+	root := "/"
+	if runtime.GOOS == "windows" {
+		root = `C:\`
+	}
+	local := j(root, "AppData", "Local")
+	winExe := j(root, "Programs", "Pinky", "Pinky.exe")
+	e := fakeEnv("windows",
+		[]string{j(local, "Android", "Sdk", "platform-tools", "adb.exe"), j(root, "scoop", "shims", "adb.exe"), j(root, "Programs", "Pinky", "adb.exe")},
+		map[string]string{"LOCALAPPDATA": local, "PATH": j(root, "scoop", "shims") + string(filepath.ListSeparator) + j(root, "Programs", "Pinky")},
+		j(root, "Users", "pat"), winExe, nil)
+	want := strings.Join([]string{
+		FromSDK + "=" + j(local, "Android", "Sdk", "platform-tools", "adb.exe"),
+		FromPath + "=" + j(root, "scoop", "shims", "adb.exe"),
+		// Pinky's own folder is on PATH: still Pinky's, and last.
+		FromPinky + "=" + j(root, "Programs", "Pinky", "adb.exe"),
+	}, "\n") + "\n"
+	if got := toolList(e.tools()); got != want {
+		t.Errorf("Windows:\n%s\nwant\n%s", got, want)
 	}
 }

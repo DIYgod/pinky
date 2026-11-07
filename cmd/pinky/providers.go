@@ -24,32 +24,30 @@ var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
 }
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	c := &adb.Client{}
-	// Pinky uses the adb server that runs, or starts one: with the adb of
-	// the Android SDK, Homebrew or PATH, else its own (adb.StartServer),
-	// now and whenever the server goes away.
-	start := func(ctx context.Context) error {
-		t, err := adb.StartServer(ctx)
-		if err != nil {
-			log.Warn("android: starting an adb server", "err", err)
-			return err
-		}
-		if t.Path != "" {
-			log.Info("android: started an adb server", "adb", t.Path, "from", t.Source, "version", t.Version)
-		}
-		return nil
-	}
-	if _, err := c.Version(ctx); errors.Is(err, adb.ErrServerNotRunning) {
-		if err := start(ctx); errors.Is(err, adb.ErrNoADB) {
-			// A build without Pinky's own adb, on a computer without one.
-			return nil, fmt.Errorf("android: no adb server, and no adb to start one (install Android's platform tools, or set %s): %w", adb.EnvADB, err)
-		}
+	if _, err := c.Version(ctx); errors.Is(err, adb.ErrServerNotRunning) && len(adb.Tools()) == 0 {
+		// A build without Pinky's own adb, on a computer without one.
+		return nil, fmt.Errorf("android: no adb server, and no adb to start one (install Android's platform tools, or set %s): %w", adb.EnvADB, adb.ErrNoADB)
 	}
 	return android.NewProvider(android.Config{
-		Client:      c,
-		StartServer: start,
+		Client: c,
+		// Pinky uses the adb server that runs, or starts one, with the
+		// adb of the Android SDK, Homebrew or PATH, else its own
+		// (adb.StartServer): at the first List, and whenever the server
+		// went away.
+		StartServer: func(ctx context.Context) error {
+			t, err := adb.StartServer(ctx)
+			if err != nil {
+				log.Warn("android: starting an adb server", "err", err)
+				return err
+			}
+			if t.Path != "" {
+				log.Info("android: started an adb server", "adb", t.Path, "from", t.Source, "version", t.Version)
+			}
+			return nil
+		},
 		// adb's own discovery stops seeing the network after the
 		// computer's network changes; the driver then reconnects the
 		// phones paired over Wi-Fi itself. Not while PINKY_DEVICES limits
