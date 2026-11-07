@@ -2,6 +2,17 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- By default, Pinky now asks only before payments (Settings › Safety › When should agents ask you?). Installs that never changed this setting move to it too; if you changed any safety setting, your choice stays.
+- Buttons that move money, such as Sell, Swap, Trade, Repay, Borrow, Stake, Withdraw, Transfer, 买入, 卖出 and 还款, now count as payments and ask, with or without an amount on the screen.
+- "Bin" and "Remove" buttons now count as deletions, as "Delete" and "Trash" do.
+- More banking, payment and crypto apps are blocked by default, among them DBS, OCBC, UOB, Trust Bank, OKX, Coinbase, Crypto.com and ether.fi; Singpass is blocked with the password managers.
+- An app blocked as part of a family of apps, such as all of one bank's apps, can now be unblocked on its own in Settings › Safety.
+- Edits to the rules files take effect while Pinky runs, and Settings › Safety shows them.
+- Opening a blocked banking or wallet app now asks you instead of failing. If you allow it, the agent may open and read it for the rest of that task; what your rules ask about there still asks, and Pinky keeps no screenshots or recordings of it.
+- An agent can start a task read-only, and a new agent that asks for read-only gets that choice first. The scope menu says plainly what each choice allows.
+
 ## 2026.1108.1 (2026-11-08)
 
 - Approvals now show the whole phone screen with what the agent wants to tap marked, next to a close-up you can read, so you can tell the app, the page and the button at a glance. Swipes show as an arrow.
