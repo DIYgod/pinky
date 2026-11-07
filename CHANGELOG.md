@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- The mirror no longer stays on "Connecting…" when you come back to a phone after a while.
+- Unblocking an app in Settings › Safety now works for apps that are blocked by their id, such as Wise.
+- An agent's tap on an element keeps working when the iPhone reports that element under another parent or role.
+- Waiting for text now also finds text that only shows in the picture, such as in web pages inside apps.
+- When a task lists app names that match no installed app, the agent is told which ones.
+
 ## 2026.1107.5 (2026-11-07)
 
 - On Windows, Pinky now installs updates by itself, as on macOS: when you're not using it, or when you click Update now, it runs the new installer quietly, starts the new version and shows what's new, and goes back to the version you had if the new one doesn't start. Agents connected through `pinky mcp` stay connected.
