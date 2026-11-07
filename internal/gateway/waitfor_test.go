@@ -82,3 +82,66 @@ func TestWaitForReadsOCRText(t *testing.T) {
 		t.Fatalf("not gone after it went: %s", res.Message)
 	}
 }
+
+// phone_wait_for matches whole words in Latin text (field test #24):
+// waiting for the Stop button is not answered at once by the Stopwatch tab.
+func TestWaitForMatchesWholeWords(t *testing.T) {
+	ctx := context.Background()
+	dev := &ocrDev{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android)}
+	g := newOCRGateway(t, dev)
+	s, _ := connect(t, g, "Time the run")
+	dev.show("Stopwatch")
+
+	res := s.WaitFor(ctx, WaitForRequest{Text: "Stop", TimeoutMS: 300})
+	mustStatus(t, res, StatusSettled)
+	if res.Matched == nil || *res.Matched {
+		t.Fatalf("“Stop” matched the Stopwatch tab: %s", res.Message)
+	}
+	res = s.WaitFor(ctx, WaitForRequest{Text: "Stop", Gone: true, TimeoutMS: 300})
+	if res.Matched == nil || !*res.Matched {
+		t.Fatalf("“Stop” not gone although only Stopwatch shows: %s", res.Message)
+	}
+	dev.show("Stop")
+	res = s.WaitFor(ctx, WaitForRequest{Text: "stop", TimeoutMS: 3000})
+	if res.Matched == nil || !*res.Matched {
+		t.Fatalf("“stop” not found: %s", res.Message)
+	}
+}
+
+func TestContainsText(t *testing.T) {
+	for _, c := range []struct {
+		label, text string
+		want        bool
+	}{
+		{"Stopwatch", "Stop", false},
+		{"Stop", "Stop", true},
+		{"STOP", "stop", true},
+		{"Stop timer", "Stop", true},
+		{"Nonstop", "stop", false},
+		{"Done.", "Done", true},
+		{"Order placed", "placed", true},
+		{"Your order was placed", "order was", true},
+		{"Stopwatch, Stop", "Stop", true}, // the second occurrence is a word
+		{"Wi-Fi", "Wi-Fi", true},
+		{"Wi-Fi Calling", "Wi-Fi", true},
+		{"PayPal", "Pay", false},
+		{"Apple Pay", "Pay", true},
+		{"Pay $5", "Pay", true},
+		{"$50", "$5", false},
+		{"Step 1 of 3", "1", true},
+		{"15 min", "5", false},
+		{"Order #12: ready", "#12", true},
+		{"立即还款", "还款", true},
+		{"预估未出账单 ¥5,527.07", "预估未出账单", true},
+		{"お支払いを確定", "支払い", true},
+		{"결제하기", "결제", true},
+		{"Café ouvert", "café", true},
+		{"Cafés", "café", false},
+		{"", "Stop", false},
+		{"Stop", "", false},
+	} {
+		if got := containsText(c.label, c.text); got != c.want {
+			t.Errorf("containsText(%q, %q) = %v, want %v", c.label, c.text, got, c.want)
+		}
+	}
+}

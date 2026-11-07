@@ -202,7 +202,7 @@ Steps run in order, each settling first, and the batch stops at the first step t
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `text` | string, required | Matched without case in element labels and new events |
+| `text` | string, required | Matched without case in element labels and new events. In languages that put spaces between words it matches whole words only (`Stop` does not match `Stopwatch`); Chinese, Japanese, Korean and Thai text matches anywhere in a label |
 | `gone` | boolean | Wait for it to disappear |
 | `timeout_ms` | 0–45000 | Default 10000 |
 

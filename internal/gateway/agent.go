@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/DIYgod/pinky/internal/approval"
 	"github.com/DIYgod/pinky/internal/driver"
@@ -971,19 +973,59 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 	return g.finish(l, res)
 }
 
+// screenHas reports whether an element's label or an event shows text
+// (containsText).
 func screenHas(s *screen.Screen, evs []screen.Event, text string) bool {
-	t := strings.ToLower(text)
 	for _, e := range s.Elements {
-		if strings.Contains(strings.ToLower(e.Label), t) {
+		if containsText(e.Label, text) {
 			return true
 		}
 	}
 	for _, ev := range evs {
-		if strings.Contains(strings.ToLower(ev.Text), t) {
+		if containsText(ev.Text, text) {
 			return true
 		}
 	}
 	return false
+}
+
+// containsText reports whether label contains text, ignoring case. Where a
+// script puts spaces between words, the text must match whole words, so
+// waiting for "Stop" is not answered by the "Stopwatch" tab already on the
+// screen; Chinese, Japanese, Korean and Thai text matches anywhere, as
+// their words run together.
+func containsText(label, text string) bool {
+	l, t := strings.ToLower(label), strings.ToLower(text)
+	if t == "" {
+		return false
+	}
+	first, _ := utf8.DecodeRuneInString(t)
+	last, _ := utf8.DecodeLastRuneInString(t)
+	for i := 0; i <= len(l); {
+		j := strings.Index(l[i:], t)
+		if j < 0 {
+			return false
+		}
+		start, end := i+j, i+j+len(t)
+		before, _ := utf8.DecodeLastRuneInString(l[:start])
+		after, _ := utf8.DecodeRuneInString(l[end:])
+		if !(wordRune(before) && wordRune(first)) && !(wordRune(last) && wordRune(after)) {
+			return true
+		}
+		_, size := utf8.DecodeRuneInString(l[start:])
+		i = start + size
+	}
+	return false
+}
+
+// wordRune reports whether r is a letter or digit of a script that
+// separates its words with spaces.
+func wordRune(r rune) bool {
+	if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+		return false
+	}
+	return !unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul,
+		unicode.Thai, unicode.Lao, unicode.Khmer, unicode.Myanmar)
 }
 
 // Apps implements phone_apps: installed apps inside the agent's scope.
