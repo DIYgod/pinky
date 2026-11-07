@@ -563,9 +563,8 @@ func (p *Provider) Connections(ctx context.Context, id string) driver.Connection
 	return out
 }
 
-// probeLegacyServices reports whether the developer services Pinky uses
-// below iOS 27 are published: instruments (screenshots) and the
-// accessibility daemon, both from the developer disk image.
+// probeLegacyServices reports whether a phone below iOS 27 lists what Pinky
+// uses there (see legacyReady).
 func probeLegacyServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
@@ -574,8 +573,31 @@ func probeLegacyServices(ctx context.Context, e goios.DeviceEntry) (bool, error)
 		return false, err
 	}
 	defer l.Close()
-	return l.has(instrumentsService), nil
+	return legacyReady(l), nil
 }
+
+// legacyReady reports whether a phone below iOS 27 lists instruments, for
+// screenshots, and a service only the developer disk image publishes, for
+// XCTest (WebDriverAgent runs on the image's frameworks). Instruments and
+// the accessibility daemons come with iOS itself: iOS 27 lists them with
+// no image mounted, so they say nothing about the image.
+func legacyReady(l *link) bool {
+	if !l.has(instrumentsService) {
+		return false
+	}
+	for _, s := range diskImageServices {
+		if l.has(s) {
+			return true
+		}
+	}
+	return false
+}
+
+// diskImageServices are what the developer disk image publishes, through
+// its launch daemons (Xcode 27.2's image, cryptex and personalized alike).
+// They are listed whenever the image is mounted, also where the phone
+// refuses them below iOS 27.
+var diskImageServices = []string{displayService, universalHIDService, screenCaptureService, pasteboardService, deviceInfoService}
 
 // instrumentsService is DTServiceHub, instruments over RemoteXPC (iOS 17+).
 const instrumentsService = "com.apple.instruments.dtservicehub"

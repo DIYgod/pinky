@@ -128,3 +128,30 @@ func TestCDServiceRedials(t *testing.T) {
 		t.Fatalf("after Close: %v, %d dials", err, dials)
 	}
 }
+
+func TestLegacyReady(t *testing.T) {
+	listing := func(services ...string) *link {
+		l := &link{rsd: goios.RsdHandshakeResponse{Services: map[string]goios.RsdServiceEntry{}}}
+		for i, s := range services {
+			l.rsd.Services[s] = goios.RsdServiceEntry{Port: uint32(60000 + i)}
+		}
+		return l
+	}
+	builtIn := []string{instrumentsService, "com.apple.accessibility.axAuditDaemon.remoteAXService"}
+	cases := []struct {
+		name string
+		l    *link
+		want bool
+	}{
+		// What the iPhone 13 mini (iOS 27.0.1) listed with no image mounted.
+		{"no image", listing(builtIn...), false},
+		{"image mounted", listing(append(builtIn, displayService, universalHIDService, screenCaptureService, pasteboardService, deviceInfoService)...), true},
+		{"one of the image's services", listing(append(builtIn, screenCaptureService)...), true},
+		{"no instruments", listing(displayService, deviceInfoService), false},
+	}
+	for _, c := range cases {
+		if got := legacyReady(c.l); got != c.want {
+			t.Errorf("%s: %v, want %v", c.name, got, c.want)
+		}
+	}
+}
