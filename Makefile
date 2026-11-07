@@ -6,6 +6,9 @@ GOARCH := $(shell go env GOARCH)
 FFMPEG := build/ffmpeg
 # The companion APK that make app puts in the app (make companion).
 COMPANION_APK ?= android/companion/app/build/outputs/apk/debug/app-debug.apk
+# The identity that signs Pinky.app: "-" signs ad hoc, for this Mac only;
+# a Developer ID ("Developer ID Application: …") signs for others.
+MACOS_SIGN ?= -
 
 .PHONY: build test vet check app e2e companion ffmpeg
 
@@ -45,11 +48,11 @@ app:
 	else \
 		echo "no companion APK at $(COMPANION_APK) (make companion); the app will not offer to install it"; \
 	fi
-	MYGO_LDFLAGS="-X main.version=$(VERSION)" go tool mygo build cmd/pinky
+	MYGO_LDFLAGS="-X main.version=$(VERSION)" go tool mygo build -sign "$(MACOS_SIGN)" -skip-notarize cmd/pinky
 	@rm -f cmd/pinky/resources/pinky-companion.apk
 	@rmdir cmd/pinky/resources 2>/dev/null || true
 ifeq ($(UNAME),Darwin)
-	scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
+	SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 endif
 
 # A pinky binary with MyGo's automation socket, for end-to-end checks.

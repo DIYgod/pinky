@@ -2,21 +2,29 @@
 # Finishes a Pinky.app that `mygo build` made (make app), then makes its
 # disk image again so the .dmg carries the finished app:
 #
-#   scripts/macapp.sh <Pinky.app> <ffmpeg prefix> [<disk image>]
+#   SIGN=<identity> scripts/macapp.sh <Pinky.app> <ffmpeg prefix> [<disk image>]
 #
 # - copies FFmpeg's libraries from <ffmpeg prefix>/lib (make ffmpeg) into
 #   Contents/Frameworks, named by their major versions as internal/video
 #   loads them; each one's install name is @rpath/<name> and its rpath is
 #   @loader_path, so they find one another there whoever loads them;
 # - puts FFmpeg's license and build notes in Contents/Resources;
-# - signs the libraries and the app again, ad hoc;
+# - signs the libraries and the app again with SIGN, the identity mygo
+#   build signed with ("-", ad hoc, by default; a Developer ID gets the
+#   hardened runtime and a timestamp, as mygo build gives it);
 # - rebuilds the disk image from the finished app, keeping the Finder
-#   window (.DS_Store) and volume icon that mygo build gave it.
+#   window (.DS_Store) and volume icon that mygo build gave it, and signs
+#   it with a Developer ID. Notarize the final image yourself.
 set -eu
 
 app=${1:?usage: scripts/macapp.sh <Pinky.app> <ffmpeg prefix> [<disk image>]}
 ffmpeg=${2:?usage: scripts/macapp.sh <Pinky.app> <ffmpeg prefix> [<disk image>]}
 dmg=${3:-}
+sign=${SIGN:--}
+signflags=""
+if [ "$sign" != "-" ]; then
+	signflags="--options runtime --timestamp"
+fi
 contents=$app/Contents
 frameworks=$contents/Frameworks
 libs="libavutil.61 libswscale.10 libavcodec.63 libavformat.63"
@@ -69,8 +77,10 @@ for f in COPYING.LGPLv2.1 BUILD.txt; do
 	cp "$ffmpeg/$f" "$contents/Resources/FFmpeg-$f"
 done
 
-codesign --force --sign - "$frameworks"/*.dylib
-codesign --force --deep --sign - "$app"
+# shellcheck disable=SC2086 # signflags splits on purpose
+codesign --force $signflags --sign "$sign" "$frameworks"/*.dylib
+# shellcheck disable=SC2086
+codesign --force --deep $signflags --sign "$sign" "$app"
 codesign --verify --deep --strict "$app"
 echo "added FFmpeg's libraries to $app"
 
@@ -119,5 +129,8 @@ if diskutil image create from -h >/dev/null 2>&1; then
 	fi
 else
 	hdiutil_retry convert "$work/rw.dmg" -format ULMO -ov -o "$dmg"
+fi
+if [ "$sign" != "-" ]; then
+	codesign --force --timestamp --sign "$sign" "$dmg"
 fi
 echo "made $dmg again from the finished app"

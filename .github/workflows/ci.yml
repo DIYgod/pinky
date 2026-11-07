@@ -95,6 +95,10 @@ jobs:
         shell: bash
         run: scripts/smoke.sh build/smoke
 
+      - name: Package for Linux and Windows
+        if: runner.os == 'Linux'
+        run: go tool mygo build -platform linux/amd64,windows/amd64 -skip-installer -o "$RUNNER_TEMP/packages" cmd/pinky
+
       - name: Window under Xvfb
         if: runner.os == 'Linux'
         run: |
