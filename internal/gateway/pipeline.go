@@ -485,6 +485,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	scope := g.scopeOf(l.session)
 	g.mu.Lock()
 	apps := append([]string(nil), l.apps...)
+	seen := l.baseline
 	g.mu.Unlock()
 	var fg screen.App
 	if cur != nil {
@@ -505,6 +506,9 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 
 	byRef := func(ref int) (*screen.Element, *Result) {
 		e, ok := cur.Find(ref)
+		if !ok {
+			e, ok = relocate(seen, cur, ref)
+		}
 		if !ok {
 			return nil, g.attachScreen(l, errResult(ErrNotFound, "[%d] is not on the screen anymore. Nothing was done.", ref), cur)
 		}
@@ -1554,6 +1558,35 @@ func (snap *snapshot) changed(cur *screen.Screen, p *prep) bool {
 		}
 	}
 	return false
+}
+
+// relocate finds the element the agent knew as ref on the screen it last
+// saw, when the fresh screen gave that element another ref. Refs follow an
+// element's ancestry, which some drivers report differently from one read
+// to the next (iOS apps whose views get re-wrapped), while agents are told
+// that a ref lasts as long as its element keeps its label and place. It
+// matches role, label and id, with the position within a few pixels, and
+// gives up when more than one element matches.
+func relocate(seen, cur *screen.Screen, ref int) (screen.Element, bool) {
+	if seen == nil || cur == nil {
+		return screen.Element{}, false
+	}
+	old, ok := seen.Find(ref)
+	if !ok || old.Source == screen.SourceOCR || old.Label == "" {
+		return screen.Element{}, false
+	}
+	var found screen.Element
+	n := 0
+	for _, e := range cur.Elements {
+		if e.Ref == 0 || e.Source == screen.SourceOCR {
+			continue
+		}
+		if e.Role == old.Role && e.Label == old.Label && e.ID == old.ID && near(e.Bounds, old.Bounds) {
+			found = e
+			n++
+		}
+	}
+	return found, n == 1
 }
 
 // near allows a few pixels of layout jitter.
