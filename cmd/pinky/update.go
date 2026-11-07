@@ -57,6 +57,9 @@ func startedUpdate(u *update.Updater, log *slog.Logger) *update.Swapped {
 		log.Info("update: running the new version", "from", sw.From, "to", sw.To)
 	}
 	u.Change(func(s *update.State) { s.Launched(version) })
+	if u.StatePath != "" {
+		update.RestartDone(filepath.Dir(u.StatePath))
+	}
 	return sw
 }
 

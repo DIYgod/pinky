@@ -67,7 +67,7 @@ The install (`BundleInstaller`):
 
 - `pinky daemon` checks at start and every 4 hours and logs when a newer version is out, with what to do; it never replaces itself (it may run under launchd, systemd or a package). `--no-update-check` turns the check off.
 - `pinky update [--check]` reports and, without `--check`, downloads, checks and installs the update while no Pinky runs (it says to `pinky quit` first otherwise): on macOS the same checks, then the swap at once (`SwapNow`), no helper.
-- Agents connected through `pinky mcp` lose their connection when the app restarts for an update; the shim does not reconnect yet (see Open questions).
+- **Agents stay connected across an update.** Before it quits for an update the app writes `update-restarting` next to `update.json`; a `pinky mcp` whose gateway goes away while that marker is fresh (5 minutes) keeps the agent's stdio open, waits up to 3 minutes for the new gateway, says hello again, replays the agent's `initialize` (with an id of its own, whose answer it swallows) and `notifications/initialized`, and goes on. Requests the old gateway did not answer are sent again, except `tools/call`, which may have acted on a phone: the agent gets an error saying to call the tool again. The new gateway removes the marker. Without the marker (Quit, `pinky quit`) the session ends with the gateway, as before. `TestShimReconnectsAfterAnUpdate` checks both with two fake daemons.
 
 ## Pinky Companion
 
@@ -87,11 +87,12 @@ The install (`BundleInstaller`):
 - `go test ./internal/update/`: versions, the feed (bad assets, redirects to HTTP, size limits), downloads (checksum, size, nothing left behind), the changelog, the state, idle rules, and on macOS staging (wrong version, identifier, two apps, not a zip, an unsigned bundle), the swap with a fake running app and a fake `open` (success, rollback after a crash, rollback when nothing launches), leftovers, `Locate` (translocated, read-only, ad hoc, Homebrew). `PINKY_SIGNED_APP=<a release Pinky.app> go test -run TestSignatureOfARelease ./internal/update/` checks the requirement against a real release and a modified copy.
 - `go test ./ui -run 'Update|WhatsNew|Companion(UpdatesWhen|Waits)|SettingsCheckNow|RelaunchArgs'`: the cards and dialogs in `ui.Tester` against a local feed and a fake installer, automatic installs waiting for an agent, the person and the setting, Homebrew and download-only installs, What's new, the companion's automatic update with the fake gateway.
 - `scripts/devlock.sh emulator-5562 env PINKY_DEVICE=emulator-5562 PINKY_COMPANION_OLD=<older apk> PINKY_COMPANION_APK=<bundled apk> go test -tags device -run TestDeviceCompanionUpdate -v ./internal/driver/android/`: off stays off, on stays on, and what Android does by itself; it leaves the bundled build installed and the setting as found.
+- `go test -run TestShimReconnectsAfterAnUpdate ./cmd/pinky/`: an agent's session through `pinky mcp` survives a restart marked as an update and ends with a plain quit.
 - `PINKY_E2E_SIGN="Developer ID Application: … (492J8Q67PF)" go test -tags e2e -run TestUpdateEndToEnd -v -timeout 10m ./cmd/pinky/`: two e2e builds signed with the Developer ID in a temporary Applications folder and a local feed; the older one, left alone in the menu bar, updates itself, the newer one starts, drops the old bundle and shows What's new over MyGo's automation socket.
 
 ## Open questions
 
 - **For the release pipeline:** the feed's repository (`update.Repo`), the asset names and formats (zip for macOS; the Windows installer; what Linux gets), that the macOS zip is of the stapled app, and that `CHANGELOG.md` follows the heading format. Releases should keep `latest` pointing at the newest stable release, since the feed URL follows it.
-- **Agents during a restart:** `pinky mcp` could keep the agent's session across an update by reconnecting and replaying `initialize`; today the agent sees its MCP server exit.
+- **Agents during a restart:** an agent connected over HTTP (Settings › Agents › Remote agents) loses its session when the app restarts; its MCP client has to connect again. Agents on `pinky mcp` reconnect (above).
 - **Homebrew:** if a cask is published with `auto_updates true`, Pinky should update itself there too and not defer to `brew`.
 - **Windows:** the silent install above.

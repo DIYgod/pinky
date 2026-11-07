@@ -95,3 +95,31 @@ func (s *State) Launched(version string) {
 func (s State) Snoozed(version string, now time.Time) bool {
 	return s.Later != "" && Compare(s.Later, version) == 0 && now.Before(s.LaterUntil)
 }
+
+// restartMarker is the file that tells `pinky mcp` the app is restarting
+// for an update, so it waits and reconnects instead of ending the agent's
+// session. It sits next to update.json.
+const restartMarker = "update-restarting"
+
+// restartFresh is how long a marker counts: a restart takes seconds.
+const restartFresh = 5 * time.Minute
+
+// MarkRestart notes that Pinky is about to quit for an update.
+func (u *Updater) MarkRestart() {
+	if u.StatePath == "" {
+		return
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(u.StatePath), restartMarker), []byte(time.Now().UTC().Format(time.RFC3339)), 0o600); err != nil {
+		u.logger().Warn("update: mark the restart", "err", err)
+	}
+}
+
+// Restarting reports whether Pinky quit for an update within the last
+// minutes, by the marker in dir (the folder of update.json).
+func Restarting(dir string) bool {
+	fi, err := os.Stat(filepath.Join(dir, restartMarker))
+	return err == nil && time.Since(fi.ModTime()) < restartFresh
+}
+
+// RestartDone removes the marker once a gateway runs again.
+func RestartDone(dir string) { os.Remove(filepath.Join(dir, restartMarker)) }

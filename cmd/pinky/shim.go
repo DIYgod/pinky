@@ -1,10 +1,8 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -14,9 +12,10 @@ import (
 	"github.com/DIYgod/pinky/internal/api"
 )
 
-// runMCP is the stdio shim agents launch. It forwards bytes between stdio
-// and the gateway's socket, where the MCP server runs, and starts the
-// gateway first when none is running.
+// runMCP is the stdio shim agents launch. It forwards messages between
+// stdio and the gateway's socket, where the MCP server runs, starts the
+// gateway first when none is running, and waits for it when the app
+// restarts for an update.
 func runMCP(args []string) error {
 	fs := flag.NewFlagSet("pinky mcp", flag.ContinueOnError)
 	fake := fs.Bool("fake", false, "when no gateway runs, start one with fake phones")
@@ -41,23 +40,12 @@ func runMCP(args []string) error {
 	if err != nil {
 		return err
 	}
-	br, _, err := api.Greet(conn, api.Hello{Role: api.RoleMCP, Token: tok})
+	br, err := greetMCP(conn, tok)
 	if err != nil {
 		return err
 	}
-	go func() {
-		io.Copy(conn, os.Stdin)
-		// The agent closed stdin: let the gateway end the session.
-		if uc, ok := conn.(*net.UnixConn); ok {
-			uc.CloseWrite()
-		} else {
-			conn.Close()
-		}
-	}()
-	if _, err := io.Copy(os.Stdout, br); err != nil && !errors.Is(err, net.ErrClosed) {
-		return err
-	}
-	return nil
+	// The session survives the app restarting for an update (shimconn.go).
+	return newShimSession(dirs, tok, os.Stdout).run(conn, br, os.Stdin)
 }
 
 // startDaemon starts the gateway in the background, detached from this

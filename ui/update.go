@@ -313,6 +313,7 @@ func (a *app) prepared(p *update.Prepared, err error) {
 			s.phase, s.err = updFailed, "Couldn't open the installer: "+err.Error()
 			return
 		}
+		a.opt.Updates.MarkRestart()
 		s.phase = updRestarting
 		s.quit()
 	default:
@@ -341,6 +342,8 @@ func (a *app) restartForUpdate() {
 		s.prepared, s.phase, s.err = nil, updFailed, updateError(err)
 		return
 	}
+	// Agents connected through `pinky mcp` wait for the new version.
+	a.opt.Updates.MarkRestart()
 	s.phase = updRestarting
 	log.Printf("pinky: restarting for version %s", s.prepared.Release.Version)
 	s.quit()
