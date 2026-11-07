@@ -89,6 +89,10 @@ finance:
     - jp.co.rakuten_bank.*
     - com.kakaobank.channel
     - viva.republica.toss
+    - com.dbs.*                         # DBS digibank, digibank by POSB, DBS PayLah!
+    - sg.trust                          # Trust Bank
+    - com.ocbc.*
+    - com.uob.*
     # Brokerages and crypto
     - com.robinhood.android
     - com.robinhood.release.Robinhood
@@ -117,6 +121,22 @@ finance:
     - com.kucoin.wallet
     - com.ledger.live
     - io.exodus.wallet
+    - com.okex.OKExAppstoreFull         # OKX (iOS)
+    - com.vilcsak.bitcoin2              # Coinbase (iOS)
+    - org.toshi.distribution            # Coinbase Wallet (iOS)
+    - co.mona.android                   # Crypto.com
+    - co.mona.Monaco
+    - com.kubi.kucoin
+    - fi.ether.cashapp                  # ether.fi
+    - app.ethenapay.co                  # Ethena
+    - to.plasma.one.application         # Plasma One
+    - ag.jup.jupiter.ios                # Jupiter
+    - me.rainbow
+    - com.uniswap.mobile
+    - io.gnosis.safe
+    # Remittance
+    - com.panda.exchangerate            # Panda Remit
+    - com.westernunion.android.mtapp
   names:
     - PayPal
     - Venmo
@@ -137,6 +157,17 @@ finance:
     - Coinbase
     - Binance
     - MetaMask
+    - digibank
+    - DBS digibank
+    - PayLah!
+    - DBS PayLah!
+    - Trust Bank
+    - OKX
+    - Crypto.com
+    - ether.fi
+    - Ethena
+    - Plasma One
+    - Panda Remit
 
 passwords:
   ids:
@@ -161,6 +192,7 @@ passwords:
     - com.microsoft.azureauthenticator
     - proton.android.pass
     - me.proton.pass.ios
+    - sg.ndi.sp                          # Singpass: national digital identity, signs in to banks
   names:
     - 1Password
     - Bitwarden
@@ -168,6 +200,7 @@ passwords:
     - Passwords
     - Authenticator
     - Authy
+    - Singpass
 
 messaging:
   ids:
