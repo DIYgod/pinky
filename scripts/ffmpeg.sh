@@ -1,34 +1,84 @@
 #!/bin/sh
-# Builds the FFmpeg libraries Pinky ships (make ffmpeg): a minimal LGPL
-# build of FFmpeg 9 with shared libraries, holding only what Pinky uses.
+# Builds the FFmpeg libraries Pinky ships (make ffmpeg, scripts/dist.sh): a
+# minimal LGPL build of FFmpeg 9 with shared libraries, holding only what
+# Pinky uses.
 #
-#   scripts/ffmpeg.sh <prefix> [arm64|amd64]
+#   scripts/ffmpeg.sh <prefix> [arm64|amd64|windows-amd64|linux-amd64]
 #
-# On macOS the second argument picks the processor (default: this Mac's),
-# so a Mac with Apple silicon builds the Intel libraries too; x86_64 needs
-# nasm (brew install nasm) for FFmpeg's assembly, or FFMPEG_NO_ASM=1 for
-# a slower build without it.
+# Without a second argument it builds for this machine. On macOS, arm64 or
+# amd64 picks the Mac's processor, so a Mac with Apple silicon builds the
+# Intel libraries too; x86_64 needs nasm (brew install nasm) for FFmpeg's
+# assembly, or FFMPEG_NO_ASM=1 for a slower build without it.
+# windows-amd64 (Pinky.exe's DLLs, cross-compiled with mingw-w64) and
+# linux-amd64 are built in a Linux container (Docker), the same on a Mac and
+# on GitHub's runners: the Linux libraries with Ubuntu 20.04's glibc, 2.31,
+# so that they load on the Linux systems of the last five years or so.
 #
 # - libavcodec: the H.264 and HEVC decoders and parsers, with VideoToolbox
-#   on macOS (internal/video decodes the phones' streams with them);
+#   on macOS and D3D11VA on Windows (internal/video decodes the phones'
+#   streams with them; on Linux it decodes in software);
 # - libavutil and libswscale (hardware frames, pixel conversion);
 # - libavformat with the MP4/MOV muxer and demuxer, the raw H.264/HEVC
 #   demuxers, the file protocol and the Annex B bitstream filters, for
 #   recordings that are remuxed without re-encoding.
 #
 # Nothing GPL or nonfree is enabled, and every library FFmpeg would find on
-# the machine by itself (zlib, iconv, SDL, X11...) is turned off, so the
-# libraries depend on the system's frameworks alone. The source is checked
-# against its SHA-256 and kept in <prefix>-src for the next build.
+# the machine by itself (zlib, iconv, SDL, X11, VA-API...) is turned off, so
+# the libraries depend on the system's own libraries alone, which the end of
+# this script checks for Windows and Linux. The source is checked against
+# its SHA-256 and kept in <prefix>-src for the next build.
 set -eu
 
 VERSION=9.0.2
 SHA256=8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
 URL=https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.xz
 
-prefix=${1:?usage: scripts/ffmpeg.sh <prefix> [arm64|amd64]}
-arch=${2:-}
+usage="usage: scripts/ffmpeg.sh <prefix> [arm64|amd64|windows-amd64|linux-amd64]"
+prefix=${1:?$usage}
+target=${2:-}
 case $prefix in /*) ;; *) prefix=$(pwd)/$prefix ;; esac
+
+# Windows and Linux: run this script again in a container, unless it is
+# running in one. The images and packages are here, so that the hash of
+# this file, which names the builds that scripts/dist.sh and the release
+# workflow keep, changes with them.
+case $target in
+windows-amd64 | linux-amd64)
+	if [ -z "${FFMPEG_IN_CONTAINER:-}" ]; then
+		case $target in
+		windows-amd64)
+			image=ubuntu:24.04
+			packages="gcc libc6-dev gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev"
+			;;
+		linux-amd64)
+			image=ubuntu:20.04
+			packages="gcc libc6-dev patchelf"
+			;;
+		esac
+		if ! docker info >/dev/null 2>&1; then
+			echo "ffmpeg.sh: FFmpeg for $target is built in a Docker container, and Docker is not running here" >&2
+			exit 1
+		fi
+		mkdir -p "$(dirname "$prefix")"
+		script=$(cd "$(dirname "$0")" && pwd)/ffmpeg.sh
+		exec docker run --rm --platform linux/amd64 \
+			-e FFMPEG_IN_CONTAINER=1 -e PACKAGES="$packages" -e TARGET="$target" \
+			-e OUT="/out/$(basename "$prefix")" -e OWNER="$(id -u):$(id -g)" \
+			-v "$script:/ffmpeg.sh:ro" -v "$(dirname "$prefix"):/out" \
+			"$image" sh -c '
+				set -e
+				export DEBIAN_FRONTEND=noninteractive
+				apt-get update -qq
+				# shellcheck disable=SC2086 # the packages are split on purpose
+				apt-get install -y -qq --no-install-recommends ca-certificates curl xz-utils make nasm binutils $PACKAGES >/dev/null
+				status=0
+				sh /ffmpeg.sh "$OUT" "$TARGET" || status=$?
+				chown -R "$OWNER" "$OUT" "$OUT-src" 2>/dev/null || true
+				exit $status'
+	fi
+	;;
+esac
+
 src=$prefix-src
 tarball=$src/ffmpeg-$VERSION.tar.xz
 
@@ -69,54 +119,86 @@ flags="--enable-shared --disable-static --enable-pic
 	--enable-protocol=file
 	--enable-bsf=h264_mp4toannexb,hevc_mp4toannexb,extract_extradata,h264_metadata,hevc_metadata"
 
-case $(uname -s) in
-Darwin)
-	# Pinky.app runs on macOS 12 and later (minimumSystemVersion in
-	# cmd/pinky/mygo.json). The libraries are found through @rpath, which
-	# make app points at Contents/Frameworks; the header padding lets
-	# install_name_tool rewrite their load commands.
-	min=12.0
+# nasm assembles FFmpeg's x86 code; without it, FFMPEG_NO_ASM=1 builds
+# without that code, which decodes and converts slower.
+need_nasm() {
+	command -v nasm >/dev/null 2>&1 && return
+	if [ "${FFMPEG_NO_ASM:-}" != 1 ]; then
+		echo "ffmpeg.sh: FFmpeg for x86_64 needs nasm (brew install nasm), or FFMPEG_NO_ASM=1 for a build without its assembly, which decodes and converts slower" >&2
+		exit 1
+	fi
+	echo "ffmpeg.sh: no nasm; building without FFmpeg's x86 assembly (FFMPEG_NO_ASM=1)" >&2
 	flags="$flags
+	--disable-x86asm"
+}
+
+case $target in
+windows-amd64)
+	# Pinky.exe's DLLs, with D3D11VA, which FFmpeg reaches through
+	# d3d11.dll at run time, and the compiler's helpers linked in, so that
+	# they import nothing but Windows' own DLLs and one another (checked
+	# below). FFmpeg uses Windows' threads, not winpthreads.
+	cross=x86_64-w64-mingw32-
+	flags="$flags
+	--enable-cross-compile --target-os=mingw32 --arch=x86_64 --cross-prefix=$cross
+	--enable-d3d11va
+	--enable-hwaccel=h264_d3d11va,h264_d3d11va2,hevc_d3d11va,hevc_d3d11va2
+	--extra-ldflags=-static-libgcc"
+	need_nasm
+	what="Windows x86_64"
+	jobs=$(nproc)
+	;;
+linux-amd64)
+	need_nasm
+	what="Linux x86_64"
+	jobs=$(nproc)
+	;;
+*)
+	case $(uname -s) in
+	Darwin)
+		# Pinky.app runs on macOS 12 and later (minimumSystemVersion in
+		# cmd/pinky/mygo.json). The libraries are found through @rpath,
+		# which make app points at Contents/Frameworks; the header padding
+		# lets install_name_tool rewrite their load commands.
+		min=12.0
+		flags="$flags
 	--install-name-dir=@rpath
 	--enable-videotoolbox
 	--enable-hwaccel=h264_videotoolbox,hevc_videotoolbox
 	--extra-cflags=-mmacosx-version-min=$min
 	--extra-ldflags=-mmacosx-version-min=$min
 	--extra-ldflags=-Wl,-headerpad_max_install_names"
-	host=$(uname -m)
-	case ${arch:-$host} in
-	arm64 | aarch64) target=arm64 ;;
-	amd64 | x86_64) target=x86_64 ;;
+		host=$(uname -m)
+		case ${target:-$host} in
+		arm64 | aarch64) arch=arm64 ;;
+		amd64 | x86_64) arch=x86_64 ;;
+		*)
+			echo "ffmpeg.sh: no macOS build for the processor $target (arm64 or amd64)" >&2
+			exit 2
+			;;
+		esac
+		if [ "$arch" != "$host" ]; then
+			# --target, one word, as the flags are split at spaces.
+			flags="$flags
+	--enable-cross-compile --target-os=darwin --arch=$arch --cc=clang
+	--extra-cflags=--target=$arch-apple-macos$min
+	--extra-ldflags=--target=$arch-apple-macos$min"
+		fi
+		if [ "$arch" = x86_64 ]; then
+			need_nasm
+		fi
+		what=$arch
+		jobs=$(sysctl -n hw.ncpu)
+		;;
 	*)
-		echo "ffmpeg.sh: no macOS build for the processor $arch (arm64 or amd64)" >&2
-		exit 2
+		what=$(uname -m)
+		if [ -n "$target" ] && [ "$target" != "$what" ] && ! { [ "$target" = amd64 ] && [ "$what" = x86_64 ]; } && ! { [ "$target" = arm64 ] && [ "$what" = aarch64 ]; }; then
+			echo "ffmpeg.sh: building for another processor ($target) is for macOS, Windows (windows-amd64) and Linux (linux-amd64) only" >&2
+			exit 2
+		fi
+		jobs=$(nproc 2>/dev/null || echo 4)
 		;;
 	esac
-	if [ "$target" != "$host" ]; then
-		# --target, one word, as the flags are split at spaces.
-		flags="$flags
-	--enable-cross-compile --target-os=darwin --arch=$target --cc=clang
-	--extra-cflags=--target=$target-apple-macos$min
-	--extra-ldflags=--target=$target-apple-macos$min"
-	fi
-	if [ "$target" = x86_64 ] && ! command -v nasm >/dev/null 2>&1; then
-		if [ "${FFMPEG_NO_ASM:-}" != 1 ]; then
-			echo "ffmpeg.sh: FFmpeg for x86_64 needs nasm (brew install nasm), or FFMPEG_NO_ASM=1 for a build without its assembly, which decodes and converts slower" >&2
-			exit 1
-		fi
-		echo "ffmpeg.sh: no nasm; building without FFmpeg's x86 assembly (FFMPEG_NO_ASM=1)" >&2
-		flags="$flags
-	--disable-x86asm"
-	fi
-	jobs=$(sysctl -n hw.ncpu)
-	;;
-*)
-	target=$(uname -m)
-	if [ -n "$arch" ] && [ "$arch" != "$target" ] && ! { [ "$arch" = amd64 ] && [ "$target" = x86_64 ]; } && ! { [ "$arch" = arm64 ] && [ "$target" = aarch64 ]; }; then
-		echo "ffmpeg.sh: building for another processor ($arch) is for macOS only" >&2
-		exit 2
-	fi
-	jobs=$(nproc 2>/dev/null || echo 4)
 	;;
 esac
 
@@ -134,9 +216,41 @@ rm -rf "$prefix"
 mv "$stage/opt/pinky-ffmpeg" "$prefix"
 rm -rf "$stage"
 
+case $target in
+windows-amd64)
+	# Every DLL may import Windows' own DLLs and FFmpeg's, and nothing else
+	# (no libwinpthread-1.dll, no libgcc_s_seh-1.dll).
+	imports=$("${cross}objdump" -p "$prefix"/bin/*.dll | sed -n 's/^[[:space:]]*DLL Name: //p' | sort -u)
+	echo "The DLLs import: $(echo "$imports" | tr '\n' ' ')"
+	bad=$(echo "$imports" | grep -v -i -E '^(avcodec|avformat|avutil|swscale)-[0-9]+\.dll$|^(kernel32|user32|gdi32|advapi32|ole32|oleaut32|shell32|shlwapi|bcrypt|msvcrt|ucrtbase|ws2_32|secur32|crypt32|mfplat|d3d11|dxgi)\.dll$|^api-ms-win-' || true)
+	if [ -n "$bad" ]; then
+		echo "ffmpeg.sh: the DLLs import libraries that Windows does not have:" >&2
+		echo "$bad" >&2
+		exit 1
+	fi
+	;;
+linux-amd64)
+	# The libraries find one another in their own folder, wherever it is,
+	# need nothing but glibc and one another, and say which glibc.
+	for f in "$prefix"/lib/lib*.so.*.*.*; do
+		patchelf --set-rpath '$ORIGIN' "$f"
+	done
+	needed=$(for f in "$prefix"/lib/lib*.so.*.*.*; do readelf -d "$f"; done | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p' | sort -u)
+	echo "The libraries need: $(echo "$needed" | tr '\n' ' ')"
+	bad=$(echo "$needed" | grep -v -E '^lib(avcodec|avformat|avutil|swscale)\.so\.[0-9]+$|^(libc|libm|libpthread|libdl|librt)\.so\.[0-9]+$|^ld-linux-x86-64\.so\.2$' || true)
+	if [ -n "$bad" ]; then
+		echo "ffmpeg.sh: the libraries need libraries beyond glibc:" >&2
+		echo "$bad" >&2
+		exit 1
+	fi
+	glibc=$(objdump -T "$prefix"/lib/lib*.so.*.*.* | grep -o 'GLIBC_[0-9][0-9.]*' | sort -u -V | tail -n 1)
+	what="$what, glibc ${glibc#GLIBC_} or later"
+	;;
+esac
+
 cp COPYING.LGPLv2.1 "$prefix/COPYING.LGPLv2.1"
 {
-	echo "FFmpeg $VERSION, built for Pinky under the LGPL 2.1 (see COPYING.LGPLv2.1), for $target."
+	echo "FFmpeg $VERSION, built for Pinky under the LGPL 2.1 (see COPYING.LGPLv2.1), for $what."
 	echo "Source: $URL"
 	echo "SHA-256: $SHA256"
 	echo "Configured with:"
