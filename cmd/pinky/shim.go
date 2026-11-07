@@ -14,8 +14,9 @@ import (
 
 // runMCP is the stdio shim agents launch. It forwards messages between
 // stdio and the gateway's socket, where the MCP server runs, starts the
-// gateway first when none is running, and waits for it when the app
-// restarts for an update.
+// gateway first when none is running, and keeps the agent's session when
+// the gateway goes away: it waits for the app to restart for an update, or
+// for the person to open it again after quitting it.
 func runMCP(args []string) error {
 	fs := flag.NewFlagSet("pinky mcp", flag.ContinueOnError)
 	fake := fs.Bool("fake", false, "when no gateway runs, start one with fake phones")
@@ -44,7 +45,8 @@ func runMCP(args []string) error {
 	if err != nil {
 		return err
 	}
-	// The session survives the app restarting for an update (shimconn.go).
+	// The session survives the app restarting for an update, and being quit
+	// and opened again (shimconn.go).
 	return newShimSession(dirs, tok, os.Stdout).run(conn, br, os.Stdin)
 }
 

@@ -51,6 +51,8 @@ The first line of every result is its status (or `error: <code>`), with details 
 
 Errors: `device_offline` (wait, it may come back within a minute), `lease_held` (another agent uses that phone; the result says who), `scope_denied` (an app outside your scope or the task's list), `not_found` (the ref is gone; read the screen again), `unsupported` (this phone cannot do it, e.g. `recents` on iPhone), `invalid_argument` (fix the call).
 
+A tool result that says Pinky is not running means the person quit Pinky: tell them, and once they open it again (the connection comes back by itself), call `phone_connect` again and observe before acting.
+
 ## Approvals
 
 Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Confirm and the like, in every language, icon buttons included (a paper plane, a trash can); sending a message (Enter or `submit: true` in a chat app); installing apps; opening links that leave the app; calls; changing settings. Pass `intent` on such calls, one sentence the person reads on the approval panel:
