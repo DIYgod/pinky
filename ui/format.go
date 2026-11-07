@@ -54,6 +54,15 @@ func splitStep(text string) (string, string) {
 	return first, strings.TrimSpace(rest)
 }
 
+// withSub puts the client's line about a step above the step's own second
+// line, when it has one.
+func withSub(line, sub string) string {
+	if sub == "" {
+		return line
+	}
+	return line + "\n" + sub
+}
+
 func running(s gateway.TaskState) bool {
 	return s == gateway.TaskWorking || s == gateway.TaskWaiting || s == gateway.TaskPaused
 }

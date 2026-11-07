@@ -240,6 +240,7 @@
   "gwStatusOfflineDetail": "离线 · {detail}",
   "gwStatusReconnecting": "离线 · 正在为“{task}”重新连接",
   "gwStatusWaiting": "等你处理 · {title}",
+  "gwStepAlwaysAllowed": "始终允许：{app} 中的“{rule}”",
   "gwStepAskedTakeOver": "请你接管：{reason}",
   "gwStepAskedYou": "询问你：{question}",
   "gwStepBlocked": "被“{rule}”规则拦下：{action}",

@@ -267,6 +267,7 @@ var (
 	reCopied    = re(`^Copied (\d+) files? (from|to) the phone(: .*)?$`)
 	reYouDid    = re(`^You (allowed|denied): (.*)$`)
 	reYourNote  = re(`^Your note: (.*)$`)
+	reAlways    = re(`^Always allowed: “(.*?)” in (.+)$`)
 )
 
 var outcomes = map[string]func() string{
@@ -350,7 +351,8 @@ func stepText(s string) string {
 }
 
 // stepSub says a step's second line as the gateway (or the fake) wrote
-// it: "Your note: “…”".
+// it: "Your note: “…”", or "Always allowed: “Payments” in Dinely" under a
+// step that ran without asking because of the person's Always allow.
 func stepSub(s string) string {
 	if !translated() || s == "" {
 		return s
@@ -358,6 +360,8 @@ func stepSub(s string) string {
 	first, rest, more := strings.Cut(s, "\n")
 	if m := reYourNote.FindStringSubmatch(first); m != nil {
 		first = locales.GwStepYourNote(m[1])
+	} else if m := reAlways.FindStringSubmatch(first); m != nil {
+		first = locales.GwStepAlwaysAllowed(ruleName(m[1]), m[2])
 	}
 	if more {
 		return first + "\n" + stepSub(rest)
