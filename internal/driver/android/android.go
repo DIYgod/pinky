@@ -39,10 +39,6 @@ type Config struct {
 	// packet counts as a change. Zero derives it from the frame size.
 	SettleBytes int
 
-	// StayAwake keeps the phone awake while plugged in during a session
-	// (scrcpy restores the setting when the session ends).
-	StayAwake bool
-
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
 }

@@ -49,7 +49,30 @@ func parseFocusedApp(out string) string {
 	return ""
 }
 
-var wakefulnessRE = regexp.MustCompile(`mWakefulness=(\w+)`)
+var (
+	wakefulnessRE = regexp.MustCompile(`mWakefulness=(\w+)`)
+	displayIDRE   = regexp.MustCompile(`mDisplayId=\s*:?\s*(-?\d+)`)
+	screenStateRE = regexp.MustCompile(`mScreenState=(\w+)`)
+)
+
+// parseScreenOn reports whether display 0 is on, from `dumpsys display`:
+// each display power controller prints its display id before its
+// mScreenState (Android 10 has one controller and may print no id). ON
+// and VR count as on; OFF, DOZE, DOZE_SUSPEND and ON_SUSPEND (an always-on
+// display) as off. Without any mScreenState it falls back to the
+// wakefulness in `dumpsys power`.
+func parseScreenOn(out string) (on, ok bool) {
+	cur := -1
+	for _, line := range strings.Split(out, "\n") {
+		if m := displayIDRE.FindStringSubmatch(line); m != nil {
+			cur, _ = strconv.Atoi(m[1])
+		}
+		if m := screenStateRE.FindStringSubmatch(line); m != nil && cur <= 0 {
+			return m[1] == "ON" || m[1] == "VR", true
+		}
+	}
+	return parseAwake(out)
+}
 
 // parseAwake reports whether the screen is on, from `dumpsys power`.
 // Dozing (always-on display) counts as off.
@@ -113,4 +136,51 @@ func splitSections(out string) map[string]string {
 	}
 	sec[name] = b.String()
 	return sec
+}
+
+var curSizeRE = regexp.MustCompile(`\bcur=(\d+)x(\d+)`)
+
+// parseCurSize returns the first display's current size, rotation
+// included, from `dumpsys window displays` ("init=1080x2400 420dpi
+// cur=1080x2400 app=...").
+func parseCurSize(out string) (w, h int, ok bool) {
+	m := curSizeRE.FindStringSubmatch(out)
+	if m == nil {
+		return 0, 0, false
+	}
+	w, _ = strconv.Atoi(m[1])
+	h, _ = strconv.Atoi(m[2])
+	return w, h, w > 0 && h > 0
+}
+
+// rootTask is a root task (a stack before Android 12) and its tasks, from
+// `cmd activity stack list`.
+type rootTask struct {
+	id, display int
+	tasks       []int
+}
+
+var (
+	rootTaskRE = regexp.MustCompile(`^(?:RootTask|Stack) id=(-?\d+)\b.*\bdisplayId=(-?\d+)`)
+	taskIDRE   = regexp.MustCompile(`^\s+taskId=(\d+):`)
+)
+
+// parseRootTasks reads `cmd activity stack list` ("RootTask id=125 ...
+// displayId=0 ..." on Android 12 and later, "Stack id=60 ... displayId=0
+// ..." before, each followed by "  taskId=66: pkg/cls ..." lines).
+func parseRootTasks(out string) []rootTask {
+	var roots []rootTask
+	for _, line := range strings.Split(strings.ReplaceAll(out, "\r", ""), "\n") {
+		if m := rootTaskRE.FindStringSubmatch(line); m != nil {
+			id, _ := strconv.Atoi(m[1])
+			disp, _ := strconv.Atoi(m[2])
+			roots = append(roots, rootTask{id: id, display: disp})
+			continue
+		}
+		if m := taskIDRE.FindStringSubmatch(line); m != nil && len(roots) > 0 {
+			t, _ := strconv.Atoi(m[1])
+			roots[len(roots)-1].tasks = append(roots[len(roots)-1].tasks, t)
+		}
+	}
+	return roots
 }

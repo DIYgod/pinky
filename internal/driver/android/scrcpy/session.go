@@ -57,6 +57,9 @@ type Session struct {
 	closeOnce sync.Once
 	done      chan struct{}
 	err       error
+
+	jarOnce sync.Once
+	jarDone chan struct{} // closed once the jar is removed after the end
 }
 
 // Start pushes the bundled server to the phone, runs it with opt and
@@ -71,10 +74,11 @@ func Start(ctx context.Context, c *adb.Client, serial string, opt Options) (*Ses
 	}
 	s := &Session{
 		client: c, serial: serial, scid: scid, opt: opt,
-		jar:    fmt.Sprintf("/data/local/tmp/pinky-scrcpy-%08x.jar", scid),
-		exited: make(chan struct{}),
-		done:   make(chan struct{}),
-		acks:   map[uint64]chan struct{}{},
+		jar:     fmt.Sprintf("/data/local/tmp/pinky-scrcpy-%08x.jar", scid),
+		exited:  make(chan struct{}),
+		done:    make(chan struct{}),
+		jarDone: make(chan struct{}),
+		acks:    map[uint64]chan struct{}{},
 	}
 	if err := c.Push(ctx, serial, bytes.NewReader(serverJar), s.jar, 0o644, time.Now()); err != nil {
 		return nil, fmt.Errorf("scrcpy: push server: %w", err)
@@ -474,6 +478,21 @@ func logMessage(line string) string {
 // Done is closed when the session ends.
 func (s *Session) Done() <-chan struct{} { return s.done }
 
+// encoderErrorRE matches the server's log lines for a video encoder that
+// fails, as the Android 10 emulator's does (so does its screenrecord).
+var encoderErrorRE = regexp.MustCompile(`Capture/encoding error|Exception on thread Thread\[video|Encoder failed|Could not open video stream|MediaCodec\.`)
+
+// VideoFailure returns the first server log line that says the video
+// capture or encoder failed, or "" when there is none.
+func (s *Session) VideoFailure() string {
+	for _, l := range s.logs.recent() {
+		if encoderErrorRE.MatchString(l) {
+			return logMessage(l)
+		}
+	}
+	return ""
+}
+
 // Err says why the session ended, or is nil while it runs.
 func (s *Session) Err() error {
 	select {
@@ -489,6 +508,18 @@ func (s *Session) fail(err error) {
 		s.err = err
 		close(s.done)
 		s.closeConns()
+		// The server deletes its jar when it starts, but not always when
+		// it crashes early (a failing encoder on Android 10): make sure
+		// nothing stays on the phone.
+		go s.cleanJar()
+	})
+}
+
+// cleanJar removes the server's jar once.
+func (s *Session) cleanJar() {
+	s.jarOnce.Do(func() {
+		s.removeJar()
+		close(s.jarDone)
 	})
 }
 
@@ -500,9 +531,14 @@ func (s *Session) closeConns() {
 	}
 }
 
-// Close stops the session; the server exits when its sockets close.
+// Close stops the session; the server exits when its sockets close. It
+// waits up to 3 s for the server's jar to be gone from the phone.
 func (s *Session) Close() error {
 	s.fail(ErrClosed)
+	select {
+	case <-s.jarDone:
+	case <-time.After(3 * time.Second):
+	}
 	return nil
 }
 

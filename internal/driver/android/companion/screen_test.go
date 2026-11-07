@@ -455,3 +455,56 @@ func TestDecodeWireTree(t *testing.T) {
 		t.Fatalf("screen:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+// Gboard's stylus toolbar on Android 16: a window over the lower half of
+// the screen whose touchable region is only the toolbar and a strip.
+func TestScreenOccludesByRegion(t *testing.T) {
+	root := &Node{Class: "android.widget.FrameLayout", Bounds: Bounds{0, 0, screenW, screenH}, Children: []*Node{
+		{Class: "android.widget.EditText", Text: "pinky", Editable: true, Focused: true, Bounds: Bounds{126, 128, screenW, 317}},
+		{Class: "android.widget.Button", Text: "Pinky Companion", Clickable: true, Bounds: Bounds{0, 1000, screenW, 1150}},
+		{Class: "android.widget.Button", Text: "Under the toolbar", Clickable: true, Bounds: Bounds{21, 1200, 169, 1300}},
+	}}
+	toolbar := Window{ID: 9, Type: WindowInputMethod, Layer: 30, Bounds: Bounds{0, 896, screenW, screenH},
+		Region: []Bounds{{21, 896, 169, 1586}, {0, 1880, screenW, screenH}}}
+	tr := &Tree{Display: Display{Width: screenW, Height: screenH},
+		Windows: []Window{toolbar, appWindow("app", "App", root)}}
+	got := lines(tr.Screen(ScreenOptions{}))
+	want := []string{
+		"screen 1080x1920 · app: App (app) · portrait · keyboard shown · focus [1]",
+		`[1] input "pinky" @603,222 focused`,
+		`[2] button "Pinky Companion" @540,1075`,
+		// The button under the toolbar itself is hidden.
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("screen:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// A keyboard sheet that covers the app (Gboard's stylus tutorial): the
+// app sends the sheet's nodes without being asked, and they are what the
+// person sees.
+func TestScreenKeyboardSheet(t *testing.T) {
+	app := &Node{Class: "android.widget.FrameLayout", Bounds: Bounds{0, 0, screenW, screenH}, Children: []*Node{
+		{Class: "android.widget.EditText", Text: "Search settings", Editable: true, Focused: true, Invisible: true, Bounds: Bounds{126, 128, screenW, 317}},
+	}}
+	sheet := &Node{Class: "android.widget.FrameLayout", Bounds: Bounds{0, 128, screenW, screenH}, Children: []*Node{
+		tv("Try out your stylus", Bounds{100, 1200, 980, 1300}),
+		{Class: "android.widget.Button", Text: "Cancel", Clickable: true, Bounds: Bounds{500, 1800, 700, 1880}},
+	}}
+	ime := Window{ID: 9, Type: WindowInputMethod, Layer: 30, Bounds: Bounds{0, 128, screenW, screenH}, Root: sheet}
+	tr := &Tree{Display: Display{Width: screenW, Height: screenH},
+		Windows: []Window{ime, appWindow("app", "App", app)}}
+	got := lines(tr.Screen(ScreenOptions{}))
+	want := []string{
+		"screen 1080x1920 · app: App (app) · portrait · keyboard shown",
+		`[1] text "Try out your stylus" @540,1250`,
+		`[2] button "Cancel" @600,1840`,
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("screen:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	var w Window
+	if err := json.Unmarshal([]byte(`{"id":9,"type":"input_method","bounds":[0,896,1080,2400],"region":[[21,896,169,1586],[0,2337,1080,2400]]}`), &w); err != nil || len(w.Region) != 2 || w.Region[1] != (Bounds{0, 2337, 1080, 2400}) {
+		t.Errorf("region from the wire: %+v, %v", w.Region, err)
+	}
+}

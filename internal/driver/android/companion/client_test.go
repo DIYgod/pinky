@@ -203,8 +203,8 @@ func TestEvents(t *testing.T) {
 	}
 	now := time.Now().UnixMilli()
 	p.events <- `{"event":"toast","time":` + itoa(now) + `,"package":"app.pinky.companion","text":"Toast 测试"}`
-	p.events <- `{"event":"notification","time":` + itoa(now) + `,"package":"com.example","title":"Alice","text":"See you at 7","category":"msg"}`
-	p.events <- `{"event":"content","time":` + itoa(now) + `,"package":"com.example","count":3}`
+	p.events <- `{"event":"notification","time":` + itoa(now) + `,"display":-1,"package":"com.example","title":"Alice","text":"See you at 7","category":"msg"}`
+	p.events <- `{"event":"content","time":` + itoa(now) + `,"display":7,"package":"com.example","count":3}`
 
 	var got []Event
 	for len(got) < 3 {
@@ -233,6 +233,11 @@ func TestEvents(t *testing.T) {
 	}
 	if _, ok := got[2].ScreenEvent(); ok || got[2].Count != 3 {
 		t.Errorf("content event: %+v", got[2])
+	}
+	// The display: as sent, and -1 (not known) when left out, as apps
+	// from before round three do below Android 13; never 0.
+	if got[0].Display != -1 || got[1].Display != -1 || got[2].Display != 7 {
+		t.Errorf("displays: %d, %d, %d; want -1, -1, 7", got[0].Display, got[1].Display, got[2].Display)
 	}
 
 	// The service going away ends the subscription with ErrNotRunning.

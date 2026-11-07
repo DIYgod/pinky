@@ -192,12 +192,19 @@ type SetTextOptions struct {
 	// for an accessibility service to do that; SetTextResult.Submitted is
 	// then false and the caller should press Enter itself.
 	Submit bool
+	// Display is the display whose windows the target is looked up in; 0
+	// is the main display. Other displays need an app with
+	// FeatureDisplays: an older one ignores the parameter.
+	Display int
 }
 
 // SetText writes text into an editable node with ACTION_SET_TEXT. Any
 // script works, and neither the clipboard nor the keyboard is involved.
 func (c *Client) SetText(ctx context.Context, t Target, text string, opt SetTextOptions) (*SetTextResult, error) {
 	params := map[string]any{"text": text, "target": t.params()}
+	if opt.Display != 0 {
+		params["display"] = opt.Display
+	}
 	if opt.Append {
 		params["append"] = true
 	}

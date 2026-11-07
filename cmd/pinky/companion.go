@@ -44,15 +44,15 @@ func runCompanion(args []string) error {
 	}
 	defer dev.Close()
 	fmt.Printf("Installing %s on %s. If the phone asks whether to scan or allow the app (Google Play Protect), answer on the phone.\n", apk, info.Name)
-	res, err := dev.InstallCompanion(ctx)
+	res, err := dev.SetUpCompanion(ctx, false)
 	if err != nil {
 		return err
 	}
 	if !res.Installed {
-		fmt.Printf("%s already has this companion build.\n", info.Name)
+		fmt.Printf("%s already has this companion build; its service is on.\n", info.Name)
 		return nil
 	}
-	fmt.Printf("Installed the companion on %s. Pinky turns its accessibility service on only while it reads the screen.\n", info.Name)
+	fmt.Printf("Installed the companion on %s and turned its accessibility service on.\n", info.Name)
 	return nil
 }
 

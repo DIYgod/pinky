@@ -15,6 +15,7 @@ import (
 
 // Android key codes and meta states (android.view.KeyEvent).
 const (
+	keycode0          = 7 // KEYCODE_0; the digits follow in order
 	keycodeHome       = 3
 	keycodeBack       = 4
 	keycodeDpadUp     = 19
@@ -75,6 +76,28 @@ func (d *Device) inputSession(ctx context.Context) (*live, error) {
 	return l, nil
 }
 
+// withInput runs one gesture on the main session, waking the screen first
+// when wake is set. A gesture whose session was replaced before it began
+// sent nothing, so it goes to the new session.
+func (d *Device) withInput(ctx context.Context, wake bool, f func(l *live) error) error {
+	for try := 0; ; try++ {
+		var l *live
+		var err error
+		if wake {
+			l, err = d.inputSession(ctx)
+		} else {
+			l, err = d.session(ctx)
+		}
+		if err == nil {
+			err = l.input(func() error { return f(l) })
+		}
+		if errors.Is(err, errReplaced) && try < 3 {
+			continue
+		}
+		return err
+	}
+}
+
 func (d *Device) wake(ctx context.Context, l *live) error {
 	d.stateMu.Lock()
 	fresh := time.Since(d.awakeAt) < awakeTrust
@@ -82,31 +105,18 @@ func (d *Device) wake(ctx context.Context, l *live) error {
 	if fresh {
 		return nil
 	}
-	awake, err := d.screenOn(ctx)
+	on, err := d.ScreenOn(ctx)
 	if err != nil {
 		if errors.Is(err, driver.ErrOffline) || ctx.Err() != nil {
 			return err
 		}
-		// A failed check should not block the action itself.
+		// A failed check should not block the action itself, and an
+		// unknown state presses nothing.
 		d.cfg.logf("android: %s: screen state: %v", d.info.ID, err)
 		return nil
 	}
-	if !awake {
-		d.cfg.logf("android: %s: screen is off, waking it", d.info.ID)
-		if err := l.key(keycodeWakeup, 0); err != nil {
-			return err
-		}
-		// Give the display time to come on before the action lands.
-		deadline := time.Now().Add(2 * time.Second)
-		for time.Now().Before(deadline) {
-			if err := sleepCtx(ctx, 150*time.Millisecond); err != nil {
-				return err
-			}
-			if on, err := d.screenOn(ctx); err == nil && on {
-				break
-			}
-		}
-		if err := sleepCtx(ctx, 250*time.Millisecond); err != nil {
+	if !on {
+		if err := d.pressWakeup(ctx, l); err != nil {
 			return err
 		}
 	}
@@ -118,19 +128,6 @@ func (d *Device) markAwake() {
 	d.stateMu.Lock()
 	d.awakeAt = time.Now()
 	d.stateMu.Unlock()
-}
-
-// screenOn reports whether the screen is on (dozing counts as off).
-func (d *Device) screenOn(ctx context.Context) (bool, error) {
-	out, err := d.client.Shell(ctx, d.info.ID, "dumpsys power | grep mWakefulness=")
-	if err != nil {
-		return false, wrapErr(err)
-	}
-	awake, ok := parseAwake(string(out))
-	if !ok {
-		return true, nil // unknown: do not press anything
-	}
-	return awake, nil
 }
 
 // longPressHold returns how long to hold a long press: the phone's
@@ -156,15 +153,11 @@ func (d *Device) longPressHold(ctx context.Context) time.Duration {
 // Tap implements driver.Device.
 func (d *Device) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
 	d.used()
-	l, err := d.inputSession(ctx)
-	if err != nil {
-		return err
-	}
 	hold := tapHold
 	if opt.LongPress {
 		hold = d.longPressHold(ctx)
 	}
-	err = l.tap(ctx, p, hold)
+	err := d.withInput(ctx, true, func(l *live) error { return l.tap(ctx, p, hold) })
 	if err == nil {
 		d.markAwake()
 		d.stateMu.Lock()
@@ -177,11 +170,7 @@ func (d *Device) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions)
 // Swipe implements driver.Device.
 func (d *Device) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
 	d.used()
-	l, err := d.inputSession(ctx)
-	if err != nil {
-		return err
-	}
-	err = l.swipe(ctx, from, to, dur)
+	err := d.withInput(ctx, true, func(l *live) error { return l.swipe(ctx, from, to, dur) })
 	if err == nil {
 		d.markAwake()
 	}
@@ -191,17 +180,7 @@ func (d *Device) Swipe(ctx context.Context, from, to screen.Point, dur time.Dura
 // Touch implements driver.Toucher, for the person's drags on the mirror.
 func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point) error {
 	d.used()
-	var l *live
-	var err error
-	if a == driver.TouchDown {
-		l, err = d.inputSession(ctx)
-	} else {
-		l, err = d.session(ctx)
-	}
-	if err != nil {
-		return err
-	}
-	return l.touch(ctx, a, p)
+	return d.withInput(ctx, a == driver.TouchDown, func(l *live) error { return l.touch(ctx, a, p) })
 }
 
 // Key implements driver.Device.
@@ -211,11 +190,7 @@ func (d *Device) Key(ctx context.Context, k driver.Key) error {
 	if !ok {
 		return fmt.Errorf("android: key %q: %w", k, driver.ErrUnsupported)
 	}
-	l, err := d.inputSession(ctx)
-	if err != nil {
-		return err
-	}
-	return l.key(code, 0)
+	return d.withInput(ctx, true, func(l *live) error { return l.key(code, 0) })
 }
 
 // Type implements driver.Device. With the companion app it writes the
@@ -229,16 +204,19 @@ func (d *Device) Key(ctx context.Context, k driver.Key) error {
 // field's text is selected first (Ctrl+A) and replaced.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	d.used()
-	l, err := d.inputSession(ctx)
-	if err != nil {
+	if _, err := d.inputSession(ctx); err != nil {
 		return err
 	}
 	if c := d.companionClient(ctx); c != nil {
-		if done, err := d.typeCompanion(ctx, c, l, text, opt.Append, opt.Submit); done {
+		enter := func() error {
+			return d.withInput(ctx, false, func(l *live) error { return l.key(keycodeEnter, 0) })
+		}
+		if done, err := d.typeCompanion(ctx, c, text, opt.Append, opt.Submit, 0, d.recentTap, enter); done {
 			return err
 		}
 	}
-	return l.typeText(ctx, text, opt, plainASCII(text) && d.keysReachField(ctx))
+	keys := plainASCII(text) && d.keysReachField(ctx)
+	return d.withInput(ctx, false, func(l *live) error { return l.typeText(ctx, text, opt, keys) })
 }
 
 // keysReachField reports whether typed letters reach the app as they are:
@@ -482,14 +460,8 @@ func (l *live) typeText(ctx context.Context, text string, opt driver.TypeOptions
 	}
 	if text != "" {
 		if keys && plainASCII(text) {
-			for _, part := range scrcpy.SplitText(text, scrcpy.MaxInjectText) {
-				msg, err := scrcpy.InjectText(part)
-				if err != nil {
-					return err
-				}
-				if err := l.send(msg); err != nil {
-					return err
-				}
+			if err := l.injectText(text); err != nil {
+				return err
 			}
 		} else {
 			if len(text) > scrcpy.MaxClipboardText {
@@ -502,6 +474,21 @@ func (l *live) typeText(ctx context.Context, text string, opt driver.TypeOptions
 	}
 	if opt.Submit {
 		return l.key(keycodeEnter, 0)
+	}
+	return nil
+}
+
+// injectText types printable ASCII as key events, in messages of at most
+// scrcpy.MaxInjectText bytes.
+func (l *live) injectText(text string) error {
+	for _, part := range scrcpy.SplitText(text, scrcpy.MaxInjectText) {
+		msg, err := scrcpy.InjectText(part)
+		if err != nil {
+			return err
+		}
+		if err := l.send(msg); err != nil {
+			return err
+		}
 	}
 	return nil
 }

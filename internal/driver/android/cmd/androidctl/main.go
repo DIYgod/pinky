@@ -11,19 +11,28 @@
 //	androidctl [-s serial] launch APP        (package or display name)
 //	androidctl [-s serial] apps
 //	androidctl [-s serial] locked
+//	androidctl [-s serial] screen            (whether the screen is on)
+//	androidctl [-s serial] wake
+//	androidctl [-s serial] unlock            (PIN from $ANDROIDCTL_PIN or stdin)
+//	androidctl [-s serial] files             (list the phone's Pinky folder)
+//	androidctl [-s serial] pull PATH FILE    (PATH inside the Pinky folder)
+//	androidctl [-s serial] push FILE PATH
 //	androidctl [-s serial] stream [-seconds N] [-max-size N] [-out FILE.h264]
 //	androidctl [-s serial] settle [-max MS]  (time until the screen is still)
 //	androidctl [-s serial] run [-person] STEP...  (steps with action and settle timings)
-//	androidctl [-s serial] companion-install (install or update the companion app)
+//	androidctl [-s serial] companion-install [-force] (install or update the companion app)
+//	androidctl [-s serial] companion-state
 //	androidctl [-s serial] bg [-app APP] [-out FILE.h264] [-seconds N] [STEP...]
 //
 // Steps for run and bg: tap:X,Y  longtap:X,Y  swipe:X1,Y1,X2,Y2[,MS]  key:NAME
-// type:TEXT  launch:APP  sleep:MS  observe  shot:FILE.png
+// type:TEXT  launch:APP  sleep:MS  observe  shot:FILE.png  state (bg: the
+// phone's own screen)
 //
 // Run commands that touch a phone through scripts/devlock.sh.
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -80,17 +89,27 @@ commands:
   launch APP                      start an app by package or name
   apps                            list launcher apps
   locked                          print whether the lock screen shows
+  screen                          print whether the screen is on
+  wake                            turn the screen on (KEYCODE_WAKEUP)
+  unlock                          enter the PIN from $ANDROIDCTL_PIN, or the
+                                  first line of stdin, on the lock screen
+  files                           list the phone's Pinky folder (/sdcard/Pinky)
+  pull PATH FILE                  copy PATH from the Pinky folder to FILE
+  push FILE PATH                  copy FILE to PATH in the Pinky folder
   stream [-seconds N] [-max-size N] [-out FILE.h264]
                                   video statistics, optionally saving the stream
   settle [-max MS]                time until the screen stops changing
   run [-person] STEP...           run steps, timing each action and its settle;
                                   -person counts PersonWatcher signals meanwhile
-  companion-install               install or update the companion app (setup only)
+  companion-install [-force]      install or update the companion app and turn
+                                  its service on (setup only)
+  companion-state                 on, off, missing, outdated or no_apk
   bg [-app APP] [-seconds N] [-out FILE.h264] [STEP...]
                                   open a virtual display and run steps on it
 
 steps: tap:X,Y longtap:X,Y swipe:X1,Y1,X2,Y2[,MS] key:NAME type:TEXT
-       launch:APP sleep:MS observe shot:FILE.png
+       launch:APP sleep:MS observe shot:FILE.png state (bg only: whether
+       the phone's own screen is on and locked)
 `)
 }
 
@@ -195,6 +214,67 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 		fmt.Println(l)
 		fmt.Fprintf(os.Stderr, "(%v)\n", time.Since(start).Round(time.Millisecond))
 		return nil
+	case "screen":
+		start := time.Now()
+		on, err := d.ScreenOn(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println(on)
+		fmt.Fprintf(os.Stderr, "(%v)\n", time.Since(start).Round(time.Millisecond))
+		return nil
+	case "wake":
+		return timed("wake", func() error { return d.Wake(ctx) })
+	case "unlock":
+		// Never on the command line, where other processes can read it.
+		pin := os.Getenv("ANDROIDCTL_PIN")
+		if pin == "" {
+			line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+			if err != nil && line == "" {
+				return errors.New("unlock: give the PIN in $ANDROIDCTL_PIN or on stdin")
+			}
+			pin = strings.TrimRight(line, "\r\n")
+		}
+		return timed("unlock", func() error { return d.Unlock(ctx, pin) })
+	case "files":
+		start := time.Now()
+		list, err := d.ListFiles(ctx)
+		if err != nil {
+			return err
+		}
+		for _, f := range list {
+			kind := "f"
+			if f.Dir {
+				kind = "d"
+			}
+			fmt.Printf("%s %10d %s %s\n", kind, f.Size, f.ModTime.Format("2006-01-02 15:04:05"), f.Path)
+		}
+		fmt.Fprintf(os.Stderr, "(%d entries in %v)\n", len(list), time.Since(start).Round(time.Millisecond))
+		return nil
+	case "pull":
+		if len(args) != 2 {
+			return errors.New("usage: pull PATH FILE")
+		}
+		f, err := os.Create(args[1])
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		return timed("pull", func() error { return d.Pull(ctx, args[0], f) })
+	case "push":
+		if len(args) != 2 {
+			return errors.New("usage: push FILE PATH")
+		}
+		f, err := os.Open(args[0])
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		fi, err := f.Stat()
+		if err != nil {
+			return err
+		}
+		return timed("push", func() error { return d.Push(ctx, args[1], f, fi.Size(), fi.ModTime()) })
 	case "stream":
 		fs := flag.NewFlagSet("stream", flag.ExitOnError)
 		secs := fs.Float64("seconds", 5, "how long to read")
@@ -242,15 +322,34 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 		fmt.Printf("person input signals during the run: %d\n", n)
 		return err
 	case "companion-install":
-		res, err := d.InstallCompanion(ctx)
+		fs := flag.NewFlagSet("companion-install", flag.ExitOnError)
+		force := fs.Bool("force", false, "install even when the phone has the same version (a build with other changes)")
+		fs.Parse(args)
+		start := time.Now()
+		res, err := d.SetUpCompanion(ctx, *force)
 		if err != nil {
 			return err
 		}
-		if res.Installed {
-			fmt.Printf("installed %s\n", res.APK)
-		} else {
-			fmt.Printf("already up to date with %s\n", res.APK)
+		switch {
+		case res.Replaced:
+			fmt.Printf("replaced build %d (signed with another key) with %s build %d\n", res.Before.Code, res.Bundled.Name, res.Bundled.Code)
+		case res.Installed && res.Before.Code > 0:
+			fmt.Printf("updated build %d to %s build %d\n", res.Before.Code, res.Bundled.Name, res.Bundled.Code)
+		case res.Installed:
+			fmt.Printf("installed %s build %d\n", res.Bundled.Name, res.Bundled.Code)
+		default:
+			fmt.Printf("build %d is installed; the bundled one is %d\n", res.Before.Code, res.Bundled.Code)
 		}
+		fmt.Printf("its service is on (%v)\n", time.Since(start).Round(time.Millisecond))
+		return nil
+	case "companion-state":
+		start := time.Now()
+		st, err := d.CompanionState(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println(st)
+		fmt.Fprintf(os.Stderr, "(%v)\n", time.Since(start).Round(time.Millisecond))
 		return nil
 	case "bg":
 		return background(ctx, d, args)
@@ -458,6 +557,14 @@ func runSteps(ctx context.Context, d stepper, st statser, steps []string) error 
 		case "shot":
 			action = false
 			err = screenshot(ctx, d, arg)
+		case "state":
+			// The phone's own screen, for background display checks.
+			action = false
+			if ps, ok := d.(phoneStater); ok {
+				var line string
+				line, err = ps.phoneState(ctx)
+				fmt.Printf("phone: %s\n", line)
+			}
 		default:
 			err = fmt.Errorf("unknown step %q", step)
 		}
@@ -564,15 +671,40 @@ func videoSummary(ctx context.Context, st statser, start time.Time) {
 		float64(frames)/elapsed.Seconds(), float64(bytes)*8/elapsed.Seconds()/1e6, peakFrames, float64(peakBytes)*8/1e6)
 }
 
+// phoneStater reports the phone's own screen during background steps.
+type phoneStater interface {
+	phoneState(ctx context.Context) (string, error)
+}
+
+// bgSteps runs steps on a background display and reads the main screen's
+// state for the state step.
+type bgSteps struct {
+	*android.Background
+	phone *android.Device
+}
+
+func (b bgSteps) phoneState(ctx context.Context) (string, error) {
+	on, err := b.phone.ScreenOn(ctx)
+	if err != nil {
+		return "", err
+	}
+	locked, err := b.phone.Locked(ctx)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("screen on %v, locked %v", on, locked), nil
+}
+
 func background(ctx context.Context, d *android.Device, args []string) error {
 	fs := flag.NewFlagSet("bg", flag.ExitOnError)
 	app := fs.String("app", "", "app to start on the virtual display")
 	out := fs.String("out", "", "write the display's H.264 stream to this file")
 	secs := fs.Float64("seconds", 2, "seconds to keep streaming after the steps")
 	decor := fs.Bool("decorations", false, "show the status bar, taskbar and launcher on the display")
+	keep := fs.Bool("keep", false, "move every app on the display to the main display when it closes")
 	fs.Parse(args)
 	start := time.Now()
-	b, err := d.OpenBackground(ctx, android.BackgroundOptions{App: *app, SystemDecorations: *decor})
+	b, err := d.OpenDisplay(ctx, android.DisplayOptions{App: *app, SystemDecorations: *decor, KeepContent: *keep})
 	if err != nil {
 		return err
 	}
@@ -601,7 +733,7 @@ func background(ctx context.Context, d *android.Device, args []string) error {
 	if _, err := b.WaitSettled(ctx, 0); err != nil {
 		return err
 	}
-	if err := runSteps(ctx, b, b, fs.Args()); err != nil {
+	if err := runSteps(ctx, bgSteps{b, d}, b, fs.Args()); err != nil {
 		return err
 	}
 	time.Sleep(time.Duration(*secs * float64(time.Second)))

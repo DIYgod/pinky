@@ -10,7 +10,11 @@ import (
 
 // ScreenOptions tune Tree.Screen.
 type ScreenOptions struct {
-	Keyboard   bool // list the keyboard's keys (needs DumpOptions.IME)
+	// Keyboard lists the keyboard's keys (with DumpOptions.IME). Without
+	// it, an input method window is listed only when the app walked it on
+	// its own: a sheet that covers the screen (Gboard's stylus tutorial,
+	// a setup screen), which is what the person sees there.
+	Keyboard   bool
 	SystemBars bool // list the status and navigation bars (needs DumpOptions.Bars)
 }
 
@@ -53,12 +57,13 @@ func (t *Tree) Screen(opt ScreenOptions) *screen.Screen {
 	}
 	cv := &converter{screenArea: float64(s.Width) * float64(s.Height), minTarget: minUnlabeledDP * dpi / 160}
 	full := screen.Rect{W: s.Width, H: s.Height}
-	var above []screen.Rect // bounds of the windows above the current one
+	var above []screen.Rect // what the windows above the current one cover
 	for _, w := range t.Windows {
 		wb := w.Bounds.rect()
-		skip := (w.Type == WindowInputMethod && !opt.Keyboard) ||
-			(t.isSystemBar(w) && !opt.SystemBars) ||
-			w.Type == WindowMagnificationOverlay
+		// The app sends an input method window's nodes only when asked
+		// (DumpOptions.IME) or when the window covers the screen like a
+		// sheet; either way, list what it sent.
+		skip := (t.isSystemBar(w) && !opt.SystemBars) || w.Type == WindowMagnificationOverlay
 		if !skip && w.Root != nil {
 			cv.clip = intersect(wb, full)
 			if full.Empty() {
@@ -68,12 +73,28 @@ func (t *Tree) Screen(opt ScreenOptions) *screen.Screen {
 			cv.prefix = w.Type + ":" + w.Package
 			cv.node(w.Root, cv.prefix, false)
 		}
-		if !wb.Empty() {
-			above = append(above, wb)
-		}
+		above = append(above, w.covers()...)
 	}
 	s.Elements = cv.out
 	return s
+}
+
+// covers returns what a window hides from the windows below it: its
+// touchable region when the app sent one, else its bounds.
+func (w Window) covers() []screen.Rect {
+	var out []screen.Rect
+	for _, r := range w.Region {
+		if rr := r.rect(); !rr.Empty() {
+			out = append(out, rr)
+		}
+	}
+	if len(out) > 0 {
+		return out
+	}
+	if wb := w.Bounds.rect(); !wb.Empty() {
+		return []screen.Rect{wb}
+	}
+	return nil
 }
 
 // foreground picks the app the person is looking at: the top-most focused

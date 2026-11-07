@@ -135,3 +135,49 @@ func TestPersonSignalRate(t *testing.T) {
 		t.Errorf("buffered %d signals", len(w.ch))
 	}
 }
+
+// The Android 10 and 16 emulators' touchscreens: multi-touch axes and no
+// input properties at all.
+const geteventEmulator = `add device 1: /dev/input/event0
+  name:     "gpio-keys"
+  events:
+    KEY (0001): KEY_POWER
+  input props:
+    <none>
+add device 2: /dev/input/event1
+  name:     "virtio_input_multi_touch_1"
+  events:
+    KEY (0001): BTN_TOOL_RUBBER       BTN_STYLUS
+    ABS (0003): ABS_X                 : value 0, min 0, max 32767, fuzz 0, flat 0, resolution 0
+                ABS_MT_SLOT           : value 0, min 0, max 10, fuzz 0, flat 0, resolution 0
+                ABS_MT_POSITION_X     : value 0, min 0, max 32767, fuzz 0, flat 0, resolution 0
+                ABS_MT_POSITION_Y     : value 0, min 0, max 32767, fuzz 0, flat 0, resolution 0
+                ABS_MT_TRACKING_ID    : value 0, min 0, max 65535, fuzz 0, flat 0, resolution 0
+    SW  (0005): SW_LID
+  input props:
+    <none>
+add device 3: /dev/input/event2
+  name:     "virtio_input_multi_touch_2"
+  events:
+    ABS (0003): ABS_MT_POSITION_X     : value 0, min 0, max 32767, fuzz 0, flat 0, resolution 0
+  input props:
+    <none>
+`
+
+func TestClassifyEmulatorDevices(t *testing.T) {
+	devs := classifyInputDevices(geteventEmulator)
+	if got := devs.String(); got != "touchscreens [event1, event2] and keys [event0]" {
+		t.Errorf("emulator devices: %s", got)
+	}
+	// With a direct touchscreen present, other multi-touch devices stay out.
+	devs = classifyInputDevices(geteventEmulator + `add device 4: /dev/input/event9
+  name:     "fts"
+  events:
+    ABS (0003): ABS_MT_POSITION_X     : value 0, min 0, max 1079, fuzz 0, flat 0, resolution 0
+  input props:
+    INPUT_PROP_DIRECT
+`)
+	if got := devs.String(); got != "touchscreens [event9] and keys [event0]" {
+		t.Errorf("with a direct touchscreen: %s", got)
+	}
+}

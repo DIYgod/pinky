@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -40,9 +41,24 @@ func openTestDevice(t *testing.T) (*Device, context.Context) {
 		t.Fatal(err)
 	}
 	if locked {
-		t.Skip("the phone is locked; leaving it alone")
+		// Emulators are Pinky's own: unlock them with their test PIN.
+		pin := os.Getenv("PINKY_TEST_PIN")
+		if pin == "" || !strings.HasPrefix(serial, "emulator-") {
+			t.Skip("the phone is locked; leaving it alone")
+		}
+		if err := d.Unlock(ctx, pin); err != nil {
+			t.Fatalf("unlock the emulator: %v", err)
+		}
 	}
 	return d, ctx
+}
+
+// envInt reads a positive number from the environment.
+func envInt(name string, def int) int {
+	if v, err := strconv.Atoi(os.Getenv(name)); err == nil && v > 0 {
+		return v
+	}
+	return def
 }
 
 // act runs an action, waits for the screen to settle and paces like a person.
@@ -122,6 +138,42 @@ func calculatorPackage(t *testing.T, ctx context.Context, d *Device) string {
 	}
 	t.Skip("no calculator app")
 	return ""
+}
+
+// keypadPackage returns an app with digit keys to tap: the Calculator,
+// or on emulators, which have none, the phone app's keypad (never its
+// call button).
+func keypadPackage(t *testing.T, ctx context.Context, d *Device) string {
+	apps, err := d.Apps(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range apps {
+		if strings.Contains(a.ID, "calculator") {
+			return a.ID
+		}
+	}
+	if strings.HasPrefix(d.info.ID, "emulator-") {
+		for _, a := range apps {
+			if strings.HasSuffix(a.ID, ".dialer") {
+				return a.ID
+			}
+		}
+	}
+	t.Skip("no calculator app")
+	return ""
+}
+
+// digitKeys returns up to n elements whose label starts with a digit: the
+// keys of a calculator or a keypad.
+func digitKeys(s *screen.Screen, n int) []screen.Element {
+	var out []screen.Element
+	for _, e := range s.Elements {
+		if e.Role == "button" && e.Label != "" && e.Label[0] >= '1' && e.Label[0] <= '9' && len(out) < n {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 func TestDeviceCalculator(t *testing.T) {
@@ -250,6 +302,9 @@ func TestDeviceTypeAndClipboard(t *testing.T) {
 func TestDeviceStreamAndSettle(t *testing.T) {
 	d, ctx := openTestDevice(t)
 	st, err := d.Stream(ctx, driver.StreamOptions{})
+	if errors.Is(err, driver.ErrUnsupported) {
+		t.Skipf("no video on this phone: %v", err)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,9 +372,22 @@ func TestDeviceLaunchUnknown(t *testing.T) {
 
 func TestDeviceBackground(t *testing.T) {
 	d, ctx := openTestDevice(t)
-	pkg := calculatorPackage(t, ctx, d)
+	pkg := ""
+	if strings.HasPrefix(d.info.ID, "emulator-") {
+		// No calculator there; Settings' first page stands still, unlike
+		// the phone app's (which animates).
+		pkg = "com.android.settings"
+		if _, err := d.client.Shell(ctx, d.info.ID, "am force-stop com.android.settings; am force-stop com.google.android.settings.intelligence"); err != nil {
+			t.Fatal(err)
+		}
+	} else {
+		pkg = calculatorPackage(t, ctx, d)
+	}
 	act(t, ctx, d, "home", func() error { return d.Key(ctx, driver.KeyHome) })
-	b, err := d.OpenBackground(ctx, BackgroundOptions{App: pkg})
+	b, err := d.OpenDisplay(ctx, DisplayOptions{App: pkg})
+	if errors.Is(err, driver.ErrUnsupported) {
+		t.Skipf("no virtual display on this phone: %v", err)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -347,9 +415,11 @@ func TestDeviceBackground(t *testing.T) {
 	if main := parseFocusedApp(out); main == pkg {
 		t.Errorf("the calculator took over the main display:\n%s", out)
 	}
-	// No text field is focused, so typed keys reach the calculator.
-	if err := b.Type(ctx, "6*7", driver.TypeOptions{Submit: true}); err != nil {
-		t.Fatal(err)
+	// Typed keys reach the calculator: no text field is focused.
+	if strings.Contains(pkg, "calculator") {
+		if err := b.Type(ctx, "6*7", driver.TypeOptions{Submit: true}); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if ok, err := b.WaitSettled(ctx, 0); err != nil || !ok {
 		t.Errorf("settle on the virtual display: %v %v", ok, err)
@@ -382,7 +452,7 @@ func (d *Device) companionOn() bool {
 
 func TestDevicePersonQuietWhileInjecting(t *testing.T) {
 	d, ctx := openTestDevice(t)
-	pkg := calculatorPackage(t, ctx, d)
+	pkg := keypadPackage(t, ctx, d)
 	signals := d.PersonInput()
 	var n int
 	counted := make(chan struct{})
@@ -394,18 +464,28 @@ func TestDevicePersonQuietWhileInjecting(t *testing.T) {
 	}()
 	time.Sleep(2 * time.Second) // let getevent start
 	act(t, ctx, d, "home", func() error { return d.Key(ctx, driver.KeyHome) })
-	act(t, ctx, d, "launch", func() error { return d.Launch(ctx, pkg) })
+	act(t, ctx, d, "launch", func() error {
+		if strings.HasSuffix(pkg, ".dialer") {
+			// The keypad, not the favorites page.
+			_, err := d.client.Shell(ctx, d.info.ID, "am start -a android.intent.action.DIAL >/dev/null 2>&1")
+			return err
+		}
+		return d.Launch(ctx, pkg)
+	})
 	s := observe(t, ctx, d)
-	if len(s.Elements) < 10 {
-		t.Fatalf("calculator not on screen:\n%s", s.Render())
+	keys := digitKeys(s, 4)
+	if len(keys) < 4 {
+		t.Fatalf("no keypad on screen:\n%s", s.Render())
 	}
 	// Taps, a long press, a swipe, typed keys and hardware-like keys: all
 	// injected, none may look like the person.
-	for _, e := range s.Elements[len(s.Elements)-4:] {
+	for _, e := range keys {
 		act(t, ctx, d, "tap "+e.Label, func() error { return d.Tap(ctx, e.Bounds.Center(), driver.TapOptions{}) })
 	}
 	mid := screen.Point{X: s.Width / 2, Y: s.Height / 2}
-	act(t, ctx, d, "long press", func() error { return d.Tap(ctx, mid, driver.TapOptions{LongPress: true}) })
+	// The long press goes to the display at the top, away from the keys.
+	top := screen.Point{X: s.Width / 2, Y: s.Height / 5}
+	act(t, ctx, d, "long press", func() error { return d.Tap(ctx, top, driver.TapOptions{LongPress: true}) })
 	act(t, ctx, d, "swipe", func() error {
 		return d.Swipe(ctx, screen.Point{X: mid.X, Y: mid.Y + 200}, screen.Point{X: mid.X, Y: mid.Y - 200}, 300*time.Millisecond)
 	})

@@ -14,19 +14,38 @@ const ProtocolVersion = 1
 
 // Info is the ping result.
 type Info struct {
-	Protocol            int    `json:"protocol"`
-	Version             string `json:"version"`
-	VersionCode         int    `json:"version_code"`
-	SDK                 int    `json:"sdk"`
-	Release             string `json:"release"`
-	Manufacturer        string `json:"manufacturer"`
-	Model               string `json:"model"`
-	Time                int64  `json:"time"` // phone clock, Unix milliseconds
-	UptimeMS            int64  `json:"uptime_ms"`
-	Displays            []int  `json:"displays"`
-	Connections         int    `json:"connections"` // open connections, this one included
-	IncludeNotImportant bool   `json:"include_not_important"`
-	IdleDisableMS       int64  `json:"idle_disable_ms"`
+	Protocol     int    `json:"protocol"`
+	Version      string `json:"version"`
+	VersionCode  int    `json:"version_code"`
+	SDK          int    `json:"sdk"`
+	Release      string `json:"release"`
+	Manufacturer string `json:"manufacturer"`
+	Model        string `json:"model"`
+	Time         int64  `json:"time"` // phone clock, Unix milliseconds
+	UptimeMS     int64  `json:"uptime_ms"`
+	Displays     []int  `json:"displays"`
+	// Features lists additions to protocol 1 this app has on this phone,
+	// such as FeatureDisplays. Apps built before round 3 send none.
+	Features            []string `json:"features,omitempty"`
+	Connections         int      `json:"connections"` // open connections, this one included
+	IncludeNotImportant bool     `json:"include_not_important"`
+	IdleDisableMS       int64    `json:"idle_disable_ms"`
+}
+
+// FeatureDisplays means tree, set_text, events and wait_idle take displays
+// other than 0, and events name their display (Android 11 and later). An
+// app without it ignores the display parameter of set_text, which would
+// then write on the main display.
+const FeatureDisplays = "displays"
+
+// Has reports whether the app has a feature.
+func (i *Info) Has(feature string) bool {
+	for _, f := range i.Features {
+		if f == feature {
+			return true
+		}
+	}
+	return false
 }
 
 // Tree is a tree response: every window on one display, top-most first.
@@ -64,15 +83,20 @@ const (
 
 // Window is one accessibility window.
 type Window struct {
-	ID      int    `json:"id"`
-	Type    string `json:"type"`
-	Layer   int    `json:"layer"`
-	Title   string `json:"title,omitempty"`
-	Bounds  Bounds `json:"bounds"`
-	Active  bool   `json:"active,omitempty"`
-	Focused bool   `json:"focused,omitempty"`
-	PIP     bool   `json:"pip,omitempty"`
-	Package string `json:"package,omitempty"`
+	ID     int    `json:"id"`
+	Type   string `json:"type"`
+	Layer  int    `json:"layer"`
+	Title  string `json:"title,omitempty"`
+	Bounds Bounds `json:"bounds"`
+	// Region is the window's touchable region, sent on Android 13 and
+	// later when it is more than the bounds' rectangle: a floating
+	// toolbar's window spans the screen's lower half but covers only the
+	// toolbar and a strip. Windows below are hidden by the region.
+	Region  []Bounds `json:"region,omitempty"`
+	Active  bool     `json:"active,omitempty"`
+	Focused bool     `json:"focused,omitempty"`
+	PIP     bool     `json:"pip,omitempty"`
+	Package string   `json:"package,omitempty"`
 	// App is the package's display name. The app loads names in the
 	// background, so the first tree after an app opens may lack it.
 	App  string `json:"app,omitempty"`

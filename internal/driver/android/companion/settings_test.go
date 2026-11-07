@@ -195,3 +195,54 @@ func TestComponentNames(t *testing.T) {
 		t.Errorf("shellQuote = %s", q)
 	}
 }
+
+func TestTurnOnKeepsOtherServicesAndStaysOn(t *testing.T) {
+	p := newFakePhone(t)
+	p.settings[settingKey] = mika
+	c := New(p)
+	t.Cleanup(func() { c.Close() })
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := c.TurnOn(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := p.settings[settingKey], mika+":"+Component; got != want {
+		t.Errorf("after TurnOn: %q, want %q", got, want)
+	}
+	if err := c.Disable(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := p.settings[settingKey], mika+":"+Component; got != want {
+		t.Errorf("Disable after TurnOn: %q, want it left on (%q)", got, want)
+	}
+	// Already on: TurnOn writes nothing.
+	writes := len(p.shell)
+	if err := c.TurnOn(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, cmd := range p.shell[writes:] {
+		if strings.HasPrefix(cmd, "settings put") {
+			t.Errorf("TurnOn rewrote the setting: %q", cmd)
+		}
+	}
+}
+
+func TestKeepEnabledAfterEnable(t *testing.T) {
+	p := newFakePhone(t)
+	p.settings[settingKey] = mika
+	task := enableDisable(t, p)
+	if !task.EnabledForTask() {
+		t.Fatal("EnabledForTask is false after Enable turned the service on")
+	}
+	// The person turns it on for good while the driver has it on.
+	task.KeepEnabled()
+	if task.EnabledForTask() {
+		t.Error("EnabledForTask after KeepEnabled")
+	}
+	if err := task.Disable(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := p.settings[settingKey], mika+":"+Component; got != want {
+		t.Errorf("after Disable: %q, want %q", got, want)
+	}
+}

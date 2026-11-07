@@ -42,9 +42,12 @@ type inputDevices struct {
 // (multi-touch or single-touch axes on a direct input device) and the
 // devices with hardware keys. Devices that user space created with uinput
 // (fingerprint gestures, injection tools) are left out: they can report
-// keys nobody pressed.
+// keys nobody pressed. A phone without any direct touch device (the
+// emulator's virtio touchscreens have no input properties; an .idc file
+// makes them touchscreens) uses its multi-touch devices instead.
 func classifyInputDevices(out string) inputDevices {
 	devs := inputDevices{touch: map[string]bool{}, keys: map[string]bool{}}
+	multi := map[string]bool{} // multi-touch devices that are not direct
 	var path, name string
 	var caps strings.Builder
 	flush := func() {
@@ -59,6 +62,8 @@ func classifyInputDevices(out string) inputDevices {
 		case uinput:
 		case axes && direct:
 			devs.touch[path] = true
+		case strings.Contains(c, "ABS_MT_POSITION_X"):
+			multi[path] = true
 		case hasAnyWord(c, personKeys):
 			devs.keys[path] = true
 		}
@@ -82,6 +87,9 @@ func classifyInputDevices(out string) inputDevices {
 		caps.WriteByte('\n')
 	}
 	flush()
+	if len(devs.touch) == 0 {
+		devs.touch = multi
+	}
 	return devs
 }
 

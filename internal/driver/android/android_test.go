@@ -245,7 +245,7 @@ func TestWaitQuiet(t *testing.T) {
 }
 
 func testLive(vw, vh int, screenSize func(int, int) (int, int)) *live {
-	l := &live{cfg: &Config{}, sized: make(chan struct{}), done: make(chan struct{}), screenSize: screenSize, vw: vw, vh: vh}
+	l := &live{cfg: &Config{}, video: true, sized: make(chan struct{}), done: make(chan struct{}), screenSize: screenSize, vw: vw, vh: vh}
 	close(l.sized)
 	return l
 }
@@ -266,6 +266,12 @@ func TestPosition(t *testing.T) {
 	p, _ = scaled.position(ctx, screen.Point{X: 540, Y: 1170})
 	if p.X != 256 || p.Y != 552 {
 		t.Errorf("scaled center = %+v", p)
+	}
+	// Without video, points are display pixels of the current rotation.
+	nov := &live{cfg: &Config{}, done: make(chan struct{}), displaySize: func(context.Context) (int, int, error) { return 1920, 1080, nil }}
+	p, _ = nov.position(ctx, screen.Point{X: 1900, Y: 1000})
+	if p != (scrcpy.Position{X: 1900, Y: 1000, Width: 1920, Height: 1080}) {
+		t.Errorf("without video = %+v", p)
 	}
 	// Landscape: the video is wide, so the screen is too.
 	land := testLive(2340, 1080, func(vw, vh int) (int, int) { return orient(1080, 2340, vw, vh) })
@@ -350,4 +356,40 @@ func sameFile(a, b string) bool {
 	fa, err1 := os.Stat(a)
 	fb, err2 := os.Stat(b)
 	return err1 == nil && err2 == nil && os.SameFile(fa, fb)
+}
+
+func TestEmptyWithKeyboard(t *testing.T) {
+	app := screen.App{ID: "com.google.android.settings.intelligence"}
+	if !emptyWithKeyboard(&screen.Screen{App: app, Keyboard: true}) {
+		t.Error("an empty tree with the keyboard up was accepted")
+	}
+	for _, s := range []*screen.Screen{
+		{App: app, Keyboard: false},
+		{App: app, Keyboard: true, Locked: true},
+		{App: app, Keyboard: true, Elements: []screen.Element{{Role: "input"}}},
+	} {
+		if emptyWithKeyboard(s) {
+			t.Errorf("flagged %+v", s)
+		}
+	}
+}
+
+func TestParseRootTasks(t *testing.T) {
+	android16 := `RootTask id=1 bounds=[0,0][1080,2400] displayId=0 userId=0
+ configuration={1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi}
+  taskId=6: com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity bounds=[0,0][1080,2400] userId=0 visible=true
+RootTask id=122 bounds=[0,0][1080,2400] displayId=1038 userId=0
+ configuration={1.0}
+  taskId=122: com.google.android.deskclock/com.android.deskclock.DeskClock bounds=[0,0][1080,2400] userId=0 visible=true
+`
+	got := parseRootTasks(android16)
+	if len(got) != 2 || got[0].id != 1 || got[0].display != 0 || len(got[0].tasks) != 1 || got[0].tasks[0] != 6 ||
+		got[1].id != 122 || got[1].display != 1038 || got[1].tasks[0] != 122 {
+		t.Errorf("Android 16: %+v", got)
+	}
+	android10 := "Stack id=60 bounds=[0,0][1080,1920] displayId=0 userId=0\n configuration={1.0}\n  taskId=66: app.pinky.companion/app.pinky.companion.MainActivity bounds=[0,0][1080,1920]\n  taskId=67: app.pinky.companion/x.Y bounds=[0,0][1080,1920]\n"
+	got = parseRootTasks(android10)
+	if len(got) != 1 || got[0].id != 60 || len(got[0].tasks) != 2 || got[0].tasks[1] != 67 {
+		t.Errorf("Android 10: %+v", got)
+	}
 }

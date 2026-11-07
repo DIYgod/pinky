@@ -34,6 +34,9 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 	d.used()
 	if c := d.companionClient(ctx); c != nil {
 		s, err := d.observeCompanion(ctx, c)
+		if err == nil && emptyWithKeyboard(s) {
+			err = errEmptyTree
+		}
 		if err == nil {
 			return s, nil
 		}
@@ -44,6 +47,17 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 		d.companionFailed(err)
 	}
 	return d.observeDump(ctx)
+}
+
+// errEmptyTree is a companion tree with no elements while an app shows the
+// keyboard, even with the keyboard's own nodes: the read missed something,
+// so uiautomator reads the screen instead.
+var errEmptyTree = errors.New("the tree has no elements while the keyboard shows")
+
+// emptyWithKeyboard reports whether a screen is empty although an app has
+// the keyboard up, which only happens when the tree is incomplete.
+func emptyWithKeyboard(s *screen.Screen) bool {
+	return len(s.Elements) == 0 && s.Keyboard && !s.Locked && s.App.ID != ""
 }
 
 // observeDump reads the screen with `uiautomator dump`.

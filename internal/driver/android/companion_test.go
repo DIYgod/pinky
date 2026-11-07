@@ -119,3 +119,25 @@ func TestCompanionNotAnswering(t *testing.T) {
 		t.Error("used after close")
 	}
 }
+
+func TestLastChangeByDisplay(t *testing.T) {
+	var k companionLink
+	k.live = true
+	k.lastAt = map[int]time.Time{}
+	t0 := time.Unix(1000, 0)
+	k.lastAt[0] = t0
+	k.lastAt[23] = t0.Add(2 * time.Second)
+	if last, live := k.lastChange(0); !live || !last.Equal(t0) {
+		t.Errorf("main display = %v, %v", last, live)
+	}
+	if last, _ := k.lastChange(23); !last.Equal(t0.Add(2 * time.Second)) {
+		t.Errorf("display 23 = %v", last)
+	}
+	// An event whose display is not known counts for every display.
+	k.lastAt[-1] = t0.Add(5 * time.Second)
+	for _, d := range []int{0, 23, 99} {
+		if last, _ := k.lastChange(d); !last.Equal(t0.Add(5 * time.Second)) {
+			t.Errorf("display %d after an unknown one = %v", d, last)
+		}
+	}
+}
