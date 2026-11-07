@@ -12,6 +12,8 @@ import (
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/ui/demogw"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
@@ -199,7 +201,19 @@ func TestGatewaySettingsFollowHandEdits(t *testing.T) {
 	}
 	ga.opt.GatewaySettings = read
 	var reported [][2]Settings
-	ga.opt.OnSettings = func(old, s Settings) { reported = append(reported, [2]Settings{old, s}) }
+	ga.opt.OnSettings = func(old, s Settings) {
+		reported = append(reported, [2]Settings{old, s})
+		// As cmd/pinky's applySettings: what differs, nothing else.
+		if s.Preset != old.Preset && s.Preset >= 1 && s.Preset <= 3 {
+			pol.SetPreset(policy.Preset(s.Preset))
+		}
+		if s.HideCodes != old.HideCodes {
+			pol.SetHideCodes(s.HideCodes)
+		}
+		if s.ReadOnly != old.ReadOnly {
+			pol.SetReadOnly("", s.ReadOnly)
+		}
+	}
 	ga.page, ga.set.sec = pageSettings, secSafety
 	tt := mg.NewTester(ga.view, 1280, 2600)
 	// Settings reads again at once rather than in a few seconds.
@@ -237,6 +251,17 @@ func TestGatewaySettingsFollowHandEdits(t *testing.T) {
 	if old, s := reported[0][0], reported[0][1]; old.Preset != 3 || !old.ReadOnly || old.HideCodes || len(old.BlockedApps) != 1 ||
 		s.Preset != 3 || !s.ReadOnly || !s.HideCodes || len(s.BlockedApps) != 1 {
 		t.Fatalf("the change: from %+v to %+v", old, s)
+	}
+	// It lands on top of the hand edits.
+	if pol.Preset() != policy.PresetEvery || !pol.ReadOnly("") || !pol.HideCodes() {
+		t.Fatalf("policy after the change: preset %d, read-only %v, hide codes %v", pol.Preset(), pol.ReadOnly(""), pol.HideCodes())
+	}
+	if data, _ := os.ReadFile(rules); !strings.Contains(string(data), "preset: 3") || !strings.Contains(string(data), "read_only: true") ||
+		!strings.Contains(string(data), "mask_codes: true") {
+		t.Fatalf("rules.yaml after the change:\n%s", data)
+	}
+	if _, ok := pol.Blocked(screen.App{Name: "Chatter"}); !ok {
+		t.Fatal("the app blocked by hand is no longer blocked")
 	}
 
 	// A read that a change overtakes is dropped, and made again.

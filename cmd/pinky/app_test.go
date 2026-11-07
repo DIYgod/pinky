@@ -99,7 +99,7 @@ func TestSettingsFollowHandEdits(t *testing.T) {
 	blocked := func(s ui.Settings, name string) bool {
 		for _, b := range s.BlockedApps {
 			if b.Name == name {
-				return true
+				return b.Kind == policy.CategoryLabel(policy.CatBlocked)
 			}
 		}
 		return false
