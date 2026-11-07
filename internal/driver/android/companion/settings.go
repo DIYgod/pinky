@@ -104,9 +104,18 @@ func (c *Client) restoreLocked(ctx context.Context) error {
 
 // TurnOn turns the service on for good, when the person asks for it (the
 // client's Install button): it adds only Pinky's entry to
-// enabled_accessibility_services, keeps every other entry, and waits until
-// the service answers. Unlike Enable, a later Disable leaves it on.
+// enabled_accessibility_services, keeps every other entry, waits until
+// the service answers, and stops the app's idle backstop (idle_disable_ms
+// 0), which would otherwise turn the service off after three minutes
+// without a connection. Unlike Enable, a later Disable leaves it on.
 func (c *Client) TurnOn(ctx context.Context) error {
+	if err := c.turnOn(ctx); err != nil {
+		return err
+	}
+	return c.SetIdleDisable(ctx, 0)
+}
+
+func (c *Client) turnOn(ctx context.Context) error {
 	c.setMu.Lock()
 	defer c.setMu.Unlock()
 	c.restore = nil

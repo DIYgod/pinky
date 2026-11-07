@@ -152,3 +152,35 @@ func parseCurSize(out string) (w, h int, ok bool) {
 	h, _ = strconv.Atoi(m[2])
 	return w, h, w > 0 && h > 0
 }
+
+// rootTask is a root task (a stack before Android 12) and its tasks, from
+// `cmd activity stack list`.
+type rootTask struct {
+	id, display int
+	tasks       []int
+}
+
+var (
+	rootTaskRE = regexp.MustCompile(`^(?:RootTask|Stack) id=(-?\d+)\b.*\bdisplayId=(-?\d+)`)
+	taskIDRE   = regexp.MustCompile(`^\s+taskId=(\d+):`)
+)
+
+// parseRootTasks reads `cmd activity stack list` ("RootTask id=125 ...
+// displayId=0 ..." on Android 12 and later, "Stack id=60 ... displayId=0
+// ..." before, each followed by "  taskId=66: pkg/cls ..." lines).
+func parseRootTasks(out string) []rootTask {
+	var roots []rootTask
+	for _, line := range strings.Split(strings.ReplaceAll(out, "\r", ""), "\n") {
+		if m := rootTaskRE.FindStringSubmatch(line); m != nil {
+			id, _ := strconv.Atoi(m[1])
+			disp, _ := strconv.Atoi(m[2])
+			roots = append(roots, rootTask{id: id, display: disp})
+			continue
+		}
+		if m := taskIDRE.FindStringSubmatch(line); m != nil && len(roots) > 0 {
+			t, _ := strconv.Atoi(m[1])
+			roots[len(roots)-1].tasks = append(roots[len(roots)-1].tasks, t)
+		}
+	}
+	return roots
+}

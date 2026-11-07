@@ -373,3 +373,23 @@ func TestEmptyWithKeyboard(t *testing.T) {
 		}
 	}
 }
+
+func TestParseRootTasks(t *testing.T) {
+	android16 := `RootTask id=1 bounds=[0,0][1080,2400] displayId=0 userId=0
+ configuration={1.0 310mcc260mnc [en_US] ldltr sw411dp w411dp h914dp 420dpi}
+  taskId=6: com.google.android.apps.nexuslauncher/com.google.android.apps.nexuslauncher.NexusLauncherActivity bounds=[0,0][1080,2400] userId=0 visible=true
+RootTask id=122 bounds=[0,0][1080,2400] displayId=1038 userId=0
+ configuration={1.0}
+  taskId=122: com.google.android.deskclock/com.android.deskclock.DeskClock bounds=[0,0][1080,2400] userId=0 visible=true
+`
+	got := parseRootTasks(android16)
+	if len(got) != 2 || got[0].id != 1 || got[0].display != 0 || len(got[0].tasks) != 1 || got[0].tasks[0] != 6 ||
+		got[1].id != 122 || got[1].display != 1038 || got[1].tasks[0] != 122 {
+		t.Errorf("Android 16: %+v", got)
+	}
+	android10 := "Stack id=60 bounds=[0,0][1080,1920] displayId=0 userId=0\n configuration={1.0}\n  taskId=66: app.pinky.companion/app.pinky.companion.MainActivity bounds=[0,0][1080,1920]\n  taskId=67: app.pinky.companion/x.Y bounds=[0,0][1080,1920]\n"
+	got = parseRootTasks(android10)
+	if len(got) != 1 || got[0].id != 60 || len(got[0].tasks) != 2 || got[0].tasks[1] != 67 {
+		t.Errorf("Android 10: %+v", got)
+	}
+}

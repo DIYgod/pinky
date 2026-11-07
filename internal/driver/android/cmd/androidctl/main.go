@@ -701,9 +701,10 @@ func background(ctx context.Context, d *android.Device, args []string) error {
 	out := fs.String("out", "", "write the display's H.264 stream to this file")
 	secs := fs.Float64("seconds", 2, "seconds to keep streaming after the steps")
 	decor := fs.Bool("decorations", false, "show the status bar, taskbar and launcher on the display")
+	keep := fs.Bool("keep", false, "move every app on the display to the main display when it closes")
 	fs.Parse(args)
 	start := time.Now()
-	b, err := d.OpenDisplay(ctx, android.DisplayOptions{App: *app, SystemDecorations: *decor})
+	b, err := d.OpenDisplay(ctx, android.DisplayOptions{App: *app, SystemDecorations: *decor, KeepContent: *keep})
 	if err != nil {
 		return err
 	}

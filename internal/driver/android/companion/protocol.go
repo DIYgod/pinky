@@ -83,15 +83,20 @@ const (
 
 // Window is one accessibility window.
 type Window struct {
-	ID      int    `json:"id"`
-	Type    string `json:"type"`
-	Layer   int    `json:"layer"`
-	Title   string `json:"title,omitempty"`
-	Bounds  Bounds `json:"bounds"`
-	Active  bool   `json:"active,omitempty"`
-	Focused bool   `json:"focused,omitempty"`
-	PIP     bool   `json:"pip,omitempty"`
-	Package string `json:"package,omitempty"`
+	ID     int    `json:"id"`
+	Type   string `json:"type"`
+	Layer  int    `json:"layer"`
+	Title  string `json:"title,omitempty"`
+	Bounds Bounds `json:"bounds"`
+	// Region is the window's touchable region, sent on Android 13 and
+	// later when it is more than the bounds' rectangle: a floating
+	// toolbar's window spans the screen's lower half but covers only the
+	// toolbar and a strip. Windows below are hidden by the region.
+	Region  []Bounds `json:"region,omitempty"`
+	Active  bool     `json:"active,omitempty"`
+	Focused bool     `json:"focused,omitempty"`
+	PIP     bool     `json:"pip,omitempty"`
+	Package string   `json:"package,omitempty"`
 	// App is the package's display name. The app loads names in the
 	// background, so the first tree after an app opens may lack it.
 	App  string `json:"app,omitempty"`

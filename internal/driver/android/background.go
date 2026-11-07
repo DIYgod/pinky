@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/png"
 	"io"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -53,6 +54,13 @@ type Background struct {
 	mu       sync.Mutex
 	tapPoint screen.Point // the last tap, for typing into the field under it
 	tapAt    time.Time
+	// theirs holds the tasks that were elsewhere before an app started on
+	// the display: an app the person has open moves its task here when
+	// the agent starts it. Close moves those back to the main display and
+	// lets the display destroy only what the agent opened. Nil when the
+	// display keeps its content anyway.
+	theirs    map[int]bool
+	closeOnce sync.Once
 }
 
 // alwaysUnlocked reports whether scrcpy's virtual displays ignore the
@@ -132,13 +140,25 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 		l.close(err)
 		return nil, fmt.Errorf("android: virtual display did not start: %w", err)
 	}
+	if !opt.KeepContent {
+		b.theirs = map[int]bool{}
+	}
 	if pkg != "" {
-		if err := l.startApp(ctx, pkg); err != nil {
+		if err := b.startApp(ctx, pkg); err != nil {
 			l.close(err)
 			return nil, err
 		}
 	}
 	return b, nil
+}
+
+// rootTasks lists the phone's root tasks and their displays.
+func (d *Device) rootTasks(ctx context.Context) ([]rootTask, error) {
+	out, err := d.client.Shell(ctx, d.info.ID, "cmd activity stack list")
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+	return parseRootTasks(string(out)), nil
 }
 
 // DisplayID returns the Android display id of the virtual display.
@@ -257,7 +277,57 @@ func (b *Background) Launch(ctx context.Context, app string) error {
 	if err != nil {
 		return err
 	}
+	return b.startApp(ctx, pkg)
+}
+
+// startApp starts an app on the display, noting first which tasks are
+// elsewhere, so that one the start moves here can be given back.
+func (b *Background) startApp(ctx context.Context, pkg string) error {
+	if b.theirs != nil {
+		roots, err := b.d.rootTasks(ctx)
+		if err != nil {
+			return err
+		}
+		b.mu.Lock()
+		for _, r := range roots {
+			if r.display != b.display {
+				for _, t := range r.tasks {
+					b.theirs[t] = true
+				}
+			}
+		}
+		b.mu.Unlock()
+	}
 	return b.l.startApp(ctx, pkg)
+}
+
+// returnTheirs moves the root tasks on the display that hold one of the
+// person's tasks back to the main display, before the display closes and
+// destroys the rest.
+func (b *Background) returnTheirs() {
+	b.mu.Lock()
+	theirs := b.theirs
+	b.mu.Unlock()
+	if len(theirs) == 0 {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	roots, err := b.d.rootTasks(ctx)
+	if err != nil {
+		b.d.cfg.logf("android: %s: listing tasks before closing display %d: %v", b.d.info.ID, b.display, err)
+		return
+	}
+	for _, r := range roots {
+		if r.display != b.display || !slices.ContainsFunc(r.tasks, func(t int) bool { return theirs[t] }) {
+			continue
+		}
+		if _, err := b.d.client.Shell(ctx, b.d.info.ID, fmt.Sprintf("cmd activity display move-stack %d 0", r.id)); err != nil {
+			b.d.cfg.logf("android: %s: moving task %d back to the main display: %v", b.d.info.ID, r.id, err)
+			continue
+		}
+		b.d.cfg.logf("android: %s: moved the person's task %d back to the main display", b.d.info.ID, r.id)
+	}
 }
 
 // Apps implements driver.Device.
@@ -334,7 +404,12 @@ func (b *Background) VideoStats(ctx context.Context, since time.Time) (VideoStat
 // Close implements driver.Device. Unless KeepContent was set, the apps on
 // the display close with it.
 func (b *Background) Close() error {
-	b.l.close(fmt.Errorf("android: background display closed"))
+	b.closeOnce.Do(func() {
+		if !b.l.ended() {
+			b.returnTheirs()
+		}
+		b.l.close(fmt.Errorf("android: background display closed"))
+	})
 	return nil
 }
 
