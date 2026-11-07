@@ -311,3 +311,46 @@ func TestCheckupInChinese(t *testing.T) {
 		}
 	}
 }
+
+// hostAPI is the fake with a computer that lacks something for Android
+// phones.
+type hostAPI struct {
+	*fakeapi.API
+	host driver.HostCheck
+}
+
+func (h hostAPI) HostChecks() map[driver.Platform]driver.HostCheck {
+	return map[driver.Platform]driver.HostCheck{driver.Android: h.host}
+}
+
+func TestAddAndroidHostProblem(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.NoPhones, Speed: 50, HoldSetup: true})
+	ta.app.api = hostAPI{ta.api, driver.HostCheck{Missing: "adb_restarts", Detail: "the adb server went away 4 times in 10 minutes"}}
+	ta.sync()
+	ta.page = pageAddPhone
+	ta.add.reset(ta.app)
+	ta.add.step = "android"
+	tt := mg.NewTester(func(c *mg.Context) { ta.addPhonePage(c) }, 1280, 900)
+	ta.frameUntil(t, tt, "the host check", func() bool { return ta.droid.host.Missing != "" })
+	if !hasText(tt, locales.CheckHostADBRestarts()) || !hasText(tt, "went away 4 times") {
+		t.Errorf("no word of the adb that keeps being replaced: %q", tt.Texts())
+	}
+}
+
+func TestCheckupHostWords(t *testing.T) {
+	ta := newTestApp(t, fakeapi.ThreePhones)
+	ta.sync()
+	android, iphone := *ta.device("pixel-9"), *ta.device("iphone-17")
+	w := ta.checkWords(android, gateway.CheckupView{}, driver.Check{ID: driver.CheckHost, Status: driver.CheckFail, Fix: "adb_old", Detail: "adb server version 39"})
+	if w.title != locales.CheckADBTitle() || w.text != locales.CheckHostADBOld() || !w.detail {
+		t.Errorf("an old adb: %+v", w)
+	}
+	// Codes of other platforms show their driver's words.
+	w = ta.checkWords(iphone, gateway.CheckupView{}, driver.Check{ID: driver.CheckHost, Status: driver.CheckFail, Fix: "usbmuxd", Detail: "Install usbmuxd."})
+	if w.title != locales.CheckHostTitle() || w.text != "Install usbmuxd." {
+		t.Errorf("an iPhone's host: %+v", w)
+	}
+	if got := sortedChecks([]driver.Check{{ID: driver.CheckConnection}, {ID: driver.CheckHost}}); got[0].ID != driver.CheckHost {
+		t.Errorf("the host item is not first: %+v", got)
+	}
+}

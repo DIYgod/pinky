@@ -25,6 +25,31 @@ type checkerProvider struct {
 
 func (p checkerProvider) Open(context.Context, string) (driver.Device, error) { return p.x, nil }
 
+// hostProvider is a provider whose computer lacks something.
+type hostProvider struct {
+	listedProvider
+	host driver.HostCheck
+}
+
+func (p hostProvider) CheckHost() driver.HostCheck { return p.host }
+
+func TestCheckupHost(t *testing.T) {
+	info := driver.Info{ID: "x", Platform: driver.Android, Name: "Phone", Connection: "usb", State: driver.StateUnauthorized}
+	g := checkupGateway(t, hostProvider{listedProvider{info}, driver.HostCheck{Missing: "adb_restarts", Detail: "replaced 3 times"}})
+	deadline := time.Now().Add(2 * time.Second)
+	for len(g.Devices()) == 0 && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	v, err := g.Checkup(context.Background(), "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(v.Checks) != 3 || v.Checks[0].ID != driver.CheckHost || v.Checks[0].Fix != "adb_restarts" ||
+		v.Checks[0].Status != driver.CheckFail || v.Checks[0].Detail != "replaced 3 times" {
+		t.Errorf("checks = %+v", v.Checks)
+	}
+}
+
 // listedProvider lists one phone in a fixed state and opens nothing.
 type listedProvider struct{ info driver.Info }
 

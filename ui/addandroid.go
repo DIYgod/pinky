@@ -25,6 +25,36 @@ type droidState struct {
 	// waiting is when each phone began to wait for the person to allow
 	// this computer, to say what to try when no prompt shows.
 	waiting map[string]time.Time
+	// host is what the computer lacks for Android phones (the bundled
+	// adb's HostCheck), asked every 2 s while the steps show.
+	host     driver.HostCheck
+	hostAt   time.Time
+	hostBusy bool
+}
+
+// hostCheckLister is a gateway that says what the computer lacks for each
+// platform's phones (gateway.HostChecks).
+type hostCheckLister interface {
+	HostChecks() map[driver.Platform]driver.HostCheck
+}
+
+// androidHost returns what the computer lacks for Android phones, asking
+// the gateway off the UI thread every 2 s.
+func (a *app) androidHost(c *mg.Context) driver.HostCheck {
+	st := &a.droid
+	hc, ok := a.api.(hostCheckLister)
+	if !ok {
+		return driver.HostCheck{}
+	}
+	if !st.hostBusy && time.Since(st.hostAt) >= 2*time.Second {
+		st.hostBusy = true
+		go func() {
+			h := hc.HostChecks()[driver.Android]
+			a.post(func() { st.host, st.hostAt, st.hostBusy = h, time.Now(), false })
+		}()
+	}
+	c.After(2 * time.Second)
+	return st.host
 }
 
 // noPromptAfter is how long a phone waits for Allow before the steps say
@@ -69,6 +99,12 @@ func (a *app) addAndroid(c *mg.Context) {
 		a.recognize(*d, run)
 	}
 	a.brandPicker(c, d)
+	// adb that does not work keeps any phone from showing up: say so first.
+	if h := a.androidHost(c); h.Missing != "" {
+		if words := hostWords(h.Missing); words != "" {
+			guideProblem(c, words, h.Detail)
+		}
+	}
 	b := brandByID(nonEmpty(st.brand, "other"))
 	seen, before := d != nil, guideNow
 	if seen {

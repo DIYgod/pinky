@@ -95,7 +95,7 @@ A Go test binary or an unsigned `androidctl` is usually not allowed on the local
 ## Not done
 
 - An Android phone with USB debugging off is invisible to adb, so before step 3 Pinky cannot tell the brand. Reading the USB vendor id of a plugged-in phone (IOKit, sysfs, SetupAPI) would let Add phone say "a Xiaomi phone is plugged in, but USB debugging is off".
-- Whether adb itself works on the computer (no adb, another adb server) is the bundled-adb work's (`driver.HostChecker`); the checkup's adb item only says the server answers.
+- Whether adb itself works on the computer is the bundled adb's `driver.HostChecker` (branch `claude/bundle-adb-3b0832`): `adb`, `adb_server`, `adb_old`, `adb_restarts`. The checkup puts what a phone's provider lacks first (`driver.CheckHost`, the code as its fix), and Add phone › Android shows it above the steps, asking `HostChecks` every 2 s; both show nothing until that branch is merged. Pairing over Wi-Fi without a working adb says to go back for why.
 - iPhone items: the iOS session's.
 - Android 13+ restricted settings, and Android 17's Advanced Protection, can turn the companion's service off again; the checkup says how to allow it, but does not read `ACCESS_RESTRICTED_SETTINGS`. On ColorOS 15, `appops set <package> ACCESS_RESTRICTED_SETTINGS allow` after turning the service on is reported to keep it on: the companion's install could do that (companion session).
 - The exact output of an install that HUAWEI's Monitor apps installed by ADB or Pure mode stops, and of China ColorOS's 取消安装, was not seen: those errors fall to the generic messages.

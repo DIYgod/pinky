@@ -477,6 +477,7 @@ type Check struct {
 
 // What a checkup checks, in Check.ID.
 const (
+	CheckHost         = "host"          // the computer has what the phone's platform needs (driver.HostChecker): Fix is what it lacks
 	CheckADB          = "adb"           // Android: the adb server answers
 	CheckConnection   = "connection"    // the phone is connected and answers
 	CheckAuthorized   = "authorized"    // the phone allows this computer (USB debugging allowed, trusted)

@@ -31,7 +31,7 @@ func (g *Gateway) Checkup(ctx context.Context, deviceID string) (CheckupView, er
 		return CheckupView{}, err
 	}
 	g.mu.Lock()
-	info, online, dev := d.info, d.online, d.dev
+	info, online, dev, prov := d.info, d.online, d.dev, d.provider
 	g.mu.Unlock()
 	v := CheckupView{DeviceID: deviceID, Platform: info.Platform, At: time.Now()}
 	// A phone is open once it is online; one that went away keeps the
@@ -39,7 +39,14 @@ func (g *Gateway) Checkup(ctx context.Context, deviceID string) (CheckupView, er
 	if info.State == driver.StateOnline && (!online || dev == nil) {
 		info.State = driver.StateOffline
 	}
-	v.Checks = ConnectionChecks(info)
+	// What the computer lacks for the phone's platform comes first: the
+	// adb server that keeps being replaced, the usbmuxd that is missing.
+	if hc, ok := prov.(driver.HostChecker); ok {
+		if h := hc.CheckHost(); h.Missing != "" {
+			v.Checks = append(v.Checks, driver.Check{ID: driver.CheckHost, Status: driver.CheckFail, Fix: h.Missing, Detail: h.Detail})
+		}
+	}
+	v.Checks = append(v.Checks, ConnectionChecks(info)...)
 	if info.State != driver.StateOnline {
 		return v, nil
 	}

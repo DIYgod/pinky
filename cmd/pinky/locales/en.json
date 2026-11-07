@@ -652,6 +652,26 @@
   "@checkConnectionWiFi": {
     "description": "The checkup, connection and Wi-Fi: passed, over Wi-Fi."
   },
+  "checkHostADBOld": "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such as an old Android SDK's tools, or update them: Pinky then starts its own.",
+  "@checkHostADBOld": {
+    "description": "The checkup and Add phone › Android: the adb server that runs is older than Wi-Fi pairing needs."
+  },
+  "checkHostADBRestarts": "Another program keeps replacing the adb server, so phones drop off now and then. It's usually a program with another version of adb: quit it, or have it use the same adb as Pinky.",
+  "@checkHostADBRestarts": {
+    "description": "The checkup and Add phone › Android: the adb server went away again and again, as when another program with another adb replaces it."
+  },
+  "checkHostADBServer": "Android's adb server isn't running, and Pinky couldn't start it.",
+  "@checkHostADBServer": {
+    "description": "The checkup and Add phone › Android: no adb server runs and starting one failed; the system's words follow."
+  },
+  "checkHostNoADB": "Pinky found no adb, the tool it talks to Android phones through. Install Android's SDK Platform-Tools, then open Pinky again.",
+  "@checkHostNoADB": {
+    "description": "The checkup and Add phone › Android: the computer has no adb at all (a build of Pinky without its own)."
+  },
+  "checkHostTitle": "This computer's software",
+  "@checkHostTitle": {
+    "description": "The checkup: the item for software this computer needs for the phone's platform, on a phone that is not Android (Android's is checkADBTitle)."
+  },
   "checkInputFail": "Pinky couldn't send a key to the phone.",
   "@checkInputFail": {
     "description": "The checkup, tapping and typing: failed for another reason; the system's words follow."
@@ -3096,9 +3116,9 @@
   "@pairingConnecting": {
     "description": "Pair over Wi-Fi: the status line, next to a spinner, once the phone paired and Pinky connects to it."
   },
-  "pairingErrNoAdb": "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead.",
+  "pairingErrNoAdb": "Android's adb isn't working on this computer, so Pinky can't pair phones over Wi-Fi. Go back to see why, or use a USB cable.",
   "@pairingErrNoAdb": {
-    "description": "Pair over Wi-Fi: the error when this computer has no Android tools (adb) to pair with."
+    "description": "Pair over Wi-Fi: the error when adb does not work on this computer (no adb, or its server does not run); Add phone › Android, one step back, says why."
   },
   "pairingErrOther": "Couldn't pair: {detail}",
   "@pairingErrOther": {

@@ -2035,6 +2035,86 @@ func (msgs Messages) CheckConnectionWiFi() string {
 	return Catalog.Format(msgs.locale, "checkConnectionWiFi", nil)
 }
 
+// CheckHostADBOld says "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such …"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: the adb server that runs is older
+// than Wi-Fi pairing needs.
+func CheckHostADBOld() string { return In(i18n.Locale()).CheckHostADBOld() }
+
+// CheckHostADBOld says "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such …"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: the adb server that runs is older
+// than Wi-Fi pairing needs.
+func (msgs Messages) CheckHostADBOld() string {
+	return Catalog.Format(msgs.locale, "checkHostADBOld", nil)
+}
+
+// CheckHostADBRestarts says "Another program keeps replacing the adb server, so phones drop off now and then. It's usually a program with another …"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: the adb server went away again and
+// again, as when another program with another adb replaces it.
+func CheckHostADBRestarts() string { return In(i18n.Locale()).CheckHostADBRestarts() }
+
+// CheckHostADBRestarts says "Another program keeps replacing the adb server, so phones drop off now and then. It's usually a program with another …"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: the adb server went away again and
+// again, as when another program with another adb replaces it.
+func (msgs Messages) CheckHostADBRestarts() string {
+	return Catalog.Format(msgs.locale, "checkHostADBRestarts", nil)
+}
+
+// CheckHostADBServer says "Android's adb server isn't running, and Pinky couldn't start it."
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: no adb server runs and starting
+// one failed; the system's words follow.
+func CheckHostADBServer() string { return In(i18n.Locale()).CheckHostADBServer() }
+
+// CheckHostADBServer says "Android's adb server isn't running, and Pinky couldn't start it."
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: no adb server runs and starting
+// one failed; the system's words follow.
+func (msgs Messages) CheckHostADBServer() string {
+	return Catalog.Format(msgs.locale, "checkHostADBServer", nil)
+}
+
+// CheckHostNoADB says "Pinky found no adb, the tool it talks to Android phones through. Install Android's SDK Platform-Tools, then open Pink…"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: the computer has no adb at all (a
+// build of Pinky without its own).
+func CheckHostNoADB() string { return In(i18n.Locale()).CheckHostNoADB() }
+
+// CheckHostNoADB says "Pinky found no adb, the tool it talks to Android phones through. Install Android's SDK Platform-Tools, then open Pink…"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: the computer has no adb at all (a
+// build of Pinky without its own).
+func (msgs Messages) CheckHostNoADB() string {
+	return Catalog.Format(msgs.locale, "checkHostNoADB", nil)
+}
+
+// CheckHostTitle says "This computer's software"
+// in the language the app shows.
+//
+// The checkup: the item for software this computer needs for the phone's
+// platform, on a phone that is not Android (Android's is checkADBTitle).
+func CheckHostTitle() string { return In(i18n.Locale()).CheckHostTitle() }
+
+// CheckHostTitle says "This computer's software"
+// in the language of msgs.
+//
+// The checkup: the item for software this computer needs for the phone's
+// platform, on a phone that is not Android (Android's is checkADBTitle).
+func (msgs Messages) CheckHostTitle() string {
+	return Catalog.Format(msgs.locale, "checkHostTitle", nil)
+}
+
 // CheckInputFail says "Pinky couldn't send a key to the phone."
 // in the language the app shows.
 //
@@ -8417,18 +8497,20 @@ func (msgs Messages) PairingConnecting() string {
 	return Catalog.Format(msgs.locale, "pairingConnecting", nil)
 }
 
-// PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
+// PairingErrNoAdb says "Android's adb isn't working on this computer, so Pinky can't pair phones over Wi-Fi. Go back to see why, or use a USB…"
 // in the language the app shows.
 //
-// Pair over Wi-Fi: the error when this computer has no Android tools (adb)
-// to pair with.
+// Pair over Wi-Fi: the error when adb does not work on this computer (no
+// adb, or its server does not run); Add phone › Android, one step back,
+// says why.
 func PairingErrNoAdb() string { return In(i18n.Locale()).PairingErrNoAdb() }
 
-// PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
+// PairingErrNoAdb says "Android's adb isn't working on this computer, so Pinky can't pair phones over Wi-Fi. Go back to see why, or use a USB…"
 // in the language of msgs.
 //
-// Pair over Wi-Fi: the error when this computer has no Android tools (adb)
-// to pair with.
+// Pair over Wi-Fi: the error when adb does not work on this computer (no
+// adb, or its server does not run); Add phone › Android, one step back,
+// says why.
 func (msgs Messages) PairingErrNoAdb() string {
 	return Catalog.Format(msgs.locale, "pairingErrNoAdb", nil)
 }

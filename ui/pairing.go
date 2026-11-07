@@ -256,7 +256,7 @@ func checkPairAddr(addr string) string {
 func pairError(err error) string {
 	msg := strings.ToLower(err.Error())
 	switch {
-	case errors.Is(err, gateway.ErrNoPairing):
+	case errors.Is(err, gateway.ErrNoPairing) || strings.Contains(msg, "adb server not running"):
 		return locales.PairingErrNoAdb()
 	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(msg, "timeout") || strings.Contains(msg, "timed out"):
 		return locales.PairingErrTimeout()

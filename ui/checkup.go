@@ -212,7 +212,7 @@ func (a *app) checkupList(c *mg.Context, d gateway.DeviceView, run *checkupRun, 
 }
 
 // checkOrder is the order items show in; others follow.
-var checkOrder = []string{driver.CheckADB, driver.CheckConnection, driver.CheckAuthorized, driver.CheckCompanion,
+var checkOrder = []string{driver.CheckHost, driver.CheckADB, driver.CheckConnection, driver.CheckAuthorized, driver.CheckCompanion,
 	driver.CheckInput, driver.CheckScreen, driver.CheckBackground, driver.CheckWiFi, driver.CheckLocalNetwork}
 
 func sortedChecks(in []driver.Check) []driver.Check {
@@ -318,6 +318,15 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 	w := checkWords{title: checkTitle(ck.ID), detail: true}
 	pass := ck.Status == driver.CheckPass
 	switch ck.ID {
+	case driver.CheckHost:
+		if android {
+			w.title = locales.CheckADBTitle()
+		}
+		w.text = hostWords(ck.Fix)
+		w.detail = true
+		if w.text == "" {
+			w.text, w.detail = ck.Detail, false
+		}
 	case driver.CheckADB:
 		if pass {
 			w.text, w.detail = locales.CheckADBPass(), false
@@ -451,6 +460,22 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 	return w
 }
 
+// hostWords says what the computer lacks for Android phones, by the
+// Android driver's HostCheck codes; "" for codes of other platforms.
+func hostWords(missing string) string {
+	switch missing {
+	case "adb":
+		return locales.CheckHostNoADB()
+	case "adb_server":
+		return locales.CheckHostADBServer()
+	case "adb_old":
+		return locales.CheckHostADBOld()
+	case "adb_restarts":
+		return locales.CheckHostADBRestarts()
+	}
+	return ""
+}
+
 // familyOf is the maker's system of the phone, from this checkup, or the
 // last one that read it.
 func (a *app) familyOf(id string, v gateway.CheckupView) string {
@@ -473,6 +498,8 @@ func inputSteps(b brand) (steps []string, path, note string) {
 
 func checkTitle(id string) string {
 	switch id {
+	case driver.CheckHost:
+		return locales.CheckHostTitle()
 	case driver.CheckADB:
 		return locales.CheckADBTitle()
 	case driver.CheckConnection:
