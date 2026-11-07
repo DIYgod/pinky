@@ -21,10 +21,11 @@ type Engine struct {
 	readOnlyAll     *bool
 	readOnlyDevices map[string]bool
 
-	// rules.yaml and apps.yaml as the engine last read or wrote them, and
-	// what Refresh has to report (disk.go).
+	// rules.yaml and apps.yaml as the engine last read or wrote them, what
+	// Refresh has to report, and the files' version (disk.go).
 	rulesDisk, appsDisk diskFile
 	changes             []FileChange
+	version             int
 }
 
 // New returns an engine for the given rules and app table. A nil table uses

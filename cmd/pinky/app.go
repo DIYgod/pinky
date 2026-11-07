@@ -91,26 +91,25 @@ func runApp(args []string) error {
 	}()
 
 	gatewaySettings(&settings, rg)
-	current := settings
 	return ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
 		Version:  version,
 		Theme:    *theme,
 		Hidden:   *background,
 		Settings: &settings,
-		OnSettings: func(s ui.Settings) {
-			applySettings(rg, current, s, c.Log)
+		OnSettings: func(old, s ui.Settings) {
+			applySettings(rg, old, s, c.Log)
 			applyTelemetry(tel, s)
 			unlock.on.Store(s.UnlockFromComputer)
-			current = s
 			if err := saveSettings(settingsPath, s); err != nil {
 				c.Log.Warn("save settings", "err", err)
 			}
 		},
-		RulesFile:  dirs.Rules(),
-		AgentToken: rg.srv.Token,
-		Telemetry:  tel,
-		Updates:    upd,
-		Changelog:  pinky.Changelog,
+		GatewaySettings: func(since int) (ui.Settings, int, bool) { return policySettings(rg, since) },
+		RulesFile:       dirs.Rules(),
+		AgentToken:      rg.srv.Token,
+		Telemetry:       tel,
+		Updates:         upd,
+		Changelog:       pinky.Changelog,
 		// The window is up: an update that just swapped this version in
 		// can drop the old one.
 		OnReady: func(*mygo.Window) {
@@ -159,9 +158,10 @@ func saveSettings(path string, s ui.Settings) error {
 }
 
 // gatewaySettings fills in what the policy keeps in rules.yaml and
-// apps.yaml, which are the source of truth for it.
+// apps.yaml, which are the source of truth for it. A file without a preset
+// shows none of the three.
 func gatewaySettings(s *ui.Settings, rg *runningGateway) {
-	if p := rg.Policy.Preset(); p >= policy.PresetCommits && p <= policy.PresetEvery {
+	if p := rg.Policy.Preset(); p >= policy.PresetNone && p <= policy.PresetEvery {
 		s.Preset = int(p)
 	}
 	s.HideCodes = rg.Policy.HideCodes()
@@ -176,6 +176,20 @@ func gatewaySettings(s *ui.Settings, rg *runningGateway) {
 		}
 		s.BlockedApps = append(s.BlockedApps, ui.BlockedApp{Name: name, Kind: policy.CategoryLabel(b.Category)})
 	}
+}
+
+// policySettings is gatewaySettings for Settings to read again after hand
+// edits of the rules files: it reads the gateway only when the policy's
+// version is no longer since, which saves listing the phones' apps every
+// few seconds.
+func policySettings(rg *runningGateway, since int) (ui.Settings, int, bool) {
+	v := rg.Policy.Version()
+	if v == since {
+		return ui.Settings{}, v, false
+	}
+	var s ui.Settings
+	gatewaySettings(&s, rg)
+	return s, v, true
 }
 
 // startSettings applies what the gateway takes from Settings at start:

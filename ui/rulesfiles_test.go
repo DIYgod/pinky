@@ -174,3 +174,83 @@ func TestAppsFileProblem(t *testing.T) {
 		t.Errorf("the preset did not change while only apps.yaml is broken: %d", ta.settings.Preset)
 	}
 }
+
+// TestGatewaySettingsFollowHandEdits edits rules.yaml and apps.yaml by hand
+// while Settings › Safety shows, against the real gateway: the preset,
+// Read-only mode, Hide codes and the blocked apps show the edits; the next
+// change reports them as the edits left them, so that it passes on only
+// what the person changed; and a read that a change overtakes is dropped.
+func TestGatewaySettingsFollowHandEdits(t *testing.T) {
+	dir := t.TempDir()
+	rules, apps := filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml")
+	ga := newGatewayApp(t, true, func(o *demogw.Options) { o.ConfigDir = dir })
+	pol := ga.w.Gateway.Policy()
+	// As cmd/pinky's policySettings, with the person's blocked apps only.
+	read := func(since int) (Settings, int, bool) {
+		v := pol.Version()
+		if v == since {
+			return Settings{}, v, false
+		}
+		s := Settings{Preset: int(pol.Preset()), HideCodes: pol.HideCodes(), ReadOnly: pol.ReadOnly("")}
+		for _, b := range pol.BlockedApps(nil) {
+			s.BlockedApps = append(s.BlockedApps, BlockedApp{Name: nonEmpty(b.Name, b.ID), Kind: "Blocked by you"})
+		}
+		return s, v, true
+	}
+	ga.opt.GatewaySettings = read
+	var reported [][2]Settings
+	ga.opt.OnSettings = func(old, s Settings) { reported = append(reported, [2]Settings{old, s}) }
+	ga.page, ga.set.sec = pageSettings, secSafety
+	tt := mg.NewTester(ga.view, 1280, 2600)
+	// Settings reads again at once rather than in a few seconds.
+	now := func() { ga.files.lastLoad, ga.gwSet.lastLoad = time.Time{}, time.Time{} }
+	ga.waitFor(t, "the first read", func() bool { now(); tt.Frame(); return ga.gwSet.version >= 0 })
+	if s := ga.settings; s.Preset != 1 || !s.HideCodes || s.ReadOnly || len(s.BlockedApps) != 0 {
+		t.Fatalf("settings at first: %+v", s)
+	}
+
+	data, err := os.ReadFile(rules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handEdit(t, rules, strings.NewReplacer("\npreset: 1\n", "\npreset: 3\n", "\nmask_codes: true\n", "\nmask_codes: false\n",
+		"\nread_only: false\n", "\nread_only: true\n").Replace(string(data)))
+	handEdit(t, apps, "add:\n  blocked:\n    names: [Chatter]\n")
+	ga.waitFor(t, "the hand edits", func() bool {
+		now()
+		tt.Frame()
+		s := ga.settings
+		return s.Preset == 3 && !s.HideCodes && s.ReadOnly && len(s.BlockedApps) == 1
+	})
+	if !hasText(tt, "Chatter") {
+		t.Errorf("the app blocked by hand is not listed: %q", tt.Texts())
+	}
+
+	// Hide codes turned back on: the change has the hand edits as before.
+	if err := tt.Click(locales.SettingsSafetyHideCodes()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if len(reported) != 1 {
+		t.Fatalf("changes reported: %+v", reported)
+	}
+	if old, s := reported[0][0], reported[0][1]; old.Preset != 3 || !old.ReadOnly || old.HideCodes || len(old.BlockedApps) != 1 ||
+		s.Preset != 3 || !s.ReadOnly || !s.HideCodes || len(s.BlockedApps) != 1 {
+		t.Fatalf("the change: from %+v to %+v", old, s)
+	}
+
+	// A read that a change overtakes is dropped, and made again.
+	release := make(chan struct{})
+	ga.opt.GatewaySettings = func(int) (Settings, int, bool) { <-release; return Settings{Preset: 1}, 999, true }
+	ga.gwSet.lastLoad = time.Time{}
+	tt.Frame() // starts the read
+	if err := tt.Click(locales.SettingsSafetyHideCodes()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	close(release)
+	ga.waitFor(t, "the read to end", func() bool { return !ga.gwSet.reading })
+	if ga.gwSet.version == 999 || ga.settings.Preset != 3 {
+		t.Fatalf("an overtaken read was taken in: version %d, preset %d", ga.gwSet.version, ga.settings.Preset)
+	}
+}

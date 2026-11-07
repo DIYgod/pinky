@@ -409,7 +409,7 @@ func TestCompanionWaitsWhileAnAgentWorks(t *testing.T) {
 func TestSettingsCheckNow(t *testing.T) {
 	ut := newUpdateTest(t, fakeapi.Companion)
 	var saved []Settings
-	ut.opt.OnSettings = func(s Settings) { saved = append(saved, s) }
+	ut.opt.OnSettings = func(_, s Settings) { saved = append(saved, s) }
 	ut.page, ut.set.sec = pageSettings, secAdvanced
 	tt := mg.NewTester(ut.view, 1280, 820)
 	if !hasText(tt, "Update automatically") || !hasText(tt, "Pinky 2026.1107.1") {

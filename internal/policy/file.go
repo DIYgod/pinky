@@ -99,7 +99,7 @@ func Load(rulesPath, appsPath string) (*Engine, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.refreshLocked(true)
-	e.changes = nil
+	e.changes, e.version = nil, 0
 	for _, d := range []*diskFile{&e.rulesDisk, &e.appsDisk} {
 		if d.err != nil {
 			return nil, fmt.Errorf("%s: %w", d.path, d.err)

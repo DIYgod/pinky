@@ -155,6 +155,15 @@ func (e *Engine) Refresh() []FileChange {
 	return out
 }
 
+// Version counts the changes of rules.yaml and apps.yaml since Load: hand
+// edits the engine took in or found it cannot use, and what Settings
+// wrote. Settings shows what the files hold again when it moves.
+func (e *Engine) Version() int {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	return e.version
+}
+
 // Problems lists the rules files that changed on disk but cannot be used,
 // rules.yaml first.
 func (e *Engine) Problems() []*FileError {
@@ -277,6 +286,7 @@ func (e *Engine) settleLocked(d *diskFile, l look, force bool, parse func([]byte
 
 // noteLocked keeps a change for Refresh to report.
 func (e *Engine) noteLocked(c FileChange) {
+	e.version++
 	const keep = 16
 	if len(e.changes) >= keep {
 		e.changes = append(e.changes[:0], e.changes[len(e.changes)-keep+1:]...)
@@ -295,6 +305,7 @@ func (e *Engine) writeLocked(d *diskFile, data []byte) error {
 		return err
 	}
 	d.seen, d.sum = info, sha256.Sum256(data)
+	e.version++
 	return nil
 }
 

@@ -11,11 +11,15 @@ import (
 )
 
 // Hand edits of the rules files. The gateway takes in edits of rules.yaml
-// and apps.yaml made while Pinky runs. One it cannot use changes nothing,
-// and Settings says what is wrong, at the top of Safety and under Advanced
-// › Rules file, until the person fixes the file. Meanwhile the controls
-// that would change that file are off: the gateway refuses such changes,
-// so a switch would show what is not in force.
+// and apps.yaml made while Pinky runs, and Settings shows what they hold:
+// the lists of Safety read the gateway every few seconds, and the preset,
+// Read-only mode, Hide codes and the blocked apps come again from
+// Options.GatewaySettings once the policy changed. An edit the gateway
+// cannot use changes nothing, and Settings says what is wrong, at the top
+// of Safety and under Advanced › Rules file, until the person fixes the
+// file. Meanwhile the controls that would change that file are off: the
+// gateway refuses such changes, so a switch would show what is not in
+// force.
 
 // The rules files, as gateway.FileProblem names them.
 const (
@@ -53,6 +57,55 @@ func (a *app) watchFileProblems(c *mg.Context) {
 		}()
 	}
 	c.After(2 * time.Second)
+}
+
+// gwSettingsState is what Settings knows of the settings the gateway
+// keeps: the policy's version it shows (-1 before the first read), and
+// whether a read is under way.
+type gwSettingsState struct {
+	version  int
+	reading  bool
+	lastLoad time.Time
+}
+
+// watchGatewaySettings reads what the gateway keeps of the settings every
+// two seconds while Settings shows, when the policy changed since the
+// version Settings shows: after a hand edit of the rules files, and after
+// the person's own changes, which come back as they were made.
+func (a *app) watchGatewaySettings(c *mg.Context) {
+	read := a.opt.GatewaySettings
+	st := &a.gwSet
+	if read == nil {
+		return
+	}
+	if !st.reading && time.Since(st.lastLoad) > 2*time.Second {
+		st.reading, st.lastLoad = true, time.Now()
+		since, changes := st.version, a.changes
+		go func() {
+			s, v, ok := read(since)
+			a.post(func() {
+				st.reading = false
+				// A change made meanwhile is newer than what was read: read
+				// again next time.
+				if ok && changes == a.changes {
+					a.takeGatewaySettings(s)
+					st.version = v
+				}
+			})
+		}()
+	}
+	c.After(2 * time.Second)
+}
+
+// takeGatewaySettings shows what the gateway keeps of the settings, and
+// makes it what the next change reports as before it, so that the change
+// passes on only what the person changed, never a value a hand edit
+// replaced.
+func (a *app) takeGatewaySettings(g Settings) {
+	for _, s := range []*Settings{&a.settings, &a.reported} {
+		s.Preset, s.HideCodes, s.ReadOnly = g.Preset, g.HideCodes, g.ReadOnly
+		s.BlockedApps = append([]BlockedApp(nil), g.BlockedApps...)
+	}
 }
 
 // fileBroken reports whether a rules file (rulesYAML or appsYAML) has a

@@ -460,3 +460,29 @@ func TestHalfDoneSaveIsNotRead(t *testing.T) {
 		t.Fatalf("Chase after the save: %q %v", rule, ok)
 	}
 }
+
+// TestVersion counts the changes of the files: hand edits taken in, ones
+// that cannot be used and their fixes, and what Settings wrote, but not a
+// look that found nothing new or a change from Settings that changed
+// nothing.
+func TestVersion(t *testing.T) {
+	e, rules, apps := loadIn(t)
+	if v := e.Version(); v != 0 {
+		t.Fatalf("version after Load: %d", v)
+	}
+	step := func(what string, changes bool, f func()) {
+		t.Helper()
+		v := e.Version()
+		f()
+		if (e.Version() != v) != changes {
+			t.Errorf("%s: version %d, then %d", what, v, e.Version())
+		}
+	}
+	step("a hand edit", true, func() { handEdit(t, rules, handRules); e.Refresh() })
+	step("nothing new", false, func() { e.Refresh() })
+	step("a change from Settings", true, func() { e.SetPreset(PresetEvery) })
+	step("a change from Settings that changes nothing", false, func() { e.SetPreset(PresetEvery) })
+	step("an edit that cannot be used", true, func() { handEdit(t, apps, "add: [\n"); e.Refresh() })
+	step("the same problem", false, func() { e.Refresh() })
+	step("the fix", true, func() { handEdit(t, apps, "add: {}\n"); e.Refresh() })
+}

@@ -34,12 +34,21 @@ type settingsState struct {
 	confirm bool
 }
 
+// changed reports a change in Settings, with the settings as they were
+// before it.
 func (a *app) changed() {
+	a.changes++
+	old := a.reported
+	a.reported = a.settings.clone()
 	if a.opt.OnSettings != nil {
-		s := a.settings
-		s.BlockedApps = append([]BlockedApp(nil), s.BlockedApps...)
-		a.opt.OnSettings(s)
+		a.opt.OnSettings(old, a.settings.clone())
 	}
+}
+
+// clone returns s with a list of blocked apps of its own.
+func (s Settings) clone() Settings {
+	s.BlockedApps = append([]BlockedApp(nil), s.BlockedApps...)
+	return s
 }
 
 func (a *app) settingsPage(c *mg.Context) {
@@ -88,6 +97,7 @@ func (a *app) settingsPage(c *mg.Context) {
 			a.feedbackLink(c)
 		})
 		a.watchFileProblems(c)
+		a.watchGatewaySettings(c)
 		mg.Scroll(c).Grow(1).MinWidth(0).Padding(24, 40).Children(func() {
 			mg.Column(c).MaxWidth(640).Gap(22).Children(func() {
 				switch s.sec {
