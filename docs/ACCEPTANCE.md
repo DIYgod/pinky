@@ -20,7 +20,7 @@ open build/pinky/darwin-arm64/Pinky.app
 
 - [ ] The sidebar lists your phones with a status line; selecting one shows its live screen.
 - [ ] Pinky's icon is in the menu bar; closing the window keeps Pinky running there. `Pinky.app/Contents/MacOS/Pinky quit` (or the menu) quits it.
-- *(checked)* The app carries its own FFmpeg (`Contents/Frameworks`) and the companion APK (`Contents/Resources`), and so does the `.dmg`.
+- *(checked)* The app carries its own FFmpeg (`Contents/Frameworks`) and the companion APK (`Contents/Resources`), and so does the `.dmg`. `make release` signs it with the Developer ID and notarizes it, so the `.dmg` opens on other Macs.
 
 ## 2. Connect Claude Code
 
@@ -89,7 +89,7 @@ open build/pinky/darwin-arm64/Pinky.app --args --fake    # quit the real Pinky f
 
 ## Not done, and why
 
-- **Notarization**: `make release` signs with the NATURAL SELECTION LABS Developer ID (checked: hardened runtime, timestamp, FFmpeg loads from the app) and notarizes, once you store the notarytool profile: `xcrun notarytool store-credentials pinky-notary --apple-id diygod@rss3.io --team-id 492J8Q67PF`.
+- ~~Notarization~~ done on the 7th: `make release` signed Pinky.app with the NATURAL SELECTION LABS Developer ID (hardened runtime, timestamp; FFmpeg loads from the app) and Apple notarized the `.dmg` (accepted, stapled; Gatekeeper: "Notarized Developer ID"). Run it again for each release; the `pinky-notary` profile is in your keychain.
 - **An Intel or universal build**: only Apple silicon is built.
 - **Background displays on Android 10**: apps run there, but nothing on them can be read before Android 11, so Pinky does not offer background work on the Pixel. Android 11 and 12 are not verified and default to the main screen.
 - **Things that need a person**: Touch ID and Windows Hello prompts, a real Wi-Fi pairing, unlocking the iPhone, a finger on the Mi during a task.
