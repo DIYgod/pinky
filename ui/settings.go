@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
@@ -634,14 +635,18 @@ func keepChoices(cur int) []int {
 
 // keepLabel is a retention limit as the select shows it, in the language
 // shown. The select maps a label back to its limit in the same frame.
-func keepLabel(days int) string {
+func keepLabel(days int) string { return keepLabelIn(locales.In(i18n.Locale()), days) }
+
+// keepLabelIn names a retention in the language of m; feedback's
+// diagnostics are English.
+func keepLabelIn(m locales.Messages, days int) string {
 	switch {
 	case days <= 0:
-		return locales.SettingsPrivacyKeepForever()
+		return m.SettingsPrivacyKeepForever()
 	case days == 365:
-		return locales.SettingsPrivacyKeepYear()
+		return m.SettingsPrivacyKeepYear()
 	}
-	return locales.SettingsPrivacyKeepDays(days)
+	return m.SettingsPrivacyKeepDays(days)
 }
 
 func (a *app) settingsPrivacy(c *mg.Context) {

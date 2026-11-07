@@ -272,3 +272,47 @@ func TestChineseUpdateScreenshots(t *testing.T) {
 	ut.upd.newsOpen = true
 	shot("whats-new")
 }
+
+// TestChineseTelemetryScreenshots draws Settings › Privacy, What Pinky
+// shares and Send feedback in Simplified Chinese into $PINKY_SCREENSHOTS_ZH.
+func TestChineseTelemetryScreenshots(t *testing.T) {
+	dir := os.Getenv("PINKY_SCREENSHOTS_ZH")
+	if dir == "" {
+		t.Skip("set PINKY_SCREENSHOTS_ZH to a folder to write the Chinese screenshots")
+	}
+	inLanguage(t, "zh-Hans")
+	ta := newTelApp(t, &reports{})
+	ta.tel.Count("runs.started")
+	ta.tel.Count("tools.phone_tap")
+	shoot := func(name string, setup func()) {
+		t.Helper()
+		tt := mg.NewTester(ta.view, 1280, 820)
+		inLanguage(t, "zh-Hans", tt)
+		tt.SetScale(2)
+		if setup != nil {
+			setup()
+		}
+		ta.eventually(t, tt, "posted work", func() bool { return !ta.t.fb.reading })
+		tt.Frame()
+		f, err := os.Create(filepath.Join(dir, name+"-zh-light.png"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		if err := png.Encode(f, tt.Image()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	shoot("feedback", func() {
+		if !ta.t.fb.open {
+			ta.openFeedback()
+			ta.t.fb.title = "Mirror froze"
+			ta.t.fb.message = "The mirror froze after I unlocked the phone from the computer."
+			ta.t.fb.review = true
+		}
+	})
+	ta.t.fb.open = false
+	ta.page, ta.set.sec = pageSettings, secPrivacy
+	shoot("settings-privacy-usage", nil)
+	shoot("whats-shared", func() { ta.openShared() })
+}

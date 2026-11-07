@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
@@ -570,21 +571,25 @@ func clampInt(v, lo, hi int) int {
 }
 
 // videoLine describes the decoder for Settings › Advanced.
-func videoLine(a *app) string {
+func videoLine(a *app) string { return videoLineIn(locales.In(i18n.Locale()), a) }
+
+// videoLineIn is videoLine in the language of m; feedback's diagnostics
+// are English.
+func videoLineIn(m locales.Messages, a *app) string {
 	if a.videoErr != nil {
 		return a.videoErr.Error()
 	}
 	line := video.Version()
-	for _, m := range a.mirrors {
-		if m.player == nil {
+	for _, mr := range a.mirrors {
+		if mr.player == nil {
 			continue
 		}
-		st := m.player.Stats()
-		dec := locales.MirrorDecoderSoftware()
+		st := mr.player.Stats()
+		dec := m.MirrorDecoderSoftware()
 		if st.Hardware != "" {
 			dec = st.Hardware
 		}
-		line = locales.MirrorDecoderStats(line, m.id, dec, fmt.Sprintf("%.0f", st.FPS), st.Latency.Round(100*time.Microsecond).String())
+		line = m.MirrorDecoderStats(line, mr.id, dec, fmt.Sprintf("%.0f", st.FPS), st.Latency.Round(100*time.Microsecond).String())
 	}
 	return line
 }

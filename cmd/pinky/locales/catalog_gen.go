@@ -1863,6 +1863,322 @@ func (msgs Messages) ExportTask() string {
 	return Catalog.Format(msgs.locale, "exportTask", nil)
 }
 
+// FeedbackAttach says "Attach diagnostics: versions, settings, phone models and Pinky's recent logs"
+// in the language the app shows.
+//
+// Send feedback: the checkbox that attaches the diagnostics (in English) to
+// the issue.
+func FeedbackAttach() string { return In(i18n.Locale()).FeedbackAttach() }
+
+// FeedbackAttach says "Attach diagnostics: versions, settings, phone models and Pinky's recent logs"
+// in the language of msgs.
+//
+// Send feedback: the checkbox that attaches the diagnostics (in English) to
+// the issue.
+func (msgs Messages) FeedbackAttach() string {
+	return Catalog.Format(msgs.locale, "feedbackAttach", nil)
+}
+
+// FeedbackBrowserFailed says "Couldn't open the browser: {detail}. Copy the feedback and send it another way."
+// in the language the app shows.
+//
+// Send feedback when the browser would not open; detail is the system's
+// error in English.
+func FeedbackBrowserFailed(detail string) string {
+	return In(i18n.Locale()).FeedbackBrowserFailed(detail)
+}
+
+// FeedbackBrowserFailed says "Couldn't open the browser: {detail}. Copy the feedback and send it another way."
+// in the language of msgs.
+//
+// Send feedback when the browser would not open; detail is the system's
+// error in English.
+func (msgs Messages) FeedbackBrowserFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "feedbackBrowserFailed", map[string]any{"detail": detail})
+}
+
+// FeedbackCancel says "Cancel"
+// in the language the app shows.
+//
+// Send feedback: the button that closes the dialog, keeping the draft.
+func FeedbackCancel() string { return In(i18n.Locale()).FeedbackCancel() }
+
+// FeedbackCancel says "Cancel"
+// in the language of msgs.
+//
+// Send feedback: the button that closes the dialog, keeping the draft.
+func (msgs Messages) FeedbackCancel() string {
+	return Catalog.Format(msgs.locale, "feedbackCancel", nil)
+}
+
+// FeedbackCopied says "Copied"
+// in the language the app shows.
+//
+// A toast after copying the feedback.
+func FeedbackCopied() string { return In(i18n.Locale()).FeedbackCopied() }
+
+// FeedbackCopied says "Copied"
+// in the language of msgs.
+//
+// A toast after copying the feedback.
+func (msgs Messages) FeedbackCopied() string {
+	return Catalog.Format(msgs.locale, "feedbackCopied", nil)
+}
+
+// FeedbackCopy says "Copy"
+// in the language the app shows.
+//
+// Send feedback: the button that copies the feedback.
+func FeedbackCopy() string { return In(i18n.Locale()).FeedbackCopy() }
+
+// FeedbackCopy says "Copy"
+// in the language of msgs.
+//
+// Send feedback: the button that copies the feedback.
+func (msgs Messages) FeedbackCopy() string {
+	return Catalog.Format(msgs.locale, "feedbackCopy", nil)
+}
+
+// FeedbackCopyLabel says "Copy feedback"
+// in the language the app shows.
+//
+// The accessibility label of feedbackCopy.
+func FeedbackCopyLabel() string { return In(i18n.Locale()).FeedbackCopyLabel() }
+
+// FeedbackCopyLabel says "Copy feedback"
+// in the language of msgs.
+//
+// The accessibility label of feedbackCopy.
+func (msgs Messages) FeedbackCopyLabel() string {
+	return Catalog.Format(msgs.locale, "feedbackCopyLabel", nil)
+}
+
+// FeedbackCopyTooltip says "Copy the message and diagnostics"
+// in the language the app shows.
+//
+// The tooltip of feedbackCopy.
+func FeedbackCopyTooltip() string { return In(i18n.Locale()).FeedbackCopyTooltip() }
+
+// FeedbackCopyTooltip says "Copy the message and diagnostics"
+// in the language of msgs.
+//
+// The tooltip of feedbackCopy.
+func (msgs Messages) FeedbackCopyTooltip() string {
+	return Catalog.Format(msgs.locale, "feedbackCopyTooltip", nil)
+}
+
+// FeedbackCut says "Not all of the logs fit in the link: Copy puts everything on the clipboard to paste into the issue."
+// in the language the app shows.
+//
+// Follows feedbackNote when the diagnostics are too long for the issue's
+// link.
+func FeedbackCut() string { return In(i18n.Locale()).FeedbackCut() }
+
+// FeedbackCut says "Not all of the logs fit in the link: Copy puts everything on the clipboard to paste into the issue."
+// in the language of msgs.
+//
+// Follows feedbackNote when the diagnostics are too long for the issue's
+// link.
+func (msgs Messages) FeedbackCut() string {
+	return Catalog.Format(msgs.locale, "feedbackCut", nil)
+}
+
+// FeedbackHide says "Hide"
+// in the language the app shows.
+//
+// Send feedback: the button that hides the diagnostics again.
+func FeedbackHide() string { return In(i18n.Locale()).FeedbackHide() }
+
+// FeedbackHide says "Hide"
+// in the language of msgs.
+//
+// Send feedback: the button that hides the diagnostics again.
+func (msgs Messages) FeedbackHide() string {
+	return Catalog.Format(msgs.locale, "feedbackHide", nil)
+}
+
+// FeedbackHideLabel says "Hide diagnostics"
+// in the language the app shows.
+//
+// The accessibility label of feedbackHide.
+func FeedbackHideLabel() string { return In(i18n.Locale()).FeedbackHideLabel() }
+
+// FeedbackHideLabel says "Hide diagnostics"
+// in the language of msgs.
+//
+// The accessibility label of feedbackHide.
+func (msgs Messages) FeedbackHideLabel() string {
+	return Catalog.Format(msgs.locale, "feedbackHideLabel", nil)
+}
+
+// FeedbackIntro says "What happened, or what would make Pinky better? If something went wrong, say what you were doing."
+// in the language the app shows.
+//
+// Send feedback: under the title.
+func FeedbackIntro() string { return In(i18n.Locale()).FeedbackIntro() }
+
+// FeedbackIntro says "What happened, or what would make Pinky better? If something went wrong, say what you were doing."
+// in the language of msgs.
+//
+// Send feedback: under the title.
+func (msgs Messages) FeedbackIntro() string {
+	return Catalog.Format(msgs.locale, "feedbackIntro", nil)
+}
+
+// FeedbackMessageField says "Message"
+// in the language the app shows.
+//
+// Send feedback: the accessibility label of the message field.
+func FeedbackMessageField() string { return In(i18n.Locale()).FeedbackMessageField() }
+
+// FeedbackMessageField says "Message"
+// in the language of msgs.
+//
+// Send feedback: the accessibility label of the message field.
+func (msgs Messages) FeedbackMessageField() string {
+	return Catalog.Format(msgs.locale, "feedbackMessageField", nil)
+}
+
+// FeedbackMessagePlaceholder says "Your message"
+// in the language the app shows.
+//
+// Send feedback: the message field's placeholder.
+func FeedbackMessagePlaceholder() string { return In(i18n.Locale()).FeedbackMessagePlaceholder() }
+
+// FeedbackMessagePlaceholder says "Your message"
+// in the language of msgs.
+//
+// Send feedback: the message field's placeholder.
+func (msgs Messages) FeedbackMessagePlaceholder() string {
+	return Catalog.Format(msgs.locale, "feedbackMessagePlaceholder", nil)
+}
+
+// FeedbackNote says "Pinky opens a new issue on GitHub with this filled in; read it there and submit it with your GitHub account. Issues a…"
+// in the language the app shows.
+//
+// Send feedback: where the feedback goes, above the buttons.
+func FeedbackNote() string { return In(i18n.Locale()).FeedbackNote() }
+
+// FeedbackNote says "Pinky opens a new issue on GitHub with this filled in; read it there and submit it with your GitHub account. Issues a…"
+// in the language of msgs.
+//
+// Send feedback: where the feedback goes, above the buttons.
+func (msgs Messages) FeedbackNote() string {
+	return Catalog.Format(msgs.locale, "feedbackNote", nil)
+}
+
+// FeedbackOpen says "Open on GitHub"
+// in the language the app shows.
+//
+// Send feedback: the button that opens the new issue in the browser.
+func FeedbackOpen() string { return In(i18n.Locale()).FeedbackOpen() }
+
+// FeedbackOpen says "Open on GitHub"
+// in the language of msgs.
+//
+// Send feedback: the button that opens the new issue in the browser.
+func (msgs Messages) FeedbackOpen() string {
+	return Catalog.Format(msgs.locale, "feedbackOpen", nil)
+}
+
+// FeedbackRedacted says "Phone names and IDs, your user name, e-mail and IP addresses, app and task names are taken out."
+// in the language the app shows.
+//
+// Send feedback: under the checkbox, what the diagnostics leave out.
+func FeedbackRedacted() string { return In(i18n.Locale()).FeedbackRedacted() }
+
+// FeedbackRedacted says "Phone names and IDs, your user name, e-mail and IP addresses, app and task names are taken out."
+// in the language of msgs.
+//
+// Send feedback: under the checkbox, what the diagnostics leave out.
+func (msgs Messages) FeedbackRedacted() string {
+	return Catalog.Format(msgs.locale, "feedbackRedacted", nil)
+}
+
+// FeedbackReview says "Review"
+// in the language the app shows.
+//
+// Send feedback: the button that shows the diagnostics.
+func FeedbackReview() string { return In(i18n.Locale()).FeedbackReview() }
+
+// FeedbackReview says "Review"
+// in the language of msgs.
+//
+// Send feedback: the button that shows the diagnostics.
+func (msgs Messages) FeedbackReview() string {
+	return Catalog.Format(msgs.locale, "feedbackReview", nil)
+}
+
+// FeedbackReviewLabel says "Review diagnostics"
+// in the language the app shows.
+//
+// The accessibility label of feedbackReview.
+func FeedbackReviewLabel() string { return In(i18n.Locale()).FeedbackReviewLabel() }
+
+// FeedbackReviewLabel says "Review diagnostics"
+// in the language of msgs.
+//
+// The accessibility label of feedbackReview.
+func (msgs Messages) FeedbackReviewLabel() string {
+	return Catalog.Format(msgs.locale, "feedbackReviewLabel", nil)
+}
+
+// FeedbackThanks says "Finish your feedback on GitHub. Thanks!"
+// in the language the app shows.
+//
+// A toast after the new issue opened in the browser.
+func FeedbackThanks() string { return In(i18n.Locale()).FeedbackThanks() }
+
+// FeedbackThanks says "Finish your feedback on GitHub. Thanks!"
+// in the language of msgs.
+//
+// A toast after the new issue opened in the browser.
+func (msgs Messages) FeedbackThanks() string {
+	return Catalog.Format(msgs.locale, "feedbackThanks", nil)
+}
+
+// FeedbackTitle says "Send feedback"
+// in the language the app shows.
+//
+// The title and accessibility label of the Send feedback dialog.
+func FeedbackTitle() string { return In(i18n.Locale()).FeedbackTitle() }
+
+// FeedbackTitle says "Send feedback"
+// in the language of msgs.
+//
+// The title and accessibility label of the Send feedback dialog.
+func (msgs Messages) FeedbackTitle() string {
+	return Catalog.Format(msgs.locale, "feedbackTitle", nil)
+}
+
+// FeedbackTitleField says "Title"
+// in the language the app shows.
+//
+// Send feedback: the accessibility label of the title field.
+func FeedbackTitleField() string { return In(i18n.Locale()).FeedbackTitleField() }
+
+// FeedbackTitleField says "Title"
+// in the language of msgs.
+//
+// Send feedback: the accessibility label of the title field.
+func (msgs Messages) FeedbackTitleField() string {
+	return Catalog.Format(msgs.locale, "feedbackTitleField", nil)
+}
+
+// FeedbackTitlePlaceholder says "Title (optional): a few words"
+// in the language the app shows.
+//
+// Send feedback: the title field's placeholder.
+func FeedbackTitlePlaceholder() string { return In(i18n.Locale()).FeedbackTitlePlaceholder() }
+
+// FeedbackTitlePlaceholder says "Title (optional): a few words"
+// in the language of msgs.
+//
+// Send feedback: the title field's placeholder.
+func (msgs Messages) FeedbackTitlePlaceholder() string {
+	return Catalog.Format(msgs.locale, "feedbackTitlePlaceholder", nil)
+}
+
 // FlyoutLocked says "Locked"
 // in the language the app shows.
 //
@@ -10585,6 +10901,268 @@ func TasksStop() string { return In(i18n.Locale()).TasksStop() }
 // phones tiles.
 func (msgs Messages) TasksStop() string {
 	return Catalog.Format(msgs.locale, "tasksStop", nil)
+}
+
+// TelClose says "Close"
+// in the language the app shows.
+//
+// The button that closes What Pinky shares.
+func TelClose() string { return In(i18n.Locale()).TelClose() }
+
+// TelClose says "Close"
+// in the language of msgs.
+//
+// The button that closes What Pinky shares.
+func (msgs Messages) TelClose() string {
+	return Catalog.Format(msgs.locale, "telClose", nil)
+}
+
+// TelDoNotTrack says "Off: DO_NOT_TRACK is set on this computer."
+// in the language the app shows.
+//
+// Settings › Privacy in place of the switch's description when the
+// DO_NOT_TRACK environment variable is set.
+func TelDoNotTrack() string { return In(i18n.Locale()).TelDoNotTrack() }
+
+// TelDoNotTrack says "Off: DO_NOT_TRACK is set on this computer."
+// in the language of msgs.
+//
+// Settings › Privacy in place of the switch's description when the
+// DO_NOT_TRACK environment variable is set.
+func (msgs Messages) TelDoNotTrack() string {
+	return Catalog.Format(msgs.locale, "telDoNotTrack", nil)
+}
+
+// TelHelpMenu says "Help"
+// in the language the app shows.
+//
+// The menu bar's Help menu on Windows and Linux (macOS names its own).
+func TelHelpMenu() string { return In(i18n.Locale()).TelHelpMenu() }
+
+// TelHelpMenu says "Help"
+// in the language of msgs.
+//
+// The menu bar's Help menu on Windows and Linux (macOS names its own).
+func (msgs Messages) TelHelpMenu() string {
+	return Catalog.Format(msgs.locale, "telHelpMenu", nil)
+}
+
+// TelNothingCounted says "Nothing has been counted since the last report."
+// in the language the app shows.
+//
+// What Pinky shares, under the report, when it has no counts yet.
+func TelNothingCounted() string { return In(i18n.Locale()).TelNothingCounted() }
+
+// TelNothingCounted says "Nothing has been counted since the last report."
+// in the language of msgs.
+//
+// What Pinky shares, under the report, when it has no counts yet.
+func (msgs Messages) TelNothingCounted() string {
+	return Catalog.Format(msgs.locale, "telNothingCounted", nil)
+}
+
+// TelPrivacyGroup says "Usage statistics and crash reports"
+// in the language the app shows.
+//
+// Settings › Privacy: the accessibility label of the group about usage
+// statistics.
+func TelPrivacyGroup() string { return In(i18n.Locale()).TelPrivacyGroup() }
+
+// TelPrivacyGroup says "Usage statistics and crash reports"
+// in the language of msgs.
+//
+// Settings › Privacy: the accessibility label of the group about usage
+// statistics.
+func (msgs Messages) TelPrivacyGroup() string {
+	return Catalog.Format(msgs.locale, "telPrivacyGroup", nil)
+}
+
+// TelPrivacyTitle says "Helping Pinky get better"
+// in the language the app shows.
+//
+// Settings › Privacy: the heading above the usage statistics switch.
+func TelPrivacyTitle() string { return In(i18n.Locale()).TelPrivacyTitle() }
+
+// TelPrivacyTitle says "Helping Pinky get better"
+// in the language of msgs.
+//
+// Settings › Privacy: the heading above the usage statistics switch.
+func (msgs Messages) TelPrivacyTitle() string {
+	return Catalog.Format(msgs.locale, "telPrivacyTitle", nil)
+}
+
+// TelSendFeedbackLabel says "Send feedback"
+// in the language the app shows.
+//
+// The accessibility label of telSendFeedbackLink.
+func TelSendFeedbackLabel() string { return In(i18n.Locale()).TelSendFeedbackLabel() }
+
+// TelSendFeedbackLabel says "Send feedback"
+// in the language of msgs.
+//
+// The accessibility label of telSendFeedbackLink.
+func (msgs Messages) TelSendFeedbackLabel() string {
+	return Catalog.Format(msgs.locale, "telSendFeedbackLabel", nil)
+}
+
+// TelSendFeedbackLink says "Send feedback…"
+// in the language the app shows.
+//
+// Settings: the link under the sections that opens Send feedback.
+func TelSendFeedbackLink() string { return In(i18n.Locale()).TelSendFeedbackLink() }
+
+// TelSendFeedbackLink says "Send feedback…"
+// in the language of msgs.
+//
+// Settings: the link under the sections that opens Send feedback.
+func (msgs Messages) TelSendFeedbackLink() string {
+	return Catalog.Format(msgs.locale, "telSendFeedbackLink", nil)
+}
+
+// TelSendFeedbackMenu says "Send Feedback…"
+// in the language the app shows.
+//
+// The menu item that opens Send feedback, in the Help menu and the menu bar
+// icon's menu.
+func TelSendFeedbackMenu() string { return In(i18n.Locale()).TelSendFeedbackMenu() }
+
+// TelSendFeedbackMenu says "Send Feedback…"
+// in the language of msgs.
+//
+// The menu item that opens Send feedback, in the Help menu and the menu bar
+// icon's menu.
+func (msgs Messages) TelSendFeedbackMenu() string {
+	return Catalog.Format(msgs.locale, "telSendFeedbackMenu", nil)
+}
+
+// TelSendsNothing says "This build of Pinky sends nothing: it has no address to send to."
+// in the language the app shows.
+//
+// Settings › Privacy in a build without a telemetry address.
+func TelSendsNothing() string { return In(i18n.Locale()).TelSendsNothing() }
+
+// TelSendsNothing says "This build of Pinky sends nothing: it has no address to send to."
+// in the language of msgs.
+//
+// Settings › Privacy in a build without a telemetry address.
+func (msgs Messages) TelSendsNothing() string {
+	return Catalog.Format(msgs.locale, "telSendsNothing", nil)
+}
+
+// TelShareUsage says "Share anonymous usage statistics and crash reports"
+// in the language the app shows.
+//
+// Settings › Privacy: the switch that sends usage statistics and crash
+// reports.
+func TelShareUsage() string { return In(i18n.Locale()).TelShareUsage() }
+
+// TelShareUsage says "Share anonymous usage statistics and crash reports"
+// in the language of msgs.
+//
+// Settings › Privacy: the switch that sends usage statistics and crash
+// reports.
+func (msgs Messages) TelShareUsage() string {
+	return Catalog.Format(msgs.locale, "telShareUsage", nil)
+}
+
+// TelShareUsageDesc says "Counts such as tasks run, tools used and phones connected, about once a day, and where Pinky's code stopped after a c…"
+// in the language the app shows.
+//
+// Under telShareUsage: what is sent and what never is.
+func TelShareUsageDesc() string { return In(i18n.Locale()).TelShareUsageDesc() }
+
+// TelShareUsageDesc says "Counts such as tasks run, tools used and phones connected, about once a day, and where Pinky's code stopped after a c…"
+// in the language of msgs.
+//
+// Under telShareUsage: what is sent and what never is.
+func (msgs Messages) TelShareUsageDesc() string {
+	return Catalog.Format(msgs.locale, "telShareUsageDesc", nil)
+}
+
+// TelSharedDesc says "About once a day, Pinky sends counts like these, with a random install ID, its version and your computer's system, an…"
+// in the language the app shows.
+//
+// What Pinky shares: what goes out, above the report itself (JSON, in
+// English).
+func TelSharedDesc() string { return In(i18n.Locale()).TelSharedDesc() }
+
+// TelSharedDesc says "About once a day, Pinky sends counts like these, with a random install ID, its version and your computer's system, an…"
+// in the language of msgs.
+//
+// What Pinky shares: what goes out, above the report itself (JSON, in
+// English).
+func (msgs Messages) TelSharedDesc() string {
+	return Catalog.Format(msgs.locale, "telSharedDesc", nil)
+}
+
+// TelSharedTitle says "What Pinky shares"
+// in the language the app shows.
+//
+// The title of the dialog that shows the usage report.
+func TelSharedTitle() string { return In(i18n.Locale()).TelSharedTitle() }
+
+// TelSharedTitle says "What Pinky shares"
+// in the language of msgs.
+//
+// The title of the dialog that shows the usage report.
+func (msgs Messages) TelSharedTitle() string {
+	return Catalog.Format(msgs.locale, "telSharedTitle", nil)
+}
+
+// TelShow says "Show…"
+// in the language the app shows.
+//
+// Settings › Privacy: the button that opens What Pinky shares.
+func TelShow() string { return In(i18n.Locale()).TelShow() }
+
+// TelShow says "Show…"
+// in the language of msgs.
+//
+// Settings › Privacy: the button that opens What Pinky shares.
+func (msgs Messages) TelShow() string {
+	return Catalog.Format(msgs.locale, "telShow", nil)
+}
+
+// TelShowLabel says "Show what's shared"
+// in the language the app shows.
+//
+// The accessibility label of telShow.
+func TelShowLabel() string { return In(i18n.Locale()).TelShowLabel() }
+
+// TelShowLabel says "Show what's shared"
+// in the language of msgs.
+//
+// The accessibility label of telShow.
+func (msgs Messages) TelShowLabel() string {
+	return Catalog.Format(msgs.locale, "telShowLabel", nil)
+}
+
+// TelWhatsShared says "What's shared"
+// in the language the app shows.
+//
+// Settings › Privacy: the row that shows the usage report.
+func TelWhatsShared() string { return In(i18n.Locale()).TelWhatsShared() }
+
+// TelWhatsShared says "What's shared"
+// in the language of msgs.
+//
+// Settings › Privacy: the row that shows the usage report.
+func (msgs Messages) TelWhatsShared() string {
+	return Catalog.Format(msgs.locale, "telWhatsShared", nil)
+}
+
+// TelWhatsSharedDesc says "The usage report as it would go out now"
+// in the language the app shows.
+//
+// Under telWhatsShared.
+func TelWhatsSharedDesc() string { return In(i18n.Locale()).TelWhatsSharedDesc() }
+
+// TelWhatsSharedDesc says "The usage report as it would go out now"
+// in the language of msgs.
+//
+// Under telWhatsShared.
+func (msgs Messages) TelWhatsSharedDesc() string {
+	return Catalog.Format(msgs.locale, "telWhatsSharedDesc", nil)
 }
 
 // TimeHours says "{hours}\u00a0h\u00a0{minutes}\u00a0min"

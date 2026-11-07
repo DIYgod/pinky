@@ -636,6 +636,100 @@
   "@exportTask": {
     "description": "An item of the ⋯ menu in a task's detail: exports that task into a new folder on the Desktop."
   },
+  "feedbackAttach": "Attach diagnostics: versions, settings, phone models and Pinky's recent logs",
+  "@feedbackAttach": {
+    "description": "Send feedback: the checkbox that attaches the diagnostics (in English) to the issue."
+  },
+  "feedbackBrowserFailed": "Couldn't open the browser: {detail}. Copy the feedback and send it another way.",
+  "@feedbackBrowserFailed": {
+    "description": "Send feedback when the browser would not open; detail is the system's error in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "no browser"
+      }
+    }
+  },
+  "feedbackCancel": "Cancel",
+  "@feedbackCancel": {
+    "description": "Send feedback: the button that closes the dialog, keeping the draft."
+  },
+  "feedbackCopied": "Copied",
+  "@feedbackCopied": {
+    "description": "A toast after copying the feedback."
+  },
+  "feedbackCopy": "Copy",
+  "@feedbackCopy": {
+    "description": "Send feedback: the button that copies the feedback."
+  },
+  "feedbackCopyLabel": "Copy feedback",
+  "@feedbackCopyLabel": {
+    "description": "The accessibility label of feedbackCopy."
+  },
+  "feedbackCopyTooltip": "Copy the message and diagnostics",
+  "@feedbackCopyTooltip": {
+    "description": "The tooltip of feedbackCopy."
+  },
+  "feedbackCut": "Not all of the logs fit in the link: Copy puts everything on the clipboard to paste into the issue.",
+  "@feedbackCut": {
+    "description": "Follows feedbackNote when the diagnostics are too long for the issue's link."
+  },
+  "feedbackHide": "Hide",
+  "@feedbackHide": {
+    "description": "Send feedback: the button that hides the diagnostics again."
+  },
+  "feedbackHideLabel": "Hide diagnostics",
+  "@feedbackHideLabel": {
+    "description": "The accessibility label of feedbackHide."
+  },
+  "feedbackIntro": "What happened, or what would make Pinky better? If something went wrong, say what you were doing.",
+  "@feedbackIntro": {
+    "description": "Send feedback: under the title."
+  },
+  "feedbackMessageField": "Message",
+  "@feedbackMessageField": {
+    "description": "Send feedback: the accessibility label of the message field."
+  },
+  "feedbackMessagePlaceholder": "Your message",
+  "@feedbackMessagePlaceholder": {
+    "description": "Send feedback: the message field's placeholder."
+  },
+  "feedbackNote": "Pinky opens a new issue on GitHub with this filled in; read it there and submit it with your GitHub account. Issues are public.",
+  "@feedbackNote": {
+    "description": "Send feedback: where the feedback goes, above the buttons."
+  },
+  "feedbackOpen": "Open on GitHub",
+  "@feedbackOpen": {
+    "description": "Send feedback: the button that opens the new issue in the browser."
+  },
+  "feedbackRedacted": "Phone names and IDs, your user name, e-mail and IP addresses, app and task names are taken out.",
+  "@feedbackRedacted": {
+    "description": "Send feedback: under the checkbox, what the diagnostics leave out."
+  },
+  "feedbackReview": "Review",
+  "@feedbackReview": {
+    "description": "Send feedback: the button that shows the diagnostics."
+  },
+  "feedbackReviewLabel": "Review diagnostics",
+  "@feedbackReviewLabel": {
+    "description": "The accessibility label of feedbackReview."
+  },
+  "feedbackThanks": "Finish your feedback on GitHub. Thanks!",
+  "@feedbackThanks": {
+    "description": "A toast after the new issue opened in the browser."
+  },
+  "feedbackTitle": "Send feedback",
+  "@feedbackTitle": {
+    "description": "The title and accessibility label of the Send feedback dialog."
+  },
+  "feedbackTitleField": "Title",
+  "@feedbackTitleField": {
+    "description": "Send feedback: the accessibility label of the title field."
+  },
+  "feedbackTitlePlaceholder": "Title (optional): a few words",
+  "@feedbackTitlePlaceholder": {
+    "description": "Send feedback: the title field's placeholder."
+  },
   "flyoutLocked": "Locked",
   "@flyoutLocked": {
     "description": "Menu bar flyout: what a locked phone's Needs you row says after the phone's name."
@@ -3947,6 +4041,78 @@
   "tasksStop": "Stop",
   "@tasksStop": {
     "description": "Red button that stops the agent's task: on the task card and on the All phones tiles."
+  },
+  "telClose": "Close",
+  "@telClose": {
+    "description": "The button that closes What Pinky shares."
+  },
+  "telDoNotTrack": "Off: DO_NOT_TRACK is set on this computer.",
+  "@telDoNotTrack": {
+    "description": "Settings › Privacy in place of the switch's description when the DO_NOT_TRACK environment variable is set."
+  },
+  "telHelpMenu": "Help",
+  "@telHelpMenu": {
+    "description": "The menu bar's Help menu on Windows and Linux (macOS names its own)."
+  },
+  "telNothingCounted": "Nothing has been counted since the last report.",
+  "@telNothingCounted": {
+    "description": "What Pinky shares, under the report, when it has no counts yet."
+  },
+  "telPrivacyGroup": "Usage statistics and crash reports",
+  "@telPrivacyGroup": {
+    "description": "Settings › Privacy: the accessibility label of the group about usage statistics."
+  },
+  "telPrivacyTitle": "Helping Pinky get better",
+  "@telPrivacyTitle": {
+    "description": "Settings › Privacy: the heading above the usage statistics switch."
+  },
+  "telSendFeedbackLabel": "Send feedback",
+  "@telSendFeedbackLabel": {
+    "description": "The accessibility label of telSendFeedbackLink."
+  },
+  "telSendFeedbackLink": "Send feedback…",
+  "@telSendFeedbackLink": {
+    "description": "Settings: the link under the sections that opens Send feedback."
+  },
+  "telSendFeedbackMenu": "Send Feedback…",
+  "@telSendFeedbackMenu": {
+    "description": "The menu item that opens Send feedback, in the Help menu and the menu bar icon's menu."
+  },
+  "telSendsNothing": "This build of Pinky sends nothing: it has no address to send to.",
+  "@telSendsNothing": {
+    "description": "Settings › Privacy in a build without a telemetry address."
+  },
+  "telShareUsage": "Share anonymous usage statistics and crash reports",
+  "@telShareUsage": {
+    "description": "Settings › Privacy: the switch that sends usage statistics and crash reports."
+  },
+  "telShareUsageDesc": "Counts such as tasks run, tools used and phones connected, about once a day, and where Pinky's code stopped after a crash. Never your screens, what's typed, apps, phone names or PINs.",
+  "@telShareUsageDesc": {
+    "description": "Under telShareUsage: what is sent and what never is."
+  },
+  "telSharedDesc": "About once a day, Pinky sends counts like these, with a random install ID, its version and your computer's system, and after a crash, where in Pinky's code it stopped. They never include what is on your phones' screens, what is typed, app names, phone names or IDs, PINs or file names. Turn this off in Settings › Privacy, or set DO_NOT_TRACK=1.",
+  "@telSharedDesc": {
+    "description": "What Pinky shares: what goes out, above the report itself (JSON, in English)."
+  },
+  "telSharedTitle": "What Pinky shares",
+  "@telSharedTitle": {
+    "description": "The title of the dialog that shows the usage report."
+  },
+  "telShow": "Show…",
+  "@telShow": {
+    "description": "Settings › Privacy: the button that opens What Pinky shares."
+  },
+  "telShowLabel": "Show what's shared",
+  "@telShowLabel": {
+    "description": "The accessibility label of telShow."
+  },
+  "telWhatsShared": "What's shared",
+  "@telWhatsShared": {
+    "description": "Settings › Privacy: the row that shows the usage report."
+  },
+  "telWhatsSharedDesc": "The usage report as it would go out now",
+  "@telWhatsSharedDesc": {
+    "description": "Under telWhatsShared."
   },
   "timeHours": "{hours}\u00a0h\u00a0{minutes}\u00a0min",
   "@timeHours": {

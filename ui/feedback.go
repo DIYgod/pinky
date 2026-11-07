@@ -6,6 +6,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/telemetry"
 )
@@ -77,9 +78,9 @@ func (a *app) diagnosticLines() []string {
 		return "off"
 	}
 	lines := []string{fmt.Sprintf("Settings: preset %d · read-only %s · unlock from computer %s · hide codes %s · record %s · keep %s · remote agents %s · developer mode %s",
-		s.Preset, onOff(s.ReadOnly), onOff(s.UnlockFromComputer), onOff(s.HideCodes), onOff(s.Record), keepLabel(s.KeepDays),
+		s.Preset, onOff(s.ReadOnly), onOff(s.UnlockFromComputer), onOff(s.HideCodes), onOff(s.Record), keepLabelIn(locales.In("en"), s.KeepDays),
 		onOff(s.RemoteAgents), onOff(s.DeveloperMode))}
-	if v := videoLine(a); v != "" {
+	if v := videoLineIn(locales.In("en"), a); v != "" {
 		lines = append(lines, "Video: "+v)
 	}
 	return lines
@@ -105,26 +106,26 @@ func (a *app) feedbackDialog(c *mg.Context) {
 	}
 	p := pal(c)
 	mg.Modal(c, &fb.open, func() {
-		mg.Column(c).Width(560).Gap(12).Label("Send feedback").Children(func() {
-			mg.Text(c, "Send feedback").FontSize(17).FontWeight(650).Role(mg.RoleHeading)
-			mg.Text(c, "What happened, or what would make Pinky better? If something went wrong, say what you were doing.").
+		mg.Column(c).Width(560).Gap(12).Label(locales.FeedbackTitle()).Children(func() {
+			mg.Text(c, locales.FeedbackTitle()).FontSize(17).FontWeight(650).Role(mg.RoleHeading)
+			mg.Text(c, locales.FeedbackIntro()).
 				FontSize(13.5).TextColor(p.ink2)
-			mg.TextInput(c.Key("fb-title"), &fb.title).Label("Title").Placeholder("Title (optional): a few words")
-			mg.TextArea(c.Key("fb-message"), &fb.message).Label("Message").Placeholder("Your message").Lines(5, 10).AutoFocus()
+			mg.TextInput(c.Key("fb-title"), &fb.title).Label(locales.FeedbackTitleField()).Placeholder(locales.FeedbackTitlePlaceholder())
+			mg.TextArea(c.Key("fb-message"), &fb.message).Label(locales.FeedbackMessageField()).Placeholder(locales.FeedbackMessagePlaceholder()).Lines(5, 10).AutoFocus()
 			cut := false
 			mg.Column(c).Gap(4).Children(func() {
-				mg.Checkbox(c, &fb.attach, "Attach diagnostics: versions, settings, phone models and Pinky's recent logs")
+				mg.Checkbox(c, &fb.attach, locales.FeedbackAttach())
 				if !fb.attach {
 					return
 				}
 				mg.Row(c).Gap(8).Padding(0, 0, 0, 26).AlignItems(mg.Center).Children(func() {
-					mg.Text(c, "Phone names and IDs, your user name, e-mail and IP addresses, app and task names are taken out.").
+					mg.Text(c, locales.FeedbackRedacted()).
 						FontSize(12.5).TextColor(p.ink3).Grow(1).MinWidth(0)
-					label := "Review"
+					label, aria := locales.FeedbackReview(), locales.FeedbackReviewLabel()
 					if fb.review {
-						label = "Hide"
+						label, aria = locales.FeedbackHide(), locales.FeedbackHideLabel()
 					}
-					if button(c, label, btnOpt{small: true}).Label(label + " diagnostics").Clicked() {
+					if button(c, label, btnOpt{small: true}).Label(aria).Clicked() {
 						fb.review = !fb.review
 					}
 				})
@@ -138,23 +139,23 @@ func (a *app) feedbackDialog(c *mg.Context) {
 					})
 				}
 			})
-			note := "Pinky opens a new issue on GitHub with this filled in; read it there and submit it with your GitHub account. Issues are public."
+			note := locales.FeedbackNote()
 			if cut {
-				note += " Not all of the logs fit in the link: Copy puts everything on the clipboard to paste into the issue."
+				note = locales.SentencePair(note, locales.FeedbackCut())
 			}
 			mg.Text(c, note).FontSize(12.5).TextColor(p.ink3)
 			if fb.err != "" {
 				mg.Text(c, fb.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
 			}
 			mg.Row(c).Gap(8).Justify(mg.End).Children(func() {
-				if button(c, "Copy", btnOpt{icon: icCopy}).Label("Copy feedback").Tooltip("Copy the message and diagnostics").Clicked() {
+				if button(c, locales.FeedbackCopy(), btnOpt{icon: icCopy}).Label(locales.FeedbackCopyLabel()).Tooltip(locales.FeedbackCopyTooltip()).Clicked() {
 					c.WriteClipboard(a.feedback().Text())
-					a.toasts = append(a.toasts, "Copied")
+					a.toasts = append(a.toasts, locales.FeedbackCopied())
 				}
-				if button(c, "Cancel", btnOpt{}).Clicked() {
+				if button(c, locales.FeedbackCancel(), btnOpt{}).Clicked() {
 					fb.open = false
 				}
-				open := button(c, "Open on GitHub", btnOpt{kind: btnPrimary})
+				open := button(c, locales.FeedbackOpen(), btnOpt{kind: btnPrimary})
 				switch {
 				case strings.TrimSpace(fb.message) == "" || (fb.attach && fb.reading):
 					open.Disabled(true)
@@ -173,10 +174,10 @@ func (a *app) openIssue(c *mg.Context) {
 	fb.err = ""
 	openURL(c, u, func(err error) {
 		if err != nil {
-			fb.err = "Couldn't open the browser: " + err.Error() + ". Copy the feedback and send it another way."
+			fb.err = locales.FeedbackBrowserFailed(err.Error())
 			return
 		}
 		*fb = feedbackState{seq: fb.seq}
-		a.toasts = append(a.toasts, "Finish your feedback on GitHub. Thanks!")
+		a.toasts = append(a.toasts, locales.FeedbackThanks())
 	})
 }

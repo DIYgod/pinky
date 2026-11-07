@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -63,6 +64,24 @@ func TestHandoffBannerWithChineseReason(t *testing.T) {
 		}
 		if hasText(tt, "\ufffd") {
 			t.Errorf("%s: a character was cut: %q", lang, tt.Texts())
+		}
+	}
+}
+
+// TestFeedbackDiagnosticsStayEnglish: the diagnostics in a feedback issue
+// are for whoever reads the issue, in English, whatever language the app
+// shows.
+func TestFeedbackDiagnosticsStayEnglish(t *testing.T) {
+	inLanguage(t, "zh-Hans")
+	ta := newTestApp(t, fakeapi.OnePhone)
+	lines := strings.Join(ta.diagnosticLines(), "\n")
+	if !strings.Contains(lines, "keep 30 days") {
+		t.Errorf("the diagnostics do not say the retention in English: %q", lines)
+	}
+	for _, r := range lines {
+		if unicode.Is(unicode.Han, r) {
+			t.Errorf("Chinese in the diagnostics: %q", lines)
+			break
 		}
 	}
 }
