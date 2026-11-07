@@ -44,7 +44,8 @@ How Pinky keeps itself and its Android companion app current, and tells the pers
 | a copy macOS translocated (run from Downloads with quarantine) | Download, with "move Pinky to Applications" |
 | the disk image, or a folder the person cannot write to, or a bundle owned by another user | Download, with why |
 | a build signed ad hoc (`make app` on this Mac) | Download: a developer's build is never overwritten |
-| Homebrew (a `pinky` cask in `Caskroom`, or a formula in `Cellar`) | the `brew upgrade` command, with Copy |
+| Homebrew's cask (`brew install --cask pinky`: Pinky.app in Applications) | Update now, as above: the cask declares `auto_updates true`, so `brew upgrade` leaves it to Pinky |
+| a Homebrew formula (in the `Cellar`) | the `brew upgrade pinky` command, with Copy |
 | not in a bundle (`go run`, a bare binary) | Download |
 
 The install (`BundleInstaller`):
@@ -60,7 +61,7 @@ The install (`BundleInstaller`):
 
 ## Windows and Linux
 
-- **Windows:** the card's **Download and install** downloads and checks the installer, opens it and quits Pinky. MyGo's NSIS installer installs per user in `%LOCALAPPDATA%\Programs\Pinky`, closes a running Pinky and supports `/S`; a silent, automatic install (run `/S` after Pinky exits, then start it) is the next step and needs a Windows machine to test.
+- **Windows:** the release pipeline publishes a zip of the app's files (`pinky-<version>-windows-amd64.zip`), so **Download** saves it in `~/Downloads` and shows it, with a link to the release page. Were the asset an installer (`.exe`, `.msi`), **Download and install** would check it, open it and quit Pinky (`Updater.MethodFor`). Replacing the per-user install in `%LOCALAPPDATA%\Programs\Pinky` from the zip by itself (unpack next to it, swap the files after Pinky exits, as MyGo's updater does) is the next step and needs a Windows machine to test.
 - **Linux:** **Download** saves the release in `~/Downloads` and shows it. A Pinky that dpkg or pacman installed says to update it through the package manager; a Linuxbrew one shows `brew upgrade pinky`.
 
 ## The daemon and the command line
@@ -94,5 +95,5 @@ The install (`BundleInstaller`):
 
 - **For the release pipeline:** the feed's repository (`update.Repo`), the asset names and formats (zip for macOS; the Windows installer; what Linux gets), that the macOS zip is of the stapled app, and that `CHANGELOG.md` follows the heading format. Releases should keep `latest` pointing at the newest stable release, since the feed URL follows it. The repository must be public: Pinky fetches without credentials. On 2026-11-07 it did not exist yet; the feed answered 404, which the app logs and otherwise ignores.
 - **Agents during a restart:** an agent connected over HTTP (Settings › Agents › Remote agents) loses its session when the app restarts; its MCP client has to connect again. Agents on `pinky mcp` reconnect (above).
-- **Homebrew:** if a cask is published with `auto_updates true`, Pinky should update itself there too and not defer to `brew`.
+- **The releases repository:** the release session's work in progress moves releases from `DIYgod/pinky-releases` to `DIYgod/pinky`; `update.Repo` must name the same repository, and it must be public.
 - **Windows:** the silent install above.

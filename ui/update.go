@@ -532,8 +532,9 @@ func (a *app) updateActions(c *mg.Context) {
 	p := pal(c)
 	s := &a.upd
 	loc := a.opt.Updates.Where()
-	switch {
-	case loc.Method == update.MethodManager:
+	m := a.opt.Updates.MethodFor(*s.rel)
+	switch m {
+	case update.MethodManager:
 		mg.Text(c, loc.Manager+" installed Pinky; update it there:").FontSize(12.5).TextColor(p.ink2)
 		mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, loc.Command).FontSize(12).Font("monospace").Grow(1).MinWidth(0).Selectable()
@@ -551,8 +552,7 @@ func (a *app) updateActions(c *mg.Context) {
 			a.laterUpdate()
 		}
 		return
-	case loc.CanReplace(), loc.Method == update.MethodInstaller:
-	default:
+	case update.MethodDownload:
 		if loc.Problem != "" {
 			mg.Text(c, loc.Problem).FontSize(12).TextColor(p.ink2)
 		}
@@ -561,10 +561,10 @@ func (a *app) updateActions(c *mg.Context) {
 		}
 	}
 	label := "Update now"
-	switch {
-	case loc.Method == update.MethodInstaller:
+	switch m {
+	case update.MethodInstaller:
 		label = "Download and install"
-	case !loc.CanReplace():
+	case update.MethodDownload:
 		label = "Download"
 		if s.file != "" {
 			label = "Show download"
@@ -572,7 +572,7 @@ func (a *app) updateActions(c *mg.Context) {
 	}
 	mg.Row(c).Gap(10).AlignItems(mg.Center).Margin(2, 0, 0, 0).Children(func() {
 		if button(c, label, btnOpt{kind: btnPrimary, small: true}).Label(label + " Pinky " + s.rel.Version).Clicked() {
-			if s.file != "" && !loc.CanReplace() {
+			if s.file != "" && m == update.MethodDownload {
 				a.reveal(s.file)
 			} else {
 				a.updateNow()
@@ -582,6 +582,15 @@ func (a *app) updateActions(c *mg.Context) {
 			a.laterUpdate()
 		}
 	})
+	if page := update.ReleasePage(s.rel.Tag); m == update.MethodDownload && page != "" {
+		if linkButton(c, "Release page").AlignSelf(mg.Start).Label("Open the release page of Pinky " + s.rel.Version).Clicked() {
+			go func() {
+				if err := mygo.Shell.OpenExternal(page); err != nil {
+					a.post(func() { a.toasts = append(a.toasts, "Couldn't open the release page: "+err.Error()) })
+				}
+			}()
+		}
+	}
 }
 
 // news is what What's new shows: a title, a line for the card, and the

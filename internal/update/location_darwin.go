@@ -2,7 +2,6 @@ package update
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -20,12 +19,11 @@ var checkRunning = func(bundle string) error {
 	return verifySignature(ctx, bundle, false)
 }
 
-// homebrewPrefixes are where Homebrew keeps its casks.
-var homebrewPrefixes = []string{"/opt/homebrew", "/usr/local"}
-
 // locate on macOS: Pinky.app replaces itself where it is, unless macOS
-// runs it from a translocated or read-only copy, Homebrew manages it, the
-// folder is not writable, or the bundle is not signed by Pinky's team.
+// runs it from a translocated or read-only copy, a Homebrew formula
+// manages it, the folder is not writable, or the bundle is not signed by
+// Pinky's team. Pinky's Homebrew cask declares auto_updates, so `brew
+// upgrade` leaves a cask's Pinky.app to update itself, as here.
 func locate(exe string) Location {
 	l := Location{Exe: exe, App: exe, Method: MethodDownload}
 	macOS := filepath.Dir(exe)
@@ -60,19 +58,13 @@ func locate(exe string) Location {
 	return l
 }
 
-// homebrew returns the command that updates a Pinky Homebrew installed,
-// or "" when Homebrew did not.
+// homebrew returns the command that updates a Pinky that a Homebrew
+// formula installed (in the Cellar), or "". A cask moves Pinky.app to the
+// Applications folder, and Pinky's cask says it updates itself
+// (auto_updates true), so brew does not.
 func homebrew(exe string) string {
 	if strings.Contains(exe, "/Cellar/") {
 		return "brew upgrade pinky"
-	}
-	if strings.Contains(exe, "/Caskroom/") {
-		return "brew upgrade --cask pinky"
-	}
-	for _, prefix := range homebrewPrefixes {
-		if fi, err := os.Stat(filepath.Join(prefix, "Caskroom", "pinky")); err == nil && fi.IsDir() {
-			return "brew upgrade --cask pinky"
-		}
 	}
 	return ""
 }

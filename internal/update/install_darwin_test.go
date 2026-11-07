@@ -372,8 +372,7 @@ func TestCheckSwap(t *testing.T) {
 func TestLocate(t *testing.T) {
 	ok := func(string) error { return nil }
 	unsigned := func(string) error { return ErrSignature }
-	defer func(f func(string) error, p []string) { checkRunning, homebrewPrefixes = f, p }(checkRunning, homebrewPrefixes)
-	homebrewPrefixes = []string{t.TempDir()}
+	defer func(f func(string) error) { checkRunning = f }(checkRunning)
 	checkRunning = ok
 	exeOf := func(app string) string { return filepath.Join(app, "Contents", "MacOS", "Pinky") }
 
@@ -403,9 +402,10 @@ func TestLocate(t *testing.T) {
 	if l := locate("/opt/homebrew/Cellar/pinky/1.0/Pinky.app/Contents/MacOS/Pinky"); l.Method != MethodManager || l.Command != "brew upgrade pinky" {
 		t.Errorf("a Homebrew formula: %+v", l)
 	}
-	os.MkdirAll(filepath.Join(homebrewPrefixes[0], "Caskroom", "pinky"), 0o755)
-	if l := locate(exeOf(app)); l.Method != MethodManager || l.Manager != "Homebrew" || l.Command != "brew upgrade --cask pinky" {
-		t.Errorf("a Homebrew cask: %+v", l)
+	// Pinky's cask moves Pinky.app to Applications and declares
+	// auto_updates: it updates itself.
+	if l := locate(exeOf(app)); !l.CanReplace() {
+		t.Errorf("a cask's Pinky.app: %+v", l)
 	}
 }
 

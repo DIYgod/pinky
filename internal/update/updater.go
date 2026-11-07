@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -156,15 +157,32 @@ type Prepared struct {
 	Staged  Staged
 }
 
+// MethodFor is how a release reaches this installation: Pinky replaces
+// itself where it can; an installer runs only when the release's asset is
+// one (an .exe or .msi); anything else is downloaded for the person.
+func (u *Updater) MethodFor(r Release) Method {
+	loc := u.Where()
+	m := loc.Method
+	switch {
+	case m == MethodSelf && !loc.CanReplace():
+		m = MethodDownload
+	case m == MethodInstaller && !isInstaller(r.Asset.URL):
+		m = MethodDownload
+	}
+	return m
+}
+
+func isInstaller(raw string) bool {
+	name := strings.ToLower(assetName(raw))
+	return strings.HasSuffix(name, ".exe") || strings.HasSuffix(name, ".msi")
+}
+
 // Prepare downloads a release and checks it. Where Pinky replaces itself it
 // also unpacks it next to the app and checks its signature, so that what
 // is left is the swap; elsewhere the file goes to Downloads.
 func (u *Updater) Prepare(ctx context.Context, r Release, progress func(done, total int64)) (*Prepared, error) {
 	loc := u.Where()
-	m := loc.Method
-	if m == MethodSelf && !loc.CanReplace() {
-		m = MethodDownload
-	}
+	m := u.MethodFor(r)
 	if m == MethodManager {
 		return nil, fmt.Errorf("%s updates this Pinky: %s", loc.Manager, loc.Command)
 	}

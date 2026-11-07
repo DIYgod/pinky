@@ -272,6 +272,19 @@ func TestUpdateWhereItCannotReplaceItself(t *testing.T) {
 	if ut2.quits != 0 {
 		t.Error("quit after a download for the person")
 	}
+
+	// Windows with a release whose asset is a zip, not an installer:
+	// download it rather than run it.
+	ut3 := newUpdateTest(t, fakeapi.Companion)
+	ut3.u.Location = update.Location{Method: update.MethodInstaller, App: `C:\Users\x\AppData\Local\Programs\Pinky\Pinky.exe`}
+	ut3.check(t)
+	tt = mg.NewTester(ut3.view, 1280, 820)
+	if hasText(tt, "Download and install") || !hasText(tt, "Download") {
+		t.Errorf("a zip on Windows: %q", tt.Texts())
+	}
+	if m := ut3.u.MethodFor(*ut3.upd.rel); m != update.MethodDownload {
+		t.Errorf("MethodFor = %v", m)
+	}
 }
 
 const testChangelog = `# Changelog
