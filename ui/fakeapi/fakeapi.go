@@ -133,6 +133,7 @@ type API struct {
 	fileProblems []gateway.FileProblem
 
 	iosHost driver.HostCheck // what the computer lacks for iPhones (iphone.go)
+	dlErr   error            // what DownloadDiskImage fails with (iphone.go)
 }
 
 type device struct {

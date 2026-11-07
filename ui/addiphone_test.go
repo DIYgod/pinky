@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -183,4 +184,53 @@ func TestAddIPhoneScreenshots(t *testing.T) {
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupNoDiskImage})
 	ta.waitFor(t, "the missing image in Chinese", func() bool { tt.Frame(); return hasText(tt, "开发者磁盘映像") })
 	shoot("iphone-noimage-zh")
+}
+
+// TestAddIPhoneDownload offers the developer disk image from the mirror
+// when the computer has none, says where it comes from, downloads it on a
+// click and moves on; a failed or changed download says so and points back
+// to the official ways.
+func TestAddIPhoneDownload(t *testing.T) {
+	ta, tt := addIPhoneApp(t)
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the phone", func() bool { tt.Frame(); return ta.add.iphone(ta.app) != nil })
+	id := ta.add.iphone(ta.app).Info.ID
+	noImage := driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupNoDiskImage, Detail: "Pinky needs Apple's developer disk image."}
+
+	// A download that fails, then one whose files are not the expected ones.
+	for _, c := range []struct {
+		err  error
+		says string
+	}{
+		{errors.New("downloading Image.dmg: connection reset"), "The download did not work."},
+		{errors.Join(errors.New("Image.dmg"), driver.ErrDiskImageMismatch), "The mirror's files are not the ones Pinky expects"},
+	} {
+		ta.api.SetIPhone(id, noImage)
+		ta.api.SetDownloadError(c.err)
+		ta.waitFor(t, "the offer", func() bool { tt.Frame(); return hasText(tt, "Or download it from a third-party mirror") })
+		for _, want := range []string{"github.com/doronz88/DeveloperDiskImage", "not Apple", "Xcode 27.0 beta 4 (27A5228h)"} {
+			if !hasText(tt, want) {
+				t.Fatalf("the offer does not say %q: %q", want, tt.Texts())
+			}
+		}
+		label := "Download (32 MB)"
+		if ta.add.dl.err != nil {
+			label = "Try again"
+		}
+		if err := tt.Click(label); err != nil {
+			t.Fatalf("%s: %v (%q)", label, err, tt.Texts())
+		}
+		ta.waitFor(t, "the failure", func() bool { tt.Frame(); return hasText(tt, c.says) })
+		if !hasText(tt, "use an official copy instead") {
+			t.Errorf("a failed download does not point to the official ways: %q", tt.Texts())
+		}
+	}
+
+	// One that works: the phone is prepared next.
+	ta.api.SetDownloadError(nil)
+	if err := tt.Click("Try again"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the progress", func() bool { tt.Frame(); return hasText(tt, "Downloading…") })
+	ta.waitFor(t, "the phone being prepared", func() bool { tt.Frame(); return hasText(tt, "Preparing the iPhone…") })
 }

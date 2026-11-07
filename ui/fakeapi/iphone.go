@@ -1,6 +1,7 @@
 package fakeapi
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -116,4 +117,54 @@ func (a *API) SetHostCheck(c driver.HostCheck) {
 	a.iosHost = c
 	a.mu.Unlock()
 	a.emit(gateway.Event{Kind: gateway.EventDevices})
+}
+
+// fakeMirror is what the fake's DiskImageMirror offers, as the iOS driver's.
+var fakeMirror = driver.DiskImageMirror{Name: "github.com/doronz88/DeveloperDiskImage", Image: "Xcode 27.0 beta 4 (27A5228h)", Size: 32437683}
+
+// DiskImageMirror implements the client's disk image download
+// (gateway.DiskImageMirror).
+func (a *API) DiskImageMirror() (driver.DiskImageMirror, bool) { return fakeMirror, true }
+
+// DownloadDiskImage pretends to download the developer disk image in a
+// couple of seconds at Speed, then moves iPhones that waited for an image
+// on to being prepared; it fails with what SetDownloadError set.
+func (a *API) DownloadDiskImage(ctx context.Context, progress func(done, total int64)) error {
+	const steps = 8
+	for i := 1; i <= steps; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Duration(float64(250*time.Millisecond) / a.opt.Speed)):
+		}
+		a.mu.Lock()
+		err := a.dlErr
+		a.mu.Unlock()
+		if err != nil && i == steps/2 {
+			return err
+		}
+		if progress != nil {
+			progress(fakeMirror.Size*int64(i)/steps, fakeMirror.Size)
+		}
+	}
+	a.mu.Lock()
+	var waiting []string
+	for _, d := range a.devices {
+		if d.info.Platform == driver.IOS && d.info.Setup == driver.SetupNoDiskImage {
+			waiting = append(waiting, d.info.ID)
+		}
+	}
+	a.mu.Unlock()
+	for _, id := range waiting {
+		a.SetIPhone(id, iphoneSteps[2])
+	}
+	return nil
+}
+
+// SetDownloadError makes DownloadDiskImage fail halfway with err; nil
+// makes it work again.
+func (a *API) SetDownloadError(err error) {
+	a.mu.Lock()
+	a.dlErr = err
+	a.mu.Unlock()
 }

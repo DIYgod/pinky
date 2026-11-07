@@ -206,6 +206,68 @@
   "@addPhoneIPhoneGetXcode": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the link that opens Xcode's page in the Mac App Store."
   },
+  "addPhoneIPhoneMirrorDetail": "{source} keeps copies of Apple's files; the author of pymobiledevice3 runs it, not Apple. Pinky downloads the image from {image}, {size}, and checks every file against the checksum it expects.",
+  "@addPhoneIPhoneMirrorDetail": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. What it is. source is the mirror's address, image which Xcode the image is from, size its size.",
+    "placeholders": {
+      "source": {
+        "type": "String",
+        "example": "github.com/doronz88/DeveloperDiskImage"
+      },
+      "image": {
+        "type": "String",
+        "example": "Xcode 27.0 beta 4 (27A5228h)"
+      },
+      "size": {
+        "type": "String",
+        "example": "32 MB"
+      }
+    }
+  },
+  "addPhoneIPhoneMirrorDone": "Downloaded. Pinky is preparing the iPhone…",
+  "@addPhoneIPhoneMirrorDone": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Next to a spinner once the download is done, until the step moves on."
+  },
+  "addPhoneIPhoneMirrorDownload": "Download ({size})",
+  "@addPhoneIPhoneMirrorDownload": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. The button that starts the download. size is its size.",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "example": "32 MB"
+      }
+    }
+  },
+  "addPhoneIPhoneMirrorDownloading": "Downloading… {done} of {total}",
+  "@addPhoneIPhoneMirrorDownloading": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Next to a spinner while it downloads.",
+    "placeholders": {
+      "done": {
+        "type": "String",
+        "example": "12 MB"
+      },
+      "total": {
+        "type": "String",
+        "example": "32 MB"
+      }
+    }
+  },
+  "addPhoneIPhoneMirrorFailed": "The download did not work.",
+  "@addPhoneIPhoneMirrorFailed": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. When the download failed; Pinky's own reason follows in English."
+  },
+  "addPhoneIPhoneMirrorMismatch": "The mirror's files are not the ones Pinky expects, so Pinky did not use them.",
+  "@addPhoneIPhoneMirrorMismatch": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. When a downloaded file's checksum differed from the one Pinky expects."
+  },
+  "addPhoneIPhoneMirrorOfficial": "You can still use an official copy instead, as described above.",
+  "@addPhoneIPhoneMirrorOfficial": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Under a failed download: the official ways above still work."
+  },
+  "addPhoneIPhoneMirrorTitle": "Or download it from a third-party mirror",
+  "@addPhoneIPhoneMirrorTitle": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Its title."
+  },
   "addPhoneIPhoneNoAnswer": "{name} does not answer. Unplug it and plug it in again.",
   "@addPhoneIPhoneNoAnswer": {
     "description": "Add phone › iPhone, the step list: under the plug-in step when the iPhone is connected but does not answer; Pinky's own reason follows in English. name is the iPhone's name.",

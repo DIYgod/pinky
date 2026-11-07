@@ -615,6 +615,170 @@ func (msgs Messages) AddPhoneIPhoneGetXcode() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneGetXcode", nil)
 }
 
+// AddPhoneIPhoneMirrorDetail says "{source} keeps copies of Apple's files; the author of pymobiledevice3 runs it, not Apple. Pinky downloads the image f…"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. What it is. source is the
+// mirror's address, image which Xcode the image is from, size its size.
+func AddPhoneIPhoneMirrorDetail(source string, image string, size string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneMirrorDetail(source, image, size)
+}
+
+// AddPhoneIPhoneMirrorDetail says "{source} keeps copies of Apple's files; the author of pymobiledevice3 runs it, not Apple. Pinky downloads the image f…"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. What it is. source is the
+// mirror's address, image which Xcode the image is from, size its size.
+func (msgs Messages) AddPhoneIPhoneMirrorDetail(source string, image string, size string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorDetail", map[string]any{"source": source, "image": image, "size": size})
+}
+
+// AddPhoneIPhoneMirrorDone says "Downloaded. Pinky is preparing the iPhone…"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Next to a spinner once the
+// download is done, until the step moves on.
+func AddPhoneIPhoneMirrorDone() string { return In(i18n.Locale()).AddPhoneIPhoneMirrorDone() }
+
+// AddPhoneIPhoneMirrorDone says "Downloaded. Pinky is preparing the iPhone…"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Next to a spinner once the
+// download is done, until the step moves on.
+func (msgs Messages) AddPhoneIPhoneMirrorDone() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorDone", nil)
+}
+
+// AddPhoneIPhoneMirrorDownload says "Download ({size})"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. The button that starts the
+// download. size is its size.
+func AddPhoneIPhoneMirrorDownload(size string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneMirrorDownload(size)
+}
+
+// AddPhoneIPhoneMirrorDownload says "Download ({size})"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. The button that starts the
+// download. size is its size.
+func (msgs Messages) AddPhoneIPhoneMirrorDownload(size string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorDownload", map[string]any{"size": size})
+}
+
+// AddPhoneIPhoneMirrorDownloading says "Downloading… {done} of {total}"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Next to a spinner while it
+// downloads.
+func AddPhoneIPhoneMirrorDownloading(done string, total string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneMirrorDownloading(done, total)
+}
+
+// AddPhoneIPhoneMirrorDownloading says "Downloading… {done} of {total}"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Next to a spinner while it
+// downloads.
+func (msgs Messages) AddPhoneIPhoneMirrorDownloading(done string, total string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorDownloading", map[string]any{"done": done, "total": total})
+}
+
+// AddPhoneIPhoneMirrorFailed says "The download did not work."
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. When the download failed;
+// Pinky's own reason follows in English.
+func AddPhoneIPhoneMirrorFailed() string { return In(i18n.Locale()).AddPhoneIPhoneMirrorFailed() }
+
+// AddPhoneIPhoneMirrorFailed says "The download did not work."
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. When the download failed;
+// Pinky's own reason follows in English.
+func (msgs Messages) AddPhoneIPhoneMirrorFailed() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorFailed", nil)
+}
+
+// AddPhoneIPhoneMirrorMismatch says "The mirror's files are not the ones Pinky expects, so Pinky did not use them."
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. When a downloaded file's
+// checksum differed from the one Pinky expects.
+func AddPhoneIPhoneMirrorMismatch() string { return In(i18n.Locale()).AddPhoneIPhoneMirrorMismatch() }
+
+// AddPhoneIPhoneMirrorMismatch says "The mirror's files are not the ones Pinky expects, so Pinky did not use them."
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. When a downloaded file's
+// checksum differed from the one Pinky expects.
+func (msgs Messages) AddPhoneIPhoneMirrorMismatch() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorMismatch", nil)
+}
+
+// AddPhoneIPhoneMirrorOfficial says "You can still use an official copy instead, as described above."
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Under a failed download:
+// the official ways above still work.
+func AddPhoneIPhoneMirrorOfficial() string { return In(i18n.Locale()).AddPhoneIPhoneMirrorOfficial() }
+
+// AddPhoneIPhoneMirrorOfficial says "You can still use an official copy instead, as described above."
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Under a failed download:
+// the official ways above still work.
+func (msgs Messages) AddPhoneIPhoneMirrorOfficial() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorOfficial", nil)
+}
+
+// AddPhoneIPhoneMirrorTitle says "Or download it from a third-party mirror"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Its title.
+func AddPhoneIPhoneMirrorTitle() string { return In(i18n.Locale()).AddPhoneIPhoneMirrorTitle() }
+
+// AddPhoneIPhoneMirrorTitle says "Or download it from a third-party mirror"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when the computer has no
+// developer disk image, below the official ways to get it: the offer to
+// download it from a third-party mirror instead. Its title.
+func (msgs Messages) AddPhoneIPhoneMirrorTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneMirrorTitle", nil)
+}
+
 // AddPhoneIPhoneNoAnswer says "{name} does not answer. Unplug it and plug it in again."
 // in the language the app shows.
 //

@@ -29,6 +29,7 @@ type addState struct {
 	host     driver.HostCheck
 	hostAt   time.Time
 	hostBusy bool
+	dl       diskDownload // the developer disk image from the mirror
 }
 
 func (s *addState) reset(a *app) {

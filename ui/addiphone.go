@@ -1,8 +1,12 @@
 package ui
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	mg "github.com/egoist/mygo/ui"
@@ -190,7 +194,9 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 					guideProblem(c, locales.AddPhoneIPhoneNoImageTitle(), locales.AddPhoneIPhoneNoImageCopy())
 					guideNote(c, d.Info.Detail)
 				}
-				guideNote(c, locales.AddPhoneIPhoneRetrying())
+				// The person chose to offer a third-party copy too, after
+				// the official ways and only on a click.
+				a.mirrorOffer(c)
 			default:
 				guideProblem(c, locales.AddPhoneIPhoneStuck(), d.Info.Detail)
 				guideNote(c, locales.AddPhoneIPhoneRetrying())
@@ -217,4 +223,101 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			s.old = true
 		}
 	})
+}
+
+// diskImageDownloader is a gateway that can download the developer disk
+// image a computer without Xcode lacks, from a third-party mirror
+// (gateway.DiskImageMirror and DownloadDiskImage).
+type diskImageDownloader interface {
+	DiskImageMirror() (driver.DiskImageMirror, bool)
+	DownloadDiskImage(ctx context.Context, progress func(done, total int64)) error
+}
+
+// diskDownload is the download the person started from the steps.
+type diskDownload struct {
+	seq         int64
+	running     bool
+	finished    bool // done; the phone is prepared at the next look
+	done, total int64
+	err         error
+}
+
+// dlSeq numbers downloads, so a download the person walked away from does
+// not report into a newer one.
+var dlSeq atomic.Int64
+
+// mirrorOffer offers the developer disk image from the third-party mirror:
+// where it comes from and that it is not Apple, a Download button, the
+// progress, and what to do when it fails.
+func (a *app) mirrorOffer(c *mg.Context) {
+	dl, ok := a.api.(diskImageDownloader)
+	if !ok {
+		return
+	}
+	m, ok := dl.DiskImageMirror()
+	if !ok {
+		return
+	}
+	st := &a.add.dl
+	mg.Column(c).Gap(8).Margin(6, 0, 0, 0).Children(func() {
+		mg.Text(c, locales.AddPhoneIPhoneMirrorTitle()).FontSize(13.5).FontWeight(600)
+		guideText(c, locales.AddPhoneIPhoneMirrorDetail(m.Name, m.Image, megabytes(m.Size)))
+		switch {
+		case st.running:
+			done, total := megabytes(st.done), megabytes(st.total)
+			if st.total == 0 {
+				total = megabytes(m.Size)
+			}
+			guideWaiting(c, locales.AddPhoneIPhoneMirrorDownloading(done, total))
+		case st.finished:
+			guideWaiting(c, locales.AddPhoneIPhoneMirrorDone())
+		default:
+			label := locales.AddPhoneIPhoneMirrorDownload(megabytes(m.Size))
+			if st.err != nil {
+				if errors.Is(st.err, driver.ErrDiskImageMismatch) {
+					guideProblem(c, locales.AddPhoneIPhoneMirrorMismatch(), "")
+				} else {
+					guideProblem(c, locales.AddPhoneIPhoneMirrorFailed(), st.err.Error())
+				}
+				guideNote(c, locales.AddPhoneIPhoneMirrorOfficial())
+				label = locales.AddPhoneTryAgain()
+			}
+			mg.Row(c).Children(func() {
+				if button(c, label, btnOpt{}).Clicked() {
+					a.downloadDiskImage(dl)
+				}
+			})
+		}
+	})
+}
+
+// downloadDiskImage downloads the image in the background, reporting its
+// progress a few times a second.
+func (a *app) downloadDiskImage(dl diskImageDownloader) {
+	st := &a.add.dl
+	seq := dlSeq.Add(1)
+	*st = diskDownload{seq: seq, running: true}
+	go func() {
+		var last time.Time
+		err := dl.DownloadDiskImage(a.ctx, func(done, total int64) {
+			if now := time.Now(); now.Sub(last) >= 200*time.Millisecond || done == total {
+				last = now
+				a.post(func() {
+					if st.seq == seq {
+						st.done, st.total = done, total
+					}
+				})
+			}
+		})
+		a.post(func() {
+			if st.seq == seq {
+				st.running, st.finished, st.err = false, err == nil, err
+			}
+		})
+	}()
+}
+
+// megabytes says a size in megabytes, as downloads do: "32 MB".
+func megabytes(n int64) string {
+	return fmt.Sprintf("%d MB", (n+500_000)/1_000_000)
 }
