@@ -6,6 +6,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -225,4 +227,177 @@ func TestAXProbeActivate(t *testing.T) {
 		time.Sleep(time.Second)
 		full.Close()
 	}
+}
+
+// TestAXProbeMirror reads, without any input, what the phone's
+// accessibility services see while the person mirrors it to a Mac with
+// iPhone Mirroring (the phone locked): the lock and backlight state, the
+// inspector's walk with each element's process, and remoteAXService's
+// frontmost app. Run alone with PINKY_AXPROBE=mirror once the person has
+// locked the phone, started iPhone Mirroring and opened Settings in it.
+func TestAXProbeMirror(t *testing.T) {
+	if os.Getenv("PINKY_AXPROBE") != "mirror" {
+		t.Skip("PINKY_AXPROBE=mirror not set")
+	}
+	id := os.Getenv("PINKY_DEVICE")
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	l, err := dialLink(ctx, id, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	d := &Device{l: l}
+	locked, lerr := d.Locked(ctx)
+	t.Logf("lockdown PasswordProtected: %v (%v)", locked, lerr)
+	if svc, err := dialCoreDevice(l.entry, deviceInfoService); err == nil {
+		si, err := readScreenInfo(ctx, svc)
+		t.Logf("display: %dx%d, backlight %q, orientation %q (%v)", si.Width, si.Height, si.Backlight, si.Orientation, err)
+		svc.Close()
+	}
+	procs, err := d.processPaths(ctx)
+	if err != nil {
+		t.Logf("process list: %v", err)
+	}
+	name := func(pid uint64) string {
+		p := procs[pid]
+		if i := strings.LastIndex(p, "/"); i >= 0 {
+			p = p[i+1:]
+		}
+		return p
+	}
+	// remoteAXService's idea of the frontmost app.
+	if rax, err := d.raxReady(ctx); err == nil {
+		app, err := rax.frontmostApp(ctx)
+		if err == nil {
+			t.Logf("remoteAXService frontmost app: pid %d (%s)", app.PID, name(uint64(app.PID)))
+		} else {
+			t.Logf("remoteAXService frontmost app: %v", err)
+		}
+		rax.Close()
+	} else {
+		t.Logf("remoteAXService: %v", err)
+	}
+	// The inspector's walk.
+	ax, err := dialAX(ctx, l.base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ax.Close()
+	t0 := time.Now()
+	nodes, complete, err := ax.walk(ctx, observeLimits)
+	t.Logf("inspector walk: %v, %d elements, complete %v, err %v", time.Since(t0).Round(time.Millisecond), len(nodes), complete, err)
+	byProc := map[string]int{}
+	for i, n := range nodes {
+		p := name(handlePID(n.handle))
+		byProc[p]++
+		t.Logf("  %2d %-24s %q ident %q", i, p, n.caption, n.ident)
+	}
+	fgName, fgID := ax.foreground()
+	t.Logf("elements by process: %v; app-state foreground: %s (%s)", byProc, fgName, fgID)
+}
+
+// TestAXProbeFocusActivate is TestAXProbeActivate with the inspector's
+// focus moved onto the element first, since the daemon answers attribute
+// queries only for the focused element. PINKY_AXPROBE=focus.
+func TestAXProbeFocusActivate(t *testing.T) {
+	if os.Getenv("PINKY_AXPROBE") != "focus" {
+		t.Skip("PINKY_AXPROBE=focus not set")
+	}
+	id := os.Getenv("PINKY_DEVICE")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	l, err := dialLink(ctx, id, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	d := &Device{l: l}
+	ax, err := dialAX(ctx, l.base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ax.Close()
+	display := func() string {
+		nodes, _, _ := ax.walk(ctx, observeLimits)
+		for _, n := range nodes {
+			if strings.HasPrefix(n.ident, "StandardInputView") {
+				return n.ident
+			}
+		}
+		return "?"
+	}
+	focusThenActivate := func(label string, n axNode) {
+		ax.drain(ctx)
+		ax.ch.MethodCallAsync("deviceInspectorFocusOnElement:", elementArg(n.handle))
+		msg, err := ax.recvFocus(ctx, 2*time.Second)
+		got := ""
+		if err == nil {
+			f, _ := parseFocus(msg)
+			got = f.caption
+		}
+		t0 := time.Now()
+		aerr := ax.activate(ctx, n.handle)
+		t.Logf("%s: focus -> %q (%v), activate %v in %v", label, got, err, aerr, time.Since(t0).Round(time.Millisecond))
+		ax.ch.MethodCallAsync("deviceInspectorPreviewOnElement:", nskeyedarchiver.NewNSNull())
+		time.Sleep(time.Second)
+	}
+	if err := d.Launch(ctx, "com.apple.calculator"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+	nodes, _, _ := ax.walk(ctx, observeLimits)
+	t.Logf("display before: %s", display())
+	for _, n := range nodes {
+		if parseCaption(n.caption).first == "7" {
+			focusThenActivate("7", n)
+			break
+		}
+	}
+	t.Logf("display after 7: %s", display())
+	nodes, _, _ = ax.walk(ctx, observeLimits)
+	for _, n := range nodes {
+		if n.ident == "AllClear" || n.ident == "Clear" {
+			focusThenActivate(n.ident, n)
+			break
+		}
+	}
+	t.Logf("display after clear: %s", display())
+	full, err := Open(ctx, driver.Info{ID: id, Platform: driver.IOS})
+	if err == nil {
+		full.Key(ctx, driver.KeyHome)
+		time.Sleep(time.Second)
+		full.Close()
+	}
+}
+
+// activate performs an element's default action, as VoiceOver's double tap
+// does (the inspector's "Activate", AXAction-2010), the way go-ios sends it.
+// On iOS 27.0.1 it returns at once and presses nothing in Calculator.
+func (a *axSession) activate(ctx context.Context, handle []byte) error {
+	if len(handle) == 0 {
+		return errors.New("accessibility: no element") // a null handle breaks the daemon's connection
+	}
+	pass := func(v any) any {
+		return nskeyedarchiver.NewNSMutableDictionary(map[string]any{"ObjectType": "passthrough", "Value": v})
+	}
+	action := nskeyedarchiver.NewNSMutableDictionary(map[string]any{
+		"ObjectType": "AXAuditElementAttribute_v1",
+		"Value": pass(nskeyedarchiver.NewNSMutableDictionary(map[string]any{
+			"AttributeNameValue_v1":     pass("AXAction-2010"),
+			"HumanReadableNameValue_v1": pass("Activate"),
+			"PerformsActionValue_v1":    pass(true),
+			"SettableValue_v1":          pass(false),
+			"DisplayAsTree_v1":          pass(false),
+			"DisplayInlineValue_v1":     pass(false),
+			"IsInternal_v1":             pass(false),
+			"ValueTypeValue_v1":         pass(int32(1)),
+		})),
+	})
+	c, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if _, err := a.ch.MethodCallWithContext(c, "deviceElement:performAction:withValue:", elementArg(handle), action, nskeyedarchiver.NewNSMutableDictionary(map[string]any{})); err != nil {
+		return fmt.Errorf("accessibility: activate: %w", err)
+	}
+	return nil
 }
