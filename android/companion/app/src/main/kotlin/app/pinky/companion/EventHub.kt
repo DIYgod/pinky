@@ -54,6 +54,15 @@ class EventHub(private val labels: AppLabels, private val displays: Displays) {
     private val packageDisplays = HashMap<String, Int>()
     private val packageWindows = HashMap<String, Int>()
 
+    /**
+     * Records the displays of the apps that had windows when the service
+     * started, so that a toast before any window event of its app still finds
+     * its display. Window events seen meanwhile win. Main thread only.
+     */
+    fun seed(appDisplays: Map<String, Int>) {
+        for ((pkg, d) in appDisplays) packageDisplays.putIfAbsent(pkg, d)
+    }
+
     /** Subscribes a connection; a display limits it to that display's events. */
     fun subscribe(conn: Connection, kinds: Set<String>, display: Int?): Subscriber {
         val s = Subscriber(conn, kinds, display)
@@ -212,7 +221,7 @@ class EventHub(private val labels: AppLabels, private val displays: Displays) {
      */
     private fun toastText(e: AccessibilityEvent): String {
         val parts = e.text.mapNotNull { it?.toString()?.trim() }.filter { it.isNotEmpty() }
-        val label = e.packageName?.let { labels.get(it.toString()) }
+        val label = e.packageName?.let { labels.load(it.toString()) }
         val message = if (parts.size > 1 && label != null) parts.filter { it != label } else parts
         return message.joinToString(" ")
     }

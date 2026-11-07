@@ -9,7 +9,6 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -62,10 +61,22 @@ class PinkyAccessibilityService : AccessibilityService() {
             serviceInfo.flags and AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS != 0
         val keep = prefs.getBoolean(KEY_INCLUDE_NOT_IMPORTANT, includeNotImportant)
         if (keep != includeNotImportant) setIncludeNotImportant(keep)
+        // A service that was only restarted keeps counting idle time from
+        // its clients' last activity; one that was turned on starts now.
+        if (!restarted) IdleClock.touch()
+        restarted = false
         server?.stop()
         server = CompanionServer(this).also { it.start() }
+        // Which display each open app is on, for toasts that come before
+        // any window event of their app.
+        server?.handler?.runOnWorker {
+            val seed = displays.appDisplays()
+            main.post { events.seed(seed) }
+        }
+        // Check now rather than 10 s from now, so that frequent rebinding
+        // cannot postpone the check for ever.
         main.removeCallbacks(watchdog)
-        main.postDelayed(watchdog, WATCHDOG_INTERVAL_MS)
+        main.post(watchdog)
         Log.i(TAG, "connected")
     }
 
@@ -82,7 +93,9 @@ class PinkyAccessibilityService : AccessibilityService() {
         // Android also unbinds the service without turning it off, for a
         // uiautomator dump or an update; only a service that was turned off
         // (in Android Settings, by Pinky or by the watchdog) forgets config.
-        if (!listedInSettings()) prefs.edit().clear().commit()
+        val listed = listedInSettings()
+        if (!listed) prefs.edit().clear().commit()
+        restarted = listed
         return super.onUnbind(intent)
     }
 
@@ -150,13 +163,14 @@ class PinkyAccessibilityService : AccessibilityService() {
     }
 
     // A backstop for a gateway that crashed or lost the phone without
-    // turning the service off: no connection for idleDisableMs turns it off.
+    // turning the service off: no client for idleDisableMs turns it off.
     private val watchdog = object : Runnable {
         override fun run() {
             val s = server ?: return
             val limit = idleDisableMs
-            if (limit > 0 && s.connectionCount == 0 && SystemClock.uptimeMillis() - s.lastActivity >= limit) {
-                Log.i(TAG, "no connection for ${limit / 1000} s, turning the service off")
+            val idle = IdleClock.idleMs()
+            if (limit > 0 && s.connectionCount == 0 && idle >= limit) {
+                Log.i(TAG, "no client for ${idle / 1000} s (limit ${limit / 1000} s), turning the service off")
                 disableSelf()
                 return
             }
@@ -167,6 +181,10 @@ class PinkyAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "PinkyService"
         const val DEFAULT_IDLE_DISABLE_MS = 3 * 60_000L
+
+        // Whether the last unbind left the service turned on (a restart),
+        // across service instances in this process. Main thread only.
+        private var restarted = false
         private const val WATCHDOG_INTERVAL_MS = 10_000L
         private const val PREFS = "service_config"
         private const val KEY_IDLE_DISABLE_MS = "idle_disable_ms"

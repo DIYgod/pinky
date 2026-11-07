@@ -164,7 +164,7 @@ Subscribes the connection to events. The reply comes first; events follow on the
 
 The result is `{"kinds": [...], "display": <id, when given>, "time": <ms>}`.
 
-Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display`: the display it came from, or -1 when that is not known. Android 13 and later report it for every event. On Android 11 and 12 the event's window tells, so a window that has only just opened can be -1; on Android 10 only the main display's windows are known. Toast events name no window: their display is the one Android reports, else the display where the app last opened a window. Notifications are always -1: they belong to the phone, not to a display. Content changes are folded per display.
+Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display`: the display it came from, or -1 when that is not known. Android 13 and later report it for every event. On Android 11 and 12 the event's window tells, so a window that has only just opened can be -1; on Android 10 only the main display's windows are known. Toast events name no window: their display is the one Android reports, else the display where the app last opened a window, else, for an app that opened none since the service started, the display its windows were on then. Notifications are always -1: they belong to the phone, not to a display. Content changes are folded per display.
 
 | Kind | When | Extra fields |
 | --- | --- | --- |
@@ -200,7 +200,7 @@ Changes the service's settings until the service is turned off. The app saves th
 | Parameter | Default | Meaning |
 | --- | --- | --- |
 | `include_not_important` | false | Include views that are not important for accessibility (layout containers), as `uiautomator dump` does. Before Android 13 the app cannot clear its node cache, so the change takes full effect at the next window change. |
-| `idle_disable_ms` | 180000 | The service turns itself off (`disableSelf`) after this long without any connection. 0 keeps it on until it is turned off; Pinky's Install sends it, so a service the person turned on from Pinky stays on, also after a reboot or an update. |
+| `idle_disable_ms` | 180000 | The service turns itself off (`disableSelf`) after this long without any client: no connection open and none opened, closed or used meanwhile. Time the phone spends asleep counts, and so does time across a restart of the service (a `uiautomator dump` rebinds it). 0 keeps it on until it is turned off; Pinky's Install sends it, so a service the person turned on from Pinky stays on, also after a reboot or an update. |
 
 The result holds the current values.
 
@@ -225,5 +225,5 @@ The Go client maps `not_found` to `driver.ErrNotFound` and `unsupported` to `dri
 
 - Pinky turns the service on by adding only its own component, `app.pinky.companion/.PinkyAccessibilityService`, to `enabled_accessibility_services`, and off by removing it again; see [companion.md](companion.md#turning-the-service-on-and-off).
 - When the service connects it binds the socket (retrying for up to 5 seconds if a previous instance still holds the name); when Android unbinds it, the socket closes and every connection ends.
-- After `idle_disable_ms` with no connection the service turns itself off, unless `config` set it to 0. This is a backstop for a gateway that crashed or lost the phone while the service was on for a task.
+- After `idle_disable_ms` without any client the service turns itself off, unless `config` set it to 0. The count goes on when Android only rebinds the service, and it is checked again every time it does. This is a backstop for a gateway that crashed or lost the phone while the service was on for a task.
 - `uiautomator dump` (and any other UiAutomation client that does not ask to keep services) makes Android unbind every accessibility service for as long as it runs, so the companion restarts with an empty cache around each dump. Do not mix the two.

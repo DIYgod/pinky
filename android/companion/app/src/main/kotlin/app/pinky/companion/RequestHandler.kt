@@ -36,6 +36,21 @@ class RequestHandler(
         worker.shutdownNow()
     }
 
+    /** Runs work that touches the accessibility tree on the worker thread, without a request. */
+    fun runOnWorker(task: () -> Unit) {
+        try {
+            worker.execute {
+                try {
+                    task()
+                } catch (e: Exception) {
+                    Log.w(TAG, "background work failed", e)
+                }
+            }
+        } catch (_: java.util.concurrent.RejectedExecutionException) {
+            // Shut down already.
+        }
+    }
+
     fun handle(line: String, conn: Connection): Reply {
         var id: Any? = null
         return try {
