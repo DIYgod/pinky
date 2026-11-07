@@ -32,6 +32,7 @@ func PolicyApps() map[string]policy.CategoryEntries {
 // iPhone, each behind its own provider.
 func World() ([]driver.Provider, []*Device) {
 	pixel := NewDevice("fake-pixel-9", "Pixel 9 (fake)", driver.Android)
+	pixel.PutFile("Notes/groceries.txt", []byte("Rice, eggs, spring onions\n"))
 	iphone := NewDevice("fake-iphone-17", "iPhone 17 (fake)", driver.IOS)
 	return []driver.Provider{NewProvider(driver.Android, pixel), NewProvider(driver.IOS, iphone)}, []*Device{pixel, iphone}
 }
@@ -75,7 +76,8 @@ func (p *Provider) List(context.Context) ([]driver.Info, error) {
 	return out, nil
 }
 
-// Open implements driver.Provider.
+// Open implements driver.Provider. Android phones come wrapped in Android,
+// with a Pinky folder and background displays; use Of for the phone.
 func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -83,6 +85,9 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 		if d.info.ID == id {
 			if d.Offline() {
 				return nil, driver.ErrOffline
+			}
+			if d.Info().Platform == driver.Android {
+				return Android{d}, nil
 			}
 			return d, nil
 		}
@@ -118,6 +123,10 @@ type Device struct {
 	slow    time.Duration
 	person  chan struct{}
 	noVideo bool
+	// screenOff is set while the screen is off (SetScreen; Wake clears it).
+	screenOff bool
+	// files is the Pinky folder of Android phones.
+	files map[string]file
 }
 
 // NewDevice returns a demo phone. Android phones use the Pixel launcher,

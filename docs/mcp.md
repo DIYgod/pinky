@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pinky mcp`, a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pinky mcp`, a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -17,6 +17,25 @@ Any client that takes a JSON config:
 ```
 
 To try Pinky without a phone, use `pinky mcp --fake` (it starts `pinky daemon --fake` when no gateway runs) or run `pinky daemon --fake` yourself first.
+
+### Over HTTP
+
+For agents on another machine, in a container, or clients that speak only HTTP, Pinky serves the same tools over Streamable HTTP. It is off by default: turn on Settings › Remote agents in the app, or run `pinky daemon --http 127.0.0.1:7465`. The endpoint is `http://<address>/mcp`, on this computer only (`127.0.0.1:7465`) unless the person picks another address. Every request needs the agent token as a bearer token; `pinky token` prints it.
+
+Claude Code:
+
+```sh
+claude mcp add --transport http pinky http://127.0.0.1:7465/mcp --header "Authorization: Bearer $(pinky token)"
+```
+
+A JSON config:
+
+```json
+{ "mcpServers": { "pinky": { "type": "http", "url": "http://127.0.0.1:7465/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
+```
+
+- Without the token, or with another one, requests get `401`. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
+- Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. The agent's name gets " (remote)" after it ("Claude Code (remote)"), so a remote agent is asked about on its own first connection and never gets the scope the person gave the agent of that name on this computer. Closing it (`DELETE`), an hour without requests, or turning Remote agents off ends it, with its leases and open approvals.
 
 - Protocol: the official Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0), newline-delimited JSON-RPC over stdio; the SDK negotiates the protocol version.
 - Server info: name `pinky`, title `Pinky`; the server sends short usage instructions at initialization.
@@ -63,7 +82,7 @@ note: "<the person's note>"
 | `lease_held` | Another session holds the phone; `holder` names its agent and task |
 | `scope_denied` | The app is outside the agent's scope or the task's app list |
 | `not_found` | The ref is gone, or no installed app matches |
-| `unsupported` | The phone or backend cannot do this, such as `recents` on iPhone, or `phone_files` in this version |
+| `unsupported` | The phone or backend cannot do this, such as `recents` on iPhone, or `phone_files` on iPhone |
 | `invalid_argument` | Bad or missing arguments, a misused `approval_id`, or no phone connected in this session |
 | `internal` | The call was cancelled, or the gateway failed |
 
@@ -77,7 +96,7 @@ Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_key`, `phone
 | `intent` | string | One sentence on why, shown on the approval panel and in history |
 | `approval_id` | string | From `approval_pending`: repeat the same call with it to keep waiting |
 
-`phone_observe`, `phone_apps`, `phone_wait_for`, `phone_files` and `phone_release` take `device`; `phone_request_approval` and `phone_handoff` take `device` and `approval_id`. Unknown arguments are rejected.
+`phone_observe`, `phone_apps`, `phone_wait_for` and `phone_release` take `device`; `phone_files`, `phone_request_approval` and `phone_handoff` take `device` and `approval_id` (and `phone_files` takes `intent`). Unknown arguments are rejected.
 
 ## Tools
 
@@ -110,7 +129,7 @@ Returns the whole current screen.
 | Argument | Type | Meaning |
 | --- | --- | --- |
 | `wait_ms` | 0–30000 | Wait until the screen differs from what the agent last saw (then let it settle), or until this passes |
-| `screenshot` | boolean | Add a JPEG screenshot, in the screen's pixel space |
+| `screenshot` | boolean | Add a JPEG screenshot, in the screen's pixel space. None while the phone is locked or a blocked app is in front |
 
 Works while the person is in control and while an approval is open.
 
@@ -189,7 +208,20 @@ Returns `settled` with `matched: true` or `matched: false` and the screen change
 
 ### phone_files
 
-Returns `unsupported` in this version. Planned: a local folder synced with the phone's `Pinky/` folder (Android).
+Copies files between the phone's Pinky folder (`/sdcard/Pinky` on Android, the only place on the phone agents may reach) and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools. Needs a `phone_connect` lease like the other tools. iPhones return `unsupported`.
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `action` | `list` \| `pull` \| `push` | `list` (default) shows both sides; `pull` copies from the phone; `push` copies to the phone |
+| `paths` | string[] | Files or folders, relative to the Pinky folder. Default: everything; for `push`, the files that are new or changed on the computer |
+| `intent` | string | For `push`: one sentence on why, shown on the approval panel |
+| `approval_id` | string | From `approval_pending`: repeat the same call with it |
+
+The result lists the folder, then one line per file: `path · size · modified · where`, where `where` is `both` (same size and time), `phone`, `computer` or `differs`. `pull` and `push` list the files they copied and skip files that are the same on both sides; copied files keep their modification time.
+
+- `push` asks the person first (rule `Files`), like an Ask action: up to 45 s, then `approval_pending`. "Allow for this task" covers later pushes in the task. Read-only mode refuses it (`blocked_by_policy`, rule `Read-only`), and read-only and watch-only agents get `scope_denied`: they may only list and pull.
+- Paths that leave the folder (`..`, absolute paths) are `invalid_argument`; files that are not there are `not_found`. Symbolic links in the computer's folder are not copied, and a pull replaces a link in its way instead of writing through it.
+- Each call is a step in the task's history ("Copied 2 files from the phone: a.txt, b.png").
 
 ### phone_request_approval
 

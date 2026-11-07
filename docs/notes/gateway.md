@@ -1,6 +1,6 @@
 # Gateway, MCP and local API
 
-Branch `claude/gateway-core-da93b5`. This covers the packages the main session owned in [WORKING.md](../WORKING.md): `internal/gateway` (except the shared `api.go`), `internal/policy`, `internal/approval`, `internal/history`, `internal/mcp` and `cmd/pinky`, plus two new packages, `internal/api` (the local socket, listed in DESIGN's repository layout) and `internal/demo` (scripted fake phones). The first round used fake phones only; the second ran the gateway on the Mi 10 Pro and the iPhone (see "Real phones") and added the Settings API.
+Branch `claude/gateway-core-da93b5`. This covers the packages the main session owned in [WORKING.md](../WORKING.md): `internal/gateway` (except the shared `api.go`), `internal/policy`, `internal/approval`, `internal/history`, `internal/mcp` and `cmd/pinky`, plus `internal/api` (the local socket, listed in DESIGN's repository layout), `internal/demo` (scripted fake phones) and, from round three, `internal/recording`. The first round used fake phones only; the second ran the gateway on the Mi 10 Pro and the iPhone (see "Real phones") and added the Settings API; the third ([round3.md](round3.md)) added waking and unlocking, `phone_files`, one stream per device, recordings, retention and export, background displays and MCP over HTTP (see "Round three").
 
 ## What works
 
@@ -14,10 +14,89 @@ Everything below runs and is tested against fake phones; real drivers plug in la
 | Person controls | `TakeOver`, `HandBack`, `Stop`, `StopAll`, mirror input (`Touch`, `Key`, `Text`; taps and swipes are emulated when a driver lacks `Toucher`), lock state (from `Screen.Locked` and `driver.LockReporter`), client events |
 | Policy | Allow, Ask, Deny; commit detection (`commit`, `payment`, `send_message`, `install_app`, `open_url`, `call`, plus `change_setting`) with word tables in 11 languages; YAML rules, strictest wins; a bundled, editable app table; blocked apps hidden from agents; password and one-time-code fields refused (rule `credentials`); read-only mode; per-task app list; digit codes in notifications masked |
 | Approvals | 60 s from opening, then Deny; calls block 45 s, then `approval_pending` with a single-use id bound to session, device, lease, tool and arguments; decisions between calls are kept; on Allow the target and screen text are checked again (`stale`); the phone takes no other action meanwhile (reads still work); only the client's `Decide` answers |
-| History | SQLite through `modernc.org/sqlite` with the tables from DESIGN (devices, agents, sessions, tasks, steps, approvals, media); a JPEG before and after each step in `media/`, taken in the background (see "What the agent waits for"); `WipeHistory` |
-| MCP | The 14 tools from DESIGN on the official Go SDK v1.8.0, with progress notifications when a request has a `progressToken`. Reference: [docs/mcp.md](../mcp.md); agent guide: [docs/SKILL.md](../SKILL.md) |
+| History | SQLite through `modernc.org/sqlite` with the tables from DESIGN (devices, agents, sessions, tasks, steps, approvals, media) plus `recordings` and `device_settings`; a JPEG before and after each step in `media/`, taken in the background (see "What the agent waits for"); a screen recording per task in `recordings/`; retention, export and `WipeHistory` |
+| MCP | The 14 tools from DESIGN on the official Go SDK v1.8.0, with progress notifications when a request has a `progressToken`, over stdio (through the socket) and Streamable HTTP. Reference: [docs/mcp.md](../mcp.md); agent guide: [docs/SKILL.md](../SKILL.md) |
 | Local API | A Unix socket only the user can reach (0700 folder, 0600 socket, peer uid checked), one gateway per user (flock on `pinky.lock`), JSON-RPC control plus MCP sessions |
-| Commands | `pinky daemon`, `pinky mcp` (stdio shim that starts the daemon when none runs), `pinky devices`, `--fake`; hidden helpers `pinky needs` and `pinky decide` (answers only on a fake gateway) |
+| Commands | `pinky` (the app: gateway and window in one process), `pinky daemon` (`--http addr` for remote agents), `pinky mcp` (stdio shim that starts the gateway when none runs), `pinky devices`, `pinky token`, `--fake`; hidden helpers `pinky needs` and `pinky decide` (answers only on a fake gateway) |
+
+## Round three
+
+Built on 2026-11-07 from [round3.md](round3.md). Each part has tests against fake phones (test doubles for the driver interfaces the drivers do not have yet), and the streams and recordings also ran on the emulators and both phones (see "Checked on real streams").
+
+### Wake and unlock
+
+- **Wake** (`wake.go`): before an agent's call reads or acts on the phone's own screen (connect, every action, `phone_observe`, `phone_wait_for`, an approved action, a hand-back), the gateway calls `driver.Waker.Wake`, at most once every 5 s (the shortest screen timeouts are 15 and 30 s). A woken phone that is locked shows its lock screen, and the agent gets `device_locked` and the NeedUnlock card as before. Tasks on a background display never wake the phone.
+- **Unlock from the computer**: `Options.Unlock` is gone; `Options.PIN func(ctx, deviceID) (string, error)` hands out the saved PIN and the gateway enters it with `driver.Unlocker.Unlock`, only after asking the phone again whether it is locked (a PIN typed into an unlocked phone would land in the app in front), and once: a wrong PIN returns `ErrWrongPIN` and is never retried. It holds the device's action lock meanwhile, counts as input (no screenshot or recording of the PIN pad is kept), and adds a step to the running task: "Unlocked from the computer", or "Unlock from the computer failed: the phone did not accept the saved PIN" (status `wrong_pin`). The log says only whether it worked. `DeviceView.Features.Unlock` is the driver's `Unlocker`.
+- **cmd/pinky** passes a PIN source that answers only while Settings › Unlock from this computer is on, checks `secret.Store.Has` first (so a phone without a saved PIN never brings up Touch ID), and calls `secret.System().Reveal(ctx, secret.PINAccount(id), "unlock "+name)`. On main, `secret.System()` is still the stub, so unlocking from the computer returns the keychain's `ErrUnsupported` until the platform session lands it.
+
+### phone_files
+
+`Session.Files` and the tool (`files.go`): `list`, `pull` and `push` between the phone's Pinky folder (`driver.Files`) and `<data>/files/<phone id>/` (the id made safe for a folder name). Results carry the local folder and the files, each with where it is (`both`, `phone`, `computer`, `differs`, by size and time to the second). Pull and push skip files that are the same on both sides and keep modification times. Push asks the person (rule `Files`, the usual 45 s block and `approval_id`; "Allow for this task" covers later pushes), read-only mode refuses it, and read-only and watch-only agents get `scope_denied`. Paths with `..` are refused before the driver sees them; symbolic links in the local folder are never pushed, a pull goes through a temporary file renamed into place, so a link planted where a file goes is replaced, not written through, and a folder on the way that is a link is refused before anything is made. Every call is a history step. iPhones (no `Files`) return `unsupported`. Docs: [mcp.md](../mcp.md), [SKILL.md](../SKILL.md).
+
+### One stream per device
+
+A phone gives one stream at a time (the Android driver ends the first when a second opens), and the mirror's viewers and the recorder all want it. `streams.go` keeps one hub per device screen: the first member opens the driver's stream, every packet goes to each member, and the stream closes when the last member leaves. A member that joins late first gets the last configuration and the packets since the last key frame, so the mirror shows the current picture at once. Each viewer has a queue of its own and hands packets out through a channel of 4 as it reads them: a burst of the packets since the last key frame never looks like a backlog to the mirror's player (which skips to the next key frame past 30 queued packets). A viewer that falls more than 2048 packets or 64 MB behind skips to the next key frame. When the phone goes offline or the gateway stops, every member sees the stream end. `Gateway.Stream` (the mirror) and `AgentStream` (a background display) are hubs; the recorder taps them.
+
+A stream that can ask the phone for a key frame now (an optional `RequestKeyFrame()` on the driver's stream; nothing in `driver.go` yet) is asked when a recording starts or resumes and when a viewer falls behind; otherwise members wait for the next one. The iOS driver could implement it with its `requestKeyFrame` (PLI), the Android driver with scrcpy's `ResetVideo`.
+
+### Recordings
+
+One fragmented MP4 per task, remuxed without re-encoding (`internal/recording`, on `github.com/Eyevinn/mp4ff`): an init segment with the first parameter sets (`avc1` or `hvc1`), then a fragment about every second, one starting early at a key frame, so a crash loses at most the fragment being written and leaves a file that players open. Parameter sets that change later (a rotation) go into the next key frame's sample. Files live in `<data>/recordings/<YYYY-MM>/<task id>.mp4` with a row in the `recordings` table; `Recording(ctx, taskID)` returns the path, start, length (read from the file, so a crash's file is right too) and a mark per step (`StepView.At` from the recording's start). `recording.Open(ctx, path, from)` plays one back as a `driver.Stream`: from the key frame at or before `from`, the frames up to `from` at once, then paced in real time, through a channel of 8 that waits for the reader. `SetRecording(on)` turns recording of new and running tasks on or off (off by default in the gateway; the app and the daemon apply `Settings.Record`, on by default); a task is recorded once, so turning it off and on again does not overwrite its file.
+
+**Nothing of a blocked app, a locked screen or the person's own use is stored.** The gateway knows what is on the screen only from reads, so the recorder holds packets back until a read vouches for them: the packets that arrived before a read started are written when that read shows a recordable screen (unlocked, an app that is known and not blocked, the person not in control), and dropped, with everything held since the last read that did, when it does not. Until a read shows a recordable screen again, packets are dropped, and writing resumes at a key frame (a picture decoded against the wrong reference could show traces of what was dropped). Taking over, a lock the driver reports, an unlock from the computer, the phone going offline and a new stream drop what is held too. Every drop is a point in time: reads that started before it can no longer resume the recording, and packets that arrived before it and come later (a hub replays its last key frame to a member that joins again) are never written; the task's start is the first such point, and its end the last (later packets are not taken, so the person's own use after the task stays out). When packets have waited 10 s and no action runs, the recorder reads the screen itself, so it holds little; past 48 MB it drops them. When the task ends it reads once more, except after Stop. Frames are placed by their PTS plus the shortest delay any frame of the stream took to arrive, which is smoother than arrival times and never places a frame after it arrived. Reads can overlap (`phone_observe` during an action, the recorder's own read): a recordable read writes nothing while a read that started before it still runs (in order, that one might have dropped it), a read that shows what must not be recorded drops what is held whenever it ends, and a recordable read older than one that already decided changes nothing. The recorder taps the screen's current device each time it opens the stream (a new one after the phone reconnects, a reopened background display), and its last read, when a task ends, reads that screen itself, waiting at most 15 s for actions in progress. A read that names no app (taken while one app hands over to the next; on the emulator, Settings opening) vouches for nothing, for history screenshots too, since a blocked app may be on its way in. A blocked app that comes and goes between two reads, neither of which sees it, is not caught; payment hand-offs stay in the bank's app until the person is done, so the next read sees them.
+
+Agents' own screenshots (`phone_observe { screenshot: true }`) now follow the same rule: none while the phone is locked (its lock screen can show notifications from blocked apps) or when a read names no app.
+
+### Retention and export
+
+- `SetRetention(days)` (`retention.go`) deletes tasks that ended more than `days` ago (or, for tasks that never ended, as after a crash, started), with their steps, approvals, screenshots and recordings, and sessions left without tasks; at once and every 24 hours after. Running tasks stay; a screenshot that another task's step still shows stays. 0 keeps everything (the gateway's default; the app and daemon apply `Settings.KeepDays`, 30). `Retention()` reads it.
+- `ExportHistory(ctx, taskIDs, dir)` (`export.go`) writes `pinky-history-<date>-<time>.html`, a report that opens in any browser on its own (screenshots inline as data URLs, each shown once, a click enlarges it; each recording in a `<video>` with its step marks as links), a `.json` file of the same tasks (steps with their arguments, intents, statuses, times, screenshot ids and the screen text after each step; approvals; recordings with marks), and each recording copied next to them. Empty `taskIDs` means every finished task. HEVC recordings are copied as they are (Safari plays them; other browsers may not), not transcoded.
+
+### Background displays
+
+`SetBackground(deviceID, on)` (saved in `device_settings`; `driver.ErrUnsupported` for a connected phone whose driver has no `Backgrounder`), `Background(deviceID)`, `AgentStream(ctx, deviceID, opt)` (`background.go`). Whether a task uses a background display is decided when it starts, so the setting applies from the next task, and watch-only agents never get one (they watch the phone's own screen). With background on, a lease opens a display (`OpenBackground`, once per lease, again after the phone dropped) when its first call needs the screen, and its reads, actions, screenshots and recording use it. The phone's own lock does not stop the agent (no `device_locked`, no unlock card), the phone is not woken, and the person's touches on the phone or the mirror do not pause it; Take over still does. The status line ends "· in the background". The display closes with the lease. When it cannot be opened, when an app refuses it (its `Launch` returns `driver.ErrUnsupported`: the app is then launched on the phone's screen, unless that is locked, which returns `device_locked`, or the person used that screen in the last minute, which puts them in control and returns `user_took_over`), or when it cannot be read (`Observe` returns `driver.ErrUnsupported`), the task moves to the phone's screen for the rest of the lease and the agent's next result says why.
+
+### MCP over HTTP
+
+`mcp.Server.HTTP(token)` (`internal/mcp/http.go`) serves the tools over the SDK's Streamable HTTP handler at `/mcp`, on an SDK server of its own so that turning it off (`CloseSessions`) ends exactly its sessions. Agents over HTTP are named with " (remote)" after their client name ("Claude Code (remote)"): a name is only what the agent says, so a remote agent never inherits the approval and scope of the local agent it claims to be, and its first connection asks. Every request needs `Authorization: Bearer <agent token>`; cross-origin browser requests are refused (`http.CrossOriginProtection`) and the SDK refuses loopback requests that name another host. One MCP session is one gateway session, closed when the MCP session ends (`DELETE`, an hour idle, or Remote agents off), for stdio sessions too now. cmd/pinky starts, moves and stops it from `Settings.RemoteAgents` and `Settings.RemoteAddr` (`ui.DefaultRemoteAddr` when empty), logging a warning for an address other computers can reach; `pinky daemon --http addr` starts it at startup, and `pinky token` prints the token. [mcp.md](../mcp.md) has the `claude mcp add --transport http` command.
+
+### Demo phones
+
+Every demo phone now wakes (`driver.Waker`; `SetScreen` turns its screen off) and takes a PIN (`driver.Unlocker`, `demo.PIN` = 1234). The demo's Android phones come out of `Provider.Open` wrapped in `demo.Android` (`demo.Of` unwraps), with a Pinky folder (`PutFile`, `File`; the fake Pixel has `Notes/groceries.txt`) and background displays (a demo phone of their own), so `--fake` and the client's runs on the real gateway show those controls; the fake iPhone has neither, as real iPhones.
+
+### cmd/pinky
+
+The app loads Settings before the gateway starts, so the PIN source knows the unlock setting; it applies Record (`SetRecording`), KeepDays (`SetRetention`) and Remote agents at start and on every change. The daemon applies Record and KeepDays from the app's `settings.json` when there is one (defaults otherwise), and `--http`.
+
+### Checked on real streams
+
+On 2026-11-07, holding each device's lock (`scripts/devlock.sh`) for every run:
+
+| | What ran | Result |
+| --- | --- | --- |
+| emulator-5560 (Android 16) | `TestEmulatorRecording`: Clock with a mirror viewer open; Settings blocked for the run and brought up by adb, then scrolled for 3 s; five runs | A shared scrcpy stream (the mirror got 1100 to 1150 packets); recordings of 787 to 864 frames over about 40 s, none while Settings was in front, frames on both sides. Two runs first failed because Settings read as no app or as its search package; that led to the unknown-app rule |
+| emulator-5560 | `TestEmulatorBackground`: background on, through a test adapter for the driver's `OpenBackground` | The display opened, but the companion cannot read it ("display 359 is not open to accessibility services"); the gateway moved the task to the phone's screen and said so |
+| emulator-5562 (Android 10) | the same recording test | The driver's stream fails at once (`scrcpy: video stream: EOF`, also with `androidctl stream`), so no mirror and no recording; the recorder backs off (2 s to 30 s) |
+| Mi 10 Pro | the device test with `PINKY_RECORD=1` (Calculator, Settings, take over, Stop), twice | All parts pass; last run's recording H.264 1080x2340, 1470 frames, 38.2 s, 21 marks, 21.2 MB (ffprobe). Action median 1.42 and 1.44 s, as without recording (1.44 s) |
+| iPhone 13 mini | the same, three times | All parts pass (one earlier run failed the test's own switch check, fixed below); last recording HEVC 1136x2464, 3419 frames, 68.7 s, 21 marks, 26.3 MB. Action median 2.89 and 2.50 s (the driver's reads got faster on main) |
+
+After the review fixes, the recording test ran once more on emulator-5560 (552 frames, none while Settings was in front); both phones had locked themselves by then, so their device tests skipped without input, as they should. Recordings and logs stayed in `/tmp/pinky-gw-*` and were deleted. One mistake on the way: the first emulator run did not limit the provider to the emulator, so its gateway also opened the Mi 10 Pro and emulator-5562 for 43 s (the driver reads their properties and listens to `getevent`; no input was sent); the emulator tests now list only their emulator. One read-only `dumpsys` on the Mi also ran outside its lock.
+
+Also found: the device test's check that no tap reached a denied switch looked at every tap of the run, and on the iPhone a Calculator tap from the first subtest fell inside where Settings' Airplane Mode switch now sits (two new banners moved it down). It now counts only input since the approval opened.
+
+### For the drivers
+
+- `Backgrounder`: return `driver.ErrUnsupported` from the display's `Launch` when the app opened on the main display instead (Android: some apps refuse secondary displays), so the gateway can move the task; and from `Observe` when the display cannot be read. On the Android 16 emulator the companion cannot read scrcpy's virtual display; background work needs a display accessibility services see (or another read path). The display's `Screenshot` returns `ErrUnsupported`, so background tasks have no history screenshots or approval-panel picture.
+- `RequestKeyFrame()` on streams (optional, above).
+- `Waker`, `Unlocker` and `Files` are not in the drivers on main yet; the gateway's paths for them are tested with doubles (`extras_test.go`).
+- The Android 10 emulator's stream (above).
+
+### What is left
+
+- HEVC recordings are not transcoded for the export.
+- `recording.Open` plays what was written when it opened; it does not follow a recording that is still growing.
+- The person cannot drive a background display from the client: `Touch`, `Key` and `Text` reach the phone's own screen.
+- Remote API over WebSocket, history encryption.
 
 ## How to run
 
@@ -50,6 +129,12 @@ Real phones (build tag `device`): `internal/gateway/device_test.go` runs the gat
 go test -c -tags device -o /tmp/pinky-gw/gateway.test ./internal/gateway
 scripts/devlock.sh 3e8be48e env PINKY_DEVICE=3e8be48e /tmp/pinky-gw/gateway.test -test.run 'TestDevice$' -test.v
 scripts/devlock.sh 00008110-001E30C9262A801E env PINKY_DEVICE=00008110-001E30C9262A801E /tmp/pinky-gw/gateway.test -test.run 'TestDevice$' -test.v
+```
+
+Add `PINKY_RECORD=1` to record the run and check the recording with ffprobe (the guard then lets the stream through; it only reads the screen). The emulator tests block Settings for the run and drive it with adb, so they refuse anything but an emulator serial:
+
+```sh
+scripts/devlock.sh emulator-5560 env PINKY_EMULATOR=emulator-5560 /tmp/pinky-gw/gateway.test -test.run TestEmulator -test.v
 ```
 
 Folders: `$PINKY_HOME/{config,data,run}` when set; otherwise `~/Library/Application Support/Pinky` on macOS, XDG folders on Linux. Config holds `rules.yaml`, `apps.yaml` (both written with defaults on first start) and `agent-token` (0600). Data holds `pinky.db`, `media/` and `daemon.log`; a `--fake` gateway keeps its history in `data/fake`.
@@ -168,7 +253,8 @@ Everything Settings › Safety shows maps onto the policy engine (`g.Policy()`) 
 - **Real drivers.** Append factories to `providerFactories` in `cmd/pinky/providers.go`; `realProviders` skips one that fails to start. `--fake` uses only `demo.World()`.
 - **Desktop app.** Run `gateway.New` in the app process and use it as `gateway.API`. Methods the client needs that are not in `API` (I did not change the interface, since the client session may have its own implementation of it): `SetReadOnly(deviceID, on)` (empty id = every phone), `SetTaskApps`, `MediaPath(ctx, mediaID)` for `StepView.Before/After`, `WipeHistory`, `Agents`, `SetAgentScope`, `Policy()` (rules, `Reload`), `PersonTouched(deviceID)`, `Flush`, `Refresh`.
 - **Needs.** `NeedApproval` covers Ask actions, `phone_request_approval` and an agent's first connection (rule `New agent`). New: `NeedHandoff` (`phone_handoff`). `NeedUnlock` ids are `unlock:<device id>` and show only while an agent task waits on a locked phone. `Decide` on a handoff: allow = hand back with the note, Deny = decline, TakeOver = take over (the handoff stays open until `HandBack`). `Decide(…, TakeOver)` on an action approval calls `TakeOver`. `AllowTask` grants the rules that asked, in that app, for the rest of the task; `AllowAlways` currently does the same.
-- **Unlock.** `Options.Unlock` is the hook for entering the saved PIN after Touch ID; without it `Unlock` returns `ErrNoUnlock`. A successful `Unlock` also answers the handoffs the agent opened while the phone was locked.
+- **Unlock.** `Options.PIN` hands out a phone's saved PIN (cmd/pinky: from the keychain, after Touch ID, only while Settings › Unlock from this computer is on); the gateway enters it through `driver.Unlocker`. Without `PIN`, or for a driver without `Unlocker`, `Unlock` returns `ErrNoUnlock`; a wrong PIN returns `ErrWrongPIN`. A successful `Unlock` also answers the handoffs the agent opened while the phone was locked.
+- **Round three extras** (methods on `*Gateway`, not in `API`): `Recording(ctx, taskID) (RecordingView, error)`, `SetRecording(on)`, `SetRetention(days)`, `Retention()`, `ExportHistory(ctx, taskIDs, dir) (htmlPath, error)`, `SetBackground(deviceID, on) error`, `Background(deviceID) bool`, `AgentStream(ctx, deviceID, opt)`, `FilesDir(deviceID)`; `recording.Open(ctx, path, from)` for the player. `Stream` viewers share one stream per phone, so the mirror may open several.
 - **In control without a task.** `DeviceInControl` can now show with no task ("You're in control") after the agent left; the device card needs a Hand back button in that state.
 - **Touches on the phone itself.** `driver.go` has no way for a driver to report them, so I added `Gateway.PersonTouched(deviceID)`. Either wire the Android driver's getevent signal to it, or add an optional driver interface (for example `TouchWatcher`) that the gateway subscribes to.
 - **Socket clients.** A desktop app that attaches to a running daemon cannot approve over the socket: `decide`, `hand_back`, `unlock` and `wipe_history` need user presence (Touch ID or Windows Hello), which is not built. Only a gateway with fake phones accepts them.
@@ -207,11 +293,18 @@ Nobody was available to ask, so these are mine; each is easy to change.
 27. **Several phones online and no `device`**: `phone_connect` returns `invalid_argument` with the list, rather than picking one.
 28. **Presets are rules generated from a number** in `rules.yaml` (`preset: 1`), added before the file's own rules; the file stays the one source of truth, as DESIGN asks, and keeps working when edited by hand. Preset 2 means what the client's text says: only payments ask, so sends, deletions, installs, calls and settings changes go through. Preset 3 asks before every tap, type, swipe, key and launch; with read-only on, looking around still asks rather than being denied.
 29. **"Hide codes" is the notification code mask** (it does not blur screenshots); **blocked apps** the person adds go to a `blocked` category in `apps.yaml` with a built-in deny rule, and unblocking a bundled banking app excludes it by id and by name.
+30. **Recordings hold packets until a read vouches for them** (see "Recordings"), rather than trusting the last read: reads are the only way the gateway knows what is on the screen, and a payment can hand over to a bank between two reads. The cost is a few seconds of video around each pause and, on Android without key frame requests, up to scrcpy's key frame interval after one.
+31. **`phone_files` copies on request and needs a lease.** Copying to the phone asks, as DESIGN says ("writing to the phone is Ask"), under its own rule `Files`; a lease keeps every call in a task's history and under the agent's approval and scope.
+32. **The gateway's own defaults are off**: no recording and no retention limit until the client (or the daemon, from the app's settings) says otherwise, so a gateway in tests or in another program never records or deletes by surprise.
+33. **Background displays fall back to the phone's screen for the rest of the lease** whenever the display cannot be opened, read or used for an app, and say why in the next result, rather than failing the call: the person turned background on to be left alone, but the task matters more.
+34. **One HTTP endpoint for all agents with the one agent token**, as the socket has; agents are told apart by their client name, as over stdio.
+35. **Export copies the recordings next to the report** rather than inlining them (they are large) or leaving them out.
 
 ## Differences from DESIGN
 
-- Not built here: the desktop app mode (`pinky` alone prints a message), Streamable HTTP, the remote API, video recording, retention limits, encryption, HTML and JSON export, Allow for this task and Always allow beyond what is above (M2), `phone_files` (returns `unsupported`), the scope picker.
-- `pinky mcp` starts `pinky daemon`, not the desktop app in tray mode, since the app does not exist yet.
+- Not built here: the remote API over WebSocket, encryption, Always allow beyond what is above (M2), transcoding iPhone recordings for the export.
+- Retention is one limit for everything (Settings › Keep history, 30 days by default), not 30 days for video and 180 for steps.
+- `phone_files` copies on request (`list`, `pull`, `push`) rather than keeping the folders in sync.
 - One agent token for all agents, rather than one per agent; agents are told apart by their MCP client name, and the `agents.token_hash` column stays empty.
 - Takeover by touches on the phone itself needs a driver signal (see Integration).
 - Screenshots are JPEG, not WebP.
@@ -227,6 +320,8 @@ Nobody was available to ask, so these are mine; each is easy to change.
 - Windows: builds, but untested; the single-gateway lock there only checks whether the socket answers.
 - A `--fake` gateway accepts approvals from any local process; that is intended (fake phones only) but worth knowing.
 - `pinky needs` and `pinky decide` are development aids and not documented in `pinky help`.
+- Recordings: a blocked app that comes and goes between two reads, neither of which sees it, is not caught (see "Recordings"). After a pause, writing resumes at the next key frame: at once on streams that take `RequestKeyFrame`, within scrcpy's key frame interval on Android otherwise.
+- Background tasks have no history screenshots and no approval-panel picture (the Android display's `Screenshot` is unsupported).
 
 ## Review
 
@@ -240,11 +335,23 @@ An independent review of the pipeline, approvals and socket (after the first com
 - "Allow for this task" on one rule skipped other rules that also asked. Grants now need every asking rule, per app.
 - Smaller: history steps of one approval used by two concurrent calls, a data race on the agent approval flag and on the device's provider, approvals opened after `Close`, the daemon exiting on a transient `Accept` error, typing with unknown focus near a password field, stale checks ignoring element states.
 
+### Round three review
+
+An independent review of the round three code (read-only, by a subagent) found these, all fixed with tests:
+
+- A mirror viewer that gave up waiting for a stream to open left its goroutine running (`TestStreamGivenUpLeavesNothing`).
+- Recording: a drop from outside (a lock, a takeover) could be undone by a read that had started before it; a clean read that finished first could write what an earlier, still running read was about to drop; a hub's replay of its last key frame to a recorder joining again could bring back packets from before a drop; packets after the task's end were taken until the recorder stopped; and its last read read whatever screen the device showed next (`TestRecordingOverlappingReads`, `TestRecordingEndsWithTheTask`).
+- The recorder kept the device it started with, so after a reconnect it never opened the stream again (`TestRecordingAfterReconnect`); a driver read that returned no screen and no error stopped the recording for good.
+- Turning background on moved a running task to an empty display, and watch-only agents got one too (`TestBackgroundFromTheNextTask`); an app refusing the display took the phone's screen from a person using it (`TestBackgroundFallbackWaitsForThePerson`).
+- A remote agent could take a local agent's approval and scope by its name (now " (remote)"); Unlock could type the PIN into an unlocked phone (`TestUnlockOfAnUnlockedPhone`); a folder link could make empty folders outside the local folder (`TestPhoneFilesFolderLink`); turning remote agents off waited for event streams before ending sessions.
+- Not fixed here: no driver's stream has `RequestKeyFrame` yet, so after a drop a recording resumes at the next key frame (scrcpy: every few seconds; an iPhone with a still screen may send none), and a mirror viewer that falls behind on an iPhone no longer asks the phone for a key frame, which the iOS driver did for its own subscribers.
+
 ## Shared contracts
 
 - `internal/gateway/api.go`: added `NeedHandoff NeedKind = "handoff"`. Nothing else changed.
 - `internal/screen`, `internal/driver/driver.go`, `internal/driver/fake`: unchanged.
-- `go.mod` gains `github.com/modelcontextprotocol/go-sdk v1.8.0`, `modernc.org/sqlite v1.61.1`, `go.yaml.in/yaml/v3 v3.0.6`, `golang.org/x/sys`; other branches add their own requires, so expect a `go.mod` merge and a `go mod tidy`.
+- `go.mod` gains `github.com/modelcontextprotocol/go-sdk v1.8.0`, `modernc.org/sqlite v1.61.1`, `go.yaml.in/yaml/v3 v3.0.6`, `golang.org/x/sys`, and in round three `github.com/Eyevinn/mp4ff v0.62.0`; other branches add their own requires, so expect a `go.mod` merge and a `go mod tidy`.
+- Round three: `Options.Unlock` became `Options.PIN` (nothing outside the gateway set it); `Result` gained `Folder` and `Files`; streams may implement an optional `RequestKeyFrame()` (gateway-side interface, not in `driver.go`).
 
 ## Tests
 
@@ -254,7 +361,9 @@ An independent review of the pipeline, approvals and socket (after the first com
 | `internal/approval` | decide while waiting, pending then a kept decision, timeout as Deny, expiry, binding mismatch, single use, withdraw, cancelled waits |
 | `internal/history` | round trip of every table, search, paths with spaces, JPEG downscaling, reopen, wipe |
 | `internal/gateway` | approval allow (with history and media), deny, timeout, pending then repeat (busy phone, mismatched and reused ids), stale (screen text and target), take over and handoff, take over during an approval, stop and stop all (cancelling a slow action), lease conflict, session close, MCP-style cancellation, read-only, blocked app, credential fields, send message, batch, offline and reconnect, idle expiry, new-agent approval, locked phone and unlock from the computer, wait_for and diffs, `Settler`, watch-only scope, task app list, unclaimed approvals, events, wipe. Regression tests from a review: takeover kept across tasks and sessions, take over and Stop while an action is in flight, no orphan approvals, blocked-app events and screenshots, a price label inside a Pay button, per-app task grants, one approval id used twice, agent approval race, typing with unknown focus. Background screenshots (`shots_test.go`): the result does not wait, "before" reuses "after", a blocked app is never stored (also when it opens during the screenshot), drops on the next input and on the person's input, the read at task end (not after Stop), and when a launch reads first |
-| `internal/mcp` | over the SDK's in-memory transport: the 14 tools and their schemas, a full flow with approval and progress notifications, pending and errors, session close releasing the lease, batch and screenshots, handoff |
+| `internal/mcp` | over the SDK's in-memory transport: the 14 tools and their schemas, a full flow with approval and progress notifications, pending and errors, session close releasing the lease, batch and screenshots, handoff. Over HTTP (`http_test.go`): no token or a wrong one is 401, a session works like stdio and its close frees the phone, `CloseSessions`, the first-connection approval |
+| `internal/recording` | H.264 and HEVC from ffmpeg test patterns (`recordingtest`, stored as base64 since the repository ignores raw streams) recorded and checked with `Probe` and ffprobe, no file before a key frame, a file cut short still opens, playback from the start and from the middle (paced, pre-roll at once), Close, changed parameter sets, a live ffmpeg stream with the Mi's YCgCo tag |
 | `internal/api` | single gateway per user, socket and token modes, MCP over the socket with the token, control methods and the trust rule |
-| `internal/gateway` (tag `device`) | the real Mi 10 Pro and iPhone, see "Real phones" |
-| `cmd/pinky` | end to end with real processes: `daemon --fake`, a refused second daemon, `devices`, two `pinky mcp` agents (approval answered through `needs`/`decide`, credentials, `lease_held`, iPhone `recents` unsupported, release, history), stdin close releasing leases, SIGTERM; and `pinky mcp --fake` starting the daemon itself |
+| `internal/gateway`, round three | `streams_test.go` (one stream for every viewer, late joiners from the key frame, the stream closes after the last viewer and ends for all, a slow viewer skips to a key frame), `video_test.go` (only what reads vouch for is recorded: a blocked app, a takeover and a Stop drop what is held; no recording when off; packets from before the task), `files_test.go`, `background_test.go` (reads and actions on the display, the phone's lock and the person's touches, refusal, unreadable display, open failure, the setting kept across restarts, waking), `retention_test.go` (retention with screenshots and recordings, a running task kept; export of HTML, JSON and the recording), unlock with the PIN and a wrong PIN in `gateway_test.go`; doubles in `extras_test.go` |
+| `internal/gateway` (tag `device`) | the real Mi 10 Pro and iPhone, see "Real phones"; with `PINKY_RECORD=1` the run is recorded and checked with ffprobe; `emulator_test.go` (`PINKY_EMULATOR`): the shared stream and the recording around a blocked app, and background displays |
+| `cmd/pinky` | end to end with real processes: `daemon --fake`, a refused second daemon, `devices`, two `pinky mcp` agents (approval answered through `needs`/`decide`, credentials, `lease_held`, iPhone `recents` unsupported, release, history), stdin close releasing leases, SIGTERM; `pinky mcp --fake` starting the daemon itself; `daemon --fake --http` with `pinky token`. Settings reaching the gateway (preset, codes, read-only, blocked apps, retention, remote agents on and off) and the PIN source (off, saved, nothing saved without a prompt, cancelled) |

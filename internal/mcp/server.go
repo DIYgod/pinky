@@ -31,8 +31,9 @@ found on the screen. Never type passwords or one-time codes; call phone_handoff 
 
 // Server serves Pinky's tools to MCP sessions.
 type Server struct {
-	g   *gateway.Gateway
-	srv *sdk.Server
+	g       *gateway.Gateway
+	version string
+	srv     *sdk.Server
 
 	mu       sync.Mutex
 	sessions map[*sdk.ServerSession]*gateway.Session
@@ -40,12 +41,27 @@ type Server struct {
 
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
-	s := &Server{g: g, sessions: map[*sdk.ServerSession]*gateway.Session{}}
-	s.srv = sdk.NewServer(&sdk.Implementation{Name: "pinky", Title: "Pinky", Version: version},
-		&sdk.ServerOptions{Instructions: Instructions, Capabilities: &sdk.ServerCapabilities{}})
-	s.addTools()
+	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}}
+	s.srv = s.newSDK(false)
 	return s
 }
+
+// newSDK returns an SDK server with Pinky's tools. Every SDK server of a
+// Server shares its gateway sessions. Agents of a remote one (HTTP) are
+// told apart from local agents of the same name.
+func (s *Server) newSDK(remote bool) *sdk.Server {
+	srv := sdk.NewServer(&sdk.Implementation{Name: "pinky", Title: "Pinky", Version: s.version},
+		&sdk.ServerOptions{Instructions: Instructions, Capabilities: &sdk.ServerCapabilities{}})
+	s.addTools(srv, remote)
+	return srv
+}
+
+// RemoteSuffix ends the names of agents that connect over HTTP. A name is
+// what the agent says it is, so a remote agent that says "claude-code"
+// becomes "Claude Code (remote)": it is asked about on its first
+// connection and gets a scope of its own, rather than what the person
+// allowed the Claude Code on this computer.
+const RemoteSuffix = " (remote)"
 
 // SDK returns the underlying SDK server.
 func (s *Server) SDK() *sdk.Server { return s.srv }
@@ -67,6 +83,12 @@ func (s *Server) Serve(ctx context.Context, t sdk.Transport) error {
 	}()
 	err = ss.Wait()
 	close(done)
+	s.forget(ss)
+	return err
+}
+
+// forget closes the gateway side of an MCP session that ended.
+func (s *Server) forget(ss *sdk.ServerSession) {
 	s.mu.Lock()
 	gs := s.sessions[ss]
 	delete(s.sessions, ss)
@@ -74,12 +96,11 @@ func (s *Server) Serve(ctx context.Context, t sdk.Transport) error {
 	if gs != nil {
 		gs.Close()
 	}
-	return err
 }
 
 // session returns the gateway session for an MCP session, opening it on the
 // first tool call.
-func (s *Server) session(req *sdk.CallToolRequest) *gateway.Session {
+func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if gs, ok := s.sessions[req.Session]; ok {
@@ -90,8 +111,18 @@ func (s *Server) session(req *sdk.CallToolRequest) *gateway.Session {
 		info.Name = DisplayName(ci.Name, ci.Title)
 		info.Client = strings.TrimSpace(ci.Name + " " + ci.Version)
 	}
+	if remote {
+		info.Name += RemoteSuffix
+	}
 	gs := s.g.OpenSession(info)
 	s.sessions[req.Session] = gs
+	// Whichever transport carries it (stdio through the socket, or HTTP),
+	// the gateway session ends with the MCP session.
+	ss := req.Session
+	go func() {
+		ss.Wait()
+		s.forget(ss)
+	}()
 	return gs
 }
 

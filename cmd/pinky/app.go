@@ -11,11 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/ui"
 )
 
@@ -49,6 +52,11 @@ func runApp(args []string) error {
 	}
 	c.Log = slog.New(slog.NewTextHandler(io.MultiWriter(os.Stderr, logFile), &slog.HandlerOptions{Level: level}))
 
+	settingsPath := filepath.Join(dirs.Config, "settings.json")
+	settings := loadSettings(settingsPath, c.Log)
+	var unlock pinSource
+	unlock.on.Store(settings.UnlockFromComputer)
+	c.PIN = unlock.pin
 	rg, err := startGateway(c)
 	if err != nil {
 		var running *api.RunningError
@@ -58,6 +66,8 @@ func runApp(args []string) error {
 		return err
 	}
 	defer rg.Close()
+	unlock.names = rg.G
+	startSettings(rg, settings, c.Log)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -67,8 +77,6 @@ func runApp(args []string) error {
 		}
 	}()
 
-	settingsPath := filepath.Join(dirs.Config, "settings.json")
-	settings := loadSettings(settingsPath, c.Log)
 	gatewaySettings(&settings, rg)
 	current := settings
 	return ui.Run(rg.G, ui.Options{
@@ -78,6 +86,7 @@ func runApp(args []string) error {
 		Settings: &settings,
 		OnSettings: func(s ui.Settings) {
 			applySettings(rg, current, s, c.Log)
+			unlock.on.Store(s.UnlockFromComputer)
 			current = s
 			if err := saveSettings(settingsPath, s); err != nil {
 				c.Log.Warn("save settings", "err", err)
@@ -144,12 +153,74 @@ func gatewaySettings(s *ui.Settings, rg *runningGateway) {
 	}
 }
 
+// startSettings applies what the gateway takes from Settings at start:
+// recording, retention and remote agents.
+func startSettings(rg *runningGateway, s ui.Settings, log *slog.Logger) {
+	rg.G.SetRecording(s.Record)
+	rg.G.SetRetention(s.KeepDays)
+	if s.RemoteAgents {
+		if err := rg.Remote.Set(true, remoteAddr(s)); err != nil {
+			log.Warn("settings: remote agents", "err", err)
+		}
+	}
+}
+
+func remoteAddr(s ui.Settings) string {
+	if a := strings.TrimSpace(s.RemoteAddr); a != "" {
+		return a
+	}
+	return ui.DefaultRemoteAddr
+}
+
+// pinSource hands out saved PINs from the system keychain, which asks the
+// person to confirm (Touch ID), and only while Settings › Unlock from this
+// computer is on.
+type pinSource struct {
+	on    atomic.Bool
+	names interface{ Devices() []gateway.DeviceView }
+	store secret.Store // nil: the system keychain
+}
+
+func (p *pinSource) pin(ctx context.Context, deviceID string) (string, error) {
+	if !p.on.Load() {
+		return "", errors.New("unlocking from this computer is off in Settings; unlock on the phone")
+	}
+	name := deviceID
+	if p.names != nil {
+		for _, d := range p.names.Devices() {
+			if d.Info.ID == deviceID && d.Info.Name != "" {
+				name = d.Info.Name
+			}
+		}
+	}
+	store := p.store
+	if store == nil {
+		store = secret.System()
+	}
+	account := secret.PINAccount(deviceID)
+	// Without a saved PIN there is nothing to confirm: say so without a
+	// Touch ID prompt.
+	if !store.Has(account) {
+		return "", fmt.Errorf("no PIN is saved for %s; save it in the phone's settings in Pinky: %w", name, secret.ErrNotFound)
+	}
+	return store.Reveal(ctx, account, "unlock "+name)
+}
+
 // applySettings passes what changed in Settings to the gateway.
 func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
 	warn := func(what string, err error) {
 		if err != nil {
 			log.Warn("settings: "+what, "err", err)
 		}
+	}
+	if s.Record != old.Record {
+		rg.G.SetRecording(s.Record)
+	}
+	if s.KeepDays != old.KeepDays {
+		rg.G.SetRetention(s.KeepDays)
+	}
+	if rg.Remote != nil && (s.RemoteAgents != old.RemoteAgents || remoteAddr(s) != remoteAddr(old)) {
+		warn("remote agents", rg.Remote.Set(s.RemoteAgents, remoteAddr(s)))
 	}
 	if s.Preset != old.Preset && s.Preset >= int(policy.PresetCommits) && s.Preset <= int(policy.PresetEvery) {
 		warn("preset", rg.Policy.SetPreset(policy.Preset(s.Preset)))

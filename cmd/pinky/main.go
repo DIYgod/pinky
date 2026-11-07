@@ -5,6 +5,7 @@
 //	pinky daemon     gateway only, no UI
 //	pinky mcp        stdio MCP server for agents; forwards to the gateway
 //	pinky devices    list connected phones
+//	pinky token      print the agent token, for agents that connect over HTTP
 //	pinky version    print the version
 //
 // Add --fake to daemon, mcp or devices to use scripted fake phones instead
@@ -17,6 +18,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/DIYgod/pinky/internal/api"
 )
 
 // version is set at build time with -ldflags "-X main.version=...".
@@ -48,6 +51,8 @@ func main() {
 		err = runNeeds(args)
 	case "decide":
 		err = runDecide(args)
+	case "token":
+		err = runToken(args)
 	default:
 		usage()
 		os.Exit(2)
@@ -82,12 +87,37 @@ Commands:
   devices   list connected phones
   companion install [phone]
             install or update the Android companion app
+  token     print the agent token, which agents connecting over HTTP send
   version   print the version
 
 Flags:
   --fake    use scripted fake phones (app, daemon, mcp, devices)
+  --http addr
+            daemon: also serve MCP over HTTP at addr (127.0.0.1:7465)
 
 Environment:
   PINKY_HOME  keep config, data and the socket under this folder
 `)
+}
+
+// runToken prints the agent token, creating it when missing. Agents that
+// connect over HTTP send it as a bearer token; `pinky mcp` reads it itself.
+func runToken(args []string) error {
+	fs := flag.NewFlagSet("pinky token", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	dirs, err := api.DefaultDirs()
+	if err != nil {
+		return err
+	}
+	if err := dirs.Ensure(); err != nil {
+		return err
+	}
+	tok, err := api.EnsureToken(dirs.TokenFile())
+	if err != nil {
+		return err
+	}
+	fmt.Println(tok)
+	return nil
 }
