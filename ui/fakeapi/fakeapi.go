@@ -145,6 +145,7 @@ type device struct {
 	task       *task                 // the task running on it, if any
 	companion  driver.CompanionState // Android only; "" is on
 	background bool                  // agents work on a background display
+	way        string                // iPhone: the connection the person chose
 }
 
 type task struct {
