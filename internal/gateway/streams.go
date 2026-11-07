@@ -47,10 +47,12 @@ type timedPacket struct {
 	at time.Time
 }
 
-// member is a hub's viewer or tap. push must not block.
+// member is a hub's viewer or tap. push must not block. release leaves
+// the hub and frees the member's goroutine, for a member nobody will read.
 type member interface {
 	push(tp timedPacket)
 	finish()
+	release()
 }
 
 // hub shares one device stream.
@@ -109,11 +111,11 @@ func (g *Gateway) join(ctx context.Context, key string, dev driver.Device, opt d
 	select {
 	case <-h.ready:
 	case <-ctx.Done():
-		h.leave(mem)
+		mem.release()
 		return nil, nil, ctx.Err()
 	}
 	if h.src == nil {
-		h.leave(mem)
+		mem.release()
 		return nil, nil, h.failure()
 	}
 	return h, mem, nil
@@ -439,6 +441,8 @@ func (v *viewer) Err() error {
 	return v.h.endErr()
 }
 
+func (v *viewer) release() { v.Close() }
+
 // Close leaves the hub; the device's stream closes after its last member.
 func (v *viewer) Close() error {
 	v.once.Do(func() {
@@ -485,3 +489,5 @@ func (t *streamTap) Close() {
 	t.h.leave(t)
 	t.finish()
 }
+
+func (t *streamTap) release() { t.Close() }

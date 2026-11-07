@@ -35,7 +35,7 @@ A JSON config:
 ```
 
 - Without the token, or with another one, requests get `401`. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
-- Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. Closing it (`DELETE`), an hour without requests, or turning Remote agents off ends it, with its leases and open approvals.
+- Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. The agent's name gets " (remote)" after it ("Claude Code (remote)"), so a remote agent is asked about on its own first connection and never gets the scope the person gave the agent of that name on this computer. Closing it (`DELETE`), an hour without requests, or turning Remote agents off ends it, with its leases and open approvals.
 
 - Protocol: the official Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0), newline-delimited JSON-RPC over stdio; the SDK negotiates the protocol version.
 - Server info: name `pinky`, title `Pinky`; the server sends short usage instructions at initialization.

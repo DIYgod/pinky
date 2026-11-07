@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -247,5 +248,113 @@ func TestNoScreenshotOfALockedPhone(t *testing.T) {
 	dev.SetLocked(false)
 	if res := s.Observe(context.Background(), ObserveRequest{Screenshot: true}); res.Screenshot == nil {
 		t.Fatalf("no screenshot when unlocked: %q", res.Message)
+	}
+}
+
+// Turning background on applies from the next task; a watch-only agent
+// watches the phone's own screen.
+func TestBackgroundFromTheNextTask(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	g := newExtraGateway(t, x)
+	s, _ := connect(t, g, "Lunch")
+	if err := g.SetBackground("pixel", true); err != nil {
+		t.Fatal(err)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	if len(x.backgrounds()) != 0 || x.Current() != "dinely" {
+		t.Fatalf("the running task moved: %d displays, phone %q", len(x.backgrounds()), x.Current())
+	}
+	s.Release(ctx, ReleaseRequest{})
+
+	g.SetAgentScope("Watcher", Scope{Mode: ScopeWatchOnly})
+	w := g.OpenSession(AgentInfo{Name: "Watcher"})
+	defer w.Close()
+	mustStatus(t, w.Connect(ctx, ConnectRequest{Task: "Watch"}), StatusSettled)
+	mustStatus(t, w.Observe(ctx, ObserveRequest{}), StatusSettled)
+	if len(x.backgrounds()) != 0 {
+		t.Fatal("a watch-only agent got a background display")
+	}
+}
+
+// When an app refuses the background display while the person is using
+// the phone's own screen, the agent waits for them instead of taking it.
+func TestBackgroundFallbackWaitsForThePerson(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	x.refuse[demo.Chatter] = true
+	g := newExtraGateway(t, x)
+	g.SetBackground("pixel", true)
+	s, _ := connect(t, g, "Chat")
+	x.Show("settings") // the person is in Settings
+	if err := g.PersonTouched("pixel"); err != nil {
+		t.Fatal(err)
+	}
+	res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "Chatter"})
+	mustStatus(t, res, StatusTookOver)
+	if x.Current() != "settings" {
+		t.Fatalf("the agent took the person's screen: %q", x.Current())
+	}
+	if d := g.Devices()[0]; d.Status != DeviceInControl {
+		t.Fatalf("device %+v", d)
+	}
+}
+
+// Unlocking a phone that is already unlocked enters no PIN: it would go
+// into the app in front.
+func TestUnlockOfAnUnlockedPhone(t *testing.T) {
+	x := newExtraDev("pixel", "Pixel 9")
+	x.pin = "4711"
+	g := newExtraGateway(t, x, func(o *Options) {
+		o.PIN = func(context.Context, string) (string, error) { return "4711", nil }
+	})
+	connect(t, g, "Lunch")
+	if err := g.Unlock("pixel"); err != nil {
+		t.Fatal(err)
+	}
+	if len(x.entered) != 0 {
+		t.Fatalf("entered a PIN on an unlocked phone: %d times", len(x.entered))
+	}
+}
+
+// slowStreamDev opens its stream only when told.
+type slowStreamDev struct {
+	*demo.Device
+	release chan struct{}
+}
+
+func (s *slowStreamDev) Stream(ctx context.Context, _ driver.StreamOptions) (driver.Stream, error) {
+	select {
+	case <-s.release:
+		return nil, errors.New("no video")
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+// A viewer that gives up before the stream opens leaves nothing running.
+func TestStreamGivenUpLeavesNothing(t *testing.T) {
+	dev := &slowStreamDev{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android), release: make(chan struct{})}
+	g, err := New(Options{Providers: []driver.Provider{extraProvider2{demo.NewProvider(driver.Android, dev.Device), dev}},
+		TrustNewAgents: true, NoScreenshots: true, DiscoverEvery: time.Hour})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	before := runtime.NumGoroutine()
+	for i := 0; i < 20; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+		if _, err := g.Stream(ctx, "pixel", driver.StreamOptions{}); err == nil {
+			t.Fatal("a stream that never opened")
+		}
+		cancel()
+	}
+	close(dev.release)
+	deadline := time.Now().Add(2 * time.Second)
+	for runtime.NumGoroutine() > before+2 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if n := runtime.NumGoroutine(); n > before+2 {
+		t.Fatalf("%d goroutines left behind (%d before)", n-before, before)
 	}
 }

@@ -42,18 +42,26 @@ type Server struct {
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
 	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}}
-	s.srv = s.newSDK()
+	s.srv = s.newSDK(false)
 	return s
 }
 
 // newSDK returns an SDK server with Pinky's tools. Every SDK server of a
-// Server shares its gateway sessions.
-func (s *Server) newSDK() *sdk.Server {
+// Server shares its gateway sessions. Agents of a remote one (HTTP) are
+// told apart from local agents of the same name.
+func (s *Server) newSDK(remote bool) *sdk.Server {
 	srv := sdk.NewServer(&sdk.Implementation{Name: "pinky", Title: "Pinky", Version: s.version},
 		&sdk.ServerOptions{Instructions: Instructions, Capabilities: &sdk.ServerCapabilities{}})
-	s.addTools(srv)
+	s.addTools(srv, remote)
 	return srv
 }
+
+// RemoteSuffix ends the names of agents that connect over HTTP. A name is
+// what the agent says it is, so a remote agent that says "claude-code"
+// becomes "Claude Code (remote)": it is asked about on its first
+// connection and gets a scope of its own, rather than what the person
+// allowed the Claude Code on this computer.
+const RemoteSuffix = " (remote)"
 
 // SDK returns the underlying SDK server.
 func (s *Server) SDK() *sdk.Server { return s.srv }
@@ -92,7 +100,7 @@ func (s *Server) forget(ss *sdk.ServerSession) {
 
 // session returns the gateway session for an MCP session, opening it on the
 // first tool call.
-func (s *Server) session(req *sdk.CallToolRequest) *gateway.Session {
+func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if gs, ok := s.sessions[req.Session]; ok {
@@ -102,6 +110,9 @@ func (s *Server) session(req *sdk.CallToolRequest) *gateway.Session {
 	if ci := req.ClientInfo(); ci != nil {
 		info.Name = DisplayName(ci.Name, ci.Title)
 		info.Client = strings.TrimSpace(ci.Name + " " + ci.Version)
+	}
+	if remote {
+		info.Name += RemoteSuffix
 	}
 	gs := s.g.OpenSession(info)
 	s.sessions[req.Session] = gs

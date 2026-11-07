@@ -453,6 +453,13 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 	l := &lease{id: history.NewID("l_"), session: s, dev: d, task: t, created: now, lastUsed: now,
 		apps: append([]string(nil), apps...), grants: map[string]bool{}}
 	l.ctx, l.cancel = context.WithCancel(g.ctx)
+	// A watch-only agent watches the phone's own screen; a background
+	// display would show it nothing.
+	scope := g.opt.DefaultScope
+	if st, ok := g.agents[s.agent.Name]; ok {
+		scope = st.scope
+	}
+	l.bgWanted = g.background[d.id] && scope.Mode != ScopeWatchOnly
 	d.lease = l
 	if d.person {
 		// The person is still in control from before: the task starts paused.

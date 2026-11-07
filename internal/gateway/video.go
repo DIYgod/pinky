@@ -60,23 +60,26 @@ type vpacket struct {
 
 // taskVideo records one task.
 type taskVideo struct {
-	g     *Gateway
-	d     *device
-	t     *task
-	since time.Time // packets that arrived before are never written
+	g *Gateway
+	d *device
+	t *task
 
 	ctx    context.Context
 	cancel context.CancelFunc
 	ran    chan struct{} // closed when run returns
 	wrote  chan struct{} // closed when writeLoop returns
 
-	mu       sync.Mutex
-	cond     *sync.Cond    // ready or stopping changed
-	key      string        // the hub the recording taps
-	dev      driver.Device // its device
-	tap      *streamTap    // the current tap, nil between streams
-	moved    chan struct{} // closed when key changes
-	held     []vpacket     // waiting for a read
+	mu    sync.Mutex
+	cond  *sync.Cond    // ready or stopping changed
+	key   string        // the hub the recording taps
+	tap   *streamTap    // the current tap, nil between streams
+	moved chan struct{} // closed when the recording moves to another screen
+	// floor: packets that arrived before it are never written (the task's
+	// start, then the last drop: a member that joins a hub again gets old
+	// packets first). endAt: the task ended; later packets are not taken.
+	floor    time.Time
+	endAt    time.Time
+	held     []vpacket // waiting for a read
 	heldSize int
 	paused   bool // dropping until a recordable read
 	needKey  bool // the next picture moved to ready must be a key frame
@@ -109,14 +112,11 @@ func (g *Gateway) startVideoLocked(l *lease) {
 	if !g.recordOn || g.store == nil || d.video != nil || l.ended || l.recorded || g.closed {
 		return
 	}
-	key, dev := hubKey(d.id, false), d.dev
+	key := hubKey(d.id, false)
 	if l.bg != nil {
-		key, dev = hubKey(d.id, true), l.bg
+		key = hubKey(d.id, true)
 	}
-	if dev == nil {
-		return
-	}
-	v := &taskVideo{g: g, d: d, t: l.task, since: time.Now(), key: key, dev: dev, moved: make(chan struct{}),
+	v := &taskVideo{g: g, d: d, t: l.task, floor: time.Now(), key: key, moved: make(chan struct{}),
 		needKey: true, ran: make(chan struct{}), wrote: make(chan struct{})}
 	v.cond = sync.NewCond(&v.mu)
 	v.ctx, v.cancel = context.WithCancel(g.ctx)
@@ -138,26 +138,46 @@ func (g *Gateway) stopVideoLocked(d *device, read bool) {
 		return
 	}
 	d.video = nil
+	v.mu.Lock()
+	v.endAt = time.Now()
+	v.mu.Unlock()
 	g.videoStops.add()
 	go v.stop(read)
 }
 
 // moveVideoLocked moves the recording to another screen of the device, as
-// when a task leaves its background display. Callers hold g.mu.
-func (g *Gateway) moveVideoLocked(d *device, key string, dev driver.Device) {
+// when a task leaves its background display, or to a new display under the
+// same key (one opened again after the phone dropped). Callers hold g.mu.
+func (g *Gateway) moveVideoLocked(d *device, key string) {
 	v := d.video
-	if v == nil || dev == nil {
+	if v == nil {
 		return
 	}
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	if v.key == key {
-		return
-	}
-	v.key, v.dev = key, dev
+	v.key = key
 	close(v.moved)
 	v.moved = make(chan struct{})
 	v.dropLocked()
+}
+
+// source returns the hub key the recording taps and that screen's device
+// now: the phone's (a new one after it reconnected), or the lease's
+// background display; nil while there is none.
+func (v *taskVideo) source() (string, driver.Device, chan struct{}) {
+	g, d := v.g, v.d
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	v.mu.Lock()
+	key, moved := v.key, v.moved
+	v.mu.Unlock()
+	if key == hubKey(d.id, true) {
+		if l := d.lease; l != nil && l.task == v.t && l.bg != nil {
+			return key, l.bg, moved
+		}
+		return key, nil, moved
+	}
+	return key, d.dev, moved
 }
 
 // run taps the stream until the recording stops, tapping it again when it
@@ -174,9 +194,14 @@ func (v *taskVideo) run() {
 		return ok
 	}
 	for v.ctx.Err() == nil {
-		v.mu.Lock()
-		key, dev, moved := v.key, v.dev, v.moved
-		v.mu.Unlock()
+		key, dev, moved := v.source()
+		if dev == nil {
+			// Offline, or the display is gone: wait for it.
+			if !backoff() {
+				return
+			}
+			continue
+		}
 		opened := time.Now()
 		t, err := g.tapStream(v.ctx, key, dev, v.packet)
 		if err != nil {
@@ -235,17 +260,20 @@ func (v *taskVideo) packet(tp timedPacket, codec driver.Codec) {
 	if codec != v.codec {
 		return // another codec on a new stream: the file cannot take it
 	}
+	if !v.endAt.IsZero() && tp.at.After(v.endAt) {
+		return // after the task
+	}
 	p := tp.p
 	if p.Config {
 		cp := p
 		v.cfg = &cp
-		if !v.paused && !tp.at.Before(v.since) {
+		if !v.paused && !tp.at.Before(v.floor) {
 			v.held = append(v.held, vpacket{p: p, arrived: tp.at, at: tp.at})
 		}
 		return
 	}
 	at := v.timeOf(tp)
-	if v.paused || tp.at.Before(v.since) {
+	if v.paused || tp.at.Before(v.floor) {
 		v.needKey = true
 		return
 	}
@@ -280,10 +308,20 @@ func (v *taskVideo) timeOf(tp timedPacket) time.Time {
 	return v.base.Add(p.PTS)
 }
 
-// dropLocked drops what is held and waits for a recordable read.
+// dropLocked drops what is held and waits for a recordable read that
+// started after now: a read already running may have looked before what
+// caused the drop, and packets from before now that come later (a member
+// joining a hub gets the last key frame's) are never written.
 func (v *taskVideo) dropLocked() {
 	v.held, v.heldSize = nil, 0
 	v.paused, v.needKey = true, true
+	now := time.Now()
+	if now.After(v.floor) {
+		v.floor = now
+	}
+	if now.After(v.newest) {
+		v.newest = now
+	}
 }
 
 // readStarting registers a read of the screen the agent uses, before it
@@ -320,23 +358,23 @@ func (v *taskVideo) read(tok uint64, start time.Time, recordable bool) {
 	delete(v.reads, tok)
 	if !recordable {
 		v.dropLocked()
-		if start.After(v.newest) {
-			v.newest = start
-		}
 		return
 	}
 	if start.Before(v.newest) {
 		return
 	}
 	v.newest = start
-	limit := start
 	for _, s := range v.reads {
-		if s.Before(limit) {
-			limit = s
+		if s.Before(start) {
+			// An earlier read is still running and may yet show what must
+			// not be recorded: in order, it would have dropped what came
+			// before this one. Write nothing now; the next read does.
+			v.paused = false
+			return
 		}
 	}
 	n := 0
-	for n < len(v.held) && v.held[n].arrived.Before(limit) {
+	for n < len(v.held) && v.held[n].arrived.Before(start) {
 		n++
 	}
 	cfgQueued := false
@@ -476,30 +514,19 @@ func (v *taskVideo) save() {
 	g.rec.do(func(ctx context.Context) error { return g.store.SaveRecording(ctx, rec) })
 }
 
-// stop ends the recording: with read, one more read keeps what it holds
-// when the screen is still recordable; then the file is closed.
+// stop ends the recording: with read, one more read of the recording's own
+// screen keeps what arrived before the task ended, when that screen is
+// still recordable; then the file is closed. A background display closes
+// with its task, so there is no last read of it.
 func (v *taskVideo) stop(read bool) {
 	g := v.g
 	defer g.videos.done()
 	defer g.videoStops.done()
-	if read {
-		v.mu.Lock()
-		holds := len(v.held) > 0
-		v.mu.Unlock()
-		if holds && v.ctx.Err() == nil {
-			d := v.d
-			d.act.Lock()
-			ctx, cancel := context.WithTimeout(v.ctx, videoStopRead)
-			start := time.Now()
-			tok := v.readStarting(start)
-			if s, err := g.observe(ctx, d, false); err == nil {
-				v.read(tok, start, g.recordable(d, s))
-			} else {
-				v.readFailed(tok)
-			}
-			cancel()
-			d.act.Unlock()
-		}
+	v.mu.Lock()
+	holds := len(v.held) > 0
+	v.mu.Unlock()
+	if key, dev, _ := v.source(); read && holds && v.ctx.Err() == nil && dev != nil && key == hubKey(v.d.id, false) {
+		v.lastRead(dev)
 	}
 	v.mu.Lock()
 	v.stopping = true
@@ -513,9 +540,9 @@ func (v *taskVideo) stop(read bool) {
 		return
 	}
 	v.mu.Lock()
-	origin := v.origin
+	origin, end := v.origin, v.endAt
 	v.mu.Unlock()
-	if err := v.w.Close(time.Since(origin)); err != nil {
+	if err := v.w.Close(end.Sub(origin)); err != nil {
 		g.log.Warn("screen recording", "task", v.t.id, "err", err)
 	}
 	if v.w.Started() {
@@ -526,6 +553,44 @@ func (v *taskVideo) stop(read bool) {
 	}
 }
 
+// lastRead reads the phone's screen once more for what the recording
+// holds, waiting at most videoStopRead for actions in progress.
+func (v *taskVideo) lastRead(dev driver.Device) {
+	d := v.d
+	if !lockWithin(v.ctx, &d.act, videoStopRead) {
+		return
+	}
+	defer d.act.Unlock()
+	ctx, cancel := context.WithTimeout(v.ctx, videoStopRead)
+	defer cancel()
+	start := time.Now()
+	tok := v.readStarting(start)
+	s, err := dev.Observe(ctx, driver.ObserveOptions{})
+	if err != nil || s == nil {
+		v.readFailed(tok)
+		return
+	}
+	g := v.g
+	g.mu.Lock()
+	person := d.person
+	g.mu.Unlock()
+	v.read(tok, start, recordableScreen(g.policy, s) && !person)
+}
+
+// lockWithin locks mu unless that takes longer than max or ctx ends.
+func lockWithin(ctx context.Context, mu *sync.Mutex, max time.Duration) bool {
+	deadline := time.Now().Add(max)
+	for !mu.TryLock() {
+		if time.Now().After(deadline) || ctx.Err() != nil {
+			return false
+		}
+		if !sleepCtx(ctx, 20*time.Millisecond, nil) {
+			return false
+		}
+	}
+	return true
+}
+
 // view returns what the recording holds so far.
 func (v *taskVideo) view() (RecordingView, bool) {
 	v.mu.Lock()
@@ -534,17 +599,6 @@ func (v *taskVideo) view() (RecordingView, bool) {
 		return RecordingView{}, false
 	}
 	return RecordingView{TaskID: v.t.id, Path: v.file, Start: v.origin, Length: v.length}, true
-}
-
-// recordable reports whether read s of the screen the agent uses may be
-// recorded.
-func (g *Gateway) recordable(d *device, s *screen.Screen) bool {
-	if !recordableScreen(g.policy, s) {
-		return false
-	}
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return !d.person
 }
 
 // recordableScreen reports whether a read shows a screen whose pictures

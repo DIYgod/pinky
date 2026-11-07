@@ -1280,6 +1280,9 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		return nil, err
 	}
 	if s == nil {
+		if video != nil {
+			video.readFailed(readTok)
+		}
 		return nil, errors.New("the driver returned no screen")
 	}
 	d.refs.Assign(s)

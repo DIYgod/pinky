@@ -482,30 +482,31 @@ func pick(phone []driver.FileInfo, paths []string) (want []driver.FileInfo, miss
 	return want, missing
 }
 
-// localPath returns where a file of the Pinky folder goes under dir, after
-// checking that no folder on the way is a link out of it.
+// localPath returns where a file of the Pinky folder goes under dir. No
+// folder on the way may be a link (which could lead out of dir); the
+// missing ones are made.
 func localPath(dir, rel string) (string, error) {
 	clean, ok := cleanRel(rel)
 	if !ok || clean == "" {
 		return "", fmt.Errorf("%q: %w", rel, driver.ErrNotFound)
 	}
-	full := filepath.Join(dir, filepath.FromSlash(clean))
-	root, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return "", err
+	parts := strings.Split(clean, "/")
+	cur := dir
+	for _, part := range parts[:len(parts)-1] {
+		cur = filepath.Join(cur, part)
+		fi, err := os.Lstat(cur)
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			if err := os.Mkdir(cur, 0o700); err != nil && !errors.Is(err, fs.ErrExist) {
+				return "", err
+			}
+		case err != nil:
+			return "", err
+		case fi.Mode()&fs.ModeSymlink != 0 || !fi.IsDir():
+			return "", fmt.Errorf("%q: %s is not a folder of the local folder", rel, part)
+		}
 	}
-	parent := filepath.Dir(full)
-	if err := os.MkdirAll(parent, 0o700); err != nil {
-		return "", err
-	}
-	real, err := filepath.EvalSymlinks(parent)
-	if err != nil {
-		return "", err
-	}
-	if r, err := filepath.Rel(root, real); err != nil || r == ".." || strings.HasPrefix(r, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("%q leaves the local folder", rel)
-	}
-	return filepath.Join(real, filepath.Base(full)), nil
+	return filepath.Join(cur, parts[len(parts)-1]), nil
 }
 
 // pullOne copies a file from the phone through a temporary file, so a

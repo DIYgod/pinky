@@ -284,6 +284,7 @@ func (g *Gateway) takeOver(d *device, byInput bool) {
 	if l := d.lease; byInput && l != nil && l.bg != nil {
 		// The person uses the phone's own screen; the agent works on its
 		// background display and goes on.
+		d.personAt = time.Now()
 		g.mu.Unlock()
 		return
 	}

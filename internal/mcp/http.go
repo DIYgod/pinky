@@ -20,9 +20,10 @@ const httpSessionTimeout = time.Hour
 // agents that cannot start `pinky mcp`: on another machine, in a
 // container, or a client that speaks only HTTP. Every request needs the
 // agent token as a bearer token. Each MCP session is one gateway session,
-// with the same first-connection approval and scopes as over stdio; the
-// SDK refuses requests to a loopback address that name another host (DNS
-// rebinding), and cross-origin browser requests are refused too.
+// with the same first-connection approval and scopes as over stdio, under
+// a name of its own (RemoteSuffix). The SDK refuses requests to a loopback
+// address that name another host (DNS rebinding), and cross-origin
+// browser requests are refused too.
 type HTTP struct {
 	srv     *sdk.Server
 	handler http.Handler
@@ -32,8 +33,9 @@ type HTTP struct {
 // HTTP returns the Streamable HTTP endpoint for the server's tools, at
 // HTTPPath, accepting token.
 func (s *Server) HTTP(token string) *HTTP {
-	// A server of its own, so turning HTTP off can end exactly its sessions.
-	srv := s.newSDK()
+	// A server of its own, so turning HTTP off can end exactly its
+	// sessions, and its agents are named apart from local ones.
+	srv := s.newSDK(true)
 	h := sdk.NewStreamableHTTPHandler(func(*http.Request) *sdk.Server { return srv },
 		&sdk.StreamableHTTPOptions{SessionTimeout: httpSessionTimeout})
 	mux := http.NewServeMux()

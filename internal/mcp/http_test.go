@@ -92,7 +92,7 @@ func TestHTTP(t *testing.T) {
 	if !strings.HasPrefix(text, "settled") {
 		t.Fatalf("connect:\n%s", text)
 	}
-	if d := h.g.Devices()[0]; d.Status != gateway.DeviceWorking || !strings.HasPrefix(d.StatusLine, "Codex") {
+	if d := h.g.Devices()[0]; d.Status != gateway.DeviceWorking || !strings.HasPrefix(d.StatusLine, "Codex (remote) · ") {
 		t.Fatalf("device %+v", d)
 	}
 	cs.Close()

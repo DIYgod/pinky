@@ -23,9 +23,13 @@ import (
 // bgOpenTimeout bounds opening a background display.
 const bgOpenTimeout = 20 * time.Second
 
+// personRecent is how recently the person must have used the phone's own
+// screen for a task leaving its background display to wait for them.
+const personRecent = time.Minute
+
 // SetBackground sets whether agents work on a phone's background display
-// instead of its main screen. It applies from the next task and is saved
-// per phone. A phone whose driver has no background displays returns
+// instead of its main screen. It applies from the next task (a running
+// one keeps the screen it started on) and is saved per phone. A phone whose driver has no background displays returns
 // driver.ErrUnsupported while it is connected.
 func (g *Gateway) SetBackground(deviceID string, on bool) error {
 	d, err := g.device(deviceID)
@@ -87,7 +91,7 @@ func (g *Gateway) AgentStream(ctx context.Context, deviceID string, opt driver.S
 func (g *Gateway) readyScreen(ctx context.Context, l *lease) {
 	d := l.dev
 	g.mu.Lock()
-	want := g.background[d.id] && !l.bgOff && l.bg == nil && !l.ended
+	want := l.bgWanted && !l.bgOff && l.bg == nil && !l.ended
 	dev := d.dev
 	g.mu.Unlock()
 	if want && dev != nil {
@@ -144,7 +148,7 @@ func (g *Gateway) openBackground(ctx context.Context, l *lease, b driver.Backgro
 	g.inputLocked(d)
 	if g.recordOn {
 		if d.video != nil {
-			g.moveVideoLocked(d, hubKey(d.id, true), bg)
+			g.moveVideoLocked(d, hubKey(d.id, true))
 		} else {
 			g.startVideoLocked(l)
 		}
@@ -169,7 +173,7 @@ func (g *Gateway) leaveBackgroundLocked(l *lease, why string) {
 		g.dropShotLocked(d, p)
 	}
 	g.inputLocked(d)
-	g.moveVideoLocked(d, hubKey(d.id, false), d.dev)
+	g.moveVideoLocked(d, hubKey(d.id, false))
 	go func() {
 		g.stopHub(hubKey(d.id, true), errors.New("the background display closed"))
 		bg.Close()
@@ -218,10 +222,20 @@ func (g *Gateway) leaveForLaunch(ctx context.Context, l *lease, p *prep, cause e
 	g.mu.Lock()
 	g.leaveBackgroundLocked(l, fmt.Sprintf("%s does not run on a background display, so the task moved to the phone's own screen.", name))
 	dev := d.dev
+	using := time.Since(d.personAt) < personRecent
 	g.mu.Unlock()
 	g.log.Info("app refused the background display", "device", d.id, "app", name, "err", cause)
 	if dev == nil {
 		return nil, errResult(ErrDeviceOffline, "%s is offline. Nothing was done.", d.name())
+	}
+	if using {
+		// The person has been using the phone's screen, which background
+		// work left to them: they get it until they hand it over.
+		g.takeOver(d, false)
+		g.mu.Lock()
+		l.tookOverSeen = true
+		g.mu.Unlock()
+		return nil, statusResult(StatusTookOver, "%s does not run on a background display, and the person is using the phone's own screen, so nothing was opened and the agent is paused. Call phone_handoff to wait until they let you use it.", name)
 	}
 	g.wake(ctx, d)
 	g.checkLock(ctx, d)

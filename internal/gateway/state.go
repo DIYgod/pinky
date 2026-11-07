@@ -55,7 +55,10 @@ type device struct {
 	video *taskVideo
 	// wokeAt is when the gateway last woke the screen, or found it on.
 	wokeAt time.Time
-	touch  *touchState
+	// personAt is when the person last used the phone's own screen while
+	// an agent worked on a background display (which does not pause it).
+	personAt time.Time
+	touch    *touchState
 	// wake is closed and replaced on every state change, to wake waiting calls.
 	wake chan struct{}
 }
@@ -171,6 +174,9 @@ type lease struct {
 	bg     driver.Device
 	bgOff  bool
 	bgNote string
+	// bgWanted is whether the task uses a background display, decided when
+	// it starts: turning the setting on or off applies from the next task.
+	bgWanted bool
 	// filesGranted is set when the person allowed copying files to the
 	// phone for the rest of the task.
 	filesGranted bool

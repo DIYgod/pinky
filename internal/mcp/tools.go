@@ -199,7 +199,7 @@ func patchSwipe(p map[string]*jsonschema.Schema) {
 
 func boolp(b bool) *bool { return &b }
 
-func (s *Server) addTools(srv *sdk.Server) {
+func (s *Server) addTools(srv *sdk.Server, remote bool) {
 	readOnly := &sdk.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: boolp(false)}
 	acting := &sdk.ToolAnnotations{DestructiveHint: boolp(true), OpenWorldHint: boolp(true)}
 
@@ -209,7 +209,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 			"Another session's phone returns lease_held. Call phone_release when done.",
 		InputSchema: schema[connectIn](nil), Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in connectIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Connect(ctx, gateway.ConnectRequest{
+			return render(s.session(req, remote).Connect(ctx, gateway.ConnectRequest{
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
 				Task: in.Task, Apps: in.Apps})), nil, nil
 		})
@@ -219,7 +219,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 		InputSchema: schema[releaseIn](func(p map[string]*jsonschema.Schema) { enum(p["outcome"], outcomes...) }),
 		Annotations: &sdk.ToolAnnotations{IdempotentHint: true, OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in releaseIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Release(ctx, gateway.ReleaseRequest{
+			return render(s.session(req, remote).Release(ctx, gateway.ReleaseRequest{
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device)}, Outcome: in.Outcome, Summary: in.Summary})), nil, nil
 		})
 
@@ -229,7 +229,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 		InputSchema: schema[observeIn](func(p map[string]*jsonschema.Schema) { bounds(p["wait_ms"], 0, 30000) }),
 		Annotations: readOnly},
 		func(ctx context.Context, req *sdk.CallToolRequest, in observeIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Observe(ctx, gateway.ObserveRequest{
+			return render(s.session(req, remote).Observe(ctx, gateway.ObserveRequest{
 				Call:   gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
 				WaitMS: in.WaitMS, Screenshot: in.Screenshot})), nil, nil
 		})
@@ -243,7 +243,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 			if res := pointArg(in.X, in.Y, &a.Point); res != nil {
 				return res, nil, nil
 			}
-			return render(s.session(req).Act(ctx, in.call(ctx, req), a)), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_type", Title: "Type text",
@@ -253,7 +253,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 		Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in typeIn) (*sdk.CallToolResult, any, error) {
 			a := gateway.Action{Tool: "type", Ref: in.Ref, Text: in.Text, Append: in.Append, Submit: in.Submit}
-			return render(s.session(req).Act(ctx, in.call(ctx, req), a)), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_swipe", Title: "Swipe",
@@ -262,7 +262,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 		func(ctx context.Context, req *sdk.CallToolRequest, in swipeIn) (*sdk.CallToolResult, any, error) {
 			a := gateway.Action{Tool: "swipe", Ref: in.Ref, Direction: strings.ToLower(strings.TrimSpace(in.Direction)),
 				From: in.From.screen(), To: in.To.screen(), DurationMS: in.DurationMS}
-			return render(s.session(req).Act(ctx, in.call(ctx, req), a)), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_key", Title: "Press a key",
@@ -270,21 +270,21 @@ func (s *Server) addTools(srv *sdk.Server) {
 		InputSchema: schema[keyIn](func(p map[string]*jsonschema.Schema) { enum(p["key"], gateway.KeyNames()...) }),
 		Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in keyIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "key", Key: in.Key})), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "key", Key: in.Key})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_launch", Title: "Open an app",
 		Description: "Open an app by name, package name or bundle id, and return its screen. Blocked apps (banking, wallets, password managers) are refused, and apps outside the task's list return scope_denied.",
 		InputSchema: schema[launchIn](nil), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in launchIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App})), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_apps", Title: "List apps",
 		Description: "List the installed apps you may use, optionally filtered. Blocked apps are not listed.",
 		InputSchema: schema[appsIn](nil), Annotations: readOnly},
 		func(ctx context.Context, req *sdk.CallToolRequest, in appsIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Apps(ctx, gateway.AppsRequest{Call: gateway.Call{Device: strings.TrimSpace(in.Device)}, Query: in.Query})), nil, nil
+			return render(s.session(req, remote).Apps(ctx, gateway.AppsRequest{Call: gateway.Call{Device: strings.TrimSpace(in.Device)}, Query: in.Query})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_batch", Title: "Run several steps",
@@ -310,7 +310,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 				}
 				br.Steps = append(br.Steps, a)
 			}
-			return render(s.session(req).Batch(ctx, br)), nil, nil
+			return render(s.session(req, remote).Batch(ctx, br)), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_wait_for", Title: "Wait for text",
@@ -318,7 +318,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 		InputSchema: schema[waitForIn](func(p map[string]*jsonschema.Schema) { bounds(p["timeout_ms"], 0, 45000) }),
 		Annotations: readOnly},
 		func(ctx context.Context, req *sdk.CallToolRequest, in waitForIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).WaitFor(ctx, gateway.WaitForRequest{
+			return render(s.session(req, remote).WaitFor(ctx, gateway.WaitForRequest{
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
 				Text: in.Text, Gone: in.Gone, TimeoutMS: in.TimeoutMS})), nil, nil
 		})
@@ -330,7 +330,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 		InputSchema: schema[filesIn](func(p map[string]*jsonschema.Schema) { enum(p["action"], "list", "pull", "push") }),
 		Annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(false), OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in filesIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Files(ctx, gateway.FilesRequest{
+			return render(s.session(req, remote).Files(ctx, gateway.FilesRequest{
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Intent: strings.TrimSpace(in.Intent),
 					ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
 				Action: in.Action, Paths: in.Paths})), nil, nil
@@ -341,7 +341,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 			"Blocks up to 45 s, then returns approval_pending with an approval_id to repeat the call with.",
 		InputSchema: schema[requestApprovalIn](nil), Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in requestApprovalIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).RequestApproval(ctx, gateway.ApprovalRequest{
+			return render(s.session(req, remote).RequestApproval(ctx, gateway.ApprovalRequest{
 				Call:    gateway.Call{Device: strings.TrimSpace(in.Device), ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
 				Summary: in.Summary, Details: in.Details})), nil, nil
 		})
@@ -351,7 +351,7 @@ func (s *Server) addTools(srv *sdk.Server) {
 			"Call it after user_took_over, paused or device_locked too. Blocks up to 45 s, then returns approval_pending with an approval_id to repeat the call with.",
 		InputSchema: schema[handoffIn](nil), Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in handoffIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req).Handoff(ctx, gateway.HandoffRequest{
+			return render(s.session(req, remote).Handoff(ctx, gateway.HandoffRequest{
 				Call:   gateway.Call{Device: strings.TrimSpace(in.Device), ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
 				Reason: in.Reason})), nil, nil
 		})

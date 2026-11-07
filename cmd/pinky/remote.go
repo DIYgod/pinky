@@ -93,12 +93,12 @@ func (r *remoteAgents) stopLocked() {
 	if r.srv == nil {
 		return
 	}
+	// MCP sessions outlive requests: end them first, with their leases,
+	// which also ends their open event streams, so Shutdown need not wait.
+	r.h.CloseSessions()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	r.srv.Shutdown(ctx)
-	// Shutdown waits for requests, not for MCP sessions, which outlive
-	// them: end those, with their leases.
-	r.h.CloseSessions()
 	r.log.Info("remote agents off", "addr", r.addr)
 	r.addr, r.ln, r.srv, r.h = "", nil, nil, nil
 }

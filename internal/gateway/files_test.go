@@ -238,3 +238,28 @@ func TestDemoAndroidFeatures(t *testing.T) {
 		t.Fatalf("unlock without a PIN source: %v", err)
 	}
 }
+
+// A folder link in the local folder is not followed: nothing is written
+// where it leads.
+func TestPhoneFilesFolderLink(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	x.files["notes/todo.txt"] = memFile{data: []byte("milk"), mtime: time.Now()}
+	g := newExtraGateway(t, x)
+	s, _ := connect(t, g, "Copy notes")
+	dir := g.FilesDir("pixel")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	outside := t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(dir, "notes")); err != nil {
+		t.Skip("no symbolic links here:", err)
+	}
+	res := s.Files(ctx, FilesRequest{Action: "pull"})
+	if res.Error == "" {
+		t.Fatalf("pulled through a folder link: %+v", res)
+	}
+	if entries, _ := os.ReadDir(outside); len(entries) != 0 {
+		t.Fatalf("wrote outside the local folder: %v", entries)
+	}
+}

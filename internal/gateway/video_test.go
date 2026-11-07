@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/recording"
 )
@@ -256,43 +257,177 @@ func TestRecordingDropsAnUnknownApp(t *testing.T) {
 }
 
 // Reads can overlap. A read that started earlier and is still running
-// may show a blocked app, so a newer clean read writes only what came
-// before it started; when the older read then shows the blocked app,
-// the rest is dropped.
+// may show a blocked app, so a newer clean read writes nothing while it
+// runs; when the older read then shows the blocked app, everything held is
+// dropped. A drop from outside (a lock, a takeover) makes reads that were
+// already running too old to resume the recording.
 func TestRecordingOverlappingReads(t *testing.T) {
-	t0 := time.Now()
-	v := &taskVideo{since: t0, needKey: true}
-	v.cond = sync.NewCond(&v.mu)
+	t0 := time.Now().Add(-time.Hour) // packets on a clock of their own, in the past
 	pkts := testPackets(t)
 	at := func(ms int) time.Time { return t0.Add(time.Duration(ms) * time.Millisecond) }
-	send := func(p driver.Packet, ms int) {
+	newVideo := func() *taskVideo {
+		v := &taskVideo{floor: t0, needKey: true}
+		v.cond = sync.NewCond(&v.mu)
+		return v
+	}
+	send := func(v *taskVideo, p driver.Packet, ms int) {
 		p.PTS = time.Duration(ms) * time.Millisecond
 		v.packet(timedPacket{p: p, at: at(ms)}, driver.H264)
 	}
-	send(pkts[0], 1)  // configuration
-	send(pkts[1], 10) // key frame
-	send(pkts[2], 20)
+
+	v := newVideo()
+	send(v, pkts[0], 1)  // configuration
+	send(v, pkts[1], 10) // key frame
+	send(v, pkts[2], 20)
 	old := v.readStarting(at(25)) // will see the blocked app
-	send(pkts[3], 30)
-	send(pkts[4], 40)
+	send(v, pkts[3], 30)
 	clean := v.readStarting(at(45))
-	send(pkts[5], 50)
+	send(v, pkts[4], 50)
 	v.read(clean, at(45), true)
-	if n := len(v.ready); n != 3 {
-		t.Fatalf("%d packets written, want the configuration, the key frame and one picture: before the older read began", n)
+	if len(v.ready) != 0 {
+		t.Fatalf("%d packets written while an earlier read still ran", len(v.ready))
 	}
 	v.read(old, at(25), false)
-	if len(v.held) != 0 || !v.paused || len(v.ready) != 3 {
+	if len(v.held) != 0 || !v.paused || len(v.ready) != 0 {
 		t.Fatalf("after the older read saw the blocked app: %d held, paused %v, %d written", len(v.held), v.paused, len(v.ready))
 	}
-	// A read older than one that decided changes nothing.
-	stale := v.readStarting(at(46))
-	newer := v.readStarting(at(60))
-	send(pkts[11], 61) // a key frame
-	v.read(newer, at(60), false)
-	send(pkts[12], 70)
-	v.read(stale, at(46), true)
-	if !v.paused || len(v.held) != 0 {
-		t.Fatalf("a stale read resumed the recording: paused %v, %d held", v.paused, len(v.held))
+
+	// In order, a clean read writes what came before it.
+	v = newVideo()
+	send(v, pkts[0], 1)
+	send(v, pkts[1], 10)
+	send(v, pkts[2], 20)
+	r := v.readStarting(at(25))
+	send(v, pkts[3], 30)
+	v.read(r, at(25), true)
+	if n := len(v.ready); n != 3 || len(v.held) != 1 {
+		t.Fatalf("%d written, %d held; want the configuration, the key frame and a picture written, one held", n, len(v.held))
 	}
+
+	// The phone locks while a read runs: that read cannot resume the
+	// recording, and what came before the lock and arrives later (a hub
+	// replaying its last key frame) is never written.
+	running := v.readStarting(at(40))
+	v.pause()
+	v.read(running, at(40), true)
+	if !v.paused {
+		t.Fatal("a read from before the lock resumed the recording")
+	}
+	fresh := v.readStarting(time.Now())
+	send(v, pkts[11], 60) // a key frame from before the lock, replayed
+	v.read(fresh, time.Now(), true)
+	send(v, pkts[12], 70)
+	if len(v.held) != 0 || len(v.ready) != 3 {
+		t.Fatalf("old packets taken after the lock: %d held, %d written", len(v.held), len(v.ready))
+	}
+}
+
+// Packets that arrive after the task ended are not the task's.
+func TestRecordingEndsWithTheTask(t *testing.T) {
+	ctx := context.Background()
+	v := newVideoDev("pixel")
+	g := newVideoGateway(t, v)
+	g.SetRecording(true)
+	s, _ := connect(t, g, "Lunch")
+	id := taskID(t, g, s)
+	st := newStreamer(t, v.open(t))
+	st.config()
+	st.pictures(10, true)
+	mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
+	st.pictures(6, false) // the person's own use, after the task
+	g.Flush()
+	rec, err := g.Recording(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := recording.Probe(rec.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Frames != 10 {
+		t.Fatalf("recorded %d frames, want the 10 of the task", info.Frames)
+	}
+}
+
+// closingDev is a phone's device that stops working once closed, as a
+// driver's does after the phone dropped; every Open returns a new one.
+type closingDev struct {
+	*videoDev
+	mu     sync.Mutex
+	closed bool
+}
+
+func (c *closingDev) Stream(ctx context.Context, opt driver.StreamOptions) (driver.Stream, error) {
+	c.mu.Lock()
+	closed := c.closed
+	c.mu.Unlock()
+	if closed {
+		return nil, errors.New("device closed")
+	}
+	return c.videoDev.Stream(ctx, opt)
+}
+
+func (c *closingDev) Close() error {
+	c.mu.Lock()
+	c.closed = true
+	c.mu.Unlock()
+	return nil
+}
+
+type closingProvider struct {
+	*demo.Provider
+	v *videoDev
+}
+
+func (p closingProvider) Open(ctx context.Context, id string) (driver.Device, error) {
+	if _, err := p.Provider.Open(ctx, id); err != nil {
+		return nil, err
+	}
+	return &closingDev{videoDev: p.v}, nil
+}
+
+// After the phone drops and comes back, the recording opens the stream of
+// the new connection, not the closed one.
+func TestRecordingAfterReconnect(t *testing.T) {
+	ctx := context.Background()
+	v := newVideoDev("pixel")
+	g := newVideoGateway(t, v, func(o *Options) {
+		o.Providers = []driver.Provider{closingProvider{demo.NewProvider(driver.Android, v.Device), v}}
+		o.DiscoverEvery = 10 * time.Millisecond
+	})
+	g.SetRecording(true)
+	s, _ := connect(t, g, "Lunch")
+	id := taskID(t, g, s)
+	first := v.open(t)
+	v.SetOffline(true)
+	waitStatus(t, g, DeviceOffline)
+	first.end(errors.New("unplugged"))
+	v.SetOffline(false)
+	waitStatus(t, g, DeviceWorking)
+	st := newStreamer(t, v.open(t))
+	// Nothing is written until a read after the new stream vouches for it.
+	mustStatus(t, s.Observe(ctx, ObserveRequest{}), StatusSettled)
+	st.config()
+	st.pictures(8, true)
+	mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
+	g.Flush()
+	rec, err := g.Recording(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info, err := recording.Probe(rec.Path); err != nil || info.Frames != 8 {
+		t.Fatalf("after the reconnect: %+v, %v", info, err)
+	}
+}
+
+func waitStatus(t *testing.T, g *Gateway, st DeviceStatus) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if g.Devices()[0].Status == st {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("the phone is %s, not %s", g.Devices()[0].Status, st)
 }

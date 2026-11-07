@@ -97,6 +97,15 @@ func (g *Gateway) Unlock(deviceID string) error {
 	}
 	l := d.lease
 	g.mu.Unlock()
+	// Only a lock screen gets the PIN: a phone unlocked meanwhile would
+	// take it as typing in whatever app is in front.
+	if locked, known := g.lockedNow(ctx, dev); known && !locked {
+		d.act.Unlock()
+		g.log.Info("unlock from the computer: the phone is already unlocked", "device", d.id)
+		g.setLocked(d, false)
+		g.answerUnlockHandoffs(d)
+		return nil
+	}
 	start := time.Now()
 	err = u.Unlock(ctx, pin)
 	pin = ""
@@ -114,8 +123,13 @@ func (g *Gateway) Unlock(deviceID string) error {
 	if _, ok := dev.(driver.LockReporter); !ok {
 		g.readLock(ctx, d, dev)
 	}
-	// The person unlocked from the computer: handoffs the agent opened for
-	// the lock are answered.
+	g.answerUnlockHandoffs(d)
+	return nil
+}
+
+// answerUnlockHandoffs answers the handoffs the agent opened for the lock,
+// once the phone is unlocked from the computer.
+func (g *Gateway) answerUnlockHandoffs(d *device) {
 	g.mu.Lock()
 	var ids []string
 	if !d.locked && d.lease != nil {
@@ -126,7 +140,22 @@ func (g *Gateway) Unlock(deviceID string) error {
 	for _, id := range ids {
 		_ = g.approvals.Decide(id, approval.AllowOnce, "The phone was unlocked.")
 	}
-	return nil
+}
+
+// lockedNow asks the phone whether it is locked, by its LockReporter or a
+// read of its screen; known is false when it cannot tell.
+func (g *Gateway) lockedNow(ctx context.Context, dev driver.Device) (locked, known bool) {
+	if lr, ok := dev.(driver.LockReporter); ok {
+		v, err := lr.Locked(ctx)
+		return v, err == nil
+	}
+	rctx, cancel := context.WithTimeout(ctx, observeTimeout)
+	defer cancel()
+	s, err := dev.Observe(rctx, driver.ObserveOptions{})
+	if err != nil || s == nil {
+		return false, false
+	}
+	return s.Locked, true
 }
 
 // recordUnlock adds the unlock to the task running on the phone, if any.
