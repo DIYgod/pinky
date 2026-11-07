@@ -95,6 +95,9 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	if err != nil {
 		return nil, err
 	}
+	// What SpringBoard shows over the app, looked at in the background
+	// while the app's tree comes (see springboard.go).
+	sbDone := d.kickSpringBoard(rax)
 	si := d.screen()
 	var wg sync.WaitGroup
 	var els []raxElement
@@ -163,7 +166,23 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	if app.HasFrame && app.Frame.W > 0 {
 		scale = float64(si.Width) / app.Frame.W
 	}
-	s.Elements, s.Keyboard = raxScreenElements(els, scale, si.Width, si.Height, s.App.ID)
+	frontApp, _ := d.appForPID(ctx, uint64(app.Object.PID))
+	frontSB := frontApp.ID == springBoard
+	d.noteFront(app.Object, frontSB)
+	var covered []screen.Rect
+	var dialog []screen.Element
+	if !frontSB {
+		if over, ok := d.springBoardOverlays(sbDone); ok && len(over) > 0 {
+			var dlg []raxElement
+			s.Events, covered, dlg = d.overlayEvents(ctx, over, scale, si.Width, si.Height)
+			dialog = dialogElements(d.springBoardElement(), dlg, scale, si.Width, si.Height)
+			st.Trace = append(st.Trace, fmt.Sprintf("SpringBoard shows %d overlays over the app", len(over)))
+		} else if ok {
+			d.overlayEvents(ctx, nil, scale, si.Width, si.Height) // forget the ones gone
+		}
+	}
+	s.Elements, s.Keyboard = raxScreenElements(els, scale, si.Width, si.Height, s.App.ID, covered...)
+	s.Elements = append(s.Elements, dialog...)
 	if opt.OCR && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {
 			s.Keyboard = true
@@ -356,7 +375,8 @@ func walkDetached(ctx context.Context, rax *raxSession, stop *atomic.Bool, onApp
 
 // raxScreenElements turns a walk into screen elements: the accessibility
 // elements (containers only lead to them), with frames in screen pixels.
-// Elements entirely off screen are left out.
+// Elements entirely off screen are left out, and so are those under what
+// covers them: the keyboard, the tab bar, and covered, in pixels.
 //
 // Elements of other processes come with frames relative to the view that
 // hosts them. A host is marked by traitRemoteHost and comes right before
@@ -364,7 +384,7 @@ func walkDetached(ctx context.Context, rax *raxSession, stop *atomic.Bool, onApp
 // widgets) cannot be placed and are left out. A process whose elements are
 // mostly single characters is the on-screen keyboard: it only marks the
 // keyboard as shown.
-func raxScreenElements(els []raxElement, scale float64, w, h int, appID string) ([]screen.Element, bool) {
+func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, covered ...screen.Rect) ([]screen.Element, bool) {
 	if len(els) == 0 {
 		return nil, false
 	}
@@ -456,6 +476,9 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string) 
 	var over []occluder
 	if !kb.Empty() {
 		over = append(over, occluder{r: kb})
+	}
+	for _, r := range covered {
+		over = append(over, occluder{r: r})
 	}
 	if tb, ok := tabBar(out, scale, w, h); ok {
 		over = append(over, tb)
