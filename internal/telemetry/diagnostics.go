@@ -50,7 +50,7 @@ func (c *Client) Diagnostics(phones []driver.Info, extra ...string) string {
 	if c != nil && c.opt.Version != "" {
 		version = c.opt.Version
 	}
-	fmt.Fprintf(&b, "Pinky %s · %s %s · %s · %s\n", version, sys.OS, sys.OSVersion, sys.Arch, sys.GoVersion)
+	fmt.Fprintf(&b, "Pinky %s · %s %s · %s · %s\n", version, OSName(sys.OS), sys.OSVersion, sys.Arch, sys.GoVersion)
 	if c != nil {
 		stats := "off"
 		switch {

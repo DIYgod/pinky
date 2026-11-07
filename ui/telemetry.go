@@ -66,7 +66,7 @@ func (a *app) telemetryBanner(c *mg.Context) {
 	}
 	p := pal(c)
 	on := a.settings.UsageStats
-	text := "Pinky shares anonymous usage statistics, such as how many tasks ran and which tools agents used, to get better. " +
+	text := "Pinky shares anonymous usage statistics, such as how many tasks ran and which tools agents used, to help make it better. " +
 		"Never your screens, what's typed, apps, phone names or PINs."
 	if !on {
 		text = "Help make Pinky better by sharing anonymous usage statistics, such as how many tasks ran and which tools agents used? " +
@@ -116,18 +116,15 @@ func (a *app) setUsageStats(on bool) {
 	}()
 }
 
+// openShared shows the usage report as it would go out now.
 func (a *app) openShared() {
-	tel := a.tel()
-	a.t.sharedOpen, a.t.sharedText = true, ""
-	go func() {
-		r := tel.Report()
-		data, _ := json.MarshalIndent(r, "", "  ")
-		text := string(data)
-		if len(r.Counts) == 0 {
-			text += "\n\nNothing has been counted since the last report."
-		}
-		a.post(func() { a.t.sharedText = text })
-	}()
+	r := a.tel().Report()
+	data, _ := json.MarshalIndent(r, "", "  ")
+	text := string(data)
+	if len(r.Counts) == 0 {
+		text += "\n\nNothing has been counted since the last report."
+	}
+	a.t.sharedOpen, a.t.sharedText = true, text
 }
 
 // telemetryDialogs are the crash report and "What Pinky shares" dialogs,
@@ -153,9 +150,6 @@ func (a *app) sharedDialog(c *mg.Context) {
 				"They never include what is on your phones' screens, what is typed, app names, phone names or IDs, PINs or file names. "+
 				"Turn this off in Settings › Privacy, or set DO_NOT_TRACK=1.").FontSize(13.5).TextColor(p.ink2)
 			text := a.t.sharedText
-			if text == "" {
-				text = "Reading…"
-			}
 			mg.Scroll(c).MaxHeight(320).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
 				mg.Text(c, text).Font("monospace").FontSize(12).Selectable()
 			})
@@ -200,7 +194,7 @@ func (a *app) crashDialog(c *mg.Context) {
 					if i > 0 {
 						b.WriteString("\n\n")
 					}
-					fmt.Fprintf(&b, "Pinky %s (%s) · %s %s · %s\n%s\n\n%s", x.Version, x.Process, x.OS, x.OSVersion, x.Arch, x.Reason, x.Stack)
+					fmt.Fprintf(&b, "Pinky %s (%s) · %s %s · %s\n%s\n\n%s", x.Version, x.Process, telemetry.OSName(x.OS), x.OSVersion, x.Arch, x.Reason, x.Stack)
 				}
 				mg.Scroll(c).MaxHeight(260).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
 					mg.Text(c, b.String()).Font("monospace").FontSize(11.5).Selectable()

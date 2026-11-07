@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -445,4 +446,65 @@ func TestMenusOfferFeedback(t *testing.T) {
 	if hasText(tt, "Send feedback…") {
 		t.Fatal("Send feedback without telemetry")
 	}
+}
+
+// TestTelemetryScreenshots renders the note about usage statistics, What
+// Pinky shares, the crash report dialog, Send Feedback and Settings ›
+// Privacy in light and dark into $PINKY_SCREENSHOTS.
+func TestTelemetryScreenshots(t *testing.T) {
+	dir := os.Getenv("PINKY_SCREENSHOTS")
+	if dir == "" {
+		t.Skip("set PINKY_SCREENSHOTS to a folder to write the screenshots")
+	}
+	shoot := func(ta *telApp, name string, setup func(tt *mg.Tester)) {
+		t.Helper()
+		for _, dark := range []bool{false, true} {
+			tt := mg.NewTester(ta.view, 1280, 820)
+			tt.SetScale(2)
+			tt.SetDark(dark)
+			if setup != nil {
+				setup(tt)
+			}
+			ta.eventually(t, tt, "posted work", func() bool { return !ta.t.fb.reading })
+			tt.Frame()
+			suffix := "-light.png"
+			if dark {
+				suffix = "-dark.png"
+			}
+			f, err := os.Create(filepath.Join(dir, name+suffix))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := png.Encode(f, tt.Image()); err != nil {
+				t.Fatal(err)
+			}
+			f.Close()
+		}
+	}
+	ta := newTelApp(t, &reports{})
+	ta.tel.Count("runs.started")
+	ta.tel.Count("tools.phone_tap")
+	shoot(ta, "usage-note", nil)
+	shoot(ta, "whats-shared", func(*mg.Tester) { ta.openShared() })
+	ta.t.sharedOpen = false
+
+	crash := crashReport("app-1-2", "app")
+	crash.Stack = "goroutine 1 [running]:\ngithub.com/DIYgod/pinky/internal/gateway.(*Gateway).Decide(...)\n\t~/Code/pinky/internal/gateway/client.go:240 +0x1c4\nmain.main()\n\t~/Code/pinky/cmd/pinky/main.go:44 +0x2b8"
+	tc := newTelApp(t, &reports{}, crash)
+	tc.t.notice = false
+	shoot(tc, "crash-dialog", func(*mg.Tester) { tc.t.crashText = true })
+
+	tf := newTelApp(t, &reports{})
+	tf.t.notice = false
+	shoot(tf, "feedback", func(tt *mg.Tester) {
+		if !tf.t.fb.open {
+			tf.openFeedback()
+			tf.t.fb.message = "The mirror froze after I unlocked the phone from the computer."
+			tf.t.fb.email = "ada@example.com"
+			tf.t.fb.review = true
+		}
+	})
+	tf.t.fb.open = false
+	tf.page, tf.set.sec = pageSettings, secPrivacy
+	shoot(tf, "settings-privacy", nil)
 }

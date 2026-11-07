@@ -711,6 +711,19 @@ var (
 	sysInfo SystemInfo
 )
 
+// OSName is how people write a system's name: "macOS" for "macos".
+func OSName(os string) string {
+	switch os {
+	case "macos", "darwin":
+		return "macOS"
+	case "windows":
+		return "Windows"
+	case "linux":
+		return "Linux"
+	}
+	return os
+}
+
 // System returns the computer's system, read once.
 func System() SystemInfo {
 	sysOnce.Do(func() {

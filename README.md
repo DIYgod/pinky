@@ -32,6 +32,10 @@ No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pink
 - **iPhone:** iOS 27 or later, Developer Mode on, connected over USB and trusted once in Xcode's Devices window. Nothing is installed on the phone. Typing pastes the text and puts your clipboard back.
 - **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN.
 
+### Usage statistics, crash reports and feedback
+
+Pinky shares anonymous usage statistics (counters such as tasks run, tools called and phones connected, about once a day, with a random install id) once you have seen the note about them on the first run; turn them off in Settings › Privacy or with `DO_NOT_TRACK=1`. After a crash it asks before sending a report. Help › Send Feedback… sends a message, with diagnostics you can read first. Screens, typed text, app names, phone names and ids, PINs and file names are never sent. [docs/TELEMETRY.md](docs/TELEMETRY.md) lists everything.
+
 ## Layout
 
 ```text
@@ -45,6 +49,7 @@ internal/mcp/                 the MCP server
 internal/api/                 the local socket for agents and clients
 internal/demo/                scripted fake phones
 internal/video/, ui/          the desktop client (MyGo native UI, FFmpeg decoding)
+internal/telemetry/           usage statistics, crash reports and feedback
 android/companion/            the Android companion app (Kotlin)
 scripts/                      device locks and an MCP call script for checks
 docs/                         design, agent guide, MCP reference and notes
@@ -105,6 +110,7 @@ CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) builds, vets and tests
 - [Design](docs/DESIGN.md)
 - [Agent guide (SKILL.md)](docs/SKILL.md) and [MCP reference](docs/mcp.md)
 - [Working on Pinky](docs/WORKING.md)
+- [Usage statistics, crash reports and feedback](docs/TELEMETRY.md)
 - Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md)
 
 ## License

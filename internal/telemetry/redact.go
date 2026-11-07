@@ -122,10 +122,17 @@ func (r *Redactor) Learn(s string) {
 	}
 }
 
+// keep are words a redactor leaves alone, such as Pinky's module path in a
+// stack, which holds its author's name.
+var keep = []string{"github.com/DIYgod/pinky"}
+
 // String returns s without what could identify the person.
 func (r *Redactor) String(s string) string {
 	if r == nil {
 		return s
+	}
+	for i, k := range keep {
+		s = strings.ReplaceAll(s, k, fmt.Sprintf("\x00keep%d\x00", i))
 	}
 	s = reADB.ReplaceAllString(s, "<adb-wifi-phone>")
 	for _, p := range r.literal {
@@ -149,6 +156,9 @@ func (r *Redactor) String(s string) string {
 		return "<ip>"
 	})
 	s = reHex.ReplaceAllString(s, "<hex>")
+	for i, k := range keep {
+		s = strings.ReplaceAll(s, fmt.Sprintf("\x00keep%d\x00", i), k)
+	}
 	return s
 }
 
