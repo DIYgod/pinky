@@ -10,8 +10,14 @@ COMPANION_APK ?= android/companion/app/build/outputs/apk/debug/app-debug.apk
 # cmd/pinky/mygo.json, else "-", ad hoc, for this Mac only. A Developer ID
 # ("Developer ID Application: …") signs for other Macs.
 MACOS_SIGN ?= $(or $(shell sed -n 's/.*"signingIdentity": *"\([^"]*\)".*/\1/p' cmd/pinky/mygo.json),-)
+# A release: Pinky.app signed with this Developer ID and notarized with the
+# notarytool profile NOTARY_PROFILE, which `xcrun notarytool
+# store-credentials` keeps in the login keychain.
+RELEASE_SIGN ?= Developer ID Application: NATURAL SELECTION LABS PTE. LTD. (492J8Q67PF)
+NOTARY_PROFILE ?= pinky-notary
+DMG := build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 
-.PHONY: build test vet check app e2e companion ffmpeg
+.PHONY: build test vet check app e2e companion ffmpeg release notarize
 
 build:
 	CGO_ENABLED=0 go build ./...
@@ -55,6 +61,18 @@ app:
 ifeq ($(UNAME),Darwin)
 	SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 endif
+
+# Pinky.app and its .dmg, signed with the Developer ID and notarized.
+release:
+	$(MAKE) app MACOS_SIGN="$(RELEASE_SIGN)"
+	$(MAKE) notarize
+
+# Submits the .dmg to Apple's notary service, waits for the answer and
+# staples the ticket to the .dmg, so Gatekeeper accepts it offline too.
+notarize:
+	xcrun notarytool submit "$(DMG)" --keychain-profile "$(NOTARY_PROFILE)" --wait
+	xcrun stapler staple "$(DMG)"
+	spctl -a -vv -t open --context context:primary-signature "$(DMG)"
 
 # A pinky binary with MyGo's automation socket, for end-to-end checks.
 e2e:

@@ -4,7 +4,7 @@ How to check what was built in rounds one to three (2026-11-06 and 07). Each ite
 
 ## Before you start
 
-- [ ] **The Pixel (FA6C20303860)** came back on USB around noon on the 7th. The Android driver's real-phone tests pass on it (reading the screen, screenshots, the Calculator, typing, the video). During a Claude Code run on it, Pinky saw a finger on its screen and paused the agent: if that was you, it worked as designed.
+- [x] **The Pixel (FA6C20303860)** came back on USB around noon on the 7th. The Android driver's real-phone tests pass on it (reading the screen, screenshots, the Calculator, typing, the video). During a Claude Code run on it, Pinky saw your finger on its screen and paused the agent, as designed.
 - [ ] **The Mi 10 Pro keeps its screen on while charging**: Developer options › Stay awake is on (`stay_on_while_plugged_in=15`). Pinky did not set it; one of the other tools on the phone may have. Turn it off if you share the burn-in worry: Pinky wakes the phone when a step needs it and, on Android 13 and later, works on a background display while the phone stays off and locked.
 - [ ] **Quit other phone tools** that hold the phones (AndroMeld, iPhone-use).
 - [ ] **Unlock the Mac and keep the screen on**: a locked Mac does not draw windows.
@@ -45,7 +45,7 @@ Ask: *"On my Mi 10 Pro, open Settings and turn on Airplane mode."*
 
 ## 4. Android: companion, background work, unlock, files, Wi-Fi
 
-- [ ] **Companion app.** The Mi's page shows *Update Pinky Companion* (the Mi has round one's build, signed with another key). Click it with the phone at hand: the phone may ask to allow the install (Play Protect). It installs, replaces the old build and turns its service on for good; Settings › Phones then says *On*.
+- [x] **Companion app.** Updated on the Mi on the 7th with `Pinky companion install` (build 130, replacing round one's build signed with another key); its service is on, next to Mika's. *(checked)* Claude Code then worked out 8 × 9 in the Mi's Calculator on a background display in 38 s ($0.21, about 1.4 s a tap), and the Calculator task you had open went back to the main screen at the end.
 - [ ] **Background work** (Android 13 and later, on by default; Settings › Phones › Work in the background): during a task the mirror shows the agent's own display, with a switch to the phone's screen; the phone's screen can stay off and locked. *(checked on the Android 16 emulator: Claude Code used the Clock while the phone was off and locked, with screenshots from the display's video, and the task was recorded)*
 - [ ] **Unlock from the computer.** Settings › Phones › the Mi › Save PIN…, then lock the phone and start a task: the card offers **Unlock with Touch ID**. A wrong PIN is tried once, never again. *(checked through the gateway on the emulator with a test PIN; Touch ID itself needs you)*
 - [ ] **Files.** Ask: *"Put a text file named hello.txt with 'hi' in my Mi's Pinky folder."* The agent uses `phone_files`; the file appears in the phone's `Pinky/` folder (and in `~/Library/Application Support/Pinky/files/<phone>/`).
@@ -89,7 +89,7 @@ open build/pinky/darwin-arm64/Pinky.app --args --fake    # quit the real Pinky f
 
 ## Not done, and why
 
-- **Developer ID signing and notarization**: the app is signed ad hoc, which runs on this Mac only. You have a Developer ID certificate: `make app MACOS_SIGN="Developer ID Application: …"` signs with it; notarizing needs your Apple account (`xcrun notarytool`).
+- **Notarization**: `make release` signs with the NATURAL SELECTION LABS Developer ID (checked: hardened runtime, timestamp, FFmpeg loads from the app) and notarizes, once you store the notarytool profile: `xcrun notarytool store-credentials pinky-notary --apple-id diygod@rss3.io --team-id 492J8Q67PF`.
 - **An Intel or universal build**: only Apple silicon is built.
 - **Background displays on Android 10**: apps run there, but nothing on them can be read before Android 11, so Pinky does not offer background work on the Pixel. Android 11 and 12 are not verified and default to the main screen.
 - **Things that need a person**: Touch ID and Windows Hello prompts, a real Wi-Fi pairing, unlocking the iPhone, a finger on the Mi during a task.
