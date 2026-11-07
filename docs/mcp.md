@@ -308,7 +308,7 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 
 ## Limits
 
-- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper. With the helper, everything works; reading the screen takes 0.5 to 3 s.
+- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper. With the helper, everything works; reading the screen takes 0.5 to 3 s, and about 7 s on a home screen.
 
 | Limit | Value |
 | --- | --- |

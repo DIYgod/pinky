@@ -113,3 +113,38 @@ func (s *Store) BackgroundDevices(ctx context.Context) (map[string]bool, error) 
 	}
 	return out, rows.Err()
 }
+
+// SetDeviceConnection saves how Pinky connects to a phone; an empty way
+// removes the choice (the driver's own rule applies).
+func (s *Store) SetDeviceConnection(ctx context.Context, deviceID, way string) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if way == "" {
+		_, err := s.db.ExecContext(ctx, `DELETE FROM device_connections WHERE device_id = ?`, deviceID)
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO device_connections (device_id, way) VALUES (?, ?)
+		ON CONFLICT(device_id) DO UPDATE SET way=excluded.way`, deviceID, way)
+	return err
+}
+
+// DeviceConnections returns how the person chose to connect each phone, by
+// phone. Phones without a choice are left out.
+func (s *Store) DeviceConnections(ctx context.Context) (map[string]string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	rows, err := s.db.QueryContext(ctx, `SELECT device_id, way FROM device_connections`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var id, way string
+		if err := rows.Scan(&id, &way); err != nil {
+			return nil, err
+		}
+		out[id] = way
+	}
+	return out, rows.Err()
+}
