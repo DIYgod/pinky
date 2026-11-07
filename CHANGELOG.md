@@ -1,8 +1,8 @@
 # Changelog
 
-What changed in each version of Pinky, newest first. After an update, Pinky shows the entries newer than the version that ran before.
+What changed for people in each release of Pinky, newest first. Each release is a `## <version> (<YYYY-MM-DD>)` heading with short bullets; notes not released yet wait under `## Unreleased`.
 
-## 0.1.0 (2026-11-07)
+## Unreleased
 
-- First preview: agents use real iPhones and Android phones over MCP while you watch, approve risky steps, take over and review what happened.
-- Pinky checks for new versions, updates itself when you're not using it, and updates Pinky Companion on your Android phones.
+- Pinky keeps itself up to date: it tells you when a new version is out and what changed, installs it by itself when you're not using it (Settings › Advanced › Update automatically), and shows what's new afterwards.
+- Pinky Companion on your Android phones is updated by itself while the phone is free, and its service stays on.

@@ -4,7 +4,7 @@ How Pinky keeps itself and its Android companion app current, and tells the pers
 
 ## The feed
 
-`latest.json` in the newest release of `update.Repo` (`DIYgod/pinky-releases`, one constant): `https://github.com/DIYgod/pinky-releases/releases/latest/download/latest.json`. `PINKY_UPDATE_FEED` overrides the whole URL (tests, a staging feed); plain HTTP is accepted only from this computer.
+`latest.json` in the newest release of `update.Repo` (`DIYgod/pinky`, one constant; the release pipeline publishes there, see `docs/RELEASING.md` on its branch): `https://github.com/DIYgod/pinky/releases/latest/download/latest.json`. The repository must be public. `PINKY_UPDATE_FEED` overrides the whole URL (tests, a staging feed); plain HTTP is accepted only from this computer.
 
 ```json
 {
@@ -13,10 +13,10 @@ How Pinky keeps itself and its Android companion app current, and tells the pers
   "date": "2026-11-07T10:00:00Z",
   "notes": "- Markdown, shown on the update card",
   "assets": {
-    "darwin-arm64": {"url": "https://…/Pinky-2026.1107.2-arm64.zip", "sha256": "<64 hex>", "size": 41234567},
-    "darwin-amd64": {"url": "…", "sha256": "…", "size": 0},
-    "windows-amd64": {"url": "…/Pinky-2026.1107.2-setup.exe", "sha256": "…", "size": 0},
-    "linux-amd64": {"url": "…", "sha256": "…", "size": 0}
+    "darwin-arm64": {"url": "https://github.com/DIYgod/pinky/releases/download/v2026.1107.2/pinky-2026.1107.2-darwin-arm64.zip", "sha256": "<64 hex>", "size": 41234567},
+    "darwin-amd64": {"url": "…/pinky-2026.1107.2-darwin-amd64.zip", "sha256": "…", "size": 0},
+    "windows-amd64": {"url": "…/pinky-2026.1107.2-windows-amd64.zip", "sha256": "…", "size": 0},
+    "linux-amd64": {"url": "…/pinky-2026.1107.2-linux-amd64.tar.gz", "sha256": "…", "size": 0}
   }
 }
 ```
@@ -93,7 +93,7 @@ The install (`BundleInstaller`):
 
 ## Open questions
 
-- **For the release pipeline:** the feed's repository (`update.Repo`), the asset names and formats (zip for macOS; the Windows installer; what Linux gets), that the macOS zip is of the stapled app, and that `CHANGELOG.md` follows the heading format. Releases should keep `latest` pointing at the newest stable release, since the feed URL follows it. The repository must be public: Pinky fetches without credentials. On 2026-11-07 it did not exist yet; the feed answered 404, which the app logs and otherwise ignores.
+- **For the release pipeline:** the feed's repository (`update.Repo`), the asset names and formats (zip for macOS; the Windows installer; what Linux gets), that the macOS zip is of the stapled app, and that `CHANGELOG.md` follows the heading format. Releases should keep `latest` pointing at the newest stable release, since the feed URL follows it. The repository must be public: Pinky fetches without credentials. On 2026-11-07 there was no release yet (and `DIYgod/pinky` was private), so the feed answered 404, which the app logs and otherwise ignores.
 - **Agents during a restart:** an agent connected over HTTP (Settings › Agents › Remote agents) loses its session when the app restarts; its MCP client has to connect again. Agents on `pinky mcp` reconnect (above).
-- **The releases repository:** the release session's work in progress moves releases from `DIYgod/pinky-releases` to `DIYgod/pinky`; `update.Repo` must name the same repository, and it must be public.
+- **The releases repository:** `update.Repo` is `DIYgod/pinky`, as the release pipeline's `docs/RELEASING.md` says; it must stay in step with the pipeline's `defaultReleasesRepo`, and the repository must be public.
 - **Windows:** the silent install above.

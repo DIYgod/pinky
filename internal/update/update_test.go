@@ -70,7 +70,7 @@ const feedJSON = `{
   "date": "2026-11-07T10:00:00Z",
   "notes": "- Faster mirroring\n- Pinky updates itself",
   "assets": {
-    "darwin-arm64": {"url": "https://github.com/DIYgod/pinky-releases/releases/download/v2026.1107.2/Pinky-2026.1107.2-arm64.zip", "sha256": "%s", "size": 42},
+    "darwin-arm64": {"url": "https://github.com/DIYgod/pinky/releases/download/v2026.1107.2/pinky-2026.1107.2-darwin-arm64.zip", "sha256": "%s", "size": 42},
     "darwin-amd64": {"url": "http://example.com/Pinky.zip", "sha256": "%s", "size": 42},
     "windows-amd64": {"url": "https://example.com/Pinky-Setup.exe", "sha256": "abc", "size": 42},
     "linux-amd64": {"url": "https://example.com/pinky.tar.gz", "sha256": "%s", "size": 0}
@@ -113,10 +113,10 @@ func TestParseFeed(t *testing.T) {
 
 func TestFeedURL(t *testing.T) {
 	t.Setenv(FeedEnv, "")
-	if got := FeedURL(); got != "https://github.com/DIYgod/pinky-releases/releases/latest/download/latest.json" {
+	if got := FeedURL(); got != "https://github.com/DIYgod/pinky/releases/latest/download/latest.json" {
 		t.Errorf("FeedURL = %s", got)
 	}
-	if got := ReleasePage("v2026.1107.2"); got != "https://github.com/DIYgod/pinky-releases/releases/tag/v2026.1107.2" {
+	if got := ReleasePage("v2026.1107.2"); got != "https://github.com/DIYgod/pinky/releases/tag/v2026.1107.2" {
 		t.Errorf("ReleasePage = %s", got)
 	}
 	t.Setenv(FeedEnv, "http://127.0.0.1:9/latest.json")
