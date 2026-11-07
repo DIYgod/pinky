@@ -79,3 +79,24 @@ func TestClassifyBouncer(t *testing.T) {
 	}
 	_ = errors.Is(nil, driver.ErrLocked)
 }
+
+// TestClassifyFingerprintBouncer tells the alternate bouncer of an
+// under-display fingerprint sensor (the Mi 10 Pro's) from a PIN pad.
+func TestClassifyFingerprintBouncer(t *testing.T) {
+	sys := "com.android.systemui"
+	b := classifyBouncer([]lockNode{
+		{pkg: sys, id: sys + ":id/udfps_touch_overlay", enabled: true},
+		{pkg: sys, id: sys + ":id/alternate_bouncer", enabled: true},
+		{pkg: sys, id: sys + ":id/alternate_bouncer_udfps_icon_view", enabled: true},
+	})
+	if b.kind != bouncerNone || !b.fingerprint {
+		t.Errorf("the fingerprint screen: %+v", b)
+	}
+	pad := []lockNode{{pkg: sys, id: sys + ":id/pinEntry", password: true, focused: true, enabled: true}}
+	for i := 0; i < 10; i++ {
+		pad = append(pad, lockNode{pkg: sys, id: sys + ":id/key" + string(rune('0'+i)), text: string(rune('0' + i)), enabled: true})
+	}
+	if b := classifyBouncer(pad); b.kind != bouncerPIN || b.fingerprint {
+		t.Errorf("the PIN pad: %+v", b)
+	}
+}

@@ -229,7 +229,6 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 	if err != nil || b.kind != bouncerNone {
 		return b, err
 	}
-	d.cfg.logf("android: %s: no PIN pad after dismiss-keyguard; swiping up", d.info.ID)
 	w, h, err := d.naturalSize(ctx)
 	if err != nil {
 		return bouncer{}, err
@@ -240,8 +239,23 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 	} else {
 		w, h = min(w, h), max(w, h)
 	}
+	if b.fingerprint {
+		// The alternate bouncer waits for a finger on the sensor at the
+		// bottom; a tap away from it brings up the PIN pad.
+		d.cfg.logf("android: %s: the lock screen asks for a fingerprint; tapping above the sensor for the PIN pad", d.info.ID)
+		tap := func(l *live) error { return l.tap(ctx, screen.Point{X: w / 2, Y: h * 30 / 100}, 0) }
+		if err := d.withInput(ctx, false, tap); err != nil {
+			return bouncer{}, err
+		}
+		if b, err = d.waitBouncer(ctx, bouncerWait); err != nil || b.kind != bouncerNone {
+			return b, err
+		}
+	}
+	// A swipe up, starting above where under-display fingerprint sensors
+	// sit: one that starts on the sensor goes to the sensor instead.
+	d.cfg.logf("android: %s: no PIN pad after dismiss-keyguard; swiping up", d.info.ID)
 	swipe := func(l *live) error {
-		return l.swipe(ctx, screen.Point{X: w / 2, Y: h * 85 / 100}, screen.Point{X: w / 2, Y: h * 35 / 100}, 250*time.Millisecond)
+		return l.swipe(ctx, screen.Point{X: w / 2, Y: h * 70 / 100}, screen.Point{X: w / 2, Y: h * 25 / 100}, 250*time.Millisecond)
 	}
 	if err := d.withInput(ctx, false, swipe); err != nil {
 		return bouncer{}, err
@@ -275,7 +289,8 @@ func (d *Device) waitBouncer(ctx context.Context, max time.Duration) (bouncer, e
 		if err != nil {
 			return bouncer{}, err
 		}
-		if b.kind != bouncerNone || time.Now().After(deadline) {
+		// The fingerprint screen will not turn into the PIN pad by itself.
+		if b.kind != bouncerNone || b.fingerprint || time.Now().After(deadline) {
 			return b, nil
 		}
 	}
@@ -327,6 +342,10 @@ func (k bouncerKind) String() string {
 type bouncer struct {
 	kind    bouncerKind
 	enabled bool // false while the phone refuses attempts
+	// fingerprint: the alternate bouncer shows, which asks for a finger on
+	// an under-display sensor instead of the PIN (phones with one, such as
+	// the Mi 10 Pro). A tap away from the sensor brings up the PIN pad.
+	fingerprint bool
 }
 
 // lockNode is the part of a tree node that classifyBouncer looks at, from
@@ -366,7 +385,10 @@ var (
 	pinEntryIDs      = []string{"pinEntry", "pin_entry"}
 	passwordEntryIDs = []string{"passwordEntry", "password_entry"}
 	patternIDs       = []string{"lockPatternView", "lock_pattern_view"}
-	pinKeyIDs        = []string{"key0", "key1", "key2", "key3", "key4", "key5", "key6", "key7", "key8", "key9", "digit_text"}
+	// The alternate bouncer of phones with an under-display fingerprint
+	// sensor (Android 13+).
+	fingerprintIDs = []string{"alternate_bouncer", "alternate_bouncer_udfps_icon_view", "udfps_touch_overlay"}
+	pinKeyIDs      = []string{"key0", "key1", "key2", "key3", "key4", "key5", "key6", "key7", "key8", "key9", "digit_text"}
 )
 
 // classifyBouncer finds the lock screen's credential view among the
@@ -377,9 +399,13 @@ func classifyBouncer(nodes []lockNode) bouncer {
 	var pinEntry, passEntry, pattern, field *lockNode
 	keys := 0
 	keysEnabled := 0
+	fingerprint := false
 	for i := range nodes {
 		n := &nodes[i]
 		name := idName(n.id)
+		if hasName(name, fingerprintIDs) {
+			fingerprint = true
+		}
 		switch {
 		case hasName(name, pinEntryIDs):
 			pinEntry = n
@@ -409,7 +435,7 @@ func classifyBouncer(nodes []lockNode) bouncer {
 	case field != nil:
 		return bouncer{kind: bouncerPassword, enabled: field.enabled}
 	}
-	return bouncer{kind: bouncerNone}
+	return bouncer{kind: bouncerNone, fingerprint: fingerprint}
 }
 
 func hasName(name string, names []string) bool {
