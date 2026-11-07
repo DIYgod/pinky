@@ -397,9 +397,10 @@ func refusedText(err error) bool {
 
 // typeCompanion writes text with the companion into the focused field of
 // a display, or else into the field under the last tap there (tap
-// returns it). It returns done=false when the companion refused and the
-// caller should type another way.
-func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, l *live, text string, append, submit bool, display int, tap func() (screen.Point, bool)) (bool, error) {
+// returns it), and presses Enter with enter when Submit was asked and the
+// companion could not submit. It returns done=false when the companion
+// refused and the caller should type another way.
+func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, text string, append, submit bool, display int, tap func() (screen.Point, bool), enter func() error) (bool, error) {
 	o := companion.SetTextOptions{Append: append, Submit: submit, Display: display}
 	res, err := c.SetText(ctx, companion.Target{}, text, o)
 	if refusedText(err) {
@@ -410,7 +411,7 @@ func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, l *live
 	switch {
 	case err == nil:
 		if submit && !res.Submitted {
-			return true, l.key(keycodeEnter, 0)
+			return true, enter()
 		}
 		return true, nil
 	case refusedText(err):

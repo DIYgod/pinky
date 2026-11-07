@@ -196,7 +196,7 @@ func (b *Background) Tap(ctx context.Context, p screen.Point, opt driver.TapOpti
 	if opt.LongPress {
 		hold = b.d.longPressHold(ctx)
 	}
-	err := b.l.tap(ctx, p, hold)
+	err := b.l.input(func() error { return b.l.tap(ctx, p, hold) })
 	if err == nil {
 		b.mu.Lock()
 		b.tapPoint, b.tapAt = p, time.Now()
@@ -218,12 +218,12 @@ func (b *Background) recentTap() (screen.Point, bool) {
 // Swipe implements driver.Device.
 func (b *Background) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
 	b.d.used()
-	return b.l.swipe(ctx, from, to, dur)
+	return b.l.input(func() error { return b.l.swipe(ctx, from, to, dur) })
 }
 
 // Touch implements driver.Toucher.
 func (b *Background) Touch(ctx context.Context, a driver.TouchAction, p screen.Point) error {
-	return b.l.touch(ctx, a, p)
+	return b.l.input(func() error { return b.l.touch(ctx, a, p) })
 }
 
 // Type implements driver.Device. With a companion that reads other
@@ -233,11 +233,13 @@ func (b *Background) Touch(ctx context.Context, a driver.TouchAction, p screen.P
 func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	b.d.used()
 	if c := b.d.companionClient(ctx); c != nil && b.d.comp.displays() {
-		if done, err := b.d.typeCompanion(ctx, c, b.l, text, opt.Append, opt.Submit, b.display, b.recentTap); done {
+		enter := func() error { return b.l.input(func() error { return b.l.key(keycodeEnter, 0) }) }
+		if done, err := b.d.typeCompanion(ctx, c, text, opt.Append, opt.Submit, b.display, b.recentTap, enter); done {
 			return err
 		}
 	}
-	return b.l.typeText(ctx, text, opt, plainASCII(text) && b.d.keysReachField(ctx))
+	keys := plainASCII(text) && b.d.keysReachField(ctx)
+	return b.l.input(func() error { return b.l.typeText(ctx, text, opt, keys) })
 }
 
 // Key implements driver.Device.
@@ -246,7 +248,7 @@ func (b *Background) Key(ctx context.Context, k driver.Key) error {
 	if !ok {
 		return fmt.Errorf("android: key %q: %w", k, driver.ErrUnsupported)
 	}
-	return b.l.key(code, 0)
+	return b.l.input(func() error { return b.l.key(code, 0) })
 }
 
 // Launch implements driver.Device: the app starts on the virtual display.

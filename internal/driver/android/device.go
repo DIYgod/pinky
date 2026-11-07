@@ -120,23 +120,24 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 	if d.closed {
 		return nil, errors.New("android: device closed")
 	}
-	if l := d.main; l != nil {
-		if !l.ended() {
-			if want == nil || l.video && sameVideo(l.opt, *want) {
-				return l, nil
-			}
-			d.cfg.logf("android: %s: restarting the session for new stream options", d.info.ID)
-			l.close(errors.New("android: session restarted with new options"))
-		} else {
-			d.noteVideoFailureLocked(l)
-		}
+	if l := d.main; l != nil && l.ended() {
+		d.noteVideoFailureLocked(l)
 	}
 	noVideo := d.noVideo != ""
 	if want != nil && noVideo {
+		// Refuse before touching the running session, which input uses.
 		if time.Since(d.noVideoAt) < videoRetry {
 			return nil, fmt.Errorf("android: the phone's video encoder fails (%s): %w", d.noVideo, driver.ErrUnsupported)
 		}
 		noVideo = false // try again
+	}
+	if l := d.main; l != nil && !l.ended() {
+		if want == nil || l.video && sameVideo(l.opt, *want) {
+			return l, nil
+		}
+		d.cfg.logf("android: %s: restarting the session for new stream options", d.info.ID)
+		// After the gesture in progress, so that no tap is cut off.
+		l.replace(errors.New("android: session restarted with new options"))
 	}
 	opt := d.baseOptions()
 	if want != nil {
@@ -291,9 +292,50 @@ type live struct {
 	settle settleTracker
 	stats  streamStats
 
+	// Input runs one gesture at a time, and a restart waits for the one in
+	// progress: closing the sockets drops control messages the server has
+	// not read yet, which loses taps.
+	inputMu   sync.Mutex
+	lastInput atomic.Int64 // Unix nanoseconds when the last gesture ended
+	replaced  atomic.Bool  // the device closed it for a new session
+
 	done chan struct{}
 	once sync.Once
 	err  error
+}
+
+// errReplaced means the device replaced the session before a gesture
+// began: nothing was sent, so the gesture can go to the new session.
+var errReplaced = errors.New("android: session replaced")
+
+// inputGrace is how long a session stays open after its last gesture
+// before the device replaces it, so the server processes that gesture.
+const inputGrace = 150 * time.Millisecond
+
+// input runs one gesture (a tap, a swipe, a key, typing) on the session.
+func (l *live) input(f func() error) error {
+	l.inputMu.Lock()
+	defer l.inputMu.Unlock()
+	if l.replaced.Load() {
+		return errReplaced
+	}
+	err := f()
+	l.lastInput.Store(time.Now().UnixNano())
+	return err
+}
+
+// replace closes the session for a new one, once the gesture in progress
+// has ended and the server has had time to process it.
+func (l *live) replace(why error) {
+	l.inputMu.Lock()
+	defer l.inputMu.Unlock()
+	if last := l.lastInput.Load(); last != 0 {
+		if wait := inputGrace - time.Since(time.Unix(0, last)); wait > 0 {
+			time.Sleep(wait)
+		}
+	}
+	l.replaced.Store(true)
+	l.close(why)
 }
 
 func startLive(ctx context.Context, cfg *Config, c *adb.Client, serial string, opt scrcpy.Options,

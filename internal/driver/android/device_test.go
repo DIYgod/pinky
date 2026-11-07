@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -40,9 +41,24 @@ func openTestDevice(t *testing.T) (*Device, context.Context) {
 		t.Fatal(err)
 	}
 	if locked {
-		t.Skip("the phone is locked; leaving it alone")
+		// Emulators are Pinky's own: unlock them with their test PIN.
+		pin := os.Getenv("PINKY_TEST_PIN")
+		if pin == "" || !strings.HasPrefix(serial, "emulator-") {
+			t.Skip("the phone is locked; leaving it alone")
+		}
+		if err := d.Unlock(ctx, pin); err != nil {
+			t.Fatalf("unlock the emulator: %v", err)
+		}
 	}
 	return d, ctx
+}
+
+// envInt reads a positive number from the environment.
+func envInt(name string, def int) int {
+	if v, err := strconv.Atoi(os.Getenv(name)); err == nil && v > 0 {
+		return v
+	}
+	return def
 }
 
 // act runs an action, waits for the screen to settle and paces like a person.

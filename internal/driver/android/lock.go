@@ -67,7 +67,7 @@ func (d *Device) wakeNow(ctx context.Context, l *live) error {
 // pressWakeup presses KEYCODE_WAKEUP and waits up to 2 s for the screen.
 func (d *Device) pressWakeup(ctx context.Context, l *live) error {
 	d.cfg.logf("android: %s: screen is off, waking it", d.info.ID)
-	if err := l.key(keycodeWakeup, 0); err != nil {
+	if err := l.input(func() error { return l.key(keycodeWakeup, 0) }); err != nil {
 		return err
 	}
 	deadline := time.Now().Add(2 * time.Second)
@@ -139,7 +139,9 @@ func (d *Device) Unlock(ctx context.Context, pin string) error {
 	case !b.enabled:
 		return fmt.Errorf("android: the phone does not take a PIN right now (too many attempts); nothing was entered: %w", driver.ErrLocked)
 	}
-	if err := enterPIN(ctx, l, pin, digits); err != nil {
+	// One gesture: a session restart waits for the whole PIN, and a PIN
+	// that was not sent at all goes to the new session.
+	if err := d.withInput(ctx, false, func(l *live) error { return enterPIN(ctx, l, pin, digits) }); err != nil {
 		return err
 	}
 	// Some phones unlock as soon as the last digit is right; Enter would
@@ -151,7 +153,7 @@ func (d *Device) Unlock(ctx context.Context, pin string) error {
 		d.markAwake()
 		return nil
 	}
-	if err := l.key(keycodeEnter, 0); err != nil {
+	if err := d.withInput(ctx, false, func(l *live) error { return l.key(keycodeEnter, 0) }); err != nil {
 		return err
 	}
 	deadline := time.Now().Add(unlockVerify)
@@ -238,7 +240,10 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 	} else {
 		w, h = min(w, h), max(w, h)
 	}
-	if err := l.swipe(ctx, screen.Point{X: w / 2, Y: h * 85 / 100}, screen.Point{X: w / 2, Y: h * 35 / 100}, 250*time.Millisecond); err != nil {
+	swipe := func(l *live) error {
+		return l.swipe(ctx, screen.Point{X: w / 2, Y: h * 85 / 100}, screen.Point{X: w / 2, Y: h * 35 / 100}, 250*time.Millisecond)
+	}
+	if err := d.withInput(ctx, false, swipe); err != nil {
 		return bouncer{}, err
 	}
 	b, err = d.waitBouncer(ctx, bouncerWait)
