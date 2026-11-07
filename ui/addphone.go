@@ -150,12 +150,14 @@ func (a *app) addQR(c *mg.Context) {
 		a.pairConnectForm(c)
 	case st.form:
 		heading(c, locales.PairingCodeTitle(), locales.PairingCodeDetail())
+		a.wirelessPath(c)
 		a.pairCodeForm(c)
 	default:
 		if st.state == "" {
 			a.startPairing()
 		}
 		heading(c, locales.PairingTitle(), locales.PairingQRDetail())
+		a.wirelessPath(c)
 		mg.Box(c).AlignSelf(mg.Center).Padding(6).Radius(16).Background(hex("#ffffff")).Border(1, p.line).Children(func() {
 			if st.code != nil {
 				qrView(c, st.code, 208)

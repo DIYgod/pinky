@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -215,8 +216,15 @@ func TestAddAndroidUSBPermission(t *testing.T) {
 		State: driver.StateNeedsSetup, Detail: "This computer has no permission to use the phone over USB (missing udev rules? user is in the plugdev group)."}})
 	tt := mg.NewTester(func(c *mg.Context) { ta.addPhonePage(c) }, 1280, 820)
 	tt.Frame()
-	if !hasText(tt, locales.CheckUSBPermission()) || !hasText(tt, locales.CheckUSBPermissionNote()) {
-		t.Errorf("no udev help: %q", tt.Texts())
+	if runtime.GOOS == "linux" {
+		if !hasText(tt, locales.CheckUSBPermission()) || !hasText(tt, locales.CheckUSBPermissionNote()) {
+			t.Errorf("no udev help: %q", tt.Texts())
+		}
+		return
+	}
+	// Elsewhere (a Windows phone without a USB driver) the driver's words say why.
+	if !hasText(tt, locales.CheckUSBNotReady()) || !hasText(tt, "missing udev rules") {
+		t.Errorf("no help for a phone the computer cannot use yet: %q", tt.Texts())
 	}
 }
 

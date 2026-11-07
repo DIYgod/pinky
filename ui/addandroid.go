@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"runtime"
 	"time"
 
 	mg "github.com/egoist/mygo/ui"
@@ -93,8 +94,9 @@ func (a *app) addAndroid(c *mg.Context) {
 			}
 		})
 		guideRow(c, 3, locales.AddAndroidStepPlug(), plug, func() {
-			guideText(c, locales.AddAndroidStepPlugDetail())
-			allowSketch(c)
+			always, allow := b.prompt()
+			guideText(c, locales.AddAndroidStepPlugDetail(allow))
+			allowSketch(c, always, allow)
 			a.plugStatus(c, d)
 		})
 		guideRow(c, 4, locales.AddAndroidStepCheck(), check, func() {
@@ -216,17 +218,33 @@ func (a *app) plugStatus(c *mg.Context, d *gateway.DeviceView) {
 		} else {
 			c.After(time.Second)
 		}
-	case d.Info.State == driver.StateNeedsSetup:
+	case d.Info.State == driver.StateNeedsSetup && runtime.GOOS == "linux":
 		guideProblem(c, locales.CheckUSBPermission(), d.Info.Detail)
 		guideNote(c, locales.CheckUSBPermissionNote())
+	case d.Info.State == driver.StateNeedsSetup:
+		// Windows lists a phone whose USB debugging has no driver.
+		guideProblem(c, locales.CheckUSBNotReady(), d.Info.Detail)
 	case d.Info.State == driver.StateOffline:
 		guideProblem(c, locales.AddAndroidOffline(d.Info.Name), d.Info.Detail)
 	}
 }
 
+// prompt returns the check box and the button of the brand's "Allow USB
+// debugging?" prompt.
+func (b brand) prompt() (always, allow string) {
+	always, allow = locales.AddAndroidSketchAlways(), locales.AddAndroidSketchAllow()
+	if b.promptAlways != nil {
+		always = b.promptAlways()
+	}
+	if b.promptAllow != nil {
+		allow = b.promptAllow()
+	}
+	return always, allow
+}
+
 // allowSketch draws the prompt the phone shows, so the person knows it
 // when it comes: a drawing, not a screenshot.
-func allowSketch(c *mg.Context) {
+func allowSketch(c *mg.Context, always, allow string) {
 	p := pal(c)
 	mg.Column(c).Width(268).Padding(14, 16, 10, 16).Radius(16).Background(p.panel).Border(1, p.line2).Gap(8).Margin(2, 0, 2, 0).
 		Role(mg.RoleImage).Label(locales.AddAndroidSketchLabel()).Children(func() {
@@ -239,13 +257,20 @@ func allowSketch(c *mg.Context) {
 			mg.Box(c).Size(15, 15).Radius(4).Background(p.accent).Center().Shrink(0).Children(func() {
 				mg.Icon(c, icCheck).FontSize(11).TextColor(p.white)
 			})
-			mg.Text(c, locales.AddAndroidSketchAlways()).FontSize(12.5).Grow(1).MinWidth(0)
+			mg.Text(c, always).FontSize(12.5).Grow(1).MinWidth(0)
 		})
 		mg.Row(c).Gap(18).Justify(mg.End).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, locales.AddAndroidSketchCancel()).FontSize(13).TextColor(p.ink3)
 			mg.Box(c).Padding(3, 10).Radius(8).Border(2, p.brand).Children(func() {
-				mg.Text(c, locales.AddAndroidSketchAllow()).FontSize(13).FontWeight(700).TextColor(p.accentInk)
+				mg.Text(c, allow).FontSize(13).FontWeight(700).TextColor(p.accentInk)
 			})
 		})
 	})
+}
+
+// wirelessPath shows where Wireless debugging is on the brand of phone the
+// Android steps show, for pairing over Wi-Fi.
+func (a *app) wirelessPath(c *mg.Context) {
+	b := brandByID(nonEmpty(a.droid.brand, "other"))
+	menuPath(c, b.dev()+" › "+locales.GuideWirelessDebugging(), "")
 }

@@ -224,9 +224,15 @@
   "@addAndroidStepPlug": {
     "description": "Add phone › Android, step 3's title."
   },
-  "addAndroidStepPlugDetail": "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap Allow:",
+  "addAndroidStepPlugDetail": "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap {button}:",
   "@addAndroidStepPlugDetail": {
-    "description": "Add phone › Android, step 3: above a drawing of Android's \"Allow USB debugging?\" prompt."
+    "description": "Add phone › Android, step 3: above a drawing of the phone's \"Allow USB debugging?\" prompt. button is the prompt's button, as the phone's maker words it (Allow, or OK on HUAWEI and HONOR phones).",
+    "placeholders": {
+      "button": {
+        "type": "String",
+        "example": "Allow"
+      }
+    }
   },
   "addAndroidStepUSB": "Turn on USB debugging",
   "@addAndroidStepUSB": {
@@ -570,6 +576,14 @@
   "@checkCompanionOff": {
     "description": "The checkup, Pinky Companion: its service is off; a Turn on button follows."
   },
+  "checkCompanionOffHuawei": "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky Companion, and allow it to run in the background.",
+  "@checkCompanionOffHuawei": {
+    "description": "The checkup, Pinky Companion, on a HUAWEI or HONOR phone whose app's service is off. App launch and Manage automatically are Huawei's names: use those of its Simplified Chinese settings."
+  },
+  "checkCompanionOffOppo": "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, allow background activity.",
+  "@checkCompanionOffOppo": {
+    "description": "The checkup, Pinky Companion, on an OPPO, OnePlus or realme phone whose app's service is off. Use ColorOS's Simplified Chinese names."
+  },
   "checkCompanionOffOther": "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky Companion, tap ⋮ › Allow restricted settings, then turn it on again.",
   "@checkCompanionOffOther": {
     "description": "The checkup, Pinky Companion, on other phones whose app's service is off. Allow restricted settings is Android's own name: use that of Android's Simplified Chinese settings."
@@ -642,7 +656,7 @@
   "@checkInputFail": {
     "description": "The checkup, tapping and typing: failed for another reason; the system's words follow."
   },
-  "checkInputOppo": "In Developer options, turn on “Disable permission monitoring”, then unplug the phone and plug it in again.",
+  "checkInputOppo": "In Developer options, turn on “Disable permission monitoring”, then restart the phone.",
   "@checkInputOppo": {
     "description": "The checkup, tapping and typing, on an OPPO, OnePlus or realme phone. Disable permission monitoring is the name of ColorOS's switch: use the name of its Simplified Chinese settings."
   },
@@ -713,6 +727,10 @@
   "checkScreenTitle": "Seeing the screen",
   "@checkScreenTitle": {
     "description": "The checkup: the item for screenshots and the live picture."
+  },
+  "checkUSBNotReady": "This computer can't use the phone over USB yet.",
+  "@checkUSBNotReady": {
+    "description": "The checkup and Add phone: an Android phone listed as needing setup on macOS or Windows (on Windows: its USB debugging has no driver); the system's words follow."
   },
   "checkUSBPermission": "This computer isn't allowed to open the phone's USB connection.",
   "@checkUSBPermission": {
@@ -836,6 +854,10 @@
   "@companionAllowHint": {
     "description": "The Pinky Companion card: under the progress bar while the app installs, and in small type under the buttons before."
   },
+  "companionAllowHintOppo": "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account.",
+  "@companionAllowHintOppo": {
+    "description": "The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme phone, while Pinky installs the app: what to do on the phone. Continue installing is the button of ColorOS's page: use its Simplified Chinese name."
+  },
   "companionAllowHintXiaomi": "On the phone, tap Install within 10 seconds; keep it unlocked.",
   "@companionAllowHintXiaomi": {
     "description": "The Pinky Companion card and the checkup, on a Xiaomi phone, while Pinky installs the app: what to do on the phone. Install is the button of Xiaomi's prompt: use its Simplified Chinese name."
@@ -890,7 +912,7 @@
       }
     }
   },
-  "companionErrSettingsOppo": "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, then try again.",
+  "companionErrSettingsOppo": "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, restart the phone, then try again.",
   "@companionErrSettingsOppo": {
     "description": "The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme phone: turning on the app's service failed because permission monitoring is on. Use ColorOS's Simplified Chinese name for the switch."
   },
@@ -1336,13 +1358,29 @@
   "@guideHonorAbout": {
     "description": "Add phone › Android, step 1 on HONOR phones: where the item to tap 7 times is. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
   },
+  "guideHonorAboutNote": "Only the phone's owner can turn it on: not in a second user or a private space.",
+  "@guideHonorAboutNote": {
+    "description": "Add phone › Android, step 1 on HONOR phones: a note under the steps."
+  },
   "guideHonorDev": "Settings › System & updates › Developer options",
   "@guideHonorDev": {
     "description": "Add phone › Android, step 2 on HONOR phones: where Developer options is once it is on. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
   },
-  "guideHonorNote": "If the phone asks what to use USB for, pick File transfer.",
+  "guideHonorNote": "If the phone asks what to use USB for, pick Transfer files.",
   "@guideHonorNote": {
     "description": "Add phone › Android, step 2 on HONOR phones: a note under the switches."
+  },
+  "guideHonorPromptAlways": "Always allow from this computer",
+  "@guideHonorPromptAlways": {
+    "description": "Add phone › Android, step 3 on HONOR phones: the check box of HONOR's prompt to allow USB debugging. Use HONOR's Simplified Chinese words."
+  },
+  "guideHonorSwitchCharge": "Allow ADB debugging in charge only mode",
+  "@guideHonorSwitchCharge": {
+    "description": "Add phone › Android, step 2 on HONOR phones: HONOR's switch that keeps USB debugging on. Use the name of HONOR's Simplified Chinese settings, as written there."
+  },
+  "guideHonorSwitchChargeWhy": "Turn this on first: without it, HONOR turns USB debugging off again after a while, or when you unplug the phone.",
+  "@guideHonorSwitchChargeWhy": {
+    "description": "Add phone › Android, step 2 on HONOR phones: why to turn on the charge-only switch, before USB debugging."
   },
   "guideHonorTap": "Build number",
   "@guideHonorTap": {
@@ -1352,7 +1390,7 @@
   "@guideHuaweiAbout": {
     "description": "Add phone › Android, step 1 on HUAWEI phones: where the item to tap 7 times is. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
   },
-  "guideHuaweiAboutNote": "Phones on HarmonyOS NEXT (HarmonyOS 5 and later) run no Android apps and have no USB debugging for Android: Pinky can't use them.",
+  "guideHuaweiAboutNote": "On HarmonyOS 2 to 4, tap HarmonyOS version. Phones on HarmonyOS 5 or later (HarmonyOS NEXT) run no Android and have no USB debugging for it: Pinky can't use them. Only the phone's owner can turn Developer options on: not in PrivateSpace, a second user or Student mode.",
   "@guideHuaweiAboutNote": {
     "description": "Add phone › Android, step 1 on HUAWEI phones: a note under the steps."
   },
@@ -1360,17 +1398,29 @@
   "@guideHuaweiDev": {
     "description": "Add phone › Android, step 2 on HUAWEI phones: where Developer options is once it is on. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
   },
-  "guideHuaweiNote": "If the phone asks what to use USB for, pick File transfer.",
+  "guideHuaweiNote": "If the phone asks what to use USB for, pick Transfer files. If installing Pinky Companion is blocked, turn off Enhanced protection in Settings › System & updates › Pure mode.",
   "@guideHuaweiNote": {
     "description": "Add phone › Android, step 2 on HUAWEI phones: a note under the switches."
   },
+  "guideHuaweiPromptAlways": "Always allow from this computer",
+  "@guideHuaweiPromptAlways": {
+    "description": "Add phone › Android, step 3 on HUAWEI phones: the check box of Huawei's prompt to allow USB debugging. Use Huawei's Simplified Chinese words."
+  },
   "guideHuaweiSwitchCharge": "Allow ADB debugging in charge only mode",
   "@guideHuaweiSwitchCharge": {
-    "description": "Add phone › Android, step 2 on HUAWEI and HONOR phones: the switch that keeps USB debugging working when the USB connection is set to charging only."
+    "description": "Add phone › Android, step 2 on HUAWEI phones: the switch Huawei asks to turn on with USB debugging. Use the name of Huawei's Simplified Chinese settings, as written there."
   },
-  "guideHuaweiSwitchChargeWhy": "Keeps USB debugging working when the phone only charges over USB.",
+  "guideHuaweiSwitchChargeWhy": "Turn this on first: Huawei asks for it with USB debugging, which otherwise may not turn on or may turn itself off.",
   "@guideHuaweiSwitchChargeWhy": {
-    "description": "Add phone › Android, step 2 on HUAWEI and HONOR phones: why to turn on that switch."
+    "description": "Add phone › Android, step 2 on HUAWEI phones: why to turn on the charge-only switch, before USB debugging."
+  },
+  "guideHuaweiSwitchMonitor": "Monitor apps installed by ADB",
+  "@guideHuaweiSwitchMonitor": {
+    "description": "Add phone › Android, step 2 on HUAWEI phones: the switch that makes each install over USB wait for a confirmation. Use the name of Huawei's Simplified Chinese settings."
+  },
+  "guideHuaweiSwitchMonitorWhy": "While it's on, each install waits for you to confirm it on the phone.",
+  "@guideHuaweiSwitchMonitorWhy": {
+    "description": "Add phone › Android, step 2 on HUAWEI phones: why to turn Monitor apps installed by ADB off."
   },
   "guideHuaweiTap": "Build number",
   "@guideHuaweiTap": {
@@ -1380,25 +1430,25 @@
   "@guideOppoAbout": {
     "description": "Add phone › Android, step 1 on OPPO, OnePlus and realme phones: where the item to tap 7 times is. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
   },
-  "guideOppoAboutNote": "On older versions: Settings › About phone › Version.",
+  "guideOppoAboutNote": "On some versions the item is named Version number; on older ones it's under Settings › About phone › Version.",
   "@guideOppoAboutNote": {
     "description": "Add phone › Android, step 1 on OPPO, OnePlus and realme phones: a note under the steps."
   },
-  "guideOppoDev": "Settings › System settings › Developer options",
+  "guideOppoDev": "Settings › System & update › Developer options",
   "@guideOppoDev": {
     "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: where Developer options is once it is on. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
   },
-  "guideOppoNote": "On older versions, Developer options is under Settings › Additional settings.",
+  "guideOppoNote": "On ColorOS 13 and 14, Developer options is under Settings › Additional settings, at the bottom; you can also search Settings for it. If the phone asks what to use USB for, pick File transfer.",
   "@guideOppoNote": {
     "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: a note under the switches."
   },
   "guideOppoSwitchMonitor": "Disable permission monitoring",
   "@guideOppoSwitchMonitor": {
-    "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: ColorOS's switch, near the bottom of Developer options."
+    "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: ColorOS's switch at the bottom of Developer options. Use the name of ColorOS's Simplified Chinese settings."
   },
-  "guideOppoSwitchMonitorWhy": "Lets Pinky tap, type and turn on its companion app. It's near the bottom of Developer options.",
+  "guideOppoSwitchMonitorWhy": "Lets Pinky turn on its companion app. It's at the bottom of Developer options; restart the phone after turning it on. On ColorOS and OxygenOS 16 it shows only in English, as Disable system optimization: switch the phone's language to English, turn it on, tap Turn on anyway, and switch back.",
   "@guideOppoSwitchMonitorWhy": {
-    "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to turn on Disable permission monitoring."
+    "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to turn on Disable permission monitoring, and how to find it on version 16. Disable system optimization and Turn on anyway are the English names the phone shows: keep them in English."
   },
   "guideOppoTap": "Build number",
   "@guideOppoTap": {
@@ -1439,6 +1489,10 @@
   "guidePixelTap": "Build number",
   "@guidePixelTap": {
     "description": "Add phone › Android, step 1 on Google Pixel phones: the item to tap 7 times, as the phone names it."
+  },
+  "guidePromptOK": "OK",
+  "@guidePromptOK": {
+    "description": "Add phone › Android, step 3 on HONOR and HUAWEI phones: the button of their prompt to allow USB debugging."
   },
   "guideSamsungAbout": "Settings › About phone › Software information",
   "@guideSamsungAbout": {
@@ -1495,6 +1549,10 @@
   "guideVivoTap": "Build number",
   "@guideVivoTap": {
     "description": "Add phone › Android, step 1 on vivo and iQOO phones: the item to tap 7 times, as the phone names it."
+  },
+  "guideWirelessDebugging": "Wireless debugging",
+  "@guideWirelessDebugging": {
+    "description": "Pair over Wi-Fi: the last item of the menu path to Android's Wireless debugging, under the brand's way to Developer options. Use the name of Android's Simplified Chinese settings."
   },
   "guideXiaomiAbout": "Settings › About phone",
   "@guideXiaomiAbout": {

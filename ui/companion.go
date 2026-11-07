@@ -214,8 +214,11 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 // allowHint says what to do on the phone while Pinky installs its app:
 // Xiaomi's phones ask for each install and give up after 10 seconds.
 func (a *app) allowHint(id string) string {
-	if a.chk.family[id] == "xiaomi" {
+	switch a.chk.family[id] {
+	case "xiaomi":
 		return locales.CompanionAllowHintXiaomi()
+	case "oppo":
+		return locales.CompanionAllowHintOppo()
 	}
 	return locales.CompanionAllowHint()
 }

@@ -26,6 +26,10 @@ type brand struct {
 	switches func() []brandSwitch
 	// note is anything else the maker's phones need.
 	note func() string
+	// promptAlways and promptAllow are the check box and the button of
+	// the phone's "Allow USB debugging?" prompt, where the maker words
+	// them its own way; nil for Android's.
+	promptAlways, promptAllow func() string
 }
 
 // brandSwitch is a switch to set in Developer options, or elsewhere when
@@ -60,14 +64,22 @@ func brands() []brand {
 			aboutNote: locales.GuideVivoAboutNote, dev: locales.GuideVivoDev, note: locales.GuideVivoNote,
 			switches: func() []brandSwitch { return []brandSwitch{usb} }},
 		{id: "honor", name: locales.BrandHonor, about: locales.GuideHonorAbout, tap: locales.GuideHonorTap,
-			aboutNote: none, dev: locales.GuideHonorDev, note: locales.GuideHonorNote,
+			aboutNote: locales.GuideHonorAboutNote, dev: locales.GuideHonorDev, note: locales.GuideHonorNote,
+			promptAlways: locales.GuideHonorPromptAlways, promptAllow: locales.GuidePromptOK,
 			switches: func() []brandSwitch {
-				return []brandSwitch{usb, {name: locales.GuideHuaweiSwitchCharge(), why: locales.GuideHuaweiSwitchChargeWhy()}}
+				// The charge-only switch first: without it, HONOR turns USB
+				// debugging off again after a while.
+				return []brandSwitch{{name: locales.GuideHonorSwitchCharge(), why: locales.GuideHonorSwitchChargeWhy()}, usb}
 			}},
 		{id: "huawei", name: locales.BrandHuawei, about: locales.GuideHuaweiAbout, tap: locales.GuideHuaweiTap,
 			aboutNote: locales.GuideHuaweiAboutNote, dev: locales.GuideHuaweiDev, note: locales.GuideHuaweiNote,
+			promptAlways: locales.GuideHuaweiPromptAlways, promptAllow: locales.GuidePromptOK,
 			switches: func() []brandSwitch {
-				return []brandSwitch{usb, {name: locales.GuideHuaweiSwitchCharge(), why: locales.GuideHuaweiSwitchChargeWhy()}}
+				return []brandSwitch{
+					{name: locales.GuideHuaweiSwitchCharge(), why: locales.GuideHuaweiSwitchChargeWhy()},
+					usb,
+					{name: locales.GuideHuaweiSwitchMonitor(), why: locales.GuideHuaweiSwitchMonitorWhy(), off: true},
+				}
 			}},
 		{id: "samsung", name: locales.BrandSamsung, about: locales.GuideSamsungAbout, tap: locales.GuideSamsungTap,
 			aboutNote: none, dev: locales.GuideSamsungDev, note: locales.GuideSamsungNote,

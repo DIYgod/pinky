@@ -263,6 +263,7 @@ func parseProps(out string) map[string]string {
 func familyOf(props map[string]string) (family, system string) {
 	maker := strings.ToLower(props["ro.product.manufacturer"])
 	brand := strings.ToLower(props["ro.product.brand"])
+	magic := props["ro.build.version.magic"]
 	switch {
 	case props["ro.lineage.build.version"] != "":
 		// First: LineageOS keeps the maker's name, not its system.
@@ -279,7 +280,9 @@ func familyOf(props map[string]string) (family, system string) {
 		switch {
 		case brand == "realme" || maker == "realme":
 			return "oppo", join("realme UI", strings.TrimPrefix(props["ro.build.version.realmeui"], "V"))
-		case brand == "oneplus" || maker == "oneplus":
+		case (brand == "oneplus" || maker == "oneplus") && props["ro.oplus.image.system_ext.area"] != "domestic":
+			// OxygenOS 13 and later have no property of their own: a
+			// OnePlus phone sold outside China runs it.
 			return "oppo", join("OxygenOS", nonEmpty(props["ro.oxygen.version"], v))
 		}
 		return "oppo", join("ColorOS", v)
@@ -291,15 +294,28 @@ func familyOf(props map[string]string) (family, system string) {
 			id = ""
 		}
 		return "vivo", id
-	case props["ro.build.version.magic"] != "":
-		return "honor", join("MagicOS", versionAfter(props["ro.build.version.magic"], "_"))
-	case props["hw_sc.build.platform.version"] != "" || props["ro.build.version.emui"] != "":
+	case strings.HasPrefix(magic, "MagicOS_") || strings.HasPrefix(magic, "MagicUI_") || props["msc.config.magic.version"] != "":
+		// HONOR since it left Huawei: "MagicOS_9.0.0", "MagicUI_6.1.0".
+		name := "MagicOS"
+		if strings.HasPrefix(magic, "MagicUI_") {
+			name = "Magic UI"
+		}
+		v := props["msc.config.magic.version"]
+		if strings.Contains(magic, "_") {
+			v = versionAfter(magic, "_")
+		}
+		return "honor", join(name, v)
+	case props["hw_sc.build.platform.version"] != "" || props["ro.build.version.emui"] != "" || magic != "":
 		family := "huawei"
 		if maker == "honor" || brand == "honor" {
 			family = "honor"
 		}
-		if v := props["hw_sc.build.platform.version"]; v != "" {
+		if v := harmonyOS(props); v != "" {
 			return family, join("HarmonyOS", v)
+		}
+		if magic != "" {
+			// HONOR phones made while it was Huawei's: "3.0.1".
+			return "honor", join("Magic UI", magic)
 		}
 		return family, join("EMUI", versionAfter(props["ro.build.version.emui"], "_"))
 	case props["ro.build.version.oneui"] != "":
@@ -310,6 +326,30 @@ func familyOf(props map[string]string) (family, system string) {
 		return "pixel", ""
 	}
 	return "", ""
+}
+
+// harmonyOS returns the HarmonyOS version (2 to 4, the ones that run
+// Android apps) a Huawei phone runs, or "" for EMUI. hw_sc's version shows
+// on EMUI 11 to 15 too, so the version in the build's display id decides:
+// "LIO-AL00 4.2.0.120(SP1C00E100R5P4)" is HarmonyOS 4.2, "ICL-L29
+// 15.0.0.209(C636E3R1P1)" EMUI 15.
+func harmonyOS(props map[string]string) string {
+	v := props["hw_sc.build.platform.version"]
+	if v == "" {
+		return ""
+	}
+	f := strings.Fields(props["ro.huawei.build.display.id"])
+	if len(f) < 2 {
+		if props["ro.build.ohos.devicetype"] != "" {
+			return v
+		}
+		return ""
+	}
+	major, err := strconv.Atoi(strings.SplitN(f[1], ".", 2)[0])
+	if err != nil || major < 2 || major > 4 {
+		return ""
+	}
+	return v
 }
 
 // emulator reports whether the properties are an Android emulator's.

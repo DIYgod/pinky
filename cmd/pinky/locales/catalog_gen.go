@@ -665,20 +665,24 @@ func (msgs Messages) AddAndroidStepPlug() string {
 	return Catalog.Format(msgs.locale, "addAndroidStepPlug", nil)
 }
 
-// AddAndroidStepPlugDetail says "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap Allow:"
+// AddAndroidStepPlugDetail says "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap {butt…"
 // in the language the app shows.
 //
-// Add phone › Android, step 3: above a drawing of Android's "Allow USB
-// debugging?" prompt.
-func AddAndroidStepPlugDetail() string { return In(i18n.Locale()).AddAndroidStepPlugDetail() }
+// Add phone › Android, step 3: above a drawing of the phone's "Allow USB
+// debugging?" prompt. button is the prompt's button, as the phone's maker
+// words it (Allow, or OK on HUAWEI and HONOR phones).
+func AddAndroidStepPlugDetail(button string) string {
+	return In(i18n.Locale()).AddAndroidStepPlugDetail(button)
+}
 
-// AddAndroidStepPlugDetail says "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap Allow:"
+// AddAndroidStepPlugDetail says "Plug the phone into this computer with a USB cable that carries data. When the phone asks, tick the box and tap {butt…"
 // in the language of msgs.
 //
-// Add phone › Android, step 3: above a drawing of Android's "Allow USB
-// debugging?" prompt.
-func (msgs Messages) AddAndroidStepPlugDetail() string {
-	return Catalog.Format(msgs.locale, "addAndroidStepPlugDetail", nil)
+// Add phone › Android, step 3: above a drawing of the phone's "Allow USB
+// debugging?" prompt. button is the prompt's button, as the phone's maker
+// words it (Allow, or OK on HUAWEI and HONOR phones).
+func (msgs Messages) AddAndroidStepPlugDetail(button string) string {
+	return Catalog.Format(msgs.locale, "addAndroidStepPlugDetail", map[string]any{"button": button})
 }
 
 // AddAndroidStepUSB says "Turn on USB debugging"
@@ -1769,6 +1773,40 @@ func (msgs Messages) CheckCompanionOff() string {
 	return Catalog.Format(msgs.locale, "checkCompanionOff", nil)
 }
 
+// CheckCompanionOffHuawei says "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky Companion, and allow…"
+// in the language the app shows.
+//
+// The checkup, Pinky Companion, on a HUAWEI or HONOR phone whose app's
+// service is off. App launch and Manage automatically are Huawei's names:
+// use those of its Simplified Chinese settings.
+func CheckCompanionOffHuawei() string { return In(i18n.Locale()).CheckCompanionOffHuawei() }
+
+// CheckCompanionOffHuawei says "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky Companion, and allow…"
+// in the language of msgs.
+//
+// The checkup, Pinky Companion, on a HUAWEI or HONOR phone whose app's
+// service is off. App launch and Manage automatically are Huawei's names:
+// use those of its Simplified Chinese settings.
+func (msgs Messages) CheckCompanionOffHuawei() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOffHuawei", nil)
+}
+
+// CheckCompanionOffOppo says "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, …"
+// in the language the app shows.
+//
+// The checkup, Pinky Companion, on an OPPO, OnePlus or realme phone whose
+// app's service is off. Use ColorOS's Simplified Chinese names.
+func CheckCompanionOffOppo() string { return In(i18n.Locale()).CheckCompanionOffOppo() }
+
+// CheckCompanionOffOppo says "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, …"
+// in the language of msgs.
+//
+// The checkup, Pinky Companion, on an OPPO, OnePlus or realme phone whose
+// app's service is off. Use ColorOS's Simplified Chinese names.
+func (msgs Messages) CheckCompanionOffOppo() string {
+	return Catalog.Format(msgs.locale, "checkCompanionOffOppo", nil)
+}
+
 // CheckCompanionOffOther says "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky Companion, tap ⋮ › Allow restr…"
 // in the language the app shows.
 //
@@ -2013,7 +2051,7 @@ func (msgs Messages) CheckInputFail() string {
 	return Catalog.Format(msgs.locale, "checkInputFail", nil)
 }
 
-// CheckInputOppo says "In Developer options, turn on “Disable permission monitoring”, then unplug the phone and plug it in again."
+// CheckInputOppo says "In Developer options, turn on “Disable permission monitoring”, then restart the phone."
 // in the language the app shows.
 //
 // The checkup, tapping and typing, on an OPPO, OnePlus or realme phone.
@@ -2021,7 +2059,7 @@ func (msgs Messages) CheckInputFail() string {
 // name of its Simplified Chinese settings.
 func CheckInputOppo() string { return In(i18n.Locale()).CheckInputOppo() }
 
-// CheckInputOppo says "In Developer options, turn on “Disable permission monitoring”, then unplug the phone and plug it in again."
+// CheckInputOppo says "In Developer options, turn on “Disable permission monitoring”, then restart the phone."
 // in the language of msgs.
 //
 // The checkup, tapping and typing, on an OPPO, OnePlus or realme phone.
@@ -2287,6 +2325,24 @@ func CheckScreenTitle() string { return In(i18n.Locale()).CheckScreenTitle() }
 // The checkup: the item for screenshots and the live picture.
 func (msgs Messages) CheckScreenTitle() string {
 	return Catalog.Format(msgs.locale, "checkScreenTitle", nil)
+}
+
+// CheckUSBNotReady says "This computer can't use the phone over USB yet."
+// in the language the app shows.
+//
+// The checkup and Add phone: an Android phone listed as needing setup on
+// macOS or Windows (on Windows: its USB debugging has no driver); the
+// system's words follow.
+func CheckUSBNotReady() string { return In(i18n.Locale()).CheckUSBNotReady() }
+
+// CheckUSBNotReady says "This computer can't use the phone over USB yet."
+// in the language of msgs.
+//
+// The checkup and Add phone: an Android phone listed as needing setup on
+// macOS or Windows (on Windows: its USB debugging has no driver); the
+// system's words follow.
+func (msgs Messages) CheckUSBNotReady() string {
+	return Catalog.Format(msgs.locale, "checkUSBNotReady", nil)
 }
 
 // CheckUSBPermission says "This computer isn't allowed to open the phone's USB connection."
@@ -2625,6 +2681,26 @@ func (msgs Messages) CompanionAllowHint() string {
 	return Catalog.Format(msgs.locale, "companionAllowHint", nil)
 }
 
+// CompanionAllowHintOppo says "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account."
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
+// phone, while Pinky installs the app: what to do on the phone. Continue
+// installing is the button of ColorOS's page: use its Simplified Chinese
+// name.
+func CompanionAllowHintOppo() string { return In(i18n.Locale()).CompanionAllowHintOppo() }
+
+// CompanionAllowHintOppo says "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account."
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
+// phone, while Pinky installs the app: what to do on the phone. Continue
+// installing is the button of ColorOS's page: use its Simplified Chinese
+// name.
+func (msgs Messages) CompanionAllowHintOppo() string {
+	return Catalog.Format(msgs.locale, "companionAllowHintOppo", nil)
+}
+
 // CompanionAllowHintXiaomi says "On the phone, tap Install within 10 seconds; keep it unlocked."
 // in the language the app shows.
 //
@@ -2779,7 +2855,7 @@ func (msgs Messages) CompanionErrSettings(detail string) string {
 	return Catalog.Format(msgs.locale, "companionErrSettings", map[string]any{"detail": detail})
 }
 
-// CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, t…"
+// CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, r…"
 // in the language the app shows.
 //
 // The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
@@ -2787,7 +2863,7 @@ func (msgs Messages) CompanionErrSettings(detail string) string {
 // is on. Use ColorOS's Simplified Chinese name for the switch.
 func CompanionErrSettingsOppo() string { return In(i18n.Locale()).CompanionErrSettingsOppo() }
 
-// CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, t…"
+// CompanionErrSettingsOppo says "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, r…"
 // in the language of msgs.
 //
 // The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme
@@ -4093,6 +4169,20 @@ func (msgs Messages) GuideHonorAbout() string {
 	return Catalog.Format(msgs.locale, "guideHonorAbout", nil)
 }
 
+// GuideHonorAboutNote says "Only the phone's owner can turn it on: not in a second user or a private space."
+// in the language the app shows.
+//
+// Add phone › Android, step 1 on HONOR phones: a note under the steps.
+func GuideHonorAboutNote() string { return In(i18n.Locale()).GuideHonorAboutNote() }
+
+// GuideHonorAboutNote says "Only the phone's owner can turn it on: not in a second user or a private space."
+// in the language of msgs.
+//
+// Add phone › Android, step 1 on HONOR phones: a note under the steps.
+func (msgs Messages) GuideHonorAboutNote() string {
+	return Catalog.Format(msgs.locale, "guideHonorAboutNote", nil)
+}
+
 // GuideHonorDev says "Settings › System & updates › Developer options"
 // in the language the app shows.
 //
@@ -4111,18 +4201,68 @@ func (msgs Messages) GuideHonorDev() string {
 	return Catalog.Format(msgs.locale, "guideHonorDev", nil)
 }
 
-// GuideHonorNote says "If the phone asks what to use USB for, pick File transfer."
+// GuideHonorNote says "If the phone asks what to use USB for, pick Transfer files."
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on HONOR phones: a note under the switches.
 func GuideHonorNote() string { return In(i18n.Locale()).GuideHonorNote() }
 
-// GuideHonorNote says "If the phone asks what to use USB for, pick File transfer."
+// GuideHonorNote says "If the phone asks what to use USB for, pick Transfer files."
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on HONOR phones: a note under the switches.
 func (msgs Messages) GuideHonorNote() string {
 	return Catalog.Format(msgs.locale, "guideHonorNote", nil)
+}
+
+// GuideHonorPromptAlways says "Always allow from this computer"
+// in the language the app shows.
+//
+// Add phone › Android, step 3 on HONOR phones: the check box of HONOR's
+// prompt to allow USB debugging. Use HONOR's Simplified Chinese words.
+func GuideHonorPromptAlways() string { return In(i18n.Locale()).GuideHonorPromptAlways() }
+
+// GuideHonorPromptAlways says "Always allow from this computer"
+// in the language of msgs.
+//
+// Add phone › Android, step 3 on HONOR phones: the check box of HONOR's
+// prompt to allow USB debugging. Use HONOR's Simplified Chinese words.
+func (msgs Messages) GuideHonorPromptAlways() string {
+	return Catalog.Format(msgs.locale, "guideHonorPromptAlways", nil)
+}
+
+// GuideHonorSwitchCharge says "Allow ADB debugging in charge only mode"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HONOR phones: HONOR's switch that keeps
+// USB debugging on. Use the name of HONOR's Simplified Chinese settings, as
+// written there.
+func GuideHonorSwitchCharge() string { return In(i18n.Locale()).GuideHonorSwitchCharge() }
+
+// GuideHonorSwitchCharge says "Allow ADB debugging in charge only mode"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HONOR phones: HONOR's switch that keeps
+// USB debugging on. Use the name of HONOR's Simplified Chinese settings, as
+// written there.
+func (msgs Messages) GuideHonorSwitchCharge() string {
+	return Catalog.Format(msgs.locale, "guideHonorSwitchCharge", nil)
+}
+
+// GuideHonorSwitchChargeWhy says "Turn this on first: without it, HONOR turns USB debugging off again after a while, or when you unplug the phone."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HONOR phones: why to turn on the
+// charge-only switch, before USB debugging.
+func GuideHonorSwitchChargeWhy() string { return In(i18n.Locale()).GuideHonorSwitchChargeWhy() }
+
+// GuideHonorSwitchChargeWhy says "Turn this on first: without it, HONOR turns USB debugging off again after a while, or when you unplug the phone."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HONOR phones: why to turn on the
+// charge-only switch, before USB debugging.
+func (msgs Messages) GuideHonorSwitchChargeWhy() string {
+	return Catalog.Format(msgs.locale, "guideHonorSwitchChargeWhy", nil)
 }
 
 // GuideHonorTap says "Build number"
@@ -4159,13 +4299,13 @@ func (msgs Messages) GuideHuaweiAbout() string {
 	return Catalog.Format(msgs.locale, "guideHuaweiAbout", nil)
 }
 
-// GuideHuaweiAboutNote says "Phones on HarmonyOS NEXT (HarmonyOS 5 and later) run no Android apps and have no USB debugging for Android: Pinky can…"
+// GuideHuaweiAboutNote says "On HarmonyOS 2 to 4, tap HarmonyOS version. Phones on HarmonyOS 5 or later (HarmonyOS NEXT) run no Android and have n…"
 // in the language the app shows.
 //
 // Add phone › Android, step 1 on HUAWEI phones: a note under the steps.
 func GuideHuaweiAboutNote() string { return In(i18n.Locale()).GuideHuaweiAboutNote() }
 
-// GuideHuaweiAboutNote says "Phones on HarmonyOS NEXT (HarmonyOS 5 and later) run no Android apps and have no USB debugging for Android: Pinky can…"
+// GuideHuaweiAboutNote says "On HarmonyOS 2 to 4, tap HarmonyOS version. Phones on HarmonyOS 5 or later (HarmonyOS NEXT) run no Android and have n…"
 // in the language of msgs.
 //
 // Add phone › Android, step 1 on HUAWEI phones: a note under the steps.
@@ -4191,14 +4331,14 @@ func (msgs Messages) GuideHuaweiDev() string {
 	return Catalog.Format(msgs.locale, "guideHuaweiDev", nil)
 }
 
-// GuideHuaweiNote says "If the phone asks what to use USB for, pick File transfer."
+// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky Companion is blocked, turn off Enhanc…"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on HUAWEI phones: a note under the
 // switches.
 func GuideHuaweiNote() string { return In(i18n.Locale()).GuideHuaweiNote() }
 
-// GuideHuaweiNote says "If the phone asks what to use USB for, pick File transfer."
+// GuideHuaweiNote says "If the phone asks what to use USB for, pick Transfer files. If installing Pinky Companion is blocked, turn off Enhanc…"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on HUAWEI phones: a note under the
@@ -4207,38 +4347,88 @@ func (msgs Messages) GuideHuaweiNote() string {
 	return Catalog.Format(msgs.locale, "guideHuaweiNote", nil)
 }
 
+// GuideHuaweiPromptAlways says "Always allow from this computer"
+// in the language the app shows.
+//
+// Add phone › Android, step 3 on HUAWEI phones: the check box of Huawei's
+// prompt to allow USB debugging. Use Huawei's Simplified Chinese words.
+func GuideHuaweiPromptAlways() string { return In(i18n.Locale()).GuideHuaweiPromptAlways() }
+
+// GuideHuaweiPromptAlways says "Always allow from this computer"
+// in the language of msgs.
+//
+// Add phone › Android, step 3 on HUAWEI phones: the check box of Huawei's
+// prompt to allow USB debugging. Use Huawei's Simplified Chinese words.
+func (msgs Messages) GuideHuaweiPromptAlways() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiPromptAlways", nil)
+}
+
 // GuideHuaweiSwitchCharge says "Allow ADB debugging in charge only mode"
 // in the language the app shows.
 //
-// Add phone › Android, step 2 on HUAWEI and HONOR phones: the switch that
-// keeps USB debugging working when the USB connection is set to charging
-// only.
+// Add phone › Android, step 2 on HUAWEI phones: the switch Huawei asks to
+// turn on with USB debugging. Use the name of Huawei's Simplified Chinese
+// settings, as written there.
 func GuideHuaweiSwitchCharge() string { return In(i18n.Locale()).GuideHuaweiSwitchCharge() }
 
 // GuideHuaweiSwitchCharge says "Allow ADB debugging in charge only mode"
 // in the language of msgs.
 //
-// Add phone › Android, step 2 on HUAWEI and HONOR phones: the switch that
-// keeps USB debugging working when the USB connection is set to charging
-// only.
+// Add phone › Android, step 2 on HUAWEI phones: the switch Huawei asks to
+// turn on with USB debugging. Use the name of Huawei's Simplified Chinese
+// settings, as written there.
 func (msgs Messages) GuideHuaweiSwitchCharge() string {
 	return Catalog.Format(msgs.locale, "guideHuaweiSwitchCharge", nil)
 }
 
-// GuideHuaweiSwitchChargeWhy says "Keeps USB debugging working when the phone only charges over USB."
+// GuideHuaweiSwitchChargeWhy says "Turn this on first: Huawei asks for it with USB debugging, which otherwise may not turn on or may turn itself off."
 // in the language the app shows.
 //
-// Add phone › Android, step 2 on HUAWEI and HONOR phones: why to turn on
-// that switch.
+// Add phone › Android, step 2 on HUAWEI phones: why to turn on the
+// charge-only switch, before USB debugging.
 func GuideHuaweiSwitchChargeWhy() string { return In(i18n.Locale()).GuideHuaweiSwitchChargeWhy() }
 
-// GuideHuaweiSwitchChargeWhy says "Keeps USB debugging working when the phone only charges over USB."
+// GuideHuaweiSwitchChargeWhy says "Turn this on first: Huawei asks for it with USB debugging, which otherwise may not turn on or may turn itself off."
 // in the language of msgs.
 //
-// Add phone › Android, step 2 on HUAWEI and HONOR phones: why to turn on
-// that switch.
+// Add phone › Android, step 2 on HUAWEI phones: why to turn on the
+// charge-only switch, before USB debugging.
 func (msgs Messages) GuideHuaweiSwitchChargeWhy() string {
 	return Catalog.Format(msgs.locale, "guideHuaweiSwitchChargeWhy", nil)
+}
+
+// GuideHuaweiSwitchMonitor says "Monitor apps installed by ADB"
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: the switch that makes
+// each install over USB wait for a confirmation. Use the name of Huawei's
+// Simplified Chinese settings.
+func GuideHuaweiSwitchMonitor() string { return In(i18n.Locale()).GuideHuaweiSwitchMonitor() }
+
+// GuideHuaweiSwitchMonitor says "Monitor apps installed by ADB"
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: the switch that makes
+// each install over USB wait for a confirmation. Use the name of Huawei's
+// Simplified Chinese settings.
+func (msgs Messages) GuideHuaweiSwitchMonitor() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiSwitchMonitor", nil)
+}
+
+// GuideHuaweiSwitchMonitorWhy says "While it's on, each install waits for you to confirm it on the phone."
+// in the language the app shows.
+//
+// Add phone › Android, step 2 on HUAWEI phones: why to turn Monitor apps
+// installed by ADB off.
+func GuideHuaweiSwitchMonitorWhy() string { return In(i18n.Locale()).GuideHuaweiSwitchMonitorWhy() }
+
+// GuideHuaweiSwitchMonitorWhy says "While it's on, each install waits for you to confirm it on the phone."
+// in the language of msgs.
+//
+// Add phone › Android, step 2 on HUAWEI phones: why to turn Monitor apps
+// installed by ADB off.
+func (msgs Messages) GuideHuaweiSwitchMonitorWhy() string {
+	return Catalog.Format(msgs.locale, "guideHuaweiSwitchMonitorWhy", nil)
 }
 
 // GuideHuaweiTap says "Build number"
@@ -4275,14 +4465,14 @@ func (msgs Messages) GuideOppoAbout() string {
 	return Catalog.Format(msgs.locale, "guideOppoAbout", nil)
 }
 
-// GuideOppoAboutNote says "On older versions: Settings › About phone › Version."
+// GuideOppoAboutNote says "On some versions the item is named Version number; on older ones it's under Settings › About phone › Version."
 // in the language the app shows.
 //
 // Add phone › Android, step 1 on OPPO, OnePlus and realme phones: a note
 // under the steps.
 func GuideOppoAboutNote() string { return In(i18n.Locale()).GuideOppoAboutNote() }
 
-// GuideOppoAboutNote says "On older versions: Settings › About phone › Version."
+// GuideOppoAboutNote says "On some versions the item is named Version number; on older ones it's under Settings › About phone › Version."
 // in the language of msgs.
 //
 // Add phone › Android, step 1 on OPPO, OnePlus and realme phones: a note
@@ -4291,7 +4481,7 @@ func (msgs Messages) GuideOppoAboutNote() string {
 	return Catalog.Format(msgs.locale, "guideOppoAboutNote", nil)
 }
 
-// GuideOppoDev says "Settings › System settings › Developer options"
+// GuideOppoDev says "Settings › System & update › Developer options"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: where
@@ -4299,7 +4489,7 @@ func (msgs Messages) GuideOppoAboutNote() string {
 // as the phone shows them in Simplified Chinese.
 func GuideOppoDev() string { return In(i18n.Locale()).GuideOppoDev() }
 
-// GuideOppoDev says "Settings › System settings › Developer options"
+// GuideOppoDev says "Settings › System & update › Developer options"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: where
@@ -4309,14 +4499,14 @@ func (msgs Messages) GuideOppoDev() string {
 	return Catalog.Format(msgs.locale, "guideOppoDev", nil)
 }
 
-// GuideOppoNote says "On older versions, Developer options is under Settings › Additional settings."
+// GuideOppoNote says "On ColorOS 13 and 14, Developer options is under Settings › Additional settings, at the bottom; you can also search…"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: a note
 // under the switches.
 func GuideOppoNote() string { return In(i18n.Locale()).GuideOppoNote() }
 
-// GuideOppoNote says "On older versions, Developer options is under Settings › Additional settings."
+// GuideOppoNote says "On ColorOS 13 and 14, Developer options is under Settings › Additional settings, at the bottom; you can also search…"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: a note
@@ -4329,30 +4519,36 @@ func (msgs Messages) GuideOppoNote() string {
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones:
-// ColorOS's switch, near the bottom of Developer options.
+// ColorOS's switch at the bottom of Developer options. Use the name of
+// ColorOS's Simplified Chinese settings.
 func GuideOppoSwitchMonitor() string { return In(i18n.Locale()).GuideOppoSwitchMonitor() }
 
 // GuideOppoSwitchMonitor says "Disable permission monitoring"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones:
-// ColorOS's switch, near the bottom of Developer options.
+// ColorOS's switch at the bottom of Developer options. Use the name of
+// ColorOS's Simplified Chinese settings.
 func (msgs Messages) GuideOppoSwitchMonitor() string {
 	return Catalog.Format(msgs.locale, "guideOppoSwitchMonitor", nil)
 }
 
-// GuideOppoSwitchMonitorWhy says "Lets Pinky tap, type and turn on its companion app. It's near the bottom of Developer options."
+// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on its companion app. It's at the bottom of Developer options; restart the phone after turning it on.…"
 // in the language the app shows.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to
-// turn on Disable permission monitoring.
+// turn on Disable permission monitoring, and how to find it on version 16.
+// Disable system optimization and Turn on anyway are the English names the
+// phone shows: keep them in English.
 func GuideOppoSwitchMonitorWhy() string { return In(i18n.Locale()).GuideOppoSwitchMonitorWhy() }
 
-// GuideOppoSwitchMonitorWhy says "Lets Pinky tap, type and turn on its companion app. It's near the bottom of Developer options."
+// GuideOppoSwitchMonitorWhy says "Lets Pinky turn on its companion app. It's at the bottom of Developer options; restart the phone after turning it on.…"
 // in the language of msgs.
 //
 // Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to
-// turn on Disable permission monitoring.
+// turn on Disable permission monitoring, and how to find it on version 16.
+// Disable system optimization and Turn on anyway are the English names the
+// phone shows: keep them in English.
 func (msgs Messages) GuideOppoSwitchMonitorWhy() string {
 	return Catalog.Format(msgs.locale, "guideOppoSwitchMonitorWhy", nil)
 }
@@ -4523,6 +4719,22 @@ func GuidePixelTap() string { return In(i18n.Locale()).GuidePixelTap() }
 // times, as the phone names it.
 func (msgs Messages) GuidePixelTap() string {
 	return Catalog.Format(msgs.locale, "guidePixelTap", nil)
+}
+
+// GuidePromptOK says "OK"
+// in the language the app shows.
+//
+// Add phone › Android, step 3 on HONOR and HUAWEI phones: the button of
+// their prompt to allow USB debugging.
+func GuidePromptOK() string { return In(i18n.Locale()).GuidePromptOK() }
+
+// GuidePromptOK says "OK"
+// in the language of msgs.
+//
+// Add phone › Android, step 3 on HONOR and HUAWEI phones: the button of
+// their prompt to allow USB debugging.
+func (msgs Messages) GuidePromptOK() string {
+	return Catalog.Format(msgs.locale, "guidePromptOK", nil)
 }
 
 // GuideSamsungAbout says "Settings › About phone › Software information"
@@ -4757,6 +4969,24 @@ func GuideVivoTap() string { return In(i18n.Locale()).GuideVivoTap() }
 // times, as the phone names it.
 func (msgs Messages) GuideVivoTap() string {
 	return Catalog.Format(msgs.locale, "guideVivoTap", nil)
+}
+
+// GuideWirelessDebugging says "Wireless debugging"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the last item of the menu path to Android's Wireless
+// debugging, under the brand's way to Developer options. Use the name of
+// Android's Simplified Chinese settings.
+func GuideWirelessDebugging() string { return In(i18n.Locale()).GuideWirelessDebugging() }
+
+// GuideWirelessDebugging says "Wireless debugging"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the last item of the menu path to Android's Wireless
+// debugging, under the brand's way to Developer options. Use the name of
+// Android's Simplified Chinese settings.
+func (msgs Messages) GuideWirelessDebugging() string {
+	return Catalog.Format(msgs.locale, "guideWirelessDebugging", nil)
 }
 
 // GuideXiaomiAbout says "Settings › About phone"
