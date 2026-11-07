@@ -69,8 +69,10 @@ func (a *app) addPhonePage(c *mg.Context) {
 	// As in the prototype, the wizard has no header: a strip at the top
 	// drags the window.
 	mg.Row(c).Height(32).Shrink(0).Background(p.bg2).DragWindow()
+	// Steps taller than the window scroll inside the card.
+	_, h := c.Size()
 	mg.Column(c).Grow(1).Center().Padding(0, 24, 32, 24).Background(p.bg2).Children(func() {
-		card := mg.Column(c).FillWidth().MaxWidth(470).Padding(32).Radius(16).Background(p.panel).Border(1, p.line).Gap(18).Label(locales.AddPhoneLabel())
+		card := mg.Scroll(c).FillWidth().MaxWidth(470).MaxHeight(max(h-64, 240)).Padding(32).Radius(16).Background(p.panel).Border(1, p.line).Gap(18).Label(locales.AddPhoneLabel())
 		shadow(c, card).Children(func() {
 			mg.Row(c).MinHeight(22).AlignItems(mg.Center).Margin(0, 0, -6, 0).Children(func() {
 				if s.step != "choose" && linkButton(c, locales.AddPhoneBack()).Clicked() {
@@ -142,74 +144,6 @@ func (a *app) addChoose(c *mg.Context) {
 	})
 }
 
-func (a *app) addAndroid(c *mg.Context) {
-	p := pal(c)
-	s := &a.add
-	heading(c, locales.AddPhoneAndroidTitle(), locales.AddPhoneAndroidDetail())
-	d := s.fresh(a, driver.Android)
-	found := d != nil && d.Info.State == driver.StateOnline
-	fix := d != nil && !found && !s.tryAgain
-	statusBox(c, func() {
-		switch {
-		case found:
-			dot(c, p.green, false)
-			mg.Text(c, locales.AddPhoneFound(d.Info.Name)).FontWeight(600)
-		case fix:
-			dot(c, p.amberDot, false)
-			msg := locales.AddPhoneFoundNeedsSetup(d.Info.Name)
-			if d.Info.Detail != "" {
-				msg = locales.AddPhoneFoundBut(d.Info.Name, lowerFirst(d.Info.Detail))
-			}
-			mg.Text(c, msg)
-		default:
-			spinner(c)
-			mg.Text(c, locales.AddPhoneLooking())
-		}
-	})
-	if d != nil && !found && s.tryAgain && d.Info.State != driver.StateOnline {
-		// Looking again; the gateway reports the phone once it is ready.
-		c.After(2_000_000_000)
-		s.tryAgain = false
-	}
-	if fix {
-		mg.Column(c).Padding(16, 18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(10).Children(func() {
-			mg.Text(c, locales.AddPhoneUSBTitle()).FontSize(15).FontWeight(650)
-			mg.Column(c).Gap(6).Role(mg.RoleList).Children(func() {
-				for i, line := range []string{
-					locales.AddPhoneUSBStep1(),
-					locales.AddPhoneUSBStep2(),
-					locales.AddPhoneUSBStep3(),
-				} {
-					mg.Row(c.Key(i)).Gap(8).AlignItems(mg.Start).Role(mg.RoleListItem).Children(func() {
-						mg.Text(c, string(rune('1'+i))+".").Width(14).TextColor(p.ink2)
-						mg.Text(c, line).Grow(1).MinWidth(0)
-					})
-				}
-			})
-			mg.Row(c).Children(func() {
-				if button(c, locales.AddPhoneTryAgain(), btnOpt{}).Clicked() {
-					s.tryAgain = true
-				}
-			})
-		})
-	}
-	if found {
-		mg.Row(c).Children(func() {
-			if button(c, locales.AddPhoneDone(), btnOpt{kind: btnPrimary}).Clicked() {
-				a.selectPhone(d.Info.ID)
-				s.step = ""
-			}
-		})
-		return
-	}
-	mg.Row(c).Children(func() {
-		if linkButton(c, locales.AddPhoneOrWiFi()).Clicked() {
-			s.step = "qr"
-			s.snapshot(a)
-		}
-	})
-}
-
 func (a *app) addQR(c *mg.Context) {
 	p := pal(c)
 	s := &a.add
@@ -223,12 +157,14 @@ func (a *app) addQR(c *mg.Context) {
 		a.pairConnectForm(c)
 	case st.form:
 		heading(c, locales.PairingCodeTitle(), locales.PairingCodeDetail())
+		a.wirelessPath(c)
 		a.pairCodeForm(c)
 	default:
 		if st.state == "" {
 			a.startPairing()
 		}
 		heading(c, locales.PairingTitle(), locales.PairingQRDetail())
+		a.wirelessPath(c)
 		mg.Box(c).AlignSelf(mg.Center).Padding(6).Radius(16).Background(hex("#ffffff")).Border(1, p.line).Children(func() {
 			if st.code != nil {
 				qrView(c, st.code, 208)

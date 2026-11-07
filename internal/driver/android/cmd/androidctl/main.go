@@ -22,6 +22,7 @@
 //	androidctl [-s serial] run [-person] STEP...  (steps with action and settle timings)
 //	androidctl [-s serial] companion-install [-force] (install or update the companion app)
 //	androidctl [-s serial] companion-state
+//	androidctl [-s serial] checkup [-json]   (what the phone needs for Pinky, item by item)
 //	androidctl [-s serial] bg [-app APP] [-out FILE.h264] [-seconds N] [STEP...]
 //	androidctl wifi-search [-seconds N]
 //	androidctl pair-qr FILE.png
@@ -54,6 +55,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
+	"github.com/DIYgod/pinky/internal/driver/android/adb"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -68,7 +70,18 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	cfg := android.Config{}
+	cfg := android.Config{
+		// As the app does: an adb server that runs, or one started with
+		// the adb of the Android SDK, Homebrew, PATH or Pinky
+		// (adb.StartServer; PINKY_ADB names one).
+		StartServer: func(ctx context.Context) error {
+			t, err := adb.StartServer(ctx)
+			if err == nil && t.Path != "" {
+				fmt.Fprintf(os.Stderr, "androidctl: started an adb server with %s (%s, %s)\n", t.Path, t.Source, t.Version)
+			}
+			return err
+		},
+	}
 	if *verbose {
 		cfg.Logf = func(f string, a ...any) { fmt.Fprintf(os.Stderr, "\u00b7 "+f+"\n", a...) }
 	}
@@ -372,6 +385,27 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 			return err
 		}
 		fmt.Println(st)
+		fmt.Fprintf(os.Stderr, "(%v)\n", time.Since(start).Round(time.Millisecond))
+		return nil
+	case "checkup":
+		start := time.Now()
+		cu, err := d.Checkup(ctx)
+		if err != nil {
+			return err
+		}
+		if len(args) > 0 && args[0] == "-json" {
+			enc := json.NewEncoder(os.Stdout)
+			enc.SetIndent("", "  ")
+			return enc.Encode(cu)
+		}
+		fmt.Printf("family %q, system %q\n", cu.Family, cu.System)
+		for _, c := range cu.Checks {
+			fix := ""
+			if c.Fix != "" {
+				fix = " [" + c.Fix + "]"
+			}
+			fmt.Printf("%-5s %-14s %s%s\n", c.Status, c.ID, c.Detail, fix)
+		}
 		fmt.Fprintf(os.Stderr, "(%v)\n", time.Since(start).Round(time.Millisecond))
 		return nil
 	case "bg":

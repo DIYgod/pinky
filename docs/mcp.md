@@ -4,17 +4,58 @@ Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pi
 
 ## Connecting an agent
 
-Settings › Agents › Add an agent shows both commands below for the copy of Pinky that is open, by its own path, with buttons that copy them.
+### With a click
+
+Settings › Agents › Connect an agent lists the agents Pinky finds on this computer, each with Connect, and connects one with a click. Until some agent can reach Pinky (its settings have Pinky, or one has connected), a card in the sidebar offers the same: Connect when Pinky found one agent, Choose… for several, and where to get one (Claude Code, Claude Desktop) when there is none; the Tasks list says no agent is connected.
+
+Connect adds an MCP server named `pinky` to the agent's own settings, which starts this Pinky by its full path with the argument `mcp` (as `/Applications/Pinky.app/Contents/MacOS/Pinky mcp`): no other program can stand in for a path, and agents started from the Dock or the Start menu find it without the terminal's `PATH`.
+
+- Pinky changes nothing until the person clicks Connect (or Update, Fix or Remove) for that agent.
+- Where the agent has a command for its MCP servers, Pinky runs it, found on the `PATH` of the person's login shell and where installers put it: `claude mcp add --scope user pinky -- <path> mcp`, `codex mcp add pinky -- <path> mcp`, `copilot mcp add pinky -- <path> mcp`, `gemini mcp add --scope user pinky <path> mcp`, and `… mcp remove` for Remove. Otherwise Pinky changes the settings file itself, in Pinky's entry only: the rest of the file stays as it was, comments, order and formatting included. Pinky reads the file again after the change and refuses one that would alter anything else, and it leaves a file with a mistake in it alone: Settings says what is wrong where, with Show the file.
+- Before any change Pinky keeps a copy of the file as it was in its data folder, `agents/backups/<agent>/<time>-<file>` (the newest ten for each agent), and Settings offers to show it.
+- It installs Pinky's skill, [SKILL.md](SKILL.md), as `pinky/SKILL.md` in the folder of skills the agent reads: `~/.claude/skills` for Claude Code, `~/.agents/skills` for the agents that share it ([agentskills.io](https://agentskills.io)). Remove takes it out, from `~/.agents/skills` once no agent that reads it has Pinky. A `pinky` skill that is not Pinky's (its front matter names another) stays as it is.
+- An agent is Connected when its entry starts this Pinky (or `pinkyctl`, when that is on the `PATH`) and its skill is this Pinky's. Settings marks an entry that starts a Pinky that is no longer there (the app moved), `pinky` (coreutils' command on many computers, below), another copy of Pinky or something else under the name `pinky`, and an old skill; Update sets it right. The sidebar's card offers Fix for the first two, which leave the agent without Pinky.
+- Settings reads the agents again every 10 s while it shows them, and the card every 30 s, so an agent installed meanwhile shows up.
+
+| Agent | Found by | Settings | Changed with | Skills |
+| --- | --- | --- | --- | --- |
+| Claude Code | `claude`, or `~/.claude.json` | `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json`): `mcpServers`, user scope | `claude mcp add` and `remove`, else the file | `~/.claude/skills` |
+| Claude Desktop | Claude.app, or its folder | Pinky's extension (below); an entry in `claude_desktop_config.json` (`mcpServers`, in `~/Library/Application Support/Claude`, `%APPDATA%\Claude` or MSIX's folder, `~/.config/Claude`) is set right there | opens the extension in Claude Desktop, which asks to install it | — |
+| Codex (CLI, IDE extension, ChatGPT app) | `codex` (also inside ChatGPT.app), or `~/.codex` | `~/.codex/config.toml` (or `$CODEX_HOME`): `[mcp_servers.pinky]` | `codex mcp add` and `remove`, else the file | `~/.agents/skills` |
+| Cursor | Cursor.app, or `~/.cursor/mcp.json` | `~/.cursor/mcp.json`: `mcpServers` | the file | `~/.agents/skills` |
+| VS Code | the app, or its User folder | Copilot's global `~/.copilot/mcp-config.json` (or `$COPILOT_HOME`): `mcpServers`, `"type": "local"`; an entry in VS Code's `User/mcp.json` (`servers`) is set right there | the file | `~/.agents/skills` |
+| Copilot CLI | `copilot` | the same as VS Code | `copilot mcp add` and `remove`, else the file | `~/.agents/skills` |
+| Windsurf, now Devin Desktop | the app, `~/.config/devin`, `devin` or `~/.codeium/windsurf` | Devin's `~/.config/devin/mcp_config.json` (`%APPDATA%\devin`), or Windsurf's `~/.codeium/windsurf/mcp_config.json`: `mcpServers` | the file | `~/.agents/skills`; Windsurf's own `~/.codeium/windsurf/skills` |
+| Gemini CLI | `gemini` (`~/.gemini` is Antigravity's too) | `~/.gemini/settings.json` (or `$GEMINI_CLI_HOME/.gemini`): `mcpServers` | `gemini mcp add` and `remove`, else the file | `~/.agents/skills` |
+
+Claude Code, Codex, Copilot CLI and Gemini CLI read their MCP servers when a session starts, so Settings says to start a new session; Cursor, Windsurf and Claude Desktop's settings file when they open (quit and open them again). VS Code starts a new server at the next message.
+
+Claude Desktop keeps its settings in memory while it runs and writes them back whole, so a change to `claude_desktop_config.json` made while it runs may be lost. Connect therefore installs Pinky as an extension: it writes `Pinky.mcpb` into `<data>/agents/` (the extension below, made to start this Pinky) and opens it in Claude Desktop (`open -b com.anthropic.claudefordesktop` on macOS), which asks the person to install it. Settings then finds it among Claude Desktop's extensions (`Claude Extensions/*/manifest.json` named `pinky`) and shows it connected, or turned off; only Claude Desktop removes it, in Settings › Extensions. An entry that the person added to `claude_desktop_config.json` comes first in Claude Desktop, so Pinky changes that one instead, and says to quit and open Claude Desktop again.
+
+`PINKY_AGENTS_PATH`, for tests of the app, is the whole search path for agents' commands, and leaves out the login shell, the system's application folders and every command outside that path.
+
+Not yet: Antigravity (`~/.gemini/config/mcp_config.json`), opencode, Zed, Kiro, Cline, Factory Droid and Qwen Code; add them by hand. How it is built and what was tried: [notes/agents.md](notes/agents.md).
+
+### Claude Desktop extension
+
+Each release has `pinky-<version>.mcpb`, an [MCP bundle](https://github.com/modelcontextprotocol/mcpb): opened with a double-click, or dragged into Claude Desktop's Settings › Extensions, it installs as the extension Pinky, with no settings file to change. The bundle does not carry Pinky: it starts the Pinky installed on the computer, `/Applications/Pinky.app` or `~/Applications/Pinky.app` on a Mac (then the cask's `pinkyctl`), `%LOCALAPPDATA%\Programs\Pinky\Pinky.exe` on Windows, so install Pinky first. Its setting Pinky takes another path to Pinky's program on a Mac. `go run ./scripts/release mcpb -version <version> -out <file>` makes it; the release workflow adds it to every release. The one Settings › Agents opens names this Pinky's path instead.
+
+### By hand
+
+Settings › Agents › Add an agent by hand shows both commands below for the copy of Pinky that is open, by its own path, with buttons that copy them.
 
 Claude Code:
 
 ```sh
-claude mcp add pinky -- pinkyctl mcp
+claude mcp add --scope user pinky -- pinkyctl mcp
+mkdir -p ~/.claude/skills/pinky && cp docs/SKILL.md ~/.claude/skills/pinky/SKILL.md
 ```
+
+`--scope user` makes Pinky available in every folder; without it, Claude Code adds it to the folder it runs in only.
 
 `pinkyctl` is the command that Homebrew's cask (`brew install --cask diygod/tap/pinky`) and the Linux packages put on the `PATH`. Without them, or for agents started from the Dock or the Start menu, which may not see the terminal's `PATH`, give the app's own executable instead: `/Applications/Pinky.app/Contents/MacOS/Pinky` on a Mac, `Pinky.exe` in `%LOCALAPPDATA%\Programs\Pinky` on Windows, `/opt/pinky/pinky` (the .deb) or `~/.local/pinky.app/pinky` (the .tar.gz's `install.sh`) on Linux.
 
-The command used to be named `pinky`, which is also a coreutils command (on many Macs through Homebrew's coreutils, and on every Linux): an agent set up with `pinky mcp` that reports "Connection closed" runs coreutils' `pinky` (`pinky --version` says GNU coreutils). Set it up again with `pinkyctl mcp` or the app's path.
+The command used to be named `pinky`, which is also a coreutils command (on many Macs through Homebrew's coreutils, and on every Linux): an agent set up with `pinky mcp` that reports "Connection closed" runs coreutils' `pinky` (`pinky --version` says GNU coreutils). Set it up again with `pinkyctl mcp` or the app's path; Settings › Agents marks such an agent and sets it right with Update.
 
 Any client that takes a JSON config:
 
@@ -267,7 +308,7 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 
 ## Limits
 
-- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper. With the helper, everything works; reading the screen takes 0.5 to 3 s.
+- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper. With the helper, everything works; reading the screen takes 0.5 to 3 s, and about 7 s on a home screen.
 
 | Limit | Value |
 | --- | --- |

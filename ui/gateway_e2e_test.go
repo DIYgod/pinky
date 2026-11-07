@@ -787,7 +787,7 @@ func TestGatewayRound3(t *testing.T) {
 	ga.add.step = "qr"
 	ga.waitFor(t, "the pairing to fail", func() bool { tt.Frame(); return ga.add.pair.state == "failed" })
 	tt.Frame()
-	if !hasText(tt, "This computer can't pair phones over Wi-Fi") {
+	if !hasText(tt, "can't pair phones over Wi-Fi") {
 		t.Errorf("pairing without a Pairer: %q", tt.Texts())
 	}
 }

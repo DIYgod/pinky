@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/DIYgod/pinky/internal/driver/android/adb"
 )
 
 // Runner runs adb commands against one device. ExecRunner shells out to the
@@ -95,45 +95,18 @@ func (r *ExecRunner) Install(ctx context.Context, apk string) error {
 	return nil
 }
 
-// FindADB returns the adb to use: $PINKY_ADB, then the adb of an installed
-// Android SDK (so Pinky shares Android Studio's adb server), then adb on
-// PATH.
+// FindADB returns the adb to use: the first that works of the ones the
+// adb package finds (PINKY_ADB, the Android SDK's, so that Pinky shares
+// Android Studio's adb server, Homebrew's, those on PATH, Pinky's own), or
+// adb for PATH to find.
 func FindADB() string {
-	if p := os.Getenv("PINKY_ADB"); p != "" {
+	if p, err := adb.FindADB(); err == nil {
 		return p
 	}
-	name := "adb"
 	if runtime.GOOS == "windows" {
-		name = "adb.exe"
+		return "adb.exe"
 	}
-	var sdks []string
-	for _, env := range []string{"ANDROID_HOME", "ANDROID_SDK_ROOT"} {
-		if v := os.Getenv(env); v != "" {
-			sdks = append(sdks, v)
-		}
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		switch runtime.GOOS {
-		case "darwin":
-			sdks = append(sdks, filepath.Join(home, "Library", "Android", "sdk"))
-		case "linux":
-			sdks = append(sdks, filepath.Join(home, "Android", "Sdk"))
-		case "windows":
-			if v := os.Getenv("LOCALAPPDATA"); v != "" {
-				sdks = append(sdks, filepath.Join(v, "Android", "Sdk"))
-			}
-		}
-	}
-	for _, sdk := range sdks {
-		p := filepath.Join(sdk, "platform-tools", name)
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return p
-		}
-	}
-	if p, err := exec.LookPath(name); err == nil {
-		return p
-	}
-	return name
+	return "adb"
 }
 
 // shellQuote quotes s for the device's sh.

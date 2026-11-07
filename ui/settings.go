@@ -13,6 +13,7 @@ import (
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
+	"github.com/DIYgod/pinky/internal/agents"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -382,6 +383,12 @@ func (a *app) settingsPhones(c *mg.Context) {
 				if d.Features.Background {
 					a.backgroundRow(c, d, true)
 				}
+				a.connectionRows(c, d)
+				mg.Row(c).Padding(4, 0, 0, 0).Children(func() {
+					if linkButton(c, locales.PhoneCheckup()).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
+						a.openCheckup(d)
+					}
+				})
 			})
 		}
 	})
@@ -569,7 +576,13 @@ func (a *app) settingsAgents(c *mg.Context) {
 	}
 	mg.Column(c).Label(locales.SettingsAgentsList()).Children(func() {
 		if len(rows) == 0 {
-			mg.Text(c, locales.SettingsAgentsNone()).TextColor(p.ink2).Padding(10, 0)
+			none := locales.SettingsAgentsNone()
+			for _, st := range a.setup.list {
+				if st.State == agents.Connected {
+					none = locales.SettingsAgentsNoneYet()
+				}
+			}
+			mg.Text(c, none).TextColor(p.ink2).Padding(10, 0)
 		}
 		for i, r := range rows {
 			r := r

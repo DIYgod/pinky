@@ -2,6 +2,30 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1108.5 (2026-11-08)
+
+- Pinky now carries its own adb on macOS, Windows and Linux, so Android phones work without installing Android's platform tools. It still uses the adb you already run, such as Android Studio's or Homebrew's, also when Pinky is opened from the Finder.
+- On Windows, Add phone shows Android phones that lack a USB driver and how to get one; on Linux, it shows the steps that let Pinky reach the phone over USB.
+- Add phone › Android walks you through connecting your phone step by step for its brand, such as Xiaomi, OPPO, vivo, HONOR, HUAWEI, Samsung and Pixel, including each brand's extra switches.
+- Each phone has a checkup that lists what works and how to fix what doesn't, such as Xiaomi's USB debugging (Security settings) or a phone that needs a restart. When adb itself is the problem, Pinky says so first.
+- Pinky finds the agents on your computer, such as Claude Code, Claude Desktop, Codex and Cursor, and connects them with one click, the Pinky skill included. Until one is connected, Pinky offers to do it.
+- Each release includes Pinky's MCP bundle for Claude Desktop, which adds Pinky with a double-click.
+
+## 2026.1108.4 (2026-11-08)
+
+- You can now choose how Pinky connects to each iPhone in Settings › Phones: Automatic, CoreDevice (nothing to install, iOS 27 and later) or the WebDriverAgent helper. Through the helper the iPhone shares no screen, so banking apps that refuse screen sharing (DBS digibank and China Merchants Bank in testing) keep working while Pinky is connected.
+- Unlocking an iPhone from the computer also works through the WebDriverAgent helper.
+- When an iPhone asks for its passcode before the WebDriverAgent helper can start, Pinky says so in Settings and connects once you enter it, instead of starting the helper over and over.
+
+## 2026.1108.3 (2026-11-08)
+
+- On iPhone, alerts and notification banners now reach the agent, and Pinky's code masking and hiding of blocked apps' notifications apply to them.
+- On iPhone, Pinky stops the live picture after 30 seconds when nobody is watching, so banking apps that refuse to run while the screen is shared, and the camera and microphone, work for you again.
+- On iPhone, the app in front is always named by its bundle id, also right after a session starts and while Face ID is on screen, so blocked apps stay blocked.
+- On iPhone, elements keep their numbers between reads, picker wheels read as their values, and rows hidden behind the tab bar are left out.
+- On iPhone, the agent is told when part of the screen, such as some apps' passcode keys, is hidden from screenshots and the mirror.
+- Unlocking an iPhone from the computer swipes again when notifications cover the lock screen.
+
 ## 2026.1108.2 (2026-11-08)
 
 - By default, Pinky now asks only before payments (Settings › Safety › When should agents ask you?). Installs that never changed this setting move to it too; if you changed any safety setting, your choice stays.

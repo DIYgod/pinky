@@ -205,6 +205,11 @@ func (a *API) InstallCompanion(ctx context.Context, deviceID string) error {
 	}
 	a.mu.Lock()
 	d := a.device(deviceID)
+	if d != nil && d.installErr != nil {
+		err := d.installErr
+		a.mu.Unlock()
+		return err
+	}
 	if d != nil {
 		d.companion = driver.CompanionOn
 		a.installs = append(a.installs, deviceID)
@@ -247,6 +252,55 @@ func (a *API) Background(deviceID string) bool {
 	defer a.mu.Unlock()
 	d := a.device(deviceID)
 	return d != nil && d.background
+}
+
+// --- connections ---
+
+// Connections describes how an iPhone can be connected: CoreDevice works
+// (iOS 27), the WebDriverAgent helper is not installed.
+func (a *API) Connections(_ context.Context, deviceID string) (driver.Connections, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	d := a.device(deviceID)
+	if d == nil {
+		return driver.Connections{}, fmt.Errorf("fakeapi: no device %q: %w", deviceID, driver.ErrNotFound)
+	}
+	if d.info.Platform != driver.IOS {
+		return driver.Connections{}, fmt.Errorf("connections: %w", driver.ErrUnsupported)
+	}
+	out := driver.Connections{Chosen: d.way, Ways: []driver.Connection{
+		{ID: driver.ConnectionAuto, Available: true},
+		{ID: "coredevice", Available: true},
+		{ID: "wda", Reason: "not_installed", Detail: "The WebDriverAgent helper is not installed on this iPhone."},
+	}}
+	if d.info.State == driver.StateOnline {
+		out.Current = d.info.Backend
+	}
+	return out, nil
+}
+
+// SetConnection chooses how an iPhone is connected. The helper is not
+// installed, so choosing it leaves the phone needing setup.
+func (a *API) SetConnection(deviceID, way string) error {
+	a.mu.Lock()
+	d := a.device(deviceID)
+	if d == nil {
+		a.mu.Unlock()
+		return fmt.Errorf("fakeapi: no device %q: %w", deviceID, driver.ErrNotFound)
+	}
+	if d.info.Platform != driver.IOS {
+		a.mu.Unlock()
+		return fmt.Errorf("connections: %w", driver.ErrUnsupported)
+	}
+	d.way = way
+	if way == "wda" {
+		d.info.State, d.info.Detail = driver.StateNeedsSetup, "The WebDriverAgent helper is not installed on this iPhone. Install it once from Xcode, or choose another connection in Settings > Phones."
+	} else {
+		d.info.State, d.info.Detail, d.info.Backend = driver.StateOnline, "", "coredevice"
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+	return nil
 }
 
 // AgentStream is the agent's display while a task runs on a phone that

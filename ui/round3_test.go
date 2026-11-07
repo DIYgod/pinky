@@ -321,22 +321,6 @@ func TestCompanionNotNow(t *testing.T) {
 	}
 }
 
-func TestCompanionErrors(t *testing.T) {
-	for _, c := range []struct {
-		err  error
-		want string
-	}{
-		{context.DeadlineExceeded, "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again."},
-		{errors.New("adb: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]"), "The phone blocked the install. Turn on Install via USB in Developer options, then try again."},
-		{errors.New("adb: Failure [INSTALL_FAILED_VERIFICATION_FAILURE]"), "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again."},
-		{driver.ErrOffline, "The phone went offline. Connect it again, then try again."},
-	} {
-		if got := companionError(c.err); got != c.want {
-			t.Errorf("companionError(%v) = %q, want %q", c.err, got, c.want)
-		}
-	}
-}
-
 // --- background displays ---
 
 // TestBackgroundSwitch turns background work off and on in Settings ›

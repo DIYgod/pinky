@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/driver"
@@ -25,18 +25,29 @@ var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
 }
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	c := &adb.Client{}
-	if _, err := c.Version(ctx); err != nil {
-		// No adb server yet: start the one that comes with the Android SDK
-		// or platform tools, if installed.
-		if err := adb.StartServer(ctx); err != nil {
-			return nil, fmt.Errorf("android: no adb server, and starting one failed (install Android platform tools): %w", err)
-		}
-	}
+	var noADB sync.Once
 	return android.NewProvider(android.Config{
-		Client: c,
+		Client: &adb.Client{},
+		// Pinky uses the adb server that runs, or starts one, with the
+		// adb of the Android SDK, Homebrew or PATH, else its own
+		// (adb.StartServer): at the first List, and whenever the server
+		// went away. Without any adb (a build without Pinky's own), it
+		// lists no phones and CheckHost says why.
+		StartServer: func(ctx context.Context) error {
+			t, err := adb.StartServer(ctx)
+			switch {
+			case errors.Is(err, adb.ErrNoADB):
+				noADB.Do(func() { log.Warn("android: no adb server, and no adb to start one", "err", err) })
+				return err
+			case err != nil:
+				log.Warn("android: starting an adb server", "err", err)
+				return err
+			}
+			if t.Path != "" {
+				log.Info("android: started an adb server", "adb", t.Path, "from", t.Source, "version", t.Version)
+			}
+			return nil
+		},
 		// adb's own discovery stops seeing the network after the
 		// computer's network changes; the driver then reconnects the
 		// phones paired over Wi-Fi itself. Not while PINKY_DEVICES limits

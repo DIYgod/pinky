@@ -58,6 +58,15 @@ type Config struct {
 	// ~/.android/adb_known_hosts.pb.
 	KnownHosts func() ([]string, error)
 
+	// StartServer, when set, starts an adb server when List finds none
+	// (cmd/pinky passes adb.StartServer): at once the first time, and
+	// when a server that ran went away, once it has stayed away for
+	// serverAway, so that a tool that restarts it comes first (an adb
+	// client that finds a server of another version kills it and starts
+	// its own). After a failure, List tries again after serverRetry,
+	// doubling up to serverRetryMax.
+	StartServer func(ctx context.Context) error
+
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
 }
@@ -94,12 +103,17 @@ type Provider struct {
 	props map[string]deviceProps // by serial and transport id
 
 	wifi *reconnector // nil without Config.ReconnectWiFi
+
+	server serverWatch
+	// usbNodes lists the computer's USB devices as Windows sees them, to
+	// find phones without a driver (usbdriver.go); nil elsewhere.
+	usbNodes func() ([]usbNode, error)
 }
 
 // NewProvider returns a provider with the given configuration.
 func NewProvider(cfg Config) *Provider {
 	cfg.defaults()
-	p := &Provider{cfg: cfg, props: map[string]deviceProps{}}
+	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes}
 	if cfg.ReconnectWiFi {
 		p.wifi = newReconnector(p)
 	}
@@ -118,11 +132,31 @@ type deviceProps struct {
 }
 
 // List implements driver.Provider. It reads each online device's
-// properties once per connection.
+// properties once per connection, starts an adb server when none runs
+// (Config.StartServer), and on Windows adds the phones plugged in without
+// a driver for USB debugging, which adb cannot see.
 func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	entries, err := p.cfg.Client.Devices(ctx)
+	if errors.Is(err, adb.ErrServerNotRunning) && p.cfg.StartServer != nil {
+		if p.server.claim(time.Now(), p.cfg.logf) {
+			serr := p.cfg.StartServer(ctx)
+			p.server.done(time.Now(), serr)
+			if serr == nil {
+				entries, err = p.cfg.Client.Devices(ctx)
+			}
+		}
+		if err != nil && p.server.noADB() {
+			// No adb at all: no phones, which CheckHost explains.
+			return nil, nil
+		}
+	}
 	if err != nil {
 		return nil, wrapErr(err)
+	}
+	if p.server.answered() {
+		if v, err := p.cfg.Client.Version(ctx); err == nil {
+			p.server.setVersion(v)
+		}
 	}
 	if p.wifi != nil {
 		p.wifi.kick(entries)
@@ -148,8 +182,18 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		}()
 	}
 	wg.Wait()
-	return mergeTransports(infos), nil
+	infos = mergeTransports(infos)
+	return append(infos, p.driverlessPhones(infos)...), nil
 }
+
+// CheckHost implements driver.HostChecker, from what the last List found:
+// "adb" when there is no adb to start a server with (a build without
+// Pinky's own, on a computer without one), "adb_server" when no server
+// runs and starting one failed, "adb_old" when the server that runs is
+// older than protocol 41, and "adb_restarts" when the server went away
+// three times or more within ten minutes, as when another program keeps
+// restarting it with an adb of another version.
+func (p *Provider) CheckHost() driver.HostCheck { return p.server.check(time.Now()) }
 
 // phoneID is the id Pinky knows a phone by: the adb serial, except over
 // Wi-Fi, where it is the phone's hardware serial (the serial adb gives a
@@ -247,12 +291,15 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 		info.State = driver.StateUnauthorized
 		info.Detail = "Unlock the phone and allow USB debugging for this computer."
 	case adb.StateNoPerm:
+		// Linux: adb may not open the phone's USB device. (Add phone
+		// shows "Found <phone>, but <detail>", the first letter lowered.)
 		info.State = driver.StateNeedsSetup
+		info.Setup = setupUSBPermission
 		info.Detail = "This computer has no permission to use the phone over USB"
 		if e.Detail != "" {
 			info.Detail += " (" + e.Detail + ")"
 		}
-		info.Detail += "."
+		info.Detail += ". Install the udev rules for Android phones (android-sdk-platform-tools-common on Debian and Ubuntu, android-udev on Arch, android-tools on Fedora), make sure you are in the plugdev group, then unplug the phone and plug it in again."
 	case adb.StateRecovery, adb.StateBootloader, adb.StateSideload, adb.StateRescue:
 		info.State = driver.StateOffline
 		info.Detail = "The phone is in " + e.State + " mode."
@@ -330,5 +377,14 @@ func wrapErr(err error) error {
 }
 
 var (
-	_ driver.Provider = (*Provider)(nil)
+	_ driver.Provider    = (*Provider)(nil)
+	_ driver.HostChecker = (*Provider)(nil)
+)
+
+// The setup steps of a phone that needs the computer set up (Info.Setup),
+// the values of driver.SetupUSBPermission and driver.SetupUSBDriver on the
+// onboarding branch.
+const (
+	setupUSBPermission = "usb_permission" // Linux: no udev rule for the phone, or not in the plugdev group
+	setupUSBDriver     = "usb_driver"     // Windows: no driver for the phone's USB debugging interface
 )

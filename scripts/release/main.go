@@ -12,6 +12,8 @@
 //	release manifest -dir <dir> ...  latest.json, the cask and SHA256SUMS
 //	release cask <latest.json>       the Homebrew cask of a release
 //	release zip <out.zip> <dir>      a zip of a directory's files
+//	release mcpb -version <v> -out <file>
+//	                                 the MCP bundle for Claude Desktop
 //	release newer <a> [<b>]          whether version a is newer than b
 //
 // Versions are the date in Asia/Shanghai and that day's count, as
@@ -54,6 +56,9 @@ func usage() {
   cask [-repo owner/name] <latest.json>
                              print the Homebrew cask of a release
   zip <out.zip> <dir>        zip the files in dir
+  mcpb -version <version> -out <file.mcpb>
+                             write the MCP bundle that installs Pinky in
+                             Claude Desktop
   newer <a> [<b>]            exit 0 when version a is newer than b (or b is
                              empty), 1 otherwise
 `)
@@ -78,6 +83,7 @@ func main() {
 		"manifest": runManifest,
 		"cask":     runCask,
 		"zip":      runZip,
+		"mcpb":     runMCPB,
 		"newer":    runNewer,
 	}[cmd]
 	if run == nil {
