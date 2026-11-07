@@ -3,6 +3,7 @@ package android
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/png"
@@ -10,6 +11,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -61,6 +63,10 @@ type Background struct {
 	// display keeps its content anyway.
 	theirs    map[int]bool
 	closeOnce sync.Once
+	// started is set once an app was started on the display. Before that
+	// the display has no window, which accessibility reports as it does a
+	// display it cannot see, so Observe shows it as empty.
+	started atomic.Bool
 }
 
 // alwaysUnlocked reports whether scrcpy's virtual displays ignore the
@@ -187,6 +193,9 @@ func (b *Background) Observe(ctx context.Context, _ driver.ObserveOptions) (*scr
 	}
 	t, err := c.Dump(ctx, companion.DumpOptions{Display: b.display})
 	if err != nil {
+		if !b.started.Load() && errors.Is(err, driver.ErrUnsupported) && ctx.Err() == nil {
+			return b.emptyScreen(ctx)
+		}
 		if ctx.Err() == nil {
 			b.d.companionFailed(err)
 		}
@@ -303,7 +312,28 @@ func (b *Background) startApp(ctx context.Context, pkg string) error {
 		}
 		b.mu.Unlock()
 	}
-	return b.l.startApp(ctx, pkg)
+	if err := b.l.startApp(ctx, pkg); err != nil {
+		return err
+	}
+	b.started.Store(true)
+	return nil
+}
+
+// emptyScreen is the display before an app was started on it: nothing to
+// read, in the display's size.
+func (b *Background) emptyScreen(ctx context.Context) (*screen.Screen, error) {
+	w, h := b.w, b.h
+	if w <= 0 || h <= 0 {
+		var err error
+		if w, h, err = b.l.videoSize(ctx); err != nil {
+			return nil, err
+		}
+	}
+	o := "portrait"
+	if w > h {
+		o = "landscape"
+	}
+	return &screen.Screen{Width: w, Height: h, Orientation: o, CapturedAt: time.Now()}, nil
 }
 
 // returnTheirs moves the root tasks on the display that hold one of the

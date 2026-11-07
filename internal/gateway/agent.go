@@ -532,7 +532,12 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 	res.Message = fmt.Sprintf("Connected to %s for “%s”.", l.dev.name(), l.task.title)
 	g.mu.Lock()
 	person := l.dev.person
+	onBG := l.bg != nil
 	g.mu.Unlock()
+	if onBG {
+		// A background display starts empty, without a home screen.
+		res.Message += " This task runs on a background display of the phone, which starts empty and has no home screen: open apps with phone_launch."
+	}
 	switch {
 	case person:
 		res.Status = StatusPaused

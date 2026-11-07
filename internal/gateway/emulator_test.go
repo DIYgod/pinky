@@ -11,6 +11,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -84,7 +85,7 @@ func TestEmulatorRecording(t *testing.T) {
 	// Only this emulator: the gateway opens every phone a provider lists.
 	prov := &oneDevice{Provider: android.NewProvider(android.Config{}), id: id}
 	g, err := New(Options{Providers: []driver.Provider{prov}, DataDir: data,
-		TrustNewAgents: true, Policy: pol, Logger: log, NoScreenshots: true})
+		TrustNewAgents: true, Policy: pol, Logger: log, NoScreenshots: true, PIN: testPIN})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,6 +97,12 @@ func TestEmulatorRecording(t *testing.T) {
 	}
 	adbShell(t, id, "input", "keyevent", "KEYCODE_WAKEUP")
 	adbShell(t, id, "input", "keyevent", "KEYCODE_HOME")
+	// The main screen: Android 13+ runs tasks on a background display by
+	// default, and the blocked app below opens on the main screen.
+	if err := g.SetBackground(id, false); err != nil {
+		t.Fatal(err)
+	}
+	unlockForTest(t, g, id)
 	g.SetRecording(true)
 
 	// The mirror watches the whole time; the recorder shares its stream.
@@ -327,9 +334,16 @@ func TestEmulatorBackground(t *testing.T) {
 			}
 		}
 	}
-	on := adbShell(t, id, "dumpsys", "power")
-	if !strings.Contains(on, "mWakefulness=Asleep") && !strings.Contains(on, "mWakefulness=Dozing") {
-		t.Errorf("the phone's own screen woke up: %s", firstLine(on, "mWakefulness"))
+	// Display 0's own state: the phone's overall wakefulness stays awake
+	// while the background display keeps its display group awake.
+	if dev, err := android.NewProvider(android.Config{}).OpenDevice(ctx, id); err == nil {
+		on, err := dev.ScreenOn(ctx)
+		if err != nil || on {
+			t.Errorf("the phone's own screen woke up: on %v, %v", on, err)
+		}
+		dev.Close()
+	} else {
+		t.Error(err)
 	}
 	if res := s.Release(ctx, ReleaseRequest{}); res.Status != StatusSettled {
 		t.Fatalf("release: %+v", res)
@@ -349,6 +363,33 @@ func TestEmulatorBackground(t *testing.T) {
 	if len(frames) == 0 {
 		t.Error("the recording has no frames")
 	}
+}
+
+// testPIN hands the gateway the emulator's PIN from PINKY_TEST_PIN, as
+// the app hands it one from the keychain.
+func testPIN(context.Context, string) (string, error) {
+	if pin := os.Getenv("PINKY_TEST_PIN"); pin != "" {
+		return pin, nil
+	}
+	return "", errors.New("PINKY_TEST_PIN is not set")
+}
+
+// unlockForTest unlocks the emulator through the gateway (driver.Unlocker)
+// when its lock screen shows, or skips the test without a PIN.
+func unlockForTest(t *testing.T, g *Gateway, id string) {
+	t.Helper()
+	if !strings.Contains(adbShell(t, id, "dumpsys", "window"), "mDreamingLockscreen=true") {
+		return
+	}
+	if os.Getenv("PINKY_TEST_PIN") == "" {
+		t.Skip("the emulator is locked: set PINKY_TEST_PIN to its PIN")
+	}
+	start := time.Now()
+	if err := g.Unlock(id); err != nil {
+		t.Fatalf("unlock through the gateway: %v", err)
+	}
+	t.Logf("unlocked through the gateway in %.1f s", time.Since(start).Seconds())
+	adbShell(t, id, "input", "keyevent", "KEYCODE_HOME")
 }
 
 func firstLine(s, has string) string {

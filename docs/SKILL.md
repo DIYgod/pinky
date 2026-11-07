@@ -89,4 +89,5 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - `phone_wait_for { text: "Order placed" }` waits for loading better than repeated observing; `phone_observe { wait_ms: 3000 }` returns as soon as the screen changes.
 - `phone_batch` runs several steps in one call and stops at the first that does not settle. If a step returns `approval_pending`, repeat that step alone with its `approval_id`, then carry on.
 - `phone_apps { query: "din" }` finds an app's exact name before `phone_launch`.
+- On some Android phones the task runs on a background display, so the person's own screen stays free (or off and locked). `phone_connect` says so. That display starts empty, with no home screen: open apps with `phone_launch` rather than looking for their icons.
 - `phone_observe { screenshot: true }` only when the element list is not enough; screenshots are large.
