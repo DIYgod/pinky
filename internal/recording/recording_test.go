@@ -316,8 +316,13 @@ func TestRecordLiveStream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	begin := time.Now()
+	// A second and a half from the first packet: ffmpeg starting up, slow
+	// on a busy machine, does not count.
+	var begin time.Time
 	for p := range src.Packets() {
+		if begin.IsZero() {
+			begin = time.Now()
+		}
 		if err := w.Write(p, time.Since(begin)); err != nil {
 			t.Fatal(err)
 		}

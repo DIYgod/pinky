@@ -1136,6 +1136,12 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 			l.unlockHandoffs = append(l.unlockHandoffs, info.ID)
 		}
 		g.mu.Unlock()
+		if locked {
+			// An unlock from the computer as soon as the card showed may
+			// have finished before the line above and found nothing to
+			// answer: answer now if the phone is unlocked.
+			g.answerUnlockHandoffs(l.dev)
+		}
 		if res := g.afterOpen(l, info); res != nil {
 			return g.finish(l, res)
 		}
