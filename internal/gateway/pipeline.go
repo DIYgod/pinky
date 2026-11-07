@@ -1565,8 +1565,10 @@ func (snap *snapshot) changed(cur *screen.Screen, p *prep) bool {
 // element's ancestry, which some drivers report differently from one read
 // to the next (iOS apps whose views get re-wrapped), while agents are told
 // that a ref lasts as long as its element keeps its label and place. It
-// matches role, label and id, with the position within a few pixels, and
-// gives up when more than one element matches.
+// matches label and id, with the position within a few pixels: the element
+// of the same role when exactly one matches, else the only element there of
+// any role (the same iOS button also comes back as text). It gives up when
+// that leaves more than one.
 func relocate(seen, cur *screen.Screen, ref int) (screen.Element, bool) {
 	if seen == nil || cur == nil {
 		return screen.Element{}, false
@@ -1575,18 +1577,25 @@ func relocate(seen, cur *screen.Screen, ref int) (screen.Element, bool) {
 	if !ok || old.Source == screen.SourceOCR || old.Label == "" {
 		return screen.Element{}, false
 	}
-	var found screen.Element
-	n := 0
+	var same, any []screen.Element
 	for _, e := range cur.Elements {
 		if e.Ref == 0 || e.Source == screen.SourceOCR {
 			continue
 		}
-		if e.Role == old.Role && e.Label == old.Label && e.ID == old.ID && near(e.Bounds, old.Bounds) {
-			found = e
-			n++
+		if e.Label == old.Label && e.ID == old.ID && near(e.Bounds, old.Bounds) {
+			any = append(any, e)
+			if e.Role == old.Role {
+				same = append(same, e)
+			}
 		}
 	}
-	return found, n == 1
+	switch {
+	case len(same) == 1:
+		return same[0], true
+	case len(same) == 0 && len(any) == 1:
+		return any[0], true
+	}
+	return screen.Element{}, false
 }
 
 // near allows a few pixels of layout jitter.

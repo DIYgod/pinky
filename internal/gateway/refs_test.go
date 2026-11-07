@@ -81,6 +81,13 @@ func TestRelocate(t *testing.T) {
 		{"moved away", []screen.Element{btn(3, "Left", 200)}, 0},
 		{"relabelled", []screen.Element{btn(3, "Back", 10)}, 0},
 		{"two candidates", []screen.Element{btn(3, "Left", 10), btn(4, "Left", 11)}, 0},
+		{"now text", []screen.Element{{Ref: 5, Role: screen.RoleText, Label: "Left", Source: screen.SourceTree, Bounds: screen.Rect{X: 10, Y: 100, W: 80, H: 40}}}, 5},
+		{"button and its text twin", []screen.Element{
+			{Ref: 5, Role: screen.RoleText, Label: "Left", Source: screen.SourceTree, Bounds: screen.Rect{X: 10, Y: 100, W: 80, H: 40}},
+			btn(6, "Left", 10)}, 6},
+		{"text and other twins", []screen.Element{
+			{Ref: 5, Role: screen.RoleText, Label: "Left", Source: screen.SourceTree, Bounds: screen.Rect{X: 10, Y: 100, W: 80, H: 40}},
+			{Ref: 6, Role: screen.RoleOther, Label: "Left", Source: screen.SourceTree, Bounds: screen.Rect{X: 10, Y: 100, W: 80, H: 40}}}, 0},
 		{"ocr only", []screen.Element{{Role: screen.RoleText, Label: "Left", Source: screen.SourceOCR, Bounds: screen.Rect{X: 10, Y: 100, W: 80, H: 40}}}, 0},
 	}
 	for _, c := range cases {
