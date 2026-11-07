@@ -5191,6 +5191,120 @@ func (msgs Messages) PairingCodeTitle() string {
 	return Catalog.Format(msgs.locale, "pairingCodeTitle", nil)
 }
 
+// PairingConnect says "Connect"
+// in the language the app shows.
+//
+// Pair with a code: the button that connects to the address typed in the
+// connect step.
+func PairingConnect() string { return In(i18n.Locale()).PairingConnect() }
+
+// PairingConnect says "Connect"
+// in the language of msgs.
+//
+// Pair with a code: the button that connects to the address typed in the
+// connect step.
+func (msgs Messages) PairingConnect() string {
+	return Catalog.Format(msgs.locale, "pairingConnect", nil)
+}
+
+// PairingConnectBusy says "Connecting…"
+// in the language the app shows.
+//
+// Pair with a code: next to a spinner, right of the Connect button, while
+// Pinky connects.
+func PairingConnectBusy() string { return In(i18n.Locale()).PairingConnectBusy() }
+
+// PairingConnectBusy says "Connecting…"
+// in the language of msgs.
+//
+// Pair with a code: next to a spinner, right of the Connect button, while
+// Pinky connects.
+func (msgs Messages) PairingConnectBusy() string {
+	return Catalog.Format(msgs.locale, "pairingConnectBusy", nil)
+}
+
+// PairingConnectDetail says "The phone paired, but Pinky can't find it on this network. On the phone, open Wireless debugging and enter the IP add…"
+// in the language the app shows.
+//
+// Pair with a code: the line under pairingConnectTitle. Wireless debugging
+// is Android's own name.
+func PairingConnectDetail() string { return In(i18n.Locale()).PairingConnectDetail() }
+
+// PairingConnectDetail says "The phone paired, but Pinky can't find it on this network. On the phone, open Wireless debugging and enter the IP add…"
+// in the language of msgs.
+//
+// Pair with a code: the line under pairingConnectTitle. Wireless debugging
+// is Android's own name.
+func (msgs Messages) PairingConnectDetail() string {
+	return Catalog.Format(msgs.locale, "pairingConnectDetail", nil)
+}
+
+// PairingConnectErrOther says "Couldn't connect: {detail}"
+// in the language the app shows.
+//
+// Pair with a code: the error when connecting in the connect step failed
+// for another reason. detail is the error, in English.
+func PairingConnectErrOther(detail string) string {
+	return In(i18n.Locale()).PairingConnectErrOther(detail)
+}
+
+// PairingConnectErrOther says "Couldn't connect: {detail}"
+// in the language of msgs.
+//
+// Pair with a code: the error when connecting in the connect step failed
+// for another reason. detail is the error, in English.
+func (msgs Messages) PairingConnectErrOther(detail string) string {
+	return Catalog.Format(msgs.locale, "pairingConnectErrOther", map[string]any{"detail": detail})
+}
+
+// PairingConnectErrUnreachable says "Couldn't connect at that address. Use the IP address and port at the top of Wireless debugging, not the ones of the p…"
+// in the language the app shows.
+//
+// Pair with a code: the error when nothing answered at the address typed in
+// the connect step. Wireless debugging is Android's own name.
+func PairingConnectErrUnreachable() string { return In(i18n.Locale()).PairingConnectErrUnreachable() }
+
+// PairingConnectErrUnreachable says "Couldn't connect at that address. Use the IP address and port at the top of Wireless debugging, not the ones of the p…"
+// in the language of msgs.
+//
+// Pair with a code: the error when nothing answered at the address typed in
+// the connect step. Wireless debugging is Android's own name.
+func (msgs Messages) PairingConnectErrUnreachable() string {
+	return Catalog.Format(msgs.locale, "pairingConnectErrUnreachable", nil)
+}
+
+// PairingConnectTitle says "Connect to the phone"
+// in the language the app shows.
+//
+// Pair with a code: the heading of the step that connects to a phone that
+// paired but that Pinky could not find on the network.
+func PairingConnectTitle() string { return In(i18n.Locale()).PairingConnectTitle() }
+
+// PairingConnectTitle says "Connect to the phone"
+// in the language of msgs.
+//
+// Pair with a code: the heading of the step that connects to a phone that
+// paired but that Pinky could not find on the network.
+func (msgs Messages) PairingConnectTitle() string {
+	return Catalog.Format(msgs.locale, "pairingConnectTitle", nil)
+}
+
+// PairingConnecting says "Paired. Connecting to the phone…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// paired and Pinky connects to it.
+func PairingConnecting() string { return In(i18n.Locale()).PairingConnecting() }
+
+// PairingConnecting says "Paired. Connecting to the phone…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// paired and Pinky connects to it.
+func (msgs Messages) PairingConnecting() string {
+	return Catalog.Format(msgs.locale, "pairingConnecting", nil)
+}
+
 // PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
 // in the language the app shows.
 //
@@ -5287,6 +5401,22 @@ func (msgs Messages) PairingErrWrongCode() string {
 	return Catalog.Format(msgs.locale, "pairingErrWrongCode", nil)
 }
 
+// PairingFound says "Found the phone. Pairing…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// scanned the code and Pinky pairs with it.
+func PairingFound() string { return In(i18n.Locale()).PairingFound() }
+
+// PairingFound says "Found the phone. Pairing…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// scanned the code and Pinky pairs with it.
+func (msgs Messages) PairingFound() string {
+	return Catalog.Format(msgs.locale, "pairingFound", nil)
+}
+
 // PairingGettingCode says "Getting a code…"
 // in the language the app shows.
 //
@@ -5317,6 +5447,24 @@ func PairingNoCode() string { return In(i18n.Locale()).PairingNoCode() }
 // getting one failed.
 func (msgs Messages) PairingNoCode() string {
 	return Catalog.Format(msgs.locale, "pairingNoCode", nil)
+}
+
+// PairingOpenLocalNetwork says "Open Local Network settings"
+// in the language the app shows.
+//
+// Pair over Wi-Fi, on a Mac: the button under the note that opens System
+// Settings › Privacy & Security › Local Network. Local Network is
+// macOS's own name.
+func PairingOpenLocalNetwork() string { return In(i18n.Locale()).PairingOpenLocalNetwork() }
+
+// PairingOpenLocalNetwork says "Open Local Network settings"
+// in the language of msgs.
+//
+// Pair over Wi-Fi, on a Mac: the button under the note that opens System
+// Settings › Privacy & Security › Local Network. Local Network is
+// macOS's own name.
+func (msgs Messages) PairingOpenLocalNetwork() string {
+	return Catalog.Format(msgs.locale, "pairingOpenLocalNetwork", nil)
 }
 
 // PairingPair says "Pair"
@@ -5415,22 +5563,158 @@ func (msgs Messages) PairingQRLabel() string {
 	return Catalog.Format(msgs.locale, "pairingQRLabel", nil)
 }
 
-// PairingSlowHint says "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happen…"
+// PairingStuckNoSearch says "Check that this computer is connected to Wi-Fi or Ethernet, or pair with a code instead. ({detail})"
 // in the language the app shows.
 //
-// Pair over Wi-Fi: under the status line when the phone has not paired
-// after 30 seconds. adb is Android's tool and adb kill-server a command:
-// both stay as they are.
-func PairingSlowHint() string { return In(i18n.Locale()).PairingSlowHint() }
+// Pair over Wi-Fi: the note's text under pairingStuckNoSearchTitle. detail
+// is the error, in English.
+func PairingStuckNoSearch(detail string) string {
+	return In(i18n.Locale()).PairingStuckNoSearch(detail)
+}
 
-// PairingSlowHint says "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happen…"
+// PairingStuckNoSearch says "Check that this computer is connected to Wi-Fi or Ethernet, or pair with a code instead. ({detail})"
 // in the language of msgs.
 //
-// Pair over Wi-Fi: under the status line when the phone has not paired
-// after 30 seconds. adb is Android's tool and adb kill-server a command:
-// both stay as they are.
-func (msgs Messages) PairingSlowHint() string {
-	return Catalog.Format(msgs.locale, "pairingSlowHint", nil)
+// Pair over Wi-Fi: the note's text under pairingStuckNoSearchTitle. detail
+// is the error, in English.
+func (msgs Messages) PairingStuckNoSearch(detail string) string {
+	return Catalog.Format(msgs.locale, "pairingStuckNoSearch", map[string]any{"detail": detail})
+}
+
+// PairingStuckNoSearchTitle says "Pinky can't look for phones on this network"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note when Pinky cannot search the
+// network for another reason, such as no network connection.
+func PairingStuckNoSearchTitle() string { return In(i18n.Locale()).PairingStuckNoSearchTitle() }
+
+// PairingStuckNoSearchTitle says "Pinky can't look for phones on this network"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note when Pinky cannot search the
+// network for another reason, such as no network connection.
+func (msgs Messages) PairingStuckNoSearchTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNoSearchTitle", nil)
+}
+
+// PairingStuckNotAllowed says "Something on this computer, perhaps a firewall, keeps Pinky from looking for phones on the network. Let Pinky use the…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi, on Linux and Windows: the note's text under
+// pairingStuckNotAllowedTitle.
+func PairingStuckNotAllowed() string { return In(i18n.Locale()).PairingStuckNotAllowed() }
+
+// PairingStuckNotAllowed says "Something on this computer, perhaps a firewall, keeps Pinky from looking for phones on the network. Let Pinky use the…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi, on Linux and Windows: the note's text under
+// pairingStuckNotAllowedTitle.
+func (msgs Messages) PairingStuckNotAllowed() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotAllowed", nil)
+}
+
+// PairingStuckNotAllowedMac says "Turn on Pinky under System Settings › Privacy & Security › Local Network, then try again. Or pair with a code ins…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi, on a Mac: the note's text under
+// pairingStuckNotAllowedTitle. System Settings, Privacy & Security and
+// Local Network are macOS's own names: use those of macOS in Simplified
+// Chinese.
+func PairingStuckNotAllowedMac() string { return In(i18n.Locale()).PairingStuckNotAllowedMac() }
+
+// PairingStuckNotAllowedMac says "Turn on Pinky under System Settings › Privacy & Security › Local Network, then try again. Or pair with a code ins…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi, on a Mac: the note's text under
+// pairingStuckNotAllowedTitle. System Settings, Privacy & Security and
+// Local Network are macOS's own names: use those of macOS in Simplified
+// Chinese.
+func (msgs Messages) PairingStuckNotAllowedMac() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotAllowedMac", nil)
+}
+
+// PairingStuckNotAllowedTitle says "Pinky isn't allowed to look for phones on this network"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note when the system keeps Pinky from
+// looking for devices on the local network.
+func PairingStuckNotAllowedTitle() string { return In(i18n.Locale()).PairingStuckNotAllowedTitle() }
+
+// PairingStuckNotAllowedTitle says "Pinky isn't allowed to look for phones on this network"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note when the system keeps Pinky from
+// looking for devices on the local network.
+func (msgs Messages) PairingStuckNotAllowedTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotAllowedTitle", nil)
+}
+
+// PairingStuckNotSeen says "Scan this code on the phone under Wireless debugging › Pair device with QR code, with the phone on the same Wi-Fi a…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckNotSeenTitle. Wireless
+// debugging and Pair device with QR code are Android's own names: use those
+// of Android's Simplified Chinese settings.
+func PairingStuckNotSeen() string { return In(i18n.Locale()).PairingStuckNotSeen() }
+
+// PairingStuckNotSeen says "Scan this code on the phone under Wireless debugging › Pair device with QR code, with the phone on the same Wi-Fi a…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckNotSeenTitle. Wireless
+// debugging and Pair device with QR code are Android's own names: use those
+// of Android's Simplified Chinese settings.
+func (msgs Messages) PairingStuckNotSeen() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotSeen", nil)
+}
+
+// PairingStuckNotSeenTitle says "The phone hasn't shown up on the network yet"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note under the status line when, 30
+// seconds after the code showed, the phone has not appeared on the network:
+// it has not scanned the code, or the network keeps devices apart.
+func PairingStuckNotSeenTitle() string { return In(i18n.Locale()).PairingStuckNotSeenTitle() }
+
+// PairingStuckNotSeenTitle says "The phone hasn't shown up on the network yet"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note under the status line when, 30
+// seconds after the code showed, the phone has not appeared on the network:
+// it has not scanned the code, or the network keeps devices apart.
+func (msgs Messages) PairingStuckNotSeenTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotSeenTitle", nil)
+}
+
+// PairingStuckPairing says "If the phone shows an error or went back to Wireless debugging, scan the code again. Or pair with a code instead."
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckPairingTitle. Wireless
+// debugging is Android's own name.
+func PairingStuckPairing() string { return In(i18n.Locale()).PairingStuckPairing() }
+
+// PairingStuckPairing says "If the phone shows an error or went back to Wireless debugging, scan the code again. Or pair with a code instead."
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckPairingTitle. Wireless
+// debugging is Android's own name.
+func (msgs Messages) PairingStuckPairing() string {
+	return Catalog.Format(msgs.locale, "pairingStuckPairing", nil)
+}
+
+// PairingStuckPairingTitle says "The phone showed up, but pairing hasn't finished"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note when the phone appeared on the
+// network a while ago and pairing has not finished.
+func PairingStuckPairingTitle() string { return In(i18n.Locale()).PairingStuckPairingTitle() }
+
+// PairingStuckPairingTitle says "The phone showed up, but pairing hasn't finished"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note when the phone appeared on the
+// network a while ago and pairing has not finished.
+func (msgs Messages) PairingStuckPairingTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckPairingTitle", nil)
 }
 
 // PairingTitle says "Pair over Wi-Fi"

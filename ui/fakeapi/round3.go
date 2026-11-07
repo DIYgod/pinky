@@ -105,8 +105,26 @@ func (p *pairing) Close() error {
 	return nil
 }
 
+// Progress implements driver.PairingReporter: what SetPairingProgress
+// set.
+func (p *pairing) Progress() driver.PairingProgress {
+	p.a.mu.Lock()
+	defer p.a.mu.Unlock()
+	return p.a.pairProg
+}
+
+// SetPairingProgress sets what the QR pairings report, as a real phone
+// would move them on: found on the network, paired, or a search the
+// system blocks.
+func (a *API) SetPairingProgress(pr driver.PairingProgress) {
+	a.mu.Lock()
+	a.pairProg = pr
+	a.mu.Unlock()
+}
+
 // PairWithCode pairs a fake phone by pairing code. The code 000000 is
-// wrong and port 1 refuses, to show the errors.
+// wrong, port 1 refuses, and a phone at port 2 pairs but does not show up
+// on the network (ConnectWiFi then connects it), to show the errors.
 func (a *API) PairWithCode(ctx context.Context, addr, code string) (driver.Info, error) {
 	select {
 	case <-ctx.Done():
@@ -118,6 +136,22 @@ func (a *API) PairWithCode(ctx context.Context, addr, code string) (driver.Info,
 		return driver.Info{}, errors.New("adb: failed to pair: Wrong password or connection was dropped")
 	case strings.HasSuffix(addr, ":1"):
 		return driver.Info{}, fmt.Errorf("adb: dial tcp %s: connect: connection refused", addr)
+	case strings.HasSuffix(addr, ":2"):
+		return driver.Info{}, fmt.Errorf("android: the phone paired, but its wireless debugging service did not show up: %w", driver.ErrPairedNotFound)
+	}
+	return a.addWiFiPhone(), nil
+}
+
+// ConnectWiFi connects a fake phone that paired at the address it shows.
+// Port 1 refuses.
+func (a *API) ConnectWiFi(ctx context.Context, addr string) (driver.Info, error) {
+	select {
+	case <-ctx.Done():
+		return driver.Info{}, ctx.Err()
+	case <-time.After(time.Duration(float64(800*time.Millisecond) / a.opt.Speed)):
+	}
+	if strings.HasSuffix(addr, ":1") {
+		return driver.Info{}, fmt.Errorf("adb: connect %s: failed to connect to '%s': Connection refused", addr, addr)
 	}
 	return a.addWiFiPhone(), nil
 }

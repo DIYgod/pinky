@@ -57,6 +57,11 @@ type (
 		StartPairing(ctx context.Context) (driver.Pairing, error)
 		PairWithCode(ctx context.Context, addr, code string) (driver.Info, error)
 	}
+	// wifiConnector connects a phone that paired but that Pinky could not
+	// find on the network, at the address it shows.
+	wifiConnector interface {
+		ConnectWiFi(ctx context.Context, addr string) (driver.Info, error)
+	}
 	companionInstaller interface {
 		CompanionState(ctx context.Context, deviceID string) (driver.CompanionState, error)
 		InstallCompanion(ctx context.Context, deviceID string) error

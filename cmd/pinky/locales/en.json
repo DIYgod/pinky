@@ -2130,6 +2130,40 @@
   "@pairingCodeTitle": {
     "description": "Pair over Wi-Fi: the heading of the form that pairs with the address and the six-digit code the phone shows."
   },
+  "pairingConnect": "Connect",
+  "@pairingConnect": {
+    "description": "Pair with a code: the button that connects to the address typed in the connect step."
+  },
+  "pairingConnectBusy": "Connecting…",
+  "@pairingConnectBusy": {
+    "description": "Pair with a code: next to a spinner, right of the Connect button, while Pinky connects."
+  },
+  "pairingConnectDetail": "The phone paired, but Pinky can't find it on this network. On the phone, open Wireless debugging and enter the IP address and port shown at the top.",
+  "@pairingConnectDetail": {
+    "description": "Pair with a code: the line under pairingConnectTitle. Wireless debugging is Android's own name."
+  },
+  "pairingConnectErrOther": "Couldn't connect: {detail}",
+  "@pairingConnectErrOther": {
+    "description": "Pair with a code: the error when connecting in the connect step failed for another reason. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "adb: device offline"
+      }
+    }
+  },
+  "pairingConnectErrUnreachable": "Couldn't connect at that address. Use the IP address and port at the top of Wireless debugging, not the ones of the pairing dialog.",
+  "@pairingConnectErrUnreachable": {
+    "description": "Pair with a code: the error when nothing answered at the address typed in the connect step. Wireless debugging is Android's own name."
+  },
+  "pairingConnectTitle": "Connect to the phone",
+  "@pairingConnectTitle": {
+    "description": "Pair with a code: the heading of the step that connects to a phone that paired but that Pinky could not find on the network."
+  },
+  "pairingConnecting": "Paired. Connecting to the phone…",
+  "@pairingConnecting": {
+    "description": "Pair over Wi-Fi: the status line, next to a spinner, once the phone paired and Pinky connects to it."
+  },
   "pairingErrNoAdb": "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead.",
   "@pairingErrNoAdb": {
     "description": "Pair over Wi-Fi: the error when this computer has no Android tools (adb) to pair with."
@@ -2160,6 +2194,10 @@
   "@pairingErrWrongCode": {
     "description": "Pair with a code: the error when the pairing code typed was wrong. Pair device with pairing code is Android's own name."
   },
+  "pairingFound": "Found the phone. Pairing…",
+  "@pairingFound": {
+    "description": "Pair over Wi-Fi: the status line, next to a spinner, once the phone scanned the code and Pinky pairs with it."
+  },
   "pairingGettingCode": "Getting a code…",
   "@pairingGettingCode": {
     "description": "Pair over Wi-Fi: the status line, next to a spinner, while Pinky gets the QR code from the gateway."
@@ -2167,6 +2205,10 @@
   "pairingNoCode": "No code",
   "@pairingNoCode": {
     "description": "Pair over Wi-Fi: in place of the QR code, under an alert icon, when getting one failed."
+  },
+  "pairingOpenLocalNetwork": "Open Local Network settings",
+  "@pairingOpenLocalNetwork": {
+    "description": "Pair over Wi-Fi, on a Mac: the button under the note that opens System Settings › Privacy & Security › Local Network. Local Network is macOS's own name."
   },
   "pairingPair": "Pair",
   "@pairingPair": {
@@ -2204,9 +2246,47 @@
   "@pairingQRLabel": {
     "description": "Pair over Wi-Fi: the accessibility label of the QR code. Wireless debugging and Pair device with QR code are Android's own names."
   },
-  "pairingSlowHint": "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happens here, adb may have stopped seeing the network: quit other Android tools and run adb kill-server, then try again.",
-  "@pairingSlowHint": {
-    "description": "Pair over Wi-Fi: under the status line when the phone has not paired after 30 seconds. adb is Android's tool and adb kill-server a command: both stay as they are."
+  "pairingStuckNoSearch": "Check that this computer is connected to Wi-Fi or Ethernet, or pair with a code instead. ({detail})",
+  "@pairingStuckNoSearch": {
+    "description": "Pair over Wi-Fi: the note's text under pairingStuckNoSearchTitle. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "mdns: no network interface to search"
+      }
+    }
+  },
+  "pairingStuckNoSearchTitle": "Pinky can't look for phones on this network",
+  "@pairingStuckNoSearchTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note when Pinky cannot search the network for another reason, such as no network connection."
+  },
+  "pairingStuckNotAllowed": "Something on this computer, perhaps a firewall, keeps Pinky from looking for phones on the network. Let Pinky use the local network, or pair with a code instead.",
+  "@pairingStuckNotAllowed": {
+    "description": "Pair over Wi-Fi, on Linux and Windows: the note's text under pairingStuckNotAllowedTitle."
+  },
+  "pairingStuckNotAllowedMac": "Turn on Pinky under System Settings › Privacy & Security › Local Network, then try again. Or pair with a code instead.",
+  "@pairingStuckNotAllowedMac": {
+    "description": "Pair over Wi-Fi, on a Mac: the note's text under pairingStuckNotAllowedTitle. System Settings, Privacy & Security and Local Network are macOS's own names: use those of macOS in Simplified Chinese."
+  },
+  "pairingStuckNotAllowedTitle": "Pinky isn't allowed to look for phones on this network",
+  "@pairingStuckNotAllowedTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note when the system keeps Pinky from looking for devices on the local network."
+  },
+  "pairingStuckNotSeen": "Scan this code on the phone under Wireless debugging › Pair device with QR code, with the phone on the same Wi-Fi as this computer. Some networks, such as guest Wi-Fi and many offices, keep devices from finding each other; there, pair with a code instead.",
+  "@pairingStuckNotSeen": {
+    "description": "Pair over Wi-Fi: the note's text under pairingStuckNotSeenTitle. Wireless debugging and Pair device with QR code are Android's own names: use those of Android's Simplified Chinese settings."
+  },
+  "pairingStuckNotSeenTitle": "The phone hasn't shown up on the network yet",
+  "@pairingStuckNotSeenTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note under the status line when, 30 seconds after the code showed, the phone has not appeared on the network: it has not scanned the code, or the network keeps devices apart."
+  },
+  "pairingStuckPairing": "If the phone shows an error or went back to Wireless debugging, scan the code again. Or pair with a code instead.",
+  "@pairingStuckPairing": {
+    "description": "Pair over Wi-Fi: the note's text under pairingStuckPairingTitle. Wireless debugging is Android's own name."
+  },
+  "pairingStuckPairingTitle": "The phone showed up, but pairing hasn't finished",
+  "@pairingStuckPairingTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note when the phone appeared on the network a while ago and pairing has not finished."
   },
   "pairingTitle": "Pair over Wi-Fi",
   "@pairingTitle": {
