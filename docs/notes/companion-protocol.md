@@ -9,6 +9,7 @@ Changes since the first version, all additive:
 | When | Change | Feature |
 | --- | --- | --- |
 | 2026-11-07, round 3 | `display` on `set_text`, `events` and `wait_idle`; `display` on every event; `features` in `ping`; `tree` fails clearly for a display it cannot read | `displays` (Android 11+) |
+| 2026-11-07, round 3 | `config` values are kept until the service is turned off, across restarts | none: an older app forgets them when its service restarts; `ping` shows the current values |
 | 2026-11-07, round 3 | `region` on windows; `tree` walks an input method window that covers the screen like a sheet even without `ime` | none: an older app leaves `region` out, and a client that reads it treats its absence as "the bounds" |
 
 ## Transport
@@ -194,12 +195,12 @@ Result: `settled` (false when the timeout came first), `waited_ms`, and `last_ch
 
 ### `config`
 
-Changes the service's settings for as long as it stays connected; turning the service off resets them.
+Changes the service's settings until the service is turned off. The app saves them, so they survive the service restarting while it stays on: a reboot, an app update, a `uiautomator dump`. When the service is turned off, by the person in Android Settings, by Pinky or by its own idle watchdog, the app forgets them and the next start begins from the defaults. It tells the two apart by reading `enabled_accessibility_services` when Android unbinds it: still listed means a restart.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
 | `include_not_important` | false | Include views that are not important for accessibility (layout containers), as `uiautomator dump` does. Before Android 13 the app cannot clear its node cache, so the change takes full effect at the next window change. |
-| `idle_disable_ms` | 180000 | The service turns itself off (`disableSelf`) after this long without any connection; 0 keeps it on. |
+| `idle_disable_ms` | 180000 | The service turns itself off (`disableSelf`) after this long without any connection. 0 keeps it on until it is turned off; Pinky's Install sends it, so a service the person turned on from Pinky stays on, also after a reboot or an update. |
 
 The result holds the current values.
 
@@ -224,5 +225,5 @@ The Go client maps `not_found` to `driver.ErrNotFound` and `unsupported` to `dri
 
 - Pinky turns the service on by adding only its own component, `app.pinky.companion/.PinkyAccessibilityService`, to `enabled_accessibility_services`, and off by removing it again; see [companion.md](companion.md#turning-the-service-on-and-off).
 - When the service connects it binds the socket (retrying for up to 5 seconds if a previous instance still holds the name); when Android unbinds it, the socket closes and every connection ends.
-- After `idle_disable_ms` with no connection the service turns itself off. This is a backstop for a gateway that crashed or lost the phone.
+- After `idle_disable_ms` with no connection the service turns itself off, unless `config` set it to 0. This is a backstop for a gateway that crashed or lost the phone while the service was on for a task.
 - `uiautomator dump` (and any other UiAutomation client that does not ask to keep services) makes Android unbind every accessibility service for as long as it runs, so the companion restarts with an empty cache around each dump. Do not mix the two.
