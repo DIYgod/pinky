@@ -34,6 +34,10 @@ type pinState struct {
 	err       string
 	unlocking map[string]bool // phones being unlocked
 	later     map[string]bool // phones whose lock card the person put off
+	// wrong holds phones whose saved PIN the phone refused. Pinky does not
+	// try it again until the phone is seen unlocked or the PIN changes:
+	// phones lock out, or erase themselves, after repeated wrong PINs.
+	wrong map[string]bool
 }
 
 // notAvailableHere is what the client says where the system has no
@@ -94,7 +98,7 @@ func (a *app) loadPINs() {
 func (a *app) canUnlockHere(id string) bool {
 	d := a.device(id)
 	st := &a.pin
-	return d != nil && d.Features.Unlock && a.settings.UnlockFromComputer && st.ready && st.supported && st.saved[id]
+	return d != nil && d.Features.Unlock && a.settings.UnlockFromComputer && st.ready && st.supported && st.saved[id] && !st.wrong[id]
 }
 
 // unlock enters the phone's saved PIN, after Touch ID, and says in plain
@@ -112,6 +116,9 @@ func (a *app) unlock(id string) {
 		err := a.api.Unlock(id)
 		a.post(func() {
 			delete(a.pin.unlocking, id)
+			if errors.Is(err, driver.ErrLocked) {
+				a.pin.wrong[id] = true
+			}
 			if msg := unlockError(err, name); msg != "" {
 				a.toasts = append(a.toasts, msg)
 			}
@@ -125,7 +132,9 @@ func unlockError(err error, name string) string {
 	case err == nil, errors.Is(err, secret.ErrCancelled):
 		return "" // unlocked, or the person cancelled Touch ID
 	case errors.Is(err, driver.ErrLocked):
-		return "The PIN didn't unlock " + name + ". Check the PIN saved in Settings › Phones, or unlock it on the phone."
+		return "The saved PIN didn't unlock " + name + ". To keep the phone from locking you out, Pinky won't try it again until you unlock the phone yourself or change the PIN in Settings › Phones."
+	case errors.Is(err, driver.ErrPINNotEntered):
+		return "Pinky couldn't get to " + name + "'s passcode screen, so it entered nothing. Try again, or unlock it on the phone."
 	case errors.Is(err, secret.ErrNotFound):
 		return "No PIN is saved for " + name + ". Save it in Settings › Phones."
 	case errors.Is(err, secret.ErrUnsupported):
@@ -196,6 +205,8 @@ func (a *app) unlockElsewhere(id, then string) string {
 		return "Unlock it on the phone" + end + " Unlocking from this computer is off in Settings › Safety."
 	case st.ready && !st.supported:
 		return notAvailableHere + " Unlock it on the phone" + end
+	case st.wrong[id]:
+		return "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone" + end + " If its PIN changed, update it in Settings › Phones."
 	case st.ready && !st.saved[id]:
 		return "Save the phone's PIN to unlock it from this computer, or unlock it on the phone" + end
 	}
@@ -280,6 +291,7 @@ func (a *app) savePIN(id, name string) {
 				st.err = "Couldn't save the PIN: " + err.Error()
 			default:
 				st.saved[id], st.editing = true, ""
+				delete(st.wrong, id)
 				a.toasts = append(a.toasts, "Saved the PIN for "+name)
 			}
 		})
@@ -296,6 +308,7 @@ func (a *app) removePIN(id, name string) {
 				return
 			}
 			a.pin.saved[id] = false
+			delete(a.pin.wrong, id)
 			if a.pin.editing == id {
 				a.pin.editing = ""
 			}
@@ -311,8 +324,8 @@ func (a *app) removePIN(id, name string) {
 // lock screen.
 func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
 	id := d.Info.ID
-	canUnlock, missing := a.canUnlockHere(id), a.pinMissing(d)
-	if !canUnlock && !missing {
+	canUnlock, missing, wrong := a.canUnlockHere(id), a.pinMissing(d), a.pin.wrong[id]
+	if !canUnlock && !missing && !wrong {
 		return // this computer cannot unlock it: the mirror's lock says enough
 	}
 	if missing && a.pin.later[id] && a.pin.editing != id {
@@ -326,6 +339,10 @@ func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
 			mg.Icon(c, icLock).FontSize(16).TextColor(p.ink2)
 			mg.Text(c, d.Info.Name+" is locked").FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
 		})
+		if wrong {
+			mg.Text(c, a.unlockElsewhere(id, "")).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			return
+		}
 		if canUnlock {
 			mg.Text(c, "Unlock it from here when you or an agent need it.").FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
 			a.unlockButton(c, id).Margin(4, 0, 0, 0).FillWidth()

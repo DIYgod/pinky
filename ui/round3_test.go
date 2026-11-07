@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"image"
 	"os"
 	"path/filepath"
@@ -141,7 +142,8 @@ func TestUnlockErrors(t *testing.T) {
 	}{
 		{nil, ""},
 		{secret.ErrCancelled, ""},
-		{errors.Join(errors.New("entered"), driver.ErrLocked), "The PIN didn't unlock Mi 10 Pro."},
+		{errors.Join(errors.New("entered"), driver.ErrLocked), "The saved PIN didn't unlock Mi 10 Pro."},
+		{errors.Join(errors.New("no pad"), driver.ErrPINNotEntered), "Pinky couldn't get to Mi 10 Pro's passcode screen, so it entered nothing."},
 		{secret.ErrNotFound, "No PIN is saved for Mi 10 Pro."},
 		{secret.ErrUnsupported, notAvailableHere},
 		{gateway.ErrNoUnlock, "Unlocking from this computer isn't available."},
@@ -672,5 +674,33 @@ func TestLockCardOffersPIN(t *testing.T) {
 	tt.Frame()
 	if hasText(tt, "Save PIN…") || hasText(tt, "Not now") {
 		t.Errorf("Not now did not hide the card: %q", tt.Texts())
+	}
+}
+
+// TestRefusedPINIsNotRetried keeps Unlock from trying a PIN the phone
+// refused again, which could lock the person out, until the phone is
+// unlocked on it or the PIN changes; a PIN that was never entered may be
+// tried again.
+func TestRefusedPINIsNotRetried(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.waitFor(t, "the phones and the keychain probe", func() bool { return ta.pin.ready && len(ta.devices) > 0 })
+	d := ta.devices[0]
+	d.Status, d.Features.Unlock = gateway.DeviceLocked, true
+	ta.devices[0], ta.needs, ta.sel, ta.page = d, nil, d.Info.ID, pagePhones
+	ta.pin.saved[d.Info.ID] = true
+	if !ta.canUnlockHere(d.Info.ID) {
+		t.Fatal("a locked phone with a saved PIN cannot be unlocked")
+	}
+	ta.pin.wrong[d.Info.ID] = true
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	if label, _ := unlockWords(); hasText(tt, label) {
+		t.Errorf("Unlock offered again after the phone refused the PIN: %q", tt.Texts())
+	}
+	if !hasText(tt, "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone. If its PIN changed, update it in Settings › Phones.") {
+		t.Errorf("the card does not say why: %q", tt.Texts())
+	}
+	if msg := unlockError(fmt.Errorf("unlock: the passcode pad did not appear: %w", driver.ErrPINNotEntered), "iPhone"); !strings.Contains(msg, "entered nothing") {
+		t.Errorf("a PIN that was never entered: %q", msg)
 	}
 }

@@ -234,7 +234,8 @@ func newApp(api gateway.API, opt Options) *app {
 		mediaCache: map[string]*mediaEntry{}, previews: map[string]bool{},
 		awake: keepMacAwake, exportTo: exportFolder, reveal: revealFile,
 	}
-	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{}}
+	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
+		wrong: map[string]bool{}}
 	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
 		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
@@ -429,6 +430,11 @@ func (a *app) refresh(devs, tasks, needs bool) {
 		if devs {
 			a.devices = d
 			a.setBackgrounds(bg)
+			for id := range a.pin.wrong {
+				if dv := a.device(id); dv != nil && dv.Status != gateway.DeviceLocked && dv.Status != gateway.DeviceNeedsYou {
+					delete(a.pin.wrong, id) // unlocked on the phone: the person may try again
+				}
+			}
 		}
 		if tasks {
 			a.tasks = t

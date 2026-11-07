@@ -110,13 +110,21 @@ func (g *Gateway) Unlock(deviceID string) error {
 	err = u.Unlock(ctx, pin)
 	pin = ""
 	d.act.Unlock()
-	g.log.Info("unlock from the computer", "device", d.id, "ok", err == nil)
+	if err != nil {
+		// Drivers never put the PIN in their errors.
+		g.log.Info("unlock from the computer", "device", d.id, "ok", false, "err", err.Error())
+	} else {
+		g.log.Info("unlock from the computer", "device", d.id, "ok", true)
+	}
 	g.recordUnlock(l, start, err)
 	if err != nil {
 		if errors.Is(err, driver.ErrLocked) {
 			g.setLocked(d, true)
 			// Both: the client words a wrong PIN by driver.ErrLocked.
 			return fmt.Errorf("%w: %w", ErrWrongPIN, driver.ErrLocked)
+		}
+		if errors.Is(err, driver.ErrPINNotEntered) {
+			return fmt.Errorf("Pinky could not get to the passcode screen, so it entered nothing; try again or unlock it on the phone: %w", err)
 		}
 		return err
 	}
@@ -168,6 +176,8 @@ func (g *Gateway) recordUnlock(l *lease, start time.Time, err error) {
 	switch {
 	case errors.Is(err, driver.ErrLocked):
 		st.Text, st.Status = "Unlock from the computer failed: the phone did not accept the saved PIN", "wrong_pin"
+	case errors.Is(err, driver.ErrPINNotEntered):
+		st.Text, st.Status = "Unlock from the computer stopped before entering the PIN", "pin_not_entered"
 	case err != nil:
 		st.Text, st.Status = "Unlock from the computer failed", string(ErrInternal)
 	}

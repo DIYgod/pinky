@@ -70,6 +70,10 @@ func (d *Device) Unlock(ctx context.Context, pin string) error {
 
 // powerPhone is what waking and unlocking need from a phone; tests fake it.
 type powerPhone interface {
+	// freshAX drops the accessibility session and any failure kept from
+	// it, so the pad is looked for in a session made on the lock screen:
+	// one made before the phone locked may no longer see it.
+	freshAX()
 	screenOn(ctx context.Context) (bool, error)
 	locked(ctx context.Context) (bool, error)
 	pressHome(ctx context.Context) error
@@ -82,7 +86,7 @@ type powerPhone interface {
 // Timing for waking and unlocking.
 const (
 	wakeWait    = 2 * time.Second        // for the screen to come on after Home
-	keypadWait  = 3 * time.Second        // for the passcode pad after the swipe
+	keypadWait  = 5 * time.Second        // for the passcode pad after the swipe
 	unlockWait  = 4 * time.Second        // for lockdown to report the unlock
 	powerPoll   = 150 * time.Millisecond // between checks
 	pinKeyGap   = 120 * time.Millisecond // between passcode keys
@@ -174,25 +178,37 @@ func unlock(ctx context.Context, p powerPhone, pin string) error {
 	if !locked {
 		return nil
 	}
+	p.freshAX()
 	if err := p.swipeUp(ctx); err != nil {
-		return fmt.Errorf("unlock: %w", err)
+		return fmt.Errorf("unlock: %w: %w", err, driver.ErrPINNotEntered)
 	}
 	if err := p.sleep(ctx, afterSwipe); err != nil {
 		return err
 	}
-	// Face ID can unlock the phone on the way, if its owner is there.
+	// Face ID can unlock the phone on the way, if its owner is there. A
+	// failed look for the pad is tried again in a new session.
 	unlocked := false
+	var lookErr error
 	padOrOpen := func(c context.Context) (bool, error) {
 		l, err := p.locked(c)
 		if err != nil || !l {
 			unlocked = err == nil
 			return unlocked, err
 		}
-		return p.keypadShown(c)
+		shown, err := p.keypadShown(c)
+		if err != nil {
+			lookErr = err
+			p.freshAX()
+			return false, nil
+		}
+		return shown, nil
 	}
 	if err := waitFor(ctx, p, keypadWait, padOrOpen, "the passcode pad did not appear"); err != nil {
+		if lookErr != nil {
+			err = fmt.Errorf("%v (last error: %v)", err, lookErr)
+		}
 		// Nothing was typed, so no attempt was used.
-		return fmt.Errorf("unlock: %w: %w", err, driver.ErrLocked)
+		return fmt.Errorf("unlock: %v: %w", err, driver.ErrPINNotEntered)
 	}
 	if unlocked {
 		return nil
@@ -237,7 +253,18 @@ func unlock(ctx context.Context, p powerPhone, pin string) error {
 type devicePower struct{ d *Device }
 
 func (p devicePower) screenOn(ctx context.Context) (bool, error) { return p.d.ScreenOn(ctx) }
-func (p devicePower) locked(ctx context.Context) (bool, error)   { return p.d.Locked(ctx) }
+
+func (p devicePower) freshAX() {
+	d := p.d
+	d.svcMu.Lock()
+	defer d.svcMu.Unlock()
+	if d.rax != nil {
+		d.rax.Close()
+		d.rax = nil
+	}
+	d.raxErr = nil
+}
+func (p devicePower) locked(ctx context.Context) (bool, error) { return p.d.Locked(ctx) }
 
 func (p devicePower) pressHome(ctx context.Context) error {
 	p.d.inputMu.Lock()

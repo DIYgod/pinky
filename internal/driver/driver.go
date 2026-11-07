@@ -217,9 +217,11 @@ type Waker interface {
 // person can trigger it, from the client after Touch ID or the system's
 // equivalent; agents never reach it and never see the PIN. It wakes the
 // screen, brings up the PIN pad, enters pin and confirms, then returns nil
-// once the lock screen is gone, or ErrLocked when it is still there (a
-// wrong PIN). It never retries: phones lock out or wipe after repeated
-// failures.
+// once the lock screen is gone, ErrLocked when it is still there after the
+// PIN was entered (a wrong PIN: one attempt used), or ErrPINNotEntered when
+// it stopped before entering anything (the PIN pad never appeared, the
+// phone refuses attempts for now). It never retries: phones lock out or
+// wipe after repeated failures.
 type Unlocker interface {
 	Unlock(ctx context.Context, pin string) error
 }
@@ -325,5 +327,8 @@ var (
 	ErrUnsupported = errors.New("not supported by this device or backend")
 	ErrOffline     = errors.New("device offline")
 	ErrLocked      = errors.New("device locked")
-	ErrNotFound    = errors.New("not found")
+	// ErrPINNotEntered: Unlock stopped before entering anything, so no
+	// attempt was used.
+	ErrPINNotEntered = errors.New("the PIN was not entered")
+	ErrNotFound      = errors.New("not found")
 )

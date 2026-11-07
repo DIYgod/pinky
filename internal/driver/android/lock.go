@@ -135,9 +135,9 @@ func (d *Device) Unlock(ctx context.Context, pin string) error {
 	case b.kind == bouncerPattern:
 		return fmt.Errorf("android: the phone is locked with a pattern; Pinky enters only a PIN or a password: %w", driver.ErrUnsupported)
 	case b.kind == bouncerPIN && !digits:
-		return fmt.Errorf("android: the phone asks for a PIN, and the saved one is not all digits; nothing was entered: %w", driver.ErrLocked)
+		return fmt.Errorf("android: the phone asks for a PIN, and the saved one is not all digits; nothing was entered: %w", driver.ErrPINNotEntered)
 	case !b.enabled:
-		return fmt.Errorf("android: the phone does not take a PIN right now (too many attempts); nothing was entered: %w", driver.ErrLocked)
+		return fmt.Errorf("android: the phone does not take a PIN right now (too many attempts); nothing was entered: %w", driver.ErrPINNotEntered)
 	}
 	// One gesture: a session restart waits for the whole PIN, and a PIN
 	// that was not sent at all goes to the new session.
@@ -251,7 +251,7 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 		return b, err
 	}
 	if b.kind == bouncerNone {
-		return b, fmt.Errorf("android: the lock screen showed no PIN pad; nothing was entered: %w", driver.ErrLocked)
+		return b, fmt.Errorf("android: the lock screen showed no PIN pad; nothing was entered: %w", driver.ErrPINNotEntered)
 	}
 	return b, nil
 }

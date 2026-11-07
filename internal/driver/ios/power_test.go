@@ -24,7 +24,11 @@ type fakePhone struct {
 	entry        []keyStroke // keys since the pad last cleared
 	pad          bool
 	slept        time.Duration
+	fresh        int // accessibility sessions dropped
+	lookErrs     int // looks for the pad that fail before one works
 }
+
+func (f *fakePhone) freshAX() { f.fresh++ }
 
 func (f *fakePhone) screenOn(context.Context) (bool, error) { return f.on, nil }
 func (f *fakePhone) locked(context.Context) (bool, error)   { return f.isLocked, nil }
@@ -47,7 +51,13 @@ func (f *fakePhone) swipeUp(context.Context) error {
 	return nil
 }
 
-func (f *fakePhone) keypadShown(context.Context) (bool, error) { return f.pad, nil }
+func (f *fakePhone) keypadShown(context.Context) (bool, error) {
+	if f.lookErrs > 0 {
+		f.lookErrs--
+		return false, errors.New("the accessibility session went away")
+	}
+	return f.pad, nil
+}
 
 func (f *fakePhone) pressKey(_ context.Context, k keyStroke) error {
 	if !f.isLocked {
@@ -147,8 +157,18 @@ func TestUnlock(t *testing.T) {
 		f := lockedPhone("123456")
 		f.padOnSwipe = false
 		err := unlock(ctx, f, "123456")
-		if !errors.Is(err, driver.ErrLocked) || len(f.keys) != 0 {
-			t.Errorf("err %v, keys %d; want ErrLocked and nothing typed", err, len(f.keys))
+		if !errors.Is(err, driver.ErrPINNotEntered) || errors.Is(err, driver.ErrLocked) || len(f.keys) != 0 {
+			t.Errorf("err %v, keys %d; want ErrPINNotEntered and nothing typed", err, len(f.keys))
+		}
+	})
+	t.Run("the pad is found in a fresh session after errors", func(t *testing.T) {
+		f := lockedPhone("123456")
+		f.lookErrs = 2
+		if err := unlock(ctx, f, "123456"); err != nil {
+			t.Fatalf("unlock: %v", err)
+		}
+		if f.fresh < 3 {
+			t.Errorf("accessibility sessions dropped %d times; want one at the start and one per failed look", f.fresh)
 		}
 	})
 	t.Run("face id on the swipe", func(t *testing.T) {
