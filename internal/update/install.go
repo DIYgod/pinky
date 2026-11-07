@@ -28,6 +28,12 @@ type Staged interface {
 	Discard()
 }
 
+// SwapNower is a Staged that can also swap at once, while Pinky does not
+// run (`pinky update`).
+type SwapNower interface {
+	SwapNow() error
+}
+
 // StartOptions say how the new version starts after a swap.
 type StartOptions struct {
 	// Background starts it without bringing it to the front, as after an

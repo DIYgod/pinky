@@ -226,6 +226,27 @@ func (s *stagedBundle) Swap(opt StartOptions) error {
 
 func (s *stagedBundle) Discard() { os.RemoveAll(s.work) }
 
+// SwapNow puts the new version in place at once, for `pinky update` while
+// Pinky is not running: it renames the installed bundle aside, the new one
+// in, and removes the old one, putting it back should the second rename
+// fail.
+func (s *stagedBundle) SwapNow() error {
+	old := filepath.Join(s.work, "old.app")
+	if err := os.Rename(s.b.Bundle, old); err != nil {
+		s.Discard()
+		return fmt.Errorf("move %s aside: %w", s.b.Bundle, err)
+	}
+	if err := os.Rename(s.app, s.b.Bundle); err != nil {
+		if rerr := os.Rename(old, s.b.Bundle); rerr != nil {
+			return fmt.Errorf("move the new version in: %w (and putting the old one back failed: %v; it is in %s)", err, rerr, old)
+		}
+		s.Discard()
+		return fmt.Errorf("move the new version in: %w", err)
+	}
+	s.Discard()
+	return nil
+}
+
 // swapScript is the helper, for /bin/sh. With the pid of the running
 // Pinky, the installed bundle, the new bundle, the work folder, a log file
 // and how long to wait for the new version to launch (in tenths of a
@@ -357,13 +378,14 @@ func (s *Swapped) Confirm() error {
 var errNotBundle = errors.New("Pinky does not run from Pinky.app")
 
 // NewInstaller returns the installer for a location that can replace
-// itself, or an error saying why it cannot.
-func NewInstaller(l Location, log *slog.Logger) (Installer, error) {
+// itself, or an error saying why it cannot; the swap's helper logs to
+// logFile.
+func NewInstaller(l Location, logFile string, log *slog.Logger) (Installer, error) {
 	if !l.CanReplace() {
 		if l.Problem != "" {
 			return nil, errors.New(l.Problem)
 		}
 		return nil, errNotBundle
 	}
-	return &BundleInstaller{Bundle: l.App, Logger: log}, nil
+	return &BundleInstaller{Bundle: l.App, Log: logFile, Logger: log}, nil
 }

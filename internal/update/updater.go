@@ -164,7 +164,7 @@ func (u *Updater) Prepare(ctx context.Context, r Release, progress func(done, to
 	}
 	in := u.Installer
 	if in == nil {
-		if in, err = NewInstaller(u.Location, log); err != nil {
+		if in, err = NewInstaller(u.Location, "", log); err != nil {
 			os.Remove(file)
 			return nil, err
 		}

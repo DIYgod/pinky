@@ -27,6 +27,7 @@ func runDaemon(args []string) error {
 	var c gatewayConfig
 	c.flags(fs)
 	verbose := fs.Bool("v", false, "log debug messages")
+	noUpdates := fs.Bool("no-update-check", false, "do not look for new versions of Pinky")
 	httpAddr := fs.String("http", "", `also serve MCP over Streamable HTTP at this address, such as "`+ui.DefaultRemoteAddr+`"; each request needs the agent token (`+"`pinky token`"+`)`)
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -52,6 +53,13 @@ func runDaemon(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	rg.srv.Quit = stop
+	upd := newUpdater(rg.Dirs, c.Log)
+	if err := startedUpdate(upd, c.Log).Confirm(); err != nil {
+		c.Log.Warn("update: confirm", "err", err)
+	}
+	if !*noUpdates {
+		go daemonUpdates(ctx, upd, c.Log)
+	}
 	err = rg.Serve(ctx)
 	c.Log.Info("gateway stopping")
 	return err

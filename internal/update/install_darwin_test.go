@@ -408,3 +408,23 @@ func TestLocate(t *testing.T) {
 		t.Errorf("a Homebrew cask: %+v", l)
 	}
 }
+
+func TestSwapNow(t *testing.T) {
+	apps := t.TempDir()
+	installed := fakeBundle(t, apps, "Pinky.app", BundleID, "2026.1107.1")
+	zip := zipBundle(t, fakeBundle(t, t.TempDir(), "Pinky.app", BundleID, "2026.1107.2"))
+	in := &BundleInstaller{Bundle: installed, Verify: acceptAll}
+	st, err := in.Stage(context.Background(), zip, Release{Feed: Feed{Version: "2026.1107.2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.(SwapNower).SwapNow(); err != nil {
+		t.Fatal(err)
+	}
+	if v := installedVersion(t, installed); v != "2026.1107.2" {
+		t.Errorf("installed %s", v)
+	}
+	if left, _ := filepath.Glob(filepath.Join(apps, ".Pinky.app.update-*")); len(left) != 0 {
+		t.Errorf("left %v", left)
+	}
+}

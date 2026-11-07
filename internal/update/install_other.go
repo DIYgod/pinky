@@ -15,7 +15,7 @@ func (s *Swapped) Confirm() error { return nil }
 
 // NewInstaller: Pinky replaces itself on macOS only; elsewhere the person
 // runs the installer or the package manager.
-func NewInstaller(l Location, log *slog.Logger) (Installer, error) {
+func NewInstaller(l Location, logFile string, log *slog.Logger) (Installer, error) {
 	if l.Problem != "" {
 		return nil, errors.New(l.Problem)
 	}
