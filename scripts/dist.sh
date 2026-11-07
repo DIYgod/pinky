@@ -30,6 +30,15 @@
 #                    FFmpeg's assembly for Intel Macs
 set -eu
 
+# Homebrew's makensis (NSIS 3.13, which mygo build runs for the Windows
+# installer) aborts with std::bad_alloc unless the character type is UTF-8,
+# and a shell may have no locale at all, or C. The build then runs in
+# C.UTF-8, which macOS and Linux both have. (Ubuntu's NSIS works either way.)
+case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
+*[Uu][Tt][Ff]-8* | *[Uu][Tt][Ff]8*) ;;
+*) export LC_ALL=C.UTF-8 ;;
+esac
+
 usage="usage: scripts/dist.sh companion|darwin|windows|linux <out>"
 cmd=${1:?$usage}
 out=${2:?$usage}
