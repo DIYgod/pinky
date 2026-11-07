@@ -211,5 +211,12 @@ func isClosedErr(err error) bool {
 		return false
 	}
 	m := err.Error()
-	return strings.Contains(m, "EOF") || strings.Contains(m, "closed") || strings.Contains(m, "reset")
+	// go-ios's HTTP/2 layer reports a peer that shuts the connection down
+	// as "received GOAWAY".
+	for _, s := range []string{"EOF", "closed", "reset", "GOAWAY", "broken pipe"} {
+		if strings.Contains(m, s) {
+			return true
+		}
+	}
+	return false
 }

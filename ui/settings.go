@@ -382,6 +382,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 				if d.Features.Background {
 					a.backgroundRow(c, d, true)
 				}
+				a.connectionRows(c, d)
 				mg.Row(c).Padding(4, 0, 0, 0).Children(func() {
 					if linkButton(c, locales.PhoneCheckup()).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
 						a.openCheckup(d)

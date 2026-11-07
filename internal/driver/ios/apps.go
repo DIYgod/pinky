@@ -44,6 +44,21 @@ func (d *Device) Apps(ctx context.Context) ([]driver.App, error) {
 
 // catalog returns the app catalog, refreshed when older than appCacheTTL.
 func (d *Device) catalog(ctx context.Context) (*appCatalog, error) {
+	return d.catalogWithin(ctx, appCacheTTL)
+}
+
+// catalogFresh returns the app catalog read again unless it was read in
+// the last appRecheck: for an app installed or updated since.
+func (d *Device) catalogFresh(ctx context.Context) (*appCatalog, error) {
+	return d.catalogWithin(ctx, appRecheck)
+}
+
+// appRecheck is how often at most the catalog is read again for a process
+// it does not list.
+const appRecheck = 10 * time.Second
+
+// catalogWithin returns the app catalog, read again when older than ttl.
+func (d *Device) catalogWithin(ctx context.Context, ttl time.Duration) (*appCatalog, error) {
 	d.svcMu.Lock()
 	if d.apps == nil {
 		d.apps = &appCatalog{}
@@ -51,7 +66,7 @@ func (d *Device) catalog(ctx context.Context) (*appCatalog, error) {
 	c := d.apps
 	d.svcMu.Unlock()
 	c.mu.Lock()
-	fresh := c.apps != nil && time.Since(c.at) < appCacheTTL
+	fresh := c.apps != nil && time.Since(c.at) < ttl
 	c.mu.Unlock()
 	if fresh {
 		return c, nil
@@ -162,7 +177,7 @@ func (d *Device) processPaths(ctx context.Context) (map[uint64]string, error) {
 		u, _ := t["executableURL"].(map[string]any)
 		rel, _ := u["relative"].(string)
 		if pid != 0 && rel != "" {
-			m[pid] = strings.TrimPrefix(rel, "file://")
+			m[pid] = executablePath(rel)
 		}
 	}
 	return m, nil

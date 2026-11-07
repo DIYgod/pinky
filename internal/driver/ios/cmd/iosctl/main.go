@@ -17,6 +17,7 @@
 //	iosctl [-udid U] apps
 //	iosctl [-udid U] locked
 //	iosctl -wda http://127.0.0.1:8100 [-mjpeg http://127.0.0.1:9100] observe|tap|...
+//	iosctl -udid U -connection wda|coredevice|auto observe|tap|...|unlock
 //
 // Coordinates are screenshot pixels (1125x2436 on an iPhone 13 mini).
 // Without -udid it uses the only connected iPhone. An iPhone below iOS 27
@@ -50,6 +51,7 @@ import (
 func main() {
 	udid := flag.String("udid", "", "device UDID (default: the only iPhone)")
 	flag.StringVar(&wdaURL, "wda", "", "use the WebDriverAgent server at this URL (a simulator)")
+	flag.StringVar(&connection, "connection", "", "connect this way: auto, coredevice or wda (default: as Pinky would)")
 	flag.StringVar(&mjpegURL, "mjpeg", "", "its MJPEG server's URL, for stream")
 	flag.Usage = usage
 	flag.Parse()
@@ -66,7 +68,7 @@ func main() {
 	}
 }
 
-var wdaURL, mjpegURL string
+var wdaURL, mjpegURL, connection string
 
 func usage() {
 	fmt.Fprint(os.Stderr, `usage: iosctl [-udid UDID | -wda URL [-mjpeg URL]] COMMAND [ARGS]
@@ -123,7 +125,12 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 	if cmd == "locked" {
 		return locked(id)
 	}
-	if old, err := belowCoreDevice(id); err == nil && old {
+	if connection != "" && connection != "auto" {
+		if err := p.SetConnection(id, connection); err != nil {
+			return err
+		}
+	}
+	if old, err := belowCoreDevice(id); (err == nil && old) || (connection != "" && connection != "auto") {
 		start := time.Now()
 		d, err := p.Open(ctx, id)
 		if err != nil {
@@ -386,6 +393,8 @@ func generic(ctx context.Context, d driver.Device, cmd string, args []string) er
 				}
 			case <-stop:
 				done = true
+			case <-ctx.Done():
+				done = true
 			}
 		}
 		fmt.Printf("%s %dx%d: %d packets, %d key frames, %d bytes; err %v\n", s.Codec(), w, h, n, keys, bytes, s.Err())
@@ -403,6 +412,22 @@ func generic(ctx context.Context, d driver.Device, cmd string, args []string) er
 		for _, a := range apps {
 			fmt.Printf("%-40s %s\n", a.ID, a.Name)
 		}
+		return nil
+	case "unlock":
+		u, ok := d.(driver.Unlocker)
+		if !ok {
+			return fmt.Errorf("unlock: %w", driver.ErrUnsupported)
+		}
+		// The passcode comes on standard input, never on the command line.
+		fmt.Fprint(os.Stderr, "passcode (one line on standard input): ")
+		pin, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil && pin == "" {
+			return err
+		}
+		if err := u.Unlock(ctx, strings.TrimRight(pin, "\r\n")); err != nil {
+			return err
+		}
+		fmt.Println("unlocked")
 		return nil
 	case "locked":
 		lr, ok := d.(driver.LockReporter)

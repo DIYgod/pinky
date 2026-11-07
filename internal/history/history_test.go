@@ -156,3 +156,36 @@ func TestDownscale(t *testing.T) {
 		t.Fatal("small image should be returned as is")
 	}
 }
+
+func TestDeviceConnections(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetDeviceConnection(ctx, "iphone", "wda"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetDeviceConnection(ctx, "ipad", "coredevice"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetDeviceConnection(ctx, "ipad", ""); err != nil { // back to automatic
+		t.Fatal(err)
+	}
+	s.Close()
+	s, err = Open(dir) // survives a restart
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	got, err := s.DeviceConnections(ctx)
+	if err != nil || len(got) != 1 || got["iphone"] != "wda" {
+		t.Fatalf("connections %v, %v", got, err)
+	}
+	// The background choice is kept apart: a phone with only a connection
+	// choice has made none about background displays.
+	if bg, err := s.BackgroundDevices(ctx); err != nil || len(bg) != 0 {
+		t.Fatalf("background %v, %v", bg, err)
+	}
+}

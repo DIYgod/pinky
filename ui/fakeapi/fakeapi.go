@@ -150,6 +150,7 @@ type device struct {
 	background bool                  // agents work on a background display
 	checkup    *driver.Checkup       // what its own checkup finds; nil for the default
 	installErr error                 // what installing the companion app fails with
+	way        string                // iPhone: the connection the person chose
 }
 
 type task struct {
