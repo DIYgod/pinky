@@ -16,6 +16,8 @@ type fakePhone struct {
 	isLocked   bool
 	passcode   string
 	padOnSwipe bool
+	padAt      int  // the pad shows from this swipe on (0: padOnSwipe decides)
+	sleepsOff  int  // the screen goes dark again after this many swipes (0: never)
 	faceID     bool // the swipe unlocks it
 	unlockAt   int  // Face ID unlocks it after this many keys (0: never)
 
@@ -42,12 +44,21 @@ func (f *fakePhone) pressHome(context.Context) error {
 }
 
 func (f *fakePhone) swipeUp(context.Context) error {
+	if !f.on {
+		panic("swiped on a dark screen")
+	}
 	f.swipes++
 	if f.faceID {
 		f.isLocked = false
 		return nil
 	}
 	f.pad = f.padOnSwipe
+	if f.padAt > 0 {
+		f.pad = f.swipes >= f.padAt
+	}
+	if f.sleepsOff > 0 && f.swipes == f.sleepsOff && !f.pad {
+		f.on = false
+	}
 	return nil
 }
 
@@ -160,6 +171,43 @@ func TestUnlock(t *testing.T) {
 		if !errors.Is(err, driver.ErrPINNotEntered) || errors.Is(err, driver.ErrLocked) || len(f.keys) != 0 {
 			t.Errorf("err %v, keys %d; want ErrPINNotEntered and nothing typed", err, len(f.keys))
 		}
+		if f.swipes != unlockSwipes {
+			t.Errorf("%d swipes; want %d", f.swipes, unlockSwipes)
+		}
+	})
+	t.Run("the pad comes on the second swipe", func(t *testing.T) {
+		// A lock screen with notifications took the first swipe for its
+		// notification list.
+		f := lockedPhone("123456")
+		f.padAt = 2
+		if err := unlock(ctx, f, "123456"); err != nil {
+			t.Fatal(err)
+		}
+		if f.swipes != 2 || len(f.keys) != 6 {
+			t.Errorf("swipes %d, keys %d; want 2 swipes and one passcode", f.swipes, len(f.keys))
+		}
+	})
+	t.Run("the screen goes dark between swipes", func(t *testing.T) {
+		f := lockedPhone("123456")
+		f.padAt, f.sleepsOff = 2, 1
+		if err := unlock(ctx, f, "123456"); err != nil {
+			t.Fatal(err)
+		}
+		if f.home != 2 || f.swipes != 2 || len(f.keys) != 6 {
+			t.Errorf("home %d, swipes %d, keys %d; want Home again before the second swipe", f.home, f.swipes, len(f.keys))
+		}
+	})
+	t.Run("a just lit screen gets a moment before the swipe", func(t *testing.T) {
+		f := lockedPhone("123456")
+		f.padOnSwipe = false
+		unlock(ctx, f, "123456")
+		g := lockedPhone("123456")
+		g.on = true
+		g.padOnSwipe = false
+		unlock(ctx, g, "123456")
+		if f.slept-g.slept < afterWake {
+			t.Errorf("slept %v after waking, %v when already on; want %v more", f.slept, g.slept, afterWake)
+		}
 	})
 	t.Run("the pad is found in a fresh session after errors", func(t *testing.T) {
 		f := lockedPhone("123456")
@@ -259,5 +307,16 @@ func TestSubmitsItself(t *testing.T) {
 		if got := submitsItself(pin); got != want {
 			t.Errorf("%q: %v, want %v", pin, got, want)
 		}
+	}
+}
+
+func TestIsClosedErr(t *testing.T) {
+	for _, m := range []string{"ReceiveOnServerClientStream: could not read frame. EOF", "received GOAWAY", "write: broken pipe", "connection reset by peer", "use of closed network connection"} {
+		if !isClosedErr(errors.New(m)) {
+			t.Errorf("%q: not taken for a closed connection", m)
+		}
+	}
+	if isClosedErr(errors.New("CoreDevice error 9021")) || isClosedErr(nil) {
+		t.Error("a device's answer was taken for a closed connection")
 	}
 }

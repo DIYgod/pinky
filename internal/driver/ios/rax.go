@@ -33,8 +33,16 @@ const (
 	raxRequestTimeout = 2 * time.Second
 )
 
-// AXP request types, as iOS 27 answers them.
+// AXP request types, as iOS 27 answers them. The numbers are the cases of
+// -[AXPTranslator processTranslatorRequest:] (macOS 27 ships the iOS
+// translator too): 1 processApplicationObject:, 2 processAttributeRequest:,
+// 3 processCanSetAttribute:, 4 processFrontMostApp:, 5
+// processMultipleAttributeRequest:, 6 processHitTest: (parameters point,
+// displayId, contextId), 7 processActionRequest:, 8 processSetAttribute:, 9
+// processSupportedActions:, 10 processSupportsAttributes:, 11
+// processAXTreeElements:.
 const (
+	axpReqAppObject    = 1 // an application's element by pid, parameters {"pid": n}
 	axpReqAttribute    = 2 // one attribute of an element
 	axpReqFrontmostApp = 4 // the frontmost application's element
 	axpReqAttributes   = 5 // several attributes, parameters {"attributes": [...]}
@@ -93,6 +101,60 @@ type raxSession struct {
 
 	tree   *raxTree      // the last tree the phone pushed, under mu
 	treeCh chan struct{} // closed when a new tree arrives, under mu
+
+	// meta is what walks and second pushes said of each element, by
+	// process and ID, under mu: a first push lacks it (see fill).
+	meta map[[2]uint64]objMeta
+}
+
+// objMeta is what a first push leaves out of an element.
+type objMeta struct {
+	Type  int
+	Ident string
+}
+
+// maxMeta bounds the elements a session remembers.
+const maxMeta = 20000
+
+// learn remembers the type and identifier of elements read whole: from a
+// walk or a second push.
+func (s *raxSession) learn(els []raxElement) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.meta == nil || len(s.meta)+len(els) > maxMeta {
+		s.meta = make(map[[2]uint64]objMeta, len(els))
+	}
+	for _, e := range els {
+		s.meta[[2]uint64{uint64(e.Object.PID), e.Object.ID}] = objMeta{Type: e.Type, Ident: e.Ident}
+	}
+}
+
+// fill returns a copy of a first push's elements with the types and
+// identifiers walks and second pushes gave them, and whether it knew every
+// one. Elements seen before then read the same whichever source a read
+// came from: their role, identifier and ancestry, and so their refs, do not
+// change between a read from a first push and the next (field test item
+// 13: refs flipped between two numbers, roles between button and text).
+func (s *raxSession) fill(els []raxElement) ([]raxElement, bool) {
+	out := append([]raxElement(nil), els...)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	known := true
+	for i := range out {
+		e := &out[i]
+		m, ok := s.meta[[2]uint64{uint64(e.Object.PID), e.Object.ID}]
+		if !ok {
+			known = false
+			continue
+		}
+		if e.Type == 0 {
+			e.Type = m.Type
+		}
+		if e.Ident == "" {
+			e.Ident = m.Ident
+		}
+	}
+	return out, known
 }
 
 // raxTree is a tree the phone pushed, in walk order.
@@ -213,6 +275,9 @@ func (s *raxSession) Dispatch(msg dtx.Message) {
 			kind, _ := d["treeDumpType"].(string)
 			now := time.Now()
 			t := &raxTree{els: els, at: now, start: now, first: kind == "AXPTreeDumpTypeInitialDump", appPID: els[0].Object.PID}
+			if !t.first {
+				s.learn(els)
+			}
 			s.mu.Lock()
 			if prev := s.tree; !t.first && prev != nil && prev.first && prev.appPID == t.appPID {
 				t.start = prev.start
@@ -507,6 +572,25 @@ func (s *raxSession) walkUntil(ctx context.Context, lim walkLimits, stop *atomic
 	if onApp != nil {
 		onApp(app)
 	}
+	return s.walkFrom(ctx, app, lim, stop)
+}
+
+// appObject returns the application element of process pid, in front or
+// not.
+func (s *raxSession) appObject(ctx context.Context, pid int) (*axpObject, error) {
+	r, err := s.request(ctx, axpRequest{Type: axpReqAppObject, Client: raxClientType, Params: map[string]any{"pid": pid}})
+	if err != nil {
+		return nil, err
+	}
+	app, _ := r.Result.(*axpObject)
+	if app == nil {
+		return nil, fmt.Errorf("remote accessibility: no application element for pid %d", pid)
+	}
+	return app, nil
+}
+
+// walkFrom walks the elements below root, root first, as walkUntil does.
+func (s *raxSession) walkFrom(ctx context.Context, app *axpObject, lim walkLimits, stop *atomic.Bool) ([]raxElement, bool, error) {
 	type item struct {
 		o             *axpObject
 		parent, depth int
@@ -536,6 +620,7 @@ func (s *raxSession) walkUntil(ctx context.Context, lim walkLimits, stop *atomic
 		ad, _ := r.Result.(axpDict)
 		e, kids := raxElementFrom(it.o, ad, it.parent, it.depth)
 		out = append(out, e)
+		s.learn(out[len(out)-1:])
 		idx := len(out) - 1
 		for i := len(kids) - 1; i >= 0; i-- {
 			stack = append(stack, item{kids[i], idx, it.depth + 1})
