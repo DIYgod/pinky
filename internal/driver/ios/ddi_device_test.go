@@ -4,10 +4,12 @@ package ios
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	goios "github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/imagemounter"
 )
@@ -108,4 +110,133 @@ func TestDiskImageMountKeeps(t *testing.T) {
 	}
 	list, err := m.ListCryptexes()
 	t.Logf("cryptexes afterwards: %+v err=%v", list, err)
+}
+
+// TestDiskImageRemount takes the developer disk image off the phone and
+// lets the provider put it back, as after a restart: List must report the
+// phone as being prepared, then online, with the same image as before. It
+// changes the phone for a few seconds, so it runs only with
+// PINKY_REMOUNT=1, with the owner's leave, and only when the phone has
+// this computer's image (the one it puts back).
+func TestDiskImageRemount(t *testing.T) {
+	udid := os.Getenv("PINKY_DEVICE")
+	if udid == "" || os.Getenv("PINKY_REMOUNT") != "1" {
+		t.Skip("set PINKY_DEVICE and PINKY_REMOUNT=1 to take the image off and let Pinky mount it again")
+	}
+	img, err := findDiskImage("")
+	if err != nil {
+		t.Skip(err)
+	}
+	base, err := findEntry(udid, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cryptexes := func(what string) []imagemounter.RemoteCryptex {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		l, err := dialLinkEntry(ctx, base)
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+		defer l.Close()
+		m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry)
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+		list, err := m.ListCryptexes()
+		t.Logf("%s: cryptexes %+v err=%v; display %v, hid %v", what, list, err, l.has(displayService), l.has(universalHIDService))
+		return list
+	}
+	has := func(list []imagemounter.RemoteCryptex) bool {
+		for _, c := range list {
+			if c.Identifier == ddiCryptex && c.Version == img.Version {
+				return true
+			}
+		}
+		return false
+	}
+	if !has(cryptexes("before")) {
+		t.Skip("the phone does not have this computer's image as a cryptex")
+	}
+	// A locked phone mounts nothing until it is unlocked, so taking the
+	// image off one would leave it without until then.
+	lctx, lcancel := context.WithTimeout(context.Background(), 10*time.Second)
+	locked, err := lockedEntry(lctx, base)
+	lcancel()
+	if err != nil || locked {
+		t.Skipf("the phone is locked (%v, %v): unlock it first", locked, err)
+	}
+	// Whatever happens below, the phone ends with its image.
+	defer func() {
+		if has(cryptexes("at the end")) {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), mountTimeout)
+		defer cancel()
+		l, err := dialLinkEntry(ctx, base)
+		if err != nil {
+			t.Errorf("putting the image back: %v", err)
+			return
+		}
+		defer l.Close()
+		r, err := mountDiskImage(ctx, l, img)
+		t.Logf("putting the image back directly: %+v err=%v", r, err)
+		if err != nil {
+			t.Errorf("THE PHONE HAS NO DEVELOPER DISK IMAGE: %v. Open Xcode with the iPhone connected (Window > Devices and Simulators) to mount it again.", err)
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	l, err := dialLinkEntry(ctx, base)
+	if err != nil {
+		cancel()
+		t.Fatal(err)
+	}
+	m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry)
+	if err == nil {
+		start := time.Now()
+		err = m.UnmountImage()
+		t.Logf("took the image off in %v: err=%v", time.Since(start), err)
+	}
+	l.Close()
+	cancel()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if has(cryptexes("after taking it off")) {
+		t.Fatal("the image is still there")
+	}
+
+	// The provider, as the gateway runs it: List every 2 s.
+	p := NewProvider()
+	start := time.Now()
+	last := ""
+	for {
+		lctx, lcancel := context.WithTimeout(context.Background(), 30*time.Second)
+		infos, err := p.List(lctx)
+		lcancel()
+		var info driver.Info
+		for _, i := range infos {
+			if i.ID == udid {
+				info = i
+			}
+		}
+		line := fmt.Sprintf("%s / %s / %s (err %v)", info.State, info.Setup, info.Detail, err)
+		if line != last {
+			t.Logf("%5.1f s: %s", time.Since(start).Seconds(), line)
+			last = line
+		}
+		if info.State == driver.StateOnline {
+			break
+		}
+		if time.Since(start) > 4*time.Minute {
+			t.Fatalf("not online after 4 minutes: %s", line)
+		}
+		time.Sleep(2 * time.Second)
+	}
+	t.Logf("online again %.1f s after the image was taken off", time.Since(start).Seconds())
+	if !has(cryptexes("after Pinky mounted it")) {
+		t.Fatal("the phone is online but this computer's image is not there")
+	}
 }

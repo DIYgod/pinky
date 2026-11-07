@@ -3,6 +3,7 @@ package ios
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -171,6 +172,7 @@ func TestClassifyMountError(t *testing.T) {
 		{errors.New("MountImage: findCryptexIdentity: no Cryptex1 identity for chip 0xff10"), problemNotFor},
 		{errors.Join(errors.New("as a cryptex: x"), errNewerImageMounted), problemNewer},
 		{errNoDiskImage, problemNoImage},
+		{fmt.Errorf("mount: %w", errPhoneLocked), problemLocked},
 		{errors.New("something else"), problemOther},
 	} {
 		if got := classifyMountError(c.err); got != c.want {

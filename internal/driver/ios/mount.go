@@ -43,9 +43,15 @@ type mountResult struct {
 // than the one Pinky found, which Pinky leaves alone.
 var errNewerImageMounted = errors.New("the iPhone has a newer developer disk image than this computer")
 
+// errPhoneLocked means the phone is locked: it mounts no image until it is
+// unlocked (CoreDevice refuses then too, "the device was still locked").
+var errPhoneLocked = errors.New("the iPhone is locked")
+
 // mountTimeout bounds one mount: the signing request (up to a minute in
-// go-ios) and sending about 17 MB to the phone.
-const mountTimeout = 3 * time.Minute
+// go-ios) and sending about 17 MB to the phone, which takes seconds over
+// USB. A phone that locks while its image is installed as a cryptex makes
+// the install wait rather than fail, so this is what ends it.
+const mountTimeout = 90 * time.Second
 
 // mountDiskImage mounts img on the phone behind l. It installs the image
 // as a cryptex when the phone offers cryptexd and the image has a cryptex
@@ -64,7 +70,7 @@ func mountDiskImage(ctx context.Context, l *link, img diskImage) (mountResult, e
 	// go-ios takes no context; the call goes on in the background if ctx
 	// ends first, and its connections close with the link.
 	go func() {
-		r, err := mountWith(l, img)
+		r, err := mountWith(ctx, l, img)
 		ch <- result{r, err}
 	}()
 	select {
@@ -75,7 +81,7 @@ func mountDiskImage(ctx context.Context, l *link, img diskImage) (mountResult, e
 	}
 }
 
-func mountWith(l *link, img diskImage) (mountResult, error) {
+func mountWith(ctx context.Context, l *link, img diskImage) (mountResult, error) {
 	var errs []error
 	if img.Version != "" && l.has(cryptexService) {
 		r, err := mountAsCryptex(l, img)
@@ -83,6 +89,11 @@ func mountWith(l *link, img diskImage) (mountResult, error) {
 			return r, err
 		}
 		errs = append(errs, fmt.Errorf("as a cryptex: %w", err))
+		if ctx.Err() != nil {
+			// mountDiskImage gave up on this mount; do not start
+			// another way in the background.
+			return mountResult{}, errors.Join(errs...)
+		}
 	}
 	r, err := mountPersonalizedImage(l, img)
 	if err == nil {
@@ -182,6 +193,8 @@ func classifyMountError(err error) mountProblem {
 		return problemNoImage
 	case errors.Is(err, errNewerImageMounted):
 		return problemNewer
+	case errors.Is(err, errPhoneLocked):
+		return problemLocked
 	}
 	m := strings.ToLower(err.Error())
 	has := func(words ...string) bool {

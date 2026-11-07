@@ -150,8 +150,12 @@ func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check f
 	}
 }
 
-// mountOn mounts img on the phone behind e through a tunnel of its own.
+// mountOn mounts img on the phone behind e through a tunnel of its own,
+// once the phone is unlocked.
 func mountOn(ctx context.Context, e goios.DeviceEntry, img diskImage) (mountResult, error) {
+	if locked, err := lockedEntry(ctx, e); err == nil && locked {
+		return mountResult{}, errPhoneLocked
+	}
 	l, err := dialLinkEntry(ctx, e)
 	if err != nil {
 		return mountResult{}, err
@@ -372,4 +376,41 @@ func lastLine(err error) string {
 		s = s[i+1:]
 	}
 	return s
+}
+
+// lockedEntry reports whether the phone behind e is locked: lockdown's
+// PasswordProtected, as Device.Locked reads it.
+func lockedEntry(ctx context.Context, e goios.DeviceEntry) (bool, error) {
+	type result struct {
+		v   bool
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		conn, err := goios.ConnectLockdownWithSession(e)
+		if err != nil {
+			ch <- result{err: err}
+			return
+		}
+		defer conn.Close()
+		v, err := conn.GetValue("PasswordProtected")
+		if err != nil {
+			ch <- result{err: err}
+			return
+		}
+		b, ok := v.(bool)
+		if !ok {
+			ch <- result{err: fmt.Errorf("PasswordProtected is %T", v)}
+			return
+		}
+		ch <- result{v: b}
+	}()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	select {
+	case r := <-ch:
+		return r.v, r.err
+	case <-ctx.Done():
+		return false, ctx.Err()
+	}
 }
