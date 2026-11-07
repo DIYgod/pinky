@@ -229,6 +229,11 @@ func (s *Session) readLogs() {
 // Logs returns the server's most recent log lines.
 func (s *Session) Logs() []string { return s.logs.recent() }
 
+// SubscribeLogs returns the server's log lines from now on, until cancel
+// is called. A slow reader misses lines rather than blocking the server's
+// output.
+func (s *Session) SubscribeLogs() (lines <-chan string, cancel func()) { return s.logs.subscribe() }
+
 // ReadPacket reads the next video packet. Only one goroutine may read.
 func (s *Session) ReadPacket() (Packet, error) {
 	if s.videoR == nil {

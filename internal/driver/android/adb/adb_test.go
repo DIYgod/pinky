@@ -143,15 +143,20 @@ func (s *fakeServer) handle(c net.Conn) {
 		case strings.HasPrefix(svc, "forward:"):
 			spec := strings.TrimPrefix(strings.TrimPrefix(svc, "forward:"), "norebind:")
 			local, remote, _ := strings.Cut(spec, ";")
-			okay(c)
-			okay(c)
-			if local == "tcp:0" {
+			anyPort := local == "tcp:0"
+			if anyPort {
 				local = "tcp:43210"
-				writeStr(c, "43210")
 			}
+			// Kept before the answer, as the real server listens before it
+			// answers: the client may list the forwards right after.
 			s.mu.Lock()
 			s.forwards = append(s.forwards, Forward{serial, local, remote})
 			s.mu.Unlock()
+			okay(c)
+			okay(c)
+			if anyPort {
+				writeStr(c, "43210")
+			}
 		case strings.HasPrefix(svc, "killforward:"):
 			local := strings.TrimPrefix(svc, "killforward:")
 			s.mu.Lock()

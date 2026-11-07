@@ -115,6 +115,7 @@ type API struct {
 
 	pairings    []*pairing
 	installs    []string
+	updates     []string // companion apps UpdateCompanion updated
 	noRecording bool
 	keepDays    int
 	unrecorded  map[string]bool // finished while recording was off

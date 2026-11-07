@@ -100,6 +100,10 @@ func (d *Device) withInput(ctx context.Context, wake bool, f func(l *live) error
 }
 
 func (d *Device) wake(ctx context.Context, l *live) error {
+	if d.undark() {
+		d.markAwake()
+		return nil
+	}
 	d.stateMu.Lock()
 	fresh := time.Since(d.awakeAt) < awakeTrust
 	d.stateMu.Unlock()

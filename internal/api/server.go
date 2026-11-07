@@ -122,13 +122,18 @@ type Server struct {
 }
 
 // Serve accepts connections until ctx ends, then waits for them to finish.
+// It closes ln, and ln is closed by the time Serve returns: for a Listener
+// the socket is gone and the lock is free, so a gateway can start again at
+// once.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	if s.Log == nil {
 		s.Log = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	closed := make(chan struct{})
 	go func() {
+		defer close(closed)
 		<-ctx.Done()
 		ln.Close()
 	}()
@@ -159,6 +164,9 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 		}()
 	}
 	cancel()
+	// Accept fails as soon as the listener starts closing, before Close has
+	// removed the socket and released the lock.
+	<-closed
 	s.wg.Wait()
 	return err
 }

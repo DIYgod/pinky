@@ -18,6 +18,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/secret"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/internal/video"
 )
 
@@ -62,6 +63,10 @@ type Options struct {
 	// AgentToken is the token agents present, which Settings › Agents shows
 	// for remote agents as their bearer token; empty leaves it out.
 	AgentToken string
+	// Updates finds and installs new versions of Pinky; nil leaves updates
+	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new.
+	Updates   *update.Updater
+	Changelog string
 }
 
 // Settings are what the Settings screen changes.
@@ -78,6 +83,9 @@ type Settings struct {
 	// that cannot start `pinky mcp`; each request needs the agent token.
 	RemoteAgents bool
 	RemoteAddr   string
+	// AutoUpdate installs new versions of Pinky, and of the companion app
+	// on Android phones, by themselves while no one uses them.
+	AutoUpdate bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -104,6 +112,7 @@ func DefaultSettings() Settings {
 			{Name: "Northbank", Kind: "Banking"}, {Name: "Vaultly", Kind: "Passwords"}, {Name: "Coinpouch", Kind: "Wallet"},
 		},
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
+		AutoUpdate: true,
 	}
 }
 
@@ -184,6 +193,7 @@ type app struct {
 	bg     bgState        // background displays, per phone
 	rec    recState       // task recordings in Activity
 	remote remoteState    // Settings › Agents › Remote agents
+	upd    updateState    // new versions of Pinky and the companion app
 
 	awake    func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
 	awakeOn  bool
@@ -331,6 +341,7 @@ func (a *app) ready() {
 		a.opt.OnReady(a.main)
 	}
 	go a.watch()
+	a.startUpdates()
 }
 
 func (a *app) shutdown() {

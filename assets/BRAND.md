@@ -39,3 +39,13 @@ All PNGs were rendered from the SVGs with headless Chrome on a transparent backg
 | Depth | shadow `#9E6B00`; Linux bottom edge `#D99600` |
 
 How the client uses these colors, and how it keeps them apart from the amber of "Needs you" and the red of "Stop", is in `docs/notes/client.md`.
+
+## README images (`readme/`)
+
+| File | Contents |
+| --- | --- |
+| `readme/hero.png` | Pinky's window (1760 × 1100) during a real Claude Code run on an Android 16 emulator: the Send tap waits for approval. On the lemon field. |
+| `readme/demo.gif` | The same run, about 12 s: the reply is typed, the Send waits, it is allowed and sent. |
+| `readme/social-preview.png` | The repository's social preview (1280 × 640). GitHub reads it only from Settings › General › Social preview, so upload it there. |
+
+They were made from captures of the e2e build taken through MyGo's automation socket, with the launch materials' scripts (kept outside the repository).

@@ -16,6 +16,7 @@ import (
 
 	"github.com/egoist/mygo"
 
+	"github.com/DIYgod/pinky"
 	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
@@ -70,6 +71,9 @@ func runApp(args []string) error {
 	defer rg.Close()
 	unlock.names = rg.G
 	startSettings(rg, settings, c.Log)
+	upd := newUpdater(dirs, c.Log)
+	swapped := startedUpdate(upd, c.Log)
+	go upd.Where() // codesign takes a moment; look while the window opens
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -98,6 +102,15 @@ func runApp(args []string) error {
 		},
 		RulesFile:  dirs.Rules(),
 		AgentToken: rg.srv.Token,
+		Updates:    upd,
+		Changelog:  pinky.Changelog,
+		// The window is up: an update that just swapped this version in
+		// can drop the old one.
+		OnReady: func(*mygo.Window) {
+			if err := swapped.Confirm(); err != nil {
+				c.Log.Warn("update: confirm", "err", err)
+			}
+		},
 	})
 }
 

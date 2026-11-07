@@ -7,6 +7,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -456,13 +457,15 @@ func TestRecordingJumpsToSteps(t *testing.T) {
 			mark = m
 		}
 	}
+	if mark.At <= 0 {
+		t.Fatalf("no step to jump to after the start: %+v", pl.rec.Marks)
+	}
 	if err := tt.Click("Jump to " + clock(mark.At) + ": You allowed: pay $12.80"); err != nil {
 		t.Fatal(err)
 	}
-	ta.waitFor(t, "the jump", func() bool {
-		opens := ta.api.RecordingOpens()
-		return len(opens) >= 2 && opens[len(opens)-1] == mark.At
-	})
+	// Watch recording opened the recording at the start on a goroutine of
+	// its own, which may ask the fake after the jump's does.
+	ta.waitFor(t, "the jump", func() bool { return slices.Contains(ta.api.RecordingOpens(), mark.At) })
 	if pl.markAt(pl.pos) < 0 || pl.rec.Marks[pl.markAt(pl.pos)].At != mark.At {
 		t.Errorf("the current step after the jump: pos %v", pl.pos)
 	}

@@ -3,6 +3,7 @@
 package ui
 
 import (
+	"runtime"
 	"sync"
 
 	"github.com/ebitengine/purego/objc"
@@ -63,6 +64,10 @@ func keepMacAwake(on bool) {
 // beginActivity starts a process activity and returns its token, retained:
 // the activity lasts until endActivity.
 func beginActivity(options uint64, reason string) objc.ID {
+	// Autorelease pools belong to a thread, and the goroutine may move to
+	// another one between calls unless it is locked (as the UI's is).
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	pool := objc.ID(objc.GetClass("NSAutoreleasePool")).Send(objc.RegisterName("new"))
 	defer pool.Send(objc.RegisterName("drain"))
 	info := objc.ID(objc.GetClass("NSProcessInfo")).Send(objc.RegisterName("processInfo"))
@@ -72,6 +77,8 @@ func beginActivity(options uint64, reason string) objc.ID {
 }
 
 func endActivity(token objc.ID) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	pool := objc.ID(objc.GetClass("NSAutoreleasePool")).Send(objc.RegisterName("new"))
 	defer pool.Send(objc.RegisterName("drain"))
 	info := objc.ID(objc.GetClass("NSProcessInfo")).Send(objc.RegisterName("processInfo"))

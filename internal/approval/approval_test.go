@@ -75,12 +75,23 @@ func TestTimeoutDenies(t *testing.T) {
 }
 
 func TestDecisionExpires(t *testing.T) {
-	c := New(Options{Timeout: time.Second, Keep: 30 * time.Millisecond})
+	expired := make(chan Info, 1)
+	// A timeout far beyond the wait below: what expires it is Keep.
+	c := New(Options{Timeout: time.Minute, Keep: 30 * time.Millisecond, OnExpire: func(i Info) { expired <- i }})
 	a := c.Open(Request{Kind: KindAction, Binding: bind})
 	if err := c.Decide(a.ID, AllowOnce, ""); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(80 * time.Millisecond)
+	// Not a fixed sleep: after a long stall of the test, its Wait could
+	// run before the expiry's timer does.
+	select {
+	case i := <-expired:
+		if i.ID != a.ID {
+			t.Fatalf("expired %s, not %s", i.ID, a.ID)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the decision did not expire")
+	}
 	if _, err := c.Wait(context.Background(), a.ID, time.Second); !errors.Is(err, ErrExpired) {
 		t.Fatalf("want expired, got %v", err)
 	}

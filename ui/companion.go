@@ -15,8 +15,10 @@ import (
 
 // Pinky Companion is the Android app that reads the screen and types for
 // Pinky. It ships inside Pinky; a phone without it, or with an older one,
-// gets an Install card on its page, and nothing is installed without the
-// person's click.
+// gets an Install card on its page. Nothing is installed without the
+// person's click, except that with Update automatically on Pinky updates
+// an older companion by itself while the phone is free (companionTick in
+// update.go), keeping its service as it was.
 
 // companionState is what the client knows of each phone's companion app.
 type companionState struct {
@@ -113,11 +115,14 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 	st := &a.comp
 	id := d.Info.ID
 	cs := a.companionFor(d)
-	busy := !st.installing[id].IsZero()
+	// auto: Pinky updates the app by itself (companionTick), without the
+	// phone asking anything.
+	auto := a.companionUpdating(id)
+	busy := !st.installing[id].IsZero() || auto
 	if st.later[id] && !busy {
 		return
 	}
-	title, body, action, actionLabel := "", "", "", ""
+	title, body, action, actionLabel, extra := "", "", "", "", ""
 	switch cs {
 	case driver.CompanionMissing:
 		title, action = locales.CompanionInstallTitle(), locales.CompanionInstall()
@@ -127,6 +132,7 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		title, action = locales.CompanionUpdateTitle(), locales.CompanionUpdate()
 		actionLabel = locales.CompanionUpdateLabel(d.Info.Name)
 		body = locales.CompanionUpdateBody()
+		extra = a.companionAutoLine(id)
 	case driver.CompanionOff:
 		title, action = locales.CompanionTurnOnTitle(), locales.CompanionTurnOn()
 		actionLabel = locales.CompanionTurnOnLabel(d.Info.Name)
@@ -137,6 +143,9 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		}
 		title = locales.CompanionInstallingTitle()
 	}
+	if auto {
+		title = "Updating Pinky Companion"
+	}
 	p := pal(c)
 	mg.Column(c.Key("companion-"+id)).Padding(14).Radius(12).Background(p.bg2).Border(1, p.line).Gap(8).
 		Label(locales.CompanionCardLabel(d.Info.Name)).Children(func() {
@@ -146,6 +155,15 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		})
 		if body != "" && !busy {
 			mg.Text(c, body).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+		}
+		if extra != "" && !busy {
+			mg.Text(c, extra).FontSize(13).TextColor(p.ink2)
+		}
+		if auto {
+			mg.Progress(c, -1).FillWidth().Label("Updating")
+			mg.Text(c, "Agents can use the phone again in a few seconds.").FontSize(13).TextColor(p.ink2)
+			c.After(time.Second)
+			return
 		}
 		if busy {
 			mg.Progress(c, -1).FillWidth().Label(locales.CompanionInstalling())

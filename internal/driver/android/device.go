@@ -35,6 +35,8 @@ type Device struct {
 	noVideo   string
 	noVideoAt time.Time
 	videoSeen bool // a session on this device delivered a frame
+	hevcSeen  bool // an H.265 session delivered a frame
+	noHEVC    bool // the phone has no working H.265 encoder: use H.264
 
 	dumpMu   sync.Mutex // uiautomator allows one dump at a time
 	dumpFile bool       // this phone cannot dump to /dev/tty
@@ -63,6 +65,13 @@ type Device struct {
 
 	comp   companionLink
 	person personWatch
+
+	bgMu sync.Mutex
+	bgs  map[*Background]struct{} // open background displays
+	dk   *dark                    // keeps the phone dark for them (dark.go)
+	// sharedSeen: a display of this phone shared the main display's power
+	// before Android 17.
+	sharedSeen atomic.Bool
 }
 
 func newDevice(cfg Config, info driver.Info, props deviceProps) *Device {
@@ -82,9 +91,23 @@ func (d *Device) Info() driver.Info {
 // Serial returns the adb serial.
 func (d *Device) Serial() string { return d.info.ID }
 
-// Close implements driver.Device. It ends the scrcpy session; the server
-// exits and removes itself from the phone.
+// Close implements driver.Device. It closes the background displays still
+// open, which may wait for the phone to time out (see Background.Close),
+// and ends the scrcpy session; the server exits and removes itself from
+// the phone.
 func (d *Device) Close() error {
+	var wg sync.WaitGroup
+	for _, b := range d.backgrounds() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b.Close()
+		}()
+	}
+	wg.Wait()
+	if dk := d.darkIfAny(); dk != nil {
+		dk.close()
+	}
 	d.mu.Lock()
 	d.closed = true
 	l := d.main
@@ -98,14 +121,84 @@ func (d *Device) Close() error {
 	return nil
 }
 
+func (d *Device) addBackground(b *Background) {
+	d.bgMu.Lock()
+	defer d.bgMu.Unlock()
+	if d.bgs == nil {
+		d.bgs = map[*Background]struct{}{}
+	}
+	d.bgs[b] = struct{}{}
+}
+
+func (d *Device) removeBackground(b *Background) {
+	d.bgMu.Lock()
+	defer d.bgMu.Unlock()
+	delete(d.bgs, b)
+}
+
+func (d *Device) backgrounds() []*Background {
+	d.bgMu.Lock()
+	defer d.bgMu.Unlock()
+	var out []*Background
+	for b := range d.bgs {
+		out = append(out, b)
+	}
+	return out
+}
+
+// darkPanel reports whether Pinky keeps the phone awake with its panel off
+// for a background display (dark.go): the display power controller then
+// reports the screen on.
+func (d *Device) darkPanel() bool {
+	dk := d.darkIfAny()
+	return dk != nil && dk.on.Load()
+}
+
+// undark turns the panel back on when Pinky keeps the phone dark, for work
+// on the main screen, and reports whether it did.
+func (d *Device) undark() bool {
+	dk := d.darkIfAny()
+	return dk != nil && dk.undark()
+}
+
 // baseOptions are the session options when no stream asked for others.
 func (d *Device) baseOptions() scrcpy.Options {
-	return scrcpy.Options{
+	o := scrcpy.Options{
 		MaxSize:      d.cfg.MaxSize,
 		MaxFPS:       float64(d.cfg.MaxFPS),
 		VideoBitRate: d.cfg.VideoBitRate,
+		VideoCodec:   d.cfg.VideoCodec,
 	}
+	if d.info.Connection == "wifi" {
+		// Wireless debugging carries the stream over TLS, and a phone's
+		// Wi-Fi gives it far less than its link speed: 4 to 14 Mbit/s on
+		// the Mi 10 Pro (1200 Mbit/s link), less while it dozes. scrcpy's
+		// 8 Mbit/s at 60 frames a second queued up for seconds there, so
+		// the mirror lagged behind the phone. Ask for 2.5 Mbit/s at 30
+		// frames a second, in H.265, which keeps more picture in it. The
+		// resolution stays: the mirror and the agent's coordinates are in
+		// the phone's pixels. Measurements: docs/notes/integration.md.
+		if o.VideoBitRate == 0 {
+			o.VideoBitRate = wifiBitRate
+		}
+		if o.MaxFPS == 0 {
+			o.MaxFPS = wifiMaxFPS
+		}
+		if o.VideoCodec == "" {
+			o.VideoCodec = "h265"
+		}
+	}
+	if o.VideoCodec == "h265" && d.noHEVC {
+		o.VideoCodec = ""
+	}
+	return o
 }
+
+// The stream over wireless debugging (see baseOptions).
+const (
+	wifiBitRate = 2_500_000
+	wifiMaxFPS  = 30
+)
 
 // session returns the running main-display session, starting one if
 // needed.
@@ -153,6 +246,9 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 	if want != nil {
 		opt = *want
 	}
+	if opt.VideoCodec == "h265" && d.noHEVC {
+		opt.VideoCodec = "" // H.265 failed since the options were made
+	}
 	if noVideo {
 		opt = scrcpy.Options{NoVideo: true}
 	}
@@ -160,10 +256,31 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 	if err != nil {
 		return nil, err
 	}
+	if l.video && opt.VideoCodec == "h265" && !d.hevcSeen {
+		// Some phones have no H.265 encoder, or one that fails: use H.264.
+		select {
+		case <-l.firstFrame:
+			d.videoSeen, d.hevcSeen = true, true
+		case <-l.done:
+			if why := l.videoFailure(); why != "" {
+				d.cfg.logf("android: %s: the H.265 encoder failed (%s); using H.264", d.info.ID, why)
+				d.noHEVC = true
+				opt.VideoCodec = ""
+				if l, err = d.startMain(ctx, opt); err != nil {
+					return nil, err
+				}
+			}
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			l.close(ctx.Err())
+			return nil, ctx.Err()
+		}
+	}
 	if l.video && !d.videoSeen {
 		select {
 		case <-l.firstFrame:
 			d.videoSeen = true
+			d.hevcSeen = d.hevcSeen || opt.VideoCodec == "h265"
 		case <-l.done:
 			if !d.noteVideoFailureLocked(l) {
 				return nil, l.failure()
@@ -205,10 +322,18 @@ func (d *Device) startMain(ctx context.Context, opt scrcpy.Options) (*live, erro
 }
 
 // noteVideoFailureLocked records an ended session's encoder failure, and
-// reports whether there was one; d.mu must be held.
+// reports whether the phone's video encoder fails; an H.265 session that
+// failed only makes later sessions use H.264. d.mu must be held.
 func (d *Device) noteVideoFailureLocked(l *live) bool {
 	reason := l.videoFailure()
 	if reason == "" {
+		return false
+	}
+	if l.opt.VideoCodec == "h265" {
+		if !d.noHEVC {
+			d.cfg.logf("android: %s: the H.265 encoder failed (%s); using H.264", d.info.ID, reason)
+		}
+		d.noHEVC = true
 		return false
 	}
 	if d.noVideo == "" {
