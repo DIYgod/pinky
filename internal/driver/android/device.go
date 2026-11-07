@@ -18,10 +18,13 @@ import (
 // main display, started on first use and restarted if it dies, which
 // carries input, the video stream and settle detection.
 type Device struct {
-	cfg    Config
-	client *adb.Client
-	info   driver.Info
-	props  deviceProps
+	// phoneID is the id the provider lists the phone by, when it differs
+	// from the adb serial in info.ID (a phone on Wi-Fi).
+	phoneID string
+	cfg     Config
+	client  *adb.Client
+	info    driver.Info
+	props   deviceProps
 
 	mu     sync.Mutex
 	main   *live
@@ -66,8 +69,15 @@ func newDevice(cfg Config, info driver.Info, props deviceProps) *Device {
 	return &Device{cfg: cfg, client: cfg.Client, info: info, props: props}
 }
 
-// Info implements driver.Device.
-func (d *Device) Info() driver.Info { return d.info }
+// Info implements driver.Device, with the id the provider lists the phone
+// by (see phoneID); the device itself talks to adb by Serial.
+func (d *Device) Info() driver.Info {
+	info := d.info
+	if d.phoneID != "" {
+		info.ID = d.phoneID
+	}
+	return info
+}
 
 // Serial returns the adb serial.
 func (d *Device) Serial() string { return d.info.ID }

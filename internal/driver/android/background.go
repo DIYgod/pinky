@@ -220,7 +220,7 @@ func (b *Background) DisplayID() int { return b.display }
 
 // Info implements driver.Device.
 func (b *Background) Info() driver.Info {
-	info := b.d.info
+	info := b.d.Info()
 	info.Backend = "scrcpy-virtual-display"
 	return info
 }

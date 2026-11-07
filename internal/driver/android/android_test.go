@@ -418,3 +418,40 @@ func TestMatchAppByPackage(t *testing.T) {
 		t.Errorf("an app the phone lacks: %v", err)
 	}
 }
+
+// TestOnePhoneOverUSBAndWiFi lists a phone connected both ways once, under
+// its hardware serial, by USB while that works.
+func TestOnePhoneOverUSBAndWiFi(t *testing.T) {
+	usb := adb.DeviceEntry{Serial: "3e8be48e", USB: "1048576X", State: adb.StateDevice}
+	wifi := adb.DeviceEntry{Serial: "adb-3e8be48e-kIY2HE._adb-tls-connect._tcp", State: adb.StateDevice}
+	pr := deviceProps{HardwareSerial: "3e8be48e"}
+	if got := phoneID(usb, pr); got != "3e8be48e" {
+		t.Errorf("USB id %q", got)
+	}
+	if got := phoneID(wifi, pr); got != "3e8be48e" {
+		t.Errorf("Wi-Fi id %q, want the hardware serial", got)
+	}
+	if got := phoneID(wifi, deviceProps{}); got != wifi.Serial {
+		t.Errorf("Wi-Fi id without a hardware serial %q", got)
+	}
+	emu := adb.DeviceEntry{Serial: "emulator-5560", State: adb.StateDevice}
+	if got := phoneID(emu, deviceProps{HardwareSerial: "EMULATOR36X1X11X0"}); got != "emulator-5560" {
+		t.Errorf("an emulator's id %q", got)
+	}
+	on := driver.StateOnline
+	out := mergeTransports([]driver.Info{
+		{ID: "3e8be48e", Connection: "wifi", State: on},
+		{ID: "3e8be48e", Connection: "usb", State: on},
+		{ID: "emulator-5560", Connection: "usb", State: on},
+	})
+	if len(out) != 2 || out[0].ID != "3e8be48e" || out[0].Connection != "usb" {
+		t.Errorf("merged %+v", out)
+	}
+	out = mergeTransports([]driver.Info{
+		{ID: "3e8be48e", Connection: "usb", State: driver.StateUnauthorized},
+		{ID: "3e8be48e", Connection: "wifi", State: on},
+	})
+	if len(out) != 1 || out[0].Connection != "wifi" {
+		t.Errorf("USB not usable, Wi-Fi online: %+v", out)
+	}
+}

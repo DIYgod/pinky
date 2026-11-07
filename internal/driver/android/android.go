@@ -82,6 +82,8 @@ func (p *Provider) Platform() driver.Platform { return driver.Android }
 type deviceProps struct {
 	Name, Model, OSVersion string
 	SDK                    int
+	// HardwareSerial is ro.serialno, the same over USB and Wi-Fi.
+	HardwareSerial string
 }
 
 // List implements driver.Provider. It reads each online device's
@@ -105,13 +107,53 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 			defer cancel()
 			if pr, err := p.deviceProps(pctx, e); err == nil {
 				infos[i].Name, infos[i].Model, infos[i].OSVersion = pr.Name, pr.Model, pr.OSVersion
+				infos[i].ID = phoneID(e, pr)
 			} else {
 				p.cfg.logf("android: read properties of %s: %v", e.Serial, err)
 			}
 		}()
 	}
 	wg.Wait()
-	return infos, nil
+	return mergeTransports(infos), nil
+}
+
+// phoneID is the id Pinky knows a phone by: the adb serial, except over
+// Wi-Fi, where it is the phone's hardware serial (the serial adb gives a
+// USB connection), so the phone keeps one id, and its PIN, settings and
+// history, whichever way it is connected.
+func phoneID(e adb.DeviceEntry, pr deviceProps) string {
+	if e.Wireless() && pr.HardwareSerial != "" {
+		return pr.HardwareSerial
+	}
+	return e.Serial
+}
+
+// mergeTransports lists a phone connected both ways once, by its USB
+// connection while that works.
+func mergeTransports(infos []driver.Info) []driver.Info {
+	at := map[string]int{}
+	var out []driver.Info
+	for _, info := range infos {
+		j, seen := at[info.ID]
+		if !seen {
+			at[info.ID] = len(out)
+			out = append(out, info)
+			continue
+		}
+		if better(info, out[j]) {
+			out[j] = info
+		}
+	}
+	return out
+}
+
+// better reports whether a connection of a phone is the one to use rather
+// than another: an online one before one that is not, then USB before Wi-Fi.
+func better(a, b driver.Info) bool {
+	if (a.State == driver.StateOnline) != (b.State == driver.StateOnline) {
+		return a.State == driver.StateOnline
+	}
+	return a.Connection == "usb" && b.Connection != "usb"
 }
 
 func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (deviceProps, error) {
@@ -123,15 +165,18 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 		return pr, nil
 	}
 	out, err := p.cfg.Client.Shell(ctx, e.Serial,
-		"getprop ro.product.model; getprop ro.build.version.release; getprop ro.build.version.sdk; settings get global device_name")
+		"getprop ro.product.model; getprop ro.build.version.release; getprop ro.build.version.sdk; settings get global device_name; getprop ro.serialno")
 	if err != nil {
 		return deviceProps{}, err
 	}
 	lines := strings.Split(strings.ReplaceAll(string(out), "\r", ""), "\n")
-	for len(lines) < 4 {
+	for len(lines) < 5 {
 		lines = append(lines, "")
 	}
 	pr = deviceProps{Model: strings.TrimSpace(lines[0]), OSVersion: strings.TrimSpace(lines[1])}
+	if hs := strings.TrimSpace(lines[4]); hs != "" && hs != "unknown" {
+		pr.HardwareSerial = hs
+	}
 	fmt.Sscan(strings.TrimSpace(lines[2]), &pr.SDK)
 	pr.Name = strings.TrimSpace(lines[3])
 	if pr.Name == "" || pr.Name == "null" {
@@ -197,22 +242,42 @@ func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
 	if err != nil {
 		return nil, wrapErr(err)
 	}
+	// The phone's connections: its adb serial, or (over Wi-Fi) its hardware
+	// serial; USB first.
+	var best *driver.Info
+	var bestEntry adb.DeviceEntry
+	var bestProps deviceProps
 	for _, e := range entries {
-		if e.Serial != id {
+		info := infoFromEntry(e)
+		var pr deviceProps
+		if info.State == driver.StateOnline {
+			if pr, err = p.deviceProps(ctx, e); err != nil {
+				if e.Serial == id {
+					return nil, wrapErr(err)
+				}
+				continue
+			}
+			info.Name, info.Model, info.OSVersion = pr.Name, pr.Model, pr.OSVersion
+		}
+		if e.Serial != id && phoneID(e, pr) != id {
 			continue
 		}
-		info := infoFromEntry(e)
-		if info.State != driver.StateOnline {
-			return nil, fmt.Errorf("android: %s is %s: %s: %w", id, info.State, info.Detail, driver.ErrOffline)
+		if best == nil || better(info, *best) {
+			c := info
+			best, bestEntry, bestProps = &c, e, pr
 		}
-		pr, err := p.deviceProps(ctx, e)
-		if err != nil {
-			return nil, wrapErr(err)
-		}
-		info.Name, info.Model, info.OSVersion = pr.Name, pr.Model, pr.OSVersion
-		return newDevice(p.cfg, info, pr), nil
 	}
-	return nil, fmt.Errorf("android: device %q: %w", id, driver.ErrNotFound)
+	if best == nil {
+		return nil, fmt.Errorf("android: device %q: %w", id, driver.ErrNotFound)
+	}
+	if best.State != driver.StateOnline {
+		return nil, fmt.Errorf("android: %s is %s: %s: %w", id, best.State, best.Detail, driver.ErrOffline)
+	}
+	info := *best
+	info.ID = bestEntry.Serial // the device talks to adb by its serial
+	d := newDevice(p.cfg, info, bestProps)
+	d.phoneID = id
+	return d, nil
 }
 
 // wrapErr marks errors that mean the phone is gone as driver.ErrOffline.
