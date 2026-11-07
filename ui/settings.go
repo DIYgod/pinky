@@ -462,6 +462,7 @@ func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scop
 	mg.Select(c.Key("scope-"+key), &choice, labels).Label(label).MaxWidth(360)
 	scope := gateway.Scope{Mode: scopeOf(choice)}
 	st.choice[key] = string(scope.Mode)
+	mg.Text(c, scopeHint(scope.Mode)).FontSize(12.5).TextColor(pal(c).ink2).MaxWidth(360).Margin(4, 0, 0, 0)
 	if scope.Mode == gateway.ScopeApps {
 		apps := st.apps[key]
 		mg.TextInput(c.Key("apps-"+key), &apps).Placeholder(locales.SettingsAgentsAppsPlaceholder()).Label(locales.SettingsAgentsApps()).MaxWidth(360)

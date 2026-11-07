@@ -1982,6 +1982,16 @@
   "@needsAddNote": {
     "description": "Link on a handoff card that opens a field for a note to the agent."
   },
+  "needsAgentAskedReadOnly": "{agent} asked to only browse and read.",
+  "@needsAgentAskedReadOnly": {
+    "description": "On an agent's first-connection card, above the menu of what it may do, when the agent asked to only browse and read (phone_connect read_only). The menu then starts on scopeReadOnly.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
   "needsAllow": "Allow",
   "@needsAllow": {
     "description": "Primary button that allows the step once: on approval cards and in the floating approval panel."
@@ -2120,7 +2130,7 @@
   },
   "needsLetAgent": "Let {agent}",
   "@needsLetAgent": {
-    "description": "On an agent's first-connection card: the label above (and the accessibility label of) the menu of what the agent may do. In English it reads on into the choice: \"Let Claude Code\" + \"All apps except blocked ones\", \"Only the apps I choose\", \"Browse and read, never commit\" or \"Watch only\".",
+    "description": "On an agent's first-connection card: the label above (and the accessibility label of) the menu of what the agent may do. In English it reads on into the choice: \"Let Claude Code\" + \"All apps except blocked ones\", \"Only the apps I choose\", \"Read only: browse, never commit\" or \"Watch only: no taps or typing\".",
     "placeholders": {
       "agent": {
         "type": "String",
@@ -2153,6 +2163,24 @@
   "needsThenClickDone": ", then click Done.",
   "@needsThenClickDone": {
     "description": "Ends the sentence that says how to unlock a phone on a handoff card (\"Unlock it on the phone, then click Done.\"): it starts with a comma and ends the sentence. Done is the card's button (needsDone)."
+  },
+  "needsUnblockHow": "{app} is blocked by “{rule}”. Allowing lets {agent} open it and read its screen until this task ends. What your rules ask about still asks, Pinky takes no pictures of it, and it stays blocked in Settings.",
+  "@needsUnblockHow": {
+    "description": "On the card that asks whether an agent may open a blocked app for its task, above Deny and needsAllowTask. rule is the rule that blocks it, such as Finance apps.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Wise"
+      },
+      "rule": {
+        "type": "String",
+        "example": "Finance apps"
+      },
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
   },
   "pairingAddrField": "IP address and port",
   "@pairingAddrField": {
@@ -2557,6 +2585,20 @@
       "agent": {
         "type": "String",
         "example": "Claude Code"
+      }
+    }
+  },
+  "panelUnblockedDetail": "{agent} can use {app} until this task ends.",
+  "@panelUnblockedDetail": {
+    "description": "The floating approval panel's confirmation under panelAllowedTask, after the person allowed a blocked app for the agent's task.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "app": {
+        "type": "String",
+        "example": "Wise"
       }
     }
   },
@@ -3368,6 +3410,22 @@
   "@scopeEverything": {
     "description": "A choice of what a new agent may do: any app but those blocked in Settings › Safety."
   },
+  "scopeHintApps": "It can open only the apps you list. What Settings › Safety asks about still asks you.",
+  "@scopeHintApps": {
+    "description": "Under the menu of what an agent may do, while scopeApps is chosen."
+  },
+  "scopeHintEverything": "It can open any app except blocked ones. What Settings › Safety asks about still asks you.",
+  "@scopeHintEverything": {
+    "description": "Under the menu of what an agent may do, while scopeEverything is chosen."
+  },
+  "scopeHintReadOnly": "It can open apps, look around and search. Anything that would ask you is refused, and it types only into search fields.",
+  "@scopeHintReadOnly": {
+    "description": "Under the menu of what an agent may do, while scopeReadOnly is chosen."
+  },
+  "scopeHintWatchOnly": "It sees the screen and touches nothing: no taps, typing or swipes.",
+  "@scopeHintWatchOnly": {
+    "description": "Under the menu of what an agent may do, while scopeWatchOnly is chosen."
+  },
   "scopeLineApps": "Can use {apps}",
   "@scopeLineApps": {
     "description": "Settings › Agents: an agent limited to these apps.",
@@ -3394,11 +3452,11 @@
   "@scopeLineWatchOnly": {
     "description": "Settings › Agents: an agent that may only see the screen."
   },
-  "scopeReadOnly": "Browse and read, never commit",
+  "scopeReadOnly": "Read only: browse, never commit",
   "@scopeReadOnly": {
     "description": "A choice of what an agent may do: look and read, but never pay, send, delete or change anything."
   },
-  "scopeWatchOnly": "Watch only",
+  "scopeWatchOnly": "Watch only: no taps or typing",
   "@scopeWatchOnly": {
     "description": "A choice of what an agent may do: see the screen, touch nothing."
   },
@@ -4479,6 +4537,10 @@
   "tasksNone": "No tasks running. Ask your agent to use a phone.",
   "@tasksNone": {
     "description": "In place of the Tasks list when no agent is working on any phone."
+  },
+  "tasksReadOnly": "Read only",
+  "@tasksReadOnly": {
+    "description": "On a task card's line with the agent, the phone and the time, for a task the agent asked to run read-only."
   },
   "tasksRowDone": "done",
   "@tasksRowDone": {

@@ -99,6 +99,9 @@ type TaskView struct {
 	Started    time.Time
 	Ended      time.Time // zero while running
 	Steps      []StepView
+	// ReadOnly is set when the agent asked to run the task read-only
+	// (phone_connect read_only), whatever its scope.
+	ReadOnly bool
 }
 
 // StepView is one step of a task.
@@ -170,6 +173,16 @@ type NeedView struct {
 	// unlocking is all it asked for. Other handoffs stay open until the
 	// person hands the phone back.
 	EndsOnUnlock bool
+	// Unblock is set on an approval to open an app that a rule blocks (a
+	// finance app, or one the person blocked): any Allow lets the agent
+	// open and use that app until the task ends, while Settings stay as
+	// they are, and Deny keeps it blocked for the rest of the task. Rule
+	// names the rule that blocks it.
+	Unblock bool
+	// ReadOnly is set on an agent's first-connection card when the agent
+	// asked to only browse and read (phone_connect read_only): the client
+	// offers that scope first.
+	ReadOnly bool
 }
 
 // Decision answers an approval.

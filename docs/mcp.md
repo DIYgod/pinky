@@ -63,7 +63,7 @@ note: "<the person's note>"
 - The screen is the format in DESIGN.md: a header line, then events (`toast:`, `notification:`, `dialog:`), then one element per line `[ref] role "label" @x,y state`, then `ocr` lines.
 - After an action, only the changes are sent: `+` added, `-` removed, `~` changed (including `~ screen …` for a changed header). A new app, size, orientation or lock state, or a diff longer than the screen, sends the whole screen.
 - `phone_connect`, `phone_observe` and `phone_handoff` always send the whole screen.
-- A blocked app shows as `app: blocked app` with no elements; its toasts and dialogs are dropped, and no screenshot is returned.
+- A blocked app shows as `app: blocked app` with no elements; its toasts and dialogs are dropped, and no screenshot is returned. An app the person allowed for the task (see `phone_launch`) shows as usual, but still without screenshots.
 
 ### Statuses
 
@@ -115,6 +115,7 @@ Leases a phone for a task and returns its first screen.
 | `task` | string, required | One line naming the task, shown to the person |
 | `device` | string | Optional when exactly one phone is online, or the session already holds one |
 | `apps` | string[] | Optional app allow-list for the task (names or ids). Launching another app returns `scope_denied`; typing into one asks the person. Launchers and system UI are always allowed |
+| `read_only` | boolean | Run the task read-only, whatever the agent's scope: anything the person's rules would ask about is refused (`blocked_by_policy`, rule `Read-only`), and typing works only in search fields. Connecting again for the same task never widens it. A new agent's approval card then offers read-only access first |
 
 The first connection of an agent the person has not approved yet returns `approval_pending` (rule `New agent`); repeat with `approval_id`. Another session's phone returns `lease_held`. Calling again with the same task keeps the lease; another task name ends the previous task (outcome `replaced`) and starts a new one. After the person pressed Stop, the session cannot connect to that phone again. While the person is in control of the phone (they took over and have not handed back, whichever task was running), the lease starts paused and the result is `paused`: call `phone_handoff`.
 
@@ -183,7 +184,7 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 | --- | --- | --- |
 | `app` | string, required | Package name, bundle id, or name (exact, then a unique part of it) |
 
-Blocked apps return `blocked_by_policy`; apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A URL (`https://…`) counts as opening a link (rule `Installs and links`), which asks the person when they chose to approve more than payments.
+Opening a blocked banking or wallet app, or one the person blocked, asks the person like an Ask action (rule `Finance apps` or `Blocked by you`; up to 45 s, then `approval_pending`). If they allow it, it stays allowed for the rest of the task: the agent may open it and read its screen, and everything else the rules ask about there still asks; Pinky keeps no screenshots, recording or screen text of it, and Settings do not change. If they deny it, later launches of it in the task return `blocked_by_policy` at once. Password managers return `blocked_by_policy` without asking. Apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A URL (`https://…`) counts as opening a link (rule `Installs and links`), which asks the person when they chose to approve more than payments.
 
 ### phone_apps
 

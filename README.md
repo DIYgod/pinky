@@ -13,7 +13,7 @@ Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPh
 - **Free and open source** under the Apache-2.0 license, with no account to create.
 - **You approve the risky steps.** Payments, trades and transfers wait for your click; in Settings › Safety you can have sends, orders, deletions, calls, installs, links that leave the app and settings changes wait too, or every step. Pinky spots these buttons in 10 languages. The rules run in Pinky's gateway, so an agent can't approve itself, even when text on the screen tries to talk it into it.
 - **Your phone stays yours.** On Android 13 and later, agents work on a hidden second screen, so the phone can stay off and locked. Click the mirror to take over; on Android, touching the phone yourself pauses the agent too. Stop all is ⌥⌘. from anywhere.
-- **Off-limits by default.** Banking, wallet and password-manager apps are invisible to agents, and agents can't type into password or one-time-code fields. Every new agent needs your approval and gets only the scope you give it.
+- **Off-limits by default.** Banking, wallet and password-manager apps are invisible to agents, and agents can't type into password or one-time-code fields. When an agent needs a banking or wallet app for a task, it asks, and you can allow that app for that task only. Every new agent needs your approval and gets only the scope you give it.
 - **Locked phone? Unlock it from your computer** with Touch ID. The PIN stays in the Keychain; agents never see it.
 - **Every run is on the record.** Each step in plain words, screenshots and a screen recording with a mark per step, exportable as an HTML report. It all stays on your computer.
 

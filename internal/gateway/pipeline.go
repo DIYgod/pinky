@@ -290,6 +290,9 @@ type prep struct {
 	// the finger but is never the target, which an approval checks again
 	// on a read without OCR.
 	ocr []screen.Element
+	// unblock is set when the approval for this launch asks the person to
+	// allow a blocked app for the task (unblock.go).
+	unblock bool
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -341,6 +344,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	}
 	g.ocrForVerdict(ctx, d, p, cur)
 	v := g.evaluate(p, cur)
+	v, _ = g.unblockAsk(l, p, v)
 	switch v.Decision {
 	case policy.Deny:
 		d.act.Unlock()
@@ -404,7 +408,10 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 		g.recordRefusal(l, c, a, p, res)
 		return res
 	}
-	v := g.evaluate(p, nil)
+	v, ask := g.unblockAsk(l, p, g.evaluate(p, nil))
+	if ask {
+		return nil // the person may allow the blocked app: ask with the screen read
+	}
 	switch {
 	case v.Decision == policy.Deny:
 		res := refusal(v)
@@ -577,21 +584,23 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	d := l.dev
 	p := &prep{}
 	scope := g.scopeOf(l.session)
-	g.mu.Lock()
-	apps := append([]string(nil), l.apps...)
-	seen := l.baseline
-	g.mu.Unlock()
 	var fg screen.App
 	if cur != nil {
 		fg = cur.App
 	}
+	g.mu.Lock()
+	apps := append([]string(nil), l.apps...)
+	seen := l.baseline
+	readOnly := l.readOnly
+	fgAllowed := allowsLocked(l, fg)
+	g.mu.Unlock()
 	p.input = policy.Input{Device: d.id, App: fg, Screen: cur, TaskApps: apps, LongPress: a.LongPress,
-		ReadOnly: scope.Mode == ScopeReadOnly}
+		ReadOnly: scope.Mode == ScopeReadOnly || readOnly, AllowBlocked: fgAllowed}
 	if scope.Mode == ScopeApps {
 		p.input.ScopeApps = scope.Apps
 	}
 
-	if rule, blocked := g.policy.Blocked(fg); blocked && a.Tool != "launch" && !(a.Tool == "key" && a.Key == "home") {
+	if rule, blocked := g.policy.Blocked(fg); blocked && !fgAllowed && a.Tool != "launch" && !(a.Tool == "key" && a.Key == "home") {
 		p.desc = describe(a, p)
 		res := &Result{Status: StatusBlocked, Rule: rule,
 			Message: fmt.Sprintf("The foreground app is blocked by the rule %q, so Pinky hides it and takes no action there. Nothing was done. Press home or launch another app.", rule)}
@@ -690,6 +699,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		p.launch, p.url = app, url
 		p.input.Launch = screen.App{ID: app.ID, Name: app.Name}
 		p.input.LaunchURL = url
+		p.input.AllowBlocked = !url && g.allows(l, p.input.Launch)
 	}
 	p.input.Target = p.target
 	p.desc = describe(a, p)
@@ -986,9 +996,13 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	} else {
 		detail += " · " + l.task.title
 	}
+	app := appLabel(cur.App)
+	if p.unblock {
+		app = appLabel(p.input.Launch) // the card is about the app to open
+	}
 	info := g.approvals.Open(approval.Request{
 		Kind: approval.KindAction, Binding: g.binding(l, a), Rule: v.Rule, Title: approvalTitle(a, p, v),
-		Detail: detail, App: appLabel(cur.App), Agent: l.session.agent.Name, TaskID: l.task.id,
+		Detail: detail, App: app, Agent: l.session.agent.Name, TaskID: l.task.id,
 		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Point: point, To: to, Data: takeSnapshot(cur, p, v),
 	})
 	if res := g.afterOpen(l, info); res != nil {
@@ -1129,9 +1143,18 @@ func (g *Gateway) awaitApproval(ctx context.Context, l *lease, c Call, a Action,
 		return g.withdrawnResult(l, out)
 	}
 	g.recordDecision(info, out)
+	snap, _ := info.Data.(*snapshot)
+	unblock := snap != nil && snap.unblock
 	switch {
+	case out.Decision.Allows() && unblock:
+		// Any Allow allows the app for the rest of the task: opening it
+		// once would leave the agent nothing it may read.
+		g.mu.Lock()
+		l.unblocked = append(l.unblocked, snap.grantApp)
+		g.mu.Unlock()
+		return g.runApproved(ctx, l, c, a, info, out)
 	case out.Decision.Allows():
-		if snap, ok := info.Data.(*snapshot); ok && out.Decision != approval.AllowOnce {
+		if snap != nil && out.Decision != approval.AllowOnce {
 			g.mu.Lock()
 			for _, r := range snap.asks {
 				l.grants[grantKey(r, snap.grantApp)] = true
@@ -1145,8 +1168,15 @@ func (g *Gateway) awaitApproval(ctx context.Context, l *lease, c Call, a Action,
 	}
 	g.closeStep(info.ID, string(StatusDenied), out.Waited)
 	res := &Result{Status: StatusDenied, Rule: info.Rule, Note: denyNote(out), Message: "The person denied this action. Nothing was done."}
-	if out.TimedOut {
+	switch {
+	case out.TimedOut:
 		res.Message = "Nobody answered in time, which counts as Deny. Nothing was done."
+	case unblock:
+		// Asked once per task: the next launch of it is refused at once.
+		g.mu.Lock()
+		l.kept = append(l.kept, snap.grantApp)
+		g.mu.Unlock()
+		res.Message = fmt.Sprintf("The person kept %s blocked for this task. Nothing was done.", appLabel(snap.grantApp))
 	}
 	return res
 }
@@ -1317,6 +1347,8 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 	res.Note = out.Note
 	msg := "The person allowed this once."
 	switch {
+	case snap.unblock:
+		msg = unblockedMessage(snap.grantApp)
 	case out.Decision == approval.AllowAlways && len(v.Exempted) > 0:
 		// Gateway.Decide kept the answer (always.go), so the action no
 		// longer asks.
@@ -1430,7 +1462,11 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		res.Message = strings.TrimSpace(res.Message + " The phone is locked now.")
 	}
 	shot := g.startShot(d, next)
-	idx := g.recordStep(l, step, a, c, p, res, start, before, "", body(res.Screen))
+	text := body(res.Screen)
+	if _, blocked := g.policy.Blocked(next.App); blocked {
+		text = "" // allowed for the task: history keeps the steps only
+	}
+	idx := g.recordStep(l, step, a, c, p, res, start, before, "", text)
 	g.useShot(shot, l.task, idx, true)
 	return res
 }
@@ -1626,12 +1662,13 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	}
 	d.refs.Assign(s)
 	evs := g.policy.FilterEvents(s.Events)
-	if _, blocked := g.policy.Blocked(s.App); blocked {
+	_, blocked := g.policy.Blocked(s.App)
+	s.Events = nil
+	g.mu.Lock()
+	if blocked && !allowsLocked(d.lease, s.App) {
 		// Toasts and dialogs on a blocked app's screen are the app's own.
 		evs = notificationsOnly(evs)
 	}
-	s.Events = nil
-	g.mu.Lock()
 	d.events = append(d.events, evs...)
 	if n := len(d.events); n > 50 {
 		d.events = append([]screen.Event(nil), d.events[n-50:]...)
@@ -1708,9 +1745,10 @@ func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (
 	return img, nil
 }
 
-// agentView hides a blocked app's screen.
-func (g *Gateway) agentView(raw *screen.Screen) (*screen.Screen, string) {
-	if rule, blocked := g.policy.Blocked(raw.App); blocked {
+// agentView hides a blocked app's screen, unless the person allowed the
+// app for the lease's task.
+func (g *Gateway) agentView(l *lease, raw *screen.Screen) (*screen.Screen, string) {
+	if rule, blocked := g.policy.Blocked(raw.App); blocked && !g.allows(l, raw.App) {
 		return &screen.Screen{Width: raw.Width, Height: raw.Height, App: screen.App{Name: "blocked app"},
 			Orientation: raw.Orientation, Locked: raw.Locked, CapturedAt: raw.CapturedAt}, rule
 	}
@@ -1731,7 +1769,7 @@ func (g *Gateway) agentView(raw *screen.Screen) (*screen.Screen, string) {
 // screenResult builds the agent's view of a fresh screen, as a diff against
 // what it saw last, and makes it the new baseline.
 func (g *Gateway) screenResult(l *lease, raw *screen.Screen, full bool) *Result {
-	view, rule := g.agentView(raw)
+	view, rule := g.agentView(l, raw)
 	g.mu.Lock()
 	d := l.dev
 	evs := d.events
@@ -1820,11 +1858,15 @@ type snapshot struct {
 	// launch is set for phone_launch, whose app is not the one the panel
 	// names; Always allow is not offered for it.
 	launch bool
+	// unblock is set when the launch asks to allow a blocked app for the
+	// task: any Allow does (unblock.go).
+	unblock bool
 }
 
 func takeSnapshot(s *screen.Screen, p *prep, v policy.Verdict) *snapshot {
 	snap := &snapshot{app: s.App.ID + "\x00" + s.App.Name, point: p.point, text: screenText(s),
-		asks: append([]string(nil), v.Asks...), grantApp: grantApp(p), launch: p.input.Op == policy.OpLaunch}
+		asks: append([]string(nil), v.Asks...), grantApp: grantApp(p), launch: p.input.Op == policy.OpLaunch,
+		unblock: p.unblock}
 	if p.target != nil {
 		t := *p.target
 		snap.target = &t

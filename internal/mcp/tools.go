@@ -38,6 +38,8 @@ type connectIn struct {
 	Device string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Optional when one phone is connected."`
 	Task   string   `json:"task" jsonschema:"One line naming the task, shown to the person, e.g. Reorder last week's lunch."`
 	Apps   []string `json:"apps,omitempty" jsonschema:"Optional: the only apps this task needs, by name or id. Pinky then refuses to launch other apps and asks the person before typing into them."`
+	// ReadOnly lets an agent ask for less than the person gave it.
+	ReadOnly bool `json:"read_only,omitempty" jsonschema:"Run this task read-only, for tasks that only look: you may open apps, read and search, but anything the person's rules would ask about is refused, and typing works only in search fields. A new agent's approval card then offers read-only access."`
 }
 
 type releaseIn struct {
@@ -211,7 +213,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		func(ctx context.Context, req *sdk.CallToolRequest, in connectIn) (*sdk.CallToolResult, any, error) {
 			return render(s.session(req, remote).Connect(ctx, gateway.ConnectRequest{
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
-				Task: in.Task, Apps: in.Apps})), nil, nil
+				Task: in.Task, Apps: in.Apps, ReadOnly: in.ReadOnly})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_release", Title: "Release the phone",
@@ -274,7 +276,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_launch", Title: "Open an app",
-		Description: "Open an app by name, package name or bundle id, and return its screen. Blocked apps (banking, wallets, password managers) are refused, and apps outside the task's list return scope_denied.",
+		Description: "Open an app by name, package name or bundle id, and return its screen. Apps outside the task's list return scope_denied. " +
+			"Blocked banking and wallet apps ask the person, who may allow the app for the rest of the task (approval_pending; repeat with approval_id); password managers are refused.",
 		InputSchema: schema[launchIn](nil), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in launchIn) (*sdk.CallToolResult, any, error) {
 			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App})), nil, nil

@@ -300,7 +300,11 @@ func TestLaunchReadsOnlyWhenNeeded(t *testing.T) {
 	}
 
 	cd := &countingDevice{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android)}
-	g := newGateway(t, cd, countingProvider{demo.NewProvider(driver.Android, cd.Device), cd}, nil)
+	// A password manager is refused without a question (a finance app
+	// asks whether to allow it for the task, with the screen it starts on).
+	vault := policy.Default()
+	vault.AddApps(policy.CatPasswords, policy.CategoryEntries{IDs: []string{"com.google.android.apps.walletnfcrel"}})
+	g := newGateway(t, cd, countingProvider{demo.NewProvider(driver.Android, cd.Device), cd}, vault)
 	s, _ := connect(t, g, "Lunch")
 	g.Flush()
 	reads(cd)

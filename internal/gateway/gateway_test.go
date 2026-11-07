@@ -462,10 +462,24 @@ func TestBlockedApp(t *testing.T) {
 			t.Fatalf("blocked app listed: %+v", apps.Apps)
 		}
 	}
+	// Opening it asks the person (unblock_test.go has the rest); they keep
+	// it blocked, and the next launch is refused at once.
+	go func() {
+		n := waitNeed(t, g)
+		if !n.Unblock || n.Rule != "Finance apps" {
+			t.Errorf("need: %+v", n)
+		}
+		g.Decide(n.ID, Deny, "")
+	}()
 	res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "com.google.android.apps.walletnfcrel"})
-	mustStatus(t, res, StatusBlocked)
+	mustStatus(t, res, StatusDenied)
 	if res.Rule != "Finance apps" {
 		t.Fatalf("rule %q", res.Rule)
+	}
+	res = s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "com.google.android.apps.walletnfcrel"})
+	mustStatus(t, res, StatusBlocked)
+	if res.Rule != "Finance apps" || !strings.Contains(res.Message, "kept it blocked for this task") {
+		t.Fatalf("second launch: %+v", res)
 	}
 	// The person opens it; the agent sees nothing of it.
 	dev.Show("wallet")
@@ -959,7 +973,14 @@ func TestGatewayBlockedApps(t *testing.T) {
 		t.Fatal(err)
 	}
 	s, _ := connect(t, g, "Lunch")
-	if res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "Dinely"}); res.Status != StatusBlocked || res.Rule != policy.RuleBlocked {
+	go func() {
+		n := waitNeed(t, g)
+		if !n.Unblock || n.Rule != policy.RuleBlocked {
+			t.Errorf("need: %+v", n)
+		}
+		g.Decide(n.ID, Deny, "")
+	}()
+	if res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "Dinely"}); res.Status != StatusDenied || res.Rule != policy.RuleBlocked {
 		t.Fatalf("launch a blocked app: %+v", res)
 	}
 	if got := g.BlockedApps(context.Background()); len(got) != 2 {
@@ -976,7 +997,7 @@ func TestAgentViewDropsStatusBarOCR(t *testing.T) {
 		{Source: screen.SourceOCR, Label: "6x7", Bounds: screen.Rect{X: 950, Y: 640, W: 100, H: 44}},
 		{Role: screen.RoleButton, Label: "Equals", Bounds: screen.Rect{X: 840, Y: 2100, W: 230, H: 230}},
 	}}
-	view, _ := g.agentView(raw)
+	view, _ := g.agentView(nil, raw)
 	var labels []string
 	for _, e := range view.Elements {
 		labels = append(labels, e.Label)
