@@ -100,7 +100,8 @@ type ObserveStats struct {
 	Complete  bool // the walk came back to its start
 	WalkError error
 	OCRError  error
-	RAXError  error // why the remoteax path was not used
+	RAXError  error    // why the remoteax path was not used
+	Trace     []string // what the remoteax path waited for, with times
 }
 
 // Observe implements driver.Device. It reads the screen through the

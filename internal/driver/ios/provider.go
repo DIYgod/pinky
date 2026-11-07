@@ -244,7 +244,7 @@ func (p *Provider) services(ctx context.Context, e goios.DeviceEntry) (bool, err
 func probeServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	l, err := dialLink(cctx, e.Properties.SerialNumber)
+	l, err := dialLinkEntry(cctx, e)
 	if err != nil {
 		return false, err
 	}
@@ -255,7 +255,7 @@ func probeServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 // Open implements driver.Provider. It checks only the phone it opens, and
 // reuses what List found when the phone's entry has not changed.
 func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
-	entry, err := findEntry(id)
+	entry, err := findEntry(id, false)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %w", err, driver.ErrNotFound)
 	}

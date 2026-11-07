@@ -1,6 +1,7 @@
 package ios
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -176,11 +177,13 @@ func TestScaleAxis(t *testing.T) {
 	}
 }
 
+// Without the pasteboard service, text that keys cannot type is refused
+// before the field is touched (a zero Device panics on any input).
 func TestTypeRejectsNonASCII(t *testing.T) {
-	d := &Device{}
+	d := &Device{l: &link{}}
 	err := d.Type(t.Context(), "你好", driver.TypeOptions{})
-	if err == nil {
-		t.Fatal("non-ASCII text accepted")
+	if !errors.Is(err, driver.ErrUnsupported) {
+		t.Fatalf("err = %v, want ErrUnsupported", err)
 	}
 }
 

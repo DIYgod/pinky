@@ -14,7 +14,7 @@ import (
 // Services opens a tunnel to the device and lists the RemoteXPC services it
 // publishes, with a one-line summary of the tunnel.
 func Services(ctx context.Context, udid string) ([]string, string, error) {
-	l, err := dialLink(ctx, udid)
+	l, err := dialLink(ctx, udid, false)
 	if err != nil {
 		return nil, "", err
 	}

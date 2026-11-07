@@ -1,12 +1,15 @@
 // Command iosctl drives Pinky's iOS driver by hand, for debugging.
 //
 //	iosctl devices
+//	iosctl mux
 //	iosctl [-udid U] rsd
 //	iosctl [-udid U] observe [-ocr] [-n 1]
 //	iosctl [-udid U] tap X Y [-long]
 //	iosctl [-udid U] swipe X1 Y1 X2 Y2 [-ms 300]
 //	iosctl [-udid U] key home|back|enter|delete|...
 //	iosctl [-udid U] type TEXT [-append] [-submit]
+//	iosctl [-udid U] screen|wake
+//	iosctl [-udid U] unlock < passcode-file
 //	iosctl [-udid U] stream [-seconds 10] [-out /tmp/pinky-stream.hevc]
 //	iosctl [-udid U] latency [-n 6] [-vertical]
 //	iosctl [-udid U] screenshot [-out /tmp/pinky-shot.png]
@@ -20,6 +23,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"flag"
@@ -34,6 +38,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	pios "github.com/DIYgod/pinky/internal/driver/ios"
 	"github.com/DIYgod/pinky/internal/screen"
+	goios "github.com/danielpaulus/go-ios/ios"
 )
 
 func main() {
@@ -58,12 +63,17 @@ func usage() {
 
 commands:
   devices                       list iPhones and what they need
+  mux                           list usbmuxd's entries without contacting any phone
   rsd                           open a tunnel and list the device's services
   observe [-ocr] [-n N]         print the screen as agents read it
   tap X Y [-long]               tap at screenshot pixels
   swipe X1 Y1 X2 Y2 [-ms 300]   swipe
   key KEY                       home, back, enter, delete, tab, escape, dpad_*
-  type TEXT [-append] [-submit] type ASCII text into the focused field
+  type TEXT [-append] [-submit] type text into the focused field (pasted, the
+                                pasteboard put back afterwards)
+  screen                        report whether the screen is on
+  wake                          press Home if the screen is off
+  unlock                        read a passcode from standard input and unlock
   stream [-seconds 10] [-out F] video statistics; -out writes Annex B HEVC
   latency [-n 6] [-vertical]    swipe and time the video: home screen pages, or
                                 with -vertical scroll the current screen
@@ -79,6 +89,8 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 	switch cmd {
 	case "devices":
 		return devices(ctx, p)
+	case "mux":
+		return mux()
 	case "rsd":
 		id, err := pick(ctx, p, udid)
 		if err != nil {
@@ -89,6 +101,9 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 	id, err := pick(ctx, p, udid)
 	if err != nil {
 		return err
+	}
+	if cmd == "locked" {
+		return locked(id)
 	}
 	start := time.Now()
 	d, err := pios.Open(ctx, driver.Info{ID: id, Platform: driver.IOS})
@@ -140,7 +155,34 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 		if len(text) != 1 {
 			return errors.New("type: one text argument (quote text with spaces)")
 		}
-		return d.Type(ctx, text[0], driver.TypeOptions{Append: *appendText, Submit: *submit})
+		err := d.Type(ctx, text[0], driver.TypeOptions{Append: *appendText, Submit: *submit})
+		st := d.LastTypeStats()
+		fmt.Printf("typed by %s in %v: pasteboard saved %q in %v, %q in %v; the field changed: %v\n",
+			st.Method, st.Total.Round(time.Millisecond), st.Saved, st.Save.Round(time.Millisecond), st.Restore, st.Restored.Round(time.Millisecond), st.Confirmed)
+		return err
+	case "screen":
+		on, err := d.ScreenOn(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println("screen on:", on)
+		return nil
+	case "wake":
+		return d.Wake(ctx)
+	case "unlock":
+		// The passcode comes on standard input, never on the command line,
+		// where it would stay in the shell's history.
+		fmt.Fprint(os.Stderr, "passcode (one line on standard input): ")
+		pin, err := bufio.NewReader(os.Stdin).ReadString('\n')
+		if err != nil && pin == "" {
+			return err
+		}
+		pin = strings.TrimRight(pin, "\r\n")
+		if err := d.Unlock(ctx, pin); err != nil {
+			return err
+		}
+		fmt.Println("unlocked")
+		return nil
 	case "stream":
 		return stream(ctx, d, args)
 	case "latency":
@@ -183,13 +225,6 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 			}
 			fmt.Printf("%-40s %-6s %s\n", a.ID, kind, a.Name)
 		}
-		return nil
-	case "locked":
-		l, err := d.Locked(ctx)
-		if err != nil {
-			return err
-		}
-		fmt.Println("locked:", l)
 		return nil
 	}
 	return fmt.Errorf("unknown command %q", cmd)
@@ -253,6 +288,38 @@ func ints(fs *flag.FlagSet, args []string, n int) ([]int, error) {
 func isNumber(s string) bool {
 	_, err := strconv.Atoi(s)
 	return err == nil
+}
+
+// locked asks lockdown alone, without opening a session (no tunnel, no
+// stream), so it works on a phone in any state.
+func locked(udid string) error {
+	e, err := goios.GetDevice(udid)
+	if err != nil {
+		return err
+	}
+	conn, err := goios.ConnectLockdownWithSession(e)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	v, err := conn.GetValue("PasswordProtected")
+	if err != nil {
+		return err
+	}
+	fmt.Println("locked:", v)
+	return nil
+}
+
+// mux prints usbmuxd's entries: one per phone and connection.
+func mux() error {
+	list, err := goios.ListDevices()
+	if err != nil {
+		return err
+	}
+	for _, e := range list.DeviceList {
+		fmt.Printf("%-28s %-8s device %d\n", e.Properties.SerialNumber, e.Properties.ConnectionType, e.DeviceID)
+	}
+	return nil
 }
 
 func devices(ctx context.Context, p *pios.Provider) error {

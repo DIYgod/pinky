@@ -38,6 +38,9 @@ type axpRect struct{ X, Y, W, H float64 }
 // axpPoint is an NSValue holding a CGPoint, in points.
 type axpPoint struct{ X, Y float64 }
 
+// axpRange is an NSValue holding an NSRange.
+type axpRange struct{ Loc, Len int }
+
 // axpDict is an NSDictionary; keys keep their decoded type.
 type axpDict map[any]any
 
@@ -146,6 +149,9 @@ func (a *keyedArchive) resolve(v any) (any, error) {
 			}
 			s, _ := r.(string)
 			return parsePoint(s)
+		}
+		if _, ok := m["NS.rangeval.length"]; ok {
+			return axpRange{Loc: toInt(m["NS.rangeval.location"]), Len: toInt(m["NS.rangeval.length"])}, nil
 		}
 		return m, nil
 	case "AXPTranslationObject":
