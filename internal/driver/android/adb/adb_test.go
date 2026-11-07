@@ -29,6 +29,10 @@ type fakeServer struct {
 	modes    map[string]uint32
 	forwards []Forward
 	requests []string
+
+	mdns      string // host:mdns:services
+	pairCode  string // the code or password the fake phone accepts
+	connected []string
 }
 
 func newFakeServer(t *testing.T) (*fakeServer, *Client) {
@@ -80,6 +84,39 @@ func (s *fakeServer) handle(c net.Conn) {
 	case req == "host:version":
 		okay(c)
 		writeStr(c, "0029")
+	case req == "host:mdns:check":
+		okay(c)
+		writeStr(c, "mdns daemon version [adb discovery 0.0.0]")
+	case req == "host:mdns:services":
+		s.mu.Lock()
+		list := s.mdns
+		s.mu.Unlock()
+		okay(c)
+		writeStr(c, list)
+	case strings.HasPrefix(req, "host:pair:"):
+		code, addr, _ := strings.Cut(strings.TrimPrefix(req, "host:pair:"), ":")
+		okay(c)
+		s.mu.Lock()
+		want := s.pairCode
+		s.mu.Unlock()
+		// As the real server: a second status once the pairing is over.
+		if code != want {
+			fail(c, "Failed: Wrong password or connection was dropped.")
+			return
+		}
+		okay(c)
+		writeStr(c, "Successfully paired to "+addr+" [guid=adb-R5CN20ABC-x1y2z3]")
+	case strings.HasPrefix(req, "host:connect:"):
+		addr := strings.TrimPrefix(req, "host:connect:")
+		okay(c)
+		if strings.HasPrefix(addr, "10.") {
+			writeStr(c, "failed to connect to "+addr+": No route to host")
+			return
+		}
+		s.mu.Lock()
+		s.connected = append(s.connected, addr)
+		s.mu.Unlock()
+		writeStr(c, "connected to "+addr)
 	case req == "host:devices-l":
 		okay(c)
 		writeStr(c, s.devices)
@@ -652,5 +689,46 @@ func TestSyncListAndLstat(t *testing.T) {
 			t.Errorf("v2=%v: List sub = %+v, %v", v2, list, err)
 		}
 		y.Close()
+	}
+}
+
+func TestMDNSPairConnect(t *testing.T) {
+	s, c := newFakeServer(t)
+	ctx := context.Background()
+	if v, err := c.MDNSCheck(ctx); err != nil || !strings.Contains(v, "mdns daemon") {
+		t.Fatalf("MDNSCheck = %q, %v", v, err)
+	}
+	s.mu.Lock()
+	s.mdns = "pinky-abc\t_adb-tls-pairing._tcp.\t192.168.1.42:37123\n" +
+		"adb-R5CN20ABC-x1y2z3\t_adb-tls-connect._tcp\t192.168.1.42:41000\n" +
+		"junk line\n"
+	s.pairCode = "123456"
+	s.mu.Unlock()
+	svcs, err := c.MDNSServices(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []MDNSService{
+		{"pinky-abc", ServicePairing, "192.168.1.42:37123"},
+		{"adb-R5CN20ABC-x1y2z3", ServiceConnect, "192.168.1.42:41000"},
+	}
+	if fmt.Sprint(svcs) != fmt.Sprint(want) {
+		t.Errorf("MDNSServices = %+v, want %+v", svcs, want)
+	}
+	if _, err := c.Pair(ctx, "192.168.1.42:37123", "654321"); !errors.Is(err, ErrPairing) {
+		t.Errorf("wrong code: %v, want ErrPairing", err)
+	}
+	guid, err := c.Pair(ctx, "192.168.1.42:37123", "123456")
+	if err != nil || guid != "adb-R5CN20ABC-x1y2z3" {
+		t.Errorf("Pair = %q, %v", guid, err)
+	}
+	if _, err := c.Pair(ctx, "192.168.1.42:37123", "12:34"); err == nil {
+		t.Error("a password with a colon was sent")
+	}
+	if err := c.Connect(ctx, "192.168.1.42:41000"); err != nil {
+		t.Errorf("Connect: %v", err)
+	}
+	if err := c.Connect(ctx, "10.0.0.1:5555"); err == nil {
+		t.Error("a failed connect returned nil")
 	}
 }
