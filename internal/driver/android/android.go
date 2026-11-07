@@ -43,6 +43,21 @@ type Config struct {
 	// packet counts as a change. Zero derives it from the frame size.
 	SettleBytes int
 
+	// Browser finds the phones' wireless debugging services on the network
+	// without the adb server, whose own discovery stops working after the
+	// computer's network changes. Nil means Pinky's mDNS browser (package
+	// mdns).
+	Browser Browser
+	// ReconnectWiFi has List reconnect the phones this computer paired
+	// with over Wi-Fi when they are on the network and the adb server has
+	// not connected them: it does so by itself only while its discovery
+	// works. Off by default, since it searches the network now and then.
+	ReconnectWiFi bool
+	// KnownHosts lists the guids of the phones the adb server paired with
+	// ("adb-<serial>-<suffix>"), for ReconnectWiFi. Nil reads the server's
+	// ~/.android/adb_known_hosts.pb.
+	KnownHosts func() ([]string, error)
+
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
 }
@@ -50,6 +65,12 @@ type Config struct {
 func (c *Config) defaults() {
 	if c.Client == nil {
 		c.Client = &adb.Client{}
+	}
+	if c.Browser == nil {
+		c.Browser = mdnsBrowser{}
+	}
+	if c.KnownHosts == nil {
+		c.KnownHosts = readKnownHosts
 	}
 	if c.SettleMax <= 0 {
 		c.SettleMax = 3 * time.Second
@@ -71,12 +92,18 @@ type Provider struct {
 
 	mu    sync.Mutex
 	props map[string]deviceProps // by serial and transport id
+
+	wifi *reconnector // nil without Config.ReconnectWiFi
 }
 
 // NewProvider returns a provider with the given configuration.
 func NewProvider(cfg Config) *Provider {
 	cfg.defaults()
-	return &Provider{cfg: cfg, props: map[string]deviceProps{}}
+	p := &Provider{cfg: cfg, props: map[string]deviceProps{}}
+	if cfg.ReconnectWiFi {
+		p.wifi = newReconnector(p)
+	}
+	return p
 }
 
 // Platform implements driver.Provider.
@@ -96,6 +123,9 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	entries, err := p.cfg.Client.Devices(ctx)
 	if err != nil {
 		return nil, wrapErr(err)
+	}
+	if p.wifi != nil {
+		p.wifi.kick(entries)
 	}
 	infos := make([]driver.Info, len(entries))
 	var wg sync.WaitGroup

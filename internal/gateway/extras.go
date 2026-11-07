@@ -48,6 +48,23 @@ func (g *Gateway) PairWithCode(ctx context.Context, addr, code string) (driver.I
 	return driver.Info{}, ErrNoPairing
 }
 
+// ConnectWiFi connects a phone paired over Wi-Fi at the address it shows
+// under Wireless debugging (IP address & Port), for a network on which the
+// driver cannot find it by itself (driver.ErrPairedNotFound from a
+// pairing).
+func (g *Gateway) ConnectWiFi(ctx context.Context, addr string) (driver.Info, error) {
+	for _, p := range g.opt.Providers {
+		if wc, ok := p.(driver.WiFiConnector); ok {
+			info, err := wc.ConnectWiFi(ctx, addr)
+			if err == nil {
+				g.discover(ctx)
+			}
+			return info, err
+		}
+	}
+	return driver.Info{}, ErrNoPairing
+}
+
 // discoverOnPair looks for devices as soon as a pairing finishes, rather
 // than at the next discovery tick.
 type discoverOnPair struct {
@@ -61,6 +78,14 @@ func (p *discoverOnPair) Wait(ctx context.Context) (driver.Info, error) {
 		p.g.discover(ctx)
 	}
 	return info, err
+}
+
+// Progress passes the pairing's progress on (driver.PairingReporter).
+func (p *discoverOnPair) Progress() driver.PairingProgress {
+	if r, ok := p.Pairing.(driver.PairingReporter); ok {
+		return r.Progress()
+	}
+	return driver.PairingProgress{}
 }
 
 // CompanionState reports whether a phone's companion app is ready, or

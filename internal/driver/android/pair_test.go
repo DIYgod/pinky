@@ -15,24 +15,42 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
+	"github.com/DIYgod/pinky/internal/driver/android/mdns"
 )
 
-// fakeADB is an adb server with a phone that pairs over Wi-Fi.
+// fakeADB is an adb server with a phone that pairs over Wi-Fi. It is also
+// the driver's own network search (Browser), which can see what the
+// server's discovery does not.
 type fakeADB struct {
 	t  *testing.T
 	ln net.Listener
 
 	mu         sync.Mutex
-	services   []string // mDNS services, "instance\ttype\taddr"
+	services   []string // the server's mDNS services, "instance\ttype\taddr"
+	noMDNS     bool     // the server has no mDNS discovery (host:mdns:* fail)
 	code       string   // the code or password the phone accepts
 	guid       string   // reported by pair; "" for an old server
 	devices    []string // host:devices-l lines
 	connects   []string
 	pairs      int
-	autoSerial string // a serial the server adds by itself after pairing
+	autoSerial string            // a serial the server adds by itself after pairing
+	props      map[string]string // getprop output by serial; none fails the shell
+	connectOK  map[string]bool   // addresses host:connect reaches; nil: all
+
+	known     []string // the phones the server paired with (adb_known_hosts.pb)
+	own       []string // what the driver's search sees, as services
+	ownErr    error    // what the driver's search reports
+	browseErr error    // Browse fails
+	browses   int
+	closes    int
 }
 
 func newFakeADB(t *testing.T) (*fakeADB, *Provider) {
+	f := startFakeADB(t)
+	return f, NewProvider(f.config())
+}
+
+func startFakeADB(t *testing.T) *fakeADB {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -48,27 +66,71 @@ func newFakeADB(t *testing.T) (*fakeADB, *Provider) {
 			go f.handle(c)
 		}
 	}()
-	return f, NewProvider(Config{Client: &adb.Client{Addr: ln.Addr().String()}})
+	return f
+}
+
+func (f *fakeADB) config() Config {
+	return Config{Client: &adb.Client{Addr: f.ln.Addr().String()}, Browser: f, Logf: f.t.Logf}
+}
+
+func (f *fakeADB) set(fn func(f *fakeADB)) {
+	f.mu.Lock()
+	fn(f)
+	f.mu.Unlock()
+}
+
+func readRequest(r *bufio.Reader) (string, bool) {
+	var n [4]byte
+	if _, err := io.ReadFull(r, n[:]); err != nil {
+		return "", false
+	}
+	size, _ := strconv.ParseUint(string(n[:]), 16, 32)
+	buf := make([]byte, size)
+	if _, err := io.ReadFull(r, buf); err != nil {
+		return "", false
+	}
+	return string(buf), true
 }
 
 func (f *fakeADB) handle(c net.Conn) {
 	defer c.Close()
 	r := bufio.NewReader(c)
-	var n [4]byte
-	if _, err := io.ReadFull(r, n[:]); err != nil {
+	req, ok := readRequest(r)
+	if !ok {
 		return
 	}
-	size, _ := strconv.ParseUint(string(n[:]), 16, 32)
-	buf := make([]byte, size)
-	io.ReadFull(r, buf)
-	req := string(buf)
 	reply := func(s string) { fmt.Fprintf(c, "OKAY%04x%s", len(s), s) }
+	fail := func(msg string) { fmt.Fprintf(c, "FAIL%04x%s", len(msg), msg) }
+	if serial, ok := strings.CutPrefix(req, "host:transport:"); ok {
+		f.mu.Lock()
+		out, has := f.props[serial]
+		f.mu.Unlock()
+		if !has {
+			fail("device '" + serial + "' not found")
+			return
+		}
+		io.WriteString(c, "OKAY")
+		if next, ok := readRequest(r); ok && strings.HasPrefix(next, "shell:getprop ro.product.model") {
+			io.WriteString(c, "OKAY"+out)
+		} else {
+			fail("unsupported")
+		}
+		return
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	switch {
 	case req == "host:mdns:check":
+		if f.noMDNS {
+			fail("mdns daemon unavailable")
+			return
+		}
 		reply("mdns daemon version [adb discovery 0.0.0]")
 	case req == "host:mdns:services":
+		if f.noMDNS {
+			fail("mdns daemon unavailable")
+			return
+		}
 		reply(strings.Join(f.services, "\n") + "\n")
 	case strings.HasPrefix(req, "host:pair:"):
 		code, addr, _ := strings.Cut(strings.TrimPrefix(req, "host:pair:"), ":")
@@ -91,14 +153,60 @@ func (f *fakeADB) handle(c net.Conn) {
 	case strings.HasPrefix(req, "host:connect:"):
 		addr := strings.TrimPrefix(req, "host:connect:")
 		f.connects = append(f.connects, addr)
+		if f.connectOK != nil && !f.connectOK[addr] {
+			reply("failed to connect to '" + addr + "': Connection refused")
+			return
+		}
 		f.devices = append(f.devices, addr+"\tdevice product:x model:Pixel_9 device:x transport_id:8")
 		reply("connected to " + addr)
 	case req == "host:devices-l":
 		reply(strings.Join(f.devices, "\n") + "\n")
 	default:
-		msg := "unsupported"
-		fmt.Fprintf(c, "FAIL%04x%s", len(msg), msg)
+		fail("unsupported")
 	}
+}
+
+// Browse implements Browser.
+func (f *fakeADB) Browse(types ...string) (Browse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.browseErr != nil {
+		return nil, f.browseErr
+	}
+	f.browses++
+	return &fakeBrowse{f: f, types: types}, nil
+}
+
+type fakeBrowse struct {
+	f     *fakeADB
+	types []string
+}
+
+func (b *fakeBrowse) Services() []adb.MDNSService {
+	b.f.mu.Lock()
+	defer b.f.mu.Unlock()
+	var out []adb.MDNSService
+	for _, s := range adb.ParseMDNSServices(strings.Join(b.f.own, "\n")) {
+		for _, t := range b.types {
+			if s.Type == t {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
+}
+
+func (b *fakeBrowse) Err() error {
+	b.f.mu.Lock()
+	defer b.f.mu.Unlock()
+	return b.f.ownErr
+}
+
+func (b *fakeBrowse) Close() error {
+	b.f.mu.Lock()
+	b.f.closes++
+	b.f.mu.Unlock()
+	return nil
 }
 
 func TestQRPairing(t *testing.T) {
@@ -115,20 +223,20 @@ func TestQRPairing(t *testing.T) {
 	if !ok || !strings.HasPrefix(name, "pinky-") || len(pass) < 12 {
 		t.Fatalf("QR() = %q", qr)
 	}
-	f.mu.Lock()
-	f.code = pass
-	f.guid = "adb-R5CN20ABC-x1y2z3"
-	f.mu.Unlock()
+	f.set(func(f *fakeADB) {
+		f.code = pass
+		f.guid = "adb-R5CN20ABC-x1y2z3"
+	})
 	// The phone shows up a moment after the person scans the code.
 	go func() {
 		time.Sleep(700 * time.Millisecond)
-		f.mu.Lock()
-		f.services = []string{
-			"pinky-other\t_adb-tls-pairing._tcp.\t192.168.1.9:30000",
-			name + "\t_adb-tls-pairing._tcp.\t192.168.1.42:37123",
-			"adb-R5CN20ABC-x1y2z3\t_adb-tls-connect._tcp.\t192.168.1.42:41000",
-		}
-		f.mu.Unlock()
+		f.set(func(f *fakeADB) {
+			f.services = []string{
+				"pinky-other\t_adb-tls-pairing._tcp.\t192.168.1.9:30000",
+				name + "\t_adb-tls-pairing._tcp.\t192.168.1.42:37123",
+				"adb-R5CN20ABC-x1y2z3\t_adb-tls-connect._tcp.\t192.168.1.42:41000",
+			}
+		})
 	}()
 	info, err := pg.Wait(ctx)
 	if err != nil {
@@ -141,6 +249,131 @@ func TestQRPairing(t *testing.T) {
 	defer f.mu.Unlock()
 	if len(f.connects) != 1 || f.connects[0] != "192.168.1.42:41000" {
 		t.Errorf("connects = %q", f.connects)
+	}
+}
+
+// TestQRPairingServerBlind is the bug this search fixes: the adb server's
+// discovery has stopped and lists nothing, while the phone's services are
+// on the network. Wait pairs with the address the driver found, connects
+// at once (the server will not), and the phone keeps its hardware serial
+// as its id.
+func TestQRPairingServerBlind(t *testing.T) {
+	f, p := newFakeADB(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	pg, err := p.StartPairing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name, pass, _ := parseQR(pg.QR())
+	rep := pg.(driver.PairingReporter)
+	if pr := rep.Progress(); pr.Found || pr.Paired || pr.NotAllowed || pr.SearchErr != "" {
+		t.Errorf("progress before the scan = %+v", pr)
+	}
+	f.set(func(f *fakeADB) {
+		f.code, f.guid = pass, "adb-R5CN20ABC-x1y2z3"
+		f.props = map[string]string{"192.168.1.42:41000": "Pixel 9\n16\n36\nPixel 9\nR5CN20ABC\n"}
+	})
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		f.set(func(f *fakeADB) {
+			f.own = []string{
+				name + "\t_adb-tls-pairing._tcp\t192.168.1.42:37123",
+				"adb-R5CN20ABC-x1y2z3\t_adb-tls-connect._tcp\t192.168.1.42:41000",
+			}
+		})
+	}()
+	start := time.Now()
+	info, err := pg.Wait(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.ID != "R5CN20ABC" || info.Name != "Pixel 9" || info.Connection != "wifi" || info.State != driver.StateOnline {
+		t.Errorf("Wait = %+v", info)
+	}
+	if d := time.Since(start); d > 3*time.Second {
+		t.Errorf("took %v", d)
+	}
+	if pr := rep.Progress(); !pr.Found || !pr.Paired {
+		t.Errorf("progress after = %+v", pr)
+	}
+	pg.Close()
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.connects) != 1 || f.connects[0] != "192.168.1.42:41000" {
+		t.Errorf("connects = %q", f.connects)
+	}
+	if f.browses != 1 || f.closes != 1 {
+		t.Errorf("browses %d, closes %d", f.browses, f.closes)
+	}
+}
+
+// TestQRPairingWithoutServerMDNS pairs with a server that has no mDNS at
+// all, by the driver's own search.
+func TestQRPairingWithoutServerMDNS(t *testing.T) {
+	f, p := newFakeADB(t)
+	f.set(func(f *fakeADB) { f.noMDNS = true })
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	pg, err := p.StartPairing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pg.Close()
+	name, pass, _ := parseQR(pg.QR())
+	f.set(func(f *fakeADB) {
+		f.code = pass // an old server: no guid
+		f.own = []string{
+			name + "\t_adb-tls-pairing._tcp\t192.168.1.42:37123",
+			"adb-R5CN20ABC-x1y2z3\t_adb-tls-connect._tcp\t192.168.1.42:41000",
+		}
+	})
+	info, err := pg.Wait(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.ID != "192.168.1.42:41000" {
+		t.Errorf("Wait = %+v", info)
+	}
+}
+
+// TestQRPairingCannotSearch: with no discovery in the server and no search
+// of its own, the driver cannot pair by QR code.
+func TestQRPairingCannotSearch(t *testing.T) {
+	f, p := newFakeADB(t)
+	f.set(func(f *fakeADB) {
+		f.noMDNS = true
+		f.browseErr = errors.New("no sockets")
+	})
+	if _, err := p.StartPairing(context.Background()); !errors.Is(err, driver.ErrUnsupported) {
+		t.Errorf("StartPairing = %v", err)
+	}
+	// Without a server at all.
+	f.ln.Close()
+	if _, err := p.StartPairing(context.Background()); !errors.Is(err, driver.ErrUnsupported) {
+		t.Errorf("StartPairing without a server = %v", err)
+	}
+}
+
+// TestPairingProgressNotAllowed reports a search the system blocks (macOS
+// Local Network privacy) until the phone shows up.
+func TestPairingProgressNotAllowed(t *testing.T) {
+	f, p := newFakeADB(t)
+	f.set(func(f *fakeADB) {
+		f.ownErr = fmt.Errorf("%w: the questions never came back", mdns.ErrNotAllowed)
+	})
+	pg, err := p.StartPairing(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pg.Close()
+	pr := pg.(driver.PairingReporter).Progress()
+	if !pr.NotAllowed || !strings.Contains(pr.SearchErr, "not allowed") {
+		t.Errorf("progress = %+v", pr)
+	}
+	f.set(func(f *fakeADB) { f.ownErr = errors.New("mdns: no network interface to search") })
+	if pr := pg.(driver.PairingReporter).Progress(); pr.NotAllowed || pr.SearchErr == "" {
+		t.Errorf("progress without a network = %+v", pr)
 	}
 }
 
@@ -162,7 +395,7 @@ func parseQR(qr string) (name, pass string, ok bool) {
 }
 
 func TestQRPairingClose(t *testing.T) {
-	_, p := newFakeADB(t)
+	f, p := newFakeADB(t)
 	pg, err := p.StartPairing(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -174,23 +407,31 @@ func TestQRPairingClose(t *testing.T) {
 	if _, err := pg.Wait(context.Background()); err == nil {
 		t.Error("Wait after Close returned no error")
 	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.closes != 1 {
+		t.Errorf("the search was closed %d times", f.closes)
+	}
 }
 
 func TestPairWithCode(t *testing.T) {
 	f, p := newFakeADB(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	f.mu.Lock()
-	f.code = "482913"
-	f.guid = "adb-R5CN20ABC-x1y2z3"
-	// A current adb server connects by itself after pairing.
-	f.autoSerial = "adb-R5CN20ABC-x1y2z3._adb-tls-connect._tcp"
-	f.mu.Unlock()
+	f.set(func(f *fakeADB) {
+		f.code = "482913"
+		f.guid = "adb-R5CN20ABC-x1y2z3"
+		// A current adb server connects by itself after pairing.
+		f.autoSerial = "adb-R5CN20ABC-x1y2z3._adb-tls-connect._tcp"
+	})
 	if _, err := p.PairWithCode(ctx, "192.168.1.42:37123", "12345"); err == nil {
 		t.Error("a five-digit code was accepted")
 	}
 	if _, err := p.PairWithCode(ctx, "192.168.1.42", "482913"); err == nil {
 		t.Error("an address without a port was accepted")
+	}
+	if _, err := p.PairWithCode(ctx, "192.168.1.42:99999", "482913"); err == nil {
+		t.Error("a port out of range was accepted")
 	}
 	if _, err := p.PairWithCode(ctx, "192.168.1.42:37123", "000000"); !errors.Is(err, adb.ErrPairing) {
 		t.Errorf("wrong code: %v", err)
@@ -206,6 +447,56 @@ func TestPairWithCode(t *testing.T) {
 	defer f.mu.Unlock()
 	if len(f.connects) != 0 {
 		t.Errorf("connected by hand although the server had: %q", f.connects)
+	}
+}
+
+// TestPairWithCodeServerBlind connects by hand to the connect service the
+// driver's own search found, when the server's discovery sees nothing.
+func TestPairWithCodeServerBlind(t *testing.T) {
+	f, p := newFakeADB(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f.set(func(f *fakeADB) {
+		f.code, f.guid = "482913", "adb-R5CN20ABC-x1y2z3"
+		f.own = []string{"adb-R5CN20ABC-x1y2z3\t_adb-tls-connect._tcp\t192.168.1.42:41000"}
+	})
+	info, err := p.PairWithCode(ctx, "192.168.1.42:37123", "482913")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.ID != "192.168.1.42:41000" {
+		t.Errorf("PairWithCode = %+v", info)
+	}
+}
+
+// TestPairWithCodeNotFound: the phone paired, but its connect service shows
+// up nowhere; the error says so, and ConnectWiFi then connects with the
+// address the person reads off the phone.
+func TestPairWithCodeNotFound(t *testing.T) {
+	f, p := newFakeADB(t)
+	old := connectTimeout
+	connectTimeout = 1500 * time.Millisecond
+	defer func() { connectTimeout = old }()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	f.set(func(f *fakeADB) { f.code, f.guid = "482913", "adb-R5CN20ABC-x1y2z3" })
+	_, err := p.PairWithCode(ctx, "192.168.1.42:37123", "482913")
+	if !errors.Is(err, driver.ErrPairedNotFound) {
+		t.Fatalf("PairWithCode = %v", err)
+	}
+	if _, err := p.ConnectWiFi(ctx, "the phone"); err == nil {
+		t.Error("ConnectWiFi took a bad address")
+	}
+	f.set(func(f *fakeADB) { f.connectOK = map[string]bool{"192.168.1.42:41000": true} })
+	if _, err := p.ConnectWiFi(ctx, "192.168.1.42:5555"); err == nil || !strings.Contains(err.Error(), "refused") {
+		t.Errorf("ConnectWiFi to a closed port = %v", err)
+	}
+	info, err := p.ConnectWiFi(ctx, " 192.168.1.42:41000 ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.ID != "192.168.1.42:41000" || info.State != driver.StateOnline {
+		t.Errorf("ConnectWiFi = %+v", info)
 	}
 }
 
