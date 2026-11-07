@@ -2,6 +2,22 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Approvals now show the whole phone screen with what the agent wants to tap marked, next to a close-up you can read, so you can tell the app, the page and the button at a glance. Swipes show as an arrow.
+- Click an approval's screenshot to see it larger.
+- Approval cards in the main window show the screenshot when that phone isn't the one on screen.
+- When an approval has no screenshot, it says why, such as the phone being locked or the app being blocked.
+- Taps on buttons whose words only show in the picture, such as in web pages inside apps, are now checked against your rules too.
+- Waiting for text matches whole words, so waiting for "Stop" no longer stops at "Stopwatch".
+- After Home or opening an app, the agent's next step waits until the app in front has changed.
+- Unlocking a phone from the computer no longer ends a handoff that asked you for more than the unlock.
+- A tap on a dimmed backdrop, such as the area around a menu, lands where nothing lies on it instead of on what is underneath.
+- Agents keep their Pinky connection when Pinky quits and pick up again when it reopens.
+- The Windows and Linux packages now carry FFmpeg, so the live mirror works there without installing it.
+- The command that Homebrew and the Linux packages install is now `pinkyctl`, because `pinky` is also a coreutils command: it took Pinky's place on many Macs and kept the `.deb` from installing on Debian and Ubuntu. Agents set up with `pinky mcp` need `pinkyctl mcp`, or the command in Settings › Agents.
+- Settings › Agents shows ready-to-copy commands that add Pinky to Claude Code and other agents.
+
 ## 2026.1107.9 (2026-11-07)
 
 - Unlocking an iPhone from the computer works again after the phone locked during a long session.
