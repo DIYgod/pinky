@@ -26,11 +26,19 @@ case $prefix in /*) ;; *) prefix=$(pwd)/$prefix ;; esac
 src=$prefix-src
 tarball=$src/ffmpeg-$VERSION.tar.xz
 
+sha256() {
+	if command -v shasum >/dev/null 2>&1; then
+		shasum -a 256 "$1" | cut -d' ' -f1
+	else
+		sha256sum "$1" | cut -d' ' -f1
+	fi
+}
+
 mkdir -p "$src"
-if [ ! -f "$tarball" ] || [ "$(shasum -a 256 "$tarball" | cut -d' ' -f1)" != "$SHA256" ]; then
+if [ ! -f "$tarball" ] || [ "$(sha256 "$tarball")" != "$SHA256" ]; then
 	echo "Downloading $URL"
 	curl -fL --retry 3 -o "$tarball.part" "$URL"
-	got=$(shasum -a 256 "$tarball.part" | cut -d' ' -f1)
+	got=$(sha256 "$tarball.part")
 	if [ "$got" != "$SHA256" ]; then
 		echo "ffmpeg-$VERSION.tar.xz has SHA-256 $got, want $SHA256" >&2
 		rm -f "$tarball.part"
@@ -43,8 +51,7 @@ tree=$src/ffmpeg-$VERSION
 rm -rf "$tree"
 tar -xJf "$tarball" -C "$src"
 
-flags="--prefix=$prefix
-	--enable-shared --disable-static --enable-pic
+flags="--enable-shared --disable-static --enable-pic
 	--disable-programs --disable-doc --disable-debug
 	--disable-autodetect --disable-network
 	--disable-everything
@@ -77,12 +84,19 @@ Darwin)
 	;;
 esac
 
-rm -rf "$prefix"
 cd "$tree"
+# The libraries record their configure line (avutil_configuration), so a
+# fixed prefix keeps this machine's paths out of them; make install puts
+# them under a staging folder, from where they move to $prefix.
+stage=$src/stage
+rm -rf "$stage"
 # shellcheck disable=SC2086 # the flags are split on purpose
-./configure $flags
+./configure --prefix=/opt/pinky-ffmpeg $flags
 make -j"$jobs"
-make install
+make install DESTDIR="$stage"
+rm -rf "$prefix"
+mv "$stage/opt/pinky-ffmpeg" "$prefix"
+rm -rf "$stage"
 
 cp COPYING.LGPLv2.1 "$prefix/COPYING.LGPLv2.1"
 {
