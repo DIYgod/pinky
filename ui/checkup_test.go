@@ -228,6 +228,31 @@ func TestAddAndroidUSBPermission(t *testing.T) {
 	}
 }
 
+func TestAddAndroidSetupCodes(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.NoPhones, Speed: 50, HoldSetup: true})
+	ta.sync()
+	ta.page = pageAddPhone
+	ta.add.reset(ta.app)
+	ta.add.step = "android"
+	for _, c := range []struct {
+		setup, want string
+	}{
+		{driver.SetupUSBPermission, locales.CheckUSBPermissionNote()},
+		{driver.SetupUSBDriver, "Install the Google USB Driver"},
+	} {
+		ta.devices = []gateway.DeviceView{{Info: driver.Info{ID: "usb:1", Platform: driver.Android, Name: "Phone",
+			State: driver.StateNeedsSetup, Setup: c.setup, Detail: "Install the Google USB Driver, or the driver from the phone's maker."}}}
+		tt := mg.NewTester(func(c *mg.Context) { ta.addPhonePage(c) }, 1280, 900)
+		tt.Frame()
+		if !hasText(tt, c.want) {
+			t.Errorf("%s: no %q in %q", c.setup, c.want, tt.Texts())
+		}
+		if c.setup == driver.SetupUSBDriver && hasText(tt, locales.CheckUSBPermissionNote()) {
+			t.Errorf("a phone without a USB driver gets udev's steps")
+		}
+	}
+}
+
 func TestCompanionErrors(t *testing.T) {
 	restricted := errors.New("adb: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]")
 	for _, c := range []struct {

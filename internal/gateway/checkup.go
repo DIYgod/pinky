@@ -59,7 +59,8 @@ func (g *Gateway) Checkup(ctx context.Context, deviceID string) (CheckupView, er
 
 // ConnectionChecks are the items every checkup starts with, from what the
 // phone's driver lists it as: whether it is connected, and whether it
-// allows this computer. The other items wait while either fails.
+// allows this computer. The other items wait while either fails. The fix
+// of a phone that waits for a step is that step (Info.Setup).
 func ConnectionChecks(info driver.Info) []driver.Check {
 	conn := driver.Check{ID: driver.CheckConnection, Status: driver.CheckPass, Detail: info.Connection}
 	auth := driver.Check{ID: driver.CheckAuthorized, Status: driver.CheckPass}
@@ -69,8 +70,11 @@ func ConnectionChecks(info driver.Info) []driver.Check {
 		auth.Status = driver.CheckSkip
 	case driver.StateUnauthorized:
 		auth.Status, auth.Fix, auth.Detail = driver.CheckFail, driver.FixAuthorize, info.Detail
+		if info.Setup != "" {
+			auth.Fix = info.Setup
+		}
 	case driver.StateNeedsSetup:
-		auth.Status, auth.Detail = driver.CheckFail, info.Detail
+		auth.Status, auth.Fix, auth.Detail = driver.CheckFail, info.Setup, info.Detail
 	}
 	return []driver.Check{conn, auth}
 }

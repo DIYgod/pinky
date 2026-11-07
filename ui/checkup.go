@@ -347,13 +347,14 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		case android && ck.Fix == driver.FixAuthorize:
 			w.text, w.detail = locales.CheckAuthorizedAndroidFail(), false
 			w.note = locales.AddAndroidNoPrompt()
-		case android && runtime.GOOS == "linux":
+		case ck.Fix == driver.FixUSBPermission || (android && ck.Fix == "" && runtime.GOOS == "linux"):
 			// Android lists a phone as needing setup when the computer may
 			// not open its USB device (Linux without udev rules)…
 			w.text = locales.CheckUSBPermission()
 			w.note = locales.CheckUSBPermissionNote()
 		case android:
-			// …or, on Windows, when its USB debugging has no driver.
+			// …or, on Windows, when its USB debugging has no driver
+			// (FixUSBDriver): the driver says which to install.
 			w.text = locales.CheckUSBNotReady()
 		default:
 			w.text = nonEmpty(ck.Detail, locales.CheckAuthorizedFail())

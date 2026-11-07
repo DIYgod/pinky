@@ -98,6 +98,24 @@ func TestCheckupWithoutChecker(t *testing.T) {
 	}
 }
 
+func TestConnectionChecksSetup(t *testing.T) {
+	for _, c := range []struct {
+		info driver.Info
+		fix  string
+	}{
+		{driver.Info{State: driver.StateUnauthorized, Setup: driver.SetupTrust}, driver.SetupTrust},
+		{driver.Info{State: driver.StateUnauthorized}, driver.FixAuthorize},
+		{driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupDeveloperMode}, driver.SetupDeveloperMode},
+		{driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUSBDriver}, driver.FixUSBDriver},
+		{driver.Info{State: driver.StateNeedsSetup}, ""},
+	} {
+		auth := ConnectionChecks(c.info)[1]
+		if auth.Status != driver.CheckFail || auth.Fix != c.fix {
+			t.Errorf("%+v: %+v, want the fix %q", c.info, auth, c.fix)
+		}
+	}
+}
+
 func TestCheckupPhoneNotOnline(t *testing.T) {
 	for _, c := range []struct {
 		state        driver.State

@@ -218,11 +218,13 @@ func (a *app) plugStatus(c *mg.Context, d *gateway.DeviceView) {
 		} else {
 			c.After(time.Second)
 		}
-	case d.Info.State == driver.StateNeedsSetup && runtime.GOOS == "linux":
+	case d.Info.State == driver.StateNeedsSetup &&
+		(d.Info.Setup == driver.SetupUSBPermission || (d.Info.Setup == "" && runtime.GOOS == "linux")):
 		guideProblem(c, locales.CheckUSBPermission(), d.Info.Detail)
 		guideNote(c, locales.CheckUSBPermissionNote())
 	case d.Info.State == driver.StateNeedsSetup:
-		// Windows lists a phone whose USB debugging has no driver.
+		// Windows lists a phone whose USB debugging has no driver
+		// (SetupUSBDriver); the driver says which to install.
 		guideProblem(c, locales.CheckUSBNotReady(), d.Info.Detail)
 	case d.Info.State == driver.StateOffline:
 		guideProblem(c, locales.AddAndroidOffline(d.Info.Name), d.Info.Detail)

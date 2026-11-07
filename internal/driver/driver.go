@@ -493,6 +493,7 @@ const (
 	FixReconnect        = "reconnect"          // connect the phone again: plug it in, or turn Wi-Fi debugging back on
 	FixAuthorize        = "authorize"          // allow this computer on the phone (Allow USB debugging, Trust)
 	FixUSBPermission    = "usb_permission"     // Linux: the computer may not open the phone's USB device (udev rules)
+	FixUSBDriver        = "usb_driver"         // Windows: the phone's USB debugging has no driver
 	FixInstallCompanion = "install_companion"  // install Pinky Companion
 	FixUpdateCompanion  = "update_companion"   // update it to the version Pinky carries
 	FixTurnOnCompanion  = "turn_on_companion"  // turn its accessibility service on
@@ -505,6 +506,14 @@ const (
 	FixLocalNetwork     = "local_network"      // allow Pinky under Privacy & Security › Local Network
 	FixLocked           = "locked"             // unlock the phone, then check again
 	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
+)
+
+// Setup steps of Android phones, in Info.Setup with the Setup constants:
+// what the computer, not the phone, lacks. A checkup's fix for a phone
+// that is not online is its Info.Setup.
+const (
+	SetupUSBPermission = FixUSBPermission // Linux: no udev rule for the phone, or not in the plugdev group
+	SetupUSBDriver     = FixUSBDriver     // Windows: no driver for the phone's USB debugging interface
 )
 
 // Checkup is a phone's checkup, as its driver ran it.
