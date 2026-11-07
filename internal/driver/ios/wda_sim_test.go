@@ -257,6 +257,24 @@ func TestWDASim(t *testing.T) {
 		}
 	})
 
+	t.Run("settle", func(t *testing.T) {
+		start := time.Now()
+		ok, err := d.WaitSettled(simCtx(t, 10*time.Second), 3*time.Second)
+		t.Logf("still screen: settled %v in %v", ok, time.Since(start))
+		if err != nil || !ok {
+			t.Fatalf("still screen: %v %v", ok, err)
+		}
+		if err := d.Swipe(simCtx(t, 20*time.Second), screen.Point{X: d.width / 2, Y: d.height * 3 / 4}, screen.Point{X: d.width / 2, Y: d.height / 3}, 200*time.Millisecond); err != nil {
+			t.Fatal(err)
+		}
+		start = time.Now()
+		ok, err = d.WaitSettled(simCtx(t, 10*time.Second), 3*time.Second)
+		t.Logf("after a fling: settled %v in %v", ok, time.Since(start))
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
 	t.Run("mirror touch", func(t *testing.T) {
 		vw, vh := d.videoSize()
 		if vw == 0 {

@@ -26,7 +26,7 @@ What these mean for the design:
 
 ## What is built
 
-`internal/driver/ios` implements `driver.Provider`, `driver.Device`, `driver.Toucher`, `driver.LockReporter`, `driver.Settler`, `driver.Waker` and `driver.Unlocker` on iOS 27. Below iOS 27, `WDADevice` implements `driver.Device`, `driver.Toucher` and `driver.LockReporter`, and `AXDevice` `driver.Device` and `driver.LockReporter` (see "iPhones below iOS 27").
+`internal/driver/ios` implements `driver.Provider`, `driver.Device`, `driver.Toucher`, `driver.LockReporter`, `driver.Settler`, `driver.Waker` and `driver.Unlocker` on iOS 27. Below iOS 27, `WDADevice` implements `driver.Device`, `driver.Toucher`, `driver.LockReporter` and `driver.Settler`, and `AXDevice` `driver.Device`, `driver.LockReporter` and `driver.Settler` (see "iPhones below iOS 27").
 
 | File | What |
 | --- | --- |
@@ -48,7 +48,7 @@ What these mean for the design:
 | `version.go` | Which way to drive a phone, by its iOS version |
 | `wda.go`, `wda_observe.go`, `wda_device.go`, `wda_run.go`, `replaytouch.go` | The WebDriverAgent path (iOS 17.4 to 26): the HTTP client over usbmuxd, its tree as elements, the device, starting the runner's test, the mirror's touches played back as gestures |
 | `ax_device.go` | The accessibility path (iOS 17.4 to 26, nothing installed) |
-| `framestream.go`, `mjpeg.go`, `h264_darwin.go`, `h264_other.go` | Frames (JPEG from WDA, screenshots) to H.264 through VideoToolbox, for the mirror and the recorder |
+| `framestream.go`, `mjpeg.go`, `h264_darwin.go`, `h264_other.go`, `settle_frames.go` | Frames (JPEG from WDA, screenshots) to H.264 through VideoToolbox, for the mirror and the recorder, and settling by them |
 
 Coordinates are screenshot pixels: 1125x2436 on an iPhone 13 mini, which is the size UIKit renders (375x812 points at 3x); the panel is 1080x2340 and the video 1136x2464. `Toucher` points are video pixels (the contract since 5e83552). Matching decoded frames against screenshots (row and column brightness profiles, correlation 0.998 and better on Settings and Calculator) showed the video is the screen at 1:1 in the top-left corner with black padding, 11 columns on the right and 28 rows at the bottom, so a video point is the same screen point and `Touch` only clamps points in the padding to the screen's edge. A video smaller than the screen would be scaled back up; no phone tested does that.
 
@@ -228,14 +228,14 @@ The daemons check the OS version only against iOS 18 and 26 (`__isPlatformVersio
 - **`accessibility`**, when it is not: nothing installed. The picture is screenshots (one every 100 ms while the screen changes, then one a second), the elements the inspector's walk placed by OCR, apps opened through the app service. Tap presses the smallest element of the last observation that contains the point, with the inspector's Activate action (`deviceElement:performAction:withValue:` with `AXAction-2010`, what VoiceOver's double tap does, as go-ios sends it). Swipes, typing, long presses and keys return `unsupported` with a sentence that names the helper. The provider asks such a phone again every 30 s, so a helper installed meanwhile is picked up.
 - iOS 17.0 to 17.3 and 16 and earlier are `needs_setup`, with the reason in the detail.
 
-Both send H.264 encoded by macOS's VideoToolbox (`h264_darwin.go`, purego): Main profile, no B-frames, 2.5 Mbit/s, a key frame first and again after 10 s of a still picture; frames that did not change (same bytes) are skipped, as the phone's own stream does. WDA's MJPEG is the screen at half size, 15 fps, quality 50; `Toucher` scales the mirror's points back up and plays a drag back when the finger lifts, because WDA performs whole gestures. Other systems get `unsupported` for the stream: the gateway and agents still work, but the mirror has no picture. The mirror and the recorder need no change: they take H.264 already.
+Both settle by the picture (`settle_frames.go`): WDA's MJPEG frames (15 a second, and a still screen encodes to the same bytes) or screenshots, settled once nothing changed for 250 ms and at least 500 ms passed, as on iOS 27. On the Simulator: 0.52 s on a still screen, 0.93 s after a fling. Both send H.264 encoded by macOS's VideoToolbox (`h264_darwin.go`, purego): Main profile, no B-frames, 2.5 Mbit/s, a key frame first and again after 10 s of a still picture; frames that did not change (same bytes) are skipped, as the phone's own stream does. WDA's MJPEG is the screen at half size, 15 fps, quality 50; `Toucher` scales the mirror's points back up and plays a drag back when the finger lifts, because WDA performs whole gestures. Other systems get `unsupported` for the stream: the gateway and agents still work, but the mirror has no picture. The mirror and the recorder need no change: they take H.264 already.
 
 ### What ran where
 
 | What | Where | Result |
 | --- | --- | --- |
-| WDA path end to end (`TestWDASim`): home screen, Settings by bundle id, a tap on General and back, typing `Wallpaper` and `蓝牙 é ✓` into Settings' search and clearing it, a screenshot, 3 s of video checked by ffprobe, a mirror drag, the lock state | iOS 18.5 and 26.5 Simulators (iPhone 16 and 17), WebDriverAgent 16.17.6 built by Xcode 27.2 | All pass. Observe 0.5 s (Settings) to 1.5 s (home screen); typing 0.55 to 0.85 s; first video frame after 0.2 to 0.3 s; activating an app 0.8 s (the first Settings launch after the 26.5 Simulator booted took over 30 s) |
-| VideoToolbox encoder, frame stream, MJPEG parsing, WDA's tree to elements, the client against a fake WDA, the touch recorder, version paths, provider choices | Unit tests | Pass |
+| WDA path end to end (`TestWDASim`): home screen, Settings by bundle id, a tap on General and back, typing `Wallpaper` and `蓝牙 é ✓` into Settings' search and clearing it, a screenshot, 3 s of video checked by ffprobe, settling, a mirror drag, the lock state | iOS 18.5 and 26.5 Simulators (iPhone 16 and 17), WebDriverAgent 16.17.6 built by Xcode 27.2 | All pass. Observe 0.5 s (Settings) to 1.5 s (home screen); typing 0.55 to 0.85 s; first video frame after 0.2 to 0.3 s; activating an app 0.8 s (the first Settings launch after the 26.5 Simulator booted took over 30 s) |
+| VideoToolbox encoder, frame stream, settling by frames, MJPEG parsing, WDA's tree to elements, the client against a fake WDA, the touch recorder, version paths, provider choices | Unit tests | Pass |
 | Starting WDA through testmanagerd over Pinky's tunnel, usbmuxd port forwarding to a phone | Nowhere | Built on go-ios's `RunTestWithConfig` and usbmuxd `Connect`, as `ios ui run wda` does |
 | The accessibility path | Nowhere below iOS 27 | Its parts run on iOS 27 every day (instruments screenshots, the inspector walk and OCR, the app service, lockdown); Activate is untested. `TestAXProbeDump` (device tag, `PINKY_AXPROBE=dump`) dumps what the inspector sends, for the first run on a phone |
 

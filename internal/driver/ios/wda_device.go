@@ -518,4 +518,5 @@ func (d *WDADevice) Close() error {
 var (
 	_ driver.Device       = (*WDADevice)(nil)
 	_ driver.LockReporter = (*WDADevice)(nil)
+	_ driver.Settler      = (*WDADevice)(nil)
 )

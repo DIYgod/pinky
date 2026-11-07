@@ -459,3 +459,30 @@ func TestProviderRechecksAccessibilityPhones(t *testing.T) {
 		t.Fatalf("asked %d times after 35 s; a phone without the helper is asked again", calls)
 	}
 }
+
+func TestFrameSettle(t *testing.T) {
+	// Frames every 20 ms: changing for the first 300 ms, then still.
+	run := func(changeFor time.Duration, limit time.Duration) (bool, time.Duration) {
+		start := time.Now()
+		n := uint64(0)
+		settled, err := frameSettle(context.Background(), limit, func(ctx context.Context) (uint64, error) {
+			if err := sleepCtx(ctx, 20*time.Millisecond); err != nil {
+				return 0, err
+			}
+			if time.Since(start) < changeFor {
+				n++
+			}
+			return n, nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return settled, time.Since(start)
+	}
+	if ok, took := run(300*time.Millisecond, 3*time.Second); !ok || took < settleMin || took > 900*time.Millisecond {
+		t.Errorf("settling after 300 ms of motion: %v after %v", ok, took)
+	}
+	if ok, took := run(time.Hour, 600*time.Millisecond); ok || took > time.Second {
+		t.Errorf("endless motion: settled %v after %v, want false at the limit", ok, took)
+	}
+}
