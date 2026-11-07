@@ -325,36 +325,56 @@ func (d *Device) disableLocked() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	// Another driver (another Pinky, androidctl) may be using the service
-	// this one turned on: turning it off would cut that one off. Leave it
-	// on then; the app turns itself off three minutes after its last client
-	// leaves.
-	if k.client.EnabledForTask() && othersConnected(ctx, k.client) {
-		d.cfg.logf("android: %s: another client is using the companion; leaving its service on", d.info.ID)
-	} else if err := k.client.Disable(ctx); err != nil {
+	// Several drivers (two Pinky processes, Pinky and androidctl) may share
+	// the service. The last one to leave turns it off: exactly as found
+	// when it turned it on itself, or by removing only Pinky's entry when
+	// another driver turned it on for its reads. A service the person
+	// turned on for good (Install sets idle_disable_ms 0, which the app
+	// keeps) stays on, and so does one another client still uses.
+	enabledHere := k.client.EnabledForTask()
+	others, keptOn, known := companionPeers(ctx, k.client)
+	var err error
+	switch {
+	case others:
+		if enabledHere || !keptOn {
+			d.cfg.logf("android: %s: another client is using the companion; leaving its service on", d.info.ID)
+		}
+	case enabledHere:
+		err = k.client.Disable(ctx)
+	case known && !keptOn:
+		err = k.client.ForceDisable(ctx)
+	}
+	if err != nil {
 		d.cfg.logf("android: %s: turning the companion off: %v", d.info.ID, err)
 	}
 	k.client.Close()
 }
 
-// othersConnected reports whether the companion app has clients other than
-// this one's request connection. The event subscription was just closed;
-// the app may count it for a moment, so ask a few times.
-func othersConnected(ctx context.Context, c *companion.Client) bool {
+// companionPeers asks the app whether clients other than this one's
+// request connection are connected, and whether the person turned the
+// service on for good (idle_disable_ms 0). The event subscription was just
+// closed, and the app may count it for a moment, so it asks a few times.
+// When the app does not answer, there is nobody to cut off, and known is
+// false: whether the person wants it on cannot be told.
+func companionPeers(ctx context.Context, c *companion.Client) (others, keptOn, known bool) {
 	for i := 0; i < 3; i++ {
 		if i > 0 {
 			if sleepCtx(ctx, 100*time.Millisecond) != nil {
-				return false
+				return false, keptOn, known
 			}
 		}
 		pctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		info, err := c.Ping(pctx)
 		cancel()
-		if err != nil || info.Connections <= 1 {
-			return false
+		if err != nil {
+			return false, keptOn, known
+		}
+		keptOn, known = info.IdleDisableMS == 0, true
+		if info.Connections <= 1 {
+			return false, keptOn, true
 		}
 	}
-	return true
+	return true, keptOn, true
 }
 
 // observeCompanion reads the screen from the companion, with the lock and
