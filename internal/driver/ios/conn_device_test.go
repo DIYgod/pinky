@@ -30,8 +30,25 @@ func TestDeviceConnection(t *testing.T) {
 	}
 	defer d.Close()
 	t.Logf("%s: entry %s, session open in %v", conn, d.l.base.Properties.ConnectionType, time.Since(start).Round(time.Millisecond))
+	// Never press or swipe on a lock screen: a swipe there can open the
+	// camera or the widgets.
+	if locked, err := d.Locked(ctx); err != nil || locked {
+		t.Fatalf("the phone is locked (%v, %v): unlock it first; nothing was pressed", locked, err)
+	}
 	defer home(ctx, d)
 	home(ctx, d)
+	// Watch the picture all along, as the mirror would: without a view the
+	// stream stops when input pauses for 30 s (idle.go), which would cut
+	// the counters short.
+	view, err := d.Stream(ctx, driver.StreamOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer view.Close()
+	go func() {
+		for range view.Packets() {
+		}
+	}()
 	stopRate := logStreamRate(t, d)
 	defer stopRate()
 
@@ -46,7 +63,7 @@ func TestDeviceConnection(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("home screen observe %d: %v, %d elements, source %s", i, time.Since(t0).Round(time.Millisecond), len(s.Elements), st.Source)
+		t.Logf("home screen observe %d: %v, %d elements, source %s (remoteax: %v)", i, time.Since(t0).Round(time.Millisecond), len(s.Elements), st.Source, st.RAXError)
 		pause()
 	}
 	for i := 0; i < 2; i++ {
@@ -126,8 +143,14 @@ func (d *Device) captureFormat(ctx context.Context, format string) ([]byte, erro
 // second, to see whether the phone's encoder follows the loss it is told.
 func logStreamRate(t *testing.T, d *Device) func() {
 	done := make(chan struct{})
+	current := func() *media {
+		d.mu.Lock()
+		defer d.mu.Unlock()
+		return d.m
+	}
 	go func() {
 		prev, _ := d.StreamStats()
+		prevM := current()
 		tick := time.NewTicker(time.Second)
 		defer tick.Stop()
 		for {
@@ -135,6 +158,13 @@ func logStreamRate(t *testing.T, d *Device) func() {
 			case <-done:
 				return
 			case <-tick.C:
+			}
+			if m := current(); m != prevM {
+				if prevM != nil {
+					t.Logf("stream restarted: %v", prevM.Err())
+				}
+				prevM = m
+				prev = MediaStats{}
 			}
 			cur, ok := d.StreamStats()
 			if !ok {
