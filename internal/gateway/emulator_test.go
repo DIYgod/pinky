@@ -12,6 +12,7 @@ package gateway
 import (
 	"context"
 	"errors"
+	"image"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -347,6 +348,29 @@ func TestEmulatorBackground(t *testing.T) {
 			}
 		}
 	}
+	// Screenshots come from the display's video (screencap cannot reach a
+	// virtual display) and show it as it is now: with the stopwatch
+	// running, two taken apart differ.
+	if e := findLabel(s.Observe(ctx, ObserveRequest{Call: Call{Device: id}}), "Start"); e != nil {
+		act("tap Start", Action{Tool: "tap", Ref: e.Ref})
+	}
+	shot := func() image.Image {
+		start := time.Now()
+		res := s.Observe(ctx, ObserveRequest{Call: Call{Device: id}, Screenshot: true})
+		if res.Screenshot == nil {
+			t.Fatalf("no screenshot of the background display: %s %s", res.Status, res.Message)
+		}
+		t.Logf("a screenshot of the background display in %v", time.Since(start).Round(time.Millisecond))
+		return res.Screenshot
+	}
+	a := shot()
+	time.Sleep(2 * time.Second)
+	if b := shot(); sameImage(a, b) {
+		t.Error("two screenshots of a running stopwatch 2 s apart are the same: the picture is stale")
+	}
+	if e := findLabel(s.Observe(ctx, ObserveRequest{Call: Call{Device: id}}), "Pause"); e != nil {
+		act("tap Pause", Action{Tool: "tap", Ref: e.Ref})
+	}
 	// Display 0's own state: the phone's overall wakefulness stays awake
 	// while the background display keeps its display group awake.
 	if dev, err := android.NewProvider(android.Config{}).OpenDevice(ctx, id); err == nil {
@@ -403,6 +427,22 @@ func unlockForTest(t *testing.T, g *Gateway, id string) {
 	}
 	t.Logf("unlocked through the gateway in %.1f s", time.Since(start).Seconds())
 	adbShell(t, id, "input", "keyevent", "KEYCODE_HOME")
+}
+
+// sameImage reports whether two pictures have the same size and pixels.
+func sameImage(a, b image.Image) bool {
+	if a.Bounds() != b.Bounds() {
+		return false
+	}
+	r := a.Bounds()
+	for y := r.Min.Y; y < r.Max.Y; y += 4 {
+		for x := r.Min.X; x < r.Max.X; x += 4 {
+			if a.At(x, y) != b.At(x, y) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func firstLine(s, has string) string {

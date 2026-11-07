@@ -1342,7 +1342,7 @@ var errLockedShot = errors.New("the phone is locked, and its lock screen can sho
 // changed, is blocked or unknown, or the phone locked, so a blocked app
 // that comes to the front in between is never captured.
 func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (image.Image, error) {
-	dev, _ := g.screenOf(d)
+	dev, bg := g.screenOf(d)
 	if dev == nil {
 		return nil, driver.ErrOffline
 	}
@@ -1352,7 +1352,7 @@ func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (
 	if !recordableScreen(g.policy, s) {
 		return nil, errScreenChanged
 	}
-	img, err := dev.Screenshot(ctx)
+	img, err := g.shotOf(ctx, d, dev, bg)
 	if err != nil {
 		return nil, err
 	}

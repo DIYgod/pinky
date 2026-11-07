@@ -117,18 +117,18 @@ func (g *Gateway) startShot(d *device, s *screen.Screen) *bgShot {
 	p := &bgShot{key: key, app: s.App, inputs: d.inputs, done: make(chan struct{})}
 	d.shot = p
 	g.shots.add()
-	dev, _ := g.screenOfLocked(d)
-	go g.takeShot(d, dev, p)
+	dev, bg := g.screenOfLocked(d)
+	go g.takeShot(d, dev, bg, p)
 	return p
 }
 
 // takeShot runs the screenshot; it then waits for a read to confirm it.
-func (g *Gateway) takeShot(d *device, dev driver.Device, p *bgShot) {
+func (g *Gateway) takeShot(d *device, dev driver.Device, background bool, p *bgShot) {
 	defer g.shots.done()
 	defer close(p.done)
 	ctx, cancel := context.WithTimeout(g.ctx, observeTimeout)
 	defer cancel()
-	img, err := dev.Screenshot(ctx)
+	img, err := g.shotOf(ctx, d, dev, background)
 	if err == nil && img != nil {
 		img = history.Downscale(img, history.MaxShotSide)
 	}

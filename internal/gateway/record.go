@@ -25,11 +25,11 @@ func (g *Gateway) rawShot(ctx context.Context, d *device, s *screen.Screen) imag
 	if _, blocked := g.policy.Blocked(s.App); blocked {
 		return nil
 	}
-	dev, _ := g.screenOf(d)
+	dev, bg := g.screenOf(d)
 	if dev == nil {
 		return nil
 	}
-	img, err := dev.Screenshot(ctx)
+	img, err := g.shotOf(ctx, d, dev, bg)
 	if err != nil {
 		return nil
 	}

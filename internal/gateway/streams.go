@@ -280,6 +280,15 @@ func (h *hub) requestKeyFrame() {
 	}
 }
 
+// canRequestKeyFrame reports whether the hub's source can be asked for a
+// key frame.
+func (h *hub) canRequestKeyFrame() bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	_, ok := h.src.(keyFrameRequester)
+	return ok
+}
+
 func (h *hub) failure() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
