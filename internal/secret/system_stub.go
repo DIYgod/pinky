@@ -1,3 +1,5 @@
+//go:build !darwin && !windows
+
 package secret
 
 // system is replaced per platform (Keychain with Touch ID on macOS).
