@@ -58,6 +58,7 @@ type Device struct {
 	pidMiss     map[uint64]time.Time          // processes that are no app, and when that was found
 	foreground  func(context.Context) []axApp // for tests: the apps in the foreground
 	sb          springBoardWatch
+	capture     captureMarks // what screenshots did not show (capture.go)
 	pb          *pbConn
 
 	typeStats TypeStats // guarded by mu

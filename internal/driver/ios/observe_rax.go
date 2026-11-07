@@ -3,6 +3,7 @@ package ios
 import (
 	"context"
 	"fmt"
+	"image"
 	"math"
 	"strings"
 	"sync"
@@ -116,6 +117,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	}()
 	var lines []ocrLine
 	var ocrErr error
+	var shot image.Image // the screenshot, for what it does not show (capture.go)
 	if opt.OCR {
 		wg.Add(1)
 		go func() {
@@ -127,9 +129,12 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 				ocrErr = err
 				return
 			}
+			decoded := make(chan image.Image, 1)
+			go func() { decoded <- decodeShot(png) }()
 			t = time.Now()
 			lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
 			st.OCR = time.Since(t)
+			shot = <-decoded
 		}()
 	}
 	var locked bool
@@ -195,6 +200,11 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 			lines = kept
 		}
 		s.Elements = append(s.Elements, ocrExtras(s.Elements, lines, si.Width, si.Height)...)
+	}
+	if shot != nil {
+		d.capture.mark(s, uncaptured(s.Elements, shot, lines, si.Width, si.Height))
+	} else {
+		d.capture.apply(s)
 	}
 	for _, e := range s.Elements {
 		if e.Source == screen.SourceTree && !e.Bounds.Empty() {

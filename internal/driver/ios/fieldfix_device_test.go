@@ -182,3 +182,32 @@ func TestDeviceFieldFixes(t *testing.T) {
 		t.Error("no stream after input")
 	}
 }
+
+// TestDeviceNotInScreenshot reads screens that show everything, with OCR
+// as the gateway does after an action, and expects no element marked as
+// missing from the screenshot.
+func TestDeviceNotInScreenshot(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, 3*time.Minute)
+	for _, app := range []string{"", "com.apple.Preferences", "com.apple.mobiletimer", "com.apple.calculator", ""} {
+		if app == "" {
+			d.Key(ctx, driver.KeyHome)
+		} else if err := d.Launch(ctx, app); err != nil {
+			t.Fatal(err)
+		}
+		d.WaitSettled(ctx, 3*time.Second)
+		s, st, err := d.ObserveWithStats(ctx, driver.ObserveOptions{OCR: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		marked := 0
+		for _, e := range s.Elements {
+			if e.Has(stateNotInScreenshot) {
+				marked++
+				t.Errorf("%s: %s %q marked not in the screenshot", s.App.ID, e.Role, e.Label)
+			}
+		}
+		t.Logf("%s: %d elements, %d OCR lines, %d marked, %v (shot %v, OCR %v)", s.App.ID, len(s.Elements), st.OCRLines, marked, st.Total.Round(time.Millisecond), st.Shot.Round(time.Millisecond), st.OCR.Round(time.Millisecond))
+		pause()
+	}
+}
