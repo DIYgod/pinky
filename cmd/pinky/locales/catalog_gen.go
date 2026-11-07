@@ -35,6 +35,334 @@ type Messages struct{ locale string }
 // source language.
 func In(locale string) Messages { return Messages{locale} }
 
+// ActivityAnsweredIn says "Answered in {duration}"
+// in the language the app shows.
+//
+// The second line of a step where the person allowed or denied what the
+// agent asked: how long they took to answer. duration is as "14 s" or "1
+// min 02 s".
+func ActivityAnsweredIn(duration string) string {
+	return In(i18n.Locale()).ActivityAnsweredIn(duration)
+}
+
+// ActivityAnsweredIn says "Answered in {duration}"
+// in the language of msgs.
+//
+// The second line of a step where the person allowed or denied what the
+// agent asked: how long they took to answer. duration is as "14 s" or "1
+// min 02 s".
+func (msgs Messages) ActivityAnsweredIn(duration string) string {
+	return Catalog.Format(msgs.locale, "activityAnsweredIn", map[string]any{"duration": duration})
+}
+
+// ActivityApprovals says "{count, plural, one {# approval} other {# approvals}}"
+// in the language the app shows.
+//
+// Under a task's outcome on its row in Activity: how many times the task
+// asked the person to allow something.
+func ActivityApprovals(count int) string { return In(i18n.Locale()).ActivityApprovals(count) }
+
+// ActivityApprovals says "{count, plural, one {# approval} other {# approvals}}"
+// in the language of msgs.
+//
+// Under a task's outcome on its row in Activity: how many times the task
+// asked the person to allow something.
+func (msgs Messages) ActivityApprovals(count int) string {
+	return Catalog.Format(msgs.locale, "activityApprovals", map[string]any{"count": count})
+}
+
+// ActivityChooseTask says "Choose a task to see its steps."
+// in the language the app shows.
+//
+// Activity's right column when no task is selected.
+func ActivityChooseTask() string { return In(i18n.Locale()).ActivityChooseTask() }
+
+// ActivityChooseTask says "Choose a task to see its steps."
+// in the language of msgs.
+//
+// Activity's right column when no task is selected.
+func (msgs Messages) ActivityChooseTask() string {
+	return Catalog.Format(msgs.locale, "activityChooseTask", nil)
+}
+
+// ActivityDelete says "Delete"
+// in the language the app shows.
+//
+// An item of the ⋯ menu in a task's detail, which deletes the task. It
+// shows disabled: the gateway cannot delete one task yet.
+func ActivityDelete() string { return In(i18n.Locale()).ActivityDelete() }
+
+// ActivityDelete says "Delete"
+// in the language of msgs.
+//
+// An item of the ⋯ menu in a task's detail, which deletes the task. It
+// shows disabled: the gateway cannot delete one task yet.
+func (msgs Messages) ActivityDelete() string {
+	return Catalog.Format(msgs.locale, "activityDelete", nil)
+}
+
+// ActivityDetailLabel says "Task detail"
+// in the language the app shows.
+//
+// The accessibility label of Activity's right column: the selected task's
+// detail.
+func ActivityDetailLabel() string { return In(i18n.Locale()).ActivityDetailLabel() }
+
+// ActivityDetailLabel says "Task detail"
+// in the language of msgs.
+//
+// The accessibility label of Activity's right column: the selected task's
+// detail.
+func (msgs Messages) ActivityDetailLabel() string {
+	return Catalog.Format(msgs.locale, "activityDetailLabel", nil)
+}
+
+// ActivityEmpty says "No finished tasks yet."
+// in the language the app shows.
+//
+// Activity's list when no task has finished yet.
+func ActivityEmpty() string { return In(i18n.Locale()).ActivityEmpty() }
+
+// ActivityEmpty says "No finished tasks yet."
+// in the language of msgs.
+//
+// Activity's list when no task has finished yet.
+func (msgs Messages) ActivityEmpty() string {
+	return Catalog.Format(msgs.locale, "activityEmpty", nil)
+}
+
+// ActivityMoreActions says "More actions"
+// in the language the app shows.
+//
+// The accessibility label of the ⋯ button in a task's detail, whose menu
+// has Export…, Step-by-step replay and Delete.
+func ActivityMoreActions() string { return In(i18n.Locale()).ActivityMoreActions() }
+
+// ActivityMoreActions says "More actions"
+// in the language of msgs.
+//
+// The accessibility label of the ⋯ button in a task's detail, whose menu
+// has Export…, Step-by-step replay and Delete.
+func (msgs Messages) ActivityMoreActions() string {
+	return Catalog.Format(msgs.locale, "activityMoreActions", nil)
+}
+
+// ActivityNoMatch says "No tasks match “{query}”."
+// in the language the app shows.
+//
+// Activity's list when the search finds nothing. query is what the person
+// typed.
+func ActivityNoMatch(query string) string { return In(i18n.Locale()).ActivityNoMatch(query) }
+
+// ActivityNoMatch says "No tasks match “{query}”."
+// in the language of msgs.
+//
+// Activity's list when the search finds nothing. query is what the person
+// typed.
+func (msgs Messages) ActivityNoMatch(query string) string {
+	return Catalog.Format(msgs.locale, "activityNoMatch", map[string]any{"query": query})
+}
+
+// ActivityOutcomeDenied says "Denied"
+// in the language the app shows.
+//
+// A task's outcome on its row in Activity, a state: the task ended after
+// the person denied what it asked.
+func ActivityOutcomeDenied() string { return In(i18n.Locale()).ActivityOutcomeDenied() }
+
+// ActivityOutcomeDenied says "Denied"
+// in the language of msgs.
+//
+// A task's outcome on its row in Activity, a state: the task ended after
+// the person denied what it asked.
+func (msgs Messages) ActivityOutcomeDenied() string {
+	return Catalog.Format(msgs.locale, "activityOutcomeDenied", nil)
+}
+
+// ActivityOutcomeDone says "Done"
+// in the language the app shows.
+//
+// A task's outcome on its row in Activity, a state: the task finished.
+func ActivityOutcomeDone() string { return In(i18n.Locale()).ActivityOutcomeDone() }
+
+// ActivityOutcomeDone says "Done"
+// in the language of msgs.
+//
+// A task's outcome on its row in Activity, a state: the task finished.
+func (msgs Messages) ActivityOutcomeDone() string {
+	return Catalog.Format(msgs.locale, "activityOutcomeDone", nil)
+}
+
+// ActivityOutcomeFailed says "Failed"
+// in the language the app shows.
+//
+// A task's outcome on its row in Activity, a state: the task failed.
+func ActivityOutcomeFailed() string { return In(i18n.Locale()).ActivityOutcomeFailed() }
+
+// ActivityOutcomeFailed says "Failed"
+// in the language of msgs.
+//
+// A task's outcome on its row in Activity, a state: the task failed.
+func (msgs Messages) ActivityOutcomeFailed() string {
+	return Catalog.Format(msgs.locale, "activityOutcomeFailed", nil)
+}
+
+// ActivityOutcomeStopped says "Stopped"
+// in the language the app shows.
+//
+// A task's outcome on its row in Activity, a state: the person or the agent
+// stopped it.
+func ActivityOutcomeStopped() string { return In(i18n.Locale()).ActivityOutcomeStopped() }
+
+// ActivityOutcomeStopped says "Stopped"
+// in the language of msgs.
+//
+// A task's outcome on its row in Activity, a state: the person or the agent
+// stopped it.
+func (msgs Messages) ActivityOutcomeStopped() string {
+	return Catalog.Format(msgs.locale, "activityOutcomeStopped", nil)
+}
+
+// ActivityPanelClose says "Close"
+// in the language the app shows.
+//
+// The button in the header of Watch replay and of Watch recording that
+// closes them, back to the task's steps.
+func ActivityPanelClose() string { return In(i18n.Locale()).ActivityPanelClose() }
+
+// ActivityPanelClose says "Close"
+// in the language of msgs.
+//
+// The button in the header of Watch replay and of Watch recording that
+// closes them, back to the task's steps.
+func (msgs Messages) ActivityPanelClose() string {
+	return Catalog.Format(msgs.locale, "activityPanelClose", nil)
+}
+
+// ActivityReadFailed says "Couldn't read Activity: {detail}"
+// in the language the app shows.
+//
+// A toast when Activity cannot load the finished tasks from the gateway.
+// detail is the error, in English.
+func ActivityReadFailed(detail string) string { return In(i18n.Locale()).ActivityReadFailed(detail) }
+
+// ActivityReadFailed says "Couldn't read Activity: {detail}"
+// in the language of msgs.
+//
+// A toast when Activity cannot load the finished tasks from the gateway.
+// detail is the error, in English.
+func (msgs Messages) ActivityReadFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "activityReadFailed", map[string]any{"detail": detail})
+}
+
+// ActivitySearchLabel says "Search activity"
+// in the language the app shows.
+//
+// The accessibility label of Activity's search field.
+func ActivitySearchLabel() string { return In(i18n.Locale()).ActivitySearchLabel() }
+
+// ActivitySearchLabel says "Search activity"
+// in the language of msgs.
+//
+// The accessibility label of Activity's search field.
+func (msgs Messages) ActivitySearchLabel() string {
+	return Catalog.Format(msgs.locale, "activitySearchLabel", nil)
+}
+
+// ActivitySearchPlaceholder says "Search tasks and apps"
+// in the language the app shows.
+//
+// The placeholder of Activity's search field, which finds tasks by their
+// titles and apps as the person types.
+func ActivitySearchPlaceholder() string { return In(i18n.Locale()).ActivitySearchPlaceholder() }
+
+// ActivitySearchPlaceholder says "Search tasks and apps"
+// in the language of msgs.
+//
+// The placeholder of Activity's search field, which finds tasks by their
+// titles and apps as the person types.
+func (msgs Messages) ActivitySearchPlaceholder() string {
+	return Catalog.Format(msgs.locale, "activitySearchPlaceholder", nil)
+}
+
+// ActivityShowShot says "Show the screenshot"
+// in the language the app shows.
+//
+// The tooltip of a step's screenshot thumbnail: a click shows it larger,
+// below the step.
+func ActivityShowShot() string { return In(i18n.Locale()).ActivityShowShot() }
+
+// ActivityShowShot says "Show the screenshot"
+// in the language of msgs.
+//
+// The tooltip of a step's screenshot thumbnail: a click shows it larger,
+// below the step.
+func (msgs Messages) ActivityShowShot() string {
+	return Catalog.Format(msgs.locale, "activityShowShot", nil)
+}
+
+// ActivityStepShotLabel says "Screenshot of “{step}”"
+// in the language the app shows.
+//
+// The accessibility label of a step's screenshot thumbnail, a button that
+// shows the screenshot larger. step is the step's text.
+func ActivityStepShotLabel(step string) string { return In(i18n.Locale()).ActivityStepShotLabel(step) }
+
+// ActivityStepShotLabel says "Screenshot of “{step}”"
+// in the language of msgs.
+//
+// The accessibility label of a step's screenshot thumbnail, a button that
+// shows the screenshot larger. step is the step's text.
+func (msgs Messages) ActivityStepShotLabel(step string) string {
+	return Catalog.Format(msgs.locale, "activityStepShotLabel", map[string]any{"step": step})
+}
+
+// ActivitySteps says "Steps"
+// in the language the app shows.
+//
+// The heading above the list of a task's steps in Activity's detail.
+func ActivitySteps() string { return In(i18n.Locale()).ActivitySteps() }
+
+// ActivitySteps says "Steps"
+// in the language of msgs.
+//
+// The heading above the list of a task's steps in Activity's detail.
+func (msgs Messages) ActivitySteps() string {
+	return Catalog.Format(msgs.locale, "activitySteps", nil)
+}
+
+// ActivityTasksLabel says "Tasks"
+// in the language the app shows.
+//
+// The accessibility label of Activity's left column: the list of finished
+// tasks.
+func ActivityTasksLabel() string { return In(i18n.Locale()).ActivityTasksLabel() }
+
+// ActivityTasksLabel says "Tasks"
+// in the language of msgs.
+//
+// The accessibility label of Activity's left column: the list of finished
+// tasks.
+func (msgs Messages) ActivityTasksLabel() string {
+	return Catalog.Format(msgs.locale, "activityTasksLabel", nil)
+}
+
+// ActivityTitle says "Activity"
+// in the language the app shows.
+//
+// The title in the Activity page's header. Activity lists the finished
+// tasks by day.
+func ActivityTitle() string { return In(i18n.Locale()).ActivityTitle() }
+
+// ActivityTitle says "Activity"
+// in the language of msgs.
+//
+// The title in the Activity page's header. Activity lists the finished
+// tasks by day.
+func (msgs Messages) ActivityTitle() string {
+	return Catalog.Format(msgs.locale, "activityTitle", nil)
+}
+
 // AgentGeneric says "the agent"
 // in the language the app shows.
 //
@@ -229,6 +557,132 @@ func DayYesterday() string { return In(i18n.Locale()).DayYesterday() }
 // Activity groups tasks by day: the heading of yesterday's.
 func (msgs Messages) DayYesterday() string {
 	return Catalog.Format(msgs.locale, "dayYesterday", nil)
+}
+
+// ExportAll says "Export all"
+// in the language the app shows.
+//
+// The button in Activity's header that exports every finished task into a
+// new folder on the Desktop.
+func ExportAll() string { return In(i18n.Locale()).ExportAll() }
+
+// ExportAll says "Export all"
+// in the language of msgs.
+//
+// The button in Activity's header that exports every finished task into a
+// new folder on the Desktop.
+func (msgs Messages) ExportAll() string {
+	return Catalog.Format(msgs.locale, "exportAll", nil)
+}
+
+// ExportAllTooltip says "Every finished task, as a report and JSON"
+// in the language the app shows.
+//
+// The tooltip of Export all: what it writes, an HTML report and a JSON
+// file.
+func ExportAllTooltip() string { return In(i18n.Locale()).ExportAllTooltip() }
+
+// ExportAllTooltip says "Every finished task, as a report and JSON"
+// in the language of msgs.
+//
+// The tooltip of Export all: what it writes, an HTML report and a JSON
+// file.
+func (msgs Messages) ExportAllTooltip() string {
+	return Catalog.Format(msgs.locale, "exportAllTooltip", nil)
+}
+
+// ExportDone says "Exported to “{folder}” in {parent}"
+// in the language the app shows.
+//
+// A toast after an export, which also shows the report in the Finder.
+// folder is the new folder's name (see exportFolderName); parent is the
+// name of the folder it was made in: "Desktop", the Desktop folder's real
+// name, which the Finder shows translated, or else the home folder's name.
+// The Chinese picks 桌面 for Desktop.
+func ExportDone(folder string, parent string) string {
+	return In(i18n.Locale()).ExportDone(folder, parent)
+}
+
+// ExportDone says "Exported to “{folder}” in {parent}"
+// in the language of msgs.
+//
+// A toast after an export, which also shows the report in the Finder.
+// folder is the new folder's name (see exportFolderName); parent is the
+// name of the folder it was made in: "Desktop", the Desktop folder's real
+// name, which the Finder shows translated, or else the home folder's name.
+// The Chinese picks 桌面 for Desktop.
+func (msgs Messages) ExportDone(folder string, parent string) string {
+	return Catalog.Format(msgs.locale, "exportDone", map[string]any{"folder": folder, "parent": parent})
+}
+
+// ExportFailed says "Couldn't export: {detail}"
+// in the language the app shows.
+//
+// A toast when an export fails. detail is the error, in English.
+func ExportFailed(detail string) string { return In(i18n.Locale()).ExportFailed(detail) }
+
+// ExportFailed says "Couldn't export: {detail}"
+// in the language of msgs.
+//
+// A toast when an export fails. detail is the error, in English.
+func (msgs Messages) ExportFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "exportFailed", map[string]any{"detail": detail})
+}
+
+// ExportFolderAll says "activity"
+// in the language the app shows.
+//
+// Export all: the word that names what it exported in the name of the
+// folder it makes, "Pinky activity 2026-11-07 at 09.30.12" (see
+// exportFolderName). Part of a file name.
+func ExportFolderAll() string { return In(i18n.Locale()).ExportFolderAll() }
+
+// ExportFolderAll says "activity"
+// in the language of msgs.
+//
+// Export all: the word that names what it exported in the name of the
+// folder it makes, "Pinky activity 2026-11-07 at 09.30.12" (see
+// exportFolderName). Part of a file name.
+func (msgs Messages) ExportFolderAll() string {
+	return Catalog.Format(msgs.locale, "exportFolderAll", nil)
+}
+
+// ExportFolderName says "Pinky {name} {date} at {clock}"
+// in the language the app shows.
+//
+// The name of the folder an export makes on the Desktop. name is
+// exportFolderAll or the exported task's title; date is as 2026-11-07,
+// clock as 09.30.12 (with dots: file names cannot hold colons). It must
+// stay a valid file name, without / or :.
+func ExportFolderName(name string, date string, clock string) string {
+	return In(i18n.Locale()).ExportFolderName(name, date, clock)
+}
+
+// ExportFolderName says "Pinky {name} {date} at {clock}"
+// in the language of msgs.
+//
+// The name of the folder an export makes on the Desktop. name is
+// exportFolderAll or the exported task's title; date is as 2026-11-07,
+// clock as 09.30.12 (with dots: file names cannot hold colons). It must
+// stay a valid file name, without / or :.
+func (msgs Messages) ExportFolderName(name string, date string, clock string) string {
+	return Catalog.Format(msgs.locale, "exportFolderName", map[string]any{"name": name, "date": date, "clock": clock})
+}
+
+// ExportTask says "Export…"
+// in the language the app shows.
+//
+// An item of the ⋯ menu in a task's detail: exports that task into a new
+// folder on the Desktop.
+func ExportTask() string { return In(i18n.Locale()).ExportTask() }
+
+// ExportTask says "Export…"
+// in the language of msgs.
+//
+// An item of the ⋯ menu in a task's detail: exports that task into a new
+// folder on the Desktop.
+func (msgs Messages) ExportTask() string {
+	return Catalog.Format(msgs.locale, "exportTask", nil)
 }
 
 // GwAgentGives says " Allowing gives it {scope} access."
@@ -2221,6 +2675,266 @@ func (msgs Messages) MenuStopAll() string {
 	return Catalog.Format(msgs.locale, "menuStopAll", nil)
 }
 
+// MirrorAgentScreenLabel says "{agent}'s screen on {phone}, live"
+// in the language the app shows.
+//
+// The accessibility label of the mirror while it shows the agent's own
+// screen: the hidden second screen it works on in the background. agent is
+// the agent's name, or "The agent" (agentGenericStart); phone is the
+// phone's name.
+func MirrorAgentScreenLabel(agent string, phone string) string {
+	return In(i18n.Locale()).MirrorAgentScreenLabel(agent, phone)
+}
+
+// MirrorAgentScreenLabel says "{agent}'s screen on {phone}, live"
+// in the language of msgs.
+//
+// The accessibility label of the mirror while it shows the agent's own
+// screen: the hidden second screen it works on in the background. agent is
+// the agent's name, or "The agent" (agentGenericStart); phone is the
+// phone's name.
+func (msgs Messages) MirrorAgentScreenLabel(agent string, phone string) string {
+	return Catalog.Format(msgs.locale, "mirrorAgentScreenLabel", map[string]any{"agent": agent, "phone": phone})
+}
+
+// MirrorCallKey says "press {key}"
+// in the language the app shows.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when a key pressed on the mirror cannot reach the
+// phone. key is the phone's name for the key, in English: back, home,
+// enter, tab, delete, escape, dpad_up, page_down…
+func MirrorCallKey(key string) string { return In(i18n.Locale()).MirrorCallKey(key) }
+
+// MirrorCallKey says "press {key}"
+// in the language of msgs.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when a key pressed on the mirror cannot reach the
+// phone. key is the phone's name for the key, in English: back, home,
+// enter, tab, delete, escape, dpad_up, page_down…
+func (msgs Messages) MirrorCallKey(key string) string {
+	return Catalog.Format(msgs.locale, "mirrorCallKey", map[string]any{"key": key})
+}
+
+// MirrorCallPaste says "paste"
+// in the language the app shows.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when ⌘V on the mirror cannot paste the Mac's
+// clipboard on the phone.
+func MirrorCallPaste() string { return In(i18n.Locale()).MirrorCallPaste() }
+
+// MirrorCallPaste says "paste"
+// in the language of msgs.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when ⌘V on the mirror cannot paste the Mac's
+// clipboard on the phone.
+func (msgs Messages) MirrorCallPaste() string {
+	return Catalog.Format(msgs.locale, "mirrorCallPaste", nil)
+}
+
+// MirrorCallTouch says "send the touch"
+// in the language the app shows.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when a click, drag or scroll on the mirror cannot
+// reach the phone.
+func MirrorCallTouch() string { return In(i18n.Locale()).MirrorCallTouch() }
+
+// MirrorCallTouch says "send the touch"
+// in the language of msgs.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when a click, drag or scroll on the mirror cannot
+// reach the phone.
+func (msgs Messages) MirrorCallTouch() string {
+	return Catalog.Format(msgs.locale, "mirrorCallTouch", nil)
+}
+
+// MirrorCallType says "type"
+// in the language the app shows.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when text typed on the mirror cannot reach the
+// phone.
+func MirrorCallType() string { return In(i18n.Locale()).MirrorCallType() }
+
+// MirrorCallType says "type"
+// in the language of msgs.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
+// 无法…：<error>) when text typed on the mirror cannot reach the
+// phone.
+func (msgs Messages) MirrorCallType() string {
+	return Catalog.Format(msgs.locale, "mirrorCallType", nil)
+}
+
+// MirrorConnecting says "Connecting…"
+// in the language the app shows.
+//
+// Under a spinner over the mirror while the phone's live picture connects.
+func MirrorConnecting() string { return In(i18n.Locale()).MirrorConnecting() }
+
+// MirrorConnecting says "Connecting…"
+// in the language of msgs.
+//
+// Under a spinner over the mirror while the phone's live picture connects.
+func (msgs Messages) MirrorConnecting() string {
+	return Catalog.Format(msgs.locale, "mirrorConnecting", nil)
+}
+
+// MirrorDecoderSoftware says "software decoding"
+// in the language the app shows.
+//
+// Settings › Advanced in Developer mode, the Video row: how a mirror
+// decodes without a hardware decoder, in place of a hardware decoder's name
+// such as videotoolbox (see mirrorDecoderStats).
+func MirrorDecoderSoftware() string { return In(i18n.Locale()).MirrorDecoderSoftware() }
+
+// MirrorDecoderSoftware says "software decoding"
+// in the language of msgs.
+//
+// Settings › Advanced in Developer mode, the Video row: how a mirror
+// decodes without a hardware decoder, in place of a hardware decoder's name
+// such as videotoolbox (see mirrorDecoderStats).
+func (msgs Messages) MirrorDecoderSoftware() string {
+	return Catalog.Format(msgs.locale, "mirrorDecoderSoftware", nil)
+}
+
+// MirrorDecoderStats says "{line}. {device}: {decoder}, {fps} fps, {latency} from packet to picture"
+// in the language the app shows.
+//
+// Settings › Advanced in Developer mode, the Video row: adds a playing
+// mirror to the line. line is the line so far (FFmpeg's libavcodec version
+// and the mirrors before); device is the phone's ID; decoder is
+// mirrorDecoderSoftware or a hardware decoder's name; fps is pictures per
+// second; latency is the time from a packet's arrival to its picture.
+func MirrorDecoderStats(line string, device string, decoder string, fps string, latency string) string {
+	return In(i18n.Locale()).MirrorDecoderStats(line, device, decoder, fps, latency)
+}
+
+// MirrorDecoderStats says "{line}. {device}: {decoder}, {fps} fps, {latency} from packet to picture"
+// in the language of msgs.
+//
+// Settings › Advanced in Developer mode, the Video row: adds a playing
+// mirror to the line. line is the line so far (FFmpeg's libavcodec version
+// and the mirrors before); device is the phone's ID; decoder is
+// mirrorDecoderSoftware or a hardware decoder's name; fps is pictures per
+// second; latency is the time from a packet's arrival to its picture.
+func (msgs Messages) MirrorDecoderStats(line string, device string, decoder string, fps string, latency string) string {
+	return Catalog.Format(msgs.locale, "mirrorDecoderStats", map[string]any{"line": line, "device": device, "decoder": decoder, "fps": fps, "latency": latency})
+}
+
+// MirrorLocked says "{phone} is locked"
+// in the language the app shows.
+//
+// A pill over the dimmed mirror of a locked phone. phone is the phone's
+// name. One line over the phone's picture: keep it short.
+func MirrorLocked(phone string) string { return In(i18n.Locale()).MirrorLocked(phone) }
+
+// MirrorLocked says "{phone} is locked"
+// in the language of msgs.
+//
+// A pill over the dimmed mirror of a locked phone. phone is the phone's
+// name. One line over the phone's picture: keep it short.
+func (msgs Messages) MirrorLocked(phone string) string {
+	return Catalog.Format(msgs.locale, "mirrorLocked", map[string]any{"phone": phone})
+}
+
+// MirrorLockedTile says "Locked"
+// in the language the app shows.
+//
+// The same pill over a locked phone's tile in All phones, which can be 168
+// points wide.
+func MirrorLockedTile() string { return In(i18n.Locale()).MirrorLockedTile() }
+
+// MirrorLockedTile says "Locked"
+// in the language of msgs.
+//
+// The same pill over a locked phone's tile in All phones, which can be 168
+// points wide.
+func (msgs Messages) MirrorLockedTile() string {
+	return Catalog.Format(msgs.locale, "mirrorLockedTile", nil)
+}
+
+// MirrorNoPicture says "No picture: {detail}"
+// in the language the app shows.
+//
+// Over the mirror when the phone's live picture fails. detail is the error,
+// in English.
+func MirrorNoPicture(detail string) string { return In(i18n.Locale()).MirrorNoPicture(detail) }
+
+// MirrorNoPicture says "No picture: {detail}"
+// in the language of msgs.
+//
+// Over the mirror when the phone's live picture fails. detail is the error,
+// in English.
+func (msgs Messages) MirrorNoPicture(detail string) string {
+	return Catalog.Format(msgs.locale, "mirrorNoPicture", map[string]any{"detail": detail})
+}
+
+// MirrorOffline says "The phone went offline."
+// in the language the app shows.
+//
+// Over the mirror when the phone disconnected.
+func MirrorOffline() string { return In(i18n.Locale()).MirrorOffline() }
+
+// MirrorOffline says "The phone went offline."
+// in the language of msgs.
+//
+// Over the mirror when the phone disconnected.
+func (msgs Messages) MirrorOffline() string {
+	return Catalog.Format(msgs.locale, "mirrorOffline", nil)
+}
+
+// MirrorScreenLabel says "{phone} screen, live"
+// in the language the app shows.
+//
+// The accessibility label of the mirror, the phone's live picture, where
+// clicks, scrolls and typing reach the phone. phone is the phone's name.
+func MirrorScreenLabel(phone string) string { return In(i18n.Locale()).MirrorScreenLabel(phone) }
+
+// MirrorScreenLabel says "{phone} screen, live"
+// in the language of msgs.
+//
+// The accessibility label of the mirror, the phone's live picture, where
+// clicks, scrolls and typing reach the phone. phone is the phone's name.
+func (msgs Messages) MirrorScreenLabel(phone string) string {
+	return Catalog.Format(msgs.locale, "mirrorScreenLabel", map[string]any{"phone": phone})
+}
+
+// MirrorStreamEnded says "The stream ended. Reconnecting…"
+// in the language the app shows.
+//
+// Over the mirror when the phone's live picture stopped; it connects again
+// by itself.
+func MirrorStreamEnded() string { return In(i18n.Locale()).MirrorStreamEnded() }
+
+// MirrorStreamEnded says "The stream ended. Reconnecting…"
+// in the language of msgs.
+//
+// Over the mirror when the phone's live picture stopped; it connects again
+// by itself.
+func (msgs Messages) MirrorStreamEnded() string {
+	return Catalog.Format(msgs.locale, "mirrorStreamEnded", nil)
+}
+
+// MirrorUnsupported says "This phone has no live picture."
+// in the language the app shows.
+//
+// Over the mirror of a phone that cannot stream its screen.
+func MirrorUnsupported() string { return In(i18n.Locale()).MirrorUnsupported() }
+
+// MirrorUnsupported says "This phone has no live picture."
+// in the language of msgs.
+//
+// Over the mirror of a phone that cannot stream its screen.
+func (msgs Messages) MirrorUnsupported() string {
+	return Catalog.Format(msgs.locale, "mirrorUnsupported", nil)
+}
+
 // PlatformUnlockKeepMac says "Your PIN stays in your Mac's Keychain. Agents never see it."
 // in the language the app shows.
 //
@@ -2305,6 +3019,440 @@ func PlatformUnlockWindows() string { return In(i18n.Locale()).PlatformUnlockWin
 // Windows: the button that unlocks a locked phone with its saved PIN.
 func (msgs Messages) PlatformUnlockWindows() string {
 	return Catalog.Format(msgs.locale, "platformUnlockWindows", nil)
+}
+
+// RecordingEnded says "The recording ended."
+// in the language the app shows.
+//
+// Over the recording's picture when it stopped without an error.
+func RecordingEnded() string { return In(i18n.Locale()).RecordingEnded() }
+
+// RecordingEnded says "The recording ended."
+// in the language of msgs.
+//
+// Over the recording's picture when it stopped without an error.
+func (msgs Messages) RecordingEnded() string {
+	return Catalog.Format(msgs.locale, "recordingEnded", nil)
+}
+
+// RecordingGone says "The recording is gone; the history limit may have removed it."
+// in the language the app shows.
+//
+// Over the recording's picture when its file is missing. Settings ›
+// Privacy › Keep activity for deletes older recordings.
+func RecordingGone() string { return In(i18n.Locale()).RecordingGone() }
+
+// RecordingGone says "The recording is gone; the history limit may have removed it."
+// in the language of msgs.
+//
+// Over the recording's picture when its file is missing. Settings ›
+// Privacy › Keep activity for deletes older recordings.
+func (msgs Messages) RecordingGone() string {
+	return Catalog.Format(msgs.locale, "recordingGone", nil)
+}
+
+// RecordingJumpHeading says "Jump to a step"
+// in the language the app shows.
+//
+// The heading of the list of steps beside the recording: a click on a step
+// plays the recording from that step.
+func RecordingJumpHeading() string { return In(i18n.Locale()).RecordingJumpHeading() }
+
+// RecordingJumpHeading says "Jump to a step"
+// in the language of msgs.
+//
+// The heading of the list of steps beside the recording: a click on a step
+// plays the recording from that step.
+func (msgs Messages) RecordingJumpHeading() string {
+	return Catalog.Format(msgs.locale, "recordingJumpHeading", nil)
+}
+
+// RecordingJumpTo says "Jump to {at}: {step}"
+// in the language the app shows.
+//
+// The accessibility label of a step in the list beside the recording. at is
+// where the step is in the recording, as 1:48; step is the step's text.
+func RecordingJumpTo(at string, step string) string {
+	return In(i18n.Locale()).RecordingJumpTo(at, step)
+}
+
+// RecordingJumpTo says "Jump to {at}: {step}"
+// in the language of msgs.
+//
+// The accessibility label of a step in the list beside the recording. at is
+// where the step is in the recording, as 1:48; step is the step's text.
+func (msgs Messages) RecordingJumpTo(at string, step string) string {
+	return Catalog.Format(msgs.locale, "recordingJumpTo", map[string]any{"at": at, "step": step})
+}
+
+// RecordingNoMarks says "No steps are marked in this recording."
+// in the language the app shows.
+//
+// In place of the list of steps beside a recording that has none marked.
+func RecordingNoMarks() string { return In(i18n.Locale()).RecordingNoMarks() }
+
+// RecordingNoMarks says "No steps are marked in this recording."
+// in the language of msgs.
+//
+// In place of the list of steps beside a recording that has none marked.
+func (msgs Messages) RecordingNoMarks() string {
+	return Catalog.Format(msgs.locale, "recordingNoMarks", nil)
+}
+
+// RecordingPanelLabel says "Recording"
+// in the language the app shows.
+//
+// The accessibility label of the Watch recording panel.
+func RecordingPanelLabel() string { return In(i18n.Locale()).RecordingPanelLabel() }
+
+// RecordingPanelLabel says "Recording"
+// in the language of msgs.
+//
+// The accessibility label of the Watch recording panel.
+func (msgs Messages) RecordingPanelLabel() string {
+	return Catalog.Format(msgs.locale, "recordingPanelLabel", nil)
+}
+
+// RecordingPanelTitle says "Recording · {title}"
+// in the language the app shows.
+//
+// The title of the Watch recording panel. title is the task's title, as the
+// agent wrote it.
+func RecordingPanelTitle(title string) string { return In(i18n.Locale()).RecordingPanelTitle(title) }
+
+// RecordingPanelTitle says "Recording · {title}"
+// in the language of msgs.
+//
+// The title of the Watch recording panel. title is the task's title, as the
+// agent wrote it.
+func (msgs Messages) RecordingPanelTitle(title string) string {
+	return Catalog.Format(msgs.locale, "recordingPanelTitle", map[string]any{"title": title})
+}
+
+// RecordingPause says "Pause"
+// in the language the app shows.
+//
+// The accessibility label and tooltip of the player's icon button while the
+// recording plays: pauses it.
+func RecordingPause() string { return In(i18n.Locale()).RecordingPause() }
+
+// RecordingPause says "Pause"
+// in the language of msgs.
+//
+// The accessibility label and tooltip of the player's icon button while the
+// recording plays: pauses it.
+func (msgs Messages) RecordingPause() string {
+	return Catalog.Format(msgs.locale, "recordingPause", nil)
+}
+
+// RecordingPlay says "Play"
+// in the language the app shows.
+//
+// The accessibility label and tooltip of the player's icon button while the
+// recording is paused: plays it.
+func RecordingPlay() string { return In(i18n.Locale()).RecordingPlay() }
+
+// RecordingPlay says "Play"
+// in the language of msgs.
+//
+// The accessibility label and tooltip of the player's icon button while the
+// recording is paused: plays it.
+func (msgs Messages) RecordingPlay() string {
+	return Catalog.Format(msgs.locale, "recordingPlay", nil)
+}
+
+// RecordingPlayAgain says "Play again"
+// in the language the app shows.
+//
+// The accessibility label and tooltip of the player's icon button once the
+// recording has ended: plays it from the start.
+func RecordingPlayAgain() string { return In(i18n.Locale()).RecordingPlayAgain() }
+
+// RecordingPlayAgain says "Play again"
+// in the language of msgs.
+//
+// The accessibility label and tooltip of the player's icon button once the
+// recording has ended: plays it from the start.
+func (msgs Messages) RecordingPlayAgain() string {
+	return Catalog.Format(msgs.locale, "recordingPlayAgain", nil)
+}
+
+// RecordingPlayFailed says "Couldn't play the recording: {detail}"
+// in the language the app shows.
+//
+// Over the recording's picture when it cannot play. detail is the error, in
+// English.
+func RecordingPlayFailed(detail string) string { return In(i18n.Locale()).RecordingPlayFailed(detail) }
+
+// RecordingPlayFailed says "Couldn't play the recording: {detail}"
+// in the language of msgs.
+//
+// Over the recording's picture when it cannot play. detail is the error, in
+// English.
+func (msgs Messages) RecordingPlayFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "recordingPlayFailed", map[string]any{"detail": detail})
+}
+
+// RecordingPlayerLabel says "Recording of {title}"
+// in the language the app shows.
+//
+// The accessibility label of the recording's picture, in a phone frame.
+// title is the task's title, as the agent wrote it.
+func RecordingPlayerLabel(title string) string { return In(i18n.Locale()).RecordingPlayerLabel(title) }
+
+// RecordingPlayerLabel says "Recording of {title}"
+// in the language of msgs.
+//
+// The accessibility label of the recording's picture, in a phone frame.
+// title is the task's title, as the agent wrote it.
+func (msgs Messages) RecordingPlayerLabel(title string) string {
+	return Catalog.Format(msgs.locale, "recordingPlayerLabel", map[string]any{"title": title})
+}
+
+// RecordingPosition says "Position in the recording"
+// in the language the app shows.
+//
+// The accessibility label of the recording's timeline, a slider: a click
+// jumps there, ← and → move by 5 s.
+func RecordingPosition() string { return In(i18n.Locale()).RecordingPosition() }
+
+// RecordingPosition says "Position in the recording"
+// in the language of msgs.
+//
+// The accessibility label of the recording's timeline, a slider: a click
+// jumps there, ← and → move by 5 s.
+func (msgs Messages) RecordingPosition() string {
+	return Catalog.Format(msgs.locale, "recordingPosition", nil)
+}
+
+// RecordingStepsLabel says "Steps in the recording"
+// in the language the app shows.
+//
+// The accessibility label of the list of steps beside the recording.
+func RecordingStepsLabel() string { return In(i18n.Locale()).RecordingStepsLabel() }
+
+// RecordingStepsLabel says "Steps in the recording"
+// in the language of msgs.
+//
+// The accessibility label of the list of steps beside the recording.
+func (msgs Messages) RecordingStepsLabel() string {
+	return Catalog.Format(msgs.locale, "recordingStepsLabel", nil)
+}
+
+// RecordingUnsupported says "This build of Pinky can't play recordings yet."
+// in the language the app shows.
+//
+// Over the recording's picture when this copy of Pinky cannot play
+// recordings.
+func RecordingUnsupported() string { return In(i18n.Locale()).RecordingUnsupported() }
+
+// RecordingUnsupported says "This build of Pinky can't play recordings yet."
+// in the language of msgs.
+//
+// Over the recording's picture when this copy of Pinky cannot play
+// recordings.
+func (msgs Messages) RecordingUnsupported() string {
+	return Catalog.Format(msgs.locale, "recordingUnsupported", nil)
+}
+
+// RecordingWatch says "Watch recording"
+// in the language the app shows.
+//
+// The button in a task's detail that plays the task's screen recording.
+func RecordingWatch() string { return In(i18n.Locale()).RecordingWatch() }
+
+// RecordingWatch says "Watch recording"
+// in the language of msgs.
+//
+// The button in a task's detail that plays the task's screen recording.
+func (msgs Messages) RecordingWatch() string {
+	return Catalog.Format(msgs.locale, "recordingWatch", nil)
+}
+
+// ReplayMenuItem says "Step-by-step replay"
+// in the language the app shows.
+//
+// An item of the ⋯ menu of a task that has a screen recording: shows the
+// steps one at a time with their screenshots instead of the recording.
+func ReplayMenuItem() string { return In(i18n.Locale()).ReplayMenuItem() }
+
+// ReplayMenuItem says "Step-by-step replay"
+// in the language of msgs.
+//
+// An item of the ⋯ menu of a task that has a screen recording: shows the
+// steps one at a time with their screenshots instead of the recording.
+func (msgs Messages) ReplayMenuItem() string {
+	return Catalog.Format(msgs.locale, "replayMenuItem", nil)
+}
+
+// ReplayNext says "Next step"
+// in the language the app shows.
+//
+// The accessibility label of Watch replay's › button, which shows the
+// step after.
+func ReplayNext() string { return In(i18n.Locale()).ReplayNext() }
+
+// ReplayNext says "Next step"
+// in the language of msgs.
+//
+// The accessibility label of Watch replay's › button, which shows the
+// step after.
+func (msgs Messages) ReplayNext() string {
+	return Catalog.Format(msgs.locale, "replayNext", nil)
+}
+
+// ReplayNoSteps says "This task has no steps."
+// in the language the app shows.
+//
+// Watch replay of a task that has no steps.
+func ReplayNoSteps() string { return In(i18n.Locale()).ReplayNoSteps() }
+
+// ReplayNoSteps says "This task has no steps."
+// in the language of msgs.
+//
+// Watch replay of a task that has no steps.
+func (msgs Messages) ReplayNoSteps() string {
+	return Catalog.Format(msgs.locale, "replayNoSteps", nil)
+}
+
+// ReplayPanelLabel says "Replay"
+// in the language the app shows.
+//
+// The accessibility label of the Watch replay panel.
+func ReplayPanelLabel() string { return In(i18n.Locale()).ReplayPanelLabel() }
+
+// ReplayPanelLabel says "Replay"
+// in the language of msgs.
+//
+// The accessibility label of the Watch replay panel.
+func (msgs Messages) ReplayPanelLabel() string {
+	return Catalog.Format(msgs.locale, "replayPanelLabel", nil)
+}
+
+// ReplayPanelTitle says "Replay · {title}"
+// in the language the app shows.
+//
+// The title of the Watch replay panel. title is the task's title, as the
+// agent wrote it.
+func ReplayPanelTitle(title string) string { return In(i18n.Locale()).ReplayPanelTitle(title) }
+
+// ReplayPanelTitle says "Replay · {title}"
+// in the language of msgs.
+//
+// The title of the Watch replay panel. title is the task's title, as the
+// agent wrote it.
+func (msgs Messages) ReplayPanelTitle(title string) string {
+	return Catalog.Format(msgs.locale, "replayPanelTitle", map[string]any{"title": title})
+}
+
+// ReplayPause says "Pause"
+// in the language the app shows.
+//
+// Watch replay's Play button while it plays: stops at the step shown.
+func ReplayPause() string { return In(i18n.Locale()).ReplayPause() }
+
+// ReplayPause says "Pause"
+// in the language of msgs.
+//
+// Watch replay's Play button while it plays: stops at the step shown.
+func (msgs Messages) ReplayPause() string {
+	return Catalog.Format(msgs.locale, "replayPause", nil)
+}
+
+// ReplayPlay says "Play"
+// in the language the app shows.
+//
+// Watch replay's button that goes through the steps by itself, one every
+// 1.5 s.
+func ReplayPlay() string { return In(i18n.Locale()).ReplayPlay() }
+
+// ReplayPlay says "Play"
+// in the language of msgs.
+//
+// Watch replay's button that goes through the steps by itself, one every
+// 1.5 s.
+func (msgs Messages) ReplayPlay() string {
+	return Catalog.Format(msgs.locale, "replayPlay", nil)
+}
+
+// ReplayPrevious says "Previous step"
+// in the language the app shows.
+//
+// The accessibility label of Watch replay's ‹ button, which shows the
+// step before.
+func ReplayPrevious() string { return In(i18n.Locale()).ReplayPrevious() }
+
+// ReplayPrevious says "Previous step"
+// in the language of msgs.
+//
+// The accessibility label of Watch replay's ‹ button, which shows the
+// step before.
+func (msgs Messages) ReplayPrevious() string {
+	return Catalog.Format(msgs.locale, "replayPrevious", nil)
+}
+
+// ReplayStepOf says "Step {current} of {total}"
+// in the language the app shows.
+//
+// Watch replay: the step shown, above its text. current is its number,
+// total how many steps the task has.
+func ReplayStepOf(current int, total int) string {
+	return In(i18n.Locale()).ReplayStepOf(current, total)
+}
+
+// ReplayStepOf says "Step {current} of {total}"
+// in the language of msgs.
+//
+// Watch replay: the step shown, above its text. current is its number,
+// total how many steps the task has.
+func (msgs Messages) ReplayStepOf(current int, total int) string {
+	return Catalog.Format(msgs.locale, "replayStepOf", map[string]any{"current": current, "total": total})
+}
+
+// ReplayTimelineHint says "Each dot is a step. Larger dots are moments you were asked."
+// in the language the app shows.
+//
+// Under Watch replay's timeline, a row of dots, one per step; the dots of
+// the steps where the agent asked the person are larger.
+func ReplayTimelineHint() string { return In(i18n.Locale()).ReplayTimelineHint() }
+
+// ReplayTimelineHint says "Each dot is a step. Larger dots are moments you were asked."
+// in the language of msgs.
+//
+// Under Watch replay's timeline, a row of dots, one per step; the dots of
+// the steps where the agent asked the person are larger.
+func (msgs Messages) ReplayTimelineHint() string {
+	return Catalog.Format(msgs.locale, "replayTimelineHint", nil)
+}
+
+// ReplayWatch says "Watch replay"
+// in the language the app shows.
+//
+// The button in a task's detail that shows the task's steps one at a time
+// with their screenshots, for a task without a screen recording.
+func ReplayWatch() string { return In(i18n.Locale()).ReplayWatch() }
+
+// ReplayWatch says "Watch replay"
+// in the language of msgs.
+//
+// The button in a task's detail that shows the task's steps one at a time
+// with their screenshots, for a task without a screen recording.
+func (msgs Messages) ReplayWatch() string {
+	return Catalog.Format(msgs.locale, "replayWatch", nil)
+}
+
+// ReplayWatchTooltip says "Step by step, with the screenshots"
+// in the language the app shows.
+//
+// The tooltip of Watch replay.
+func ReplayWatchTooltip() string { return In(i18n.Locale()).ReplayWatchTooltip() }
+
+// ReplayWatchTooltip says "Step by step, with the screenshots"
+// in the language of msgs.
+//
+// The tooltip of Watch replay.
+func (msgs Messages) ReplayWatchTooltip() string {
+	return Catalog.Format(msgs.locale, "replayWatchTooltip", nil)
 }
 
 // RuleActionCalls says "calls"

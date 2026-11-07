@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo/i18n"
+
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
@@ -112,18 +114,21 @@ const nbsp = "\u00a0"
 
 // elapsed formats a duration as the prototype does: "38 s", "1 min 02 s",
 // joined with no-break spaces so it never wraps.
-func elapsed(d time.Duration) string {
+func elapsed(d time.Duration) string { return elapsedIn(locales.In(i18n.Locale()), d) }
+
+// elapsedIn formats a duration in the language of m.
+func elapsedIn(m locales.Messages, d time.Duration) string {
 	if d < 0 {
 		d = 0
 	}
 	s := int(d.Round(time.Second) / time.Second)
 	switch {
 	case s < 60:
-		return locales.TimeSeconds(strconv.Itoa(s))
+		return m.TimeSeconds(strconv.Itoa(s))
 	case s < 3600:
-		return locales.TimeMinutes(strconv.Itoa(s/60), fmt.Sprintf("%02d", s%60))
+		return m.TimeMinutes(strconv.Itoa(s/60), fmt.Sprintf("%02d", s%60))
 	}
-	return locales.TimeHours(strconv.Itoa(s/3600), fmt.Sprintf("%02d", s%3600/60))
+	return m.TimeHours(strconv.Itoa(s/3600), fmt.Sprintf("%02d", s%3600/60))
 }
 
 // clock formats a duration as a player shows it: "1:48".

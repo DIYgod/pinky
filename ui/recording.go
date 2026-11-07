@@ -14,6 +14,7 @@ import (
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/recording"
@@ -242,7 +243,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 		}
 		const bezel = 7
 		w := (h-2*bezel)*aspect + 2*bezel
-		mg.Box(c).Size(w, h).Shrink(0).Radius(34).Background(p.phone).Padding(bezel).Label("Recording of " + t.Title).
+		mg.Box(c).Size(w, h).Shrink(0).Radius(34).Background(p.phone).Padding(bezel).Label(locales.RecordingPlayerLabel(t.Title)).
 			Children(func() {
 				scr := mg.Box(c).Fill().Radius(28).Clip().Background(hex("#000000"))
 				scr.Draw(func(pt *mg.Painter, r mg.Rect) {
@@ -275,17 +276,17 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 					}
 				})
 			})
-		mg.Column(c).Basis(220).Grow(1).MinWidth(0).Gap(4).Label("Steps in the recording").Children(func() {
+		mg.Column(c).Basis(220).Grow(1).MinWidth(0).Gap(4).Label(locales.RecordingStepsLabel()).Children(func() {
 			cur := pl.markAt(pl.pos)
-			mg.Text(c, "Jump to a step").FontSize(12.5).FontWeight(600).TextColor(p.ink3).Margin(0, 0, 4, 0)
+			mg.Text(c, locales.RecordingJumpHeading()).FontSize(12.5).FontWeight(600).TextColor(p.ink3).Margin(0, 0, 4, 0)
 			for i, mk := range pl.rec.Marks {
 				i, mk := i, mk
-				text := mk.Text
+				text := stepText(mk.Text)
 				if mk.Step >= 0 && mk.Step < len(t.Steps) {
 					text, _, _ = stepDisplay(t, mk.Step)
 				}
 				row := mg.ButtonBase(c.Key(i)).Padding(6, 10).Radius(8).Gap(10).AlignItems(mg.Center).Justify(mg.Start).FillWidth().
-					Label("Jump to " + clock(mk.At) + ": " + text).TextColor(p.ink)
+					Label(locales.RecordingJumpTo(clock(mk.At), text)).TextColor(p.ink)
 				switch {
 				case i == cur:
 					row.Background(p.bg3)
@@ -305,22 +306,22 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 				})
 			}
 			if len(pl.rec.Marks) == 0 {
-				mg.Text(c, "No steps are marked in this recording.").FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.RecordingNoMarks()).FontSize(13).TextColor(p.ink2)
 			}
 		})
 	})
 	// Play, the timeline and the time.
 	mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
-		label, icon := "Pause", icPause
+		label, icon := locales.RecordingPause(), icPause
 		switch pl.state {
 		case "paused", "failed":
-			label, icon = "Play", icPlay
+			label, icon = locales.RecordingPlay(), icPlay
 		case "ended":
-			label, icon = "Play again", icPlay
+			label, icon = locales.RecordingPlayAgain(), icPlay
 		}
 		b := button(c, "", btnOpt{icon: icon, label: label}).Width(34).Padding(0).Tooltip(label)
 		if b.Clicked() {
-			if label == "Pause" {
+			if label == locales.RecordingPause() {
 				pl.pause()
 			} else {
 				pl.resume()
@@ -336,7 +337,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer) mg.Element {
 	p := pal(c)
 	length := max(pl.rec.Length, time.Millisecond)
-	bar := mg.Box(c).Height(30).Focusable().Role(mg.RoleSlider).Label("Position in the recording").Cursor(mg.CursorPointer)
+	bar := mg.Box(c).Height(30).Focusable().Role(mg.RoleSlider).Label(locales.RecordingPosition()).Cursor(mg.CursorPointer)
 	var width float32
 	bar.HandleInput(func(ev mg.InputEvent) bool {
 		switch ev.Kind {
@@ -385,15 +386,15 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 func recordingError(err error) string {
 	switch {
 	case err == nil:
-		return "The recording ended."
+		return locales.RecordingEnded()
 	case errors.Is(err, driver.ErrUnsupported):
-		return "This build of Pinky can't play recordings yet."
+		return locales.RecordingUnsupported()
 	case errors.Is(err, driver.ErrNotFound), errors.Is(err, os.ErrNotExist):
-		return "The recording is gone; the history limit may have removed it."
+		return locales.RecordingGone()
 	case errors.Is(err, video.ErrNotFound):
 		return err.Error()
 	}
-	return "Couldn't play the recording: " + err.Error()
+	return locales.RecordingPlayFailed(err.Error())
 }
 
 // --- export ---
@@ -428,7 +429,8 @@ func (a *app) exportHistory(ids []string, name string) {
 		base, err := a.exportTo()
 		var dir, path string
 		if err == nil {
-			dir = filepath.Join(base, freeName(base, "Pinky "+fileName(name)+" "+time.Now().Format("2006-01-02 at 15.04.05")))
+			now := time.Now()
+			dir = filepath.Join(base, freeName(base, locales.ExportFolderName(fileName(name), now.Format("2006-01-02"), now.Format("15.04.05"))))
 			err = os.MkdirAll(dir, 0o755)
 		}
 		if err == nil && gw {
@@ -439,10 +441,10 @@ func (a *app) exportHistory(ids []string, name string) {
 		}
 		a.post(func() {
 			if err != nil {
-				a.toasts = append(a.toasts, "Couldn't export: "+err.Error())
+				a.toasts = append(a.toasts, locales.ExportFailed(err.Error()))
 				return
 			}
-			a.toasts = append(a.toasts, "Exported to “"+filepath.Base(dir)+"” in "+filepath.Base(base))
+			a.toasts = append(a.toasts, locales.ExportDone(filepath.Base(dir), filepath.Base(base)))
 			if a.reveal != nil {
 				a.reveal(path)
 			}

@@ -1,5 +1,119 @@
 {
   "@@locale": "en",
+  "activityAnsweredIn": "Answered in {duration}",
+  "@activityAnsweredIn": {
+    "description": "The second line of a step where the person allowed or denied what the agent asked: how long they took to answer. duration is as \"14 s\" or \"1 min 02 s\".",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "14 s"
+      }
+    }
+  },
+  "activityApprovals": "{count, plural, one {# approval} other {# approvals}}",
+  "@activityApprovals": {
+    "description": "Under a task's outcome on its row in Activity: how many times the task asked the person to allow something.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "activityChooseTask": "Choose a task to see its steps.",
+  "@activityChooseTask": {
+    "description": "Activity's right column when no task is selected."
+  },
+  "activityDelete": "Delete",
+  "@activityDelete": {
+    "description": "An item of the ⋯ menu in a task's detail, which deletes the task. It shows disabled: the gateway cannot delete one task yet."
+  },
+  "activityDetailLabel": "Task detail",
+  "@activityDetailLabel": {
+    "description": "The accessibility label of Activity's right column: the selected task's detail."
+  },
+  "activityEmpty": "No finished tasks yet.",
+  "@activityEmpty": {
+    "description": "Activity's list when no task has finished yet."
+  },
+  "activityMoreActions": "More actions",
+  "@activityMoreActions": {
+    "description": "The accessibility label of the ⋯ button in a task's detail, whose menu has Export…, Step-by-step replay and Delete."
+  },
+  "activityNoMatch": "No tasks match “{query}”.",
+  "@activityNoMatch": {
+    "description": "Activity's list when the search finds nothing. query is what the person typed.",
+    "placeholders": {
+      "query": {
+        "type": "String",
+        "example": "lunch"
+      }
+    }
+  },
+  "activityOutcomeDenied": "Denied",
+  "@activityOutcomeDenied": {
+    "description": "A task's outcome on its row in Activity, a state: the task ended after the person denied what it asked."
+  },
+  "activityOutcomeDone": "Done",
+  "@activityOutcomeDone": {
+    "description": "A task's outcome on its row in Activity, a state: the task finished."
+  },
+  "activityOutcomeFailed": "Failed",
+  "@activityOutcomeFailed": {
+    "description": "A task's outcome on its row in Activity, a state: the task failed."
+  },
+  "activityOutcomeStopped": "Stopped",
+  "@activityOutcomeStopped": {
+    "description": "A task's outcome on its row in Activity, a state: the person or the agent stopped it."
+  },
+  "activityPanelClose": "Close",
+  "@activityPanelClose": {
+    "description": "The button in the header of Watch replay and of Watch recording that closes them, back to the task's steps."
+  },
+  "activityReadFailed": "Couldn't read Activity: {detail}",
+  "@activityReadFailed": {
+    "description": "A toast when Activity cannot load the finished tasks from the gateway. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "connection refused"
+      }
+    }
+  },
+  "activitySearchLabel": "Search activity",
+  "@activitySearchLabel": {
+    "description": "The accessibility label of Activity's search field."
+  },
+  "activitySearchPlaceholder": "Search tasks and apps",
+  "@activitySearchPlaceholder": {
+    "description": "The placeholder of Activity's search field, which finds tasks by their titles and apps as the person types."
+  },
+  "activityShowShot": "Show the screenshot",
+  "@activityShowShot": {
+    "description": "The tooltip of a step's screenshot thumbnail: a click shows it larger, below the step."
+  },
+  "activityStepShotLabel": "Screenshot of “{step}”",
+  "@activityStepShotLabel": {
+    "description": "The accessibility label of a step's screenshot thumbnail, a button that shows the screenshot larger. step is the step's text.",
+    "placeholders": {
+      "step": {
+        "type": "String",
+        "example": "Tapped “Pay”"
+      }
+    }
+  },
+  "activitySteps": "Steps",
+  "@activitySteps": {
+    "description": "The heading above the list of a task's steps in Activity's detail."
+  },
+  "activityTasksLabel": "Tasks",
+  "@activityTasksLabel": {
+    "description": "The accessibility label of Activity's left column: the list of finished tasks."
+  },
+  "activityTitle": "Activity",
+  "@activityTitle": {
+    "description": "The title in the Activity page's header. Activity lists the finished tasks by day."
+  },
   "agentGeneric": "the agent",
   "@agentGeneric": {
     "description": "Names an agent whose name is unknown, inside a sentence: \"Note for the agent\"."
@@ -75,6 +189,64 @@
   "dayYesterday": "Yesterday",
   "@dayYesterday": {
     "description": "Activity groups tasks by day: the heading of yesterday's."
+  },
+  "exportAll": "Export all",
+  "@exportAll": {
+    "description": "The button in Activity's header that exports every finished task into a new folder on the Desktop."
+  },
+  "exportAllTooltip": "Every finished task, as a report and JSON",
+  "@exportAllTooltip": {
+    "description": "The tooltip of Export all: what it writes, an HTML report and a JSON file."
+  },
+  "exportDone": "Exported to “{folder}” in {parent}",
+  "@exportDone": {
+    "description": "A toast after an export, which also shows the report in the Finder. folder is the new folder's name (see exportFolderName); parent is the name of the folder it was made in: \"Desktop\", the Desktop folder's real name, which the Finder shows translated, or else the home folder's name. The Chinese picks 桌面 for Desktop.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "Pinky activity 2026-11-07 at 09.30.12"
+      },
+      "parent": {
+        "type": "String",
+        "example": "Desktop"
+      }
+    }
+  },
+  "exportFailed": "Couldn't export: {detail}",
+  "@exportFailed": {
+    "description": "A toast when an export fails. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "exportFolderAll": "activity",
+  "@exportFolderAll": {
+    "description": "Export all: the word that names what it exported in the name of the folder it makes, \"Pinky activity 2026-11-07 at 09.30.12\" (see exportFolderName). Part of a file name."
+  },
+  "exportFolderName": "Pinky {name} {date} at {clock}",
+  "@exportFolderName": {
+    "description": "The name of the folder an export makes on the Desktop. name is exportFolderAll or the exported task's title; date is as 2026-11-07, clock as 09.30.12 (with dots: file names cannot hold colons). It must stay a valid file name, without / or :.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "activity"
+      },
+      "date": {
+        "type": "String",
+        "example": "2026-11-07"
+      },
+      "clock": {
+        "type": "String",
+        "example": "09.30.12"
+      }
+    }
+  },
+  "exportTask": "Export…",
+  "@exportTask": {
+    "description": "An item of the ⋯ menu in a task's detail: exports that task into a new folder on the Desktop."
   },
   "gwAgentGives": " Allowing gives it {scope} access.",
   "@gwAgentGives": {
@@ -1084,6 +1256,122 @@
   "@menuStopAll": {
     "description": "Phones menu: stops every agent on every phone."
   },
+  "mirrorAgentScreenLabel": "{agent}'s screen on {phone}, live",
+  "@mirrorAgentScreenLabel": {
+    "description": "The accessibility label of the mirror while it shows the agent's own screen: the hidden second screen it works on in the background. agent is the agent's name, or \"The agent\" (agentGenericStart); phone is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "mirrorCallKey": "press {key}",
+  "@mirrorCallKey": {
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when a key pressed on the mirror cannot reach the phone. key is the phone's name for the key, in English: back, home, enter, tab, delete, escape, dpad_up, page_down…",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "enter"
+      }
+    }
+  },
+  "mirrorCallPaste": "paste",
+  "@mirrorCallPaste": {
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when ⌘V on the mirror cannot paste the Mac's clipboard on the phone."
+  },
+  "mirrorCallTouch": "send the touch",
+  "@mirrorCallTouch": {
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when a click, drag or scroll on the mirror cannot reach the phone."
+  },
+  "mirrorCallType": "type",
+  "@mirrorCallType": {
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when text typed on the mirror cannot reach the phone."
+  },
+  "mirrorConnecting": "Connecting…",
+  "@mirrorConnecting": {
+    "description": "Under a spinner over the mirror while the phone's live picture connects."
+  },
+  "mirrorDecoderSoftware": "software decoding",
+  "@mirrorDecoderSoftware": {
+    "description": "Settings › Advanced in Developer mode, the Video row: how a mirror decodes without a hardware decoder, in place of a hardware decoder's name such as videotoolbox (see mirrorDecoderStats)."
+  },
+  "mirrorDecoderStats": "{line}. {device}: {decoder}, {fps} fps, {latency} from packet to picture",
+  "@mirrorDecoderStats": {
+    "description": "Settings › Advanced in Developer mode, the Video row: adds a playing mirror to the line. line is the line so far (FFmpeg's libavcodec version and the mirrors before); device is the phone's ID; decoder is mirrorDecoderSoftware or a hardware decoder's name; fps is pictures per second; latency is the time from a packet's arrival to its picture.",
+    "placeholders": {
+      "line": {
+        "type": "String",
+        "example": "libavcodec 62.11.100 (/opt/homebrew/lib)"
+      },
+      "device": {
+        "type": "String",
+        "example": "emulator-5554"
+      },
+      "decoder": {
+        "type": "String",
+        "example": "videotoolbox"
+      },
+      "fps": {
+        "type": "String",
+        "example": "60"
+      },
+      "latency": {
+        "type": "String",
+        "example": "3.2ms"
+      }
+    }
+  },
+  "mirrorLocked": "{phone} is locked",
+  "@mirrorLocked": {
+    "description": "A pill over the dimmed mirror of a locked phone. phone is the phone's name. One line over the phone's picture: keep it short.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "mirrorLockedTile": "Locked",
+  "@mirrorLockedTile": {
+    "description": "The same pill over a locked phone's tile in All phones, which can be 168 points wide."
+  },
+  "mirrorNoPicture": "No picture: {detail}",
+  "@mirrorNoPicture": {
+    "description": "Over the mirror when the phone's live picture fails. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "adb: device unauthorized"
+      }
+    }
+  },
+  "mirrorOffline": "The phone went offline.",
+  "@mirrorOffline": {
+    "description": "Over the mirror when the phone disconnected."
+  },
+  "mirrorScreenLabel": "{phone} screen, live",
+  "@mirrorScreenLabel": {
+    "description": "The accessibility label of the mirror, the phone's live picture, where clicks, scrolls and typing reach the phone. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "mirrorStreamEnded": "The stream ended. Reconnecting…",
+  "@mirrorStreamEnded": {
+    "description": "Over the mirror when the phone's live picture stopped; it connects again by itself."
+  },
+  "mirrorUnsupported": "This phone has no live picture.",
+  "@mirrorUnsupported": {
+    "description": "Over the mirror of a phone that cannot stream its screen."
+  },
   "platformUnlockKeepMac": "Your PIN stays in your Mac's Keychain. Agents never see it.",
   "@platformUnlockKeepMac": {
     "description": "macOS: where a saved phone PIN is kept, under the PIN field."
@@ -1107,6 +1395,162 @@
   "platformUnlockWindows": "Unlock with Windows Hello",
   "@platformUnlockWindows": {
     "description": "Windows: the button that unlocks a locked phone with its saved PIN."
+  },
+  "recordingEnded": "The recording ended.",
+  "@recordingEnded": {
+    "description": "Over the recording's picture when it stopped without an error."
+  },
+  "recordingGone": "The recording is gone; the history limit may have removed it.",
+  "@recordingGone": {
+    "description": "Over the recording's picture when its file is missing. Settings › Privacy › Keep activity for deletes older recordings."
+  },
+  "recordingJumpHeading": "Jump to a step",
+  "@recordingJumpHeading": {
+    "description": "The heading of the list of steps beside the recording: a click on a step plays the recording from that step."
+  },
+  "recordingJumpTo": "Jump to {at}: {step}",
+  "@recordingJumpTo": {
+    "description": "The accessibility label of a step in the list beside the recording. at is where the step is in the recording, as 1:48; step is the step's text.",
+    "placeholders": {
+      "at": {
+        "type": "String",
+        "example": "1:48"
+      },
+      "step": {
+        "type": "String",
+        "example": "Placed the order"
+      }
+    }
+  },
+  "recordingNoMarks": "No steps are marked in this recording.",
+  "@recordingNoMarks": {
+    "description": "In place of the list of steps beside a recording that has none marked."
+  },
+  "recordingPanelLabel": "Recording",
+  "@recordingPanelLabel": {
+    "description": "The accessibility label of the Watch recording panel."
+  },
+  "recordingPanelTitle": "Recording · {title}",
+  "@recordingPanelTitle": {
+    "description": "The title of the Watch recording panel. title is the task's title, as the agent wrote it.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Reorder last week's lunch"
+      }
+    }
+  },
+  "recordingPause": "Pause",
+  "@recordingPause": {
+    "description": "The accessibility label and tooltip of the player's icon button while the recording plays: pauses it."
+  },
+  "recordingPlay": "Play",
+  "@recordingPlay": {
+    "description": "The accessibility label and tooltip of the player's icon button while the recording is paused: plays it."
+  },
+  "recordingPlayAgain": "Play again",
+  "@recordingPlayAgain": {
+    "description": "The accessibility label and tooltip of the player's icon button once the recording has ended: plays it from the start."
+  },
+  "recordingPlayFailed": "Couldn't play the recording: {detail}",
+  "@recordingPlayFailed": {
+    "description": "Over the recording's picture when it cannot play. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "invalid data found when processing input"
+      }
+    }
+  },
+  "recordingPlayerLabel": "Recording of {title}",
+  "@recordingPlayerLabel": {
+    "description": "The accessibility label of the recording's picture, in a phone frame. title is the task's title, as the agent wrote it.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Reorder last week's lunch"
+      }
+    }
+  },
+  "recordingPosition": "Position in the recording",
+  "@recordingPosition": {
+    "description": "The accessibility label of the recording's timeline, a slider: a click jumps there, ← and → move by 5 s."
+  },
+  "recordingStepsLabel": "Steps in the recording",
+  "@recordingStepsLabel": {
+    "description": "The accessibility label of the list of steps beside the recording."
+  },
+  "recordingUnsupported": "This build of Pinky can't play recordings yet.",
+  "@recordingUnsupported": {
+    "description": "Over the recording's picture when this copy of Pinky cannot play recordings."
+  },
+  "recordingWatch": "Watch recording",
+  "@recordingWatch": {
+    "description": "The button in a task's detail that plays the task's screen recording."
+  },
+  "replayMenuItem": "Step-by-step replay",
+  "@replayMenuItem": {
+    "description": "An item of the ⋯ menu of a task that has a screen recording: shows the steps one at a time with their screenshots instead of the recording."
+  },
+  "replayNext": "Next step",
+  "@replayNext": {
+    "description": "The accessibility label of Watch replay's › button, which shows the step after."
+  },
+  "replayNoSteps": "This task has no steps.",
+  "@replayNoSteps": {
+    "description": "Watch replay of a task that has no steps."
+  },
+  "replayPanelLabel": "Replay",
+  "@replayPanelLabel": {
+    "description": "The accessibility label of the Watch replay panel."
+  },
+  "replayPanelTitle": "Replay · {title}",
+  "@replayPanelTitle": {
+    "description": "The title of the Watch replay panel. title is the task's title, as the agent wrote it.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Reorder last week's lunch"
+      }
+    }
+  },
+  "replayPause": "Pause",
+  "@replayPause": {
+    "description": "Watch replay's Play button while it plays: stops at the step shown."
+  },
+  "replayPlay": "Play",
+  "@replayPlay": {
+    "description": "Watch replay's button that goes through the steps by itself, one every 1.5 s."
+  },
+  "replayPrevious": "Previous step",
+  "@replayPrevious": {
+    "description": "The accessibility label of Watch replay's ‹ button, which shows the step before."
+  },
+  "replayStepOf": "Step {current} of {total}",
+  "@replayStepOf": {
+    "description": "Watch replay: the step shown, above its text. current is its number, total how many steps the task has.",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "example": "3"
+      },
+      "total": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "replayTimelineHint": "Each dot is a step. Larger dots are moments you were asked.",
+  "@replayTimelineHint": {
+    "description": "Under Watch replay's timeline, a row of dots, one per step; the dots of the steps where the agent asked the person are larger."
+  },
+  "replayWatch": "Watch replay",
+  "@replayWatch": {
+    "description": "The button in a task's detail that shows the task's steps one at a time with their screenshots, for a task without a screen recording."
+  },
+  "replayWatchTooltip": "Step by step, with the screenshots",
+  "@replayWatchTooltip": {
+    "description": "The tooltip of Watch replay."
   },
   "ruleActionCalls": "calls",
   "@ruleActionCalls": {

@@ -9,6 +9,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
 
@@ -43,7 +44,7 @@ func (s *activityState) load(a *app) {
 				return
 			}
 			if err != nil {
-				a.toasts = append(a.toasts, "Couldn't read Activity: "+err.Error())
+				a.toasts = append(a.toasts, locales.ActivityReadFailed(err.Error()))
 				return
 			}
 			s.tasks, s.loaded = tasks, true
@@ -78,27 +79,27 @@ func (a *app) activityPage(c *mg.Context) {
 		s.load(a)
 	}
 	pageHeader(c, func() {
-		mg.Text(c, "Activity").FontSize(17).FontWeight(650)
+		mg.Text(c, locales.ActivityTitle()).FontSize(17).FontWeight(650)
 		mg.Spacer(c)
-		if button(c, "Export all", btnOpt{icon: icExport, small: true}).Tooltip("Every finished task, as a report and JSON").Clicked() {
-			a.exportHistory(nil, "activity")
+		if button(c, locales.ExportAll(), btnOpt{icon: icExport, small: true}).Tooltip(locales.ExportAllTooltip()).Clicked() {
+			a.exportHistory(nil, locales.ExportFolderAll())
 		}
 		mg.Row(c).Width(300).Height(34).Padding(0, 12).Radius(9).Background(p.bg2).Border(1, p.line).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icSearch).FontSize(16).TextColor(p.ink3)
-			mg.TextInputBase(c.Key("act-search"), &s.query).Grow(1).Placeholder("Search tasks and apps").Label("Search activity").FontSize(14)
+			mg.TextInputBase(c.Key("act-search"), &s.query).Grow(1).Placeholder(locales.ActivitySearchPlaceholder()).Label(locales.ActivitySearchLabel()).FontSize(14)
 		})
 	})
 	mg.Row(c).Grow(1).MinHeight(0).AlignItems(mg.Stretch).Children(func() {
 		mg.Scroll(c).Basis(400).Grow(1).MinWidth(320).MaxWidth(520).BorderWidth(0, 1, 0, 0).BorderColor(p.line).Padding(14, 12).Gap(2).
-			Label("Tasks").Children(func() {
+			Label(locales.ActivityTasksLabel()).Children(func() {
 			if !s.loaded {
 				mg.Box(c).Padding(20).Center().Children(func() { spinner(c) })
 				return
 			}
 			if len(s.tasks) == 0 {
-				msg := "No finished tasks yet."
+				msg := locales.ActivityEmpty()
 				if s.query != "" {
-					msg = "No tasks match “" + s.query + "”."
+					msg = locales.ActivityNoMatch(s.query)
 				}
 				mg.Text(c, msg).FontSize(14).TextColor(p.ink2).Padding(12)
 				return
@@ -117,7 +118,7 @@ func (a *app) activityPage(c *mg.Context) {
 				a.activityRow(c.Key(t.ID), t)
 			}
 		})
-		mg.Scroll(c).Basis(460).Grow(999).MinWidth(0).Padding(28, 32).Gap(18).Label("Task detail").Children(func() {
+		mg.Scroll(c).Basis(460).Grow(999).MinWidth(0).Padding(28, 32).Gap(18).Label(locales.ActivityDetailLabel()).Children(func() {
 			var t *gateway.TaskView
 			for i := range s.tasks {
 				if s.tasks[i].ID == s.sel {
@@ -126,7 +127,7 @@ func (a *app) activityPage(c *mg.Context) {
 			}
 			if t == nil {
 				if s.loaded {
-					mg.Text(c, "Choose a task to see its steps.").FontSize(14).TextColor(p.ink2)
+					mg.Text(c, locales.ActivityChooseTask()).FontSize(14).TextColor(p.ink2)
 				}
 				return
 			}
@@ -149,16 +150,23 @@ func outcome(c *mg.Context, t gateway.TaskView) (string, mg.Element) {
 	p := pal(c)
 	switch {
 	case t.State == gateway.TaskStopped:
-		return "Stopped", dot(c, p.ink3, false)
+		return locales.ActivityOutcomeStopped(), dot(c, p.ink3, false)
 	case t.State == gateway.TaskFailed:
-		return "Failed", dot(c, p.red, false)
+		return locales.ActivityOutcomeFailed(), dot(c, p.red, false)
 	case denied(t) && !strings.HasPrefix(lastText(t), "You allowed"):
 		if allowedLater(t) {
-			return "Done", dot(c, p.green, false)
+			return locales.ActivityOutcomeDone(), dot(c, p.green, false)
 		}
-		return "Denied", hollowDot(c)
+		return locales.ActivityOutcomeDenied(), hollowDot(c)
 	}
-	return "Done", dot(c, p.green, false)
+	return locales.ActivityOutcomeDone(), dot(c, p.green, false)
+}
+
+// answered reports whether a step is the person's answer to an approval,
+// as the gateway and the fake word it.
+func answered(s gateway.StepView) bool {
+	return strings.HasPrefix(s.Text, "You allowed") || strings.HasPrefix(s.Text, "You denied") ||
+		s.Status == "approval_denied" && strings.HasPrefix(s.Text, "Waiting for you: ")
 }
 
 func lastText(t gateway.TaskView) string {
@@ -212,7 +220,7 @@ func (a *app) activityRow(c *mg.Context, t gateway.TaskView) {
 				mg.Text(c, word).FontSize(13)
 			})
 			if n := approvals(t); n > 0 {
-				mg.Text(c, plural(n, "approval", "approvals")).FontSize(12.5).TextColor(p.ink3)
+				mg.Text(c, locales.ActivityApprovals(n)).FontSize(12.5).TextColor(p.ink3)
 			}
 		})
 	})
@@ -261,27 +269,27 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 			rec := a.recordingOf(t.ID)
 			switch {
 			case rec != nil:
-				if button(c, "Watch recording", btnOpt{icon: icPlay}).Clicked() {
+				if button(c, locales.RecordingWatch(), btnOpt{icon: icPlay}).Clicked() {
 					a.act.replay, a.act.playing = true, false
 					a.openRecording(t.ID, *rec)
 				}
 			default:
-				if button(c, "Watch replay", btnOpt{icon: icPlay}).Tooltip("Step by step, with the screenshots").Clicked() {
+				if button(c, locales.ReplayWatch(), btnOpt{icon: icPlay}).Tooltip(locales.ReplayWatchTooltip()).Clicked() {
 					a.act.replay, a.act.at, a.act.playing = true, 0, false
 					a.closeRecording()
 				}
 			}
-			more := button(c, "", btnOpt{icon: icMore, label: "More actions"}).Width(34).Padding(0)
+			more := button(c, "", btnOpt{icon: icMore, label: locales.ActivityMoreActions()}).Width(34).Padding(0)
 			more.PopoverMenuButton(func(m *mg.Menu) {
-				if m.Item("Export…").Chosen() {
+				if m.Item(locales.ExportTask()).Chosen() {
 					a.exportHistory([]string{t.ID}, t.Title)
 				}
-				if rec != nil && m.Item("Step-by-step replay").Chosen() {
+				if rec != nil && m.Item(locales.ReplayMenuItem()).Chosen() {
 					a.act.replay, a.act.at, a.act.playing = true, 0, false
 					a.closeRecording()
 				}
 				m.Separator()
-				m.Item("Delete").Disabled(true)
+				m.Item(locales.ActivityDelete()).Disabled(true)
 			})
 		})
 	})
@@ -297,14 +305,13 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 		return
 	}
 	mg.Column(c).Gap(12).Children(func() {
-		mg.Text(c, "Steps").FontSize(13).FontWeight(600).TextColor(p.ink3)
+		mg.Text(c, locales.ActivitySteps()).FontSize(13).FontWeight(600).TextColor(p.ink3)
 		mg.Column(c).Gap(10).Role(mg.RoleList).Children(func() {
 			for i, s := range t.Steps {
 				text, sub, kind := stepDisplay(t, i)
 				you := kind == stepYou
-				if sub == "" && you && s.Elapsed >= time.Second && strings.HasPrefix(text, "You ") &&
-					(strings.Contains(text, "allowed") || strings.Contains(text, "denied")) {
-					sub = "Answered in " + elapsed(s.Elapsed)
+				if sub == "" && you && s.Elapsed >= time.Second && answered(s) {
+					sub = locales.ActivityAnsweredIn(elapsed(s.Elapsed))
 				}
 				key := fmt.Sprintf("act/%s/%d", t.ID, s.Index)
 				shot := a.hasShot(s)
@@ -319,8 +326,8 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 								})
 							})
 						case shot:
-							b := mg.ButtonBase(c).Radius(6).Shrink(0).Label("Screenshot of “" + text + "”").Expanded(open).
-								Tooltip("Show the screenshot")
+							b := mg.ButtonBase(c).Radius(6).Shrink(0).Label(locales.ActivityStepShotLabel(text)).Expanded(open).
+								Tooltip(locales.ActivityShowShot())
 							if b.Clicked() {
 								a.previews[key] = !open
 							}
@@ -364,10 +371,10 @@ func stepThumb(c *mg.Context, col string) {
 // step marks, in the replay's panel.
 func (a *app) recordingPanel(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 	p := pal(c)
-	mg.Column(c).Gap(16).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label("Recording").Children(func() {
+	mg.Column(c).Gap(16).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label(locales.RecordingPanelLabel()).Children(func() {
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
-			mg.Text(c, "Recording · "+t.Title).FontSize(16).FontWeight(650).Grow(1)
-			if button(c, "Close", btnOpt{}).Clicked() {
+			mg.Text(c, locales.RecordingPanelTitle(t.Title)).FontSize(16).FontWeight(650).Grow(1)
+			if button(c, locales.ActivityPanelClose(), btnOpt{}).Clicked() {
 				a.act.replay = false
 				a.closeRecording()
 			}
@@ -398,15 +405,15 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 		}
 		c.After(100 * time.Millisecond)
 	}
-	mg.Column(c).Gap(18).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label("Replay").Children(func() {
+	mg.Column(c).Gap(18).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label(locales.ReplayPanelLabel()).Children(func() {
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
-			mg.Text(c, "Replay · "+t.Title).FontSize(16).FontWeight(650).Grow(1)
-			if button(c, "Close", btnOpt{}).Clicked() {
+			mg.Text(c, locales.ReplayPanelTitle(t.Title)).FontSize(16).FontWeight(650).Grow(1)
+			if button(c, locales.ActivityPanelClose(), btnOpt{}).Clicked() {
 				a.act.replay, a.act.playing = false, false
 			}
 		})
 		if n == 0 {
-			mg.Text(c, "This task has no steps.").FontSize(13.5).TextColor(p.ink2)
+			mg.Text(c, locales.ReplayNoSteps()).FontSize(13.5).TextColor(p.ink2)
 			return
 		}
 		s := t.Steps[st.at]
@@ -414,7 +421,7 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 		mg.Row(c).Gap(20).AlignItems(mg.Start).Wrap().Children(func() {
 			a.shotView(c, t, s, 420)
 			mg.Column(c).Basis(200).Grow(1).MinWidth(0).Gap(6).Children(func() {
-				mg.Text(c, fmt.Sprintf("Step %d of %d", st.at+1, n)).FontSize(12.5).FontWeight(600).TextColor(p.ink3)
+				mg.Text(c, locales.ReplayStepOf(st.at+1, n)).FontSize(12.5).FontWeight(600).TextColor(p.ink3)
 				mg.Text(c, text).FontSize(16).FontWeight(600).LineHeight(1.35)
 				if sub != "" {
 					mg.Text(c, sub).FontSize(13.5).TextColor(p.ink2)
@@ -423,13 +430,13 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 					mg.Text(c, s.At.Format("15:04:05")).FontSize(13).TextColor(p.ink3)
 				}
 				mg.Row(c).Gap(8).Margin(10, 0, 0, 0).Children(func() {
-					if button(c, "", btnOpt{icon: icChevL, label: "Previous step"}).Width(34).Padding(0).Disabled(st.at == 0).Clicked() {
+					if button(c, "", btnOpt{icon: icChevL, label: locales.ReplayPrevious()}).Width(34).Padding(0).Disabled(st.at == 0).Clicked() {
 						st.at--
 						st.playing = false
 					}
-					play := "Play"
+					play := locales.ReplayPlay()
 					if st.playing {
-						play = "Pause"
+						play = locales.ReplayPause()
 					}
 					if button(c, play, btnOpt{icon: icPlay}).Clicked() {
 						st.playing = !st.playing
@@ -440,7 +447,7 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 							st.nextAt = c.Now().Add(1500 * time.Millisecond)
 						}
 					}
-					if button(c, "", btnOpt{icon: icChevR, label: "Next step"}).Width(34).Padding(0).Disabled(st.at >= n-1).Clicked() {
+					if button(c, "", btnOpt{icon: icChevR, label: locales.ReplayNext()}).Width(34).Padding(0).Disabled(st.at >= n-1).Clicked() {
 						st.at++
 						st.playing = false
 					}
@@ -470,7 +477,7 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 			}
 		})
 		mg.Row(c).Children(func() {
-			mg.Text(c, "Each dot is a step. Larger dots are moments you were asked.").FontSize(12.5).TextColor(p.ink2).Grow(1)
+			mg.Text(c, locales.ReplayTimelineHint()).FontSize(12.5).TextColor(p.ink2).Grow(1)
 			mg.Text(c, clock(taskDuration(t, c.Now()))).FontSize(13).TextColor(p.ink2)
 		})
 	})
@@ -493,7 +500,7 @@ func reportHTML(tasks []gateway.TaskView) string {
 	for _, t := range tasks {
 		b.WriteString("<section>")
 		fmt.Fprintf(&b, "<h2>%s</h2><p><small>%s · %s · %s · %s</small></p>", esc(t.Title), esc(t.Agent), esc(t.DeviceName),
-			t.Started.Format("2006-01-02 15:04"), esc(elapsed(t.Ended.Sub(t.Started))))
+			t.Started.Format("2006-01-02 15:04"), esc(elapsedIn(locales.In("en"), t.Ended.Sub(t.Started))))
 		if s := summaryOf(t); s != "" {
 			fmt.Fprintf(&b, "<p>%s</p>", esc(s))
 		}
