@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/ebitengine/purego"
 	"github.com/ebitengine/purego/objc"
@@ -98,8 +99,13 @@ func confirmPresence(ctx context.Context, reason string) error {
 	case r = <-done:
 	case <-ctx.Done():
 		// Takes the prompt away; the reply follows with LAErrorAppCancel.
+		// The framework holds its own copy of the block, so returning
+		// before the reply would be safe too; wait a while for tidiness.
 		la.Send(a.selInvalidate)
-		<-done
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
 		return ctx.Err()
 	}
 	if r.ok {
@@ -107,7 +113,9 @@ func confirmPresence(ctx context.Context, reason string) error {
 	}
 	switch r.code {
 	case laErrorAuthenticationFailed, laErrorUserCancel, laErrorUserFallback, laErrorSystemCancel, laErrorAppCancel:
-		return ErrCancelled
+		// The code tells a person's cancel from the system's (such as a
+		// locked screen) in logs.
+		return fmt.Errorf("%w (%s, LAError %d)", ErrCancelled, r.msg, r.code)
 	case laErrorPasscodeNotSet:
 		return fmt.Errorf("secret: this Mac has no password to confirm with: %w", ErrUnsupported)
 	case laErrorNotInteractive:

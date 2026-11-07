@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"unsafe"
 
@@ -176,7 +177,9 @@ func (o *objects) release() {
 }
 
 func (o *objects) str(v string) cf {
-	b := []byte(v)
+	// CoreFoundation returns NULL for bytes that are not UTF-8, which a
+	// dictionary cannot hold.
+	b := []byte(strings.ToValidUTF8(v, "�"))
 	var p *byte
 	if len(b) > 0 {
 		p = &b[0]

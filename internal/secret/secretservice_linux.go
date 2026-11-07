@@ -149,14 +149,19 @@ func (s *secretService) item(conn *dbus.Conn, account string) (coll, item dbus.O
 	if coll == noPrompt {
 		return "", "", ErrNotFound
 	}
-	var found []dbus.ObjectPath
-	if err := call(conn, coll, ssCollection+".SearchItems", []any{&found}, s.attributes(account)); err != nil {
+	// The service's search finds items of locked collections too (in its
+	// second list), which a collection's own search may not; the items of
+	// a collection are the objects under its path.
+	var unlocked, locked []dbus.ObjectPath
+	if err := call(conn, ssPath, ssService+".SearchItems", []any{&unlocked, &locked}, s.attributes(account)); err != nil {
 		return "", "", err
 	}
-	if len(found) == 0 {
-		return coll, "", ErrNotFound
+	for _, it := range append(unlocked, locked...) {
+		if strings.HasPrefix(string(it), string(coll)+"/") {
+			return coll, it, nil
+		}
 	}
-	return coll, found[0], nil
+	return coll, "", ErrNotFound
 }
 
 // prompt shows a prompt the Secret Service asked for and waits for the

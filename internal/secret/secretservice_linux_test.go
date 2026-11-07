@@ -216,6 +216,28 @@ func (a fakeServiceAPI) Unlock(objects []dbus.ObjectPath) ([]dbus.ObjectPath, db
 	return []dbus.ObjectPath{}, p, nil
 }
 
+// SearchItems finds items in every collection: those of unlocked
+// collections first, then those of locked ones.
+func (a fakeServiceAPI) SearchItems(attrs map[string]string) ([]dbus.ObjectPath, []dbus.ObjectPath, *dbus.Error) {
+	a.f.mu.Lock()
+	defer a.f.mu.Unlock()
+	unlocked, locked := []dbus.ObjectPath{}, []dbus.ObjectPath{}
+	for path, it := range a.f.items {
+		match := true
+		for k, v := range attrs {
+			match = match && it.attrs[k] == v
+		}
+		switch {
+		case !match:
+		case a.f.collections[it.coll].locked:
+			locked = append(locked, path)
+		default:
+			unlocked = append(unlocked, path)
+		}
+	}
+	return unlocked, locked, nil
+}
+
 func (a fakeServiceAPI) Lock(objects []dbus.ObjectPath) ([]dbus.ObjectPath, dbus.ObjectPath, *dbus.Error) {
 	a.f.mu.Lock()
 	defer a.f.mu.Unlock()
@@ -357,6 +379,14 @@ func TestSecretServiceSaveRevealDelete(t *testing.T) {
 	s := newSecretService("app.pinky.desktop.test", "Pinky test")
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
+
+	// An item of another keyring with the same attributes is not Pinky's.
+	login := ssPath + "/collection/login"
+	f.mu.Lock()
+	f.collections[login] = &fakeCollection{label: "Login"}
+	f.items[login+"/1"] = &fakeItem{coll: login, secret: []byte("not this"),
+		attrs: map[string]string{"service": "app.pinky.desktop.test", "account": "pin:a"}}
+	f.mu.Unlock()
 
 	if s.Has("pin:a") {
 		t.Fatal("Has before Save")
