@@ -836,6 +836,50 @@
   "@checkConnectionWiFi": {
     "description": "The checkup, connection and Wi-Fi: passed, over Wi-Fi."
   },
+  "checkDeveloperModePass": "On.",
+  "@checkDeveloperModePass": {
+    "description": "Checkup, an iPhone's item: Developer Mode is on."
+  },
+  "checkDeveloperModeTitle": "Developer Mode",
+  "@checkDeveloperModeTitle": {
+    "description": "Checkup, an iPhone's item: the title of the Developer Mode item. Developer Mode is the iPhone's own name for the setting; use the name iOS shows in your language."
+  },
+  "checkDiskImageDownloadNote": "Show the steps to download it from a third-party mirror instead.",
+  "@checkDiskImageDownloadNote": {
+    "description": "Checkup, an iPhone's item: a note under the item when this computer has no developer disk image: Add phone's steps (the button below) offer a download from a third-party mirror."
+  },
+  "checkDiskImageMissing": "Not mounted, so the iPhone doesn't offer what Pinky needs.",
+  "@checkDiskImageMissing": {
+    "description": "Checkup, an iPhone's item: the image is not mounted; Pinky's reason follows in English."
+  },
+  "checkDiskImageNoCopy": "Mounted, but this computer has no copy of it, so Pinky can't mount it again after the iPhone restarts.",
+  "@checkDiskImageNoCopy": {
+    "description": "Checkup, an iPhone's item: the image is mounted, but this computer has none to mount again after a restart; the steps below say where to get one."
+  },
+  "checkDiskImagePass": "Mounted. Pinky mounts it again by itself after the iPhone restarts.",
+  "@checkDiskImagePass": {
+    "description": "Checkup, an iPhone's item: the image is mounted, and this computer has one to mount again after a restart."
+  },
+  "checkDiskImageTitle": "Developer disk image",
+  "@checkDiskImageTitle": {
+    "description": "Checkup, an iPhone's item: the title of the item about Apple's developer disk image, the add-on that gives the iPhone its developer services."
+  },
+  "checkHelperHow": "How to install it",
+  "@checkHelperHow": {
+    "description": "Checkup, an iPhone's item: the button that opens the instructions for installing the helper."
+  },
+  "checkHelperMissing": "WebDriverAgent isn't installed or doesn't answer. Below iOS 27 an iPhone takes taps and typing only through it; without it Pinky can only read the screen and open apps.",
+  "@checkHelperMissing": {
+    "description": "Checkup, an iPhone's item: the helper is missing or does not answer."
+  },
+  "checkHelperPass": "WebDriverAgent is installed and answers.",
+  "@checkHelperPass": {
+    "description": "Checkup, an iPhone's item: the helper answers."
+  },
+  "checkHelperTitle": "Pinky helper",
+  "@checkHelperTitle": {
+    "description": "Checkup, an iPhone's item: the title of the item about the WebDriverAgent helper, the app Pinky drives iPhones below iOS 27 through."
+  },
   "checkHostADBOld": "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such as an old Android SDK's tools, or update them: Pinky then starts its own.",
   "@checkHostADBOld": {
     "description": "The checkup and Add phone › Android: the adb server that runs is older than Wi-Fi pairing needs."
@@ -859,6 +903,14 @@
   "checkInputFail": "Pinky couldn't send a key to the phone.",
   "@checkInputFail": {
     "description": "The checkup, tapping and typing: failed for another reason; the system's words follow."
+  },
+  "checkInputIPhoneNoHelper": "No taps or typing without the Pinky helper.",
+  "@checkInputIPhoneNoHelper": {
+    "description": "Checkup, an iPhone's item: the input item of an iPhone below iOS 27 without the helper."
+  },
+  "checkInputIPhonePass": "The iPhone's touch and key service answers.",
+  "@checkInputIPhonePass": {
+    "description": "Checkup, an iPhone's item: the input item passed: the phone's input service accepted a connection (Pinky sends no tap to check)."
   },
   "checkInputOppo": "In Developer options, turn on “Disable permission monitoring”, then restart the phone.",
   "@checkInputOppo": {
@@ -931,6 +983,10 @@
   "checkScreenTitle": "Seeing the screen",
   "@checkScreenTitle": {
     "description": "The checkup: the item for screenshots and the live picture."
+  },
+  "checkTrustedPass": "The iPhone trusts this computer.",
+  "@checkTrustedPass": {
+    "description": "Checkup, an iPhone's item: the iPhone trusts this computer (its answer to \"Trust This Computer?\"). The item's title is Add phone's \"Trust this computer\"."
   },
   "checkUSBNotReady": "This computer can't use the phone over USB yet.",
   "@checkUSBNotReady": {

@@ -345,10 +345,15 @@ func TestCheckupHostWords(t *testing.T) {
 	if w.title != locales.CheckADBTitle() || w.text != locales.CheckHostADBOld() || !w.detail {
 		t.Errorf("an old adb: %+v", w)
 	}
-	// Codes of other platforms show their driver's words.
+	// iPhones' codes have their own words (checkup_iphone.go); codes no
+	// client knows show their driver's.
 	w = ta.checkWords(iphone, gateway.CheckupView{}, driver.Check{ID: driver.CheckHost, Status: driver.CheckFail, Fix: "usbmuxd", Detail: "Install usbmuxd."})
-	if w.title != locales.CheckHostTitle() || w.text != "Install usbmuxd." {
+	if w.title != locales.CheckHostTitle() || w.text != locales.AddPhoneIPhoneStepUsbmuxdDetail() {
 		t.Errorf("an iPhone's host: %+v", w)
+	}
+	w = ta.checkWords(iphone, gateway.CheckupView{}, driver.Check{ID: driver.CheckHost, Status: driver.CheckFail, Fix: "something_new", Detail: "Install something."})
+	if w.text != "Install something." {
+		t.Errorf("an unknown host code: %+v", w)
 	}
 	if got := sortedChecks([]driver.Check{{ID: driver.CheckConnection}, {ID: driver.CheckHost}}); got[0].ID != driver.CheckHost {
 		t.Errorf("the host item is not first: %+v", got)

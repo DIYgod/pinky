@@ -383,6 +383,20 @@ Clients reach it through `driver.DiskImageDownloader` (the iOS provider) and the
 
 Every connection to an iPhone goes through usbmuxd. macOS has it built in. Windows gets it with Apple's iPhone driver, from the Apple Devices app (Microsoft Store) or iTunes. Linux gets it from the `usbmuxd` package, whose daemon udev starts while an iPhone is plugged in, so at Pinky's launch it is often not running. Before, Pinky left iPhones out for the whole run when usbmuxd did not answer at launch; now the provider always starts, `List` returns no phones while usbmuxd is missing (once it has listed phones, the first two failures in a row are errors instead, so a hiccup does not drop them from the gateway), and `CheckHost` (`driver.HostChecker`, through the gateway's `HostChecks`) says what is missing: `apple_devices` (Windows), `usbmuxd` (Linux, not installed) or `usbmuxd_stopped` (Linux, installed but not running). `pinkyctl devices` prints it too.
 
+### Checkup
+
+iPhones answer the checkup page (`driver.Checker`, `checkup.go`), reading only: no taps, no keys, no settings, nothing mounted.
+
+| Item | How it is checked | When it fails or warns |
+| --- | --- | --- |
+| `developer_mode` | The image mounter's `QueryDeveloperModeStatus` | Fix `developer_mode` |
+| `disk_image` | What the phone has mounted (cryptexd's list, else the image mounter's), the services the path needs (screen and HID on CoreDevice), and whether this computer has an image to mount again after a restart (`findDiskImage` in Pinky's folder, Xcode's, the download) | Fails with fix `disk_image` when the services are missing; warns with `no_disk_image` when nothing here could mount it again |
+| `helper` | WebDriverAgent's `/status`, on the helper's path; without the helper it fails | Fix `install_helper` |
+| `screen` | A screenshot | Fix `screenshot` |
+| `input` | CoreDevice: the HID service accepts a connection, which is closed again without an event (any event would reach the phone). Without the helper: fails | Fix `install_helper` below iOS 27 |
+
+The gateway puts the connection items first; for an iPhone that is not online, the `authorized` item's fix is its `Setup` step, which the client puts into the same words as Add phone's steps, with a button to them (`ui/checkup_iphone.go`).
+
 ### What ran where
 
 | What | Where | Result |
@@ -391,13 +405,14 @@ Every connection to an iPhone goes through usbmuxd. macOS has it built in. Windo
 | How the phone has its image (`TestDiskImageStatus`, read only) | iPhone 13 mini, iOS 27.0.1 | Developer Mode on, cryptexd offered, one cryptex `com.apple.MobileAsset.DDI` 27.2.52.0 (this Mac's image), no personalized image |
 | Pinky's mount on a phone that has the image (`TestDiskImageMountKeeps`) | The same | Kept as it is in 7 ms: no signing request, no upload, the same cryptex afterwards |
 | Taking the image off and letting the provider mount it again, as after a restart (`TestDiskImageRemount`, with the owner's leave) | iPhone 13 mini, 2026-11-08 | Taking it off worked (3 s). Then every cryptex install (the provider's, its retry and the test's own clean-up) waited until its 3-minute timeout: the phone was locked (Apple's devicectl refused at once, "the device was still locked", and read `passcodeRequired` true). go-ios's install waits for the phone to accept each file before it reads the install's reply, so a refusal makes it wait instead of fail. Afterwards the phone listed 64 services instead of 85: no image at all. Instruments (`dtservicehub`) and `remoteAXService` were still listed because iOS 27 offers them itself: neither is in the image (Xcode 27.2's cryptex and personalized images, attached read only on the Mac, publish `displayservice`, `universalhidservice`, `screencaptureservice`, `pasteboardservice` and `deviceinfo` from `/Library/LaunchDaemons/com.apple.coredevice.*.plist`, and nothing else Pinky uses). So none of Pinky's mounts put anything on the phone, and the personalized try in the background did not either: both images carry the screen and HID daemons. Pinky now checks the lock first and watches it during the mount. The coordinating session put the image back with `devicectl` once the phone was unlocked. Not yet repeated on an unlocked phone |
+| The checkup (`TestCheckupOnPhone`, read only) | iPhone 13 mini, iOS 27.0.1, 2026-11-08, after the image was put back | All four items pass in 1.0 s: Developer Mode on; the image 27.2.52.0 mounted as a cryptex, and Xcode's 27B52 here to mount again after a restart; a 1125×2436 screenshot; the HID service answers (no event sent) |
 | Downloading the mirror's image (`TestDownloadMirrorLive`) | This Mac, from GitHub | 32 MB in 37 s, every file matched its pin, the assembled image read as 27A5228h, cryptex version 27.1.5228.8 |
 | The Developer Mode switch | Not yet | The test phone has Developer Mode on, and turning it off is not allowed |
 | Pairing on Windows; usbmuxd on Windows and Linux | Not yet | Unit tests only |
 | The steps in Add phone | The client's tester, light and dark, English and Chinese | Each step and each stuck case drawn and checked |
 
 ```sh
-PINKY_DEVICE=<udid> scripts/devlock.sh <udid> go test -tags device -count=1 -v -run 'TestDiskImage(Status|MountKeeps)' ./internal/driver/ios/
+PINKY_DEVICE=<udid> scripts/devlock.sh <udid> go test -tags device -count=1 -v -run 'TestDiskImage(Status|MountKeeps)|TestCheckupOnPhone' ./internal/driver/ios/
 # Takes the image off an unlocked phone and lets Pinky mount it again (ask the owner first):
 PINKY_DEVICE=<udid> PINKY_REMOUNT=1 scripts/devlock.sh <udid> go test -tags device -count=1 -v -run TestDiskImageRemount ./internal/driver/ios/
 # Downloads the mirror's image (32 MB) into a temporary folder:

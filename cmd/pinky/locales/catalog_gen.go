@@ -2655,6 +2655,182 @@ func (msgs Messages) CheckConnectionWiFi() string {
 	return Catalog.Format(msgs.locale, "checkConnectionWiFi", nil)
 }
 
+// CheckDeveloperModePass says "On."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: Developer Mode is on.
+func CheckDeveloperModePass() string { return In(i18n.Locale()).CheckDeveloperModePass() }
+
+// CheckDeveloperModePass says "On."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: Developer Mode is on.
+func (msgs Messages) CheckDeveloperModePass() string {
+	return Catalog.Format(msgs.locale, "checkDeveloperModePass", nil)
+}
+
+// CheckDeveloperModeTitle says "Developer Mode"
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the title of the Developer Mode item.
+// Developer Mode is the iPhone's own name for the setting; use the name iOS
+// shows in your language.
+func CheckDeveloperModeTitle() string { return In(i18n.Locale()).CheckDeveloperModeTitle() }
+
+// CheckDeveloperModeTitle says "Developer Mode"
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the title of the Developer Mode item.
+// Developer Mode is the iPhone's own name for the setting; use the name iOS
+// shows in your language.
+func (msgs Messages) CheckDeveloperModeTitle() string {
+	return Catalog.Format(msgs.locale, "checkDeveloperModeTitle", nil)
+}
+
+// CheckDiskImageDownloadNote says "Show the steps to download it from a third-party mirror instead."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: a note under the item when this computer has
+// no developer disk image: Add phone's steps (the button below) offer a
+// download from a third-party mirror.
+func CheckDiskImageDownloadNote() string { return In(i18n.Locale()).CheckDiskImageDownloadNote() }
+
+// CheckDiskImageDownloadNote says "Show the steps to download it from a third-party mirror instead."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: a note under the item when this computer has
+// no developer disk image: Add phone's steps (the button below) offer a
+// download from a third-party mirror.
+func (msgs Messages) CheckDiskImageDownloadNote() string {
+	return Catalog.Format(msgs.locale, "checkDiskImageDownloadNote", nil)
+}
+
+// CheckDiskImageMissing says "Not mounted, so the iPhone doesn't offer what Pinky needs."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the image is not mounted; Pinky's reason
+// follows in English.
+func CheckDiskImageMissing() string { return In(i18n.Locale()).CheckDiskImageMissing() }
+
+// CheckDiskImageMissing says "Not mounted, so the iPhone doesn't offer what Pinky needs."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the image is not mounted; Pinky's reason
+// follows in English.
+func (msgs Messages) CheckDiskImageMissing() string {
+	return Catalog.Format(msgs.locale, "checkDiskImageMissing", nil)
+}
+
+// CheckDiskImageNoCopy says "Mounted, but this computer has no copy of it, so Pinky can't mount it again after the iPhone restarts."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the image is mounted, but this computer has
+// none to mount again after a restart; the steps below say where to get
+// one.
+func CheckDiskImageNoCopy() string { return In(i18n.Locale()).CheckDiskImageNoCopy() }
+
+// CheckDiskImageNoCopy says "Mounted, but this computer has no copy of it, so Pinky can't mount it again after the iPhone restarts."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the image is mounted, but this computer has
+// none to mount again after a restart; the steps below say where to get
+// one.
+func (msgs Messages) CheckDiskImageNoCopy() string {
+	return Catalog.Format(msgs.locale, "checkDiskImageNoCopy", nil)
+}
+
+// CheckDiskImagePass says "Mounted. Pinky mounts it again by itself after the iPhone restarts."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the image is mounted, and this computer has
+// one to mount again after a restart.
+func CheckDiskImagePass() string { return In(i18n.Locale()).CheckDiskImagePass() }
+
+// CheckDiskImagePass says "Mounted. Pinky mounts it again by itself after the iPhone restarts."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the image is mounted, and this computer has
+// one to mount again after a restart.
+func (msgs Messages) CheckDiskImagePass() string {
+	return Catalog.Format(msgs.locale, "checkDiskImagePass", nil)
+}
+
+// CheckDiskImageTitle says "Developer disk image"
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the title of the item about Apple's developer
+// disk image, the add-on that gives the iPhone its developer services.
+func CheckDiskImageTitle() string { return In(i18n.Locale()).CheckDiskImageTitle() }
+
+// CheckDiskImageTitle says "Developer disk image"
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the title of the item about Apple's developer
+// disk image, the add-on that gives the iPhone its developer services.
+func (msgs Messages) CheckDiskImageTitle() string {
+	return Catalog.Format(msgs.locale, "checkDiskImageTitle", nil)
+}
+
+// CheckHelperHow says "How to install it"
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the button that opens the instructions for
+// installing the helper.
+func CheckHelperHow() string { return In(i18n.Locale()).CheckHelperHow() }
+
+// CheckHelperHow says "How to install it"
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the button that opens the instructions for
+// installing the helper.
+func (msgs Messages) CheckHelperHow() string {
+	return Catalog.Format(msgs.locale, "checkHelperHow", nil)
+}
+
+// CheckHelperMissing says "WebDriverAgent isn't installed or doesn't answer. Below iOS 27 an iPhone takes taps and typing only through it; witho…"
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the helper is missing or does not answer.
+func CheckHelperMissing() string { return In(i18n.Locale()).CheckHelperMissing() }
+
+// CheckHelperMissing says "WebDriverAgent isn't installed or doesn't answer. Below iOS 27 an iPhone takes taps and typing only through it; witho…"
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the helper is missing or does not answer.
+func (msgs Messages) CheckHelperMissing() string {
+	return Catalog.Format(msgs.locale, "checkHelperMissing", nil)
+}
+
+// CheckHelperPass says "WebDriverAgent is installed and answers."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the helper answers.
+func CheckHelperPass() string { return In(i18n.Locale()).CheckHelperPass() }
+
+// CheckHelperPass says "WebDriverAgent is installed and answers."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the helper answers.
+func (msgs Messages) CheckHelperPass() string {
+	return Catalog.Format(msgs.locale, "checkHelperPass", nil)
+}
+
+// CheckHelperTitle says "Pinky helper"
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the title of the item about the WebDriverAgent
+// helper, the app Pinky drives iPhones below iOS 27 through.
+func CheckHelperTitle() string { return In(i18n.Locale()).CheckHelperTitle() }
+
+// CheckHelperTitle says "Pinky helper"
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the title of the item about the WebDriverAgent
+// helper, the app Pinky drives iPhones below iOS 27 through.
+func (msgs Messages) CheckHelperTitle() string {
+	return Catalog.Format(msgs.locale, "checkHelperTitle", nil)
+}
+
 // CheckHostADBOld says "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such …"
 // in the language the app shows.
 //
@@ -2749,6 +2925,38 @@ func CheckInputFail() string { return In(i18n.Locale()).CheckInputFail() }
 // words follow.
 func (msgs Messages) CheckInputFail() string {
 	return Catalog.Format(msgs.locale, "checkInputFail", nil)
+}
+
+// CheckInputIPhoneNoHelper says "No taps or typing without the Pinky helper."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the input item of an iPhone below iOS 27
+// without the helper.
+func CheckInputIPhoneNoHelper() string { return In(i18n.Locale()).CheckInputIPhoneNoHelper() }
+
+// CheckInputIPhoneNoHelper says "No taps or typing without the Pinky helper."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the input item of an iPhone below iOS 27
+// without the helper.
+func (msgs Messages) CheckInputIPhoneNoHelper() string {
+	return Catalog.Format(msgs.locale, "checkInputIPhoneNoHelper", nil)
+}
+
+// CheckInputIPhonePass says "The iPhone's touch and key service answers."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the input item passed: the phone's input
+// service accepted a connection (Pinky sends no tap to check).
+func CheckInputIPhonePass() string { return In(i18n.Locale()).CheckInputIPhonePass() }
+
+// CheckInputIPhonePass says "The iPhone's touch and key service answers."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the input item passed: the phone's input
+// service accepted a connection (Pinky sends no tap to check).
+func (msgs Messages) CheckInputIPhonePass() string {
+	return Catalog.Format(msgs.locale, "checkInputIPhonePass", nil)
 }
 
 // CheckInputOppo says "In Developer options, turn on “Disable permission monitoring”, then restart the phone."
@@ -3025,6 +3233,24 @@ func CheckScreenTitle() string { return In(i18n.Locale()).CheckScreenTitle() }
 // The checkup: the item for screenshots and the live picture.
 func (msgs Messages) CheckScreenTitle() string {
 	return Catalog.Format(msgs.locale, "checkScreenTitle", nil)
+}
+
+// CheckTrustedPass says "The iPhone trusts this computer."
+// in the language the app shows.
+//
+// Checkup, an iPhone's item: the iPhone trusts this computer (its answer to
+// "Trust This Computer?"). The item's title is Add phone's "Trust this
+// computer".
+func CheckTrustedPass() string { return In(i18n.Locale()).CheckTrustedPass() }
+
+// CheckTrustedPass says "The iPhone trusts this computer."
+// in the language of msgs.
+//
+// Checkup, an iPhone's item: the iPhone trusts this computer (its answer to
+// "Trust This Computer?"). The item's title is Add phone's "Trust this
+// computer".
+func (msgs Messages) CheckTrustedPass() string {
+	return Catalog.Format(msgs.locale, "checkTrustedPass", nil)
 }
 
 // CheckUSBNotReady says "This computer can't use the phone over USB yet."
