@@ -41,6 +41,8 @@ type WDADevice struct {
 	videoW, videoH int // the stream's picture, for the mirror's touches
 
 	closeOnce sync.Once
+
+	imageDir string // Pinky's folder for developer disk images (checkup.go)
 }
 
 // openWDA connects to a WDA server that is running and reads the screen's

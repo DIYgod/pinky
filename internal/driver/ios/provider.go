@@ -612,6 +612,18 @@ func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 	if info.State != driver.StateOnline {
 		return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
 	}
+	dev, err := p.openBackend(ctx, info)
+	if err != nil {
+		return nil, err
+	}
+	if s, ok := dev.(imageDirSetter); ok {
+		s.setImageDir(p.DiskImageDir) // for the checkup (checkup.go)
+	}
+	return dev, nil
+}
+
+// openBackend opens the phone the way its Info.Backend says.
+func (p *Provider) openBackend(ctx context.Context, info driver.Info) (driver.Device, error) {
 	switch info.Backend {
 	case backendWDA:
 		return p.openWDA(ctx, info)

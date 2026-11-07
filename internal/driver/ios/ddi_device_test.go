@@ -249,3 +249,42 @@ func TestDiskImageRemount(t *testing.T) {
 		t.Fatal("the phone is online but this computer's image is not there")
 	}
 }
+
+// TestCheckupOnPhone opens the phone as the gateway does and runs its
+// checkup, which only reads: Developer Mode, the image, a screenshot and
+// the HID service (no event sent).
+func TestCheckupOnPhone(t *testing.T) {
+	udid := os.Getenv("PINKY_DEVICE")
+	if udid == "" {
+		t.Skip("PINKY_DEVICE not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	p := NewProvider()
+	if _, err := p.List(ctx); err != nil {
+		t.Fatal(err)
+	}
+	dev, err := p.Open(ctx, udid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dev.Close()
+	ck, ok := dev.(driver.Checker)
+	if !ok {
+		t.Fatalf("%T runs no checkup", dev)
+	}
+	start := time.Now()
+	cu, err := ck.Checkup(ctx)
+	t.Logf("checkup (%v): system %q err=%v", time.Since(start), cu.System, err)
+	for _, c := range cu.Checks {
+		t.Logf("  %-15s %-5s fix=%q %s", c.ID, c.Status, c.Fix, c.Detail)
+	}
+	if err != nil || len(cu.Checks) == 0 {
+		t.Fatal("no checkup")
+	}
+	for _, c := range cu.Checks {
+		if c.Status == driver.CheckFail {
+			t.Errorf("%s failed: %s", c.ID, c.Detail)
+		}
+	}
+}

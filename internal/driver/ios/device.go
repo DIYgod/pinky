@@ -69,6 +69,8 @@ type Device struct {
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.
 	preferCapture bool
+
+	imageDir string // Pinky's folder for developer disk images (checkup.go)
 }
 
 // Open connects to a device and starts its video stream and HID session.

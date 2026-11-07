@@ -284,6 +284,16 @@ type DiskImageMirror struct {
 // not the one expected (its size or checksum differs); it is not used.
 var ErrDiskImageMismatch = errors.New("the downloaded file is not the one expected")
 
+// Checkup items and fixes only iPhones have, with the Check* and Fix*
+// names. A failed item's fix can also be a Setup step: SetupDeveloperMode,
+// SetupNoDiskImage.
+const (
+	CheckDeveloperMode = "developer_mode" // Developer Mode is on
+	CheckDiskImage     = "disk_image"     // the developer disk image is mounted, and the computer can mount it again after a restart
+	CheckHelper        = "helper"         // the WebDriverAgent helper answers, where Pinky drives the phone through it
+	FixInstallHelper   = "install_helper" // install the WebDriverAgent helper on the phone
+)
+
 // FileInfo is one entry of the phone's Pinky folder.
 type FileInfo struct {
 	Path    string // slash-separated, relative to the Pinky folder
