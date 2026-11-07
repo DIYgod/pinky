@@ -151,9 +151,15 @@ func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check f
 }
 
 // mountOn mounts img on the phone behind e through a tunnel of its own,
-// once the phone is unlocked.
+// once the phone is unlocked. A mount that ran out of time on a phone that
+// locked meanwhile is reported as the lock, so the person is asked to
+// unlock it.
 func mountOn(ctx context.Context, e goios.DeviceEntry, img diskImage) (mountResult, error) {
-	if locked, err := lockedEntry(ctx, e); err == nil && locked {
+	st, err := phoneStateOf(ctx, e)
+	if err != nil {
+		return mountResult{}, err
+	}
+	if st.locked {
 		return mountResult{}, errPhoneLocked
 	}
 	l, err := dialLinkEntry(ctx, e)
@@ -161,7 +167,13 @@ func mountOn(ctx context.Context, e goios.DeviceEntry, img diskImage) (mountResu
 		return mountResult{}, err
 	}
 	defer l.Close()
-	return mountDiskImage(ctx, l, img)
+	r, err := mountDiskImage(ctx, l, img, st.major)
+	if errors.Is(err, context.DeadlineExceeded) {
+		if now, serr := phoneStateOf(context.Background(), e); serr == nil && now.locked {
+			return r, fmt.Errorf("%w (it locked while the image was being installed)", errPhoneLocked)
+		}
+	}
+	return r, err
 }
 
 // serviceWait is how long waitForServices waits.
@@ -379,11 +391,18 @@ func lastLine(err error) string {
 	return s
 }
 
-// lockedEntry reports whether the phone behind e is locked: lockdown's
-// PasswordProtected, as Device.Locked reads it.
-func lockedEntry(ctx context.Context, e goios.DeviceEntry) (bool, error) {
+// phoneState is what lockdown says before a mount: the iOS version's
+// major number and whether the phone is locked (PasswordProtected, as
+// Device.Locked reads it).
+type phoneState struct {
+	major  int
+	locked bool
+}
+
+// phoneStateOf asks lockdown, in one session.
+func phoneStateOf(ctx context.Context, e goios.DeviceEntry) (phoneState, error) {
 	type result struct {
-		v   bool
+		st  phoneState
 		err error
 	}
 	ch := make(chan result, 1)
@@ -394,7 +413,15 @@ func lockedEntry(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 			return
 		}
 		defer conn.Close()
-		v, err := conn.GetValue("PasswordProtected")
+		var st phoneState
+		v, err := conn.GetValue("ProductVersion")
+		if err != nil {
+			ch <- result{err: err}
+			return
+		}
+		s, _ := v.(string)
+		st.major = parseVersion(s).Major
+		v, err = conn.GetValue("PasswordProtected")
 		if err != nil {
 			ch <- result{err: err}
 			return
@@ -404,14 +431,21 @@ func lockedEntry(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 			ch <- result{err: fmt.Errorf("PasswordProtected is %T", v)}
 			return
 		}
-		ch <- result{v: b}
+		st.locked = b
+		ch <- result{st: st}
 	}()
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	select {
 	case r := <-ch:
-		return r.v, r.err
+		return r.st, r.err
 	case <-ctx.Done():
-		return false, ctx.Err()
+		return phoneState{}, ctx.Err()
 	}
+}
+
+// lockedEntry reports whether the phone behind e is locked.
+func lockedEntry(ctx context.Context, e goios.DeviceEntry) (bool, error) {
+	st, err := phoneStateOf(ctx, e)
+	return st.locked, err
 }

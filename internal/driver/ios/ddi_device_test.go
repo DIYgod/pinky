@@ -102,8 +102,12 @@ func TestDiskImageMountKeeps(t *testing.T) {
 	if ok, err := m.IsImageMounted(img.Dir); err != nil || !ok {
 		t.Skipf("the phone does not have this computer's image (%v, %v); this test only checks that a mounted one is kept", ok, err)
 	}
+	st, err := phoneStateOf(ctx, base)
+	if err != nil {
+		t.Fatal(err)
+	}
 	start := time.Now()
-	r, err := mountDiskImage(ctx, l, img)
+	r, err := mountDiskImage(ctx, l, img, st.major)
 	t.Logf("mountDiskImage (%v): %+v err=%v", time.Since(start), r, err)
 	if err != nil || !r.Already || r.How != mountCryptex || r.Replaced != "" {
 		t.Fatalf("mountDiskImage = %+v, %v; want the image kept as it is", r, err)
@@ -180,7 +184,12 @@ func TestDiskImageRemount(t *testing.T) {
 			return
 		}
 		defer l.Close()
-		r, err := mountDiskImage(ctx, l, img)
+		st, err := phoneStateOf(ctx, base)
+		if err != nil {
+			t.Errorf("putting the image back: %v", err)
+			return
+		}
+		r, err := mountDiskImage(ctx, l, img, st.major)
 		t.Logf("putting the image back directly: %+v err=%v", r, err)
 		if err != nil {
 			t.Errorf("THE PHONE HAS NO DEVELOPER DISK IMAGE: %v. Open Xcode with the iPhone connected (Window > Devices and Simulators) to mount it again.", err)

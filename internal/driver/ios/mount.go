@@ -53,13 +53,34 @@ var errPhoneLocked = errors.New("the iPhone is locked")
 // the install wait rather than fail, so this is what ends it.
 const mountTimeout = 90 * time.Second
 
-// mountDiskImage mounts img on the phone behind l. It installs the image
-// as a cryptex when the phone offers cryptexd and the image has a cryptex
-// identity (Xcode 16 and later), and otherwise mounts it with the image
-// mounter as a personalized image (Xcode 15's way, which iOS 17 and later
-// still take). An image of the same version already on the phone is kept;
-// an older one is replaced; a newer one is left alone (errNewerImageMounted).
-func mountDiskImage(ctx context.Context, l *link, img diskImage) (mountResult, error) {
+// errNoCryptex means the image has no cryptex, which iOS 27 needs: it
+// comes from a Xcode older than 16.
+var errNoCryptex = errors.New("the developer disk image has no cryptex, which iOS 27 and later install")
+
+// mountWay says how a phone on iOS major takes img: iOS 27 and later as a
+// cryptex through cryptexd, as Xcode 27 installs it (the test phone has it
+// so) and as pymobiledevice3 does too; earlier iOS as a personalized image
+// through the image mounter. One way per phone: trying the other after a
+// failure could leave the phone with an image that lacks the services
+// Pinky needs.
+func mountWay(major int, img diskImage, cryptexd bool) (string, error) {
+	if major < minIOS {
+		return mountPersonalized, nil
+	}
+	switch {
+	case img.Version == "":
+		return "", errNoCryptex
+	case !cryptexd:
+		return "", fmt.Errorf("the iPhone does not offer %s", cryptexService)
+	}
+	return mountCryptex, nil
+}
+
+// mountDiskImage mounts img on the phone behind l, which runs iOS major,
+// the way mountWay picks. An image of the same version already on the
+// phone is kept; an older one is replaced; a newer one is left alone
+// (errNewerImageMounted).
+func mountDiskImage(ctx context.Context, l *link, img diskImage, major int) (mountResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, mountTimeout)
 	defer cancel()
 	type result struct {
@@ -70,7 +91,7 @@ func mountDiskImage(ctx context.Context, l *link, img diskImage) (mountResult, e
 	// go-ios takes no context; the call goes on in the background if ctx
 	// ends first, and its connections close with the link.
 	go func() {
-		r, err := mountWith(ctx, l, img)
+		r, err := mountWith(l, img, major)
 		ch <- result{r, err}
 	}()
 	select {
@@ -81,26 +102,15 @@ func mountDiskImage(ctx context.Context, l *link, img diskImage) (mountResult, e
 	}
 }
 
-func mountWith(ctx context.Context, l *link, img diskImage) (mountResult, error) {
-	var errs []error
-	if img.Version != "" && l.has(cryptexService) {
-		r, err := mountAsCryptex(l, img)
-		if err == nil || errors.Is(err, errNewerImageMounted) {
-			return r, err
-		}
-		errs = append(errs, fmt.Errorf("as a cryptex: %w", err))
-		if ctx.Err() != nil {
-			// mountDiskImage gave up on this mount; do not start
-			// another way in the background.
-			return mountResult{}, errors.Join(errs...)
-		}
+func mountWith(l *link, img diskImage, major int) (mountResult, error) {
+	way, err := mountWay(major, img, l.has(cryptexService))
+	if err != nil {
+		return mountResult{}, err
 	}
-	r, err := mountPersonalizedImage(l, img)
-	if err == nil {
-		return r, nil
+	if way == mountCryptex {
+		return mountAsCryptex(l, img)
 	}
-	errs = append(errs, fmt.Errorf("as a personalized image: %w", err))
-	return mountResult{}, errors.Join(errs...)
+	return mountPersonalizedImage(l, img)
 }
 
 // mountAsCryptex installs img through cryptexd, the way CoreDevice does.
@@ -195,6 +205,8 @@ func classifyMountError(err error) mountProblem {
 		return problemNewer
 	case errors.Is(err, errPhoneLocked):
 		return problemLocked
+	case errors.Is(err, errNoCryptex):
+		return problemNotFor
 	}
 	m := strings.ToLower(err.Error())
 	has := func(words ...string) bool {

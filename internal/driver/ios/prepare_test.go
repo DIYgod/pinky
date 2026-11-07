@@ -530,3 +530,30 @@ func TestListWithoutUsbmuxd(t *testing.T) {
 		t.Fatalf("third failure: %v, %v; want no phones", got, err)
 	}
 }
+
+func TestMountWay(t *testing.T) {
+	cryptex := diskImage{Version: "27.2.52.0"}
+	old := diskImage{} // Xcode 15: no cryptex
+	for _, c := range []struct {
+		major    int
+		img      diskImage
+		cryptexd bool
+		want     string
+		err      error
+	}{
+		{27, cryptex, true, mountCryptex, nil},
+		{28, cryptex, true, mountCryptex, nil},
+		{27, old, true, "", errNoCryptex},
+		{27, cryptex, false, "", nil}, // an error, not the other way
+		{26, cryptex, true, mountPersonalized, nil},
+		{18, old, false, mountPersonalized, nil},
+	} {
+		got, err := mountWay(c.major, c.img, c.cryptexd)
+		if got != c.want || (c.err != nil && !errors.Is(err, c.err)) || (c.want == "" && err == nil) {
+			t.Errorf("mountWay(%d, %+v, %v) = %q, %v; want %q", c.major, c.img, c.cryptexd, got, err, c.want)
+		}
+	}
+	if classifyMountError(errNoCryptex) != problemNotFor {
+		t.Error("an image without a cryptex should read as not for this iPhone")
+	}
+}
