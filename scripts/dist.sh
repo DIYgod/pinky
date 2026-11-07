@@ -8,8 +8,10 @@
 #                                     stapled: pinky-<version>-darwin-<arch>.zip
 #                                     (the updater's and Homebrew's) and
 #                                     pinky-<version>-<arch>.dmg
-#   scripts/dist.sh windows <out>     pinky-<version>-windows-amd64.zip (the app's
-#                                     files) and pinky-setup-<version>-amd64.exe
+#   scripts/dist.sh windows <out>     pinky-setup-<version>-amd64.exe (the installer,
+#                                     which the updater opens too) and
+#                                     pinky-<version>-windows-amd64.zip (the app's
+#                                     files, to run it without installing)
 #   scripts/dist.sh linux <out>       pinky-<version>-linux-amd64.tar.gz and the .deb
 #
 # The version is cmd/pinky/mygo.json's, which a release writes into a
@@ -245,9 +247,12 @@ windows() {
 	rm -f "$zip"
 	go run ./scripts/release zip "$zip" "$files"
 	say "$zip"
-	if [ -f "$dir/pinky-setup-$version-amd64.exe" ]; then
-		cp "$dir/pinky-setup-$version-amd64.exe" "$out/"
-		say "$out/pinky-setup-$version-amd64.exe"
+	installer=$dir/pinky-setup-$version-amd64.exe
+	if [ -f "$installer" ]; then
+		cp "$installer" "$out/"
+		say "$out/${installer##*/}"
+	elif [ -z "$skip" ]; then
+		lacking "mygo build made no Windows installer"
 	fi
 }
 

@@ -31,14 +31,15 @@ type Asset struct {
 	Size   int64  `json:"size"`
 }
 
-// archives names the archive of each platform, by version: a zip of the
-// signed, notarized and stapled Pinky.app on macOS (made with ditto), a zip
-// of the app's files on Windows, and the archive `mygo build` makes on
-// Linux, which its install.sh installs.
+// archives names the file of each platform that the updater installs, by
+// version: a zip of the signed, notarized and stapled Pinky.app on macOS
+// (made with ditto), the installer on Windows, which the updater opens and
+// which installs over the installed version, and the archive `mygo build`
+// makes on Linux, which its install.sh installs.
 var archives = []struct{ platform, name string }{
 	{"darwin-arm64", "pinky-%s-darwin-arm64.zip"},
 	{"darwin-amd64", "pinky-%s-darwin-amd64.zip"},
-	{"windows-amd64", "pinky-%s-windows-amd64.zip"},
+	{"windows-amd64", "pinky-setup-%s-amd64.exe"},
 	{"linux-amd64", "pinky-%s-linux-amd64.tar.gz"},
 }
 
@@ -73,20 +74,20 @@ func fileSum(path string) (string, int64, error) {
 }
 
 // BuildManifest returns the manifest of the release of version in dir,
-// which holds every platform's archive.
-func BuildManifest(dir, version, repo, notes string, now time.Time) (*Manifest, error) {
+// which holds every platform's archive. A partial manifest (a dry run's)
+// leaves out the platforms whose archives are missing, and names them.
+func BuildManifest(dir, version, repo, notes string, now time.Time, partial bool) (m *Manifest, missing []string, err error) {
 	v, err := ParseVersion(version)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	m := &Manifest{
+	m = &Manifest{
 		Version: v.String(),
 		Tag:     v.Tag(),
 		Date:    now.UTC().Format(time.RFC3339),
 		Notes:   notes,
 		Assets:  map[string]Asset{},
 	}
-	var missing []string
 	for _, a := range archives {
 		name := fmt.Sprintf(a.name, m.Version)
 		sum, size, err := fileSum(filepath.Join(dir, name))
@@ -95,14 +96,14 @@ func BuildManifest(dir, version, repo, notes string, now time.Time) (*Manifest, 
 			continue
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		m.Assets[a.platform] = Asset{URL: downloadURL(repo, m.Tag, name), SHA256: sum, Size: size}
 	}
-	if len(missing) > 0 {
-		return nil, fmt.Errorf("%s lacks %s", dir, strings.Join(missing, ", "))
+	if len(missing) > 0 && !partial {
+		return nil, missing, fmt.Errorf("%s lacks %s", dir, strings.Join(missing, ", "))
 	}
-	return m, nil
+	return m, missing, nil
 }
 
 // writeJSON writes v to path as indented JSON.

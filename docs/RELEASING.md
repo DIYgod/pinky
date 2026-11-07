@@ -29,8 +29,8 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 | --- | --- |
 | `pinky-<version>-darwin-arm64.zip`, `pinky-<version>-darwin-amd64.zip` | The updater and the Homebrew cask: `Pinky.app`, signed, notarized and stapled, zipped with `ditto -c -k --keepParent` |
 | `pinky-<version>-arm64.dmg`, `pinky-<version>-amd64.dmg` | People on macOS: the disk image, signed, notarized and stapled |
-| `pinky-<version>-windows-amd64.zip` | The updater on Windows: the app's files (`Pinky.exe` and the companion APK), as installed in `%LOCALAPPDATA%\Programs\Pinky` |
-| `pinky-setup-<version>-amd64.exe` | People on Windows: the installer (not signed, so SmartScreen warns) |
+| `pinky-setup-<version>-amd64.exe` | People on Windows, and the updater, which opens it: the installer, which installs over the installed version in `%LOCALAPPDATA%\Programs\Pinky` (not signed, so SmartScreen warns) |
+| `pinky-<version>-windows-amd64.zip` | People who run Pinky without installing it: the app's files (`Pinky.exe` and the companion APK) |
 | `pinky-<version>-linux-amd64.tar.gz` | The updater on Linux and `install.sh` of `mygo build`: `pinky`, its desktop entry and icon, the companion APK |
 | `pinky_<version>_amd64.deb` | People on Debian and Ubuntu |
 | `latest.json` | The updater: the release's manifest, below |
@@ -51,7 +51,7 @@ The Windows and Linux packages do not carry FFmpeg yet, so their live mirror nee
     "darwin-amd64": { "url": "https://github.com/DIYgod/pinky/releases/download/v2026.1107.1/pinky-2026.1107.1-darwin-amd64.zip", "sha256": "…", "size": 17931709 },
     "darwin-arm64": { "url": "…/pinky-2026.1107.1-darwin-arm64.zip", "sha256": "…", "size": 16508868 },
     "linux-amd64": { "url": "…/pinky-2026.1107.1-linux-amd64.tar.gz", "sha256": "…", "size": 14804370 },
-    "windows-amd64": { "url": "…/pinky-2026.1107.1-windows-amd64.zip", "sha256": "…", "size": 15125261 }
+    "windows-amd64": { "url": "…/pinky-setup-2026.1107.1-amd64.exe", "sha256": "…", "size": 14000000 }
   }
 }
 ```
@@ -98,7 +98,7 @@ scripts/release.sh trigger v2026.1107.1   # run the release workflow for a tag a
 scripts/release.sh publish v2026.1107.1   # build and publish a tag from this Mac
 ```
 
-`build` and `publish` check the commit out in a worktree of their own, so nothing uncommitted gets in, and build what the workflow builds into `dist/<version>/`; FFmpeg's builds are kept in `~/Library/Caches/pinky-release`. They sign with the Developer ID in the login keychain and notarize with the notarytool profile `pinky-notary`, so they need no secrets. A dry run leaves out what it cannot make, with a warning: without nasm (`brew install nasm`) the Intel FFmpeg lacks its assembly, and without NSIS (`brew install makensis`) there is no Windows installer. `publish` stops instead, and needs both (or `STRICT=0`, to publish without them).
+`build` and `publish` check the commit out in a worktree of their own, so nothing uncommitted gets in, and build what the workflow builds into `dist/<version>/` (a dry run's `latest.json` leaves out what it could not build); FFmpeg's builds are kept in `~/Library/Caches/pinky-release`. They sign with the Developer ID in the login keychain and notarize with the notarytool profile `pinky-notary`, so they need no secrets. A dry run leaves out what it cannot make, with a warning: without nasm (`brew install nasm`) the Intel FFmpeg lacks its assembly, and without NSIS (`brew install makensis`) there is no Windows installer. `publish` stops instead, and needs both (or `STRICT=0`, to publish without them).
 
 `publish` is for when the workflow cannot run (the secrets are not set up yet, or GitHub Actions is down). It publishes the same release as the workflow.
 

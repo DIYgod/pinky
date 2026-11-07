@@ -384,6 +384,7 @@ func runManifest(args []string) error {
 	file := fs.String("changelog", "", "the changelog (default: CHANGELOG.md of the source)")
 	unreleasedOK := fs.Bool("unreleased", false, "take the Unreleased notes when the version has none (a dry run)")
 	given := fs.String("notes", "", "the notes, in place of CHANGELOG.md's (a dry run)")
+	partial := fs.Bool("partial", false, "leave out the platforms whose archives are missing (a dry run)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -408,9 +409,12 @@ func runManifest(args []string) error {
 			return err
 		}
 	}
-	m, err := BuildManifest(*dir, *version, *repo, notes, time.Now())
+	m, missing, err := BuildManifest(*dir, *version, *repo, notes, time.Now(), *partial)
 	if err != nil {
 		return err
+	}
+	if len(missing) > 0 {
+		fmt.Fprintf(os.Stderr, "release manifest: warning: latest.json leaves out %s, which %s lacks\n", strings.Join(missing, ", "), *dir)
 	}
 	if err := writeJSON(filepath.Join(*dir, "latest.json"), m); err != nil {
 		return err

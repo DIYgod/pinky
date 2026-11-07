@@ -77,11 +77,14 @@ build_release() {
 	"$work/src/scripts/dist.sh" darwin "$out"
 	"$work/src/scripts/dist.sh" windows "$out"
 	"$work/src/scripts/dist.sh" linux "$out"
+	# A dry run's manifest leaves out what the build left out.
+	partial=
+	[ "${STRICT:-0}" = 1 ] || partial=-partial
 	if [ -n "$dryrun" ]; then
-		(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo" -unreleased) ||
-			(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo" -notes "A dry run of $ref, with no notes.")
+		(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo" $partial -unreleased) ||
+			(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo" $partial -notes "A dry run of $ref, with no notes.")
 	else
-		(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo")
+		(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo" $partial)
 	fi
 	if [ "$publishing" = 1 ]; then
 		"$work/src/scripts/publish.sh" "$out"

@@ -185,7 +185,7 @@ func TestManifestAndCask(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 11, 7, 8, 9, 10, 0, time.UTC)
-	m, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky", "- One.", now)
+	m, _, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky", "- One.", now, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,9 +254,13 @@ func TestManifestAndCask(t *testing.T) {
 		t.Error("Cask for another repository than the manifest's URLs: no error")
 	}
 
-	os.Remove(filepath.Join(dir, archiveName("linux-amd64", "2026.1107.1")))
-	if _, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky", "- One.", now); err == nil {
-		t.Error("BuildManifest without the Linux archive: no error")
+	os.Remove(filepath.Join(dir, archiveName("windows-amd64", "2026.1107.1")))
+	if _, _, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky", "- One.", now, false); err == nil {
+		t.Error("BuildManifest without the Windows installer: no error")
+	}
+	m, missing, err := BuildManifest(dir, "2026.1107.1", "DIYgod/pinky", "- One.", now, true)
+	if _, ok := m.Assets["windows-amd64"]; err != nil || ok || len(m.Assets) != 3 || len(missing) != 1 || missing[0] != "pinky-setup-2026.1107.1-amd64.exe" {
+		t.Errorf("partial BuildManifest without the Windows installer = %+v, %v, %v", m, missing, err)
 	}
 }
 
