@@ -131,10 +131,17 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 			b.w, b.h = natW, natH
 		}
 	}
+	// The main display's stream settings: over Wi-Fi, a lower bit rate and
+	// H.265 (see baseOptions).
+	base := d.baseOptions()
+	if opt.MaxFPS == 0 {
+		opt.MaxFPS = int(base.MaxFPS)
+	}
 	sopt := scrcpy.Options{
 		MaxSize:      opt.MaxSize,
 		MaxFPS:       float64(opt.MaxFPS),
-		VideoBitRate: d.cfg.VideoBitRate,
+		VideoBitRate: base.VideoBitRate,
+		VideoCodec:   base.VideoCodec,
 		Virtual: &scrcpy.VirtualDisplay{
 			Width: opt.Width, Height: opt.Height, DPI: opt.DPI,
 			KeepContent:         opt.KeepContent,

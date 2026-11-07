@@ -35,6 +35,7 @@ type Device struct {
 	noVideo   string
 	noVideoAt time.Time
 	videoSeen bool // a session on this device delivered a frame
+	noHEVC    bool // the phone has no working H.265 encoder: use H.264
 
 	dumpMu   sync.Mutex // uiautomator allows one dump at a time
 	dumpFile bool       // this phone cannot dump to /dev/tty
@@ -100,12 +101,36 @@ func (d *Device) Close() error {
 
 // baseOptions are the session options when no stream asked for others.
 func (d *Device) baseOptions() scrcpy.Options {
-	return scrcpy.Options{
+	o := scrcpy.Options{
 		MaxSize:      d.cfg.MaxSize,
 		MaxFPS:       float64(d.cfg.MaxFPS),
 		VideoBitRate: d.cfg.VideoBitRate,
 	}
+	if d.info.Connection == "wifi" {
+		// Wireless debugging carries the stream over TLS: on the Mi 10 Pro
+		// about 5.6 Mbit/s, below scrcpy's 8 Mbps, with 90 ms of jitter, so
+		// the default stream queued up and the mirror lagged. Ask for half
+		// of that, at 30 frames a second, and in H.265, which keeps more
+		// picture in it. The resolution stays: the mirror and the agent's
+		// coordinates are in the phone's pixels.
+		if o.VideoBitRate == 0 {
+			o.VideoBitRate = wifiBitRate
+		}
+		if o.MaxFPS == 0 {
+			o.MaxFPS = wifiMaxFPS
+		}
+		if !d.noHEVC {
+			o.VideoCodec = "h265"
+		}
+	}
+	return o
 }
+
+// The stream over wireless debugging (see baseOptions).
+const (
+	wifiBitRate = 2_500_000
+	wifiMaxFPS  = 30
+)
 
 // session returns the running main-display session, starting one if
 // needed.
@@ -159,6 +184,24 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 	l, err := d.startMain(ctx, opt)
 	if err != nil {
 		return nil, err
+	}
+	if l.video && !d.videoSeen && opt.VideoCodec == "h265" {
+		// Some phones have no H.265 encoder, or one that fails: use H.264.
+		select {
+		case <-l.firstFrame:
+			d.videoSeen = true
+		case <-l.done:
+			d.cfg.logf("android: %s: the H.265 encoder failed (%s); using H.264", d.info.ID, l.videoFailure())
+			d.noHEVC = true
+			opt.VideoCodec = ""
+			if l, err = d.startMain(ctx, opt); err != nil {
+				return nil, err
+			}
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			l.close(ctx.Err())
+			return nil, ctx.Err()
+		}
 	}
 	if l.video && !d.videoSeen {
 		select {
