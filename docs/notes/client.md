@@ -1,13 +1,13 @@
 # Desktop client and video
 
-Status as of 2026-11-07, branch `claude/desktop-client-380250`. The client was built against a scripted fake gateway, then run against the real gateway (`internal/gateway`) on `internal/demo`'s drawn phones with scripted agents; see [Against the real gateway](#against-the-real-gateway). Nothing here touched a real phone.
+Status as of 2026-11-07, branch `claude/desktop-client-380250`. The client was built against a scripted fake gateway, then run against the real gateway (`internal/gateway`) on `internal/demo`'s drawn phones with scripted agents; see [Against the real gateway](#against-the-real-gateway). The third pass added unlocking with a saved PIN, pairing over Wi-Fi, the companion app, background displays, recordings, export, remote agents and keeping the Mac awake; see [Round three](#round-three). Nothing here touched a real phone.
 
 ## What is built
 
 | Path | What it is |
 | --- | --- |
 | `ui/` | The desktop client on MyGo v0.7.4 native UI. Entry point `ui.Run(api gateway.API, opts ui.Options) error`. It uses nothing of the gateway but `gateway.API`. |
-| `ui/fakeapi/` | A scripted `gateway.API`: the prototype's scenarios with ffmpeg test streams for the mirrors. It also has the gateway's extra methods (step screenshots, agents, read-only, deleting history). |
+| `ui/fakeapi/` | A scripted `gateway.API`: the prototype's scenarios with ffmpeg test streams for the mirrors. It also has the gateway's extra methods: step screenshots, agents, read-only, deleting history, and round three's pairing, companion app, background displays, drawn recordings, retention and export. |
 | `ui/demogw/` | The real gateway on `internal/demo`'s phones, with their drawn screens streamed through `video.FrameStream`, and scripted agents that call it as an MCP client would. For `pinky-ui-demo -gateway` and the end-to-end tests. |
 | `internal/video/` | H.264 and HEVC decoding through FFmpeg 9 (libavcodec 63, libavutil 61, libswscale 10) called with purego, VideoToolbox hardware decoding with software fallback, Annex B helpers, a live test stream from the `ffmpeg` command, and a player that decodes on its own goroutine and keeps the newest picture. |
 | `cmd/pinky-ui-demo/` | Runs the client against the fake (`go run ./cmd/pinky-ui-demo`) or the real gateway (`-gateway`), a `bench` subcommand for the video numbers, an `e2e` build tag that links MyGo's automation plugin, and `mygo.json` to package it. |
@@ -16,16 +16,16 @@ Status as of 2026-11-07, branch `claude/desktop-client-380250`. The client was b
 Screens, after prototype v18 (`*.dc.html`):
 
 - **Sidebar.** Logo and name in the header next to the window controls; the phones with a status dot and a plain status line; "All phones" once two or more phones are known; Add phone; Activity, Settings and Stop all (with its shortcut) at the bottom.
-- **Phone.** The live mirror in a phone bezel sized to the window, with the agent's overlay (the target outlined, the touch point with two ripples while a step is in progress), the lock (screen dimmed, "Pixel 9 is locked" pill), the "You're in control" banner with Hand back, the gray ring while the person is in control, and the keys below (Back, Home, Recents on Android; Home on iPhone) and ⋯ (Take screenshot works; Record, Rotate and Background display are shown disabled).
+- **Phone.** The live mirror in a phone bezel sized to the window, with the agent's overlay (the target outlined, the touch point with two ripples while a step is in progress), the lock (screen dimmed, "Pixel 9 is locked" pill), the "You're in control" banner with Hand back, the gray ring while the person is in control, and the keys below (Back, Home, Recents on Android; Home on iPhone) and ⋯ (Take screenshot and Work in the background work; Record and Rotate are shown disabled). While an agent works on a background display, the mirror shows that display, with a switch to the phone's own screen.
 - **All phones.** Live tiles converted at tile size, amber edge on phones that need the person, Take over and Stop on hover, the offline tile; a click selects the phone.
-- **Right panel.** Needs you (approval cards with Deny, Allow and More options: Allow for this task, Always allow *kind* in *app*, Take over, Deny with a note; unlock cards with "Unlock with Touch ID"; handoff cards, where the agent asked the person to do something, with Done, Take over, Decline and Add a note; first-connection cards with what the agent may do, Deny and Approve), then Tasks: the selected phone's task expanded (status, Take over, Stop, title, agent · phone · time, steps with their marks, a click on a step with a screenshot opens it under the step; in Developer mode a Details switch that shows the tool calls), the other phones' tasks one row each.
+- **Right panel.** Needs you (approval cards with Deny, Allow and More options: Allow for this task, Always allow *kind* in *app*, Take over, Deny with a note; unlock cards with "Unlock with Touch ID" once the phone's PIN is saved, or the PIN form, or why it cannot be unlocked from here; handoff cards, where the agent asked the person to do something, with Done, Take over, Decline and Add a note; first-connection cards with what the agent may do, Deny and Approve), then Tasks: the selected phone's task expanded (status, Take over, Stop, title, agent · phone · time, steps with their marks, a click on a step with a screenshot opens it under the step; in Developer mode a Details switch that shows the tool calls), the other phones' tasks one row each. On an Android phone without the companion app, an Install card above Tasks.
 - **Approval panel.** A MyGo panel window (`WindowOptions.Panel`) shown with `ShowInactive`, so it never takes the keyboard. It shows while approvals wait and the main window is not in front, at the top right of the display the pointer is on: time-left bar, "1 of 2" paging, "Denies in 42 s", the eyebrow, title and detail, the screenshot cropped around the target with the target outlined, Deny, Allow and More options, the note editor, and a short "Allowed once" / "Denied" confirmation. After the person clicks it, Return allows and Esc denies.
 - **Menu bar.** A template icon in the macOS menu bar (the color icon in the Windows and Linux trays) with the number of things waiting as its title; a click opens a flyout (Needs you with Review, the phones, Open Pinky, Stop all ⌥⌘.); right click opens a menu. Linux tray icons report no clicks, so there the menu holds "Show Phones…".
 - **Global shortcut.** `CmdOrCtrl+Alt+.` (⌥⌘. on macOS, Ctrl+Alt+. elsewhere) runs Stop all from anywhere.
 - **Notifications.** A system notification for each new need while the main window is not in front; a click opens the approval panel or the phone. macOS shows notifications of packaged apps only, so `go run` skips them.
-- **Activity.** Finished tasks by day with app letter icon, outcome dot (Done, Stopped, Denied) and approval count; the detail with summary, steps with their screenshots as thumbnails (a click opens the screenshot; the person's steps with "Answered in 14 s") and Watch replay (the steps one at a time with their screenshots, Play, Previous and Next, on the step timeline); Export report (HTML) and Export JSON to the Desktop. Search goes to `History` as the person types.
-- **Settings.** Phones, Agents (the gateway's agents with what each may do and Change, and first-connection requests), Safety (the three presets, blocked apps with add and remove, Read-only mode, Unlock from this computer, Hide codes from agents), Privacy and Advanced (Developer mode, backends, the video decoder in use, the rules file).
-- **Add phone.** Which phone → Android: "Looking for your phone…", "Found Pixel 8a, but USB debugging is off" with the three steps and Try again, "Found Pixel 8a" and Done; Pair over Wi-Fi; iPhone with the six-digit code, and the older-iPhone choices. With no phone connected the client opens straight into it.
+- **Activity.** Finished tasks by day with app letter icon, outcome dot (Done, Stopped, Denied) and approval count; the detail with summary, steps with their screenshots as thumbnails (a click opens the screenshot; the person's steps with "Answered in 14 s"); Watch recording (the task's screen recording with a mark per step to jump to) or, without one, Watch replay (the steps one at a time with their screenshots, Play, Previous and Next, on the step timeline); Export… for one task and Export all, as an HTML report and JSON in a folder on the Desktop. Search goes to `History` as the person types.
+- **Settings.** Phones (each phone's saved PIN, Work in the background, its companion app), Agents (the gateway's agents with what each may do and Change, first-connection requests, and Remote agents: HTTP, the address, URL, token and the `claude mcp add` command), Safety (the three presets, blocked apps with add and remove, Read-only mode, Unlock from this computer, Hide codes from agents), Privacy (Keep activity for, Record the screen, Delete all activity) and Advanced (Developer mode, backends, the video decoder in use, the rules file).
+- **Add phone.** Which phone → Android: "Looking for your phone…", "Found Pixel 8a, but USB debugging is off" with the three steps and Try again, "Found Pixel 8a" and Done; Pair over Wi-Fi by QR code or with a pairing code; iPhone with the six-digit code, and the older-iPhone choices. With no phone connected the client opens straight into it.
 - **Closing the window** hides it; the gateway keeps running in the menu bar. Cmd+W hides too.
 
 ## How to run
@@ -40,6 +40,8 @@ go run ./cmd/pinky-ui-demo -theme dark -dev -approval-timeout 10m -speed 2
 go run ./cmd/pinky-ui-demo -scenario three -page settings   # or activity, add-phone
 go run ./cmd/pinky-ui-demo -scenario handoff     # the agent asks you to sign in to Dinely
 go run ./cmd/pinky-ui-demo -scenario agent       # Codex connects for the first time
+go run ./cmd/pinky-ui-demo -scenario companion   # Pixel 9 lacks the companion app: Install
+go run ./cmd/pinky-ui-demo -scenario background  # the agent works on a background display
 go run ./cmd/pinky-ui-demo -gateway              # the real gateway on internal/demo's phones
 go run ./cmd/pinky-ui-demo -gateway -hidden      # starts in the menu bar; the window opens on the first request
 go run ./cmd/pinky-ui-demo -gateway -video=false # demo phones without video, as pinky --fake has them
@@ -47,7 +49,7 @@ go run ./cmd/pinky-ui-demo -gateway -video=false # demo phones without video, as
 
 With `-gateway`, Claude Code connects to Pixel 9 (fake) two seconds after start, which the gateway asks the person to allow, then opens Dinely, reorders lunch, adds a note and asks to pay. Touch the mirror to take over; it waits with `phone_handoff` until Hand back. The Demo menu starts more agents (a sign-in handoff on the iPhone, Codex for another first connection) and locks or unplugs the iPhone. History and screenshots go to a temporary folder deleted on quit.
 
-Needs Homebrew's FFmpeg 9 (`brew install ffmpeg`): the `ffmpeg` command makes the test streams and its libraries decode them. The **Demo** menu switches scenarios, restarts the one playing (⇧⌘R) and plugs in a new phone for Add phone. Approvals deny after 60 s, as designed; `-approval-timeout` lengthens that for a slow walk-through.
+Needs Homebrew's FFmpeg 9 (`brew install ffmpeg`): the `ffmpeg` command makes the test streams and its libraries decode them. The **Demo** menu switches scenarios, restarts the one playing (⇧⌘R), plugs in a new phone for Add phone and has the fake phone scan the pairing QR code (it does by itself after 6 s). PINs saved in the demo stay in memory; its agent token is made up. Approvals deny after 60 s, as designed; `-approval-timeout` lengthens that for a slow walk-through.
 
 A walk-through that covers the brief: start with `-scenario three`; watch the Pixel's steps and ripples; Allow (or More options › Deny with a note) on "Pay $12.80?"; click All phones and a tile; Take over on the iPhone, Hand back; hide the window (⌘W) to see the approval panel; click the menu bar icon; Demo › Locked phone and Unlock with Touch ID; Demo › One phone to see the sidebar without "All phones".
 
@@ -120,15 +122,15 @@ Ways to cut the CPU further, in the order I would try them: ask VideoToolbox for
 
 ## Gaps in gateway.API (for the main session)
 
-None of these block the demo; each is a small additive change when the gateway is ready for it. I did not change `api.go`. The gateway's methods beyond `gateway.API` (`MediaPath`, `Agents`, `SetAgentScope`, `SetReadOnly`, `WipeHistory`) are used through optional interfaces, see below.
+None of these block the demo; each is a small additive change when the gateway is ready for it. I did not change `api.go`. The gateway's methods beyond `gateway.API` (`MediaPath`, `Agents`, `SetAgentScope`, `SetReadOnly`, `WipeHistory`, and round three's in `internal/gateway/extras.go`) are used through optional interfaces, see below. `ui/contract_test.go` fails to compile when one of them stops matching the gateway's signature.
 
 - **Settings.** No methods to read or change the safety preset, blocked apps, unlock, code hiding, retention or recording. The client keeps them (`ui.Options.Settings`) and reports changes through `ui.Options.OnSettings`; `cmd/pinky` persists them.
-- **Pairing.** No way to start Android wireless pairing (the QR code) or iPhone pairing with a code. Add phone watches `Devices` for a new phone, so USB works; the Wi-Fi QR shows a placeholder, and Pair waits for the gateway to report the iPhone.
-- **Unlock.** `Unlock(deviceID)` is called after the person clicks "Unlock with Touch ID"; the client does not run Touch ID itself. If presence should be proven in the client, it needs LocalAuthentication through purego.
+- **Pairing.** Android pairs by QR code or pairing code through the extras (round three). iPhone pairing with a code still has no method: Pair waits for the gateway to report the iPhone.
+- **Unlock.** `Unlock(deviceID)` is called after the person clicks "Unlock with Touch ID"; the gateway asks the keychain for the PIN, which asks for Touch ID. The client only saves and removes PINs.
 - **Rules file path.** `ui.Options.RulesFile` opens it from Settings › Advanced.
-- **Phone controls.** Record screen, Rotate and Background display have no API; they show disabled.
+- **Phone controls.** Record screen (a manual recording) and Rotate have no API; they show disabled.
 - **One task's history.** Activity's per-task Delete stays disabled: the gateway can only wipe all of it.
-- **Recordings.** Watch replay shows step screenshots; there are no screen recordings yet.
+- **Remote agents' state.** The client cannot tell whether the HTTP server listens (a port in use, say); `cmd/pinky` could report it.
 
 ## Against the real gateway
 
@@ -145,7 +147,7 @@ The second pass (2026-11-07) ran the client against `internal/gateway` itself an
 
 **Decisions**
 
-1. **App Nap flags.** The brief asked for `NSActivityUserInitiated | NSActivityLatencyCritical`. `NSActivityUserInitiated` includes `NSActivityIdleSystemSleepDisabled`, so holding it for the app's lifetime would keep the Mac from ever idle-sleeping while Pinky runs, and Pinky lives in the menu bar all day. I used `NSActivityUserInitiatedAllowingIdleSystemSleep | NSActivityLatencyCritical`: App Nap, timer coalescing and background throttling stay off, which is what slowed the streams, and the Mac may still sleep when idle (an agent on the same Mac sleeps with it). It is one constant in `ui/appnap_darwin.go` if the gateway should keep the Mac awake instead; I would do that only while a task runs.
+1. **App Nap flags.** The brief asked for `NSActivityUserInitiated | NSActivityLatencyCritical`. `NSActivityUserInitiated` includes `NSActivityIdleSystemSleepDisabled`, so holding it for the app's lifetime would keep the Mac from ever idle-sleeping while Pinky runs, and Pinky lives in the menu bar all day. I used `NSActivityUserInitiatedAllowingIdleSystemSleep | NSActivityLatencyCritical`: App Nap, timer coalescing and background throttling stay off, which is what slowed the streams, and the Mac may still sleep when idle. Round three adds `NSActivityUserInitiated` while a task runs (round three, item 7).
 2. **The scope chosen for a new agent.** Approve calls `SetAgentScope(name, scope)`, which also approves the agent, and then `Decide(id, AllowOnce, "")`, so the person's choice wins. The gateway's `approveAgent` currently sets `DefaultScope` again when a call that was still waiting picks up the answer; the main session asked the gateway session to keep a scope already set instead. Until that lands on main, a narrower scope chosen in the card can be lost on the first approval; the client does not poll to put it back. `TestGatewayAgentScope` checks the order of the two calls.
 3. **The request's detail.** The gateway's "Allowing gives it everything access." would contradict a narrower choice in the select, so with the select shown the client drops that sentence and adds the time ("Asked at 03:51.").
 4. **A handoff on a locked phone** is one card: the handoff's reason, "Unlock with Touch ID" (which ends the handoff, as decision 11 says), and Decline and Done for after an unlock on the phone. The separate unlock card for that phone is hidden, so two amber cards never ask for one thing.
@@ -157,12 +159,44 @@ The second pass (2026-11-07) ran the client against `internal/gateway` itself an
 
 10. **The mirror's states.** The first picture is taken while the mirror paints, and painting does not build the view again, so the "Connecting…" overlay from the build before it stayed over the live picture until something else changed (an idle iPhone sends no frames while its screen is still). Taking the first picture now asks for a build. A stream that fails shows why ("This phone has no live picture." for `ErrUnsupported`) and is opened again after 3 s (2 s after it ends) on a timer, not on the next build, which an idle window or a locked screen never makes. While it tries again the mirror keeps showing that reason, not the Connecting spinner, so a phone without a picture does not flicker every 3 s. Updates that goroutines post before the main window exists are kept and run once it does, instead of being dropped.
 
-**For `cmd/pinky` (main session)**
+**For `cmd/pinky` (main session)**, done on main since: `Hidden` from `pinky mcp` (`--background`), and demo phones streaming through `video.FrameStream` in `internal/demo`.
 
-- Pass `ui.Options{Hidden: true}` when `pinky mcp` starts the app.
-- `pinky --fake` app mode: `internal/demo.Device.Stream` returns `ErrUnsupported`, so the mirror shows its error. `demogw`'s wrapper (`streamingProvider` in `ui/demogw/demogw.go`) can move into `internal/demo`, or `Device.Stream` can return `video.FrameStream(ctx, d.w, d.h, 12, func() image.Image { img, _ := d.Screenshot(context.Background()); return img })`.
 - With `TrustNewAgents: true` in `--fake` mode the first-connection card never shows; leave it false in app mode if people should see it.
 - Gateway wording seen on the way: the payment approval's title is "Pay: “Place order · $12.80”?" where the prototype says "Pay $12.80?", and the first-connection detail says "everything access".
+
+## Round three
+
+The third pass (2026-11-07) built what the acceptance checklist listed as missing on the client's side, after [round3.md](round3.md). Every new control is backed by a method in `internal/gateway/extras.go` (or `DeviceView.Features`) that the client finds with a type assertion and leaves out when it is missing; the gateway's stubs make the client fall back, as `TestGatewayRound3Fallbacks` checks.
+
+**What changed**
+
+1. **Unlock from this computer.** Settings › Phones has, for each phone whose driver can unlock (`Features.Unlock`), "Unlock from this computer" with Save PIN…: a password field (`Password()`; its state is thrown away after each save so no editor keeps the PIN) that saves with `secret.PINAccount(id)` into `Options.Secrets` (nil is `secret.System()`), then "PIN saved" with Change and Remove. The locked phone's card shows "Unlock with Touch ID" (`api.Unlock`) only when the phone has `Features.Unlock`, its PIN is saved and Unlock from this computer is on. When only the PIN is missing, the card has the same form; otherwise it says why: "Unlock it on the phone.", "…is off in Settings › Safety.", or "Unlocking from this computer is not available on this system." (also in Settings › Safety). Unlock's errors read in words: a wrong PIN (`driver.ErrLocked`), no PIN saved, no keychain, a gateway without unlocking, offline; a cancelled Touch ID (`secret.ErrCancelled`) says nothing. The client never reads a PIN back.
+2. **Pairing.** Add phone › Android › Or pair over Wi-Fi calls `StartPairing`, draws `QR()` with `rsc.io/qr` (BSD, pure Go), its modules snapped to whole pixels with the quiet zone, and waits on `Wait`; leaving the step closes the pairing. On success the client reads the devices and shows the new phone. "Pair with a code instead" takes the IP address and port and the six-digit code for `PairWithCode` (45 s), with errors in words: a wrong code, an address that does not answer, no adb on this computer, a timeout. A gateway that cannot pair says so.
+3. **The companion app.** On an Android phone's page (`Features.Companion`), `CompanionState` is read every 30 s while it shows. Missing, off or outdated puts a card above Tasks: Install, Turn on or Update, why (faster, steadier control, typing without the clipboard), "If the phone asks, allow the install.", and Not now (for the session). Install calls `InstallCompanion` (up to 5 minutes, for the phone's prompt) under an indeterminate progress bar, then reads the state again. Its errors read in words: Play Protect, Xiaomi's Install via USB, a timeout, the phone going offline. Settings › Phones names each phone's companion state.
+4. **Background work.** "Work in the background" per phone (`Features.Background`) in Settings › Phones and in the mirror's ⋯, through `SetBackground`; `Background` is read with the devices. While a task runs on such a phone, the mirror shows `AgentStream`: the agent's display, without input and without the lock, with the agent's outline. A segmented control under it switches to the phone's own screen, which works as before with no outline. When the gateway has no agent display open (`ErrNotFound`: the task began before the switch), the phone's screen shows without the switch, and the client asks again every 3 s. The page header adds "· Claude Code works in the background"; tiles show the agent's display.
+5. **Recordings and history.** Activity asks `Recording(taskID)`. A task with one offers Watch recording: the recording in a phone frame through `recording.Open` (or a fake's `OpenRecording`) and the mirror's decoder, with Play and Pause, a timeline with a mark per step (larger where the person answered; click, or ← and → by 5 s), the time, the steps with their times to jump to, and the step's target outlined for 2 s after its mark. A task without one keeps Watch replay with the screenshots, which ⋯ also offers for recorded tasks. ⋯ › Export… and Export all call `ExportHistory` into a new folder on the Desktop and show the report in the Finder; a gateway without it, or with the stub's `ErrUnsupported`, gets the client's own `report.html` and `tasks.json`. Keep activity for (7, 30, 90 days, 1 year, Forever) and Record the screen are saved through `OnSettings` as before, and the client passes them to `SetRetention` and `SetRecording` at start (off the main thread) and on each change.
+6. **Remote agents.** Settings › Agents › Remote agents: "Let agents connect over HTTP" (`Settings.RemoteAgents`), the address (`RemoteAddr`, checked: a port from 1 to 65535 and an IP address of this computer or localhost, with a warning when other computers can reach it), the URL `http://<address>/mcp` (`ui.RemoteURL`), the agent token (`Options.AgentToken`, dots until Show) and `claude mcp add --transport http pinky <URL> --header "Authorization: Bearer <token>"`, each with Copy.
+7. **The Mac awake while tasks run.** While any task runs (working, waiting or paused), `ui/appnap_darwin.go` holds `NSActivityUserInitiated | NSActivityLatencyCritical`, named "Pinky: an agent task is running": no idle system sleep, while the display may sleep. It ends with the last task, and on quit. The lifetime activity that keeps App Nap off still allows idle sleep. `TestKeepMacAwake` checks both with `pmset -g assertions`. Other systems do nothing yet.
+8. **fakeapi and the demo.** The fake implements every extra: features per phone, pairing (a Pixel 8a over Wi-Fi; the code is scanned after 6 s, or from Demo › Scan the Pairing QR Code; code 000000 is wrong and port 1 refuses), the companion app (scenario `companion`), background displays (scenario `background`; the agent's display is SMPTE bars), recordings drawn per step with the step's number and the time in seven-segment figures (the boarding pass task has none), retention, recording on and off, and export. `pinky-ui-demo` keeps PINs in a `secret.Memory` and shows a made-up token.
+
+**Decisions**
+
+1. **Where the PIN is saved.** In Settings › Phones and on the locked phone's card, the same form, at least four characters. The mirror's lock has no Unlock button of its own: inside the mirror's input handler it took clicks unreliably, and it repeated the card.
+2. **Is there a keychain?** A store with a `Supported() bool` method is asked. Otherwise `Delete` of `pin:` (no phone has an empty id) failing with `secret.ErrUnsupported` means there is none; it never asks the person anything. The platform session could add `Supported` to the stores.
+3. **Where exports go.** A new folder on the Desktop per export ("Pinky activity 2026-11-07 at 09.30.12"), shown in the Finder, as screenshots go to the Desktop. No save dialog, which a locked screen could not test either.
+4. **The agent's display is for watching.** Input there would reach the phone's own screen, so the keys are disabled with a tooltip and touches are not taken; the person switches to the phone's screen to use the phone.
+5. **A recording's position** comes from the frames' PTS, which `recording.Open` is expected to count from the recording's start, as `RecordingMark.At` does. A stream that counts from where it opened (its first PTS far below the start asked for) is offset.
+6. **Record and Keep activity reach the gateway from the client**, through `SetRecording` and `SetRetention`, so they apply whether or not `cmd/pinky` passes them too; the calls agree.
+7. **The agent token comes from `Options.AgentToken`**: the client reads no files of the gateway's.
+8. **The companion card** sits above Tasks in the neutral panel color, not amber and not in Needs you: nothing waits on it.
+
+**For the gateway session (`cmd/pinky`)**
+
+- Pass `ui.Options.AgentToken` (`api.EnsureToken(dirs.TokenFile())`), and serve MCP at `ui.RemoteURL(settings.RemoteAddr)` (path `ui.RemotePath`, `/mcp`) while `RemoteAgents` is on; `OnSettings` reports changes to either. `Options.Secrets` can stay nil.
+- `recording.Open`: PTS from the recording's start, and `io.EOF` at its end.
+- `Unlock`: wrap `secret.ErrCancelled`, `secret.ErrNotFound` and `driver.ErrLocked` with `%w`, so the client's words apply.
+- Background tasks and the person: when the person takes over, or a handoff is open, the mirror shows the phone's own screen, and `Touch`, `Key` and `Text` go there as always. A handoff that needs the person on the agent's display (signing in inside the app it works in) has no way to send input there yet.
+- `pinky --fake` runs the real gateway on `internal/demo`'s phones, which have none of the optional drivers, so these controls stay hidden there until the demo phones gain fakes of them; `pinky-ui-demo` shows them all on `fakeapi`.
 
 ## Brand colors, and keeping amber and red apart
 
@@ -206,7 +240,11 @@ The trade-off: amber now leans orange and red leans vermilion, so amber and red 
 - The panel's Return and Esc work only after the person clicked it, by design.
 - Windows and Linux builds compile but were not run; D3D11VA and VA-API decoding are untested.
 - FFmpeg 9 only; other major versions are refused rather than supported with other offsets.
-- Approving a new agent with a narrower scope can lose it on the first approval until the gateway keeps a scope set before the answer (decision 2 above).
+- Approving a new agent with a narrower scope can lose it on the first approval until the gateway keeps a scope set before the answer (decision 2 above); 79d1c2a on main fixed this in the gateway.
+- Recordings, export, retention and background displays are stubs in the gateway, so against it the client shows its fallbacks; the player and the agent's display were checked on the fake only (the player through the real decoder).
+- The keychain probe (round three, decision 2) deletes `pin:` until the stores say whether they are supported.
+- Keeping the computer awake while tasks run is macOS only.
+- Durations ("38 s", "1 min 02 s") are joined with no-break spaces, so a task card's "Claude Code · sdk_gphone64_arm64 · 38 s" moves "38 s" to the next line together instead of leaving the "s" alone. MyGo honors them (`TestDurationsDoNotWrap`), except that a no-break run wider than its whole box still breaks inside, as browsers do.
 - With `-hidden`, the first request opens the main window and, because that window is not focused, the floating panel as well.
 - `video.FrameStream` costs a full-size RGBA copy and an x264 encode per frame; it is for demo phones only.
 - **Automation with the screen locked is unreliable, by MyGo's design rather than the client's.** While the screen is locked a window counts as occluded and MyGo holds its frames (`engine.holdFrame`). In a 15-second run the main window was built twice, once at start and once on the first capture; a press (`act`), a pointer click (`input`), pointer moves and later captures built nothing. A press only bumps the button's click count, which the next build consumes, so it is lost until a build happens to come along, and which presses "work" depends on timing, not on the card: Approve, Allow and the sidebar's Activity were lost the same way. The floating panel is built once when it is made (hidden, nothing waiting) and never again while the screen is locked, so its capture is an empty card with an empty tree. `ui.Tester` builds every frame and is the way to test these flows (`TestGateway*`, `TestApprovePaymentWithRealGateway`); a MyGo fix would have automation's `act` and `input` build a frame for occluded windows.
@@ -240,5 +278,22 @@ The same flow was clicked through in the real app over the automation socket wit
 | Handoff in the floating panel | `handoff-panel-light.png` | `handoff-panel-dark.png` |
 | Settings › Agents, changing a scope | `settings-agents-light.png` | `settings-agents-dark.png` |
 | Activity with step screenshots | `activity-shots-light.png` | `activity-shots-dark.png` |
+
+Round three's screens, drawn by `ui.Tester` on the fake (`PINKY_SCREENSHOTS=dir go test ./ui -run TestRound3Screenshots`; the mirrors show stills of the test source and of a demo phone's app):
+
+| Screen | Light | Dark |
+| --- | --- | --- |
+| Pair over Wi-Fi, QR code | `pair-qr-light.png` | `pair-qr-dark.png` |
+| Pair with a code, wrong code | `pair-code-light.png` | `pair-code-dark.png` |
+| Install Pinky Companion | `companion-light.png` | `companion-dark.png` |
+| The agent's screen in the mirror | `background-light.png` | `background-dark.png` |
+| Locked phone, saving its PIN | `unlock-pin-light.png` | `unlock-pin-dark.png` |
+| Locked phone, Unlock with Touch ID | `unlock-touch-id-light.png` | `unlock-touch-id-dark.png` |
+| Settings › Phones | `settings-phones-light.png` | `settings-phones-dark.png` |
+| Settings › Agents › Remote agents | `settings-remote-light.png` | `settings-remote-dark.png` |
+| Settings › Privacy | `settings-privacy-light.png` | `settings-privacy-dark.png` |
+| Recording player | `recording-light.png` | `recording-dark.png` |
+
+Round three's tests (`ui/round3_test.go`, `ui/recording_test.go`, `ui/appnap_darwin_test.go`, `ui/fakeapi/round3_test.go`, and `TestGatewayRound3Fallbacks`): a PIN saved on the card, never shown, used to unlock and removed in Settings; a short PIN refused; no keychain; the QR code drawn module by module as `rsc.io/qr` encodes it and the paired phone shown; a pairing code after a bad address, a wrong code and a refused port; the companion card through Install and Not now; the background switch; the agent's screen with its switch and the fallback without one; recordings offered or not, jumping to a step's mark, and a recording played through the real decoder, jumping to a step's picture (checked by its color), pausing and going on from there; export through the gateway, without it and with its stub; Record and Keep activity applied; remote agents' switch, Copy, Show and the address check; the Mac awake while a task runs, and the assertion seen by `pmset`; the real gateway's fallbacks.
 
 The `ui` tests run the views in `ui.Tester` against the fake: approving, denying with a note, taking over and handing back, the lock card, one and three phones, All phones, the offline phone, Activity, Settings, Developer mode's details, Add phone with a new phone plugged in, the approval panel's paging and Esc, the flyout's Stop all, and mirror input (touch mapping, Back, Enter, Chinese text, wheel to swipe).

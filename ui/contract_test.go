@@ -1,0 +1,41 @@
+package ui
+
+import (
+	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/ui/fakeapi"
+)
+
+// The client finds the gateway's extras with type assertions, which fail
+// without a word when a signature drifts: SetReadOnly gained an error
+// result once and read-only mode silently stopped reaching the gateway.
+// These assignments fail to compile instead.
+var (
+	_ mediaPather        = (*gateway.Gateway)(nil)
+	_ agentLister        = (*gateway.Gateway)(nil)
+	_ agentScoper        = (*gateway.Gateway)(nil)
+	_ readOnlySetter     = (*gateway.Gateway)(nil)
+	_ historyWiper       = (*gateway.Gateway)(nil)
+	_ pairer             = (*gateway.Gateway)(nil)
+	_ companionInstaller = (*gateway.Gateway)(nil)
+	_ backgroundSetter   = (*gateway.Gateway)(nil)
+	_ agentStreamer      = (*gateway.Gateway)(nil)
+	_ recordingFinder    = (*gateway.Gateway)(nil)
+	_ recordingSetter    = (*gateway.Gateway)(nil)
+	_ retentionSetter    = (*gateway.Gateway)(nil)
+	_ historyExporter    = (*gateway.Gateway)(nil)
+
+	_ mediaPather        = (*fakeapi.API)(nil)
+	_ agentLister        = (*fakeapi.API)(nil)
+	_ agentScoper        = (*fakeapi.API)(nil)
+	_ readOnlySetter     = (*fakeapi.API)(nil)
+	_ historyWiper       = (*fakeapi.API)(nil)
+	_ pairer             = (*fakeapi.API)(nil)
+	_ companionInstaller = (*fakeapi.API)(nil)
+	_ backgroundSetter   = (*fakeapi.API)(nil)
+	_ agentStreamer      = (*fakeapi.API)(nil)
+	_ recordingFinder    = (*fakeapi.API)(nil)
+	_ recordingSetter    = (*fakeapi.API)(nil)
+	_ retentionSetter    = (*fakeapi.API)(nil)
+	_ historyExporter    = (*fakeapi.API)(nil)
+	_ recordingPlayer    = (*fakeapi.API)(nil)
+)

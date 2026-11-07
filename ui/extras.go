@@ -14,6 +14,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
 
@@ -35,6 +36,41 @@ type (
 	}
 	historyWiper interface {
 		WipeHistory(ctx context.Context) error
+	}
+
+	// Round three: pairing, the companion app, background displays,
+	// recordings, retention and export.
+	pairer interface {
+		StartPairing(ctx context.Context) (driver.Pairing, error)
+		PairWithCode(ctx context.Context, addr, code string) (driver.Info, error)
+	}
+	companionInstaller interface {
+		CompanionState(ctx context.Context, deviceID string) (driver.CompanionState, error)
+		InstallCompanion(ctx context.Context, deviceID string) error
+	}
+	backgroundSetter interface {
+		SetBackground(deviceID string, on bool) error
+		Background(deviceID string) bool
+	}
+	agentStreamer interface {
+		AgentStream(ctx context.Context, deviceID string, opt driver.StreamOptions) (driver.Stream, error)
+	}
+	recordingFinder interface {
+		Recording(ctx context.Context, taskID string) (gateway.RecordingView, error)
+	}
+	recordingSetter interface {
+		SetRecording(on bool)
+	}
+	retentionSetter interface {
+		SetRetention(days int)
+	}
+	historyExporter interface {
+		ExportHistory(ctx context.Context, taskIDs []string, dir string) (string, error)
+	}
+	// recordingPlayer plays a recording without a file, as fakes do; the
+	// client plays the others' files with recording.Open.
+	recordingPlayer interface {
+		OpenRecording(ctx context.Context, rec gateway.RecordingView, from time.Duration) (driver.Stream, error)
 	}
 )
 

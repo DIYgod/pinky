@@ -103,7 +103,13 @@ func appColor(name string) string {
 	return appColors[h.Sum32()%uint32(len(appColors))]
 }
 
-// elapsed formats a duration as the prototype does: "38 s", "1 min 02 s".
+// nbsp is a no-break space: a line never breaks at it, so a number stays
+// with its unit ("38 s", not "38" at the end of one line and "s" on the
+// next).
+const nbsp = "\u00a0"
+
+// elapsed formats a duration as the prototype does: "38 s", "1 min 02 s",
+// joined with no-break spaces so it never wraps.
 func elapsed(d time.Duration) string {
 	if d < 0 {
 		d = 0
@@ -111,11 +117,11 @@ func elapsed(d time.Duration) string {
 	s := int(d.Round(time.Second) / time.Second)
 	switch {
 	case s < 60:
-		return fmt.Sprintf("%d s", s)
+		return fmt.Sprintf("%d"+nbsp+"s", s)
 	case s < 3600:
-		return fmt.Sprintf("%d min %02d s", s/60, s%60)
+		return fmt.Sprintf("%d"+nbsp+"min"+nbsp+"%02d"+nbsp+"s", s/60, s%60)
 	}
-	return fmt.Sprintf("%d h %02d min", s/3600, s%3600/60)
+	return fmt.Sprintf("%d"+nbsp+"h"+nbsp+"%02d"+nbsp+"min", s/3600, s%3600/60)
 }
 
 // clock formats a duration as a player shows it: "1:48".

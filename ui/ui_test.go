@@ -12,6 +12,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
 
@@ -30,9 +31,15 @@ func newTestApp(t *testing.T, s fakeapi.Scenario) *testApp {
 
 func newTestAppTimeout(t *testing.T, s fakeapi.Scenario, timeout time.Duration) *testApp {
 	t.Helper()
-	api := fakeapi.New(fakeapi.Options{Scenario: s, Speed: 50, ApprovalTimeout: timeout})
+	return newTestAppWith(t, fakeapi.Options{Scenario: s, Speed: 50, ApprovalTimeout: timeout})
+}
+
+func newTestAppWith(t *testing.T, opt fakeapi.Options) *testApp {
+	t.Helper()
+	api := fakeapi.New(opt)
 	ta := &testApp{api: api}
 	ta.app = newApp(api, Options{NoTray: true, Shortcut: "-"})
+	testHooks(t, ta.app)
 	ta.app.videoErr = errors.New("no video in tests") // mirrors show their error instead of streaming
 	ta.app.postHook = func(fn func()) {
 		ta.mu.Lock()
@@ -41,6 +48,19 @@ func newTestAppTimeout(t *testing.T, s fakeapi.Scenario, timeout time.Duration) 
 	}
 	t.Cleanup(ta.app.end)
 	return ta
+}
+
+// testHooks keeps a test's client off the computer: no keychain (PINs go
+// to a Memory store), no power assertions, and exports in a temporary
+// folder.
+func testHooks(t *testing.T, a *app) {
+	if a.opt.Secrets == nil {
+		a.opt.Secrets = &secret.Memory{}
+	}
+	a.awake = func(bool) {}
+	dir := t.TempDir()
+	a.exportTo = func() (string, error) { return dir, nil }
+	a.reveal = func(string) {}
 }
 
 // sync reads the fake's views, as the event loop would, and runs what was
@@ -55,6 +75,7 @@ func (ta *testApp) sync() {
 	}
 	ta.devices, ta.tasks = ta.api.Devices(), ta.api.Tasks()
 	ta.setNeeds(ta.api.Needs())
+	ta.setBackgrounds(ta.readBackground(ta.devices))
 	first := !ta.loaded
 	ta.loaded = true
 	ta.afterRefresh(first)
@@ -164,7 +185,12 @@ func TestTakeOverAndHandBack(t *testing.T) {
 
 func TestLockedCard(t *testing.T) {
 	ta := newTestApp(t, fakeapi.Locked)
-	ta.waitFor(t, "the unlock card", func() bool { return len(ta.needs) == 1 && ta.needs[0].Kind == gateway.NeedUnlock })
+	if err := ta.opt.Secrets.Save(secret.PINAccount("pixel-9"), "2468"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the unlock card", func() bool {
+		return len(ta.needs) == 1 && ta.needs[0].Kind == gateway.NeedUnlock && ta.pin.ready
+	})
 	tt := mg.NewTester(ta.view, 1280, 820)
 	label, keep := unlockWords()
 	for _, want := range []string{"Pixel 9 is locked", "Claude Code is waiting to reply to Sam.", label, "or unlock it on the phone", keep, "Locked"} {

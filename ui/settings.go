@@ -112,8 +112,19 @@ func settingsTitle(c *mg.Context, title, desc string) {
 }
 
 // toggleRow is a setting row with a switch; clicking its words toggles
-// it too, as a form's field label does. It reports a change.
+// it too, as a form's field label does. It reports a change, which it
+// saves with the settings.
 func (a *app) toggleRow(c *mg.Context, key, title, desc string, last bool, on *bool) bool {
+	changed := a.toggleRowFor(c, key, title, desc, last, on)
+	if changed {
+		a.changed()
+	}
+	return changed
+}
+
+// toggleRowFor is toggleRow for a choice the gateway keeps rather than the
+// settings file.
+func (a *app) toggleRowFor(c *mg.Context, key, title, desc string, last bool, on *bool) bool {
 	p := pal(c)
 	changed := false
 	r := mg.Row(c.Key(key)).Gap(16).Padding(10, 0).AlignItems(mg.Center)
@@ -136,9 +147,6 @@ func (a *app) toggleRow(c *mg.Context, key, title, desc string, last bool, on *b
 			changed = true
 		}
 	})
-	if changed {
-		a.changed()
-	}
 	return changed
 }
 
@@ -253,12 +261,16 @@ func (a *app) settingsSafety(c *mg.Context) {
 			}
 		}
 		_, keep := unlockWords()
-		desc := "Save your phone PIN in the Keychain; unlock with Touch ID"
+		desc := "Save your phone PIN in the Keychain; unlock with Touch ID. Save each phone's PIN in Settings › Phones."
 		if runtime.GOOS != "darwin" {
 			desc = strings.TrimSuffix(strings.TrimPrefix(keep, "Your PIN stays in "), ". Agents never see it.")
 			desc = "Save your phone PIN in " + desc
 		}
-		a.toggleRow(c, "unlock", "Unlock from this computer", desc, false, &st.UnlockFromComputer)
+		if a.pin.ready && !a.pin.supported {
+			settingRow(c, "Unlock from this computer", notAvailableHere, false, nil)
+		} else {
+			a.toggleRow(c, "unlock", "Unlock from this computer", desc, false, &st.UnlockFromComputer)
+		}
 		a.toggleRow(c, "codes", "Hide codes from agents", "Passwords and one-time codes are blurred before an agent sees the screen", true, &st.HideCodes)
 	})
 }
@@ -284,21 +296,47 @@ func (a *app) settingsPhones(c *mg.Context) {
 		}
 		for i, d := range a.devices {
 			d := d
-			settingRow(c.Key(d.Info.ID), d.Info.Name, osLine(d), i == len(a.devices)-1, func() {
-				mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
-					word := "Connected"
-					switch {
-					case d.Status == gateway.DeviceOffline:
-						hollowDot(c)
-						word = "Offline"
-					case d.Info.State != driver.StateOnline:
-						dot(c, p.amberDot, false)
-						word = "Needs setup"
-					default:
-						dot(c, p.green, false)
-					}
-					mg.Text(c, word).FontSize(13).TextColor(p.ink2)
+			last := i == len(a.devices)-1
+			box := mg.Column(c.Key(d.Info.ID)).Padding(10, 0).Gap(4).Label(d.Info.Name)
+			if !last {
+				box.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
+			}
+			box.Children(func() {
+				mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+						mg.Text(c, d.Info.Name).FontWeight(600)
+						line := osLine(d)
+						if cl := companionLine(a.companionFor(d)); cl != "" {
+							line += " · " + cl
+						}
+						mg.Text(c, line).FontSize(13.5).TextColor(p.ink2)
+					})
+					mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
+						word := "Connected"
+						switch {
+						case d.Status == gateway.DeviceOffline:
+							hollowDot(c)
+							word = "Offline"
+						case d.Info.State != driver.StateOnline:
+							dot(c, p.amberDot, false)
+							word = "Needs setup"
+						default:
+							dot(c, p.green, false)
+						}
+						mg.Text(c, word).FontSize(13).TextColor(p.ink2)
+					})
 				})
+				// Unlocking from this computer: the phone's PIN. A saved one
+				// can be removed even with unlocking turned off.
+				if a.pin.saved[d.Info.ID] || (d.Features.Unlock && a.settings.UnlockFromComputer) {
+					mg.Column(c).Gap(6).Padding(6, 0, 0, 0).Children(func() {
+						mg.Text(c, "Unlock from this computer").FontSize(13.5).FontWeight(600)
+						a.pinForm(c, d, "settings")
+					})
+				}
+				if d.Features.Background {
+					a.backgroundRow(c, d, true)
+				}
 			})
 		}
 	})
@@ -546,6 +584,31 @@ func (a *app) settingsAgents(c *mg.Context) {
 	if !canList {
 		mg.Text(c, "This gateway does not list its agents; these are the ones seen in tasks.").FontSize(12.5).TextColor(p.ink3)
 	}
+	a.remoteAgents(c)
+}
+
+// keepChoices are the retention limits Settings offers, with the current
+// one when it is something else (from the settings file).
+func keepChoices(cur int) []int {
+	out := []int{7, 30, 90, 365, 0}
+	for _, d := range out {
+		if d == cur {
+			return out
+		}
+	}
+	return append([]int{cur}, out...)
+}
+
+func keepLabel(days int) string {
+	switch {
+	case days <= 0:
+		return "Forever"
+	case days == 1:
+		return "1 day"
+	case days == 365:
+		return "1 year"
+	}
+	return fmt.Sprintf("%d days", days)
 }
 
 func (a *app) settingsPrivacy(c *mg.Context) {
@@ -553,14 +616,32 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 	st := &a.settings
 	settingsTitle(c, "Privacy", "Activity and recordings stay on this computer.")
 	mg.Column(c).Label("Privacy").Children(func() {
-		settingRow(c, "Keep activity for", "Older tasks are deleted automatically", false, func() {
-			days := fmt.Sprintf("%d days", st.KeepDays)
-			if mg.Select(c.Key("keep"), &days, []string{"7 days", "30 days", "90 days"}).Label("Keep activity for").Changed() {
-				fmt.Sscanf(days, "%d", &st.KeepDays)
+		settingRow(c, "Keep activity for", "Older tasks, their screenshots and recordings are deleted automatically", false, func() {
+			choices := keepChoices(st.KeepDays)
+			labels := make([]string, len(choices))
+			for i, d := range choices {
+				labels[i] = keepLabel(d)
+			}
+			cur := keepLabel(st.KeepDays)
+			if mg.Select(c.Key("keep"), &cur, labels).Label("Keep activity for").Changed() {
+				for i, l := range labels {
+					if l == cur {
+						st.KeepDays = choices[i]
+					}
+				}
 				a.changed()
+				if rs, ok := a.api.(retentionSetter); ok {
+					days := st.KeepDays
+					go rs.SetRetention(days)
+				}
 			}
 		})
-		a.toggleRow(c, "rec", "Record the screen during tasks", "Used for replays in Activity", false, &st.Record)
+		if a.toggleRow(c, "rec", "Record the screen during tasks", "Used for replays in Activity. Recording pauses while a blocked app is open.", false, &st.Record) {
+			if rs, ok := a.api.(recordingSetter); ok {
+				on := st.Record
+				go rs.SetRecording(on)
+			}
+		}
 		settingRow(c, "Delete all activity", "Removes every task, step and recording", true, func() {
 			b := button(c, "Delete…", btnOpt{})
 			if _, ok := a.api.(historyWiper); !ok {
@@ -624,7 +705,11 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 				backends += "."
 			}
 			settingRow(c, "Backends", backends, false, nil)
-			settingRow(c, "Agent connection", "MCP over stdio: pinky mcp", false, nil)
+			conn := "MCP over stdio: pinky mcp"
+			if st.RemoteAgents {
+				conn += "; Streamable HTTP at " + RemoteURL(st.RemoteAddr)
+			}
+			settingRow(c, "Agent connection", conn, false, nil)
 			if v := videoLine(a); v != "" {
 				settingRow(c, "Video", v, false, nil)
 			}

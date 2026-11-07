@@ -16,6 +16,7 @@ require (
 	gvisor.dev/gvisor v0.0.0-20240405191320-0878b34101b5
 	howett.net/plist v1.0.1
 	modernc.org/sqlite v1.61.1
+	rsc.io/qr v0.2.0
 )
 
 require (

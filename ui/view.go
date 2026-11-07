@@ -38,6 +38,14 @@ func (a *app) view(c *mg.Context) {
 		})
 	})
 	a.sweepMirrors()
+	// A QR pairing lasts while its step shows, and a recording plays while
+	// Activity does.
+	if (a.page != pageAddPhone || a.add.step != "qr" || a.add.pair.form) && a.add.pair.cancel != nil {
+		a.stopPairing()
+	}
+	if a.page != pageActivity && a.rec.pl != nil {
+		a.closeRecording()
+	}
 	// The panel shows approvals the page cannot: sync it after a page
 	// change, once this build is done.
 	if a.page != a.panelPage && a.main != nil {

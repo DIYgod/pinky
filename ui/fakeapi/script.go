@@ -238,7 +238,7 @@ func (r *run) ask(s askSpec) (dec decision, ok bool) {
 		st.Tool, st.Args = "", ""
 		switch {
 		case timedOut:
-			st.Text = fmt.Sprintf("No answer in %d s, so Pinky said no: %s", int(a.opt.ApprovalTimeout.Seconds()), s.denied)
+			st.Text = fmt.Sprintf("No answer in %d\u00a0s, so Pinky said no: %s", int(a.opt.ApprovalTimeout.Seconds()), s.denied)
 			st.Status = "approval_denied"
 		case dec.d == gateway.Deny:
 			st.Text, st.Status = "You denied: "+s.denied, "user"
