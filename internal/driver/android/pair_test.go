@@ -122,7 +122,8 @@ func (f *fakeADB) handle(c net.Conn) {
 	switch {
 	case req == "host:mdns:check":
 		if f.noMDNS {
-			fail("mdns daemon unavailable")
+			// As a real server started with ADB_MDNS=0.
+			reply("ERROR: mdns discovery disabled")
 			return
 		}
 		reply("mdns daemon version [adb discovery 0.0.0]")
