@@ -28,7 +28,7 @@ make app                                   # build/pinky/darwin-<arch>/Pinky.app
 open build/pinky/darwin-arm64/Pinky.app
 ```
 
-Or install a release: `brew install --cask diygod/tap/pinky` on macOS, which also puts the `pinky` command on the `PATH` (`claude mcp add pinky -- pinky mcp`), or a download of [the latest release](https://github.com/DIYgod/pinky/releases/latest) for macOS, Windows or Linux.
+Or install a release: `brew install --cask diygod/tap/pinky` on macOS, which also puts the `pinky` command on the `PATH` (`claude mcp add pinky -- pinky mcp`), or a download of [the latest release](https://github.com/DIYgod/pinky/releases/latest) for macOS, Windows or Linux. Homebrew's coreutils has a `pinky` command of its own, and the cask leaves it in place: if `pinky --version` says GNU coreutils, use the app's path instead, `claude mcp add pinky -- /Applications/Pinky.app/Contents/MacOS/Pinky mcp`.
 
 Then connect your agent. For Claude Code:
 

@@ -358,3 +358,76 @@ func TestSlowViewerSkipsToAKeyFrame(t *testing.T) {
 		recv(t, slow)
 	}
 }
+
+// A viewer that joins while no key frame is kept (an iPhone sends one only
+// when asked, and the pictures since the last one may have outgrown
+// maxGOPBytes) asks the phone for one instead of waiting forever.
+func TestLateViewerAsksForAKeyFrame(t *testing.T) {
+	ctx := context.Background()
+	v := newVideoDev("pixel")
+	g := newVideoGateway(t, v)
+	pkts := testPackets(t)
+	a, err := g.Stream(ctx, "pixel", driver.StreamOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	src := v.open(t)
+	// The configuration, then pictures without their key frame.
+	src.send(pkts[0])
+	for _, p := range pkts[2:5] {
+		src.send(p)
+	}
+	for i := 0; i < 4; i++ {
+		recv(t, a)
+	}
+	before := src.keyRequests()
+	b, err := g.Stream(ctx, "pixel", driver.StreamOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	for deadline := time.Now().Add(3 * time.Second); src.keyRequests() == before; time.Sleep(time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatal("a late viewer with no key frame to start from did not ask the phone for one")
+		}
+	}
+	if p := recv(t, b); !p.Config {
+		t.Fatal("the late viewer's first packet is not the configuration")
+	}
+}
+
+// A late viewer that gets the pictures since the last key frame does not
+// ask for another.
+func TestLateViewerWithAKeyFrameDoesNotAsk(t *testing.T) {
+	ctx := context.Background()
+	v := newVideoDev("pixel")
+	g := newVideoGateway(t, v)
+	pkts := testPackets(t)
+	a, err := g.Stream(ctx, "pixel", driver.StreamOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	src := v.open(t)
+	for _, p := range pkts[:5] {
+		src.send(p)
+	}
+	for i := 0; i < 5; i++ {
+		recv(t, a)
+	}
+	before := src.keyRequests()
+	b, err := g.Stream(ctx, "pixel", driver.StreamOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	recv(t, b)
+	if p := recv(t, b); !p.KeyFrame {
+		t.Fatal("the late viewer did not start from the kept key frame")
+	}
+	time.Sleep(20 * time.Millisecond)
+	if n := src.keyRequests(); n != before {
+		t.Fatalf("%d key frame requests for a viewer that had one", n-before)
+	}
+}

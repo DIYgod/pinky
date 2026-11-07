@@ -10,6 +10,8 @@ Claude Code:
 claude mcp add pinky -- pinky mcp
 ```
 
+On a Mac with Homebrew's coreutils, `pinky` on the `PATH` may be coreutils' own `pinky` (`pinky --version` says GNU coreutils; Claude Code then reports "Connection closed"). Use the app's path: `claude mcp add pinky -- /Applications/Pinky.app/Contents/MacOS/Pinky mcp`.
+
 Any client that takes a JSON config:
 
 ```json
