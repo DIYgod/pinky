@@ -1615,6 +1615,50 @@ func (msgs Messages) CompanionUpdateTitle() string {
 	return Catalog.Format(msgs.locale, "companionUpdateTitle", nil)
 }
 
+// CompanionUpdatingHint says "Agents can use the phone again in a few seconds."
+// in the language the app shows.
+//
+// Under the companion card's progress bar while it updates.
+func CompanionUpdatingHint() string { return In(i18n.Locale()).CompanionUpdatingHint() }
+
+// CompanionUpdatingHint says "Agents can use the phone again in a few seconds."
+// in the language of msgs.
+//
+// Under the companion card's progress bar while it updates.
+func (msgs Messages) CompanionUpdatingHint() string {
+	return Catalog.Format(msgs.locale, "companionUpdatingHint", nil)
+}
+
+// CompanionUpdatingLabel says "Updating"
+// in the language the app shows.
+//
+// The accessibility label of the companion card's progress bar while it
+// updates.
+func CompanionUpdatingLabel() string { return In(i18n.Locale()).CompanionUpdatingLabel() }
+
+// CompanionUpdatingLabel says "Updating"
+// in the language of msgs.
+//
+// The accessibility label of the companion card's progress bar while it
+// updates.
+func (msgs Messages) CompanionUpdatingLabel() string {
+	return Catalog.Format(msgs.locale, "companionUpdatingLabel", nil)
+}
+
+// CompanionUpdatingTitle says "Updating Pinky Companion"
+// in the language the app shows.
+//
+// The companion card's title while Pinky updates the app by itself.
+func CompanionUpdatingTitle() string { return In(i18n.Locale()).CompanionUpdatingTitle() }
+
+// CompanionUpdatingTitle says "Updating Pinky Companion"
+// in the language of msgs.
+//
+// The companion card's title while Pinky updates the app by itself.
+func (msgs Messages) CompanionUpdatingTitle() string {
+	return Catalog.Format(msgs.locale, "companionUpdatingTitle", nil)
+}
+
 // ConnectionOffline says "{platform} · offline"
 // in the language the app shows.
 //
@@ -11005,4 +11049,1354 @@ func UnlockPitchWindows() string { return In(i18n.Locale()).UnlockPitchWindows()
 // button Save PIN…. The card is in a narrow side panel.
 func (msgs Messages) UnlockPitchWindows() string {
 	return Catalog.Format(msgs.locale, "unlockPitchWindows", nil)
+}
+
+// UpdateActionLabel says "{action} Pinky {version}"
+// in the language the app shows.
+//
+// The accessibility label of the update card's main button: its label, then
+// the version.
+func UpdateActionLabel(action string, version string) string {
+	return In(i18n.Locale()).UpdateActionLabel(action, version)
+}
+
+// UpdateActionLabel says "{action} Pinky {version}"
+// in the language of msgs.
+//
+// The accessibility label of the update card's main button: its label, then
+// the version.
+func (msgs Messages) UpdateActionLabel(action string, version string) string {
+	return Catalog.Format(msgs.locale, "updateActionLabel", map[string]any{"action": action, "version": version})
+}
+
+// UpdateAgoDay says "on {day, date, ::MMMd}"
+// in the language the app shows.
+//
+// Inside updateLineUpToDate: checked a day or more ago.
+func UpdateAgoDay(day time.Time) string { return In(i18n.Locale()).UpdateAgoDay(day) }
+
+// UpdateAgoDay says "on {day, date, ::MMMd}"
+// in the language of msgs.
+//
+// Inside updateLineUpToDate: checked a day or more ago.
+func (msgs Messages) UpdateAgoDay(day time.Time) string {
+	return Catalog.Format(msgs.locale, "updateAgoDay", map[string]any{"day": day})
+}
+
+// UpdateAgoHours says "{count, plural, one {an hour ago} other {# hours ago}}"
+// in the language the app shows.
+//
+// Inside updateLineUpToDate: how long ago in hours.
+func UpdateAgoHours(count int) string { return In(i18n.Locale()).UpdateAgoHours(count) }
+
+// UpdateAgoHours says "{count, plural, one {an hour ago} other {# hours ago}}"
+// in the language of msgs.
+//
+// Inside updateLineUpToDate: how long ago in hours.
+func (msgs Messages) UpdateAgoHours(count int) string {
+	return Catalog.Format(msgs.locale, "updateAgoHours", map[string]any{"count": count})
+}
+
+// UpdateAgoMinutes says "{count, plural, one {a minute ago} other {# minutes ago}}"
+// in the language the app shows.
+//
+// Inside updateLineUpToDate: how long ago in minutes.
+func UpdateAgoMinutes(count int) string { return In(i18n.Locale()).UpdateAgoMinutes(count) }
+
+// UpdateAgoMinutes says "{count, plural, one {a minute ago} other {# minutes ago}}"
+// in the language of msgs.
+//
+// Inside updateLineUpToDate: how long ago in minutes.
+func (msgs Messages) UpdateAgoMinutes(count int) string {
+	return Catalog.Format(msgs.locale, "updateAgoMinutes", map[string]any{"count": count})
+}
+
+// UpdateAgoNow says "just now"
+// in the language the app shows.
+//
+// Inside updateLineUpToDate: checked less than a minute ago.
+func UpdateAgoNow() string { return In(i18n.Locale()).UpdateAgoNow() }
+
+// UpdateAgoNow says "just now"
+// in the language of msgs.
+//
+// Inside updateLineUpToDate: checked less than a minute ago.
+func (msgs Messages) UpdateAgoNow() string {
+	return Catalog.Format(msgs.locale, "updateAgoNow", nil)
+}
+
+// UpdateAvailable says "Pinky {version} is available"
+// in the language the app shows.
+//
+// The update card's title when a newer version is out.
+func UpdateAvailable(version string) string { return In(i18n.Locale()).UpdateAvailable(version) }
+
+// UpdateAvailable says "Pinky {version} is available"
+// in the language of msgs.
+//
+// The update card's title when a newer version is out.
+func (msgs Messages) UpdateAvailable(version string) string {
+	return Catalog.Format(msgs.locale, "updateAvailable", map[string]any{"version": version})
+}
+
+// UpdateBusyControl says "you control {phone}"
+// in the language the app shows.
+//
+// What a restart for an update would stop: the person's control of a phone.
+func UpdateBusyControl(phone string) string { return In(i18n.Locale()).UpdateBusyControl(phone) }
+
+// UpdateBusyControl says "you control {phone}"
+// in the language of msgs.
+//
+// What a restart for an update would stop: the person's control of a phone.
+func (msgs Messages) UpdateBusyControl(phone string) string {
+	return Catalog.Format(msgs.locale, "updateBusyControl", map[string]any{"phone": phone})
+}
+
+// UpdateBusyInstalling says "installing Pinky Companion on {phone}"
+// in the language the app shows.
+//
+// What a restart for an update would stop: installing the companion app.
+func UpdateBusyInstalling(phone string) string { return In(i18n.Locale()).UpdateBusyInstalling(phone) }
+
+// UpdateBusyInstalling says "installing Pinky Companion on {phone}"
+// in the language of msgs.
+//
+// What a restart for an update would stop: installing the companion app.
+func (msgs Messages) UpdateBusyInstalling(phone string) string {
+	return Catalog.Format(msgs.locale, "updateBusyInstalling", map[string]any{"phone": phone})
+}
+
+// UpdateBusyPairing says "pairing a phone"
+// in the language the app shows.
+//
+// What a restart for an update would stop: pairing a phone over Wi-Fi.
+func UpdateBusyPairing() string { return In(i18n.Locale()).UpdateBusyPairing() }
+
+// UpdateBusyPairing says "pairing a phone"
+// in the language of msgs.
+//
+// What a restart for an update would stop: pairing a phone over Wi-Fi.
+func (msgs Messages) UpdateBusyPairing() string {
+	return Catalog.Format(msgs.locale, "updateBusyPairing", nil)
+}
+
+// UpdateBusyRecording says "playing a recording"
+// in the language the app shows.
+//
+// What a restart for an update would stop: a recording playing in Activity.
+func UpdateBusyRecording() string { return In(i18n.Locale()).UpdateBusyRecording() }
+
+// UpdateBusyRecording says "playing a recording"
+// in the language of msgs.
+//
+// What a restart for an update would stop: a recording playing in Activity.
+func (msgs Messages) UpdateBusyRecording() string {
+	return Catalog.Format(msgs.locale, "updateBusyRecording", nil)
+}
+
+// UpdateBusyUnlocking says "unlocking {phone}"
+// in the language the app shows.
+//
+// What a restart for an update would stop, in the list of
+// updateConfirmBusy: unlocking a phone.
+func UpdateBusyUnlocking(phone string) string { return In(i18n.Locale()).UpdateBusyUnlocking(phone) }
+
+// UpdateBusyUnlocking says "unlocking {phone}"
+// in the language of msgs.
+//
+// What a restart for an update would stop, in the list of
+// updateConfirmBusy: unlocking a phone.
+func (msgs Messages) UpdateBusyUnlocking(phone string) string {
+	return Catalog.Format(msgs.locale, "updateBusyUnlocking", map[string]any{"phone": phone})
+}
+
+// UpdateBusyUpdating says "updating Pinky Companion on {phone}"
+// in the language the app shows.
+//
+// What a restart for an update would stop: updating the companion app.
+func UpdateBusyUpdating(phone string) string { return In(i18n.Locale()).UpdateBusyUpdating(phone) }
+
+// UpdateBusyUpdating says "updating Pinky Companion on {phone}"
+// in the language of msgs.
+//
+// What a restart for an update would stop: updating the companion app.
+func (msgs Messages) UpdateBusyUpdating(phone string) string {
+	return Catalog.Format(msgs.locale, "updateBusyUpdating", map[string]any{"phone": phone})
+}
+
+// UpdateCancel says "Cancel"
+// in the language the app shows.
+//
+// The update card's button that stops the download.
+func UpdateCancel() string { return In(i18n.Locale()).UpdateCancel() }
+
+// UpdateCancel says "Cancel"
+// in the language of msgs.
+//
+// The update card's button that stops the download.
+func (msgs Messages) UpdateCancel() string {
+	return Catalog.Format(msgs.locale, "updateCancel", nil)
+}
+
+// UpdateCardLabel says "Update"
+// in the language the app shows.
+//
+// The accessibility label of the sidebar card that offers a new version.
+func UpdateCardLabel() string { return In(i18n.Locale()).UpdateCardLabel() }
+
+// UpdateCardLabel says "Update"
+// in the language of msgs.
+//
+// The accessibility label of the sidebar card that offers a new version.
+func (msgs Messages) UpdateCardLabel() string {
+	return Catalog.Format(msgs.locale, "updateCardLabel", nil)
+}
+
+// UpdateCheckFailed says "Couldn't check for updates: {detail}"
+// in the language the app shows.
+//
+// Settings › Advanced › Updates after Check now failed; detail is
+// updateErrNetwork and the like, or the error in English.
+func UpdateCheckFailed(detail string) string { return In(i18n.Locale()).UpdateCheckFailed(detail) }
+
+// UpdateCheckFailed says "Couldn't check for updates: {detail}"
+// in the language of msgs.
+//
+// Settings › Advanced › Updates after Check now failed; detail is
+// updateErrNetwork and the like, or the error in English.
+func (msgs Messages) UpdateCheckFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "updateCheckFailed", map[string]any{"detail": detail})
+}
+
+// UpdateCheckNow says "Check now"
+// in the language the app shows.
+//
+// Settings › Advanced › Updates: the button that checks for a newer
+// version.
+func UpdateCheckNow() string { return In(i18n.Locale()).UpdateCheckNow() }
+
+// UpdateCheckNow says "Check now"
+// in the language of msgs.
+//
+// Settings › Advanced › Updates: the button that checks for a newer
+// version.
+func (msgs Messages) UpdateCheckNow() string {
+	return Catalog.Format(msgs.locale, "updateCheckNow", nil)
+}
+
+// UpdateClose says "Close"
+// in the language the app shows.
+//
+// The button that closes the release notes and What's new.
+func UpdateClose() string { return In(i18n.Locale()).UpdateClose() }
+
+// UpdateClose says "Close"
+// in the language of msgs.
+//
+// The button that closes the release notes and What's new.
+func (msgs Messages) UpdateClose() string {
+	return Catalog.Format(msgs.locale, "updateClose", nil)
+}
+
+// UpdateCompanionAuto says "Pinky updates it by itself when the phone is free."
+// in the language the app shows.
+//
+// The companion card when an update is out and automatic updates are on.
+func UpdateCompanionAuto() string { return In(i18n.Locale()).UpdateCompanionAuto() }
+
+// UpdateCompanionAuto says "Pinky updates it by itself when the phone is free."
+// in the language of msgs.
+//
+// The companion card when an update is out and automatic updates are on.
+func (msgs Messages) UpdateCompanionAuto() string {
+	return Catalog.Format(msgs.locale, "updateCompanionAuto", nil)
+}
+
+// UpdateCompanionNeedsYou says "The phone asks before apps are installed over USB, so this update needs you."
+// in the language the app shows.
+//
+// The companion card: the phone asks the person before installs, so Pinky
+// cannot update it by itself.
+func UpdateCompanionNeedsYou() string { return In(i18n.Locale()).UpdateCompanionNeedsYou() }
+
+// UpdateCompanionNeedsYou says "The phone asks before apps are installed over USB, so this update needs you."
+// in the language of msgs.
+//
+// The companion card: the phone asks the person before installs, so Pinky
+// cannot update it by itself.
+func (msgs Messages) UpdateCompanionNeedsYou() string {
+	return Catalog.Format(msgs.locale, "updateCompanionNeedsYou", nil)
+}
+
+// UpdateCompanionToast says "Updated Pinky Companion on {phone}"
+// in the language the app shows.
+//
+// A toast after Pinky updated the companion app on a phone by itself.
+func UpdateCompanionToast(phone string) string { return In(i18n.Locale()).UpdateCompanionToast(phone) }
+
+// UpdateCompanionToast says "Updated Pinky Companion on {phone}"
+// in the language of msgs.
+//
+// A toast after Pinky updated the companion app on a phone by itself.
+func (msgs Messages) UpdateCompanionToast(phone string) string {
+	return Catalog.Format(msgs.locale, "updateCompanionToast", map[string]any{"phone": phone})
+}
+
+// UpdateConfirmBusy says "This stops {list}."
+// in the language the app shows.
+//
+// Follows updateConfirmMessage: what else stops; list is
+// updateBusyUnlocking and the like, joined with listSeparator.
+func UpdateConfirmBusy(list string) string { return In(i18n.Locale()).UpdateConfirmBusy(list) }
+
+// UpdateConfirmBusy says "This stops {list}."
+// in the language of msgs.
+//
+// Follows updateConfirmMessage: what else stops; list is
+// updateBusyUnlocking and the like, joined with listSeparator.
+func (msgs Messages) UpdateConfirmBusy(list string) string {
+	return Catalog.Format(msgs.locale, "updateConfirmBusy", map[string]any{"list": list})
+}
+
+// UpdateConfirmMessage says "Pinky restarts to update."
+// in the language the app shows.
+//
+// The dialog's message, followed by updateConfirmTask or updateConfirmBusy.
+func UpdateConfirmMessage() string { return In(i18n.Locale()).UpdateConfirmMessage() }
+
+// UpdateConfirmMessage says "Pinky restarts to update."
+// in the language of msgs.
+//
+// The dialog's message, followed by updateConfirmTask or updateConfirmBusy.
+func (msgs Messages) UpdateConfirmMessage() string {
+	return Catalog.Format(msgs.locale, "updateConfirmMessage", nil)
+}
+
+// UpdateConfirmTask says "The agent task that runs now stops."
+// in the language the app shows.
+//
+// Follows updateConfirmMessage when an agent task runs.
+func UpdateConfirmTask() string { return In(i18n.Locale()).UpdateConfirmTask() }
+
+// UpdateConfirmTask says "The agent task that runs now stops."
+// in the language of msgs.
+//
+// Follows updateConfirmMessage when an agent task runs.
+func (msgs Messages) UpdateConfirmTask() string {
+	return Catalog.Format(msgs.locale, "updateConfirmTask", nil)
+}
+
+// UpdateConfirmTitle says "Update Pinky now?"
+// in the language the app shows.
+//
+// The title of the dialog that asks before an update stops something.
+func UpdateConfirmTitle() string { return In(i18n.Locale()).UpdateConfirmTitle() }
+
+// UpdateConfirmTitle says "Update Pinky now?"
+// in the language of msgs.
+//
+// The title of the dialog that asks before an update stops something.
+func (msgs Messages) UpdateConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "updateConfirmTitle", nil)
+}
+
+// UpdateCopiedCommand says "Copied {command}"
+// in the language the app shows.
+//
+// A toast after copying the update command.
+func UpdateCopiedCommand(command string) string {
+	return In(i18n.Locale()).UpdateCopiedCommand(command)
+}
+
+// UpdateCopiedCommand says "Copied {command}"
+// in the language of msgs.
+//
+// A toast after copying the update command.
+func (msgs Messages) UpdateCopiedCommand(command string) string {
+	return Catalog.Format(msgs.locale, "updateCopiedCommand", map[string]any{"command": command})
+}
+
+// UpdateCopy says "Copy"
+// in the language the app shows.
+//
+// The tooltip of the button that copies the update command.
+func UpdateCopy() string { return In(i18n.Locale()).UpdateCopy() }
+
+// UpdateCopy says "Copy"
+// in the language of msgs.
+//
+// The tooltip of the button that copies the update command.
+func (msgs Messages) UpdateCopy() string {
+	return Catalog.Format(msgs.locale, "updateCopy", nil)
+}
+
+// UpdateCopyCommandLabel says "Copy the command"
+// in the language the app shows.
+//
+// The accessibility label of the button that copies the package manager's
+// update command.
+func UpdateCopyCommandLabel() string { return In(i18n.Locale()).UpdateCopyCommandLabel() }
+
+// UpdateCopyCommandLabel says "Copy the command"
+// in the language of msgs.
+//
+// The accessibility label of the button that copies the package manager's
+// update command.
+func (msgs Messages) UpdateCopyCommandLabel() string {
+	return Catalog.Format(msgs.locale, "updateCopyCommandLabel", nil)
+}
+
+// UpdateDevBuild says "This is a development build, which doesn't update itself."
+// in the language the app shows.
+//
+// Settings › Advanced › Updates after Check now, in a development
+// build.
+func UpdateDevBuild() string { return In(i18n.Locale()).UpdateDevBuild() }
+
+// UpdateDevBuild says "This is a development build, which doesn't update itself."
+// in the language of msgs.
+//
+// Settings › Advanced › Updates after Check now, in a development
+// build.
+func (msgs Messages) UpdateDevBuild() string {
+	return Catalog.Format(msgs.locale, "updateDevBuild", nil)
+}
+
+// UpdateDownload says "Download"
+// in the language the app shows.
+//
+// The update card's button where Pinky cannot replace itself: download the
+// new version.
+func UpdateDownload() string { return In(i18n.Locale()).UpdateDownload() }
+
+// UpdateDownload says "Download"
+// in the language of msgs.
+//
+// The update card's button where Pinky cannot replace itself: download the
+// new version.
+func (msgs Messages) UpdateDownload() string {
+	return Catalog.Format(msgs.locale, "updateDownload", nil)
+}
+
+// UpdateDownloadInstall says "Download and install"
+// in the language the app shows.
+//
+// The update card's button where an installer replaces Pinky (Windows).
+func UpdateDownloadInstall() string { return In(i18n.Locale()).UpdateDownloadInstall() }
+
+// UpdateDownloadInstall says "Download and install"
+// in the language of msgs.
+//
+// The update card's button where an installer replaces Pinky (Windows).
+func (msgs Messages) UpdateDownloadInstall() string {
+	return Catalog.Format(msgs.locale, "updateDownloadInstall", nil)
+}
+
+// UpdateDownloadLabel says "Download"
+// in the language the app shows.
+//
+// The accessibility label of the update card's progress bar.
+func UpdateDownloadLabel() string { return In(i18n.Locale()).UpdateDownloadLabel() }
+
+// UpdateDownloadLabel says "Download"
+// in the language of msgs.
+//
+// The accessibility label of the update card's progress bar.
+func (msgs Messages) UpdateDownloadLabel() string {
+	return Catalog.Format(msgs.locale, "updateDownloadLabel", nil)
+}
+
+// UpdateDownloadedHint says "Downloaded. Open it to install."
+// in the language the app shows.
+//
+// The update card once the new version was downloaded for the person to
+// install.
+func UpdateDownloadedHint() string { return In(i18n.Locale()).UpdateDownloadedHint() }
+
+// UpdateDownloadedHint says "Downloaded. Open it to install."
+// in the language of msgs.
+//
+// The update card once the new version was downloaded for the person to
+// install.
+func (msgs Messages) UpdateDownloadedHint() string {
+	return Catalog.Format(msgs.locale, "updateDownloadedHint", nil)
+}
+
+// UpdateDownloadedToast says "Downloaded Pinky {version}"
+// in the language the app shows.
+//
+// A toast when a new version was downloaded for the person to install.
+func UpdateDownloadedToast(version string) string {
+	return In(i18n.Locale()).UpdateDownloadedToast(version)
+}
+
+// UpdateDownloadedToast says "Downloaded Pinky {version}"
+// in the language of msgs.
+//
+// A toast when a new version was downloaded for the person to install.
+func (msgs Messages) UpdateDownloadedToast(version string) string {
+	return Catalog.Format(msgs.locale, "updateDownloadedToast", map[string]any{"version": version})
+}
+
+// UpdateDownloading says "Downloading Pinky {version}"
+// in the language the app shows.
+//
+// The update card's title while the new version downloads.
+func UpdateDownloading(version string) string { return In(i18n.Locale()).UpdateDownloading(version) }
+
+// UpdateDownloading says "Downloading Pinky {version}"
+// in the language of msgs.
+//
+// The update card's title while the new version downloads.
+func (msgs Messages) UpdateDownloading(version string) string {
+	return Catalog.Format(msgs.locale, "updateDownloading", map[string]any{"version": version})
+}
+
+// UpdateErrChecksum says "The download was damaged. Try again."
+// in the language the app shows.
+//
+// Why an update failed: the downloaded file did not match.
+func UpdateErrChecksum() string { return In(i18n.Locale()).UpdateErrChecksum() }
+
+// UpdateErrChecksum says "The download was damaged. Try again."
+// in the language of msgs.
+//
+// Why an update failed: the downloaded file did not match.
+func (msgs Messages) UpdateErrChecksum() string {
+	return Catalog.Format(msgs.locale, "updateErrChecksum", nil)
+}
+
+// UpdateErrNetwork says "Couldn't reach the update server. Check the connection and try again."
+// in the language the app shows.
+//
+// Why an update or a check failed: no connection.
+func UpdateErrNetwork() string { return In(i18n.Locale()).UpdateErrNetwork() }
+
+// UpdateErrNetwork says "Couldn't reach the update server. Check the connection and try again."
+// in the language of msgs.
+//
+// Why an update or a check failed: no connection.
+func (msgs Messages) UpdateErrNetwork() string {
+	return Catalog.Format(msgs.locale, "updateErrNetwork", nil)
+}
+
+// UpdateErrNoAsset says "There's no build of this version for this computer yet."
+// in the language the app shows.
+//
+// Why an update failed: the release has no file for this system.
+func UpdateErrNoAsset() string { return In(i18n.Locale()).UpdateErrNoAsset() }
+
+// UpdateErrNoAsset says "There's no build of this version for this computer yet."
+// in the language of msgs.
+//
+// Why an update failed: the release has no file for this system.
+func (msgs Messages) UpdateErrNoAsset() string {
+	return Catalog.Format(msgs.locale, "updateErrNoAsset", nil)
+}
+
+// UpdateErrSignature says "The update isn't signed by Pinky's developer, so Pinky didn't install it."
+// in the language the app shows.
+//
+// Why an update failed: its signature did not check.
+func UpdateErrSignature() string { return In(i18n.Locale()).UpdateErrSignature() }
+
+// UpdateErrSignature says "The update isn't signed by Pinky's developer, so Pinky didn't install it."
+// in the language of msgs.
+//
+// Why an update failed: its signature did not check.
+func (msgs Messages) UpdateErrSignature() string {
+	return Catalog.Format(msgs.locale, "updateErrSignature", nil)
+}
+
+// UpdateErrStalled says "The download stopped coming in. Check the connection and try again."
+// in the language the app shows.
+//
+// Why an update failed: the download stalled.
+func UpdateErrStalled() string { return In(i18n.Locale()).UpdateErrStalled() }
+
+// UpdateErrStalled says "The download stopped coming in. Check the connection and try again."
+// in the language of msgs.
+//
+// Why an update failed: the download stalled.
+func (msgs Messages) UpdateErrStalled() string {
+	return Catalog.Format(msgs.locale, "updateErrStalled", nil)
+}
+
+// UpdateFailedTitle says "Couldn't update"
+// in the language the app shows.
+//
+// The update card's title after the update failed; the reason shows under
+// it.
+func UpdateFailedTitle() string { return In(i18n.Locale()).UpdateFailedTitle() }
+
+// UpdateFailedTitle says "Couldn't update"
+// in the language of msgs.
+//
+// The update card's title after the update failed; the reason shows under
+// it.
+func (msgs Messages) UpdateFailedTitle() string {
+	return Catalog.Format(msgs.locale, "updateFailedTitle", nil)
+}
+
+// UpdateLater says "Later"
+// in the language the app shows.
+//
+// The update card's button that hides it for a day.
+func UpdateLater() string { return In(i18n.Locale()).UpdateLater() }
+
+// UpdateLater says "Later"
+// in the language of msgs.
+//
+// The update card's button that hides it for a day.
+func (msgs Messages) UpdateLater() string {
+	return Catalog.Format(msgs.locale, "updateLater", nil)
+}
+
+// UpdateLineAvailable says "Pinky {version} is available."
+// in the language the app shows.
+//
+// Settings › Advanced › Updates when a newer version is out.
+func UpdateLineAvailable(version string) string {
+	return In(i18n.Locale()).UpdateLineAvailable(version)
+}
+
+// UpdateLineAvailable says "Pinky {version} is available."
+// in the language of msgs.
+//
+// Settings › Advanced › Updates when a newer version is out.
+func (msgs Messages) UpdateLineAvailable(version string) string {
+	return Catalog.Format(msgs.locale, "updateLineAvailable", map[string]any{"version": version})
+}
+
+// UpdateLineChecking says "Checking for updates…"
+// in the language the app shows.
+//
+// Settings › Advanced › Updates while checking.
+func UpdateLineChecking() string { return In(i18n.Locale()).UpdateLineChecking() }
+
+// UpdateLineChecking says "Checking for updates…"
+// in the language of msgs.
+//
+// Settings › Advanced › Updates while checking.
+func (msgs Messages) UpdateLineChecking() string {
+	return Catalog.Format(msgs.locale, "updateLineChecking", nil)
+}
+
+// UpdateLineDev says "Development builds don't update themselves."
+// in the language the app shows.
+//
+// Settings › Advanced › Updates, in a development build.
+func UpdateLineDev() string { return In(i18n.Locale()).UpdateLineDev() }
+
+// UpdateLineDev says "Development builds don't update themselves."
+// in the language of msgs.
+//
+// Settings › Advanced › Updates, in a development build.
+func (msgs Messages) UpdateLineDev() string {
+	return Catalog.Format(msgs.locale, "updateLineDev", nil)
+}
+
+// UpdateLineEvery says "Pinky looks for updates every few hours."
+// in the language the app shows.
+//
+// Settings › Advanced › Updates before the first check.
+func UpdateLineEvery() string { return In(i18n.Locale()).UpdateLineEvery() }
+
+// UpdateLineEvery says "Pinky looks for updates every few hours."
+// in the language of msgs.
+//
+// Settings › Advanced › Updates before the first check.
+func (msgs Messages) UpdateLineEvery() string {
+	return Catalog.Format(msgs.locale, "updateLineEvery", nil)
+}
+
+// UpdateLineLastFailed says "The last try failed: {detail}"
+// in the language the app shows.
+//
+// Settings › Advanced › Updates after the last automatic update failed;
+// detail is the error in English.
+func UpdateLineLastFailed(detail string) string {
+	return In(i18n.Locale()).UpdateLineLastFailed(detail)
+}
+
+// UpdateLineLastFailed says "The last try failed: {detail}"
+// in the language of msgs.
+//
+// Settings › Advanced › Updates after the last automatic update failed;
+// detail is the error in English.
+func (msgs Messages) UpdateLineLastFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "updateLineLastFailed", map[string]any{"detail": detail})
+}
+
+// UpdateLineManager says "{manager} updates this copy: {command}."
+// in the language the app shows.
+//
+// Settings › Advanced › Updates when a package manager installed Pinky.
+func UpdateLineManager(manager string, command string) string {
+	return In(i18n.Locale()).UpdateLineManager(manager, command)
+}
+
+// UpdateLineManager says "{manager} updates this copy: {command}."
+// in the language of msgs.
+//
+// Settings › Advanced › Updates when a package manager installed Pinky.
+func (msgs Messages) UpdateLineManager(manager string, command string) string {
+	return Catalog.Format(msgs.locale, "updateLineManager", map[string]any{"manager": manager, "command": command})
+}
+
+// UpdateLineUpToDate says "Up to date. Checked {ago}."
+// in the language the app shows.
+//
+// Settings › Advanced › Updates when no newer version is out; ago is
+// updateAgoNow and the like.
+func UpdateLineUpToDate(ago string) string { return In(i18n.Locale()).UpdateLineUpToDate(ago) }
+
+// UpdateLineUpToDate says "Up to date. Checked {ago}."
+// in the language of msgs.
+//
+// Settings › Advanced › Updates when no newer version is out; ago is
+// updateAgoNow and the like.
+func (msgs Messages) UpdateLineUpToDate(ago string) string {
+	return Catalog.Format(msgs.locale, "updateLineUpToDate", map[string]any{"ago": ago})
+}
+
+// UpdateManagerInstalled says "{manager} installed Pinky; update it there:"
+// in the language the app shows.
+//
+// The update card when a package manager installed Pinky; its update
+// command shows under it.
+func UpdateManagerInstalled(manager string) string {
+	return In(i18n.Locale()).UpdateManagerInstalled(manager)
+}
+
+// UpdateManagerInstalled says "{manager} installed Pinky; update it there:"
+// in the language of msgs.
+//
+// The update card when a package manager installed Pinky; its update
+// command shows under it.
+func (msgs Messages) UpdateManagerInstalled(manager string) string {
+	return Catalog.Format(msgs.locale, "updateManagerInstalled", map[string]any{"manager": manager})
+}
+
+// UpdateNewsAt says ", {when, date, ::MMMd} at {when, time, ::Hm}"
+// in the language the app shows.
+//
+// Follows updateNewsCompanionLine: when it was updated.
+func UpdateNewsAt(when time.Time) string { return In(i18n.Locale()).UpdateNewsAt(when) }
+
+// UpdateNewsAt says ", {when, date, ::MMMd} at {when, time, ::Hm}"
+// in the language of msgs.
+//
+// Follows updateNewsCompanionLine: when it was updated.
+func (msgs Messages) UpdateNewsAt(when time.Time) string {
+	return Catalog.Format(msgs.locale, "updateNewsAt", map[string]any{"when": when})
+}
+
+// UpdateNewsCardTitle says "Pinky was updated"
+// in the language the app shows.
+//
+// The What's new card's title after Pinky was updated.
+func UpdateNewsCardTitle() string { return In(i18n.Locale()).UpdateNewsCardTitle() }
+
+// UpdateNewsCardTitle says "Pinky was updated"
+// in the language of msgs.
+//
+// The What's new card's title after Pinky was updated.
+func (msgs Messages) UpdateNewsCardTitle() string {
+	return Catalog.Format(msgs.locale, "updateNewsCardTitle", nil)
+}
+
+// UpdateNewsCompanionLine says "Updated on {phone} to {version}"
+// in the language the app shows.
+//
+// What's new, under the Pinky Companion heading: the companion app was
+// updated on a phone.
+func UpdateNewsCompanionLine(phone string, version string) string {
+	return In(i18n.Locale()).UpdateNewsCompanionLine(phone, version)
+}
+
+// UpdateNewsCompanionLine says "Updated on {phone} to {version}"
+// in the language of msgs.
+//
+// What's new, under the Pinky Companion heading: the companion app was
+// updated on a phone.
+func (msgs Messages) UpdateNewsCompanionLine(phone string, version string) string {
+	return Catalog.Format(msgs.locale, "updateNewsCompanionLine", map[string]any{"phone": phone, "version": version})
+}
+
+// UpdateNewsCompanionUpdated says "Pinky Companion was updated"
+// in the language the app shows.
+//
+// The What's new card's title after only the companion app was updated.
+func UpdateNewsCompanionUpdated() string { return In(i18n.Locale()).UpdateNewsCompanionUpdated() }
+
+// UpdateNewsCompanionUpdated says "Pinky Companion was updated"
+// in the language of msgs.
+//
+// The What's new card's title after only the companion app was updated.
+func (msgs Messages) UpdateNewsCompanionUpdated() string {
+	return Catalog.Format(msgs.locale, "updateNewsCompanionUpdated", nil)
+}
+
+// UpdateNewsDismiss says "Dismiss"
+// in the language the app shows.
+//
+// The tooltip of the What's new card's close button.
+func UpdateNewsDismiss() string { return In(i18n.Locale()).UpdateNewsDismiss() }
+
+// UpdateNewsDismiss says "Dismiss"
+// in the language of msgs.
+//
+// The tooltip of the What's new card's close button.
+func (msgs Messages) UpdateNewsDismiss() string {
+	return Catalog.Format(msgs.locale, "updateNewsDismiss", nil)
+}
+
+// UpdateNewsDismissLabel says "Dismiss What's new"
+// in the language the app shows.
+//
+// The accessibility label of the What's new card's close button.
+func UpdateNewsDismissLabel() string { return In(i18n.Locale()).UpdateNewsDismissLabel() }
+
+// UpdateNewsDismissLabel says "Dismiss What's new"
+// in the language of msgs.
+//
+// The accessibility label of the What's new card's close button.
+func (msgs Messages) UpdateNewsDismissLabel() string {
+	return Catalog.Format(msgs.locale, "updateNewsDismissLabel", nil)
+}
+
+// UpdateNewsNoNotes says "The changelog has no notes for this version."
+// in the language the app shows.
+//
+// What's new from Settings when the changelog says nothing about this
+// version.
+func UpdateNewsNoNotes() string { return In(i18n.Locale()).UpdateNewsNoNotes() }
+
+// UpdateNewsNoNotes says "The changelog has no notes for this version."
+// in the language of msgs.
+//
+// What's new from Settings when the changelog says nothing about this
+// version.
+func (msgs Messages) UpdateNewsNoNotes() string {
+	return Catalog.Format(msgs.locale, "updateNewsNoNotes", nil)
+}
+
+// UpdateNewsNow says "Now {version}"
+// in the language the app shows.
+//
+// The What's new card's second line after Pinky was updated.
+func UpdateNewsNow(version string) string { return In(i18n.Locale()).UpdateNewsNow(version) }
+
+// UpdateNewsNow says "Now {version}"
+// in the language of msgs.
+//
+// The What's new card's second line after Pinky was updated.
+func (msgs Messages) UpdateNewsNow(version string) string {
+	return Catalog.Format(msgs.locale, "updateNewsNow", map[string]any{"version": version})
+}
+
+// UpdateNewsOnPhone says "On {phone}"
+// in the language the app shows.
+//
+// The What's new card's second line after the companion app was updated on
+// one phone.
+func UpdateNewsOnPhone(phone string) string { return In(i18n.Locale()).UpdateNewsOnPhone(phone) }
+
+// UpdateNewsOnPhone says "On {phone}"
+// in the language of msgs.
+//
+// The What's new card's second line after the companion app was updated on
+// one phone.
+func (msgs Messages) UpdateNewsOnPhone(phone string) string {
+	return Catalog.Format(msgs.locale, "updateNewsOnPhone", map[string]any{"phone": phone})
+}
+
+// UpdateNewsOnPhones says "{count, plural, one {On # phone} other {On # phones}}"
+// in the language the app shows.
+//
+// The What's new card's second line after the companion app was updated on
+// several phones.
+func UpdateNewsOnPhones(count int) string { return In(i18n.Locale()).UpdateNewsOnPhones(count) }
+
+// UpdateNewsOnPhones says "{count, plural, one {On # phone} other {On # phones}}"
+// in the language of msgs.
+//
+// The What's new card's second line after the companion app was updated on
+// several phones.
+func (msgs Messages) UpdateNewsOnPhones(count int) string {
+	return Catalog.Format(msgs.locale, "updateNewsOnPhones", map[string]any{"count": count})
+}
+
+// UpdateNewsSee says "See what's new"
+// in the language the app shows.
+//
+// The What's new card's link that opens the notes.
+func UpdateNewsSee() string { return In(i18n.Locale()).UpdateNewsSee() }
+
+// UpdateNewsSee says "See what's new"
+// in the language of msgs.
+//
+// The What's new card's link that opens the notes.
+func (msgs Messages) UpdateNewsSee() string {
+	return Catalog.Format(msgs.locale, "updateNewsSee", nil)
+}
+
+// UpdateNewsUpdatedTo says "Pinky was updated to {version}."
+// in the language the app shows.
+//
+// What's new after an update when the changelog says nothing about it.
+func UpdateNewsUpdatedTo(version string) string {
+	return In(i18n.Locale()).UpdateNewsUpdatedTo(version)
+}
+
+// UpdateNewsUpdatedTo says "Pinky was updated to {version}."
+// in the language of msgs.
+//
+// What's new after an update when the changelog says nothing about it.
+func (msgs Messages) UpdateNewsUpdatedTo(version string) string {
+	return Catalog.Format(msgs.locale, "updateNewsUpdatedTo", map[string]any{"version": version})
+}
+
+// UpdateNowButton says "Update now"
+// in the language the app shows.
+//
+// The button that updates Pinky now (update card, release notes, the
+// confirmation).
+func UpdateNowButton() string { return In(i18n.Locale()).UpdateNowButton() }
+
+// UpdateNowButton says "Update now"
+// in the language of msgs.
+//
+// The button that updates Pinky now (update card, release notes, the
+// confirmation).
+func (msgs Messages) UpdateNowButton() string {
+	return Catalog.Format(msgs.locale, "updateNowButton", nil)
+}
+
+// UpdateOpenInstallerFailed says "Couldn't open the installer: {detail}"
+// in the language the app shows.
+//
+// Why an update failed: the downloaded installer would not open; detail is
+// the system's error.
+func UpdateOpenInstallerFailed(detail string) string {
+	return In(i18n.Locale()).UpdateOpenInstallerFailed(detail)
+}
+
+// UpdateOpenInstallerFailed says "Couldn't open the installer: {detail}"
+// in the language of msgs.
+//
+// Why an update failed: the downloaded installer would not open; detail is
+// the system's error.
+func (msgs Messages) UpdateOpenInstallerFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "updateOpenInstallerFailed", map[string]any{"detail": detail})
+}
+
+// UpdateProgress says "{done} of {total}"
+// in the language the app shows.
+//
+// The update card: how much has downloaded, in MB or KB.
+func UpdateProgress(done string, total string) string {
+	return In(i18n.Locale()).UpdateProgress(done, total)
+}
+
+// UpdateProgress says "{done} of {total}"
+// in the language of msgs.
+//
+// The update card: how much has downloaded, in MB or KB.
+func (msgs Messages) UpdateProgress(done string, total string) string {
+	return Catalog.Format(msgs.locale, "updateProgress", map[string]any{"done": done, "total": total})
+}
+
+// UpdateReady says "Pinky {version} is ready"
+// in the language the app shows.
+//
+// The update card's title once the new version is downloaded and checked.
+func UpdateReady(version string) string { return In(i18n.Locale()).UpdateReady(version) }
+
+// UpdateReady says "Pinky {version} is ready"
+// in the language of msgs.
+//
+// The update card's title once the new version is downloaded and checked.
+func (msgs Messages) UpdateReady(version string) string {
+	return Catalog.Format(msgs.locale, "updateReady", map[string]any{"version": version})
+}
+
+// UpdateReadyDetail says "Pinky restarts to finish the update."
+// in the language the app shows.
+//
+// Under updateReady.
+func UpdateReadyDetail() string { return In(i18n.Locale()).UpdateReadyDetail() }
+
+// UpdateReadyDetail says "Pinky restarts to finish the update."
+// in the language of msgs.
+//
+// Under updateReady.
+func (msgs Messages) UpdateReadyDetail() string {
+	return Catalog.Format(msgs.locale, "updateReadyDetail", nil)
+}
+
+// UpdateReleasePage says "Release page"
+// in the language the app shows.
+//
+// The update card's link to the release's web page.
+func UpdateReleasePage() string { return In(i18n.Locale()).UpdateReleasePage() }
+
+// UpdateReleasePage says "Release page"
+// in the language of msgs.
+//
+// The update card's link to the release's web page.
+func (msgs Messages) UpdateReleasePage() string {
+	return Catalog.Format(msgs.locale, "updateReleasePage", nil)
+}
+
+// UpdateReleasePageFailed says "Couldn't open the release page: {detail}"
+// in the language the app shows.
+//
+// A toast when the release page would not open; detail is the system's
+// error.
+func UpdateReleasePageFailed(detail string) string {
+	return In(i18n.Locale()).UpdateReleasePageFailed(detail)
+}
+
+// UpdateReleasePageFailed says "Couldn't open the release page: {detail}"
+// in the language of msgs.
+//
+// A toast when the release page would not open; detail is the system's
+// error.
+func (msgs Messages) UpdateReleasePageFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "updateReleasePageFailed", map[string]any{"detail": detail})
+}
+
+// UpdateReleasePageLabel says "Open the release page of Pinky {version}"
+// in the language the app shows.
+//
+// The accessibility label of the release page link.
+func UpdateReleasePageLabel(version string) string {
+	return In(i18n.Locale()).UpdateReleasePageLabel(version)
+}
+
+// UpdateReleasePageLabel says "Open the release page of Pinky {version}"
+// in the language of msgs.
+//
+// The accessibility label of the release page link.
+func (msgs Messages) UpdateReleasePageLabel(version string) string {
+	return Catalog.Format(msgs.locale, "updateReleasePageLabel", map[string]any{"version": version})
+}
+
+// UpdateRestartNow says "Restart now"
+// in the language the app shows.
+//
+// The update card's button that restarts Pinky into the new version.
+func UpdateRestartNow() string { return In(i18n.Locale()).UpdateRestartNow() }
+
+// UpdateRestartNow says "Restart now"
+// in the language of msgs.
+//
+// The update card's button that restarts Pinky into the new version.
+func (msgs Messages) UpdateRestartNow() string {
+	return Catalog.Format(msgs.locale, "updateRestartNow", nil)
+}
+
+// UpdateRestarting says "Restarting Pinky…"
+// in the language the app shows.
+//
+// The update card's title while Pinky quits to update.
+func UpdateRestarting() string { return In(i18n.Locale()).UpdateRestarting() }
+
+// UpdateRestarting says "Restarting Pinky…"
+// in the language of msgs.
+//
+// The update card's title while Pinky quits to update.
+func (msgs Messages) UpdateRestarting() string {
+	return Catalog.Format(msgs.locale, "updateRestarting", nil)
+}
+
+// UpdateRestartingLabel says "Restarting"
+// in the language the app shows.
+//
+// The accessibility label of the progress bar under updateRestarting.
+func UpdateRestartingLabel() string { return In(i18n.Locale()).UpdateRestartingLabel() }
+
+// UpdateRestartingLabel says "Restarting"
+// in the language of msgs.
+//
+// The accessibility label of the progress bar under updateRestarting.
+func (msgs Messages) UpdateRestartingLabel() string {
+	return Catalog.Format(msgs.locale, "updateRestartingLabel", nil)
+}
+
+// UpdateSettingsAuto says "Update automatically"
+// in the language the app shows.
+//
+// Settings › Advanced › Updates: the switch that lets Pinky update
+// itself and the companion app.
+func UpdateSettingsAuto() string { return In(i18n.Locale()).UpdateSettingsAuto() }
+
+// UpdateSettingsAuto says "Update automatically"
+// in the language of msgs.
+//
+// Settings › Advanced › Updates: the switch that lets Pinky update
+// itself and the companion app.
+func (msgs Messages) UpdateSettingsAuto() string {
+	return Catalog.Format(msgs.locale, "updateSettingsAuto", nil)
+}
+
+// UpdateSettingsAutoDesc says "Pinky, and Pinky Companion on your Android phones, update when no one is using them."
+// in the language the app shows.
+//
+// Under updateSettingsAuto.
+func UpdateSettingsAutoDesc() string { return In(i18n.Locale()).UpdateSettingsAutoDesc() }
+
+// UpdateSettingsAutoDesc says "Pinky, and Pinky Companion on your Android phones, update when no one is using them."
+// in the language of msgs.
+//
+// Under updateSettingsAuto.
+func (msgs Messages) UpdateSettingsAutoDesc() string {
+	return Catalog.Format(msgs.locale, "updateSettingsAutoDesc", nil)
+}
+
+// UpdateSettingsNewsDesc says "The changes in this version"
+// in the language the app shows.
+//
+// Settings › Advanced › Updates: under updateWhatsNew.
+func UpdateSettingsNewsDesc() string { return In(i18n.Locale()).UpdateSettingsNewsDesc() }
+
+// UpdateSettingsNewsDesc says "The changes in this version"
+// in the language of msgs.
+//
+// Settings › Advanced › Updates: under updateWhatsNew.
+func (msgs Messages) UpdateSettingsNewsDesc() string {
+	return Catalog.Format(msgs.locale, "updateSettingsNewsDesc", nil)
+}
+
+// UpdateSettingsTitle says "Updates"
+// in the language the app shows.
+//
+// Settings › Advanced: the heading of the updates rows.
+func UpdateSettingsTitle() string { return In(i18n.Locale()).UpdateSettingsTitle() }
+
+// UpdateSettingsTitle says "Updates"
+// in the language of msgs.
+//
+// Settings › Advanced: the heading of the updates rows.
+func (msgs Messages) UpdateSettingsTitle() string {
+	return Catalog.Format(msgs.locale, "updateSettingsTitle", nil)
+}
+
+// UpdateShow says "Show"
+// in the language the app shows.
+//
+// Settings › Advanced › Updates: the button that shows What's new.
+func UpdateShow() string { return In(i18n.Locale()).UpdateShow() }
+
+// UpdateShow says "Show"
+// in the language of msgs.
+//
+// Settings › Advanced › Updates: the button that shows What's new.
+func (msgs Messages) UpdateShow() string {
+	return Catalog.Format(msgs.locale, "updateShow", nil)
+}
+
+// UpdateShowDownload says "Show download"
+// in the language the app shows.
+//
+// The update card's button that shows the downloaded file.
+func UpdateShowDownload() string { return In(i18n.Locale()).UpdateShowDownload() }
+
+// UpdateShowDownload says "Show download"
+// in the language of msgs.
+//
+// The update card's button that shows the downloaded file.
+func (msgs Messages) UpdateShowDownload() string {
+	return Catalog.Format(msgs.locale, "updateShowDownload", nil)
+}
+
+// UpdateShowLabel says "Show what's new"
+// in the language the app shows.
+//
+// The accessibility label of updateShow.
+func UpdateShowLabel() string { return In(i18n.Locale()).UpdateShowLabel() }
+
+// UpdateShowLabel says "Show what's new"
+// in the language of msgs.
+//
+// The accessibility label of updateShow.
+func (msgs Messages) UpdateShowLabel() string {
+	return Catalog.Format(msgs.locale, "updateShowLabel", nil)
+}
+
+// UpdateTryAgain says "Try again"
+// in the language the app shows.
+//
+// The update card's button after a failure.
+func UpdateTryAgain() string { return In(i18n.Locale()).UpdateTryAgain() }
+
+// UpdateTryAgain says "Try again"
+// in the language of msgs.
+//
+// The update card's button after a failure.
+func (msgs Messages) UpdateTryAgain() string {
+	return Catalog.Format(msgs.locale, "updateTryAgain", nil)
+}
+
+// UpdateUpToDateToast says "Pinky is up to date"
+// in the language the app shows.
+//
+// A toast after Check now finds no newer version.
+func UpdateUpToDateToast() string { return In(i18n.Locale()).UpdateUpToDateToast() }
+
+// UpdateUpToDateToast says "Pinky is up to date"
+// in the language of msgs.
+//
+// A toast after Check now finds no newer version.
+func (msgs Messages) UpdateUpToDateToast() string {
+	return Catalog.Format(msgs.locale, "updateUpToDateToast", nil)
+}
+
+// UpdateWhatsNew says "What's new"
+// in the language the app shows.
+//
+// Opens the release notes (the update card's link, Settings › Advanced
+// › Updates, the What's new card).
+func UpdateWhatsNew() string { return In(i18n.Locale()).UpdateWhatsNew() }
+
+// UpdateWhatsNew says "What's new"
+// in the language of msgs.
+//
+// Opens the release notes (the update card's link, Settings › Advanced
+// › Updates, the What's new card).
+func (msgs Messages) UpdateWhatsNew() string {
+	return Catalog.Format(msgs.locale, "updateWhatsNew", nil)
+}
+
+// UpdateWhatsNewIn says "What's new in Pinky {version}"
+// in the language the app shows.
+//
+// The title of the release notes, and the label of the link that opens
+// them.
+func UpdateWhatsNewIn(version string) string { return In(i18n.Locale()).UpdateWhatsNewIn(version) }
+
+// UpdateWhatsNewIn says "What's new in Pinky {version}"
+// in the language of msgs.
+//
+// The title of the release notes, and the label of the link that opens
+// them.
+func (msgs Messages) UpdateWhatsNewIn(version string) string {
+	return Catalog.Format(msgs.locale, "updateWhatsNewIn", map[string]any{"version": version})
+}
+
+// UpdateWhereDiskImage says "Pinky runs from its disk image. Drag it to Applications and open it from there to get updates automatically."
+// in the language the app shows.
+//
+// Why this Pinky cannot update itself: it runs from the .dmg. Shown only in
+// other languages; in English internal/update's own words show.
+func UpdateWhereDiskImage() string { return In(i18n.Locale()).UpdateWhereDiskImage() }
+
+// UpdateWhereDiskImage says "Pinky runs from its disk image. Drag it to Applications and open it from there to get updates automatically."
+// in the language of msgs.
+//
+// Why this Pinky cannot update itself: it runs from the .dmg. Shown only in
+// other languages; in English internal/update's own words show.
+func (msgs Messages) UpdateWhereDiskImage() string {
+	return Catalog.Format(msgs.locale, "updateWhereDiskImage", nil)
+}
+
+// UpdateWhereNotApp says "This Pinky doesn't run from Pinky.app, so it can't replace itself."
+// in the language the app shows.
+//
+// Why this Pinky cannot update itself. Shown only in other languages; in
+// English internal/update's own words show.
+func UpdateWhereNotApp() string { return In(i18n.Locale()).UpdateWhereNotApp() }
+
+// UpdateWhereNotApp says "This Pinky doesn't run from Pinky.app, so it can't replace itself."
+// in the language of msgs.
+//
+// Why this Pinky cannot update itself. Shown only in other languages; in
+// English internal/update's own words show.
+func (msgs Messages) UpdateWhereNotApp() string {
+	return Catalog.Format(msgs.locale, "updateWhereNotApp", nil)
+}
+
+// UpdateWhereNotWritable says "Pinky can't write to {folder}, where it is installed."
+// in the language the app shows.
+//
+// Why this Pinky cannot update itself: its folder is read-only. Shown only
+// in other languages; in English internal/update's own words show.
+func UpdateWhereNotWritable(folder string) string {
+	return In(i18n.Locale()).UpdateWhereNotWritable(folder)
+}
+
+// UpdateWhereNotWritable says "Pinky can't write to {folder}, where it is installed."
+// in the language of msgs.
+//
+// Why this Pinky cannot update itself: its folder is read-only. Shown only
+// in other languages; in English internal/update's own words show.
+func (msgs Messages) UpdateWhereNotWritable(folder string) string {
+	return Catalog.Format(msgs.locale, "updateWhereNotWritable", map[string]any{"folder": folder})
+}
+
+// UpdateWhereOtherUser says "Pinky.app belongs to another user of this Mac, so Pinky can't replace it."
+// in the language the app shows.
+//
+// Why this Pinky cannot update itself: another user owns it. Shown only in
+// other languages; in English internal/update's own words show.
+func UpdateWhereOtherUser() string { return In(i18n.Locale()).UpdateWhereOtherUser() }
+
+// UpdateWhereOtherUser says "Pinky.app belongs to another user of this Mac, so Pinky can't replace it."
+// in the language of msgs.
+//
+// Why this Pinky cannot update itself: another user owns it. Shown only in
+// other languages; in English internal/update's own words show.
+func (msgs Messages) UpdateWhereOtherUser() string {
+	return Catalog.Format(msgs.locale, "updateWhereOtherUser", nil)
+}
+
+// UpdateWhereTranslocated says "macOS runs this Pinky from a temporary copy. Move Pinky to Applications and open it from there to get updates automat…"
+// in the language the app shows.
+//
+// Why this Pinky cannot update itself: macOS translocated it. Shown only in
+// other languages; in English internal/update's own words show.
+func UpdateWhereTranslocated() string { return In(i18n.Locale()).UpdateWhereTranslocated() }
+
+// UpdateWhereTranslocated says "macOS runs this Pinky from a temporary copy. Move Pinky to Applications and open it from there to get updates automat…"
+// in the language of msgs.
+//
+// Why this Pinky cannot update itself: macOS translocated it. Shown only in
+// other languages; in English internal/update's own words show.
+func (msgs Messages) UpdateWhereTranslocated() string {
+	return Catalog.Format(msgs.locale, "updateWhereTranslocated", nil)
+}
+
+// UpdateWhereUnknown says "Pinky could not find where it is installed."
+// in the language the app shows.
+//
+// Why this Pinky cannot update itself: its location is unknown. Shown only
+// in other languages; in English internal/update's own words show.
+func UpdateWhereUnknown() string { return In(i18n.Locale()).UpdateWhereUnknown() }
+
+// UpdateWhereUnknown says "Pinky could not find where it is installed."
+// in the language of msgs.
+//
+// Why this Pinky cannot update itself: its location is unknown. Shown only
+// in other languages; in English internal/update's own words show.
+func (msgs Messages) UpdateWhereUnknown() string {
+	return Catalog.Format(msgs.locale, "updateWhereUnknown", nil)
+}
+
+// UpdateWhereUnsigned says "This copy of Pinky isn't signed by Pinky's developer (a build made on this Mac), so it doesn't replace itself."
+// in the language the app shows.
+//
+// Why this Pinky cannot update itself: it is a local build. Shown only in
+// other languages; in English internal/update's own words show.
+func UpdateWhereUnsigned() string { return In(i18n.Locale()).UpdateWhereUnsigned() }
+
+// UpdateWhereUnsigned says "This copy of Pinky isn't signed by Pinky's developer (a build made on this Mac), so it doesn't replace itself."
+// in the language of msgs.
+//
+// Why this Pinky cannot update itself: it is a local build. Shown only in
+// other languages; in English internal/update's own words show.
+func (msgs Messages) UpdateWhereUnsigned() string {
+	return Catalog.Format(msgs.locale, "updateWhereUnsigned", nil)
 }

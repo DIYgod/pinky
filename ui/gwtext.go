@@ -544,3 +544,31 @@ func statusLine(d gateway.DeviceView) string {
 	}
 	return s
 }
+
+var reNotWritable = re(`^Pinky can't write to (.+), where it is installed\.$`)
+
+// whereProblems are internal/update's reasons why this copy of Pinky
+// cannot replace itself (Location.Problem).
+var whereProblems = map[string]func() string{
+	"This Pinky doesn't run from Pinky.app, so it can't replace itself.":                                                           locales.UpdateWhereNotApp,
+	"macOS runs this Pinky from a temporary copy. Move Pinky to Applications and open it from there to get updates automatically.": locales.UpdateWhereTranslocated,
+	"Pinky runs from its disk image. Drag it to Applications and open it from there to get updates automatically.":                 locales.UpdateWhereDiskImage,
+	"Pinky.app belongs to another user of this Mac, so Pinky can't replace it.":                                                    locales.UpdateWhereOtherUser,
+	"This copy of Pinky isn't signed by Pinky's developer (a build made on this Mac), so it doesn't replace itself.":               locales.UpdateWhereUnsigned,
+	"Pinky could not find where it is installed.":                                                                                  locales.UpdateWhereUnknown,
+}
+
+// whereProblem says why this copy of Pinky cannot update itself, as
+// internal/update words it, in the app's language.
+func whereProblem(p string) string {
+	if !translated() {
+		return p
+	}
+	if f := whereProblems[p]; f != nil {
+		return f()
+	}
+	if m := reNotWritable.FindStringSubmatch(p); m != nil {
+		return locales.UpdateWhereNotWritable(m[1])
+	}
+	return p
+}

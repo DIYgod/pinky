@@ -13,7 +13,9 @@ import (
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/internal/demo"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/secret"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
 
@@ -209,4 +211,64 @@ func TestChineseScreenshots(t *testing.T) {
 	pl.bitmap, pl.picW, pl.picH = mg.NewBitmap(drawn), b.Dx(), b.Dy()
 	ta.rec.pl = pl
 	main(ta, "recording", nil)
+}
+
+// TestChineseUpdateScreenshots draws the update screens in Simplified
+// Chinese into $PINKY_SCREENSHOTS_ZH: the update card, its notes, the
+// download, the companion's automatic update, What's new, Settings ›
+// Advanced › Updates and the confirmation.
+func TestChineseUpdateScreenshots(t *testing.T) {
+	dir := os.Getenv("PINKY_SCREENSHOTS_ZH")
+	if dir == "" {
+		t.Skip("set PINKY_SCREENSHOTS_ZH to a folder to write the Chinese screenshots")
+	}
+	inLanguage(t, "zh-Hans")
+	ut := newUpdateTest(t, fakeapi.Companion)
+	ut.check(t)
+	shot := func(name string) {
+		t.Helper()
+		tt := mg.NewTester(ut.view, 1280, 820)
+		inLanguage(t, "zh-Hans", tt)
+		tt.SetScale(2)
+		tt.Frame()
+		tt.Frame()
+		f, err := os.Create(filepath.Join(dir, name+"-zh-light.png"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		if err := png.Encode(f, tt.Image()); err != nil {
+			t.Fatal(err)
+		}
+	}
+	shot("update-card")
+	ut.upd.notesOpen = true
+	shot("update-notes")
+	ut.upd.notesOpen = false
+	ut.upd.confirm = true
+	shot("update-confirm")
+	ut.upd.confirm = false
+	ut.upd.phase, ut.upd.done, ut.upd.total = updDownloading, 18<<20, 41<<20
+	shot("update-downloading")
+	ut.upd.phase, ut.upd.err = updFailed, updateError(update.ErrStalled)
+	shot("update-failed")
+	ut.upd.phase, ut.upd.err = updIdle, ""
+	ut.page, ut.set.sec = pageSettings, secAdvanced
+	shot("settings-updates")
+	ut.page = pagePhones
+	ut.comp.state["pixel-9"], ut.comp.checked["pixel-9"] = driver.CompanionOutdated, time.Now()
+	shot("companion-outdated")
+	ut.upd.comp = map[string]*compAuto{"pixel-9": {running: true}}
+	shot("companion-updating")
+	ut.upd.comp = nil
+	ut.comp.state["pixel-9"] = driver.CompanionOn
+	ut.upd.rel = nil
+	ut.u.Version, ut.opt.Version, ut.opt.Changelog = "2026.1107.2", "2026.1107.2", testChangelog
+	ut.u.Change(func(s *update.State) { s.Launched("2026.1107.1"); s.Launched("2026.1107.2") })
+	ut.u.Change(func(s *update.State) {
+		s.Changes = []update.Change{{Kind: "companion", Device: "Pixel 9", From: "0.1.0 (75)", To: "0.1.0 (130)", At: time.Now()}}
+	})
+	shot("whats-new-card")
+	ut.upd.newsOpen = true
+	shot("whats-new")
 }

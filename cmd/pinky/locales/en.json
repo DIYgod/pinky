@@ -528,6 +528,18 @@
   "@companionUpdateTitle": {
     "description": "The title of the card that offers to update Pinky Companion on the phone to the version this Pinky comes with."
   },
+  "companionUpdatingHint": "Agents can use the phone again in a few seconds.",
+  "@companionUpdatingHint": {
+    "description": "Under the companion card's progress bar while it updates."
+  },
+  "companionUpdatingLabel": "Updating",
+  "@companionUpdatingLabel": {
+    "description": "The accessibility label of the companion card's progress bar while it updates."
+  },
+  "companionUpdatingTitle": "Updating Pinky Companion",
+  "@companionUpdatingTitle": {
+    "description": "The companion card's title while Pinky updates the app by itself."
+  },
   "connectionOffline": "{platform} · offline",
   "@connectionOffline": {
     "description": "The phone page header's second line and Settings › Phones, for an offline phone. platform is Android, iPhone or a version such as Android 16.",
@@ -4171,5 +4183,579 @@
   "unlockPitchWindows": "Save its PIN and you can unlock it from this computer with Windows Hello when an agent needs it, without picking the phone up.",
   "@unlockPitchWindows": {
     "description": "Windows: the locked phone's card when no PIN is saved for it, above the button Save PIN…. The card is in a narrow side panel."
+  },
+  "updateActionLabel": "{action} Pinky {version}",
+  "@updateActionLabel": {
+    "description": "The accessibility label of the update card's main button: its label, then the version.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "Update now"
+      },
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateAgoDay": "on {day, date, ::MMMd}",
+  "@updateAgoDay": {
+    "description": "Inside updateLineUpToDate: checked a day or more ago.",
+    "placeholders": {
+      "day": {
+        "type": "DateTime",
+        "example": "Nov 7"
+      }
+    }
+  },
+  "updateAgoHours": "{count, plural, one {an hour ago} other {# hours ago}}",
+  "@updateAgoHours": {
+    "description": "Inside updateLineUpToDate: how long ago in hours.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "updateAgoMinutes": "{count, plural, one {a minute ago} other {# minutes ago}}",
+  "@updateAgoMinutes": {
+    "description": "Inside updateLineUpToDate: how long ago in minutes.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
+  },
+  "updateAgoNow": "just now",
+  "@updateAgoNow": {
+    "description": "Inside updateLineUpToDate: checked less than a minute ago."
+  },
+  "updateAvailable": "Pinky {version} is available",
+  "@updateAvailable": {
+    "description": "The update card's title when a newer version is out.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateBusyControl": "you control {phone}",
+  "@updateBusyControl": {
+    "description": "What a restart for an update would stop: the person's control of a phone.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "updateBusyInstalling": "installing Pinky Companion on {phone}",
+  "@updateBusyInstalling": {
+    "description": "What a restart for an update would stop: installing the companion app.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "updateBusyPairing": "pairing a phone",
+  "@updateBusyPairing": {
+    "description": "What a restart for an update would stop: pairing a phone over Wi-Fi."
+  },
+  "updateBusyRecording": "playing a recording",
+  "@updateBusyRecording": {
+    "description": "What a restart for an update would stop: a recording playing in Activity."
+  },
+  "updateBusyUnlocking": "unlocking {phone}",
+  "@updateBusyUnlocking": {
+    "description": "What a restart for an update would stop, in the list of updateConfirmBusy: unlocking a phone.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "updateBusyUpdating": "updating Pinky Companion on {phone}",
+  "@updateBusyUpdating": {
+    "description": "What a restart for an update would stop: updating the companion app.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "updateCancel": "Cancel",
+  "@updateCancel": {
+    "description": "The update card's button that stops the download."
+  },
+  "updateCardLabel": "Update",
+  "@updateCardLabel": {
+    "description": "The accessibility label of the sidebar card that offers a new version."
+  },
+  "updateCheckFailed": "Couldn't check for updates: {detail}",
+  "@updateCheckFailed": {
+    "description": "Settings › Advanced › Updates after Check now failed; detail is updateErrNetwork and the like, or the error in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "Couldn't reach the update server."
+      }
+    }
+  },
+  "updateCheckNow": "Check now",
+  "@updateCheckNow": {
+    "description": "Settings › Advanced › Updates: the button that checks for a newer version."
+  },
+  "updateClose": "Close",
+  "@updateClose": {
+    "description": "The button that closes the release notes and What's new."
+  },
+  "updateCompanionAuto": "Pinky updates it by itself when the phone is free.",
+  "@updateCompanionAuto": {
+    "description": "The companion card when an update is out and automatic updates are on."
+  },
+  "updateCompanionNeedsYou": "The phone asks before apps are installed over USB, so this update needs you.",
+  "@updateCompanionNeedsYou": {
+    "description": "The companion card: the phone asks the person before installs, so Pinky cannot update it by itself."
+  },
+  "updateCompanionToast": "Updated Pinky Companion on {phone}",
+  "@updateCompanionToast": {
+    "description": "A toast after Pinky updated the companion app on a phone by itself.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "updateConfirmBusy": "This stops {list}.",
+  "@updateConfirmBusy": {
+    "description": "Follows updateConfirmMessage: what else stops; list is updateBusyUnlocking and the like, joined with listSeparator.",
+    "placeholders": {
+      "list": {
+        "type": "String",
+        "example": "unlocking Pixel 9"
+      }
+    }
+  },
+  "updateConfirmMessage": "Pinky restarts to update.",
+  "@updateConfirmMessage": {
+    "description": "The dialog's message, followed by updateConfirmTask or updateConfirmBusy."
+  },
+  "updateConfirmTask": "The agent task that runs now stops.",
+  "@updateConfirmTask": {
+    "description": "Follows updateConfirmMessage when an agent task runs."
+  },
+  "updateConfirmTitle": "Update Pinky now?",
+  "@updateConfirmTitle": {
+    "description": "The title of the dialog that asks before an update stops something."
+  },
+  "updateCopiedCommand": "Copied {command}",
+  "@updateCopiedCommand": {
+    "description": "A toast after copying the update command.",
+    "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "brew upgrade pinky"
+      }
+    }
+  },
+  "updateCopy": "Copy",
+  "@updateCopy": {
+    "description": "The tooltip of the button that copies the update command."
+  },
+  "updateCopyCommandLabel": "Copy the command",
+  "@updateCopyCommandLabel": {
+    "description": "The accessibility label of the button that copies the package manager's update command."
+  },
+  "updateDevBuild": "This is a development build, which doesn't update itself.",
+  "@updateDevBuild": {
+    "description": "Settings › Advanced › Updates after Check now, in a development build."
+  },
+  "updateDownload": "Download",
+  "@updateDownload": {
+    "description": "The update card's button where Pinky cannot replace itself: download the new version."
+  },
+  "updateDownloadInstall": "Download and install",
+  "@updateDownloadInstall": {
+    "description": "The update card's button where an installer replaces Pinky (Windows)."
+  },
+  "updateDownloadLabel": "Download",
+  "@updateDownloadLabel": {
+    "description": "The accessibility label of the update card's progress bar."
+  },
+  "updateDownloadedHint": "Downloaded. Open it to install.",
+  "@updateDownloadedHint": {
+    "description": "The update card once the new version was downloaded for the person to install."
+  },
+  "updateDownloadedToast": "Downloaded Pinky {version}",
+  "@updateDownloadedToast": {
+    "description": "A toast when a new version was downloaded for the person to install.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateDownloading": "Downloading Pinky {version}",
+  "@updateDownloading": {
+    "description": "The update card's title while the new version downloads.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateErrChecksum": "The download was damaged. Try again.",
+  "@updateErrChecksum": {
+    "description": "Why an update failed: the downloaded file did not match."
+  },
+  "updateErrNetwork": "Couldn't reach the update server. Check the connection and try again.",
+  "@updateErrNetwork": {
+    "description": "Why an update or a check failed: no connection."
+  },
+  "updateErrNoAsset": "There's no build of this version for this computer yet.",
+  "@updateErrNoAsset": {
+    "description": "Why an update failed: the release has no file for this system."
+  },
+  "updateErrSignature": "The update isn't signed by Pinky's developer, so Pinky didn't install it.",
+  "@updateErrSignature": {
+    "description": "Why an update failed: its signature did not check."
+  },
+  "updateErrStalled": "The download stopped coming in. Check the connection and try again.",
+  "@updateErrStalled": {
+    "description": "Why an update failed: the download stalled."
+  },
+  "updateFailedTitle": "Couldn't update",
+  "@updateFailedTitle": {
+    "description": "The update card's title after the update failed; the reason shows under it."
+  },
+  "updateLater": "Later",
+  "@updateLater": {
+    "description": "The update card's button that hides it for a day."
+  },
+  "updateLineAvailable": "Pinky {version} is available.",
+  "@updateLineAvailable": {
+    "description": "Settings › Advanced › Updates when a newer version is out.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateLineChecking": "Checking for updates…",
+  "@updateLineChecking": {
+    "description": "Settings › Advanced › Updates while checking."
+  },
+  "updateLineDev": "Development builds don't update themselves.",
+  "@updateLineDev": {
+    "description": "Settings › Advanced › Updates, in a development build."
+  },
+  "updateLineEvery": "Pinky looks for updates every few hours.",
+  "@updateLineEvery": {
+    "description": "Settings › Advanced › Updates before the first check."
+  },
+  "updateLineLastFailed": "The last try failed: {detail}",
+  "@updateLineLastFailed": {
+    "description": "Settings › Advanced › Updates after the last automatic update failed; detail is the error in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "the download was damaged"
+      }
+    }
+  },
+  "updateLineManager": "{manager} updates this copy: {command}.",
+  "@updateLineManager": {
+    "description": "Settings › Advanced › Updates when a package manager installed Pinky.",
+    "placeholders": {
+      "manager": {
+        "type": "String",
+        "example": "Homebrew"
+      },
+      "command": {
+        "type": "String",
+        "example": "brew upgrade pinky"
+      }
+    }
+  },
+  "updateLineUpToDate": "Up to date. Checked {ago}.",
+  "@updateLineUpToDate": {
+    "description": "Settings › Advanced › Updates when no newer version is out; ago is updateAgoNow and the like.",
+    "placeholders": {
+      "ago": {
+        "type": "String",
+        "example": "5 minutes ago"
+      }
+    }
+  },
+  "updateManagerInstalled": "{manager} installed Pinky; update it there:",
+  "@updateManagerInstalled": {
+    "description": "The update card when a package manager installed Pinky; its update command shows under it.",
+    "placeholders": {
+      "manager": {
+        "type": "String",
+        "example": "Homebrew"
+      }
+    }
+  },
+  "updateNewsAt": ", {when, date, ::MMMd} at {when, time, ::Hm}",
+  "@updateNewsAt": {
+    "description": "Follows updateNewsCompanionLine: when it was updated.",
+    "placeholders": {
+      "when": {
+        "type": "DateTime",
+        "example": "Nov 7, 15:04"
+      }
+    }
+  },
+  "updateNewsCardTitle": "Pinky was updated",
+  "@updateNewsCardTitle": {
+    "description": "The What's new card's title after Pinky was updated."
+  },
+  "updateNewsCompanionLine": "Updated on {phone} to {version}",
+  "@updateNewsCompanionLine": {
+    "description": "What's new, under the Pinky Companion heading: the companion app was updated on a phone.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "version": {
+        "type": "String",
+        "example": "131"
+      }
+    }
+  },
+  "updateNewsCompanionUpdated": "Pinky Companion was updated",
+  "@updateNewsCompanionUpdated": {
+    "description": "The What's new card's title after only the companion app was updated."
+  },
+  "updateNewsDismiss": "Dismiss",
+  "@updateNewsDismiss": {
+    "description": "The tooltip of the What's new card's close button."
+  },
+  "updateNewsDismissLabel": "Dismiss What's new",
+  "@updateNewsDismissLabel": {
+    "description": "The accessibility label of the What's new card's close button."
+  },
+  "updateNewsNoNotes": "The changelog has no notes for this version.",
+  "@updateNewsNoNotes": {
+    "description": "What's new from Settings when the changelog says nothing about this version."
+  },
+  "updateNewsNow": "Now {version}",
+  "@updateNewsNow": {
+    "description": "The What's new card's second line after Pinky was updated.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateNewsOnPhone": "On {phone}",
+  "@updateNewsOnPhone": {
+    "description": "The What's new card's second line after the companion app was updated on one phone.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "updateNewsOnPhones": "{count, plural, one {On # phone} other {On # phones}}",
+  "@updateNewsOnPhones": {
+    "description": "The What's new card's second line after the companion app was updated on several phones.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "updateNewsSee": "See what's new",
+  "@updateNewsSee": {
+    "description": "The What's new card's link that opens the notes."
+  },
+  "updateNewsUpdatedTo": "Pinky was updated to {version}.",
+  "@updateNewsUpdatedTo": {
+    "description": "What's new after an update when the changelog says nothing about it.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateNowButton": "Update now",
+  "@updateNowButton": {
+    "description": "The button that updates Pinky now (update card, release notes, the confirmation)."
+  },
+  "updateOpenInstallerFailed": "Couldn't open the installer: {detail}",
+  "@updateOpenInstallerFailed": {
+    "description": "Why an update failed: the downloaded installer would not open; detail is the system's error.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "updateProgress": "{done} of {total}",
+  "@updateProgress": {
+    "description": "The update card: how much has downloaded, in MB or KB.",
+    "placeholders": {
+      "done": {
+        "type": "String",
+        "example": "12.5 MB"
+      },
+      "total": {
+        "type": "String",
+        "example": "48 MB"
+      }
+    }
+  },
+  "updateReady": "Pinky {version} is ready",
+  "@updateReady": {
+    "description": "The update card's title once the new version is downloaded and checked.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateReadyDetail": "Pinky restarts to finish the update.",
+  "@updateReadyDetail": {
+    "description": "Under updateReady."
+  },
+  "updateReleasePage": "Release page",
+  "@updateReleasePage": {
+    "description": "The update card's link to the release's web page."
+  },
+  "updateReleasePageFailed": "Couldn't open the release page: {detail}",
+  "@updateReleasePageFailed": {
+    "description": "A toast when the release page would not open; detail is the system's error.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "no browser"
+      }
+    }
+  },
+  "updateReleasePageLabel": "Open the release page of Pinky {version}",
+  "@updateReleasePageLabel": {
+    "description": "The accessibility label of the release page link.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateRestartNow": "Restart now",
+  "@updateRestartNow": {
+    "description": "The update card's button that restarts Pinky into the new version."
+  },
+  "updateRestarting": "Restarting Pinky…",
+  "@updateRestarting": {
+    "description": "The update card's title while Pinky quits to update."
+  },
+  "updateRestartingLabel": "Restarting",
+  "@updateRestartingLabel": {
+    "description": "The accessibility label of the progress bar under updateRestarting."
+  },
+  "updateSettingsAuto": "Update automatically",
+  "@updateSettingsAuto": {
+    "description": "Settings › Advanced › Updates: the switch that lets Pinky update itself and the companion app."
+  },
+  "updateSettingsAutoDesc": "Pinky, and Pinky Companion on your Android phones, update when no one is using them.",
+  "@updateSettingsAutoDesc": {
+    "description": "Under updateSettingsAuto."
+  },
+  "updateSettingsNewsDesc": "The changes in this version",
+  "@updateSettingsNewsDesc": {
+    "description": "Settings › Advanced › Updates: under updateWhatsNew."
+  },
+  "updateSettingsTitle": "Updates",
+  "@updateSettingsTitle": {
+    "description": "Settings › Advanced: the heading of the updates rows."
+  },
+  "updateShow": "Show",
+  "@updateShow": {
+    "description": "Settings › Advanced › Updates: the button that shows What's new."
+  },
+  "updateShowDownload": "Show download",
+  "@updateShowDownload": {
+    "description": "The update card's button that shows the downloaded file."
+  },
+  "updateShowLabel": "Show what's new",
+  "@updateShowLabel": {
+    "description": "The accessibility label of updateShow."
+  },
+  "updateTryAgain": "Try again",
+  "@updateTryAgain": {
+    "description": "The update card's button after a failure."
+  },
+  "updateUpToDateToast": "Pinky is up to date",
+  "@updateUpToDateToast": {
+    "description": "A toast after Check now finds no newer version."
+  },
+  "updateWhatsNew": "What's new",
+  "@updateWhatsNew": {
+    "description": "Opens the release notes (the update card's link, Settings › Advanced › Updates, the What's new card)."
+  },
+  "updateWhatsNewIn": "What's new in Pinky {version}",
+  "@updateWhatsNewIn": {
+    "description": "The title of the release notes, and the label of the link that opens them.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "2026.1107.2"
+      }
+    }
+  },
+  "updateWhereDiskImage": "Pinky runs from its disk image. Drag it to Applications and open it from there to get updates automatically.",
+  "@updateWhereDiskImage": {
+    "description": "Why this Pinky cannot update itself: it runs from the .dmg. Shown only in other languages; in English internal/update's own words show."
+  },
+  "updateWhereNotApp": "This Pinky doesn't run from Pinky.app, so it can't replace itself.",
+  "@updateWhereNotApp": {
+    "description": "Why this Pinky cannot update itself. Shown only in other languages; in English internal/update's own words show."
+  },
+  "updateWhereNotWritable": "Pinky can't write to {folder}, where it is installed.",
+  "@updateWhereNotWritable": {
+    "description": "Why this Pinky cannot update itself: its folder is read-only. Shown only in other languages; in English internal/update's own words show.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "/Applications"
+      }
+    }
+  },
+  "updateWhereOtherUser": "Pinky.app belongs to another user of this Mac, so Pinky can't replace it.",
+  "@updateWhereOtherUser": {
+    "description": "Why this Pinky cannot update itself: another user owns it. Shown only in other languages; in English internal/update's own words show."
+  },
+  "updateWhereTranslocated": "macOS runs this Pinky from a temporary copy. Move Pinky to Applications and open it from there to get updates automatically.",
+  "@updateWhereTranslocated": {
+    "description": "Why this Pinky cannot update itself: macOS translocated it. Shown only in other languages; in English internal/update's own words show."
+  },
+  "updateWhereUnknown": "Pinky could not find where it is installed.",
+  "@updateWhereUnknown": {
+    "description": "Why this Pinky cannot update itself: its location is unknown. Shown only in other languages; in English internal/update's own words show."
+  },
+  "updateWhereUnsigned": "This copy of Pinky isn't signed by Pinky's developer (a build made on this Mac), so it doesn't replace itself.",
+  "@updateWhereUnsigned": {
+    "description": "Why this Pinky cannot update itself: it is a local build. Shown only in other languages; in English internal/update's own words show."
   }
 }

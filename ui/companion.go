@@ -144,7 +144,7 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		title = locales.CompanionInstallingTitle()
 	}
 	if auto {
-		title = "Updating Pinky Companion"
+		title = locales.CompanionUpdatingTitle()
 	}
 	p := pal(c)
 	mg.Column(c.Key("companion-"+id)).Padding(14).Radius(12).Background(p.bg2).Border(1, p.line).Gap(8).
@@ -160,8 +160,8 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 			mg.Text(c, extra).FontSize(13).TextColor(p.ink2)
 		}
 		if auto {
-			mg.Progress(c, -1).FillWidth().Label("Updating")
-			mg.Text(c, "Agents can use the phone again in a few seconds.").FontSize(13).TextColor(p.ink2)
+			mg.Progress(c, -1).FillWidth().Label(locales.CompanionUpdatingLabel())
+			mg.Text(c, locales.CompanionUpdatingHint()).FontSize(13).TextColor(p.ink2)
 			c.After(time.Second)
 			return
 		}
