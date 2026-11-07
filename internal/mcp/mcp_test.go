@@ -190,11 +190,18 @@ func TestFlowWithApproval(t *testing.T) {
 	if isErr || !strings.HasPrefix(text, "settled") || !strings.Contains(text, `note: "ok"`) || !strings.Contains(text, "Order placed") {
 		t.Fatalf("approved tap:\n%s", text)
 	}
-	c.mu.Lock()
-	gotProgress := len(c.progress) > 0 && strings.Contains(c.progress[0], "Waiting for the person")
-	c.mu.Unlock()
-	if !gotProgress {
-		t.Fatalf("no progress notification: %q", c.progress)
+	// The client handles notifications on a goroutine of their own, which
+	// may run after the call's result came in.
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(5 * time.Millisecond) {
+		c.mu.Lock()
+		progress := append([]string(nil), c.progress...)
+		c.mu.Unlock()
+		if len(progress) > 0 && strings.Contains(progress[0], "Waiting for the person") {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("no progress notification: %q", progress)
+		}
 	}
 
 	text, _ = c.call(t, "phone_release", map[string]any{"outcome": "done", "summary": "Ordered lunch."})
