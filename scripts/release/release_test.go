@@ -306,7 +306,10 @@ func gitRepo(t *testing.T) (clone, remote string) {
 	}
 	// Neither the person's nor the system's git configuration (signing,
 	// hooks) applies.
-	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	base := t.TempDir()
+	global := filepath.Join(base, "gitconfig")
+	write(t, global, "")
+	t.Setenv("GIT_CONFIG_GLOBAL", global)
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME"} {
 		t.Setenv(k, "Release Test")
@@ -314,7 +317,6 @@ func gitRepo(t *testing.T) (clone, remote string) {
 	for _, k := range []string{"GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
 		t.Setenv(k, "release@example.com")
 	}
-	base := t.TempDir()
 	remote, clone = filepath.Join(base, "remote.git"), filepath.Join(base, "clone")
 	run := func(dir string, args ...string) {
 		t.Helper()

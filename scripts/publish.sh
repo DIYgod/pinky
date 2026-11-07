@@ -21,6 +21,7 @@
 #   GH_TOKEN       for gh, which must be able to write RELEASES_REPO
 #                  (default: gh's own login)
 #   TAP_TOKEN      a token that may push to TAP_REPO (default: gh's login)
+#   TAP_URL        where the tap is cloned from (default: TAP_REPO on GitHub)
 set -eu
 
 dir=${1:?usage: scripts/publish.sh <dir>}
@@ -36,23 +37,24 @@ die() {
 	printf 'publish: %s\n' "$*" >&2
 	exit 1
 }
-release() { go run ./scripts/release "$@"; }
 
 [ -f "$dir/latest.json" ] || die "$dir has no latest.json (go run ./scripts/release manifest)"
-version=$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$dir/latest.json" | head -1)
-release newer "$version" >/dev/null || die "latest.json has no release version"
-tag=v$version
 work=$(mktemp -d "${TMPDIR:-/tmp}/pinky-publish.XXXXXX")
 trap 'rm -rf "$work"' EXIT
+go build -o "$work/release" ./scripts/release
+release() { "$work/release" "$@"; }
+version=$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$dir/latest.json" | head -1)
+release newer "$version" || die "latest.json has no release version"
+tag=v$version
 
 # The release page: the notes, then where to get Pinky.
 {
-	release notes "$version"
+	release notes -manifest "$dir/latest.json"
 	cat <<EOF
 
 ---
 
-**macOS:** \`brew install --cask $tapname/pinky\`, or the \`.dmg\` for your Mac below (\`arm64\` for Apple silicon, \`amd64\` for Intel). Pinky keeps itself up to date.
+**macOS:** \`brew install --cask $tapname/pinky\`, or the \`.dmg\` for your Mac below (\`arm64\` for Apple silicon, \`amd64\` for Intel).
 **Windows:** \`pinky-setup-$version-amd64.exe\`. **Linux:** \`pinky_${version}_amd64.deb\`, or \`pinky-$version-linux-amd64.tar.gz\`.
 EOF
 } >"$work/notes.md"
@@ -99,7 +101,7 @@ tapcommit() {
 	git -C "$work/tap" "$@"
 }
 release cask -repo "$repo" "$manifest" >"$work/pinky.rb"
-tapgit clone --quiet --depth 1 "https://github.com/$tap.git" "$work/tap"
+tapgit clone --quiet --depth 1 "${TAP_URL:-https://github.com/$tap.git}" "$work/tap"
 mkdir -p "$work/tap/Casks"
 attempt=1
 while :; do

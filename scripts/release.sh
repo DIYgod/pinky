@@ -34,7 +34,9 @@ die() {
 	printf 'release: %s\n' "$*" >&2
 	exit 1
 }
-release() { go run ./scripts/release "$@"; }
+# The release tool, built once (build/ is ignored by git).
+go build -o build/bin/release ./scripts/release
+release() { "$root/build/bin/release" "$@"; }
 
 # build_release builds the release of a commit (a tag, or any ref for a
 # dry run) into dist/<version>/, in a checkout of its own so that nothing
@@ -66,7 +68,7 @@ build_release() {
 	git worktree add --quiet --detach "$work/src" "$sha"
 	rm -rf "$out"
 	mkdir -p "$out"
-	(cd "$work/src" && go run ./scripts/release stamp "$version")
+	(cd "$work/src" && release stamp "$version")
 
 	# FFmpeg's builds outlive the worktree.
 	export FFMPEG_CACHE="${FFMPEG_CACHE:-$HOME/Library/Caches/pinky-release/ffmpeg}"
@@ -76,12 +78,12 @@ build_release() {
 	"$work/src/scripts/dist.sh" windows "$out"
 	"$work/src/scripts/dist.sh" linux "$out"
 	if [ -n "$dryrun" ]; then
-		(cd "$work/src" && go run ./scripts/release manifest -dir "$out" -version "$version" -repo "$repo" -unreleased) ||
-			(cd "$work/src" && go run ./scripts/release manifest -dir "$out" -version "$version" -repo "$repo" -notes "A dry run of $ref, with no notes.")
+		(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo" -unreleased) ||
+			(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo" -notes "A dry run of $ref, with no notes.")
 	else
-		(cd "$work/src" && go run ./scripts/release manifest -dir "$out" -version "$version" -repo "$repo")
+		(cd "$work/src" && release manifest -dir "$out" -version "$version" -repo "$repo")
 	fi
-	(cd "$work/src" && go run ./scripts/release cask -repo "$repo" "$out/latest.json") >"$root/dist/pinky-$version.rb"
+	release cask -repo "$repo" "$out/latest.json" >"$root/dist/pinky-$version.rb"
 	if [ "$publishing" = 1 ]; then
 		"$work/src/scripts/publish.sh" "$out"
 	fi

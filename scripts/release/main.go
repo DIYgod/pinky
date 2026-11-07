@@ -45,6 +45,8 @@ func usage() {
                              version, commit that and tag it v<version>;
                              -push pushes main and the tag together
   notes <version>            print a version's notes from CHANGELOG.md
+  notes -manifest <latest.json>
+                             print a release's notes from its manifest
   stamp <version>            write the version into cmd/pinky/mygo.json
   manifest -dir <dir> -version <version> [-repo owner/name]
                              write latest.json and SHA256SUMS in dir
@@ -289,11 +291,20 @@ func runTag(args []string) error {
 func runNotes(args []string) error {
 	fs := flag.NewFlagSet("notes", flag.ContinueOnError)
 	file := fs.String("changelog", "", "the changelog (default: CHANGELOG.md of the source)")
+	manifest := fs.String("manifest", "", "print the notes of this latest.json instead")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	if *manifest != "" && fs.NArg() == 0 {
+		m, err := readManifest(*manifest)
+		if err != nil {
+			return err
+		}
+		fmt.Println(m.Notes)
+		return nil
+	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: release notes [-changelog file] <version>")
+		return errors.New("usage: release notes [-changelog file] <version>, or release notes -manifest <latest.json>")
 	}
 	path, err := sourceFile(*file, changelogFile)
 	if err != nil {
