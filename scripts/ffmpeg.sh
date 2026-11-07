@@ -39,7 +39,8 @@ target=${2:-}
 case $prefix in /*) ;; *) prefix=$(pwd)/$prefix ;; esac
 
 src=$prefix-src
-tarball=$src/ffmpeg-$VERSION.tar.xz
+# One copy of the source, next to the builds, serves every build there.
+tarball=$(dirname "$prefix")/ffmpeg-$VERSION.tar.xz
 
 sha256() {
 	if command -v shasum >/dev/null 2>&1; then
@@ -51,11 +52,21 @@ sha256() {
 
 # The source is downloaded here, before any container: a container may not
 # share this machine's way to the network (a proxy, say). It mounts the
-# folder that holds the source.
+# folder that holds the source. ffmpeg.org drops a connection now and then,
+# which curl's own retries do not cover.
 mkdir -p "$src"
 if [ ! -f "$tarball" ] || [ "$(sha256 "$tarball")" != "$SHA256" ]; then
 	echo "Downloading $URL"
-	curl -fL --retry 3 -o "$tarball.part" "$URL"
+	tries=0
+	until curl -fsSL --retry 3 -o "$tarball.part" "$URL"; do
+		tries=$((tries + 1))
+		if [ $tries -ge 5 ]; then
+			echo "ffmpeg.sh: could not download $URL" >&2
+			rm -f "$tarball.part"
+			exit 1
+		fi
+		sleep $((tries * 5))
+	done
 	got=$(sha256 "$tarball.part")
 	if [ "$got" != "$SHA256" ]; then
 		echo "ffmpeg-$VERSION.tar.xz has SHA-256 $got, want $SHA256" >&2
