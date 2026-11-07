@@ -6,12 +6,13 @@
 // id, Pinky's version and the computer's system, at most once a day. They
 // never hold what is on a phone's screen, what is typed, app names, phone
 // identifiers, PINs, file names or anything else about the person. They
-// are counted only while the setting is on, sent only once the person has
-// seen the note about them, and neither happens while DO_NOT_TRACK is set.
+// are counted and sent only while the setting is on (the default), and
+// never while DO_NOT_TRACK is set.
 //
 // Crash reports come from the Go runtime, which writes a crash to a file
-// in the data folder (runtime/debug.SetCrashOutput); the next launch offers
-// to send them. Feedback is sent when the person sends it.
+// in the data folder (runtime/debug.SetCrashOutput); the next launch sends
+// them under the same setting. Feedback goes to GitHub as an issue that the
+// person reads and submits themselves (IssueURL).
 //
 // Nothing here may stop Pinky: errors are logged and dropped.
 package telemetry
@@ -78,12 +79,12 @@ type Options struct {
 	// without EndpointEnv, nothing is sent.
 	Backend Backend
 	// Crashes is this process's crash capture (CaptureCrashes); what it
-	// found of earlier runs is counted and offered to the person.
+	// found of earlier runs is counted and sent.
 	Crashes *Crashes
-	// Usage and AutoCrash are the settings to start with (SetUsage,
-	// SetAutoCrash).
-	Usage, AutoCrash bool
-	Log              *slog.Logger
+	// Usage is the setting to start with (SetUsage): usage statistics and
+	// crash reports.
+	Usage bool
+	Log   *slog.Logger
 	// Now is the clock; nil is time.Now.
 	Now func() time.Time
 	// Tick is how often Run looks at what is due; zero is five minutes.
@@ -91,8 +92,8 @@ type Options struct {
 }
 
 // Client counts usage, keeps it on disk and sends it when due; it also
-// sends crash reports and feedback. Its methods are safe from any
-// goroutine, and a nil *Client does nothing.
+// sends crash reports. Its methods are safe from any goroutine, and a nil
+// *Client does nothing.
 type Client struct {
 	opt     Options
 	backend Backend // nil: nothing is sent
@@ -100,14 +101,13 @@ type Client struct {
 	now     func() time.Time
 	path    string
 
-	mu        sync.Mutex
-	st        state
-	usage     bool // Settings › Privacy › Share usage statistics
-	autoCrash bool // send crash reports without asking
-	dirty     bool
-	sending   bool
-	closed    bool
-	wake      chan struct{}
+	mu      sync.Mutex
+	st      state
+	usage   bool // Settings › Privacy › Share usage statistics and crash reports
+	dirty   bool
+	sending bool
+	closed  bool
+	wake    chan struct{}
 	// crashRetry is when crash reports that failed to go out may be tried
 	// again.
 	crashRetry time.Time
@@ -120,10 +120,7 @@ type state struct {
 	InstallID string `json:"install_id"`
 	// Salt keys the hashes that count each phone once a period; the
 	// hashes never leave the computer.
-	Salt string `json:"salt"`
-	// NoticeShown is when the person dismissed the note about usage
-	// statistics; nothing is sent before.
-	NoticeShown time.Time `json:"notice_shown,omitzero"`
+	Salt        string    `json:"salt"`
 	LastSent    time.Time `json:"last_sent,omitzero"`
 	PeriodStart time.Time `json:"period_start,omitzero"`
 	// Counts add up; Max keeps the highest value seen; Phones holds, per
@@ -154,7 +151,7 @@ func Open(opt Options) *Client {
 	if opt.Process == "" {
 		opt.Process = "app"
 	}
-	c := &Client{opt: opt, log: opt.Log, now: opt.Now, wake: make(chan struct{}, 1), usage: opt.Usage, autoCrash: opt.AutoCrash}
+	c := &Client{opt: opt, log: opt.Log, now: opt.Now, wake: make(chan struct{}, 1), usage: opt.Usage}
 	c.backend = opt.Backend
 	if c.backend == nil {
 		if url := endpoint(opt.Version); url != "" {
@@ -262,8 +259,9 @@ func randomHex(n int) string {
 
 // --- settings ---
 
-// SetUsage turns usage statistics on or off, from Settings › Privacy.
-// Turning them off forgets what was counted and not yet sent.
+// SetUsage turns usage statistics and crash reports on or off, from
+// Settings › Privacy. Turning them off forgets what was counted and not yet
+// sent; crash reports stay on this computer.
 func (c *Client) SetUsage(on bool) {
 	if c == nil {
 		return
@@ -292,54 +290,6 @@ func (c *Client) Usage() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.usage && !DoNotTrack()
-}
-
-// NoticeShown reports whether the person has dismissed the note about
-// usage statistics.
-func (c *Client) NoticeShown() bool {
-	if c == nil {
-		return true
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return !c.st.NoticeShown.IsZero()
-}
-
-// MarkNoticeShown records that the person dismissed the note; usage
-// statistics may go out from then on.
-func (c *Client) MarkNoticeShown() {
-	if c == nil {
-		return
-	}
-	c.mu.Lock()
-	if c.st.NoticeShown.IsZero() {
-		c.st.NoticeShown = c.now()
-		c.dirty = true
-	}
-	c.mu.Unlock()
-	c.persist()
-	c.poke()
-}
-
-// SetAutoCrash chooses whether crash reports go out without asking.
-func (c *Client) SetAutoCrash(on bool) {
-	if c == nil {
-		return
-	}
-	c.mu.Lock()
-	c.autoCrash = on
-	c.mu.Unlock()
-	c.poke()
-}
-
-// AutoCrash reports whether crash reports go out without asking.
-func (c *Client) AutoCrash() bool {
-	if c == nil {
-		return false
-	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.autoCrash
 }
 
 // CanSend reports whether this build has a backend to send to.
@@ -533,8 +483,6 @@ func (c *Client) dueLocked(now time.Time) bool {
 	switch {
 	case c.backend == nil, !c.usage, c.closed, c.sending, DoNotTrack():
 		return false
-	case c.st.NoticeShown.IsZero():
-		return false // the person has not seen the note yet
 	case c.keysLocked() == 0, c.st.PeriodStart.IsZero():
 		return false
 	case now.Sub(c.st.PeriodStart) < sendEvery:
@@ -545,9 +493,8 @@ func (c *Client) dueLocked(now time.Time) bool {
 	return true
 }
 
-// Run persists the counts and sends what is due until ctx ends: usage
-// statistics once a day, and crash reports at once when the person chose
-// to send them without asking.
+// Run persists the counts and sends what is due until ctx ends: crash
+// reports at once, usage statistics once a day.
 func (c *Client) Run(ctx context.Context) {
 	if c == nil {
 		return
@@ -640,8 +587,7 @@ func backoff(n int) time.Duration {
 	return min(d, maxBackoff)
 }
 
-// Close saves what was counted. Counting stops; sending feedback and
-// crash reports still works.
+// Close saves what was counted. Counting stops.
 func (c *Client) Close() {
 	if c == nil {
 		return
@@ -654,33 +600,6 @@ func (c *Client) Close() {
 
 // ErrNoBackend is returned when this build has nowhere to send to.
 var ErrNoBackend = errors.New("this build of Pinky has no address to send reports to")
-
-// SendFeedback sends the person's feedback, whatever the usage setting:
-// they asked to send it.
-func (c *Client) SendFeedback(ctx context.Context, f Feedback) error {
-	if c == nil || c.backend == nil {
-		return ErrNoBackend
-	}
-	f.Message = strings.TrimSpace(f.Message)
-	if f.Message == "" {
-		return errors.New("the message is empty")
-	}
-	f.Email = strings.TrimSpace(f.Email)
-	if len(f.Message) > maxMessage {
-		f.Message = f.Message[:maxMessage]
-	}
-	if len(f.Diagnostics) > maxDiagnostics {
-		f.Diagnostics = f.Diagnostics[len(f.Diagnostics)-maxDiagnostics:]
-	}
-	sys := System()
-	f.Version, f.OS, f.OSVersion, f.Arch = c.opt.Version, sys.OS, sys.OSVersion, sys.Arch
-	if f.Created.IsZero() {
-		f.Created = c.now()
-	}
-	sctx, cancel := context.WithTimeout(ctx, 60*time.Second)
-	defer cancel()
-	return c.backend.Feedback(sctx, f)
-}
 
 // --- the package's client ---
 

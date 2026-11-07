@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 )
@@ -19,19 +20,59 @@ const (
 	logTailLines = 300
 )
 
-// Diagnostics is the text the person may attach to feedback: Pinky's
-// version and system, the phones' platforms, models and systems, extra
-// lines from the caller (settings, video), and the end of Pinky's logs.
-// Phone ids and names, the home folder, the user name, e-mail and IP
-// addresses, and log fields that may name apps, tasks or files are taken
-// out (Redactor). The person reads it before sending.
-func (c *Client) Diagnostics(phones []driver.Info, extra ...string) string {
+// Diagnostics is what the person may attach to feedback: a summary
+// (Pinky's version and system, the settings, the last crash, the phones'
+// platforms, models and systems) and the end of Pinky's logs. Phone ids
+// and names, the home folder, the user name, e-mail and IP addresses, and
+// log fields that may name apps, tasks or files are taken out (Redactor).
+// The person reads it before it goes anywhere.
+type Diagnostics struct {
+	Summary string
+	Logs    []LogTail
+}
+
+// LogTail is the end of one log, oldest line first.
+type LogTail struct {
+	Name  string
+	Lines []string
+}
+
+// String is the whole text.
+func (d Diagnostics) String() string { return d.Text(-1) }
+
+// Text is the summary with at most the last maxLines lines of each log; a
+// negative maxLines keeps them all.
+func (d Diagnostics) Text(maxLines int) string {
+	var b strings.Builder
+	b.WriteString(strings.TrimRight(d.Summary, "\n"))
+	b.WriteByte('\n')
+	for _, l := range d.Logs {
+		lines := l.Lines
+		if maxLines >= 0 && len(lines) > maxLines {
+			lines = lines[len(lines)-maxLines:]
+		}
+		if len(lines) == 0 {
+			continue
+		}
+		fmt.Fprintf(&b, "\n%s, the last lines:\n", l.Name)
+		b.WriteString(strings.Join(lines, "\n"))
+		b.WriteByte('\n')
+	}
+	out := b.String()
+	if len(out) > maxDiagnostics {
+		out = "… (cut)\n" + out[len(out)-maxDiagnostics+10:]
+	}
+	return out
+}
+
+// Diagnostics reads the diagnostics now: extra lines from the caller
+// (settings, the video decoder) go in the summary.
+func (c *Client) Diagnostics(phones []driver.Info, extra ...string) Diagnostics {
 	red := NewRedactor()
 	for _, p := range phones {
 		red.Phone(p.ID, p.Name, p.Model)
 	}
-	var logs []string
-	var names []string
+	var d Diagnostics
 	if c != nil && c.opt.Dir != "" {
 		for _, name := range diagnosticLogs {
 			tail, err := readTail(filepath.Join(c.opt.Dir, name), logTailBytes, logTailLines)
@@ -39,8 +80,12 @@ func (c *Client) Diagnostics(phones []driver.Info, extra ...string) string {
 				continue
 			}
 			red.Learn(tail)
-			logs = append(logs, tail)
-			names = append(names, name)
+			d.Logs = append(d.Logs, LogTail{Name: name, Lines: strings.Split(tail, "\n")})
+		}
+		for i := range d.Logs {
+			for j, line := range d.Logs[i].Lines {
+				d.Logs[i].Lines[j] = red.String(line)
+			}
 		}
 	}
 
@@ -59,11 +104,11 @@ func (c *Client) Diagnostics(phones []driver.Info, extra ...string) string {
 		case c.Usage():
 			stats = "on"
 		}
-		crashes := "ask first"
-		if c.AutoCrash() {
-			crashes = "send automatically"
+		fmt.Fprintf(&b, "Usage statistics and crash reports: %s\n", stats)
+		if crashes := c.Crashes(); len(crashes) > 0 {
+			r := crashes[0]
+			fmt.Fprintf(&b, "Last crash: %s (%s, Pinky %s): %s\n", r.Crashed.UTC().Format(time.DateTime), r.Process, r.Version, r.Reason)
 		}
-		fmt.Fprintf(&b, "Usage statistics: %s · Crash reports: %s · Waiting crash reports: %d\n", stats, crashes, len(c.Crashes()))
 	}
 	for _, line := range extra {
 		if line = strings.TrimSpace(line); line != "" {
@@ -84,16 +129,8 @@ func (c *Client) Diagnostics(phones []driver.Info, extra ...string) string {
 		}
 		b.WriteString("  " + red.String(strings.Join(parts, " · ")) + "\n")
 	}
-	for i, tail := range logs {
-		fmt.Fprintf(&b, "\n%s, the last lines:\n", names[i])
-		b.WriteString(red.String(strings.TrimRight(tail, "\n")))
-		b.WriteByte('\n')
-	}
-	out := b.String()
-	if len(out) > maxDiagnostics {
-		out = "… (cut)\n" + out[len(out)-maxDiagnostics+10:]
-	}
-	return out
+	d.Summary = b.String()
+	return d
 }
 
 // readTail returns the last lines of a file, at most max bytes and lines,

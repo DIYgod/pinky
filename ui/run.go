@@ -83,10 +83,9 @@ type Settings struct {
 	// that cannot start `pinky mcp`; each request needs the agent token.
 	RemoteAgents bool
 	RemoteAddr   string
-	// UsageStats shares anonymous usage statistics; CrashReports sends
-	// crash reports without asking first (docs/TELEMETRY.md).
-	UsageStats   bool
-	CrashReports bool
+	// UsageStats shares anonymous usage statistics and crash reports
+	// (docs/TELEMETRY.md).
+	UsageStats bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -283,7 +282,6 @@ func (a *app) ready() {
 	a.setBackgrounds(a.readBackground(a.devices))
 	a.loaded = true
 	a.applySettings()
-	a.startTelemetry()
 	a.afterRefresh(true)
 
 	a.main = mygo.NewWindow(mygo.WindowOptions{

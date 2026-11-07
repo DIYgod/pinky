@@ -13,12 +13,12 @@ import (
 	"time"
 )
 
-// Backend receives Pinky's reports. HTTP is the one Pinky uses; a hosted
-// service would be another.
+// Backend receives Pinky's reports. HTTP is the one Pinky uses, with the
+// Worker in worker/; a hosted service would be another. Feedback does not
+// go through it: it goes to GitHub (IssueURL).
 type Backend interface {
 	Usage(ctx context.Context, u Usage) error
 	Crash(ctx context.Context, r CrashReport) error
-	Feedback(ctx context.Context, f Feedback) error
 }
 
 // Usage is a usage report: counters for a period, with what they ran on.
@@ -33,35 +33,19 @@ type Usage struct {
 	Counts      map[string]int64 `json:"counts"`
 }
 
-// Feedback is what the person wrote, with the diagnostics they chose to
-// attach.
-type Feedback struct {
-	Message     string    `json:"message"`
-	Email       string    `json:"email,omitempty"`
-	Diagnostics string    `json:"diagnostics,omitempty"`
-	Version     string    `json:"version"`
-	OS          string    `json:"os"`
-	OSVersion   string    `json:"os_version,omitempty"`
-	Arch        string    `json:"arch"`
-	Created     time.Time `json:"created"`
-}
-
-// Limits on what is sent, in bytes.
+// Limits on what is kept and sent, in bytes.
 const (
-	maxMessage     = 20 << 10
 	maxDiagnostics = 256 << 10
 	maxStack       = 256 << 10
 )
 
 // Paths under the backend's URL.
 const (
-	PathUsage    = "/v1/usage"
-	PathCrash    = "/v1/crash"
-	PathFeedback = "/v1/feedback"
+	PathUsage = "/v1/usage"
+	PathCrash = "/v1/crash"
 )
 
-// HTTP posts reports as JSON to URL + PathUsage, PathCrash and
-// PathFeedback.
+// HTTP posts reports as JSON to URL + PathUsage and PathCrash.
 type HTTP struct {
 	URL     string
 	Version string       // for the User-Agent
@@ -73,9 +57,6 @@ func (h *HTTP) Usage(ctx context.Context, u Usage) error { return h.post(ctx, Pa
 
 // Crash posts a crash report.
 func (h *HTTP) Crash(ctx context.Context, r CrashReport) error { return h.post(ctx, PathCrash, r) }
-
-// Feedback posts feedback.
-func (h *HTTP) Feedback(ctx context.Context, f Feedback) error { return h.post(ctx, PathFeedback, f) }
 
 func (h *HTTP) post(ctx context.Context, path string, v any) error {
 	body, err := json.Marshal(v)

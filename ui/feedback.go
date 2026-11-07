@@ -1,11 +1,8 @@
 package ui
 
 import (
-	"context"
 	"fmt"
-	"net/mail"
 	"strings"
-	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -13,19 +10,25 @@ import (
 	"github.com/DIYgod/pinky/internal/telemetry"
 )
 
+// Feedback goes to GitHub: Send Feedback writes it here, then opens a new
+// issue with it filled in, which the person reads and submits with their
+// GitHub account (telemetry.IssueURL). The issue is public.
+
 // feedbackState is the Send Feedback dialog's.
 type feedbackState struct {
 	open    bool
+	title   string
 	message string
-	email   string
-	attach  bool   // attach the diagnostics
-	review  bool   // the diagnostics show
-	diag    string // read when the dialog opens
+	attach  bool // attach the diagnostics
+	review  bool // the diagnostics show
+	diag    telemetry.Diagnostics
 	reading bool
-	sending bool
 	err     string
 	seq     int
 }
+
+// openURL opens an address in the browser; e2e builds may log it instead.
+var openURL = func(c *mg.Context, u string, done func(error)) { c.OpenURLThen(u, done) }
 
 // openFeedback opens Send Feedback, from the Help menu, the menu bar
 // icon's menu and Settings. A draft that was not sent stays.
@@ -35,7 +38,7 @@ func (a *app) openFeedback() {
 		return
 	}
 	fb := &a.t.fb
-	if !fb.open && fb.message == "" {
+	if !fb.open && fb.message == "" && fb.title == "" {
 		fb.attach = true
 	}
 	fb.open, fb.err = true, ""
@@ -51,10 +54,10 @@ func (a *app) openFeedback() {
 	}
 	extra := a.diagnosticLines()
 	go func() {
-		text := tel.Diagnostics(phones, extra...)
+		d := tel.Diagnostics(phones, extra...)
 		a.post(func() {
 			if seq == fb.seq {
-				fb.diag, fb.reading = text, false
+				fb.diag, fb.reading = d, false
 			}
 		})
 	}()
@@ -82,125 +85,98 @@ func (a *app) diagnosticLines() []string {
 	return lines
 }
 
-// feedbackDialog is Send Feedback: a message, an e-mail address for an
-// answer, and the diagnostics, which the person can read before sending.
+// feedback is what the dialog holds, as telemetry.Feedback.
+func (a *app) feedback() telemetry.Feedback {
+	fb := &a.t.fb
+	f := telemetry.Feedback{Title: fb.title, Message: fb.message, Version: a.tel().VersionLine()}
+	if fb.attach && !fb.reading {
+		d := fb.diag
+		f.Diagnostics = &d
+	}
+	return f
+}
+
+// feedbackDialog is Send Feedback: a title, a message and the
+// diagnostics, which the person can read, then GitHub.
 func (a *app) feedbackDialog(c *mg.Context) {
 	fb := &a.t.fb
 	if !fb.open {
 		return
 	}
 	p := pal(c)
-	tel := a.tel()
 	mg.Modal(c, &fb.open, func() {
 		mg.Column(c).Width(560).Gap(12).Label("Send feedback").Children(func() {
 			mg.Text(c, "Send feedback").FontSize(17).FontWeight(650).Role(mg.RoleHeading)
 			mg.Text(c, "What happened, or what would make Pinky better? If something went wrong, say what you were doing.").
 				FontSize(13.5).TextColor(p.ink2)
+			mg.TextInput(c.Key("fb-title"), &fb.title).Label("Title").Placeholder("Title (optional): a few words")
 			mg.TextArea(c.Key("fb-message"), &fb.message).Label("Message").Placeholder("Your message").Lines(5, 10).AutoFocus()
-			mg.TextInput(c.Key("fb-email"), &fb.email).Label("E-mail (optional)").Placeholder("E-mail, if you'd like an answer (optional)")
+			cut := false
 			mg.Column(c).Gap(4).Children(func() {
-				mg.Checkbox(c, &fb.attach, "Attach diagnostics: versions, phone models and Pinky's recent logs")
-				if fb.attach {
-					mg.Row(c).Gap(8).Padding(0, 0, 0, 26).AlignItems(mg.Center).Children(func() {
-						mg.Text(c, "Phone names and IDs, your user name, e-mail and IP addresses, app and task names are taken out.").
-							FontSize(12.5).TextColor(p.ink3).Grow(1).MinWidth(0)
-						label := "Review"
-						if fb.review {
-							label = "Hide"
-						}
-						if button(c, label, btnOpt{small: true}).Label(label + " diagnostics").Clicked() {
-							fb.review = !fb.review
-						}
-					})
+				mg.Checkbox(c, &fb.attach, "Attach diagnostics: versions, settings, phone models and Pinky's recent logs")
+				if !fb.attach {
+					return
+				}
+				mg.Row(c).Gap(8).Padding(0, 0, 0, 26).AlignItems(mg.Center).Children(func() {
+					mg.Text(c, "Phone names and IDs, your user name, e-mail and IP addresses, app and task names are taken out.").
+						FontSize(12.5).TextColor(p.ink3).Grow(1).MinWidth(0)
+					label := "Review"
 					if fb.review {
-						text := fb.diag
-						if fb.reading {
-							text = "Reading…"
-						}
-						mg.Scroll(c).MaxHeight(240).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
-							mg.Text(c, text).Font("monospace").FontSize(11.5).Selectable()
-						})
+						label = "Hide"
 					}
+					if button(c, label, btnOpt{small: true}).Label(label + " diagnostics").Clicked() {
+						fb.review = !fb.review
+					}
+				})
+				if fb.reading {
+					return
+				}
+				_, cut = telemetry.IssueURL(a.feedback())
+				if fb.review {
+					mg.Scroll(c).MaxHeight(240).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
+						mg.Text(c, fb.diag.String()).Font("monospace").FontSize(11.5).Selectable()
+					})
 				}
 			})
+			note := "Pinky opens a new issue on GitHub with this filled in; read it there and submit it with your GitHub account. Issues are public."
+			if cut {
+				note += " Not all of the logs fit in the link: Copy puts everything on the clipboard to paste into the issue."
+			}
+			mg.Text(c, note).FontSize(12.5).TextColor(p.ink3)
 			if fb.err != "" {
 				mg.Text(c, fb.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
 			}
-			if !tel.CanSend() {
-				mg.Text(c, "This build of Pinky has no address to send feedback to. Copy it and send it another way.").
-					FontSize(12.5).TextColor(p.ink3)
-			}
 			mg.Row(c).Gap(8).Justify(mg.End).Children(func() {
 				if button(c, "Copy", btnOpt{icon: icCopy}).Label("Copy feedback").Tooltip("Copy the message and diagnostics").Clicked() {
-					c.WriteClipboard(a.feedbackText())
+					c.WriteClipboard(a.feedback().Text())
 					a.toasts = append(a.toasts, "Copied")
 				}
 				if button(c, "Cancel", btnOpt{}).Clicked() {
 					fb.open = false
 				}
-				label := "Send"
-				if fb.sending {
-					label = "Sending…"
-				}
-				send := button(c, label, btnOpt{kind: btnPrimary})
+				open := button(c, "Open on GitHub", btnOpt{kind: btnPrimary})
 				switch {
-				case !tel.CanSend():
-					send.Disabled(true).Tooltip("This build has nowhere to send it")
-				case fb.sending || strings.TrimSpace(fb.message) == "":
-					send.Disabled(true)
-				case send.Clicked():
-					a.sendFeedback()
+				case strings.TrimSpace(fb.message) == "" || (fb.attach && fb.reading):
+					open.Disabled(true)
+				case open.Clicked():
+					a.openIssue(c)
 				}
 			})
 		})
 	})
 }
 
-// feedbackText is the feedback as text, for Copy.
-func (a *app) feedbackText() string {
+// openIssue opens the new issue in the browser and closes the dialog.
+func (a *app) openIssue(c *mg.Context) {
 	fb := &a.t.fb
-	var b strings.Builder
-	b.WriteString(strings.TrimSpace(fb.message))
-	if e := strings.TrimSpace(fb.email); e != "" {
-		b.WriteString("\n\nFrom: " + e)
-	}
-	if fb.attach && fb.diag != "" {
-		b.WriteString("\n\n---\n" + fb.diag)
-	}
-	return b.String()
-}
-
-func (a *app) sendFeedback() {
-	fb := &a.t.fb
-	email := strings.TrimSpace(fb.email)
-	if email != "" {
-		if _, err := mail.ParseAddress(email); err != nil || !strings.Contains(email, "@") {
-			fb.err = "That e-mail address doesn't look right. Leave it empty to send without one."
+	u, _ := telemetry.IssueURL(a.feedback())
+	fb.err = ""
+	openURL(c, u, func(err error) {
+		if err != nil {
+			fb.err = "Couldn't open the browser: " + err.Error() + ". Copy the feedback and send it another way."
 			return
 		}
-	}
-	f := telemetry.Feedback{Message: fb.message, Email: email}
-	if fb.attach {
-		if fb.reading {
-			fb.err = "The diagnostics are still being read; try again in a moment."
-			return
-		}
-		f.Diagnostics = fb.diag
-	}
-	fb.sending, fb.err = true, ""
-	tel := a.tel()
-	go func() {
-		ctx, cancel := context.WithTimeout(a.ctx, time.Minute)
-		defer cancel()
-		err := tel.SendFeedback(ctx, f)
-		a.post(func() {
-			fb.sending = false
-			if err != nil {
-				fb.err = "Couldn't send it: " + err.Error() + ". Your message is still here."
-				return
-			}
-			*fb = feedbackState{seq: fb.seq}
-			a.toasts = append(a.toasts, "Thanks! Your feedback was sent.")
-		})
-	}()
+		*fb = feedbackState{seq: fb.seq}
+		a.toasts = append(a.toasts, "Finish your feedback on GitHub. Thanks!")
+	})
 }

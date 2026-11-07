@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,10 +24,11 @@ import (
 )
 
 // TestTelemetryInTheApp drives the e2e build of the desktop app over MyGo's
-// automation socket, with a fake backend: the note about usage statistics,
-// Help › Send Feedback…, a crash of the app (SIGQUIT) offered at the next
-// start and sent, and a clean quit that leaves nothing behind. It opens
-// windows, so it needs a display with the screen unlocked:
+// automation socket, with a fake backend: Help › Send Feedback… opening a
+// new GitHub issue (logged rather than opened), a crash of the app
+// (SIGQUIT) sent at the next start, and a clean quit that leaves nothing
+// behind. It opens windows, so it needs a display with the screen
+// unlocked:
 //
 //	go test -tags e2e -run TestTelemetryInTheApp ./cmd/pinky
 func TestTelemetryInTheApp(t *testing.T) {
@@ -41,36 +43,40 @@ func TestTelemetryInTheApp(t *testing.T) {
 	home := pinkyHome(t)
 	backend := newFakeBackend(t)
 	data := filepath.Join(home, "data")
+	urls := filepath.Join(home, "opened.txt")
 
-	// The first run: the note, then feedback, then a crash.
-	app := startApp(t, bin, home, backend.URL)
+	// The first run: no note, feedback to GitHub, then a crash.
+	app := startApp(t, bin, home, backend.URL, urls)
 	win := app.window(t)
-	app.waitText(t, win, "Pinky shares anonymous usage statistics")
+	app.waitText(t, win, "Pixel 9 (fake)")
+	if app.hasText(t, win, "usage statistics") {
+		t.Fatal("a note about usage statistics")
+	}
 	if runs, _ := filepath.Glob(filepath.Join(data, "crashes", "app-*.run")); len(runs) != 1 {
 		t.Fatalf("crash files while running: %v", runs)
 	}
-	app.press(t, win, "OK")
-	waitFile(t, filepath.Join(data, "telemetry.json"), `"notice_shown"`)
-
 	app.call(t, "menu", map[string]any{"window": win, "path": []string{"Help", "Send Feedback…"}}, nil)
 	app.waitText(t, win, "Send feedback")
 	app.setValue(t, win, "fb-message", "Sent by the e2e test.")
-	app.waitEnabled(t, win, "Send")
-	app.press(t, win, "Send")
-	fb := backend.wait(t, telemetry.PathFeedback)
-	var f telemetry.Feedback
-	if err := json.Unmarshal(fb, &f); err != nil || f.Message != "Sent by the e2e test." || !strings.Contains(f.Diagnostics, "Phones (") {
-		t.Fatalf("feedback %s: %v", fb, err)
+	app.waitEnabled(t, win, "Open on GitHub")
+	app.press(t, win, "Open on GitHub")
+	waitFile(t, urls, "github.com/"+telemetry.IssueRepo+"/issues/new?")
+	opened, _ := os.ReadFile(urls)
+	u, err := url.Parse(strings.TrimSpace(string(opened)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if q := u.Query(); q.Get("message") != "Sent by the e2e test." || !strings.Contains(q.Get("diagnostics"), "Phones (") ||
+		q.Get("template") != telemetry.IssueTemplate {
+		t.Fatalf("issue %v", q)
 	}
 
 	app.cmd.Process.Signal(syscall.SIGQUIT)
 	app.wait(t)
 
-	// The next run offers the crash and sends it.
-	app = startApp(t, bin, home, backend.URL)
+	// The next run sends the crash report by itself.
+	app = startApp(t, bin, home, backend.URL, urls)
 	win = app.window(t)
-	app.waitText(t, win, "Pinky quit unexpectedly")
-	app.press(t, win, "Send Report")
 	cr := backend.wait(t, telemetry.PathCrash)
 	var r telemetry.CrashReport
 	if err := json.Unmarshal(cr, &r); err != nil || r.Process != "app" || !strings.HasPrefix(r.Reason, "SIGQUIT") || !strings.Contains(r.Stack, "goroutine ") {
@@ -79,21 +85,24 @@ func TestTelemetryInTheApp(t *testing.T) {
 	if strings.Contains(r.Stack, os.Getenv("HOME")+"/") {
 		t.Fatalf("the stack keeps the home folder:\n%s", r.Stack)
 	}
+	if app.hasText(t, win, "quit unexpectedly") {
+		t.Fatal("asked about the crash")
+	}
 
-	// A clean quit leaves no crash file, and the next run finds nothing.
+	// A clean quit leaves no crash file, and the next run sends nothing.
 	run(t, bin, home, "quit")
 	app.wait(t)
 	if left, _ := filepath.Glob(filepath.Join(data, "crashes", "*")); len(left) != 0 {
 		t.Fatalf("left after a clean quit: %v", left)
 	}
-	app = startApp(t, bin, home, backend.URL)
+	app = startApp(t, bin, home, backend.URL, urls)
 	win = app.window(t)
 	app.waitText(t, win, "Pixel 9 (fake)")
-	if app.hasText(t, win, "quit unexpectedly") || app.hasText(t, win, "Pinky shares anonymous usage statistics") {
-		t.Fatal("asked again after a clean quit")
-	}
 	run(t, bin, home, "quit")
 	app.wait(t)
+	if n := backend.count(telemetry.PathCrash); n != 1 {
+		t.Fatalf("%d crash reports, want 1", n)
+	}
 }
 
 // fakeBackend keeps the bodies posted to it, by path.
@@ -114,6 +123,12 @@ func newFakeBackend(t *testing.T) *fakeBackend {
 	}))
 	t.Cleanup(b.Close)
 	return b
+}
+
+func (b *fakeBackend) count(path string) int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.bodies[path])
 }
 
 func (b *fakeBackend) wait(t *testing.T, path string) []byte {
@@ -140,13 +155,14 @@ type uiApp struct {
 }
 
 // startApp runs the e2e build of the app with fake phones, a backend at
-// url and an automation socket.
-func startApp(t *testing.T, bin, home, url string) *uiApp {
+// backendURL, an automation socket, and the addresses it opens logged to
+// urls.
+func startApp(t *testing.T, bin, home, backendURL, urls string) *uiApp {
 	t.Helper()
 	sock := filepath.Join(home, "ui.sock")
 	os.Remove(sock)
 	cmd := exec.Command(bin, "--fake")
-	cmd.Env = append(env(home), "MYGO_AUTOMATION="+sock, telemetry.EndpointEnv+"="+url, "DO_NOT_TRACK=")
+	cmd.Env = append(env(home), "MYGO_AUTOMATION="+sock, telemetry.EndpointEnv+"="+backendURL, "DO_NOT_TRACK=", "PINKY_E2E_URLS="+urls)
 	out := &syncBuffer{}
 	cmd.Stdout, cmd.Stderr = out, out
 	if err := cmd.Start(); err != nil {

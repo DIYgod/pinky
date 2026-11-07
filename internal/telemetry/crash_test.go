@@ -213,7 +213,7 @@ func TestRunningProcessIsLeftAlone(t *testing.T) {
 	}
 }
 
-func TestAutoCrashSending(t *testing.T) {
+func TestCrashReportsFollowUsageStatistics(t *testing.T) {
 	dir := t.TempDir()
 	runChildTo(t, "panic", dir, "app")
 	cr := capture(t, dir)
@@ -221,11 +221,17 @@ func TestAutoCrashSending(t *testing.T) {
 	t.Setenv("DO_NOT_TRACK", "")
 	c := Open(Options{Dir: dir, Version: "1.2.4", Backend: b, Crashes: cr})
 	c.sendCrashes(context.Background())
-	if len(b.crashes) != 0 {
-		t.Fatal("sent without asking")
+	if len(b.crashes) != 0 || len(c.Crashes()) != 1 {
+		t.Fatal("sent with usage statistics off, or dropped the report")
 	}
+	t.Setenv("DO_NOT_TRACK", "1")
+	c.SetUsage(true)
+	c.sendCrashes(context.Background())
+	if len(b.crashes) != 0 {
+		t.Fatal("sent with DO_NOT_TRACK=1")
+	}
+	t.Setenv("DO_NOT_TRACK", "")
 	b.setErr(fmt.Errorf("offline"))
-	c.SetAutoCrash(true)
 	c.sendCrashes(context.Background())
 	if len(c.Crashes()) != 1 {
 		t.Fatal("a report that failed to go out was dropped")

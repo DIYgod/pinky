@@ -17,11 +17,10 @@ import (
 
 // fakeBackend records what would be sent.
 type fakeBackend struct {
-	mu       sync.Mutex
-	usage    []Usage
-	crashes  []CrashReport
-	feedback []Feedback
-	err      error
+	mu      sync.Mutex
+	usage   []Usage
+	crashes []CrashReport
+	err     error
 }
 
 func (f *fakeBackend) Usage(_ context.Context, u Usage) error {
@@ -41,16 +40,6 @@ func (f *fakeBackend) Crash(_ context.Context, r CrashReport) error {
 		return f.err
 	}
 	f.crashes = append(f.crashes, r)
-	return nil
-}
-
-func (f *fakeBackend) Feedback(_ context.Context, fb Feedback) error {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	if f.err != nil {
-		return f.err
-	}
-	f.feedback = append(f.feedback, fb)
 	return nil
 }
 
@@ -141,20 +130,14 @@ func TestCountingFollowsTheSetting(t *testing.T) {
 	}
 }
 
-func TestUsageGoesOutOnceADayAfterTheNotice(t *testing.T) {
+func TestUsageGoesOutOnceADay(t *testing.T) {
 	b := &fakeBackend{}
 	clk := newClock()
 	c := openTest(t, t.TempDir(), b, clk, true)
 	ctx := context.Background()
 	c.Count("runs.started")
 
-	clk.advance(25 * time.Hour)
-	c.sendUsage(ctx)
-	if n := len(b.usages()); n != 0 {
-		t.Fatalf("sent before the person saw the note: %d", n)
-	}
-	c.MarkNoticeShown()
-	clk.advance(-25*time.Hour + time.Hour) // an hour after the first count
+	clk.advance(time.Hour)
 	c.sendUsage(ctx)
 	if n := len(b.usages()); n != 0 {
 		t.Fatalf("sent before a day passed: %d", n)
@@ -188,7 +171,6 @@ func TestFailedSendsBackOff(t *testing.T) {
 	b := &fakeBackend{}
 	clk := newClock()
 	c := openTest(t, t.TempDir(), b, clk, true)
-	c.MarkNoticeShown()
 	c.Count("runs.started")
 	clk.advance(25 * time.Hour)
 	b.setErr(errors.New("network down"))
@@ -221,7 +203,6 @@ func TestDoNotTrack(t *testing.T) {
 	clk := newClock()
 	dir := t.TempDir()
 	c := openTest(t, dir, b, clk, true)
-	c.MarkNoticeShown()
 	c.Count("runs.started")
 	c.Close()
 
@@ -349,15 +330,14 @@ func TestHTTPBackend(t *testing.T) {
 	if !c.CanSend() {
 		t.Fatal("no backend with PINKY_TELEMETRY_URL set")
 	}
-	c.MarkNoticeShown()
 	c.Count("runs.started")
 	clk.advance(25 * time.Hour)
 	c.sendUsage(context.Background())
-	if err := c.SendFeedback(context.Background(), Feedback{Message: "Hi", Email: "me@example.com"}); err != nil {
+	if err := c.backend.Crash(context.Background(), CrashReport{ID: "app-1-2", Reason: "panic: x"}); err != nil {
 		t.Fatal(err)
 	}
 	mu.Lock()
-	if len(reqs) != 2 || reqs[0].path != PathUsage || reqs[1].path != PathFeedback {
+	if len(reqs) != 2 || reqs[0].path != PathUsage || reqs[1].path != PathCrash {
 		t.Fatalf("requests: %+v", reqs)
 	}
 	if !strings.HasPrefix(reqs[0].ua, "Pinky/0.0.0-dev (") || reqs[0].ctype != "application/json" {
@@ -367,9 +347,9 @@ func TestHTTPBackend(t *testing.T) {
 	if err := json.Unmarshal(reqs[0].body, &u); err != nil || u.Counts["runs.started"] != 1 {
 		t.Fatalf("usage body %s: %v", reqs[0].body, err)
 	}
-	var fb Feedback
-	if err := json.Unmarshal(reqs[1].body, &fb); err != nil || fb.Message != "Hi" || fb.Email != "me@example.com" || fb.Version != DevVersion {
-		t.Fatalf("feedback body %s: %v", reqs[1].body, err)
+	var cr CrashReport
+	if err := json.Unmarshal(reqs[1].body, &cr); err != nil || cr.ID != "app-1-2" || cr.Reason != "panic: x" {
+		t.Fatalf("crash body %s: %v", reqs[1].body, err)
 	}
 	mu.Unlock()
 
@@ -378,39 +358,14 @@ func TestHTTPBackend(t *testing.T) {
 		mu.Lock()
 		status = code
 		mu.Unlock()
-		err := h.Feedback(context.Background(), Feedback{Message: "x"})
+		err := h.Crash(context.Background(), CrashReport{ID: "x"})
 		if err == nil || Permanent(err) != permanent {
 			t.Errorf("HTTP %d: err %v, permanent %v", code, err, Permanent(err))
 		}
 	}
 	srv.Close()
-	if err := h.Feedback(context.Background(), Feedback{Message: "x"}); err == nil || Permanent(err) {
+	if err := h.Crash(context.Background(), CrashReport{ID: "x"}); err == nil || Permanent(err) {
 		t.Errorf("server gone: %v", err)
-	}
-}
-
-func TestFeedback(t *testing.T) {
-	b := &fakeBackend{}
-	c := openTest(t, t.TempDir(), b, newClock(), false)
-	if err := c.SendFeedback(context.Background(), Feedback{Message: "  "}); err == nil {
-		t.Fatal("an empty message was sent")
-	}
-	long := strings.Repeat("log line\n", maxDiagnostics/4)
-	if err := c.SendFeedback(context.Background(), Feedback{Message: " It froze. ", Email: " a@b.co ", Diagnostics: long}); err != nil {
-		t.Fatal(err)
-	}
-	fb := b.feedback[0]
-	if fb.Message != "It froze." || fb.Email != "a@b.co" || fb.Version != "1.2.3" || fb.OS == "" || fb.Created.IsZero() {
-		t.Fatalf("feedback: %+v", fb)
-	}
-	if len(fb.Diagnostics) != maxDiagnostics {
-		t.Fatalf("diagnostics %d bytes, want %d", len(fb.Diagnostics), maxDiagnostics)
-	}
-	if err := (*Client)(nil).SendFeedback(context.Background(), Feedback{Message: "x"}); !errors.Is(err, ErrNoBackend) {
-		t.Fatalf("nil client: %v", err)
-	}
-	if err := Open(Options{Version: DevVersion}).SendFeedback(context.Background(), Feedback{Message: "x"}); !errors.Is(err, ErrNoBackend) {
-		t.Fatalf("no backend: %v", err)
 	}
 }
 
@@ -421,7 +376,6 @@ func TestRunSendsWhatIsDue(t *testing.T) {
 	dir := t.TempDir()
 	c := Open(Options{Dir: dir, Version: "1.2.3", Backend: b, Now: clk.now, Usage: true, Tick: 10 * time.Millisecond})
 	c.Count("runs.started")
-	c.MarkNoticeShown()
 	clk.advance(25 * time.Hour)
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
@@ -446,10 +400,9 @@ func TestNilClient(t *testing.T) {
 	var c *Client
 	c.Count("x")
 	c.SetUsage(true)
-	c.MarkNoticeShown()
 	c.Close()
 	c.Run(context.Background())
-	if c.Usage() || c.CanSend() || !c.NoticeShown() || c.Crashes() != nil {
+	if c.Usage() || c.CanSend() || c.Crashes() != nil {
 		t.Fatal("a nil client claims something")
 	}
 	Count("x") // no default client

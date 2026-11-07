@@ -89,8 +89,8 @@ func TestDiagnostics(t *testing.T) {
 		{ID: "3e8be48e", Platform: driver.Android, Name: "Ada’s Mi", Model: "Mi 10 Pro", OSVersion: "17", Connection: "wifi", Backend: "scrcpy", State: driver.StateOnline},
 		{ID: "00008110-001E30C9262A801E", Platform: driver.IOS, Name: "Ada’s iPhone", Model: "iPhone 13 mini", OSVersion: "27.1", Connection: "usb", State: driver.StateOnline},
 	}
-	d := c.Diagnostics(phones, "Video: FFmpeg 9.0.2", "Settings: preset 1")
-	for _, want := range []string{"Pinky 1.2.3 · " + OSName(System().OS), "Usage statistics: on", "Phones (2):", "android 17 · Mi 10 Pro · wifi · scrcpy · online",
+	d := c.Diagnostics(phones, "Video: FFmpeg 9.0.2", "Settings: preset 1").String()
+	for _, want := range []string{"Pinky 1.2.3 · " + OSName(System().OS), "Usage statistics and crash reports: on", "Phones (2):", "android 17 · Mi 10 Pro · wifi · scrcpy · online",
 		"ios 27.1 · iPhone 13 mini · usb · online", "Video: FFmpeg 9.0.2", "pinky.log, the last lines:", "adb server not running"} {
 		if !strings.Contains(d, want) {
 			t.Errorf("%q is missing:\n%s", want, d)
@@ -104,7 +104,7 @@ func TestDiagnostics(t *testing.T) {
 	if n := strings.Count(d, `msg="device online"`); n > logTailLines {
 		t.Errorf("%d log lines, at most %d", n, logTailLines)
 	}
-	if empty := (*Client)(nil).Diagnostics(nil); !strings.Contains(empty, "none connected") {
+	if empty := (*Client)(nil).Diagnostics(nil).String(); !strings.Contains(empty, "none connected") {
 		t.Errorf("no phones:\n%s", empty)
 	}
 }

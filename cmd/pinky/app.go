@@ -95,7 +95,7 @@ func runApp(args []string) error {
 		Settings: &settings,
 		OnSettings: func(s ui.Settings) {
 			applySettings(rg, current, s, c.Log)
-			applyTelemetry(tel, s, c.Fake)
+			applyTelemetry(tel, s)
 			unlock.on.Store(s.UnlockFromComputer)
 			current = s
 			if err := saveSettings(settingsPath, s); err != nil {

@@ -24,9 +24,9 @@ import (
 // unrecovered panic or fatal error after the header. A clean exit removes
 // the file. At the next start, a .run file whose lock is free belongs to a
 // process that is gone: with text after the header it crashed, and becomes
-// a crash report (crashes/<id>.json) to offer the person; with none, it
-// ended without quitting (killed, a power cut, a hang the person
-// force-quit), which only counts in usage statistics.
+// a crash report (crashes/<id>.json) that goes out while usage statistics
+// are on; with none, it ended without quitting (killed, a power cut, a
+// hang the person force-quit), which only counts in usage statistics.
 
 // CrashReport is a crash of an earlier run.
 type CrashReport struct {
@@ -412,7 +412,7 @@ func (c *Client) DiscardCrash(id string) {
 }
 
 // SendCrash sends a crash report and forgets it. A report the backend
-// refuses is forgotten too.
+// refuses is forgotten too. Run sends them while usage statistics are on.
 func (c *Client) SendCrash(ctx context.Context, id string) error {
 	if c == nil || c.backend == nil {
 		return ErrNoBackend
@@ -439,11 +439,12 @@ func (c *Client) SendCrash(ctx context.Context, id string) error {
 	return err
 }
 
-// sendCrashes sends the waiting crash reports when the person chose to
-// send them without asking; after a failure it waits an hour.
+// sendCrashes sends the waiting crash reports while usage statistics are
+// on; after a failure it waits an hour. With them off, reports stay on this
+// computer (for feedback's diagnostics) until they are 30 days old.
 func (c *Client) sendCrashes(ctx context.Context) {
 	c.mu.Lock()
-	auto := c.autoCrash && c.backend != nil && !DoNotTrack()
+	auto := c.usage && !c.closed && c.backend != nil && !DoNotTrack()
 	wait := c.now().Before(c.crashRetry)
 	c.mu.Unlock()
 	if !auto || wait {

@@ -12,7 +12,8 @@ import (
 
 // Usage statistics, crash reports and feedback (docs/TELEMETRY.md). The app
 // and the daemon capture their crashes from the start; whichever holds the
-// gateway counts usage, with scripted fake phones counting nothing.
+// gateway counts usage and sends it with the crash reports, while
+// Settings › Privacy allows. Scripted fake phones count nothing.
 
 // captureCrashes starts capturing this process's crashes in the data
 // folder. Call Stop on a clean exit.
@@ -25,7 +26,7 @@ func captureCrashes(dirs api.Dirs, process string, log *slog.Logger) *telemetry.
 // until ctx ends. Close it when the gateway stops.
 func startTelemetry(ctx context.Context, rg *runningGateway, cr *telemetry.Crashes, s ui.Settings, process string, fake bool, log *slog.Logger) *telemetry.Client {
 	tel := telemetry.Open(telemetry.Options{Dir: rg.Dirs.Data, Version: version, Process: process, Crashes: cr,
-		Usage: s.UsageStats && !fake, AutoCrash: s.CrashReports, Log: log})
+		Usage: s.UsageStats, Log: log})
 	telemetry.SetDefault(tel)
 	if !fake {
 		tel.Count(telemetry.Key(process, "starts"))
@@ -45,8 +46,7 @@ func clientAPI(rg *runningGateway, tel *telemetry.Client, fake bool) gateway.API
 	return telemetry.WrapGateway(rg.G, tel)
 }
 
-// applyTelemetry passes Settings › Privacy's choices to the client.
-func applyTelemetry(tel *telemetry.Client, s ui.Settings, fake bool) {
-	tel.SetUsage(s.UsageStats && !fake)
-	tel.SetAutoCrash(s.CrashReports)
+// applyTelemetry passes Settings › Privacy's choice to the client.
+func applyTelemetry(tel *telemetry.Client, s ui.Settings) {
+	tel.SetUsage(s.UsageStats)
 }

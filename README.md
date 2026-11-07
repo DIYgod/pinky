@@ -34,7 +34,7 @@ No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pink
 
 ### Usage statistics, crash reports and feedback
 
-Pinky shares anonymous usage statistics (counters such as tasks run, tools called and phones connected, about once a day, with a random install id) once you have seen the note about them on the first run; turn them off in Settings › Privacy or with `DO_NOT_TRACK=1`. After a crash it asks before sending a report. Help › Send Feedback… sends a message, with diagnostics you can read first. Screens, typed text, app names, phone names and ids, PINs and file names are never sent. [docs/TELEMETRY.md](docs/TELEMETRY.md) lists everything.
+Pinky shares anonymous usage statistics (counters such as tasks run, tools called and phones connected, about once a day, with a random install id) and crash reports; turn both off in Settings › Privacy or with `DO_NOT_TRACK=1`. Screens, typed text, app names, phone names and ids, PINs and file names are never sent. Help › Send Feedback… opens a GitHub issue with your message and diagnostics filled in, which you read and submit yourself. [docs/TELEMETRY.md](docs/TELEMETRY.md) lists everything.
 
 ## Layout
 
@@ -50,6 +50,7 @@ internal/api/                 the local socket for agents and clients
 internal/demo/                scripted fake phones
 internal/video/, ui/          the desktop client (MyGo native UI, FFmpeg decoding)
 internal/telemetry/           usage statistics, crash reports and feedback
+worker/                       the Cloudflare Worker that receives usage statistics and crash reports
 android/companion/            the Android companion app (Kotlin)
 scripts/                      device locks and an MCP call script for checks
 docs/                         design, agent guide, MCP reference and notes
