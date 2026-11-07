@@ -88,7 +88,10 @@ func isCommandFlag(arg string) bool {
 }
 
 func usage() {
-	fmt.Fprint(os.Stderr, `Usage: pinky [command] [flags]
+	fmt.Fprint(os.Stderr, `Usage: pinkyctl [command] [flags]
+
+pinkyctl is the command that Homebrew's cask and the Linux packages
+install; Pinky's own executable takes the same commands.
 
 Commands:
   (none)    start the desktop app (gateway and window); same as "app"

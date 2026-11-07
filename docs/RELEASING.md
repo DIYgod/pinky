@@ -73,6 +73,10 @@ Pinky looks there before the system's libraries (after `PINKY_FFMPEG_DIR`), so a
 
 Newest first. Each release is a `## <version> (<YYYY-MM-DD>)` heading followed by short bullets for people; notes not released yet wait under `## Unreleased` at the top, which a dev build of the app should leave out. A heading's first word is its version (as MyGo's `update.ReleaseNotes` reads it too), and headings inside fenced code blocks do not count.
 
+### The command
+
+The command that the Homebrew cask (`/opt/homebrew/bin/pinkyctl`) and the Linux packages (`/usr/bin/pinkyctl` from the `.deb`, `~/.local/bin/pinkyctl` from `install.sh`) install is `pinkyctl`, not `pinky`: coreutils has a `pinky` command, which every Linux and Homebrew's coreutils install, so a `pinky` of Pinky's could not be installed there (dpkg refuses to overwrite coreutils' file) or lost to it on the `PATH`.
+
 ## Setting it up
 
 Done once.
