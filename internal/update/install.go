@@ -5,6 +5,10 @@ import (
 	"errors"
 )
 
+// BundleID is Pinky's identifier: Pinky.app's, and the name of its
+// installer's entry in Settings › Apps on Windows.
+const BundleID = "app.pinky.desktop"
+
 // Release is a newer version with a build for this computer.
 type Release struct {
 	Feed
@@ -50,13 +54,19 @@ type StartOptions struct {
 // ErrSignature means a downloaded Pinky.app is not signed by Pinky's team.
 var ErrSignature = errors.New("the update is not signed by Pinky's developer")
 
+// ErrNotarized means a downloaded Pinky.app, signed by Pinky's team, has
+// no notarization ticket from Apple.
+var ErrNotarized = errors.New("the update is not notarized by Apple")
+
 // Swapped is what a swap left for the version that runs now: the new
 // version, which Confirm tells that it is up, or the old one again after
 // the new one did not start (Failed).
 type Swapped struct {
 	From, To string
 	// Failed means the new version did not start and the helper put this
-	// one back.
+	// one back; Why says what went wrong, when the helper said, completing
+	// "Pinky <To> …": "didn't start".
 	Failed bool
+	Why    string
 	dir    string
 }

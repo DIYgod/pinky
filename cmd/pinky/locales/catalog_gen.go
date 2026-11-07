@@ -13121,6 +13121,22 @@ func (msgs Messages) UpdateErrNoAsset() string {
 	return Catalog.Format(msgs.locale, "updateErrNoAsset", nil)
 }
 
+// UpdateErrNotarized says "Apple hasn't notarized the update, so Pinky didn't install it."
+// in the language the app shows.
+//
+// Why an update failed on macOS: the downloaded app is signed by Pinky's
+// developer but carries no notarization ticket from Apple.
+func UpdateErrNotarized() string { return In(i18n.Locale()).UpdateErrNotarized() }
+
+// UpdateErrNotarized says "Apple hasn't notarized the update, so Pinky didn't install it."
+// in the language of msgs.
+//
+// Why an update failed on macOS: the downloaded app is signed by Pinky's
+// developer but carries no notarization ticket from Apple.
+func (msgs Messages) UpdateErrNotarized() string {
+	return Catalog.Format(msgs.locale, "updateErrNotarized", nil)
+}
+
 // UpdateErrSignature says "The update isn't signed by Pinky's developer, so Pinky didn't install it."
 // in the language the app shows.
 //

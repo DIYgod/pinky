@@ -127,11 +127,20 @@ func writeFile(t *testing.T, content string) string {
 	return p
 }
 
-// TestSignatureOfARelease checks the requirement against a Pinky.app signed
-// with the Developer ID (make release), when one is at hand:
-// PINKY_SIGNED_APP, else the repository's build folder.
+// TestSignatureOfARelease checks the requirements against a Pinky.app signed
+// with the Developer ID, when one is at hand: PINKY_SIGNED_APP, a release
+// (notarized and stapled, as a release's zip holds it), else make release's
+// build in the repository's build folder, which is not notarized. With
+// PINKY_E2E_SIGN, the Developer ID itself, a changed copy signed again is
+// Pinky's team's but not notarized, and must not pass as an update.
+//
+//	PINKY_SIGNED_APP=<unzipped release>/Pinky.app \
+//	PINKY_E2E_SIGN="Developer ID Application: NATURAL SELECTION LABS PTE. LTD. (492J8Q67PF)" \
+//	  go test -run TestSignatureOfARelease -v ./internal/update/
 func TestSignatureOfARelease(t *testing.T) {
+	ctx := context.Background()
 	app := os.Getenv("PINKY_SIGNED_APP")
+	release := app != ""
 	if app == "" {
 		app = filepath.Join("..", "..", "build", "pinky", "darwin-arm64", "Pinky.app")
 	}
@@ -142,20 +151,50 @@ func TestSignatureOfARelease(t *testing.T) {
 	if !strings.Contains(string(out), "TeamIdentifier="+TeamID) {
 		t.Skipf("%s is not signed by Pinky's team", app)
 	}
-	if err := verifySignature(context.Background(), app, true); err != nil {
+	if err := verifySignature(ctx, app, true); err != nil {
 		t.Errorf("a release does not pass: %v", err)
+	}
+	if release && notarizationRequired {
+		if err := verifyUpdate(ctx, app); err != nil {
+			t.Errorf("a notarized release does not pass as an update: %v", err)
+		}
 	}
 	// The same app copied and changed fails.
 	cp := filepath.Join(t.TempDir(), "Pinky.app")
 	if out, err := exec.Command("/usr/bin/ditto", app, cp).CombinedOutput(); err != nil {
 		t.Fatalf("ditto: %v: %s", err, out)
 	}
-	if err := verifySignature(context.Background(), cp, true); err != nil {
+	if err := verifySignature(ctx, cp, true); err != nil {
 		t.Errorf("an unchanged copy does not pass: %v", err)
 	}
+	if release && notarizationRequired {
+		if err := verifyUpdate(ctx, cp); err != nil {
+			t.Errorf("an unchanged copy of a release does not pass as an update: %v", err)
+		}
+	}
 	os.WriteFile(filepath.Join(cp, "Contents", "Resources", "extra.txt"), []byte("added"), 0o644)
-	if err := verifySignature(context.Background(), cp, true); !errors.Is(err, ErrSignature) {
+	if err := verifySignature(ctx, cp, true); !errors.Is(err, ErrSignature) {
 		t.Errorf("a changed copy passes: %v", err)
+	}
+
+	// Signed again with Pinky's Developer ID, the changed copy is the
+	// team's, but Apple never notarized it.
+	sign := os.Getenv("PINKY_E2E_SIGN")
+	if sign == "" || !notarizationRequired {
+		return
+	}
+	os.Remove(filepath.Join(cp, "Contents", "CodeResources")) // the stapled ticket, of the release's code
+	if out, err := exec.Command("/usr/bin/codesign", "--force", "--deep", "--timestamp=none", "--options", "runtime", "--sign", sign, cp).CombinedOutput(); err != nil {
+		t.Fatalf("sign the changed copy: %v: %s", err, out)
+	}
+	if err := verifySignature(ctx, cp, true); err != nil {
+		t.Errorf("the changed copy, signed again, is not the team's: %v", err)
+	}
+	if err := verifyUpdate(ctx, cp); !errors.Is(err, ErrNotarized) {
+		t.Errorf("a copy that Apple did not notarize passes as an update: %v", err)
+	}
+	if out, err := codesign(ctx, cp, updateRequirement(), true); err == nil {
+		t.Errorf("the helper's requirement accepts a copy that is not notarized: %s", out)
 	}
 }
 
@@ -423,7 +462,9 @@ func TestSwapAfterAZombie(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitUntil(t, "the swap after the zombie", 10*time.Second, func() bool {
-		return installedVersion(t, installed) == "2026.1107.2"
+		// Between the helper's two renames there is no bundle there.
+		info, err := readBundleInfo(installed)
+		return err == nil && info.Version == "2026.1107.2"
 	})
 }
 

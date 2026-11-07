@@ -51,8 +51,12 @@ func startedUpdate(u *update.Updater, log *slog.Logger) *update.Swapped {
 	switch {
 	case sw == nil:
 	case sw.Failed:
-		log.Warn("update: the new version did not start; this is the old one again", "version", sw.To, "running", version)
-		u.Failed(sw.To, fmt.Errorf("Pinky %s didn't start, so Pinky went back to %s", sw.To, version))
+		why := sw.Why
+		if why == "" {
+			why = "didn't start"
+		}
+		log.Warn("update: the new version was not installed; this is the old one again", "version", sw.To, "why", why, "running", version)
+		u.Failed(sw.To, fmt.Errorf("Pinky %s %s, so Pinky went back to %s", sw.To, why, version))
 	default:
 		log.Info("update: running the new version", "from", sw.From, "to", sw.To)
 	}
@@ -110,6 +114,16 @@ func howToUpdate(l update.Location) string {
 	return "download it from " + update.ReleasePage("")
 }
 
+// runUpdateHelper is `pinky update-helper <job.json>`, which the app starts
+// on Windows from a copy of itself in the update's work folder: it installs
+// the update once the app has quit (internal/update/helper.go).
+func runUpdateHelper(args []string) error {
+	if len(args) != 1 {
+		return errors.New("usage: pinky update-helper <job.json>")
+	}
+	return update.RunHelper(args[0])
+}
+
 // runUpdate is `pinky update [--check]`: it says whether a newer version
 // is out and, unless --check, installs it while Pinky is not running.
 func runUpdate(args []string) error {
@@ -146,6 +160,13 @@ func runUpdate(args []string) error {
 	loc := u.Where()
 	if loc.Method == update.MethodManager {
 		return fmt.Errorf("%s installed Pinky; update it with: %s", loc.Manager, loc.Command)
+	}
+	if loc.Method == update.MethodSelf && loc.Setup {
+		// This command runs from the Pinky.exe that the installer
+		// replaces, so it leaves the installer for the person to run (the
+		// app installs updates by itself).
+		loc.Method = update.MethodInstaller
+		u.Location = loc
 	}
 	if ctl, err := api.DialControl(dirs); err == nil {
 		ctl.Close()

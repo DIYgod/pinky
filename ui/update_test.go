@@ -205,6 +205,44 @@ func TestAutomaticUpdateWaitsUntilIdle(t *testing.T) {
 	}
 }
 
+// TestUpdateOnWindows: a Pinky that its installer installed on Windows
+// updates itself with the release's installer, which runs quietly: the card
+// offers Update now, and Pinky installs it by itself while idle.
+func TestUpdateOnWindows(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	setup := []byte("MZ the installer of Pinky 2026.1107.2")
+	h := sha256.Sum256(setup)
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/latest.json":
+			fmt.Fprintf(w, `{"version": "2026.1107.2", "tag": "v2026.1107.2", "date": "2026-11-07T10:00:00Z", "notes": %q, "assets": {%q: {"url": %q, "sha256": %q, "size": %d}}}`,
+				testNotes, update.Platform(), srv.URL+"/pinky-setup-2026.1107.2-amd64.exe", hexenc.EncodeToString(h[:]), len(setup))
+		case "/pinky-setup-2026.1107.2-amd64.exe":
+			w.Write(setup)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	ut.u.Feed = srv.URL + "/latest.json"
+	ut.u.Location = update.Location{Method: update.MethodSelf, Setup: true,
+		App: `C:\Users\x\AppData\Local\Programs\Pinky`, Exe: `C:\Users\x\AppData\Local\Programs\Pinky\Pinky.exe`}
+	ut.check(t)
+	tt := mg.NewTester(ut.view, 1280, 820)
+	if !hasText(tt, "Update now") || hasText(tt, "Download and install") {
+		t.Errorf("the card: %q", tt.Texts())
+	}
+	ut.updateTick(time.Now())
+	ut.waitFor(t, "the automatic update", func() bool { return ut.quits > 0 })
+	if len(ut.in.staged) != 1 || string(ut.in.staged[0]) != string(setup) {
+		t.Errorf("staged %q", ut.in.staged)
+	}
+	if swaps := ut.in.swapped(); len(swaps) != 1 || !slices.Contains(swaps[0].Args, "--background") {
+		t.Errorf("swaps %+v", swaps)
+	}
+}
+
 func TestAutomaticUpdateDoesNotRetryAFailure(t *testing.T) {
 	ut := newUpdateTest(t, fakeapi.Companion)
 	ut.check(t)

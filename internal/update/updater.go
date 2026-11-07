@@ -62,6 +62,7 @@ func (u *Updater) Where() Location {
 			u.mu.Lock()
 			u.Location = l
 			u.mu.Unlock()
+			u.logger().Info("update: where Pinky runs", "app", l.App, "updates", l.Method, "problem", l.Problem)
 		}
 	})
 	u.mu.Lock()
@@ -166,7 +167,7 @@ func (u *Updater) MethodFor(r Release) Method {
 	switch {
 	case m == MethodSelf && !loc.CanReplace():
 		m = MethodDownload
-	case m == MethodInstaller && !isInstaller(r.Asset.URL):
+	case (m == MethodInstaller || m == MethodSelf && loc.Setup) && !isInstaller(r.Asset.URL):
 		m = MethodDownload
 	}
 	return m

@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !darwin && !windows
 
 package update
 
@@ -9,15 +9,11 @@ import (
 	"strings"
 )
 
-// locate on Windows and Linux: Pinky downloads the release for the person
-// to install. On Windows that is the installer, which replaces the per-user
-// install in %LOCALAPPDATA%\Programs and quits the running Pinky first;
-// Linux packages are updated by the package manager.
+// locate on Linux and elsewhere: Pinky downloads the release for the person
+// to install; Linux packages are updated by the package manager.
 func locate(exe string) Location {
 	l := Location{Exe: exe, App: exe, Method: MethodDownload}
 	switch runtime.GOOS {
-	case "windows":
-		l.Method = MethodInstaller
 	case "linux":
 		switch {
 		case os.Getenv("APPIMAGE") != "":
