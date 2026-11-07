@@ -3,7 +3,9 @@ package android
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -134,5 +136,78 @@ func TestListDriverless(t *testing.T) {
 	p.usbNodes = func() ([]usbNode, error) { return nil, errors.New("no SetupAPI") }
 	if infos, err := p.List(context.Background()); err != nil || len(infos) != 1 {
 		t.Errorf("when Windows does not answer: %+v %v", infos, err)
+	}
+}
+
+func TestCheckHost(t *testing.T) {
+	logf := func(string, ...any) {}
+	t0 := time.Unix(2_000_000, 0)
+
+	// No adb at all.
+	var w serverWatch
+	w.claim(t0, logf)
+	w.done(t0, fmt.Errorf("adb: %w", adb.ErrNoADB))
+	if c := w.check(t0); c.Missing != hostNoADB || !w.noADB() {
+		t.Errorf("no adb: %+v", c)
+	}
+	// A start that failed otherwise.
+	w = serverWatch{}
+	w.claim(t0, logf)
+	w.done(t0, errors.New("the server quit before it was ready"))
+	if c := w.check(t0); c.Missing != hostADBServer || !strings.Contains(c.Detail, "quit before") || w.noADB() {
+		t.Errorf("a failed start: %+v", c)
+	}
+	// A server answers: nothing missing, its version asked for once.
+	if !w.answered() || w.answered() {
+		t.Errorf("the version is asked for once per server")
+	}
+	if c := w.check(t0); c.Missing != "" {
+		t.Errorf("a server answers: %+v", c)
+	}
+	w.setVersion(39)
+	if c := w.check(t0); c.Missing != hostADBOld {
+		t.Errorf("an old server: %+v", c)
+	}
+	w.setVersion(41)
+	if c := w.check(t0); c.Missing != "" {
+		t.Errorf("a current server: %+v", c)
+	}
+	// It goes away three times within ten minutes.
+	for i := 1; i <= restartsMin; i++ {
+		at := t0.Add(time.Duration(i) * time.Minute)
+		w.claim(at, logf)
+		if !w.answered() {
+			t.Errorf("a server that came back is asked for its version again")
+		}
+	}
+	if c := w.check(t0.Add(4 * time.Minute)); c.Missing != hostADBRestarts {
+		t.Errorf("a server that keeps going away: %+v", c)
+	}
+	if c := w.check(t0.Add(time.Minute + restartWindow)); c.Missing != "" {
+		t.Errorf("ten minutes later: %+v", c)
+	}
+}
+
+// TestListWithoutADB: no adb to start a server with lists no phones, as
+// no error, and CheckHost says why.
+func TestListWithoutADB(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close()
+	p := NewProvider(Config{
+		Client:      &adb.Client{Addr: addr},
+		StartServer: func(context.Context) error { return fmt.Errorf("adb: %w", adb.ErrNoADB) },
+		Logf:        t.Logf,
+	})
+	p.usbNodes = nil
+	infos, err := p.List(context.Background())
+	if err != nil || len(infos) != 0 {
+		t.Fatalf("listed %v, %v", infos, err)
+	}
+	if c := p.CheckHost(); c.Missing != hostNoADB {
+		t.Errorf("CheckHost: %+v", c)
 	}
 }

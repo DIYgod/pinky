@@ -34,7 +34,7 @@ func TestDriverless(t *testing.T) {
 	}
 	pixel, xiaomi, other := got[0], got[1], got[2]
 	if pixel.ID != driverlessPrefix+`USB\VID_18D1&PID_4EE7\26051FDF6002R9` || pixel.Name != "Pixel 7" ||
-		pixel.State != driver.StateNeedsSetup || pixel.Platform != driver.Android || pixel.Connection != "usb" ||
+		pixel.State != driver.StateNeedsSetup || pixel.Setup != setupUSBDriver || pixel.Platform != driver.Android || pixel.Connection != "usb" ||
 		!strings.Contains(pixel.Detail, "Google USB Driver") {
 		t.Errorf("the Pixel: %+v", pixel)
 	}

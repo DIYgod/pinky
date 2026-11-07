@@ -145,11 +145,19 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 				entries, err = p.cfg.Client.Devices(ctx)
 			}
 		}
+		if err != nil && p.server.noADB() {
+			// No adb at all: no phones, which CheckHost explains.
+			return nil, nil
+		}
 	}
 	if err != nil {
 		return nil, wrapErr(err)
 	}
-	p.server.answered()
+	if p.server.answered() {
+		if v, err := p.cfg.Client.Version(ctx); err == nil {
+			p.server.setVersion(v)
+		}
+	}
 	if p.wifi != nil {
 		p.wifi.kick(entries)
 	}
@@ -177,6 +185,15 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	infos = mergeTransports(infos)
 	return append(infos, p.driverlessPhones(infos)...), nil
 }
+
+// CheckHost implements driver.HostChecker, from what the last List found:
+// "adb" when there is no adb to start a server with (a build without
+// Pinky's own, on a computer without one), "adb_server" when no server
+// runs and starting one failed, "adb_old" when the server that runs is
+// older than protocol 41, and "adb_restarts" when the server went away
+// three times or more within ten minutes, as when another program keeps
+// restarting it with an adb of another version.
+func (p *Provider) CheckHost() driver.HostCheck { return p.server.check(time.Now()) }
 
 // phoneID is the id Pinky knows a phone by: the adb serial, except over
 // Wi-Fi, where it is the phone's hardware serial (the serial adb gives a
@@ -277,6 +294,7 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 		// Linux: adb may not open the phone's USB device. (Add phone
 		// shows "Found <phone>, but <detail>", the first letter lowered.)
 		info.State = driver.StateNeedsSetup
+		info.Setup = setupUSBPermission
 		info.Detail = "This computer has no permission to use the phone over USB"
 		if e.Detail != "" {
 			info.Detail += " (" + e.Detail + ")"
@@ -359,5 +377,14 @@ func wrapErr(err error) error {
 }
 
 var (
-	_ driver.Provider = (*Provider)(nil)
+	_ driver.Provider    = (*Provider)(nil)
+	_ driver.HostChecker = (*Provider)(nil)
+)
+
+// The setup steps of a phone that needs the computer set up (Info.Setup),
+// the values of driver.SetupUSBPermission and driver.SetupUSBDriver on the
+// onboarding branch.
+const (
+	setupUSBPermission = "usb_permission" // Linux: no udev rule for the phone, or not in the plugdev group
+	setupUSBDriver     = "usb_driver"     // Windows: no driver for the phone's USB debugging interface
 )

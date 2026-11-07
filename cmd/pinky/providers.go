@@ -24,22 +24,21 @@ var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
 }
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	c := &adb.Client{}
-	if _, err := c.Version(ctx); errors.Is(err, adb.ErrServerNotRunning) && len(adb.Tools()) == 0 {
-		// A build without Pinky's own adb, on a computer without one.
-		return nil, fmt.Errorf("android: no adb server, and no adb to start one (install Android's platform tools, or set %s): %w", adb.EnvADB, adb.ErrNoADB)
-	}
+	var noADB sync.Once
 	return android.NewProvider(android.Config{
-		Client: c,
+		Client: &adb.Client{},
 		// Pinky uses the adb server that runs, or starts one, with the
 		// adb of the Android SDK, Homebrew or PATH, else its own
 		// (adb.StartServer): at the first List, and whenever the server
-		// went away.
+		// went away. Without any adb (a build without Pinky's own), it
+		// lists no phones and CheckHost says why.
 		StartServer: func(ctx context.Context) error {
 			t, err := adb.StartServer(ctx)
-			if err != nil {
+			switch {
+			case errors.Is(err, adb.ErrNoADB):
+				noADB.Do(func() { log.Warn("android: no adb server, and no adb to start one", "err", err) })
+				return err
+			case err != nil:
 				log.Warn("android: starting an adb server", "err", err)
 				return err
 			}
