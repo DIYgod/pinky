@@ -279,14 +279,19 @@ func TestPagesRender(t *testing.T) {
 	ta.api.ConnectPhone()
 	ta.waitFor(t, "the new phone", func() bool { return len(ta.devices) == 4 })
 	tt.Frame()
-	if !hasText(tt, "USB debugging is off") {
+	if !hasText(tt, "Found Pixel 8a. Unlock it and tap Allow on the phone.") {
 		t.Errorf("Add phone after plugging in: %q", tt.Texts())
 	}
 	ta.api.FinishSetup()
-	ta.waitFor(t, "the new phone online", func() bool { return ta.devices[3].Info.State == driver.StateOnline })
+	ta.waitFor(t, "the new phone online", func() bool { tt.Frame(); return ta.devices[3].Info.State == driver.StateOnline })
+	ta.waitFor(t, "its checkup", func() bool {
+		tt.Frame()
+		r := ta.checkupOf(ta.devices[3].Info.ID)
+		return r != nil && r.have && !r.running
+	})
 	tt.Frame()
-	if !hasText(tt, "Found Pixel 8a") || hasText(tt, "USB debugging is off") {
-		t.Errorf("Add phone after USB debugging went on: %q", tt.Texts())
+	if !hasText(tt, "Everything works.") || hasText(tt, "Unlock it and tap Allow") {
+		t.Errorf("Add phone after the phone came online: %q", tt.Texts())
 	}
 }
 

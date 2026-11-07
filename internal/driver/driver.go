@@ -44,13 +44,48 @@ type Info struct {
 	Backend    string // "scrcpy", "coredevice", "wda", "mirroring", "fake"
 	State      State
 	Detail     string // a plain sentence when State is not online
+	// Setup names the step a phone that is not online waits for, one of
+	// the Setup constants, so a client can walk the person through it in
+	// its own words; "" when the driver does not say. Detail says the same
+	// in a sentence.
+	Setup string
 }
+
+// Setup steps, in Info.Setup.
+const (
+	SetupTrust         = "trust"          // unlock the phone, tap Trust and enter its passcode
+	SetupDeveloperMode = "developer_mode" // turn on Developer Mode, which restarts the phone
+	SetupUnlock        = "unlock"         // unlock the phone so the computer can finish preparing it
+	SetupPreparing     = "preparing"      // the computer is preparing the phone; nothing to do but wait
+	SetupNoDiskImage   = "no_disk_image"  // the computer has no developer disk image; Detail says where to get one
+	SetupDiskImage     = "disk_image"     // the developer disk image did not mount; Detail says why
+	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
+)
 
 // Provider discovers and opens the devices of one platform.
 type Provider interface {
 	Platform() Platform
 	List(ctx context.Context) ([]Info, error)
 	Open(ctx context.Context, id string) (Device, error)
+}
+
+// HostChecker is a Provider that needs software on the computer (usbmuxd
+// for iPhones) and says when it is missing, since a provider without it
+// lists no phones at all.
+type HostChecker interface {
+	// CheckHost reports what the computer lacks; the zero HostCheck means
+	// nothing.
+	CheckHost() HostCheck
+}
+
+// HostCheck is what HostChecker found missing.
+type HostCheck struct {
+	// Missing is a code clients put into words: "apple_devices" (Windows:
+	// Apple's iPhone driver, from the Apple Devices app or iTunes),
+	// "usbmuxd" (Linux: the usbmuxd package), "usbmuxd_stopped" (Linux:
+	// installed, but not running; it starts when an iPhone is plugged in).
+	Missing string
+	Detail  string // the same in a sentence
 }
 
 // Device is an open, long-lived session with one phone. Methods must be safe
@@ -407,3 +442,99 @@ var (
 	ErrPINNotEntered = errors.New("the PIN was not entered")
 	ErrNotFound      = errors.New("not found")
 )
+
+// Checkups. A phone's checkup checks, item by item and for real, what
+// Pinky needs on it (a key that does nothing to see that input works, a
+// screenshot, the companion app), and says what to do about each item
+// that fails. The client's checkup page and the last step of Add phone
+// show it.
+
+// CheckStatus is how one item of a checkup went.
+type CheckStatus string
+
+// Check statuses.
+const (
+	CheckPass CheckStatus = "pass" // it works
+	CheckFail CheckStatus = "fail" // it does not work; Fix says what to do
+	CheckWarn CheckStatus = "warn" // it works, with a limit the person may want to lift
+	CheckSkip CheckStatus = "skip" // not checked: it does not apply, or an earlier item must pass first
+)
+
+// Check is one item of a phone's checkup.
+type Check struct {
+	// ID says what was checked: one of the Check* names below, or one a
+	// driver adds (clients show items they do not know by Detail).
+	ID     string
+	Status CheckStatus
+	// Fix names what to do about an item that failed or has a limit, a
+	// code clients put into steps and buttons in their own words (the
+	// Fix* names below); "" when there is nothing to do.
+	Fix string
+	// Detail is what the driver found, in its own words and in English:
+	// an error, or a fact such as "adb server version 41".
+	Detail string
+}
+
+// What a checkup checks, in Check.ID.
+const (
+	CheckHost         = "host"          // the computer has what the phone's platform needs (driver.HostChecker): Fix is what it lacks
+	CheckADB          = "adb"           // Android: the adb server answers
+	CheckConnection   = "connection"    // the phone is connected and answers
+	CheckAuthorized   = "authorized"    // the phone allows this computer (USB debugging allowed, trusted)
+	CheckCompanion    = "companion"     // Android: Pinky Companion is installed, current and on
+	CheckInput        = "input"         // taps, swipes and keys reach the phone
+	CheckScreen       = "screen"        // screenshots and the live picture
+	CheckBackground   = "background"    // agents can work on a background display
+	CheckWiFi         = "wifi"          // the phone can be paired and used over Wi-Fi
+	CheckLocalNetwork = "local_network" // macOS: Pinky may look for phones on the local network
+)
+
+// What to do, in Check.Fix.
+const (
+	FixReconnect        = "reconnect"          // connect the phone again: plug it in, or turn Wi-Fi debugging back on
+	FixAuthorize        = "authorize"          // allow this computer on the phone (Allow USB debugging, Trust)
+	FixUSBPermission    = "usb_permission"     // Linux: the computer may not open the phone's USB device (udev rules)
+	FixUSBDriver        = "usb_driver"         // Windows: the phone's USB debugging has no driver
+	FixInstallCompanion = "install_companion"  // install Pinky Companion
+	FixUpdateCompanion  = "update_companion"   // update it to the version Pinky carries
+	FixTurnOnCompanion  = "turn_on_companion"  // turn its accessibility service on
+	FixInputPermission  = "input_permission"   // the phone refuses input from the computer (Xiaomi's USB debugging (Security settings), ColorOS's permission monitoring)
+	FixVideoEncoder     = "video_encoder"      // the phone's video encoder fails: the live picture is replaced by still pictures
+	FixScreenshot       = "screenshot"         // the phone sends no screenshots
+	FixNewerAndroid     = "newer_android"      // the item needs a newer Android version than the phone has
+	FixUnlockedOnly     = "unlocked_only"      // background work only while the phone is unlocked (Android 11 and 12)
+	FixWirelessDebug    = "wireless_debugging" // turn on Wireless debugging and pair the phone, to use it over Wi-Fi
+	FixLocalNetwork     = "local_network"      // allow Pinky under Privacy & Security › Local Network
+	FixLocked           = "locked"             // unlock the phone, then check again
+	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
+)
+
+// Setup steps of Android phones, in Info.Setup with the Setup constants:
+// what the computer, not the phone, lacks. A checkup's fix for a phone
+// that is not online is its Info.Setup.
+const (
+	SetupUSBPermission = FixUSBPermission // Linux: no udev rule for the phone, or not in the plugdev group
+	SetupUSBDriver     = FixUSBDriver     // Windows: no driver for the phone's USB debugging interface
+)
+
+// Checkup is a phone's checkup, as its driver ran it.
+type Checkup struct {
+	// Family names the maker's system the phone runs, for steps that
+	// differ between makers: "xiaomi" (HyperOS, MIUI), "oppo" (ColorOS,
+	// OxygenOS, realme UI), "vivo" (OriginOS, Funtouch OS), "honor"
+	// (MagicOS), "huawei" (EMUI, HarmonyOS), "samsung" (One UI), "pixel";
+	// "" for stock Android and others, such as a Xiaomi phone that runs
+	// LineageOS.
+	Family string
+	// System is that system and its version as the phone names it, for
+	// people to read ("HyperOS 2.0", "LineageOS 23.0"); "" when unknown.
+	System string
+	Checks []Check
+}
+
+// Checker is a Device that runs its own checkup. It must not change
+// anything on the phone the person would notice: no taps, no settings, no
+// installs.
+type Checker interface {
+	Checkup(ctx context.Context) (Checkup, error)
+}

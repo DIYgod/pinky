@@ -110,6 +110,7 @@ func runApp(args []string) error {
 		Telemetry:       tel,
 		Updates:         upd,
 		Changelog:       pinky.Changelog,
+		AgentSetup:      agentSetup(dirs),
 		// The window is up: an update that just swapped this version in
 		// can drop the old one.
 		OnReady: func(*mygo.Window) {

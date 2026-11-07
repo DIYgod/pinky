@@ -205,6 +205,11 @@ func (a *API) InstallCompanion(ctx context.Context, deviceID string) error {
 	}
 	a.mu.Lock()
 	d := a.device(deviceID)
+	if d != nil && d.installErr != nil {
+		err := d.installErr
+		a.mu.Unlock()
+		return err
+	}
 	if d != nil {
 		d.companion = driver.CompanionOn
 		a.installs = append(a.installs, deviceID)
