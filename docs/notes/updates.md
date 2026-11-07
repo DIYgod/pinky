@@ -15,7 +15,7 @@ How Pinky keeps itself and its Android companion app current, and tells the pers
   "assets": {
     "darwin-arm64": {"url": "https://github.com/DIYgod/pinky/releases/download/v2026.1107.2/pinky-2026.1107.2-darwin-arm64.zip", "sha256": "<64 hex>", "size": 41234567},
     "darwin-amd64": {"url": "…/pinky-2026.1107.2-darwin-amd64.zip", "sha256": "…", "size": 0},
-    "windows-amd64": {"url": "…/pinky-2026.1107.2-windows-amd64.zip", "sha256": "…", "size": 0},
+    "windows-amd64": {"url": "…/pinky-setup-2026.1107.2-amd64.exe", "sha256": "…", "size": 0},
     "linux-amd64": {"url": "…/pinky-2026.1107.2-linux-amd64.tar.gz", "sha256": "…", "size": 0}
   }
 }
