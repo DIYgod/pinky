@@ -1803,6 +1803,176 @@ func (msgs Messages) ConnectTitle() string {
 	return Catalog.Format(msgs.locale, "connectTitle", nil)
 }
 
+// ConnectionAuto says "Automatic"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: the first choice,
+// which goes by the iOS version.
+func ConnectionAuto() string { return In(i18n.Locale()).ConnectionAuto() }
+
+// ConnectionAuto says "Automatic"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: the first choice,
+// which goes by the iOS version.
+func (msgs Messages) ConnectionAuto() string {
+	return Catalog.Format(msgs.locale, "connectionAuto", nil)
+}
+
+// ConnectionAutoDesc says "Without the helper on iOS 27 and later; through the WebDriverAgent helper on older iPhones that have it."
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: what Automatic does.
+func ConnectionAutoDesc() string { return In(i18n.Locale()).ConnectionAutoDesc() }
+
+// ConnectionAutoDesc says "Without the helper on iOS 27 and later; through the WebDriverAgent helper on older iPhones that have it."
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: what Automatic does.
+func (msgs Messages) ConnectionAutoDesc() string {
+	return Catalog.Format(msgs.locale, "connectionAutoDesc", nil)
+}
+
+// ConnectionAutoNow says "Automatic (now {way})"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: Automatic while it is
+// chosen, with the way it picked. way is CoreDevice, WebDriverAgent, or the
+// words of connectionReadOnly.
+func ConnectionAutoNow(way string) string { return In(i18n.Locale()).ConnectionAutoNow(way) }
+
+// ConnectionAutoNow says "Automatic (now {way})"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: Automatic while it is
+// chosen, with the way it picked. way is CoreDevice, WebDriverAgent, or the
+// words of connectionReadOnly.
+func (msgs Messages) ConnectionAutoNow(way string) string {
+	return Catalog.Format(msgs.locale, "connectionAutoNow", map[string]any{"way": way})
+}
+
+// ConnectionChangeFailed says "Couldn't change how Pinky connects to {phone}: {reason}"
+// in the language the app shows.
+//
+// A toast when choosing an iPhone's connection failed. phone is the phone's
+// name, reason the error in English.
+func ConnectionChangeFailed(phone string, reason string) string {
+	return In(i18n.Locale()).ConnectionChangeFailed(phone, reason)
+}
+
+// ConnectionChangeFailed says "Couldn't change how Pinky connects to {phone}: {reason}"
+// in the language of msgs.
+//
+// A toast when choosing an iPhone's connection failed. phone is the phone's
+// name, reason the error in English.
+func (msgs Messages) ConnectionChangeFailed(phone string, reason string) string {
+	return Catalog.Format(msgs.locale, "connectionChangeFailed", map[string]any{"phone": phone, "reason": reason})
+}
+
+// ConnectionCoreDevice says "CoreDevice (nothing to install)"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: the way through
+// Xcode's CoreDevice protocol. CoreDevice is a name.
+func ConnectionCoreDevice() string { return In(i18n.Locale()).ConnectionCoreDevice() }
+
+// ConnectionCoreDevice says "CoreDevice (nothing to install)"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: the way through
+// Xcode's CoreDevice protocol. CoreDevice is a name.
+func (msgs Messages) ConnectionCoreDevice() string {
+	return Catalog.Format(msgs.locale, "connectionCoreDevice", nil)
+}
+
+// ConnectionCoreDeviceDesc says "Nothing to install, and the smoothest live picture. Needs iOS 27 or later. Some banking apps take the live picture fo…"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: what CoreDevice gives
+// and costs.
+func ConnectionCoreDeviceDesc() string { return In(i18n.Locale()).ConnectionCoreDeviceDesc() }
+
+// ConnectionCoreDeviceDesc says "Nothing to install, and the smoothest live picture. Needs iOS 27 or later. Some banking apps take the live picture fo…"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: what CoreDevice gives
+// and costs.
+func (msgs Messages) ConnectionCoreDeviceDesc() string {
+	return Catalog.Format(msgs.locale, "connectionCoreDeviceDesc", nil)
+}
+
+// ConnectionIOSTooOld says "Pinky needs iOS 17.4 or later; this iPhone runs iOS {version}."
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: why no way works on
+// this iPhone. version is its iOS version.
+func ConnectionIOSTooOld(version string) string {
+	return In(i18n.Locale()).ConnectionIOSTooOld(version)
+}
+
+// ConnectionIOSTooOld says "Pinky needs iOS 17.4 or later; this iPhone runs iOS {version}."
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: why no way works on
+// this iPhone. version is its iOS version.
+func (msgs Messages) ConnectionIOSTooOld(version string) string {
+	return Catalog.Format(msgs.locale, "connectionIOSTooOld", map[string]any{"version": version})
+}
+
+// ConnectionNeedsIOS27 says "Needs iOS 27 or later; this iPhone runs iOS {version}."
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: why CoreDevice cannot
+// be used. version is the iPhone's iOS version.
+func ConnectionNeedsIOS27(version string) string {
+	return In(i18n.Locale()).ConnectionNeedsIOS27(version)
+}
+
+// ConnectionNeedsIOS27 says "Needs iOS 27 or later; this iPhone runs iOS {version}."
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: why CoreDevice cannot
+// be used. version is the iPhone's iOS version.
+func (msgs Messages) ConnectionNeedsIOS27(version string) string {
+	return Catalog.Format(msgs.locale, "connectionNeedsIOS27", map[string]any{"version": version})
+}
+
+// ConnectionNoAnswer says "The iPhone doesn't answer right now."
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: why a way cannot be
+// checked.
+func ConnectionNoAnswer() string { return In(i18n.Locale()).ConnectionNoAnswer() }
+
+// ConnectionNoAnswer says "The iPhone doesn't answer right now."
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: why a way cannot be
+// checked.
+func (msgs Messages) ConnectionNoAnswer() string {
+	return Catalog.Format(msgs.locale, "connectionNoAnswer", nil)
+}
+
+// ConnectionNotInstalled says "The helper isn't installed on this iPhone. Install it once with Xcode (WebDriverAgent's WebDriverAgentRunner, Product…"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: why the
+// WebDriverAgent helper cannot be used yet, and how to install it.
+// WebDriverAgent, WebDriverAgentRunner and Product › Test are names in
+// Xcode.
+func ConnectionNotInstalled() string { return In(i18n.Locale()).ConnectionNotInstalled() }
+
+// ConnectionNotInstalled says "The helper isn't installed on this iPhone. Install it once with Xcode (WebDriverAgent's WebDriverAgentRunner, Product…"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: why the
+// WebDriverAgent helper cannot be used yet, and how to install it.
+// WebDriverAgent, WebDriverAgentRunner and Product › Test are names in
+// Xcode.
+func (msgs Messages) ConnectionNotInstalled() string {
+	return Catalog.Format(msgs.locale, "connectionNotInstalled", nil)
+}
+
 // ConnectionOffline says "{platform} · offline"
 // in the language the app shows.
 //
@@ -1819,6 +1989,92 @@ func ConnectionOffline(platform string) string { return In(i18n.Locale()).Connec
 // 16.
 func (msgs Messages) ConnectionOffline(platform string) string {
 	return Catalog.Format(msgs.locale, "connectionOffline", map[string]any{"platform": platform})
+}
+
+// ConnectionReadOnly says "read-only, no helper"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: what Automatic picked
+// on an iPhone below iOS 27 without the WebDriverAgent helper, where Pinky
+// can read the screen but not act. Shown inside connectionAutoNow, so lower
+// case.
+func ConnectionReadOnly() string { return In(i18n.Locale()).ConnectionReadOnly() }
+
+// ConnectionReadOnly says "read-only, no helper"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: what Automatic picked
+// on an iPhone below iOS 27 without the WebDriverAgent helper, where Pinky
+// can read the screen but not act. Shown inside connectionAutoNow, so lower
+// case.
+func (msgs Messages) ConnectionReadOnly() string {
+	return Catalog.Format(msgs.locale, "connectionReadOnly", nil)
+}
+
+// ConnectionReconnecting says "Reconnecting {phone} the way you chose…"
+// in the language the app shows.
+//
+// A toast once an iPhone's connection was changed: Pinky reconnects it.
+// phone is the phone's name.
+func ConnectionReconnecting(phone string) string {
+	return In(i18n.Locale()).ConnectionReconnecting(phone)
+}
+
+// ConnectionReconnecting says "Reconnecting {phone} the way you chose…"
+// in the language of msgs.
+//
+// A toast once an iPhone's connection was changed: Pinky reconnects it.
+// phone is the phone's name.
+func (msgs Messages) ConnectionReconnecting(phone string) string {
+	return Catalog.Format(msgs.locale, "connectionReconnecting", map[string]any{"phone": phone})
+}
+
+// ConnectionTitle says "Connection"
+// in the language the app shows.
+//
+// Settings › Phones: the heading of an iPhone's choice of how Pinky
+// connects to it.
+func ConnectionTitle() string { return In(i18n.Locale()).ConnectionTitle() }
+
+// ConnectionTitle says "Connection"
+// in the language of msgs.
+//
+// Settings › Phones: the heading of an iPhone's choice of how Pinky
+// connects to it.
+func (msgs Messages) ConnectionTitle() string {
+	return Catalog.Format(msgs.locale, "connectionTitle", nil)
+}
+
+// ConnectionWDA says "WebDriverAgent helper"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: the way through the
+// WebDriverAgent helper app. WebDriverAgent is a name.
+func ConnectionWDA() string { return In(i18n.Locale()).ConnectionWDA() }
+
+// ConnectionWDA says "WebDriverAgent helper"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: the way through the
+// WebDriverAgent helper app. WebDriverAgent is a name.
+func (msgs Messages) ConnectionWDA() string {
+	return Catalog.Format(msgs.locale, "connectionWDA", nil)
+}
+
+// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs the helper …"
+// in the language the app shows.
+//
+// Settings › Phones, an iPhone's connection choice: what the
+// WebDriverAgent helper gives and costs.
+func ConnectionWDADesc() string { return In(i18n.Locale()).ConnectionWDADesc() }
+
+// ConnectionWDADesc says "Works from iOS 17.4, and shares no screen, so banking apps that refuse screen sharing keep working. Needs the helper …"
+// in the language of msgs.
+//
+// Settings › Phones, an iPhone's connection choice: what the
+// WebDriverAgent helper gives and costs.
+func (msgs Messages) ConnectionWDADesc() string {
+	return Catalog.Format(msgs.locale, "connectionWDADesc", nil)
 }
 
 // DayOtherYear says "{day, date, ::yMMMMd}"

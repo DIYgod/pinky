@@ -386,6 +386,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 				if d.Features.Background {
 					a.backgroundRow(c, d, true)
 				}
+				a.connectionRows(c, d)
 			})
 		}
 	})

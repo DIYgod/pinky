@@ -378,6 +378,42 @@ type Forgetter interface {
 // phone.
 var ErrPairedNotFound = errors.New("the phone paired, but its wireless debugging address was not found on the network")
 
+// ConnectionChooser is a Provider that can reach a phone in more than one
+// way and lets the person choose, per phone (iPhone: Xcode's CoreDevice
+// protocol, or the WebDriverAgent helper). The choice takes effect at the
+// next Open; the gateway closes the phone's session to apply it.
+type ConnectionChooser interface {
+	// Connections describes the ways to connect a phone, in the order the
+	// person sees them, automatic first.
+	Connections(ctx context.Context, id string) Connections
+	// SetConnection chooses one by its ID; ConnectionAuto goes back to the
+	// driver's own rule.
+	SetConnection(id, way string) error
+}
+
+// ConnectionAuto is the ID of the driver's own choice.
+const ConnectionAuto = ""
+
+// Connections is what ConnectionChooser.Connections says about a phone.
+type Connections struct {
+	Chosen  string       // the person's choice, ConnectionAuto when none
+	Current string       // the way the phone is reached now (its Info.Backend), "" when it is not
+	Ways    []Connection // automatic first
+}
+
+// Connection is one way to connect a phone.
+type Connection struct {
+	ID        string // ConnectionAuto, or a backend name such as "coredevice" or "wda"
+	Available bool   // it can be used with this phone now
+	// Reason says why it cannot, as a code clients put into words:
+	// "os_version" (the phone's OS is too old or too new for it),
+	// "not_installed" (it needs an app on the phone that is not there),
+	// "needs_setup" (the phone needs a step first, such as Developer Mode),
+	// "offline" (the phone does not answer).
+	Reason string
+	Detail string // the same in a sentence, for logs and clients without words for Reason
+}
+
 // Errors drivers return. Wrap them with fmt.Errorf("...: %w", err).
 var (
 	ErrUnsupported = errors.New("not supported by this device or backend")

@@ -82,17 +82,44 @@ const wdaStartTimeout = 60 * time.Second
 // OpenWDA opens a phone through its WebDriverAgent helper, starting the
 // helper's test when it is not running yet.
 func OpenWDA(ctx context.Context, info driver.Info) (*WDADevice, error) {
+	s, err := startWDAFor(ctx, info)
+	if err != nil {
+		return nil, err
+	}
+	d, err := s.open(ctx, info)
+	if err != nil {
+		s.stop()
+		return nil, err
+	}
+	return d, nil
+}
+
+// errAutomation is the phone waiting for its passcode: now and then iOS
+// asks for it on the phone before a UI test runs, so before the helper can
+// control the phone (see runnerLog). A passcode entered after the runner
+// gave up still counts for the next start.
+var errAutomation = errors.New("the iPhone asks on its screen for its passcode to allow automation")
+
+// wdaStart is WebDriverAgent starting on a phone: the client that reaches
+// it and, when Pinky started it, the runner's test run and the tunnel the
+// run goes through.
+type wdaStart struct {
+	base goios.DeviceEntry
+	c    *wdaClient
+	run  *wdaRun
+	l    *link
+}
+
+// startWDAFor starts the helper's test on a phone, unless WebDriverAgent
+// already answers there (started by Xcode, or by an earlier Pinky).
+func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	base, err := findEntry(info.ID, info.Connection == "wifi")
 	if err != nil {
 		return nil, err
 	}
-	c := newWDAUSB(base)
-	// WDA may already be running, started by Xcode or by an earlier Pinky.
-	sctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	st, err := c.status(sctx)
-	cancel()
-	if err == nil && st.Ready {
-		return openWDA(ctx, info, c, base, nil)
+	s := &wdaStart{base: base, c: newWDAUSB(base)}
+	if s.ready(ctx) {
+		return s, nil
 	}
 	bundleID, err := findWDARunner(base)
 	if err != nil {
@@ -105,32 +132,79 @@ func OpenWDA(ctx context.Context, info driver.Info) (*WDADevice, error) {
 	if err != nil {
 		return nil, err
 	}
-	run := startWDA(l.entry, bundleID)
+	s.run, s.l = startWDA(l.entry, bundleID), l
+	return s, nil
+}
+
+// ready reports whether WebDriverAgent answers and is ready.
+func (s *wdaStart) ready(ctx context.Context) bool {
+	sctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	st, err := s.c.status(sctx)
+	return err == nil && st.Ready
+}
+
+// running reports whether the start can still succeed: WebDriverAgent was
+// running already, or the runner's test is still going.
+func (s *wdaStart) running() bool {
+	if s.run == nil {
+		return true
+	}
+	alive, _ := s.run.alive()
+	return alive
+}
+
+// open waits for WebDriverAgent to answer and opens the phone through it;
+// the device then owns the run and the tunnel. It stops waiting when the
+// run ends, and returns errAutomation as soon as the phone asks for its
+// passcode, leaving the start to the caller, to stop or keep.
+func (s *wdaStart) open(ctx context.Context, info driver.Info) (*WDADevice, error) {
+	if s.run == nil {
+		return openWDA(ctx, info, s.c, s.base, nil)
+	}
 	wctx, cancel := context.WithTimeout(ctx, wdaStartTimeout)
 	defer cancel()
 	go func() {
-		// Stop waiting as soon as the run fails, instead of at the timeout.
-		select {
-		case <-run.done:
-			cancel()
-		case <-wctx.Done():
+		t := time.NewTicker(250 * time.Millisecond)
+		defer t.Stop()
+		for {
+			select {
+			case <-s.run.done:
+				cancel()
+				return
+			case <-wctx.Done():
+				return
+			case <-t.C:
+				if s.run.asking() {
+					cancel()
+					return
+				}
+			}
 		}
 	}()
-	d, err := openWDA(wctx, info, c, base, run)
+	d, err := openWDA(wctx, info, s.c, s.base, s.run)
 	if err != nil {
-		if alive, rerr := run.alive(); !alive && rerr != nil {
+		if alive, rerr := s.run.alive(); !alive && rerr != nil {
 			err = fmt.Errorf("start WebDriverAgent: %w", rerr)
+		} else if alive && s.run.asking() {
+			err = errAutomation
 		}
-		run.stop()
-		l.Close()
 		return nil, err
 	}
-	d.l = l
+	d.l = s.l
 	return d, nil
 }
 
-// OpenWDAURL opens a WDA server at a URL, such as one the iOS Simulator
-// runs; mjpeg is its MJPEG server's URL. For tests and debugging.
+// stop ends what the start began.
+func (s *wdaStart) stop() {
+	if s.run != nil {
+		s.run.stop()
+	}
+	if s.l != nil {
+		s.l.Close()
+	}
+}
+
 func OpenWDAURL(ctx context.Context, base, mjpeg string) (*WDADevice, error) {
 	return openWDA(ctx, driver.Info{ID: base, Platform: driver.IOS, Name: "WebDriverAgent", Connection: "usb", State: driver.StateOnline}, newWDAURL(base, mjpeg), goios.DeviceEntry{}, nil)
 }
@@ -159,7 +233,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 	wg.Add(3)
 	go func() { defer wg.Done(); root, srcErr = d.c.source(ctx) }()
 	go func() { defer wg.Done(); app, _ = d.c.activeApp(ctx) }()
-	go func() { defer wg.Done(); locked, _ = d.c.locked(ctx) }()
+	go func() { defer wg.Done(); locked, _ = d.lockState(ctx) }()
 	if opt.OCR {
 		wg.Add(1)
 		go func() {
@@ -467,9 +541,10 @@ func (d *WDADevice) Apps(ctx context.Context) ([]driver.App, error) {
 	}
 }
 
-// Locked implements driver.LockReporter.
+// Locked implements driver.LockReporter: whether the phone needs its
+// passcode, from lockdown as on the CoreDevice path.
 func (d *WDADevice) Locked(ctx context.Context) (bool, error) {
-	return d.c.locked(ctx)
+	return d.lockState(ctx)
 }
 
 // Stream implements driver.Device: WDA's MJPEG picture, encoded to H.264.
