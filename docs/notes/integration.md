@@ -1,6 +1,6 @@
 # Integration
 
-What the main session did to put the five parts together, what was checked on real phones, and what is still open. Written on 2026-11-07.
+What the main session did to put the parts together, what was checked on real phones, and what is still open. Rounds one and two were integrated in the night of 2026-11-06; round three on 2026-11-07, see [Round three](#round-three).
 
 ## Merges
 
@@ -79,3 +79,43 @@ With `uiautomator`, each step settled (median 1.3 s), read the screen (2.2 s), t
 2. Only USB iPhones by default, until Pinky has its own pairing flow for Wi-Fi.
 3. The desktop app hosts the gateway (as DESIGN says), and the shim starts the app on macOS.
 4. Keep the companion APK out of git and the Go binary for now: `make companion` builds it and `make app` bundles it.
+
+## Round three
+
+After the second round the owner asked for the window checked with the screen on, a decision on typing on an iPhone with Pinyin active, the companion app shipped inside Pinky.app, no keeping phones awake (burn-in, heat), and everything else that was still missing. The plan, the decisions and who did what are in [round3.md](round3.md).
+
+### The window with the screen on
+
+With the Mac unlocked, [`scripts/screencheck.py`](../../scripts/screencheck.py) drove the `e2e` build through MyGo's automation socket and acted as the agent over MCP, on `emulator-5560`: the New agent card (Approve), an approval in the window (Deny), the floating panel with its screenshot and countdown (Allow), clicking the mirror to take over ("You're in control"), Hand back and Stop all. All ten checks passed, and the captures looked right. It found one bug: with no phone added, and on Activity, Settings and Add phone, the window has no Needs you column, so an agent's first connection waited unseen until it timed out; the floating panel now shows approvals whenever the window cannot (a793b8e). Computer-use access to the window was declined, so the check uses the automation socket only, which acts inside Pinky's windows.
+
+### Merges
+
+Six branches merged into `main` without conflicts: `claude/platform-5568b2`, `claude/android-companion-76e6fd`, `claude/android-driver-1aff78`, `claude/ios-driver-ba7421`, `claude/gateway-core-da93b5`, `claude/desktop-client-380250`. Build, vet and tests passed after the last one except two client tests that still expected the gateway's stubs.
+
+### Fixes made while integrating
+
+- **The client's tests** expected the gateway's round-three stubs; the merged gateway records, exports and gives the demo phones unlocking, background work and files, so the client shows those controls (`TestGatewayRound3`, `TestGatewayLockedHandoff`).
+- **The agent token** reaches the window (`ui.Options.AgentToken`), which Settings › Agents › Remote agents shows.
+- **`PINKY_DEVICES` hid Wi-Fi pairing**: the filter now passes `driver.Pairer` through and lets a paired phone in (`TestDeviceFilterKeepsPairing`).
+- **A wrong PIN** now carries `driver.ErrLocked` as well as `gateway.ErrWrongPIN`, so the client words it.
+- **Key frames on shared streams**: the gateway shares one stream among the mirror and the recorder, so drivers answer its key frame requests: iPhones with an RTCP FIR, Android phones by restarting the encoder (scrcpy's reset-video). Without it a background task's recording on Android was empty: scrcpy sends key frames only every 10 s, and the recorder drops what comes before the first readable screen.
+- **PIN stores say whether they work** (`secret.Supported`), so the client no longer probes the keychain with a delete.
+- **`pinky quit`** ends the running app or daemon over the socket; Windows has no signal for it, and the smoke run uses it on every system.
+- **Background work is the default on Android 13 and later** (`driver.BackgroundDefaulter`): there the virtual display keeps working while the phone's own screen is off and locked, which answers the owner's worry about keeping screens on. The person's choice in Settings wins and is kept.
+- **An empty background display read as unreadable**: the gateway opens the display before the agent picks an app, and accessibility reports a display without windows as one it cannot see, so every task moved to the phone's locked main screen. The driver now shows it as an empty screen until an app starts, and `phone_connect` tells the agent to open apps with `phone_launch` (also in `docs/SKILL.md`).
+- **The gateway's emulator tests** unlock through the gateway (`PINKY_TEST_PIN`), keep the recording test on the main screen, and check display 0's own power state: the phone as a whole stays awake while a background display is open.
+
+### Checked
+
+| What | Result |
+| --- | --- |
+| `make check`, `go vet` with the `device` and `e2e` tags, Windows and Linux builds | Pass |
+| CI (`.github/workflows/ci.yml`) on Linux, Windows and macOS, with the smoke run | See the run for the commit on GitHub |
+| Gateway on the Android 16 emulator, main screen | Unlocked through the gateway with the PIN in 2.8 s; a 39 s recording (987 frames, 19 step marks) with nothing written while a blocked app was up |
+| Gateway on the Android 16 emulator, background display, phone off and locked | Clock on the display by taps, 400 frames recorded, the phone's own display stayed off |
+| Remote agents | `pinky daemon --fake --http`: 401 without the token; Claude Code over Streamable HTTP opened the Calculator on the fake Pixel and released it (24 s, $0.21) |
+| `pinky quit` | Ends the daemon and the app |
+| Pinky.app | FFmpeg's four libraries in `Contents/Frameworks`, the companion APK and FFmpeg's license in `Resources`, ad hoc signature valid, `.dmg` 13 MB |
+| Claude Code on the emulator through the app | Found the bug below |
+
+The phones were not available for end-to-end runs: the iPhone's screen was off and locked, the Mi 10 Pro locked after someone pressed its power key at 10:35, and the Pixel is still offline. The sessions' own real-phone checks are in their notes: the iPhone's 16 tests (typing by paste with Pinyin active, Chinese and emoji, the clipboard put back), and the Calculator on a background display of the Mi (unlocked, main screen untouched).

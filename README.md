@@ -4,7 +4,7 @@ Let AI agents use your phone, with you in the loop.
 
 Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
 
-**Status:** pre-alpha. Claude Code has used real phones through it end to end (an Android phone over USB and an iPhone on iOS 27), but expect rough edges. See [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) for what works today and how to try it.
+**Status:** pre-alpha. Claude Code has used real phones through it end to end (an Android phone over USB and an iPhone on iOS 27), and agents can connect over stdio or HTTP. Unlocking from the computer, background work on Android, recordings, export, Wi-Fi pairing and the phone's files are built; some of it still waits for a person to try it. See [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) for what works today and how to try it.
 
 ## Try it
 
@@ -28,8 +28,9 @@ No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pink
 
 ### Phones
 
-- **Android:** turn on USB debugging, plug the phone in and accept the computer's key. Pinky works over adb and a bundled scrcpy server; nothing has to be installed on the phone. The optional companion app reads the screen in about 70 ms instead of 2 s: `make companion && make app`, then `pinky companion install` with the phone plugged in (the phone may ask you to allow an unknown app once).
-- **iPhone:** iOS 27 or later, Developer Mode on, connected over USB and trusted once in Xcode's Devices window. Nothing is installed on the phone.
+- **Android:** turn on USB debugging, plug the phone in and accept the computer's key, or pair over Wi-Fi from Add phone. Pinky works over adb and a bundled scrcpy server. Its companion app, which ships inside Pinky.app, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
+- **iPhone:** iOS 27 or later, Developer Mode on, connected over USB and trusted once in Xcode's Devices window. Nothing is installed on the phone. Typing pastes the text and puts your clipboard back.
+- **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN.
 
 ## Layout
 
