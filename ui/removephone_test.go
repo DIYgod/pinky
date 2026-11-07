@@ -292,6 +292,8 @@ func TestRemovePhoneForgetsClientState(t *testing.T) {
 		return ok
 	})
 	ta.bg.on["iphone-17"], ta.pin.asked["iphone-17"], ta.more["tile:iphone-17"] = true, true, true
+	ta.chk.runs, ta.chk.family = map[string]*checkupRun{"iphone-17": {have: true}}, map[string]string{"iphone-17": "ios"}
+	ta.chk.showing = "iphone-17"
 	ta.askRemove(*ta.device("iphone-17"))
 	ta.removePhone()
 	ta.waitFor(t, "the removal", func() bool { return !ta.rm.busy && ta.device("iphone-17") == nil })
@@ -303,5 +305,8 @@ func TestRemovePhoneForgetsClientState(t *testing.T) {
 	}
 	if ta.bg.on["iphone-17"] || ta.pin.asked["iphone-17"] || ta.more["tile:iphone-17"] {
 		t.Error("other state about the iPhone stayed")
+	}
+	if ta.checkupOf("iphone-17") != nil || ta.chk.family["iphone-17"] != "" || ta.chk.showing != "" {
+		t.Error("the iPhone's checkup stayed, and would show again should it come back")
 	}
 }

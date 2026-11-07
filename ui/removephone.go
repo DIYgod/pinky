@@ -231,6 +231,15 @@ func (a *app) forgetPhone(id string, history bool) {
 	delete(conn.loading, id)
 	delete(conn.busy, id)
 	delete(conn.chosen, id)
+	delete(a.chk.runs, id) // its checkup, which shows in place of the mirror
+	delete(a.chk.family, id)
+	if a.chk.showing == id {
+		a.chk.showing = ""
+	}
+	delete(a.droid.waiting, id) // Add phone's wait for the phone to allow this computer
+	if a.droid.auto == id {
+		a.droid.auto, a.droid.autoBrand = "", ""
+	}
 	delete(a.more, id)
 	delete(a.more, "tile:"+id)
 	if history && a.act.loaded {
