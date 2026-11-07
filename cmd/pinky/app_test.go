@@ -9,11 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/ui"
 )
@@ -73,6 +75,65 @@ func TestSettingsReachTheGateway(t *testing.T) {
 			t.Fatalf("Chatter still blocked: %+v", third.BlockedApps)
 		}
 	}
+}
+
+// Unblocking a finance app in Settings › Safety unblocks it for agents. The
+// bundled table names Google Wallet by package and by name; a row that kept
+// only the name used to leave it blocked by its package (Wise on an iPhone).
+func TestUnblockingABundledFinanceApp(t *testing.T) {
+	dir := t.TempDir()
+	pol, err := policy.Load(filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	providers, _ := demo.World()
+	g, err := gateway.New(gateway.Options{Providers: providers, Policy: pol})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	rg := &runningGateway{Policy: pol, G: g}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	wallet := screen.App{ID: "com.google.android.apps.walletnfcrel", Name: "Google Wallet"}
+	if _, blocked := pol.Blocked(wallet); !blocked {
+		t.Fatal("Google Wallet is not blocked to begin with")
+	}
+
+	var s ui.Settings
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(20 * time.Millisecond) {
+		gatewaySettings(&s, rg)
+		if hasBlocked(s, "Google Wallet") || time.Now().After(deadline) {
+			break
+		}
+	}
+	if !hasBlocked(s, "Google Wallet") {
+		t.Fatalf("Google Wallet is not listed: %+v", s.BlockedApps)
+	}
+	next := s
+	next.BlockedApps = nil
+	for _, b := range s.BlockedApps {
+		if b.Name != "Google Wallet" {
+			next.BlockedApps = append(next.BlockedApps, b)
+		}
+	}
+	applySettings(rg, s, next, log)
+	if rule, blocked := pol.Blocked(wallet); blocked {
+		t.Fatalf("still blocked by %q after unblocking it in Settings", rule)
+	}
+	var again ui.Settings
+	gatewaySettings(&again, rg)
+	if hasBlocked(again, "Google Wallet") {
+		t.Fatalf("listed again: %+v", again.BlockedApps)
+	}
+}
+
+func hasBlocked(s ui.Settings, name string) bool {
+	for _, b := range s.BlockedApps {
+		if b.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func TestAppFromText(t *testing.T) {

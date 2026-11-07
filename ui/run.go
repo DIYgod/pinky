@@ -100,9 +100,12 @@ type Settings struct {
 // only, on port 7465 (PINK on a phone keypad).
 const DefaultRemoteAddr = "127.0.0.1:7465"
 
-// BlockedApp is an app agents may not open.
+// BlockedApp is an app agents may not open. ID is its package name or
+// bundle id when Pinky knows it, so that unblocking takes the app out of
+// every entry that blocks it, not only its name.
 type BlockedApp struct {
 	Name, Kind string
+	ID         string
 }
 
 // AgentInfo is a row of Settings › Agents.
