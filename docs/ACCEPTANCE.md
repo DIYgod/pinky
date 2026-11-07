@@ -47,8 +47,11 @@ Ask: *"On my Mi 10 Pro, open Settings and turn on Airplane mode."*
 
 - [x] **Companion app.** Updated on the Mi on the 7th with `Pinky companion install` (build 130, replacing round one's build signed with another key); its service is on, next to Mika's. *(checked)* Claude Code then worked out 8 × 9 in the Mi's Calculator on a background display in 38 s ($0.21, about 1.4 s a tap), and the Calculator task you had open went back to the main screen at the end.
 - [ ] **Background work** (Android 13 and later, on by default; Settings › Phones › Work in the background): during a task the mirror shows the agent's own display, with a switch to the phone's screen; the phone's screen can stay off and locked. *(checked on the Android 16 emulator: Claude Code used the Clock while the phone was off and locked, with screenshots from the display's video, and the task was recorded)*
+- [ ] **Background work on Android 17** (the Mi): Android 17 stops a background display with the phone's screen, so during such a task Pinky keeps the phone awake with its screen dark. Check by eye, with the Mi locked and its screen off: starting a task does not light or blink the screen (an always-on display goes dark); a touch on the phone during the task lights the lock screen; after the task the phone is asleep as before. The power key then turns the phone off on its first press and on with the second. *(checked by tests on the Mi over Wi-Fi and on the Android 17 emulator, not by eye: see docs/notes/integration.md)*
 - [x] **Unlock from the computer** *(checked on the 7th with the Mi 10 Pro, over Wi-Fi)*: a locked Mi's page offers Unlock with Touch ID once its PIN is saved. Phones with an under-display fingerprint sensor first show a fingerprint screen; Pinky taps past it to the PIN pad. A PIN the phone refuses is not tried again until you unlock the phone yourself or change the PIN.
+- [ ] **Unlock a phone with another lock screen** (Xiaomi, Samsung, OPPO, OnePlus, realme, vivo, Honor, Huawei): save its PIN and click Unlock with Touch ID while you watch the phone. Pinky reads the PIN pad's keys from the screen and taps them; if it cannot read them with confidence it enters nothing and says so. A PIN the phone refuses is not tried again. *(only covered by tests made from what is known of these lock screens)*
 - [ ] **Files.** Ask: *"Put a text file named hello.txt with 'hi' in my Mi's Pinky folder."* The agent uses `phone_files`; the file appears in the phone's `Pinky/` folder (and in `~/Library/Application Support/Pinky/files/<phone>/`).
+- [ ] **Mirroring over Wi-Fi**: the Mi's mirror follows the phone with little lag while you scroll it (over Wi-Fi Pinky streams 2.5 Mbit/s at 30 frames a second in H.265; USB is unchanged). *(measured on the Mi: frames queue 12–25 ms typically instead of 50–800 ms, see docs/notes/integration.md)*
 - [x] **Wi-Fi pairing** *(checked on the 7th with the Mi 10 Pro)*: Add phone › Android › Or pair over Wi-Fi, then on the phone Developer options › Wireless debugging › Pair device with QR code. A phone on both USB and Wi-Fi shows once, by USB while the cable is in, and keeps its id (and saved PIN, settings, history) on Wi-Fi. If pairing hangs, adb may have stopped seeing the network after running for days: quit other Android tools and run `adb kill-server` (the pairing step says so after 30 s).
 
 ## 5. iPhone
@@ -79,11 +82,19 @@ open build/pinky/darwin-arm64/Pinky.app --args --fake    # quit the real Pinky f
 
 - [ ] Two fake phones with drawn screens. Ask Claude Code to *"reorder last week's lunch (the chicken rice bowl) on the fake Pixel"*: it reaches a **Pay** approval.
 
+## 10. Updates
+
+- [x] **Pinky updates itself** *(checked on the 7th against a local feed, with two builds signed with the Developer ID in a temporary folder: `TestUpdateEndToEnd`)*: the older Pinky, left alone in the menu bar, found the newer one within a minute, downloaded and checked it, quit, and the newer one started in its place, removed the old bundle and showed **Pinky was updated** with What's new.
+- [ ] **With the real feed**, once the release pipeline publishes `latest.json`: in an installed Pinky.app the sidebar shows **Pinky … is available**; **What's new** shows the notes; **Update now** restarts into the new version; **What's new** after the restart lists the changes since the version you had. Settings › Advanced › **Check now** says *Up to date* afterwards.
+- [ ] **Not while you work**: during an agent task, an approval or with the window in use, nothing restarts; **Update now** then asks first.
+- [x] **Pinky Companion** *(checked on the Android 10 and 16 emulators)*: a phone with an older companion is updated while it is free, its accessibility service stays as it was (Android keeps it on across the update), and a toast and What's new say so. On phones where Play Protect checks USB installs it waits for your click instead, since the phone would ask.
+
 ## Decisions
 
 - **Typing on an iPhone** (yours to decide, decided here): paste through the iPhone's pasteboard and put the clipboard back; typing by keys only as a fallback.
-- **The companion app** ships inside Pinky.app and installs when you click Install; Pinky never installs anything by itself.
-- **No keeping phones awake**: Pinky wakes a phone before a step and lets its own timeout and lock apply; Android 13+ works on a background display by default so the screen can stay off.
+- **The companion app** ships inside Pinky.app and installs when you click Install. With Update automatically on, Pinky updates an installed companion by itself while the phone is free (only Pinky's own package, and not where the phone would ask); it never installs anything else.
+- **Updates** are automatic by default (Settings › Advanced), only while nothing is going on, and the old version comes back if the new one does not start.
+- **No keeping phones awake**: Pinky wakes a phone before a step and lets its own timeout and lock apply; Android 13+ works on a background display by default so the screen can stay off. Android 17 is the exception: the phone stays awake, with its screen dark, while a background task runs, since the display stops with the screen otherwise.
 - **The Mac** stays awake while an agent task runs, and only then.
 - **Remote agents** are off by default and listen on this computer only unless you change the address.
 

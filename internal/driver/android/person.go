@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -170,6 +171,36 @@ type personWatch struct {
 	done   chan struct{}
 	closed bool
 	last   time.Time // the last signal sent
+
+	// Touches on the phone's own touchscreen, for a background display that
+	// keeps the phone dark (dark.go): when, and a wake-up for its watch.
+	touchAt   atomic.Int64 // Unix nanoseconds
+	touchOnce sync.Once
+	touchCh   chan struct{}
+}
+
+// touched returns a channel that receives after a touch on the phone's own
+// touchscreen, while PersonInput is being watched.
+func (w *personWatch) touched() <-chan struct{} { return w.touchChan() }
+
+func (w *personWatch) touchChan() chan struct{} {
+	w.touchOnce.Do(func() { w.touchCh = make(chan struct{}, 1) })
+	return w.touchCh
+}
+
+// touchedSince reports whether the touchscreen was touched after t.
+func (w *personWatch) touchedSince(t time.Time) bool {
+	at := w.touchAt.Load()
+	return at != 0 && time.Unix(0, at).After(t)
+}
+
+// touch records a touch on the touchscreen.
+func (w *personWatch) touch(now time.Time) {
+	w.touchAt.Store(now.UnixNano())
+	select {
+	case w.touchChan() <- struct{}{}:
+	default:
+	}
 }
 
 // PersonInput implements driver.PersonWatcher. The first call starts
@@ -282,7 +313,11 @@ func (d *Device) watchPersonOnce(ctx context.Context) error {
 		}
 		ev, ok := parseEventLine(line)
 		if ok && devs.personEvent(ev) {
-			d.person.signal(time.Now())
+			now := time.Now()
+			if devs.touch[ev.path] {
+				d.person.touch(now)
+			}
+			d.person.signal(now)
 		}
 	}
 	if err := sc.Err(); err != nil && ctx.Err() == nil {

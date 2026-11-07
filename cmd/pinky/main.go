@@ -7,6 +7,7 @@
 //	pinky devices    list connected phones
 //	pinky token      print the agent token, for agents that connect over HTTP
 //	pinky quit       quit the running Pinky
+//	pinky update     install a newer version of Pinky
 //	pinky version    print the version
 //
 // Add --fake to daemon, mcp or devices to use scripted fake phones instead
@@ -57,6 +58,8 @@ func main() {
 		err = runToken(args)
 	case "quit":
 		err = runQuit(args)
+	case "update":
+		err = runUpdate(args)
 	default:
 		usage()
 		os.Exit(2)
@@ -93,6 +96,9 @@ Commands:
             install or update the Android companion app
   token     print the agent token, which agents connecting over HTTP send
   quit      quit the running Pinky (the app or the daemon)
+  update [--check]
+            say whether a newer Pinky is out and install it (while Pinky
+            is not running; the app updates itself)
   version   print the version
 
 Flags:
@@ -101,7 +107,8 @@ Flags:
             daemon: also serve MCP over HTTP at addr (127.0.0.1:7465)
 
 Environment:
-  PINKY_HOME  keep config, data and the socket under this folder
+  PINKY_HOME         keep config, data and the socket under this folder
+  PINKY_UPDATE_FEED  read updates from this feed (latest.json) instead
 `)
 }
 

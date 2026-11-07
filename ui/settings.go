@@ -730,7 +730,6 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 			}
 		})
 	})
-	if a.opt.Version != "" {
-		mg.Text(c, "Pinky "+a.opt.Version).FontSize(12.5).TextColor(p.ink3)
-	}
+	a.settingsUpdates(c)
+	_ = p
 }

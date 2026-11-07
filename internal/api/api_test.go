@@ -84,6 +84,40 @@ func TestSingleGatewayAndPermissions(t *testing.T) {
 	}
 }
 
+// TestServeFreesTheLock: once Serve returns, the socket and the lock are
+// free, so the same process can start a gateway again at once (TestQuit
+// does). Accept fails while the listener is still closing, so Serve must
+// wait for Close to finish.
+func TestServeFreesTheLock(t *testing.T) {
+	d := shortDirs(t)
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	g, err := gateway.New(gateway.Options{Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)}, NoScreenshots: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	for i := range 20 {
+		ln, err := Listen(d)
+		if err != nil {
+			t.Fatalf("round %d: %v", i, err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		srv := &Server{Gateway: g, MCP: mcp.New(g, "test"), Version: "test"}
+		done := make(chan error, 1)
+		go func() { done <- srv.Serve(ctx, ln) }()
+		// One client first, so Serve is blocked in Accept when it stops.
+		ctl, err := DialControl(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctl.Close()
+		cancel()
+		if err := <-done; err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestMCPOverSocket(t *testing.T) {
 	d := shortDirs(t)
 	startServer(t, d, false)

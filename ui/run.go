@@ -19,6 +19,7 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/internal/telemetry"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/internal/video"
 )
 
@@ -67,6 +68,10 @@ type Options struct {
 	// (docs/TELEMETRY.md); nil leaves out Send Feedback and the Privacy
 	// switch for usage statistics and crash reports.
 	Telemetry *telemetry.Client
+	// Updates finds and installs new versions of Pinky; nil leaves updates
+	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new.
+	Updates   *update.Updater
+	Changelog string
 }
 
 // Settings are what the Settings screen changes.
@@ -86,6 +91,9 @@ type Settings struct {
 	// UsageStats shares anonymous usage statistics and crash reports
 	// (docs/TELEMETRY.md).
 	UsageStats bool
+	// AutoUpdate installs new versions of Pinky, and of the companion app
+	// on Android phones, by themselves while no one uses them.
+	AutoUpdate bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -113,6 +121,7 @@ func DefaultSettings() Settings {
 		},
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
 		UsageStats: usageStatsByDefault,
+		AutoUpdate: true,
 	}
 }
 
@@ -194,6 +203,7 @@ type app struct {
 	bg     bgState        // background displays, per phone
 	rec    recState       // task recordings in Activity
 	remote remoteState    // Settings › Agents › Remote agents
+	upd    updateState    // new versions of Pinky and the companion app
 
 	awake    func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
 	awakeOn  bool
@@ -334,6 +344,7 @@ func (a *app) ready() {
 		a.opt.OnReady(a.main)
 	}
 	go a.watch()
+	a.startUpdates()
 }
 
 func (a *app) shutdown() {

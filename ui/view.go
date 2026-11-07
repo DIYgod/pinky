@@ -38,6 +38,7 @@ func (a *app) view(c *mg.Context) {
 		})
 	})
 	a.telemetryDialogs(c)
+	a.updateDialogs(c)
 	a.sweepMirrors()
 	// A QR pairing lasts while its step shows, and a recording plays while
 	// Activity does.
@@ -113,6 +114,7 @@ func (a *app) sidebar(c *mg.Context) {
 		})
 
 		mg.Spacer(c)
+		a.updateCards(c)
 		mg.Column(c).Gap(2).Padding(10, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).Children(func() {
 			footRow(c, icHistory, "Activity", a.page == pageActivity, func() {
 				a.page = pageActivity

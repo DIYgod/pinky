@@ -14,7 +14,9 @@ import (
 
 // runCompanion is `pinky companion install [phone]`: it installs or updates
 // the Android companion app, which reads the screen much faster than
-// uiautomator. Pinky never installs it on its own.
+// uiautomator. Pinky never installs it on its own; with Update
+// automatically on, the app updates an installed one while the phone is
+// free (docs/notes/updates.md).
 func runCompanion(args []string) error {
 	if len(args) == 0 || args[0] != "install" {
 		return errors.New("usage: pinky companion install [phone id or name]")

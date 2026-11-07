@@ -2,7 +2,12 @@
 # Builds the FFmpeg libraries Pinky ships (make ffmpeg): a minimal LGPL
 # build of FFmpeg 9 with shared libraries, holding only what Pinky uses.
 #
-#   scripts/ffmpeg.sh <prefix>
+#   scripts/ffmpeg.sh <prefix> [arm64|amd64]
+#
+# On macOS the second argument picks the processor (default: this Mac's),
+# so a Mac with Apple silicon builds the Intel libraries too; x86_64 needs
+# nasm (brew install nasm) for FFmpeg's assembly, or FFMPEG_NO_ASM=1 for
+# a slower build without it.
 #
 # - libavcodec: the H.264 and HEVC decoders and parsers, with VideoToolbox
 #   on macOS (internal/video decodes the phones' streams with them);
@@ -21,7 +26,8 @@ VERSION=9.0.2
 SHA256=8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e
 URL=https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.xz
 
-prefix=${1:?usage: scripts/ffmpeg.sh <prefix>}
+prefix=${1:?usage: scripts/ffmpeg.sh <prefix> [arm64|amd64]}
+arch=${2:-}
 case $prefix in /*) ;; *) prefix=$(pwd)/$prefix ;; esac
 src=$prefix-src
 tarball=$src/ffmpeg-$VERSION.tar.xz
@@ -77,9 +83,39 @@ Darwin)
 	--extra-cflags=-mmacosx-version-min=$min
 	--extra-ldflags=-mmacosx-version-min=$min
 	--extra-ldflags=-Wl,-headerpad_max_install_names"
+	host=$(uname -m)
+	case ${arch:-$host} in
+	arm64 | aarch64) target=arm64 ;;
+	amd64 | x86_64) target=x86_64 ;;
+	*)
+		echo "ffmpeg.sh: no macOS build for the processor $arch (arm64 or amd64)" >&2
+		exit 2
+		;;
+	esac
+	if [ "$target" != "$host" ]; then
+		# --target, one word, as the flags are split at spaces.
+		flags="$flags
+	--enable-cross-compile --target-os=darwin --arch=$target --cc=clang
+	--extra-cflags=--target=$target-apple-macos$min
+	--extra-ldflags=--target=$target-apple-macos$min"
+	fi
+	if [ "$target" = x86_64 ] && ! command -v nasm >/dev/null 2>&1; then
+		if [ "${FFMPEG_NO_ASM:-}" != 1 ]; then
+			echo "ffmpeg.sh: FFmpeg for x86_64 needs nasm (brew install nasm), or FFMPEG_NO_ASM=1 for a build without its assembly, which decodes and converts slower" >&2
+			exit 1
+		fi
+		echo "ffmpeg.sh: no nasm; building without FFmpeg's x86 assembly (FFMPEG_NO_ASM=1)" >&2
+		flags="$flags
+	--disable-x86asm"
+	fi
 	jobs=$(sysctl -n hw.ncpu)
 	;;
 *)
+	target=$(uname -m)
+	if [ -n "$arch" ] && [ "$arch" != "$target" ] && ! { [ "$arch" = amd64 ] && [ "$target" = x86_64 ]; } && ! { [ "$arch" = arm64 ] && [ "$target" = aarch64 ]; }; then
+		echo "ffmpeg.sh: building for another processor ($arch) is for macOS only" >&2
+		exit 2
+	fi
 	jobs=$(nproc 2>/dev/null || echo 4)
 	;;
 esac
@@ -100,7 +136,7 @@ rm -rf "$stage"
 
 cp COPYING.LGPLv2.1 "$prefix/COPYING.LGPLv2.1"
 {
-	echo "FFmpeg $VERSION, built for Pinky under the LGPL 2.1 (see COPYING.LGPLv2.1)."
+	echo "FFmpeg $VERSION, built for Pinky under the LGPL 2.1 (see COPYING.LGPLv2.1), for $target."
 	echo "Source: $URL"
 	echo "SHA-256: $SHA256"
 	echo "Configured with:"

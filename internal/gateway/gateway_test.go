@@ -368,12 +368,14 @@ func TestStop(t *testing.T) {
 	defer s3.Close()
 	dev.SetSlow(time.Second)
 	defer dev.SetSlow(0)
+	g.Stop("pixel")
+	mustStatus(t, s3.Connect(context.Background(), ConnectRequest{Task: "slow"}), StatusSettled)
+	// Only once s3 holds the phone: a test goroutine that ran late must
+	// not get to Connect after Stop all.
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 		g.StopAll()
 	}()
-	g.Stop("pixel")
-	mustStatus(t, s3.Connect(context.Background(), ConnectRequest{Task: "slow"}), StatusSettled)
 	start := time.Now()
 	res = s3.Act(context.Background(), Call{}, Action{Tool: "key", Key: "home"})
 	mustStatus(t, res, StatusStopped)
