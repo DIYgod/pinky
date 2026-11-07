@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -251,5 +252,47 @@ func TestRecordingDropsAnUnknownApp(t *testing.T) {
 	}
 	if info.Frames != 10 {
 		t.Fatalf("recorded %d frames, want the 10 before the unknown app", info.Frames)
+	}
+}
+
+// Reads can overlap. A read that started earlier and is still running
+// may show a blocked app, so a newer clean read writes only what came
+// before it started; when the older read then shows the blocked app,
+// the rest is dropped.
+func TestRecordingOverlappingReads(t *testing.T) {
+	t0 := time.Now()
+	v := &taskVideo{since: t0, needKey: true}
+	v.cond = sync.NewCond(&v.mu)
+	pkts := testPackets(t)
+	at := func(ms int) time.Time { return t0.Add(time.Duration(ms) * time.Millisecond) }
+	send := func(p driver.Packet, ms int) {
+		p.PTS = time.Duration(ms) * time.Millisecond
+		v.packet(timedPacket{p: p, at: at(ms)}, driver.H264)
+	}
+	send(pkts[0], 1)  // configuration
+	send(pkts[1], 10) // key frame
+	send(pkts[2], 20)
+	old := v.readStarting(at(25)) // will see the blocked app
+	send(pkts[3], 30)
+	send(pkts[4], 40)
+	clean := v.readStarting(at(45))
+	send(pkts[5], 50)
+	v.read(clean, at(45), true)
+	if n := len(v.ready); n != 3 {
+		t.Fatalf("%d packets written, want the configuration, the key frame and one picture: before the older read began", n)
+	}
+	v.read(old, at(25), false)
+	if len(v.held) != 0 || !v.paused || len(v.ready) != 3 {
+		t.Fatalf("after the older read saw the blocked app: %d held, paused %v, %d written", len(v.held), v.paused, len(v.ready))
+	}
+	// A read older than one that decided changes nothing.
+	stale := v.readStarting(at(46))
+	newer := v.readStarting(at(60))
+	send(pkts[11], 61) // a key frame
+	v.read(newer, at(60), false)
+	send(pkts[12], 70)
+	v.read(stale, at(46), true)
+	if !v.paused || len(v.held) != 0 {
+		t.Fatalf("a stale read resumed the recording: paused %v, %d held", v.paused, len(v.held))
 	}
 }

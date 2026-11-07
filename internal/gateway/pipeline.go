@@ -1237,14 +1237,26 @@ const observeTimeout = 60 * time.Second
 
 // observe reads the screen, assigns refs and collects events.
 func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Screen, error) {
-	dev, onBG := g.screenOf(d)
+	g.mu.Lock()
+	dev, onBG := g.screenOfLocked(d)
+	video := d.video
+	g.mu.Unlock()
 	if dev == nil {
 		return nil, driver.ErrOffline
 	}
 	ctx, cancel := context.WithTimeout(ctx, observeTimeout)
 	defer cancel()
 	start := time.Now()
+	// The recording learns of the read before it runs: while it runs, what
+	// it may show limits what other reads vouch for (video.go).
+	var readTok uint64
+	if video != nil {
+		readTok = video.readStarting(start)
+	}
 	s, err := dev.Observe(ctx, driver.ObserveOptions{OCR: ocr})
+	if err != nil && video != nil {
+		video.readFailed(readTok)
+	}
 	if err != nil && onBG && errors.Is(err, driver.ErrUnsupported) {
 		// The display cannot be read (Android keeps some virtual displays
 		// from accessibility services): the task moves to the phone's own
@@ -1285,14 +1297,17 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	d.last = s
 	g.confirmShotLocked(d, s, start)
 	_, reporter := dev.(driver.LockReporter)
-	video := d.video
+	moved := false
 	if _, bg := g.screenOfLocked(d); bg != onBG {
-		video = nil // the task moved to another screen meanwhile
+		moved = true // the task moved to another screen meanwhile
 	}
 	person := d.person
 	g.mu.Unlock()
-	if video != nil {
-		video.read(start, recordableScreen(g.policy, s) && !person)
+	switch {
+	case video != nil && moved:
+		video.readFailed(readTok)
+	case video != nil:
+		video.read(readTok, start, recordableScreen(g.policy, s) && !person)
 	}
 	// A background display is always unlocked; the phone's lock shows only
 	// on its own screen.

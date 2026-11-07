@@ -84,6 +84,9 @@ type taskVideo struct {
 	ready    []vpacket
 	reading  bool
 	stopping bool
+	reads    map[uint64]time.Time // reads in progress, by token, and when they started
+	readNext uint64
+	newest   time.Time // the start of the newest read that has decided
 	codec    driver.Codec
 	base     time.Time // arrival minus PTS of the fastest picture so far
 	lastPTS  time.Duration
@@ -283,31 +286,74 @@ func (v *taskVideo) dropLocked() {
 	v.paused, v.needKey = true, true
 }
 
-// read takes a read of the screen the agent uses, which started at start:
-// what arrived before it goes to the file when the screen is recordable,
-// and is dropped otherwise.
-func (v *taskVideo) read(start time.Time, recordable bool) {
+// readStarting registers a read of the screen the agent uses, before it
+// runs, and returns its token for read or readFailed.
+func (v *taskVideo) readStarting(start time.Time) uint64 {
 	v.mu.Lock()
 	defer v.mu.Unlock()
+	if v.reads == nil {
+		v.reads = map[uint64]time.Time{}
+	}
+	v.readNext++
+	v.reads[v.readNext] = start
+	return v.readNext
+}
+
+// readFailed forgets a read that returned no screen.
+func (v *taskVideo) readFailed(tok uint64) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	delete(v.reads, tok)
+}
+
+// read takes a read of the screen the agent uses, which started at start:
+// what arrived before it goes to the file when the screen is recordable,
+// and is dropped otherwise. Reads can overlap (phone_observe during an
+// action, the recorder's own): a read that started earlier and is still
+// running may yet show a blocked app, so a recordable read writes only
+// what arrived before every read still running started. A read that shows
+// what must not be recorded drops what is held whenever it ends; a
+// recordable read older than one that already decided changes nothing.
+func (v *taskVideo) read(tok uint64, start time.Time, recordable bool) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	delete(v.reads, tok)
 	if !recordable {
 		v.dropLocked()
+		if start.After(v.newest) {
+			v.newest = start
+		}
 		return
 	}
+	if start.Before(v.newest) {
+		return
+	}
+	v.newest = start
+	limit := start
+	for _, s := range v.reads {
+		if s.Before(limit) {
+			limit = s
+		}
+	}
 	n := 0
-	for n < len(v.held) && v.held[n].arrived.Before(start) {
+	for n < len(v.held) && v.held[n].arrived.Before(limit) {
 		n++
 	}
+	cfgQueued := false
 	for _, vp := range v.held[:n] {
 		switch {
 		case vp.p.Config:
 			v.ready = append(v.ready, vp)
+			cfgQueued = true
 		case v.needKey && !vp.p.KeyFrame:
 			// Cannot be decoded without the frames dropped before it.
 		default:
-			if vp.p.KeyFrame && v.needKey && vp.cfg != nil {
+			if vp.p.KeyFrame && v.needKey && vp.cfg != nil && !cfgQueued {
+				// The configuration it was encoded with, which a gap may
+				// have dropped.
 				v.ready = append(v.ready, vpacket{p: *vp.cfg, arrived: vp.arrived, at: vp.at})
 			}
-			v.needKey = false
+			v.needKey, cfgQueued = false, false
 			v.ready = append(v.ready, vp)
 		}
 		v.heldSize -= len(vp.p.Data)
@@ -445,8 +491,11 @@ func (v *taskVideo) stop(read bool) {
 			d.act.Lock()
 			ctx, cancel := context.WithTimeout(v.ctx, videoStopRead)
 			start := time.Now()
+			tok := v.readStarting(start)
 			if s, err := g.observe(ctx, d, false); err == nil {
-				v.read(start, g.recordable(d, s))
+				v.read(tok, start, g.recordable(d, s))
+			} else {
+				v.readFailed(tok)
 			}
 			cancel()
 			d.act.Unlock()
