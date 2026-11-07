@@ -138,6 +138,12 @@ A Claude Code run on the Pixel stopped when the person watcher reported a finger
 - **The iPhone over USB**: Claude Code typed "Wi-Fi" into Settings' search by paste with Pinyin active, read the first result, went home and released the phone, in 45 s ($0.25).
 - **Signing and notarization**: `make release` signed Pinky.app with the NATURAL SELECTION LABS Developer ID (team 492J8Q67PF, hardened runtime, timestamp) and Apple notarized the `.dmg` (accepted and stapled); Gatekeeper accepts both as "Notarized Developer ID". The signed app loads FFmpeg from its own Frameworks.
 
+### Unlocking the iPhone from the computer
+
+- **Nobody knew the feature was there.** The owner locked the iPhone and Pinky said nothing: idle phones' lock state was not read, and the offer to save a PIN came only once an agent hit the lock. The gateway now reads idle phones' lock state every 6 s, and a locked phone's page shows a card that offers to save its PIN, or to unlock it once one is saved (fc835f4).
+- **Unlock failed with "the phone did not accept the saved PIN"**, though the PIN was right and nothing had been typed: the passcode pad was looked for through an accessibility session made before the phone locked, which did not see it, and the failure was kept for 30 s, so the next tries failed in a second. A diagnostic that types nothing showed the pad about 2 s after the swipe in a session made on the lock screen. The driver now looks in a fresh session, retries after errors and waits up to 5 s; `driver.ErrPINNotEntered` tells "nothing was entered" from a refused PIN; and after a refused PIN the client offers no further tries until the phone is unlocked on it or the PIN changes (0db9973).
+- **Then it worked**: Unlock with Touch ID from the card unlocked the iPhone; and with the iPhone locked, Claude Code asked for help, the owner clicked Unlock with Touch ID (4 s), and Claude finished the Calculator task (76 s, $0.27).
+
 ### Known limits found in round three
 
 - **A screenshot is one instant.** Content that blinks (Clock's paused stopwatch) may show blank; the element list still has its text.

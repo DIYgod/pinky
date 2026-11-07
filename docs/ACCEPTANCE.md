@@ -47,14 +47,14 @@ Ask: *"On my Mi 10 Pro, open Settings and turn on Airplane mode."*
 
 - [x] **Companion app.** Updated on the Mi on the 7th with `Pinky companion install` (build 130, replacing round one's build signed with another key); its service is on, next to Mika's. *(checked)* Claude Code then worked out 8 × 9 in the Mi's Calculator on a background display in 38 s ($0.21, about 1.4 s a tap), and the Calculator task you had open went back to the main screen at the end.
 - [ ] **Background work** (Android 13 and later, on by default; Settings › Phones › Work in the background): during a task the mirror shows the agent's own display, with a switch to the phone's screen; the phone's screen can stay off and locked. *(checked on the Android 16 emulator: Claude Code used the Clock while the phone was off and locked, with screenshots from the display's video, and the task was recorded)*
-- [ ] **Unlock from the computer.** Settings › Phones › the Mi › Save PIN…, then lock the phone and start a task: the card offers **Unlock with Touch ID**. A wrong PIN is tried once, never again. *(checked through the gateway on the emulator with a test PIN; Touch ID itself needs you)*
+- [ ] **Unlock from the computer.** On Android 13 and later agents work on a background display, so a locked Mi rarely needs it; to try it, turn off Work in the background for the Mi, lock it and start a task. A PIN the phone refuses is not tried again until you unlock the phone yourself or change the PIN. *(checked through the gateway on the emulator with a test PIN, and with Touch ID on the iPhone)*
 - [ ] **Files.** Ask: *"Put a text file named hello.txt with 'hi' in my Mi's Pinky folder."* The agent uses `phone_files`; the file appears in the phone's `Pinky/` folder (and in `~/Library/Application Support/Pinky/files/<phone>/`).
 - [ ] **Wi-Fi pairing.** Add phone › Android › Pair over Wi-Fi: scan the QR code on the phone in Developer options › Wireless debugging › Pair device with QR code, or use *Pair with a code instead*. The phone then shows with *Wi-Fi*. *(checked against fake adb servers only)*
 
 ## 5. iPhone
 
 - [x] Ask: *"On my iPhone, open Settings, search for Wi-Fi and tell me the first result."* Typing pastes the text and puts your clipboard back, so it works with Pinyin active, and with Chinese and emoji. *(checked on the 7th: Claude Code searched with Pinyin active, read "Wi-Fi" as the first result, went home and released the phone, in 45 s for $0.25)*
-- [ ] **Unlock from the computer**: Save PIN… for the iPhone, lock it, then Unlock with Touch ID. Never tried on the phone (it needs your passcode); `docs/notes/ios.md` has the steps with `iosctl unlock`.
+- [x] **Unlock from the computer** *(checked on the 7th)*: a locked iPhone's page offers to save its passcode (the card appears as soon as the phone locks), then Unlock with Touch ID. With the iPhone locked, Claude Code connected, asked for help with `phone_handoff`, you clicked Unlock with Touch ID, the iPhone unlocked in 4 s, and Claude went on to work out 12 × 12 = 144 (76 s, $0.27).
 - Known limits: iPhones over Wi-Fi stay off (3–5 s screenshots, lost video); `phone_files` is Android only.
 
 ## 6. History, recordings, export
