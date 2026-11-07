@@ -2,7 +2,7 @@
 
 The companion is a small Kotlin app with an accessibility service, plus its Go client. It gives the Android driver a fast element tree, events (window changes, toasts, notifications, content changes), text input with `ACTION_SET_TEXT` and a settle signal. The wire protocol is in [companion-protocol.md](companion-protocol.md).
 
-Status, 2026-11-07, round 3: background displays work (tree, `set_text`, window and toast events and `wait_idle` for a given display, Android 11 and later), every build is signed with a committed key, and the versions come from the build, so the driver can tell an outdated app. Checked on the Android 16 emulator (`pinky-api36`, `emulator-5560`) and on Android 10: background displays on `pinky-api29` (`emulator-5562`), the main display on a temporary AVD with the same system image, because `pinky-api29` was locked with a PIN this session did not know. Round 2 results on the Pixel and the Mi 10 Pro are below, unchanged: nothing was installed on the Mi 10 Pro this round, and its 01:43 build is signed with another key (see [Versions and signing](#versions-and-signing)). The Go client in `internal/driver/android/companion` belongs to the Android driver session from round 3 on; this session owns the app and these notes.
+Status, 2026-11-07, round 3: background displays work (tree, `set_text`, window and toast events and `wait_idle` for a given display, Android 11 and later), every build is signed with a committed key, and the versions come from the build, so the driver can tell an outdated app. Checked on the Android 16 emulator (`pinky-api36`, `emulator-5560`) and the Android 10 emulator (`pinky-api29`, `emulator-5562`), plus a temporary AVD with `pinky-api29`'s system image while `pinky-api29` was locked with a PIN this session did not know yet. Round 2 results on the Pixel and the Mi 10 Pro are below, unchanged: nothing was installed on the Mi 10 Pro this round, and its 01:43 build is signed with another key (see [Versions and signing](#versions-and-signing)). The Go client in `internal/driver/android/companion` belongs to the Android driver session from round 3 on; this session owns the app and these notes.
 
 ## What is where
 
@@ -113,13 +113,13 @@ Found after the Android driver session reported a nearly empty Settings search t
 
 Main display, with the current build (versionCode 68), each run through the emulator's device lock: `companionctl install`, the device test suite (`PINKY_DEVICE=… go test -tags device ./internal/driver/android/companion/`), then a raw protocol script for event displays and notifications. `enabled_accessibility_services` was `null` before and after every run.
 
-`emulator-5562` (`pinky-api29`) was asleep behind a PIN lock the whole time, set by the Android driver session for its unlock tests, and its PIN was not known here, so the device suite skipped there ("the phone is locked"). The Android 10 main-display column comes from a temporary AVD with the same system image (`system-images;android-29;default;arm64-v8a`, `emulator-5564`), deleted afterwards. The current build is installed on `emulator-5562` too, and its background display checks below ran there.
+Both emulators have a test PIN that the Android driver session set for its unlock tests and asked to keep. `emulator-5562` was locked with it at first, and the device suite skipped there ("the phone is locked"), so the Android 10 checks first ran on a temporary AVD with the same system image (`system-images;android-29;default;arm64-v8a`, `emulator-5564`, deleted afterwards). Once that session shared the PIN, they ran on `emulator-5562` too, unlocked under its device lock and locked again afterwards.
 
-| Check | Android 16 (`emulator-5560`, Google APIs) | Android 10 (`pinky-api29`'s image) |
+| Check | Android 16 (`emulator-5560`, Google APIs) | Android 10 (`emulator-5562`; the temporary AVD) |
 | --- | --- | --- |
 | Install | `adb install` of the new key's APK, no prompt | The same |
-| Enable | Answers 222 ms after the setting changes | Answers 210 ms after the setting changes |
-| Device test suite | Passes: Settings (11 elements), every `set_text` case (Chinese and emoji by resource id, point with append, node handle, password field, `not_found`), toast event. Calculator skipped: neither image has one. | Passes the same way: Settings 13 elements |
+| Enable | Answers 222 ms after the setting changes | Answers 78 ms after the setting changes (210 ms on the temporary AVD) |
+| Device test suite | Passes: Settings (11 elements), every `set_text` case (Chinese and emoji by resource id, point with append, node handle, password field, `not_found`), toast event. Calculator skipped: neither image has one. | Passes the same way: Settings 11 elements (13 on the taller temporary AVD) |
 | Event displays | Toast from the debug page `display: 0`, its window events `display: 0`, notification (permission granted inside the emulator) `display: -1` | The same (no permission needed) |
 
 ### Pixel (FA6C20303860), Android 10
