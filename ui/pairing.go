@@ -230,6 +230,8 @@ func (a *app) paired(seq int, info driver.Info, err error, form bool) {
 		}
 		if d := a.device(id); d != nil {
 			paired = locales.PairingPaired(d.Info.Name)
+			// The last step of adding a phone: its checkup.
+			a.openCheckup(*d)
 		}
 		a.toasts = append(a.toasts, paired)
 		a.afterRefresh(false)

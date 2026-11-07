@@ -83,8 +83,14 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 			if serr == nil {
 				st.state[id], st.checked[id] = cs, time.Now()
 			}
+			// A checkup that showed the app missing or off is stale now.
+			if a.checkupOf(id) != nil {
+				if dv := a.device(id); dv != nil {
+					a.runCheckup(*dv)
+				}
+			}
 			if err != nil {
-				st.err[id] = companionError(err)
+				st.err[id] = companionError(err, a.chk.family[id])
 				return
 			}
 			a.toasts = append(a.toasts, locales.CompanionOnToast(name))
@@ -92,13 +98,29 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 	}()
 }
 
-func companionError(err error) string {
+// companionError says why installing the companion app failed and what to
+// do, in the steps of the phone's maker (family, as its checkup read it;
+// "" when unknown).
+func companionError(err error, family string) string {
 	msg := err.Error()
 	switch {
 	case errors.Is(err, context.DeadlineExceeded):
 		return locales.CompanionErrTimeout()
+	case strings.Contains(msg, "INSTALL_FAILED_USER_RESTRICTED") && family == "xiaomi":
+		return locales.CompanionErrRestrictedXiaomi()
 	case strings.Contains(msg, "INSTALL_FAILED_USER_RESTRICTED"):
 		return locales.CompanionErrRestricted()
+	case strings.Contains(msg, "INSTALL_FAILED_ABORTED"):
+		return locales.CompanionErrDeclined()
+	// Turning the app's service on writes a secure setting, which Xiaomi
+	// phones refuse without USB debugging (Security settings) and ColorOS
+	// with permission monitoring on.
+	case strings.Contains(msg, "WRITE_SECURE_SETTINGS") && family == "xiaomi":
+		return locales.CompanionErrSettingsXiaomi()
+	case strings.Contains(msg, "WRITE_SECURE_SETTINGS") && family == "oppo":
+		return locales.CompanionErrSettingsOppo()
+	case strings.Contains(msg, "WRITE_SECURE_SETTINGS"):
+		return locales.CompanionErrSettings(msg)
 	case strings.Contains(msg, "INSTALL_FAILED_VERIFICATION_FAILURE") || strings.Contains(msg, "Play Protect"):
 		return locales.CompanionErrPlayProtect()
 	case strings.Contains(msg, "INSTALL_FAILED_INSUFFICIENT_STORAGE"):
@@ -167,7 +189,7 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		}
 		if busy {
 			mg.Progress(c, -1).FillWidth().Label(locales.CompanionInstalling())
-			mg.Text(c, locales.CompanionAllowHint()).FontSize(13.5).FontWeight(600)
+			mg.Text(c, a.allowHint(id)).FontSize(13.5).FontWeight(600)
 			c.After(time.Second)
 			if time.Since(st.installing[id]) > 20*time.Second {
 				mg.Text(c, locales.CompanionStillWaiting()).FontSize(13).TextColor(p.ink2)
@@ -185,8 +207,17 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 				st.later[id] = true
 			}
 		})
-		mg.Text(c, locales.CompanionAllowHint()).FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, a.allowHint(id)).FontSize(12.5).TextColor(p.ink3)
 	})
+}
+
+// allowHint says what to do on the phone while Pinky installs its app:
+// Xiaomi's phones ask for each install and give up after 10 seconds.
+func (a *app) allowHint(id string) string {
+	if a.chk.family[id] == "xiaomi" {
+		return locales.CompanionAllowHintXiaomi()
+	}
+	return locales.CompanionAllowHint()
 }
 
 // companionLine is a phone's companion app in Settings › Phones.

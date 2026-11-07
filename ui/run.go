@@ -200,6 +200,8 @@ type app struct {
 	act      activityState
 	set      settingsState
 	add      addState
+	droid    droidState      // Add phone's Android steps
+	chk      checkupState    // the phones' checkups
 	more     map[string]bool // the More phone controls popover, per device
 	toasts   []string
 
