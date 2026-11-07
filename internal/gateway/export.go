@@ -296,6 +296,9 @@ type reportTask struct {
 
 type reportStep struct {
 	exportStep
+	// Line is the step's first line, and Sub the rest, which the client
+	// also shows smaller: "Always allowed: “Payments” in Dinely".
+	Line, Sub           string
 	Offset              string
 	Took                string
 	BeforeURL, AfterURL template.URL
@@ -312,6 +315,7 @@ func writeReport(w io.Writer, now time.Time, tasks []exportTask, shots map[strin
 		for _, st := range t.Steps {
 			rs := reportStep{exportStep: st, Offset: "+" + shortDuration(st.Started.Sub(t.Started)),
 				Took: shortDuration(time.Duration(st.Elapsed) * time.Millisecond)}
+			rs.Line, rs.Sub, _ = strings.Cut(st.Text, "\n")
 			// A step usually starts from the picture the one before ended
 			// with: show that once.
 			if st.Before != "" && st.Before != prevAfter {
@@ -374,7 +378,8 @@ ol.steps li { border-top: 1px solid var(--line); padding: 10px 0; display: grid;
 .status.settled { color: var(--ok); }
 .status.approval_denied, .status.blocked_by_policy, .status.stopped, .status.wrong_pin { color: var(--bad); }
 .status.uncertain, .status.stale { color: var(--warn); }
-.intent { color: var(--ink2); font-size: 14px; }
+.detail, .intent { color: var(--ink2); font-size: 14px; }
+.detail { white-space: pre-line; }
 .shots { grid-column: 2; display: flex; gap: 8px; flex-wrap: wrap; }
 .shots figure { margin: 0; }
 .shots img { width: 150px; border-radius: 8px; border: 1px solid var(--line); cursor: zoom-in; display: block; }
@@ -406,7 +411,7 @@ td, th { text-align: left; border-top: 1px solid var(--line); padding: 4px 8px 4
 {{range .Steps}}
 <li>
 <span class="at">{{.Offset}}</span>
-<div><span class="text">{{.Text}}</span><span class="status {{lower .Status}}">{{.Status}}</span>{{if .Intent}}<div class="intent">{{.Intent}}</div>{{end}}</div>
+<div><span class="text">{{.Line}}</span><span class="status {{lower .Status}}">{{.Status}}</span>{{if .Sub}}<div class="detail">{{.Sub}}</div>{{end}}{{if .Intent}}<div class="intent">{{.Intent}}</div>{{end}}</div>
 {{if or .BeforeURL .AfterURL}}
 <div class="shots">
 {{with .BeforeURL}}<figure><img src="{{.}}" alt="Before"><figcaption>Before</figcaption></figure>{{end}}

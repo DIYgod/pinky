@@ -8,6 +8,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
@@ -107,7 +108,7 @@ func paid(tasks []gateway.TaskView) bool {
 		return false
 	}
 	for _, st := range tasks[len(tasks)-1].Steps {
-		if st.Text == "Tapped “Place order · $12.80”" {
+		if first, _ := splitStep(st.Text); first == "Tapped “Place order · $12.80”" {
 			return st.Status == "settled"
 		}
 		if strings.HasPrefix(st.Text, "Waiting for you") {
@@ -115,6 +116,58 @@ func paid(tasks []gateway.TaskView) bool {
 		}
 	}
 	return false
+}
+
+// TestGatewayAlwaysAllowedStep: a lunch paid on an earlier Always allow
+// says so under the payment's step, on the task card and in Activity, in
+// English and in Chinese.
+func TestGatewayAlwaysAllowedStep(t *testing.T) {
+	ga := newGatewayApp(t, true)
+	if _, err := ga.w.Gateway.Policy().Exempt([]string{"Payments", "Commits"}, screen.App{Name: "Dinely", ID: demo.Dinely}); err != nil {
+		t.Fatal(err)
+	}
+	tt := mg.NewTester(ga.view, 1280, 820)
+	done := ga.agent(t, "Claude Code", pixel, (*demogw.Agent).ReorderLunch)
+	if err := wait(t, done, "the lunch"); err != nil {
+		t.Fatalf("agent: %v", err)
+	}
+	if !paid(ga.w.Gateway.Tasks()) {
+		t.Fatalf("the lunch was not paid without asking: %+v", ga.w.Gateway.Tasks())
+	}
+	zh := locales.In("zh-Hans")
+	en := []string{"Tapped “Place order · $12.80”", "Always allowed: “Payments” in Dinely"}
+	cn := []string{zh.GwDidTap("Place order · $12.80"), zh.GwStepAlwaysAllowed(zh.RulePayments(), "Dinely")}
+	check := func(where string, want []string, not string) {
+		t.Helper()
+		for _, s := range want {
+			if !hasText(tt, s) {
+				t.Errorf("%s: no %q in %q", where, s, tt.Texts())
+			}
+		}
+		if not != "" && hasText(tt, not) {
+			t.Errorf("%s: %q shows: %q", where, not, tt.Texts())
+		}
+	}
+
+	ga.page, ga.sel = pagePhones, pixel
+	ga.waitFor(t, "the finished task", func() bool {
+		task := ga.taskOf(pixel)
+		return task != nil && !running(task.State)
+	})
+	tt.Frame()
+	check("the task card", en, "")
+	ga.page = pageActivity
+	ga.waitFor(t, "Activity", func() bool { tt.Frame(); return ga.act.loaded && len(ga.act.tasks) > 0 })
+	ga.act.sel = ga.act.tasks[0].ID
+	tt.Frame()
+	check("Activity", en, "")
+
+	inLanguage(t, "zh-Hans", tt)
+	tt.Frame()
+	check("Activity in Chinese", cn, "Always allowed")
+	ga.page = pagePhones
+	tt.Frame()
+	check("the task card in Chinese", cn, "Always allowed")
 }
 
 // TestGatewayAlwaysAllowNotOffered: while every action asks, More options

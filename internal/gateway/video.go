@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -697,8 +698,8 @@ func (g *Gateway) Recording(ctx context.Context, taskID string) (RecordingView, 
 }
 
 // marksFor places steps on a recording: where each started, from the
-// recording's start. Steps from before it start at 0; steps after its end
-// are left out.
+// recording's start, named by their first line. Steps from before it start
+// at 0; steps after its end are left out.
 func marksFor(view RecordingView, steps []StepView) []RecordingMark {
 	var out []RecordingMark
 	for _, st := range steps {
@@ -712,7 +713,8 @@ func marksFor(view RecordingView, steps []StepView) []RecordingMark {
 		if at > view.Length+time.Second {
 			continue
 		}
-		out = append(out, RecordingMark{At: at, Step: st.Index, Text: st.Text})
+		text, _, _ := strings.Cut(st.Text, "\n")
+		out = append(out, RecordingMark{At: at, Step: st.Index, Text: text})
 	}
 	return out
 }

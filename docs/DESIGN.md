@@ -337,6 +337,7 @@ always_allow:
 - The answer is kept when the person gives it, even when the agent's call is no longer waiting for it.
 - Settings › Safety › Always allowed lists the exemptions; removing one makes its rules ask again.
 - The agent learns of it: the approved call says the rule no longer asks in that app, and a later action that runs because of it says `No approval needed: the person always allows "Payments" in Dinely.`
+- So does whoever reviews the task: the step of an action that ran, or may have, because of it says `Always allowed: “Payments” in Dinely` on its second line, in Activity, on the task card and in the history export, so a payment on a standing answer does not read like one the person allowed just then. The step the person answered with Always allow has no such line.
 
 ### Other controls
 

@@ -154,6 +154,80 @@ func TestAlwaysAllowLastsAcrossTasks(t *testing.T) {
 	}
 }
 
+// TestAlwaysAllowedStep: a payment in Dinely that runs without asking
+// because of the person's Always allow says so on its step, which history
+// keeps and the report shows; the payment they answered Always allow just
+// then, and the steps around both, do not.
+func TestAlwaysAllowedStep(t *testing.T) {
+	ctx := context.Background()
+	g, _ := newTestGateway(t, func(o *Options) { o.DataDir = t.TempDir() })
+	s, _ := connect(t, g, "Lunch")
+	answer(t, g, AllowAlways, nil)
+	mustStatus(t, payInDinely(t, s), StatusSettled)
+	s.Release(ctx, ReleaseRequest{Outcome: "done"})
+	s, _ = connect(t, g, "Lunch again")
+	mustStatus(t, payInDinely(t, s), StatusSettled)
+	s.Release(ctx, ReleaseRequest{Outcome: "done"})
+
+	const place, mark = "Tapped “Place order · $12.80”", "Always allowed: “Payments” in Dinely"
+	stored, err := g.History(ctx, HistoryQuery{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tasks := range [][]TaskView{g.Tasks(), stored} {
+		if len(tasks) != 2 {
+			t.Fatalf("%d tasks", len(tasks))
+		}
+		for _, task := range tasks {
+			want := place
+			if task.Title == "Lunch again" {
+				want += "\n" + mark
+			}
+			paid := false
+			for _, st := range task.Steps {
+				first, _, _ := strings.Cut(st.Text, "\n")
+				switch {
+				case first == place:
+					paid = true
+					if st.Text != want || st.Status != string(StatusSettled) {
+						t.Errorf("%s: the payment's step is %q (%s), want %q", task.Title, st.Text, st.Status, want)
+					}
+				case first != st.Text:
+					t.Errorf("%s: step %q has a second line", task.Title, st.Text)
+				}
+			}
+			if !paid {
+				t.Errorf("%s: no payment among %+v", task.Title, task.Steps)
+			}
+		}
+	}
+
+	// The report shows the mark under the step, and a recording names the
+	// step by its first line.
+	path, err := g.ExportHistory(ctx, nil, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for want, n := range map[string]int{
+		`<span class="text">` + place + `</span>`: 2, // both lunches
+		`<div class="detail">` + mark + `</div>`:  1, // the one paid on Always allow
+	} {
+		if got := strings.Count(string(b), want); got != n {
+			t.Errorf("the report has %q %d times, want %d", want, got, n)
+		}
+	}
+	start := time.Now()
+	marks := marksFor(RecordingView{Start: start, Length: time.Minute},
+		[]StepView{{Index: 6, Text: place + "\n" + mark, At: start.Add(time.Second)}})
+	if len(marks) != 1 || marks[0].Text != place {
+		t.Errorf("marks %+v", marks)
+	}
+}
+
 func waitGone(t *testing.T, g *Gateway) {
 	t.Helper()
 	for deadline := time.Now().Add(2 * time.Second); time.Now().Before(deadline); time.Sleep(2 * time.Millisecond) {

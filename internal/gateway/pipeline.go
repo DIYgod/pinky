@@ -281,6 +281,10 @@ type prep struct {
 	decider *screen.Element
 	// unplaced is set when the ref is on the screen without a position.
 	unplaced bool
+	// exempted lists the rules the person always allows in the app that
+	// let the action run without asking (policy.Verdict.Exempted); its
+	// step says so (exemptedLine).
+	exempted []string
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -347,6 +351,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 			return g.awaitApproval(ctx, l, c, a, info)
 		}
 	}
+	p.exempted = v.Exempted
 	res = g.execute(ctx, l, c, a, p, cur, -1)
 	d.act.Unlock()
 	return exemptedNote(res, v, p)
@@ -402,6 +407,7 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 	case v.Decision == policy.Ask && !g.granted(l, v, p):
 		return nil
 	}
+	p.exempted = v.Exempted
 	return exemptedNote(g.execute(ctx, l, c, a, p, nil, -1), v, p)
 }
 
