@@ -188,7 +188,7 @@ func (r *run) ask(s askSpec) (dec decision, ok bool) {
 			DeviceID: r.t.dev.info.ID, DeviceName: r.t.dev.info.Name, App: s.app, Agent: agentName,
 			TaskID: r.t.view.ID, Title: s.title, Detail: s.detail, Rule: s.rule,
 			Created: now, Deadline: now.Add(a.opt.ApprovalTimeout), Screenshot: shot, Target: s.target,
-			AlwaysAllow: s.rule != "" && s.app != "",
+			AlwaysAllow: s.rule != "" && s.app != "", AllowTask: s.rule != "",
 		},
 		decision: make(chan decision, 1),
 	}

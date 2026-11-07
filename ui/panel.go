@@ -244,7 +244,9 @@ func (a *app) panelView(c *mg.Context) {
 				}
 			})
 			linkButton(c, locales.NeedsMoreOptions()).Margin(10, 0, 0, 0).AlignSelf(mg.Start).PopoverMenuButton(func(m *mg.Menu) {
-				if m.Item(locales.NeedsAllowTask()).Chosen() {
+				// As on the card (approvalControls): each only where the
+				// gateway keeps it.
+				if n.AllowTask && m.Item(locales.NeedsAllowTask()).Chosen() {
 					a.decide(n, gateway.AllowTask, "")
 				}
 				if n.AlwaysAllow && m.Item(alwaysAllowLabel(n)).Chosen() {

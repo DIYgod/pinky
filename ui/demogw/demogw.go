@@ -154,6 +154,15 @@ func (ag *Agent) WaitForPerson(ctx context.Context, reason string) error {
 	return ag.check(res, "handoff")
 }
 
+// Ask asks the person a question with phone_request_approval and waits for
+// the answer; a no is ErrEnded.
+func (ag *Agent) Ask(ctx context.Context, summary string) error {
+	res := ag.pending(ctx, func(id string) *gateway.Result {
+		return ag.s.RequestApproval(ctx, gateway.ApprovalRequest{Call: gateway.Call{Device: ag.dev, ApprovalID: id}, Summary: summary})
+	})
+	return ag.check(res, "request approval")
+}
+
 // Observe reads the screen.
 func (ag *Agent) Observe(ctx context.Context) error {
 	res := ag.s.Observe(ctx, gateway.ObserveRequest{Call: gateway.Call{Device: ag.dev}})
