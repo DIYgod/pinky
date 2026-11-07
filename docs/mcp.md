@@ -177,7 +177,7 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 | --- | --- | --- |
 | `app` | string, required | Package name, bundle id, or name (exact, then a unique part of it) |
 
-Blocked apps return `blocked_by_policy`; apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A URL (`https://…`) counts as opening a link and asks the person.
+Blocked apps return `blocked_by_policy`; apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A URL (`https://…`) counts as opening a link (rule `Installs and links`), which asks the person when they chose to approve more than payments.
 
 ### phone_apps
 
@@ -230,7 +230,7 @@ The result lists the folder, then one line per file: `path · size · modified �
 | `summary` | string, required | The question as the person reads it |
 | `details` | string | More context |
 
-Returns `settled` with `decision: allow`, or `approval_denied`, with the person's `note`. It grants nothing: later commits still ask, and so does your next question. Like action approvals it blocks up to 45 s and holds the phone while open.
+Returns `settled` with `decision: allow`, or `approval_denied`, with the person's `note`. It grants nothing: later steps the person's rules ask about, such as payments, still ask, and so does your next question. Like action approvals it blocks up to 45 s and holds the phone while open.
 
 ### phone_handoff
 
@@ -242,6 +242,7 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 
 ## Approvals
 
+- Which actions ask is the person's choice in Settings › Safety: payments only (the default); payments, messages, deletions and other commits, calls, installs, links that leave the app and settings changes; or every action. Their own rules may ask about more, and blocked apps and credential fields are refused whatever they chose.
 - An Ask action opens an approval panel in the client and the call blocks for up to 45 s, sending progress notifications if the request carried a `progressToken` (at the start, then every 5 s, with the time left to answer).
 - The person has 60 s from when the panel opens (configurable with `pinky daemon --approval-timeout`). No answer means Deny (`note: "No answer in 60 s."`).
 - After 45 s the call returns `approval_pending` with the id. The panel stays open. A decision made while no call waits is kept for the next call with that id, for as long as the timeout again; later the id is gone and a call with it asks anew.

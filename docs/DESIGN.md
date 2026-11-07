@@ -264,12 +264,13 @@ Approvals are decided in the client and enforced in the gateway; the agent only 
 
 ### Risk tiers
 
-Defaults; the person can change each one.
+Defaults; the person can change each one. Settings › Safety › "When should agents ask you?" picks what asks: payments only (the default, recommended), payments, messages and deletions (the second Ask row too), or every action.
 
 | Tier | Actions |
 | --- | --- |
-| Allow | Observe, navigate, scroll, search, type into search fields |
-| Ask | Send a message or post; pay, order, book or transfer; delete; change account or security settings; place a call; install or uninstall an app; open a link that leaves the app; read the clipboard; write files to the phone |
+| Allow | Observe, navigate, scroll, search, type into search fields; by default also what the second Ask row lists |
+| Ask | Pay: a commit on a screen that shows an amount (Pay, Place order · $12.80, a price in a store); write files to the phone |
+| Ask, with "Ask before payments, messages and deletions" | Send a message or post; order, book or transfer; delete; change account or security settings; place a call; install or uninstall an app; open a link that leaves the app; read the clipboard |
 | Deny | Anything in a blocked app (banking, wallets and password managers by default), where the agent does not even get the screen; typing into password and one-time-code fields |
 
 ### Detecting a commit
@@ -315,11 +316,11 @@ Settings › Safety › Rules lists the file's rules to add, change, move and re
 - While an approval is open, the device accepts no other action; `phone_observe` and `phone_wait_for` still work.
 - An `approval_id` is single-use and bound to the device, lease, tool and arguments; a call with other arguments is refused.
 - On approval the gateway re-checks the target's label and position and the screen text shown in the panel (status bar excluded). Any change returns `stale`, and nothing is done.
-- `phone_request_approval` records the person's answer but grants nothing: a later commit still asks, and so does the agent's next question. Its card offers no Allow for this task (nor Always allow): a question is the person's consent to what it says, and answering the next ones by itself would let an agent claim consent the person never gave.
+- `phone_request_approval` records the person's answer but grants nothing: a later step the rules ask about, such as a payment, still asks, and so does the agent's next question. Its card offers no Allow for this task (nor Always allow): a question is the person's consent to what it says, and answering the next ones by itself would let an agent claim consent the person never gave.
 
 ### Always allow
 
-"Always allow payments in Dinely" keeps the person's answer in the rules file, under `always_allow`, as an exemption: in that app, the rule the approval named (Payments) and the rules that asked with it (Commits, since a payment is a commit) no longer ask about the steps that rule asks about, in later tasks and after a restart. Another commit in Dinely, such as Delete, still asks, as do a payment in another app and a step that a further rule asks about.
+"Always allow payments in Dinely" keeps the person's answer in the rules file, under `always_allow`, as an exemption: in that app, the rule the approval named (Payments) and the rules that asked with it (Commits, with "Ask before payments, messages and deletions", since a payment is a commit) no longer ask about the steps that rule asks about, in later tasks and after a restart. Another commit in Dinely, such as Delete, still asks, as do a payment in another app and a step that a further rule asks about.
 
 ```yaml
 always_allow:
