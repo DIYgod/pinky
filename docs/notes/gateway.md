@@ -233,7 +233,7 @@ Mi 10 Pro (Android driver):
 
 ## Settings API (for the client)
 
-Everything Settings › Safety shows maps onto the policy engine (`g.Policy()`) and two gateway helpers. Each setter saves its file at once (`rules.yaml` or `apps.yaml` in the config directory, mode 0600, written atomically); agents cannot reach any of it.
+Everything Settings › Safety shows maps onto the policy engine (`g.Policy()`) and two gateway helpers. Each setter saves its file at once (`rules.yaml` or `apps.yaml` in the config directory, mode 0600, written atomically), on top of any hand edit of it (see 38 below); agents cannot reach any of it.
 
 | Client setting (`ui.Settings`) | Read | Change |
 | --- | --- | --- |
@@ -301,6 +301,7 @@ Nobody was available to ask, so these are mine; each is easy to change.
 35. **Export copies the recordings next to the report** rather than inlining them (they are large) or leaving them out.
 36. **Icon buttons** (`internal/policy/icons.go`): a tap on an element with no words of its own is a commit when what the app calls it is one: the resource id on Android (uiautomator's fallback label is its last part, `btn_send`), the identifier on iOS (`sendButton`), or an SF Symbol name (`paperplane.fill`, `trash`). A label with words still decides alone. Ids name nouns as often as actions, so fewer words count than for labels (`post`, `book`, `order` only next to `btn`, `button`, `fab`, `action` or `menu`), and ids with a state or place word (`status`, `time`, `methods`, `list`, `carousel`) never count. It only adds asks.
 37. **Rules editor and Always allow** (`policy/editor.go`, `policy/exempt.go`, `gateway/rules.go`, `gateway/always.go`): Settings › Safety edits the file's rules through `SetFileRules` (checked as `ParseFile` does, plus names no other rule has); Always allow keeps exemptions under `always_allow`. See DESIGN.md › Detecting a commit and › Always allow.
+38. **Hand edits of the rules files** (`policy/disk.go`): the engine remembers the version of `rules.yaml` and `apps.yaml` it last read or wrote (the file, its size and time, and a hash). `Engine.Refresh`, which `gateway.rulesLoop` runs every `Options.RulesEvery` (2 s) and `Rules`, `Exemptions` and `FileProblems` run first, reads a file that changed once two looks 50 ms apart agree, and puts it in force when it parses; every setter does the same before it changes anything, so a change from Settings lands on top of a hand edit. A file that cannot be used is a `*policy.FileError`: the rules in force stay, setters for that file return the error and write nothing, `CanExempt` is false, and `Engine.Problems` (`Gateway.FileProblems`) lists it. `SetFileRules(base, rules)` returns `ErrRulesChanged` unless the file's rules are still `base`. A removed file is written again with the bundled one. Setters that change nothing no longer rewrite the file.
 
 ## Differences from DESIGN
 
