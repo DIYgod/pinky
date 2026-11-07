@@ -624,7 +624,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			if res != nil {
 				return p, res
 			}
-			p.target, p.point = e, e.Bounds.Center()
+			p.target, p.point = e, tapPoint(cur, *e)
 		} else {
 			if !inBounds(*a.Point) {
 				return p, errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
@@ -720,6 +720,118 @@ func swipeLine(area screen.Rect, dir string) (from, to screen.Point) {
 		return screen.Point{X: c.X + dx, Y: c.Y}, screen.Point{X: c.X - dx, Y: c.Y}
 	}
 	return screen.Point{X: c.X - dx, Y: c.Y}, screen.Point{X: c.X + dx, Y: c.Y}
+}
+
+// tapPoint is where a tap on the element t by ref lands: its centre, unless
+// t is a control and something drawn on it lies there that would take the
+// tap instead: another control, or anything at all when t covers half the
+// screen or more. iOS puts a full-screen "Dismiss context menu" button
+// behind a context menu, and a tap at its centre hit the menu item lying
+// there (field test #29). Then the tap lands on the point of t farthest
+// from the elements on it, and from its edges and the status bar, when one
+// is clear of them.
+//
+// Trees list what is drawn later, on top, later, so the elements listed
+// after t are drawn on it and those before it lie under it. A backdrop's
+// place in its tree is the app's reading order, though, so for an element
+// that large every other element counts at first, and only those listed
+// after it when that leaves no point clear.
+func tapPoint(s *screen.Screen, t screen.Element) screen.Point {
+	c := t.Bounds.Center()
+	if !actionable(t) || t.Ref == 0 {
+		return c
+	}
+	big := s.Width > 0 && s.Height > 0 && t.Bounds.W*t.Bounds.H*2 >= s.Width*s.Height
+	var all, above []screen.Rect
+	covered, after := false, false
+	for _, e := range s.Elements {
+		if e.Ref == t.Ref {
+			after = true
+			continue
+		}
+		if e.Bounds.Empty() || encloses(e.Bounds, t.Bounds) || !overlaps(e.Bounds, t.Bounds) || (!after && !big) {
+			continue // what holds t, what lies elsewhere, and what lies under a control of usual size
+		}
+		all = append(all, e.Bounds)
+		if after {
+			above = append(above, e.Bounds)
+		}
+		if e.Bounds.Contains(c) && (big || (actionable(e) && e.Label != t.Label)) {
+			covered = true
+		}
+	}
+	if !covered {
+		return c
+	}
+	if p, ok := clearPoint(s, t.Bounds, all); ok {
+		return p
+	}
+	if len(above) < len(all) {
+		if p, ok := clearPoint(s, t.Bounds, above); ok {
+			return p
+		}
+	}
+	return c // nowhere clear: tap where it always did
+}
+
+// clearPoint returns the point of area farthest from the rectangles on it,
+// from its edges and from the status bar, if that is clear of them all by
+// a margin.
+func clearPoint(s *screen.Screen, area screen.Rect, on []screen.Rect) (screen.Point, bool) {
+	c := area.Center()
+	if top := s.Height * 6 / 100; area.Y < top && area.Y+area.H > 2*top {
+		area.H -= top - area.Y
+		area.Y = top
+	}
+	step := max(4, min(area.W, area.H)/32)
+	best, clear := c, -1
+	for y := area.Y + step/2; y < area.Y+area.H; y += step {
+		for x := area.X + step/2; x < area.X+area.W; x += step {
+			pt := screen.Point{X: x, Y: y}
+			d := min(x-area.X, area.X+area.W-1-x, y-area.Y, area.Y+area.H-1-y)
+			for _, r := range on {
+				if d = min(d, distance(pt, r)); d < clear {
+					break // worse than the best so far
+				}
+			}
+			if d > clear || (d == clear && closer(pt, best, c)) {
+				best, clear = pt, d
+			}
+		}
+	}
+	return best, clear >= max(4, min(s.Width, s.Height)/60)
+}
+
+// actionable reports whether an agent could mean to act on e.
+func actionable(e screen.Element) bool {
+	switch e.Role {
+	case screen.RoleButton, screen.RoleLink, screen.RoleInput, screen.RoleSwitch, screen.RoleCheckbox, screen.RoleTab:
+		return true
+	}
+	return e.Has(screen.StateEditable)
+}
+
+// encloses reports whether a holds all of b.
+func encloses(a, b screen.Rect) bool {
+	return a.X <= b.X && a.Y <= b.Y && a.X+a.W >= b.X+b.W && a.Y+a.H >= b.Y+b.H
+}
+
+func overlaps(a, b screen.Rect) bool {
+	return a.X < b.X+b.W && b.X < a.X+a.W && a.Y < b.Y+b.H && b.Y < a.Y+a.H
+}
+
+// distance is how far p lies from r along the farther axis, 0 inside it.
+func distance(p screen.Point, r screen.Rect) int {
+	dx := max(r.X-p.X, 0, p.X-(r.X+r.W-1))
+	dy := max(r.Y-p.Y, 0, p.Y-(r.Y+r.H-1))
+	return max(dx, dy)
+}
+
+// closer reports whether a is nearer to c than b.
+func closer(a, b, c screen.Point) bool {
+	da := (a.X-c.X)*(a.X-c.X) + (a.Y-c.Y)*(a.Y-c.Y)
+	db := (b.X-c.X)*(b.X-c.X) + (b.Y-c.Y)*(b.Y-c.Y)
+	return da < db
 }
 
 // hitTest returns the smallest tree element under p. OCR text is never the
