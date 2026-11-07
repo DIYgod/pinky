@@ -230,7 +230,7 @@ The result lists the folder, then one line per file: `path · size · modified �
 | `summary` | string, required | The question as the person reads it |
 | `details` | string | More context |
 
-Returns `settled` with `decision: allow`, or `approval_denied`, with the person's `note`. It grants nothing: later commits still ask. Like action approvals it blocks up to 45 s and holds the phone while open.
+Returns `settled` with `decision: allow`, or `approval_denied`, with the person's `note`. It grants nothing: later commits still ask, and so does your next question. Like action approvals it blocks up to 45 s and holds the phone while open.
 
 ### phone_handoff
 
@@ -248,7 +248,7 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 - The id is single-use and bound to the session, device, lease, tool and arguments (`intent` excluded). Another call with it returns `invalid_argument`.
 - While an approval is open on a phone, other actions on it return `approval_pending` with that approval's id; reads still work.
 - Before acting on Allow, Pinky reads the screen again and compares the target's role, label, states and position (a few pixels of tolerance) and the screen's text and states (status bar excluded; OCR text only when the screen has no element text). Any change returns `stale`.
-- "Allow for this task" covers the rules that asked, in that app, for the rest of the task. An action that another rule also asks about still asks.
+- "Allow for this task" covers the rules that asked, in that app, for the rest of the task. An action that another rule also asks about still asks. `phone_request_approval` has no such answer: each question asks the person.
 - "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files` or `phone_launch`.
 - An MCP cancellation of the blocked call, a closed session, Stop and Take over all withdraw the panel without acting.
 - Only the client's `Decide` answers approvals. No tool can.

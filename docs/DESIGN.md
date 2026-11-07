@@ -315,7 +315,7 @@ Settings › Safety › Rules lists the file's rules to add, change, move and re
 - While an approval is open, the device accepts no other action; `phone_observe` and `phone_wait_for` still work.
 - An `approval_id` is single-use and bound to the device, lease, tool and arguments; a call with other arguments is refused.
 - On approval the gateway re-checks the target's label and position and the screen text shown in the panel (status bar excluded). Any change returns `stale`, and nothing is done.
-- `phone_request_approval` records the person's answer but grants nothing: a later commit still asks.
+- `phone_request_approval` records the person's answer but grants nothing: a later commit still asks, and so does the agent's next question. Its card offers no Allow for this task (nor Always allow): a question is the person's consent to what it says, and answering the next ones by itself would let an agent claim consent the person never gave.
 
 ### Always allow
 
@@ -333,7 +333,7 @@ always_allow:
 - It also allows the rest of the task, as Allow for this task does; that is what covers a task's app list, for that task only.
 - It matches the app by package name or bundle id, and by name when the phone reports no id.
 - While "Ask before every action" is on, exemptions do not apply and the panel does not offer Always allow; they apply again with another preset.
-- The panel offers it only for actions the policy asked about in an app: not for the agent's own questions (`phone_request_approval`), copying files, or opening apps and links. Where it cannot be kept it counts as Allow for this task.
+- The panel offers it only for actions the policy asked about in an app: not for the agent's own questions (`phone_request_approval`), copying files, or opening apps and links. Where it cannot be kept it counts as Allow for this task, and on the agent's own questions as Allow once.
 - The answer is kept when the person gives it, even when the agent's call is no longer waiting for it.
 - Settings › Safety › Always allowed lists the exemptions; removing one makes its rules ask again.
 - The agent learns of it: the approved call says the rule no longer asks in that app, and a later action that runs because of it says `No approval needed: the person always allows "Payments" in Dinely.`

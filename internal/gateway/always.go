@@ -17,7 +17,8 @@ import (
 // as Allow for this task does, which covers what an exemption may not
 // lift: a task's app list. Approvals it cannot be kept for (the agent's
 // own questions, copying files, opening apps and links, every action
-// asking) count as Allow for this task, and NeedView.AlwaysAllow tells the
+// asking) count as Allow for this task, or as Allow once where that keeps
+// nothing either (Gateway.Decide), and NeedView.AlwaysAllow tells the
 // client not to offer it there.
 
 // Exemption is one of the person's Always allow answers, as Settings ›

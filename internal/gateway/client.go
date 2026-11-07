@@ -151,7 +151,7 @@ func (g *Gateway) Needs() []NeedView {
 		out = append(out, NeedView{ID: info.ID, Kind: kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
 			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
-			AlwaysAllow: g.canAlwaysAllow(info)})
+			AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info)})
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -257,16 +257,47 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 		// The panel's Take over: the person does it themselves.
 		return g.TakeOver(info.Binding.Device)
 	}
-	// Always allow is kept before the answer wakes the agent's call, which
-	// then finds the action no longer asks (always.go).
+	// An answer counts for what the approval can keep, so the agent and
+	// the history hear what it did: Always allow that cannot be kept as
+	// Allow for this task, and Allow for this task where nothing lasts for
+	// the task as Allow once. Older clients offer both on the agent's own
+	// questions (NeedView.AlwaysAllow, NeedView.AllowTask).
 	var kept error
-	if d == AllowAlways && info.State == approval.Open {
-		kept = g.alwaysAllow(info)
+	if dec == approval.AllowAlways {
+		if g.canAlwaysAllow(info) {
+			// Kept before the answer wakes the agent's call, which then
+			// finds the action no longer asks (always.go).
+			if info.State == approval.Open {
+				kept = g.alwaysAllow(info)
+			}
+		} else {
+			dec = approval.AllowTask
+		}
+	}
+	if dec == approval.AllowTask && !canAllowTask(info) {
+		dec = approval.AllowOnce
 	}
 	if err := g.decide(needID, dec, note); err != nil {
 		return err
 	}
 	return kept
+}
+
+// canAllowTask reports whether an approval's Allow for this task lasts:
+// for an action the policy asked about, the rules that asked no longer ask
+// in its app for the rest of the task (awaitApproval), and once copying
+// files is allowed, later copies do not ask (askToPush). An agent's own
+// question gets a yes for that question only: each one is the person's
+// consent to what it says, and answering the next ones by itself would let
+// the agent claim consent the person never gave.
+func canAllowTask(info approval.Info) bool {
+	if info.Kind != approval.KindAction {
+		return false
+	}
+	if snap, ok := info.Data.(*snapshot); ok {
+		return len(snap.asks) > 0
+	}
+	return info.Rule == filesRule
 }
 
 func (g *Gateway) decide(id string, d approval.Decision, note string) error {

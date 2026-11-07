@@ -1001,8 +1001,9 @@ func appListed(app screen.App, list []string) bool {
 }
 
 // RequestApproval implements phone_request_approval: it asks the person a
-// question and records the answer. It grants nothing; a later commit still
-// asks.
+// question and records the answer. It grants nothing: a later commit still
+// asks, and so does the next question, since a yes answers this one only
+// (canAllowTask).
 func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Result {
 	summary := strings.TrimSpace(req.Summary)
 	if summary == "" {
