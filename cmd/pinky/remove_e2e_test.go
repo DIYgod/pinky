@@ -70,18 +70,30 @@ func startAppWith(t *testing.T, bin, home string, args []string, extra ...string
 	}
 }
 
-// pressRole presses the element with this role and label once it shows.
+// pressLabel presses the element labelled label, whatever its role, once
+// it shows.
+func (a *uiApp) pressLabel(t *testing.T, win int, label string) {
+	t.Helper()
+	a.pressRole(t, win, "", label)
+}
+
+// pressRole presses the element with this role ("" for any) and label once
+// it shows.
 func (a *uiApp) pressRole(t *testing.T, win int, role, label string) {
 	t.Helper()
 	for deadline := time.Now().Add(20 * time.Second); time.Now().Before(deadline); time.Sleep(100 * time.Millisecond) {
 		for _, n := range a.nodes(t, win) {
-			if n.Role == role && n.Label == label {
+			if (role == "" || n.Role == role) && n.Label == label {
 				a.call(t, "act", map[string]any{"window": win, "id": n.ID, "action": "press"}, nil)
 				return
 			}
 		}
 	}
-	t.Fatalf("no %s %q", role, label)
+	var labels []string
+	for _, n := range a.nodes(t, win) {
+		labels = append(labels, n.Role+" "+n.Label)
+	}
+	t.Fatalf("no %s %q in %q", role, label, labels)
 }
 
 // pressPrefix presses the first element whose label starts with prefix,
@@ -191,7 +203,7 @@ func TestRemovePhoneInTheApp(t *testing.T) {
 
 	// Settings › Phones removes the iPhone with its history.
 	app.phonesSettings(t, win)
-	app.pressNode(t, win, "Remove iPhone 17 (fake)")
+	app.pressLabel(t, win, "Remove iPhone 17 (fake)")
 	app.waitText(t, win, "Remove iPhone 17 (fake)?")
 	for _, want := range []string{"It leaves Pinky's list", "Its history stays in Activity.",
 		"It's connected with a cable, so it shows up again right away", "The phone keeps trusting this computer"} {
@@ -199,7 +211,7 @@ func TestRemovePhoneInTheApp(t *testing.T) {
 			t.Errorf("the dialog lacks %q", want)
 		}
 	}
-	app.pressNode(t, win, "Also delete its history: tasks, screenshots and recordings")
+	app.pressLabel(t, win, "Also delete its history: tasks, screenshots and recordings")
 	app.pressRole(t, win, "button", "Remove")
 	waitFor(t, "the iPhone's history to go", 20*time.Second, func() bool { return gw.tasksOn("fake-iphone-17") == 0 })
 	waitFor(t, "the dialog to close", 10*time.Second, func() bool { return !app.hasText(t, win, "Remove iPhone 17 (fake)?") })
@@ -208,8 +220,8 @@ func TestRemovePhoneInTheApp(t *testing.T) {
 
 	// The Pixel's ⋯ menu removes it and keeps its history.
 	app.pressPrefix(t, win, "Pixel 9 (fake), ")
-	app.pressNode(t, win, "More phone controls")
-	app.pressNode(t, win, "Remove this phone…")
+	app.pressLabel(t, win, "More phone controls")
+	app.pressLabel(t, win, "Remove this phone…")
 	app.waitText(t, win, "Remove Pixel 9 (fake)?")
 	app.pressRole(t, win, "button", "Remove")
 	waitFor(t, "the dialog to close", 10*time.Second, func() bool { return !app.hasText(t, win, "Remove Pixel 9 (fake)?") })
@@ -234,7 +246,8 @@ func TestRemovePhoneInTheApp(t *testing.T) {
 // person removes it in Settings › Phones; Pinky drops the connection, and
 // when the connection comes back, as adb or another tool may make it, the
 // phone stays off the list, after a restart too. Its iPhone provider is
-// off (PINKY_PLATFORMS), so a plugged-in iPhone is left alone:
+// off (PINKY_PLATFORMS), so a plugged-in iPhone is left alone. Like the
+// other tests that open the app, it needs the screen unlocked:
 //
 //	PINKY_E2E_EMULATOR=emulator-5560 scripts/devlock.sh emulator-5560 \
 //	  go test -tags e2e -run TestRemovePhoneOnEmulator ./cmd/pinky
@@ -260,7 +273,7 @@ func TestRemovePhoneOnEmulator(t *testing.T) {
 	name := dv.Info.Name
 
 	app.phonesSettings(t, win)
-	app.pressNode(t, win, "Remove "+name)
+	app.pressLabel(t, win, "Remove "+name)
 	app.waitText(t, win, "Remove "+name+"?")
 	if !app.hasText(t, win, "Pinky disconnects from it and won't connect to it again by itself.") {
 		t.Error("the dialog lacks the Wi-Fi note")
