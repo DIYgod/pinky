@@ -406,3 +406,33 @@ func TestBackgroundByDefault(t *testing.T) {
 		t.Fatal("the person's choice was lost in a restart")
 	}
 }
+
+// oldAndroidDev is a phone where a background display cannot be read, as on
+// Android 10.
+type oldAndroidDev struct{ *extraDev }
+
+func (oldAndroidDev) BackgroundSupported() bool { return false }
+
+type oldAndroidProvider struct{ extraProvider }
+
+func (p oldAndroidProvider) Open(context.Context, string) (driver.Device, error) {
+	return oldAndroidDev{p.x}, nil
+}
+
+// TestBackgroundUnsupported offers no background work on a phone whose
+// driver says it cannot be used, and refuses it.
+func TestBackgroundUnsupported(t *testing.T) {
+	x := newExtraDev("pixel", "Pixel")
+	g := newExtraGateway(t, x, func(o *Options) {
+		o.Providers = []driver.Provider{oldAndroidProvider{extraProvider{demo.NewProvider(driver.Android, x.Device), x}}}
+	})
+	if f := g.Devices()[0].Features; f.Background {
+		t.Errorf("features %+v offer background work", f)
+	}
+	if err := g.SetBackground("pixel", true); !errors.Is(err, driver.ErrUnsupported) {
+		t.Fatalf("SetBackground on Android 10: %v", err)
+	}
+	if g.Background("pixel") {
+		t.Error("background on")
+	}
+}

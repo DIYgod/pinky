@@ -408,12 +408,15 @@ func TestDeviceBackground(t *testing.T) {
 	// The calculator runs on the virtual display; the main display keeps
 	// its own app.
 	out := displays()
-	i := strings.Index(out, fmt.Sprintf("mDisplayId=%d ", b.DisplayID()))
+	i := displaySection(out, b.DisplayID())
 	if i < 0 || parseFocusedApp(out[i:]) != pkg {
 		t.Fatalf("calculator not on display %d:\n%s", b.DisplayID(), out)
 	}
 	if main := parseFocusedApp(out); main == pkg {
 		t.Errorf("the calculator took over the main display:\n%s", out)
+	}
+	if !d.BackgroundSupported() {
+		t.Skipf("the app runs on display %d, but Android %s cannot read another display's windows (API 30)", b.DisplayID(), d.info.OSVersion)
 	}
 	// Typed keys reach the calculator: no text field is focused.
 	if strings.Contains(pkg, "calculator") {
@@ -501,5 +504,23 @@ func TestDevicePersonQuietWhileInjecting(t *testing.T) {
 	}
 	if n != 0 {
 		t.Errorf("%d person signals while only Pinky gave input", n)
+	}
+}
+
+// displaySection returns where display id's section of `dumpsys window
+// displays` starts: "mDisplayId=2" ends with a space on newer Android and
+// with the line on Android 10.
+func displaySection(out string, id int) int {
+	key := fmt.Sprintf("mDisplayId=%d", id)
+	for from := 0; ; {
+		i := strings.Index(out[from:], key)
+		if i < 0 {
+			return -1
+		}
+		end := from + i + len(key)
+		if end == len(out) || out[end] < '0' || out[end] > '9' {
+			return from + i
+		}
+		from = end
 	}
 }

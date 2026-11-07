@@ -81,9 +81,19 @@ func (d *Device) alwaysUnlocked() bool { return d.props.SDK >= 33 }
 // so agents use one unless the person turns it off.
 func (d *Device) BackgroundByDefault() bool { return d.alwaysUnlocked() }
 
+// BackgroundSupported implements driver.BackgroundSupporter: agents can work
+// on a background display only where the companion can read it, which
+// needs the windows of every display (Android 11, API 30). On Android 10
+// the app runs there, but nothing on it can be read.
+func (d *Device) BackgroundSupported() bool { return d.props.SDK == 0 || d.props.SDK >= 30 }
+
 // OpenBackground implements driver.Backgrounder with a scrcpy virtual
 // display at the main display's size, without system decorations.
 func (d *Device) OpenBackground(ctx context.Context, opt driver.BackgroundOptions) (driver.Device, error) {
+	if !d.BackgroundSupported() {
+		return nil, fmt.Errorf("android: agents need Android 11 or later to work on a background display (this phone runs Android %s): %w",
+			d.info.OSVersion, driver.ErrUnsupported)
+	}
 	b, err := d.OpenDisplay(ctx, DisplayOptions{App: opt.App})
 	if err != nil {
 		return nil, err

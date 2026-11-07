@@ -52,10 +52,22 @@ func (g *Gateway) Devices() []DeviceView {
 	return out
 }
 
+// backgroundWorks reports whether agents can work on a background display
+// of the phone.
+func backgroundWorks(dev driver.Device) bool {
+	if _, ok := dev.(driver.Backgrounder); !ok {
+		return false
+	}
+	if bs, ok := dev.(driver.BackgroundSupporter); ok {
+		return bs.BackgroundSupported()
+	}
+	return true
+}
+
 func featuresOf(dev driver.Device) Features {
 	var f Features
 	_, f.Unlock = dev.(driver.Unlocker)
-	_, f.Background = dev.(driver.Backgrounder)
+	f.Background = backgroundWorks(dev)
 	_, f.Files = dev.(driver.Files)
 	_, f.Companion = dev.(driver.CompanionInstaller)
 	return f

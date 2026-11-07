@@ -38,7 +38,7 @@ func (g *Gateway) SetBackground(deviceID string, on bool) error {
 	}
 	g.mu.Lock()
 	if dev := d.dev; on && dev != nil {
-		if _, ok := dev.(driver.Backgrounder); !ok {
+		if !backgroundWorks(dev) {
 			g.mu.Unlock()
 			return fmt.Errorf("%s cannot run apps on a background display: %w", d.name(), driver.ErrUnsupported)
 		}
@@ -71,8 +71,7 @@ func (g *Gateway) backgroundLocked(d *device) bool {
 		return on
 	}
 	if bd, ok := d.dev.(driver.BackgroundDefaulter); ok {
-		_, can := d.dev.(driver.Backgrounder)
-		return can && bd.BackgroundByDefault()
+		return backgroundWorks(d.dev) && bd.BackgroundByDefault()
 	}
 	return false
 }

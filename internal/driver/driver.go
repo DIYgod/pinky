@@ -269,6 +269,13 @@ type BackgroundDefaulter interface {
 	BackgroundByDefault() bool
 }
 
+// BackgroundSupporter says whether a driver.Backgrounder works on this
+// phone at all (Android 10 cannot read other displays' windows). A
+// Backgrounder that does not implement it does.
+type BackgroundSupporter interface {
+	BackgroundSupported() bool
+}
+
 // CompanionState is whether the phone's companion app is ready.
 type CompanionState string
 
