@@ -36,6 +36,8 @@ var (
 	_ rulesEditor        = (*fakeapi.API)(nil)
 	_ fileProblemLister  = (*fakeapi.API)(nil)
 	_ pairer             = (*fakeapi.API)(nil)
+	_ hostChecker        = (*fakeapi.API)(nil)
+	_ hostChecker        = (*gateway.Gateway)(nil)
 	_ companionInstaller = (*fakeapi.API)(nil)
 	_ backgroundSetter   = (*fakeapi.API)(nil)
 	_ agentStreamer      = (*fakeapi.API)(nil)

@@ -19,10 +19,16 @@ type addState struct {
 	known    map[string]bool
 	old      bool   // the older-iPhone path
 	oldPick  string // "helper" or "mirror"
-	code     string // the iPhone's pairing code
-	pairing  bool
 	tryAgain bool
 	pair     pairState // pairing an Android phone over Wi-Fi
+
+	// The iPhone steps (addiphone.go): when they began, and what the
+	// computer lacks for iPhones, asked every 2 s.
+	since    time.Time
+	focus    string // the iPhone the Phone screen sent the person here for
+	host     driver.HostCheck
+	hostAt   time.Time
+	hostBusy bool
 }
 
 func (s *addState) reset(a *app) {
@@ -71,7 +77,7 @@ func (a *app) addPhonePage(c *mg.Context) {
 					case "qr":
 						s.step = "android"
 					default:
-						s.step, s.old, s.pairing, s.oldPick = "choose", false, false, ""
+						s.step, s.old, s.oldPick, s.since = "choose", false, "", time.Time{}
 					}
 					s.snapshot(a)
 				}
@@ -368,67 +374,7 @@ func (a *app) addIPhone(c *mg.Context) {
 	s := &a.add
 	d := s.fresh(a, driver.IOS)
 	if !s.old {
-		heading(c, locales.AddPhoneIPhoneTitle(), locales.AddPhoneIPhoneDetail())
-		ready := d != nil && d.Info.State == driver.StateOnline
-		statusBox(c, func() {
-			switch {
-			case ready:
-				dot(c, p.green, false)
-				mg.Text(c, locales.AddPhoneReady(d.Info.Name)).FontWeight(600)
-			case d != nil:
-				dot(c, p.green, false)
-				mg.Text(c, strings.TrimSpace(locales.AddPhoneFoundIOS(d.Info.Name, d.Info.OSVersion)))
-			default:
-				spinner(c)
-				mg.Text(c, locales.AddPhoneLookingIPhone())
-			}
-		})
-		if ready {
-			mg.Row(c).Children(func() {
-				if button(c, locales.AddPhoneDone(), btnOpt{kind: btnPrimary}).Clicked() {
-					a.selectPhone(d.Info.ID)
-					s.step = ""
-				}
-			})
-			return
-		}
-		// Six boxes show the code; a transparent field over them takes
-		// the typing, and the box the next digit goes in is outlined.
-		var in mg.Element
-		mg.Box(c).AlignSelf(mg.Start).Children(func() {
-			mg.Row(c).Gap(8).Role(mg.RoleGroup).Label(locales.AddPhoneIPhoneCode()).PassThrough().Children(func() {
-				digits := []rune(s.code)
-				for i := 0; i < 6; i++ {
-					ch := ""
-					if i < len(digits) {
-						ch = string(digits[i])
-					}
-					box := mg.Box(c.Key(i)).Size(44, 52).Radius(10).Border(1, p.line2).Background(p.panel).Center()
-					if i == len(digits) && !s.pairing {
-						box.Border(2, p.brand)
-					}
-					box.Children(func() { mg.Text(c, ch).FontSize(22).FontWeight(600) })
-				}
-			})
-			in = mg.TextInputBase(c.Key("code"), &s.code).Label(locales.AddPhoneIPhoneCode()).Absolute().Top(0).Left(0).Right(0).Bottom(0).
-				Opacity(0).FontSize(22).AutoFocus()
-		})
-		if in.Changed() {
-			s.code = keepDigits(s.code, 6)
-		}
-		mg.Row(c).Gap(16).AlignItems(mg.Center).Wrap().Children(func() {
-			pair := button(c, locales.PairingPair(), btnOpt{kind: btnPrimary}).Disabled(len(s.code) < 6 || s.pairing)
-			if pair.Clicked() || (in.Submitted() && len(s.code) == 6) {
-				s.pairing = true
-			}
-			mg.Spacer(c)
-			if quietButton(c, locales.AddPhoneOlderIPhone()).Clicked() {
-				s.old = true
-			}
-		})
-		if s.pairing {
-			mg.Text(c, locales.AddPhoneIPhoneWaiting()).FontSize(13.5).TextColor(p.ink2)
-		}
+		a.addIPhoneSteps(c)
 		return
 	}
 	heading(c, locales.AddPhoneIPhoneTitle(), locales.AddPhoneOlderDetail())

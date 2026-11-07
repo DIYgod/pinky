@@ -131,6 +131,8 @@ type API struct {
 	rulesSet bool
 	// fileProblems are rules files edited by hand that cannot be used.
 	fileProblems []gateway.FileProblem
+
+	iosHost driver.HostCheck // what the computer lacks for iPhones (iphone.go)
 }
 
 type device struct {

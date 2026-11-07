@@ -581,70 +581,542 @@ func (msgs Messages) AddPhoneFoundNeedsSetup(name string) string {
 	return Catalog.Format(msgs.locale, "addPhoneFoundNeedsSetup", map[string]any{"name": name})
 }
 
-// AddPhoneIPhoneCode says "Pairing code"
+// AddPhoneIPhoneDetail says "Pinky sets the iPhone up for you. Each step says what to do on the iPhone."
 // in the language the app shows.
 //
-// Add phone › iPhone: the accessibility label of the six boxes, and of
-// the field over them, where the person types the code the iPhone shows.
-func AddPhoneIPhoneCode() string { return In(i18n.Locale()).AddPhoneIPhoneCode() }
-
-// AddPhoneIPhoneCode says "Pairing code"
-// in the language of msgs.
-//
-// Add phone › iPhone: the accessibility label of the six boxes, and of
-// the field over them, where the person types the code the iPhone shows.
-func (msgs Messages) AddPhoneIPhoneCode() string {
-	return Catalog.Format(msgs.locale, "addPhoneIPhoneCode", nil)
-}
-
-// AddPhoneIPhoneDetail says "On the iPhone, turn on Developer Mode in Settings › Privacy & Security. Keep it on the same Wi-Fi, then enter the c…"
-// in the language the app shows.
-//
-// Add phone › iPhone: the line under the heading, above the six boxes of
-// the pairing code. Settings, Privacy & Security and Developer Mode are the
-// iPhone's own names: use those of iOS's Simplified Chinese settings.
+// Add phone › iPhone: the line under the title, above the steps.
 func AddPhoneIPhoneDetail() string { return In(i18n.Locale()).AddPhoneIPhoneDetail() }
 
-// AddPhoneIPhoneDetail says "On the iPhone, turn on Developer Mode in Settings › Privacy & Security. Keep it on the same Wi-Fi, then enter the c…"
+// AddPhoneIPhoneDetail says "Pinky sets the iPhone up for you. Each step says what to do on the iPhone."
 // in the language of msgs.
 //
-// Add phone › iPhone: the line under the heading, above the six boxes of
-// the pairing code. Settings, Privacy & Security and Developer Mode are the
-// iPhone's own names: use those of iOS's Simplified Chinese settings.
+// Add phone › iPhone: the line under the title, above the steps.
 func (msgs Messages) AddPhoneIPhoneDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneDetail", nil)
 }
 
-// AddPhoneIPhoneTitle says "Pair your iPhone"
+// AddPhoneIPhoneGetXcode says "Get Xcode in the App Store"
 // in the language the app shows.
 //
-// Add phone › iPhone: the heading of the iPhone step, for current and for
-// older iPhones.
-func AddPhoneIPhoneTitle() string { return In(i18n.Locale()).AddPhoneIPhoneTitle() }
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the link that opens Xcode's page in the
+// Mac App Store.
+func AddPhoneIPhoneGetXcode() string { return In(i18n.Locale()).AddPhoneIPhoneGetXcode() }
 
-// AddPhoneIPhoneTitle says "Pair your iPhone"
+// AddPhoneIPhoneGetXcode says "Get Xcode in the App Store"
 // in the language of msgs.
 //
-// Add phone › iPhone: the heading of the iPhone step, for current and for
-// older iPhones.
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the link that opens Xcode's page in the
+// Mac App Store.
+func (msgs Messages) AddPhoneIPhoneGetXcode() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneGetXcode", nil)
+}
+
+// AddPhoneIPhoneNoAnswer says "{name} does not answer. Unplug it and plug it in again."
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the plug-in step when the
+// iPhone is connected but does not answer; Pinky's own reason follows in
+// English. name is the iPhone's name.
+func AddPhoneIPhoneNoAnswer(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneNoAnswer(name)
+}
+
+// AddPhoneIPhoneNoAnswer says "{name} does not answer. Unplug it and plug it in again."
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the plug-in step when the
+// iPhone is connected but does not answer; Pinky's own reason follows in
+// English. name is the iPhone's name.
+func (msgs Messages) AddPhoneIPhoneNoAnswer(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoAnswer", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneNoImageCopy says "Apple's developer disk image comes with Xcode, which runs only on a Mac. On a Mac where Xcode was opened once, copy t…"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the text on Windows and Linux; Pinky's
+// sentence with its folder follows. The path stays as it is.
+func AddPhoneIPhoneNoImageCopy() string { return In(i18n.Locale()).AddPhoneIPhoneNoImageCopy() }
+
+// AddPhoneIPhoneNoImageCopy says "Apple's developer disk image comes with Xcode, which runs only on a Mac. On a Mac where Xcode was opened once, copy t…"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the text on Windows and Linux; Pinky's
+// sentence with its folder follows. The path stays as it is.
+func (msgs Messages) AddPhoneIPhoneNoImageCopy() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageCopy", nil)
+}
+
+// AddPhoneIPhoneNoImageMac says "Apple's developer disk image comes with Xcode. Install Xcode from the App Store and open it once, then you can quit i…"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the text on a Mac.
+func AddPhoneIPhoneNoImageMac() string { return In(i18n.Locale()).AddPhoneIPhoneNoImageMac() }
+
+// AddPhoneIPhoneNoImageMac says "Apple's developer disk image comes with Xcode. Install Xcode from the App Store and open it once, then you can quit i…"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the text on a Mac.
+func (msgs Messages) AddPhoneIPhoneNoImageMac() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageMac", nil)
+}
+
+// AddPhoneIPhoneNoImageTitle says "This computer has no developer disk image yet"
+// in the language the app shows.
+//
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the title of the box.
+func AddPhoneIPhoneNoImageTitle() string { return In(i18n.Locale()).AddPhoneIPhoneNoImageTitle() }
+
+// AddPhoneIPhoneNoImageTitle says "This computer has no developer disk image yet"
+// in the language of msgs.
+//
+// Add phone › iPhone, under the preparation step when this computer has
+// no developer disk image (Apple's add-on that gives a phone its developer
+// services; it comes with Xcode): the title of the box.
+func (msgs Messages) AddPhoneIPhoneNoImageTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageTitle", nil)
+}
+
+// AddPhoneIPhoneRetrying says "Pinky tries again by itself."
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: a small note under a failed
+// preparation step.
+func AddPhoneIPhoneRetrying() string { return In(i18n.Locale()).AddPhoneIPhoneRetrying() }
+
+// AddPhoneIPhoneRetrying says "Pinky tries again by itself."
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: a small note under a failed
+// preparation step.
+func (msgs Messages) AddPhoneIPhoneRetrying() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRetrying", nil)
+}
+
+// AddPhoneIPhoneStepDevMode says "Turn on Developer Mode"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: the step of turning on the iPhone's
+// Developer Mode. Developer Mode is the iPhone's own name for the setting;
+// use the name iOS shows in your language.
+func AddPhoneIPhoneStepDevMode() string { return In(i18n.Locale()).AddPhoneIPhoneStepDevMode() }
+
+// AddPhoneIPhoneStepDevMode says "Turn on Developer Mode"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: the step of turning on the iPhone's
+// Developer Mode. Developer Mode is the iPhone's own name for the setting;
+// use the name iOS shows in your language.
+func (msgs Messages) AddPhoneIPhoneStepDevMode() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevMode", nil)
+}
+
+// AddPhoneIPhoneStepDevModeDetail says "On the iPhone, open Settings › Privacy & Security › Developer Mode, turn it on and tap Restart. After the restart…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the Developer Mode step.
+// Settings, Privacy & Security, Developer Mode, Restart and Turn On are the
+// iPhone's own words; use the words iOS shows in your language.
+func AddPhoneIPhoneStepDevModeDetail() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepDevModeDetail()
+}
+
+// AddPhoneIPhoneStepDevModeDetail says "On the iPhone, open Settings › Privacy & Security › Developer Mode, turn it on and tap Restart. After the restart…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the Developer Mode step.
+// Settings, Privacy & Security, Developer Mode, Restart and Turn On are the
+// iPhone's own words; use the words iOS shows in your language.
+func (msgs Messages) AddPhoneIPhoneStepDevModeDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeDetail", nil)
+}
+
+// AddPhoneIPhoneStepDevModeNote says "Pinky has made the Developer Mode switch appear; it is near the bottom of Privacy & Security."
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: a small note under the Developer
+// Mode step: iOS hides the switch until a developer tool asks for it, and
+// Pinky did.
+func AddPhoneIPhoneStepDevModeNote() string { return In(i18n.Locale()).AddPhoneIPhoneStepDevModeNote() }
+
+// AddPhoneIPhoneStepDevModeNote says "Pinky has made the Developer Mode switch appear; it is near the bottom of Privacy & Security."
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: a small note under the Developer
+// Mode step: iOS hides the switch until a developer tool asks for it, and
+// Pinky did.
+func (msgs Messages) AddPhoneIPhoneStepDevModeNote() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeNote", nil)
+}
+
+// AddPhoneIPhoneStepDone says "Done"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: the accessibility label of the check
+// mark in place of a finished step's number.
+func AddPhoneIPhoneStepDone() string { return In(i18n.Locale()).AddPhoneIPhoneStepDone() }
+
+// AddPhoneIPhoneStepDone says "Done"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: the accessibility label of the check
+// mark in place of a finished step's number.
+func (msgs Messages) AddPhoneIPhoneStepDone() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDone", nil)
+}
+
+// AddPhoneIPhoneStepDriver says "Install Apple's iPhone driver"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: the first step on Windows, while
+// Apple's driver (which comes with the Apple Devices app or iTunes) is
+// missing.
+func AddPhoneIPhoneStepDriver() string { return In(i18n.Locale()).AddPhoneIPhoneStepDriver() }
+
+// AddPhoneIPhoneStepDriver says "Install Apple's iPhone driver"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: the first step on Windows, while
+// Apple's driver (which comes with the Apple Devices app or iTunes) is
+// missing.
+func (msgs Messages) AddPhoneIPhoneStepDriver() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDriver", nil)
+}
+
+// AddPhoneIPhoneStepDriverDetail says "Install Apple Devices from the Microsoft Store, or iTunes from apple.com. Pinky talks to the iPhone through it."
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the Windows driver step. Apple
+// Devices is the name of Apple's app in the Microsoft Store (in Chinese
+// stores “Apple 设备”).
+func AddPhoneIPhoneStepDriverDetail() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepDriverDetail()
+}
+
+// AddPhoneIPhoneStepDriverDetail says "Install Apple Devices from the Microsoft Store, or iTunes from apple.com. Pinky talks to the iPhone through it."
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the Windows driver step. Apple
+// Devices is the name of Apple's app in the Microsoft Store (in Chinese
+// stores “Apple 设备”).
+func (msgs Messages) AddPhoneIPhoneStepDriverDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDriverDetail", nil)
+}
+
+// AddPhoneIPhoneStepDriverWaiting says "Waiting for it to be installed…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: next to a spinner under the driver
+// or usbmuxd step: Pinky notices by itself once it is installed.
+func AddPhoneIPhoneStepDriverWaiting() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepDriverWaiting()
+}
+
+// AddPhoneIPhoneStepDriverWaiting says "Waiting for it to be installed…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: next to a spinner under the driver
+// or usbmuxd step: Pinky notices by itself once it is installed.
+func (msgs Messages) AddPhoneIPhoneStepDriverWaiting() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDriverWaiting", nil)
+}
+
+// AddPhoneIPhoneStepPlug says "Plug in the iPhone"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: the step of connecting the iPhone
+// with a cable.
+func AddPhoneIPhoneStepPlug() string { return In(i18n.Locale()).AddPhoneIPhoneStepPlug() }
+
+// AddPhoneIPhoneStepPlug says "Plug in the iPhone"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: the step of connecting the iPhone
+// with a cable.
+func (msgs Messages) AddPhoneIPhoneStepPlug() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPlug", nil)
+}
+
+// AddPhoneIPhoneStepPlugDetail says "Connect it to this computer with a USB cable, and unlock it."
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the plug-in step.
+func AddPhoneIPhoneStepPlugDetail() string { return In(i18n.Locale()).AddPhoneIPhoneStepPlugDetail() }
+
+// AddPhoneIPhoneStepPlugDetail says "Connect it to this computer with a USB cable, and unlock it."
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the plug-in step.
+func (msgs Messages) AddPhoneIPhoneStepPlugDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPlugDetail", nil)
+}
+
+// AddPhoneIPhoneStepPrepare says "Prepare the iPhone"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: the step Pinky does by itself:
+// mounting Apple's developer disk image on the iPhone.
+func AddPhoneIPhoneStepPrepare() string { return In(i18n.Locale()).AddPhoneIPhoneStepPrepare() }
+
+// AddPhoneIPhoneStepPrepare says "Prepare the iPhone"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: the step Pinky does by itself:
+// mounting Apple's developer disk image on the iPhone.
+func (msgs Messages) AddPhoneIPhoneStepPrepare() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPrepare", nil)
+}
+
+// AddPhoneIPhoneStepPrepareDetail says "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. It does this again by itself afte…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the preparation step. The
+// developer disk image is Apple's add-on that gives a phone its developer
+// services.
+func AddPhoneIPhoneStepPrepareDetail() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepPrepareDetail()
+}
+
+// AddPhoneIPhoneStepPrepareDetail says "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. It does this again by itself afte…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the preparation step. The
+// developer disk image is Apple's add-on that gives a phone its developer
+// services.
+func (msgs Messages) AddPhoneIPhoneStepPrepareDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPrepareDetail", nil)
+}
+
+// AddPhoneIPhoneStepPreparing says "Preparing the iPhone…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: next to a spinner while Pinky mounts
+// the developer disk image.
+func AddPhoneIPhoneStepPreparing() string { return In(i18n.Locale()).AddPhoneIPhoneStepPreparing() }
+
+// AddPhoneIPhoneStepPreparing says "Preparing the iPhone…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: next to a spinner while Pinky mounts
+// the developer disk image.
+func (msgs Messages) AddPhoneIPhoneStepPreparing() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPreparing", nil)
+}
+
+// AddPhoneIPhoneStepTrust says "Trust this computer"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: the step of tapping Trust on the
+// iPhone's “Trust This Computer?” question.
+func AddPhoneIPhoneStepTrust() string { return In(i18n.Locale()).AddPhoneIPhoneStepTrust() }
+
+// AddPhoneIPhoneStepTrust says "Trust this computer"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: the step of tapping Trust on the
+// iPhone's “Trust This Computer?” question.
+func (msgs Messages) AddPhoneIPhoneStepTrust() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrust", nil)
+}
+
+// AddPhoneIPhoneStepTrustDetail says "When the iPhone asks “Trust This Computer?”, tap Trust and enter its passcode. If it does not ask, unlock it; if …"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the Trust step. “Trust This
+// Computer?”, Trust and Don't Trust are the iPhone's own words; use the
+// words iOS shows in your language.
+func AddPhoneIPhoneStepTrustDetail() string { return In(i18n.Locale()).AddPhoneIPhoneStepTrustDetail() }
+
+// AddPhoneIPhoneStepTrustDetail says "When the iPhone asks “Trust This Computer?”, tap Trust and enter its passcode. If it does not ask, unlock it; if …"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the Trust step. “Trust This
+// Computer?”, Trust and Don't Trust are the iPhone's own words; use the
+// words iOS shows in your language.
+func (msgs Messages) AddPhoneIPhoneStepTrustDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustDetail", nil)
+}
+
+// AddPhoneIPhoneStepTrustWaiting says "Waiting for the iPhone to trust this computer…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: next to a spinner under the Trust
+// step.
+func AddPhoneIPhoneStepTrustWaiting() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepTrustWaiting()
+}
+
+// AddPhoneIPhoneStepTrustWaiting says "Waiting for the iPhone to trust this computer…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: next to a spinner under the Trust
+// step.
+func (msgs Messages) AddPhoneIPhoneStepTrustWaiting() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustWaiting", nil)
+}
+
+// AddPhoneIPhoneStepUnlock says "Unlock the iPhone so Pinky can finish."
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the preparation step when the
+// iPhone must be unlocked first (after a restart, for example).
+func AddPhoneIPhoneStepUnlock() string { return In(i18n.Locale()).AddPhoneIPhoneStepUnlock() }
+
+// AddPhoneIPhoneStepUnlock says "Unlock the iPhone so Pinky can finish."
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the preparation step when the
+// iPhone must be unlocked first (after a restart, for example).
+func (msgs Messages) AddPhoneIPhoneStepUnlock() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepUnlock", nil)
+}
+
+// AddPhoneIPhoneStepUsbmuxd says "Install usbmuxd"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: the first step on Linux, while
+// usbmuxd (the daemon every iPhone connection goes through) is missing.
+func AddPhoneIPhoneStepUsbmuxd() string { return In(i18n.Locale()).AddPhoneIPhoneStepUsbmuxd() }
+
+// AddPhoneIPhoneStepUsbmuxd says "Install usbmuxd"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: the first step on Linux, while
+// usbmuxd (the daemon every iPhone connection goes through) is missing.
+func (msgs Messages) AddPhoneIPhoneStepUsbmuxd() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepUsbmuxd", nil)
+}
+
+// AddPhoneIPhoneStepUsbmuxdDetail says "Install the usbmuxd package, for example with sudo apt install usbmuxd. Pinky talks to the iPhone through it; it star…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the Linux usbmuxd step. The
+// command stays as it is.
+func AddPhoneIPhoneStepUsbmuxdDetail() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepUsbmuxdDetail()
+}
+
+// AddPhoneIPhoneStepUsbmuxdDetail says "Install the usbmuxd package, for example with sudo apt install usbmuxd. Pinky talks to the iPhone through it; it star…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the Linux usbmuxd step. The
+// command stays as it is.
+func (msgs Messages) AddPhoneIPhoneStepUsbmuxdDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepUsbmuxdDetail", nil)
+}
+
+// AddPhoneIPhoneStepsLabel says "Steps"
+// in the language the app shows.
+//
+// Add phone › iPhone: the accessibility label of the step list.
+func AddPhoneIPhoneStepsLabel() string { return In(i18n.Locale()).AddPhoneIPhoneStepsLabel() }
+
+// AddPhoneIPhoneStepsLabel says "Steps"
+// in the language of msgs.
+//
+// Add phone › iPhone: the accessibility label of the step list.
+func (msgs Messages) AddPhoneIPhoneStepsLabel() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepsLabel", nil)
+}
+
+// AddPhoneIPhoneStuck says "Pinky could not finish this step."
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the preparation step when it
+// failed; Pinky's own reason follows in English.
+func AddPhoneIPhoneStuck() string { return In(i18n.Locale()).AddPhoneIPhoneStuck() }
+
+// AddPhoneIPhoneStuck says "Pinky could not finish this step."
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the preparation step when it
+// failed; Pinky's own reason follows in English.
+func (msgs Messages) AddPhoneIPhoneStuck() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStuck", nil)
+}
+
+// AddPhoneIPhoneTitle says "Connect your iPhone"
+// in the language the app shows.
+//
+// Add phone › iPhone: the title.
+func AddPhoneIPhoneTitle() string { return In(i18n.Locale()).AddPhoneIPhoneTitle() }
+
+// AddPhoneIPhoneTitle says "Connect your iPhone"
+// in the language of msgs.
+//
+// Add phone › iPhone: the title.
 func (msgs Messages) AddPhoneIPhoneTitle() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneTitle", nil)
 }
 
-// AddPhoneIPhoneWaiting says "Waiting for the iPhone. It shows up here once the gateway has paired with it."
+// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update."
 // in the language the app shows.
 //
-// Add phone › iPhone: the line under the code after the person clicks
-// Pair, while the gateway pairs with the iPhone.
-func AddPhoneIPhoneWaiting() string { return In(i18n.Locale()).AddPhoneIPhoneWaiting() }
+// Add phone › iPhone: the text of the box shown when the iPhone's iOS is
+// too old. version is its iOS version. Settings, General and Software
+// Update are the iPhone's own words.
+func AddPhoneIPhoneTooOld(version string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneTooOld(version)
+}
 
-// AddPhoneIPhoneWaiting says "Waiting for the iPhone. It shows up here once the gateway has paired with it."
+// AddPhoneIPhoneTooOld says "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update."
 // in the language of msgs.
 //
-// Add phone › iPhone: the line under the code after the person clicks
-// Pair, while the gateway pairs with the iPhone.
-func (msgs Messages) AddPhoneIPhoneWaiting() string {
-	return Catalog.Format(msgs.locale, "addPhoneIPhoneWaiting", nil)
+// Add phone › iPhone: the text of the box shown when the iPhone's iOS is
+// too old. version is its iOS version. Settings, General and Software
+// Update are the iPhone's own words.
+func (msgs Messages) AddPhoneIPhoneTooOld(version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTooOld", map[string]any{"version": version})
+}
+
+// AddPhoneIPhoneTooOldTitle says "{name} needs a newer iOS"
+// in the language the app shows.
+//
+// Add phone › iPhone: the title of the box shown in place of the steps
+// when the iPhone's iOS is too old. name is the iPhone's name.
+func AddPhoneIPhoneTooOldTitle(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneTooOldTitle(name)
+}
+
+// AddPhoneIPhoneTooOldTitle says "{name} needs a newer iOS"
+// in the language of msgs.
+//
+// Add phone › iPhone: the title of the box shown in place of the steps
+// when the iPhone's iOS is too old. name is the iPhone's name.
+func (msgs Messages) AddPhoneIPhoneTooOldTitle(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTooOldTitle", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneUsbmuxdStopped says "Not showing up? usbmuxd is installed but not running. Plug the iPhone in again, or start it with sudo systemctl start…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the step list: under the plug-in step on Linux,
+// when no iPhone showed up for a while and usbmuxd is installed but not
+// running. The command stays as it is.
+func AddPhoneIPhoneUsbmuxdStopped() string { return In(i18n.Locale()).AddPhoneIPhoneUsbmuxdStopped() }
+
+// AddPhoneIPhoneUsbmuxdStopped says "Not showing up? usbmuxd is installed but not running. Plug the iPhone in again, or start it with sudo systemctl start…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the step list: under the plug-in step on Linux,
+// when no iPhone showed up for a while and usbmuxd is installed but not
+// running. The command stays as it is.
+func (msgs Messages) AddPhoneIPhoneUsbmuxdStopped() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneUsbmuxdStopped", nil)
 }
 
 // AddPhoneLabel says "Add phone"
@@ -7089,6 +7561,22 @@ func PhoneScreenshotSaved(file string) string { return In(i18n.Locale()).PhoneSc
 // (phoneScreenshotName and.png).
 func (msgs Messages) PhoneScreenshotSaved(file string) string {
 	return Catalog.Format(msgs.locale, "phoneScreenshotSaved", map[string]any{"file": file})
+}
+
+// PhoneSetUpIPhone says "Show the steps"
+// in the language the app shows.
+//
+// The Phone screen of an iPhone that needs setup: the link under the reason
+// that opens Add phone › iPhone at the step the phone is at.
+func PhoneSetUpIPhone() string { return In(i18n.Locale()).PhoneSetUpIPhone() }
+
+// PhoneSetUpIPhone says "Show the steps"
+// in the language of msgs.
+//
+// The Phone screen of an iPhone that needs setup: the link under the reason
+// that opens Add phone › iPhone at the step the phone is at.
+func (msgs Messages) PhoneSetUpIPhone() string {
+	return Catalog.Format(msgs.locale, "phoneSetUpIPhone", nil)
 }
 
 // PhoneShow says "Show {phone}"

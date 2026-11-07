@@ -106,6 +106,13 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			if d.Info.Detail != "" {
 				mg.Text(c, d.Info.Detail).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
 			}
+			// An iPhone's steps are in Add phone, which follows a phone
+			// that waits for one (addiphone.go).
+			if d.Info.Platform == driver.IOS && linkButton(c, locales.PhoneSetUpIPhone()).Clicked() {
+				a.page = pageAddPhone
+				a.add.reset(a)
+				a.add.step, a.add.focus = "iphone", d.Info.ID
+			}
 		})
 		return
 	}
