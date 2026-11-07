@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -627,28 +628,22 @@ func TestLockedPhone(t *testing.T) {
 }
 
 func TestUnlockFromComputer(t *testing.T) {
-	var g *Gateway
-	g, dev := newTestGateway(t, func(o *Options) {
-		o.Unlock = func(ctx context.Context, id string, d driver.Device) error {
-			d.(*demo.Device).SetLocked(false)
-			return nil
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	x.pin = "4711"
+	var asked []string
+	g := newExtraGateway(t, x, func(o *Options) {
+		o.PIN = func(ctx context.Context, id string) (string, error) {
+			asked = append(asked, id)
+			return "4711", nil
 		}
 	})
 	s, _ := connect(t, g, "Lunch")
-	dev.SetLocked(true)
-	mustStatus(t, s.Observe(context.Background(), ObserveRequest{}), StatusLocked)
+	x.SetLocked(true)
+	mustStatus(t, s.Observe(ctx, ObserveRequest{}), StatusLocked)
 	done := make(chan *Result, 1)
-	go func() { done <- s.Handoff(context.Background(), HandoffRequest{Reason: "Please unlock the phone"}) }()
-	for i := 0; i < 500; i++ {
-		found := false
-		for _, n := range g.Needs() {
-			found = found || n.Kind == NeedHandoff
-		}
-		if found {
-			break
-		}
-		time.Sleep(2 * time.Millisecond)
-	}
+	go func() { done <- s.Handoff(ctx, HandoffRequest{Reason: "Please unlock the phone"}) }()
+	waitNeedKind(t, g, NeedHandoff)
 	if err := g.Decide("unlock:pixel", AllowOnce, ""); err != nil {
 		t.Fatal(err)
 	}
@@ -656,6 +651,52 @@ func TestUnlockFromComputer(t *testing.T) {
 	mustStatus(t, res, StatusSettled)
 	if res.Note != "The phone was unlocked." {
 		t.Fatalf("unlock handoff: %+v", res)
+	}
+	if len(asked) != 1 || asked[0] != "pixel" || len(x.entered) != 1 {
+		t.Fatalf("PIN asked for %v, entered %d times", asked, len(x.entered))
+	}
+	// The task's history says so, never with the PIN.
+	found := false
+	for _, st := range taskSteps(g, s) {
+		if strings.Contains(st.Args+st.Text, "4711") {
+			t.Fatalf("the PIN is in history: %+v", st)
+		}
+		found = found || st.Text == "Unlocked from the computer"
+	}
+	if !found {
+		t.Fatalf("no unlock step: %+v", taskSteps(g, s))
+	}
+}
+
+func TestWrongPINIsNotRetried(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	x.pin = "4711"
+	g := newExtraGateway(t, x, func(o *Options) {
+		o.PIN = func(context.Context, string) (string, error) { return "0000", nil }
+	})
+	s, _ := connect(t, g, "Lunch")
+	x.SetLocked(true)
+	mustStatus(t, s.Observe(ctx, ObserveRequest{}), StatusLocked)
+	if err := g.Unlock("pixel"); !errors.Is(err, ErrWrongPIN) {
+		t.Fatalf("wrong PIN: %v", err)
+	}
+	if len(x.entered) != 1 {
+		t.Fatalf("entered the PIN %d times, want once", len(x.entered))
+	}
+	var failed bool
+	for _, st := range taskSteps(g, s) {
+		failed = failed || strings.HasPrefix(st.Text, "Unlock from the computer failed")
+	}
+	if !failed {
+		t.Fatalf("no failed unlock step: %+v", taskSteps(g, s))
+	}
+	// Cancelled at the prompt: nothing is entered.
+	g2 := newExtraGateway(t, newExtraDev("pixel", "Pixel 9"), func(o *Options) {
+		o.PIN = func(context.Context, string) (string, error) { return "", errors.New("cancelled") }
+	})
+	if err := g2.Unlock("pixel"); err == nil || err.Error() != "cancelled" {
+		t.Fatalf("cancelled: %v", err)
 	}
 }
 

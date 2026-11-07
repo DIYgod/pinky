@@ -81,7 +81,7 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 			return DeviceNeedsYou, "Waiting for you · " + info.Title
 		}
 	}
-	if d.locked {
+	if d.locked && (l == nil || l.bg == nil) {
 		if l != nil {
 			return DeviceNeedsYou, "Locked · unlock to continue " + l.task.title
 		}
@@ -94,7 +94,11 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		return DeviceInControl, "You're in control"
 	}
 	if l != nil {
-		return DeviceWorking, l.session.agent.Name + " · " + l.task.title
+		line := l.session.agent.Name + " · " + l.task.title
+		if l.bg != nil {
+			line += " · in the background"
+		}
+		return DeviceWorking, line
 	}
 	return DeviceIdle, "Idle"
 }
@@ -139,7 +143,7 @@ func (g *Gateway) Needs() []NeedView {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	for _, d := range g.sortedDevicesLocked() {
-		if l := d.lease; l != nil && d.locked && d.online {
+		if l := d.lease; l != nil && d.locked && d.online && l.bg == nil {
 			out = append(out, NeedView{ID: unlockNeedPrefix + d.id, Kind: NeedUnlock, DeviceID: d.id, DeviceName: d.name(),
 				Agent: l.session.agent.Name, TaskID: l.task.id, Title: "Unlock " + d.name(),
 				Detail:  fmt.Sprintf("%s is waiting for the phone to unlock · %s", l.session.agent.Name, l.task.title),
@@ -250,46 +254,6 @@ func (g *Gateway) decide(id string, d approval.Decision, note string) error {
 	return nil
 }
 
-// Unlock implements API.
-func (g *Gateway) Unlock(deviceID string) error {
-	d, err := g.device(deviceID)
-	if err != nil {
-		return err
-	}
-	if g.opt.Unlock == nil {
-		return ErrNoUnlock
-	}
-	dev := g.driverOf(d)
-	if dev == nil {
-		return driver.ErrOffline
-	}
-	ctx, cancel := context.WithTimeout(g.ctx, 30*time.Second)
-	defer cancel()
-	g.mu.Lock()
-	g.inputLocked(d)
-	g.mu.Unlock()
-	if err := g.opt.Unlock(ctx, deviceID, dev); err != nil {
-		return err
-	}
-	g.checkLock(ctx, d)
-	if _, ok := dev.(driver.LockReporter); !ok {
-		g.observe(ctx, d, false)
-	}
-	// The person unlocked from the computer: handoffs the agent opened for
-	// the lock are answered.
-	g.mu.Lock()
-	var ids []string
-	if !d.locked && d.lease != nil {
-		ids = d.lease.unlockHandoffs
-		d.lease.unlockHandoffs = nil
-	}
-	g.mu.Unlock()
-	for _, id := range ids {
-		_ = g.approvals.Decide(id, approval.AllowOnce, "The phone was unlocked.")
-	}
-	return nil
-}
-
 func (g *Gateway) device(id string) (*device, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -317,8 +281,15 @@ func (g *Gateway) TakeOver(deviceID string) error {
 // HandBack, across leases.
 func (g *Gateway) takeOver(d *device, byInput bool) {
 	g.mu.Lock()
+	if l := d.lease; byInput && l != nil && l.bg != nil {
+		// The person uses the phone's own screen; the agent works on its
+		// background display and goes on.
+		g.mu.Unlock()
+		return
+	}
 	// The person may change the screen from now on, task or not.
 	g.inputLocked(d)
+	g.pauseVideoLocked(d)
 	l := d.lease
 	if l == nil && byInput {
 		g.mu.Unlock()
@@ -425,7 +396,9 @@ func (g *Gateway) StopAll() error {
 	return nil
 }
 
-// Stream implements API.
+// Stream implements API: the live video of the phone's main screen. The
+// mirror's viewers and the recorder share one stream from the phone (see
+// streams.go).
 func (g *Gateway) Stream(ctx context.Context, deviceID string, opt driver.StreamOptions) (driver.Stream, error) {
 	d, err := g.device(deviceID)
 	if err != nil {
@@ -435,7 +408,7 @@ func (g *Gateway) Stream(ctx context.Context, deviceID string, opt driver.Stream
 	if dev == nil {
 		return nil, driver.ErrOffline
 	}
-	return dev.Stream(ctx, opt)
+	return g.watch(ctx, hubKey(d.id, false), dev, opt)
 }
 
 // Touch implements API. The person's input pauses the agent.

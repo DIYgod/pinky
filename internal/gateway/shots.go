@@ -120,7 +120,8 @@ func (g *Gateway) startShot(d *device, s *screen.Screen) *bgShot {
 	p := &bgShot{key: key, app: s.App, inputs: d.inputs, done: make(chan struct{})}
 	d.shot = p
 	g.shots.add()
-	go g.takeShot(d, d.dev, p)
+	dev, _ := g.screenOfLocked(d)
+	go g.takeShot(d, dev, p)
 	return p
 }
 

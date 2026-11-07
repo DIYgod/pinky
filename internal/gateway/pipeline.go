@@ -231,7 +231,7 @@ func (g *Gateway) gate(l *lease, approvalID string, action bool) *Result {
 			Message: fmt.Sprintf("An approval is open on this phone (%s: %s), so it takes no other action. Nothing was done. Repeat that %s call with approval_id %q, or use phone_observe meanwhile.",
 				busy.Rule, busy.Title, tool, busy.ID)}
 	}
-	if d.locked {
+	if d.locked && l.bg == nil {
 		g.mu.Unlock()
 		return g.withCurrentScreen(l, statusResult(StatusLocked,
 			"The phone is locked. Nothing was done. Call phone_handoff so the person can unlock it."))
@@ -291,6 +291,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	if c.ApprovalID != "" {
 		return g.resume(ctx, l, c, a)
 	}
+	g.readyScreen(ctx, l)
 	d := l.dev
 	d.act.Lock()
 	// Check again under the device's action lock: another call may have
@@ -377,6 +378,11 @@ func (g *Gateway) startScreen(ctx context.Context, l *lease, c Call) (*screen.Sc
 func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) *Result {
 	g.mu.Lock()
 	_, reports := l.dev.dev.(driver.LockReporter)
+	if l.bg != nil {
+		// A background display is never locked, but whether an app runs
+		// on it shows only after the launch: read first.
+		reports = false
+	}
 	waits := g.stepWaitsLocked(l.dev)
 	g.mu.Unlock()
 	if !reports || waits {
@@ -1008,6 +1014,7 @@ func (g *Gateway) resume(ctx context.Context, l *lease, c Call, a Action) *Resul
 // runApproved re-checks the screen and runs an approved action.
 func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, info approval.Info, out approval.Outcome) *Result {
 	d := l.dev
+	g.readyScreen(ctx, l)
 	d.act.Lock()
 	defer d.act.Unlock()
 	if res := g.gate(l, info.ID, true); res != nil {
@@ -1098,7 +1105,7 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	// The person taking over cancels the driver call in progress.
 	actx, cancel := context.WithCancel(ctx)
 	g.mu.Lock()
-	dev := d.dev
+	dev, onBG := g.screenOfLocked(d)
 	d.inflight = cancel
 	g.inputLocked(d)
 	g.mu.Unlock()
@@ -1109,6 +1116,21 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		return res
 	}
 	err := g.perform(actx, dev, a, p)
+	if err != nil && onBG && a.Tool == "launch" && errors.Is(err, driver.ErrUnsupported) {
+		// The app will not run on a background display: the task moves
+		// to the phone's own screen, which may be off or locked.
+		var res *Result
+		dev, res = g.leaveForLaunch(actx, l, p, err)
+		if res != nil {
+			cancel()
+			g.mu.Lock()
+			d.inflight = nil
+			g.mu.Unlock()
+			g.recordStep(l, step, a, c, p, res, start, before, "", "")
+			return res
+		}
+		err = g.perform(actx, dev, a, p)
+	}
 	g.mu.Lock()
 	d.inflight = nil
 	g.mu.Unlock()
@@ -1215,7 +1237,7 @@ const observeTimeout = 60 * time.Second
 
 // observe reads the screen, assigns refs and collects events.
 func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Screen, error) {
-	dev := g.driverOf(d)
+	dev, onBG := g.screenOf(d)
 	if dev == nil {
 		return nil, driver.ErrOffline
 	}
@@ -1247,8 +1269,19 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	d.last = s
 	g.confirmShotLocked(d, s, start)
 	_, reporter := dev.(driver.LockReporter)
+	video := d.video
+	if _, bg := g.screenOfLocked(d); bg != onBG {
+		video = nil // the task moved to another screen meanwhile
+	}
+	person := d.person
 	g.mu.Unlock()
-	if s.Locked || !reporter {
+	if video != nil {
+		_, blocked := g.policy.Blocked(s.App)
+		video.read(start, !s.Locked && !blocked && !person)
+	}
+	// A background display is always unlocked; the phone's lock shows only
+	// on its own screen.
+	if !onBG && (s.Locked || !reporter) {
 		g.setLocked(d, s.Locked)
 	}
 	return s, nil
@@ -1272,7 +1305,7 @@ var errScreenChanged = errors.New("the screen changed while the screenshot was t
 // changed or is blocked, so a blocked app that comes to the front in
 // between is never captured.
 func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (image.Image, error) {
-	dev := g.driverOf(d)
+	dev, _ := g.screenOf(d)
 	if dev == nil {
 		return nil, driver.ErrOffline
 	}
@@ -1345,7 +1378,7 @@ func (g *Gateway) screenResult(l *lease, raw *screen.Screen, full bool) *Result 
 
 // settle waits until the screen stops changing, up to SettleMax.
 func (g *Gateway) settle(ctx context.Context, d *device) bool {
-	dev := g.driverOf(d)
+	dev, _ := g.screenOf(d)
 	if dev == nil {
 		return false
 	}

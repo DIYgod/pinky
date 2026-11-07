@@ -82,6 +82,8 @@ type Result struct {
 	Screenshot image.Image
 	Steps      []*Result // phone_batch, one per step that ran
 	Task       string    // phone_connect: the task id
+	Folder     string    // phone_files: the folder on the computer
+	Files      []FileView
 }
 
 // IsError reports whether the result is an error rather than a status.
@@ -292,7 +294,12 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 	g.mu.Lock()
 	ended, by := l.ended, l.endedBy
 	name := l.dev.name()
+	note := l.bgNote
+	l.bgNote = ""
 	g.mu.Unlock()
+	if note != "" {
+		r.Message = joinNote(r.Message, note)
+	}
 	if ended && by == OutcomeStopped {
 		ran := r.Status == StatusSettled || r.Status == StatusUncertain
 		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
@@ -503,6 +510,10 @@ func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) {
 func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 	ctx, cancel := mergeCtx(ctx, l.ctx)
 	defer cancel()
+	g.readyScreen(ctx, l)
+	g.mu.Lock()
+	g.startVideoLocked(l)
+	g.mu.Unlock()
 	cur, err := g.observe(ctx, l.dev, true)
 	if err != nil {
 		return g.finish(l, g.readError(l, err))
@@ -753,6 +764,7 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 	if res := g.gate(l, req.ApprovalID, false); res != nil {
 		return g.finish(l, res)
 	}
+	g.readyScreen(ctx, l)
 	if req.WaitMS > 0 {
 		g.waitChange(ctx, l, time.Duration(req.WaitMS)*time.Millisecond, req.Progress)
 	}
@@ -844,6 +856,7 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 	if res := g.gate(l, req.ApprovalID, false); res != nil {
 		return g.finish(l, res)
 	}
+	g.readyScreen(ctx, l)
 	start := time.Now()
 	deadline := start.Add(timeout)
 	lastProgress := start
@@ -971,11 +984,6 @@ func appListed(app screen.App, list []string) bool {
 		}
 	}
 	return false
-}
-
-// Files implements phone_files, which this version does not offer.
-func (s *Session) Files(ctx context.Context, c Call) *Result {
-	return errResult(ErrUnsupported, "phone_files is not available in this version of Pinky.")
 }
 
 // RequestApproval implements phone_request_approval: it asks the person a
@@ -1149,6 +1157,7 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 }
 
 func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *Result {
+	g.readyScreen(ctx, l)
 	cur, err := g.observe(ctx, l.dev, true)
 	if err != nil {
 		return g.finish(l, g.readError(l, err))

@@ -3,6 +3,7 @@ module github.com/DIYgod/pinky
 go 1.27.3
 
 require (
+	github.com/Eyevinn/mp4ff v0.62.0
 	github.com/danielpaulus/go-ios v1.3.3-0.20261103131045-6910f3b585ad
 	github.com/ebitengine/purego v0.11.3
 	github.com/egoist/mygo v0.7.4

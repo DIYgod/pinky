@@ -51,7 +51,11 @@ type device struct {
 	// confirm it; kept is the last one kept, which steps reuse while the
 	// screen matches (see shots.go).
 	shot, kept *bgShot
-	touch      *touchState
+	// video records the running task's screen (video.go).
+	video *taskVideo
+	// wokeAt is when the gateway last woke the screen, or found it on.
+	wokeAt time.Time
+	touch  *touchState
 	// wake is closed and replaced on every state change, to wake waiting calls.
 	wake chan struct{}
 }
@@ -161,6 +165,15 @@ type lease struct {
 	// step of a phone_batch reuses it while it is fresh.
 	after   *screen.Screen
 	afterAt time.Time
+	// bg is the background display the agent works on (background.go),
+	// nil on the phone's own screen. bgOff is set once the task left it,
+	// and bgNote says why, for the agent's next result.
+	bg     driver.Device
+	bgOff  bool
+	bgNote string
+	// filesGranted is set when the person allowed copying files to the
+	// phone for the rest of the task.
+	filesGranted bool
 
 	ctx    context.Context
 	cancel context.CancelFunc

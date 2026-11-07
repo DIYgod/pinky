@@ -25,8 +25,9 @@ import (
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
-// schemaVersion is stored in PRAGMA user_version.
-const schemaVersion = 1
+// schemaVersion is stored in PRAGMA user_version. Version 2 added the
+// recordings and device_settings tables; both versions open the same way.
+const schemaVersion = 2
 
 const schema = `
 CREATE TABLE IF NOT EXISTS devices (
@@ -115,14 +116,29 @@ CREATE TABLE IF NOT EXISTS media (
 	hash       TEXT NOT NULL DEFAULT '',
 	created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS recordings (
+	task_id    TEXT PRIMARY KEY,
+	path       TEXT NOT NULL,
+	started_at INTEGER NOT NULL,
+	length_ms  INTEGER NOT NULL DEFAULT 0,
+	codec      TEXT NOT NULL DEFAULT '',
+	width      INTEGER NOT NULL DEFAULT 0,
+	height     INTEGER NOT NULL DEFAULT 0,
+	size       INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS device_settings (
+	device_id  TEXT PRIMARY KEY,
+	background INTEGER NOT NULL DEFAULT 0
+);
 `
 
-// Store is the history database and its media folder.
+// Store is the history database and its media and recordings folders.
 type Store struct {
 	db       *sql.DB
 	dir      string
 	mediaDir string
-	mu       sync.RWMutex // held for writing during Wipe
+	recDir   string
+	mu       sync.RWMutex // held for writing during Wipe and Prune
 }
 
 // Open opens or creates the store in dir: dir/pinky.db and dir/media/.
@@ -152,7 +168,7 @@ func Open(dir string) (*Store, error) {
 		return nil, err
 	}
 	_ = os.Chmod(path, 0o600)
-	return &Store{db: db, dir: dir, mediaDir: media}, nil
+	return &Store{db: db, dir: dir, mediaDir: media, recDir: filepath.Join(dir, "recordings")}, nil
 }
 
 // Close closes the database.
@@ -499,7 +515,7 @@ func (s *Store) Wipe(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, t := range []string{"steps", "approvals", "tasks", "sessions", "media"} {
+	for _, t := range []string{"steps", "approvals", "tasks", "sessions", "media", "recordings"} {
 		if _, err := tx.ExecContext(ctx, "DELETE FROM "+t); err != nil {
 			tx.Rollback()
 			return err
@@ -512,6 +528,9 @@ func (s *Store) Wipe(ctx context.Context) error {
 		return err
 	}
 	if err := os.MkdirAll(s.mediaDir, 0o700); err != nil {
+		return err
+	}
+	if err := os.RemoveAll(s.recDir); err != nil {
 		return err
 	}
 	_, err = s.db.ExecContext(ctx, "VACUUM")

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -319,4 +321,102 @@ func TestShimStartsDaemon(t *testing.T) {
 	if st, err := os.Stat(d.TokenFile()); err != nil || st.Mode().Perm() != 0o600 {
 		t.Fatalf("agent token: %v %v", st, err)
 	}
+}
+
+// bearerTransport adds the agent token to every request.
+type bearerTransport struct{ token string }
+
+func (b bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.Header.Set("Authorization", "Bearer "+b.token)
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+// `pinky daemon --http` serves the same tools over Streamable HTTP, with
+// the token `pinky token` prints.
+func TestDaemonServesHTTP(t *testing.T) {
+	bin := buildPinky(t)
+	home := pinkyHome(t)
+	d := dirsFor(t, home)
+	daemon := exec.Command(bin, "daemon", "--fake", "--http", "127.0.0.1:0")
+	daemon.Env = env(home)
+	var logs syncBuffer
+	daemon.Stderr = &logs
+	if err := daemon.Start(); err != nil {
+		t.Fatal(err)
+	}
+	exited := make(chan error, 1)
+	go func() { exited <- daemon.Wait() }()
+	defer func() {
+		daemon.Process.Signal(syscall.SIGTERM)
+		select {
+		case <-exited:
+		case <-time.After(10 * time.Second):
+			daemon.Process.Kill()
+		}
+		if t.Failed() {
+			t.Logf("daemon log:\n%s", logs.String())
+		}
+	}()
+	waitSocket(t, d)
+	urlRe := regexp.MustCompile(`MCP over HTTP at (http://\S+)`)
+	var url string
+	for deadline := time.Now().Add(10 * time.Second); url == "" && time.Now().Before(deadline); time.Sleep(20 * time.Millisecond) {
+		if m := urlRe.FindStringSubmatch(logs.String()); m != nil {
+			url = m[1]
+		}
+	}
+	if url == "" {
+		t.Fatal("the daemon did not say where it serves HTTP")
+	}
+	token := strings.TrimSpace(run(t, bin, home, "token"))
+	if len(token) < 32 {
+		t.Fatalf("token %q", token)
+	}
+	tr := &sdk.StreamableClientTransport{Endpoint: url, MaxRetries: -1,
+		HTTPClient: &http.Client{Transport: bearerTransport{token}}}
+	cl := sdk.NewClient(&sdk.Implementation{Name: "codex", Version: "e2e"}, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cs, err := cl.Connect(ctx, tr, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cs.Close()
+	c := &mcpClient{cs: cs}
+	text, isErr := c.call(t, "phone_connect", map[string]any{"device": "Pixel 9 (fake)", "task": "Check the time"})
+	if isErr || !strings.HasPrefix(text, "settled · Pixel 9 (fake)") {
+		t.Fatalf("connect over HTTP:\n%s", text)
+	}
+	if text, _ := c.call(t, "phone_release", map[string]any{}); !strings.HasPrefix(text, "settled") {
+		t.Fatalf("release:\n%s", text)
+	}
+	// Without the token: refused.
+	resp, err := http.Post(url, "application/json", strings.NewReader(`{}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("no token: status %d", resp.StatusCode)
+	}
+}
+
+// syncBuffer is a bytes.Buffer safe for a process writing while the test
+// reads.
+type syncBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
 }

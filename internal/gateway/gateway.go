@@ -45,9 +45,11 @@ type Options struct {
 	TrustNewAgents bool
 	// DefaultScope is what a newly approved agent may do; default everything.
 	DefaultScope Scope
-	// Unlock enters the saved PIN when the person asks to unlock from the
-	// computer. Nil means unlocking from the computer is not available.
-	Unlock func(ctx context.Context, deviceID string, dev driver.Device) error
+	// PIN returns a phone's saved PIN when the person asks to unlock it
+	// from the computer, after they confirm (Touch ID); the gateway enters
+	// it through driver.Unlocker and forgets it. Nil means unlocking from
+	// the computer is not available.
+	PIN func(ctx context.Context, deviceID string) (string, error)
 
 	Logger *slog.Logger
 }
@@ -94,11 +96,25 @@ type Gateway struct {
 	subMu sync.Mutex
 	subs  map[chan Event]struct{}
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
-	shots  running // history screenshots being taken or confirmed
-	closed bool
+	// hubMu guards the video streams (streams.go). It is never held while
+	// taking g.mu.
+	hubMu      sync.Mutex
+	hubs       map[string]*hub
+	hubsClosed bool
+
+	// Guarded by mu.
+	recordOn   bool            // record the screen of new tasks
+	background map[string]bool // phones whose agents work on a background display
+	keepDays   int             // history retention; 0 keeps everything
+	prune      chan struct{}   // asks the retention loop to run now
+
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+	shots      running // history screenshots being taken or confirmed
+	videos     running // task recordings, until their files are closed
+	videoStops running // recordings being finished
+	closed     bool
 }
 
 var _ API = (*Gateway)(nil)
@@ -108,14 +124,17 @@ var _ API = (*Gateway)(nil)
 func New(o Options) (*Gateway, error) {
 	o.defaults()
 	g := &Gateway{
-		opt:      o,
-		log:      o.Logger,
-		policy:   o.Policy,
-		devices:  map[string]*device{},
-		sessions: map[string]*Session{},
-		agents:   map[string]*agentState{},
-		apSteps:  map[string]stepRef{},
-		subs:     map[chan Event]struct{}{},
+		opt:        o,
+		log:        o.Logger,
+		policy:     o.Policy,
+		devices:    map[string]*device{},
+		sessions:   map[string]*Session{},
+		agents:     map[string]*agentState{},
+		apSteps:    map[string]stepRef{},
+		subs:       map[chan Event]struct{}{},
+		hubs:       map[string]*hub{},
+		background: map[string]bool{},
+		prune:      make(chan struct{}, 1),
 	}
 	if g.policy == nil {
 		g.policy = policy.Default()
@@ -126,6 +145,11 @@ func New(o Options) (*Gateway, error) {
 			return nil, fmt.Errorf("history: %w", err)
 		}
 		g.store = st
+		if bg, err := st.BackgroundDevices(context.Background()); err == nil {
+			g.background = bg
+		} else {
+			g.log.Warn("history: background displays", "err", err)
+		}
 	}
 	g.approvals = approval.New(approval.Options{
 		Timeout:  o.ApprovalTimeout,
@@ -139,9 +163,10 @@ func New(o Options) (*Gateway, error) {
 	g.discover(ctx)
 	cancel()
 
-	g.wg.Add(2)
+	g.wg.Add(3)
 	go g.discoverLoop()
 	go g.idleLoop()
+	go g.retentionLoop()
 	return g, nil
 }
 
@@ -163,7 +188,11 @@ func (g *Gateway) Close() error {
 	}
 	g.approvals.Close()
 	g.cancel()
+	// Recordings close their files, which needs the history queue.
+	g.videos.wait()
+	g.stopAllHubs()
 	g.wg.Wait()
+	g.shots.wait()
 	g.rec.close()
 	g.mu.Lock()
 	var devs []driver.Device
@@ -186,10 +215,11 @@ func (g *Gateway) Close() error {
 // Policy returns the policy engine, for settings screens.
 func (g *Gateway) Policy() *policy.Engine { return g.policy }
 
-// Flush waits until the history screenshots being taken and the history
-// writes queued so far are done.
+// Flush waits until the history screenshots being taken, the recordings of
+// tasks that ended and the history writes queued so far are done.
 func (g *Gateway) Flush() {
 	g.shots.wait()
+	g.videoStops.wait()
 	g.rec.flush()
 }
 
@@ -364,8 +394,19 @@ func (g *Gateway) setOffline(d *device, why string) {
 	}
 	// Anything may happen on the phone while it is away.
 	g.inputLocked(d)
+	g.pauseVideoLocked(d)
+	var bg driver.Device
+	if l := d.lease; l != nil && l.bg != nil {
+		// The background display went with the phone; the next call opens
+		// another (background.go).
+		bg, l.bg = l.bg, nil
+	}
 	g.wakeLocked(d)
 	g.mu.Unlock()
+	g.stopHubs(d.id)
+	if bg != nil {
+		go bg.Close()
+	}
 	if dev != nil {
 		go dev.Close()
 	}
@@ -419,7 +460,7 @@ func (g *Gateway) pollLocks(ctx context.Context) {
 		}
 		if _, ok := d.dev.(driver.LockReporter); ok {
 			report = append(report, d)
-		} else if d.locked {
+		} else if d.locked && d.lease.bg == nil {
 			read = append(read, d)
 		}
 	}
@@ -460,16 +501,36 @@ func (g *Gateway) setLocked(d *device, locked bool) {
 		return
 	}
 	d.locked = locked
+	if locked && (d.lease == nil || d.lease.bg == nil) {
+		g.pauseVideoLocked(d)
+	}
 	g.wakeLocked(d)
 	g.mu.Unlock()
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	g.emit(Event{Kind: EventNeeds, DeviceID: d.id})
 }
 
+// driverOf returns the phone's own device: its main screen, lock, files
+// and the person's mirror.
 func (g *Gateway) driverOf(d *device) driver.Device {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return d.dev
+}
+
+// screenOf returns the device the agent's reads and actions go to: the
+// lease's background display when it works on one, else the phone.
+func (g *Gateway) screenOf(d *device) (dev driver.Device, background bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.screenOfLocked(d)
+}
+
+func (g *Gateway) screenOfLocked(d *device) (driver.Device, bool) {
+	if l := d.lease; l != nil && l.bg != nil {
+		return l.bg, true
+	}
+	return d.dev, false
 }
 
 // wakeLocked wakes every call waiting on the device's state.

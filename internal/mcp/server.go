@@ -31,8 +31,9 @@ found on the screen. Never type passwords or one-time codes; call phone_handoff 
 
 // Server serves Pinky's tools to MCP sessions.
 type Server struct {
-	g   *gateway.Gateway
-	srv *sdk.Server
+	g       *gateway.Gateway
+	version string
+	srv     *sdk.Server
 
 	mu       sync.Mutex
 	sessions map[*sdk.ServerSession]*gateway.Session
@@ -40,11 +41,18 @@ type Server struct {
 
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
-	s := &Server{g: g, sessions: map[*sdk.ServerSession]*gateway.Session{}}
-	s.srv = sdk.NewServer(&sdk.Implementation{Name: "pinky", Title: "Pinky", Version: version},
-		&sdk.ServerOptions{Instructions: Instructions, Capabilities: &sdk.ServerCapabilities{}})
-	s.addTools()
+	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}}
+	s.srv = s.newSDK()
 	return s
+}
+
+// newSDK returns an SDK server with Pinky's tools. Every SDK server of a
+// Server shares its gateway sessions.
+func (s *Server) newSDK() *sdk.Server {
+	srv := sdk.NewServer(&sdk.Implementation{Name: "pinky", Title: "Pinky", Version: s.version},
+		&sdk.ServerOptions{Instructions: Instructions, Capabilities: &sdk.ServerCapabilities{}})
+	s.addTools(srv)
+	return srv
 }
 
 // SDK returns the underlying SDK server.
@@ -67,6 +75,12 @@ func (s *Server) Serve(ctx context.Context, t sdk.Transport) error {
 	}()
 	err = ss.Wait()
 	close(done)
+	s.forget(ss)
+	return err
+}
+
+// forget closes the gateway side of an MCP session that ended.
+func (s *Server) forget(ss *sdk.ServerSession) {
 	s.mu.Lock()
 	gs := s.sessions[ss]
 	delete(s.sessions, ss)
@@ -74,7 +88,6 @@ func (s *Server) Serve(ctx context.Context, t sdk.Transport) error {
 	if gs != nil {
 		gs.Close()
 	}
-	return err
 }
 
 // session returns the gateway session for an MCP session, opening it on the
@@ -92,6 +105,13 @@ func (s *Server) session(req *sdk.CallToolRequest) *gateway.Session {
 	}
 	gs := s.g.OpenSession(info)
 	s.sessions[req.Session] = gs
+	// Whichever transport carries it (stdio through the socket, or HTTP),
+	// the gateway session ends with the MCP session.
+	ss := req.Session
+	go func() {
+		ss.Wait()
+		s.forget(ss)
+	}()
 	return gs
 }
 
