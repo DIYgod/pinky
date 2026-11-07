@@ -279,14 +279,14 @@ Policy actions are tool calls in context:
 
 | Action | Detected as |
 | --- | --- |
-| `commit` | A tap whose label matches the commit words (Send, Pay, Order, Place order, Checkout, Buy, Book, Reserve, Confirm, Submit, Delete, Transfer, Post), in every supported UI language; for a button with no words of its own (an icon), what the app calls it: the resource id on Android, the accessibility identifier or SF Symbol name on iOS (`btn_send`, `sendButton`, `paperplane.fill`, `trash`), minus ids that name a state or a place (`send_status`, `payment_methods`) |
-| `payment` | A commit on a screen that shows a currency amount |
+| `commit` | A tap whose label matches the commit words (Send, Pay, Order, Place order, Checkout, Buy, Sell, Swap, Trade, Repay, Borrow, Stake, Book, Reserve, Confirm, Submit, Delete, Remove, Bin, Transfer, Post), in every supported UI language; text that only OCR reads (a web view) by the whole line and by its pieces; never a tab, which only moves between pages; for a button with no words of its own (an icon), what the app calls it: the resource id on Android, the accessibility identifier or SF Symbol name on iOS (`btn_send`, `sendButton`, `paperplane.fill`, `trash`), minus ids that name a state or a place (`send_status`, `payment_methods`) |
+| `payment` | A commit that moves money by itself (Pay, Buy, Sell, Swap, Trade, Repay, Borrow, Stake, Withdraw, Transfer, Deposit, 还款, 分期, 买入, 卖出, 赎回, 申购, 闪兑 and the like), or any commit on a screen that shows an amount, coins included (`0.5 ETH`, `1,200 USDC`). Convert, Exchange, Redeem and Claim count only next to an amount |
 | `send_message` | Enter, or `submit: true`, in an input of a messaging app |
 | `install_app` | Install, Get or Uninstall in an app store or the system's package dialog |
 | `open_url` | A tap on a link element that leaves the current app |
 | `call` | A tap on a call button, or a dialer showing a number |
 
-App categories (finance, messaging, stores) come from a bundled, editable list of package names and bundle ids. The rules file is the only source of truth, and Settings › Safety edits it:
+App categories (finance, messaging, stores) come from a bundled, editable list of package names and bundle ids; an app the list does not know whose name says bank, wallet, securities, remittance or pay (in Latin script, Chinese, Japanese or Korean) counts as finance. `apps.yaml` can exclude an id or a name, which then beats a prefix entry and the name (Settings › Safety unblocks one app that way). The rules file is the only source of truth, and Settings › Safety edits it:
 
 ```yaml
 rules:
