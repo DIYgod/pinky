@@ -100,8 +100,23 @@ func TestDeviceCompanionUpdate(t *testing.T) {
 		}
 	}
 
+	ping := func() *companion.Info {
+		pctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		defer cancel()
+		info, err := c.Ping(pctx)
+		if err != nil {
+			return nil
+		}
+		return info
+	}
 	orig := setting()
-	t.Logf("before: build %d, enabled_accessibility_services=%q", installed(), orig)
+	origIdle := int64(-1)
+	if listed() {
+		if info := ping(); info != nil {
+			origIdle = info.IdleDisableMS
+		}
+	}
+	t.Logf("before: build %d, enabled_accessibility_services=%q, idle_disable_ms=%d", installed(), orig, origIdle)
 	defer func() {
 		// Leave the bundled build with the setting as found.
 		rctx, cancel := context.WithTimeout(context.Background(), time.Minute)
@@ -117,6 +132,11 @@ func TestDeviceCompanionUpdate(t *testing.T) {
 		}
 		if _, err := run.Shell(rctx, cmd); err != nil {
 			t.Errorf("restore the setting: %v", err)
+		}
+		if origIdle >= 0 && answers(rctx, c, 15*time.Second) {
+			if err := c.SetIdleDisable(rctx, time.Duration(origIdle)*time.Millisecond); err != nil {
+				t.Errorf("restore idle_disable_ms: %v", err)
+			}
 		}
 	}()
 	t.Setenv("PINKY_COMPANION_APK", newAPK)
@@ -158,24 +178,33 @@ func TestDeviceCompanionUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	kept := listed()
-	answers := false
+	answering := false
 	for deadline := time.Now().Add(10 * time.Second); time.Now().Before(deadline) && kept; time.Sleep(500 * time.Millisecond) {
 		pctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		_, err := c.Ping(pctx)
 		cancel()
 		if err == nil {
-			answers = true
+			answering = true
 			break
 		}
 	}
-	t.Logf("after pm install -r over an enabled service: still listed %v, answers %v", kept, answers)
+	t.Logf("after pm install -r over an enabled service: still listed %v, answers %v", kept, answering)
 
-	// 3. On stays on.
+	// 3. On stays on, with the app's own settings: a service another client
+	// turned on for its reads (it turns itself off without clients) is not
+	// made permanent.
 	installOld()
 	if !listed() {
 		if err := c.TurnOn(ctx); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if !answers(ctx, c, 15*time.Second) {
+		t.Fatal("the old build's service does not answer")
+	}
+	const idle = 240 * time.Second
+	if err := c.SetIdleDisable(ctx, idle); err != nil {
+		t.Fatal(err)
 	}
 	res, err = d.UpdateCompanion(ctx)
 	if err != nil {
@@ -186,6 +215,9 @@ func TestDeviceCompanionUpdate(t *testing.T) {
 	}
 	if !listed() {
 		t.Errorf("the service is off after the update: %q", setting())
+	}
+	if info := ping(); info == nil || info.IdleDisableMS != idle.Milliseconds() {
+		t.Errorf("after the update the app answers %+v; want idle_disable_ms %d kept", info, idle.Milliseconds())
 	}
 	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionOn {
 		t.Errorf("CompanionState after the update = %v, %v; want on", st, err)
