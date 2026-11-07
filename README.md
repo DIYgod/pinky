@@ -87,7 +87,7 @@ docs/                         design, agent guide, MCP reference and notes
 
 ## Build and install
 
-Pinky is one Go binary without cgo; MyGo (`go tool mygo build`) packages it for each system. The live mirror and recordings use FFmpeg 9's shared libraries, which Pinky loads at run time: from `PINKY_FFMPEG_DIR`, from the app (macOS), next to the executable, then from where the system keeps libraries. Without them everything but the mirror works, and Pinky says what is missing.
+Pinky is one Go binary without cgo; MyGo (`go tool mygo build`) packages it for each system. The live mirror and recordings use FFmpeg 9's shared libraries, which Pinky loads at run time: from `PINKY_FFMPEG_DIR`, from the app (macOS), next to the executable, then from where the system keeps libraries. Every release carries its own minimal LGPL build (`scripts/ffmpeg.sh`, the H.264 and HEVC decoders): in Pinky.app, and next to the executable in the Windows installer and zip and in the Linux `.tar.gz` and `.deb` ([docs/RELEASING.md](docs/RELEASING.md#ffmpeg)). A build of your own needs one too: `make app` adds it to Pinky.app, and `scripts/release.sh build` makes every package with it. Without FFmpeg everything but the mirror works, and Pinky says what is missing.
 
 ### macOS
 
@@ -109,7 +109,7 @@ go tool mygo build -platform windows/amd64 cmd/pinky   # build/pinky/windows-amd
 go build -o pinky.exe ./cmd/pinky                      # a console build, for pinky devices and other commands in a terminal
 ```
 
-Pinky.exe is a windowed program: agents that start `Pinky.exe mcp` talk to it over pipes, but a terminal shows nothing it prints, so use the console build there. Put FFmpeg 9's shared DLLs (`avcodec-63.dll`, `avutil-61.dll`, `swscale-10.dll` and the DLLs they need, as in the `ffmpeg-n9.0-…-win64-lgpl-shared` builds at [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases)) next to the executable, or set `PINKY_FFMPEG_DIR` to their folder. Android phones need `adb` on the `PATH`. iPhones are untested on Windows. PINs are kept in the Credential Manager, and each unlock asks through Windows Hello, or for the account's password where Hello is not set up.
+Pinky.exe is a windowed program: agents that start `Pinky.exe mcp` talk to it over pipes, but a terminal shows nothing it prints, so use the console build there. A release's installer and zip carry FFmpeg next to `Pinky.exe` (with D3D11VA). For a build of your own, `scripts/ffmpeg.sh build/ffmpeg-windows windows-amd64` makes the DLLs in `build/ffmpeg-windows/bin` (in a Docker container); put them next to the executable, or set `PINKY_FFMPEG_DIR` to their folder (the `ffmpeg-n9.0-…-win64-lgpl-shared` builds at [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases) work too). Android phones need `adb` on the `PATH`. iPhones are untested on Windows. PINs are kept in the Credential Manager, and each unlock asks through Windows Hello, or for the account's password where Hello is not set up.
 
 ### Linux
 
@@ -117,7 +117,7 @@ Pinky.exe is a windowed program: agents that start `Pinky.exe mcp` talk to it ov
 go tool mygo build -platform linux/amd64 cmd/pinky   # build/pinky/linux-amd64/: pinky, a .deb, a .tar.gz with install.sh, a PKGBUILD
 ```
 
-The window needs GTK 3 and EGL (`libgtk-3-0`, `libegl1`; Mesa draws it in software where there is no GPU). FFmpeg 9's shared libraries come from the distribution where it has FFmpeg 9, or from a shared build in a folder of its own with `PINKY_FFMPEG_DIR` (BtbN's need `libva2` and `libva-drm2` for VA-API; without them Pinky decodes in software). iPhones are untested on Linux. PINs are kept in the Secret Service (GNOME Keyring, KWallet, KeePassXC) in a keyring of Pinky's own, which the first save asks you to give a password and which Pinky locks again after each use, so every unlock asks for that password.
+The window needs GTK 3 and EGL (`libgtk-3-0`, `libegl1`; Mesa draws it in software where there is no GPU). A release's `.tar.gz` and `.deb` carry FFmpeg next to `pinky`; it needs glibc 2.31 or later (Ubuntu 20.04, Debian 11) and decodes in software. For a build of your own, `scripts/ffmpeg.sh build/ffmpeg-linux linux-amd64` makes the libraries in `build/ffmpeg-linux/lib` (in a Docker container); put them next to the executable, or set `PINKY_FFMPEG_DIR` to their folder. For hardware decoding (VA-API), point `PINKY_FFMPEG_DIR` at an FFmpeg 9 that has it, such as the distribution's or BtbN's shared builds (which need `libva2` and `libva-drm2`); Pinky looks there first. iPhones are untested on Linux. PINs are kept in the Secret Service (GNOME Keyring, KWallet, KeePassXC) in a keyring of Pinky's own, which the first save asks you to give a password and which Pinky locks again after each use, so every unlock asks for that password.
 
 ## Build and test
 
@@ -131,7 +131,7 @@ scripts/smoke.sh    # the fake gateway, pinky devices and a task through pinky m
 make dist           # a dry run of a release, in dist/<version>/ (docs/RELEASING.md)
 ```
 
-Tests that need a real phone use the `device` build tag; see [docs/WORKING.md](docs/WORKING.md). `go run ./scripts/secretcheck` checks by hand that unlocking asks you (Touch ID, Windows Hello). `PINKY_FFMPEG_APP=build/pinky/darwin-arm64/Pinky.app go test -run TestPackagedFFmpeg ./internal/video/` checks that the app decodes with its own FFmpeg.
+Tests that need a real phone use the `device` build tag; see [docs/WORKING.md](docs/WORKING.md). `go run ./scripts/secretcheck` checks by hand that unlocking asks you (Touch ID, Windows Hello). `PINKY_FFMPEG_APP=build/pinky/darwin-arm64/Pinky.app go test -run TestPackagedFFmpeg ./internal/video/` checks that the app decodes with its own FFmpeg; given the folder of an unpacked Windows or Linux package, it checks that package's.
 
 CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) builds, vets and tests on Linux and Windows, builds and vets on macOS, runs `scripts/smoke.sh` on all three, packages for Linux and Windows, and on Linux opens the window under Xvfb and captures it through the automation socket. It runs for `main`, pull requests, by hand, and the platform session's `claude/platform-*` branches.
 

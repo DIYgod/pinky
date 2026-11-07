@@ -179,7 +179,7 @@ stage_ffmpeg() {
 		done
 		;;
 	esac
-	cp "$ff/COPYING.LGPLv2.1" "$dst/FFmpeg-COPYING.LGPLv2.1.txt"
+	cp "$ff/COPYING.LGPLv2.1" "$dst/FFmpeg-COPYING.LGPLv2.1"
 	cp "$ff/BUILD.txt" "$dst/FFmpeg-BUILD.txt"
 	(cd "$dst" && ls -- *.dll *.so.* 2>/dev/null)
 }
