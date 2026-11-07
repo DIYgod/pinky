@@ -45,6 +45,11 @@ func (d *Device) ScreenOn(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("display info: %w", driver.ErrOffline)
 	}
 	si, err := readScreenInfo(ctx, svc)
+	if err != nil && isClosedErr(err) && ctx.Err() == nil {
+		// The phone closed the connection (it locked, or a long session
+		// went quiet); the failed request dropped it, so this dials again.
+		si, err = readScreenInfo(ctx, svc)
+	}
 	if err != nil {
 		return false, err
 	}
