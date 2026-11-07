@@ -2,6 +2,15 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On Windows, Pinky now installs updates by itself, as on macOS: when you're not using it, or when you click Update now, it runs the new installer quietly, starts the new version and shows what's new, and goes back to the version you had if the new one doesn't start. Agents connected through `pinky mcp` stay connected.
+- On macOS, Pinky installs an update only after checking that Apple notarized it.
+- When an update fails, Settings › Advanced says why, for example that the new version didn't start.
+- Homebrew no longer prints a deprecation warning about Pinky's cask with every `brew` command.
+- When an agent asks you a question, the answer no longer offers "Allow for this task", which granted nothing there.
+- Activity marks the steps that ran without asking because of an Always allow.
+
 ## 2026.1107.4 (2026-11-07)
 
 - iPhones on iOS 17.4 to 26 can now be connected. With the WebDriverAgent helper, installed once from Xcode, agents can do everything they do on iOS 27; this is tried on the iOS 18 and 26 Simulators, not yet on such a phone.
