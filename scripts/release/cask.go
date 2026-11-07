@@ -8,10 +8,11 @@ import (
 )
 
 // The Homebrew cask of Pinky, Casks/pinky.rb in the tap: the macOS zips of
-// the release, which the app updates itself from (auto_updates), and a
-// pinky command for agents (pinky mcp). The command is a script that runs
-// the app's executable by its own path rather than a symbolic link to it,
-// so that the app finds its bundle as it does when it is opened.
+// the release, which the app is to update itself from (auto_updates), and
+// a pinky command for agents (pinky mcp). The command is a wrapper that
+// runs the app's executable by its own path (command_wrapper) rather than
+// a symbolic link to it, so that the app finds its bundle as it does when
+// it is opened.
 var caskTemplate = template.Must(template.New("cask").Parse(`cask "pinky" do
   arch arm: "arm64", intel: "amd64"
 
@@ -33,15 +34,10 @@ var caskTemplate = template.Must(template.New("cask").Parse(`cask "pinky" do
   depends_on macos: ">= :monterey"
 
   app "Pinky.app"
-  shimscript = "#{staged_path}/pinky.wrapper.sh"
-  binary shimscript, target: "pinky"
+  command_wrapper "pinky",
+                  executable: "#{appdir}/Pinky.app/Contents/MacOS/Pinky"
 
-  preflight do
-    File.write shimscript, <<~EOS
-      #!/bin/sh
-      exec '#{appdir}/Pinky.app/Contents/MacOS/Pinky' "$@"
-    EOS
-  end
+  uninstall quit: "app.pinky.desktop"
 
   zap trash: [
     "~/Library/Application Support/Pinky",

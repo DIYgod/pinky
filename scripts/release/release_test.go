@@ -241,6 +241,7 @@ func TestManifestAndCask(t *testing.T) {
 		`url "https://github.com/DIYgod/pinky-releases/releases/download/v#{version}/pinky-#{version}-darwin-#{arch}.zip"`,
 		"auto_updates true",
 		`app "Pinky.app"`,
+		`command_wrapper "pinky",`,
 	} {
 		if !strings.Contains(cask, want) {
 			t.Errorf("the cask lacks %s:\n%s", want, cask)
