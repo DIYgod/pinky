@@ -23,11 +23,17 @@ type link struct {
 // device treats us as a legacy peer and its services crash when they send
 // large replies such as screenshots. iOS 27.2 accepts that announcement only
 // once per tunnel, so later handshakes must not repeat it.
-func dialLink(ctx context.Context, udid string) (*link, error) {
-	base, err := findEntry(udid)
+func dialLink(ctx context.Context, udid string, wifi bool) (*link, error) {
+	base, err := findEntry(udid, wifi)
 	if err != nil {
 		return nil, err
 	}
+	return dialLinkEntry(ctx, base)
+}
+
+// dialLinkEntry opens a tunnel through one usbmuxd entry.
+func dialLinkEntry(ctx context.Context, base goios.DeviceEntry) (*link, error) {
+	udid := base.Properties.SerialNumber
 	t, err := OpenTunnel(ctx, base)
 	if err != nil {
 		return nil, err
@@ -44,10 +50,10 @@ func dialLink(ctx context.Context, udid string) (*link, error) {
 	return l, nil
 }
 
-// findEntry returns the usbmuxd entry for a device, preferring USB: a phone
-// that also syncs over Wi-Fi is listed twice, and a tunnel over Wi-Fi is
-// several times slower and loses video packets.
-func findEntry(udid string) (goios.DeviceEntry, error) {
+// findEntry returns the usbmuxd entry for a device. A phone that is on USB
+// and Wi-Fi at once is listed twice; USB wins unless wifi asks for the
+// network entry, which then must exist.
+func findEntry(udid string, wifi bool) (goios.DeviceEntry, error) {
 	list, err := goios.ListDevices()
 	if err != nil {
 		return goios.DeviceEntry{}, fmt.Errorf("usbmuxd: %w", err)
@@ -57,11 +63,18 @@ func findEntry(udid string) (goios.DeviceEntry, error) {
 		if e.Properties.SerialNumber != udid {
 			continue
 		}
-		if found == nil || e.Properties.ConnectionType == "USB" {
+		network := e.Properties.ConnectionType == "Network"
+		if wifi && !network {
+			continue
+		}
+		if found == nil || !network {
 			found = &list.DeviceList[i]
 		}
 	}
 	if found == nil {
+		if wifi {
+			return goios.DeviceEntry{}, fmt.Errorf("iPhone %s is not reachable over Wi-Fi", udid)
+		}
 		return goios.DeviceEntry{}, fmt.Errorf("iPhone %s is not connected", udid)
 	}
 	return *found, nil

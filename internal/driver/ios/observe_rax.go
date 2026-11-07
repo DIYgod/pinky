@@ -105,7 +105,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		defer wg.Done()
 		t := time.Now()
 		var pushed bool
-		els, complete, pushed, walkErr = d.raxTree(ctx, rax)
+		els, complete, pushed, walkErr = d.raxTree(ctx, rax, &st.Trace)
 		st.Walk = time.Since(t)
 		if pushed {
 			st.Source = "remoteax-push"
@@ -229,9 +229,14 @@ const (
 // its first tree came at least raxPushAfter after the input and its app is
 // the frontmost app the walk found first: a push can arrive late, after
 // the next input, and then describes the screen before it.
-func (d *Device) raxTree(ctx context.Context, rax *raxSession) ([]raxElement, bool, bool, error) {
+func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) ([]raxElement, bool, bool, error) {
 	input := d.lastInputAt()
 	trusted := time.Since(input) < raxPushTrust
+	t0 := time.Now()
+	note := func(format string, args ...any) {
+		*trace = append(*trace, fmt.Sprintf("%v ", time.Since(t0).Round(time.Millisecond))+fmt.Sprintf(format, args...))
+	}
+	note("input %v ago, trusted %v", t0.Sub(input).Round(time.Millisecond), trusted)
 	var stop atomic.Bool
 	apps := make(chan *axpObject, 1)
 	walked := walkDetached(ctx, rax, &stop, func(app *axpObject) { apps <- app })
@@ -254,9 +259,11 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession) ([]raxElement, bo
 			return nil
 		}
 		if !t.first || !t.unnamed() {
+			note("push (first %v) from %v after the input", t.first, t.start.Sub(input).Round(time.Millisecond))
 			return t
 		}
 		if first == nil || first.start != t.start {
+			note("first push with unnamed elements, %v after the input", t.start.Sub(input).Round(time.Millisecond))
 			first = t
 			second = time.After(raxSecondPush)
 		}
@@ -267,16 +274,19 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession) ([]raxElement, bo
 	for {
 		select {
 		case r := <-walked:
+			note("walk: %d elements, err %v", len(r.els), r.err)
 			if r.err != nil || len(r.els) > 1 || rewalked {
 				return r.els, r.complete, false, r.err
 			}
 			empty = time.After(raxEmptyWait)
 			walked = nil
 		case <-empty:
+			note("walk again")
 			walked = walkDetached(ctx, rax, &stop, nil)
 			empty = nil
 			rewalked = true
 		case app = <-apps:
+			note("frontmost app pid %d", app.PID)
 			if u := consider(t); u != nil {
 				stop.Store(true)
 				return u.els, true, true, nil
@@ -288,6 +298,7 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession) ([]raxElement, bo
 				return u.els, true, true, nil
 			}
 		case <-second:
+			note("no second push; using the first")
 			stop.Store(true)
 			return first.els, true, true, nil
 		case <-ctx.Done():
@@ -528,6 +539,9 @@ func raxRole(e raxElement, inTabBar bool) (string, []string) {
 				role = screen.RoleButton
 			}
 		}
+	}
+	if role == screen.RoleOther && e.IdentValue {
+		role = screen.RoleText // shows a value and nothing else
 	}
 	if inTabBar && role == screen.RoleButton {
 		role = screen.RoleTab

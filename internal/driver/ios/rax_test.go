@@ -245,6 +245,25 @@ func TestRAXRole(t *testing.T) {
 	}
 }
 
+// Calculator's display names its value in its identifier.
+func TestRAXElementIdentifierValue(t *testing.T) {
+	e, _ := raxElementFrom(&axpObject{ID: 1}, axpDict{axpAttrIdentifier: "StandardInputView;value:144", axpAttrRole: 4}, 0, 1)
+	if e.Ident != "StandardInputView" || e.Value != "144" {
+		t.Errorf("ident %q, value %q; want StandardInputView and 144", e.Ident, e.Value)
+	}
+	if role, _ := raxRole(e, false); role != screen.RoleText || raxLabel(e, role) != "144" {
+		t.Errorf("the display reads %s %q; want text \"144\"", role, raxLabel(e, role))
+	}
+	e, _ = raxElementFrom(&axpObject{ID: 2}, axpDict{axpAttrIdentifier: "Display;value:12", axpAttrValue: "13"}, 0, 1)
+	if e.Ident != "Display" || e.Value != "13" {
+		t.Errorf("ident %q, value %q; want the element's own value to win", e.Ident, e.Value)
+	}
+	e, _ = raxElementFrom(&axpObject{ID: 3}, axpDict{axpAttrIdentifier: "com.apple.settings.general"}, 0, 1)
+	if e.Ident != "com.apple.settings.general" || e.Value != "" {
+		t.Errorf("a plain identifier changed: %+v", e)
+	}
+}
+
 func TestRAXLabel(t *testing.T) {
 	for _, c := range []struct {
 		e    raxElement
@@ -255,7 +274,8 @@ func TestRAXLabel(t *testing.T) {
 		{raxElement{Label: "Airplane Mode", Value: "0"}, screen.RoleSwitch, "Airplane Mode"},
 		{raxElement{Value: "Search"}, screen.RoleInput, "Search"},
 		{raxElement{Placeholder: "Name"}, screen.RoleInput, "Name"},
-		{raxElement{Ident: "StandardInputView;value:7"}, screen.RoleOther, "StandardInputView;value:7"},
+		{raxElement{Ident: "StandardInputView"}, screen.RoleOther, "StandardInputView"},
+		{raxElement{Ident: "StandardInputView", Value: "144"}, screen.RoleText, "144"},
 		{raxElement{Label: "Clock", ValueText: "3:51 AM"}, screen.RoleButton, "Clock, 3:51 AM"},
 	} {
 		if got := raxLabel(c.e, c.role); got != c.want {

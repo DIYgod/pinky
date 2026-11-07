@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -47,6 +48,7 @@ const (
 	axpAttrAttributedLabel  = 3
 	axpAttrChildren         = 8
 	axpAttrNavigationOrder  = 9  // children in VoiceOver's order
+	axpAttrFocusedElement   = 19 // of an application: the element with keyboard focus
 	axpAttrFrame            = 21 // screen coordinates, in points
 	axpAttrHelp             = 23
 	axpAttrIdentifier       = 25
@@ -406,6 +408,7 @@ type raxElement struct {
 	Placeholder string
 	ValueText   string // ValueDescription
 	Ident       string
+	IdentValue  bool // Value came from the identifier (a display, like Calculator's)
 	Frame       axpRect
 	HasFrame    bool
 	Type        int // XCUIElementType; 0 in a first pushed tree
@@ -428,6 +431,16 @@ func raxElementFrom(o *axpObject, ad axpDict, parent, depth int) (raxElement, []
 	e.Placeholder, _ = ad[axpAttrPlaceholder].(string)
 	e.ValueText, _ = ad[axpAttrValueDescription].(string)
 	e.Ident, _ = ad[axpAttrIdentifier].(string)
+	// Some apps carry the value in the identifier (Calculator's display is
+	// "StandardInputView;value:144", with no label or value): keep the
+	// name as the identifier, which stays the same, and the rest as the
+	// value.
+	if name, v, ok := strings.Cut(e.Ident, ";value:"); ok && name != "" {
+		e.Ident = name
+		if e.Value == "" {
+			e.Value, e.IdentValue = v, true
+		}
+	}
 	e.Frame, e.HasFrame = ad[axpAttrFrame].(axpRect)
 	e.Type = toInt(ad[axpAttrAutomationType])
 	e.AXRole = toInt(ad[axpAttrRole])
@@ -529,6 +542,30 @@ func (s *raxSession) walkUntil(ctx context.Context, lim walkLimits, stop *atomic
 		}
 	}
 	return out, true, nil
+}
+
+// focusedElement returns the frontmost app's focused element, or nil when
+// nothing has keyboard focus.
+func (s *raxSession) focusedElement(ctx context.Context) (*axpObject, error) {
+	app, err := s.frontmostApp(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r, err := s.request(ctx, axpRequest{Type: axpReqAttribute, Attribute: axpAttrFocusedElement, Object: app, Client: raxClientType})
+	if err != nil {
+		return nil, err
+	}
+	el, _ := r.Result.(*axpObject)
+	return el, nil
+}
+
+// stringAttribute reads one attribute of an element as text.
+func (s *raxSession) stringAttribute(ctx context.Context, o *axpObject, attr int) (string, error) {
+	r, err := s.request(ctx, axpRequest{Type: axpReqAttribute, Attribute: attr, Object: o, Client: raxClientType})
+	if err != nil {
+		return "", err
+	}
+	return axpString(r.Result), nil
 }
 
 // Close tells the phone this client is gone and closes the connection.
