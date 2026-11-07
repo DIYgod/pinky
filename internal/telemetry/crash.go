@@ -242,7 +242,9 @@ func (c *Crashes) scanRun(path, id string) {
 	r := CrashReport{ID: id, Process: nonEmpty(h.Process, "app"), Version: h.Version, OS: h.OS, OSVersion: h.OSVersion,
 		Arch: h.Arch, GoVersion: h.GoVersion, Started: h.Started, Crashed: crashed}
 	r.Stack, r.Reason = crashText(string(rest), NewRedactor())
-	if !strings.HasPrefix(r.Reason, "panic: ") && !strings.HasPrefix(r.Reason, "fatal error: ") {
+	if strings.HasPrefix(r.Reason, "goroutine ") {
+		// A fatal error, whose message the runtime printed before the
+		// copy to the crash file began.
 		r.Reason = fatalReason(r.Stack, filepath.Join(filepath.Dir(c.dir), h.Process+".log"), crashed)
 	}
 	out, err := json.MarshalIndent(r, "", "  ")
