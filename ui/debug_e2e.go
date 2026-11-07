@@ -13,6 +13,7 @@ func init() {
 			{Label: "Open Flyout", Click: func(*mygo.MenuItem, *mygo.Window) { a.toggleFlyout() }},
 			{Label: "Show Approval Panel", Click: func(*mygo.MenuItem, *mygo.Window) { a.showPanel(false) }},
 			{Label: "Hide Main Window", Click: func(*mygo.MenuItem, *mygo.Window) { a.main.Hide() }},
+			{Label: "Show Main Window", Click: func(*mygo.MenuItem, *mygo.Window) { a.showMain() }},
 		}}
 	}
 }
