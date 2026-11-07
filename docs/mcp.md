@@ -1,24 +1,28 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pinky mcp`, a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
+
+Settings › Agents › Add an agent shows both commands below for the copy of Pinky that is open, by its own path, with buttons that copy them.
 
 Claude Code:
 
 ```sh
-claude mcp add pinky -- pinky mcp
+claude mcp add pinky -- pinkyctl mcp
 ```
 
-On a Mac with Homebrew's coreutils, `pinky` on the `PATH` may be coreutils' own `pinky` (`pinky --version` says GNU coreutils; Claude Code then reports "Connection closed"). Use the app's path: `claude mcp add pinky -- /Applications/Pinky.app/Contents/MacOS/Pinky mcp`.
+`pinkyctl` is the command that Homebrew's cask (`brew install --cask diygod/tap/pinky`) and the Linux packages put on the `PATH`. Without them, or for agents started from the Dock or the Start menu, which may not see the terminal's `PATH`, give the app's own executable instead: `/Applications/Pinky.app/Contents/MacOS/Pinky` on a Mac, `Pinky.exe` in `%LOCALAPPDATA%\Programs\Pinky` on Windows, `/opt/pinky/pinky` (the .deb) or `~/.local/pinky.app/pinky` (the .tar.gz's `install.sh`) on Linux.
+
+The command used to be named `pinky`, which is also a coreutils command (on many Macs through Homebrew's coreutils, and on every Linux): an agent set up with `pinky mcp` that reports "Connection closed" runs coreutils' `pinky` (`pinky --version` says GNU coreutils). Set it up again with `pinkyctl mcp` or the app's path.
 
 Any client that takes a JSON config:
 
 ```json
-{ "mcpServers": { "pinky": { "command": "pinky", "args": ["mcp"] } } }
+{ "mcpServers": { "pinky": { "command": "pinkyctl", "args": ["mcp"] } } }
 ```
 
-To try Pinky without a phone, use `pinky mcp --fake` (it starts `pinky daemon --fake` when no gateway runs) or run `pinky daemon --fake` yourself first.
+To try Pinky without a phone, use `pinkyctl mcp --fake` (it starts `pinkyctl daemon --fake` when no gateway runs) or run `pinkyctl daemon --fake` yourself first.
 
 ### Over HTTP
 
@@ -27,7 +31,7 @@ For agents on another machine, in a container, or clients that speak only HTTP, 
 Claude Code:
 
 ```sh
-claude mcp add --transport http pinky http://127.0.0.1:7465/mcp --header "Authorization: Bearer $(pinky token)"
+claude mcp add --transport http pinky http://127.0.0.1:7465/mcp --header "Authorization: Bearer $(pinkyctl token)"
 ```
 
 A JSON config:
