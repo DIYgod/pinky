@@ -9,6 +9,7 @@ Status, round three (2026-11-07): everything the round asked for is built and ch
 | `internal/driver/android/adb` | A client for the adb server protocol: `host:version`, `host:devices-l`, `host:track-devices-l`, `host-serial:<serial>:features`, `host:transport:<serial>`, `shell:` (v1, interleaved output), `shell,v2,raw:` (stdout, stderr, exit code), `exec:` (binary-safe), `sync:` (push, pull, `STAT`/`LST2`, `LIST`/`LIS2`, several requests on one connection), local sockets, forwards, and wireless debugging: `host:mdns:check`, `host:mdns:services`, `host:pair:`, `host:connect:`. It reuses the running server; it never kills or restarts it. `StartServer` exists for a caller that finds no server; nothing calls it automatically. |
 | `internal/driver/android/scrcpy` | The bundled scrcpy 5.0.1 server (`server/`, with its Apache-2.0 license and checksum) and its protocol: `key=value` options, the video stream headers, control messages, device messages, `start_app` results read from the server log, and `list_apps`. The options that would keep a screen awake or press POWER do not exist and are dropped from raw extras. |
 | `internal/driver/android` | The driver. `Provider` (also `driver.Pairer`), `Device` (also `Toucher`, `LockReporter`, `Clipboard`, `Settler`, `PersonWatcher`, `Waker`, `Unlocker`, `Files`, `Backgrounder`, `CompanionInstaller`), and `Background`, the device a background display gives (`Toucher`, `LockReporter`, `Clipboard`, `Settler`, `Files`). |
+| `internal/driver/android/mdns` | Pinky's own mDNS search (RFC 6762/6763), questions only: the adb server's discovery stops working after the computer's network changes. See [Wi-Fi without adb's discovery](#wi-fi-without-adbs-discovery). |
 | `internal/driver/android/companion` | The Go client for the companion app (owned by this session since round three; the app itself is the companion session's). Round three added `TurnOn`, `KeepEnabled`, `EnabledForTask`, `Uninstall`, `InstalledVersion`, `APKVersion`, `Info.Features` and a display for `set_text`. |
 | `internal/driver/android/cmd/androidctl` | A debug command for every feature, with timings. |
 
@@ -30,7 +31,8 @@ Shared contracts: none changed by this session. `cmd/pinky/companion.go` (gatewa
 - **Background displays (`driver.Backgrounder`).** `OpenBackground` opens a scrcpy virtual display at the main display's size without system decorations, with the keyboard kept on it, and starts the app. The device it returns streams, observes (through the companion), takes input and settles on that display only, and closes it on Close. **The person's tasks are never destroyed:** starting an app the person already has a task for moves that task to the virtual display (Android reuses it), so before every start the driver notes which tasks are elsewhere (`cmd activity stack list`), and Close moves those back to the main display (`cmd activity display move-stack <id> 0`) before the display goes and takes only the agent's own tasks with it. A task given back lands on top of the main display: Android has no shell command to put it lower. `DisplayOptions.KeepContent` (`androidctl bg -keep`) moves every task to the main display instead, also on top. From Android 13 the display is always unlocked and has its own display group, so it keeps working while the phone is off and locked ([below](#background-displays-while-the-phone-is-off-and-locked)); there `Background.Locked` is false, and the display gets a key that does nothing (`KEYCODE_UNKNOWN`) every 4 s without other input, which keeps its display group awake through the lock screen's 10 s timeout. Its reads turn the companion on again at once after a failure (there is no uiautomator to fall back on there) and retry once. `Type` uses the companion's `set_text` on that display when the app has the `displays` feature, and settle waits for that display's events too.
 - **Companion app.** When `app.pinky.companion` is installed, the first Observe or Type turns its service on for the driver's reads (`Enable`) unless it is on already, and a minute without driver calls, or Close, turns it off again, restoring the setting exactly. A service the person turned on (`InstallCompanion` does that) stays on. Several drivers (two Pinky processes, Pinky and `androidctl`) can share it: a driver closing leaves the service on while another client is connected, and the last one to leave turns it off, exactly as found when it turned it on itself, or by removing only Pinky's entry when another driver had turned it on. A service the person turned on for good (Install; the app then keeps `idle_disable_ms` 0) stays on. Events are tracked per display (`display` in each event; -1 counts for every display).
 - **The companion installer (`driver.CompanionInstaller`).** `CompanionState`: `missing` (or `no_apk` when Pinky has no APK either), `outdated` when the installed versionCode is lower than the bundled APK's (`assets/pinky-companion.json` in the APK, which the companion build writes since round three; versionCode is the commit count), `on` when the service is listed and answers a ping, else `off`. While the driver has the service on only for its own reads, the state is `off`: the person has not turned it on. `InstallCompanion` installs when the phone has none or an older build. A build signed with another key (any build from before round three, such as the Mi's) cannot be updated in place: the driver turns it off, uninstalls Pinky's own package and installs the new one. It then turns the service on for good (`TurnOn`: only Pinky's entry is added, every other entry stays), waits for it to answer, and stops the app's idle backstop (`idle_disable_ms` 0), which would otherwise turn the service off after three minutes without a connection. From build 73 the app keeps that setting across restarts (a reboot, an update, a uiautomator dump) and forgets it when its entry leaves the setting (the person turns the service off, `Disable`, `ForceDisable`), so the driver's own on-demand `Enable` keeps the three-minute backstop. Checked on `emulator-5560` with build 73: turned on through the installer, the service was still listed and answering 3 min 24 s later with no connection. Play Protect may make the phone ask the person; the call waits up to its context.
-- **Pairing (`driver.Pairer`, on the Provider).** `StartPairing` makes a random service name (`pinky-xxxxxxxxxx`) and password, `QR()` returns `WIFI:T:ADB;S:<name>;P:<password>;;`, and `Wait` polls the adb server's mDNS services for the phone's `_adb-tls-pairing._tcp` service of that name, pairs with `host:pair:<password>:<addr>`, and waits up to 30 s for the phone to come online. The server may connect by itself (serial `adb-<serial>-<suffix>._adb-tls-connect._tcp`); otherwise the driver connects to the phone's `_adb-tls-connect._tcp` service, found by the guid `host:pair` reports, or by the address it paired from. `PairWithCode` does the same with the address and six-digit code the phone shows. A real adb server (platform-tools 37) answers `host:pair` with OKAY and then a second OKAY or FAIL once the pairing is over; `Pair` reads both forms.
+- **Pairing (`driver.Pairer`, on the Provider).** `StartPairing` makes a random service name (`pinky-xxxxxxxxxx`) and password, `QR()` returns `WIFI:T:ADB;S:<name>;P:<password>;;`, and `Wait` looks for the phone's `_adb-tls-pairing._tcp` service of that name both in the adb server's mDNS services and in the driver's own search (`Config.Browser`, package `mdns`), pairs with `host:pair:<password>:<addr>`, and waits up to 30 s for the phone to come online. A server whose discovery lists the phone may connect by itself (serial `adb-<serial>-<suffix>._adb-tls-connect._tcp`) and gets a second for it; otherwise the driver connects at once to the phone's `_adb-tls-connect._tcp` service, from either list, found by the guid `host:pair` reports, or by the address it paired from. `PairWithCode` does the same with the address and six-digit code the phone shows. A pairing reports its progress (`driver.PairingReporter`: found, paired, and whether the system blocks the search). When the phone paired but its connect service shows up nowhere, the error wraps `driver.ErrPairedNotFound`, and `ConnectWiFi` (`driver.WiFiConnector`) connects at the address Wireless debugging shows. A real adb server (platform-tools 37) answers `host:pair` with OKAY and then a second OKAY or FAIL once the pairing is over; `Pair` reads both forms. Pairing returns the phone by the id `List` gives it (over Wi-Fi its hardware serial); before 2026-11-07 it looked it up by the connection's serial and failed with not found after a real pairing.
+- **Reconnecting over Wi-Fi (`Config.ReconnectWiFi`, on in the app).** `List` starts a pass in the background when one is due: the guids in the adb server's `~/.android/adb_known_hosts.pb` (the phones it paired with) that have no connection in use and that the server's discovery does not list are searched for on the network for up to 4 s, and the ones found are connected by address (`host:connect`). Passes come 5 s after a phone came or went, then back off from 10 s to 2 minutes while a paired phone stays away, and once a minute while all are there. A computer that never paired a phone over Wi-Fi never searches.
 - **Person input** (`PersonInput`): `getevent` on the touchscreens and hardware-key devices from `getevent -lp`: direct multi-touch devices, or, on a phone without any (the emulators' virtio touchscreens have no input properties), its multi-touch devices; devices with power, volume, home, back, menu or recents keys; never `uinput` devices. Injected input never reaches /dev/input, so it is not reported. At most one signal per 300 ms.
 - **Observe:** the companion's tree when it is on, else `uiautomator dump`; lock and keyboard state from the window manager in parallel. The screen conversion lists an input method window's elements whenever the app sends its nodes (build 70 sends them unasked for a keyboard sheet that covers the screen, such as Gboard's stylus tutorial), and hides what lies under a higher window by its touchable `region` when the app sends one (Android 13+), else by its bounds: Gboard's stylus toolbar spans the lower half of the screen but covers only a narrow strip. When a tree is still empty while the keyboard shows (older builds, such as the Mi's), the driver reads again with the keyboard's window, then falls back to uiautomator for that read.
 
@@ -54,7 +56,8 @@ bg, _ := dev.(driver.Backgrounder).OpenBackground(ctx, driver.BackgroundOptions{
 - `CompanionState` costs one `dumpsys package` (7 to 80 ms), plus `settings get` and a ping when the app is current. `InstallCompanion` may take minutes on a phone where Play Protect asks.
 - `func (d *android.Device) SetUpCompanion(ctx context.Context, force bool) (android.CompanionInstall, error)` does what `InstallCompanion` does and reports `APK`, `Bundled` and `Before` (versions), `Installed` and `Replaced`; `force` also installs over the same versionCode when the file differs. `android.FindCompanionAPK()` looks at `$PINKY_COMPANION_APK`, `pinky-companion.apk` next to the executable, `../Resources/pinky-companion.apk` (macOS bundle), then the debug build under the working directory.
 - `Stream` returns `ErrUnsupported` on a phone whose encoder fails; input still works there.
-- **`cmd/pinky`'s `onlyProvider` (`PINKY_DEVICES`) hides `driver.Pairer`:** it embeds `driver.Provider` only, so `Gateway.StartPairing` finds no pairer while that variable is set. gateway-core may want to forward it.
+- **`cmd/pinky`'s `onlyProvider` (`PINKY_DEVICES`) hides `driver.Pairer`:** it embeds `driver.Provider` only, so `Gateway.StartPairing` finds no pairer while that variable is set. gateway-core may want to forward it. (Since forwarded, with `driver.WiFiConnector` and the pairing's progress.)
+- **The app sets `ReconnectWiFi`.** Other providers (`androidctl`, `cmd/pinky/companion.go`, tests) leave it off, so they never search the network unasked; pairing searches whatever the setting.
 
 ## How to run
 
@@ -74,6 +77,22 @@ scripts/devlock.sh emulator-5560 $A -s emulator-5560 bg -app com.google.android.
 
 `bg` runs steps on a background display; its `state` step prints whether the phone's own screen is on and locked. Never pass a PIN on the command line.
 
+Wi-Fi, against a second adb server whose discovery is off, which stands in for one whose discovery stopped and leaves the shared server (and its emulators) alone:
+
+```sh
+ADB=~/Library/Android/sdk/platform-tools/adb
+ADB_MDNS=0 ADB_USB=0 ADB_EMU=0 $ADB -P 5038 start-server   # no discovery, no USB, no emulators
+export ADB_SERVER_SOCKET=tcp:127.0.0.1:5038
+$A wifi-search -seconds 8                                  # what Pinky's own search sees
+scripts/devlock.sh 3e8be48e $A -v pair-qr /tmp/pinky-android/qr.png   # scan it on the phone
+scripts/devlock.sh 3e8be48e $A -v pair-code 192.168.5.137:37109 123456
+scripts/devlock.sh 3e8be48e $A wifi-connect 192.168.5.137:38161
+scripts/devlock.sh 3e8be48e $A -v wifi-reconnect -seconds 60          # $ADB -P 5038 disconnect … meanwhile
+$ADB -P 5038 kill-server
+```
+
+On macOS the binary needs Local Network access ([below](#macos-local-network-privacy)); sign it once with an identifier (`codesign -s - -f --identifier app.pinky.androidctl $A`) and keep that build.
+
 Tests:
 
 ```sh
@@ -83,6 +102,44 @@ scripts/devlock.sh emulator-5560 env PINKY_DEVICE=emulator-5560 PINKY_TEST_PIN=1
 ```
 
 On a phone the device tests use only the home screen, Settings search and the Calculator, and skip what needs an emulator. On emulators they also press power, unlock with `PINKY_TEST_PIN`, use the phone app's keypad where there is no Calculator, install the companion and change the accessibility setting (put back afterwards). `PINKY_TAPS` sets the taps per batch of `TestDeviceTapsLand` (40).
+
+## Wi-Fi without adb's discovery
+
+2026-11-07. The owner's Homebrew Pinky 2026.1107.1 sat on "Pairing…" on both the Mac and the Mi: the adb server listed no mDNS service at all, while `dns-sd -B _adb-tls-pairing._tcp` showed the phone's. Restarting the server fixed it at once, as it had that morning for a server running since 5 November.
+
+**Why the server stops seeing the network.** Its log (`$TMPDIR/adb.501.log`) shows the server of 15:24 reconnecting the Mi over Wi-Fi at 15:24, 15:28 and 16:07, then losing it at 21:18 and never finding it again. At 21:08:40 an iPhone was plugged in: macOS attached its USB network interfaces (`en10`, `anri0`) and configd logged "network changed" at 21:09:20. The server's discovery (openscreen, `mdns daemon version [adb discovery 0.0.0]`) does not survive such a change, and stays blind until it restarts. Plugging in an iPhone, a VPN or a sleep is enough, so on a computer that runs for days it is the normal case.
+
+**What Pinky does now.** It searches for `_adb-tls-pairing._tcp` and `_adb-tls-connect._tcp` itself (package `mdns`) whenever it pairs, and in the background while a paired phone is away, and connects by address; see How it works. It never restarts the server. In the logs: "the adb server's discovery does not list …; Pinky found it at …".
+
+**How the Mi answers mDNS** (LineageOS 24, Android 17, measured from the Mac):
+
+- A question with the unicast-response bit from another port than 5353 gets its answer straight back, with the SRV, TXT, A, AAAA and NSEC records in the additional section. A plain question gets a multicast answer (which the group socket reads); a plain question sent straight to the phone gets a multicast answer too. It does not answer a legacy unicast question (`dig @224.0.0.251 -p 5353`) with its id.
+- Asleep, it misses the first questions: answers came from the second to the fourth (1–5 s), and at times it answered nothing for a minute. The search asks at 0, 1, 2, 4, 6 and 10 s, then every 5 s.
+- After the pairing dialog closes, its pairing service says goodbye (TTL 0) and leaves the search's list at once.
+
+### macOS Local Network privacy
+
+Searching needs Local Network access (macOS 15 and later), and the system gives no error when it is missing: sends succeed and nothing comes back. What was seen on this Mac (macOS 27.2):
+
+- It is decided per executable. Go builds carry the ad-hoc identifier `a.out`; a binary that searched fine stopped receiving anything when copied to another path or rebuilt, while `/usr/bin/python3`, the `dig` binary and a build re-signed with `--identifier app.pinky.androidctl` were let through. TCP connections to the phone worked from every binary. Test binaries built by `go test` are blocked, so `TestDeviceBrowse` reports `mdns: not allowed…` here; the unit tests use the loopback only.
+- A process the app starts (the adb server, when Pinky starts it) counts as the app.
+- `nehelper` keeps a rule for `app.pinky.desktop`; whether the owner's Pinky is allowed was not checked. Pinky.app now explains its prompt (`NSLocalNetworkUsageDescription`, English in `cmd/pinky/mygo.json`, Chinese in `cmd/pinky/resources/darwin/zh-Hans.lproj/InfoPlist.strings`).
+- The search tells a blocked process by its own questions: they loop back to its group socket within milliseconds when allowed (multicast loopback) and never when blocked. After 1.5 s without one, `Err` wraps `mdns.ErrNotAllowed`, the pairing reports `NotAllowed`, and Add phone offers Privacy & Security › Local Network.
+
+### Checked on the Mi (owner at the phone)
+
+With a second server on port 5038 with discovery off (How to run), `androidctl` from this branch:
+
+| What | Result |
+| --- | --- |
+| `wifi-search` | The Mi's connect service in 1.4–5.2 s |
+| `wifi-reconnect`, nothing connected | Connected the Mi by address in 6.2 s, listed as `3e8be48e` (its hardware serial) |
+| The same, connection dropped (`adb -P 5038 disconnect`) | Back 10 s later (5 s to the pass, then the search) |
+| `pair-qr`, scanned on the Mi | Found the pairing service, paired in under 0.25 s, connected 0.6 s later; returned as `3e8be48e` |
+| `pair-code` with the dialog's code and address | Paired and connected in 2.4 s |
+| `wifi-connect` | The right address at once; a closed port: "failed to connect to '192.168.5.137:5555': Connection refused" |
+
+The shared server on 5037 kept its connections to the Mi and `emulator-5560` throughout; the server on 5038 was stopped afterwards. The Mi was paired with this Mac twice more (QR, code), which only adds this Mac's key to its paired devices.
 
 ## Round three results
 
@@ -159,7 +216,7 @@ Totals after the fix: 320 taps on Android 16 and 280 on Android 10, none lost. T
 | Companion state and install | State only: `outdated` (build 1 vs 69) | Yes, all states | Yes, incl. replacing a build signed with another key | |
 | Background display | Yes, Calculator, unlocked | Yes, also off and locked | No (needs video) | |
 | Person input | Pinky's input gives no signal (round two) | Finger: one signal; Pinky: none | Same | |
-| Pairing | Fake servers only; a real pairing needs someone at a phone | | | |
+| Pairing | Yes (2026-11-07, owner at the phone): QR code and pairing code on a server with discovery off, found by Pinky's own search; connect by address; reconnect after a drop | Fake servers | | |
 
 ## The Mi 10 Pro in round three
 
@@ -208,11 +265,18 @@ Round three:
 26. **A no-op key keeps a background display awake** while it is open, rather than a wake lock (which would need a change to the bundled scrcpy server or the companion app) or `KEYCODE_WAKEUP` (which wakes the phone's own screen). It is sent only after 4 s without other input on the display.
 27. **The last driver to leave turns the companion off,** so two Pinky processes (or Pinky and `androidctl`) do not cut each other off and the setting still goes back: the app's three-minute backstop did not turn the service off on `emulator-5560` in a four-minute wait with no client: build 73 restarted its count whenever Android bound the service again, which every `uiautomator dump` causes. Build 74 fixed that, but older builds (the Mi's) still have it, so the driver does not rely on the backstop.
 
+Wi-Fi without adb's discovery (2026-11-07):
+
+28. **Pinky searches the network itself instead of restarting the adb server.** A restart fixes the server's discovery but drops every other tool's connections and the emulators', and the next network change breaks it again. The server still pairs and connects; only finding the phone moved to the driver.
+29. **Questions with the unicast-response bit from a port of Pinky's own, answers also read on a socket bound to the group address.** The Mi answers such questions straight back and multicasts answers to plain ones; binding the wildcard address on 5353, as most libraries do, would take the unicast answers meant for mDNSResponder. Pinky never answers or announces anything.
+30. **Reconnect what adb would:** the phones in its known hosts, when their connect service is on the network and the server does not list it. A phone the server lists is left to the server.
+31. **A search the system blocks is told by its own questions not coming back** (multicast loopback to the group socket), since macOS drops a blocked app's traffic without an error.
+
 ## Not done, and open questions
 
 - **Android 10 to 12 with a background display while locked:** expected not to work (see above); needs a real phone.
 - **A wake lock instead of the keep-awake key:** the companion session could add a `keep_awake` command that puts a 1-pixel, untouchable accessibility overlay with `FLAG_KEEP_SCREEN_ON` on a given display, which recent Android versions turn into a wake lock for that display. Not built or tested; the key works.
-- **A real Wi-Fi pairing:** needs someone at a phone. The adb server here has mDNS (`adb discovery`).
+- **The app's own Local Network prompt** was not seen: the verification ran through `androidctl`. A Pinky.app without Local Network access shows "Pinky isn't allowed to look for phones on this network" in Add phone after 30 s.
 - **The Mi:** locked since about 10:36, probably by someone at it; Stay awake keeps its screen on while charging, which the owner may want off. It still has companion build 1; `InstallCompanion` there will replace it and Play Protect will ask.
 - **The Pixel:** still offline.
 - **Screenshot on a virtual display** returns `ErrUnsupported` (`screencap` rejects virtual display ids); decode a frame from the display's stream.
