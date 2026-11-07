@@ -179,6 +179,10 @@ const (
 	MaxBatchSteps  = 50
 )
 
+// waitForOCREvery is how often phone_wait_for also reads the screen with
+// OCR, which is slow on phones that need a screenshot for it.
+const waitForOCREvery = time.Second
+
 // Session is one agent connection. It may hold several devices.
 type Session struct {
 	g       *Gateway
@@ -876,6 +880,11 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 	lastProgress := start
 	var cur *screen.Screen
 	matched := false
+	// Text that only the pixels show (a web view, a canvas) is in OCR
+	// elements, which tree reads leave out: read with OCR as well, at most
+	// once a second, and count its answer until the next such read.
+	var lastOCR time.Time
+	ocrFound := false
 	for {
 		var err error
 		cur, err = g.observe(ctx, l.dev, false)
@@ -887,6 +896,17 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 		evs := append([]screen.Event(nil), l.dev.events...)
 		g.mu.Unlock()
 		found := screenHas(view, evs, text)
+		if !found && time.Since(lastOCR) >= waitForOCREvery {
+			if o, err := g.observe(ctx, l.dev, true); err == nil {
+				lastOCR = time.Now()
+				ov, _ := g.agentView(o)
+				ocrFound = screenHas(ov, evs, text)
+				if ocrFound || req.Gone {
+					cur = o
+				}
+			}
+		}
+		found = found || ocrFound
 		if found != req.Gone {
 			matched = true
 			break
