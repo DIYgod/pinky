@@ -136,7 +136,6 @@ var loadSecurity = sync.OnceValues(func() (*security, error) {
 	fn(secLib, &s.SecItemUpdate, "SecItemUpdate")
 	fn(secLib, &s.SecItemDelete, "SecItemDelete")
 	fn(secLib, &s.SecCopyErrorMessageString, "SecCopyErrorMessageString")
-	fn(secLib, &s.SecKeychainSetUserInteractionAllowed, "SecKeychainSetUserInteractionAllowed")
 	s.kSecClass = constant(secLib, "kSecClass")
 	s.kSecClassGenericPassword = constant(secLib, "kSecClassGenericPassword")
 	s.kSecAttrService = constant(secLib, "kSecAttrService")
@@ -147,10 +146,19 @@ var loadSecurity = sync.OnceValues(func() (*security, error) {
 	s.kSecReturnData = constant(secLib, "kSecReturnData")
 	s.kSecMatchLimit = constant(secLib, "kSecMatchLimit")
 	s.kSecMatchLimitOne = constant(secLib, "kSecMatchLimitOne")
-	s.kSecUseAuthenticationUI = constant(secLib, "kSecUseAuthenticationUI")
-	s.kSecUseAuthenticationUIFail = constant(secLib, "kSecUseAuthenticationUIFail")
 	if len(missing) > 0 {
 		return nil, fmt.Errorf("secret: the Security framework lacks %v", missing)
+	}
+	// Deprecated, and only refinements: without them Has may ask to
+	// unlock a locked keychain, and the tests cannot turn prompts off.
+	if sym, err := purego.Dlsym(secLib, "SecKeychainSetUserInteractionAllowed"); err == nil && sym != 0 {
+		purego.RegisterFunc(&s.SecKeychainSetUserInteractionAllowed, sym)
+	}
+	ui, err1 := purego.Dlsym(secLib, "kSecUseAuthenticationUI")
+	fail, err2 := purego.Dlsym(secLib, "kSecUseAuthenticationUIFail")
+	if err1 == nil && err2 == nil && ui != 0 && fail != 0 {
+		s.kSecUseAuthenticationUI = **(**cf)(unsafe.Pointer(&ui))
+		s.kSecUseAuthenticationUIFail = **(**cf)(unsafe.Pointer(&fail))
 	}
 	return s, nil
 })
@@ -279,7 +287,9 @@ func (k keychain) Has(account string) bool {
 	o.set(q, s.kSecMatchLimit, s.kSecMatchLimitOne)
 	// Never ask the person here, not even to unlock the keychain: a
 	// keychain that needs them reads as nothing saved.
-	o.set(q, s.kSecUseAuthenticationUI, s.kSecUseAuthenticationUIFail)
+	if s.kSecUseAuthenticationUI != 0 {
+		o.set(q, s.kSecUseAuthenticationUI, s.kSecUseAuthenticationUIFail)
+	}
 	return s.SecItemCopyMatching(q, nil) == errSecSuccess
 }
 
@@ -375,6 +385,9 @@ func setInteractionAllowed(allowed bool) error {
 	s, err := loadSecurity()
 	if err != nil {
 		return err
+	}
+	if s.SecKeychainSetUserInteractionAllowed == nil {
+		return errors.New("secret: this macOS cannot turn the keychain's prompts off")
 	}
 	return s.statusError("set interaction", s.SecKeychainSetUserInteractionAllowed(allowed))
 }
