@@ -1,6 +1,6 @@
 # iOS driver notes
 
-Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found on a real iPhone. Measured on 2026-11-07 with an iPhone 13 mini (iPhone14,4) on iOS 27.0.1 (24A446), connected by USB to a Mac with macOS 27.2 and Xcode 27.2; the developer disk image was mounted and Developer Mode on. A second pass the same night added element frames through `remoteAXService`, the provider's inspection cache, and touches in video pixels. The third (round three, the next morning) added typing by paste, `Waker` and `Unlocker`, measured the phone over Wi-Fi, and read Calculator's display as its value. The fourth (the evening of 2026-11-07) added iPhones below iOS 27; see "iPhones below iOS 27".
+Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found on a real iPhone. Measured on 2026-11-07 with an iPhone 13 mini (iPhone14,4) on iOS 27.0.1 (24A446), connected by USB to a Mac with macOS 27.2 and Xcode 27.2; the developer disk image was mounted and Developer Mode on. A second pass the same night added element frames through `remoteAXService`, the provider's inspection cache, and touches in video pixels. The third (round three, the next morning) added typing by paste, `Waker` and `Unlocker`, measured the phone over Wi-Fi, and read Calculator's display as its value. The fourth (the evening of 2026-11-07) added iPhones below iOS 27; see "iPhones below iOS 27". The fifth (2026-11-08) made Pinky prepare a phone itself, without Xcode; see "Preparing a phone without Xcode".
 
 ## Step 0 results
 
@@ -48,6 +48,7 @@ What these mean for the design:
 | `version.go` | Which way to drive a phone, by its iOS version |
 | `wda.go`, `wda_observe.go`, `wda_device.go`, `wda_run.go`, `replaytouch.go` | The WebDriverAgent path (iOS 17.4 to 26): the HTTP client over usbmuxd, its tree as elements, the device, starting the runner's test, the mirror's touches played back as gestures |
 | `ax_device.go` | The accessibility path (iOS 17.4 to 26, nothing installed) |
+| `ddi.go`, `mount.go`, `prepare.go`, `host.go` | Preparing a phone without Xcode: finding the developer disk image on the computer, mounting it, the Developer Mode switch, pairing on Windows, the background jobs and the steps in `Info.Setup`, and what the computer lacks (usbmuxd) |
 | `framestream.go`, `mjpeg.go`, `h264_darwin.go`, `h264_other.go`, `settle_frames.go` | Frames (JPEG from WDA, screenshots) to H.264 through VideoToolbox, for the mirror and the recorder, and settling by them |
 
 Coordinates are screenshot pixels: 1125x2436 on an iPhone 13 mini, which is the size UIKit renders (375x812 points at 3x); the panel is 1080x2340 and the video 1136x2464. `Toucher` points are video pixels (the contract since 5e83552). Matching decoded frames against screenshots (row and column brightness profiles, correlation 0.998 and better on Settings and Calculator) showed the video is the screen at 1:1 in the top-left corner with black padding, 11 columns on the right and 28 rows at the bottom, so a video point is the same screen point and `Touch` only clamps points in the padding to the screen's edge. A video smaller than the screen would be scaled back up; no phone tested does that.
@@ -211,7 +212,7 @@ The developer disk image is one image for every iOS from 17 (Xcode 27.2's `/Libr
 | Piece | iOS 27 | iOS 17.4 to 26 | iOS 17.0 to 17.3 | iOS 16 and earlier |
 | --- | --- | --- | --- | --- |
 | Tunnel | Lockdown's `CoreDeviceProxy` | The same (added in 17.4) | Not there: remote pairing over QUIC on the phone's USB network interface, which go-ios and pymobiledevice3 do as root (go-ios pauses macOS's `remoted`) | No tunnel; lockdown services |
-| Developer services | Xcode mounts the image | The same image | The same image | A `DeveloperDiskImage.dmg` for that exact version; Xcode 27 ships none (its `DeviceSupport` folder is gone), and Pinky will not fetch Apple's images from mirrors |
+| Developer services | Pinky mounts Xcode's image as a cryptex (see "Preparing a phone without Xcode") | The same image, as a cryptex or a personalized image | The same image | A `DeveloperDiskImage.dmg` for that exact version; Xcode 27 ships none (its `DeviceSupport` folder is gone), and Pinky will not fetch Apple's images from mirrors |
 | Screen stream | `displayservice` | Listed, but refused with CoreDeviceError 9021 (go-ios's measurement). Xcode 27's Device Hub refuses too: its DeviceKit says a device "must be running … or above to screen share" | | |
 | HID input | `universalhidservice` | 9021 on iOS 18 (go-ios) | | |
 | Screenshots | Instruments, CoreDevice's screen capture | Instruments (`dtservicehub`) | | |
@@ -290,6 +291,58 @@ xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
 - The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
 - Landscape on both paths.
 
+## Preparing a phone without Xcode
+
+Built on 2026-11-08. Before, Pinky needed Xcode for two steps: showing the Developer Mode switch (iOS hides it until a developer tool has seen the phone) and mounting the developer disk image (Xcode's Devices window did it, and nothing did it again after the phone restarted). Now Pinky does both. What remains of Xcode is the image itself, which Pinky does not ship.
+
+| Step | Before | Now |
+| --- | --- | --- |
+| Trusting the computer | The system asks: macOS when a phone is plugged in, Linux's usbmuxd too | The same on macOS and Linux. On Windows, where nothing else may ask, Pinky asks the phone itself (go-ios `Pair`) while it has no pair record, at most every 4 s |
+| The Developer Mode switch | Xcode reveals it when it sees the phone | Pinky sends AMFI's reveal (`com.apple.amfi.lockdown`, action 0) once per attach while Developer Mode is off. The person turns it on, the phone restarts and asks them to confirm. Pinky never confirms for them (AMFI's action 2 would): that question is the person's |
+| The developer disk image | Xcode mounts it; after a restart nothing does until Xcode runs again | Pinky mounts it in the background whenever the developer services are missing (see below), so also after every restart |
+| The tunnel | Pinky's own (lockdown's CoreDeviceProxy, userspace) | Unchanged |
+
+### Where the image comes from
+
+`findDiskImage` (`ddi.go`) looks, in order, in `PINKY_DDI` (an `iOS_DDI` folder or the `Restore` folder in one; when set, the only place), in Pinky's folder (`DeveloperDiskImages/iOS_DDI` in its data folder: `~/Library/Application Support/Pinky` on macOS, `%LOCALAPPDATA%\Pinky` on Windows, `~/.local/share/pinky` on Linux), and on macOS in Xcode's `/Library/Developer/DeveloperDiskImages/iOS_DDI`. Xcode installs that folder the first time it is opened (from its `MobileDeviceDevelopment` package), and it stays when Xcode is deleted. The newest image wins, by cryptex version, then by Xcode build; a folder missing a file its manifest names is skipped.
+
+Pinky does not download the image. Apple serves Xcode 27's image only inside Xcode, from the App Store or the developer site, both behind an Apple Account sign-in; `devicectl manage ddis update` copies from an installed Xcode and downloads nothing. Apple's public CDN has older images inside device-support packages (Xcode 16.2 and 26.0.x), which most likely lack the services iOS 27's path uses. The mirrors other tools use are third-party copies of beta images: pymobiledevice3 downloads github.com/doronz88/DeveloperDiskImage (Xcode 27.0 beta 4, 27A5228h, files renamed, so not Apple's files byte for byte) and go-ios deviceboxhq.com (Xcode 26.4 beta, no cryptex). Xcode's license forbids redistributing Apple's software. Whether Pinky should offer a download from a mirror, with pinned checksums and the source named, is the owner's decision, still open.
+
+### The mount
+
+- It starts when `List` finds the services Pinky checks for missing (the screen stream and HID on iOS 27, instruments below), in the background, one at a time per phone. Meanwhile the phone is `needs_setup` with `Setup` "preparing"; when the mount ends the provider forgets the phone and looks at it again at once.
+- `mountDiskImage` installs the image as a cryptex through cryptexd (`com.apple.security.cryptexd.remote`), as Xcode 16 and later do and as the test phone has it; that is also the only way for models newer than the personalized identities of 27B52's manifest list (up to iPhone18,5, the iPhone 17 family), such as the iPhone 18 Pro. Otherwise it mounts the personalized image with the image mounter (Xcode 15's way). Either way Apple's signing server (gs.apple.com) signs the image's digests for this phone with a nonce the phone made, through go-ios, and the phone checks that signature, so only Apple's own image mounts. Each mount sends the phone's ECID and chip identifiers to Apple, as Xcode does.
+- It keeps what is there: a cryptex of the same version is left alone (nothing is signed or sent), an older one is replaced, a newer one is left alone and reported. A personalized image that is not this one is replaced: Pinky gets there only when the services are missing.
+- After mounting it waits up to 10 s for the services. If they do not come, it says whether the image is older than the phone's iOS (then Xcode needs updating) or asks for a restart of the phone.
+- A failed mount is tried again by what went wrong: a locked phone after 3 s (`Setup` "unlock": a phone that just restarted mounts nothing until it is unlocked once), no image after 10 s ("no_disk_image", with where to get one), no network after 20 s, other errors after 30 s. What trying again cannot fix (the signing server refuses, the image does not know the phone, a newer image on the phone, services missing after a mount) waits 10 minutes or until the phone reconnects. A restart is a new usbmuxd attach, which starts over.
+- `List` asks a phone that waits for a step again sooner than other phones that are not online: every 2 s while it waits for Trust, every 3 s while it is being prepared or must be unlocked, so Add phone moves on soon after the person's step.
+
+### Steps for clients
+
+`driver.Info.Setup` (new, additive) names the step a phone waits for: `trust`, `developer_mode`, `unlock`, `preparing`, `no_disk_image`, `disk_image` (the mount failed; `Detail` says why) and `update` (iOS too old). `Detail` still says it in a sentence. Add phone › iPhone (`ui/addiphone.go`) shows them as numbered steps, each saying what to do on the phone, and the reason when one is stuck; the Phone screen of an iPhone that needs setup links to them. The steps replace the pairing-code form, which no iPhone used.
+
+### The computer
+
+Every connection to an iPhone goes through usbmuxd. macOS has it built in. Windows gets it with Apple's iPhone driver, from the Apple Devices app (Microsoft Store) or iTunes. Linux gets it from the `usbmuxd` package, whose daemon udev starts while an iPhone is plugged in, so at Pinky's launch it is often not running. Before, Pinky left iPhones out for the whole run when usbmuxd did not answer at launch; now the provider always starts, `List` returns no phones while usbmuxd is missing (once it has listed phones, the first two failures in a row are errors instead, so a hiccup does not drop them from the gateway), and `CheckHost` (`driver.HostChecker`, through the gateway's `HostChecks`) says what is missing: `apple_devices` (Windows), `usbmuxd` (Linux, not installed) or `usbmuxd_stopped` (Linux, installed but not running). `pinkyctl devices` prints it too.
+
+### What ran where
+
+| What | Where | Result |
+| --- | --- | --- |
+| Finding the image | This Mac, Xcode 27.2 | Xcode's 27B52, cryptex version 27.2.52.0 |
+| How the phone has its image (`TestDiskImageStatus`, read only) | iPhone 13 mini, iOS 27.0.1 | Developer Mode on, cryptexd offered, one cryptex `com.apple.MobileAsset.DDI` 27.2.52.0 (this Mac's image), no personalized image |
+| Pinky's mount on a phone that has the image (`TestDiskImageMountKeeps`) | The same | Kept as it is in 7 ms: no signing request, no upload, the same cryptex afterwards |
+| Mounting on a phone without the image, as after a restart | Not yet | Needs the image taken off the test phone (the owner's decision) or another phone |
+| The Developer Mode switch | Not yet | The test phone has Developer Mode on, and turning it off is not allowed |
+| Pairing on Windows; usbmuxd on Windows and Linux | Not yet | Unit tests only |
+| The steps in Add phone | The client's tester, light and dark, English and Chinese | Each step and each stuck case drawn and checked |
+
+```sh
+PINKY_DEVICE=<udid> scripts/devlock.sh <udid> go test -tags device -count=1 -v -run 'TestDiskImage' ./internal/driver/ios/
+```
+
+The demo (`go run ./cmd/pinky-ui-demo`) has Demo › Plug In a New iPhone, which walks a made-up iPhone through the steps.
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.
@@ -303,6 +356,7 @@ xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
 - Wi-Fi: works but slow and lossy (above); `Wireless` stays off.
 - Waking a dark screen and `Unlock` are unit-tested only; lock detection for phones without a passcode is not tested.
 - iOS 17.4 to 26 is built but not tried on a phone (see "iPhones below iOS 27"); 17.3 and earlier are not supported. Windows and Linux cross-compile, untested.
+- Pinky's own mount of the developer disk image, the Developer Mode switch and pairing on Windows are built but not yet tried on a phone (see "Preparing a phone without Xcode"). A computer without Xcode's image (a Mac that never had Xcode, Windows, Linux) needs a copy from a Mac with Xcode.
 - `WaitSettled` uses frame sizes (and accessibility notifications when they come); animated widgets keep it from ever settling on such home screens (it times out), and after motion the encoder's slowly falling bitrate can keep it waiting a little after the picture stopped.
 
 ## What the owner should try
