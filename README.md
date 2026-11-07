@@ -15,6 +15,8 @@ make app                                   # build/pinky/darwin-<arch>/Pinky.app
 open build/pinky/darwin-arm64/Pinky.app
 ```
 
+Or install a release: `brew install --cask diygod/tap/pinky` on macOS, which also puts the `pinky` command on the `PATH` (`claude mcp add pinky -- pinky mcp`), or a download of [the latest release](https://github.com/DIYgod/pinky-releases/releases/latest) for macOS, Windows or Linux.
+
 Then connect your agent. For Claude Code:
 
 ```sh
@@ -61,7 +63,7 @@ make companion   # optional: the Android companion APK (Android SDK and JDK)
 make app         # build/pinky/darwin-<arch>/Pinky.app and pinky-<version>-<arch>.dmg
 ```
 
-`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize. `make release` signs with the Developer ID in `RELEASE_SIGN` and notarizes the `.dmg` (`make notarize`: submit, wait, staple), with the notarytool profile in `NOTARY_PROFILE` (`pinky-notary`), which you store once with `xcrun notarytool store-credentials pinky-notary --apple-id <Apple ID> --team-id <team>`.
+`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize. `make release` signs with the Developer ID in `RELEASE_SIGN` and notarizes the `.dmg` (`make notarize`: submit, wait, staple), with the notarytool profile in `NOTARY_PROFILE` (`pinky-notary`), which you store once with `xcrun notarytool store-credentials pinky-notary --apple-id <Apple ID> --team-id <team>`. Releases themselves are built, signed and published by a workflow for both kinds of Mac, Windows and Linux; see [docs/RELEASING.md](docs/RELEASING.md).
 
 `go run ./cmd/pinky` does not see the app's FFmpeg: install FFmpeg 9 with Homebrew (`brew install ffmpeg`) or point at the build, `PINKY_FFMPEG_DIR=build/ffmpeg/lib go run ./cmd/pinky`.
 
@@ -93,6 +95,7 @@ make ffmpeg         # FFmpeg 9 for Pinky.app, in build/ffmpeg
 make companion      # the Android companion APK (Android SDK and JDK needed)
 make e2e            # a binary with MyGo's automation socket, for UI checks
 scripts/smoke.sh    # the fake gateway, pinky devices and a task through pinky mcp
+make dist           # a dry run of a release, in dist/<version>/ (docs/RELEASING.md)
 ```
 
 Tests that need a real phone use the `device` build tag; see [docs/WORKING.md](docs/WORKING.md). `go run ./scripts/secretcheck` checks by hand that unlocking asks you (Touch ID, Windows Hello). `PINKY_FFMPEG_APP=build/pinky/darwin-arm64/Pinky.app go test -run TestPackagedFFmpeg ./internal/video/` checks that the app decodes with its own FFmpeg.
