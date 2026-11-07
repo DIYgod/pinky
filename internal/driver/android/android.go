@@ -333,6 +333,5 @@ func wrapErr(err error) error {
 }
 
 var (
-	_ driver.Provider  = (*Provider)(nil)
-	_ driver.Forgetter = (*Provider)(nil)
+	_ driver.Provider = (*Provider)(nil)
 )

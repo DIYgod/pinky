@@ -141,16 +141,6 @@ With a second server on port 5038 with discovery off (How to run), `androidctl` 
 
 The shared server on 5037 kept its connections to the Mi and `emulator-5560` throughout; the server on 5038 was stopped afterwards. Once the server on 5038 crashed when a reconnect's TLS handshake failed (`Handshake failed in SSL_accept/SSL_connect`, then `libc++abi: … mutex lock failed`), an adb bug: hence the long waits after a refusal. Run every `adb -P 5038` command with the three variables: a bare one starts an ordinary server there, which connects the emulators and the Mi too (it happened once, for three seconds). The Mi was paired with this Mac twice more (QR, code), which only adds this Mac's key to its paired devices.
 
-### Removed phones (`driver.Forgetter`, 2026-11-08)
-
-When the person removes a phone from Pinky (gateway notes, "Removing a phone"), the provider hears `Forget(id)` and `Disconnect(ctx, id)`, at start `Forget` again for each phone removed earlier, and `Remember(id)` once it is added back (`forget.go`). The driver hides nothing itself; the gateway keeps the phone off its list.
-
-- `Forget` keeps the Wi-Fi reconnector (Config.ReconnectWiFi) away from the phone: it skips the paired phones whose guid, `adb-<serial>-<suffix>`, holds a removed phone's hardware serial, and neither searches for them nor connects them.
-- `Disconnect` drops the phone's Wi-Fi connections that were made by address (by the reconnector, by `ConnectWiFi` and pairings, or by `adb connect`), found by their serial, by the guid in an mDNS name, or by the hardware serial in their properties; `adb.Client.Disconnect` sends `host:disconnect:<serial>` and never an empty serial, which would drop every connection. A USB connection stays. A connection the adb server's own discovery made cannot be dropped: platform-tools 37 reads `adb disconnect adb-3e8be48e-kIY2HE._adb-tls-connect._tcp` as an address, adds port 5555 and answers `no such device 'adb-…._tcp:5555'` (checked on this Mac). It stays connected to the server, which reconnects it after a drop anyway, and Pinky does not use it.
-- adb's own files stay as they are: the phone is still in `~/.android/adb_known_hosts.pb` and still trusts this computer's key, for the other tools that share the server. Pairing it again in Add phone, or plugging it in, adds it back.
-
-Checked on `pinky-api36` (`emulator-5560`) through an adb server of the test's own on port 5097 (`ADB_MDNS=0 ADB_USB=0 ADB_EMU=0`, so it found nothing by itself), with the emulator connected by address as a phone on Wi-Fi: `TestRemoveEmulatorOverWiFi` (tag `device`) and `TestRemovePhoneOnEmulator` (tag `e2e`) in `cmd/pinky`. Removing it dropped `127.0.0.1:5561`; connected again with `adb -P 5097 connect`, it stayed off the list, after a restart too; `ConnectWiFi` brought it back. Over a TCP connection the emulator is known by its hardware serial (`EMULATOR37X2X13X0`), and on its own transport by its adb serial (`emulator-5560`), so it cannot stand in for a phone removed over Wi-Fi and then plugged in; the gateway's tests cover that.
-
 ## Round three results
 
 ### Background displays while the phone is off and locked
@@ -239,6 +229,16 @@ Totals after the fix: 320 taps on Android 16 and 280 on Android 10, none lost. T
 - Both: PIN `1234` (`locksettings set-pin`), `stay_on_while_plugged_in=0`, the accessibility setting as found (`null`), the companion session's build 73. `emulator-5560` is unlocked on its home screen; the companion session left `emulator-5562` locked and asleep. `screen_off_timeout` is 600000 on `emulator-5560`; on `emulator-5562` it went back to the image's maximum after the restart. Gboard's stylus tutorial was dismissed on `emulator-5560`.
 - `emulator-5562` runs with `-gpu swiftshader_indirect` since a restart at 09:11 (it did not help the encoder).
 - `/sdcard/Pinky` exists on both and is empty. No Pinky jar is left in `/data/local/tmp`.
+
+## Removed phones (`driver.Forgetter`, 2026-11-08)
+
+When the person removes a phone from Pinky (gateway notes, "Removing a phone"), the provider hears `Forget(id)` and `Disconnect(ctx, id)`, at start `Forget` again for each phone removed earlier, and `Remember(id)` once it is added back (`forget.go`). The driver hides nothing itself; the gateway keeps the phone off its list.
+
+- `Forget` keeps the Wi-Fi reconnector (Config.ReconnectWiFi) away from the phone: it skips the paired phones whose guid, `adb-<serial>-<suffix>`, holds a removed phone's hardware serial, and neither searches for them nor connects them.
+- `Disconnect` drops the phone's Wi-Fi connections that were made by address (by the reconnector, by `ConnectWiFi` and pairings, or by `adb connect`), found by their serial, by the guid in an mDNS name, or by the hardware serial in their properties; `adb.Client.Disconnect` sends `host:disconnect:<serial>` and never an empty serial, which would drop every connection. A USB connection stays. A connection the adb server's own discovery made cannot be dropped: platform-tools 37 reads `adb disconnect adb-3e8be48e-kIY2HE._adb-tls-connect._tcp` as an address, adds port 5555 and answers `no such device 'adb-…._tcp:5555'` (checked on this Mac). It stays connected to the server, which reconnects it after a drop anyway, and Pinky does not use it.
+- adb's own files stay as they are: the phone is still in `~/.android/adb_known_hosts.pb` and still trusts this computer's key, for the other tools that share the server. Pairing it again in Add phone, or plugging it in, adds it back.
+
+Checked on `pinky-api36` (`emulator-5560`) through an adb server of the test's own on port 5097 (`ADB_MDNS=0 ADB_USB=0 ADB_EMU=0`, so it found nothing by itself), with the emulator connected by address as a phone on Wi-Fi: `TestRemoveEmulatorOverWiFi` (tag `device`) and `TestRemovePhoneOnEmulator` (tag `e2e`) in `cmd/pinky`. Removing it dropped `127.0.0.1:5561`; connected again with `adb -P 5097 connect`, it stayed off the list, after a restart too; `ConnectWiFi` brought it back. Over a TCP connection the emulator is known by its hardware serial (`EMULATOR37X2X13X0`), and on its own transport by its adb serial (`emulator-5560`), so it cannot stand in for a phone removed over Wi-Fi and then plugged in; the gateway's tests cover that.
 
 ## Decisions
 

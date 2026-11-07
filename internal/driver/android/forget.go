@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
 )
 
@@ -121,3 +122,5 @@ func isAddr(serial string) bool {
 	host, port, err := net.SplitHostPort(serial)
 	return err == nil && host != "" && port != ""
 }
+
+var _ driver.Forgetter = (*Provider)(nil)
