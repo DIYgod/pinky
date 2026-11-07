@@ -46,6 +46,15 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install Linux packages
+        if: runner.os == 'Linux'
+        run: |
+          # dbus: the private session bus of the keyring tests; the rest:
+          # the window under Xvfb (GTK 3, EGL with Mesa's software GL).
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends dbus dbus-x11 xvfb xauth libegl1 libegl-mesa0 libgl1-mesa-dri libepoxy0 >/dev/null
+          sudo apt-get install -y -qq --no-install-recommends libgtk-3-0t64 >/dev/null || sudo apt-get install -y -qq --no-install-recommends libgtk-3-0 >/dev/null
+
       - name: Install FFmpeg 9 (Linux)
         if: runner.os == 'Linux'
         run: |
@@ -76,7 +85,11 @@ jobs:
 
       - name: Test
         if: matrix.test
-        run: go test ./...
+        shell: bash
+        run: |
+          go test ./...
+          # What the decoder and keyring tests did, rather than only "ok".
+          go test -count=1 -v -run 'TestDecodeTestStream|TestSecretService|TestCredential|TestHello' ./internal/video/ ./internal/secret/ | grep -E -e '--- |video_test.go|Windows Hello'
 
       - name: Smoke run with fake phones
         shell: bash
@@ -85,9 +98,6 @@ jobs:
       - name: Window under Xvfb
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends xvfb xauth dbus-x11 libegl1 libegl-mesa0 libgl1-mesa-dri libepoxy0 >/dev/null
-          sudo apt-get install -y -qq --no-install-recommends libgtk-3-0t64 >/dev/null || sudo apt-get install -y -qq --no-install-recommends libgtk-3-0 >/dev/null
           mkdir -p build/e2e
           go build -tags e2e -o build/e2e/pinky ./cmd/pinky
           export PINKY_HOME=build/e2e/h MYGO_AUTOMATION="$PWD/build/e2e/ui.sock"
