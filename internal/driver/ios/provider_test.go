@@ -2,6 +2,8 @@ package ios
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
 	goios "github.com/danielpaulus/go-ios/ios"
+	"github.com/danielpaulus/go-ios/ios/xpc"
 )
 
 func entry(udid string, deviceID int, conn string) goios.DeviceEntry {
@@ -102,5 +105,26 @@ func TestFromVideo(t *testing.T) {
 	}
 	if x, y := scaleAxis(1130, 1125), scaleAxis(2450, 2436); x != scaleAxis(1124, 1125) || y != scaleAxis(2435, 2436) {
 		t.Errorf("a point in the padding maps to %d,%d, want the screen's last row and column", x, y)
+	}
+}
+
+func TestCDServiceRedials(t *testing.T) {
+	dials := 0
+	boom := errors.New("dial failed")
+	s := &cdService{name: "com.apple.coredevice.deviceinfo", dial: func(goios.DeviceEntry, string) (*xpc.Connection, error) {
+		dials++
+		return nil, boom
+	}}
+	// A dropped connection is dialled again on the next request.
+	if _, err := s.invoke(context.Background(), "f", "", nil); !errors.Is(err, boom) || dials != 1 {
+		t.Fatalf("after a drop: %v, %d dials", err, dials)
+	}
+	if _, err := s.invoke(context.Background(), "f", "", nil); !errors.Is(err, boom) || dials != 2 {
+		t.Fatalf("again: %v, %d dials", err, dials)
+	}
+	// After Close it stays closed.
+	s.Close()
+	if _, err := s.invoke(context.Background(), "f", "", nil); err == nil || !strings.Contains(err.Error(), "connection closed") || dials != 2 {
+		t.Fatalf("after Close: %v, %d dials", err, dials)
 	}
 }
