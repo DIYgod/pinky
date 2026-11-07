@@ -107,12 +107,13 @@ func (e *Engine) Exemptions() []Exemption {
 }
 
 // CanExempt reports whether Exempt would keep an "Always allow" for these
-// asks (Verdict.Asks) in this app.
+// asks (Verdict.Asks) in this app. It cannot while rules.yaml has an edit
+// that cannot be used (FileError).
 func (e *Engine) CanExempt(asks []string, app screen.App) bool {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
 	_, ok := e.exemptionLocked(asks, app)
-	return ok
+	return ok && e.rulesDisk.err == nil
 }
 
 // Exempt keeps an "Always allow" for the rules that asked about an action
@@ -120,10 +121,14 @@ func (e *Engine) CanExempt(asks []string, app screen.App) bool {
 // Rules it cannot lift are left out; ErrNotExemptable means none is left,
 // the app is unknown or every action asks. An exemption for the same rule
 // and app takes the new rules in. The engine applies it even when saving
-// fails.
+// fails, but not while rules.yaml has an edit that cannot be used, which
+// it returns (FileError).
 func (e *Engine) Exempt(asks []string, app screen.App) (Exemption, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if err := e.syncLocked(&e.rulesDisk); err != nil {
+		return Exemption{}, err
+	}
 	x, ok := e.exemptionLocked(asks, app)
 	if !ok {
 		return Exemption{}, ErrNotExemptable
@@ -162,6 +167,9 @@ func (e *Engine) Exempt(asks []string, app screen.App) (Exemption, error) {
 func (e *Engine) Unexempt(x Exemption) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if err := e.syncLocked(&e.rulesDisk); err != nil {
+		return err
+	}
 	kept := e.file.AlwaysAllow[:0:0]
 	found := false
 	for _, y := range e.file.AlwaysAllow {

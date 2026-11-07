@@ -30,8 +30,10 @@ type Exemption struct {
 	AppName string   // the app's name; empty when the phone gave none
 }
 
-// Exemptions lists the person's Always allow answers, oldest first.
+// Exemptions lists the person's Always allow answers, oldest first, after
+// taking in hand edits of the rules files.
 func (g *Gateway) Exemptions() []Exemption {
+	g.refreshRules()
 	xs := g.policy.Exemptions()
 	out := make([]Exemption, len(xs))
 	for i, x := range xs {
@@ -48,21 +50,29 @@ func (g *Gateway) RemoveExemption(x Exemption) error {
 
 // canAlwaysAllow reports whether an approval's Always allow can be kept:
 // an action the policy asked about, in an app, not a launch (whose app is
-// not the one the panel names), with a rule an exemption may lift, and
-// not while every action asks.
+// not the one the panel names), with a rule an exemption may lift, not
+// while every action asks, and not while rules.yaml has a hand edit that
+// cannot be used.
 func (g *Gateway) canAlwaysAllow(info approval.Info) bool {
+	snap, ok := actionSnapshot(info)
+	return ok && g.policy.CanExempt(snap.asks, snap.grantApp)
+}
+
+// actionSnapshot returns an approval's action, unless it is a launch.
+func actionSnapshot(info approval.Info) (*snapshot, bool) {
 	snap, ok := info.Data.(*snapshot)
-	return ok && info.Kind == approval.KindAction && !snap.launch && g.policy.CanExempt(snap.asks, snap.grantApp)
+	return snap, ok && info.Kind == approval.KindAction && !snap.launch
 }
 
 // alwaysAllow keeps an approval's Always allow, when it can be kept. The
 // engine applies it even when the rules file cannot be saved, which the
-// error reports.
+// error reports, as it does a rules.yaml that cannot be used (the panel
+// may have offered Always allow before it broke).
 func (g *Gateway) alwaysAllow(info approval.Info) error {
-	if !g.canAlwaysAllow(info) {
+	snap, ok := actionSnapshot(info)
+	if !ok {
 		return nil
 	}
-	snap := info.Data.(*snapshot)
 	x, err := g.policy.Exempt(snap.asks, snap.grantApp)
 	switch {
 	case errors.Is(err, policy.ErrNotExemptable):

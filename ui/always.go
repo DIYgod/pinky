@@ -85,9 +85,13 @@ func (a *app) alwaysAllowed(c *mg.Context) {
 					appIcon(c, app, 28, 8, 13, "")
 					mg.Text(c, app).Grow(1).MinWidth(0).SingleLine()
 					mg.Text(c, ruleName(x.Rule)).FontSize(13.5).TextColor(p.ink2)
-					rm := mg.ButtonBase(c).Size(26, 26).Radius(6).Center().
+					// While rules.yaml cannot be used, the gateway would refuse.
+					off := a.fileBroken(rulesYAML)
+					rm := mg.ButtonBase(c).Size(26, 26).Radius(6).Center().Disabled(off).
 						Label(locales.SettingsSafetyAlwaysRemoveItem(ruleAction(x.Rule), app)).Tooltip(locales.SettingsSafetyAlwaysRemove())
-					if rm.Hovered() {
+					if off {
+						rm.Opacity(0.35)
+					} else if rm.Hovered() {
 						rm.Background(p.bg3)
 					}
 					if rm.Clicked() {

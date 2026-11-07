@@ -37,6 +37,9 @@ type Options struct {
 	SettleMax       time.Duration // default 3 s
 	PollInterval    time.Duration // default 250 ms, for settling and phone_wait_for
 	DiscoverEvery   time.Duration // default 2 s
+	// RulesEvery is how often the policy's files are checked for hand
+	// edits (policy.Engine.Refresh); default 2 s.
+	RulesEvery time.Duration
 
 	// NoScreenshots skips the before and after screenshots of each step.
 	NoScreenshots bool
@@ -68,6 +71,7 @@ func (o *Options) defaults() {
 	set(&o.SettleMax, 3*time.Second)
 	set(&o.PollInterval, 250*time.Millisecond)
 	set(&o.DiscoverEvery, 2*time.Second)
+	set(&o.RulesEvery, 2*time.Second)
 	if o.DefaultScope.Mode == "" {
 		o.DefaultScope = Scope{Mode: ScopeEverything}
 	}
@@ -163,10 +167,11 @@ func New(o Options) (*Gateway, error) {
 	g.discover(ctx)
 	cancel()
 
-	g.wg.Add(3)
+	g.wg.Add(4)
 	go g.discoverLoop()
 	go g.idleLoop()
 	go g.retentionLoop()
+	go g.rulesLoop()
 	return g, nil
 }
 

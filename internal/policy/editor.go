@@ -3,6 +3,7 @@ package policy
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -43,14 +44,23 @@ func (e *Engine) BuiltInRules() []Rule {
 var (
 	ErrRuleNameTaken    = errors.New("two rules have the same name")
 	ErrRuleNameReserved = errors.New("the name belongs to one of Pinky's own rules")
+	// ErrRulesChanged means the file's rules are no longer the ones the
+	// change was made from: rules.yaml was edited meanwhile. Nothing
+	// changed; FileRules returns the file's rules now.
+	ErrRulesChanged = errors.New("the rules in rules.yaml changed since they were read; nothing was saved")
 )
 
 // SetFileRules replaces the rules file's rules, in order, and saves the
-// file. It checks them as ParseFile does, and also refuses a name that two
-// rules share or that one of Pinky's own rules has, so that a question
-// names one rule. Always allow answers about a rule that is gone are
-// dropped with it. The engine applies the rules even when saving fails.
-func (e *Engine) SetFileRules(rules []Rule) error {
+// file, while the file's rules are still base, the ones the change was
+// made from (FileRules when the person started it): it takes in hand
+// edits of rules.yaml first, and returns ErrRulesChanged when one changed
+// the rules, so that it never undoes the edit. It checks the rules as
+// ParseFile does, and also refuses a name that two rules share or that
+// one of Pinky's own rules has, so that a question names one rule. Always
+// allow answers about a rule that is gone are dropped with it. The engine
+// applies the rules even when saving fails, but not while rules.yaml has
+// an edit that cannot be used, which it returns (FileError).
+func (e *Engine) SetFileRules(base, rules []Rule) error {
 	rules = tidyRules(rules)
 	for i, r := range rules {
 		if err := checkRule(i, r); err != nil {
@@ -59,6 +69,15 @@ func (e *Engine) SetFileRules(rules []Rule) error {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if err := e.syncLocked(&e.rulesDisk); err != nil {
+		return err
+	}
+	if !sameRules(base, e.file.Rules) {
+		return ErrRulesChanged
+	}
+	if sameRules(rules, e.file.Rules) {
+		return nil
+	}
 	old := map[string]bool{}
 	for _, r := range e.file.Rules {
 		old[r.Name] = true
@@ -89,6 +108,16 @@ func (e *Engine) SetFileRules(rules []Rule) error {
 	e.file.Rules = rules
 	e.dropExemptionsLocked(gone)
 	return e.saveRulesLocked()
+}
+
+// sameRules reports whether two lists hold the same rules, in order, as
+// tidyRules leaves them.
+func sameRules(a, b []Rule) bool {
+	return slices.EqualFunc(tidyRules(a), tidyRules(b), func(x, y Rule) bool {
+		m, n := x.Match, y.Match
+		return x.Name == y.Name && x.Decision == y.Decision && slices.Equal(m.App, n.App) &&
+			slices.Equal(m.Category, n.Category) && slices.Equal(m.Action, n.Action) && slices.Equal(m.Label, n.Label)
+	})
 }
 
 // reservedName reports whether a name belongs to one of Pinky's own

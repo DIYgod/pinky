@@ -3432,6 +3432,54 @@
   "@settingsClose": {
     "description": "Settings › Agents: replaces Change while the editor of what an agent may do is open; closes it without saving."
   },
+  "settingsFileProblemDesc": "It was edited outside Settings and can't be read as it is. Pinky keeps the rules it had, and the settings kept in the file can't be changed here until you fix it.",
+  "@settingsFileProblemDesc": {
+    "description": "Under settingsFileProblemTitle: what that means. The settings kept in the file are the ones Safety dims meanwhile: for rules.yaml the preset, Always allowed, Read-only mode, Hide codes and the rules; for apps.yaml the blocked apps."
+  },
+  "settingsFileProblemEdit": "Edit {file}",
+  "@settingsFileProblemEdit": {
+    "description": "The button of the note under settingsFileProblemTitle: opens the file in the computer's text editor. file is rules.yaml or apps.yaml.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "rules.yaml"
+      }
+    }
+  },
+  "settingsFileProblemError": "What's wrong: {error}",
+  "@settingsFileProblemError": {
+    "description": "Under settingsFileProblemDesc: what Pinky found wrong in the file. error is the YAML parser's or Pinky's message in English, often with a line number.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "yaml: line 3: mapping values are not allowed in this context"
+      }
+    }
+  },
+  "settingsFileProblemOpenFailed": "Couldn't open {file}: {reason}",
+  "@settingsFileProblemOpenFailed": {
+    "description": "A toast when the system could not open rules.yaml or apps.yaml from the note's button. reason is the system's error in English.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "rules.yaml"
+      },
+      "reason": {
+        "type": "String",
+        "example": "no application can open it"
+      }
+    }
+  },
+  "settingsFileProblemTitle": "Pinky can't use {file}",
+  "@settingsFileProblemTitle": {
+    "description": "Settings › Safety, and Advanced under Rules file: the heading of a note shown while rules.yaml or apps.yaml has an edit made outside Settings that Pinky cannot read. file is the file's name, rules.yaml or apps.yaml.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "rules.yaml"
+      }
+    }
+  },
   "settingsLanguage": "Language",
   "@settingsLanguage": {
     "description": "Settings › Advanced: the row and select that choose the language of Pinky's windows and menus."
@@ -3677,6 +3725,10 @@
   "settingsRulesDeny": "Block",
   "@settingsRulesDeny": {
     "description": "Settings › Safety › Rules: what a rule does when it matches: refuses the action (the strictest)."
+  },
+  "settingsRulesErrChanged": "The rules file was changed outside Settings, so this wasn't saved. The rules below are the file's now; try again.",
+  "@settingsRulesErrChanged": {
+    "description": "Settings › Safety › Rules: a change in the rules list was not saved, because rules.yaml was edited by hand since the list was read. The list then shows the file's rules."
   },
   "settingsRulesErrMatch": "Fill in at least one of apps, categories, actions or button text.",
   "@settingsRulesErrMatch": {

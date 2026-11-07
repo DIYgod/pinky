@@ -32,10 +32,14 @@ type gwApp struct {
 	q  []func()
 }
 
-func newGatewayApp(t *testing.T, trust bool) *gwApp {
+func newGatewayApp(t *testing.T, trust bool, opts ...func(*demogw.Options)) *gwApp {
 	t.Helper()
 	demogw.Pace = 20 * time.Millisecond
-	w, err := demogw.New(demogw.Options{DataDir: t.TempDir(), TrustNewAgents: trust, MaxBlock: time.Second})
+	o := demogw.Options{DataDir: t.TempDir(), TrustNewAgents: trust, MaxBlock: time.Second}
+	for _, f := range opts {
+		f(&o)
+	}
+	w, err := demogw.New(o)
 	if err != nil {
 		t.Fatal(err)
 	}

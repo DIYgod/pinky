@@ -192,8 +192,9 @@ type app struct {
 	mediaCache map[string]*mediaEntry // step screenshots by media id
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
-	always     alwaysState // Settings › Safety › Always allowed
-	rules      rulesState  // Settings › Safety › Rules
+	always     alwaysState       // Settings › Safety › Always allowed
+	rules      rulesState        // Settings › Safety › Rules
+	files      fileProblemsState // rules files edited by hand that cannot be used
 
 	postMu  sync.Mutex
 	postWin *mygo.Window // the main window, once ready made it; post waits for it

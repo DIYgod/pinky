@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"slices"
 	"strings"
 	"time"
@@ -108,16 +109,18 @@ type rulesState struct {
 	lastLoad time.Time
 	err      string // why the last change of a row was not saved
 
-	editing bool
-	edit    int // the rule in the form: an index of view.File, or len(view.File) for a new one
-	form    ruleForm
-	formErr string
-	saving  bool
+	editing  bool
+	edit     int    // the rule in the form: an index of view.File, or len(view.File) for a new one
+	editName string // the name the rule in the form had, to find it again when the rules change
+	form     ruleForm
+	formErr  string
+	saving   bool
 
 	// confirm holds a change that removes or changes a rule that blocks,
-	// until the person confirms it.
+	// until the person confirms it, with the rules it was made from.
 	confirm     bool
 	pending     []gateway.RuleView
+	pendingBase []gateway.RuleView
 	pendingRule string
 	pendingGone bool // removed rather than changed
 	pendingForm bool // the change comes from the form
@@ -178,8 +181,37 @@ func (s *rulesState) load(a *app, ed rulesEditor) {
 				return
 			}
 			s.view, s.loaded = v, true
+			s.findEdited()
 		})
 	}()
+}
+
+// findEdited points the form at the rule it changes in rules read again,
+// by name: a hand edit of rules.yaml may have moved it. A rule that is
+// gone is added when the form is saved.
+func (s *rulesState) findEdited() {
+	if !s.editing {
+		return
+	}
+	s.edit = len(s.view.File)
+	if s.editName == "" {
+		return
+	}
+	for i, r := range s.view.File {
+		if r.Name == s.editName {
+			s.edit = i
+			return
+		}
+	}
+}
+
+// open opens the form on the i-th rule, or on a new one with i ==
+// len(view.File).
+func (s *rulesState) open(i int, r gateway.RuleView) {
+	s.editing, s.edit, s.form, s.formErr, s.editName = true, i, newRuleForm(r), "", ""
+	if i < len(s.view.File) {
+		s.editName = s.view.File[i].Name
+	}
 }
 
 // rulesSection is Settings › Safety › Rules.
@@ -194,15 +226,16 @@ func (a *app) rulesSection(c *mg.Context) {
 		st.load(a, ed)
 	}
 	c.After(5 * time.Second)
+	broken := a.fileBroken(rulesYAML)
 	mg.Column(c).Gap(8).Label(locales.SettingsRules()).Children(func() {
 		mg.Row(c).Gap(12).AlignItems(mg.End).Children(func() {
 			mg.Column(c).Grow(1).Children(func() {
 				mg.Text(c, locales.SettingsRules()).FontSize(15).FontWeight(650)
 				mg.Text(c, locales.SettingsRulesIntro()).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
 			})
-			add := button(c, locales.SettingsRulesAdd(), btnOpt{}).Disabled(!st.loaded || st.editing || st.saving)
+			add := button(c, locales.SettingsRulesAdd(), btnOpt{}).Disabled(!st.loaded || st.editing || st.saving || broken)
 			if add.Clicked() {
-				st.editing, st.edit, st.form, st.formErr = true, len(st.view.File), newRuleForm(gateway.RuleView{Decision: "ask"}), ""
+				st.open(len(st.view.File), gateway.RuleView{Decision: "ask"})
 			}
 		})
 		mg.Text(c, locales.SettingsRulesYours()).FontSize(13).FontWeight(600).TextColor(p.ink3).Margin(6, 0, 0, 0)
@@ -245,10 +278,10 @@ func (a *app) rulesSection(c *mg.Context) {
 		}
 		switch mg.AlertDialog(c, &st.confirm, title, locales.SettingsRulesWeakenMessage(), locales.SettingsCancel(), ok) {
 		case 1:
-			a.saveRules(ed, st.pending, st.pendingForm)
+			a.saveRules(ed, st.pendingBase, st.pending, st.pendingForm)
 		}
 		if !st.confirm {
-			st.pending = nil
+			st.pending, st.pendingBase = nil, nil
 		}
 	}
 }
@@ -297,26 +330,26 @@ func iconButton(c *mg.Context, ic *mg.SVG, label, tip string, disabled bool) mg.
 
 func (a *app) ruleRow(c *mg.Context, ed rulesEditor, i int, r gateway.RuleView) {
 	st := &a.rules
-	busy := st.editing || st.saving
+	busy := st.editing || st.saving || a.fileBroken(rulesYAML)
 	ruleLine(c, "rule-"+r.Name, r.Name, ruleSummary(r), r.Decision, func() {
 		mg.Row(c).Gap(2).AlignItems(mg.Center).Shrink(0).Children(func() {
 			change := button(c, locales.SettingsChange(), btnOpt{small: true}).Label(locales.SettingsRulesChangeLabel(r.Name)).Disabled(busy)
 			if change.Clicked() {
-				st.editing, st.edit, st.form, st.formErr = true, i, newRuleForm(r), ""
+				st.open(i, r)
 			}
 			list := st.view.File
 			if iconButton(c, icChevU, locales.SettingsRulesMoveUp(r.Name), locales.SettingsRulesMoveUpTip(), busy || i == 0).Clicked() {
-				a.saveRules(ed, moved(list, i, i-1), false)
+				a.saveRules(ed, list, moved(list, i, i-1), false)
 			}
 			if iconButton(c, icChevD, locales.SettingsRulesMoveDown(r.Name), locales.SettingsRulesMoveDownTip(), busy || i == len(list)-1).Clicked() {
-				a.saveRules(ed, moved(list, i, i+1), false)
+				a.saveRules(ed, list, moved(list, i, i+1), false)
 			}
 			if iconButton(c, icX, locales.SettingsRulesRemove(r.Name), locales.SettingsRulesRemoveTip(), busy).Clicked() {
 				rest := append(append([]gateway.RuleView(nil), list[:i]...), list[i+1:]...)
 				if r.Decision == "deny" {
-					a.confirmRules(rest, r.Name, true, false)
+					a.confirmRules(list, rest, r.Name, true, false)
 				} else {
-					a.saveRules(ed, rest, false)
+					a.saveRules(ed, list, rest, false)
 				}
 			}
 		})
@@ -387,7 +420,7 @@ func (a *app) ruleForm(c *mg.Context, ed rulesEditor) {
 			if button(c, locales.SettingsCancel(), btnOpt{}).Disabled(st.saving).Clicked() {
 				st.editing, st.formErr = false, ""
 			}
-			if button(c, locales.SettingsSave(), btnOpt{kind: btnPrimary}).Disabled(st.saving).Clicked() {
+			if button(c, locales.SettingsSave(), btnOpt{kind: btnPrimary}).Disabled(st.saving || a.fileBroken(rulesYAML)).Clicked() {
 				a.submitRuleForm(ed)
 			}
 		})
@@ -407,13 +440,13 @@ func (a *app) submitRuleForm(ed rulesEditor) {
 		old := list[st.edit]
 		list[st.edit] = r
 		if old.Decision == "deny" && !sameMatch(old, r) {
-			a.confirmRules(list, old.Name, false, true)
+			a.confirmRules(st.view.File, list, old.Name, false, true)
 			return
 		}
 	} else {
 		list = append(list, r)
 	}
-	a.saveRules(ed, list, true)
+	a.saveRules(ed, st.view.File, list, true)
 }
 
 // ruleProblem says what is wrong with the form's rule, in the person's
@@ -447,15 +480,19 @@ func sameMatch(a, b gateway.RuleView) bool {
 
 // confirmRules asks the person before a change that removes or changes a
 // rule that blocks.
-func (a *app) confirmRules(list []gateway.RuleView, rule string, gone, fromForm bool) {
+func (a *app) confirmRules(base, list []gateway.RuleView, rule string, gone, fromForm bool) {
 	st := &a.rules
 	st.confirm, st.pending, st.pendingRule, st.pendingGone, st.pendingForm = true, list, rule, gone, fromForm
+	st.pendingBase = base
 }
 
-// saveRules hands the rules to the gateway. A change from the form keeps
-// the form open until the gateway took it; the list's own changes show at
-// once.
-func (a *app) saveRules(ed rulesEditor, list []gateway.RuleView, fromForm bool) {
+// saveRules hands the rules to the gateway, with base, the rules the
+// change was made from. A change from the form keeps the form open until
+// the gateway took it; the list's own changes show at once. When rules.yaml
+// was edited by hand since base was read, nothing is saved: the list shows
+// the file's rules, and the form stays open on the rule it changes, to
+// save again.
+func (a *app) saveRules(ed rulesEditor, base, list []gateway.RuleView, fromForm bool) {
 	st := &a.rules
 	st.saving, st.err = true, ""
 	if !fromForm {
@@ -463,11 +500,14 @@ func (a *app) saveRules(ed rulesEditor, list []gateway.RuleView, fromForm bool) 
 	}
 	st.seq++ // a read in flight has the old rules
 	go func() {
-		err := ed.SetRules(list)
+		err := ed.SetRules(base, list)
 		a.post(func() {
 			st.saving = false
 			if err != nil {
 				msg := locales.SettingsRulesErrSave(err.Error())
+				if errors.Is(err, gateway.ErrRulesChanged) {
+					msg = locales.SettingsRulesErrChanged()
+				}
 				if fromForm {
 					st.formErr = msg
 				} else {
@@ -478,8 +518,12 @@ func (a *app) saveRules(ed rulesEditor, list []gateway.RuleView, fromForm bool) 
 				st.view.File = list
 			}
 			// Read the rules back, and the Always allow answers, which lose
-			// the rules that are gone.
+			// the rules that are gone. The form, still open after a refusal,
+			// keeps the list from loading by itself.
 			st.lastLoad = time.Time{}
+			if st.editing {
+				st.load(a, ed)
+			}
 			a.always.stale()
 		})
 	}()

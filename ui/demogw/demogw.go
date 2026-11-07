@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,6 +24,10 @@ type Options struct {
 	// DataDir keeps history and screenshots; empty keeps history in memory,
 	// without step screenshots.
 	DataDir string
+	// ConfigDir keeps the policy's rules.yaml and apps.yaml, as the app's
+	// config folder does, to edit them by hand; empty uses the bundled
+	// rules without files.
+	ConfigDir string
 	// Video streams the demo phones' screens through ffmpeg so the mirror
 	// shows them; without it the mirror shows an error.
 	Video bool
@@ -47,6 +52,12 @@ func New(opt Options) (*World, error) {
 		d.SetVideo(opt.Video)
 	}
 	pol := policy.Default()
+	if opt.ConfigDir != "" {
+		var err error
+		if pol, err = policy.Load(filepath.Join(opt.ConfigDir, "rules.yaml"), filepath.Join(opt.ConfigDir, "apps.yaml")); err != nil {
+			return nil, err
+		}
+	}
 	for cat, e := range demo.PolicyApps() {
 		pol.AddApps(cat, e)
 	}
