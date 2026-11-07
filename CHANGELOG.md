@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Pairing a phone over Wi-Fi no longer hangs on "Pairing…" when Android's adb tools have stopped seeing the network, as they do after the computer's network changes (for example when an iPhone is plugged in): Pinky now finds the phone itself.
+- Phones paired over Wi-Fi come back by themselves when they return to the network, even when adb no longer sees it.
+- When pairing over Wi-Fi takes long, Add phone says what is likely wrong, such as the phone not showing up on the network or, on a Mac, Pinky not allowed to use the local network, and offers to pair with a code instead.
+- Pairing with a code now also works on networks where Pinky can't find the phone: it asks for the address Wireless debugging shows and connects there.
+- On a Mac, Pinky asks for Local Network access to find Android phones over Wi-Fi, and says why.
+
 ## 2026.1107.6 (2026-11-07)
 
 - The mirror no longer stays on "Connecting…" when you come back to a phone after a while.
