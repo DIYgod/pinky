@@ -462,7 +462,9 @@ func TestSwapAfterAZombie(t *testing.T) {
 		t.Fatal(err)
 	}
 	waitUntil(t, "the swap after the zombie", 10*time.Second, func() bool {
-		return installedVersion(t, installed) == "2026.1107.2"
+		// Between the helper's two renames there is no bundle there.
+		info, err := readBundleInfo(installed)
+		return err == nil && info.Version == "2026.1107.2"
 	})
 }
 
