@@ -18,7 +18,7 @@ func (c *Client) Observe(ctx context.Context, api gateway.API) {
 	if c == nil || api == nil {
 		return
 	}
-	o := &observer{c: c, tasks: map[string]gateway.TaskState{}, bg: map[string]bool{}, needs: map[string]string{}}
+	o := newObserver(c)
 	events := api.Subscribe(ctx)
 	o.read(api)
 	for {
@@ -54,6 +54,10 @@ func (c *Client) Observe(ctx context.Context, api gateway.API) {
 // observeEvery is how long Observe gathers events before it reads the
 // views; tests shorten it.
 var observeEvery = 500 * time.Millisecond
+
+func newObserver(c *Client) *observer {
+	return &observer{c: c, tasks: map[string]gateway.TaskState{}, bg: map[string]bool{}, needs: map[string]string{}}
+}
 
 type observer struct {
 	c     *Client
