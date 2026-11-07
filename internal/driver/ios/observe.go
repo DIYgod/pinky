@@ -131,12 +131,20 @@ func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions
 
 // observeInspector is Observe through the inspector walk and OCR.
 func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions, st ObserveStats) (*screen.Screen, ObserveStats, error) {
+	s, _, st, err := d.observeInspectorNodes(ctx, opt, st)
+	return s, st, err
+}
+
+// observeInspectorNodes is observeInspector that also returns, for each
+// element, the walk's node it came from (nil for OCR text), whose handle
+// the accessibility daemon can act on.
+func (d *Device) observeInspectorNodes(ctx context.Context, opt driver.ObserveOptions, st ObserveStats) (*screen.Screen, []*axNode, ObserveStats, error) {
 	start := time.Now()
 	st.Source = "inspector"
 	si := d.screen()
 	ax, err := d.axReady(ctx)
 	if err != nil {
-		return nil, st, err
+		return nil, nil, st, err
 	}
 
 	var wg sync.WaitGroup
@@ -175,7 +183,7 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	wg.Wait()
 	if walkErr != nil && len(nodes) == 0 {
 		if ocrErr != nil || len(lines) == 0 {
-			return nil, st, walkErr
+			return nil, nil, st, walkErr
 		}
 		// Without the tree the screen is still worth reading: fall back to
 		// OCR text alone.
@@ -204,6 +212,7 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	}
 	keys := keyboardKeys(firsts)
 	var match []string
+	var from []*axNode
 	for i, n := range nodes {
 		if keys[i] || n.traits&traitKeyboardKey != 0 {
 			s.Keyboard = true
@@ -219,6 +228,7 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 			Role: role, Label: label, States: states, Source: screen.SourceTree,
 			Path: appID, ID: n.ident,
 		})
+		from = append(from, &nodes[i])
 		match = append(match, cp.first)
 	}
 	// The on-screen keyboard is drawn by another process (InputUI), so the
@@ -249,15 +259,16 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 				Role: screen.RoleText, Label: l.Text, Source: screen.SourceOCR,
 				Bounds: ocrRect(l, si.Width, si.Height),
 			})
+			from = append(from, nil)
 		}
 	}
 	if ocrErr != nil && len(s.Elements) == 0 {
-		return nil, st, fmt.Errorf("observe: %w", ocrErr)
+		return nil, nil, st, fmt.Errorf("observe: %w", ocrErr)
 	}
 	st.Elements = len(nodes)
 	st.OCRLines = len(lines)
 	st.Total = time.Since(start)
-	return s, st, nil
+	return s, from, st, nil
 }
 
 // appForPID resolves the app a process belongs to, through the process list

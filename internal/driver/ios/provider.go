@@ -16,7 +16,7 @@ import (
 )
 
 // minIOS is the first iOS whose CoreDevice services stream the screen and
-// take HID input.
+// take HID input. Older phones go other ways; see pathFor.
 const minIOS = 27
 
 // Provider discovers iPhones through usbmuxd (Apple Devices on Windows,
@@ -27,19 +27,23 @@ type Provider struct {
 	// or Finder over the network, and the gateway opens whatever it lists.
 	Wireless bool
 
-	mu    sync.Mutex
-	ddi   map[string]ddiCheck // by UDID
-	known map[string]known    // by UDID, what List last found
-	setup func(ctx context.Context, e goios.DeviceEntry) (bool, error)
+	mu          sync.Mutex
+	ddi         map[string]ddiCheck // by UDID
+	known       map[string]known    // by UDID, what List last found
+	setup       func(ctx context.Context, e goios.DeviceEntry) (bool, error)
+	legacySetup func(ctx context.Context, e goios.DeviceEntry) (bool, error)
+	findRunner  func(e goios.DeviceEntry) (string, error)
 
 	// For tests: how a phone is inspected, and the clock.
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
 }
 
-// recheckOffline is how often List asks a phone that is not online again.
-// An online phone is asked again only when its usbmuxd entry changes, which
-// it does when the phone reconnects or restarts.
+// recheckOffline is how often List asks a phone that is not online again,
+// and one driven without the WebDriverAgent helper, so a helper installed
+// meanwhile is noticed. Other online phones are asked again only when their
+// usbmuxd entry changes, which it does when the phone reconnects or
+// restarts.
 const recheckOffline = 30 * time.Second
 
 // known is an inspected phone and the usbmuxd entry it was seen through.
@@ -68,7 +72,7 @@ type ddiCheck struct {
 
 // NewProvider returns an iOS provider.
 func NewProvider() *Provider {
-	return &Provider{ddi: map[string]ddiCheck{}, known: map[string]known{}, setup: probeServices}
+	return &Provider{ddi: map[string]ddiCheck{}, known: map[string]known{}, setup: probeServices, legacySetup: probeLegacyServices}
 }
 
 // Platform implements driver.Provider.
@@ -127,7 +131,7 @@ func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 	p.mu.Lock()
 	k, ok := p.known[id]
 	p.mu.Unlock()
-	if ok && k.key == key && (k.info.State == driver.StateOnline || p.clock().Sub(k.at) < recheckOffline) {
+	if ok && k.key == key && ((k.info.State == driver.StateOnline && k.info.Backend != backendAccessibility) || p.clock().Sub(k.at) < recheckOffline) {
 		return k.info
 	}
 	inspect := p.inspectFn
@@ -193,9 +197,10 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)
 	info.OSVersion = values.Value.ProductVersion
-	if major(info.OSVersion) < minIOS {
+	kind, why := pathFor(parseVersion(info.OSVersion))
+	if kind == pathUnsupported {
 		info.State = driver.StateNeedsSetup
-		info.Detail = fmt.Sprintf("Pinky needs iOS %d or later to show and control an iPhone without installing anything on it; this one runs iOS %s.", minIOS, info.OSVersion)
+		info.Detail = why
 		return info
 	}
 	dev, err := imagemounter.IsDevModeEnabled(e)
@@ -203,6 +208,9 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 		info.State = driver.StateNeedsSetup
 		info.Detail = "Turn on Developer Mode on the iPhone (Settings > Privacy & Security > Developer Mode), restart it and confirm."
 		return info
+	}
+	if kind == pathLegacy {
+		return p.inspectLegacy(ctx, e, info)
 	}
 	ok, err := p.services(ctx, e)
 	switch {
@@ -220,6 +228,11 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 // they are once the developer disk image is mounted. It needs a tunnel, so
 // results are cached: a mounted image stays mounted until the phone restarts.
 func (p *Provider) services(ctx context.Context, e goios.DeviceEntry) (bool, error) {
+	return p.servicesWith(ctx, e, p.setup)
+}
+
+// servicesWith is services with the check to run.
+func (p *Provider) servicesWith(ctx context.Context, e goios.DeviceEntry, setup func(context.Context, goios.DeviceEntry) (bool, error)) (bool, error) {
 	id := e.Properties.SerialNumber
 	p.mu.Lock()
 	c, ok := p.ddi[id]
@@ -230,7 +243,7 @@ func (p *Provider) services(ctx context.Context, e goios.DeviceEntry) (bool, err
 		}
 		return c.ok, nil
 	}
-	ok, err := p.setup(ctx, e)
+	ok, err := setup(ctx, e)
 	c = ddiCheck{ok: ok, at: time.Now()}
 	if err != nil {
 		c.err = err.Error()
@@ -240,6 +253,49 @@ func (p *Provider) services(ctx context.Context, e goios.DeviceEntry) (bool, err
 	p.mu.Unlock()
 	return ok, err
 }
+
+// inspectLegacy finishes inspecting a phone on iOS 17.4 to 26: the
+// developer services must be there (the developer disk image mounted), and
+// the WebDriverAgent helper decides the backend.
+func (p *Provider) inspectLegacy(ctx context.Context, e goios.DeviceEntry, info driver.Info) driver.Info {
+	ok, err := p.servicesWith(ctx, e, p.legacySetup)
+	switch {
+	case err != nil:
+		info.State = driver.StateOffline
+		info.Detail = "Could not reach the iPhone's developer services: " + err.Error()
+		return info
+	case !ok:
+		info.State = driver.StateNeedsSetup
+		info.Detail = "The developer disk image is not mounted. Connect the iPhone to this computer and open Xcode's Devices window (Window > Devices and Simulators) once, so Xcode prepares it for development."
+		return info
+	}
+	find := p.findRunner
+	if find == nil {
+		find = findWDARunner
+	}
+	info.Backend = backendAccessibility
+	if id, err := find(e); err == nil && id != "" {
+		info.Backend = backendWDA
+	}
+	return info
+}
+
+// probeLegacyServices reports whether the developer services Pinky uses
+// below iOS 27 are published: instruments (screenshots) and the
+// accessibility daemon, both from the developer disk image.
+func probeLegacyServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
+	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	l, err := dialLinkEntry(cctx, e)
+	if err != nil {
+		return false, err
+	}
+	defer l.Close()
+	return l.has(instrumentsService), nil
+}
+
+// instrumentsService is DTServiceHub, instruments over RemoteXPC (iOS 17+).
+const instrumentsService = "com.apple.instruments.dtservicehub"
 
 func probeServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
@@ -266,6 +322,12 @@ func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 	if info.State != driver.StateOnline {
 		return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
 	}
+	switch info.Backend {
+	case backendWDA:
+		return OpenWDA(ctx, info)
+	case backendAccessibility:
+		return OpenAccessibility(ctx, info)
+	}
 	return Open(ctx, info)
 }
 
@@ -286,7 +348,7 @@ func major(version string) int {
 }
 
 // modelName turns a product type into a marketing name, for the models
-// Pinky can drive (iOS 27 runs on iPhone 11 and later).
+// Pinky can drive (iOS 17.4 runs on iPhone XS, XR and later).
 func modelName(productType string) string {
 	if n, ok := models[productType]; ok {
 		return n
@@ -295,6 +357,7 @@ func modelName(productType string) string {
 }
 
 var models = map[string]string{
+	"iPhone11,2": "iPhone XS", "iPhone11,4": "iPhone XS Max", "iPhone11,6": "iPhone XS Max", "iPhone11,8": "iPhone XR",
 	"iPhone12,1": "iPhone 11", "iPhone12,3": "iPhone 11 Pro", "iPhone12,5": "iPhone 11 Pro Max", "iPhone12,8": "iPhone SE (2nd generation)",
 	"iPhone13,1": "iPhone 12 mini", "iPhone13,2": "iPhone 12", "iPhone13,3": "iPhone 12 Pro", "iPhone13,4": "iPhone 12 Pro Max",
 	"iPhone14,4": "iPhone 13 mini", "iPhone14,5": "iPhone 13", "iPhone14,2": "iPhone 13 Pro", "iPhone14,3": "iPhone 13 Pro Max",
