@@ -64,7 +64,8 @@ type BundleInstaller struct {
 	// PID is the process the swap waits for; 0 is this one.
 	PID int
 	// LaunchWait is how long the helper waits for the new version to
-	// launch before it puts the old one back; 0 is a minute.
+	// launch (take the gateway's lock) before it puts the old one back; 0
+	// is three minutes, as the gateway may wait on adb as it starts.
 	LaunchWait time.Duration
 	Logger     *slog.Logger
 }
@@ -209,10 +210,16 @@ func (s *stagedBundle) Swap(opt StartOptions) error {
 	}
 	wait := b.LaunchWait
 	if wait <= 0 {
-		wait = time.Minute
+		wait = 3 * time.Minute
 	}
 	tenths := strconv.Itoa(int(wait / (100 * time.Millisecond)))
-	args := append([]string{"-c", swapScript, "pinky-update", strconv.Itoa(pid), b.Bundle, s.app, s.work, logPath, tenths}, start...)
+	// The helper checks the signature again right before the swap: the new
+	// bundle may have waited next to the app for a while since Stage.
+	req := ""
+	if b.Verify == nil {
+		req = requirement
+	}
+	args := append([]string{"-c", swapScript, "pinky-update", strconv.Itoa(pid), b.Bundle, s.app, s.work, logPath, tenths, req}, start...)
 	cmd := exec.Command("/bin/sh", args...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := cmd.Start(); err != nil {
@@ -247,24 +254,48 @@ func (s *stagedBundle) SwapNow() error {
 	return nil
 }
 
-// swapScript is the helper, for /bin/sh. With the pid of the running
-// Pinky, the installed bundle, the new bundle, the work folder, a log file
-// and how long to wait for the new version to launch (in tenths of a
-// second), then the command that starts Pinky: it waits for Pinky to exit,
-// moves the installed bundle into the work folder, the new one in its
-// place (putting the old one back if that fails), and starts it. The new
-// version writes its pid to launched once it holds the gateway's lock
-// (CheckSwap) and started once its window is up (Confirm); the helper then
-// removes the work folder with the old bundle. A new version that exits,
-// or never launches within a minute, is moved aside and the old one put
-// back and started again, which reads rolled-back. A new version that
-// runs but is not up yet is waited for.
-const swapScript = `pid=$1 target=$2 new=$3 work=$4 log=$5 wait=$6
-shift 6
+// swapScript is the helper, for /bin/sh. Its arguments: the pid of the
+// running Pinky, the installed bundle, the new bundle, the work folder, a
+// log file, how long to wait for the new version to launch (in tenths of a
+// second) and the code requirement to check the new bundle against (empty:
+// none), then the command that starts Pinky.
+//
+// It waits for Pinky to exit (a zombie counts as exited), checks the new
+// bundle's signature again, moves the installed bundle to work/old.app and
+// the new one in its place, and starts it. The new version writes its pid
+// to launched once it holds the gateway's lock (CheckSwap) and started
+// once its window is up (Confirm); the helper then removes the work folder
+// with the old bundle. A new version that exits before that, or never
+// launches, is moved to work/failed.app and the old one put back and
+// started again. Whenever the update does not happen, the helper leaves
+// rolled-back in the work folder, so the old version knows and does not try
+// the same version again by itself. It never removes a bundle that is not
+// in place elsewhere: if the old one cannot be put back, both stay in the
+// work folder and the log says where.
+const swapScript = `pid=$1 target=$2 new=$3 work=$4 log=$5 wait=$6 req=$7
+shift 7
 trap '' HUP INT
+old=$work/old.app
 say() { echo "$(date '+%Y-%m-%d %H:%M:%S') pinky-update[$$]: $*" >>"$log" 2>/dev/null; }
+alive() {
+	kill -0 "$1" 2>/dev/null || return 1
+	case $(ps -o stat= -p "$1" 2>/dev/null) in
+	*Z*) return 1 ;;
+	esac
+	return 0
+}
+put_back() {
+	i=0
+	until mv "$old" "$target" 2>>"$log"; do
+		i=$((i + 1))
+		if [ "$i" -ge 5 ]; then
+			return 1
+		fi
+		sleep 1
+	done
+}
 n=0
-while kill -0 "$pid" 2>/dev/null; do
+while alive "$pid"; do
 	n=$((n + 1))
 	if [ "$n" -gt 6000 ]; then
 		say "Pinky (pid $pid) still runs after 10 minutes; not updating"
@@ -272,18 +303,28 @@ while kill -0 "$pid" 2>/dev/null; do
 	fi
 	sleep 0.1
 done
-old=$work/old.app
+if [ -n "$req" ] && ! /usr/bin/codesign --verify --deep --strict -R "=$req" "$new" >>"$log" 2>&1; then
+	say "the new version's signature does not check out; not installing it"
+	rm -rf "$new"
+	: >"$work/rolled-back"
+	"$@" >>"$log" 2>&1
+	exit 1
+fi
 if ! mv "$target" "$old" 2>>"$log"; then
 	say "could not move $target aside; keeping it"
-	rm -rf "$work"
-	"$@"
+	rm -rf "$new"
+	: >"$work/rolled-back"
+	"$@" >>"$log" 2>&1
 	exit 1
 fi
 if ! mv "$new" "$target" 2>>"$log"; then
 	say "could not move the new version to $target; putting the old one back"
-	mv "$old" "$target" 2>>"$log"
-	rm -rf "$work"
-	"$@"
+	if put_back; then
+		: >"$work/rolled-back"
+		"$@" >>"$log" 2>&1
+	else
+		say "could not put the old version back: it is at $old"
+	fi
 	exit 1
 fi
 say "installed the new version at $target; starting it"
@@ -292,7 +333,7 @@ n=0
 while [ ! -e "$work/started" ]; do
 	lp=$(cat "$work/launched" 2>/dev/null)
 	if [ -n "$lp" ]; then
-		kill -0 "$lp" 2>/dev/null || break
+		alive "$lp" || break
 	elif [ "$n" -gt "$wait" ]; then
 		break
 	fi
@@ -305,11 +346,17 @@ if [ -e "$work/started" ]; then
 	exit 0
 fi
 say "the new version did not start; putting the old one back"
-if mv "$target" "$work/failed.app" 2>>"$log" && mv "$old" "$target" 2>>"$log"; then
+if ! mv "$target" "$work/failed.app" 2>>"$log"; then
+	say "could not move the new version aside; keeping it"
+	exit 1
+fi
+if put_back; then
 	: >"$work/rolled-back"
 	"$@" >>"$log" 2>&1
+elif mv "$work/failed.app" "$target" 2>>"$log"; then
+	say "could not put the old version back (it is at $old); kept the new one"
 else
-	say "could not put the old version back"
+	say "could not put either version back: the old one is at $old, the new one at $work/failed.app"
 fi
 exit 1
 `
@@ -336,8 +383,11 @@ func CheckSwap(version string) *Swapped {
 }
 
 func checkSwap(bundle, version string, pid int, now time.Time) *Swapped {
+	exists := func(path string) bool { _, err := os.Stat(path); return err == nil }
 	dirs, _ := filepath.Glob(filepath.Join(filepath.Dir(bundle), workPrefix(bundle)+"*"))
-	var found *Swapped
+	var failed *Swapped
+	live, liveAt := "", time.Time{}
+	var liveP pendingSwap
 	for _, dir := range dirs {
 		data, err := os.ReadFile(filepath.Join(dir, "pending.json"))
 		var p pendingSwap
@@ -349,20 +399,30 @@ func checkSwap(bundle, version string, pid int, now time.Time) *Swapped {
 			}
 			continue
 		}
-		_, rolledBack := os.Stat(filepath.Join(dir, "rolled-back"))
-		switch {
-		case rolledBack == nil:
-			found = &Swapped{From: p.From, To: p.To, Failed: true}
+		switch rolledBack := exists(filepath.Join(dir, "rolled-back")); {
+		case rolledBack && Compare(p.To, version) != 0:
+			// The old version again: the update did not happen.
+			failed = &Swapped{From: p.From, To: p.To, Failed: true}
 			os.RemoveAll(dir)
-		case Compare(p.To, version) == 0 && found == nil:
-			if os.WriteFile(filepath.Join(dir, "launched"), []byte(strconv.Itoa(pid)), 0o600) == nil {
-				found = &Swapped{From: p.From, To: p.To, dir: dir}
+		case rolledBack:
+			// This version was moved aside while it started, and may run
+			// from there: the old version cleans up.
+		case Compare(p.To, version) == 0 && exists(filepath.Join(dir, "old.app")) && !exists(filepath.Join(dir, "started")):
+			// The swap that put this version in place: its helper waits.
+			if live == "" || p.At.After(liveAt) {
+				live, liveAt, liveP = dir, p.At, p
 			}
 		case now.Sub(p.At) > 24*time.Hour:
 			os.RemoveAll(dir)
 		}
 	}
-	return found
+	if failed != nil {
+		return failed
+	}
+	if live != "" && os.WriteFile(filepath.Join(live, "launched"), []byte(strconv.Itoa(pid)), 0o600) == nil {
+		return &Swapped{From: liveP.From, To: liveP.To, dir: live}
+	}
+	return nil
 }
 
 // Confirm tells the helper that the new version is up, so it removes the

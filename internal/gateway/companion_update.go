@@ -14,13 +14,17 @@ var ErrPhoneInUse = errors.New("an agent is using the phone")
 
 // UpdateCompanion updates a phone's companion app without asking the
 // person, for the client's automatic updates (driver.CompanionUpdater). It
-// refuses while an agent holds the phone; the person's own Update button
-// uses InstallCompanion.
+// refuses while an agent holds the phone, and holds the phone's action lock
+// while it installs, so an agent that connects meanwhile waits for the
+// update rather than reading the screen through an app being replaced. The
+// person's own Update button uses InstallCompanion.
 func (g *Gateway) UpdateCompanion(ctx context.Context, deviceID string) (driver.CompanionUpdate, error) {
 	d, err := g.device(deviceID)
 	if err != nil {
 		return driver.CompanionUpdate{}, err
 	}
+	d.act.Lock()
+	defer d.act.Unlock()
 	g.mu.Lock()
 	dev, leased := d.dev, d.lease != nil
 	g.mu.Unlock()

@@ -85,6 +85,9 @@ type compAuto struct {
 	failedAt time.Time // the last failure; tried again hours later
 }
 
+// retryDelays are the waits after automatic installs that failed in a row.
+var retryDelays = []time.Duration{time.Hour, 4 * time.Hour, 24 * time.Hour}
+
 var (
 	icUpdate  = icon(`<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/>`)
 	icSparkle = icon(`<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17v4"/><path d="M17 19h4"/>`)
@@ -180,6 +183,9 @@ func (a *app) checked(r *update.Release, err error) {
 			s.prepared, s.phase = nil, updIdle
 		}
 		if s.phase == updIdle || s.phase == updFailed {
+			if r != nil && (s.rel == nil || s.rel.Version != r.Version) {
+				s.failures, s.retryAt = 0, time.Time{} // a new release starts afresh
+			}
 			s.rel = r
 		}
 		if r == nil && asked {
@@ -242,6 +248,11 @@ func (a *app) activity(now time.Time) update.Activity {
 	for id := range a.comp.installing {
 		act.Busy = append(act.Busy, "installing Pinky Companion on "+a.deviceName(id))
 	}
+	for id, ca := range a.upd.comp {
+		if ca.running {
+			act.Busy = append(act.Busy, "updating Pinky Companion on "+a.deviceName(id))
+		}
+	}
 	for _, d := range a.devices {
 		if d.Status == gateway.DeviceInControl {
 			act.Busy = append(act.Busy, "you control "+d.Info.Name)
@@ -297,9 +308,9 @@ func (a *app) prepared(p *update.Prepared, err error) {
 		}
 		log.Printf("pinky: update: %v", err)
 		if s.auto {
-			// Quietly, and again later: an hour, four, then a day.
+			// Quietly, and again later: an hour, four, then once a day.
 			s.failures++
-			s.retryAt = time.Now().Add(min(time.Hour<<(2*(s.failures-1)), 24*time.Hour))
+			s.retryAt = time.Now().Add(retryDelays[min(s.failures, len(retryDelays))-1])
 			s.phase = updIdle
 			return
 		}
@@ -403,6 +414,8 @@ func updateError(err error) string {
 		return "The update isn't signed by Pinky's developer, so Pinky didn't install it."
 	case errors.Is(err, update.ErrNoAsset):
 		return "There's no build of this version for this computer yet."
+	case errors.Is(err, update.ErrStalled):
+		return "The download stopped coming in. Check the connection and try again."
 	case errors.Is(err, context.DeadlineExceeded), errors.As(err, &ne):
 		return "Couldn't reach the update server. Check the connection and try again."
 	}

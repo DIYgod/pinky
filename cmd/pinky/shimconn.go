@@ -77,6 +77,23 @@ func (s *shimSession) run(conn net.Conn, br *bufio.Reader, stdin io.Reader) erro
 			}
 			return err
 		}
+		// The agent may have closed its side while the shim reconnected,
+		// when there was no connection to tell: tell this one.
+		s.mu.Lock()
+		gone := s.agentDone
+		s.mu.Unlock()
+		if gone {
+			halfClose(conn)
+		}
+	}
+}
+
+// halfClose tells the gateway the agent is done sending.
+func halfClose(c net.Conn) {
+	if uc, ok := c.(*net.UnixConn); ok {
+		uc.CloseWrite()
+	} else if c != nil {
+		c.Close()
 	}
 }
 
@@ -151,10 +168,8 @@ func (s *shimSession) fromAgent(stdin io.Reader) {
 	s.agentDone = true
 	c := s.conn
 	s.mu.Unlock()
-	if uc, ok := c.(*net.UnixConn); ok {
-		uc.CloseWrite()
-	} else if c != nil {
-		c.Close()
+	if c != nil {
+		halfClose(c)
 	}
 }
 
@@ -182,10 +197,14 @@ func (s *shimSession) send(line []byte, request, method string) bool {
 }
 
 // toAgent forwards the gateway's messages to stdout until its connection
-// ends.
+// ends. A message cut off by the end is dropped: its request is still
+// pending, and is sent again or answered once the shim reconnects.
 func (s *shimSession) toAgent(br *bufio.Reader) error {
 	for {
 		line, err := br.ReadBytes('\n')
+		if err != nil && len(line) > 0 && line[len(line)-1] != '\n' {
+			line = nil
+		}
 		if len(line) > 0 {
 			if h, ok := head(line); ok && len(h.ID) > 0 && h.Method == "" {
 				s.mu.Lock()

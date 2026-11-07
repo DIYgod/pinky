@@ -392,3 +392,29 @@ func TestIdle(t *testing.T) {
 		}
 	}
 }
+
+func TestDownloadStalls(t *testing.T) {
+	defer func(d time.Duration) { StallTimeout = d }(StallTimeout)
+	StallTimeout = 300 * time.Millisecond
+	release := make(chan struct{})
+	defer close(release)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "1000")
+		w.Write([]byte("only the start"))
+		w.(http.Flusher).Flush()
+		select { // then nothing, as a proxy whose far side hangs
+		case <-release:
+		case <-r.Context().Done():
+		}
+	}))
+	defer srv.Close()
+	a := Asset{URL: srv.URL + "/Pinky.zip", SHA256: sum([]byte("x")), Size: 1000}
+	start := time.Now()
+	_, err := Download(context.Background(), NewClient(), a, t.TempDir(), "1.0.0", nil)
+	if !errors.Is(err, ErrStalled) {
+		t.Fatalf("Download = %v, want ErrStalled", err)
+	}
+	if d := time.Since(start); d > 5*time.Second {
+		t.Errorf("took %v to notice", d)
+	}
+}

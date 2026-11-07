@@ -15,9 +15,9 @@ import (
 // bundled companion APK over an older installed build, as `pm install -r`
 // does, without asking anyone, and keeps the app's accessibility service
 // as it was. Android keeps enabled_accessibility_services across an update
-// of the same package; when the service was on and is not listed or does
-// not answer afterwards, it is turned on again through TurnOn, the path
-// SetUpCompanion uses. A service that was off, or on only for the driver's
+// of the same package, and the app its own settings; when the service was
+// on and is not listed or does not answer afterwards, it is turned on
+// again through TurnOn, the path SetUpCompanion uses. A service that was off, or on only for the driver's
 // own reads, is left to the driver. It refuses with driver.ErrNeedsPerson
 // when the phone would show a dialog (Google Play Protect checks adb
 // installs) or the installed app is signed with another key, and does
@@ -77,14 +77,37 @@ func (d *Device) UpdateCompanion(ctx context.Context) (driver.CompanionUpdate, e
 	if !wasOn {
 		return res, nil
 	}
-	// It was on: it should still be listed and answer once Android has
-	// bound the new build. TurnOn adds Pinky's entry only when it is
-	// missing and waits until the app answers.
+	// It was on, and Android keeps it listed across the update and binds
+	// the new build by itself; the app keeps its own settings (how long it
+	// stays on without a client) too. Wait for it to answer, and change
+	// nothing.
+	if listed, err := c.Enabled(ctx); err == nil && listed && answers(ctx, c, 10*time.Second) {
+		res.ServiceOn = true
+		return res, nil
+	}
+	// Android dropped it: turn it on again through the person's path.
 	if err := c.TurnOn(ctx); err != nil {
 		return res, fmt.Errorf("updated the companion, but its service did not come back on: %w", wrapErr(err))
 	}
 	res.ServiceOn = true
 	return res, nil
+}
+
+// answers waits up to max for the companion app's service to answer.
+func answers(ctx context.Context, c *companion.Client, max time.Duration) bool {
+	deadline := time.Now().Add(max)
+	for {
+		pctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		_, err := c.Ping(pctx)
+		cancel()
+		if err == nil {
+			return true
+		}
+		if ctx.Err() != nil || time.Now().After(deadline) {
+			return false
+		}
+		time.Sleep(300 * time.Millisecond)
+	}
 }
 
 // versionLine is a companion version as people read it: "0.1.0 (75)".

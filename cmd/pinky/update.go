@@ -175,7 +175,20 @@ func runUpdate(args []string) error {
 		p.Staged.Discard()
 		return errors.New("this installation cannot be updated from the command line")
 	}
-	if err := sn.SwapNow(); err != nil {
+	// Hold the gateway's lock while swapping, so no Pinky starts from the
+	// bundle meanwhile (an agent's `pinky mcp` may start one at any time).
+	ln, err := api.Listen(dirs)
+	if err != nil {
+		p.Staged.Discard()
+		var running *api.RunningError
+		if errors.As(err, &running) {
+			return errors.New("Pinky started while the update downloaded; it installs updates itself, or quit it and run pinky update again")
+		}
+		return err
+	}
+	err = sn.SwapNow()
+	ln.Close()
+	if err != nil {
 		return err
 	}
 	fmt.Printf("Installed Pinky %s at %s.\n", r.Version, loc.App)

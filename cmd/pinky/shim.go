@@ -77,7 +77,10 @@ func startDaemon(dirs api.Dirs, fake bool) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	return cmd.Process.Release()
+	// Reap it should it exit while this shim runs, as when the app quits to
+	// update itself: a zombie would look alive to the update's helper.
+	go cmd.Wait()
+	return nil
 }
 
 func waitForGateway(dirs api.Dirs, timeout time.Duration) (net.Conn, error) {

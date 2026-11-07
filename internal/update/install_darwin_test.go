@@ -334,27 +334,39 @@ func TestCheckSwap(t *testing.T) {
 	apps := t.TempDir()
 	bundle := fakeBundle(t, apps, "Pinky.app", BundleID, "2026.1107.2")
 	now := time.Now()
-	mk := func(name, pending string, age time.Duration) string {
+	mk := func(name, from, to string, at time.Time, files ...string) string {
 		dir := filepath.Join(apps, ".Pinky.app.update-"+name)
 		os.MkdirAll(dir, 0o700)
-		if pending != "" {
-			os.WriteFile(filepath.Join(dir, "pending.json"), []byte(pending), 0o600)
+		if to != "" {
+			os.WriteFile(filepath.Join(dir, "pending.json"), []byte(fmt.Sprintf(`{"from":%q,"to":%q,"at":%q}`, from, to, at.UTC().Format(time.RFC3339))), 0o600)
 		}
-		old := now.Add(-age)
-		os.Chtimes(dir, old, old)
+		for _, f := range files {
+			if strings.HasSuffix(f, ".app") {
+				os.MkdirAll(filepath.Join(dir, f), 0o755)
+			} else {
+				os.WriteFile(filepath.Join(dir, f), nil, 0o600)
+			}
+		}
+		os.Chtimes(dir, at, at)
 		return dir
 	}
-	current := mk("a", fmt.Sprintf(`{"from":"2026.1107.1","to":"2026.1107.2","at":%q}`, now.UTC().Format(time.RFC3339)), 0)
-	stale := mk("b", "", 48*time.Hour)
-	fresh := mk("c", "", time.Minute)
-	oldSwap := mk("d", fmt.Sprintf(`{"from":"1","to":"2","at":%q}`, now.Add(-72*time.Hour).UTC().Format(time.RFC3339)), 72*time.Hour)
+	// A helper that gave up before swapping left a folder for the same
+	// version; the swap that happened has the old bundle in its folder.
+	abandoned := mk("a", "2026.1107.1", "2026.1107.2", now.Add(-time.Hour))
+	current := mk("b", "2026.1107.1", "2026.1107.2", now, "old.app")
+	stale := mk("c", "", "", now.Add(-48*time.Hour))
+	fresh := mk("d", "", "", now.Add(-time.Minute))
+	oldSwap := mk("e", "1", "2", now.Add(-72*time.Hour), "old.app")
 
 	sw := checkSwap(bundle, "2026.1107.2", 4242, now)
-	if sw == nil || sw.Failed || sw.From != "2026.1107.1" || sw.To != "2026.1107.2" {
+	if sw == nil || sw.Failed || sw.From != "2026.1107.1" || sw.To != "2026.1107.2" || sw.dir != current {
 		t.Fatalf("checkSwap = %+v", sw)
 	}
 	if data, _ := os.ReadFile(filepath.Join(current, "launched")); string(data) != "4242" {
 		t.Errorf("launched = %q", data)
+	}
+	if _, err := os.Stat(filepath.Join(abandoned, "launched")); err == nil {
+		t.Error("launched went to the abandoned folder")
 	}
 	if err := sw.Confirm(); err != nil {
 		t.Fatal(err)
@@ -362,7 +374,7 @@ func TestCheckSwap(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(current, "started")); err != nil {
 		t.Errorf("Confirm wrote nothing: %v", err)
 	}
-	for dir, want := range map[string]bool{stale: false, fresh: true, oldSwap: false} {
+	for dir, want := range map[string]bool{stale: false, fresh: true, oldSwap: false, abandoned: true} {
 		_, err := os.Stat(dir)
 		if exists := err == nil; exists != want {
 			t.Errorf("%s exists = %v, want %v", filepath.Base(dir), exists, want)
@@ -370,6 +382,108 @@ func TestCheckSwap(t *testing.T) {
 	}
 	if sw := checkSwap(bundle, "2026.1201.1", 1, now); sw != nil {
 		t.Errorf("another version: %+v", sw)
+	}
+
+	// The update was rolled back: the old version learns it; the new one,
+	// should it run from where it was moved, leaves the folder alone.
+	back := mk("f", "2026.1107.1", "2026.1107.3", now, "rolled-back", "failed.app")
+	if sw := checkSwap(bundle, "2026.1107.3", 1, now); sw != nil {
+		t.Errorf("the failed version: %+v", sw)
+	}
+	if _, err := os.Stat(filepath.Join(back, "failed.app")); err != nil {
+		t.Error("the failed version removed the bundle it may run from")
+	}
+	if sw := checkSwap(bundle, "2026.1107.1", 1, now); sw == nil || !sw.Failed || sw.To != "2026.1107.3" {
+		t.Errorf("the old version: %+v", sw)
+	}
+	if _, err := os.Stat(back); !os.IsNotExist(err) {
+		t.Error("the old version left the rolled-back folder")
+	}
+}
+
+// TestSwapAfterAZombie: Pinky started by `pinky mcp` is that shim's child,
+// and a zombie once it exits until the shim reaps it; the helper must not
+// wait for it.
+func TestSwapAfterAZombie(t *testing.T) {
+	apps := t.TempDir()
+	installed := fakeBundle(t, apps, "Pinky.app", BundleID, "2026.1107.1")
+	zip := zipBundle(t, fakeBundle(t, t.TempDir(), "Pinky.app", BundleID, "2026.1107.2"))
+	child := exec.Command("/bin/sh", "-c", "sleep 0.5")
+	if err := child.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer child.Wait() // reaps it at the end only
+	starts := filepath.Join(t.TempDir(), "starts")
+	in := &BundleInstaller{Bundle: installed, Verify: acceptAll, PID: child.Process.Pid, Open: fakeOpen(t, starts, false), Log: filepath.Join(t.TempDir(), "log")}
+	st, err := in.Stage(context.Background(), zip, Release{Feed: Feed{Version: "2026.1107.2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Swap(StartOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	waitUntil(t, "the swap after the zombie", 10*time.Second, func() bool {
+		return installedVersion(t, installed) == "2026.1107.2"
+	})
+}
+
+// swapThatFails swaps with a helper that cannot do its work, and returns
+// what the old version reads afterwards.
+func swapThatFails(t *testing.T, prepare func(in *BundleInstaller, installed string)) (*Swapped, string) {
+	t.Helper()
+	apps := t.TempDir()
+	installed := fakeBundle(t, apps, "Pinky.app", BundleID, "2026.1107.1")
+	zip := zipBundle(t, fakeBundle(t, t.TempDir(), "Pinky.app", BundleID, "2026.1107.2"))
+	running := fakeApp(t)
+	starts := filepath.Join(t.TempDir(), "starts")
+	log := filepath.Join(t.TempDir(), "log")
+	in := &BundleInstaller{Bundle: installed, Verify: acceptAll, PID: running.Process.Pid, Open: fakeOpen(t, starts, false), Log: log}
+	st, err := in.Stage(context.Background(), zip, Release{Feed: Feed{Version: "2026.1107.2"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepare(in, installed)
+	if err := st.Swap(StartOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	running.Process.Kill()
+	running.Wait()
+	waitUntil(t, "the old version to start again", 10*time.Second, func() bool {
+		data, _ := os.ReadFile(starts)
+		return strings.HasPrefix(string(data), "2026.1107.1")
+	})
+	if v := installedVersion(t, installed); v != "2026.1107.1" {
+		t.Errorf("installed %s", v)
+	}
+	logged, _ := os.ReadFile(log)
+	return checkSwap(installed, "2026.1107.1", os.Getpid(), time.Now()), string(logged)
+}
+
+func TestSwapThatCannotMoveTheApp(t *testing.T) {
+	sw, log := swapThatFails(t, func(_ *BundleInstaller, installed string) {
+		// An immutable bundle cannot be renamed.
+		if out, err := exec.Command("/usr/bin/chflags", "uchg", installed).CombinedOutput(); err != nil {
+			t.Skipf("chflags: %v: %s", err, out)
+		}
+		t.Cleanup(func() { exec.Command("/usr/bin/chflags", "nouchg", installed).Run() })
+	})
+	if sw == nil || !sw.Failed || sw.To != "2026.1107.2" {
+		t.Errorf("the old version reads %+v; it would try the same update again", sw)
+	}
+	if !strings.Contains(log, "could not move") {
+		t.Errorf("log:\n%s", log)
+	}
+}
+
+func TestSwapChecksTheSignatureAgain(t *testing.T) {
+	// Staged as checked, then the bundle is not Pinky's team's when the
+	// helper looks again (here: never signed).
+	sw, log := swapThatFails(t, func(in *BundleInstaller, _ string) { in.Verify = nil })
+	if sw == nil || !sw.Failed {
+		t.Errorf("the old version reads %+v", sw)
+	}
+	if !strings.Contains(log, "signature does not check out") {
+		t.Errorf("log:\n%s", log)
 	}
 }
 
