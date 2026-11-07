@@ -1243,6 +1243,7 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	d := l.dev
 	start := time.Now()
 	before := g.shotID(g.beforeShot(d, cur))
+	from := g.leftFrom(d, cur)
 	if res := g.preflight(ctx, l); res != nil {
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
@@ -1292,6 +1293,9 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
+	if g.leaves(a, p, from) && stillIn(next, from.App) {
+		next, settled = g.awaitLeave(ctx, d, from.App, next, settled)
+	}
 	res := g.screenResult(l, next, false)
 	res.Status = StatusSettled
 	g.mu.Lock()
@@ -1310,6 +1314,77 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	idx := g.recordStep(l, step, a, c, p, res, start, before, "", body(res.Screen))
 	g.useShot(shot, l.task, idx, true)
 	return res
+}
+
+// leftFrom is the screen an action started from: cur, or for a launch that
+// did not read it (launchUnread), the phone's last read.
+func (g *Gateway) leftFrom(d *device, cur *screen.Screen) *screen.Screen {
+	if cur != nil {
+		return cur
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return d.last
+}
+
+// leaves reports whether an action takes the phone out of the app in front
+// on cur: home in an app other than the launcher, or opening another app.
+func (g *Gateway) leaves(a Action, p *prep, cur *screen.Screen) bool {
+	if cur == nil || cur.Locked || (cur.App.ID == "" && cur.App.Name == "") {
+		return false
+	}
+	switch {
+	case a.Tool == "key" && a.Key == "home":
+		return !g.policy.IsSystem(cur.App)
+	case a.Tool == "launch" && p != nil && !p.url:
+		to := screen.App{ID: p.launch.ID, Name: p.launch.Name}
+		if to.ID == to.Name {
+			to.ID = "" // a phone that cannot list its apps: only the name is known
+		}
+		return !sameApp(to, cur.App)
+	}
+	return false
+}
+
+// awaitLeave waits, up to SettleMax, for a read that shows another app in
+// front than from, then settles and reads again. An iPhone names the app
+// in front with a delay, and the read right after home can still show the
+// app the agent left (field test #25): a blocked app that seemed to stay
+// in front gave the agent "no change" and refused its next action. It
+// keeps next when the app does not change.
+func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, next *screen.Screen, settled bool) (*screen.Screen, bool) {
+	deadline := time.Now().Add(g.opt.SettleMax)
+	for time.Now().Before(deadline) {
+		if !sleepCtx(ctx, g.opt.PollInterval, nil) {
+			break
+		}
+		s, err := g.observe(ctx, d, false)
+		if err != nil {
+			break
+		}
+		if stillIn(s, from) {
+			continue
+		}
+		settled = g.settle(ctx, d)
+		if o, err := g.observe(ctx, d, true); err == nil {
+			return o, settled
+		}
+		return s, settled
+	}
+	return next, settled
+}
+
+// stillIn reports whether s shows app in front, unlocked.
+func stillIn(s *screen.Screen, app screen.App) bool {
+	return !s.Locked && sameApp(s.App, app)
+}
+
+// sameApp compares apps by id, or by name when one has no id.
+func sameApp(a, b screen.App) bool {
+	if a.ID != "" && b.ID != "" {
+		return a.ID == b.ID
+	}
+	return a.Name != "" && strings.EqualFold(a.Name, b.Name)
 }
 
 func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *prep) error {
