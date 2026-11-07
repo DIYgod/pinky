@@ -93,6 +93,33 @@ func (e *Engine) SetReadOnly(deviceID string, on bool) error {
 	return nil
 }
 
+// ForgetDevice drops what the rules keep about one phone, which the person
+// removed from Pinky: its read-only switch, and its entry in the rules
+// file's read_only_devices, which is then saved. Read-only mode for every
+// device stays as it is.
+func (e *Engine) ForgetDevice(deviceID string) error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	delete(e.readOnlyDevices, deviceID)
+	if deviceID == "" || !contains(e.file.ReadOnlyDevices, deviceID) {
+		return nil
+	}
+	if err := e.syncLocked(&e.rulesDisk); err != nil {
+		return err
+	}
+	if !contains(e.file.ReadOnlyDevices, deviceID) {
+		return nil // a hand edit took it out meanwhile
+	}
+	var keep []string
+	for _, id := range e.file.ReadOnlyDevices {
+		if id != deviceID {
+			keep = append(keep, id)
+		}
+	}
+	e.file.ReadOnlyDevices = keep
+	return e.saveRulesLocked()
+}
+
 // ReadOnly reports whether read-only mode applies to the device.
 func (e *Engine) ReadOnly(deviceID string) bool {
 	e.mu.RLock()

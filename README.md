@@ -6,10 +6,10 @@
 
 Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
 
-<p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator.</sub></p>
+<p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator. Pinky asks before payments by default; this run also asks before messages.</sub></p>
 
 - **Every platform.** One app for macOS (Apple silicon and Intel), Windows and Linux. It drives Android phones (Android 10 to 17) and iPhones on iOS 17.4 or later: nothing to install on iOS 27 and later, and a helper installed once from Xcode on iOS 17.4 to 26, which you can also choose on iOS 27 (tried there and on Simulators, not yet on a phone below 27; [details](#phones)).
-- **Tiny and native.** The window is drawn by [MyGo](https://github.com/egoist/mygo) on the GPU, with no Electron and no webview: a 12–16 MB download that idles at about 70 MB of memory and 0% CPU on a Mac.
+- **Tiny and native.** The window is drawn by [MyGo](https://github.com/egoist/mygo) on the GPU, with no Electron and no webview: a 14–18 MB download that idles at about 70 MB of memory and 0% CPU on a Mac.
 - **Free and open source** under the Apache-2.0 license, with no account to create.
 - **You approve the risky steps.** Payments, trades and transfers wait for your click; in Settings › Safety you can have sends, orders, deletions, calls, installs, links that leave the app and settings changes wait too, or every step. Pinky spots these buttons in 10 languages. The rules run in Pinky's gateway, so an agent can't approve itself, even when text on the screen tries to talk it into it.
 - **Your phone stays yours.** On Android 13 and later, agents work on a hidden second screen, so the phone can stay off and locked. Click the mirror to take over; on Android, touching the phone yourself pauses the agent too. Stop all is ⌥⌘. from anywhere.
@@ -50,9 +50,13 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 
 #### Android
 
+**Add phone › Android** shows these steps for your phone's brand, with its own menu names and extra switches: Xiaomi, OPPO, vivo, HONOR, HUAWEI, Samsung and Pixel, and general steps for the rest.
+
 1. On the phone, turn on USB debugging: in Settings › About phone, tap **Build number** 7 times, then turn on **USB debugging** in Settings › System › Developer options. Some brands name these menus a little differently.
 2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone**.
 3. Pinky offers to install Pinky Companion, its app for the phone, which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
+
+Each phone has a **Checkup**, in the ··· menu under its mirror, that lists what works and how to fix what doesn't, such as a Xiaomi's USB debugging (Security settings) switch.
 
 #### Android tools
 
@@ -117,6 +121,7 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
   The helper is Appium's WebDriverAgent, signed with your own Apple ID; with a free Apple ID it has to be installed again every 7 days.
 - **Screen sharing on iPhone:** while Pinky streams an iPhone's screen, iOS tells apps that the screen is being shared, and some banking apps (DBS digibank and China Merchants Bank among them) refuse to run or warn you. Pinky streams it while the phone's page or tile is open in Pinky, while an agent works on it, and for 30 seconds after; then such apps work again. Over CoreDevice, agents cannot use them. Connect that iPhone through the WebDriverAgent helper instead (Settings › Phones): the phone then shares no screen, and agents can use those apps too.
 - **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN. On Android this is checked on AOSP-style lock screens (LineageOS on a Mi 10 Pro, the Android 10, 16 and 17 emulators); the lock screens of Xiaomi, Samsung, OPPO, OnePlus, vivo, Honor and Huawei are only covered by tests made from what is known of them, and where Pinky cannot read the PIN pad with confidence it enters nothing ([details](docs/notes/integration.md#unlocking-other-android-phones)).
+- **Removing a phone:** **Remove this phone…** in the phone's ⋯ menu (also on its page while it is offline, on its tile in All phones, in its right-click menu in the sidebar and in Settings › Phones) takes it off the list and deletes its saved PIN and its settings. Its tasks, screenshots and recordings stay in Activity unless you tick the box to delete them too, and a task running on it stops. A phone on a cable comes back at once, as a new phone, until you unplug it. A phone on Wi-Fi is disconnected and stays off the list, even when adb connects it again by itself; to add it back, pair it again in Add phone or plug it in. Pinky does not unpair the phone from your computer: its USB or wireless debugging pairing, or the iPhone's trust, stays for other apps ([details](docs/notes/gateway.md#removing-a-phone)).
 
 ### Updates
 

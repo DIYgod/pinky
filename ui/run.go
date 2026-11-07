@@ -208,6 +208,7 @@ type app struct {
 	droid    droidState      // Add phone's Android steps
 	chk      checkupState    // the phones' checkups
 	more     map[string]bool // the More phone controls popover, per device
+	rm       removeState     // the Remove this phone dialog (removephone.go)
 	toasts   []string
 
 	quitting  bool

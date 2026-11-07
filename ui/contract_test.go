@@ -28,6 +28,7 @@ var (
 	_ retentionSetter    = (*gateway.Gateway)(nil)
 	_ historyExporter    = (*gateway.Gateway)(nil)
 	_ checkupRunner      = (*gateway.Gateway)(nil)
+	_ phoneRemover       = (*gateway.Gateway)(nil)
 
 	_ mediaPather         = (*fakeapi.API)(nil)
 	_ agentLister         = (*fakeapi.API)(nil)
@@ -52,4 +53,5 @@ var (
 	_ historyExporter     = (*fakeapi.API)(nil)
 	_ recordingPlayer     = (*fakeapi.API)(nil)
 	_ checkupRunner       = (*fakeapi.API)(nil)
+	_ phoneRemover        = (*fakeapi.API)(nil)
 )

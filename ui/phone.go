@@ -103,6 +103,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			if linkButton(c, locales.PhoneCheckup()).Clicked() {
 				a.openCheckup(d)
 			}
+			a.removeLink(c, d)
 		})
 		return
 	}
@@ -123,6 +124,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 				a.add.reset(a)
 				a.add.step, a.add.focus = "iphone", d.Info.ID
 			}
+			a.removeLink(c, d)
 		})
 		return
 	}
@@ -297,6 +299,13 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 				a.setBackground(d, on)
 			}
 		})
+		if a.canRemove() {
+			mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
+			if menuItem(c, locales.RemovePhoneMenu(), p.red).Clicked() {
+				open = false
+				a.askRemove(d)
+			}
+		}
 	})
 	a.more[id] = open
 }
@@ -350,6 +359,9 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 				tile.Background(p.bg2)
 			}
 			hovered := tile.Hovered()
+			if a.canRemove() {
+				tile.ContextMenu(func(m *mg.Menu) { a.removeMenuItem(m, d) })
+			}
 			tile.Children(func() {
 				sel := mg.ButtonBase(c).Column().AlignItems(mg.Stretch).Justify(mg.Start).FillWidth().Padding(14).Gap(10).Radius(14).Label(locales.PhoneShow(d.Info.Name))
 				if sel.Clicked() {
@@ -409,9 +421,42 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 						}
 					})
 				}
+				a.tileMore(c, d, hovered)
 			})
 		}
 	})
+}
+
+// tileMore is the ⋯ button on a phone's tile in All phones, which shows
+// while the pointer is on the tile; its menu removes the phone.
+func (a *app) tileMore(c *mg.Context, d gateway.DeviceView, hovered bool) {
+	if !a.canRemove() {
+		return
+	}
+	p := pal(c)
+	key := "tile:" + d.Info.ID
+	open := a.more[key]
+	label := locales.RemovePhoneTileMore(d.Info.Name)
+	b := mg.ButtonBase(c.Key("tile-more-"+d.Info.ID)).Absolute().Top(8).Right(8).Size(30, 30).Radius(9).Center().
+		Background(p.panel).Border(1, p.line2).Label(label).Tooltip(label)
+	show := hovered || open || b.Hovered() || b.Focused()
+	b.Opacity(b.Animate("show", b2f(show), 150*time.Millisecond)).IgnoreInput(!show)
+	if b.Clicked() {
+		open = !open
+	}
+	col := p.ink2
+	if b.Hovered() || open {
+		col = p.ink
+	}
+	b.TextColor(col).Children(func() { mg.Icon(c, icMore).FontSize(16) })
+	mg.PopoverBase(c, b, &open, func(panel mg.Element) {
+		menuPanel(c, panel).Width(220).Margin(6, 0, 0, 0)
+		if menuItem(c, locales.RemovePhoneMenu(), p.red).Clicked() {
+			open = false
+			a.askRemove(d)
+		}
+	})
+	a.more[key] = open
 }
 
 func b2f(b bool) float32 {

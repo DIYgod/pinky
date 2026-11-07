@@ -26,9 +26,9 @@ import (
 )
 
 // schemaVersion is stored in PRAGMA user_version. Version 2 added the
-// recordings and device_settings tables, version 3 device_connections; all
-// versions open the same way.
-const schemaVersion = 3
+// recordings and device_settings tables, version 3 device_connections,
+// version 4 removed_devices; all versions open the same way.
+const schemaVersion = 4
 
 const schema = `
 CREATE TABLE IF NOT EXISTS devices (
@@ -134,6 +134,10 @@ CREATE TABLE IF NOT EXISTS device_settings (
 CREATE TABLE IF NOT EXISTS device_connections (
 	device_id TEXT PRIMARY KEY,
 	way       TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS removed_devices (
+	device_id  TEXT PRIMARY KEY,
+	removed_at INTEGER NOT NULL DEFAULT 0
 );
 `
 

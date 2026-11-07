@@ -32,6 +32,7 @@ type fakeADB struct {
 	guid          string   // reported by pair; "" for an old server
 	devices       []string // host:devices-l lines
 	connects      []string
+	disconnects   []string // host:disconnect arguments, with the port the server adds
 	pairs         int
 	autoSerial    string            // a serial the server adds by itself after pairing
 	props         map[string]string // getprop output by serial; none fails the shell
@@ -165,6 +166,22 @@ func (f *fakeADB) handle(c net.Conn) {
 		}
 		f.devices = append(f.devices, addr+"\tdevice product:x model:Pixel_9 device:x transport_id:8")
 		reply("connected to " + addr)
+	case strings.HasPrefix(req, "host:disconnect:"):
+		// As platform-tools 37: the argument is an address, with port 5555
+		// when it has none, so a name is never found.
+		addr := strings.TrimPrefix(req, "host:disconnect:")
+		if !strings.Contains(addr, ":") {
+			addr += ":5555"
+		}
+		f.disconnects = append(f.disconnects, addr)
+		for i, line := range f.devices {
+			if strings.HasPrefix(line, addr+"\t") {
+				f.devices = append(f.devices[:i:i], f.devices[i+1:]...)
+				reply("disconnected " + addr)
+				return
+			}
+		}
+		fail("no such device '" + addr + "'")
 	case req == "host:devices-l":
 		reply(strings.Join(f.devices, "\n") + "\n")
 	default:

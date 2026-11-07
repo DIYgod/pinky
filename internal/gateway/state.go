@@ -27,6 +27,7 @@ type device struct {
 	dev          driver.Device // nil while offline or not opened yet
 	opening      bool
 	online       bool
+	removed      bool // the person removed it (remove.go); a new device takes its place if it comes back
 	offlineSince time.Time
 	offlineWhy   string
 	lease        *lease

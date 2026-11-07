@@ -12961,6 +12961,392 @@ func (msgs Messages) RemoteURLTitle() string {
 	return Catalog.Format(msgs.locale, "remoteURLTitle", nil)
 }
 
+// RemovePhoneAddBackAndroid says "To add it back later, plug it in, or pair it again over Wi-Fi in Add phone."
+// in the language the app shows.
+//
+// In the Remove phone dialog, for an Android phone that is offline now: how
+// to add it back. Add phone is the sidebar's sidebarAddPhone.
+func RemovePhoneAddBackAndroid() string { return In(i18n.Locale()).RemovePhoneAddBackAndroid() }
+
+// RemovePhoneAddBackAndroid says "To add it back later, plug it in, or pair it again over Wi-Fi in Add phone."
+// in the language of msgs.
+//
+// In the Remove phone dialog, for an Android phone that is offline now: how
+// to add it back. Add phone is the sidebar's sidebarAddPhone.
+func (msgs Messages) RemovePhoneAddBackAndroid() string {
+	return Catalog.Format(msgs.locale, "removePhoneAddBackAndroid", nil)
+}
+
+// RemovePhoneAddBackIPhone says "To add it back later, plug it in again."
+// in the language the app shows.
+//
+// In the Remove phone dialog, for an iPhone that is offline now: how to add
+// it back.
+func RemovePhoneAddBackIPhone() string { return In(i18n.Locale()).RemovePhoneAddBackIPhone() }
+
+// RemovePhoneAddBackIPhone says "To add it back later, plug it in again."
+// in the language of msgs.
+//
+// In the Remove phone dialog, for an iPhone that is offline now: how to add
+// it back.
+func (msgs Messages) RemovePhoneAddBackIPhone() string {
+	return Catalog.Format(msgs.locale, "removePhoneAddBackIPhone", nil)
+}
+
+// RemovePhoneBusy says "Removing…"
+// in the language the app shows.
+//
+// The Remove button of the Remove phone dialog while the phone is being
+// removed.
+func RemovePhoneBusy() string { return In(i18n.Locale()).RemovePhoneBusy() }
+
+// RemovePhoneBusy says "Removing…"
+// in the language of msgs.
+//
+// The Remove button of the Remove phone dialog while the phone is being
+// removed.
+func (msgs Messages) RemovePhoneBusy() string {
+	return Catalog.Format(msgs.locale, "removePhoneBusy", nil)
+}
+
+// RemovePhoneButton says "Remove…"
+// in the language the app shows.
+//
+// A small button on each phone's row in Settings › Phones: it opens the
+// Remove phone dialog.
+func RemovePhoneButton() string { return In(i18n.Locale()).RemovePhoneButton() }
+
+// RemovePhoneButton says "Remove…"
+// in the language of msgs.
+//
+// A small button on each phone's row in Settings › Phones: it opens the
+// Remove phone dialog.
+func (msgs Messages) RemovePhoneButton() string {
+	return Catalog.Format(msgs.locale, "removePhoneButton", nil)
+}
+
+// RemovePhoneButtonLabel says "Remove {name}"
+// in the language the app shows.
+//
+// What assistive technology reads for removePhoneButton. name is the
+// phone's name.
+func RemovePhoneButtonLabel(name string) string {
+	return In(i18n.Locale()).RemovePhoneButtonLabel(name)
+}
+
+// RemovePhoneButtonLabel says "Remove {name}"
+// in the language of msgs.
+//
+// What assistive technology reads for removePhoneButton. name is the
+// phone's name.
+func (msgs Messages) RemovePhoneButtonLabel(name string) string {
+	return Catalog.Format(msgs.locale, "removePhoneButtonLabel", map[string]any{"name": name})
+}
+
+// RemovePhoneCable says "It's connected with a cable, so it shows up again right away, as a new phone. Unplug it first to keep it off the list."
+// in the language the app shows.
+//
+// In the Remove phone dialog, for a phone connected with a USB cable now:
+// removing it does not keep it away.
+func RemovePhoneCable() string { return In(i18n.Locale()).RemovePhoneCable() }
+
+// RemovePhoneCable says "It's connected with a cable, so it shows up again right away, as a new phone. Unplug it first to keep it off the list."
+// in the language of msgs.
+//
+// In the Remove phone dialog, for a phone connected with a USB cable now:
+// removing it does not keep it away.
+func (msgs Messages) RemovePhoneCable() string {
+	return Catalog.Format(msgs.locale, "removePhoneCable", nil)
+}
+
+// RemovePhoneCancel says "Cancel"
+// in the language the app shows.
+//
+// The Remove phone dialog's button that closes it without removing
+// anything.
+func RemovePhoneCancel() string { return In(i18n.Locale()).RemovePhoneCancel() }
+
+// RemovePhoneCancel says "Cancel"
+// in the language of msgs.
+//
+// The Remove phone dialog's button that closes it without removing
+// anything.
+func (msgs Messages) RemovePhoneCancel() string {
+	return Catalog.Format(msgs.locale, "removePhoneCancel", nil)
+}
+
+// RemovePhoneConfirm says "Remove"
+// in the language the app shows.
+//
+// The Remove phone dialog's button that removes the phone.
+func RemovePhoneConfirm() string { return In(i18n.Locale()).RemovePhoneConfirm() }
+
+// RemovePhoneConfirm says "Remove"
+// in the language of msgs.
+//
+// The Remove phone dialog's button that removes the phone.
+func (msgs Messages) RemovePhoneConfirm() string {
+	return Catalog.Format(msgs.locale, "removePhoneConfirm", nil)
+}
+
+// RemovePhoneDone says "Removed {name}"
+// in the language the app shows.
+//
+// A notice after a phone was removed. name is the phone's name.
+func RemovePhoneDone(name string) string { return In(i18n.Locale()).RemovePhoneDone(name) }
+
+// RemovePhoneDone says "Removed {name}"
+// in the language of msgs.
+//
+// A notice after a phone was removed. name is the phone's name.
+func (msgs Messages) RemovePhoneDone(name string) string {
+	return Catalog.Format(msgs.locale, "removePhoneDone", map[string]any{"name": name})
+}
+
+// RemovePhoneFailed says "Couldn't remove {name}: {error}"
+// in the language the app shows.
+//
+// In the Remove phone dialog when removing failed. error is the gateway's
+// error in English.
+func RemovePhoneFailed(name string, error string) string {
+	return In(i18n.Locale()).RemovePhoneFailed(name, error)
+}
+
+// RemovePhoneFailed says "Couldn't remove {name}: {error}"
+// in the language of msgs.
+//
+// In the Remove phone dialog when removing failed. error is the gateway's
+// error in English.
+func (msgs Messages) RemovePhoneFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "removePhoneFailed", map[string]any{"name": name, "error": error})
+}
+
+// RemovePhoneGoesList says "It leaves Pinky's list, and agents can no longer use it."
+// in the language the app shows.
+//
+// A point in the Remove phone dialog: what removing the phone does.
+func RemovePhoneGoesList() string { return In(i18n.Locale()).RemovePhoneGoesList() }
+
+// RemovePhoneGoesList says "It leaves Pinky's list, and agents can no longer use it."
+// in the language of msgs.
+//
+// A point in the Remove phone dialog: what removing the phone does.
+func (msgs Messages) RemovePhoneGoesList() string {
+	return Catalog.Format(msgs.locale, "removePhoneGoesList", nil)
+}
+
+// RemovePhoneGoesSettings says "Its saved PIN and its settings in Pinky are deleted."
+// in the language the app shows.
+//
+// A point in the Remove phone dialog: the PIN saved for unlocking from this
+// computer, and the phone's settings (work in the background, how Pinky
+// connects), are deleted.
+func RemovePhoneGoesSettings() string { return In(i18n.Locale()).RemovePhoneGoesSettings() }
+
+// RemovePhoneGoesSettings says "Its saved PIN and its settings in Pinky are deleted."
+// in the language of msgs.
+//
+// A point in the Remove phone dialog: the PIN saved for unlocking from this
+// computer, and the phone's settings (work in the background, how Pinky
+// connects), are deleted.
+func (msgs Messages) RemovePhoneGoesSettings() string {
+	return Catalog.Format(msgs.locale, "removePhoneGoesSettings", nil)
+}
+
+// RemovePhoneGoesTask says "{agent}'s task on it stops: {task}."
+// in the language the app shows.
+//
+// A point in the Remove phone dialog while an agent works on the phone.
+// task is the task's title as the agent named it.
+func RemovePhoneGoesTask(agent string, task string) string {
+	return In(i18n.Locale()).RemovePhoneGoesTask(agent, task)
+}
+
+// RemovePhoneGoesTask says "{agent}'s task on it stops: {task}."
+// in the language of msgs.
+//
+// A point in the Remove phone dialog while an agent works on the phone.
+// task is the task's title as the agent named it.
+func (msgs Messages) RemovePhoneGoesTask(agent string, task string) string {
+	return Catalog.Format(msgs.locale, "removePhoneGoesTask", map[string]any{"agent": agent, "task": task})
+}
+
+// RemovePhoneHistory says "Also delete its history: tasks, screenshots and recordings"
+// in the language the app shows.
+//
+// The check box in the Remove phone dialog, off by default: also delete the
+// phone's tasks in Activity.
+func RemovePhoneHistory() string { return In(i18n.Locale()).RemovePhoneHistory() }
+
+// RemovePhoneHistory says "Also delete its history: tasks, screenshots and recordings"
+// in the language of msgs.
+//
+// The check box in the Remove phone dialog, off by default: also delete the
+// phone's tasks in Activity.
+func (msgs Messages) RemovePhoneHistory() string {
+	return Catalog.Format(msgs.locale, "removePhoneHistory", nil)
+}
+
+// RemovePhoneHistoryFailed says "Removed {name}, but its history couldn't be deleted: {error}"
+// in the language the app shows.
+//
+// A notice when the phone was removed but deleting its history failed.
+// error is in English.
+func RemovePhoneHistoryFailed(name string, error string) string {
+	return In(i18n.Locale()).RemovePhoneHistoryFailed(name, error)
+}
+
+// RemovePhoneHistoryFailed says "Removed {name}, but its history couldn't be deleted: {error}"
+// in the language of msgs.
+//
+// A notice when the phone was removed but deleting its history failed.
+// error is in English.
+func (msgs Messages) RemovePhoneHistoryFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "removePhoneHistoryFailed", map[string]any{"name": name, "error": error})
+}
+
+// RemovePhoneHistoryStays says "Its history stays in Activity."
+// in the language the app shows.
+//
+// Under the history check box of the Remove phone dialog while it is off.
+// Activity is the sidebar's sidebarActivity.
+func RemovePhoneHistoryStays() string { return In(i18n.Locale()).RemovePhoneHistoryStays() }
+
+// RemovePhoneHistoryStays says "Its history stays in Activity."
+// in the language of msgs.
+//
+// Under the history check box of the Remove phone dialog while it is off.
+// Activity is the sidebar's sidebarActivity.
+func (msgs Messages) RemovePhoneHistoryStays() string {
+	return Catalog.Format(msgs.locale, "removePhoneHistoryStays", nil)
+}
+
+// RemovePhoneLink says "Remove this phone"
+// in the language the app shows.
+//
+// A link on the page of a phone that is offline or needs setup: it opens
+// the Remove phone dialog.
+func RemovePhoneLink() string { return In(i18n.Locale()).RemovePhoneLink() }
+
+// RemovePhoneLink says "Remove this phone"
+// in the language of msgs.
+//
+// A link on the page of a phone that is offline or needs setup: it opens
+// the Remove phone dialog.
+func (msgs Messages) RemovePhoneLink() string {
+	return Catalog.Format(msgs.locale, "removePhoneLink", nil)
+}
+
+// RemovePhoneMenu says "Remove this phone…"
+// in the language the app shows.
+//
+// A menu item in a phone's ⋯ menus and right-click menus: it opens the
+// Remove phone dialog.
+func RemovePhoneMenu() string { return In(i18n.Locale()).RemovePhoneMenu() }
+
+// RemovePhoneMenu says "Remove this phone…"
+// in the language of msgs.
+//
+// A menu item in a phone's ⋯ menus and right-click menus: it opens the
+// Remove phone dialog.
+func (msgs Messages) RemovePhoneMenu() string {
+	return Catalog.Format(msgs.locale, "removePhoneMenu", nil)
+}
+
+// RemovePhonePINFailed says "Removed {name}, but its saved PIN couldn't be deleted: {error}"
+// in the language the app shows.
+//
+// A notice when the phone was removed but deleting its PIN from the
+// system's keychain failed. error is in English.
+func RemovePhonePINFailed(name string, error string) string {
+	return In(i18n.Locale()).RemovePhonePINFailed(name, error)
+}
+
+// RemovePhonePINFailed says "Removed {name}, but its saved PIN couldn't be deleted: {error}"
+// in the language of msgs.
+//
+// A notice when the phone was removed but deleting its PIN from the
+// system's keychain failed. error is in English.
+func (msgs Messages) RemovePhonePINFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "removePhonePINFailed", map[string]any{"name": name, "error": error})
+}
+
+// RemovePhoneTileMore says "More actions for {name}"
+// in the language the app shows.
+//
+// The ⋯ button on a phone's tile in All phones, as assistive technology
+// reads it and as its tooltip.
+func RemovePhoneTileMore(name string) string { return In(i18n.Locale()).RemovePhoneTileMore(name) }
+
+// RemovePhoneTileMore says "More actions for {name}"
+// in the language of msgs.
+//
+// The ⋯ button on a phone's tile in All phones, as assistive technology
+// reads it and as its tooltip.
+func (msgs Messages) RemovePhoneTileMore(name string) string {
+	return Catalog.Format(msgs.locale, "removePhoneTileMore", map[string]any{"name": name})
+}
+
+// RemovePhoneTitle says "Remove {name}?"
+// in the language the app shows.
+//
+// The Remove phone dialog's title. name is the phone's name.
+func RemovePhoneTitle(name string) string { return In(i18n.Locale()).RemovePhoneTitle(name) }
+
+// RemovePhoneTitle says "Remove {name}?"
+// in the language of msgs.
+//
+// The Remove phone dialog's title. name is the phone's name.
+func (msgs Messages) RemovePhoneTitle(name string) string {
+	return Catalog.Format(msgs.locale, "removePhoneTitle", map[string]any{"name": name})
+}
+
+// RemovePhoneTrust says "The phone keeps trusting this computer, so other apps that use it are not affected."
+// in the language the app shows.
+//
+// In the Remove phone dialog: Pinky does not unpair the phone from the
+// computer (USB debugging, wireless debugging, iPhone trust).
+func RemovePhoneTrust() string { return In(i18n.Locale()).RemovePhoneTrust() }
+
+// RemovePhoneTrust says "The phone keeps trusting this computer, so other apps that use it are not affected."
+// in the language of msgs.
+//
+// In the Remove phone dialog: Pinky does not unpair the phone from the
+// computer (USB debugging, wireless debugging, iPhone trust).
+func (msgs Messages) RemovePhoneTrust() string {
+	return Catalog.Format(msgs.locale, "removePhoneTrust", nil)
+}
+
+// RemovePhoneWiFi says "Pinky disconnects from it and won't connect to it again by itself. To add it back, pair it again in Add phone, or plu…"
+// in the language the app shows.
+//
+// In the Remove phone dialog, for an Android phone connected over Wi-Fi
+// now. Add phone is the sidebar's sidebarAddPhone.
+func RemovePhoneWiFi() string { return In(i18n.Locale()).RemovePhoneWiFi() }
+
+// RemovePhoneWiFi says "Pinky disconnects from it and won't connect to it again by itself. To add it back, pair it again in Add phone, or plu…"
+// in the language of msgs.
+//
+// In the Remove phone dialog, for an Android phone connected over Wi-Fi
+// now. Add phone is the sidebar's sidebarAddPhone.
+func (msgs Messages) RemovePhoneWiFi() string {
+	return Catalog.Format(msgs.locale, "removePhoneWiFi", nil)
+}
+
+// RemovePhoneWiFiIPhone says "Pinky stops using it over Wi-Fi. To add it back, plug it in."
+// in the language the app shows.
+//
+// In the Remove phone dialog, for an iPhone connected over Wi-Fi now.
+func RemovePhoneWiFiIPhone() string { return In(i18n.Locale()).RemovePhoneWiFiIPhone() }
+
+// RemovePhoneWiFiIPhone says "Pinky stops using it over Wi-Fi. To add it back, plug it in."
+// in the language of msgs.
+//
+// In the Remove phone dialog, for an iPhone connected over Wi-Fi now.
+func (msgs Messages) RemovePhoneWiFiIPhone() string {
+	return Catalog.Format(msgs.locale, "removePhoneWiFiIPhone", nil)
+}
+
 // ReplayMenuItem says "Step-by-step replay"
 // in the language the app shows.
 //
