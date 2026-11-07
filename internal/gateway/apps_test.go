@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"context"
+	"strings"
 	"testing"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -31,4 +33,25 @@ func TestMatchAppByID(t *testing.T) {
 	if _, ok := matchApp(apps, "Maps"); ok {
 		t.Error("matched an app the phone lacks")
 	}
+}
+
+// A task app list with a name no installed app has (天气 for an English
+// Weather app) is pointed out on connect, and connecting again with the
+// same task takes the corrected list.
+func TestConnectPointsOutUnknownTaskApps(t *testing.T) {
+	g, _ := newTestGateway(t)
+	s := g.OpenSession(agent)
+	t.Cleanup(s.Close)
+	ctx := context.Background()
+	res := s.Connect(ctx, ConnectRequest{Task: "Lunch", Apps: []string{"天气", "Dinely"}})
+	mustStatus(t, res, StatusSettled)
+	if !strings.Contains(res.Message, "“天气”") || strings.Contains(res.Message, "“Dinely”") {
+		t.Fatalf("connect message: %s", res.Message)
+	}
+	res = s.Connect(ctx, ConnectRequest{Task: "Lunch", Apps: []string{"Dinely"}})
+	mustStatus(t, res, StatusSettled)
+	if strings.Contains(res.Message, "No installed app matches") {
+		t.Fatalf("still warned: %s", res.Message)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "com.dinely.app"}), StatusSettled)
 }

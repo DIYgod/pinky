@@ -428,7 +428,11 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		l.inflight++
 		g.mu.Unlock()
 		defer s.done(l)
-		return g.firstScreen(ctx, l)
+		var unknown []string
+		if len(req.Apps) > 0 {
+			unknown = g.resolveTaskApps(ctx, l)
+		}
+		return withUnknownApps(g.firstScreen(ctx, l), unknown)
 	} else if l != nil {
 		g.endLeaseLocked(l, OutcomeReplaced, "")
 	}
@@ -437,7 +441,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	g.mu.Unlock()
 	defer s.done(l)
 
-	g.resolveTaskApps(ctx, l)
+	unknown := g.resolveTaskApps(ctx, l)
 	g.recordSession(s)
 	args := map[string]any{"task": title}
 	if len(req.Apps) > 0 {
@@ -447,7 +451,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		Text: fmt.Sprintf("Connected to %s for “%s”", d.name(), title), Status: string(StatusSettled), At: time.Now()})
 	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
-	return g.firstScreen(ctx, l)
+	return withUnknownApps(g.firstScreen(ctx, l), unknown)
 }
 
 func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []string) *lease {
@@ -487,34 +491,56 @@ func appendUniq(list []string, s string) []string {
 }
 
 // resolveTaskApps adds the ids and names of installed apps that the task's
-// allow-list names, so the list matches either.
-func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) {
+// allow-list names, so the list matches either. It returns the names that
+// match no installed app, such as 天气 on a phone whose Weather app has an
+// English name; nil when the phone cannot list its apps.
+func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []string {
 	g.mu.Lock()
 	want := append([]string(nil), l.apps...)
 	g.mu.Unlock()
 	if len(want) == 0 {
-		return
+		return nil
 	}
 	dev := g.driverOf(l.dev)
 	if dev == nil {
-		return
+		return nil
 	}
 	apps, err := dev.Apps(ctx)
 	if err != nil {
-		return
+		return nil
 	}
 	out := append([]string(nil), want...)
+	var unknown []string
 	for _, w := range want {
 		if a, ok := matchApp(apps, w); ok {
 			out = appendUniq(out, a.ID)
 			if a.Name != "" {
 				out = appendUniq(out, a.Name)
 			}
+		} else {
+			unknown = append(unknown, w)
 		}
 	}
 	g.mu.Lock()
 	l.apps = out
 	g.mu.Unlock()
+	return unknown
+}
+
+// withUnknownApps tells the agent at once which names in its task's app
+// list match no installed app, rather than at the first refused launch.
+func withUnknownApps(res *Result, unknown []string) *Result {
+	if len(unknown) == 0 || res == nil || res.IsError() {
+		return res
+	}
+	names := make([]string, len(unknown))
+	for i, u := range unknown {
+		names[i] = "“" + u + "”"
+	}
+	res.Message = strings.TrimSpace(res.Message + fmt.Sprintf(
+		" No installed app matches %s in the task's app list, so opening those apps will be refused. Call phone_apps for the names this phone uses, then phone_connect again with the same task and the corrected apps.",
+		strings.Join(names, ", ")))
+	return res
 }
 
 // firstScreen reads the whole screen for a new lease.
