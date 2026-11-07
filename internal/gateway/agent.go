@@ -1214,18 +1214,20 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 	}
 	var info approval.Info
 	if id == "" {
+		// Unlocking from the computer answers a handoff opened on a locked
+		// phone only when unlocking is all it asks for.
 		g.mu.Lock()
-		locked := l.dev.locked
+		endsOnUnlock := l.dev.locked && unlockOnly(reason)
 		g.mu.Unlock()
 		info = g.approvals.Open(approval.Request{Kind: approval.KindHandoff, Binding: b, Rule: "Handoff",
 			Title: reason, Detail: fmt.Sprintf("%s · %s", s.agent.Name, l.task.title), Agent: s.agent.Name,
 			TaskID: l.task.id, DeviceName: l.dev.name(), App: g.appName(l.dev), Timeout: g.opt.HandoffTimeout})
 		g.mu.Lock()
-		if locked {
+		if endsOnUnlock {
 			l.unlockHandoffs = append(l.unlockHandoffs, info.ID)
 		}
 		g.mu.Unlock()
-		if locked {
+		if endsOnUnlock {
 			// An unlock from the computer as soon as the card showed may
 			// have finished before the line above and found nothing to
 			// answer: answer now if the phone is unlocked.

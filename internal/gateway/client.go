@@ -155,6 +155,16 @@ func (g *Gateway) Needs() []NeedView {
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	for i := range out {
+		if out[i].Kind != NeedHandoff {
+			continue
+		}
+		if d := g.devices[out[i].DeviceID]; d != nil && d.lease != nil {
+			for _, id := range d.lease.unlockHandoffs {
+				out[i].EndsOnUnlock = out[i].EndsOnUnlock || id == out[i].ID
+			}
+		}
+	}
 	for _, d := range g.sortedDevicesLocked() {
 		if l := d.lease; l != nil && d.locked && d.online && l.bg == nil {
 			out = append(out, NeedView{ID: unlockNeedPrefix + d.id, Kind: NeedUnlock, DeviceID: d.id, DeviceName: d.name(),

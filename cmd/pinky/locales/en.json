@@ -2072,6 +2072,16 @@
       }
     }
   },
+  "needsHandoffLockedHereThenDone": "The phone is locked. Unlock it here or on the phone, do what {agent} asked, then click Done.",
+  "@needsHandoffLockedHereThenDone": {
+    "description": "A handoff card on a locked phone that this computer can unlock, under the Unlock with Touch ID button, when the agent asked for more than unlocking: unlocking does not hand the phone back. Done is the card's button (needsDone).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
   "needsHandoffNotePlaceholder": "What you did, or what to do next",
   "@needsHandoffNotePlaceholder": {
     "description": "The placeholder of the note field on a handoff card: what the person did on the phone, or what the agent should do next."

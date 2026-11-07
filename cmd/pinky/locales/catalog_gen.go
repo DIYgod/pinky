@@ -4959,6 +4959,28 @@ func (msgs Messages) NeedsHandoffLockedHere(agent string) string {
 	return Catalog.Format(msgs.locale, "needsHandoffLockedHere", map[string]any{"agent": agent})
 }
 
+// NeedsHandoffLockedHereThenDone says "The phone is locked. Unlock it here or on the phone, do what {agent} asked, then click Done."
+// in the language the app shows.
+//
+// A handoff card on a locked phone that this computer can unlock, under the
+// Unlock with Touch ID button, when the agent asked for more than
+// unlocking: unlocking does not hand the phone back. Done is the card's
+// button (needsDone).
+func NeedsHandoffLockedHereThenDone(agent string) string {
+	return In(i18n.Locale()).NeedsHandoffLockedHereThenDone(agent)
+}
+
+// NeedsHandoffLockedHereThenDone says "The phone is locked. Unlock it here or on the phone, do what {agent} asked, then click Done."
+// in the language of msgs.
+//
+// A handoff card on a locked phone that this computer can unlock, under the
+// Unlock with Touch ID button, when the agent asked for more than
+// unlocking: unlocking does not hand the phone back. Done is the card's
+// button (needsDone).
+func (msgs Messages) NeedsHandoffLockedHereThenDone(agent string) string {
+	return Catalog.Format(msgs.locale, "needsHandoffLockedHereThenDone", map[string]any{"agent": agent})
+}
+
 // NeedsHandoffNotePlaceholder says "What you did, or what to do next"
 // in the language the app shows.
 //

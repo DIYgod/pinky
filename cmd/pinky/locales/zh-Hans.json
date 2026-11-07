@@ -304,6 +304,7 @@
   "needsHandoffInControl": "现在由你操作。点按“完成”即可将手机交还给 {agent}。",
   "needsHandoffLocked": "手机已锁定。{how}",
   "needsHandoffLockedHere": "手机已锁定。在这里解锁会把手机交还给 {agent}。如果你在手机上解锁，做完后点按“完成”。",
+  "needsHandoffLockedHereThenDone": "手机已锁定。在这里或在手机上解锁，做完 {agent} 要求的事后点按“完成”。",
   "needsHandoffNotePlaceholder": "你做了什么，或接下来该做什么",
   "needsLetAgent": "{agent} 的权限",
   "needsMoreOptions": "更多选项",

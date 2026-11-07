@@ -167,8 +167,8 @@ type lease struct {
 	// agent calls phone_handoff.
 	handedBack   bool
 	handBackNote string
-	// unlockHandoffs are handoffs opened while the phone was locked; Unlock
-	// from the computer ends them.
+	// unlockHandoffs are handoffs opened while the phone was locked that ask
+	// only for unlocking (unlockOnly); Unlock from the computer ends them.
 	unlockHandoffs []string
 	// after is the read that ended the last action, if it settled; the next
 	// step of a phone_batch reuses it while it is fresh.

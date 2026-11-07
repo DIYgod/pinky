@@ -130,8 +130,13 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 		mg.Text(c, locales.NeedsHandoffInControl(agent)).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case locked && a.canUnlockHere(n.DeviceID):
 		a.unlockButton(c, n.DeviceID).Margin(12, 0, 0, 0).FillWidth()
-		mg.Text(c, locales.NeedsHandoffLockedHere(agent)).
-			FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		// Unlocking hands the phone back only when unlocking is all the
+		// agent asked for.
+		how := locales.NeedsHandoffLockedHereThenDone(agent)
+		if n.EndsOnUnlock {
+			how = locales.NeedsHandoffLockedHere(agent)
+		}
+		mg.Text(c, how).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case locked:
 		mg.Text(c, locales.NeedsHandoffLocked(a.unlockElsewhere(n.DeviceID, locales.NeedsThenClickDone()))).
 			FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
