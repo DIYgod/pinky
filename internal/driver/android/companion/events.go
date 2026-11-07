@@ -28,17 +28,22 @@ const (
 
 // Event is something that happened on the phone.
 type Event struct {
-	Kind     EventKind
-	Time     time.Time // when it happened, on the host's clock
-	Package  string    // the app it came from
-	Display  int       // the display id (Android 13+)
-	Class    string    // window: the activity or dialog class
-	Title    string    // window: its title; notification: the title
-	Text     string    // toast and notification text
-	Category string    // notification category, such as "msg"
-	Window   int       // window and windows: the window id
-	Changes  []string  // windows: added, removed, title, bounds, layer, active, focused, ...
-	Count    int       // content: events folded into this one; dropped: events lost
+	Kind    EventKind
+	Time    time.Time // when it happened, on the host's clock
+	Package string    // the app it came from
+	// Display is the display the event came from, or -1 when that is not
+	// known: notifications, which belong to the phone; a window that has
+	// only just opened (Android 11 and 12); every event from apps built
+	// before round three below Android 13, which leave the field out.
+	// Never read -1 as the main display.
+	Display  int
+	Class    string   // window: the activity or dialog class
+	Title    string   // window: its title; notification: the title
+	Text     string   // toast and notification text
+	Category string   // notification category, such as "msg"
+	Window   int      // window and windows: the window id
+	Changes  []string // windows: added, removed, title, bounds, layer, active, focused, ...
+	Count    int      // content: events folded into this one; dropped: events lost
 }
 
 // ScreenEvent converts a toast or notification into the screen model's
@@ -64,7 +69,7 @@ type wireEvent struct {
 	Event    string   `json:"event"`
 	Time     int64    `json:"time"`
 	Package  string   `json:"package"`
-	Display  int      `json:"display"`
+	Display  *int     `json:"display"`
 	Class    string   `json:"class"`
 	Title    string   `json:"title"`
 	Text     string   `json:"text"`
@@ -182,11 +187,15 @@ func (s *Subscription) read(ctx context.Context, rd *bufio.Reader) {
 		if json.Unmarshal(raw, &w) != nil || w.Event == "" {
 			continue
 		}
+		display := -1 // left out: not known
+		if w.Display != nil {
+			display = *w.Display
+		}
 		ev := Event{
 			Kind:     EventKind(w.Event),
 			Time:     s.client.HostTime(w.Time),
 			Package:  w.Package,
-			Display:  w.Display,
+			Display:  display,
 			Class:    w.Class,
 			Title:    w.Title,
 			Text:     w.Text,
