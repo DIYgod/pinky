@@ -20,8 +20,9 @@ import (
 // measured 0.1 s to 0.4 s depending on the model.
 const inputSettle = 500 * time.Millisecond
 
-// Device is an open session with one iPhone. It keeps one tunnel, one video
-// stream and one HID connection for its whole life.
+// Device is an open session with one iPhone. It keeps one tunnel for its
+// whole life, and one video stream with an HID connection on it while
+// anyone watches or Pinky sends input (see idle.go).
 type Device struct {
 	info driver.Info
 	l    *link
@@ -34,6 +35,9 @@ type Device struct {
 
 	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
 	closed    bool
+	done      chan struct{} // closed by Close
+	watchers  int           // stream views open (see idle.go)
+	watchedAt time.Time     // when one last opened or closed
 
 	inputMu   sync.Mutex // serializes gestures and raw touches
 	restartMu sync.Mutex // one stream restart at a time; guards the two below
@@ -68,11 +72,12 @@ func Open(ctx context.Context, info driver.Info) (*Device, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &Device{info: info, l: l}
+	d := &Device{info: info, l: l, done: make(chan struct{})}
 	if err := d.start(ctx); err != nil {
 		l.Close()
 		return nil, err
 	}
+	go d.idleLoop()
 	// Connect the accessibility service now (the phone answers its first
 	// requests slowly while it builds the first tree it pushes), and the
 	// pasteboard service, whose handshake would otherwise slow the first
@@ -222,16 +227,18 @@ func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
 // Info implements driver.Device.
 func (d *Device) Info() driver.Info { return d.info }
 
-// Stream implements driver.Device. The device's stream runs as long as the
-// session does; each call returns a new view of it that starts at the next
-// keyframe. Closing the view does not stop the device's stream, which HID
-// input needs.
+// Stream implements driver.Device. Each call returns a new view of the
+// device's stream that starts at the next keyframe. Closing the view does
+// not stop the device's stream, which HID input needs; it stops once no
+// view is open and Pinky sends no input for a while (see idle.go).
 func (d *Device) Stream(ctx context.Context, _ driver.StreamOptions) (driver.Stream, error) {
+	d.watch() // before the stream is looked at: an idle stop must not race this view
 	m, _, err := d.live(ctx)
 	if err != nil {
+		d.unwatch()
 		return nil, err
 	}
-	return &mediaStream{m: m, s: m.subscribe()}, nil
+	return &watchedStream{mediaStream: &mediaStream{m: m, s: m.subscribe()}, d: d}, nil
 }
 
 // StreamStats reports the stream's counters, for diagnostics.
@@ -483,6 +490,9 @@ func (d *Device) Close() error {
 		return nil
 	}
 	d.closed = true
+	if d.done != nil {
+		close(d.done)
+	}
 	d.mu.Unlock()
 	// A restart in flight sees closed and stops its own stream; wait for it.
 	d.restartMu.Lock()
