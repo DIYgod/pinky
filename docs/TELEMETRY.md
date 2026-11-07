@@ -128,6 +128,6 @@ All are readable only by the user. Settings › Privacy's choice is `UsageStats`
 
 Usage statistics and crash reports are posted as JSON over HTTPS to the backend's `/v1/usage` and `/v1/crash`, with `User-Agent: Pinky/<version> (<os>; <arch>)`. A report that fails to go out is tried again later (after an hour, doubling up to a day); one the backend refuses (HTTP 4xx) is dropped.
 
-The backend is a Cloudflare Worker with a D1 database ([`worker/`](../worker)). It checks each report's shape and size, stores it, and keeps usage reports for 400 days and crash reports for 180. It does not store IP addresses or any request header; Cloudflare sees the address of the connection, as any server would.
+The backend is a Cloudflare Worker with a D1 database ([`worker/`](../worker)), at `https://pinky-telemetry.rss3.workers.dev`. It checks each report's shape and size, stores it, and keeps usage reports for 400 days and crash reports for 180. It does not store IP addresses or any request header, and has Workers Logs off; Cloudflare sees the address of the connection, as any server would, and the Worker uses it for a minute to limit how often one address may report.
 
 The backend's address is `telemetry.Endpoint` in [`internal/telemetry/telemetry.go`](../internal/telemetry/telemetry.go) (a build may set it with `-ldflags "-X github.com/DIYgod/pinky/internal/telemetry.Endpoint=…"`), or `PINKY_TELEMETRY_URL`. The client talks to it through the `telemetry.Backend` interface, so another backend can replace it.

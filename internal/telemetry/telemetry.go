@@ -35,10 +35,12 @@ import (
 	"time"
 )
 
-// Endpoint is the base URL of the backend that receives reports; the
-// paths in backend.go follow it. Empty sends nothing. A build may set it
-// with -ldflags "-X github.com/DIYgod/pinky/internal/telemetry.Endpoint=…".
-var Endpoint = ""
+// Endpoint is the base URL of the backend that receives reports, the
+// Worker in worker/; the paths in backend.go follow it. Empty sends
+// nothing. A build may set it with
+// -ldflags "-X github.com/DIYgod/pinky/internal/telemetry.Endpoint=…".
+// Development builds never use it (endpoint).
+var Endpoint = "https://pinky-telemetry.rss3.workers.dev"
 
 // EndpointEnv overrides Endpoint, for a staging backend or a test. It also
 // lets a development build send, which it otherwise never does.
