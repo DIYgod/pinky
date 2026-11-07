@@ -28,14 +28,9 @@ make app                                   # build/pinky/darwin-<arch>/Pinky.app
 open build/pinky/darwin-arm64/Pinky.app
 ```
 
-Or install a release: `brew install --cask diygod/tap/pinky` on macOS, which also puts the `pinkyctl` command on the `PATH` (`claude mcp add pinky -- pinkyctl mcp`), or a download of [the latest release](https://github.com/DIYgod/pinky/releases/latest) for macOS, Windows or Linux (the Linux packages install `pinkyctl` too). Settings › Agents shows the command that adds this copy of Pinky to Claude Code and other agents, by the app's own path. The command is not `pinky`: coreutils has a `pinky` command of its own, which many Macs (Homebrew's coreutils) and every Linux have.
+Or install a release: `brew install --cask diygod/tap/pinky` on macOS, which also puts the `pinkyctl` command on the `PATH`, or a download of [the latest release](https://github.com/DIYgod/pinky/releases/latest) for macOS, Windows or Linux (the Linux packages install `pinkyctl` too). The command is not `pinky`: coreutils has a `pinky` command of its own, which many Macs (Homebrew's coreutils) and every Linux have.
 
-Then connect your agent. For Claude Code:
-
-```sh
-claude mcp add pinky -- "$PWD/build/pinky/darwin-arm64/Pinky.app/Contents/MacOS/Pinky" mcp
-mkdir -p ~/.claude/skills/pinky && cp docs/SKILL.md ~/.claude/skills/pinky/SKILL.md
-```
+Then connect your agent: in Settings › Agents, click **Connect** next to it. Pinky finds Claude Code, Claude Desktop, Codex, Cursor, VS Code, Copilot CLI, Windsurf (Devin Desktop) and Gemini CLI on your computer and adds itself to the agent's MCP servers by the app's own path: through the agent's own command where it has one, such as `claude mcp add`, or in its settings file, keeping a copy of the file first; Claude Desktop gets it as an extension, which it asks you to install. Pinky also installs its guide for agents, [SKILL.md](docs/SKILL.md), where the agent reads skills. Until an agent is connected, a card in the sidebar offers to do it, or says where to get one. Claude Desktop can also install Pinky from `pinky-<version>.mcpb` on the [release page](https://github.com/DIYgod/pinky/releases/latest), with a double-click. For other agents, Settings › Agents › Add an agent by hand gives the command; [docs/mcp.md](docs/mcp.md#connecting-an-agent) has the details.
 
 Ask the agent to do something on your phone. The first time it connects, Pinky asks you to allow it.
 

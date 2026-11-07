@@ -24,10 +24,15 @@ open build/pinky/darwin-arm64/Pinky.app
 
 ## 2. Connect Claude Code
 
+In Pinky, open Settings › Agents and click **Connect** next to Claude Code (or the card in the sidebar, while no agent is connected). By hand instead:
+
 ```sh
-claude mcp add pinky -- "$HOME/Code/Projects/pinky/build/pinky/darwin-arm64/Pinky.app/Contents/MacOS/Pinky" mcp
+claude mcp add --scope user pinky -- "$HOME/Code/Projects/pinky/build/pinky/darwin-arm64/Pinky.app/Contents/MacOS/Pinky" mcp
 mkdir -p ~/.claude/skills/pinky && cp docs/SKILL.md ~/.claude/skills/pinky/SKILL.md
 ```
+
+- [ ] Settings › Agents lists the agents on this Mac; Connect next to Claude Code runs `claude mcp add --scope user pinky -- <Pinky.app's path> mcp`, installs `~/.claude/skills/pinky/SKILL.md` and says Connected. *(checked with fake agents in a home folder of the test's own, `go test -tags e2e -run TestAgentSetupInTheApp ./cmd/pinky`)*
+- [ ] Connect next to Claude Desktop opens Pinky's extension in Claude Desktop, which asks to install it; once installed, Settings says Connected as an extension.
 
 Ask a new Claude Code session: *"Use my Mi 10 Pro: open the Calculator and work out 6 × 7."*
 
