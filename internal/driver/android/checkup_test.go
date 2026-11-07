@@ -33,8 +33,11 @@ func TestFamilyOf(t *testing.T) {
 		{"OxygenOS", map[string]string{"ro.product.manufacturer": "OnePlus", "ro.product.brand": "OnePlus", "ro.build.version.oplusrom": "V15.0.0"}, "oppo", "OxygenOS 15.0.0"},
 		{"realme UI", map[string]string{"ro.product.manufacturer": "realme", "ro.product.brand": "realme",
 			"ro.build.version.oplusrom": "V14.0", "ro.build.version.realmeui": "V5.0"}, "oppo", "realme UI 5.0"},
-		{"OriginOS", map[string]string{"ro.product.manufacturer": "vivo", "ro.product.brand": "iQOO", "ro.vivo.os.name": "OriginOS", "ro.vivo.os.version": "5.0"}, "vivo", "OriginOS 5.0"},
-		{"Funtouch OS", map[string]string{"ro.product.manufacturer": "vivo", "ro.vivo.os.name": "Funtouch", "ro.vivo.os.version": "14.0"}, "vivo", "Funtouch OS 14.0"},
+		{"OriginOS", map[string]string{"ro.product.manufacturer": "vivo", "ro.product.brand": "iQOO", "ro.vivo.os.name": "Funtouch",
+			"ro.vivo.os.version": "15.0", "ro.vivo.os.build.display.id": "OriginOS 5"}, "vivo", "OriginOS 5"},
+		{"Funtouch OS", map[string]string{"ro.product.manufacturer": "vivo", "ro.vivo.os.name": "Funtouch", "ro.vivo.os.build.display.id": "Funtouch OS_14"}, "vivo", "Funtouch OS 14"},
+		{"vivo with an unknown display id", map[string]string{"ro.product.manufacturer": "vivo", "ro.vivo.os.build.display.id": "PD2309"}, "vivo", ""},
+		{"LineageOS on a vivo", map[string]string{"ro.product.manufacturer": "vivo", "ro.lineage.build.version": "22.2"}, "", "LineageOS 22.2"},
 		{"MagicOS", map[string]string{"ro.product.manufacturer": "HONOR", "ro.build.version.magic": "MagicOS_9.0.0"}, "honor", "MagicOS 9.0.0"},
 		{"Magic UI on EMUI", map[string]string{"ro.product.manufacturer": "HONOR", "ro.build.version.emui": "EmotionUI_10.0.0"}, "honor", "EMUI 10.0.0"},
 		{"HarmonyOS", map[string]string{"ro.product.manufacturer": "HUAWEI", "ro.build.version.emui": "EmotionUI_14.2.0", "hw_sc.build.platform.version": "4.2.0"}, "huawei", "HarmonyOS 4.2.0"},
@@ -68,7 +71,7 @@ func TestVersions(t *testing.T) {
 func TestInputRefused(t *testing.T) {
 	for line, want := range map[string]bool{
 		"java.lang.SecurityException: Injecting input events requires the caller (or the source of the instrumentation, if any) to have the INJECT_EVENTS permission.": true,
-		"[server] ERROR: java.lang.SecurityException: Injecting to another application requires INJECT_EVENTS permission":                                             true,
+		"[server] ERROR: java.lang.SecurityException: Injecting to another application requires INJECT_EVENTS permission":                                              true,
 		"[server] INFO: Device: [Xiaomi] Redmi 23013RK75C (Android 14)":                                                                                                false,
 	} {
 		if got := inputRefused(line); got != want {
@@ -77,5 +80,17 @@ func TestInputRefused(t *testing.T) {
 	}
 	if got := serverMessage("[server] ERROR: java.lang.SecurityException: no"); got != "java.lang.SecurityException: no" {
 		t.Errorf("serverMessage = %q", got)
+	}
+}
+
+func TestXiaomiInputSwitch(t *testing.T) {
+	// The switch's property, as getprop prints it on a phone that has it
+	// on but was not restarted since.
+	props := parseProps("[persist.security.adbinput]: [1]\n[ro.mi.os.version.name]: [OS3.0]\n")
+	if props["persist.security.adbinput"] != "1" {
+		t.Fatalf("props = %q", props)
+	}
+	if f, _ := familyOf(props); f != "xiaomi" {
+		t.Errorf("family = %q", f)
 	}
 }

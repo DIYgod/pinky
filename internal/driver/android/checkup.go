@@ -40,7 +40,9 @@ func (d *Device) Checkup(ctx context.Context) (driver.Checkup, error) {
 	cu.Family, cu.System = familyOf(props)
 
 	checks := []func(context.Context) driver.Check{
-		d.checkADB, d.checkCompanion, d.checkInput, d.checkScreen,
+		d.checkADB, d.checkCompanion,
+		func(ctx context.Context) driver.Check { return d.checkInput(ctx, cu.Family, props) },
+		d.checkScreen,
 		func(context.Context) driver.Check { return d.checkBackground() },
 		func(context.Context) driver.Check { return d.checkWiFi() },
 	}
@@ -102,8 +104,10 @@ func (d *Device) checkCompanion(ctx context.Context) driver.Check {
 // the server's log: a phone that refuses input from the computer (Xiaomi
 // without USB debugging (Security settings), ColorOS with permission
 // monitoring) makes the server log a SecurityException about the
-// INJECT_EVENTS permission at once.
-func (d *Device) checkInput(ctx context.Context) driver.Check {
+// INJECT_EVENTS permission at once. Xiaomi's switch sets
+// persist.security.adbinput at once but takes effect only after a
+// restart: a phone that has it and still refuses needs that restart.
+func (d *Device) checkInput(ctx context.Context, family string, props map[string]string) driver.Check {
 	c := driver.Check{ID: driver.CheckInput}
 	l, err := d.session(ctx)
 	if err != nil {
@@ -120,6 +124,9 @@ func (d *Device) checkInput(ctx context.Context) driver.Check {
 	switch {
 	case err == nil:
 		c.Status, c.Fix, c.Detail = driver.CheckFail, driver.FixInputPermission, serverMessage(line)
+		if family == "xiaomi" && props["persist.security.adbinput"] == "1" {
+			c.Fix, c.Detail = driver.FixRestart, "persist.security.adbinput is 1, but the phone still refuses input: "+c.Detail
+		}
 	case errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil:
 		c.Status, c.Detail = driver.CheckPass, "a key that does nothing reached the phone"
 	default:
@@ -257,8 +264,12 @@ func familyOf(props map[string]string) (family, system string) {
 	maker := strings.ToLower(props["ro.product.manufacturer"])
 	brand := strings.ToLower(props["ro.product.brand"])
 	switch {
+	case props["ro.lineage.build.version"] != "":
+		// First: LineageOS keeps the maker's name, not its system.
+		return "", join("LineageOS", props["ro.lineage.build.version"])
 	case props["ro.mi.os.version.name"] != "":
-		// "OS2.0" on HyperOS 2.
+		// "OS2.0" on HyperOS 2. HyperOS keeps ro.miui.ui.version.name
+		// ("V816"), so it goes before MIUI.
 		return "xiaomi", join("HyperOS", strings.TrimPrefix(props["ro.mi.os.version.name"], "OS"))
 	case props["ro.miui.ui.version.name"] != "":
 		return "xiaomi", join("MIUI", miuiVersion(props["ro.miui.ui.version.name"]))
@@ -267,27 +278,23 @@ func familyOf(props map[string]string) (family, system string) {
 		v := strings.TrimPrefix(nonEmpty(props["ro.build.version.oplusrom"], props["ro.build.version.opporom"]), "V")
 		switch {
 		case brand == "realme" || maker == "realme":
-			return "oppo", join("realme UI", strings.TrimPrefix(nonEmpty(props["ro.build.version.realmeui"], ""), "V"))
+			return "oppo", join("realme UI", strings.TrimPrefix(props["ro.build.version.realmeui"], "V"))
 		case brand == "oneplus" || maker == "oneplus":
 			return "oppo", join("OxygenOS", nonEmpty(props["ro.oxygen.version"], v))
 		}
 		return "oppo", join("ColorOS", v)
-	case props["ro.vivo.os.version"] != "" || props["ro.vivo.os.name"] != "":
-		name := props["ro.vivo.os.name"]
-		switch strings.ToLower(name) {
-		case "funtouch":
-			name = "Funtouch OS"
-		case "":
-			name = "OriginOS"
-			if props["ro.vivo.os.build.display.id"] != "" && strings.Contains(strings.ToLower(props["ro.vivo.os.build.display.id"]), "funtouch") {
-				name = "Funtouch OS"
-			}
+	case props["ro.vivo.os.build.display.id"] != "" || props["ro.vivo.os.version"] != "" || maker == "vivo":
+		// "OriginOS 5", "Funtouch OS_14"; ro.vivo.os.name says Funtouch
+		// on OriginOS too.
+		id := strings.TrimSpace(strings.ReplaceAll(props["ro.vivo.os.build.display.id"], "_", " "))
+		if l := strings.ToLower(id); !strings.Contains(l, "origin") && !strings.Contains(l, "funtouch") {
+			id = ""
 		}
-		return "vivo", join(name, props["ro.vivo.os.version"])
+		return "vivo", id
 	case props["ro.build.version.magic"] != "":
 		return "honor", join("MagicOS", versionAfter(props["ro.build.version.magic"], "_"))
 	case props["hw_sc.build.platform.version"] != "" || props["ro.build.version.emui"] != "":
-		family = "huawei"
+		family := "huawei"
 		if maker == "honor" || brand == "honor" {
 			family = "honor"
 		}
@@ -299,8 +306,6 @@ func familyOf(props map[string]string) (family, system string) {
 		return "samsung", join("One UI", oneUIVersion(props["ro.build.version.oneui"]))
 	case maker == "samsung":
 		return "samsung", "One UI"
-	case props["ro.lineage.build.version"] != "":
-		return "", join("LineageOS", props["ro.lineage.build.version"])
 	case maker == "google" && strings.HasPrefix(strings.ToLower(props["ro.product.model"]), "pixel") && !emulator(props):
 		return "pixel", ""
 	}

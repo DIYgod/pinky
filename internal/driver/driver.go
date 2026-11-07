@@ -433,6 +433,7 @@ const (
 	FixWirelessDebug    = "wireless_debugging" // turn on Wireless debugging and pair the phone, to use it over Wi-Fi
 	FixLocalNetwork     = "local_network"      // allow Pinky under Privacy & Security › Local Network
 	FixLocked           = "locked"             // unlock the phone, then check again
+	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
 )
 
 // Checkup is a phone's checkup, as its driver ran it.
