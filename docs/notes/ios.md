@@ -1,6 +1,6 @@
 # iOS driver notes
 
-Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found on a real iPhone. Measured on 2026-11-07 with an iPhone 13 mini (iPhone14,4) on iOS 27.0.1 (24A446), connected by USB to a Mac with macOS 27.2 and Xcode 27.2; the developer disk image was mounted and Developer Mode on. A second pass the same night added element frames through `remoteAXService`, the provider's inspection cache, and touches in video pixels. The third (round three, the next morning) added typing by paste, `Waker` and `Unlocker`, measured the phone over Wi-Fi, and read Calculator's display as its value.
+Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found on a real iPhone. Measured on 2026-11-07 with an iPhone 13 mini (iPhone14,4) on iOS 27.0.1 (24A446), connected by USB to a Mac with macOS 27.2 and Xcode 27.2; the developer disk image was mounted and Developer Mode on. A second pass the same night added element frames through `remoteAXService`, the provider's inspection cache, and touches in video pixels. The third (round three, the next morning) added typing by paste, `Waker` and `Unlocker`, measured the phone over Wi-Fi, and read Calculator's display as its value. The fourth (the evening of 2026-11-07) added iPhones below iOS 27; see "iPhones below iOS 27".
 
 ## Step 0 results
 
@@ -26,7 +26,7 @@ What these mean for the design:
 
 ## What is built
 
-`internal/driver/ios` implements `driver.Provider`, `driver.Device`, `driver.Toucher`, `driver.LockReporter`, `driver.Settler`, `driver.Waker` and `driver.Unlocker`.
+`internal/driver/ios` implements `driver.Provider`, `driver.Device`, `driver.Toucher`, `driver.LockReporter`, `driver.Settler`, `driver.Waker` and `driver.Unlocker` on iOS 27. Below iOS 27, `WDADevice` implements `driver.Device`, `driver.Toucher`, `driver.LockReporter` and `driver.Settler`, and `AXDevice` `driver.Device`, `driver.LockReporter` and `driver.Settler` (see "iPhones below iOS 27").
 
 | File | What |
 | --- | --- |
@@ -45,6 +45,10 @@ What these mean for the design:
 | `ocr.go`, `ocr_darwin.go`, `ocr_other.go` | Vision text recognition through purego (no cgo); other OSes return `unsupported` |
 | `screenshot.go`, `apps.go`, `lock.go`, `settle.go`, `provider.go`, `display_info.go` | The rest of the interface |
 | `diag.go`, `cmd/iosctl` | Diagnostics and the debugging command |
+| `version.go` | Which way to drive a phone, by its iOS version |
+| `wda.go`, `wda_observe.go`, `wda_device.go`, `wda_run.go`, `replaytouch.go` | The WebDriverAgent path (iOS 17.4 to 26): the HTTP client over usbmuxd, its tree as elements, the device, starting the runner's test, the mirror's touches played back as gestures |
+| `ax_device.go` | The accessibility path (iOS 17.4 to 26, nothing installed) |
+| `framestream.go`, `mjpeg.go`, `h264_darwin.go`, `h264_other.go`, `settle_frames.go` | Frames (JPEG from WDA, screenshots) to H.264 through VideoToolbox, for the mirror and the recorder, and settling by them |
 
 Coordinates are screenshot pixels: 1125x2436 on an iPhone 13 mini, which is the size UIKit renders (375x812 points at 3x); the panel is 1080x2340 and the video 1136x2464. `Toucher` points are video pixels (the contract since 5e83552). Matching decoded frames against screenshots (row and column brightness profiles, correlation 0.998 and better on Settings and Calculator) showed the video is the screen at 1:1 in the top-left corner with black padding, 11 columns on the right and 28 rows at the bottom, so a video point is the same screen point and `Touch` only clamps points in the padding to the screen's edge. A video smaller than the screen would be scaled back up; no phone tested does that.
 
@@ -195,6 +199,91 @@ The protocol, as iOS 27.0.1 speaks it:
 - Placement matches labels to text in rounds (equal, truncated with an ellipsis, label inside a line, line inside the label) in reading order. Text that appears twice can be matched to the wrong element (a search field whose value equals a result title); elements without visible text (icons, dock apps, images) get no position.
 - The on-screen keyboard is detected from OCR (five or more single letters in the lower half) and its keys are dropped from the output.
 
+## iPhones below iOS 27
+
+Built on 2026-11-07. No iPhone below iOS 27 was at hand, so what follows separates what ran somewhere from what is only built to spec.
+
+### What each iOS offers
+
+The developer disk image is one image for every iOS from 17 (Xcode 27.2's `/Library/Developer/DeveloperDiskImages/iOS_DDI`, build 27B52); its daemons are built for iOS 17.0 (`LC_BUILD_VERSION` minos 17.0), and their launchd plists publish the same services on every version. So the question per version is what the phone does when asked.
+
+| Piece | iOS 27 | iOS 17.4 to 26 | iOS 17.0 to 17.3 | iOS 16 and earlier |
+| --- | --- | --- | --- | --- |
+| Tunnel | Lockdown's `CoreDeviceProxy` | The same (added in 17.4) | Not there: remote pairing over QUIC on the phone's USB network interface, which go-ios and pymobiledevice3 do as root (go-ios pauses macOS's `remoted`) | No tunnel; lockdown services |
+| Developer services | Xcode mounts the image | The same image | The same image | A `DeveloperDiskImage.dmg` for that exact version; Xcode 27 ships none (its `DeviceSupport` folder is gone), and Pinky will not fetch Apple's images from mirrors |
+| Screen stream | `displayservice` | Listed, but refused with CoreDeviceError 9021 (go-ios's measurement). Xcode 27's Device Hub refuses too: its DeviceKit says a device "must be running … or above to screen share" | | |
+| HID input | `universalhidservice` | 9021 on iOS 18 (go-ios) | | |
+| Screenshots | Instruments, CoreDevice's screen capture | Instruments (`dtservicehub`) | | |
+| Elements | `remoteAXService`, with frames | The inspector (`axAuditDaemon.remoteserver`, over lockdown, as the iOS 27 fallback uses), without frames (go-ios on 18.4.1). Whether `remoteAXService` exists before 27 is unknown | | |
+| Apps | CoreDevice's app service | The same (iOS 17 and later) | | |
+| Lock state | Lockdown's `PasswordProtected` | The same | | |
+
+The daemons check the OS version only against iOS 18 and 26 (`__isPlatformVersionAtLeast` in `dtuhidd`, `dtremotedisplayd`, `dtscreencaptured`, `dtpasteboardd`; `dtdeviceinfod` also checks 27), so the 9021 refusals most likely come from what the OS itself lacks, not from the image. Without HID there is no touch at a point, no keyboard and so no pasting, and no Home; without the stream no live picture. XCTest is the remaining way to touch, which needs a test runner on the phone: WebDriverAgent.
+
+### Two ways, chosen per phone
+
+`pathFor` (`version.go`) picks by version, and the provider by what is on the phone:
+
+- **`wda`**, when the WebDriverAgent runner is installed (an app whose bundle id ends in `.xctrunner` and names WebDriverAgentRunner; Pinky's own build would win). Everything works but unlocking from the computer. `OpenWDA` uses WDA if it already answers (started by Xcode, say), and otherwise starts its test through testmanagerd with go-ios over the tunnel's RSD entry. Pinky reaches WDA's ports, 8100 (HTTP) and 9100 (MJPEG), through usbmuxd, one connection per request: nothing listens on the computer. Requests: `/status`, a session with Pinky's settings, `/source?format=json`, `/screenshot`, W3C `/actions` for taps, long presses, swipes and the mirror's drags, `/wda/keys`, `/element/active` + `/clear`, `/wda/homescreen`, `/wda/apps/activate` (which, unlike `launch`, never restarts a running app), `/wda/activeAppInfo`, `/wda/locked`.
+- **`accessibility`**, when it is not: nothing installed. The picture is screenshots (one every 100 ms while the screen changes, then one a second), the elements the inspector's walk placed by OCR, apps opened through the app service. Tap presses the smallest element of the last observation that contains the point, with the inspector's Activate action (`deviceElement:performAction:withValue:` with `AXAction-2010`, what VoiceOver's double tap does, as go-ios sends it). Swipes, typing, long presses and keys return `unsupported` with a sentence that names the helper. The provider asks such a phone again every 30 s, so a helper installed meanwhile is picked up.
+- iOS 17.0 to 17.3 and 16 and earlier are `needs_setup`, with the reason in the detail.
+
+Both settle by the picture (`settle_frames.go`): WDA's MJPEG frames (15 a second, and a still screen encodes to the same bytes) or screenshots, settled once nothing changed for 250 ms and at least 500 ms passed, as on iOS 27. On the Simulator: 0.52 s on a still screen, 0.93 s after a fling. Both send H.264 encoded by macOS's VideoToolbox (`h264_darwin.go`, purego): Main profile, no B-frames, 2.5 Mbit/s, a key frame first and again after 10 s of a still picture; frames that did not change (same bytes) are skipped, as the phone's own stream does. WDA's MJPEG is the screen at half size, 15 fps, quality 50; `Toucher` scales the mirror's points back up and plays a drag back when the finger lifts, because WDA performs whole gestures. Other systems get `unsupported` for the stream: the gateway and agents still work, but the mirror has no picture. The mirror and the recorder need no change: they take H.264 already.
+
+### What ran where
+
+| What | Where | Result |
+| --- | --- | --- |
+| WDA path end to end (`TestWDASim`): home screen, Settings by bundle id, a tap on General and back, typing `Wallpaper` and `蓝牙 é ✓` into Settings' search and clearing it, a screenshot, 3 s of video checked by ffprobe, settling, a mirror drag, the lock state | iOS 18.5 and 26.5 Simulators (iPhone 16 and 17), WebDriverAgent 16.17.6 built by Xcode 27.2 | All pass. Observe 0.5 s (Settings) to 1.5 s (home screen); typing 0.55 to 0.85 s; first video frame after 0.2 to 0.3 s; activating an app 0.8 s (the first Settings launch after the 26.5 Simulator booted took over 30 s) |
+| VideoToolbox encoder, frame stream, settling by frames, MJPEG parsing, WDA's tree to elements, the client against a fake WDA, the touch recorder, version paths, provider choices | Unit tests | Pass |
+| Starting WDA through testmanagerd over Pinky's tunnel, usbmuxd port forwarding to a phone | Nowhere | Built on go-ios's `RunTestWithConfig` and usbmuxd `Connect`, as `ios ui run wda` does |
+| The accessibility path | Nowhere below iOS 27 | Its parts run on iOS 27 every day (instruments screenshots, the inspector walk and OCR, the app service, lockdown); Activate is untested. `TestAXProbeDump` (device tag, `PINKY_AXPROBE=dump`) dumps what the inspector sends, for the first run on a phone |
+
+Found on the Simulators and handled:
+
+- The edge swipe that is Back on iOS 27 did nothing on the iOS 18.5 Simulator through XCTest, so Back taps the navigation bar's back button when there is one and only otherwise swipes.
+- Screenshots are a pixel narrower than points times scale (1178 for 393 points at 3x), so the screenshot's size is the coordinate space, as on iOS 27.
+- Settings rows are a Cell holding an accessible Button with the title; only accessibility elements (and text fields and switches) become elements, or every row would show twice.
+- The keyboard is a `Keyboard` element with `Key` children in the app's tree; its keys only mark the keyboard as shown. The globe and dictation buttons beside it are listed. iOS 26 shows a one-time tip about sliding to type over the keyboard.
+- iOS 26 moved Settings' search to the bottom, with a close button instead of Cancel.
+
+Commands, with WDA built for a simulator (`wda-dd` is any build folder):
+
+```sh
+xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
+  -destination 'platform=iOS Simulator,id=<sim>' -derivedDataPath wda-dd CODE_SIGNING_ALLOWED=NO build-for-testing
+TEST_RUNNER_USE_PORT=18100 TEST_RUNNER_MJPEG_SERVER_PORT=19100 xcodebuild test-without-building \
+  -xctestrun wda-dd/Build/Products/WebDriverAgentRunner_iphonesimulator*.xctestrun -destination id=<sim>
+PINKY_WDA_URL=http://127.0.0.1:18100 PINKY_MJPEG_URL=http://127.0.0.1:19100 \
+  go test -tags wdasim -count=1 -v -run TestWDASim ./internal/driver/ios/
+/tmp/pinky-iosctl -wda http://127.0.0.1:18100 -mjpeg http://127.0.0.1:19100 observe
+```
+
+WDA on a simulator listens on every interface of the computer while it runs; stop it when done. `iosctl` opens a phone below iOS 27 the way Pinky would and runs the commands every path has (observe, tap, swipe, key, type, screenshot, stream, launch, apps, locked).
+
+### Installing the WebDriverAgent helper
+
+Once per phone, on a Mac with Xcode:
+
+1. Get WebDriverAgent: `git clone https://github.com/appium/WebDriverAgent` (Appium's copy works too).
+2. Open `WebDriverAgent.xcodeproj`. For the WebDriverAgentRunner target, under Signing & Capabilities, pick your team (a free Apple ID works). If Xcode says the bundle identifier is taken, change its prefix (`com.<you>.WebDriverAgentRunner`), keeping WebDriverAgentRunner in it so Pinky finds it.
+3. Pick the iPhone as the destination and run Product › Test once. Xcode installs WebDriverAgentRunner and starts it; with a free Apple ID the phone first asks you to trust the developer in Settings › General › VPN & Device Management. Stop the test once Xcode's log shows `ServerURLHere`.
+
+From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days; after that, repeat step 3. The same from a terminal:
+
+```sh
+xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
+  -destination id=<udid> -allowProvisioningUpdates DEVELOPMENT_TEAM=<team id> test
+```
+
+### Not done yet
+
+- Nothing below iOS 27 has run on a phone. The first such phone should get, in order: `iosctl devices` (the backend it picks), `TestAXProbeDump`, then `iosctl observe`, `tap` and `stream` on each path.
+- Unlocking from the computer and `Waker` below iOS 27; the lock state is reported.
+- Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now. go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
+- The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
+- Landscape on both paths.
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.
@@ -207,7 +296,7 @@ The protocol, as iOS 27.0.1 speaks it:
 - Typing by keys (only without the pasteboard service): ASCII, the first letter capitalized by Latin keyboards, 4–5 s per call with a keyboard switch (each probe walks the tree, slowly while the phone pushes one).
 - Wi-Fi: works but slow and lossy (above); `Wireless` stays off.
 - Waking a dark screen and `Unlock` are unit-tested only; lock detection for phones without a passcode is not tested.
-- iOS below 27 (needs WebDriverAgent), Windows, Linux (cross-compiles, untested).
+- iOS 17.4 to 26 is built but not tried on a phone (see "iPhones below iOS 27"); 17.3 and earlier are not supported. Windows and Linux cross-compile, untested.
 - `WaitSettled` uses frame sizes (and accessibility notifications when they come); animated widgets keep it from ever settling on such home screens (it times out), and after motion the encoder's slowly falling bitrate can keep it waiting a little after the picture stopped.
 
 ## What the owner should try
@@ -223,6 +312,9 @@ The protocol, as iOS 27.0.1 speaks it:
 If the pad does not come up after the swipe (the phone may want Home instead with a keyboard attached), `unlock` stops with "the passcode pad did not appear" and has typed nothing. If the phone accepts the passcode but `unlock` still fails, lockdown's lock state is slow to change and `unlockWait` (4 s) needs raising.
 
 ## Security notes
+
+- WebDriverAgent serves its HTTP and MJPEG ports on every interface of the phone by default, Wi-Fi included: anyone on the same network could drive the phone through it, past Pinky's approvals. When Pinky starts the helper it sets `USE_IP=127.0.0.1`, so both listen only on the phone's loopback, where usbmuxd's connections arrive. A WDA that is already running when Pinky opens the phone (started from Xcode or Appium) is used as it is, with whatever binding it has: stop it after installing (step 3 of "Installing the WebDriverAgent helper") so Pinky starts its own.
+- On the accessibility path the inspector's Activate presses what the agent asked for, like a tap; the gateway's approvals apply to it the same way.
 
 - While a session runs, the tunnel's forwarder listens on 127.0.0.1 and lets any local process reach the phone's developer services through it (go-ios's own userspace tunnel does the same). It adds nothing an agent with shell access could not already do through usbmuxd, which the threat model covers, but the gateway's isolation advice applies to it too.
 - Media streams make the phone show its screen-sharing indicator and block its camera and microphone; `Close` stops the stream, and the phone also stops it by itself 10 s after receiver reports stop (a crashed process).

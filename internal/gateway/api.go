@@ -148,6 +148,13 @@ type NeedView struct {
 	Deadline   time.Time // when no answer means Deny
 	Screenshot image.Image
 	Target     screen.Rect // the element the action targets, in Screenshot pixels
+	// AlwaysAllow is set when the approval can be answered with
+	// AllowAlways: from then on, Rule (and the rules that asked with it)
+	// no longer asks about such steps in App, until the person takes it
+	// back in Settings. Unset for the agent's own questions, copying
+	// files, opening apps and links, and while every action asks; there
+	// AllowAlways counts as AllowTask.
+	AlwaysAllow bool
 }
 
 // Decision answers an approval.

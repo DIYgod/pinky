@@ -16,10 +16,15 @@
 //	iosctl [-udid U] launch APP
 //	iosctl [-udid U] apps
 //	iosctl [-udid U] locked
+//	iosctl -wda http://127.0.0.1:8100 [-mjpeg http://127.0.0.1:9100] observe|tap|...
 //
 // Coordinates are screenshot pixels (1125x2436 on an iPhone 13 mini).
-// Without -udid it uses the only connected iPhone. Hold the device lock
-// while it runs: scripts/devlock.sh <udid> iosctl ...
+// Without -udid it uses the only connected iPhone. An iPhone below iOS 27
+// opens the way Pinky would open it (WebDriverAgent or the accessibility
+// inspector), and takes the commands every path has: observe, tap, swipe,
+// key, type, screenshot, stream, launch, apps. -wda talks to a
+// WebDriverAgent server directly, such as one on the iOS Simulator. Hold
+// the device lock while it runs: scripts/devlock.sh <udid> iosctl ...
 package main
 
 import (
@@ -28,6 +33,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"image/png"
 	"os"
 	"os/signal"
 	"sort"
@@ -43,6 +49,8 @@ import (
 
 func main() {
 	udid := flag.String("udid", "", "device UDID (default: the only iPhone)")
+	flag.StringVar(&wdaURL, "wda", "", "use the WebDriverAgent server at this URL (a simulator)")
+	flag.StringVar(&mjpegURL, "mjpeg", "", "its MJPEG server's URL, for stream")
 	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() == 0 {
@@ -58,8 +66,10 @@ func main() {
 	}
 }
 
+var wdaURL, mjpegURL string
+
 func usage() {
-	fmt.Fprint(os.Stderr, `usage: iosctl [-udid UDID] COMMAND [ARGS]
+	fmt.Fprint(os.Stderr, `usage: iosctl [-udid UDID | -wda URL [-mjpeg URL]] COMMAND [ARGS]
 
 commands:
   devices                       list iPhones and what they need
@@ -86,6 +96,14 @@ commands:
 
 func run(ctx context.Context, cmd, udid string, args []string) error {
 	p := pios.NewProvider()
+	if wdaURL != "" {
+		d, err := pios.OpenWDAURL(ctx, wdaURL, mjpegURL)
+		if err != nil {
+			return err
+		}
+		defer d.Close()
+		return generic(ctx, d, cmd, args)
+	}
 	switch cmd {
 	case "devices":
 		return devices(ctx, p)
@@ -104,6 +122,16 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 	}
 	if cmd == "locked" {
 		return locked(id)
+	}
+	if old, err := belowCoreDevice(id); err == nil && old {
+		start := time.Now()
+		d, err := p.Open(ctx, id)
+		if err != nil {
+			return err
+		}
+		defer d.Close()
+		fmt.Fprintf(os.Stderr, "%s session open in %v\n", d.Info().Backend, time.Since(start).Round(time.Millisecond))
+		return generic(ctx, d, cmd, args)
 	}
 	start := time.Now()
 	d, err := pios.Open(ctx, driver.Info{ID: id, Platform: driver.IOS})
@@ -228,6 +256,167 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown command %q", cmd)
+}
+
+// belowCoreDevice reports whether a phone runs an iOS below 27, asking
+// lockdown alone.
+func belowCoreDevice(udid string) (bool, error) {
+	e, err := goios.GetDevice(udid)
+	if err != nil {
+		return false, err
+	}
+	v, err := goios.GetValues(e)
+	if err != nil {
+		return false, err
+	}
+	major, _, _ := strings.Cut(v.Value.ProductVersion, ".")
+	n, err := strconv.Atoi(major)
+	return err == nil && n < 27, err
+}
+
+// generic runs the commands every iOS path has, through driver.Device.
+func generic(ctx context.Context, d driver.Device, cmd string, args []string) error {
+	switch cmd {
+	case "observe":
+		fs := flag.NewFlagSet("observe", flag.ContinueOnError)
+		ocr := fs.Bool("ocr", false, "add text the tree lacks")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		s := time.Now()
+		scr, err := d.Observe(ctx, driver.ObserveOptions{OCR: *ocr})
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s (%s), %dx%d, keyboard %v, locked %v, %d elements in %v\n", scr.App.Name, scr.App.ID, scr.Width, scr.Height, scr.Keyboard, scr.Locked, len(scr.Elements), time.Since(s).Round(time.Millisecond))
+		for _, e := range scr.Elements {
+			fmt.Printf("  %-7s %q %v %v %s\n", e.Role, e.Label, e.Bounds, e.States, e.Source)
+		}
+		return nil
+	case "tap":
+		fs := flag.NewFlagSet("tap", flag.ContinueOnError)
+		long := fs.Bool("long", false, "long press")
+		pts, err := ints(fs, args, 2)
+		if err != nil {
+			return err
+		}
+		return d.Tap(ctx, screen.Point{X: pts[0], Y: pts[1]}, driver.TapOptions{LongPress: *long})
+	case "swipe":
+		fs := flag.NewFlagSet("swipe", flag.ContinueOnError)
+		ms := fs.Int("ms", 300, "duration in milliseconds")
+		pts, err := ints(fs, args, 4)
+		if err != nil {
+			return err
+		}
+		return d.Swipe(ctx, screen.Point{X: pts[0], Y: pts[1]}, screen.Point{X: pts[2], Y: pts[3]}, time.Duration(*ms)*time.Millisecond)
+	case "key":
+		if len(args) != 1 {
+			return errors.New("key: one key name")
+		}
+		return d.Key(ctx, driver.Key(args[0]))
+	case "type":
+		var text []string
+		opt := driver.TypeOptions{}
+		for _, a := range args {
+			switch strings.TrimLeft(a, "-") {
+			case "append":
+				opt.Append = true
+			case "submit":
+				opt.Submit = true
+			default:
+				text = append(text, a)
+			}
+		}
+		if len(text) != 1 {
+			return errors.New("type: one text argument (quote text with spaces)")
+		}
+		return d.Type(ctx, text[0], opt)
+	case "screenshot":
+		fs := flag.NewFlagSet("screenshot", flag.ContinueOnError)
+		out := fs.String("out", "/tmp/pinky-shot.png", "output file")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		img, err := d.Screenshot(ctx)
+		if err != nil {
+			return err
+		}
+		f, err := os.Create(*out)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		fmt.Printf("%s: %v\n", *out, img.Bounds())
+		return png.Encode(f, img)
+	case "stream":
+		fs := flag.NewFlagSet("stream", flag.ContinueOnError)
+		secs := fs.Int("seconds", 10, "how long")
+		out := fs.String("out", "", "write Annex B H.264 here")
+		if err := fs.Parse(args); err != nil {
+			return err
+		}
+		s, err := d.Stream(ctx, driver.StreamOptions{})
+		if err != nil {
+			return err
+		}
+		defer s.Close()
+		var f *os.File
+		if *out != "" {
+			if f, err = os.Create(*out); err != nil {
+				return err
+			}
+			defer f.Close()
+		}
+		w, h := s.Size()
+		n, keys, bytes := 0, 0, 0
+		stop := time.After(time.Duration(*secs) * time.Second)
+		for done := false; !done; {
+			select {
+			case p, ok := <-s.Packets():
+				if !ok {
+					done = true
+					break
+				}
+				n, bytes = n+1, bytes+len(p.Data)
+				if p.KeyFrame {
+					keys++
+				}
+				if f != nil {
+					f.Write(p.Data)
+				}
+			case <-stop:
+				done = true
+			}
+		}
+		fmt.Printf("%s %dx%d: %d packets, %d key frames, %d bytes; err %v\n", s.Codec(), w, h, n, keys, bytes, s.Err())
+		return nil
+	case "launch":
+		if len(args) != 1 {
+			return errors.New("launch: one app")
+		}
+		return d.Launch(ctx, args[0])
+	case "apps":
+		apps, err := d.Apps(ctx)
+		if err != nil {
+			return err
+		}
+		for _, a := range apps {
+			fmt.Printf("%-40s %s\n", a.ID, a.Name)
+		}
+		return nil
+	case "locked":
+		lr, ok := d.(driver.LockReporter)
+		if !ok {
+			return driver.ErrUnsupported
+		}
+		v, err := lr.Locked(ctx)
+		if err != nil {
+			return err
+		}
+		fmt.Println("locked:", v)
+		return nil
+	}
+	return fmt.Errorf("%s: not available on this path", cmd)
 }
 
 func pick(ctx context.Context, p *pios.Provider, udid string) (string, error) {

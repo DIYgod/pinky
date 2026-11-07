@@ -80,6 +80,9 @@ type Options struct {
 	// the code; 0 is a few seconds at Speed, and below 0 waits for
 	// ScanPairing.
 	PairDelay time.Duration
+	// HoldSetup keeps a phone ConnectPhone plugs in at "USB debugging is
+	// off" until FinishSetup, rather than for a few seconds at Speed.
+	HoldSetup bool
 }
 
 // Input is one input the person sent through the mirror.
@@ -121,6 +124,10 @@ type API struct {
 	unrecorded  map[string]bool // finished while recording was off
 	recOpens    []time.Duration
 	exports     []Export
+
+	always   []gateway.Exemption // Always allow answers
+	rules    []gateway.RuleView  // the rules file's rules
+	rulesSet bool
 }
 
 type device struct {
@@ -254,7 +261,8 @@ func (a *API) Play(s Scenario) {
 }
 
 // ConnectPhone plugs in a new Android phone, as the Add phone flow waits
-// for: it shows up needing setup (USB debugging off), then comes online.
+// for: it shows up needing setup (USB debugging off), then comes online a
+// few seconds later at Speed, or at FinishSetup with Options.HoldSetup.
 func (a *API) ConnectPhone() {
 	a.mu.Lock()
 	gen := a.gen
@@ -269,15 +277,42 @@ func (a *API) ConnectPhone() {
 	a.devices = append(a.devices, d)
 	a.mu.Unlock()
 	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	if a.opt.HoldSetup {
+		return
+	}
 	go func() {
-		if !a.sleepGen(gen, 4*time.Second) {
-			return
+		if a.sleepGen(gen, 4*time.Second) {
+			a.finishSetup(d)
 		}
-		a.mu.Lock()
-		d.info.State, d.info.Detail = driver.StateOnline, ""
-		a.mu.Unlock()
-		a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
 	}()
+}
+
+// FinishSetup brings the phones ConnectPhone plugged in online now, as
+// when the person turns USB debugging on.
+func (a *API) FinishSetup() {
+	a.mu.Lock()
+	var waiting []*device
+	for _, d := range a.devices {
+		if d.info.State == driver.StateNeedsSetup {
+			waiting = append(waiting, d)
+		}
+	}
+	a.mu.Unlock()
+	for _, d := range waiting {
+		a.finishSetup(d)
+	}
+}
+
+func (a *API) finishSetup(d *device) {
+	a.mu.Lock()
+	if d.info.State != driver.StateNeedsSetup {
+		a.mu.Unlock()
+		return
+	}
+	d.info.State, d.info.Detail = driver.StateOnline, ""
+	id := d.info.ID
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
 }
 
 // Inputs returns the person's input received so far.
@@ -451,6 +486,9 @@ func (a *API) Decide(needID string, d gateway.Decision, note string) error {
 		return nil
 	}
 	a.needs = append(a.needs[:idx], a.needs[idx+1:]...)
+	if d == gateway.AllowAlways && n.view.AlwaysAllow {
+		a.keepAlwaysLocked(gateway.Exemption{Rule: n.view.Rule, AppName: n.view.App})
+	}
 	a.mu.Unlock()
 	n.decision <- decision{d: d, note: note}
 	a.emit(gateway.Event{Kind: gateway.EventNeeds, NeedID: needID, DeviceID: n.view.DeviceID})

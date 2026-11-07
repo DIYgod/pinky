@@ -88,9 +88,12 @@ func (f *fakePhone) handle(c net.Conn) {
 		io.WriteString(c, "OKAY")
 		c.Close()
 	case strings.HasPrefix(svc, "shell:"):
-		io.WriteString(c, "OKAY")
+		// Keep the shell before answering: the client goes on as soon as it
+		// reads OKAY. Answering under the lock keeps others from writing the
+		// server's log to the shell before the OKAY.
 		f.mu.Lock()
 		f.shell, f.command = c, strings.TrimPrefix(svc, "shell:")
+		io.WriteString(c, "OKAY")
 		f.mu.Unlock()
 		io.WriteString(c, "[server] INFO: Device: [Fake] Phone (Android 17)\n")
 		if strings.Contains(svc, "list_apps=true") {

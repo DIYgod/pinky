@@ -267,8 +267,10 @@ func (a *uiApp) window(t *testing.T) int {
 }
 
 type uiNode struct {
-	ID, Role, Key, Label, Value string
-	States                      []string
+	ID, Role, Label, Value string
+	// Key is a string, a boolean or a number, as the app gave it.
+	Key    any
+	States []string
 }
 
 func (a *uiApp) nodes(t *testing.T, win int) []uiNode {

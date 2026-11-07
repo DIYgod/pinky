@@ -44,7 +44,16 @@ No phone at hand? `Pinky.app/Contents/MacOS/Pinky --fake` (or `go run ./cmd/pink
 ### Phones
 
 - **Android:** turn on USB debugging, plug the phone in and accept the computer's key, or pair over Wi-Fi from Add phone. Pinky works over adb and a bundled scrcpy server. Its companion app, which ships inside Pinky.app, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
-- **iPhone:** iOS 27 or later, Developer Mode on, connected over USB and trusted once in Xcode's Devices window. Nothing is installed on the phone. Typing pastes the text and puts your clipboard back.
+- **iPhone:** Developer Mode on, connected over USB and trusted once in Xcode's Devices window. What Pinky can do depends on the iOS version:
+
+  | iOS | How | What works | Tested on |
+  | --- | --- | --- | --- |
+  | 27 and later | Xcode's Device Hub protocol; nothing installed on the phone | Everything. Typing pastes the text and puts your clipboard back | iPhone 13 mini, iOS 27.0.1 |
+  | 17.4 to 26, with the helper | The WebDriverAgent helper, installed once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)) | Everything but unlocking from the computer; the live picture needs macOS | iOS 18.5 and 26.5 Simulators; not yet on a phone |
+  | 17.4 to 26, without it | The developer services alone; nothing installed | Watching (a few frames a second, macOS only), reading the screen (placed by OCR, macOS only), pressing what Pinky read, opening apps. No swiping, typing or Home | Not yet on a phone below iOS 27 |
+  | 17.3 and earlier | | Not supported: before 17.4 the connection needs administrator rights, and iOS 16 and earlier need a developer disk image that current Xcode no longer includes | |
+
+  The helper is Appium's WebDriverAgent, signed with your own Apple ID; with a free Apple ID it has to be installed again every 7 days.
 - **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN. On Android this is checked on AOSP-style lock screens (LineageOS on a Mi 10 Pro, the Android 10, 16 and 17 emulators); the lock screens of Xiaomi, Samsung, OPPO, OnePlus, vivo, Honor and Huawei are only covered by tests made from what is known of them, and where Pinky cannot read the PIN pad with confidence it enters nothing ([details](docs/notes/integration.md#unlocking-other-android-phones)).
 
 ### Updates

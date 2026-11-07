@@ -27,6 +27,21 @@
 # Built in and not editable here: typing into password and one-time-code
 # fields is always denied (rule: credentials), and apps you block in Settings
 # (the "blocked" category in apps.yaml) are denied (rule: Blocked by you).
+#
+# always_allow (at the end of the file once there is one) keeps your "Always
+# allow" answers to approvals. Each entry lifts, in one app, the rule the
+# approval named and the rules that asked with it, for the actions that rule
+# asks about:
+#
+#   always_allow:
+#     - rule: Payments          # payments in Dinely no longer ask
+#       with: [Commits]         # nor does Commits about those payments
+#       app: com.dinely.app     # package name or bundle id
+#       app_name: Dinely        # matched when the phone reports no id
+#
+# Other commits in Dinely still ask. An entry never lifts a deny, read-only
+# mode, an agent's scope or a task's app list, and none applies with preset 3.
+# Settings > Safety lists them and takes them back.
 
 preset: 1
 

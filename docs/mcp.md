@@ -169,7 +169,7 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 | --- | --- | --- |
 | `key` | `back` `home` `recents` `enter` `tab` `delete` `forward_delete` `escape` `dpad_up` `dpad_down` `dpad_left` `dpad_right` `page_up` `page_down` | Keys the phone lacks return `unsupported` |
 
-`home` always works, even in a blocked app.
+`home` always works, even in a blocked app, except on an iPhone below iOS 27 without the WebDriverAgent helper (see Limits).
 
 ### phone_launch
 
@@ -249,6 +249,7 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 - While an approval is open on a phone, other actions on it return `approval_pending` with that approval's id; reads still work.
 - Before acting on Allow, Pinky reads the screen again and compares the target's role, label, states and position (a few pixels of tolerance) and the screen's text and states (status bar excluded; OCR text only when the screen has no element text). Any change returns `stale`.
 - "Allow for this task" covers the rules that asked, in that app, for the rest of the task. An action that another rule also asks about still asks.
+- "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files` or `phone_launch`.
 - An MCP cancellation of the blocked call, a closed session, Stop and Take over all withdraw the panel without acting.
 - Only the client's `Decide` answers approvals. No tool can.
 
@@ -257,6 +258,8 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 Sent only when the request carries `_meta.progressToken`: while waiting for an approval or handoff (at the start and every 5 s), for `phone_observe` with `wait_ms`, and for `phone_wait_for` (every 5 s). `progress` and `total` are seconds.
 
 ## Limits
+
+- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) read the screen through the accessibility inspector and OCR, and can only press listed elements and launch apps: `phone_swipe`, `phone_type`, `phone_key`, `long_press` and taps at points with no listed element return `unsupported` (or `not_found` for the tap), with a sentence naming the helper. With the helper, everything works; reading the screen takes 0.5 to 3 s.
 
 | Limit | Value |
 | --- | --- |

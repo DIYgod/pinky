@@ -78,11 +78,7 @@ var builtinRules = []Rule{
 // rulesLocked returns every rule in evaluation order: the preset's, then
 // the file's, then the built-in ones.
 func (e *Engine) rulesLocked() []Rule {
-	p := PresetNone
-	if e.file.Preset != nil {
-		p = Preset(*e.file.Preset)
-	}
-	out := append([]Rule(nil), presetRules(p)...)
+	out := append([]Rule(nil), presetRules(e.presetLocked())...)
 	out = append(out, e.file.Rules...)
 	return append(out, builtinRules...)
 }
@@ -113,6 +109,10 @@ func migrate(f *File) {
 func (e *Engine) Preset() Preset {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
+	return e.presetLocked()
+}
+
+func (e *Engine) presetLocked() Preset {
 	if e.file.Preset == nil {
 		return PresetNone
 	}
@@ -152,6 +152,9 @@ const rulesHeader = `# Pinky policy rules. Settings writes this file; you may ed
 # preset: 1 = payments, messages, deletions and other commits ask (recommended),
 # 2 = only payments ask, 3 = every action asks, 0 = only the rules below.
 # When several rules match, the strictest wins: deny, then ask, then allow.
+# always_allow holds your "Always allow" answers to approvals: in that app,
+# those rules no longer ask (never a deny or read-only mode; not with preset
+# 3). Settings > Safety lists them.
 # The bundled defaults, with every field explained, are in Pinky's source:
 # internal/policy/defaults.yaml.
 

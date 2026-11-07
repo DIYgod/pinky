@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"slices"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -186,12 +187,15 @@ type app struct {
 	updating  atomic.Bool
 	callMu    sync.Mutex
 	callQueue map[string]chan func()
-	postHook  func(func()) // tests run posted functions themselves
-	shownOnce bool         // the main window has shown (Options.Hidden)
+	setq      settingsQueue // settings on their way to the gateway
+	postHook  func(func())  // tests run posted functions themselves
+	shownOnce bool          // the main window has shown (Options.Hidden)
 
 	mediaCache map[string]*mediaEntry // step screenshots by media id
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
+	always     alwaysState // Settings › Safety › Always allowed
+	rules      rulesState  // Settings › Safety › Rules
 
 	postMu  sync.Mutex
 	postWin *mygo.Window // the main window, once ready made it; post waits for it
@@ -527,20 +531,86 @@ func (a *app) setAwake(on bool) {
 }
 
 // applySettings passes Record and Keep activity to a gateway that takes
-// them, at start; Settings › Privacy passes each change. The gateway may
-// delete old tasks then, so it runs off the main thread.
+// them, at start; Settings passes each change the same way.
 func (a *app) applySettings() {
-	record, days := a.settings.Record, a.settings.KeepDays
-	rs, canRecord := a.api.(recordingSetter)
-	ks, canKeep := a.api.(retentionSetter)
-	go func() {
-		if canRecord {
-			rs.SetRecording(record)
+	a.applyRecording(a.settings.Record)
+	a.applyRetention(a.settings.KeepDays)
+}
+
+// applyRecording, applyRetention and applyReadOnly pass a setting the
+// gateway keeps to a gateway that takes it. The gateway may stop
+// recordings or delete old tasks then, so the change goes through
+// settingsQueue, off the main thread.
+func (a *app) applyRecording(on bool) {
+	if rs, ok := a.api.(recordingSetter); ok {
+		a.setq.push("record", func() { rs.SetRecording(on) })
+	}
+}
+
+func (a *app) applyRetention(days int) {
+	if rs, ok := a.api.(retentionSetter); ok {
+		a.setq.push("keep", func() { rs.SetRetention(days) })
+	}
+}
+
+func (a *app) applyReadOnly(on bool) {
+	if ro, ok := a.api.(readOnlySetter); ok {
+		a.setq.push("read-only", func() { _ = ro.SetReadOnly("", on) }) // every phone
+	}
+}
+
+// settingsQueue passes settings to the gateway off the main thread, one
+// change at a time and in the order they were made, so two quick changes
+// of a switch cannot reach the gateway the other way round. A change that
+// has not started when its setting changes again is dropped: the last
+// change wins, and a slow gateway is not asked for the states in between.
+type settingsQueue struct {
+	mu      sync.Mutex
+	waiting []settingChange // oldest first, at most one per setting
+	done    chan struct{}   // closed when the goroutine applying them stops; nil while none runs
+}
+
+type settingChange struct {
+	key   string
+	apply func()
+}
+
+// push queues apply as the latest change of the setting key.
+func (q *settingsQueue) push(key string, apply func()) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	q.waiting = slices.DeleteFunc(q.waiting, func(c settingChange) bool { return c.key == key })
+	q.waiting = append(q.waiting, settingChange{key: key, apply: apply})
+	if q.done == nil {
+		q.done = make(chan struct{})
+		go q.run(q.done)
+	}
+}
+
+func (q *settingsQueue) run(done chan struct{}) {
+	for {
+		q.mu.Lock()
+		if len(q.waiting) == 0 {
+			q.done = nil
+			q.mu.Unlock()
+			close(done)
+			return
 		}
-		if canKeep {
-			ks.SetRetention(days)
-		}
-	}()
+		c := q.waiting[0]
+		q.waiting = slices.Delete(q.waiting, 0, 1)
+		q.mu.Unlock()
+		c.apply()
+	}
+}
+
+// wait returns once the changes queued so far have been applied.
+func (q *settingsQueue) wait() {
+	q.mu.Lock()
+	done := q.done
+	q.mu.Unlock()
+	if done != nil {
+		<-done
+	}
 }
 
 func (a *app) setNeeds(n []gateway.NeedView) {
@@ -691,7 +761,13 @@ func (a *app) selectPhone(id string) {
 
 func (a *app) decide(n gateway.NeedView, d gateway.Decision, note string) {
 	a.remember(n, d, note)
-	a.call(n.DeviceID, locales.CallAnswer(), func() error { return a.api.Decide(n.ID, d, note) })
+	a.call(n.DeviceID, locales.CallAnswer(), func() error {
+		err := a.api.Decide(n.ID, d, note)
+		if d == gateway.AllowAlways {
+			a.post(a.always.stale) // Settings › Safety lists it now
+		}
+		return err
+	})
 	if d == gateway.TakeOver {
 		a.selectPhone(n.DeviceID)
 		a.showMain()

@@ -26,6 +26,9 @@ type File struct {
 	// MaskCodes masks digit codes in notifications. Default true.
 	MaskCodes *bool  `yaml:"mask_codes"`
 	Rules     []Rule `yaml:"rules"`
+	// AlwaysAllow holds the person's "Always allow" answers to approvals
+	// (see Exemption), oldest first.
+	AlwaysAllow []Exemption `yaml:"always_allow,omitempty"`
 }
 
 // DefaultFile returns the bundled default rules.
@@ -47,20 +50,34 @@ func ParseFile(data []byte) (File, error) {
 		return File{}, err
 	}
 	for i, r := range f.Rules {
-		if r.Name == "" {
-			return File{}, fmt.Errorf("rule %d has no name", i+1)
-		}
-		m := r.Match
-		if len(m.App) == 0 && len(m.Category) == 0 && len(m.Action) == 0 && len(m.Label) == 0 {
-			return File{}, fmt.Errorf("rule %q matches everything; give it an app, category, action or label", r.Name)
-		}
-		for _, a := range m.Action {
-			if !knownAction(a) {
-				return File{}, fmt.Errorf("rule %q: unknown action %q", r.Name, a)
-			}
+		if err := checkRule(i, r); err != nil {
+			return File{}, err
 		}
 	}
+	if err := checkExemptions(&f); err != nil {
+		return File{}, err
+	}
 	return f, nil
+}
+
+// checkRule checks the i-th rule of a rules file.
+func checkRule(i int, r Rule) error {
+	if r.Name == "" {
+		return fmt.Errorf("rule %d has no name", i+1)
+	}
+	m := r.Match
+	if len(m.App) == 0 && len(m.Category) == 0 && len(m.Action) == 0 && len(m.Label) == 0 {
+		return fmt.Errorf("rule %q matches everything; give it an app, category, action or label", r.Name)
+	}
+	for _, a := range m.Action {
+		if !knownAction(a) {
+			return fmt.Errorf("rule %q: unknown action %q", r.Name, a)
+		}
+	}
+	if r.Decision < Allow || r.Decision > Deny {
+		return fmt.Errorf("rule %q: unknown decision %d", r.Name, int(r.Decision))
+	}
+	return nil
 }
 
 func knownAction(a string) bool {

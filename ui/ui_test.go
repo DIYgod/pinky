@@ -235,7 +235,9 @@ func TestThreePhonesAndAllPhones(t *testing.T) {
 }
 
 func TestPagesRender(t *testing.T) {
-	ta := newTestApp(t, fakeapi.ThreePhones)
+	// The phone plugged in below waits at "USB debugging is off" until the
+	// test turns it on, so a slow frame cannot skip that state.
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.ThreePhones, Speed: 50, ApprovalTimeout: time.Minute, HoldSetup: true})
 	ta.sync()
 	tt := mg.NewTester(ta.view, 1280, 820)
 	if err := tt.Click("Activity"); err != nil {
@@ -279,6 +281,12 @@ func TestPagesRender(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "USB debugging is off") {
 		t.Errorf("Add phone after plugging in: %q", tt.Texts())
+	}
+	ta.api.FinishSetup()
+	ta.waitFor(t, "the new phone online", func() bool { return ta.devices[3].Info.State == driver.StateOnline })
+	tt.Frame()
+	if !hasText(tt, "Found Pixel 8a") || hasText(tt, "USB debugging is off") {
+		t.Errorf("Add phone after USB debugging went on: %q", tt.Texts())
 	}
 }
 

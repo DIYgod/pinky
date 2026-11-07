@@ -233,11 +233,9 @@ func (a *app) approvalControls(c *mg.Context, n gateway.NeedView) {
 		if m.Item(locales.NeedsAllowTask()).Chosen() {
 			a.decide(n, gateway.AllowTask, "")
 		}
-		always := locales.NeedsAlwaysAllow(kindNoun(n.Rule)) // "this kind" without a rule
-		if n.Rule != "" && n.App != "" {
-			always = locales.NeedsAlwaysAllowIn(kindNoun(n.Rule), n.App)
-		}
-		if m.Item(always).Chosen() {
+		// Only where the gateway can keep it: not the agent's own questions,
+		// files, opening apps or links, or while every action asks.
+		if n.AlwaysAllow && m.Item(alwaysAllowLabel(n)).Chosen() {
 			a.decide(n, gateway.AllowAlways, "")
 		}
 		if m.Item(locales.PhoneTakeOver()).Chosen() {
