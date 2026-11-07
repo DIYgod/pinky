@@ -18,6 +18,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/secret"
+	"github.com/DIYgod/pinky/internal/telemetry"
 	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/internal/video"
 )
@@ -63,6 +64,10 @@ type Options struct {
 	// AgentToken is the token agents present, which Settings › Agents shows
 	// for remote agents as their bearer token; empty leaves it out.
 	AgentToken string
+	// Telemetry counts usage and gathers feedback's diagnostics
+	// (docs/TELEMETRY.md); nil leaves out Send Feedback and the Privacy
+	// switch for usage statistics and crash reports.
+	Telemetry *telemetry.Client
 	// Updates finds and installs new versions of Pinky; nil leaves updates
 	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new.
 	Updates   *update.Updater
@@ -83,6 +88,9 @@ type Settings struct {
 	// that cannot start `pinky mcp`; each request needs the agent token.
 	RemoteAgents bool
 	RemoteAddr   string
+	// UsageStats shares anonymous usage statistics and crash reports
+	// (docs/TELEMETRY.md).
+	UsageStats bool
 	// AutoUpdate installs new versions of Pinky, and of the companion app
 	// on Android phones, by themselves while no one uses them.
 	AutoUpdate bool
@@ -112,6 +120,7 @@ func DefaultSettings() Settings {
 			{Name: "Northbank", Kind: "Banking"}, {Name: "Vaultly", Kind: "Passwords"}, {Name: "Coinpouch", Kind: "Wallet"},
 		},
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
+		UsageStats: usageStatsByDefault,
 		AutoUpdate: true,
 	}
 }
@@ -189,6 +198,7 @@ type app struct {
 	early   []func()     // posts made before that
 
 	pin    pinState       // PINs for unlocking from this computer
+	t      telState       // usage statistics, crash reports and feedback
 	comp   companionState // the Android companion app, per phone
 	bg     bgState        // background displays, per phone
 	rec    recState       // task recordings in Activity
@@ -815,6 +825,9 @@ func (a *app) setMenu() {
 		items = append(items, debugMenu(a))
 	}
 	items = append(items, &mygo.MenuItem{Role: mygo.RoleWindowMenu})
+	if help := a.helpMenu(); help != nil {
+		items = append(items, help)
+	}
 	mygo.App.SetMenu(mygo.NewMenu(items))
 }
 

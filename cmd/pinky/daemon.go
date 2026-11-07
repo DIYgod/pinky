@@ -19,6 +19,7 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/telemetry"
 	"github.com/DIYgod/pinky/ui"
 )
 
@@ -33,16 +34,26 @@ func runDaemon(args []string) error {
 		return err
 	}
 	c.Log = newLogger(os.Stderr, *verbose)
+	if dirs, err := api.DefaultDirs(); err == nil && dirs.Ensure() == nil {
+		crashes := captureCrashes(dirs, "daemon", c.Log)
+		defer crashes.Stop()
+		c.Crashes = crashes
+	}
 
 	rg, err := startGateway(c)
 	if err != nil {
 		return err
 	}
 	defer rg.Close()
-	// Recording and retention follow the app's settings, when there are any.
+	// Recording, retention and usage statistics follow the app's settings,
+	// when there are any.
 	s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
 	rg.G.SetRecording(s.Record)
 	rg.G.SetRetention(s.KeepDays)
+	tctx, tstop := context.WithCancel(context.Background())
+	defer tstop()
+	tel := startTelemetry(tctx, rg, c.Crashes, s, "daemon", c.Fake, c.Log)
+	defer tel.Close()
 	if *httpAddr != "" {
 		if err := rg.Remote.Set(true, *httpAddr); err != nil {
 			return err
@@ -75,6 +86,8 @@ type gatewayConfig struct {
 	// PIN hands out a phone's saved PIN for unlocking from the computer;
 	// nil turns that off (the daemon has no one to confirm it).
 	PIN func(ctx context.Context, deviceID string) (string, error)
+	// Crashes is the process's crash capture, for usage statistics.
+	Crashes *telemetry.Crashes
 }
 
 func (c *gatewayConfig) flags(fs *flag.FlagSet) {
@@ -101,6 +114,8 @@ type runningGateway struct {
 	G       *gateway.Gateway
 	// Remote serves MCP over HTTP while remote agents are on.
 	Remote *remoteAgents
+	// MCP serves agents, over the socket and HTTP.
+	MCP *mcp.Server
 
 	ln  net.Listener
 	srv *api.Server
@@ -164,7 +179,7 @@ func startGateway(c gatewayConfig) (*runningGateway, error) {
 	m := mcp.New(g, version)
 	srv := &api.Server{Gateway: g, MCP: m, Token: tok, Trusted: c.Fake, Version: version, Log: log}
 	log.Info("gateway ready", "socket", dirs.Socket(), "data", dataDir, "devices", len(g.Devices()), "fake", c.Fake, "pid", os.Getpid())
-	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, Remote: newRemoteAgents(m, tok, log),
+	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, Remote: newRemoteAgents(m, tok, log), MCP: m,
 		ln: ln, srv: srv, log: log}, nil
 }
 

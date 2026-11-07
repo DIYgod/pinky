@@ -32,6 +32,7 @@ func (a *app) newTray() {
 		mygo.Separator(),
 		{Label: "Stop All", Click: func(*mygo.MenuItem, *mygo.Window) { a.stopAll() }},
 		mygo.Separator(),
+		{Label: "Send Feedback…", Hidden: a.tel() == nil, Click: func(*mygo.MenuItem, *mygo.Window) { a.openFeedback() }},
 		{Role: mygo.RoleQuit},
 	})
 	if runtime.GOOS == "linux" {

@@ -35,8 +35,9 @@ type Server struct {
 	version string
 	srv     *sdk.Server
 
-	mu       sync.Mutex
-	sessions map[*sdk.ServerSession]*gateway.Session
+	mu         sync.Mutex
+	sessions   map[*sdk.ServerSession]*gateway.Session
+	middleware []sdk.Middleware // Use's, for the HTTP servers made later
 }
 
 // New returns an MCP server for the gateway.
@@ -53,7 +54,19 @@ func (s *Server) newSDK(remote bool) *sdk.Server {
 	srv := sdk.NewServer(&sdk.Implementation{Name: "pinky", Title: "Pinky", Version: s.version},
 		&sdk.ServerOptions{Instructions: Instructions, Capabilities: &sdk.ServerCapabilities{}})
 	s.addTools(srv, remote)
+	s.mu.Lock()
+	srv.AddReceivingMiddleware(s.middleware...)
+	s.mu.Unlock()
 	return srv
+}
+
+// Use adds middleware to the requests agents send, such as counting the
+// tools they call, here and on the HTTP endpoints made after it.
+func (s *Server) Use(mw ...sdk.Middleware) {
+	s.mu.Lock()
+	s.middleware = append(s.middleware, mw...)
+	s.mu.Unlock()
+	s.srv.AddReceivingMiddleware(mw...)
 }
 
 // RemoteSuffix ends the names of agents that connect over HTTP. A name is
