@@ -129,7 +129,7 @@ CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) builds, vets and tests
 - [Agent guide (SKILL.md)](docs/SKILL.md) and [MCP reference](docs/mcp.md)
 - [Working on Pinky](docs/WORKING.md)
 - [Usage statistics, crash reports and feedback](docs/TELEMETRY.md)
-- Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md), [updates](docs/notes/updates.md)
+- Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md), [updates](docs/notes/updates.md), [telemetry](docs/notes/telemetry.md)
 - [Changelog](CHANGELOG.md)
 
 ## License
