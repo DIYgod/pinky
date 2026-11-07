@@ -684,3 +684,10 @@ func (st *mediaStream) Close() error {
 	st.once.Do(func() { st.m.unsubscribe(st.s) })
 	return nil
 }
+
+// RequestKeyFrame asks the phone for a key frame now (an RTCP FIR, at most
+// one every 500 ms). The gateway shares one stream among the mirror and
+// the recorder, so a member that needs a key frame (a viewer that fell
+// behind, a recording after a pause) asks through it: the stream itself
+// never sees that member fall behind.
+func (st *mediaStream) RequestKeyFrame() { st.m.requestKeyFrame() }

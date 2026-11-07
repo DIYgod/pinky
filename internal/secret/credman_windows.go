@@ -96,6 +96,11 @@ func (s credStore) read(account string, keep bool) (string, error) {
 	return v, nil
 }
 
+// Supported reports whether Credential Manager's functions are there.
+func (s credStore) Supported() bool {
+	return procCredReadW.Find() == nil && procCredWriteW.Find() == nil
+}
+
 func (s credStore) Has(account string) bool {
 	_, err := s.read(account, false)
 	return err == nil

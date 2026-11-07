@@ -115,7 +115,8 @@ func (g *Gateway) Unlock(deviceID string) error {
 	if err != nil {
 		if errors.Is(err, driver.ErrLocked) {
 			g.setLocked(d, true)
-			return ErrWrongPIN
+			// Both: the client words a wrong PIN by driver.ErrLocked.
+			return fmt.Errorf("%w: %w", ErrWrongPIN, driver.ErrLocked)
 		}
 		return err
 	}

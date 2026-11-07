@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="108" height="108"><title>Pinky foreground</title><defs>
+<linearGradient id="pkand-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#FFBE1A"/></linearGradient>
+<radialGradient id="pkand-lift" cx="0.5" cy="0.56" r="0.5"><stop offset="0" stop-color="#FFF7C9" stop-opacity=".5"/><stop offset="1" stop-color="#FFF7C9" stop-opacity="0"/></radialGradient>
+<radialGradient id="pkand-body" cx="0.3" cy="0.18" r="0.95"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#FCF9F4"/><stop offset="1" stop-color="#EFE4D3"/></radialGradient>
+<linearGradient id="pkand-ring" gradientUnits="userSpaceOnUse" x1="636" y1="198" x2="764" y2="326"><stop offset="0" stop-color="#FF8A9B"/><stop offset="1" stop-color="#EE4D6C"/></linearGradient>
+<linearGradient id="pkand-screen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2B3144"/><stop offset="1" stop-color="#151923"/></linearGradient>
+<filter id="pkand-soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="26"/></filter>
+</defs><g transform="translate(54 54) scale(0.066) translate(-548 -494)"><g transform="translate(512 512) scale(1.12) translate(-512 -540)"><g transform="rotate(-6 505 544)">
+<circle cx="700" cy="262" r="64" fill="none" stroke="url(#pkand-ring)" stroke-width="46"/>
+<rect x="262" y="238" width="486" height="612" rx="148" fill="url(#pkand-body)"/>
+<rect x="300" y="276" width="410" height="536" rx="112" fill="url(#pkand-screen)"/>
+<ellipse cx="443" cy="520" rx="49" ry="61" fill="#F8F6F5"/><ellipse cx="571" cy="520" rx="49" ry="61" fill="#F8F6F5"/>
+<circle cx="454" cy="501" r="29" fill="#151923"/><circle cx="582" cy="501" r="29" fill="#151923"/>
+<circle cx="463" cy="491" r="10" fill="#FFFFFF"/><circle cx="591" cy="491" r="10" fill="#FFFFFF"/>
+<ellipse cx="386" cy="609" rx="35" ry="21" fill="#FF7F95" opacity=".9"/><ellipse cx="628" cy="609" rx="35" ry="21" fill="#FF7F95" opacity=".9"/>
+<path d="M476 600 Q507 641 538 600 Z" fill="#FF7F95"/>
+</g></g></g></svg>

@@ -92,7 +92,8 @@ func runApp(args []string) error {
 				c.Log.Warn("save settings", "err", err)
 			}
 		},
-		RulesFile: dirs.Rules(),
+		RulesFile:  dirs.Rules(),
+		AgentToken: rg.srv.Token,
 	})
 }
 

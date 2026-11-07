@@ -678,7 +678,7 @@ func TestWrongPINIsNotRetried(t *testing.T) {
 	s, _ := connect(t, g, "Lunch")
 	x.SetLocked(true)
 	mustStatus(t, s.Observe(ctx, ObserveRequest{}), StatusLocked)
-	if err := g.Unlock("pixel"); !errors.Is(err, ErrWrongPIN) {
+	if err := g.Unlock("pixel"); !errors.Is(err, ErrWrongPIN) || !errors.Is(err, driver.ErrLocked) {
 		t.Fatalf("wrong PIN: %v", err)
 	}
 	if len(x.entered) != 1 {

@@ -103,6 +103,7 @@ func TestShortPINIsKept(t *testing.T) {
 // unsupportedStore is a system without a keychain Pinky can use.
 type unsupportedStore struct{}
 
+func (unsupportedStore) Supported() bool           { return false }
 func (unsupportedStore) Has(string) bool           { return false }
 func (unsupportedStore) Save(string, string) error { return secret.ErrUnsupported }
 func (unsupportedStore) Delete(string) error       { return secret.ErrUnsupported }

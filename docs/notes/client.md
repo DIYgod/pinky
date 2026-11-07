@@ -182,7 +182,7 @@ The third pass (2026-11-07) built what the acceptance checklist listed as missin
 **Decisions**
 
 1. **Where the PIN is saved.** In Settings › Phones and on the locked phone's card, the same form, at least four characters. The mirror's lock has no Unlock button of its own: inside the mirror's input handler it took clicks unreliably, and it repeated the card.
-2. **Is there a keychain?** A store with a `Supported() bool` method is asked. Otherwise `Delete` of `pin:` (no phone has an empty id) failing with `secret.ErrUnsupported` means there is none; it never asks the person anything. The platform session could add `Supported` to the stores.
+2. **Is there a keychain?** `secret.Supported` asks the store, which says so without asking the person anything; no store is probed by writing or deleting.
 3. **Where exports go.** A new folder on the Desktop per export ("Pinky activity 2026-11-07 at 09.30.12"), shown in the Finder, as screenshots go to the Desktop. No save dialog, which a locked screen could not test either.
 4. **The agent's display is for watching.** Input there would reach the phone's own screen, so the keys are disabled with a tooltip and touches are not taken; the person switches to the phone's screen to use the phone.
 5. **A recording's position** comes from the frames' PTS, which `recording.Open` is expected to count from the recording's start, as `RecordingMark.At` does. A stream that counts from where it opened (its first PTS far below the start asked for) is offset.
@@ -242,7 +242,6 @@ The trade-off: amber now leans orange and red leans vermilion, so amber and red 
 - FFmpeg 9 only; other major versions are refused rather than supported with other offsets.
 - Approving a new agent with a narrower scope can lose it on the first approval until the gateway keeps a scope set before the answer (decision 2 above); 79d1c2a on main fixed this in the gateway.
 - Recordings, export, retention and background displays are stubs in the gateway, so against it the client shows its fallbacks; the player and the agent's display were checked on the fake only (the player through the real decoder).
-- The keychain probe (round three, decision 2) deletes `pin:` until the stores say whether they are supported.
 - Keeping the computer awake while tasks run is macOS only.
 - Durations ("38 s", "1 min 02 s") are joined with no-break spaces, so a task card's "Claude Code · sdk_gphone64_arm64 · 38 s" moves "38 s" to the next line together instead of leaving the "s" alone. MyGo honors them (`TestDurationsDoNotWrap`), except that a no-break run wider than its whole box still breaks inside, as browsers do.
 - With `-hidden`, the first request opens the main window and, because that window is not focused, the floating panel as well.

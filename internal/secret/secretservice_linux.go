@@ -245,6 +245,13 @@ func closeSession(conn *dbus.Conn, session dbus.ObjectPath) {
 	conn.Object(ssName, session).Call(ssSession+".Close", 0)
 }
 
+// Supported reports whether a session bus answers, where a keyring such
+// as GNOME Keyring or KWallet serves the Secret Service.
+func (s *secretService) Supported() bool {
+	_, err := s.bus()
+	return err == nil
+}
+
 func (s *secretService) Has(account string) bool {
 	conn, err := s.bus()
 	if err != nil {

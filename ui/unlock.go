@@ -46,15 +46,8 @@ func (a *app) secrets() secret.Store {
 }
 
 // keychainSupported reports whether a store can keep PINs, without asking
-// the person anything: a store that says so, else one whose Delete of an
-// account no phone has (device ids are never empty) does not fail with
-// ErrUnsupported.
-func keychainSupported(s secret.Store) bool {
-	if v, ok := s.(interface{ Supported() bool }); ok {
-		return v.Supported()
-	}
-	return !errors.Is(s.Delete(secret.PINAccount("")), secret.ErrUnsupported)
-}
+// the person anything.
+func keychainSupported(s secret.Store) bool { return secret.Supported(s) }
 
 // loadPINs probes the keychain once and looks up whether the phones it has
 // not seen yet have a saved PIN, off the main thread: a keychain call can

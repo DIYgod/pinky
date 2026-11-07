@@ -276,6 +276,12 @@ func (e *statusError) Error() string {
 	return fmt.Sprintf("secret: keychain %s: %s (OSStatus %d)", e.op, msg, e.status)
 }
 
+// Supported reports whether the Security framework loaded.
+func (k keychain) Supported() bool {
+	_, err := loadSecurity()
+	return err == nil
+}
+
 func (k keychain) Has(account string) bool {
 	s, err := loadSecurity()
 	if err != nil {
