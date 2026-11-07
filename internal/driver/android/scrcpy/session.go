@@ -57,6 +57,9 @@ type Session struct {
 	closeOnce sync.Once
 	done      chan struct{}
 	err       error
+
+	jarOnce sync.Once
+	jarDone chan struct{} // closed once the jar is removed after the end
 }
 
 // Start pushes the bundled server to the phone, runs it with opt and
@@ -71,10 +74,11 @@ func Start(ctx context.Context, c *adb.Client, serial string, opt Options) (*Ses
 	}
 	s := &Session{
 		client: c, serial: serial, scid: scid, opt: opt,
-		jar:    fmt.Sprintf("/data/local/tmp/pinky-scrcpy-%08x.jar", scid),
-		exited: make(chan struct{}),
-		done:   make(chan struct{}),
-		acks:   map[uint64]chan struct{}{},
+		jar:     fmt.Sprintf("/data/local/tmp/pinky-scrcpy-%08x.jar", scid),
+		exited:  make(chan struct{}),
+		done:    make(chan struct{}),
+		jarDone: make(chan struct{}),
+		acks:    map[uint64]chan struct{}{},
 	}
 	if err := c.Push(ctx, serial, bytes.NewReader(serverJar), s.jar, 0o644, time.Now()); err != nil {
 		return nil, fmt.Errorf("scrcpy: push server: %w", err)
@@ -504,6 +508,18 @@ func (s *Session) fail(err error) {
 		s.err = err
 		close(s.done)
 		s.closeConns()
+		// The server deletes its jar when it starts, but not always when
+		// it crashes early (a failing encoder on Android 10): make sure
+		// nothing stays on the phone.
+		go s.cleanJar()
+	})
+}
+
+// cleanJar removes the server's jar once.
+func (s *Session) cleanJar() {
+	s.jarOnce.Do(func() {
+		s.removeJar()
+		close(s.jarDone)
 	})
 }
 
@@ -515,9 +531,14 @@ func (s *Session) closeConns() {
 	}
 }
 
-// Close stops the session; the server exits when its sockets close.
+// Close stops the session; the server exits when its sockets close. It
+// waits up to 3 s for the server's jar to be gone from the phone.
 func (s *Session) Close() error {
 	s.fail(ErrClosed)
+	select {
+	case <-s.jarDone:
+	case <-time.After(3 * time.Second):
+	}
 	return nil
 }
 
