@@ -198,72 +198,9 @@ func unlock(ctx context.Context, p powerPhone, pin string) error {
 	if err != nil {
 		return err
 	}
-	woke, err := wakeUp(ctx, p)
-	if err != nil {
-		return fmt.Errorf("unlock: %w", err)
-	}
-	locked, err := p.locked(ctx)
-	if err != nil {
-		return fmt.Errorf("unlock: %w", err)
-	}
-	if !locked {
-		return nil
-	}
-	p.freshAX()
-	if woke {
-		// The lock screen takes a moment to come up behind the backlight.
-		if err := p.sleep(ctx, afterWake); err != nil {
-			return err
-		}
-	}
-	// Face ID can unlock the phone on the way, if its owner is there. A
-	// failed look for the pad is tried again in a new session.
-	unlocked := false
-	var lookErr error
-	padOrOpen := func(c context.Context) (bool, error) {
-		l, err := p.locked(c)
-		if err != nil || !l {
-			unlocked = err == nil
-			return unlocked, err
-		}
-		shown, err := p.keypadShown(c)
-		if err != nil {
-			lookErr = err
-			p.freshAX()
-			return false, nil
-		}
-		return shown, nil
-	}
-	for swipe := 1; ; swipe++ {
-		if swipe > 1 {
-			// The screen may have gone dark while the pad was looked for.
-			if _, err := wakeUp(ctx, p); err != nil {
-				return fmt.Errorf("unlock: %w: %w", err, driver.ErrPINNotEntered)
-			}
-		}
-		if err := p.swipeUp(ctx); err != nil {
-			return fmt.Errorf("unlock: %w: %w", err, driver.ErrPINNotEntered)
-		}
-		if err := p.sleep(ctx, afterSwipe); err != nil {
-			return err
-		}
-		err := waitFor(ctx, p, keypadWait, padOrOpen, "the passcode pad did not appear")
-		if err == nil {
-			break
-		}
-		if !errors.Is(err, errWaitedOut) || swipe == unlockSwipes {
-			if lookErr != nil {
-				err = fmt.Errorf("%v (last error: %v)", err, lookErr)
-			}
-			if errors.Is(err, errWaitedOut) {
-				err = fmt.Errorf("%v after %d swipes", err, swipe)
-			}
-			// Nothing was typed, so no attempt was used.
-			return fmt.Errorf("unlock: %v: %w", err, driver.ErrPINNotEntered)
-		}
-	}
-	if unlocked {
-		return nil
+	unlocked, err := reachPad(ctx, p)
+	if err != nil || unlocked {
+		return err
 	}
 	if err := p.sleep(ctx, afterKeypad); err != nil {
 		return err
@@ -299,6 +236,76 @@ func unlock(ctx context.Context, p powerPhone, pin string) error {
 		return fmt.Errorf("unlock: %v: %w", err, driver.ErrLocked)
 	}
 	return nil
+}
+
+// reachPad wakes the phone and brings up its passcode pad, typing nothing.
+// It reports unlocked when the phone needs no passcode after all: it was
+// not locked, or Face ID opened it on the way. An error wraps
+// ErrPINNotEntered once the phone was found locked.
+func reachPad(ctx context.Context, p powerPhone) (unlocked bool, err error) {
+	woke, err := wakeUp(ctx, p)
+	if err != nil {
+		return false, fmt.Errorf("unlock: %w", err)
+	}
+	locked, err := p.locked(ctx)
+	if err != nil {
+		return false, fmt.Errorf("unlock: %w", err)
+	}
+	if !locked {
+		return true, nil
+	}
+	p.freshAX()
+	if woke {
+		// The lock screen takes a moment to come up behind the backlight.
+		if err := p.sleep(ctx, afterWake); err != nil {
+			return false, err
+		}
+	}
+	// Face ID can unlock the phone on the way, if its owner is there. A
+	// failed look for the pad is tried again in a new session.
+	var lookErr error
+	padOrOpen := func(c context.Context) (bool, error) {
+		l, err := p.locked(c)
+		if err != nil || !l {
+			unlocked = err == nil
+			return unlocked, err
+		}
+		shown, err := p.keypadShown(c)
+		if err != nil {
+			lookErr = err
+			p.freshAX()
+			return false, nil
+		}
+		return shown, nil
+	}
+	for swipe := 1; ; swipe++ {
+		if swipe > 1 {
+			// The screen may have gone dark while the pad was looked for.
+			if _, err := wakeUp(ctx, p); err != nil {
+				return false, fmt.Errorf("unlock: %w: %w", err, driver.ErrPINNotEntered)
+			}
+		}
+		if err := p.swipeUp(ctx); err != nil {
+			return false, fmt.Errorf("unlock: %w: %w", err, driver.ErrPINNotEntered)
+		}
+		if err := p.sleep(ctx, afterSwipe); err != nil {
+			return false, err
+		}
+		err := waitFor(ctx, p, keypadWait, padOrOpen, "the passcode pad did not appear")
+		if err == nil {
+			return unlocked, nil
+		}
+		if !errors.Is(err, errWaitedOut) || swipe == unlockSwipes {
+			if lookErr != nil {
+				err = fmt.Errorf("%v (last error: %v)", err, lookErr)
+			}
+			if errors.Is(err, errWaitedOut) {
+				err = fmt.Errorf("%v after %d swipes", err, swipe)
+			}
+			// Nothing was typed, so no attempt was used.
+			return false, fmt.Errorf("unlock: %v: %w", err, driver.ErrPINNotEntered)
+		}
+	}
 }
 
 // devicePower is a Device as a powerPhone.
