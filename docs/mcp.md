@@ -202,7 +202,7 @@ Steps run in order, each settling first, and the batch stops at the first step t
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `text` | string, required | Matched without case in element labels and new events |
+| `text` | string, required | Matched without case in element labels and new events. In languages that put spaces between words it matches whole words only (`Stop` does not match `Stopwatch`); Chinese, Japanese, Korean and Thai text matches anywhere in a label |
 | `gone` | boolean | Wait for it to disappear |
 | `timeout_ms` | 0–45000 | Default 10000 |
 
@@ -240,7 +240,7 @@ Returns `settled` with `decision: allow`, or `approval_denied`, with the person'
 | --- | --- | --- |
 | `reason` | string, required | What the person should do |
 
-Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer; after an unlock on the phone itself, the person hands back explicitly. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
+Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer, if unlocking is all its `reason` asks for ("Please unlock the phone"); one that asks for more ("Unlock the phone, then sign in to Wise") stays open until the person hands back, and so does any handoff after an unlock on the phone itself. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
 
 ## Approvals
 

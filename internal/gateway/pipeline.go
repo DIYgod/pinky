@@ -285,6 +285,11 @@ type prep struct {
 	// let the action run without asking (policy.Verdict.Exempted); its
 	// step says so (exemptedLine).
 	exempted []string
+	// ocr lists the text that only OCR reads under or next to the finger
+	// (ocrForVerdict). It counts in the verdict like the elements under
+	// the finger but is never the target, which an approval checks again
+	// on a read without OCR.
+	ocr []screen.Element
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -334,6 +339,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		g.recordRefusal(l, c, a, p, res)
 		return res
 	}
+	g.ocrForVerdict(ctx, d, p, cur)
 	v := g.evaluate(p, cur)
 	switch v.Decision {
 	case policy.Deny:
@@ -413,28 +419,30 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 
 // evaluate runs the policy on the action. A tap or swipe is checked
 // against every element under the finger, not only the smallest one, so a
-// price label inside a Pay button still counts as tapping Pay. The
-// strictest verdict wins; p.decider records which element decided.
+// price label inside a Pay button still counts as tapping Pay, and against
+// the text only OCR reads there (p.ocr), so "Pay" on a web page without
+// accessibility elements counts too. The strictest verdict wins;
+// p.decider records which element decided.
 func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 	v := g.policy.Evaluate(p.input)
 	p.decider = p.target
-	var pt screen.Point
-	switch p.input.Op {
-	case policy.OpTap:
-		pt = p.point
-	case policy.OpSwipe:
-		pt = p.from
-	default:
+	pt, ok := p.finger()
+	if !ok {
 		return v
 	}
-	for i := range cur.Elements {
-		e := cur.Elements[i]
+	under := make([]screen.Element, 0, len(p.ocr)+8)
+	for _, e := range cur.Elements {
 		if e.Source == screen.SourceOCR || e.Bounds.Empty() || !e.Bounds.Contains(pt) {
 			continue
 		}
 		if p.target != nil && e.Ref == p.target.Ref && e.Ref != 0 {
 			continue
 		}
+		under = append(under, e)
+	}
+	under = append(under, p.ocr...)
+	for i := range under {
+		e := under[i]
 		in := p.input
 		in.Target = &e
 		switch w := g.policy.Evaluate(in); {
@@ -448,6 +456,81 @@ func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 		}
 	}
 	return v
+}
+
+// finger returns where a tap or swipe first touches the screen.
+func (p *prep) finger() (screen.Point, bool) {
+	switch p.input.Op {
+	case policy.OpTap:
+		return p.point, p.hasPt
+	case policy.OpSwipe:
+		return p.from, true
+	}
+	return screen.Point{}, false
+}
+
+// ocrForVerdict collects into p.ocr the text that only OCR reads under or
+// next to the finger of a tap or swipe: on web views and canvas apps
+// "还款" or "Pay" may be nowhere in the element tree. The read an action
+// starts from has no OCR (it would slow every action), so on phones whose
+// driver reads text (d.ocr) it reads again with OCR, but only where the
+// tree says little about the point: no element there, an unlabelled one,
+// or a large one such as a web view. Without a second read the action is
+// checked as before.
+func (g *Gateway) ocrForVerdict(ctx context.Context, d *device, p *prep, cur *screen.Screen) {
+	pt, ok := p.finger()
+	if !ok || cur == nil {
+		return
+	}
+	src := cur
+	if !hasOCR(cur) {
+		g.mu.Lock()
+		reads := d.ocr
+		g.mu.Unlock()
+		if !reads || !vagueAt(cur, p.target) {
+			return
+		}
+		o, err := g.observe(ctx, d, true)
+		if err != nil {
+			return
+		}
+		src = o
+	}
+	for _, e := range src.Elements {
+		if e.Source == screen.SourceOCR && e.Label != "" && !ocrInStatusBar(src, e) && ocrReach(e.Bounds).Contains(pt) {
+			p.ocr = append(p.ocr, e)
+		}
+	}
+}
+
+// vagueAt reports whether the tree element under the finger leaves open
+// what the finger is on: there is none, it has no label, or it covers a
+// sixth of the screen or more (a web view, a canvas, a backdrop).
+func vagueAt(s *screen.Screen, target *screen.Element) bool {
+	if target == nil || strings.TrimSpace(target.Label) == "" {
+		return true
+	}
+	return s.Width > 0 && s.Height > 0 && target.Bounds.W*target.Bounds.H*6 >= s.Width*s.Height
+}
+
+// ocrReach is the area around an OCR line where a tap counts as a tap on
+// it: OCR boxes hug the letters, while the button around them reaches
+// about a line's height further on every side.
+func ocrReach(r screen.Rect) screen.Rect {
+	m := r.H
+	return screen.Rect{X: r.X - m, Y: r.Y - m, W: r.W + 2*m, H: r.H + 2*m}
+}
+
+func hasOCR(s *screen.Screen) bool {
+	if s == nil {
+		return false
+	}
+	for _, e := range s.Elements {
+		if e.Source == screen.SourceOCR {
+			return true
+		}
+	}
+	return false
 }
 
 func refusal(v policy.Verdict) *Result {
@@ -541,7 +624,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			if res != nil {
 				return p, res
 			}
-			p.target, p.point = e, e.Bounds.Center()
+			p.target, p.point = e, tapPoint(cur, *e)
 		} else {
 			if !inBounds(*a.Point) {
 				return p, errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
@@ -639,7 +722,121 @@ func swipeLine(area screen.Rect, dir string) (from, to screen.Point) {
 	return screen.Point{X: c.X - dx, Y: c.Y}, screen.Point{X: c.X + dx, Y: c.Y}
 }
 
-// hitTest returns the smallest tree element under p.
+// tapPoint is where a tap on the element t by ref lands: its centre, unless
+// t is a control and something drawn on it lies there that would take the
+// tap instead: another control, or anything at all when t covers half the
+// screen or more. iOS puts a full-screen "Dismiss context menu" button
+// behind a context menu, and a tap at its centre hit the menu item lying
+// there (field test #29). Then the tap lands on the point of t farthest
+// from the elements on it, and from its edges and the status bar, when one
+// is clear of them.
+//
+// Trees list what is drawn later, on top, later, so the elements listed
+// after t are drawn on it and those before it lie under it. A backdrop's
+// place in its tree is the app's reading order, though, so for an element
+// that large every other element counts at first, and only those listed
+// after it when that leaves no point clear.
+func tapPoint(s *screen.Screen, t screen.Element) screen.Point {
+	c := t.Bounds.Center()
+	if !actionable(t) || t.Ref == 0 {
+		return c
+	}
+	big := s.Width > 0 && s.Height > 0 && t.Bounds.W*t.Bounds.H*2 >= s.Width*s.Height
+	var all, above []screen.Rect
+	covered, after := false, false
+	for _, e := range s.Elements {
+		if e.Ref == t.Ref {
+			after = true
+			continue
+		}
+		if e.Bounds.Empty() || encloses(e.Bounds, t.Bounds) || !overlaps(e.Bounds, t.Bounds) || (!after && !big) {
+			continue // what holds t, what lies elsewhere, and what lies under a control of usual size
+		}
+		all = append(all, e.Bounds)
+		if after {
+			above = append(above, e.Bounds)
+		}
+		if e.Bounds.Contains(c) && (big || (actionable(e) && e.Label != t.Label)) {
+			covered = true
+		}
+	}
+	if !covered {
+		return c
+	}
+	if p, ok := clearPoint(s, t.Bounds, all); ok {
+		return p
+	}
+	if len(above) < len(all) {
+		if p, ok := clearPoint(s, t.Bounds, above); ok {
+			return p
+		}
+	}
+	return c // nowhere clear: tap where it always did
+}
+
+// clearPoint returns the point of area farthest from the rectangles on it,
+// from its edges and from the status bar, if that is clear of them all by
+// a margin.
+func clearPoint(s *screen.Screen, area screen.Rect, on []screen.Rect) (screen.Point, bool) {
+	c := area.Center()
+	if top := s.Height * 6 / 100; area.Y < top && area.Y+area.H > 2*top {
+		area.H -= top - area.Y
+		area.Y = top
+	}
+	step := max(4, min(area.W, area.H)/32)
+	best, clear := c, -1
+	for y := area.Y + step/2; y < area.Y+area.H; y += step {
+		for x := area.X + step/2; x < area.X+area.W; x += step {
+			pt := screen.Point{X: x, Y: y}
+			d := min(x-area.X, area.X+area.W-1-x, y-area.Y, area.Y+area.H-1-y)
+			for _, r := range on {
+				if d = min(d, distance(pt, r)); d < clear {
+					break // worse than the best so far
+				}
+			}
+			if d > clear || (d == clear && closer(pt, best, c)) {
+				best, clear = pt, d
+			}
+		}
+	}
+	return best, clear >= max(4, min(s.Width, s.Height)/60)
+}
+
+// actionable reports whether an agent could mean to act on e.
+func actionable(e screen.Element) bool {
+	switch e.Role {
+	case screen.RoleButton, screen.RoleLink, screen.RoleInput, screen.RoleSwitch, screen.RoleCheckbox, screen.RoleTab:
+		return true
+	}
+	return e.Has(screen.StateEditable)
+}
+
+// encloses reports whether a holds all of b.
+func encloses(a, b screen.Rect) bool {
+	return a.X <= b.X && a.Y <= b.Y && a.X+a.W >= b.X+b.W && a.Y+a.H >= b.Y+b.H
+}
+
+func overlaps(a, b screen.Rect) bool {
+	return a.X < b.X+b.W && b.X < a.X+a.W && a.Y < b.Y+b.H && b.Y < a.Y+a.H
+}
+
+// distance is how far p lies from r along the farther axis, 0 inside it.
+func distance(p screen.Point, r screen.Rect) int {
+	dx := max(r.X-p.X, 0, p.X-(r.X+r.W-1))
+	dy := max(r.Y-p.Y, 0, p.Y-(r.Y+r.H-1))
+	return max(dx, dy)
+}
+
+// closer reports whether a is nearer to c than b.
+func closer(a, b, c screen.Point) bool {
+	da := (a.X-c.X)*(a.X-c.X) + (a.Y-c.Y)*(a.Y-c.Y)
+	db := (b.X-c.X)*(b.X-c.X) + (b.Y-c.Y)*(b.Y-c.Y)
+	return da < db
+}
+
+// hitTest returns the smallest tree element under p. OCR text is never the
+// target, since an approval checks its target again on a read without OCR;
+// the verdict weighs the OCR text under the finger as well (evaluate).
 func hitTest(s *screen.Screen, p screen.Point) *screen.Element {
 	var best *screen.Element
 	for i := range s.Elements {
@@ -1158,6 +1355,7 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	d := l.dev
 	start := time.Now()
 	before := g.shotID(g.beforeShot(d, cur))
+	from := g.leftFrom(d, cur)
 	if res := g.preflight(ctx, l); res != nil {
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
@@ -1207,6 +1405,9 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
+	if g.leaves(a, p, from) && stillIn(next, from.App) {
+		next, settled = g.awaitLeave(ctx, d, from.App, next, settled)
+	}
 	res := g.screenResult(l, next, false)
 	res.Status = StatusSettled
 	g.mu.Lock()
@@ -1225,6 +1426,77 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	idx := g.recordStep(l, step, a, c, p, res, start, before, "", body(res.Screen))
 	g.useShot(shot, l.task, idx, true)
 	return res
+}
+
+// leftFrom is the screen an action started from: cur, or for a launch that
+// did not read it (launchUnread), the phone's last read.
+func (g *Gateway) leftFrom(d *device, cur *screen.Screen) *screen.Screen {
+	if cur != nil {
+		return cur
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return d.last
+}
+
+// leaves reports whether an action takes the phone out of the app in front
+// on cur: home in an app other than the launcher, or opening another app.
+func (g *Gateway) leaves(a Action, p *prep, cur *screen.Screen) bool {
+	if cur == nil || cur.Locked || (cur.App.ID == "" && cur.App.Name == "") {
+		return false
+	}
+	switch {
+	case a.Tool == "key" && a.Key == "home":
+		return !g.policy.IsSystem(cur.App)
+	case a.Tool == "launch" && p != nil && !p.url:
+		to := screen.App{ID: p.launch.ID, Name: p.launch.Name}
+		if to.ID == to.Name {
+			to.ID = "" // a phone that cannot list its apps: only the name is known
+		}
+		return !sameApp(to, cur.App)
+	}
+	return false
+}
+
+// awaitLeave waits, up to SettleMax, for a read that shows another app in
+// front than from, then settles and reads again. An iPhone names the app
+// in front with a delay, and the read right after home can still show the
+// app the agent left (field test #25): a blocked app that seemed to stay
+// in front gave the agent "no change" and refused its next action. It
+// keeps next when the app does not change.
+func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, next *screen.Screen, settled bool) (*screen.Screen, bool) {
+	deadline := time.Now().Add(g.opt.SettleMax)
+	for time.Now().Before(deadline) {
+		if !sleepCtx(ctx, g.opt.PollInterval, nil) {
+			break
+		}
+		s, err := g.observe(ctx, d, false)
+		if err != nil {
+			break
+		}
+		if stillIn(s, from) {
+			continue
+		}
+		settled = g.settle(ctx, d)
+		if o, err := g.observe(ctx, d, true); err == nil {
+			return o, settled
+		}
+		return s, settled
+	}
+	return next, settled
+}
+
+// stillIn reports whether s shows app in front, unlocked.
+func stillIn(s *screen.Screen, app screen.App) bool {
+	return !s.Locked && sameApp(s.App, app)
+}
+
+// sameApp compares apps by id, or by name when one has no id.
+func sameApp(a, b screen.App) bool {
+	if a.ID != "" && b.ID != "" {
+		return a.ID == b.ID
+	}
+	return a.Name != "" && strings.EqualFold(a.Name, b.Name)
 }
 
 func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *prep) error {
@@ -1358,6 +1630,9 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		d.events = append([]screen.Event(nil), d.events[n-50:]...)
 	}
 	d.last = s
+	if ocr && !d.ocr {
+		d.ocr = hasOCR(s)
+	}
 	g.confirmShotLocked(d, s, start)
 	_, reporter := dev.(driver.LockReporter)
 	moved := false

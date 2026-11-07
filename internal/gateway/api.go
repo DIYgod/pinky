@@ -161,6 +161,11 @@ type NeedView struct {
 	// asks. Unset for the agent's own questions, where a yes answers that
 	// question only; there AllowTask and AllowAlways count as AllowOnce.
 	AllowTask bool
+	// EndsOnUnlock is set on a handoff that unlocking the phone from the
+	// computer answers: the phone was locked when the agent asked, and
+	// unlocking is all it asked for. Other handoffs stay open until the
+	// person hands the phone back.
+	EndsOnUnlock bool
 }
 
 // Decision answers an approval.

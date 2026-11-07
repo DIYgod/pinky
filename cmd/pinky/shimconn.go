@@ -15,22 +15,29 @@ import (
 )
 
 // shimSession forwards an agent's MCP session (newline-delimited JSON-RPC
-// on stdio) to the gateway's socket. When the gateway goes away because
-// the app restarts for an update (update.Restarting), it keeps the agent's
-// side open, waits for the new version, connects again and replays the
-// agent's initialize and initialized, so the agent's session goes on.
-// Requests the old gateway did not answer get an error to retry.
+// on stdio) to the gateway's socket. When the gateway goes away, it keeps
+// the agent's side open, connects again once a gateway is back and replays
+// the agent's initialize and initialized, so the agent's session goes on:
+//
+//   - when the app restarts for an update (update.Restarting), it waits for
+//     the new version, and the agent's requests wait with it. Requests the
+//     old gateway did not answer get an error to retry.
+//   - when the person quits Pinky, it waits until they open it again, as
+//     long as the agent keeps the session. Meanwhile every request gets an
+//     answer at once that says Pinky is not running.
 type shimSession struct {
 	dirs  api.Dirs
 	token string
 	out   io.Writer
-	// wait is how long to wait for the new version; tests shorten it.
-	wait time.Duration
+	// wait is how long to wait for the new version, and poll how often to
+	// look for Pinky after it quit; tests shorten them.
+	wait, poll time.Duration
 
 	mu           sync.Mutex
 	cond         *sync.Cond
 	conn         net.Conn                  // nil while reconnecting
 	closed       bool                      // gave up: writes fail
+	away         bool                      // Pinky quit: requests are answered here until it is back
 	init, inited []byte                    // the agent's initialize request and initialized notification
 	pending      map[string]pendingRequest // by id
 	replayID     string
@@ -40,7 +47,8 @@ type shimSession struct {
 }
 
 func newShimSession(dirs api.Dirs, token string, out io.Writer) *shimSession {
-	s := &shimSession{dirs: dirs, token: token, out: out, wait: 3 * time.Minute, pending: map[string]pendingRequest{}}
+	s := &shimSession{dirs: dirs, token: token, out: out, wait: 3 * time.Minute, poll: time.Second,
+		pending: map[string]pendingRequest{}}
 	s.cond = sync.NewCond(&s.mu)
 	return s
 }
@@ -52,7 +60,7 @@ func greetMCP(conn net.Conn, token string) (*bufio.Reader, error) {
 }
 
 // run forwards until the agent closes stdin and the gateway ends the
-// session, or the gateway goes away for good.
+// session.
 func (s *shimSession) run(conn net.Conn, br *bufio.Reader, stdin io.Reader) error {
 	s.setConn(conn)
 	go s.fromAgent(stdin)
@@ -63,19 +71,25 @@ func (s *shimSession) run(conn net.Conn, br *bufio.Reader, stdin io.Reader) erro
 		s.conn = nil
 		s.mu.Unlock()
 		conn.Close()
-		if done || !update.Restarting(s.dirs.Config) {
+		if done {
 			s.giveUp()
 			if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) {
 				return err
 			}
 			return nil
 		}
-		if conn, br, err = s.reconnect(); err != nil {
+		err = errQuit
+		if update.Restarting(s.dirs.Config) {
+			conn, br, err = s.reconnect()
+		}
+		if err != nil && !errors.Is(err, errAgentGone) {
+			// Pinky quit, or did not come back from its update: wait for
+			// the person to open it.
+			conn, br, err = s.awaitReopen()
+		}
+		if err != nil {
 			s.giveUp()
-			if errors.Is(err, errAgentGone) {
-				return nil
-			}
-			return err
+			return nil // the agent ended the session
 		}
 		// The agent may have closed its side while the shim reconnected,
 		// when there was no connection to tell: tell this one.
@@ -100,9 +114,12 @@ func halfClose(c net.Conn) {
 // errAgentGone ends a reconnect: the agent closed its side meanwhile.
 var errAgentGone = errors.New("the agent ended the session")
 
+// errQuit means the gateway went away without restarting for an update.
+var errQuit = errors.New("Pinky quit")
+
 func (s *shimSession) setConn(c net.Conn) {
 	s.mu.Lock()
-	s.conn = c
+	s.conn, s.away = c, false
 	s.cond.Broadcast()
 	s.mu.Unlock()
 }
@@ -173,22 +190,30 @@ func (s *shimSession) fromAgent(stdin io.Reader) {
 	}
 }
 
-// send writes one line to the gateway, waiting out a reconnect, and notes
-// a request (its id) as unanswered on that connection; false once the
-// shim gave up. Nothing is sent while there is no connection, so what is
-// pending when the gateway goes away went to the old one.
+// send writes one line to the gateway, waiting out a reconnect for an
+// update, and notes a request (its id) as unanswered on that connection;
+// false once the shim gave up. Nothing is sent while there is no
+// connection, so what is pending when the gateway goes away went to the old
+// one. While Pinky is away after it quit, the shim answers requests itself
+// and drops notifications.
 func (s *shimSession) send(line []byte, request, method string) bool {
 	s.mu.Lock()
-	for s.conn == nil && !s.closed {
+	for s.conn == nil && !s.closed && !s.away {
 		s.cond.Wait()
 	}
-	c, closed := s.conn, s.closed
-	if !closed && request != "" {
+	c, closed, away := s.conn, s.closed, s.away
+	if !closed && !away && request != "" {
 		s.pending[request] = pendingRequest{method: method, line: append([]byte(nil), line...)}
 	}
 	s.mu.Unlock()
 	if closed {
 		return false
+	}
+	if away {
+		if request != "" {
+			s.write(awayAnswer(request, method, notRunning))
+		}
+		return true
 	}
 	// A write that fails means the gateway went away; its request stays
 	// pending and is answered with an error once the shim reconnects.
@@ -236,23 +261,98 @@ func (s *shimSession) reconnect() (net.Conn, *bufio.Reader, error) {
 		if gone {
 			return nil, nil, errAgentGone
 		}
-		conn, err := api.Dial(s.dirs)
-		if err == nil {
-			br, err := greetMCP(conn, s.token)
-			if err == nil {
-				if err = s.replay(conn, br); err == nil {
-					s.settlePending(conn)
-					s.setConn(conn)
-					return conn, br, nil
-				}
-			}
-			conn.Close()
+		if conn, br, ok := s.connectOnce(); ok {
+			return conn, br, nil
 		}
 		if time.Now().After(deadline) {
 			return nil, nil, fmt.Errorf("Pinky did not come back within %s of restarting for an update", s.wait)
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
+}
+
+// awaitReopen waits, as long as the agent keeps its session, for the
+// person to open Pinky again after it quit. Meanwhile the shim answers the
+// agent's requests itself (send), starting with those the gateway left
+// unanswered. It does not start Pinky: quitting it is how the person stops
+// every agent.
+func (s *shimSession) awaitReopen() (net.Conn, *bufio.Reader, error) {
+	s.mu.Lock()
+	s.away = true
+	left := s.pending
+	s.pending = map[string]pendingRequest{}
+	s.cond.Broadcast()
+	s.mu.Unlock()
+	for id, p := range left {
+		msg := notRunning
+		if p.method == "tools/call" {
+			msg = quitDuring // it may have acted on the phone
+		}
+		s.write(awayAnswer(id, p.method, msg))
+	}
+	for {
+		s.mu.Lock()
+		gone := s.agentDone
+		s.mu.Unlock()
+		if gone {
+			return nil, nil, errAgentGone
+		}
+		// The person may have made a new agent token meanwhile.
+		if tok, err := api.EnsureToken(s.dirs.TokenFile()); err == nil {
+			s.mu.Lock()
+			s.token = tok
+			s.mu.Unlock()
+		}
+		if conn, br, ok := s.connectOnce(); ok {
+			return conn, br, nil
+		}
+		time.Sleep(s.poll)
+	}
+}
+
+// connectOnce dials the gateway, says hello, replays the agent's
+// initialize and deals with what the old gateway left unanswered.
+func (s *shimSession) connectOnce() (net.Conn, *bufio.Reader, bool) {
+	conn, err := api.Dial(s.dirs)
+	if err != nil {
+		return nil, nil, false
+	}
+	s.mu.Lock()
+	tok := s.token
+	s.mu.Unlock()
+	br, err := greetMCP(conn, tok)
+	if err == nil {
+		if err = s.replay(conn, br); err == nil {
+			s.settlePending(conn)
+			s.setConn(conn)
+			return conn, br, true
+		}
+	}
+	conn.Close()
+	return nil, nil, false
+}
+
+// What the shim answers while Pinky is away.
+const (
+	notRunning = "Pinky is not running on this computer, so nothing was done. Ask the person to open Pinky; " +
+		"this connection picks it up by itself. Then call phone_connect again."
+	quitDuring = "Pinky quit during this call, which may or may not have acted on the phone. Ask the person to open " +
+		"Pinky again; this connection picks it up by itself. Then call phone_connect and observe before anything else."
+)
+
+// awayAnswer is the shim's own answer to a request while Pinky is away: an
+// empty result to a ping, a tool error the model reads to a tool call, and
+// an error to anything else.
+func awayAnswer(id, method, msg string) []byte {
+	text, _ := json.Marshal(msg)
+	switch method {
+	case "ping":
+		return []byte(`{"jsonrpc":"2.0","id":` + id + `,"result":{}}` + "\n")
+	case "tools/call":
+		return []byte(`{"jsonrpc":"2.0","id":` + id + `,"result":{"content":[{"type":"text","text":` + string(text) +
+			`}],"isError":true}}` + "\n")
+	}
+	return []byte(`{"jsonrpc":"2.0","id":` + id + `,"error":{"code":-32603,"message":` + string(text) + `}}` + "\n")
 }
 
 func (s *shimSession) replay(conn net.Conn, br *bufio.Reader) error {

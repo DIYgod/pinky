@@ -44,6 +44,10 @@ type device struct {
 	// result, already filtered by the policy.
 	events []screen.Event
 	last   *screen.Screen // the last raw observation
+	// ocr is set once a read with OCR returned OCR lines: the phone's
+	// driver reads text from the pixels (iPhone), so a tap on text that
+	// only OCR sees is checked against it (ocrForVerdict).
+	ocr bool
 	// inputs counts input sent to the phone, by the agent or the person. A
 	// history screenshot is dropped when input came while it was taken.
 	inputs uint64
@@ -163,8 +167,8 @@ type lease struct {
 	// agent calls phone_handoff.
 	handedBack   bool
 	handBackNote string
-	// unlockHandoffs are handoffs opened while the phone was locked; Unlock
-	// from the computer ends them.
+	// unlockHandoffs are handoffs opened while the phone was locked that ask
+	// only for unlocking (unlockOnly); Unlock from the computer ends them.
 	unlockHandoffs []string
 	// after is the read that ended the last action, if it settled; the next
 	// step of a phone_batch reuses it while it is fresh.

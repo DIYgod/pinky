@@ -119,7 +119,7 @@ type batchIn struct {
 
 type waitForIn struct {
 	Device    string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
-	Text      string `json:"text" jsonschema:"Text to wait for, matched without case in element labels and new toasts or notifications."`
+	Text      string `json:"text" jsonschema:"Text to wait for, matched without case in element labels and new toasts or notifications. In languages that put spaces between words it matches whole words only, so Stop does not match Stopwatch."`
 	Gone      bool   `json:"gone,omitempty" jsonschema:"Wait for the text to disappear instead."`
 	TimeoutMS int    `json:"timeout_ms,omitempty" jsonschema:"Give up after this many milliseconds, at most 45000; default 10000."`
 }

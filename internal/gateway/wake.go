@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/DIYgod/pinky/internal/approval"
 	"github.com/DIYgod/pinky/internal/driver"
@@ -134,6 +136,90 @@ func (g *Gateway) Unlock(deviceID string) error {
 	}
 	g.answerUnlockHandoffs(d)
 	return nil
+}
+
+// unlockOnly reports whether a handoff's reason asks the person for nothing
+// but unlocking the phone, so that unlocking it from the computer answers
+// it. Every clause that asks the person for something has to be about the
+// lock: "The phone is locked. Please unlock it." is; "Unlock it, then
+// unblock three apps in Settings" is not (field test #26), and stays open
+// until the person clicks Done. Courtesies ("thanks"), the agent's own plans
+// ("then I'll continue") and purposes ("以便我继续") ask for nothing.
+func unlockOnly(reason string) bool {
+	lock := false
+	for _, c := range clauses(reason) {
+		switch {
+		case mentionsLock(c):
+			lock = true
+		case asksNothing(c):
+		default:
+			return false
+		}
+	}
+	return lock
+}
+
+// clauseBreaks split a reason into clauses: punctuation, and words that
+// join one request to the next.
+var clauseBreaks = strings.NewReplacer(
+	".", "\n", ";", "\n", "!", "\n", "?", "\n", ",", "\n", ":", "\n",
+	"。", "\n", "；", "\n", "！", "\n", "？", "\n", "，", "\n", "、", "\n", "：", "\n",
+	" then ", "\n", " and ", "\n", " after that ", "\n", " afterwards ", "\n", " also ", "\n", " plus ", "\n",
+	"然后", "\n", "之后", "\n", "以后", "\n", "接着", "\n", "并且", "\n", "以及", "\n", "同时", "\n",
+	"还要", "\n", "再", "\n", "并", "\n", "和", "\n", "后", "\n",
+)
+
+func clauses(reason string) []string {
+	var out []string
+	for _, c := range strings.Split(clauseBreaks.Replace(" "+strings.ToLower(reason)+" "), "\n") {
+		if c = strings.TrimSpace(c); c != "" {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// mentionsLock reports whether a clause is about the phone's lock. A
+// passcode alone is not: apps have their own.
+func mentionsLock(c string) bool {
+	if strings.ContainsAny(c, "锁鎖") || strings.Contains(c, "잠금") || strings.Contains(c, "잠겨") {
+		return true
+	}
+	if i := strings.Index(c, "ロック"); i >= 0 && !strings.HasSuffix(c[:i], "ブ") { // ブロック is a block
+		return true
+	}
+	for _, w := range strings.FieldsFunc(c, func(r rune) bool { return !unicode.IsLetter(r) }) {
+		for _, p := range lockWords {
+			if strings.HasPrefix(w, p) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// lockWords start words about a phone's lock (and never about blocking):
+// lock, unlock, entsperren, gesperrt, déverrouiller, desbloquear, разблокировать.
+var lockWords = []string{"lock", "unlock", "entsperr", "gesperrt", "sperrbildschirm", "verrouill", "déverrouill",
+	"desbloque", "разблокир", "заблокир"}
+
+// asksNothing reports whether a clause asks the person for nothing: a
+// courtesy, what the agent will do itself, or what for.
+func asksNothing(c string) bool {
+	switch c {
+	case "please", "thanks", "thank you", "thx", "谢谢", "请", "麻烦了", "麻烦你", "感谢", "辛苦了":
+		return true
+	}
+	for _, p := range []string{
+		"so ", "so that ", "in order to ", "to continue", "to go on", "to proceed",
+		"i'll ", "i will ", "i can ", "i could ", "i'm going to ", "i am going to ", "let me ", "we'll ", "we can ",
+		"以便", "好让", "让我", "方便我", "我来", "我会", "我再", "我就", "我好", "我才", "我可以", "我能", "我继续", "我将", "我接着",
+	} {
+		if strings.HasPrefix(c+" ", p) {
+			return true
+		}
+	}
+	return false
 }
 
 // answerUnlockHandoffs answers the handoffs the agent opened for the lock,

@@ -14,6 +14,9 @@ import (
 	"testing"
 	"time"
 
+	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/update"
 )
 
@@ -54,8 +57,7 @@ func startFakeDaemon(t *testing.T, bin, home string) (stop func()) {
 
 // TestShimReconnectsAfterAnUpdate: when the gateway goes away because Pinky
 // restarts for an update, `pinky mcp` waits for the new one and the agent's
-// session goes on; when it goes away otherwise, the session ends as
-// before.
+// session goes on.
 func TestShimReconnectsAfterAnUpdate(t *testing.T) {
 	bin := buildPinky(t)
 	home := pinkyHome(t)
@@ -96,20 +98,72 @@ func TestShimReconnectsAfterAnUpdate(t *testing.T) {
 	if update.Restarting(d.Config) {
 		t.Error("the new gateway left the restart marker")
 	}
-
-	// Without the marker the session ends with the gateway.
 	stop2()
-	done := make(chan error, 1)
+}
+
+// TestShimWaitsForPinkyToOpenAgain: when the person quits Pinky, `pinky
+// mcp` keeps the agent's session, answers its calls at once that Pinky is
+// not running, and picks Pinky up again once it is opened (field test
+// #20). It does not start Pinky itself.
+func TestShimWaitsForPinkyToOpenAgain(t *testing.T) {
+	bin := buildPinky(t)
+	home := pinkyHome(t)
+	d := dirsFor(t, home)
+	stop := startFakeDaemon(t, bin, home)
+
+	agent := startMCP(t, bin, home, "claude-code")
+	text, isErr := agent.call(t, "phone_connect", map[string]any{"device": "Pixel 9 (fake)", "task": "Before quitting"})
+	if isErr {
+		t.Fatalf("connect: %s", text)
+	}
+	// A call waiting when Pinky quits gets an answer, and the session
+	// stays.
+	waiting := make(chan error, 1)
 	go func() {
-		_, err := agent.cs.ListTools(context.Background(), nil)
-		done <- err
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		_, err := agent.cs.CallTool(ctx, &sdk.CallToolParams{Name: "phone_wait_for",
+			Arguments: map[string]any{"text": "Never shown", "timeout_ms": 30000}})
+		waiting <- err
 	}()
+	time.Sleep(500 * time.Millisecond)
+	stop()
 	select {
-	case err := <-done:
-		if err == nil {
-			t.Error("the session went on without a gateway")
+	case err := <-waiting:
+		if err != nil {
+			t.Fatalf("a call that waited when Pinky quit: %v", err)
 		}
-	case <-time.After(20 * time.Second):
-		t.Error("the shim waited for a gateway that quit for good")
+	case <-time.After(10 * time.Second):
+		t.Fatal("a call that waited when Pinky quit got no answer")
+	}
+
+	start := time.Now()
+	text, isErr = agent.call(t, "phone_observe", map[string]any{})
+	if !isErr || !strings.Contains(text, "Pinky is not running") || time.Since(start) > 5*time.Second {
+		t.Fatalf("a call while Pinky is closed (%v): %v %s", time.Since(start), isErr, text)
+	}
+	if c, err := api.Dial(d); err == nil {
+		c.Close()
+		t.Fatal("the shim started Pinky again")
+	}
+
+	// The person opens Pinky: the session goes on.
+	startFakeDaemon(t, bin, home)
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		text, isErr = agent.call(t, "phone_connect", map[string]any{"device": "Pixel 9 (fake)", "task": "After opening Pinky again"})
+		if !isErr {
+			break
+		}
+		if !strings.Contains(text, "Pinky is not running") || time.Now().After(deadline) {
+			t.Fatalf("connect after opening Pinky again: %s", text)
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	if !strings.Contains(text, "Pixel 9 (fake)") {
+		t.Fatalf("connect after opening Pinky again: %s", text)
+	}
+	if tools, err := agent.cs.ListTools(context.Background(), nil); err != nil || len(tools.Tools) == 0 {
+		t.Fatalf("tools after opening Pinky again: %v", err)
 	}
 }
