@@ -230,7 +230,9 @@ func (a *app) approvalControls(c *mg.Context, n gateway.NeedView) {
 	}
 	more := linkButton(c, locales.NeedsMoreOptions()).Margin(10, 0, 0, 0).AlignSelf(mg.Start)
 	more.PopoverMenuButton(func(m *mg.Menu) {
-		if m.Item(locales.NeedsAllowTask()).Chosen() {
+		// Only where the rest of the task skips the question: not the
+		// agent's own questions, where a yes answers that question only.
+		if n.AllowTask && m.Item(locales.NeedsAllowTask()).Chosen() {
 			a.decide(n, gateway.AllowTask, "")
 		}
 		// Only where the gateway can keep it: not the agent's own questions,
