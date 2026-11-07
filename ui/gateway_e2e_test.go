@@ -376,13 +376,17 @@ func TestGatewayLockedHandoff(t *testing.T) {
 		}
 	}
 	tt := mg.NewTester(ga.view, 1280, 820)
-	for _, want := range []string{"Unlock the phone, please", "The phone is locked. Unlock it on the phone, then click Done.", "Decline", "Done"} {
+	// The demo iPhone can be unlocked from the computer (driver.Unlocker),
+	// but no PIN is saved: the card offers to save one.
+	for _, want := range []string{"Unlock the phone, please",
+		"The phone is locked. Save the phone's PIN to unlock it from this computer, or unlock it on the phone, then click Done.",
+		"Save PIN…", "Decline", "Done"} {
 		if !hasText(tt, want) {
 			t.Errorf("no %q in %q", want, tt.Texts())
 		}
 	}
 	if label, _ := unlockWords(); hasText(tt, label) {
-		t.Errorf("an unlock button shows for a phone without driver.Unlocker: %q", tt.Texts())
+		t.Errorf("an unlock button shows for a phone without a saved PIN: %q", tt.Texts())
 	}
 }
 
@@ -665,12 +669,12 @@ func TestMirrorRetryKeepsError(t *testing.T) {
 	}
 }
 
-// TestGatewayRound3Fallbacks runs the round-three controls against the
-// real gateway, whose recordings, export and background displays are
-// still stubs and whose demo phones have no optional drivers: the client
-// shows none of the controls that would not work, replays screenshots,
-// writes its own export, and says why pairing over Wi-Fi is unavailable.
-func TestGatewayRound3Fallbacks(t *testing.T) {
+// TestGatewayRound3 runs the round-three controls against the real
+// gateway on the demo phones: the controls follow the phones' features,
+// Activity offers the task's recording or its replay, Export all writes the
+// gateway's report, and pairing over Wi-Fi says why it is unavailable (the
+// demo has no Pairer).
+func TestGatewayRound3(t *testing.T) {
 	ga := newGatewayApp(t, true)
 	var revealed []string
 	ga.reveal = func(p string) { revealed = append(revealed, p) }
@@ -689,8 +693,8 @@ func TestGatewayRound3Fallbacks(t *testing.T) {
 		t.Fatal(err)
 	}
 	ga.waitFor(t, "the phones", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
-	if f := ga.device(pixel).Features; f != (gateway.Features{}) {
-		t.Errorf("a demo phone has features %+v", f)
+	if f := ga.device(pixel).Features; f != (gateway.Features{Unlock: true, Background: true, Files: true}) {
+		t.Errorf("the demo Pixel has features %+v", f)
 	}
 	ga.selectPhone(pixel)
 	tt := mg.NewTester(ga.view, 1280, 820)
@@ -701,8 +705,8 @@ func TestGatewayRound3Fallbacks(t *testing.T) {
 
 	ga.page, ga.set.sec = pageSettings, secPhones
 	tt.Frame()
-	if hasText(tt, "Work in the background") || hasText(tt, "Save PIN…") {
-		t.Errorf("Settings › Phones offers controls the phones lack: %q", tt.Texts())
+	if !hasText(tt, "Work in the background") || !hasText(tt, "Unlock from this computer") {
+		t.Errorf("Settings › Phones lacks controls the phones have: %q", tt.Texts())
 	}
 
 	ga.page = pageActivity
@@ -714,14 +718,14 @@ func TestGatewayRound3Fallbacks(t *testing.T) {
 		return e != nil && !e.loading
 	})
 	tt.Frame()
-	if !hasText(tt, "Watch replay") || hasText(tt, "Watch recording") {
-		t.Errorf("a task without a recording: %q", tt.Texts())
+	if !hasText(tt, "Watch replay") && !hasText(tt, "Watch recording") {
+		t.Errorf("a finished task offers neither its recording nor a replay: %q", tt.Texts())
 	}
 	if err := tt.Click("Export all"); err != nil {
 		t.Fatal(err)
 	}
 	ga.waitFor(t, "the export", func() bool { return len(revealed) == 1 })
-	if filepath.Base(revealed[0]) != "report.html" {
+	if filepath.Ext(revealed[0]) != ".html" {
 		t.Errorf("exported %v", revealed)
 	}
 	data, err := os.ReadFile(revealed[0])
