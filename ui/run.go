@@ -121,8 +121,9 @@ type app struct {
 	unlocks map[string]bool // phones with an open unlock need, by id
 	loaded  bool
 
-	page page
-	sel  string // the selected phone, or allPhones
+	page      page
+	panelPage page   // the page syncPanel last saw, to sync again when it changes
+	sel       string // the selected phone, or allPhones
 
 	mirrors map[string]*mirror
 	shots   map[string]*mg.Bitmap // approval screenshots by need ID

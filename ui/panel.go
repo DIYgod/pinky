@@ -64,14 +64,16 @@ func (a *app) newPanel() {
 	})
 }
 
-// syncPanel shows the panel while approvals wait and the main window is
-// not in front, and hides it otherwise. It never takes the keyboard: the
-// person clicks it first, and then Return allows and Esc denies.
+// syncPanel shows the panel while approvals wait and the person cannot see
+// them in the main window, and hides it otherwise. It never takes the
+// keyboard: the person clicks it first, and then Return allows and Esc
+// denies.
 func (a *app) syncPanel() {
 	if a.panel == nil {
 		return
 	}
-	want := (len(a.approvals()) > 0 || len(a.liveAnswers()) > 0) && !a.mainInFront()
+	a.panelPage = a.page
+	want := (len(a.approvals()) > 0 || len(a.liveAnswers()) > 0) && !a.needsInFront()
 	switch {
 	case want && !a.panel.IsVisible():
 		a.placePanel()
@@ -82,8 +84,13 @@ func (a *app) syncPanel() {
 	a.panel.Invalidate()
 }
 
-func (a *app) mainInFront() bool {
-	return a.main != nil && a.main.IsVisible() && !a.main.IsMinimized() && a.focused
+// needsInFront reports whether the person sees the Needs you column: the
+// main window is in front and shows the Phones page with a phone. Other
+// pages, and the Phones page before any phone is added, have no such
+// column, so their approvals go to the panel.
+func (a *app) needsInFront() bool {
+	return a.main != nil && a.main.IsVisible() && !a.main.IsMinimized() && a.focused &&
+		a.page == pagePhones && len(a.devices) > 0
 }
 
 // showPanel brings the panel up, from a notification or the flyout.

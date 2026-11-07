@@ -38,6 +38,12 @@ func (a *app) view(c *mg.Context) {
 		})
 	})
 	a.sweepMirrors()
+	// The panel shows approvals the page cannot: sync it after a page
+	// change, once this build is done.
+	if a.page != a.panelPage && a.main != nil {
+		a.panelPage = a.page
+		a.main.Update(a.syncPanel)
+	}
 }
 
 // sidebar is the prototype's nav: the logo, the phones, Add phone, and
