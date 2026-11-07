@@ -109,6 +109,7 @@ type Gateway struct {
 	// Guarded by mu.
 	recordOn   bool            // record the screen of new tasks
 	background map[string]bool // the person's choice per phone: agents on a background display, or not
+	removed    map[string]bool // phones the person removed, kept off the list while listed over the network (remove.go)
 	keepDays   int             // history retention; 0 keeps everything
 	prune      chan struct{}   // asks the retention loop to run now
 
@@ -138,6 +139,7 @@ func New(o Options) (*Gateway, error) {
 		subs:       map[chan Event]struct{}{},
 		hubs:       map[string]*hub{},
 		background: map[string]bool{},
+		removed:    map[string]bool{},
 		prune:      make(chan struct{}, 1),
 	}
 	if g.policy == nil {
@@ -154,6 +156,7 @@ func New(o Options) (*Gateway, error) {
 		} else {
 			g.log.Warn("history: background displays", "err", err)
 		}
+		g.loadRemoved()
 	}
 	g.approvals = approval.New(approval.Options{
 		Timeout:  o.ApprovalTimeout,
@@ -308,6 +311,16 @@ func (g *Gateway) discover(ctx context.Context) {
 // should be opened.
 func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	g.mu.Lock()
+	if g.removed[info.ID] {
+		if !cabled(info) {
+			// The person removed it; the provider lists it over the
+			// network by itself.
+			g.mu.Unlock()
+			return nil
+		}
+		// Plugged in: the person adds it back.
+		g.addedBackLocked(info.ID)
+	}
 	d, ok := g.devices[info.ID]
 	if !ok {
 		d = newDevice(p, info)
@@ -339,7 +352,7 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	dev, err := p.Open(ctx, d.id)
 	g.mu.Lock()
 	d.opening = false
-	if err != nil || g.closed {
+	if err != nil || g.closed || d.removed {
 		g.mu.Unlock()
 		if err == nil {
 			dev.Close()

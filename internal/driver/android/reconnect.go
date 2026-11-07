@@ -124,6 +124,9 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 		return false, false
 	}
 	want := r.missing(guids, entries)
+	// Phones the person removed from Pinky stay away until they add them
+	// back (Forget).
+	want = slices.DeleteFunc(want, func(g string) bool { return p.forgot(guidSerial(g)) })
 	if len(want) == 0 {
 		return false, false
 	}
@@ -256,6 +259,13 @@ func (r *reconnector) remember(addr, guid string) {
 	r.mu.Lock()
 	r.byAddr[addr] = guid
 	delete(r.refused, guid)
+	r.mu.Unlock()
+}
+
+// drop forgets a connection by address once it is gone.
+func (r *reconnector) drop(addr string) {
+	r.mu.Lock()
+	delete(r.byAddr, addr)
 	r.mu.Unlock()
 }
 

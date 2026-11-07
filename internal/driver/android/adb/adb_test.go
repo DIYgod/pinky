@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -125,6 +126,25 @@ func (s *fakeServer) handle(c net.Conn) {
 		s.connected = append(s.connected, addr)
 		s.mu.Unlock()
 		writeStr(c, "connected to "+addr)
+	case strings.HasPrefix(req, "host:disconnect:"):
+		// As platform-tools 37: the argument is an address, with port 5555
+		// when it has none, so a name is never found.
+		addr := strings.TrimPrefix(req, "host:disconnect:")
+		if !strings.Contains(addr, ":") {
+			addr += ":5555"
+		}
+		s.mu.Lock()
+		i := slices.Index(s.connected, addr)
+		if i >= 0 {
+			s.connected = slices.Delete(s.connected, i, i+1)
+		}
+		s.mu.Unlock()
+		if i < 0 {
+			fail(c, "no such device '"+addr+"'")
+			return
+		}
+		okay(c)
+		writeStr(c, "disconnected "+addr)
 	case req == "host:devices-l":
 		okay(c)
 		writeStr(c, s.devices)
@@ -754,5 +774,36 @@ func TestMDNSPairConnect(t *testing.T) {
 	}
 	if err := c.Connect(ctx, "10.0.0.1:5555"); err == nil {
 		t.Error("a failed connect returned nil")
+	}
+
+	// Disconnect drops a connection made by address; a name the server's
+	// discovery gave a connection is not found, nor is an address with no
+	// connection, and an empty serial (every connection) is never sent.
+	if err := c.Disconnect(ctx, "192.168.1.42:41000"); err != nil {
+		t.Errorf("Disconnect: %v", err)
+	}
+	s.mu.Lock()
+	left := slices.Clone(s.connected)
+	s.mu.Unlock()
+	if len(left) != 0 {
+		t.Errorf("still connected to %v", left)
+	}
+	if err := c.Disconnect(ctx, "192.168.1.42:41000"); !errors.Is(err, ErrDeviceNotFound) {
+		t.Errorf("Disconnect twice: %v, want ErrDeviceNotFound", err)
+	}
+	if err := c.Disconnect(ctx, "adb-R5CN20ABC-x1y2z3._adb-tls-connect._tcp"); !errors.Is(err, ErrDeviceNotFound) {
+		t.Errorf("Disconnect by service name: %v, want ErrDeviceNotFound", err)
+	}
+	s.mu.Lock()
+	n := len(s.requests)
+	s.mu.Unlock()
+	if err := c.Disconnect(ctx, " "); err == nil {
+		t.Error("Disconnect with no serial returned nil")
+	}
+	s.mu.Lock()
+	sent := len(s.requests) > n
+	s.mu.Unlock()
+	if sent {
+		t.Error("Disconnect with no serial asked the server")
 	}
 }

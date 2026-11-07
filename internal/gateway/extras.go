@@ -34,12 +34,14 @@ func (g *Gateway) StartPairing(ctx context.Context) (driver.Pairing, error) {
 }
 
 // PairWithCode pairs a phone with the address and six-digit code it shows
-// under Pair device with pairing code.
+// under Pair device with pairing code. A phone the person removed is back
+// once it pairs.
 func (g *Gateway) PairWithCode(ctx context.Context, addr, code string) (driver.Info, error) {
 	for _, p := range g.opt.Providers {
 		if pr, ok := p.(driver.Pairer); ok {
 			info, err := pr.PairWithCode(ctx, addr, code)
 			if err == nil {
+				g.unremove(info.ID)
 				g.discover(ctx)
 			}
 			return info, err
@@ -51,12 +53,13 @@ func (g *Gateway) PairWithCode(ctx context.Context, addr, code string) (driver.I
 // ConnectWiFi connects a phone paired over Wi-Fi at the address it shows
 // under Wireless debugging (IP address & Port), for a network on which the
 // driver cannot find it by itself (driver.ErrPairedNotFound from a
-// pairing).
+// pairing). A phone the person removed is back once it connects.
 func (g *Gateway) ConnectWiFi(ctx context.Context, addr string) (driver.Info, error) {
 	for _, p := range g.opt.Providers {
 		if wc, ok := p.(driver.WiFiConnector); ok {
 			info, err := wc.ConnectWiFi(ctx, addr)
 			if err == nil {
+				g.unremove(info.ID)
 				g.discover(ctx)
 			}
 			return info, err
@@ -66,7 +69,8 @@ func (g *Gateway) ConnectWiFi(ctx context.Context, addr string) (driver.Info, er
 }
 
 // discoverOnPair looks for devices as soon as a pairing finishes, rather
-// than at the next discovery tick.
+// than at the next discovery tick, and lets a phone the person removed
+// back on the list.
 type discoverOnPair struct {
 	driver.Pairing
 	g *Gateway
@@ -75,6 +79,7 @@ type discoverOnPair struct {
 func (p *discoverOnPair) Wait(ctx context.Context) (driver.Info, error) {
 	info, err := p.Pairing.Wait(ctx)
 	if err == nil {
+		p.g.unremove(info.ID)
 		p.g.discover(ctx)
 	}
 	return info, err

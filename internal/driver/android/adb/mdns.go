@@ -154,3 +154,30 @@ func (c *Client) Connect(ctx context.Context, addr string) error {
 	}
 	return fmt.Errorf("adb: connect %s: %s", addr, resp)
 }
+
+// Disconnect drops the server's connection to a phone over the network,
+// as `adb disconnect <serial>` does. The server reads serial as an
+// address, so a connection made by address ("192.168.1.42:41000") can be
+// dropped, and one its own discovery made, which it names after the
+// phone's mDNS service ("adb-<serial>-<suffix>._adb-tls-connect._tcp"),
+// cannot: platform-tools 37 looks for "<name>:5555" and answers no such
+// device. A serial with no connection returns an error wrapping
+// ErrDeviceNotFound. An empty serial is refused, since to the server it
+// means every connection.
+func (c *Client) Disconnect(ctx context.Context, serial string) error {
+	if strings.TrimSpace(serial) == "" {
+		return errors.New("adb: disconnect: no serial")
+	}
+	resp, err := c.query(ctx, "host:disconnect:"+serial)
+	var ae *Error
+	if errors.As(err, &ae) && strings.Contains(strings.ToLower(ae.Msg), "no such device") {
+		return fmt.Errorf("adb: disconnect %s: %s: %w", serial, ae.Msg, ErrDeviceNotFound)
+	}
+	if err != nil {
+		return err
+	}
+	if resp = strings.TrimSpace(resp); !strings.HasPrefix(resp, "disconnected") {
+		return fmt.Errorf("adb: disconnect %s: %s", serial, resp)
+	}
+	return nil
+}
