@@ -111,7 +111,9 @@ func driverless(nodes []usbNode, online []driver.Info) []driver.Info {
 			Connection: "usb",
 			Backend:    "scrcpy",
 			State:      driver.StateNeedsSetup,
-			Detail:     "Windows has no driver for this phone's USB debugging. Install " + where + ", then unplug the phone and plug it in again.",
+			// Add phone shows "Found <phone>, but <detail>", the
+			// first letter lowered.
+			Detail: "The phone's USB debugging has no driver on this computer. Install " + where + ", then unplug the phone and plug it in again.",
 		})
 	}
 	return out

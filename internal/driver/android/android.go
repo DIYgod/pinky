@@ -274,9 +274,10 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 		info.State = driver.StateUnauthorized
 		info.Detail = "Unlock the phone and allow USB debugging for this computer."
 	case adb.StateNoPerm:
-		// Linux: adb may not open the phone's USB device.
+		// Linux: adb may not open the phone's USB device. (Add phone
+		// shows "Found <phone>, but <detail>", the first letter lowered.)
 		info.State = driver.StateNeedsSetup
-		info.Detail = "Linux does not let Pinky open the phone's USB device"
+		info.Detail = "This computer has no permission to use the phone over USB"
 		if e.Detail != "" {
 			info.Detail += " (" + e.Detail + ")"
 		}
