@@ -62,6 +62,17 @@ type DeviceView struct {
 	Status     DeviceStatus
 	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Offline"
 	TaskID     string // the running task, if any
+	// Features says what the phone's driver offers, so the client shows
+	// only the controls that work. All false while the phone is offline.
+	Features Features
+}
+
+// Features are the optional driver capabilities the client has controls for.
+type Features struct {
+	Unlock     bool // driver.Unlocker: unlock from the computer
+	Background bool // driver.Backgrounder: agents can work on a background display
+	Files      bool // driver.Files: the phone's Pinky folder
+	Companion  bool // driver.CompanionInstaller: an Android companion app to install
 }
 
 // TaskState is the state of an agent task.

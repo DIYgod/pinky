@@ -41,12 +41,24 @@ func (g *Gateway) Devices() []DeviceView {
 		}
 		st, line := g.statusLocked(d, open)
 		v := DeviceView{Info: info, Status: st, StatusLine: line}
+		if d.online && d.dev != nil {
+			v.Features = featuresOf(d.dev)
+		}
 		if d.lease != nil {
 			v.TaskID = d.lease.task.id
 		}
 		out = append(out, v)
 	}
 	return out
+}
+
+func featuresOf(dev driver.Device) Features {
+	var f Features
+	_, f.Unlock = dev.(driver.Unlocker)
+	_, f.Background = dev.(driver.Backgrounder)
+	_, f.Files = dev.(driver.Files)
+	_, f.Companion = dev.(driver.CompanionInstaller)
+	return f
 }
 
 func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, string) {

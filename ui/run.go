@@ -65,7 +65,15 @@ type Settings struct {
 	KeepDays           int
 	Record             bool
 	DeveloperMode      bool
+	// RemoteAgents serves MCP over Streamable HTTP at RemoteAddr, for agents
+	// that cannot start `pinky mcp`; each request needs the agent token.
+	RemoteAgents bool
+	RemoteAddr   string
 }
+
+// DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
+// only, on port 7465 (PINK on a phone keypad).
+const DefaultRemoteAddr = "127.0.0.1:7465"
 
 // BlockedApp is an app agents may not open.
 type BlockedApp struct {
@@ -86,7 +94,7 @@ func DefaultSettings() Settings {
 		BlockedApps: []BlockedApp{
 			{Name: "Northbank", Kind: "Banking"}, {Name: "Vaultly", Kind: "Passwords"}, {Name: "Coinpouch", Kind: "Wallet"},
 		},
-		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true,
+		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
 	}
 }
 

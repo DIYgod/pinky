@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"image"
+	"io"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/screen"
@@ -197,6 +198,111 @@ type Clipboard interface {
 // events). It returns settled=false when max passed first.
 type Settler interface {
 	WaitSettled(ctx context.Context, max time.Duration) (settled bool, err error)
+}
+
+// Waker turns the screen on. Pinky never keeps a phone awake: the gateway
+// wakes it before an agent's step, and the phone's own screen timeout and
+// lock apply between steps and tasks. Wake must not unlock, press the
+// power key (which would lock a phone whose screen is on) or change a
+// setting.
+type Waker interface {
+	// ScreenOn reports whether the display is on.
+	ScreenOn(ctx context.Context) (bool, error)
+	// Wake turns the display on when it is off, and does nothing when it
+	// is on.
+	Wake(ctx context.Context) error
+}
+
+// Unlocker enters the phone's PIN or passcode on its lock screen. Only the
+// person can trigger it, from the client after Touch ID or the system's
+// equivalent; agents never reach it and never see the PIN. It wakes the
+// screen, brings up the PIN pad, enters pin and confirms, then returns nil
+// once the lock screen is gone, or ErrLocked when it is still there (a
+// wrong PIN). It never retries: phones lock out or wipe after repeated
+// failures.
+type Unlocker interface {
+	Unlock(ctx context.Context, pin string) error
+}
+
+// FileInfo is one entry of the phone's Pinky folder.
+type FileInfo struct {
+	Path    string // slash-separated, relative to the Pinky folder
+	Size    int64
+	ModTime time.Time
+	Dir     bool
+}
+
+// Files reads and writes the phone's Pinky folder (/sdcard/Pinky on
+// Android), the only place on the phone agents may reach. Paths are
+// relative to it; drivers refuse paths that leave it (.., absolute paths,
+// symlinks out) with ErrNotFound.
+type Files interface {
+	// ListFiles lists the whole folder, recursively, creating it when it
+	// does not exist.
+	ListFiles(ctx context.Context) ([]FileInfo, error)
+	Pull(ctx context.Context, path string, w io.Writer) error
+	// Push writes a file, creating its folders, and sets its time.
+	Push(ctx context.Context, path string, r io.Reader, size int64, mtime time.Time) error
+}
+
+// BackgroundOptions configure Backgrounder.OpenBackground.
+type BackgroundOptions struct {
+	// App is started on the new display once it exists (package, bundle id
+	// or display name, as for Launch). Empty starts nothing.
+	App string
+}
+
+// Backgrounder opens a second display on the phone for an agent to work
+// on while the main screen stays free for the person, or off and locked
+// (Android: a scrcpy virtual display). The Device it returns observes,
+// acts and streams on that display only, and closes it on Close; the
+// phone's own Device keeps working on the main screen.
+type Backgrounder interface {
+	OpenBackground(ctx context.Context, opt BackgroundOptions) (Device, error)
+}
+
+// CompanionState is whether the phone's companion app is ready.
+type CompanionState string
+
+// Companion states.
+const (
+	CompanionOn       CompanionState = "on"       // installed, current and its service is running
+	CompanionOff      CompanionState = "off"      // installed, but its accessibility service is off
+	CompanionMissing  CompanionState = "missing"  // not installed
+	CompanionOutdated CompanionState = "outdated" // installed, older than the one Pinky bundles
+	CompanionNoAPK    CompanionState = "no_apk"   // Pinky has no APK to install (a build without it)
+)
+
+// CompanionInstaller installs or updates the phone's companion app from the
+// APK bundled with Pinky. Installing happens only when the person asks in
+// the client; the driver never installs anything by itself.
+type CompanionInstaller interface {
+	CompanionState(ctx context.Context) (CompanionState, error)
+	// InstallCompanion installs or updates it and turns its service on.
+	// The phone may ask the person to allow the install (Google Play
+	// Protect); the call waits for that, up to ctx.
+	InstallCompanion(ctx context.Context) error
+}
+
+// Pairer pairs phones over the network: Android's wireless debugging, by
+// QR code or by pairing code. Paired phones then show up in List with
+// Connection "wifi".
+type Pairer interface {
+	// StartPairing begins pairing by QR code: the client shows QR() as a QR
+	// code, the person scans it in Developer options › Wireless debugging ›
+	// Pair device with QR code, and Wait returns the phone once it paired
+	// and connected.
+	StartPairing(ctx context.Context) (Pairing, error)
+	// PairWithCode pairs with the address and six-digit code the phone
+	// shows under Pair device with pairing code, then connects.
+	PairWithCode(ctx context.Context, addr, code string) (Info, error)
+}
+
+// Pairing is a QR pairing in progress.
+type Pairing interface {
+	QR() string // the text the QR code encodes
+	Wait(ctx context.Context) (Info, error)
+	Close() error
 }
 
 // Errors drivers return. Wrap them with fmt.Errorf("...: %w", err).
