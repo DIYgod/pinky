@@ -464,6 +464,14 @@ func (c *wdaClient) home(ctx context.Context) error {
 	return c.call(ctx, c.hc, http.MethodPost, "/wda/homescreen", map[string]any{}, nil)
 }
 
+// pressHome presses the Home button and nothing more. /wda/homescreen
+// also brings SpringBoard to the front, which iOS refuses while the phone
+// is locked ("Unable to launch … because the device was not, or could not
+// be, unlocked"); on the lock screen the press alone wakes the screen.
+func (c *wdaClient) pressHome(ctx context.Context) error {
+	return c.do(ctx, c.hc, http.MethodPost, "/wda/pressButton", map[string]any{"name": "home"}, nil)
+}
+
 // activate brings an app to the front, launching it when it is not
 // running; unlike launch it never restarts a running app.
 func (c *wdaClient) activate(ctx context.Context, bundleID string) error {

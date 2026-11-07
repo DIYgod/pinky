@@ -77,6 +77,12 @@ type (
 		SetBackground(deviceID string, on bool) error
 		Background(deviceID string) bool
 	}
+	// connectionChooser is how Pinky connects to a phone, for Settings ›
+	// Phones: iPhones can go through CoreDevice or the WebDriverAgent helper.
+	connectionChooser interface {
+		Connections(ctx context.Context, deviceID string) (driver.Connections, error)
+		SetConnection(deviceID, way string) error
+	}
 	agentStreamer interface {
 		AgentStream(ctx context.Context, deviceID string, opt driver.StreamOptions) (driver.Stream, error)
 	}
