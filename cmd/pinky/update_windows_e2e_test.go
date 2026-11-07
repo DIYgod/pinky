@@ -32,7 +32,8 @@ import (
 // names), serves the next one from a local feed and leaves Pinky alone in
 // the tray. Pinky installs the update by itself: its helper runs the
 // installer quietly, starts the new version, which shows What's new, and
-// removes the old files. Then the feed offers the newest, which exits as it
+// removes the old files; an agent connected through `pinky mcp` stays
+// connected. Then the feed offers the newest, which exits as it
 // starts (PINKY_E2E_CRASH_VERSION): the helper puts the version before it
 // back, files and Settings › Apps entry, and that version does not try the
 // broken one again by itself.
@@ -148,8 +149,7 @@ func TestWindowsUpdate(t *testing.T) {
 		t.Errorf("update.json: %+v", st)
 	}
 
-	// What became of the agent's session (the installer stops what runs
-	// from the install folder). A `pinky mcp` that lives on runs the old
+	// The agent's session lives on, its `pinky mcp` running the old
 	// Pinky.exe from the work folder, which goes once it ends.
 	agent.check(t)
 	agent.cs.Close()
@@ -340,13 +340,16 @@ func connectAgent(t *testing.T, exe string, env []string) *testAgent {
 	return a
 }
 
-// check reports whether the agent's session survived the update.
+// check checks that the agent's session survived the update: the installer
+// stops what runs from the install folder, and the helper moved the old
+// Pinky.exe that this `pinky mcp` runs out of it first.
 func (a *testAgent) check(t *testing.T) {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	tools, err := a.cs.ListTools(ctx, nil)
-	if err != nil {
-		t.Logf("the agent's session through `pinky mcp` did not survive the update: %v\n%s", err, a.stderr)
+	if err != nil || len(tools.Tools) == 0 {
+		t.Errorf("the agent's session through `pinky mcp` did not survive the update: %v\n%s", err, a.stderr)
 		return
 	}
 	t.Logf("the agent's session through `pinky mcp` survived the update: %d tools", len(tools.Tools))
