@@ -171,14 +171,16 @@ func CheckSwap(version string) *Swapped {
 }
 
 // cleanUpAfter removes the work folder of a swap once its helper, which
-// runs from a copy of Pinky.exe in it, is through.
+// runs from a copy of Pinky.exe in it, is through, trying for a quarter of
+// an hour: the old Pinky.exe stays in use while an agent's `pinky mcp`
+// that started from it runs. A later start of Pinky removes what is left
+// (CheckSwap).
 func cleanUpAfter(work string) {
-	for deadline := time.Now().Add(15 * time.Minute); time.Now().Before(deadline); time.Sleep(time.Second) {
+	for deadline := time.Now().Add(15 * time.Minute); time.Now().Before(deadline); time.Sleep(2 * time.Second) {
 		if exists(filepath.Join(work, "kept")) || !exists(work) {
 			return
 		}
-		if exists(filepath.Join(work, "done")) {
-			removeSoon(work) // the helper is exiting
+		if exists(filepath.Join(work, "done")) && os.RemoveAll(work) == nil {
 			return
 		}
 	}

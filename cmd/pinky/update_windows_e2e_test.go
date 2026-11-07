@@ -147,6 +147,12 @@ func TestWindowsUpdate(t *testing.T) {
 	if st.LastRun != newV || st.NotesFrom != oldV {
 		t.Errorf("update.json: %+v", st)
 	}
+
+	// What became of the agent's session (the installer stops what runs
+	// from the install folder). A `pinky mcp` that lives on runs the old
+	// Pinky.exe from the work folder, which goes once it ends.
+	agent.check(t)
+	agent.cs.Close()
 	waitFor(t, "the work folder to go", 90*time.Second, func() bool { return len(workFolders(programs)) == 0 })
 
 	c := dialAutomation(t, sock)
@@ -157,10 +163,6 @@ func TestWindowsUpdate(t *testing.T) {
 	})
 	c.conn.Close()
 	t.Logf("the new version shows: %s", strings.Join(labels[:min(len(labels), 12)], " · "))
-
-	// What became of the agent's session (the installer stops what runs
-	// from the install folder).
-	agent.check(t)
 
 	// The next version exits as it starts: the helper puts this one back.
 	quitPinky(dirs)
