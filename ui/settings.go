@@ -258,10 +258,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 	})
 	mg.Column(c).Label(locales.SettingsSafetyProtections()).Children(func() {
 		if a.toggleRow(c, "ro", locales.SettingsSafetyReadOnly(), locales.SettingsSafetyReadOnlyDesc(), false, &st.ReadOnly) {
-			if ro, ok := a.api.(readOnlySetter); ok {
-				on := st.ReadOnly
-				go ro.SetReadOnly("", on) // every phone
-			}
+			a.applyReadOnly(st.ReadOnly)
 		}
 		desc := locales.SettingsSafetyUnlockDescOther()
 		switch runtime.GOOS {
@@ -668,17 +665,11 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 					}
 				}
 				a.changed()
-				if rs, ok := a.api.(retentionSetter); ok {
-					days := st.KeepDays
-					go rs.SetRetention(days)
-				}
+				a.applyRetention(st.KeepDays)
 			}
 		})
 		if a.toggleRow(c, "rec", locales.SettingsPrivacyRecord(), locales.SettingsPrivacyRecordDesc(), false, &st.Record) {
-			if rs, ok := a.api.(recordingSetter); ok {
-				on := st.Record
-				go rs.SetRecording(on)
-			}
+			a.applyRecording(st.Record)
 		}
 		settingRow(c, locales.SettingsPrivacyDeleteAll(), locales.SettingsPrivacyDeleteAllDesc(), true, func() {
 			b := button(c, locales.SettingsPrivacyDeleteButton(), btnOpt{})
