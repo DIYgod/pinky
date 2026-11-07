@@ -154,6 +154,13 @@ func New(o Options) (*Gateway, error) {
 		} else {
 			g.log.Warn("history: background displays", "err", err)
 		}
+		// How the person chose to connect each phone, before the first
+		// discovery opens it.
+		if ways, err := st.DeviceConnections(context.Background()); err == nil {
+			g.applyConnections(ways)
+		} else {
+			g.log.Warn("history: connections", "err", err)
+		}
 	}
 	g.approvals = approval.New(approval.Options{
 		Timeout:  o.ApprovalTimeout,

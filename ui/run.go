@@ -231,6 +231,7 @@ type app struct {
 	t      telState       // usage statistics, crash reports and feedback
 	comp   companionState // the Android companion app, per phone
 	bg     bgState        // background displays, per phone
+	conn   connState      // iPhones: how Pinky connects, per phone
 	rec    recState       // task recordings in Activity
 	remote remoteState    // Settings › Agents › Remote agents
 	upd    updateState    // new versions of Pinky and the companion app

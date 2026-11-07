@@ -1,6 +1,7 @@
 package ios
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -72,10 +73,14 @@ func pickWDARunner(apps []installationproxy.AppInfo) string {
 	return best
 }
 
+// wdaLog receives the runner's test log; tests point it at stderr.
+var wdaLog io.Writer = io.Discard
+
 // wdaRun is the test run hosting WebDriverAgent on a phone.
 type wdaRun struct {
 	cancel context.CancelFunc
 	done   chan struct{}
+	log    *runnerLog
 
 	mu  sync.Mutex
 	err error
@@ -87,7 +92,7 @@ type wdaRun struct {
 // (the person closed the runner, the phone locked for long, a reboot).
 func startWDA(entry goios.DeviceEntry, bundleID string) *wdaRun {
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &wdaRun{cancel: cancel, done: make(chan struct{})}
+	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}}
 	go func() {
 		defer close(r.done)
 		dir, err := os.MkdirTemp("", "pinky-wda-")
@@ -100,7 +105,7 @@ func startWDA(entry goios.DeviceEntry, bundleID string) *wdaRun {
 			XctestConfigName:   wdaTestBundle,
 			Env:                wdaEnv,
 			Device:             entry,
-			Listener:           testmanagerd.NewTestListener(io.Discard, io.Discard, dir),
+			Listener:           testmanagerd.NewTestListener(r.log, r.log, dir),
 		})
 		if err == nil && ctx.Err() == nil {
 			err = errors.New("the WebDriverAgent test ended")
@@ -131,4 +136,85 @@ func (r *wdaRun) stop() {
 	case <-r.done:
 	case <-time.After(5 * time.Second):
 	}
+}
+
+// asking reports whether the phone waits for its passcode to allow
+// automation (see runnerLog).
+func (r *wdaRun) asking() bool { return r.log != nil && r.log.asking(time.Now()) }
+
+// runnerLog reads the runner's log as it arrives, passing it on to wdaLog,
+// for one wait: now and then iOS asks on the phone for its passcode before
+// a UI test runs (after a restart, and again later: on iOS 27 half an hour
+// later, after the phone had locked), and XCTest waits up to a minute for it.
+// The runner logs "<XCTWaiter: 0x...> entering wait loop for 60.00s with
+// expectations: `enabling automation mode`" when it starts waiting, and
+// "Returning result ... for synchronous waiter <XCTWaiter: 0x...>" when
+// the wait ends, either way. A wait that ends at once (automation already
+// allowed) is not asking.
+type runnerLog struct {
+	mu     sync.Mutex
+	line   []byte    // the line being read
+	waiter string    // the XCTWaiter waiting for automation mode, "" when none
+	since  time.Time // when it started waiting
+}
+
+// automationGrace is how long the automation wait must last to be a
+// question to the person. Without one it ends within a second.
+const automationGrace = 5 * time.Second
+
+// maxLogLine bounds a log line runnerLog keeps; the lines it looks for are
+// short, and longer lines are cut.
+const maxLogLine = 4096
+
+func (l *runnerLog) Write(b []byte) (int, error) {
+	n := len(b)
+	wdaLog.Write(b)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for len(b) > 0 {
+		i := bytes.IndexByte(b, '\n')
+		part := b
+		if i >= 0 {
+			part = b[:i]
+		}
+		if room := maxLogLine - len(l.line); room > 0 {
+			l.line = append(l.line, part[:min(len(part), room)]...)
+		}
+		if i < 0 {
+			break
+		}
+		l.read(string(l.line), time.Now())
+		l.line = l.line[:0]
+		b = b[i+1:]
+	}
+	return n, nil
+}
+
+// read takes one line of the log.
+func (l *runnerLog) read(line string, now time.Time) {
+	switch {
+	case strings.Contains(line, "entering wait loop") && strings.Contains(line, "enabling automation mode"):
+		l.waiter, l.since = waiterOf(line), now
+	case l.waiter != "" && strings.Contains(line, "for synchronous waiter "+l.waiter):
+		l.waiter = ""
+	}
+}
+
+func (l *runnerLog) asking(now time.Time) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.waiter != "" && now.Sub(l.since) >= automationGrace
+}
+
+// waiterOf finds the waiter a log line names, "<XCTWaiter: 0x...>".
+func waiterOf(line string) string {
+	i := strings.Index(line, "<XCTWaiter: ")
+	if i < 0 {
+		return "<XCTWaiter>"
+	}
+	j := strings.IndexByte(line[i:], '>')
+	if j < 0 {
+		return "<XCTWaiter>"
+	}
+	return line[i : i+j+1]
 }
