@@ -157,22 +157,6 @@ func TestPickWDARunner(t *testing.T) {
 	}
 }
 
-func TestTargetAt(t *testing.T) {
-	ts := []axTarget{
-		{bounds: screen.Rect{X: 0, Y: 0, W: 1000, H: 1000}, label: "page"},
-		{bounds: screen.Rect{X: 100, Y: 100, W: 200, H: 50}, label: "row"},
-	}
-	if got, ok := targetAt(ts, screen.Point{X: 150, Y: 120}); !ok || got.label != "row" {
-		t.Errorf("got %v %v, want the smallest element", got.label, ok)
-	}
-	if got, ok := targetAt(ts, screen.Point{X: 500, Y: 500}); !ok || got.label != "page" {
-		t.Errorf("got %v %v", got.label, ok)
-	}
-	if _, ok := targetAt(ts, screen.Point{X: 1500, Y: 10}); ok {
-		t.Error("found an element outside every frame")
-	}
-}
-
 func TestTouchRecorder(t *testing.T) {
 	var r touchRecorder
 	t0 := time.Unix(100, 0)

@@ -13,6 +13,7 @@ import (
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/internal/demo"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
@@ -94,6 +95,21 @@ func TestRound3Screenshots(t *testing.T) {
 	ta.add.pair.form, ta.add.pair.addr, ta.add.pair.pin = true, "192.168.1.20:37123", "000000"
 	ta.add.pair.formErr = pairError(errorString("adb: failed to pair: Wrong password or connection was dropped"))
 	shoot(ta, "pair-code", nil)
+	// A QR pairing that waited 30 s for the phone, one the Mac keeps
+	// off the local network, and the connect step of a phone that paired
+	// but did not show up.
+	ta.add.pair.form, ta.add.pair.formErr = false, ""
+	ta.startPairing()
+	ta.waitFor(t, "the QR code", func() bool { tt.Frame(); return ta.add.pair.code != nil })
+	ta.add.pair.since = time.Now().Add(-31 * time.Second)
+	shoot(ta, "pair-stuck", nil)
+	ta.api.SetPairingProgress(driver.PairingProgress{NotAllowed: true, SearchErr: "mdns: not allowed to use the local network"})
+	shoot(ta, "pair-not-allowed", nil)
+	ta.api.SetPairingProgress(driver.PairingProgress{})
+	ta.stopPairing()
+	ta.add.pair.form, ta.add.pair.connect, ta.add.pair.connAddr = true, true, "192.168.1.20:41234"
+	shoot(ta, "pair-connect", nil)
+	ta.add.pair.form, ta.add.pair.connect, ta.add.pair.connAddr = false, false, ""
 
 	// The companion app's card on a phone without it.
 	ta = newTestApp(t, fakeapi.Companion)

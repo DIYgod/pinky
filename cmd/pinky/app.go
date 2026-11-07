@@ -174,7 +174,7 @@ func gatewaySettings(s *ui.Settings, rg *runningGateway) {
 		if name == "" {
 			name = b.ID
 		}
-		s.BlockedApps = append(s.BlockedApps, ui.BlockedApp{Name: name, Kind: policy.CategoryLabel(b.Category)})
+		s.BlockedApps = append(s.BlockedApps, ui.BlockedApp{Name: name, ID: b.ID, Kind: policy.CategoryLabel(b.Category)})
 	}
 }
 
@@ -256,22 +256,37 @@ func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
 	if s.ReadOnly != old.ReadOnly {
 		warn("read-only", rg.G.SetReadOnly("", s.ReadOnly))
 	}
-	was := map[string]bool{}
+	was := map[string]ui.BlockedApp{}
 	for _, b := range old.BlockedApps {
-		was[b.Name] = true
+		was[b.Name] = b
 	}
 	now := map[string]bool{}
 	for _, b := range s.BlockedApps {
 		now[b.Name] = true
-		if !was[b.Name] {
-			warn("block "+b.Name, rg.G.SetAppBlocked(appFromText(b.Name), true))
+		if _, ok := was[b.Name]; !ok {
+			warn("block "+b.Name, rg.G.SetAppBlocked(blockedApp(b), true))
 		}
 	}
-	for name := range was {
+	for name, b := range was {
 		if !now[name] {
-			warn("unblock "+name, rg.G.SetAppBlocked(appFromText(name), false))
+			warn("unblock "+name, rg.G.SetAppBlocked(blockedApp(b), false))
 		}
 	}
+}
+
+// blockedApp is the app a row of Settings › Safety stands for: by its id
+// and name when the gateway listed it (a banking app the bundled table
+// blocks by bundle id, such as Wise, stays blocked when only its name is
+// unblocked), else by what the person typed.
+func blockedApp(b ui.BlockedApp) screen.App {
+	if b.ID == "" {
+		return appFromText(b.Name)
+	}
+	a := screen.App{ID: b.ID}
+	if b.Name != b.ID {
+		a.Name = b.Name
+	}
+	return a
 }
 
 // appFromText reads what the person typed as an app: a package or bundle

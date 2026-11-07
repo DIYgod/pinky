@@ -23,6 +23,11 @@
 //	androidctl [-s serial] companion-install [-force] (install or update the companion app)
 //	androidctl [-s serial] companion-state
 //	androidctl [-s serial] bg [-app APP] [-out FILE.h264] [-seconds N] [STEP...]
+//	androidctl wifi-search [-seconds N]
+//	androidctl pair-qr FILE.png
+//	androidctl pair-code ADDR CODE
+//	androidctl wifi-connect ADDR
+//	androidctl wifi-reconnect [-seconds N]
 //
 // Steps for run and bg: tap:X,Y  longtap:X,Y  swipe:X1,Y1,X2,Y2[,MS]  key:NAME
 // type:TEXT  launch:APP  sleep:MS  observe  shot:FILE.png  state (bg: the
@@ -67,8 +72,15 @@ func main() {
 	if *verbose {
 		cfg.Logf = func(f string, a ...any) { fmt.Fprintf(os.Stderr, "\u00b7 "+f+"\n", a...) }
 	}
-	p := android.NewProvider(cfg)
 	cmd, args := flag.Arg(0), flag.Args()[1:]
+	if ok, err := wifi(ctx, cfg, cmd, args); ok {
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "androidctl:", err)
+			os.Exit(1)
+		}
+		return
+	}
+	p := android.NewProvider(cfg)
 	if err := run(ctx, p, *serial, cmd, args); err != nil {
 		fmt.Fprintln(os.Stderr, "androidctl:", err)
 		os.Exit(1)
@@ -106,6 +118,17 @@ commands:
   companion-state                 on, off, missing, outdated or no_apk
   bg [-app APP] [-seconds N] [-out FILE.h264] [STEP...]
                                   open a virtual display and run steps on it
+
+Wi-Fi (no phone needed; the adb server is $ADB_SERVER_SOCKET's):
+  wifi-search [-seconds N]        search the network for wireless debugging
+                                  services, as Pinky does itself
+  pair-qr FILE.png                pair by QR code: write it to FILE.png, wait
+                                  for the phone and print the progress
+  pair-code ADDR CODE             pair with the address and six-digit code of
+                                  Pair device with pairing code
+  wifi-connect ADDR               connect to a paired phone at the address
+                                  Wireless debugging shows
+  wifi-reconnect [-seconds N]     list phones every 2 s with reconnecting on
 
 steps: tap:X,Y longtap:X,Y swipe:X1,Y1,X2,Y2[,MS] key:NAME type:TEXT
        launch:APP sleep:MS observe shot:FILE.png state (bg only: whether

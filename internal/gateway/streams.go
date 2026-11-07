@@ -161,7 +161,10 @@ func (h *hub) open(dev driver.Device, opt driver.StreamOptions) {
 	h.end(err)
 }
 
-// add adds a member; a late one starts from the last key frame.
+// add adds a member; a late one starts from the last key frame. When none
+// is kept (the pictures since it outgrew maxGOPBytes), the phone is asked
+// for one: an iPhone sends key frames only when asked, so a mirror opened
+// late in a long session would otherwise wait for a picture forever.
 func (h *hub) add(m member) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -171,6 +174,11 @@ func (h *hub) add(m member) {
 	}
 	for _, tp := range h.gop {
 		m.push(tp)
+	}
+	if len(h.gop) == 0 && h.src != nil {
+		if kr, ok := h.src.(keyFrameRequester); ok {
+			go kr.RequestKeyFrame()
+		}
 	}
 }
 

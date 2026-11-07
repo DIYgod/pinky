@@ -211,6 +211,9 @@ func (a *app) addQR(c *mg.Context) {
 	switch {
 	case !canPair:
 		heading(c, locales.PairingTitle(), locales.PairingUnsupported())
+	case st.form && st.connect:
+		heading(c, locales.PairingConnectTitle(), locales.PairingConnectDetail())
+		a.pairConnectForm(c)
 	case st.form:
 		heading(c, locales.PairingCodeTitle(), locales.PairingCodeDetail())
 		a.pairCodeForm(c)
@@ -245,22 +248,22 @@ func (a *app) addQR(c *mg.Context) {
 				}
 			case "waiting":
 				spinner(c)
-				mg.Column(c).Gap(4).Grow(1).MinWidth(0).Children(func() {
-					mg.Text(c, locales.PairingWaiting())
-					// Pinky finds the phone through adb, which can stop
-					// seeing the network after it has run for days.
-					c.After(time.Second)
-					if !st.since.IsZero() && time.Since(st.since) > 30*time.Second {
-						mg.Text(c, locales.PairingSlowHint()).
-							FontSize(13).TextColor(p.ink2).LineHeight(1.4)
-					}
-				})
+				c.After(time.Second) // the progress has no events
+				msg := locales.PairingWaiting()
+				switch pr := st.prog(); {
+				case pr.Paired:
+					msg = locales.PairingConnecting()
+				case pr.Found:
+					msg = locales.PairingFound()
+				}
+				mg.Text(c, msg).Grow(1).MinWidth(0)
 			default:
 				spinner(c)
 				mg.Text(c, locales.PairingGettingCode())
 			}
 		})
 	}
+	stuck := canPair && !st.form && a.pairStuck(c)
 	if d := s.fresh(a, driver.Android); d != nil && d.Info.State == driver.StateOnline {
 		statusBox(c, func() {
 			dot(c, p.green, false)
@@ -275,13 +278,14 @@ func (a *app) addQR(c *mg.Context) {
 		return
 	}
 	mg.Row(c).Gap(16).Wrap().Children(func() {
-		if canPair {
+		// A stuck pairing offers the pairing code in its note.
+		if canPair && (st.form || !stuck) {
 			other := locales.PairingUseCode()
 			if st.form {
 				other = locales.PairingUseQR()
 			}
 			if linkButton(c, other).Clicked() {
-				st.form, st.formErr = !st.form, ""
+				st.form, st.formErr, st.connect = !st.form, "", false
 				if st.form {
 					a.stopPairing()
 				}
@@ -323,6 +327,34 @@ func (a *app) pairCodeForm(c *mg.Context) {
 			if st.formBusy {
 				spinner(c)
 				mg.Text(c, locales.PairingBusy()).FontSize(13.5).TextColor(p.ink2)
+			}
+		})
+		if st.formErr != "" {
+			mg.Text(c, st.formErr).FontSize(13.5).TextColor(p.red).Role(mg.RoleStatus)
+		}
+	})
+}
+
+// pairConnectForm is the connect step: the address and port at the top of
+// Wireless debugging, for a phone that paired but that Pinky could not find
+// on the network.
+func (a *app) pairConnectForm(c *mg.Context) {
+	p := pal(c)
+	st := &a.add.pair
+	mg.Column(c).Gap(12).Children(func() {
+		var addr mg.Element
+		mg.Column(c).Gap(6).Children(func() {
+			mg.Text(c, locales.PairingAddrField()).FontSize(13).FontWeight(600)
+			addr = mg.TextInput(c.Key("connect-addr"), &st.connAddr).Placeholder("192.168.1.20:41234").Label(locales.PairingAddrField()).AutoFocus()
+		})
+		mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
+			connect := button(c, locales.PairingConnect(), btnOpt{kind: btnPrimary}).Disabled(st.formBusy || strings.TrimSpace(st.connAddr) == "")
+			if (connect.Clicked() || addr.Submitted()) && !st.formBusy && strings.TrimSpace(st.connAddr) != "" {
+				a.connectWiFi()
+			}
+			if st.formBusy {
+				spinner(c)
+				mg.Text(c, locales.PairingConnectBusy()).FontSize(13.5).TextColor(p.ink2)
 			}
 		})
 		if st.formErr != "" {

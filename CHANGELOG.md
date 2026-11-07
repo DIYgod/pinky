@@ -2,6 +2,26 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1107.8 (2026-11-07)
+
+- On iPhones below iOS 27 without the WebDriverAgent helper, Pinky now says up front that taps, swipes and typing need the helper; it can still show and read the screen and open apps.
+
+## 2026.1107.7 (2026-11-07)
+
+- Pairing a phone over Wi-Fi no longer hangs on "Pairing…" when Android's adb tools have stopped seeing the network, as they do after the computer's network changes (for example when an iPhone is plugged in): Pinky now finds the phone itself.
+- Phones paired over Wi-Fi come back by themselves when they return to the network, even when adb no longer sees it.
+- When pairing over Wi-Fi takes long, Add phone says what is likely wrong, such as the phone not showing up on the network or, on a Mac, Pinky not allowed to use the local network, and offers to pair with a code instead.
+- Pairing with a code now also works on networks where Pinky can't find the phone: it asks for the address Wireless debugging shows and connects there.
+- On a Mac, Pinky asks for Local Network access to find Android phones over Wi-Fi, and says why.
+
+## 2026.1107.6 (2026-11-07)
+
+- The mirror no longer stays on "Connecting…" when you come back to a phone after a while.
+- Unblocking an app in Settings › Safety now works for apps that are blocked by their id, such as Wise.
+- An agent's tap on an element keeps working when the iPhone reports that element under another parent or role.
+- Waiting for text now also finds text that only shows in the picture, such as in web pages inside apps.
+- When a task lists app names that match no installed app, the agent is told which ones.
+
 ## 2026.1107.5 (2026-11-07)
 
 - On Windows, Pinky now installs updates by itself, as on macOS: when you're not using it, or when you click Update now, it runs the new installer quietly, starts the new version and shows what's new, and goes back to the version you had if the new one doesn't start. Agents connected through `pinky mcp` stay connected.
