@@ -703,10 +703,50 @@ func matchApp(apps []driver.App, name string) (driver.App, bool) {
 	if a, ok := pick(exact); ok {
 		return a, true
 	}
-	if len(exact) == 0 {
+	if len(exact) == 0 && len(part) > 0 {
 		return pick(part)
 	}
+	if len(exact) == 0 {
+		// No name matches, as an English name on a phone in another
+		// language ("Calculator" for 计算器): try the package or bundle
+		// id's parts (com.google.android.calculator).
+		return pick(idMatches(apps, q))
+	}
 	return driver.App{}, false
+}
+
+// idMatches returns the apps whose id has a part equal to q, or else a
+// part that contains it ("clock" in com.google.android.deskclock). q is
+// lower case; parts shorter than four letters only match whole.
+func idMatches(apps []driver.App, q string) []driver.App {
+	q = strings.ReplaceAll(q, " ", "")
+	if len(q) < 3 {
+		return nil
+	}
+	var whole, part []driver.App
+	for _, a := range apps {
+		matched := false
+		for i, seg := range strings.Split(strings.ToLower(a.ID), ".") {
+			if i == 0 && (seg == "com" || seg == "org" || seg == "net" || seg == "app") {
+				continue
+			}
+			switch {
+			case seg == q:
+				whole = append(whole, a)
+				matched = true
+			case len(q) >= 4 && strings.Contains(seg, q) && !matched:
+				part = append(part, a)
+				matched = true
+			}
+			if matched {
+				break
+			}
+		}
+	}
+	if len(whole) > 0 {
+		return whole
+	}
+	return part
 }
 
 // ask opens an approval for an action and records the waiting step.

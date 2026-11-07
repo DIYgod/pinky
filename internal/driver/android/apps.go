@@ -175,6 +175,21 @@ func matchApp(apps []driver.App, query string) (string, error) {
 			return "", fmt.Errorf("android: launch %q: %w: %s", query, errAmbiguous, strings.Join(names, ", "))
 		}
 	}
+	// An English name on a phone in another language ("Calculator" for
+	// 计算器): a package whose last parts name it.
+	var byID []driver.App
+	for _, a := range apps {
+		segs := strings.Split(strings.ToLower(a.ID), ".")
+		for _, seg := range segs[1:] {
+			if seg == q || len(q) >= 4 && strings.Contains(seg, q) {
+				byID = append(byID, a)
+				break
+			}
+		}
+	}
+	if len(byID) == 1 {
+		return byID[0].ID, nil
+	}
 	return "", fmt.Errorf("android: launch %q: no app with that name or package: %w", query, driver.ErrNotFound)
 }
 

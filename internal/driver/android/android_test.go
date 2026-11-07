@@ -393,3 +393,28 @@ RootTask id=122 bounds=[0,0][1080,2400] displayId=1038 userId=0
 		t.Errorf("Android 10: %+v", got)
 	}
 }
+
+// TestMatchAppByPackage finds apps by English names on a phone in Chinese,
+// through their packages.
+func TestMatchAppByPackage(t *testing.T) {
+	apps := []driver.App{
+		{ID: "com.google.android.calculator", Name: "计算器", System: true},
+		{ID: "com.google.android.deskclock", Name: "时钟", System: true},
+		{ID: "com.android.settings", Name: "设置", System: true},
+		{ID: "com.google.android.calendar", Name: "日历", System: true},
+	}
+	for q, want := range map[string]string{
+		"Calculator": "com.google.android.calculator",
+		"Clock":      "com.google.android.deskclock",
+		"Settings":   "com.android.settings",
+		"计算器":        "com.google.android.calculator",
+	} {
+		got, err := matchApp(apps, q)
+		if err != nil || got != want {
+			t.Errorf("matchApp(%q) = %q, %v; want %q", q, got, err, want)
+		}
+	}
+	if _, err := matchApp(apps, "Maps"); !errors.Is(err, driver.ErrNotFound) {
+		t.Errorf("an app the phone lacks: %v", err)
+	}
+}
