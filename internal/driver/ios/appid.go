@@ -28,14 +28,14 @@ import (
 //     daemon's app states: the screen is still that app's, with something
 //     of the system's in front.
 
-// appListWait bounds the wait for the daemon's first app states when the
-// inspector session connects for them.
+// appListWait bounds the wait for the daemon's first app state, in tests.
 const appListWait = time.Second
 
 // screenApp names the app on screen from a read's elements, the first of
 // which is the frontmost application's. note records what it decided, for
-// ObserveStats.Trace.
-func (d *Device) screenApp(ctx context.Context, els []raxElement, note func(string, ...any)) screen.App {
+// ObserveStats.Trace. On a locked phone the lock screen is SpringBoard's,
+// and nothing is beneath it.
+func (d *Device) screenApp(ctx context.Context, els []raxElement, locked bool, note func(string, ...any)) screen.App {
 	front := els[0]
 	app, ok := d.appForPID(ctx, uint64(front.Object.PID))
 	if !ok && strings.TrimSpace(front.Label) != "" {
@@ -44,22 +44,37 @@ func (d *Device) screenApp(ctx context.Context, els []raxElement, note func(stri
 		}
 	}
 	if ok && app.ID != springBoard && d.homeScreenApp(ctx, app.ID) {
+		d.sawFront(screen.App{Name: app.Name, ID: app.ID})
 		return screen.App{Name: app.Name, ID: app.ID}
 	}
 	// The home screen itself: its icons are on screen. The app that was in
 	// front may still be listed in the foreground for a moment after Home.
-	if ok && app.ID == springBoard && homeIcons(els) {
+	if ok && app.ID == springBoard && (locked || homeIcons(els)) {
+		d.sawFront(screen.App{})
 		return screen.App{Name: app.Name, ID: app.ID}
 	}
-	if fg, found := d.foregroundApp(ctx); found {
-		note("pid %d (%q) is in front of %s", front.Object.PID, app.ID, fg.ID)
-		return fg
+	if !locked {
+		if fg, found := d.foregroundApp(ctx); found {
+			note("pid %d (%q) is in front of %s", front.Object.PID, app.ID, fg.ID)
+			return fg
+		}
 	}
 	if ok {
 		return screen.App{Name: app.Name, ID: app.ID}
 	}
 	return screen.App{Name: front.Label}
 }
+
+// sawFront records the home screen app a read found in front, or none.
+func (d *Device) sawFront(app screen.App) {
+	d.mu.Lock()
+	d.lastFront, d.lastFrontAt = app, time.Now()
+	d.mu.Unlock()
+}
+
+// lastFrontKeep is how long the app a read found in front is taken to be
+// beneath what came in front of it, when the inspector cannot say.
+const lastFrontKeep = 30 * time.Second
 
 // homeIcons reports whether a read shows the home screen's app icons.
 func homeIcons(els []raxElement) bool {
@@ -71,32 +86,55 @@ func homeIcons(els []raxElement) bool {
 	return false
 }
 
-// foregroundApp returns the app from the home screen that the system has in
-// the foreground, if any.
+// foregroundApp returns the home screen app the system has in the
+// foreground beneath what is in front, if it can tell: an app the
+// inspector session saw come to the foreground since the last read that
+// named the app in front, else that app, unless the daemon said since that
+// it left. The daemon reports only changes after the session connects (Open
+// connects it), so an app that was in front all along is known only from
+// reads. And it reports apps that iOS wakes in the background (a bank's
+// app, for a push; widgets) in the foreground too: those it reported before
+// a read found another app in front were not on screen.
 func (d *Device) foregroundApp(ctx context.Context) (screen.App, bool) {
-	for _, a := range d.foregroundList(ctx) {
-		if a.id == springBoard || axBackgroundUI[a.id] {
+	states, tracking := d.appStatesList(ctx)
+	d.mu.Lock()
+	last, lastAt := d.lastFront, d.lastFrontAt
+	d.mu.Unlock()
+	var best screen.App
+	var bestAt time.Time
+	for _, a := range states {
+		if a.state != appForeground || a.id == springBoard || axBackgroundUI[a.id] || !a.at.After(lastAt) || !a.at.After(bestAt) {
 			continue
 		}
 		if app, ok := d.listedApp(ctx, a.id); ok {
-			return screen.App{Name: app.Name, ID: app.ID}, true
+			best, bestAt = screen.App{Name: app.Name, ID: app.ID}, a.at
 		}
 	}
-	return screen.App{}, false
+	if best.ID != "" {
+		return best, true
+	}
+	if last.ID == "" || !(tracking || time.Since(lastAt) < lastFrontKeep) {
+		return screen.App{}, false
+	}
+	for _, a := range states {
+		if a.id == last.ID && a.state != appForeground && a.at.After(lastAt) {
+			return screen.App{}, false // it left
+		}
+	}
+	return last, true
 }
 
-// foregroundList returns the apps the system has in the foreground, the
-// latest first, from the inspector session's app states.
-func (d *Device) foregroundList(ctx context.Context) []axApp {
+// appStatesList returns what the inspector session knows of each app, and
+// whether it is connected to tell changes.
+func (d *Device) appStatesList(ctx context.Context) ([]axApp, bool) {
 	if d.foreground != nil {
-		return d.foreground(ctx)
+		return d.foreground(ctx), true
 	}
 	ax, err := d.axReady(ctx)
 	if err != nil {
-		return nil
+		return nil, false
 	}
-	ax.waitApps(ctx, appListWait)
-	return ax.foregroundApps()
+	return ax.allApps(), true
 }
 
 // homeScreenApp reports whether id is an app a person opens from the home

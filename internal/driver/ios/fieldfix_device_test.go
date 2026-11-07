@@ -211,3 +211,29 @@ func TestDeviceNotInScreenshot(t *testing.T) {
 		pause()
 	}
 }
+
+// TestDeviceForegroundApps looks at whether the inspector's app states
+// follow launches, and after turning app monitoring off and on again.
+func TestDeviceForegroundApps(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, time.Minute)
+	ax, err := d.axReady(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	show := func(when string) {
+		var ids []string
+		for _, a := range ax.foregroundApps() {
+			ids = append(ids, a.id)
+		}
+		t.Logf("%s: foreground %v", when, ids)
+	}
+	t.Logf("first app states in time: %v", ax.waitApps(ctx, appListWait))
+	show("connected")
+	d.Launch(ctx, "com.apple.Preferences")
+	time.Sleep(2 * time.Second)
+	show("after launching Settings")
+	d.Key(ctx, driver.KeyHome)
+	time.Sleep(2 * time.Second)
+	show("after Home")
+}

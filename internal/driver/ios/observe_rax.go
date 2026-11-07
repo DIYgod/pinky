@@ -164,7 +164,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		Locked:      locked,
 		CapturedAt:  time.Now(),
 	}
-	s.App = d.screenApp(ctx, els, func(format string, args ...any) {
+	s.App = d.screenApp(ctx, els, locked, func(format string, args ...any) {
 		st.Trace = append(st.Trace, fmt.Sprintf(format, args...))
 	})
 	scale := si.Scale

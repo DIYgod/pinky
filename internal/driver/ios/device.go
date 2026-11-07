@@ -34,10 +34,13 @@ type Device struct {
 	inputAt time.Time // when input starts to work
 
 	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
-	closed    bool
-	done      chan struct{} // closed by Close
-	watchers  int           // stream views open (see idle.go)
-	watchedAt time.Time     // when one last opened or closed
+
+	lastFront   screen.App // the home screen app the last read found in front (appid.go)
+	lastFrontAt time.Time
+	closed      bool
+	done        chan struct{} // closed by Close
+	watchers    int           // stream views open (see idle.go)
+	watchedAt   time.Time     // when one last opened or closed
 
 	inputMu   sync.Mutex // serializes gestures and raw touches
 	restartMu sync.Mutex // one stream restart at a time; guards the two below
@@ -56,7 +59,7 @@ type Device struct {
 	apps        *appCatalog
 	pidApps     map[uint64]driver.App
 	pidMiss     map[uint64]time.Time          // processes that are no app, and when that was found
-	foreground  func(context.Context) []axApp // for tests: the apps in the foreground
+	foreground  func(context.Context) []axApp // for tests: the app states the inspector reported
 	sb          springBoardWatch
 	capture     captureMarks // what screenshots did not show (capture.go)
 	pb          *pbConn
@@ -93,8 +96,11 @@ func Open(ctx context.Context, info driver.Info) (*Device, error) {
 		if pb := d.pasteboard(); pb != nil {
 			pb.connect()
 		}
-		// The first read names its app through the catalog.
+		// The first read names its app through the catalog, and the
+		// inspector session follows apps coming to the foreground from now
+		// on (appid.go).
 		d.catalog(c)
+		d.axReady(c)
 	}()
 	return d, nil
 }

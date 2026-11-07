@@ -66,6 +66,7 @@ type axApp struct {
 	pid      uint64
 	state    uint64
 	seq      int
+	at       time.Time // when its state last changed
 }
 
 // axSession is a long-lived connection to the audit daemon.
@@ -75,12 +76,12 @@ type axSession struct {
 
 	walkMu sync.Mutex // one walk at a time: the inspector focus is global
 
-	appMu    sync.Mutex
-	apps     map[string]*axApp
-	appSeq   int
-	appsIn   chan struct{} // closed once the first app state arrived
-	appsOnce sync.Once
-	changed  atomic.Int64 // unix nanos of the last screen or layout change
+	appMu   sync.Mutex
+	apps    map[string]*axApp
+	appSeq  int
+	appsIn  chan struct{} // closed when the first app state arrived
+	appsGot bool          // appsIn is closed
+	changed atomic.Int64  // unix nanos of the last screen or layout change
 
 	done chan struct{}
 	once sync.Once
@@ -112,6 +113,7 @@ func dialAX(ctx context.Context, entry goios.DeviceEntry) (*axSession, error) {
 		return nil, ctx.Err()
 	}
 	a := &axSession{conn: conn, ch: conn.GlobalChannel(), apps: map[string]*axApp{}, appsIn: make(chan struct{}), done: make(chan struct{})}
+	conn.MessageDispatcher = a
 	for _, sel := range axHostSelectors {
 		a.ch.RegisterMethodForRemote(sel)
 	}
@@ -227,22 +229,46 @@ func (a *axSession) onAppState(msg dtx.Message) {
 	if pid != 0 {
 		app.pid = pid
 	}
-	a.appsOnce.Do(func() { close(a.appsIn) })
+	app.at = time.Now()
+	if !a.appsGot {
+		a.appsGot = true
+		close(a.appsIn)
+	}
 }
 
-// waitApps waits, up to wait, for the daemon's first app state: it lists
-// the running apps when app monitoring turns on, as the session connects.
+// waitApps waits, up to wait, for the daemon's first app state. On iOS 27
+// it sends none when app monitoring turns on, only changes after that (an
+// app coming to the foreground or leaving it), so a session knows only the
+// apps that changed since it connected.
 func (a *axSession) waitApps(ctx context.Context, wait time.Duration) bool {
 	t := time.NewTimer(wait)
 	defer t.Stop()
+	a.appMu.Lock()
+	in := a.appsIn
+	a.appMu.Unlock()
 	select {
-	case <-a.appsIn:
+	case <-in:
 		return true
 	case <-t.C:
 	case <-ctx.Done():
 	}
 	return false
 }
+
+// allApps returns what the daemon last said of each app it reported.
+func (a *axSession) allApps() []axApp {
+	a.appMu.Lock()
+	defer a.appMu.Unlock()
+	out := make([]axApp, 0, len(a.apps))
+	for _, app := range a.apps {
+		out = append(out, *app)
+	}
+	return out
+}
+
+// Dispatch implements dtx.Dispatcher for the daemon's calls that no walk
+// or pump waits for, which go-ios would otherwise log as errors.
+func (a *axSession) Dispatch(dtx.Message) {}
 
 // foregroundApps returns the apps the system has in the foreground, the one
 // that came there last first. An app stays there while something of the
