@@ -144,6 +144,12 @@ A Claude Code run on the Pixel stopped when the person watcher reported a finger
 - **Unlock failed with "the phone did not accept the saved PIN"**, though the PIN was right and nothing had been typed: the passcode pad was looked for through an accessibility session made before the phone locked, which did not see it, and the failure was kept for 30 s, so the next tries failed in a second. A diagnostic that types nothing showed the pad about 2 s after the swipe in a session made on the lock screen. The driver now looks in a fresh session, retries after errors and waits up to 5 s; `driver.ErrPINNotEntered` tells "nothing was entered" from a refused PIN; and after a refused PIN the client offers no further tries until the phone is unlocked on it or the PIN changes (0db9973).
 - **Then it worked**: Unlock with Touch ID from the card unlocked the iPhone; and with the iPhone locked, Claude Code asked for help, the owner clicked Unlock with Touch ID (4 s), and Claude finished the Calculator task (76 s, $0.27).
 
+### Pairing the Mi over Wi-Fi
+
+- **adb no longer saw the network.** Its server had run since two days before and its mDNS discovery listed nothing, while macOS's Bonjour saw the Mi's wireless debugging service; restarting the server brought discovery back, and it reconnected the Mi over Wi-Fi at once (this Mac had paired before). Pinky does not restart adb by itself, since other tools share it; the pairing step now says what to check after 30 s (171b99b).
+- **One phone showed twice**, over USB and over Wi-Fi, with another id on Wi-Fi. Over Wi-Fi a phone's id is now its hardware serial (`ro.serialno`, the serial adb gives the USB connection), its connections are listed once, and USB is used while it works (2e73598).
+- **Then it worked**: the owner paired the Mi by QR code from Add phone, and the new release lists the Mi once.
+
 ### Known limits found in round three
 
 - **A screenshot is one instant.** Content that blinks (Clock's paused stopwatch) may show blank; the element list still has its text.
