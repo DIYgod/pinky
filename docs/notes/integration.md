@@ -104,6 +104,8 @@ Six branches merged into `main` without conflicts: `claude/platform-5568b2`, `cl
 - **Background work is the default on Android 13 and later** (`driver.BackgroundDefaulter`): there the virtual display keeps working while the phone's own screen is off and locked, which answers the owner's worry about keeping screens on. The person's choice in Settings wins and is kept.
 - **An empty background display read as unreadable**: the gateway opens the display before the agent picks an app, and accessibility reports a display without windows as one it cannot see, so every task moved to the phone's locked main screen. The driver now shows it as an empty screen until an app starts, and `phone_connect` tells the agent to open apps with `phone_launch` (also in `docs/SKILL.md`).
 - **The gateway's emulator tests** unlock through the gateway (`PINKY_TEST_PIN`), keep the recording test on the main screen, and check display 0's own power state: the phone as a whole stays awake while a background display is open.
+- **Background displays went to sleep** about 10 s after the agent's last input while the phone was locked: Android gives every display group the lock screen's short timeout, so the app on the display slept and its tree read empty. Claude Code, which thinks longer than that between steps, then saw an empty screen and asked for a handoff. The Android driver now sends a key that does nothing (`KEYCODE_UNKNOWN`) to an open background display every 4 s without other input, which keeps that display's group awake and leaves the phone's own screen off (1437a55, the Android driver session).
+- **Screenshots of background displays**: Android cannot screencap a virtual display, so approval cards, history and `phone_observe`'s screenshot had no picture during background tasks. The gateway now decodes one from the display's shared video, from a key frame it asks for, so it shows the screen as it is now (0.6–1.1 s on the emulator).
 
 ### Checked
 
@@ -116,6 +118,11 @@ Six branches merged into `main` without conflicts: `claude/platform-5568b2`, `cl
 | Remote agents | `pinky daemon --fake --http`: 401 without the token; Claude Code over Streamable HTTP opened the Calculator on the fake Pixel and released it (24 s, $0.21) |
 | `pinky quit` | Ends the daemon and the app |
 | Pinky.app | FFmpeg's four libraries in `Contents/Frameworks`, the companion APK and FFmpeg's license in `Resources`, ad hoc signature valid, `.dmg` 13 MB |
-| Claude Code on the emulator through the app | Found the bug below |
+| Claude Code on the emulator through the app, the emulator off and locked | The first runs found the two bugs above. After the fixes Claude worked on the background display (opened the Clock, started and paused the stopwatch, read the time, released) in 94 s for $0.46; the phone's own screen stayed off and locked |
 
 The phones were not available for end-to-end runs: the iPhone's screen was off and locked, the Mi 10 Pro locked after someone pressed its power key at 10:35, and the Pixel is still offline. The sessions' own real-phone checks are in their notes: the iPhone's 16 tests (typing by paste with Pinyin active, Chinese and emoji, the clipboard put back), and the Calculator on a background display of the Mi (unlocked, main screen untouched).
+
+### Known limits found in round three
+
+- **A screenshot is one instant.** Content that blinks (Clock's paused stopwatch) may show blank; the element list still has its text.
+- **Apps that hide text from accessibility** (Clock's running stopwatch hides its time) need a screenshot to read it; the agent guide says to ask for one when the list is not enough.
