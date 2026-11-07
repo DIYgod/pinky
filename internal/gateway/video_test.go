@@ -41,8 +41,10 @@ func newStreamer(t *testing.T, src *feedStream) *streamer {
 // config sends the configuration packet.
 func (s *streamer) config() { s.src.send(s.cfg) }
 
-// pictures sends n pictures, the first a key frame when key is set.
+// pictures sends n pictures, the first a key frame when key is set, and
+// returns once the hub has taken them all.
 func (s *streamer) pictures(n int, key bool) {
+	s.t.Helper()
 	for i := 0; i < n; i++ {
 		var p driver.Packet
 		if i == 0 && key {
@@ -55,6 +57,15 @@ func (s *streamer) pictures(n int, key bool) {
 		p.PTS = time.Since(s.start)
 		s.src.send(p)
 		time.Sleep(2 * time.Millisecond)
+	}
+	// The hub stamps a packet's arrival when it takes it from the stream,
+	// and a read vouches only for what arrived before it: a hub that has
+	// not run for a while on a busy machine would date the last pictures
+	// after the test's next read.
+	for deadline := time.Now().Add(5 * time.Second); len(s.src.ch) > 0; time.Sleep(time.Millisecond) {
+		if time.Now().After(deadline) {
+			s.t.Fatalf("the hub did not take %d pictures", len(s.src.ch))
+		}
 	}
 	time.Sleep(5 * time.Millisecond)
 }
@@ -94,9 +105,11 @@ func TestRecordingKeepsOnlyWhatReadsVouchFor(t *testing.T) {
 	// Home again: writing resumes at a key frame, which the recorder asks
 	// for (once at the start, once now).
 	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "key", Key: "home"}), StatusSettled)
-	time.Sleep(10 * time.Millisecond)
-	if n := st.src.keyRequests(); n < 2 {
-		t.Fatalf("%d key frame requests", n)
+	// It asks on a goroutine of its own, through the hub's.
+	for deadline := time.Now().Add(5 * time.Second); st.src.keyRequests() < 2; time.Sleep(time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("%d key frame requests", st.src.keyRequests())
+		}
 	}
 	st.pictures(3, false)
 	st.pictures(5, true)
