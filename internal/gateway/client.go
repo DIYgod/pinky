@@ -150,7 +150,8 @@ func (g *Gateway) Needs() []NeedView {
 		}
 		out = append(out, NeedView{ID: info.ID, Kind: kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
-			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target})
+			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
+			AlwaysAllow: g.canAlwaysAllow(info)})
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -256,7 +257,16 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 		// The panel's Take over: the person does it themselves.
 		return g.TakeOver(info.Binding.Device)
 	}
-	return g.decide(needID, dec, note)
+	// Always allow is kept before the answer wakes the agent's call, which
+	// then finds the action no longer asks (always.go).
+	var kept error
+	if d == AllowAlways && info.State == approval.Open {
+		kept = g.alwaysAllow(info)
+	}
+	if err := g.decide(needID, dec, note); err != nil {
+		return err
+	}
+	return kept
 }
 
 func (g *Gateway) decide(id string, d approval.Decision, note string) error {

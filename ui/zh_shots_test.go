@@ -14,6 +14,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui/fakeapi"
@@ -151,7 +152,9 @@ func TestChineseScreenshots(t *testing.T) {
 	ta.pin.saved["pixel-9"] = true
 	main(ta, "unlock-touch-id", pixel(ta))
 
-	// Settings, every section.
+	// Settings, every section, with an Always allow answer kept.
+	ta.api.AlwaysAllow(gateway.Exemption{Rule: "Payments", With: []string{"Commits"}, AppID: "com.dinely.app", AppName: "Dinely"})
+	ta.always.list, ta.always.loaded, ta.always.lastLoad = ta.api.Exemptions(), true, time.Now()
 	for _, s := range []struct {
 		sec  settingsSection
 		name string

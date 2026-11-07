@@ -1127,6 +1127,22 @@ func (msgs Messages) CallStopAll() string {
 	return Catalog.Format(msgs.locale, "callStopAll", nil)
 }
 
+// CallTakeBackAlways says "take back Always allow"
+// in the language the app shows.
+//
+// A verb phrase inside toastCouldNot, when Settings › Safety could not
+// take back an Always allow answer.
+func CallTakeBackAlways() string { return In(i18n.Locale()).CallTakeBackAlways() }
+
+// CallTakeBackAlways says "take back Always allow"
+// in the language of msgs.
+//
+// A verb phrase inside toastCouldNot, when Settings › Safety could not
+// take back an Always allow answer.
+func (msgs Messages) CallTakeBackAlways() string {
+	return Catalog.Format(msgs.locale, "callTakeBackAlways", nil)
+}
+
 // CallTakeOver says "take over"
 // in the language the app shows.
 //
@@ -9337,6 +9353,834 @@ func (msgs Messages) SettingsPrivacyRecordDesc() string {
 	return Catalog.Format(msgs.locale, "settingsPrivacyRecordDesc", nil)
 }
 
+// SettingsRules says "Rules"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the heading of the rules every action is
+// checked against, and the accessibility label of that part.
+func SettingsRules() string { return In(i18n.Locale()).SettingsRules() }
+
+// SettingsRules says "Rules"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the heading of the rules every action is
+// checked against, and the accessibility label of that part.
+func (msgs Messages) SettingsRules() string {
+	return Catalog.Format(msgs.locale, "settingsRules", nil)
+}
+
+// SettingsRulesActionCall says "Calls"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the action of placing a phone call.
+func SettingsRulesActionCall() string { return In(i18n.Locale()).SettingsRulesActionCall() }
+
+// SettingsRulesActionCall says "Calls"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the action of placing a phone call.
+func (msgs Messages) SettingsRulesActionCall() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionCall", nil)
+}
+
+// SettingsRulesActionChangeSetting says "Settings changes"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the action of changing a setting.
+func SettingsRulesActionChangeSetting() string {
+	return In(i18n.Locale()).SettingsRulesActionChangeSetting()
+}
+
+// SettingsRulesActionChangeSetting says "Settings changes"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the action of changing a setting.
+func (msgs Messages) SettingsRulesActionChangeSetting() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionChangeSetting", nil)
+}
+
+// SettingsRulesActionCommit says "Commits"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the action of a tap on Send, Pay, Delete
+// and the like.
+func SettingsRulesActionCommit() string { return In(i18n.Locale()).SettingsRulesActionCommit() }
+
+// SettingsRulesActionCommit says "Commits"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the action of a tap on Send, Pay, Delete
+// and the like.
+func (msgs Messages) SettingsRulesActionCommit() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionCommit", nil)
+}
+
+// SettingsRulesActionInstallApp says "Installing apps"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the action of Install, Get or Uninstall in
+// an app store.
+func SettingsRulesActionInstallApp() string { return In(i18n.Locale()).SettingsRulesActionInstallApp() }
+
+// SettingsRulesActionInstallApp says "Installing apps"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the action of Install, Get or Uninstall in
+// an app store.
+func (msgs Messages) SettingsRulesActionInstallApp() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionInstallApp", nil)
+}
+
+// SettingsRulesActionKey says "Keys"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the operation of pressing a key such as
+// Back or Enter.
+func SettingsRulesActionKey() string { return In(i18n.Locale()).SettingsRulesActionKey() }
+
+// SettingsRulesActionKey says "Keys"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the operation of pressing a key such as
+// Back or Enter.
+func (msgs Messages) SettingsRulesActionKey() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionKey", nil)
+}
+
+// SettingsRulesActionLaunch says "Opening apps"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the operation of opening an app.
+func SettingsRulesActionLaunch() string { return In(i18n.Locale()).SettingsRulesActionLaunch() }
+
+// SettingsRulesActionLaunch says "Opening apps"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the operation of opening an app.
+func (msgs Messages) SettingsRulesActionLaunch() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionLaunch", nil)
+}
+
+// SettingsRulesActionOpenURL says "Opening links"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the action of opening a link that leaves
+// the app.
+func SettingsRulesActionOpenURL() string { return In(i18n.Locale()).SettingsRulesActionOpenURL() }
+
+// SettingsRulesActionOpenURL says "Opening links"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the action of opening a link that leaves
+// the app.
+func (msgs Messages) SettingsRulesActionOpenURL() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionOpenURL", nil)
+}
+
+// SettingsRulesActionPayment says "Payments"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the action of a commit on a screen that
+// shows an amount.
+func SettingsRulesActionPayment() string { return In(i18n.Locale()).SettingsRulesActionPayment() }
+
+// SettingsRulesActionPayment says "Payments"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the action of a commit on a screen that
+// shows an amount.
+func (msgs Messages) SettingsRulesActionPayment() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionPayment", nil)
+}
+
+// SettingsRulesActionSendMessage says "Sending messages"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the action of sending in a chat app.
+func SettingsRulesActionSendMessage() string {
+	return In(i18n.Locale()).SettingsRulesActionSendMessage()
+}
+
+// SettingsRulesActionSendMessage says "Sending messages"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the action of sending in a chat app.
+func (msgs Messages) SettingsRulesActionSendMessage() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionSendMessage", nil)
+}
+
+// SettingsRulesActionSwipe says "Swipes"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the operation of swiping.
+func SettingsRulesActionSwipe() string { return In(i18n.Locale()).SettingsRulesActionSwipe() }
+
+// SettingsRulesActionSwipe says "Swipes"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the operation of swiping.
+func (msgs Messages) SettingsRulesActionSwipe() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionSwipe", nil)
+}
+
+// SettingsRulesActionTap says "Taps"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the operation of tapping.
+func SettingsRulesActionTap() string { return In(i18n.Locale()).SettingsRulesActionTap() }
+
+// SettingsRulesActionTap says "Taps"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the operation of tapping.
+func (msgs Messages) SettingsRulesActionTap() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionTap", nil)
+}
+
+// SettingsRulesActionType says "Typing"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the operation of typing text.
+func SettingsRulesActionType() string { return In(i18n.Locale()).SettingsRulesActionType() }
+
+// SettingsRulesActionType says "Typing"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the operation of typing text.
+func (msgs Messages) SettingsRulesActionType() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActionType", nil)
+}
+
+// SettingsRulesActions says "Actions"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the label of the actions a rule matches
+// (Payments, Taps…), in its form.
+func SettingsRulesActions() string { return In(i18n.Locale()).SettingsRulesActions() }
+
+// SettingsRulesActions says "Actions"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the label of the actions a rule matches
+// (Payments, Taps…), in its form.
+func (msgs Messages) SettingsRulesActions() string {
+	return Catalog.Format(msgs.locale, "settingsRulesActions", nil)
+}
+
+// SettingsRulesAdd says "Add rule"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the button that opens the form of a new
+// rule.
+func SettingsRulesAdd() string { return In(i18n.Locale()).SettingsRulesAdd() }
+
+// SettingsRulesAdd says "Add rule"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the button that opens the form of a new
+// rule.
+func (msgs Messages) SettingsRulesAdd() string {
+	return Catalog.Format(msgs.locale, "settingsRulesAdd", nil)
+}
+
+// SettingsRulesAllow says "Allow"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: what a rule does when it matches: lets the
+// action through (the weakest).
+func SettingsRulesAllow() string { return In(i18n.Locale()).SettingsRulesAllow() }
+
+// SettingsRulesAllow says "Allow"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: what a rule does when it matches: lets the
+// action through (the weakest).
+func (msgs Messages) SettingsRulesAllow() string {
+	return Catalog.Format(msgs.locale, "settingsRulesAllow", nil)
+}
+
+// SettingsRulesAllowHint says "An Allow rule never stops another rule from asking or blocking. To stop a rule asking in one app, choose Always allow…"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: shown in a rule's form when Allow is
+// chosen.
+func SettingsRulesAllowHint() string { return In(i18n.Locale()).SettingsRulesAllowHint() }
+
+// SettingsRulesAllowHint says "An Allow rule never stops another rule from asking or blocking. To stop a rule asking in one app, choose Always allow…"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: shown in a rule's form when Allow is
+// chosen.
+func (msgs Messages) SettingsRulesAllowHint() string {
+	return Catalog.Format(msgs.locale, "settingsRulesAllowHint", nil)
+}
+
+// SettingsRulesApps says "Apps"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the label of the apps field of a rule's
+// form.
+func SettingsRulesApps() string { return In(i18n.Locale()).SettingsRulesApps() }
+
+// SettingsRulesApps says "Apps"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the label of the apps field of a rule's
+// form.
+func (msgs Messages) SettingsRulesApps() string {
+	return Catalog.Format(msgs.locale, "settingsRulesApps", nil)
+}
+
+// SettingsRulesAppsPlaceholder says "Names or package names, separated by commas"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the placeholder of the apps field of a
+// rule's form.
+func SettingsRulesAppsPlaceholder() string { return In(i18n.Locale()).SettingsRulesAppsPlaceholder() }
+
+// SettingsRulesAppsPlaceholder says "Names or package names, separated by commas"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the placeholder of the apps field of a
+// rule's form.
+func (msgs Messages) SettingsRulesAppsPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsRulesAppsPlaceholder", nil)
+}
+
+// SettingsRulesAsk says "Ask"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: what a rule does when it matches: asks the
+// person first.
+func SettingsRulesAsk() string { return In(i18n.Locale()).SettingsRulesAsk() }
+
+// SettingsRulesAsk says "Ask"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: what a rule does when it matches: asks the
+// person first.
+func (msgs Messages) SettingsRulesAsk() string {
+	return Catalog.Format(msgs.locale, "settingsRulesAsk", nil)
+}
+
+// SettingsRulesBlockedDesc says "The apps under Blocked apps"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: what the built-in Blocked by you rule
+// covers.
+func SettingsRulesBlockedDesc() string { return In(i18n.Locale()).SettingsRulesBlockedDesc() }
+
+// SettingsRulesBlockedDesc says "The apps under Blocked apps"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: what the built-in Blocked by you rule
+// covers.
+func (msgs Messages) SettingsRulesBlockedDesc() string {
+	return Catalog.Format(msgs.locale, "settingsRulesBlockedDesc", nil)
+}
+
+// SettingsRulesBuiltIn says "Built in"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the heading of the rules Pinky adds, which
+// the person cannot change here.
+func SettingsRulesBuiltIn() string { return In(i18n.Locale()).SettingsRulesBuiltIn() }
+
+// SettingsRulesBuiltIn says "Built in"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the heading of the rules Pinky adds, which
+// the person cannot change here.
+func (msgs Messages) SettingsRulesBuiltIn() string {
+	return Catalog.Format(msgs.locale, "settingsRulesBuiltIn", nil)
+}
+
+// SettingsRulesBuiltInDesc says "From “When should agents ask you?” and Blocked apps above; change them there."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the line under Built in: where those rules
+// come from.
+func SettingsRulesBuiltInDesc() string { return In(i18n.Locale()).SettingsRulesBuiltInDesc() }
+
+// SettingsRulesBuiltInDesc says "From “When should agents ask you?” and Blocked apps above; change them there."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the line under Built in: where those rules
+// come from.
+func (msgs Messages) SettingsRulesBuiltInDesc() string {
+	return Catalog.Format(msgs.locale, "settingsRulesBuiltInDesc", nil)
+}
+
+// SettingsRulesCategories says "Categories"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the label of the app categories a rule
+// matches (Finance, Messaging…), in its form.
+func SettingsRulesCategories() string { return In(i18n.Locale()).SettingsRulesCategories() }
+
+// SettingsRulesCategories says "Categories"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the label of the app categories a rule
+// matches (Finance, Messaging…), in its form.
+func (msgs Messages) SettingsRulesCategories() string {
+	return Catalog.Format(msgs.locale, "settingsRulesCategories", nil)
+}
+
+// SettingsRulesChangeLabel says "Change {rule}"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the accessibility label of the Change
+// button of a rule. rule is its name.
+func SettingsRulesChangeLabel(rule string) string {
+	return In(i18n.Locale()).SettingsRulesChangeLabel(rule)
+}
+
+// SettingsRulesChangeLabel says "Change {rule}"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the accessibility label of the Change
+// button of a rule. rule is its name.
+func (msgs Messages) SettingsRulesChangeLabel(rule string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesChangeLabel", map[string]any{"rule": rule})
+}
+
+// SettingsRulesCredentials says "Passwords and codes"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: a built-in rule: Pinky never types into
+// password and one-time-code fields.
+func SettingsRulesCredentials() string { return In(i18n.Locale()).SettingsRulesCredentials() }
+
+// SettingsRulesCredentials says "Passwords and codes"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: a built-in rule: Pinky never types into
+// password and one-time-code fields.
+func (msgs Messages) SettingsRulesCredentials() string {
+	return Catalog.Format(msgs.locale, "settingsRulesCredentials", nil)
+}
+
+// SettingsRulesCredentialsDesc says "Typing into password and one-time-code fields"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: what the built-in Passwords and codes rule
+// covers.
+func SettingsRulesCredentialsDesc() string { return In(i18n.Locale()).SettingsRulesCredentialsDesc() }
+
+// SettingsRulesCredentialsDesc says "Typing into password and one-time-code fields"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: what the built-in Passwords and codes rule
+// covers.
+func (msgs Messages) SettingsRulesCredentialsDesc() string {
+	return Catalog.Format(msgs.locale, "settingsRulesCredentialsDesc", nil)
+}
+
+// SettingsRulesDecision says "When it matches"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the label of the choice of Ask, Block or
+// Allow in a rule's form.
+func SettingsRulesDecision() string { return In(i18n.Locale()).SettingsRulesDecision() }
+
+// SettingsRulesDecision says "When it matches"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the label of the choice of Ask, Block or
+// Allow in a rule's form.
+func (msgs Messages) SettingsRulesDecision() string {
+	return Catalog.Format(msgs.locale, "settingsRulesDecision", nil)
+}
+
+// SettingsRulesDeny says "Block"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: what a rule does when it matches: refuses
+// the action (the strictest).
+func SettingsRulesDeny() string { return In(i18n.Locale()).SettingsRulesDeny() }
+
+// SettingsRulesDeny says "Block"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: what a rule does when it matches: refuses
+// the action (the strictest).
+func (msgs Messages) SettingsRulesDeny() string {
+	return Catalog.Format(msgs.locale, "settingsRulesDeny", nil)
+}
+
+// SettingsRulesErrMatch says "Fill in at least one of apps, categories, actions or button text."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: an error in a rule's form: a rule that
+// matches nothing in particular would match every action.
+func SettingsRulesErrMatch() string { return In(i18n.Locale()).SettingsRulesErrMatch() }
+
+// SettingsRulesErrMatch says "Fill in at least one of apps, categories, actions or button text."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: an error in a rule's form: a rule that
+// matches nothing in particular would match every action.
+func (msgs Messages) SettingsRulesErrMatch() string {
+	return Catalog.Format(msgs.locale, "settingsRulesErrMatch", nil)
+}
+
+// SettingsRulesErrName says "Give the rule a name."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: an error in a rule's form: the name is
+// empty.
+func SettingsRulesErrName() string { return In(i18n.Locale()).SettingsRulesErrName() }
+
+// SettingsRulesErrName says "Give the rule a name."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: an error in a rule's form: the name is
+// empty.
+func (msgs Messages) SettingsRulesErrName() string {
+	return Catalog.Format(msgs.locale, "settingsRulesErrName", nil)
+}
+
+// SettingsRulesErrNameTaken says "A rule is already called “{rule}”."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: an error in a rule's form: another rule,
+// the person's or a built-in one, has that name.
+func SettingsRulesErrNameTaken(rule string) string {
+	return In(i18n.Locale()).SettingsRulesErrNameTaken(rule)
+}
+
+// SettingsRulesErrNameTaken says "A rule is already called “{rule}”."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: an error in a rule's form: another rule,
+// the person's or a built-in one, has that name.
+func (msgs Messages) SettingsRulesErrNameTaken(rule string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesErrNameTaken", map[string]any{"rule": rule})
+}
+
+// SettingsRulesErrSave says "Couldn't save the rules: {error}"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the gateway refused the rules or could not
+// write rules.yaml. error is its message in English.
+func SettingsRulesErrSave(error string) string { return In(i18n.Locale()).SettingsRulesErrSave(error) }
+
+// SettingsRulesErrSave says "Couldn't save the rules: {error}"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the gateway refused the rules or could not
+// write rules.yaml. error is its message in English.
+func (msgs Messages) SettingsRulesErrSave(error string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesErrSave", map[string]any{"error": error})
+}
+
+// SettingsRulesHowItMatches says "A rule matches when everything you fill in matches; within a field, any one of the values does."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: a line in a rule's form on how its fields
+// combine.
+func SettingsRulesHowItMatches() string { return In(i18n.Locale()).SettingsRulesHowItMatches() }
+
+// SettingsRulesHowItMatches says "A rule matches when everything you fill in matches; within a field, any one of the values does."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: a line in a rule's form on how its fields
+// combine.
+func (msgs Messages) SettingsRulesHowItMatches() string {
+	return Catalog.Format(msgs.locale, "settingsRulesHowItMatches", nil)
+}
+
+// SettingsRulesIntro says "Pinky checks every action against these rules. When several match, the strictest wins: Block, then Ask, then Allow."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the line under Rules.
+func SettingsRulesIntro() string { return In(i18n.Locale()).SettingsRulesIntro() }
+
+// SettingsRulesIntro says "Pinky checks every action against these rules. When several match, the strictest wins: Block, then Ask, then Allow."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the line under Rules.
+func (msgs Messages) SettingsRulesIntro() string {
+	return Catalog.Format(msgs.locale, "settingsRulesIntro", nil)
+}
+
+// SettingsRulesLabels says "Button text"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the label of the field of words on the
+// button or element acted on, in a rule's form.
+func SettingsRulesLabels() string { return In(i18n.Locale()).SettingsRulesLabels() }
+
+// SettingsRulesLabels says "Button text"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the label of the field of words on the
+// button or element acted on, in a rule's form.
+func (msgs Messages) SettingsRulesLabels() string {
+	return Catalog.Format(msgs.locale, "settingsRulesLabels", nil)
+}
+
+// SettingsRulesLabelsPlaceholder says "Words such as delete, separated by commas"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the placeholder of the button text field
+// of a rule's form.
+func SettingsRulesLabelsPlaceholder() string {
+	return In(i18n.Locale()).SettingsRulesLabelsPlaceholder()
+}
+
+// SettingsRulesLabelsPlaceholder says "Words such as delete, separated by commas"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the placeholder of the button text field
+// of a rule's form.
+func (msgs Messages) SettingsRulesLabelsPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsRulesLabelsPlaceholder", nil)
+}
+
+// SettingsRulesLabelsSummary says "text “{labels}”"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: in a rule's summary, the words of the
+// elements it matches. labels are the words, separated by commas.
+func SettingsRulesLabelsSummary(labels string) string {
+	return In(i18n.Locale()).SettingsRulesLabelsSummary(labels)
+}
+
+// SettingsRulesLabelsSummary says "text “{labels}”"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: in a rule's summary, the words of the
+// elements it matches. labels are the words, separated by commas.
+func (msgs Messages) SettingsRulesLabelsSummary(labels string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesLabelsSummary", map[string]any{"labels": labels})
+}
+
+// SettingsRulesMoveDown says "Move {rule} down"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the accessibility label of the button that
+// moves a rule down the list. rule is its name.
+func SettingsRulesMoveDown(rule string) string { return In(i18n.Locale()).SettingsRulesMoveDown(rule) }
+
+// SettingsRulesMoveDown says "Move {rule} down"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the accessibility label of the button that
+// moves a rule down the list. rule is its name.
+func (msgs Messages) SettingsRulesMoveDown(rule string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesMoveDown", map[string]any{"rule": rule})
+}
+
+// SettingsRulesMoveDownTip says "Move down"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the tooltip of the button that moves a
+// rule down.
+func SettingsRulesMoveDownTip() string { return In(i18n.Locale()).SettingsRulesMoveDownTip() }
+
+// SettingsRulesMoveDownTip says "Move down"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the tooltip of the button that moves a
+// rule down.
+func (msgs Messages) SettingsRulesMoveDownTip() string {
+	return Catalog.Format(msgs.locale, "settingsRulesMoveDownTip", nil)
+}
+
+// SettingsRulesMoveUp says "Move {rule} up"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the accessibility label of the button that
+// moves a rule up the list. rule is its name.
+func SettingsRulesMoveUp(rule string) string { return In(i18n.Locale()).SettingsRulesMoveUp(rule) }
+
+// SettingsRulesMoveUp says "Move {rule} up"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the accessibility label of the button that
+// moves a rule up the list. rule is its name.
+func (msgs Messages) SettingsRulesMoveUp(rule string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesMoveUp", map[string]any{"rule": rule})
+}
+
+// SettingsRulesMoveUpTip says "Move up"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the tooltip of the button that moves a
+// rule up. Order decides which rule names the question when several ask.
+func SettingsRulesMoveUpTip() string { return In(i18n.Locale()).SettingsRulesMoveUpTip() }
+
+// SettingsRulesMoveUpTip says "Move up"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the tooltip of the button that moves a
+// rule up. Order decides which rule names the question when several ask.
+func (msgs Messages) SettingsRulesMoveUpTip() string {
+	return Catalog.Format(msgs.locale, "settingsRulesMoveUpTip", nil)
+}
+
+// SettingsRulesName says "Name"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the label of a rule's name field in its
+// form.
+func SettingsRulesName() string { return In(i18n.Locale()).SettingsRulesName() }
+
+// SettingsRulesName says "Name"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the label of a rule's name field in its
+// form.
+func (msgs Messages) SettingsRulesName() string {
+	return Catalog.Format(msgs.locale, "settingsRulesName", nil)
+}
+
+// SettingsRulesNamePlaceholder says "Send in Chatter"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the placeholder of a rule's name field: an
+// example of a name.
+func SettingsRulesNamePlaceholder() string { return In(i18n.Locale()).SettingsRulesNamePlaceholder() }
+
+// SettingsRulesNamePlaceholder says "Send in Chatter"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the placeholder of a rule's name field: an
+// example of a name.
+func (msgs Messages) SettingsRulesNamePlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsRulesNamePlaceholder", nil)
+}
+
+// SettingsRulesNone says "No rules of your own yet."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: under Your rules when there are none.
+func SettingsRulesNone() string { return In(i18n.Locale()).SettingsRulesNone() }
+
+// SettingsRulesNone says "No rules of your own yet."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: under Your rules when there are none.
+func (msgs Messages) SettingsRulesNone() string {
+	return Catalog.Format(msgs.locale, "settingsRulesNone", nil)
+}
+
+// SettingsRulesRemove says "Remove {rule}"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the accessibility label of the × button
+// of a rule. rule is its name.
+func SettingsRulesRemove(rule string) string { return In(i18n.Locale()).SettingsRulesRemove(rule) }
+
+// SettingsRulesRemove says "Remove {rule}"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the accessibility label of the × button
+// of a rule. rule is its name.
+func (msgs Messages) SettingsRulesRemove(rule string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesRemove", map[string]any{"rule": rule})
+}
+
+// SettingsRulesRemoveConfirm says "Remove"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the button that confirms removing a rule
+// that blocks.
+func SettingsRulesRemoveConfirm() string { return In(i18n.Locale()).SettingsRulesRemoveConfirm() }
+
+// SettingsRulesRemoveConfirm says "Remove"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the button that confirms removing a rule
+// that blocks.
+func (msgs Messages) SettingsRulesRemoveConfirm() string {
+	return Catalog.Format(msgs.locale, "settingsRulesRemoveConfirm", nil)
+}
+
+// SettingsRulesRemoveTip says "Remove"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the tooltip of the × button of a rule.
+func SettingsRulesRemoveTip() string { return In(i18n.Locale()).SettingsRulesRemoveTip() }
+
+// SettingsRulesRemoveTip says "Remove"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the tooltip of the × button of a rule.
+func (msgs Messages) SettingsRulesRemoveTip() string {
+	return Catalog.Format(msgs.locale, "settingsRulesRemoveTip", nil)
+}
+
+// SettingsRulesRemoveTitle says "Remove “{rule}”?"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the title of the dialog that confirms
+// removing a rule that blocks.
+func SettingsRulesRemoveTitle(rule string) string {
+	return In(i18n.Locale()).SettingsRulesRemoveTitle(rule)
+}
+
+// SettingsRulesRemoveTitle says "Remove “{rule}”?"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the title of the dialog that confirms
+// removing a rule that blocks.
+func (msgs Messages) SettingsRulesRemoveTitle(rule string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesRemoveTitle", map[string]any{"rule": rule})
+}
+
+// SettingsRulesWeakenMessage says "It blocks agents now. Afterwards they may be able to do what it blocks."
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the dialog that confirms removing or
+// changing a rule that blocks: what the change means.
+func SettingsRulesWeakenMessage() string { return In(i18n.Locale()).SettingsRulesWeakenMessage() }
+
+// SettingsRulesWeakenMessage says "It blocks agents now. Afterwards they may be able to do what it blocks."
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the dialog that confirms removing or
+// changing a rule that blocks: what the change means.
+func (msgs Messages) SettingsRulesWeakenMessage() string {
+	return Catalog.Format(msgs.locale, "settingsRulesWeakenMessage", nil)
+}
+
+// SettingsRulesWeakenTitle says "Change “{rule}”?"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the title of the dialog that confirms
+// changing a rule that blocks.
+func SettingsRulesWeakenTitle(rule string) string {
+	return In(i18n.Locale()).SettingsRulesWeakenTitle(rule)
+}
+
+// SettingsRulesWeakenTitle says "Change “{rule}”?"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the title of the dialog that confirms
+// changing a rule that blocks.
+func (msgs Messages) SettingsRulesWeakenTitle(rule string) string {
+	return Catalog.Format(msgs.locale, "settingsRulesWeakenTitle", map[string]any{"rule": rule})
+}
+
+// SettingsRulesYours says "Your rules"
+// in the language the app shows.
+//
+// Settings › Safety › Rules: the heading of the person's own rules,
+// which they can change.
+func SettingsRulesYours() string { return In(i18n.Locale()).SettingsRulesYours() }
+
+// SettingsRulesYours says "Your rules"
+// in the language of msgs.
+//
+// Settings › Safety › Rules: the heading of the person's own rules,
+// which they can change.
+func (msgs Messages) SettingsRulesYours() string {
+	return Catalog.Format(msgs.locale, "settingsRulesYours", nil)
+}
+
 // SettingsSafetyAddApp says "Add app"
 // in the language the app shows.
 //
@@ -9351,6 +10195,110 @@ func SettingsSafetyAddApp() string { return In(i18n.Locale()).SettingsSafetyAddA
 // to block another app.
 func (msgs Messages) SettingsSafetyAddApp() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAddApp", nil)
+}
+
+// SettingsSafetyAlways says "Always allowed"
+// in the language the app shows.
+//
+// Settings › Safety: the heading of the steps the person chose Always
+// allow for on approvals, and the accessibility label of that part.
+func SettingsSafetyAlways() string { return In(i18n.Locale()).SettingsSafetyAlways() }
+
+// SettingsSafetyAlways says "Always allowed"
+// in the language of msgs.
+//
+// Settings › Safety: the heading of the steps the person chose Always
+// allow for on approvals, and the accessibility label of that part.
+func (msgs Messages) SettingsSafetyAlways() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlways", nil)
+}
+
+// SettingsSafetyAlwaysEvery says "While agents ask before every action, these ask too."
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: a note shown while Ask before
+// every action is chosen, which suspends the Always allow answers.
+func SettingsSafetyAlwaysEvery() string { return In(i18n.Locale()).SettingsSafetyAlwaysEvery() }
+
+// SettingsSafetyAlwaysEvery says "While agents ask before every action, these ask too."
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: a note shown while Ask before
+// every action is chosen, which suspends the Always allow answers.
+func (msgs Messages) SettingsSafetyAlwaysEvery() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysEvery", nil)
+}
+
+// SettingsSafetyAlwaysIntro says "You chose Always allow for these on an approval. Agents do them in that app without asking you."
+// in the language the app shows.
+//
+// Settings › Safety: the line under Always allowed. Each row is an app
+// and the rule that no longer asks there, such as Payments in Dinely.
+func SettingsSafetyAlwaysIntro() string { return In(i18n.Locale()).SettingsSafetyAlwaysIntro() }
+
+// SettingsSafetyAlwaysIntro says "You chose Always allow for these on an approval. Agents do them in that app without asking you."
+// in the language of msgs.
+//
+// Settings › Safety: the line under Always allowed. Each row is an app
+// and the rule that no longer asks there, such as Payments in Dinely.
+func (msgs Messages) SettingsSafetyAlwaysIntro() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysIntro", nil)
+}
+
+// SettingsSafetyAlwaysNone says "None yet. On an approval, More options › Always allow adds one."
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed, when the person has not chosen
+// Always allow on any approval. More options › Always allow is the menu
+// item on approval cards.
+func SettingsSafetyAlwaysNone() string { return In(i18n.Locale()).SettingsSafetyAlwaysNone() }
+
+// SettingsSafetyAlwaysNone says "None yet. On an approval, More options › Always allow adds one."
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed, when the person has not chosen
+// Always allow on any approval. More options › Always allow is the menu
+// item on approval cards.
+func (msgs Messages) SettingsSafetyAlwaysNone() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysNone", nil)
+}
+
+// SettingsSafetyAlwaysRemove says "Ask again"
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: the tooltip of the × button at
+// the end of a row, which takes the Always allow back so the rule asks
+// again.
+func SettingsSafetyAlwaysRemove() string { return In(i18n.Locale()).SettingsSafetyAlwaysRemove() }
+
+// SettingsSafetyAlwaysRemove says "Ask again"
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: the tooltip of the × button at
+// the end of a row, which takes the Always allow back so the rule asks
+// again.
+func (msgs Messages) SettingsSafetyAlwaysRemove() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysRemove", nil)
+}
+
+// SettingsSafetyAlwaysRemoveItem says "Ask again about {kind} in {app}"
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: the accessibility label of the ×
+// button that takes an Always allow back. kind says what the rule covers,
+// as in needsAlwaysAllowIn; app is the app's name.
+func SettingsSafetyAlwaysRemoveItem(kind string, app string) string {
+	return In(i18n.Locale()).SettingsSafetyAlwaysRemoveItem(kind, app)
+}
+
+// SettingsSafetyAlwaysRemoveItem says "Ask again about {kind} in {app}"
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: the accessibility label of the ×
+// button that takes an Always allow back. kind says what the rule covers,
+// as in needsAlwaysAllowIn; app is the app's name.
+func (msgs Messages) SettingsSafetyAlwaysRemoveItem(kind string, app string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysRemoveItem", map[string]any{"kind": kind, "app": app})
 }
 
 // SettingsSafetyAppLabel says "App to block"

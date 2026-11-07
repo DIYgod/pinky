@@ -40,6 +40,8 @@ var (
 	icX        = icon(`<path d="M18 6 6 18"/><path d="m6 6 12 12"/>`)
 	icChevL    = icon(`<path d="m15 18-6-6 6-6"/>`)
 	icChevR    = icon(`<path d="m9 18 6-6-6-6"/>`)
+	icChevU    = icon(`<path d="m18 15-6-6-6 6"/>`)
+	icChevD    = icon(`<path d="m6 9 6 6 6-6"/>`)
 	icAndroid  = icon(`<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>`)
 	icIphone   = icon(`<rect x="6" y="2" width="12" height="20" rx="3.5"/><path d="M10 5h4"/>`)
 	icAlert    = icon(`<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>`)

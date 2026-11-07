@@ -349,7 +349,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	}
 	res = g.execute(ctx, l, c, a, p, cur, -1)
 	d.act.Unlock()
-	return res
+	return exemptedNote(res, v, p)
 }
 
 // startScreen reads the screen an action starts from. A phone_batch step
@@ -402,7 +402,7 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 	case v.Decision == policy.Ask && !g.granted(l, v, p):
 		return nil
 	}
-	return g.execute(ctx, l, c, a, p, nil, -1)
+	return exemptedNote(g.execute(ctx, l, c, a, p, nil, -1), v, p)
 }
 
 // evaluate runs the policy on the action. A tap or swipe is checked
@@ -431,9 +431,14 @@ func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 		}
 		in := p.input
 		in.Target = &e
-		if w := g.policy.Evaluate(in); w.Decision > v.Decision {
+		switch w := g.policy.Evaluate(in); {
+		case w.Decision > v.Decision:
 			v = w
 			p.decider = &e
+		case w.Decision == policy.Allow && v.Decision == policy.Allow && len(v.Exempted) == 0 && len(w.Exempted) > 0:
+			// The Pay button around the price label: what lets the tap
+			// through is the person's Always allow for it.
+			v.Exempted = w.Exempted
 		}
 	}
 	return v
@@ -1097,7 +1102,12 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 	res = g.execute(ctx, l, c, a, p, cur, idx)
 	res.Note = out.Note
 	msg := "The person allowed this once."
-	if out.Decision != approval.AllowOnce {
+	switch {
+	case out.Decision == approval.AllowAlways && len(v.Exempted) > 0:
+		// Gateway.Decide kept the answer (always.go), so the action no
+		// longer asks.
+		msg = fmt.Sprintf("The person allowed this, and from now on %q no longer asks in %s.", info.Rule, appLabel(grantApp(p)))
+	case out.Decision != approval.AllowOnce:
 		msg = fmt.Sprintf("The person allowed this, and %q for the rest of the task.", info.Rule)
 	}
 	res.Message = strings.TrimSpace(msg + " " + res.Message)
@@ -1511,14 +1521,18 @@ type snapshot struct {
 	target *screen.Element
 	point  screen.Point
 	text   []string
-	// asks and grantApp say what "Allow for this task" grants.
+	// asks and grantApp say what "Allow for this task" grants, and
+	// "Always allow" keeps (always.go).
 	asks     []string
 	grantApp screen.App
+	// launch is set for phone_launch, whose app is not the one the panel
+	// names; Always allow is not offered for it.
+	launch bool
 }
 
 func takeSnapshot(s *screen.Screen, p *prep, v policy.Verdict) *snapshot {
 	snap := &snapshot{app: s.App.ID + "\x00" + s.App.Name, point: p.point, text: screenText(s),
-		asks: append([]string(nil), v.Asks...), grantApp: grantApp(p)}
+		asks: append([]string(nil), v.Asks...), grantApp: grantApp(p), launch: p.input.Op == policy.OpLaunch}
 	if p.target != nil {
 		t := *p.target
 		snap.target = &t

@@ -192,6 +192,8 @@ type app struct {
 	mediaCache map[string]*mediaEntry // step screenshots by media id
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
+	always     alwaysState // Settings › Safety › Always allowed
+	rules      rulesState  // Settings › Safety › Rules
 
 	postMu  sync.Mutex
 	postWin *mygo.Window // the main window, once ready made it; post waits for it
@@ -691,7 +693,13 @@ func (a *app) selectPhone(id string) {
 
 func (a *app) decide(n gateway.NeedView, d gateway.Decision, note string) {
 	a.remember(n, d, note)
-	a.call(n.DeviceID, locales.CallAnswer(), func() error { return a.api.Decide(n.ID, d, note) })
+	a.call(n.DeviceID, locales.CallAnswer(), func() error {
+		err := a.api.Decide(n.ID, d, note)
+		if d == gateway.AllowAlways {
+			a.post(a.always.stale) // Settings › Safety lists it now
+		}
+		return err
+	})
 	if d == gateway.TakeOver {
 		a.selectPhone(n.DeviceID)
 		a.showMain()
