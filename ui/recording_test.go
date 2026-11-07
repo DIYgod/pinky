@@ -85,9 +85,12 @@ func TestRecordingPlaysAndSeeks(t *testing.T) {
 	if pl.state != "paused" || pl.pos != held {
 		t.Errorf("after Pause: %s at %v, was %v", pl.state, pl.pos, held)
 	}
+	before := len(ta.api.RecordingOpens())
 	if err := tt.Click("Play"); err != nil {
 		t.Fatal(err)
 	}
+	// The player opens the recording on a goroutine of its own.
+	ta.waitFor(t, "the recording to open again", func() bool { return len(ta.api.RecordingOpens()) > before })
 	opens := ta.api.RecordingOpens()
 	if got := opens[len(opens)-1]; got != held {
 		t.Errorf("Play went on from %v, not %v", got, held)
