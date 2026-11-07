@@ -35,6 +35,7 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
 
     fun dump(opt: Options): String {
         val started = SystemClock.elapsedRealtimeNanos()
+        service.displays.check(opt.display)
         val display = service.getSystemService(DisplayManager::class.java)?.getDisplay(opt.display)
         val metrics = DisplayMetrics()
         @Suppress("DEPRECATION")
@@ -51,12 +52,13 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
             j.field("rotation", display.rotation * 90)
         }
         j.endObject()
+        // The phone's keyguard, which covers the main display only.
         val keyguard = service.getSystemService(KeyguardManager::class.java)
         j.field("locked", keyguard?.isKeyguardLocked ?: false)
         j.field("secure_locked", keyguard?.isDeviceLocked ?: false)
 
         val t0 = SystemClock.elapsedRealtimeNanos()
-        val windows = windowsOn(opt.display).sortedByDescending { it.layer }
+        val windows = service.displays.windowsOn(opt.display).sortedByDescending { it.layer }
         val windowsMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000
         j.name("windows").beginArray()
         for (w in windows) {
@@ -72,20 +74,6 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
         j.field("took_ms", (SystemClock.elapsedRealtimeNanos() - started) / 1_000_000)
         j.endObject()
         return j.toString()
-    }
-
-    fun windowsOn(display: Int): List<AccessibilityWindowInfo> {
-        if (display == Display.DEFAULT_DISPLAY || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return if (display == Display.DEFAULT_DISPLAY) service.windows else emptyList()
-        }
-        return service.windowsOnAllDisplays.get(display) ?: emptyList()
-    }
-
-    /** Ids of the displays that have accessibility windows. */
-    fun displays(): List<Int> {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return listOf(Display.DEFAULT_DISPLAY)
-        val all = service.windowsOnAllDisplays
-        return (0 until all.size()).map { all.keyAt(it) }.sorted()
     }
 
     private fun writeWindow(j: Json, w: AccessibilityWindowInfo, st: State) {

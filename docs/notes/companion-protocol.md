@@ -2,7 +2,13 @@
 
 The Android companion app (`android/companion`, package `app.pinky.companion`) serves this protocol from its accessibility service. The Go client is `internal/driver/android/companion`. This page is the reference for both; [companion.md](companion.md) covers the app, the client and test results.
 
-Protocol version: **1**. Additive changes (new commands, new fields, new event kinds) keep the number; incompatible changes bump it. Clients read `protocol` from `ping`.
+Protocol version: **1**. Additive changes (new commands, new fields, new event kinds) keep the number; incompatible changes bump it. Clients read `protocol` from `ping`, and `features` for additions they must not assume an older app has: an older app ignores parameters it does not know, so a `set_text` with a `display` would write on the main display there.
+
+Changes since the first version, all additive:
+
+| When | Change | Feature |
+| --- | --- | --- |
+| 2026-11-07, round 3 | `display` on `set_text`, `events` and `wait_idle`; `display` on every event; `features` in `ping`; `tree` fails clearly for a display it cannot read | `displays` (Android 11+) |
 
 ## Transport
 
@@ -22,6 +28,16 @@ Protocol version: **1**. Additive changes (new commands, new fields, new event k
 - Rectangles are `[left, top, right, bottom]` in screen pixels of the display's current rotation.
 - Boolean fields on nodes and windows are sent only when true; absent means false.
 
+## Displays
+
+Every command that reads or writes the screen takes `display`, an Android display id; 0, the main display, is the default. Other displays are for background work: the driver opens a virtual display with scrcpy and starts an app there (`internal/driver/android/background.go`), so an agent can work in it while the person uses the main screen.
+
+- **Android 11 and later** (`ping` lists the feature `displays`): any display Android opens to accessibility services, which includes the main display and public virtual displays such as scrcpy's. Android leaves out private virtual displays and overlay displays (the developer option "Simulate secondary displays"); asking for one gives `unsupported`.
+- **Android 10**: the main display only. Any other display gives `unsupported`: Android 10 gives accessibility services the main display's windows only, and its events do not say which display they came from.
+- A display that does not exist, or no longer does, gives `not_found`. A negative id gives `bad_request`.
+- Bounds, and the `x` and `y` of a `set_text` target, are pixels of that display.
+- Input focus: the phone's input focus follows the last touch, so it is on one display at a time, and the other displays have no focused window. Their views keep their focus, though, so `set_text` on a display that was not touched last uses the focused view of its top-most application window (see `set_text`).
+
 ## Commands
 
 ### `ping`
@@ -33,7 +49,8 @@ Protocol version: **1**. Additive changes (new commands, new fields, new event k
 | Field | Meaning |
 | --- | --- |
 | `protocol` | Protocol version (1) |
-| `version`, `version_code` | The app's version name and code |
+| `features` | Additions this app supports on this phone, beyond protocol 1 as it first shipped: `displays` (Android 11+) means `tree`, `set_text`, `events` and `wait_idle` take displays other than 0, and events name their display. Absent in apps built before 2026-11-07. |
+| `version`, `version_code` | The app's version name (Pinky's version, from `cmd/pinky/mygo.json`) and code (the number of commits up to the one built); see [companion.md](companion.md#versions-and-signing) |
 | `sdk`, `release` | Android API level and version string |
 | `manufacturer`, `model` | `Build.MANUFACTURER`, `Build.MODEL` |
 | `time`, `uptime_ms` | Phone wall clock (Unix ms) and uptime |
@@ -51,7 +68,7 @@ All windows on one display and their node trees.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `display` | 0 | Display id. Other displays need Android 11+. |
+| `display` | 0 | Display id; see [Displays](#displays). |
 | `ime` | false | Walk the keyboard window's nodes. Off by default: keys are noise for agents. The window is always listed. |
 | `bars` | false | Walk the status and navigation bars: system windows that span one screen edge and are at most 12% thick. They are always listed, so clients can tell what covers the app. |
 | `invisible` | false | Keep nodes that are not visible to the user (marked `"invisible": true`). By default they are skipped with their subtrees, as `uiautomator dump` does. |
@@ -63,7 +80,7 @@ Result:
 | Field | Meaning |
 | --- | --- |
 | `display` | `{id, width, height, density_dpi, rotation}`; width and height in pixels for the current rotation, rotation in degrees |
-| `locked` | The keyguard is showing |
+| `locked` | The keyguard is showing. It belongs to the phone and covers the main display only, whatever `display` was asked for. |
 | `secure_locked` | The keyguard needs a PIN, pattern or password |
 | `windows` | Windows sorted top-most first (by layer) |
 | `nodes`, `truncated` | Nodes written, and whether `max_nodes` cut the walk |
@@ -113,6 +130,7 @@ Writes text into an editable node with `ACTION_SET_TEXT`. The text goes straight
 | --- | --- |
 | `text` | Required. The new text, or the text to append. |
 | `target` | Which node; see below. Absent or `{}` means the focused input. |
+| `display` | The display whose windows the target is looked up in; default 0. See [Displays](#displays). |
 | `append` | Keep the current text and add to it. Fails with `unsupported` on password fields, whose text cannot be read. |
 | `submit` | Focus the node first, then run its IME action (`ACTION_IME_ENTER`, Android 11+). On Android 10 the result has `"submitted": false` and the client should press Enter itself. |
 | `timeout_ms` | Default 10000. |
@@ -121,7 +139,7 @@ Targets, in order of precedence:
 
 | Target | Picks |
 | --- | --- |
-| `{"focused": true}` | The node with input focus |
+| `{"focused": true}` | The node with input focus on the display: the phone's input focus when it is there; otherwise the focused view of the display's focused window, or, on a display that was not touched last, of its top-most application window. A dialog without a focused field gives `not_found`, never the field behind it. |
 | `{"node": 4242, "window": 41}` | The node with this handle from a `tree` result; `window` narrows the search |
 | `{"x": 540, "y": 1296, "id": "..."}` | The smallest editable node under the point, top-most window first; among those, one with the resource id `id` if given |
 | `{"id": "com.example:id/note"}` | The first visible editable node with this resource id, top-most window first |
@@ -136,9 +154,14 @@ Subscribes the connection to events. The reply comes first; events follow on the
 {"id":4,"cmd":"events","kinds":["window","toast","notification"]}
 ```
 
-`kinds` defaults to `window`, `toast` and `notification`. The result is `{"kinds": [...], "time": <ms>}`.
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `kinds` | `window`, `toast`, `notification` | Event kinds |
+| `display` | all displays | Only events of this display. Notifications belong to the phone and always pass; so does `dropped`. See [Displays](#displays). |
 
-Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display` (Android 13+).
+The result is `{"kinds": [...], "display": <id, when given>, "time": <ms>}`.
+
+Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display`: the display it came from, or -1 when that is not known. Android 13 and later report it for every event. On Android 11 and 12 the event's window tells, so a window that has only just opened can be -1; on Android 10 only the main display's windows are known. Toast events name no window: their display is the one Android reports, else the display where the app last opened a window. Notifications are always -1: they belong to the phone, not to a display. Content changes are folded per display.
 
 | Kind | When | Extra fields |
 | --- | --- | --- |
@@ -147,7 +170,7 @@ Every event has `event` (the kind), `time` (when it happened on the phone), `pac
 | `content` | Content changed, scrolled or text changed. Bursts are folded: at most one event per 100 ms. | `count`: events folded into this one |
 | `toast` | A toast appeared, including toasts SystemUI draws for apps targeting Android 11+ | `text`. SystemUI's toasts (Android 12+) also report the app's name; when the event has several texts, the one equal to the app's name is dropped. |
 | `notification` | A notification was posted or alerted again | `title`, `text` (falls back to the big text, then the ticker), `category` |
-| `dropped` | The connection fell behind and the app dropped events (its queue holds 2048) | `count` |
+| `dropped` | The connection fell behind and the app dropped events (its queue holds 2048); `display` is -1 | `count` |
 
 Notifications can carry personal data. The app forwards what Android reports; filtering (for example of blocked apps) is the gateway's job.
 
@@ -163,6 +186,7 @@ Blocks until no change event (window state, windows, content, scroll, text) arri
 | --- | --- | --- |
 | `quiet_ms` | 300 | 10 to 10000 |
 | `timeout_ms` | 3000 | 0 to 30000 |
+| `display` | all displays | Count only changes on this display, and those whose display is not known |
 
 Result: `settled` (false when the timeout came first), `waited_ms`, and `last_change_ms_ago` when any change was seen since the service started.
 
@@ -181,12 +205,12 @@ The result holds the current values.
 
 | Code | Meaning |
 | --- | --- |
-| `bad_request` | Malformed JSON, a missing parameter or an unknown event kind |
+| `bad_request` | Malformed JSON, a missing parameter, an unknown event kind or a negative display id |
 | `unknown_command` | No such `cmd` |
-| `not_found` | No node matches the target, or the node is gone |
+| `not_found` | No node matches the target, the node is gone, or the display does not exist |
 | `not_editable` | The target node is not editable |
 | `disabled` | The target node is disabled |
-| `unsupported` | The request cannot work here (append to a password field) |
+| `unsupported` | The request cannot work here: append to a password field, a display other than 0 before Android 11, or a display Android keeps from accessibility services |
 | `action_failed` | The app refused `ACTION_SET_TEXT` |
 | `timeout` | The request took longer than `timeout_ms` |
 | `forbidden` | The peer is not adb, root or the app itself |

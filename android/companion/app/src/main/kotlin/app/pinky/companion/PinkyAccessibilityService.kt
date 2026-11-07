@@ -19,7 +19,8 @@ import org.json.JSONObject
 class PinkyAccessibilityService : AccessibilityService() {
 
     val labels = AppLabels(this)
-    val events = EventHub(labels)
+    val displays = Displays(this)
+    val events = EventHub(labels, displays)
 
     lateinit var tree: TreeDumper
         private set

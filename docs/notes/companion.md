@@ -2,7 +2,7 @@
 
 The companion is a small Kotlin app with an accessibility service, plus its Go client. It gives the Android driver a fast element tree, events (window changes, toasts, notifications, content changes), text input with `ACTION_SET_TEXT` and a settle signal. The wire protocol is in [companion-protocol.md](companion-protocol.md).
 
-Status, 2026-11-07: built and tested on the Pixel (Android 10), the Mi 10 Pro (Android 17) and an Android 16 emulator. The Mi 10 Pro runs the build from 01:43, before the last fixes (toast text, an API-level guard, the themed icon), because installing a new build there makes Google Play Protect ask the owner again (see [What does not work yet](#what-does-not-work-yet)).
+Status, 2026-11-07, round 3: background displays work (tree, `set_text`, window and toast events and `wait_idle` for a given display, Android 11 and later), every build is signed with a committed key, and the versions come from the build, so the driver can tell an outdated app. Checked on the Android 16 emulator (`pinky-api36`, `emulator-5560`) and on Android 10: background displays on `pinky-api29` (`emulator-5562`), the main display on a temporary AVD with the same system image, because `pinky-api29` was locked with a PIN this session did not know. Round 2 results on the Pixel and the Mi 10 Pro are below, unchanged: nothing was installed on the Mi 10 Pro this round, and its 01:43 build is signed with another key (see [Versions and signing](#versions-and-signing)). The Go client in `internal/driver/android/companion` belongs to the Android driver session from round 3 on; this session owns the app and these notes.
 
 ## What is where
 
@@ -13,24 +13,26 @@ Status, 2026-11-07: built and tested on the Pixel (Android 10), the Mi 10 Pro (A
 | `.../CompanionServer.kt` | Abstract socket `@pinky_companion`, peer check, one thread per connection |
 | `.../RequestHandler.kt` | Parses requests; runs everything that touches the tree on one worker thread |
 | `.../TreeDumper.kt` | Windows and nodes to JSON, with per-window timing |
+| `.../Displays.kt` | Which windows are on which display: checks display ids for requests, lists a display's windows, and maps windows to displays for events |
 | `.../TextSetter.kt` | Target resolution and `ACTION_SET_TEXT` |
 | `.../EventHub.kt` | Event conversion, content-change folding, subscriber queues, `wait_idle` |
 | `.../AppLabels.kt` | App display names, loaded in the background |
 | `.../MainActivity.kt` | Debug page (own process `:debug`): status, a text field, a password field, toast and notification buttons |
+| `android/companion/pinky-companion-debug.keystore` | The key every build is signed with, committed on purpose; see [Versions and signing](#versions-and-signing) |
+| `assets/pinky-companion.json` in the APK | The version, written by the build, so Pinky can read a bundled APK's version without the Android SDK |
 | `res/drawable/ic_launcher_*.xml` | Adaptive icon converted by hand from the brand SVGs (`pinky-android-foreground.svg`, `pinky-android-background.svg`) into vector drawables; the SVG transforms are kept as groups, and the body's radial gradient is drawn in its unit box so it stretches the way SVG's `objectBoundingBox` does |
 | `internal/driver/android/companion/` | Go client: `Client` (Ping, Tree, Dump, SetText, Events, WaitSettled, Enable, Disable, ForceDisable, Install, InstallIfChanged, Installed), tree-to-screen conversion, `Runner` (adb) |
 | `internal/driver/android/companion/cmd/companionctl` | A command-line tool for trying all of it by hand and for the benchmark |
 
-No shared contract changed. The client implements `driver.Settler`.
+No shared contract changed. The client implements `driver.Settler`. The app's debug page shows its version, version code and the display it is on ("Version 0.1.0 (68) on display 10").
 
 ## How to build and run
 
 ```sh
-cd android/companion
-export ANDROID_HOME=~/Library/Android/sdk
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
-./gradlew assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
+make companion                   # android/companion/app/build/outputs/apk/debug/app-debug.apk
 ```
+
+`make companion` runs `./gradlew assembleDebug` in `android/companion` with `ANDROID_HOME` (`~/Library/Android/sdk`) and `JAVA_HOME` (Android Studio's JBR) set, and `make app` copies the APK into Pinky.app. The build needs git and the repository's whole history for the version code; `-Ppinky.versionCode=N` overrides it.
 
 By hand, through the device lock (every command from `ping` on turns the service on for its run and restores the setting afterwards; `-keep` leaves it on):
 
@@ -57,6 +59,39 @@ scripts/devlock.sh $ID env PINKY_DEVICE=$ID go test -tags device -v ./internal/d
 
 The device test installs the APK if it changed, turns the service on, reads Settings and the Calculator, writes Chinese and emoji into the debug page (by resource id, by point with append, by node handle), checks the password field and a `not_found` error, waits for a toast event, then turns the service off and checks that `enabled_accessibility_services` is exactly what it was. `PINKY_COMPANION_APK` overrides the APK path.
 
+## Versions and signing
+
+- **versionName** is Pinky's version, read from `cmd/pinky/mygo.json` at build time (`0.1.0` now). **versionCode** is the number of commits up to the one built (`git rev-list --count HEAD`; 68 when this was written), so it grows with every commit on main and a build of a newer commit installs over an older one. A shallow clone stops the build with a message (fetch the history; `fetch-depth: 0` for `actions/checkout`) instead of building versionCode 1; `-Ppinky.versionCode=N` overrides the count.
+- **Reading the installed version:** `adb shell dumpsys package app.pinky.companion` prints `versionCode=68 minSdk=29 targetSdk=36` and `versionName=0.1.0`; `adb shell pm list packages --show-versioncode app.pinky.companion` prints `package:app.pinky.companion versionCode:68`; while the service runs, `ping` returns `version` and `version_code`.
+- **Reading a bundled APK's version:** the APK is a zip file, and `assets/pinky-companion.json` in it holds `{"package":"app.pinky.companion","version_name":"0.1.0","version_code":68}`, written by the same build from the same values as the manifest (`aapt2 dump badging` shows them too, but needs the SDK).
+- **Comparing:** an installed versionCode lower than the bundled one means outdated. The same versionCode with a different file is a build with uncommitted changes; compare SHA-256 when that matters (`InstallIfChanged` does).
+- **Signing:** every build, debug and release, is signed with `android/companion/pinky-companion-debug.keystore` (PKCS12, alias `pinky-companion`, store and key password `android`; certificate `CN=Pinky Companion Debug, O=Pinky`, SHA-256 `7e:ac:a4:e5:a5:de:59:98:9c:c9:66:1b:f1:06:bc:93:1a:91:2b:63:82:42:33:07:85:0d:85:42:94:38:5d:3e`, valid until 2056). It is committed on purpose (round 3, decision 2) so that a build from any machine installs over an older one; it guards nothing and must not sign anything else.
+- **Builds from before round 3** (versionCode 1) were signed with each machine's own `~/.android/debug.keystore`. Installing a current build over one fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (signatures do not match). The Mi 10 Pro has such a build. The installer has to uninstall the old app first (`pm uninstall app.pinky.companion`, only Pinky's own package), and only while its service is off: Android drops an uninstalled package's services from `enabled_accessibility_services` by rewriting the setting. Both emulators have current builds.
+
+## Background displays
+
+Android 11 and later give accessibility services the windows of every display Android opens to them, so the companion reads and writes a background display the same way as the main one: `tree`, `set_text`, `events` and `wait_idle` take a `display`, and every event names its display (-1 when that is not known). `ping` lists the feature `displays` where this works; on Android 10 every request for another display fails with `unsupported`. The protocol has the rules, including how input focus works across displays: [companion-protocol.md](companion-protocol.md#displays).
+
+Checked on both emulators with a virtual display from the driver (`androidctl bg -app app.pinky.companion`, which shows the debug page there) and a raw protocol script (the Go client does not send `display` for `set_text` and events yet):
+
+| Check | Android 16 (`emulator-5560`) | Android 10 (`emulator-5562`; the last row on the temporary AVD) |
+| --- | --- | --- |
+| `ping` | `displays: [0, 10]`, `features: ["displays"]` | `displays: [0]`, `features: []` |
+| Tree of the virtual display | The debug page, 15 nodes ("Version 0.1.0 (68) on display 10"); 1 ms on the phone and 4 ms round trip, the same as the main display; the main display's tree still shows the launcher | `unsupported`: "display 2: Android 10 (API 29) gives accessibility services the main display only; other displays need Android 11" |
+| `set_text` on it | By resource id ("你好，后台 Pinky 🎉", verified, the page's echo shows 13 characters), into the focused field after a tap there (`input -d 10 tap`), at a point with append, by node handle | `unsupported`, as above |
+| Focus stays per display | With the virtual display touched last, a `set_text` for display 0 without a target gives `not_found` and leaves the background field alone; an id target for display 0 does not reach the other display | |
+| Events | A subscriber for display 10 gets only display 10's events (Settings opening there, its window list changes, the debug page's toast), one for display 0 none of them, one without a filter all of them with `display: 10`; notifications pass every filter with `display: -1`; the soft keyboard opened on the virtual display (`display: 10`), as scrcpy's local IME policy asks | `events` with `display: 2` gives `unsupported` |
+| `wait_idle` for the display | Settled after 300 ms | `unsupported` |
+| Errors | Display 9999: `not_found`; display -3: `bad_request` | |
+| Events of the virtual display without a filter | `display: 10` | The debug page's window events after it moved there: `display: -1`, never 0; the launcher coming to the front of the main display meanwhile: `display: 0` |
+
+Found on the way:
+
+- **Android 16 sends toast events with no display and no window** (both -1), so a toast takes the display of its app's last window event. The first version used the app's last window id instead and lost toasts whose last window was the launch splash screen, which closes before the toast shows.
+- **Starting an app on the virtual display moves its task off the main display.** The debug page's task (#13) was on display 0, in the background, before `androidctl bg -app app.pinky.companion`, and on the virtual display afterwards, without the activity being recreated. An app the person has open would leave their screen the same way. For the Android driver.
+- **On Android 10 the shell cannot start activities on scrcpy's virtual display** (`am start --display 2` fails with "Permission Denial: starting Intent ... with launchDisplayId=2"): Android 10 lets only activities that allow embedding open on another app's virtual display. scrcpy's own start did put the debug page there (its task moved from display 0, as on Android 16). A plain `am start` then opened a second task on the main display instead of reaching the page on the virtual display.
+- **A tap on the virtual display ended the scrcpy session on Android 10** (`androidctl bg … tap:274,1753`: "device offline: scrcpy session ended: scrcpy: control channel: EOF", 2.5 s after the display opened), once, on the temporary AVD. For the Android driver; the companion was not involved.
+
 ## Turning the service on and off
 
 - `Enable` reads `enabled_accessibility_services`, appends only `app.pinky.companion/.PinkyAccessibilityService` and keeps every other entry, then pings until the service answers (up to 10 s). If it never answers, Enable restores the setting itself.
@@ -66,6 +101,19 @@ The device test installs the APK if it changed, turns the service on, reads Sett
 - This setting is the only one Pinky changes, and only its own entry, as docs/WORKING.md requires.
 
 ## Results
+
+### Round 3: the two emulators
+
+Main display, with the current build (versionCode 68), each run through the emulator's device lock: `companionctl install`, the device test suite (`PINKY_DEVICE=… go test -tags device ./internal/driver/android/companion/`), then a raw protocol script for event displays and notifications. `enabled_accessibility_services` was `null` before and after every run.
+
+`emulator-5562` (`pinky-api29`) was asleep behind a PIN lock the whole time, set by the Android driver session for its unlock tests, and its PIN was not known here, so the device suite skipped there ("the phone is locked"). The Android 10 main-display column comes from a temporary AVD with the same system image (`system-images;android-29;default;arm64-v8a`, `emulator-5564`), deleted afterwards. The current build is installed on `emulator-5562` too, and its background display checks below ran there.
+
+| Check | Android 16 (`emulator-5560`, Google APIs) | Android 10 (`pinky-api29`'s image) |
+| --- | --- | --- |
+| Install | `adb install` of the new key's APK, no prompt | The same |
+| Enable | Answers 222 ms after the setting changes | Answers 210 ms after the setting changes |
+| Device test suite | Passes: Settings (11 elements), every `set_text` case (Chinese and emoji by resource id, point with append, node handle, password field, `not_found`), toast event. Calculator skipped: neither image has one. | Passes the same way: Settings 13 elements |
+| Event displays | Toast from the debug page `display: 0`, its window events `display: 0`, notification (permission granted inside the emulator) `display: -1` | The same (no permission needed) |
 
 ### Pixel (FA6C20303860), Android 10
 
@@ -91,7 +139,7 @@ Checked with `companionctl` against the build installed at 01:43, without reinst
 | Toast event | Arrives, but this build reports "Toast 测试 ✓ Pinky Companion": SystemUI adds the app's name, which the current build drops (fixed and tested on the emulator) |
 | Other accessibility services | Mika's floating button is an accessibility overlay window and shows up as `button "Mika"` above the app, as on screen |
 
-### Android 16 emulator (API 36, Google Play image, arm64 on the Mac)
+### Android 16 emulator, round 2 (API 36, Google Play image, arm64 on the Mac)
 
 The Pixel went offline before the final test run, and a new build cannot go onto the Mi 10 Pro without Play Protect asking, so the full device test suite ran on a temporary emulator (created for this, then deleted).
 
@@ -134,17 +182,26 @@ Round trip from the computer: the companion's time includes adb forwarding and J
 - **Submit on Android 10.** `ACTION_IME_ENTER` exists from Android 11. Below that, `set_text` reports `submitted: false` and the caller presses Enter itself; the client does not inject keys behind the driver's back.
 - **Events** are folded for content changes (one per 100 ms per connection, with a count) and queued per subscriber, so a slow reader never blocks the service. Times are converted to the host's clock using the skew `ping` measures.
 - **Idle watchdog** of 3 minutes without any connection, changeable with `config`. It also turns off a service the person enabled by hand, which matches "accessibility on only during tasks".
+- **Display support is a feature, not a new protocol version.** It is additive, and the driver accepts exactly protocol 1, so a new number would have made it refuse every new app until it changed. An older app ignores `display` and would act on the main display, so clients check `features` before sending one.
+- **Unknown displays are -1, never absent.** A client must not mistake an event of unknown origin for one of the main display (a toast from the person's app shown to an agent working in the background, or the other way round), so every event carries `display` and -1 (Android's `INVALID_DISPLAY`) means unknown. Filtered subscriptions drop unknown events, except notifications, which belong to the phone.
+- **Input focus per display.** The phone's input focus is on the display touched last, and the other displays have no focused window, but their views keep their focus. So `set_text` without a target uses the phone's focus only when it is on the requested display, and otherwise the focused view of that display's focused or top-most application window. Searching only that one window means a dialog without a focused field gives `not_found` instead of the field behind it.
+- **Android 10 gets a clear `unsupported`** for other displays rather than an empty tree: its accessibility services see only the main display's windows, and its events do not say which display they came from.
+- **versionCode is the commit count.** It grows with every commit on main, needs no state anywhere, and any machine with the history computes the same number. A shallow clone fails the build rather than produce versionCode 1, which every newer app would refuse to downgrade to.
+- **The version also sits in the APK as `assets/pinky-companion.json`,** so Pinky reads a bundled APK's version with `archive/zip` instead of the Android SDK's `aapt2` or a binary manifest parser.
+- **The debug build ships.** `make companion` builds it and `make app` copies it into Pinky.app. It is debuggable, which adds nothing to what adb already allows. The release build (`./gradlew assembleRelease`, minified: 90 KB against 2.7 MB) is signed with the same key and has the same version file, should the packaging prefer it; it was built but not run on a phone this round.
 - **Runner interface.** The client needs only `Shell`, `Forward`, `RemoveForward` and `Install`. `ExecRunner` uses the adb command line (the SDK's adb first, as the design says); the Android driver can pass its own adb implementation when the main session integrates the two.
 
 ## What does not work yet
 
 - **Play Protect on the Mi 10 Pro.** The first `adb install -r` there, at about 01:43, opened Google Play Protect's "Send app for a security check?" dialog (always send / send this time / don't send), and the install waited for it. Per the safety rules nobody answered it and the companion session stopped using the phone. At about 01:54 the Android driver session's tests began with a Home key press, which hid the dialog, and the install completed; at 02:08 the phone showed the launcher with nothing unusual in the activity stack. The owner may want to check Play Protect's settings. A newer build would ask again, so the Mi 10 Pro still runs the 01:43 build; install the current one (`companionctl install`) while the owner is around, then run the device test there.
 - **The Pixel went offline** at about 01:45, during the Android driver session's tests, and macOS no longer sees it on USB. The cause is unknown: its old battery may have browned out with the screen on (Settings showed it discharging while plugged in, 21% and seven minutes later 17%), or a reboot did not finish, or the cable. Someone has to look at it. The APK changes made after that ran on the emulator only.
-- **Play Protect on other phones.** Any phone with Google Play and "verify apps over USB" will ask the person once for an unknown APK. Setup should explain it, and a release build signed with a stable key would help Play recognize the app.
+- **Play Protect on other phones.** Any phone with Google Play and "verify apps over USB" may ask the person about an unknown APK, as on the Mi 10 Pro. Setup should explain it. Every build is now signed with the same key, so Play at least sees the same app each time.
+- **The Mi 10 Pro's build must be uninstalled before the current one goes on**: it is signed with another key (see [Versions and signing](#versions-and-signing)), and it predates `features`, so the driver must not send it `display`.
 - **`uiautomator dump` turns the companion off while it runs** (Android unbinds every other accessibility service for a UiAutomation), so a driver must not mix the two; the client reconnects once by itself afterwards.
 - **Screen off.** With the screen off, Android lists only the status bar window, so the tree is empty. The driver should check the power state itself.
-- **Not tested:** virtual displays (the `display` parameter exists for scrcpy's background mode), WebView, Compose and Flutter apps, landscape on a real phone, toasts and notifications with the companion running for hours, and `include_not_important` on Android below 13 (it cannot clear the node cache there).
-- **Not done:** the APK is not shipped with the Go binary (`*.apk` is ignored by git). The main session should decide between building it in CI and embedding it with `go:embed`, or downloading it from GitHub releases. No release signing config exists yet.
+- **Background displays on Android 10** are not supported by the companion (`unsupported`), so the driver's background mode there has no element tree. Android 11 and 12 had no emulator this round: their event displays come from the window list and are untested.
+- **Not tested:** background displays on a real phone (the Mi 10 Pro runs the 01:43 build, which ignores `display` for `set_text` and events), background displays while the phone is locked (the Android driver session's check), WebView, Compose and Flutter apps, landscape on a real phone, toasts and notifications with the companion running for hours, and `include_not_important` on Android below 13 (it cannot clear the node cache there).
+- **Shipping:** decided in round 3: the APK goes into Pinky.app and the `.dmg` (`make app`), and Pinky installs it when the person clicks Install. A CI build of the APK needs the whole git history for its version code.
 - **Possible speedups:** non-active windows (dialogs, the shade) still pay a cache-bypassing root fetch per tree; a client could also keep one subscription and request trees only after `content` events.
 
 ## Integration notes for the driver
@@ -154,3 +211,5 @@ Round trip from the computer: the companion's time includes adb forwarding and J
 3. `Type`: `SetText(Target{Point: &center, ID: element.ID}, text, SetTextOptions{Append, Submit})`, or `Target{}` for the focused field. When `Submit` was asked and `Submitted` is false, press Enter through scrcpy.
 4. Settle: the client implements `driver.Settler` (`WaitSettled`, 300 ms of quiet), which can back up the frame-size detector.
 5. Fall back to `uiautomator dump` only when the companion is not available, never while it is on.
+6. Background displays: when `ping`'s `features` holds `displays`, pass the display id to `tree` (`DumpOptions.Display`), `set_text` and `wait_idle`, and route events by their `display` (or subscribe per display). Treat -1 as unknown, never as the main display. Without the feature, do not send a `display` at all.
+7. Install: compare the installed versionCode (`dumpsys package`) with the bundled APK's (`assets/pinky-companion.json`). On `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, uninstall Pinky's own package while its service is off, then install again.
