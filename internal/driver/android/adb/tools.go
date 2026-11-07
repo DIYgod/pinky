@@ -51,10 +51,10 @@ const (
 	FromPinky    = "Pinky"
 )
 
-// MinTools is the oldest platform-tools release StartServer starts a
-// server with, unless PINKY_ADB names it: 30.0.0 (2020) brought Wireless
-// debugging (host:pair). Older ones, such as the adb packages of Ubuntu
-// 22.04 and earlier, are passed over for a newer one.
+// MinTools is the oldest platform-tools release StartServer prefers:
+// 30.0.0 (2020) brought Wireless debugging (host:pair). An older one, such
+// as the adb package of Ubuntu 22.04, is passed over for a newer one, and
+// used only when no newer one works.
 const MinTools = 30
 
 // ErrNoADB means there is no adb to start a server with.
@@ -86,7 +86,9 @@ func FindADB() (string, error) {
 // StartServer starts an adb server unless one answers already, and
 // returns the adb it started it with (a zero Tool when one was running).
 // It never kills a server.
-func StartServer(ctx context.Context) (Tool, error) {
+func StartServer(ctx context.Context) (Tool, error) { return startServer(ctx, Tools) }
+
+func startServer(ctx context.Context, list func() []Tool) (Tool, error) {
 	c := &Client{}
 	if _, err := c.Version(ctx); !errors.Is(err, ErrServerNotRunning) {
 		return Tool{}, err
@@ -96,27 +98,44 @@ func StartServer(ctx context.Context) (Tool, error) {
 		return Tool{}, fmt.Errorf("adb: the server address %s is not this computer's, so Pinky cannot start one there", c.addr())
 	}
 	var errs []string
-	for _, t := range Tools() {
-		t, err := check(ctx, t)
-		if err != nil {
-			errs = append(errs, err.Error())
-			continue
-		}
+	var old []Tool // used only when no recent adb works
+	// start starts a server with t, and reports whether one answers then:
+	// whoever started it, that is what is needed (a zero Tool when it was
+	// not t's).
+	start := func(t Tool) (Tool, bool, error) {
 		serr := spawnServer(ctx, t.Path)
-		// Whoever started it, a server that answers is what is needed.
 		if _, err := c.Version(ctx); err == nil {
 			if serr != nil {
-				return Tool{}, nil
+				return Tool{}, true, nil
 			}
-			return t, nil
+			return t, true, nil
 		}
 		if ctx.Err() != nil {
-			return Tool{}, ctx.Err()
+			return Tool{}, false, ctx.Err()
 		}
 		if serr == nil {
 			serr = errors.New("it did not answer")
 		}
 		errs = append(errs, fmt.Sprintf("%s (%s): starting a server: %v", t.Path, t.Source, serr))
+		return Tool{}, false, nil
+	}
+	for _, t := range list() {
+		t, err := check(ctx, t)
+		if errors.Is(err, errOld) {
+			old = append(old, t)
+		}
+		if err != nil {
+			errs = append(errs, err.Error())
+			continue
+		}
+		if got, ok, err := start(t); ok || err != nil {
+			return got, err
+		}
+	}
+	for _, t := range old {
+		if got, ok, err := start(t); ok || err != nil {
+			return got, err
+		}
 	}
 	if len(errs) == 0 {
 		return Tool{}, fmt.Errorf("adb: %w (Pinky looks in the Android SDK, Homebrew, PATH and its own folder; %s names one)", ErrNoADB, EnvADB)
@@ -132,15 +151,23 @@ func isLoopback(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// usable returns the first tool that runs and is recent enough.
+// usable returns the first tool that runs and is recent enough, else the
+// first that runs.
 func usable(ctx context.Context, tools []Tool) (Tool, error) {
 	var errs []string
+	var old []Tool
 	for _, t := range tools {
 		t, err := check(ctx, t)
 		if err == nil {
 			return t, nil
 		}
+		if errors.Is(err, errOld) {
+			old = append(old, t)
+		}
 		errs = append(errs, err.Error())
+	}
+	if len(old) > 0 {
+		return old[0], nil
 	}
 	if len(errs) == 0 {
 		return Tool{}, fmt.Errorf("adb: %w (Pinky looks in the Android SDK, Homebrew, PATH and its own folder; %s names one)", ErrNoADB, EnvADB)
@@ -148,9 +175,13 @@ func usable(ctx context.Context, tools []Tool) (Tool, error) {
 	return Tool{}, fmt.Errorf("adb: no adb that works: %s", strings.Join(errs, "; "))
 }
 
+// errOld is check's error for an adb that runs but is older than
+// MinTools, which StartServer uses only when no other one works.
+var errOld = errors.New("older than platform-tools " + strconv.Itoa(MinTools))
+
 // check readies a tool to run: Pinky's own is copied to the cache first.
-// It runs `adb version` and refuses an adb older than MinTools, unless
-// PINKY_ADB names it.
+// It runs `adb version`, and reports an adb older than MinTools with
+// errOld, unless PINKY_ADB names it.
 func check(ctx context.Context, t Tool) (Tool, error) {
 	if t.Source == FromPinky {
 		p, err := stage(t.Path)
@@ -165,7 +196,7 @@ func check(ctx context.Context, t Tool) (Tool, error) {
 	}
 	t.Version = v.Tools
 	if t.Source != FromEnv && !v.recent() {
-		return t, fmt.Errorf("%s (%s) is platform-tools %s, older than %d", t.Path, t.Source, nonEmpty(v.Tools, "1.0."+strconv.Itoa(v.Server)), MinTools)
+		return t, fmt.Errorf("%s (%s) is platform-tools %s, %w", t.Path, t.Source, nonEmpty(v.Tools, "1.0."+strconv.Itoa(v.Server)), errOld)
 	}
 	return t, nil
 }

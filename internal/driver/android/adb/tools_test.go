@@ -3,6 +3,7 @@ package adb
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -330,8 +331,13 @@ func TestCheck(t *testing.T) {
 	}
 
 	t.Setenv("PINKY_FAKE_ADB_VERSION", "29.0.6-debian")
-	if _, err := check(ctx, Tool{Path: adb, Source: FromPath}); err == nil || !strings.Contains(err.Error(), "older than") {
+	if _, err := check(ctx, Tool{Path: adb, Source: FromPath}); !errors.Is(err, errOld) {
 		t.Errorf("an old adb: %v", err)
+	}
+	// An old one, when it is the only one that runs.
+	missing := Tool{Path: filepath.Join(t.TempDir(), "missing"), Source: FromSDK}
+	if got, err := usable(ctx, []Tool{missing, {Path: adb, Source: FromPath}}); err != nil || got.Path != adb {
+		t.Errorf("the old adb as the last resort: %+v %v", got, err)
 	}
 	if got, err := check(ctx, Tool{Path: adb, Source: FromEnv}); err != nil || got.Version != "29.0.6-debian" {
 		t.Errorf("an old adb that PINKY_ADB names: %+v %v", got, err)
@@ -396,6 +402,31 @@ func TestStartServer(t *testing.T) {
 	}
 	if v, err := c.Version(ctx); err != nil || v != 41 {
 		t.Errorf("the first server after the second: %d %v", v, err)
+	}
+}
+
+// TestStartServerOld: an adb older than MinTools starts the server only
+// when no other one works.
+func TestStartServerOld(t *testing.T) {
+	t.Setenv("ADB_SERVER_SOCKET", "")
+	t.Setenv("ANDROID_ADB_SERVER_ADDRESS", "")
+	t.Setenv("ANDROID_ADB_SERVER_PORT", freePort(t))
+	t.Setenv("PINKY_FAKE_ADB", "1")
+	t.Setenv("PINKY_FAKE_ADB_VERSION", "29.0.6-debian")
+	old := fakeADB(t, t.TempDir())
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	t.Cleanup(func() {
+		if conn, err := net.Dial("tcp", ServerAddr()); err == nil {
+			writeRequest(conn, "host:kill")
+			readStatus(conn)
+			conn.Close()
+		}
+	})
+	missing := Tool{Path: filepath.Join(t.TempDir(), "adb"), Source: FromSDK}
+	tool, err := startServer(ctx, func() []Tool { return []Tool{{Path: old, Source: FromPath}, missing} })
+	if err != nil || tool.Path != old || tool.Version != "29.0.6-debian" {
+		t.Fatalf("started with %+v: %v", tool, err)
 	}
 }
 

@@ -155,7 +155,7 @@ Since 2026-11-08 every package of Pinky carries an adb of its own, so that a per
 
 Licenses and build notes go with it (`adb-NOTICE.txt`, `adb-BUILD.txt`; in Pinky.app under `Contents/Resources`): Apache-2.0 for AOSP's code, BoringSSL's, the BSD licenses of protobuf, lz4 and zstd, MIT for brotli and fmt, zlib's, and the LGPL 2.1 of libusb, which is linked statically; its source is in android-tools' release and `scripts/adb.sh` builds and links it again.
 
-**Which adb starts the server.** Pinky uses whatever adb server runs and never kills or restarts one. When none answers, `adb.StartServer` starts one with the first adb that runs and is platform-tools 30 or later (older ones, such as Ubuntu 22.04's 29.0.6, lack Wireless debugging and are passed over):
+**Which adb starts the server.** Pinky uses whatever adb server runs and never kills or restarts one. When none answers, `adb.StartServer` starts one with the first adb that runs and is platform-tools 30 or later (an older one, such as Ubuntu 22.04's 29.0.6, lacks Wireless debugging: it is passed over for a newer one, and used only when none works):
 
 1. the one `PINKY_ADB` names, and only that one: a path, or `pinky` for Pinky's own (no version check);
 2. the Android SDK's: `ANDROID_HOME`, `ANDROID_SDK_ROOT`, then where Android Studio puts it (`~/Library/Android/sdk`, `%LOCALAPPDATA%\Android\Sdk`, `~/Android/Sdk`), so that Pinky and Android Studio share one server of one version;
