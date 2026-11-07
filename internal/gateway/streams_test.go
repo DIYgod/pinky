@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -291,31 +292,48 @@ func TestSlowViewerSkipsToAKeyFrame(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer fast.Close()
-	src.send(pkts[0]) // the configuration
-	got := 0
+	var got atomic.Int64
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
 		for range fast.Packets() {
-			got++
-			if got == maxQueueLen+51 {
+			if got.Add(1) == maxQueueLen+51 {
 				return
 			}
 		}
 	}()
+	// eventually waits up to 5s for cond, which the viewers' goroutines
+	// make true.
+	eventually := func(cond func() bool) bool {
+		for deadline := time.Now().Add(5 * time.Second); !cond(); time.Sleep(time.Millisecond) {
+			if time.Now().After(deadline) {
+				return false
+			}
+		}
+		return true
+	}
+	src.send(pkts[0]) // the configuration
+	if !eventually(func() bool { return got.Load() == 1 && len(slow.Packets()) > 0 }) {
+		t.Fatal("the viewers did not get the configuration")
+	}
 	// Far more than the slow viewer may queue: pictures, then a key frame
-	// near the end.
+	// near the end. The fast viewer reads each batch before the next goes
+	// out: on a busy machine its goroutines may not run for a while, and it
+	// must not fall behind as far as the slow one.
 	for i := 0; i < maxQueueLen+50; i++ {
 		p := pkts[2+i%9]
 		if i == maxQueueLen+40 {
 			p = pkts[1]
 		}
 		src.send(p)
+		if sent := int64(i + 2); i%256 == 255 && !eventually(func() bool { return got.Load() >= sent }) {
+			t.Fatalf("the fast viewer got %d of %d packets", got.Load(), sent)
+		}
 	}
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
-		t.Fatalf("the fast viewer got %d packets", got)
+		t.Fatalf("the fast viewer got %d packets", got.Load())
 	}
 	// The slow viewer got the configuration and the few packets already on
 	// their way, then the configuration again and the key frame it resumed
