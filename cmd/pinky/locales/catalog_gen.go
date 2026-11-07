@@ -1003,6 +1003,72 @@ func (msgs Messages) AgentRequestAskedAt(time_ string) string {
 	return Catalog.Format(msgs.locale, "agentRequestAskedAt", map[string]any{"time": time_})
 }
 
+// BackgroundChangeFailed says "Couldn't change background work on {phone}: {reason}"
+// in the language the app shows.
+//
+// A toast when turning Work in the background on or off failed. phone is
+// the phone's name, reason the error in English.
+func BackgroundChangeFailed(phone string, reason string) string {
+	return In(i18n.Locale()).BackgroundChangeFailed(phone, reason)
+}
+
+// BackgroundChangeFailed says "Couldn't change background work on {phone}: {reason}"
+// in the language of msgs.
+//
+// A toast when turning Work in the background on or off failed. phone is
+// the phone's name, reason the error in English.
+func (msgs Messages) BackgroundChangeFailed(phone string, reason string) string {
+	return Catalog.Format(msgs.locale, "backgroundChangeFailed", map[string]any{"phone": phone, "reason": reason})
+}
+
+// BackgroundDesc says "Agents use a hidden second screen, so the phone stays yours and can stay locked. Applies from the next task."
+// in the language the app shows.
+//
+// Settings › Phones: the line under Work in the background.
+func BackgroundDesc() string { return In(i18n.Locale()).BackgroundDesc() }
+
+// BackgroundDesc says "Agents use a hidden second screen, so the phone stays yours and can stay locked. Applies from the next task."
+// in the language of msgs.
+//
+// Settings › Phones: the line under Work in the background.
+func (msgs Messages) BackgroundDesc() string {
+	return Catalog.Format(msgs.locale, "backgroundDesc", nil)
+}
+
+// BackgroundTitle says "Work in the background"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's switch (Android) that lets agents work on
+// a hidden second display while the phone's own screen stays the person's.
+func BackgroundTitle() string { return In(i18n.Locale()).BackgroundTitle() }
+
+// BackgroundTitle says "Work in the background"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's switch (Android) that lets agents work on
+// a hidden second display while the phone's own screen stays the person's.
+func (msgs Messages) BackgroundTitle() string {
+	return Catalog.Format(msgs.locale, "backgroundTitle", nil)
+}
+
+// BackgroundUnsupported says "{phone} can't work in the background yet."
+// in the language the app shows.
+//
+// A toast when the phone cannot work in the background. phone is the
+// phone's name.
+func BackgroundUnsupported(phone string) string {
+	return In(i18n.Locale()).BackgroundUnsupported(phone)
+}
+
+// BackgroundUnsupported says "{phone} can't work in the background yet."
+// in the language of msgs.
+//
+// A toast when the phone cannot work in the background. phone is the
+// phone's name.
+func (msgs Messages) BackgroundUnsupported(phone string) string {
+	return Catalog.Format(msgs.locale, "backgroundUnsupported", map[string]any{"phone": phone})
+}
+
 // CallAnswer says "answer the approval"
 // in the language the app shows.
 //
@@ -1664,7 +1730,8 @@ func (msgs Messages) ExportAllTooltip() string {
 // folder is the new folder's name (see exportFolderName); parent is the
 // name of the folder it was made in: "Desktop", the Desktop folder's real
 // name, which the Finder shows translated, or else the home folder's name.
-// The Chinese picks 桌面 for Desktop.
+// A translation may name the Desktop in its own words when parent is
+// "Desktop", with a select.
 func ExportDone(folder string, parent string) string {
 	return In(i18n.Locale()).ExportDone(folder, parent)
 }
@@ -1676,7 +1743,8 @@ func ExportDone(folder string, parent string) string {
 // folder is the new folder's name (see exportFolderName); parent is the
 // name of the folder it was made in: "Desktop", the Desktop folder's real
 // name, which the Finder shows translated, or else the home folder's name.
-// The Chinese picks 桌面 for Desktop.
+// A translation may name the Desktop in its own words when parent is
+// "Desktop", with a select.
 func (msgs Messages) ExportDone(folder string, parent string) string {
 	return Catalog.Format(msgs.locale, "exportDone", map[string]any{"folder": folder, "parent": parent})
 }
@@ -1719,7 +1787,7 @@ func (msgs Messages) ExportFolderAll() string {
 // The name of the folder an export makes on the Desktop. name is
 // exportFolderAll or the exported task's title; date is as 2026-11-07,
 // clock as 09.30.12 (with dots: file names cannot hold colons). It must
-// stay a valid file name, without / or :.
+// stay a valid file name, without / or:.
 func ExportFolderName(name string, date string, clock string) string {
 	return In(i18n.Locale()).ExportFolderName(name, date, clock)
 }
@@ -1730,7 +1798,7 @@ func ExportFolderName(name string, date string, clock string) string {
 // The name of the folder an export makes on the Desktop. name is
 // exportFolderAll or the exported task's title; date is as 2026-11-07,
 // clock as 09.30.12 (with dots: file names cannot hold colons). It must
-// stay a valid file name, without / or :.
+// stay a valid file name, without / or:.
 func (msgs Messages) ExportFolderName(name string, date string, clock string) string {
 	return Catalog.Format(msgs.locale, "exportFolderName", map[string]any{"name": name, "date": date, "clock": clock})
 }
@@ -1947,18 +2015,16 @@ func (msgs Messages) FlyoutUnlock() string {
 // in the language the app shows.
 //
 // Follows gwAgentWants: what the agent may do if allowed; scope is
-// scopeLineEverything and the like (zh:
-// 可以使用除已屏蔽应用外的所有应用). Shown only in other
-// languages; in English the gateway's own words show.
+// scopeLineEverything and the like. Shown only in other languages; in
+// English the gateway's own words show.
 func GwAgentGives(scope string) string { return In(i18n.Locale()).GwAgentGives(scope) }
 
 // GwAgentGives says " Allowing gives it {scope} access."
 // in the language of msgs.
 //
 // Follows gwAgentWants: what the agent may do if allowed; scope is
-// scopeLineEverything and the like (zh:
-// 可以使用除已屏蔽应用外的所有应用). Shown only in other
-// languages; in English the gateway's own words show.
+// scopeLineEverything and the like. Shown only in other languages; in
+// English the gateway's own words show.
 func (msgs Messages) GwAgentGives(scope string) string {
 	return Catalog.Format(msgs.locale, "gwAgentGives", map[string]any{"scope": scope})
 }
@@ -2878,17 +2944,15 @@ func (msgs Messages) GwFilesMore(count string) string {
 // GwKeyBack says "back"
 // in the language the app shows.
 //
-// The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
-// a whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyBack() string { return In(i18n.Locale()).GwKeyBack() }
 
 // GwKeyBack says "back"
 // in the language of msgs.
 //
-// The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
-// a whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyBack() string {
 	return Catalog.Format(msgs.locale, "gwKeyBack", nil)
 }
@@ -2896,17 +2960,15 @@ func (msgs Messages) GwKeyBack() string {
 // GwKeyDelete says "delete"
 // in the language the app shows.
 //
-// The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyDelete() string { return In(i18n.Locale()).GwKeyDelete() }
 
 // GwKeyDelete says "delete"
 // in the language of msgs.
 //
-// The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyDelete() string {
 	return Catalog.Format(msgs.locale, "gwKeyDelete", nil)
 }
@@ -2914,17 +2976,15 @@ func (msgs Messages) GwKeyDelete() string {
 // GwKeyDown says "dpad down"
 // in the language the app shows.
 //
-// The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyDown() string { return In(i18n.Locale()).GwKeyDown() }
 
 // GwKeyDown says "dpad down"
 // in the language of msgs.
 //
-// The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyDown() string {
 	return Catalog.Format(msgs.locale, "gwKeyDown", nil)
 }
@@ -2932,17 +2992,15 @@ func (msgs Messages) GwKeyDown() string {
 // GwKeyEnter says "enter"
 // in the language the app shows.
 //
-// The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
-// a whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyEnter() string { return In(i18n.Locale()).GwKeyEnter() }
 
 // GwKeyEnter says "enter"
 // in the language of msgs.
 //
-// The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
-// a whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyEnter() string {
 	return Catalog.Format(msgs.locale, "gwKeyEnter", nil)
 }
@@ -2950,17 +3008,15 @@ func (msgs Messages) GwKeyEnter() string {
 // GwKeyEscape says "escape"
 // in the language the app shows.
 //
-// The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyEscape() string { return In(i18n.Locale()).GwKeyEscape() }
 
 // GwKeyEscape says "escape"
 // in the language of msgs.
 //
-// The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyEscape() string {
 	return Catalog.Format(msgs.locale, "gwKeyEscape", nil)
 }
@@ -2969,16 +3025,16 @@ func (msgs Messages) GwKeyEscape() string {
 // in the language the app shows.
 //
 // The phone key 'forward delete', inside gwDidPress, gwDoPress and
-// gwAskPressIn (zh: a whole word with 键). Shown only in other languages;
-// in English the gateway's own words show.
+// gwAskPressIn. Shown only in other languages; in English the gateway's own
+// words show.
 func GwKeyForwardDelete() string { return In(i18n.Locale()).GwKeyForwardDelete() }
 
 // GwKeyForwardDelete says "forward delete"
 // in the language of msgs.
 //
 // The phone key 'forward delete', inside gwDidPress, gwDoPress and
-// gwAskPressIn (zh: a whole word with 键). Shown only in other languages;
-// in English the gateway's own words show.
+// gwAskPressIn. Shown only in other languages; in English the gateway's own
+// words show.
 func (msgs Messages) GwKeyForwardDelete() string {
 	return Catalog.Format(msgs.locale, "gwKeyForwardDelete", nil)
 }
@@ -2986,17 +3042,15 @@ func (msgs Messages) GwKeyForwardDelete() string {
 // GwKeyHome says "home"
 // in the language the app shows.
 //
-// The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
-// a whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyHome() string { return In(i18n.Locale()).GwKeyHome() }
 
 // GwKeyHome says "home"
 // in the language of msgs.
 //
-// The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
-// a whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyHome() string {
 	return Catalog.Format(msgs.locale, "gwKeyHome", nil)
 }
@@ -3004,17 +3058,15 @@ func (msgs Messages) GwKeyHome() string {
 // GwKeyLeft says "dpad left"
 // in the language the app shows.
 //
-// The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyLeft() string { return In(i18n.Locale()).GwKeyLeft() }
 
 // GwKeyLeft says "dpad left"
 // in the language of msgs.
 //
-// The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyLeft() string {
 	return Catalog.Format(msgs.locale, "gwKeyLeft", nil)
 }
@@ -3022,17 +3074,15 @@ func (msgs Messages) GwKeyLeft() string {
 // GwKeyPageDown says "page down"
 // in the language the app shows.
 //
-// The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyPageDown() string { return In(i18n.Locale()).GwKeyPageDown() }
 
 // GwKeyPageDown says "page down"
 // in the language of msgs.
 //
-// The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyPageDown() string {
 	return Catalog.Format(msgs.locale, "gwKeyPageDown", nil)
 }
@@ -3040,17 +3090,15 @@ func (msgs Messages) GwKeyPageDown() string {
 // GwKeyPageUp says "page up"
 // in the language the app shows.
 //
-// The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyPageUp() string { return In(i18n.Locale()).GwKeyPageUp() }
 
 // GwKeyPageUp says "page up"
 // in the language of msgs.
 //
-// The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyPageUp() string {
 	return Catalog.Format(msgs.locale, "gwKeyPageUp", nil)
 }
@@ -3058,17 +3106,15 @@ func (msgs Messages) GwKeyPageUp() string {
 // GwKeyRecents says "recents"
 // in the language the app shows.
 //
-// The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyRecents() string { return In(i18n.Locale()).GwKeyRecents() }
 
 // GwKeyRecents says "recents"
 // in the language of msgs.
 //
-// The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyRecents() string {
 	return Catalog.Format(msgs.locale, "gwKeyRecents", nil)
 }
@@ -3076,17 +3122,17 @@ func (msgs Messages) GwKeyRecents() string {
 // GwKeyRight says "dpad right"
 // in the language the app shows.
 //
-// The phone key 'dpad right', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad right', inside gwDidPress, gwDoPress and
+// gwAskPressIn. Shown only in other languages; in English the gateway's own
+// words show.
 func GwKeyRight() string { return In(i18n.Locale()).GwKeyRight() }
 
 // GwKeyRight says "dpad right"
 // in the language of msgs.
 //
-// The phone key 'dpad right', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad right', inside gwDidPress, gwDoPress and
+// gwAskPressIn. Shown only in other languages; in English the gateway's own
+// words show.
 func (msgs Messages) GwKeyRight() string {
 	return Catalog.Format(msgs.locale, "gwKeyRight", nil)
 }
@@ -3094,17 +3140,15 @@ func (msgs Messages) GwKeyRight() string {
 // GwKeyTab says "tab"
 // in the language the app shows.
 //
-// The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a
-// whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn. Shown
+// only in other languages; in English the gateway's own words show.
 func GwKeyTab() string { return In(i18n.Locale()).GwKeyTab() }
 
 // GwKeyTab says "tab"
 // in the language of msgs.
 //
-// The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a
-// whole word with 键). Shown only in other languages; in English the
-// gateway's own words show.
+// The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn. Shown
+// only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyTab() string {
 	return Catalog.Format(msgs.locale, "gwKeyTab", nil)
 }
@@ -3112,17 +3156,15 @@ func (msgs Messages) GwKeyTab() string {
 // GwKeyUp says "dpad up"
 // in the language the app shows.
 //
-// The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func GwKeyUp() string { return In(i18n.Locale()).GwKeyUp() }
 
 // GwKeyUp says "dpad up"
 // in the language of msgs.
 //
-// The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn
-// (zh: a whole word with 键). Shown only in other languages; in English
-// the gateway's own words show.
+// The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn.
+// Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwKeyUp() string {
 	return Catalog.Format(msgs.locale, "gwKeyUp", nil)
 }
@@ -3958,19 +4000,19 @@ func (msgs Messages) MirrorAgentScreenLabel(agent string, phone string) string {
 // MirrorCallKey says "press {key}"
 // in the language the app shows.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when a key pressed on the mirror cannot reach the
-// phone. key is the phone's name for the key, in English: back, home,
-// enter, tab, delete, escape, dpad_up, page_down…
+// A verb phrase that completes the toast "Couldn't …: <error>" when a key
+// pressed on the mirror cannot reach the phone. key is the phone's name for
+// the key, in English: back, home, enter, tab, delete, escape, dpad_up,
+// page_down…
 func MirrorCallKey(key string) string { return In(i18n.Locale()).MirrorCallKey(key) }
 
 // MirrorCallKey says "press {key}"
 // in the language of msgs.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when a key pressed on the mirror cannot reach the
-// phone. key is the phone's name for the key, in English: back, home,
-// enter, tab, delete, escape, dpad_up, page_down…
+// A verb phrase that completes the toast "Couldn't …: <error>" when a key
+// pressed on the mirror cannot reach the phone. key is the phone's name for
+// the key, in English: back, home, enter, tab, delete, escape, dpad_up,
+// page_down…
 func (msgs Messages) MirrorCallKey(key string) string {
 	return Catalog.Format(msgs.locale, "mirrorCallKey", map[string]any{"key": key})
 }
@@ -3978,17 +4020,15 @@ func (msgs Messages) MirrorCallKey(key string) string {
 // MirrorCallPaste says "paste"
 // in the language the app shows.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when ⌘V on the mirror cannot paste the Mac's
-// clipboard on the phone.
+// A verb phrase that completes the toast "Couldn't …: <error>" when ⌘V
+// on the mirror cannot paste the Mac's clipboard on the phone.
 func MirrorCallPaste() string { return In(i18n.Locale()).MirrorCallPaste() }
 
 // MirrorCallPaste says "paste"
 // in the language of msgs.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when ⌘V on the mirror cannot paste the Mac's
-// clipboard on the phone.
+// A verb phrase that completes the toast "Couldn't …: <error>" when ⌘V
+// on the mirror cannot paste the Mac's clipboard on the phone.
 func (msgs Messages) MirrorCallPaste() string {
 	return Catalog.Format(msgs.locale, "mirrorCallPaste", nil)
 }
@@ -3996,17 +4036,15 @@ func (msgs Messages) MirrorCallPaste() string {
 // MirrorCallTouch says "send the touch"
 // in the language the app shows.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when a click, drag or scroll on the mirror cannot
-// reach the phone.
+// A verb phrase that completes the toast "Couldn't …: <error>" when a
+// click, drag or scroll on the mirror cannot reach the phone.
 func MirrorCallTouch() string { return In(i18n.Locale()).MirrorCallTouch() }
 
 // MirrorCallTouch says "send the touch"
 // in the language of msgs.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when a click, drag or scroll on the mirror cannot
-// reach the phone.
+// A verb phrase that completes the toast "Couldn't …: <error>" when a
+// click, drag or scroll on the mirror cannot reach the phone.
 func (msgs Messages) MirrorCallTouch() string {
 	return Catalog.Format(msgs.locale, "mirrorCallTouch", nil)
 }
@@ -4014,17 +4052,15 @@ func (msgs Messages) MirrorCallTouch() string {
 // MirrorCallType says "type"
 // in the language the app shows.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when text typed on the mirror cannot reach the
-// phone.
+// A verb phrase that completes the toast "Couldn't …: <error>" when text
+// typed on the mirror cannot reach the phone.
 func MirrorCallType() string { return In(i18n.Locale()).MirrorCallType() }
 
 // MirrorCallType says "type"
 // in the language of msgs.
 //
-// A verb phrase that completes the toast "Couldn't …: <error>" (zh:
-// 无法…：<error>) when text typed on the mirror cannot reach the
-// phone.
+// A verb phrase that completes the toast "Couldn't …: <error>" when text
+// typed on the mirror cannot reach the phone.
 func (msgs Messages) MirrorCallType() string {
 	return Catalog.Format(msgs.locale, "mirrorCallType", nil)
 }
@@ -4243,18 +4279,16 @@ func (msgs Messages) NeedsAllowTask() string {
 // in the language the app shows.
 //
 // Item of More options: never ask again for steps like this one. kind says
-// what they are, from the rule that asked (zh 付款, 发送消息,
-// 更改设置, 执行所有操作), or "this kind" (zh 此类操作) when
-// no rule is named.
+// what they are, from the rule that asked, or "this kind" when no rule is
+// named.
 func NeedsAlwaysAllow(kind string) string { return In(i18n.Locale()).NeedsAlwaysAllow(kind) }
 
 // NeedsAlwaysAllow says "Always allow {kind}"
 // in the language of msgs.
 //
 // Item of More options: never ask again for steps like this one. kind says
-// what they are, from the rule that asked (zh 付款, 发送消息,
-// 更改设置, 执行所有操作), or "this kind" (zh 此类操作) when
-// no rule is named.
+// what they are, from the rule that asked, or "this kind" when no rule is
+// named.
 func (msgs Messages) NeedsAlwaysAllow(kind string) string {
 	return Catalog.Format(msgs.locale, "needsAlwaysAllow", map[string]any{"kind": kind})
 }
@@ -4263,9 +4297,8 @@ func (msgs Messages) NeedsAlwaysAllow(kind string) string {
 // in the language the app shows.
 //
 // Item of More options on an approval card: never ask again for steps like
-// this one in this app. kind says what they are, from the rule that asked
-// (zh 付款, 发送消息, 更改设置, 执行所有操作); app is the
-// app's name.
+// this one in this app. kind says what they are, from the rule that asked;
+// app is the app's name.
 func NeedsAlwaysAllowIn(kind string, app string) string {
 	return In(i18n.Locale()).NeedsAlwaysAllowIn(kind, app)
 }
@@ -4274,9 +4307,8 @@ func NeedsAlwaysAllowIn(kind string, app string) string {
 // in the language of msgs.
 //
 // Item of More options on an approval card: never ask again for steps like
-// this one in this app. kind says what they are, from the rule that asked
-// (zh 付款, 发送消息, 更改设置, 执行所有操作); app is the
-// app's name.
+// this one in this app. kind says what they are, from the rule that asked;
+// app is the app's name.
 func (msgs Messages) NeedsAlwaysAllowIn(kind string, app string) string {
 	return Catalog.Format(msgs.locale, "needsAlwaysAllowIn", map[string]any{"kind": kind, "app": app})
 }
@@ -5235,9 +5267,8 @@ func (msgs Messages) PanelAllowedTask() string {
 // in the language the app shows.
 //
 // The floating approval panel's confirmation under Allowed for this task.
-// rule is the name of the rule that asked (zh 付款, 发送消息,
-// 更改设置, 所有操作), or panelActionsLikeThis; app is the app's
-// name, or panelThisApp.
+// rule is the name of the rule that asked, or panelActionsLikeThis; app is
+// the app's name, or panelThisApp.
 func PanelAllowedTaskDetail(rule string, app string) string {
 	return In(i18n.Locale()).PanelAllowedTaskDetail(rule, app)
 }
@@ -5246,9 +5277,8 @@ func PanelAllowedTaskDetail(rule string, app string) string {
 // in the language of msgs.
 //
 // The floating approval panel's confirmation under Allowed for this task.
-// rule is the name of the rule that asked (zh 付款, 发送消息,
-// 更改设置, 所有操作), or panelActionsLikeThis; app is the app's
-// name, or panelThisApp.
+// rule is the name of the rule that asked, or panelActionsLikeThis; app is
+// the app's name, or panelThisApp.
 func (msgs Messages) PanelAllowedTaskDetail(rule string, app string) string {
 	return Catalog.Format(msgs.locale, "panelAllowedTaskDetail", map[string]any{"rule": rule, "app": app})
 }
@@ -5272,8 +5302,8 @@ func (msgs Messages) PanelAlwaysAllowed() string {
 //
 // The floating approval panel's confirmation under Always allowed: Pinky
 // won't ask the person about these steps again. rule is the name of the
-// rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or
-// panelActionsLikeThis; app is the app's name, or panelThisApp.
+// rule that asked, or panelActionsLikeThis; app is the app's name, or
+// panelThisApp.
 func PanelAlwaysAllowedDetail(rule string, app string) string {
 	return In(i18n.Locale()).PanelAlwaysAllowedDetail(rule, app)
 }
@@ -5283,8 +5313,8 @@ func PanelAlwaysAllowedDetail(rule string, app string) string {
 //
 // The floating approval panel's confirmation under Always allowed: Pinky
 // won't ask the person about these steps again. rule is the name of the
-// rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or
-// panelActionsLikeThis; app is the app's name, or panelThisApp.
+// rule that asked, or panelActionsLikeThis; app is the app's name, or
+// panelThisApp.
 func (msgs Messages) PanelAlwaysAllowedDetail(rule string, app string) string {
 	return Catalog.Format(msgs.locale, "panelAlwaysAllowedDetail", map[string]any{"rule": rule, "app": app})
 }
@@ -5375,14 +5405,14 @@ func (msgs Messages) PanelDeniedDetailNote(agent string, note string) string {
 // in the language the app shows.
 //
 // Top right of the floating approval panel: the approval is denied by
-// itself when this time runs out. duration is as "42 s" (zh 42 秒).
+// itself when this time runs out. duration is as "42 s".
 func PanelDeniesIn(duration string) string { return In(i18n.Locale()).PanelDeniesIn(duration) }
 
 // PanelDeniesIn says "Denies in {duration}"
 // in the language of msgs.
 //
 // Top right of the floating approval panel: the approval is denied by
-// itself when this time runs out. duration is as "42 s" (zh 42 秒).
+// itself when this time runs out. duration is as "42 s".
 func (msgs Messages) PanelDeniesIn(duration string) string {
 	return Catalog.Format(msgs.locale, "panelDeniesIn", map[string]any{"duration": duration})
 }
@@ -5410,7 +5440,7 @@ func (msgs Messages) PanelDenyWithNote() string {
 //
 // Top right of the floating approval panel for a handoff (the agent asked
 // the person to do something): the request ends when this time runs out.
-// duration is as "4 min 10 s" (zh 4 分 10 秒).
+// duration is as "4 min 10 s".
 func PanelEndsIn(duration string) string { return In(i18n.Locale()).PanelEndsIn(duration) }
 
 // PanelEndsIn says "Ends in {duration}"
@@ -5418,7 +5448,7 @@ func PanelEndsIn(duration string) string { return In(i18n.Locale()).PanelEndsIn(
 //
 // Top right of the floating approval panel for a handoff (the agent asked
 // the person to do something): the request ends when this time runs out.
-// duration is as "4 min 10 s" (zh 4 分 10 秒).
+// duration is as "4 min 10 s".
 func (msgs Messages) PanelEndsIn(duration string) string {
 	return Catalog.Format(msgs.locale, "panelEndsIn", map[string]any{"duration": duration})
 }
@@ -6008,17 +6038,15 @@ func (msgs Messages) PhonePhoneScreen() string {
 // PhonePressKey says "press {key}"
 // in the language the app shows.
 //
-// What failed, inside the toast "Couldn't press Back: <error>" (zh
-// 无法按返回键：<error>). key is the key's name: phoneKeyBack,
-// phoneKeyHome or phoneKeyRecents.
+// What failed, inside the toast "Couldn't press Back: <error>". key is the
+// key's name: phoneKeyBack, phoneKeyHome or phoneKeyRecents.
 func PhonePressKey(key string) string { return In(i18n.Locale()).PhonePressKey(key) }
 
 // PhonePressKey says "press {key}"
 // in the language of msgs.
 //
-// What failed, inside the toast "Couldn't press Back: <error>" (zh
-// 无法按返回键：<error>). key is the key's name: phoneKeyBack,
-// phoneKeyHome or phoneKeyRecents.
+// What failed, inside the toast "Couldn't press Back: <error>". key is the
+// key's name: phoneKeyBack, phoneKeyHome or phoneKeyRecents.
 func (msgs Messages) PhonePressKey(key string) string {
 	return Catalog.Format(msgs.locale, "phonePressKey", map[string]any{"key": key})
 }
@@ -6157,14 +6185,14 @@ func (msgs Messages) PhoneScreenshotName(phone string, date string, clock string
 // in the language the app shows.
 //
 // Toast after Take screenshot: the file's name on the Desktop
-// (phoneScreenshotName and .png).
+// (phoneScreenshotName and.png).
 func PhoneScreenshotSaved(file string) string { return In(i18n.Locale()).PhoneScreenshotSaved(file) }
 
 // PhoneScreenshotSaved says "Saved {file}"
 // in the language of msgs.
 //
 // Toast after Take screenshot: the file's name on the Desktop
-// (phoneScreenshotName and .png).
+// (phoneScreenshotName and.png).
 func (msgs Messages) PhoneScreenshotSaved(file string) string {
 	return Catalog.Format(msgs.locale, "phoneScreenshotSaved", map[string]any{"file": file})
 }
@@ -6851,6 +6879,426 @@ func (msgs Messages) RecordingWatch() string {
 	return Catalog.Format(msgs.locale, "recordingWatch", nil)
 }
 
+// RemoteAddrInvalid says "Enter an address and port, like 127.0.0.1:7465."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: under the address field, when what
+// was typed is not an address with a port. 127.0.0.1:7465 is the default
+// address; keep it.
+func RemoteAddrInvalid() string { return In(i18n.Locale()).RemoteAddrInvalid() }
+
+// RemoteAddrInvalid says "Enter an address and port, like 127.0.0.1:7465."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: under the address field, when what
+// was typed is not an address with a port. 127.0.0.1:7465 is the default
+// address; keep it.
+func (msgs Messages) RemoteAddrInvalid() string {
+	return Catalog.Format(msgs.locale, "remoteAddrInvalid", nil)
+}
+
+// RemoteAddress says "Address"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the row of the address and port
+// Pinky listens on, and the accessibility label of its field.
+func RemoteAddress() string { return In(i18n.Locale()).RemoteAddress() }
+
+// RemoteAddress says "Address"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the row of the address and port
+// Pinky listens on, and the accessibility label of its field.
+func (msgs Messages) RemoteAddress() string {
+	return Catalog.Format(msgs.locale, "remoteAddress", nil)
+}
+
+// RemoteAddressDesc says "Where Pinky listens. 127.0.0.1 is this computer only."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the line under Address. 127.0.0.1
+// is the loopback address; keep it.
+func RemoteAddressDesc() string { return In(i18n.Locale()).RemoteAddressDesc() }
+
+// RemoteAddressDesc says "Where Pinky listens. 127.0.0.1 is this computer only."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the line under Address. 127.0.0.1
+// is the loopback address; keep it.
+func (msgs Messages) RemoteAddressDesc() string {
+	return Catalog.Format(msgs.locale, "remoteAddressDesc", nil)
+}
+
+// RemoteChangeAddress says "Change the address"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// Change button next to the address.
+func RemoteChangeAddress() string { return In(i18n.Locale()).RemoteChangeAddress() }
+
+// RemoteChangeAddress says "Change the address"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// Change button next to the address.
+func (msgs Messages) RemoteChangeAddress() string {
+	return Catalog.Format(msgs.locale, "remoteChangeAddress", nil)
+}
+
+// RemoteCommandLabel says "Command to add Pinky to Claude Code"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// claude mcp add command shown under Claude Code.
+func RemoteCommandLabel() string { return In(i18n.Locale()).RemoteCommandLabel() }
+
+// RemoteCommandLabel says "Command to add Pinky to Claude Code"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// claude mcp add command shown under Claude Code.
+func (msgs Messages) RemoteCommandLabel() string {
+	return Catalog.Format(msgs.locale, "remoteCommandLabel", nil)
+}
+
+// RemoteCopiedCommand says "Copied the command"
+// in the language the app shows.
+//
+// A toast once the claude mcp add command is copied.
+func RemoteCopiedCommand() string { return In(i18n.Locale()).RemoteCopiedCommand() }
+
+// RemoteCopiedCommand says "Copied the command"
+// in the language of msgs.
+//
+// A toast once the claude mcp add command is copied.
+func (msgs Messages) RemoteCopiedCommand() string {
+	return Catalog.Format(msgs.locale, "remoteCopiedCommand", nil)
+}
+
+// RemoteCopiedToken says "Copied the agent token"
+// in the language the app shows.
+//
+// A toast once the agent token is copied.
+func RemoteCopiedToken() string { return In(i18n.Locale()).RemoteCopiedToken() }
+
+// RemoteCopiedToken says "Copied the agent token"
+// in the language of msgs.
+//
+// A toast once the agent token is copied.
+func (msgs Messages) RemoteCopiedToken() string {
+	return Catalog.Format(msgs.locale, "remoteCopiedToken", nil)
+}
+
+// RemoteCopiedURL says "Copied the url"
+// in the language the app shows.
+//
+// A toast once the remote agents' URL is copied. The English has url in
+// lower case.
+func RemoteCopiedURL() string { return In(i18n.Locale()).RemoteCopiedURL() }
+
+// RemoteCopiedURL says "Copied the url"
+// in the language of msgs.
+//
+// A toast once the remote agents' URL is copied. The English has url in
+// lower case.
+func (msgs Messages) RemoteCopiedURL() string {
+	return Catalog.Format(msgs.locale, "remoteCopiedURL", nil)
+}
+
+// RemoteCopyCommand says "Copy the command"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the claude mcp add command.
+func RemoteCopyCommand() string { return In(i18n.Locale()).RemoteCopyCommand() }
+
+// RemoteCopyCommand says "Copy the command"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the claude mcp add command.
+func (msgs Messages) RemoteCopyCommand() string {
+	return Catalog.Format(msgs.locale, "remoteCopyCommand", nil)
+}
+
+// RemoteCopyToken says "Copy the agent token"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the agent token.
+func RemoteCopyToken() string { return In(i18n.Locale()).RemoteCopyToken() }
+
+// RemoteCopyToken says "Copy the agent token"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the agent token.
+func (msgs Messages) RemoteCopyToken() string {
+	return Catalog.Format(msgs.locale, "remoteCopyToken", nil)
+}
+
+// RemoteCopyURL says "Copy the url"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the URL. The English has url in lower case.
+func RemoteCopyURL() string { return In(i18n.Locale()).RemoteCopyURL() }
+
+// RemoteCopyURL says "Copy the url"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the URL. The English has url in lower case.
+func (msgs Messages) RemoteCopyURL() string {
+	return Catalog.Format(msgs.locale, "remoteCopyURL", nil)
+}
+
+// RemoteHide says "Hide"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the small button that hides the
+// agent token behind dots again.
+func RemoteHide() string { return In(i18n.Locale()).RemoteHide() }
+
+// RemoteHide says "Hide"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the small button that hides the
+// agent token behind dots again.
+func (msgs Messages) RemoteHide() string {
+	return Catalog.Format(msgs.locale, "remoteHide", nil)
+}
+
+// RemoteHideToken says "Hide the agent token"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// Hide button next to the agent token.
+func RemoteHideToken() string { return In(i18n.Locale()).RemoteHideToken() }
+
+// RemoteHideToken says "Hide the agent token"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// Hide button next to the agent token.
+func (msgs Messages) RemoteHideToken() string {
+	return Catalog.Format(msgs.locale, "remoteHideToken", nil)
+}
+
+// RemoteHostInvalid says "Enter an IP address of this computer, like 127.0.0.1, or localhost."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: under the address field, when the
+// host is a name other than localhost. Keep 127.0.0.1 and localhost.
+func RemoteHostInvalid() string { return In(i18n.Locale()).RemoteHostInvalid() }
+
+// RemoteHostInvalid says "Enter an IP address of this computer, like 127.0.0.1, or localhost."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: under the address field, when the
+// host is a name other than localhost. Keep 127.0.0.1 and localhost.
+func (msgs Messages) RemoteHostInvalid() string {
+	return Catalog.Format(msgs.locale, "remoteHostInvalid", nil)
+}
+
+// RemoteIntro says "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the…"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the line under the heading. `pinky
+// mcp` is the command local agents run, kept with its backticks; the agent
+// token is the secret agents present; as above refers to the connection
+// requests above.
+func RemoteIntro() string { return In(i18n.Locale()).RemoteIntro() }
+
+// RemoteIntro says "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the…"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the line under the heading. `pinky
+// mcp` is the command local agents run, kept with its backticks; the agent
+// token is the secret agents present; as above refers to the connection
+// requests above.
+func (msgs Messages) RemoteIntro() string {
+	return Catalog.Format(msgs.locale, "remoteIntro", nil)
+}
+
+// RemoteOthersWarning says "Other computers on your network can reach Pinky at this address. Anyone with the agent token can ask to use your phones."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: a warning under the address when
+// other computers can reach it (0.0.0.0, a LAN address).
+func RemoteOthersWarning() string { return In(i18n.Locale()).RemoteOthersWarning() }
+
+// RemoteOthersWarning says "Other computers on your network can reach Pinky at this address. Anyone with the agent token can ask to use your phones."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: a warning under the address when
+// other computers can reach it (0.0.0.0, a LAN address).
+func (msgs Messages) RemoteOthersWarning() string {
+	return Catalog.Format(msgs.locale, "remoteOthersWarning", nil)
+}
+
+// RemotePortInvalid says "The port is a number from 1 to 65535."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: under the address field, when the
+// port is not a number from 1 to 65535.
+func RemotePortInvalid() string { return In(i18n.Locale()).RemotePortInvalid() }
+
+// RemotePortInvalid says "The port is a number from 1 to 65535."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: under the address field, when the
+// port is not a number from 1 to 65535.
+func (msgs Messages) RemotePortInvalid() string {
+	return Catalog.Format(msgs.locale, "remotePortInvalid", nil)
+}
+
+// RemoteRunHint says "Run this where the agent runs."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: under the heading Claude Code,
+// above the claude mcp add command that adds Pinky to Claude Code: run it
+// on the computer or in the container where the agent runs.
+func RemoteRunHint() string { return In(i18n.Locale()).RemoteRunHint() }
+
+// RemoteRunHint says "Run this where the agent runs."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: under the heading Claude Code,
+// above the claude mcp add command that adds Pinky to Claude Code: run it
+// on the computer or in the container where the agent runs.
+func (msgs Messages) RemoteRunHint() string {
+	return Catalog.Format(msgs.locale, "remoteRunHint", nil)
+}
+
+// RemoteShow says "Show"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the small button that shows the
+// agent token in place of dots.
+func RemoteShow() string { return In(i18n.Locale()).RemoteShow() }
+
+// RemoteShow says "Show"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the small button that shows the
+// agent token in place of dots.
+func (msgs Messages) RemoteShow() string {
+	return Catalog.Format(msgs.locale, "remoteShow", nil)
+}
+
+// RemoteShowToken says "Show the agent token"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// Show button next to the agent token.
+func RemoteShowToken() string { return In(i18n.Locale()).RemoteShowToken() }
+
+// RemoteShowToken says "Show the agent token"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// Show button next to the agent token.
+func (msgs Messages) RemoteShowToken() string {
+	return Catalog.Format(msgs.locale, "remoteShowToken", nil)
+}
+
+// RemoteTitle says "Remote agents"
+// in the language the app shows.
+//
+// Settings › Agents: the heading of the part where agents connect over
+// HTTP, from a container or another computer, and its accessibility label.
+func RemoteTitle() string { return In(i18n.Locale()).RemoteTitle() }
+
+// RemoteTitle says "Remote agents"
+// in the language of msgs.
+//
+// Settings › Agents: the heading of the part where agents connect over
+// HTTP, from a container or another computer, and its accessibility label.
+func (msgs Messages) RemoteTitle() string {
+	return Catalog.Format(msgs.locale, "remoteTitle", nil)
+}
+
+// RemoteToggle says "Let agents connect over HTTP"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the switch that serves MCP over
+// HTTP.
+func RemoteToggle() string { return In(i18n.Locale()).RemoteToggle() }
+
+// RemoteToggle says "Let agents connect over HTTP"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the switch that serves MCP over
+// HTTP.
+func (msgs Messages) RemoteToggle() string {
+	return Catalog.Format(msgs.locale, "remoteToggle", nil)
+}
+
+// RemoteToken says "Agent token"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the row of the agent token, the
+// secret agents send to connect over HTTP.
+func RemoteToken() string { return In(i18n.Locale()).RemoteToken() }
+
+// RemoteToken says "Agent token"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the row of the agent token, the
+// secret agents send to connect over HTTP.
+func (msgs Messages) RemoteToken() string {
+	return Catalog.Format(msgs.locale, "remoteToken", nil)
+}
+
+// RemoteTokenDesc says "Agents send it as their bearer token. Keep it private."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the line under Agent token. A
+// bearer token is the token of HTTP's Authorization header.
+func RemoteTokenDesc() string { return In(i18n.Locale()).RemoteTokenDesc() }
+
+// RemoteTokenDesc says "Agents send it as their bearer token. Keep it private."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the line under Agent token. A
+// bearer token is the token of HTTP's Authorization header.
+func (msgs Messages) RemoteTokenDesc() string {
+	return Catalog.Format(msgs.locale, "remoteTokenDesc", nil)
+}
+
+// RemoteTokenMissing says "This Pinky didn't give the client its agent token."
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the line under Agent token when
+// the running Pinky did not pass the token to its window.
+func RemoteTokenMissing() string { return In(i18n.Locale()).RemoteTokenMissing() }
+
+// RemoteTokenMissing says "This Pinky didn't give the client its agent token."
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the line under Agent token when
+// the running Pinky did not pass the token to its window.
+func (msgs Messages) RemoteTokenMissing() string {
+	return Catalog.Format(msgs.locale, "remoteTokenMissing", nil)
+}
+
+// RemoteURLTitle says "URL"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the row of the URL agents connect
+// to, as http://127.0.0.1:7465/mcp.
+func RemoteURLTitle() string { return In(i18n.Locale()).RemoteURLTitle() }
+
+// RemoteURLTitle says "URL"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the row of the URL agents connect
+// to, as http://127.0.0.1:7465/mcp.
+func (msgs Messages) RemoteURLTitle() string {
+	return Catalog.Format(msgs.locale, "remoteURLTitle", nil)
+}
+
 // ReplayMenuItem says "Step-by-step replay"
 // in the language the app shows.
 //
@@ -7146,15 +7594,13 @@ func (msgs Messages) RuleActionOther(rule string) string {
 // RuleActionPayments says "payments"
 // in the language the app shows.
 //
-// What the Payments rule covers, inside "Always allow payments in Dinely"
-// (zh: 始终允许在 Dinely 中付款).
+// What the Payments rule covers, inside "Always allow payments in Dinely".
 func RuleActionPayments() string { return In(i18n.Locale()).RuleActionPayments() }
 
 // RuleActionPayments says "payments"
 // in the language of msgs.
 //
-// What the Payments rule covers, inside "Always allow payments in Dinely"
-// (zh: 始终允许在 Dinely 中付款).
+// What the Payments rule covers, inside "Always allow payments in Dinely".
 func (msgs Messages) RuleActionPayments() string {
 	return Catalog.Format(msgs.locale, "ruleActionPayments", nil)
 }
@@ -7558,7 +8004,7 @@ func (msgs Messages) ScopeWatchOnly() string {
 // SentencePair says "{first} {second}"
 // in the language the app shows.
 //
-// Joins two sentences in one line (zh: no space after 。).
+// Joins two sentences in one line.
 func SentencePair(first string, second string) string {
 	return In(i18n.Locale()).SentencePair(first, second)
 }
@@ -7566,9 +8012,1677 @@ func SentencePair(first string, second string) string {
 // SentencePair says "{first} {second}"
 // in the language of msgs.
 //
-// Joins two sentences in one line (zh: no space after 。).
+// Joins two sentences in one line.
 func (msgs Messages) SentencePair(first string, second string) string {
 	return Catalog.Format(msgs.locale, "sentencePair", map[string]any{"first": first, "second": second})
+}
+
+// SettingsAdvancedBackends says "Backends"
+// in the language the app shows.
+//
+// Settings › Advanced, in Developer mode: the row that lists each phone's
+// driver backend, as Pixel 9: scrcpy.
+func SettingsAdvancedBackends() string { return In(i18n.Locale()).SettingsAdvancedBackends() }
+
+// SettingsAdvancedBackends says "Backends"
+// in the language of msgs.
+//
+// Settings › Advanced, in Developer mode: the row that lists each phone's
+// driver backend, as Pixel 9: scrcpy.
+func (msgs Messages) SettingsAdvancedBackends() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedBackends", nil)
+}
+
+// SettingsAdvancedConnHTTP says "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}"
+// in the language the app shows.
+//
+// Settings › Advanced, in Developer mode: the line under Agent connection
+// while remote agents are on: MCP over stdio, and over Streamable HTTP at
+// endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.
+func SettingsAdvancedConnHTTP(endpoint string) string {
+	return In(i18n.Locale()).SettingsAdvancedConnHTTP(endpoint)
+}
+
+// SettingsAdvancedConnHTTP says "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}"
+// in the language of msgs.
+//
+// Settings › Advanced, in Developer mode: the line under Agent connection
+// while remote agents are on: MCP over stdio, and over Streamable HTTP at
+// endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.
+func (msgs Messages) SettingsAdvancedConnHTTP(endpoint string) string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedConnHTTP", map[string]any{"endpoint": endpoint})
+}
+
+// SettingsAdvancedConnStdio says "MCP over stdio: pinky mcp"
+// in the language the app shows.
+//
+// Settings › Advanced, in Developer mode: the line under Agent
+// connection: agents run the command pinky mcp, which speaks MCP over
+// standard input and output. Keep MCP, stdio and pinky mcp.
+func SettingsAdvancedConnStdio() string { return In(i18n.Locale()).SettingsAdvancedConnStdio() }
+
+// SettingsAdvancedConnStdio says "MCP over stdio: pinky mcp"
+// in the language of msgs.
+//
+// Settings › Advanced, in Developer mode: the line under Agent
+// connection: agents run the command pinky mcp, which speaks MCP over
+// standard input and output. Keep MCP, stdio and pinky mcp.
+func (msgs Messages) SettingsAdvancedConnStdio() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedConnStdio", nil)
+}
+
+// SettingsAdvancedConnection says "Agent connection"
+// in the language the app shows.
+//
+// Settings › Advanced, in Developer mode: the row of how agents reach
+// Pinky.
+func SettingsAdvancedConnection() string { return In(i18n.Locale()).SettingsAdvancedConnection() }
+
+// SettingsAdvancedConnection says "Agent connection"
+// in the language of msgs.
+//
+// Settings › Advanced, in Developer mode: the row of how agents reach
+// Pinky.
+func (msgs Messages) SettingsAdvancedConnection() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedConnection", nil)
+}
+
+// SettingsAdvancedDevMode says "Developer mode"
+// in the language the app shows.
+//
+// Settings › Advanced: the switch that shows developers' details in the
+// app.
+func SettingsAdvancedDevMode() string { return In(i18n.Locale()).SettingsAdvancedDevMode() }
+
+// SettingsAdvancedDevMode says "Developer mode"
+// in the language of msgs.
+//
+// Settings › Advanced: the switch that shows developers' details in the
+// app.
+func (msgs Messages) SettingsAdvancedDevMode() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedDevMode", nil)
+}
+
+// SettingsAdvancedDevModeDesc says "Shows tool calls, element lists, timings and backends. A Details switch appears on the task card."
+// in the language the app shows.
+//
+// Settings › Advanced: the line under Developer mode. Details is the
+// label of a switch on the task card that shows the tool calls.
+func SettingsAdvancedDevModeDesc() string { return In(i18n.Locale()).SettingsAdvancedDevModeDesc() }
+
+// SettingsAdvancedDevModeDesc says "Shows tool calls, element lists, timings and backends. A Details switch appears on the task card."
+// in the language of msgs.
+//
+// Settings › Advanced: the line under Developer mode. Details is the
+// label of a switch on the task card that shows the tool calls.
+func (msgs Messages) SettingsAdvancedDevModeDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedDevModeDesc", nil)
+}
+
+// SettingsAdvancedEditRules says "Edit rules file"
+// in the language the app shows.
+//
+// Settings › Advanced: the button that opens the rules file in the
+// system's editor.
+func SettingsAdvancedEditRules() string { return In(i18n.Locale()).SettingsAdvancedEditRules() }
+
+// SettingsAdvancedEditRules says "Edit rules file"
+// in the language of msgs.
+//
+// Settings › Advanced: the button that opens the rules file in the
+// system's editor.
+func (msgs Messages) SettingsAdvancedEditRules() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedEditRules", nil)
+}
+
+// SettingsAdvancedIntro says "For people who build with Pinky."
+// in the language the app shows.
+//
+// Settings › Advanced: the line under the page title.
+func SettingsAdvancedIntro() string { return In(i18n.Locale()).SettingsAdvancedIntro() }
+
+// SettingsAdvancedIntro says "For people who build with Pinky."
+// in the language of msgs.
+//
+// Settings › Advanced: the line under the page title.
+func (msgs Messages) SettingsAdvancedIntro() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedIntro", nil)
+}
+
+// SettingsAdvancedNoPhones says "No phones connected."
+// in the language the app shows.
+//
+// Settings › Advanced, in Developer mode: the line under Backends when no
+// phone is connected.
+func SettingsAdvancedNoPhones() string { return In(i18n.Locale()).SettingsAdvancedNoPhones() }
+
+// SettingsAdvancedNoPhones says "No phones connected."
+// in the language of msgs.
+//
+// Settings › Advanced, in Developer mode: the line under Backends when no
+// phone is connected.
+func (msgs Messages) SettingsAdvancedNoPhones() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedNoPhones", nil)
+}
+
+// SettingsAdvancedNoRulesFile says "The gateway did not say where its rules file is"
+// in the language the app shows.
+//
+// Settings › Advanced: the tooltip of the disabled Edit rules file
+// button.
+func SettingsAdvancedNoRulesFile() string { return In(i18n.Locale()).SettingsAdvancedNoRulesFile() }
+
+// SettingsAdvancedNoRulesFile says "The gateway did not say where its rules file is"
+// in the language of msgs.
+//
+// Settings › Advanced: the tooltip of the disabled Edit rules file
+// button.
+func (msgs Messages) SettingsAdvancedNoRulesFile() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedNoRulesFile", nil)
+}
+
+// SettingsAdvancedRulesFile says "Rules file"
+// in the language the app shows.
+//
+// Settings › Advanced: the row of the rules file, the text file of the
+// rules behind Settings › Safety.
+func SettingsAdvancedRulesFile() string { return In(i18n.Locale()).SettingsAdvancedRulesFile() }
+
+// SettingsAdvancedRulesFile says "Rules file"
+// in the language of msgs.
+//
+// Settings › Advanced: the row of the rules file, the text file of the
+// rules behind Settings › Safety.
+func (msgs Messages) SettingsAdvancedRulesFile() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedRulesFile", nil)
+}
+
+// SettingsAdvancedRulesFileDesc says "The rules behind Safety, as text"
+// in the language the app shows.
+//
+// Settings › Advanced: the line under Rules file. Safety is the Settings
+// section.
+func SettingsAdvancedRulesFileDesc() string { return In(i18n.Locale()).SettingsAdvancedRulesFileDesc() }
+
+// SettingsAdvancedRulesFileDesc says "The rules behind Safety, as text"
+// in the language of msgs.
+//
+// Settings › Advanced: the line under Rules file. Safety is the Settings
+// section.
+func (msgs Messages) SettingsAdvancedRulesFileDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedRulesFileDesc", nil)
+}
+
+// SettingsAdvancedRulesOpenFailed says "Couldn't open the rules file: {reason}"
+// in the language the app shows.
+//
+// A toast when the rules file could not be opened. reason is the error, in
+// English.
+func SettingsAdvancedRulesOpenFailed(reason string) string {
+	return In(i18n.Locale()).SettingsAdvancedRulesOpenFailed(reason)
+}
+
+// SettingsAdvancedRulesOpenFailed says "Couldn't open the rules file: {reason}"
+// in the language of msgs.
+//
+// A toast when the rules file could not be opened. reason is the error, in
+// English.
+func (msgs Messages) SettingsAdvancedRulesOpenFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedRulesOpenFailed", map[string]any{"reason": reason})
+}
+
+// SettingsAdvancedVideo says "Video"
+// in the language the app shows.
+//
+// Settings › Advanced, in Developer mode: the row of the video decoder in
+// use.
+func SettingsAdvancedVideo() string { return In(i18n.Locale()).SettingsAdvancedVideo() }
+
+// SettingsAdvancedVideo says "Video"
+// in the language of msgs.
+//
+// Settings › Advanced, in Developer mode: the row of the video decoder in
+// use.
+func (msgs Messages) SettingsAdvancedVideo() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedVideo", nil)
+}
+
+// SettingsAgentsAllowed says "Allowed"
+// in the language the app shows.
+//
+// Settings › Agents: the state at the end of an agent's row, next to a
+// gray dot: allowed, and no task of it runs.
+func SettingsAgentsAllowed() string { return In(i18n.Locale()).SettingsAgentsAllowed() }
+
+// SettingsAgentsAllowed says "Allowed"
+// in the language of msgs.
+//
+// Settings › Agents: the state at the end of an agent's row, next to a
+// gray dot: allowed, and no task of it runs.
+func (msgs Messages) SettingsAgentsAllowed() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAllowed", nil)
+}
+
+// SettingsAgentsApprove says "approve the agent"
+// in the language the app shows.
+//
+// Completes "Couldn't …: <error>" in a toast when allowing an agent's
+// first connection fails: a verb phrase.
+func SettingsAgentsApprove() string { return In(i18n.Locale()).SettingsAgentsApprove() }
+
+// SettingsAgentsApprove says "approve the agent"
+// in the language of msgs.
+//
+// Completes "Couldn't …: <error>" in a toast when allowing an agent's
+// first connection fails: a verb phrase.
+func (msgs Messages) SettingsAgentsApprove() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsApprove", nil)
+}
+
+// SettingsAgentsApps says "Apps"
+// in the language the app shows.
+//
+// The accessibility label of the field of the apps an agent may use, under
+// the select of what it may do (Settings › Agents, and a first-connection
+// card).
+func SettingsAgentsApps() string { return In(i18n.Locale()).SettingsAgentsApps() }
+
+// SettingsAgentsApps says "Apps"
+// in the language of msgs.
+//
+// The accessibility label of the field of the apps an agent may use, under
+// the select of what it may do (Settings › Agents, and a first-connection
+// card).
+func (msgs Messages) SettingsAgentsApps() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsApps", nil)
+}
+
+// SettingsAgentsAppsPlaceholder says "Apps, separated by commas: Dinely, Chatter"
+// in the language the app shows.
+//
+// The placeholder of the field of the apps an agent may use. Dinely and
+// Chatter are example app names; keep them.
+func SettingsAgentsAppsPlaceholder() string { return In(i18n.Locale()).SettingsAgentsAppsPlaceholder() }
+
+// SettingsAgentsAppsPlaceholder says "Apps, separated by commas: Dinely, Chatter"
+// in the language of msgs.
+//
+// The placeholder of the field of the apps an agent may use. Dinely and
+// Chatter are example app names; keep them.
+func (msgs Messages) SettingsAgentsAppsPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsAppsPlaceholder", nil)
+}
+
+// SettingsAgentsChangeLabel says "Change what {agent} may do"
+// in the language the app shows.
+//
+// Settings › Agents: the accessibility label of the Change button of an
+// agent's row, which opens the select of what it may do.
+func SettingsAgentsChangeLabel(agent string) string {
+	return In(i18n.Locale()).SettingsAgentsChangeLabel(agent)
+}
+
+// SettingsAgentsChangeLabel says "Change what {agent} may do"
+// in the language of msgs.
+//
+// Settings › Agents: the accessibility label of the Change button of an
+// agent's row, which opens the select of what it may do.
+func (msgs Messages) SettingsAgentsChangeLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "settingsAgentsChangeLabel", map[string]any{"agent": agent})
+}
+
+// SettingsAgentsIntro says "Agents connect to Pinky on this computer. Each one only gets what you allow."
+// in the language the app shows.
+//
+// Settings › Agents: the line under the page title.
+func SettingsAgentsIntro() string { return In(i18n.Locale()).SettingsAgentsIntro() }
+
+// SettingsAgentsIntro says "Agents connect to Pinky on this computer. Each one only gets what you allow."
+// in the language of msgs.
+//
+// Settings › Agents: the line under the page title.
+func (msgs Messages) SettingsAgentsIntro() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsIntro", nil)
+}
+
+// SettingsAgentsList says "Connected agents"
+// in the language the app shows.
+//
+// Settings › Agents: the accessibility label of the list of agents.
+func SettingsAgentsList() string { return In(i18n.Locale()).SettingsAgentsList() }
+
+// SettingsAgentsList says "Connected agents"
+// in the language of msgs.
+//
+// Settings › Agents: the accessibility label of the list of agents.
+func (msgs Messages) SettingsAgentsList() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsList", nil)
+}
+
+// SettingsAgentsNone says "No agent has connected yet. Point an agent at `pinky mcp` to start."
+// in the language the app shows.
+//
+// Settings › Agents: in place of the list while no agent has connected.
+// `pinky mcp` is the command agents run to reach Pinky; keep it with its
+// backticks.
+func SettingsAgentsNone() string { return In(i18n.Locale()).SettingsAgentsNone() }
+
+// SettingsAgentsNone says "No agent has connected yet. Point an agent at `pinky mcp` to start."
+// in the language of msgs.
+//
+// Settings › Agents: in place of the list while no agent has connected.
+// `pinky mcp` is the command agents run to reach Pinky; keep it with its
+// backticks.
+func (msgs Messages) SettingsAgentsNone() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsNone", nil)
+}
+
+// SettingsAgentsNotAllowed says "Not allowed yet"
+// in the language the app shows.
+//
+// Settings › Agents: an agent's second line while its first connection
+// waits for the person.
+func SettingsAgentsNotAllowed() string { return In(i18n.Locale()).SettingsAgentsNotAllowed() }
+
+// SettingsAgentsNotAllowed says "Not allowed yet"
+// in the language of msgs.
+//
+// Settings › Agents: an agent's second line while its first connection
+// waits for the person.
+func (msgs Messages) SettingsAgentsNotAllowed() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsNotAllowed", nil)
+}
+
+// SettingsAgentsRequest says "Connection request"
+// in the language the app shows.
+//
+// Settings › Agents: the accessibility label of the card of an agent's
+// first connection, which waits for the person to allow it.
+func SettingsAgentsRequest() string { return In(i18n.Locale()).SettingsAgentsRequest() }
+
+// SettingsAgentsRequest says "Connection request"
+// in the language of msgs.
+//
+// Settings › Agents: the accessibility label of the card of an agent's
+// first connection, which waits for the person to allow it.
+func (msgs Messages) SettingsAgentsRequest() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsRequest", nil)
+}
+
+// SettingsAgentsScopeLabel says "What {agent} may do"
+// in the language the app shows.
+//
+// Settings › Agents: the accessibility label of the select of what an
+// agent may do (All apps except blocked ones, Only the apps I choose…),
+// under its row.
+func SettingsAgentsScopeLabel(agent string) string {
+	return In(i18n.Locale()).SettingsAgentsScopeLabel(agent)
+}
+
+// SettingsAgentsScopeLabel says "What {agent} may do"
+// in the language of msgs.
+//
+// Settings › Agents: the accessibility label of the select of what an
+// agent may do (All apps except blocked ones, Only the apps I choose…),
+// under its row.
+func (msgs Messages) SettingsAgentsScopeLabel(agent string) string {
+	return Catalog.Format(msgs.locale, "settingsAgentsScopeLabel", map[string]any{"agent": agent})
+}
+
+// SettingsAgentsUnlisted says "This gateway does not list its agents; these are the ones seen in tasks."
+// in the language the app shows.
+//
+// Settings › Agents: a note under the list when the gateway cannot list
+// its agents, so the list shows the agents of the tasks the app saw.
+func SettingsAgentsUnlisted() string { return In(i18n.Locale()).SettingsAgentsUnlisted() }
+
+// SettingsAgentsUnlisted says "This gateway does not list its agents; these are the ones seen in tasks."
+// in the language of msgs.
+//
+// Settings › Agents: a note under the list when the gateway cannot list
+// its agents, so the list shows the agents of the tasks the app saw.
+func (msgs Messages) SettingsAgentsUnlisted() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsUnlisted", nil)
+}
+
+// SettingsAgentsViaMCP says "Connected through MCP"
+// in the language the app shows.
+//
+// Settings › Agents: an agent's second line when the gateway does not say
+// what it may do.
+func SettingsAgentsViaMCP() string { return In(i18n.Locale()).SettingsAgentsViaMCP() }
+
+// SettingsAgentsViaMCP says "Connected through MCP"
+// in the language of msgs.
+//
+// Settings › Agents: an agent's second line when the gateway does not say
+// what it may do.
+func (msgs Messages) SettingsAgentsViaMCP() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsViaMCP", nil)
+}
+
+// SettingsAgentsWaiting says "Waiting for you"
+// in the language the app shows.
+//
+// Settings › Agents: the state at the end of an agent's row, next to an
+// amber dot: its first connection waits for the person.
+func SettingsAgentsWaiting() string { return In(i18n.Locale()).SettingsAgentsWaiting() }
+
+// SettingsAgentsWaiting says "Waiting for you"
+// in the language of msgs.
+//
+// Settings › Agents: the state at the end of an agent's row, next to an
+// amber dot: its first connection waits for the person.
+func (msgs Messages) SettingsAgentsWaiting() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsWaiting", nil)
+}
+
+// SettingsAgentsWorking says "Working"
+// in the language the app shows.
+//
+// Settings › Agents: the state at the end of an agent's row, next to a
+// green dot: one of its tasks is running.
+func SettingsAgentsWorking() string { return In(i18n.Locale()).SettingsAgentsWorking() }
+
+// SettingsAgentsWorking says "Working"
+// in the language of msgs.
+//
+// Settings › Agents: the state at the end of an agent's row, next to a
+// green dot: one of its tasks is running.
+func (msgs Messages) SettingsAgentsWorking() string {
+	return Catalog.Format(msgs.locale, "settingsAgentsWorking", nil)
+}
+
+// SettingsCancel says "Cancel"
+// in the language the app shows.
+//
+// Settings: a button that closes without changing anything: the remote
+// agents' address editor, and the alert of Delete all activity.
+func SettingsCancel() string { return In(i18n.Locale()).SettingsCancel() }
+
+// SettingsCancel says "Cancel"
+// in the language of msgs.
+//
+// Settings: a button that closes without changing anything: the remote
+// agents' address editor, and the alert of Delete all activity.
+func (msgs Messages) SettingsCancel() string {
+	return Catalog.Format(msgs.locale, "settingsCancel", nil)
+}
+
+// SettingsChange says "Change"
+// in the language the app shows.
+//
+// Settings: a button that opens an editor: of what an agent may do
+// (Settings › Agents), or of the remote agents' address.
+func SettingsChange() string { return In(i18n.Locale()).SettingsChange() }
+
+// SettingsChange says "Change"
+// in the language of msgs.
+//
+// Settings: a button that opens an editor: of what an agent may do
+// (Settings › Agents), or of the remote agents' address.
+func (msgs Messages) SettingsChange() string {
+	return Catalog.Format(msgs.locale, "settingsChange", nil)
+}
+
+// SettingsClose says "Close"
+// in the language the app shows.
+//
+// Settings › Agents: replaces Change while the editor of what an agent
+// may do is open; closes it without saving.
+func SettingsClose() string { return In(i18n.Locale()).SettingsClose() }
+
+// SettingsClose says "Close"
+// in the language of msgs.
+//
+// Settings › Agents: replaces Change while the editor of what an agent
+// may do is open; closes it without saving.
+func (msgs Messages) SettingsClose() string {
+	return Catalog.Format(msgs.locale, "settingsClose", nil)
+}
+
+// SettingsLanguage says "Language"
+// in the language the app shows.
+//
+// Settings › Advanced: the row and select that choose the language of
+// Pinky's windows and menus.
+func SettingsLanguage() string { return In(i18n.Locale()).SettingsLanguage() }
+
+// SettingsLanguage says "Language"
+// in the language of msgs.
+//
+// Settings › Advanced: the row and select that choose the language of
+// Pinky's windows and menus.
+func (msgs Messages) SettingsLanguage() string {
+	return Catalog.Format(msgs.locale, "settingsLanguage", nil)
+}
+
+// SettingsLanguageDesc says "Pinky's windows and menus. System follows your computer's preferred languages."
+// in the language the app shows.
+//
+// Settings › Advanced › Language: what the setting changes, and what
+// its first choice does.
+func SettingsLanguageDesc() string { return In(i18n.Locale()).SettingsLanguageDesc() }
+
+// SettingsLanguageDesc says "Pinky's windows and menus. System follows your computer's preferred languages."
+// in the language of msgs.
+//
+// Settings › Advanced › Language: what the setting changes, and what
+// its first choice does.
+func (msgs Messages) SettingsLanguageDesc() string {
+	return Catalog.Format(msgs.locale, "settingsLanguageDesc", nil)
+}
+
+// SettingsLanguageSystem says "System"
+// in the language the app shows.
+//
+// Settings › Advanced › Language: the first choice, which follows the
+// computer's preferred languages. The other choices name each language in
+// itself (English, Simplified Chinese).
+func SettingsLanguageSystem() string { return In(i18n.Locale()).SettingsLanguageSystem() }
+
+// SettingsLanguageSystem says "System"
+// in the language of msgs.
+//
+// Settings › Advanced › Language: the first choice, which follows the
+// computer's preferred languages. The other choices name each language in
+// itself (English, Simplified Chinese).
+func (msgs Messages) SettingsLanguageSystem() string {
+	return Catalog.Format(msgs.locale, "settingsLanguageSystem", nil)
+}
+
+// SettingsNeedsYou says "Needs you"
+// in the language the app shows.
+//
+// Settings › Agents: the eyebrow of a card that asks the person to allow
+// an agent's first connection, and the accessibility label of the amber dot
+// on the Agents tab while one waits.
+func SettingsNeedsYou() string { return In(i18n.Locale()).SettingsNeedsYou() }
+
+// SettingsNeedsYou says "Needs you"
+// in the language of msgs.
+//
+// Settings › Agents: the eyebrow of a card that asks the person to allow
+// an agent's first connection, and the accessibility label of the amber dot
+// on the Agents tab while one waits.
+func (msgs Messages) SettingsNeedsYou() string {
+	return Catalog.Format(msgs.locale, "settingsNeedsYou", nil)
+}
+
+// SettingsPageTitle says "Settings"
+// in the language the app shows.
+//
+// The Settings page's title, in its header.
+func SettingsPageTitle() string { return In(i18n.Locale()).SettingsPageTitle() }
+
+// SettingsPageTitle says "Settings"
+// in the language of msgs.
+//
+// The Settings page's title, in its header.
+func (msgs Messages) SettingsPageTitle() string {
+	return Catalog.Format(msgs.locale, "settingsPageTitle", nil)
+}
+
+// SettingsPhonesAdd says "Add phone"
+// in the language the app shows.
+//
+// Settings › Phones: the button under the list that opens Add phone.
+func SettingsPhonesAdd() string { return In(i18n.Locale()).SettingsPhonesAdd() }
+
+// SettingsPhonesAdd says "Add phone"
+// in the language of msgs.
+//
+// Settings › Phones: the button under the list that opens Add phone.
+func (msgs Messages) SettingsPhonesAdd() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesAdd", nil)
+}
+
+// SettingsPhonesConnected says "Connected"
+// in the language the app shows.
+//
+// Settings › Phones: the state at the end of a phone's row, next to a
+// green dot: online and ready.
+func SettingsPhonesConnected() string { return In(i18n.Locale()).SettingsPhonesConnected() }
+
+// SettingsPhonesConnected says "Connected"
+// in the language of msgs.
+//
+// Settings › Phones: the state at the end of a phone's row, next to a
+// green dot: online and ready.
+func (msgs Messages) SettingsPhonesConnected() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesConnected", nil)
+}
+
+// SettingsPhonesIntro says "Phones this computer can reach."
+// in the language the app shows.
+//
+// Settings › Phones: the line under the page title.
+func SettingsPhonesIntro() string { return In(i18n.Locale()).SettingsPhonesIntro() }
+
+// SettingsPhonesIntro says "Phones this computer can reach."
+// in the language of msgs.
+//
+// Settings › Phones: the line under the page title.
+func (msgs Messages) SettingsPhonesIntro() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesIntro", nil)
+}
+
+// SettingsPhonesNeedsSetup says "Needs setup"
+// in the language the app shows.
+//
+// Settings › Phones: the state at the end of a phone's row, next to an
+// amber dot: plugged in but not ready yet (USB debugging off, not
+// trusted…).
+func SettingsPhonesNeedsSetup() string { return In(i18n.Locale()).SettingsPhonesNeedsSetup() }
+
+// SettingsPhonesNeedsSetup says "Needs setup"
+// in the language of msgs.
+//
+// Settings › Phones: the state at the end of a phone's row, next to an
+// amber dot: plugged in but not ready yet (USB debugging off, not
+// trusted…).
+func (msgs Messages) SettingsPhonesNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesNeedsSetup", nil)
+}
+
+// SettingsPhonesNone says "No phones yet."
+// in the language the app shows.
+//
+// Settings › Phones: in place of the list while no phone is known.
+func SettingsPhonesNone() string { return In(i18n.Locale()).SettingsPhonesNone() }
+
+// SettingsPhonesNone says "No phones yet."
+// in the language of msgs.
+//
+// Settings › Phones: in place of the list while no phone is known.
+func (msgs Messages) SettingsPhonesNone() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesNone", nil)
+}
+
+// SettingsPhonesOffline says "Offline"
+// in the language the app shows.
+//
+// Settings › Phones: the state at the end of a phone's row, next to a
+// hollow dot: not reachable.
+func SettingsPhonesOffline() string { return In(i18n.Locale()).SettingsPhonesOffline() }
+
+// SettingsPhonesOffline says "Offline"
+// in the language of msgs.
+//
+// Settings › Phones: the state at the end of a phone's row, next to a
+// hollow dot: not reachable.
+func (msgs Messages) SettingsPhonesOffline() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesOffline", nil)
+}
+
+// SettingsPrivacyCannotDelete says "This gateway cannot delete its history"
+// in the language the app shows.
+//
+// Settings › Privacy: the tooltip of the disabled Delete… button when
+// the gateway cannot delete its history.
+func SettingsPrivacyCannotDelete() string { return In(i18n.Locale()).SettingsPrivacyCannotDelete() }
+
+// SettingsPrivacyCannotDelete says "This gateway cannot delete its history"
+// in the language of msgs.
+//
+// Settings › Privacy: the tooltip of the disabled Delete… button when
+// the gateway cannot delete its history.
+func (msgs Messages) SettingsPrivacyCannotDelete() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyCannotDelete", nil)
+}
+
+// SettingsPrivacyDeleteAll says "Delete all activity"
+// in the language the app shows.
+//
+// Settings › Privacy: the row whose button deletes every finished task.
+func SettingsPrivacyDeleteAll() string { return In(i18n.Locale()).SettingsPrivacyDeleteAll() }
+
+// SettingsPrivacyDeleteAll says "Delete all activity"
+// in the language of msgs.
+//
+// Settings › Privacy: the row whose button deletes every finished task.
+func (msgs Messages) SettingsPrivacyDeleteAll() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleteAll", nil)
+}
+
+// SettingsPrivacyDeleteAllDesc says "Removes every task, step and recording"
+// in the language the app shows.
+//
+// Settings › Privacy: the line under Delete all activity.
+func SettingsPrivacyDeleteAllDesc() string { return In(i18n.Locale()).SettingsPrivacyDeleteAllDesc() }
+
+// SettingsPrivacyDeleteAllDesc says "Removes every task, step and recording"
+// in the language of msgs.
+//
+// Settings › Privacy: the line under Delete all activity.
+func (msgs Messages) SettingsPrivacyDeleteAllDesc() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleteAllDesc", nil)
+}
+
+// SettingsPrivacyDeleteButton says "Delete…"
+// in the language the app shows.
+//
+// Settings › Privacy: the button that asks to confirm, then deletes all
+// activity.
+func SettingsPrivacyDeleteButton() string { return In(i18n.Locale()).SettingsPrivacyDeleteButton() }
+
+// SettingsPrivacyDeleteButton says "Delete…"
+// in the language of msgs.
+//
+// Settings › Privacy: the button that asks to confirm, then deletes all
+// activity.
+func (msgs Messages) SettingsPrivacyDeleteButton() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleteButton", nil)
+}
+
+// SettingsPrivacyDeleteConfirm says "Delete"
+// in the language the app shows.
+//
+// Settings › Privacy: the alert's button that deletes all activity.
+func SettingsPrivacyDeleteConfirm() string { return In(i18n.Locale()).SettingsPrivacyDeleteConfirm() }
+
+// SettingsPrivacyDeleteConfirm says "Delete"
+// in the language of msgs.
+//
+// Settings › Privacy: the alert's button that deletes all activity.
+func (msgs Messages) SettingsPrivacyDeleteConfirm() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleteConfirm", nil)
+}
+
+// SettingsPrivacyDeleteFailed says "Couldn't delete the activity: {reason}"
+// in the language the app shows.
+//
+// A toast when deleting all activity failed. reason is the error, in
+// English.
+func SettingsPrivacyDeleteFailed(reason string) string {
+	return In(i18n.Locale()).SettingsPrivacyDeleteFailed(reason)
+}
+
+// SettingsPrivacyDeleteFailed says "Couldn't delete the activity: {reason}"
+// in the language of msgs.
+//
+// A toast when deleting all activity failed. reason is the error, in
+// English.
+func (msgs Messages) SettingsPrivacyDeleteFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleteFailed", map[string]any{"reason": reason})
+}
+
+// SettingsPrivacyDeleteMessage says "Every finished task, its steps, approvals and screenshots are removed from this computer. Running tasks go on."
+// in the language the app shows.
+//
+// Settings › Privacy: the message of the alert that confirms deleting all
+// activity.
+func SettingsPrivacyDeleteMessage() string { return In(i18n.Locale()).SettingsPrivacyDeleteMessage() }
+
+// SettingsPrivacyDeleteMessage says "Every finished task, its steps, approvals and screenshots are removed from this computer. Running tasks go on."
+// in the language of msgs.
+//
+// Settings › Privacy: the message of the alert that confirms deleting all
+// activity.
+func (msgs Messages) SettingsPrivacyDeleteMessage() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleteMessage", nil)
+}
+
+// SettingsPrivacyDeleteTitle says "Delete all activity?"
+// in the language the app shows.
+//
+// Settings › Privacy: the title of the alert that confirms deleting all
+// activity.
+func SettingsPrivacyDeleteTitle() string { return In(i18n.Locale()).SettingsPrivacyDeleteTitle() }
+
+// SettingsPrivacyDeleteTitle says "Delete all activity?"
+// in the language of msgs.
+//
+// Settings › Privacy: the title of the alert that confirms deleting all
+// activity.
+func (msgs Messages) SettingsPrivacyDeleteTitle() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleteTitle", nil)
+}
+
+// SettingsPrivacyDeleted says "Deleted all activity"
+// in the language the app shows.
+//
+// A toast once all activity is deleted.
+func SettingsPrivacyDeleted() string { return In(i18n.Locale()).SettingsPrivacyDeleted() }
+
+// SettingsPrivacyDeleted says "Deleted all activity"
+// in the language of msgs.
+//
+// A toast once all activity is deleted.
+func (msgs Messages) SettingsPrivacyDeleted() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyDeleted", nil)
+}
+
+// SettingsPrivacyIntro says "Activity and recordings stay on this computer."
+// in the language the app shows.
+//
+// Settings › Privacy: the line under the page title. Activity is the page
+// of finished tasks.
+func SettingsPrivacyIntro() string { return In(i18n.Locale()).SettingsPrivacyIntro() }
+
+// SettingsPrivacyIntro says "Activity and recordings stay on this computer."
+// in the language of msgs.
+//
+// Settings › Privacy: the line under the page title. Activity is the page
+// of finished tasks.
+func (msgs Messages) SettingsPrivacyIntro() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyIntro", nil)
+}
+
+// SettingsPrivacyKeep says "Keep activity for"
+// in the language the app shows.
+//
+// Settings › Privacy: the row of how long finished tasks are kept, before
+// a select of 7, 30, 90 days, 1 year or Forever; also the select's
+// accessibility label.
+func SettingsPrivacyKeep() string { return In(i18n.Locale()).SettingsPrivacyKeep() }
+
+// SettingsPrivacyKeep says "Keep activity for"
+// in the language of msgs.
+//
+// Settings › Privacy: the row of how long finished tasks are kept, before
+// a select of 7, 30, 90 days, 1 year or Forever; also the select's
+// accessibility label.
+func (msgs Messages) SettingsPrivacyKeep() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyKeep", nil)
+}
+
+// SettingsPrivacyKeepDays says "{days, plural, one {# day} other {# days}}"
+// in the language the app shows.
+//
+// Settings › Privacy: a choice of Keep activity for, a number of days: 7,
+// 30, 90, or another one kept in the settings file.
+func SettingsPrivacyKeepDays(days int) string { return In(i18n.Locale()).SettingsPrivacyKeepDays(days) }
+
+// SettingsPrivacyKeepDays says "{days, plural, one {# day} other {# days}}"
+// in the language of msgs.
+//
+// Settings › Privacy: a choice of Keep activity for, a number of days: 7,
+// 30, 90, or another one kept in the settings file.
+func (msgs Messages) SettingsPrivacyKeepDays(days int) string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyKeepDays", map[string]any{"days": days})
+}
+
+// SettingsPrivacyKeepDesc says "Older tasks, their screenshots and recordings are deleted automatically"
+// in the language the app shows.
+//
+// Settings › Privacy: the line under Keep activity for.
+func SettingsPrivacyKeepDesc() string { return In(i18n.Locale()).SettingsPrivacyKeepDesc() }
+
+// SettingsPrivacyKeepDesc says "Older tasks, their screenshots and recordings are deleted automatically"
+// in the language of msgs.
+//
+// Settings › Privacy: the line under Keep activity for.
+func (msgs Messages) SettingsPrivacyKeepDesc() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyKeepDesc", nil)
+}
+
+// SettingsPrivacyKeepForever says "Forever"
+// in the language the app shows.
+//
+// Settings › Privacy: a choice of Keep activity for: never delete.
+func SettingsPrivacyKeepForever() string { return In(i18n.Locale()).SettingsPrivacyKeepForever() }
+
+// SettingsPrivacyKeepForever says "Forever"
+// in the language of msgs.
+//
+// Settings › Privacy: a choice of Keep activity for: never delete.
+func (msgs Messages) SettingsPrivacyKeepForever() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyKeepForever", nil)
+}
+
+// SettingsPrivacyKeepYear says "1 year"
+// in the language the app shows.
+//
+// Settings › Privacy: a choice of Keep activity for: 365 days.
+func SettingsPrivacyKeepYear() string { return In(i18n.Locale()).SettingsPrivacyKeepYear() }
+
+// SettingsPrivacyKeepYear says "1 year"
+// in the language of msgs.
+//
+// Settings › Privacy: a choice of Keep activity for: 365 days.
+func (msgs Messages) SettingsPrivacyKeepYear() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyKeepYear", nil)
+}
+
+// SettingsPrivacyRecord says "Record the screen during tasks"
+// in the language the app shows.
+//
+// Settings › Privacy: the switch that records the phone's screen while
+// agents work.
+func SettingsPrivacyRecord() string { return In(i18n.Locale()).SettingsPrivacyRecord() }
+
+// SettingsPrivacyRecord says "Record the screen during tasks"
+// in the language of msgs.
+//
+// Settings › Privacy: the switch that records the phone's screen while
+// agents work.
+func (msgs Messages) SettingsPrivacyRecord() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyRecord", nil)
+}
+
+// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open."
+// in the language the app shows.
+//
+// Settings › Privacy: the line under Record the screen during tasks.
+// Activity is the page of finished tasks.
+func SettingsPrivacyRecordDesc() string { return In(i18n.Locale()).SettingsPrivacyRecordDesc() }
+
+// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open."
+// in the language of msgs.
+//
+// Settings › Privacy: the line under Record the screen during tasks.
+// Activity is the page of finished tasks.
+func (msgs Messages) SettingsPrivacyRecordDesc() string {
+	return Catalog.Format(msgs.locale, "settingsPrivacyRecordDesc", nil)
+}
+
+// SettingsSafetyAddApp says "Add app"
+// in the language the app shows.
+//
+// Settings › Safety: the button next to Blocked apps that opens a field
+// to block another app.
+func SettingsSafetyAddApp() string { return In(i18n.Locale()).SettingsSafetyAddApp() }
+
+// SettingsSafetyAddApp says "Add app"
+// in the language of msgs.
+//
+// Settings › Safety: the button next to Blocked apps that opens a field
+// to block another app.
+func (msgs Messages) SettingsSafetyAddApp() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAddApp", nil)
+}
+
+// SettingsSafetyAppLabel says "App to block"
+// in the language the app shows.
+//
+// Settings › Safety: the accessibility label of the field of an app to
+// block.
+func SettingsSafetyAppLabel() string { return In(i18n.Locale()).SettingsSafetyAppLabel() }
+
+// SettingsSafetyAppLabel says "App to block"
+// in the language of msgs.
+//
+// Settings › Safety: the accessibility label of the field of an app to
+// block.
+func (msgs Messages) SettingsSafetyAppLabel() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppLabel", nil)
+}
+
+// SettingsSafetyAppPlaceholder says "App name or package"
+// in the language the app shows.
+//
+// Settings › Safety: the placeholder of the field of an app to block,
+// which takes the app's name or its package name, as com.example.app.
+func SettingsSafetyAppPlaceholder() string { return In(i18n.Locale()).SettingsSafetyAppPlaceholder() }
+
+// SettingsSafetyAppPlaceholder says "App name or package"
+// in the language of msgs.
+//
+// Settings › Safety: the placeholder of the field of an app to block,
+// which takes the app's name or its package name, as com.example.app.
+func (msgs Messages) SettingsSafetyAppPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppPlaceholder", nil)
+}
+
+// SettingsSafetyAskGroup says "When agents ask"
+// in the language the app shows.
+//
+// Settings › Safety: the accessibility label of the part with the three
+// choices of when agents ask for approval.
+func SettingsSafetyAskGroup() string { return In(i18n.Locale()).SettingsSafetyAskGroup() }
+
+// SettingsSafetyAskGroup says "When agents ask"
+// in the language of msgs.
+//
+// Settings › Safety: the accessibility label of the part with the three
+// choices of when agents ask for approval.
+func (msgs Messages) SettingsSafetyAskGroup() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAskGroup", nil)
+}
+
+// SettingsSafetyAskTitle says "When should agents ask you?"
+// in the language the app shows.
+//
+// Settings › Safety: the heading above the three choices of when agents
+// ask for approval, and the label of their radio group.
+func SettingsSafetyAskTitle() string { return In(i18n.Locale()).SettingsSafetyAskTitle() }
+
+// SettingsSafetyAskTitle says "When should agents ask you?"
+// in the language of msgs.
+//
+// Settings › Safety: the heading above the three choices of when agents
+// ask for approval, and the label of their radio group.
+func (msgs Messages) SettingsSafetyAskTitle() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAskTitle", nil)
+}
+
+// SettingsSafetyBlock says "Block"
+// in the language the app shows.
+//
+// Settings › Safety: the button next to the field that adds the app typed
+// to the blocked apps.
+func SettingsSafetyBlock() string { return In(i18n.Locale()).SettingsSafetyBlock() }
+
+// SettingsSafetyBlock says "Block"
+// in the language of msgs.
+//
+// Settings › Safety: the button next to the field that adds the app typed
+// to the blocked apps.
+func (msgs Messages) SettingsSafetyBlock() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyBlock", nil)
+}
+
+// SettingsSafetyBlockedApps says "Blocked apps"
+// in the language the app shows.
+//
+// Settings › Safety: the heading of the apps agents may never open, and
+// the accessibility label of that part.
+func SettingsSafetyBlockedApps() string { return In(i18n.Locale()).SettingsSafetyBlockedApps() }
+
+// SettingsSafetyBlockedApps says "Blocked apps"
+// in the language of msgs.
+//
+// Settings › Safety: the heading of the apps agents may never open, and
+// the accessibility label of that part.
+func (msgs Messages) SettingsSafetyBlockedApps() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyBlockedApps", nil)
+}
+
+// SettingsSafetyBlockedIntro says "Agents can't open these apps or see their screens."
+// in the language the app shows.
+//
+// Settings › Safety: the line under Blocked apps.
+func SettingsSafetyBlockedIntro() string { return In(i18n.Locale()).SettingsSafetyBlockedIntro() }
+
+// SettingsSafetyBlockedIntro says "Agents can't open these apps or see their screens."
+// in the language of msgs.
+//
+// Settings › Safety: the line under Blocked apps.
+func (msgs Messages) SettingsSafetyBlockedIntro() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyBlockedIntro", nil)
+}
+
+// SettingsSafetyHideCodes says "Hide codes from agents"
+// in the language the app shows.
+//
+// Settings › Safety: the switch that hides passwords and one-time codes
+// on the phone's screen from agents.
+func SettingsSafetyHideCodes() string { return In(i18n.Locale()).SettingsSafetyHideCodes() }
+
+// SettingsSafetyHideCodes says "Hide codes from agents"
+// in the language of msgs.
+//
+// Settings › Safety: the switch that hides passwords and one-time codes
+// on the phone's screen from agents.
+func (msgs Messages) SettingsSafetyHideCodes() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyHideCodes", nil)
+}
+
+// SettingsSafetyHideCodesDesc says "Passwords and one-time codes are blurred before an agent sees the screen"
+// in the language the app shows.
+//
+// Settings › Safety: the line under Hide codes from agents.
+func SettingsSafetyHideCodesDesc() string { return In(i18n.Locale()).SettingsSafetyHideCodesDesc() }
+
+// SettingsSafetyHideCodesDesc says "Passwords and one-time codes are blurred before an agent sees the screen"
+// in the language of msgs.
+//
+// Settings › Safety: the line under Hide codes from agents.
+func (msgs Messages) SettingsSafetyHideCodesDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyHideCodesDesc", nil)
+}
+
+// SettingsSafetyIntro says "Pinky checks every action before it reaches the phone. Agents can't change these settings."
+// in the language the app shows.
+//
+// Settings › Safety: the line under the page title.
+func SettingsSafetyIntro() string { return In(i18n.Locale()).SettingsSafetyIntro() }
+
+// SettingsSafetyIntro says "Pinky checks every action before it reaches the phone. Agents can't change these settings."
+// in the language of msgs.
+//
+// Settings › Safety: the line under the page title.
+func (msgs Messages) SettingsSafetyIntro() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyIntro", nil)
+}
+
+// SettingsSafetyKindBanking says "Banking"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a bank's app.
+func SettingsSafetyKindBanking() string { return In(i18n.Locale()).SettingsSafetyKindBanking() }
+
+// SettingsSafetyKindBanking says "Banking"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a bank's app.
+func (msgs Messages) SettingsSafetyKindBanking() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindBanking", nil)
+}
+
+// SettingsSafetyKindBrowsers says "Browsers"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a web browser.
+func SettingsSafetyKindBrowsers() string { return In(i18n.Locale()).SettingsSafetyKindBrowsers() }
+
+// SettingsSafetyKindBrowsers says "Browsers"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a web browser.
+func (msgs Messages) SettingsSafetyKindBrowsers() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindBrowsers", nil)
+}
+
+// SettingsSafetyKindFinance says "Finance"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a finance app.
+func SettingsSafetyKindFinance() string { return In(i18n.Locale()).SettingsSafetyKindFinance() }
+
+// SettingsSafetyKindFinance says "Finance"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a finance app.
+func (msgs Messages) SettingsSafetyKindFinance() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindFinance", nil)
+}
+
+// SettingsSafetyKindMessaging says "Messaging"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a messaging app.
+func SettingsSafetyKindMessaging() string { return In(i18n.Locale()).SettingsSafetyKindMessaging() }
+
+// SettingsSafetyKindMessaging says "Messaging"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a messaging app.
+func (msgs Messages) SettingsSafetyKindMessaging() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindMessaging", nil)
+}
+
+// SettingsSafetyKindPasswords says "Passwords"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a password manager.
+func SettingsSafetyKindPasswords() string { return In(i18n.Locale()).SettingsSafetyKindPasswords() }
+
+// SettingsSafetyKindPasswords says "Passwords"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a password manager.
+func (msgs Messages) SettingsSafetyKindPasswords() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindPasswords", nil)
+}
+
+// SettingsSafetyKindPhone says "Phone"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// the phone's dialer or calls app.
+func SettingsSafetyKindPhone() string { return In(i18n.Locale()).SettingsSafetyKindPhone() }
+
+// SettingsSafetyKindPhone says "Phone"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// the phone's dialer or calls app.
+func (msgs Messages) SettingsSafetyKindPhone() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindPhone", nil)
+}
+
+// SettingsSafetyKindSettings says "Settings"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// the phone's Settings app.
+func SettingsSafetyKindSettings() string { return In(i18n.Locale()).SettingsSafetyKindSettings() }
+
+// SettingsSafetyKindSettings says "Settings"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// the phone's Settings app.
+func (msgs Messages) SettingsSafetyKindSettings() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindSettings", nil)
+}
+
+// SettingsSafetyKindSocial says "Social"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a social network's app.
+func SettingsSafetyKindSocial() string { return In(i18n.Locale()).SettingsSafetyKindSocial() }
+
+// SettingsSafetyKindSocial says "Social"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a social network's app.
+func (msgs Messages) SettingsSafetyKindSocial() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindSocial", nil)
+}
+
+// SettingsSafetyKindStores says "Stores"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// an app store or an app installer.
+func SettingsSafetyKindStores() string { return In(i18n.Locale()).SettingsSafetyKindStores() }
+
+// SettingsSafetyKindStores says "Stores"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// an app store or an app installer.
+func (msgs Messages) SettingsSafetyKindStores() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindStores", nil)
+}
+
+// SettingsSafetyKindSystem says "System"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// part of the phone's system (launcher, system UI).
+func SettingsSafetyKindSystem() string { return In(i18n.Locale()).SettingsSafetyKindSystem() }
+
+// SettingsSafetyKindSystem says "System"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// part of the phone's system (launcher, system UI).
+func (msgs Messages) SettingsSafetyKindSystem() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindSystem", nil)
+}
+
+// SettingsSafetyKindWallet says "Wallet"
+// in the language the app shows.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a wallet (payments, crypto).
+func SettingsSafetyKindWallet() string { return In(i18n.Locale()).SettingsSafetyKindWallet() }
+
+// SettingsSafetyKindWallet says "Wallet"
+// in the language of msgs.
+//
+// Settings › Safety: why an app is blocked, at the end of its row: it is
+// a wallet (payments, crypto).
+func (msgs Messages) SettingsSafetyKindWallet() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyKindWallet", nil)
+}
+
+// SettingsSafetyPresetCommits says "Ask before payments, messages and deletions (Recommended)"
+// in the language the app shows.
+//
+// Settings › Safety: the recommended choice: agents ask for approval
+// before paying, sending messages and deleting.
+func SettingsSafetyPresetCommits() string { return In(i18n.Locale()).SettingsSafetyPresetCommits() }
+
+// SettingsSafetyPresetCommits says "Ask before payments, messages and deletions (Recommended)"
+// in the language of msgs.
+//
+// Settings › Safety: the recommended choice: agents ask for approval
+// before paying, sending messages and deleting.
+func (msgs Messages) SettingsSafetyPresetCommits() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPresetCommits", nil)
+}
+
+// SettingsSafetyPresetCommitsDesc says "Also asks before calls, account changes and installing apps."
+// in the language the app shows.
+//
+// Settings › Safety: the line under the recommended choice.
+func SettingsSafetyPresetCommitsDesc() string {
+	return In(i18n.Locale()).SettingsSafetyPresetCommitsDesc()
+}
+
+// SettingsSafetyPresetCommitsDesc says "Also asks before calls, account changes and installing apps."
+// in the language of msgs.
+//
+// Settings › Safety: the line under the recommended choice.
+func (msgs Messages) SettingsSafetyPresetCommitsDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPresetCommitsDesc", nil)
+}
+
+// SettingsSafetyPresetEvery says "Ask before every action"
+// in the language the app shows.
+//
+// Settings › Safety: the choice where agents ask for approval before each
+// step.
+func SettingsSafetyPresetEvery() string { return In(i18n.Locale()).SettingsSafetyPresetEvery() }
+
+// SettingsSafetyPresetEvery says "Ask before every action"
+// in the language of msgs.
+//
+// Settings › Safety: the choice where agents ask for approval before each
+// step.
+func (msgs Messages) SettingsSafetyPresetEvery() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPresetEvery", nil)
+}
+
+// SettingsSafetyPresetEveryDesc says "Slower, but you see every tap first."
+// in the language the app shows.
+//
+// Settings › Safety: the line under Ask before every action.
+func SettingsSafetyPresetEveryDesc() string { return In(i18n.Locale()).SettingsSafetyPresetEveryDesc() }
+
+// SettingsSafetyPresetEveryDesc says "Slower, but you see every tap first."
+// in the language of msgs.
+//
+// Settings › Safety: the line under Ask before every action.
+func (msgs Messages) SettingsSafetyPresetEveryDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPresetEveryDesc", nil)
+}
+
+// SettingsSafetyPresetPayments says "Ask before payments only"
+// in the language the app shows.
+//
+// Settings › Safety: the choice where agents ask for approval before
+// payments and nothing else.
+func SettingsSafetyPresetPayments() string { return In(i18n.Locale()).SettingsSafetyPresetPayments() }
+
+// SettingsSafetyPresetPayments says "Ask before payments only"
+// in the language of msgs.
+//
+// Settings › Safety: the choice where agents ask for approval before
+// payments and nothing else.
+func (msgs Messages) SettingsSafetyPresetPayments() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPresetPayments", nil)
+}
+
+// SettingsSafetyPresetPaymentsDesc says "Messages and deletions go through without asking."
+// in the language the app shows.
+//
+// Settings › Safety: the line under Ask before payments only.
+func SettingsSafetyPresetPaymentsDesc() string {
+	return In(i18n.Locale()).SettingsSafetyPresetPaymentsDesc()
+}
+
+// SettingsSafetyPresetPaymentsDesc says "Messages and deletions go through without asking."
+// in the language of msgs.
+//
+// Settings › Safety: the line under Ask before payments only.
+func (msgs Messages) SettingsSafetyPresetPaymentsDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyPresetPaymentsDesc", nil)
+}
+
+// SettingsSafetyProtections says "Protections"
+// in the language the app shows.
+//
+// Settings › Safety: the accessibility label of the switches below the
+// blocked apps (Read-only mode, Unlock from this computer, Hide codes from
+// agents).
+func SettingsSafetyProtections() string { return In(i18n.Locale()).SettingsSafetyProtections() }
+
+// SettingsSafetyProtections says "Protections"
+// in the language of msgs.
+//
+// Settings › Safety: the accessibility label of the switches below the
+// blocked apps (Read-only mode, Unlock from this computer, Hide codes from
+// agents).
+func (msgs Messages) SettingsSafetyProtections() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyProtections", nil)
+}
+
+// SettingsSafetyReadOnly says "Read-only mode"
+// in the language the app shows.
+//
+// Settings › Safety: the switch that lets agents look and read on every
+// phone, but never pay, send, delete or change anything.
+func SettingsSafetyReadOnly() string { return In(i18n.Locale()).SettingsSafetyReadOnly() }
+
+// SettingsSafetyReadOnly says "Read-only mode"
+// in the language of msgs.
+//
+// Settings › Safety: the switch that lets agents look and read on every
+// phone, but never pay, send, delete or change anything.
+func (msgs Messages) SettingsSafetyReadOnly() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyReadOnly", nil)
+}
+
+// SettingsSafetyReadOnlyDesc says "Agents can browse, not commit"
+// in the language the app shows.
+//
+// Settings › Safety: the line under Read-only mode.
+func SettingsSafetyReadOnlyDesc() string { return In(i18n.Locale()).SettingsSafetyReadOnlyDesc() }
+
+// SettingsSafetyReadOnlyDesc says "Agents can browse, not commit"
+// in the language of msgs.
+//
+// Settings › Safety: the line under Read-only mode.
+func (msgs Messages) SettingsSafetyReadOnlyDesc() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyReadOnlyDesc", nil)
+}
+
+// SettingsSafetyUnblock says "Unblock"
+// in the language the app shows.
+//
+// Settings › Safety: the tooltip of the × button at the end of a blocked
+// app's row, which removes it from the list.
+func SettingsSafetyUnblock() string { return In(i18n.Locale()).SettingsSafetyUnblock() }
+
+// SettingsSafetyUnblock says "Unblock"
+// in the language of msgs.
+//
+// Settings › Safety: the tooltip of the × button at the end of a blocked
+// app's row, which removes it from the list.
+func (msgs Messages) SettingsSafetyUnblock() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyUnblock", nil)
+}
+
+// SettingsSafetyUnblockApp says "Unblock {app}"
+// in the language the app shows.
+//
+// Settings › Safety: the accessibility label of the × button that
+// removes this app from the blocked apps.
+func SettingsSafetyUnblockApp(app string) string {
+	return In(i18n.Locale()).SettingsSafetyUnblockApp(app)
+}
+
+// SettingsSafetyUnblockApp says "Unblock {app}"
+// in the language of msgs.
+//
+// Settings › Safety: the accessibility label of the × button that
+// removes this app from the blocked apps.
+func (msgs Messages) SettingsSafetyUnblockApp(app string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyUnblockApp", map[string]any{"app": app})
+}
+
+// SettingsSafetyUnlockDescMac says "Save your phone PIN in the Keychain; unlock with Touch ID. Save each phone's PIN in Settings › Phones."
+// in the language the app shows.
+//
+// Settings › Safety, on a Mac: the line under Unlock from this computer.
+// The Keychain is macOS's; Settings › Phones is where each phone's PIN is
+// entered.
+func SettingsSafetyUnlockDescMac() string { return In(i18n.Locale()).SettingsSafetyUnlockDescMac() }
+
+// SettingsSafetyUnlockDescMac says "Save your phone PIN in the Keychain; unlock with Touch ID. Save each phone's PIN in Settings › Phones."
+// in the language of msgs.
+//
+// Settings › Safety, on a Mac: the line under Unlock from this computer.
+// The Keychain is macOS's; Settings › Phones is where each phone's PIN is
+// entered.
+func (msgs Messages) SettingsSafetyUnlockDescMac() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyUnlockDescMac", nil)
+}
+
+// SettingsSafetyUnlockDescOther says "Save your phone PIN in your keyring"
+// in the language the app shows.
+//
+// Settings › Safety, on Linux: the line under Unlock from this computer.
+// The keyring is the system's store of passwords.
+func SettingsSafetyUnlockDescOther() string { return In(i18n.Locale()).SettingsSafetyUnlockDescOther() }
+
+// SettingsSafetyUnlockDescOther says "Save your phone PIN in your keyring"
+// in the language of msgs.
+//
+// Settings › Safety, on Linux: the line under Unlock from this computer.
+// The keyring is the system's store of passwords.
+func (msgs Messages) SettingsSafetyUnlockDescOther() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyUnlockDescOther", nil)
+}
+
+// SettingsSafetyUnlockDescWindows says "Save your phone PIN in Windows Credential Manager"
+// in the language the app shows.
+//
+// Settings › Safety, on Windows: the line under Unlock from this
+// computer.
+func SettingsSafetyUnlockDescWindows() string {
+	return In(i18n.Locale()).SettingsSafetyUnlockDescWindows()
+}
+
+// SettingsSafetyUnlockDescWindows says "Save your phone PIN in Windows Credential Manager"
+// in the language of msgs.
+//
+// Settings › Safety, on Windows: the line under Unlock from this
+// computer.
+func (msgs Messages) SettingsSafetyUnlockDescWindows() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyUnlockDescWindows", nil)
+}
+
+// SettingsSave says "Save"
+// in the language the app shows.
+//
+// Settings: the button that saves what an agent may do (Settings ›
+// Agents), or the remote agents' address.
+func SettingsSave() string { return In(i18n.Locale()).SettingsSave() }
+
+// SettingsSave says "Save"
+// in the language of msgs.
+//
+// Settings: the button that saves what an agent may do (Settings ›
+// Agents), or the remote agents' address.
+func (msgs Messages) SettingsSave() string {
+	return Catalog.Format(msgs.locale, "settingsSave", nil)
+}
+
+// SettingsSectionAdvanced says "Advanced"
+// in the language the app shows.
+//
+// Settings: the section for developers (developer mode, the rules file).
+// Its tab on the left, its page title and the accessibility label of its
+// rows.
+func SettingsSectionAdvanced() string { return In(i18n.Locale()).SettingsSectionAdvanced() }
+
+// SettingsSectionAdvanced says "Advanced"
+// in the language of msgs.
+//
+// Settings: the section for developers (developer mode, the rules file).
+// Its tab on the left, its page title and the accessibility label of its
+// rows.
+func (msgs Messages) SettingsSectionAdvanced() string {
+	return Catalog.Format(msgs.locale, "settingsSectionAdvanced", nil)
+}
+
+// SettingsSectionAgents says "Agents"
+// in the language the app shows.
+//
+// Settings: the section of the agents that connect to Pinky. Its tab on the
+// left and its page title.
+func SettingsSectionAgents() string { return In(i18n.Locale()).SettingsSectionAgents() }
+
+// SettingsSectionAgents says "Agents"
+// in the language of msgs.
+//
+// Settings: the section of the agents that connect to Pinky. Its tab on the
+// left and its page title.
+func (msgs Messages) SettingsSectionAgents() string {
+	return Catalog.Format(msgs.locale, "settingsSectionAgents", nil)
+}
+
+// SettingsSectionPhones says "Phones"
+// in the language the app shows.
+//
+// Settings: the section of the phones this computer can reach. Its tab on
+// the left, its page title and the accessibility label of its list of
+// phones.
+func SettingsSectionPhones() string { return In(i18n.Locale()).SettingsSectionPhones() }
+
+// SettingsSectionPhones says "Phones"
+// in the language of msgs.
+//
+// Settings: the section of the phones this computer can reach. Its tab on
+// the left, its page title and the accessibility label of its list of
+// phones.
+func (msgs Messages) SettingsSectionPhones() string {
+	return Catalog.Format(msgs.locale, "settingsSectionPhones", nil)
+}
+
+// SettingsSectionPrivacy says "Privacy"
+// in the language the app shows.
+//
+// Settings: the section of what Pinky keeps (activity, recordings). Its tab
+// on the left, its page title and the accessibility label of its rows.
+func SettingsSectionPrivacy() string { return In(i18n.Locale()).SettingsSectionPrivacy() }
+
+// SettingsSectionPrivacy says "Privacy"
+// in the language of msgs.
+//
+// Settings: the section of what Pinky keeps (activity, recordings). Its tab
+// on the left, its page title and the accessibility label of its rows.
+func (msgs Messages) SettingsSectionPrivacy() string {
+	return Catalog.Format(msgs.locale, "settingsSectionPrivacy", nil)
+}
+
+// SettingsSectionSafety says "Safety"
+// in the language the app shows.
+//
+// Settings: the section of when agents ask, the blocked apps and the
+// protections. Its tab on the left and its page title.
+func SettingsSectionSafety() string { return In(i18n.Locale()).SettingsSectionSafety() }
+
+// SettingsSectionSafety says "Safety"
+// in the language of msgs.
+//
+// Settings: the section of when agents ask, the blocked apps and the
+// protections. Its tab on the left and its page title.
+func (msgs Messages) SettingsSectionSafety() string {
+	return Catalog.Format(msgs.locale, "settingsSectionSafety", nil)
+}
+
+// SettingsSectionsLabel says "Settings sections"
+// in the language the app shows.
+//
+// Settings: the accessibility label of the list of sections on the left
+// (Phones, Agents, Safety, Privacy, Advanced).
+func SettingsSectionsLabel() string { return In(i18n.Locale()).SettingsSectionsLabel() }
+
+// SettingsSectionsLabel says "Settings sections"
+// in the language of msgs.
+//
+// Settings: the accessibility label of the list of sections on the left
+// (Phones, Agents, Safety, Privacy, Advanced).
+func (msgs Messages) SettingsSectionsLabel() string {
+	return Catalog.Format(msgs.locale, "settingsSectionsLabel", nil)
+}
+
+// SettingsUnlockFromComputer says "Unlock from this computer"
+// in the language the app shows.
+//
+// Settings › Safety: the switch that lets Pinky unlock a locked phone
+// with its saved PIN. Also the heading of each phone's PIN form in Settings
+// › Phones.
+func SettingsUnlockFromComputer() string { return In(i18n.Locale()).SettingsUnlockFromComputer() }
+
+// SettingsUnlockFromComputer says "Unlock from this computer"
+// in the language of msgs.
+//
+// Settings › Safety: the switch that lets Pinky unlock a locked phone
+// with its saved PIN. Also the heading of each phone's PIN form in Settings
+// › Phones.
+func (msgs Messages) SettingsUnlockFromComputer() string {
+	return Catalog.Format(msgs.locale, "settingsUnlockFromComputer", nil)
 }
 
 // ShotLabel says "Screenshot of {phone}"
@@ -8485,7 +10599,7 @@ func (msgs Messages) TimeSeconds(seconds string) string {
 // in the language the app shows.
 //
 // A toast when a call to the gateway fails: action is a verb phrase such as
-// callTakeOver (zh: 接管), error the gateway's error in English.
+// callTakeOver, error the gateway's error in English.
 func ToastCouldNot(action string, error string) string {
 	return In(i18n.Locale()).ToastCouldNot(action, error)
 }
@@ -8494,7 +10608,7 @@ func ToastCouldNot(action string, error string) string {
 // in the language of msgs.
 //
 // A toast when a call to the gateway fails: action is a verb phrase such as
-// callTakeOver (zh: 接管), error the gateway's error in English.
+// callTakeOver, error the gateway's error in English.
 func (msgs Messages) ToastCouldNot(action string, error string) string {
 	return Catalog.Format(msgs.locale, "toastCouldNot", map[string]any{"action": action, "error": error})
 }
@@ -8518,15 +10632,15 @@ func (msgs Messages) UnlockBusy() string {
 // UnlockCallWhat says "unlock the phone"
 // in the language the app shows.
 //
-// Fills "Couldn't …: <error>" (zh: 无法…：<error>), a notice when
-// unlocking a phone fails: a verb phrase.
+// Fills "Couldn't …: <error>", a notice when unlocking a phone fails: a
+// verb phrase.
 func UnlockCallWhat() string { return In(i18n.Locale()).UnlockCallWhat() }
 
 // UnlockCallWhat says "unlock the phone"
 // in the language of msgs.
 //
-// Fills "Couldn't …: <error>" (zh: 无法…：<error>), a notice when
-// unlocking a phone fails: a verb phrase.
+// Fills "Couldn't …: <error>", a notice when unlocking a phone fails: a
+// verb phrase.
 func (msgs Messages) UnlockCallWhat() string {
 	return Catalog.Format(msgs.locale, "unlockCallWhat", nil)
 }

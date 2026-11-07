@@ -181,7 +181,11 @@ func (a *app) shotView(c *mg.Context, t gateway.TaskView, s gateway.StepView, h 
 				msg = locales.ShotLoading()
 				c.After(150 * time.Millisecond)
 			}
-			mg.Text(c, msg).FontSize(12).TextColor(p.ink3)
+			// A thumbnail is too narrow for words, which Chinese would
+			// stack a character a line.
+			if w >= 60 {
+				mg.Text(c, msg).FontSize(12).TextColor(p.ink3).TextAlign(mg.Center)
+			}
 		})
 		return box
 	}

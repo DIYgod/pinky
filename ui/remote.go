@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	mg "github.com/egoist/mygo/ui"
+
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 )
 
 // Remote agents: MCP over Streamable HTTP, for agents that cannot start
@@ -33,10 +35,10 @@ type remoteState struct {
 func checkRemoteAddr(addr string) (msg string, others bool) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return "Enter an address and port, like 127.0.0.1:7465.", false
+		return locales.RemoteAddrInvalid(), false
 	}
 	if n, err := strconv.Atoi(port); err != nil || n < 1 || n > 65535 {
-		return "The port is a number from 1 to 65535.", false
+		return locales.RemotePortInvalid(), false
 	}
 	switch {
 	case host == "localhost":
@@ -46,7 +48,7 @@ func checkRemoteAddr(addr string) (msg string, others bool) {
 	}
 	ip := net.ParseIP(host)
 	if ip == nil {
-		return "Enter an IP address of this computer, like 127.0.0.1, or localhost.", false
+		return locales.RemoteHostInvalid(), false
 	}
 	return "", !ip.IsLoopback()
 }
@@ -59,31 +61,31 @@ func (a *app) remoteAgents(c *mg.Context) {
 	if st.RemoteAddr == "" {
 		st.RemoteAddr = DefaultRemoteAddr
 	}
-	mg.Column(c).Gap(8).Label("Remote agents").Children(func() {
+	mg.Column(c).Gap(8).Label(locales.RemoteTitle()).Children(func() {
 		mg.Column(c).Children(func() {
-			mg.Text(c, "Remote agents").FontSize(15).FontWeight(650)
-			mg.Text(c, "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the agent token, and you allow each one, as above.").
+			mg.Text(c, locales.RemoteTitle()).FontSize(15).FontWeight(650)
+			mg.Text(c, locales.RemoteIntro()).
 				FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
 		})
 		mg.Column(c).Children(func() {
-			a.toggleRow(c, "remote", "Let agents connect over HTTP", "", !st.RemoteAgents, &st.RemoteAgents)
+			a.toggleRow(c, "remote", locales.RemoteToggle(), "", !st.RemoteAgents, &st.RemoteAgents)
 			if !st.RemoteAgents {
 				return
 			}
 			_, others := checkRemoteAddr(st.RemoteAddr)
-			settingRow(c, "Address", "Where Pinky listens. 127.0.0.1 is this computer only.", false, func() {
+			settingRow(c, locales.RemoteAddress(), locales.RemoteAddressDesc(), false, func() {
 				if !r.editing {
 					mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 						mg.Text(c, st.RemoteAddr).Font("monospace").FontSize(13).Selectable()
-						if button(c, "Change", btnOpt{small: true}).Label("Change the address").Clicked() {
+						if button(c, locales.SettingsChange(), btnOpt{small: true}).Label(locales.RemoteChangeAddress()).Clicked() {
 							r.editing, r.addr, r.err = true, st.RemoteAddr, ""
 						}
 					})
 					return
 				}
 				mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-					in := mg.TextInput(c.Key("remote-addr"), &r.addr).Label("Address").Placeholder(DefaultRemoteAddr).Width(170).AutoFocus()
-					save := button(c, "Save", btnOpt{small: true, kind: btnPrimary})
+					in := mg.TextInput(c.Key("remote-addr"), &r.addr).Label(locales.RemoteAddress()).Placeholder(DefaultRemoteAddr).Width(170).AutoFocus()
+					save := button(c, locales.SettingsSave(), btnOpt{small: true, kind: btnPrimary})
 					if save.Clicked() || in.Submitted() {
 						addr := strings.TrimSpace(r.addr)
 						if msg, _ := checkRemoteAddr(addr); msg != "" {
@@ -93,7 +95,7 @@ func (a *app) remoteAgents(c *mg.Context) {
 							a.changed()
 						}
 					}
-					if button(c, "Cancel", btnOpt{small: true}).Clicked() {
+					if button(c, locales.SettingsCancel(), btnOpt{small: true}).Clicked() {
 						r.editing, r.err = false, ""
 					}
 				})
@@ -105,32 +107,32 @@ func (a *app) remoteAgents(c *mg.Context) {
 				mg.Row(c).Gap(8).AlignItems(mg.Start).Padding(10, 12).Radius(10).Background(p.amberTint).Border(1, p.amberLine).Margin(0, 0, 6, 0).
 					Children(func() {
 						mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber)
-						mg.Text(c, "Other computers on your network can reach Pinky at this address. Anyone with the agent token can ask to use your phones.").
+						mg.Text(c, locales.RemoteOthersWarning()).
 							FontSize(13).Grow(1).MinWidth(0)
 					})
 			}
 			url := RemoteURL(st.RemoteAddr)
-			a.copyRow(c, "URL", url, url, false)
+			a.copyRow(c, locales.RemoteURLTitle(), url, url, locales.RemoteCopyURL(), locales.RemoteCopiedURL(), false)
 			tok := a.opt.AgentToken
 			if tok == "" {
-				settingRow(c, "Agent token", "This Pinky didn't give the client its agent token.", false, nil)
+				settingRow(c, locales.RemoteToken(), locales.RemoteTokenMissing(), false, nil)
 			} else {
 				shown := strings.Repeat("•", 16)
 				if r.showToken {
 					shown = tok
 				}
-				settingRow(c, "Agent token", "Agents send it as their bearer token. Keep it private.", false, func() {
+				settingRow(c, locales.RemoteToken(), locales.RemoteTokenDesc(), false, func() {
 					mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 						mg.Text(c, shown).Font("monospace").FontSize(12.5).MaxWidth(180).SingleLine()
-						word := "Show"
+						word, label := locales.RemoteShow(), locales.RemoteShowToken()
 						if r.showToken {
-							word = "Hide"
+							word, label = locales.RemoteHide(), locales.RemoteHideToken()
 						}
-						if button(c, word, btnOpt{small: true}).Label(word + " the agent token").Clicked() {
+						if button(c, word, btnOpt{small: true}).Label(label).Clicked() {
 							r.showToken = !r.showToken
 						}
-						if button(c, "", btnOpt{small: true, icon: icCopy, label: "Copy the agent token"}).Clicked() {
-							a.copy(c, tok, "Copied the agent token")
+						if button(c, "", btnOpt{small: true, icon: icCopy, label: locales.RemoteCopyToken()}).Clicked() {
+							a.copy(c, tok, locales.RemoteCopiedToken())
 						}
 					})
 				})
@@ -148,26 +150,27 @@ func (a *app) remoteAgents(c *mg.Context) {
 				mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
 					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 						mg.Text(c, "Claude Code").FontWeight(600)
-						mg.Text(c, "Run this where the agent runs.").FontSize(13.5).TextColor(p.ink2)
+						mg.Text(c, locales.RemoteRunHint()).FontSize(13.5).TextColor(p.ink2)
 					})
-					if button(c, "", btnOpt{small: true, icon: icCopy, label: "Copy the command"}).Clicked() {
-						a.copy(c, cmd, "Copied the command")
+					if button(c, "", btnOpt{small: true, icon: icCopy, label: locales.RemoteCopyCommand()}).Clicked() {
+						a.copy(c, cmd, locales.RemoteCopiedCommand())
 					}
 				})
 				mg.Text(c, shownCmd).Font("monospace").FontSize(12).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).
-					Selectable().Label("Command to add Pinky to Claude Code")
+					Selectable().Label(locales.RemoteCommandLabel())
 			})
 		})
 	})
 }
 
-// copyRow is a setting row whose value has a Copy button.
-func (a *app) copyRow(c *mg.Context, title, shown, value string, last bool) {
+// copyRow is a setting row whose value has a Copy button, named copyLabel,
+// which says copied once it copies.
+func (a *app) copyRow(c *mg.Context, title, shown, value, copyLabel, copied string, last bool) {
 	settingRow(c, title, "", last, func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, shown).Font("monospace").FontSize(12.5).Selectable()
-			if button(c, "", btnOpt{small: true, icon: icCopy, label: "Copy the " + strings.ToLower(title)}).Clicked() {
-				a.copy(c, value, "Copied the "+strings.ToLower(title))
+			if button(c, "", btnOpt{small: true, icon: icCopy, label: copyLabel}).Clicked() {
+				a.copy(c, value, copied)
 			}
 		})
 	})

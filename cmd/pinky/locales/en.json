@@ -314,6 +314,38 @@
       }
     }
   },
+  "backgroundChangeFailed": "Couldn't change background work on {phone}: {reason}",
+  "@backgroundChangeFailed": {
+    "description": "A toast when turning Work in the background on or off failed. phone is the phone's name, reason the error in English.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "reason": {
+        "type": "String",
+        "example": "the phone went offline"
+      }
+    }
+  },
+  "backgroundDesc": "Agents use a hidden second screen, so the phone stays yours and can stay locked. Applies from the next task.",
+  "@backgroundDesc": {
+    "description": "Settings › Phones: the line under Work in the background."
+  },
+  "backgroundTitle": "Work in the background",
+  "@backgroundTitle": {
+    "description": "Settings › Phones: a phone's switch (Android) that lets agents work on a hidden second display while the phone's own screen stays the person's."
+  },
+  "backgroundUnsupported": "{phone} can't work in the background yet.",
+  "@backgroundUnsupported": {
+    "description": "A toast when the phone cannot work in the background. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
   "callAnswer": "answer the approval",
   "@callAnswer": {
     "description": "Inside toastCouldNot: the person's answer to an approval did not reach the gateway."
@@ -544,7 +576,7 @@
   },
   "exportDone": "Exported to “{folder}” in {parent}",
   "@exportDone": {
-    "description": "A toast after an export, which also shows the report in the Finder. folder is the new folder's name (see exportFolderName); parent is the name of the folder it was made in: \"Desktop\", the Desktop folder's real name, which the Finder shows translated, or else the home folder's name. The Chinese picks 桌面 for Desktop.",
+    "description": "A toast after an export, which also shows the report in the Finder. folder is the new folder's name (see exportFolderName); parent is the name of the folder it was made in: \"Desktop\", the Desktop folder's real name, which the Finder shows translated, or else the home folder's name. A translation may name the Desktop in its own words when parent is \"Desktop\", with a select.",
     "placeholders": {
       "folder": {
         "type": "String",
@@ -572,7 +604,7 @@
   },
   "exportFolderName": "Pinky {name} {date} at {clock}",
   "@exportFolderName": {
-    "description": "The name of the folder an export makes on the Desktop. name is exportFolderAll or the exported task's title; date is as 2026-11-07, clock as 09.30.12 (with dots: file names cannot hold colons). It must stay a valid file name, without / or :.",
+    "description": "The name of the folder an export makes on the Desktop. name is exportFolderAll or the exported task's title; date is as 2026-11-07, clock as 09.30.12 (with dots: file names cannot hold colons). It must stay a valid file name, without / or:.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -668,7 +700,7 @@
   },
   "gwAgentGives": " Allowing gives it {scope} access.",
   "@gwAgentGives": {
-    "description": "Follows gwAgentWants: what the agent may do if allowed; scope is scopeLineEverything and the like (zh: 可以使用除已屏蔽应用外的所有应用). Shown only in other languages; in English the gateway's own words show.",
+    "description": "Follows gwAgentWants: what the agent may do if allowed; scope is scopeLineEverything and the like. Shown only in other languages; in English the gateway's own words show.",
     "placeholders": {
       "scope": {
         "type": "String",
@@ -1240,59 +1272,59 @@
   },
   "gwKeyBack": "back",
   "@gwKeyBack": {
-    "description": "The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyDelete": "delete",
   "@gwKeyDelete": {
-    "description": "The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyDown": "dpad down",
   "@gwKeyDown": {
-    "description": "The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyEnter": "enter",
   "@gwKeyEnter": {
-    "description": "The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyEscape": "escape",
   "@gwKeyEscape": {
-    "description": "The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyForwardDelete": "forward delete",
   "@gwKeyForwardDelete": {
-    "description": "The phone key 'forward delete', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'forward delete', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyHome": "home",
   "@gwKeyHome": {
-    "description": "The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyLeft": "dpad left",
   "@gwKeyLeft": {
-    "description": "The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyPageDown": "page down",
   "@gwKeyPageDown": {
-    "description": "The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyPageUp": "page up",
   "@gwKeyPageUp": {
-    "description": "The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyRecents": "recents",
   "@gwKeyRecents": {
-    "description": "The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyRight": "dpad right",
   "@gwKeyRight": {
-    "description": "The phone key 'dpad right', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'dpad right', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyTab": "tab",
   "@gwKeyTab": {
-    "description": "The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwKeyUp": "dpad up",
   "@gwKeyUp": {
-    "description": "The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+    "description": "The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn. Shown only in other languages; in English the gateway's own words show."
   },
   "gwOutcomeCancelled": "cancelled",
   "@gwOutcomeCancelled": {
@@ -1690,7 +1722,7 @@
   },
   "mirrorCallKey": "press {key}",
   "@mirrorCallKey": {
-    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when a key pressed on the mirror cannot reach the phone. key is the phone's name for the key, in English: back, home, enter, tab, delete, escape, dpad_up, page_down…",
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when a key pressed on the mirror cannot reach the phone. key is the phone's name for the key, in English: back, home, enter, tab, delete, escape, dpad_up, page_down…",
     "placeholders": {
       "key": {
         "type": "String",
@@ -1700,15 +1732,15 @@
   },
   "mirrorCallPaste": "paste",
   "@mirrorCallPaste": {
-    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when ⌘V on the mirror cannot paste the Mac's clipboard on the phone."
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when ⌘V on the mirror cannot paste the Mac's clipboard on the phone."
   },
   "mirrorCallTouch": "send the touch",
   "@mirrorCallTouch": {
-    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when a click, drag or scroll on the mirror cannot reach the phone."
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when a click, drag or scroll on the mirror cannot reach the phone."
   },
   "mirrorCallType": "type",
   "@mirrorCallType": {
-    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" (zh: 无法…：<error>) when text typed on the mirror cannot reach the phone."
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when text typed on the mirror cannot reach the phone."
   },
   "mirrorConnecting": "Connecting…",
   "@mirrorConnecting": {
@@ -1804,7 +1836,7 @@
   },
   "needsAlwaysAllow": "Always allow {kind}",
   "@needsAlwaysAllow": {
-    "description": "Item of More options: never ask again for steps like this one. kind says what they are, from the rule that asked (zh 付款, 发送消息, 更改设置, 执行所有操作), or \"this kind\" (zh 此类操作) when no rule is named.",
+    "description": "Item of More options: never ask again for steps like this one. kind says what they are, from the rule that asked, or \"this kind\" when no rule is named.",
     "placeholders": {
       "kind": {
         "type": "String",
@@ -1814,7 +1846,7 @@
   },
   "needsAlwaysAllowIn": "Always allow {kind} in {app}",
   "@needsAlwaysAllowIn": {
-    "description": "Item of More options on an approval card: never ask again for steps like this one in this app. kind says what they are, from the rule that asked (zh 付款, 发送消息, 更改设置, 执行所有操作); app is the app's name.",
+    "description": "Item of More options on an approval card: never ask again for steps like this one in this app. kind says what they are, from the rule that asked; app is the app's name.",
     "placeholders": {
       "kind": {
         "type": "String",
@@ -2132,7 +2164,7 @@
   },
   "panelAllowedTaskDetail": "{rule} in {app} are allowed until this task ends.",
   "@panelAllowedTaskDetail": {
-    "description": "The floating approval panel's confirmation under Allowed for this task. rule is the name of the rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or panelActionsLikeThis; app is the app's name, or panelThisApp.",
+    "description": "The floating approval panel's confirmation under Allowed for this task. rule is the name of the rule that asked, or panelActionsLikeThis; app is the app's name, or panelThisApp.",
     "placeholders": {
       "rule": {
         "type": "String",
@@ -2150,7 +2182,7 @@
   },
   "panelAlwaysAllowedDetail": "{rule} in {app} no longer ask. Change it in Settings.",
   "@panelAlwaysAllowedDetail": {
-    "description": "The floating approval panel's confirmation under Always allowed: Pinky won't ask the person about these steps again. rule is the name of the rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or panelActionsLikeThis; app is the app's name, or panelThisApp.",
+    "description": "The floating approval panel's confirmation under Always allowed: Pinky won't ask the person about these steps again. rule is the name of the rule that asked, or panelActionsLikeThis; app is the app's name, or panelThisApp.",
     "placeholders": {
       "rule": {
         "type": "String",
@@ -2200,7 +2232,7 @@
   },
   "panelDeniesIn": "Denies in {duration}",
   "@panelDeniesIn": {
-    "description": "Top right of the floating approval panel: the approval is denied by itself when this time runs out. duration is as \"42 s\" (zh 42 秒).",
+    "description": "Top right of the floating approval panel: the approval is denied by itself when this time runs out. duration is as \"42 s\".",
     "placeholders": {
       "duration": {
         "type": "String",
@@ -2214,7 +2246,7 @@
   },
   "panelEndsIn": "Ends in {duration}",
   "@panelEndsIn": {
-    "description": "Top right of the floating approval panel for a handoff (the agent asked the person to do something): the request ends when this time runs out. duration is as \"4 min 10 s\" (zh 4 分 10 秒).",
+    "description": "Top right of the floating approval panel for a handoff (the agent asked the person to do something): the request ends when this time runs out. duration is as \"4 min 10 s\".",
     "placeholders": {
       "duration": {
         "type": "String",
@@ -2458,7 +2490,7 @@
   },
   "phonePressKey": "press {key}",
   "@phonePressKey": {
-    "description": "What failed, inside the toast \"Couldn't press Back: <error>\" (zh 无法按返回键：<error>). key is the key's name: phoneKeyBack, phoneKeyHome or phoneKeyRecents.",
+    "description": "What failed, inside the toast \"Couldn't press Back: <error>\". key is the key's name: phoneKeyBack, phoneKeyHome or phoneKeyRecents.",
     "placeholders": {
       "key": {
         "type": "String",
@@ -2526,7 +2558,7 @@
   },
   "phoneScreenshotSaved": "Saved {file}",
   "@phoneScreenshotSaved": {
-    "description": "Toast after Take screenshot: the file's name on the Desktop (phoneScreenshotName and .png).",
+    "description": "Toast after Take screenshot: the file's name on the Desktop (phoneScreenshotName and.png).",
     "placeholders": {
       "file": {
         "type": "String",
@@ -2804,6 +2836,110 @@
   "@recordingWatch": {
     "description": "The button in a task's detail that plays the task's screen recording."
   },
+  "remoteAddrInvalid": "Enter an address and port, like 127.0.0.1:7465.",
+  "@remoteAddrInvalid": {
+    "description": "Settings › Agents › Remote agents: under the address field, when what was typed is not an address with a port. 127.0.0.1:7465 is the default address; keep it."
+  },
+  "remoteAddress": "Address",
+  "@remoteAddress": {
+    "description": "Settings › Agents › Remote agents: the row of the address and port Pinky listens on, and the accessibility label of its field."
+  },
+  "remoteAddressDesc": "Where Pinky listens. 127.0.0.1 is this computer only.",
+  "@remoteAddressDesc": {
+    "description": "Settings › Agents › Remote agents: the line under Address. 127.0.0.1 is the loopback address; keep it."
+  },
+  "remoteChangeAddress": "Change the address",
+  "@remoteChangeAddress": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the Change button next to the address."
+  },
+  "remoteCommandLabel": "Command to add Pinky to Claude Code",
+  "@remoteCommandLabel": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the claude mcp add command shown under Claude Code."
+  },
+  "remoteCopiedCommand": "Copied the command",
+  "@remoteCopiedCommand": {
+    "description": "A toast once the claude mcp add command is copied."
+  },
+  "remoteCopiedToken": "Copied the agent token",
+  "@remoteCopiedToken": {
+    "description": "A toast once the agent token is copied."
+  },
+  "remoteCopiedURL": "Copied the url",
+  "@remoteCopiedURL": {
+    "description": "A toast once the remote agents' URL is copied. The English has url in lower case."
+  },
+  "remoteCopyCommand": "Copy the command",
+  "@remoteCopyCommand": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the copy button next to the claude mcp add command."
+  },
+  "remoteCopyToken": "Copy the agent token",
+  "@remoteCopyToken": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the copy button next to the agent token."
+  },
+  "remoteCopyURL": "Copy the url",
+  "@remoteCopyURL": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the copy button next to the URL. The English has url in lower case."
+  },
+  "remoteHide": "Hide",
+  "@remoteHide": {
+    "description": "Settings › Agents › Remote agents: the small button that hides the agent token behind dots again."
+  },
+  "remoteHideToken": "Hide the agent token",
+  "@remoteHideToken": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the Hide button next to the agent token."
+  },
+  "remoteHostInvalid": "Enter an IP address of this computer, like 127.0.0.1, or localhost.",
+  "@remoteHostInvalid": {
+    "description": "Settings › Agents › Remote agents: under the address field, when the host is a name other than localhost. Keep 127.0.0.1 and localhost."
+  },
+  "remoteIntro": "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the agent token, and you allow each one, as above.",
+  "@remoteIntro": {
+    "description": "Settings › Agents › Remote agents: the line under the heading. `pinky mcp` is the command local agents run, kept with its backticks; the agent token is the secret agents present; as above refers to the connection requests above."
+  },
+  "remoteOthersWarning": "Other computers on your network can reach Pinky at this address. Anyone with the agent token can ask to use your phones.",
+  "@remoteOthersWarning": {
+    "description": "Settings › Agents › Remote agents: a warning under the address when other computers can reach it (0.0.0.0, a LAN address)."
+  },
+  "remotePortInvalid": "The port is a number from 1 to 65535.",
+  "@remotePortInvalid": {
+    "description": "Settings › Agents › Remote agents: under the address field, when the port is not a number from 1 to 65535."
+  },
+  "remoteRunHint": "Run this where the agent runs.",
+  "@remoteRunHint": {
+    "description": "Settings › Agents › Remote agents: under the heading Claude Code, above the claude mcp add command that adds Pinky to Claude Code: run it on the computer or in the container where the agent runs."
+  },
+  "remoteShow": "Show",
+  "@remoteShow": {
+    "description": "Settings › Agents › Remote agents: the small button that shows the agent token in place of dots."
+  },
+  "remoteShowToken": "Show the agent token",
+  "@remoteShowToken": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the Show button next to the agent token."
+  },
+  "remoteTitle": "Remote agents",
+  "@remoteTitle": {
+    "description": "Settings › Agents: the heading of the part where agents connect over HTTP, from a container or another computer, and its accessibility label."
+  },
+  "remoteToggle": "Let agents connect over HTTP",
+  "@remoteToggle": {
+    "description": "Settings › Agents › Remote agents: the switch that serves MCP over HTTP."
+  },
+  "remoteToken": "Agent token",
+  "@remoteToken": {
+    "description": "Settings › Agents › Remote agents: the row of the agent token, the secret agents send to connect over HTTP."
+  },
+  "remoteTokenDesc": "Agents send it as their bearer token. Keep it private.",
+  "@remoteTokenDesc": {
+    "description": "Settings › Agents › Remote agents: the line under Agent token. A bearer token is the token of HTTP's Authorization header."
+  },
+  "remoteTokenMissing": "This Pinky didn't give the client its agent token.",
+  "@remoteTokenMissing": {
+    "description": "Settings › Agents › Remote agents: the line under Agent token when the running Pinky did not pass the token to its window."
+  },
+  "remoteURLTitle": "URL",
+  "@remoteURLTitle": {
+    "description": "Settings › Agents › Remote agents: the row of the URL agents connect to, as http://127.0.0.1:7465/mcp."
+  },
   "replayMenuItem": "Step-by-step replay",
   "@replayMenuItem": {
     "description": "An item of the ⋯ menu of a task that has a screen recording: shows the steps one at a time with their screenshots instead of the recording."
@@ -2904,7 +3040,7 @@
   },
   "ruleActionPayments": "payments",
   "@ruleActionPayments": {
-    "description": "What the Payments rule covers, inside \"Always allow payments in Dinely\" (zh: 始终允许在 Dinely 中付款)."
+    "description": "What the Payments rule covers, inside \"Always allow payments in Dinely\"."
   },
   "ruleActionSettingsChanges": "settings changes",
   "@ruleActionSettingsChanges": {
@@ -3022,7 +3158,7 @@
   },
   "sentencePair": "{first} {second}",
   "@sentencePair": {
-    "description": "Joins two sentences in one line (zh: no space after 。).",
+    "description": "Joins two sentences in one line.",
     "placeholders": {
       "first": {
         "type": "String",
@@ -3033,6 +3169,464 @@
         "example": "Asked at 03:51."
       }
     }
+  },
+  "settingsAdvancedBackends": "Backends",
+  "@settingsAdvancedBackends": {
+    "description": "Settings › Advanced, in Developer mode: the row that lists each phone's driver backend, as Pixel 9: scrcpy."
+  },
+  "settingsAdvancedConnHTTP": "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}",
+  "@settingsAdvancedConnHTTP": {
+    "description": "Settings › Advanced, in Developer mode: the line under Agent connection while remote agents are on: MCP over stdio, and over Streamable HTTP at endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.",
+    "placeholders": {
+      "endpoint": {
+        "type": "String",
+        "example": "http://127.0.0.1:7465/mcp"
+      }
+    }
+  },
+  "settingsAdvancedConnStdio": "MCP over stdio: pinky mcp",
+  "@settingsAdvancedConnStdio": {
+    "description": "Settings › Advanced, in Developer mode: the line under Agent connection: agents run the command pinky mcp, which speaks MCP over standard input and output. Keep MCP, stdio and pinky mcp."
+  },
+  "settingsAdvancedConnection": "Agent connection",
+  "@settingsAdvancedConnection": {
+    "description": "Settings › Advanced, in Developer mode: the row of how agents reach Pinky."
+  },
+  "settingsAdvancedDevMode": "Developer mode",
+  "@settingsAdvancedDevMode": {
+    "description": "Settings › Advanced: the switch that shows developers' details in the app."
+  },
+  "settingsAdvancedDevModeDesc": "Shows tool calls, element lists, timings and backends. A Details switch appears on the task card.",
+  "@settingsAdvancedDevModeDesc": {
+    "description": "Settings › Advanced: the line under Developer mode. Details is the label of a switch on the task card that shows the tool calls."
+  },
+  "settingsAdvancedEditRules": "Edit rules file",
+  "@settingsAdvancedEditRules": {
+    "description": "Settings › Advanced: the button that opens the rules file in the system's editor."
+  },
+  "settingsAdvancedIntro": "For people who build with Pinky.",
+  "@settingsAdvancedIntro": {
+    "description": "Settings › Advanced: the line under the page title."
+  },
+  "settingsAdvancedNoPhones": "No phones connected.",
+  "@settingsAdvancedNoPhones": {
+    "description": "Settings › Advanced, in Developer mode: the line under Backends when no phone is connected."
+  },
+  "settingsAdvancedNoRulesFile": "The gateway did not say where its rules file is",
+  "@settingsAdvancedNoRulesFile": {
+    "description": "Settings › Advanced: the tooltip of the disabled Edit rules file button."
+  },
+  "settingsAdvancedRulesFile": "Rules file",
+  "@settingsAdvancedRulesFile": {
+    "description": "Settings › Advanced: the row of the rules file, the text file of the rules behind Settings › Safety."
+  },
+  "settingsAdvancedRulesFileDesc": "The rules behind Safety, as text",
+  "@settingsAdvancedRulesFileDesc": {
+    "description": "Settings › Advanced: the line under Rules file. Safety is the Settings section."
+  },
+  "settingsAdvancedRulesOpenFailed": "Couldn't open the rules file: {reason}",
+  "@settingsAdvancedRulesOpenFailed": {
+    "description": "A toast when the rules file could not be opened. reason is the error, in English.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "exit status 1"
+      }
+    }
+  },
+  "settingsAdvancedVideo": "Video",
+  "@settingsAdvancedVideo": {
+    "description": "Settings › Advanced, in Developer mode: the row of the video decoder in use."
+  },
+  "settingsAgentsAllowed": "Allowed",
+  "@settingsAgentsAllowed": {
+    "description": "Settings › Agents: the state at the end of an agent's row, next to a gray dot: allowed, and no task of it runs."
+  },
+  "settingsAgentsApprove": "approve the agent",
+  "@settingsAgentsApprove": {
+    "description": "Completes \"Couldn't …: <error>\" in a toast when allowing an agent's first connection fails: a verb phrase."
+  },
+  "settingsAgentsApps": "Apps",
+  "@settingsAgentsApps": {
+    "description": "The accessibility label of the field of the apps an agent may use, under the select of what it may do (Settings › Agents, and a first-connection card)."
+  },
+  "settingsAgentsAppsPlaceholder": "Apps, separated by commas: Dinely, Chatter",
+  "@settingsAgentsAppsPlaceholder": {
+    "description": "The placeholder of the field of the apps an agent may use. Dinely and Chatter are example app names; keep them."
+  },
+  "settingsAgentsChangeLabel": "Change what {agent} may do",
+  "@settingsAgentsChangeLabel": {
+    "description": "Settings › Agents: the accessibility label of the Change button of an agent's row, which opens the select of what it may do.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "settingsAgentsIntro": "Agents connect to Pinky on this computer. Each one only gets what you allow.",
+  "@settingsAgentsIntro": {
+    "description": "Settings › Agents: the line under the page title."
+  },
+  "settingsAgentsList": "Connected agents",
+  "@settingsAgentsList": {
+    "description": "Settings › Agents: the accessibility label of the list of agents."
+  },
+  "settingsAgentsNone": "No agent has connected yet. Point an agent at `pinky mcp` to start.",
+  "@settingsAgentsNone": {
+    "description": "Settings › Agents: in place of the list while no agent has connected. `pinky mcp` is the command agents run to reach Pinky; keep it with its backticks."
+  },
+  "settingsAgentsNotAllowed": "Not allowed yet",
+  "@settingsAgentsNotAllowed": {
+    "description": "Settings › Agents: an agent's second line while its first connection waits for the person."
+  },
+  "settingsAgentsRequest": "Connection request",
+  "@settingsAgentsRequest": {
+    "description": "Settings › Agents: the accessibility label of the card of an agent's first connection, which waits for the person to allow it."
+  },
+  "settingsAgentsScopeLabel": "What {agent} may do",
+  "@settingsAgentsScopeLabel": {
+    "description": "Settings › Agents: the accessibility label of the select of what an agent may do (All apps except blocked ones, Only the apps I choose…), under its row.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "settingsAgentsUnlisted": "This gateway does not list its agents; these are the ones seen in tasks.",
+  "@settingsAgentsUnlisted": {
+    "description": "Settings › Agents: a note under the list when the gateway cannot list its agents, so the list shows the agents of the tasks the app saw."
+  },
+  "settingsAgentsViaMCP": "Connected through MCP",
+  "@settingsAgentsViaMCP": {
+    "description": "Settings › Agents: an agent's second line when the gateway does not say what it may do."
+  },
+  "settingsAgentsWaiting": "Waiting for you",
+  "@settingsAgentsWaiting": {
+    "description": "Settings › Agents: the state at the end of an agent's row, next to an amber dot: its first connection waits for the person."
+  },
+  "settingsAgentsWorking": "Working",
+  "@settingsAgentsWorking": {
+    "description": "Settings › Agents: the state at the end of an agent's row, next to a green dot: one of its tasks is running."
+  },
+  "settingsCancel": "Cancel",
+  "@settingsCancel": {
+    "description": "Settings: a button that closes without changing anything: the remote agents' address editor, and the alert of Delete all activity."
+  },
+  "settingsChange": "Change",
+  "@settingsChange": {
+    "description": "Settings: a button that opens an editor: of what an agent may do (Settings › Agents), or of the remote agents' address."
+  },
+  "settingsClose": "Close",
+  "@settingsClose": {
+    "description": "Settings › Agents: replaces Change while the editor of what an agent may do is open; closes it without saving."
+  },
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {
+    "description": "Settings › Advanced: the row and select that choose the language of Pinky's windows and menus."
+  },
+  "settingsLanguageDesc": "Pinky's windows and menus. System follows your computer's preferred languages.",
+  "@settingsLanguageDesc": {
+    "description": "Settings › Advanced › Language: what the setting changes, and what its first choice does."
+  },
+  "settingsLanguageSystem": "System",
+  "@settingsLanguageSystem": {
+    "description": "Settings › Advanced › Language: the first choice, which follows the computer's preferred languages. The other choices name each language in itself (English, Simplified Chinese)."
+  },
+  "settingsNeedsYou": "Needs you",
+  "@settingsNeedsYou": {
+    "description": "Settings › Agents: the eyebrow of a card that asks the person to allow an agent's first connection, and the accessibility label of the amber dot on the Agents tab while one waits."
+  },
+  "settingsPageTitle": "Settings",
+  "@settingsPageTitle": {
+    "description": "The Settings page's title, in its header."
+  },
+  "settingsPhonesAdd": "Add phone",
+  "@settingsPhonesAdd": {
+    "description": "Settings › Phones: the button under the list that opens Add phone."
+  },
+  "settingsPhonesConnected": "Connected",
+  "@settingsPhonesConnected": {
+    "description": "Settings › Phones: the state at the end of a phone's row, next to a green dot: online and ready."
+  },
+  "settingsPhonesIntro": "Phones this computer can reach.",
+  "@settingsPhonesIntro": {
+    "description": "Settings › Phones: the line under the page title."
+  },
+  "settingsPhonesNeedsSetup": "Needs setup",
+  "@settingsPhonesNeedsSetup": {
+    "description": "Settings › Phones: the state at the end of a phone's row, next to an amber dot: plugged in but not ready yet (USB debugging off, not trusted…)."
+  },
+  "settingsPhonesNone": "No phones yet.",
+  "@settingsPhonesNone": {
+    "description": "Settings › Phones: in place of the list while no phone is known."
+  },
+  "settingsPhonesOffline": "Offline",
+  "@settingsPhonesOffline": {
+    "description": "Settings › Phones: the state at the end of a phone's row, next to a hollow dot: not reachable."
+  },
+  "settingsPrivacyCannotDelete": "This gateway cannot delete its history",
+  "@settingsPrivacyCannotDelete": {
+    "description": "Settings › Privacy: the tooltip of the disabled Delete… button when the gateway cannot delete its history."
+  },
+  "settingsPrivacyDeleteAll": "Delete all activity",
+  "@settingsPrivacyDeleteAll": {
+    "description": "Settings › Privacy: the row whose button deletes every finished task."
+  },
+  "settingsPrivacyDeleteAllDesc": "Removes every task, step and recording",
+  "@settingsPrivacyDeleteAllDesc": {
+    "description": "Settings › Privacy: the line under Delete all activity."
+  },
+  "settingsPrivacyDeleteButton": "Delete…",
+  "@settingsPrivacyDeleteButton": {
+    "description": "Settings › Privacy: the button that asks to confirm, then deletes all activity."
+  },
+  "settingsPrivacyDeleteConfirm": "Delete",
+  "@settingsPrivacyDeleteConfirm": {
+    "description": "Settings › Privacy: the alert's button that deletes all activity."
+  },
+  "settingsPrivacyDeleteFailed": "Couldn't delete the activity: {reason}",
+  "@settingsPrivacyDeleteFailed": {
+    "description": "A toast when deleting all activity failed. reason is the error, in English.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "database is locked"
+      }
+    }
+  },
+  "settingsPrivacyDeleteMessage": "Every finished task, its steps, approvals and screenshots are removed from this computer. Running tasks go on.",
+  "@settingsPrivacyDeleteMessage": {
+    "description": "Settings › Privacy: the message of the alert that confirms deleting all activity."
+  },
+  "settingsPrivacyDeleteTitle": "Delete all activity?",
+  "@settingsPrivacyDeleteTitle": {
+    "description": "Settings › Privacy: the title of the alert that confirms deleting all activity."
+  },
+  "settingsPrivacyDeleted": "Deleted all activity",
+  "@settingsPrivacyDeleted": {
+    "description": "A toast once all activity is deleted."
+  },
+  "settingsPrivacyIntro": "Activity and recordings stay on this computer.",
+  "@settingsPrivacyIntro": {
+    "description": "Settings › Privacy: the line under the page title. Activity is the page of finished tasks."
+  },
+  "settingsPrivacyKeep": "Keep activity for",
+  "@settingsPrivacyKeep": {
+    "description": "Settings › Privacy: the row of how long finished tasks are kept, before a select of 7, 30, 90 days, 1 year or Forever; also the select's accessibility label."
+  },
+  "settingsPrivacyKeepDays": "{days, plural, one {# day} other {# days}}",
+  "@settingsPrivacyKeepDays": {
+    "description": "Settings › Privacy: a choice of Keep activity for, a number of days: 7, 30, 90, or another one kept in the settings file.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "30"
+      }
+    }
+  },
+  "settingsPrivacyKeepDesc": "Older tasks, their screenshots and recordings are deleted automatically",
+  "@settingsPrivacyKeepDesc": {
+    "description": "Settings › Privacy: the line under Keep activity for."
+  },
+  "settingsPrivacyKeepForever": "Forever",
+  "@settingsPrivacyKeepForever": {
+    "description": "Settings › Privacy: a choice of Keep activity for: never delete."
+  },
+  "settingsPrivacyKeepYear": "1 year",
+  "@settingsPrivacyKeepYear": {
+    "description": "Settings › Privacy: a choice of Keep activity for: 365 days."
+  },
+  "settingsPrivacyRecord": "Record the screen during tasks",
+  "@settingsPrivacyRecord": {
+    "description": "Settings › Privacy: the switch that records the phone's screen while agents work."
+  },
+  "settingsPrivacyRecordDesc": "Used for replays in Activity. Recording pauses while a blocked app is open.",
+  "@settingsPrivacyRecordDesc": {
+    "description": "Settings › Privacy: the line under Record the screen during tasks. Activity is the page of finished tasks."
+  },
+  "settingsSafetyAddApp": "Add app",
+  "@settingsSafetyAddApp": {
+    "description": "Settings › Safety: the button next to Blocked apps that opens a field to block another app."
+  },
+  "settingsSafetyAppLabel": "App to block",
+  "@settingsSafetyAppLabel": {
+    "description": "Settings › Safety: the accessibility label of the field of an app to block."
+  },
+  "settingsSafetyAppPlaceholder": "App name or package",
+  "@settingsSafetyAppPlaceholder": {
+    "description": "Settings › Safety: the placeholder of the field of an app to block, which takes the app's name or its package name, as com.example.app."
+  },
+  "settingsSafetyAskGroup": "When agents ask",
+  "@settingsSafetyAskGroup": {
+    "description": "Settings › Safety: the accessibility label of the part with the three choices of when agents ask for approval."
+  },
+  "settingsSafetyAskTitle": "When should agents ask you?",
+  "@settingsSafetyAskTitle": {
+    "description": "Settings › Safety: the heading above the three choices of when agents ask for approval, and the label of their radio group."
+  },
+  "settingsSafetyBlock": "Block",
+  "@settingsSafetyBlock": {
+    "description": "Settings › Safety: the button next to the field that adds the app typed to the blocked apps."
+  },
+  "settingsSafetyBlockedApps": "Blocked apps",
+  "@settingsSafetyBlockedApps": {
+    "description": "Settings › Safety: the heading of the apps agents may never open, and the accessibility label of that part."
+  },
+  "settingsSafetyBlockedIntro": "Agents can't open these apps or see their screens.",
+  "@settingsSafetyBlockedIntro": {
+    "description": "Settings › Safety: the line under Blocked apps."
+  },
+  "settingsSafetyHideCodes": "Hide codes from agents",
+  "@settingsSafetyHideCodes": {
+    "description": "Settings › Safety: the switch that hides passwords and one-time codes on the phone's screen from agents."
+  },
+  "settingsSafetyHideCodesDesc": "Passwords and one-time codes are blurred before an agent sees the screen",
+  "@settingsSafetyHideCodesDesc": {
+    "description": "Settings › Safety: the line under Hide codes from agents."
+  },
+  "settingsSafetyIntro": "Pinky checks every action before it reaches the phone. Agents can't change these settings.",
+  "@settingsSafetyIntro": {
+    "description": "Settings › Safety: the line under the page title."
+  },
+  "settingsSafetyKindBanking": "Banking",
+  "@settingsSafetyKindBanking": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a bank's app."
+  },
+  "settingsSafetyKindBrowsers": "Browsers",
+  "@settingsSafetyKindBrowsers": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a web browser."
+  },
+  "settingsSafetyKindFinance": "Finance",
+  "@settingsSafetyKindFinance": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a finance app."
+  },
+  "settingsSafetyKindMessaging": "Messaging",
+  "@settingsSafetyKindMessaging": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a messaging app."
+  },
+  "settingsSafetyKindPasswords": "Passwords",
+  "@settingsSafetyKindPasswords": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a password manager."
+  },
+  "settingsSafetyKindPhone": "Phone",
+  "@settingsSafetyKindPhone": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is the phone's dialer or calls app."
+  },
+  "settingsSafetyKindSettings": "Settings",
+  "@settingsSafetyKindSettings": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is the phone's Settings app."
+  },
+  "settingsSafetyKindSocial": "Social",
+  "@settingsSafetyKindSocial": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a social network's app."
+  },
+  "settingsSafetyKindStores": "Stores",
+  "@settingsSafetyKindStores": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is an app store or an app installer."
+  },
+  "settingsSafetyKindSystem": "System",
+  "@settingsSafetyKindSystem": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is part of the phone's system (launcher, system UI)."
+  },
+  "settingsSafetyKindWallet": "Wallet",
+  "@settingsSafetyKindWallet": {
+    "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a wallet (payments, crypto)."
+  },
+  "settingsSafetyPresetCommits": "Ask before payments, messages and deletions (Recommended)",
+  "@settingsSafetyPresetCommits": {
+    "description": "Settings › Safety: the recommended choice: agents ask for approval before paying, sending messages and deleting."
+  },
+  "settingsSafetyPresetCommitsDesc": "Also asks before calls, account changes and installing apps.",
+  "@settingsSafetyPresetCommitsDesc": {
+    "description": "Settings › Safety: the line under the recommended choice."
+  },
+  "settingsSafetyPresetEvery": "Ask before every action",
+  "@settingsSafetyPresetEvery": {
+    "description": "Settings › Safety: the choice where agents ask for approval before each step."
+  },
+  "settingsSafetyPresetEveryDesc": "Slower, but you see every tap first.",
+  "@settingsSafetyPresetEveryDesc": {
+    "description": "Settings › Safety: the line under Ask before every action."
+  },
+  "settingsSafetyPresetPayments": "Ask before payments only",
+  "@settingsSafetyPresetPayments": {
+    "description": "Settings › Safety: the choice where agents ask for approval before payments and nothing else."
+  },
+  "settingsSafetyPresetPaymentsDesc": "Messages and deletions go through without asking.",
+  "@settingsSafetyPresetPaymentsDesc": {
+    "description": "Settings › Safety: the line under Ask before payments only."
+  },
+  "settingsSafetyProtections": "Protections",
+  "@settingsSafetyProtections": {
+    "description": "Settings › Safety: the accessibility label of the switches below the blocked apps (Read-only mode, Unlock from this computer, Hide codes from agents)."
+  },
+  "settingsSafetyReadOnly": "Read-only mode",
+  "@settingsSafetyReadOnly": {
+    "description": "Settings › Safety: the switch that lets agents look and read on every phone, but never pay, send, delete or change anything."
+  },
+  "settingsSafetyReadOnlyDesc": "Agents can browse, not commit",
+  "@settingsSafetyReadOnlyDesc": {
+    "description": "Settings › Safety: the line under Read-only mode."
+  },
+  "settingsSafetyUnblock": "Unblock",
+  "@settingsSafetyUnblock": {
+    "description": "Settings › Safety: the tooltip of the × button at the end of a blocked app's row, which removes it from the list."
+  },
+  "settingsSafetyUnblockApp": "Unblock {app}",
+  "@settingsSafetyUnblockApp": {
+    "description": "Settings › Safety: the accessibility label of the × button that removes this app from the blocked apps.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Northbank"
+      }
+    }
+  },
+  "settingsSafetyUnlockDescMac": "Save your phone PIN in the Keychain; unlock with Touch ID. Save each phone's PIN in Settings › Phones.",
+  "@settingsSafetyUnlockDescMac": {
+    "description": "Settings › Safety, on a Mac: the line under Unlock from this computer. The Keychain is macOS's; Settings › Phones is where each phone's PIN is entered."
+  },
+  "settingsSafetyUnlockDescOther": "Save your phone PIN in your keyring",
+  "@settingsSafetyUnlockDescOther": {
+    "description": "Settings › Safety, on Linux: the line under Unlock from this computer. The keyring is the system's store of passwords."
+  },
+  "settingsSafetyUnlockDescWindows": "Save your phone PIN in Windows Credential Manager",
+  "@settingsSafetyUnlockDescWindows": {
+    "description": "Settings › Safety, on Windows: the line under Unlock from this computer."
+  },
+  "settingsSave": "Save",
+  "@settingsSave": {
+    "description": "Settings: the button that saves what an agent may do (Settings › Agents), or the remote agents' address."
+  },
+  "settingsSectionAdvanced": "Advanced",
+  "@settingsSectionAdvanced": {
+    "description": "Settings: the section for developers (developer mode, the rules file). Its tab on the left, its page title and the accessibility label of its rows."
+  },
+  "settingsSectionAgents": "Agents",
+  "@settingsSectionAgents": {
+    "description": "Settings: the section of the agents that connect to Pinky. Its tab on the left and its page title."
+  },
+  "settingsSectionPhones": "Phones",
+  "@settingsSectionPhones": {
+    "description": "Settings: the section of the phones this computer can reach. Its tab on the left, its page title and the accessibility label of its list of phones."
+  },
+  "settingsSectionPrivacy": "Privacy",
+  "@settingsSectionPrivacy": {
+    "description": "Settings: the section of what Pinky keeps (activity, recordings). Its tab on the left, its page title and the accessibility label of its rows."
+  },
+  "settingsSectionSafety": "Safety",
+  "@settingsSectionSafety": {
+    "description": "Settings: the section of when agents ask, the blocked apps and the protections. Its tab on the left and its page title."
+  },
+  "settingsSectionsLabel": "Settings sections",
+  "@settingsSectionsLabel": {
+    "description": "Settings: the accessibility label of the list of sections on the left (Phones, Agents, Safety, Privacy, Advanced)."
+  },
+  "settingsUnlockFromComputer": "Unlock from this computer",
+  "@settingsUnlockFromComputer": {
+    "description": "Settings › Safety: the switch that lets Pinky unlock a locked phone with its saved PIN. Also the heading of each phone's PIN form in Settings › Phones."
   },
   "shotLabel": "Screenshot of {phone}",
   "@shotLabel": {
@@ -3382,7 +3976,7 @@
   },
   "toastCouldNot": "Couldn't {action}: {error}",
   "@toastCouldNot": {
-    "description": "A toast when a call to the gateway fails: action is a verb phrase such as callTakeOver (zh: 接管), error the gateway's error in English.",
+    "description": "A toast when a call to the gateway fails: action is a verb phrase such as callTakeOver, error the gateway's error in English.",
     "placeholders": {
       "action": {
         "type": "String",
@@ -3400,7 +3994,7 @@
   },
   "unlockCallWhat": "unlock the phone",
   "@unlockCallWhat": {
-    "description": "Fills \"Couldn't …: <error>\" (zh: 无法…：<error>), a notice when unlocking a phone fails: a verb phrase."
+    "description": "Fills \"Couldn't …: <error>\", a notice when unlocking a phone fails: a verb phrase."
   },
   "unlockEnd": ".",
   "@unlockEnd": {

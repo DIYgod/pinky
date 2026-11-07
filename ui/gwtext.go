@@ -112,7 +112,7 @@ func tapVerb(s string) string {
 	return "tap"
 }
 
-// done says the action as a step that happened: "点按了“支付”".
+// done says the action as a step that happened, as "Tapped “Pay”" does.
 func (a action) done() string {
 	switch a.verb {
 	case "tap", "longpress":
@@ -155,7 +155,8 @@ func (a action) done() string {
 	return a.ask()
 }
 
-// ask says the action as what was asked, without a tense: "点按“支付”".
+// ask says the action as what was asked, without a tense, as "tap “Pay”"
+// does.
 func (a action) ask() string {
 	switch a.verb {
 	case "tap", "longpress":
@@ -210,7 +211,7 @@ func (a action) ask() string {
 
 // actionAsked says the action of a step that waited for the person, given
 // as the gateway words it after "Waiting for you: ": "tap “Pay”" in
-// English (imperative), "点按“Pay”" in Chinese.
+// English, and the catalog's gwDoTap and the like in other languages.
 func actionAsked(past string) string {
 	if translated() {
 		if a, ok := parseAction(past); ok {

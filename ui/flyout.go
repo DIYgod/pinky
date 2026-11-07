@@ -208,7 +208,7 @@ func needShort(n gateway.NeedView) string {
 	if len(t) > 0 && t[len(t)-1] == '?' {
 		t = t[:len(t)-1]
 	}
-	t = strings.TrimSuffix(t, "？") // a translated title's full-width question mark
+	t = strings.TrimSuffix(t, "\uff1f") // a translated title's full-width question mark
 	if n.Kind == gateway.NeedUnlock {
 		return locales.FlyoutLocked()
 	}

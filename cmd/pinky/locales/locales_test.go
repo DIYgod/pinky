@@ -78,18 +78,21 @@ func TestTranslations(t *testing.T) {
 	}
 }
 
-// TestChineseSays checks a few messages as the app shows them.
-func TestChineseSays(t *testing.T) {
-	for _, c := range []struct{ got, want string }{
-		{In("zh-Hans").SidebarStopAll(), "全部停止"},
-		{In("en").SidebarStopAll(), "Stop all"},
-		{In("zh-CN").SidebarStopAll(), "全部停止"},
-		{In("zh-Hans-SG").SidebarStopAll(), "全部停止"},
-		{In("zh").SidebarStopAll(), "全部停止"},
-		{In("de").SidebarStopAll(), "Stop all"}, // other languages fall back to English
-	} {
-		if c.got != c.want {
-			t.Errorf("got %q, want %q", c.got, c.want)
+// TestLanguageMatch checks which catalog a language reads: Chinese written
+// in simplified characters reads Chinese, other languages English.
+func TestLanguageMatch(t *testing.T) {
+	zh, en := In("zh-Hans").SidebarStopAll(), In("en").SidebarStopAll()
+	if zh == en {
+		t.Fatalf("the Chinese catalog says %q as English does", zh)
+	}
+	for _, tag := range []string{"zh-CN", "zh-Hans-SG", "zh"} {
+		if got := In(tag).SidebarStopAll(); got != zh {
+			t.Errorf("%s says %q, want the Chinese %q", tag, got, zh)
+		}
+	}
+	for _, tag := range []string{"en-GB", "de", "zh-Hant"} {
+		if got := In(tag).SidebarStopAll(); got != en {
+			t.Errorf("%s says %q, want the English %q", tag, got, en)
 		}
 	}
 }
