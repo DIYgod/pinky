@@ -1001,8 +1001,8 @@ func appListed(app screen.App, list []string) bool {
 }
 
 // RequestApproval implements phone_request_approval: it asks the person a
-// question and records the answer. It grants nothing: a later commit still
-// asks, and so does the next question, since a yes answers this one only
+// question and records the answer. It grants nothing: a later step the
+// rules ask about still asks, and so does the next question, since a yes answers this one only
 // (canAllowTask).
 func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Result {
 	summary := strings.TrimSpace(req.Summary)
@@ -1073,7 +1073,7 @@ func (s *Session) RequestApproval(ctx context.Context, req ApprovalRequest) *Res
 	if out.Decision.Allows() {
 		g.closeStep(info.ID, string(StatusSettled), out.Waited)
 		res := &Result{Status: StatusSettled, Decision: "allow", Note: out.Note,
-			Message: "The person said yes. This grants nothing by itself: a later commit still asks."}
+			Message: "The person said yes. This grants nothing by itself: a later step their rules ask about, such as a payment, still asks."}
 		return g.finish(l, res)
 	}
 	g.closeStep(info.ID, string(StatusDenied), out.Waited)

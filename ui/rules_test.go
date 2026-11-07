@@ -3,6 +3,7 @@ package ui
 import (
 	"slices"
 	"testing"
+	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -40,11 +41,20 @@ func TestGatewayRules(t *testing.T) {
 	ga.waitFor(t, "the rules", func() bool { tt.Frame(); return ga.rules.loaded })
 	tt.Frame()
 	for _, want := range []string{"Rules", "Your rules", "Finance apps", "Password managers", "Built in", "Payments",
-		"Installing apps, Opening links", "Blocked by you", "Passwords and codes"} {
+		"Blocked by you", "Passwords and codes"} {
 		if !hasText(tt, want) {
 			t.Errorf("no %q in Settings › Safety: %q", want, tt.Texts())
 		}
 	}
+	// The default asks before payments only; preset 1 adds its rules.
+	if hasText(tt, "Installing apps, Opening links") {
+		t.Errorf("preset 1's rules show with the default: %q", tt.Texts())
+	}
+	if err := g.Policy().SetPreset(policy.PresetCommits); err != nil {
+		t.Fatal(err)
+	}
+	ga.rules.lastLoad = time.Time{}
+	ga.waitFor(t, "preset 1's rules", func() bool { tt.Frame(); return hasText(tt, "Installing apps, Opening links") })
 	file := func() []string {
 		var out []string
 		for _, r := range g.Rules().File {

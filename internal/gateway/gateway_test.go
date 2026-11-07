@@ -14,13 +14,26 @@ import (
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
-func newTestGateway(t *testing.T, opts ...func(*Options)) (*Gateway, *demo.Device) {
+// testPolicy is the bundled policy with the demo apps' categories and
+// "Ask before payments, messages and deletions" (preset 1). The gateway's
+// tests check that sends, deletions, calls, links and settings changes ask,
+// which the default preset (payments only) lets through.
+func testPolicy(t testing.TB) *policy.Engine {
 	t.Helper()
-	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
 	pol := policy.Default()
+	if err := pol.SetPreset(policy.PresetCommits); err != nil {
+		t.Fatal(err)
+	}
 	for cat, e := range demo.PolicyApps() {
 		pol.AddApps(cat, e)
 	}
+	return pol
+}
+
+func newTestGateway(t *testing.T, opts ...func(*Options)) (*Gateway, *demo.Device) {
+	t.Helper()
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	pol := testPolicy(t)
 	o := Options{
 		Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)}, Policy: pol, TrustNewAgents: true,
 		ApprovalTimeout: 3 * time.Second, MaxBlock: 2 * time.Second, SettleMax: 200 * time.Millisecond,
@@ -997,5 +1010,34 @@ func TestIdlePhoneLockShows(t *testing.T) {
 		if time.Now().After(deadline) {
 			t.Fatalf("an idle unlocked phone shows %q", status())
 		}
+	}
+}
+
+// TestDefaultAsksBeforePaymentsOnly runs the bundled policy as it ships:
+// a message goes out without asking, a payment still asks.
+func TestDefaultAsksBeforePaymentsOnly(t *testing.T) {
+	g, dev := newTestGateway(t, func(o *Options) {
+		pol := policy.Default()
+		for cat, e := range demo.PolicyApps() {
+			pol.AddApps(cat, e)
+		}
+		o.Policy, o.MaxBlock = pol, 50*time.Millisecond
+	})
+	if p := g.Policy().Preset(); p != policy.PresetPayments {
+		t.Fatalf("default preset %d", p)
+	}
+	ctx := context.Background()
+	s, _ := connect(t, g, "Chat")
+	dev.Show("chats")
+	res := tap(s, ref(t, s.Observe(ctx, ObserveRequest{}), "Sam"))
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "type", Ref: ref(t, res, "Message"), Text: "hi", Submit: true}), StatusSettled)
+	if chat := dev.Chat(); chat[len(chat)-1] != "Me: hi" || len(g.Needs()) != 0 {
+		t.Fatalf("the message asked or did not go: %v, needs %+v", chat, g.Needs())
+	}
+	cart := toCart(t, s)
+	res = tap(s, ref(t, cart, "Place order · $12.80"))
+	mustStatus(t, res, StatusPending)
+	if n := g.Needs(); len(n) != 1 || n[0].Rule != "Payments" || dev.Current() != "cart" {
+		t.Fatalf("the payment did not ask: needs %+v, screen %s", n, dev.Current())
 	}
 }

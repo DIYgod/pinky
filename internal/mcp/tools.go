@@ -65,7 +65,7 @@ type typeIn struct {
 	Text   string `json:"text" jsonschema:"The text to type, up to 16384 characters. Any language works."`
 	Ref    int    `json:"ref,omitempty" jsonschema:"The text field to type into; default the focused field."`
 	Append bool   `json:"append,omitempty" jsonschema:"Keep the field's text and add to it; default replaces it."`
-	Submit bool   `json:"submit,omitempty" jsonschema:"Press Enter afterwards. In a chat app this sends the message, which asks the person first."`
+	Submit bool   `json:"submit,omitempty" jsonschema:"Press Enter afterwards. In a chat app this sends the message, which asks the person first if they chose to approve messages."`
 }
 
 type swipeIn struct {
@@ -236,7 +236,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_tap", Title: "Tap",
 		Description: "Tap an element by ref, or a point by x and y. Waits for the screen to settle and returns what changed. " +
-			"Taps that commit (Pay, Send, Order, Delete, ...) wait for the person's approval: up to 45 s, then approval_pending with an approval_id to repeat the call with.",
+			"Taps the person's rules ask about wait for their approval (payments by default; they may also choose sends, orders, deletions and other commits): up to 45 s, then approval_pending with an approval_id to repeat the call with.",
 		InputSchema: schema[tapIn](func(p map[string]*jsonschema.Schema) { nonNull(p, "x", "y") }), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in tapIn) (*sdk.CallToolResult, any, error) {
 			a := gateway.Action{Tool: "tap", Ref: in.Ref, LongPress: in.LongPress}
@@ -266,7 +266,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_key", Title: "Press a key",
-		Description: "Press a navigation or keyboard key. Enter in a chat app sends the message, which asks the person first. Keys a phone lacks (recents on iPhone) return unsupported.",
+		Description: "Press a navigation or keyboard key. Enter in a chat app sends the message, which asks the person first if they chose to approve messages. Keys a phone lacks (recents on iPhone) return unsupported.",
 		InputSchema: schema[keyIn](func(p map[string]*jsonschema.Schema) { enum(p["key"], gateway.KeyNames()...) }),
 		Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in keyIn) (*sdk.CallToolResult, any, error) {
@@ -337,7 +337,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_request_approval", Title: "Ask the person",
-		Description: "Ask the person a yes-or-no question in Pinky and return their answer and note. It grants nothing: a later Pay or Send still asks. " +
+		Description: "Ask the person a yes-or-no question in Pinky and return their answer and note. It grants nothing: a later Pay still asks. " +
 			"Blocks up to 45 s, then returns approval_pending with an approval_id to repeat the call with.",
 		InputSchema: schema[requestApprovalIn](nil), Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in requestApprovalIn) (*sdk.CallToolResult, any, error) {

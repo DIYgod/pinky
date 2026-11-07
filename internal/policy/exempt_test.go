@@ -39,7 +39,7 @@ func exemptPayment(t *testing.T, e *Engine) Exemption {
 }
 
 func TestExemptionLiftsOnlyItsAsks(t *testing.T) {
-	e := Default()
+	e := commitsEngine(t)
 	exemptPayment(t, e)
 
 	v := e.Evaluate(tap(dinely, pay))
@@ -210,7 +210,7 @@ func TestExemptionOrderDoesNotMatter(t *testing.T) {
 }
 
 func TestExemptionsAndEveryAction(t *testing.T) {
-	e := Default()
+	e := commitsEngine(t)
 	exemptPayment(t, e)
 	if err := e.SetPreset(PresetEvery); err != nil {
 		t.Fatal(err)
@@ -252,11 +252,15 @@ func TestExemptionsSavedAndTakenBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Messages and Commits ask only with preset 1.
+	if err := e.SetPreset(PresetCommits); err != nil {
+		t.Fatal(err)
+	}
 	// An earlier answer about payments alone takes Commits in later.
 	if _, err := e.Exempt([]string{"Payments"}, dinely); err != nil {
 		t.Fatal(err)
 	}
-	x := exemptPayment(t, New(DefaultFile(), nil)) // the same answer on a fresh engine
+	x := exemptPayment(t, commitsEngine(t)) // the same answer on a fresh engine
 	if got, err := e.Exempt([]string{"Payments", "Commits"}, dinely); err != nil || !reflect.DeepEqual(got, x) {
 		t.Fatalf("merged exemption %+v, %v", got, err)
 	}

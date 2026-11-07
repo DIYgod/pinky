@@ -10655,18 +10655,18 @@ func (msgs Messages) SettingsSafetyKindWallet() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyKindWallet", nil)
 }
 
-// SettingsSafetyPresetCommits says "Ask before payments, messages and deletions (Recommended)"
+// SettingsSafetyPresetCommits says "Ask before payments, messages and deletions"
 // in the language the app shows.
 //
-// Settings › Safety: the recommended choice: agents ask for approval
-// before paying, sending messages and deleting.
+// Settings › Safety: the choice where agents ask for approval before
+// paying, sending messages and deleting.
 func SettingsSafetyPresetCommits() string { return In(i18n.Locale()).SettingsSafetyPresetCommits() }
 
-// SettingsSafetyPresetCommits says "Ask before payments, messages and deletions (Recommended)"
+// SettingsSafetyPresetCommits says "Ask before payments, messages and deletions"
 // in the language of msgs.
 //
-// Settings › Safety: the recommended choice: agents ask for approval
-// before paying, sending messages and deleting.
+// Settings › Safety: the choice where agents ask for approval before
+// paying, sending messages and deleting.
 func (msgs Messages) SettingsSafetyPresetCommits() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyPresetCommits", nil)
 }
@@ -10674,7 +10674,8 @@ func (msgs Messages) SettingsSafetyPresetCommits() string {
 // SettingsSafetyPresetCommitsDesc says "Also asks before calls, account changes and installing apps."
 // in the language the app shows.
 //
-// Settings › Safety: the line under the recommended choice.
+// Settings › Safety: the line under Ask before payments, messages and
+// deletions.
 func SettingsSafetyPresetCommitsDesc() string {
 	return In(i18n.Locale()).SettingsSafetyPresetCommitsDesc()
 }
@@ -10682,7 +10683,8 @@ func SettingsSafetyPresetCommitsDesc() string {
 // SettingsSafetyPresetCommitsDesc says "Also asks before calls, account changes and installing apps."
 // in the language of msgs.
 //
-// Settings › Safety: the line under the recommended choice.
+// Settings › Safety: the line under Ask before payments, messages and
+// deletions.
 func (msgs Messages) SettingsSafetyPresetCommitsDesc() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyPresetCommitsDesc", nil)
 }
@@ -10717,18 +10719,18 @@ func (msgs Messages) SettingsSafetyPresetEveryDesc() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyPresetEveryDesc", nil)
 }
 
-// SettingsSafetyPresetPayments says "Ask before payments only"
+// SettingsSafetyPresetPayments says "Ask before payments only (Recommended)"
 // in the language the app shows.
 //
-// Settings › Safety: the choice where agents ask for approval before
-// payments and nothing else.
+// Settings › Safety: the default and recommended choice, where agents ask
+// for approval before payments and nothing else.
 func SettingsSafetyPresetPayments() string { return In(i18n.Locale()).SettingsSafetyPresetPayments() }
 
-// SettingsSafetyPresetPayments says "Ask before payments only"
+// SettingsSafetyPresetPayments says "Ask before payments only (Recommended)"
 // in the language of msgs.
 //
-// Settings › Safety: the choice where agents ask for approval before
-// payments and nothing else.
+// Settings › Safety: the default and recommended choice, where agents ask
+// for approval before payments and nothing else.
 func (msgs Messages) SettingsSafetyPresetPayments() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyPresetPayments", nil)
 }

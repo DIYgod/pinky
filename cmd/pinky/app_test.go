@@ -38,7 +38,7 @@ func TestSettingsReachTheGateway(t *testing.T) {
 
 	s := ui.DefaultSettings()
 	gatewaySettings(&s, rg)
-	if s.Preset != 1 || !s.HideCodes || s.ReadOnly {
+	if s.Preset != int(policy.PresetPayments) || !s.HideCodes || s.ReadOnly {
 		t.Fatalf("defaults from the gateway: %+v", s)
 	}
 	for _, b := range s.BlockedApps {
@@ -48,10 +48,10 @@ func TestSettingsReachTheGateway(t *testing.T) {
 	}
 
 	next := s
-	next.Preset, next.HideCodes, next.ReadOnly = 2, false, true
+	next.Preset, next.HideCodes, next.ReadOnly = int(policy.PresetCommits), false, true
 	next.BlockedApps = append(append([]ui.BlockedApp(nil), s.BlockedApps...), ui.BlockedApp{Name: "Chatter"})
 	applySettings(rg, s, next, log)
-	if pol.Preset() != policy.PresetPayments || pol.HideCodes() || !pol.ReadOnly("") {
+	if pol.Preset() != policy.PresetCommits || pol.HideCodes() || !pol.ReadOnly("") {
 		t.Fatalf("after applying: preset %d, hide codes %v, read-only %v", pol.Preset(), pol.HideCodes(), pol.ReadOnly(""))
 	}
 	var again ui.Settings

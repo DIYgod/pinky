@@ -59,10 +59,7 @@ func (p hookProvider) Open(context.Context, string) (driver.Device, error) { ret
 func newHookGateway(t *testing.T, opts ...func(*Options)) (*Gateway, *hookDev) {
 	t.Helper()
 	hd := &hookDev{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android)}
-	pol := policy.Default()
-	for cat, e := range demo.PolicyApps() {
-		pol.AddApps(cat, e)
-	}
+	pol := testPolicy(t)
 	o := Options{
 		Providers: []driver.Provider{hookProvider{hd}}, Policy: pol, TrustNewAgents: true,
 		ApprovalTimeout: 3 * time.Second, MaxBlock: 2 * time.Second, SettleMax: 200 * time.Millisecond,

@@ -105,7 +105,7 @@ func TestIconButtons(t *testing.T) {
 			"SubmitReply":     "Commits",
 		}},
 	}
-	e := Default()
+	e := commitsEngine(t)
 	for name, sc := range cases {
 		s := &screen.Screen{App: sc.app, Elements: sc.tree}
 		for i := range sc.tree {
@@ -129,7 +129,7 @@ func TestIconButtons(t *testing.T) {
 // TestIconButtonsKeepDenies: what an icon adds only asks; denies, read-only
 // mode and a task's apps decide as before.
 func TestIconButtonsKeepDenies(t *testing.T) {
-	e := Default()
+	e := commitsEngine(t)
 	pay := el(screen.RoleButton, "", "com.chase.sig.android:id/btn_pay")
 	if v := e.Evaluate(Input{Op: OpTap, App: chase, Target: &pay}); v.Decision != Deny || v.Rule != "Finance apps" {
 		t.Fatalf("pay icon in a finance app: %+v", v)
@@ -154,7 +154,7 @@ func TestIconButtonsKeepDenies(t *testing.T) {
 }
 
 func TestIconSliders(t *testing.T) {
-	e := Default()
+	e := commitsEngine(t)
 	shop := screen.App{Name: "Example Shop", ID: "com.example.shop"}
 	slider := el(screen.RoleOther, "", "com.example.shop:id/slide_to_pay")
 	if v := e.Evaluate(Input{Op: OpSwipe, App: shop, Target: &slider}); v.Decision != Ask || v.Rule != "Commits" {
@@ -168,7 +168,7 @@ func TestIconSliders(t *testing.T) {
 }
 
 func TestInstallIcons(t *testing.T) {
-	e := Default()
+	e := commitsEngine(t)
 	get := el(screen.RoleButton, "", "com.android.vending:id/download_button")
 	if v := e.Evaluate(Input{Op: OpTap, App: play, Target: &get}); v.Decision != Ask || v.Rule != "Installs and links" {
 		t.Fatalf("download icon in Play Store: %+v", v)

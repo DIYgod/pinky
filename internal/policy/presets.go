@@ -24,9 +24,10 @@ const (
 	PresetNone Preset = 0
 	// PresetCommits asks before payments, messages, deletions and other
 	// commits, calls, installs, links that leave the app and settings
-	// changes. The default and recommended preset.
+	// changes. The default before 2026-11-07's change to PresetPayments.
 	PresetCommits Preset = 1
-	// PresetPayments asks before payments only.
+	// PresetPayments asks before payments only. The default and
+	// recommended preset.
 	PresetPayments Preset = 2
 	// PresetEvery asks before every action.
 	PresetEvery Preset = 3
@@ -149,8 +150,9 @@ func (e *Engine) SetHideCodes(on bool) error {
 
 // rulesHeader starts a saved rules file.
 const rulesHeader = `# Pinky policy rules. Settings writes this file; you may edit it too.
-# preset: 1 = payments, messages, deletions and other commits ask (recommended),
-# 2 = only payments ask, 3 = every action asks, 0 = only the rules below.
+# preset: 1 = payments, messages, deletions and other commits ask,
+# 2 = only payments ask (the default, recommended), 3 = every action asks,
+# 0 = only the rules below.
 # When several rules match, the strictest wins: deny, then ask, then allow.
 # always_allow holds your "Always allow" answers to approvals: in that app,
 # those rules no longer ask (never a deny or read-only mode; not with preset

@@ -164,7 +164,8 @@ func TestDevice(t *testing.T) {
 	}
 	prov := &guardProvider{Provider: inner, id: id, navRows: navRows}
 	log := slog.New(slog.NewTextHandler(testWriter{t}, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	g, err := New(Options{Providers: []driver.Provider{prov}, DataDir: data, TrustNewAgents: true,
+	// Preset 1 (testPolicy): the run checks that a switch in Settings asks.
+	g, err := New(Options{Providers: []driver.Provider{prov}, DataDir: data, TrustNewAgents: true, Policy: testPolicy(t),
 		ApprovalTimeout: 60 * time.Second, MaxBlock: 30 * time.Second, Logger: log})
 	if err != nil {
 		t.Fatal(err)

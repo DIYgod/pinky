@@ -108,6 +108,14 @@ func Load(rulesPath, appsPath string) (*Engine, error) {
 		case err != nil:
 			return nil, err
 		default:
+			// A file an earlier version wrote, never changed, takes
+			// today's defaults (upgrade.go).
+			if fresh, ok := upgradeDefaults(data); ok {
+				if err := writeFile(rulesPath, fresh); err != nil {
+					return nil, err
+				}
+				data = fresh
+			}
 			if f, err = ParseFile(data); err != nil {
 				return nil, fmt.Errorf("%s: %w", rulesPath, err)
 			}

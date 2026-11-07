@@ -215,15 +215,10 @@ func (a *API) keepAlwaysLocked(x gateway.Exemption) {
 	a.always = append(a.always, x)
 }
 
-// fakeBuiltIn are the rules the recommended preset and the blocked apps
-// add, as the gateway lists them.
+// fakeBuiltIn are the rules the default preset (payments only) and the
+// blocked apps add, as the gateway lists them.
 var fakeBuiltIn = []gateway.RuleView{
 	{Name: "Payments", Actions: []string{"payment"}, Decision: "ask"},
-	{Name: "Messages", Actions: []string{"send_message"}, Decision: "ask"},
-	{Name: "Commits", Actions: []string{"commit"}, Decision: "ask"},
-	{Name: "Installs and links", Actions: []string{"install_app", "open_url"}, Decision: "ask"},
-	{Name: "Calls", Actions: []string{"call"}, Decision: "ask"},
-	{Name: "Settings changes", Actions: []string{"change_setting"}, Decision: "ask"},
 	{Name: "Blocked by you", Categories: []string{"blocked"}, Decision: "deny"},
 }
 

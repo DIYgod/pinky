@@ -20,6 +20,10 @@ func TestEditRules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Commits ask only with preset 1.
+	if err := e.SetPreset(PresetCommits); err != nil {
+		t.Fatal(err)
+	}
 	rules := e.FileRules()
 	if len(rules) != 2 || rules[0].Name != "Finance apps" || rules[1].Name != "Password managers" {
 		t.Fatalf("default rules %+v", rules)
@@ -163,6 +167,12 @@ func TestBuiltInRules(t *testing.T) {
 			out = append(out, r.Name)
 		}
 		return out
+	}
+	if got := names(); !reflect.DeepEqual(got, []string{"Payments", RuleBlocked}) {
+		t.Fatalf("built in with the default, preset 2: %q", got)
+	}
+	if err := e.SetPreset(PresetCommits); err != nil {
+		t.Fatal(err)
 	}
 	want := []string{"Payments", "Messages", "Commits", "Installs and links", "Calls", "Settings changes", RuleBlocked}
 	if got := names(); !reflect.DeepEqual(got, want) {

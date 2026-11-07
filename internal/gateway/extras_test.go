@@ -14,7 +14,6 @@ import (
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
-	"github.com/DIYgod/pinky/internal/policy"
 )
 
 // extraDev adds the optional driver features of round three to a demo
@@ -198,10 +197,7 @@ var (
 // temporary folder.
 func newExtraGateway(t *testing.T, x *extraDev, opts ...func(*Options)) *Gateway {
 	t.Helper()
-	pol := policy.Default()
-	for cat, e := range demo.PolicyApps() {
-		pol.AddApps(cat, e)
-	}
+	pol := testPolicy(t)
 	o := Options{
 		Providers: []driver.Provider{extraProvider{demo.NewProvider(driver.Android, x.Device), x}}, Policy: pol,
 		TrustNewAgents: true, DataDir: t.TempDir(), ApprovalTimeout: 3 * time.Second, MaxBlock: 2 * time.Second,

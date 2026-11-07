@@ -77,7 +77,7 @@ type Options struct {
 
 // Settings are what the Settings screen changes.
 type Settings struct {
-	Preset             int // 1: payments, messages and deletions (recommended); 2: payments only; 3: every action
+	Preset             int // 1: payments, messages and deletions; 2: payments only (the default, recommended); 3: every action
 	BlockedApps        []BlockedApp
 	ReadOnly           bool
 	UnlockFromComputer bool
@@ -116,7 +116,7 @@ type AgentInfo struct {
 // DefaultSettings are the design's defaults.
 func DefaultSettings() Settings {
 	return Settings{
-		Preset: 1,
+		Preset: 2,
 		BlockedApps: []BlockedApp{
 			{Name: "Northbank", Kind: "Banking"}, {Name: "Vaultly", Kind: "Passwords"}, {Name: "Coinpouch", Kind: "Wallet"},
 		},

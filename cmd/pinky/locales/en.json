@@ -3954,13 +3954,13 @@
   "@settingsSafetyKindWallet": {
     "description": "Settings › Safety: why an app is blocked, at the end of its row: it is a wallet (payments, crypto)."
   },
-  "settingsSafetyPresetCommits": "Ask before payments, messages and deletions (Recommended)",
+  "settingsSafetyPresetCommits": "Ask before payments, messages and deletions",
   "@settingsSafetyPresetCommits": {
-    "description": "Settings › Safety: the recommended choice: agents ask for approval before paying, sending messages and deleting."
+    "description": "Settings › Safety: the choice where agents ask for approval before paying, sending messages and deleting."
   },
   "settingsSafetyPresetCommitsDesc": "Also asks before calls, account changes and installing apps.",
   "@settingsSafetyPresetCommitsDesc": {
-    "description": "Settings › Safety: the line under the recommended choice."
+    "description": "Settings › Safety: the line under Ask before payments, messages and deletions."
   },
   "settingsSafetyPresetEvery": "Ask before every action",
   "@settingsSafetyPresetEvery": {
@@ -3970,9 +3970,9 @@
   "@settingsSafetyPresetEveryDesc": {
     "description": "Settings › Safety: the line under Ask before every action."
   },
-  "settingsSafetyPresetPayments": "Ask before payments only",
+  "settingsSafetyPresetPayments": "Ask before payments only (Recommended)",
   "@settingsSafetyPresetPayments": {
-    "description": "Settings › Safety: the choice where agents ask for approval before payments and nothing else."
+    "description": "Settings › Safety: the default and recommended choice, where agents ask for approval before payments and nothing else."
   },
   "settingsSafetyPresetPaymentsDesc": "Messages and deletions go through without asking.",
   "@settingsSafetyPresetPaymentsDesc": {
