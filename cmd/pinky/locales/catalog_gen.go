@@ -1675,6 +1675,134 @@ func (msgs Messages) CompanionUpdatingTitle() string {
 	return Catalog.Format(msgs.locale, "companionUpdatingTitle", nil)
 }
 
+// ConnectClaudeHint says "Run this in a terminal."
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: under the heading Claude Code,
+// above the claude mcp add command that adds Pinky to Claude Code.
+func ConnectClaudeHint() string { return In(i18n.Locale()).ConnectClaudeHint() }
+
+// ConnectClaudeHint says "Run this in a terminal."
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: under the heading Claude Code,
+// above the claude mcp add command that adds Pinky to Claude Code.
+func (msgs Messages) ConnectClaudeHint() string {
+	return Catalog.Format(msgs.locale, "connectClaudeHint", nil)
+}
+
+// ConnectCommandLabel says "Command that starts Pinky for an agent"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the accessibility label of the
+// command shown under Other agents.
+func ConnectCommandLabel() string { return In(i18n.Locale()).ConnectCommandLabel() }
+
+// ConnectCommandLabel says "Command that starts Pinky for an agent"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the accessibility label of the
+// command shown under Other agents.
+func (msgs Messages) ConnectCommandLabel() string {
+	return Catalog.Format(msgs.locale, "connectCommandLabel", nil)
+}
+
+// ConnectCopyClaude says "Copy the command for Claude Code"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the claude mcp add command.
+func ConnectCopyClaude() string { return In(i18n.Locale()).ConnectCopyClaude() }
+
+// ConnectCopyClaude says "Copy the command for Claude Code"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the claude mcp add command.
+func (msgs Messages) ConnectCopyClaude() string {
+	return Catalog.Format(msgs.locale, "connectCopyClaude", nil)
+}
+
+// ConnectCopyOther says "Copy the command for other agents"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the command under Other agents.
+func ConnectCopyOther() string { return In(i18n.Locale()).ConnectCopyOther() }
+
+// ConnectCopyOther says "Copy the command for other agents"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the accessibility label of the copy
+// button next to the command under Other agents.
+func (msgs Messages) ConnectCopyOther() string {
+	return Catalog.Format(msgs.locale, "connectCopyOther", nil)
+}
+
+// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the line under the heading.
+func ConnectIntro() string { return In(i18n.Locale()).ConnectIntro() }
+
+// ConnectIntro says "Agents on this computer start Pinky with a command, and you allow each one the first time it connects."
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the line under the heading.
+func (msgs Messages) ConnectIntro() string {
+	return Catalog.Format(msgs.locale, "connectIntro", nil)
+}
+
+// ConnectOtherHint says "Set this as the command of an MCP server over stdio."
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: under Other agents, above the
+// command (Pinky's path and the argument mcp) that agents' MCP settings
+// take. Keep MCP and stdio.
+func ConnectOtherHint() string { return In(i18n.Locale()).ConnectOtherHint() }
+
+// ConnectOtherHint says "Set this as the command of an MCP server over stdio."
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: under Other agents, above the
+// command (Pinky's path and the argument mcp) that agents' MCP settings
+// take. Keep MCP and stdio.
+func (msgs Messages) ConnectOtherHint() string {
+	return Catalog.Format(msgs.locale, "connectOtherHint", nil)
+}
+
+// ConnectOtherTitle says "Other agents"
+// in the language the app shows.
+//
+// Settings › Agents › Add an agent: the heading above the command other
+// agents (Codex, Cursor…) run to reach Pinky.
+func ConnectOtherTitle() string { return In(i18n.Locale()).ConnectOtherTitle() }
+
+// ConnectOtherTitle says "Other agents"
+// in the language of msgs.
+//
+// Settings › Agents › Add an agent: the heading above the command other
+// agents (Codex, Cursor…) run to reach Pinky.
+func (msgs Messages) ConnectOtherTitle() string {
+	return Catalog.Format(msgs.locale, "connectOtherTitle", nil)
+}
+
+// ConnectTitle says "Add an agent"
+// in the language the app shows.
+//
+// Settings › Agents: the heading of the part that says how to add an
+// agent on this computer, and its accessibility label.
+func ConnectTitle() string { return In(i18n.Locale()).ConnectTitle() }
+
+// ConnectTitle says "Add an agent"
+// in the language of msgs.
+//
+// Settings › Agents: the heading of the part that says how to add an
+// agent on this computer, and its accessibility label.
+func (msgs Messages) ConnectTitle() string {
+	return Catalog.Format(msgs.locale, "connectTitle", nil)
+}
+
 // ConnectionOffline says "{platform} · offline"
 // in the language the app shows.
 //
@@ -5277,6 +5405,120 @@ func (msgs Messages) PairingCodeTitle() string {
 	return Catalog.Format(msgs.locale, "pairingCodeTitle", nil)
 }
 
+// PairingConnect says "Connect"
+// in the language the app shows.
+//
+// Pair with a code: the button that connects to the address typed in the
+// connect step.
+func PairingConnect() string { return In(i18n.Locale()).PairingConnect() }
+
+// PairingConnect says "Connect"
+// in the language of msgs.
+//
+// Pair with a code: the button that connects to the address typed in the
+// connect step.
+func (msgs Messages) PairingConnect() string {
+	return Catalog.Format(msgs.locale, "pairingConnect", nil)
+}
+
+// PairingConnectBusy says "Connecting…"
+// in the language the app shows.
+//
+// Pair with a code: next to a spinner, right of the Connect button, while
+// Pinky connects.
+func PairingConnectBusy() string { return In(i18n.Locale()).PairingConnectBusy() }
+
+// PairingConnectBusy says "Connecting…"
+// in the language of msgs.
+//
+// Pair with a code: next to a spinner, right of the Connect button, while
+// Pinky connects.
+func (msgs Messages) PairingConnectBusy() string {
+	return Catalog.Format(msgs.locale, "pairingConnectBusy", nil)
+}
+
+// PairingConnectDetail says "The phone paired, but Pinky can't find it on this network. On the phone, open Wireless debugging and enter the IP add…"
+// in the language the app shows.
+//
+// Pair with a code: the line under pairingConnectTitle. Wireless debugging
+// is Android's own name.
+func PairingConnectDetail() string { return In(i18n.Locale()).PairingConnectDetail() }
+
+// PairingConnectDetail says "The phone paired, but Pinky can't find it on this network. On the phone, open Wireless debugging and enter the IP add…"
+// in the language of msgs.
+//
+// Pair with a code: the line under pairingConnectTitle. Wireless debugging
+// is Android's own name.
+func (msgs Messages) PairingConnectDetail() string {
+	return Catalog.Format(msgs.locale, "pairingConnectDetail", nil)
+}
+
+// PairingConnectErrOther says "Couldn't connect: {detail}"
+// in the language the app shows.
+//
+// Pair with a code: the error when connecting in the connect step failed
+// for another reason. detail is the error, in English.
+func PairingConnectErrOther(detail string) string {
+	return In(i18n.Locale()).PairingConnectErrOther(detail)
+}
+
+// PairingConnectErrOther says "Couldn't connect: {detail}"
+// in the language of msgs.
+//
+// Pair with a code: the error when connecting in the connect step failed
+// for another reason. detail is the error, in English.
+func (msgs Messages) PairingConnectErrOther(detail string) string {
+	return Catalog.Format(msgs.locale, "pairingConnectErrOther", map[string]any{"detail": detail})
+}
+
+// PairingConnectErrUnreachable says "Couldn't connect at that address. Use the IP address and port at the top of Wireless debugging, not the ones of the p…"
+// in the language the app shows.
+//
+// Pair with a code: the error when nothing answered at the address typed in
+// the connect step. Wireless debugging is Android's own name.
+func PairingConnectErrUnreachable() string { return In(i18n.Locale()).PairingConnectErrUnreachable() }
+
+// PairingConnectErrUnreachable says "Couldn't connect at that address. Use the IP address and port at the top of Wireless debugging, not the ones of the p…"
+// in the language of msgs.
+//
+// Pair with a code: the error when nothing answered at the address typed in
+// the connect step. Wireless debugging is Android's own name.
+func (msgs Messages) PairingConnectErrUnreachable() string {
+	return Catalog.Format(msgs.locale, "pairingConnectErrUnreachable", nil)
+}
+
+// PairingConnectTitle says "Connect to the phone"
+// in the language the app shows.
+//
+// Pair with a code: the heading of the step that connects to a phone that
+// paired but that Pinky could not find on the network.
+func PairingConnectTitle() string { return In(i18n.Locale()).PairingConnectTitle() }
+
+// PairingConnectTitle says "Connect to the phone"
+// in the language of msgs.
+//
+// Pair with a code: the heading of the step that connects to a phone that
+// paired but that Pinky could not find on the network.
+func (msgs Messages) PairingConnectTitle() string {
+	return Catalog.Format(msgs.locale, "pairingConnectTitle", nil)
+}
+
+// PairingConnecting says "Paired. Connecting to the phone…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// paired and Pinky connects to it.
+func PairingConnecting() string { return In(i18n.Locale()).PairingConnecting() }
+
+// PairingConnecting says "Paired. Connecting to the phone…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// paired and Pinky connects to it.
+func (msgs Messages) PairingConnecting() string {
+	return Catalog.Format(msgs.locale, "pairingConnecting", nil)
+}
+
 // PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
 // in the language the app shows.
 //
@@ -5373,6 +5615,22 @@ func (msgs Messages) PairingErrWrongCode() string {
 	return Catalog.Format(msgs.locale, "pairingErrWrongCode", nil)
 }
 
+// PairingFound says "Found the phone. Pairing…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// scanned the code and Pinky pairs with it.
+func PairingFound() string { return In(i18n.Locale()).PairingFound() }
+
+// PairingFound says "Found the phone. Pairing…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, once the phone
+// scanned the code and Pinky pairs with it.
+func (msgs Messages) PairingFound() string {
+	return Catalog.Format(msgs.locale, "pairingFound", nil)
+}
+
 // PairingGettingCode says "Getting a code…"
 // in the language the app shows.
 //
@@ -5403,6 +5661,24 @@ func PairingNoCode() string { return In(i18n.Locale()).PairingNoCode() }
 // getting one failed.
 func (msgs Messages) PairingNoCode() string {
 	return Catalog.Format(msgs.locale, "pairingNoCode", nil)
+}
+
+// PairingOpenLocalNetwork says "Open Local Network settings"
+// in the language the app shows.
+//
+// Pair over Wi-Fi, on a Mac: the button under the note that opens System
+// Settings › Privacy & Security › Local Network. Local Network is
+// macOS's own name.
+func PairingOpenLocalNetwork() string { return In(i18n.Locale()).PairingOpenLocalNetwork() }
+
+// PairingOpenLocalNetwork says "Open Local Network settings"
+// in the language of msgs.
+//
+// Pair over Wi-Fi, on a Mac: the button under the note that opens System
+// Settings › Privacy & Security › Local Network. Local Network is
+// macOS's own name.
+func (msgs Messages) PairingOpenLocalNetwork() string {
+	return Catalog.Format(msgs.locale, "pairingOpenLocalNetwork", nil)
 }
 
 // PairingPair says "Pair"
@@ -5501,22 +5777,158 @@ func (msgs Messages) PairingQRLabel() string {
 	return Catalog.Format(msgs.locale, "pairingQRLabel", nil)
 }
 
-// PairingSlowHint says "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happen…"
+// PairingStuckNoSearch says "Check that this computer is connected to Wi-Fi or Ethernet, or pair with a code instead. ({detail})"
 // in the language the app shows.
 //
-// Pair over Wi-Fi: under the status line when the phone has not paired
-// after 30 seconds. adb is Android's tool and adb kill-server a command:
-// both stay as they are.
-func PairingSlowHint() string { return In(i18n.Locale()).PairingSlowHint() }
+// Pair over Wi-Fi: the note's text under pairingStuckNoSearchTitle. detail
+// is the error, in English.
+func PairingStuckNoSearch(detail string) string {
+	return In(i18n.Locale()).PairingStuckNoSearch(detail)
+}
 
-// PairingSlowHint says "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happen…"
+// PairingStuckNoSearch says "Check that this computer is connected to Wi-Fi or Ethernet, or pair with a code instead. ({detail})"
 // in the language of msgs.
 //
-// Pair over Wi-Fi: under the status line when the phone has not paired
-// after 30 seconds. adb is Android's tool and adb kill-server a command:
-// both stay as they are.
-func (msgs Messages) PairingSlowHint() string {
-	return Catalog.Format(msgs.locale, "pairingSlowHint", nil)
+// Pair over Wi-Fi: the note's text under pairingStuckNoSearchTitle. detail
+// is the error, in English.
+func (msgs Messages) PairingStuckNoSearch(detail string) string {
+	return Catalog.Format(msgs.locale, "pairingStuckNoSearch", map[string]any{"detail": detail})
+}
+
+// PairingStuckNoSearchTitle says "Pinky can't look for phones on this network"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note when Pinky cannot search the
+// network for another reason, such as no network connection.
+func PairingStuckNoSearchTitle() string { return In(i18n.Locale()).PairingStuckNoSearchTitle() }
+
+// PairingStuckNoSearchTitle says "Pinky can't look for phones on this network"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note when Pinky cannot search the
+// network for another reason, such as no network connection.
+func (msgs Messages) PairingStuckNoSearchTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNoSearchTitle", nil)
+}
+
+// PairingStuckNotAllowed says "Something on this computer, perhaps a firewall, keeps Pinky from looking for phones on the network. Let Pinky use the…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi, on Linux and Windows: the note's text under
+// pairingStuckNotAllowedTitle.
+func PairingStuckNotAllowed() string { return In(i18n.Locale()).PairingStuckNotAllowed() }
+
+// PairingStuckNotAllowed says "Something on this computer, perhaps a firewall, keeps Pinky from looking for phones on the network. Let Pinky use the…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi, on Linux and Windows: the note's text under
+// pairingStuckNotAllowedTitle.
+func (msgs Messages) PairingStuckNotAllowed() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotAllowed", nil)
+}
+
+// PairingStuckNotAllowedMac says "Turn on Pinky under System Settings › Privacy & Security › Local Network, then try again. Or pair with a code ins…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi, on a Mac: the note's text under
+// pairingStuckNotAllowedTitle. System Settings, Privacy & Security and
+// Local Network are macOS's own names: use those of macOS in Simplified
+// Chinese.
+func PairingStuckNotAllowedMac() string { return In(i18n.Locale()).PairingStuckNotAllowedMac() }
+
+// PairingStuckNotAllowedMac says "Turn on Pinky under System Settings › Privacy & Security › Local Network, then try again. Or pair with a code ins…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi, on a Mac: the note's text under
+// pairingStuckNotAllowedTitle. System Settings, Privacy & Security and
+// Local Network are macOS's own names: use those of macOS in Simplified
+// Chinese.
+func (msgs Messages) PairingStuckNotAllowedMac() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotAllowedMac", nil)
+}
+
+// PairingStuckNotAllowedTitle says "Pinky isn't allowed to look for phones on this network"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note when the system keeps Pinky from
+// looking for devices on the local network.
+func PairingStuckNotAllowedTitle() string { return In(i18n.Locale()).PairingStuckNotAllowedTitle() }
+
+// PairingStuckNotAllowedTitle says "Pinky isn't allowed to look for phones on this network"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note when the system keeps Pinky from
+// looking for devices on the local network.
+func (msgs Messages) PairingStuckNotAllowedTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotAllowedTitle", nil)
+}
+
+// PairingStuckNotSeen says "Scan this code on the phone under Wireless debugging › Pair device with QR code, with the phone on the same Wi-Fi a…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckNotSeenTitle. Wireless
+// debugging and Pair device with QR code are Android's own names: use those
+// of Android's Simplified Chinese settings.
+func PairingStuckNotSeen() string { return In(i18n.Locale()).PairingStuckNotSeen() }
+
+// PairingStuckNotSeen says "Scan this code on the phone under Wireless debugging › Pair device with QR code, with the phone on the same Wi-Fi a…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckNotSeenTitle. Wireless
+// debugging and Pair device with QR code are Android's own names: use those
+// of Android's Simplified Chinese settings.
+func (msgs Messages) PairingStuckNotSeen() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotSeen", nil)
+}
+
+// PairingStuckNotSeenTitle says "The phone hasn't shown up on the network yet"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note under the status line when, 30
+// seconds after the code showed, the phone has not appeared on the network:
+// it has not scanned the code, or the network keeps devices apart.
+func PairingStuckNotSeenTitle() string { return In(i18n.Locale()).PairingStuckNotSeenTitle() }
+
+// PairingStuckNotSeenTitle says "The phone hasn't shown up on the network yet"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note under the status line when, 30
+// seconds after the code showed, the phone has not appeared on the network:
+// it has not scanned the code, or the network keeps devices apart.
+func (msgs Messages) PairingStuckNotSeenTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckNotSeenTitle", nil)
+}
+
+// PairingStuckPairing says "If the phone shows an error or went back to Wireless debugging, scan the code again. Or pair with a code instead."
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckPairingTitle. Wireless
+// debugging is Android's own name.
+func PairingStuckPairing() string { return In(i18n.Locale()).PairingStuckPairing() }
+
+// PairingStuckPairing says "If the phone shows an error or went back to Wireless debugging, scan the code again. Or pair with a code instead."
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the note's text under pairingStuckPairingTitle. Wireless
+// debugging is Android's own name.
+func (msgs Messages) PairingStuckPairing() string {
+	return Catalog.Format(msgs.locale, "pairingStuckPairing", nil)
+}
+
+// PairingStuckPairingTitle says "The phone showed up, but pairing hasn't finished"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the note when the phone appeared on the
+// network a while ago and pairing has not finished.
+func PairingStuckPairingTitle() string { return In(i18n.Locale()).PairingStuckPairingTitle() }
+
+// PairingStuckPairingTitle says "The phone showed up, but pairing hasn't finished"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the note when the phone appeared on the
+// network a while ago and pairing has not finished.
+func (msgs Messages) PairingStuckPairingTitle() string {
+	return Catalog.Format(msgs.locale, "pairingStuckPairingTitle", nil)
 }
 
 // PairingTitle says "Pair over Wi-Fi"
@@ -5993,20 +6405,22 @@ func (msgs Messages) PanelPrevious() string {
 	return Catalog.Format(msgs.locale, "panelPrevious", nil)
 }
 
-// PanelShotLabel says "{phone} screen: the target, outlined"
+// PanelShotLabel says "{phone} screen with the target marked"
 // in the language the app shows.
 //
-// The accessibility label of the floating approval panel's picture: the
-// part of the phone's screen around what the agent wants to tap, with that
-// element outlined.
+// The accessibility label of an approval's screenshot in the floating
+// approval panel, on a Needs you card and in its large view: the phone's
+// whole screen and the part around what the agent wants to tap, with that
+// element marked.
 func PanelShotLabel(phone string) string { return In(i18n.Locale()).PanelShotLabel(phone) }
 
-// PanelShotLabel says "{phone} screen: the target, outlined"
+// PanelShotLabel says "{phone} screen with the target marked"
 // in the language of msgs.
 //
-// The accessibility label of the floating approval panel's picture: the
-// part of the phone's screen around what the agent wants to tap, with that
-// element outlined.
+// The accessibility label of an approval's screenshot in the floating
+// approval panel, on a Needs you card and in its large view: the phone's
+// whole screen and the part around what the agent wants to tap, with that
+// element marked.
 func (msgs Messages) PanelShotLabel(phone string) string {
 	return Catalog.Format(msgs.locale, "panelShotLabel", map[string]any{"phone": phone})
 }
@@ -7428,15 +7842,15 @@ func (msgs Messages) RemoteChangeAddress() string {
 // RemoteCommandLabel says "Command to add Pinky to Claude Code"
 // in the language the app shows.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// claude mcp add command shown under Claude Code.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the claude mcp add command shown under Claude Code.
 func RemoteCommandLabel() string { return In(i18n.Locale()).RemoteCommandLabel() }
 
 // RemoteCommandLabel says "Command to add Pinky to Claude Code"
 // in the language of msgs.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// claude mcp add command shown under Claude Code.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the claude mcp add command shown under Claude Code.
 func (msgs Messages) RemoteCommandLabel() string {
 	return Catalog.Format(msgs.locale, "remoteCommandLabel", nil)
 }
@@ -7444,13 +7858,13 @@ func (msgs Messages) RemoteCommandLabel() string {
 // RemoteCopiedCommand says "Copied the command"
 // in the language the app shows.
 //
-// A toast once the claude mcp add command is copied.
+// A toast once a command in Settings › Agents is copied.
 func RemoteCopiedCommand() string { return In(i18n.Locale()).RemoteCopiedCommand() }
 
 // RemoteCopiedCommand says "Copied the command"
 // in the language of msgs.
 //
-// A toast once the claude mcp add command is copied.
+// A toast once a command in Settings › Agents is copied.
 func (msgs Messages) RemoteCopiedCommand() string {
 	return Catalog.Format(msgs.locale, "remoteCopiedCommand", nil)
 }
@@ -7488,15 +7902,15 @@ func (msgs Messages) RemoteCopiedURL() string {
 // RemoteCopyCommand says "Copy the command"
 // in the language the app shows.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// copy button next to the claude mcp add command.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the copy button next to a command.
 func RemoteCopyCommand() string { return In(i18n.Locale()).RemoteCopyCommand() }
 
 // RemoteCopyCommand says "Copy the command"
 // in the language of msgs.
 //
-// Settings › Agents › Remote agents: the accessibility label of the
-// copy button next to the claude mcp add command.
+// Settings › Agents (Add an agent and Remote agents): the accessibility
+// label of the copy button next to a command.
 func (msgs Messages) RemoteCopyCommand() string {
 	return Catalog.Format(msgs.locale, "remoteCopyCommand", nil)
 }
@@ -7581,22 +7995,22 @@ func (msgs Messages) RemoteHostInvalid() string {
 	return Catalog.Format(msgs.locale, "remoteHostInvalid", nil)
 }
 
-// RemoteIntro says "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the…"
+// RemoteIntro says "For agents that can't start Pinky on this computer, such as one in a container. They connect over HTTP with the agent…"
 // in the language the app shows.
 //
-// Settings › Agents › Remote agents: the line under the heading. `pinky
-// mcp` is the command local agents run, kept with its backticks; the agent
-// token is the secret agents present; as above refers to the connection
-// requests above.
+// Settings › Agents › Remote agents: the line under the heading. Agents
+// on this computer start Pinky with a command (Add an agent, above it); the
+// agent token is the secret agents present; as above refers to the
+// connection requests above.
 func RemoteIntro() string { return In(i18n.Locale()).RemoteIntro() }
 
-// RemoteIntro says "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the…"
+// RemoteIntro says "For agents that can't start Pinky on this computer, such as one in a container. They connect over HTTP with the agent…"
 // in the language of msgs.
 //
-// Settings › Agents › Remote agents: the line under the heading. `pinky
-// mcp` is the command local agents run, kept with its backticks; the agent
-// token is the secret agents present; as above refers to the connection
-// requests above.
+// Settings › Agents › Remote agents: the line under the heading. Agents
+// on this computer start Pinky with a command (Add an agent, above it); the
+// agent token is the secret agents present; as above refers to the
+// connection requests above.
 func (msgs Messages) RemoteIntro() string {
 	return Catalog.Format(msgs.locale, "remoteIntro", nil)
 }
@@ -8569,42 +8983,44 @@ func (msgs Messages) SettingsAdvancedBackends() string {
 	return Catalog.Format(msgs.locale, "settingsAdvancedBackends", nil)
 }
 
-// SettingsAdvancedConnHTTP says "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}"
+// SettingsAdvancedConnHTTP says "MCP over stdio: {command}; Streamable HTTP at {endpoint}"
 // in the language the app shows.
 //
 // Settings › Advanced, in Developer mode: the line under Agent connection
-// while remote agents are on: MCP over stdio, and over Streamable HTTP at
-// endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.
-func SettingsAdvancedConnHTTP(endpoint string) string {
-	return In(i18n.Locale()).SettingsAdvancedConnHTTP(endpoint)
+// while remote agents are on: MCP over stdio through command, and over
+// Streamable HTTP at endpoint, a URL. Keep MCP, stdio and Streamable HTTP.
+func SettingsAdvancedConnHTTP(command string, endpoint string) string {
+	return In(i18n.Locale()).SettingsAdvancedConnHTTP(command, endpoint)
 }
 
-// SettingsAdvancedConnHTTP says "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}"
+// SettingsAdvancedConnHTTP says "MCP over stdio: {command}; Streamable HTTP at {endpoint}"
 // in the language of msgs.
 //
 // Settings › Advanced, in Developer mode: the line under Agent connection
-// while remote agents are on: MCP over stdio, and over Streamable HTTP at
-// endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.
-func (msgs Messages) SettingsAdvancedConnHTTP(endpoint string) string {
-	return Catalog.Format(msgs.locale, "settingsAdvancedConnHTTP", map[string]any{"endpoint": endpoint})
+// while remote agents are on: MCP over stdio through command, and over
+// Streamable HTTP at endpoint, a URL. Keep MCP, stdio and Streamable HTTP.
+func (msgs Messages) SettingsAdvancedConnHTTP(command string, endpoint string) string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedConnHTTP", map[string]any{"command": command, "endpoint": endpoint})
 }
 
-// SettingsAdvancedConnStdio says "MCP over stdio: pinky mcp"
+// SettingsAdvancedConnStdio says "MCP over stdio: {command}"
 // in the language the app shows.
 //
 // Settings › Advanced, in Developer mode: the line under Agent
-// connection: agents run the command pinky mcp, which speaks MCP over
-// standard input and output. Keep MCP, stdio and pinky mcp.
-func SettingsAdvancedConnStdio() string { return In(i18n.Locale()).SettingsAdvancedConnStdio() }
+// connection: agents run command, which speaks MCP over standard input and
+// output. Keep MCP and stdio.
+func SettingsAdvancedConnStdio(command string) string {
+	return In(i18n.Locale()).SettingsAdvancedConnStdio(command)
+}
 
-// SettingsAdvancedConnStdio says "MCP over stdio: pinky mcp"
+// SettingsAdvancedConnStdio says "MCP over stdio: {command}"
 // in the language of msgs.
 //
 // Settings › Advanced, in Developer mode: the line under Agent
-// connection: agents run the command pinky mcp, which speaks MCP over
-// standard input and output. Keep MCP, stdio and pinky mcp.
-func (msgs Messages) SettingsAdvancedConnStdio() string {
-	return Catalog.Format(msgs.locale, "settingsAdvancedConnStdio", nil)
+// connection: agents run command, which speaks MCP over standard input and
+// output. Keep MCP and stdio.
+func (msgs Messages) SettingsAdvancedConnStdio(command string) string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedConnStdio", map[string]any{"command": command})
 }
 
 // SettingsAdvancedConnection says "Agent connection"
@@ -8895,20 +9311,18 @@ func (msgs Messages) SettingsAgentsList() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsList", nil)
 }
 
-// SettingsAgentsNone says "No agent has connected yet. Point an agent at `pinky mcp` to start."
+// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
 // in the language the app shows.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// `pinky mcp` is the command agents run to reach Pinky; keep it with its
-// backticks.
+// The commands below are those under Add an agent (connectTitle).
 func SettingsAgentsNone() string { return In(i18n.Locale()).SettingsAgentsNone() }
 
-// SettingsAgentsNone says "No agent has connected yet. Point an agent at `pinky mcp` to start."
+// SettingsAgentsNone says "No agent has connected yet. Add one with a command below."
 // in the language of msgs.
 //
 // Settings › Agents: in place of the list while no agent has connected.
-// `pinky mcp` is the command agents run to reach Pinky; keep it with its
-// backticks.
+// The commands below are those under Add an agent (connectTitle).
 func (msgs Messages) SettingsAgentsNone() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsNone", nil)
 }
@@ -11153,6 +11567,38 @@ func (msgs Messages) SettingsUnlockFromComputer() string {
 	return Catalog.Format(msgs.locale, "settingsUnlockFromComputer", nil)
 }
 
+// ShotClose says "Close"
+// in the language the app shows.
+//
+// The accessibility label of the × that closes the large view of an
+// approval's screenshot.
+func ShotClose() string { return In(i18n.Locale()).ShotClose() }
+
+// ShotClose says "Close"
+// in the language of msgs.
+//
+// The accessibility label of the × that closes the large view of an
+// approval's screenshot.
+func (msgs Messages) ShotClose() string {
+	return Catalog.Format(msgs.locale, "shotClose", nil)
+}
+
+// ShotEnlarge says "Click to see it larger"
+// in the language the app shows.
+//
+// The tooltip of an approval's screenshot in the floating approval panel
+// and on a Needs you card: a click shows the screenshot larger.
+func ShotEnlarge() string { return In(i18n.Locale()).ShotEnlarge() }
+
+// ShotEnlarge says "Click to see it larger"
+// in the language of msgs.
+//
+// The tooltip of an approval's screenshot in the floating approval panel
+// and on a Needs you card: a click shows the screenshot larger.
+func (msgs Messages) ShotEnlarge() string {
+	return Catalog.Format(msgs.locale, "shotEnlarge", nil)
+}
+
 // ShotLabel says "Screenshot of {phone}"
 // in the language the app shows.
 //
@@ -11179,6 +11625,54 @@ func ShotLoading() string { return In(i18n.Locale()).ShotLoading() }
 // In place of a step's screenshot while it loads.
 func (msgs Messages) ShotLoading() string {
 	return Catalog.Format(msgs.locale, "shotLoading", nil)
+}
+
+// ShotMissing says "No screenshot of this screen"
+// in the language the app shows.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone sent none.
+func ShotMissing() string { return In(i18n.Locale()).ShotMissing() }
+
+// ShotMissing says "No screenshot of this screen"
+// in the language of msgs.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone sent none.
+func (msgs Messages) ShotMissing() string {
+	return Catalog.Format(msgs.locale, "shotMissing", nil)
+}
+
+// ShotMissingBlocked says "Pinky takes no screenshots of {app}"
+// in the language the app shows.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the app on the phone's screen is blocked: Pinky hides blocked apps.
+func ShotMissingBlocked(app string) string { return In(i18n.Locale()).ShotMissingBlocked(app) }
+
+// ShotMissingBlocked says "Pinky takes no screenshots of {app}"
+// in the language of msgs.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the app on the phone's screen is blocked: Pinky hides blocked apps.
+func (msgs Messages) ShotMissingBlocked(app string) string {
+	return Catalog.Format(msgs.locale, "shotMissingBlocked", map[string]any{"app": app})
+}
+
+// ShotMissingLocked says "{phone} is locked, so there's no screenshot"
+// in the language the app shows.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone is locked.
+func ShotMissingLocked(phone string) string { return In(i18n.Locale()).ShotMissingLocked(phone) }
+
+// ShotMissingLocked says "{phone} is locked, so there's no screenshot"
+// in the language of msgs.
+//
+// Stands for an approval's screenshot in the floating approval panel when
+// the phone is locked.
+func (msgs Messages) ShotMissingLocked(phone string) string {
+	return Catalog.Format(msgs.locale, "shotMissingLocked", map[string]any{"phone": phone})
 }
 
 // ShotNone says "No screenshot"

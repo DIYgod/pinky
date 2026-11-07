@@ -14,13 +14,20 @@ import (
 )
 
 // cdService is a connection to one CoreDevice RemoteXPC service. Requests run
-// one at a time: nothing in the framing pairs a reply with its request.
+// one at a time: nothing in the framing pairs a reply with its request. A
+// request that fails drops the connection, and the next one dials again:
+// the phone closes these connections at times (when it locks, in a long
+// session), and a service that stayed dropped made waking and unlocking
+// from the computer fail until the phone was opened again.
 type cdService struct {
 	name  string
 	devID string
+	entry goios.DeviceEntry
 
-	mu   sync.Mutex
-	conn *xpc.Connection
+	mu     sync.Mutex
+	conn   *xpc.Connection
+	closed bool                                                     // Close ran: never dial again
+	dial   func(goios.DeviceEntry, string) (*xpc.Connection, error) // for tests
 }
 
 func dialCoreDevice(entry goios.DeviceEntry, name string) (*cdService, error) {
@@ -28,7 +35,7 @@ func dialCoreDevice(entry goios.DeviceEntry, name string) (*cdService, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &cdService{name: name, devID: uuid.New().String(), conn: conn}, nil
+	return &cdService{name: name, devID: uuid.New().String(), entry: entry, conn: conn}, nil
 }
 
 // dialTimeout bounds connecting to a service. A service that is stuck on the
@@ -82,7 +89,18 @@ func (s *cdService) invoke(ctx context.Context, feature, action string, input ma
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.conn == nil {
-		return nil, fmt.Errorf("%s: connection closed", s.name)
+		if s.closed {
+			return nil, fmt.Errorf("%s: connection closed", s.name)
+		}
+		dial := s.dial
+		if dial == nil {
+			dial = dialXPCConn
+		}
+		c, err := dial(s.entry, s.name)
+		if err != nil {
+			return nil, err
+		}
+		s.conn = c
 	}
 	conn := s.conn
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
@@ -182,6 +200,7 @@ func (s *cdService) drop() {
 func (s *cdService) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.closed = true
 	s.drop()
 	return nil
 }

@@ -31,6 +31,7 @@ type fakeServer struct {
 	requests []string
 
 	mdns      string // host:mdns:services
+	mdnsOff   bool   // discovery turned off, as with ADB_MDNS=0
 	pairCode  string // the code or password the fake phone accepts
 	connected []string
 }
@@ -86,6 +87,13 @@ func (s *fakeServer) handle(c net.Conn) {
 		writeStr(c, "0029")
 	case req == "host:mdns:check":
 		okay(c)
+		s.mu.Lock()
+		off := s.mdnsOff
+		s.mu.Unlock()
+		if off {
+			writeStr(c, "ERROR: mdns discovery disabled")
+			return
+		}
 		writeStr(c, "mdns daemon version [adb discovery 0.0.0]")
 	case req == "host:mdns:services":
 		s.mu.Lock()
@@ -703,6 +711,17 @@ func TestMDNSPairConnect(t *testing.T) {
 	if v, err := c.MDNSCheck(ctx); err != nil || !strings.Contains(v, "mdns daemon") {
 		t.Fatalf("MDNSCheck = %q, %v", v, err)
 	}
+	// A server started with ADB_MDNS=0 says so in an OKAY reply.
+	s.mu.Lock()
+	s.mdnsOff = true
+	s.mu.Unlock()
+	var ae *Error
+	if v, err := c.MDNSCheck(ctx); !errors.As(err, &ae) || ae.Msg != "mdns discovery disabled" {
+		t.Errorf("MDNSCheck with discovery off = %q, %v", v, err)
+	}
+	s.mu.Lock()
+	s.mdnsOff = false
+	s.mu.Unlock()
 	s.mu.Lock()
 	s.mdns = "pinky-abc\t_adb-tls-pairing._tcp.\t192.168.1.42:37123\n" +
 		"adb-R5CN20ABC-x1y2z3\t_adb-tls-connect._tcp\t192.168.1.42:41000\n" +

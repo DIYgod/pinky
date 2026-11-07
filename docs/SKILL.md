@@ -94,4 +94,4 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - `phone_apps { query: "din" }` finds an app's exact name before `phone_launch`.
 - On some Android phones the task runs on a background display, so the person's own screen stays free (or off and locked). `phone_connect` says so. That display starts empty, with no home screen: open apps with `phone_launch` rather than looking for their icons.
 - `phone_observe { screenshot: true }` only when the element list is not enough; screenshots are large.
-- An iPhone below iOS 27 without Pinky's helper can only press what the screen lists and open apps: `phone_swipe`, `phone_type`, `phone_key` and long presses return `unsupported`, and a tap at `x,y` must land on a listed element. Tap refs, open apps with `phone_launch`, and tell the person what needs the helper.
+- An iPhone below iOS 27 without Pinky's helper can only be read and have apps opened: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`. Read the screen, open apps with `phone_launch`, and tell the person the task needs the helper.

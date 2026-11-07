@@ -79,6 +79,10 @@ type Request struct {
 	DeviceName string
 	Screenshot image.Image
 	Target     screen.Rect
+	// Point is where the finger goes down and, for a swipe, To where it
+	// lifts, in Screenshot pixels; both zero when the action has no
+	// position.
+	Point, To screen.Point
 	// Timeout overrides the center's timeout; handoffs wait longer.
 	Timeout time.Duration
 	// Data is the gateway's own state, such as what to re-check on approval.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -19,7 +20,13 @@ import (
 // Pairing an Android phone over Wi-Fi, by QR code or by pairing code
 // (Developer options › Wireless debugging). The gateway's StartPairing
 // gives the text of the QR code and waits for the phone; PairWithCode
-// pairs with the address and code the phone shows.
+// pairs with the address and code the phone shows. A phone that paired
+// but that Pinky cannot find on the network gets a connect step, which
+// takes the address Wireless debugging shows (ConnectWiFi).
+
+// pairStuckAfter is how long a QR pairing waits for the phone before the
+// page says what may be wrong and offers the pairing code instead.
+const pairStuckAfter = 30 * time.Second
 
 // pairState is a pairing under way on the Add phone page.
 type pairState struct {
@@ -30,13 +37,32 @@ type pairState struct {
 	code   *qr.Code
 	err    string
 	since  time.Time // when the code showed
+	// progress is the pairing's (driver.PairingReporter); nil when it
+	// reports none.
+	progress func() driver.PairingProgress
+	foundAt  time.Time // when the phone showed up on the network
 
-	// The pairing-code form.
+	// The pairing-code form, and its connect step.
 	form     bool
 	addr     string
 	pin      string
 	formBusy bool
 	formErr  string
+	connect  bool   // the phone paired; the form asks where to connect to it
+	connAddr string // the address typed in the connect step
+}
+
+// prog returns the pairing's progress, the zero value when it reports
+// none, and notes when the phone showed up.
+func (st *pairState) prog() driver.PairingProgress {
+	if st.progress == nil {
+		return driver.PairingProgress{}
+	}
+	pr := st.progress()
+	if pr.Found && st.foundAt.IsZero() {
+		st.foundAt = time.Now()
+	}
+	return pr
 }
 
 // startPairing asks the gateway for a QR code and waits for the phone in
@@ -75,6 +101,10 @@ func (a *app) startPairing() {
 				return
 			}
 			st.state, st.text, st.code, st.since = "waiting", text, code, time.Now()
+			st.progress, st.foundAt = nil, time.Time{}
+			if r, ok := pg.(driver.PairingReporter); ok {
+				st.progress = r.Progress
+			}
 		})
 		if qerr != nil {
 			return
@@ -96,6 +126,7 @@ func (a *app) stopPairing() {
 	}
 	st.seq++
 	st.state, st.err = "", ""
+	st.progress = nil
 }
 
 // pairWithCode pairs with the address and code the phone shows under Pair
@@ -126,8 +157,32 @@ func (a *app) pairWithCode() {
 	}()
 }
 
+// connectWiFi connects to a phone that paired but that Pinky could not
+// find on the network, at the address Wireless debugging shows.
+func (a *app) connectWiFi() {
+	st := &a.add.pair
+	wc, ok := a.api.(wifiConnector)
+	if !ok || st.formBusy {
+		return
+	}
+	addr := strings.TrimSpace(st.connAddr)
+	if msg := checkPairAddr(addr); msg != "" {
+		st.formErr = msg
+		return
+	}
+	st.formBusy, st.formErr = true, ""
+	seq := st.seq
+	go func() {
+		ctx, cancel := context.WithTimeout(a.ctx, 45*time.Second)
+		defer cancel()
+		info, err := wc.ConnectWiFi(ctx, addr)
+		a.paired(seq, info, err, true)
+	}()
+}
+
 // paired finishes a pairing: on success it reads the devices again and
-// shows the new phone.
+// shows the new phone. A phone that paired but did not show up on the
+// network gets the connect step.
 func (a *app) paired(seq int, info driver.Info, err error, form bool) {
 	var devs []gateway.DeviceView
 	if err == nil {
@@ -138,10 +193,22 @@ func (a *app) paired(seq int, info driver.Info, err error, form bool) {
 		if form {
 			st.formBusy = false
 		}
+		if errors.Is(err, driver.ErrPairedNotFound) && (form || st.seq == seq) {
+			if _, ok := a.api.(wifiConnector); ok {
+				if !form {
+					a.stopPairing()
+				}
+				st.form, st.connect, st.formErr = true, true, ""
+				return
+			}
+		}
 		if err != nil {
-			if form {
+			switch {
+			case form && st.connect:
+				st.formErr = connectError(err)
+			case form:
 				st.formErr = pairError(err)
-			} else if st.seq == seq {
+			case st.seq == seq:
 				st.state, st.err = "failed", pairError(err)
 			}
 			return
@@ -154,7 +221,7 @@ func (a *app) paired(seq int, info driver.Info, err error, form bool) {
 			}
 		}
 		a.stopPairing()
-		st.form, st.addr, st.pin = false, "", ""
+		st.form, st.addr, st.pin, st.connect, st.connAddr = false, "", "", false, ""
 		a.add.step = ""
 		a.selectPhone(id)
 		paired := locales.PairingPairedPhone()
@@ -199,6 +266,74 @@ func pairError(err error) string {
 		return locales.PairingErrUnreachable()
 	}
 	return locales.PairingErrOther(err.Error())
+}
+
+// connectError says in plain words why connecting at an address failed.
+func connectError(err error) string {
+	msg := strings.ToLower(err.Error())
+	switch {
+	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(msg, "timeout") || strings.Contains(msg, "timed out"):
+		return locales.PairingErrTimeout()
+	case strings.Contains(msg, "refused") || strings.Contains(msg, "unreachable") || strings.Contains(msg, "no route") ||
+		strings.Contains(msg, "failed to connect") || strings.Contains(msg, "reset"):
+		return locales.PairingConnectErrUnreachable()
+	}
+	return locales.PairingConnectErrOther(err.Error())
+}
+
+// localNetworkSettings is System Settings › Privacy & Security › Local
+// Network.
+const localNetworkSettings = "x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork"
+
+// pairStuck says, once a QR pairing has waited long, what may be wrong
+// and what to do next, with buttons for the pairing code and, on a Mac
+// that keeps Pinky off the local network, its settings. It reports
+// whether it showed.
+func (a *app) pairStuck(c *mg.Context) bool {
+	p := pal(c)
+	st := &a.add.pair
+	if st.state != "waiting" || st.since.IsZero() {
+		return false
+	}
+	c.After(time.Second)
+	pr := st.prog()
+	var title, text string
+	settings := false
+	switch {
+	case pr.Paired:
+		return false // connecting ends by itself, in 30 s at most
+	case pr.Found:
+		if st.foundAt.IsZero() || time.Since(st.foundAt) < pairStuckAfter/2 {
+			return false
+		}
+		title, text = locales.PairingStuckPairingTitle(), locales.PairingStuckPairing()
+	case time.Since(st.since) < pairStuckAfter:
+		return false
+	case pr.NotAllowed:
+		title, text = locales.PairingStuckNotAllowedTitle(), locales.PairingStuckNotAllowed()
+		if runtime.GOOS == "darwin" {
+			text, settings = locales.PairingStuckNotAllowedMac(), true
+		}
+	case pr.SearchErr != "":
+		title, text = locales.PairingStuckNoSearchTitle(), locales.PairingStuckNoSearch(pr.SearchErr)
+	default:
+		title, text = locales.PairingStuckNotSeenTitle(), locales.PairingStuckNotSeen()
+	}
+	mg.Column(c).Padding(16, 18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(10).Role(mg.RoleStatus).Children(func() {
+		mg.Text(c, title).FontSize(15).FontWeight(650)
+		mg.Text(c, text).FontSize(13.5).LineHeight(1.45)
+		mg.Row(c).Gap(10).Wrap().Children(func() {
+			// Allowing Pinky is the fix there; the code goes around it.
+			if settings && button(c, locales.PairingOpenLocalNetwork(), btnOpt{small: true, kind: btnPrimary}).Clicked() {
+				openURL(c, localNetworkSettings, func(error) {})
+			}
+			if button(c, locales.PairingUseCode(), btnOpt{small: true}).Clicked() {
+				a.stopPairing()
+				st.form, st.formErr = true, ""
+			}
+		})
+	})
+	return true
 }
 
 // qrGeometry places a QR code of size modules in r, with 4 modules of

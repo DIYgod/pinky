@@ -94,9 +94,33 @@ func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 		case n.Unblock:
 			a.unblockControls(c, n)
 		default:
+			if a.cardShot(n) {
+				b := n.Screenshot.Bounds()
+				_, zoom := marksOf(n).focus(b.Dx(), b.Dy())
+				h := figureHeight(cardFigureW, cardFigure, cardWide, cardLens, b.Dx(), b.Dy(), zoom)
+				a.approvalFigure(c, n, func() { a.shotOpen = n.ID }).Height(h).Margin(12, 0, 0, 0)
+			}
 			a.approvalControls(c, n)
 		}
 	})
+}
+
+// cardShot reports whether a Needs you card shows its approval's
+// screenshot: where the middle of the window does not show that phone's
+// screen with the target marked, as for another phone, All phones, or a
+// locked phone or one without video.
+func (a *app) cardShot(n gateway.NeedView) bool {
+	if n.Screenshot == nil || n.Kind != gateway.NeedApproval || newAgentNeed(n) || a.noting[n.ID] {
+		return false
+	}
+	if a.sel != n.DeviceID {
+		return true
+	}
+	if d := a.device(n.DeviceID); d != nil && a.isLocked(*d) {
+		return true
+	}
+	m := a.mirrors[n.DeviceID]
+	return m != nil && m.state == "failed"
 }
 
 func needEyebrow(c *mg.Context, n gateway.NeedView) {

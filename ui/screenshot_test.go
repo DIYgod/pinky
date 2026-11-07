@@ -23,7 +23,8 @@ func TestPanelScreenshots(t *testing.T) {
 	ta := newTestAppTimeout(t, fakeapi.ThreePhones, 45*time.Second)
 	ta.waitFor(t, "two approvals", func() bool { return len(ta.approvals()) == 2 })
 	for _, dark := range []bool{false, true} {
-		tt := mg.NewTester(ta.panelView, panelW, panelH)
+		w, h := ta.panelSize()
+		tt := mg.NewTester(ta.panelView, w, h)
 		tt.SetScale(2)
 		tt.SetDark(dark)
 		tt.Frame()

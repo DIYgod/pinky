@@ -16,7 +16,10 @@
 #
 # The version is cmd/pinky/mygo.json's, which a release writes into a
 # checkout of its tag first (go run ./scripts/release stamp <version>).
-# Every app carries <out>/pinky-companion.apk, so build that first.
+# Every app carries <out>/pinky-companion.apk, so build that first, and its
+# own FFmpeg (scripts/ffmpeg.sh): Pinky.app in Contents/Frameworks, the
+# Windows and Linux apps next to their executables, built in a Docker
+# container the first time.
 #
 # Environment:
 #   SIGN             the identity that signs Pinky.app (default: the Developer ID
@@ -27,7 +30,8 @@
 #   FFMPEG_CACHE     where FFmpeg's builds are kept (default build/ffmpeg-dist)
 #   STRICT           1 stops rather than leave out what a release must have:
 #                    the companion APK, the Windows installer, notarization,
-#                    FFmpeg's assembly for Intel Macs
+#                    FFmpeg's assembly for Intel Macs, FFmpeg for Windows and
+#                    Linux (which needs Docker)
 set -eu
 
 # Homebrew's makensis (NSIS 3.13, which mygo build runs for the Windows
@@ -75,10 +79,12 @@ sha256() {
 
 [ -n "$version" ] || die "cmd/pinky/mygo.json has no version"
 
-# The companion APK goes into every app through MyGo's resources, which
-# are staged for the build only.
+# The companion APK goes into every app through MyGo's resources, and
+# FFmpeg into the Windows and Linux apps through their platform folders
+# there; they are staged for the build only.
 unstage() {
 	rm -f "$resources/pinky-companion.apk"
+	rm -rf "$resources/windows-amd64" "$resources/linux-amd64"
 	rmdir "$resources" 2>/dev/null || true
 }
 trap unstage EXIT
@@ -116,27 +122,70 @@ companion() {
 	say "$out/pinky-companion.apk: $info"
 }
 
-# ffmpeg_for prints the prefix of FFmpeg built for a Mac's processor
-# (arm64, amd64), building it the first time. The builds are kept by the
-# hash of scripts/ffmpeg.sh, which changes with what they hold.
+# ffmpeg_for prints the prefix of FFmpeg built for a target: a Mac's
+# processor (arm64, amd64), windows-amd64 or linux-amd64, building it the
+# first time. The builds are kept by the hash of scripts/ffmpeg.sh, which
+# changes with what they hold. Windows and Linux are built in a Docker
+# container; without Docker it prints nothing (and a strict build stops).
 ffmpeg_for() {
-	arch=$1
-	dir=${FFMPEG_CACHE:-$root/build/ffmpeg-dist}/$(sha256 scripts/ffmpeg.sh | cut -c1-12)-$arch
+	target=$1
+	dir=${FFMPEG_CACHE:-$root/build/ffmpeg-dist}/$(sha256 scripts/ffmpeg.sh | cut -c1-12)-$target
 	noasm=
-	if [ ! -f "$dir/BUILD.txt" ] && [ "$arch" = amd64 ] && ! command -v nasm >/dev/null 2>&1; then
+	if [ ! -f "$dir/BUILD.txt" ] && [ "$target" = amd64 ] && ! command -v nasm >/dev/null 2>&1; then
 		lacking "no nasm (brew install nasm): FFmpeg for Intel Macs is built without its assembly, which decodes slower"
 		noasm=1
 		dir=$dir-noasm
 	fi
 	if [ ! -f "$dir/BUILD.txt" ]; then
+		case $target in
+		windows-amd64 | linux-amd64)
+			if ! docker info >/dev/null 2>&1; then
+				lacking "Docker is not running, so the $target app carries no FFmpeg, and its mirror needs FFmpeg 9 installed"
+				return 0
+			fi
+			;;
+		esac
 		mkdir -p "$(dirname "$dir")"
-		say "FFmpeg for $arch, in $dir (a few minutes the first time)"
-		if ! FFMPEG_NO_ASM=$noasm scripts/ffmpeg.sh "$dir" "$arch" >"$dir.log" 2>&1; then
+		say "FFmpeg for $target, in $dir (a few minutes the first time)"
+		if ! FFMPEG_NO_ASM=$noasm scripts/ffmpeg.sh "$dir" "$target" >"$dir.log" 2>&1; then
 			tail -30 "$dir.log" >&2
-			die "building FFmpeg for $arch failed; its log is $dir.log"
+			die "building FFmpeg for $target failed; its log is $dir.log"
 		fi
 	fi
 	echo "$dir"
+}
+
+# stage_ffmpeg puts the FFmpeg of a target (windows-amd64, linux-amd64)
+# among MyGo's resources for that platform, which every package of it
+# installs next to the executable, where internal/video looks before the
+# system's libraries: the DLLs, or the libraries under the names they are
+# loaded by, with FFmpeg's license and build notes. It prints the
+# libraries' names.
+stage_ffmpeg() {
+	target=$1
+	ff=$(ffmpeg_for "$target")
+	[ -n "$ff" ] || return 0
+	dst=$resources/$target
+	rm -rf "$dst"
+	mkdir -p "$dst"
+	case $target in
+	windows-amd64) cp "$ff"/bin/*.dll "$dst/" ;;
+	linux-amd64)
+		for f in "$ff"/lib/lib*.so.*; do
+			case ${f##*/} in
+			*.so.*.*) ;; # the full version, which the name by major points to
+			*) cp -L "$f" "$dst/" ;;
+			esac
+		done
+		;;
+	esac
+	cp "$ff/COPYING.LGPLv2.1" "$dst/FFmpeg-COPYING.LGPLv2.1"
+	cp "$ff/BUILD.txt" "$dst/FFmpeg-BUILD.txt"
+	for f in "$dst"/*; do
+		case ${f##*/} in
+		*.dll | *.so.*) echo "${f##*/}" ;;
+		esac
+	done
 }
 
 # machine is how lipo names a processor.
@@ -239,9 +288,13 @@ windows() {
 		lacking "no makensis (NSIS: brew install makensis, apt install nsis): no Windows installer"
 		skip=-skip-installer
 	fi
+	libs=$(stage_ffmpeg windows-amd64)
 	# shellcheck disable=SC2086 # skip is one flag or none
 	build windows/amd64 $skip
 	dir=$stage/windows-amd64
+	for lib in $libs; do
+		[ -f "$dir/$lib" ] || die "the Windows app lacks FFmpeg's $lib"
+	done
 	files=$stage/windows-files
 	rm -rf "$files"
 	mkdir -p "$files"
@@ -266,10 +319,21 @@ windows() {
 }
 
 linux() {
+	libs=$(stage_ffmpeg linux-amd64)
 	build linux/amd64
 	dir=$stage/linux-amd64
 	for f in "pinky-$version-linux-amd64.tar.gz" "pinky_${version}_amd64.deb"; do
 		[ -f "$dir/$f" ] || die "mygo build made no $f"
+	done
+	# FFmpeg must be next to the executable in both packages: at the
+	# archive's top, and in /opt/pinky in the Debian package.
+	archive=$(tar -tzf "$dir/pinky-$version-linux-amd64.tar.gz")
+	data=$(cd "$dir" && ar p "pinky_${version}_amd64.deb" data.tar.gz | tar -tzf -)
+	for lib in $libs; do
+		printf '%s\n' "$archive" | grep -E -qx "(\./)?$lib" || die "the .tar.gz lacks FFmpeg's $lib"
+		printf '%s\n' "$data" | grep -E -qx "(\./)?opt/pinky/$lib" || die "the .deb lacks FFmpeg's $lib in /opt/pinky"
+	done
+	for f in "pinky-$version-linux-amd64.tar.gz" "pinky_${version}_amd64.deb"; do
 		cp "$dir/$f" "$out/"
 		say "$out/$f"
 	done

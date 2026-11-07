@@ -40,6 +40,7 @@ func (a *app) view(c *mg.Context) {
 	})
 	a.telemetryDialogs(c)
 	a.updateDialogs(c)
+	a.shotDialog(c)
 	a.sweepMirrors()
 	// A QR pairing lasts while its step shows, and a recording plays while
 	// Activity does.

@@ -3,12 +3,14 @@ run-name: Release ${{ inputs.tag || github.ref_name }}
 
 # A tag v<version>, which `scripts/release.sh tag` pushes with its commit,
 # is a release: this builds the companion APK, Pinky for Windows and Linux
-# (Ubuntu) and Pinky.app for Apple silicon and Intel (macOS: signed with
-# the Developer ID, both disk images notarized at once, the tickets
-# stapled), then publishes the GitHub release, latest.json last. The steps
-# are the scripts at the tag: scripts/dist.sh builds, scripts/publish.sh
-# publishes. The Homebrew tap takes the cask that the release carries. See
-# docs/RELEASING.md.
+# (Ubuntu, with the FFmpeg that scripts/ffmpeg.sh builds in a container)
+# and Pinky.app for Apple silicon and Intel (macOS: signed with the
+# Developer ID, both disk images notarized at once, the tickets stapled),
+# checks that the Linux and Windows packages' FFmpeg decodes (on Ubuntu and
+# on GitHub's Windows runner), then publishes the GitHub release,
+# latest.json last. The steps are the scripts at the tag: scripts/dist.sh
+# builds, scripts/publish.sh publishes. The Homebrew tap takes the cask
+# that the release carries. See docs/RELEASING.md.
 on:
   push:
     tags: ["v*"]
@@ -18,7 +20,7 @@ on:
         description: The tag to release again (v2026.1107.1)
         required: true
       publish:
-        description: Publish it (off builds it and keeps the files as this run's artifacts)
+        description: Publish it (off builds the branch this runs on, as the tag's version, and keeps the files as this run's artifacts)
         type: boolean
         default: true
 
@@ -29,7 +31,11 @@ permissions:
   contents: read
 
 env:
+  CGO_ENABLED: "0"
   TAG: ${{ inputs.tag || github.ref_name }}
+  # What the jobs build: the tag, or, in a run by hand that publishes
+  # nothing, the commit it runs on, to try a branch as a release.
+  REF: ${{ (github.event_name == 'workflow_dispatch' && !inputs.publish) && github.sha || format('refs/tags/{0}', inputs.tag || github.ref_name) }}
 
 jobs:
   companion:
@@ -39,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: ${{ env.REF }}
           persist-credentials: false
           fetch-depth: 0 # the companion's versionCode is the count of commits
       - uses: actions/setup-java@v6
@@ -49,10 +55,13 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Check the tag and its notes
-        run: |
-          go run ./scripts/release newer "${TAG#v}"
-          go run ./scripts/release notes "${TAG#v}" > /dev/null
+      - name: Check the tag
+        run: go run ./scripts/release newer "${TAG#v}"
+      - name: Check its notes
+        # A run that publishes nothing may build a branch whose CHANGELOG.md
+        # does not have the tag's notes yet.
+        if: github.event_name == 'push' || inputs.publish
+        run: go run ./scripts/release notes "${TAG#v}" > /dev/null
       - name: Build
         env:
           STRICT: "1"
@@ -74,15 +83,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: ${{ env.REF }}
           persist-credentials: false
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - name: Install NSIS, for the Windows installer
+      - name: Install NSIS, for the Windows installer, and ffmpeg, which makes the test streams
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends nsis >/dev/null
+          sudo apt-get install -y -qq --no-install-recommends nsis ffmpeg >/dev/null
+      - name: Cache FFmpeg
+        uses: actions/cache@v6
+        with:
+          path: build/ffmpeg-dist
+          key: ffmpeg-windows-linux-${{ hashFiles('scripts/ffmpeg.sh') }}
       - uses: actions/download-artifact@v8
         with:
           name: companion
@@ -95,12 +109,51 @@ jobs:
           go run ./scripts/release stamp "${TAG#v}"
           scripts/dist.sh windows "$RUNNER_TEMP/dist"
           scripts/dist.sh linux "$RUNNER_TEMP/dist"
+      - name: Check that the Linux package's FFmpeg decodes
+        run: |
+          dir="$RUNNER_TEMP/linux-package"
+          mkdir -p "$dir"
+          tar -xzf "$RUNNER_TEMP/dist/pinky-${TAG#v}-linux-amd64.tar.gz" -C "$dir"
+          PINKY_FFMPEG_APP="$dir" go test -count=1 -run TestPackagedFFmpeg -v ./internal/video/ | grep -E -e '--- |^(ok|FAIL)|video_test.go'
       - uses: actions/upload-artifact@v7
         with:
           name: linux-windows
           path: ${{ runner.temp }}/dist/
           if-no-files-found: error
           retention-days: 3
+
+  windows:
+    name: Windows package
+    needs: linux-windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.REF }}
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux-windows
+          path: ${{ runner.temp }}/dist
+      - name: Unpack the Windows zip, and get an ffmpeg command for the test streams
+        shell: pwsh
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $version = $env:TAG.TrimStart('v')
+          Expand-Archive "$env:RUNNER_TEMP\dist\pinky-$version-windows-amd64.zip" -DestinationPath "$env:RUNNER_TEMP\windows-package"
+          # A static build, so that no other FFmpeg DLLs are around.
+          Invoke-WebRequest "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n9.0-latest-win64-gpl-9.0.zip" -OutFile "$env:RUNNER_TEMP\ffmpeg.zip"
+          Expand-Archive "$env:RUNNER_TEMP\ffmpeg.zip" -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
+          (Get-ChildItem "$env:RUNNER_TEMP\ffmpeg" -Directory | Select-Object -First 1).FullName + "\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          Get-ChildItem "$env:RUNNER_TEMP\windows-package"
+      - name: Check that the Windows package's FFmpeg decodes
+        shell: bash
+        run: |
+          PINKY_FFMPEG_APP="$RUNNER_TEMP\windows-package" go test -count=1 -run TestPackagedFFmpeg -v ./internal/video/ | grep -E -e '--- |^(ok|FAIL)|video_test.go'
 
   macos:
     name: macOS
@@ -110,7 +163,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: ${{ env.REF }}
           persist-credentials: false
       - uses: actions/setup-go@v7
         with:
@@ -188,7 +241,7 @@ jobs:
 
   publish:
     name: Publish
-    needs: [linux-windows, macos]
+    needs: [linux-windows, windows, macos]
     if: github.event_name == 'push' || inputs.publish
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -197,7 +250,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: refs/tags/${{ env.TAG }}
+          ref: ${{ env.REF }}
           persist-credentials: false
       - uses: actions/setup-go@v7
         with:

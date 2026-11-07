@@ -618,6 +618,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 	if !canList {
 		mg.Text(c, locales.SettingsAgentsUnlisted()).FontSize(12.5).TextColor(p.ink3)
 	}
+	a.connectAgents(c)
 	a.remoteAgents(c)
 }
 
@@ -739,9 +740,9 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 				backends += "."
 			}
 			settingRow(c, locales.SettingsAdvancedBackends(), backends, false, nil)
-			conn := locales.SettingsAdvancedConnStdio()
+			conn := locales.SettingsAdvancedConnStdio(agentCommand())
 			if st.RemoteAgents {
-				conn = locales.SettingsAdvancedConnHTTP(RemoteURL(st.RemoteAddr))
+				conn = locales.SettingsAdvancedConnHTTP(agentCommand(), RemoteURL(st.RemoteAddr))
 			}
 			settingRow(c, locales.SettingsAdvancedConnection(), conn, false, nil)
 			if v := videoLine(a); v != "" {

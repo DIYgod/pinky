@@ -138,7 +138,7 @@ The window has the same three parts whatever the number of phones: a sidebar lis
 | All phones | See several phones at once |
 | Phone, locked | Unlock from the computer with Touch ID, or on the phone |
 | Phone, you're in control | Pass control back and forth |
-| Approval panel | The same Needs you card, floating when the window is not in front, plus a screenshot of the target, since the mirror is out of view |
+| Approval panel | The same Needs you card, floating when the window is not in front, plus the screenshot, since the mirror is out of view: the whole screen with the target marked, beside the part around the target large enough to read, and larger on a click |
 | Menu bar flyout | The same sections as the right panel, plus Stop all |
 | Activity | Review past tasks by day, with the phone on each row |
 | Settings | Phones, Agents, Safety presets, Privacy, Advanced |

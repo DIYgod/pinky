@@ -544,6 +544,38 @@
   "@companionUpdatingTitle": {
     "description": "The companion card's title while Pinky updates the app by itself."
   },
+  "connectClaudeHint": "Run this in a terminal.",
+  "@connectClaudeHint": {
+    "description": "Settings › Agents › Add an agent: under the heading Claude Code, above the claude mcp add command that adds Pinky to Claude Code."
+  },
+  "connectCommandLabel": "Command that starts Pinky for an agent",
+  "@connectCommandLabel": {
+    "description": "Settings › Agents › Add an agent: the accessibility label of the command shown under Other agents."
+  },
+  "connectCopyClaude": "Copy the command for Claude Code",
+  "@connectCopyClaude": {
+    "description": "Settings › Agents › Add an agent: the accessibility label of the copy button next to the claude mcp add command."
+  },
+  "connectCopyOther": "Copy the command for other agents",
+  "@connectCopyOther": {
+    "description": "Settings › Agents › Add an agent: the accessibility label of the copy button next to the command under Other agents."
+  },
+  "connectIntro": "Agents on this computer start Pinky with a command, and you allow each one the first time it connects.",
+  "@connectIntro": {
+    "description": "Settings › Agents › Add an agent: the line under the heading."
+  },
+  "connectOtherHint": "Set this as the command of an MCP server over stdio.",
+  "@connectOtherHint": {
+    "description": "Settings › Agents › Add an agent: under Other agents, above the command (Pinky's path and the argument mcp) that agents' MCP settings take. Keep MCP and stdio."
+  },
+  "connectOtherTitle": "Other agents",
+  "@connectOtherTitle": {
+    "description": "Settings › Agents › Add an agent: the heading above the command other agents (Codex, Cursor…) run to reach Pinky."
+  },
+  "connectTitle": "Add an agent",
+  "@connectTitle": {
+    "description": "Settings › Agents: the heading of the part that says how to add an agent on this computer, and its accessibility label."
+  },
   "connectionOffline": "{platform} · offline",
   "@connectionOffline": {
     "description": "The phone page header's second line and Settings › Phones, for an offline phone. platform is Android, iPhone or a version such as Android 16.",
@@ -2182,6 +2214,40 @@
   "@pairingCodeTitle": {
     "description": "Pair over Wi-Fi: the heading of the form that pairs with the address and the six-digit code the phone shows."
   },
+  "pairingConnect": "Connect",
+  "@pairingConnect": {
+    "description": "Pair with a code: the button that connects to the address typed in the connect step."
+  },
+  "pairingConnectBusy": "Connecting…",
+  "@pairingConnectBusy": {
+    "description": "Pair with a code: next to a spinner, right of the Connect button, while Pinky connects."
+  },
+  "pairingConnectDetail": "The phone paired, but Pinky can't find it on this network. On the phone, open Wireless debugging and enter the IP address and port shown at the top.",
+  "@pairingConnectDetail": {
+    "description": "Pair with a code: the line under pairingConnectTitle. Wireless debugging is Android's own name."
+  },
+  "pairingConnectErrOther": "Couldn't connect: {detail}",
+  "@pairingConnectErrOther": {
+    "description": "Pair with a code: the error when connecting in the connect step failed for another reason. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "adb: device offline"
+      }
+    }
+  },
+  "pairingConnectErrUnreachable": "Couldn't connect at that address. Use the IP address and port at the top of Wireless debugging, not the ones of the pairing dialog.",
+  "@pairingConnectErrUnreachable": {
+    "description": "Pair with a code: the error when nothing answered at the address typed in the connect step. Wireless debugging is Android's own name."
+  },
+  "pairingConnectTitle": "Connect to the phone",
+  "@pairingConnectTitle": {
+    "description": "Pair with a code: the heading of the step that connects to a phone that paired but that Pinky could not find on the network."
+  },
+  "pairingConnecting": "Paired. Connecting to the phone…",
+  "@pairingConnecting": {
+    "description": "Pair over Wi-Fi: the status line, next to a spinner, once the phone paired and Pinky connects to it."
+  },
   "pairingErrNoAdb": "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead.",
   "@pairingErrNoAdb": {
     "description": "Pair over Wi-Fi: the error when this computer has no Android tools (adb) to pair with."
@@ -2212,6 +2278,10 @@
   "@pairingErrWrongCode": {
     "description": "Pair with a code: the error when the pairing code typed was wrong. Pair device with pairing code is Android's own name."
   },
+  "pairingFound": "Found the phone. Pairing…",
+  "@pairingFound": {
+    "description": "Pair over Wi-Fi: the status line, next to a spinner, once the phone scanned the code and Pinky pairs with it."
+  },
   "pairingGettingCode": "Getting a code…",
   "@pairingGettingCode": {
     "description": "Pair over Wi-Fi: the status line, next to a spinner, while Pinky gets the QR code from the gateway."
@@ -2219,6 +2289,10 @@
   "pairingNoCode": "No code",
   "@pairingNoCode": {
     "description": "Pair over Wi-Fi: in place of the QR code, under an alert icon, when getting one failed."
+  },
+  "pairingOpenLocalNetwork": "Open Local Network settings",
+  "@pairingOpenLocalNetwork": {
+    "description": "Pair over Wi-Fi, on a Mac: the button under the note that opens System Settings › Privacy & Security › Local Network. Local Network is macOS's own name."
   },
   "pairingPair": "Pair",
   "@pairingPair": {
@@ -2256,9 +2330,47 @@
   "@pairingQRLabel": {
     "description": "Pair over Wi-Fi: the accessibility label of the QR code. Wireless debugging and Pair device with QR code are Android's own names."
   },
-  "pairingSlowHint": "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happens here, adb may have stopped seeing the network: quit other Android tools and run adb kill-server, then try again.",
-  "@pairingSlowHint": {
-    "description": "Pair over Wi-Fi: under the status line when the phone has not paired after 30 seconds. adb is Android's tool and adb kill-server a command: both stay as they are."
+  "pairingStuckNoSearch": "Check that this computer is connected to Wi-Fi or Ethernet, or pair with a code instead. ({detail})",
+  "@pairingStuckNoSearch": {
+    "description": "Pair over Wi-Fi: the note's text under pairingStuckNoSearchTitle. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "mdns: no network interface to search"
+      }
+    }
+  },
+  "pairingStuckNoSearchTitle": "Pinky can't look for phones on this network",
+  "@pairingStuckNoSearchTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note when Pinky cannot search the network for another reason, such as no network connection."
+  },
+  "pairingStuckNotAllowed": "Something on this computer, perhaps a firewall, keeps Pinky from looking for phones on the network. Let Pinky use the local network, or pair with a code instead.",
+  "@pairingStuckNotAllowed": {
+    "description": "Pair over Wi-Fi, on Linux and Windows: the note's text under pairingStuckNotAllowedTitle."
+  },
+  "pairingStuckNotAllowedMac": "Turn on Pinky under System Settings › Privacy & Security › Local Network, then try again. Or pair with a code instead.",
+  "@pairingStuckNotAllowedMac": {
+    "description": "Pair over Wi-Fi, on a Mac: the note's text under pairingStuckNotAllowedTitle. System Settings, Privacy & Security and Local Network are macOS's own names: use those of macOS in Simplified Chinese."
+  },
+  "pairingStuckNotAllowedTitle": "Pinky isn't allowed to look for phones on this network",
+  "@pairingStuckNotAllowedTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note when the system keeps Pinky from looking for devices on the local network."
+  },
+  "pairingStuckNotSeen": "Scan this code on the phone under Wireless debugging › Pair device with QR code, with the phone on the same Wi-Fi as this computer. Some networks, such as guest Wi-Fi and many offices, keep devices from finding each other; there, pair with a code instead.",
+  "@pairingStuckNotSeen": {
+    "description": "Pair over Wi-Fi: the note's text under pairingStuckNotSeenTitle. Wireless debugging and Pair device with QR code are Android's own names: use those of Android's Simplified Chinese settings."
+  },
+  "pairingStuckNotSeenTitle": "The phone hasn't shown up on the network yet",
+  "@pairingStuckNotSeenTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note under the status line when, 30 seconds after the code showed, the phone has not appeared on the network: it has not scanned the code, or the network keeps devices apart."
+  },
+  "pairingStuckPairing": "If the phone shows an error or went back to Wireless debugging, scan the code again. Or pair with a code instead.",
+  "@pairingStuckPairing": {
+    "description": "Pair over Wi-Fi: the note's text under pairingStuckPairingTitle. Wireless debugging is Android's own name."
+  },
+  "pairingStuckPairingTitle": "The phone showed up, but pairing hasn't finished",
+  "@pairingStuckPairingTitle": {
+    "description": "Pair over Wi-Fi: the heading of the note when the phone appeared on the network a while ago and pairing has not finished."
   },
   "pairingTitle": "Pair over Wi-Fi",
   "@pairingTitle": {
@@ -2452,9 +2564,9 @@
   "@panelPrevious": {
     "description": "The accessibility label of the floating approval panel's left arrow."
   },
-  "panelShotLabel": "{phone} screen: the target, outlined",
+  "panelShotLabel": "{phone} screen with the target marked",
   "@panelShotLabel": {
-    "description": "The accessibility label of the floating approval panel's picture: the part of the phone's screen around what the agent wants to tap, with that element outlined.",
+    "description": "The accessibility label of an approval's screenshot in the floating approval panel, on a Needs you card and in its large view: the phone's whole screen and the part around what the agent wants to tap, with that element marked.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -3030,11 +3142,11 @@
   },
   "remoteCommandLabel": "Command to add Pinky to Claude Code",
   "@remoteCommandLabel": {
-    "description": "Settings › Agents › Remote agents: the accessibility label of the claude mcp add command shown under Claude Code."
+    "description": "Settings › Agents (Add an agent and Remote agents): the accessibility label of the claude mcp add command shown under Claude Code."
   },
   "remoteCopiedCommand": "Copied the command",
   "@remoteCopiedCommand": {
-    "description": "A toast once the claude mcp add command is copied."
+    "description": "A toast once a command in Settings › Agents is copied."
   },
   "remoteCopiedToken": "Copied the agent token",
   "@remoteCopiedToken": {
@@ -3046,7 +3158,7 @@
   },
   "remoteCopyCommand": "Copy the command",
   "@remoteCopyCommand": {
-    "description": "Settings › Agents › Remote agents: the accessibility label of the copy button next to the claude mcp add command."
+    "description": "Settings › Agents (Add an agent and Remote agents): the accessibility label of the copy button next to a command."
   },
   "remoteCopyToken": "Copy the agent token",
   "@remoteCopyToken": {
@@ -3068,9 +3180,9 @@
   "@remoteHostInvalid": {
     "description": "Settings › Agents › Remote agents: under the address field, when the host is a name other than localhost. Keep 127.0.0.1 and localhost."
   },
-  "remoteIntro": "For agents that can't start `pinky mcp` on this computer, such as one in a container. They connect over HTTP with the agent token, and you allow each one, as above.",
+  "remoteIntro": "For agents that can't start Pinky on this computer, such as one in a container. They connect over HTTP with the agent token, and you allow each one, as above.",
   "@remoteIntro": {
-    "description": "Settings › Agents › Remote agents: the line under the heading. `pinky mcp` is the command local agents run, kept with its backticks; the agent token is the secret agents present; as above refers to the connection requests above."
+    "description": "Settings › Agents › Remote agents: the line under the heading. Agents on this computer start Pinky with a command (Add an agent, above it); the agent token is the secret agents present; as above refers to the connection requests above."
   },
   "remoteOthersWarning": "Other computers on your network can reach Pinky at this address. Anyone with the agent token can ask to use your phones.",
   "@remoteOthersWarning": {
@@ -3366,19 +3478,29 @@
   "@settingsAdvancedBackends": {
     "description": "Settings › Advanced, in Developer mode: the row that lists each phone's driver backend, as Pixel 9: scrcpy."
   },
-  "settingsAdvancedConnHTTP": "MCP over stdio: pinky mcp; Streamable HTTP at {endpoint}",
+  "settingsAdvancedConnHTTP": "MCP over stdio: {command}; Streamable HTTP at {endpoint}",
   "@settingsAdvancedConnHTTP": {
-    "description": "Settings › Advanced, in Developer mode: the line under Agent connection while remote agents are on: MCP over stdio, and over Streamable HTTP at endpoint, a URL. Keep MCP, stdio, pinky mcp and Streamable HTTP.",
+    "description": "Settings › Advanced, in Developer mode: the line under Agent connection while remote agents are on: MCP over stdio through command, and over Streamable HTTP at endpoint, a URL. Keep MCP, stdio and Streamable HTTP.",
     "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "/Applications/Pinky.app/Contents/MacOS/Pinky mcp"
+      },
       "endpoint": {
         "type": "String",
         "example": "http://127.0.0.1:7465/mcp"
       }
     }
   },
-  "settingsAdvancedConnStdio": "MCP over stdio: pinky mcp",
+  "settingsAdvancedConnStdio": "MCP over stdio: {command}",
   "@settingsAdvancedConnStdio": {
-    "description": "Settings › Advanced, in Developer mode: the line under Agent connection: agents run the command pinky mcp, which speaks MCP over standard input and output. Keep MCP, stdio and pinky mcp."
+    "description": "Settings › Advanced, in Developer mode: the line under Agent connection: agents run command, which speaks MCP over standard input and output. Keep MCP and stdio.",
+    "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "/Applications/Pinky.app/Contents/MacOS/Pinky mcp"
+      }
+    }
   },
   "settingsAdvancedConnection": "Agent connection",
   "@settingsAdvancedConnection": {
@@ -3464,9 +3586,9 @@
   "@settingsAgentsList": {
     "description": "Settings › Agents: the accessibility label of the list of agents."
   },
-  "settingsAgentsNone": "No agent has connected yet. Point an agent at `pinky mcp` to start.",
+  "settingsAgentsNone": "No agent has connected yet. Add one with a command below.",
   "@settingsAgentsNone": {
-    "description": "Settings › Agents: in place of the list while no agent has connected. `pinky mcp` is the command agents run to reach Pinky; keep it with its backticks."
+    "description": "Settings › Agents: in place of the list while no agent has connected. The commands below are those under Add an agent (connectTitle)."
   },
   "settingsAgentsNotAllowed": "Not allowed yet",
   "@settingsAgentsNotAllowed": {
@@ -4116,6 +4238,14 @@
   "@settingsUnlockFromComputer": {
     "description": "Settings › Safety: the switch that lets Pinky unlock a locked phone with its saved PIN. Also the heading of each phone's PIN form in Settings › Phones."
   },
+  "shotClose": "Close",
+  "@shotClose": {
+    "description": "The accessibility label of the × that closes the large view of an approval's screenshot."
+  },
+  "shotEnlarge": "Click to see it larger",
+  "@shotEnlarge": {
+    "description": "The tooltip of an approval's screenshot in the floating approval panel and on a Needs you card: a click shows the screenshot larger."
+  },
   "shotLabel": "Screenshot of {phone}",
   "@shotLabel": {
     "description": "The accessibility label of a step's screenshot.",
@@ -4129,6 +4259,30 @@
   "shotLoading": "Loading…",
   "@shotLoading": {
     "description": "In place of a step's screenshot while it loads."
+  },
+  "shotMissing": "No screenshot of this screen",
+  "@shotMissing": {
+    "description": "Stands for an approval's screenshot in the floating approval panel when the phone sent none."
+  },
+  "shotMissingBlocked": "Pinky takes no screenshots of {app}",
+  "@shotMissingBlocked": {
+    "description": "Stands for an approval's screenshot in the floating approval panel when the app on the phone's screen is blocked: Pinky hides blocked apps.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Wallet"
+      }
+    }
+  },
+  "shotMissingLocked": "{phone} is locked, so there's no screenshot",
+  "@shotMissingLocked": {
+    "description": "Stands for an approval's screenshot in the floating approval panel when the phone is locked.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
   },
   "shotNone": "No screenshot",
   "@shotNone": {

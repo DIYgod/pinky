@@ -35,6 +35,11 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 	}
 	return android.NewProvider(android.Config{
 		Client: c,
+		// adb's own discovery stops seeing the network after the
+		// computer's network changes; the driver then reconnects the
+		// phones paired over Wi-Fi itself. Not while PINKY_DEVICES limits
+		// Pinky to some phones: the others belong to other tools.
+		ReconnectWiFi: strings.TrimSpace(os.Getenv("PINKY_DEVICES")) == "",
 		Logf: func(format string, args ...any) {
 			log.Debug(fmt.Sprintf(format, args...), "platform", "android")
 		},
@@ -148,6 +153,20 @@ func (p *onlyPairer) PairWithCode(ctx context.Context, addr, code string) (drive
 	return info, err
 }
 
+// ConnectWiFi connects a paired phone at the address it shows, and lets it
+// in as a pairing does.
+func (p *onlyPairer) ConnectWiFi(ctx context.Context, addr string) (driver.Info, error) {
+	wc, ok := p.pairer.(driver.WiFiConnector)
+	if !ok {
+		return driver.Info{}, fmt.Errorf("connecting by address: %w", driver.ErrUnsupported)
+	}
+	info, err := wc.ConnectWiFi(ctx, addr)
+	if err == nil {
+		p.allow(info.ID)
+	}
+	return info, err
+}
+
 type allowOnPair struct {
 	driver.Pairing
 	p *onlyProvider
@@ -159,4 +178,12 @@ func (a *allowOnPair) Wait(ctx context.Context) (driver.Info, error) {
 		a.p.allow(info.ID)
 	}
 	return info, err
+}
+
+// Progress passes the pairing's progress on (driver.PairingReporter).
+func (a *allowOnPair) Progress() driver.PairingProgress {
+	if r, ok := a.Pairing.(driver.PairingReporter); ok {
+		return r.Progress()
+	}
+	return driver.PairingProgress{}
 }

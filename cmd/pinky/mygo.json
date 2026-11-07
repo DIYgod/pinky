@@ -9,12 +9,15 @@
   "i18n": { "dir": "locales", "source": "en" },
   "macos": {
     "icon": "../../assets/icon/Pinky.icns",
-    "minimumSystemVersion": "12.0"
+    "minimumSystemVersion": "12.0",
+    "infoPlist": {
+      "NSLocalNetworkUsageDescription": "Pinky looks for your Android phones on this network to pair them and connect to them over Wi-Fi."
+    }
   },
   "linux": {
     "webview": false,
     "comment": "Let AI agents use your phone, with you in the loop",
     "categories": ["Utility"],
-    "command": "pinky"
+    "command": "pinkyctl"
   }
 }

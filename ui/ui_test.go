@@ -309,7 +309,8 @@ func TestDetailsInDeveloperMode(t *testing.T) {
 func TestApprovalPanelKeys(t *testing.T) {
 	ta := newTestApp(t, fakeapi.ThreePhones)
 	ta.waitFor(t, "two approvals", func() bool { return len(ta.approvals()) == 2 })
-	tt := mg.NewTester(ta.panelView, panelW, panelH)
+	w, h := ta.panelSize()
+	tt := mg.NewTester(ta.panelView, w, h)
 	for _, want := range []string{"1 of 2", "Pixel 9 · Dinely", "Pay $12.80?", "Denies in", "Allow", "More options"} {
 		if !hasText(tt, want) {
 			t.Errorf("panel lacks %q: %q", want, tt.Texts())

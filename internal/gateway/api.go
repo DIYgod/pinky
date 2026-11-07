@@ -151,6 +151,10 @@ type NeedView struct {
 	Deadline   time.Time // when no answer means Deny
 	Screenshot image.Image
 	Target     screen.Rect // the element the action targets, in Screenshot pixels
+	// Point is where the finger goes down and, for a swipe, To where it
+	// lifts, in Screenshot pixels; both zero when the action has no
+	// position (a key, opening an app).
+	Point, To screen.Point
 	// AlwaysAllow is set when the approval can be answered with
 	// AllowAlways: from then on, Rule (and the rules that asked with it)
 	// no longer asks about such steps in App, until the person takes it

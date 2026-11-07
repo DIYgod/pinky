@@ -166,6 +166,13 @@ type app struct {
 
 	mirrors map[string]*mirror
 	shots   map[string]*mg.Bitmap // approval screenshots by need ID
+	// An approval's screenshot shown larger: in viewer, a window beside
+	// the floating panel, for the need viewing; over the main window for
+	// the need shotOpen.
+	viewer   *mygo.Window
+	viewing  string
+	shotOpen string
+	panelMax int // the floating panel's height at most, on its display
 
 	noting   map[string]bool   // needs whose Deny with a note is open
 	notes    map[string]string // the notes
@@ -397,7 +404,7 @@ func (a *app) post(fn func()) {
 // invalidate redraws the windows other than the main one, which Update
 // redraws itself.
 func (a *app) invalidate() {
-	for _, w := range []*mygo.Window{a.panel, a.flyout} {
+	for _, w := range []*mygo.Window{a.panel, a.flyout, a.viewer} {
 		if w != nil && !w.IsDestroyed() {
 			w.Invalidate()
 		}
@@ -662,6 +669,9 @@ func (a *app) setNeeds(n []gateway.NeedView) {
 		if !live[id] {
 			delete(a.shots, id)
 		}
+	}
+	if a.viewing != "" && !live[a.viewing] {
+		a.closeShot()
 	}
 	for id := range a.noting {
 		if !live[id] {

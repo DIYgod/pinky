@@ -37,11 +37,18 @@ func (p *pairingProvider) PairWithCode(_ context.Context, addr, _ string) (drive
 	return p.pair("code-" + addr), nil
 }
 
+func (p *pairingProvider) ConnectWiFi(_ context.Context, addr string) (driver.Info, error) {
+	return p.pair("connect-" + addr), nil
+}
+
 type fakePairing struct{ p *pairingProvider }
 
 func (f *fakePairing) QR() string                                { return "WIFI:T:ADB;S:pinky-test;P:secret;;" }
 func (f *fakePairing) Wait(context.Context) (driver.Info, error) { return f.p.pair("qr-phone"), nil }
 func (f *fakePairing) Close() error                              { return nil }
+func (f *fakePairing) Progress() driver.PairingProgress {
+	return driver.PairingProgress{Found: true}
+}
 
 // TestDeviceFilterKeepsPairing checks that PINKY_DEVICES keeps Wi-Fi
 // pairing available and lets the phones paired through it in.
@@ -77,14 +84,24 @@ func TestDeviceFilterKeepsPairing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if r, ok := pg.(driver.PairingReporter); !ok || !r.Progress().Found {
+		t.Errorf("%T hides the pairing's progress", pg)
+	}
 	if _, err := pg.Wait(ctx); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := pr.PairWithCode(ctx, "10.0.0.2:37000", "123456"); err != nil {
 		t.Fatal(err)
 	}
+	wc, ok := ps[0].(driver.WiFiConnector)
+	if !ok {
+		t.Fatalf("%T hides driver.WiFiConnector", ps[0])
+	}
+	if _, err := wc.ConnectWiFi(ctx, "10.0.0.2:41000"); err != nil {
+		t.Fatal(err)
+	}
 	got := ids()
-	want := map[string]bool{"usb-phone": true, "qr-phone": true, "code-10.0.0.2:37000": true}
+	want := map[string]bool{"usb-phone": true, "qr-phone": true, "code-10.0.0.2:37000": true, "connect-10.0.0.2:41000": true}
 	if len(got) != len(want) {
 		t.Fatalf("listed %v", got)
 	}

@@ -82,21 +82,21 @@ func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) 
 		method = "keys"
 	)
 	if text != "" {
+		var pbErr error
 		if pb = d.pasteboard(); pb != nil {
 			t0 := time.Now()
-			var err error
-			saved, st.Saved, err = savePasteboard(ctx, pb)
+			saved, st.Saved, pbErr = savePasteboard(ctx, pb)
 			st.Save = time.Since(t0)
 			switch {
-			case err == nil:
+			case pbErr == nil:
 				method = "paste"
-			case !errors.Is(err, errPasteUnavailable):
-				return err
+			case !errors.Is(pbErr, errPasteUnavailable):
+				return pbErr
 			}
 		}
 		if method == "keys" {
 			var err error
-			if keys, err = asciiStrokes(text); err != nil {
+			if keys, err = keyStrokesFor(text, pbErr); err != nil {
 				return err
 			}
 		}
@@ -122,6 +122,20 @@ func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) 
 		return d.pressKeys(ctx, []keyStroke{{usage: keyEnter}})
 	}
 	return nil
+}
+
+// keyStrokesFor is how Type types text without the pasteboard: as keys,
+// which only printable ASCII can be. pbErr is why the pasteboard did not
+// do: nil when the phone has no pasteboard service, so text that keys
+// cannot type is unsupported; else the service is there and did not answer
+// this time, which the error says, so that the caller tries again instead
+// of concluding that the text cannot be typed.
+func keyStrokesFor(text string, pbErr error) ([]keyStroke, error) {
+	keys, err := asciiStrokes(text)
+	if err != nil && pbErr != nil {
+		return nil, fmt.Errorf("type: the phone's pasteboard did not answer, so nothing was typed; try again: %v", pbErr)
+	}
+	return keys, err
 }
 
 // pasteboard returns the pasteboard connection, or nil when the phone has
@@ -175,11 +189,20 @@ func (d *Device) paste(ctx context.Context, pb *pbConn, saved *pbSnapshot, text 
 // savePasteboard reads the pasteboard so it can be put back. A pasteboard
 // the phone does not let anyone read comes back nil with kind "unreadable";
 // it is cleared after pasting rather than left holding the text. Other
-// failures mean the service is unusable.
-func savePasteboard(ctx context.Context, pb *pbConn) (*pbSnapshot, string, error) {
-	c, cancel := context.WithTimeout(ctx, pbQuick)
-	snap, err := pb.pull(c, pbPromiseSecondary)
-	cancel()
+// failures mean the service did not answer.
+func savePasteboard(ctx context.Context, pb pbPuller) (*pbSnapshot, string, error) {
+	pull := func() (*pbSnapshot, error) {
+		c, cancel := context.WithTimeout(ctx, pbQuick)
+		defer cancel()
+		return pb.pull(c, pbPromiseSecondary)
+	}
+	snap, err := pull()
+	if err != nil && !errors.Is(err, errPBRestricted) && ctx.Err() == nil {
+		// The phone closes the service's connection after a while idle, and
+		// the first request after that fails; the failure dropped it, so
+		// this one dials again. A read changes nothing, so it can repeat.
+		snap, err = pull()
+	}
 	switch {
 	case errors.Is(err, errPBRestricted):
 		return nil, "unreadable", nil
@@ -196,7 +219,7 @@ func savePasteboard(ctx context.Context, pb *pbConn) (*pbSnapshot, string, error
 	// Other representations are only promised: read them all, but not for
 	// long. If the daemon is stuck on one an app cannot produce, keep the
 	// first representation of each item, which it did give.
-	c, cancel = context.WithTimeout(ctx, pbFullPull)
+	c, cancel := context.WithTimeout(ctx, pbFullPull)
 	full, err := pb.pull(c, pbAllResolved)
 	cancel()
 	if err == nil {
@@ -206,6 +229,11 @@ func savePasteboard(ctx context.Context, pb *pbConn) (*pbSnapshot, string, error
 		return nil, "", ctx.Err()
 	}
 	return snap, "primary", nil
+}
+
+// pbPuller reads the pasteboard; pbConn is one, tests fake it.
+type pbPuller interface {
+	pull(ctx context.Context, policy string) (*pbSnapshot, error)
 }
 
 // restorePasteboard puts saved back (an empty pasteboard when saved is nil)

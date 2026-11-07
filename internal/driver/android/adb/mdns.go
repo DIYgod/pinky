@@ -29,9 +29,19 @@ type MDNSService struct {
 }
 
 // MDNSCheck reports whether the server can discover services with mDNS,
-// and which implementation it uses.
+// and which implementation it uses. A server without discovery fails with
+// an *Error.
 func (c *Client) MDNSCheck(ctx context.Context) (string, error) {
-	return c.query(ctx, "host:mdns:check")
+	s, err := c.query(ctx, "host:mdns:check")
+	if err != nil {
+		return "", err
+	}
+	// A server started with ADB_MDNS=0 answers OKAY and
+	// "ERROR: mdns discovery disabled".
+	if strings.HasPrefix(s, "ERROR") {
+		return "", &Error{Msg: strings.TrimSpace(strings.TrimPrefix(s, "ERROR:"))}
+	}
+	return s, nil
 }
 
 // MDNSServices lists the services the server has discovered.

@@ -146,7 +146,7 @@ A Claude Code run on the Pixel stopped when the person watcher reported a finger
 
 ### Pairing the Mi over Wi-Fi
 
-- **adb no longer saw the network.** Its server had run since two days before and its mDNS discovery listed nothing, while macOS's Bonjour saw the Mi's wireless debugging service; restarting the server brought discovery back, and it reconnected the Mi over Wi-Fi at once (this Mac had paired before). Pinky does not restart adb by itself, since other tools share it; the pairing step now says what to check after 30 s (171b99b).
+- **adb no longer saw the network.** Its server had run since two days before and its mDNS discovery listed nothing, while macOS's Bonjour saw the Mi's wireless debugging service; restarting the server brought discovery back, and it reconnected the Mi over Wi-Fi at once (this Mac had paired before). Pinky does not restart adb by itself, since other tools share it; the pairing step now says what to check after 30 s (171b99b). Since 2026-11-07 Pinky searches the network itself and pairs, connects and reconnects by address, so a server whose discovery stopped no longer keeps a phone away; it still never restarts the server ([android.md](android.md#wi-fi-without-adbs-discovery)).
 - **One phone showed twice**, over USB and over Wi-Fi, with another id on Wi-Fi. Over Wi-Fi a phone's id is now its hardware serial (`ro.serialno`, the serial adb gives the USB connection), its connections are listed once, and USB is used while it works (2e73598).
 - **Then it worked**: the owner paired the Mi by QR code from Add phone, and the new release lists the Mi once.
 

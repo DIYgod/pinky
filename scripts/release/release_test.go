@@ -243,7 +243,7 @@ func TestManifestAndCask(t *testing.T) {
 		// Monterey or later; Homebrew 7 deprecates the ">= :monterey" form.
 		"depends_on macos: :monterey\n",
 		`app "Pinky.app"`,
-		`command_wrapper "pinky",`,
+		`command_wrapper "pinkyctl",`,
 	} {
 		if !strings.Contains(cask, want) {
 			t.Errorf("the cask lacks %s:\n%s", want, cask)
