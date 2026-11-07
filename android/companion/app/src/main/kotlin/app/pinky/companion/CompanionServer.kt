@@ -190,11 +190,14 @@ class Connection(private val socket: LocalSocket, private val server: CompanionS
         }
     }
 
-    /** Replaces this connection's event subscription; an empty set unsubscribes. */
-    fun subscribe(kinds: Set<String>): EventHub.Subscriber? {
+    /**
+     * Replaces this connection's event subscription; an empty set
+     * unsubscribes. A display limits it to that display's events.
+     */
+    fun subscribe(kinds: Set<String>, display: Int?): EventHub.Subscriber? {
         val hub = server.events
         subscriber?.let { hub.unsubscribe(it) }
-        subscriber = if (kinds.isEmpty()) null else hub.subscribe(this, kinds)
+        subscriber = if (kinds.isEmpty()) null else hub.subscribe(this, kinds, display)
         return subscriber
     }
 

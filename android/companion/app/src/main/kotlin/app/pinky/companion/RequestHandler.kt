@@ -74,13 +74,36 @@ class RequestHandler(
         j.field("time", System.currentTimeMillis())
         j.field("uptime_ms", SystemClock.uptimeMillis())
         j.name("displays").beginArray()
-        onWorker(null) { service.tree.displays() }.forEach { j.value(it) }
+        onWorker(null) { service.displays.list() }.forEach { j.value(it) }
+        j.endArray()
+        j.name("features").beginArray()
+        features().forEach { j.value(it) }
         j.endArray()
         j.field("connections", connectionCount())
         j.field("include_not_important", service.includeNotImportant)
         j.field("idle_disable_ms", service.idleDisableMs)
         j.endObject()
         return j.toString()
+    }
+
+    /**
+     * What this app supports on this phone, beyond protocol 1 as it first
+     * shipped. Clients check a feature before relying on it: an older app
+     * ignores parameters it does not know.
+     */
+    private fun features(): List<String> {
+        val f = mutableListOf<String>()
+        // tree, set_text, events and wait_idle take a display other than 0.
+        if (service.displays.multiDisplay) f += FEATURE_DISPLAYS
+        return f
+    }
+
+    /** The optional display parameter, checked; null when absent. */
+    private fun displayParam(req: JSONObject): Int? {
+        if (!req.has("display") || req.isNull("display")) return null
+        val d = req.getInt("display")
+        service.displays.check(d)
+        return d
     }
 
     private fun treeOptions(req: JSONObject) = TreeDumper.Options(
@@ -103,12 +126,14 @@ class RequestHandler(
                 kinds += k
             }
         }
-        val sub = conn.subscribe(kinds)
+        val display = displayParam(req)
+        val sub = conn.subscribe(kinds, display)
         val j = Json()
         j.beginObject()
         j.name("kinds").beginArray()
         kinds.sorted().forEach { j.value(it) }
         j.endArray()
+        display?.let { j.field("display", it) }
         j.field("time", System.currentTimeMillis())
         j.endObject()
         return Reply(ok(id, j.toString())) { sub?.start() }
@@ -117,7 +142,7 @@ class RequestHandler(
     private fun waitIdle(req: JSONObject): String {
         val quiet = req.optLong("quiet_ms", 300).coerceIn(10, 10_000)
         val timeout = req.optLong("timeout_ms", 3_000).coerceIn(0, 30_000)
-        return service.events.waitIdle(quiet, timeout)
+        return service.events.waitIdle(quiet, timeout, displayParam(req))
     }
 
     private fun <T> onWorker(req: JSONObject?, task: () -> T): T {
@@ -164,6 +189,7 @@ class RequestHandler(
     companion object {
         private const val TAG = "PinkyRequests"
         const val PROTOCOL_VERSION = 1
+        const val FEATURE_DISPLAYS = "displays"
         private const val DEFAULT_TIMEOUT_MS = 10_000L
     }
 }
