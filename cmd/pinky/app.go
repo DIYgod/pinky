@@ -73,6 +73,7 @@ func runApp(args []string) error {
 	startSettings(rg, settings, c.Log)
 	upd := newUpdater(dirs, c.Log)
 	swapped := startedUpdate(upd, c.Log)
+	go upd.Where() // codesign takes a moment; look while the window opens
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

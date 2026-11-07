@@ -169,7 +169,10 @@ func (a *app) checked(r *update.Release, err error) {
 		}
 	default:
 		if s.phase == updReady && (r == nil || s.prepared == nil || r.Version != s.prepared.Release.Version) {
-			s.prepared.Staged.Discard()
+			// A newer release (or none) replaces the one waiting to restart.
+			if s.prepared != nil && s.prepared.Staged != nil {
+				s.prepared.Staged.Discard()
+			}
 			s.prepared, s.phase = nil, updIdle
 		}
 		if s.phase == updIdle || s.phase == updFailed {
@@ -199,7 +202,7 @@ func (a *app) updateTick(now time.Time) {
 	switch {
 	case s.phase == updReady && ok:
 		a.restartForUpdate()
-	case s.phase == updIdle && s.rel != nil && a.opt.Updates.Location.CanReplace():
+	case s.phase == updIdle && s.rel != nil && a.opt.Updates.Where().CanReplace():
 		if st := a.opt.Updates.State(); update.Compare(st.Failed, s.rel.Version) == 0 {
 			return // failed before: only the person's Update now tries again
 		}
@@ -513,7 +516,7 @@ func (a *app) updateCard(c *mg.Context) {
 func (a *app) updateActions(c *mg.Context) {
 	p := pal(c)
 	s := &a.upd
-	loc := a.opt.Updates.Location
+	loc := a.opt.Updates.Where()
 	switch {
 	case loc.Method == update.MethodManager:
 		mg.Text(c, loc.Manager+" installed Pinky; update it there:").FontSize(12.5).TextColor(p.ink2)
@@ -788,7 +791,7 @@ func (a *app) updateLine() string {
 	default:
 		line = "Pinky looks for updates every few hours."
 	}
-	if loc := u.Location; !loc.CanReplace() {
+	if loc := u.Where(); !loc.CanReplace() {
 		switch {
 		case loc.Method == update.MethodManager:
 			line += " " + loc.Manager + " updates this copy: " + loc.Command + "."

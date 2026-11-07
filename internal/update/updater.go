@@ -32,18 +32,40 @@ type Updater struct {
 	// Downloads is where a release the person installs by hand goes, such
 	// as ~/Downloads; "" is Cache.
 	Downloads string
-	// Location is where Pinky is installed (Locate).
+	// Location is where Pinky is installed; left empty, Where finds it
+	// with Locate the first time it is needed (which runs codesign, so
+	// not on the way to the window).
 	Location Location
-	// Installer replaces Pinky where Location.CanReplace; nil is
-	// NewInstaller(Location).
+	// Installer replaces Pinky where the location can replace itself; nil
+	// is NewInstaller, whose helper logs to HelperLog.
 	Installer Installer
+	HelperLog string
 	// StatePath is update.json; "" keeps the state in memory.
 	StatePath string
 	Log       *slog.Logger
 
-	mu     sync.Mutex
-	state  State
-	loaded bool
+	mu      sync.Mutex
+	state   State
+	loaded  bool
+	locOnce sync.Once
+}
+
+// Where returns where Pinky is installed, looking it up once.
+func (u *Updater) Where() Location {
+	u.locOnce.Do(func() {
+		u.mu.Lock()
+		empty := u.Location == (Location{})
+		u.mu.Unlock()
+		if empty {
+			l := Locate()
+			u.mu.Lock()
+			u.Location = l
+			u.mu.Unlock()
+		}
+	})
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.Location
 }
 
 func (u *Updater) logger() *slog.Logger {
@@ -138,12 +160,13 @@ type Prepared struct {
 // also unpacks it next to the app and checks its signature, so that what
 // is left is the swap; elsewhere the file goes to Downloads.
 func (u *Updater) Prepare(ctx context.Context, r Release, progress func(done, total int64)) (*Prepared, error) {
-	m := u.Location.Method
-	if m == MethodSelf && !u.Location.CanReplace() {
+	loc := u.Where()
+	m := loc.Method
+	if m == MethodSelf && !loc.CanReplace() {
 		m = MethodDownload
 	}
 	if m == MethodManager {
-		return nil, fmt.Errorf("%s updates this Pinky: %s", u.Location.Manager, u.Location.Command)
+		return nil, fmt.Errorf("%s updates this Pinky: %s", loc.Manager, loc.Command)
 	}
 	dir := u.Cache
 	if m == MethodDownload && u.Downloads != "" {
@@ -164,7 +187,7 @@ func (u *Updater) Prepare(ctx context.Context, r Release, progress func(done, to
 	}
 	in := u.Installer
 	if in == nil {
-		if in, err = NewInstaller(u.Location, "", log); err != nil {
+		if in, err = NewInstaller(loc, u.HelperLog, log); err != nil {
 			os.Remove(file)
 			return nil, err
 		}

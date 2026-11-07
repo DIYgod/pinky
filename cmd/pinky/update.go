@@ -19,21 +19,14 @@ import (
 // person's Downloads, where Pinky cannot replace itself) and the helper's
 // log in update.log.
 func newUpdater(dirs api.Dirs, log *slog.Logger) *update.Updater {
-	loc := update.Locate()
-	u := &update.Updater{
+	return &update.Updater{
 		Version:   version,
-		Location:  loc,
 		Cache:     filepath.Join(dirs.Data, "updates"),
 		Downloads: downloadsDir(),
 		StatePath: filepath.Join(dirs.Config, "update.json"),
+		HelperLog: filepath.Join(dirs.Data, "update.log"),
 		Log:       log,
 	}
-	if loc.CanReplace() {
-		if in, err := update.NewInstaller(loc, filepath.Join(dirs.Data, "update.log"), log); err == nil {
-			u.Installer = in
-		}
-	}
-	return u
 }
 
 func downloadsDir() string {
@@ -86,7 +79,7 @@ func daemonUpdates(ctx context.Context, u *update.Updater, log *slog.Logger) {
 		case r != nil && r.Version != said:
 			said = r.Version
 			log.Info("update: a new version of Pinky is available: run `pinky update` after `pinky quit`, or update from the app",
-				"version", r.Version, "running", version, "how", howToUpdate(u.Location))
+				"version", r.Version, "running", version, "how", howToUpdate(u.Where()))
 		}
 	}
 	check()
@@ -147,7 +140,7 @@ func runUpdate(args []string) error {
 	if *checkOnly {
 		return nil
 	}
-	loc := u.Location
+	loc := u.Where()
 	if loc.Method == update.MethodManager {
 		return fmt.Errorf("%s installed Pinky; update it with: %s", loc.Manager, loc.Command)
 	}
