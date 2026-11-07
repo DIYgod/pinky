@@ -123,6 +123,15 @@ Six branches merged into `main` without conflicts: `claude/platform-5568b2`, `cl
 
 The phones were not available for end-to-end runs: the iPhone's screen was off and locked, the Mi 10 Pro locked after someone pressed its power key at 10:35, and the Pixel is still offline. The sessions' own real-phone checks are in their notes: the iPhone's 16 tests (typing by paste with Pinyin active, Chinese and emoji, the clipboard put back), and the Calculator on a background display of the Mi (unlocked, main screen untouched).
 
+### The Pixel, back at noon
+
+The Pixel 1 (Android 10) came back on USB. The Android driver's device tests pass on it (observe, screenshots, the Calculator, typing and the clipboard, the stream and settle, Pinky's own input not counted as the person's). Two fixes came from it:
+
+- **No background work below Android 11**: an app runs on a virtual display there, but the companion cannot read another display's windows before API 30, so the driver says so (`driver.BackgroundSupporter`) and the client offers no switch.
+- **English app names on a phone in another language**: `phone_launch "Calculator"` found nothing on the Pixel, whose apps have Chinese names (计算器). The gateway and the driver now also match the parts of the package or bundle id.
+
+A Claude Code run on the Pixel stopped when the person watcher reported a finger on its screen (with 0 signals in 20 s of idling just after, so most likely a real touch); real phones were left alone after that.
+
 ### Known limits found in round three
 
 - **A screenshot is one instant.** Content that blinks (Clock's paused stopwatch) may show blank; the element list still has its text.

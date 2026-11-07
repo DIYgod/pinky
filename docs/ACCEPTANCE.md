@@ -4,7 +4,7 @@ How to check what was built in rounds one to three (2026-11-06 and 07). Each ite
 
 ## Before you start
 
-- [ ] **The Pixel (FA6C20303860)** has been off USB since 01:45 on the 7th: check its battery and cable. Android 10 was checked on an emulator meanwhile.
+- [ ] **The Pixel (FA6C20303860)** came back on USB around noon on the 7th. The Android driver's real-phone tests pass on it (reading the screen, screenshots, the Calculator, typing, the video). During a Claude Code run on it, Pinky saw a finger on its screen and paused the agent: if that was you, it worked as designed.
 - [ ] **The Mi 10 Pro keeps its screen on while charging**: Developer options › Stay awake is on (`stay_on_while_plugged_in=15`). Pinky did not set it; one of the other tools on the phone may have. Turn it off if you share the burn-in worry: Pinky wakes the phone when a step needs it and, on Android 13 and later, works on a background display while the phone stays off and locked.
 - [ ] **Quit other phone tools** that hold the phones (AndroMeld, iPhone-use).
 - [ ] **Unlock the Mac and keep the screen on**: a locked Mac does not draw windows.
@@ -91,5 +91,5 @@ open build/pinky/darwin-arm64/Pinky.app --args --fake    # quit the real Pinky f
 
 - **Developer ID signing and notarization**: the app is signed ad hoc, which runs on this Mac only. You have a Developer ID certificate: `make app MACOS_SIGN="Developer ID Application: …"` signs with it; notarizing needs your Apple account (`xcrun notarytool`).
 - **An Intel or universal build**: only Apple silicon is built.
-- **Background displays on Android 10–12**: not verified (the Android 10 emulator has no working video encoder, the Pixel is offline), so they stay off there by default.
+- **Background displays on Android 10**: apps run there, but nothing on them can be read before Android 11, so Pinky does not offer background work on the Pixel. Android 11 and 12 are not verified and default to the main screen.
 - **Things that need a person**: Touch ID and Windows Hello prompts, a real Wi-Fi pairing, unlocking the iPhone, a finger on the Mi during a task.
