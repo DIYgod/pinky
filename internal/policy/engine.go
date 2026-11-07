@@ -168,7 +168,7 @@ func (e *Engine) Evaluate(in Input) Verdict {
 		asks = append(asks, RuleTaskApps)
 		if v.Decision < Ask {
 			v.Decision, v.Rule = Ask, RuleTaskApps
-			v.Reason = fmt.Sprintf("Typing into %s, which is not in this task's app list.", appName(app))
+			v.Reason = askReason(v, app)
 		}
 	}
 	if v.Decision == Ask {
@@ -189,7 +189,17 @@ func (e *Engine) Evaluate(in Input) Verdict {
 			v.Reason = "Read-only mode is on: the agent may type only into search fields."
 		}
 	}
-	return v
+	// The person's "Always allow" answers come last: they lift asks, never
+	// a deny or read-only mode.
+	return e.liftLocked(v, app)
+}
+
+// askReason explains an Ask verdict.
+func askReason(v Verdict, app screen.App) string {
+	if v.Rule == RuleTaskApps {
+		return fmt.Sprintf("Typing into %s, which is not in this task's app list.", appName(app))
+	}
+	return reason(v, app)
 }
 
 // onlyEvery reports whether PresetEvery's catch-all is the only rule that

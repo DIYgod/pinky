@@ -26,6 +26,9 @@ type File struct {
 	// MaskCodes masks digit codes in notifications. Default true.
 	MaskCodes *bool  `yaml:"mask_codes"`
 	Rules     []Rule `yaml:"rules"`
+	// AlwaysAllow holds the person's "Always allow" answers to approvals
+	// (see Exemption), oldest first.
+	AlwaysAllow []Exemption `yaml:"always_allow,omitempty"`
 }
 
 // DefaultFile returns the bundled default rules.
@@ -59,6 +62,9 @@ func ParseFile(data []byte) (File, error) {
 				return File{}, fmt.Errorf("rule %q: unknown action %q", r.Name, a)
 			}
 		}
+	}
+	if err := checkExemptions(&f); err != nil {
+		return File{}, err
 	}
 	return f, nil
 }

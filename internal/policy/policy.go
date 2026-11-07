@@ -4,7 +4,9 @@
 // applies read-only mode, app scopes and the credential rule.
 //
 // The rules file is the only source of truth for rules. When several rules
-// match, the strictest wins: Deny, then Ask, then Allow.
+// match, the strictest wins: Deny, then Ask, then Allow. The person's
+// "Always allow" answers (Exemption, kept in the rules file too) lift asks
+// in one app, never a deny.
 package policy
 
 import (
@@ -120,6 +122,10 @@ type Verdict struct {
 	// Asks lists every rule that asked, Rule first, when the decision is
 	// Ask. Skipping the question (Allow for this task) needs all of them.
 	Asks []string
+	// Exempted lists the rules that would have asked but that the person
+	// always allows in this app (Exemption). They are not in Asks; when
+	// nothing else asks, the decision is Allow.
+	Exempted []string
 	// Scope marks a denial because the app is outside the agent's scope or
 	// the task's allow-list; the gateway reports it as scope_denied.
 	Scope bool
