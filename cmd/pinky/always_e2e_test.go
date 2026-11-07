@@ -73,8 +73,10 @@ func TestAlwaysAllowInTheApp(t *testing.T) {
 		return result{}
 	}
 
-	// The payment asks; the person answers on the card.
+	// The payment asks; the person answers on the card. The window comes
+	// to the front first: MyGo draws no frames for a covered window.
 	done := payment(agent)
+	app.call(t, "menu", map[string]any{"window": win, "path": []string{"Debug", "Show Main Window"}}, nil)
 	app.pressNode(t, win, "More options")
 	app.pressNode(t, win, "Always allow payments in Dinely")
 	if r := got(done); r.isErr || !strings.HasPrefix(r.text, "settled") || !strings.Contains(r.text, `from now on "Payments" no longer asks in Dinely`) {
@@ -99,6 +101,7 @@ func TestAlwaysAllowInTheApp(t *testing.T) {
 	app = startApp(t, bin, home, backend.URL, urls)
 	win = app.window(t)
 	app.waitText(t, win, "Pixel 9 (fake)")
+	app.call(t, "menu", map[string]any{"window": win, "path": []string{"Debug", "Show Main Window"}}, nil)
 	app.call(t, "menu", map[string]any{"window": win, "path": []string{"Phones", "Settings…"}}, nil)
 	app.waitText(t, win, "Always allowed")
 	app.waitNode(t, win, "Ask again about payments in Dinely")
