@@ -99,7 +99,7 @@ if [ -n "${ADB:-}" ]; then
 	cp "$ADB/NOTICE.txt" "$contents/Resources/adb-NOTICE.txt"
 	cp "$ADB/BUILD.txt" "$contents/Resources/adb-BUILD.txt"
 	# shellcheck disable=SC2086 # signflags splits on purpose
-	codesign --force $signflags --identifier app.pinky.desktop.adb --sign "$sign" "$helpers/adb"
+	codesign --force $signflags --sign "$sign" "$helpers/adb"
 fi
 
 # shellcheck disable=SC2086 # signflags splits on purpose
