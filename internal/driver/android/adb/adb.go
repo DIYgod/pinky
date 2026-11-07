@@ -4,7 +4,8 @@
 // exec, sync (push, pull, stat) and local sockets.
 //
 // The client reuses the adb server that is already running. It never kills
-// or restarts it; StartServer exists only for callers that find none.
+// or restarts it; StartServer (tools.go) starts one for callers that find
+// none.
 //
 // Protocol reference: SERVICES.TXT, SYNC.TXT and protocol.txt in AOSP's
 // packages/modules/adb.
@@ -17,9 +18,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -294,57 +292,4 @@ func firstWord(s string) string {
 		return s[:i]
 	}
 	return s
-}
-
-// StartServer starts an adb server with the adb tool from the Android SDK
-// (ANDROID_HOME, ANDROID_SDK_ROOT) or PATH. It is a no-op when a server is
-// already running, and it never kills one.
-func StartServer(ctx context.Context) error {
-	bin, err := FindADB()
-	if err != nil {
-		return err
-	}
-	out, err := exec.CommandContext(ctx, bin, "start-server").CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("adb start-server: %v: %s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
-}
-
-// FindADB returns the adb executable to use: the Android SDK's platform-tools
-// first, so Pinky shares Android Studio's server, then PATH.
-func FindADB() (string, error) {
-	name := "adb"
-	if runtime.GOOS == "windows" {
-		name = "adb.exe"
-	}
-	var dirs []string
-	for _, env := range []string{"ANDROID_HOME", "ANDROID_SDK_ROOT"} {
-		if d := os.Getenv(env); d != "" {
-			dirs = append(dirs, filepath.Join(d, "platform-tools"))
-		}
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		switch runtime.GOOS {
-		case "darwin":
-			dirs = append(dirs, filepath.Join(home, "Library", "Android", "sdk", "platform-tools"))
-		case "linux":
-			dirs = append(dirs, filepath.Join(home, "Android", "Sdk", "platform-tools"))
-		case "windows":
-			if la := os.Getenv("LOCALAPPDATA"); la != "" {
-				dirs = append(dirs, filepath.Join(la, "Android", "Sdk", "platform-tools"))
-			}
-		}
-	}
-	for _, d := range dirs {
-		p := filepath.Join(d, name)
-		if fi, err := os.Stat(p); err == nil && !fi.IsDir() {
-			return p, nil
-		}
-	}
-	p, err := exec.LookPath(name)
-	if err != nil {
-		return "", fmt.Errorf("adb not found in the Android SDK or PATH: %w", err)
-	}
-	return p, nil
 }

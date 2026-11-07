@@ -58,6 +58,15 @@ type Config struct {
 	// ~/.android/adb_known_hosts.pb.
 	KnownHosts func() ([]string, error)
 
+	// StartServer, when set, starts an adb server when List finds none
+	// (cmd/pinky passes adb.StartServer): at once the first time, and
+	// when a server that ran went away, once it has stayed away for
+	// serverAway, so that a tool that restarts it comes first (an adb
+	// client that finds a server of another version kills it and starts
+	// its own). After a failure, List tries again after serverRetry,
+	// doubling up to serverRetryMax.
+	StartServer func(ctx context.Context) error
+
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
 }
@@ -94,6 +103,8 @@ type Provider struct {
 	props map[string]deviceProps // by serial and transport id
 
 	wifi *reconnector // nil without Config.ReconnectWiFi
+
+	server serverWatch
 }
 
 // NewProvider returns a provider with the given configuration.
@@ -118,12 +129,23 @@ type deviceProps struct {
 }
 
 // List implements driver.Provider. It reads each online device's
-// properties once per connection.
+// properties once per connection, and starts an adb server when none
+// runs (Config.StartServer).
 func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	entries, err := p.cfg.Client.Devices(ctx)
+	if errors.Is(err, adb.ErrServerNotRunning) && p.cfg.StartServer != nil {
+		if p.server.claim(time.Now(), p.cfg.logf) {
+			serr := p.cfg.StartServer(ctx)
+			p.server.done(time.Now(), serr)
+			if serr == nil {
+				entries, err = p.cfg.Client.Devices(ctx)
+			}
+		}
+	}
 	if err != nil {
 		return nil, wrapErr(err)
 	}
+	p.server.answered()
 	if p.wifi != nil {
 		p.wifi.kick(entries)
 	}
