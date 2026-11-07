@@ -1,8 +1,17 @@
-# Pinky
-
-Let AI agents use your phone, with you in the loop.
+<p align="center"><img src="assets/icon/pinky-macos-1024.png" width="112" alt=""></p>
+<h1 align="center">Pinky</h1>
+<p align="center"><b>Let AI agents use your phone, with you in the loop.</b></p>
+<p align="center"><img src="assets/readme/hero.png" width="880" alt="Pinky's window: Claude Code replies to a text on an Android phone, and the Send tap waits for approval"></p>
 
 Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
+
+<p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator.</sub></p>
+
+- **You approve the risky steps.** Sends, payments, orders, deletions, calls, installs, links that leave the app and settings changes wait for your click; Pinky spots these buttons in 10 languages. The rules run in Pinky's gateway, so an agent can't approve itself, even when text on the screen tries to talk it into it.
+- **Your phone stays yours.** On Android 13 and later, agents work on a hidden second screen, so the phone can stay off and locked. Click the mirror to take over; on Android, touching the phone yourself pauses the agent too. Stop all is ⌥⌘. from anywhere.
+- **Off-limits by default.** Banking, wallet and password-manager apps are invisible to agents, and agents can't type into password or one-time-code fields. Every new agent needs your approval and gets only the scope you give it.
+- **Locked phone? Unlock it from your computer** with Touch ID. The PIN stays in the Keychain; agents never see it.
+- **Every run is on the record.** Each step in plain words, screenshots and a screen recording with a mark per step, exportable as an HTML report. It all stays on your computer.
 
 **Status:** pre-alpha. Claude Code has used real phones through it end to end (an Android phone over USB and an iPhone on iOS 27), and agents can connect over stdio or HTTP. Unlocking from the computer, background work on Android, recordings, export, Wi-Fi pairing and the phone's files are built; some of it still waits for a person to try it. See [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) for what works today and how to try it.
 
