@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -101,12 +102,15 @@ const (
 // Unlock implements driver.Unlocker. It wakes the screen, asks the system
 // to dismiss the lock screen (`wm dismiss-keyguard`, which shows the PIN
 // pad on a secure lock screen), and swipes up if no PIN pad or password
-// field shows. Only once it sees one does it enter pin, as key events
-// through scrcpy (never in a shell command line, where other processes
-// could read it), then press Enter unless the phone already unlocked
-// itself. It returns nil once the lock screen is gone and wraps
-// driver.ErrLocked when it is still there. It enters the PIN at most once
-// and never logs it.
+// field shows. Only once it sees one does it enter pin, through scrcpy
+// (never in a shell command line, where other processes could read it):
+// as key events into AOSP's PIN view or a focused password field, then
+// Enter unless the phone already unlocked itself; or, on a PIN pad read
+// from its keys' labels (OEM lock screens), as taps on those keys, then
+// on its confirm key if it shows one (see tapPIN). It returns nil once the
+// lock screen is gone and wraps driver.ErrLocked when it is still there,
+// or driver.ErrPINNotEntered when it entered nothing. It enters the PIN at
+// most once and never logs it.
 func (d *Device) Unlock(ctx context.Context, pin string) error {
 	d.used()
 	digits, err := checkPIN(pin)
@@ -139,6 +143,9 @@ func (d *Device) Unlock(ctx context.Context, pin string) error {
 	case !b.enabled:
 		return fmt.Errorf("android: the phone does not take a PIN right now (too many attempts); nothing was entered: %w", driver.ErrPINNotEntered)
 	}
+	if b.pad != nil {
+		return d.tapPIN(ctx, b.pad, pin)
+	}
 	// One gesture: a session restart waits for the whole PIN, and a PIN
 	// that was not sent at all goes to the new session.
 	if err := d.withInput(ctx, false, func(l *live) error { return enterPIN(ctx, l, pin, digits) }); err != nil {
@@ -156,25 +163,12 @@ func (d *Device) Unlock(ctx context.Context, pin string) error {
 	if err := d.withInput(ctx, false, func(l *live) error { return l.key(keycodeEnter, 0) }); err != nil {
 		return err
 	}
-	deadline := time.Now().Add(unlockVerify)
-	for {
-		if err := sleepCtx(ctx, lockPoll); err != nil {
-			return err
-		}
-		locked, err := d.Locked(ctx)
-		if err == nil && !locked {
-			d.markAwake()
-			d.cfg.logf("android: %s: unlocked", d.info.ID)
-			return nil
-		}
-		if time.Now().After(deadline) {
-			if err != nil {
-				return err
-			}
-			d.cfg.logf("android: %s: still locked after entering the PIN", d.info.ID)
-			return fmt.Errorf("android: the phone is still locked after the PIN was entered (wrong PIN?); not retried: %w", driver.ErrLocked)
-		}
+	unlocked, err := d.waitUnlocked(ctx, unlockVerify)
+	if err != nil || unlocked {
+		return err
 	}
+	d.cfg.logf("android: %s: still locked after entering the PIN", d.info.ID)
+	return fmt.Errorf("android: the phone is still locked after the PIN was entered (wrong PIN?); not retried: %w", driver.ErrLocked)
 }
 
 // checkPIN accepts a PIN of 4 to 16 digits or a password of printable
@@ -229,6 +223,11 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 	if err != nil || b.kind != bouncerNone {
 		return b, err
 	}
+	// A pad Pinky cannot read gets no swipe either: on some pads a touch
+	// on a key enters its digit.
+	if b.unsure {
+		return b, errPadUnsure
+	}
 	w, h, err := d.naturalSize(ctx)
 	if err != nil {
 		return bouncer{}, err
@@ -250,6 +249,9 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 		if b, err = d.waitBouncer(ctx, bouncerWait); err != nil || b.kind != bouncerNone {
 			return b, err
 		}
+		if b.unsure {
+			return b, errPadUnsure
+		}
 	}
 	// A swipe up, starting above where under-display fingerprint sensors
 	// sit: one that starts on the sensor goes to the sensor instead.
@@ -264,16 +266,26 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 	if err != nil {
 		return b, err
 	}
+	if b.unsure {
+		return b, errPadUnsure
+	}
 	if b.kind == bouncerNone {
 		return b, fmt.Errorf("android: the lock screen showed no PIN pad; nothing was entered: %w", driver.ErrPINNotEntered)
 	}
 	return b, nil
 }
 
+var errPadUnsure = fmt.Errorf("android: the lock screen shows digit keys that Pinky cannot read as one PIN pad with confidence; nothing was entered: %w", driver.ErrPINNotEntered)
+
 // waitBouncer reads the screen until it shows a PIN pad, a password field
-// or a pattern, or the lock screen is gone, for up to max.
+// or a pattern, or the lock screen is gone, for up to max. A PIN pad read
+// from its keys' labels counts once it shows in the same place in two
+// reads in a row: a pad still sliding in would be tapped in the wrong
+// places. It gets up to max from when it first shows to settle.
 func (d *Device) waitBouncer(ctx context.Context, max time.Duration) (bouncer, error) {
 	deadline := time.Now().Add(max)
+	settleBy := deadline
+	var last bouncer
 	for {
 		if err := sleepCtx(ctx, 400*time.Millisecond); err != nil {
 			return bouncer{}, err
@@ -289,38 +301,85 @@ func (d *Device) waitBouncer(ctx context.Context, max time.Duration) (bouncer, e
 		if err != nil {
 			return bouncer{}, err
 		}
-		// The fingerprint screen will not turn into the PIN pad by itself.
-		if b.kind != bouncerNone || b.fingerprint || time.Now().After(deadline) {
+		now := time.Now()
+		switch {
+		case b.pad != nil && b.pad.same(last.pad):
 			return b, nil
+		case b.pad == nil && (b.kind != bouncerNone || b.fingerprint):
+			// The fingerprint screen will not turn into the PIN pad by itself.
+			return b, nil
+		case b.pad == nil && now.After(deadline):
+			return b, nil
+		case b.pad != nil && last.pad == nil:
+			settleBy = later(deadline, now.Add(max))
+		case b.pad != nil && now.After(settleBy):
+			d.cfg.logf("android: %s: the PIN pad kept moving", d.info.ID)
+			return bouncer{kind: bouncerNone, unsure: true}, nil
 		}
+		last = b
 	}
+}
+
+func later(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
 }
 
 // readBouncer reads the main display's tree, through the companion when
 // it is on (uiautomator would reset it) and with uiautomator otherwise.
 func (d *Device) readBouncer(ctx context.Context) (bouncer, error) {
-	var nodes []lockNode
+	nodes, err := d.readLockNodes(ctx)
+	if err != nil {
+		return bouncer{}, err
+	}
+	if padOnlyDevice.Load() == d {
+		for i := range nodes {
+			nodes[i].id, nodes[i].focused = "", false
+		}
+	}
+	return classifyBouncer(nodes), nil
+}
+
+// padOnlyDevice, set by device tests, makes readBouncer read that
+// device's PIN pad the way it reads OEM ones, from the keys' labels and
+// layout without AOSP's ids, to check that path on an emulator.
+var padOnlyDevice atomic.Pointer[Device]
+
+// readLockNodes reads the nodes of the main display's windows.
+func (d *Device) readLockNodes(ctx context.Context) ([]lockNode, error) {
 	if c := d.companionClient(ctx); c != nil {
 		t, err := c.Dump(ctx, companion.DumpOptions{})
 		if err == nil {
-			for _, w := range t.Windows {
-				nodes = appendCompanionNodes(nodes, w.Package, w.Root)
-			}
-			return classifyBouncer(nodes), nil
+			return companionLockNodes(t), nil
 		}
 		if ctx.Err() != nil {
-			return bouncer{}, ctx.Err()
+			return nil, ctx.Err()
 		}
 		d.companionFailed(err)
 	}
 	t, err := d.dumpUI(ctx)
 	if err != nil {
-		return bouncer{}, err
+		return nil, err
 	}
+	var nodes []lockNode
 	for _, r := range t.Roots {
 		nodes = appendUINodes(nodes, r)
 	}
-	return classifyBouncer(nodes), nil
+	return nodes, nil
+}
+
+// companionLockNodes lists a companion tree's nodes, each with what the
+// windows above its own cover.
+func companionLockNodes(t *companion.Tree) []lockNode {
+	var nodes []lockNode
+	var above []screen.Rect
+	for i, w := range t.Windows {
+		nodes = appendCompanionNodes(nodes, w.Package, w.Root, i, above)
+		above = append(above[:len(above):len(above)], windowCovers(w)...)
+	}
+	return nodes
 }
 
 // bouncerKind is what the lock screen shows.
@@ -346,13 +405,25 @@ type bouncer struct {
 	// an under-display sensor instead of the PIN (phones with one, such as
 	// the Mi 10 Pro). A tap away from the sensor brings up the PIN pad.
 	fingerprint bool
+	// pad is set for a PIN pad read from its keys' labels and layout (OEM
+	// lock screens), which takes the PIN as taps on its keys.
+	pad *pinPad
+	// unsure: the lock screen shows digit keys that Pinky cannot read as
+	// one PIN pad, so nothing may be entered or touched.
+	unsure bool
 }
 
 // lockNode is the part of a tree node that classifyBouncer looks at, from
 // either a uiautomator dump or a companion tree.
 type lockNode struct {
-	pkg, id, text, desc        string
-	password, focused, enabled bool
+	pkg, id, text, desc                   string
+	password, focused, enabled, clickable bool
+	bounds                                screen.Rect
+	// win is the node's window, top-most first (companion trees; a
+	// uiautomator dump has one), and above what the windows above it
+	// cover, where a tap would not reach the node.
+	win   int
+	above []screen.Rect
 }
 
 func appendUINodes(out []lockNode, n *uiNode) []lockNode {
@@ -360,23 +431,45 @@ func appendUINodes(out []lockNode, n *uiNode) []lockNode {
 		return out
 	}
 	out = append(out, lockNode{pkg: n.Package, id: n.ResID, text: n.Text, desc: n.Desc,
-		password: n.Password, focused: n.Focused, enabled: n.Enabled})
+		password: n.Password, focused: n.Focused, enabled: n.Enabled, clickable: n.Clickable, bounds: n.Bounds})
 	for _, c := range n.Children {
 		out = appendUINodes(out, c)
 	}
 	return out
 }
 
-func appendCompanionNodes(out []lockNode, pkg string, n *companion.Node) []lockNode {
+func appendCompanionNodes(out []lockNode, pkg string, n *companion.Node, win int, above []screen.Rect) []lockNode {
 	if n == nil {
 		return out
 	}
 	out = append(out, lockNode{pkg: pkg, id: n.ID, text: n.Text, desc: n.Desc,
-		password: n.Password, focused: n.Focused, enabled: !n.Disabled})
+		password: n.Password, focused: n.Focused, enabled: !n.Disabled, clickable: n.Clickable,
+		bounds: boundsRect(n.Bounds), win: win, above: above})
 	for _, c := range n.Children {
-		out = appendCompanionNodes(out, pkg, c)
+		out = appendCompanionNodes(out, pkg, c, win, above)
 	}
 	return out
+}
+
+// windowCovers returns what a companion window hides from the windows
+// below it: its touchable region when the phone sent one, else its bounds.
+func windowCovers(w companion.Window) []screen.Rect {
+	var out []screen.Rect
+	for _, r := range w.Region {
+		if rr := boundsRect(r); !rr.Empty() {
+			out = append(out, rr)
+		}
+	}
+	if len(out) == 0 {
+		if wb := boundsRect(w.Bounds); !wb.Empty() {
+			out = append(out, wb)
+		}
+	}
+	return out
+}
+
+func boundsRect(b companion.Bounds) screen.Rect {
+	return screen.Rect{X: b[0], Y: b[1], W: b[2] - b[0], H: b[3] - b[1]}
 }
 
 // Resource ids of AOSP's keyguard views (Android 10 to 17); vendors that
@@ -392,19 +485,26 @@ var (
 )
 
 // classifyBouncer finds the lock screen's credential view among the
-// nodes: SystemUI's PIN, password or pattern view by resource id, or a
-// focused password field in SystemUI next to digit keys (a PIN pad) or
-// without them (a password).
+// nodes: SystemUI's PIN, password or pattern view by resource id; a
+// focused password field in SystemUI next to digit keys (a PIN pad, which
+// takes key events) or without them (a password); or, without any of
+// those, a PIN pad read from its keys' labels and layout (findPinPad),
+// which takes taps.
 func classifyBouncer(nodes []lockNode) bouncer {
 	var pinEntry, passEntry, pattern, field *lockNode
 	keys := 0
 	keysEnabled := 0
+	var digits [10]bool
 	fingerprint := false
 	for i := range nodes {
 		n := &nodes[i]
 		name := idName(n.id)
 		if hasName(name, fingerprintIDs) {
 			fingerprint = true
+		}
+		digit := -1
+		if isSystemUI(n.pkg) && !n.password {
+			digit = nodeDigit(n)
 		}
 		switch {
 		case hasName(name, pinEntryIDs):
@@ -413,15 +513,22 @@ func classifyBouncer(nodes []lockNode) bouncer {
 			passEntry = n
 		case hasName(name, patternIDs):
 			pattern = n
-		case hasName(name, pinKeyIDs) || isSystemUI(n.pkg) && isDigitKey(n):
+		case hasName(name, pinKeyIDs) || digit >= 0:
 			keys++
 			if n.enabled {
 				keysEnabled++
+			}
+			if digit >= 0 {
+				digits[digit] = true
 			}
 		}
 		if n.password && n.focused && isSystemUI(n.pkg) && field == nil {
 			field = n
 		}
+	}
+	allDigits := true
+	for _, seen := range digits {
+		allDigits = allDigits && seen
 	}
 	switch {
 	case pinEntry != nil:
@@ -430,10 +537,15 @@ func classifyBouncer(nodes []lockNode) bouncer {
 		return bouncer{kind: bouncerPassword, enabled: passEntry.enabled}
 	case pattern != nil:
 		return bouncer{kind: bouncerPattern, enabled: pattern.enabled}
-	case field != nil && keys >= 10:
+	case field != nil && (keys >= 10 || allDigits):
 		return bouncer{kind: bouncerPIN, enabled: field.enabled && keysEnabled > 0}
 	case field != nil:
 		return bouncer{kind: bouncerPassword, enabled: field.enabled}
+	}
+	if pad, unsure := findPinPad(nodes); pad != nil {
+		return bouncer{kind: bouncerPIN, enabled: pad.enabled, pad: pad}
+	} else if unsure {
+		return bouncer{kind: bouncerNone, fingerprint: fingerprint, unsure: true}
 	}
 	return bouncer{kind: bouncerNone, fingerprint: fingerprint}
 }
@@ -449,17 +561,6 @@ func hasName(name string, names []string) bool {
 
 func isSystemUI(pkg string) bool {
 	return pkg == "com.android.systemui" || strings.HasSuffix(pkg, ".systemui") || strings.Contains(pkg, "keyguard")
-}
-
-// isDigitKey reports whether a node is a key of a PIN pad: a single digit
-// as its text or description.
-func isDigitKey(n *lockNode) bool {
-	for _, s := range []string{n.text, n.desc} {
-		if len(s) == 1 && s[0] >= '0' && s[0] <= '9' {
-			return true
-		}
-	}
-	return false
 }
 
 var (
