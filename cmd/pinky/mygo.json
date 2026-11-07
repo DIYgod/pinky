@@ -6,6 +6,7 @@
   "copyright": "Copyright © 2026 DIYgod",
   "icon": "../../assets/icon/pinky-macos-1024.png",
   "out": "../../build/pinky",
+  "i18n": { "dir": "locales", "source": "en" },
   "macos": {
     "icon": "../../assets/icon/Pinky.icns",
     "minimumSystemVersion": "12.0"

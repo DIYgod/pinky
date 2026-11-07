@@ -1,0 +1,353 @@
+{
+  "@@locale": "en",
+  "agentGeneric": "the agent",
+  "@agentGeneric": {
+    "description": "Names an agent whose name is unknown, inside a sentence: \"Note for the agent\"."
+  },
+  "agentGenericStart": "The agent",
+  "@agentGenericStart": {
+    "description": "Names an agent whose name is unknown, at the start of a sentence or label: \"The agent's screen\"."
+  },
+  "agentRequestAskedAt": "Asked at {time}.",
+  "@agentRequestAskedAt": {
+    "description": "Ends the detail of an agent's first-connection request: when it asked, as 03:51.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "03:51"
+      }
+    }
+  },
+  "connectionOffline": "{platform} · offline",
+  "@connectionOffline": {
+    "description": "The phone page header's second line and Settings › Phones, for an offline phone. platform is Android, iPhone or a version such as Android 16.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Android 16"
+      }
+    }
+  },
+  "dayOtherYear": "{day, date, ::yMMMMd}",
+  "@dayOtherYear": {
+    "description": "Activity's heading of a day in another year: the month, day and year.",
+    "placeholders": {
+      "day": {
+        "type": "DateTime",
+        "example": "January 2, 2025"
+      }
+    }
+  },
+  "dayThisYear": "{day, date, ::MMMMEEEEd}",
+  "@dayThisYear": {
+    "description": "Activity's heading of a day earlier this year: the weekday, month and day.",
+    "placeholders": {
+      "day": {
+        "type": "DateTime",
+        "example": "Monday, January 2"
+      }
+    }
+  },
+  "dayToday": "Today",
+  "@dayToday": {
+    "description": "Activity groups tasks by day: the heading of today's."
+  },
+  "dayYesterday": "Yesterday",
+  "@dayYesterday": {
+    "description": "Activity groups tasks by day: the heading of yesterday's."
+  },
+  "listMany": "{rest} and {last}",
+  "@listMany": {
+    "description": "Three or more names in a sentence: rest is the names before the last, joined with listSeparator.",
+    "placeholders": {
+      "rest": {
+        "type": "String",
+        "example": "Dinely, Chatter"
+      },
+      "last": {
+        "type": "String",
+        "example": "Calendar"
+      }
+    }
+  },
+  "listPair": "{first} and {second}",
+  "@listPair": {
+    "description": "Two names in a sentence, as \"Can use Dinely and Chatter\".",
+    "placeholders": {
+      "first": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "second": {
+        "type": "String",
+        "example": "Chatter"
+      }
+    }
+  },
+  "listSeparator": ", ",
+  "@listSeparator": {
+    "description": "Joins the names of a list before its last one (see listMany)."
+  },
+  "platformUnlockKeepMac": "Your PIN stays in your Mac's Keychain. Agents never see it.",
+  "@platformUnlockKeepMac": {
+    "description": "macOS: where a saved phone PIN is kept, under the PIN field."
+  },
+  "platformUnlockKeepOther": "Your PIN stays in your keyring. Agents never see it.",
+  "@platformUnlockKeepOther": {
+    "description": "Linux: where a saved phone PIN is kept, under the PIN field."
+  },
+  "platformUnlockKeepWindows": "Your PIN stays in Windows Credential Manager. Agents never see it.",
+  "@platformUnlockKeepWindows": {
+    "description": "Windows: where a saved phone PIN is kept, under the PIN field."
+  },
+  "platformUnlockMac": "Unlock with Touch ID",
+  "@platformUnlockMac": {
+    "description": "macOS: the button that unlocks a locked phone with its saved PIN, after Touch ID or the Mac's password."
+  },
+  "platformUnlockOther": "Unlock from this computer",
+  "@platformUnlockOther": {
+    "description": "Linux: the button that unlocks a locked phone with its saved PIN."
+  },
+  "platformUnlockWindows": "Unlock with Windows Hello",
+  "@platformUnlockWindows": {
+    "description": "Windows: the button that unlocks a locked phone with its saved PIN."
+  },
+  "ruleActionCalls": "calls",
+  "@ruleActionCalls": {
+    "description": "What the Calls rule covers, inside \"Always allow calls in Phone\"."
+  },
+  "ruleActionCommits": "commits",
+  "@ruleActionCommits": {
+    "description": "What the Commits rule covers, inside \"Always allow commits in Dinely\"."
+  },
+  "ruleActionEveryAction": "every action",
+  "@ruleActionEveryAction": {
+    "description": "What the Every action rule covers, inside \"Always allow every action in Dinely\"."
+  },
+  "ruleActionInstallsLinks": "installs and links",
+  "@ruleActionInstallsLinks": {
+    "description": "What the Installs and links rule covers, inside \"Always allow installs and links in Chrome\"."
+  },
+  "ruleActionMessages": "messages",
+  "@ruleActionMessages": {
+    "description": "What the Messages rule covers, inside \"Always allow messages in Chatter\"."
+  },
+  "ruleActionOther": "{rule}",
+  "@ruleActionOther": {
+    "description": "What a rule of the person's own rules file covers, inside \"Always allow … in Dinely\": the rule's name with a lower-case first letter.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "shopping"
+      }
+    }
+  },
+  "ruleActionPayments": "payments",
+  "@ruleActionPayments": {
+    "description": "What the Payments rule covers, inside \"Always allow payments in Dinely\" (zh: 始终允许在 Dinely 中付款)."
+  },
+  "ruleActionSettingsChanges": "settings changes",
+  "@ruleActionSettingsChanges": {
+    "description": "What the Settings changes rule covers, inside \"Always allow settings changes in Settings\"."
+  },
+  "ruleActionThisKind": "this kind",
+  "@ruleActionThisKind": {
+    "description": "Inside \"Always allow this kind\" when the approval names no rule."
+  },
+  "ruleAgentScope": "Agent scope",
+  "@ruleAgentScope": {
+    "description": "The name of the rule that keeps an agent to what the person allowed it."
+  },
+  "ruleBlockedByYou": "Blocked by you",
+  "@ruleBlockedByYou": {
+    "description": "The name of the policy rule that denies the apps the person blocked."
+  },
+  "ruleCalls": "Calls",
+  "@ruleCalls": {
+    "description": "The name of the policy rule that asks before calls."
+  },
+  "ruleCommits": "Commits",
+  "@ruleCommits": {
+    "description": "The name of the policy rule that asks before deletions, posts and other commits."
+  },
+  "ruleCredentials": "credentials",
+  "@ruleCredentials": {
+    "description": "The name of the built-in rule that denies typing into password and one-time-code fields."
+  },
+  "ruleEveryAction": "Every action",
+  "@ruleEveryAction": {
+    "description": "The name of the policy rule that asks before every action."
+  },
+  "ruleFiles": "Files",
+  "@ruleFiles": {
+    "description": "The name of the rule that asks before copying files to the phone."
+  },
+  "ruleFinanceApps": "Finance apps",
+  "@ruleFinanceApps": {
+    "description": "The name of the default rule that blocks finance apps."
+  },
+  "ruleInstallsLinks": "Installs and links",
+  "@ruleInstallsLinks": {
+    "description": "The name of the policy rule that asks before installing apps and opening links that leave the app."
+  },
+  "ruleMessages": "Messages",
+  "@ruleMessages": {
+    "description": "The name of the policy rule that asks before sending messages."
+  },
+  "rulePasswordManagers": "Password managers",
+  "@rulePasswordManagers": {
+    "description": "The name of the default rule that blocks password managers."
+  },
+  "rulePayments": "Payments",
+  "@rulePayments": {
+    "description": "The name of the policy rule that asks before payments, as approvals and steps name it."
+  },
+  "ruleReadOnly": "Read-only",
+  "@ruleReadOnly": {
+    "description": "The name of the rule of Read-only mode."
+  },
+  "ruleSettingsChanges": "Settings changes",
+  "@ruleSettingsChanges": {
+    "description": "The name of the policy rule that asks before changing a setting."
+  },
+  "ruleTaskApps": "Task apps",
+  "@ruleTaskApps": {
+    "description": "The name of the rule that keeps an agent to the apps of its task."
+  },
+  "scopeApps": "Only the apps I choose",
+  "@scopeApps": {
+    "description": "A choice of what an agent may do: only the apps the person names."
+  },
+  "scopeEverything": "All apps except blocked ones",
+  "@scopeEverything": {
+    "description": "A choice of what a new agent may do: any app but those blocked in Settings › Safety."
+  },
+  "scopeLineApps": "Can use {apps}",
+  "@scopeLineApps": {
+    "description": "Settings › Agents: an agent limited to these apps.",
+    "placeholders": {
+      "apps": {
+        "type": "String",
+        "example": "Dinely, Chatter and Calendar"
+      }
+    }
+  },
+  "scopeLineEverything": "Can use all apps except blocked ones",
+  "@scopeLineEverything": {
+    "description": "Settings › Agents: an agent that may use any app but the blocked ones."
+  },
+  "scopeLineNoApp": "Can use no app yet",
+  "@scopeLineNoApp": {
+    "description": "Settings › Agents: an agent limited to chosen apps, before any app is chosen."
+  },
+  "scopeLineReadOnly": "Can browse and read, never commit",
+  "@scopeLineReadOnly": {
+    "description": "Settings › Agents: an agent that may only look and read."
+  },
+  "scopeLineWatchOnly": "Can only watch",
+  "@scopeLineWatchOnly": {
+    "description": "Settings › Agents: an agent that may only see the screen."
+  },
+  "scopeReadOnly": "Browse and read, never commit",
+  "@scopeReadOnly": {
+    "description": "A choice of what an agent may do: look and read, but never pay, send, delete or change anything."
+  },
+  "scopeWatchOnly": "Watch only",
+  "@scopeWatchOnly": {
+    "description": "A choice of what an agent may do: see the screen, touch nothing."
+  },
+  "shotLabel": "Screenshot of {phone}",
+  "@shotLabel": {
+    "description": "The accessibility label of a step's screenshot.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "shotLoading": "Loading…",
+  "@shotLoading": {
+    "description": "In place of a step's screenshot while it loads."
+  },
+  "shotNone": "No screenshot",
+  "@shotNone": {
+    "description": "In place of a step's screenshot when there is none."
+  },
+  "sidebarActivity": "Activity",
+  "@sidebarActivity": {
+    "description": "The sidebar row that opens Activity, the finished tasks."
+  },
+  "sidebarAddPhone": "Add phone",
+  "@sidebarAddPhone": {
+    "description": "The sidebar row that opens Add phone."
+  },
+  "sidebarAllPhones": "All phones",
+  "@sidebarAllPhones": {
+    "description": "The sidebar row that shows every phone at once, as live tiles."
+  },
+  "sidebarPhoneRow": "{name}, {status}",
+  "@sidebarPhoneRow": {
+    "description": "The accessibility label of a phone's sidebar row: its name and status line.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "status": {
+        "type": "String",
+        "example": "Claude Code · Reorder lunch"
+      }
+    }
+  },
+  "sidebarPhones": "Phones",
+  "@sidebarPhones": {
+    "description": "The sidebar's heading above the list of phones."
+  },
+  "sidebarSettings": "Settings",
+  "@sidebarSettings": {
+    "description": "The sidebar row that opens Settings."
+  },
+  "sidebarStopAll": "Stop all",
+  "@sidebarStopAll": {
+    "description": "The sidebar's emergency button that stops every agent on every phone; its shortcut shows next to it."
+  },
+  "timeHours": "{hours}\u00a0h\u00a0{minutes}\u00a0min",
+  "@timeHours": {
+    "description": "A duration of an hour or more. minutes has two digits. Joined with no-break spaces.",
+    "placeholders": {
+      "hours": {
+        "type": "String",
+        "example": "1"
+      },
+      "minutes": {
+        "type": "String",
+        "example": "05"
+      }
+    }
+  },
+  "timeMinutes": "{minutes}\u00a0min\u00a0{seconds}\u00a0s",
+  "@timeMinutes": {
+    "description": "A duration under an hour. seconds has two digits. Joined with no-break spaces.",
+    "placeholders": {
+      "minutes": {
+        "type": "String",
+        "example": "1"
+      },
+      "seconds": {
+        "type": "String",
+        "example": "02"
+      }
+    }
+  },
+  "timeSeconds": "{seconds}\u00a0s",
+  "@timeSeconds": {
+    "description": "A duration under a minute, as task cards and Activity show it. Joined with a no-break space so it never wraps.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "38"
+      }
+    }
+  }
+}

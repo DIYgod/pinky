@@ -14,6 +14,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -175,9 +176,9 @@ func (a *app) shotView(c *mg.Context, t gateway.TaskView, s gateway.StepView, h 
 		w := h * 9 / 19.5
 		box := mg.Box(c).Size(w, h).Shrink(0).Radius(10).Border(1, p.line2).Background(p.bg3).Center()
 		box.Children(func() {
-			msg := "No screenshot"
+			msg := locales.ShotNone()
 			if loading {
-				msg = "Loading…"
+				msg = locales.ShotLoading()
 				c.After(150 * time.Millisecond)
 			}
 			mg.Text(c, msg).FontSize(12).TextColor(p.ink3)
@@ -187,7 +188,7 @@ func (a *app) shotView(c *mg.Context, t gateway.TaskView, s gateway.StepView, h 
 	w := h * float32(e.w) / float32(e.h)
 	k := a.shotScale(t.DeviceID, e)
 	box := mg.Box(c).Size(w, h).Shrink(0).Radius(10).Border(1, p.line2).Clip().Background(hex("#000000")).
-		Label("Screenshot of " + t.DeviceName)
+		Label(locales.ShotLabel(t.DeviceName))
 	box.Draw(func(pt *mg.Painter, r mg.Rect) {
 		pt.Clip(r, 10, func() {
 			pt.Image(e.bitmap, r, mg.Contain)
@@ -308,18 +309,18 @@ func imperative(s string) string {
 // Scopes as the person reads them.
 var scopeChoices = []struct {
 	mode  gateway.ScopeMode
-	label string
+	label func() string
 }{
-	{gateway.ScopeEverything, "All apps except blocked ones"},
-	{gateway.ScopeApps, "Only the apps I choose"},
-	{gateway.ScopeReadOnly, "Browse and read, never commit"},
-	{gateway.ScopeWatchOnly, "Watch only"},
+	{gateway.ScopeEverything, locales.ScopeEverything},
+	{gateway.ScopeApps, locales.ScopeApps},
+	{gateway.ScopeReadOnly, locales.ScopeReadOnly},
+	{gateway.ScopeWatchOnly, locales.ScopeWatchOnly},
 }
 
 func scopeLabel(m gateway.ScopeMode) string {
 	for _, c := range scopeChoices {
 		if c.mode == m {
-			return c.label
+			return c.label()
 		}
 	}
 	return string(m)
@@ -327,7 +328,7 @@ func scopeLabel(m gateway.ScopeMode) string {
 
 func scopeOf(label string) gateway.ScopeMode {
 	for _, c := range scopeChoices {
-		if c.label == label {
+		if c.label() == label {
 			return c.mode
 		}
 	}
@@ -339,25 +340,15 @@ func scopeLine(s gateway.Scope) string {
 	switch s.Mode {
 	case gateway.ScopeApps:
 		if len(s.Apps) == 0 {
-			return "Can use no app yet"
+			return locales.ScopeLineNoApp()
 		}
-		return "Can use " + joinAnd(s.Apps)
+		return locales.ScopeLineApps(joinAnd(s.Apps))
 	case gateway.ScopeReadOnly:
-		return "Can browse and read, never commit"
+		return locales.ScopeLineReadOnly()
 	case gateway.ScopeWatchOnly:
-		return "Can only watch"
+		return locales.ScopeLineWatchOnly()
 	}
-	return "Can use all apps except blocked ones"
-}
-
-func joinAnd(s []string) string {
-	switch len(s) {
-	case 0:
-		return ""
-	case 1:
-		return s[0]
-	}
-	return strings.Join(s[:len(s)-1], ", ") + " and " + s[len(s)-1]
+	return locales.ScopeLineEverything()
 }
 
 // newAgentNeed reports an agent's first-connection approval.
@@ -395,7 +386,7 @@ func agentRequestDetail(n gateway.NeedView, picker bool) string {
 		}
 	}
 	if !n.Created.IsZero() {
-		d = strings.TrimSpace(d + " Asked at " + n.Created.Format("15:04") + ".")
+		d = strings.TrimSpace(d + " " + locales.AgentRequestAskedAt(n.Created.Format("15:04")))
 	}
 	return d
 }

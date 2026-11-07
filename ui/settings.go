@@ -408,7 +408,7 @@ func (a *app) scopePicker(c *mg.Context, key, label string, initial gateway.Scop
 	}
 	labels := make([]string, len(scopeChoices))
 	for i, sc := range scopeChoices {
-		labels[i] = sc.label
+		labels[i] = sc.label()
 	}
 	mg.Select(c.Key("scope-"+key), &choice, labels).Label(label).MaxWidth(360)
 	st.choice[key] = choice

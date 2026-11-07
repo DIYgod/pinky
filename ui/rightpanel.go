@@ -7,6 +7,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
 
@@ -255,7 +256,7 @@ func agentOf(n gateway.NeedView) string {
 	if n.Agent != "" {
 		return n.Agent
 	}
-	return "the agent"
+	return locales.AgentGeneric()
 }
 
 // taskStatus words a task's state for its card.

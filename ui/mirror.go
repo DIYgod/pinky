@@ -12,6 +12,7 @@ import (
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -237,7 +238,7 @@ func agentOrTheAgent(t *gateway.TaskView) string {
 	if t != nil && t.Agent != "" {
 		return t.Agent
 	}
-	return "The agent"
+	return locales.AgentGenericStart()
 }
 
 // mirrorView draws the screen inside a phone's bezel: the video, the
