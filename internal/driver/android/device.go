@@ -64,6 +64,13 @@ type Device struct {
 
 	comp   companionLink
 	person personWatch
+
+	bgMu sync.Mutex
+	bgs  map[*Background]struct{} // open background displays
+	dk   *dark                    // keeps the phone dark for them (dark.go)
+	// sharedSeen: a display of this phone shared the main display's power
+	// before Android 17.
+	sharedSeen atomic.Bool
 }
 
 func newDevice(cfg Config, info driver.Info, props deviceProps) *Device {
@@ -83,9 +90,23 @@ func (d *Device) Info() driver.Info {
 // Serial returns the adb serial.
 func (d *Device) Serial() string { return d.info.ID }
 
-// Close implements driver.Device. It ends the scrcpy session; the server
-// exits and removes itself from the phone.
+// Close implements driver.Device. It closes the background displays still
+// open, which may wait for the phone to time out (see Background.Close),
+// and ends the scrcpy session; the server exits and removes itself from
+// the phone.
 func (d *Device) Close() error {
+	var wg sync.WaitGroup
+	for _, b := range d.backgrounds() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			b.Close()
+		}()
+	}
+	wg.Wait()
+	if dk := d.darkIfAny(); dk != nil {
+		dk.close()
+	}
 	d.mu.Lock()
 	d.closed = true
 	l := d.main
@@ -97,6 +118,46 @@ func (d *Device) Close() error {
 		l.close(errors.New("android: device closed"))
 	}
 	return nil
+}
+
+func (d *Device) addBackground(b *Background) {
+	d.bgMu.Lock()
+	defer d.bgMu.Unlock()
+	if d.bgs == nil {
+		d.bgs = map[*Background]struct{}{}
+	}
+	d.bgs[b] = struct{}{}
+}
+
+func (d *Device) removeBackground(b *Background) {
+	d.bgMu.Lock()
+	defer d.bgMu.Unlock()
+	delete(d.bgs, b)
+}
+
+func (d *Device) backgrounds() []*Background {
+	d.bgMu.Lock()
+	defer d.bgMu.Unlock()
+	var out []*Background
+	for b := range d.bgs {
+		out = append(out, b)
+	}
+	return out
+}
+
+// darkPanel reports whether Pinky keeps the phone awake with its panel off
+// for a background display (dark.go): the display power controller then
+// reports the screen on.
+func (d *Device) darkPanel() bool {
+	dk := d.darkIfAny()
+	return dk != nil && dk.on.Load()
+}
+
+// undark turns the panel back on when Pinky keeps the phone dark, for work
+// on the main screen, and reports whether it did.
+func (d *Device) undark() bool {
+	dk := d.darkIfAny()
+	return dk != nil && dk.undark()
 }
 
 // baseOptions are the session options when no stream asked for others.
