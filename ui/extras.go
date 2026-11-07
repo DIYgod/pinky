@@ -212,33 +212,38 @@ func stepDisplay(t gateway.TaskView, i int) (text, sub string, kind stepKind) {
 	kind = kindOf(t, i)
 	action, waiting := strings.CutPrefix(text, "Waiting for you: ")
 	if waiting {
-		action = imperative(action)
+		action = actionAsked(action)
 	}
 	handoff, isHandoff := strings.CutPrefix(text, "Asked you to take over: ")
 	asked, isAsk := strings.CutPrefix(text, "Asked you: ")
+	sub = stepSub(sub)
 	asked2 := func(why string) string {
 		if sub != "" {
-			return "Asked: “" + why + "”\n" + sub
+			return locales.StepAsked(why) + "\n" + sub
 		}
-		return "Asked: “" + why + "”"
+		return locales.StepAsked(why)
 	}
+	said := false // text is the client's words, not the gateway's
+	set := func(s string) { text, said = s, true }
 	switch s.Status {
 	case "approval_pending":
 		switch {
 		case waiting && t.State == gateway.TaskWorking:
 			// Answered: the gateway closes the step once the action ran.
-			text, kind = "You answered: "+action, stepYou
+			set(locales.StepYouAnswered(action))
+			kind = stepYou
 		case waiting:
-			text = "Waiting for you: " + action
+			set(locales.StepWaiting(action))
 		}
 	case "approval_denied":
 		switch {
 		case waiting:
-			text = "You denied: " + action
+			set(locales.StepYouDenied(action))
 		case isHandoff:
-			text, sub = "You declined", asked2(handoff)
+			set(locales.StepYouDeclined())
+			sub = asked2(handoff)
 		case isAsk:
-			text = "You said no: " + asked
+			set(locales.StepYouSaidNo(asked))
 		}
 		if waiting || isHandoff || isAsk {
 			kind = stepYou
@@ -246,42 +251,62 @@ func stepDisplay(t gateway.TaskView, i int) (text, sub string, kind stepKind) {
 	case "settled":
 		switch {
 		case isHandoff:
-			text, sub, kind = "You handed it back", asked2(handoff), stepYou
+			set(locales.StepYouHandedBack())
+			sub, kind = asked2(handoff), stepYou
 		case isAsk:
-			text, kind = "You agreed: "+asked, stepYou
+			set(locales.StepYouAgreed(asked))
+			kind = stepYou
 		}
 	case "user_took_over":
 		if waiting {
-			text = upperFirst(action)
+			set(upperFirst(action))
 		}
-		sub, kind = "Not done: you took over", stepYou
+		sub, kind = locales.StepNotDoneTookOver(), stepYou
 	case "paused":
-		sub = "Not done: you were in control"
+		sub = locales.StepNotDoneInControl()
 	case "stopped":
 		if waiting {
-			text = upperFirst(action)
+			set(upperFirst(action))
 		}
-		sub = "Not done: stopped"
+		sub = locales.StepNotDoneStopped()
 	case "stale":
-		sub = "Not done: the screen changed while it waited"
+		sub = locales.StepNotDoneStale()
 	case "uncertain":
-		sub = "May have happened"
+		sub = locales.StepMayHaveHappened()
 	case "expired":
 		if waiting {
-			text = upperFirst(action)
+			set(upperFirst(action))
 		}
-		sub = "Allowed, but the agent did not come back for it"
+		sub = locales.StepAllowedNotUsed()
 	case "device_locked":
-		sub = "The phone was locked"
+		sub = locales.StepPhoneLocked()
 	case "device_offline":
-		sub = "The phone went offline"
+		sub = locales.StepPhoneOffline()
 	case "lease_held", "scope_denied", "not_found", "unsupported", "invalid_argument", "internal":
-		sub = "Failed: " + strings.ReplaceAll(s.Status, "_", " ")
+		sub = locales.StepFailedCode(failureName(s.Status))
 	}
-	if waiting && kind != stepWait && strings.HasPrefix(text, "Waiting for you: ") {
+	switch {
+	case said:
+	case waiting && kind != stepWait:
 		text = upperFirst(action)
+	default:
+		text = stepText(text)
 	}
 	return text, sub, kind
+}
+
+// failures name the error codes a step can end with.
+var failures = map[string]func() string{
+	"lease_held": locales.StepCodeLeaseHeld, "scope_denied": locales.StepCodeScopeDenied,
+	"not_found": locales.StepCodeNotFound, "unsupported": locales.StepCodeUnsupported,
+	"invalid_argument": locales.StepCodeInvalidArgument, "internal": locales.StepCodeInternal,
+}
+
+func failureName(code string) string {
+	if f := failures[code]; f != nil {
+		return f()
+	}
+	return strings.ReplaceAll(code, "_", " ")
 }
 
 func upperFirst(s string) string {
@@ -379,14 +404,14 @@ func (a *app) handoffFor(deviceID string) (gateway.NeedView, bool) {
 // picker under it, the gateway's "Allowing gives it … access." would
 // contradict the choice, so it is left out.
 func agentRequestDetail(n gateway.NeedView, picker bool) string {
-	d := n.Detail
 	if picker {
-		if i := strings.Index(d, " Allowing gives it"); i >= 0 {
-			d = d[:i]
+		if i := strings.Index(n.Detail, " Allowing gives it"); i >= 0 {
+			n.Detail = n.Detail[:i]
 		}
 	}
+	d := needDetail(n)
 	if !n.Created.IsZero() {
-		d = strings.TrimSpace(d + " " + locales.AgentRequestAskedAt(n.Created.Format("15:04")))
+		d = strings.TrimSpace(locales.SentencePair(d, locales.AgentRequestAskedAt(n.Created.Format("15:04"))))
 	}
 	return d
 }

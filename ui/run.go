@@ -3,7 +3,6 @@ package ui
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -15,6 +14,7 @@ import (
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/secret"
@@ -315,6 +315,13 @@ func (a *app) ready() {
 	a.registerShortcut()
 	a.setMenu()
 	a.updateTray()
+	// Windows draw anew in another language by themselves; the menus and
+	// the tray's tooltip keep the labels they were given until set again.
+	mygo.App.OnLocaleChanged(func(string) {
+		a.setMenu()
+		a.updateTray()
+		a.invalidate()
+	})
 	// Started hidden while something already waits (an agent's first
 	// connection, say): open for it now.
 	if len(a.needs) > 0 {
@@ -640,7 +647,7 @@ func (a *app) call(deviceID, what string, fn func() error) {
 	job := func() {
 		if err := fn(); err != nil && !errors.Is(err, context.Canceled) {
 			log.Printf("pinky: %s: %v", what, err)
-			a.post(func() { a.toasts = append(a.toasts, fmt.Sprintf("Couldn't %s: %v", what, err)) })
+			a.post(func() { a.toasts = append(a.toasts, locales.ToastCouldNot(what, err.Error())) })
 		}
 	}
 	select {
@@ -663,7 +670,7 @@ func (a *app) selectPhone(id string) {
 
 func (a *app) decide(n gateway.NeedView, d gateway.Decision, note string) {
 	a.remember(n, d, note)
-	a.call(n.DeviceID, "answer the approval", func() error { return a.api.Decide(n.ID, d, note) })
+	a.call(n.DeviceID, locales.CallAnswer(), func() error { return a.api.Decide(n.ID, d, note) })
 	if d == gateway.TakeOver {
 		a.selectPhone(n.DeviceID)
 		a.showMain()
@@ -671,22 +678,22 @@ func (a *app) decide(n gateway.NeedView, d gateway.Decision, note string) {
 }
 
 func (a *app) takeOver(id string) {
-	a.call(id, "take over", func() error { return a.api.TakeOver(id) })
+	a.call(id, locales.CallTakeOver(), func() error { return a.api.TakeOver(id) })
 	a.selectPhone(id)
 }
 
 func (a *app) handBack(id string) {
-	a.call(id, "hand back", func() error { return a.api.HandBack(id, "") })
+	a.call(id, locales.CallHandBack(), func() error { return a.api.HandBack(id, "") })
 }
 
 func (a *app) stop(id string) {
-	a.call(id, "stop the task", func() error { return a.api.Stop(id) })
+	a.call(id, locales.CallStop(), func() error { return a.api.Stop(id) })
 }
 
 // stopAll is the emergency stop, from the sidebar, the flyout and the
 // global shortcut.
 func (a *app) stopAll() {
-	a.call("", "stop all", a.api.StopAll)
+	a.call("", locales.CallStopAll(), a.api.StopAll)
 }
 
 func (a *app) showMain() {
@@ -740,12 +747,12 @@ func (a *app) notify(n gateway.NeedView) {
 		return
 	}
 	a.notified[n.ID] = true
-	title := n.Title
+	title := needTitle(n)
 	sub := n.DeviceName
 	if n.App != "" {
 		sub += " · " + n.App
 	}
-	nt := mygo.NewNotification(mygo.NotificationOptions{ID: n.ID, Group: "needs", Title: title, Subtitle: sub, Body: n.Detail})
+	nt := mygo.NewNotification(mygo.NotificationOptions{ID: n.ID, Group: "needs", Title: title, Subtitle: sub, Body: needDetail(n)})
 	nt.OnClick(func() {
 		if n.Kind != gateway.NeedUnlock {
 			a.showPanel(true)
@@ -791,12 +798,12 @@ func (a *app) setMenu() {
 	}
 	items = append(items,
 		&mygo.MenuItem{Role: mygo.RoleEditMenu},
-		&mygo.MenuItem{Label: "Phones", Submenu: []*mygo.MenuItem{
-			{Label: "Activity", Accelerator: "CmdOrCtrl+1", Click: func(*mygo.MenuItem, *mygo.Window) { a.goPage(pageActivity) }},
-			{Label: "Settings…", Accelerator: "CmdOrCtrl+,", Click: func(*mygo.MenuItem, *mygo.Window) { a.goPage(pageSettings) }},
-			{Label: "Add Phone…", Accelerator: "CmdOrCtrl+N", Click: func(*mygo.MenuItem, *mygo.Window) { a.goPage(pageAddPhone) }},
+		&mygo.MenuItem{Label: locales.MenuPhones(), Submenu: []*mygo.MenuItem{
+			{Label: locales.MenuActivity(), Accelerator: "CmdOrCtrl+1", Click: func(*mygo.MenuItem, *mygo.Window) { a.goPage(pageActivity) }},
+			{Label: locales.MenuSettings(), Accelerator: "CmdOrCtrl+,", Click: func(*mygo.MenuItem, *mygo.Window) { a.goPage(pageSettings) }},
+			{Label: locales.MenuAddPhone(), Accelerator: "CmdOrCtrl+N", Click: func(*mygo.MenuItem, *mygo.Window) { a.goPage(pageAddPhone) }},
 			mygo.Separator(),
-			{Label: "Stop All", Click: func(*mygo.MenuItem, *mygo.Window) { a.stopAll() }},
+			{Label: locales.MenuStopAll(), Click: func(*mygo.MenuItem, *mygo.Window) { a.stopAll() }},
 		}},
 	)
 	items = append(items, a.opt.Menus...)

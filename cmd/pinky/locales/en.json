@@ -18,6 +18,26 @@
       }
     }
   },
+  "callAnswer": "answer the approval",
+  "@callAnswer": {
+    "description": "Inside toastCouldNot: the person's answer to an approval did not reach the gateway."
+  },
+  "callHandBack": "hand back",
+  "@callHandBack": {
+    "description": "Inside toastCouldNot: handing a phone back to the agent failed."
+  },
+  "callStop": "stop the task",
+  "@callStop": {
+    "description": "Inside toastCouldNot: stopping a task failed."
+  },
+  "callStopAll": "stop all",
+  "@callStopAll": {
+    "description": "Inside toastCouldNot: Stop all failed."
+  },
+  "callTakeOver": "take over",
+  "@callTakeOver": {
+    "description": "Inside toastCouldNot: taking over a phone failed."
+  },
   "connectionOffline": "{platform} · offline",
   "@connectionOffline": {
     "description": "The phone page header's second line and Settings › Phones, for an offline phone. platform is Android, iPhone or a version such as Android 16.",
@@ -56,6 +76,962 @@
   "@dayYesterday": {
     "description": "Activity groups tasks by day: the heading of yesterday's."
   },
+  "gwAgentGives": " Allowing gives it {scope} access.",
+  "@gwAgentGives": {
+    "description": "Follows gwAgentWants: what the agent may do if allowed; scope is scopeLineEverything and the like (zh: 可以使用除已屏蔽应用外的所有应用). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "scope": {
+        "type": "String",
+        "example": "can use all apps except blocked ones"
+      }
+    }
+  },
+  "gwAgentWants": "{agent} wants to connect for “{task}”.",
+  "@gwAgentWants": {
+    "description": "An agent's first-connection request: who asks, for which task. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Codex"
+      },
+      "task": {
+        "type": "String",
+        "example": "Book a table"
+      }
+    }
+  },
+  "gwAskAgent": "Let {agent} use your phones?",
+  "@gwAskAgent": {
+    "description": "The title of an agent's first-connection request. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Codex"
+      }
+    }
+  },
+  "gwAskChange": "Change “{label}”?",
+  "@gwAskChange": {
+    "description": "An approval's title: change the setting with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Wi-Fi"
+      }
+    }
+  },
+  "gwAskLongPress": "Long-press “{label}”?",
+  "@gwAskLongPress": {
+    "description": "An approval's title: long-press the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Photo"
+      }
+    }
+  },
+  "gwAskOpen": "Open {app}?",
+  "@gwAskOpen": {
+    "description": "An approval's title: open this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Northbank"
+      }
+    }
+  },
+  "gwAskPay": "Pay: “{label}”?",
+  "@gwAskPay": {
+    "description": "An approval's title: pay with the button that has this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Place order · $12.80"
+      }
+    }
+  },
+  "gwAskPressIn": "Press {key} in “{label}”?",
+  "@gwAskPressIn": {
+    "description": "An approval's title: press a key (gwKeyEnter and the like) in a field. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "enter"
+      },
+      "label": {
+        "type": "String",
+        "example": "Message"
+      }
+    }
+  },
+  "gwAskQuestion": "{action}?",
+  "@gwAskQuestion": {
+    "description": "An approval's title made of what the step would do (gwDoTap and the like), as a question. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "Tap at 540,1200"
+      }
+    }
+  },
+  "gwAskSend": "Send “{text}”?",
+  "@gwAskSend": {
+    "description": "An approval's title: send this message. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "See you at 3"
+      }
+    }
+  },
+  "gwAskSendMessage": "Send the message?",
+  "@gwAskSendMessage": {
+    "description": "An approval's title: send a message whose text is unknown. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwAskSwipe": "Swipe “{label}”?",
+  "@gwAskSwipe": {
+    "description": "An approval's title: swipe in the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Slide to pay"
+      }
+    }
+  },
+  "gwAskTap": "Tap “{label}”?",
+  "@gwAskTap": {
+    "description": "An approval's title: tap the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Delete"
+      }
+    }
+  },
+  "gwAskTypeInto": "Type into “{label}”?",
+  "@gwAskTypeInto": {
+    "description": "An approval's title: type into the field with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Message"
+      }
+    }
+  },
+  "gwDidLongPress": "Long-pressed “{label}”",
+  "@gwDidLongPress": {
+    "description": "A step: the agent long-pressed the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Photo"
+      }
+    }
+  },
+  "gwDidLongPressAt": "Long-pressed at {x},{y}",
+  "@gwDidLongPressAt": {
+    "description": "A step: the agent long-pressed at a point of the screen. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "x": {
+        "type": "String",
+        "example": "540"
+      },
+      "y": {
+        "type": "String",
+        "example": "1200"
+      }
+    }
+  },
+  "gwDidLongPressBare": "Long-pressed",
+  "@gwDidLongPressBare": {
+    "description": "A step: the agent long-pressed, without a known place. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidOpen": "Opened {app}",
+  "@gwDidOpen": {
+    "description": "A step: the agent opened this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "gwDidPress": "Pressed {key}",
+  "@gwDidPress": {
+    "description": "A step: the agent pressed a key; key is gwKeyHome and the like. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "home"
+      }
+    }
+  },
+  "gwDidSwipe": "Swiped {direction}",
+  "@gwDidSwipe": {
+    "description": "A step: the agent swiped; direction is gwDirUp and the like. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "direction": {
+        "type": "String",
+        "example": "up"
+      }
+    }
+  },
+  "gwDidSwipeFromTo": "Swiped from {fromX},{fromY} to {toX},{toY}",
+  "@gwDidSwipeFromTo": {
+    "description": "A step: the agent swiped between two points, in pixels. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "fromX": {
+        "type": "String",
+        "example": "540"
+      },
+      "fromY": {
+        "type": "String",
+        "example": "1800"
+      },
+      "toX": {
+        "type": "String",
+        "example": "540"
+      },
+      "toY": {
+        "type": "String",
+        "example": "600"
+      }
+    }
+  },
+  "gwDidSwipeIn": "Swiped {direction} in “{label}”",
+  "@gwDidSwipeIn": {
+    "description": "A step: the agent swiped inside the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "direction": {
+        "type": "String",
+        "example": "up"
+      },
+      "label": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "gwDidTap": "Tapped “{label}”",
+  "@gwDidTap": {
+    "description": "A step: the agent tapped the element with this label (read from the phone). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Place order"
+      }
+    }
+  },
+  "gwDidTapAt": "Tapped at {x},{y}",
+  "@gwDidTapAt": {
+    "description": "A step: the agent tapped at a point of the screen, in pixels. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "x": {
+        "type": "String",
+        "example": "540"
+      },
+      "y": {
+        "type": "String",
+        "example": "1200"
+      }
+    }
+  },
+  "gwDidTapBare": "Tapped",
+  "@gwDidTapBare": {
+    "description": "A step: the agent tapped, without a known place. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidType": "Typed “{text}”",
+  "@gwDidType": {
+    "description": "A step: the agent typed this text. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "no cilantro"
+      }
+    }
+  },
+  "gwDidTypeInto": "Typed “{text}” into “{label}”",
+  "@gwDidTypeInto": {
+    "description": "A step: the agent typed text into the field with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "no cilantro"
+      },
+      "label": {
+        "type": "String",
+        "example": "Note"
+      }
+    }
+  },
+  "gwDidTypeIntoSubmit": "Typed “{text}” into “{label}” and submitted",
+  "@gwDidTypeIntoSubmit": {
+    "description": "A step: the agent typed text into a field and pressed Enter. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "chicken rice"
+      },
+      "label": {
+        "type": "String",
+        "example": "Search"
+      }
+    }
+  },
+  "gwDidTypeSubmit": "Typed “{text}” and submitted",
+  "@gwDidTypeSubmit": {
+    "description": "A step: the agent typed text and pressed Enter. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "chicken rice"
+      }
+    }
+  },
+  "gwDirDown": "down",
+  "@gwDirDown": {
+    "description": "A swipe's direction inside gwDidSwipe and gwDoSwipe: down. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDirLeft": "left",
+  "@gwDirLeft": {
+    "description": "A swipe's direction inside gwDidSwipe and gwDoSwipe: left. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDirRight": "right",
+  "@gwDirRight": {
+    "description": "A swipe's direction inside gwDidSwipe and gwDoSwipe: right. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDirUp": "up",
+  "@gwDirUp": {
+    "description": "A swipe's direction inside gwDidSwipe and gwDoSwipe: up. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoCopyFile": "copy “{path}” to {phone}",
+  "@gwDoCopyFile": {
+    "description": "What a step asked for: copy a file of the computer into the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "ticket.pdf"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "gwDoCopyFiles": "copy {count} files to {phone}",
+  "@gwDoCopyFiles": {
+    "description": "What a step asked for: copy several files into the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "3"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "gwDoCopyFromPhone": "copy from the phone",
+  "@gwDoCopyFromPhone": {
+    "description": "What a step tried: copy files from the phone to the computer. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoCopyToPhone": "copy to the phone",
+  "@gwDoCopyToPhone": {
+    "description": "What a step tried: copy files from the computer to the phone. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoListFolder": "list the phone's Pinky folder",
+  "@gwDoListFolder": {
+    "description": "What a step tried: list the files in the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoLongPress": "long-press “{label}”",
+  "@gwDoLongPress": {
+    "description": "What a step asked for: long-press the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Photo"
+      }
+    }
+  },
+  "gwDoLongPressAt": "long-press at {x},{y}",
+  "@gwDoLongPressAt": {
+    "description": "What a step asked for: long-press at a point of the screen. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "x": {
+        "type": "String",
+        "example": "540"
+      },
+      "y": {
+        "type": "String",
+        "example": "1200"
+      }
+    }
+  },
+  "gwDoLongPressBare": "long-press",
+  "@gwDoLongPressBare": {
+    "description": "What a step asked for: a long-press without a known place. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoOpen": "open {app}",
+  "@gwDoOpen": {
+    "description": "What a step asked for: open this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "gwDoPress": "press {key}",
+  "@gwDoPress": {
+    "description": "What a step asked for: press a key; key is gwKeyHome and the like. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "home"
+      }
+    }
+  },
+  "gwDoSwipe": "swipe {direction}",
+  "@gwDoSwipe": {
+    "description": "What a step asked for: a swipe; direction is gwDirUp and the like. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "direction": {
+        "type": "String",
+        "example": "up"
+      }
+    }
+  },
+  "gwDoSwipeFromTo": "swipe from {fromX},{fromY} to {toX},{toY}",
+  "@gwDoSwipeFromTo": {
+    "description": "What a step asked for: a swipe between two points. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "fromX": {
+        "type": "String",
+        "example": "540"
+      },
+      "fromY": {
+        "type": "String",
+        "example": "1800"
+      },
+      "toX": {
+        "type": "String",
+        "example": "540"
+      },
+      "toY": {
+        "type": "String",
+        "example": "600"
+      }
+    }
+  },
+  "gwDoSwipeIn": "swipe {direction} in “{label}”",
+  "@gwDoSwipeIn": {
+    "description": "What a step asked for: a swipe inside an element. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "direction": {
+        "type": "String",
+        "example": "up"
+      },
+      "label": {
+        "type": "String",
+        "example": "Messages"
+      }
+    }
+  },
+  "gwDoTap": "tap “{label}”",
+  "@gwDoTap": {
+    "description": "What a step asked for or would have done, after \"Waiting for you: \" and the like: tap the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Pay"
+      }
+    }
+  },
+  "gwDoTapAt": "tap at {x},{y}",
+  "@gwDoTapAt": {
+    "description": "What a step asked for: tap at a point of the screen. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "x": {
+        "type": "String",
+        "example": "540"
+      },
+      "y": {
+        "type": "String",
+        "example": "1200"
+      }
+    }
+  },
+  "gwDoTapBare": "tap",
+  "@gwDoTapBare": {
+    "description": "What a step asked for: a tap without a known place. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoType": "type “{text}”",
+  "@gwDoType": {
+    "description": "What a step asked for: type this text. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "See you at 3"
+      }
+    }
+  },
+  "gwDoTypeInto": "type “{text}” into “{label}”",
+  "@gwDoTypeInto": {
+    "description": "What a step asked for: type text into a field. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "See you at 3"
+      },
+      "label": {
+        "type": "String",
+        "example": "Message"
+      }
+    }
+  },
+  "gwDoTypeIntoSubmit": "type “{text}” into “{label}” and submit",
+  "@gwDoTypeIntoSubmit": {
+    "description": "What a step asked for: type text into a field and press Enter. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "See you at 3"
+      },
+      "label": {
+        "type": "String",
+        "example": "Message"
+      }
+    }
+  },
+  "gwDoTypeSubmit": "type “{text}” and submit",
+  "@gwDoTypeSubmit": {
+    "description": "What a step asked for: type text and press Enter. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "See you at 3"
+      }
+    }
+  },
+  "gwFilesDetail": "{agent} · into the phone's Pinky folder{names}",
+  "@gwFilesDetail": {
+    "description": "The second line of an approval to copy files to the phone; names is gwFilesList or empty. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "names": {
+        "type": "String",
+        "example": ": ticket.pdf"
+      }
+    }
+  },
+  "gwFilesList": ": {names}",
+  "@gwFilesList": {
+    "description": "Lists file names after a files step or approval.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "a.txt, b.png"
+      }
+    }
+  },
+  "gwFilesMore": "and {count} more",
+  "@gwFilesMore": {
+    "description": "Ends a list of file names that goes on: and 3 more files. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "gwKeyBack": "back",
+  "@gwKeyBack": {
+    "description": "The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyDelete": "delete",
+  "@gwKeyDelete": {
+    "description": "The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyDown": "dpad down",
+  "@gwKeyDown": {
+    "description": "The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyEnter": "enter",
+  "@gwKeyEnter": {
+    "description": "The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyEscape": "escape",
+  "@gwKeyEscape": {
+    "description": "The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyForwardDelete": "forward delete",
+  "@gwKeyForwardDelete": {
+    "description": "The phone key 'forward delete', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyHome": "home",
+  "@gwKeyHome": {
+    "description": "The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyLeft": "dpad left",
+  "@gwKeyLeft": {
+    "description": "The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyPageDown": "page down",
+  "@gwKeyPageDown": {
+    "description": "The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyPageUp": "page up",
+  "@gwKeyPageUp": {
+    "description": "The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyRecents": "recents",
+  "@gwKeyRecents": {
+    "description": "The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyRight": "dpad right",
+  "@gwKeyRight": {
+    "description": "The phone key 'dpad right', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyTab": "tab",
+  "@gwKeyTab": {
+    "description": "The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwKeyUp": "dpad up",
+  "@gwKeyUp": {
+    "description": "The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a whole word with 键). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeCancelled": "cancelled",
+  "@gwOutcomeCancelled": {
+    "description": "How a task ended, inside gwStepFinished: cancelled. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeDisconnected": "disconnected",
+  "@gwOutcomeDisconnected": {
+    "description": "How a task ended, inside gwStepFinished: disconnected. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeDone": "done",
+  "@gwOutcomeDone": {
+    "description": "How a task ended, inside gwStepFinished: done. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeExpired": "expired",
+  "@gwOutcomeExpired": {
+    "description": "How a task ended, inside gwStepFinished: expired. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeFailed": "failed",
+  "@gwOutcomeFailed": {
+    "description": "How a task ended, inside gwStepFinished: failed. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeOffline": "offline",
+  "@gwOutcomeOffline": {
+    "description": "How a task ended, inside gwStepFinished: offline. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomePartial": "partial",
+  "@gwOutcomePartial": {
+    "description": "How a task ended, inside gwStepFinished: partial. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeReplaced": "replaced",
+  "@gwOutcomeReplaced": {
+    "description": "How a task ended, inside gwStepFinished: replaced. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwOutcomeStopped": "stopped",
+  "@gwOutcomeStopped": {
+    "description": "How a task ended, inside gwStepFinished: stopped. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusBackground": "{work} · in the background",
+  "@gwStatusBackground": {
+    "description": "A phone's status line: an agent works on a background display; work is \"agent · task\". Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "work": {
+        "type": "String",
+        "example": "Claude Code · Reply to Alex"
+      }
+    }
+  },
+  "gwStatusIdle": "Idle",
+  "@gwStatusIdle": {
+    "description": "A phone's status line: nothing runs on it. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusInControl": "You're in control",
+  "@gwStatusInControl": {
+    "description": "A phone's status line: the person took over. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusInControlPaused": "You're in control · {agent} is paused",
+  "@gwStatusInControlPaused": {
+    "description": "A phone's status line: the person took over and the agent waits. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "gwStatusLocked": "Locked",
+  "@gwStatusLocked": {
+    "description": "A phone's status line: the phone is locked. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusLockedTask": "Locked · unlock to continue {task}",
+  "@gwStatusLockedTask": {
+    "description": "A phone's status line: the phone is locked and a task waits. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "task": {
+        "type": "String",
+        "example": "Reorder lunch"
+      }
+    }
+  },
+  "gwStatusNeedsSetup": "Needs setup",
+  "@gwStatusNeedsSetup": {
+    "description": "A phone's status line in the demo: it is connected but not ready. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusNeedsYou": "Needs you · {title}",
+  "@gwStatusNeedsYou": {
+    "description": "A phone's status line: an agent asked the person to do something (title is its reason). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Sign in to Dinely"
+      }
+    }
+  },
+  "gwStatusOffline": "Offline",
+  "@gwStatusOffline": {
+    "description": "A phone's status line in the sidebar and tiles: the phone is offline. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusOfflineDetail": "Offline · {detail}",
+  "@gwStatusOfflineDetail": {
+    "description": "A phone's status line: offline, with why (from the phone's driver, in English). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "USB debugging is off"
+      }
+    }
+  },
+  "gwStatusReconnecting": "Offline · reconnecting for {task}",
+  "@gwStatusReconnecting": {
+    "description": "A phone's status line: offline while a task waits for it to come back. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "task": {
+        "type": "String",
+        "example": "Reorder lunch"
+      }
+    }
+  },
+  "gwStatusWaiting": "Waiting for you · {title}",
+  "@gwStatusWaiting": {
+    "description": "A phone's status line: an approval waits (title is the approval's, gwAskPay and the like). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Pay: “Place order · $12.80”?"
+      }
+    }
+  },
+  "gwStepAskedTakeOver": "Asked you to take over: {reason}",
+  "@gwStepAskedTakeOver": {
+    "description": "A step: the agent asked the person to do something on the phone; reason is the agent's own words. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "Sign in to Dinely"
+      }
+    }
+  },
+  "gwStepAskedYou": "Asked you: {question}",
+  "@gwStepAskedYou": {
+    "description": "A step: the agent asked the person a question, in quotes. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "question": {
+        "type": "String",
+        "example": "“Is 3pm fine?”"
+      }
+    }
+  },
+  "gwStepBlocked": "Blocked by “{rule}”: {action}",
+  "@gwStepBlocked": {
+    "description": "A step that a policy rule refused; rule is the rule's name (rulePayments and the like). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Payments"
+      },
+      "action": {
+        "type": "String",
+        "example": "tap “Pay”"
+      }
+    }
+  },
+  "gwStepConnected": "Connected to {phone} for “{task}”",
+  "@gwStepConnected": {
+    "description": "A task's first step: the agent connected to the phone for this task. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "task": {
+        "type": "String",
+        "example": "Reorder lunch"
+      }
+    }
+  },
+  "gwStepCopiedFrom": "Copied {count} files from the phone{names}",
+  "@gwStepCopiedFrom": {
+    "description": "A step: the agent copied files from the phone; names is gwFilesList or empty. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      },
+      "names": {
+        "type": "String",
+        "example": ": a.txt, b.png"
+      }
+    }
+  },
+  "gwStepCopiedTo": "Copied {count} files to the phone{names}",
+  "@gwStepCopiedTo": {
+    "description": "A step: the agent copied files to the phone; names is gwFilesList or empty. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      },
+      "names": {
+        "type": "String",
+        "example": ": a.txt, b.png"
+      }
+    }
+  },
+  "gwStepFailed": "Failed: {action}",
+  "@gwStepFailed": {
+    "description": "A step that failed. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "tap “Pay”"
+      }
+    }
+  },
+  "gwStepFinished": "Finished: {outcome}",
+  "@gwStepFinished": {
+    "description": "A task's last step: how the agent said it ended (gwOutcomeDone and the like). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "outcome": {
+        "type": "String",
+        "example": "done"
+      }
+    }
+  },
+  "gwStepListedFolder": "Listed the phone's Pinky folder ({count} files)",
+  "@gwStepListedFolder": {
+    "description": "A step: the agent listed the files in the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "3"
+      }
+    }
+  },
+  "gwStepOutside": "Outside the scope: {action}",
+  "@gwStepOutside": {
+    "description": "A step outside what the person allowed the agent. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "open Northbank"
+      }
+    }
+  },
+  "gwStepUnlocked": "Unlocked from the computer",
+  "@gwStepUnlocked": {
+    "description": "A step: the phone was unlocked from this computer with its saved PIN. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepWaited": "Waited for “{text}”",
+  "@gwStepWaited": {
+    "description": "A step: the agent waited for this text to show on the screen. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "Order placed"
+      }
+    }
+  },
+  "gwStepWaiting": "Waiting for you: {action}",
+  "@gwStepWaiting": {
+    "description": "A step that waits for the person's approval; action is gwDoTap and the like.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "tap “Pay”"
+      }
+    }
+  },
+  "gwStepYouAllowed": "You allowed: {action}",
+  "@gwStepYouAllowed": {
+    "description": "A step of the demo's fake gateway: the person allowed an action. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "pay $12.80"
+      }
+    }
+  },
+  "gwStepYouDenied": "You denied: {action}",
+  "@gwStepYouDenied": {
+    "description": "A step of the demo's fake gateway: the person denied an action. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "send the message"
+      }
+    }
+  },
+  "gwStepYouStopped": "You stopped the task",
+  "@gwStepYouStopped": {
+    "description": "A step of the demo's fake gateway: the person stopped the task. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepYouTookOver": "You took over",
+  "@gwStepYouTookOver": {
+    "description": "A step of the demo's fake gateway: the person took over. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepYourNote": "Your note: {note}",
+  "@gwStepYourNote": {
+    "description": "The second line of a step: the note the person gave with an answer, in quotes. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "note": {
+        "type": "String",
+        "example": "“Say 3pm, not 2pm”"
+      }
+    }
+  },
+  "gwUnlockDetail": "{agent} is waiting for the phone to unlock · {task}",
+  "@gwUnlockDetail": {
+    "description": "The second line of the unlock card. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "task": {
+        "type": "String",
+        "example": "Reorder lunch"
+      }
+    }
+  },
+  "gwUnlockTitle": "Unlock {phone}",
+  "@gwUnlockTitle": {
+    "description": "The title of the card that asks the person to unlock a locked phone an agent waits for. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
   "listMany": "{rest} and {last}",
   "@listMany": {
     "description": "Three or more names in a sentence: rest is the names before the last, joined with listSeparator.",
@@ -87,6 +1063,26 @@
   "listSeparator": ", ",
   "@listSeparator": {
     "description": "Joins the names of a list before its last one (see listMany)."
+  },
+  "menuActivity": "Activity",
+  "@menuActivity": {
+    "description": "Phones menu: opens Activity (⌘1)."
+  },
+  "menuAddPhone": "Add Phone…",
+  "@menuAddPhone": {
+    "description": "Phones menu: opens Add phone (⌘N)."
+  },
+  "menuPhones": "Phones",
+  "@menuPhones": {
+    "description": "The menu bar's menu of the app's pages and Stop all."
+  },
+  "menuSettings": "Settings…",
+  "@menuSettings": {
+    "description": "Phones menu: opens Settings (⌘,)."
+  },
+  "menuStopAll": "Stop All",
+  "@menuStopAll": {
+    "description": "Phones menu: stops every agent on every phone."
   },
   "platformUnlockKeepMac": "Your PIN stays in your Mac's Keychain. Agents never see it.",
   "@platformUnlockKeepMac": {
@@ -256,6 +1252,20 @@
   "@scopeWatchOnly": {
     "description": "A choice of what an agent may do: see the screen, touch nothing."
   },
+  "sentencePair": "{first} {second}",
+  "@sentencePair": {
+    "description": "Joins two sentences in one line (zh: no space after 。).",
+    "placeholders": {
+      "first": {
+        "type": "String",
+        "example": "Codex wants to connect."
+      },
+      "second": {
+        "type": "String",
+        "example": "Asked at 03:51."
+      }
+    }
+  },
   "shotLabel": "Screenshot of {phone}",
   "@shotLabel": {
     "description": "The accessibility label of a step's screenshot.",
@@ -312,6 +1322,140 @@
   "@sidebarStopAll": {
     "description": "The sidebar's emergency button that stops every agent on every phone; its shortcut shows next to it."
   },
+  "stepAllowedNotUsed": "Allowed, but the agent did not come back for it",
+  "@stepAllowedNotUsed": {
+    "description": "The second line of a step the person allowed but the agent never did."
+  },
+  "stepAsked": "Asked: “{reason}”",
+  "@stepAsked": {
+    "description": "The second line of a handoff step: what the agent had asked, in its own words.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "Sign in to Dinely"
+      }
+    }
+  },
+  "stepCodeInternal": "internal",
+  "@stepCodeInternal": {
+    "description": "Why a step failed, inside stepFailedCode: internal."
+  },
+  "stepCodeInvalidArgument": "invalid argument",
+  "@stepCodeInvalidArgument": {
+    "description": "Why a step failed, inside stepFailedCode: invalid argument."
+  },
+  "stepCodeLeaseHeld": "lease held",
+  "@stepCodeLeaseHeld": {
+    "description": "Why a step failed, inside stepFailedCode: lease held."
+  },
+  "stepCodeNotFound": "not found",
+  "@stepCodeNotFound": {
+    "description": "Why a step failed, inside stepFailedCode: not found."
+  },
+  "stepCodeScopeDenied": "scope denied",
+  "@stepCodeScopeDenied": {
+    "description": "Why a step failed, inside stepFailedCode: scope denied."
+  },
+  "stepCodeUnsupported": "unsupported",
+  "@stepCodeUnsupported": {
+    "description": "Why a step failed, inside stepFailedCode: unsupported."
+  },
+  "stepFailedCode": "Failed: {reason}",
+  "@stepFailedCode": {
+    "description": "The second line of a step that failed; reason is stepCodeNotFound and the like.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "not found"
+      }
+    }
+  },
+  "stepMayHaveHappened": "May have happened",
+  "@stepMayHaveHappened": {
+    "description": "The second line of a step whose result is uncertain."
+  },
+  "stepNotDoneInControl": "Not done: you were in control",
+  "@stepNotDoneInControl": {
+    "description": "The second line of a step that never ran while the person was in control."
+  },
+  "stepNotDoneStale": "Not done: the screen changed while it waited",
+  "@stepNotDoneStale": {
+    "description": "The second line of an approved step that never ran because the screen changed."
+  },
+  "stepNotDoneStopped": "Not done: stopped",
+  "@stepNotDoneStopped": {
+    "description": "The second line of a step that never ran because the task was stopped."
+  },
+  "stepNotDoneTookOver": "Not done: you took over",
+  "@stepNotDoneTookOver": {
+    "description": "The second line of a step that never ran because the person took over."
+  },
+  "stepPhoneLocked": "The phone was locked",
+  "@stepPhoneLocked": {
+    "description": "The second line of a step that failed because the phone was locked."
+  },
+  "stepPhoneOffline": "The phone went offline",
+  "@stepPhoneOffline": {
+    "description": "The second line of a step that failed because the phone went offline."
+  },
+  "stepWaiting": "Waiting for you: {action}",
+  "@stepWaiting": {
+    "description": "A task card's step that waits for the person's approval; action is what it would do (gwDoTap and the like).",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "tap “Pay”"
+      }
+    }
+  },
+  "stepYouAgreed": "You agreed: {question}",
+  "@stepYouAgreed": {
+    "description": "A step: the person agreed to the agent's question, in quotes.",
+    "placeholders": {
+      "question": {
+        "type": "String",
+        "example": "“Is 3pm fine?”"
+      }
+    }
+  },
+  "stepYouAnswered": "You answered: {action}",
+  "@stepYouAnswered": {
+    "description": "A step the person answered, while the action runs.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "tap “Pay”"
+      }
+    }
+  },
+  "stepYouDeclined": "You declined",
+  "@stepYouDeclined": {
+    "description": "A step: the person declined what the agent asked them to do (a handoff)."
+  },
+  "stepYouDenied": "You denied: {action}",
+  "@stepYouDenied": {
+    "description": "A step the person denied.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "tap “Pay”"
+      }
+    }
+  },
+  "stepYouHandedBack": "You handed it back",
+  "@stepYouHandedBack": {
+    "description": "A step: the person did what the agent asked and handed the phone back."
+  },
+  "stepYouSaidNo": "You said no: {question}",
+  "@stepYouSaidNo": {
+    "description": "A step: the person said no to the agent's question, in quotes.",
+    "placeholders": {
+      "question": {
+        "type": "String",
+        "example": "“Is 3pm fine?”"
+      }
+    }
+  },
   "timeHours": "{hours}\u00a0h\u00a0{minutes}\u00a0min",
   "@timeHours": {
     "description": "A duration of an hour or more. minutes has two digits. Joined with no-break spaces.",
@@ -347,6 +1491,20 @@
       "seconds": {
         "type": "String",
         "example": "38"
+      }
+    }
+  },
+  "toastCouldNot": "Couldn't {action}: {error}",
+  "@toastCouldNot": {
+    "description": "A toast when a call to the gateway fails: action is a verb phrase such as callTakeOver (zh: 接管), error the gateway's error in English.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "take over"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone is offline"
       }
     }
   }

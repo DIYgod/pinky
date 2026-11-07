@@ -83,6 +83,78 @@ func (msgs Messages) AgentRequestAskedAt(time_ string) string {
 	return Catalog.Format(msgs.locale, "agentRequestAskedAt", map[string]any{"time": time_})
 }
 
+// CallAnswer says "answer the approval"
+// in the language the app shows.
+//
+// Inside toastCouldNot: the person's answer to an approval did not reach
+// the gateway.
+func CallAnswer() string { return In(i18n.Locale()).CallAnswer() }
+
+// CallAnswer says "answer the approval"
+// in the language of msgs.
+//
+// Inside toastCouldNot: the person's answer to an approval did not reach
+// the gateway.
+func (msgs Messages) CallAnswer() string {
+	return Catalog.Format(msgs.locale, "callAnswer", nil)
+}
+
+// CallHandBack says "hand back"
+// in the language the app shows.
+//
+// Inside toastCouldNot: handing a phone back to the agent failed.
+func CallHandBack() string { return In(i18n.Locale()).CallHandBack() }
+
+// CallHandBack says "hand back"
+// in the language of msgs.
+//
+// Inside toastCouldNot: handing a phone back to the agent failed.
+func (msgs Messages) CallHandBack() string {
+	return Catalog.Format(msgs.locale, "callHandBack", nil)
+}
+
+// CallStop says "stop the task"
+// in the language the app shows.
+//
+// Inside toastCouldNot: stopping a task failed.
+func CallStop() string { return In(i18n.Locale()).CallStop() }
+
+// CallStop says "stop the task"
+// in the language of msgs.
+//
+// Inside toastCouldNot: stopping a task failed.
+func (msgs Messages) CallStop() string {
+	return Catalog.Format(msgs.locale, "callStop", nil)
+}
+
+// CallStopAll says "stop all"
+// in the language the app shows.
+//
+// Inside toastCouldNot: Stop all failed.
+func CallStopAll() string { return In(i18n.Locale()).CallStopAll() }
+
+// CallStopAll says "stop all"
+// in the language of msgs.
+//
+// Inside toastCouldNot: Stop all failed.
+func (msgs Messages) CallStopAll() string {
+	return Catalog.Format(msgs.locale, "callStopAll", nil)
+}
+
+// CallTakeOver says "take over"
+// in the language the app shows.
+//
+// Inside toastCouldNot: taking over a phone failed.
+func CallTakeOver() string { return In(i18n.Locale()).CallTakeOver() }
+
+// CallTakeOver says "take over"
+// in the language of msgs.
+//
+// Inside toastCouldNot: taking over a phone failed.
+func (msgs Messages) CallTakeOver() string {
+	return Catalog.Format(msgs.locale, "callTakeOver", nil)
+}
+
 // ConnectionOffline says "{platform} · offline"
 // in the language the app shows.
 //
@@ -159,6 +231,1882 @@ func (msgs Messages) DayYesterday() string {
 	return Catalog.Format(msgs.locale, "dayYesterday", nil)
 }
 
+// GwAgentGives says " Allowing gives it {scope} access."
+// in the language the app shows.
+//
+// Follows gwAgentWants: what the agent may do if allowed; scope is
+// scopeLineEverything and the like (zh:
+// 可以使用除已屏蔽应用外的所有应用). Shown only in other
+// languages; in English the gateway's own words show.
+func GwAgentGives(scope string) string { return In(i18n.Locale()).GwAgentGives(scope) }
+
+// GwAgentGives says " Allowing gives it {scope} access."
+// in the language of msgs.
+//
+// Follows gwAgentWants: what the agent may do if allowed; scope is
+// scopeLineEverything and the like (zh:
+// 可以使用除已屏蔽应用外的所有应用). Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwAgentGives(scope string) string {
+	return Catalog.Format(msgs.locale, "gwAgentGives", map[string]any{"scope": scope})
+}
+
+// GwAgentWants says "{agent} wants to connect for “{task}”."
+// in the language the app shows.
+//
+// An agent's first-connection request: who asks, for which task. Shown only
+// in other languages; in English the gateway's own words show.
+func GwAgentWants(agent string, task string) string {
+	return In(i18n.Locale()).GwAgentWants(agent, task)
+}
+
+// GwAgentWants says "{agent} wants to connect for “{task}”."
+// in the language of msgs.
+//
+// An agent's first-connection request: who asks, for which task. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwAgentWants(agent string, task string) string {
+	return Catalog.Format(msgs.locale, "gwAgentWants", map[string]any{"agent": agent, "task": task})
+}
+
+// GwAskAgent says "Let {agent} use your phones?"
+// in the language the app shows.
+//
+// The title of an agent's first-connection request. Shown only in other
+// languages; in English the gateway's own words show.
+func GwAskAgent(agent string) string { return In(i18n.Locale()).GwAskAgent(agent) }
+
+// GwAskAgent says "Let {agent} use your phones?"
+// in the language of msgs.
+//
+// The title of an agent's first-connection request. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwAskAgent(agent string) string {
+	return Catalog.Format(msgs.locale, "gwAskAgent", map[string]any{"agent": agent})
+}
+
+// GwAskChange says "Change “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: change the setting with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func GwAskChange(label string) string { return In(i18n.Locale()).GwAskChange(label) }
+
+// GwAskChange says "Change “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: change the setting with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwAskChange(label string) string {
+	return Catalog.Format(msgs.locale, "gwAskChange", map[string]any{"label": label})
+}
+
+// GwAskLongPress says "Long-press “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: long-press the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func GwAskLongPress(label string) string { return In(i18n.Locale()).GwAskLongPress(label) }
+
+// GwAskLongPress says "Long-press “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: long-press the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwAskLongPress(label string) string {
+	return Catalog.Format(msgs.locale, "gwAskLongPress", map[string]any{"label": label})
+}
+
+// GwAskOpen says "Open {app}?"
+// in the language the app shows.
+//
+// An approval's title: open this app. Shown only in other languages; in
+// English the gateway's own words show.
+func GwAskOpen(app string) string { return In(i18n.Locale()).GwAskOpen(app) }
+
+// GwAskOpen says "Open {app}?"
+// in the language of msgs.
+//
+// An approval's title: open this app. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwAskOpen(app string) string {
+	return Catalog.Format(msgs.locale, "gwAskOpen", map[string]any{"app": app})
+}
+
+// GwAskPay says "Pay: “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: pay with the button that has this label. Shown only
+// in other languages; in English the gateway's own words show.
+func GwAskPay(label string) string { return In(i18n.Locale()).GwAskPay(label) }
+
+// GwAskPay says "Pay: “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: pay with the button that has this label. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwAskPay(label string) string {
+	return Catalog.Format(msgs.locale, "gwAskPay", map[string]any{"label": label})
+}
+
+// GwAskPressIn says "Press {key} in “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: press a key (gwKeyEnter and the like) in a field.
+// Shown only in other languages; in English the gateway's own words show.
+func GwAskPressIn(key string, label string) string { return In(i18n.Locale()).GwAskPressIn(key, label) }
+
+// GwAskPressIn says "Press {key} in “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: press a key (gwKeyEnter and the like) in a field.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwAskPressIn(key string, label string) string {
+	return Catalog.Format(msgs.locale, "gwAskPressIn", map[string]any{"key": key, "label": label})
+}
+
+// GwAskQuestion says "{action}?"
+// in the language the app shows.
+//
+// An approval's title made of what the step would do (gwDoTap and the
+// like), as a question. Shown only in other languages; in English the
+// gateway's own words show.
+func GwAskQuestion(action string) string { return In(i18n.Locale()).GwAskQuestion(action) }
+
+// GwAskQuestion says "{action}?"
+// in the language of msgs.
+//
+// An approval's title made of what the step would do (gwDoTap and the
+// like), as a question. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwAskQuestion(action string) string {
+	return Catalog.Format(msgs.locale, "gwAskQuestion", map[string]any{"action": action})
+}
+
+// GwAskSend says "Send “{text}”?"
+// in the language the app shows.
+//
+// An approval's title: send this message. Shown only in other languages; in
+// English the gateway's own words show.
+func GwAskSend(text string) string { return In(i18n.Locale()).GwAskSend(text) }
+
+// GwAskSend says "Send “{text}”?"
+// in the language of msgs.
+//
+// An approval's title: send this message. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwAskSend(text string) string {
+	return Catalog.Format(msgs.locale, "gwAskSend", map[string]any{"text": text})
+}
+
+// GwAskSendMessage says "Send the message?"
+// in the language the app shows.
+//
+// An approval's title: send a message whose text is unknown. Shown only in
+// other languages; in English the gateway's own words show.
+func GwAskSendMessage() string { return In(i18n.Locale()).GwAskSendMessage() }
+
+// GwAskSendMessage says "Send the message?"
+// in the language of msgs.
+//
+// An approval's title: send a message whose text is unknown. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwAskSendMessage() string {
+	return Catalog.Format(msgs.locale, "gwAskSendMessage", nil)
+}
+
+// GwAskSwipe says "Swipe “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: swipe in the element with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func GwAskSwipe(label string) string { return In(i18n.Locale()).GwAskSwipe(label) }
+
+// GwAskSwipe says "Swipe “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: swipe in the element with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwAskSwipe(label string) string {
+	return Catalog.Format(msgs.locale, "gwAskSwipe", map[string]any{"label": label})
+}
+
+// GwAskTap says "Tap “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: tap the element with this label. Shown only in other
+// languages; in English the gateway's own words show.
+func GwAskTap(label string) string { return In(i18n.Locale()).GwAskTap(label) }
+
+// GwAskTap says "Tap “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: tap the element with this label. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwAskTap(label string) string {
+	return Catalog.Format(msgs.locale, "gwAskTap", map[string]any{"label": label})
+}
+
+// GwAskTypeInto says "Type into “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: type into the field with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func GwAskTypeInto(label string) string { return In(i18n.Locale()).GwAskTypeInto(label) }
+
+// GwAskTypeInto says "Type into “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: type into the field with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwAskTypeInto(label string) string {
+	return Catalog.Format(msgs.locale, "gwAskTypeInto", map[string]any{"label": label})
+}
+
+// GwDidLongPress says "Long-pressed “{label}”"
+// in the language the app shows.
+//
+// A step: the agent long-pressed the element with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDidLongPress(label string) string { return In(i18n.Locale()).GwDidLongPress(label) }
+
+// GwDidLongPress says "Long-pressed “{label}”"
+// in the language of msgs.
+//
+// A step: the agent long-pressed the element with this label. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidLongPress(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidLongPress", map[string]any{"label": label})
+}
+
+// GwDidLongPressAt says "Long-pressed at {x},{y}"
+// in the language the app shows.
+//
+// A step: the agent long-pressed at a point of the screen. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDidLongPressAt(x string, y string) string { return In(i18n.Locale()).GwDidLongPressAt(x, y) }
+
+// GwDidLongPressAt says "Long-pressed at {x},{y}"
+// in the language of msgs.
+//
+// A step: the agent long-pressed at a point of the screen. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidLongPressAt(x string, y string) string {
+	return Catalog.Format(msgs.locale, "gwDidLongPressAt", map[string]any{"x": x, "y": y})
+}
+
+// GwDidLongPressBare says "Long-pressed"
+// in the language the app shows.
+//
+// A step: the agent long-pressed, without a known place. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDidLongPressBare() string { return In(i18n.Locale()).GwDidLongPressBare() }
+
+// GwDidLongPressBare says "Long-pressed"
+// in the language of msgs.
+//
+// A step: the agent long-pressed, without a known place. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidLongPressBare() string {
+	return Catalog.Format(msgs.locale, "gwDidLongPressBare", nil)
+}
+
+// GwDidOpen says "Opened {app}"
+// in the language the app shows.
+//
+// A step: the agent opened this app. Shown only in other languages; in
+// English the gateway's own words show.
+func GwDidOpen(app string) string { return In(i18n.Locale()).GwDidOpen(app) }
+
+// GwDidOpen says "Opened {app}"
+// in the language of msgs.
+//
+// A step: the agent opened this app. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDidOpen(app string) string {
+	return Catalog.Format(msgs.locale, "gwDidOpen", map[string]any{"app": app})
+}
+
+// GwDidPress says "Pressed {key}"
+// in the language the app shows.
+//
+// A step: the agent pressed a key; key is gwKeyHome and the like. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDidPress(key string) string { return In(i18n.Locale()).GwDidPress(key) }
+
+// GwDidPress says "Pressed {key}"
+// in the language of msgs.
+//
+// A step: the agent pressed a key; key is gwKeyHome and the like. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidPress(key string) string {
+	return Catalog.Format(msgs.locale, "gwDidPress", map[string]any{"key": key})
+}
+
+// GwDidSwipe says "Swiped {direction}"
+// in the language the app shows.
+//
+// A step: the agent swiped; direction is gwDirUp and the like. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDidSwipe(direction string) string { return In(i18n.Locale()).GwDidSwipe(direction) }
+
+// GwDidSwipe says "Swiped {direction}"
+// in the language of msgs.
+//
+// A step: the agent swiped; direction is gwDirUp and the like. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidSwipe(direction string) string {
+	return Catalog.Format(msgs.locale, "gwDidSwipe", map[string]any{"direction": direction})
+}
+
+// GwDidSwipeFromTo says "Swiped from {fromX},{fromY} to {toX},{toY}"
+// in the language the app shows.
+//
+// A step: the agent swiped between two points, in pixels. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDidSwipeFromTo(fromX string, fromY string, toX string, toY string) string {
+	return In(i18n.Locale()).GwDidSwipeFromTo(fromX, fromY, toX, toY)
+}
+
+// GwDidSwipeFromTo says "Swiped from {fromX},{fromY} to {toX},{toY}"
+// in the language of msgs.
+//
+// A step: the agent swiped between two points, in pixels. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidSwipeFromTo(fromX string, fromY string, toX string, toY string) string {
+	return Catalog.Format(msgs.locale, "gwDidSwipeFromTo", map[string]any{"fromX": fromX, "fromY": fromY, "toX": toX, "toY": toY})
+}
+
+// GwDidSwipeIn says "Swiped {direction} in “{label}”"
+// in the language the app shows.
+//
+// A step: the agent swiped inside the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDidSwipeIn(direction string, label string) string {
+	return In(i18n.Locale()).GwDidSwipeIn(direction, label)
+}
+
+// GwDidSwipeIn says "Swiped {direction} in “{label}”"
+// in the language of msgs.
+//
+// A step: the agent swiped inside the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidSwipeIn(direction string, label string) string {
+	return Catalog.Format(msgs.locale, "gwDidSwipeIn", map[string]any{"direction": direction, "label": label})
+}
+
+// GwDidTap says "Tapped “{label}”"
+// in the language the app shows.
+//
+// A step: the agent tapped the element with this label (read from the
+// phone). Shown only in other languages; in English the gateway's own words
+// show.
+func GwDidTap(label string) string { return In(i18n.Locale()).GwDidTap(label) }
+
+// GwDidTap says "Tapped “{label}”"
+// in the language of msgs.
+//
+// A step: the agent tapped the element with this label (read from the
+// phone). Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwDidTap(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidTap", map[string]any{"label": label})
+}
+
+// GwDidTapAt says "Tapped at {x},{y}"
+// in the language the app shows.
+//
+// A step: the agent tapped at a point of the screen, in pixels. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDidTapAt(x string, y string) string { return In(i18n.Locale()).GwDidTapAt(x, y) }
+
+// GwDidTapAt says "Tapped at {x},{y}"
+// in the language of msgs.
+//
+// A step: the agent tapped at a point of the screen, in pixels. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidTapAt(x string, y string) string {
+	return Catalog.Format(msgs.locale, "gwDidTapAt", map[string]any{"x": x, "y": y})
+}
+
+// GwDidTapBare says "Tapped"
+// in the language the app shows.
+//
+// A step: the agent tapped, without a known place. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDidTapBare() string { return In(i18n.Locale()).GwDidTapBare() }
+
+// GwDidTapBare says "Tapped"
+// in the language of msgs.
+//
+// A step: the agent tapped, without a known place. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDidTapBare() string {
+	return Catalog.Format(msgs.locale, "gwDidTapBare", nil)
+}
+
+// GwDidType says "Typed “{text}”"
+// in the language the app shows.
+//
+// A step: the agent typed this text. Shown only in other languages; in
+// English the gateway's own words show.
+func GwDidType(text string) string { return In(i18n.Locale()).GwDidType(text) }
+
+// GwDidType says "Typed “{text}”"
+// in the language of msgs.
+//
+// A step: the agent typed this text. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDidType(text string) string {
+	return Catalog.Format(msgs.locale, "gwDidType", map[string]any{"text": text})
+}
+
+// GwDidTypeInto says "Typed “{text}” into “{label}”"
+// in the language the app shows.
+//
+// A step: the agent typed text into the field with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDidTypeInto(text string, label string) string {
+	return In(i18n.Locale()).GwDidTypeInto(text, label)
+}
+
+// GwDidTypeInto says "Typed “{text}” into “{label}”"
+// in the language of msgs.
+//
+// A step: the agent typed text into the field with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidTypeInto(text string, label string) string {
+	return Catalog.Format(msgs.locale, "gwDidTypeInto", map[string]any{"text": text, "label": label})
+}
+
+// GwDidTypeIntoSubmit says "Typed “{text}” into “{label}” and submitted"
+// in the language the app shows.
+//
+// A step: the agent typed text into a field and pressed Enter. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDidTypeIntoSubmit(text string, label string) string {
+	return In(i18n.Locale()).GwDidTypeIntoSubmit(text, label)
+}
+
+// GwDidTypeIntoSubmit says "Typed “{text}” into “{label}” and submitted"
+// in the language of msgs.
+//
+// A step: the agent typed text into a field and pressed Enter. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidTypeIntoSubmit(text string, label string) string {
+	return Catalog.Format(msgs.locale, "gwDidTypeIntoSubmit", map[string]any{"text": text, "label": label})
+}
+
+// GwDidTypeSubmit says "Typed “{text}” and submitted"
+// in the language the app shows.
+//
+// A step: the agent typed text and pressed Enter. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDidTypeSubmit(text string) string { return In(i18n.Locale()).GwDidTypeSubmit(text) }
+
+// GwDidTypeSubmit says "Typed “{text}” and submitted"
+// in the language of msgs.
+//
+// A step: the agent typed text and pressed Enter. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDidTypeSubmit(text string) string {
+	return Catalog.Format(msgs.locale, "gwDidTypeSubmit", map[string]any{"text": text})
+}
+
+// GwDirDown says "down"
+// in the language the app shows.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: down. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDirDown() string { return In(i18n.Locale()).GwDirDown() }
+
+// GwDirDown says "down"
+// in the language of msgs.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: down. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDirDown() string {
+	return Catalog.Format(msgs.locale, "gwDirDown", nil)
+}
+
+// GwDirLeft says "left"
+// in the language the app shows.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: left. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDirLeft() string { return In(i18n.Locale()).GwDirLeft() }
+
+// GwDirLeft says "left"
+// in the language of msgs.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: left. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDirLeft() string {
+	return Catalog.Format(msgs.locale, "gwDirLeft", nil)
+}
+
+// GwDirRight says "right"
+// in the language the app shows.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: right. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDirRight() string { return In(i18n.Locale()).GwDirRight() }
+
+// GwDirRight says "right"
+// in the language of msgs.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: right. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDirRight() string {
+	return Catalog.Format(msgs.locale, "gwDirRight", nil)
+}
+
+// GwDirUp says "up"
+// in the language the app shows.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: up. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDirUp() string { return In(i18n.Locale()).GwDirUp() }
+
+// GwDirUp says "up"
+// in the language of msgs.
+//
+// A swipe's direction inside gwDidSwipe and gwDoSwipe: up. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDirUp() string {
+	return Catalog.Format(msgs.locale, "gwDirUp", nil)
+}
+
+// GwDoCopyFile says "copy “{path}” to {phone}"
+// in the language the app shows.
+//
+// What a step asked for: copy a file of the computer into the phone's Pinky
+// folder. Shown only in other languages; in English the gateway's own words
+// show.
+func GwDoCopyFile(path string, phone string) string {
+	return In(i18n.Locale()).GwDoCopyFile(path, phone)
+}
+
+// GwDoCopyFile says "copy “{path}” to {phone}"
+// in the language of msgs.
+//
+// What a step asked for: copy a file of the computer into the phone's Pinky
+// folder. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwDoCopyFile(path string, phone string) string {
+	return Catalog.Format(msgs.locale, "gwDoCopyFile", map[string]any{"path": path, "phone": phone})
+}
+
+// GwDoCopyFiles says "copy {count} files to {phone}"
+// in the language the app shows.
+//
+// What a step asked for: copy several files into the phone's Pinky folder.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoCopyFiles(count string, phone string) string {
+	return In(i18n.Locale()).GwDoCopyFiles(count, phone)
+}
+
+// GwDoCopyFiles says "copy {count} files to {phone}"
+// in the language of msgs.
+//
+// What a step asked for: copy several files into the phone's Pinky folder.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoCopyFiles(count string, phone string) string {
+	return Catalog.Format(msgs.locale, "gwDoCopyFiles", map[string]any{"count": count, "phone": phone})
+}
+
+// GwDoCopyFromPhone says "copy from the phone"
+// in the language the app shows.
+//
+// What a step tried: copy files from the phone to the computer. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoCopyFromPhone() string { return In(i18n.Locale()).GwDoCopyFromPhone() }
+
+// GwDoCopyFromPhone says "copy from the phone"
+// in the language of msgs.
+//
+// What a step tried: copy files from the phone to the computer. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoCopyFromPhone() string {
+	return Catalog.Format(msgs.locale, "gwDoCopyFromPhone", nil)
+}
+
+// GwDoCopyToPhone says "copy to the phone"
+// in the language the app shows.
+//
+// What a step tried: copy files from the computer to the phone. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoCopyToPhone() string { return In(i18n.Locale()).GwDoCopyToPhone() }
+
+// GwDoCopyToPhone says "copy to the phone"
+// in the language of msgs.
+//
+// What a step tried: copy files from the computer to the phone. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoCopyToPhone() string {
+	return Catalog.Format(msgs.locale, "gwDoCopyToPhone", nil)
+}
+
+// GwDoListFolder says "list the phone's Pinky folder"
+// in the language the app shows.
+//
+// What a step tried: list the files in the phone's Pinky folder. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoListFolder() string { return In(i18n.Locale()).GwDoListFolder() }
+
+// GwDoListFolder says "list the phone's Pinky folder"
+// in the language of msgs.
+//
+// What a step tried: list the files in the phone's Pinky folder. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoListFolder() string {
+	return Catalog.Format(msgs.locale, "gwDoListFolder", nil)
+}
+
+// GwDoLongPress says "long-press “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: long-press the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoLongPress(label string) string { return In(i18n.Locale()).GwDoLongPress(label) }
+
+// GwDoLongPress says "long-press “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: long-press the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoLongPress(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoLongPress", map[string]any{"label": label})
+}
+
+// GwDoLongPressAt says "long-press at {x},{y}"
+// in the language the app shows.
+//
+// What a step asked for: long-press at a point of the screen. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDoLongPressAt(x string, y string) string { return In(i18n.Locale()).GwDoLongPressAt(x, y) }
+
+// GwDoLongPressAt says "long-press at {x},{y}"
+// in the language of msgs.
+//
+// What a step asked for: long-press at a point of the screen. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoLongPressAt(x string, y string) string {
+	return Catalog.Format(msgs.locale, "gwDoLongPressAt", map[string]any{"x": x, "y": y})
+}
+
+// GwDoLongPressBare says "long-press"
+// in the language the app shows.
+//
+// What a step asked for: a long-press without a known place. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDoLongPressBare() string { return In(i18n.Locale()).GwDoLongPressBare() }
+
+// GwDoLongPressBare says "long-press"
+// in the language of msgs.
+//
+// What a step asked for: a long-press without a known place. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoLongPressBare() string {
+	return Catalog.Format(msgs.locale, "gwDoLongPressBare", nil)
+}
+
+// GwDoOpen says "open {app}"
+// in the language the app shows.
+//
+// What a step asked for: open this app. Shown only in other languages; in
+// English the gateway's own words show.
+func GwDoOpen(app string) string { return In(i18n.Locale()).GwDoOpen(app) }
+
+// GwDoOpen says "open {app}"
+// in the language of msgs.
+//
+// What a step asked for: open this app. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDoOpen(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoOpen", map[string]any{"app": app})
+}
+
+// GwDoPress says "press {key}"
+// in the language the app shows.
+//
+// What a step asked for: press a key; key is gwKeyHome and the like. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoPress(key string) string { return In(i18n.Locale()).GwDoPress(key) }
+
+// GwDoPress says "press {key}"
+// in the language of msgs.
+//
+// What a step asked for: press a key; key is gwKeyHome and the like. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoPress(key string) string {
+	return Catalog.Format(msgs.locale, "gwDoPress", map[string]any{"key": key})
+}
+
+// GwDoSwipe says "swipe {direction}"
+// in the language the app shows.
+//
+// What a step asked for: a swipe; direction is gwDirUp and the like. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoSwipe(direction string) string { return In(i18n.Locale()).GwDoSwipe(direction) }
+
+// GwDoSwipe says "swipe {direction}"
+// in the language of msgs.
+//
+// What a step asked for: a swipe; direction is gwDirUp and the like. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoSwipe(direction string) string {
+	return Catalog.Format(msgs.locale, "gwDoSwipe", map[string]any{"direction": direction})
+}
+
+// GwDoSwipeFromTo says "swipe from {fromX},{fromY} to {toX},{toY}"
+// in the language the app shows.
+//
+// What a step asked for: a swipe between two points. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoSwipeFromTo(fromX string, fromY string, toX string, toY string) string {
+	return In(i18n.Locale()).GwDoSwipeFromTo(fromX, fromY, toX, toY)
+}
+
+// GwDoSwipeFromTo says "swipe from {fromX},{fromY} to {toX},{toY}"
+// in the language of msgs.
+//
+// What a step asked for: a swipe between two points. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoSwipeFromTo(fromX string, fromY string, toX string, toY string) string {
+	return Catalog.Format(msgs.locale, "gwDoSwipeFromTo", map[string]any{"fromX": fromX, "fromY": fromY, "toX": toX, "toY": toY})
+}
+
+// GwDoSwipeIn says "swipe {direction} in “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: a swipe inside an element. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoSwipeIn(direction string, label string) string {
+	return In(i18n.Locale()).GwDoSwipeIn(direction, label)
+}
+
+// GwDoSwipeIn says "swipe {direction} in “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: a swipe inside an element. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoSwipeIn(direction string, label string) string {
+	return Catalog.Format(msgs.locale, "gwDoSwipeIn", map[string]any{"direction": direction, "label": label})
+}
+
+// GwDoTap says "tap “{label}”"
+// in the language the app shows.
+//
+// What a step asked for or would have done, after "Waiting for you: " and
+// the like: tap the element with this label. Shown only in other languages;
+// in English the gateway's own words show.
+func GwDoTap(label string) string { return In(i18n.Locale()).GwDoTap(label) }
+
+// GwDoTap says "tap “{label}”"
+// in the language of msgs.
+//
+// What a step asked for or would have done, after "Waiting for you: " and
+// the like: tap the element with this label. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwDoTap(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoTap", map[string]any{"label": label})
+}
+
+// GwDoTapAt says "tap at {x},{y}"
+// in the language the app shows.
+//
+// What a step asked for: tap at a point of the screen. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoTapAt(x string, y string) string { return In(i18n.Locale()).GwDoTapAt(x, y) }
+
+// GwDoTapAt says "tap at {x},{y}"
+// in the language of msgs.
+//
+// What a step asked for: tap at a point of the screen. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTapAt(x string, y string) string {
+	return Catalog.Format(msgs.locale, "gwDoTapAt", map[string]any{"x": x, "y": y})
+}
+
+// GwDoTapBare says "tap"
+// in the language the app shows.
+//
+// What a step asked for: a tap without a known place. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoTapBare() string { return In(i18n.Locale()).GwDoTapBare() }
+
+// GwDoTapBare says "tap"
+// in the language of msgs.
+//
+// What a step asked for: a tap without a known place. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTapBare() string {
+	return Catalog.Format(msgs.locale, "gwDoTapBare", nil)
+}
+
+// GwDoType says "type “{text}”"
+// in the language the app shows.
+//
+// What a step asked for: type this text. Shown only in other languages; in
+// English the gateway's own words show.
+func GwDoType(text string) string { return In(i18n.Locale()).GwDoType(text) }
+
+// GwDoType says "type “{text}”"
+// in the language of msgs.
+//
+// What a step asked for: type this text. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDoType(text string) string {
+	return Catalog.Format(msgs.locale, "gwDoType", map[string]any{"text": text})
+}
+
+// GwDoTypeInto says "type “{text}” into “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: type text into a field. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoTypeInto(text string, label string) string {
+	return In(i18n.Locale()).GwDoTypeInto(text, label)
+}
+
+// GwDoTypeInto says "type “{text}” into “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: type text into a field. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTypeInto(text string, label string) string {
+	return Catalog.Format(msgs.locale, "gwDoTypeInto", map[string]any{"text": text, "label": label})
+}
+
+// GwDoTypeIntoSubmit says "type “{text}” into “{label}” and submit"
+// in the language the app shows.
+//
+// What a step asked for: type text into a field and press Enter. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoTypeIntoSubmit(text string, label string) string {
+	return In(i18n.Locale()).GwDoTypeIntoSubmit(text, label)
+}
+
+// GwDoTypeIntoSubmit says "type “{text}” into “{label}” and submit"
+// in the language of msgs.
+//
+// What a step asked for: type text into a field and press Enter. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTypeIntoSubmit(text string, label string) string {
+	return Catalog.Format(msgs.locale, "gwDoTypeIntoSubmit", map[string]any{"text": text, "label": label})
+}
+
+// GwDoTypeSubmit says "type “{text}” and submit"
+// in the language the app shows.
+//
+// What a step asked for: type text and press Enter. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoTypeSubmit(text string) string { return In(i18n.Locale()).GwDoTypeSubmit(text) }
+
+// GwDoTypeSubmit says "type “{text}” and submit"
+// in the language of msgs.
+//
+// What a step asked for: type text and press Enter. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTypeSubmit(text string) string {
+	return Catalog.Format(msgs.locale, "gwDoTypeSubmit", map[string]any{"text": text})
+}
+
+// GwFilesDetail says "{agent} · into the phone's Pinky folder{names}"
+// in the language the app shows.
+//
+// The second line of an approval to copy files to the phone; names is
+// gwFilesList or empty. Shown only in other languages; in English the
+// gateway's own words show.
+func GwFilesDetail(agent string, names string) string {
+	return In(i18n.Locale()).GwFilesDetail(agent, names)
+}
+
+// GwFilesDetail says "{agent} · into the phone's Pinky folder{names}"
+// in the language of msgs.
+//
+// The second line of an approval to copy files to the phone; names is
+// gwFilesList or empty. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwFilesDetail(agent string, names string) string {
+	return Catalog.Format(msgs.locale, "gwFilesDetail", map[string]any{"agent": agent, "names": names})
+}
+
+// GwFilesList says ": {names}"
+// in the language the app shows.
+//
+// Lists file names after a files step or approval.
+func GwFilesList(names string) string { return In(i18n.Locale()).GwFilesList(names) }
+
+// GwFilesList says ": {names}"
+// in the language of msgs.
+//
+// Lists file names after a files step or approval.
+func (msgs Messages) GwFilesList(names string) string {
+	return Catalog.Format(msgs.locale, "gwFilesList", map[string]any{"names": names})
+}
+
+// GwFilesMore says "and {count} more"
+// in the language the app shows.
+//
+// Ends a list of file names that goes on: and 3 more files. Shown only in
+// other languages; in English the gateway's own words show.
+func GwFilesMore(count string) string { return In(i18n.Locale()).GwFilesMore(count) }
+
+// GwFilesMore says "and {count} more"
+// in the language of msgs.
+//
+// Ends a list of file names that goes on: and 3 more files. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwFilesMore(count string) string {
+	return Catalog.Format(msgs.locale, "gwFilesMore", map[string]any{"count": count})
+}
+
+// GwKeyBack says "back"
+// in the language the app shows.
+//
+// The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
+// a whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func GwKeyBack() string { return In(i18n.Locale()).GwKeyBack() }
+
+// GwKeyBack says "back"
+// in the language of msgs.
+//
+// The phone key 'back', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
+// a whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwKeyBack() string {
+	return Catalog.Format(msgs.locale, "gwKeyBack", nil)
+}
+
+// GwKeyDelete says "delete"
+// in the language the app shows.
+//
+// The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyDelete() string { return In(i18n.Locale()).GwKeyDelete() }
+
+// GwKeyDelete says "delete"
+// in the language of msgs.
+//
+// The phone key 'delete', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyDelete() string {
+	return Catalog.Format(msgs.locale, "gwKeyDelete", nil)
+}
+
+// GwKeyDown says "dpad down"
+// in the language the app shows.
+//
+// The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyDown() string { return In(i18n.Locale()).GwKeyDown() }
+
+// GwKeyDown says "dpad down"
+// in the language of msgs.
+//
+// The phone key 'dpad down', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyDown() string {
+	return Catalog.Format(msgs.locale, "gwKeyDown", nil)
+}
+
+// GwKeyEnter says "enter"
+// in the language the app shows.
+//
+// The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
+// a whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func GwKeyEnter() string { return In(i18n.Locale()).GwKeyEnter() }
+
+// GwKeyEnter says "enter"
+// in the language of msgs.
+//
+// The phone key 'enter', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
+// a whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwKeyEnter() string {
+	return Catalog.Format(msgs.locale, "gwKeyEnter", nil)
+}
+
+// GwKeyEscape says "escape"
+// in the language the app shows.
+//
+// The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyEscape() string { return In(i18n.Locale()).GwKeyEscape() }
+
+// GwKeyEscape says "escape"
+// in the language of msgs.
+//
+// The phone key 'escape', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyEscape() string {
+	return Catalog.Format(msgs.locale, "gwKeyEscape", nil)
+}
+
+// GwKeyForwardDelete says "forward delete"
+// in the language the app shows.
+//
+// The phone key 'forward delete', inside gwDidPress, gwDoPress and
+// gwAskPressIn (zh: a whole word with 键). Shown only in other languages;
+// in English the gateway's own words show.
+func GwKeyForwardDelete() string { return In(i18n.Locale()).GwKeyForwardDelete() }
+
+// GwKeyForwardDelete says "forward delete"
+// in the language of msgs.
+//
+// The phone key 'forward delete', inside gwDidPress, gwDoPress and
+// gwAskPressIn (zh: a whole word with 键). Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwKeyForwardDelete() string {
+	return Catalog.Format(msgs.locale, "gwKeyForwardDelete", nil)
+}
+
+// GwKeyHome says "home"
+// in the language the app shows.
+//
+// The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
+// a whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func GwKeyHome() string { return In(i18n.Locale()).GwKeyHome() }
+
+// GwKeyHome says "home"
+// in the language of msgs.
+//
+// The phone key 'home', inside gwDidPress, gwDoPress and gwAskPressIn (zh:
+// a whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwKeyHome() string {
+	return Catalog.Format(msgs.locale, "gwKeyHome", nil)
+}
+
+// GwKeyLeft says "dpad left"
+// in the language the app shows.
+//
+// The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyLeft() string { return In(i18n.Locale()).GwKeyLeft() }
+
+// GwKeyLeft says "dpad left"
+// in the language of msgs.
+//
+// The phone key 'dpad left', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyLeft() string {
+	return Catalog.Format(msgs.locale, "gwKeyLeft", nil)
+}
+
+// GwKeyPageDown says "page down"
+// in the language the app shows.
+//
+// The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyPageDown() string { return In(i18n.Locale()).GwKeyPageDown() }
+
+// GwKeyPageDown says "page down"
+// in the language of msgs.
+//
+// The phone key 'page down', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyPageDown() string {
+	return Catalog.Format(msgs.locale, "gwKeyPageDown", nil)
+}
+
+// GwKeyPageUp says "page up"
+// in the language the app shows.
+//
+// The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyPageUp() string { return In(i18n.Locale()).GwKeyPageUp() }
+
+// GwKeyPageUp says "page up"
+// in the language of msgs.
+//
+// The phone key 'page up', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyPageUp() string {
+	return Catalog.Format(msgs.locale, "gwKeyPageUp", nil)
+}
+
+// GwKeyRecents says "recents"
+// in the language the app shows.
+//
+// The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyRecents() string { return In(i18n.Locale()).GwKeyRecents() }
+
+// GwKeyRecents says "recents"
+// in the language of msgs.
+//
+// The phone key 'recents', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyRecents() string {
+	return Catalog.Format(msgs.locale, "gwKeyRecents", nil)
+}
+
+// GwKeyRight says "dpad right"
+// in the language the app shows.
+//
+// The phone key 'dpad right', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyRight() string { return In(i18n.Locale()).GwKeyRight() }
+
+// GwKeyRight says "dpad right"
+// in the language of msgs.
+//
+// The phone key 'dpad right', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyRight() string {
+	return Catalog.Format(msgs.locale, "gwKeyRight", nil)
+}
+
+// GwKeyTab says "tab"
+// in the language the app shows.
+//
+// The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a
+// whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func GwKeyTab() string { return In(i18n.Locale()).GwKeyTab() }
+
+// GwKeyTab says "tab"
+// in the language of msgs.
+//
+// The phone key 'tab', inside gwDidPress, gwDoPress and gwAskPressIn (zh: a
+// whole word with 键). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwKeyTab() string {
+	return Catalog.Format(msgs.locale, "gwKeyTab", nil)
+}
+
+// GwKeyUp says "dpad up"
+// in the language the app shows.
+//
+// The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func GwKeyUp() string { return In(i18n.Locale()).GwKeyUp() }
+
+// GwKeyUp says "dpad up"
+// in the language of msgs.
+//
+// The phone key 'dpad up', inside gwDidPress, gwDoPress and gwAskPressIn
+// (zh: a whole word with 键). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwKeyUp() string {
+	return Catalog.Format(msgs.locale, "gwKeyUp", nil)
+}
+
+// GwOutcomeCancelled says "cancelled"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: cancelled. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomeCancelled() string { return In(i18n.Locale()).GwOutcomeCancelled() }
+
+// GwOutcomeCancelled says "cancelled"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: cancelled. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeCancelled() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeCancelled", nil)
+}
+
+// GwOutcomeDisconnected says "disconnected"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: disconnected. Shown only in
+// other languages; in English the gateway's own words show.
+func GwOutcomeDisconnected() string { return In(i18n.Locale()).GwOutcomeDisconnected() }
+
+// GwOutcomeDisconnected says "disconnected"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: disconnected. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeDisconnected() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeDisconnected", nil)
+}
+
+// GwOutcomeDone says "done"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: done. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomeDone() string { return In(i18n.Locale()).GwOutcomeDone() }
+
+// GwOutcomeDone says "done"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: done. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeDone() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeDone", nil)
+}
+
+// GwOutcomeExpired says "expired"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: expired. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomeExpired() string { return In(i18n.Locale()).GwOutcomeExpired() }
+
+// GwOutcomeExpired says "expired"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: expired. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeExpired() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeExpired", nil)
+}
+
+// GwOutcomeFailed says "failed"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: failed. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomeFailed() string { return In(i18n.Locale()).GwOutcomeFailed() }
+
+// GwOutcomeFailed says "failed"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: failed. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeFailed() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeFailed", nil)
+}
+
+// GwOutcomeOffline says "offline"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: offline. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomeOffline() string { return In(i18n.Locale()).GwOutcomeOffline() }
+
+// GwOutcomeOffline says "offline"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: offline. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeOffline() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeOffline", nil)
+}
+
+// GwOutcomePartial says "partial"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: partial. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomePartial() string { return In(i18n.Locale()).GwOutcomePartial() }
+
+// GwOutcomePartial says "partial"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: partial. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomePartial() string {
+	return Catalog.Format(msgs.locale, "gwOutcomePartial", nil)
+}
+
+// GwOutcomeReplaced says "replaced"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: replaced. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomeReplaced() string { return In(i18n.Locale()).GwOutcomeReplaced() }
+
+// GwOutcomeReplaced says "replaced"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: replaced. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeReplaced() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeReplaced", nil)
+}
+
+// GwOutcomeStopped says "stopped"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: stopped. Shown only in other
+// languages; in English the gateway's own words show.
+func GwOutcomeStopped() string { return In(i18n.Locale()).GwOutcomeStopped() }
+
+// GwOutcomeStopped says "stopped"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: stopped. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwOutcomeStopped() string {
+	return Catalog.Format(msgs.locale, "gwOutcomeStopped", nil)
+}
+
+// GwStatusBackground says "{work} · in the background"
+// in the language the app shows.
+//
+// A phone's status line: an agent works on a background display; work is
+// "agent · task". Shown only in other languages; in English the gateway's
+// own words show.
+func GwStatusBackground(work string) string { return In(i18n.Locale()).GwStatusBackground(work) }
+
+// GwStatusBackground says "{work} · in the background"
+// in the language of msgs.
+//
+// A phone's status line: an agent works on a background display; work is
+// "agent · task". Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwStatusBackground(work string) string {
+	return Catalog.Format(msgs.locale, "gwStatusBackground", map[string]any{"work": work})
+}
+
+// GwStatusIdle says "Idle"
+// in the language the app shows.
+//
+// A phone's status line: nothing runs on it. Shown only in other languages;
+// in English the gateway's own words show.
+func GwStatusIdle() string { return In(i18n.Locale()).GwStatusIdle() }
+
+// GwStatusIdle says "Idle"
+// in the language of msgs.
+//
+// A phone's status line: nothing runs on it. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwStatusIdle() string {
+	return Catalog.Format(msgs.locale, "gwStatusIdle", nil)
+}
+
+// GwStatusInControl says "You're in control"
+// in the language the app shows.
+//
+// A phone's status line: the person took over. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStatusInControl() string { return In(i18n.Locale()).GwStatusInControl() }
+
+// GwStatusInControl says "You're in control"
+// in the language of msgs.
+//
+// A phone's status line: the person took over. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusInControl() string {
+	return Catalog.Format(msgs.locale, "gwStatusInControl", nil)
+}
+
+// GwStatusInControlPaused says "You're in control · {agent} is paused"
+// in the language the app shows.
+//
+// A phone's status line: the person took over and the agent waits. Shown
+// only in other languages; in English the gateway's own words show.
+func GwStatusInControlPaused(agent string) string {
+	return In(i18n.Locale()).GwStatusInControlPaused(agent)
+}
+
+// GwStatusInControlPaused says "You're in control · {agent} is paused"
+// in the language of msgs.
+//
+// A phone's status line: the person took over and the agent waits. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusInControlPaused(agent string) string {
+	return Catalog.Format(msgs.locale, "gwStatusInControlPaused", map[string]any{"agent": agent})
+}
+
+// GwStatusLocked says "Locked"
+// in the language the app shows.
+//
+// A phone's status line: the phone is locked. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStatusLocked() string { return In(i18n.Locale()).GwStatusLocked() }
+
+// GwStatusLocked says "Locked"
+// in the language of msgs.
+//
+// A phone's status line: the phone is locked. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusLocked() string {
+	return Catalog.Format(msgs.locale, "gwStatusLocked", nil)
+}
+
+// GwStatusLockedTask says "Locked · unlock to continue {task}"
+// in the language the app shows.
+//
+// A phone's status line: the phone is locked and a task waits. Shown only
+// in other languages; in English the gateway's own words show.
+func GwStatusLockedTask(task string) string { return In(i18n.Locale()).GwStatusLockedTask(task) }
+
+// GwStatusLockedTask says "Locked · unlock to continue {task}"
+// in the language of msgs.
+//
+// A phone's status line: the phone is locked and a task waits. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusLockedTask(task string) string {
+	return Catalog.Format(msgs.locale, "gwStatusLockedTask", map[string]any{"task": task})
+}
+
+// GwStatusNeedsSetup says "Needs setup"
+// in the language the app shows.
+//
+// A phone's status line in the demo: it is connected but not ready. Shown
+// only in other languages; in English the gateway's own words show.
+func GwStatusNeedsSetup() string { return In(i18n.Locale()).GwStatusNeedsSetup() }
+
+// GwStatusNeedsSetup says "Needs setup"
+// in the language of msgs.
+//
+// A phone's status line in the demo: it is connected but not ready. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "gwStatusNeedsSetup", nil)
+}
+
+// GwStatusNeedsYou says "Needs you · {title}"
+// in the language the app shows.
+//
+// A phone's status line: an agent asked the person to do something (title
+// is its reason). Shown only in other languages; in English the gateway's
+// own words show.
+func GwStatusNeedsYou(title string) string { return In(i18n.Locale()).GwStatusNeedsYou(title) }
+
+// GwStatusNeedsYou says "Needs you · {title}"
+// in the language of msgs.
+//
+// A phone's status line: an agent asked the person to do something (title
+// is its reason). Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwStatusNeedsYou(title string) string {
+	return Catalog.Format(msgs.locale, "gwStatusNeedsYou", map[string]any{"title": title})
+}
+
+// GwStatusOffline says "Offline"
+// in the language the app shows.
+//
+// A phone's status line in the sidebar and tiles: the phone is offline.
+// Shown only in other languages; in English the gateway's own words show.
+func GwStatusOffline() string { return In(i18n.Locale()).GwStatusOffline() }
+
+// GwStatusOffline says "Offline"
+// in the language of msgs.
+//
+// A phone's status line in the sidebar and tiles: the phone is offline.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusOffline() string {
+	return Catalog.Format(msgs.locale, "gwStatusOffline", nil)
+}
+
+// GwStatusOfflineDetail says "Offline · {detail}"
+// in the language the app shows.
+//
+// A phone's status line: offline, with why (from the phone's driver, in
+// English). Shown only in other languages; in English the gateway's own
+// words show.
+func GwStatusOfflineDetail(detail string) string {
+	return In(i18n.Locale()).GwStatusOfflineDetail(detail)
+}
+
+// GwStatusOfflineDetail says "Offline · {detail}"
+// in the language of msgs.
+//
+// A phone's status line: offline, with why (from the phone's driver, in
+// English). Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStatusOfflineDetail(detail string) string {
+	return Catalog.Format(msgs.locale, "gwStatusOfflineDetail", map[string]any{"detail": detail})
+}
+
+// GwStatusReconnecting says "Offline · reconnecting for {task}"
+// in the language the app shows.
+//
+// A phone's status line: offline while a task waits for it to come back.
+// Shown only in other languages; in English the gateway's own words show.
+func GwStatusReconnecting(task string) string { return In(i18n.Locale()).GwStatusReconnecting(task) }
+
+// GwStatusReconnecting says "Offline · reconnecting for {task}"
+// in the language of msgs.
+//
+// A phone's status line: offline while a task waits for it to come back.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStatusReconnecting(task string) string {
+	return Catalog.Format(msgs.locale, "gwStatusReconnecting", map[string]any{"task": task})
+}
+
+// GwStatusWaiting says "Waiting for you · {title}"
+// in the language the app shows.
+//
+// A phone's status line: an approval waits (title is the approval's,
+// gwAskPay and the like). Shown only in other languages; in English the
+// gateway's own words show.
+func GwStatusWaiting(title string) string { return In(i18n.Locale()).GwStatusWaiting(title) }
+
+// GwStatusWaiting says "Waiting for you · {title}"
+// in the language of msgs.
+//
+// A phone's status line: an approval waits (title is the approval's,
+// gwAskPay and the like). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStatusWaiting(title string) string {
+	return Catalog.Format(msgs.locale, "gwStatusWaiting", map[string]any{"title": title})
+}
+
+// GwStepAskedTakeOver says "Asked you to take over: {reason}"
+// in the language the app shows.
+//
+// A step: the agent asked the person to do something on the phone; reason
+// is the agent's own words. Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepAskedTakeOver(reason string) string { return In(i18n.Locale()).GwStepAskedTakeOver(reason) }
+
+// GwStepAskedTakeOver says "Asked you to take over: {reason}"
+// in the language of msgs.
+//
+// A step: the agent asked the person to do something on the phone; reason
+// is the agent's own words. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepAskedTakeOver(reason string) string {
+	return Catalog.Format(msgs.locale, "gwStepAskedTakeOver", map[string]any{"reason": reason})
+}
+
+// GwStepAskedYou says "Asked you: {question}"
+// in the language the app shows.
+//
+// A step: the agent asked the person a question, in quotes. Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepAskedYou(question string) string { return In(i18n.Locale()).GwStepAskedYou(question) }
+
+// GwStepAskedYou says "Asked you: {question}"
+// in the language of msgs.
+//
+// A step: the agent asked the person a question, in quotes. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepAskedYou(question string) string {
+	return Catalog.Format(msgs.locale, "gwStepAskedYou", map[string]any{"question": question})
+}
+
+// GwStepBlocked says "Blocked by “{rule}”: {action}"
+// in the language the app shows.
+//
+// A step that a policy rule refused; rule is the rule's name (rulePayments
+// and the like). Shown only in other languages; in English the gateway's
+// own words show.
+func GwStepBlocked(rule string, action string) string {
+	return In(i18n.Locale()).GwStepBlocked(rule, action)
+}
+
+// GwStepBlocked says "Blocked by “{rule}”: {action}"
+// in the language of msgs.
+//
+// A step that a policy rule refused; rule is the rule's name (rulePayments
+// and the like). Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwStepBlocked(rule string, action string) string {
+	return Catalog.Format(msgs.locale, "gwStepBlocked", map[string]any{"rule": rule, "action": action})
+}
+
+// GwStepConnected says "Connected to {phone} for “{task}”"
+// in the language the app shows.
+//
+// A task's first step: the agent connected to the phone for this task.
+// Shown only in other languages; in English the gateway's own words show.
+func GwStepConnected(phone string, task string) string {
+	return In(i18n.Locale()).GwStepConnected(phone, task)
+}
+
+// GwStepConnected says "Connected to {phone} for “{task}”"
+// in the language of msgs.
+//
+// A task's first step: the agent connected to the phone for this task.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepConnected(phone string, task string) string {
+	return Catalog.Format(msgs.locale, "gwStepConnected", map[string]any{"phone": phone, "task": task})
+}
+
+// GwStepCopiedFrom says "Copied {count} files from the phone{names}"
+// in the language the app shows.
+//
+// A step: the agent copied files from the phone; names is gwFilesList or
+// empty. Shown only in other languages; in English the gateway's own words
+// show.
+func GwStepCopiedFrom(count string, names string) string {
+	return In(i18n.Locale()).GwStepCopiedFrom(count, names)
+}
+
+// GwStepCopiedFrom says "Copied {count} files from the phone{names}"
+// in the language of msgs.
+//
+// A step: the agent copied files from the phone; names is gwFilesList or
+// empty. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwStepCopiedFrom(count string, names string) string {
+	return Catalog.Format(msgs.locale, "gwStepCopiedFrom", map[string]any{"count": count, "names": names})
+}
+
+// GwStepCopiedTo says "Copied {count} files to the phone{names}"
+// in the language the app shows.
+//
+// A step: the agent copied files to the phone; names is gwFilesList or
+// empty. Shown only in other languages; in English the gateway's own words
+// show.
+func GwStepCopiedTo(count string, names string) string {
+	return In(i18n.Locale()).GwStepCopiedTo(count, names)
+}
+
+// GwStepCopiedTo says "Copied {count} files to the phone{names}"
+// in the language of msgs.
+//
+// A step: the agent copied files to the phone; names is gwFilesList or
+// empty. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwStepCopiedTo(count string, names string) string {
+	return Catalog.Format(msgs.locale, "gwStepCopiedTo", map[string]any{"count": count, "names": names})
+}
+
+// GwStepFailed says "Failed: {action}"
+// in the language the app shows.
+//
+// A step that failed. Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepFailed(action string) string { return In(i18n.Locale()).GwStepFailed(action) }
+
+// GwStepFailed says "Failed: {action}"
+// in the language of msgs.
+//
+// A step that failed. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepFailed(action string) string {
+	return Catalog.Format(msgs.locale, "gwStepFailed", map[string]any{"action": action})
+}
+
+// GwStepFinished says "Finished: {outcome}"
+// in the language the app shows.
+//
+// A task's last step: how the agent said it ended (gwOutcomeDone and the
+// like). Shown only in other languages; in English the gateway's own words
+// show.
+func GwStepFinished(outcome string) string { return In(i18n.Locale()).GwStepFinished(outcome) }
+
+// GwStepFinished says "Finished: {outcome}"
+// in the language of msgs.
+//
+// A task's last step: how the agent said it ended (gwOutcomeDone and the
+// like). Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwStepFinished(outcome string) string {
+	return Catalog.Format(msgs.locale, "gwStepFinished", map[string]any{"outcome": outcome})
+}
+
+// GwStepListedFolder says "Listed the phone's Pinky folder ({count} files)"
+// in the language the app shows.
+//
+// A step: the agent listed the files in the phone's Pinky folder. Shown
+// only in other languages; in English the gateway's own words show.
+func GwStepListedFolder(count string) string { return In(i18n.Locale()).GwStepListedFolder(count) }
+
+// GwStepListedFolder says "Listed the phone's Pinky folder ({count} files)"
+// in the language of msgs.
+//
+// A step: the agent listed the files in the phone's Pinky folder. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepListedFolder(count string) string {
+	return Catalog.Format(msgs.locale, "gwStepListedFolder", map[string]any{"count": count})
+}
+
+// GwStepOutside says "Outside the scope: {action}"
+// in the language the app shows.
+//
+// A step outside what the person allowed the agent. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStepOutside(action string) string { return In(i18n.Locale()).GwStepOutside(action) }
+
+// GwStepOutside says "Outside the scope: {action}"
+// in the language of msgs.
+//
+// A step outside what the person allowed the agent. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStepOutside(action string) string {
+	return Catalog.Format(msgs.locale, "gwStepOutside", map[string]any{"action": action})
+}
+
+// GwStepUnlocked says "Unlocked from the computer"
+// in the language the app shows.
+//
+// A step: the phone was unlocked from this computer with its saved PIN.
+// Shown only in other languages; in English the gateway's own words show.
+func GwStepUnlocked() string { return In(i18n.Locale()).GwStepUnlocked() }
+
+// GwStepUnlocked says "Unlocked from the computer"
+// in the language of msgs.
+//
+// A step: the phone was unlocked from this computer with its saved PIN.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepUnlocked() string {
+	return Catalog.Format(msgs.locale, "gwStepUnlocked", nil)
+}
+
+// GwStepWaited says "Waited for “{text}”"
+// in the language the app shows.
+//
+// A step: the agent waited for this text to show on the screen. Shown only
+// in other languages; in English the gateway's own words show.
+func GwStepWaited(text string) string { return In(i18n.Locale()).GwStepWaited(text) }
+
+// GwStepWaited says "Waited for “{text}”"
+// in the language of msgs.
+//
+// A step: the agent waited for this text to show on the screen. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepWaited(text string) string {
+	return Catalog.Format(msgs.locale, "gwStepWaited", map[string]any{"text": text})
+}
+
+// GwStepWaiting says "Waiting for you: {action}"
+// in the language the app shows.
+//
+// A step that waits for the person's approval; action is gwDoTap and the
+// like.
+func GwStepWaiting(action string) string { return In(i18n.Locale()).GwStepWaiting(action) }
+
+// GwStepWaiting says "Waiting for you: {action}"
+// in the language of msgs.
+//
+// A step that waits for the person's approval; action is gwDoTap and the
+// like.
+func (msgs Messages) GwStepWaiting(action string) string {
+	return Catalog.Format(msgs.locale, "gwStepWaiting", map[string]any{"action": action})
+}
+
+// GwStepYouAllowed says "You allowed: {action}"
+// in the language the app shows.
+//
+// A step of the demo's fake gateway: the person allowed an action. Shown
+// only in other languages; in English the gateway's own words show.
+func GwStepYouAllowed(action string) string { return In(i18n.Locale()).GwStepYouAllowed(action) }
+
+// GwStepYouAllowed says "You allowed: {action}"
+// in the language of msgs.
+//
+// A step of the demo's fake gateway: the person allowed an action. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepYouAllowed(action string) string {
+	return Catalog.Format(msgs.locale, "gwStepYouAllowed", map[string]any{"action": action})
+}
+
+// GwStepYouDenied says "You denied: {action}"
+// in the language the app shows.
+//
+// A step of the demo's fake gateway: the person denied an action. Shown
+// only in other languages; in English the gateway's own words show.
+func GwStepYouDenied(action string) string { return In(i18n.Locale()).GwStepYouDenied(action) }
+
+// GwStepYouDenied says "You denied: {action}"
+// in the language of msgs.
+//
+// A step of the demo's fake gateway: the person denied an action. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepYouDenied(action string) string {
+	return Catalog.Format(msgs.locale, "gwStepYouDenied", map[string]any{"action": action})
+}
+
+// GwStepYouStopped says "You stopped the task"
+// in the language the app shows.
+//
+// A step of the demo's fake gateway: the person stopped the task. Shown
+// only in other languages; in English the gateway's own words show.
+func GwStepYouStopped() string { return In(i18n.Locale()).GwStepYouStopped() }
+
+// GwStepYouStopped says "You stopped the task"
+// in the language of msgs.
+//
+// A step of the demo's fake gateway: the person stopped the task. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepYouStopped() string {
+	return Catalog.Format(msgs.locale, "gwStepYouStopped", nil)
+}
+
+// GwStepYouTookOver says "You took over"
+// in the language the app shows.
+//
+// A step of the demo's fake gateway: the person took over. Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepYouTookOver() string { return In(i18n.Locale()).GwStepYouTookOver() }
+
+// GwStepYouTookOver says "You took over"
+// in the language of msgs.
+//
+// A step of the demo's fake gateway: the person took over. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepYouTookOver() string {
+	return Catalog.Format(msgs.locale, "gwStepYouTookOver", nil)
+}
+
+// GwStepYourNote says "Your note: {note}"
+// in the language the app shows.
+//
+// The second line of a step: the note the person gave with an answer, in
+// quotes. Shown only in other languages; in English the gateway's own words
+// show.
+func GwStepYourNote(note string) string { return In(i18n.Locale()).GwStepYourNote(note) }
+
+// GwStepYourNote says "Your note: {note}"
+// in the language of msgs.
+//
+// The second line of a step: the note the person gave with an answer, in
+// quotes. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwStepYourNote(note string) string {
+	return Catalog.Format(msgs.locale, "gwStepYourNote", map[string]any{"note": note})
+}
+
+// GwUnlockDetail says "{agent} is waiting for the phone to unlock · {task}"
+// in the language the app shows.
+//
+// The second line of the unlock card. Shown only in other languages; in
+// English the gateway's own words show.
+func GwUnlockDetail(agent string, task string) string {
+	return In(i18n.Locale()).GwUnlockDetail(agent, task)
+}
+
+// GwUnlockDetail says "{agent} is waiting for the phone to unlock · {task}"
+// in the language of msgs.
+//
+// The second line of the unlock card. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwUnlockDetail(agent string, task string) string {
+	return Catalog.Format(msgs.locale, "gwUnlockDetail", map[string]any{"agent": agent, "task": task})
+}
+
+// GwUnlockTitle says "Unlock {phone}"
+// in the language the app shows.
+//
+// The title of the card that asks the person to unlock a locked phone an
+// agent waits for. Shown only in other languages; in English the gateway's
+// own words show.
+func GwUnlockTitle(phone string) string { return In(i18n.Locale()).GwUnlockTitle(phone) }
+
+// GwUnlockTitle says "Unlock {phone}"
+// in the language of msgs.
+//
+// The title of the card that asks the person to unlock a locked phone an
+// agent waits for. Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwUnlockTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "gwUnlockTitle", map[string]any{"phone": phone})
+}
+
 // ListMany says "{rest} and {last}"
 // in the language the app shows.
 //
@@ -201,6 +2149,76 @@ func ListSeparator() string { return In(i18n.Locale()).ListSeparator() }
 // Joins the names of a list before its last one (see listMany).
 func (msgs Messages) ListSeparator() string {
 	return Catalog.Format(msgs.locale, "listSeparator", nil)
+}
+
+// MenuActivity says "Activity"
+// in the language the app shows.
+//
+// Phones menu: opens Activity (⌘1).
+func MenuActivity() string { return In(i18n.Locale()).MenuActivity() }
+
+// MenuActivity says "Activity"
+// in the language of msgs.
+//
+// Phones menu: opens Activity (⌘1).
+func (msgs Messages) MenuActivity() string {
+	return Catalog.Format(msgs.locale, "menuActivity", nil)
+}
+
+// MenuAddPhone says "Add Phone…"
+// in the language the app shows.
+//
+// Phones menu: opens Add phone (⌘N).
+func MenuAddPhone() string { return In(i18n.Locale()).MenuAddPhone() }
+
+// MenuAddPhone says "Add Phone…"
+// in the language of msgs.
+//
+// Phones menu: opens Add phone (⌘N).
+func (msgs Messages) MenuAddPhone() string {
+	return Catalog.Format(msgs.locale, "menuAddPhone", nil)
+}
+
+// MenuPhones says "Phones"
+// in the language the app shows.
+//
+// The menu bar's menu of the app's pages and Stop all.
+func MenuPhones() string { return In(i18n.Locale()).MenuPhones() }
+
+// MenuPhones says "Phones"
+// in the language of msgs.
+//
+// The menu bar's menu of the app's pages and Stop all.
+func (msgs Messages) MenuPhones() string {
+	return Catalog.Format(msgs.locale, "menuPhones", nil)
+}
+
+// MenuSettings says "Settings…"
+// in the language the app shows.
+//
+// Phones menu: opens Settings (⌘,).
+func MenuSettings() string { return In(i18n.Locale()).MenuSettings() }
+
+// MenuSettings says "Settings…"
+// in the language of msgs.
+//
+// Phones menu: opens Settings (⌘,).
+func (msgs Messages) MenuSettings() string {
+	return Catalog.Format(msgs.locale, "menuSettings", nil)
+}
+
+// MenuStopAll says "Stop All"
+// in the language the app shows.
+//
+// Phones menu: stops every agent on every phone.
+func MenuStopAll() string { return In(i18n.Locale()).MenuStopAll() }
+
+// MenuStopAll says "Stop All"
+// in the language of msgs.
+//
+// Phones menu: stops every agent on every phone.
+func (msgs Messages) MenuStopAll() string {
+	return Catalog.Format(msgs.locale, "menuStopAll", nil)
 }
 
 // PlatformUnlockKeepMac says "Your PIN stays in your Mac's Keychain. Agents never see it."
@@ -775,6 +2793,22 @@ func (msgs Messages) ScopeWatchOnly() string {
 	return Catalog.Format(msgs.locale, "scopeWatchOnly", nil)
 }
 
+// SentencePair says "{first} {second}"
+// in the language the app shows.
+//
+// Joins two sentences in one line (zh: no space after 。).
+func SentencePair(first string, second string) string {
+	return In(i18n.Locale()).SentencePair(first, second)
+}
+
+// SentencePair says "{first} {second}"
+// in the language of msgs.
+//
+// Joins two sentences in one line (zh: no space after 。).
+func (msgs Messages) SentencePair(first string, second string) string {
+	return Catalog.Format(msgs.locale, "sentencePair", map[string]any{"first": first, "second": second})
+}
+
 // ShotLabel says "Screenshot of {phone}"
 // in the language the app shows.
 //
@@ -921,6 +2955,336 @@ func (msgs Messages) SidebarStopAll() string {
 	return Catalog.Format(msgs.locale, "sidebarStopAll", nil)
 }
 
+// StepAllowedNotUsed says "Allowed, but the agent did not come back for it"
+// in the language the app shows.
+//
+// The second line of a step the person allowed but the agent never did.
+func StepAllowedNotUsed() string { return In(i18n.Locale()).StepAllowedNotUsed() }
+
+// StepAllowedNotUsed says "Allowed, but the agent did not come back for it"
+// in the language of msgs.
+//
+// The second line of a step the person allowed but the agent never did.
+func (msgs Messages) StepAllowedNotUsed() string {
+	return Catalog.Format(msgs.locale, "stepAllowedNotUsed", nil)
+}
+
+// StepAsked says "Asked: “{reason}”"
+// in the language the app shows.
+//
+// The second line of a handoff step: what the agent had asked, in its own
+// words.
+func StepAsked(reason string) string { return In(i18n.Locale()).StepAsked(reason) }
+
+// StepAsked says "Asked: “{reason}”"
+// in the language of msgs.
+//
+// The second line of a handoff step: what the agent had asked, in its own
+// words.
+func (msgs Messages) StepAsked(reason string) string {
+	return Catalog.Format(msgs.locale, "stepAsked", map[string]any{"reason": reason})
+}
+
+// StepCodeInternal says "internal"
+// in the language the app shows.
+//
+// Why a step failed, inside stepFailedCode: internal.
+func StepCodeInternal() string { return In(i18n.Locale()).StepCodeInternal() }
+
+// StepCodeInternal says "internal"
+// in the language of msgs.
+//
+// Why a step failed, inside stepFailedCode: internal.
+func (msgs Messages) StepCodeInternal() string {
+	return Catalog.Format(msgs.locale, "stepCodeInternal", nil)
+}
+
+// StepCodeInvalidArgument says "invalid argument"
+// in the language the app shows.
+//
+// Why a step failed, inside stepFailedCode: invalid argument.
+func StepCodeInvalidArgument() string { return In(i18n.Locale()).StepCodeInvalidArgument() }
+
+// StepCodeInvalidArgument says "invalid argument"
+// in the language of msgs.
+//
+// Why a step failed, inside stepFailedCode: invalid argument.
+func (msgs Messages) StepCodeInvalidArgument() string {
+	return Catalog.Format(msgs.locale, "stepCodeInvalidArgument", nil)
+}
+
+// StepCodeLeaseHeld says "lease held"
+// in the language the app shows.
+//
+// Why a step failed, inside stepFailedCode: lease held.
+func StepCodeLeaseHeld() string { return In(i18n.Locale()).StepCodeLeaseHeld() }
+
+// StepCodeLeaseHeld says "lease held"
+// in the language of msgs.
+//
+// Why a step failed, inside stepFailedCode: lease held.
+func (msgs Messages) StepCodeLeaseHeld() string {
+	return Catalog.Format(msgs.locale, "stepCodeLeaseHeld", nil)
+}
+
+// StepCodeNotFound says "not found"
+// in the language the app shows.
+//
+// Why a step failed, inside stepFailedCode: not found.
+func StepCodeNotFound() string { return In(i18n.Locale()).StepCodeNotFound() }
+
+// StepCodeNotFound says "not found"
+// in the language of msgs.
+//
+// Why a step failed, inside stepFailedCode: not found.
+func (msgs Messages) StepCodeNotFound() string {
+	return Catalog.Format(msgs.locale, "stepCodeNotFound", nil)
+}
+
+// StepCodeScopeDenied says "scope denied"
+// in the language the app shows.
+//
+// Why a step failed, inside stepFailedCode: scope denied.
+func StepCodeScopeDenied() string { return In(i18n.Locale()).StepCodeScopeDenied() }
+
+// StepCodeScopeDenied says "scope denied"
+// in the language of msgs.
+//
+// Why a step failed, inside stepFailedCode: scope denied.
+func (msgs Messages) StepCodeScopeDenied() string {
+	return Catalog.Format(msgs.locale, "stepCodeScopeDenied", nil)
+}
+
+// StepCodeUnsupported says "unsupported"
+// in the language the app shows.
+//
+// Why a step failed, inside stepFailedCode: unsupported.
+func StepCodeUnsupported() string { return In(i18n.Locale()).StepCodeUnsupported() }
+
+// StepCodeUnsupported says "unsupported"
+// in the language of msgs.
+//
+// Why a step failed, inside stepFailedCode: unsupported.
+func (msgs Messages) StepCodeUnsupported() string {
+	return Catalog.Format(msgs.locale, "stepCodeUnsupported", nil)
+}
+
+// StepFailedCode says "Failed: {reason}"
+// in the language the app shows.
+//
+// The second line of a step that failed; reason is stepCodeNotFound and the
+// like.
+func StepFailedCode(reason string) string { return In(i18n.Locale()).StepFailedCode(reason) }
+
+// StepFailedCode says "Failed: {reason}"
+// in the language of msgs.
+//
+// The second line of a step that failed; reason is stepCodeNotFound and the
+// like.
+func (msgs Messages) StepFailedCode(reason string) string {
+	return Catalog.Format(msgs.locale, "stepFailedCode", map[string]any{"reason": reason})
+}
+
+// StepMayHaveHappened says "May have happened"
+// in the language the app shows.
+//
+// The second line of a step whose result is uncertain.
+func StepMayHaveHappened() string { return In(i18n.Locale()).StepMayHaveHappened() }
+
+// StepMayHaveHappened says "May have happened"
+// in the language of msgs.
+//
+// The second line of a step whose result is uncertain.
+func (msgs Messages) StepMayHaveHappened() string {
+	return Catalog.Format(msgs.locale, "stepMayHaveHappened", nil)
+}
+
+// StepNotDoneInControl says "Not done: you were in control"
+// in the language the app shows.
+//
+// The second line of a step that never ran while the person was in control.
+func StepNotDoneInControl() string { return In(i18n.Locale()).StepNotDoneInControl() }
+
+// StepNotDoneInControl says "Not done: you were in control"
+// in the language of msgs.
+//
+// The second line of a step that never ran while the person was in control.
+func (msgs Messages) StepNotDoneInControl() string {
+	return Catalog.Format(msgs.locale, "stepNotDoneInControl", nil)
+}
+
+// StepNotDoneStale says "Not done: the screen changed while it waited"
+// in the language the app shows.
+//
+// The second line of an approved step that never ran because the screen
+// changed.
+func StepNotDoneStale() string { return In(i18n.Locale()).StepNotDoneStale() }
+
+// StepNotDoneStale says "Not done: the screen changed while it waited"
+// in the language of msgs.
+//
+// The second line of an approved step that never ran because the screen
+// changed.
+func (msgs Messages) StepNotDoneStale() string {
+	return Catalog.Format(msgs.locale, "stepNotDoneStale", nil)
+}
+
+// StepNotDoneStopped says "Not done: stopped"
+// in the language the app shows.
+//
+// The second line of a step that never ran because the task was stopped.
+func StepNotDoneStopped() string { return In(i18n.Locale()).StepNotDoneStopped() }
+
+// StepNotDoneStopped says "Not done: stopped"
+// in the language of msgs.
+//
+// The second line of a step that never ran because the task was stopped.
+func (msgs Messages) StepNotDoneStopped() string {
+	return Catalog.Format(msgs.locale, "stepNotDoneStopped", nil)
+}
+
+// StepNotDoneTookOver says "Not done: you took over"
+// in the language the app shows.
+//
+// The second line of a step that never ran because the person took over.
+func StepNotDoneTookOver() string { return In(i18n.Locale()).StepNotDoneTookOver() }
+
+// StepNotDoneTookOver says "Not done: you took over"
+// in the language of msgs.
+//
+// The second line of a step that never ran because the person took over.
+func (msgs Messages) StepNotDoneTookOver() string {
+	return Catalog.Format(msgs.locale, "stepNotDoneTookOver", nil)
+}
+
+// StepPhoneLocked says "The phone was locked"
+// in the language the app shows.
+//
+// The second line of a step that failed because the phone was locked.
+func StepPhoneLocked() string { return In(i18n.Locale()).StepPhoneLocked() }
+
+// StepPhoneLocked says "The phone was locked"
+// in the language of msgs.
+//
+// The second line of a step that failed because the phone was locked.
+func (msgs Messages) StepPhoneLocked() string {
+	return Catalog.Format(msgs.locale, "stepPhoneLocked", nil)
+}
+
+// StepPhoneOffline says "The phone went offline"
+// in the language the app shows.
+//
+// The second line of a step that failed because the phone went offline.
+func StepPhoneOffline() string { return In(i18n.Locale()).StepPhoneOffline() }
+
+// StepPhoneOffline says "The phone went offline"
+// in the language of msgs.
+//
+// The second line of a step that failed because the phone went offline.
+func (msgs Messages) StepPhoneOffline() string {
+	return Catalog.Format(msgs.locale, "stepPhoneOffline", nil)
+}
+
+// StepWaiting says "Waiting for you: {action}"
+// in the language the app shows.
+//
+// A task card's step that waits for the person's approval; action is what
+// it would do (gwDoTap and the like).
+func StepWaiting(action string) string { return In(i18n.Locale()).StepWaiting(action) }
+
+// StepWaiting says "Waiting for you: {action}"
+// in the language of msgs.
+//
+// A task card's step that waits for the person's approval; action is what
+// it would do (gwDoTap and the like).
+func (msgs Messages) StepWaiting(action string) string {
+	return Catalog.Format(msgs.locale, "stepWaiting", map[string]any{"action": action})
+}
+
+// StepYouAgreed says "You agreed: {question}"
+// in the language the app shows.
+//
+// A step: the person agreed to the agent's question, in quotes.
+func StepYouAgreed(question string) string { return In(i18n.Locale()).StepYouAgreed(question) }
+
+// StepYouAgreed says "You agreed: {question}"
+// in the language of msgs.
+//
+// A step: the person agreed to the agent's question, in quotes.
+func (msgs Messages) StepYouAgreed(question string) string {
+	return Catalog.Format(msgs.locale, "stepYouAgreed", map[string]any{"question": question})
+}
+
+// StepYouAnswered says "You answered: {action}"
+// in the language the app shows.
+//
+// A step the person answered, while the action runs.
+func StepYouAnswered(action string) string { return In(i18n.Locale()).StepYouAnswered(action) }
+
+// StepYouAnswered says "You answered: {action}"
+// in the language of msgs.
+//
+// A step the person answered, while the action runs.
+func (msgs Messages) StepYouAnswered(action string) string {
+	return Catalog.Format(msgs.locale, "stepYouAnswered", map[string]any{"action": action})
+}
+
+// StepYouDeclined says "You declined"
+// in the language the app shows.
+//
+// A step: the person declined what the agent asked them to do (a handoff).
+func StepYouDeclined() string { return In(i18n.Locale()).StepYouDeclined() }
+
+// StepYouDeclined says "You declined"
+// in the language of msgs.
+//
+// A step: the person declined what the agent asked them to do (a handoff).
+func (msgs Messages) StepYouDeclined() string {
+	return Catalog.Format(msgs.locale, "stepYouDeclined", nil)
+}
+
+// StepYouDenied says "You denied: {action}"
+// in the language the app shows.
+//
+// A step the person denied.
+func StepYouDenied(action string) string { return In(i18n.Locale()).StepYouDenied(action) }
+
+// StepYouDenied says "You denied: {action}"
+// in the language of msgs.
+//
+// A step the person denied.
+func (msgs Messages) StepYouDenied(action string) string {
+	return Catalog.Format(msgs.locale, "stepYouDenied", map[string]any{"action": action})
+}
+
+// StepYouHandedBack says "You handed it back"
+// in the language the app shows.
+//
+// A step: the person did what the agent asked and handed the phone back.
+func StepYouHandedBack() string { return In(i18n.Locale()).StepYouHandedBack() }
+
+// StepYouHandedBack says "You handed it back"
+// in the language of msgs.
+//
+// A step: the person did what the agent asked and handed the phone back.
+func (msgs Messages) StepYouHandedBack() string {
+	return Catalog.Format(msgs.locale, "stepYouHandedBack", nil)
+}
+
+// StepYouSaidNo says "You said no: {question}"
+// in the language the app shows.
+//
+// A step: the person said no to the agent's question, in quotes.
+func StepYouSaidNo(question string) string { return In(i18n.Locale()).StepYouSaidNo(question) }
+
+// StepYouSaidNo says "You said no: {question}"
+// in the language of msgs.
+//
+// A step: the person said no to the agent's question, in quotes.
+func (msgs Messages) StepYouSaidNo(question string) string {
+	return Catalog.Format(msgs.locale, "stepYouSaidNo", map[string]any{"question": question})
+}
+
 // TimeHours says "{hours}\u00a0h\u00a0{minutes}\u00a0min"
 // in the language the app shows.
 //
@@ -971,4 +3335,22 @@ func TimeSeconds(seconds string) string { return In(i18n.Locale()).TimeSeconds(s
 // with a no-break space so it never wraps.
 func (msgs Messages) TimeSeconds(seconds string) string {
 	return Catalog.Format(msgs.locale, "timeSeconds", map[string]any{"seconds": seconds})
+}
+
+// ToastCouldNot says "Couldn't {action}: {error}"
+// in the language the app shows.
+//
+// A toast when a call to the gateway fails: action is a verb phrase such as
+// callTakeOver (zh: 接管), error the gateway's error in English.
+func ToastCouldNot(action string, error string) string {
+	return In(i18n.Locale()).ToastCouldNot(action, error)
+}
+
+// ToastCouldNot says "Couldn't {action}: {error}"
+// in the language of msgs.
+//
+// A toast when a call to the gateway fails: action is a verb phrase such as
+// callTakeOver (zh: 接管), error the gateway's error in English.
+func (msgs Messages) ToastCouldNot(action string, error string) string {
+	return Catalog.Format(msgs.locale, "toastCouldNot", map[string]any{"action": action, "error": error})
 }

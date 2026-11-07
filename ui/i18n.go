@@ -4,24 +4,13 @@ import (
 	"strings"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
-	"github.com/DIYgod/pinky/internal/gateway"
 )
 
 // The client's words are in the catalogs of cmd/pinky/locales, one
 // function per message (see docs/notes/client.md, "i18n"). These helpers
-// put into the language the app shows what the gateway and policy send as
-// finished English text. Agents' own words (task titles, reasons, notes)
-// and the phone's (labels, app names) stay as they are.
-
-// needTitle is a Needs you card's title.
-func needTitle(n gateway.NeedView) string { return n.Title }
-
-// needDetail is a Needs you card's second line.
-func needDetail(n gateway.NeedView) string { return n.Detail }
-
-// statusLine is a phone's status line in the sidebar, the tiles and the
-// menu bar flyout.
-func statusLine(d gateway.DeviceView) string { return d.StatusLine }
+// name the policy's rules and join lists in the language the app shows;
+// gwtext.go says the gateway's English steps, approvals and status lines
+// in it.
 
 // ruleNames are the rules of the policy presets and the built-in ones, as
 // approvals and steps name them.
