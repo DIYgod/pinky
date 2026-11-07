@@ -47,6 +47,9 @@ type media struct {
 	rxMu      sync.Mutex
 	lastSeq   uint16
 	cycles    uint32
+	baseSeq   uint32 // extended sequence number of the first packet
+	received  uint32 // packets taken
+	prior     lossPrior
 	jitter    float64
 	lastSR    uint32    // middle 32 bits of the last SR's NTP time
 	lastSRAt  time.Time // when it arrived
@@ -337,7 +340,11 @@ func (m *media) track(p rtpPacket, now time.Time) (ok, gap bool) {
 			m.cycles += 1 << 16
 		}
 	}
+	if !m.haveSeq {
+		m.baseSeq = uint32(p.Seq)
+	}
 	m.lastSeq, m.haveSeq = p.Seq, true
+	m.received++
 
 	// Interarrival jitter (RFC 3550 A.8), in clock units, with 32-bit
 	// arithmetic so that the RTP clock's wrap does not show up as jitter.
@@ -597,7 +604,12 @@ func (m *media) receiverReport() []byte {
 	b = append(b, 0x81, 201, 0, 7)
 	b = binary.BigEndian.AppendUint32(b, m.ans.HostSSRC)
 	b = binary.BigEndian.AppendUint32(b, m.ans.DeviceSSRC)
-	b = append(b, 0, 0, 0, 0) // fraction and cumulative lost
+	var fraction uint8
+	var lost int32
+	if m.haveSeq {
+		fraction, lost = m.prior.update(m.cycles|uint32(m.lastSeq), m.baseSeq, m.received)
+	}
+	b = append(b, fraction, byte(lost>>16), byte(lost>>8), byte(lost))
 	b = binary.BigEndian.AppendUint32(b, m.cycles|uint32(m.lastSeq))
 	b = binary.BigEndian.AppendUint32(b, uint32(m.jitter))
 	b = binary.BigEndian.AppendUint32(b, m.lastSR)
@@ -607,6 +619,31 @@ func (m *media) receiverReport() []byte {
 	b = binary.BigEndian.AppendUint32(b, m.ans.HostSSRC)
 	b = append(b, 1, 0, 0, 0)
 	return b
+}
+
+// lossPrior is what the last receiver report counted, for the fraction
+// lost since then.
+type lossPrior struct{ expected, received uint32 }
+
+// update returns RFC 3550's loss fields (A.3) and remembers the counts: the
+// fraction of packets lost since the last report, in 256ths, and the
+// packets lost since the stream started, clamped to 24 bits. The phone's
+// encoder adapts its bitrate to them; reporting no loss at all, as Pinky
+// did, kept it sending at its cap on links that could not carry it (Wi-Fi,
+// where the tunnel backs up and the phone drops packets).
+func (p *lossPrior) update(extMax, base, received uint32) (uint8, int32) {
+	expected := extMax - base + 1
+	lost := int64(expected) - int64(received)
+	lost = max(min(lost, 0x7fffff), -0x800000)
+	expInt := expected - p.expected
+	recInt := received - p.received
+	p.expected, p.received = expected, received
+	lostInt := int64(expInt) - int64(recInt)
+	var fraction uint8
+	if expInt != 0 && lostInt > 0 {
+		fraction = uint8(min(lostInt<<8/int64(expInt), 255))
+	}
+	return fraction, int32(lost)
 }
 
 // subscribe adds a Stream consumer. It starts at the next keyframe, which

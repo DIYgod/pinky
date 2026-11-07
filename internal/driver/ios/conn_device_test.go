@@ -3,6 +3,7 @@
 package ios
 
 import (
+	"context"
 	"os"
 	"sort"
 	"testing"
@@ -31,6 +32,8 @@ func TestDeviceConnection(t *testing.T) {
 	t.Logf("%s: entry %s, session open in %v", conn, d.l.base.Properties.ConnectionType, time.Since(start).Round(time.Millisecond))
 	defer home(ctx, d)
 	home(ctx, d)
+	stopRate := logStreamRate(t, d)
+	defer stopRate()
 
 	lat, err := d.SwipeLatency(ctx, 6, false)
 	sort.Slice(lat, func(i, j int) bool { return lat[i] < lat[j] })
@@ -53,6 +56,14 @@ func TestDeviceConnection(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Logf("screenshot %d: %v (%v)", i, time.Since(t0).Round(time.Millisecond), img.Bounds().Size())
+		pause()
+	}
+	// The screen capture service takes a format; PNGs are 16 bits a channel
+	// and 5 to 7 MB, which costs seconds over Wi-Fi.
+	for _, format := range []string{"jpeg", "heic"} {
+		t0 := time.Now()
+		b, err := d.captureFormat(ctx, format)
+		t.Logf("capture as %s: %d bytes in %v, %v", format, len(b), time.Since(t0).Round(time.Millisecond), err)
 		pause()
 	}
 	if err := d.Launch(ctx, "com.apple.Preferences"); err != nil {
@@ -86,4 +97,52 @@ func TestDeviceConnection(t *testing.T) {
 	elapsed := time.Since(ms.Since).Seconds()
 	t.Logf("stream: %d frames, %d keyframes, %d packets, %d lost, %d dropped, %d keyframe requests, %.1f Mbit/s over %.0f s, delay %v (known %v)",
 		ms.Frames, ms.KeyFrames, ms.Packets, ms.Lost, ms.Dropped, ms.KeyRequests, float64(ms.Bytes)*8/1e6/elapsed, elapsed, ms.Delay, ms.DelayKnown)
+}
+
+// captureFormat asks CoreDevice's screen capture service for one format.
+func (d *Device) captureFormat(ctx context.Context, format string) ([]byte, error) {
+	d.svcMu.Lock()
+	defer d.svcMu.Unlock()
+	if d.shot == nil {
+		svc, err := dialCoreDevice(d.l.entry, screenCaptureService)
+		if err != nil {
+			return nil, err
+		}
+		d.shot = svc
+	}
+	c, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	out, err := d.shot.invoke(c, featureCaptureScreenshot, actionCaptureScreenshot, map[string]any{"requestedFormat": format})
+	if err != nil {
+		d.shot.Close()
+		d.shot = nil
+		return nil, err
+	}
+	img, _ := out["image"].([]byte)
+	return img, nil
+}
+
+// logStreamRate logs the stream's bitrate, loss and key frame requests every
+// second, to see whether the phone's encoder follows the loss it is told.
+func logStreamRate(t *testing.T, d *Device) func() {
+	done := make(chan struct{})
+	go func() {
+		prev, _ := d.StreamStats()
+		tick := time.NewTicker(time.Second)
+		defer tick.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-tick.C:
+			}
+			cur, ok := d.StreamStats()
+			if !ok {
+				continue
+			}
+			t.Logf("rate: %.2f Mbit/s, %d frames, %d lost, %d key requests", float64(cur.Bytes-prev.Bytes)*8/1e6, cur.Frames-prev.Frames, cur.Lost-prev.Lost, cur.KeyRequests-prev.KeyRequests)
+			prev = cur
+		}
+	}()
+	return func() { close(done) }
 }
