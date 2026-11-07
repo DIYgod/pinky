@@ -1,0 +1,46 @@
+name: Release
+
+# A tag v<version>, which `scripts/release.sh tag` pushes with its commit,
+# is a release. This hands it to the release workflow of the public
+# releases repository (DIYgod/pinky-releases), which builds, signs and
+# publishes it on that repository's runners, which cost nothing. See
+# docs/RELEASING.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    name: Start the release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      RELEASES_REPO: ${{ vars.RELEASES_REPO || 'DIYgod/pinky-releases' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check the tag and its notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          case "$version" in
+          [0-9][0-9][0-9][0-9].[1-9]*.[1-9]*) ;;
+          *) echo "::error::$GITHUB_REF_NAME is not a release tag, as v2026.1107.1"; exit 1 ;;
+          esac
+          if ! grep -q "^## $version " CHANGELOG.md; then
+            echo "::error::CHANGELOG.md at $GITHUB_REF_NAME has no section for $version"
+            exit 1
+          fi
+      - name: Start the release workflow of ${{ env.RELEASES_REPO }}
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::The secret RELEASE_TOKEN is not set, so $GITHUB_REF_NAME is not released; see docs/RELEASING.md, or publish it from the Mac with scripts/release.sh publish $GITHUB_REF_NAME"
+            exit 1
+          fi
+          gh api "repos/$RELEASES_REPO/dispatches" -f event_type=release -f "client_payload[tag]=$GITHUB_REF_NAME"
+          echo "Started: https://github.com/$RELEASES_REPO/actions/workflows/release.yml" >> "$GITHUB_STEP_SUMMARY"

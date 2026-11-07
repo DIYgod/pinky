@@ -2,7 +2,7 @@
   "name": "Pinky",
   "slug": "pinky",
   "identifier": "app.pinky.desktop",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "copyright": "Copyright © 2026 DIYgod",
   "icon": "../../assets/icon/pinky-macos-1024.png",
   "out": "../../build/pinky",

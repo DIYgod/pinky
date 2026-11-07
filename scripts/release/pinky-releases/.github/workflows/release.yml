@@ -1,0 +1,249 @@
+name: Release
+run-name: Pinky ${{ inputs.tag || github.event.client_payload.tag }}
+
+# Builds, signs and publishes a release of Pinky from a tag of its private
+# source, DIYgod/pinky, whose own release workflow starts this one when the
+# tag is pushed (repository_dispatch). The steps are the source's scripts at
+# that tag: scripts/dist.sh builds and scripts/publish.sh publishes. This
+# file comes from scripts/release/pinky-releases/ in DIYgod/pinky, which
+# `scripts/release.sh setup` copies here; docs/RELEASING.md there explains
+# it all.
+#
+# The repository is public, so its runners cost nothing, and its logs and
+# artifacts are public too: no step prints the source, and nothing built
+# from it is cached (FFmpeg's builds and Go's downloaded modules are).
+
+on:
+  repository_dispatch:
+    types: [release]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The tag of DIYgod/pinky to release (v2026.1107.1)
+        required: true
+      publish:
+        description: Publish it (off builds it and keeps the files as this run's artifacts)
+        type: boolean
+        default: true
+
+concurrency:
+  group: release-${{ inputs.tag || github.event.client_payload.tag }}
+
+permissions:
+  contents: write # the release, in this repository
+
+env:
+  TAG: ${{ inputs.tag || github.event.client_payload.tag }}
+  SOURCE: ${{ vars.SOURCE_REPO || 'DIYgod/pinky' }}
+
+jobs:
+  companion:
+    name: Companion APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check the tag
+        run: |
+          case "$TAG" in
+          v[0-9][0-9][0-9][0-9].[1-9]*.[1-9]*) ;;
+          *) echo "::error::\"$TAG\" is not a release tag, as v2026.1107.1"; exit 1 ;;
+          esac
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.SOURCE }}
+          ref: refs/tags/${{ env.TAG }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+          persist-credentials: false
+          fetch-depth: 0 # the companion's versionCode is the count of commits
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build
+        env:
+          STRICT: "1"
+        run: |
+          go run ./scripts/release stamp "${TAG#v}"
+          scripts/dist.sh companion "$RUNNER_TEMP/companion"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: companion
+          path: ${{ runner.temp }}/companion/pinky-companion.apk
+          if-no-files-found: error
+          retention-days: 3
+
+  linux-windows:
+    name: Linux and Windows
+    needs: companion
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.SOURCE }}
+          ref: refs/tags/${{ env.TAG }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Cache Go's modules
+        uses: actions/cache@v6
+        with:
+          path: ~/go/pkg/mod
+          key: gomod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+      - name: Install NSIS, for the Windows installer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends nsis >/dev/null
+      - uses: actions/download-artifact@v8
+        with:
+          name: companion
+          path: ${{ runner.temp }}/companion
+      - name: Build
+        env:
+          STRICT: "1"
+          COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
+        run: |
+          go run ./scripts/release stamp "${TAG#v}"
+          scripts/dist.sh windows "$RUNNER_TEMP/dist"
+          scripts/dist.sh linux "$RUNNER_TEMP/dist"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-windows
+          path: ${{ runner.temp }}/dist/
+          if-no-files-found: error
+          retention-days: 3
+
+  macos:
+    name: macOS
+    needs: companion
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.SOURCE }}
+          ref: refs/tags/${{ env.TAG }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Cache Go's modules
+        uses: actions/cache@v6
+        with:
+          path: ~/go/pkg/mod
+          key: gomod-${{ runner.os }}-${{ hashFiles('go.sum') }}
+      - name: Cache FFmpeg
+        id: ffmpeg
+        uses: actions/cache@v6
+        with:
+          path: build/ffmpeg-dist
+          key: ffmpeg-macos-${{ hashFiles('scripts/ffmpeg.sh') }}
+      - name: Install nasm, for FFmpeg's Intel assembly
+        if: steps.ffmpeg.outputs.cache-hit != 'true'
+        run: brew install --quiet nasm
+      - name: Put the Developer ID and the notary's credentials in a keychain
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          NOTARY_API_KEY: ${{ secrets.NOTARY_API_KEY }}
+          NOTARY_API_KEY_ID: ${{ secrets.NOTARY_API_KEY_ID }}
+          NOTARY_API_ISSUER: ${{ secrets.NOTARY_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          if [ -z "$MACOS_CERTIFICATE" ]; then
+            echo "::error::The secret MACOS_CERTIFICATE (the Developer ID Application certificate as a base64 .p12) is not set; see docs/RELEASING.md in DIYgod/pinky"
+            exit 1
+          fi
+          keychain="$RUNNER_TEMP/pinky-signing.keychain-db"
+          password="$(openssl rand -base64 24)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign >/dev/null
+          rm -f "$RUNNER_TEMP/developer-id.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$keychain"
+          if [ -n "$NOTARY_API_KEY" ]; then
+            printf '%s\n' "$NOTARY_API_KEY" > "$RUNNER_TEMP/notary-key.p8"
+            xcrun notarytool store-credentials pinky-notary --keychain "$keychain" \
+              --key "$RUNNER_TEMP/notary-key.p8" --key-id "$NOTARY_API_KEY_ID" --issuer "$NOTARY_API_ISSUER" >/dev/null
+          elif [ -n "$APPLE_ID" ]; then
+            xcrun notarytool store-credentials pinky-notary --keychain "$keychain" \
+              --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" >/dev/null
+          else
+            echo "::error::Neither NOTARY_API_KEY (an App Store Connect API key) nor APPLE_ID is set, so nothing can notarize; see docs/RELEASING.md in DIYgod/pinky"
+            exit 1
+          fi
+          echo "NOTARY_KEYCHAIN=$keychain" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v8
+        with:
+          name: companion
+          path: ${{ runner.temp }}/companion
+      - name: Build, sign and notarize
+        env:
+          STRICT: "1"
+          COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
+          SIGN: ${{ vars.MACOS_SIGN_IDENTITY }}
+        run: |
+          go run ./scripts/release stamp "${TAG#v}"
+          scripts/dist.sh darwin "$RUNNER_TEMP/dist"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: macos
+          path: ${{ runner.temp }}/dist/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Remove the keychain
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/pinky-signing.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/notary-key.p8"
+
+  publish:
+    name: Publish
+    needs: [linux-windows, macos]
+    if: github.event_name == 'repository_dispatch' || inputs.publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ env.SOURCE }}
+          ref: refs/tags/${{ env.TAG }}
+          token: ${{ secrets.RELEASE_TOKEN }}
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux-windows
+          path: ${{ runner.temp }}/dist
+      - uses: actions/download-artifact@v8
+        with:
+          name: macos
+          path: ${{ runner.temp }}/dist
+      - name: Publish the release and the cask
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAP_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          RELEASES_REPO: ${{ github.repository }}
+          TAP_REPO: ${{ vars.TAP_REPO || 'DIYgod/homebrew-tap' }}
+        run: |
+          go run ./scripts/release manifest -dir "$RUNNER_TEMP/dist" -version "${TAG#v}" -repo "$RELEASES_REPO"
+          ls -l "$RUNNER_TEMP/dist"
+          scripts/publish.sh "$RUNNER_TEMP/dist"

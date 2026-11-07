@@ -1,3 +1,6 @@
+# The version of cmd/pinky/mygo.json: 0.0.0 in the source, and the
+# release's version in the checkout a release builds, which writes it there
+# (docs/RELEASING.md).
 VERSION := $(shell sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' cmd/pinky/mygo.json)
 UNAME := $(shell uname -s)
 GOARCH := $(shell go env GOARCH)
@@ -17,7 +20,7 @@ RELEASE_SIGN ?= Developer ID Application: NATURAL SELECTION LABS PTE. LTD. (492J
 NOTARY_PROFILE ?= pinky-notary
 DMG := build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 
-.PHONY: build test vet check app e2e companion ffmpeg release notarize
+.PHONY: build test vet check app e2e companion ffmpeg release notarize dist
 
 build:
 	CGO_ENABLED=0 go build ./...
@@ -62,7 +65,9 @@ ifeq ($(UNAME),Darwin)
 	SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 endif
 
-# Pinky.app and its .dmg, signed with the Developer ID and notarized.
+# Pinky.app and its .dmg for this Mac's processor, signed with the
+# Developer ID and notarized, to try on other Macs. Releases are made by
+# scripts/release.sh and the release workflow instead (docs/RELEASING.md).
 release:
 	$(MAKE) app MACOS_SIGN="$(RELEASE_SIGN)"
 	$(MAKE) notarize
@@ -73,6 +78,11 @@ notarize:
 	xcrun notarytool submit "$(DMG)" --keychain-profile "$(NOTARY_PROFILE)" --wait
 	xcrun stapler staple "$(DMG)"
 	spctl -a -vv -t open --context context:primary-signature "$(DMG)"
+
+# A dry run of a release: what the release workflow builds, from HEAD, in
+# dist/<version>/, published nowhere (NOTARIZE=1 notarizes it too).
+dist:
+	scripts/release.sh build
 
 # A pinky binary with MyGo's automation socket, for end-to-end checks.
 e2e:
