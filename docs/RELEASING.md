@@ -13,7 +13,7 @@ Pinky releases often, several times a day when there is something to ship, and n
    - **Publish** (Ubuntu): `release manifest` writes `latest.json`, the Homebrew cask `pinky.rb` and `SHA256SUMS`, and `scripts/publish.sh` creates the GitHub release as a draft, uploads everything (`latest.json` last) and publishes it.
 4. Within a quarter of an hour, the workflow of the tap, [DIYgod/homebrew-tap](https://github.com/DIYgod/homebrew-tap), takes `pinky.rb` from the latest release into `Casks/pinky.rb`, so this repository needs no token for the tap.
 
-On this Mac the whole build, notarization included, takes about two minutes once FFmpeg is built; GitHub's runners are slower, so expect roughly 10 to 20 minutes from the push to the published release (not measured yet), the first one longer while FFmpeg is built and cached.
+On this Mac the whole build, notarization included, takes about two minutes once FFmpeg is built. On GitHub the first run (7 November 2026, without publishing) took 12 minutes: 5 of them went to building FFmpeg for both Macs, which later runs take from the cache, and Apple's notary service answered within a minute. Expect about 10 minutes from the push to the published release.
 
 ## Versions
 
@@ -85,6 +85,10 @@ Done once.
 
    The Apple ID instead also works: `APPLE_ID`, `APPLE_TEAM_ID` (492J8Q67PF) and `APPLE_APP_PASSWORD`, an app-specific password from <https://account.apple.com>.
 
+All three were done on 7 November 2026, with an API key named "Pinky GitHub Actions notary". GitHub never shows a secret again, so the owner keeps the `.p12`, its password and the `.p8` in 1Password, as the "Pinky release: …" items.
+
+**Renewing.** The Developer ID certificate expires on 1 February 2027, together with Apple's first Developer ID certification authority, which issued it. Before then, the team's Account Holder creates a new Developer ID Application certificate (at <https://developer.apple.com/account/resources/certificates>, or in Xcode), and step 2 is done again with it. On this Mac, codesign finds the identity by its name and stops when two certificates share it: remove the old one from the keychains, or set `SIGN` (`RELEASE_SIGN` for `make release`) to the new one's SHA-1. Releases signed and notarized with the old certificate keep opening after it expires, as their signatures carry a timestamp. App Store Connect API keys do not expire: if the key leaks, revoke it in App Store Connect and do step 3 again with a new one.
+
 The secrets reach only workflows that people with write access start (a tag push, or "Run workflow"), never pull requests from forks. The repository variable `MACOS_SIGN_IDENTITY` names another signing identity.
 
 ## By hand
@@ -100,12 +104,14 @@ scripts/release.sh publish v2026.1107.1   # build and publish a tag from this Ma
 
 `build` and `publish` check the commit out in a worktree of their own, so nothing uncommitted gets in, and build what the workflow builds into `dist/<version>/` (a dry run's `latest.json` leaves out what it could not build); FFmpeg's builds are kept in `~/Library/Caches/pinky-release`. They sign with the Developer ID in the login keychain and notarize with the notarytool profile `pinky-notary`, so they need no secrets. A dry run leaves out what it cannot make, with a warning: without nasm (`brew install nasm`) the Intel FFmpeg lacks its assembly, and without NSIS (`brew install makensis`) there is no Windows installer. `publish` stops instead, and needs both (or `STRICT=0`, to publish without them).
 
-`publish` is for when the workflow cannot run (the secrets are not set up yet, or GitHub Actions is down). It publishes the same release as the workflow.
+`publish` is for when the workflow cannot run (GitHub Actions is down, or a secret has expired). It publishes the same release as the workflow, so cancel the tag's run before you publish the tag from the Mac.
+
+To build a tag on GitHub and publish nothing, to check the workflow say, run it with publish off: `gh workflow run release.yml --repo DIYgod/pinky -f tag=<tag> -f publish=false`. The files stay with the run, as its artifacts, for three days.
 
 ## When something fails
 
 - **The release workflow failed:** open the run in [Actions](https://github.com/DIYgod/pinky/actions/workflows/release.yml) and choose "Re-run failed jobs". Running it again for the same tag is safe: a draft release gets its files replaced, a published one keeps its files.
-- **The tag was pushed but no release came:** the run says why (often a missing secret). Fix it and re-run, or `scripts/release.sh trigger <tag>`, or `scripts/release.sh publish <tag>` from the Mac.
+- **The tag was pushed but no release came:** the run says why (often a missing or expired secret). Fix it and re-run, or `scripts/release.sh trigger <tag>`, or `scripts/release.sh publish <tag>` from the Mac.
 - **The cask is behind:** the tap's [workflow](https://github.com/DIYgod/homebrew-tap/actions) runs every 15 minutes; "Run workflow" runs it now. GitHub turns its schedule off after 60 days without a commit to the tap, and "Run workflow" turns it on again.
 - **A release is broken:** release a fix. Do not delete or move a published tag; installed apps and the cask follow the newest version.
 - **Two releases at once:** each tag runs on its own. The later version becomes the latest release whichever finishes first, and the cask never goes back to an older version.
