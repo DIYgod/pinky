@@ -150,6 +150,10 @@ A Claude Code run on the Pixel stopped when the person watcher reported a finger
 - **One phone showed twice**, over USB and over Wi-Fi, with another id on Wi-Fi. Over Wi-Fi a phone's id is now its hardware serial (`ro.serialno`, the serial adb gives the USB connection), its connections are listed once, and USB is used while it works (2e73598).
 - **Then it worked**: the owner paired the Mi by QR code from Add phone, and the new release lists the Mi once.
 
+### Unlocking the Mi from the computer
+
+- **"The lock screen showed no PIN pad"**: on the Mi 10 Pro (LineageOS, an under-display fingerprint sensor) `wm dismiss-keyguard` brings up the alternate bouncer, which waits for a finger on the sensor, and the driver's fallback swipe started on the sensor, which took it. Nothing was entered. The driver now recognizes the alternate bouncer (`alternate_bouncer`, `udfps_touch_overlay`) and taps above the sensor, which brings up the PIN pad, and swipes from above the sensor otherwise (6eed8c9). A check on the locked Mi that enters nothing found the PIN pad that way; then Unlock with Touch ID unlocked the Mi over Wi-Fi.
+
 ### Known limits found in round three
 
 - **A screenshot is one instant.** Content that blinks (Clock's paused stopwatch) may show blank; the element list still has its text.
