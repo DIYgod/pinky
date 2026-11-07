@@ -37,6 +37,8 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 | `pinky.rb` | The Homebrew tap: the cask of this release |
 | `SHA256SUMS` | Everyone: every other file's SHA-256, as `sha256sum` writes it |
 
+The command that the Homebrew cask (`/opt/homebrew/bin/pinkyctl`) and the Linux packages (`/usr/bin/pinkyctl` from the `.deb`, `~/.local/bin/pinkyctl` from `install.sh`) install is `pinkyctl`, not `pinky`: coreutils has a `pinky` command, which every Linux and Homebrew's coreutils install, so a `pinky` of Pinky's could not be installed there (dpkg refuses to overwrite coreutils' file) or lost to it on the `PATH`.
+
 The Windows and Linux packages do not carry FFmpeg yet, so their live mirror needs FFmpeg 9 installed (see the README).
 
 ### latest.json

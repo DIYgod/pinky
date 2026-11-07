@@ -9,10 +9,13 @@ import (
 
 // The Homebrew cask of Pinky, Casks/pinky.rb in the tap: the macOS zips of
 // the release, which the app is to update itself from (auto_updates), and
-// a pinky command for agents (pinky mcp). The command is a wrapper that
-// runs the app's executable by its own path (command_wrapper) rather than
-// a symbolic link to it, so that the app finds its bundle as it does when
-// it is opened.
+// the pinkyctl command for terminals and agents (pinkyctl mcp). The command
+// is a wrapper that runs the app's executable by its own path
+// (command_wrapper) rather than a symbolic link to it, so that the app
+// finds its bundle as it does when it is opened. It is not named pinky:
+// coreutils has a pinky command, which Homebrew's coreutils links into the
+// same folder, so a cask's pinky was skipped there, and a coreutils
+// installed after it could not link.
 var caskTemplate = template.Must(template.New("cask").Parse(`cask "pinky" do
   arch arm: "arm64", intel: "amd64"
 
@@ -34,7 +37,7 @@ var caskTemplate = template.Must(template.New("cask").Parse(`cask "pinky" do
   depends_on macos: :monterey
 
   app "Pinky.app"
-  command_wrapper "pinky",
+  command_wrapper "pinkyctl",
                   executable: "#{appdir}/Pinky.app/Contents/MacOS/Pinky"
 
   uninstall quit: "app.pinky.desktop"
@@ -47,6 +50,13 @@ var caskTemplate = template.Must(template.New("cask").Parse(`cask "pinky" do
     "~/Library/Preferences/app.pinky.desktop.plist",
     "~/Library/Saved Application State/app.pinky.desktop.savedState",
   ]
+
+  caveats <<~EOS
+    Agents start Pinky with: pinkyctl mcp
+      claude mcp add pinky -- pinkyctl mcp
+    The command was named pinky before, a name coreutils has too: change
+    agents that run "pinky mcp" to run "pinkyctl mcp".
+  EOS
 end
 `))
 
