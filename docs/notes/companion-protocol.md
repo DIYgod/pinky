@@ -9,6 +9,7 @@ Changes since the first version, all additive:
 | When | Change | Feature |
 | --- | --- | --- |
 | 2026-11-07, round 3 | `display` on `set_text`, `events` and `wait_idle`; `display` on every event; `features` in `ping`; `tree` fails clearly for a display it cannot read | `displays` (Android 11+) |
+| 2026-11-07, round 3 | `region` on windows; `tree` walks an input method window that covers the screen like a sheet even without `ime` | none: an older app leaves `region` out, and a client that reads it treats its absence as "the bounds" |
 
 ## Transport
 
@@ -69,7 +70,7 @@ All windows on one display and their node trees.
 | Parameter | Default | Meaning |
 | --- | --- | --- |
 | `display` | 0 | Display id; see [Displays](#displays). |
-| `ime` | false | Walk the keyboard window's nodes. Off by default: keys are noise for agents. The window is always listed. |
+| `ime` | false | Walk the keyboard window's nodes. Off by default: keys are noise for agents. The window is always listed. An input method window that covers the screen like a sheet rather than a keyboard is walked anyway: one that reaches into the top third of the display and whose region covers at least half of it, such as Gboard's stylus introduction over a scrim. Android then reports the app's nodes under it as not visible, so without it the tree would be empty. |
 | `bars` | false | Walk the status and navigation bars: system windows that span one screen edge and are at most 12% thick. They are always listed, so clients can tell what covers the app. |
 | `invisible` | false | Keep nodes that are not visible to the user (marked `"invisible": true`). By default they are skipped with their subtrees, as `uiautomator dump` does. |
 | `max_nodes` | 20000 | Stop after this many nodes and set `truncated`. |
@@ -94,7 +95,8 @@ Window:
 | `id`, `layer` | Accessibility window id and z-order (higher is on top) |
 | `type` | `application`, `input_method`, `system`, `accessibility_overlay`, `split_screen_divider`, `magnification_overlay` or `unknown` |
 | `title` | Window title, if any (an activity's label, "Navigation bar", ...) |
-| `bounds` | Window rectangle |
+| `bounds` | Window rectangle: the bounds of its touchable region |
+| `region` | The touchable region as rectangles, `[[left, top, right, bottom], ...]`, when it is more than the one rectangle of `bounds` (Android 13+; left out above 32 rectangles). Gboard's stylus toolbar, for example, has `bounds` `[0,896,1080,2400]` but `region` `[[21,896,169,1586],[0,2337,1080,2400]]`. Android hides from the user only the nodes of lower windows that the region covers, so a client that cuts elements under higher windows should cut by `region` when it is there. |
 | `active`, `focused`, `pip` | Active window, input focus, picture-in-picture |
 | `package`, `app` | Package of the root node, and its display name. Names load in the background, so the first tree after an app opens may lack `app`. |
 | `root` | The root node, absent when the window was not walked |

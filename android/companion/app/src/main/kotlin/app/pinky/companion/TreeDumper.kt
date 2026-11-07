@@ -2,6 +2,8 @@ package app.pinky.companion
 
 import android.app.KeyguardManager
 import android.graphics.Rect
+import android.graphics.Region
+import android.graphics.RegionIterator
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.SystemClock
@@ -85,11 +87,17 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
         j.fieldIfNotEmpty("title", w.title)
         w.getBoundsInScreen(st.rect)
         j.rect("bounds", st.rect.left, st.rect.top, st.rect.right, st.rect.bottom)
+        val region = regionRects(w, st.rect)
+        if (region != null) {
+            j.name("region").beginArray()
+            for (r in region) j.beginArray().value(r.left).value(r.top).value(r.right).value(r.bottom).endArray()
+            j.endArray()
+        }
         j.flag("active", w.isActive)
         j.flag("focused", w.isFocused)
         j.flag("pip", w.isInPictureInPictureMode)
 
-        val walk = (type != AccessibilityWindowInfo.TYPE_INPUT_METHOD || st.opt.ime) &&
+        val walk = (type != AccessibilityWindowInfo.TYPE_INPUT_METHOD || st.opt.ime || isImeSheet(w, region, st)) &&
             (st.opt.bars || !isSystemBar(w, st))
         val t0 = SystemClock.elapsedRealtimeNanos()
         val root = if (walk) rootOf(w) else null
@@ -126,6 +134,45 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
             r?.let { recycle(it) }
         }
         return w.root
+    }
+
+    /**
+     * The window's touchable region as rectangles, when it is more than the
+     * one rectangle of its bounds (Android 13+). Gboard's stylus toolbar, for
+     * one, takes a small strip on the left and one at the bottom, while its
+     * bounds span most of the screen; Android hides from the user only the
+     * nodes the region covers. Null when the region is the bounds, unknown,
+     * or more than MAX_REGION_RECTS rectangles.
+     */
+    private fun regionRects(w: AccessibilityWindowInfo, bounds: Rect): List<Rect>? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+        val region = Region()
+        w.getRegionInScreen(region)
+        if (region.isEmpty || (region.isRect && region.bounds == bounds)) return null
+        val rects = mutableListOf<Rect>()
+        val it = RegionIterator(region)
+        val r = Rect()
+        while (it.next(r)) {
+            if (rects.size == MAX_REGION_RECTS) return null
+            rects += Rect(r)
+        }
+        return rects
+    }
+
+    /**
+     * Whether an input method window covers the screen like a sheet rather
+     * than sitting at the bottom as a keyboard: it reaches into the top third
+     * of the display and its region covers at least half of it. Gboard's
+     * stylus introduction does this, over a scrim. Android then reports the
+     * app's nodes under it as not visible, so the input method has to be
+     * walked or the tree would be empty.
+     */
+    private fun isImeSheet(w: AccessibilityWindowInfo, region: List<Rect>?, st: State): Boolean {
+        if (w.type != AccessibilityWindowInfo.TYPE_INPUT_METHOD || st.width <= 0 || st.height <= 0) return false
+        val r = st.rect
+        w.getBoundsInScreen(r)
+        val area = region?.sumOf { it.width().toLong() * it.height().toLong() } ?: (r.width().toLong() * r.height().toLong())
+        return r.top < st.height / 3 && area * 2 >= st.width.toLong() * st.height.toLong()
     }
 
     /**
@@ -213,6 +260,7 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
 
     companion object {
         private const val MAX_DEPTH = 256
+        private const val MAX_REGION_RECTS = 32
 
         // Set by AccessibilityNodeInfoCompat.setRoleDescription and Compose.
         private const val ROLE_DESCRIPTION_KEY = "AccessibilityNodeInfo.roleDescription"
