@@ -135,6 +135,9 @@ type API struct {
 	// fileProblems are rules files edited by hand that cannot be used.
 	fileProblems []gateway.FileProblem
 	removals     []Removal // RemoveDevice calls (remove.go)
+
+	iosHost driver.HostCheck // what the computer lacks for iPhones (iphone.go)
+	dlErr   error            // what DownloadDiskImage fails with (iphone.go)
 }
 
 type device struct {

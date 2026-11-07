@@ -80,6 +80,7 @@ func main() {
 		mygo.Separator(),
 		&mygo.MenuItem{Label: "Restart Scenario", Accelerator: "CmdOrCtrl+Shift+R", Click: func(*mygo.MenuItem, *mygo.Window) { api.Play(api.Scenario()) }},
 		&mygo.MenuItem{Label: "Plug In a New Phone", Click: func(*mygo.MenuItem, *mygo.Window) { api.ConnectPhone() }},
+		&mygo.MenuItem{Label: "Plug In a New iPhone", Click: func(*mygo.MenuItem, *mygo.Window) { api.ConnectIPhone() }},
 		&mygo.MenuItem{Label: "Scan the Pairing QR Code", Click: func(*mygo.MenuItem, *mygo.Window) { api.ScanPairing() }},
 	)
 	err := ui.Run(api, ui.Options{

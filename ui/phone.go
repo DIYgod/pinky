@@ -117,6 +117,13 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
 				a.openCheckup(d)
 			}
+			// An iPhone's steps are in Add phone, which follows a phone
+			// that waits for one (addiphone.go).
+			if d.Info.Platform == driver.IOS && linkButton(c, locales.PhoneSetUpIPhone()).Clicked() {
+				a.page = pageAddPhone
+				a.add.reset(a)
+				a.add.step, a.add.focus = "iphone", d.Info.ID
+			}
 			a.removeLink(c, d)
 		})
 		return

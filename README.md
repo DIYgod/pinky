@@ -31,7 +31,7 @@ Install Pinky, connect your phone and add Pinky to your agent. Then ask the agen
 | **Windows** | Windows 10 or 11, 64-bit (x64) |
 | **Linux** | A 64-bit PC (x86-64) with Ubuntu 20.04, Debian 11 or a newer system (glibc 2.29 or later), and GTK 3 |
 | **Android phone** | Android 10 to 17 and a USB cable. Pinky brings its own adb; on Windows some phones need a USB driver, and on Linux USB access ([below](#usb-on-windows-and-linux)) |
-| **iPhone** | iOS 17.4 or later and a USB cable. For now also a Mac with Xcode to prepare it ([below](#iphone)), and on iOS 17.4 to 26 a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
+| **iPhone** | iOS 17.4 or later and a USB cable. Pinky prepares it itself, with Apple's developer disk image, which comes with Xcode or which Pinky can download from a third-party mirror when you ask ([below](#iphone)). On iOS 17.4 to 26 also a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
 | **Agent** | Any agent that can use MCP servers, such as Claude Code, Codex or Cursor |
 
 ### 1. Download and install Pinky
@@ -69,14 +69,15 @@ Pinky brings its own adb, the tool it reaches Android phones with, built from An
 
 #### iPhone
 
-For now an iPhone needs a Mac with [Xcode](https://apps.apple.com/app/xcode/id497799835), Apple's free app for developers, to prepare it. Use an Xcode that supports the iPhone's iOS version; Apple lists [which macOS each Xcode needs](https://developer.apple.com/xcode/system-requirements/). Pinky has not been tried with iPhones on Windows or Linux yet.
+Pinky prepares an iPhone itself; **Add phone › iPhone** walks you through it.
 
-1. Plug the iPhone into the Mac, unlock it and tap **Trust**.
-2. Open Xcode and choose **Window › Devices and Simulators**.
-3. On the iPhone, turn on **Developer Mode** in Settings › Privacy & Security; it appears there once Xcode has seen the iPhone. The iPhone restarts: unlock it and confirm.
-4. Wait until Xcode's Devices window no longer says that it is preparing the iPhone. Pinky then lists the iPhone as ready.
+1. Plug the iPhone into the computer, unlock it, tap **Trust** and enter its passcode. On Windows, install Apple Devices from the Microsoft Store (or iTunes) first; on Linux, the `usbmuxd` package. Add phone says when they are missing.
+2. On the iPhone, turn on **Developer Mode** in Settings › Privacy & Security: Pinky makes the switch appear there. The iPhone restarts; unlock it, tap **Turn On** and enter the passcode.
+3. Pinky mounts Apple's developer disk image on the iPhone and lists it as ready. It does this again by itself after every restart, once you unlock the iPhone.
 
-Each time the iPhone restarts, Xcode has to prepare it again: open the Devices window with the iPhone plugged in. Pinky's page for the phone says when. On iOS 27 and later, nothing gets installed on the iPhone.
+The developer disk image comes with [Xcode](https://apps.apple.com/app/xcode/id497799835), Apple's free app for developers, and Pinky does not ship it. On a Mac, install Xcode once and open it: Pinky uses the image it installs, and Xcode never has to run again. On Windows and Linux, copy `/Library/Developer/DeveloperDiskImages/iOS_DDI` from such a Mac into Pinky's folder ([where](docs/notes/ios.md#preparing-a-phone-without-xcode)). Without either, Add phone offers to download the image from a third-party mirror, github.com/doronz88/DeveloperDiskImage (Xcode 27.0 beta 4, 32 MB, kept by the author of pymobiledevice3, not by Apple), only when you click Download; Pinky checks every file against the checksum it expects. On iOS 27 and later, no app gets installed on the iPhone.
+
+Checked on the iPhone 13 mini: finding Xcode's image and keeping the image already on the phone. Not yet tried on a phone: Pinky mounting the image itself, the downloaded image, the Developer Mode switch, and iPhones on Windows or Linux.
 
 #### iPhones on iOS 17.4 to 26
 
@@ -108,7 +109,7 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 ### Phones
 
 - **Android:** turn on USB debugging, plug the phone in and accept the computer's key, or pair over Wi-Fi from Add phone. Pinky works over adb and a bundled scrcpy server. Its companion app, which ships inside Pinky.app, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
-- **iPhone:** Developer Mode on, connected over USB and trusted once in Xcode's Devices window. What Pinky can do depends on the iOS version and on how Pinky connects, which you can choose for each iPhone in Settings › Phones (Automatic picks by version, as below):
+- **iPhone:** connected over USB and prepared by Pinky ([above](#iphone)). What Pinky can do depends on the iOS version and on how Pinky connects, which you can choose for each iPhone in Settings › Phones (Automatic picks by version, as below):
 
   | iOS | How | What works | Tested on |
   | --- | --- | --- | --- |

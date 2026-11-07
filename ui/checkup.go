@@ -213,6 +213,7 @@ func (a *app) checkupList(c *mg.Context, d gateway.DeviceView, run *checkupRun, 
 
 // checkOrder is the order items show in; others follow.
 var checkOrder = []string{driver.CheckHost, driver.CheckADB, driver.CheckConnection, driver.CheckAuthorized, driver.CheckCompanion,
+	driver.CheckDeveloperMode, driver.CheckDiskImage, driver.CheckHelper,
 	driver.CheckInput, driver.CheckScreen, driver.CheckBackground, driver.CheckWiFi, driver.CheckLocalNetwork}
 
 func sortedChecks(in []driver.Check) []driver.Check {
@@ -313,6 +314,11 @@ type checkWords struct {
 
 // checkWords puts an item into words, with the steps of the phone's maker.
 func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.Check) checkWords {
+	if d.Info.Platform == driver.IOS {
+		if w, ok := a.iphoneCheckWords(d, ck); ok {
+			return w // checkup_iphone.go
+		}
+	}
 	android := d.Info.Platform == driver.Android
 	b := brandByID(brandOfFamily(a.familyOf(d.Info.ID, v)))
 	w := checkWords{title: checkTitle(ck.ID), detail: true}
@@ -519,11 +525,17 @@ func checkTitle(id string) string {
 	case driver.CheckLocalNetwork:
 		return locales.CheckLocalNetworkTitle()
 	}
+	if t := iphoneCheckTitle(id); t != "" {
+		return t
+	}
 	return id
 }
 
 // checkAction is an item's button, where Pinky can fix it.
 func (a *app) checkAction(c *mg.Context, d gateway.DeviceView, ck driver.Check) {
+	if d.Info.Platform == driver.IOS && a.iphoneCheckAction(c, d, ck) {
+		return // checkup_iphone.go
+	}
 	id := d.Info.ID
 	switch ck.Fix {
 	case driver.FixInstallCompanion, driver.FixTurnOnCompanion, driver.FixUpdateCompanion:

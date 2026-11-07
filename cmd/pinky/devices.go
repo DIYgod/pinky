@@ -54,6 +54,11 @@ func runDevices(args []string) error {
 				fmt.Fprintf(os.Stderr, "%s: %v\n", p.Platform(), err)
 				continue
 			}
+			if hc, ok := p.(driver.HostChecker); ok {
+				if c := hc.CheckHost(); c.Missing != "" {
+					fmt.Fprintf(os.Stderr, "%s: %s\n", p.Platform(), c.Detail)
+				}
+			}
 			for _, info := range infos {
 				st := gateway.DeviceIdle
 				if info.State != driver.StateOnline {

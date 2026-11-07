@@ -318,21 +318,205 @@
       }
     }
   },
-  "addPhoneIPhoneCode": "Pairing code",
-  "@addPhoneIPhoneCode": {
-    "description": "Add phone › iPhone: the accessibility label of the six boxes, and of the field over them, where the person types the code the iPhone shows."
-  },
-  "addPhoneIPhoneDetail": "On the iPhone, turn on Developer Mode in Settings › Privacy & Security. Keep it on the same Wi-Fi, then enter the code it shows.",
+  "addPhoneIPhoneDetail": "Pinky sets the iPhone up for you. Each step says what to do on the iPhone.",
   "@addPhoneIPhoneDetail": {
-    "description": "Add phone › iPhone: the line under the heading, above the six boxes of the pairing code. Settings, Privacy & Security and Developer Mode are the iPhone's own names: use those of iOS's Simplified Chinese settings."
+    "description": "Add phone › iPhone: the line under the title, above the steps."
   },
-  "addPhoneIPhoneTitle": "Pair your iPhone",
+  "addPhoneIPhoneGetXcode": "Get Xcode in the App Store",
+  "@addPhoneIPhoneGetXcode": {
+    "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the link that opens Xcode's page in the Mac App Store."
+  },
+  "addPhoneIPhoneMirrorDetail": "{source} keeps copies of Apple's files; the author of pymobiledevice3 runs it, not Apple. Pinky downloads the image from {image}, {size}, and checks every file against the checksum it expects.",
+  "@addPhoneIPhoneMirrorDetail": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. What it is. source is the mirror's address, image which Xcode the image is from, size its size.",
+    "placeholders": {
+      "source": {
+        "type": "String",
+        "example": "github.com/doronz88/DeveloperDiskImage"
+      },
+      "image": {
+        "type": "String",
+        "example": "Xcode 27.0 beta 4 (27A5228h)"
+      },
+      "size": {
+        "type": "String",
+        "example": "32 MB"
+      }
+    }
+  },
+  "addPhoneIPhoneMirrorDone": "Downloaded. Pinky is preparing the iPhone…",
+  "@addPhoneIPhoneMirrorDone": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Next to a spinner once the download is done, until the step moves on."
+  },
+  "addPhoneIPhoneMirrorDownload": "Download ({size})",
+  "@addPhoneIPhoneMirrorDownload": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. The button that starts the download. size is its size.",
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "example": "32 MB"
+      }
+    }
+  },
+  "addPhoneIPhoneMirrorDownloading": "Downloading… {done} of {total}",
+  "@addPhoneIPhoneMirrorDownloading": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Next to a spinner while it downloads.",
+    "placeholders": {
+      "done": {
+        "type": "String",
+        "example": "12 MB"
+      },
+      "total": {
+        "type": "String",
+        "example": "32 MB"
+      }
+    }
+  },
+  "addPhoneIPhoneMirrorFailed": "The download did not work.",
+  "@addPhoneIPhoneMirrorFailed": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. When the download failed; Pinky's own reason follows in English."
+  },
+  "addPhoneIPhoneMirrorMismatch": "The mirror's files are not the ones Pinky expects, so Pinky did not use them.",
+  "@addPhoneIPhoneMirrorMismatch": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. When a downloaded file's checksum differed from the one Pinky expects."
+  },
+  "addPhoneIPhoneMirrorOfficial": "You can still use an official copy instead, as described above.",
+  "@addPhoneIPhoneMirrorOfficial": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Under a failed download: the official ways above still work."
+  },
+  "addPhoneIPhoneMirrorTitle": "Or download it from a third-party mirror",
+  "@addPhoneIPhoneMirrorTitle": {
+    "description": "Add phone › iPhone, under the preparation step when the computer has no developer disk image, below the official ways to get it: the offer to download it from a third-party mirror instead. Its title."
+  },
+  "addPhoneIPhoneNoAnswer": "{name} does not answer. Unplug it and plug it in again.",
+  "@addPhoneIPhoneNoAnswer": {
+    "description": "Add phone › iPhone, the step list: under the plug-in step when the iPhone is connected but does not answer; Pinky's own reason follows in English. name is the iPhone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
+  },
+  "addPhoneIPhoneNoImageCopy": "Apple's developer disk image comes with Xcode, which runs only on a Mac. On a Mac where Xcode was opened once, copy the folder /Library/Developer/DeveloperDiskImages/iOS_DDI into the folder named below.",
+  "@addPhoneIPhoneNoImageCopy": {
+    "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the text on Windows and Linux; Pinky's sentence with its folder follows. The path stays as it is."
+  },
+  "addPhoneIPhoneNoImageMac": "Apple's developer disk image comes with Xcode. Install Xcode from the App Store and open it once, then you can quit it: Pinky uses the image from then on, also after restarts.",
+  "@addPhoneIPhoneNoImageMac": {
+    "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the text on a Mac."
+  },
+  "addPhoneIPhoneNoImageTitle": "This computer has no developer disk image yet",
+  "@addPhoneIPhoneNoImageTitle": {
+    "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the title of the box."
+  },
+  "addPhoneIPhoneRetrying": "Pinky tries again by itself.",
+  "@addPhoneIPhoneRetrying": {
+    "description": "Add phone › iPhone, the step list: a small note under a failed preparation step."
+  },
+  "addPhoneIPhoneStepDevMode": "Turn on Developer Mode",
+  "@addPhoneIPhoneStepDevMode": {
+    "description": "Add phone › iPhone, the step list: the step of turning on the iPhone's Developer Mode. Developer Mode is the iPhone's own name for the setting; use the name iOS shows in your language."
+  },
+  "addPhoneIPhoneStepDevModeDetail": "On the iPhone, open Settings › Privacy & Security › Developer Mode, turn it on and tap Restart. After the restart, unlock the iPhone, tap Turn On and enter its passcode.",
+  "@addPhoneIPhoneStepDevModeDetail": {
+    "description": "Add phone › iPhone, the step list: under the Developer Mode step. Settings, Privacy & Security, Developer Mode, Restart and Turn On are the iPhone's own words; use the words iOS shows in your language."
+  },
+  "addPhoneIPhoneStepDevModeNote": "Pinky has made the Developer Mode switch appear; it is near the bottom of Privacy & Security.",
+  "@addPhoneIPhoneStepDevModeNote": {
+    "description": "Add phone › iPhone, the step list: a small note under the Developer Mode step: iOS hides the switch until a developer tool asks for it, and Pinky did."
+  },
+  "addPhoneIPhoneStepDriver": "Install Apple's iPhone driver",
+  "@addPhoneIPhoneStepDriver": {
+    "description": "Add phone › iPhone, the step list: the first step on Windows, while Apple's driver (which comes with the Apple Devices app or iTunes) is missing."
+  },
+  "addPhoneIPhoneStepDriverDetail": "Install Apple Devices from the Microsoft Store, or iTunes from apple.com. Pinky talks to the iPhone through it.",
+  "@addPhoneIPhoneStepDriverDetail": {
+    "description": "Add phone › iPhone, the step list: under the Windows driver step. Apple Devices is the name of Apple's app in the Microsoft Store (in Chinese stores “Apple 设备”)."
+  },
+  "addPhoneIPhoneStepDriverWaiting": "Waiting for it to be installed…",
+  "@addPhoneIPhoneStepDriverWaiting": {
+    "description": "Add phone › iPhone, the step list: next to a spinner under the driver or usbmuxd step: Pinky notices by itself once it is installed."
+  },
+  "addPhoneIPhoneStepPlug": "Plug in the iPhone",
+  "@addPhoneIPhoneStepPlug": {
+    "description": "Add phone › iPhone, the step list: the step of connecting the iPhone with a cable."
+  },
+  "addPhoneIPhoneStepPlugDetail": "Connect it to this computer with a USB cable, and unlock it.",
+  "@addPhoneIPhoneStepPlugDetail": {
+    "description": "Add phone › iPhone, the step list: under the plug-in step."
+  },
+  "addPhoneIPhoneStepPrepare": "Prepare the iPhone",
+  "@addPhoneIPhoneStepPrepare": {
+    "description": "Add phone › iPhone, the step list: the step Pinky does by itself: mounting Apple's developer disk image on the iPhone."
+  },
+  "addPhoneIPhoneStepPrepareDetail": "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. It does this again by itself after every restart.",
+  "@addPhoneIPhoneStepPrepareDetail": {
+    "description": "Add phone › iPhone, the step list: under the preparation step. The developer disk image is Apple's add-on that gives a phone its developer services."
+  },
+  "addPhoneIPhoneStepPreparing": "Preparing the iPhone…",
+  "@addPhoneIPhoneStepPreparing": {
+    "description": "Add phone › iPhone, the step list: next to a spinner while Pinky mounts the developer disk image."
+  },
+  "addPhoneIPhoneStepTrust": "Trust this computer",
+  "@addPhoneIPhoneStepTrust": {
+    "description": "Add phone › iPhone, the step list: the step of tapping Trust on the iPhone's “Trust This Computer?” question."
+  },
+  "addPhoneIPhoneStepTrustDetail": "When the iPhone asks “Trust This Computer?”, tap Trust and enter its passcode. If it does not ask, unlock it; if you tapped Don't Trust, unplug it and plug it in again.",
+  "@addPhoneIPhoneStepTrustDetail": {
+    "description": "Add phone › iPhone, the step list: under the Trust step. “Trust This Computer?”, Trust and Don't Trust are the iPhone's own words; use the words iOS shows in your language."
+  },
+  "addPhoneIPhoneStepTrustWaiting": "Waiting for the iPhone to trust this computer…",
+  "@addPhoneIPhoneStepTrustWaiting": {
+    "description": "Add phone › iPhone, the step list: next to a spinner under the Trust step."
+  },
+  "addPhoneIPhoneStepUnlock": "Unlock the iPhone so Pinky can finish.",
+  "@addPhoneIPhoneStepUnlock": {
+    "description": "Add phone › iPhone, the step list: under the preparation step when the iPhone must be unlocked first (after a restart, for example)."
+  },
+  "addPhoneIPhoneStepUsbmuxd": "Install usbmuxd",
+  "@addPhoneIPhoneStepUsbmuxd": {
+    "description": "Add phone › iPhone, the step list: the first step on Linux, while usbmuxd (the daemon every iPhone connection goes through) is missing."
+  },
+  "addPhoneIPhoneStepUsbmuxdDetail": "Install the usbmuxd package, for example with sudo apt install usbmuxd. Pinky talks to the iPhone through it; it starts by itself when an iPhone is plugged in.",
+  "@addPhoneIPhoneStepUsbmuxdDetail": {
+    "description": "Add phone › iPhone, the step list: under the Linux usbmuxd step. The command stays as it is."
+  },
+  "addPhoneIPhoneStepsLabel": "Steps",
+  "@addPhoneIPhoneStepsLabel": {
+    "description": "Add phone › iPhone: the accessibility label of the step list."
+  },
+  "addPhoneIPhoneStuck": "Pinky could not finish this step.",
+  "@addPhoneIPhoneStuck": {
+    "description": "Add phone › iPhone, the step list: under the preparation step when it failed; Pinky's own reason follows in English."
+  },
+  "addPhoneIPhoneTitle": "Connect your iPhone",
   "@addPhoneIPhoneTitle": {
-    "description": "Add phone › iPhone: the heading of the iPhone step, for current and for older iPhones."
+    "description": "Add phone › iPhone: the title."
   },
-  "addPhoneIPhoneWaiting": "Waiting for the iPhone. It shows up here once the gateway has paired with it.",
-  "@addPhoneIPhoneWaiting": {
-    "description": "Add phone › iPhone: the line under the code after the person clicks Pair, while the gateway pairs with the iPhone."
+  "addPhoneIPhoneTooOld": "This iPhone runs iOS {version}. Pinky needs iOS 17.4 or later: update it in Settings › General › Software Update.",
+  "@addPhoneIPhoneTooOld": {
+    "description": "Add phone › iPhone: the text of the box shown when the iPhone's iOS is too old. version is its iOS version. Settings, General and Software Update are the iPhone's own words.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "16.7.10"
+      }
+    }
+  },
+  "addPhoneIPhoneTooOldTitle": "{name} needs a newer iOS",
+  "@addPhoneIPhoneTooOldTitle": {
+    "description": "Add phone › iPhone: the title of the box shown in place of the steps when the iPhone's iOS is too old. name is the iPhone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 8"
+      }
+    }
+  },
+  "addPhoneIPhoneUsbmuxdStopped": "Not showing up? usbmuxd is installed but not running. Plug the iPhone in again, or start it with sudo systemctl start usbmuxd.",
+  "@addPhoneIPhoneUsbmuxdStopped": {
+    "description": "Add phone › iPhone, the step list: under the plug-in step on Linux, when no iPhone showed up for a while and usbmuxd is installed but not running. The command stays as it is."
   },
   "addPhoneLabel": "Add phone",
   "@addPhoneLabel": {
@@ -652,6 +836,50 @@
   "@checkConnectionWiFi": {
     "description": "The checkup, connection and Wi-Fi: passed, over Wi-Fi."
   },
+  "checkDeveloperModePass": "On.",
+  "@checkDeveloperModePass": {
+    "description": "Checkup, an iPhone's item: Developer Mode is on."
+  },
+  "checkDeveloperModeTitle": "Developer Mode",
+  "@checkDeveloperModeTitle": {
+    "description": "Checkup, an iPhone's item: the title of the Developer Mode item. Developer Mode is the iPhone's own name for the setting; use the name iOS shows in your language."
+  },
+  "checkDiskImageDownloadNote": "Show the steps to download it from a third-party mirror instead.",
+  "@checkDiskImageDownloadNote": {
+    "description": "Checkup, an iPhone's item: a note under the item when this computer has no developer disk image: Add phone's steps (the button below) offer a download from a third-party mirror."
+  },
+  "checkDiskImageMissing": "Not mounted, so the iPhone doesn't offer what Pinky needs.",
+  "@checkDiskImageMissing": {
+    "description": "Checkup, an iPhone's item: the image is not mounted; Pinky's reason follows in English."
+  },
+  "checkDiskImageNoCopy": "Mounted, but this computer has no copy of it, so Pinky can't mount it again after the iPhone restarts.",
+  "@checkDiskImageNoCopy": {
+    "description": "Checkup, an iPhone's item: the image is mounted, but this computer has none to mount again after a restart; the steps below say where to get one."
+  },
+  "checkDiskImagePass": "Mounted. Pinky mounts it again by itself after the iPhone restarts.",
+  "@checkDiskImagePass": {
+    "description": "Checkup, an iPhone's item: the image is mounted, and this computer has one to mount again after a restart."
+  },
+  "checkDiskImageTitle": "Developer disk image",
+  "@checkDiskImageTitle": {
+    "description": "Checkup, an iPhone's item: the title of the item about Apple's developer disk image, the add-on that gives the iPhone its developer services."
+  },
+  "checkHelperHow": "How to install it",
+  "@checkHelperHow": {
+    "description": "Checkup, an iPhone's item: the button that opens the instructions for installing the helper."
+  },
+  "checkHelperMissing": "WebDriverAgent isn't installed or doesn't answer. Below iOS 27 an iPhone takes taps and typing only through it; without it Pinky can only read the screen and open apps.",
+  "@checkHelperMissing": {
+    "description": "Checkup, an iPhone's item: the helper is missing or does not answer."
+  },
+  "checkHelperPass": "WebDriverAgent is installed and answers.",
+  "@checkHelperPass": {
+    "description": "Checkup, an iPhone's item: the helper answers."
+  },
+  "checkHelperTitle": "Pinky helper",
+  "@checkHelperTitle": {
+    "description": "Checkup, an iPhone's item: the title of the item about the WebDriverAgent helper, the app Pinky drives iPhones below iOS 27 through."
+  },
   "checkHostADBOld": "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such as an old Android SDK's tools, or update them: Pinky then starts its own.",
   "@checkHostADBOld": {
     "description": "The checkup and Add phone › Android: the adb server that runs is older than Wi-Fi pairing needs."
@@ -675,6 +903,14 @@
   "checkInputFail": "Pinky couldn't send a key to the phone.",
   "@checkInputFail": {
     "description": "The checkup, tapping and typing: failed for another reason; the system's words follow."
+  },
+  "checkInputIPhoneNoHelper": "No taps or typing without the Pinky helper.",
+  "@checkInputIPhoneNoHelper": {
+    "description": "Checkup, an iPhone's item: the input item of an iPhone below iOS 27 without the helper."
+  },
+  "checkInputIPhonePass": "The iPhone's touch and key service answers.",
+  "@checkInputIPhonePass": {
+    "description": "Checkup, an iPhone's item: the input item passed: the phone's input service accepted a connection (Pinky sends no tap to check)."
   },
   "checkInputOppo": "In Developer options, turn on “Disable permission monitoring”, then restart the phone.",
   "@checkInputOppo": {
@@ -747,6 +983,10 @@
   "checkScreenTitle": "Seeing the screen",
   "@checkScreenTitle": {
     "description": "The checkup: the item for screenshots and the live picture."
+  },
+  "checkTrustedPass": "The iPhone trusts this computer.",
+  "@checkTrustedPass": {
+    "description": "Checkup, an iPhone's item: the iPhone trusts this computer (its answer to \"Trust This Computer?\"). The item's title is Add phone's \"Trust this computer\"."
   },
   "checkUSBNotReady": "This computer can't use the phone over USB yet.",
   "@checkUSBNotReady": {
@@ -4109,6 +4349,10 @@
         "example": "Pixel 9 2026-11-07 at 09.30.12.png"
       }
     }
+  },
+  "phoneSetUpIPhone": "Show the steps",
+  "@phoneSetUpIPhone": {
+    "description": "The Phone screen of an iPhone that needs setup: the link under the reason that opens Add phone › iPhone at the step the phone is at."
   },
   "phoneShow": "Show {phone}",
   "@phoneShow": {
