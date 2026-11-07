@@ -704,3 +704,26 @@ func TestRefusedPINIsNotRetried(t *testing.T) {
 		t.Errorf("a PIN that was never entered: %q", msg)
 	}
 }
+
+// TestPairingSlowHint says what to check when a phone takes long to pair.
+func TestPairingSlowHint(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.page = pageAddPhone
+	ta.add.reset(ta.app)
+	ta.add.step = "qr"
+	ta.add.pair.state, ta.add.pair.since = "waiting", time.Now()
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	if hasText(tt, "Taking a while?") {
+		t.Fatal("the hint shows at once")
+	}
+	ta.add.pair.since = time.Now().Add(-31 * time.Second)
+	tt.Frame()
+	found := false
+	for _, s := range tt.Texts() {
+		found = found || strings.HasPrefix(s, "Taking a while?")
+	}
+	if !found {
+		t.Errorf("no hint after 30 s: %q", tt.Texts())
+	}
+}

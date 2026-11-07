@@ -28,6 +28,7 @@ type pairState struct {
 	text   string // what the QR code says
 	code   *qr.Code
 	err    string
+	since  time.Time // when the code showed
 
 	// The pairing-code form.
 	form     bool
@@ -72,7 +73,7 @@ func (a *app) startPairing() {
 				st.state, st.err = "failed", "Couldn't draw the QR code: "+qerr.Error()
 				return
 			}
-			st.state, st.text, st.code = "waiting", text, code
+			st.state, st.text, st.code, st.since = "waiting", text, code, time.Now()
 		})
 		if qerr != nil {
 			return

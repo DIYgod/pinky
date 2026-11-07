@@ -2,6 +2,7 @@ package ui
 
 import (
 	"strings"
+	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -243,7 +244,16 @@ func (a *app) addQR(c *mg.Context) {
 				}
 			case "waiting":
 				spinner(c)
-				mg.Text(c, "Waiting for the phone to scan the code…")
+				mg.Column(c).Gap(4).Grow(1).MinWidth(0).Children(func() {
+					mg.Text(c, "Waiting for the phone to scan the code…")
+					// Pinky finds the phone through adb, which can stop
+					// seeing the network after it has run for days.
+					c.After(time.Second)
+					if !st.since.IsZero() && time.Since(st.since) > 30*time.Second {
+						mg.Text(c, "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happens here, adb may have stopped seeing the network: quit other Android tools and run adb kill-server, then try again.").
+							FontSize(13).TextColor(p.ink2).LineHeight(1.4)
+					}
+				})
 			default:
 				spinner(c)
 				mg.Text(c, "Getting a code…")
