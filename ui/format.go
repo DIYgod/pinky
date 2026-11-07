@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/egoist/mygo/i18n"
 
@@ -187,12 +189,17 @@ func osLine(d gateway.DeviceView) string {
 }
 
 // lowerFirst lowers a sentence's first letter for use mid-sentence,
-// keeping acronyms such as "USB" as they are.
+// keeping acronyms such as "USB" as they are. It works on runes: text in
+// Chinese, Japanese or Russian keeps its first character whole.
 func lowerFirst(s string) string {
-	if s == "" || (len(s) > 1 && s[1] >= 'A' && s[1] <= 'Z') {
+	r, n := utf8.DecodeRuneInString(s)
+	if n == 0 || !unicode.IsUpper(r) {
 		return s
 	}
-	return strings.ToLower(s[:1]) + s[1:]
+	if next, _ := utf8.DecodeRuneInString(s[n:]); unicode.IsUpper(next) {
+		return s // an acronym
+	}
+	return string(unicode.ToLower(r)) + s[n:]
 }
 
 // dayLabel groups Activity by day.

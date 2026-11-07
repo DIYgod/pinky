@@ -126,7 +126,8 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		// The agent asked for the person: the phone is theirs until they
 		// hand it back, here or with Done on the card.
 		inControl = true
-		a.controlBanner(c, d.Info.ID, locales.PhoneBannerYourTurn(), locales.PhoneBannerWaits(agentOf(ho), lowerFirst(strings.TrimSuffix(needTitle(ho), "."))))
+		reason := strings.TrimSuffix(strings.TrimSuffix(needTitle(ho), "."), "\u3002") // the agent's words, without the final period
+		a.controlBanner(c, d.Info.ID, locales.PhoneBannerYourTurn(), locales.PhoneBannerWaits(agentOf(ho), lowerFirst(reason)))
 	case inControl && agent != "":
 		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerPaused(agent))
 	case inControl:
