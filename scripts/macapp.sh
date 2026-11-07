@@ -2,16 +2,19 @@
 # Finishes a Pinky.app that `mygo build` made (make app), then makes its
 # disk image again so the .dmg carries the finished app:
 #
-#   SIGN=<identity> scripts/macapp.sh <Pinky.app> <ffmpeg prefix> [<disk image>]
+#   SIGN=<identity> [ADB=<adb folder>] scripts/macapp.sh <Pinky.app> <ffmpeg prefix> [<disk image>]
 #
 # - copies FFmpeg's libraries from <ffmpeg prefix>/lib (make ffmpeg) into
 #   Contents/Frameworks, named by their major versions as internal/video
 #   loads them; each one's install name is @rpath/<name> and its rpath is
 #   @loader_path, so they find one another there whoever loads them;
 # - puts FFmpeg's license and build notes in Contents/Resources;
-# - signs the libraries and the app again with SIGN, the identity mygo
-#   build signed with ("-", ad hoc, by default; a Developer ID gets the
-#   hardened runtime and a timestamp, as mygo build gives it);
+# - copies the adb that scripts/adb.sh built into ADB (make adb), when set,
+#   to Contents/Helpers/adb, where Pinky looks for its own adb, with its
+#   license and build notes in Contents/Resources;
+# - signs the libraries, adb and the app again with SIGN, the identity
+#   mygo build signed with ("-", ad hoc, by default; a Developer ID gets
+#   the hardened runtime and a timestamp, as mygo build gives it);
 # - rebuilds the disk image from the finished app, keeping the Finder
 #   window (.DS_Store) and volume icon that mygo build gave it, and signs
 #   it with a Developer ID. Notarize the final image yourself.
@@ -77,12 +80,38 @@ for f in COPYING.LGPLv2.1 BUILD.txt; do
 	cp "$ffmpeg/$f" "$contents/Resources/FFmpeg-$f"
 done
 
+helpers=$contents/Helpers
+rm -rf "$helpers" "$contents/Resources/adb-NOTICE.txt" "$contents/Resources/adb-BUILD.txt"
+if [ -n "${ADB:-}" ]; then
+	if [ ! -f "$ADB/adb" ]; then
+		echo "macapp: no $ADB/adb; run make adb" >&2
+		exit 1
+	fi
+	mkdir -p "$helpers"
+	cp "$ADB/adb" "$helpers/adb"
+	chmod 755 "$helpers/adb"
+	bad=$(otool -L "$helpers/adb" | awk 'NR > 1 { print $1 }' | grep -v -e '^/usr/lib/' -e '^/System/Library/' || true)
+	if [ -n "$bad" ]; then
+		echo "macapp: adb needs libraries outside the system:" >&2
+		echo "$bad" >&2
+		exit 1
+	fi
+	cp "$ADB/NOTICE.txt" "$contents/Resources/adb-NOTICE.txt"
+	cp "$ADB/BUILD.txt" "$contents/Resources/adb-BUILD.txt"
+	# shellcheck disable=SC2086 # signflags splits on purpose
+	codesign --force $signflags --sign "$sign" "$helpers/adb"
+fi
+
 # shellcheck disable=SC2086 # signflags splits on purpose
 codesign --force $signflags --sign "$sign" "$frameworks"/*.dylib
 # shellcheck disable=SC2086
 codesign --force --deep $signflags --sign "$sign" "$app"
 codesign --verify --deep --strict "$app"
-echo "added FFmpeg's libraries to $app"
+if [ -n "${ADB:-}" ]; then
+	echo "added FFmpeg's libraries and adb to $app"
+else
+	echo "added FFmpeg's libraries to $app"
+fi
 
 [ -n "$dmg" ] || exit 0
 if [ ! -f "$dmg" ]; then

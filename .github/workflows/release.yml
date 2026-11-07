@@ -3,11 +3,12 @@ run-name: Release ${{ inputs.tag || github.ref_name }}
 
 # A tag v<version>, which `scripts/release.sh tag` pushes with its commit,
 # is a release: this builds the companion APK, Pinky for Windows and Linux
-# (Ubuntu, with the FFmpeg that scripts/ffmpeg.sh builds in a container)
-# and Pinky.app for Apple silicon and Intel (macOS: signed with the
-# Developer ID, both disk images notarized at once, the tickets stapled),
-# checks that the Linux and Windows packages' FFmpeg decodes (on Ubuntu and
-# on GitHub's Windows runner), then publishes the GitHub release,
+# (Ubuntu, with the FFmpeg and adb that scripts/ffmpeg.sh and
+# scripts/adb.sh build in containers) and Pinky.app for Apple silicon and
+# Intel (macOS: signed with the Developer ID, both disk images notarized at
+# once, the tickets stapled), checks that the Linux and Windows packages'
+# FFmpeg decodes and that every package's adb runs a server (on Ubuntu,
+# GitHub's Windows runner and macOS), then publishes the GitHub release,
 # latest.json last. The steps are the scripts at the tag: scripts/dist.sh
 # builds, scripts/publish.sh publishes. The Homebrew tap takes the cask
 # that the release carries. See docs/RELEASING.md.
@@ -79,7 +80,8 @@ jobs:
     name: Linux and Windows
     needs: companion
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # FFmpeg and adb for both, when the cache has none, take about 20.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:
@@ -97,6 +99,11 @@ jobs:
         with:
           path: build/ffmpeg-dist
           key: ffmpeg-windows-linux-${{ hashFiles('scripts/ffmpeg.sh') }}
+      - name: Cache adb
+        uses: actions/cache@v6
+        with:
+          path: build/adb-dist
+          key: adb-windows-linux-${{ hashFiles('scripts/adb.sh', 'scripts/adb/**') }}
       - uses: actions/download-artifact@v8
         with:
           name: companion
@@ -115,6 +122,9 @@ jobs:
           mkdir -p "$dir"
           tar -xzf "$RUNNER_TEMP/dist/pinky-${TAG#v}-linux-amd64.tar.gz" -C "$dir"
           PINKY_FFMPEG_APP="$dir" go test -count=1 -run TestPackagedFFmpeg -v ./internal/video/ | grep -E -e '--- |^(ok|FAIL)|video_test.go'
+      - name: Check that the Linux package's adb runs a server
+        run: |
+          PINKY_ADB_APP="$RUNNER_TEMP/linux-package" go test -count=1 -run TestPackagedADB -v ./internal/driver/android/adb/ | grep -E -e '--- |^(ok|FAIL)|packaged_test.go'
       - uses: actions/upload-artifact@v7
         with:
           name: linux-windows
@@ -154,6 +164,10 @@ jobs:
         shell: bash
         run: |
           PINKY_FFMPEG_APP="$RUNNER_TEMP\windows-package" go test -count=1 -run TestPackagedFFmpeg -v ./internal/video/ | grep -E -e '--- |^(ok|FAIL)|video_test.go'
+      - name: Check that the Windows package's adb runs a server
+        shell: bash
+        run: |
+          PINKY_ADB_APP="$RUNNER_TEMP\windows-package" go test -count=1 -run TestPackagedADB -v ./internal/driver/android/adb/ | grep -E -e '--- |^(ok|FAIL)|packaged_test.go'
 
   macos:
     name: macOS
@@ -177,6 +191,15 @@ jobs:
       - name: Install nasm, for FFmpeg's Intel assembly
         if: steps.ffmpeg.outputs.cache-hit != 'true'
         run: brew install --quiet nasm
+      - name: Cache adb
+        id: adb
+        uses: actions/cache@v6
+        with:
+          path: build/adb-dist
+          key: adb-macos-${{ hashFiles('scripts/adb.sh', 'scripts/adb/**') }}
+      - name: Install CMake, for adb
+        if: steps.adb.outputs.cache-hit != 'true'
+        run: command -v cmake >/dev/null || brew install --quiet cmake
       - name: Put the Developer ID and the notary's credentials in a keychain
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
@@ -227,6 +250,17 @@ jobs:
         run: |
           go run ./scripts/release stamp "${TAG#v}"
           scripts/dist.sh darwin "$RUNNER_TEMP/dist"
+      - name: Check that the apps' adb runs a server
+        run: |
+          for arch in arm64 amd64; do
+            if [ "$arch" = amd64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+              echo "No Rosetta on this runner: the Intel app's adb was checked for its processor only"
+              continue
+            fi
+            dir="$RUNNER_TEMP/check-adb-$arch"
+            ditto -x -k "$RUNNER_TEMP/dist/pinky-${TAG#v}-darwin-$arch.zip" "$dir"
+            PINKY_ADB_APP="$dir/Pinky.app" go test -count=1 -run TestPackagedADB -v ./internal/driver/android/adb/ | grep -E -e '--- |^(ok|FAIL)|packaged_test.go'
+          done
       - uses: actions/upload-artifact@v7
         with:
           name: macos

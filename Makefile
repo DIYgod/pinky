@@ -7,6 +7,9 @@ GOARCH := $(shell go env GOARCH)
 
 # FFmpeg's libraries for Pinky.app (make ffmpeg).
 FFMPEG := build/ffmpeg
+# Pinky's own adb for Pinky.app (make adb), which make app builds when
+# CMake is installed.
+ADB := build/adb
 # The companion APK that make app puts in the app (make companion).
 COMPANION_APK ?= android/companion/app/build/outputs/apk/debug/app-debug.apk
 # The identity that signs Pinky.app: macos.signingIdentity in
@@ -20,7 +23,7 @@ RELEASE_SIGN ?= Developer ID Application: NATURAL SELECTION LABS PTE. LTD. (492J
 NOTARY_PROFILE ?= pinky-notary
 DMG := build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 
-.PHONY: build test vet check app e2e companion ffmpeg release notarize dist
+.PHONY: build test vet check app e2e companion ffmpeg adb release notarize dist
 
 build:
 	CGO_ENABLED=0 go build ./...
@@ -41,13 +44,22 @@ ffmpeg:
 $(FFMPEG)/BUILD.txt: scripts/ffmpeg.sh
 	scripts/ffmpeg.sh $(FFMPEG)
 
+# adb for this Mac, from AOSP's source (needs CMake: brew install cmake),
+# in build/adb; see scripts/adb.sh.
+adb:
+	scripts/adb.sh $(ADB)
+
+$(ADB)/BUILD.txt: scripts/adb.sh scripts/adb/CMakeLists.txt
+	scripts/adb.sh $(ADB)
+
 # Pinky.app and its .dmg in build/pinky/<os>-<arch>/. The companion APK
 # (when built) goes in through MyGo's resources, so every platform's build
 # and the .dmg carry it. On macOS the app also gets FFmpeg's libraries in
-# Contents/Frameworks, building them the first time, and the .dmg is made
+# Contents/Frameworks and, with CMake installed, its own adb in
+# Contents/Helpers, building them the first time, and the .dmg is made
 # again from the finished app.
 ifeq ($(UNAME),Darwin)
-app: $(FFMPEG)/BUILD.txt
+app: $(FFMPEG)/BUILD.txt $(if $(shell command -v cmake),$(ADB)/BUILD.txt)
 endif
 app:
 	@rm -f cmd/pinky/resources/pinky-companion.apk
@@ -62,7 +74,7 @@ app:
 	@rm -f cmd/pinky/resources/pinky-companion.apk
 	@rmdir cmd/pinky/resources 2>/dev/null || true
 ifeq ($(UNAME),Darwin)
-	SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
+	ADB="$(if $(wildcard $(ADB)/BUILD.txt),$(ADB))" SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg
 endif
 
 # Pinky.app and its .dmg for this Mac's processor, signed with the

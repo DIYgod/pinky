@@ -8,13 +8,13 @@ Pinky releases often, several times a day when there is something to ship, and n
 2. `scripts/release.sh tag -push` gives them the next version, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together (`git push --atomic`).
 3. The tag starts [.github/workflows/release.yml](../.github/workflows/release.yml), which runs the scripts as they are at the tag, on GitHub's runners (free, macOS's too, as the repository is public):
    - **Companion APK** (Ubuntu): checks the tag and its notes, then `scripts/dist.sh companion`.
-   - **Linux and Windows** (Ubuntu): `scripts/dist.sh windows`, `scripts/dist.sh linux`, with their FFmpeg (below), then decodes test streams with the FFmpeg that the `.tar.gz` carries.
-   - **Windows package** (GitHub's Windows runner): decodes test streams with the FFmpeg that the Windows zip carries.
-   - **macOS**: `scripts/dist.sh darwin` builds Pinky.app for Apple silicon and Intel, each with its own FFmpeg, signs them with the Developer ID, notarizes both disk images at once and staples the tickets to the disk images and the apps.
+   - **Linux and Windows** (Ubuntu): `scripts/dist.sh windows`, `scripts/dist.sh linux`, with their FFmpeg and adb (below), then decodes test streams with the FFmpeg that the `.tar.gz` carries and starts a server with its adb.
+   - **Windows package** (GitHub's Windows runner): decodes test streams with the FFmpeg that the Windows zip carries and starts a server with its adb.
+   - **macOS**: `scripts/dist.sh darwin` builds Pinky.app for Apple silicon and Intel, each with its own FFmpeg and adb, signs them with the Developer ID, notarizes both disk images at once and staples the tickets to the disk images and the apps, then starts a server with each app's adb (the Intel one's where the runner has Rosetta).
    - **Publish** (Ubuntu), once the others passed: `release manifest` writes `latest.json`, the Homebrew cask `pinky.rb` and `SHA256SUMS`, and `scripts/publish.sh` creates the GitHub release as a draft, uploads everything (`latest.json` last) and publishes it.
 4. Within a quarter of an hour, the workflow of the tap, [DIYgod/homebrew-tap](https://github.com/DIYgod/homebrew-tap), takes `pinky.rb` from the latest release into `Casks/pinky.rb`, so this repository needs no token for the tap.
 
-On this Mac the whole build, notarization included, takes about two minutes once FFmpeg is built. On GitHub the first run (7 November 2026, without publishing) took 12 minutes: 5 of them went to building FFmpeg for both Macs, which later runs take from the cache, and Apple's notary service answered within a minute. Expect about 10 minutes from the push to the published release.
+On this Mac the whole build, notarization included, takes about two minutes once FFmpeg and adb are built. On GitHub the first run (7 November 2026, without publishing) took 12 minutes: 5 of them went to building FFmpeg for both Macs, and Apple's notary service answered within a minute. Pinky's own adb adds about 13 minutes to the Linux and Windows job (7 for Windows, 6 for Linux) and 5 to the macOS one when the cache has no build of it (8 November 2026). A run for a tag finds no cache that another tag's run saved (GitHub keeps a tag's caches to that tag), so a release builds both again: expect about 25 minutes from the push to the published release.
 
 ## Versions
 
@@ -31,8 +31,8 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 | `pinky-<version>-darwin-arm64.zip`, `pinky-<version>-darwin-amd64.zip` | The updater and the Homebrew cask: `Pinky.app`, signed, notarized and stapled, zipped with `ditto -c -k --keepParent` |
 | `pinky-<version>-arm64.dmg`, `pinky-<version>-amd64.dmg` | People on macOS: the disk image, signed, notarized and stapled |
 | `pinky-setup-<version>-amd64.exe` | People on Windows, and the updater, which runs it quietly (`/S /D=<the install folder>`) to update a Pinky it installed: the installer, which installs over the installed version in `%LOCALAPPDATA%\Programs\Pinky` (not signed, so SmartScreen warns when people download it) |
-| `pinky-<version>-windows-amd64.zip` | People who run Pinky without installing it: the app's files (`Pinky.exe`, FFmpeg's DLLs and the companion APK) |
-| `pinky-<version>-linux-amd64.tar.gz` | The updater on Linux and `install.sh` of `mygo build`: `pinky`, FFmpeg's libraries, its desktop entry and icon, the companion APK |
+| `pinky-<version>-windows-amd64.zip` | People who run Pinky without installing it: the app's files (`Pinky.exe`, FFmpeg's DLLs, adb and the companion APK) |
+| `pinky-<version>-linux-amd64.tar.gz` | The updater on Linux and `install.sh` of `mygo build`: `pinky`, FFmpeg's libraries, adb, its desktop entry and icon, the companion APK |
 | `pinky_<version>_amd64.deb` | People on Debian and Ubuntu: the same in `/opt/pinky` |
 | `latest.json` | The updater: the release's manifest, below |
 | `pinky.rb` | The Homebrew tap: the cask of this release |
@@ -49,6 +49,18 @@ Every package carries Pinky's own FFmpeg, which `scripts/ffmpeg.sh` builds from 
 | Linux `.tar.gz` and `.deb` | next to `pinky` (`libavcodec.so.63` and the rest, which find one another through `$ORIGIN`) | software; needs glibc 2.29 or later (Ubuntu 20.04, Debian 11) |
 
 Pinky looks there before the system's libraries (after `PINKY_FFMPEG_DIR`), so a person can point `PINKY_FFMPEG_DIR` at another FFmpeg 9, such as one with VA-API on Linux. The Windows and Linux builds are made in a Docker container, Ubuntu 24.04's mingw-w64 for Windows and Ubuntu 20.04 for Linux (an old glibc, so that they need no newer one; FFmpeg 9's assembly needs a newer nasm than its own, which the build makes from source), the same on this Mac and on the runners, and `scripts/ffmpeg.sh` checks that they need nothing but the system's own libraries. The builds are kept by the hash of `scripts/ffmpeg.sh`: the release workflow caches them, and this Mac keeps them in `~/Library/Caches/pinky-release`. `PINKY_FFMPEG_APP=<a Pinky.app, or the folder of an unpacked Windows or Linux package> go test -run TestPackagedFFmpeg ./internal/video/` decodes with a package's FFmpeg, as the release workflow does before it publishes.
+
+### adb
+
+Every package carries Pinky's own adb, so that Android phones need no platform tools: `scripts/adb.sh` builds it from the source of [android-tools](https://github.com/nmeum/android-tools) 37.0.0p1 (AOSP's `android-17.0.0_r1`, Google's platform-tools 37.0.0), adb alone (`scripts/adb/CMakeLists.txt`), linked statically against protobuf 3.21.12, BoringSSL, libusb, fmt, brotli, lz4, zstd and zlib, every source checked against its SHA-256. It goes with its licenses and build notes (`adb-NOTICE.txt`, `adb-BUILD.txt`; libusb's LGPL 2.1 among them).
+
+| Package | Where | Built |
+| --- | --- | --- |
+| Pinky.app | `Contents/Helpers/adb`, signed with the app | on the Mac, with CMake (Apple's clang, macOS 12 and later), for each processor |
+| Windows installer and zip | `adb.exe`, `AdbWinApi.dll`, `AdbWinUsbApi.dll` next to `Pinky.exe` | a 32-bit adb.exe, as Google's, with Ubuntu 24.04's mingw-w64 in Docker; the two DLLs are AOSP's own (`platform/development`, `host/windows/prebuilt/usb`), which AOSP builds for 32-bit Windows only |
+| Linux `.tar.gz` and `.deb` | `adb` next to `pinky`, executable | a static musl executable, in an Alpine container: no glibc needed |
+
+Pinky prefers an adb the computer has (the Android SDK's, Homebrew's, PATH's) and runs its own from a copy in the user's cache folder, never from the app's folder: see [Pinky's own adb](notes/android.md#pinkys-own-adb). The builds are kept by the hash of `scripts/adb.sh` and `scripts/adb/`: the release workflow caches them, and this Mac keeps them in `~/Library/Caches/pinky-release/adb` (`ADB_CACHE`). `PINKY_ADB_APP=<a Pinky.app, or the folder of an unpacked Windows or Linux package> go test -run TestPackagedADB ./internal/driver/android/adb/` starts a server with a package's adb on a port of its own, as the release workflow does before it publishes. `make adb` builds this Mac's into `build/adb`, which `make app` puts in the app.
 
 ### latest.json
 
@@ -120,7 +132,7 @@ gh workflow run release.yml --ref <branch> -f tag=v2026.1107.1 -f publish=false
                                           # that version; the files stay as the run's artifacts
 ```
 
-`build` and `publish` check the commit out in a worktree of their own, so nothing uncommitted gets in, and build what the workflow builds into `dist/<version>/` (a dry run's `latest.json` leaves out what it could not build); FFmpeg's builds are kept in `~/Library/Caches/pinky-release`. They sign with the Developer ID in the login keychain and notarize with the notarytool profile `pinky-notary`, so they need no secrets. A dry run leaves out what it cannot make, with a warning: without nasm (`brew install nasm`) the Intel FFmpeg lacks its assembly, without NSIS (`brew install makensis`) there is no Windows installer, and without Docker (OrbStack or Docker Desktop, running) the Windows and Linux packages carry no FFmpeg. `publish` stops instead, and needs all three (or `STRICT=0`, to publish without them).
+`build` and `publish` check the commit out in a worktree of their own, so nothing uncommitted gets in, and build what the workflow builds into `dist/<version>/` (a dry run's `latest.json` leaves out what it could not build); FFmpeg's and adb's builds are kept in `~/Library/Caches/pinky-release`. They sign with the Developer ID in the login keychain and notarize with the notarytool profile `pinky-notary`, so they need no secrets. A dry run leaves out what it cannot make, with a warning: without nasm (`brew install nasm`) the Intel FFmpeg lacks its assembly, without NSIS (`brew install makensis`) there is no Windows installer, without CMake (`brew install cmake`) Pinky.app carries no adb, and without Docker (OrbStack or Docker Desktop, running) the Windows and Linux packages carry no FFmpeg and no adb. `publish` stops instead, and needs all four (or `STRICT=0`, to publish without them).
 
 `publish` is for when the workflow cannot run (GitHub Actions is down, or a secret has expired). It publishes the same release as the workflow, so cancel the tag's run before you publish the tag from the Mac.
 
