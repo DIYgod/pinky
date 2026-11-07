@@ -92,7 +92,7 @@ The install (`BundleInstaller`):
 
 ## Open questions
 
-- **For the release pipeline:** the feed's repository (`update.Repo`), the asset names and formats (zip for macOS; the Windows installer; what Linux gets), that the macOS zip is of the stapled app, and that `CHANGELOG.md` follows the heading format. Releases should keep `latest` pointing at the newest stable release, since the feed URL follows it.
+- **For the release pipeline:** the feed's repository (`update.Repo`), the asset names and formats (zip for macOS; the Windows installer; what Linux gets), that the macOS zip is of the stapled app, and that `CHANGELOG.md` follows the heading format. Releases should keep `latest` pointing at the newest stable release, since the feed URL follows it. The repository must be public: Pinky fetches without credentials. On 2026-11-07 it did not exist yet; the feed answered 404, which the app logs and otherwise ignores.
 - **Agents during a restart:** an agent connected over HTTP (Settings › Agents › Remote agents) loses its session when the app restarts; its MCP client has to connect again. Agents on `pinky mcp` reconnect (above).
 - **Homebrew:** if a cask is published with `auto_updates true`, Pinky should update itself there too and not defer to `brew`.
 - **Windows:** the silent install above.
