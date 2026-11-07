@@ -85,11 +85,10 @@ func waitCount(t *testing.T, c *Client, name string, want int64) {
 	t.Fatalf("%s = %d, want %d; counts %v", name, c.Report().Counts[name], want, c.Report().Counts)
 }
 
+// TestObserve checks what one observer counts from the views, reading
+// them itself, as Observe does when they change. (Reading them in the test
+// keeps it from looking at the counts halfway through a read.)
 func TestObserve(t *testing.T) {
-	old := observeEvery
-	observeEvery = 5 * time.Millisecond
-	t.Cleanup(func() { observeEvery = old })
-
 	c := openTest(t, t.TempDir(), &fakeBackend{}, newClock(), true)
 	v := &views{events: make(chan gateway.Event, 16)}
 	pixel := driver.Info{ID: "FA6C20303860", Platform: driver.Android, Name: "Pixel", Model: "Pixel 4", OSVersion: "10",
@@ -100,32 +99,28 @@ func TestObserve(t *testing.T) {
 		Connection: "usb", State: driver.StateNeedsSetup}
 	v.devices = []gateway.DeviceView{{Info: pixel, Status: gateway.DeviceIdle}, {Info: mi, Status: gateway.DeviceIdle},
 		{Info: iphone, Status: gateway.DeviceIdle}}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	go c.Observe(ctx, v)
+	o := newObserver(c)
+	o.read(v)
 
-	waitCount(t, c, "phones.android.usb", 1)
-	v.set(func() {
-		v.devices[1].StatusLine = "Claude Code · Reorder lunch · in the background"
-		v.tasks = []gateway.TaskView{
-			{ID: "t1", DeviceID: mi.ID, Agent: "Claude Code", Title: "Reorder lunch", State: gateway.TaskWorking},
-			{ID: "t2", DeviceID: pixel.ID, Agent: "Ada's script (remote)", Title: "Check mail", State: gateway.TaskWorking, Ended: time.Now()},
-		}
-		v.needs = []gateway.NeedView{
-			{ID: "ap_1", Kind: gateway.NeedApproval, Rule: "Payments", Title: "Pay $12.80?"},
-			{ID: "ap_2", Kind: gateway.NeedApproval, Rule: "My bank rule"},
-			{ID: "ap_3", Kind: gateway.NeedApproval, Rule: "New agent"},
-		}
-	})
-	waitCount(t, c, "needs.approval.asked", 2)
-	c.markDecided("ap_1")
-	v.set(func() {
-		v.tasks[0].State = gateway.TaskDone
-		v.tasks[0].Ended = time.Now()
-		v.tasks[1].State = gateway.TaskFailed
-		v.needs = nil
-	})
-	waitCount(t, c, "runs.failed", 1)
+	v.devices[1].StatusLine = "Claude Code · Reorder lunch · in the background"
+	v.tasks = []gateway.TaskView{
+		{ID: "t1", DeviceID: mi.ID, Agent: "Claude Code", Title: "Reorder lunch", State: gateway.TaskWorking},
+		{ID: "t2", DeviceID: pixel.ID, Agent: "Ada's script (remote)", Title: "Check mail", State: gateway.TaskWorking, Ended: time.Now()},
+	}
+	v.needs = []gateway.NeedView{
+		{ID: "ap_1", Kind: gateway.NeedApproval, Rule: "Payments", Title: "Pay $12.80?"},
+		{ID: "ap_2", Kind: gateway.NeedApproval, Rule: "My bank rule"},
+		{ID: "ap_3", Kind: gateway.NeedApproval, Rule: "New agent"},
+	}
+	o.read(v)
+	o.read(v) // nothing new: nothing counts twice
+
+	c.markDecided("ap_1") // the person answered it in Pinky (Gateway.Decide)
+	v.tasks[0].State = gateway.TaskDone
+	v.tasks[0].Ended = time.Now()
+	v.tasks[1].State = gateway.TaskFailed
+	v.needs = nil
+	o.read(v)
 
 	got := c.Report().Counts
 	want := map[string]int64{
@@ -141,12 +136,48 @@ func TestObserve(t *testing.T) {
 			t.Errorf("%s = %d, want %d", k, got[k], n)
 		}
 	}
-	// Nothing about the phones or tasks themselves.
-	data, _ := json.Marshal(c.Report())
+	if len(got) != len(want) {
+		t.Errorf("counted %v, want only %v", got, want)
+	}
+	// Nothing about the phones or tasks themselves. The random install id
+	// is left out of the search: its hex may spell "ada" or "e48e".
+	r := c.Report()
+	r.InstallID = ""
+	data, _ := json.Marshal(r)
 	for _, s := range []string{"FA6C2030", "3e8be48e", "001E30C9", "Ada", "lunch", "$12.80", "my bank", "check mail"} {
 		if strings.Contains(strings.ToLower(string(data)), strings.ToLower(s)) {
 			t.Errorf("the report has %q: %s", s, data)
 		}
+	}
+}
+
+// TestObserveFollowsEvents: Observe reads the views at the start and after
+// changes, and stops with its context.
+func TestObserveFollowsEvents(t *testing.T) {
+	old := observeEvery
+	observeEvery = 5 * time.Millisecond
+	t.Cleanup(func() { observeEvery = old })
+
+	c := openTest(t, t.TempDir(), &fakeBackend{}, newClock(), true)
+	v := &views{events: make(chan gateway.Event, 16)}
+	v.devices = []gateway.DeviceView{{Info: driver.Info{ID: "FA6C20303860", Platform: driver.Android, Connection: "usb",
+		State: driver.StateOnline}, Status: gateway.DeviceIdle}}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		c.Observe(ctx, v)
+		close(done)
+	}()
+	waitCount(t, c, "phones.android.usb", 1)
+	// Asked needs are the last thing a read counts, so once this one is,
+	// that read is over.
+	v.set(func() { v.needs = []gateway.NeedView{{ID: "ap_1", Kind: gateway.NeedApproval, Rule: "Payments"}} })
+	waitCount(t, c, "needs.approval.asked", 1)
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Observe did not stop with its context")
 	}
 }
 
