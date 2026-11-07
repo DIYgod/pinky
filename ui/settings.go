@@ -84,6 +84,7 @@ func (a *app) settingsPage(c *mg.Context) {
 			tab(secSafety, locales.SettingsSectionSafety(), false)
 			tab(secPrivacy, locales.SettingsSectionPrivacy(), false)
 			tab(secAdvanced, locales.SettingsSectionAdvanced(), false)
+			a.feedbackLink(c)
 		})
 		mg.Scroll(c).Grow(1).MinWidth(0).Padding(24, 40).Children(func() {
 			mg.Column(c).MaxWidth(640).Gap(22).Children(func() {
@@ -683,6 +684,7 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 			}
 		})
 	})
+	a.privacyTelemetry(c)
 	if a.set.confirm {
 		switch mg.AlertDialog(c, &a.set.confirm, locales.SettingsPrivacyDeleteTitle(),
 			locales.SettingsPrivacyDeleteMessage(),
