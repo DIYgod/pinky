@@ -209,7 +209,7 @@ func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) 
 		return err
 	}
 	if c := d.companionClient(ctx); c != nil {
-		if done, err := d.typeCompanion(ctx, c, l, text, opt.Append, opt.Submit); done {
+		if done, err := d.typeCompanion(ctx, c, l, text, opt.Append, opt.Submit, 0, d.recentTap); done {
 			return err
 		}
 	}

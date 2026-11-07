@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"io"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -47,7 +49,18 @@ type Background struct {
 	l       *live
 	display int
 	w, h    int // display size when the stream is scaled; 0 = video size
+
+	mu       sync.Mutex
+	tapPoint screen.Point // the last tap, for typing into the field under it
+	tapAt    time.Time
 }
+
+// alwaysUnlocked reports whether scrcpy's virtual displays ignore the
+// phone's lock: from Android 13 it creates them always unlocked and in
+// their own display group, so they keep running, drawing and taking input
+// while the phone's own screen is off and locked (checked on the Android 16
+// emulator). Older versions have neither flag.
+func (d *Device) alwaysUnlocked() bool { return d.props.SDK >= 33 }
 
 // OpenBackground implements driver.Backgrounder with a scrcpy virtual
 // display at the main display's size, without system decorations.
@@ -157,9 +170,9 @@ func (b *Background) Observe(ctx context.Context, _ driver.ObserveOptions) (*scr
 	s := t.Screen(companion.ScreenOptions{})
 	s.CapturedAt = c.HostTime(t.Time)
 	s.App.Name = b.d.companionAppName(s.App)
-	// scrcpy creates the display always unlocked; the phone's own lock
-	// screen is on the main display.
-	s.Locked = false
+	// The phone's lock screen is on the main display; from Android 13 the
+	// virtual display is always unlocked.
+	s.Locked = t.Locked && !b.d.alwaysUnlocked()
 	return s, nil
 }
 
@@ -178,15 +191,33 @@ func (b *Background) Screenshot(ctx context.Context) (image.Image, error) {
 
 // Tap implements driver.Device.
 func (b *Background) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
+	b.d.used()
 	hold := tapHold
 	if opt.LongPress {
 		hold = b.d.longPressHold(ctx)
 	}
-	return b.l.tap(ctx, p, hold)
+	err := b.l.tap(ctx, p, hold)
+	if err == nil {
+		b.mu.Lock()
+		b.tapPoint, b.tapAt = p, time.Now()
+		b.mu.Unlock()
+	}
+	return err
+}
+
+// recentTap returns the last tap's point if it was in the last minute.
+func (b *Background) recentTap() (screen.Point, bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.tapAt.IsZero() || time.Since(b.tapAt) > time.Minute {
+		return screen.Point{}, false
+	}
+	return b.tapPoint, true
 }
 
 // Swipe implements driver.Device.
 func (b *Background) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
+	b.d.used()
 	return b.l.swipe(ctx, from, to, dur)
 }
 
@@ -195,8 +226,17 @@ func (b *Background) Touch(ctx context.Context, a driver.TouchAction, p screen.P
 	return b.l.touch(ctx, a, p)
 }
 
-// Type implements driver.Device.
+// Type implements driver.Device. With a companion that reads other
+// displays (Android 11 and later) the text goes in with ACTION_SET_TEXT
+// on this display, as on the main one; otherwise as key events or a
+// paste.
 func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
+	b.d.used()
+	if c := b.d.companionClient(ctx); c != nil && b.d.comp.displays() {
+		if done, err := b.d.typeCompanion(ctx, c, b.l, text, opt.Append, opt.Submit, b.display, b.recentTap); done {
+			return err
+		}
+	}
 	return b.l.typeText(ctx, text, opt, plainASCII(text) && b.d.keysReachField(ctx))
 }
 
@@ -227,13 +267,41 @@ func (b *Background) Stream(ctx context.Context, _ driver.StreamOptions) (driver
 	return b.l.attach(ctx)
 }
 
-// WaitSettled implements driver.Settler for the virtual display.
+// WaitSettled implements driver.Settler for the virtual display: its
+// video, and the companion's events on it while the companion is on.
 func (b *Background) WaitSettled(ctx context.Context, max time.Duration) (bool, error) {
-	return b.l.waitSettled(ctx, max)
+	b.d.used()
+	var extra []quietCond
+	if c, ok := b.d.settleCond(b.display); ok {
+		extra = append(extra, c)
+	}
+	return b.l.waitSettled(ctx, max, extra...)
 }
 
-// Locked implements driver.LockReporter for the whole phone.
-func (b *Background) Locked(ctx context.Context) (bool, error) { return b.d.Locked(ctx) }
+// Locked implements driver.LockReporter. From Android 13 the virtual
+// display is always unlocked, so an agent keeps working while the phone is
+// locked; before, the phone's lock applies.
+func (b *Background) Locked(ctx context.Context) (bool, error) {
+	if b.d.alwaysUnlocked() {
+		return false, nil
+	}
+	return b.d.Locked(ctx)
+}
+
+// ListFiles implements driver.Files: the phone's Pinky folder.
+func (b *Background) ListFiles(ctx context.Context) ([]driver.FileInfo, error) {
+	return b.d.ListFiles(ctx)
+}
+
+// Pull implements driver.Files.
+func (b *Background) Pull(ctx context.Context, path string, w io.Writer) error {
+	return b.d.Pull(ctx, path, w)
+}
+
+// Push implements driver.Files.
+func (b *Background) Push(ctx context.Context, path string, r io.Reader, size int64, mtime time.Time) error {
+	return b.d.Push(ctx, path, r, size, mtime)
+}
 
 // SetClipboard implements driver.Clipboard; the clipboard is shared.
 func (b *Background) SetClipboard(ctx context.Context, text string) error {
@@ -274,4 +342,6 @@ var (
 	_ driver.LockReporter = (*Background)(nil)
 	_ driver.Clipboard    = (*Background)(nil)
 	_ driver.Settler      = (*Background)(nil)
+	_ driver.Files        = (*Background)(nil)
+	_ driver.Backgrounder = (*Device)(nil)
 )

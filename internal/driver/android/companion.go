@@ -51,10 +51,12 @@ type companionLink struct {
 	sub     *companion.Subscription
 	stop    context.CancelFunc // ends the subscription's context
 
+	info *companion.Info // the app's ping while it is on
+
 	evMu   sync.Mutex
-	last   time.Time      // arrival of the last window or content event
-	events []screen.Event // toasts and notifications since the last Observe
-	live   bool           // the subscription is delivering
+	lastAt map[int]time.Time // arrival of the last window or content event, by display (-1: unknown)
+	events []screen.Event    // toasts and notifications since the last Observe
+	live   bool              // the subscription is delivering
 }
 
 // companionClient returns the companion client with its service on, or nil
@@ -111,6 +113,7 @@ func (d *Device) companionClient(ctx context.Context) *companion.Client {
 		return nil
 	}
 	k.on = true
+	k.info = info
 	k.reason = ""
 	d.used()
 	if k.idle == nil {
@@ -170,7 +173,7 @@ func (d *Device) subscribeLocked() error {
 	k.evMu.Lock()
 	k.live = true
 	k.events = nil
-	k.last = time.Time{}
+	k.lastAt = map[int]time.Time{}
 	k.evMu.Unlock()
 	go d.readCompanionEvents(sub)
 	return nil
@@ -182,8 +185,10 @@ func (d *Device) readCompanionEvents(sub *companion.Subscription) {
 		now := time.Now()
 		k.evMu.Lock()
 		switch ev.Kind {
-		case companion.EventWindow, companion.EventWindows, companion.EventContent, companion.EventDropped:
-			k.last = now
+		case companion.EventWindow, companion.EventWindows, companion.EventContent:
+			k.lastAt[ev.Display] = now
+		case companion.EventDropped:
+			k.lastAt[-1] = now
 		}
 		if se, ok := ev.ScreenEvent(); ok {
 			k.events = append(k.events, se)
@@ -209,12 +214,44 @@ func (k *companionLink) takeEvents() []screen.Event {
 	return ev
 }
 
-// lastChange is the arrival of the last window or content event; ok is
-// false when no subscription is delivering.
-func (k *companionLink) lastChange() (time.Time, bool) {
+// lastChange is the arrival of the last window or content event on a
+// display, or of one whose display is not known; ok is false when no
+// subscription is delivering. Apps from before round 3 send no display,
+// which reads as 0, the main display.
+func (k *companionLink) lastChange(display int) (time.Time, bool) {
 	k.evMu.Lock()
 	defer k.evMu.Unlock()
-	return k.last, k.live
+	last := k.lastAt[display]
+	if u := k.lastAt[-1]; u.After(last) {
+		last = u
+	}
+	return last, k.live
+}
+
+// displays reports whether the app on the phone takes displays other than
+// the main one for set_text (Android 11 and later, apps from round 3).
+func (k *companionLink) displays() bool {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	return k.on && k.info != nil && k.info.Has(companion.FeatureDisplays)
+}
+
+// settleCond is the companion's settle condition for a display, or false
+// when no subscription is delivering.
+func (d *Device) settleCond(display int) (quietCond, bool) {
+	if _, live := d.comp.lastChange(display); !live {
+		return quietCond{}, false
+	}
+	return quietCond{
+		last: func() time.Time {
+			last, live := d.comp.lastChange(display)
+			if !live {
+				return time.Time{} // the subscription ended: video alone
+			}
+			return last
+		},
+		quiet: companion.DefaultQuiet,
+	}, true
 }
 
 // companionUnusableLocked records why the companion is not used and when
@@ -254,6 +291,7 @@ func (d *Device) companionOffLocked(why string) {
 	k := &d.comp
 	d.disableLocked()
 	k.on = false
+	k.info = nil
 	d.cfg.logf("android: %s: companion off: %s", d.info.ID, why)
 }
 
@@ -357,14 +395,15 @@ func refusedText(err error) bool {
 	return false
 }
 
-// typeCompanion writes text with the companion: into the focused field, or
-// else into the field under the last tap. It returns done=false when the
-// companion refused and the caller should type another way.
-func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, l *live, text string, append, submit bool) (bool, error) {
-	o := companion.SetTextOptions{Append: append, Submit: submit}
+// typeCompanion writes text with the companion into the focused field of
+// a display, or else into the field under the last tap there (tap
+// returns it). It returns done=false when the companion refused and the
+// caller should type another way.
+func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, l *live, text string, append, submit bool, display int, tap func() (screen.Point, bool)) (bool, error) {
+	o := companion.SetTextOptions{Append: append, Submit: submit, Display: display}
 	res, err := c.SetText(ctx, companion.Target{}, text, o)
 	if refusedText(err) {
-		if p, ok := d.recentTap(); ok {
+		if p, ok := tap(); ok {
 			res, err = c.SetText(ctx, companion.Target{Point: &p}, text, o)
 		}
 	}

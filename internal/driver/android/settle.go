@@ -5,8 +5,6 @@ import (
 	"errors"
 	"sync"
 	"time"
-
-	"github.com/DIYgod/pinky/internal/driver/android/companion"
 )
 
 // Settle detection reads only the timing and sizes of encoded video
@@ -181,17 +179,8 @@ func (d *Device) WaitSettled(ctx context.Context, max time.Duration) (bool, erro
 		return false, err
 	}
 	var extra []quietCond
-	if _, live := d.comp.lastChange(); live {
-		extra = append(extra, quietCond{
-			last: func() time.Time {
-				last, live := d.comp.lastChange()
-				if !live {
-					return time.Time{} // the subscription ended: video alone
-				}
-				return last
-			},
-			quiet: companion.DefaultQuiet,
-		})
+	if c, ok := d.settleCond(0); ok {
+		extra = append(extra, c)
 	}
 	return l.waitSettled(ctx, max, extra...)
 }
