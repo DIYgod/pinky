@@ -80,7 +80,8 @@ jobs:
     name: Linux and Windows
     needs: companion
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # FFmpeg and adb for both, when the cache has none, take about 20.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
         with:

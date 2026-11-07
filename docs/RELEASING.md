@@ -14,7 +14,7 @@ Pinky releases often, several times a day when there is something to ship, and n
    - **Publish** (Ubuntu), once the others passed: `release manifest` writes `latest.json`, the Homebrew cask `pinky.rb` and `SHA256SUMS`, and `scripts/publish.sh` creates the GitHub release as a draft, uploads everything (`latest.json` last) and publishes it.
 4. Within a quarter of an hour, the workflow of the tap, [DIYgod/homebrew-tap](https://github.com/DIYgod/homebrew-tap), takes `pinky.rb` from the latest release into `Casks/pinky.rb`, so this repository needs no token for the tap.
 
-On this Mac the whole build, notarization included, takes about two minutes once FFmpeg is built. On GitHub the first run (7 November 2026, without publishing) took 12 minutes: 5 of them went to building FFmpeg for both Macs, which later runs take from the cache, and Apple's notary service answered within a minute. Expect about 10 minutes from the push to the published release.
+On this Mac the whole build, notarization included, takes about two minutes once FFmpeg and adb are built. On GitHub the first run (7 November 2026, without publishing) took 12 minutes: 5 of them went to building FFmpeg for both Macs, and Apple's notary service answered within a minute. Pinky's own adb adds about 13 minutes to the Linux and Windows job (7 for Windows, 6 for Linux) and 5 to the macOS one when the cache has no build of it (8 November 2026). A run for a tag finds no cache that another tag's run saved (GitHub keeps a tag's caches to that tag), so a release builds both again: expect about 25 minutes from the push to the published release.
 
 ## Versions
 
