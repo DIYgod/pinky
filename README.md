@@ -30,7 +30,7 @@ Install Pinky, connect your phone and add Pinky to your agent. Then ask the agen
 | **Mac** | macOS 12 or later, with Apple silicon or Intel |
 | **Windows** | Windows 10 or 11, 64-bit (x64) |
 | **Linux** | A 64-bit PC (x86-64) with Ubuntu 20.04, Debian 11 or a newer system (glibc 2.29 or later), and GTK 3 |
-| **Android phone** | Android 10 to 17 and a USB cable. For now the computer also needs Google's Android tools ([below](#android-tools)) |
+| **Android phone** | Android 10 to 17 and a USB cable. Pinky brings its own adb; on Windows some phones need a USB driver, and on Linux USB access ([below](#usb-on-windows-and-linux)) |
 | **iPhone** | iOS 17.4 or later and a USB cable. For now also a Mac with Xcode to prepare it ([below](#iphone)), and on iOS 17.4 to 26 a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
 | **Agent** | Any agent that can use MCP servers, such as Claude Code, Codex or Cursor |
 
@@ -50,30 +50,18 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 
 #### Android
 
-1. Put Google's Android tools on the computer ([below](#android-tools)). Pinky does not include them yet.
-2. On the phone, turn on USB debugging: in Settings › About phone, tap **Build number** 7 times, then turn on **USB debugging** in Settings › System › Developer options. Some brands name these menus a little differently.
-3. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone**.
-4. Pinky offers to install Pinky Companion, its app for the phone, which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
+1. On the phone, turn on USB debugging: in Settings › About phone, tap **Build number** 7 times, then turn on **USB debugging** in Settings › System › Developer options. Some brands name these menus a little differently.
+2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone**.
+3. Pinky offers to install Pinky Companion, its app for the phone, which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
 
 #### Android tools
 
-Pinky reaches Android phones through adb, which comes with Google's Android platform tools. Until Pinky includes it, put the tools where Android Studio keeps them, which is where Pinky looks. With Android Studio installed, they are there already.
+Pinky brings its own adb, the tool it reaches Android phones with, built from Android's source, so nothing else needs installing. When the computer has Android's platform tools already, from Android Studio, Homebrew or the system's packages, Pinky uses those, and shares their adb server with Android Studio and other tools.
 
-- **Mac**, in Terminal:
+#### USB on Windows and Linux
 
-  ```sh
-  mkdir -p ~/Library/Android/sdk && curl -fsSL -o /tmp/platform-tools.zip https://dl.google.com/android/repository/platform-tools-latest-darwin.zip && unzip -oq /tmp/platform-tools.zip -d ~/Library/Android/sdk
-  ```
-
-- **Windows**, in PowerShell:
-
-  ```powershell
-  Invoke-WebRequest https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile "$env:TEMP\platform-tools.zip"; Expand-Archive -Force -Path "$env:TEMP\platform-tools.zip" -DestinationPath "$env:LOCALAPPDATA\Android\Sdk"
-  ```
-
-- **Linux:** your system's package, which usually also gives you access to phones over USB: `sudo apt install adb` on Debian and Ubuntu, `sudo dnf install android-tools` on Fedora.
-
-The Mac and Windows commands download Google's [SDK Platform-Tools](https://developer.android.com/tools/releases/platform-tools), which come under Google's terms. You can also download them from that page and unzip them into the same folder.
+- **Windows:** the phone's USB debugging needs a driver. Windows installs one by itself for many phones; when it has none, Pinky lists the phone as needing setup and says which driver to install: the [Google USB Driver](https://developer.android.com/studio/run/win-usb) for Pixels, [Samsung's](https://developer.samsung.com/android-usb-driver) for Samsung phones, the [phone maker's](https://developer.android.com/studio/run/oem-usb) for others. Unplug the phone and plug it in again afterwards.
+- **Linux:** the computer must let Pinky open the phone's USB device, which takes udev rules for Android phones: `sudo apt install android-sdk-platform-tools-common` on Debian and Ubuntu, `android-udev` on Arch, `android-tools` on Fedora. You may also need to be in the `plugdev` group. Then plug the phone in again. Pinky says so when they are missing.
 
 #### iPhone
 
@@ -159,7 +147,7 @@ make companion   # optional: the Android companion APK (Android SDK and JDK)
 make app         # build/pinky/darwin-<arch>/Pinky.app and pinky-<version>-<arch>.dmg
 ```
 
-`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize. `make release` signs with the Developer ID in `RELEASE_SIGN` and notarizes the `.dmg` (`make notarize`: submit, wait, staple), with the notarytool profile in `NOTARY_PROFILE` (`pinky-notary`), which you store once with `xcrun notarytool store-credentials pinky-notary --apple-id <Apple ID> --team-id <team>`. Releases themselves are built, signed and published by a workflow for both kinds of Mac, Windows and Linux; see [docs/RELEASING.md](docs/RELEASING.md).
+`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, with CMake installed (`brew install cmake`) also builds Pinky's own adb (`make adb`) into `Contents/Helpers`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize. `make release` signs with the Developer ID in `RELEASE_SIGN` and notarizes the `.dmg` (`make notarize`: submit, wait, staple), with the notarytool profile in `NOTARY_PROFILE` (`pinky-notary`), which you store once with `xcrun notarytool store-credentials pinky-notary --apple-id <Apple ID> --team-id <team>`. Releases themselves are built, signed and published by a workflow for both kinds of Mac, Windows and Linux; see [docs/RELEASING.md](docs/RELEASING.md).
 
 To try your build, open it (`open build/pinky/darwin-arm64/Pinky.app`) and connect your agent to it with the command in its Settings › Agents, or for Claude Code from the checkout:
 
@@ -179,7 +167,7 @@ go tool mygo build -platform windows/amd64 cmd/pinky   # build/pinky/windows-amd
 go build -o pinky.exe ./cmd/pinky                      # a console build, for pinky devices and other commands in a terminal
 ```
 
-Pinky.exe is a windowed program: agents that start `Pinky.exe mcp` talk to it over pipes, but a terminal shows nothing it prints, so use the console build there. A release's installer and zip carry FFmpeg next to `Pinky.exe` (with D3D11VA). For a build of your own, `scripts/ffmpeg.sh build/ffmpeg-windows windows-amd64` makes the DLLs in `build/ffmpeg-windows/bin` (in a Docker container); put them next to the executable, or set `PINKY_FFMPEG_DIR` to their folder (the `ffmpeg-n9.0-…-win64-lgpl-shared` builds at [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases) work too). Android phones need `adb` on the `PATH`. iPhones are untested on Windows. PINs are kept in the Credential Manager, and each unlock asks through Windows Hello, or for the account's password where Hello is not set up.
+Pinky.exe is a windowed program: agents that start `Pinky.exe mcp` talk to it over pipes, but a terminal shows nothing it prints, so use the console build there. A release's installer and zip carry FFmpeg next to `Pinky.exe` (with D3D11VA). For a build of your own, `scripts/ffmpeg.sh build/ffmpeg-windows windows-amd64` makes the DLLs in `build/ffmpeg-windows/bin` (in a Docker container); put them next to the executable, or set `PINKY_FFMPEG_DIR` to their folder (the `ffmpeg-n9.0-…-win64-lgpl-shared` builds at [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds/releases) work too). A build of your own carries no adb, so Android phones need the one of Android's platform tools; `scripts/adb.sh build/adb-windows windows-amd64` builds Pinky's own (in a Docker container), whose `adb.exe` and two DLLs go next to the executable. iPhones are untested on Windows. PINs are kept in the Credential Manager, and each unlock asks through Windows Hello, or for the account's password where Hello is not set up.
 
 ### Linux
 
@@ -195,6 +183,7 @@ The window needs GTK 3 and EGL (`libgtk-3-0`, `libegl1`; Mesa draws it in softwa
 make check          # build (CGO_ENABLED=0), vet, test
 make app            # Pinky.app with FFmpeg and the companion, and a .dmg (macOS)
 make ffmpeg         # FFmpeg 9 for Pinky.app, in build/ffmpeg
+make adb            # Pinky's own adb for Pinky.app, in build/adb (needs CMake)
 make companion      # the Android companion APK (Android SDK and JDK needed)
 make e2e            # a binary with MyGo's automation socket, for UI checks
 scripts/smoke.sh    # the fake gateway, pinky devices and a task through pinky mcp

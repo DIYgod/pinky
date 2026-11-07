@@ -280,7 +280,7 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 		if e.Detail != "" {
 			info.Detail += " (" + e.Detail + ")"
 		}
-		info.Detail += ". Install the udev rules for Android phones (the android-udev-rules package, or android-sdk-platform-tools-common on Debian and Ubuntu), make sure you are in the plugdev group, then unplug the phone and plug it in again."
+		info.Detail += ". Install the udev rules for Android phones (android-sdk-platform-tools-common on Debian and Ubuntu, android-udev on Arch, android-tools on Fedora), make sure you are in the plugdev group, then unplug the phone and plug it in again."
 	case adb.StateRecovery, adb.StateBootloader, adb.StateSideload, adb.StateRescue:
 		info.State = driver.StateOffline
 		info.Detail = "The phone is in " + e.State + " mode."

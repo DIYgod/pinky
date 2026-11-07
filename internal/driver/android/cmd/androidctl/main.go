@@ -54,6 +54,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
+	"github.com/DIYgod/pinky/internal/driver/android/adb"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -68,7 +69,18 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-	cfg := android.Config{}
+	cfg := android.Config{
+		// As the app does: an adb server that runs, or one started with
+		// the adb of the Android SDK, Homebrew, PATH or Pinky
+		// (adb.StartServer; PINKY_ADB names one).
+		StartServer: func(ctx context.Context) error {
+			t, err := adb.StartServer(ctx)
+			if err == nil && t.Path != "" {
+				fmt.Fprintf(os.Stderr, "androidctl: started an adb server with %s (%s, %s)\n", t.Path, t.Source, t.Version)
+			}
+			return err
+		},
+	}
 	if *verbose {
 		cfg.Logf = func(f string, a ...any) { fmt.Fprintf(os.Stderr, "\u00b7 "+f+"\n", a...) }
 	}

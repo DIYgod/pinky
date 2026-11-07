@@ -6,7 +6,7 @@ Status, round three (2026-11-07): everything the round asked for is built and ch
 
 | Package | What it does |
 | --- | --- |
-| `internal/driver/android/adb` | A client for the adb server protocol: `host:version`, `host:devices-l`, `host:track-devices-l`, `host-serial:<serial>:features`, `host:transport:<serial>`, `shell:` (v1, interleaved output), `shell,v2,raw:` (stdout, stderr, exit code), `exec:` (binary-safe), `sync:` (push, pull, `STAT`/`LST2`, `LIST`/`LIS2`, several requests on one connection), local sockets, forwards, and wireless debugging: `host:mdns:check`, `host:mdns:services`, `host:pair:`, `host:connect:`. It reuses the running server; it never kills or restarts it. `StartServer` exists for a caller that finds no server; nothing calls it automatically. |
+| `internal/driver/android/adb` | A client for the adb server protocol: `host:version`, `host:devices-l`, `host:track-devices-l`, `host-serial:<serial>:features`, `host:transport:<serial>`, `shell:` (v1, interleaved output), `shell,v2,raw:` (stdout, stderr, exit code), `exec:` (binary-safe), `sync:` (push, pull, `STAT`/`LST2`, `LIST`/`LIS2`, several requests on one connection), local sockets, forwards, and wireless debugging: `host:mdns:check`, `host:mdns:services`, `host:pair:`, `host:connect:`. It reuses the running server and never kills one; when none runs, `StartServer` starts one, with Pinky's own adb when the computer has none ([below](#pinkys-own-adb)). |
 | `internal/driver/android/scrcpy` | The bundled scrcpy 5.0.1 server (`server/`, with its Apache-2.0 license and checksum) and its protocol: `key=value` options, the video stream headers, control messages, device messages, `start_app` results read from the server log, and `list_apps`. The options that would keep a screen awake or press POWER do not exist and are dropped from raw extras. |
 | `internal/driver/android` | The driver. `Provider` (also `driver.Pairer`), `Device` (also `Toucher`, `LockReporter`, `Clipboard`, `Settler`, `PersonWatcher`, `Waker`, `Unlocker`, `Files`, `Backgrounder`, `CompanionInstaller`), and `Background`, the device a background display gives (`Toucher`, `LockReporter`, `Clipboard`, `Settler`, `Files`). |
 | `internal/driver/android/mdns` | Pinky's own mDNS search (RFC 6762/6763), questions only: the adb server's discovery stops working after the computer's network changes. See [Wi-Fi without adb's discovery](#wi-fi-without-adbs-discovery). |
@@ -141,6 +141,44 @@ With a second server on port 5038 with discovery off (How to run), `androidctl` 
 
 The shared server on 5037 kept its connections to the Mi and `emulator-5560` throughout; the server on 5038 was stopped afterwards. Once the server on 5038 crashed when a reconnect's TLS handshake failed (`Handshake failed in SSL_accept/SSL_connect`, then `libc++abi: … mutex lock failed`), an adb bug: hence the long waits after a refusal. Run every `adb -P 5038` command with the three variables: a bare one starts an ordinary server there, which connects the emulators and the Mi too (it happened once, for three seconds). The Mi was paired with this Mac twice more (QR, code), which only adds this Mac's key to its paired devices.
 
+## Pinky's own adb
+
+Since 2026-11-08 every package of Pinky carries an adb of its own, so that a person with an Android phone installs nothing else (branch `claude/bundle-adb-3b0832`).
+
+**What it is.** `scripts/adb.sh` builds adb, and nothing else, from [android-tools](https://github.com/nmeum/android-tools) 37.0.0p1, AOSP's `android-17.0.0_r1` with a CMake build (the same version as Google's platform-tools 37.0.0), with `scripts/adb/CMakeLists.txt`. It links protobuf 3.21.12 (the last without Abseil), BoringSSL, libusb, fmt, brotli, lz4, zstd and zlib statically, so it needs only the system's libraries; every source is checked against its SHA-256. `adb version` says `Version 37.0.0p1-pinky`. It has no mDNS (android-tools builds that with Rust): Pinky finds the phones on the network itself ([above](#wi-fi-without-adbs-discovery)) and pairs and connects by address, and a server without discovery answers `host:mdns:check` with a failure, which pairing already handles.
+
+| Package | Where | Built |
+| --- | --- | --- |
+| Pinky.app (arm64, amd64) | `Contents/Helpers/adb`, signed with the app (hardened runtime, identifier `app.pinky.desktop.adb`) | Apple's clang for macOS 12 and later, 6.3 MB, the system's zlib; USB through libusb, adb's default on macOS |
+| Windows installer and zip | `adb.exe`, `AdbWinApi.dll` and `AdbWinUsbApi.dll` next to `Pinky.exe` | a 32-bit `adb.exe` (8.4 MB), as Google's: AOSP builds AdbWinApi for 32-bit Windows only, and the two DLLs are AOSP's own (platform/development, `host/windows/prebuilt/usb`, Apache-2.0, checked by SHA-256 and the git blob). Cross-compiled with Ubuntu 24.04's mingw-w64 (posix threads, `-static`, SSE2) in Docker, with MSYS2's mingw fixes (`scripts/adb/windows.patch`). It imports Windows' own DLLs and AdbWinApi.dll only |
+| Linux `.tar.gz` and `.deb` | `adb` next to `pinky` (`/opt/pinky/adb`) | a static musl executable (8.8 MB) built in Alpine 3.22, which runs on any x86-64 Linux |
+
+Licenses and build notes go with it (`adb-NOTICE.txt`, `adb-BUILD.txt`; in Pinky.app under `Contents/Resources`): Apache-2.0 for AOSP's code, BoringSSL's, the BSD licenses of protobuf, lz4 and zstd, MIT for brotli and fmt, zlib's, and the LGPL 2.1 of libusb, which is linked statically; its source is in android-tools' release and `scripts/adb.sh` builds and links it again.
+
+**Which adb starts the server.** Pinky uses whatever adb server runs and never kills or restarts one. When none answers, `adb.StartServer` starts one with the first adb that runs and is platform-tools 30 or later (older ones, such as Ubuntu 22.04's 29.0.6, lack Wireless debugging and are passed over):
+
+1. the one `PINKY_ADB` names, and only that one: a path, or `pinky` for Pinky's own (no version check);
+2. the Android SDK's: `ANDROID_HOME`, `ANDROID_SDK_ROOT`, then where Android Studio puts it (`~/Library/Android/sdk`, `%LOCALAPPDATA%\Android\Sdk`, `~/Android/Sdk`), so that Pinky and Android Studio share one server of one version;
+3. Homebrew's (`$HOMEBREW_PREFIX/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, Linuxbrew's): an app opened from the Finder or the Dock has the system's PATH, without them;
+4. those on PATH, in order (a system package's `/usr/bin/adb`, Scoop's, Chocolatey's);
+5. Pinky's own, last, also when its folder happens to be on PATH.
+
+An adb the person installed comes first so that their own adb commands find a server of their version. Pinky's own runs from a copy in the user's cache folder (`~/Library/Caches/Pinky/adb/<hash>/`, `%LOCALAPPDATA%\Pinky\adb\<hash>\` with the two DLLs, `~/.cache/pinky/adb/<hash>/`; `$PINKY_HOME/cache/adb` when that is set), named after the files' SHA-256, and other versions' copies go: the server outlives Pinky, and running from the app's folder it would keep the Windows installer from updating Pinky (MyGo's installer stops every process started from the install folder, which would take every tool's adb connections down) and a disk image from being ejected.
+
+**How the server starts.** Pinky runs the server process itself, `adb -L tcp:<port> fork-server server --reply-fd <fd>` (what `adb start-server` runs once it has found no server), detached (its own session; on Windows `DETACHED_PROCESS` and an inherited pipe handle), and waits for the `OK` it writes once it has looked for devices. `adb start-server` would check the version of a server that came up meanwhile and kill it when it differs; a server process that cannot listen because another one does only exits. The port is `ServerAddr()`'s, so `ANDROID_ADB_SERVER_PORT` and `ADB_SERVER_SOCKET` hold as before; a server address that is not this computer's is never started.
+
+**When the server goes away.** The Android provider now exists without a server (only a computer without any adb, a development build, skips it), and `List` starts one (`Config.StartServer`): at once the first time, and when a server that ran went away, after it has stayed away for 3 s, so that whoever restarts it comes first. An adb client of another version (an old `adb` on PATH, a newer SDK) prints "adb server version (41) doesn't match this client (39); killing..." and starts its own at once; Pinky then uses that one, and pairing and other features an old server lacks fail as they would. After a failure `List` waits 5 s, doubling to two minutes. Since every platform-tools from 29 (2019) speaks protocol 41, as Pinky's does, mismatches come only from much older or much newer adbs.
+
+**USB on Windows and Linux.** Windows needs a driver for a phone's USB debugging interface; adb cannot see a phone without one. `List` reads the USB devices from SetupAPI (`usbdriver_windows.go`) and lists a phone whose debugging interface (compatible id `USB\Class_ff&SubClass_42&Prot_01`) has no driver (problem 28 or 1, or no service) as `StateNeedsSetup`, id `usbdriver:<instance id>`, named as the phone names itself (the bus-reported description of the composite device), with the driver to install: the Google USB Driver for Google's vendor id, Samsung's for Samsung's, the makers' page otherwise. A phone online over Wi-Fi by the serial its USB device reports is left out. Linux needs udev rules for adb to open the USB device; a phone adb reports with "no permissions" says which package has them. Both reach the client as any phone that needs setup does (Add phone's "Found …, but …", the phone's page, the checkup).
+
+**How it was checked (2026-11-08).**
+
+- `make check`; unit tests for the search order on all three systems, version parsing and the platform-tools 30 limit, the cache copy, starting a server with the test binary as a fake adb (on Windows through the inherited handle, in CI), that a second server where one listens quits and leaves the first, `List` starting a server and waiting after one went away, and the Windows driver listing from recorded SetupAPI data.
+- This Mac, under `scripts/devlock.sh emulator-5560`: `pinky daemon` with an empty `HOME` (no SDK), PATH `/usr/bin:/bin:/usr/sbin:/sbin` (no adb), `PINKY_ADB=pinky` (Homebrew's adb is passed over too), a server port of its own (5039) with `ADB_USB=0 ADB_EMU=0`, only emulator-5560 registered (`host:emulator:5561`) and `ADB_VENDOR_KEYS` pointing at the usual key. The daemon logged `android: started an adb server adb=…/cache/adb/64df412b2df9aab8/adb from=Pinky version=37.0.0p1-pinky`, `pinky devices` listed `sdk_gphone64_arm64 emulator-5560 android usb Idle`, and `androidctl` took a 1080×2400 screenshot (652 ms) and read the home screen through that server. Without `PINKY_ADB`, the same environment started Homebrew's adb (37.0.2). The shared server on 5037 and its devices were the same before and after.
+- `TestPackagedADB` (`PINKY_ADB_APP=<package>`) starts a server with a package's adb on a port of its own and asks it for its version and devices; the release workflow runs it for the Linux, Windows and Mac packages (the Intel app's where the runner has Rosetta). The Intel Mac adb could not run here (no Rosetta on this Mac); the Windows adb ran under Wine (`adb.exe version`).
+
+**Not done.** mDNS in Pinky's adb (Android Studio's "Pair devices using Wi-Fi" through a server Pinky started fails; it works once that server is gone and Android Studio starts its own); the Windows driver listing has not met a real phone without a driver; no Windows ARM64 or Linux arm64 adb (Pinky has no such packages either).
+
 ## Round three results
 
 ### Background displays while the phone is off and locked
@@ -271,6 +309,13 @@ Wi-Fi without adb's discovery (2026-11-07):
 29. **Questions with the unicast-response bit from a port of Pinky's own, answers also read on a socket bound to the group address.** The Mi answers such questions straight back and multicasts answers to plain ones; binding the wildcard address on 5353, as most libraries do, would take the unicast answers meant for mDNSResponder. Pinky never answers or announces anything. Follow-up questions for a missing SRV or address record come at most once a second.
 30. **Reconnect what adb would:** the phones in its known hosts, when their connect service is on the network and the server does not list it. A phone the server lists is left to the server.
 31. **A search the system blocks is told by its own questions not coming back** (multicast loopback to the group socket), since macOS drops a blocked app's traffic without an error.
+
+Pinky's own adb (2026-11-08):
+
+32. **Built from AOSP's source rather than Google's platform-tools,** which come under Google's SDK terms, which forbid passing them on. android-tools' CMake build, cut down to adb, is the shortest way there; the Windows adb is 32-bit like Google's because AOSP's AdbWinApi.dll, which Samsung's and the other makers' older drivers need, is.
+33. **The person's adb before Pinky's own,** so that their tools and Pinky share one server of one version and neither kills the other's.
+34. **The server process started directly** (`fork-server server`), never through `adb start-server`, which kills a server of another version.
+35. **Pinky's own adb from a copy in the cache,** not from the app's folder, so that updates and disk images are never held by the server, which outlives Pinky.
 
 ## Not done, and open questions
 
