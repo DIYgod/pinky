@@ -29,7 +29,7 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 | --- | --- |
 | `pinky-<version>-darwin-arm64.zip`, `pinky-<version>-darwin-amd64.zip` | The updater and the Homebrew cask: `Pinky.app`, signed, notarized and stapled, zipped with `ditto -c -k --keepParent` |
 | `pinky-<version>-arm64.dmg`, `pinky-<version>-amd64.dmg` | People on macOS: the disk image, signed, notarized and stapled |
-| `pinky-setup-<version>-amd64.exe` | People on Windows, and the updater, which opens it: the installer, which installs over the installed version in `%LOCALAPPDATA%\Programs\Pinky` (not signed, so SmartScreen warns) |
+| `pinky-setup-<version>-amd64.exe` | People on Windows, and the updater, which runs it quietly (`/S /D=<the install folder>`) to update a Pinky it installed: the installer, which installs over the installed version in `%LOCALAPPDATA%\Programs\Pinky` (not signed, so SmartScreen warns when people download it) |
 | `pinky-<version>-windows-amd64.zip` | People who run Pinky without installing it: the app's files (`Pinky.exe` and the companion APK) |
 | `pinky-<version>-linux-amd64.tar.gz` | The updater on Linux and `install.sh` of `mygo build`: `pinky`, its desktop entry and icon, the companion APK |
 | `pinky_<version>_amd64.deb` | People on Debian and Ubuntu |
@@ -112,4 +112,6 @@ scripts/release.sh publish v2026.1107.1   # build and publish a tag from this Ma
 
 ## Changing the pipeline
 
-The build and publish steps are the scripts here (`scripts/dist.sh`, `scripts/publish.sh`, `scripts/release/`), and each release runs them as they are at its tag. The tap's workflow lives in the tap: change it in `scripts/release/homebrew-tap/` and run `scripts/release.sh setup`. `go test ./scripts/release` tests the versions, the changelog, the tag, the manifest and the cask.
+The build and publish steps are the scripts here (`scripts/dist.sh`, `scripts/publish.sh`, `scripts/release/`), and each release runs them as they are at its tag. The tap's workflow lives in the tap: change it in `scripts/release/homebrew-tap/` and run `scripts/release.sh setup`. `go test ./scripts/release` tests the versions, the changelog, the tag, the manifest (and that the app reads it, `TestFeedTheAppReads`) and the cask.
+
+Installed apps update from what a release publishes (`docs/notes/updates.md`): Pinky.app from the zips, which must stay signed, notarized and stapled, and a Windows Pinky by running the installer quietly, which [.github/workflows/update-windows.yml](../.github/workflows/update-windows.yml) checks on GitHub's Windows runner whenever the update code, the Windows packaging (`cmd/pinky/mygo.json`, MyGo's version in `go.mod`) or the workflow change.

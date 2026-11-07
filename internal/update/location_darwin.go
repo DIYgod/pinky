@@ -22,8 +22,9 @@ var checkRunning = func(bundle string) error {
 // locate on macOS: Pinky.app replaces itself where it is, unless macOS
 // runs it from a translocated or read-only copy, a Homebrew formula
 // manages it, the folder is not writable, or the bundle is not signed by
-// Pinky's team. Pinky's Homebrew cask declares auto_updates, so `brew
-// upgrade` leaves a cask's Pinky.app to update itself, as here.
+// Pinky's team. Pinky's Homebrew cask declares auto_updates, so Homebrew
+// leaves a cask's Pinky.app to update itself, as here, and upgrades it only
+// when the app's own version falls behind the tap (docs/notes/updates.md).
 func locate(exe string) Location {
 	l := Location{Exe: exe, App: exe, Method: MethodDownload}
 	macOS := filepath.Dir(exe)
@@ -61,7 +62,7 @@ func locate(exe string) Location {
 // homebrew returns the command that updates a Pinky that a Homebrew
 // formula installed (in the Cellar), or "". A cask moves Pinky.app to the
 // Applications folder, and Pinky's cask says it updates itself
-// (auto_updates true), so brew does not.
+// (auto_updates true), so that is Pinky's to do.
 func homebrew(exe string) string {
 	if strings.Contains(exe, "/Cellar/") {
 		return "brew upgrade pinky"
