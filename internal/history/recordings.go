@@ -91,12 +91,13 @@ func (s *Store) SetDeviceBackground(ctx context.Context, deviceID string, on boo
 	return err
 }
 
-// BackgroundDevices returns the phones whose agents work on a background
-// display.
+// BackgroundDevices returns the phones the person chose for, whether their
+// agents work on a background display (true) or on the main screen (false).
+// Phones without a choice are left out.
 func (s *Store) BackgroundDevices(ctx context.Context) (map[string]bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	rows, err := s.db.QueryContext(ctx, `SELECT device_id FROM device_settings WHERE background != 0`)
+	rows, err := s.db.QueryContext(ctx, `SELECT device_id, background FROM device_settings`)
 	if err != nil {
 		return nil, err
 	}
@@ -104,10 +105,11 @@ func (s *Store) BackgroundDevices(ctx context.Context) (map[string]bool, error) 
 	out := map[string]bool{}
 	for rows.Next() {
 		var id string
-		if err := rows.Scan(&id); err != nil {
+		var v int
+		if err := rows.Scan(&id, &v); err != nil {
 			return nil, err
 		}
-		out[id] = true
+		out[id] = v != 0
 	}
 	return out, rows.Err()
 }

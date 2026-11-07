@@ -43,11 +43,7 @@ func (g *Gateway) SetBackground(deviceID string, on bool) error {
 			return fmt.Errorf("%s cannot run apps on a background display: %w", d.name(), driver.ErrUnsupported)
 		}
 	}
-	if on {
-		g.background[d.id] = true
-	} else {
-		delete(g.background, d.id)
-	}
+	g.background[d.id] = on
 	if g.store != nil {
 		id := d.id
 		g.rec.do(func(ctx context.Context) error { return g.store.SetDeviceBackground(ctx, id, on) })
@@ -57,11 +53,28 @@ func (g *Gateway) SetBackground(deviceID string, on bool) error {
 	return nil
 }
 
-// Background reports whether agents work on a phone's background display.
+// Background reports whether agents work on a phone's background display:
+// the person's choice, else the driver's default (driver.BackgroundDefaulter).
 func (g *Gateway) Background(deviceID string) bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	return g.background[deviceID]
+	d := g.devices[deviceID]
+	if d == nil {
+		return g.background[deviceID]
+	}
+	return g.backgroundLocked(d)
+}
+
+// backgroundLocked is Background for a known phone.
+func (g *Gateway) backgroundLocked(d *device) bool {
+	if on, ok := g.background[d.id]; ok {
+		return on
+	}
+	if bd, ok := d.dev.(driver.BackgroundDefaulter); ok {
+		_, can := d.dev.(driver.Backgrounder)
+		return can && bd.BackgroundByDefault()
+	}
+	return false
 }
 
 // AgentStream returns the live video of the background display an agent

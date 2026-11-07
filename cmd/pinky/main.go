@@ -6,6 +6,7 @@
 //	pinky mcp        stdio MCP server for agents; forwards to the gateway
 //	pinky devices    list connected phones
 //	pinky token      print the agent token, for agents that connect over HTTP
+//	pinky quit       quit the running Pinky
 //	pinky version    print the version
 //
 // Add --fake to daemon, mcp or devices to use scripted fake phones instead
@@ -18,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
 )
@@ -53,6 +55,8 @@ func main() {
 		err = runDecide(args)
 	case "token":
 		err = runToken(args)
+	case "quit":
+		err = runQuit(args)
 	default:
 		usage()
 		os.Exit(2)
@@ -88,6 +92,7 @@ Commands:
   companion install [phone]
             install or update the Android companion app
   token     print the agent token, which agents connecting over HTTP send
+  quit      quit the running Pinky (the app or the daemon)
   version   print the version
 
 Flags:
@@ -98,6 +103,37 @@ Flags:
 Environment:
   PINKY_HOME  keep config, data and the socket under this folder
 `)
+}
+
+// runQuit asks the running gateway, the app's or the daemon's, to quit, and
+// waits until its socket goes away.
+func runQuit(args []string) error {
+	fs := flag.NewFlagSet("pinky quit", flag.ContinueOnError)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	dirs, err := api.DefaultDirs()
+	if err != nil {
+		return err
+	}
+	ctl, err := api.DialControl(dirs)
+	if err != nil {
+		fmt.Println("Pinky is not running.")
+		return nil
+	}
+	err = ctl.Call("quit", nil, nil)
+	ctl.Close()
+	if err != nil {
+		return err
+	}
+	for deadline := time.Now().Add(15 * time.Second); time.Now().Before(deadline); time.Sleep(200 * time.Millisecond) {
+		c, err := api.DialControl(dirs)
+		if err != nil {
+			return nil
+		}
+		c.Close()
+	}
+	return errors.New("Pinky is still running after 15 s")
 }
 
 // runToken prints the agent token, creating it when missing. Agents that

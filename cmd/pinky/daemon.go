@@ -51,6 +51,7 @@ func runDaemon(args []string) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	rg.srv.Quit = stop
 	err = rg.Serve(ctx)
 	c.Log.Info("gateway stopping")
 	return err

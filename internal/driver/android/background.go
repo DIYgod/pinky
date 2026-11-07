@@ -70,6 +70,11 @@ type Background struct {
 // emulator). Older versions have neither flag.
 func (d *Device) alwaysUnlocked() bool { return d.props.SDK >= 33 }
 
+// BackgroundByDefault implements driver.BackgroundDefaulter: from Android
+// 13 a background display keeps working while the phone is off and locked,
+// so agents use one unless the person turns it off.
+func (d *Device) BackgroundByDefault() bool { return d.alwaysUnlocked() }
+
 // OpenBackground implements driver.Backgrounder with a scrcpy virtual
 // display at the main display's size, without system decorations.
 func (d *Device) OpenBackground(ctx context.Context, opt driver.BackgroundOptions) (driver.Device, error) {

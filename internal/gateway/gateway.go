@@ -104,7 +104,7 @@ type Gateway struct {
 
 	// Guarded by mu.
 	recordOn   bool            // record the screen of new tasks
-	background map[string]bool // phones whose agents work on a background display
+	background map[string]bool // the person's choice per phone: agents on a background display, or not
 	keepDays   int             // history retention; 0 keeps everything
 	prune      chan struct{}   // asks the retention loop to run now
 

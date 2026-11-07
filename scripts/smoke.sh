@@ -61,6 +61,20 @@ if grep -q "error=true" "$out/mcp.txt"; then
 fi
 grep -q "Released Pixel 9 (fake)" "$out/mcp.txt"
 
+# `pinky quit` ends the daemon on every system, Windows included, which
+# has no signal for it.
+echo "== pinky quit"
+"$pinky" quit
+for _ in $(seq 1 30); do
+	kill -0 "$daemon" 2>/dev/null || break
+	sleep 0.5
+done
+if kill -0 "$daemon" 2>/dev/null; then
+	echo "smoke: the daemon is still running after pinky quit" >&2
+	exit 1
+fi
+grep -q "gateway stopping" "$out/daemon.log"
+
 stop
 trap - EXIT
 echo "smoke: passed"

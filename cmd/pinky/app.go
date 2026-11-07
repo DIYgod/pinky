@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/egoist/mygo"
+
 	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
@@ -71,6 +73,8 @@ func runApp(args []string) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	// `pinky quit` quits the app as its menu would.
+	rg.srv.Quit = func() { mygo.App.Quit() }
 	go func() {
 		if err := rg.Serve(ctx); err != nil && ctx.Err() == nil {
 			c.Log.Error("agent socket stopped", "err", err)

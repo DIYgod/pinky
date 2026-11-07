@@ -459,7 +459,7 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 	if st, ok := g.agents[s.agent.Name]; ok {
 		scope = st.scope
 	}
-	l.bgWanted = g.background[d.id] && scope.Mode != ScopeWatchOnly
+	l.bgWanted = g.backgroundLocked(d) && scope.Mode != ScopeWatchOnly
 	d.lease = l
 	if d.person {
 		// The person is still in control from before: the task starts paused.

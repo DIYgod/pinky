@@ -358,3 +358,51 @@ func TestStreamGivenUpLeavesNothing(t *testing.T) {
 		t.Fatalf("%d goroutines left behind (%d before)", n-before, before)
 	}
 }
+
+// defaultBgDev is a phone whose driver wants background work unless the
+// person chooses otherwise, as Android 13 and later do.
+type defaultBgDev struct{ *extraDev }
+
+func (defaultBgDev) BackgroundByDefault() bool { return true }
+
+type defaultBgProvider struct{ extraProvider }
+
+func (p defaultBgProvider) Open(context.Context, string) (driver.Device, error) {
+	return defaultBgDev{p.x}, nil
+}
+
+// TestBackgroundByDefault uses a background display on a phone whose
+// driver says so, until the person turns it off, which is kept.
+func TestBackgroundByDefault(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	dir := t.TempDir()
+	opts := func(o *Options) {
+		o.DataDir = dir
+		o.Providers = []driver.Provider{defaultBgProvider{extraProvider{demo.NewProvider(driver.Android, x.Device), x}}}
+	}
+	g1 := newExtraGateway(t, x, opts)
+	if !g1.Background("pixel") {
+		t.Fatal("off on a phone whose driver wants it by default")
+	}
+	s, _ := connect(t, g1, "Lunch")
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
+	x.mu.Lock()
+	opened := len(x.bgs)
+	x.mu.Unlock()
+	if opened == 0 {
+		t.Fatal("the task did not use a background display")
+	}
+	s.Close()
+	if err := g1.SetBackground("pixel", false); err != nil {
+		t.Fatal(err)
+	}
+	if g1.Background("pixel") {
+		t.Fatal("the person's choice did not win")
+	}
+	g1.Close()
+	g2 := newExtraGateway(t, x, opts)
+	if g2.Background("pixel") {
+		t.Fatal("the person's choice was lost in a restart")
+	}
+}

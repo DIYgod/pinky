@@ -245,38 +245,6 @@ func findLabel(res *Result, label string) *screen.Element {
 	return nil
 }
 
-// bgAdapter gives the Android driver's background displays the shape of
-// driver.Backgrounder, which the driver session is adding this round.
-type bgAdapter struct{ *android.Device }
-
-func (a bgAdapter) OpenBackground(ctx context.Context, opt driver.BackgroundOptions) (driver.Device, error) {
-	b, err := a.Device.OpenBackground(ctx, android.BackgroundOptions{App: opt.App})
-	if err != nil {
-		return nil, err
-	}
-	return b, nil
-}
-
-type bgProvider struct {
-	*android.Provider
-	id string
-}
-
-func (p *bgProvider) List(ctx context.Context) ([]driver.Info, error) {
-	return (&oneDevice{Provider: p.Provider, id: p.id}).List(ctx)
-}
-
-func (p *bgProvider) Open(ctx context.Context, id string) (driver.Device, error) {
-	if id != p.id {
-		return nil, driver.ErrNotFound
-	}
-	d, err := p.Provider.OpenDevice(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	return bgAdapter{d}, nil
-}
-
 // The agent works on a background display while the emulator's own
 // screen is off; its stream and recording come from that display.
 func TestEmulatorBackground(t *testing.T) {
@@ -288,7 +256,7 @@ func TestEmulatorBackground(t *testing.T) {
 	}
 	defer os.RemoveAll(data)
 	log := slog.New(slog.NewTextHandler(testWriter{t}, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	g, err := New(Options{Providers: []driver.Provider{&bgProvider{Provider: android.NewProvider(android.Config{}), id: id}},
+	g, err := New(Options{Providers: []driver.Provider{&oneDevice{Provider: android.NewProvider(android.Config{}), id: id}},
 		DataDir: data, TrustNewAgents: true, Logger: log, NoScreenshots: true})
 	if err != nil {
 		t.Fatal(err)
