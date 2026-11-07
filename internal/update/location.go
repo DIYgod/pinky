@@ -3,6 +3,7 @@ package update
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -24,6 +25,20 @@ const (
 	// package); Pinky only says so.
 	MethodManager
 )
+
+func (m Method) String() string {
+	switch m {
+	case MethodSelf:
+		return "self"
+	case MethodInstaller:
+		return "installer"
+	case MethodDownload:
+		return "download"
+	case MethodManager:
+		return "manager"
+	}
+	return "method " + strconv.Itoa(int(m))
+}
 
 // Location is where the running Pinky is installed, and how it can be
 // updated there.

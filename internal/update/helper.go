@@ -159,6 +159,7 @@ func (h *helper) mark(name, content string) {
 func runHelper(j helperJob, ops helperOps) error {
 	h := &helper{job: j, ops: ops}
 	exe := filepath.Join(j.Dir, j.Exe)
+	h.say("waiting for Pinky (pid %d) to quit, to install %s", j.PID, j.Version)
 	if !ops.exited(j.PID, helperAppWait) {
 		h.say("Pinky (pid %d) still runs after %s; not updating", j.PID, helperAppWait)
 		h.mark("done", "")

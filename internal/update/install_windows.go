@@ -34,7 +34,14 @@ var installLocation = func() string {
 	if err != nil {
 		return ""
 	}
-	return strings.Trim(strings.TrimSpace(dir), `"`)
+	dir = strings.Trim(strings.TrimSpace(dir), `"`)
+	// The installer keeps the folder as it was given, which may use short
+	// names (C:\Users\RUNNER~1\…); the running Pinky.exe's path has the long
+	// ones.
+	if long, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = long
+	}
+	return dir
 }
 
 // locate on Windows: a Pinky that Pinky's installer installed (where
@@ -138,7 +145,7 @@ func (st *stagedSetup) Swap(opt StartOptions) error {
 		// would take the socket the new version listens on.
 		cmd.Env = withoutVar(os.Environ(), "MYGO_AUTOMATION")
 		return cmd
-	})
+	}, true)
 	if err != nil {
 		return fmt.Errorf("start the update helper: %w", err)
 	}
@@ -196,13 +203,14 @@ func RunHelper(jobFile string) error {
 
 // startDetached starts a command that outlives this process and the job
 // object it may run in (a terminal's, an agent's), where the job allows
-// that.
-func startDetached(mk func() *exec.Cmd) (*os.Process, error) {
+// that. hide starts it hidden, which suits the helper; Pinky itself must
+// not get it, as Windows would apply it to its window's first showing.
+func startDetached(mk func() *exec.Cmd, hide bool) (*os.Process, error) {
 	flags := []uint32{windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_BREAKAWAY_FROM_JOB, windows.CREATE_NEW_PROCESS_GROUP}
 	var err error
 	for _, f := range flags {
 		cmd := mk()
-		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: f, HideWindow: true}
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: f, HideWindow: hide}
 		if err = cmd.Start(); err == nil {
 			return cmd.Process, nil
 		}
@@ -276,18 +284,18 @@ func startPinky(exe string, args, env []string) (helperProc, error) {
 		cmd.Dir = filepath.Dir(exe)
 		cmd.Env = withVars(os.Environ(), env)
 		return cmd
-	})
+	}, false)
 	if err != nil {
 		return nil, err
 	}
-	w := &winProc{done: make(chan struct{}), kill: p.Kill}
+	w := &winProc{pid: p.Pid, done: make(chan struct{}), kill: p.Kill}
 	go func() { cmd.Wait(); close(w.done) }()
 	return w, nil
 }
 
 // watchProcess follows a process by its pid; one that is gone is done.
 func watchProcess(pid int) helperProc {
-	w := &winProc{done: make(chan struct{})}
+	w := &winProc{pid: pid, done: make(chan struct{})}
 	h, err := windows.OpenProcess(windows.SYNCHRONIZE|windows.PROCESS_TERMINATE, false, uint32(pid))
 	if err != nil {
 		close(w.done)
@@ -304,6 +312,7 @@ func watchProcess(pid int) helperProc {
 }
 
 type winProc struct {
+	pid  int
 	done chan struct{}
 	kill func() error
 }

@@ -101,7 +101,9 @@ func TestWindowsUpdate(t *testing.T) {
 
 	// The older version, installed quietly with its installer.
 	installSetup(t, setup[oldV], dir)
-	if got := uninstallValue(t, "InstallLocation"); !strings.EqualFold(filepath.Clean(got), filepath.Clean(dir)) {
+	// The runner's temporary folder has short names (RUNNER~1), which the
+	// installer keeps; Pinky.exe's own path has the long ones.
+	if got := uninstallValue(t, "InstallLocation"); !samePath(got, dir) {
 		t.Fatalf("Settings › Apps says Pinky is in %q, not %s", got, dir)
 	}
 	if got := uninstallValue(t, "DisplayVersion"); got != oldV {
@@ -292,6 +294,16 @@ func exeVersion(t *testing.T, exe string, env []string) string {
 		t.Fatalf("%s version: %v", exe, err)
 	}
 	return strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(string(out)), "pinky"))
+}
+
+func samePath(a, b string) bool {
+	if l, err := filepath.EvalSymlinks(a); err == nil {
+		a = l
+	}
+	if l, err := filepath.EvalSymlinks(b); err == nil {
+		b = l
+	}
+	return strings.EqualFold(filepath.Clean(a), filepath.Clean(b))
 }
 
 func workFolders(programs string) []string {

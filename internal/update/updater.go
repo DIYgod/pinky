@@ -62,6 +62,7 @@ func (u *Updater) Where() Location {
 			u.mu.Lock()
 			u.Location = l
 			u.mu.Unlock()
+			u.logger().Info("update: where Pinky runs", "app", l.App, "updates", l.Method, "problem", l.Problem)
 		}
 	})
 	u.mu.Lock()
