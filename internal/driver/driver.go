@@ -322,6 +322,45 @@ type Pairing interface {
 	Close() error
 }
 
+// PairingReporter is a Pairing that says how it is going, so a client can
+// explain one that takes long.
+type PairingReporter interface {
+	Progress() PairingProgress
+}
+
+// PairingProgress is how far a QR pairing got. The zero value says the
+// phone has not shown up yet and nothing is known to be wrong.
+type PairingProgress struct {
+	// Found is set once the phone showed up on the network, which it does
+	// once it scanned the code.
+	Found bool
+	// Paired is set once the phone took the pairing; the driver then
+	// connects to it.
+	Paired bool
+	// NotAllowed is set while the system does not let Pinky look for
+	// phones on the local network (on macOS, Pinky's switch under System
+	// Settings › Privacy & Security › Local Network).
+	NotAllowed bool
+	// SearchErr says why Pinky cannot look for the phone on the network
+	// itself, when it cannot; "" while it can.
+	SearchErr string
+}
+
+// WiFiConnector connects to a phone that is paired with this computer at
+// the address it shows under Wireless debugging (IP address & Port), for a
+// network on which the driver cannot find it by itself. It returns the
+// phone once it is online.
+type WiFiConnector interface {
+	ConnectWiFi(ctx context.Context, addr string) (Info, error)
+}
+
+// ErrPairedNotFound is wrapped by PairWithCode and Pairing.Wait when the
+// phone paired but the driver could not find where to connect to it: its
+// wireless debugging service did not show up on the network.
+// WiFiConnector then connects with the address the person reads off the
+// phone.
+var ErrPairedNotFound = errors.New("the phone paired, but its wireless debugging address was not found on the network")
+
 // Errors drivers return. Wrap them with fmt.Errorf("...: %w", err).
 var (
 	ErrUnsupported = errors.New("not supported by this device or backend")

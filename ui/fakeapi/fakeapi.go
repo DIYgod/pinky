@@ -117,6 +117,7 @@ type API struct {
 	mediaFiles map[string]string // media id → file
 
 	pairings    []*pairing
+	pairProg    driver.PairingProgress // what the open QR pairings report
 	installs    []string
 	updates     []string // companion apps UpdateCompanion updated
 	noRecording bool

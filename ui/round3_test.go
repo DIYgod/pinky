@@ -7,6 +7,7 @@ import (
 	"image"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -708,25 +709,179 @@ func TestRefusedPINIsNotRetried(t *testing.T) {
 	}
 }
 
-// TestPairingSlowHint says what to check when a phone takes long to pair.
-func TestPairingSlowHint(t *testing.T) {
+// TestPairingProgress follows the pairing on the status line: the phone
+// found on the network, then paired and connecting.
+func TestPairingProgress(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, PairDelay: -1})
+	ta.sync()
+	ta.page = pageAddPhone
+	ta.add.reset(ta.app)
+	ta.add.step = "qr"
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "the QR code", func() bool { tt.Frame(); return ta.add.pair.code != nil })
+	for _, c := range []struct {
+		pr   driver.PairingProgress
+		want string
+	}{
+		{driver.PairingProgress{}, "Waiting for the phone to scan the code…"},
+		{driver.PairingProgress{Found: true}, "Found the phone. Pairing…"},
+		{driver.PairingProgress{Found: true, Paired: true}, "Paired. Connecting to the phone…"},
+	} {
+		ta.api.SetPairingProgress(c.pr)
+		tt.Frame()
+		if !hasText(tt, c.want) {
+			t.Errorf("%+v: %q", c.pr, tt.Texts())
+		}
+	}
+}
+
+// TestPairingStuck says, once a pairing has waited 30 seconds, what may be
+// wrong and what to do next, and offers the pairing code.
+func TestPairingStuck(t *testing.T) {
 	ta := newTestApp(t, fakeapi.OnePhone)
 	ta.page = pageAddPhone
 	ta.add.reset(ta.app)
 	ta.add.step = "qr"
-	ta.add.pair.state, ta.add.pair.since = "waiting", time.Now()
+	var pr driver.PairingProgress
+	st := &ta.add.pair
+	set := func(p driver.PairingProgress, ago time.Duration) {
+		ta.stopPairing()
+		st.state, st.since = "waiting", time.Now().Add(-ago)
+		st.progress, st.foundAt = func() driver.PairingProgress { return pr }, time.Time{}
+		pr = p
+	}
+	set(driver.PairingProgress{}, 0)
 	tt := mg.NewTester(ta.view, 1280, 820)
 	tt.Frame()
-	if hasText(tt, "Taking a while?") {
-		t.Fatal("the hint shows at once")
+	if hasText(tt, "The phone hasn't shown up on the network yet") {
+		t.Fatal("the note shows at once")
 	}
-	ta.add.pair.since = time.Now().Add(-31 * time.Second)
+	notAllowed := "Something on this computer, perhaps a firewall, keeps Pinky from looking for phones on the network."
+	if runtime.GOOS == "darwin" {
+		notAllowed = "Turn on Pinky under System Settings › Privacy & Security › Local Network, then try again."
+	}
+	for _, c := range []struct {
+		pr          driver.PairingProgress
+		title, text string
+	}{
+		{driver.PairingProgress{}, "The phone hasn't shown up on the network yet", "Some networks, such as guest Wi-Fi and many offices, keep devices from finding each other"},
+		{driver.PairingProgress{NotAllowed: true, SearchErr: "mdns: not allowed"}, "Pinky isn't allowed to look for phones on this network", notAllowed},
+		{driver.PairingProgress{SearchErr: "mdns: no network interface to search"}, "Pinky can't look for phones on this network", "(mdns: no network interface to search)"},
+	} {
+		set(c.pr, 31*time.Second)
+		tt.Frame()
+		if !hasText(tt, c.title) || !hasText(tt, c.text) {
+			t.Errorf("%+v: %q", c.pr, tt.Texts())
+		}
+		// A button shows its text and its label.
+		if n := countText(tt, "Pair with a code instead"); n != 2 {
+			t.Errorf("%+v: the pairing code is offered %d times: %q", c.pr, n/2, tt.Texts())
+		}
+		if got := hasText(tt, "Open Local Network settings"); got != (c.pr.NotAllowed && runtime.GOOS == "darwin") {
+			t.Errorf("%+v: settings button shown: %v", c.pr, got)
+		}
+	}
+	// On a Mac the settings button opens Local Network.
+	if runtime.GOOS == "darwin" {
+		set(driver.PairingProgress{NotAllowed: true}, 31*time.Second)
+		var opened string
+		saved := openURL
+		openURL = func(_ *mg.Context, u string, done func(error)) { opened = u; done(nil) }
+		t.Cleanup(func() { openURL = saved })
+		tt.Frame()
+		if err := tt.Click("Open Local Network settings"); err != nil {
+			t.Fatal(err)
+		}
+		if opened != localNetworkSettings {
+			t.Errorf("opened %q", opened)
+		}
+	}
+	// A phone that showed up gets a while to pair; the note then says so.
+	set(driver.PairingProgress{Found: true}, 31*time.Second)
 	tt.Frame()
-	found := false
-	for _, s := range tt.Texts() {
-		found = found || strings.HasPrefix(s, "Taking a while?")
+	if hasText(tt, "The phone showed up, but pairing hasn't finished") {
+		t.Error("the note shows as soon as the phone showed up")
 	}
-	if !found {
-		t.Errorf("no hint after 30 s: %q", tt.Texts())
+	st.foundAt = time.Now().Add(-16 * time.Second)
+	tt.Frame()
+	if !hasText(tt, "The phone showed up, but pairing hasn't finished") {
+		t.Errorf("no note 16 s after the phone showed up: %q", tt.Texts())
+	}
+	// Paired phones are connecting: no note.
+	set(driver.PairingProgress{Found: true, Paired: true}, 5*time.Minute)
+	tt.Frame()
+	if hasText(tt, "The phone showed up, but pairing hasn't finished") || countText(tt, "Pair with a code instead") != 2 {
+		t.Errorf("a note while connecting: %q", tt.Texts())
+	}
+	// The note's button goes to the pairing-code form.
+	set(driver.PairingProgress{}, 31*time.Second)
+	tt.Frame()
+	if err := tt.Click("Pair with a code instead"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !st.form || st.cancel != nil || !hasText(tt, "Pair with a code") || hasText(tt, "The phone hasn't shown up on the network yet") {
+		t.Errorf("after the button: form %v, %q", st.form, tt.Texts())
+	}
+}
+
+func countText(tt *mg.Tester, s string) int {
+	n := 0
+	for _, t := range tt.Texts() {
+		if strings.Contains(t, s) {
+			n++
+		}
+	}
+	return n
+}
+
+// TestPairWithCodeConnectStep: the phone paired but did not show up on
+// the network, so the form asks for the address Wireless debugging shows
+// and connects there.
+func TestPairWithCodeConnectStep(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, PairDelay: -1})
+	ta.sync()
+	ta.page = pageAddPhone
+	ta.add.reset(ta.app)
+	ta.add.step = "qr"
+	tt := mg.NewTester(ta.view, 1280, 820)
+	if err := tt.Click("Pair with a code instead"); err != nil {
+		t.Fatal(err)
+	}
+	ta.sync()
+	st := &ta.add.pair
+	st.addr, st.pin = "192.168.1.20:2", "123456"
+	tt.Frame()
+	if err := tt.Click("Pair"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the connect step", func() bool { tt.Frame(); return st.connect && !st.formBusy })
+	if !hasText(tt, "Connect to the phone") || !hasText(tt, "enter the IP address and port shown at the top") {
+		t.Fatalf("connect step: %q", tt.Texts())
+	}
+	try := func(addr, want string) {
+		t.Helper()
+		st.connAddr = addr
+		tt.Frame()
+		if err := tt.Click("Connect"); err != nil {
+			t.Fatal(err)
+		}
+		ta.waitFor(t, "an answer", func() bool { return !st.formBusy })
+		if st.formErr != want {
+			t.Errorf("%s: %q, want %q", addr, st.formErr, want)
+		}
+	}
+	try("the phone", "Enter the IP address and port the phone shows, like 192.168.1.20:37123.")
+	try("192.168.1.20:1", "Couldn't connect at that address. Use the IP address and port at the top of Wireless debugging, not the ones of the pairing dialog.")
+	st.connAddr = "192.168.1.20:41234"
+	tt.Frame()
+	if err := tt.Click("Connect"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the connected phone", func() bool {
+		return ta.page == pagePhones && strings.HasPrefix(ta.sel, "pixel-8a-wifi-")
+	})
+	if st.connect || st.form {
+		t.Errorf("the form stayed: connect %v, form %v", st.connect, st.form)
 	}
 }
