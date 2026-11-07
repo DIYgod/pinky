@@ -3,12 +3,14 @@ run-name: Release ${{ inputs.tag || github.ref_name }}
 
 # A tag v<version>, which `scripts/release.sh tag` pushes with its commit,
 # is a release: this builds the companion APK, Pinky for Windows and Linux
-# (Ubuntu) and Pinky.app for Apple silicon and Intel (macOS: signed with
-# the Developer ID, both disk images notarized at once, the tickets
-# stapled), then publishes the GitHub release, latest.json last. The steps
-# are the scripts at the tag: scripts/dist.sh builds, scripts/publish.sh
-# publishes. The Homebrew tap takes the cask that the release carries. See
-# docs/RELEASING.md.
+# (Ubuntu, with the FFmpeg that scripts/ffmpeg.sh builds in a container)
+# and Pinky.app for Apple silicon and Intel (macOS: signed with the
+# Developer ID, both disk images notarized at once, the tickets stapled),
+# checks that the Linux and Windows packages' FFmpeg decodes (on Ubuntu and
+# on GitHub's Windows runner), then publishes the GitHub release,
+# latest.json last. The steps are the scripts at the tag: scripts/dist.sh
+# builds, scripts/publish.sh publishes. The Homebrew tap takes the cask
+# that the release carries. See docs/RELEASING.md.
 on:
   push:
     tags: ["v*"]
