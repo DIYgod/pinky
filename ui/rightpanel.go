@@ -447,7 +447,7 @@ func techList(c *mg.Context, t gateway.TaskView) {
 				result = "running"
 			}
 			if s.Elapsed > 0 {
-				result += fmt.Sprintf(" · %.1f s", s.Elapsed.Seconds())
+				result += fmt.Sprintf(" · %.1f"+nbsp+"s", s.Elapsed.Seconds())
 			}
 			if !s.Target.Empty() {
 				result += fmt.Sprintf(" · target %d,%d %dx%d", s.Target.X, s.Target.Y, s.Target.W, s.Target.H)
