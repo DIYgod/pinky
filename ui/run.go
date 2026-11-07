@@ -18,6 +18,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/secret"
+	"github.com/DIYgod/pinky/internal/telemetry"
 	"github.com/DIYgod/pinky/internal/video"
 )
 
@@ -62,6 +63,10 @@ type Options struct {
 	// AgentToken is the token agents present, which Settings › Agents shows
 	// for remote agents as their bearer token; empty leaves it out.
 	AgentToken string
+	// Telemetry sends usage statistics, crash reports and feedback
+	// (docs/TELEMETRY.md); nil leaves out Send Feedback, the crash report
+	// prompt and their settings.
+	Telemetry *telemetry.Client
 }
 
 // Settings are what the Settings screen changes.
@@ -78,6 +83,10 @@ type Settings struct {
 	// that cannot start `pinky mcp`; each request needs the agent token.
 	RemoteAgents bool
 	RemoteAddr   string
+	// UsageStats shares anonymous usage statistics; CrashReports sends
+	// crash reports without asking first (docs/TELEMETRY.md).
+	UsageStats   bool
+	CrashReports bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -104,6 +113,7 @@ func DefaultSettings() Settings {
 			{Name: "Northbank", Kind: "Banking"}, {Name: "Vaultly", Kind: "Passwords"}, {Name: "Coinpouch", Kind: "Wallet"},
 		},
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
+		UsageStats: usageStatsByDefault,
 	}
 }
 
@@ -180,6 +190,7 @@ type app struct {
 	early   []func()     // posts made before that
 
 	pin    pinState       // PINs for unlocking from this computer
+	t      telState       // usage statistics, crash reports and feedback
 	comp   companionState // the Android companion app, per phone
 	bg     bgState        // background displays, per phone
 	rec    recState       // task recordings in Activity
@@ -272,6 +283,7 @@ func (a *app) ready() {
 	a.setBackgrounds(a.readBackground(a.devices))
 	a.loaded = true
 	a.applySettings()
+	a.startTelemetry()
 	a.afterRefresh(true)
 
 	a.main = mygo.NewWindow(mygo.WindowOptions{
@@ -804,6 +816,9 @@ func (a *app) setMenu() {
 		items = append(items, debugMenu(a))
 	}
 	items = append(items, &mygo.MenuItem{Role: mygo.RoleWindowMenu})
+	if help := a.helpMenu(); help != nil {
+		items = append(items, help)
+	}
 	mygo.App.SetMenu(mygo.NewMenu(items))
 }
 

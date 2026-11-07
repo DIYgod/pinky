@@ -25,6 +25,7 @@ func (a *app) view(c *mg.Context) {
 	mg.Row(c).Fill().AlignItems(mg.Stretch).Children(func() {
 		a.sidebar(c)
 		mg.Column(c).Grow(1).MinWidth(0).Background(p.bg).Children(func() {
+			a.telemetryBanner(c)
 			switch a.page {
 			case pageActivity:
 				a.activityPage(c)
@@ -37,6 +38,7 @@ func (a *app) view(c *mg.Context) {
 			}
 		})
 	})
+	a.telemetryDialogs(c)
 	a.sweepMirrors()
 	// A QR pairing lasts while its step shows, and a recording plays while
 	// Activity does.

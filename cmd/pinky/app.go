@@ -53,6 +53,9 @@ func runApp(args []string) error {
 		level = slog.LevelDebug
 	}
 	c.Log = slog.New(slog.NewTextHandler(io.MultiWriter(os.Stderr, logFile), &slog.HandlerOptions{Level: level}))
+	crashes := captureCrashes(dirs, "app", c.Log)
+	defer crashes.Stop()
+	c.Crashes = crashes
 
 	settingsPath := filepath.Join(dirs.Config, "settings.json")
 	settings := loadSettings(settingsPath, c.Log)
@@ -73,6 +76,8 @@ func runApp(args []string) error {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	tel := startTelemetry(ctx, rg, crashes, settings, "app", c.Fake, c.Log)
+	defer tel.Close()
 	// `pinky quit` quits the app as its menu would.
 	rg.srv.Quit = func() { mygo.App.Quit() }
 	go func() {
@@ -83,13 +88,14 @@ func runApp(args []string) error {
 
 	gatewaySettings(&settings, rg)
 	current := settings
-	return ui.Run(rg.G, ui.Options{
+	return ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
 		Version:  version,
 		Theme:    *theme,
 		Hidden:   *background,
 		Settings: &settings,
 		OnSettings: func(s ui.Settings) {
 			applySettings(rg, current, s, c.Log)
+			applyTelemetry(tel, s, c.Fake)
 			unlock.on.Store(s.UnlockFromComputer)
 			current = s
 			if err := saveSettings(settingsPath, s); err != nil {
@@ -98,6 +104,7 @@ func runApp(args []string) error {
 		},
 		RulesFile:  dirs.Rules(),
 		AgentToken: rg.srv.Token,
+		Telemetry:  tel,
 	})
 }
 

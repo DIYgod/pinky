@@ -83,6 +83,7 @@ func (a *app) settingsPage(c *mg.Context) {
 			tab(secSafety, "Safety", false)
 			tab(secPrivacy, "Privacy", false)
 			tab(secAdvanced, "Advanced", false)
+			a.feedbackLink(c)
 		})
 		mg.Scroll(c).Grow(1).MinWidth(0).Padding(24, 40).Children(func() {
 			mg.Column(c).MaxWidth(640).Gap(22).Children(func() {
@@ -651,6 +652,7 @@ func (a *app) settingsPrivacy(c *mg.Context) {
 			}
 		})
 	})
+	a.privacyTelemetry(c)
 	if a.set.confirm {
 		switch mg.AlertDialog(c, &a.set.confirm, "Delete all activity?",
 			"Every finished task, its steps, approvals and screenshots are removed from this computer. Running tasks go on.",
