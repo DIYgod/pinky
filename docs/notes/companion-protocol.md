@@ -164,7 +164,7 @@ Subscribes the connection to events. The reply comes first; events follow on the
 
 The result is `{"kinds": [...], "display": <id, when given>, "time": <ms>}`.
 
-Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display`: the display it came from, or -1 when that is not known. Android 13 and later report it for every event. On Android 11 and 12 the event's window tells, so a window that has only just opened can be -1; on Android 10 only the main display's windows are known. Toast events name no window: their display is the one Android reports, else the display where the app last opened a window. Notifications are always -1: they belong to the phone, not to a display. Content changes are folded per display.
+Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display`: the display it came from, or -1 when that is not known. Android 13 and later report it for every event. On Android 11 and 12 the event's window tells, so a window that has only just opened can be -1; on Android 10 only the main display's windows are known. Toast events name no window: their display is the one Android reports, else the display where the app last opened a window, else, for an app that opened none since the service started, the display its windows were on then. Notifications are always -1: they belong to the phone, not to a display. Content changes are folded per display.
 
 | Kind | When | Extra fields |
 | --- | --- | --- |

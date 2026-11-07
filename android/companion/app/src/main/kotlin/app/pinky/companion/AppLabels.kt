@@ -29,19 +29,31 @@ class AppLabels(private val context: Context) {
         return null
     }
 
+    /**
+     * Returns the name, loading it on the calling thread if it is not known
+     * yet. For toasts, whose text must not depend on whether the app's name
+     * happened to be loaded already.
+     */
+    fun load(pkg: String): String? {
+        if (pkg.isEmpty()) return null
+        val label = labels.getOrPut(pkg) { lookup(pkg) }
+        return label.ifEmpty { null }
+    }
+
     /** Starts loading a package's name if it is not known yet. */
     fun warm(pkg: String) {
         if (pkg.isEmpty() || labels.containsKey(pkg) || !pending.add(pkg)) return
         loader.execute {
-            val label = try {
-                val pm = context.packageManager
-                pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
-            } catch (_: PackageManager.NameNotFoundException) {
-                ""
-            }
-            labels[pkg] = label
+            labels.putIfAbsent(pkg, lookup(pkg))
             pending.remove(pkg)
         }
+    }
+
+    private fun lookup(pkg: String): String = try {
+        val pm = context.packageManager
+        pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+    } catch (_: PackageManager.NameNotFoundException) {
+        ""
     }
 
     fun shutdown() {

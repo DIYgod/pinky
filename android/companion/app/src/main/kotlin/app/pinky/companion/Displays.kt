@@ -68,6 +68,35 @@ class Displays(private val service: PinkyAccessibilityService) {
         }
     }
 
+    /**
+     * The display of each app that has an application window now, leaving
+     * out apps with windows on more than one display. Fetches each window's
+     * root, so it runs on the worker thread, once when the service starts.
+     */
+    fun appDisplays(): Map<String, Int> {
+        val found = HashMap<String, Int>()
+        val both = HashSet<String>()
+        fun add(display: Int, ws: List<AccessibilityWindowInfo>) {
+            for (w in ws) {
+                if (w.type != AccessibilityWindowInfo.TYPE_APPLICATION) continue
+                val root = w.root ?: continue
+                val pkg = root.packageName?.toString()
+                TreeDumper.recycle(root)
+                if (pkg.isNullOrEmpty()) continue
+                val prev = found.put(pkg, display)
+                if (prev != null && prev != display) both += pkg
+            }
+            TreeDumper.recycleWindows(ws)
+        }
+        if (multiDisplay) {
+            val all = service.windowsOnAllDisplays
+            for (i in 0 until all.size()) add(all.keyAt(i), all.valueAt(i))
+        } else {
+            add(Display.DEFAULT_DISPLAY, service.windows)
+        }
+        return found - both
+    }
+
     /** Ids of the displays that have accessibility windows. Worker thread only. */
     fun list(): List<Int> {
         if (!multiDisplay) return listOf(Display.DEFAULT_DISPLAY)

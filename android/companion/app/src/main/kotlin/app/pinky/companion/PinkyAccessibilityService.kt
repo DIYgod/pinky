@@ -67,6 +67,12 @@ class PinkyAccessibilityService : AccessibilityService() {
         restarted = false
         server?.stop()
         server = CompanionServer(this).also { it.start() }
+        // Which display each open app is on, for toasts that come before
+        // any window event of their app.
+        server?.handler?.runOnWorker {
+            val seed = displays.appDisplays()
+            main.post { events.seed(seed) }
+        }
         // Check now rather than 10 s from now, so that frequent rebinding
         // cannot postpone the check for ever.
         main.removeCallbacks(watchdog)
