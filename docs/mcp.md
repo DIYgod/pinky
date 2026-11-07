@@ -169,7 +169,7 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 | --- | --- | --- |
 | `key` | `back` `home` `recents` `enter` `tab` `delete` `forward_delete` `escape` `dpad_up` `dpad_down` `dpad_left` `dpad_right` `page_up` `page_down` | Keys the phone lacks return `unsupported` |
 
-`home` always works, even in a blocked app.
+`home` always works, even in a blocked app, except on an iPhone below iOS 27 without the WebDriverAgent helper (see Limits).
 
 ### phone_launch
 
@@ -258,6 +258,8 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 Sent only when the request carries `_meta.progressToken`: while waiting for an approval or handoff (at the start and every 5 s), for `phone_observe` with `wait_ms`, and for `phone_wait_for` (every 5 s). `progress` and `total` are seconds.
 
 ## Limits
+
+- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) read the screen through the accessibility inspector and OCR, and can only press listed elements and launch apps: `phone_swipe`, `phone_type`, `phone_key`, `long_press` and taps at points with no listed element return `unsupported` (or `not_found` for the tap), with a sentence naming the helper. With the helper, everything works; reading the screen takes 0.5 to 3 s.
 
 | Limit | Value |
 | --- | --- |
