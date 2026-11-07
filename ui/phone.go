@@ -77,6 +77,10 @@ func (a *app) phonesPage(c *mg.Context) {
 // and the keys below it.
 func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
+	if a.chk.showing == d.Info.ID {
+		a.checkupPanel(c, d)
+		return
+	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		mg.Column(c).AlignItems(mg.Center).Gap(12).Children(func() {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
@@ -96,6 +100,9 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 					a.add.reset(a)
 				}
 			})
+			if linkButton(c, locales.PhoneCheckup()).Clicked() {
+				a.openCheckup(d)
+			}
 		})
 		return
 	}
@@ -105,6 +112,9 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			mg.Text(c, locales.PhoneNeedsSetup(d.Info.Name)).FontSize(16).FontWeight(600)
 			if d.Info.Detail != "" {
 				mg.Text(c, d.Info.Detail).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+			}
+			if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
+				a.openCheckup(d)
 			}
 		})
 		return
@@ -255,6 +265,10 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 		if menuItem(c, locales.PhoneTakeScreenshot(), mg.Color{}).Clicked() {
 			open = false
 			a.saveScreenshot(m, d.Info.Name)
+		}
+		if menuItem(c, locales.PhoneCheckup(), mg.Color{}).Clicked() {
+			open = false
+			a.openCheckup(d)
 		}
 		menuItem(c, locales.PhoneRecordScreen(), p.ink3).Disabled(true).Tooltip(locales.PhoneRecordScreenTooltip())
 		menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())

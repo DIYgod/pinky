@@ -230,6 +230,8 @@ func (a *app) paired(seq int, info driver.Info, err error, form bool) {
 		}
 		if d := a.device(id); d != nil {
 			paired = locales.PairingPaired(d.Info.Name)
+			// The last step of adding a phone: its checkup.
+			a.openCheckup(*d)
 		}
 		a.toasts = append(a.toasts, paired)
 		a.afterRefresh(false)
@@ -254,7 +256,7 @@ func checkPairAddr(addr string) string {
 func pairError(err error) string {
 	msg := strings.ToLower(err.Error())
 	switch {
-	case errors.Is(err, gateway.ErrNoPairing):
+	case errors.Is(err, gateway.ErrNoPairing) || strings.Contains(msg, "adb server not running"):
 		return locales.PairingErrNoAdb()
 	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(msg, "timeout") || strings.Contains(msg, "timed out"):
 		return locales.PairingErrTimeout()

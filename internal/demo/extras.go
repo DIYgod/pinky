@@ -203,3 +203,24 @@ var (
 	_ driver.Files        = Android{}
 	_ driver.Backgrounder = Android{}
 )
+
+// Checkup implements driver.Checker: a demo phone has all it needs, as a
+// Pixel with the companion app would.
+func (a Android) Checkup(ctx context.Context) (driver.Checkup, error) {
+	if err := a.check(ctx); err != nil {
+		return driver.Checkup{}, err
+	}
+	pass := func(id, detail string) driver.Check {
+		return driver.Check{ID: id, Status: driver.CheckPass, Detail: detail}
+	}
+	return driver.Checkup{Family: "pixel", Checks: []driver.Check{
+		pass(driver.CheckADB, "demo phones need no adb"),
+		pass(driver.CheckCompanion, "the demo phone reads its own screen"),
+		pass(driver.CheckInput, "the demo phone takes taps"),
+		pass(driver.CheckScreen, "the demo phone draws its screen"),
+		pass(driver.CheckBackground, "the demo phone opens background displays"),
+		pass(driver.CheckWiFi, "the demo phone is connected over USB"),
+	}}, nil
+}
+
+var _ driver.Checker = Android{}
