@@ -66,6 +66,15 @@ Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Con
 - The id works once, only for that exact call. While an approval is open the phone takes no other action; `phone_observe` and `phone_wait_for` still work.
 - You cannot approve anything. `phone_request_approval` asks the person a question and returns their answer, but grants nothing: a later Pay still asks.
 
+## Files
+
+On Android phones, `phone_files` moves files between the phone's Pinky folder (`/sdcard/Pinky`, the only place on the phone you may reach) and a folder on this computer, which the result names. Work on the files there with your own file tools.
+
+- `phone_files {}` lists both sides: each file with its size, time and where it is (`both`, `phone`, `computer` or `differs`).
+- `phone_files { action: "pull" }` copies what the phone has and the computer lacks; pass `paths` for some files or folders.
+- `phone_files { action: "push", intent: "Put the edited photo where Gallery can open it" }` copies new and changed files to the phone. The person approves it first, like a Pay tap (`approval_pending`, then repeat with `approval_id`). Read-only agents may only list and pull.
+- iPhones return `unsupported`.
+
 ## Things you must not do
 
 - Never type passwords or one-time codes; Pinky refuses (`rule: credentials`). Call `phone_handoff { reason: "Please sign in to Dinely" }` and wait.
@@ -80,4 +89,5 @@ Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Con
 - `phone_wait_for { text: "Order placed" }` waits for loading better than repeated observing; `phone_observe { wait_ms: 3000 }` returns as soon as the screen changes.
 - `phone_batch` runs several steps in one call and stops at the first that does not settle. If a step returns `approval_pending`, repeat that step alone with its `approval_id`, then carry on.
 - `phone_apps { query: "din" }` finds an app's exact name before `phone_launch`.
+- On some Android phones the task runs on a background display, so the person's own screen stays free (or off and locked). `phone_connect` says so. That display starts empty, with no home screen: open apps with `phone_launch` rather than looking for their icons.
 - `phone_observe { screenshot: true }` only when the element list is not enough; screenshots are large.

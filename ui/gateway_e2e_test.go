@@ -41,6 +41,7 @@ func newGatewayApp(t *testing.T, trust bool) *gwApp {
 	}
 	ga := &gwApp{w: w}
 	ga.app = newApp(w.Gateway, Options{NoTray: true, Shortcut: "-"})
+	testHooks(t, ga.app)
 	ga.app.videoErr = errors.New("no video in tests")
 	ga.app.postHook = func(fn func()) {
 		ga.mu.Lock()
@@ -65,6 +66,7 @@ func (ga *gwApp) sync() {
 	g := ga.w.Gateway
 	ga.devices, ga.tasks = g.Devices(), g.Tasks()
 	ga.setNeeds(g.Needs())
+	ga.setBackgrounds(ga.readBackground(ga.devices))
 	first := !ga.loaded
 	ga.loaded = true
 	ga.afterRefresh(first)
@@ -352,8 +354,9 @@ func TestGatewayHandoff(t *testing.T) {
 	}
 }
 
-// TestGatewayLockedHandoff shows a handoff on a locked phone as one card
-// with the unlock button.
+// TestGatewayLockedHandoff shows a handoff on a locked phone as one card.
+// Demo phones cannot be unlocked from the computer (no driver.Unlocker),
+// so the card has no unlock button and says to unlock on the phone.
 func TestGatewayLockedHandoff(t *testing.T) {
 	ga := newGatewayApp(t, true)
 	ga.w.IPhone.SetLocked(true)
@@ -373,11 +376,17 @@ func TestGatewayLockedHandoff(t *testing.T) {
 		}
 	}
 	tt := mg.NewTester(ga.view, 1280, 820)
-	label, _ := unlockWords()
-	for _, want := range []string{"Unlock the phone, please", label, "Decline", "Done"} {
+	// The demo iPhone can be unlocked from the computer (driver.Unlocker),
+	// but no PIN is saved: the card offers to save one.
+	for _, want := range []string{"Unlock the phone, please",
+		"The phone is locked. Save the phone's PIN to unlock it from this computer, or unlock it on the phone, then click Done.",
+		"Save PIN…", "Decline", "Done"} {
 		if !hasText(tt, want) {
 			t.Errorf("no %q in %q", want, tt.Texts())
 		}
+	}
+	if label, _ := unlockWords(); hasText(tt, label) {
+		t.Errorf("an unlock button shows for a phone without a saved PIN: %q", tt.Texts())
 	}
 }
 
@@ -568,6 +577,7 @@ func TestMirrorFirstPicture(t *testing.T) {
 	}
 	ga := &gwApp{w: w}
 	ga.app = newApp(w.Gateway, Options{NoTray: true, Shortcut: "-"})
+	testHooks(t, ga.app)
 	ga.app.postHook = func(fn func()) {
 		ga.mu.Lock()
 		ga.q = append(ga.q, fn)
@@ -620,6 +630,7 @@ func TestMirrorRetryKeepsError(t *testing.T) {
 	}
 	ga := &gwApp{w: w}
 	ga.app = newApp(w.Gateway, Options{NoTray: true, Shortcut: "-"})
+	testHooks(t, ga.app)
 	ga.app.postHook = func(fn func()) {
 		ga.mu.Lock()
 		ga.q = append(ga.q, fn)
@@ -655,5 +666,79 @@ func TestMirrorRetryKeepsError(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "This phone has no live picture.") || hasText(tt, "Connecting…") {
 		t.Errorf("after trying again: %q", tt.Texts())
+	}
+}
+
+// TestGatewayRound3 runs the round-three controls against the real
+// gateway on the demo phones: the controls follow the phones' features,
+// Activity offers the task's recording or its replay, Export all writes the
+// gateway's report, and pairing over Wi-Fi says why it is unavailable (the
+// demo has no Pairer).
+func TestGatewayRound3(t *testing.T) {
+	ga := newGatewayApp(t, true)
+	var revealed []string
+	ga.reveal = func(p string) { revealed = append(revealed, p) }
+	ga.applySettings() // the stubs take them without complaint
+	done := ga.agent(t, "Claude Code", pixel, func(ag *demogw.Agent, ctx context.Context) error {
+		if err := ag.Connect(ctx, "Look at the home screen"); err != nil {
+			return err
+		}
+		if err := ag.Observe(ctx); err != nil {
+			return err
+		}
+		ag.Release(ctx, "done", "Looked at the home screen.")
+		return nil
+	})
+	if err := wait(t, done, "the agent"); err != nil {
+		t.Fatal(err)
+	}
+	ga.waitFor(t, "the phones", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
+	if f := ga.device(pixel).Features; f != (gateway.Features{Unlock: true, Background: true, Files: true}) {
+		t.Errorf("the demo Pixel has features %+v", f)
+	}
+	ga.selectPhone(pixel)
+	tt := mg.NewTester(ga.view, 1280, 820)
+	tt.Frame()
+	if hasText(tt, "Pinky Companion") {
+		t.Errorf("a companion card for a phone without one: %q", tt.Texts())
+	}
+
+	ga.page, ga.set.sec = pageSettings, secPhones
+	tt.Frame()
+	if !hasText(tt, "Work in the background") || !hasText(tt, "Unlock from this computer") {
+		t.Errorf("Settings › Phones lacks controls the phones have: %q", tt.Texts())
+	}
+
+	ga.page = pageActivity
+	ga.waitFor(t, "the task in Activity", func() bool { tt.Frame(); return ga.act.loaded && len(ga.act.tasks) > 0 })
+	ga.act.sel = ga.act.tasks[0].ID
+	ga.waitFor(t, "the recording lookup", func() bool {
+		tt.Frame()
+		e := ga.rec.views[ga.act.sel]
+		return e != nil && !e.loading
+	})
+	tt.Frame()
+	if !hasText(tt, "Watch replay") && !hasText(tt, "Watch recording") {
+		t.Errorf("a finished task offers neither its recording nor a replay: %q", tt.Texts())
+	}
+	if err := tt.Click("Export all"); err != nil {
+		t.Fatal(err)
+	}
+	ga.waitFor(t, "the export", func() bool { return len(revealed) == 1 })
+	if filepath.Ext(revealed[0]) != ".html" {
+		t.Errorf("exported %v", revealed)
+	}
+	data, err := os.ReadFile(revealed[0])
+	if err != nil || !strings.Contains(string(data), "Look at the home screen") {
+		t.Errorf("the client's report: %v\n%s", err, data)
+	}
+
+	ga.page = pageAddPhone
+	ga.add.reset(ga.app)
+	ga.add.step = "qr"
+	ga.waitFor(t, "the pairing to fail", func() bool { tt.Frame(); return ga.add.pair.state == "failed" })
+	tt.Frame()
+	if !hasText(tt, "This computer can't pair phones over Wi-Fi") {
+		t.Errorf("pairing without a Pairer: %q", tt.Texts())
 	}
 }

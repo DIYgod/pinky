@@ -82,6 +82,8 @@ type Result struct {
 	Screenshot image.Image
 	Steps      []*Result // phone_batch, one per step that ran
 	Task       string    // phone_connect: the task id
+	Folder     string    // phone_files: the folder on the computer
+	Files      []FileView
 }
 
 // IsError reports whether the result is an error rather than a status.
@@ -292,7 +294,12 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 	g.mu.Lock()
 	ended, by := l.ended, l.endedBy
 	name := l.dev.name()
+	note := l.bgNote
+	l.bgNote = ""
 	g.mu.Unlock()
+	if note != "" {
+		r.Message = joinNote(r.Message, note)
+	}
 	if ended && by == OutcomeStopped {
 		ran := r.Status == StatusSettled || r.Status == StatusUncertain
 		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
@@ -446,6 +453,13 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 	l := &lease{id: history.NewID("l_"), session: s, dev: d, task: t, created: now, lastUsed: now,
 		apps: append([]string(nil), apps...), grants: map[string]bool{}}
 	l.ctx, l.cancel = context.WithCancel(g.ctx)
+	// A watch-only agent watches the phone's own screen; a background
+	// display would show it nothing.
+	scope := g.opt.DefaultScope
+	if st, ok := g.agents[s.agent.Name]; ok {
+		scope = st.scope
+	}
+	l.bgWanted = g.backgroundLocked(d) && scope.Mode != ScopeWatchOnly
 	d.lease = l
 	if d.person {
 		// The person is still in control from before: the task starts paused.
@@ -503,6 +517,10 @@ func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) {
 func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 	ctx, cancel := mergeCtx(ctx, l.ctx)
 	defer cancel()
+	g.readyScreen(ctx, l)
+	g.mu.Lock()
+	g.startVideoLocked(l)
+	g.mu.Unlock()
 	cur, err := g.observe(ctx, l.dev, true)
 	if err != nil {
 		return g.finish(l, g.readError(l, err))
@@ -514,7 +532,12 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 	res.Message = fmt.Sprintf("Connected to %s for “%s”.", l.dev.name(), l.task.title)
 	g.mu.Lock()
 	person := l.dev.person
+	onBG := l.bg != nil
 	g.mu.Unlock()
+	if onBG {
+		// A background display starts empty, without a home screen.
+		res.Message += " This task runs on a background display of the phone, which starts empty and has no home screen: open apps with phone_launch."
+	}
 	switch {
 	case person:
 		res.Status = StatusPaused
@@ -753,6 +776,7 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 	if res := g.gate(l, req.ApprovalID, false); res != nil {
 		return g.finish(l, res)
 	}
+	g.readyScreen(ctx, l)
 	if req.WaitMS > 0 {
 		g.waitChange(ctx, l, time.Duration(req.WaitMS)*time.Millisecond, req.Progress)
 	}
@@ -780,6 +804,8 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 				g.keepImage(l.dev, cur, img)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
+			case errors.Is(err, errLockedShot):
+				res.Message = strings.TrimSpace(res.Message + " No screenshot: " + err.Error() + ".")
 			case errors.Is(err, errScreenChanged):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: the screen changed while it was taken; observe again.")
 			default:
@@ -844,6 +870,7 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 	if res := g.gate(l, req.ApprovalID, false); res != nil {
 		return g.finish(l, res)
 	}
+	g.readyScreen(ctx, l)
 	start := time.Now()
 	deadline := start.Add(timeout)
 	lastProgress := start
@@ -971,11 +998,6 @@ func appListed(app screen.App, list []string) bool {
 		}
 	}
 	return false
-}
-
-// Files implements phone_files, which this version does not offer.
-func (s *Session) Files(ctx context.Context, c Call) *Result {
-	return errResult(ErrUnsupported, "phone_files is not available in this version of Pinky.")
 }
 
 // RequestApproval implements phone_request_approval: it asks the person a
@@ -1149,6 +1171,7 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 }
 
 func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *Result {
+	g.readyScreen(ctx, l)
 	cur, err := g.observe(ctx, l.dev, true)
 	if err != nil {
 		return g.finish(l, g.readError(l, err))

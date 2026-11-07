@@ -4,12 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/internal/gateway"
@@ -83,6 +80,9 @@ func (a *app) activityPage(c *mg.Context) {
 	pageHeader(c, func() {
 		mg.Text(c, "Activity").FontSize(17).FontWeight(650)
 		mg.Spacer(c)
+		if button(c, "Export all", btnOpt{icon: icExport, small: true}).Tooltip("Every finished task, as a report and JSON").Clicked() {
+			a.exportHistory(nil, "activity")
+		}
 		mg.Row(c).Width(300).Height(34).Padding(0, 12).Radius(9).Background(p.bg2).Border(1, p.line).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icSearch).FontSize(16).TextColor(p.ink3)
 			mg.TextInputBase(c.Key("act-search"), &s.query).Grow(1).Placeholder("Search tasks and apps").Label("Search activity").FontSize(14)
@@ -196,6 +196,7 @@ func (a *app) activityRow(c *mg.Context, t gateway.TaskView) {
 	}
 	if row.Clicked() {
 		a.act.sel, a.act.replay = t.ID, false
+		a.closeRecording()
 	}
 	app := appOf(t)
 	row.Children(func() {
@@ -257,16 +258,27 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 			mg.Text(c, strings.Join(meta, " · ")).FontSize(13.5).TextColor(p.ink2).Margin(3, 0, 0, 0)
 		})
 		mg.Row(c).Gap(8).Children(func() {
-			if button(c, "Watch replay", btnOpt{icon: icPlay}).Clicked() {
-				a.act.replay, a.act.at, a.act.playing = true, 0, false
+			rec := a.recordingOf(t.ID)
+			switch {
+			case rec != nil:
+				if button(c, "Watch recording", btnOpt{icon: icPlay}).Clicked() {
+					a.act.replay, a.act.playing = true, false
+					a.openRecording(t.ID, *rec)
+				}
+			default:
+				if button(c, "Watch replay", btnOpt{icon: icPlay}).Tooltip("Step by step, with the screenshots").Clicked() {
+					a.act.replay, a.act.at, a.act.playing = true, 0, false
+					a.closeRecording()
+				}
 			}
 			more := button(c, "", btnOpt{icon: icMore, label: "More actions"}).Width(34).Padding(0)
 			more.PopoverMenuButton(func(m *mg.Menu) {
-				if m.Item("Export report").Chosen() {
-					a.export(t, "html")
+				if m.Item("Export…").Chosen() {
+					a.exportHistory([]string{t.ID}, t.Title)
 				}
-				if m.Item("Export JSON").Chosen() {
-					a.export(t, "json")
+				if rec != nil && m.Item("Step-by-step replay").Chosen() {
+					a.act.replay, a.act.at, a.act.playing = true, 0, false
+					a.closeRecording()
 				}
 				m.Separator()
 				m.Item("Delete").Disabled(true)
@@ -277,7 +289,11 @@ func (a *app) activityDetail(c *mg.Context, t gateway.TaskView) {
 		mg.Text(c, sum).FontSize(15).LineHeight(1.5).MaxWidth(560)
 	}
 	if a.act.replay {
-		a.replayView(c, t)
+		if pl := a.rec.pl; pl != nil && pl.task == t.ID {
+			a.recordingPanel(c, t, pl)
+		} else {
+			a.replayView(c, t)
+		}
 		return
 	}
 	mg.Column(c).Gap(12).Children(func() {
@@ -344,8 +360,25 @@ func stepThumb(c *mg.Context, col string) {
 		})
 }
 
+// recordingPanel is Watch recording: the task's screen recording with its
+// step marks, in the replay's panel.
+func (a *app) recordingPanel(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
+	p := pal(c)
+	mg.Column(c).Gap(16).Padding(20).Radius(12).Border(1, p.line).Background(p.bg2).Role(mg.RoleDialog).Label("Recording").Children(func() {
+		mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
+			mg.Text(c, "Recording · "+t.Title).FontSize(16).FontWeight(650).Grow(1)
+			if button(c, "Close", btnOpt{}).Clicked() {
+				a.act.replay = false
+				a.closeRecording()
+			}
+		})
+		a.recordingView(c, t, pl)
+	})
+}
+
 // replayView is Watch replay: the task's steps one at a time, with the
-// screenshot of each, on a timeline. Video recordings are not kept yet.
+// screenshot of each, on a timeline. Tasks with a screen recording play it
+// instead (recordingPanel); this is the replay of those without.
 func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 	p := pal(c)
 	st := &a.act
@@ -443,58 +476,38 @@ func (a *app) replayView(c *mg.Context, t gateway.TaskView) {
 	})
 }
 
-// export writes a task as JSON or as a small HTML report to the Desktop.
-func (a *app) export(t gateway.TaskView, kind string) {
-	go func() {
-		dir, err := mygo.App.Path(mygo.PathDesktop)
-		if err != nil || dir == "" {
-			dir, _ = os.UserHomeDir()
-		}
-		name := strings.Map(func(r rune) rune {
-			if strings.ContainsRune(`/\:*?"<>|`, r) {
-				return '-'
-			}
-			return r
-		}, t.Title)
-		path := filepath.Join(dir, fmt.Sprintf("Pinky – %s.%s", name, kind))
-		var data []byte
-		if kind == "json" {
-			data, err = json.MarshalIndent(t, "", "  ")
-		} else {
-			data = []byte(reportHTML(t))
-		}
-		if err == nil {
-			err = os.WriteFile(path, data, 0o644)
-		}
-		a.post(func() {
-			if err != nil {
-				a.toasts = append(a.toasts, "Couldn't export: "+err.Error())
-			} else {
-				a.toasts = append(a.toasts, "Saved "+filepath.Base(path)+" to "+filepath.Base(dir))
-			}
-		})
-	}()
-}
-
-func reportHTML(t gateway.TaskView) string {
+// reportHTML is a small, self-contained report of tasks, for a gateway
+// that cannot export its own.
+func reportHTML(tasks []gateway.TaskView) string {
 	var b strings.Builder
 	esc := html.EscapeString
-	fmt.Fprintf(&b, "<!doctype html><meta charset=utf-8><title>%s</title>", esc(t.Title))
-	b.WriteString(`<style>body{font:15px/1.5 -apple-system,system-ui,sans-serif;max-width:640px;margin:40px auto;padding:0 20px;color:#1d1d22}small{color:#5b5b64}li{margin:6px 0}</style>`)
-	fmt.Fprintf(&b, "<h1>%s</h1><p><small>%s · %s · %s · %s</small></p>", esc(t.Title), esc(t.Agent), esc(t.DeviceName),
-		t.Started.Format("2006-01-02 15:04"), esc(elapsed(t.Ended.Sub(t.Started))))
-	if s := summaryOf(t); s != "" {
-		fmt.Fprintf(&b, "<p>%s</p>", esc(s))
+	title := "Pinky activity"
+	if len(tasks) == 1 {
+		title = tasks[0].Title
 	}
-	b.WriteString("<ol>")
-	for _, s := range t.Steps {
-		text, sub := splitStep(s.Text)
-		fmt.Fprintf(&b, "<li>%s", esc(text))
-		if sub != "" {
-			fmt.Fprintf(&b, "<br><small>%s</small>", esc(sub))
+	fmt.Fprintf(&b, "<!doctype html><meta charset=utf-8><title>%s</title>", esc(title))
+	b.WriteString(`<style>body{font:15px/1.5 -apple-system,system-ui,sans-serif;max-width:680px;margin:40px auto;padding:0 20px;color:#1d1d22}small{color:#5b5b64}li{margin:6px 0}section{margin:0 0 40px}</style>`)
+	if len(tasks) != 1 {
+		fmt.Fprintf(&b, "<h1>%s</h1><p><small>%d tasks</small></p>", esc(title), len(tasks))
+	}
+	for _, t := range tasks {
+		b.WriteString("<section>")
+		fmt.Fprintf(&b, "<h2>%s</h2><p><small>%s · %s · %s · %s</small></p>", esc(t.Title), esc(t.Agent), esc(t.DeviceName),
+			t.Started.Format("2006-01-02 15:04"), esc(elapsed(t.Ended.Sub(t.Started))))
+		if s := summaryOf(t); s != "" {
+			fmt.Fprintf(&b, "<p>%s</p>", esc(s))
 		}
-		b.WriteString("</li>")
+		b.WriteString("<ol>")
+		for _, s := range t.Steps {
+			text, sub := splitStep(s.Text)
+			fmt.Fprintf(&b, "<li>%s", esc(text))
+			if sub != "" {
+				fmt.Fprintf(&b, "<br><small>%s</small>", esc(sub))
+			}
+			b.WriteString("</li>")
+		}
+		b.WriteString("</ol></section>")
 	}
-	b.WriteString("</ol><p><small>Exported from Pinky.</small></p>")
+	b.WriteString("<p><small>Exported from Pinky.</small></p>")
 	return b.String()
 }

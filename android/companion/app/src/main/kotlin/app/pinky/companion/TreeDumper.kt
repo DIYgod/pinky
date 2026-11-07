@@ -2,6 +2,8 @@ package app.pinky.companion
 
 import android.app.KeyguardManager
 import android.graphics.Rect
+import android.graphics.Region
+import android.graphics.RegionIterator
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.os.SystemClock
@@ -35,6 +37,7 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
 
     fun dump(opt: Options): String {
         val started = SystemClock.elapsedRealtimeNanos()
+        service.displays.check(opt.display)
         val display = service.getSystemService(DisplayManager::class.java)?.getDisplay(opt.display)
         val metrics = DisplayMetrics()
         @Suppress("DEPRECATION")
@@ -51,12 +54,13 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
             j.field("rotation", display.rotation * 90)
         }
         j.endObject()
+        // The phone's keyguard, which covers the main display only.
         val keyguard = service.getSystemService(KeyguardManager::class.java)
         j.field("locked", keyguard?.isKeyguardLocked ?: false)
         j.field("secure_locked", keyguard?.isDeviceLocked ?: false)
 
         val t0 = SystemClock.elapsedRealtimeNanos()
-        val windows = windowsOn(opt.display).sortedByDescending { it.layer }
+        val windows = service.displays.windowsOn(opt.display).sortedByDescending { it.layer }
         val windowsMs = (SystemClock.elapsedRealtimeNanos() - t0) / 1_000_000
         j.name("windows").beginArray()
         for (w in windows) {
@@ -74,20 +78,6 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
         return j.toString()
     }
 
-    fun windowsOn(display: Int): List<AccessibilityWindowInfo> {
-        if (display == Display.DEFAULT_DISPLAY || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return if (display == Display.DEFAULT_DISPLAY) service.windows else emptyList()
-        }
-        return service.windowsOnAllDisplays.get(display) ?: emptyList()
-    }
-
-    /** Ids of the displays that have accessibility windows. */
-    fun displays(): List<Int> {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return listOf(Display.DEFAULT_DISPLAY)
-        val all = service.windowsOnAllDisplays
-        return (0 until all.size()).map { all.keyAt(it) }.sorted()
-    }
-
     private fun writeWindow(j: Json, w: AccessibilityWindowInfo, st: State) {
         val type = w.type
         j.beginObject()
@@ -97,11 +87,17 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
         j.fieldIfNotEmpty("title", w.title)
         w.getBoundsInScreen(st.rect)
         j.rect("bounds", st.rect.left, st.rect.top, st.rect.right, st.rect.bottom)
+        val region = regionRects(w, st.rect)
+        if (region != null) {
+            j.name("region").beginArray()
+            for (r in region) j.beginArray().value(r.left).value(r.top).value(r.right).value(r.bottom).endArray()
+            j.endArray()
+        }
         j.flag("active", w.isActive)
         j.flag("focused", w.isFocused)
         j.flag("pip", w.isInPictureInPictureMode)
 
-        val walk = (type != AccessibilityWindowInfo.TYPE_INPUT_METHOD || st.opt.ime) &&
+        val walk = (type != AccessibilityWindowInfo.TYPE_INPUT_METHOD || st.opt.ime || isImeSheet(w, region, st)) &&
             (st.opt.bars || !isSystemBar(w, st))
         val t0 = SystemClock.elapsedRealtimeNanos()
         val root = if (walk) rootOf(w) else null
@@ -138,6 +134,45 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
             r?.let { recycle(it) }
         }
         return w.root
+    }
+
+    /**
+     * The window's touchable region as rectangles, when it is more than the
+     * one rectangle of its bounds (Android 13+). Gboard's stylus toolbar, for
+     * one, takes a small strip on the left and one at the bottom, while its
+     * bounds span most of the screen; Android hides from the user only the
+     * nodes the region covers. Null when the region is the bounds, unknown,
+     * or more than MAX_REGION_RECTS rectangles.
+     */
+    private fun regionRects(w: AccessibilityWindowInfo, bounds: Rect): List<Rect>? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+        val region = Region()
+        w.getRegionInScreen(region)
+        if (region.isEmpty || (region.isRect && region.bounds == bounds)) return null
+        val rects = mutableListOf<Rect>()
+        val it = RegionIterator(region)
+        val r = Rect()
+        while (it.next(r)) {
+            if (rects.size == MAX_REGION_RECTS) return null
+            rects += Rect(r)
+        }
+        return rects
+    }
+
+    /**
+     * Whether an input method window covers the screen like a sheet rather
+     * than sitting at the bottom as a keyboard: it reaches into the top third
+     * of the display and its region covers at least half of it. Gboard's
+     * stylus introduction does this, over a scrim. Android then reports the
+     * app's nodes under it as not visible, so the input method has to be
+     * walked or the tree would be empty.
+     */
+    private fun isImeSheet(w: AccessibilityWindowInfo, region: List<Rect>?, st: State): Boolean {
+        if (w.type != AccessibilityWindowInfo.TYPE_INPUT_METHOD || st.width <= 0 || st.height <= 0) return false
+        val r = st.rect
+        w.getBoundsInScreen(r)
+        val area = region?.sumOf { it.width().toLong() * it.height().toLong() } ?: (r.width().toLong() * r.height().toLong())
+        return r.top < st.height / 3 && area * 2 >= st.width.toLong() * st.height.toLong()
     }
 
     /**
@@ -225,6 +260,7 @@ class TreeDumper(private val service: PinkyAccessibilityService) {
 
     companion object {
         private const val MAX_DEPTH = 256
+        private const val MAX_REGION_RECTS = 32
 
         // Set by AccessibilityNodeInfoCompat.setRoleDescription and Compose.
         private const val ROLE_DESCRIPTION_KEY = "AccessibilityNodeInfo.roleDescription"

@@ -3,9 +3,11 @@ module github.com/DIYgod/pinky
 go 1.27.3
 
 require (
+	github.com/Eyevinn/mp4ff v0.62.0
 	github.com/danielpaulus/go-ios v1.3.3-0.20261103131045-6910f3b585ad
 	github.com/ebitengine/purego v0.11.3
 	github.com/egoist/mygo v0.7.4
+	github.com/godbus/dbus/v5 v5.2.4
 	github.com/google/jsonschema-go v0.4.3
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
@@ -14,6 +16,7 @@ require (
 	gvisor.dev/gvisor v0.0.0-20240405191320-0878b34101b5
 	howett.net/plist v1.0.1
 	modernc.org/sqlite v1.61.1
+	rsc.io/qr v0.2.0
 )
 
 require (

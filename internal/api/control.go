@@ -211,6 +211,16 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 			return nil, g.Unlock(p.Device)
 		}
 		return nil, g.HandBack(p.Device, p.Note)
+	case "quit":
+		if s.Quit == nil {
+			return nil, &RPCError{Code: CodeMethod, Message: "this gateway cannot be quit from the socket"}
+		}
+		// Answer first: quitting closes this connection.
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			s.Quit()
+		}()
+		return nil, nil
 	case "wipe_history":
 		if err := trusted(); err != nil {
 			return nil, err

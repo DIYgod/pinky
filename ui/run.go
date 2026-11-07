@@ -15,7 +15,9 @@ import (
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/internal/video"
 )
 
@@ -53,6 +55,13 @@ type Options struct {
 	// agent launches Pinky through `pinky mcp`. The window opens by itself
 	// when the first Needs you item arrives, and from the menu bar icon.
 	Hidden bool
+	// Secrets keeps the phones' PINs for unlocking from this computer; nil
+	// is the system keychain (secret.System). The client only saves and
+	// removes them: the gateway reads one, after Touch ID, to unlock.
+	Secrets secret.Store
+	// AgentToken is the token agents present, which Settings › Agents shows
+	// for remote agents as their bearer token; empty leaves it out.
+	AgentToken string
 }
 
 // Settings are what the Settings screen changes.
@@ -169,6 +178,17 @@ type app struct {
 	postMu  sync.Mutex
 	postWin *mygo.Window // the main window, once ready made it; post waits for it
 	early   []func()     // posts made before that
+
+	pin    pinState       // PINs for unlocking from this computer
+	comp   companionState // the Android companion app, per phone
+	bg     bgState        // background displays, per phone
+	rec    recState       // task recordings in Activity
+	remote remoteState    // Settings › Agents › Remote agents
+
+	awake    func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
+	awakeOn  bool
+	exportTo func() (string, error) // where exports go; tests replace it
+	reveal   func(path string)      // shows an exported file; tests replace it
 }
 
 // Run starts the client and returns when it quits. It owns the main
@@ -212,7 +232,13 @@ func newApp(api gateway.API, opt Options) *app {
 		notified: map[string]bool{}, seenNeed: map[string]bool{}, unlocks: map[string]bool{}, more: map[string]bool{},
 		callQueue:  map[string]chan func(){},
 		mediaCache: map[string]*mediaEntry{}, previews: map[string]bool{},
+		awake: keepMacAwake, exportTo: exportFolder, reveal: revealFile,
 	}
+	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}}
+	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
+		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
+	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
+	a.rec = recState{views: map[string]*recEntry{}}
 	if opt.Settings != nil {
 		a.settings = *opt.Settings
 	} else {
@@ -242,7 +268,9 @@ func (a *app) ready() {
 	// phones rather than an empty sidebar; watch keeps them current.
 	a.devices, a.tasks = a.api.Devices(), a.api.Tasks()
 	a.setNeeds(a.api.Needs())
+	a.setBackgrounds(a.readBackground(a.devices))
 	a.loaded = true
+	a.applySettings()
 	a.afterRefresh(true)
 
 	a.main = mygo.NewWindow(mygo.WindowOptions{
@@ -299,6 +327,7 @@ func (a *app) ready() {
 
 func (a *app) shutdown() {
 	a.end()
+	a.setAwake(false)
 	for id, m := range a.mirrors {
 		m.close()
 		delete(a.mirrors, id)
@@ -385,8 +414,10 @@ func (a *app) refresh(devs, tasks, needs bool) {
 	var d []gateway.DeviceView
 	var t []gateway.TaskView
 	var n []gateway.NeedView
+	var bg map[string]bool
 	if devs {
 		d = a.api.Devices()
+		bg = a.readBackground(d)
 	}
 	if tasks {
 		t = a.api.Tasks()
@@ -397,6 +428,7 @@ func (a *app) refresh(devs, tasks, needs bool) {
 	a.post(func() {
 		if devs {
 			a.devices = d
+			a.setBackgrounds(bg)
 		}
 		if tasks {
 			a.tasks = t
@@ -425,8 +457,56 @@ func (a *app) afterRefresh(first bool) {
 			a.sel = a.devices[0].Info.ID
 		}
 	}
+	a.loadPINs()
+	a.setAwake(a.anyRunning())
 	a.updateTray()
 	a.syncPanel()
+}
+
+// setBackgrounds takes what readBackground read.
+func (a *app) setBackgrounds(bg map[string]bool) {
+	for id, on := range bg {
+		if !a.bg.busy[id] {
+			a.bg.on[id] = on
+		}
+	}
+}
+
+// anyRunning reports whether an agent task runs on any phone.
+func (a *app) anyRunning() bool {
+	for _, t := range a.tasks {
+		if running(t.State) {
+			return true
+		}
+	}
+	return false
+}
+
+// setAwake keeps the Mac from sleeping while agent tasks run, and lets it
+// sleep again once they end.
+func (a *app) setAwake(on bool) {
+	if on == a.awakeOn || a.awake == nil {
+		return
+	}
+	a.awakeOn = on
+	a.awake(on)
+}
+
+// applySettings passes Record and Keep activity to a gateway that takes
+// them, at start; Settings › Privacy passes each change. The gateway may
+// delete old tasks then, so it runs off the main thread.
+func (a *app) applySettings() {
+	record, days := a.settings.Record, a.settings.KeepDays
+	rs, canRecord := a.api.(recordingSetter)
+	ks, canKeep := a.api.(retentionSetter)
+	go func() {
+		if canRecord {
+			rs.SetRecording(record)
+		}
+		if canKeep {
+			ks.SetRetention(days)
+		}
+	}()
 }
 
 func (a *app) setNeeds(n []gateway.NeedView) {
@@ -595,10 +675,6 @@ func (a *app) handBack(id string) {
 
 func (a *app) stop(id string) {
 	a.call(id, "stop the task", func() error { return a.api.Stop(id) })
-}
-
-func (a *app) unlock(id string) {
-	a.call(id, "unlock the phone", func() error { return a.api.Unlock(id) })
 }
 
 // stopAll is the emergency stop, from the sidebar, the flyout and the

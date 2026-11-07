@@ -22,9 +22,14 @@ import (
 
 	"github.com/egoist/mygo"
 
+	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/ui"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
+
+// demoToken is the agent token Settings › Agents shows in the demo; no
+// agent can use it.
+const demoToken = "demo-0f3c9a7e51b24d6c8e2a"
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "bench" {
@@ -75,6 +80,7 @@ func main() {
 		mygo.Separator(),
 		&mygo.MenuItem{Label: "Restart Scenario", Accelerator: "CmdOrCtrl+Shift+R", Click: func(*mygo.MenuItem, *mygo.Window) { api.Play(api.Scenario()) }},
 		&mygo.MenuItem{Label: "Plug In a New Phone", Click: func(*mygo.MenuItem, *mygo.Window) { api.ConnectPhone() }},
+		&mygo.MenuItem{Label: "Scan the Pairing QR Code", Click: func(*mygo.MenuItem, *mygo.Window) { api.ScanPairing() }},
 	)
 	err := ui.Run(api, ui.Options{
 		Version:   "0.0.0-demo",
@@ -83,6 +89,10 @@ func main() {
 		StartPage: *page,
 		Hidden:    *hidden,
 		Menus:     []*mygo.MenuItem{{Label: "Demo", Submenu: items}},
+		// The demo keeps PINs in memory, never in the keychain, and shows
+		// a made-up agent token.
+		Secrets:    &secret.Memory{},
+		AgentToken: demoToken,
 	})
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

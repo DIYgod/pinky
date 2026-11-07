@@ -25,6 +25,7 @@ import (
 type mirror struct {
 	a       *app
 	id      string
+	agent   bool // the display an agent works on in the background, which takes no input
 	gen     int
 	cancel  context.CancelFunc
 	player  *video.Player
@@ -107,8 +108,18 @@ func (m *mirror) open() {
 	m.opening = true
 	a := m.a
 	go func() {
-		logf("pinky: mirror %s: opening the stream (gen %d)", m.id, gen)
-		s, err := a.api.Stream(ctx, m.id, driver.StreamOptions{})
+		logf("pinky: mirror %s: opening the stream (gen %d, agent %v)", m.id, gen, m.agent)
+		var s driver.Stream
+		var err error
+		if m.agent {
+			if as, ok := a.api.(agentStreamer); ok {
+				s, err = as.AgentStream(ctx, m.id, driver.StreamOptions{})
+			} else {
+				err = fmt.Errorf("agent displays: %w", driver.ErrNotFound)
+			}
+		} else {
+			s, err = a.api.Stream(ctx, m.id, driver.StreamOptions{})
+		}
 		var p *video.Player
 		if err == nil {
 			p, err = video.NewPlayer(s, video.PlayerOptions{})
@@ -165,6 +176,12 @@ func (m *mirror) retryLater() {
 	})
 }
 
+// missing reports an agent's display that the gateway says is not open,
+// as before a background task starts it.
+func (m *mirror) missing() bool {
+	return m.state == "failed" && errors.Is(m.err, driver.ErrNotFound)
+}
+
 func (m *mirror) close() {
 	logf("pinky: mirror %s: closed", m.id)
 	m.closed = true
@@ -215,15 +232,28 @@ func overlayStep(t *gateway.TaskView) (gateway.StepView, stepKind, bool) {
 	return s, k, true
 }
 
+// agentOrTheAgent names a task's agent, for labels.
+func agentOrTheAgent(t *gateway.TaskView) string {
+	if t != nil && t.Agent != "" {
+		return t.Agent
+	}
+	return "The agent"
+}
+
 // mirrorView draws the screen inside a phone's bezel: the video, the
 // agent's overlay, the lock, and takes the person's input unless it is a
 // tile.
 func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gateway.TaskView, radius float32, tile bool) {
 	p := pal(c)
-	locked := a.isLocked(d)
+	// The agent's own display is never locked and takes no input: the
+	// person uses the phone's screen.
+	locked := a.isLocked(d) && !m.agent
 	step, kind, outline := overlayStep(t)
 	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
-	if !tile {
+	switch {
+	case m.agent:
+		scr.Label(agentOrTheAgent(t) + "'s screen on " + d.Info.Name + ", live")
+	case !tile:
 		scr.Focusable().FocusRing(false).Cursor(mg.CursorPointer).Label(d.Info.Name + " screen, live").
 			HandleInput(func(ev mg.InputEvent) bool { return a.mirrorInput(m, d, ev) })
 		scr.TextCaret(mg.Rect{X: m.boxW/2 - 1, Y: m.boxH * 0.8, W: 2, H: 20})

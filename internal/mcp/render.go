@@ -98,6 +98,12 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 	if len(res.Steps) > 0 {
 		return
 	}
+	if res.Folder != "" {
+		line("folder: " + res.Folder)
+		for _, f := range res.Files {
+			line(fmt.Sprintf("%s · %s · %s · %s", f.Path, size(f.Size), f.ModTime.Format("2006-01-02 15:04"), f.Where))
+		}
+	}
 	if len(res.Apps) > 0 {
 		for _, a := range res.Apps {
 			l := a.Name + " (" + a.ID + ")"
@@ -114,6 +120,19 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 	case len(res.Diff) > 0:
 		line(strings.Join(res.Diff, "\n"))
 	}
+}
+
+// size writes a file size for people and models alike: 812 B, 14 KB, 3.2 MB.
+func size(n int64) string {
+	switch {
+	case n < 1000:
+		return fmt.Sprintf("%d B", n)
+	case n < 1000*1000:
+		return fmt.Sprintf("%d KB", (n+500)/1000)
+	case n < 1000*1000*1000:
+		return fmt.Sprintf("%.1f MB", float64(n)/1e6)
+	}
+	return fmt.Sprintf("%.1f GB", float64(n)/1e9)
 }
 
 func indentLines(s, prefix string) string {

@@ -1,6 +1,6 @@
 # iOS driver notes
 
-Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found on a real iPhone. Measured on 2026-11-07 with an iPhone 13 mini (iPhone14,4) on iOS 27.0.1 (24A446), connected by USB to a Mac with macOS 27.2 and Xcode 27.2; the developer disk image was mounted and Developer Mode on. A second pass the same night added element frames through `remoteAXService`, the provider's inspection cache, and touches in video pixels.
+Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found on a real iPhone. Measured on 2026-11-07 with an iPhone 13 mini (iPhone14,4) on iOS 27.0.1 (24A446), connected by USB to a Mac with macOS 27.2 and Xcode 27.2; the developer disk image was mounted and Developer Mode on. A second pass the same night added element frames through `remoteAXService`, the provider's inspection cache, and touches in video pixels. The third (round three, the next morning) added typing by paste, `Waker` and `Unlocker`, measured the phone over Wi-Fi, and read Calculator's display as its value.
 
 ## Step 0 results
 
@@ -10,22 +10,23 @@ Status of `internal/driver/ios`, the CoreDevice backend, and what step 0 found o
 | Screen stream | **Works.** HEVC over RTP through the userspace tunnel, depacketized to Annex B | 1136x2464 HEVC Main, up to 60 fps, 1–3 Mbit/s typical (cap 6), first packet 0.6 s after the start request, keyframe 70 ms after a request, 0 packets lost over USB |
 | Touch | **Works.** Tap, swipe, long press and raw touches through the universal HID service, on one long-lived session. Raw touches take video pixels; the video is the screen at 1:1 plus black padding | Touch-down to the first changed video frame: 100–131 ms, median 109 ms (still Settings page) |
 | Keys | Home **works** (Indigo button event); Back is a left-edge swipe and **works**; Recents returns `unsupported` | |
-| Text | **Works for printable ASCII with an English keyboard active**, through a virtual hardware keyboard. The keys go through the phone's current input method, as a real keyboard's would: with Pinyin active (as on the test phone) the letters become an uncommitted Pinyin composition. Other characters return `unsupported` | 25–40 ms per character |
-| Element tree (pass/fail) | **Pass.** Through `remoteAXService`, the service Xcode 27's Device Hub uses: label, role, value and frame for every element on screen, nothing installed on the phone. (The inspector API, the first attempt, gives no frames on iOS 27, as go-ios found on 18.4.1.) | Act, settle, `Observe` in one session: Settings 30–270 ms (12 elements, all with frames), Calculator 30–600 ms (23), but 2.2 s and 3.0 s in 2 of 9 launches, right after the launch. A walk alone: 0.19 s (Settings), 0.29–0.31 s (Calculator), 0.32 s (home screen). Before, inspector and OCR: 1.35 s for Settings with 13 of 38 elements placed, 0.65–0.70 s for Calculator with 8 of 23, and 13.5 s for the first OCR in a process |
+| Text | **Works for any text**, pasted: the pasteboard is saved, set to the text, Command-V goes through the virtual keyboard, and once the field shows the text the pasteboard is put back. Checked in Settings' search with the Pinyin keyboard active: English, Chinese, emoji, appending, and the pasteboard byte for byte the same afterwards. Without the pasteboard service, keys: printable ASCII, switching a composing keyboard (Pinyin) to the Latin one with Control-Space and back | Paste: 0.26–0.46 s per call (the save 2–70 ms, the paste confirmed in the field 0.1–0.36 s, the restore 25–50 ms), about 1 s for the first call in a session. Keys: 4–5 s for "clock" with the switch |
+| Element tree (pass/fail) | **Pass.** Through `remoteAXService`, the service Xcode 27's Device Hub uses: label, role, value and frame for every element on screen, nothing installed on the phone. (The inspector API, the first attempt, gives no frames on iOS 27, as go-ios found on 18.4.1.) | Act, settle, `Observe` in one session: Settings 33–261 ms (12 elements, all with frames), Calculator 340–481 ms (23; it waits for the push that carries the display's number), once 1.07 s, over 18 launches in round three (the second pass had seen 2.2 s and 3.0 s in 2 of 9; they did not come back). Without settling, right after a launch: 0.8–1.6 s, which the phone sets. A walk alone: 0.19 s (Settings), 0.29–0.31 s (Calculator), 0.32 s (home screen). Before, inspector and OCR: 1.35 s for Settings with 13 of 38 elements placed, 0.65–0.70 s for Calculator with 8 of 23, and 13.5 s for the first OCR in a process |
 | OCR placement | **Fallback only.** macOS Vision through purego places elements by label when `remoteAXService` fails, and adds text the tree lacks when asked | Vision 0.1–0.4 s per screenshot (13.5 s the first time in a process); 9 of 10, 12 of 13, 18 of 26 elements placed on Settings, Clock, home screen |
 | Screenshot | **Works**, two services with fallback | 1125x2436 PNG, 0.35 s (Settings) to 0.6–0.75 s (home screen, 5–7 MB) over USB |
-| Locked phone | **Not tested.** Locking the phone is not allowed in these sessions | |
+| Wake, lock state | **Partly tested.** The screen's state (CoreDevice's backlight state) and the lock state read right on the awake, unlocked phone, and `Wake` leaves the app in front alone. Waking a dark screen and `Unlock` could not be tried: the side button is off limits, the test phone never turns its screen off by itself, and nobody may type its passcode. Unit tests cover the unlock steps; see "What the owner should try" | Screen state 12 ms |
+| Wi-Fi | **Works, but too slow and lossy to be the default.** The same tunnel, video, HID, `remoteAXService` and pasteboard run through usbmuxd's network connection | See "Wi-Fi" below: screenshots 3.4–5.3 s, walks 1.7–2.3 s, 1.5–10 % of video packets lost |
 | Windows and Linux | **Not tested.** The package cross-compiles without cgo for both | |
 
 What these mean for the design:
 
 - The userspace tunnel removes the "tunnel may need administrator rights" prerequisite on every OS: no utun, no wintun, no sudo. It still needs usbmuxd (built into macOS; Apple Devices on Windows; the `usbmuxd` package on Linux).
 - The element tree, the part step 0 feared, works without WebDriverAgent: `remoteAXService` gives frames, and the phone even pushes the whole visible tree after every change, so `Observe` after an action usually costs tens of milliseconds. It needs `clientNeedsAccessibility`, which turns on the phone's accessibility runtime for the session (Device Hub does the same). OCR stays as the fallback.
-- USB matters: an iPhone that also syncs over Wi-Fi is listed twice by usbmuxd, and a tunnel over Wi-Fi was several times slower (screenshots 2–5 s instead of 0.6 s, sessions 1–7 s instead of 0.3 s, lost video packets). The driver now always picks the USB entry; Wi-Fi works but is not tuned.
+- USB matters: an iPhone that also syncs over Wi-Fi is listed twice by usbmuxd, and a tunnel over Wi-Fi is several times slower and loses video packets (see "Wi-Fi"). The driver picks the USB entry; Wi-Fi works but stays off by default.
 
 ## What is built
 
-`internal/driver/ios` implements `driver.Provider`, `driver.Device`, `driver.Toucher`, `driver.LockReporter` and `driver.Settler`.
+`internal/driver/ios` implements `driver.Provider`, `driver.Device`, `driver.Toucher`, `driver.LockReporter`, `driver.Settler`, `driver.Waker` and `driver.Unlocker`.
 
 | File | What |
 | --- | --- |
@@ -36,6 +37,8 @@ What these mean for the design:
 | `rtp.go`, `sps.go` | RTP parsing; RFC 7798 HEVC (single NAL, AP, FU; PACI skipped) and RFC 6184 H.264 (single, STAP-A, FU-A) depacketizers; the codec is sniffed from the NAL header because payload type 100 carries HEVC. The display service's 14-byte slice trailer is stripped. SPS parsers for the picture size |
 | `media.go` | The long-lived stream: access-unit assembly, `driver.Packet`s (a config packet before each keyframe, PTS from the 24 kHz RTP clock), RTCP receiver reports every second (the device stops after 10 s without them), a per-frame receipt like Xcode's, picture loss indications when a subscriber needs a keyframe (repeated every 600 ms until one comes), loss handling, fan-out to `Stream` subscribers |
 | `hid.go`, `keys.go` | Universal HID touch reports (surface 257), Indigo button events (Home), a virtual HID keyboard registered with `createService`, ASCII to US-layout usages |
+| `pasteboard.go`, `type.go` | The pasteboard service (PULL and SET); `Type` by paste with the pasteboard saved and put back, and the keys fallback with the Latin keyboard switch |
+| `power.go` | `Waker` (screen state from the backlight, Home) and `Unlocker` |
 | `device.go` | The session: one tunnel, one media stream, one HID connection; taps and swipes in screenshot pixels and raw touches in video pixels, mapped to the panel's 0..65535 range |
 | `axp.go`, `rax.go`, `observe_rax.go` | `remoteAXService`: a keyed-archive reader and writer for AccessibilityPlatformTranslation's classes, the session (requests one at a time, the walk, the trees the phone pushes), and `Observe` from it (pushed tree or walk, roles, labels, frames in pixels, other processes' elements, the keyboard) |
 | `ax.go`, `caption.go`, `observe.go` | The fallback: the inspector walk, caption parsing into label, role and states, OCR placement, keyboard detection, the foreground app |
@@ -59,6 +62,14 @@ Coordinates are screenshot pixels: 1125x2436 on an iPhone 13 mini, which is the 
 - **Foreground app from the elements.** An element handle's first four bytes are the owning process id; the process list (`listprocesses`) and the installation proxy's bundle paths turn it into a bundle id and name. The daemon's app-state events came once and never again, so they are only a fallback.
 - **Screenshots from the instruments service first**, CoreDevice's screen capture second. Both got stuck on the device at times (most likely after a test process was killed mid-request); the fallback and dial timeouts keep calls from hanging.
 - **Lock state from lockdown's `PasswordProtected`**, the value `devicectl` reports as `passcodeRequired`. iOS 27's developer disk image does not implement CoreDevice's `getlockstate` (the feature is listed but `dtdeviceinfod` has no implementation).
+- **Typing pastes** (the owner's decision). `Type` saves the pasteboard, sets it to the text, presses Command-V on the virtual keyboard, waits until the focused field's value changes (read through `remoteAXService`: the frontmost app's focused element, attribute 19, then its value), and puts the pasteboard back. It chooses before touching the field, so text it cannot type leaves the field as it was. Restoring waits for the paste because restoring first would paste the person's own clipboard into the field (and show it to the agent); without `remoteAXService` it waits 0.5 s. What is saved stays in memory for one call and is never logged or shown; `TypeStats` says only how it went.
+- **Pinky's pasteboard writes stay on the phone.** The phone's daemon (the DDI's `dtpasteboardd`) writes with `UIPasteboard setItemProviders:localOnly:expirationDate:` and passes `localOnly` exactly when the SET carries `sourceMetadata` (disassembled from the DDI's `CoreDeviceUtilities`: `localOnly = sourceMetadata != nil`, the branch that also records "sync metadata"). pymobiledevice3 sends none, so its writes go out through Universal Clipboard and replace the clipboards of the owner's Mac and iPad. Pinky always sends `{nonce, pasteboardName, changeCount}`. Checked: the Mac's pasteboard change count (a number; its contents were never read) stayed the same through every write.
+- **What the pasteboard keeps.** `Type` reads each item's first representation (`promiseSecondary`, always quick), then all of them (`allResolved`) for up to 3 s; if that read stalls (an app listing a type it cannot produce makes the daemon stall for about 64 s, pymobiledevice3 found with Notes) it keeps the first representations. The daemon refuses to read an item marked as coming from another device through Universal Clipboard (`com.apple.is-remote-clipboard`), a password (`org.nspasteboard.ConcealedType`) or transient (`org.nspasteboard.TransientType`, `de.petermaurer.TransientPasteboardType`, `org.nspasteboard.AutoGeneratedType`), with CoreDeviceError 26006; such a pasteboard cannot be saved, so `Type` empties it after pasting instead of leaving the text there. The test phone held a Universal Clipboard item when this round started. A pasteboard that changed since Pinky's own SET (someone copied, or a Universal Clipboard item arrived) is left as it is.
+- **Keys only without the pasteboard service**: printable ASCII through the virtual keyboard. Before typing, a probe letter (deleted again) shows whether the active keyboard composes: Pinyin puts a candidate bar into the app's own tree (cells whose identifier is the candidate, "啊"), sometimes only after a few hundred milliseconds, so the probe looks for up to 1 s. If it composes, Control-Space switches to the other keyboard for the text and back afterwards, 300 ms after the last key (switching back at once let Pinyin take the English word just typed into a composition, "Cloc k", in one run); if the other keyboard composes too, the call returns `unsupported`. Latin keyboards capitalize the first letter of a field (the hardware keyboard's Auto-Capitalization setting), which keys cannot avoid; pasting is not affected. `TypeStats.Trace` records the probes.
+- **Waking with Home, never the side button.** The screen's state is CoreDevice's display info `backlightState`: `activeOn` and `activeDimmed` count as on, `off` and `inactiveOn` (the always-on display of newer phones) as asleep. `Wake` does nothing on a screen that is on: Home would leave the app.
+- **Unlocking.** `Unlock` wakes the screen, returns at once if lockdown says the phone is unlocked, swipes up from the bottom edge, and waits up to 3 s for the passcode pad (buttons for all ten digits, or a secure field for an alphanumeric passcode; it also stops there if Face ID unlocks the phone). Without the pad it returns `ErrLocked` having typed nothing. It types the passcode on the virtual keyboard 120 ms per key, checking before each key that lockdown still says locked (once it does not, the keys would go to the app in front), presses Return unless the passcode is four or six digits (those submit themselves), and waits up to 4 s for lockdown to say unlocked, else `ErrLocked`. It never types the passcode twice.
+- **Wi-Fi stays off by default.** See "Wi-Fi" below. `Open` uses the USB entry unless `Info.Connection` is "wifi".
+- **Values in identifiers.** Calculator's display has no label or value, only the identifier `StandardInputView;value:144`. An identifier with `;value:` gives its name as the identifier (stable, for refs) and the rest as the value, and such an element reads as text, so the display is `text "144"`.
 
 ## How to run
 
@@ -73,14 +84,19 @@ scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> latency -vertical      
 scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> tap 285 2283
 scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> swipe 900 1218 225 1218 -ms 300
 scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> key home
-scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> type -append hello
+scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> type -append "hello 你好"
 scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> launch Calculator
 scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> screenshot -out /tmp/pinky-shot.png
+scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> screen     # is the screen on
+scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> locked     # lockdown only, no session
+/tmp/pinky-iosctl mux                                               # usbmuxd's entries, no phone contacted
 ```
+
+`iosctl unlock` reads a passcode from standard input and unlocks: only for the owner (see "What the owner should try").
 
 `iosctl devices` lists every phone usbmuxd sees and opens a tunnel to each to check its services, so do not run it while other sessions use their phones. Keep captures under `/tmp/pinky-*` and delete them afterwards.
 
-`iosctl observe` prints where the tree came from (`remoteax`, `remoteax-push` or `inspector`) and the timings. Each `iosctl` command is a new process with no earlier input, so it always walks; the device tests below measure the push path.
+`iosctl observe` prints where the tree came from (`remoteax`, `remoteax-push` or `inspector`) and the timings; `ObserveStats.Trace` says what the remoteax path waited for. `iosctl type` prints how it typed (paste or keys) and what happened to the pasteboard, never the text. Each `iosctl` command is a new process with no earlier input, so it always walks; the device tests below measure the push path.
 
 Tests: `go test ./internal/driver/ios/` runs the unit tests (RTP and SPS parsing, depacketizers, access-unit assembly, the offer against a captured one, the keyed-archive reader and writer, trees from pushes, elements and roles from the tree including other processes and the keyboard, caption parsing, keyboard detection, OCR placement, HID reports, the provider's cache, video-to-screen points) without a phone. The real-phone tests share one session and use only the home screen, Settings, Calculator and Clock:
 
@@ -88,7 +104,7 @@ Tests: `go test ./internal/driver/ios/` runs the unit tests (RTP and SPS parsing
 PINKY_DEVICE=<udid> scripts/devlock.sh <udid> go test -tags device -count=1 -v ./internal/driver/ios/
 ```
 
-All 14 pass on the iPhone 13 mini (inspect, stream, home screen observe, swipe and raw touch, apps, launch Settings by name, Calculator tap, screenshot, lock state, unsupported keys, latency, typing into Settings' search and leaving it through the close button Observe finds, a Calculator key tapped where Observe puts it and the display read back, Observe timing after launches).
+All 16 pass on the iPhone 13 mini (inspect, stream, home screen observe, swipe and raw touch, apps, launch Settings by name, Calculator tap, screenshot, lock state, unsupported keys, latency, typing by paste into Settings' search with the pasteboard checked after each call, typing by keys with the keyboard switch, waking, a Calculator key tapped where Observe puts it and the display read back as `7`, Observe timing after launches). `TestDeviceConnection` measures one connection in a session of its own: `PINKY_CONN=usb` or `wifi`, run alone with `-run TestDeviceConnection`. `PINKY_NO_SETTLE=1` makes the timing test observe right after each launch; `PINKY_SHOTS=1` saves the typing test's screenshots under `/tmp/pinky-ios` (delete them afterwards).
 
 ## Details and data
 
@@ -114,8 +130,36 @@ All 14 pass on the iPhone 13 mini (inspect, stream, home screen observe, swipe a
 
 - Touch positions are 0..65535 on each axis of the panel in its native (portrait) orientation. Landscape is not handled yet: the mapping assumes `rot0`.
 - `Key(back)` swipes from the left edge at mid-height over 250 ms. It starts at x=0 so the system gesture wins; a stray drag cannot select anything, but avoid screens where a drag at mid-height matters.
-- The virtual keyboard makes iOS treat the phone as having a hardware keyboard while the session lasts; the software keyboard still showed in Settings. It goes away when the HID connection closes. `Type` without `Append` sends Command-A and Delete first.
-- Keys go through the active input method. On the test phone the Pinyin keyboard was active: "clock" became a composition (Command-A did not select it, one Delete left "c lo c" with U+2006 spaces between the syllables), and Escape appeared to cancel it. On Pinyin, Return commits the letters as typed and a space picks a Chinese candidate (how the keyboard behaves; not tried here). So `Type` is right only with an English (or other Latin) keyboard active, and `Submit`'s Return only commits a composition. Fixes to choose from: paste through CoreDevice's pasteboard service and Command-V (handles CJK too, but overwrites the person's clipboard unless it is saved and restored, which means reading it: a decision for the owner), or switching the input source with the keyboard's globe or Control-Space and back (changes the person's keyboard).
+- The virtual keyboard makes iOS treat the phone as having a hardware keyboard while the session lasts; the software keyboard still showed in Settings until a key was pressed. It is registered at the first key, not at `Open` (registering takes about 0.35 s), and goes away when the HID connection closes. `Type` without `Append` sends Command-A and Delete first.
+- Keys go through the active input method. On the test phone the Pinyin keyboard was active: "clock" typed as keys became a composition (Command-A did not select it, one Delete left "c lo c" with U+2006 spaces between the syllables), and Escape appeared to cancel it. That is why `Type` pastes (the owner's choice between pasting and switching keyboards); keys remain only as the fallback above. Command-V and Command-A work with Pinyin active as long as nothing is being composed.
+
+### Pasteboard
+
+- The service: `com.apple.coredevice.pasteboardservice` (DDI `dtpasteboardd`, launchd label `com.apple.coredevice.dtpasteboardd`, entitlement `com.apple.private.CoreDevice.canAccessPasteboard`), bare XPC dictionaries with `command`, replies on the server-to-client stream; requests need the wants-reply flag. Messages: `PULL {pasteboardName, dataPolicy}` → `PULL_REPLY {pasteboard: {items, metadata, sourceMetadata}}`; `SET {pasteboardName, items, sourceMetadata}` → `SET_REPLY` with the new snapshot. Items are `{types: [UTI], data: {UTI: {data}}}`; a promised representation comes as `{isPromised, isAvailable, size}`. Metadata is `{nonce (the phone's boot session), pasteboardName, changeCount}`, and a PULL returns the `sourceMetadata` of the SET that made the current contents, so Pinky can tell its own write.
+- Errors come as `{error: {code, domain, userInfo}}` (CoreDeviceError). 26006: "The pasteboard contains type '…' indicating its contents are transient, confidential, or already synchronized by another mechanism, and was not synchronized."
+- `SET` with no items empties the pasteboard. Timings over USB: the first request on a connection 0.55 s (the RemoteXPC handshake; `Open` now connects the service in the background), then PULL 2–35 ms, SET 8–30 ms.
+- No paste permission prompt or banner appeared: Command-V from a keyboard counts as the person's paste.
+
+### Keyboards
+
+- The test phone's language is English (Singapore); lockdown's `com.apple.international` `Keyboard` names the default keyboard (`en_GB@sw=QWERTY;hw=Automatic`), not the active one, which was Pinyin (Simplified Chinese).
+- With Pinyin active, a typed letter shows a candidate bar in the app's own tree (`Cell` elements labelled "啊, 叹词的啊" with the identifier "啊", and a "More suggestions" button). `AXPAttributeTextInputMarkedRange` (123) answered nothing; the field's value shows the uncommitted letters.
+- Control-Space switched Pinyin to English (UK) and back; two presses restore the keyboard. After hardware key presses iOS hides the on-screen keyboard until the field is tapped again. A probe's walk right after a switch took 1.1–1.8 s (the phone was pushing a tree).
+
+### Wi-Fi
+
+With Finder's "Show this iPhone when on Wi-Fi", usbmuxd lists the phone twice (USB and Network). Opening the Network entry runs everything Pinky uses: the tunnel (CoreDeviceProxy through usbmuxd's network connection), video, HID, `remoteAXService`, screenshots and the pasteboard. The same session measured over each (`TestDeviceConnection`, two Wi-Fi runs):
+
+| | USB | Wi-Fi |
+| --- | --- | --- |
+| Session open | 0.58 s | 1.5–2.6 s |
+| Touch-down to changed frame | 73–154 ms | 6 ms–1.5 s (median 150–270 ms) |
+| Observe, walk | 0.3 s (pushes 32–38 ms) | 1.7–2.3 s |
+| Screenshot (home screen) | 0.67–0.78 s | 3.4–5.3 s |
+| Type (paste) | 0.26–0.46 s | about 2 s |
+| Video | 0 packets lost, no keyframe requests | 1.5–10 % of packets lost, 10–27 keyframe requests in 55 s |
+
+Everything goes through TCP inside TCP over Wi-Fi (gVisor's TCP in the tunnel, inside usbmuxd's connection), so each round trip costs tens of milliseconds and a walk, which is one round trip per request, pays it 25–40 times; the video is UDP in the tunnel and the phone drops it when the tunnel backs up. So `Provider.Wireless` stays off: the mirror would stutter, agents would wait seconds per step, and turning it on would also make the gateway open every iPhone and iPad paired over Wi-Fi (the owner's iPad among them) and show screen sharing on them. Apple's own Wi-Fi path is a different tunnel (remote pairing over QUIC, pymobiledevice3's `remote start-tunnel` over Wi-Fi), not tried here; it is the way to make Wi-Fi good.
 
 ### Element tree (inspector, the fallback)
 
@@ -141,7 +185,8 @@ The protocol, as iOS 27.0.1 speaks it:
 - While the phone builds a push, requests wait. Walks measured 0.27–0.33 s on an idle Calculator and 1.08 s when one met a push; on screens whose second push carries many images, 2.9 s (home screen) and 4.6 s (Settings' search with the keyboard up). Hence the push rules above.
 - What is listed: the elements on screen, in reading order (12–14 on Settings' first page, where the inspector walk found 38 rows including those scrolled out of view; 23–25 on Calculator; 26 on the home screen). Elements behind a sheet can be listed too (Settings' rows under its search suggestions).
 - Other processes: the keyboard's keys (another process) come as children of the app, with frames relative to a host view listed just before them, which has traits bit 34 (`0x400000000`) and the keyboard's frame; the keys are `StaticText` labelled with one character. A home screen widget (Photos, another process) came with a frame relative to itself and no host; `Observe` leaves such elements out rather than place them wrongly. Attributes 66 and 69 stayed empty in both cases.
-- Calculator's display has no label or value; its identifier carries the number (`StandardInputView;value:7`), which `Observe` shows as the label. The identifier is not in a first push, so `Observe` waits up to 1.2 s for the second when a first push leaves an element unnamed. Calculator's keys are `Key` (20) with the keyboard-key trait, so the keyboard is recognized by its process (many one-character labels), not by that trait.
+- Calculator's display has no label or value; its identifier carries the number (`StandardInputView;value:7`), which `Observe` shows as a text element with that value (`text "7"`, identifier `StandardInputView`). The identifier is not in a first push (that element has only its frame, traits and role there), so `Observe` waits up to 1.2 s for the second when a first push leaves an element unnamed; requests wait while the phone builds that push, so asking for the identifier would not be sooner. Calculator's keys are `Key` (20) with the keyboard-key trait, so the keyboard is recognized by its process (many one-character labels), not by that trait.
+- The first read after an app opens, measured again in round three (18 launches): act, settle, `Observe` (what the gateway does) took 33–261 ms on Settings and 340–481 ms on Calculator (the wait for the push with the display's number), once 1.07 s; the 2–3 s seen in the second pass did not come back. `Observe` right after `Launch`, without settling, took 0.8–1.6 s: the phone's first answer (the frontmost app) alone took 0.73–0.83 s while the app started, and its push came 1.1–1.6 s after the launch.
 - An app that has just launched can show its screen before it lists any element (a walk found only the app element once); `Observe` then waits up to 1.5 s for the push and walks again.
 
 ### OCR (fallback)
@@ -158,25 +203,42 @@ The protocol, as iOS 27.0.1 speaks it:
 - The pushed-tree rules trust timing: two inputs less than about 0.3 s apart (faster than the pacing rule allows) could still get the first one's push.
 - While Pinky is connected the phone's accessibility runtime is on and it pushes a tree after every change: up to 1.7 MB (home screen) over the tunnel each time.
 - Landscape: touch mapping, element frames and the screen size assume portrait.
-- Text outside printable ASCII, and ASCII while a non-Latin input method is active (above).
-- Wi-Fi-only phones: work, untuned.
-- Lock detection for phones without a passcode, and everything about locked phones (not testable here).
+- A pasteboard the phone does not let anyone read (a Universal Clipboard item, a password, transient content) cannot be saved; `Type` empties it after pasting. When reading every representation stalls, only each item's first one is put back. Restored contents stay on the phone (no Universal Clipboard) and carry Pinky's source metadata.
+- Typing by keys (only without the pasteboard service): ASCII, the first letter capitalized by Latin keyboards, 4–5 s per call with a keyboard switch (each probe walks the tree, slowly while the phone pushes one).
+- Wi-Fi: works but slow and lossy (above); `Wireless` stays off.
+- Waking a dark screen and `Unlock` are unit-tested only; lock detection for phones without a passcode is not tested.
 - iOS below 27 (needs WebDriverAgent), Windows, Linux (cross-compiles, untested).
 - `WaitSettled` uses frame sizes (and accessibility notifications when they come); animated widgets keep it from ever settling on such home screens (it times out), and after motion the encoder's slowly falling bitrate can keep it waiting a little after the picture stopped.
+
+## What the owner should try
+
+`Unlock` and waking a dark screen could not be tried on the test phone. With the iPhone connected by USB and nobody else using it:
+
+1. Lock it with the side button and leave it until the screen is dark.
+2. `scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> screen` should print `screen on: false`, and `locked` should print `locked: true`.
+3. `wake` should light the screen on the lock screen (Home, as a keyboard's Home key would), and `screen` then print `true`.
+4. `unlock`, then type the passcode and Enter: it should print `unlocked` within a few seconds, the phone showing its home screen or last app. Watch the phone: the passcode pad should come up after the swipe and fill one key at a time.
+5. Once more with a wrong passcode: it should fail with "device locked" after one attempt (the phone counts one failed attempt) and type nothing more.
+
+If the pad does not come up after the swipe (the phone may want Home instead with a keyboard attached), `unlock` stops with "the passcode pad did not appear" and has typed nothing. If the phone accepts the passcode but `unlock` still fails, lockdown's lock state is slow to change and `unlockWait` (4 s) needs raising.
 
 ## Security notes
 
 - While a session runs, the tunnel's forwarder listens on 127.0.0.1 and lets any local process reach the phone's developer services through it (go-ios's own userspace tunnel does the same). It adds nothing an agent with shell access could not already do through usbmuxd, which the threat model covers, but the gateway's isolation advice applies to it too.
 - Media streams make the phone show its screen-sharing indicator and block its camera and microphone; `Close` stops the stream, and the phone also stops it by itself 10 s after receiver reports stop (a crashed process).
 - The virtual keyboard and any held finger are released on `Close`. A killed process cannot release them; the phone should drop them when the HID connection closes with the tunnel, but that is not tested.
+- `Type` holds the person's pasteboard in memory for one call, never logs it, and its writes stay on the phone (`localOnly`). A process killed between the SET and the restore leaves the typed text on the pasteboard, and the saved contents are lost with the process.
+- `Unlock` keeps the passcode only for the call and never logs it; it types it only while lockdown says locked and the passcode pad is on screen, so a Face ID unlock on the way cannot send it to an app. `iosctl unlock` reads it from standard input, not the command line.
 
 ## Notes for other sessions
 
 - `go.mod` gains go-ios (main), gVisor and purego; expect a merge in `go.mod`/`go.sum`.
 - No shared contract changed by this driver; it follows 5e83552 (Toucher points in video pixels).
 - For the gateway and the client: `Stream` packets are HEVC Annex B; a `Config` packet (VPS, SPS, PPS) comes before every keyframe a subscriber receives; PTS counts from the stream's start on a 24 kHz clock. A new subscriber waits up to about 100 ms for a requested keyframe. No frames come while the screen is still (from about 7 s after the last change), so the mirror keeps showing the last frame and recordings have gaps. Element bounds and taps are screenshot pixels (1125x2436 here); raw touches are video pixels (1136x2464), which on iPhone are the same numbers inside the screen. The video's right 11 columns and bottom 28 rows are black padding; a mirror can crop the picture to the `Screen`'s width and height.
-- `Open` connects `remoteAXService` in the background, which turns on the phone's accessibility runtime for the session (no visible change on the phone). The provider caches its inspections (see Decisions).
+- `Open` connects `remoteAXService` in the background, which turns on the phone's accessibility runtime for the session (no visible change on the phone), and the pasteboard service. The provider caches its inspections (see Decisions).
+- `Type` takes any text and leaves the pasteboard as it was (see Decisions for the cases it cannot). `Waker`: `ScreenOn` is quick (one CoreDevice request); `Wake` presses Home only on a dark screen. `Unlocker` follows the contract: one attempt, `ErrLocked` when the phone stays locked (or the passcode pad never showed, with nothing typed), `ErrUnsupported` for a passcode the keyboard cannot type. `Open` honours `Info.Connection == "wifi"`.
 - `WaitSettled` returns no sooner than 500 ms after the call, once the last 250 ms brought frames of one size, or no frames while the stream is alive; a fling in a list takes 2–3 s to stop, and animated widgets never stop.
 - During testing `iosctl devices` probed every phone usbmuxd listed, which included the owner's iPad (iPad13,4, over Wi-Fi): one tunnel and one RSD handshake, nothing else.
 - The phone was left on its home screen; Settings was only browsed (back navigation, scrolling, searches for "wallpaper" and "clock" that were cancelled, and closed again through the close button). Once a test's cleanup tap landed on a search result and opened Settings > Apps > Clock; nothing there was touched (its Mobile Data switch stayed on), and the test no longer taps after typing. Calculator was left cleared.
+- Round three: the phone's pasteboard held a Universal Clipboard item, which the phone does not let anyone read, so it could not be kept; the typing tests set their own pasteboard contents and leave it empty. The keyboard was switched to English (UK) and back to Pinyin by the keys test; it was left on Pinyin. The phone stayed unlocked and awake throughout; nothing was locked, no passcode typed, no setting changed.
 - The on-screen keyboard check from OCR needs single letters spread across the screen: a list's alphabetical section index (Settings > Apps) fooled the first version.

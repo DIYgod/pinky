@@ -50,6 +50,9 @@ func (a *app) phonesPage(c *mg.Context) {
 		}
 	} else if d := a.device(a.sel); d != nil {
 		name, line = d.Info.Name, connectionLine(*d)
+		if t := a.taskOf(d.Info.ID); a.backgroundTask(*d, t) {
+			line += " · " + agentOrTheAgent(t) + " works in the background"
+		}
 	}
 	pageHeader(c, func() {
 		mg.Row(c).AlignItems(mg.Baseline).Gap(10).Children(func() {
@@ -134,7 +137,15 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	w, h := c.Size()
 	availH := h - 58 - 32 - 14 - 36
 	availW := w - 220 - 320 - 32
-	m := a.mirrorFor(d.Info.ID)
+	// While an agent works on its own display in the background, the
+	// mirror shows that display, unless the person chose the phone's own
+	// screen; the agent's outline belongs on its display only.
+	m, bgTask := a.screenFor(d, t, false)
+	watching := m.agent
+	shown := t
+	if bgTask && !watching {
+		shown = nil
+	}
 	aspect := m.aspect(d)
 	const bezel = 9
 	ph := min(availH, (availW-2*bezel)/aspect+2*bezel)
@@ -153,19 +164,38 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		fig.Shadow(0, 0, 0, 2, p.ink2)
 	}
 	fig.Label(d.Info.Name + " screen").Children(func() {
-		a.mirrorView(c, m, d, t, inner, false)
+		a.mirrorView(c, m, d, shown, inner, false)
 	})
 
-	// The keys: Back, Home and Recents on Android, Home on iPhone.
+	// The keys: Back, Home and Recents on Android, Home on iPhone, after
+	// the switch between the agent's screen and the phone's own.
 	mg.Row(c).Gap(4).AlignItems(mg.Center).Children(func() {
+		if bgTask && (watching || a.phoneChosen(d.Info.ID, t)) {
+			which := 0
+			if !watching {
+				which = 1
+			}
+			seg := mg.Segmented(c.Key("screen-"+d.Info.ID), &which, agentOrTheAgent(t)+"'s screen", "Phone's screen").Label("Show on the mirror")
+			if seg.Changed() {
+				a.bg.phone[d.Info.ID] = ""
+				if which == 1 {
+					a.bg.phone[d.Info.ID] = t.ID
+				}
+			}
+			mg.Box(c).Size(1, 20).Background(p.line2).Margin(0, 6)
+		}
 		key := func(ic *mg.SVG, label string, k driver.Key) {
 			b := mg.ButtonBase(c).Size(40, 36).Radius(9).Center().Label(label).Tooltip(label)
 			col := p.ink2
-			if b.Hovered() {
+			if watching {
+				// Keys act on the phone's own screen, not the agent's.
+				b.Disabled(true).Tooltip(agentOrTheAgent(t) + " works on its own screen. Show the phone's screen to use the phone.")
+				col = p.ink3
+			} else if b.Hovered() {
 				b.Background(p.bg3)
 				col = p.ink
 			}
-			if b.Clicked() {
+			if b.Clicked() && !watching {
 				id := d.Info.ID
 				a.call(id, "press "+label, func() error { return a.api.Key(id, k) })
 			}
@@ -225,16 +255,25 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 			open = false
 			a.saveScreenshot(m, d.Info.Name)
 		}
-		menuItem(c, "Record screen", p.ink3).Disabled(true).Tooltip("Recording arrives with the history store")
+		menuItem(c, "Record screen", p.ink3).Disabled(true).Tooltip("Agent tasks are recorded while Record the screen is on in Settings › Privacy")
 		menuItem(c, "Rotate", p.ink3).Disabled(true).Tooltip("Not in the gateway API yet")
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
 		mg.Row(c).Gap(10).Padding(6, 10).AlignItems(mg.Center).Children(func() {
+			ink := p.ink
+			desc := "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task."
+			if !d.Features.Background {
+				ink = p.ink3
+				desc = "This phone can't give agents a second screen."
+			}
 			mg.Column(c).Grow(1).Children(func() {
-				mg.Text(c, "Background display").FontSize(14).TextColor(p.ink3)
-				mg.Text(c, "The agent works on a hidden screen, so the phone stays yours").FontSize(12.5).TextColor(p.ink2)
+				mg.Text(c, "Work in the background").FontSize(14).TextColor(ink)
+				mg.Text(c, desc).FontSize(12.5).TextColor(p.ink2)
 			})
-			off := false
-			toggle(c, &off, "Background display").Disabled(true)
+			on := a.bg.on[id] && d.Features.Background
+			sw := toggle(c.Key("bg-pop-"+id), &on, "Work in the background").Disabled(!d.Features.Background)
+			if sw.Changed() && d.Features.Background {
+				a.setBackground(d, on)
+			}
 		})
 	})
 	a.more[id] = open
@@ -306,8 +345,12 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 							radius = 30
 						}
 						mini.Radius(radius).Background(p.phone).Padding(5).Children(func() {
-							m := a.mirrorFor(d.Info.ID)
-							a.mirrorView(c, m, d, t, radius-5, true)
+							m, bgTask := a.screenFor(d, t, true)
+							shown := t
+							if bgTask && !m.agent {
+								shown = nil
+							}
+							a.mirrorView(c, m, d, shown, radius-5, true)
 						})
 					}
 					mg.Column(c).Gap(2).Children(func() {

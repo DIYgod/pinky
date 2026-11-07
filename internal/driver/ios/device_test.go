@@ -11,6 +11,10 @@ package ios
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"image/png"
 	"os"
 	"sort"
 	"strings"
@@ -81,7 +85,7 @@ func TestDeviceInspect(t *testing.T) {
 	if id == "" {
 		t.Skip("PINKY_DEVICE not set")
 	}
-	entry, err := findEntry(id)
+	entry, err := findEntry(id, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,9 +347,6 @@ func TestDeviceKeys(t *testing.T) {
 	if err := d.Key(ctx, driver.KeyRecents); err == nil || !strings.Contains(err.Error(), driver.ErrUnsupported.Error()) {
 		t.Fatalf("recents: %v", err)
 	}
-	if err := d.Type(ctx, "你好", driver.TypeOptions{}); err == nil {
-		t.Fatal("non-ASCII text accepted")
-	}
 }
 
 // TestDeviceSwipeLatency reports how long a swipe takes to show up in the
@@ -370,9 +371,18 @@ func TestDeviceSwipeLatency(t *testing.T) {
 
 // TestDeviceType types into Settings' search field, the one text field the
 // safety rules allow, and clears it again.
+// TestDeviceType types into Settings' search field through the pasteboard:
+// English while the phone's keyboard may be Pinyin, Chinese, emoji, with
+// Append, and checks that the pasteboard holds what it held before each
+// call, for an empty pasteboard, one with several items and
+// representations, and one the phone does not let anyone read (cleared).
 func TestDeviceType(t *testing.T) {
 	d := testDevice(t)
-	ctx := ctxFor(t, time.Minute)
+	ctx := ctxFor(t, 3*time.Minute)
+	pb := d.pasteboard()
+	if pb == nil {
+		t.Skip("no pasteboard service")
+	}
 	if err := d.Launch(ctx, "com.apple.Preferences"); err != nil {
 		t.Fatal(err)
 	}
@@ -391,44 +401,257 @@ func TestDeviceType(t *testing.T) {
 		t.Skip("Settings' search field is not on screen")
 	}
 	defer home(ctx, d)
+	defer leaveSearch(ctx, t, d)
+	// The pasteboard is set up by the test; at the end it is left empty.
+	defer pb.set(context.Background(), []any{})
 	if err := d.Tap(ctx, field.Bounds.Center(), driver.TapOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	time.Sleep(1200 * time.Millisecond)
-	if err := d.Type(ctx, "clock", driver.TypeOptions{}); err != nil {
+	saveShot(ctx, t, d, "type-focused")
+
+	person := []any{
+		map[string]any{
+			"types": []any{"public.utf8-plain-text", "public.html"},
+			"data": map[string]any{
+				"public.utf8-plain-text": map[string]any{"data": []byte("Pinky test clipboard")},
+				"public.html":            map[string]any{"data": []byte("<b>Pinky</b> test clipboard")},
+			},
+		},
+		map[string]any{
+			"types": []any{"public.utf8-plain-text"},
+			"data":  map[string]any{"public.utf8-plain-text": map[string]any{"data": []byte("second item")}},
+		},
+	}
+	unreadable := []any{map[string]any{
+		"types": []any{"public.utf8-plain-text", "org.nspasteboard.ConcealedType"},
+		"data": map[string]any{
+			"public.utf8-plain-text":         map[string]any{"data": []byte("not a password")},
+			"org.nspasteboard.ConcealedType": map[string]any{"data": []byte{}},
+		},
+	}}
+	steps := []struct {
+		name   string
+		board  []any // the pasteboard before the call
+		text   string
+		append bool
+		want   string // the field afterwards
+		saved  string
+		after  string // the pasteboard afterwards: "same" or "empty"
+	}{
+		{"English, empty pasteboard", []any{}, "hello", false, "hello", "empty", "empty"},
+		{"Chinese replaces it", person, "你好", false, "你好", "full", "same"},
+		{"emoji appended", person, "👋🏽", true, "你好👋🏽", "full", "same"},
+		{"unreadable pasteboard", unreadable, "clock", false, "clock", "unreadable", "empty"},
+	}
+	for _, step := range steps {
+		if _, err := pb.set(ctx, step.board); err != nil {
+			t.Fatalf("%s: set up the pasteboard: %v", step.name, err)
+		}
+		before, berr := pb.pull(ctx, pbAllResolved)
+		if err := d.Type(ctx, step.text, driver.TypeOptions{Append: step.append}); err != nil {
+			t.Fatalf("%s: %v", step.name, err)
+		}
+		st := d.LastTypeStats()
+		t.Logf("%s: %s, saved %s (%v), pasted in %v (confirmed %v), %s in %v, %v in all",
+			step.name, st.Method, st.Saved, st.Save.Round(time.Millisecond), st.Paste.Round(time.Millisecond),
+			st.Confirmed, st.Restore, st.Restored.Round(time.Millisecond), st.Total.Round(time.Millisecond))
+		if st.Method != "paste" || st.Saved != step.saved || !st.Confirmed {
+			t.Errorf("%s: method %s, saved %s, confirmed %v; want paste, %s, true", step.name, st.Method, st.Saved, st.Confirmed, step.saved)
+		}
+		after, aerr := pb.pull(ctx, pbAllResolved)
+		switch step.after {
+		case "same":
+			if berr != nil || aerr != nil || pbFingerprint(before) != pbFingerprint(after) {
+				t.Errorf("%s: the pasteboard changed (errors %v, %v)", step.name, berr, aerr)
+			}
+		case "empty":
+			if aerr != nil || len(after.Items) != 0 {
+				t.Errorf("%s: the pasteboard is not empty afterwards (%v)", step.name, aerr)
+			}
+		}
+		time.Sleep(time.Second)
+		s, err := d.Observe(ctx, driver.ObserveOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		saveShot(ctx, t, d, "type-"+strings.ReplaceAll(step.name, " ", "-"))
+		if !fieldReads(s, step.want) {
+			t.Errorf("%s: the field does not read %q:\n%s", step.name, step.want, s.Render())
+		}
+		pause()
+	}
+}
+
+// saveShot writes a screenshot under /tmp/pinky-ios when PINKY_SHOTS is
+// set, for looking at by hand (never committed; delete them afterwards).
+func saveShot(ctx context.Context, t *testing.T, d *Device, name string) {
+	if os.Getenv("PINKY_SHOTS") == "" {
+		return
+	}
+	img, err := d.Screenshot(ctx)
+	if err != nil {
+		t.Log(err)
+		return
+	}
+	os.MkdirAll("/tmp/pinky-ios", 0o700)
+	f, err := os.Create("/tmp/pinky-ios/" + name + ".png")
+	if err != nil {
+		t.Log(err)
+		return
+	}
+	defer f.Close()
+	png.Encode(f, img)
+}
+
+// TestDeviceTypeKeys types with keys, the fallback for phones without the
+// pasteboard service, in Settings' search: with a Pinyin keyboard active
+// it switches to the Latin one for the text and back afterwards.
+func TestDeviceTypeKeys(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, 2*time.Minute)
+	if err := d.Launch(ctx, "com.apple.Preferences"); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(time.Second)
-	s, err = d.Observe(ctx, driver.ObserveOptions{})
+	time.Sleep(1500 * time.Millisecond)
+	s, err := d.Observe(ctx, driver.ObserveOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	typed := false
+	var field screen.Element
 	for _, e := range s.Elements {
-		if e.Role == screen.RoleInput && strings.ReplaceAll(e.Label, "\u2006", "") == "clock" {
-			typed = true
+		if e.Role == screen.RoleInput && e.Label == "Search" && !e.Bounds.Empty() {
+			field = e
 		}
 	}
-	// The letters may still be an input method's composition (Pinyin, on
-	// the test phone), which Escape cancels. Then leave the search through
-	// its close button, found where Observe says it is.
-	d.Key(ctx, driver.KeyEscape)
-	pause()
-	if !typed {
-		t.Errorf("the field does not read \"clock\":\n%s", s.Render())
+	if s.App.ID != "com.apple.Preferences" || field.Bounds.Empty() {
+		t.Skip("Settings' search field is not on screen")
+	}
+	defer home(ctx, d)
+	defer leaveSearch(ctx, t, d)
+	if err := d.Tap(ctx, field.Bounds.Center(), driver.TapOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1200 * time.Millisecond)
+	rax, err := d.raxNow()
+	if err != nil {
+		t.Skip("remoteAXService is not connected")
+	}
+	noop := func(string, ...any) {}
+	d.inputMu.Lock()
+	latinBefore, err := d.latinKeyboard(ctx, rax, noop)
+	d.inputMu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	strokes, _ := asciiStrokes("clock")
+	var st TypeStats
+	d.inputMu.Lock()
+	err = d.typeKeys(ctx, strokes, &st)
+	d.inputMu.Unlock()
+	t.Logf("Latin keyboard active before: %v; typed in %v; %s", latinBefore, time.Since(start).Round(time.Millisecond), strings.Join(st.Trace, "; "))
+	if err != nil {
+		t.Fatal(err)
 	}
 	time.Sleep(time.Second)
 	s, err = d.Observe(ctx, driver.ObserveOptions{})
 	if err != nil {
 		t.Fatal(err)
+	}
+	// A Latin keyboard capitalizes the first letter of a field (the
+	// hardware keyboard's Auto-Capitalization setting).
+	if !fieldReads(s, "clock") && !fieldReads(s, "Clock") {
+		t.Errorf("the field does not read \"clock\":\n%s", s.Render())
+	}
+	d.inputMu.Lock()
+	d.pressKeys(ctx, []keyStroke{{usage: keyA, mod: keyLeftGUI}, {usage: keyBackspace}})
+	latinAfter, err := d.latinKeyboard(ctx, rax, noop)
+	d.inputMu.Unlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if latinAfter != latinBefore {
+		t.Errorf("the keyboard was not switched back (Latin before %v, after %v)", latinBefore, latinAfter)
+	}
+}
+
+// TestDeviceWake checks what can be checked without the screen going off
+// (the side button is off limits and the test phone does not lock by
+// itself): the screen reads as on, and Wake then leaves the app in front.
+func TestDeviceWake(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, time.Minute)
+	if err := d.Launch(ctx, "com.apple.calculator"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1500 * time.Millisecond)
+	start := time.Now()
+	on, err := d.ScreenOn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("screen on: %v, read in %v", on, time.Since(start).Round(time.Millisecond))
+	if !on {
+		t.Fatal("the screen reads as off while the test drives it")
+	}
+	if err := d.Wake(ctx); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+	s, err := d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.App.ID != "com.apple.calculator" {
+		t.Errorf("Wake left %q in front; it must not press Home on a screen that is on", s.App.ID)
+	}
+	locked, err := d.Locked(ctx)
+	if err != nil || locked {
+		t.Errorf("locked %v, %v; want unlocked", locked, err)
+	}
+}
+
+// fieldReads reports whether an input on screen shows text.
+func fieldReads(s *screen.Screen, text string) bool {
+	for _, e := range s.Elements {
+		if e.Role == screen.RoleInput && (e.Label == text || strings.HasSuffix(e.Label, ", "+text)) {
+			return true
+		}
+	}
+	return false
+}
+
+// pbFingerprint summarizes a pasteboard's items, types and bytes.
+func pbFingerprint(s *pbSnapshot) string {
+	if s == nil {
+		return "nil"
+	}
+	h := sha256.New()
+	for _, it := range s.Items {
+		fmt.Fprintf(h, "item %d\n", len(it.Types))
+		for _, ty := range it.Types {
+			fmt.Fprintf(h, "%s %x\n", ty, it.Data[ty].Data)
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// leaveSearch closes Settings' search through the close or Cancel button
+// Observe finds.
+func leaveSearch(ctx context.Context, t *testing.T, d *Device) {
+	d.Key(ctx, driver.KeyEscape)
+	time.Sleep(time.Second)
+	s, err := d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil {
+		t.Log(err)
+		return
 	}
 	for _, e := range s.Elements {
 		if e.Role == screen.RoleButton && (e.Label == "close" || e.Label == "Cancel") && !e.Bounds.Empty() {
-			if err := d.Tap(ctx, e.Bounds.Center(), driver.TapOptions{}); err != nil {
-				t.Fatal(err)
-			}
+			d.Tap(ctx, e.Bounds.Center(), driver.TapOptions{})
 			time.Sleep(time.Second)
-			break
+			return
 		}
 	}
 }
@@ -482,8 +705,9 @@ func TestDeviceObserveFrames(t *testing.T) {
 	s = observe("after 7")
 	shows := false
 	for _, e := range s.Elements {
-		if strings.Contains(e.Label, "value:7") || e.Label == "7, 7" {
+		if e.ID == "StandardInputView" && e.Label == "7" {
 			shows = true
+			t.Logf("the display: %s", e.Line())
 		}
 	}
 	if !shows {
@@ -508,9 +732,13 @@ func TestDeviceObserveTiming(t *testing.T) {
 				t.Fatal(err)
 			}
 			start := time.Now()
-			settled, err := d.WaitSettled(ctx, 3*time.Second)
-			if err != nil {
-				t.Fatal(err)
+			settled := false
+			if os.Getenv("PINKY_NO_SETTLE") == "" {
+				var err error
+				settled, err = d.WaitSettled(ctx, 3*time.Second)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			waited := time.Since(start)
 			s, st, err := d.ObserveWithStats(ctx, driver.ObserveOptions{})
@@ -519,6 +747,9 @@ func TestDeviceObserveTiming(t *testing.T) {
 			}
 			t.Logf("%s #%d: settle %v (%v), observe %v via %s, %d elements, %d with bounds",
 				app, i+1, waited.Round(time.Millisecond), settled, st.Total.Round(time.Millisecond), st.Source, len(s.Elements), st.Placed)
+			if st.Total > 700*time.Millisecond {
+				t.Logf("   %s", strings.Join(st.Trace, "; "))
+			}
 			// Observe again with no input in between: a walk.
 			time.Sleep(pauseBetween)
 			_, st, err = d.ObserveWithStats(ctx, driver.ObserveOptions{})

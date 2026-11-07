@@ -113,6 +113,10 @@ type Server struct {
 	Trusted bool
 	Version string
 	Log     *slog.Logger
+	// Quit, when set, ends the process that hosts the gateway: `pinky quit`
+	// calls it over the socket. Windows has no signal to end a daemon, and
+	// scripts use it to end the app.
+	Quit func()
 
 	wg sync.WaitGroup
 }

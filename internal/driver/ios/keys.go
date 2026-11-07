@@ -18,6 +18,7 @@ const (
 // HID keyboard usages (page 7).
 const (
 	keyA         = 0x04
+	keyV         = 0x19
 	key1         = 0x1E
 	key0         = 0x27
 	keyEnter     = 0x28
@@ -32,6 +33,7 @@ const (
 	keyUp        = 0x52
 	keyPageUp    = 0x4B
 	keyPageDown  = 0x4E
+	keyLeftCtrl  = 0xE0
 	keyLeftShift = 0xE1
 	keyLeftGUI   = 0xE3 // Command
 )
@@ -157,34 +159,4 @@ func (d *Device) pressKeys(ctx context.Context, strokes []keyStroke) error {
 		}
 	}
 	return nil
-}
-
-// Type implements driver.Device for ASCII text, through a virtual hardware
-// keyboard with a US layout, into the focused field. Without Append it first
-// clears the field with Command-A and Delete, as a person with a keyboard
-// would. Characters outside printable ASCII return ErrUnsupported: keyboard
-// reports carry key codes, not text, and iOS composes CJK only through an
-// input method on the phone.
-func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
-	strokes := make([]keyStroke, 0, len(text)+3)
-	if !opt.Append {
-		strokes = append(strokes, keyStroke{usage: keyA, mod: keyLeftGUI}, keyStroke{usage: keyBackspace})
-	}
-	for _, r := range text {
-		u, shift, ok := asciiUsage(r)
-		if !ok {
-			return fmt.Errorf("character %q: only printable ASCII can be typed on iPhone: %w", r, driver.ErrUnsupported)
-		}
-		ks := keyStroke{usage: u}
-		if shift {
-			ks.mod = keyLeftShift
-		}
-		strokes = append(strokes, ks)
-	}
-	if opt.Submit {
-		strokes = append(strokes, keyStroke{usage: keyEnter})
-	}
-	d.inputMu.Lock()
-	defer d.inputMu.Unlock()
-	return d.pressKeys(ctx, strokes)
 }

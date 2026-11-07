@@ -30,9 +30,22 @@ type Store interface {
 	Reveal(ctx context.Context, account, reason string) (string, error)
 }
 
+// Service is the keychain service (the Credential Manager's target
+// prefix on Windows) Pinky's secrets are saved under.
+const Service = "app.pinky.desktop"
+
 // System returns the operating system's keychain, or a Store whose methods
 // return ErrUnsupported where Pinky has none.
 func System() Store { return system() }
+
+// Supported reports whether a store can keep secrets on this system,
+// without asking the person anything.
+func Supported(s Store) bool {
+	if v, ok := s.(interface{ Supported() bool }); ok {
+		return v.Supported()
+	}
+	return true
+}
 
 // PINAccount is the account a phone's PIN is saved under.
 func PINAccount(deviceID string) string { return "pin:" + deviceID }
@@ -45,6 +58,9 @@ type Memory struct {
 	mu sync.Mutex
 	m  map[string]string
 }
+
+// Supported implements the optional method Supported looks for.
+func (s *Memory) Supported() bool { return true }
 
 func (s *Memory) Has(account string) bool {
 	s.mu.Lock()
@@ -88,6 +104,7 @@ func (s *Memory) Reveal(ctx context.Context, account, reason string) (string, er
 // unsupported is the Store of systems without a keychain Pinky can use.
 type unsupported struct{}
 
+func (unsupported) Supported() bool           { return false }
 func (unsupported) Has(string) bool           { return false }
 func (unsupported) Save(string, string) error { return ErrUnsupported }
 func (unsupported) Delete(string) error       { return ErrUnsupported }

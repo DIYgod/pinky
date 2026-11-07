@@ -25,17 +25,19 @@ type Scenario string
 
 // Scenarios, after the prototype's artboards.
 const (
-	OnePhone    Scenario = "one"      // Pixel 9 reorders lunch, then asks to pay
-	ThreePhones Scenario = "three"    // and an iPhone in an onboarding test, and an offline Galaxy
-	Locked      Scenario = "locked"   // Pixel 9 is locked while the agent replies to Sam
-	Takeover    Scenario = "takeover" // the person took over Pixel 9 to change the note
-	Handoff     Scenario = "handoff"  // the agent asks the person to sign in to Dinely
-	NewAgent    Scenario = "agent"    // Codex connects for the first time and waits to be allowed
-	NoPhones    Scenario = "empty"    // nothing connected: the client opens Add phone
+	OnePhone    Scenario = "one"        // Pixel 9 reorders lunch, then asks to pay
+	ThreePhones Scenario = "three"      // and an iPhone in an onboarding test, and an offline Galaxy
+	Locked      Scenario = "locked"     // Pixel 9 is locked while the agent replies to Sam
+	Takeover    Scenario = "takeover"   // the person took over Pixel 9 to change the note
+	Handoff     Scenario = "handoff"    // the agent asks the person to sign in to Dinely
+	NewAgent    Scenario = "agent"      // Codex connects for the first time and waits to be allowed
+	Companion   Scenario = "companion"  // Pixel 9 lacks the companion app: its page offers to install it
+	Background  Scenario = "background" // Pixel 9 works in the background: the mirror shows the agent's display
+	NoPhones    Scenario = "empty"      // nothing connected: the client opens Add phone
 )
 
 // Scenarios lists them in menu order.
-var Scenarios = []Scenario{OnePhone, ThreePhones, Locked, Takeover, Handoff, NewAgent, NoPhones}
+var Scenarios = []Scenario{OnePhone, ThreePhones, Locked, Takeover, Handoff, NewAgent, Companion, Background, NoPhones}
 
 // Title names a scenario for menus.
 func (s Scenario) Title() string {
@@ -52,6 +54,10 @@ func (s Scenario) Title() string {
 		return "Handoff"
 	case NewAgent:
 		return "New agent"
+	case Companion:
+		return "Companion app missing"
+	case Background:
+		return "Background work"
 	case NoPhones:
 		return "No phones"
 	}
@@ -70,6 +76,10 @@ type Options struct {
 	ApprovalTimeout time.Duration
 	// Now is the clock; nil is time.Now.
 	Now func() time.Time
+	// PairDelay is how long a QR pairing waits before its fake phone scans
+	// the code; 0 is a few seconds at Speed, and below 0 waits for
+	// ScanPairing.
+	PairDelay time.Duration
 }
 
 // Input is one input the person sent through the mirror.
@@ -102,6 +112,14 @@ type API struct {
 	readOnly   map[string]bool
 	mediaDir   string            // where MediaPath writes screenshots
 	mediaFiles map[string]string // media id → file
+
+	pairings    []*pairing
+	installs    []string
+	noRecording bool
+	keepDays    int
+	unrecorded  map[string]bool // finished while recording was off
+	recOpens    []time.Duration
+	exports     []Export
 }
 
 type device struct {
@@ -112,8 +130,10 @@ type device struct {
 	source     string // ffmpeg lavfi test source
 	locked     bool
 	inControl  bool
-	statusLine string // when an agent works on it
-	task       *task  // the task running on it, if any
+	statusLine string                // when an agent works on it
+	task       *task                 // the task running on it, if any
+	companion  driver.CompanionState // Android only; "" is on
+	background bool                  // agents work on a background display
 }
 
 type task struct {
@@ -150,7 +170,7 @@ func New(opt Options) *API {
 		opt.Scenario = OnePhone
 	}
 	a := &API{opt: opt, subs: map[chan gateway.Event]struct{}{}, shotCache: map[string]image.Image{},
-		agents: defaultAgents(), mediaFiles: map[string]string{}}
+		agents: defaultAgents(), mediaFiles: map[string]string{}, unrecorded: map[string]bool{}, keepDays: 30}
 	a.history = seedHistory(opt.Now())
 	a.Play(opt.Scenario)
 	return a
@@ -214,6 +234,13 @@ func (a *API) Play(s Scenario) {
 	case NewAgent:
 		a.devices = []*device{pixel}
 		scripts = append(scripts, a.newAgent(gen, pixel))
+	case Companion:
+		pixel.companion = driver.CompanionMissing
+		a.devices = []*device{pixel}
+	case Background:
+		pixel.background = true
+		a.devices = []*device{pixel}
+		scripts = append(scripts, a.lunch(gen, pixel, false))
 	case NoPhones:
 	}
 	a.mu.Unlock()
@@ -273,7 +300,7 @@ func (a *API) Devices() []gateway.DeviceView {
 }
 
 func (a *API) deviceView(d *device) gateway.DeviceView {
-	v := gateway.DeviceView{Info: d.info}
+	v := gateway.DeviceView{Info: d.info, Features: a.features(d)}
 	running := d.task != nil && !isFinished(d.task.view.State)
 	if running {
 		v.TaskID = d.task.view.ID
@@ -667,6 +694,9 @@ func (a *API) finishLocked(t *task, state gateway.TaskState) {
 	t.ended = now
 	t.dev.inControl = false
 	t.signal()
+	if a.noRecording {
+		a.unrecorded[t.view.ID] = true
+	}
 	a.history = append(a.history, cloneTask(t.view))
 }
 

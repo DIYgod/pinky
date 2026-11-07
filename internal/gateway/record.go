@@ -25,7 +25,7 @@ func (g *Gateway) rawShot(ctx context.Context, d *device, s *screen.Screen) imag
 	if _, blocked := g.policy.Blocked(s.App); blocked {
 		return nil
 	}
-	dev := g.driverOf(d)
+	dev, _ := g.screenOf(d)
 	if dev == nil {
 		return nil
 	}
@@ -315,6 +315,8 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 		// After Stop the gateway leaves the phone alone, reads included.
 		g.confirmAtEndLocked(d)
 	}
+	g.stopVideoLocked(d, outcome != OutcomeStopped)
+	g.closeBackgroundLocked(l)
 	g.wakeLocked(d)
 	g.recordTaskLocked(t)
 	leaseID := l.id

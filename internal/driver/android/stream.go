@@ -113,6 +113,23 @@ func (st *stream) push(p scrcpy.Packet) {
 	}
 }
 
+// RequestKeyFrame asks the encoder for a fresh configuration and key frame
+// now, by restarting it (scrcpy's reset-video message), at most once a
+// second. The gateway shares one stream among the mirror and the recorder,
+// and asks when one of them needs to start over (a recording after a pause,
+// a viewer that joined late): scrcpy sends key frames by itself only every
+// 10 seconds, and not at all while the screen stays still.
+func (st *stream) RequestKeyFrame() {
+	st.mu.Lock()
+	if st.closed || time.Since(st.resetAt) < time.Second {
+		st.mu.Unlock()
+		return
+	}
+	st.resetAt = time.Now()
+	st.mu.Unlock()
+	go st.l.s.Send(scrcpy.ResetVideo())
+}
+
 // end closes the stream with an error, from the session side.
 func (st *stream) end(err error) {
 	st.mu.Lock()

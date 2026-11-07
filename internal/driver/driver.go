@@ -261,6 +261,14 @@ type Backgrounder interface {
 	OpenBackground(ctx context.Context, opt BackgroundOptions) (Device, error)
 }
 
+// BackgroundDefaulter says whether agents should work on a background
+// display unless the person chooses otherwise: true where that display keeps
+// working while the phone is off and locked (Android 13 and later), so the
+// phone's own screen can stay off during tasks.
+type BackgroundDefaulter interface {
+	BackgroundByDefault() bool
+}
+
 // CompanionState is whether the phone's companion app is ready.
 type CompanionState string
 

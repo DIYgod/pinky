@@ -6,8 +6,10 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -17,27 +19,44 @@ import java.util.concurrent.atomic.AtomicInteger
  * Turns accessibility events into protocol events and fans them out to
  * subscribed connections. Events arrive on the main thread; each subscriber
  * has its own queue and writer thread, so a slow client never blocks the
- * service.
+ * service. Every event names the display it came from when that is known.
  */
-class EventHub(private val labels: AppLabels) {
+class EventHub(private val labels: AppLabels, private val displays: Displays) {
 
-    /** Uptime of the last event that means the screen changed. */
+    /** Uptime of the last event that means the screen changed, on any display. */
     @Volatile
     var lastChangeUptime = 0L
         private set
 
+    // The same per display; Display.INVALID_DISPLAY holds the changes whose
+    // display is not known.
+    private val lastChangeByDisplay = ConcurrentHashMap<Int, Long>()
+
     private val subscribers = CopyOnWriteArrayList<Subscriber>()
     private val main = Handler(Looper.getMainLooper())
 
-    // Content changes come in bursts; send at most one per CONTENT_INTERVAL_MS.
-    private var contentPending = 0
-    private var contentPackage: String? = null
-    private var contentLastTime = 0L
-    private var contentLastEmit = 0L
-    private var contentFlushScheduled = false
+    // Content changes come in bursts; send at most one per CONTENT_INTERVAL_MS
+    // and display. Main thread only.
+    private class ContentFold {
+        var pending = 0
+        var pkg: String? = null
+        var lastTime = 0L
+        var lastEmit = 0L
+        var flushScheduled = false
+    }
 
-    fun subscribe(conn: Connection, kinds: Set<String>): Subscriber {
-        val s = Subscriber(conn, kinds)
+    private val content = HashMap<Int, ContentFold>()
+
+    // The display and window of each package's last window event. Toast
+    // events name neither a window nor a display (Android 16 reports -1 for
+    // both), so a toast takes the display of its app's last window. Main
+    // thread only.
+    private val packageDisplays = HashMap<String, Int>()
+    private val packageWindows = HashMap<String, Int>()
+
+    /** Subscribes a connection; a display limits it to that display's events. */
+    fun subscribe(conn: Connection, kinds: Set<String>, display: Int?): Subscriber {
+        val s = Subscriber(conn, kinds, display)
         subscribers.add(s)
         return s
     }
@@ -56,54 +75,67 @@ class EventHub(private val labels: AppLabels) {
     fun onEvent(e: AccessibilityEvent) {
         when (e.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                markChanged()
-                e.packageName?.let { labels.warm(it.toString()) }
+                val d = displayOf(e)
+                markChanged(d)
+                val pkg = e.packageName?.toString()
+                if (pkg != null) {
+                    labels.warm(pkg)
+                    packageDisplays[pkg] = d
+                    packageWindows[pkg] = e.windowId
+                }
                 if (!wanted(KIND_WINDOW)) return
-                val j = begin(KIND_WINDOW, e)
+                val j = begin(KIND_WINDOW, e, d)
                 j.fieldIfNotEmpty("class", e.className)
                 j.fieldIfNotEmpty("title", joinText(e))
                 j.field("window", e.windowId)
-                emit(KIND_WINDOW, j)
+                emit(KIND_WINDOW, d, j)
             }
 
             AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
-                markChanged()
+                // Look the window up before the list is read again, so that
+                // a removed window is still found.
+                val d = displayOf(e)
+                displays.windowsChanged()
+                markChanged(d)
                 if (!wanted(KIND_WINDOWS)) return
-                val j = begin(KIND_WINDOWS, e)
+                val j = begin(KIND_WINDOWS, e, d)
                 j.field("window", e.windowId)
                 j.name("changes").beginArray()
                 windowChangeNames(e.windowChanges).forEach { j.value(it) }
                 j.endArray()
-                emit(KIND_WINDOWS, j)
+                emit(KIND_WINDOWS, d, j)
             }
 
             AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED,
             AccessibilityEvent.TYPE_VIEW_SCROLLED,
             AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                markChanged()
+                val d = displayOf(e)
+                markChanged(d)
                 if (!wanted(KIND_CONTENT)) return
-                onContent(e)
+                onContent(e, d)
             }
 
             AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> {
                 val data = e.parcelableData
                 if (data is Notification) {
                     if (!wanted(KIND_NOTIFICATION)) return
-                    val j = begin(KIND_NOTIFICATION, e)
+                    // Notifications belong to the phone, not to a display.
+                    val j = begin(KIND_NOTIFICATION, e, Display.INVALID_DISPLAY)
                     val extras = data.extras
                     j.fieldIfNotEmpty("title", extras?.getCharSequence(Notification.EXTRA_TITLE))
                     val body = extras?.getCharSequence(Notification.EXTRA_TEXT)
                         ?: extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)
                     j.fieldIfNotEmpty("text", body ?: joinText(e))
                     j.fieldIfNotEmpty("category", data.category)
-                    emit(KIND_NOTIFICATION, j)
+                    emit(KIND_NOTIFICATION, Display.INVALID_DISPLAY, j)
                 } else {
                     // Toasts arrive as notification events with no Notification,
                     // also when SystemUI draws them for apps targeting API 30+.
                     if (!wanted(KIND_TOAST)) return
-                    val j = begin(KIND_TOAST, e)
+                    val d = toastDisplay(e)
+                    val j = begin(KIND_TOAST, e, d)
                     j.field("text", toastText(e))
-                    emit(KIND_TOAST, j)
+                    emit(KIND_TOAST, d, j)
                 }
             }
         }
@@ -111,14 +143,15 @@ class EventHub(private val labels: AppLabels) {
 
     /**
      * Blocks until no change event arrived for quietMs, counted from the
-     * call at the earliest, or until timeoutMs passed.
+     * call at the earliest, or until timeoutMs passed. With a display, only
+     * that display's changes count, and those whose display is not known.
      */
-    fun waitIdle(quietMs: Long, timeoutMs: Long): String {
+    fun waitIdle(quietMs: Long, timeoutMs: Long, display: Int?): String {
         val start = SystemClock.uptimeMillis()
         var settled: Boolean
         while (true) {
             val now = SystemClock.uptimeMillis()
-            val quietFor = now - maxOf(lastChangeUptime, start)
+            val quietFor = now - maxOf(lastChange(display), start)
             if (quietFor >= quietMs) {
                 settled = true
                 break
@@ -130,13 +163,47 @@ class EventHub(private val labels: AppLabels) {
             Thread.sleep(minOf(quietMs - quietFor, 25L).coerceAtLeast(1L))
         }
         val now = SystemClock.uptimeMillis()
+        val last = lastChange(display)
         val j = Json()
         j.beginObject()
         j.field("settled", settled)
         j.field("waited_ms", now - start)
-        if (lastChangeUptime > 0) j.field("last_change_ms_ago", now - lastChangeUptime)
+        if (last > 0) j.field("last_change_ms_ago", now - last)
         j.endObject()
         return j.toString()
+    }
+
+    private fun lastChange(display: Int?): Long = if (display == null) {
+        lastChangeUptime
+    } else {
+        maxOf(lastChangeByDisplay[display] ?: 0L, lastChangeByDisplay[Display.INVALID_DISPLAY] ?: 0L)
+    }
+
+    /**
+     * The display an event came from, or Display.INVALID_DISPLAY. Android
+     * 13 reports it; before that the event's window tells.
+     */
+    private fun displayOf(e: AccessibilityEvent): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val d = e.displayId
+            if (d != Display.INVALID_DISPLAY) return d
+        }
+        return displays.displayOfWindow(e.windowId)
+    }
+
+    /**
+     * A toast's display: the one Android reports, else that of the app's
+     * last window event. When that event's display was not known (on Android
+     * 11 and 12 a window can be listed only after its event), its window is
+     * looked up again now.
+     */
+    private fun toastDisplay(e: AccessibilityEvent): Int {
+        val d = displayOf(e)
+        if (d != Display.INVALID_DISPLAY) return d
+        val pkg = e.packageName?.toString() ?: return Display.INVALID_DISPLAY
+        val last = packageDisplays[pkg] ?: return Display.INVALID_DISPLAY
+        if (last != Display.INVALID_DISPLAY) return last
+        return packageWindows[pkg]?.let { displays.displayOfWindow(it) } ?: Display.INVALID_DISPLAY
     }
 
     /**
@@ -150,62 +217,65 @@ class EventHub(private val labels: AppLabels) {
         return message.joinToString(" ")
     }
 
-    private fun markChanged() {
-        lastChangeUptime = SystemClock.uptimeMillis()
+    private fun markChanged(display: Int) {
+        val now = SystemClock.uptimeMillis()
+        lastChangeUptime = now
+        lastChangeByDisplay[display] = now
     }
 
     private fun wanted(kind: String): Boolean = subscribers.any { kind in it.kinds }
 
-    private fun onContent(e: AccessibilityEvent) {
-        contentPending++
-        contentPackage = e.packageName?.toString()
-        contentLastTime = eventTime(e)
+    private fun onContent(e: AccessibilityEvent, display: Int) {
+        val f = content.getOrPut(display) { ContentFold() }
+        f.pending++
+        f.pkg = e.packageName?.toString()
+        f.lastTime = eventTime(e)
         val now = SystemClock.uptimeMillis()
-        if (now - contentLastEmit >= CONTENT_INTERVAL_MS) {
-            flushContent()
-        } else if (!contentFlushScheduled) {
-            contentFlushScheduled = true
+        if (now - f.lastEmit >= CONTENT_INTERVAL_MS) {
+            flushContent(display, f)
+        } else if (!f.flushScheduled) {
+            f.flushScheduled = true
             main.postAtTime({
-                contentFlushScheduled = false
-                flushContent()
-            }, contentLastEmit + CONTENT_INTERVAL_MS)
+                f.flushScheduled = false
+                flushContent(display, f)
+            }, f.lastEmit + CONTENT_INTERVAL_MS)
         }
     }
 
-    private fun flushContent() {
-        if (contentPending == 0) return
+    private fun flushContent(display: Int, f: ContentFold) {
+        if (f.pending == 0) return
         val j = Json()
         j.beginObject()
         j.field("event", KIND_CONTENT)
-        j.field("time", contentLastTime)
-        j.fieldIfNotEmpty("package", contentPackage)
-        j.field("count", contentPending)
-        contentPending = 0
-        contentLastEmit = SystemClock.uptimeMillis()
-        emit(KIND_CONTENT, j)
+        j.field("time", f.lastTime)
+        j.fieldIfNotEmpty("package", f.pkg)
+        j.field("display", display)
+        j.field("count", f.pending)
+        f.pending = 0
+        f.lastEmit = SystemClock.uptimeMillis()
+        emit(KIND_CONTENT, display, j)
     }
 
-    private fun begin(kind: String, e: AccessibilityEvent): Json {
+    private fun begin(kind: String, e: AccessibilityEvent, display: Int): Json {
         val j = Json()
         j.beginObject()
         j.field("event", kind)
         j.field("time", eventTime(e))
         j.fieldIfNotEmpty("package", e.packageName)
-        // AccessibilityEvent.getDisplayId is public from API 33.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) j.field("display", e.displayId)
+        j.field("display", display)
         return j
     }
 
-    private fun emit(kind: String, j: Json) {
+    private fun emit(kind: String, display: Int, j: Json) {
         j.endObject()
         val line = j.toString()
         for (s in subscribers) {
-            if (kind in s.kinds) s.offer(line)
+            if (s.accepts(kind, display)) s.offer(line)
         }
     }
 
-    /** A connection that receives events. */
-    inner class Subscriber(private val conn: Connection, val kinds: Set<String>) {
+    /** A connection that receives events, of one display or of all. */
+    inner class Subscriber(private val conn: Connection, val kinds: Set<String>, private val display: Int?) {
         private val queue = LinkedBlockingQueue<String>(QUEUE_CAPACITY)
         private val dropped = AtomicInteger()
 
@@ -221,6 +291,10 @@ class EventHub(private val labels: AppLabels) {
             }
         }
 
+        /** Notifications belong to the phone and pass any display filter. */
+        fun accepts(kind: String, d: Int): Boolean =
+            kind in kinds && (display == null || kind == KIND_NOTIFICATION || d == display)
+
         fun offer(line: String) {
             if (!closed && !queue.offer(line)) dropped.incrementAndGet()
         }
@@ -235,7 +309,9 @@ class EventHub(private val labels: AppLabels) {
                 while (!closed) {
                     val line = queue.poll(1, TimeUnit.SECONDS) ?: continue
                     val lost = dropped.getAndSet(0)
-                    if (lost > 0) conn.send("{\"event\":\"dropped\",\"time\":${System.currentTimeMillis()},\"count\":$lost}")
+                    if (lost > 0) {
+                        conn.send("{\"event\":\"dropped\",\"time\":${System.currentTimeMillis()},\"display\":-1,\"count\":$lost}")
+                    }
                     conn.send(line)
                 }
             } catch (_: InterruptedException) {

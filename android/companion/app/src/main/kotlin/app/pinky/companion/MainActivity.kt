@@ -40,6 +40,7 @@ class MainActivity : Activity() {
     private lateinit var serviceView: TextView
     private lateinit var socketView: TextView
     private lateinit var echoView: TextView
+    private lateinit var versionView: TextView
 
     private val main = Handler(Looper.getMainLooper())
     private val pinger = Executors.newSingleThreadExecutor()
@@ -51,8 +52,7 @@ class MainActivity : Activity() {
         serviceView = findViewById(R.id.status_service)
         socketView = findViewById(R.id.status_socket)
         echoView = findViewById(R.id.debug_echo)
-        findViewById<TextView>(R.id.status_version).text =
-            getString(R.string.status_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
+        versionView = findViewById(R.id.status_version)
 
         findViewById<EditText>(R.id.debug_input).addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -104,6 +104,11 @@ class MainActivity : Activity() {
         val on = am?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
             ?.any { it.resolveInfo.serviceInfo.packageName == packageName } == true
         setIfChanged(serviceView, getString(if (on) R.string.status_service_on else R.string.status_service_off))
+        // Android can move the page to another display without recreating it.
+        setIfChanged(
+            versionView,
+            getString(R.string.status_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE, displayId()),
+        )
         pinger.execute {
             val ping = ping()
             main.post {
@@ -135,6 +140,15 @@ class MainActivity : Activity() {
     } catch (_: Exception) {
         null
     }
+
+    /** The display this page is on; tests open it on background displays too. */
+    private fun displayId(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            display?.displayId ?: 0
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.displayId
+        }
 
     private fun setIfChanged(v: TextView, text: String) {
         if (v.text.toString() != text) v.text = text

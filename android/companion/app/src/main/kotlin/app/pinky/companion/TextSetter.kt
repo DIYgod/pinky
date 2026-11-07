@@ -3,6 +3,7 @@ package app.pinky.companion
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.view.Display
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import org.json.JSONObject
@@ -19,7 +20,9 @@ class TextSetter(private val service: PinkyAccessibilityService) {
         val text = req.getString("text")
         val append = req.optBoolean("append")
         val submit = req.optBoolean("submit")
-        val node = resolve(req.optJSONObject("target"))
+        val display = req.optInt("display", Display.DEFAULT_DISPLAY)
+        service.displays.check(display)
+        val node = resolve(req.optJSONObject("target"), display)
         try {
             if (!node.isEditable) throw RequestError("not_editable", "the target node is not editable")
             if (!node.isEnabled) throw RequestError("disabled", "the target node is disabled")
@@ -62,17 +65,17 @@ class TextSetter(private val service: PinkyAccessibilityService) {
         if (n.isShowingHintText) "" else n.text?.toString() ?: ""
 
     /**
-     * Finds the node a request targets: the focused input, a node handle
-     * from a tree response, the editable node under a point, or the first
-     * editable node with a resource id. Windows are searched top-most first.
+     * Finds the node a request targets on one display: the focused input, a
+     * node handle from a tree response, the editable node under a point, or
+     * the first editable node with a resource id. Windows are searched
+     * top-most first.
      */
-    private fun resolve(t: JSONObject?): AccessibilityNodeInfo {
-        if (t == null || t.length() == 0 || t.optBoolean("focused")) {
-            return service.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
-                ?: throw RequestError("not_found", "no input has focus")
-        }
-        val windows = service.windows.sortedByDescending { it.layer }
+    private fun resolve(t: JSONObject?, display: Int): AccessibilityNodeInfo {
+        val windows = service.displays.windowsOn(display).sortedByDescending { it.layer }
         try {
+            if (t == null || t.length() == 0 || t.optBoolean("focused")) {
+                return focusedOn(windows)
+            }
             if (t.has("node")) {
                 val handle = t.getInt("node")
                 val windowId = t.optInt("window", -1)
@@ -101,6 +104,31 @@ class TextSetter(private val service: PinkyAccessibilityService) {
         } finally {
             TreeDumper.recycleWindows(windows)
         }
+    }
+
+    /**
+     * The input focus among a display's windows. The phone's input focus is
+     * on the display that was touched last, and is used when it is in one of
+     * these windows. A display that was not touched last has no focused
+     * window, but its views keep their focus: then the window that would get
+     * the focus is searched, the top-most application window. A dialog
+     * without a focused field so gives `not_found` rather than the field
+     * behind it.
+     */
+    private fun focusedOn(windows: List<AccessibilityWindowInfo>): AccessibilityNodeInfo {
+        service.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.let { n ->
+            if (windows.any { it.id == n.windowId }) return n
+            TreeDumper.recycle(n)
+        }
+        val w = windows.firstOrNull { it.isFocused && it.type != AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            ?: windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION }.maxByOrNull { it.layer }
+        val root = w?.root
+        if (root != null) {
+            val focus = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            TreeDumper.recycle(root)
+            if (focus != null) return focus
+        }
+        throw RequestError("not_found", "no input has focus")
     }
 
     private fun find(w: AccessibilityWindowInfo, match: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {

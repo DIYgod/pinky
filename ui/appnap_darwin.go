@@ -10,32 +10,71 @@ import (
 
 // Activity options of NSProcessInfo.beginActivityWithOptions:reason:.
 const (
-	// NSActivityUserInitiatedAllowingIdleSystemSleep: no App Nap, no timer
-	// coalescing; the Mac may still sleep when idle, so a laptop with
-	// Pinky in its menu bar sleeps as usual.
-	activityUserInitiatedAllowingSleep = 0x00FFFFFF &^ (1 << 20)
+	// NSActivityIdleSystemSleepDisabled: the Mac does not sleep when idle.
+	activityIdleSystemSleepDisabled = 1 << 20
+	// NSActivityUserInitiated: no App Nap, no timer coalescing and no idle
+	// system sleep. The display may still sleep.
+	activityUserInitiated = 0x00FFFFFF | activityIdleSystemSleepDisabled
+	// NSActivityUserInitiatedAllowingIdleSystemSleep: the same, but the
+	// Mac may sleep when idle, so a laptop with Pinky in its menu bar
+	// sleeps as usual.
+	activityUserInitiatedAllowingSleep = activityUserInitiated &^ activityIdleSystemSleepDisabled
 	// NSActivityLatencyCritical: no throttling of timers and I/O.
 	activityLatencyCritical = 0xFF00000000
 )
 
+// awakeReason names Pinky's assertion while agent tasks run, as
+// `pmset -g assertions` lists it.
+const awakeReason = "Pinky: an agent task is running"
+
 var (
 	appNapOnce  sync.Once
 	appNapToken objc.ID
+
+	awakeMu    sync.Mutex
+	awakeToken objc.ID
 )
 
 // keepAppAwake holds a process activity for the app's lifetime, so macOS
 // does not App Nap the gateway while its window is hidden or covered and
 // the screen is locked: agents' calls, video and timers keep their pace.
+// It lets the Mac sleep when idle; keepMacAwake stops that while tasks run.
 func keepAppAwake() {
 	appNapOnce.Do(func() {
-		pool := objc.ID(objc.GetClass("NSAutoreleasePool")).Send(objc.RegisterName("new"))
-		defer pool.Send(objc.RegisterName("drain"))
-		info := objc.ID(objc.GetClass("NSProcessInfo")).Send(objc.RegisterName("processInfo"))
-		reason := objc.ID(objc.GetClass("NSString")).Send(objc.RegisterName("stringWithUTF8String:"), "Pinky is connected to phones")
-		token := info.Send(objc.RegisterName("beginActivityWithOptions:reason:"),
-			uint64(activityUserInitiatedAllowingSleep|activityLatencyCritical), reason)
-		// The token is autoreleased; keep it, as ending it would bring App
-		// Nap back.
-		appNapToken = token.Send(objc.RegisterName("retain"))
+		appNapToken = beginActivity(activityUserInitiatedAllowingSleep|activityLatencyCritical, "Pinky is connected to phones")
 	})
+}
+
+// keepMacAwake holds NSActivityUserInitiated while on: the Mac does not
+// sleep when idle while an agent task runs, and may again once none does.
+// Phones are never kept awake; the display may sleep.
+func keepMacAwake(on bool) {
+	awakeMu.Lock()
+	defer awakeMu.Unlock()
+	switch {
+	case on && awakeToken == 0:
+		awakeToken = beginActivity(activityUserInitiated|activityLatencyCritical, awakeReason)
+	case !on && awakeToken != 0:
+		endActivity(awakeToken)
+		awakeToken = 0
+	}
+}
+
+// beginActivity starts a process activity and returns its token, retained:
+// the activity lasts until endActivity.
+func beginActivity(options uint64, reason string) objc.ID {
+	pool := objc.ID(objc.GetClass("NSAutoreleasePool")).Send(objc.RegisterName("new"))
+	defer pool.Send(objc.RegisterName("drain"))
+	info := objc.ID(objc.GetClass("NSProcessInfo")).Send(objc.RegisterName("processInfo"))
+	r := objc.ID(objc.GetClass("NSString")).Send(objc.RegisterName("stringWithUTF8String:"), reason)
+	token := info.Send(objc.RegisterName("beginActivityWithOptions:reason:"), options, r)
+	return token.Send(objc.RegisterName("retain"))
+}
+
+func endActivity(token objc.ID) {
+	pool := objc.ID(objc.GetClass("NSAutoreleasePool")).Send(objc.RegisterName("new"))
+	defer pool.Send(objc.RegisterName("drain"))
+	info := objc.ID(objc.GetClass("NSProcessInfo")).Send(objc.RegisterName("processInfo"))
+	info.Send(objc.RegisterName("endActivity:"), token)
+	token.Send(objc.RegisterName("release"))
 }

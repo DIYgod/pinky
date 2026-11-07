@@ -19,6 +19,7 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/ui"
 )
 
 func runDaemon(args []string) error {
@@ -26,6 +27,7 @@ func runDaemon(args []string) error {
 	var c gatewayConfig
 	c.flags(fs)
 	verbose := fs.Bool("v", false, "log debug messages")
+	httpAddr := fs.String("http", "", `also serve MCP over Streamable HTTP at this address, such as "`+ui.DefaultRemoteAddr+`"; each request needs the agent token (`+"`pinky token`"+`)`)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -36,9 +38,20 @@ func runDaemon(args []string) error {
 		return err
 	}
 	defer rg.Close()
+	// Recording and retention follow the app's settings, when there are any.
+	s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
+	rg.G.SetRecording(s.Record)
+	rg.G.SetRetention(s.KeepDays)
+	if *httpAddr != "" {
+		if err := rg.Remote.Set(true, *httpAddr); err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "MCP over HTTP at %s\n", rg.Remote.URL())
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	rg.srv.Quit = stop
 	err = rg.Serve(ctx)
 	c.Log.Info("gateway stopping")
 	return err
@@ -51,6 +64,9 @@ type gatewayConfig struct {
 	IdleTimeout     time.Duration
 	NoScreenshots   bool
 	Log             *slog.Logger
+	// PIN hands out a phone's saved PIN for unlocking from the computer;
+	// nil turns that off (the daemon has no one to confirm it).
+	PIN func(ctx context.Context, deviceID string) (string, error)
 }
 
 func (c *gatewayConfig) flags(fs *flag.FlagSet) {
@@ -75,6 +91,8 @@ type runningGateway struct {
 	DataDir string
 	Policy  *policy.Engine
 	G       *gateway.Gateway
+	// Remote serves MCP over HTTP while remote agents are on.
+	Remote *remoteAgents
 
 	ln  net.Listener
 	srv *api.Server
@@ -123,6 +141,7 @@ func startGateway(c gatewayConfig) (*runningGateway, error) {
 		// Fake phones cannot hurt anything, so agents need no first approval
 		// and socket clients may answer approvals (for scripted tests).
 		TrustNewAgents: c.Fake,
+		PIN:            c.PIN,
 	})
 	if err != nil {
 		ln.Close()
@@ -134,9 +153,11 @@ func startGateway(c gatewayConfig) (*runningGateway, error) {
 		ln.Close()
 		return nil, fmt.Errorf("agent token: %w", err)
 	}
-	srv := &api.Server{Gateway: g, MCP: mcp.New(g, version), Token: tok, Trusted: c.Fake, Version: version, Log: log}
+	m := mcp.New(g, version)
+	srv := &api.Server{Gateway: g, MCP: m, Token: tok, Trusted: c.Fake, Version: version, Log: log}
 	log.Info("gateway ready", "socket", dirs.Socket(), "data", dataDir, "devices", len(g.Devices()), "fake", c.Fake, "pid", os.Getpid())
-	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, ln: ln, srv: srv, log: log}, nil
+	return &runningGateway{Dirs: dirs, DataDir: dataDir, Policy: pol, G: g, Remote: newRemoteAgents(m, tok, log),
+		ln: ln, srv: srv, log: log}, nil
 }
 
 // Serve answers agents and clients on the socket until ctx ends.
@@ -146,6 +167,9 @@ func (r *runningGateway) Serve(ctx context.Context) error {
 
 // Close stops the gateway and releases the socket.
 func (r *runningGateway) Close() {
+	if r.Remote != nil {
+		r.Remote.Close()
+	}
 	r.G.Close()
 	r.ln.Close()
 }

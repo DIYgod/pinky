@@ -19,10 +19,15 @@ import (
 	"github.com/DIYgod/pinky/internal/mcp"
 )
 
-// shortDirs returns dirs under /tmp: Unix socket paths must stay short.
+// shortDirs returns dirs under /tmp (the temporary folder on Windows,
+// which has no /tmp): Unix socket paths must stay short.
 func shortDirs(t *testing.T) Dirs {
 	t.Helper()
-	base, err := os.MkdirTemp("/tmp", "pk")
+	tmp := "/tmp"
+	if runtime.GOOS == "windows" {
+		tmp = os.TempDir()
+	}
+	base, err := os.MkdirTemp(tmp, "pk")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +225,61 @@ func TestEnsureToken(t *testing.T) {
 func TestDefaultDirsHome(t *testing.T) {
 	t.Setenv(HomeEnv, "/tmp/pinky-x")
 	d, err := DefaultDirs()
-	if err != nil || d.Socket() != "/tmp/pinky-x/run/pinky.sock" || d.Rules() != "/tmp/pinky-x/config/rules.yaml" {
+	home, _ := filepath.Abs("/tmp/pinky-x") // D:\tmp\pinky-x on Windows
+	if err != nil || d.Socket() != filepath.Join(home, "run", "pinky.sock") || d.Rules() != filepath.Join(home, "config", "rules.yaml") {
 		t.Fatalf("%+v %v", d, err)
 	}
+}
+
+// TestQuit ends the process hosting the gateway on request, which Windows
+// needs (it has no signal for that), and refuses where nothing can quit.
+func TestQuit(t *testing.T) {
+	d := shortDirs(t)
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	g, err := gateway.New(gateway.Options{Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)}, NoScreenshots: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	serve := func(quit func()) (context.CancelFunc, chan error) {
+		ln, err := Listen(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx, cancel := context.WithCancel(context.Background())
+		srv := &Server{Gateway: g, MCP: mcp.New(g, "test"), Version: "test"}
+		if quit != nil {
+			srv.Quit = func() { quit(); cancel() }
+		}
+		done := make(chan error, 1)
+		go func() { done <- srv.Serve(ctx, ln); ln.Close() }()
+		return cancel, done
+	}
+	call := func() error {
+		ctl, err := DialControl(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer ctl.Close()
+		return ctl.Call("quit", nil, nil)
+	}
+
+	cancel, done := serve(nil)
+	if err := call(); err == nil {
+		t.Error("quit worked without Quit")
+	}
+	cancel()
+	<-done
+
+	quitted := make(chan struct{})
+	_, done = serve(func() { close(quitted) })
+	if err := call(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the server still serves after quit")
+	}
+	<-quitted
 }

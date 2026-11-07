@@ -30,6 +30,7 @@ func TestApprovePaymentWithRealGateway(t *testing.T) {
 	}
 	defer g.Close()
 	a := newApp(g, Options{NoTray: true, Shortcut: "-"})
+	testHooks(t, a)
 	a.videoErr = errors.New("no video in tests")
 	var mu sync.Mutex
 	var q []func()

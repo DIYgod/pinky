@@ -51,6 +51,9 @@ type Device struct {
 	raxFailedAt time.Time
 	apps        *appCatalog
 	pidApps     map[uint64]driver.App
+	pb          *pbConn
+
+	typeStats TypeStats // guarded by mu
 
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.
@@ -58,8 +61,10 @@ type Device struct {
 }
 
 // Open connects to a device and starts its video stream and HID session.
+// It goes over USB when it can, and over Wi-Fi when info.Connection is
+// "wifi".
 func Open(ctx context.Context, info driver.Info) (*Device, error) {
-	l, err := dialLink(ctx, info.ID)
+	l, err := dialLink(ctx, info.ID, info.Connection == "wifi")
 	if err != nil {
 		return nil, err
 	}
@@ -68,12 +73,17 @@ func Open(ctx context.Context, info driver.Info) (*Device, error) {
 		l.Close()
 		return nil, err
 	}
-	// Connect the accessibility service now: the phone answers its first
-	// requests slowly while it builds the first tree it pushes.
+	// Connect the accessibility service now (the phone answers its first
+	// requests slowly while it builds the first tree it pushes), and the
+	// pasteboard service, whose handshake would otherwise slow the first
+	// Type by half a second.
 	go func() {
 		c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 		d.raxReady(c)
+		if pb := d.pasteboard(); pb != nil {
+			pb.connect()
+		}
 	}()
 	return d, nil
 }
@@ -504,6 +514,9 @@ func (d *Device) Close() error {
 	}
 	if d.rax != nil {
 		d.rax.Close()
+	}
+	if d.pb != nil {
+		d.pb.Close()
 	}
 	d.svcMu.Unlock()
 	errs = append(errs, d.l.Close())

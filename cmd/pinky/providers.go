@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
@@ -73,7 +74,11 @@ func realProviders(log *slog.Logger) []driver.Provider {
 			continue
 		}
 		if only != nil {
-			p = &onlyProvider{Provider: p, only: only}
+			op := &onlyProvider{Provider: p, only: only}
+			p = op
+			if pr, ok := op.Provider.(driver.Pairer); ok {
+				p = &onlyPairer{onlyProvider: op, pairer: pr}
+			}
 		}
 		out = append(out, p)
 	}
@@ -84,14 +89,28 @@ func realProviders(log *slog.Logger) []driver.Provider {
 // since the gateway compares providers.
 type onlyProvider struct {
 	driver.Provider
+
+	mu   sync.Mutex
 	only map[string]bool
+}
+
+func (p *onlyProvider) allowed(id string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.only[id]
+}
+
+func (p *onlyProvider) allow(id string) {
+	p.mu.Lock()
+	p.only[id] = true
+	p.mu.Unlock()
 }
 
 func (p *onlyProvider) List(ctx context.Context) ([]driver.Info, error) {
 	infos, err := p.Provider.List(ctx)
 	out := infos[:0]
 	for _, info := range infos {
-		if p.only[info.ID] {
+		if p.allowed(info.ID) {
 			out = append(out, info)
 		}
 	}
@@ -99,8 +118,45 @@ func (p *onlyProvider) List(ctx context.Context) ([]driver.Info, error) {
 }
 
 func (p *onlyProvider) Open(ctx context.Context, id string) (driver.Device, error) {
-	if !p.only[id] {
+	if !p.allowed(id) {
 		return nil, fmt.Errorf("%s is not in PINKY_DEVICES: %w", id, driver.ErrNotFound)
 	}
 	return p.Provider.Open(ctx, id)
+}
+
+// onlyPairer is an onlyProvider whose provider pairs phones over Wi-Fi: it
+// keeps pairing available, and a phone the person pairs joins the phones
+// Pinky may use.
+type onlyPairer struct {
+	*onlyProvider
+	pairer driver.Pairer
+}
+
+func (p *onlyPairer) StartPairing(ctx context.Context) (driver.Pairing, error) {
+	pg, err := p.pairer.StartPairing(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &allowOnPair{Pairing: pg, p: p.onlyProvider}, nil
+}
+
+func (p *onlyPairer) PairWithCode(ctx context.Context, addr, code string) (driver.Info, error) {
+	info, err := p.pairer.PairWithCode(ctx, addr, code)
+	if err == nil {
+		p.allow(info.ID)
+	}
+	return info, err
+}
+
+type allowOnPair struct {
+	driver.Pairing
+	p *onlyProvider
+}
+
+func (a *allowOnPair) Wait(ctx context.Context) (driver.Info, error) {
+	info, err := a.Pairing.Wait(ctx)
+	if err == nil {
+		a.p.allow(info.ID)
+	}
+	return info, err
 }
