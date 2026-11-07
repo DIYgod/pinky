@@ -74,11 +74,11 @@ On 2026-11-07, holding each device's lock (`scripts/devlock.sh`) for every run:
 
 | | What ran | Result |
 | --- | --- | --- |
-| emulator-5560 (Android 16) | `TestEmulatorRecording`: Clock with a mirror viewer open; Settings blocked for the run and brought up by adb, then scrolled for 3 s | A shared scrcpy stream (the mirror got 1103 packets); the recording 787 frames over 40.8 s, none while Settings was in front, frames on both sides |
+| emulator-5560 (Android 16) | `TestEmulatorRecording`: Clock with a mirror viewer open; Settings blocked for the run and brought up by adb, then scrolled for 3 s; five runs | A shared scrcpy stream (the mirror got 1100 to 1150 packets); recordings of 787 to 864 frames over about 40 s, none while Settings was in front, frames on both sides. Two runs first failed because Settings read as no app or as its search package; that led to the unknown-app rule |
 | emulator-5560 | `TestEmulatorBackground`: background on, through a test adapter for the driver's `OpenBackground` | The display opened, but the companion cannot read it ("display 359 is not open to accessibility services"); the gateway moved the task to the phone's screen and said so |
 | emulator-5562 (Android 10) | the same recording test | The driver's stream fails at once (`scrcpy: video stream: EOF`, also with `androidctl stream`), so no mirror and no recording; the recorder backs off (2 s to 30 s) |
-| Mi 10 Pro | the device test with `PINKY_RECORD=1` (Calculator, Settings, take over, Stop) | All parts pass; recording H.264 1080x2340, 1485 frames, 37.8 s, 21 marks, 20.9 MB (ffprobe). Action median 1.42 s, as before (1.44 s) |
-| iPhone 13 mini | the same | All parts pass; recording HEVC 1136x2464, 3246 frames, 70.6 s, 21 marks, 20.1 MB. Action median 2.89 s (the driver's reads got faster on main) |
+| Mi 10 Pro | the device test with `PINKY_RECORD=1` (Calculator, Settings, take over, Stop), twice | All parts pass; last run's recording H.264 1080x2340, 1470 frames, 38.2 s, 21 marks, 21.2 MB (ffprobe). Action median 1.42 and 1.44 s, as without recording (1.44 s) |
+| iPhone 13 mini | the same, three times | All parts pass (one earlier run failed the test's own switch check, fixed below); last recording HEVC 1136x2464, 3419 frames, 68.7 s, 21 marks, 26.3 MB. Action median 2.89 and 2.50 s (the driver's reads got faster on main) |
 
 Recordings and logs stayed in `/tmp/pinky-gw-*` and were deleted. One mistake on the way: the first emulator run did not limit the provider to the emulator, so its gateway also opened the Mi 10 Pro and emulator-5562 for 43 s (the driver reads their properties and listens to `getevent`; no input was sent); the emulator tests now list only their emulator. One read-only `dumpsys` on the Mi also ran outside its lock.
 
