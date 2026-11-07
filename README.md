@@ -1,12 +1,14 @@
 <p align="center"><img src="assets/icon/pinky-macos-1024.png" width="112" alt=""></p>
 <h1 align="center">Pinky</h1>
-<p align="center"><b>Let AI agents use your phone, with you in the loop.</b></p>
+<p align="center"><b>Let any AI agent use your iPhone or Android phone, from macOS, Windows or Linux, with you in the loop.</b></p>
 <p align="center"><img src="assets/readme/hero.png" width="880" alt="Pinky's window: Claude Code replies to a text on an Android phone, and the Send tap waits for approval"></p>
 
 Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
 
 <p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator.</sub></p>
 
+- **Every platform.** One app for macOS (Apple silicon and Intel), Windows and Linux. It drives Android phones (Android 10 to 17) and iPhones on iOS 27 or later, with nothing to install on the iPhone.
+- **Tiny and native.** The window is drawn by [MyGo](https://github.com/egoist/mygo) on the GPU, with no Electron and no webview: a 12–16 MB download that idles at about 70 MB of memory and 0% CPU on a Mac.
 - **You approve the risky steps.** Sends, payments, orders, deletions, calls, installs, links that leave the app and settings changes wait for your click; Pinky spots these buttons in 10 languages. The rules run in Pinky's gateway, so an agent can't approve itself, even when text on the screen tries to talk it into it.
 - **Your phone stays yours.** On Android 13 and later, agents work on a hidden second screen, so the phone can stay off and locked. Click the mirror to take over; on Android, touching the phone yourself pauses the agent too. Stop all is ⌥⌘. from anywhere.
 - **Off-limits by default.** Banking, wallet and password-manager apps are invisible to agents, and agents can't type into password or one-time-code fields. Every new agent needs your approval and gets only the scope you give it.
