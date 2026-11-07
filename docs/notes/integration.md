@@ -130,7 +130,13 @@ The Pixel 1 (Android 10) came back on USB. The Android driver's device tests pas
 - **No background work below Android 11**: an app runs on a virtual display there, but the companion cannot read another display's windows before API 30, so the driver says so (`driver.BackgroundSupporter`) and the client offers no switch.
 - **English app names on a phone in another language**: `phone_launch "Calculator"` found nothing on the Pixel, whose apps have Chinese names (计算器). The gateway and the driver now also match the parts of the package or bundle id.
 
-A Claude Code run on the Pixel stopped when the person watcher reported a finger on its screen (with 0 signals in 20 s of idling just after, so most likely a real touch); real phones were left alone after that.
+A Claude Code run on the Pixel stopped when the person watcher reported a finger on its screen: the owner had touched it, so the takeover worked as designed.
+
+### With the owner back
+
+- **The Mi 10 Pro's companion** was updated (build 130, replacing round one's build signed with another key; its service on next to the owner's Mika). Claude Code then worked out 8 × 9 in the Calculator on a background display in 38 s ($0.21, about 1.4 s a tap), and the Calculator task the owner had open went back to the main screen afterwards.
+- **The iPhone over USB**: Claude Code typed "Wi-Fi" into Settings' search by paste with Pinyin active, read the first result, went home and released the phone, in 45 s ($0.25).
+- **Signing and notarization**: `make release` signed Pinky.app with the NATURAL SELECTION LABS Developer ID (team 492J8Q67PF, hardened runtime, timestamp) and Apple notarized the `.dmg` (accepted and stapled); Gatekeeper accepts both as "Notarized Developer ID". The signed app loads FFmpeg from its own Frameworks.
 
 ### Known limits found in round three
 

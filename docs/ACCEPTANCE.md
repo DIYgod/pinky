@@ -53,7 +53,7 @@ Ask: *"On my Mi 10 Pro, open Settings and turn on Airplane mode."*
 
 ## 5. iPhone
 
-- [ ] Ask: *"On my iPhone, open Settings, search for Wi-Fi and tell me the first result."* Typing pastes the text and puts your clipboard back, so it works with Pinyin active, and with Chinese and emoji. *(checked by the iOS driver's tests on your iPhone)*
+- [x] Ask: *"On my iPhone, open Settings, search for Wi-Fi and tell me the first result."* Typing pastes the text and puts your clipboard back, so it works with Pinyin active, and with Chinese and emoji. *(checked on the 7th: Claude Code searched with Pinyin active, read "Wi-Fi" as the first result, went home and released the phone, in 45 s for $0.25)*
 - [ ] **Unlock from the computer**: Save PIN… for the iPhone, lock it, then Unlock with Touch ID. Never tried on the phone (it needs your passcode); `docs/notes/ios.md` has the steps with `iosctl unlock`.
 - Known limits: iPhones over Wi-Fi stay off (3–5 s screenshots, lost video); `phone_files` is Android only.
 
