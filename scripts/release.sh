@@ -104,7 +104,9 @@ build)
 publish)
 	tag=${1:?usage: scripts/release.sh publish <tag>}
 	git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null || die "origin has no tag $tag: push it first"
-	export STRICT=1 NOTARIZE=1
+	# Everything a release has, unless STRICT=0 lets it go without the
+	# Windows installer or the Intel FFmpeg's assembly.
+	export STRICT="${STRICT:-1}" NOTARIZE=1
 	build_release "$tag" 1
 	;;
 trigger)

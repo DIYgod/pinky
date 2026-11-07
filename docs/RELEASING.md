@@ -102,7 +102,7 @@ scripts/release.sh trigger v2026.1107.1   # run the release workflow for a tag a
 scripts/release.sh publish v2026.1107.1   # build and publish a tag from this Mac
 ```
 
-`build` and `publish` check the commit out in a worktree of their own, so nothing uncommitted gets in, and build what the workflow builds into `dist/<version>/`, with the cask as `dist/pinky-<version>.rb`; FFmpeg's builds are kept in `~/Library/Caches/pinky-release`. They sign with the Developer ID in the login keychain and notarize with the notarytool profile `pinky-notary`, so they need no secrets. A dry run leaves out what it cannot make, with a warning: without nasm (`brew install nasm`) the Intel FFmpeg lacks its assembly, and without NSIS (`brew install makensis`) there is no Windows installer. `publish` stops instead, and needs both.
+`build` and `publish` check the commit out in a worktree of their own, so nothing uncommitted gets in, and build what the workflow builds into `dist/<version>/`, with the cask as `dist/pinky-<version>.rb`; FFmpeg's builds are kept in `~/Library/Caches/pinky-release`. They sign with the Developer ID in the login keychain and notarize with the notarytool profile `pinky-notary`, so they need no secrets. A dry run leaves out what it cannot make, with a warning: without nasm (`brew install nasm`) the Intel FFmpeg lacks its assembly, and without NSIS (`brew install makensis`) there is no Windows installer. `publish` stops instead, and needs both (or `STRICT=0`, to publish without them).
 
 `publish` is for when the workflow cannot run (the secrets are not set up, or GitHub Actions is down). It publishes to the same places as the workflow.
 
