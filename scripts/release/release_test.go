@@ -240,6 +240,8 @@ func TestManifestAndCask(t *testing.T) {
 		`intel: "` + m.Assets["darwin-amd64"].SHA256 + `"`,
 		`url "https://github.com/DIYgod/pinky/releases/download/v#{version}/pinky-#{version}-darwin-#{arch}.zip"`,
 		"auto_updates true",
+		// Monterey or later; Homebrew 7 deprecates the ">= :monterey" form.
+		"depends_on macos: :monterey\n",
 		`app "Pinky.app"`,
 		`command_wrapper "pinky",`,
 	} {
