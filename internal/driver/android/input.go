@@ -15,6 +15,7 @@ import (
 
 // Android key codes and meta states (android.view.KeyEvent).
 const (
+	keycodeUnknown    = 0 // KEYCODE_UNKNOWN: apps ignore it, but it counts as activity
 	keycode0          = 7 // KEYCODE_0; the digits follow in order
 	keycodeHome       = 3
 	keycodeBack       = 4
