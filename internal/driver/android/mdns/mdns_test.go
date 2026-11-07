@@ -261,8 +261,10 @@ type fakeResponder struct {
 	t    *testing.T
 	conn net.PacketConn
 
-	mu    sync.Mutex
-	asked []string
+	mu       sync.Mutex
+	asked    []string
+	messages int
+	ptrOnly  bool // answers every question with the PTR record alone
 }
 
 func newResponder(t *testing.T) *fakeResponder {
@@ -293,7 +295,16 @@ func (f *fakeResponder) serve() {
 			continue
 		}
 		qs, _ := p.AllQuestions()
+		f.mu.Lock()
+		f.messages++
+		ptrOnly := f.ptrOnly
+		f.mu.Unlock()
 		var answers []rr
+		if ptrOnly && len(qs) > 0 {
+			// A broken responder: the PTR record whatever it is asked.
+			f.conn.WriteTo(response(f.t, []rr{{name: connectType + ".local.", typ: dnsmessage.TypePTR, ttl: 4500, data: inst}}, nil), src)
+			continue
+		}
 		for _, q := range qs {
 			f.mu.Lock()
 			f.asked = append(f.asked, q.Type.String())
@@ -343,6 +354,31 @@ func TestBrowse(t *testing.T) {
 	}
 	if err := b.Close(); err != nil {
 		t.Error(err)
+	}
+}
+
+// TestBrowseFollowUpsBounded: a responder that answers every question,
+// the follow-ups for the SRV record too, with the PTR record alone is
+// asked again at most about once a second, not in a loop.
+func TestBrowseFollowUpsBounded(t *testing.T) {
+	f := newResponder(t)
+	f.mu.Lock()
+	f.ptrOnly = true
+	f.mu.Unlock()
+	b, err := Browse([]string{connectType}, Options{Dest: f.addr()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(3 * time.Second)
+	b.Close()
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	// Rounds at 0, 1 and 2 s, and at most one follow-up a second.
+	if f.messages > 7 {
+		t.Errorf("%d messages in 3 s", f.messages)
+	}
+	if svcs := b.Services(); len(svcs) != 1 || svcs[0].Port != 0 {
+		t.Errorf("services = %v", svcs)
 	}
 }
 

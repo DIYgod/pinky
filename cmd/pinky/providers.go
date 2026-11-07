@@ -37,8 +37,9 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 		Client: c,
 		// adb's own discovery stops seeing the network after the
 		// computer's network changes; the driver then reconnects the
-		// phones paired over Wi-Fi itself.
-		ReconnectWiFi: true,
+		// phones paired over Wi-Fi itself. Not while PINKY_DEVICES limits
+		// Pinky to some phones: the others belong to other tools.
+		ReconnectWiFi: strings.TrimSpace(os.Getenv("PINKY_DEVICES")) == "",
 		Logf: func(format string, args ...any) {
 			log.Debug(fmt.Sprintf(format, args...), "platform", "android")
 		},

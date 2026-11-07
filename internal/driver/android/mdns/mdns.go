@@ -88,8 +88,9 @@ var (
 	queryDelays = []time.Duration{time.Second, time.Second, 2 * time.Second, 2 * time.Second, 4 * time.Second}
 	steadyEvery = 5 * time.Second
 	// followUp is how soon a service that showed up without its port or
-	// address is asked for them.
-	followUp = 300 * time.Millisecond
+	// address is asked for them, at most once per followEvery.
+	followUp    = 300 * time.Millisecond
+	followEvery = time.Second
 )
 
 // Browser searches for services of some types until it is closed.
@@ -105,7 +106,8 @@ type Browser struct {
 	mu     sync.Mutex
 	cache  cache
 	err    error
-	joined map[int]bool // interfaces gc joined the group on
+	joined map[int]bool // interfaces gc tried to join the group on
+	member bool         // gc joined the group on at least one
 
 	// What this browser sent to the group comes back to gc (multicast
 	// loopback). When it does not, the system drops this process's
@@ -213,6 +215,7 @@ func (b *Browser) run() {
 	next := time.NewTimer(0)
 	defer next.Stop()
 	var follow <-chan time.Time
+	var followed time.Time
 	for {
 		select {
 		case <-b.closed:
@@ -226,11 +229,13 @@ func (b *Browser) run() {
 			}
 			next.Reset(d)
 		case <-b.kick:
-			if follow == nil {
+			// A responder that never sends the missing records is asked
+			// again by the rounds above, not in a loop.
+			if follow == nil && time.Since(followed) >= followEvery {
 				follow = time.After(followUp)
 			}
 		case <-follow:
-			follow = nil
+			follow, followed = nil, time.Now()
 			b.ask(false)
 		}
 	}
@@ -256,7 +261,10 @@ func (b *Browser) ask(all bool) {
 	}
 	err = b.send(msg)
 	b.setErr(err)
-	if err == nil && b.gc != nil && !b.opt.Dest.IsValid() {
+	b.mu.Lock()
+	member := b.member
+	b.mu.Unlock()
+	if err == nil && member && !b.opt.Dest.IsValid() {
 		b.expectEcho(msg)
 	}
 }
@@ -349,8 +357,13 @@ func (b *Browser) join(ifi *net.Interface) {
 	done := b.joined[ifi.Index]
 	b.joined[ifi.Index] = true
 	b.mu.Unlock()
-	if !done {
-		_ = b.gpc.JoinGroup(ifi, net.UDPAddrFromAddrPort(Group))
+	if done {
+		return
+	}
+	if err := b.gpc.JoinGroup(ifi, net.UDPAddrFromAddrPort(Group)); err == nil {
+		b.mu.Lock()
+		b.member = true
+		b.mu.Unlock()
 	}
 }
 
