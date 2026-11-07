@@ -63,9 +63,9 @@ type Options struct {
 	// AgentToken is the token agents present, which Settings › Agents shows
 	// for remote agents as their bearer token; empty leaves it out.
 	AgentToken string
-	// Telemetry sends usage statistics, crash reports and feedback
-	// (docs/TELEMETRY.md); nil leaves out Send Feedback, the crash report
-	// prompt and their settings.
+	// Telemetry counts usage and gathers feedback's diagnostics
+	// (docs/TELEMETRY.md); nil leaves out Send Feedback and the Privacy
+	// switch for usage statistics and crash reports.
 	Telemetry *telemetry.Client
 }
 

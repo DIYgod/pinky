@@ -131,3 +131,15 @@ Usage statistics and crash reports are posted as JSON over HTTPS to the backend'
 The backend is a Cloudflare Worker with a D1 database ([`worker/`](../worker)), at `https://pinky-telemetry.rss3.workers.dev`. It checks each report's shape and size, stores it, and keeps usage reports for 400 days and crash reports for 180. It does not store IP addresses or any request header, and has Workers Logs off; Cloudflare sees the address of the connection, as any server would, and the Worker uses it for a minute to limit how often one address may report.
 
 The backend's address is `telemetry.Endpoint` in [`internal/telemetry/telemetry.go`](../internal/telemetry/telemetry.go) (a build may set it with `-ldflags "-X github.com/DIYgod/pinky/internal/telemetry.Endpoint=…"`), or `PINKY_TELEMETRY_URL`. The client talks to it through the `telemetry.Backend` interface, so another backend can replace it.
+
+## Checking it
+
+Automated: `go test ./internal/telemetry ./ui` (the crash tests run the test binary again as a child that panics, hits a fatal error, exits or hangs), `go test -tags e2e -run TestTelemetryInTheApp ./cmd/pinky` (the app over MyGo's automation socket with a fake backend: Send Feedback's GitHub link, a SIGQUIT crash sent at the next start, a clean quit that leaves nothing; it needs the screen unlocked), and `node --test` plus `./smoke.sh` in `worker/` ([worker/README.md](../worker/README.md)).
+
+By hand, with a release build (`make app`; development builds send nothing):
+
+- [ ] Settings › Privacy shows **Share anonymous usage statistics and crash reports** (on) and **What's shared**, which shows the report with counters such as `app.starts`.
+- [ ] `DO_NOT_TRACK=1 build/pinky/darwin-arm64/Pinky.app/Contents/MacOS/Pinky`: the switch reads *Off: DO_NOT_TRACK is set on this computer*.
+- [ ] Help › **Send Feedback…**, write something, **Open on GitHub**: the browser opens a new issue in DIYgod/pinky with the Feedback form filled in (the message, the version line, the diagnostics). This needs the form on `main`, a `feedback` label for it to apply, and, for people other than the repository's members, the repository to be public.
+- [ ] `kill -QUIT $(pgrep -x Pinky)`, then open Pinky again: within a minute `worker/report.sh crashes` lists the crash, `SIGQUIT: quit`.
+- [ ] A day after the first run, `worker/report.sh` lists this computer's install among the installs, with its counters.
