@@ -65,6 +65,7 @@ Commits wait for the person: Pay, Order, Book, Send, Post, Delete, Transfer, Con
 - A call blocks for at most 45 s. The person has 60 s from when the panel opens; no answer means Deny.
 - The id works once, only for that exact call. While an approval is open the phone takes no other action; `phone_observe` and `phone_wait_for` still work.
 - You cannot approve anything. `phone_request_approval` asks the person a question and returns their answer, but grants nothing: a later Pay still asks.
+- The person may always allow a kind of step in one app ("Always allow payments in Dinely"). Such a step runs at once, and its result says `No approval needed: the person always allows "Payments" in Dinely.` They did not see it first, so tell them what you did. Everything else still asks.
 
 ## Files
 

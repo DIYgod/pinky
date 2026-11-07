@@ -256,6 +256,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 			}
 		})
 	})
+	a.alwaysAllowed(c)
 	mg.Column(c).Label(locales.SettingsSafetyProtections()).Children(func() {
 		if a.toggleRow(c, "ro", locales.SettingsSafetyReadOnly(), locales.SettingsSafetyReadOnlyDesc(), false, &st.ReadOnly) {
 			if ro, ok := a.api.(readOnlySetter); ok {

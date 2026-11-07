@@ -121,6 +121,8 @@ type API struct {
 	unrecorded  map[string]bool // finished while recording was off
 	recOpens    []time.Duration
 	exports     []Export
+
+	always []gateway.Exemption // Always allow answers
 }
 
 type device struct {
@@ -451,6 +453,9 @@ func (a *API) Decide(needID string, d gateway.Decision, note string) error {
 		return nil
 	}
 	a.needs = append(a.needs[:idx], a.needs[idx+1:]...)
+	if d == gateway.AllowAlways && n.view.AlwaysAllow {
+		a.keepAlwaysLocked(gateway.Exemption{Rule: n.view.Rule, AppName: n.view.App})
+	}
 	a.mu.Unlock()
 	n.decision <- decision{d: d, note: note}
 	a.emit(gateway.Event{Kind: gateway.EventNeeds, NeedID: needID, DeviceID: n.view.DeviceID})

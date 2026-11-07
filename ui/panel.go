@@ -247,7 +247,7 @@ func (a *app) panelView(c *mg.Context) {
 				if m.Item(locales.NeedsAllowTask()).Chosen() {
 					a.decide(n, gateway.AllowTask, "")
 				}
-				if m.Item(locales.NeedsAlwaysAllow(locales.RuleActionThisKind())).Chosen() {
+				if n.AlwaysAllow && m.Item(alwaysAllowLabel(n)).Chosen() {
 					a.decide(n, gateway.AllowAlways, "")
 				}
 				if m.Item(locales.PhoneTakeOver()).Chosen() {

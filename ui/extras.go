@@ -38,6 +38,12 @@ type (
 	historyWiper interface {
 		WipeHistory(ctx context.Context) error
 	}
+	// exemptionKeeper lists the person's Always allow answers for Settings ›
+	// Safety, and takes them back.
+	exemptionKeeper interface {
+		Exemptions() []gateway.Exemption
+		RemoveExemption(x gateway.Exemption) error
+	}
 
 	// Round three: pairing, the companion app, background displays,
 	// recordings, retention and export.

@@ -1127,6 +1127,22 @@ func (msgs Messages) CallStopAll() string {
 	return Catalog.Format(msgs.locale, "callStopAll", nil)
 }
 
+// CallTakeBackAlways says "take back Always allow"
+// in the language the app shows.
+//
+// A verb phrase inside toastCouldNot, when Settings › Safety could not
+// take back an Always allow answer.
+func CallTakeBackAlways() string { return In(i18n.Locale()).CallTakeBackAlways() }
+
+// CallTakeBackAlways says "take back Always allow"
+// in the language of msgs.
+//
+// A verb phrase inside toastCouldNot, when Settings › Safety could not
+// take back an Always allow answer.
+func (msgs Messages) CallTakeBackAlways() string {
+	return Catalog.Format(msgs.locale, "callTakeBackAlways", nil)
+}
+
 // CallTakeOver says "take over"
 // in the language the app shows.
 //
@@ -9351,6 +9367,110 @@ func SettingsSafetyAddApp() string { return In(i18n.Locale()).SettingsSafetyAddA
 // to block another app.
 func (msgs Messages) SettingsSafetyAddApp() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAddApp", nil)
+}
+
+// SettingsSafetyAlways says "Always allowed"
+// in the language the app shows.
+//
+// Settings › Safety: the heading of the steps the person chose Always
+// allow for on approvals, and the accessibility label of that part.
+func SettingsSafetyAlways() string { return In(i18n.Locale()).SettingsSafetyAlways() }
+
+// SettingsSafetyAlways says "Always allowed"
+// in the language of msgs.
+//
+// Settings › Safety: the heading of the steps the person chose Always
+// allow for on approvals, and the accessibility label of that part.
+func (msgs Messages) SettingsSafetyAlways() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlways", nil)
+}
+
+// SettingsSafetyAlwaysEvery says "While agents ask before every action, these ask too."
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: a note shown while Ask before
+// every action is chosen, which suspends the Always allow answers.
+func SettingsSafetyAlwaysEvery() string { return In(i18n.Locale()).SettingsSafetyAlwaysEvery() }
+
+// SettingsSafetyAlwaysEvery says "While agents ask before every action, these ask too."
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: a note shown while Ask before
+// every action is chosen, which suspends the Always allow answers.
+func (msgs Messages) SettingsSafetyAlwaysEvery() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysEvery", nil)
+}
+
+// SettingsSafetyAlwaysIntro says "You chose Always allow for these on an approval. Agents do them in that app without asking you."
+// in the language the app shows.
+//
+// Settings › Safety: the line under Always allowed. Each row is an app
+// and the rule that no longer asks there, such as Payments in Dinely.
+func SettingsSafetyAlwaysIntro() string { return In(i18n.Locale()).SettingsSafetyAlwaysIntro() }
+
+// SettingsSafetyAlwaysIntro says "You chose Always allow for these on an approval. Agents do them in that app without asking you."
+// in the language of msgs.
+//
+// Settings › Safety: the line under Always allowed. Each row is an app
+// and the rule that no longer asks there, such as Payments in Dinely.
+func (msgs Messages) SettingsSafetyAlwaysIntro() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysIntro", nil)
+}
+
+// SettingsSafetyAlwaysNone says "None yet. On an approval, More options › Always allow adds one."
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed, when the person has not chosen
+// Always allow on any approval. More options › Always allow is the menu
+// item on approval cards.
+func SettingsSafetyAlwaysNone() string { return In(i18n.Locale()).SettingsSafetyAlwaysNone() }
+
+// SettingsSafetyAlwaysNone says "None yet. On an approval, More options › Always allow adds one."
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed, when the person has not chosen
+// Always allow on any approval. More options › Always allow is the menu
+// item on approval cards.
+func (msgs Messages) SettingsSafetyAlwaysNone() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysNone", nil)
+}
+
+// SettingsSafetyAlwaysRemove says "Ask again"
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: the tooltip of the × button at
+// the end of a row, which takes the Always allow back so the rule asks
+// again.
+func SettingsSafetyAlwaysRemove() string { return In(i18n.Locale()).SettingsSafetyAlwaysRemove() }
+
+// SettingsSafetyAlwaysRemove says "Ask again"
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: the tooltip of the × button at
+// the end of a row, which takes the Always allow back so the rule asks
+// again.
+func (msgs Messages) SettingsSafetyAlwaysRemove() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysRemove", nil)
+}
+
+// SettingsSafetyAlwaysRemoveItem says "Ask again about {kind} in {app}"
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: the accessibility label of the ×
+// button that takes an Always allow back. kind says what the rule covers,
+// as in needsAlwaysAllowIn; app is the app's name.
+func SettingsSafetyAlwaysRemoveItem(kind string, app string) string {
+	return In(i18n.Locale()).SettingsSafetyAlwaysRemoveItem(kind, app)
+}
+
+// SettingsSafetyAlwaysRemoveItem says "Ask again about {kind} in {app}"
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: the accessibility label of the ×
+// button that takes an Always allow back. kind says what the rule covers,
+// as in needsAlwaysAllowIn; app is the app's name.
+func (msgs Messages) SettingsSafetyAlwaysRemoveItem(kind string, app string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysRemoveItem", map[string]any{"kind": kind, "app": app})
 }
 
 // SettingsSafetyAppLabel says "App to block"

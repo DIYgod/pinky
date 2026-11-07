@@ -362,6 +362,10 @@
   "@callStopAll": {
     "description": "Inside toastCouldNot: Stop all failed."
   },
+  "callTakeBackAlways": "take back Always allow",
+  "@callTakeBackAlways": {
+    "description": "A verb phrase inside toastCouldNot, when Settings › Safety could not take back an Always allow answer."
+  },
   "callTakeOver": "take over",
   "@callTakeOver": {
     "description": "Inside toastCouldNot: taking over a phone failed."
@@ -3555,6 +3559,40 @@
   "settingsSafetyAddApp": "Add app",
   "@settingsSafetyAddApp": {
     "description": "Settings › Safety: the button next to Blocked apps that opens a field to block another app."
+  },
+  "settingsSafetyAlways": "Always allowed",
+  "@settingsSafetyAlways": {
+    "description": "Settings › Safety: the heading of the steps the person chose Always allow for on approvals, and the accessibility label of that part."
+  },
+  "settingsSafetyAlwaysEvery": "While agents ask before every action, these ask too.",
+  "@settingsSafetyAlwaysEvery": {
+    "description": "Settings › Safety › Always allowed: a note shown while Ask before every action is chosen, which suspends the Always allow answers."
+  },
+  "settingsSafetyAlwaysIntro": "You chose Always allow for these on an approval. Agents do them in that app without asking you.",
+  "@settingsSafetyAlwaysIntro": {
+    "description": "Settings › Safety: the line under Always allowed. Each row is an app and the rule that no longer asks there, such as Payments in Dinely."
+  },
+  "settingsSafetyAlwaysNone": "None yet. On an approval, More options › Always allow adds one.",
+  "@settingsSafetyAlwaysNone": {
+    "description": "Settings › Safety › Always allowed, when the person has not chosen Always allow on any approval. More options › Always allow is the menu item on approval cards."
+  },
+  "settingsSafetyAlwaysRemove": "Ask again",
+  "@settingsSafetyAlwaysRemove": {
+    "description": "Settings › Safety › Always allowed: the tooltip of the × button at the end of a row, which takes the Always allow back so the rule asks again."
+  },
+  "settingsSafetyAlwaysRemoveItem": "Ask again about {kind} in {app}",
+  "@settingsSafetyAlwaysRemoveItem": {
+    "description": "Settings › Safety › Always allowed: the accessibility label of the × button that takes an Always allow back. kind says what the rule covers, as in needsAlwaysAllowIn; app is the app's name.",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "payments"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
   },
   "settingsSafetyAppLabel": "App to block",
   "@settingsSafetyAppLabel": {

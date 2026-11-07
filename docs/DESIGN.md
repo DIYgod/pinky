@@ -259,7 +259,7 @@ Approvals are decided in the client and enforced in the gateway; the agent only 
 
 - **Read-only:** the agent may observe, launch apps, tap, scroll and type into search fields; anything that would be Ask becomes Deny.
 - **Watch-only:** observe only.
-- **Kind:** the rule an approval matched, such as "Send in Chatter"; "Always allow this kind" adds a rule.
+- **Kind:** the rule an approval matched, such as "Payments"; "Always allow payments in Dinely" keeps an exemption for that kind in that app (see [Always allow](#always-allow)).
 - An app outside the agent's scope or the task's allow-list returns `scope_denied`; a blocked app or a Deny rule returns `blocked_by_policy`.
 
 ### Risk tiers
@@ -308,12 +308,33 @@ When several rules match, the strictest wins: Deny, then Ask, then Allow. In M1 
 ### Approval panel and transport
 
 - A floating panel that never takes focus shows the screenshot with the target highlighted, the agent's `intent`, the matched rule, the task and the agent. A system notification appears too; clicking it opens the panel.
-- Choices: Allow once, Allow for this task, Always allow this kind, Deny with a note, Take over. M1 ships Allow once, Deny and Take over; the other two arrive with the rules editor in M2.
+- Choices: Allow (once) and Deny, and under More options: Allow for this task, Always allow *payments* in *Dinely*, Take over, Deny with a note.
 - The timeout runs from when the panel opens: 60 s by default, then Deny. A tool call blocks for at most 45 s and then returns `approval_pending`; a decision made while no call is open is kept for the next call with that id until the timeout.
 - While an approval is open, the device accepts no other action; `phone_observe` and `phone_wait_for` still work.
 - An `approval_id` is single-use and bound to the device, lease, tool and arguments; a call with other arguments is refused.
 - On approval the gateway re-checks the target's label and position and the screen text shown in the panel (status bar excluded). Any change returns `stale`, and nothing is done.
 - `phone_request_approval` records the person's answer but grants nothing: a later commit still asks.
+
+### Always allow
+
+"Always allow payments in Dinely" keeps the person's answer in the rules file, under `always_allow`, as an exemption: in that app, the rule the approval named (Payments) and the rules that asked with it (Commits, since a payment is a commit) no longer ask about the steps that rule asks about, in later tasks and after a restart. Another commit in Dinely, such as Delete, still asks, as do a payment in another app and a step that a further rule asks about.
+
+```yaml
+always_allow:
+  - rule: Payments
+    with: [Commits]
+    app: com.dinely.app
+    app_name: Dinely
+```
+
+- The strictest verdict wins, so an allow rule could not cancel an ask. An exemption instead takes asks out of the verdict, after everything that denies: it never lifts a deny (blocked apps, finance and password apps, credential fields, the person's own deny rules), read-only mode, an agent's scope or a task's app list.
+- It also allows the rest of the task, as Allow for this task does; that is what covers a task's app list, for that task only.
+- It matches the app by package name or bundle id, and by name when the phone reports no id.
+- While "Ask before every action" is on, exemptions do not apply and the panel does not offer Always allow; they apply again with another preset.
+- The panel offers it only for actions the policy asked about in an app: not for the agent's own questions (`phone_request_approval`), copying files, or opening apps and links. Where it cannot be kept it counts as Allow for this task.
+- The answer is kept when the person gives it, even when the agent's call is no longer waiting for it.
+- Settings › Safety › Always allowed lists the exemptions; removing one makes its rules ask again.
+- The agent learns of it: the approved call says the rule no longer asks in that app, and a later action that runs because of it says `No approval needed: the person always allows "Payments" in Dinely.`
 
 ### Other controls
 
@@ -337,7 +358,8 @@ When several rules match, the strictest wins: Deny, then Ask, then Allow. In M1 
 | Another local process or a web page calling the gateway | User-only Unix socket or named pipe; Streamable HTTP only on 127.0.0.1, with the `Origin` check the MCP spec requires; per-agent tokens |
 | Exposure through remote access | Off by default; Tailscale or mutual TLS with keys bound to each client |
 | Sensitive data in history | Local storage, redaction, retention limits, wipe, optional encryption |
-| Approval fatigue | "Allow for this task" and per-kind rules (M2), clear intent text, fewer prompts for known flows |
+| Approval fatigue | "Allow for this task", "Always allow" per rule and app, clear intent text, fewer prompts for known flows |
+| A standing Always allow used by a prompt-injected agent | Exemptions hold for one rule in one app and never lift a deny, read-only mode, an agent's scope or a task's app list; Settings › Safety lists them and takes them back; "Ask before every action" suspends them |
 
 ## Architecture
 

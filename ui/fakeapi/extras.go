@@ -170,3 +170,46 @@ func (a *API) WipeHistory(ctx context.Context) error {
 	a.emit(gateway.Event{Kind: gateway.EventTasks})
 	return nil
 }
+
+// Exemptions lists the Always allow answers, as the gateway's does.
+func (a *API) Exemptions() []gateway.Exemption {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	out := make([]gateway.Exemption, len(a.always))
+	for i, x := range a.always {
+		x.With = append([]string(nil), x.With...)
+		out[i] = x
+	}
+	return out
+}
+
+// RemoveExemption takes an Always allow answer back.
+func (a *API) RemoveExemption(x gateway.Exemption) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	kept := a.always[:0:0]
+	for _, y := range a.always {
+		if y.Rule != x.Rule || y.AppID != x.AppID || y.AppName != x.AppName {
+			kept = append(kept, y)
+		}
+	}
+	a.always = kept
+	return nil
+}
+
+// AlwaysAllow keeps an Always allow answer, as answering an approval with
+// it does; the fake's agents ask all the same.
+func (a *API) AlwaysAllow(x gateway.Exemption) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.keepAlwaysLocked(x)
+}
+
+func (a *API) keepAlwaysLocked(x gateway.Exemption) {
+	for _, y := range a.always {
+		if y.Rule == x.Rule && y.AppID == x.AppID && y.AppName == x.AppName {
+			return
+		}
+	}
+	a.always = append(a.always, x)
+}

@@ -121,7 +121,7 @@ func runNeeds(args []string) error {
 // phones; real approvals happen in the app.
 func runDecide(args []string) error {
 	if len(args) < 2 {
-		return errors.New("usage: pinky decide <need-id> allow|allow_task|deny|take_over [note]")
+		return errors.New("usage: pinky decide <need-id> allow|allow_task|allow_always|deny|take_over [note]")
 	}
 	d := gateway.Decision(args[1])
 	if args[1] == "allow" {
