@@ -35,6 +35,7 @@ type Device struct {
 	noVideo   string
 	noVideoAt time.Time
 	videoSeen bool // a session on this device delivered a frame
+	hevcSeen  bool // an H.265 session delivered a frame
 	noHEVC    bool // the phone has no working H.265 encoder: use H.264
 
 	dumpMu   sync.Mutex // uiautomator allows one dump at a time
@@ -166,23 +167,29 @@ func (d *Device) baseOptions() scrcpy.Options {
 		MaxSize:      d.cfg.MaxSize,
 		MaxFPS:       float64(d.cfg.MaxFPS),
 		VideoBitRate: d.cfg.VideoBitRate,
+		VideoCodec:   d.cfg.VideoCodec,
 	}
 	if d.info.Connection == "wifi" {
-		// Wireless debugging carries the stream over TLS: on the Mi 10 Pro
-		// about 5.6 Mbit/s, below scrcpy's 8 Mbps, with 90 ms of jitter, so
-		// the default stream queued up and the mirror lagged. Ask for half
-		// of that, at 30 frames a second, and in H.265, which keeps more
-		// picture in it. The resolution stays: the mirror and the agent's
-		// coordinates are in the phone's pixels.
+		// Wireless debugging carries the stream over TLS, and a phone's
+		// Wi-Fi gives it far less than its link speed: 4 to 14 Mbit/s on
+		// the Mi 10 Pro (1200 Mbit/s link), less while it dozes. scrcpy's
+		// 8 Mbit/s at 60 frames a second queued up for seconds there, so
+		// the mirror lagged behind the phone. Ask for 2.5 Mbit/s at 30
+		// frames a second, in H.265, which keeps more picture in it. The
+		// resolution stays: the mirror and the agent's coordinates are in
+		// the phone's pixels. Measurements: docs/notes/integration.md.
 		if o.VideoBitRate == 0 {
 			o.VideoBitRate = wifiBitRate
 		}
 		if o.MaxFPS == 0 {
 			o.MaxFPS = wifiMaxFPS
 		}
-		if !d.noHEVC {
+		if o.VideoCodec == "" {
 			o.VideoCodec = "h265"
 		}
+	}
+	if o.VideoCodec == "h265" && d.noHEVC {
+		o.VideoCodec = ""
 	}
 	return o
 }
@@ -239,6 +246,9 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 	if want != nil {
 		opt = *want
 	}
+	if opt.VideoCodec == "h265" && d.noHEVC {
+		opt.VideoCodec = "" // H.265 failed since the options were made
+	}
 	if noVideo {
 		opt = scrcpy.Options{NoVideo: true}
 	}
@@ -246,17 +256,19 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 	if err != nil {
 		return nil, err
 	}
-	if l.video && !d.videoSeen && opt.VideoCodec == "h265" {
+	if l.video && opt.VideoCodec == "h265" && !d.hevcSeen {
 		// Some phones have no H.265 encoder, or one that fails: use H.264.
 		select {
 		case <-l.firstFrame:
-			d.videoSeen = true
+			d.videoSeen, d.hevcSeen = true, true
 		case <-l.done:
-			d.cfg.logf("android: %s: the H.265 encoder failed (%s); using H.264", d.info.ID, l.videoFailure())
-			d.noHEVC = true
-			opt.VideoCodec = ""
-			if l, err = d.startMain(ctx, opt); err != nil {
-				return nil, err
+			if why := l.videoFailure(); why != "" {
+				d.cfg.logf("android: %s: the H.265 encoder failed (%s); using H.264", d.info.ID, why)
+				d.noHEVC = true
+				opt.VideoCodec = ""
+				if l, err = d.startMain(ctx, opt); err != nil {
+					return nil, err
+				}
 			}
 		case <-time.After(time.Second):
 		case <-ctx.Done():
@@ -268,6 +280,7 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 		select {
 		case <-l.firstFrame:
 			d.videoSeen = true
+			d.hevcSeen = d.hevcSeen || opt.VideoCodec == "h265"
 		case <-l.done:
 			if !d.noteVideoFailureLocked(l) {
 				return nil, l.failure()
@@ -309,10 +322,18 @@ func (d *Device) startMain(ctx context.Context, opt scrcpy.Options) (*live, erro
 }
 
 // noteVideoFailureLocked records an ended session's encoder failure, and
-// reports whether there was one; d.mu must be held.
+// reports whether the phone's video encoder fails; an H.265 session that
+// failed only makes later sessions use H.264. d.mu must be held.
 func (d *Device) noteVideoFailureLocked(l *live) bool {
 	reason := l.videoFailure()
 	if reason == "" {
+		return false
+	}
+	if l.opt.VideoCodec == "h265" {
+		if !d.noHEVC {
+			d.cfg.logf("android: %s: the H.265 encoder failed (%s); using H.264", d.info.ID, reason)
+		}
+		d.noHEVC = true
 		return false
 	}
 	if d.noVideo == "" {

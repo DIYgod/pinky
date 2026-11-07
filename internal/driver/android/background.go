@@ -51,7 +51,7 @@ type Background struct {
 	d       *Device
 	l       *live
 	display int
-	w, h    int // display size when the stream is scaled; 0 = video size
+	w, h    int // the display's size in its natural orientation
 
 	mu       sync.Mutex
 	tapPoint screen.Point // the last tap, for typing into the field under it
@@ -130,16 +130,17 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 			return nil, err
 		}
 	}
-	b := &Background{d: d, closed: make(chan struct{})}
-	if opt.MaxSize > 0 {
-		b.w, b.h = opt.Width, opt.Height
-		if b.w == 0 || b.h == 0 {
-			natW, natH, err := d.naturalSize(ctx)
-			if err != nil {
-				return nil, err
-			}
-			b.w, b.h = natW, natH
+	// The display's size, which agents' coordinates use: the video may be
+	// smaller, when MaxSize asks or when the server scales it down for an
+	// encoder that cannot take the full size (an emulator's H.265 encoder
+	// sends 230x512 for a 1080x2400 display).
+	b := &Background{d: d, closed: make(chan struct{}), w: opt.Width, h: opt.Height}
+	if b.w == 0 || b.h == 0 {
+		natW, natH, err := d.naturalSize(ctx)
+		if err != nil {
+			return nil, err
 		}
+		b.w, b.h = natW, natH
 	}
 	// The main display's stream settings: over Wi-Fi, a lower bit rate and
 	// H.265 (see baseOptions).
@@ -219,7 +220,43 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 			return nil, err
 		}
 	}
+	if sopt.VideoCodec == "h265" && !b.hevcWorks(ctx) {
+		b.Close()
+		return d.OpenDisplay(ctx, opt) // in H.264 now
+	}
 	return b, nil
+}
+
+// hevcWorks waits up to a second for the display's first H.265 frame, the
+// first time on this phone, and reports false when the encoder failed
+// instead (the phone then uses H.264).
+func (b *Background) hevcWorks(ctx context.Context) bool {
+	d := b.d
+	d.mu.Lock()
+	seen := d.hevcSeen
+	d.mu.Unlock()
+	if seen {
+		return true
+	}
+	select {
+	case <-b.l.firstFrame:
+		d.mu.Lock()
+		d.hevcSeen = true
+		d.mu.Unlock()
+	case <-b.l.done:
+		why := b.l.videoFailure()
+		if why == "" {
+			return true // another failure, for the caller to find
+		}
+		d.mu.Lock()
+		d.noHEVC = true
+		d.mu.Unlock()
+		d.cfg.logf("android: %s: the H.265 encoder failed on a virtual display (%s); using H.264", d.info.ID, why)
+		return false
+	case <-time.After(time.Second):
+	case <-ctx.Done():
+	}
+	return true
 }
 
 // keepAwakeEvery is how often an open background display gets a key that
