@@ -44,13 +44,48 @@ type Info struct {
 	Backend    string // "scrcpy", "coredevice", "wda", "mirroring", "fake"
 	State      State
 	Detail     string // a plain sentence when State is not online
+	// Setup names the step a phone that is not online waits for, one of
+	// the Setup constants, so a client can walk the person through it in
+	// its own words; "" when the driver does not say. Detail says the same
+	// in a sentence.
+	Setup string
 }
+
+// Setup steps, in Info.Setup.
+const (
+	SetupTrust         = "trust"          // unlock the phone, tap Trust and enter its passcode
+	SetupDeveloperMode = "developer_mode" // turn on Developer Mode, which restarts the phone
+	SetupUnlock        = "unlock"         // unlock the phone so the computer can finish preparing it
+	SetupPreparing     = "preparing"      // the computer is preparing the phone; nothing to do but wait
+	SetupNoDiskImage   = "no_disk_image"  // the computer has no developer disk image; Detail says where to get one
+	SetupDiskImage     = "disk_image"     // the developer disk image did not mount; Detail says why
+	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
+)
 
 // Provider discovers and opens the devices of one platform.
 type Provider interface {
 	Platform() Platform
 	List(ctx context.Context) ([]Info, error)
 	Open(ctx context.Context, id string) (Device, error)
+}
+
+// HostChecker is a Provider that needs software on the computer (usbmuxd
+// for iPhones) and says when it is missing, since a provider without it
+// lists no phones at all.
+type HostChecker interface {
+	// CheckHost reports what the computer lacks; the zero HostCheck means
+	// nothing.
+	CheckHost() HostCheck
+}
+
+// HostCheck is what HostChecker found missing.
+type HostCheck struct {
+	// Missing is a code clients put into words: "apple_devices" (Windows:
+	// Apple's iPhone driver, from the Apple Devices app or iTunes),
+	// "usbmuxd" (Linux: the usbmuxd package), "usbmuxd_stopped" (Linux:
+	// installed, but not running; it starts when an iPhone is plugged in).
+	Missing string
+	Detail  string // the same in a sentence
 }
 
 // Device is an open, long-lived session with one phone. Methods must be safe
