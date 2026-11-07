@@ -156,11 +156,7 @@ func TestWindowsUpdate(t *testing.T) {
 	waitFor(t, "the work folder to go", 90*time.Second, func() bool { return len(workFolders(programs)) == 0 })
 
 	c := dialAutomation(t, sock)
-	var labels []string
-	waitFor(t, "What's new in the new version's window", 60*time.Second, func() bool {
-		labels = c.labels(t)
-		return containsAll(labels, "Pinky was updated", "Now "+newV)
-	})
+	labels := waitLabels(t, c, 60*time.Second, newsTexts(newV))
 	c.conn.Close()
 	t.Logf("the new version shows: %s", strings.Join(labels[:min(len(labels), 12)], " · "))
 

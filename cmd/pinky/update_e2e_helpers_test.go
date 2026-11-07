@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/api"
 )
 
@@ -55,6 +56,35 @@ func waitFor(t *testing.T, what string, d time.Duration, cond func() bool) {
 		}
 	}
 	t.Fatalf("timed out waiting for %s", what)
+}
+
+// newsTexts are the texts of the What's new card after an update to
+// version, in each of Pinky's languages: an e2e build on macOS shares
+// Pinky.app's defaults, and so the language picked in its Settings.
+func newsTexts(version string) [][]string {
+	var out [][]string
+	for _, l := range []string{"en", "zh-Hans"} {
+		m := locales.In(l)
+		out = append(out, []string{m.UpdateNewsCardTitle(), m.UpdateNewsNow(version)})
+	}
+	return out
+}
+
+// waitLabels waits for the main window to show every text of one of the
+// alternatives, and fails with what it shows when it does not.
+func waitLabels(t *testing.T, c *automation, d time.Duration, alternatives [][]string) []string {
+	t.Helper()
+	var labels []string
+	for deadline := time.Now().Add(d); time.Now().Before(deadline); time.Sleep(250 * time.Millisecond) {
+		labels = c.labels(t)
+		for _, want := range alternatives {
+			if containsAll(labels, want...) {
+				return labels
+			}
+		}
+	}
+	t.Fatalf("the window does not show %q; it shows: %s", alternatives, strings.Join(labels, " · "))
+	return nil
 }
 
 func containsAll(labels []string, want ...string) bool {

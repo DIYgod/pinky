@@ -124,11 +124,7 @@ func TestUpdateEndToEnd(t *testing.T) {
 	// The new version's window has What's new.
 	c := dialAutomation(t, sock)
 	defer c.conn.Close()
-	var labels []string
-	waitFor(t, "What's new in the new version's window", 30*time.Second, func() bool {
-		labels = c.labels(t)
-		return containsAll(labels, "Pinky was updated", "Now "+newV)
-	})
+	labels := waitLabels(t, c, 30*time.Second, newsTexts(newV))
 	t.Logf("the new version shows: %s", strings.Join(labels[:min(len(labels), 12)], " · "))
 }
 
