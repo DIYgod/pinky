@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On iPhones below iOS 27 without the WebDriverAgent helper, Pinky now says up front that taps, swipes and typing need the helper; it can still show and read the screen and open apps.
+
 ## 2026.1107.7 (2026-11-07)
 
 - Pairing a phone over Wi-Fi no longer hangs on "Pairing…" when Android's adb tools have stopped seeing the network, as they do after the computer's network changes (for example when an iPhone is plugged in): Pinky now finds the phone itself.
