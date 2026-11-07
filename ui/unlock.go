@@ -7,6 +7,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/secret"
@@ -41,7 +42,8 @@ type pinState struct {
 }
 
 // notAvailableHere is what the client says where the system has no
-// keychain it can use.
+// keychain it can use, in English; locales.UnlockNotAvailable says it in
+// the app's language.
 const notAvailableHere = "Unlocking from this computer is not available on this system."
 
 func (a *app) secrets() secret.Store {
@@ -112,7 +114,7 @@ func (a *app) unlock(id string) {
 	if d := a.device(id); d != nil {
 		name = d.Info.Name
 	}
-	a.call(id, "unlock the phone", func() error {
+	a.call(id, locales.UnlockCallWhat(), func() error {
 		err := a.api.Unlock(id)
 		a.post(func() {
 			delete(a.pin.unlocking, id)
@@ -132,21 +134,21 @@ func unlockError(err error, name string) string {
 	case err == nil, errors.Is(err, secret.ErrCancelled):
 		return "" // unlocked, or the person cancelled Touch ID
 	case errors.Is(err, driver.ErrLocked):
-		return "The saved PIN didn't unlock " + name + ". To keep the phone from locking you out, Pinky won't try it again until you unlock the phone yourself or change the PIN in Settings › Phones."
+		return locales.UnlockErrWrongPIN(name)
 	case errors.Is(err, driver.ErrPINNotEntered):
-		return "Pinky couldn't get to " + name + "'s passcode screen, so it entered nothing. Try again, or unlock it on the phone."
+		return locales.UnlockErrNoPad(name)
 	case errors.Is(err, secret.ErrNotFound):
-		return "No PIN is saved for " + name + ". Save it in Settings › Phones."
+		return locales.UnlockErrNoPIN(name)
 	case errors.Is(err, secret.ErrUnsupported):
-		return notAvailableHere
+		return locales.UnlockNotAvailable()
 	case errors.Is(err, gateway.ErrNoUnlock):
-		return "Unlocking from this computer isn't available. Unlock " + name + " on the phone."
+		return locales.UnlockErrNoUnlock(name)
 	case errors.Is(err, driver.ErrUnsupported):
-		return name + " can't be unlocked from this computer. Unlock it on the phone."
+		return locales.UnlockErrUnsupported(name)
 	case errors.Is(err, driver.ErrOffline):
-		return name + " is offline."
+		return locales.UnlockErrOffline(name)
 	}
-	return fmt.Sprintf("Couldn't unlock %s: %v", name, err)
+	return locales.UnlockErrOther(name, err.Error())
 }
 
 // unlockButton is the Unlock with Touch ID button, which says when it is
@@ -155,7 +157,7 @@ func (a *app) unlockButton(c *mg.Context, id string) mg.Element {
 	label, _ := unlockWords()
 	busy := a.pin.unlocking[id]
 	if busy {
-		label = "Unlocking…"
+		label = locales.UnlockBusy()
 	}
 	b := button(c, label, btnOpt{kind: btnPrimary, icon: icTouchID}).Disabled(busy)
 	if b.Clicked() {
@@ -172,7 +174,7 @@ func (a *app) unlockControls(c *mg.Context, n gateway.NeedView) {
 	if a.canUnlockHere(n.DeviceID) {
 		a.unlockButton(c, n.DeviceID).Margin(12, 0, 0, 0).FillWidth()
 		_, keep := unlockWords()
-		mg.Text(c, "or unlock it on the phone").FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
+		mg.Text(c, locales.UnlockOrOnPhone()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
 		mg.Text(c, keep).FontSize(12).TextColor(p.ink3).TextAlign(mg.Center).Margin(6, 0, 0, 0)
 		return
 	}
@@ -190,27 +192,28 @@ func (a *app) pinMissing(d gateway.DeviceView) bool {
 }
 
 // unlockElsewhere says how to unlock a phone that this computer cannot
-// unlock, ending with then (", then click Done.") when given.
+// unlock, ending with then (", then click Done.", in the app's language)
+// when given.
 func (a *app) unlockElsewhere(id, then string) string {
 	d := a.device(id)
 	st := &a.pin
-	end := "."
+	end := locales.UnlockEnd()
 	if then != "" {
 		end = then
 	}
 	switch {
 	case d == nil || !d.Features.Unlock:
-		return "Unlock it on the phone" + end
+		return locales.UnlockOnPhone(end)
 	case !a.settings.UnlockFromComputer:
-		return "Unlock it on the phone" + end + " Unlocking from this computer is off in Settings › Safety."
+		return locales.UnlockOnPhoneOff(end)
 	case st.ready && !st.supported:
-		return notAvailableHere + " Unlock it on the phone" + end
+		return locales.UnlockOnPhoneNotAvailable(end)
 	case st.wrong[id]:
-		return "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone" + end + " If its PIN changed, update it in Settings › Phones."
+		return locales.UnlockOnPhoneWrongPIN(end)
 	case st.ready && !st.saved[id]:
-		return "Save the phone's PIN to unlock it from this computer, or unlock it on the phone" + end
+		return locales.UnlockOnPhoneSavePIN(end)
 	}
-	return "Unlock it on the phone" + end
+	return locales.UnlockOnPhone(end)
 }
 
 // pinForm saves or removes a phone's PIN: a secure input while the person
@@ -223,7 +226,7 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 		return
 	}
 	if !st.supported {
-		mg.Text(c, notAvailableHere).FontSize(13).TextColor(p.ink2)
+		mg.Text(c, locales.UnlockNotAvailable()).FontSize(13).TextColor(p.ink2)
 		return
 	}
 	open := st.editing == id && st.where == where
@@ -231,13 +234,13 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 	switch {
 	case open:
 		in := mg.TextInput(c.Key(fmt.Sprintf("pin-%s-%s-%d", where, id, st.gen)), &st.value).Password().
-			Placeholder("PIN or passcode").Label("PIN for " + name).AutoFocus().MaxWidth(260)
+			Placeholder(locales.PinPlaceholder()).Label(locales.PinFieldLabel(name)).AutoFocus().MaxWidth(260)
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-			save := button(c, "Save PIN", btnOpt{kind: btnPrimary}).Disabled(st.busy || st.value == "")
+			save := button(c, locales.PinSave(), btnOpt{kind: btnPrimary}).Disabled(st.busy || st.value == "")
 			if (save.Clicked() || in.Submitted()) && !st.busy && st.value != "" {
 				a.savePIN(id, name)
 			}
-			if button(c, "Cancel", btnOpt{}).Clicked() {
+			if button(c, locales.PinCancel(), btnOpt{}).Clicked() {
 				st.editing, st.value, st.err = "", "", ""
 				st.gen++
 			}
@@ -253,17 +256,17 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Wrap().Children(func() {
 			mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, icLock).FontSize(14).TextColor(p.ink2)
-				mg.Text(c, "PIN saved").FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, locales.PinSaved()).FontSize(13.5).TextColor(p.ink2)
 			})
-			if linkButton(c, "Change").Label("Change the PIN for " + name).Clicked() {
+			if linkButton(c, locales.PinChange()).Label(locales.PinChangeLabel(name)).Clicked() {
 				st.editing, st.where, st.value, st.err = id, where, "", ""
 			}
-			if linkButton(c, "Remove").Label("Remove the PIN for " + name).Clicked() {
+			if linkButton(c, locales.PinRemove()).Label(locales.PinRemoveLabel(name)).Clicked() {
 				a.removePIN(id, name)
 			}
 		})
 	default:
-		if button(c, "Save PIN…", btnOpt{small: true}).Label("Save the PIN for " + name).Clicked() {
+		if button(c, locales.PinSaveOpen(), btnOpt{small: true}).Label(locales.PinSaveLabel(name)).Clicked() {
 			st.editing, st.where, st.value, st.err = id, where, "", ""
 		}
 	}
@@ -274,7 +277,7 @@ func (a *app) savePIN(id, name string) {
 	st := &a.pin
 	pin := st.value
 	if len([]rune(pin)) < 4 {
-		st.err = "Enter the PIN or passcode that unlocks " + name + ": at least 4 characters."
+		st.err = locales.PinErrShort(name)
 		return
 	}
 	st.value, st.err, st.busy = "", "", true
@@ -288,11 +291,11 @@ func (a *app) savePIN(id, name string) {
 			case errors.Is(err, secret.ErrUnsupported):
 				st.supported, st.editing = false, ""
 			case err != nil:
-				st.err = "Couldn't save the PIN: " + err.Error()
+				st.err = locales.PinErrSave(err.Error())
 			default:
 				st.saved[id], st.editing = true, ""
 				delete(st.wrong, id)
-				a.toasts = append(a.toasts, "Saved the PIN for "+name)
+				a.toasts = append(a.toasts, locales.PinSavedToast(name))
 			}
 		})
 	}()
@@ -304,7 +307,7 @@ func (a *app) removePIN(id, name string) {
 		err := store.Delete(secret.PINAccount(id))
 		a.post(func() {
 			if err != nil && !errors.Is(err, secret.ErrNotFound) {
-				a.toasts = append(a.toasts, "Couldn't remove the PIN: "+err.Error())
+				a.toasts = append(a.toasts, locales.PinErrRemove(err.Error()))
 				return
 			}
 			a.pin.saved[id] = false
@@ -312,7 +315,7 @@ func (a *app) removePIN(id, name string) {
 			if a.pin.editing == id {
 				a.pin.editing = ""
 			}
-			a.toasts = append(a.toasts, "Removed the PIN for "+name)
+			a.toasts = append(a.toasts, locales.PinRemovedToast(name))
 		})
 	}()
 }
@@ -334,39 +337,40 @@ func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	_, keep := unlockWords()
 	mg.Column(c.Key("lock-"+id)).Padding(14).Radius(12).Background(p.bg2).Border(1, p.line).Gap(8).
-		Label(d.Info.Name + " is locked").Children(func() {
+		Label(locales.UnlockLocked(d.Info.Name)).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icLock).FontSize(16).TextColor(p.ink2)
-			mg.Text(c, d.Info.Name+" is locked").FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
+			mg.Text(c, locales.UnlockLocked(d.Info.Name)).FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
 		})
 		if wrong {
 			mg.Text(c, a.unlockElsewhere(id, "")).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
 			return
 		}
 		if canUnlock {
-			mg.Text(c, "Unlock it from here when you or an agent need it.").FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			mg.Text(c, locales.UnlockFromHere()).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
 			a.unlockButton(c, id).Margin(4, 0, 0, 0).FillWidth()
 			mg.Text(c, keep).FontSize(12).TextColor(p.ink3)
 			return
 		}
-		mg.Text(c, "Save its PIN and you can unlock it from this computer"+unlockMethod()+" when an agent needs it, without picking the phone up.").
+		mg.Text(c, unlockPitch()).
 			FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
 		mg.Column(c).Gap(8).Margin(4, 0, 0, 0).Children(func() { a.pinForm(c, d, "lock") })
 		if a.pin.editing != id {
-			if quietButton(c, "Not now").Label("Not now: hide this for " + d.Info.Name).Clicked() {
+			if quietButton(c, locales.UnlockNotNow()).Label(locales.UnlockNotNowLabel(d.Info.Name)).Clicked() {
 				a.pin.later[id] = true
 			}
 		}
 	})
 }
 
-// unlockMethod is how the person confirms an unlock here, for a sentence.
-func unlockMethod() string {
+// unlockPitch offers to save a phone's PIN, naming how the person
+// confirms an unlock here.
+func unlockPitch() string {
 	switch runtime.GOOS {
 	case "darwin":
-		return " with Touch ID"
+		return locales.UnlockPitchMac()
 	case "windows":
-		return " with Windows Hello"
+		return locales.UnlockPitchWindows()
 	}
-	return ""
+	return locales.UnlockPitchOther()
 }

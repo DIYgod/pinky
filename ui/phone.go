@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -11,6 +10,7 @@ import (
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -20,21 +20,21 @@ import (
 func (a *app) phonesPage(c *mg.Context) {
 	p := pal(c)
 	if len(a.devices) == 0 {
-		pageHeader(c, func() { mg.Text(c, "Phones").FontSize(17).FontWeight(650) })
+		pageHeader(c, func() { mg.Text(c, locales.PhonePageTitle()).FontSize(17).FontWeight(650) })
 		mg.Column(c).Grow(1).Center().Gap(10).Children(func() {
 			if !a.loaded {
 				spinner(c)
 				return
 			}
-			mg.Text(c, "No phones yet").FontSize(16).FontWeight(600)
-			if b := button(c, "Add phone", btnOpt{kind: btnPrimary}); b.Clicked() {
+			mg.Text(c, locales.PhoneNoPhones()).FontSize(16).FontWeight(600)
+			if b := button(c, locales.PhoneAddPhone(), btnOpt{kind: btnPrimary}); b.Clicked() {
 				a.page = pageAddPhone
 				a.add.reset(a)
 			}
 		})
 		return
 	}
-	name, line := "All phones", ""
+	name, line := locales.PhoneAllPhones(), ""
 	if a.sel == allPhones {
 		online, offline := 0, 0
 		for _, d := range a.devices {
@@ -44,14 +44,14 @@ func (a *app) phonesPage(c *mg.Context) {
 				online++
 			}
 		}
-		line = fmt.Sprintf("%d connected", online)
+		line = locales.PhoneConnected(online)
 		if offline > 0 {
-			line += fmt.Sprintf(" · %d offline", offline)
+			line += " · " + locales.PhoneOfflineCount(offline)
 		}
 	} else if d := a.device(a.sel); d != nil {
 		name, line = d.Info.Name, connectionLine(*d)
 		if t := a.taskOf(d.Info.ID); a.backgroundTask(*d, t) {
-			line += " · " + agentOrTheAgent(t) + " works in the background"
+			line += " · " + locales.PhoneWorksInBackground(agentOrTheAgent(t))
 		}
 	}
 	pageHeader(c, func() {
@@ -82,16 +82,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 				mg.Icon(c, icWifiOff).FontSize(30).TextColor(p.ink3)
 			})
-			mg.Text(c, d.Info.Name+" is offline").FontSize(16).FontWeight(600)
+			mg.Text(c, locales.PhoneOffline(d.Info.Name)).FontSize(16).FontWeight(600)
 			mg.Row(c).Gap(4).AlignItems(mg.Baseline).Children(func() {
 				detail := d.Info.Detail
 				if detail == "" {
-					detail = "It is not connected."
+					detail = locales.PhoneNotConnected()
 				} else {
 					detail += "."
 				}
 				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2)
-				if linkButton(c, "Reconnect").Clicked() {
+				if linkButton(c, locales.PhoneReconnect()).Clicked() {
 					a.page = pageAddPhone
 					a.add.reset(a)
 				}
@@ -102,7 +102,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	if d.Info.State != driver.StateOnline {
 		mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(420).Children(func() {
 			mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
-			mg.Text(c, d.Info.Name+" needs setup").FontSize(16).FontWeight(600)
+			mg.Text(c, locales.PhoneNeedsSetup(d.Info.Name)).FontSize(16).FontWeight(600)
 			if d.Info.Detail != "" {
 				mg.Text(c, d.Info.Detail).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
 			}
@@ -113,7 +113,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	t := a.taskOf(d.Info.ID)
 	agent := ""
 	if t != nil && running(t.State) {
-		agent = nonEmpty(t.Agent, "The agent")
+		agent = nonEmpty(t.Agent, locales.AgentGenericStart())
 	}
 	inControl := d.Status == gateway.DeviceInControl
 	ho, handoff := a.handoffFor(d.Info.ID)
@@ -121,16 +121,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	case handoff && !a.isLocked(d) && t != nil && t.State == gateway.TaskPaused:
 		// The person took over and the agent waits with phone_handoff.
 		inControl = true
-		a.controlBanner(c, d.Info.ID, "You're in control. ", agentOf(ho)+" is paused.")
+		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerPaused(agentOf(ho)))
 	case handoff && !a.isLocked(d):
 		// The agent asked for the person: the phone is theirs until they
 		// hand it back, here or with Done on the card.
 		inControl = true
-		a.controlBanner(c, d.Info.ID, "Your turn. ", agentOf(ho)+" waits for you: "+lowerFirst(strings.TrimSuffix(ho.Title, ".")))
+		a.controlBanner(c, d.Info.ID, locales.PhoneBannerYourTurn(), locales.PhoneBannerWaits(agentOf(ho), lowerFirst(strings.TrimSuffix(needTitle(ho), "."))))
 	case inControl && agent != "":
-		a.controlBanner(c, d.Info.ID, "You're in control. ", agent+" is paused.")
+		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerPaused(agent))
 	case inControl:
-		a.controlBanner(c, d.Info.ID, "You're in control. ", "Hand back to let agents use this phone again.")
+		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerHandBackHint())
 	}
 
 	// Size the phone to the room the window gives it.
@@ -163,7 +163,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	if inControl {
 		fig.Shadow(0, 0, 0, 2, p.ink2)
 	}
-	fig.Label(d.Info.Name + " screen").Children(func() {
+	fig.Label(locales.PhoneScreenLabel(d.Info.Name)).Children(func() {
 		a.mirrorView(c, m, d, shown, inner, false)
 	})
 
@@ -175,7 +175,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			if !watching {
 				which = 1
 			}
-			seg := mg.Segmented(c.Key("screen-"+d.Info.ID), &which, agentOrTheAgent(t)+"'s screen", "Phone's screen").Label("Show on the mirror")
+			seg := mg.Segmented(c.Key("screen-"+d.Info.ID), &which, locales.PhoneAgentScreen(agentOrTheAgent(t)), locales.PhonePhoneScreen()).Label(locales.PhoneShowOnMirror())
 			if seg.Changed() {
 				a.bg.phone[d.Info.ID] = ""
 				if which == 1 {
@@ -189,7 +189,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			col := p.ink2
 			if watching {
 				// Keys act on the phone's own screen, not the agent's.
-				b.Disabled(true).Tooltip(agentOrTheAgent(t) + " works on its own screen. Show the phone's screen to use the phone.")
+				b.Disabled(true).Tooltip(locales.PhoneKeysAgentScreen(agentOrTheAgent(t)))
 				col = p.ink3
 			} else if b.Hovered() {
 				b.Background(p.bg3)
@@ -197,16 +197,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			}
 			if b.Clicked() && !watching {
 				id := d.Info.ID
-				a.call(id, "press "+label, func() error { return a.api.Key(id, k) })
+				a.call(id, locales.PhonePressKey(label), func() error { return a.api.Key(id, k) })
 			}
 			b.TextColor(col).Children(func() { mg.Icon(c, ic).FontSize(18) })
 		}
 		if d.Info.Platform != driver.IOS {
-			key(icBack, "Back", driver.KeyBack)
+			key(icBack, locales.PhoneKeyBack(), driver.KeyBack)
 		}
-		key(icHome, "Home", driver.KeyHome)
+		key(icHome, locales.PhoneKeyHome(), driver.KeyHome)
 		if d.Info.Platform != driver.IOS {
-			key(icRecents, "Recents", driver.KeyRecents)
+			key(icRecents, locales.PhoneKeyRecents(), driver.KeyRecents)
 		}
 		mg.Box(c).Size(1, 20).Background(p.line2).Margin(0, 6)
 		a.moreControls(c, d, m)
@@ -228,7 +228,7 @@ func (a *app) controlBanner(c *mg.Context, id, bold, rest string) {
 			mg.Span{Text: bold, Weight: 650, Color: p.ink},
 			mg.Span{Text: rest, Color: p.ink2},
 		).Grow(1).MinWidth(0)
-		if button(c, "Hand back", btnOpt{kind: btnPrimary}).Clicked() {
+		if button(c, locales.PhoneHandBack(), btnOpt{kind: btnPrimary}).Clicked() {
 			a.handBack(id)
 		}
 	})
@@ -239,7 +239,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 	p := pal(c)
 	id := d.Info.ID
 	open := a.more[id]
-	b := mg.ButtonBase(c.Key("more-"+id)).Size(40, 36).Radius(9).Center().Label("More phone controls").Tooltip("More phone controls")
+	b := mg.ButtonBase(c.Key("more-"+id)).Size(40, 36).Radius(9).Center().Label(locales.PhoneMoreControls()).Tooltip(locales.PhoneMoreControls())
 	col := p.ink2
 	if b.Hovered() || open {
 		b.Background(p.bg3)
@@ -251,26 +251,26 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 	b.TextColor(col).Children(func() { mg.Icon(c, icMore).FontSize(18) })
 	mg.PopoverBase(c, b, &open, func(panel mg.Element) {
 		menuPanel(c, panel).Width(290).Margin(6, 0, 0, 0)
-		if menuItem(c, "Take screenshot", mg.Color{}).Clicked() {
+		if menuItem(c, locales.PhoneTakeScreenshot(), mg.Color{}).Clicked() {
 			open = false
 			a.saveScreenshot(m, d.Info.Name)
 		}
-		menuItem(c, "Record screen", p.ink3).Disabled(true).Tooltip("Agent tasks are recorded while Record the screen is on in Settings › Privacy")
-		menuItem(c, "Rotate", p.ink3).Disabled(true).Tooltip("Not in the gateway API yet")
+		menuItem(c, locales.PhoneRecordScreen(), p.ink3).Disabled(true).Tooltip(locales.PhoneRecordScreenTooltip())
+		menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
 		mg.Row(c).Gap(10).Padding(6, 10).AlignItems(mg.Center).Children(func() {
 			ink := p.ink
-			desc := "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task."
+			desc := locales.PhoneBackgroundDesc()
 			if !d.Features.Background {
 				ink = p.ink3
-				desc = "This phone can't give agents a second screen."
+				desc = locales.PhoneBackgroundUnsupported()
 			}
 			mg.Column(c).Grow(1).Children(func() {
-				mg.Text(c, "Work in the background").FontSize(14).TextColor(ink)
+				mg.Text(c, locales.PhoneWorkInBackground()).FontSize(14).TextColor(ink)
 				mg.Text(c, desc).FontSize(12.5).TextColor(p.ink2)
 			})
 			on := a.bg.on[id] && d.Features.Background
-			sw := toggle(c.Key("bg-pop-"+id), &on, "Work in the background").Disabled(!d.Features.Background)
+			sw := toggle(c.Key("bg-pop-"+id), &on, locales.PhoneWorkInBackground()).Disabled(!d.Features.Background)
 			if sw.Changed() && d.Features.Background {
 				a.setBackground(d, on)
 			}
@@ -284,14 +284,15 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 func (a *app) saveScreenshot(m *mirror, name string) {
 	img := m.lastImage()
 	if img == nil {
-		a.toasts = append(a.toasts, "No picture yet")
+		a.toasts = append(a.toasts, locales.PhoneNoPicture())
 		return
 	}
 	dir, err := mygo.App.Path(mygo.PathDesktop)
 	if err != nil || dir == "" {
 		dir, _ = os.UserHomeDir()
 	}
-	path := filepath.Join(dir, fmt.Sprintf("%s %s.png", name, time.Now().Format("2006-01-02 at 15.04.05")))
+	now := time.Now()
+	path := filepath.Join(dir, locales.PhoneScreenshotName(name, now.Format("2006-01-02"), now.Format("15.04.05"))+".png")
 	go func() {
 		f, err := os.Create(path)
 		if err == nil {
@@ -302,9 +303,9 @@ func (a *app) saveScreenshot(m *mirror, name string) {
 		}
 		a.post(func() {
 			if err != nil {
-				a.toasts = append(a.toasts, "Couldn't save the screenshot: "+err.Error())
+				a.toasts = append(a.toasts, locales.PhoneScreenshotFailed(err.Error()))
 			} else {
-				a.toasts = append(a.toasts, "Saved "+filepath.Base(path))
+				a.toasts = append(a.toasts, locales.PhoneScreenshotSaved(filepath.Base(path)))
 			}
 		})
 	}()
@@ -328,7 +329,7 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 			}
 			hovered := tile.Hovered()
 			tile.Children(func() {
-				sel := mg.ButtonBase(c).Column().AlignItems(mg.Stretch).Justify(mg.Start).FillWidth().Padding(14).Gap(10).Radius(14).Label("Show " + d.Info.Name)
+				sel := mg.ButtonBase(c).Column().AlignItems(mg.Stretch).Justify(mg.Start).FillWidth().Padding(14).Gap(10).Radius(14).Label(locales.PhoneShow(d.Info.Name))
 				if sel.Clicked() {
 					a.selectPhone(d.Info.ID)
 				}
@@ -361,7 +362,7 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 								name.TextColor(p.ink2)
 							}
 						})
-						mg.Text(c, d.StatusLine).FontSize(13).TextColor(p.ink2).SingleLine()
+						mg.Text(c, statusLine(d)).FontSize(13).TextColor(p.ink2).SingleLine()
 					})
 				})
 				run := t != nil && running(t.State)
@@ -373,15 +374,15 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 					act.Children(func() {
 						switch {
 						case inControl:
-							if button(c, "Hand back", btnOpt{small: true, dark: true}).Clicked() {
+							if button(c, locales.PhoneHandBack(), btnOpt{small: true, dark: true}).Clicked() {
 								a.handBack(d.Info.ID)
 							}
 						case !a.isLocked(d):
-							if button(c, "Take over", btnOpt{small: true, dark: true}).Clicked() {
+							if button(c, locales.PhoneTakeOver(), btnOpt{small: true, dark: true}).Clicked() {
 								a.takeOver(d.Info.ID)
 							}
 						}
-						if run && button(c, "Stop", btnOpt{small: true, kind: btnRed, dark: true}).Clicked() {
+						if run && button(c, locales.TasksStop(), btnOpt{small: true, kind: btnRed, dark: true}).Clicked() {
 							a.stop(d.Info.ID)
 						}
 					})

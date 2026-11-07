@@ -363,6 +363,598 @@ func (msgs Messages) ActivityTitle() string {
 	return Catalog.Format(msgs.locale, "activityTitle", nil)
 }
 
+// AddPhoneAndroidDetail says "Connect it to this computer with a USB cable. If the phone asks to allow USB debugging, tap Allow."
+// in the language the app shows.
+//
+// Add phone › Android: the line under the heading. Allow is the button of
+// the phone's "Allow USB debugging?" prompt: use Android's Simplified
+// Chinese word for it.
+func AddPhoneAndroidDetail() string { return In(i18n.Locale()).AddPhoneAndroidDetail() }
+
+// AddPhoneAndroidDetail says "Connect it to this computer with a USB cable. If the phone asks to allow USB debugging, tap Allow."
+// in the language of msgs.
+//
+// Add phone › Android: the line under the heading. Allow is the button of
+// the phone's "Allow USB debugging?" prompt: use Android's Simplified
+// Chinese word for it.
+func (msgs Messages) AddPhoneAndroidDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneAndroidDetail", nil)
+}
+
+// AddPhoneAndroidTitle says "Plug in your Android phone"
+// in the language the app shows.
+//
+// Add phone › Android: the heading of the step where the person connects
+// the phone to the computer with a USB cable.
+func AddPhoneAndroidTitle() string { return In(i18n.Locale()).AddPhoneAndroidTitle() }
+
+// AddPhoneAndroidTitle says "Plug in your Android phone"
+// in the language of msgs.
+//
+// Add phone › Android: the heading of the step where the person connects
+// the phone to the computer with a USB cable.
+func (msgs Messages) AddPhoneAndroidTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneAndroidTitle", nil)
+}
+
+// AddPhoneBack says "‹ Back"
+// in the language the app shows.
+//
+// Add phone: the link at the top left of the wizard that goes back a step.
+func AddPhoneBack() string { return In(i18n.Locale()).AddPhoneBack() }
+
+// AddPhoneBack says "‹ Back"
+// in the language of msgs.
+//
+// Add phone: the link at the top left of the wizard that goes back a step.
+func (msgs Messages) AddPhoneBack() string {
+	return Catalog.Format(msgs.locale, "addPhoneBack", nil)
+}
+
+// AddPhoneCancel says "Cancel"
+// in the language the app shows.
+//
+// Add phone: the button at the top right of the wizard that leaves it.
+func AddPhoneCancel() string { return In(i18n.Locale()).AddPhoneCancel() }
+
+// AddPhoneCancel says "Cancel"
+// in the language of msgs.
+//
+// Add phone: the button at the top right of the wizard that leaves it.
+func (msgs Messages) AddPhoneCancel() string {
+	return Catalog.Format(msgs.locale, "addPhoneCancel", nil)
+}
+
+// AddPhoneChooseAndroid says "Pixel, Galaxy and others"
+// in the language the app shows.
+//
+// Add phone, first step: under "Android" on its card, examples of Android
+// phones.
+func AddPhoneChooseAndroid() string { return In(i18n.Locale()).AddPhoneChooseAndroid() }
+
+// AddPhoneChooseAndroid says "Pixel, Galaxy and others"
+// in the language of msgs.
+//
+// Add phone, first step: under "Android" on its card, examples of Android
+// phones.
+func (msgs Messages) AddPhoneChooseAndroid() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseAndroid", nil)
+}
+
+// AddPhoneChooseDetail says "Pinky works with Android phones and iPhones."
+// in the language the app shows.
+//
+// Add phone, first step: the line under the heading.
+func AddPhoneChooseDetail() string { return In(i18n.Locale()).AddPhoneChooseDetail() }
+
+// AddPhoneChooseDetail says "Pinky works with Android phones and iPhones."
+// in the language of msgs.
+//
+// Add phone, first step: the line under the heading.
+func (msgs Messages) AddPhoneChooseDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseDetail", nil)
+}
+
+// AddPhoneChooseIPhone says "Best on iOS 27; older versions work too"
+// in the language the app shows.
+//
+// Add phone, first step: under "iPhone" on its card, which iOS versions
+// work.
+func AddPhoneChooseIPhone() string { return In(i18n.Locale()).AddPhoneChooseIPhone() }
+
+// AddPhoneChooseIPhone says "Best on iOS 27; older versions work too"
+// in the language of msgs.
+//
+// Add phone, first step: under "iPhone" on its card, which iOS versions
+// work.
+func (msgs Messages) AddPhoneChooseIPhone() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseIPhone", nil)
+}
+
+// AddPhoneChooseTitle says "Which phone?"
+// in the language the app shows.
+//
+// Add phone, first step: the heading above two cards to pick from, Android
+// and iPhone.
+func AddPhoneChooseTitle() string { return In(i18n.Locale()).AddPhoneChooseTitle() }
+
+// AddPhoneChooseTitle says "Which phone?"
+// in the language of msgs.
+//
+// Add phone, first step: the heading above two cards to pick from, Android
+// and iPhone.
+func (msgs Messages) AddPhoneChooseTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseTitle", nil)
+}
+
+// AddPhoneDone says "Done"
+// in the language the app shows.
+//
+// Add phone: the button that ends the wizard once the new phone is ready,
+// and opens its page.
+func AddPhoneDone() string { return In(i18n.Locale()).AddPhoneDone() }
+
+// AddPhoneDone says "Done"
+// in the language of msgs.
+//
+// Add phone: the button that ends the wizard once the new phone is ready,
+// and opens its page.
+func (msgs Messages) AddPhoneDone() string {
+	return Catalog.Format(msgs.locale, "addPhoneDone", nil)
+}
+
+// AddPhoneFound says "Found {name}"
+// in the language the app shows.
+//
+// Add phone: the status line once Pinky has found the new Android phone and
+// it is ready, next to a green dot. name is the phone's name.
+func AddPhoneFound(name string) string { return In(i18n.Locale()).AddPhoneFound(name) }
+
+// AddPhoneFound says "Found {name}"
+// in the language of msgs.
+//
+// Add phone: the status line once Pinky has found the new Android phone and
+// it is ready, next to a green dot. name is the phone's name.
+func (msgs Messages) AddPhoneFound(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneFound", map[string]any{"name": name})
+}
+
+// AddPhoneFoundBut says "Found {name}, but {detail}"
+// in the language the app shows.
+//
+// Add phone › Android: the status line when Pinky found the phone but
+// cannot use it yet; the USB debugging steps follow. name is the phone's
+// name; detail is why, in English as the phone's driver says it, with a
+// lower-case first letter.
+func AddPhoneFoundBut(name string, detail string) string {
+	return In(i18n.Locale()).AddPhoneFoundBut(name, detail)
+}
+
+// AddPhoneFoundBut says "Found {name}, but {detail}"
+// in the language of msgs.
+//
+// Add phone › Android: the status line when Pinky found the phone but
+// cannot use it yet; the USB debugging steps follow. name is the phone's
+// name; detail is why, in English as the phone's driver says it, with a
+// lower-case first letter.
+func (msgs Messages) AddPhoneFoundBut(name string, detail string) string {
+	return Catalog.Format(msgs.locale, "addPhoneFoundBut", map[string]any{"name": name, "detail": detail})
+}
+
+// AddPhoneFoundIOS says "Found {name} · iOS {version}"
+// in the language the app shows.
+//
+// Add phone › iPhone: the status line once Pinky has found the iPhone,
+// before it is ready. name is the iPhone's name; version is its iOS
+// version, or empty (the line then ends with "iOS").
+func AddPhoneFoundIOS(name string, version string) string {
+	return In(i18n.Locale()).AddPhoneFoundIOS(name, version)
+}
+
+// AddPhoneFoundIOS says "Found {name} · iOS {version}"
+// in the language of msgs.
+//
+// Add phone › iPhone: the status line once Pinky has found the iPhone,
+// before it is ready. name is the iPhone's name; version is its iOS
+// version, or empty (the line then ends with "iOS").
+func (msgs Messages) AddPhoneFoundIOS(name string, version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneFoundIOS", map[string]any{"name": name, "version": version})
+}
+
+// AddPhoneFoundNeedsSetup says "Found {name}, but it needs setup"
+// in the language the app shows.
+//
+// Add phone › Android: the status line when Pinky found the phone but
+// cannot use it yet and knows no more; the USB debugging steps follow. name
+// is the phone's name.
+func AddPhoneFoundNeedsSetup(name string) string {
+	return In(i18n.Locale()).AddPhoneFoundNeedsSetup(name)
+}
+
+// AddPhoneFoundNeedsSetup says "Found {name}, but it needs setup"
+// in the language of msgs.
+//
+// Add phone › Android: the status line when Pinky found the phone but
+// cannot use it yet and knows no more; the USB debugging steps follow. name
+// is the phone's name.
+func (msgs Messages) AddPhoneFoundNeedsSetup(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneFoundNeedsSetup", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneCode says "Pairing code"
+// in the language the app shows.
+//
+// Add phone › iPhone: the accessibility label of the six boxes, and of
+// the field over them, where the person types the code the iPhone shows.
+func AddPhoneIPhoneCode() string { return In(i18n.Locale()).AddPhoneIPhoneCode() }
+
+// AddPhoneIPhoneCode says "Pairing code"
+// in the language of msgs.
+//
+// Add phone › iPhone: the accessibility label of the six boxes, and of
+// the field over them, where the person types the code the iPhone shows.
+func (msgs Messages) AddPhoneIPhoneCode() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneCode", nil)
+}
+
+// AddPhoneIPhoneDetail says "On the iPhone, turn on Developer Mode in Settings › Privacy & Security. Keep it on the same Wi-Fi, then enter the c…"
+// in the language the app shows.
+//
+// Add phone › iPhone: the line under the heading, above the six boxes of
+// the pairing code. Settings, Privacy & Security and Developer Mode are the
+// iPhone's own names: use those of iOS's Simplified Chinese settings.
+func AddPhoneIPhoneDetail() string { return In(i18n.Locale()).AddPhoneIPhoneDetail() }
+
+// AddPhoneIPhoneDetail says "On the iPhone, turn on Developer Mode in Settings › Privacy & Security. Keep it on the same Wi-Fi, then enter the c…"
+// in the language of msgs.
+//
+// Add phone › iPhone: the line under the heading, above the six boxes of
+// the pairing code. Settings, Privacy & Security and Developer Mode are the
+// iPhone's own names: use those of iOS's Simplified Chinese settings.
+func (msgs Messages) AddPhoneIPhoneDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneDetail", nil)
+}
+
+// AddPhoneIPhoneTitle says "Pair your iPhone"
+// in the language the app shows.
+//
+// Add phone › iPhone: the heading of the iPhone step, for current and for
+// older iPhones.
+func AddPhoneIPhoneTitle() string { return In(i18n.Locale()).AddPhoneIPhoneTitle() }
+
+// AddPhoneIPhoneTitle says "Pair your iPhone"
+// in the language of msgs.
+//
+// Add phone › iPhone: the heading of the iPhone step, for current and for
+// older iPhones.
+func (msgs Messages) AddPhoneIPhoneTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTitle", nil)
+}
+
+// AddPhoneIPhoneWaiting says "Waiting for the iPhone. It shows up here once the gateway has paired with it."
+// in the language the app shows.
+//
+// Add phone › iPhone: the line under the code after the person clicks
+// Pair, while the gateway pairs with the iPhone.
+func AddPhoneIPhoneWaiting() string { return In(i18n.Locale()).AddPhoneIPhoneWaiting() }
+
+// AddPhoneIPhoneWaiting says "Waiting for the iPhone. It shows up here once the gateway has paired with it."
+// in the language of msgs.
+//
+// Add phone › iPhone: the line under the code after the person clicks
+// Pair, while the gateway pairs with the iPhone.
+func (msgs Messages) AddPhoneIPhoneWaiting() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneWaiting", nil)
+}
+
+// AddPhoneLabel says "Add phone"
+// in the language the app shows.
+//
+// Add phone: the accessibility label of the wizard's card, which walks the
+// person through adding a phone.
+func AddPhoneLabel() string { return In(i18n.Locale()).AddPhoneLabel() }
+
+// AddPhoneLabel says "Add phone"
+// in the language of msgs.
+//
+// Add phone: the accessibility label of the wizard's card, which walks the
+// person through adding a phone.
+func (msgs Messages) AddPhoneLabel() string {
+	return Catalog.Format(msgs.locale, "addPhoneLabel", nil)
+}
+
+// AddPhoneLooking says "Looking for your phone…"
+// in the language the app shows.
+//
+// Add phone › Android: the status line, next to a spinner, while Pinky
+// waits for a newly plugged-in phone.
+func AddPhoneLooking() string { return In(i18n.Locale()).AddPhoneLooking() }
+
+// AddPhoneLooking says "Looking for your phone…"
+// in the language of msgs.
+//
+// Add phone › Android: the status line, next to a spinner, while Pinky
+// waits for a newly plugged-in phone.
+func (msgs Messages) AddPhoneLooking() string {
+	return Catalog.Format(msgs.locale, "addPhoneLooking", nil)
+}
+
+// AddPhoneLookingIPhone says "Looking for your iPhone…"
+// in the language the app shows.
+//
+// Add phone › iPhone: the status line, next to a spinner, while Pinky
+// waits for the iPhone.
+func AddPhoneLookingIPhone() string { return In(i18n.Locale()).AddPhoneLookingIPhone() }
+
+// AddPhoneLookingIPhone says "Looking for your iPhone…"
+// in the language of msgs.
+//
+// Add phone › iPhone: the status line, next to a spinner, while Pinky
+// waits for the iPhone.
+func (msgs Messages) AddPhoneLookingIPhone() string {
+	return Catalog.Format(msgs.locale, "addPhoneLookingIPhone", nil)
+}
+
+// AddPhoneOlderDetail says "Older iPhones work too. Pick how to connect."
+// in the language the app shows.
+//
+// Add phone › older iPhone: the line under the heading "Pair your
+// iPhone", above two ways to connect.
+func AddPhoneOlderDetail() string { return In(i18n.Locale()).AddPhoneOlderDetail() }
+
+// AddPhoneOlderDetail says "Older iPhones work too. Pick how to connect."
+// in the language of msgs.
+//
+// Add phone › older iPhone: the line under the heading "Pair your
+// iPhone", above two ways to connect.
+func (msgs Messages) AddPhoneOlderDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderDetail", nil)
+}
+
+// AddPhoneOlderHelper says "Install the Pinky helper"
+// in the language the app shows.
+//
+// Add phone › older iPhone: the first way to connect, by installing a
+// helper app (WebDriverAgent) on the iPhone. Also its accessibility label.
+func AddPhoneOlderHelper() string { return In(i18n.Locale()).AddPhoneOlderHelper() }
+
+// AddPhoneOlderHelper says "Install the Pinky helper"
+// in the language of msgs.
+//
+// Add phone › older iPhone: the first way to connect, by installing a
+// helper app (WebDriverAgent) on the iPhone. Also its accessibility label.
+func (msgs Messages) AddPhoneOlderHelper() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderHelper", nil)
+}
+
+// AddPhoneOlderHelperDetail says "WebDriverAgent, signed with your Apple ID. With a free Apple ID it needs re-signing every 7 days; a paid developer ac…"
+// in the language the app shows.
+//
+// Add phone › older iPhone: under "Install the Pinky helper", what the
+// helper is and how long its signature lasts. WebDriverAgent is a name.
+func AddPhoneOlderHelperDetail() string { return In(i18n.Locale()).AddPhoneOlderHelperDetail() }
+
+// AddPhoneOlderHelperDetail says "WebDriverAgent, signed with your Apple ID. With a free Apple ID it needs re-signing every 7 days; a paid developer ac…"
+// in the language of msgs.
+//
+// Add phone › older iPhone: under "Install the Pinky helper", what the
+// helper is and how long its signature lasts. WebDriverAgent is a name.
+func (msgs Messages) AddPhoneOlderHelperDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderHelperDetail", nil)
+}
+
+// AddPhoneOlderIPhone says "Try an older iPhone"
+// in the language the app shows.
+//
+// Add phone › iPhone: the quiet button to the right of Pair that switches
+// to the ways of connecting an older iPhone.
+func AddPhoneOlderIPhone() string { return In(i18n.Locale()).AddPhoneOlderIPhone() }
+
+// AddPhoneOlderIPhone says "Try an older iPhone"
+// in the language of msgs.
+//
+// Add phone › iPhone: the quiet button to the right of Pair that switches
+// to the ways of connecting an older iPhone.
+func (msgs Messages) AddPhoneOlderIPhone() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderIPhone", nil)
+}
+
+// AddPhoneOlderMirroring says "Use iPhone Mirroring (this Mac only)"
+// in the language the app shows.
+//
+// Add phone › older iPhone: the second way to connect, through macOS's
+// iPhone Mirroring (use Apple's Simplified Chinese name for it). Also its
+// accessibility label.
+func AddPhoneOlderMirroring() string { return In(i18n.Locale()).AddPhoneOlderMirroring() }
+
+// AddPhoneOlderMirroring says "Use iPhone Mirroring (this Mac only)"
+// in the language of msgs.
+//
+// Add phone › older iPhone: the second way to connect, through macOS's
+// iPhone Mirroring (use Apple's Simplified Chinese name for it). Also its
+// accessibility label.
+func (msgs Messages) AddPhoneOlderMirroring() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderMirroring", nil)
+}
+
+// AddPhoneOlderMirroringDetail says "Nothing to install, but Pinky can read the screen only as an image, so it is slower."
+// in the language the app shows.
+//
+// Add phone › older iPhone: under "Use iPhone Mirroring", its drawback.
+func AddPhoneOlderMirroringDetail() string { return In(i18n.Locale()).AddPhoneOlderMirroringDetail() }
+
+// AddPhoneOlderMirroringDetail says "Nothing to install, but Pinky can read the screen only as an image, so it is slower."
+// in the language of msgs.
+//
+// Add phone › older iPhone: under "Use iPhone Mirroring", its drawback.
+func (msgs Messages) AddPhoneOlderMirroringDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderMirroringDetail", nil)
+}
+
+// AddPhoneOlderNotYet says "This build can't set that up yet: the gateway's iOS backends for older iPhones come in M3."
+// in the language the app shows.
+//
+// Add phone › older iPhone: shown once the person picks a way to connect,
+// as neither works in this build yet. M3 is a milestone of the project.
+func AddPhoneOlderNotYet() string { return In(i18n.Locale()).AddPhoneOlderNotYet() }
+
+// AddPhoneOlderNotYet says "This build can't set that up yet: the gateway's iOS backends for older iPhones come in M3."
+// in the language of msgs.
+//
+// Add phone › older iPhone: shown once the person picks a way to connect,
+// as neither works in this build yet. M3 is a milestone of the project.
+func (msgs Messages) AddPhoneOlderNotYet() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderNotYet", nil)
+}
+
+// AddPhoneOlderTitle says "This iPhone needs one more step"
+// in the language the app shows.
+//
+// Add phone › older iPhone: the heading of the box with the two ways to
+// connect an older iPhone.
+func AddPhoneOlderTitle() string { return In(i18n.Locale()).AddPhoneOlderTitle() }
+
+// AddPhoneOlderTitle says "This iPhone needs one more step"
+// in the language of msgs.
+//
+// Add phone › older iPhone: the heading of the box with the two ways to
+// connect an older iPhone.
+func (msgs Messages) AddPhoneOlderTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderTitle", nil)
+}
+
+// AddPhoneOlderUpdate says "Or update to iOS 27 for the best experience."
+// in the language the app shows.
+//
+// Add phone › older iPhone: the line under the two ways to connect,
+// before the person picks one.
+func AddPhoneOlderUpdate() string { return In(i18n.Locale()).AddPhoneOlderUpdate() }
+
+// AddPhoneOlderUpdate says "Or update to iOS 27 for the best experience."
+// in the language of msgs.
+//
+// Add phone › older iPhone: the line under the two ways to connect,
+// before the person picks one.
+func (msgs Messages) AddPhoneOlderUpdate() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderUpdate", nil)
+}
+
+// AddPhoneOrWiFi says "Or pair over Wi-Fi"
+// in the language the app shows.
+//
+// Add phone › Android: the link under the USB step that switches to
+// pairing the phone over Wi-Fi instead.
+func AddPhoneOrWiFi() string { return In(i18n.Locale()).AddPhoneOrWiFi() }
+
+// AddPhoneOrWiFi says "Or pair over Wi-Fi"
+// in the language of msgs.
+//
+// Add phone › Android: the link under the USB step that switches to
+// pairing the phone over Wi-Fi instead.
+func (msgs Messages) AddPhoneOrWiFi() string {
+	return Catalog.Format(msgs.locale, "addPhoneOrWiFi", nil)
+}
+
+// AddPhoneReady says "{name} is ready"
+// in the language the app shows.
+//
+// Add phone › iPhone: the status line once the iPhone is paired and
+// ready, next to a green dot. name is the iPhone's name.
+func AddPhoneReady(name string) string { return In(i18n.Locale()).AddPhoneReady(name) }
+
+// AddPhoneReady says "{name} is ready"
+// in the language of msgs.
+//
+// Add phone › iPhone: the status line once the iPhone is paired and
+// ready, next to a green dot. name is the iPhone's name.
+func (msgs Messages) AddPhoneReady(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneReady", map[string]any{"name": name})
+}
+
+// AddPhoneTryAgain says "Try again"
+// in the language the app shows.
+//
+// Add phone: the button that looks for the phone again after it needed
+// setup, and that asks for a new QR code after pairing over Wi-Fi failed.
+func AddPhoneTryAgain() string { return In(i18n.Locale()).AddPhoneTryAgain() }
+
+// AddPhoneTryAgain says "Try again"
+// in the language of msgs.
+//
+// Add phone: the button that looks for the phone again after it needed
+// setup, and that asks for a new QR code after pairing over Wi-Fi failed.
+func (msgs Messages) AddPhoneTryAgain() string {
+	return Catalog.Format(msgs.locale, "addPhoneTryAgain", nil)
+}
+
+// AddPhoneUSBStep1 says "Open Settings › About phone and tap Build number 7 times."
+// in the language the app shows.
+//
+// Add phone › Android, USB debugging steps, step 1. Settings, About phone
+// and Build number are Android's own names: use those of Android's
+// Simplified Chinese settings.
+func AddPhoneUSBStep1() string { return In(i18n.Locale()).AddPhoneUSBStep1() }
+
+// AddPhoneUSBStep1 says "Open Settings › About phone and tap Build number 7 times."
+// in the language of msgs.
+//
+// Add phone › Android, USB debugging steps, step 1. Settings, About phone
+// and Build number are Android's own names: use those of Android's
+// Simplified Chinese settings.
+func (msgs Messages) AddPhoneUSBStep1() string {
+	return Catalog.Format(msgs.locale, "addPhoneUSBStep1", nil)
+}
+
+// AddPhoneUSBStep2 says "Go to Settings › System › Developer options."
+// in the language the app shows.
+//
+// Add phone › Android, USB debugging steps, step 2. Settings, System and
+// Developer options are Android's own names.
+func AddPhoneUSBStep2() string { return In(i18n.Locale()).AddPhoneUSBStep2() }
+
+// AddPhoneUSBStep2 says "Go to Settings › System › Developer options."
+// in the language of msgs.
+//
+// Add phone › Android, USB debugging steps, step 2. Settings, System and
+// Developer options are Android's own names.
+func (msgs Messages) AddPhoneUSBStep2() string {
+	return Catalog.Format(msgs.locale, "addPhoneUSBStep2", nil)
+}
+
+// AddPhoneUSBStep3 says "Turn on USB debugging, then tap Allow on the phone."
+// in the language the app shows.
+//
+// Add phone › Android, USB debugging steps, step 3. USB debugging is
+// Android's setting; Allow is the button of the phone's "Allow USB
+// debugging?" prompt.
+func AddPhoneUSBStep3() string { return In(i18n.Locale()).AddPhoneUSBStep3() }
+
+// AddPhoneUSBStep3 says "Turn on USB debugging, then tap Allow on the phone."
+// in the language of msgs.
+//
+// Add phone › Android, USB debugging steps, step 3. USB debugging is
+// Android's setting; Allow is the button of the phone's "Allow USB
+// debugging?" prompt.
+func (msgs Messages) AddPhoneUSBStep3() string {
+	return Catalog.Format(msgs.locale, "addPhoneUSBStep3", nil)
+}
+
+// AddPhoneUSBTitle says "Turn on USB debugging"
+// in the language the app shows.
+//
+// Add phone › Android: the heading of the box of three steps shown when
+// the phone needs USB debugging turned on.
+func AddPhoneUSBTitle() string { return In(i18n.Locale()).AddPhoneUSBTitle() }
+
+// AddPhoneUSBTitle says "Turn on USB debugging"
+// in the language of msgs.
+//
+// Add phone › Android: the heading of the box of three steps shown when
+// the phone needs USB debugging turned on.
+func (msgs Messages) AddPhoneUSBTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneUSBTitle", nil)
+}
+
 // AgentGeneric says "the agent"
 // in the language the app shows.
 //
@@ -481,6 +1073,480 @@ func CallTakeOver() string { return In(i18n.Locale()).CallTakeOver() }
 // Inside toastCouldNot: taking over a phone failed.
 func (msgs Messages) CallTakeOver() string {
 	return Catalog.Format(msgs.locale, "callTakeOver", nil)
+}
+
+// CompanionAllowHint says "If the phone asks, allow the install."
+// in the language the app shows.
+//
+// The Pinky Companion card: under the progress bar while the app installs,
+// and in small type under the buttons before.
+func CompanionAllowHint() string { return In(i18n.Locale()).CompanionAllowHint() }
+
+// CompanionAllowHint says "If the phone asks, allow the install."
+// in the language of msgs.
+//
+// The Pinky Companion card: under the progress bar while the app installs,
+// and in small type under the buttons before.
+func (msgs Messages) CompanionAllowHint() string {
+	return Catalog.Format(msgs.locale, "companionAllowHint", nil)
+}
+
+// CompanionCardLabel says "Pinky Companion on {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Pinky Companion card. name is the phone's
+// name.
+func CompanionCardLabel(name string) string { return In(i18n.Locale()).CompanionCardLabel(name) }
+
+// CompanionCardLabel says "Pinky Companion on {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Pinky Companion card. name is the phone's
+// name.
+func (msgs Messages) CompanionCardLabel(name string) string {
+	return Catalog.Format(msgs.locale, "companionCardLabel", map[string]any{"name": name})
+}
+
+// CompanionErrOffline says "The phone went offline. Connect it again, then try again."
+// in the language the app shows.
+//
+// The Pinky Companion card: the error when the phone went offline during
+// the install.
+func CompanionErrOffline() string { return In(i18n.Locale()).CompanionErrOffline() }
+
+// CompanionErrOffline says "The phone went offline. Connect it again, then try again."
+// in the language of msgs.
+//
+// The Pinky Companion card: the error when the phone went offline during
+// the install.
+func (msgs Messages) CompanionErrOffline() string {
+	return Catalog.Format(msgs.locale, "companionErrOffline", nil)
+}
+
+// CompanionErrOther says "Couldn't install Pinky Companion: {detail}"
+// in the language the app shows.
+//
+// The Pinky Companion card: the error when the install failed for another
+// reason. detail is the error, in English.
+func CompanionErrOther(detail string) string { return In(i18n.Locale()).CompanionErrOther(detail) }
+
+// CompanionErrOther says "Couldn't install Pinky Companion: {detail}"
+// in the language of msgs.
+//
+// The Pinky Companion card: the error when the install failed for another
+// reason. detail is the error, in English.
+func (msgs Messages) CompanionErrOther(detail string) string {
+	return Catalog.Format(msgs.locale, "companionErrOther", map[string]any{"detail": detail})
+}
+
+// CompanionErrPlayProtect says "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again."
+// in the language the app shows.
+//
+// The Pinky Companion card: the error when Google Play Protect stopped the
+// install. Install anyway is the button of Play Protect's prompt.
+func CompanionErrPlayProtect() string { return In(i18n.Locale()).CompanionErrPlayProtect() }
+
+// CompanionErrPlayProtect says "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again."
+// in the language of msgs.
+//
+// The Pinky Companion card: the error when Google Play Protect stopped the
+// install. Install anyway is the button of Play Protect's prompt.
+func (msgs Messages) CompanionErrPlayProtect() string {
+	return Catalog.Format(msgs.locale, "companionErrPlayProtect", nil)
+}
+
+// CompanionErrRestricted says "The phone blocked the install. Turn on Install via USB in Developer options, then try again."
+// in the language the app shows.
+//
+// The Pinky Companion card: the error when the phone blocked installs over
+// USB. Install via USB is the Developer options setting of Xiaomi phones:
+// use its Simplified Chinese name.
+func CompanionErrRestricted() string { return In(i18n.Locale()).CompanionErrRestricted() }
+
+// CompanionErrRestricted says "The phone blocked the install. Turn on Install via USB in Developer options, then try again."
+// in the language of msgs.
+//
+// The Pinky Companion card: the error when the phone blocked installs over
+// USB. Install via USB is the Developer options setting of Xiaomi phones:
+// use its Simplified Chinese name.
+func (msgs Messages) CompanionErrRestricted() string {
+	return Catalog.Format(msgs.locale, "companionErrRestricted", nil)
+}
+
+// CompanionErrStorage says "The phone is out of space. Free some up, then try again."
+// in the language the app shows.
+//
+// The Pinky Companion card: the error when the phone has no room for the
+// app.
+func CompanionErrStorage() string { return In(i18n.Locale()).CompanionErrStorage() }
+
+// CompanionErrStorage says "The phone is out of space. Free some up, then try again."
+// in the language of msgs.
+//
+// The Pinky Companion card: the error when the phone has no room for the
+// app.
+func (msgs Messages) CompanionErrStorage() string {
+	return Catalog.Format(msgs.locale, "companionErrStorage", nil)
+}
+
+// CompanionErrTimeout says "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again."
+// in the language the app shows.
+//
+// The Pinky Companion card: the error when the install did not finish in
+// time. Allow is the button of the phone's install prompt.
+func CompanionErrTimeout() string { return In(i18n.Locale()).CompanionErrTimeout() }
+
+// CompanionErrTimeout says "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again."
+// in the language of msgs.
+//
+// The Pinky Companion card: the error when the install did not finish in
+// time. Allow is the button of the phone's install prompt.
+func (msgs Messages) CompanionErrTimeout() string {
+	return Catalog.Format(msgs.locale, "companionErrTimeout", nil)
+}
+
+// CompanionInstall says "Install"
+// in the language the app shows.
+//
+// The Pinky Companion card: the button that installs the app on the phone.
+func CompanionInstall() string { return In(i18n.Locale()).CompanionInstall() }
+
+// CompanionInstall says "Install"
+// in the language of msgs.
+//
+// The Pinky Companion card: the button that installs the app on the phone.
+func (msgs Messages) CompanionInstall() string {
+	return Catalog.Format(msgs.locale, "companionInstall", nil)
+}
+
+// CompanionInstallBody says "A small Pinky app for {name}. Agents control the phone faster and more steadily with it, and type without using its c…"
+// in the language the app shows.
+//
+// The Pinky Companion card, when the app is not installed: why to install
+// it. name is the phone's name. The card is in a narrow side panel.
+func CompanionInstallBody(name string) string { return In(i18n.Locale()).CompanionInstallBody(name) }
+
+// CompanionInstallBody says "A small Pinky app for {name}. Agents control the phone faster and more steadily with it, and type without using its c…"
+// in the language of msgs.
+//
+// The Pinky Companion card, when the app is not installed: why to install
+// it. name is the phone's name. The card is in a narrow side panel.
+func (msgs Messages) CompanionInstallBody(name string) string {
+	return Catalog.Format(msgs.locale, "companionInstallBody", map[string]any{"name": name})
+}
+
+// CompanionInstallLabel says "Install Pinky Companion on {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Install button of the Pinky Companion
+// card. name is the phone's name.
+func CompanionInstallLabel(name string) string { return In(i18n.Locale()).CompanionInstallLabel(name) }
+
+// CompanionInstallLabel says "Install Pinky Companion on {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Install button of the Pinky Companion
+// card. name is the phone's name.
+func (msgs Messages) CompanionInstallLabel(name string) string {
+	return Catalog.Format(msgs.locale, "companionInstallLabel", map[string]any{"name": name})
+}
+
+// CompanionInstallTitle says "Install Pinky Companion"
+// in the language the app shows.
+//
+// The title of the card on an Android phone's side panel that offers to
+// install Pinky Companion, Pinky's app for the phone.
+func CompanionInstallTitle() string { return In(i18n.Locale()).CompanionInstallTitle() }
+
+// CompanionInstallTitle says "Install Pinky Companion"
+// in the language of msgs.
+//
+// The title of the card on an Android phone's side panel that offers to
+// install Pinky Companion, Pinky's app for the phone.
+func (msgs Messages) CompanionInstallTitle() string {
+	return Catalog.Format(msgs.locale, "companionInstallTitle", nil)
+}
+
+// CompanionInstalling says "Installing"
+// in the language the app shows.
+//
+// The Pinky Companion card: the accessibility label of the progress bar
+// while the app installs.
+func CompanionInstalling() string { return In(i18n.Locale()).CompanionInstalling() }
+
+// CompanionInstalling says "Installing"
+// in the language of msgs.
+//
+// The Pinky Companion card: the accessibility label of the progress bar
+// while the app installs.
+func (msgs Messages) CompanionInstalling() string {
+	return Catalog.Format(msgs.locale, "companionInstalling", nil)
+}
+
+// CompanionInstallingTitle says "Installing Pinky Companion"
+// in the language the app shows.
+//
+// The Pinky Companion card's title while Pinky installs or updates the app.
+func CompanionInstallingTitle() string { return In(i18n.Locale()).CompanionInstallingTitle() }
+
+// CompanionInstallingTitle says "Installing Pinky Companion"
+// in the language of msgs.
+//
+// The Pinky Companion card's title while Pinky installs or updates the app.
+func (msgs Messages) CompanionInstallingTitle() string {
+	return Catalog.Format(msgs.locale, "companionInstallingTitle", nil)
+}
+
+// CompanionLineMissing says "Pinky Companion is not installed"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the app is
+// not on the phone.
+func CompanionLineMissing() string { return In(i18n.Locale()).CompanionLineMissing() }
+
+// CompanionLineMissing says "Pinky Companion is not installed"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the app is
+// not on the phone.
+func (msgs Messages) CompanionLineMissing() string {
+	return Catalog.Format(msgs.locale, "companionLineMissing", nil)
+}
+
+// CompanionLineNoAPK says "This Pinky has no companion app to install"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky Companion when this build
+// of Pinky does not include the app.
+func CompanionLineNoAPK() string { return In(i18n.Locale()).CompanionLineNoAPK() }
+
+// CompanionLineNoAPK says "This Pinky has no companion app to install"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky Companion when this build
+// of Pinky does not include the app.
+func (msgs Messages) CompanionLineNoAPK() string {
+	return Catalog.Format(msgs.locale, "companionLineNoAPK", nil)
+}
+
+// CompanionLineOff says "Pinky Companion is installed but off"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the app is
+// installed but its service is off.
+func CompanionLineOff() string { return In(i18n.Locale()).CompanionLineOff() }
+
+// CompanionLineOff says "Pinky Companion is installed but off"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the app is
+// installed but its service is off.
+func (msgs Messages) CompanionLineOff() string {
+	return Catalog.Format(msgs.locale, "companionLineOff", nil)
+}
+
+// CompanionLineOn says "Pinky Companion is on"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky Companion, Pinky's app
+// for the phone, when it runs.
+func CompanionLineOn() string { return In(i18n.Locale()).CompanionLineOn() }
+
+// CompanionLineOn says "Pinky Companion is on"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky Companion, Pinky's app
+// for the phone, when it runs.
+func (msgs Messages) CompanionLineOn() string {
+	return Catalog.Format(msgs.locale, "companionLineOn", nil)
+}
+
+// CompanionLineOutdated says "Pinky Companion has an update"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky Companion when this Pinky
+// comes with a newer version.
+func CompanionLineOutdated() string { return In(i18n.Locale()).CompanionLineOutdated() }
+
+// CompanionLineOutdated says "Pinky Companion has an update"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky Companion when this Pinky
+// comes with a newer version.
+func (msgs Messages) CompanionLineOutdated() string {
+	return Catalog.Format(msgs.locale, "companionLineOutdated", nil)
+}
+
+// CompanionNotNow says "Not now"
+// in the language the app shows.
+//
+// The Pinky Companion card: the quiet button that hides the card for this
+// phone.
+func CompanionNotNow() string { return In(i18n.Locale()).CompanionNotNow() }
+
+// CompanionNotNow says "Not now"
+// in the language of msgs.
+//
+// The Pinky Companion card: the quiet button that hides the card for this
+// phone.
+func (msgs Messages) CompanionNotNow() string {
+	return Catalog.Format(msgs.locale, "companionNotNow", nil)
+}
+
+// CompanionOnToast says "Pinky Companion is on for {name}"
+// in the language the app shows.
+//
+// A notice after Pinky installed, updated or turned on Pinky Companion, its
+// app for Android phones. name is the phone's name.
+func CompanionOnToast(name string) string { return In(i18n.Locale()).CompanionOnToast(name) }
+
+// CompanionOnToast says "Pinky Companion is on for {name}"
+// in the language of msgs.
+//
+// A notice after Pinky installed, updated or turned on Pinky Companion, its
+// app for Android phones. name is the phone's name.
+func (msgs Messages) CompanionOnToast(name string) string {
+	return Catalog.Format(msgs.locale, "companionOnToast", map[string]any{"name": name})
+}
+
+// CompanionStillWaiting says "Still waiting for the phone. Look for a prompt on its screen."
+// in the language the app shows.
+//
+// The Pinky Companion card: when the install has taken more than 20
+// seconds, as the phone may be asking to allow it.
+func CompanionStillWaiting() string { return In(i18n.Locale()).CompanionStillWaiting() }
+
+// CompanionStillWaiting says "Still waiting for the phone. Look for a prompt on its screen."
+// in the language of msgs.
+//
+// The Pinky Companion card: when the install has taken more than 20
+// seconds, as the phone may be asking to allow it.
+func (msgs Messages) CompanionStillWaiting() string {
+	return Catalog.Format(msgs.locale, "companionStillWaiting", nil)
+}
+
+// CompanionTurnOn says "Turn on"
+// in the language the app shows.
+//
+// The Pinky Companion card: the button that turns the app's service on.
+func CompanionTurnOn() string { return In(i18n.Locale()).CompanionTurnOn() }
+
+// CompanionTurnOn says "Turn on"
+// in the language of msgs.
+//
+// The Pinky Companion card: the button that turns the app's service on.
+func (msgs Messages) CompanionTurnOn() string {
+	return Catalog.Format(msgs.locale, "companionTurnOn", nil)
+}
+
+// CompanionTurnOnBody says "The app is installed, but its service is off, so agents control the phone the slower way. Pinky can turn it on."
+// in the language the app shows.
+//
+// The Pinky Companion card, when the app's service is off: why to turn it
+// on.
+func CompanionTurnOnBody() string { return In(i18n.Locale()).CompanionTurnOnBody() }
+
+// CompanionTurnOnBody says "The app is installed, but its service is off, so agents control the phone the slower way. Pinky can turn it on."
+// in the language of msgs.
+//
+// The Pinky Companion card, when the app's service is off: why to turn it
+// on.
+func (msgs Messages) CompanionTurnOnBody() string {
+	return Catalog.Format(msgs.locale, "companionTurnOnBody", nil)
+}
+
+// CompanionTurnOnLabel says "Turn on Pinky Companion on {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Turn on button of the Pinky Companion
+// card. name is the phone's name.
+func CompanionTurnOnLabel(name string) string { return In(i18n.Locale()).CompanionTurnOnLabel(name) }
+
+// CompanionTurnOnLabel says "Turn on Pinky Companion on {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Turn on button of the Pinky Companion
+// card. name is the phone's name.
+func (msgs Messages) CompanionTurnOnLabel(name string) string {
+	return Catalog.Format(msgs.locale, "companionTurnOnLabel", map[string]any{"name": name})
+}
+
+// CompanionTurnOnTitle says "Turn on Pinky Companion"
+// in the language the app shows.
+//
+// The title of the card that offers to turn on Pinky Companion's service
+// when the app is installed but off.
+func CompanionTurnOnTitle() string { return In(i18n.Locale()).CompanionTurnOnTitle() }
+
+// CompanionTurnOnTitle says "Turn on Pinky Companion"
+// in the language of msgs.
+//
+// The title of the card that offers to turn on Pinky Companion's service
+// when the app is installed but off.
+func (msgs Messages) CompanionTurnOnTitle() string {
+	return Catalog.Format(msgs.locale, "companionTurnOnTitle", nil)
+}
+
+// CompanionUpdate says "Update"
+// in the language the app shows.
+//
+// The Pinky Companion card: the button that updates the app on the phone.
+func CompanionUpdate() string { return In(i18n.Locale()).CompanionUpdate() }
+
+// CompanionUpdate says "Update"
+// in the language of msgs.
+//
+// The Pinky Companion card: the button that updates the app on the phone.
+func (msgs Messages) CompanionUpdate() string {
+	return Catalog.Format(msgs.locale, "companionUpdate", nil)
+}
+
+// CompanionUpdateBody says "This Pinky comes with a newer version of its app for the phone. Updating keeps control fast and steady."
+// in the language the app shows.
+//
+// The Pinky Companion card, when the phone has an older version: why to
+// update it.
+func CompanionUpdateBody() string { return In(i18n.Locale()).CompanionUpdateBody() }
+
+// CompanionUpdateBody says "This Pinky comes with a newer version of its app for the phone. Updating keeps control fast and steady."
+// in the language of msgs.
+//
+// The Pinky Companion card, when the phone has an older version: why to
+// update it.
+func (msgs Messages) CompanionUpdateBody() string {
+	return Catalog.Format(msgs.locale, "companionUpdateBody", nil)
+}
+
+// CompanionUpdateLabel says "Update Pinky Companion on {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Update button of the Pinky Companion card.
+// name is the phone's name.
+func CompanionUpdateLabel(name string) string { return In(i18n.Locale()).CompanionUpdateLabel(name) }
+
+// CompanionUpdateLabel says "Update Pinky Companion on {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Update button of the Pinky Companion card.
+// name is the phone's name.
+func (msgs Messages) CompanionUpdateLabel(name string) string {
+	return Catalog.Format(msgs.locale, "companionUpdateLabel", map[string]any{"name": name})
+}
+
+// CompanionUpdateTitle says "Update Pinky Companion"
+// in the language the app shows.
+//
+// The title of the card that offers to update Pinky Companion on the phone
+// to the version this Pinky comes with.
+func CompanionUpdateTitle() string { return In(i18n.Locale()).CompanionUpdateTitle() }
+
+// CompanionUpdateTitle says "Update Pinky Companion"
+// in the language of msgs.
+//
+// The title of the card that offers to update Pinky Companion on the phone
+// to the version this Pinky comes with.
+func (msgs Messages) CompanionUpdateTitle() string {
+	return Catalog.Format(msgs.locale, "companionUpdateTitle", nil)
 }
 
 // ConnectionOffline says "{platform} · offline"
@@ -683,6 +1749,198 @@ func ExportTask() string { return In(i18n.Locale()).ExportTask() }
 // folder on the Desktop.
 func (msgs Messages) ExportTask() string {
 	return Catalog.Format(msgs.locale, "exportTask", nil)
+}
+
+// FlyoutLocked says "Locked"
+// in the language the app shows.
+//
+// Menu bar flyout: what a locked phone's Needs you row says after the
+// phone's name.
+func FlyoutLocked() string { return In(i18n.Locale()).FlyoutLocked() }
+
+// FlyoutLocked says "Locked"
+// in the language of msgs.
+//
+// Menu bar flyout: what a locked phone's Needs you row says after the
+// phone's name.
+func (msgs Messages) FlyoutLocked() string {
+	return Catalog.Format(msgs.locale, "flyoutLocked", nil)
+}
+
+// FlyoutMenuStopAll says "Stop All"
+// in the language the app shows.
+//
+// Item of the menu bar icon's menu: stops every agent on every phone at
+// once.
+func FlyoutMenuStopAll() string { return In(i18n.Locale()).FlyoutMenuStopAll() }
+
+// FlyoutMenuStopAll says "Stop All"
+// in the language of msgs.
+//
+// Item of the menu bar icon's menu: stops every agent on every phone at
+// once.
+func (msgs Messages) FlyoutMenuStopAll() string {
+	return Catalog.Format(msgs.locale, "flyoutMenuStopAll", nil)
+}
+
+// FlyoutNeedLabel says "{phone}, {title}"
+// in the language the app shows.
+//
+// The accessibility label of a Needs you row in the menu bar flyout: the
+// phone and what waits for the person.
+func FlyoutNeedLabel(phone string, title string) string {
+	return In(i18n.Locale()).FlyoutNeedLabel(phone, title)
+}
+
+// FlyoutNeedLabel says "{phone}, {title}"
+// in the language of msgs.
+//
+// The accessibility label of a Needs you row in the menu bar flyout: the
+// phone and what waits for the person.
+func (msgs Messages) FlyoutNeedLabel(phone string, title string) string {
+	return Catalog.Format(msgs.locale, "flyoutNeedLabel", map[string]any{"phone": phone, "title": title})
+}
+
+// FlyoutNoPhones says "No phones connected"
+// in the language the app shows.
+//
+// Menu bar flyout: in place of the phones when there are none.
+func FlyoutNoPhones() string { return In(i18n.Locale()).FlyoutNoPhones() }
+
+// FlyoutNoPhones says "No phones connected"
+// in the language of msgs.
+//
+// Menu bar flyout: in place of the phones when there are none.
+func (msgs Messages) FlyoutNoPhones() string {
+	return Catalog.Format(msgs.locale, "flyoutNoPhones", nil)
+}
+
+// FlyoutOpenPinky says "Open Pinky"
+// in the language the app shows.
+//
+// Item of the menu bar icon's menu and row of the menu bar flyout: shows
+// Pinky's main window.
+func FlyoutOpenPinky() string { return In(i18n.Locale()).FlyoutOpenPinky() }
+
+// FlyoutOpenPinky says "Open Pinky"
+// in the language of msgs.
+//
+// Item of the menu bar icon's menu and row of the menu bar flyout: shows
+// Pinky's main window.
+func (msgs Messages) FlyoutOpenPinky() string {
+	return Catalog.Format(msgs.locale, "flyoutOpenPinky", nil)
+}
+
+// FlyoutPhoneLabel says "{phone}, {status}"
+// in the language the app shows.
+//
+// The accessibility label of a phone's row in the menu bar flyout: its name
+// and status line.
+func FlyoutPhoneLabel(phone string, status string) string {
+	return In(i18n.Locale()).FlyoutPhoneLabel(phone, status)
+}
+
+// FlyoutPhoneLabel says "{phone}, {status}"
+// in the language of msgs.
+//
+// The accessibility label of a phone's row in the menu bar flyout: its name
+// and status line.
+func (msgs Messages) FlyoutPhoneLabel(phone string, status string) string {
+	return Catalog.Format(msgs.locale, "flyoutPhoneLabel", map[string]any{"phone": phone, "status": status})
+}
+
+// FlyoutPhones says "Phones"
+// in the language the app shows.
+//
+// Menu bar flyout: the heading above the phones.
+func FlyoutPhones() string { return In(i18n.Locale()).FlyoutPhones() }
+
+// FlyoutPhones says "Phones"
+// in the language of msgs.
+//
+// Menu bar flyout: the heading above the phones.
+func (msgs Messages) FlyoutPhones() string {
+	return Catalog.Format(msgs.locale, "flyoutPhones", nil)
+}
+
+// FlyoutReview says "Review"
+// in the language the app shows.
+//
+// Menu bar flyout: the action at the end of a Needs you row; a click opens
+// the approval.
+func FlyoutReview() string { return In(i18n.Locale()).FlyoutReview() }
+
+// FlyoutReview says "Review"
+// in the language of msgs.
+//
+// Menu bar flyout: the action at the end of a Needs you row; a click opens
+// the approval.
+func (msgs Messages) FlyoutReview() string {
+	return Catalog.Format(msgs.locale, "flyoutReview", nil)
+}
+
+// FlyoutShowPhones says "Show Phones…"
+// in the language the app shows.
+//
+// Item of the menu bar icon's menu (the only way to it on Linux, whose tray
+// icons get no clicks): opens the flyout with the phones.
+func FlyoutShowPhones() string { return In(i18n.Locale()).FlyoutShowPhones() }
+
+// FlyoutShowPhones says "Show Phones…"
+// in the language of msgs.
+//
+// Item of the menu bar icon's menu (the only way to it on Linux, whose tray
+// icons get no clicks): opens the flyout with the phones.
+func (msgs Messages) FlyoutShowPhones() string {
+	return Catalog.Format(msgs.locale, "flyoutShowPhones", nil)
+}
+
+// FlyoutStopAll says "Stop all"
+// in the language the app shows.
+//
+// The menu bar flyout's last row, in red, with its shortcut: stops every
+// agent on every phone at once.
+func FlyoutStopAll() string { return In(i18n.Locale()).FlyoutStopAll() }
+
+// FlyoutStopAll says "Stop all"
+// in the language of msgs.
+//
+// The menu bar flyout's last row, in red, with its shortcut: stops every
+// agent on every phone at once.
+func (msgs Messages) FlyoutStopAll() string {
+	return Catalog.Format(msgs.locale, "flyoutStopAll", nil)
+}
+
+// FlyoutTrayTooltip says "Pinky · {count, plural, one {# thing needs you} other {# things need you}}"
+// in the language the app shows.
+//
+// The tooltip of Pinky's menu bar icon while approvals, handoffs or locked
+// phones wait for the person.
+func FlyoutTrayTooltip(count int) string { return In(i18n.Locale()).FlyoutTrayTooltip(count) }
+
+// FlyoutTrayTooltip says "Pinky · {count, plural, one {# thing needs you} other {# things need you}}"
+// in the language of msgs.
+//
+// The tooltip of Pinky's menu bar icon while approvals, handoffs or locked
+// phones wait for the person.
+func (msgs Messages) FlyoutTrayTooltip(count int) string {
+	return Catalog.Format(msgs.locale, "flyoutTrayTooltip", map[string]any{"count": count})
+}
+
+// FlyoutUnlock says "Unlock"
+// in the language the app shows.
+//
+// Menu bar flyout: the action at the end of a locked phone's Needs you row;
+// a click opens the phone to unlock it.
+func FlyoutUnlock() string { return In(i18n.Locale()).FlyoutUnlock() }
+
+// FlyoutUnlock says "Unlock"
+// in the language of msgs.
+//
+// Menu bar flyout: the action at the end of a locked phone's Needs you row;
+// a click opens the phone to unlock it.
+func (msgs Messages) FlyoutUnlock() string {
+	return Catalog.Format(msgs.locale, "flyoutUnlock", nil)
 }
 
 // GwAgentGives says " Allowing gives it {scope} access."
@@ -2935,6 +4193,2330 @@ func (msgs Messages) MirrorUnsupported() string {
 	return Catalog.Format(msgs.locale, "mirrorUnsupported", nil)
 }
 
+// NeedsAddNote says "Add a note"
+// in the language the app shows.
+//
+// Link on a handoff card that opens a field for a note to the agent.
+func NeedsAddNote() string { return In(i18n.Locale()).NeedsAddNote() }
+
+// NeedsAddNote says "Add a note"
+// in the language of msgs.
+//
+// Link on a handoff card that opens a field for a note to the agent.
+func (msgs Messages) NeedsAddNote() string {
+	return Catalog.Format(msgs.locale, "needsAddNote", nil)
+}
+
+// NeedsAllow says "Allow"
+// in the language the app shows.
+//
+// Primary button that allows the step once: on approval cards and in the
+// floating approval panel.
+func NeedsAllow() string { return In(i18n.Locale()).NeedsAllow() }
+
+// NeedsAllow says "Allow"
+// in the language of msgs.
+//
+// Primary button that allows the step once: on approval cards and in the
+// floating approval panel.
+func (msgs Messages) NeedsAllow() string {
+	return Catalog.Format(msgs.locale, "needsAllow", nil)
+}
+
+// NeedsAllowTask says "Allow for this task"
+// in the language the app shows.
+//
+// Item of More options: allow steps like this one until the agent's task
+// ends.
+func NeedsAllowTask() string { return In(i18n.Locale()).NeedsAllowTask() }
+
+// NeedsAllowTask says "Allow for this task"
+// in the language of msgs.
+//
+// Item of More options: allow steps like this one until the agent's task
+// ends.
+func (msgs Messages) NeedsAllowTask() string {
+	return Catalog.Format(msgs.locale, "needsAllowTask", nil)
+}
+
+// NeedsAlwaysAllow says "Always allow {kind}"
+// in the language the app shows.
+//
+// Item of More options: never ask again for steps like this one. kind says
+// what they are, from the rule that asked (zh 付款, 发送消息,
+// 更改设置, 执行所有操作), or "this kind" (zh 此类操作) when
+// no rule is named.
+func NeedsAlwaysAllow(kind string) string { return In(i18n.Locale()).NeedsAlwaysAllow(kind) }
+
+// NeedsAlwaysAllow says "Always allow {kind}"
+// in the language of msgs.
+//
+// Item of More options: never ask again for steps like this one. kind says
+// what they are, from the rule that asked (zh 付款, 发送消息,
+// 更改设置, 执行所有操作), or "this kind" (zh 此类操作) when
+// no rule is named.
+func (msgs Messages) NeedsAlwaysAllow(kind string) string {
+	return Catalog.Format(msgs.locale, "needsAlwaysAllow", map[string]any{"kind": kind})
+}
+
+// NeedsAlwaysAllowIn says "Always allow {kind} in {app}"
+// in the language the app shows.
+//
+// Item of More options on an approval card: never ask again for steps like
+// this one in this app. kind says what they are, from the rule that asked
+// (zh 付款, 发送消息, 更改设置, 执行所有操作); app is the
+// app's name.
+func NeedsAlwaysAllowIn(kind string, app string) string {
+	return In(i18n.Locale()).NeedsAlwaysAllowIn(kind, app)
+}
+
+// NeedsAlwaysAllowIn says "Always allow {kind} in {app}"
+// in the language of msgs.
+//
+// Item of More options on an approval card: never ask again for steps like
+// this one in this app. kind says what they are, from the rule that asked
+// (zh 付款, 发送消息, 更改设置, 执行所有操作); app is the
+// app's name.
+func (msgs Messages) NeedsAlwaysAllowIn(kind string, app string) string {
+	return Catalog.Format(msgs.locale, "needsAlwaysAllowIn", map[string]any{"kind": kind, "app": app})
+}
+
+// NeedsAndTasksLabel says "Needs you and tasks"
+// in the language the app shows.
+//
+// The accessibility label of the Phones page's right-hand column, which
+// holds the Needs you cards and the Tasks.
+func NeedsAndTasksLabel() string { return In(i18n.Locale()).NeedsAndTasksLabel() }
+
+// NeedsAndTasksLabel says "Needs you and tasks"
+// in the language of msgs.
+//
+// The accessibility label of the Phones page's right-hand column, which
+// holds the Needs you cards and the Tasks.
+func (msgs Messages) NeedsAndTasksLabel() string {
+	return Catalog.Format(msgs.locale, "needsAndTasksLabel", nil)
+}
+
+// NeedsApprove says "Approve"
+// in the language the app shows.
+//
+// Primary button on an agent's first-connection card: lets the agent use
+// the phones as chosen above it.
+func NeedsApprove() string { return In(i18n.Locale()).NeedsApprove() }
+
+// NeedsApprove says "Approve"
+// in the language of msgs.
+//
+// Primary button on an agent's first-connection card: lets the agent use
+// the phones as chosen above it.
+func (msgs Messages) NeedsApprove() string {
+	return Catalog.Format(msgs.locale, "needsApprove", nil)
+}
+
+// NeedsApproveNoApps says "Name at least one app"
+// in the language the app shows.
+//
+// The tooltip of the disabled Approve button on a first-connection card,
+// when "Only the apps I choose" is chosen and no app is named yet.
+func NeedsApproveNoApps() string { return In(i18n.Locale()).NeedsApproveNoApps() }
+
+// NeedsApproveNoApps says "Name at least one app"
+// in the language of msgs.
+//
+// The tooltip of the disabled Approve button on a first-connection card,
+// when "Only the apps I choose" is chosen and no app is named yet.
+func (msgs Messages) NeedsApproveNoApps() string {
+	return Catalog.Format(msgs.locale, "needsApproveNoApps", nil)
+}
+
+// NeedsDecline says "Decline"
+// in the language the app shows.
+//
+// Button (or link) on a handoff card: tells the agent the person won't do
+// what it asked.
+func NeedsDecline() string { return In(i18n.Locale()).NeedsDecline() }
+
+// NeedsDecline says "Decline"
+// in the language of msgs.
+//
+// Button (or link) on a handoff card: tells the agent the person won't do
+// what it asked.
+func (msgs Messages) NeedsDecline() string {
+	return Catalog.Format(msgs.locale, "needsDecline", nil)
+}
+
+// NeedsDeclineTooltip says "Tell {agent} no"
+// in the language the app shows.
+//
+// The tooltip of Decline on a handoff card.
+func NeedsDeclineTooltip(agent string) string { return In(i18n.Locale()).NeedsDeclineTooltip(agent) }
+
+// NeedsDeclineTooltip says "Tell {agent} no"
+// in the language of msgs.
+//
+// The tooltip of Decline on a handoff card.
+func (msgs Messages) NeedsDeclineTooltip(agent string) string {
+	return Catalog.Format(msgs.locale, "needsDeclineTooltip", map[string]any{"agent": agent})
+}
+
+// NeedsDeny says "Deny"
+// in the language the app shows.
+//
+// Button that denies an approval or an agent's first connection: on Needs
+// you cards and in the floating approval panel.
+func NeedsDeny() string { return In(i18n.Locale()).NeedsDeny() }
+
+// NeedsDeny says "Deny"
+// in the language of msgs.
+//
+// Button that denies an approval or an agent's first connection: on Needs
+// you cards and in the floating approval panel.
+func (msgs Messages) NeedsDeny() string {
+	return Catalog.Format(msgs.locale, "needsDeny", nil)
+}
+
+// NeedsDenyNotePlaceholder says "Why not, or what to do instead"
+// in the language the app shows.
+//
+// The placeholder of the note field after Deny with a note, on an approval
+// card: why the person said no, or what the agent should do instead.
+func NeedsDenyNotePlaceholder() string { return In(i18n.Locale()).NeedsDenyNotePlaceholder() }
+
+// NeedsDenyNotePlaceholder says "Why not, or what to do instead"
+// in the language of msgs.
+//
+// The placeholder of the note field after Deny with a note, on an approval
+// card: why the person said no, or what the agent should do instead.
+func (msgs Messages) NeedsDenyNotePlaceholder() string {
+	return Catalog.Format(msgs.locale, "needsDenyNotePlaceholder", nil)
+}
+
+// NeedsDenyWithNote says "Deny with a note"
+// in the language the app shows.
+//
+// Item of More options: opens a field for a note to the agent, then Deny
+// sends it with the answer.
+func NeedsDenyWithNote() string { return In(i18n.Locale()).NeedsDenyWithNote() }
+
+// NeedsDenyWithNote says "Deny with a note"
+// in the language of msgs.
+//
+// Item of More options: opens a field for a note to the agent, then Deny
+// sends it with the answer.
+func (msgs Messages) NeedsDenyWithNote() string {
+	return Catalog.Format(msgs.locale, "needsDenyWithNote", nil)
+}
+
+// NeedsDone says "Done"
+// in the language the app shows.
+//
+// Button on a handoff card: the person did what the agent asked, and the
+// phone goes back to the agent, with the note if there is one.
+func NeedsDone() string { return In(i18n.Locale()).NeedsDone() }
+
+// NeedsDone says "Done"
+// in the language of msgs.
+//
+// Button on a handoff card: the person did what the agent asked, and the
+// phone goes back to the agent, with the note if there is one.
+func (msgs Messages) NeedsDone() string {
+	return Catalog.Format(msgs.locale, "needsDone", nil)
+}
+
+// NeedsDoneTooltip says "Hand the phone back to {agent}"
+// in the language the app shows.
+//
+// The tooltip of Done on a handoff card.
+func NeedsDoneTooltip(agent string) string { return In(i18n.Locale()).NeedsDoneTooltip(agent) }
+
+// NeedsDoneTooltip says "Hand the phone back to {agent}"
+// in the language of msgs.
+//
+// The tooltip of Done on a handoff card.
+func (msgs Messages) NeedsDoneTooltip(agent string) string {
+	return Catalog.Format(msgs.locale, "needsDoneTooltip", map[string]any{"agent": agent})
+}
+
+// NeedsFirstConnection says "First connection"
+// in the language the app shows.
+//
+// The small line above a card's title when an agent connects for the first
+// time and asks to use the phones. Other cards show the phone and app
+// there, as "Pixel 9 · Dinely".
+func NeedsFirstConnection() string { return In(i18n.Locale()).NeedsFirstConnection() }
+
+// NeedsFirstConnection says "First connection"
+// in the language of msgs.
+//
+// The small line above a card's title when an agent connects for the first
+// time and asks to use the phones. Other cards show the phone and app
+// there, as "Pixel 9 · Dinely".
+func (msgs Messages) NeedsFirstConnection() string {
+	return Catalog.Format(msgs.locale, "needsFirstConnection", nil)
+}
+
+// NeedsHandoffHowTo says "Do it on the phone and click Done, or take over to do it here."
+// in the language the app shows.
+//
+// A handoff card: the agent asked the person to do something on the phone
+// (its request is the card's title). Done and Take over are the card's
+// buttons.
+func NeedsHandoffHowTo() string { return In(i18n.Locale()).NeedsHandoffHowTo() }
+
+// NeedsHandoffHowTo says "Do it on the phone and click Done, or take over to do it here."
+// in the language of msgs.
+//
+// A handoff card: the agent asked the person to do something on the phone
+// (its request is the card's title). Done and Take over are the card's
+// buttons.
+func (msgs Messages) NeedsHandoffHowTo() string {
+	return Catalog.Format(msgs.locale, "needsHandoffHowTo", nil)
+}
+
+// NeedsHandoffInControl says "You're in control. Click Done to hand the phone back to {agent}."
+// in the language the app shows.
+//
+// A handoff card (the agent asked the person to do something on the phone,
+// its request is the title) after the person took over. Done is the card's
+// button (needsDone).
+func NeedsHandoffInControl(agent string) string {
+	return In(i18n.Locale()).NeedsHandoffInControl(agent)
+}
+
+// NeedsHandoffInControl says "You're in control. Click Done to hand the phone back to {agent}."
+// in the language of msgs.
+//
+// A handoff card (the agent asked the person to do something on the phone,
+// its request is the title) after the person took over. Done is the card's
+// button (needsDone).
+func (msgs Messages) NeedsHandoffInControl(agent string) string {
+	return Catalog.Format(msgs.locale, "needsHandoffInControl", map[string]any{"agent": agent})
+}
+
+// NeedsHandoffLocked says "The phone is locked. {how}"
+// in the language the app shows.
+//
+// A handoff card on a locked phone that this computer cannot unlock. how is
+// a sentence that says how to unlock it, ending with needsThenClickDone.
+func NeedsHandoffLocked(how string) string { return In(i18n.Locale()).NeedsHandoffLocked(how) }
+
+// NeedsHandoffLocked says "The phone is locked. {how}"
+// in the language of msgs.
+//
+// A handoff card on a locked phone that this computer cannot unlock. how is
+// a sentence that says how to unlock it, ending with needsThenClickDone.
+func (msgs Messages) NeedsHandoffLocked(how string) string {
+	return Catalog.Format(msgs.locale, "needsHandoffLocked", map[string]any{"how": how})
+}
+
+// NeedsHandoffLockedHere says "The phone is locked. Unlocking it here hands it back to {agent}. If you unlock it on the phone, click Done when you'r…"
+// in the language the app shows.
+//
+// A handoff card on a locked phone that this computer can unlock, under the
+// Unlock with Touch ID button. Done is the card's button (needsDone).
+func NeedsHandoffLockedHere(agent string) string {
+	return In(i18n.Locale()).NeedsHandoffLockedHere(agent)
+}
+
+// NeedsHandoffLockedHere says "The phone is locked. Unlocking it here hands it back to {agent}. If you unlock it on the phone, click Done when you'r…"
+// in the language of msgs.
+//
+// A handoff card on a locked phone that this computer can unlock, under the
+// Unlock with Touch ID button. Done is the card's button (needsDone).
+func (msgs Messages) NeedsHandoffLockedHere(agent string) string {
+	return Catalog.Format(msgs.locale, "needsHandoffLockedHere", map[string]any{"agent": agent})
+}
+
+// NeedsHandoffNotePlaceholder says "What you did, or what to do next"
+// in the language the app shows.
+//
+// The placeholder of the note field on a handoff card: what the person did
+// on the phone, or what the agent should do next.
+func NeedsHandoffNotePlaceholder() string { return In(i18n.Locale()).NeedsHandoffNotePlaceholder() }
+
+// NeedsHandoffNotePlaceholder says "What you did, or what to do next"
+// in the language of msgs.
+//
+// The placeholder of the note field on a handoff card: what the person did
+// on the phone, or what the agent should do next.
+func (msgs Messages) NeedsHandoffNotePlaceholder() string {
+	return Catalog.Format(msgs.locale, "needsHandoffNotePlaceholder", nil)
+}
+
+// NeedsLetAgent says "Let {agent}"
+// in the language the app shows.
+//
+// On an agent's first-connection card: the label above (and the
+// accessibility label of) the menu of what the agent may do. In English it
+// reads on into the choice: "Let Claude Code" + "All apps except blocked
+// ones", "Only the apps I choose", "Browse and read, never commit" or
+// "Watch only".
+func NeedsLetAgent(agent string) string { return In(i18n.Locale()).NeedsLetAgent(agent) }
+
+// NeedsLetAgent says "Let {agent}"
+// in the language of msgs.
+//
+// On an agent's first-connection card: the label above (and the
+// accessibility label of) the menu of what the agent may do. In English it
+// reads on into the choice: "Let Claude Code" + "All apps except blocked
+// ones", "Only the apps I choose", "Browse and read, never commit" or
+// "Watch only".
+func (msgs Messages) NeedsLetAgent(agent string) string {
+	return Catalog.Format(msgs.locale, "needsLetAgent", map[string]any{"agent": agent})
+}
+
+// NeedsMoreOptions says "More options"
+// in the language the app shows.
+//
+// Link under Deny and Allow, on approval cards and in the floating approval
+// panel, that opens a menu: Allow for this task, Always allow …, Take
+// over, Deny with a note.
+func NeedsMoreOptions() string { return In(i18n.Locale()).NeedsMoreOptions() }
+
+// NeedsMoreOptions says "More options"
+// in the language of msgs.
+//
+// Link under Deny and Allow, on approval cards and in the floating approval
+// panel, that opens a menu: Allow for this task, Always allow …, Take
+// over, Deny with a note.
+func (msgs Messages) NeedsMoreOptions() string {
+	return Catalog.Format(msgs.locale, "needsMoreOptions", nil)
+}
+
+// NeedsNoteFor says "Note for {agent}"
+// in the language the app shows.
+//
+// The label above (and the accessibility label of) the field where the
+// person writes a note to the agent: on handoff and approval cards and in
+// the floating approval panel.
+func NeedsNoteFor(agent string) string { return In(i18n.Locale()).NeedsNoteFor(agent) }
+
+// NeedsNoteFor says "Note for {agent}"
+// in the language of msgs.
+//
+// The label above (and the accessibility label of) the field where the
+// person writes a note to the agent: on handoff and approval cards and in
+// the floating approval panel.
+func (msgs Messages) NeedsNoteFor(agent string) string {
+	return Catalog.Format(msgs.locale, "needsNoteFor", map[string]any{"agent": agent})
+}
+
+// NeedsSection says "Needs you"
+// in the language the app shows.
+//
+// The heading (and accessibility label) of the cards that wait for the
+// person (approvals, handoffs, locked phones): in the right-hand column and
+// in the menu bar flyout.
+func NeedsSection() string { return In(i18n.Locale()).NeedsSection() }
+
+// NeedsSection says "Needs you"
+// in the language of msgs.
+//
+// The heading (and accessibility label) of the cards that wait for the
+// person (approvals, handoffs, locked phones): in the right-hand column and
+// in the menu bar flyout.
+func (msgs Messages) NeedsSection() string {
+	return Catalog.Format(msgs.locale, "needsSection", nil)
+}
+
+// NeedsTakeOverTooltip says "Do it here, in the mirror"
+// in the language the app shows.
+//
+// The tooltip of Take over on a handoff card: the person does what the
+// agent asked in the app's live picture of the phone.
+func NeedsTakeOverTooltip() string { return In(i18n.Locale()).NeedsTakeOverTooltip() }
+
+// NeedsTakeOverTooltip says "Do it here, in the mirror"
+// in the language of msgs.
+//
+// The tooltip of Take over on a handoff card: the person does what the
+// agent asked in the app's live picture of the phone.
+func (msgs Messages) NeedsTakeOverTooltip() string {
+	return Catalog.Format(msgs.locale, "needsTakeOverTooltip", nil)
+}
+
+// NeedsThenClickDone says ", then click Done."
+// in the language the app shows.
+//
+// Ends the sentence that says how to unlock a phone on a handoff card
+// ("Unlock it on the phone, then click Done."): it starts with a comma and
+// ends the sentence. Done is the card's button (needsDone).
+func NeedsThenClickDone() string { return In(i18n.Locale()).NeedsThenClickDone() }
+
+// NeedsThenClickDone says ", then click Done."
+// in the language of msgs.
+//
+// Ends the sentence that says how to unlock a phone on a handoff card
+// ("Unlock it on the phone, then click Done."): it starts with a comma and
+// ends the sentence. Done is the card's button (needsDone).
+func (msgs Messages) NeedsThenClickDone() string {
+	return Catalog.Format(msgs.locale, "needsThenClickDone", nil)
+}
+
+// PairingAddrField says "IP address and port"
+// in the language the app shows.
+//
+// Pair with a code: the label above the field for the address the phone
+// shows (as 192.168.1.20:37123), and the field's accessibility label.
+func PairingAddrField() string { return In(i18n.Locale()).PairingAddrField() }
+
+// PairingAddrField says "IP address and port"
+// in the language of msgs.
+//
+// Pair with a code: the label above the field for the address the phone
+// shows (as 192.168.1.20:37123), and the field's accessibility label.
+func (msgs Messages) PairingAddrField() string {
+	return Catalog.Format(msgs.locale, "pairingAddrField", nil)
+}
+
+// PairingAddrInvalid says "Enter the IP address and port the phone shows, like 192.168.1.20:37123."
+// in the language the app shows.
+//
+// Pair with a code: the error under the form when the address typed is not
+// an IP address and port.
+func PairingAddrInvalid() string { return In(i18n.Locale()).PairingAddrInvalid() }
+
+// PairingAddrInvalid says "Enter the IP address and port the phone shows, like 192.168.1.20:37123."
+// in the language of msgs.
+//
+// Pair with a code: the error under the form when the address typed is not
+// an IP address and port.
+func (msgs Messages) PairingAddrInvalid() string {
+	return Catalog.Format(msgs.locale, "pairingAddrInvalid", nil)
+}
+
+// PairingBusy says "Pairing…"
+// in the language the app shows.
+//
+// Pair with a code: next to a spinner, right of the Pair button, while
+// Pinky pairs.
+func PairingBusy() string { return In(i18n.Locale()).PairingBusy() }
+
+// PairingBusy says "Pairing…"
+// in the language of msgs.
+//
+// Pair with a code: next to a spinner, right of the Pair button, while
+// Pinky pairs.
+func (msgs Messages) PairingBusy() string {
+	return Catalog.Format(msgs.locale, "pairingBusy", nil)
+}
+
+// PairingCodeDetail says "On the phone, open Developer options › Wireless debugging and tap Pair device with pairing code. Enter what it shows."
+// in the language the app shows.
+//
+// Pair with a code: the line under the heading. Developer options, Wireless
+// debugging and Pair device with pairing code are Android's own names: use
+// those of Android's Simplified Chinese settings.
+func PairingCodeDetail() string { return In(i18n.Locale()).PairingCodeDetail() }
+
+// PairingCodeDetail says "On the phone, open Developer options › Wireless debugging and tap Pair device with pairing code. Enter what it shows."
+// in the language of msgs.
+//
+// Pair with a code: the line under the heading. Developer options, Wireless
+// debugging and Pair device with pairing code are Android's own names: use
+// those of Android's Simplified Chinese settings.
+func (msgs Messages) PairingCodeDetail() string {
+	return Catalog.Format(msgs.locale, "pairingCodeDetail", nil)
+}
+
+// PairingCodeField says "Wi-Fi pairing code"
+// in the language the app shows.
+//
+// Pair with a code: the label above the field for the six-digit pairing
+// code the phone shows, and the field's accessibility label.
+func PairingCodeField() string { return In(i18n.Locale()).PairingCodeField() }
+
+// PairingCodeField says "Wi-Fi pairing code"
+// in the language of msgs.
+//
+// Pair with a code: the label above the field for the six-digit pairing
+// code the phone shows, and the field's accessibility label.
+func (msgs Messages) PairingCodeField() string {
+	return Catalog.Format(msgs.locale, "pairingCodeField", nil)
+}
+
+// PairingCodeIncomplete says "Enter the six-digit code the phone shows."
+// in the language the app shows.
+//
+// Pair with a code: the error under the form when the code typed has fewer
+// than six digits.
+func PairingCodeIncomplete() string { return In(i18n.Locale()).PairingCodeIncomplete() }
+
+// PairingCodeIncomplete says "Enter the six-digit code the phone shows."
+// in the language of msgs.
+//
+// Pair with a code: the error under the form when the code typed has fewer
+// than six digits.
+func (msgs Messages) PairingCodeIncomplete() string {
+	return Catalog.Format(msgs.locale, "pairingCodeIncomplete", nil)
+}
+
+// PairingCodePlaceholder says "6 digits"
+// in the language the app shows.
+//
+// Pair with a code: the placeholder of the pairing code field, a narrow
+// field.
+func PairingCodePlaceholder() string { return In(i18n.Locale()).PairingCodePlaceholder() }
+
+// PairingCodePlaceholder says "6 digits"
+// in the language of msgs.
+//
+// Pair with a code: the placeholder of the pairing code field, a narrow
+// field.
+func (msgs Messages) PairingCodePlaceholder() string {
+	return Catalog.Format(msgs.locale, "pairingCodePlaceholder", nil)
+}
+
+// PairingCodeTitle says "Pair with a code"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the heading of the form that pairs with the address and
+// the six-digit code the phone shows.
+func PairingCodeTitle() string { return In(i18n.Locale()).PairingCodeTitle() }
+
+// PairingCodeTitle says "Pair with a code"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the heading of the form that pairs with the address and
+// the six-digit code the phone shows.
+func (msgs Messages) PairingCodeTitle() string {
+	return Catalog.Format(msgs.locale, "pairingCodeTitle", nil)
+}
+
+// PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the error when this computer has no Android tools (adb)
+// to pair with.
+func PairingErrNoAdb() string { return In(i18n.Locale()).PairingErrNoAdb() }
+
+// PairingErrNoAdb says "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead."
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the error when this computer has no Android tools (adb)
+// to pair with.
+func (msgs Messages) PairingErrNoAdb() string {
+	return Catalog.Format(msgs.locale, "pairingErrNoAdb", nil)
+}
+
+// PairingErrOther says "Couldn't pair: {detail}"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the error when pairing failed for another reason. detail
+// is the error, in English.
+func PairingErrOther(detail string) string { return In(i18n.Locale()).PairingErrOther(detail) }
+
+// PairingErrOther says "Couldn't pair: {detail}"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the error when pairing failed for another reason. detail
+// is the error, in English.
+func (msgs Messages) PairingErrOther(detail string) string {
+	return Catalog.Format(msgs.locale, "pairingErrOther", map[string]any{"detail": detail})
+}
+
+// PairingErrTimeout says "The phone didn't answer in time. Check that it's on the same Wi-Fi as this computer and that Wireless debugging is on…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the error when the phone did not answer in time.
+// Wireless debugging is Android's setting.
+func PairingErrTimeout() string { return In(i18n.Locale()).PairingErrTimeout() }
+
+// PairingErrTimeout says "The phone didn't answer in time. Check that it's on the same Wi-Fi as this computer and that Wireless debugging is on…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the error when the phone did not answer in time.
+// Wireless debugging is Android's setting.
+func (msgs Messages) PairingErrTimeout() string {
+	return Catalog.Format(msgs.locale, "pairingErrTimeout", nil)
+}
+
+// PairingErrUnreachable says "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they cha…"
+// in the language the app shows.
+//
+// Pair with a code: the error when nothing answered at the address typed.
+// Pair device with pairing code is Android's own name.
+func PairingErrUnreachable() string { return In(i18n.Locale()).PairingErrUnreachable() }
+
+// PairingErrUnreachable says "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they cha…"
+// in the language of msgs.
+//
+// Pair with a code: the error when nothing answered at the address typed.
+// Pair device with pairing code is Android's own name.
+func (msgs Messages) PairingErrUnreachable() string {
+	return Catalog.Format(msgs.locale, "pairingErrUnreachable", nil)
+}
+
+// PairingErrUnsupported says "Pairing over Wi-Fi isn't available here. Use a USB cable instead."
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the error when the phone's driver cannot pair over
+// Wi-Fi.
+func PairingErrUnsupported() string { return In(i18n.Locale()).PairingErrUnsupported() }
+
+// PairingErrUnsupported says "Pairing over Wi-Fi isn't available here. Use a USB cable instead."
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the error when the phone's driver cannot pair over
+// Wi-Fi.
+func (msgs Messages) PairingErrUnsupported() string {
+	return Catalog.Format(msgs.locale, "pairingErrUnsupported", nil)
+}
+
+// PairingErrWrongCode says "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairi…"
+// in the language the app shows.
+//
+// Pair with a code: the error when the pairing code typed was wrong. Pair
+// device with pairing code is Android's own name.
+func PairingErrWrongCode() string { return In(i18n.Locale()).PairingErrWrongCode() }
+
+// PairingErrWrongCode says "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairi…"
+// in the language of msgs.
+//
+// Pair with a code: the error when the pairing code typed was wrong. Pair
+// device with pairing code is Android's own name.
+func (msgs Messages) PairingErrWrongCode() string {
+	return Catalog.Format(msgs.locale, "pairingErrWrongCode", nil)
+}
+
+// PairingGettingCode says "Getting a code…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, while Pinky gets the
+// QR code from the gateway.
+func PairingGettingCode() string { return In(i18n.Locale()).PairingGettingCode() }
+
+// PairingGettingCode says "Getting a code…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the status line, next to a spinner, while Pinky gets the
+// QR code from the gateway.
+func (msgs Messages) PairingGettingCode() string {
+	return Catalog.Format(msgs.locale, "pairingGettingCode", nil)
+}
+
+// PairingNoCode says "No code"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: in place of the QR code, under an alert icon, when
+// getting one failed.
+func PairingNoCode() string { return In(i18n.Locale()).PairingNoCode() }
+
+// PairingNoCode says "No code"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: in place of the QR code, under an alert icon, when
+// getting one failed.
+func (msgs Messages) PairingNoCode() string {
+	return Catalog.Format(msgs.locale, "pairingNoCode", nil)
+}
+
+// PairingPair says "Pair"
+// in the language the app shows.
+//
+// Add phone: the button that pairs with the code typed, in the Android form
+// "Pair with a code" and in the iPhone step.
+func PairingPair() string { return In(i18n.Locale()).PairingPair() }
+
+// PairingPair says "Pair"
+// in the language of msgs.
+//
+// Add phone: the button that pairs with the code typed, in the Android form
+// "Pair with a code" and in the iPhone step.
+func (msgs Messages) PairingPair() string {
+	return Catalog.Format(msgs.locale, "pairingPair", nil)
+}
+
+// PairingPaired says "Paired {name} over Wi-Fi"
+// in the language the app shows.
+//
+// A notice once a phone paired over Wi-Fi; its page opens. name is the
+// phone's name.
+func PairingPaired(name string) string { return In(i18n.Locale()).PairingPaired(name) }
+
+// PairingPaired says "Paired {name} over Wi-Fi"
+// in the language of msgs.
+//
+// A notice once a phone paired over Wi-Fi; its page opens. name is the
+// phone's name.
+func (msgs Messages) PairingPaired(name string) string {
+	return Catalog.Format(msgs.locale, "pairingPaired", map[string]any{"name": name})
+}
+
+// PairingPairedPhone says "Paired the phone over Wi-Fi"
+// in the language the app shows.
+//
+// A notice once a phone paired over Wi-Fi, when its name is unknown.
+func PairingPairedPhone() string { return In(i18n.Locale()).PairingPairedPhone() }
+
+// PairingPairedPhone says "Paired the phone over Wi-Fi"
+// in the language of msgs.
+//
+// A notice once a phone paired over Wi-Fi, when its name is unknown.
+func (msgs Messages) PairingPairedPhone() string {
+	return Catalog.Format(msgs.locale, "pairingPairedPhone", nil)
+}
+
+// PairingQRDetail says "On the phone, open Developer options › Wireless debugging and tap Pair device with QR code, then scan this code. Ke…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the line under the heading, above the QR code. Developer
+// options, Wireless debugging and Pair device with QR code are Android's
+// own names: use those of Android's Simplified Chinese settings.
+func PairingQRDetail() string { return In(i18n.Locale()).PairingQRDetail() }
+
+// PairingQRDetail says "On the phone, open Developer options › Wireless debugging and tap Pair device with QR code, then scan this code. Ke…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the line under the heading, above the QR code. Developer
+// options, Wireless debugging and Pair device with QR code are Android's
+// own names: use those of Android's Simplified Chinese settings.
+func (msgs Messages) PairingQRDetail() string {
+	return Catalog.Format(msgs.locale, "pairingQRDetail", nil)
+}
+
+// PairingQRDrawError says "Couldn't draw the QR code: {detail}"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the status line when Pinky could not draw the QR code.
+// detail is the error, in English.
+func PairingQRDrawError(detail string) string { return In(i18n.Locale()).PairingQRDrawError(detail) }
+
+// PairingQRDrawError says "Couldn't draw the QR code: {detail}"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the status line when Pinky could not draw the QR code.
+// detail is the error, in English.
+func (msgs Messages) PairingQRDrawError(detail string) string {
+	return Catalog.Format(msgs.locale, "pairingQRDrawError", map[string]any{"detail": detail})
+}
+
+// PairingQRLabel says "QR code to scan in Wireless debugging › Pair device with QR code"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the accessibility label of the QR code. Wireless
+// debugging and Pair device with QR code are Android's own names.
+func PairingQRLabel() string { return In(i18n.Locale()).PairingQRLabel() }
+
+// PairingQRLabel says "QR code to scan in Wireless debugging › Pair device with QR code"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the accessibility label of the QR code. Wireless
+// debugging and Pair device with QR code are Android's own names.
+func (msgs Messages) PairingQRLabel() string {
+	return Catalog.Format(msgs.locale, "pairingQRLabel", nil)
+}
+
+// PairingSlowHint says "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happen…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: under the status line when the phone has not paired
+// after 30 seconds. adb is Android's tool and adb kill-server a command:
+// both stay as they are.
+func PairingSlowHint() string { return In(i18n.Locale()).PairingSlowHint() }
+
+// PairingSlowHint says "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happen…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: under the status line when the phone has not paired
+// after 30 seconds. adb is Android's tool and adb kill-server a command:
+// both stay as they are.
+func (msgs Messages) PairingSlowHint() string {
+	return Catalog.Format(msgs.locale, "pairingSlowHint", nil)
+}
+
+// PairingTitle says "Pair over Wi-Fi"
+// in the language the app shows.
+//
+// Add phone › Pair over Wi-Fi: the heading of the step that pairs an
+// Android phone over Wi-Fi with a QR code.
+func PairingTitle() string { return In(i18n.Locale()).PairingTitle() }
+
+// PairingTitle says "Pair over Wi-Fi"
+// in the language of msgs.
+//
+// Add phone › Pair over Wi-Fi: the heading of the step that pairs an
+// Android phone over Wi-Fi with a QR code.
+func (msgs Messages) PairingTitle() string {
+	return Catalog.Format(msgs.locale, "pairingTitle", nil)
+}
+
+// PairingUnsupported says "This gateway can't pair phones over Wi-Fi. Connect the phone with a USB cable instead."
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the line under the heading when the gateway Pinky uses
+// cannot pair phones.
+func PairingUnsupported() string { return In(i18n.Locale()).PairingUnsupported() }
+
+// PairingUnsupported says "This gateway can't pair phones over Wi-Fi. Connect the phone with a USB cable instead."
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the line under the heading when the gateway Pinky uses
+// cannot pair phones.
+func (msgs Messages) PairingUnsupported() string {
+	return Catalog.Format(msgs.locale, "pairingUnsupported", nil)
+}
+
+// PairingUseCode says "Pair with a code instead"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the link that switches from the QR code to typing the
+// address and six-digit code the phone shows.
+func PairingUseCode() string { return In(i18n.Locale()).PairingUseCode() }
+
+// PairingUseCode says "Pair with a code instead"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the link that switches from the QR code to typing the
+// address and six-digit code the phone shows.
+func (msgs Messages) PairingUseCode() string {
+	return Catalog.Format(msgs.locale, "pairingUseCode", nil)
+}
+
+// PairingUseQR says "Use a QR code instead"
+// in the language the app shows.
+//
+// Pair with a code: the link that switches back to the QR code.
+func PairingUseQR() string { return In(i18n.Locale()).PairingUseQR() }
+
+// PairingUseQR says "Use a QR code instead"
+// in the language of msgs.
+//
+// Pair with a code: the link that switches back to the QR code.
+func (msgs Messages) PairingUseQR() string {
+	return Catalog.Format(msgs.locale, "pairingUseQR", nil)
+}
+
+// PairingUseUSB says "Use a USB cable instead"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the link that goes back to connecting the phone with a
+// USB cable.
+func PairingUseUSB() string { return In(i18n.Locale()).PairingUseUSB() }
+
+// PairingUseUSB says "Use a USB cable instead"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the link that goes back to connecting the phone with a
+// USB cable.
+func (msgs Messages) PairingUseUSB() string {
+	return Catalog.Format(msgs.locale, "pairingUseUSB", nil)
+}
+
+// PairingWaiting says "Waiting for the phone to scan the code…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the status line under the QR code, next to a spinner,
+// while Pinky waits for the phone to scan it.
+func PairingWaiting() string { return In(i18n.Locale()).PairingWaiting() }
+
+// PairingWaiting says "Waiting for the phone to scan the code…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the status line under the QR code, next to a spinner,
+// while Pinky waits for the phone to scan it.
+func (msgs Messages) PairingWaiting() string {
+	return Catalog.Format(msgs.locale, "pairingWaiting", nil)
+}
+
+// PanelActionsLikeThis says "Actions like this"
+// in the language the app shows.
+//
+// Stands for the rule's name in panelAllowedTaskDetail and
+// panelAlwaysAllowedDetail when the approval names no rule.
+func PanelActionsLikeThis() string { return In(i18n.Locale()).PanelActionsLikeThis() }
+
+// PanelActionsLikeThis says "Actions like this"
+// in the language of msgs.
+//
+// Stands for the rule's name in panelAllowedTaskDetail and
+// panelAlwaysAllowedDetail when the approval names no rule.
+func (msgs Messages) PanelActionsLikeThis() string {
+	return Catalog.Format(msgs.locale, "panelActionsLikeThis", nil)
+}
+
+// PanelAgentAllowed says "{agent} can use your phones. Change what it may do in Settings › Agents."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Allowed, after the
+// person approved an agent's first connection. Settings › Agents is the
+// Settings section that lists the agents.
+func PanelAgentAllowed(agent string) string { return In(i18n.Locale()).PanelAgentAllowed(agent) }
+
+// PanelAgentAllowed says "{agent} can use your phones. Change what it may do in Settings › Agents."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Allowed, after the
+// person approved an agent's first connection. Settings › Agents is the
+// Settings section that lists the agents.
+func (msgs Messages) PanelAgentAllowed(agent string) string {
+	return Catalog.Format(msgs.locale, "panelAgentAllowed", map[string]any{"agent": agent})
+}
+
+// PanelAgentDenied says "{agent} can't use your phones."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Denied, after the person
+// denied an agent's first connection.
+func PanelAgentDenied(agent string) string { return In(i18n.Locale()).PanelAgentDenied(agent) }
+
+// PanelAgentDenied says "{agent} can't use your phones."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Denied, after the person
+// denied an agent's first connection.
+func (msgs Messages) PanelAgentDenied(agent string) string {
+	return Catalog.Format(msgs.locale, "panelAgentDenied", map[string]any{"agent": agent})
+}
+
+// PanelAllowed says "Allowed"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation title after Approve on an
+// agent's first connection.
+func PanelAllowed() string { return In(i18n.Locale()).PanelAllowed() }
+
+// PanelAllowed says "Allowed"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation title after Approve on an
+// agent's first connection.
+func (msgs Messages) PanelAllowed() string {
+	return Catalog.Format(msgs.locale, "panelAllowed", nil)
+}
+
+// PanelAllowedOnce says "Allowed once"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation title after Allow.
+func PanelAllowedOnce() string { return In(i18n.Locale()).PanelAllowedOnce() }
+
+// PanelAllowedOnce says "Allowed once"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation title after Allow.
+func (msgs Messages) PanelAllowedOnce() string {
+	return Catalog.Format(msgs.locale, "panelAllowedOnce", nil)
+}
+
+// PanelAllowedOnceDetail says "Pinky checks the button is still on screen, then taps it."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Allowed once: what
+// happens on the phone next.
+func PanelAllowedOnceDetail() string { return In(i18n.Locale()).PanelAllowedOnceDetail() }
+
+// PanelAllowedOnceDetail says "Pinky checks the button is still on screen, then taps it."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Allowed once: what
+// happens on the phone next.
+func (msgs Messages) PanelAllowedOnceDetail() string {
+	return Catalog.Format(msgs.locale, "panelAllowedOnceDetail", nil)
+}
+
+// PanelAllowedTask says "Allowed for this task"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation title after Allow for this
+// task.
+func PanelAllowedTask() string { return In(i18n.Locale()).PanelAllowedTask() }
+
+// PanelAllowedTask says "Allowed for this task"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation title after Allow for this
+// task.
+func (msgs Messages) PanelAllowedTask() string {
+	return Catalog.Format(msgs.locale, "panelAllowedTask", nil)
+}
+
+// PanelAllowedTaskDetail says "{rule} in {app} are allowed until this task ends."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Allowed for this task.
+// rule is the name of the rule that asked (zh 付款, 发送消息,
+// 更改设置, 所有操作), or panelActionsLikeThis; app is the app's
+// name, or panelThisApp.
+func PanelAllowedTaskDetail(rule string, app string) string {
+	return In(i18n.Locale()).PanelAllowedTaskDetail(rule, app)
+}
+
+// PanelAllowedTaskDetail says "{rule} in {app} are allowed until this task ends."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Allowed for this task.
+// rule is the name of the rule that asked (zh 付款, 发送消息,
+// 更改设置, 所有操作), or panelActionsLikeThis; app is the app's
+// name, or panelThisApp.
+func (msgs Messages) PanelAllowedTaskDetail(rule string, app string) string {
+	return Catalog.Format(msgs.locale, "panelAllowedTaskDetail", map[string]any{"rule": rule, "app": app})
+}
+
+// PanelAlwaysAllowed says "Always allowed"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation title after Always allow ….
+func PanelAlwaysAllowed() string { return In(i18n.Locale()).PanelAlwaysAllowed() }
+
+// PanelAlwaysAllowed says "Always allowed"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation title after Always allow ….
+func (msgs Messages) PanelAlwaysAllowed() string {
+	return Catalog.Format(msgs.locale, "panelAlwaysAllowed", nil)
+}
+
+// PanelAlwaysAllowedDetail says "{rule} in {app} no longer ask. Change it in Settings."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Always allowed: Pinky
+// won't ask the person about these steps again. rule is the name of the
+// rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or
+// panelActionsLikeThis; app is the app's name, or panelThisApp.
+func PanelAlwaysAllowedDetail(rule string, app string) string {
+	return In(i18n.Locale()).PanelAlwaysAllowedDetail(rule, app)
+}
+
+// PanelAlwaysAllowedDetail says "{rule} in {app} no longer ask. Change it in Settings."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Always allowed: Pinky
+// won't ask the person about these steps again. rule is the name of the
+// rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or
+// panelActionsLikeThis; app is the app's name, or panelThisApp.
+func (msgs Messages) PanelAlwaysAllowedDetail(rule string, app string) string {
+	return Catalog.Format(msgs.locale, "panelAlwaysAllowedDetail", map[string]any{"rule": rule, "app": app})
+}
+
+// PanelCancel says "Cancel"
+// in the language the app shows.
+//
+// Button in the floating approval panel's note editor: back to the approval
+// without denying it.
+func PanelCancel() string { return In(i18n.Locale()).PanelCancel() }
+
+// PanelCancel says "Cancel"
+// in the language of msgs.
+//
+// Button in the floating approval panel's note editor: back to the approval
+// without denying it.
+func (msgs Messages) PanelCancel() string {
+	return Catalog.Format(msgs.locale, "panelCancel", nil)
+}
+
+// PanelDeclined says "Declined"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation title after Decline on a
+// handoff.
+func PanelDeclined() string { return In(i18n.Locale()).PanelDeclined() }
+
+// PanelDeclined says "Declined"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation title after Decline on a
+// handoff.
+func (msgs Messages) PanelDeclined() string {
+	return Catalog.Format(msgs.locale, "panelDeclined", nil)
+}
+
+// PanelDenied says "Denied"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation title after Deny, on an
+// approval or an agent's first connection.
+func PanelDenied() string { return In(i18n.Locale()).PanelDenied() }
+
+// PanelDenied says "Denied"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation title after Deny, on an
+// approval or an agent's first connection.
+func (msgs Messages) PanelDenied() string {
+	return Catalog.Format(msgs.locale, "panelDenied", nil)
+}
+
+// PanelDeniedDetail says "Nothing was tapped. {agent} was told no."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Denied, after the person
+// denied a step.
+func PanelDeniedDetail(agent string) string { return In(i18n.Locale()).PanelDeniedDetail(agent) }
+
+// PanelDeniedDetail says "Nothing was tapped. {agent} was told no."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Denied, after the person
+// denied a step.
+func (msgs Messages) PanelDeniedDetail(agent string) string {
+	return Catalog.Format(msgs.locale, "panelDeniedDetail", map[string]any{"agent": agent})
+}
+
+// PanelDeniedDetailNote says "Nothing was tapped. {agent} was told no, with your note: “{note}”"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Denied, after the person
+// denied a step with a note. note is the person's own words.
+func PanelDeniedDetailNote(agent string, note string) string {
+	return In(i18n.Locale()).PanelDeniedDetailNote(agent, note)
+}
+
+// PanelDeniedDetailNote says "Nothing was tapped. {agent} was told no, with your note: “{note}”"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Denied, after the person
+// denied a step with a note. note is the person's own words.
+func (msgs Messages) PanelDeniedDetailNote(agent string, note string) string {
+	return Catalog.Format(msgs.locale, "panelDeniedDetailNote", map[string]any{"agent": agent, "note": note})
+}
+
+// PanelDeniesIn says "Denies in {duration}"
+// in the language the app shows.
+//
+// Top right of the floating approval panel: the approval is denied by
+// itself when this time runs out. duration is as "42 s" (zh 42 秒).
+func PanelDeniesIn(duration string) string { return In(i18n.Locale()).PanelDeniesIn(duration) }
+
+// PanelDeniesIn says "Denies in {duration}"
+// in the language of msgs.
+//
+// Top right of the floating approval panel: the approval is denied by
+// itself when this time runs out. duration is as "42 s" (zh 42 秒).
+func (msgs Messages) PanelDeniesIn(duration string) string {
+	return Catalog.Format(msgs.locale, "panelDeniesIn", map[string]any{"duration": duration})
+}
+
+// PanelDenyWithNote says "Deny with note"
+// in the language the app shows.
+//
+// Primary button in the floating approval panel's note editor: denies the
+// approval and sends the note to the agent. Half of the 360-point panel's
+// width.
+func PanelDenyWithNote() string { return In(i18n.Locale()).PanelDenyWithNote() }
+
+// PanelDenyWithNote says "Deny with note"
+// in the language of msgs.
+//
+// Primary button in the floating approval panel's note editor: denies the
+// approval and sends the note to the agent. Half of the 360-point panel's
+// width.
+func (msgs Messages) PanelDenyWithNote() string {
+	return Catalog.Format(msgs.locale, "panelDenyWithNote", nil)
+}
+
+// PanelEndsIn says "Ends in {duration}"
+// in the language the app shows.
+//
+// Top right of the floating approval panel for a handoff (the agent asked
+// the person to do something): the request ends when this time runs out.
+// duration is as "4 min 10 s" (zh 4 分 10 秒).
+func PanelEndsIn(duration string) string { return In(i18n.Locale()).PanelEndsIn(duration) }
+
+// PanelEndsIn says "Ends in {duration}"
+// in the language of msgs.
+//
+// Top right of the floating approval panel for a handoff (the agent asked
+// the person to do something): the request ends when this time runs out.
+// duration is as "4 min 10 s" (zh 4 分 10 秒).
+func (msgs Messages) PanelEndsIn(duration string) string {
+	return Catalog.Format(msgs.locale, "panelEndsIn", map[string]any{"duration": duration})
+}
+
+// PanelHandedBack says "Handed back"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation title after Done on a handoff:
+// the phone went back to the agent.
+func PanelHandedBack() string { return In(i18n.Locale()).PanelHandedBack() }
+
+// PanelHandedBack says "Handed back"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation title after Done on a handoff:
+// the phone went back to the agent.
+func (msgs Messages) PanelHandedBack() string {
+	return Catalog.Format(msgs.locale, "panelHandedBack", nil)
+}
+
+// PanelHandedBackDetail says "{agent} goes on from here."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Handed back.
+func PanelHandedBackDetail(agent string) string {
+	return In(i18n.Locale()).PanelHandedBackDetail(agent)
+}
+
+// PanelHandedBackDetail says "{agent} goes on from here."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Handed back.
+func (msgs Messages) PanelHandedBackDetail(agent string) string {
+	return Catalog.Format(msgs.locale, "panelHandedBackDetail", map[string]any{"agent": agent})
+}
+
+// PanelNext says "Next approval"
+// in the language the app shows.
+//
+// The accessibility label of the floating approval panel's right arrow.
+func PanelNext() string { return In(i18n.Locale()).PanelNext() }
+
+// PanelNext says "Next approval"
+// in the language of msgs.
+//
+// The accessibility label of the floating approval panel's right arrow.
+func (msgs Messages) PanelNext() string {
+	return Catalog.Format(msgs.locale, "panelNext", nil)
+}
+
+// PanelPosition says "{current} of {total}"
+// in the language the app shows.
+//
+// The floating approval panel's pager, between its two arrows: which of the
+// waiting approvals it shows. Keep it short.
+func PanelPosition(current int, total int) string {
+	return In(i18n.Locale()).PanelPosition(current, total)
+}
+
+// PanelPosition says "{current} of {total}"
+// in the language of msgs.
+//
+// The floating approval panel's pager, between its two arrows: which of the
+// waiting approvals it shows. Keep it short.
+func (msgs Messages) PanelPosition(current int, total int) string {
+	return Catalog.Format(msgs.locale, "panelPosition", map[string]any{"current": current, "total": total})
+}
+
+// PanelPrevious says "Previous approval"
+// in the language the app shows.
+//
+// The accessibility label of the floating approval panel's left arrow.
+func PanelPrevious() string { return In(i18n.Locale()).PanelPrevious() }
+
+// PanelPrevious says "Previous approval"
+// in the language of msgs.
+//
+// The accessibility label of the floating approval panel's left arrow.
+func (msgs Messages) PanelPrevious() string {
+	return Catalog.Format(msgs.locale, "panelPrevious", nil)
+}
+
+// PanelShotLabel says "{phone} screen: the target, outlined"
+// in the language the app shows.
+//
+// The accessibility label of the floating approval panel's picture: the
+// part of the phone's screen around what the agent wants to tap, with that
+// element outlined.
+func PanelShotLabel(phone string) string { return In(i18n.Locale()).PanelShotLabel(phone) }
+
+// PanelShotLabel says "{phone} screen: the target, outlined"
+// in the language of msgs.
+//
+// The accessibility label of the floating approval panel's picture: the
+// part of the phone's screen around what the agent wants to tap, with that
+// element outlined.
+func (msgs Messages) PanelShotLabel(phone string) string {
+	return Catalog.Format(msgs.locale, "panelShotLabel", map[string]any{"phone": phone})
+}
+
+// PanelThisApp says "this app"
+// in the language the app shows.
+//
+// Stands for the app's name in panelAllowedTaskDetail and
+// panelAlwaysAllowedDetail when the approval names no app.
+func PanelThisApp() string { return In(i18n.Locale()).PanelThisApp() }
+
+// PanelThisApp says "this app"
+// in the language of msgs.
+//
+// Stands for the app's name in panelAllowedTaskDetail and
+// panelAlwaysAllowedDetail when the approval names no app.
+func (msgs Messages) PanelThisApp() string {
+	return Catalog.Format(msgs.locale, "panelThisApp", nil)
+}
+
+// PanelToldNo says "{agent} was told no."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Declined: the agent
+// learned that the person won't do what it asked.
+func PanelToldNo(agent string) string { return In(i18n.Locale()).PanelToldNo(agent) }
+
+// PanelToldNo says "{agent} was told no."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Declined: the agent
+// learned that the person won't do what it asked.
+func (msgs Messages) PanelToldNo(agent string) string {
+	return Catalog.Format(msgs.locale, "panelToldNo", map[string]any{"agent": agent})
+}
+
+// PanelWaitingApprovals says "Waiting approvals"
+// in the language the app shows.
+//
+// The accessibility label of the floating approval panel's pager (previous,
+// "1 of 2", next) when several approvals wait.
+func PanelWaitingApprovals() string { return In(i18n.Locale()).PanelWaitingApprovals() }
+
+// PanelWaitingApprovals says "Waiting approvals"
+// in the language of msgs.
+//
+// The accessibility label of the floating approval panel's pager (previous,
+// "1 of 2", next) when several approvals wait.
+func (msgs Messages) PanelWaitingApprovals() string {
+	return Catalog.Format(msgs.locale, "panelWaitingApprovals", nil)
+}
+
+// PanelWindowTitle says "Pinky approval"
+// in the language the app shows.
+//
+// The title of the floating approval panel's window. The panel has no title
+// bar; screen readers and window lists read it.
+func PanelWindowTitle() string { return In(i18n.Locale()).PanelWindowTitle() }
+
+// PanelWindowTitle says "Pinky approval"
+// in the language of msgs.
+//
+// The title of the floating approval panel's window. The panel has no title
+// bar; screen readers and window lists read it.
+func (msgs Messages) PanelWindowTitle() string {
+	return Catalog.Format(msgs.locale, "panelWindowTitle", nil)
+}
+
+// PanelWithNote says "{text} Your note: “{note}”"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation after a handoff was answered
+// with a note: text is the confirmation's sentence (panelHandedBackDetail
+// or panelToldNo), note the person's own words.
+func PanelWithNote(text string, note string) string {
+	return In(i18n.Locale()).PanelWithNote(text, note)
+}
+
+// PanelWithNote says "{text} Your note: “{note}”"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation after a handoff was answered
+// with a note: text is the confirmation's sentence (panelHandedBackDetail
+// or panelToldNo), note the person's own words.
+func (msgs Messages) PanelWithNote(text string, note string) string {
+	return Catalog.Format(msgs.locale, "panelWithNote", map[string]any{"text": text, "note": note})
+}
+
+// PhoneAddPhone says "Add phone"
+// in the language the app shows.
+//
+// Primary button on the Phones page before any phone is added: opens Add
+// phone.
+func PhoneAddPhone() string { return In(i18n.Locale()).PhoneAddPhone() }
+
+// PhoneAddPhone says "Add phone"
+// in the language of msgs.
+//
+// Primary button on the Phones page before any phone is added: opens Add
+// phone.
+func (msgs Messages) PhoneAddPhone() string {
+	return Catalog.Format(msgs.locale, "phoneAddPhone", nil)
+}
+
+// PhoneAgentScreen says "{agent}'s screen"
+// in the language the app shows.
+//
+// Choice of the switch under the mirror while an agent works on a hidden
+// second screen: the mirror shows the agent's screen.
+func PhoneAgentScreen(agent string) string { return In(i18n.Locale()).PhoneAgentScreen(agent) }
+
+// PhoneAgentScreen says "{agent}'s screen"
+// in the language of msgs.
+//
+// Choice of the switch under the mirror while an agent works on a hidden
+// second screen: the mirror shows the agent's screen.
+func (msgs Messages) PhoneAgentScreen(agent string) string {
+	return Catalog.Format(msgs.locale, "phoneAgentScreen", map[string]any{"agent": agent})
+}
+
+// PhoneAllPhones says "All phones"
+// in the language the app shows.
+//
+// The Phones page's title when it shows every phone as live tiles.
+func PhoneAllPhones() string { return In(i18n.Locale()).PhoneAllPhones() }
+
+// PhoneAllPhones says "All phones"
+// in the language of msgs.
+//
+// The Phones page's title when it shows every phone as live tiles.
+func (msgs Messages) PhoneAllPhones() string {
+	return Catalog.Format(msgs.locale, "phoneAllPhones", nil)
+}
+
+// PhoneBackgroundDesc says "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task."
+// in the language the app shows.
+//
+// Under Work in the background in ⋯ under the mirror: what the switch
+// does, and that it applies from the agent's next task.
+func PhoneBackgroundDesc() string { return In(i18n.Locale()).PhoneBackgroundDesc() }
+
+// PhoneBackgroundDesc says "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task."
+// in the language of msgs.
+//
+// Under Work in the background in ⋯ under the mirror: what the switch
+// does, and that it applies from the agent's next task.
+func (msgs Messages) PhoneBackgroundDesc() string {
+	return Catalog.Format(msgs.locale, "phoneBackgroundDesc", nil)
+}
+
+// PhoneBackgroundUnsupported says "This phone can't give agents a second screen."
+// in the language the app shows.
+//
+// Under Work in the background in ⋯, when the phone can't do it (the
+// switch is disabled).
+func PhoneBackgroundUnsupported() string { return In(i18n.Locale()).PhoneBackgroundUnsupported() }
+
+// PhoneBackgroundUnsupported says "This phone can't give agents a second screen."
+// in the language of msgs.
+//
+// Under Work in the background in ⋯, when the phone can't do it (the
+// switch is disabled).
+func (msgs Messages) PhoneBackgroundUnsupported() string {
+	return Catalog.Format(msgs.locale, "phoneBackgroundUnsupported", nil)
+}
+
+// PhoneBannerHandBackHint says "Hand back to let agents use this phone again."
+// in the language the app shows.
+//
+// The banner over the mirror, after the bold phoneBannerInControl, when no
+// agent waits: Hand back is the banner's button.
+func PhoneBannerHandBackHint() string { return In(i18n.Locale()).PhoneBannerHandBackHint() }
+
+// PhoneBannerHandBackHint says "Hand back to let agents use this phone again."
+// in the language of msgs.
+//
+// The banner over the mirror, after the bold phoneBannerInControl, when no
+// agent waits: Hand back is the banner's button.
+func (msgs Messages) PhoneBannerHandBackHint() string {
+	return Catalog.Format(msgs.locale, "phoneBannerHandBackHint", nil)
+}
+
+// PhoneBannerInControl says "You're in control. "
+// in the language the app shows.
+//
+// The bold start of the banner over the mirror while the person controls
+// the phone; the rest follows in normal weight (phoneBannerPaused or
+// phoneBannerHandBackHint). English ends with a space before the rest.
+func PhoneBannerInControl() string { return In(i18n.Locale()).PhoneBannerInControl() }
+
+// PhoneBannerInControl says "You're in control. "
+// in the language of msgs.
+//
+// The bold start of the banner over the mirror while the person controls
+// the phone; the rest follows in normal weight (phoneBannerPaused or
+// phoneBannerHandBackHint). English ends with a space before the rest.
+func (msgs Messages) PhoneBannerInControl() string {
+	return Catalog.Format(msgs.locale, "phoneBannerInControl", nil)
+}
+
+// PhoneBannerPaused says "{agent} is paused."
+// in the language the app shows.
+//
+// The banner over the mirror, after the bold phoneBannerInControl: the
+// agent waits until the person hands the phone back.
+func PhoneBannerPaused(agent string) string { return In(i18n.Locale()).PhoneBannerPaused(agent) }
+
+// PhoneBannerPaused says "{agent} is paused."
+// in the language of msgs.
+//
+// The banner over the mirror, after the bold phoneBannerInControl: the
+// agent waits until the person hands the phone back.
+func (msgs Messages) PhoneBannerPaused(agent string) string {
+	return Catalog.Format(msgs.locale, "phoneBannerPaused", map[string]any{"agent": agent})
+}
+
+// PhoneBannerWaits says "{agent} waits for you: {reason}"
+// in the language the app shows.
+//
+// The banner over the mirror, after the bold phoneBannerYourTurn. reason is
+// the agent's own words, what it asked the person to do (in English with a
+// lower-case first letter).
+func PhoneBannerWaits(agent string, reason string) string {
+	return In(i18n.Locale()).PhoneBannerWaits(agent, reason)
+}
+
+// PhoneBannerWaits says "{agent} waits for you: {reason}"
+// in the language of msgs.
+//
+// The banner over the mirror, after the bold phoneBannerYourTurn. reason is
+// the agent's own words, what it asked the person to do (in English with a
+// lower-case first letter).
+func (msgs Messages) PhoneBannerWaits(agent string, reason string) string {
+	return Catalog.Format(msgs.locale, "phoneBannerWaits", map[string]any{"agent": agent, "reason": reason})
+}
+
+// PhoneBannerYourTurn says "Your turn. "
+// in the language the app shows.
+//
+// The bold start of the banner over the mirror when the agent asked the
+// person to do something on the phone; phoneBannerWaits follows in normal
+// weight. English ends with a space before the rest.
+func PhoneBannerYourTurn() string { return In(i18n.Locale()).PhoneBannerYourTurn() }
+
+// PhoneBannerYourTurn says "Your turn. "
+// in the language of msgs.
+//
+// The bold start of the banner over the mirror when the agent asked the
+// person to do something on the phone; phoneBannerWaits follows in normal
+// weight. English ends with a space before the rest.
+func (msgs Messages) PhoneBannerYourTurn() string {
+	return Catalog.Format(msgs.locale, "phoneBannerYourTurn", nil)
+}
+
+// PhoneConnected says "{count, plural, one {# connected} other {# connected}}"
+// in the language the app shows.
+//
+// All phones, next to the title: how many phones are online.
+func PhoneConnected(count int) string { return In(i18n.Locale()).PhoneConnected(count) }
+
+// PhoneConnected says "{count, plural, one {# connected} other {# connected}}"
+// in the language of msgs.
+//
+// All phones, next to the title: how many phones are online.
+func (msgs Messages) PhoneConnected(count int) string {
+	return Catalog.Format(msgs.locale, "phoneConnected", map[string]any{"count": count})
+}
+
+// PhoneHandBack says "Hand back"
+// in the language the app shows.
+//
+// Button that gives the phone back to the agents after the person took
+// over: on the banner over the mirror and on All phones tiles.
+func PhoneHandBack() string { return In(i18n.Locale()).PhoneHandBack() }
+
+// PhoneHandBack says "Hand back"
+// in the language of msgs.
+//
+// Button that gives the phone back to the agents after the person took
+// over: on the banner over the mirror and on All phones tiles.
+func (msgs Messages) PhoneHandBack() string {
+	return Catalog.Format(msgs.locale, "phoneHandBack", nil)
+}
+
+// PhoneKeyBack says "Back"
+// in the language the app shows.
+//
+// Android's Back key, a button under the mirror (accessibility label and
+// tooltip).
+func PhoneKeyBack() string { return In(i18n.Locale()).PhoneKeyBack() }
+
+// PhoneKeyBack says "Back"
+// in the language of msgs.
+//
+// Android's Back key, a button under the mirror (accessibility label and
+// tooltip).
+func (msgs Messages) PhoneKeyBack() string {
+	return Catalog.Format(msgs.locale, "phoneKeyBack", nil)
+}
+
+// PhoneKeyHome says "Home"
+// in the language the app shows.
+//
+// The phone's Home key, a button under the mirror (accessibility label and
+// tooltip).
+func PhoneKeyHome() string { return In(i18n.Locale()).PhoneKeyHome() }
+
+// PhoneKeyHome says "Home"
+// in the language of msgs.
+//
+// The phone's Home key, a button under the mirror (accessibility label and
+// tooltip).
+func (msgs Messages) PhoneKeyHome() string {
+	return Catalog.Format(msgs.locale, "phoneKeyHome", nil)
+}
+
+// PhoneKeyRecents says "Recents"
+// in the language the app shows.
+//
+// Android's Recents key (recent apps), a button under the mirror
+// (accessibility label and tooltip).
+func PhoneKeyRecents() string { return In(i18n.Locale()).PhoneKeyRecents() }
+
+// PhoneKeyRecents says "Recents"
+// in the language of msgs.
+//
+// Android's Recents key (recent apps), a button under the mirror
+// (accessibility label and tooltip).
+func (msgs Messages) PhoneKeyRecents() string {
+	return Catalog.Format(msgs.locale, "phoneKeyRecents", nil)
+}
+
+// PhoneKeysAgentScreen says "{agent} works on its own screen. Show the phone's screen to use the phone."
+// in the language the app shows.
+//
+// The tooltip of the disabled keys under the mirror while it shows the
+// agent's hidden second screen. "Phone's screen" is a choice of the switch
+// next to them.
+func PhoneKeysAgentScreen(agent string) string { return In(i18n.Locale()).PhoneKeysAgentScreen(agent) }
+
+// PhoneKeysAgentScreen says "{agent} works on its own screen. Show the phone's screen to use the phone."
+// in the language of msgs.
+//
+// The tooltip of the disabled keys under the mirror while it shows the
+// agent's hidden second screen. "Phone's screen" is a choice of the switch
+// next to them.
+func (msgs Messages) PhoneKeysAgentScreen(agent string) string {
+	return Catalog.Format(msgs.locale, "phoneKeysAgentScreen", map[string]any{"agent": agent})
+}
+
+// PhoneMoreControls says "More phone controls"
+// in the language the app shows.
+//
+// The accessibility label and tooltip of the ⋯ button under the mirror,
+// which opens Take screenshot, Record screen, Rotate and Work in the
+// background.
+func PhoneMoreControls() string { return In(i18n.Locale()).PhoneMoreControls() }
+
+// PhoneMoreControls says "More phone controls"
+// in the language of msgs.
+//
+// The accessibility label and tooltip of the ⋯ button under the mirror,
+// which opens Take screenshot, Record screen, Rotate and Work in the
+// background.
+func (msgs Messages) PhoneMoreControls() string {
+	return Catalog.Format(msgs.locale, "phoneMoreControls", nil)
+}
+
+// PhoneNeedsSetup says "{phone} needs setup"
+// in the language the app shows.
+//
+// A phone's page when the phone is connected but can't be used yet (USB
+// debugging off, not trusted); the system's reason shows under it.
+func PhoneNeedsSetup(phone string) string { return In(i18n.Locale()).PhoneNeedsSetup(phone) }
+
+// PhoneNeedsSetup says "{phone} needs setup"
+// in the language of msgs.
+//
+// A phone's page when the phone is connected but can't be used yet (USB
+// debugging off, not trusted); the system's reason shows under it.
+func (msgs Messages) PhoneNeedsSetup(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneNeedsSetup", map[string]any{"phone": phone})
+}
+
+// PhoneNoPhones says "No phones yet"
+// in the language the app shows.
+//
+// The Phones page before any phone is added, above the Add phone button.
+func PhoneNoPhones() string { return In(i18n.Locale()).PhoneNoPhones() }
+
+// PhoneNoPhones says "No phones yet"
+// in the language of msgs.
+//
+// The Phones page before any phone is added, above the Add phone button.
+func (msgs Messages) PhoneNoPhones() string {
+	return Catalog.Format(msgs.locale, "phoneNoPhones", nil)
+}
+
+// PhoneNoPicture says "No picture yet"
+// in the language the app shows.
+//
+// Toast after Take screenshot when the mirror has shown no picture of the
+// phone yet.
+func PhoneNoPicture() string { return In(i18n.Locale()).PhoneNoPicture() }
+
+// PhoneNoPicture says "No picture yet"
+// in the language of msgs.
+//
+// Toast after Take screenshot when the mirror has shown no picture of the
+// phone yet.
+func (msgs Messages) PhoneNoPicture() string {
+	return Catalog.Format(msgs.locale, "phoneNoPicture", nil)
+}
+
+// PhoneNotConnected says "It is not connected."
+// in the language the app shows.
+//
+// Under phoneOffline when the system says nothing more, before the
+// Reconnect link.
+func PhoneNotConnected() string { return In(i18n.Locale()).PhoneNotConnected() }
+
+// PhoneNotConnected says "It is not connected."
+// in the language of msgs.
+//
+// Under phoneOffline when the system says nothing more, before the
+// Reconnect link.
+func (msgs Messages) PhoneNotConnected() string {
+	return Catalog.Format(msgs.locale, "phoneNotConnected", nil)
+}
+
+// PhoneOffline says "{phone} is offline"
+// in the language the app shows.
+//
+// A phone's page when the phone is offline, under a phone outline.
+func PhoneOffline(phone string) string { return In(i18n.Locale()).PhoneOffline(phone) }
+
+// PhoneOffline says "{phone} is offline"
+// in the language of msgs.
+//
+// A phone's page when the phone is offline, under a phone outline.
+func (msgs Messages) PhoneOffline(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneOffline", map[string]any{"phone": phone})
+}
+
+// PhoneOfflineCount says "{count, plural, one {# offline} other {# offline}}"
+// in the language the app shows.
+//
+// All phones, next to the title after phoneConnected and a " · ": how many
+// phones are offline.
+func PhoneOfflineCount(count int) string { return In(i18n.Locale()).PhoneOfflineCount(count) }
+
+// PhoneOfflineCount says "{count, plural, one {# offline} other {# offline}}"
+// in the language of msgs.
+//
+// All phones, next to the title after phoneConnected and a " · ": how many
+// phones are offline.
+func (msgs Messages) PhoneOfflineCount(count int) string {
+	return Catalog.Format(msgs.locale, "phoneOfflineCount", map[string]any{"count": count})
+}
+
+// PhonePageTitle says "Phones"
+// in the language the app shows.
+//
+// The Phones page's title before any phone is added.
+func PhonePageTitle() string { return In(i18n.Locale()).PhonePageTitle() }
+
+// PhonePageTitle says "Phones"
+// in the language of msgs.
+//
+// The Phones page's title before any phone is added.
+func (msgs Messages) PhonePageTitle() string {
+	return Catalog.Format(msgs.locale, "phonePageTitle", nil)
+}
+
+// PhonePhoneScreen says "Phone's screen"
+// in the language the app shows.
+//
+// Choice of the switch under the mirror while an agent works on a hidden
+// second screen: the mirror shows the phone's own screen.
+func PhonePhoneScreen() string { return In(i18n.Locale()).PhonePhoneScreen() }
+
+// PhonePhoneScreen says "Phone's screen"
+// in the language of msgs.
+//
+// Choice of the switch under the mirror while an agent works on a hidden
+// second screen: the mirror shows the phone's own screen.
+func (msgs Messages) PhonePhoneScreen() string {
+	return Catalog.Format(msgs.locale, "phonePhoneScreen", nil)
+}
+
+// PhonePressKey says "press {key}"
+// in the language the app shows.
+//
+// What failed, inside the toast "Couldn't press Back: <error>" (zh
+// 无法按返回键：<error>). key is the key's name: phoneKeyBack,
+// phoneKeyHome or phoneKeyRecents.
+func PhonePressKey(key string) string { return In(i18n.Locale()).PhonePressKey(key) }
+
+// PhonePressKey says "press {key}"
+// in the language of msgs.
+//
+// What failed, inside the toast "Couldn't press Back: <error>" (zh
+// 无法按返回键：<error>). key is the key's name: phoneKeyBack,
+// phoneKeyHome or phoneKeyRecents.
+func (msgs Messages) PhonePressKey(key string) string {
+	return Catalog.Format(msgs.locale, "phonePressKey", map[string]any{"key": key})
+}
+
+// PhoneReconnect says "Reconnect"
+// in the language the app shows.
+//
+// Link on an offline phone's page: opens Add phone.
+func PhoneReconnect() string { return In(i18n.Locale()).PhoneReconnect() }
+
+// PhoneReconnect says "Reconnect"
+// in the language of msgs.
+//
+// Link on an offline phone's page: opens Add phone.
+func (msgs Messages) PhoneReconnect() string {
+	return Catalog.Format(msgs.locale, "phoneReconnect", nil)
+}
+
+// PhoneRecordScreen says "Record screen"
+// in the language the app shows.
+//
+// Item of ⋯ under the mirror, shown disabled.
+func PhoneRecordScreen() string { return In(i18n.Locale()).PhoneRecordScreen() }
+
+// PhoneRecordScreen says "Record screen"
+// in the language of msgs.
+//
+// Item of ⋯ under the mirror, shown disabled.
+func (msgs Messages) PhoneRecordScreen() string {
+	return Catalog.Format(msgs.locale, "phoneRecordScreen", nil)
+}
+
+// PhoneRecordScreenTooltip says "Agent tasks are recorded while Record the screen is on in Settings › Privacy"
+// in the language the app shows.
+//
+// The tooltip of the disabled Record screen item: recording happens through
+// a setting. "Record the screen" is the switch's name in Settings ›
+// Privacy.
+func PhoneRecordScreenTooltip() string { return In(i18n.Locale()).PhoneRecordScreenTooltip() }
+
+// PhoneRecordScreenTooltip says "Agent tasks are recorded while Record the screen is on in Settings › Privacy"
+// in the language of msgs.
+//
+// The tooltip of the disabled Record screen item: recording happens through
+// a setting. "Record the screen" is the switch's name in Settings ›
+// Privacy.
+func (msgs Messages) PhoneRecordScreenTooltip() string {
+	return Catalog.Format(msgs.locale, "phoneRecordScreenTooltip", nil)
+}
+
+// PhoneRotate says "Rotate"
+// in the language the app shows.
+//
+// Item of ⋯ under the mirror, shown disabled: would rotate the phone's
+// screen.
+func PhoneRotate() string { return In(i18n.Locale()).PhoneRotate() }
+
+// PhoneRotate says "Rotate"
+// in the language of msgs.
+//
+// Item of ⋯ under the mirror, shown disabled: would rotate the phone's
+// screen.
+func (msgs Messages) PhoneRotate() string {
+	return Catalog.Format(msgs.locale, "phoneRotate", nil)
+}
+
+// PhoneRotateTooltip says "Not in the gateway API yet"
+// in the language the app shows.
+//
+// The tooltip of the disabled Rotate item.
+func PhoneRotateTooltip() string { return In(i18n.Locale()).PhoneRotateTooltip() }
+
+// PhoneRotateTooltip says "Not in the gateway API yet"
+// in the language of msgs.
+//
+// The tooltip of the disabled Rotate item.
+func (msgs Messages) PhoneRotateTooltip() string {
+	return Catalog.Format(msgs.locale, "phoneRotateTooltip", nil)
+}
+
+// PhoneScreenLabel says "{phone} screen"
+// in the language the app shows.
+//
+// The accessibility label of the phone frame around the mirror, the live
+// picture of the phone's screen.
+func PhoneScreenLabel(phone string) string { return In(i18n.Locale()).PhoneScreenLabel(phone) }
+
+// PhoneScreenLabel says "{phone} screen"
+// in the language of msgs.
+//
+// The accessibility label of the phone frame around the mirror, the live
+// picture of the phone's screen.
+func (msgs Messages) PhoneScreenLabel(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneScreenLabel", map[string]any{"phone": phone})
+}
+
+// PhoneScreenshotFailed says "Couldn't save the screenshot: {reason}"
+// in the language the app shows.
+//
+// Toast when writing a screenshot to the Desktop failed. reason is the
+// system's error, in English.
+func PhoneScreenshotFailed(reason string) string {
+	return In(i18n.Locale()).PhoneScreenshotFailed(reason)
+}
+
+// PhoneScreenshotFailed says "Couldn't save the screenshot: {reason}"
+// in the language of msgs.
+//
+// Toast when writing a screenshot to the Desktop failed. reason is the
+// system's error, in English.
+func (msgs Messages) PhoneScreenshotFailed(reason string) string {
+	return Catalog.Format(msgs.locale, "phoneScreenshotFailed", map[string]any{"reason": reason})
+}
+
+// PhoneScreenshotName says "{phone} {date} at {clock}"
+// in the language the app shows.
+//
+// The name of a screenshot file on the Desktop, before ".png": the phone,
+// the date as 2026-11-07 and the time as 09.30.12 (dots: file names can't
+// have colons).
+func PhoneScreenshotName(phone string, date string, clock string) string {
+	return In(i18n.Locale()).PhoneScreenshotName(phone, date, clock)
+}
+
+// PhoneScreenshotName says "{phone} {date} at {clock}"
+// in the language of msgs.
+//
+// The name of a screenshot file on the Desktop, before ".png": the phone,
+// the date as 2026-11-07 and the time as 09.30.12 (dots: file names can't
+// have colons).
+func (msgs Messages) PhoneScreenshotName(phone string, date string, clock string) string {
+	return Catalog.Format(msgs.locale, "phoneScreenshotName", map[string]any{"phone": phone, "date": date, "clock": clock})
+}
+
+// PhoneScreenshotSaved says "Saved {file}"
+// in the language the app shows.
+//
+// Toast after Take screenshot: the file's name on the Desktop
+// (phoneScreenshotName and .png).
+func PhoneScreenshotSaved(file string) string { return In(i18n.Locale()).PhoneScreenshotSaved(file) }
+
+// PhoneScreenshotSaved says "Saved {file}"
+// in the language of msgs.
+//
+// Toast after Take screenshot: the file's name on the Desktop
+// (phoneScreenshotName and .png).
+func (msgs Messages) PhoneScreenshotSaved(file string) string {
+	return Catalog.Format(msgs.locale, "phoneScreenshotSaved", map[string]any{"file": file})
+}
+
+// PhoneShow says "Show {phone}"
+// in the language the app shows.
+//
+// The accessibility label of a one-line task row and of an All phones tile:
+// a click shows that phone.
+func PhoneShow(phone string) string { return In(i18n.Locale()).PhoneShow(phone) }
+
+// PhoneShow says "Show {phone}"
+// in the language of msgs.
+//
+// The accessibility label of a one-line task row and of an All phones tile:
+// a click shows that phone.
+func (msgs Messages) PhoneShow(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneShow", map[string]any{"phone": phone})
+}
+
+// PhoneShowOnMirror says "Show on the mirror"
+// in the language the app shows.
+//
+// The accessibility label of the switch under the mirror between the
+// agent's screen and the phone's.
+func PhoneShowOnMirror() string { return In(i18n.Locale()).PhoneShowOnMirror() }
+
+// PhoneShowOnMirror says "Show on the mirror"
+// in the language of msgs.
+//
+// The accessibility label of the switch under the mirror between the
+// agent's screen and the phone's.
+func (msgs Messages) PhoneShowOnMirror() string {
+	return Catalog.Format(msgs.locale, "phoneShowOnMirror", nil)
+}
+
+// PhoneTakeOver says "Take over"
+// in the language the app shows.
+//
+// Button or menu item that gives the person control of the phone in the
+// mirror and pauses the agent: on handoff cards, in an approval's More
+// options (card and floating panel), on the task card and on All phones
+// tiles.
+func PhoneTakeOver() string { return In(i18n.Locale()).PhoneTakeOver() }
+
+// PhoneTakeOver says "Take over"
+// in the language of msgs.
+//
+// Button or menu item that gives the person control of the phone in the
+// mirror and pauses the agent: on handoff cards, in an approval's More
+// options (card and floating panel), on the task card and on All phones
+// tiles.
+func (msgs Messages) PhoneTakeOver() string {
+	return Catalog.Format(msgs.locale, "phoneTakeOver", nil)
+}
+
+// PhoneTakeScreenshot says "Take screenshot"
+// in the language the app shows.
+//
+// Item of ⋯ under the mirror: saves the phone's screen as a picture on
+// the Desktop.
+func PhoneTakeScreenshot() string { return In(i18n.Locale()).PhoneTakeScreenshot() }
+
+// PhoneTakeScreenshot says "Take screenshot"
+// in the language of msgs.
+//
+// Item of ⋯ under the mirror: saves the phone's screen as a picture on
+// the Desktop.
+func (msgs Messages) PhoneTakeScreenshot() string {
+	return Catalog.Format(msgs.locale, "phoneTakeScreenshot", nil)
+}
+
+// PhoneWorkInBackground says "Work in the background"
+// in the language the app shows.
+//
+// The title (and the switch's accessibility label) of the row in ⋯ under
+// the mirror that lets agents work on a hidden second screen.
+func PhoneWorkInBackground() string { return In(i18n.Locale()).PhoneWorkInBackground() }
+
+// PhoneWorkInBackground says "Work in the background"
+// in the language of msgs.
+//
+// The title (and the switch's accessibility label) of the row in ⋯ under
+// the mirror that lets agents work on a hidden second screen.
+func (msgs Messages) PhoneWorkInBackground() string {
+	return Catalog.Format(msgs.locale, "phoneWorkInBackground", nil)
+}
+
+// PhoneWorksInBackground says "{agent} works in the background"
+// in the language the app shows.
+//
+// A phone's page, next to the title after the connection and a " · ": the
+// agent works on a hidden second screen of the phone.
+func PhoneWorksInBackground(agent string) string {
+	return In(i18n.Locale()).PhoneWorksInBackground(agent)
+}
+
+// PhoneWorksInBackground says "{agent} works in the background"
+// in the language of msgs.
+//
+// A phone's page, next to the title after the connection and a " · ": the
+// agent works on a hidden second screen of the phone.
+func (msgs Messages) PhoneWorksInBackground(agent string) string {
+	return Catalog.Format(msgs.locale, "phoneWorksInBackground", map[string]any{"agent": agent})
+}
+
+// PinCancel says "Cancel"
+// in the language the app shows.
+//
+// The PIN form: the button that closes it without saving.
+func PinCancel() string { return In(i18n.Locale()).PinCancel() }
+
+// PinCancel says "Cancel"
+// in the language of msgs.
+//
+// The PIN form: the button that closes it without saving.
+func (msgs Messages) PinCancel() string {
+	return Catalog.Format(msgs.locale, "pinCancel", nil)
+}
+
+// PinChange says "Change"
+// in the language the app shows.
+//
+// Next to "PIN saved": the link that opens the PIN form to type a new PIN.
+func PinChange() string { return In(i18n.Locale()).PinChange() }
+
+// PinChange says "Change"
+// in the language of msgs.
+//
+// Next to "PIN saved": the link that opens the PIN form to type a new PIN.
+func (msgs Messages) PinChange() string {
+	return Catalog.Format(msgs.locale, "pinChange", nil)
+}
+
+// PinChangeLabel says "Change the PIN for {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Change link next to "PIN saved". name is
+// the phone's name.
+func PinChangeLabel(name string) string { return In(i18n.Locale()).PinChangeLabel(name) }
+
+// PinChangeLabel says "Change the PIN for {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Change link next to "PIN saved". name is
+// the phone's name.
+func (msgs Messages) PinChangeLabel(name string) string {
+	return Catalog.Format(msgs.locale, "pinChangeLabel", map[string]any{"name": name})
+}
+
+// PinErrRemove says "Couldn't remove the PIN: {detail}"
+// in the language the app shows.
+//
+// A notice when the keychain could not remove the PIN. detail is the
+// system's error, in English.
+func PinErrRemove(detail string) string { return In(i18n.Locale()).PinErrRemove(detail) }
+
+// PinErrRemove says "Couldn't remove the PIN: {detail}"
+// in the language of msgs.
+//
+// A notice when the keychain could not remove the PIN. detail is the
+// system's error, in English.
+func (msgs Messages) PinErrRemove(detail string) string {
+	return Catalog.Format(msgs.locale, "pinErrRemove", map[string]any{"detail": detail})
+}
+
+// PinErrSave says "Couldn't save the PIN: {detail}"
+// in the language the app shows.
+//
+// The PIN form: the error when the keychain could not save the PIN. detail
+// is the system's error, in English.
+func PinErrSave(detail string) string { return In(i18n.Locale()).PinErrSave(detail) }
+
+// PinErrSave says "Couldn't save the PIN: {detail}"
+// in the language of msgs.
+//
+// The PIN form: the error when the keychain could not save the PIN. detail
+// is the system's error, in English.
+func (msgs Messages) PinErrSave(detail string) string {
+	return Catalog.Format(msgs.locale, "pinErrSave", map[string]any{"detail": detail})
+}
+
+// PinErrShort says "Enter the PIN or passcode that unlocks {name}: at least 4 characters."
+// in the language the app shows.
+//
+// The PIN form: the error when the PIN typed is shorter than 4 characters.
+// name is the phone's name.
+func PinErrShort(name string) string { return In(i18n.Locale()).PinErrShort(name) }
+
+// PinErrShort says "Enter the PIN or passcode that unlocks {name}: at least 4 characters."
+// in the language of msgs.
+//
+// The PIN form: the error when the PIN typed is shorter than 4 characters.
+// name is the phone's name.
+func (msgs Messages) PinErrShort(name string) string {
+	return Catalog.Format(msgs.locale, "pinErrShort", map[string]any{"name": name})
+}
+
+// PinFieldLabel says "PIN for {name}"
+// in the language the app shows.
+//
+// The PIN form: the accessibility label of the PIN field. name is the
+// phone's name.
+func PinFieldLabel(name string) string { return In(i18n.Locale()).PinFieldLabel(name) }
+
+// PinFieldLabel says "PIN for {name}"
+// in the language of msgs.
+//
+// The PIN form: the accessibility label of the PIN field. name is the
+// phone's name.
+func (msgs Messages) PinFieldLabel(name string) string {
+	return Catalog.Format(msgs.locale, "pinFieldLabel", map[string]any{"name": name})
+}
+
+// PinPlaceholder says "PIN or passcode"
+// in the language the app shows.
+//
+// The PIN form: the placeholder of the secure field where the person types
+// the phone's PIN or passcode.
+func PinPlaceholder() string { return In(i18n.Locale()).PinPlaceholder() }
+
+// PinPlaceholder says "PIN or passcode"
+// in the language of msgs.
+//
+// The PIN form: the placeholder of the secure field where the person types
+// the phone's PIN or passcode.
+func (msgs Messages) PinPlaceholder() string {
+	return Catalog.Format(msgs.locale, "pinPlaceholder", nil)
+}
+
+// PinRemove says "Remove"
+// in the language the app shows.
+//
+// Next to "PIN saved": the link that removes the saved PIN.
+func PinRemove() string { return In(i18n.Locale()).PinRemove() }
+
+// PinRemove says "Remove"
+// in the language of msgs.
+//
+// Next to "PIN saved": the link that removes the saved PIN.
+func (msgs Messages) PinRemove() string {
+	return Catalog.Format(msgs.locale, "pinRemove", nil)
+}
+
+// PinRemoveLabel says "Remove the PIN for {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Remove link next to "PIN saved". name is
+// the phone's name.
+func PinRemoveLabel(name string) string { return In(i18n.Locale()).PinRemoveLabel(name) }
+
+// PinRemoveLabel says "Remove the PIN for {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Remove link next to "PIN saved". name is
+// the phone's name.
+func (msgs Messages) PinRemoveLabel(name string) string {
+	return Catalog.Format(msgs.locale, "pinRemoveLabel", map[string]any{"name": name})
+}
+
+// PinRemovedToast says "Removed the PIN for {name}"
+// in the language the app shows.
+//
+// A notice after the PIN was removed. name is the phone's name.
+func PinRemovedToast(name string) string { return In(i18n.Locale()).PinRemovedToast(name) }
+
+// PinRemovedToast says "Removed the PIN for {name}"
+// in the language of msgs.
+//
+// A notice after the PIN was removed. name is the phone's name.
+func (msgs Messages) PinRemovedToast(name string) string {
+	return Catalog.Format(msgs.locale, "pinRemovedToast", map[string]any{"name": name})
+}
+
+// PinSave says "Save PIN"
+// in the language the app shows.
+//
+// The PIN form: the button that saves the PIN typed in the system's
+// keychain.
+func PinSave() string { return In(i18n.Locale()).PinSave() }
+
+// PinSave says "Save PIN"
+// in the language of msgs.
+//
+// The PIN form: the button that saves the PIN typed in the system's
+// keychain.
+func (msgs Messages) PinSave() string {
+	return Catalog.Format(msgs.locale, "pinSave", nil)
+}
+
+// PinSaveLabel says "Save the PIN for {name}"
+// in the language the app shows.
+//
+// The accessibility label of the button Save PIN…. name is the phone's
+// name.
+func PinSaveLabel(name string) string { return In(i18n.Locale()).PinSaveLabel(name) }
+
+// PinSaveLabel says "Save the PIN for {name}"
+// in the language of msgs.
+//
+// The accessibility label of the button Save PIN…. name is the phone's
+// name.
+func (msgs Messages) PinSaveLabel(name string) string {
+	return Catalog.Format(msgs.locale, "pinSaveLabel", map[string]any{"name": name})
+}
+
+// PinSaveOpen says "Save PIN…"
+// in the language the app shows.
+//
+// The small button that opens the PIN form, where no PIN is saved for the
+// phone (Settings › Phones, the locked phone's card).
+func PinSaveOpen() string { return In(i18n.Locale()).PinSaveOpen() }
+
+// PinSaveOpen says "Save PIN…"
+// in the language of msgs.
+//
+// The small button that opens the PIN form, where no PIN is saved for the
+// phone (Settings › Phones, the locked phone's card).
+func (msgs Messages) PinSaveOpen() string {
+	return Catalog.Format(msgs.locale, "pinSaveOpen", nil)
+}
+
+// PinSaved says "PIN saved"
+// in the language the app shows.
+//
+// Where a phone's PIN is saved (Settings › Phones and the locked phone's
+// card): next to a lock icon, before the links Change and Remove.
+func PinSaved() string { return In(i18n.Locale()).PinSaved() }
+
+// PinSaved says "PIN saved"
+// in the language of msgs.
+//
+// Where a phone's PIN is saved (Settings › Phones and the locked phone's
+// card): next to a lock icon, before the links Change and Remove.
+func (msgs Messages) PinSaved() string {
+	return Catalog.Format(msgs.locale, "pinSaved", nil)
+}
+
+// PinSavedToast says "Saved the PIN for {name}"
+// in the language the app shows.
+//
+// A notice after the PIN was saved. name is the phone's name.
+func PinSavedToast(name string) string { return In(i18n.Locale()).PinSavedToast(name) }
+
+// PinSavedToast says "Saved the PIN for {name}"
+// in the language of msgs.
+//
+// A notice after the PIN was saved. name is the phone's name.
+func (msgs Messages) PinSavedToast(name string) string {
+	return Catalog.Format(msgs.locale, "pinSavedToast", map[string]any{"name": name})
+}
+
 // PlatformUnlockKeepMac says "Your PIN stays in your Mac's Keychain. Agents never see it."
 // in the language the app shows.
 //
@@ -3455,6 +7037,22 @@ func (msgs Messages) ReplayWatchTooltip() string {
 	return Catalog.Format(msgs.locale, "replayWatchTooltip", nil)
 }
 
+// RuleActionAgentRequest says "agent request"
+// in the language the app shows.
+//
+// What the Agent request rule covers, inside "Always allow agent request in
+// Dinely": the approvals the agent asks for itself.
+func RuleActionAgentRequest() string { return In(i18n.Locale()).RuleActionAgentRequest() }
+
+// RuleActionAgentRequest says "agent request"
+// in the language of msgs.
+//
+// What the Agent request rule covers, inside "Always allow agent request in
+// Dinely": the approvals the agent asks for itself.
+func (msgs Messages) RuleActionAgentRequest() string {
+	return Catalog.Format(msgs.locale, "ruleActionAgentRequest", nil)
+}
+
 // RuleActionCalls says "calls"
 // in the language the app shows.
 //
@@ -3589,6 +7187,22 @@ func RuleActionThisKind() string { return In(i18n.Locale()).RuleActionThisKind()
 // Inside "Always allow this kind" when the approval names no rule.
 func (msgs Messages) RuleActionThisKind() string {
 	return Catalog.Format(msgs.locale, "ruleActionThisKind", nil)
+}
+
+// RuleAgentRequest says "Agent request"
+// in the language the app shows.
+//
+// The name of the rule of an approval the agent asked for itself
+// (phone_request_approval).
+func RuleAgentRequest() string { return In(i18n.Locale()).RuleAgentRequest() }
+
+// RuleAgentRequest says "Agent request"
+// in the language of msgs.
+//
+// The name of the rule of an approval the agent asked for itself
+// (phone_request_approval).
+func (msgs Messages) RuleAgentRequest() string {
+	return Catalog.Format(msgs.locale, "ruleAgentRequest", nil)
 }
 
 // RuleAgentScope says "Agent scope"
@@ -4433,6 +8047,388 @@ func (msgs Messages) StepYouSaidNo(question string) string {
 	return Catalog.Format(msgs.locale, "stepYouSaidNo", map[string]any{"question": question})
 }
 
+// TasksDetails says "Details"
+// in the language the app shows.
+//
+// Developer mode: the title of the row at the bottom of a task card, whose
+// switch shows the tool calls behind the steps.
+func TasksDetails() string { return In(i18n.Locale()).TasksDetails() }
+
+// TasksDetails says "Details"
+// in the language of msgs.
+//
+// Developer mode: the title of the row at the bottom of a task card, whose
+// switch shows the tool calls behind the steps.
+func (msgs Messages) TasksDetails() string {
+	return Catalog.Format(msgs.locale, "tasksDetails", nil)
+}
+
+// TasksDeveloperModeOn says "Developer mode is on"
+// in the language the app shows.
+//
+// Developer mode: under Details at the bottom of a task card, why the row
+// is there.
+func TasksDeveloperModeOn() string { return In(i18n.Locale()).TasksDeveloperModeOn() }
+
+// TasksDeveloperModeOn says "Developer mode is on"
+// in the language of msgs.
+//
+// Developer mode: under Details at the bottom of a task card, why the row
+// is there.
+func (msgs Messages) TasksDeveloperModeOn() string {
+	return Catalog.Format(msgs.locale, "tasksDeveloperModeOn", nil)
+}
+
+// TasksEarlierSteps says "{count, plural, one {# earlier step} other {# earlier steps}}"
+// in the language the app shows.
+//
+// Above a task card's last steps: how many earlier steps are not shown.
+func TasksEarlierSteps(count int) string { return In(i18n.Locale()).TasksEarlierSteps(count) }
+
+// TasksEarlierSteps says "{count, plural, one {# earlier step} other {# earlier steps}}"
+// in the language of msgs.
+//
+// Above a task card's last steps: how many earlier steps are not shown.
+func (msgs Messages) TasksEarlierSteps(count int) string {
+	return Catalog.Format(msgs.locale, "tasksEarlierSteps", map[string]any{"count": count})
+}
+
+// TasksNoToolCalls says "No tool calls yet."
+// in the language the app shows.
+//
+// Developer mode: in place of a task's tool calls before the agent made
+// any.
+func TasksNoToolCalls() string { return In(i18n.Locale()).TasksNoToolCalls() }
+
+// TasksNoToolCalls says "No tool calls yet."
+// in the language of msgs.
+//
+// Developer mode: in place of a task's tool calls before the agent made
+// any.
+func (msgs Messages) TasksNoToolCalls() string {
+	return Catalog.Format(msgs.locale, "tasksNoToolCalls", nil)
+}
+
+// TasksNone says "No tasks running. Ask your agent to use a phone."
+// in the language the app shows.
+//
+// In place of the Tasks list when no agent is working on any phone.
+func TasksNone() string { return In(i18n.Locale()).TasksNone() }
+
+// TasksNone says "No tasks running. Ask your agent to use a phone."
+// in the language of msgs.
+//
+// In place of the Tasks list when no agent is working on any phone.
+func (msgs Messages) TasksNone() string {
+	return Catalog.Format(msgs.locale, "tasksNone", nil)
+}
+
+// TasksRowDone says "done"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the task is finished.
+func TasksRowDone() string { return In(i18n.Locale()).TasksRowDone() }
+
+// TasksRowDone says "done"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the task is finished.
+func (msgs Messages) TasksRowDone() string {
+	return Catalog.Format(msgs.locale, "tasksRowDone", nil)
+}
+
+// TasksRowEnded says "ended"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the task ended after
+// the person said no.
+func TasksRowEnded() string { return In(i18n.Locale()).TasksRowEnded() }
+
+// TasksRowEnded says "ended"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the task ended after
+// the person said no.
+func (msgs Messages) TasksRowEnded() string {
+	return Catalog.Format(msgs.locale, "tasksRowEnded", nil)
+}
+
+// TasksRowFailed says "failed"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the task failed.
+func TasksRowFailed() string { return In(i18n.Locale()).TasksRowFailed() }
+
+// TasksRowFailed says "failed"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the task failed.
+func (msgs Messages) TasksRowFailed() string {
+	return Catalog.Format(msgs.locale, "tasksRowFailed", nil)
+}
+
+// TasksRowLocked says "locked"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the phone is locked.
+func TasksRowLocked() string { return In(i18n.Locale()).TasksRowLocked() }
+
+// TasksRowLocked says "locked"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the phone is locked.
+func (msgs Messages) TasksRowLocked() string {
+	return Catalog.Format(msgs.locale, "tasksRowLocked", nil)
+}
+
+// TasksRowPaused says "paused"
+// in the language the app shows.
+//
+// The short state at the end of a one-line row of another phone's task: the
+// person took over.
+func TasksRowPaused() string { return In(i18n.Locale()).TasksRowPaused() }
+
+// TasksRowPaused says "paused"
+// in the language of msgs.
+//
+// The short state at the end of a one-line row of another phone's task: the
+// person took over.
+func (msgs Messages) TasksRowPaused() string {
+	return Catalog.Format(msgs.locale, "tasksRowPaused", nil)
+}
+
+// TasksRowStep says "step {step}"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row while the agent works:
+// the number of the step it is at.
+func TasksRowStep(step int) string { return In(i18n.Locale()).TasksRowStep(step) }
+
+// TasksRowStep says "step {step}"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row while the agent works:
+// the number of the step it is at.
+func (msgs Messages) TasksRowStep(step int) string {
+	return Catalog.Format(msgs.locale, "tasksRowStep", map[string]any{"step": step})
+}
+
+// TasksRowStopped says "stopped"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the task was stopped.
+func TasksRowStopped() string { return In(i18n.Locale()).TasksRowStopped() }
+
+// TasksRowStopped says "stopped"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the task was stopped.
+func (msgs Messages) TasksRowStopped() string {
+	return Catalog.Format(msgs.locale, "tasksRowStopped", nil)
+}
+
+// TasksRowWaiting says "waiting"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the agent waits for
+// the person.
+func TasksRowWaiting() string { return In(i18n.Locale()).TasksRowWaiting() }
+
+// TasksRowWaiting says "waiting"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the agent waits for
+// the person.
+func (msgs Messages) TasksRowWaiting() string {
+	return Catalog.Format(msgs.locale, "tasksRowWaiting", nil)
+}
+
+// TasksSection says "Tasks"
+// in the language the app shows.
+//
+// The heading (and accessibility label) of the agents' tasks in the Phones
+// page's right-hand column.
+func TasksSection() string { return In(i18n.Locale()).TasksSection() }
+
+// TasksSection says "Tasks"
+// in the language of msgs.
+//
+// The heading (and accessibility label) of the agents' tasks in the Phones
+// page's right-hand column.
+func (msgs Messages) TasksSection() string {
+	return Catalog.Format(msgs.locale, "tasksSection", nil)
+}
+
+// TasksShowTechnicalDetails says "Show technical details"
+// in the language the app shows.
+//
+// The accessibility label of the Details switch on a task card: shows the
+// tool calls in place of the steps.
+func TasksShowTechnicalDetails() string { return In(i18n.Locale()).TasksShowTechnicalDetails() }
+
+// TasksShowTechnicalDetails says "Show technical details"
+// in the language of msgs.
+//
+// The accessibility label of the Details switch on a task card: shows the
+// tool calls in place of the steps.
+func (msgs Messages) TasksShowTechnicalDetails() string {
+	return Catalog.Format(msgs.locale, "tasksShowTechnicalDetails", nil)
+}
+
+// TasksStatusDone says "Done"
+// in the language the app shows.
+//
+// A task card's status: the agent finished the task.
+func TasksStatusDone() string { return In(i18n.Locale()).TasksStatusDone() }
+
+// TasksStatusDone says "Done"
+// in the language of msgs.
+//
+// A task card's status: the agent finished the task.
+func (msgs Messages) TasksStatusDone() string {
+	return Catalog.Format(msgs.locale, "tasksStatusDone", nil)
+}
+
+// TasksStatusEnded says "Ended after your answer"
+// in the language the app shows.
+//
+// A task card's status: the task ended after the person said no to one of
+// its steps.
+func TasksStatusEnded() string { return In(i18n.Locale()).TasksStatusEnded() }
+
+// TasksStatusEnded says "Ended after your answer"
+// in the language of msgs.
+//
+// A task card's status: the task ended after the person said no to one of
+// its steps.
+func (msgs Messages) TasksStatusEnded() string {
+	return Catalog.Format(msgs.locale, "tasksStatusEnded", nil)
+}
+
+// TasksStatusFailed says "Failed"
+// in the language the app shows.
+//
+// A task card's status: the task failed.
+func TasksStatusFailed() string { return In(i18n.Locale()).TasksStatusFailed() }
+
+// TasksStatusFailed says "Failed"
+// in the language of msgs.
+//
+// A task card's status: the task failed.
+func (msgs Messages) TasksStatusFailed() string {
+	return Catalog.Format(msgs.locale, "tasksStatusFailed", nil)
+}
+
+// TasksStatusLocked says "Locked"
+// in the language the app shows.
+//
+// A task card's status, next to a dot: the phone is locked and the agent
+// waits for it to be unlocked.
+func TasksStatusLocked() string { return In(i18n.Locale()).TasksStatusLocked() }
+
+// TasksStatusLocked says "Locked"
+// in the language of msgs.
+//
+// A task card's status, next to a dot: the phone is locked and the agent
+// waits for it to be unlocked.
+func (msgs Messages) TasksStatusLocked() string {
+	return Catalog.Format(msgs.locale, "tasksStatusLocked", nil)
+}
+
+// TasksStatusPaused says "Paused · You're in control"
+// in the language the app shows.
+//
+// A task card's status: the person took over the phone and the agent is
+// paused.
+func TasksStatusPaused() string { return In(i18n.Locale()).TasksStatusPaused() }
+
+// TasksStatusPaused says "Paused · You're in control"
+// in the language of msgs.
+//
+// A task card's status: the person took over the phone and the agent is
+// paused.
+func (msgs Messages) TasksStatusPaused() string {
+	return Catalog.Format(msgs.locale, "tasksStatusPaused", nil)
+}
+
+// TasksStatusStopped says "Stopped"
+// in the language the app shows.
+//
+// A task card's status: the task was stopped.
+func TasksStatusStopped() string { return In(i18n.Locale()).TasksStatusStopped() }
+
+// TasksStatusStopped says "Stopped"
+// in the language of msgs.
+//
+// A task card's status: the task was stopped.
+func (msgs Messages) TasksStatusStopped() string {
+	return Catalog.Format(msgs.locale, "tasksStatusStopped", nil)
+}
+
+// TasksStatusWaiting says "Waiting for you"
+// in the language the app shows.
+//
+// A task card's status: the agent waits for the person to answer an
+// approval or a request.
+func TasksStatusWaiting() string { return In(i18n.Locale()).TasksStatusWaiting() }
+
+// TasksStatusWaiting says "Waiting for you"
+// in the language of msgs.
+//
+// A task card's status: the agent waits for the person to answer an
+// approval or a request.
+func (msgs Messages) TasksStatusWaiting() string {
+	return Catalog.Format(msgs.locale, "tasksStatusWaiting", nil)
+}
+
+// TasksStatusWorking says "Working"
+// in the language the app shows.
+//
+// A task card's status, next to a pulsing dot: the agent is at work.
+func TasksStatusWorking() string { return In(i18n.Locale()).TasksStatusWorking() }
+
+// TasksStatusWorking says "Working"
+// in the language of msgs.
+//
+// A task card's status, next to a pulsing dot: the agent is at work.
+func (msgs Messages) TasksStatusWorking() string {
+	return Catalog.Format(msgs.locale, "tasksStatusWorking", nil)
+}
+
+// TasksStepWithShot says "{step}, screenshot"
+// in the language the app shows.
+//
+// The accessibility label of a task card's step that has a screenshot,
+// which a click shows under the step. step is the step's text, as the list
+// shows it.
+func TasksStepWithShot(step string) string { return In(i18n.Locale()).TasksStepWithShot(step) }
+
+// TasksStepWithShot says "{step}, screenshot"
+// in the language of msgs.
+//
+// The accessibility label of a task card's step that has a screenshot,
+// which a click shows under the step. step is the step's text, as the list
+// shows it.
+func (msgs Messages) TasksStepWithShot(step string) string {
+	return Catalog.Format(msgs.locale, "tasksStepWithShot", map[string]any{"step": step})
+}
+
+// TasksStop says "Stop"
+// in the language the app shows.
+//
+// Red button that stops the agent's task: on the task card and on the All
+// phones tiles.
+func TasksStop() string { return In(i18n.Locale()).TasksStop() }
+
+// TasksStop says "Stop"
+// in the language of msgs.
+//
+// Red button that stops the agent's task: on the task card and on the All
+// phones tiles.
+func (msgs Messages) TasksStop() string {
+	return Catalog.Format(msgs.locale, "tasksStop", nil)
+}
+
 // TimeHours says "{hours}\u00a0h\u00a0{minutes}\u00a0min"
 // in the language the app shows.
 //
@@ -4501,4 +8497,398 @@ func ToastCouldNot(action string, error string) string {
 // callTakeOver (zh: 接管), error the gateway's error in English.
 func (msgs Messages) ToastCouldNot(action string, error string) string {
 	return Catalog.Format(msgs.locale, "toastCouldNot", map[string]any{"action": action, "error": error})
+}
+
+// UnlockBusy says "Unlocking…"
+// in the language the app shows.
+//
+// The unlock button while it unlocks the phone; it reads "Unlock with Touch
+// ID" (or the platform's word) otherwise.
+func UnlockBusy() string { return In(i18n.Locale()).UnlockBusy() }
+
+// UnlockBusy says "Unlocking…"
+// in the language of msgs.
+//
+// The unlock button while it unlocks the phone; it reads "Unlock with Touch
+// ID" (or the platform's word) otherwise.
+func (msgs Messages) UnlockBusy() string {
+	return Catalog.Format(msgs.locale, "unlockBusy", nil)
+}
+
+// UnlockCallWhat says "unlock the phone"
+// in the language the app shows.
+//
+// Fills "Couldn't …: <error>" (zh: 无法…：<error>), a notice when
+// unlocking a phone fails: a verb phrase.
+func UnlockCallWhat() string { return In(i18n.Locale()).UnlockCallWhat() }
+
+// UnlockCallWhat says "unlock the phone"
+// in the language of msgs.
+//
+// Fills "Couldn't …: <error>" (zh: 无法…：<error>), a notice when
+// unlocking a phone fails: a verb phrase.
+func (msgs Messages) UnlockCallWhat() string {
+	return Catalog.Format(msgs.locale, "unlockCallWhat", nil)
+}
+
+// UnlockEnd says "."
+// in the language the app shows.
+//
+// Ends the hints that say how to unlock a phone on it (the unlockOnPhone
+// messages) when nothing follows them: a full stop.
+func UnlockEnd() string { return In(i18n.Locale()).UnlockEnd() }
+
+// UnlockEnd says "."
+// in the language of msgs.
+//
+// Ends the hints that say how to unlock a phone on it (the unlockOnPhone
+// messages) when nothing follows them: a full stop.
+func (msgs Messages) UnlockEnd() string {
+	return Catalog.Format(msgs.locale, "unlockEnd", nil)
+}
+
+// UnlockErrNoPIN says "No PIN is saved for {name}. Save it in Settings › Phones."
+// in the language the app shows.
+//
+// A notice when unlocking failed because no PIN is saved for the phone.
+// name is the phone's name.
+func UnlockErrNoPIN(name string) string { return In(i18n.Locale()).UnlockErrNoPIN(name) }
+
+// UnlockErrNoPIN says "No PIN is saved for {name}. Save it in Settings › Phones."
+// in the language of msgs.
+//
+// A notice when unlocking failed because no PIN is saved for the phone.
+// name is the phone's name.
+func (msgs Messages) UnlockErrNoPIN(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrNoPIN", map[string]any{"name": name})
+}
+
+// UnlockErrNoPad says "Pinky couldn't get to {name}'s passcode screen, so it entered nothing. Try again, or unlock it on the phone."
+// in the language the app shows.
+//
+// A notice when Pinky could not reach the phone's passcode screen, so it
+// typed nothing. name is the phone's name.
+func UnlockErrNoPad(name string) string { return In(i18n.Locale()).UnlockErrNoPad(name) }
+
+// UnlockErrNoPad says "Pinky couldn't get to {name}'s passcode screen, so it entered nothing. Try again, or unlock it on the phone."
+// in the language of msgs.
+//
+// A notice when Pinky could not reach the phone's passcode screen, so it
+// typed nothing. name is the phone's name.
+func (msgs Messages) UnlockErrNoPad(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrNoPad", map[string]any{"name": name})
+}
+
+// UnlockErrNoUnlock says "Unlocking from this computer isn't available. Unlock {name} on the phone."
+// in the language the app shows.
+//
+// A notice when the gateway cannot unlock phones. name is the phone's name.
+func UnlockErrNoUnlock(name string) string { return In(i18n.Locale()).UnlockErrNoUnlock(name) }
+
+// UnlockErrNoUnlock says "Unlocking from this computer isn't available. Unlock {name} on the phone."
+// in the language of msgs.
+//
+// A notice when the gateway cannot unlock phones. name is the phone's name.
+func (msgs Messages) UnlockErrNoUnlock(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrNoUnlock", map[string]any{"name": name})
+}
+
+// UnlockErrOffline says "{name} is offline."
+// in the language the app shows.
+//
+// A notice when unlocking failed because the phone is offline. name is the
+// phone's name.
+func UnlockErrOffline(name string) string { return In(i18n.Locale()).UnlockErrOffline(name) }
+
+// UnlockErrOffline says "{name} is offline."
+// in the language of msgs.
+//
+// A notice when unlocking failed because the phone is offline. name is the
+// phone's name.
+func (msgs Messages) UnlockErrOffline(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrOffline", map[string]any{"name": name})
+}
+
+// UnlockErrOther says "Couldn't unlock {name}: {detail}"
+// in the language the app shows.
+//
+// A notice when unlocking failed for another reason. name is the phone's
+// name; detail is the error, in English.
+func UnlockErrOther(name string, detail string) string {
+	return In(i18n.Locale()).UnlockErrOther(name, detail)
+}
+
+// UnlockErrOther says "Couldn't unlock {name}: {detail}"
+// in the language of msgs.
+//
+// A notice when unlocking failed for another reason. name is the phone's
+// name; detail is the error, in English.
+func (msgs Messages) UnlockErrOther(name string, detail string) string {
+	return Catalog.Format(msgs.locale, "unlockErrOther", map[string]any{"name": name, "detail": detail})
+}
+
+// UnlockErrUnsupported says "{name} can't be unlocked from this computer. Unlock it on the phone."
+// in the language the app shows.
+//
+// A notice when this phone cannot be unlocked from the computer. name is
+// the phone's name.
+func UnlockErrUnsupported(name string) string { return In(i18n.Locale()).UnlockErrUnsupported(name) }
+
+// UnlockErrUnsupported says "{name} can't be unlocked from this computer. Unlock it on the phone."
+// in the language of msgs.
+//
+// A notice when this phone cannot be unlocked from the computer. name is
+// the phone's name.
+func (msgs Messages) UnlockErrUnsupported(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrUnsupported", map[string]any{"name": name})
+}
+
+// UnlockErrWrongPIN says "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again until you unlock…"
+// in the language the app shows.
+//
+// A notice when the phone refused its saved PIN. Pinky stops trying it, as
+// phones lock out, or erase themselves, after repeated wrong PINs. name is
+// the phone's name; Settings › Phones is Pinky's Settings page.
+func UnlockErrWrongPIN(name string) string { return In(i18n.Locale()).UnlockErrWrongPIN(name) }
+
+// UnlockErrWrongPIN says "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again until you unlock…"
+// in the language of msgs.
+//
+// A notice when the phone refused its saved PIN. Pinky stops trying it, as
+// phones lock out, or erase themselves, after repeated wrong PINs. name is
+// the phone's name; Settings › Phones is Pinky's Settings page.
+func (msgs Messages) UnlockErrWrongPIN(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrWrongPIN", map[string]any{"name": name})
+}
+
+// UnlockFromHere says "Unlock it from here when you or an agent need it."
+// in the language the app shows.
+//
+// The locked phone's card, when its PIN is saved: above the unlock button.
+// The card is in a narrow side panel.
+func UnlockFromHere() string { return In(i18n.Locale()).UnlockFromHere() }
+
+// UnlockFromHere says "Unlock it from here when you or an agent need it."
+// in the language of msgs.
+//
+// The locked phone's card, when its PIN is saved: above the unlock button.
+// The card is in a narrow side panel.
+func (msgs Messages) UnlockFromHere() string {
+	return Catalog.Format(msgs.locale, "unlockFromHere", nil)
+}
+
+// UnlockLocked says "{name} is locked"
+// in the language the app shows.
+//
+// The title of the card on a locked phone's side panel, next to a lock
+// icon, and the card's accessibility label. name is the phone's name.
+func UnlockLocked(name string) string { return In(i18n.Locale()).UnlockLocked(name) }
+
+// UnlockLocked says "{name} is locked"
+// in the language of msgs.
+//
+// The title of the card on a locked phone's side panel, next to a lock
+// icon, and the card's accessibility label. name is the phone's name.
+func (msgs Messages) UnlockLocked(name string) string {
+	return Catalog.Format(msgs.locale, "unlockLocked", map[string]any{"name": name})
+}
+
+// UnlockNotAvailable says "Unlocking from this computer is not available on this system."
+// in the language the app shows.
+//
+// Where the system has no keychain Pinky can use, so phones cannot be
+// unlocked from this computer: in the PIN form's place, and as a notice
+// when unlocking fails.
+func UnlockNotAvailable() string { return In(i18n.Locale()).UnlockNotAvailable() }
+
+// UnlockNotAvailable says "Unlocking from this computer is not available on this system."
+// in the language of msgs.
+//
+// Where the system has no keychain Pinky can use, so phones cannot be
+// unlocked from this computer: in the PIN form's place, and as a notice
+// when unlocking fails.
+func (msgs Messages) UnlockNotAvailable() string {
+	return Catalog.Format(msgs.locale, "unlockNotAvailable", nil)
+}
+
+// UnlockNotNow says "Not now"
+// in the language the app shows.
+//
+// The locked phone's card: the quiet button that hides the card for this
+// phone.
+func UnlockNotNow() string { return In(i18n.Locale()).UnlockNotNow() }
+
+// UnlockNotNow says "Not now"
+// in the language of msgs.
+//
+// The locked phone's card: the quiet button that hides the card for this
+// phone.
+func (msgs Messages) UnlockNotNow() string {
+	return Catalog.Format(msgs.locale, "unlockNotNow", nil)
+}
+
+// UnlockNotNowLabel says "Not now: hide this for {name}"
+// in the language the app shows.
+//
+// The accessibility label of the Not now button on the locked phone's card.
+// name is the phone's name.
+func UnlockNotNowLabel(name string) string { return In(i18n.Locale()).UnlockNotNowLabel(name) }
+
+// UnlockNotNowLabel says "Not now: hide this for {name}"
+// in the language of msgs.
+//
+// The accessibility label of the Not now button on the locked phone's card.
+// name is the phone's name.
+func (msgs Messages) UnlockNotNowLabel(name string) string {
+	return Catalog.Format(msgs.locale, "unlockNotNowLabel", map[string]any{"name": name})
+}
+
+// UnlockOnPhone says "Unlock it on the phone{end}"
+// in the language the app shows.
+//
+// The locked phone's card: how to unlock it when this computer cannot. end
+// is a full stop (unlockEnd), or ", then click Done." when the card in
+// Needs you has a Done button, in the app's language.
+func UnlockOnPhone(end string) string { return In(i18n.Locale()).UnlockOnPhone(end) }
+
+// UnlockOnPhone says "Unlock it on the phone{end}"
+// in the language of msgs.
+//
+// The locked phone's card: how to unlock it when this computer cannot. end
+// is a full stop (unlockEnd), or ", then click Done." when the card in
+// Needs you has a Done button, in the app's language.
+func (msgs Messages) UnlockOnPhone(end string) string {
+	return Catalog.Format(msgs.locale, "unlockOnPhone", map[string]any{"end": end})
+}
+
+// UnlockOnPhoneNotAvailable says "Unlocking from this computer is not available on this system. Unlock it on the phone{end}"
+// in the language the app shows.
+//
+// The locked phone's card, when the system has no keychain Pinky can use.
+// end as in unlockOnPhone.
+func UnlockOnPhoneNotAvailable(end string) string {
+	return In(i18n.Locale()).UnlockOnPhoneNotAvailable(end)
+}
+
+// UnlockOnPhoneNotAvailable says "Unlocking from this computer is not available on this system. Unlock it on the phone{end}"
+// in the language of msgs.
+//
+// The locked phone's card, when the system has no keychain Pinky can use.
+// end as in unlockOnPhone.
+func (msgs Messages) UnlockOnPhoneNotAvailable(end string) string {
+	return Catalog.Format(msgs.locale, "unlockOnPhoneNotAvailable", map[string]any{"end": end})
+}
+
+// UnlockOnPhoneOff says "Unlock it on the phone{end} Unlocking from this computer is off in Settings › Safety."
+// in the language the app shows.
+//
+// The locked phone's card, when unlocking from this computer is turned off
+// in Settings › Safety (the switch is named "Unlock from this computer").
+// end as in unlockOnPhone.
+func UnlockOnPhoneOff(end string) string { return In(i18n.Locale()).UnlockOnPhoneOff(end) }
+
+// UnlockOnPhoneOff says "Unlock it on the phone{end} Unlocking from this computer is off in Settings › Safety."
+// in the language of msgs.
+//
+// The locked phone's card, when unlocking from this computer is turned off
+// in Settings › Safety (the switch is named "Unlock from this computer").
+// end as in unlockOnPhone.
+func (msgs Messages) UnlockOnPhoneOff(end string) string {
+	return Catalog.Format(msgs.locale, "unlockOnPhoneOff", map[string]any{"end": end})
+}
+
+// UnlockOnPhoneSavePIN says "Save the phone's PIN to unlock it from this computer, or unlock it on the phone{end}"
+// in the language the app shows.
+//
+// The locked phone's card in Needs you, when no PIN is saved for it; the
+// button Save PIN… follows. end as in unlockOnPhone.
+func UnlockOnPhoneSavePIN(end string) string { return In(i18n.Locale()).UnlockOnPhoneSavePIN(end) }
+
+// UnlockOnPhoneSavePIN says "Save the phone's PIN to unlock it from this computer, or unlock it on the phone{end}"
+// in the language of msgs.
+//
+// The locked phone's card in Needs you, when no PIN is saved for it; the
+// button Save PIN… follows. end as in unlockOnPhone.
+func (msgs Messages) UnlockOnPhoneSavePIN(end string) string {
+	return Catalog.Format(msgs.locale, "unlockOnPhoneSavePIN", map[string]any{"end": end})
+}
+
+// UnlockOnPhoneWrongPIN says "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone{end} If its PIN changed, update i…"
+// in the language the app shows.
+//
+// The locked phone's card, after the phone refused its saved PIN: Pinky
+// won't try it again. end as in unlockOnPhone.
+func UnlockOnPhoneWrongPIN(end string) string { return In(i18n.Locale()).UnlockOnPhoneWrongPIN(end) }
+
+// UnlockOnPhoneWrongPIN says "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone{end} If its PIN changed, update i…"
+// in the language of msgs.
+//
+// The locked phone's card, after the phone refused its saved PIN: Pinky
+// won't try it again. end as in unlockOnPhone.
+func (msgs Messages) UnlockOnPhoneWrongPIN(end string) string {
+	return Catalog.Format(msgs.locale, "unlockOnPhoneWrongPIN", map[string]any{"end": end})
+}
+
+// UnlockOrOnPhone says "or unlock it on the phone"
+// in the language the app shows.
+//
+// The locked phone's card in Needs you: the small line under the button
+// that unlocks it from this computer.
+func UnlockOrOnPhone() string { return In(i18n.Locale()).UnlockOrOnPhone() }
+
+// UnlockOrOnPhone says "or unlock it on the phone"
+// in the language of msgs.
+//
+// The locked phone's card in Needs you: the small line under the button
+// that unlocks it from this computer.
+func (msgs Messages) UnlockOrOnPhone() string {
+	return Catalog.Format(msgs.locale, "unlockOrOnPhone", nil)
+}
+
+// UnlockPitchMac says "Save its PIN and you can unlock it from this computer with Touch ID when an agent needs it, without picking the phone…"
+// in the language the app shows.
+//
+// macOS: the locked phone's card when no PIN is saved for it, above the
+// button Save PIN…. The card is in a narrow side panel.
+func UnlockPitchMac() string { return In(i18n.Locale()).UnlockPitchMac() }
+
+// UnlockPitchMac says "Save its PIN and you can unlock it from this computer with Touch ID when an agent needs it, without picking the phone…"
+// in the language of msgs.
+//
+// macOS: the locked phone's card when no PIN is saved for it, above the
+// button Save PIN…. The card is in a narrow side panel.
+func (msgs Messages) UnlockPitchMac() string {
+	return Catalog.Format(msgs.locale, "unlockPitchMac", nil)
+}
+
+// UnlockPitchOther says "Save its PIN and you can unlock it from this computer when an agent needs it, without picking the phone up."
+// in the language the app shows.
+//
+// Linux: the locked phone's card when no PIN is saved for it, above the
+// button Save PIN…. The card is in a narrow side panel.
+func UnlockPitchOther() string { return In(i18n.Locale()).UnlockPitchOther() }
+
+// UnlockPitchOther says "Save its PIN and you can unlock it from this computer when an agent needs it, without picking the phone up."
+// in the language of msgs.
+//
+// Linux: the locked phone's card when no PIN is saved for it, above the
+// button Save PIN…. The card is in a narrow side panel.
+func (msgs Messages) UnlockPitchOther() string {
+	return Catalog.Format(msgs.locale, "unlockPitchOther", nil)
+}
+
+// UnlockPitchWindows says "Save its PIN and you can unlock it from this computer with Windows Hello when an agent needs it, without picking the …"
+// in the language the app shows.
+//
+// Windows: the locked phone's card when no PIN is saved for it, above the
+// button Save PIN…. The card is in a narrow side panel.
+func UnlockPitchWindows() string { return In(i18n.Locale()).UnlockPitchWindows() }
+
+// UnlockPitchWindows says "Save its PIN and you can unlock it from this computer with Windows Hello when an agent needs it, without picking the …"
+// in the language of msgs.
+//
+// Windows: the locked phone's card when no PIN is saved for it, above the
+// button Save PIN…. The card is in a narrow side panel.
+func (msgs Messages) UnlockPitchWindows() string {
+	return Catalog.Format(msgs.locale, "unlockPitchWindows", nil)
 }

@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"strings"
 
 	"github.com/egoist/mygo"
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/assets"
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
 
@@ -26,28 +28,34 @@ func (a *app) newTray() {
 		return
 	}
 	a.tray = t
-	menu := mygo.NewMenu([]*mygo.MenuItem{
-		{Label: "Open Pinky", Click: func(*mygo.MenuItem, *mygo.Window) { a.showMain() }},
-		{Label: "Show Phones…", Click: func(*mygo.MenuItem, *mygo.Window) { a.toggleFlyout() }},
-		mygo.Separator(),
-		{Label: "Stop All", Click: func(*mygo.MenuItem, *mygo.Window) { a.stopAll() }},
-		mygo.Separator(),
-		{Role: mygo.RoleQuit},
-	})
 	if runtime.GOOS == "linux" {
-		t.SetMenu(menu)
+		t.SetMenu(a.trayMenu())
+		mygo.App.OnLocaleChanged(func(string) { t.SetMenu(a.trayMenu()) })
 	} else {
 		t.OnClick(a.toggleFlyout)
 		t.OnRightClick(func() {
 			if a.flyout != nil {
 				a.flyout.Close()
 			}
-			t.SetMenu(menu)
+			t.SetMenu(a.trayMenu())
 			defer t.SetMenu(nil)
 			t.PopUpMenu()
 		})
 	}
 	mygo.App.OnWillQuit(func(*mygo.QuitEvent) { t.Destroy() })
+}
+
+// trayMenu is the tray icon's menu, made anew each time it shows so its
+// labels follow the language.
+func (a *app) trayMenu() *mygo.Menu {
+	return mygo.NewMenu([]*mygo.MenuItem{
+		{Label: locales.FlyoutOpenPinky(), Click: func(*mygo.MenuItem, *mygo.Window) { a.showMain() }},
+		{Label: locales.FlyoutShowPhones(), Click: func(*mygo.MenuItem, *mygo.Window) { a.toggleFlyout() }},
+		mygo.Separator(),
+		{Label: locales.FlyoutMenuStopAll(), Click: func(*mygo.MenuItem, *mygo.Window) { a.stopAll() }},
+		mygo.Separator(),
+		{Role: mygo.RoleQuit},
+	})
 }
 
 // updateTray shows how many things wait for the person next to the icon.
@@ -59,7 +67,7 @@ func (a *app) updateTray() {
 	tip := "Pinky"
 	title := ""
 	if n > 0 {
-		tip = fmt.Sprintf("Pinky · %s", plural(n, "thing needs you", "things need you"))
+		tip = locales.FlyoutTrayTooltip(n)
 		title = fmt.Sprint(n)
 	}
 	a.tray.SetToolTip(tip)
@@ -110,7 +118,7 @@ func (a *app) flyoutView(c *mg.Context) {
 	}
 	mg.Column(c).Fill().Background(p.panel).Padding(6, 8, 8, 8).Children(func() {
 		if len(a.needs) > 0 {
-			sec("Needs you")
+			sec(locales.NeedsSection())
 			for i, n := range a.needs {
 				if i == 4 {
 					break
@@ -127,23 +135,23 @@ func (a *app) flyoutView(c *mg.Context) {
 						a.openNeed(n.ID)
 					}
 				}
-				row.Label(n.DeviceName + ", " + n.Title).Children(func() {
+				row.Label(locales.FlyoutNeedLabel(n.DeviceName, needTitle(n))).Children(func() {
 					dot(c, p.amberDot, false)
 					mg.RichText(c,
 						mg.Span{Text: n.DeviceName, Weight: 600},
 						mg.Span{Text: " · " + needShort(n)},
 					).Grow(1).MinWidth(0).SingleLine()
-					label := "Review"
+					label := locales.FlyoutReview()
 					if n.Kind == gateway.NeedUnlock {
-						label = "Unlock"
+						label = locales.FlyoutUnlock()
 					}
 					mg.Text(c, label).FontWeight(500).TextColor(p.accentInk)
 				})
 			}
 		}
-		sec("Phones")
+		sec(locales.FlyoutPhones())
 		if len(a.devices) == 0 {
-			mg.Text(c, "No phones connected").FontSize(13).TextColor(p.ink2).Padding(8, 10)
+			mg.Text(c, locales.FlyoutNoPhones()).FontSize(13).TextColor(p.ink2).Padding(8, 10)
 		}
 		for _, d := range a.devices {
 			d := d
@@ -155,31 +163,31 @@ func (a *app) flyoutView(c *mg.Context) {
 				a.selectPhone(d.Info.ID)
 				a.showMain()
 			}
-			row.Label(d.Info.Name + ", " + d.StatusLine).Children(func() {
+			row.Label(locales.FlyoutPhoneLabel(d.Info.Name, statusLine(d))).Children(func() {
 				statusDot(c, d)
 				name := mg.Text(c, d.Info.Name).FontWeight(600).Shrink(0)
 				if d.Status == gateway.DeviceOffline {
 					name.TextColor(p.ink2)
 				}
-				mg.Text(c, d.StatusLine).FontSize(13).TextColor(p.ink2).Grow(1).MinWidth(0).SingleLine()
+				mg.Text(c, statusLine(d)).FontSize(13).TextColor(p.ink2).Grow(1).MinWidth(0).SingleLine()
 			})
 		}
 		mg.Spacer(c)
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 6)
-		open := flyRow(c).Label("Open Pinky")
+		open := flyRow(c).Label(locales.FlyoutOpenPinky())
 		if open.Clicked() {
 			if a.flyout != nil {
 				a.flyout.Close()
 			}
 			a.showMain()
 		}
-		open.Children(func() { mg.Text(c, "Open Pinky") })
-		stop := flyRow(c).Label("Stop all")
+		open.Children(func() { mg.Text(c, locales.FlyoutOpenPinky()) })
+		stop := flyRow(c).Label(locales.FlyoutStopAll())
 		if stop.Clicked() {
 			a.stopAll()
 		}
 		stop.Children(func() {
-			mg.Text(c, "Stop all").TextColor(p.red).Grow(1)
+			mg.Text(c, locales.FlyoutStopAll()).TextColor(p.red).Grow(1)
 			mg.Text(c, shortcutLabel()).FontSize(13).TextColor(p.ink3)
 		})
 	})
@@ -196,12 +204,13 @@ func flyRow(c *mg.Context) mg.Element {
 
 // needShort is a need in a few words: "Pay $12.80".
 func needShort(n gateway.NeedView) string {
-	t := n.Title
+	t := needTitle(n)
 	if len(t) > 0 && t[len(t)-1] == '?' {
 		t = t[:len(t)-1]
 	}
+	t = strings.TrimSuffix(t, "？") // a translated title's full-width question mark
 	if n.Kind == gateway.NeedUnlock {
-		return "Locked"
+		return locales.FlyoutLocked()
 	}
 	return t
 }

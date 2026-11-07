@@ -30,6 +30,7 @@ var ruleNames = map[string]func() string{
 	"Finance apps":       locales.RuleFinanceApps,
 	"Password managers":  locales.RulePasswordManagers,
 	"Files":              locales.RuleFiles,
+	"Agent request":      locales.RuleAgentRequest,
 }
 
 // ruleName names a rule as the person reads it: "Payments". A rule of the
@@ -50,6 +51,7 @@ var ruleActions = map[string]func() string{
 	"Calls":              locales.RuleActionCalls,
 	"Settings changes":   locales.RuleActionSettingsChanges,
 	"Every action":       locales.RuleActionEveryAction,
+	"Agent request":      locales.RuleActionAgentRequest,
 }
 
 // ruleAction says what a rule covers, inside "Always allow payments in

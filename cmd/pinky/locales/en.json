@@ -114,6 +114,188 @@
   "@activityTitle": {
     "description": "The title in the Activity page's header. Activity lists the finished tasks by day."
   },
+  "addPhoneAndroidDetail": "Connect it to this computer with a USB cable. If the phone asks to allow USB debugging, tap Allow.",
+  "@addPhoneAndroidDetail": {
+    "description": "Add phone › Android: the line under the heading. Allow is the button of the phone's \"Allow USB debugging?\" prompt: use Android's Simplified Chinese word for it."
+  },
+  "addPhoneAndroidTitle": "Plug in your Android phone",
+  "@addPhoneAndroidTitle": {
+    "description": "Add phone › Android: the heading of the step where the person connects the phone to the computer with a USB cable."
+  },
+  "addPhoneBack": "‹ Back",
+  "@addPhoneBack": {
+    "description": "Add phone: the link at the top left of the wizard that goes back a step."
+  },
+  "addPhoneCancel": "Cancel",
+  "@addPhoneCancel": {
+    "description": "Add phone: the button at the top right of the wizard that leaves it."
+  },
+  "addPhoneChooseAndroid": "Pixel, Galaxy and others",
+  "@addPhoneChooseAndroid": {
+    "description": "Add phone, first step: under \"Android\" on its card, examples of Android phones."
+  },
+  "addPhoneChooseDetail": "Pinky works with Android phones and iPhones.",
+  "@addPhoneChooseDetail": {
+    "description": "Add phone, first step: the line under the heading."
+  },
+  "addPhoneChooseIPhone": "Best on iOS 27; older versions work too",
+  "@addPhoneChooseIPhone": {
+    "description": "Add phone, first step: under \"iPhone\" on its card, which iOS versions work."
+  },
+  "addPhoneChooseTitle": "Which phone?",
+  "@addPhoneChooseTitle": {
+    "description": "Add phone, first step: the heading above two cards to pick from, Android and iPhone."
+  },
+  "addPhoneDone": "Done",
+  "@addPhoneDone": {
+    "description": "Add phone: the button that ends the wizard once the new phone is ready, and opens its page."
+  },
+  "addPhoneFound": "Found {name}",
+  "@addPhoneFound": {
+    "description": "Add phone: the status line once Pinky has found the new Android phone and it is ready, next to a green dot. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "addPhoneFoundBut": "Found {name}, but {detail}",
+  "@addPhoneFoundBut": {
+    "description": "Add phone › Android: the status line when Pinky found the phone but cannot use it yet; the USB debugging steps follow. name is the phone's name; detail is why, in English as the phone's driver says it, with a lower-case first letter.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "detail": {
+        "type": "String",
+        "example": "unlock the phone and allow USB debugging for this computer."
+      }
+    }
+  },
+  "addPhoneFoundIOS": "Found {name} · iOS {version}",
+  "@addPhoneFoundIOS": {
+    "description": "Add phone › iPhone: the status line once Pinky has found the iPhone, before it is ready. name is the iPhone's name; version is its iOS version, or empty (the line then ends with \"iOS\").",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 17"
+      },
+      "version": {
+        "type": "String",
+        "example": "27.0"
+      }
+    }
+  },
+  "addPhoneFoundNeedsSetup": "Found {name}, but it needs setup",
+  "@addPhoneFoundNeedsSetup": {
+    "description": "Add phone › Android: the status line when Pinky found the phone but cannot use it yet and knows no more; the USB debugging steps follow. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "addPhoneIPhoneCode": "Pairing code",
+  "@addPhoneIPhoneCode": {
+    "description": "Add phone › iPhone: the accessibility label of the six boxes, and of the field over them, where the person types the code the iPhone shows."
+  },
+  "addPhoneIPhoneDetail": "On the iPhone, turn on Developer Mode in Settings › Privacy & Security. Keep it on the same Wi-Fi, then enter the code it shows.",
+  "@addPhoneIPhoneDetail": {
+    "description": "Add phone › iPhone: the line under the heading, above the six boxes of the pairing code. Settings, Privacy & Security and Developer Mode are the iPhone's own names: use those of iOS's Simplified Chinese settings."
+  },
+  "addPhoneIPhoneTitle": "Pair your iPhone",
+  "@addPhoneIPhoneTitle": {
+    "description": "Add phone › iPhone: the heading of the iPhone step, for current and for older iPhones."
+  },
+  "addPhoneIPhoneWaiting": "Waiting for the iPhone. It shows up here once the gateway has paired with it.",
+  "@addPhoneIPhoneWaiting": {
+    "description": "Add phone › iPhone: the line under the code after the person clicks Pair, while the gateway pairs with the iPhone."
+  },
+  "addPhoneLabel": "Add phone",
+  "@addPhoneLabel": {
+    "description": "Add phone: the accessibility label of the wizard's card, which walks the person through adding a phone."
+  },
+  "addPhoneLooking": "Looking for your phone…",
+  "@addPhoneLooking": {
+    "description": "Add phone › Android: the status line, next to a spinner, while Pinky waits for a newly plugged-in phone."
+  },
+  "addPhoneLookingIPhone": "Looking for your iPhone…",
+  "@addPhoneLookingIPhone": {
+    "description": "Add phone › iPhone: the status line, next to a spinner, while Pinky waits for the iPhone."
+  },
+  "addPhoneOlderDetail": "Older iPhones work too. Pick how to connect.",
+  "@addPhoneOlderDetail": {
+    "description": "Add phone › older iPhone: the line under the heading \"Pair your iPhone\", above two ways to connect."
+  },
+  "addPhoneOlderHelper": "Install the Pinky helper",
+  "@addPhoneOlderHelper": {
+    "description": "Add phone › older iPhone: the first way to connect, by installing a helper app (WebDriverAgent) on the iPhone. Also its accessibility label."
+  },
+  "addPhoneOlderHelperDetail": "WebDriverAgent, signed with your Apple ID. With a free Apple ID it needs re-signing every 7 days; a paid developer account lasts a year.",
+  "@addPhoneOlderHelperDetail": {
+    "description": "Add phone › older iPhone: under \"Install the Pinky helper\", what the helper is and how long its signature lasts. WebDriverAgent is a name."
+  },
+  "addPhoneOlderIPhone": "Try an older iPhone",
+  "@addPhoneOlderIPhone": {
+    "description": "Add phone › iPhone: the quiet button to the right of Pair that switches to the ways of connecting an older iPhone."
+  },
+  "addPhoneOlderMirroring": "Use iPhone Mirroring (this Mac only)",
+  "@addPhoneOlderMirroring": {
+    "description": "Add phone › older iPhone: the second way to connect, through macOS's iPhone Mirroring (use Apple's Simplified Chinese name for it). Also its accessibility label."
+  },
+  "addPhoneOlderMirroringDetail": "Nothing to install, but Pinky can read the screen only as an image, so it is slower.",
+  "@addPhoneOlderMirroringDetail": {
+    "description": "Add phone › older iPhone: under \"Use iPhone Mirroring\", its drawback."
+  },
+  "addPhoneOlderNotYet": "This build can't set that up yet: the gateway's iOS backends for older iPhones come in M3.",
+  "@addPhoneOlderNotYet": {
+    "description": "Add phone › older iPhone: shown once the person picks a way to connect, as neither works in this build yet. M3 is a milestone of the project."
+  },
+  "addPhoneOlderTitle": "This iPhone needs one more step",
+  "@addPhoneOlderTitle": {
+    "description": "Add phone › older iPhone: the heading of the box with the two ways to connect an older iPhone."
+  },
+  "addPhoneOlderUpdate": "Or update to iOS 27 for the best experience.",
+  "@addPhoneOlderUpdate": {
+    "description": "Add phone › older iPhone: the line under the two ways to connect, before the person picks one."
+  },
+  "addPhoneOrWiFi": "Or pair over Wi-Fi",
+  "@addPhoneOrWiFi": {
+    "description": "Add phone › Android: the link under the USB step that switches to pairing the phone over Wi-Fi instead."
+  },
+  "addPhoneReady": "{name} is ready",
+  "@addPhoneReady": {
+    "description": "Add phone › iPhone: the status line once the iPhone is paired and ready, next to a green dot. name is the iPhone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 17"
+      }
+    }
+  },
+  "addPhoneTryAgain": "Try again",
+  "@addPhoneTryAgain": {
+    "description": "Add phone: the button that looks for the phone again after it needed setup, and that asks for a new QR code after pairing over Wi-Fi failed."
+  },
+  "addPhoneUSBStep1": "Open Settings › About phone and tap Build number 7 times.",
+  "@addPhoneUSBStep1": {
+    "description": "Add phone › Android, USB debugging steps, step 1. Settings, About phone and Build number are Android's own names: use those of Android's Simplified Chinese settings."
+  },
+  "addPhoneUSBStep2": "Go to Settings › System › Developer options.",
+  "@addPhoneUSBStep2": {
+    "description": "Add phone › Android, USB debugging steps, step 2. Settings, System and Developer options are Android's own names."
+  },
+  "addPhoneUSBStep3": "Turn on USB debugging, then tap Allow on the phone.",
+  "@addPhoneUSBStep3": {
+    "description": "Add phone › Android, USB debugging steps, step 3. USB debugging is Android's setting; Allow is the button of the phone's \"Allow USB debugging?\" prompt."
+  },
+  "addPhoneUSBTitle": "Turn on USB debugging",
+  "@addPhoneUSBTitle": {
+    "description": "Add phone › Android: the heading of the box of three steps shown when the phone needs USB debugging turned on."
+  },
   "agentGeneric": "the agent",
   "@agentGeneric": {
     "description": "Names an agent whose name is unknown, inside a sentence: \"Note for the agent\"."
@@ -151,6 +333,168 @@
   "callTakeOver": "take over",
   "@callTakeOver": {
     "description": "Inside toastCouldNot: taking over a phone failed."
+  },
+  "companionAllowHint": "If the phone asks, allow the install.",
+  "@companionAllowHint": {
+    "description": "The Pinky Companion card: under the progress bar while the app installs, and in small type under the buttons before."
+  },
+  "companionCardLabel": "Pinky Companion on {name}",
+  "@companionCardLabel": {
+    "description": "The accessibility label of the Pinky Companion card. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "companionErrOffline": "The phone went offline. Connect it again, then try again.",
+  "@companionErrOffline": {
+    "description": "The Pinky Companion card: the error when the phone went offline during the install."
+  },
+  "companionErrOther": "Couldn't install Pinky Companion: {detail}",
+  "@companionErrOther": {
+    "description": "The Pinky Companion card: the error when the install failed for another reason. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "adb: Failure [INSTALL_FAILED_INVALID_APK]"
+      }
+    }
+  },
+  "companionErrPlayProtect": "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again.",
+  "@companionErrPlayProtect": {
+    "description": "The Pinky Companion card: the error when Google Play Protect stopped the install. Install anyway is the button of Play Protect's prompt."
+  },
+  "companionErrRestricted": "The phone blocked the install. Turn on Install via USB in Developer options, then try again.",
+  "@companionErrRestricted": {
+    "description": "The Pinky Companion card: the error when the phone blocked installs over USB. Install via USB is the Developer options setting of Xiaomi phones: use its Simplified Chinese name."
+  },
+  "companionErrStorage": "The phone is out of space. Free some up, then try again.",
+  "@companionErrStorage": {
+    "description": "The Pinky Companion card: the error when the phone has no room for the app."
+  },
+  "companionErrTimeout": "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again.",
+  "@companionErrTimeout": {
+    "description": "The Pinky Companion card: the error when the install did not finish in time. Allow is the button of the phone's install prompt."
+  },
+  "companionInstall": "Install",
+  "@companionInstall": {
+    "description": "The Pinky Companion card: the button that installs the app on the phone."
+  },
+  "companionInstallBody": "A small Pinky app for {name}. Agents control the phone faster and more steadily with it, and type without using its clipboard.",
+  "@companionInstallBody": {
+    "description": "The Pinky Companion card, when the app is not installed: why to install it. name is the phone's name. The card is in a narrow side panel.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "companionInstallLabel": "Install Pinky Companion on {name}",
+  "@companionInstallLabel": {
+    "description": "The accessibility label of the Install button of the Pinky Companion card. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "companionInstallTitle": "Install Pinky Companion",
+  "@companionInstallTitle": {
+    "description": "The title of the card on an Android phone's side panel that offers to install Pinky Companion, Pinky's app for the phone."
+  },
+  "companionInstalling": "Installing",
+  "@companionInstalling": {
+    "description": "The Pinky Companion card: the accessibility label of the progress bar while the app installs."
+  },
+  "companionInstallingTitle": "Installing Pinky Companion",
+  "@companionInstallingTitle": {
+    "description": "The Pinky Companion card's title while Pinky installs or updates the app."
+  },
+  "companionLineMissing": "Pinky Companion is not installed",
+  "@companionLineMissing": {
+    "description": "Settings › Phones: a phone's line about Pinky Companion when the app is not on the phone."
+  },
+  "companionLineNoAPK": "This Pinky has no companion app to install",
+  "@companionLineNoAPK": {
+    "description": "Settings › Phones: a phone's line about Pinky Companion when this build of Pinky does not include the app."
+  },
+  "companionLineOff": "Pinky Companion is installed but off",
+  "@companionLineOff": {
+    "description": "Settings › Phones: a phone's line about Pinky Companion when the app is installed but its service is off."
+  },
+  "companionLineOn": "Pinky Companion is on",
+  "@companionLineOn": {
+    "description": "Settings › Phones: a phone's line about Pinky Companion, Pinky's app for the phone, when it runs."
+  },
+  "companionLineOutdated": "Pinky Companion has an update",
+  "@companionLineOutdated": {
+    "description": "Settings › Phones: a phone's line about Pinky Companion when this Pinky comes with a newer version."
+  },
+  "companionNotNow": "Not now",
+  "@companionNotNow": {
+    "description": "The Pinky Companion card: the quiet button that hides the card for this phone."
+  },
+  "companionOnToast": "Pinky Companion is on for {name}",
+  "@companionOnToast": {
+    "description": "A notice after Pinky installed, updated or turned on Pinky Companion, its app for Android phones. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "companionStillWaiting": "Still waiting for the phone. Look for a prompt on its screen.",
+  "@companionStillWaiting": {
+    "description": "The Pinky Companion card: when the install has taken more than 20 seconds, as the phone may be asking to allow it."
+  },
+  "companionTurnOn": "Turn on",
+  "@companionTurnOn": {
+    "description": "The Pinky Companion card: the button that turns the app's service on."
+  },
+  "companionTurnOnBody": "The app is installed, but its service is off, so agents control the phone the slower way. Pinky can turn it on.",
+  "@companionTurnOnBody": {
+    "description": "The Pinky Companion card, when the app's service is off: why to turn it on."
+  },
+  "companionTurnOnLabel": "Turn on Pinky Companion on {name}",
+  "@companionTurnOnLabel": {
+    "description": "The accessibility label of the Turn on button of the Pinky Companion card. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "companionTurnOnTitle": "Turn on Pinky Companion",
+  "@companionTurnOnTitle": {
+    "description": "The title of the card that offers to turn on Pinky Companion's service when the app is installed but off."
+  },
+  "companionUpdate": "Update",
+  "@companionUpdate": {
+    "description": "The Pinky Companion card: the button that updates the app on the phone."
+  },
+  "companionUpdateBody": "This Pinky comes with a newer version of its app for the phone. Updating keeps control fast and steady.",
+  "@companionUpdateBody": {
+    "description": "The Pinky Companion card, when the phone has an older version: why to update it."
+  },
+  "companionUpdateLabel": "Update Pinky Companion on {name}",
+  "@companionUpdateLabel": {
+    "description": "The accessibility label of the Update button of the Pinky Companion card. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "companionUpdateTitle": "Update Pinky Companion",
+  "@companionUpdateTitle": {
+    "description": "The title of the card that offers to update Pinky Companion on the phone to the version this Pinky comes with."
   },
   "connectionOffline": "{platform} · offline",
   "@connectionOffline": {
@@ -247,6 +591,80 @@
   "exportTask": "Export…",
   "@exportTask": {
     "description": "An item of the ⋯ menu in a task's detail: exports that task into a new folder on the Desktop."
+  },
+  "flyoutLocked": "Locked",
+  "@flyoutLocked": {
+    "description": "Menu bar flyout: what a locked phone's Needs you row says after the phone's name."
+  },
+  "flyoutMenuStopAll": "Stop All",
+  "@flyoutMenuStopAll": {
+    "description": "Item of the menu bar icon's menu: stops every agent on every phone at once."
+  },
+  "flyoutNeedLabel": "{phone}, {title}",
+  "@flyoutNeedLabel": {
+    "description": "The accessibility label of a Needs you row in the menu bar flyout: the phone and what waits for the person.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "title": {
+        "type": "String",
+        "example": "Pay $12.80?"
+      }
+    }
+  },
+  "flyoutNoPhones": "No phones connected",
+  "@flyoutNoPhones": {
+    "description": "Menu bar flyout: in place of the phones when there are none."
+  },
+  "flyoutOpenPinky": "Open Pinky",
+  "@flyoutOpenPinky": {
+    "description": "Item of the menu bar icon's menu and row of the menu bar flyout: shows Pinky's main window."
+  },
+  "flyoutPhoneLabel": "{phone}, {status}",
+  "@flyoutPhoneLabel": {
+    "description": "The accessibility label of a phone's row in the menu bar flyout: its name and status line.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "status": {
+        "type": "String",
+        "example": "Claude Code · Reorder lunch"
+      }
+    }
+  },
+  "flyoutPhones": "Phones",
+  "@flyoutPhones": {
+    "description": "Menu bar flyout: the heading above the phones."
+  },
+  "flyoutReview": "Review",
+  "@flyoutReview": {
+    "description": "Menu bar flyout: the action at the end of a Needs you row; a click opens the approval."
+  },
+  "flyoutShowPhones": "Show Phones…",
+  "@flyoutShowPhones": {
+    "description": "Item of the menu bar icon's menu (the only way to it on Linux, whose tray icons get no clicks): opens the flyout with the phones."
+  },
+  "flyoutStopAll": "Stop all",
+  "@flyoutStopAll": {
+    "description": "The menu bar flyout's last row, in red, with its shortcut: stops every agent on every phone at once."
+  },
+  "flyoutTrayTooltip": "Pinky · {count, plural, one {# thing needs you} other {# things need you}}",
+  "@flyoutTrayTooltip": {
+    "description": "The tooltip of Pinky's menu bar icon while approvals, handoffs or locked phones wait for the person.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "flyoutUnlock": "Unlock",
+  "@flyoutUnlock": {
+    "description": "Menu bar flyout: the action at the end of a locked phone's Needs you row; a click opens the phone to unlock it."
   },
   "gwAgentGives": " Allowing gives it {scope} access.",
   "@gwAgentGives": {
@@ -1372,6 +1790,904 @@
   "@mirrorUnsupported": {
     "description": "Over the mirror of a phone that cannot stream its screen."
   },
+  "needsAddNote": "Add a note",
+  "@needsAddNote": {
+    "description": "Link on a handoff card that opens a field for a note to the agent."
+  },
+  "needsAllow": "Allow",
+  "@needsAllow": {
+    "description": "Primary button that allows the step once: on approval cards and in the floating approval panel."
+  },
+  "needsAllowTask": "Allow for this task",
+  "@needsAllowTask": {
+    "description": "Item of More options: allow steps like this one until the agent's task ends."
+  },
+  "needsAlwaysAllow": "Always allow {kind}",
+  "@needsAlwaysAllow": {
+    "description": "Item of More options: never ask again for steps like this one. kind says what they are, from the rule that asked (zh 付款, 发送消息, 更改设置, 执行所有操作), or \"this kind\" (zh 此类操作) when no rule is named.",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "payments"
+      }
+    }
+  },
+  "needsAlwaysAllowIn": "Always allow {kind} in {app}",
+  "@needsAlwaysAllowIn": {
+    "description": "Item of More options on an approval card: never ask again for steps like this one in this app. kind says what they are, from the rule that asked (zh 付款, 发送消息, 更改设置, 执行所有操作); app is the app's name.",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "payments"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "needsAndTasksLabel": "Needs you and tasks",
+  "@needsAndTasksLabel": {
+    "description": "The accessibility label of the Phones page's right-hand column, which holds the Needs you cards and the Tasks."
+  },
+  "needsApprove": "Approve",
+  "@needsApprove": {
+    "description": "Primary button on an agent's first-connection card: lets the agent use the phones as chosen above it."
+  },
+  "needsApproveNoApps": "Name at least one app",
+  "@needsApproveNoApps": {
+    "description": "The tooltip of the disabled Approve button on a first-connection card, when \"Only the apps I choose\" is chosen and no app is named yet."
+  },
+  "needsDecline": "Decline",
+  "@needsDecline": {
+    "description": "Button (or link) on a handoff card: tells the agent the person won't do what it asked."
+  },
+  "needsDeclineTooltip": "Tell {agent} no",
+  "@needsDeclineTooltip": {
+    "description": "The tooltip of Decline on a handoff card.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "needsDeny": "Deny",
+  "@needsDeny": {
+    "description": "Button that denies an approval or an agent's first connection: on Needs you cards and in the floating approval panel."
+  },
+  "needsDenyNotePlaceholder": "Why not, or what to do instead",
+  "@needsDenyNotePlaceholder": {
+    "description": "The placeholder of the note field after Deny with a note, on an approval card: why the person said no, or what the agent should do instead."
+  },
+  "needsDenyWithNote": "Deny with a note",
+  "@needsDenyWithNote": {
+    "description": "Item of More options: opens a field for a note to the agent, then Deny sends it with the answer."
+  },
+  "needsDone": "Done",
+  "@needsDone": {
+    "description": "Button on a handoff card: the person did what the agent asked, and the phone goes back to the agent, with the note if there is one."
+  },
+  "needsDoneTooltip": "Hand the phone back to {agent}",
+  "@needsDoneTooltip": {
+    "description": "The tooltip of Done on a handoff card.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "needsFirstConnection": "First connection",
+  "@needsFirstConnection": {
+    "description": "The small line above a card's title when an agent connects for the first time and asks to use the phones. Other cards show the phone and app there, as \"Pixel 9 · Dinely\"."
+  },
+  "needsHandoffHowTo": "Do it on the phone and click Done, or take over to do it here.",
+  "@needsHandoffHowTo": {
+    "description": "A handoff card: the agent asked the person to do something on the phone (its request is the card's title). Done and Take over are the card's buttons."
+  },
+  "needsHandoffInControl": "You're in control. Click Done to hand the phone back to {agent}.",
+  "@needsHandoffInControl": {
+    "description": "A handoff card (the agent asked the person to do something on the phone, its request is the title) after the person took over. Done is the card's button (needsDone).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "needsHandoffLocked": "The phone is locked. {how}",
+  "@needsHandoffLocked": {
+    "description": "A handoff card on a locked phone that this computer cannot unlock. how is a sentence that says how to unlock it, ending with needsThenClickDone.",
+    "placeholders": {
+      "how": {
+        "type": "String",
+        "example": "Unlock it on the phone, then click Done."
+      }
+    }
+  },
+  "needsHandoffLockedHere": "The phone is locked. Unlocking it here hands it back to {agent}. If you unlock it on the phone, click Done when you're finished.",
+  "@needsHandoffLockedHere": {
+    "description": "A handoff card on a locked phone that this computer can unlock, under the Unlock with Touch ID button. Done is the card's button (needsDone).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "needsHandoffNotePlaceholder": "What you did, or what to do next",
+  "@needsHandoffNotePlaceholder": {
+    "description": "The placeholder of the note field on a handoff card: what the person did on the phone, or what the agent should do next."
+  },
+  "needsLetAgent": "Let {agent}",
+  "@needsLetAgent": {
+    "description": "On an agent's first-connection card: the label above (and the accessibility label of) the menu of what the agent may do. In English it reads on into the choice: \"Let Claude Code\" + \"All apps except blocked ones\", \"Only the apps I choose\", \"Browse and read, never commit\" or \"Watch only\".",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "needsMoreOptions": "More options",
+  "@needsMoreOptions": {
+    "description": "Link under Deny and Allow, on approval cards and in the floating approval panel, that opens a menu: Allow for this task, Always allow …, Take over, Deny with a note."
+  },
+  "needsNoteFor": "Note for {agent}",
+  "@needsNoteFor": {
+    "description": "The label above (and the accessibility label of) the field where the person writes a note to the agent: on handoff and approval cards and in the floating approval panel.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "needsSection": "Needs you",
+  "@needsSection": {
+    "description": "The heading (and accessibility label) of the cards that wait for the person (approvals, handoffs, locked phones): in the right-hand column and in the menu bar flyout."
+  },
+  "needsTakeOverTooltip": "Do it here, in the mirror",
+  "@needsTakeOverTooltip": {
+    "description": "The tooltip of Take over on a handoff card: the person does what the agent asked in the app's live picture of the phone."
+  },
+  "needsThenClickDone": ", then click Done.",
+  "@needsThenClickDone": {
+    "description": "Ends the sentence that says how to unlock a phone on a handoff card (\"Unlock it on the phone, then click Done.\"): it starts with a comma and ends the sentence. Done is the card's button (needsDone)."
+  },
+  "pairingAddrField": "IP address and port",
+  "@pairingAddrField": {
+    "description": "Pair with a code: the label above the field for the address the phone shows (as 192.168.1.20:37123), and the field's accessibility label."
+  },
+  "pairingAddrInvalid": "Enter the IP address and port the phone shows, like 192.168.1.20:37123.",
+  "@pairingAddrInvalid": {
+    "description": "Pair with a code: the error under the form when the address typed is not an IP address and port."
+  },
+  "pairingBusy": "Pairing…",
+  "@pairingBusy": {
+    "description": "Pair with a code: next to a spinner, right of the Pair button, while Pinky pairs."
+  },
+  "pairingCodeDetail": "On the phone, open Developer options › Wireless debugging and tap Pair device with pairing code. Enter what it shows.",
+  "@pairingCodeDetail": {
+    "description": "Pair with a code: the line under the heading. Developer options, Wireless debugging and Pair device with pairing code are Android's own names: use those of Android's Simplified Chinese settings."
+  },
+  "pairingCodeField": "Wi-Fi pairing code",
+  "@pairingCodeField": {
+    "description": "Pair with a code: the label above the field for the six-digit pairing code the phone shows, and the field's accessibility label."
+  },
+  "pairingCodeIncomplete": "Enter the six-digit code the phone shows.",
+  "@pairingCodeIncomplete": {
+    "description": "Pair with a code: the error under the form when the code typed has fewer than six digits."
+  },
+  "pairingCodePlaceholder": "6 digits",
+  "@pairingCodePlaceholder": {
+    "description": "Pair with a code: the placeholder of the pairing code field, a narrow field."
+  },
+  "pairingCodeTitle": "Pair with a code",
+  "@pairingCodeTitle": {
+    "description": "Pair over Wi-Fi: the heading of the form that pairs with the address and the six-digit code the phone shows."
+  },
+  "pairingErrNoAdb": "This computer can't pair phones over Wi-Fi: Pinky found no Android tools (adb) to pair with. Use a USB cable instead.",
+  "@pairingErrNoAdb": {
+    "description": "Pair over Wi-Fi: the error when this computer has no Android tools (adb) to pair with."
+  },
+  "pairingErrOther": "Couldn't pair: {detail}",
+  "@pairingErrOther": {
+    "description": "Pair over Wi-Fi: the error when pairing failed for another reason. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "adb: protocol fault"
+      }
+    }
+  },
+  "pairingErrTimeout": "The phone didn't answer in time. Check that it's on the same Wi-Fi as this computer and that Wireless debugging is on, then try again.",
+  "@pairingErrTimeout": {
+    "description": "Pair over Wi-Fi: the error when the phone did not answer in time. Wireless debugging is Android's setting."
+  },
+  "pairingErrUnreachable": "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they change each time it opens.",
+  "@pairingErrUnreachable": {
+    "description": "Pair with a code: the error when nothing answered at the address typed. Pair device with pairing code is Android's own name."
+  },
+  "pairingErrUnsupported": "Pairing over Wi-Fi isn't available here. Use a USB cable instead.",
+  "@pairingErrUnsupported": {
+    "description": "Pair over Wi-Fi: the error when the phone's driver cannot pair over Wi-Fi."
+  },
+  "pairingErrWrongCode": "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairing code.",
+  "@pairingErrWrongCode": {
+    "description": "Pair with a code: the error when the pairing code typed was wrong. Pair device with pairing code is Android's own name."
+  },
+  "pairingGettingCode": "Getting a code…",
+  "@pairingGettingCode": {
+    "description": "Pair over Wi-Fi: the status line, next to a spinner, while Pinky gets the QR code from the gateway."
+  },
+  "pairingNoCode": "No code",
+  "@pairingNoCode": {
+    "description": "Pair over Wi-Fi: in place of the QR code, under an alert icon, when getting one failed."
+  },
+  "pairingPair": "Pair",
+  "@pairingPair": {
+    "description": "Add phone: the button that pairs with the code typed, in the Android form \"Pair with a code\" and in the iPhone step."
+  },
+  "pairingPaired": "Paired {name} over Wi-Fi",
+  "@pairingPaired": {
+    "description": "A notice once a phone paired over Wi-Fi; its page opens. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "pairingPairedPhone": "Paired the phone over Wi-Fi",
+  "@pairingPairedPhone": {
+    "description": "A notice once a phone paired over Wi-Fi, when its name is unknown."
+  },
+  "pairingQRDetail": "On the phone, open Developer options › Wireless debugging and tap Pair device with QR code, then scan this code. Keep the phone on the same Wi-Fi as this computer.",
+  "@pairingQRDetail": {
+    "description": "Pair over Wi-Fi: the line under the heading, above the QR code. Developer options, Wireless debugging and Pair device with QR code are Android's own names: use those of Android's Simplified Chinese settings."
+  },
+  "pairingQRDrawError": "Couldn't draw the QR code: {detail}",
+  "@pairingQRDrawError": {
+    "description": "Pair over Wi-Fi: the status line when Pinky could not draw the QR code. detail is the error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "qr: data too long"
+      }
+    }
+  },
+  "pairingQRLabel": "QR code to scan in Wireless debugging › Pair device with QR code",
+  "@pairingQRLabel": {
+    "description": "Pair over Wi-Fi: the accessibility label of the QR code. Wireless debugging and Pair device with QR code are Android's own names."
+  },
+  "pairingSlowHint": "Taking a while? This computer and the phone must be on the same Wi-Fi. If the phone says it paired and nothing happens here, adb may have stopped seeing the network: quit other Android tools and run adb kill-server, then try again.",
+  "@pairingSlowHint": {
+    "description": "Pair over Wi-Fi: under the status line when the phone has not paired after 30 seconds. adb is Android's tool and adb kill-server a command: both stay as they are."
+  },
+  "pairingTitle": "Pair over Wi-Fi",
+  "@pairingTitle": {
+    "description": "Add phone › Pair over Wi-Fi: the heading of the step that pairs an Android phone over Wi-Fi with a QR code."
+  },
+  "pairingUnsupported": "This gateway can't pair phones over Wi-Fi. Connect the phone with a USB cable instead.",
+  "@pairingUnsupported": {
+    "description": "Pair over Wi-Fi: the line under the heading when the gateway Pinky uses cannot pair phones."
+  },
+  "pairingUseCode": "Pair with a code instead",
+  "@pairingUseCode": {
+    "description": "Pair over Wi-Fi: the link that switches from the QR code to typing the address and six-digit code the phone shows."
+  },
+  "pairingUseQR": "Use a QR code instead",
+  "@pairingUseQR": {
+    "description": "Pair with a code: the link that switches back to the QR code."
+  },
+  "pairingUseUSB": "Use a USB cable instead",
+  "@pairingUseUSB": {
+    "description": "Pair over Wi-Fi: the link that goes back to connecting the phone with a USB cable."
+  },
+  "pairingWaiting": "Waiting for the phone to scan the code…",
+  "@pairingWaiting": {
+    "description": "Pair over Wi-Fi: the status line under the QR code, next to a spinner, while Pinky waits for the phone to scan it."
+  },
+  "panelActionsLikeThis": "Actions like this",
+  "@panelActionsLikeThis": {
+    "description": "Stands for the rule's name in panelAllowedTaskDetail and panelAlwaysAllowedDetail when the approval names no rule."
+  },
+  "panelAgentAllowed": "{agent} can use your phones. Change what it may do in Settings › Agents.",
+  "@panelAgentAllowed": {
+    "description": "The floating approval panel's confirmation under Allowed, after the person approved an agent's first connection. Settings › Agents is the Settings section that lists the agents.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Codex"
+      }
+    }
+  },
+  "panelAgentDenied": "{agent} can't use your phones.",
+  "@panelAgentDenied": {
+    "description": "The floating approval panel's confirmation under Denied, after the person denied an agent's first connection.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Codex"
+      }
+    }
+  },
+  "panelAllowed": "Allowed",
+  "@panelAllowed": {
+    "description": "The floating approval panel's confirmation title after Approve on an agent's first connection."
+  },
+  "panelAllowedOnce": "Allowed once",
+  "@panelAllowedOnce": {
+    "description": "The floating approval panel's confirmation title after Allow."
+  },
+  "panelAllowedOnceDetail": "Pinky checks the button is still on screen, then taps it.",
+  "@panelAllowedOnceDetail": {
+    "description": "The floating approval panel's confirmation under Allowed once: what happens on the phone next."
+  },
+  "panelAllowedTask": "Allowed for this task",
+  "@panelAllowedTask": {
+    "description": "The floating approval panel's confirmation title after Allow for this task."
+  },
+  "panelAllowedTaskDetail": "{rule} in {app} are allowed until this task ends.",
+  "@panelAllowedTaskDetail": {
+    "description": "The floating approval panel's confirmation under Allowed for this task. rule is the name of the rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or panelActionsLikeThis; app is the app's name, or panelThisApp.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Payments"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "panelAlwaysAllowed": "Always allowed",
+  "@panelAlwaysAllowed": {
+    "description": "The floating approval panel's confirmation title after Always allow …."
+  },
+  "panelAlwaysAllowedDetail": "{rule} in {app} no longer ask. Change it in Settings.",
+  "@panelAlwaysAllowedDetail": {
+    "description": "The floating approval panel's confirmation under Always allowed: Pinky won't ask the person about these steps again. rule is the name of the rule that asked (zh 付款, 发送消息, 更改设置, 所有操作), or panelActionsLikeThis; app is the app's name, or panelThisApp.",
+    "placeholders": {
+      "rule": {
+        "type": "String",
+        "example": "Payments"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "panelCancel": "Cancel",
+  "@panelCancel": {
+    "description": "Button in the floating approval panel's note editor: back to the approval without denying it."
+  },
+  "panelDeclined": "Declined",
+  "@panelDeclined": {
+    "description": "The floating approval panel's confirmation title after Decline on a handoff."
+  },
+  "panelDenied": "Denied",
+  "@panelDenied": {
+    "description": "The floating approval panel's confirmation title after Deny, on an approval or an agent's first connection."
+  },
+  "panelDeniedDetail": "Nothing was tapped. {agent} was told no.",
+  "@panelDeniedDetail": {
+    "description": "The floating approval panel's confirmation under Denied, after the person denied a step.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "panelDeniedDetailNote": "Nothing was tapped. {agent} was told no, with your note: “{note}”",
+  "@panelDeniedDetailNote": {
+    "description": "The floating approval panel's confirmation under Denied, after the person denied a step with a note. note is the person's own words.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "note": {
+        "type": "String",
+        "example": "Use the saved card"
+      }
+    }
+  },
+  "panelDeniesIn": "Denies in {duration}",
+  "@panelDeniesIn": {
+    "description": "Top right of the floating approval panel: the approval is denied by itself when this time runs out. duration is as \"42 s\" (zh 42 秒).",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "42 s"
+      }
+    }
+  },
+  "panelDenyWithNote": "Deny with note",
+  "@panelDenyWithNote": {
+    "description": "Primary button in the floating approval panel's note editor: denies the approval and sends the note to the agent. Half of the 360-point panel's width."
+  },
+  "panelEndsIn": "Ends in {duration}",
+  "@panelEndsIn": {
+    "description": "Top right of the floating approval panel for a handoff (the agent asked the person to do something): the request ends when this time runs out. duration is as \"4 min 10 s\" (zh 4 分 10 秒).",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "4 min 10 s"
+      }
+    }
+  },
+  "panelHandedBack": "Handed back",
+  "@panelHandedBack": {
+    "description": "The floating approval panel's confirmation title after Done on a handoff: the phone went back to the agent."
+  },
+  "panelHandedBackDetail": "{agent} goes on from here.",
+  "@panelHandedBackDetail": {
+    "description": "The floating approval panel's confirmation under Handed back.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "panelNext": "Next approval",
+  "@panelNext": {
+    "description": "The accessibility label of the floating approval panel's right arrow."
+  },
+  "panelPosition": "{current} of {total}",
+  "@panelPosition": {
+    "description": "The floating approval panel's pager, between its two arrows: which of the waiting approvals it shows. Keep it short.",
+    "placeholders": {
+      "current": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "panelPrevious": "Previous approval",
+  "@panelPrevious": {
+    "description": "The accessibility label of the floating approval panel's left arrow."
+  },
+  "panelShotLabel": "{phone} screen: the target, outlined",
+  "@panelShotLabel": {
+    "description": "The accessibility label of the floating approval panel's picture: the part of the phone's screen around what the agent wants to tap, with that element outlined.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "panelThisApp": "this app",
+  "@panelThisApp": {
+    "description": "Stands for the app's name in panelAllowedTaskDetail and panelAlwaysAllowedDetail when the approval names no app."
+  },
+  "panelToldNo": "{agent} was told no.",
+  "@panelToldNo": {
+    "description": "The floating approval panel's confirmation under Declined: the agent learned that the person won't do what it asked.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "panelWaitingApprovals": "Waiting approvals",
+  "@panelWaitingApprovals": {
+    "description": "The accessibility label of the floating approval panel's pager (previous, \"1 of 2\", next) when several approvals wait."
+  },
+  "panelWindowTitle": "Pinky approval",
+  "@panelWindowTitle": {
+    "description": "The title of the floating approval panel's window. The panel has no title bar; screen readers and window lists read it."
+  },
+  "panelWithNote": "{text} Your note: “{note}”",
+  "@panelWithNote": {
+    "description": "The floating approval panel's confirmation after a handoff was answered with a note: text is the confirmation's sentence (panelHandedBackDetail or panelToldNo), note the person's own words.",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "Claude Code goes on from here."
+      },
+      "note": {
+        "type": "String",
+        "example": "Signed in as Alex"
+      }
+    }
+  },
+  "phoneAddPhone": "Add phone",
+  "@phoneAddPhone": {
+    "description": "Primary button on the Phones page before any phone is added: opens Add phone."
+  },
+  "phoneAgentScreen": "{agent}'s screen",
+  "@phoneAgentScreen": {
+    "description": "Choice of the switch under the mirror while an agent works on a hidden second screen: the mirror shows the agent's screen.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "phoneAllPhones": "All phones",
+  "@phoneAllPhones": {
+    "description": "The Phones page's title when it shows every phone as live tiles."
+  },
+  "phoneBackgroundDesc": "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task.",
+  "@phoneBackgroundDesc": {
+    "description": "Under Work in the background in ⋯ under the mirror: what the switch does, and that it applies from the agent's next task."
+  },
+  "phoneBackgroundUnsupported": "This phone can't give agents a second screen.",
+  "@phoneBackgroundUnsupported": {
+    "description": "Under Work in the background in ⋯, when the phone can't do it (the switch is disabled)."
+  },
+  "phoneBannerHandBackHint": "Hand back to let agents use this phone again.",
+  "@phoneBannerHandBackHint": {
+    "description": "The banner over the mirror, after the bold phoneBannerInControl, when no agent waits: Hand back is the banner's button."
+  },
+  "phoneBannerInControl": "You're in control. ",
+  "@phoneBannerInControl": {
+    "description": "The bold start of the banner over the mirror while the person controls the phone; the rest follows in normal weight (phoneBannerPaused or phoneBannerHandBackHint). English ends with a space before the rest."
+  },
+  "phoneBannerPaused": "{agent} is paused.",
+  "@phoneBannerPaused": {
+    "description": "The banner over the mirror, after the bold phoneBannerInControl: the agent waits until the person hands the phone back.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "phoneBannerWaits": "{agent} waits for you: {reason}",
+  "@phoneBannerWaits": {
+    "description": "The banner over the mirror, after the bold phoneBannerYourTurn. reason is the agent's own words, what it asked the person to do (in English with a lower-case first letter).",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "reason": {
+        "type": "String",
+        "example": "sign in to Dinely"
+      }
+    }
+  },
+  "phoneBannerYourTurn": "Your turn. ",
+  "@phoneBannerYourTurn": {
+    "description": "The bold start of the banner over the mirror when the agent asked the person to do something on the phone; phoneBannerWaits follows in normal weight. English ends with a space before the rest."
+  },
+  "phoneConnected": "{count, plural, one {# connected} other {# connected}}",
+  "@phoneConnected": {
+    "description": "All phones, next to the title: how many phones are online.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "phoneHandBack": "Hand back",
+  "@phoneHandBack": {
+    "description": "Button that gives the phone back to the agents after the person took over: on the banner over the mirror and on All phones tiles."
+  },
+  "phoneKeyBack": "Back",
+  "@phoneKeyBack": {
+    "description": "Android's Back key, a button under the mirror (accessibility label and tooltip)."
+  },
+  "phoneKeyHome": "Home",
+  "@phoneKeyHome": {
+    "description": "The phone's Home key, a button under the mirror (accessibility label and tooltip)."
+  },
+  "phoneKeyRecents": "Recents",
+  "@phoneKeyRecents": {
+    "description": "Android's Recents key (recent apps), a button under the mirror (accessibility label and tooltip)."
+  },
+  "phoneKeysAgentScreen": "{agent} works on its own screen. Show the phone's screen to use the phone.",
+  "@phoneKeysAgentScreen": {
+    "description": "The tooltip of the disabled keys under the mirror while it shows the agent's hidden second screen. \"Phone's screen\" is a choice of the switch next to them.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "phoneMoreControls": "More phone controls",
+  "@phoneMoreControls": {
+    "description": "The accessibility label and tooltip of the ⋯ button under the mirror, which opens Take screenshot, Record screen, Rotate and Work in the background."
+  },
+  "phoneNeedsSetup": "{phone} needs setup",
+  "@phoneNeedsSetup": {
+    "description": "A phone's page when the phone is connected but can't be used yet (USB debugging off, not trusted); the system's reason shows under it.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "phoneNoPhones": "No phones yet",
+  "@phoneNoPhones": {
+    "description": "The Phones page before any phone is added, above the Add phone button."
+  },
+  "phoneNoPicture": "No picture yet",
+  "@phoneNoPicture": {
+    "description": "Toast after Take screenshot when the mirror has shown no picture of the phone yet."
+  },
+  "phoneNotConnected": "It is not connected.",
+  "@phoneNotConnected": {
+    "description": "Under phoneOffline when the system says nothing more, before the Reconnect link."
+  },
+  "phoneOffline": "{phone} is offline",
+  "@phoneOffline": {
+    "description": "A phone's page when the phone is offline, under a phone outline.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "phoneOfflineCount": "{count, plural, one {# offline} other {# offline}}",
+  "@phoneOfflineCount": {
+    "description": "All phones, next to the title after phoneConnected and a \" · \": how many phones are offline.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "phonePageTitle": "Phones",
+  "@phonePageTitle": {
+    "description": "The Phones page's title before any phone is added."
+  },
+  "phonePhoneScreen": "Phone's screen",
+  "@phonePhoneScreen": {
+    "description": "Choice of the switch under the mirror while an agent works on a hidden second screen: the mirror shows the phone's own screen."
+  },
+  "phonePressKey": "press {key}",
+  "@phonePressKey": {
+    "description": "What failed, inside the toast \"Couldn't press Back: <error>\" (zh 无法按返回键：<error>). key is the key's name: phoneKeyBack, phoneKeyHome or phoneKeyRecents.",
+    "placeholders": {
+      "key": {
+        "type": "String",
+        "example": "Back"
+      }
+    }
+  },
+  "phoneReconnect": "Reconnect",
+  "@phoneReconnect": {
+    "description": "Link on an offline phone's page: opens Add phone."
+  },
+  "phoneRecordScreen": "Record screen",
+  "@phoneRecordScreen": {
+    "description": "Item of ⋯ under the mirror, shown disabled."
+  },
+  "phoneRecordScreenTooltip": "Agent tasks are recorded while Record the screen is on in Settings › Privacy",
+  "@phoneRecordScreenTooltip": {
+    "description": "The tooltip of the disabled Record screen item: recording happens through a setting. \"Record the screen\" is the switch's name in Settings › Privacy."
+  },
+  "phoneRotate": "Rotate",
+  "@phoneRotate": {
+    "description": "Item of ⋯ under the mirror, shown disabled: would rotate the phone's screen."
+  },
+  "phoneRotateTooltip": "Not in the gateway API yet",
+  "@phoneRotateTooltip": {
+    "description": "The tooltip of the disabled Rotate item."
+  },
+  "phoneScreenLabel": "{phone} screen",
+  "@phoneScreenLabel": {
+    "description": "The accessibility label of the phone frame around the mirror, the live picture of the phone's screen.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "phoneScreenshotFailed": "Couldn't save the screenshot: {reason}",
+  "@phoneScreenshotFailed": {
+    "description": "Toast when writing a screenshot to the Desktop failed. reason is the system's error, in English.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "permission denied"
+      }
+    }
+  },
+  "phoneScreenshotName": "{phone} {date} at {clock}",
+  "@phoneScreenshotName": {
+    "description": "The name of a screenshot file on the Desktop, before \".png\": the phone, the date as 2026-11-07 and the time as 09.30.12 (dots: file names can't have colons).",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "date": {
+        "type": "String",
+        "example": "2026-11-07"
+      },
+      "clock": {
+        "type": "String",
+        "example": "09.30.12"
+      }
+    }
+  },
+  "phoneScreenshotSaved": "Saved {file}",
+  "@phoneScreenshotSaved": {
+    "description": "Toast after Take screenshot: the file's name on the Desktop (phoneScreenshotName and .png).",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "Pixel 9 2026-11-07 at 09.30.12.png"
+      }
+    }
+  },
+  "phoneShow": "Show {phone}",
+  "@phoneShow": {
+    "description": "The accessibility label of a one-line task row and of an All phones tile: a click shows that phone.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "phoneShowOnMirror": "Show on the mirror",
+  "@phoneShowOnMirror": {
+    "description": "The accessibility label of the switch under the mirror between the agent's screen and the phone's."
+  },
+  "phoneTakeOver": "Take over",
+  "@phoneTakeOver": {
+    "description": "Button or menu item that gives the person control of the phone in the mirror and pauses the agent: on handoff cards, in an approval's More options (card and floating panel), on the task card and on All phones tiles."
+  },
+  "phoneTakeScreenshot": "Take screenshot",
+  "@phoneTakeScreenshot": {
+    "description": "Item of ⋯ under the mirror: saves the phone's screen as a picture on the Desktop."
+  },
+  "phoneWorkInBackground": "Work in the background",
+  "@phoneWorkInBackground": {
+    "description": "The title (and the switch's accessibility label) of the row in ⋯ under the mirror that lets agents work on a hidden second screen."
+  },
+  "phoneWorksInBackground": "{agent} works in the background",
+  "@phoneWorksInBackground": {
+    "description": "A phone's page, next to the title after the connection and a \" · \": the agent works on a hidden second screen of the phone.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
+  "pinCancel": "Cancel",
+  "@pinCancel": {
+    "description": "The PIN form: the button that closes it without saving."
+  },
+  "pinChange": "Change",
+  "@pinChange": {
+    "description": "Next to \"PIN saved\": the link that opens the PIN form to type a new PIN."
+  },
+  "pinChangeLabel": "Change the PIN for {name}",
+  "@pinChangeLabel": {
+    "description": "The accessibility label of the Change link next to \"PIN saved\". name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "pinErrRemove": "Couldn't remove the PIN: {detail}",
+  "@pinErrRemove": {
+    "description": "A notice when the keychain could not remove the PIN. detail is the system's error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "keychain: user interaction is not allowed"
+      }
+    }
+  },
+  "pinErrSave": "Couldn't save the PIN: {detail}",
+  "@pinErrSave": {
+    "description": "The PIN form: the error when the keychain could not save the PIN. detail is the system's error, in English.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "keychain: user interaction is not allowed"
+      }
+    }
+  },
+  "pinErrShort": "Enter the PIN or passcode that unlocks {name}: at least 4 characters.",
+  "@pinErrShort": {
+    "description": "The PIN form: the error when the PIN typed is shorter than 4 characters. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "pinFieldLabel": "PIN for {name}",
+  "@pinFieldLabel": {
+    "description": "The PIN form: the accessibility label of the PIN field. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "pinPlaceholder": "PIN or passcode",
+  "@pinPlaceholder": {
+    "description": "The PIN form: the placeholder of the secure field where the person types the phone's PIN or passcode."
+  },
+  "pinRemove": "Remove",
+  "@pinRemove": {
+    "description": "Next to \"PIN saved\": the link that removes the saved PIN."
+  },
+  "pinRemoveLabel": "Remove the PIN for {name}",
+  "@pinRemoveLabel": {
+    "description": "The accessibility label of the Remove link next to \"PIN saved\". name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "pinRemovedToast": "Removed the PIN for {name}",
+  "@pinRemovedToast": {
+    "description": "A notice after the PIN was removed. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "pinSave": "Save PIN",
+  "@pinSave": {
+    "description": "The PIN form: the button that saves the PIN typed in the system's keychain."
+  },
+  "pinSaveLabel": "Save the PIN for {name}",
+  "@pinSaveLabel": {
+    "description": "The accessibility label of the button Save PIN…. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "pinSaveOpen": "Save PIN…",
+  "@pinSaveOpen": {
+    "description": "The small button that opens the PIN form, where no PIN is saved for the phone (Settings › Phones, the locked phone's card)."
+  },
+  "pinSaved": "PIN saved",
+  "@pinSaved": {
+    "description": "Where a phone's PIN is saved (Settings › Phones and the locked phone's card): next to a lock icon, before the links Change and Remove."
+  },
+  "pinSavedToast": "Saved the PIN for {name}",
+  "@pinSavedToast": {
+    "description": "A notice after the PIN was saved. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
   "platformUnlockKeepMac": "Your PIN stays in your Mac's Keychain. Agents never see it.",
   "@platformUnlockKeepMac": {
     "description": "macOS: where a saved phone PIN is kept, under the PIN field."
@@ -1552,6 +2868,10 @@
   "@replayWatchTooltip": {
     "description": "The tooltip of Watch replay."
   },
+  "ruleActionAgentRequest": "agent request",
+  "@ruleActionAgentRequest": {
+    "description": "What the Agent request rule covers, inside \"Always allow agent request in Dinely\": the approvals the agent asks for itself."
+  },
   "ruleActionCalls": "calls",
   "@ruleActionCalls": {
     "description": "What the Calls rule covers, inside \"Always allow calls in Phone\"."
@@ -1593,6 +2913,10 @@
   "ruleActionThisKind": "this kind",
   "@ruleActionThisKind": {
     "description": "Inside \"Always allow this kind\" when the approval names no rule."
+  },
+  "ruleAgentRequest": "Agent request",
+  "@ruleAgentRequest": {
+    "description": "The name of the rule of an approval the agent asked for itself (phone_request_approval)."
   },
   "ruleAgentScope": "Agent scope",
   "@ruleAgentScope": {
@@ -1900,6 +3224,124 @@
       }
     }
   },
+  "tasksDetails": "Details",
+  "@tasksDetails": {
+    "description": "Developer mode: the title of the row at the bottom of a task card, whose switch shows the tool calls behind the steps."
+  },
+  "tasksDeveloperModeOn": "Developer mode is on",
+  "@tasksDeveloperModeOn": {
+    "description": "Developer mode: under Details at the bottom of a task card, why the row is there."
+  },
+  "tasksEarlierSteps": "{count, plural, one {# earlier step} other {# earlier steps}}",
+  "@tasksEarlierSteps": {
+    "description": "Above a task card's last steps: how many earlier steps are not shown.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "tasksNoToolCalls": "No tool calls yet.",
+  "@tasksNoToolCalls": {
+    "description": "Developer mode: in place of a task's tool calls before the agent made any."
+  },
+  "tasksNone": "No tasks running. Ask your agent to use a phone.",
+  "@tasksNone": {
+    "description": "In place of the Tasks list when no agent is working on any phone."
+  },
+  "tasksRowDone": "done",
+  "@tasksRowDone": {
+    "description": "The short state at the end of a one-line task row: the task is finished."
+  },
+  "tasksRowEnded": "ended",
+  "@tasksRowEnded": {
+    "description": "The short state at the end of a one-line task row: the task ended after the person said no."
+  },
+  "tasksRowFailed": "failed",
+  "@tasksRowFailed": {
+    "description": "The short state at the end of a one-line task row: the task failed."
+  },
+  "tasksRowLocked": "locked",
+  "@tasksRowLocked": {
+    "description": "The short state at the end of a one-line task row: the phone is locked."
+  },
+  "tasksRowPaused": "paused",
+  "@tasksRowPaused": {
+    "description": "The short state at the end of a one-line row of another phone's task: the person took over."
+  },
+  "tasksRowStep": "step {step}",
+  "@tasksRowStep": {
+    "description": "The short state at the end of a one-line task row while the agent works: the number of the step it is at.",
+    "placeholders": {
+      "step": {
+        "type": "int",
+        "example": "4"
+      }
+    }
+  },
+  "tasksRowStopped": "stopped",
+  "@tasksRowStopped": {
+    "description": "The short state at the end of a one-line task row: the task was stopped."
+  },
+  "tasksRowWaiting": "waiting",
+  "@tasksRowWaiting": {
+    "description": "The short state at the end of a one-line task row: the agent waits for the person."
+  },
+  "tasksSection": "Tasks",
+  "@tasksSection": {
+    "description": "The heading (and accessibility label) of the agents' tasks in the Phones page's right-hand column."
+  },
+  "tasksShowTechnicalDetails": "Show technical details",
+  "@tasksShowTechnicalDetails": {
+    "description": "The accessibility label of the Details switch on a task card: shows the tool calls in place of the steps."
+  },
+  "tasksStatusDone": "Done",
+  "@tasksStatusDone": {
+    "description": "A task card's status: the agent finished the task."
+  },
+  "tasksStatusEnded": "Ended after your answer",
+  "@tasksStatusEnded": {
+    "description": "A task card's status: the task ended after the person said no to one of its steps."
+  },
+  "tasksStatusFailed": "Failed",
+  "@tasksStatusFailed": {
+    "description": "A task card's status: the task failed."
+  },
+  "tasksStatusLocked": "Locked",
+  "@tasksStatusLocked": {
+    "description": "A task card's status, next to a dot: the phone is locked and the agent waits for it to be unlocked."
+  },
+  "tasksStatusPaused": "Paused · You're in control",
+  "@tasksStatusPaused": {
+    "description": "A task card's status: the person took over the phone and the agent is paused."
+  },
+  "tasksStatusStopped": "Stopped",
+  "@tasksStatusStopped": {
+    "description": "A task card's status: the task was stopped."
+  },
+  "tasksStatusWaiting": "Waiting for you",
+  "@tasksStatusWaiting": {
+    "description": "A task card's status: the agent waits for the person to answer an approval or a request."
+  },
+  "tasksStatusWorking": "Working",
+  "@tasksStatusWorking": {
+    "description": "A task card's status, next to a pulsing dot: the agent is at work."
+  },
+  "tasksStepWithShot": "{step}, screenshot",
+  "@tasksStepWithShot": {
+    "description": "The accessibility label of a task card's step that has a screenshot, which a click shows under the step. step is the step's text, as the list shows it.",
+    "placeholders": {
+      "step": {
+        "type": "String",
+        "example": "Opened Dinely"
+      }
+    }
+  },
+  "tasksStop": "Stop",
+  "@tasksStop": {
+    "description": "Red button that stops the agent's task: on the task card and on the All phones tiles."
+  },
   "timeHours": "{hours}\u00a0h\u00a0{minutes}\u00a0min",
   "@timeHours": {
     "description": "A duration of an hour or more. minutes has two digits. Joined with no-break spaces.",
@@ -1951,5 +3393,189 @@
         "example": "the phone is offline"
       }
     }
+  },
+  "unlockBusy": "Unlocking…",
+  "@unlockBusy": {
+    "description": "The unlock button while it unlocks the phone; it reads \"Unlock with Touch ID\" (or the platform's word) otherwise."
+  },
+  "unlockCallWhat": "unlock the phone",
+  "@unlockCallWhat": {
+    "description": "Fills \"Couldn't …: <error>\" (zh: 无法…：<error>), a notice when unlocking a phone fails: a verb phrase."
+  },
+  "unlockEnd": ".",
+  "@unlockEnd": {
+    "description": "Ends the hints that say how to unlock a phone on it (the unlockOnPhone messages) when nothing follows them: a full stop."
+  },
+  "unlockErrNoPIN": "No PIN is saved for {name}. Save it in Settings › Phones.",
+  "@unlockErrNoPIN": {
+    "description": "A notice when unlocking failed because no PIN is saved for the phone. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockErrNoPad": "Pinky couldn't get to {name}'s passcode screen, so it entered nothing. Try again, or unlock it on the phone.",
+  "@unlockErrNoPad": {
+    "description": "A notice when Pinky could not reach the phone's passcode screen, so it typed nothing. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockErrNoUnlock": "Unlocking from this computer isn't available. Unlock {name} on the phone.",
+  "@unlockErrNoUnlock": {
+    "description": "A notice when the gateway cannot unlock phones. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockErrOffline": "{name} is offline.",
+  "@unlockErrOffline": {
+    "description": "A notice when unlocking failed because the phone is offline. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockErrOther": "Couldn't unlock {name}: {detail}",
+  "@unlockErrOther": {
+    "description": "A notice when unlocking failed for another reason. name is the phone's name; detail is the error, in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "detail": {
+        "type": "String",
+        "example": "adb: broken pipe"
+      }
+    }
+  },
+  "unlockErrUnsupported": "{name} can't be unlocked from this computer. Unlock it on the phone.",
+  "@unlockErrUnsupported": {
+    "description": "A notice when this phone cannot be unlocked from the computer. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockErrWrongPIN": "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again until you unlock the phone yourself or change the PIN in Settings › Phones.",
+  "@unlockErrWrongPIN": {
+    "description": "A notice when the phone refused its saved PIN. Pinky stops trying it, as phones lock out, or erase themselves, after repeated wrong PINs. name is the phone's name; Settings › Phones is Pinky's Settings page.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockFromHere": "Unlock it from here when you or an agent need it.",
+  "@unlockFromHere": {
+    "description": "The locked phone's card, when its PIN is saved: above the unlock button. The card is in a narrow side panel."
+  },
+  "unlockLocked": "{name} is locked",
+  "@unlockLocked": {
+    "description": "The title of the card on a locked phone's side panel, next to a lock icon, and the card's accessibility label. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockNotAvailable": "Unlocking from this computer is not available on this system.",
+  "@unlockNotAvailable": {
+    "description": "Where the system has no keychain Pinky can use, so phones cannot be unlocked from this computer: in the PIN form's place, and as a notice when unlocking fails."
+  },
+  "unlockNotNow": "Not now",
+  "@unlockNotNow": {
+    "description": "The locked phone's card: the quiet button that hides the card for this phone."
+  },
+  "unlockNotNowLabel": "Not now: hide this for {name}",
+  "@unlockNotNowLabel": {
+    "description": "The accessibility label of the Not now button on the locked phone's card. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "unlockOnPhone": "Unlock it on the phone{end}",
+  "@unlockOnPhone": {
+    "description": "The locked phone's card: how to unlock it when this computer cannot. end is a full stop (unlockEnd), or \", then click Done.\" when the card in Needs you has a Done button, in the app's language.",
+    "placeholders": {
+      "end": {
+        "type": "String",
+        "example": "."
+      }
+    }
+  },
+  "unlockOnPhoneNotAvailable": "Unlocking from this computer is not available on this system. Unlock it on the phone{end}",
+  "@unlockOnPhoneNotAvailable": {
+    "description": "The locked phone's card, when the system has no keychain Pinky can use. end as in unlockOnPhone.",
+    "placeholders": {
+      "end": {
+        "type": "String",
+        "example": "."
+      }
+    }
+  },
+  "unlockOnPhoneOff": "Unlock it on the phone{end} Unlocking from this computer is off in Settings › Safety.",
+  "@unlockOnPhoneOff": {
+    "description": "The locked phone's card, when unlocking from this computer is turned off in Settings › Safety (the switch is named \"Unlock from this computer\"). end as in unlockOnPhone.",
+    "placeholders": {
+      "end": {
+        "type": "String",
+        "example": "."
+      }
+    }
+  },
+  "unlockOnPhoneSavePIN": "Save the phone's PIN to unlock it from this computer, or unlock it on the phone{end}",
+  "@unlockOnPhoneSavePIN": {
+    "description": "The locked phone's card in Needs you, when no PIN is saved for it; the button Save PIN… follows. end as in unlockOnPhone.",
+    "placeholders": {
+      "end": {
+        "type": "String",
+        "example": "."
+      }
+    }
+  },
+  "unlockOnPhoneWrongPIN": "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone{end} If its PIN changed, update it in Settings › Phones.",
+  "@unlockOnPhoneWrongPIN": {
+    "description": "The locked phone's card, after the phone refused its saved PIN: Pinky won't try it again. end as in unlockOnPhone.",
+    "placeholders": {
+      "end": {
+        "type": "String",
+        "example": "."
+      }
+    }
+  },
+  "unlockOrOnPhone": "or unlock it on the phone",
+  "@unlockOrOnPhone": {
+    "description": "The locked phone's card in Needs you: the small line under the button that unlocks it from this computer."
+  },
+  "unlockPitchMac": "Save its PIN and you can unlock it from this computer with Touch ID when an agent needs it, without picking the phone up.",
+  "@unlockPitchMac": {
+    "description": "macOS: the locked phone's card when no PIN is saved for it, above the button Save PIN…. The card is in a narrow side panel."
+  },
+  "unlockPitchOther": "Save its PIN and you can unlock it from this computer when an agent needs it, without picking the phone up.",
+  "@unlockPitchOther": {
+    "description": "Linux: the locked phone's card when no PIN is saved for it, above the button Save PIN…. The card is in a narrow side panel."
+  },
+  "unlockPitchWindows": "Save its PIN and you can unlock it from this computer with Windows Hello when an agent needs it, without picking the phone up.",
+  "@unlockPitchWindows": {
+    "description": "Windows: the locked phone's card when no PIN is saved for it, above the button Save PIN…. The card is in a narrow side panel."
   }
 }
