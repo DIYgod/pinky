@@ -69,6 +69,7 @@ const (
 	SetupDiskImage     = "disk_image"     // the developer disk image did not mount; Detail says why
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
+	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
 )
 
 // Provider discovers and opens the devices of one platform.

@@ -325,3 +325,57 @@ func TestAgentWaitsForSetupStep(t *testing.T) {
 		t.Fatal("Done did not answer the handoff")
 	}
 }
+
+// TestIPhoneConnectionStep: an iPhone below iOS 27 set to connect through
+// CoreDevice says, in the person's language, that it needs another
+// connection, on its page, in its checkup and in Add phone, each with a
+// way to Settings › Phones, where the connection is chosen; not the
+// driver's English, the steps of Add phone, or a step Pinky retries.
+func TestIPhoneConnectionStep(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, HoldSetup: true})
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the iPhone", func() bool { return len(ta.devices) > 1 })
+	id := ta.iphoneView(t).Info.ID
+	const detail = "Connecting without the helper needs iOS 27 or later; this iPhone runs iOS 18.6. Choose Automatic or WebDriverAgent in Settings > Phones."
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupConnection, Detail: detail, OSVersion: "18.6"})
+	ta.sync()
+	for _, lang := range []string{"en", "zh-Hans"} {
+		tt := mg.NewTester(ta.view, 1280, 820)
+		inLanguage(t, lang, tt)
+		want := locales.ConnectionChosenNeedsIOS27("18.6")
+		check := func(where string, ok bool) {
+			t.Helper()
+			if !ok || hasText(tt, detail) {
+				t.Errorf("%s: %s: %q", lang, where, tt.Texts())
+			}
+		}
+		toSettings := func(where string) {
+			t.Helper()
+			if err := tt.Click(locales.ConnectionChoose()); err != nil || ta.page != pageSettings || ta.set.sec != secPhones {
+				t.Errorf("%s: %s, Choose the connection: %v, page %v, section %v", lang, where, err, ta.page, ta.set.sec)
+			}
+		}
+
+		ta.chk.showing = ""
+		ta.selectPhone(id)
+		tt.Frame()
+		tt.Frame()
+		check("the phone's page", hasText(tt, locales.PhoneNeedsSetup(ta.iphoneView(t).Info.Name)) && hasText(tt, want) &&
+			!shows(tt, locales.PhoneSetUpIPhone()))
+		toSettings("the phone's page")
+
+		ta.openCheckup(ta.iphoneView(t))
+		ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf(id); return r != nil && r.have && !r.running })
+		check("the checkup", hasText(tt, locales.ConnectionTitle()) && hasText(tt, want))
+		toSettings("the checkup")
+		ta.chk.showing = ""
+
+		ta.page = pageAddPhone
+		ta.add.reset(ta.app)
+		ta.add.step, ta.add.focus = "iphone", id
+		tt.Frame()
+		tt.Frame()
+		check("Add phone › iPhone", hasText(tt, want) && !hasText(tt, locales.AddPhoneIPhoneStuck()) && !hasText(tt, locales.AddPhoneIPhoneRetrying()))
+		toSettings("Add phone › iPhone")
+	}
+}

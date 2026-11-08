@@ -5545,6 +5545,46 @@ func (msgs Messages) ConnectionChangeFailed(phone string, reason string) string 
 	return Catalog.Format(msgs.locale, "connectionChangeFailed", map[string]any{"phone": phone, "reason": reason})
 }
 
+// ConnectionChoose says "Choose the connection"
+// in the language the app shows.
+//
+// A link or button for an iPhone whose chosen connection does not work with
+// it: opens Settings › Phones, where the connection is chosen.
+func ConnectionChoose() string { return In(i18n.Locale()).ConnectionChoose() }
+
+// ConnectionChoose says "Choose the connection"
+// in the language of msgs.
+//
+// A link or button for an iPhone whose chosen connection does not work with
+// it: opens Settings › Phones, where the connection is chosen.
+func (msgs Messages) ConnectionChoose() string {
+	return Catalog.Format(msgs.locale, "connectionChoose", nil)
+}
+
+// ConnectionChosenNeedsIOS27 says "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automati…"
+// in the language the app shows.
+//
+// The phone's page, its checkup and Add phone › iPhone, for an iPhone
+// below iOS 27 whose connection in Settings › Phones was set to
+// CoreDevice (connectionCoreDevice), which it cannot use. Automatic and the
+// WebDriverAgent helper are the other choices there (connectionAuto,
+// connectionWDA). CoreDevice and WebDriverAgent are names.
+func ConnectionChosenNeedsIOS27(version string) string {
+	return In(i18n.Locale()).ConnectionChosenNeedsIOS27(version)
+}
+
+// ConnectionChosenNeedsIOS27 says "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automati…"
+// in the language of msgs.
+//
+// The phone's page, its checkup and Add phone › iPhone, for an iPhone
+// below iOS 27 whose connection in Settings › Phones was set to
+// CoreDevice (connectionCoreDevice), which it cannot use. Automatic and the
+// WebDriverAgent helper are the other choices there (connectionAuto,
+// connectionWDA). CoreDevice and WebDriverAgent are names.
+func (msgs Messages) ConnectionChosenNeedsIOS27(version string) string {
+	return Catalog.Format(msgs.locale, "connectionChosenNeedsIOS27", map[string]any{"version": version})
+}
+
 // ConnectionCoreDevice says "CoreDevice (nothing to install)"
 // in the language the app shows.
 //

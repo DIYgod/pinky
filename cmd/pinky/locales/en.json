@@ -1828,6 +1828,20 @@
       }
     }
   },
+  "connectionChoose": "Choose the connection",
+  "@connectionChoose": {
+    "description": "A link or button for an iPhone whose chosen connection does not work with it: opens Settings › Phones, where the connection is chosen."
+  },
+  "connectionChosenNeedsIOS27": "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automatic or the WebDriverAgent helper in Settings › Phones.",
+  "@connectionChosenNeedsIOS27": {
+    "description": "The phone's page, its checkup and Add phone › iPhone, for an iPhone below iOS 27 whose connection in Settings › Phones was set to CoreDevice (connectionCoreDevice), which it cannot use. Automatic and the WebDriverAgent helper are the other choices there (connectionAuto, connectionWDA). CoreDevice and WebDriverAgent are names.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "18.6"
+      }
+    }
+  },
   "connectionCoreDevice": "CoreDevice (nothing to install)",
   "@connectionCoreDevice": {
     "description": "Settings › Phones, an iPhone's connection choice: the way through Xcode's CoreDevice protocol. CoreDevice is a name."

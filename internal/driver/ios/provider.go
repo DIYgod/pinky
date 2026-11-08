@@ -388,9 +388,7 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 		return p.inspectWDA(ctx, e, info)
 	case backendCoreDevice:
 		if kind != pathCoreDevice {
-			info.State = driver.StateNeedsSetup
-			info.Detail = fmt.Sprintf(coreDeviceTooOld, info.OSVersion)
-			return info
+			return coreDeviceTooOldState(info)
 		}
 	default:
 		if kind == pathLegacy {
@@ -528,6 +526,15 @@ const (
 	automationAsk    = "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone."
 	automationMissed = "The iPhone asked for its passcode to let the WebDriverAgent helper control it. If it still asks, enter the passcode there. Pinky tries again in a few minutes, or at once when you reconnect the iPhone or choose its connection again in Settings > Phones."
 )
+
+// coreDeviceTooOldState fills in a phone the person chose to connect
+// without the helper (CoreDevice) that runs an iOS below 27: it needs
+// another connection, which the person chooses in Settings › Phones.
+func coreDeviceTooOldState(info driver.Info) driver.Info {
+	info.State, info.Setup = driver.StateNeedsSetup, driver.SetupConnection
+	info.Detail = fmt.Sprintf(coreDeviceTooOld, info.OSVersion)
+	return info
+}
 
 // way is the connection the person chose for a phone.
 func (p *Provider) way(id string) string {
