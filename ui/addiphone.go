@@ -192,6 +192,10 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			if wifi && cur == iphonePlug {
 				guideNote(c, locales.AddPhoneIPhoneStepPlugWiFi())
 			}
+			if d != nil && lockedOnWiFi(*d) {
+				guideWaiting(c, locales.AddPhoneIPhoneUnlockWiFi(d.Info.Name))
+				return
+			}
 			if d != nil && d.Info.State == driver.StateOffline {
 				guideProblem(c, locales.AddPhoneIPhoneNoAnswer(d.Info.Name), d.Info.Detail)
 				return
@@ -220,7 +224,12 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 		})
 		row(iphoneDevMode, locales.AddPhoneIPhoneStepDevMode(), func() {
 			guideText(c, locales.AddPhoneIPhoneStepDevModeDetail())
-			guideNote(c, locales.AddPhoneIPhoneStepDevModeNote())
+			if onWiFi {
+				// Only a cable lets Pinky make the hidden switch appear.
+				guideNote(c, locales.AddPhoneIPhoneDevModeWiFiNote(d.Info.Name))
+			} else {
+				guideNote(c, locales.AddPhoneIPhoneStepDevModeNote())
+			}
 		})
 		row(iphonePrepare, locales.AddPhoneIPhoneStepPrepare(), func() {
 			guideText(c, locales.AddPhoneIPhoneStepPrepareDetail())

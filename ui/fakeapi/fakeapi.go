@@ -372,6 +372,8 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.TaskID = d.task.view.ID
 	}
 	switch {
+	case d.info.Setup == driver.SetupUnlock && d.info.State == driver.StateOffline && d.info.Connection == "wifi" && !running:
+		v.Status, v.StatusLine = gateway.DeviceOffline, "Locked on Wi-Fi"
 	case d.info.State == driver.StateOffline:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Offline"
 	case d.info.Setup == driver.SetupConfirmWiFi && d.info.State == driver.StateNeedsSetup:

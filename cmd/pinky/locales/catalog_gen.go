@@ -937,6 +937,24 @@ func (msgs Messages) AddPhoneIPhoneDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneDetail", nil)
 }
 
+// AddPhoneIPhoneDevModeWiFiNote says "Don't see Developer Mode in Privacy & Security? Plug {name} in once: Pinky can make the switch appear only over the c…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the checkup: under the Developer Mode step of a
+// phone on Wi-Fi. name is its name.
+func AddPhoneIPhoneDevModeWiFiNote(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneDevModeWiFiNote(name)
+}
+
+// AddPhoneIPhoneDevModeWiFiNote says "Don't see Developer Mode in Privacy & Security? Plug {name} in once: Pinky can make the switch appear only over the c…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the checkup: under the Developer Mode step of a
+// phone on Wi-Fi. name is its name.
+func (msgs Messages) AddPhoneIPhoneDevModeWiFiNote(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneDevModeWiFiNote", map[string]any{"name": name})
+}
+
 // AddPhoneIPhoneFoundDetail says "Pinky leaves these alone until you say they're yours. If one is yours, choose Use: Pinky sets it up over Wi-Fi, no ca…"
 // in the language the app shows.
 //
@@ -1299,18 +1317,20 @@ func (msgs Messages) AddPhoneIPhoneStepDevModeNote() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeNote", nil)
 }
 
-// AddPhoneIPhoneStepDevModeWiFi says "Also works over Wi-Fi"
+// AddPhoneIPhoneStepDevModeWiFi says "Done on the iPhone; if the switch isn't there, plug it in once"
 // in the language the app shows.
 //
 // Add phone › iPhone: under the Developer Mode step's title while Pinky
-// uses iPhones over Wi-Fi: the step can be done without the cable.
+// uses iPhones over Wi-Fi: the person turns it on, on the phone, over Wi-Fi
+// too, but only a cable lets Pinky make the hidden switch appear.
 func AddPhoneIPhoneStepDevModeWiFi() string { return In(i18n.Locale()).AddPhoneIPhoneStepDevModeWiFi() }
 
-// AddPhoneIPhoneStepDevModeWiFi says "Also works over Wi-Fi"
+// AddPhoneIPhoneStepDevModeWiFi says "Done on the iPhone; if the switch isn't there, plug it in once"
 // in the language of msgs.
 //
 // Add phone › iPhone: under the Developer Mode step's title while Pinky
-// uses iPhones over Wi-Fi: the step can be done without the cable.
+// uses iPhones over Wi-Fi: the person turns it on, on the phone, over Wi-Fi
+// too, but only a cable lets Pinky make the hidden switch appear.
 func (msgs Messages) AddPhoneIPhoneStepDevModeWiFi() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeWiFi", nil)
 }
@@ -1715,6 +1735,24 @@ func AddPhoneIPhoneTrustWiFi(name string) string {
 // longer trusts this computer. name is its name.
 func (msgs Messages) AddPhoneIPhoneTrustWiFi(name string) string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneTrustWiFi", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneUnlockWiFi says "Unlock {name}: Pinky connects to it over Wi-Fi once it's unlocked."
+// in the language the app shows.
+//
+// Add phone › iPhone: the phone the steps follow is on Wi-Fi and locked.
+// name is its name.
+func AddPhoneIPhoneUnlockWiFi(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneUnlockWiFi(name)
+}
+
+// AddPhoneIPhoneUnlockWiFi says "Unlock {name}: Pinky connects to it over Wi-Fi once it's unlocked."
+// in the language of msgs.
+//
+// Add phone › iPhone: the phone the steps follow is on Wi-Fi and locked.
+// name is its name.
+func (msgs Messages) AddPhoneIPhoneUnlockWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneUnlockWiFi", map[string]any{"name": name})
 }
 
 // AddPhoneIPhoneUsbmuxdStopped says "Not showing up? usbmuxd is installed but not running. Plug the iPhone in again, or start it with sudo systemctl start…"
@@ -9025,6 +9063,26 @@ func (msgs Messages) GwStatusLocked() string {
 	return Catalog.Format(msgs.locale, "gwStatusLocked", nil)
 }
 
+// GwStatusLockedOnWiFi says "Locked on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: an iPhone or iPad on Wi-Fi that is locked, which
+// Pinky connects to only once it is unlocked (so as not to wake its
+// screen). Shown only in other languages; in English the gateway's own
+// words show.
+func GwStatusLockedOnWiFi() string { return In(i18n.Locale()).GwStatusLockedOnWiFi() }
+
+// GwStatusLockedOnWiFi says "Locked on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: an iPhone or iPad on Wi-Fi that is locked, which
+// Pinky connects to only once it is unlocked (so as not to wake its
+// screen). Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStatusLockedOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusLockedOnWiFi", nil)
+}
+
 // GwStatusLockedTask says "Locked · unlock to continue {task}"
 // in the language the app shows.
 //
@@ -11943,6 +12001,36 @@ func PhoneKeysAgentScreen(agent string) string { return In(i18n.Locale()).PhoneK
 // next to them.
 func (msgs Messages) PhoneKeysAgentScreen(agent string) string {
 	return Catalog.Format(msgs.locale, "phoneKeysAgentScreen", map[string]any{"agent": agent})
+}
+
+// PhoneLockedWiFiDetail says "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn'…"
+// in the language the app shows.
+//
+// Under phoneLockedWiFiTitle.
+func PhoneLockedWiFiDetail() string { return In(i18n.Locale()).PhoneLockedWiFiDetail() }
+
+// PhoneLockedWiFiDetail says "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn'…"
+// in the language of msgs.
+//
+// Under phoneLockedWiFiTitle.
+func (msgs Messages) PhoneLockedWiFiDetail() string {
+	return Catalog.Format(msgs.locale, "phoneLockedWiFiDetail", nil)
+}
+
+// PhoneLockedWiFiTitle says "{phone} is locked"
+// in the language the app shows.
+//
+// The page of an iPhone or iPad on Wi-Fi that is locked, which Pinky
+// connects to only once it is unlocked. phone is its name.
+func PhoneLockedWiFiTitle(phone string) string { return In(i18n.Locale()).PhoneLockedWiFiTitle(phone) }
+
+// PhoneLockedWiFiTitle says "{phone} is locked"
+// in the language of msgs.
+//
+// The page of an iPhone or iPad on Wi-Fi that is locked, which Pinky
+// connects to only once it is unlocked. phone is its name.
+func (msgs Messages) PhoneLockedWiFiTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneLockedWiFiTitle", map[string]any{"phone": phone})
 }
 
 // PhoneMoreControls says "More phone controls"

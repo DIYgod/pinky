@@ -146,7 +146,7 @@ func (d *Device) captureShot(ctx context.Context) ([]byte, error) {
 func (d *Device) Screenshot(ctx context.Context) (image.Image, error) {
 	b, err := d.ScreenshotPNG(ctx)
 	if err != nil {
-		return nil, err
+		return nil, d.gone(err)
 	}
 	img, err := png.Decode(bytes.NewReader(b))
 	if err != nil {

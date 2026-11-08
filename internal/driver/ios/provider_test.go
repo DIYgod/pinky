@@ -40,6 +40,10 @@ func TestProviderEntries(t *testing.T) {
 	if got = p.entries(list); len(got) != 3 {
 		t.Fatalf("entries with the iPad remembered = %+v", got)
 	}
+	p.Only = map[string]bool{"ipad": true}
+	if got = p.entries(list); len(got) != 1 || got[0].Properties.SerialNumber != "ipad" {
+		t.Fatalf("entries with Only = %+v", got)
+	}
 }
 
 func TestProviderCachesInspect(t *testing.T) {

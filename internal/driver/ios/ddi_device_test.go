@@ -127,8 +127,9 @@ func TestDiskImageMountKeeps(t *testing.T) {
 // this computer's image (the one it puts back).
 func TestDiskImageRemount(t *testing.T) {
 	udid := os.Getenv("PINKY_DEVICE")
-	if udid == "" || os.Getenv("PINKY_REMOUNT") != "1" {
-		t.Skip("set PINKY_DEVICE and PINKY_REMOUNT=1 to take the image off and let Pinky mount it again")
+	remount := os.Getenv("PINKY_REMOUNT")
+	if udid == "" || (remount != "1" && remount != "any") {
+		t.Skip("set PINKY_DEVICE and PINKY_REMOUNT=1 to take the image off and let Pinky mount it again (PINKY_REMOUNT=any also takes off another version of it, which this computer's then replaces)")
 	}
 	img, err := findDiskImage("")
 	if err != nil {
@@ -163,7 +164,20 @@ func TestDiskImageRemount(t *testing.T) {
 		}
 		return false
 	}
-	if !has(cryptexes("before")) {
+	hasAny := func(list []cryptex.RemoteCryptex) bool {
+		for _, c := range list {
+			if c.Identifier == ddiCryptex {
+				return true
+			}
+		}
+		return false
+	}
+	before := cryptexes("before")
+	switch {
+	case has(before):
+	case remount == "any" && hasAny(before):
+		t.Logf("the phone has another version of the image; this computer's (%s) takes its place", img.Version)
+	default:
 		t.Skip("the phone does not have this computer's image as a cryptex")
 	}
 	// A locked phone mounts nothing until it is unlocked, so taking the
@@ -222,7 +236,7 @@ func TestDiskImageRemount(t *testing.T) {
 
 	// The provider, as the gateway runs it: List every 2 s. Its log lines
 	// say which way the mount went and how long it took.
-	p := NewProvider()
+	p := deviceProvider(t, udid)
 	p.Log = slog.New(slog.NewTextHandler(testLog{t}, nil))
 	start := time.Now()
 	last := ""
@@ -265,7 +279,7 @@ func TestCheckupOnPhone(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
-	p := NewProvider()
+	p := deviceProvider(t, udid)
 	if _, err := p.List(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -292,6 +306,21 @@ func TestCheckupOnPhone(t *testing.T) {
 			t.Errorf("%s failed: %s", c.ID, c.Detail)
 		}
 	}
+}
+
+// deviceProvider is a provider for the phone under test only, that uses it
+// over Wi-Fi when usbmuxd lists it only there, as the app does with a
+// phone the person uses.
+func deviceProvider(t *testing.T, udid string) *Provider {
+	t.Helper()
+	p := NewProvider()
+	p.Only = map[string]bool{udid: true}
+	if e, err := findEntry(udid, false); err == nil && e.Properties.ConnectionType == "Network" {
+		t.Logf("%s is on Wi-Fi", udid)
+		p.SetWiFi(true)
+		p.UseOverWiFi(udid)
+	}
+	return p
 }
 
 // testLog writes a provider's log lines to the test's output.

@@ -43,6 +43,14 @@ func foundOnWiFi(d gateway.DeviceView) bool {
 	return d.Status != gateway.DeviceOffline && d.Info.State == driver.StateNeedsSetup && d.Info.Setup == driver.SetupConfirmWiFi
 }
 
+// lockedOnWiFi reports whether a phone is offline because it is locked on
+// Wi-Fi: Pinky connects to it only once it is unlocked, so as not to wake
+// its screen (gateway: lockedOnWiFi).
+func lockedOnWiFi(d gateway.DeviceView) bool {
+	return d.Status == gateway.DeviceOffline && d.Info.State == driver.StateOffline &&
+		d.Info.Setup == driver.SetupUnlock && d.Info.Connection == "wifi"
+}
+
 // applyWiFi passes Settings › Phones' switch to the gateway.
 func (a *app) applyWiFi(on bool) {
 	if ws, ok := a.api.(wifiSetter); ok {

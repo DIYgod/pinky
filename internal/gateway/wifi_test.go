@@ -3,14 +3,17 @@ package gateway
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // airProvider lists demo iPhones over a cable or Wi-Fi as conn says, and
@@ -26,12 +29,13 @@ type airProvider struct {
 	forgot    map[string]bool
 	conn      map[string]string   // by id; "usb" when unset
 	opens     map[string][]string // the connection of each Open, by id
-	openDelay time.Duration       // Open over Wi-Fi takes this long
+	sessions  map[string][]*overDevice
+	openDelay time.Duration // Open over Wi-Fi takes this long
 }
 
 func newAirProvider(devs ...*demo.Device) *airProvider {
 	return &airProvider{Provider: demo.NewProvider(driver.IOS, devs...), use: map[string]bool{}, forgot: map[string]bool{},
-		conn: map[string]string{}, opens: map[string][]string{}}
+		conn: map[string]string{}, opens: map[string][]string{}, sessions: map[string][]*overDevice{}}
 }
 
 func (p *airProvider) connOf(id string) string {
@@ -75,10 +79,12 @@ func (p *airProvider) Open(ctx context.Context, id string) (driver.Device, error
 	if err != nil {
 		return nil, err
 	}
+	od := &overDevice{Device: dev, conn: c}
 	p.mu.Lock()
 	p.opens[id] = append(p.opens[id], c)
+	p.sessions[id] = append(p.sessions[id], od)
 	p.mu.Unlock()
-	return &overDevice{Device: dev, conn: c}, nil
+	return od, nil
 }
 
 func (p *airProvider) SetWiFi(on bool) {
@@ -120,10 +126,28 @@ func (p *airProvider) state(id string) (used, forgot bool, opens []string) {
 	return p.use[id], p.forgot[id], slices.Clone(p.opens[id])
 }
 
-// overDevice is a session over one connection.
+// overDevice is a session over one connection, which dies with it.
 type overDevice struct {
 	driver.Device
 	conn string
+	dead atomic.Bool
+}
+
+func (d *overDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
+	if d.dead.Load() {
+		return nil, fmt.Errorf("the tunnel stopped: %w", driver.ErrOffline)
+	}
+	return d.Device.Observe(ctx, opt)
+}
+
+// pull kills the sessions of a phone, as pulling its cable does, before
+// usbmuxd stops listing it there.
+func (p *airProvider) pull(id string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, d := range p.sessions[id] {
+		d.dead.Store(true)
+	}
 }
 
 func (d *overDevice) Info() driver.Info {
@@ -301,4 +325,67 @@ func TestWiFiFoundPhoneGone(t *testing.T) {
 	waitFor(t, "my iPad online", func() bool { v, _ := viewOf(g, "ipad2"); return v.Status == DeviceIdle })
 	ipad2.SetOffline(true)
 	waitFor(t, "my iPad offline", func() bool { v, ok := viewOf(g, "ipad2"); return ok && v.Status == DeviceOffline })
+}
+
+// TestWiFiCablePulledMidRead: the cable is pulled while the agent reads the
+// screen, before usbmuxd stops listing the phone on it. The read that hits
+// the dead session reads again once the phone is back on Wi-Fi.
+func TestWiFiCablePulledMidRead(t *testing.T) {
+	p := newAirProvider(demo.NewDevice("iphone", "iPhone", driver.IOS))
+	p.openDelay = 100 * time.Millisecond
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p}; o.DiscoverEvery = time.Hour })
+	g.SetWiFi(true)
+	s, _ := connect(t, g, "Check the weather")
+	p.pull("iphone")
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		p.set("iphone", "wifi") // usbmuxd catches up
+		g.Refresh(context.Background())
+	}()
+	res := s.Observe(context.Background(), ObserveRequest{})
+	if res.IsError() || res.Screen == nil {
+		t.Fatalf("the read across the pull: %+v", res)
+	}
+	if v, _ := viewOf(g, "iphone"); v.Info.Connection != "wifi" {
+		t.Fatalf("after the pull: %+v", v)
+	}
+}
+
+// TestWiFiLockedPhone: a phone locked on Wi-Fi, which the provider lists
+// offline until it is unlocked, reads as such, and agents are told to ask
+// for an unlock.
+func TestWiFiLockedPhone(t *testing.T) {
+	ipad := demo.NewDevice("ipad", "My iPad", driver.IOS)
+	p := &lockedProvider{airProvider: newAirProvider(ipad)}
+	p.set("ipad", "wifi")
+	p.UseOverWiFi("ipad")
+	p.locked.Store(true)
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p} })
+	g.SetWiFi(true)
+	waitFor(t, "the locked iPad", func() bool { v, _ := viewOf(g, "ipad"); return v.StatusLine == "Locked on Wi-Fi" })
+	s := g.OpenSession(agent)
+	t.Cleanup(s.Close)
+	res := s.Connect(context.Background(), ConnectRequest{Task: "look", Device: "ipad"})
+	if res.Error != ErrDeviceOffline || !strings.Contains(res.Message, "unlock") {
+		t.Fatalf("connect to the locked iPad: %+v", res)
+	}
+	p.locked.Store(false)
+	waitFor(t, "the iPad unlocked", func() bool { v, _ := viewOf(g, "ipad"); return v.Status == DeviceIdle })
+}
+
+// lockedProvider lists its phones on Wi-Fi locked while locked is set, as
+// the iOS provider lists a phone locked on Wi-Fi.
+type lockedProvider struct {
+	*airProvider
+	locked atomic.Bool
+}
+
+func (p *lockedProvider) List(ctx context.Context) ([]driver.Info, error) {
+	infos, err := p.airProvider.List(ctx)
+	for i, info := range infos {
+		if info.Connection == "wifi" && info.State == driver.StateOnline && p.locked.Load() {
+			infos[i].State, infos[i].Setup, infos[i].Detail = driver.StateOffline, driver.SetupUnlock, "Locked on Wi-Fi."
+		}
+	}
+	return infos, err
 }

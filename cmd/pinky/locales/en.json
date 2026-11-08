@@ -326,6 +326,16 @@
   "@addPhoneIPhoneDetail": {
     "description": "Add phone › iPhone: the line under the title, above the steps."
   },
+  "addPhoneIPhoneDevModeWiFiNote": "Don't see Developer Mode in Privacy & Security? Plug {name} in once: Pinky can make the switch appear only over the cable.",
+  "@addPhoneIPhoneDevModeWiFiNote": {
+    "description": "Add phone › iPhone and the checkup: under the Developer Mode step of a phone on Wi-Fi. name is its name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
   "addPhoneIPhoneFoundDetail": "Pinky leaves these alone until you say they're yours. If one is yours, choose Use: Pinky sets it up over Wi-Fi, no cable needed.",
   "@addPhoneIPhoneFoundDetail": {
     "description": "Add phone › iPhone: under addPhoneIPhoneFoundTitle."
@@ -438,9 +448,9 @@
   "@addPhoneIPhoneStepDevModeNote": {
     "description": "Add phone › iPhone, the step list: a small note under the Developer Mode step: iOS hides the switch until a developer tool asks for it, and Pinky did."
   },
-  "addPhoneIPhoneStepDevModeWiFi": "Also works over Wi-Fi",
+  "addPhoneIPhoneStepDevModeWiFi": "Done on the iPhone; if the switch isn't there, plug it in once",
   "@addPhoneIPhoneStepDevModeWiFi": {
-    "description": "Add phone › iPhone: under the Developer Mode step's title while Pinky uses iPhones over Wi-Fi: the step can be done without the cable."
+    "description": "Add phone › iPhone: under the Developer Mode step's title while Pinky uses iPhones over Wi-Fi: the person turns it on, on the phone, over Wi-Fi too, but only a cable lets Pinky make the hidden switch appear."
   },
   "addPhoneIPhoneStepDriver": "Install Apple's iPhone driver",
   "@addPhoneIPhoneStepDriver": {
@@ -549,6 +559,16 @@
   "addPhoneIPhoneTrustWiFi": "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust.",
   "@addPhoneIPhoneTrustWiFi": {
     "description": "Add phone › iPhone and the phone's page: an iPhone on Wi-Fi that no longer trusts this computer. name is its name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "addPhoneIPhoneUnlockWiFi": "Unlock {name}: Pinky connects to it over Wi-Fi once it's unlocked.",
+  "@addPhoneIPhoneUnlockWiFi": {
+    "description": "Add phone › iPhone: the phone the steps follow is on Wi-Fi and locked. name is its name.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -3196,6 +3216,10 @@
   "@gwStatusLocked": {
     "description": "A phone's status line: the phone is locked. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwStatusLockedOnWiFi": "Locked on Wi-Fi",
+  "@gwStatusLockedOnWiFi": {
+    "description": "A phone's status line: an iPhone or iPad on Wi-Fi that is locked, which Pinky connects to only once it is unlocked (so as not to wake its screen). Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStatusLockedTask": "Locked · unlock to continue {task}",
   "@gwStatusLockedTask": {
     "description": "A phone's status line: the phone is locked and a task waits. Shown only in other languages; in English the gateway's own words show.",
@@ -4387,6 +4411,20 @@
       "agent": {
         "type": "String",
         "example": "Claude Code"
+      }
+    }
+  },
+  "phoneLockedWiFiDetail": "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn't wake its screen.",
+  "@phoneLockedWiFiDetail": {
+    "description": "Under phoneLockedWiFiTitle."
+  },
+  "phoneLockedWiFiTitle": "{phone} is locked",
+  "@phoneLockedWiFiTitle": {
+    "description": "The page of an iPhone or iPad on Wi-Fi that is locked, which Pinky connects to only once it is unlocked. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
       }
     }
   },

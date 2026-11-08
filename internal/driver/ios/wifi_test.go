@@ -252,3 +252,58 @@ func TestWiFiFoundPhoneHeld(t *testing.T) {
 		t.Fatalf("%d reads, want 1", reads)
 	}
 }
+
+// TestGoneMarksOffline: once the tunnel a device was opened over stops, as
+// when its cable is pulled, errors read as driver.ErrOffline.
+func TestGoneMarksOffline(t *testing.T) {
+	tun := &Tunnel{done: make(chan struct{})}
+	d := &Device{l: &link{tunnel: tun}}
+	failed := errors.New("connect com.apple.accessibility.axAuditDaemon.remoteserver: Lockdown connection failed")
+	if err := d.gone(failed); errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("with the tunnel up: %v", err)
+	}
+	close(tun.done)
+	if err := d.gone(failed); !errors.Is(err, driver.ErrOffline) || !strings.Contains(err.Error(), "Lockdown") {
+		t.Fatalf("with the tunnel down: %v", err)
+	}
+	if d.gone(nil) != nil {
+		t.Fatal("no error became one")
+	}
+}
+
+// TestWiFiLockedHeld: a phone the person uses that is locked on Wi-Fi is
+// listed offline, waiting to be unlocked, also while it drops off
+// usbmuxd's list as it sleeps, for sleepHold; unlocked, it is not.
+func TestWiFiLockedHeld(t *testing.T) {
+	w := newWiFiProvider()
+	w.SetWiFi(true)
+	w.UseOverWiFi("ipad")
+	info := w.lockedOnWiFi(driver.Info{ID: "ipad", Platform: driver.IOS, Name: "iPad", Connection: "wifi", State: driver.StateOnline})
+	if info.State != driver.StateOffline || info.Setup != driver.SetupUnlock {
+		t.Fatalf("locked on Wi-Fi: %+v", info)
+	}
+	w.after(sleepHold - time.Second)
+	if got := listed(t, w.Provider); got["ipad"].Setup != driver.SetupUnlock {
+		t.Fatalf("asleep, off usbmuxd's list: %+v", got)
+	}
+	if held, ok := w.stillAsleep("ipad"); !ok || held.Setup != driver.SetupUnlock {
+		t.Fatalf("a look without an answer while asleep: %+v, %v", held, ok)
+	}
+	w.after(2 * time.Second)
+	if _, ok := w.stillAsleep("ipad"); ok {
+		t.Fatal("still asleep after sleepHold")
+	}
+	if got := listed(t, w.Provider); len(got) != 0 {
+		t.Fatalf("gone longer than sleepHold: %+v", got)
+	}
+	w.lockedOnWiFi(info)
+	w.awake("ipad")
+	if got := listed(t, w.Provider); len(got) != 0 {
+		t.Fatalf("held after it was unlocked: %+v", got)
+	}
+	w.lockedOnWiFi(info)
+	w.Forget("ipad")
+	if got := listed(t, w.Provider); len(got) != 0 {
+		t.Fatalf("held after it was removed: %+v", got)
+	}
+}

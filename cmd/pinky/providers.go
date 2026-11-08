@@ -66,6 +66,9 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 	p := ios.NewProvider()
 	p.Log = log
+	// Under PINKY_DEVICES the provider does not even look at the other
+	// phones, over a cable or Wi-Fi: other tools use them.
+	p.Only = onlyDevices()
 	if dirs, err := api.DefaultDirs(); err == nil {
 		// Where Pinky looks for Apple's developer disk image before Xcode's.
 		p.DiskImageDir = filepath.Join(dirs.Data, "DeveloperDiskImages")
@@ -82,13 +85,7 @@ func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 // list of device ids, limits Pinky to those phones (for development, when
 // other tools use the rest).
 func realProviders(log *slog.Logger) []driver.Provider {
-	var only map[string]bool
-	if v := strings.TrimSpace(os.Getenv("PINKY_DEVICES")); v != "" {
-		only = map[string]bool{}
-		for _, id := range strings.Split(v, ",") {
-			only[strings.TrimSpace(id)] = true
-		}
-	}
+	only := onlyDevices()
 	var out []driver.Provider
 	for _, f := range providerFactories {
 		p, err := f(log)
@@ -109,6 +106,19 @@ func realProviders(log *slog.Logger) []driver.Provider {
 		out = append(out, p)
 	}
 	return out
+}
+
+// onlyDevices reads PINKY_DEVICES: nil when it is not set.
+func onlyDevices() map[string]bool {
+	v := strings.TrimSpace(os.Getenv("PINKY_DEVICES"))
+	if v == "" {
+		return nil
+	}
+	only := map[string]bool{}
+	for _, id := range strings.Split(v, ",") {
+		only[strings.TrimSpace(id)] = true
+	}
+	return only
 }
 
 // onlyProvider hides every device not in only. It is used as a pointer,

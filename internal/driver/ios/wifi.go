@@ -33,6 +33,7 @@ type wifiState struct {
 	use    map[string]bool       // phones the person uses (UseOverWiFi), by UDID
 	forgot map[string]bool       // phones the person removed or ignored (Forget)
 	found  map[string]foundPhone // what was read of phones found over Wi-Fi only
+	asleep map[string]heldPhone  // phones the person uses, found locked on Wi-Fi
 
 	namesFn func(ctx context.Context, e goios.DeviceEntry) (phoneNames, error) // for tests: readNames
 }
@@ -43,6 +44,13 @@ type foundPhone struct {
 	key  entryKey
 	info driver.Info
 	at   time.Time
+	seen time.Time
+}
+
+// heldPhone is a phone List keeps listing for a while after usbmuxd
+// stopped listing it, and when usbmuxd last listed it.
+type heldPhone struct {
+	info driver.Info
 	seen time.Time
 }
 
@@ -131,10 +139,79 @@ func (p *Provider) listedOverWiFi(id string) bool {
 	return p.wifi.on && !p.wifi.forgot[id]
 }
 
+// A phone the person uses that is locked on Wi-Fi is most likely asleep: an
+// iPad on a desk then shows up on usbmuxd's list for 10 to 30 s about once a
+// minute, as a new attach each time. Opening it there starts its screen
+// stream, which lights its screen, every time (iPad Pro, iPadOS 27.0.1,
+// 2026-11-08), and the session ends a few seconds later with the listing.
+// So Pinky reads only lockdown (whether it is locked) while it is locked on
+// Wi-Fi, lists it offline with driver.SetupUnlock, and opens it once it is
+// unlocked; agents ask the person to unlock it. On a cable nothing changes.
+
+// sleepHold is how long List keeps listing a phone found locked on Wi-Fi
+// after usbmuxd stopped listing it, so one that sleeps reads as locked all
+// along rather than coming and going.
+const sleepHold = 3 * time.Minute
+
+// lockedOnWiFi is a phone the person uses that is locked on Wi-Fi.
+func (p *Provider) lockedOnWiFi(info driver.Info) driver.Info {
+	info.State, info.Setup, info.Detail = driver.StateOffline, driver.SetupUnlock, lockedWiFiDetail
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.wifi.asleep == nil {
+		p.wifi.asleep = map[string]heldPhone{}
+	}
+	if _, was := p.wifi.asleep[info.ID]; !was {
+		p.logger().Info("iphone: locked on Wi-Fi; waiting until it is unlocked", "device", info.ID)
+	}
+	p.wifi.asleep[info.ID] = heldPhone{info: info, seen: p.clock()}
+	return info
+}
+
+// stillAsleep returns what was listed of a phone found locked on Wi-Fi
+// less than sleepHold ago, for a look at it that got no answer: one that
+// sleeps answers lockdown only now and then.
+func (p *Provider) stillAsleep(id string) (driver.Info, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	h, ok := p.wifi.asleep[id]
+	if !ok || p.clock().Sub(h.seen) >= sleepHold {
+		return driver.Info{}, false
+	}
+	return h.info, true
+}
+
+// awake notes that a phone is not locked on Wi-Fi (any more).
+func (p *Provider) awake(id string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.wifi.asleep, id)
+}
+
+// heldAsleep returns the phones found locked on Wi-Fi that usbmuxd stopped
+// listing less than sleepHold ago and that are not among listed.
+func (p *Provider) heldAsleep(listed map[string]bool) []driver.Info {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	var out []driver.Info
+	for id, h := range p.wifi.asleep {
+		switch {
+		case listed[id]:
+		case !p.wifi.on || p.wifi.forgot[id] || !p.wifi.use[id] || p.clock().Sub(h.seen) >= sleepHold:
+			delete(p.wifi.asleep, id)
+		default:
+			out = append(out, h.info)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
 // Sentences for a phone over Wi-Fi.
 const (
-	foundDetail     = "Found on Wi-Fi: this iPhone or iPad was paired with this computer before, in Finder or Xcode, and Pinky has not used it. Pinky leaves it alone until you choose Use in Pinky."
-	trustWiFiDetail = "This computer cannot read the iPhone over Wi-Fi: it no longer trusts this computer. Plug it in with a cable, unlock it and tap Trust; it asks only on a cable."
+	lockedWiFiDetail = "Locked on Wi-Fi: Pinky connects to it once it is unlocked, so as not to wake its screen."
+	foundDetail      = "Found on Wi-Fi: this iPhone or iPad was paired with this computer before, in Finder or Xcode, and Pinky has not used it. Pinky leaves it alone until you choose Use in Pinky."
+	trustWiFiDetail  = "This computer cannot read the iPhone over Wi-Fi: it no longer trusts this computer. Plug it in with a cable, unlock it and tap Trust; it asks only on a cable."
 )
 
 // foundReread is how long what was read of a phone found on Wi-Fi is kept.

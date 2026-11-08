@@ -418,7 +418,11 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		return statusResult(StatusStopped, "The person stopped this agent's task on %s; this session may not use it again. End the task.", d.name())
 	}
 	if !d.online {
+		locked := lockedOnWiFi(d)
 		g.mu.Unlock()
+		if locked {
+			return errResult(ErrDeviceOffline, "%s is locked, and Pinky connects to it over Wi-Fi only once it is unlocked. Ask the person to unlock it, then call phone_connect again.", d.name())
+		}
 		return errResult(ErrDeviceOffline, "%s is offline.", d.name())
 	}
 	if l := d.lease; l != nil && l.session != s {
@@ -843,6 +847,14 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		g.waitChange(ctx, l, time.Duration(req.WaitMS)*time.Millisecond, req.Progress)
 	}
 	cur, err := g.observe(ctx, l.dev, true)
+	if err != nil && errors.Is(err, driver.ErrOffline) && g.expectedBack(l.dev) {
+		// The phone dropped as it moves between its cable and Wi-Fi: read
+		// it again once it is back (wifi.go).
+		if res := g.gate(l, req.ApprovalID, false); res != nil {
+			return g.finish(l, res)
+		}
+		cur, err = g.observe(ctx, l.dev, true)
+	}
 	if err != nil {
 		return g.finish(l, g.readError(l, err))
 	}

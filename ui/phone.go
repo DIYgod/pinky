@@ -81,6 +81,18 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.checkupPanel(c, d)
 		return
 	}
+	if lockedOnWiFi(d) {
+		// Locked on Wi-Fi: Pinky waits until it is unlocked (wifi.go).
+		mg.Column(c).AlignItems(mg.Center).Gap(12).MaxWidth(420).Children(func() {
+			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
+				mg.Icon(c, icLock).FontSize(30).TextColor(p.ink3)
+			})
+			mg.Text(c, locales.PhoneLockedWiFiTitle(d.Info.Name)).FontSize(16).FontWeight(600)
+			mg.Text(c, locales.PhoneLockedWiFiDetail()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+			a.removeLink(c, d)
+		})
+		return
+	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		mg.Column(c).AlignItems(mg.Center).Gap(12).Children(func() {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {

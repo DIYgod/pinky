@@ -106,6 +106,14 @@ func (g *Gateway) IgnoreFoundPhone(ctx context.Context, deviceID string) error {
 	return g.RemoveDevice(ctx, deviceID, RemoveOptions{})
 }
 
+// lockedOnWiFi reports whether the provider lists the phone offline because
+// it is locked on Wi-Fi, where Pinky connects to it only once it is
+// unlocked (driver.WiFiFinder: opening one that sleeps lights its screen).
+// The caller holds g.mu.
+func lockedOnWiFi(d *device) bool {
+	return !d.online && d.info.State == driver.StateOffline && d.info.Setup == driver.SetupUnlock && d.info.Connection == "wifi"
+}
+
 // foundLocked reports whether the phone waits for the person to say
 // whether it is theirs. The caller holds g.mu.
 func foundLocked(d *device) bool {
@@ -166,6 +174,14 @@ func connectionOf(dev driver.Device, info driver.Info) string {
 		return c
 	}
 	return info.Connection
+}
+
+// expectedBack reports whether a phone that is offline is expected back in
+// a moment, as it moves between its cable and Wi-Fi.
+func (g *Gateway) expectedBack(d *device) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return !d.online && time.Now().Before(d.moving)
 }
 
 // waitMovingLocked waits, while a phone moves between its cable and Wi-Fi,

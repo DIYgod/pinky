@@ -105,7 +105,7 @@ func TestAddIPhoneFound(t *testing.T) {
 	tt := mg.NewTester(ta.view, 1280, 980)
 	tt.Frame()
 	mustHave(t, tt, locales.AddPhoneIPhoneFoundTitle(), locales.AddPhoneIPhoneFoundDetail(), "Sam's iPad",
-		"Needs the cable", "Also works over Wi-Fi", "Also works over Wi-Fi, more slowly", locales.AddPhoneIPhoneStepPlugWiFi(),
+		"Needs the cable", locales.AddPhoneIPhoneStepDevModeWiFi(), "Also works over Wi-Fi, more slowly", locales.AddPhoneIPhoneStepPlugWiFi(),
 		"Looking for your iPhone…") // the found iPad is not followed by the steps
 	if err := tt.Click("Use Sam's iPad"); err != nil {
 		t.Fatal(err)
@@ -182,5 +182,20 @@ func TestWiFiScreenshots(t *testing.T) {
 		ta.add.reset(ta.app)
 		ta.add.step = "iphone"
 		shoot("wifi-add-iphone", 1280, 1100)
+	}
+}
+
+// TestLockedOnWiFiPage: an iPad locked on Wi-Fi says to unlock it, and why
+// Pinky waits.
+func TestLockedOnWiFiPage(t *testing.T) {
+	ta, id := foundApp(t, true)
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateOffline, Setup: driver.SetupUnlock, Detail: "Locked on Wi-Fi."})
+	ta.waitFor(t, "the iPad locked", func() bool { d := ta.device(id); return d != nil && lockedOnWiFi(*d) })
+	ta.sel = id
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	mustHave(t, tt, "Sam's iPad is locked", locales.PhoneLockedWiFiDetail(), "Locked on Wi-Fi")
+	if hasText(tt, "is offline") {
+		t.Errorf("the page calls it offline: %q", tt.Texts())
 	}
 }

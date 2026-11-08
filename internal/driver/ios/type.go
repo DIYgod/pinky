@@ -63,6 +63,11 @@ var errPasteUnavailable = errors.New("pasteboard service unavailable")
 // Without Append it first clears the field with Command-A and Delete, as a
 // person with a keyboard would. Submit presses Return afterwards.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
+	return d.gone(d.typeText(ctx, text, opt))
+}
+
+// typeText is Type without marking a dropped connection (gone).
+func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptions) error {
 	start := time.Now()
 	st := TypeStats{}
 	defer func() {

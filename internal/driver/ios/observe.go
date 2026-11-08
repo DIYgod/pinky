@@ -2,6 +2,7 @@ package ios
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -117,6 +118,11 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 
 // ObserveWithStats is Observe with timings.
 func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ObserveStats, error) {
+	s, st, err := d.observeWithStats(ctx, opt)
+	return s, st, d.gone(err)
+}
+
+func (d *Device) observeWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ObserveStats, error) {
 	var st ObserveStats
 	s, err := d.observeRAX(ctx, opt, &st)
 	if err == nil {
@@ -152,6 +158,10 @@ func (d *Device) lockedScreen() *screen.Screen {
 }
 
 // observeInspector is Observe through the inspector walk and OCR.
+// errEmptyRead is a read in which neither the accessibility tree nor OCR
+// found anything.
+var errEmptyRead = errors.New("the iPhone answered with an empty screen")
+
 func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions, st ObserveStats) (*screen.Screen, ObserveStats, error) {
 	start := time.Now()
 	st.Source = "inspector"
@@ -195,8 +205,14 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 		locked, _ = d.Locked(ctx)
 	}()
 	wg.Wait()
-	if walkErr != nil && len(nodes) == 0 {
+	if len(nodes) == 0 {
 		if ocrErr != nil || len(lines) == 0 {
+			// Nothing to show is not a screen: the phone's services did not
+			// answer (seen over Wi-Fi after a session dropped), and an
+			// empty read would tell the agent the screen is blank.
+			if walkErr == nil {
+				walkErr = errEmptyRead
+			}
 			return nil, st, walkErr
 		}
 		// Without the tree the screen is still worth reading: fall back to

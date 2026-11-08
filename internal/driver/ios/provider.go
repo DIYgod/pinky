@@ -24,6 +24,11 @@ const minIOS = 27
 // usbmuxd on Linux, built in on macOS): on a cable, and over Wi-Fi once
 // SetWiFi turns that on (wifi.go).
 type Provider struct {
+	// Only, when set, limits the provider to these phones, by UDID: it does
+	// not look at the others usbmuxd lists at all, not even their names
+	// (PINKY_DEVICES, tests).
+	Only map[string]bool
+
 	// DiskImageDir is Pinky's own folder for Apple's developer disk image
 	// (an iOS_DDI folder in it), looked in before Xcode's; "" for none.
 	DiskImageDir string
@@ -159,9 +164,10 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 			ids[info.ID] = true
 		}
 	}
-	// Phones found on Wi-Fi that dropped off usbmuxd's list a moment ago,
-	// as one that sleeps does (wifi.go).
-	return append(kept, p.heldFound(ids)...), nil
+	// Phones on Wi-Fi that dropped off usbmuxd's list a moment ago, as one
+	// that sleeps does (wifi.go).
+	kept = append(kept, p.heldFound(ids)...)
+	return append(kept, p.heldAsleep(ids)...), nil
 }
 
 // foundOnly reports whether Pinky reaches the phone behind e only over
@@ -177,6 +183,9 @@ func (p *Provider) foundOnly(e goios.DeviceEntry) bool {
 func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 	byID := map[string]goios.DeviceEntry{}
 	for _, e := range list {
+		if p.Only != nil && !p.Only[e.Properties.SerialNumber] {
+			continue
+		}
 		if e.Properties.ConnectionType == "Network" && !p.listedOverWiFi(e.Properties.SerialNumber) {
 			continue
 		}
@@ -386,6 +395,10 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	}
 	values, err := getValues(ctx, e)
 	if err != nil {
+		if held, ok := p.stillAsleep(info.ID); ok && info.Connection == "wifi" {
+			// Locked a moment ago, and asleep: it answers now and then.
+			return held
+		}
 		if !isPairingError(err) {
 			info.State = driver.StateOffline
 			info.Detail = "The iPhone does not answer: " + err.Error()
@@ -403,6 +416,12 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)
 	info.OSVersion = values.Value.ProductVersion
+	if info.Connection == "wifi" && values.Value.PasswordProtected {
+		// Locked on Wi-Fi, most likely asleep: Pinky waits until it is
+		// unlocked (wifi.go).
+		return p.lockedOnWiFi(info)
+	}
+	p.awake(info.ID)
 	kind, why := pathFor(parseVersion(info.OSVersion))
 	if kind == pathUnsupported {
 		info.State = driver.StateNeedsSetup
@@ -719,6 +738,9 @@ func probeServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 // Open implements driver.Provider. It checks only the phone it opens, and
 // reuses what List found when the phone's entry has not changed.
 func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
+	if p.Only != nil && !p.Only[id] {
+		return nil, fmt.Errorf("%s is not among the phones this provider may use: %w", id, driver.ErrNotFound)
+	}
 	entry, err := p.entryFor(id)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %w", err, driver.ErrNotFound)

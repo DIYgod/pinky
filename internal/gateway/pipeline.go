@@ -206,9 +206,13 @@ func (g *Gateway) gate(l *lease, approvalID string, action bool) *Result {
 		return statusResult(StatusStopped, "The lease ended (%s). End the task, or call phone_connect again.", l.endedBy)
 	case !d.online:
 		left := g.opt.ReconnectGrace - time.Since(d.offlineSince)
+		locked := lockedOnWiFi(d)
 		g.mu.Unlock()
 		if left < 0 {
 			left = 0
+		}
+		if locked {
+			return errResult(ErrDeviceOffline, "%s is locked, and Pinky connects to it over Wi-Fi only once it is unlocked. Ask the person to unlock it; the lease is kept for another %s.", d.name(), approval.Human(left))
 		}
 		return errResult(ErrDeviceOffline, "%s is offline. The lease is kept for another %s in case it reconnects.", d.name(), approval.Human(left))
 	}
