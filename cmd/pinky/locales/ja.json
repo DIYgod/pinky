@@ -217,7 +217,7 @@
   "checkupAllGood": "問題は見つかりませんでした。",
   "checkupBack": "スマホに戻る",
   "checkupFailLabel": "不合格",
-  "checkupFailed": "確認に失敗しました",
+  "checkupFailed": "確認に失敗しました：{error}",
   "checkupFor": "{name} のチェック",
   "checkupIntro": "このスマホで Pinky が使えるかを確認します。",
   "checkupPassLabel": "合格",
