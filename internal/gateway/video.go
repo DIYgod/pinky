@@ -31,10 +31,16 @@ import (
 // key frame. Taking over, a lock reported by the driver, an unlock from
 // the computer and the phone going offline drop what is held too, and so
 // does a new stream. Packets that arrived before the task started are
-// never written. When packets have waited for videoConfirm and no action
-// is running, the recorder reads the screen itself, so it never holds
-// much; when the task ends, it reads once more, except after Stop, which
-// leaves the phone alone.
+// never written, and nor are packets that arrived after it ended, however
+// late its last read comes. When packets have waited for videoConfirm and
+// no action is running, the recorder reads the screen itself, so it never
+// holds much; when the task ends, it reads once more, except after Stop,
+// which leaves the phone alone.
+//
+// These decisions compare times: when packets arrived, when reads started,
+// when the task started and ended, when what was held was dropped. They
+// all come from stamp (clock.go), so no two are equal and the order of
+// any two is the order of the events.
 //
 // A blocked app that comes and goes between two reads, neither of which
 // sees it, is not caught. Payment hand-offs stay in the bank's app until
@@ -117,7 +123,7 @@ func (g *Gateway) startVideoLocked(l *lease) {
 	if l.bg != nil {
 		key = hubKey(d.id, true)
 	}
-	v := &taskVideo{g: g, d: d, t: l.task, floor: time.Now(), key: key, moved: make(chan struct{}),
+	v := &taskVideo{g: g, d: d, t: l.task, floor: stamp(), key: key, moved: make(chan struct{}),
 		needKey: true, ran: make(chan struct{}), wrote: make(chan struct{})}
 	v.cond = sync.NewCond(&v.mu)
 	v.ctx, v.cancel = context.WithCancel(g.ctx)
@@ -140,7 +146,7 @@ func (g *Gateway) stopVideoLocked(d *device, read bool) {
 	}
 	d.video = nil
 	v.mu.Lock()
-	v.endAt = time.Now()
+	v.endAt = stamp()
 	v.mu.Unlock()
 	g.videoStops.add()
 	go v.stop(read)
@@ -316,7 +322,7 @@ func (v *taskVideo) timeOf(tp timedPacket) time.Time {
 func (v *taskVideo) dropLocked() {
 	v.held, v.heldSize = nil, 0
 	v.paused, v.needKey = true, true
-	now := time.Now()
+	now := stamp()
 	if now.After(v.floor) {
 		v.floor = now
 	}
@@ -564,7 +570,7 @@ func (v *taskVideo) lastRead(dev driver.Device) {
 	defer d.act.Unlock()
 	ctx, cancel := context.WithTimeout(v.ctx, videoStopRead)
 	defer cancel()
-	start := time.Now()
+	start := stamp()
 	tok := v.readStarting(start)
 	s, err := dev.Observe(ctx, driver.ObserveOptions{})
 	if err != nil || s == nil {

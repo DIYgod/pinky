@@ -58,6 +58,9 @@ func StatusLine(res *gateway.Result) string {
 	if res.Holder != "" {
 		parts = append(parts, "holder: "+res.Holder)
 	}
+	if res.Setup != "" {
+		parts = append(parts, "setup: "+res.Setup)
+	}
 	if !res.Full && res.Screen != nil && len(res.Diff) == 0 && len(res.Steps) == 0 {
 		parts = append(parts, "no change")
 	}

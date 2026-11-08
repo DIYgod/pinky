@@ -403,6 +403,9 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 			}
 		case driver.FixUpdateCompanion:
 			w.text, w.detail = locales.CheckCompanionOutdated(), false
+			if a.comp.state[d.Info.ID] == driver.CompanionPublicKey {
+				w.text = locales.CheckCompanionPublicKey()
+			}
 		}
 		if msg := a.comp.err[d.Info.ID]; msg != "" && !pass {
 			w.note = msg

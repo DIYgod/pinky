@@ -302,14 +302,27 @@ func (g *Gateway) discover(ctx context.Context) {
 		g.mu.Lock()
 		var gone []*device
 		var left []string
-		for _, d := range g.devices {
-			if d.provider != p || seen[d.id] {
+		now := time.Now()
+		for id, d := range g.devices {
+			if d.provider != p || seen[id] {
 				continue
 			}
-			if d.online {
+			if d.unlistedAt.IsZero() {
+				d.unlistedAt = now
+			}
+			switch {
+			case d.online:
 				gone = append(gone, d)
-			} else if unlisted(d) {
-				left = append(left, d.id)
+			case !d.opened && !d.opening && d.lease == nil && now.Sub(d.unlistedAt) >= unopenedGrace:
+				// Never opened, and gone: it never became one of the
+				// person's phones (an iPhone unplugged before it trusted
+				// the computer, the entry Windows lists for a phone
+				// without a USB driver once the driver is installed).
+				delete(g.devices, id)
+				left = append(left, id)
+				g.log.Info("device forgotten", "device", id, "why", "never opened, and no longer listed")
+			case unlisted(d):
+				left = append(left, id)
 			}
 		}
 		g.mu.Unlock()
@@ -323,6 +336,12 @@ func (g *Gateway) discover(ctx context.Context) {
 	wg.Wait()
 }
 
+// unopenedGrace is how long a phone the gateway never opened stays listed,
+// offline, after its provider stopped listing it, before it is forgotten:
+// long enough for a phone that restarts while it is set up (Developer
+// Mode) to come back as itself. A variable for tests.
+var unopenedGrace = 2 * time.Minute
+
 // unlisted marks a phone its provider no longer lists, and that the
 // gateway has not opened, as offline: it went away while it waited for a
 // step, or after it was listed offline, so the step and the reason no
@@ -334,6 +353,11 @@ func unlisted(d *device) bool {
 	}
 	was := d.info
 	d.info.State, d.info.Setup, d.info.Detail = driver.StateOffline, "", ""
+	if waitsForStep(was.State) {
+		// A lease kept while it waited has the grace of any phone that
+		// drops from now (expireOffline).
+		d.offlineSince = time.Now()
+	}
 	return d.info != was
 }
 
@@ -360,6 +384,12 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	d.info = info
 	d.nameV.Store(info.Name)
 	d.provider = p
+	d.unlistedAt = time.Time{}
+	if waitsForStep(old.State) && info.State == driver.StateOffline {
+		// It no longer waits: a lease kept while it did has the grace of
+		// any phone that drops from now (expireOffline).
+		d.offlineSince = time.Now()
+	}
 	open := info.State == driver.StateOnline && d.dev == nil && !d.opening
 	if open {
 		d.opening = true
@@ -393,14 +423,21 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	}
 	d.dev = dev
 	d.online = true
+	d.opened = true
 	d.offlineSince = time.Time{}
 	d.workSent = false
 	g.noteWorkLocked(d)
 	info := d.info
+	if d.lease != nil {
+		// A task that connected while the phone waited for a step has not
+		// recorded yet (firstScreen); for others this does nothing.
+		g.startVideoLocked(d.lease)
+	}
 	g.wakeLocked(d)
 	g.mu.Unlock()
 	g.log.Info("device online", "device", d.id, "name", info.Name)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+	g.readyNow(d)
 	if w, ok := dev.(driver.PersonWatcher); ok {
 		go g.watchPerson(d.id, w.PersonInput())
 	}
@@ -470,7 +507,9 @@ func (g *Gateway) expireOffline() {
 	g.mu.Lock()
 	var ls []*lease
 	for _, d := range g.devices {
-		if !d.online && d.lease != nil && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
+		// A lease on a phone that waits for a step waits with it: the
+		// person is setting it up (device_needs_setup).
+		if !d.online && d.lease != nil && !waitsForStep(d.info.State) && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
 			ls = append(ls, d.lease)
 		}
 	}

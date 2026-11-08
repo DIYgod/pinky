@@ -892,7 +892,7 @@ func (a *app) companionTick(now time.Time) {
 			a.companionFor(d) // asks in the background; a later tick acts on it
 			continue
 		}
-		if a.comp.state[id] != driver.CompanionOutdated || !a.phoneFree(d, now) {
+		if cs := a.comp.state[id]; cs != driver.CompanionOutdated && cs != driver.CompanionPublicKey || !a.phoneFree(d, now) {
 			continue
 		}
 		a.updateCompanion(cu, d, ca)

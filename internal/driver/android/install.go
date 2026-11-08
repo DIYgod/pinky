@@ -144,11 +144,13 @@ type CompanionInstall struct {
 }
 
 // CompanionState implements driver.CompanionInstaller: missing (or no_apk
-// when Pinky has no APK to install either); outdated when the installed
-// versionCode is lower than the bundled APK's, or it is signed with another
-// key; on when its accessibility service is on now (an agent works); off
-// when it is off and did not come on the last time the driver tried; ready
-// otherwise: Pinky turns it on while an agent works.
+// when Pinky has no APK to install either); public_key when the installed
+// build is signed with the public key of the builds until 2026-11-08 and
+// the bundled APK with another; outdated when the installed versionCode is
+// lower than the bundled APK's, or it is signed with another key; on when
+// its accessibility service is on now (an agent works); off when it is off
+// and did not come on the last time the driver tried; ready otherwise:
+// Pinky turns it on while an agent works.
 func (d *Device) CompanionState(ctx context.Context) (driver.CompanionState, error) {
 	c := d.newCompanion()
 	defer c.Close()
@@ -164,8 +166,13 @@ func (d *Device) CompanionState(ctx context.Context) (driver.CompanionState, err
 		return driver.CompanionMissing, nil
 	}
 	if apkErr == nil {
-		if _, bundled, err := apkVersion(apk); err == nil && (inst.Code > 0 && inst.Code < bundled.Code || inst.SignedElsewhere(bundled)) {
-			return driver.CompanionOutdated, nil
+		if _, bundled, err := apkVersion(apk); err == nil {
+			switch {
+			case inst.SignedElsewhere(bundled) && inst.Signer == companion.OldPublicSigner:
+				return driver.CompanionPublicKey, nil
+			case inst.Code > 0 && inst.Code < bundled.Code || inst.SignedElsewhere(bundled):
+				return driver.CompanionOutdated, nil
+			}
 		}
 	}
 	if d.companionInUse() {

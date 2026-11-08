@@ -225,6 +225,7 @@ ocr "Delivery in 25–35 min" @200,300
 | `paused` | The person paused the agent | Wait with `phone_handoff` |
 | `stopped` | The person pressed Stop; the lease is gone | End the task |
 | `device_locked` | The screen is locked; the person can unlock from the computer or the phone | Call `phone_handoff` |
+| `device_needs_setup` | The phone is connected but waits for a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode, the passcode iOS asks for before automation); the result names the step | Call `phone_handoff`; it ends once the phone is ready |
 
 Errors: `device_offline`, `lease_held`, `scope_denied` (an app outside the agent's scope or the task's allow-list), `not_found` (the ref is gone), `unsupported` (the backend cannot do this, such as `recents` on iPhone).
 

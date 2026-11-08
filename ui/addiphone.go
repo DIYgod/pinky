@@ -195,6 +195,18 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				guideWaiting(c, locales.AddPhoneIPhoneStepPreparing())
 			case driver.SetupUnlock:
 				guideProblem(c, locales.AddPhoneIPhoneStepUnlock(), "")
+			case driver.SetupPasscode:
+				// Driven through the helper, which iOS lets control the
+				// phone only once its passcode is entered.
+				guideProblem(c, locales.AddPhoneIPhoneStepPasscodeDetail(), "")
+			case driver.SetupConnection:
+				// Set to a connection it cannot use: nothing to retry.
+				guideProblem(c, locales.ConnectionChosenNeedsIOS27(d.Info.OSVersion), "")
+				mg.Row(c).Children(func() {
+					if linkButton(c, locales.ConnectionChoose()).Clicked() {
+						a.chooseConnection()
+					}
+				})
 			case driver.SetupNoDiskImage:
 				// Apple's image comes with Xcode; Pinky does not ship it.
 				if guideOS == "darwin" {

@@ -385,8 +385,8 @@ func TestUpdateCompanionReplacesTheOldPublicKey(t *testing.T) {
 	d, _ := quietDevice(t, p, apk)
 	ctx := context.Background()
 
-	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionOutdated {
-		t.Fatalf("state = %q, %v; want outdated", st, err)
+	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionPublicKey {
+		t.Fatalf("state = %q, %v; want public_key", st, err)
 	}
 	res, err := d.UpdateCompanion(ctx)
 	if err != nil {
@@ -417,6 +417,25 @@ func TestUpdateCompanionReplacesTheOldPublicKey(t *testing.T) {
 	waitFor(t, "off after the task", func() bool { return !d.companionInUse() })
 	if res, err := d.UpdateCompanion(ctx); err != nil || res.Updated {
 		t.Errorf("second update = %+v, %v", res, err)
+	}
+}
+
+func TestCompanionStateOtherKey(t *testing.T) {
+	// Signed with some other key than the public one: replaced the same
+	// way, but nothing to say about a public key.
+	apk := companiontest.APK(t, companion.Release.Package, "2026.1108.12", 500, []byte("release"))
+	p := newQuietPhone(t)
+	p.code, p.signer = 510, "1f2e3d4c"
+	d, _ := quietDevice(t, p, apk)
+	if st, err := d.CompanionState(context.Background()); err != nil || st != driver.CompanionOutdated {
+		t.Errorf("state = %q, %v; want outdated", st, err)
+	}
+	// The same key and a newer build: nothing to do.
+	p2 := newQuietPhone(t)
+	p2.code, p2.signer = 510, companion.SignerName([]byte("release"))
+	d2, _ := quietDevice(t, p2, apk)
+	if st, err := d2.CompanionState(context.Background()); err != nil || st != driver.CompanionReady {
+		t.Errorf("state = %q, %v; want ready", st, err)
 	}
 }
 

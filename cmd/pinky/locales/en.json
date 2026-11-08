@@ -450,6 +450,14 @@
   "@addPhoneIPhoneStepDriverWaiting": {
     "description": "Add phone › iPhone, the step list: next to a spinner under the driver or usbmuxd step: Pinky notices by itself once it is installed."
   },
+  "addPhoneIPhoneStepPasscode": "Enter the passcode",
+  "@addPhoneIPhoneStepPasscode": {
+    "description": "Add phone › iPhone, the phone's page and the checkup: the title of the step where the iPhone asks for its passcode before the WebDriverAgent helper may control it, as iOS does now and then."
+  },
+  "addPhoneIPhoneStepPasscodeDetail": "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone. If the iPhone no longer asks, Pinky tries again in a few minutes, or at once when you plug it in again.",
+  "@addPhoneIPhoneStepPasscodeDetail": {
+    "description": "Add phone › iPhone, the phone's page and the checkup: what to do while the iPhone asks for its passcode before the WebDriverAgent helper may control it. WebDriverAgent is a name. Pinky starts the helper again later when nobody entered the passcode."
+  },
   "addPhoneIPhoneStepPlug": "Plug in the iPhone",
   "@addPhoneIPhoneStepPlug": {
     "description": "Add phone › iPhone, the step list: the step of connecting the iPhone with a cable."
@@ -958,6 +966,10 @@
   "@checkCompanionPass": {
     "description": "The checkup, Pinky Companion: passed. Pinky turns the app's accessibility service on only while an agent works on the phone, and off again afterwards."
   },
+  "checkCompanionPublicKey": "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key.",
+  "@checkCompanionPublicKey": {
+    "description": "The checkup, Pinky Companion: the installed app is signed with the key of the builds until 8 November 2026, which was public, so anyone could make a fake update of it; an Update button follows."
+  },
   "checkCompanionTitle": "Pinky Companion",
   "@checkCompanionTitle": {
     "description": "The checkup: the item for Pinky's companion app on the phone. Pinky Companion is the app's name: keep it as it is."
@@ -1456,6 +1468,10 @@
   "@companionLineOutdated": {
     "description": "Settings › Phones: a phone's line about Pinky Companion when this Pinky comes with a newer version."
   },
+  "companionLinePublicKey": "Pinky Companion has a security update",
+  "@companionLinePublicKey": {
+    "description": "Settings › Phones: a phone's line about Pinky Companion when the installed app is signed with the old public key and this Pinky carries the version signed with its private key."
+  },
   "companionLineReady": "Pinky Companion turns on only while an agent works",
   "@companionLineReady": {
     "description": "Settings › Phones: a phone's line about Pinky Companion, Pinky's app for the phone, when it is installed and ready: Pinky turns its accessibility service on only while an agent works on the phone, so that the phone's apps (banking apps check for such services) see it only then."
@@ -1473,6 +1489,10 @@
         "example": "Pixel 9"
       }
     }
+  },
+  "companionPublicKeyBody": "Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it. The new version is signed with Pinky's private key: once you update, it is safe.",
+  "@companionPublicKeyBody": {
+    "description": "The Pinky Companion card, when the installed app is signed with the key of the builds until 8 November 2026, which was public, and this Pinky carries the version signed with its private key: why to update soon. Shown in place of the usual update text, often on phones where the person has to click Update because the phone asks before installs over USB. Keep it plain, not alarming. The card is in a narrow side panel."
   },
   "companionStillWaiting": "Still waiting for the phone. Look for a prompt on its screen.",
   "@companionStillWaiting": {
@@ -1975,6 +1995,20 @@
       "reason": {
         "type": "String",
         "example": "the phone went offline"
+      }
+    }
+  },
+  "connectionChoose": "Choose the connection",
+  "@connectionChoose": {
+    "description": "A link or button for an iPhone whose chosen connection does not work with it: opens Settings › Phones, where the connection is chosen."
+  },
+  "connectionChosenNeedsIOS27": "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automatic or the WebDriverAgent helper in Settings › Phones.",
+  "@connectionChosenNeedsIOS27": {
+    "description": "The phone's page, its checkup and Add phone › iPhone, for an iPhone below iOS 27 whose connection in Settings › Phones was set to CoreDevice (connectionCoreDevice), which it cannot use. Automatic and the WebDriverAgent helper are the other choices there (connectionAuto, connectionWDA). CoreDevice and WebDriverAgent are names.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "18.6"
       }
     }
   },
@@ -3831,6 +3865,16 @@
   "needsHandoffNotePlaceholder": "What you did, or what to do next",
   "@needsHandoffNotePlaceholder": {
     "description": "The placeholder of the note field on a handoff card: what the person did on the phone, or what the agent should do next."
+  },
+  "needsHandoffSetup": "Do it as asked. Once the phone is ready, {agent} goes on by itself.",
+  "@needsHandoffSetup": {
+    "description": "A handoff card, when the agent asked the person to do the setup step the phone waits for (such as trusting the computer; its request is the title): there is nothing to take over, and the agent goes on by itself once the phone is ready.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
   },
   "needsLetAgent": "Let {agent}",
   "@needsLetAgent": {
@@ -6380,6 +6424,10 @@
   "@stepPhoneLocked": {
     "description": "The second line of a step that failed because the phone was locked."
   },
+  "stepPhoneNeedsSetup": "The phone needed setup first",
+  "@stepPhoneNeedsSetup": {
+    "description": "The second line of a step that was not done because the phone waited for a setup step first, such as trusting the computer or allowing USB debugging."
+  },
   "stepPhoneOffline": "The phone went offline",
   "@stepPhoneOffline": {
     "description": "The second line of a step that failed because the phone went offline."
@@ -6682,6 +6730,10 @@
   "@tasksRowLocked": {
     "description": "The short state at the end of a one-line task row: the phone is locked."
   },
+  "tasksRowNeedsSetup": "needs setup",
+  "@tasksRowNeedsSetup": {
+    "description": "The short state at the end of a one-line task row: the phone waits for a setup step before the agent can use it."
+  },
   "tasksRowPaused": "paused",
   "@tasksRowPaused": {
     "description": "The short state at the end of a one-line row of another phone's task: the person took over."
@@ -6727,6 +6779,10 @@
   "tasksStatusLocked": "Locked",
   "@tasksStatusLocked": {
     "description": "A task card's status, next to a dot: the phone is locked and the agent waits for it to be unlocked."
+  },
+  "tasksStatusNeedsSetup": "Phone needs setup",
+  "@tasksStatusNeedsSetup": {
+    "description": "A task card's status, next to a dot: the phone waits for a setup step (such as trusting the computer) before the agent can use it."
   },
   "tasksStatusPaused": "Paused · You're in control",
   "@tasksStatusPaused": {

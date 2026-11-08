@@ -17,6 +17,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui/fakeapi"
@@ -425,7 +426,7 @@ func TestCompanionSignedWithThePublicKeyIsReplaced(t *testing.T) {
 	ut.api.SetCompanionSignedElsewhere("pixel-9")
 	ut.waitFor(t, "Pixel 9", func() bool { return ut.device("pixel-9") != nil })
 	ut.updateTick(time.Now()) // looks the companion up
-	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionOutdated })
+	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionPublicKey })
 	ut.updateTick(time.Now())
 	ut.waitFor(t, "the replacement", func() bool { return len(ut.api.CompanionUpdates()) == 1 && !ut.companionUpdating("pixel-9") })
 	tt := mg.NewTester(ut.view, 1280, 820)
@@ -445,6 +446,83 @@ func TestCompanionSignedWithThePublicKeyIsReplaced(t *testing.T) {
 	}
 	if ut.comp.state["pixel-9"] != driver.CompanionReady {
 		t.Errorf("state after the replacement: %q", ut.comp.state["pixel-9"])
+	}
+}
+
+// TestCompanionCardSaysWhyForThePublicKey: on a phone that asks before
+// installs over USB, Pinky cannot replace a companion signed with the old
+// public key by itself, so its card says why the person should update, and
+// the notice after their Update says what happened.
+func TestCompanionCardSaysWhyForThePublicKey(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	ut.api.SetCompanionSignedElsewhere("pixel-9")
+	ut.api.SetCompanionUpdateAsks("pixel-9")
+	ut.waitFor(t, "Pixel 9", func() bool { return ut.device("pixel-9") != nil })
+	ut.updateTick(time.Now()) // looks the companion up
+	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionPublicKey })
+	ut.updateTick(time.Now())
+	ut.waitFor(t, "the phone to say it asks", func() bool {
+		ca := ut.upd.comp["pixel-9"]
+		return ca != nil && ca.needsYou && !ca.running
+	})
+	if len(ut.api.CompanionUpdates()) != 0 {
+		t.Fatal("updated a phone that asks before installs")
+	}
+	tt := mg.NewTester(ut.view, 1280, 820)
+	tt.Frame()
+	for _, want := range []string{
+		"Update Pinky Companion",
+		"Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it.",
+		"The new version is signed with Pinky's private key: once you update, it is safe.",
+		"The phone asks before apps are installed over USB, so this update needs you.",
+	} {
+		if !hasText(tt, want) {
+			t.Errorf("no %q on the card: %q", want, tt.Texts())
+		}
+	}
+	if hasText(tt, "Updating keeps control fast and steady.") {
+		t.Errorf("the usual update text is there too: %q", tt.Texts())
+	}
+	if err := tt.Click("Update Pinky Companion on Pixel 9"); err != nil {
+		t.Fatal(err)
+	}
+	ut.waitFor(t, "the person's update", func() bool { tt.Frame(); return ut.comp.state["pixel-9"] == driver.CompanionReady })
+	tt.Frame()
+	if !hasText(tt, "Reinstalled Pinky Companion on Pixel 9 with Pinky's private signing key") {
+		t.Errorf("no notice of the replacement: %q", tt.Texts())
+	}
+	if got := ut.api.Installs(); len(got) != 1 || got[0] != "pixel-9" {
+		t.Errorf("installs %v", got)
+	}
+	if hasText(tt, "anyone could make a fake update") {
+		t.Errorf("the card stays: %q", tt.Texts())
+	}
+}
+
+func TestCompanionLineAndCheckupForThePublicKey(t *testing.T) {
+	if got := companionLine(driver.CompanionPublicKey); got != "Pinky Companion has a security update" {
+		t.Errorf("companionLine = %q", got)
+	}
+	ta := newTestApp(t, fakeapi.Companion)
+	ta.api.SetCompanionSignedElsewhere("pixel-9")
+	ta.sync()
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "the companion state", func() bool { tt.Frame(); return ta.comp.state["pixel-9"] == driver.CompanionPublicKey })
+	if err := tt.Click("More phone controls"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click("Checkup"); err != nil {
+		t.Fatal(err)
+	}
+	ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf("pixel-9"); return r != nil && r.have })
+	if !hasText(tt, locales.CheckCompanionPublicKey()) {
+		t.Errorf("the checkup does not say why: %q", tt.Texts())
+	}
+	ta.page, ta.set.sec = pageSettings, secPhones
+	tt.Frame()
+	if !hasText(tt, "Pinky Companion has a security update") {
+		t.Errorf("Settings › Phones: %q", tt.Texts())
 	}
 }
 

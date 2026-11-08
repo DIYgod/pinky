@@ -95,7 +95,7 @@ var knownStatuses = map[string]bool{}
 func init() {
 	for _, s := range []gateway.Status{gateway.StatusSettled, gateway.StatusUncertain, gateway.StatusBlocked,
 		gateway.StatusDenied, gateway.StatusPending, gateway.StatusStale, gateway.StatusTookOver, gateway.StatusPaused,
-		gateway.StatusStopped, gateway.StatusLocked} {
+		gateway.StatusStopped, gateway.StatusLocked, gateway.StatusNeedsSetup} {
 		knownStatuses[string(s)] = true
 	}
 	for _, e := range []gateway.ErrorCode{gateway.ErrDeviceOffline, gateway.ErrLeaseHeld, gateway.ErrScopeDenied,

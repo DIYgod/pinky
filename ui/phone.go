@@ -133,6 +133,11 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 				if linkButton(c, locales.CheckHelperHow()).Clicked() {
 					openURL(c, helperLink(d), func(error) {})
 				}
+			case d.Info.Setup == driver.SetupConnection:
+				// The fix is another connection, in Settings › Phones.
+				if linkButton(c, locales.ConnectionChoose()).Clicked() {
+					a.chooseConnection()
+				}
 			case d.Info.Platform == driver.IOS:
 				// An iPhone's steps are in Add phone, which follows a
 				// phone that waits for one (addiphone.go).

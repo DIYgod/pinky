@@ -338,4 +338,7 @@ func TestStatusLine(t *testing.T) {
 	if got := firstLine(StatusLine(&gateway.Result{Error: gateway.ErrLeaseHeld, Holder: "Codex · Lunch"})); got != "error: lease_held · holder: Codex · Lunch" {
 		t.Fatal(got)
 	}
+	if got := StatusLine(&gateway.Result{Status: gateway.StatusNeedsSetup, DeviceName: "iPhone 16", Setup: "trust"}); got != "device_needs_setup · iPhone 16 · setup: trust" {
+		t.Fatal(got)
+	}
 }

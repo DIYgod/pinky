@@ -1359,6 +1359,46 @@ func (msgs Messages) AddPhoneIPhoneStepDriverWaiting() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDriverWaiting", nil)
 }
 
+// AddPhoneIPhoneStepPasscode says "Enter the passcode"
+// in the language the app shows.
+//
+// Add phone › iPhone, the phone's page and the checkup: the title of the
+// step where the iPhone asks for its passcode before the WebDriverAgent
+// helper may control it, as iOS does now and then.
+func AddPhoneIPhoneStepPasscode() string { return In(i18n.Locale()).AddPhoneIPhoneStepPasscode() }
+
+// AddPhoneIPhoneStepPasscode says "Enter the passcode"
+// in the language of msgs.
+//
+// Add phone › iPhone, the phone's page and the checkup: the title of the
+// step where the iPhone asks for its passcode before the WebDriverAgent
+// helper may control it, as iOS does now and then.
+func (msgs Messages) AddPhoneIPhoneStepPasscode() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPasscode", nil)
+}
+
+// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the phone's page and the checkup: what to do while
+// the iPhone asks for its passcode before the WebDriverAgent helper may
+// control it. WebDriverAgent is a name. Pinky starts the helper again later
+// when nobody entered the passcode.
+func AddPhoneIPhoneStepPasscodeDetail() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepPasscodeDetail()
+}
+
+// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the phone's page and the checkup: what to do while
+// the iPhone asks for its passcode before the WebDriverAgent helper may
+// control it. WebDriverAgent is a name. Pinky starts the helper again later
+// when nobody entered the passcode.
+func (msgs Messages) AddPhoneIPhoneStepPasscodeDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPasscodeDetail", nil)
+}
+
 // AddPhoneIPhoneStepPlug says "Plug in the iPhone"
 // in the language the app shows.
 //
@@ -2907,6 +2947,24 @@ func CheckCompanionPass() string { return In(i18n.Locale()).CheckCompanionPass()
 // afterwards.
 func (msgs Messages) CheckCompanionPass() string {
 	return Catalog.Format(msgs.locale, "checkCompanionPass", nil)
+}
+
+// CheckCompanionPublicKey says "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key."
+// in the language the app shows.
+//
+// The checkup, Pinky Companion: the installed app is signed with the key of
+// the builds until 8 November 2026, which was public, so anyone could make
+// a fake update of it; an Update button follows.
+func CheckCompanionPublicKey() string { return In(i18n.Locale()).CheckCompanionPublicKey() }
+
+// CheckCompanionPublicKey says "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key."
+// in the language of msgs.
+//
+// The checkup, Pinky Companion: the installed app is signed with the key of
+// the builds until 8 November 2026, which was public, so anyone could make
+// a fake update of it; an Update button follows.
+func (msgs Messages) CheckCompanionPublicKey() string {
+	return Catalog.Format(msgs.locale, "checkCompanionPublicKey", nil)
 }
 
 // CheckCompanionTitle says "Pinky Companion"
@@ -4503,6 +4561,24 @@ func (msgs Messages) CompanionLineOutdated() string {
 	return Catalog.Format(msgs.locale, "companionLineOutdated", nil)
 }
 
+// CompanionLinePublicKey says "Pinky Companion has a security update"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the
+// installed app is signed with the old public key and this Pinky carries
+// the version signed with its private key.
+func CompanionLinePublicKey() string { return In(i18n.Locale()).CompanionLinePublicKey() }
+
+// CompanionLinePublicKey says "Pinky Companion has a security update"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the
+// installed app is signed with the old public key and this Pinky carries
+// the version signed with its private key.
+func (msgs Messages) CompanionLinePublicKey() string {
+	return Catalog.Format(msgs.locale, "companionLinePublicKey", nil)
+}
+
 // CompanionLineReady says "Pinky Companion turns on only while an agent works"
 // in the language the app shows.
 //
@@ -4555,6 +4631,30 @@ func CompanionOnToast(name string) string { return In(i18n.Locale()).CompanionOn
 // only while an agent works on the phone. name is the phone's name.
 func (msgs Messages) CompanionOnToast(name string) string {
 	return Catalog.Format(msgs.locale, "companionOnToast", map[string]any{"name": name})
+}
+
+// CompanionPublicKeyBody says "Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it. The…"
+// in the language the app shows.
+//
+// The Pinky Companion card, when the installed app is signed with the key
+// of the builds until 8 November 2026, which was public, and this Pinky
+// carries the version signed with its private key: why to update soon.
+// Shown in place of the usual update text, often on phones where the person
+// has to click Update because the phone asks before installs over USB. Keep
+// it plain, not alarming. The card is in a narrow side panel.
+func CompanionPublicKeyBody() string { return In(i18n.Locale()).CompanionPublicKeyBody() }
+
+// CompanionPublicKeyBody says "Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it. The…"
+// in the language of msgs.
+//
+// The Pinky Companion card, when the installed app is signed with the key
+// of the builds until 8 November 2026, which was public, and this Pinky
+// carries the version signed with its private key: why to update soon.
+// Shown in place of the usual update text, often on phones where the person
+// has to click Update because the phone asks before installs over USB. Keep
+// it plain, not alarming. The card is in a narrow side panel.
+func (msgs Messages) CompanionPublicKeyBody() string {
+	return Catalog.Format(msgs.locale, "companionPublicKeyBody", nil)
 }
 
 // CompanionStillWaiting says "Still waiting for the phone. Look for a prompt on its screen."
@@ -5833,6 +5933,46 @@ func ConnectionChangeFailed(phone string, reason string) string {
 // name, reason the error in English.
 func (msgs Messages) ConnectionChangeFailed(phone string, reason string) string {
 	return Catalog.Format(msgs.locale, "connectionChangeFailed", map[string]any{"phone": phone, "reason": reason})
+}
+
+// ConnectionChoose says "Choose the connection"
+// in the language the app shows.
+//
+// A link or button for an iPhone whose chosen connection does not work with
+// it: opens Settings › Phones, where the connection is chosen.
+func ConnectionChoose() string { return In(i18n.Locale()).ConnectionChoose() }
+
+// ConnectionChoose says "Choose the connection"
+// in the language of msgs.
+//
+// A link or button for an iPhone whose chosen connection does not work with
+// it: opens Settings › Phones, where the connection is chosen.
+func (msgs Messages) ConnectionChoose() string {
+	return Catalog.Format(msgs.locale, "connectionChoose", nil)
+}
+
+// ConnectionChosenNeedsIOS27 says "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automati…"
+// in the language the app shows.
+//
+// The phone's page, its checkup and Add phone › iPhone, for an iPhone
+// below iOS 27 whose connection in Settings › Phones was set to
+// CoreDevice (connectionCoreDevice), which it cannot use. Automatic and the
+// WebDriverAgent helper are the other choices there (connectionAuto,
+// connectionWDA). CoreDevice and WebDriverAgent are names.
+func ConnectionChosenNeedsIOS27(version string) string {
+	return In(i18n.Locale()).ConnectionChosenNeedsIOS27(version)
+}
+
+// ConnectionChosenNeedsIOS27 says "This iPhone is set to connect through CoreDevice, which needs iOS 27 or later; it runs iOS {version}. Choose Automati…"
+// in the language of msgs.
+//
+// The phone's page, its checkup and Add phone › iPhone, for an iPhone
+// below iOS 27 whose connection in Settings › Phones was set to
+// CoreDevice (connectionCoreDevice), which it cannot use. Automatic and the
+// WebDriverAgent helper are the other choices there (connectionAuto,
+// connectionWDA). CoreDevice and WebDriverAgent are names.
+func (msgs Messages) ConnectionChosenNeedsIOS27(version string) string {
+	return Catalog.Format(msgs.locale, "connectionChosenNeedsIOS27", map[string]any{"version": version})
 }
 
 // ConnectionCoreDevice says "CoreDevice (nothing to install)"
@@ -10371,6 +10511,26 @@ func NeedsHandoffNotePlaceholder() string { return In(i18n.Locale()).NeedsHandof
 // on the phone, or what the agent should do next.
 func (msgs Messages) NeedsHandoffNotePlaceholder() string {
 	return Catalog.Format(msgs.locale, "needsHandoffNotePlaceholder", nil)
+}
+
+// NeedsHandoffSetup says "Do it as asked. Once the phone is ready, {agent} goes on by itself."
+// in the language the app shows.
+//
+// A handoff card, when the agent asked the person to do the setup step the
+// phone waits for (such as trusting the computer; its request is the
+// title): there is nothing to take over, and the agent goes on by itself
+// once the phone is ready.
+func NeedsHandoffSetup(agent string) string { return In(i18n.Locale()).NeedsHandoffSetup(agent) }
+
+// NeedsHandoffSetup says "Do it as asked. Once the phone is ready, {agent} goes on by itself."
+// in the language of msgs.
+//
+// A handoff card, when the agent asked the person to do the setup step the
+// phone waits for (such as trusting the computer; its request is the
+// title): there is nothing to take over, and the agent goes on by itself
+// once the phone is ready.
+func (msgs Messages) NeedsHandoffSetup(agent string) string {
+	return Catalog.Format(msgs.locale, "needsHandoffSetup", map[string]any{"agent": agent})
 }
 
 // NeedsLetAgent says "Let {agent}"
@@ -17883,6 +18043,24 @@ func (msgs Messages) StepPhoneLocked() string {
 	return Catalog.Format(msgs.locale, "stepPhoneLocked", nil)
 }
 
+// StepPhoneNeedsSetup says "The phone needed setup first"
+// in the language the app shows.
+//
+// The second line of a step that was not done because the phone waited for
+// a setup step first, such as trusting the computer or allowing USB
+// debugging.
+func StepPhoneNeedsSetup() string { return In(i18n.Locale()).StepPhoneNeedsSetup() }
+
+// StepPhoneNeedsSetup says "The phone needed setup first"
+// in the language of msgs.
+//
+// The second line of a step that was not done because the phone waited for
+// a setup step first, such as trusting the computer or allowing USB
+// debugging.
+func (msgs Messages) StepPhoneNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "stepPhoneNeedsSetup", nil)
+}
+
 // StepPhoneOffline says "The phone went offline"
 // in the language the app shows.
 //
@@ -18685,6 +18863,22 @@ func (msgs Messages) TasksRowLocked() string {
 	return Catalog.Format(msgs.locale, "tasksRowLocked", nil)
 }
 
+// TasksRowNeedsSetup says "needs setup"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the phone waits for a
+// setup step before the agent can use it.
+func TasksRowNeedsSetup() string { return In(i18n.Locale()).TasksRowNeedsSetup() }
+
+// TasksRowNeedsSetup says "needs setup"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the phone waits for a
+// setup step before the agent can use it.
+func (msgs Messages) TasksRowNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "tasksRowNeedsSetup", nil)
+}
+
 // TasksRowPaused says "paused"
 // in the language the app shows.
 //
@@ -18837,6 +19031,22 @@ func TasksStatusLocked() string { return In(i18n.Locale()).TasksStatusLocked() }
 // waits for it to be unlocked.
 func (msgs Messages) TasksStatusLocked() string {
 	return Catalog.Format(msgs.locale, "tasksStatusLocked", nil)
+}
+
+// TasksStatusNeedsSetup says "Phone needs setup"
+// in the language the app shows.
+//
+// A task card's status, next to a dot: the phone waits for a setup step
+// (such as trusting the computer) before the agent can use it.
+func TasksStatusNeedsSetup() string { return In(i18n.Locale()).TasksStatusNeedsSetup() }
+
+// TasksStatusNeedsSetup says "Phone needs setup"
+// in the language of msgs.
+//
+// A task card's status, next to a dot: the phone waits for a setup step
+// (such as trusting the computer) before the agent can use it.
+func (msgs Messages) TasksStatusNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "tasksStatusNeedsSetup", nil)
 }
 
 // TasksStatusPaused says "Paused · You're in control"

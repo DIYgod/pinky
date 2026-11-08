@@ -72,6 +72,8 @@ const (
 	SetupNoDiskImage   = "no_disk_image"  // the computer has no developer disk image; Detail says where to get one
 	SetupDiskImage     = "disk_image"     // the developer disk image did not mount; Detail says why
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
+	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
+	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
 	// A phone reached over the network (WiFiSwitch, Tailnet) that is
 	// offline: its adb stopped listening, as when it restarted (plug it in
 	// once and turn its Wi-Fi connection on again), or it is not on the
@@ -381,7 +383,12 @@ const (
 	CompanionReady    CompanionState = "ready"
 	CompanionMissing  CompanionState = "missing"  // not installed
 	CompanionOutdated CompanionState = "outdated" // installed, older than the one Pinky bundles or signed with another key
-	CompanionNoAPK    CompanionState = "no_apk"   // Pinky has no APK to install (a build without it)
+	// CompanionPublicKey: installed, but signed with the key of the builds
+	// until 2026-11-08, which is public, so anyone could sign an update of
+	// it. The bundled build, signed with Pinky's private key, replaces it.
+	// Clients treat it as CompanionOutdated and say why.
+	CompanionPublicKey CompanionState = "public_key"
+	CompanionNoAPK     CompanionState = "no_apk" // Pinky has no APK to install (a build without it)
 )
 
 // CompanionInstaller installs or updates the phone's companion app from the

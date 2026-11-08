@@ -486,6 +486,16 @@ func TestTrustState(t *testing.T) {
 	}
 }
 
+// TestCoreDeviceTooOldState: an iPhone below iOS 27 set to connect without
+// the helper waits for another connection, a step the client can word.
+func TestCoreDeviceTooOldState(t *testing.T) {
+	info := coreDeviceTooOldState(driver.Info{OSVersion: "18.6"})
+	if info.State != driver.StateNeedsSetup || info.Setup != driver.SetupConnection ||
+		!strings.Contains(info.Detail, "iOS 18.6") || !strings.Contains(info.Detail, "Settings > Phones") {
+		t.Fatalf("coreDeviceTooOldState = %+v", info)
+	}
+}
+
 func TestRecheckFor(t *testing.T) {
 	for _, c := range []struct {
 		info driver.Info

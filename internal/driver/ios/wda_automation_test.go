@@ -109,7 +109,7 @@ func TestProviderWaitsForPasscode(t *testing.T) {
 	// The phone asks: List says so instead of starting the runner again.
 	s, wda := askingStart(t, e)
 	p.wdaWaits = map[string]*wdaStart{"p": s}
-	if got := p.info(ctx, e); got.State != driver.StateNeedsSetup || got.Detail != automationAsk {
+	if got := p.info(ctx, e); got.State != driver.StateNeedsSetup || got.Setup != driver.SetupPasscode || got.Detail != automationAsk {
 		t.Fatalf("while asking: %+v", got)
 	}
 	// The passcode was entered: online, and the next Open takes the runner over.
@@ -126,7 +126,7 @@ func TestProviderWaitsForPasscode(t *testing.T) {
 	wda.ready.Store(false)
 	close(s.run.done)
 	for i, wait := range []time.Duration{wdaHoldFirst, 2 * wdaHoldFirst} {
-		if got := p.info(ctx, e); got.State != driver.StateNeedsSetup || got.Detail != automationMissed {
+		if got := p.info(ctx, e); got.State != driver.StateNeedsSetup || got.Setup != driver.SetupPasscode || got.Detail != automationMissed {
 			t.Fatalf("miss %d: %+v", i+1, got)
 		}
 		if _, ok := p.wdaWaits["p"]; ok {

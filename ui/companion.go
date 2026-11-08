@@ -75,6 +75,8 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 	}
 	st.installing[id] = time.Now()
 	delete(st.err, id)
+	// One signed with the old public key gets replaced: say so after.
+	replacing := st.state[id] == driver.CompanionPublicKey
 	go func() {
 		ctx, cancel := context.WithTimeout(a.ctx, 5*time.Minute)
 		defer cancel()
@@ -93,6 +95,10 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 			}
 			if err != nil {
 				st.err[id] = companionError(err, a.chk.family[id])
+				return
+			}
+			if replacing {
+				a.toasts = append(a.toasts, locales.UpdateCompanionReplacedToast(name))
 				return
 			}
 			a.toasts = append(a.toasts, locales.CompanionOnToast(name))
@@ -152,10 +158,14 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		title, action = locales.CompanionInstallTitle(), locales.CompanionInstall()
 		actionLabel = locales.CompanionInstallLabel(d.Info.Name)
 		body = locales.CompanionInstallBody(d.Info.Name)
-	case driver.CompanionOutdated:
+	case driver.CompanionOutdated, driver.CompanionPublicKey:
 		title, action = locales.CompanionUpdateTitle(), locales.CompanionUpdate()
 		actionLabel = locales.CompanionUpdateLabel(d.Info.Name)
 		body = locales.CompanionUpdateBody()
+		if cs == driver.CompanionPublicKey {
+			// Why this update matters: anyone could sign one of the old.
+			body = locales.CompanionPublicKeyBody()
+		}
 		extra = a.companionAutoLine(id)
 	case driver.CompanionOff:
 		title, action = locales.CompanionTurnOnTitle(), locales.CompanionTurnOn()
@@ -238,6 +248,8 @@ func companionLine(cs driver.CompanionState) string {
 		return locales.CompanionLineMissing()
 	case driver.CompanionOutdated:
 		return locales.CompanionLineOutdated()
+	case driver.CompanionPublicKey:
+		return locales.CompanionLinePublicKey()
 	case driver.CompanionNoAPK:
 		return locales.CompanionLineNoAPK()
 	}

@@ -201,6 +201,10 @@ func (g *Gateway) gate(l *lease, approvalID string, action bool) *Result {
 	case l.ended:
 		g.mu.Unlock()
 		return statusResult(StatusStopped, "The lease ended (%s). End the task, or call phone_connect again.", l.endedBy)
+	case waitingLocked(d):
+		res := setupResultLocked(d, fmt.Sprintf("%s is connected but waits for a step before Pinky can use it. Nothing was done.", d.name()))
+		g.mu.Unlock()
+		return res
 	case !d.online:
 		left := g.opt.ReconnectGrace - time.Since(d.offlineSince)
 		g.mu.Unlock()
@@ -1593,6 +1597,12 @@ func (g *Gateway) readError(l *lease, err error) *Result {
 	switch {
 	case errors.Is(err, driver.ErrOffline):
 		g.setOffline(l.dev, "")
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		if waitingLocked(l.dev) {
+			// Closed meanwhile, as it needs a step again.
+			return setupResultLocked(l.dev, fmt.Sprintf("%s is connected but waits for a step before Pinky can use it.", l.dev.name()))
+		}
 		return errResult(ErrDeviceOffline, "%s is offline.", l.dev.name())
 	case errors.Is(err, driver.ErrLocked):
 		g.setLocked(l.dev, true)
@@ -1621,7 +1631,7 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	}
 	ctx, cancel := context.WithTimeout(ctx, observeTimeout)
 	defer cancel()
-	start := time.Now()
+	start := stamp() // ordered against the pictures it vouches for (clock.go)
 	// The recording learns of the read before it runs: while it runs, what
 	// it may show limits what other reads vouch for (video.go).
 	var readTok uint64
