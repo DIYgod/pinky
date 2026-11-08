@@ -198,7 +198,8 @@ func (g *Gateway) gate(l *lease, approvalID string, action bool) *Result {
 	g.mu.Lock()
 	d := l.dev
 	for !l.ended && g.waitMovingLocked(l.ctx, d) {
-		// It was moving between its cable and Wi-Fi (wifi.go).
+		// It was moving between its cable and Wi-Fi, or Pinky was opening
+		// it again (wifi.go).
 	}
 	switch {
 	case l.ended:

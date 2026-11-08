@@ -444,7 +444,7 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	g.mu.Lock()
 	open := info.State == driver.StateOnline && d.dev == nil && !d.opening && !d.removed
 	if open {
-		d.opening = true
+		d.opening, d.openingAt = true, time.Now()
 		if time.Now().Before(d.moving) {
 			// Back on its other connection: calls wait while it opens.
 			d.moving = time.Now().Add(moveWait)
@@ -485,6 +485,7 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	g.mu.Lock()
 	d.opening = false
 	if err != nil || g.closed || d.removed {
+		g.wakeLocked(d) // calls waiting for the open (connectWait) go on
 		g.mu.Unlock()
 		if err == nil {
 			dev.Close()
