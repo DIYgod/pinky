@@ -288,11 +288,39 @@ Once per phone, on a Mac with Xcode:
 2. Open `WebDriverAgent.xcodeproj`. For the WebDriverAgentRunner target, under Signing & Capabilities, pick your team (a free Apple ID works). If Xcode says the bundle identifier is taken, change its prefix (`com.<you>.WebDriverAgentRunner`), keeping WebDriverAgentRunner in it so Pinky finds it.
 3. Pick the iPhone as the destination and run Product › Test once. Xcode installs WebDriverAgentRunner and starts it; with a free Apple ID the phone first asks you to trust the developer in Settings › General › VPN & Device Management. Stop the test once Xcode's log shows `ServerURLHere`.
 
-From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days; after that, repeat step 3. The same from a terminal:
+From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, repeat step 3 (see "When the helper's signature runs out"). The same from a terminal:
 
 ```sh
 xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
   -destination id=<udid> -allowProvisioningUpdates DEVELOPMENT_TEAM=<team id> test
+```
+
+### When the helper's signature runs out
+
+Built on 2026-11-08 after a user's report. The helper is signed with the person's Apple ID, and the provisioning profile it is signed with runs out: 7 days after Xcode installed it with a free Apple ID, a year with a paid developer account. iOS then no longer starts it, and Pinky used to say only that the helper did not start.
+
+To install it again, plug the iPhone in and repeat step 3 of "Installing the WebDriverAgent helper" (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Xcode signs the helper anew and installs it over the old one; nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
+
+What Pinky does (`wda_profile.go`):
+
+- **Reading.** Pinky lists the phone's provisioning profiles with misagent's `CopyAll` (the lockdown service `com.apple.misagent`, over usbmuxd), which only reads. go-ios's `misagent` package sends that request but drops the answer, so Pinky has its own small client. Each profile is a CMS signed message; Pinky takes the property list inside without checking the signature and reads `ExpirationDate`, the `application-identifier` entitlement and `ProvisionedDevices`. It reads BER as well as DER (indefinite lengths, the content in a constructed OCTET STRING), which `encoding/asn1` refuses.
+- **Matching.** The helper's profile is one that grants the runner on this phone: its `application-identifier` names the runner's bundle id, or a wildcard (`<team>.*`) covers it, for the runner's team, which is the prefix of the runner's own `application-identifier` in the installation proxy's app list. Of several, the one that runs out last counts: iOS starts the app while any of them lasts, and an old profile stays next to a new one.
+- **The date.** `driver.Info.HelperExpires` (new, additive; zero when unknown) carries it for phones driven through the helper, Automatic below iOS 27 or chosen in Settings › Phones. List reads it while inspecting such a phone, again every 30 minutes while the phone is online, and every minute within the reminder (`driver.HelperReminder`, 48 hours), so a helper installed again while the phone stays plugged in is noticed.
+- **Once it ran out**, List inspects the phone again and lists it as `needs_setup` with `Setup` `install_helper` (`driver.SetupInstallHelper`, new) and a `Detail` that says when it ran out and how to install it again. The gateway then closes the phone, though a runner already running might have gone on until it ended: Pinky stops at the time it announced. A helper chosen in Settings › Phones but not installed now also gets `install_helper`.
+- **A profile Pinky cannot read** changes nothing: the phone works as before, without a reminder. Pinky's log gets each read (`iphone: the helper's provisioning profile`, expires), a change of the date, and a read that failed.
+- **The client.** Two days before, the phone's page shows a reminder above the phone: "The helper on <phone> stops working on <day and time>: install it again from Xcode", with How to install it. Once it ran out, the page of the phone that needs setup says so in the same words, with How to install it in place of the steps of Add phone, and Add phone › iPhone shows it too instead of "stuck, retrying". The checkup's `helper` item warns two days before, notes the day when it is further off, and fails with those words once it ran out (`ui/checkup_iphone.go`).
+
+What ran where:
+
+| What | Where | Result |
+| --- | --- | --- |
+| Reading the profiles and matching the helper's (`TestHelperProfileOnPhone`, read only) | iPhone 13 mini, iOS 27.0.1, 2026-11-08 | 59 profiles in 113 to 127 ms, all parsed (DER). The runner the owner had installed for another tool (bundle id ending in `.wda.xctrunner`) is granted by its team's wildcard profile, "iOS Team Provisioning Profile: *", from a paid account: 365 days, running out on 2027-10-08. The installation proxy's list gave the runner's `application-identifier` |
+| BER profiles, matching, the reminder and the expiry in the provider, the checkup item, the client's words and layout | Unit tests (`wda_profile_test.go`, `ui/helper_test.go`), the client's tester in English and Chinese, light and dark | Pass |
+| A profile that actually ran out; a free Apple ID's 7-day profile | Not yet | No such phone at hand. Whether iOS keeps an expired profile listed is not seen: if it removes it, Pinky finds no profile and shows the old failure to start |
+
+```sh
+PINKY_DEVICE=<udid> scripts/devlock.sh <udid> go test -tags device -count=1 -v -run TestHelperProfileOnPhone ./internal/driver/ios/
+PINKY_SCREENSHOTS=<dir> go test ./ui -run TestIPhoneHelperScreenshots
 ```
 
 ### Choosing the connection
@@ -335,7 +363,7 @@ Also found:
 - Mirroring a phone that Pinky drives on iOS 27 can leave its accessibility services stuck, so Pinky reads by OCR alone until the phone restarts (seen once, iOS 27.0.1 and macOS 27.2). Pinky does not notice it yet; a check that tells the person to restart the phone would help.
 - iPhone Mirroring as a way in: macOS 15 or later, iOS 18 or later, the same Apple Account on both, the phone locked nearby, not in the EU; window capture and mouse and keyboard events would need Screen Recording and Accessibility for Pinky. With no tree from the phone while it mirrors (above), it would read the screen by OCR alone, as DESIGN.md's planned Mirroring backend does; not built.
 - `Waker` through the helper; `Unlock` wakes the phone by itself.
-- Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now. go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
+- Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now, and Pinky reminds them before the signature runs out ("When the helper's signature runs out"). go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
 - The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
 - Landscape on both paths.
 
@@ -380,7 +408,7 @@ Clients reach it through `driver.DiskImageDownloader` (the iOS provider) and the
 
 ### Steps for clients
 
-`driver.Info.Setup` (new, additive) names the step a phone waits for: `trust`, `developer_mode`, `unlock`, `preparing`, `no_disk_image`, `disk_image` (the mount failed; `Detail` says why) and `update` (iOS too old). `Detail` still says it in a sentence. Add phone › iPhone (`ui/addiphone.go`) shows them as numbered steps, each saying what to do on the phone, and the reason when one is stuck; the Phone screen of an iPhone that needs setup links to them. The steps replace the pairing-code form, which no iPhone used.
+`driver.Info.Setup` (new, additive) names the step a phone waits for: `trust`, `developer_mode`, `unlock`, `preparing`, `no_disk_image`, `disk_image` (the mount failed; `Detail` says why), `update` (iOS too old) and `install_helper` (the helper is missing, or its signature ran out: see "When the helper's signature runs out"). `Detail` still says it in a sentence. Add phone › iPhone (`ui/addiphone.go`) shows them as numbered steps, each saying what to do on the phone, and the reason when one is stuck; the Phone screen of an iPhone that needs setup links to them. The steps replace the pairing-code form, which no iPhone used.
 
 ### The computer
 
@@ -394,7 +422,7 @@ iPhones answer the checkup page (`driver.Checker`, `checkup.go`), reading only: 
 | --- | --- | --- |
 | `developer_mode` | The image mounter's `QueryDeveloperModeStatus` | Fix `developer_mode` |
 | `disk_image` | What the phone has mounted (cryptexd's list, else the image mounter's), the services the path needs (screen and HID on CoreDevice, `legacyReady`'s below iOS 27), and whether this computer has an image to mount again should it go missing (`findDiskImage` in Pinky's folder, Xcode's, the download) | Fails with fix `disk_image` when the services are missing; warns with `no_disk_image` when nothing here could mount it again |
-| `helper` | WebDriverAgent's `/status`, on the helper's path; without the helper it fails | Fix `install_helper` |
+| `helper` | WebDriverAgent's `/status`, on the helper's path, and when its signature runs out, read afresh; without the helper it fails | Fix `install_helper`; warns two days before the signature runs out, and once it ran out fails, or warns while the helper still runs |
 | `screen` | A screenshot | Fix `screenshot` |
 | `input` | CoreDevice: the HID service accepts a connection, which is closed again without an event (any event would reach the phone). Without the helper: fails | Fix `install_helper` below iOS 27 |
 
