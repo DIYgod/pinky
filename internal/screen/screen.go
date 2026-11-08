@@ -86,6 +86,32 @@ type Element struct {
 	Hidden bool
 }
 
+// notificationID starts the ID of an element that stands for a
+// notification shown over the app, which has no resource id of its own:
+// an iPhone's banner, which SpringBoard draws.
+const notificationID = "pinky:notification"
+
+// NotificationID returns the ID of an element that stands for a
+// notification shown over the app, posted by app (a bundle id or package;
+// "" when the driver cannot tell). Its label starts with the app's name,
+// and the gateway hides the notifications of blocked apps.
+func NotificationID(app string) string {
+	if app == "" {
+		return notificationID
+	}
+	return notificationID + ":" + app
+}
+
+// NotificationApp reports whether an element's ID is a NotificationID,
+// and returns the app that posted the notification, if known.
+func NotificationApp(id string) (app string, ok bool) {
+	if id == notificationID {
+		return "", true
+	}
+	app, ok = strings.CutPrefix(id, notificationID+":")
+	return app, ok
+}
+
 // Has reports whether the element is in the given state.
 func (e Element) Has(state string) bool {
 	for _, s := range e.States {

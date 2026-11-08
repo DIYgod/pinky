@@ -17139,14 +17139,14 @@ func (msgs Messages) SettingsPrivacyRecord() string {
 	return Catalog.Format(msgs.locale, "settingsPrivacyRecord", nil)
 }
 
-// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open."
+// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent …"
 // in the language the app shows.
 //
 // Settings › Privacy: the line under Record the screen during tasks.
 // Activity is the page of finished tasks.
 func SettingsPrivacyRecordDesc() string { return In(i18n.Locale()).SettingsPrivacyRecordDesc() }
 
-// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open."
+// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent …"
 // in the language of msgs.
 //
 // Settings › Privacy: the line under Record the screen during tasks.

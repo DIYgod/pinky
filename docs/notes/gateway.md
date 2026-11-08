@@ -470,7 +470,34 @@ Checked on the Android 16 emulator (`pinky-api36`) through the real driver and g
 
 Not done:
 
-- **iPhone banners over an app.** The iOS driver turns SpringBoard's overlays into events and leaves them out of the elements, so the gateway cannot place a blocked app's banner: its event is hidden, but a screenshot taken while it shows has it. Proposal: the iOS driver adds a notification overlay as an element with the overlay's rect (its ID marking a banner), which `hideParts` would then treat as a notification row.
+- **iPhone banners over an app** on iOS 17.4 to 26 (WebDriverAgent): that path reads only the app in front, not SpringBoard, so a blocked app's banner can reach the agent as OCR lines and in a screenshot taken while it shows. On iOS 27 they are hidden (below, 2026-11-09 follow-up).
 - **iPhones' Notification Center and app switcher** are handled by the generic rules (SpringBoard elements whose label starts with a blocked app's name, large elements named after one), not checked on a phone: reading the owner's notifications is off limits, and the simulator's WebDriverAgent tree differs from iOS 27's accessibility path. If Notification Center comes as one SpringBoard overlay over the app, as banners do, its event's text could hold several apps' notifications and only the first is matched by name.
 - **Recent apps on other launchers** (MIUI/HyperOS, One UI, ColorOS) were not seen. Where the card is not one large element named after the app, the name alone is hidden and screenshots are withheld only if the element's id or path says recents; a launcher that names its cards otherwise could show a blocked app's snapshot.
 - **Widgets** of a blocked app on the home screen are hidden only when their element is labelled with the app's name.
+
+### iPhone banners (2026-11-09, follow-up)
+
+On iOS 27 (remoteAXService) the driver now lists each notification SpringBoard shows over the app as one element on every read while it shows, besides the event it gives once (`notificationElement` in `internal/driver/ios/springboard.go`): a button with the banner's whole text, the app's name first, at the overlay's place, with ID `screen.NotificationID(bundle id)` (`pinky:notification:<bundle id>`, or `pinky:notification` when the app is not found; new and additive in `internal/screen`). The bundle id is found once, when the banner comes (`postingApp`), and kept while it shows (`springBoardWatch.posted`). The gateway takes such an element for a notification row (`isRowID`): a blocked app's, by its bundle id (`hideHints.blockedApp`) or its name, is hidden and covered like an Android row, the OCR lines over it go with it, and one whose frames are another process's (no place) is hidden without one, which withholds the screenshot. Other apps' banners stay listed, with one-time codes masked in them and covered in screenshots like any element's. Tests: `TestOverlayEvents`, `TestNotificationElementUnknown` (iOS driver), `TestHideBannerByItsApp`, `TestIPhoneBannerHidden` (gateway, on the fake iPhone). Not run on an iPhone.
+
+### Checking on a person's phone
+
+`TestDeviceBlockedHidden` (`internal/gateway/device_hidden_test.go`, tag `device`) checks one screen of a real phone without reading anyone's content into its output. The person makes something only the app under test shows, with a marker text (`7731`), and sets the screen; the test blocks that app for the run only (in memory, nothing saved), connects a read-only task, reads the screen with a screenshot, and reports: the app in front (only when it is the system UI or a launcher), how many parts were hidden, whether the marker is in the element list, in events, or readable in the screenshot (this Mac's OCR, picture kept in memory only), and, for an element still showing the marker, its role, resource id, ancestry and place. PASS, FAIL or NOT CHECKED (nothing hidden and no marker: the app's notification or card was not on the screen). It sends no input. On the Android 16 emulator: PASS for the shade with the shell's notification and for recent apps with Settings' card; FAIL, with the row's id and place, when nothing is blocked.
+
+```sh
+go test -c -tags device -o /tmp/pinky-gw/gateway.test ./internal/gateway
+scripts/devlock.sh <id> env PINKY_DEVICE=<id> PINKY_BLOCK=<app id> PINKY_MARKER=7731 [PINKY_WAIT=90] \
+  /tmp/pinky-gw/gateway.test -test.run TestDeviceBlockedHidden -test.v
+```
+
+What still needs a phone, and the screen the person sets for each run:
+
+| Phone | Screen | Marker made by | `PINKY_BLOCK` |
+| --- | --- | --- | --- |
+| iPhone, iOS 27 | A banner over Settings: Settings open when the reminder goes off (`PINKY_WAIT=90`, started before it) | A reminder "Pinky 7731" with an alert a minute or two ahead | `com.apple.reminders` |
+| iPhone, iOS 27 | Notification Center pulled down, the reminder in it | The same reminder, after it went off | `com.apple.reminders` |
+| iPhone, iOS 27 | The app switcher, the Calculator's card in view | `7731` typed into the Calculator | `com.apple.calculator` |
+| Xiaomi, HyperOS or MIUI | The notification shade pulled down | `adb shell "cmd notification post -t 'Pinky 7731' pinky 'Pinky test 7731'"` (the shell posts it) | `com.android.shell` |
+| Xiaomi, HyperOS or MIUI | The shade again, the shell's row collapsed (no app name) | the same | `com.android.shell` |
+| Xiaomi, HyperOS or MIUI | Recent apps, the Calculator's card in view | `7731` typed into the Calculator | `com.miui.calculator` |
+
+Afterwards: delete the reminder and the shell notification (swipe it away), clear the Calculator. A FAIL's output names the resource ids and places to make the rules fit that phone; the output has no screen text, but the session that runs it should not add any either, and should keep no screenshot.

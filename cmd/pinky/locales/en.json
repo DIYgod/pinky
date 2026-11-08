@@ -6226,7 +6226,7 @@
   "@settingsPrivacyRecord": {
     "description": "Settings › Privacy: the switch that records the phone's screen while agents work."
   },
-  "settingsPrivacyRecordDesc": "Used for replays in Activity. Recording pauses while a blocked app is open.",
+  "settingsPrivacyRecordDesc": "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent apps are recorded as they show. Recordings stay on this computer.",
   "@settingsPrivacyRecordDesc": {
     "description": "Settings › Privacy: the line under Record the screen during tasks. Activity is the page of finished tasks."
   },

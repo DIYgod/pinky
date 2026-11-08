@@ -1048,7 +1048,7 @@
   "settingsPrivacyKeepForever": "永久",
   "settingsPrivacyKeepYear": "1 年",
   "settingsPrivacyRecord": "任务期间录制屏幕",
-  "settingsPrivacyRecordDesc": "用于在“活动”中回放。打开已屏蔽的应用时，录制会暂停。",
+  "settingsPrivacyRecordDesc": "用于在“活动”中回放。打开已屏蔽的应用时，录制会暂停；它的通知和最近任务里的卡片会照原样录下。录屏只保存在这台电脑上。",
   "settingsRules": "规则",
   "settingsRulesActionCall": "打电话",
   "settingsRulesActionChangeSetting": "更改设置",

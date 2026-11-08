@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/policy"
@@ -385,5 +386,76 @@ func TestHideNotificationCellOnSpringBoard(t *testing.T) {
 	}
 	if text := labels(s); strings.Contains(text, "Café") || !strings.Contains(text, "Saturday?") || !strings.Contains(text, `button "Northbank"`) {
 		t.Fatalf("wrong elements hidden (the home screen's icon stays):\n%s", text)
+	}
+}
+
+// An iPhone's banner over an app comes as one element with the app that
+// posted it: a blocked app's is hidden by its id, though its name says
+// nothing; another app's stays. A blocked app's banner without a place is
+// hidden without one.
+func TestHideBannerByItsApp(t *testing.T) {
+	s := &screen.Screen{Width: 1125, Height: 2436, App: screen.App{ID: "com.apple.mobilenotes", Name: "Notes"}, Elements: []screen.Element{
+		{Role: screen.RoleButton, Label: "Ledgerly, Card charged, €12.00", ID: screen.NotificationID("com.example.ledgerly"),
+			Path: "com.apple.springboard", Bounds: screen.Rect{X: 24, Y: 30, W: 1077, H: 240}},
+		{Role: screen.RoleText, Label: "now", Source: screen.SourceOCR, Bounds: screen.Rect{X: 950, Y: 60, W: 80, H: 40}},
+		{Role: screen.RoleText, Label: "Shopping list", Bounds: screen.Rect{X: 40, Y: 400, W: 600, H: 60}},
+	}}
+	h := hideHints{blockedName: blockNames(), blockedApp: func(id string) bool { return id == "com.example.ledgerly" }}
+	if n := hideParts(s, h); n != 1 {
+		t.Fatalf("hid %d parts:\n%s", n, labels(s))
+	}
+	if text := labels(s); strings.Contains(text, "€12.00") || strings.Contains(text, `"now"`) || !strings.Contains(text, "Shopping list") {
+		t.Fatalf("wrong elements hidden:\n%s", text)
+	}
+	if h := hiddenOf(s); len(h) != 1 || h[0].Bounds != (screen.Rect{X: 24, Y: 30, W: 1077, H: 240}) {
+		t.Fatalf("hidden element: %+v", h)
+	}
+
+	s = &screen.Screen{Width: 1125, Height: 2436, App: screen.App{ID: "com.apple.mobilenotes"}, Elements: []screen.Element{
+		{Role: screen.RoleButton, Label: "Ledgerly, Card charged", ID: screen.NotificationID("com.example.ledgerly")},
+		{Role: screen.RoleButton, Label: "Messages, Anna, Lunch?", ID: screen.NotificationID("com.apple.MobileSMS")},
+	}}
+	if n := hideParts(s, h); n != 1 {
+		t.Fatalf("hid %d parts:\n%s", n, labels(s))
+	}
+	if hd := hiddenOf(s); len(hd) != 1 || !hd[0].Bounds.Empty() || !strings.Contains(labels(s), "Lunch?") {
+		t.Fatalf("banners without a place:\n%s", labels(s))
+	}
+	if _, _, err := coverHidden(image.NewRGBA(image.Rect(0, 0, 375, 812)), s); !errors.Is(err, errHiddenShot) {
+		t.Fatalf("a blocked banner without a place: %v", err)
+	}
+}
+
+// On a fake iPhone, Wallet's banner (blocked by default) over Settings:
+// the agent reads it as hidden, the screenshot covers it, and a banner of
+// another app stays readable, its code masked.
+func TestIPhoneBannerHidden(t *testing.T) {
+	dev := demo.NewDevice("iphone", "iPhone 17", driver.IOS)
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{demo.NewProvider(driver.IOS, dev)} })
+	ctx := context.Background()
+	s, _ := connect(t, g, "Change a setting")
+	dev.Show("settings")
+	dev.SetOverlay([]screen.Element{
+		{Role: screen.RoleButton, Label: "Wallet, Apple Card, $12.00 at Café Lumen", ID: screen.NotificationID("com.apple.Passbook"),
+			Path: "com.apple.springboard", Bounds: screen.Rect{X: 24, Y: 30, W: 1032, H: 240}},
+		{Role: screen.RoleButton, Label: "Messages, Anna, Your code is 482913", ID: screen.NotificationID("com.apple.MobileSMS"),
+			Path: "com.apple.springboard", Bounds: screen.Rect{X: 24, Y: 290, W: 1032, H: 240}},
+	})
+	res := s.Observe(ctx, ObserveRequest{Screenshot: true})
+	mustStatus(t, res, StatusSettled)
+	text := res.Screen.Render()
+	if strings.Contains(text, "Café") || !strings.Contains(text, hiddenNotification) || !strings.Contains(text, "Your code is ••••••") {
+		t.Fatalf("banners as the agent reads them:\n%s", text)
+	}
+	if res.Screenshot == nil {
+		t.Fatalf("no screenshot: %s", res.Message)
+	}
+	b := res.Screenshot.Bounds()
+	at := func(x, y int) (int, int) { return x * b.Dx() / 1080, y * b.Dy() / 2340 }
+	if x, y := at(540, 150); !covered(res.Screenshot.At(x, y)) {
+		t.Fatal("Wallet's banner is not covered")
+	}
+	if x, y := at(540, 1500); covered(res.Screenshot.At(x, y)) {
+		t.Fatal("Settings is covered")
 	}
 }

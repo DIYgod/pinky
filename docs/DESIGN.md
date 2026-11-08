@@ -510,7 +510,7 @@ Everything lives in one SQLite database and a media folder in the user data dire
 | `media` | Kind (screenshot, video segment, report), path, size, hash |
 
 - **Media:** a WebP screenshot before and after each step, and MP4 segments remuxed from the device stream without re-encoding.
-- **Retention:** one button wipes everything (M1); default limits of 30 days for video and 180 days for steps come with recording (M2). Blocked apps are never recorded.
+- **Retention:** one button wipes everything (M1); default limits of 30 days for video and 180 days for steps come with recording (M2). A blocked app's screen is never recorded; its notifications and its card in recent apps, which agents get hidden, show in recordings as they were, as one-time codes do.
 - **Encryption:** optional, with the key kept in the OS keychain.
 - **Export:** a single-file HTML report and JSON. iPhone video is HEVC, which browsers play unreliably, so the export transcodes it to H.264 with FFmpeg's hardware encoder, or links the MP4 when that fails.
 

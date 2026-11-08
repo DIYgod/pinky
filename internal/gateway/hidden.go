@@ -30,11 +30,13 @@ import (
 // A notification row is the system UI's expandableNotificationRow: one
 // element on phones with the companion app, which merges the row's text
 // ("Wise, •, now, Card charged, €12.00"), or the elements inside one
-// (uiautomator), gathered by their place. A row is a blocked app's when it
-// starts with the app's name, which Android shows only while the row is
-// expanded, or when it says what a blocked app's notification says: the
-// phone's list of notifications (driver.NotificationLister) and the
-// notifications the agent was not shown give those texts. On a system
+// (uiautomator), gathered by their place. An iPhone's banner over an app
+// is one element the driver lists with the app that posted it in its id
+// (screen.NotificationID). A row is a blocked app's when that app is,
+// when it starts with a blocked app's name, which Android shows only while
+// the row is expanded, or when it says what a blocked app's notification
+// says: the phone's list of notifications (driver.NotificationLister) and
+// the notifications the agent was not shown give those texts. On a system
 // screen, a large element named after a blocked app is its card in recent
 // apps (Android's task snapshot, an iPhone's app switcher card), a widget,
 // or an iPhone's notification cell, whose name comes first.
@@ -60,6 +62,9 @@ type hideHints struct {
 	system bool
 	// blockedName reports whether a display name is a blocked app's.
 	blockedName func(name string) bool
+	// blockedApp reports whether an app id is a blocked app's; it may be
+	// nil.
+	blockedApp func(id string) bool
 	// texts are what blocked apps' notifications say, normalized (normText).
 	texts []string
 }
@@ -90,7 +95,12 @@ func hideParts(s *screen.Screen, h hideHints) int {
 	}
 	var parts []part
 	for i, e := range els {
-		if e.Source != screen.SourceOCR && isRowID(e.ID) && !e.Bounds.Empty() {
+		if e.Source == screen.SourceOCR || !isRowID(e.ID) {
+			continue
+		}
+		// An iPhone's banner may come without a place; a blocked app's is
+		// then hidden without one, which withholds screenshots.
+		if _, banner := screen.NotificationApp(e.ID); !e.Bounds.Empty() || banner {
 			parts = append(parts, part{kind: partNotification, r: e.Bounds, idx: i, label: e.Label, path: e.Path, id: e.ID})
 		}
 	}
@@ -190,6 +200,9 @@ func hideParts(s *screen.Screen, h hideHints) int {
 // starts it, the app name in a notification's header, or, for a
 // notification, what it says.
 func partBlocked(els []screen.Element, p part, h hideHints) bool {
+	if app, _ := screen.NotificationApp(p.id); app != "" && h.blockedApp != nil && h.blockedApp(app) {
+		return true
+	}
 	names := []string{p.label, firstPart(p.label)}
 	var text []string
 	if p.kind == partNotification {
@@ -257,9 +270,17 @@ func gatherRows(els []screen.Element, loose []int, height int) []part {
 	return rows
 }
 
-// isRowID reports whether a resource id is a notification row's.
+// isRowID reports whether an element's id is a notification row's: the
+// Android system UI's, or one a driver gave a notification over the app
+// (screen.NotificationID).
 func isRowID(id string) bool {
-	return id != "" && strings.HasSuffix(strings.ToLower(id), "id/expandablenotificationrow")
+	if id == "" {
+		return false
+	}
+	if _, ok := screen.NotificationApp(id); ok {
+		return true
+	}
+	return strings.HasSuffix(strings.ToLower(id), "id/expandablenotificationrow")
 }
 
 // inRowPath reports whether an element is inside a notification row.
@@ -319,6 +340,9 @@ func mostlyInside(r, box screen.Rect) bool {
 }
 
 func rectWithin(box, r screen.Rect) bool {
+	if r.Empty() {
+		return false // a part without a place is hidden on its own
+	}
 	return r.X >= box.X && r.Y >= box.Y && r.X+r.W <= box.X+box.W && r.Y+r.H <= box.Y+box.H
 }
 
@@ -570,7 +594,10 @@ func (g *Gateway) hideBlocked(ctx context.Context, d *device, dev driver.Device,
 			hs.remember(eventTexts(ev.Text))
 		}
 	}
-	h := hideHints{system: system, blockedName: blockedName}
+	h := hideHints{system: system, blockedName: blockedName, blockedApp: func(id string) bool {
+		_, b := g.policy.Blocked(screen.App{ID: id, Name: name(id)})
+		return b
+	}}
 	if rows {
 		h.texts = hs.seenTexts()
 		for _, n := range hs.notifications(ctx, dev) {
