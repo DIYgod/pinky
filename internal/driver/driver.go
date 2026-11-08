@@ -49,6 +49,14 @@ type Info struct {
 	// its own words; "" when the driver does not say. Detail says the same
 	// in a sentence.
 	Setup string
+	// HelperExpires is when the app the phone is driven through stops
+	// starting because the provisioning profile it was signed with runs
+	// out: iPhones driven through the WebDriverAgent helper, whose profile
+	// lasts 7 days with a free Apple ID and a year with a paid developer
+	// account. Zero when unknown, and for phones driven another way.
+	// Clients remind the person HelperReminder before; once it has passed
+	// the phone needs setup, with SetupInstallHelper.
+	HelperExpires time.Time `json:",omitzero"`
 }
 
 // Setup steps, in Info.Setup.
@@ -292,7 +300,12 @@ const (
 	CheckDiskImage     = "disk_image"     // the developer disk image is mounted, and the computer can mount it again after a restart
 	CheckHelper        = "helper"         // the WebDriverAgent helper answers, where Pinky drives the phone through it
 	FixInstallHelper   = "install_helper" // install the WebDriverAgent helper on the phone
+	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again) from Xcode, as it is missing or its profile ran out (Info.HelperExpires)
 )
+
+// HelperReminder is how long before Info.HelperExpires clients remind the
+// person to install the WebDriverAgent helper again.
+const HelperReminder = 48 * time.Hour
 
 // FileInfo is one entry of the phone's Pinky folder.
 type FileInfo struct {
