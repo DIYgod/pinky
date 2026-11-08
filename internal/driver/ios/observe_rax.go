@@ -117,7 +117,13 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	// What SpringBoard shows over the app, looked at in the background
 	// while the app's tree comes (see springboard.go).
 	sbDone := d.kickSpringBoard(rax)
-	si := d.screen()
+	// The display's orientation, read while the tree comes: the person
+	// may have turned the device since the last read.
+	shown := make(chan struct{})
+	go func() {
+		defer close(shown)
+		d.readDisplayNow(ctx)
+	}()
 	var locked bool
 	lockKnown := make(chan struct{})
 	go func() {
@@ -195,16 +201,20 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		if !ok {
 			return
 		}
+		<-shown
+		si := d.screen()
 		var screens []*screen.Screen
 		for _, a := range apps {
 			screens = append(screens, &screen.Screen{Width: si.Width, Height: si.Height,
-				Orientation: orientationName(si.Orientation), App: a, Locked: locked})
+				Orientation: orientationOf(si.Width, si.Height), App: a, Locked: locked})
 		}
 		gate.early(screens)
 	}()
 	<-walked
 	<-lockKnown
 	<-asked
+	<-shown
+	si := d.screen()
 	if len(els) == 0 {
 		pictured.Wait() // a picture begun after the app is not left running
 		if walkErr == nil {
@@ -222,7 +232,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	app := els[0]
 	s := &screen.Screen{
 		Width: si.Width, Height: si.Height,
-		Orientation: orientationName(si.Orientation),
+		Orientation: orientationOf(si.Width, si.Height),
 		Locked:      locked,
 		CapturedAt:  time.Now(),
 	}

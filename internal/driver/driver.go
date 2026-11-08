@@ -261,6 +261,12 @@ type Packet struct {
 	PTS      time.Duration
 	Config   bool // codec configuration (SPS/PPS/VPS)
 	KeyFrame bool
+	// Turn is how many quarter turns clockwise put the picture the right
+	// way up, 0 to 3. Most streams are upright and leave it 0; an iPhone or
+	// iPad on iOS 27 sends its display as the panel is mounted, whatever
+	// way the device is turned. Touches go back in the picture's own
+	// pixels, before the turn.
+	Turn int
 }
 
 // Stream is a live encoded video stream.
