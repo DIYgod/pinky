@@ -2,6 +2,13 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 插线连接 iPhone 或 iPad 后，Pinky 现在会自己打开它的 Wi-Fi 连接，作用和「访达」里的“Show this iPhone when on Wi-Fi”一样，拔线后也能继续通过 Wi-Fi 使用，不用再去「访达」或 Xcode 里设置。
+- 通过 Wi-Fi 连接时，审批卡片、历史记录和给智能体的 iPhone、iPad 截图现在从实时画面里取，不到一秒就好，不再需要等最长半分钟。
+- 在 iPhone 上，Pinky 不会再给你没放行的被屏蔽应用拍图，连内存里也不会。
+- 在 Linux 上，如果系统稍晚才拒绝，`pinkyctl daemon` 不再误报“正在让电脑保持唤醒”，而是记下被拒绝，5 分钟后再试。
+
 ## 2026.1108.19 (2026-11-08)
 
 - 安卓手机现在也能读出 App 画在屏幕上、却没有提供无障碍信息的文字，比如超级 App 里的小程序和其他页面、游戏和地图：Pinky 在 macOS 和 Windows 上从屏幕画面里识别这些文字，智能体可以读到，也能点击。`phone_observe` 加上 `ocr: true` 可以读出屏幕上的全部文字。

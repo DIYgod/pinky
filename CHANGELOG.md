@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Plugging in an iPhone or iPad now turns on its Wi-Fi connection, as Finder's "Show this iPhone when on Wi-Fi" does, so it keeps working over Wi-Fi when you unplug it; you no longer need Finder or Xcode for that.
+- Over Wi-Fi, screenshots of an iPhone or iPad for approvals, history and agents now come from the live picture, in a fraction of a second instead of up to half a minute.
+- On iPhones, Pinky no longer takes a picture of a blocked app you haven't allowed, not even in memory.
+- On Linux, `pinkyctl daemon` no longer says it keeps the computer awake when the system refuses a moment later; it reports the refusal and tries again in 5 minutes.
+
 ## 2026.1108.19 (2026-11-08)
 
 - Android phones now read text that apps draw without describing it, as in mini-programs and other pages inside super-apps, games and maps: Pinky reads it from the screen on macOS and Windows, and agents can read and tap it. `phone_observe` takes `ocr: true` to read all the text on the screen.
