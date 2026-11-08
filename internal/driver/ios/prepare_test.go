@@ -170,6 +170,7 @@ func TestClassifyMountError(t *testing.T) {
 		{errors.New("MountImage: mount command failed: MountImage: device responded with error: DeviceLocked"), problemLocked},
 		{errors.New("MountImage: device responded with error: DeveloperModeIsNotEnabled"), problemDevMode},
 		{errors.New(`MountImage: failed to get Cryptex1 ticket from Apple: requestTicket: failed to send request: Post "https://gs.apple.com/TSS/controller?action=2": dial tcp: lookup gs.apple.com: no such host`), problemNetwork},
+		{errors.New(`MountImage: failed to get Cryptex1 ticket from Apple: requestTicket: failed to send request: Post "https://gs.apple.com/TSS/controller?action=2": tls: failed to verify certificate: x509: certificate signed by unknown authority`), problemOther},
 		{errors.New(`MountImage: failed to get signature from Apple: unexpected status in response 94: "This device isn't eligible for the requested build."`), problemRefused},
 		{errors.New("MountImage: findCryptexIdentity: no Cryptex1 identity for chip 0xff10"), problemNotFor},
 		{errors.Join(errors.New("as a cryptex: x"), errNewerImageMounted), problemNewer},
