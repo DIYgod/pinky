@@ -52,6 +52,14 @@ func SystemEnv() *Env {
 		once.Do(func() { path = searchPath(e) })
 		return path
 	}
+	e.Run = func(ctx context.Context, name string, args ...string) ([]byte, error) {
+		cmd := exec.CommandContext(ctx, name, args...)
+		cmd.Env = withPath(os.Environ(), e.Path(), e.GOOS)
+		cmd.Stdin = nil
+		cmd.WaitDelay = 2 * time.Second // a child that keeps the output open
+		hideWindow(cmd)
+		return cmd.CombinedOutput()
+	}
 	if only := os.Getenv(PathEnv); only != "" {
 		dirs := filepath.SplitList(only)
 		e.Path = func() []string { return dirs }
@@ -67,14 +75,6 @@ func SystemEnv() *Env {
 			}
 			return nil, fmt.Errorf("%s runs only the commands in %s, not %s", PathEnv, only, name)
 		}
-	}
-	e.Run = func(ctx context.Context, name string, args ...string) ([]byte, error) {
-		cmd := exec.CommandContext(ctx, name, args...)
-		cmd.Env = withPath(os.Environ(), e.Path(), e.GOOS)
-		cmd.Stdin = nil
-		cmd.WaitDelay = 2 * time.Second // a child that keeps the output open
-		hideWindow(cmd)
-		return cmd.CombinedOutput()
 	}
 	return e
 }
