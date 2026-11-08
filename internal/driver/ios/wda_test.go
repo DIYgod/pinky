@@ -299,9 +299,20 @@ type fakeWDA struct {
 	sessions int
 	bodies   map[string][]string
 	expire   bool // the next session request fails as WDA does after a restart
+
+	// For reads.
+	app         string        // /wda/activeAppInfo's value
+	locked      bool          // /wda/locked
+	sourceDelay time.Duration // before /source answers; set before the first request
+	shots       int           // /screenshot requests
+	shotAt      time.Time     // the last one
+	sourceAt    time.Time     // when /source last answered
 }
 
 func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/source") && f.sourceDelay > 0 {
+		time.Sleep(f.sourceDelay) // a phone's tree takes long; other requests go on
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	b, _ := io.ReadAll(r.Body)
@@ -331,6 +342,19 @@ func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"value":{"sessionId":"s%d","capabilities":{}},"sessionId":"s%d"}`, f.sessions, f.sessions)
 	case "POST /appium/settings", "POST /actions", "POST /wda/keys", "POST /element/E1/clear":
 		fmt.Fprint(w, `{"value":null}`)
+	case "GET /wda/activeAppInfo":
+		fmt.Fprintf(w, `{"value":%s}`, f.app)
+	case "GET /wda/locked":
+		fmt.Fprintf(w, `{"value":%v}`, f.locked)
+	case "GET /source":
+		f.sourceAt = time.Now()
+		fmt.Fprint(w, `{"value":{"type":"XCUIElementTypeApplication","label":"App","rect":{"x":0,"y":0,"width":100,"height":200},"isVisible":"1",`+
+			`"children":[{"type":"XCUIElementTypeButton","label":"Pay","rect":{"x":10,"y":10,"width":50,"height":20},"isVisible":"1","isAccessible":"1"}]}}`)
+	case "GET /screenshot":
+		f.shots++
+		f.shotAt = time.Now()
+		w.WriteHeader(500) // the read goes on without OCR's text
+		fmt.Fprint(w, `{"value":{"error":"unknown error","message":"no picture in tests"}}`)
 	case "GET /element/active":
 		if strings.Contains(r.URL.RawQuery, "none") {
 			w.WriteHeader(404)

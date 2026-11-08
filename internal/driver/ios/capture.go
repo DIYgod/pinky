@@ -178,32 +178,80 @@ func (c *captureMarks) apply(s *screen.Screen) {
 
 // ocrPicture is the picture OCR reads, encoded for Vision, and decoded for
 // the capture marks: over Wi-Fi a frame of the live video, when the gateway
-// offers one (driver.ObserveOptions.Frame), since a screenshot costs about
-// 5 s there against well under a second for a frame; else, or when the
+// offers one (driver.ObserveOptions.Frame), since a screenshot costs
+// seconds there against well under a second for a frame; else, or when the
 // frame fails, a screenshot. from says which.
 func (d *Device) ocrPicture(ctx context.Context, opt driver.ObserveOptions) (data []byte, img image.Image, from string, err error) {
-	if opt.Frame != nil && d.info.Connection == "wifi" {
-		if f, ferr := opt.Frame(ctx); ferr == nil {
-			// The video is in the display's own frame: cut the screen out
-			// of it there, then turn it upright as screenshots are.
-			si := d.freshDisplay(ctx)
-			if s, ok := screenOfFrame(f, si); ok {
-				s = turnImage(s, si.turn())
-				var buf bytes.Buffer
-				if jerr := jpeg.Encode(&buf, s, &jpeg.Options{Quality: 95}); jerr == nil {
-					return buf.Bytes(), s, "video", nil
-				}
-			}
+	if s, ok := d.videoFrame(ctx, opt.Frame); ok {
+		var buf bytes.Buffer
+		if jerr := jpeg.Encode(&buf, s, &jpeg.Options{Quality: 95}); jerr == nil {
+			return buf.Bytes(), s, "video", nil
 		}
-		if ctx.Err() != nil {
-			return nil, nil, "", ctx.Err()
-		}
+	}
+	if ctx.Err() != nil {
+		return nil, nil, "", ctx.Err()
 	}
 	png, err := d.ScreenshotPNG(ctx)
 	if err != nil {
 		return nil, nil, "", err
 	}
 	return png, nil, "screenshot", nil
+}
+
+// Pictures from the live video over Wi-Fi. A phone sends a frame within a
+// second of being asked (0.1 to 0.8 s on an iPhone 13 mini over Wi-Fi, also
+// when its stream had just started), but one that loses most of its video's
+// packets, or ignores the request for a key frame while its screen stays
+// still, sends none for seconds (an iPad Pro 11-inch on 2026-11-08: four of
+// six frames missed 5 s). So a frame is waited for frameWait at most, and
+// after one failed the phone's screenshots are used for frameRetry: each
+// read would else wait for a frame before its screenshot. While the mirror
+// or a task's recording watches the phone, the gateway has the latest
+// picture at hand and the frame comes at once.
+var (
+	frameWait  = 2500 * time.Millisecond
+	frameRetry = time.Minute
+)
+
+// videoFrame returns a picture of the screen from frame, a frame of the live
+// video (driver.ObserveOptions.Frame), cropped to the screen, over Wi-Fi
+// only; ok is false when there is none to take, or it did not come in
+// time.
+func (d *Device) videoFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool) {
+	if frame == nil || d.info.Connection != "wifi" {
+		return nil, false
+	}
+	d.mu.Lock()
+	skip := time.Now().Before(d.framesAfter)
+	d.mu.Unlock()
+	if skip {
+		return nil, false
+	}
+	fctx, cancel := context.WithTimeout(ctx, frameWait)
+	f, err := frame(fctx)
+	cancel()
+	if err == nil {
+		// The video is in the display's own frame: cut the screen out of
+		// it there, then turn it upright as screenshots are.
+		si := d.freshDisplay(ctx)
+		if s, ok := screenOfFrame(f, si); ok {
+			return turnImage(s, si.turn()), true
+		}
+	}
+	if ctx.Err() != nil {
+		return nil, false // the read gave up: not the frame's fault
+	}
+	d.mu.Lock()
+	d.framesAfter = time.Now().Add(frameRetry)
+	d.mu.Unlock()
+	return nil, false
+}
+
+// ScreenshotFromFrame implements driver.FrameShooter: over Wi-Fi, where a
+// screenshot takes seconds (a PNG of 1 to 15 MB at about 1 MB/s), the
+// screen from a frame of the live video, as OCR reads it.
+func (d *Device) ScreenshotFromFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool) {
+	return d.videoFrame(ctx, frame)
 }
 
 // screenOfFrame is the screen in a frame of the live video, in the

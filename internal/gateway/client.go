@@ -483,6 +483,7 @@ func (g *Gateway) StopAll() error {
 	for _, d := range g.devices {
 		if d.lease != nil {
 			d.lease.session.stopped = true
+			g.noteStopLocked(d.lease.session, "")
 			g.endLeaseLocked(d.lease, OutcomeStopped, "")
 		}
 	}

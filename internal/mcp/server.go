@@ -41,12 +41,13 @@ type Server struct {
 
 	mu         sync.Mutex
 	sessions   map[*sdk.ServerSession]*gateway.Session
-	middleware []sdk.Middleware // Use's, for the HTTP servers made later
+	middleware []sdk.Middleware       // Use's, for the HTTP servers made later
+	uploads    map[string]*uploadLink // upload links by token (upload.go)
 }
 
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
-	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}}
+	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}, uploads: map[string]*uploadLink{}}
 	s.srv = s.newSDK(false)
 	return s
 }
@@ -109,6 +110,9 @@ func (s *Server) forget(ss *sdk.ServerSession) {
 	s.mu.Lock()
 	gs := s.sessions[ss]
 	delete(s.sessions, ss)
+	if gs != nil {
+		s.forgetUploadsLocked(gs)
+	}
 	s.mu.Unlock()
 	if gs != nil {
 		gs.Close()
@@ -129,7 +133,10 @@ func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session
 		info.Client = strings.TrimSpace(ci.Name + " " + ci.Version)
 	}
 	if remote {
+		// Clients over HTTP may open a session for every call, or leave
+		// the last one open: a newer session continues the older ones'.
 		info.Name += RemoteSuffix
+		info.Resume = true
 	}
 	gs := s.g.OpenSession(info)
 	s.sessions[req.Session] = gs

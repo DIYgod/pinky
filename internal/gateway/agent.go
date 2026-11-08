@@ -25,6 +25,11 @@ import (
 type AgentInfo struct {
 	Name   string // display name, such as "Claude Code"
 	Client string // the MCP client's own name and version
+	// Resume lets a newer session of this agent continue what its older
+	// sessions left: the leases they do not use at the moment, their open
+	// approvals, and a Stop (resume.go). Agents over HTTP, whose clients
+	// may open a session for every call.
+	Resume bool
 }
 
 // Status is the outcome of a call, from DESIGN.md's Results table.
@@ -203,13 +208,15 @@ type Session struct {
 	id      string
 	agent   AgentInfo
 	started time.Time
+	seq     uint64 // the order sessions opened in
 
 	// Guarded by Gateway.mu.
-	leases  map[string]*lease // by device id
-	barred  map[string]bool   // devices the person stopped this session on
-	used    []string          // every device it leased
-	closed  bool
-	stopped bool // the person pressed Stop all
+	leases    map[string]*lease // by device id
+	barred    map[string]bool   // devices the person stopped this session on
+	used      []string          // every device it leased
+	closed    bool
+	stopped   bool     // the person pressed Stop all
+	successor *Session // the newer session that continued its last lease (resume.go)
 }
 
 // OpenSession starts a session for an agent connection.
@@ -220,6 +227,8 @@ func (g *Gateway) OpenSession(a AgentInfo) *Session {
 	s := &Session{g: g, id: history.NewID("s_"), agent: a, started: time.Now(),
 		leases: map[string]*lease{}, barred: map[string]bool{}}
 	g.mu.Lock()
+	g.sessionSeq++
+	s.seq = g.sessionSeq
 	g.sessions[s.id] = s
 	g.mu.Unlock()
 	g.recordSession(s)
@@ -234,9 +243,14 @@ func (s *Session) Agent() AgentInfo { return s.agent }
 
 // Close ends the session: its leases end and its open approvals are
 // withdrawn without acting.
-func (s *Session) Close() { s.end(OutcomeDisconnected) }
+// For an agent whose sessions resume, its leases wait a while for its
+// next session instead (resume.go).
+func (s *Session) Close() { s.end(OutcomeDisconnected, s.agent.Resume) }
 
-func (s *Session) end(outcome string) {
+// CloseNow ends the session like Close, and its leases at once.
+func (s *Session) CloseNow() { s.end(OutcomeDisconnected, false) }
+
+func (s *Session) end(outcome string, keep bool) {
 	g := s.g
 	g.mu.Lock()
 	if s.closed {
@@ -245,11 +259,17 @@ func (s *Session) end(outcome string) {
 	}
 	s.closed = true
 	delete(g.sessions, s.id)
+	kept := map[string]bool{}
 	for _, l := range s.leases {
+		if keep {
+			kept[l.id] = true
+			g.keepLocked(l)
+			continue
+		}
 		g.endLeaseLocked(l, outcome, "")
 	}
 	g.mu.Unlock()
-	gone := g.approvals.WithdrawWhere(func(i approval.Info) bool { return i.Binding.Session == s.id }, "the agent disconnected")
+	gone := g.approvals.WithdrawWhere(func(i approval.Info) bool { return i.Binding.Session == s.id && !kept[i.Binding.Lease] }, "the agent disconnected")
 	g.closePendingSteps(gone, "withdrawn")
 	g.recordSession(s)
 }
@@ -268,16 +288,28 @@ func (s *Session) acquire(ref string) (*lease, *Result) {
 		if d == nil {
 			return nil, errResult(ErrInvalidArgument, "No phone matches %q. Connected phones: %s.", ref, g.deviceListLocked())
 		}
-		if s.barred[d.id] {
+		if g.barredLocked(s, d) {
 			return nil, statusResult(StatusStopped, "The person stopped the task on %s and its lease is gone. End the task.", d.name())
 		}
 		if l = s.leases[d.id]; l == nil {
-			return nil, errResult(ErrInvalidArgument, "This session is not connected to %s; call phone_connect with device %q first.", d.name(), d.id)
+			if res := g.busyElsewhereLocked(s, d); res != nil {
+				return nil, res
+			}
+			if l = g.adoptLocked(s, d); l == nil {
+				return nil, errResult(ErrInvalidArgument, "This session is not connected to %s; call phone_connect with device %q first.", d.name(), d.id)
+			}
 		}
 	} else {
+		if len(s.leases) == 0 {
+			// A newer session of an agent that resumes: the one phone its
+			// older sessions left.
+			if ds := g.adoptableLocked(s); len(ds) == 1 {
+				g.adoptLocked(s, ds[0])
+			}
+		}
 		switch len(s.leases) {
 		case 0:
-			if len(s.barred) > 0 || s.stopped {
+			if g.stoppedLocked(s) {
 				return nil, statusResult(StatusStopped, "The person pressed Stop and the lease is gone. End the task.")
 			}
 			return nil, errResult(ErrInvalidArgument, "No phone is connected in this session; call phone_connect first.")
@@ -407,6 +439,9 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		for _, l := range s.leases {
 			d = l.dev
 		}
+	} else if ds := g.adoptableLocked(s); len(s.leases) == 0 && len(ds) == 1 {
+		// The phone an older session of this agent left (resume.go).
+		d = ds[0]
 	} else {
 		// The phone that is online, or with none, the one that waits for
 		// a step: connecting to it says which step.
@@ -440,10 +475,20 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		g.mu.Unlock()
 		return statusResult(StatusStopped, "The person stopped this agent's task on %s; this session may not use it again. End the task.", d.name())
 	}
+	if g.barredLocked(s, d) {
+		g.mu.Unlock()
+		return statusResult(StatusStopped, "The person stopped %s's task on %s, so it may not use the phone until %s after the Stop. End the task.",
+			s.agent.Name, d.name(), approval.Human(stopHold))
+	}
 	if !d.online && !waitsForStep(d.info.State) {
 		g.mu.Unlock()
 		return errResult(ErrDeviceOffline, "%s is offline.", d.name())
 	}
+	if res := g.busyElsewhereLocked(s, d); res != nil {
+		g.mu.Unlock()
+		return res
+	}
+	g.adoptLocked(s, d)
 	if l := d.lease; l != nil && l.session != s {
 		holder := fmt.Sprintf("%s · %s", l.session.agent.Name, l.task.title)
 		g.mu.Unlock()
@@ -464,7 +509,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		ro := l.readOnly
 		g.mu.Unlock()
 		defer s.done(l)
-		var unknown []string
+		var unknown []unknownApp
 		if len(req.Apps) > 0 {
 			unknown = g.resolveTaskApps(ctx, l)
 		}
@@ -576,11 +621,19 @@ func appendUniq(list []string, s string) []string {
 	return append(list, s)
 }
 
+// unknownApp is a name in a task's app list that no installed app has for
+// sure, with the apps it may mean.
+type unknownApp struct {
+	name    string
+	similar []driver.App
+}
+
 // resolveTaskApps adds the ids and names of installed apps that the task's
 // allow-list names, so the list matches either. It returns the names that
-// match no installed app, such as 天气 on a phone whose Weather app has an
-// English name; nil when the phone cannot list its apps.
-func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []string {
+// match no installed app for sure, such as 天气 on a phone whose Weather app
+// has an English name, or 微信 where only 微信读书 holds it (findApp); nil
+// when the phone cannot list its apps.
+func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []unknownApp {
 	g.mu.Lock()
 	want := append([]string(nil), l.apps...)
 	g.mu.Unlock()
@@ -596,15 +649,15 @@ func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []string {
 		return nil
 	}
 	out := append([]string(nil), want...)
-	var unknown []string
+	var unknown []unknownApp
 	for _, w := range want {
-		if a, ok := matchApp(apps, w); ok {
-			out = appendUniq(out, a.ID)
-			if a.Name != "" {
-				out = appendUniq(out, a.Name)
+		if m := findApp(apps, w); m.ok {
+			out = appendUniq(out, m.app.ID)
+			if m.app.Name != "" {
+				out = appendUniq(out, m.app.Name)
 			}
 		} else {
-			unknown = append(unknown, w)
+			unknown = append(unknown, unknownApp{name: w, similar: m.similar})
 		}
 	}
 	g.mu.Lock()
@@ -615,17 +668,24 @@ func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []string {
 
 // withUnknownApps tells the agent at once which names in its task's app
 // list match no installed app, rather than at the first refused launch.
-func withUnknownApps(res *Result, unknown []string) *Result {
+func withUnknownApps(res *Result, unknown []unknownApp) *Result {
 	if len(unknown) == 0 || res == nil || res.IsError() {
 		return res
 	}
 	names := make([]string, len(unknown))
+	var similar []string
 	for i, u := range unknown {
-		names[i] = "“" + u + "”"
+		names[i] = "“" + u.name + "”"
+		if len(u.similar) > 0 {
+			similar = append(similar, fmt.Sprintf("for “%s”: %s", u.name, appList(u.similar)))
+		}
 	}
 	res.Message = strings.TrimSpace(res.Message + fmt.Sprintf(
-		" No installed app matches %s in the task's app list, so opening those apps will be refused. Call phone_apps for the names this phone uses, then phone_connect again with the same task and the corrected apps.",
-		strings.Join(names, ", ")))
+		" No installed app matches %s in the task's app list, so opening those apps will be refused.", strings.Join(names, ", ")))
+	if len(similar) > 0 {
+		res.Message += " Similar names " + strings.Join(similar, "; ") + "."
+	}
+	res.Message += " Call phone_apps for the names this phone uses, then phone_connect again with the same task and the exact names or ids."
 	return res
 }
 
@@ -687,6 +747,10 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string, readOn
 		return nil
 	}
 	b := approval.Binding{Session: s.id, Tool: "phone_connect", Args: "agent"}
+	if s.agent.Resume {
+		// Its next session repeats the call (resume.go).
+		b.Session = "agent:" + s.agent.Name
+	}
 	id := c.ApprovalID
 	if id != "" {
 		if err := g.approvals.Check(id, b); err != nil {
@@ -862,12 +926,20 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 	var ls []*lease
 	if req.Device != "" {
 		d := g.findDeviceLocked(req.Device)
+		if d != nil && s.leases[d.id] == nil {
+			g.adoptLocked(s, d)
+		}
 		if d == nil || s.leases[d.id] == nil {
 			g.mu.Unlock()
 			return errResult(ErrInvalidArgument, "This session does not hold %q.", req.Device)
 		}
 		ls = append(ls, s.leases[d.id])
 	} else {
+		if len(s.leases) == 0 {
+			for _, d := range g.adoptableLocked(s) {
+				g.adoptLocked(s, d)
+			}
+		}
 		for _, l := range s.leases {
 			ls = append(ls, l)
 		}
@@ -946,15 +1018,18 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		case blocked:
 			res.Message = strings.TrimSpace(res.Message + " " + blockedShotMessage(g.readsText(l.dev)))
 		default:
-			img, err := g.screenshot(ctx, l.dev, cur)
+			img, covered, err := g.screenshot(ctx, l.dev, cur)
 			switch {
 			case err == nil:
 				res.Screenshot = img
+				if covered > 0 {
+					res.Message = strings.TrimSpace(res.Message + " One-time codes on the screen are covered in the screenshot.")
+				}
 				// Checked against reads on both sides: steps may reuse it.
-				g.keepImage(l.dev, cur, img)
+				g.keepImage(l.dev, cur, img, true)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
-			case errors.Is(err, errLockedShot):
+			case errors.Is(err, errLockedShot), errors.Is(err, errCodeShot):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: " + err.Error() + ".")
 			case errors.Is(err, errScreenChanged):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: the screen changed while it was taken; observe again.")

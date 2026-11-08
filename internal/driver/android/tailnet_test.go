@@ -376,6 +376,22 @@ func TestSetAway(t *testing.T) {
 	if _, err := p.SetAway(ctx, piHW, true); err == nil {
 		t.Fatal("set up a phone without Tailscale")
 	}
+	// Tailscale on another tailnet, with its IPv6 address; a VPN in
+	// 100.64.0.0/10 alone may be another one, as Cloudflare WARP.
+	for _, c := range []struct{ addrs, missing string }{
+		{"31: tun0    inet 100.99.9.9/32 scope global tun0\n31: tun0    inet6 fd7a:115c:a1e0::99/128 scope global\n", driver.AwayOtherTailnet},
+		{"31: tun0    inet 100.96.0.5/32 scope global tun0\n", driver.AwayNoTailscaleThere},
+	} {
+		ph.mu.Lock()
+		ph.addrs = "30: wlan0    inet 192.168.1.42/24 scope global wlan0\n" + c.addrs
+		ph.mu.Unlock()
+		if a, _ := p.Away(ctx, piHW); a.Missing != c.missing {
+			t.Fatalf("%q: %+v, want %s", c.addrs, a, c.missing)
+		}
+		if _, err := p.SetAway(ctx, piHW, true); err == nil {
+			t.Fatalf("%q: set up a phone not on this tailnet", c.addrs)
+		}
+	}
 	// None here.
 	ts.set(func(s *tailnet.Status) { s.State = tailnet.NotRunning })
 	if a, _ := p.Away(ctx, piHW); a.Missing != driver.AwayNoTailscaleHere {

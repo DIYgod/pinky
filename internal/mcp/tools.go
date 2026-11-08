@@ -87,7 +87,7 @@ type keyIn struct {
 
 type launchIn struct {
 	actionArgs
-	App string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it."`
+	App string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it; or an http(s) link on an iPhone without the WebDriverAgent helper."`
 }
 
 type appsIn struct {
@@ -129,8 +129,10 @@ type waitForIn struct {
 
 type filesIn struct {
 	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
-	Action     string   `json:"action,omitempty" jsonschema:"list (default): the files on the phone and on the computer; pull: copy from the phone to the computer; push: copy from the computer to the phone, which asks the person first."`
-	Paths      []string `json:"paths,omitempty" jsonschema:"Files or folders, relative to the Pinky folder. Default: everything (for push, the files that are new or changed)."`
+	Action     string   `json:"action,omitempty" jsonschema:"list (default): the files on the phone and on the computer; pull: copy from the phone to the computer; push: copy from the computer to the phone, which asks the person first; upload: send Pinky a file for the computer's folder, when you cannot write there yourself (from another computer), then push it."`
+	Paths      []string `json:"paths,omitempty" jsonschema:"Files or folders, relative to the Pinky folder. Default: everything (for push, the files that are new or changed). For upload: the one file's name, such as photo.jpg or Pictures/photo.jpg."`
+	Content    *string  `json:"content,omitempty" jsonschema:"For upload: the file's bytes in base64, up to 10 MB. Over HTTP, leave it out to get a one-time link to send the file to with curl instead, up to 200 MB, which keeps it out of your context: better for anything but small files."`
+	Replace    bool     `json:"replace,omitempty" jsonschema:"For upload: replace a different file of the same name in the computer's folder."`
 	Intent     string   `json:"intent,omitempty" jsonschema:"For push: one sentence on why, shown to the person on the approval panel."`
 	ApprovalID string   `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with this id to keep waiting."`
 }
@@ -278,7 +280,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_launch", Title: "Open an app",
-		Description: "Open an app by name, package name or bundle id, and return its screen. Apps outside the task's list return scope_denied. " +
+		Description: "Open an app by name, package name or bundle id, and return its screen. An iPhone without the WebDriverAgent helper also opens an http(s) link, in Safari. Apps outside the task's list return scope_denied. " +
 			"Blocked banking and wallet apps ask the person, who may allow the app for the rest of the task (approval_pending; repeat with approval_id); password managers are refused.",
 		InputSchema: schema[launchIn](nil), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in launchIn) (*sdk.CallToolResult, any, error) {
@@ -329,16 +331,19 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_files", Title: "Phone files",
-		Description: "Copy files between the phone's Pinky folder (Android: /sdcard/Pinky, the only place on the phone you may reach) and a folder on this computer, " +
+		Description: "Copy files between the phone's Pinky folder (Android: /sdcard/Pinky, the only place on the phone you may reach) and a folder on the computer running Pinky, " +
 			"which the result names; use your own file tools there. list shows both sides, pull copies from the phone, push copies to the phone and asks the person first " +
-			"(up to 45 s, then approval_pending with an approval_id to repeat the call with). Read-only and watch-only agents may only list and pull. iPhones return unsupported.",
-		InputSchema: schema[filesIn](func(p map[string]*jsonschema.Schema) { enum(p["action"], "list", "pull", "push") }),
+			"(up to 45 s, then approval_pending with an approval_id to repeat the call with). " +
+			"upload sends Pinky a file for that folder when you cannot write there yourself, as from another computer: its name in paths and its bytes in content (base64), " +
+			"or over HTTP no content, for a one-time link to send the file to with curl; then push it. " +
+			"Read-only and watch-only agents may only list and pull. iPhones return unsupported.",
+		InputSchema: schema[filesIn](func(p map[string]*jsonschema.Schema) {
+			enum(p["action"], "list", "pull", "push", "upload")
+			nonNull(p, "content")
+		}),
 		Annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(false), OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in filesIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req, remote).Files(ctx, gateway.FilesRequest{
-				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Intent: strings.TrimSpace(in.Intent),
-					ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
-				Action: in.Action, Paths: in.Paths})), nil, nil
+			return s.files(ctx, req, remote, in), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_request_approval", Title: "Ask the person",

@@ -115,18 +115,27 @@ func (pr *preparer) clock() time.Time {
 }
 
 // mountState returns the phone's mount job, starting one when none ran for
-// this attach or when the last one failed long enough ago. check tells
-// whether the services Pinky needs are there; done runs when a job ends;
-// log gets a line when a job starts and when it ends.
+// this attach or when the last one failed long enough ago. When Apple's
+// signing server refused the image the last one used, it starts one only
+// once the image this computer has changed: the same image would be refused
+// again. check tells whether the services Pinky needs are there; done runs
+// when a job ends; log gets a line when a job starts and when it ends.
 func (pr *preparer) mountState(e goios.DeviceEntry, ownDir string, check func(context.Context, goios.DeviceEntry) (bool, error), done func(), log *slog.Logger) mountJob {
 	id, key := e.Properties.SerialNumber, keyOf(e)
+	// Looking for the image reads files, so not while holding the lock.
+	refused, wasRefused := pr.refusedImage(id, key)
+	sameImage := false
+	if wasRefused {
+		img, err := pr.find(ownDir)
+		sameImage = err == nil && img == refused
+	}
 	pr.mu.Lock()
 	defer pr.mu.Unlock()
 	if pr.jobs == nil {
 		pr.jobs = map[string]*mountJob{}
 	}
 	j := pr.jobs[id]
-	if j != nil && j.key == key && (j.running || pr.clock().Sub(j.ended) < retryAfter(j.err)) {
+	if j != nil && j.key == key && (j.running || pr.clock().Sub(j.ended) < retryAfter(j.err) || sameImage && j.img == refused && imageRefused(j.err)) {
 		return *j
 	}
 	j = &mountJob{key: key, running: true}
@@ -136,17 +145,14 @@ func (pr *preparer) mountState(e goios.DeviceEntry, ownDir string, check func(co
 }
 
 func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check func(context.Context, goios.DeviceEntry) (bool, error), done func(), log *slog.Logger) {
-	find, mount := pr.findFn, pr.mountFn
-	if find == nil {
-		find = findDiskImage
-	}
+	mount := pr.mountFn
 	if mount == nil {
 		mount = mountOn
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), mountTimeout+time.Minute)
 	defer cancel()
 	id, start := e.Properties.SerialNumber, time.Now()
-	img, err := find(ownDir)
+	img, err := pr.find(ownDir)
 	var res mountResult
 	if err == nil {
 		log.Info("iphone: mounting the developer disk image", "device", id, "image", imageName(img), "dir", img.Dir)
@@ -161,6 +167,8 @@ func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check f
 		log.Info("iphone: developer disk image ready", "device", id, "way", res.How, "kept", res.Already, "replaced", res.Replaced, "took", took)
 	case img.Dir == "":
 		log.Warn("iphone: no developer disk image to mount", "device", id, "err", err, "retry_in", retryAfter(err))
+	case imageRefused(err):
+		log.Warn("iphone: Apple's signing server refused the developer disk image", "device", id, "image", imageName(img), "version", img.Version, "dir", img.Dir, "way", res.How, "took", took, "err", err, "retry", "once another image is on this computer")
 	default:
 		log.Warn("iphone: could not mount the developer disk image", "device", id, "way", res.How, "took", took, "err", err, "retry_in", retryAfter(err))
 	}
@@ -279,10 +287,39 @@ func retryAfter(err error) time.Duration {
 		return 10 * time.Second
 	case problemNetwork:
 		return 20 * time.Second
-	case problemNewer, problemNotFor, problemRefused:
+	case problemNewer, problemNotFor:
 		return 10 * time.Minute
+	case problemRefused:
+		// Not with the same image (mountState), at once with another.
+		return 0
 	}
 	return 30 * time.Second
+}
+
+// imageRefused reports whether a mount failed because Apple's signing
+// server would not sign the image.
+func imageRefused(err error) bool {
+	return err != nil && classifyMountError(err) == problemRefused
+}
+
+// refusedImage returns the image the phone's last mount on this attach
+// used, when Apple's signing server refused to sign it.
+func (pr *preparer) refusedImage(id string, key entryKey) (diskImage, bool) {
+	pr.mu.Lock()
+	defer pr.mu.Unlock()
+	j := pr.jobs[id]
+	if j == nil || j.key != key || j.running || !imageRefused(j.err) {
+		return diskImage{}, false
+	}
+	return j.img, true
+}
+
+// find looks for the developer disk image to mount.
+func (pr *preparer) find(ownDir string) (diskImage, error) {
+	if pr.findFn != nil {
+		return pr.findFn(ownDir)
+	}
+	return findDiskImage(ownDir)
 }
 
 // forget drops a phone's job, so the next mountState starts a new one.
@@ -424,7 +461,8 @@ func diskImageState(info driver.Info, j mountJob, ownDir string) driver.Info {
 		case problemNetwork:
 			info.Detail = "Pinky could not reach Apple's signing server (gs.apple.com), which signs the developer disk image for each iPhone. Check the internet connection."
 		case problemRefused:
-			info.Detail = "Apple's signing server would not sign the developer disk image for this iPhone: " + lastLine(j.err)
+			info.Setup, info.Detail = driver.SetupDiskImageRefused, refusedDetail(j.img, j.err)
+			info.DiskImage = &driver.DiskImage{Source: j.img.Source, Build: j.img.Build, Version: j.img.Version, Dir: j.img.Dir}
 		case problemNotFor:
 			info.Detail = fmt.Sprintf("The developer disk image on this computer (from Xcode %s) does not support this iPhone. Update Xcode and open it once.", j.img.Build)
 		case problemNewer:
@@ -434,6 +472,34 @@ func diskImageState(info driver.Info, j mountJob, ownDir string) driver.Info {
 		}
 	}
 	return info
+}
+
+// refusedDetail says that Apple's signing server would not sign img, why
+// (err), and how to get an image it signs, by where img came from.
+func refusedDetail(img diskImage, err error) string {
+	which := imageName(img)
+	if img.Version != "" {
+		which += ", version " + img.Version
+	}
+	s := fmt.Sprintf("Apple's signing server would not sign the developer disk image Pinky found for this iPhone (%s, in %s): %s. Apple signs only recent images.", which, img.Dir, appleAnswer(err))
+	switch img.Source {
+	case sourceXcode:
+		return s + " Install or update Xcode from the App Store and open it once: it installs a newer image."
+	case sourceMirror:
+		return s + " Install Xcode from the App Store and open it once, or update Pinky when a version with a newer image is out."
+	}
+	return s + " Replace it with the iOS_DDI folder of a Mac where the latest Xcode from the App Store was opened once."
+}
+
+// appleAnswer is what Apple's signing server said in err, such as
+// `status 94: "This device isn't eligible for the requested build."`.
+func appleAnswer(err error) string {
+	s := lastLine(err)
+	const lead = "unexpected status in response "
+	if i := strings.Index(s, lead); i >= 0 {
+		return "status " + s[i+len(lead):]
+	}
+	return s
 }
 
 // noImageDetail says where to get a developer disk image.

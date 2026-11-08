@@ -2,8 +2,10 @@ package ui
 
 import (
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -152,6 +154,80 @@ func TestUseAwayFromHome(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "off", func() bool { tt.Frame(); return hasText(tt, "Use away from home is off for Pixel 9") })
+}
+
+// TestAwayNotOnTailnet: a phone whose Tailscale is off, maybe for another
+// VPN, or on another tailnet says which in Settings › Phones, with Set up
+// Tailscale, which opens the Tailscale steps, where the phone's step says
+// that Android runs one VPN at a time too.
+func TestAwayNotOnTailnet(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.sync()
+	id := ta.devices[0].Info.ID
+	oneVPN := "Android runs one VPN at a time: while another VPN or proxy app is on, Tailscale is off. Turn that one off, then turn Tailscale on."
+	tt := mg.NewTester(ta.view, 1280, 1000)
+	for _, c := range []struct {
+		missing, text string
+		vpn           bool
+	}{
+		{driver.AwayNoTailscaleThere, "Tailscale isn't connected on Pixel 9. Install it there, open it and sign in to the same account as on this computer.", true},
+		{driver.AwayOtherTailnet, "Pixel 9's Tailscale is signed in to another tailnet than this computer's. Sign in to the same account on both.", false},
+	} {
+		ta.api.SetPhoneAway(id, driver.Away{Port: 5555, Missing: c.missing})
+		ta.tn.init()
+		ta.tn.awayAt[id] = time.Time{}
+		ta.page, ta.set.sec = pageSettings, secPhones
+		ta.waitFor(t, c.missing, func() bool { tt.Frame(); return hasText(tt, c.text) })
+		if hasText(tt, oneVPN) != c.vpn {
+			t.Errorf("%s: one VPN at a time shows %v: %q", c.missing, !c.vpn, tt.Texts())
+		}
+		if err := tt.Click("Set up Tailscale"); err != nil {
+			t.Fatalf("%s: %v", c.missing, err)
+		}
+		tt.Frame()
+		if ta.page != pageAddPhone || ta.add.step != "tailnet" {
+			t.Fatalf("%s: Set up Tailscale opened %v %q", c.missing, ta.page, ta.add.step)
+		}
+	}
+	// The phone's step, while no Android phone is on the tailnet.
+	ta.api.SetTailnet(driver.TailnetStatus{State: driver.TailnetRunning, Tailnet: "someone@example.com", Self: "Someone's MacBook"})
+	ta.tn.at = time.Time{}
+	ta.waitFor(t, "the phone's step", func() bool { tt.Frame(); return hasText(tt, "Waiting for an Android phone on your tailnet…") })
+	if !hasText(tt, oneVPN) {
+		t.Errorf("the phone's step: %q", tt.Texts())
+	}
+}
+
+// TestTailnetDiagnostics: the diagnostics say whether Tailscale runs here,
+// what the Android devices on the tailnet are to Pinky, and each Android
+// phone's Use away from home, without the tailnet's or the devices' names.
+func TestTailnetDiagnostics(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.sync()
+	var phones []driver.Info
+	for _, d := range ta.devices {
+		phones = append(phones, d.Info)
+	}
+	id := phones[0].ID
+	ta.api.SetPhoneAway(id, driver.Away{Port: 5555, Missing: driver.AwayNoTailscaleThere})
+	got := tailnetDiagnostics(ta.ctx, ta.api, phones)
+	want := []string{
+		"Tailscale: running · tailnet name not shown · Android devices on it: 1",
+		"Tailscale: Android device 1: online · not one of Pinky's phones",
+		"Use away from home on Pixel 9: off · missing tailscale_phone",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("lines:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	for _, l := range got {
+		if strings.Contains(l, "example.com") || strings.Contains(l, "pixel-8a") || strings.Contains(l, "MacBook") {
+			t.Errorf("a name in %q", l)
+		}
+	}
+	ta.api.SetTailnet(driver.TailnetStatus{State: driver.TailnetStopped})
+	if got := tailnetDiagnostics(ta.ctx, ta.api, nil); !slices.Equal(got, []string{"Tailscale: stopped"}) {
+		t.Errorf("stopped: %q", got)
+	}
 }
 
 // TestUseWiFiInstead moves an Android 10 phone on a cable to Wi-Fi from the

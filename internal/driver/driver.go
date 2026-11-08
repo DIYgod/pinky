@@ -61,7 +61,26 @@ type Info struct {
 	// when that is not the local network: ViaTailscale through Tailscale;
 	// "" on the computer's own network or by cable.
 	Via string
+	// DiskImage is the developer disk image a phone waiting with
+	// SetupDiskImageRefused was refused; nil otherwise.
+	DiskImage *DiskImage `json:",omitempty"`
 }
+
+// DiskImage is a developer disk image on the computer (iPhones).
+type DiskImage struct {
+	Source  string // where it was found, one of the DiskImageFrom constants
+	Build   string // the Xcode build it came with, such as "27B52"
+	Version string // its version on the phone, such as "27.2.52.0"; "" for images older than Xcode 16
+	Dir     string // its folder
+}
+
+// Where a developer disk image was found, in DiskImage.Source.
+const (
+	DiskImageFromXcode  = "xcode"  // installed by Xcode on this Mac
+	DiskImageFromMirror = "mirror" // downloaded from the third-party mirror (DiskImageDownloader)
+	DiskImageFromFolder = "pinky"  // put in Pinky's own folder
+	DiskImageFromEnv    = "env"    // named by the PINKY_DDI environment variable
+)
 
 // Setup steps, in Info.Setup.
 const (
@@ -74,6 +93,12 @@ const (
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
 	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
+	// SetupDiskImageRefused: Apple's signing server would not sign the
+	// developer disk image on the computer (Info.DiskImage) for the phone,
+	// as it does with images it no longer signs, such as those of Xcode
+	// before 27. Trying the same image again cannot help: the computer
+	// needs a newer one, which the provider tries as soon as it is there.
+	SetupDiskImageRefused = "disk_image_refused"
 	// A phone reached over the network (WiFiSwitch, Tailnet) that is
 	// offline: its adb stopped listening, as when it restarted (plug it in
 	// once and turn its Wi-Fi connection on again), or it is not on the
@@ -161,11 +186,13 @@ type ObserveOptions struct {
 	// screen it read, as a screenshot or a frame of the video kept in
 	// memory only, to read its text by OCR: not of a locked phone, nor of
 	// a blocked app unless the person allowed it for the task. The
-	// picture must not outlive the read: no file, no cache. A driver that
-	// reads the tree first (Android) asks it with the screen as read,
-	// before it captures, and adds no OCR elements when it may not. nil
-	// means it may. The iOS driver captures while it reads the tree, so
-	// it does not ask.
+	// picture must not outlive the read: no file, no cache. A driver asks
+	// it with the screen as read, before it captures, and adds no OCR
+	// elements when it may not: Android once it has the tree, iOS as soon
+	// as it knows the app in front and the lock state, which it asks again
+	// with the screen it returns. The gateway sets it on every read, also
+	// without OCR: the iOS inspector path takes a picture to place the
+	// tree's elements. nil means it may.
 	MayCapture func(s *screen.Screen) bool
 }
 
@@ -185,6 +212,10 @@ type App struct {
 	ID     string // package name or bundle id
 	Name   string
 	System bool
+	// Aliases are other names the person knows the app by: on an iPhone,
+	// the name its home screen shows when that differs from the app's own
+	// ("微信" for WeChat, whose bundle is named WeChat in every language).
+	Aliases []string
 }
 
 // Key is a hardware or navigation key.
@@ -289,6 +320,17 @@ type LockReporter interface {
 // "Pay"), before any read has returned OCR elements.
 type TextReader interface {
 	ReadsText() bool
+}
+
+// FrameShooter is a Device whose screenshots are slow where a frame of its
+// live video is not: an iPhone over Wi-Fi, whose screenshot is a PNG of up
+// to 15 MB. ScreenshotFromFrame returns the screen taken from frame (a
+// picture of the live video, as ObserveOptions.Frame gives), cropped to the
+// screenshot's size, when the driver prefers it now; ok false means take a
+// screenshot. The gateway takes approval cards', history's and agents'
+// screenshots this way first.
+type FrameShooter interface {
+	ScreenshotFromFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool)
 }
 
 // Clipboard reads and writes the phone's clipboard.
@@ -613,7 +655,8 @@ type Away struct {
 // Away.Missing.
 const (
 	AwayNoTailscaleHere  = "tailscale_here"  // Tailscale does not run on this computer
-	AwayNoTailscaleThere = "tailscale_phone" // the phone is not on this computer's tailnet
+	AwayNoTailscaleThere = "tailscale_phone" // Tailscale is not connected on the phone, as when another VPN is on
+	AwayOtherTailnet     = "tailscale_other" // the phone's Tailscale is on another tailnet than this computer's
 	AwayNotConnected     = "not_connected"   // the phone is not connected to set it up (cable or Wi-Fi)
 )
 
@@ -726,6 +769,24 @@ var ErrCanceled = errors.New("canceled")
 // WiFiConnector then connects with the address the person reads off the
 // phone.
 var ErrPairedNotFound = errors.New("the phone paired, but its wireless debugging address was not found on the network")
+
+// Why pairing over Wi-Fi failed, wrapped by PairWithCode and Pairing.Wait
+// with the pairing tool's own words. adb says the same when the phone
+// refused the code and when the connection dropped, so ErrPairRejected
+// covers both.
+var (
+	// ErrPairNotListening: nothing at the address took the connection, as
+	// a wrong port, or a pairing dialog or QR screen the phone closed.
+	ErrPairNotListening = errors.New("nothing at that address takes pairing requests")
+	// ErrPairUnreachable: the address did not answer.
+	ErrPairUnreachable = errors.New("the phone did not answer at that address")
+	// ErrPairRejected: the phone ended the pairing: a wrong code, a port
+	// that is not the pairing dialog's, or a connection that dropped.
+	ErrPairRejected = errors.New("the phone ended the pairing")
+	// ErrPairOldTool: the pairing tool cannot pair over Wi-Fi, as an adb
+	// server older than platform-tools 30.
+	ErrPairOldTool = errors.New("this computer's adb server cannot pair over Wi-Fi")
+)
 
 // ConnectionChooser is a Provider that can reach a phone in more than one
 // way and lets the person choose, per phone (iPhone: Xcode's CoreDevice

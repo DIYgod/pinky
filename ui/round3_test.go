@@ -206,6 +206,61 @@ func TestPairByQRCode(t *testing.T) {
 	}
 }
 
+// TestPairByQRCodeFails: a QR pairing that fails says why without blaming
+// a code, which Pinky made, and offers the pairing code where it may help;
+// not when the phone is out of reach, which a code does not change.
+func TestPairByQRCodeFails(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, PairDelay: -1})
+	ta.sync()
+	ta.page = pageAddPhone
+	ta.add.reset(ta.app)
+	ta.add.step = "qr"
+	tt := mg.NewTester(ta.view, 1280, 820)
+	for _, c := range []struct {
+		why  error
+		text string
+		code bool
+	}{
+		{driver.ErrPairRejected, "The phone ended the pairing before it finished.", true},
+		{driver.ErrPairNotListening, "The phone stopped waiting to pair, as it does when it leaves the scanning screen.", true},
+		{driver.ErrPairUnreachable, "The phone showed up on the network, but Pinky couldn't connect to it.", false},
+		{driver.ErrPairOldTool, "The adb server running on this computer is too old to pair phones over Wi-Fi.", false},
+	} {
+		ta.waitFor(t, "the QR code", func() bool { tt.Frame(); return ta.add.pair.code != nil && ta.add.pair.state == "waiting" })
+		ta.api.FailPairing(fmt.Errorf("android: pairing with 192.168.1.42:37123 failed: %w (adb: pairing failed: Wrong password or connection was dropped.)", c.why))
+		ta.waitFor(t, "the failure", func() bool { tt.Frame(); return ta.add.pair.state == "failed" })
+		tt.Frame()
+		if !strings.HasPrefix(ta.add.pair.err, c.text) || !hasText(tt, ta.add.pair.err) {
+			t.Errorf("%v: %q, want %q…", c.why, ta.add.pair.err, c.text)
+		}
+		if strings.Contains(strings.ToLower(ta.add.pair.err), "code didn't match") {
+			t.Errorf("%v: blames the code: %q", c.why, ta.add.pair.err)
+		}
+		// The box offers the code, or the link under the page does: once.
+		if ta.add.pair.errCode != c.code {
+			t.Errorf("%v: the box offers the code: %v, want %v", c.why, ta.add.pair.errCode, c.code)
+		}
+		if n := strings.Count(strings.Join(tt.Texts(), "\n"), "Pair with a code instead"); n != 2 {
+			t.Errorf("%v: Pair with a code instead shows %d times (label and text), want once", c.why, n)
+		}
+		if err := tt.Click("Try again"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// The next step: the code form.
+	ta.waitFor(t, "the QR code", func() bool { tt.Frame(); return ta.add.pair.state == "waiting" })
+	ta.api.FailPairing(fmt.Errorf("android: pairing failed: %w", driver.ErrPairRejected))
+	ta.waitFor(t, "the failure", func() bool { tt.Frame(); return ta.add.pair.state == "failed" })
+	tt.Frame()
+	if err := tt.Click("Pair with a code instead"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !ta.add.pair.form || ta.add.pair.cancel != nil {
+		t.Errorf("not on the code form: form %v, QR pairing running %v", ta.add.pair.form, ta.add.pair.cancel != nil)
+	}
+}
+
 func lum(img *image.RGBA, x, y int) int {
 	i := img.PixOffset(x, y)
 	return (int(img.Pix[i]) + int(img.Pix[i+1]) + int(img.Pix[i+2])) / 3
@@ -241,10 +296,11 @@ func TestPairWithCode(t *testing.T) {
 		}
 	}
 	try("the phone", "123456", "Enter the IP address and port the phone shows, like 192.168.1.20:37123.")
-	try("192.168.1.20:37123", "000000", "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairing code.")
-	try("192.168.1.20:1", "123456", "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they change each time it opens.")
+	try("192.168.1.20:37123", "000000", "The phone didn't accept the pairing. Check the code, and that the port is the one in the Pair device with pairing code dialog, not the one at the top of Wireless debugging. Both change each time the dialog opens.")
+	try("192.168.1.20:3", "123456", "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they change each time it opens.")
+	try("192.168.1.20:1", "123456", "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog, and keep it open until Pinky is done.")
 	tt.Frame()
-	if !hasText(tt, "Couldn't reach the phone at that address.") && !hasText(tt, st.formErr) {
+	if !hasText(tt, st.formErr) {
 		t.Errorf("the error does not show: %q", tt.Texts())
 	}
 	st.addr, st.pin = "192.168.1.20:37123", "123456"

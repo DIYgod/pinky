@@ -34,6 +34,7 @@ type Options struct {
 	HandoffTimeout  time.Duration // default 15 min
 	IdleTimeout     time.Duration // default 10 min without calls ends a lease
 	ReconnectGrace  time.Duration // default 60 s a lease survives a dropped device
+	ResumeGrace     time.Duration // default 2 min a resuming agent's closed session keeps its leases for its next one
 	SettleMax       time.Duration // default 3 s
 	PollInterval    time.Duration // default 250 ms, for settling and phone_wait_for
 	DiscoverEvery   time.Duration // default 2 s
@@ -68,6 +69,7 @@ func (o *Options) defaults() {
 	set(&o.HandoffTimeout, 15*time.Minute)
 	set(&o.IdleTimeout, 10*time.Minute)
 	set(&o.ReconnectGrace, 60*time.Second)
+	set(&o.ResumeGrace, 2*time.Minute)
 	set(&o.SettleMax, 3*time.Second)
 	set(&o.PollInterval, 250*time.Millisecond)
 	set(&o.DiscoverEvery, 2*time.Second)
@@ -90,12 +92,14 @@ type Gateway struct {
 	approvals *approval.Center
 	rec       *recorder
 
-	mu       sync.Mutex
-	devices  map[string]*device
-	sessions map[string]*Session
-	ended    []*task // recently ended tasks, newest last
-	agents   map[string]*agentState
-	apSteps  map[string]stepRef // approval id -> the step it holds
+	mu          sync.Mutex
+	devices     map[string]*device
+	sessions    map[string]*Session
+	sessionSeq  uint64       // the last Session.seq
+	resumeStops []resumeStop // recent Stops of resuming agents (resume.go)
+	ended       []*task      // recently ended tasks, newest last
+	agents      map[string]*agentState
+	apSteps     map[string]stepRef // approval id -> the step it holds
 
 	subMu sync.Mutex
 	subs  map[chan Event]struct{}
@@ -205,8 +209,11 @@ func (g *Gateway) Close() error {
 	}
 	g.mu.Unlock()
 	for _, s := range sessions {
-		s.end("gateway stopped")
+		s.end("gateway stopped", false)
 	}
+	g.mu.Lock()
+	g.endKeptLocked("gateway stopped")
+	g.mu.Unlock()
 	g.approvals.Close()
 	g.cancel()
 	// Recordings close their files, which needs the history queue.

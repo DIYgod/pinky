@@ -351,9 +351,10 @@ func (p devicePower) keypadShown(ctx context.Context) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	c, cancel := context.WithTimeout(context.WithoutCancel(ctx), raxLimits.Budget+raxRequestTimeout)
+	lim := p.d.walkLimits()
+	c, cancel := context.WithTimeout(context.WithoutCancel(ctx), lim.Budget+raxRequestTimeout)
 	defer cancel()
-	els, _, err := rax.walk(c, raxLimits)
+	els, _, err := rax.walk(c, lim)
 	if err != nil {
 		return false, err
 	}

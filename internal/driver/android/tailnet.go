@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -135,6 +136,9 @@ func splitTailnetAddr(addr string, st tailnet.Status) (string, int, error) {
 	return "", 0, fmt.Errorf("android: no device named %q on the tailnet", host)
 }
 
+// oneVPN says why Tailscale may be off on a phone that has it.
+const oneVPN = "Android runs one VPN at a time, so another VPN or proxy app on the phone turns Tailscale off."
+
 // Away implements driver.Tailnet.
 func (p *Provider) Away(ctx context.Context, id string) (driver.Away, error) {
 	n, kept := p.net.get(id)
@@ -156,6 +160,10 @@ func (p *Provider) Away(ctx context.Context, id string) (driver.Away, error) {
 	if local == "" {
 		local = c.local
 	}
+	// other: the phone's Tailscale is on another tailnet. Its addresses
+	// unknown here include one in Tailscale's own IPv6 range; one in
+	// 100.64.0.0/10 alone may be another VPN's, as Cloudflare WARP's.
+	other := false
 	switch {
 	case c.tail != "":
 		out.Listening = true
@@ -175,6 +183,7 @@ func (p *Provider) Away(ctx context.Context, id string) (driver.Away, error) {
 			}
 			if out.Addr == "" && len(addrs) > 0 {
 				out.Addr = addrs[0].String()
+				other = slices.ContainsFunc(addrs, netip.Addr.Is6)
 			}
 		}
 		out.Listening = p.listenPort(ctx, local) == out.Port
@@ -189,11 +198,17 @@ func (p *Provider) Away(ctx context.Context, id string) (driver.Away, error) {
 		out.Detail += "."
 	case out.Addr == "" && local != "":
 		out.Missing = driver.AwayNoTailscaleThere
-		out.Detail = "Tailscale is not connected on the phone: install it there, or open it, and sign in to the same account as on this computer."
+		out.Detail = "Tailscale is not connected on the phone: install it there, or open it, and sign in to the same account as on this computer. " + oneVPN
 	case out.Addr != "":
-		if _, ok := st.Device(out.Addr); !ok {
-			out.Missing = driver.AwayNoTailscaleThere
+		if _, ok := st.Device(out.Addr); ok {
+			break
+		}
+		if other {
+			out.Missing = driver.AwayOtherTailnet
 			out.Detail = "The phone's Tailscale is signed in to another tailnet than this computer's."
+		} else {
+			out.Missing = driver.AwayNoTailscaleThere
+			out.Detail = "The phone's VPN is not this computer's tailnet: another VPN than Tailscale, or Tailscale on another tailnet. " + oneVPN
 		}
 	}
 	if out.Missing == "" && local == "" && c.tail == "" && !on {

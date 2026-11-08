@@ -76,6 +76,9 @@ type Element struct {
 	Path string
 	// ID is the platform's resource id or accessibility identifier, if any.
 	ID string
+	// Masked is set when Pinky masked a one-time code in Label (policy);
+	// pictures of the screen cover Bounds. It is never shown to agents.
+	Masked bool
 }
 
 // Has reports whether the element is in the given state.

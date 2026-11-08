@@ -435,8 +435,9 @@ func (d *Device) latinKeyboard(ctx context.Context, rax *raxSession, note func(s
 			return false, err
 		}
 		field, value := d.focusedValue(ctx)
-		wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), raxLimits.Budget+raxRequestTimeout)
-		els, _, err := rax.walk(wctx, raxLimits)
+		lim := d.walkLimits()
+		wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), lim.Budget+raxRequestTimeout)
+		els, _, err := rax.walk(wctx, lim)
 		cancel()
 		if err != nil {
 			return false, err

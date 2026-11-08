@@ -11,7 +11,6 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
-	"github.com/danielpaulus/go-ios/ios/instruments"
 )
 
 // inputSettle is how long the device needs after a stream starts before it
@@ -52,7 +51,7 @@ type Device struct {
 	svcMu       sync.Mutex
 	info2       *cdService // deviceinfo
 	shot        *cdService // screencapture
-	inst        *instruments.ScreenshotService
+	inst        *instShot
 	ax          *axSession
 	rax         *raxSession
 	raxErr      error // why rax could not connect, until raxFailedAt+raxRecheckFailures
@@ -60,12 +59,14 @@ type Device struct {
 	apps        *appCatalog
 	pidApps     map[uint64]driver.App
 	pidMiss     map[uint64]time.Time          // processes that are no app, and when that was found
+	web         webCache                      // which processes of a walk are WebKit's web content
 	foreground  func(context.Context) []axApp // for tests: the app states the inspector reported
 	sb          springBoardWatch
 	capture     captureMarks // what screenshots did not show (capture.go)
 	pb          *pbConn
 
-	typeStats TypeStats // guarded by mu
+	typeStats   TypeStats // guarded by mu
+	framesAfter time.Time // no frames of the video for pictures until then (capture.go); guarded by mu
 
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.

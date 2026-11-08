@@ -7,13 +7,14 @@ iPhones need a cable for now. An Android 10 phone, which has no Wireless debuggi
 ## What you need
 
 - Tailscale on the computer that runs Pinky and on the phone, signed in to the same account (the same *tailnet*). Personal use is free.
+- No other VPN on the phone while you use it this way. Android runs one VPN at a time: turning on another VPN or a proxy app that works as one turns Tailscale off.
 - An Android phone (Android 10 or later) that Pinky already uses: you set it up once while it is near the computer, by cable or on the same Wi-Fi.
 - The computer awake while you are out ([below](#keeping-the-computer-awake)).
 
 ## Setting it up
 
 1. **On the computer**, install Tailscale ([download](https://tailscale.com/download)) and sign in. On a Mac, either app works (from the website or the App Store). On Linux, `sudo tailscale up`.
-2. **On the phone**, install Tailscale from Google Play, open it and sign in to the same account. Allow the VPN when Android asks.
+2. **On the phone**, install Tailscale from Google Play, open it and sign in to the same account. Allow the VPN when Android asks. Turn off any other VPN or proxy app first, as Android runs one VPN at a time.
 3. **In Pinky**, with the phone connected by cable or Wi-Fi, open **Settings › Phones**, and under the phone, next to **Use away from home**, click **Turn on…**. Pinky says what this opens (below) and asks first. It then has the phone's adb listen on the network (`adb tcpip 5555`) and connects to the phone at its Tailscale address.
 
 That's all. Pinky now keeps a connection to the phone through Tailscale and uses it whenever the phone has no connection on the computer's own network: the phone stays in Pinky's list as you leave, with **Tailscale** under its name instead of Wi-Fi or USB.
@@ -71,8 +72,10 @@ At 1 Mbit/s, steady change takes about 450 MB an hour. The away-from-home tests 
 
 ## When it does not work
 
+- **"Tailscale isn't connected on the phone"** (Settings › Phones, under **Use away from home**): the phone has no Tailscale address. Open Tailscale on the phone and sign in to the same account as on the computer. If it was on, another VPN or proxy app has most likely taken its place: Android runs one VPN at a time, and turning another one on turns Tailscale off. Turn that one off, then turn Tailscale on again. **Set up Tailscale** next to it opens the steps.
+- **"Signed in to another tailnet than this computer's"**: Tailscale is on on the phone, but on another account than the computer's. Sign in to the same account on both; **Set up Tailscale** shows the tailnet the computer is on.
 - **"Doesn't take connections from Pinky yet"**: the phone's adb does not listen on the network. It stops when the phone restarts. Bring the phone near the computer (cable or Wi-Fi) and turn **Use away from home** on again.
-- **"Couldn't reach the phone through Tailscale"**: Tailscale on the phone is off or has no internet. Open Tailscale on the phone. Android may stop it to save power: in Android's settings, let Tailscale run in the background, or make it the always-on VPN (Settings › Network › VPN).
+- **"Couldn't reach the phone through Tailscale"**: Tailscale on the phone is off or has no internet. Open Tailscale on the phone, and turn off any other VPN or proxy app there. Android may stop it to save power: in Android's settings, let Tailscale run in the background, or make it the always-on VPN (Settings › Network › VPN).
 - **Slow, "connected through a Tailscale relay"**: the two devices could not reach each other directly, so their traffic goes through one of Tailscale's relay servers. `tailscale ping <phone>` on the computer says which way it goes. A home router or proxy that rewrites the computer's UDP traffic (a VPN gateway, Surge or Clash in gateway mode) often causes it: let Tailscale's traffic go direct there (UDP port 41641 and Tailscale's addresses, 100.64.0.0/10).
 - **The phone shows up twice for a moment, or reconnects as you leave**: normal. Pinky moves from the local connection to the one through Tailscale; a task on the phone carries on.
 
@@ -99,6 +102,7 @@ For developers; the code is in `internal/tailnet` and `internal/driver/android/n
 - `List` starts a reconnect pass now and then (every 20 s while an address has no connection, every minute otherwise). For each kept address without a connection, a 3 s TCP probe goes first (the adb server would wait 75 s for an address nothing answers); then `adb connect`. A Wi-Fi address that does not answer, or refuses, is looked up again with mDNS for 6 s (a dozing phone answers in up to 5 s); a Tailscale address is tried only while Tailscale says the phone is online, and a new address for the same node is picked up. Failed addresses wait 10 s, doubling to 2 min.
 - A kept phone with no connection at all is listed offline, with `driver.Info.Setup` `network_off` once its adb refused (it restarted: plug it in once) or `network_away` while it does not answer; the client words them.
 - The phone's addresses come from the phone (`ip -o addr show`): the first IPv4 address of a `wlan` interface, and the VPN interface's addresses in 100.64.0.0/10, which carriers use too, matched against the tailnet's devices.
+- `Away` says what keeps a phone from being set up (`driver.Away.Missing`): `tailscale_phone` when the phone has none of those addresses, or only one in 100.64.0.0/10 that the tailnet does not know, which another VPN may hold (Cloudflare WARP's are there); `tailscale_other` when one of them is in Tailscale's own IPv6 range (fd7a:115c:a1e0::/48) and the tailnet does not know it, so the phone's Tailscale is on another tailnet.
 - A phone with several connections is listed once, by the best (USB, then the local network, then Tailscale), so it moves to the next when one goes; `driver.Info.Via` is `tailscale` when Tailscale is the one.
 - Turning either on runs `tcpip:5555` over a connection the phone has (adbd restarts; the connection comes back in about 2 s; on Android 17 over Wireless debugging its reply may not get through, so the connection at the new address confirms it) and connects at the new address; off runs `usb:`. Removing the phone from Pinky turns both off.
 - A phone reached through Tailscale streams at 1 Mbit/s and 15 frames a second (`tailnetBitRate`), unless Pinky's configuration sets a rate; the settle threshold (about 300 bytes a packet) and screenshots (`screencap`) do not depend on it.

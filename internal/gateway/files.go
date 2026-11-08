@@ -21,16 +21,29 @@ import (
 // phone_files (round three, decision 7): the phone's Pinky folder
 // (driver.Files, /sdcard/Pinky on Android) and a folder on the computer,
 // <data>/files/<phone id>/, copied either way on request. Agents use their
-// own file tools on the local folder. Read-only and watch-only agents may
-// only list and pull; copying to the phone asks the person (rule "Files"),
-// and read-only mode refuses it.
+// own file tools on the local folder. An agent that cannot reach that
+// folder (one on another computer, over HTTP) uploads a file into it
+// instead. Read-only and watch-only agents may only list and pull; copying
+// to the phone asks the person (rule "Files"), and read-only mode refuses
+// it and the uploads made for it.
 
 // FilesRequest is phone_files.
 type FilesRequest struct {
 	Call
-	Action string   // list (default), pull or push
-	Paths  []string // files or folders, relative to the Pinky folder; empty means all
+	Action string   // list (default), pull, push or upload
+	Paths  []string // files or folders, relative to the Pinky folder; empty means all. upload: the one file's name
+
+	// For upload: the file's contents, at most MaxUpload bytes, and whether
+	// they may replace a different file of that name. Check only checks
+	// that the upload could go ahead and writes nothing, before an upload
+	// link is handed out.
+	Body    io.Reader
+	Replace bool
+	Check   bool
 }
+
+// MaxUpload bounds a file an agent uploads.
+const MaxUpload = 200 * 1000 * 1000
 
 // FileView is a file of a phone_files result.
 type FileView struct {
@@ -86,10 +99,21 @@ func (s *Session) Files(ctx context.Context, req FilesRequest) *Result {
 	if action == "" {
 		action = "list"
 	}
-	if action != "list" && action != "pull" && action != "push" {
-		return errResult(ErrInvalidArgument, "action must be list, pull or push.")
+	if action != "list" && action != "pull" && action != "push" && action != "upload" {
+		return errResult(ErrInvalidArgument, "action must be list, pull, push or upload.")
 	}
 	var paths []string
+	switch {
+	case action == "upload" && len(req.Paths) != 1:
+		return errResult(ErrInvalidArgument, `upload takes one file: pass its name in paths, such as ["photo.jpg"].`)
+	case action == "upload":
+		name, why := uploadName(req.Paths[0])
+		if why != "" {
+			return errResult(ErrInvalidArgument, "%q cannot be a file name in the Pinky folder: %s.", req.Paths[0], why)
+		}
+		paths = []string{name}
+		req.Paths = nil
+	}
 	for _, p := range req.Paths {
 		clean, ok := cleanRel(p)
 		if !ok {
@@ -128,9 +152,12 @@ func (s *Session) Files(ctx context.Context, req FilesRequest) *Result {
 	}
 	args := argsJSON(map[string]any{"action": action, "paths": paths})
 	start := time.Now()
-	if action == "push" {
+	switch action {
+	case "push":
 		res = g.pushFiles(ctx, l, req, fsys, dir, paths, args, start)
-	} else {
+	case "upload":
+		res = g.upload(ctx, l, req, dir, paths[0], args, start)
+	default:
 		res = g.listOrPull(ctx, l, action, fsys, dir, paths, args, start)
 	}
 	if res.Status != StatusPending {

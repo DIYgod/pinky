@@ -96,6 +96,16 @@ Pinky 自带 adb，这是它连接 Android 手机用的工具，从 Android 源�
 - 「Pinky 无法在这个网络上查找手机」：确认电脑已连接 Wi-Fi 或以太网。
 - 「已找到手机，但配对还没有完成」：如果手机显示错误或已回到「无线调试」页面，请重新扫描二维码，或者改用配对码。
 
+配对中途报错时，页面会说明 adb 报告了什么：
+
+- 「配对还没完成，手机就结束了」（二维码）：手机离开了扫码界面、换了 Wi-Fi，或者电脑和手机之间有东西断开了连接；adb 分辨不出是哪一种。让手机停留在扫码界面后重试，或者点提示旁边的「改用配对码」。
+- 「手机没有接受这次配对」（配对码）：配对码不对，或者端口不是配对对话框里的。「无线调试」页面顶部的地址用来连接，不用来配对，而 adb 对这两种错误的回答一模一样。
+- 「这个地址上没有在等待配对的设备」或「手机已不再等待配对」：配对对话框或扫码界面已经关闭，或者端口不对。重新打开，按它现在显示的内容操作。
+- 「无法通过这个地址连接手机」或「Pinky 连不上它」：网络把电脑和手机隔开了，情况同上；电脑上的 VPN 或防火墙也会这样。
+- 「这台电脑上运行的 adb 服务版本太旧」：别的程序启动了比 platform-tools 30 更旧的 adb。退出它或更新它，Pinky 就会启动自己的。
+
+Pinky 会把 adb 的原话写进日志，「帮助 › 发送反馈…」会把它连同诊断信息一起附上。
+
 通过 Wi-Fi 配对需要 Android 11 或更高版本；Android 10 的手机要先插线，再用「改用 Wi-Fi 连接…」换成 Wi-Fi（[见下文](#手机)）。在 Android 16 及更早的版本上，手机离开所连的 Wi-Fi（哪怕只是切到同一网络的另一个接入点）或重启后，「无线调试」会自己关闭：请重新打开，或在「添加手机」中重新配对。
 
 #### iPhone
@@ -106,13 +116,13 @@ Pinky 会自己准备好 iPhone，「添加手机 › iPhone」会一步步带�
 2. 在 iPhone 上打开「设置 › 隐私与安全性」里的「开发者模式」：这个开关是 Pinky 让它出现的。iPhone 会重启；解锁后点「打开」，再输入锁屏密码。
 3. Pinky 把 Apple 的开发者磁盘映像挂载到 iPhone 上，然后把它列为就绪。iOS 27 的 iPhone 重启后映像还在；iOS 27 以下的 iPhone 每次重启后，只要你解锁，Pinky 都会自己重新挂载。
 
-开发者磁盘映像随 [Xcode](https://apps.apple.com/app/xcode/id497799835)（Apple 给开发者的免费应用）提供，Pinky 不自带。在 Mac 上装一次 Xcode 并打开一次：Pinky 会用它装好的映像，之后 Xcode 不用再打开。在 Windows 和 Linux 上，把这样一台 Mac 上的 `/Library/Developer/DeveloperDiskImages/iOS_DDI` 复制到 Pinky 的文件夹里（[放在哪](docs/notes/ios.md#preparing-a-phone-without-xcode)）。两样都没有的话，「添加手机」会提出从第三方镜像 github.com/doronz88/DeveloperDiskImage 下载映像（Xcode 27.0 beta 4，32 MB，由 pymobiledevice3 的作者维护，不是 Apple），只在你点「下载」时才下载；Pinky 会按预期的校验和核对每一个文件。iOS 27 及以上，iPhone 上不会装任何应用。
+开发者磁盘映像随 [Xcode](https://apps.apple.com/app/xcode/id497799835)（Apple 给开发者的免费应用）提供，Pinky 不自带。在 Mac 上装一次 Xcode 并打开一次：Pinky 会用它装好的映像，之后 Xcode 不用再打开。iOS 27 及以上的 iPhone 需要 Xcode 27 或更新版本的映像：Apple 的签名服务器已不再为更早的映像签名，这时「添加手机」会写明 Pinky 用的是哪个映像，以及怎么换成新的。在 Windows 和 Linux 上，把这样一台 Mac 上的 `/Library/Developer/DeveloperDiskImages/iOS_DDI` 复制到 Pinky 的文件夹里（[放在哪](docs/notes/ios.md#preparing-a-phone-without-xcode)）。两样都没有的话，「添加手机」会提出从第三方镜像 github.com/doronz88/DeveloperDiskImage 下载映像（Xcode 27.0 beta 4，32 MB，由 pymobiledevice3 的作者维护，不是 Apple），只在你点「下载」时才下载；Pinky 会按预期的校验和核对每一个文件。iOS 27 及以上，iPhone 上不会装任何应用。
 
 在 iPhone 13 mini（iOS 27.0.1）上验证过：映像被卸掉后 Pinky 自己挂上 Xcode 的映像（约 1.5 秒），沿用手机上已有的映像，以及 iPhone 重启后映像还在。还没在真机上试过：下载的映像、开发者模式开关、iOS 27 以下的 iPhone，以及在 Windows 或 Linux 上连接 iPhone。
 
 #### 通过 Wi-Fi 使用 iPhone 和 iPad
 
-iPhone 或 iPad 和电脑在同一个 Wi-Fi 下，并且电脑在 Wi-Fi 上列出了它时，Pinky 也会通过 Wi-Fi 使用它。手机以允许 Wi-Fi 的方式和这台电脑配对过（在「访达」里勾选在 Wi-Fi 上显示这台 iPhone 的选项，英文为 Show this iPhone when on Wi-Fi；或者用过 Xcode）之后，电脑就会列出它。这项功能默认打开；在「设置 › 手机 › 通过 Wi-Fi 使用 iPhone 和 iPad」里可以关掉。
+iPhone 或 iPad 和电脑在同一个 Wi-Fi 下，并且电脑在 Wi-Fi 上列出了它时，Pinky 也会通过 Wi-Fi 使用它。手机的 Wi-Fi 连接打开后，电脑就会列出它。你插上手机并让它信任这台电脑后，Pinky 会自己打开它的 Wi-Fi 连接：这和在「访达」里勾选在 Wi-Fi 上显示这台 iPhone 的选项（英文为 Show this iPhone when on Wi-Fi）是同一个设置，已经这样设置过的手机保持不变。这项功能默认打开；在「设置 › 手机 › 通过 Wi-Fi 使用 iPhone 和 iPad」里可以关掉，关掉不会改动手机上的这个设置（可以在「访达」里关掉）。
 
 - Pinky 用过的 iPhone 或 iPad 拔掉线后仍可继续使用，还是同一台手机、同样的设置：Pinky 会自己把它切到 Wi-Fi，插回线时再切回有线，Agent 的任务会继续；切换期间它的调用会等几秒。
 - Pinky 没用过的，比如家人和这台电脑配对过的 iPad，会显示为「在 Wi-Fi 上发现」。在你选择「使用」（Pinky 会通过 Wi-Fi 完成准备）或「忽略」（插上线之前它都不会再出现在列表里）之前，Pinky 只读取它的名字、型号和 iOS 版本，不做任何其他事，Agent 也看不到它。
@@ -170,11 +180,12 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
   辅助应用是 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你用 Xcode 重新安装；到期后，手机会显示为「需要设置」并说明原因，而不是启动辅助应用失败（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。
 - **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。改用 WebDriverAgent 辅助应用连接这台 iPhone（「设置 › 手机」）：这样手机不共享屏幕，Agent 也能用这些 App。
 - **锁着的手机**：Pinky 从不让手机一直亮着，只在每一步之前唤醒屏幕。在「设置 › 手机」里保存手机的 PIN 码，就能在电脑上用 Touch ID 解锁。Agent 永远看不到 PIN 码。Android 上，这在 AOSP 风格的锁屏上验证过（Mi 10 Pro 上的 LineageOS，Android 10、16 和 17 模拟器）；小米、三星、OPPO、一加、vivo、荣耀和华为的锁屏只有根据已知信息写的测试覆盖，Pinky 读不准 PIN 码键盘时什么都不会输入（[详情](docs/notes/integration.md#unlocking-other-android-phones)）。
+- **文件**：在 Android 上，Agent 可以在手机的 Pinky 文件夹（`/sdcard/Pinky`，手机上它们唯一能碰到的地方）和电脑上的一个文件夹之间拷贝文件，往手机上拷贝之前会先问你。拷到那里的图片会出现在手机的相册和图片选择器里，Agent 可以在聊天应用里把它发出去。另一台电脑上的 Agent 碰不到电脑上的那个文件夹，所以它会先把文件发给 Pinky：小文件直接放在调用里，大一些的发到 Pinky 给它的一次性链接。之后把文件拷到手机上，照样要你同意（[详情](docs/mcp.md#uploading-a-file)）。iPhone 上没有这个功能。
 - **移除手机**：手机 ⋯ 菜单里的「移除这台手机…」（手机离线时它的页面上、「所有手机」里它的卡片上、侧栏里它的右键菜单和「设置 › 手机」里也有）会把它从列表里去掉，并删除它保存的 PIN 码和设置。它的任务、截图和录屏会留在「活动」里，除非你勾选把它们也删掉；正在这台手机上运行的任务会停止。插着线的手机会立刻作为一台新手机回来，直到你拔掉它。通过 Wi-Fi 连接的手机会断开，并且不再出现在列表里，即使 adb 自己又连上了它；要加回来，就在「添加手机」里重新配对，或者插上线。通过 Wi-Fi 连接的 iPhone 或 iPad，在你插上线之前都不会再出现在列表里。Pinky 不会解除手机和电脑的配对：它的 USB 调试或无线调试配对，以及 iPhone 的信任，都会留给其他应用使用（[详情](docs/notes/gateway.md#removing-a-phone)）。
 
 ### 不在家里的手机
 
-Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [Tailscale](https://tailscale.com) 并登录同一个账号后，Pinky 就能经它连到手机：电脑留在家里，手机带出门，用移动数据或别的 Wi-Fi 都行。
+Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [Tailscale](https://tailscale.com) 并登录同一个账号后，Pinky 就能经它连到手机：电脑留在家里，手机带出门，用移动数据或别的 Wi-Fi 都行。Android 同一时间只能开一个 VPN，所以手机上别的 VPN 和代理应用要关着：它们一开，Tailscale 就会关闭。
 
 1. 趁手机在电脑旁（插线或连同一个 Wi-Fi）设置一次：「设置 › 手机 › 离家时使用 › 打开…」。「添加手机 › Android › 手机不在这个网络里？用 Tailscale」会带你在两边装好 Tailscale，并列出你 tailnet 里的手机。
 2. Pinky 会让手机的 adb 在网络上监听（`adb tcpip`，5555 端口），再通过手机的 Tailscale 地址连接它。手机在电脑所在的网络里没有连接时，Pinky 就用这条连接，所以出门时手机会一直留在列表里。
@@ -217,7 +228,9 @@ Pinky 会发送匿名的使用统计（只有计数，比如跑了几个任务�
 <details>
 <summary><b>哪些东西 Agent 看不到？</b></summary>
 
-银行、钱包和密码管理器类 App（Pinky 自带一份名单，可以在「设置 › 安全」里添加）：Agent 拿不到它们的画面，它们的通知也会被藏起来。Agent 不能往密码框和验证码框里输入，通知里的验证码会被打码。Agent 在任务中需要用银行或钱包 App 时，Pinky 会先问你。你允许的话，Agent 在这次任务剩下的时间里可以打开和读取这个 App，你的规则在那里照样会问，Pinky 也不会留下它的截图和录屏：只有画面上才有的文字，Pinky 在内存里看一眼画面识别出来，只把文字交给 Agent，不给图。密码管理器不会提供这个选项。
+银行、钱包和密码管理器类 App（Pinky 自带一份名单，可以在「设置 › 安全」里添加）：Agent 拿不到它们的画面，它们的通知也会被藏起来。Agent 不能往密码框和验证码框里输入。Agent 在任务中需要用银行或钱包 App 时，Pinky 会先问你。你允许的话，Agent 在这次任务剩下的时间里可以打开和读取这个 App，你的规则在那里照样会问，Pinky 也不会留下它的截图和录屏：只有画面上才有的文字，Pinky 在内存里看一眼画面识别出来，只把文字交给 Agent，不给图。密码管理器不会提供这个选项。
+
+一次性验证码会在 Agent 读到之前被打码：不管是在短信、邮件、通知里还是屏幕上别的地方，「您的验证码为 482913」到 Agent 那里都是「您的验证码为 ••••••」，Agent 拿到的截图和「活动」里的截图也会用灰块把验证码遮住。价格、电话号码、日期和跟验证码无关的文字里的数字都保持原样。录屏只存在你的电脑上，也不会发给 Agent，里面的验证码保持原样。可以在「设置 › 安全 › 对智能体隐藏验证码」里关掉。
 
 </details>
 
@@ -239,6 +252,8 @@ Android 上，你点「安装」后会装上 Pinky Companion，之后 Pinky 会�
 <summary><b>银行等 App 会发现 Pinky Companion 吗？</b></summary>
 
 无障碍服务开着的时候，它们能发现。恶意软件常常滥用无障碍服务，所以很多银行 App 在发现某个不是从应用商店装的 App 开着无障碍服务时，会拒绝登录：马来西亚的银行（Maybank、CIMB、HSBC 以及马来西亚银行公会的其他成员，2024 年起）和新加坡的银行（DBS、OCBC、UOB，2023 年起）都是这样，其他地方也有。Pinky Companion 就是这样的 App，因为它是 Pinky 通过 USB 装上的。微信、抖音、小红书这类 App 也能看到这个服务，并且会留意自动化操作；我们还没听说它们因为 Pinky Companion 采取过措施，但让 Agent 操作它们可能违反它们的用户协议。
+
+App 也能看到手机开着 USB 调试或无线调试，Pinky 在每台安卓手机上都需要它；有些 App（包括一些银行 App）在它开着时会提醒你，或者不让你用。只要这台手机还在用 Pinky，它就一直开着。
 
 所以 Pinky 只在 Agent 操作手机时才开启这个服务：任务开始时开启，任务结束或你接管手机后几秒关闭，Agent 一分钟没有操作也会关闭。其余时间它都是关着的，这些 App 照常能用。Agent 工作期间（哪怕是在手机的后台显示器上），它们能看到这个服务：这时要用它们，先在 Pinky 里点「接管」，或者结束任务。
 

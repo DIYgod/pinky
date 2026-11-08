@@ -3,59 +3,96 @@ package awake
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"time"
 )
 
-// On Linux, Hold runs systemd-inhibit, which holds a logind lock against
-// idle handling and sleep while its command runs: the command is cat on a
-// pipe from this process, so the lock ends when release closes the pipe,
-// or when this process exits, however it exits. systemd-inhibit --list
-// shows it, by Pinky, with the reason. logind may refuse the lock to a
-// process outside a login session; Hold then returns its error.
+// On Linux, Hold runs systemd-inhibit, which asks logind for a lock against
+// idle handling and sleep and, once logind gives it, runs its command while
+// it holds the lock. The command is cat between two pipes of this process:
+// Hold sends it a byte and returns once the byte comes back, so the lock is
+// held by then. When logind refuses the lock, which may take a moment while
+// polkit starts, systemd-inhibit exits without running cat and Hold returns
+// its error. The lock ends when release closes cat's input, or when this
+// process exits, however it exits. systemd-inhibit --list shows it, by
+// Pinky, with the reason. logind may refuse the lock to a process outside a
+// login session.
 
-// inhibitCheck is how long Hold waits for systemd-inhibit to fail, as it
-// does at once when logind refuses the lock.
-const inhibitCheck = 500 * time.Millisecond
+// inhibitWait is how long Hold waits for logind to answer; tests shorten it.
+var inhibitWait = 10 * time.Second
 
 func hold(reason string) (func(), error) {
 	path, err := exec.LookPath("systemd-inhibit")
 	if err != nil {
 		return nil, fmt.Errorf("awake: no systemd-inhibit: %w", ErrUnsupported)
 	}
-	cmd := exec.Command(path, "--what=idle:sleep", "--who=Pinky", "--why="+reason, "--mode=block", "cat")
-	in, err := cmd.StdinPipe()
+	out, outW, err := os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("awake: %w", err)
 	}
+	defer out.Close()
+	cmd := exec.Command(path, "--what=idle:sleep", "--who=Pinky", "--why="+reason, "--mode=block", "cat")
+	cmd.Stdout = outW
 	var stderr lockedBuffer
 	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
+	in, err := cmd.StdinPipe()
+	if err != nil {
+		outW.Close()
+		return nil, fmt.Errorf("awake: %w", err)
+	}
+	err = cmd.Start()
+	outW.Close()
+	if err != nil {
 		return nil, fmt.Errorf("awake: systemd-inhibit: %w", err)
 	}
+	// If systemd-inhibit has failed already, this fails too; the select
+	// below says why.
+	in.Write([]byte{'\n'})
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
+	echoed := make(chan bool, 1)
+	go func() {
+		var b [1]byte
+		n, _ := out.Read(b[:])
+		echoed <- n == 1
+	}()
+	timeout := time.NewTimer(inhibitWait)
+	defer timeout.Stop()
+	var exit error
 	select {
-	case err := <-done:
-		in.Close()
-		msg := strings.TrimSpace(stderr.String())
-		if msg == "" && err != nil {
-			msg = err.Error()
+	case held := <-echoed:
+		if held {
+			return func() {
+				in.Close()
+				select {
+				case <-done:
+				case <-time.After(2 * time.Second):
+					cmd.Process.Kill()
+					<-done
+				}
+			}, nil
 		}
-		return nil, fmt.Errorf("awake: systemd-inhibit: %s", msg)
-	case <-time.After(inhibitCheck):
+		// No byte back: systemd-inhibit exited without running cat.
+		exit = <-done
+	case exit = <-done:
+	case <-timeout.C:
+		in.Close()
+		cmd.Process.Kill()
+		<-done
+		return nil, fmt.Errorf("awake: systemd-inhibit: no answer from logind in %v", inhibitWait)
 	}
-	return func() {
-		in.Close()
-		select {
-		case <-done:
-		case <-time.After(2 * time.Second):
-			cmd.Process.Kill()
-			<-done
-		}
-	}, nil
+	msg := strings.TrimSpace(stderr.String())
+	switch {
+	case msg != "":
+	case exit != nil:
+		msg = exit.Error()
+	default:
+		msg = "ended without holding the lock"
+	}
+	return nil, fmt.Errorf("awake: systemd-inhibit: %s", msg)
 }
 
 // lockedBuffer keeps the first KiB a process writes, safe for the

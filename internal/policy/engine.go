@@ -2,7 +2,6 @@ package policy
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -359,8 +358,8 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-// FilterEvents removes notifications from blocked apps and masks digit
-// codes in the rest, as the rules file says.
+// FilterEvents removes notifications from blocked apps and masks one-time
+// codes in the rest, and in toasts and dialogs, as the rules file says.
 func (e *Engine) FilterEvents(events []screen.Event) []screen.Event {
 	if len(events) == 0 {
 		return events
@@ -375,41 +374,10 @@ func (e *Engine) FilterEvents(events []screen.Event) []screen.Event {
 				continue
 			}
 		}
-		if mask && ev.Kind == screen.EventNotification {
+		if mask {
 			ev.Text = MaskCodes(ev.Text)
 		}
 		out = append(out, ev)
 	}
 	return out
-}
-
-var codeRe = regexp.MustCompile(`(?:^|[^\d.,$€£¥₩₹])(\d{4,8}|\d{3}[ -]\d{3}|\d{4}[ -]\d{4})(?:[^\d]|$)`)
-
-// MaskCodes hides digit codes of four to eight digits in a notification
-// that talks about a code, in any supported language: "Your code is
-// 123456" becomes "Your code is ••••••".
-func MaskCodes(text string) string {
-	lower := strings.ToLower(text)
-	if !anyWord(tokenize(lower), codeWords) && !containsAny(lower, codePhrases) && !containsAny(text, cjkCodeKeywords) {
-		return text
-	}
-	// Mask until nothing changes, since matches can touch.
-	for i := 0; i < 4; i++ {
-		next := codeRe.ReplaceAllStringFunc(text, func(m string) string {
-			var b strings.Builder
-			for _, r := range m {
-				if r >= '0' && r <= '9' {
-					b.WriteString("•")
-				} else {
-					b.WriteRune(r)
-				}
-			}
-			return b.String()
-		})
-		if next == text {
-			break
-		}
-		text = next
-	}
-	return text
 }

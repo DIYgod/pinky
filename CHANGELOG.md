@@ -2,6 +2,46 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1108.25 (2026-11-08)
+
+- One-time codes are now hidden from agents everywhere on the phone's screen, not only in notifications: a code in a text message, an email or an iPhone banner reaches the agent as ••••••, and screenshots agents get, and those in Activity, cover it with a gray box. Screen recordings, which stay on your computer, are not covered.
+- Agents connected over HTTP keep the phone from one call to the next, also when their client never sends back the session id (such as Grok Bot) or opens a new connection for every call. No proxy in front of Pinky is needed any more.
+- All phones now scrolls when you have more phones than fit in the window, and a last row that isn't full lines up under the phones above instead of sitting in the middle.
+- With many phones, the sidebar's list of phones scrolls too, so Add phone, Activity, Settings and Stop all stay within reach.
+
+## 2026.1108.24 (2026-11-08)
+
+- When a phone isn't on your tailnet, Settings › Phones now says whether Tailscale isn't connected on it or is signed in to another account, with Set up Tailscale to open the steps.
+- Pinky now says that Android runs one VPN at a time: another VPN or proxy app on the phone turns Tailscale off.
+- Feedback diagnostics now include Tailscale's state and the Android devices on your tailnet, without their names.
+- When pairing over Wi-Fi fails, Pinky now says why: the phone ended the pairing, nothing at that address was waiting to pair, the phone didn't answer, or the computer's adb is too old. It no longer says the pairing code didn't match when you scanned a QR code.
+- A QR pairing that fails now offers Pair with a code instead next to Try again.
+- adb's own words for a failed pairing now go to Pinky's log, so feedback diagnostics include them.
+
+## 2026.1108.23 (2026-11-08)
+
+- When Apple won't sign the developer disk image Pinky has for an iPhone (the images of Xcode 26 and earlier no longer work for iOS 27), Add phone and the phone's Checkup now say which image it was and what to do: install or update Xcode from the App Store and open it once. Pinky no longer retries the same image, and tries again as soon as a newer one is there.
+- On iPhones, apps are now found by the name their home screen shows: a task for 微信 opens WeChat, not 微信读书. A name that is only part of other apps' names no longer opens one of them; agents are told which apps it may mean.
+- iPhones connected through the WebDriverAgent helper: a locked phone no longer reads as an app with an empty screen, and lists such as WeChat's chats no longer repeat each row's texts or show rows hidden under the navigation bar.
+- Agents that reach Pinky over HTTP from another computer can now hand it a file for an Android phone: `phone_files` takes an upload, a small file right in the call or a file of up to 200 MB through a one-time link, and pushing it to the phone still asks you first.
+
+## 2026.1108.22 (2026-11-08)
+
+- Settings › Safety now describes Hide codes from agents as it works: one-time codes in notifications are masked before an agent reads them. It never blurred the screen itself.
+
+## 2026.1108.21 (2026-11-08)
+
+- On an iPhone with iOS 27, agents now see the elements of web pages in Safari (links, buttons and fields) rather than only the text read from the picture, and a web page's password field counts as one, so agents can't type into it.
+- On an iPhone with iOS 27, agents can open http and https links with `phone_launch`: they open in Safari, and Pinky judges them by Safari's rules too, so blocking Safari or leaving it out of an agent's scope stops its links. The Installs and links rule still asks.
+- Deleting old activity now stops if Pinky cannot finish reading which screenshots belonged to those tasks, instead of deleting the tasks and leaving the screenshots behind.
+
+## 2026.1108.20 (2026-11-08)
+
+- Plugging in an iPhone or iPad now turns on its Wi-Fi connection, as Finder's "Show this iPhone when on Wi-Fi" does, so it keeps working over Wi-Fi when you unplug it; you no longer need Finder or Xcode for that.
+- Over Wi-Fi, screenshots of an iPhone or iPad for approvals, history and agents now come from the live picture, in a fraction of a second instead of up to half a minute.
+- On iPhones, Pinky no longer takes a picture of a blocked app you haven't allowed, not even in memory.
+- On Linux, `pinkyctl daemon` no longer says it keeps the computer awake when the system refuses a moment later; it reports the refusal and tries again in 5 minutes.
+
 ## 2026.1108.19 (2026-11-08)
 
 - Android phones now read text that apps draw without describing it, as in mini-programs and other pages inside super-apps, games and maps: Pinky reads it from the screen on macOS and Windows, and agents can read and tap it. `phone_observe` takes `ocr: true` to read all the text on the screen.

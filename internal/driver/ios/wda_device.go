@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"image/png"
+	"log/slog"
 	"math"
 	"net/http"
 	"strings"
@@ -50,7 +51,10 @@ type WDADevice struct {
 
 	imageDir string // Pinky's folder for developer disk images (checkup.go)
 
-	helperFn func(context.Context) (time.Time, error) // for tests: helperExpires
+	log *slog.Logger // slow reads, with what took the time; nil: none
+
+	helperFn   func(context.Context) (time.Time, error) // for tests: helperExpires
+	lockdownFn func(context.Context) (bool, error)      // for tests: lockdownLocked
 }
 
 // openWDA connects to a WDA server that is running and reads the screen's
@@ -369,51 +373,101 @@ func (d *WDADevice) toPoints(p screen.Point) wdaPoint {
 // Observe implements driver.Device: WDA's page source, with frames.
 func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	var (
-		wg      sync.WaitGroup
-		root    *wdaNode
-		srcErr  error
-		app     wdaApp
-		locked  bool
-		lines   []ocrLine
-		ocrDone bool
+		wg       sync.WaitGroup
+		root     *wdaNode
+		srcErr   error
+		app      wdaApp
+		locked   bool
+		lines    []ocrLine
+		ocrDone  bool
+		pictured sync.WaitGroup
+		gate     *captureGate
+		tm       wdaTimes
 	)
+	start := time.Now()
+	known := make(chan struct{}) // the app and the lock state
+	var knowing sync.WaitGroup
+	knowing.Add(2)
+	go func() { knowing.Wait(); close(known) }()
 	wg.Add(3)
-	go func() { defer wg.Done(); root, srcErr = d.source(ctx) }()
-	go func() { defer wg.Done(); app, _ = d.c.activeApp(ctx) }()
-	go func() { defer wg.Done(); locked, _ = d.lockState(ctx) }()
+	go func() { defer wg.Done(); root, srcErr = d.source(ctx); tm.source = time.Since(start) }()
+	go func() { defer wg.Done(); defer knowing.Done(); app, _ = d.c.activeApp(ctx) }()
+	go func() {
+		defer wg.Done()
+		defer knowing.Done()
+		locked, _ = d.lockState(ctx)
+		tm.lock = time.Since(start)
+	}()
 	if opt.OCR {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			png, err := d.c.screenshot(ctx)
-			if err != nil {
-				return
-			}
-			if l, err := recognizeText(png, ocrOptions{Languages: ocrLanguages}); err == nil {
-				lines, ocrDone = l, true
-			}
-		}()
+		// The picture waits until the read may take it (capturegate.go):
+		// WDA names the app in front long before the page source comes.
+		gate = newCaptureGate(opt.MayCapture, func() {
+			pictured.Add(1)
+			go func() {
+				defer pictured.Done()
+				png, err := d.c.screenshot(ctx)
+				tm.shot = time.Since(start)
+				if err != nil {
+					return
+				}
+				if l, err := recognizeText(png, ocrOptions{Languages: ocrLanguages}); err == nil {
+					lines, ocrDone = l, true
+				}
+				tm.ocr = time.Since(start) - tm.shot
+			}()
+		})
+		if opt.MayCapture != nil {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-known
+				if app.BundleID != "" {
+					w, h := d.size()
+					gate.early([]*screen.Screen{{Width: w, Height: h, Orientation: orientationOf(w, h),
+						App: d.appInfo(ctx, app, nil), Locked: locked}})
+				}
+			}()
+		}
 	}
 	wg.Wait()
-	if srcErr != nil {
-		return nil, fmt.Errorf("observe: %w", srcErr)
-	}
-	w, h := d.size()
+	// At the end, once the picture is in (pictured.Wait below).
+	defer func() { d.noteSlowRead(start, tm, root, opt.OCR) }()
+	w, h := d.size() // d.source saw the orientation
 	s := &screen.Screen{
 		Width: w, Height: h,
 		Orientation: "portrait",
 		Locked:      locked,
 		CapturedAt:  time.Now(),
 	}
-	if w > h {
-		s.Orientation = "landscape"
+	s.Orientation = orientationOf(w, h)
+	if srcErr == nil {
+		s.App = d.appInfo(ctx, app, root)
 	}
-	s.App = d.appInfo(ctx, app, root)
+	if gate != nil {
+		use := gate.late(s)
+		pictured.Wait()
+		if !use {
+			lines, ocrDone = nil, false
+		}
+	}
+	if srcErr != nil {
+		return nil, fmt.Errorf("observe: %w", srcErr)
+	}
 	scale := d.scale
 	if root.Rect.Width > 0 {
 		scale = float64(w) / root.Rect.Width
 	}
 	s.Elements, s.Keyboard = wdaScreenElements(root, scale, w, h, s.App.ID)
+	if len(s.Elements) == 0 && !locked {
+		// Nothing of the app in its tree: the lock screen may be in front
+		// while lockdown says unlocked (GitHub issue #7: a first read gave
+		// WeChat with only the lock screen's charging line from OCR). WDA
+		// knows whether the lock screen shows.
+		if l, err := d.c.locked(ctx); err == nil && l {
+			s.Locked = true
+			return s, nil
+		}
+	}
 	if ocrDone && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {
 			s.Keyboard = true
@@ -428,6 +482,40 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 		s.Elements = append(s.Elements, ocrExtras(s.Elements, lines, w, h)...)
 	}
 	return s, nil
+}
+
+// wdaTimes are when the parts of a read ended, from its start; ocr is the
+// recognition alone.
+type wdaTimes struct{ source, lock, shot, ocr time.Duration }
+
+// slowRead is how long a read may take before the log says what took the
+// time.
+const slowRead = 3 * time.Second
+
+// noteSlowRead logs a read that took slowRead or more, with its parts and
+// the size of the tree (a busy app's tree takes WDA seconds).
+func (d *WDADevice) noteSlowRead(start time.Time, tm wdaTimes, root *wdaNode, ocr bool) {
+	total := time.Since(start)
+	if d.log == nil || total < slowRead {
+		return
+	}
+	nodes := 0
+	var count func(n *wdaNode)
+	count = func(n *wdaNode) {
+		nodes++
+		for i := range n.Children {
+			count(&n.Children[i])
+		}
+	}
+	if root != nil {
+		count(root)
+	}
+	args := []any{"device", d.info.ID, "total", total.Round(time.Millisecond), "source", tm.source.Round(time.Millisecond),
+		"nodes", nodes, "lock", tm.lock.Round(time.Millisecond), "connection", d.info.Connection}
+	if ocr {
+		args = append(args, "screenshot", tm.shot.Round(time.Millisecond), "ocr", tm.ocr.Round(time.Millisecond))
+	}
+	d.log.Info("iphone: slow screen read through WebDriverAgent", args...)
 }
 
 // appInfo names the app in front: WDA's active app, with the name from the

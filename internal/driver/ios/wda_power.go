@@ -23,10 +23,25 @@ func (d *WDADevice) Unlock(ctx context.Context, pin string) error {
 
 // lockState reads whether the phone needs its passcode: from lockdown, as
 // the CoreDevice path does, or from WDA on a simulator, which has no
-// lockdown.
+// lockdown, or when lockdown does not answer (over Wi-Fi it can fail, and
+// a failure must not read as unlocked: GitHub issue #7).
 func (d *WDADevice) lockState(ctx context.Context) (bool, error) {
 	if d.entry.DeviceID == 0 {
 		return d.c.locked(ctx)
+	}
+	locked, err := d.lockdownLocked(ctx)
+	if err != nil && ctx.Err() == nil {
+		if l, werr := d.c.locked(ctx); werr == nil {
+			return l, nil
+		}
+	}
+	return locked, err
+}
+
+// lockdownLocked reads lockdown's PasswordProtected.
+func (d *WDADevice) lockdownLocked(ctx context.Context) (bool, error) {
+	if d.lockdownFn != nil {
+		return d.lockdownFn(ctx)
 	}
 	type result struct {
 		v   bool

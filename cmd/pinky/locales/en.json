@@ -440,6 +440,60 @@
   "@addPhoneIPhoneNoImageTitle": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the title of the box."
   },
+  "addPhoneIPhoneRefusedFolder": "Pinky used the developer disk image in {folder}: build {build}, version {version}. Apple's signing server no longer signs it, so it can't be mounted on this iPhone. Replace it with the iOS_DDI folder of a Mac where the latest Xcode from the App Store was opened once.",
+  "@addPhoneIPhoneRefusedFolder": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the text when the image is one the person put in a folder (Pinky's own, or the one the PINKY_DDI environment variable names). folder is that folder; build is the Xcode build the image came with; version is the image's version, or a dash when unknown. iOS_DDI is a folder name.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "/Users/me/Library/Application Support/Pinky/DeveloperDiskImages/iOS_DDI/Restore"
+      },
+      "build": {
+        "type": "String",
+        "example": "17B48"
+      },
+      "version": {
+        "type": "String",
+        "example": "17.2.48.0"
+      }
+    }
+  },
+  "addPhoneIPhoneRefusedMirror": "Pinky used the developer disk image downloaded from the third-party mirror: build {build}, version {version}. Apple's signing server no longer signs it, so it can't be mounted on this iPhone. Install Xcode from the App Store and open it once, then you can quit it; or update Pinky once a version with a newer image is out.",
+  "@addPhoneIPhoneRefusedMirror": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the text when the image was downloaded from the third-party mirror (addPhoneIPhoneMirrorTitle). build is the Xcode build the image came with; version is the image's version, or a dash when unknown.",
+    "placeholders": {
+      "build": {
+        "type": "String",
+        "example": "17B48"
+      },
+      "version": {
+        "type": "String",
+        "example": "17.2.48.0"
+      }
+    }
+  },
+  "addPhoneIPhoneRefusedRetry": "Pinky tries again by itself as soon as a newer image is on this computer.",
+  "@addPhoneIPhoneRefusedRetry": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: a small note under the box."
+  },
+  "addPhoneIPhoneRefusedTitle": "Apple won't sign this developer disk image",
+  "@addPhoneIPhoneRefusedTitle": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the title of the box."
+  },
+  "addPhoneIPhoneRefusedXcode": "Pinky used the developer disk image that Xcode installed on this Mac: build {build}, version {version}. Apple's signing server no longer signs it, so it can't be mounted on this iPhone. Install or update Xcode from the App Store and open it once: it installs a newer image, and you can quit it then.",
+  "@addPhoneIPhoneRefusedXcode": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the text when the image came with Xcode on this Mac. build is the Xcode build the image came with; version is the image's version, or a dash when unknown.",
+    "placeholders": {
+      "build": {
+        "type": "String",
+        "example": "17B48"
+      },
+      "version": {
+        "type": "String",
+        "example": "17.2.48.0"
+      }
+    }
+  },
   "addPhoneIPhoneRetrying": "Pinky tries again by itself.",
   "@addPhoneIPhoneRetrying": {
     "description": "Add phone › iPhone, the step list: a small note under a failed preparation step."
@@ -488,7 +542,7 @@
   "@addPhoneIPhoneStepPlugDetail": {
     "description": "Add phone › iPhone, the step list: under the plug-in step."
   },
-  "addPhoneIPhoneStepPlugWiFi": "If it's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode, Pinky finds it there and asks you first, no cable needed.",
+  "addPhoneIPhoneStepPlugWiFi": "Once it trusts this computer, Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does, so it keeps working when you unplug it while it's on the same Wi-Fi. One already connected to this computer over Wi-Fi shows up here without the cable, and Pinky asks you first.",
   "@addPhoneIPhoneStepPlugWiFi": {
     "description": "Add phone › iPhone: a note under the plug-in step while Pinky uses iPhones over Wi-Fi."
   },
@@ -527,6 +581,10 @@
   "addPhoneIPhoneStepTrustWaiting": "Waiting for the iPhone to trust this computer…",
   "@addPhoneIPhoneStepTrustWaiting": {
     "description": "Add phone › iPhone, the step list: next to a spinner under the Trust step."
+  },
+  "addPhoneIPhoneStepTrustWiFiOn": "Then Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does. Turning off Use iPhones and iPads over Wi-Fi leaves it on; Finder can turn it off.",
+  "@addPhoneIPhoneStepTrustWiFiOn": {
+    "description": "Add phone › iPhone: a note under the trust step while Pinky uses iPhones over Wi-Fi: Pinky turns on the iPhone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's checkbox) once it trusts the computer."
   },
   "addPhoneIPhoneStepUnlock": "Unlock the iPhone so Pinky can finish.",
   "@addPhoneIPhoneStepUnlock": {
@@ -734,7 +792,7 @@
   },
   "awayHowTo": "Set up Tailscale",
   "@awayHowTo": {
-    "description": "Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale."
+    "description": "Button by awayNoTailscaleHere, awayNoTailscalePhone and awayOtherTailnet: opens Add phone › Android › Tailscale."
   },
   "awayKeepAwake": "Keep this computer awake for phones away",
   "@awayKeepAwake": {
@@ -748,9 +806,9 @@
   "@awayNoTailscaleHere": {
     "description": "Under awayTitle when Tailscale does not run on this computer."
   },
-  "awayNoTailscalePhone": "Install Tailscale on {name}, open it and sign in to the same account as on this computer.",
+  "awayNoTailscalePhone": "Tailscale isn't connected on {name}. Install it there, open it and sign in to the same account as on this computer.",
   "@awayNoTailscalePhone": {
-    "description": "Under awayTitle when the phone is not on this computer's tailnet.",
+    "description": "Under awayTitle when the phone has no Tailscale connection: Tailscale is not installed, signed out or off on it, or another VPN is on instead. awayOneVPN follows.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -789,6 +847,20 @@
       "addr": {
         "type": "String",
         "example": "100.101.2.2"
+      }
+    }
+  },
+  "awayOneVPN": "Android runs one VPN at a time: while another VPN or proxy app is on, Tailscale is off. Turn that one off, then turn Tailscale on.",
+  "@awayOneVPN": {
+    "description": "Under awayNoTailscalePhone, and under the phone's step of the Tailscale steps (tailnetPhoneSteps): why Tailscale can be off on a phone that has it."
+  },
+  "awayOtherTailnet": "{name}'s Tailscale is signed in to another tailnet than this computer's. Sign in to the same account on both.",
+  "@awayOtherTailnet": {
+    "description": "Under awayTitle when the phone's Tailscale is connected, but to another tailnet (another account) than this computer's.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Galaxy S23"
       }
     }
   },
@@ -2396,7 +2468,7 @@
   "@flyoutUnlock": {
     "description": "Menu bar flyout: the action at the end of a locked phone's Needs you row; a click opens the phone to unlock it."
   },
-  "foundDetail": "It's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode. Pinky hasn't used it, so it leaves it alone until you say it's yours: it doesn't connect to it, change anything on it or let agents use it.",
+  "foundDetail": "It's on the same Wi-Fi as this computer and was set up before to connect to it over Wi-Fi, in Finder, Xcode or Pinky. Pinky hasn't used it, so it leaves it alone until you say it's yours: it doesn't connect to it, change anything on it or let agents use it.",
   "@foundDetail": {
     "description": "Under foundTitle, and in Add phone and the checkup: why Pinky waits for the person."
   },
@@ -3140,6 +3212,16 @@
       }
     }
   },
+  "gwDoReceiveFile": "receive “{path}” from the agent",
+  "@gwDoReceiveFile": {
+    "description": "What a step tried: take a file the agent sent (phone_files upload) into the folder on the computer that is copied to the phone. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "photo.jpg"
+      }
+    }
+  },
   "gwDoSwipe": "swipe {direction}",
   "@gwDoSwipe": {
     "description": "What a step asked for: a swipe; direction is gwDirUp and the like. Shown only in other languages; in English the gateway's own words show.",
@@ -3629,6 +3711,20 @@
       "action": {
         "type": "String",
         "example": "open Northbank"
+      }
+    }
+  },
+  "gwStepReceivedFile": "Received “{path}” ({size}) from the agent",
+  "@gwStepReceivedFile": {
+    "description": "A step: the agent sent a file (phone_files upload), which Pinky saved in the folder on the computer that is copied to the phone. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "photo.jpg"
+      },
+      "size": {
+        "type": "String",
+        "example": "1.2 MB"
       }
     }
   },
@@ -4244,6 +4340,10 @@
   "@pairingErrNoAdb": {
     "description": "Pair over Wi-Fi: the error when adb does not work on this computer (no adb, or its server does not run); Add phone › Android, one step back, says why."
   },
+  "pairingErrNotListening": "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog, and keep it open until Pinky is done.",
+  "@pairingErrNotListening": {
+    "description": "Pair with a code: the error when nothing at the address typed took the connection (a wrong port, or the dialog closed). Pair device with pairing code is Android's own name."
+  },
   "pairingErrOther": "Couldn't pair: {detail}",
   "@pairingErrOther": {
     "description": "Pair over Wi-Fi: the error when pairing failed for another reason. detail is the error, in English.",
@@ -4254,21 +4354,33 @@
       }
     }
   },
+  "pairingErrQRNotListening": "The phone stopped waiting to pair, as it does when it leaves the scanning screen. Scan the code again, or pair with a code instead.",
+  "@pairingErrQRNotListening": {
+    "description": "Pair over Wi-Fi by QR code: the error when the phone's pairing service no longer took the connection. Shown with pairingUseCode and addPhoneTryAgain."
+  },
+  "pairingErrQRRejected": "The phone ended the pairing before it finished. Keep the phone on the same Wi-Fi as this computer and on its scanning screen until Pinky is done, then try again, or pair with a code instead.",
+  "@pairingErrQRRejected": {
+    "description": "Pair over Wi-Fi by QR code: the error when the phone ended the pairing (adb cannot tell why; the code is Pinky's, so never say it was wrong). Shown with pairingUseCode and addPhoneTryAgain."
+  },
+  "pairingErrQRUnreachable": "The phone showed up on the network, but Pinky couldn't connect to it. A VPN or firewall on this computer, or a network that keeps devices apart, such as guest Wi-Fi, can block it. Try another network, or a USB cable.",
+  "@pairingErrQRUnreachable": {
+    "description": "Pair over Wi-Fi by QR code: the error when the phone showed up on the network but its pairing address did not answer."
+  },
+  "pairingErrRejected": "The phone didn't accept the pairing. Check the code, and that the port is the one in the Pair device with pairing code dialog, not the one at the top of Wireless debugging. Both change each time the dialog opens.",
+  "@pairingErrRejected": {
+    "description": "Pair with a code: the error when the phone ended the pairing, which adb reports the same way for a wrong code, a port that is not the pairing dialog's and a dropped connection. Pair device with pairing code and Wireless debugging are Android's own names."
+  },
   "pairingErrTimeout": "The phone didn't answer in time. Check that it's on the same Wi-Fi as this computer and that Wireless debugging is on, then try again.",
   "@pairingErrTimeout": {
     "description": "Pair over Wi-Fi: the error when the phone did not answer in time. Wireless debugging is Android's setting."
   },
   "pairingErrUnreachable": "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they change each time it opens.",
   "@pairingErrUnreachable": {
-    "description": "Pair with a code: the error when nothing answered at the address typed. Pair device with pairing code is Android's own name."
+    "description": "Pair with a code: the error when the address typed did not answer. Pair device with pairing code is Android's own name."
   },
   "pairingErrUnsupported": "Pairing over Wi-Fi isn't available here. Use a USB cable instead.",
   "@pairingErrUnsupported": {
     "description": "Pair over Wi-Fi: the error when the phone's driver cannot pair over Wi-Fi."
-  },
-  "pairingErrWrongCode": "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairing code.",
-  "@pairingErrWrongCode": {
-    "description": "Pair with a code: the error when the pairing code typed was wrong. Pair device with pairing code is Android's own name."
   },
   "pairingFound": "Found the phone. Pairing…",
   "@pairingFound": {
@@ -6006,7 +6118,7 @@
   "@settingsPhonesWiFi": {
     "description": "Settings › Phones: the switch that lets Pinky reach iPhones and iPads over Wi-Fi when this computer finds them there, besides the cable."
   },
-  "settingsPhonesWiFiDesc": "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer. Pinky asks before it uses one it finds there. Over Wi-Fi the live picture is less smooth and each step is slower.",
+  "settingsPhonesWiFiDesc": "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer: once one trusts this computer on a cable, Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does. Pinky asks before it uses one it finds there. Over Wi-Fi the live picture is less smooth and each step is slower.",
   "@settingsPhonesWiFiDesc": {
     "description": "Settings › Phones: under settingsPhonesWiFi."
   },
@@ -6424,11 +6536,11 @@
   },
   "settingsSafetyHideCodes": "Hide codes from agents",
   "@settingsSafetyHideCodes": {
-    "description": "Settings › Safety: the switch that hides passwords and one-time codes on the phone's screen from agents."
+    "description": "Settings › Safety: the switch that hides one-time codes, on the phone's screen and in its notifications, from agents."
   },
-  "settingsSafetyHideCodesDesc": "Passwords and one-time codes are blurred before an agent sees the screen",
+  "settingsSafetyHideCodesDesc": "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. Recordings, which stay on this computer, show them.",
   "@settingsSafetyHideCodesDesc": {
-    "description": "Settings › Safety: the line under Hide codes from agents."
+    "description": "Settings › Safety: the line under Hide codes from agents. Screenshots are the ones agents get and the ones Activity keeps; recordings are the screen recordings of tasks, which are not covered."
   },
   "settingsSafetyIntro": "Pinky checks every action before it reaches the phone. Agents can't change these settings.",
   "@settingsSafetyIntro": {

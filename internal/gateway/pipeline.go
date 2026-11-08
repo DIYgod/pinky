@@ -702,8 +702,17 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		}
 		p.launch, p.url = app, url
 		p.input.Launch = screen.App{ID: app.ID, Name: app.Name}
+		opener := false
+		if lo, ok := g.driverOf(d).(linkOpener); ok && url {
+			// The rules judge the app that opens the link: blocking or
+			// scoping it covers its links too, and so does the person's
+			// allowing it for the task.
+			browser := lo.LinkApp()
+			p.input.Launch = screen.App{ID: browser.ID, Name: browser.Name}
+			opener = true
+		}
 		p.input.LaunchURL = url
-		p.input.AllowBlocked = !url && g.allows(l, p.input.Launch)
+		p.input.AllowBlocked = (!url || opener) && g.allows(l, p.input.Launch)
 	}
 	p.input.Target = p.target
 	p.desc = describe(a, p)
@@ -869,6 +878,11 @@ func hitTest(s *screen.Screen, p screen.Point) *screen.Element {
 	return &cp
 }
 
+// linkOpener is implemented by drivers that open a link in a fixed app.
+type linkOpener interface {
+	LinkApp() driver.App
+}
+
 // resolveLaunch finds the app phone_launch names.
 func (g *Gateway) resolveLaunch(ctx context.Context, d *device, name string) (driver.App, bool, *Result) {
 	name = strings.TrimSpace(name)
@@ -886,93 +900,15 @@ func (g *Gateway) resolveLaunch(ctx context.Context, d *device, name string) (dr
 	if err != nil {
 		return driver.App{}, false, errResult(ErrInternal, "Listing apps failed: %v", err)
 	}
-	if a, ok := matchApp(apps, name); ok {
-		return a, false, nil
+	m := findApp(apps, name)
+	if m.ok {
+		return m.app, false, nil
+	}
+	if len(m.similar) > 0 {
+		return driver.App{}, false, errResult(ErrNotFound, "No installed app is named %q. Similar: %s. Call phone_launch again with the exact name or id of the one you mean.",
+			name, appList(m.similar))
 	}
 	return driver.App{}, false, errResult(ErrNotFound, "No installed app matches %q; call phone_apps to see what is installed.", name)
-}
-
-// matchApp finds an app by id, then by exact name, then by a unique part of
-// its name.
-func matchApp(apps []driver.App, name string) (driver.App, bool) {
-	for _, a := range apps {
-		if a.ID == name {
-			return a, true
-		}
-	}
-	var exact, part []driver.App
-	q := strings.ToLower(name)
-	for _, a := range apps {
-		n := strings.ToLower(a.Name)
-		switch {
-		case n == q:
-			exact = append(exact, a)
-		case strings.Contains(n, q):
-			part = append(part, a)
-		}
-	}
-	pick := func(list []driver.App) (driver.App, bool) {
-		if len(list) == 1 {
-			return list[0], true
-		}
-		var user []driver.App
-		for _, a := range list {
-			if !a.System {
-				user = append(user, a)
-			}
-		}
-		if len(user) == 1 {
-			return user[0], true
-		}
-		return driver.App{}, false
-	}
-	if a, ok := pick(exact); ok {
-		return a, true
-	}
-	if len(exact) == 0 && len(part) > 0 {
-		return pick(part)
-	}
-	if len(exact) == 0 {
-		// No name matches, as an English name on a phone in another
-		// language ("Calculator" for 计算器): try the package or bundle
-		// id's parts (com.google.android.calculator).
-		return pick(idMatches(apps, q))
-	}
-	return driver.App{}, false
-}
-
-// idMatches returns the apps whose id has a part equal to q, or else a
-// part that contains it ("clock" in com.google.android.deskclock). q is
-// lower case; parts shorter than four letters only match whole.
-func idMatches(apps []driver.App, q string) []driver.App {
-	q = strings.ReplaceAll(q, " ", "")
-	if len(q) < 3 {
-		return nil
-	}
-	var whole, part []driver.App
-	for _, a := range apps {
-		matched := false
-		for i, seg := range strings.Split(strings.ToLower(a.ID), ".") {
-			if i == 0 && (seg == "com" || seg == "org" || seg == "net" || seg == "app") {
-				continue
-			}
-			switch {
-			case seg == q:
-				whole = append(whole, a)
-				matched = true
-			case len(q) >= 4 && strings.Contains(seg, q) && !matched:
-				part = append(part, a)
-				matched = true
-			}
-			if matched {
-				break
-			}
-		}
-	}
-	if len(whole) > 0 {
-		return whole
-	}
-	return part
 }
 
 // ask opens an approval for an action and records the waiting step.
@@ -1012,7 +948,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	if res := g.afterOpen(l, info); res != nil {
 		return info, res
 	}
-	before := g.shotID(g.keepImage(l.dev, cur, shot))
+	before := g.shotID(g.keepImage(l.dev, cur, shot, false))
 	g.openStep(l, info, "phone_"+a.Tool, a.args(c), "Waiting for you: "+p.desc, target, p.point, before)
 	return info, nil
 }
@@ -1664,13 +1600,16 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 		readTok = video.readStarting(start)
 	}
 	opt := driver.ObserveOptions{OCR: mode != ocrOff, OCRAll: mode == ocrAll}
+	// Asked on every read: an iPhone whose remoteAXService fails, or one
+	// below iOS 27 without the helper, takes a picture to place the tree's
+	// elements, OCR or not.
+	opt.MayCapture = func(s *screen.Screen) bool { return g.mayCapture(d, s) }
 	if opt.OCR {
 		// A picture from the live video, for drivers whose screenshots are
 		// slow (an iPhone over Wi-Fi) or missing (an Android background
 		// display); it shares the mirror's stream.
 		key := hubKey(d.id, onBG)
 		opt.Frame = func(ctx context.Context) (image.Image, error) { return g.frameShot(ctx, key, dev) }
-		opt.MayCapture = func(s *screen.Screen) bool { return g.mayCapture(d, s) }
 	}
 	s, err := dev.Observe(ctx, opt)
 	if err != nil && video != nil {
@@ -1704,6 +1643,9 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 		}
 		return nil, errors.New("the driver returned no screen")
 	}
+	// One-time codes are masked before anything else sees the read: the
+	// agent, history, approvals and refs (policy.MaskScreen).
+	g.policy.MaskScreen(s)
 	d.refs.Assign(s)
 	evs := g.policy.FilterEvents(s.Events)
 	_, blocked := g.policy.Blocked(s.App)
@@ -1813,33 +1755,38 @@ var errScreenChanged = errors.New("the screen changed while the screenshot was t
 // notifications from blocked apps.
 var errLockedShot = errors.New("the phone is locked, and its lock screen can show notifications from blocked apps")
 
-// screenshot takes a screenshot of the screen s describes. It reads the
-// screen again afterwards and drops the image when the foreground app
-// changed, is blocked or unknown, or the phone locked, so a blocked app
-// that comes to the front in between is never captured.
-func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (image.Image, error) {
+// screenshot takes a screenshot of the screen s describes, for an agent.
+// It reads the screen again afterwards and drops the image when the
+// foreground app changed, is blocked or unknown, or the phone locked, so a
+// blocked app that comes to the front in between is never captured. One-time
+// codes are covered (coverCodes); covered counts the boxes.
+func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (img image.Image, covered int, err error) {
 	dev, bg := g.screenOf(d)
 	if dev == nil {
-		return nil, driver.ErrOffline
+		return nil, 0, driver.ErrOffline
 	}
 	if s.Locked {
-		return nil, errLockedShot
+		return nil, 0, errLockedShot
 	}
 	if !recordableScreen(g.policy, s) {
-		return nil, errScreenChanged
+		return nil, 0, errScreenChanged
 	}
-	img, err := g.shotOf(ctx, d, dev, bg)
+	img, err = g.shotOf(ctx, d, dev, bg)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	after, err := g.observe(ctx, d, false)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !recordableScreen(g.policy, after) || after.App != s.App {
-		return nil, errScreenChanged
+		return nil, 0, errScreenChanged
 	}
-	return img, nil
+	img, covered, ok := g.coverCodes(img, true, s, after)
+	if !ok {
+		return nil, 0, errCodeShot
+	}
+	return img, covered, nil
 }
 
 // agentView hides a blocked app's screen, unless the person allowed the

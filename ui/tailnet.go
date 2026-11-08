@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"strconv"
 	"strings"
@@ -131,6 +132,7 @@ func (a *app) addTailnet(c *mg.Context) {
 		}
 		guideRow(c, 2, locales.TailnetStepPhone(), phone, func() {
 			guideText(c, locales.TailnetPhoneSteps())
+			guideNote(c, locales.AwayOneVPN())
 			guideWaiting(c, locales.TailnetPhoneNone())
 		})
 		guideRow(c, 3, locales.TailnetStepConnect(), connect, func() {
@@ -359,8 +361,16 @@ func (a *app) awayRow(c *mg.Context, d gateway.DeviceView) {
 	if !have {
 		return
 	}
-	var desc string
+	var desc, note string
 	var action func()
+	// setUp opens Add phone › Android › Use Tailscale, the steps for
+	// Tailscale on both sides.
+	setUp := func() {
+		if button(c, locales.AwayHowTo(), btnOpt{small: true}).Clicked() {
+			a.page, a.add.step = pageAddPhone, "tailnet"
+			a.add.snapshot(a)
+		}
+	}
 	switch {
 	case s.awayBusy[id]:
 		desc = locales.AwayBusy()
@@ -386,15 +396,13 @@ func (a *app) awayRow(c *mg.Context, d gateway.DeviceView) {
 			}
 		}
 	case aw.Missing == driver.AwayNoTailscaleHere:
-		desc = locales.AwayNoTailscaleHere()
-		action = func() {
-			if button(c, locales.AwayHowTo(), btnOpt{small: true}).Clicked() {
-				a.page, a.add.step = pageAddPhone, "tailnet"
-				a.add.snapshot(a)
-			}
-		}
+		desc, action = locales.AwayNoTailscaleHere(), setUp
 	case aw.Missing == driver.AwayNoTailscaleThere:
-		desc = locales.AwayNoTailscalePhone(name)
+		// Tailscale may be installed and signed in, and off because
+		// another VPN took its place.
+		desc, note, action = locales.AwayNoTailscalePhone(name), locales.AwayOneVPN(), setUp
+	case aw.Missing == driver.AwayOtherTailnet:
+		desc, action = locales.AwayOtherTailnet(name), setUp
 	case aw.Missing == driver.AwayNotConnected:
 		desc = locales.AwayNotConnected(name)
 	default:
@@ -410,6 +418,9 @@ func (a *app) awayRow(c *mg.Context, d gateway.DeviceView) {
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 				mg.Text(c, locales.AwayTitle()).FontSize(13.5).FontWeight(600)
 				mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+				if note != "" {
+					mg.Text(c, note).FontSize(12.5).TextColor(p.ink3)
+				}
 			})
 			if s.awayBusy[id] {
 				spinner(c)
@@ -521,4 +532,77 @@ func (a *app) awayKeepAwakeRow(c *mg.Context) {
 	if a.toggleRow(c, "away-awake", locales.AwayKeepAwake(), locales.AwayKeepAwakeDesc(), true, &a.settings.KeepAwakeAway) {
 		a.setAwayAwake(a.settings.KeepAwakeAway && a.anyAway())
 	}
+}
+
+// tailnetDiagnostics are Tailscale's lines in the diagnostics: whether it
+// runs on this computer, the Android devices on its tailnet, and each
+// Android phone's Use away from home. Tailnet and device names stay out:
+// the Redactor takes out e-mail addresses, but not a tailnet named after a
+// domain or a GitHub account, nor what someone called a device. Pinky's
+// phones go by model, as the diagnostics' list of phones has them.
+func tailnetDiagnostics(ctx context.Context, tn tailnetter, phones []driver.Info) []string {
+	st, err := tn.Tailnet(ctx)
+	if errors.Is(err, gateway.ErrNoTailnet) {
+		return nil
+	}
+	if err != nil {
+		return []string{"Tailscale: couldn't read its status: " + err.Error()}
+	}
+	model := map[string]string{}
+	for _, p := range phones {
+		model[p.ID] = nonEmpty(p.Model, string(p.Platform))
+	}
+	head := "Tailscale: " + strings.ReplaceAll(st.State, "_", " ")
+	if st.Detail != "" {
+		head += " (" + st.Detail + ")"
+	}
+	if st.State == driver.TailnetRunning {
+		head += " · tailnet name not shown · Android devices on it: " + strconv.Itoa(len(st.Phones))
+	}
+	lines := []string{head}
+	for i, ph := range st.Phones {
+		parts := []string{"offline"}
+		if ph.Online {
+			parts[0] = "online"
+		} else if !ph.LastSeen.IsZero() {
+			parts[0] += ", last seen " + ph.LastSeen.UTC().Format(time.DateTime) + " UTC"
+		}
+		switch m, known := model[ph.ID]; {
+		case known:
+			parts = append(parts, "Pinky's "+m)
+		case ph.ID != "":
+			parts = append(parts, "a phone Pinky has seen")
+		default:
+			parts = append(parts, "not one of Pinky's phones")
+		}
+		switch {
+		case ph.Connected && ph.Relayed:
+			parts = append(parts, "connected through a relay")
+		case ph.Connected:
+			parts = append(parts, "connected")
+		}
+		lines = append(lines, fmt.Sprintf("Tailscale: Android device %d: %s", i+1, strings.Join(parts, " · ")))
+	}
+	for _, p := range phones {
+		if p.Platform != driver.Android {
+			continue
+		}
+		aw, err := tn.Away(ctx, p.ID)
+		if err != nil {
+			lines = append(lines, fmt.Sprintf("Use away from home on %s: %v", model[p.ID], err))
+			continue
+		}
+		parts := []string{"off"}
+		if aw.On {
+			parts[0] = "on"
+		}
+		if aw.Listening {
+			parts = append(parts, "adb listens on the network")
+		}
+		if aw.Missing != "" {
+			parts = append(parts, "missing "+aw.Missing)
+		}
+		lines = append(lines, fmt.Sprintf("Use away from home on %s: %s", model[p.ID], strings.Join(parts, " · ")))
+	}
+	return lines
 }

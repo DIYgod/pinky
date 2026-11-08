@@ -8,6 +8,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
@@ -393,11 +395,112 @@ func TestDaemonServesHTTP(t *testing.T) {
 	if isErr || !strings.HasPrefix(text, "settled · Pixel 9 (fake)") {
 		t.Fatalf("connect over HTTP:\n%s", text)
 	}
+
+	// The agent's files are on its own machine: it hands them to Pinky, in
+	// the call or through a link it sends the file to, and pushes them,
+	// which the person allows.
+	text, isErr = c.call(t, "phone_files", map[string]any{"action": "upload", "paths": []string{"hello.txt"},
+		"content": base64.StdEncoding.EncodeToString([]byte("hi"))})
+	if isErr || !strings.Contains(text, "Saved hello.txt (2 B)") {
+		t.Fatalf("upload in the call:\n%s", text)
+	}
+	text, isErr = c.call(t, "phone_files", map[string]any{"action": "upload", "paths": []string{"Pictures/cat.png"}})
+	m := regexp.MustCompile(`curl --upload-file <your file> '([^']+)'`).FindStringSubmatch(text)
+	if isErr || m == nil {
+		t.Fatalf("upload link:\n%s", text)
+	}
+	img := bytes.Repeat([]byte{0x89, 'P', 'N', 'G'}, 50_000)
+	req, _ := http.NewRequest(http.MethodPut, m[1], bytes.NewReader(img))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var answer bytes.Buffer
+	answer.ReadFrom(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(answer.String(), "Saved Pictures/cat.png (200 KB)") {
+		t.Fatalf("PUT to the link: %d\n%s", resp.StatusCode, answer.String())
+	}
+	pushed := make(chan string, 1)
+	go func() {
+		text, _ := c.call(t, "phone_files", map[string]any{"action": "push", "intent": "Send the cat picture"})
+		pushed <- text
+	}()
+	ctl, err := api.DialControl(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ctl.Close()
+	var needs []api.NeedInfo
+	for i := 0; i < 200 && len(needs) == 0; i++ {
+		if err := ctl.Call("needs", nil, &needs); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	if len(needs) != 1 || needs[0].Rule != "Files" || needs[0].Title != "Copy 2 files to Pixel 9 (fake)?" {
+		t.Fatalf("needs: %+v", needs)
+	}
+	run(t, bin, home, "decide", needs[0].ID, "allow")
+	if text := <-pushed; !strings.HasPrefix(text, "settled") || !strings.Contains(text, "Copied 2 files to the phone") {
+		t.Fatalf("push:\n%s", text)
+	}
+	text, _ = c.call(t, "phone_files", map[string]any{})
+	if !strings.Contains(text, "hello.txt · 2 B · ") || !strings.Contains(text, "Pictures/cat.png · 200 KB · ") || strings.Count(text, " · both") != 2 {
+		t.Fatalf("list after the push:\n%s", text)
+	}
+
 	if text, _ := c.call(t, "phone_release", map[string]any{}); !strings.HasPrefix(text, "settled") {
 		t.Fatalf("release:\n%s", text)
 	}
+
+	// A client that sends fixed headers only, as Grok Bot does (GitHub
+	// DIYgod/pinky#10): no request after initialize carries the session
+	// id, and its GET stream has none either. It still works through a
+	// task on the iPhone.
+	idless := func(msg string) (int, string) {
+		req, _ := http.NewRequest(http.MethodPost, url, strings.NewReader(msg))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("User-Agent", "GrokBot/1.0")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var b bytes.Buffer
+		b.ReadFrom(resp.Body)
+		return resp.StatusCode, b.String()
+	}
+	if code, body := idless(`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"grok","version":"1"}}}`); code != http.StatusOK {
+		t.Fatalf("initialize: %d %s", code, body)
+	}
+	if code, _ := idless(`{"jsonrpc":"2.0","method":"notifications/initialized"}`); code != http.StatusAccepted {
+		t.Fatalf("initialized: %d", code)
+	}
+	get, _ := http.NewRequest(http.MethodGet, url, nil)
+	get.Header.Set("Accept", "text/event-stream")
+	get.Header.Set("Authorization", "Bearer "+token)
+	if resp, err := http.DefaultClient.Do(get); err != nil || resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("GET without a session: %v %v", resp, err)
+	} else {
+		resp.Body.Close()
+	}
+	for i, call := range []struct{ args, want string }{
+		{`{"name":"phone_connect","arguments":{"device":"iPhone 17 (fake)","task":"Open a folder"}}`, `settled · iPhone 17 (fake)`},
+		{`{"name":"phone_launch","arguments":{"app":"Dinely"}}`, `settled · iPhone 17 (fake)`},
+		{`{"name":"phone_observe","arguments":{}}`, `settled · iPhone 17 (fake)`},
+		{`{"name":"phone_release","arguments":{"summary":"Done"}}`, `Released iPhone 17 (fake)`},
+	} {
+		code, body := idless(fmt.Sprintf(`{"jsonrpc":"2.0","id":%d,"method":"tools/call","params":%s}`, i+2, call.args))
+		if code != http.StatusOK || !strings.Contains(body, call.want) || strings.Contains(body, `"isError":true`) {
+			t.Fatalf("call %d without a session id: %d\n%s", i, code, body)
+		}
+	}
+
 	// Without the token: refused.
-	resp, err := http.Post(url, "application/json", strings.NewReader(`{}`))
+	resp, err = http.Post(url, "application/json", strings.NewReader(`{}`))
 	if err != nil {
 		t.Fatal(err)
 	}
