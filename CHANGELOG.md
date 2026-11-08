@@ -12,6 +12,11 @@ What changed for people in each release of Pinky, newest first. A version is the
 - Add phone › iPhone says which steps need the cable: trusting the computer, and making the Developer Mode switch appear; the rest works over Wi-Fi.
 - A phone Pinky is connecting to, or moving between the cable and Wi-Fi, shows as Connecting or Moving to Wi-Fi rather than offline.
 - iPads are called iPads, with their model names.
+- Use your Android phone when it's away from your computer's network, as when you're out and the computer is at home, through Tailscale: turn on Use away from home for the phone in Settings › Phones once while it's near the computer, and Pinky keeps reaching it wherever it is. Add phone › Android has the steps, with buttons to get or open Tailscale and to connect the phones on your tailnet.
+- Pinky says what Use away from home opens before turning it on (the phone's adb listens on the network until it restarts) and turns it off with one click, or when you remove the phone.
+- New in Settings › Phones: Keep this computer awake for phones away, on by default, so agents can still reach a phone connected through Tailscale.
+- Through Tailscale, Pinky streams the phone's screen lighter (1 Mbit/s, 15 frames a second), since the phone's upload carries it.
+- Android 10 phones, which have no Wireless debugging, can now leave the cable too: plug the phone in and choose Use Wi-Fi instead… in the ⋯ menu under its picture. Pinky reconnects it by itself when it comes back to the network, and after the phone restarts its page says to plug it in once and choose Use Wi-Fi again; Stop the Wi-Fi connection turns it off.
 
 ## 2026.1108.13 (2026-11-08)
 
