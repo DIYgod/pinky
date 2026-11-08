@@ -100,16 +100,27 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	// while the app's tree comes (see springboard.go).
 	sbDone := d.kickSpringBoard(rax)
 	si := d.screen()
-	var wg sync.WaitGroup
+	var locked bool
+	lockKnown := make(chan struct{})
+	go func() {
+		defer close(lockKnown)
+		locked, _ = d.Locked(ctx)
+	}()
+	front := make(chan *axpObject, 1)
 	var els []raxElement
 	var complete bool
 	var walkErr error
-	wg.Add(1)
+	walked := make(chan struct{})
 	go func() {
-		defer wg.Done()
+		defer close(walked)
 		t := time.Now()
 		var pushed bool
-		els, complete, pushed, walkErr = d.raxTree(ctx, rax, &st.Trace)
+		els, complete, pushed, walkErr = d.raxTree(ctx, rax, &st.Trace, func(app *axpObject) {
+			select {
+			case front <- app:
+			default:
+			}
+		})
 		st.Walk = time.Since(t)
 		if pushed {
 			st.Source = "remoteax-push"
@@ -118,46 +129,72 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	var lines []ocrLine
 	var ocrErr error
 	var shot image.Image // the screenshot, for what it does not show (capture.go)
+	var pictured sync.WaitGroup
+	var gate *captureGate
 	if opt.OCR {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			t := time.Now()
-			png, pic, from, err := d.ocrPicture(ctx, opt)
-			st.Shot, st.ShotFrom = time.Since(t), from
-			if err != nil {
-				ocrErr = err
-				return
-			}
-			decoded := make(chan image.Image, 1)
+		// The picture waits until the read may take it (capturegate.go).
+		gate = newCaptureGate(opt.MayCapture, func() {
+			pictured.Add(1)
 			go func() {
-				if pic != nil {
-					decoded <- pic
+				defer pictured.Done()
+				t := time.Now()
+				png, pic, from, err := d.ocrPicture(ctx, opt)
+				st.Shot, st.ShotFrom = time.Since(t), from
+				if err != nil {
+					ocrErr = err
 					return
 				}
-				decoded <- decodeShot(png)
+				decoded := make(chan image.Image, 1)
+				go func() {
+					if pic != nil {
+						decoded <- pic
+						return
+					}
+					decoded <- decodeShot(png)
+				}()
+				t = time.Now()
+				lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
+				st.OCR = time.Since(t)
+				shot = <-decoded
 			}()
-			t = time.Now()
-			lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
-			st.OCR = time.Since(t)
-			shot = <-decoded
-		}()
+		})
 	}
-	var locked bool
-	wg.Add(1)
+	asked := make(chan struct{})
 	go func() {
-		defer wg.Done()
-		locked, _ = d.Locked(ctx)
+		// Ask as soon as the frontmost app and the lock state are known.
+		defer close(asked)
+		if gate == nil || opt.MayCapture == nil {
+			return
+		}
+		var app *axpObject
+		select {
+		case app = <-front:
+		case <-walked:
+			return
+		}
+		<-lockKnown
+		apps, ok := d.appCandidates(ctx, app.PID, locked)
+		if !ok {
+			return
+		}
+		var screens []*screen.Screen
+		for _, a := range apps {
+			screens = append(screens, &screen.Screen{Width: si.Width, Height: si.Height,
+				Orientation: orientationName(si.Orientation), App: a, Locked: locked})
+		}
+		gate.early(screens)
 	}()
-	wg.Wait()
+	<-walked
+	<-lockKnown
+	<-asked
 	if len(els) == 0 {
+		pictured.Wait() // a picture begun after the app is not left running
 		if walkErr == nil {
 			walkErr = errRAXTimeout
 		}
 		return nil, walkErr
 	}
 	st.WalkError = walkErr
-	st.OCRError = ocrErr
 	st.Complete = complete && walkErr == nil
 	if st.Source == "" {
 		st.Source = "remoteax"
@@ -173,6 +210,15 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	s.App = d.screenApp(ctx, els, locked, func(format string, args ...any) {
 		st.Trace = append(st.Trace, fmt.Sprintf(format, args...))
 	})
+	if gate != nil {
+		use := gate.late(s)
+		pictured.Wait()
+		st.Capture, st.CaptureWait = gate.stats()
+		if !use {
+			lines, shot, ocrErr = nil, nil, nil
+		}
+		st.OCRError = ocrErr
+	}
 	scale := si.Scale
 	if app.HasFrame && app.Frame.W > 0 {
 		scale = float64(si.Width) / app.Frame.W
@@ -278,8 +324,10 @@ const (
 // push at once, and takes whichever comes first. A push counts only when
 // its first tree came at least raxPushAfter after the input and its app is
 // the frontmost app the walk found first: a push can arrive late, after
-// the next input, and then describes the screen before it.
-func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) ([]raxElement, bool, bool, error) {
+// the next input, and then describes the screen before it. onApp, when
+// set, learns the frontmost app as soon as the walk finds it, before the
+// tree.
+func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string, onApp func(*axpObject)) ([]raxElement, bool, bool, error) {
 	input := d.lastInputAt()
 	trusted := time.Since(input) < raxPushTrust
 	t0 := time.Now()
@@ -289,7 +337,12 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) 
 	note("input %v ago, trusted %v", t0.Sub(input).Round(time.Millisecond), trusted)
 	var stop atomic.Bool
 	apps := make(chan *axpObject, 1)
-	walked := walkDetached(ctx, rax, &stop, func(app *axpObject) { apps <- app })
+	walked := walkDetached(ctx, rax, &stop, func(app *axpObject) {
+		if onApp != nil {
+			onApp(app)
+		}
+		apps <- app
+	})
 	if !trusted {
 		select {
 		case r := <-walked:

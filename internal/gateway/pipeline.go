@@ -1664,13 +1664,16 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 		readTok = video.readStarting(start)
 	}
 	opt := driver.ObserveOptions{OCR: mode != ocrOff, OCRAll: mode == ocrAll}
+	// Asked on every read: an iPhone whose remoteAXService fails, or one
+	// below iOS 27 without the helper, takes a picture to place the tree's
+	// elements, OCR or not.
+	opt.MayCapture = func(s *screen.Screen) bool { return g.mayCapture(d, s) }
 	if opt.OCR {
 		// A picture from the live video, for drivers whose screenshots are
 		// slow (an iPhone over Wi-Fi) or missing (an Android background
 		// display); it shares the mirror's stream.
 		key := hubKey(d.id, onBG)
 		opt.Frame = func(ctx context.Context) (image.Image, error) { return g.frameShot(ctx, key, dev) }
-		opt.MayCapture = func(s *screen.Screen) bool { return g.mayCapture(d, s) }
 	}
 	s, err := dev.Observe(ctx, opt)
 	if err != nil && video != nil {

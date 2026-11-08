@@ -161,11 +161,13 @@ type ObserveOptions struct {
 	// screen it read, as a screenshot or a frame of the video kept in
 	// memory only, to read its text by OCR: not of a locked phone, nor of
 	// a blocked app unless the person allowed it for the task. The
-	// picture must not outlive the read: no file, no cache. A driver that
-	// reads the tree first (Android) asks it with the screen as read,
-	// before it captures, and adds no OCR elements when it may not. nil
-	// means it may. The iOS driver captures while it reads the tree, so
-	// it does not ask.
+	// picture must not outlive the read: no file, no cache. A driver asks
+	// it with the screen as read, before it captures, and adds no OCR
+	// elements when it may not: Android once it has the tree, iOS as soon
+	// as it knows the app in front and the lock state, which it asks again
+	// with the screen it returns. The gateway sets it on every read, also
+	// without OCR: the iOS inspector path takes a picture to place the
+	// tree's elements. nil means it may.
 	MayCapture func(s *screen.Screen) bool
 }
 
