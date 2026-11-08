@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -114,6 +115,85 @@ func TestDeviceConnection(t *testing.T) {
 	elapsed := time.Since(ms.Since).Seconds()
 	t.Logf("stream: %d frames, %d keyframes, %d packets, %d lost, %d dropped, %d keyframe requests, %.1f Mbit/s over %.0f s, delay %v (known %v)",
 		ms.Frames, ms.KeyFrames, ms.Packets, ms.Lost, ms.Dropped, ms.KeyRequests, float64(ms.Bytes)*8/1e6/elapsed, elapsed, ms.Delay, ms.DelayKnown)
+}
+
+// TestDeviceStillStream keeps a view of the stream open on the still home
+// screen for PINKY_STILL seconds (20 by default), as the mirror does while
+// someone watches the phone, and logs every second what came from the
+// phone: it shows whether the stream goes quiet and fails (videoSilence)
+// while nothing on the screen changes. When the view ends it opens another,
+// as the mirror would. PINKY_CONN as in TestDeviceConnection.
+func TestDeviceStillStream(t *testing.T) {
+	conn := os.Getenv("PINKY_CONN")
+	if conn == "" {
+		t.Skip("PINKY_CONN not set")
+	}
+	still := 20 * time.Second
+	if s := os.Getenv("PINKY_STILL"); s != "" {
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			t.Fatalf("PINKY_STILL: %v", err)
+		}
+		still = time.Duration(n) * time.Second
+	}
+	ctx := ctxFor(t, still+2*time.Minute)
+	d, err := Open(ctx, driver.Info{ID: os.Getenv("PINKY_DEVICE"), Platform: driver.IOS, Connection: conn})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	t.Logf("%s: entry %s", conn, d.l.base.Properties.ConnectionType)
+	if locked, err := d.Locked(ctx); err != nil || locked {
+		t.Fatalf("the phone is locked (%v, %v): unlock it first; nothing was pressed", locked, err)
+	}
+	home(ctx, d)
+	ended := make(chan *media, 1)
+	var view driver.Stream
+	open := func() *media {
+		v, err := d.Stream(ctx, driver.StreamOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		view = v
+		m := v.(*watchedStream).m
+		go func() {
+			for range v.Packets() {
+			}
+			ended <- m
+		}()
+		return m
+	}
+	m := open()
+	defer func() { view.Close() }()
+	ago := func(ns int64) time.Duration {
+		if ns == 0 {
+			return -1
+		}
+		return time.Since(time.Unix(0, ns)).Round(100 * time.Millisecond)
+	}
+	start := time.Now()
+	var rtp, rtcp int64
+	ends := 0
+	tick := time.NewTicker(time.Second)
+	defer tick.Stop()
+	for time.Since(start) < still {
+		select {
+		case old := <-ended:
+			ends++
+			t.Logf("%4.1fs: the view ended: %v", time.Since(start).Seconds(), old.Err())
+			view.Close()
+			m = open()
+			rtp, rtcp = 0, 0
+			continue
+		case <-tick.C:
+		}
+		st := m.snapshot()
+		in := m.rtcpIn.Load()
+		t.Logf("%4.1fs: %d RTP, %d RTCP; last RTP %v ago, last RTCP %v ago",
+			time.Since(start).Seconds(), int64(st.Packets)-rtp, in-rtcp, ago(m.lastRTP.Load()), ago(m.lastRTCP.Load()))
+		rtp, rtcp = int64(st.Packets), in
+	}
+	t.Logf("%s: the view ended %d times in %v of a still screen", conn, ends, still)
 }
 
 // captureFormat asks CoreDevice's screen capture service for one format.
