@@ -50,10 +50,17 @@ func (p *Provider) forgot(id string) bool {
 // for ConnectWiFi and pairings, or by anyone else (`adb connect`). One the
 // adb server's own discovery made stays, since the server cannot drop it by
 // name (adb.Client.Disconnect) and would make it again; Pinky just no
-// longer uses it. A USB connection stays too.
+// longer uses it. A USB connection stays too. A phone set up for away
+// from home is set up no longer: its adb stops listening on the network,
+// when the phone can be reached (tailnet.go).
 func (p *Provider) Disconnect(ctx context.Context, id string) error {
 	if id == "" {
 		return nil
+	}
+	if _, ok := p.away.get(id); ok {
+		if err := p.awayOff(ctx, id); err != nil {
+			p.cfg.logf("android: %s: turning off away from home: %v", id, err)
+		}
 	}
 	entries, err := p.cfg.Client.Devices(ctx)
 	if err != nil {

@@ -421,3 +421,28 @@ func TestTailReconnect(t *testing.T) {
 		t.Fatalf("Tailscale off: missing %v, connects %q", missing, connects())
 	}
 }
+
+// TestRemoveAwayPhone: removing a phone set up for away from home stops
+// its adb listening and forgets its address.
+func TestRemoveAwayPhone(t *testing.T) {
+	f, ph, _, p := newTailnetFake(t)
+	ctx := context.Background()
+	f.set(func(f *fakeADB) {
+		f.devices = []string{localWiFi + "\tdevice product:x model:Pixel_9 device:x transport_id:7"}
+	})
+	if _, err := p.SetAway(ctx, piHW, true); err != nil {
+		t.Fatal(err)
+	}
+	p.Forget(piHW)
+	if err := p.Disconnect(ctx, piHW); err != nil {
+		t.Fatal(err)
+	}
+	if _, kept := p.away.get(piHW); kept {
+		t.Fatal("still set up")
+	}
+	ph.mu.Lock()
+	defer ph.mu.Unlock()
+	if last := ph.restarts[len(ph.restarts)-1]; last != "usb:"+localWiFi {
+		t.Fatalf("restarts %q", ph.restarts)
+	}
+}
