@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"image"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -99,11 +100,54 @@ func TestIPhoneHelperReminderLayout(t *testing.T) {
 			if soon.H == 0 || !ok || !okHome {
 				t.Fatalf("%s %v: reminder %v, phone %v %v, Home %v %v: %q", lang, size, soon, phone, ok, home, okHome, tt.Texts())
 			}
-			if soon.Y+soon.H > phone.Y || home.Y+home.H > float32(size[1]) {
+			if soon.Y+soon.H+14 > phone.Y+0.5 || home.Y+home.H > float32(size[1])-16+0.5 {
 				t.Errorf("%s %v: the reminder %v runs into the phone %v, or Home %v off the window", lang, size, soon, phone, home)
 			}
 		}
 	}
+}
+
+// TestIPhoneHelperReminderGivesWay: while the person is in control, the
+// banner takes the reminder's place above the phone; once they hand the
+// phone back, the reminder is back. Neither covers the phone.
+func TestIPhoneHelperReminderGivesWay(t *testing.T) {
+	ta, id, _ := helperApp(t)
+	exp := time.Now().Add(20 * time.Hour)
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
+	ta.sync()
+	d := ta.iphoneView(t)
+	soon := locales.CheckHelperSoon(d.Info.Name, exp.Local())
+	img := image.NewRGBA(image.Rect(0, 0, 1170, 2532))
+	stillMirror(ta, id, img)
+	ta.selectPhone(id)
+	const w, h = 1280, 820
+	tt := mg.NewTester(ta.view, w, h)
+	tt.Frame()
+	reminderFits := func(what string) {
+		t.Helper()
+		r, ok := tt.Find(soon) // the reminder's box, labeled with its words
+		b := findPhone(t, tt, d.Info.Name)
+		if !ok || b.banner || r.Y < 58+16-0.5 || r.Y+r.H+14 > b.fig.Y+0.5 || b.keys.Y+b.keys.H > h-16+0.5 {
+			t.Fatalf("%s: the reminder %v (shown %v), the phone %v, Home %v, Hand back %v", what, r, ok, b.fig, b.keys, b.banner)
+		}
+	}
+	reminderFits("before")
+
+	ta.takeOver(id)
+	ta.waitFor(t, "the person in control", func() bool { return ta.iphoneView(t).Status == gateway.DeviceInControl })
+	tt.Frame()
+	tt.Frame()
+	b := findPhone(t, tt, d.Info.Name)
+	if hasText(tt, soon) {
+		t.Fatalf("the reminder shows with the banner: %q", tt.Texts())
+	}
+	checkBanner(t, b, w, h)
+
+	ta.handBack(id)
+	ta.waitFor(t, "the phone handed back", func() bool { return ta.iphoneView(t).Status != gateway.DeviceInControl })
+	tt.Frame()
+	tt.Frame()
+	reminderFits("after Hand back")
 }
 
 // TestIPhoneHelperRanOut: once the helper's signature ran out, the iPhone
