@@ -5,10 +5,12 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/ui/fakeapi"
@@ -186,12 +188,75 @@ func TestAddIPhoneScreenshots(t *testing.T) {
 	shoot("iphone-noimage-zh")
 }
 
+// TestAddIPhoneAlreadyReady says that an iPhone connected and ready before
+// Add phone opened is ready, rather than waiting for one to be plugged in,
+// and follows another iPhone plugged in then.
+func TestAddIPhoneAlreadyReady(t *testing.T) {
+	ta, tt := addIPhoneApp(t)
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the phone", func() bool { tt.Frame(); return ta.add.iphone(ta.app) != nil })
+	id := ta.add.iphone(ta.app).Info.ID
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline})
+	ta.waitFor(t, "the phone online", func() bool {
+		tt.Frame()
+		for _, d := range ta.devices {
+			if d.Info.ID == id {
+				return d.Info.State == driver.StateOnline
+			}
+		}
+		return false
+	})
+	// Add phone › iPhone opens again, with that iPhone known.
+	ta.add.reset(ta.app)
+	ta.add.step = "iphone"
+	ta.waitFor(t, "the ready iPhone", func() bool { tt.Frame(); return hasText(tt, "iPhone 16 is ready") })
+	if !hasText(tt, "To add another iPhone, plug it in.") {
+		t.Errorf("no word of adding another iPhone: %q", tt.Texts())
+	}
+	if hasText(tt, "Looking for your iPhone") {
+		t.Errorf("still looking for an iPhone: %q", tt.Texts())
+	}
+	if _, ok := tt.Find(locales.AddPhoneOlderIPhone()); !ok {
+		t.Errorf("no way to an older iPhone: %q", tt.Texts())
+	}
+
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the new iPhone", func() bool {
+		tt.Frame()
+		d := ta.add.iphone(ta.app)
+		return d != nil && d.Info.ID != id
+	})
+	tt.Frame()
+	if hasText(tt, "To add another iPhone") {
+		t.Errorf("the steps still show the ready iPhone: %q", tt.Texts())
+	}
+}
+
 // TestAddIPhoneDownload offers the developer disk image from the mirror
 // when the computer has none, says where it comes from, downloads it on a
 // click and moves on; a failed or changed download says so and points back
 // to the official ways.
 func TestAddIPhoneDownload(t *testing.T) {
-	ta, tt := addIPhoneApp(t)
+	// The steps above the offer differ by system: an App Store link on a
+	// Mac, a longer text on how to copy the image elsewhere. Fonts differ
+	// too, and on Linux and Windows the longer text pushes the offer's
+	// button below the window, where the card scrolls; the shorter window
+	// puts it there on every system.
+	for _, c := range []struct {
+		goos   string
+		height int
+	}{{"darwin", 820}, {"linux", 640}} {
+		t.Run(c.goos, func(t *testing.T) {
+			defer func(os string) { guideOS = os }(guideOS)
+			guideOS = c.goos
+			testAddIPhoneDownload(t, c.height)
+		})
+	}
+}
+
+func testAddIPhoneDownload(t *testing.T, height int) {
+	ta, _ := addIPhoneApp(t)
+	tt := mg.NewTester(ta.view, 1280, height)
 	ta.api.ConnectIPhone()
 	ta.waitFor(t, "the phone", func() bool { tt.Frame(); return ta.add.iphone(ta.app) != nil })
 	id := ta.add.iphone(ta.app).Info.ID
@@ -217,7 +282,7 @@ func TestAddIPhoneDownload(t *testing.T) {
 		if ta.add.dl.err != nil {
 			label = "Try again"
 		}
-		if err := tt.Click(label); err != nil {
+		if err := clickInView(tt, label); err != nil {
 			t.Fatalf("%s: %v (%q)", label, err, tt.Texts())
 		}
 		ta.waitFor(t, "the failure", func() bool { tt.Frame(); return hasText(tt, c.says) })
@@ -228,9 +293,30 @@ func TestAddIPhoneDownload(t *testing.T) {
 
 	// One that works: the phone is prepared next.
 	ta.api.SetDownloadError(nil)
-	if err := tt.Click("Try again"); err != nil {
+	if err := clickInView(tt, "Try again"); err != nil {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "the progress", func() bool { tt.Frame(); return hasText(tt, "Downloading…") })
 	ta.waitFor(t, "the phone being prepared", func() bool { tt.Frame(); return hasText(tt, "Preparing the iPhone…") })
+}
+
+// clickInView clicks the element labelled s, first scrolling the Add phone
+// card while the element lies below the window or below the card's edge,
+// which clips it to nothing, as a person scrolls the card.
+func clickInView(tt *mg.Tester, s string) error {
+	for range 8 {
+		r, ok := tt.Find(s)
+		if !ok {
+			break
+		}
+		if r.W > 0 && r.H > 0 {
+			if err := tt.Click(s); err == nil || !strings.Contains(err.Error(), "outside the window") {
+				return err
+			}
+		}
+		// The card's middle: inside it in any window the tests use.
+		tt.Scroll(r.X+r.W/2, 300, 0, 200)
+		tt.Frame()
+	}
+	return tt.Click(s)
 }

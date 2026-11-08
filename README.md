@@ -91,11 +91,11 @@ Pinky prepares an iPhone itself; **Add phone › iPhone** walks you through it.
 
 1. Plug the iPhone into the computer, unlock it, tap **Trust** and enter its passcode. On Windows, install Apple Devices from the Microsoft Store (or iTunes) first; on Linux, the `usbmuxd` package. Add phone says when they are missing.
 2. On the iPhone, turn on **Developer Mode** in Settings › Privacy & Security: Pinky makes the switch appear there. The iPhone restarts; unlock it, tap **Turn On** and enter the passcode.
-3. Pinky mounts Apple's developer disk image on the iPhone and lists it as ready. It does this again by itself after every restart, once you unlock the iPhone.
+3. Pinky mounts Apple's developer disk image on the iPhone and lists it as ready. An iPhone on iOS 27 keeps the image when it restarts; below iOS 27 Pinky mounts it again after each restart, once you unlock the iPhone.
 
 The developer disk image comes with [Xcode](https://apps.apple.com/app/xcode/id497799835), Apple's free app for developers, and Pinky does not ship it. On a Mac, install Xcode once and open it: Pinky uses the image it installs, and Xcode never has to run again. On Windows and Linux, copy `/Library/Developer/DeveloperDiskImages/iOS_DDI` from such a Mac into Pinky's folder ([where](docs/notes/ios.md#preparing-a-phone-without-xcode)). Without either, Add phone offers to download the image from a third-party mirror, github.com/doronz88/DeveloperDiskImage (Xcode 27.0 beta 4, 32 MB, kept by the author of pymobiledevice3, not by Apple), only when you click Download; Pinky checks every file against the checksum it expects. On iOS 27 and later, no app gets installed on the iPhone.
 
-Checked on the iPhone 13 mini: finding Xcode's image and keeping the image already on the phone. Not yet tried on a phone: Pinky mounting the image itself, the downloaded image, the Developer Mode switch, and iPhones on Windows or Linux.
+Checked on the iPhone 13 mini (iOS 27.0.1): finding Xcode's image, keeping the image already on the phone, and that the iPhone keeps the image when it restarts. Pinky mounting the image itself does not work there yet: the install waits until it times out. Until it does, mount the image once by opening Xcode with the iPhone plugged in; it then stays. Not yet tried on a phone: the downloaded image, the Developer Mode switch, iPhones below iOS 27, and iPhones on Windows or Linux.
 
 #### iPhones on iOS 17.4 to 26
 

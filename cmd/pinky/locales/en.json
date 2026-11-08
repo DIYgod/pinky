@@ -318,6 +318,10 @@
       }
     }
   },
+  "addPhoneIPhoneAnother": "To add another iPhone, plug it in.",
+  "@addPhoneIPhoneAnother": {
+    "description": "Add phone › iPhone: a note under the ready line when the steps show an iPhone that was connected and ready already, before any other was plugged in."
+  },
   "addPhoneIPhoneDetail": "Pinky sets the iPhone up for you. Each step says what to do on the iPhone.",
   "@addPhoneIPhoneDetail": {
     "description": "Add phone › iPhone: the line under the title, above the steps."
@@ -402,7 +406,7 @@
   "@addPhoneIPhoneNoImageCopy": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the text on Windows and Linux; Pinky's sentence with its folder follows. The path stays as it is."
   },
-  "addPhoneIPhoneNoImageMac": "Apple's developer disk image comes with Xcode. Install Xcode from the App Store and open it once, then you can quit it: Pinky uses the image from then on, also after restarts.",
+  "addPhoneIPhoneNoImageMac": "Apple's developer disk image comes with Xcode. Install Xcode from the App Store and open it once, then you can quit it: Pinky uses the image from then on.",
   "@addPhoneIPhoneNoImageMac": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the text on a Mac."
   },
@@ -450,7 +454,7 @@
   "@addPhoneIPhoneStepPrepare": {
     "description": "Add phone › iPhone, the step list: the step Pinky does by itself: mounting Apple's developer disk image on the iPhone."
   },
-  "addPhoneIPhoneStepPrepareDetail": "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. It does this again by itself after every restart.",
+  "addPhoneIPhoneStepPrepareDetail": "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. iPhones on iOS 27 keep it when they restart; older ones drop it, and Pinky mounts it again by itself.",
   "@addPhoneIPhoneStepPrepareDetail": {
     "description": "Add phone › iPhone, the step list: under the preparation step. The developer disk image is Apple's add-on that gives a phone its developer services."
   },
@@ -852,13 +856,13 @@
   "@checkDiskImageMissing": {
     "description": "Checkup, an iPhone's item: the image is not mounted; Pinky's reason follows in English."
   },
-  "checkDiskImageNoCopy": "Mounted, but this computer has no copy of it, so Pinky can't mount it again after the iPhone restarts.",
+  "checkDiskImageNoCopy": "Mounted, but this computer has no copy of it, so Pinky can't mount it again should it go missing (iPhones below iOS 27 drop it when they restart).",
   "@checkDiskImageNoCopy": {
-    "description": "Checkup, an iPhone's item: the image is mounted, but this computer has none to mount again after a restart; the steps below say where to get one."
+    "description": "Checkup, an iPhone's item: the image is mounted, but this computer has none to mount again should it go missing; the steps below say where to get one."
   },
-  "checkDiskImagePass": "Mounted. Pinky mounts it again by itself after the iPhone restarts.",
+  "checkDiskImagePass": "Mounted. Should it go missing (iPhones below iOS 27 drop it when they restart), Pinky mounts it again by itself.",
   "@checkDiskImagePass": {
-    "description": "Checkup, an iPhone's item: the image is mounted, and this computer has one to mount again after a restart."
+    "description": "Checkup, an iPhone's item: the image is mounted, and this computer has one to mount again should it go missing."
   },
   "checkDiskImageTitle": "Developer disk image",
   "@checkDiskImageTitle": {

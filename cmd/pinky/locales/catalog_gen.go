@@ -905,6 +905,24 @@ func (msgs Messages) AddPhoneFoundIOS(name string, version string) string {
 	return Catalog.Format(msgs.locale, "addPhoneFoundIOS", map[string]any{"name": name, "version": version})
 }
 
+// AddPhoneIPhoneAnother says "To add another iPhone, plug it in."
+// in the language the app shows.
+//
+// Add phone › iPhone: a note under the ready line when the steps show an
+// iPhone that was connected and ready already, before any other was plugged
+// in.
+func AddPhoneIPhoneAnother() string { return In(i18n.Locale()).AddPhoneIPhoneAnother() }
+
+// AddPhoneIPhoneAnother says "To add another iPhone, plug it in."
+// in the language of msgs.
+//
+// Add phone › iPhone: a note under the ready line when the steps show an
+// iPhone that was connected and ready already, before any other was plugged
+// in.
+func (msgs Messages) AddPhoneIPhoneAnother() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneAnother", nil)
+}
+
 // AddPhoneIPhoneDetail says "Pinky sets the iPhone up for you. Each step says what to do on the iPhone."
 // in the language the app shows.
 //
@@ -1353,7 +1371,7 @@ func (msgs Messages) AddPhoneIPhoneStepPrepare() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPrepare", nil)
 }
 
-// AddPhoneIPhoneStepPrepareDetail says "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. It does this again by itself afte…"
+// AddPhoneIPhoneStepPrepareDetail says "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. iPhones on iOS 27 keep it when th…"
 // in the language the app shows.
 //
 // Add phone › iPhone, the step list: under the preparation step. The
@@ -1363,7 +1381,7 @@ func AddPhoneIPhoneStepPrepareDetail() string {
 	return In(i18n.Locale()).AddPhoneIPhoneStepPrepareDetail()
 }
 
-// AddPhoneIPhoneStepPrepareDetail says "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. It does this again by itself afte…"
+// AddPhoneIPhoneStepPrepareDetail says "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. iPhones on iOS 27 keep it when th…"
 // in the language of msgs.
 //
 // Add phone › iPhone, the step list: under the preparation step. The
@@ -2721,36 +2739,36 @@ func (msgs Messages) CheckDiskImageMissing() string {
 	return Catalog.Format(msgs.locale, "checkDiskImageMissing", nil)
 }
 
-// CheckDiskImageNoCopy says "Mounted, but this computer has no copy of it, so Pinky can't mount it again after the iPhone restarts."
+// CheckDiskImageNoCopy says "Mounted, but this computer has no copy of it, so Pinky can't mount it again should it go missing (iPhones below iOS 2…"
 // in the language the app shows.
 //
 // Checkup, an iPhone's item: the image is mounted, but this computer has
-// none to mount again after a restart; the steps below say where to get
-// one.
+// none to mount again should it go missing; the steps below say where to
+// get one.
 func CheckDiskImageNoCopy() string { return In(i18n.Locale()).CheckDiskImageNoCopy() }
 
-// CheckDiskImageNoCopy says "Mounted, but this computer has no copy of it, so Pinky can't mount it again after the iPhone restarts."
+// CheckDiskImageNoCopy says "Mounted, but this computer has no copy of it, so Pinky can't mount it again should it go missing (iPhones below iOS 2…"
 // in the language of msgs.
 //
 // Checkup, an iPhone's item: the image is mounted, but this computer has
-// none to mount again after a restart; the steps below say where to get
-// one.
+// none to mount again should it go missing; the steps below say where to
+// get one.
 func (msgs Messages) CheckDiskImageNoCopy() string {
 	return Catalog.Format(msgs.locale, "checkDiskImageNoCopy", nil)
 }
 
-// CheckDiskImagePass says "Mounted. Pinky mounts it again by itself after the iPhone restarts."
+// CheckDiskImagePass says "Mounted. Should it go missing (iPhones below iOS 27 drop it when they restart), Pinky mounts it again by itself."
 // in the language the app shows.
 //
 // Checkup, an iPhone's item: the image is mounted, and this computer has
-// one to mount again after a restart.
+// one to mount again should it go missing.
 func CheckDiskImagePass() string { return In(i18n.Locale()).CheckDiskImagePass() }
 
-// CheckDiskImagePass says "Mounted. Pinky mounts it again by itself after the iPhone restarts."
+// CheckDiskImagePass says "Mounted. Should it go missing (iPhones below iOS 27 drop it when they restart), Pinky mounts it again by itself."
 // in the language of msgs.
 //
 // Checkup, an iPhone's item: the image is mounted, and this computer has
-// one to mount again after a restart.
+// one to mount again should it go missing.
 func (msgs Messages) CheckDiskImagePass() string {
 	return Catalog.Format(msgs.locale, "checkDiskImagePass", nil)
 }

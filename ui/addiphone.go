@@ -61,23 +61,37 @@ func iphoneStep(d *gateway.DeviceView, host driver.HostCheck) int {
 // iphone returns the iPhone the steps follow: one plugged in since the
 // step began, else the one the Phone screen sent the person here for, else
 // one that is still waiting for a step (plugged in before Add phone opened,
-// or back after a restart).
+// or back after a restart), else one that is ready already.
 func (s *addState) iphone(a *app) *gateway.DeviceView {
+	d, _ := s.iphoneFollowed(a)
+	return d
+}
+
+// iphoneFollowed is iphone, and whether the iPhone is only one that was
+// ready already: the steps then say so, and that another iPhone is added
+// by plugging it in, which they then follow.
+func (s *addState) iphoneFollowed(a *app) (d *gateway.DeviceView, already bool) {
 	if d := s.fresh(a, driver.IOS); d != nil {
-		return d
+		return d, false
 	}
 	for i := range a.devices {
 		if d := &a.devices[i]; s.focus != "" && d.Info.ID == s.focus {
-			return d
+			return d, false
 		}
 	}
 	for i := range a.devices {
 		d := &a.devices[i]
 		if d.Info.Platform == driver.IOS && (d.Info.State == driver.StateUnauthorized || d.Info.State == driver.StateNeedsSetup) {
-			return d
+			return d, false
 		}
 	}
-	return nil
+	for i := range a.devices {
+		d := &a.devices[i]
+		if d.Info.Platform == driver.IOS && d.Info.State == driver.StateOnline {
+			return d, true
+		}
+	}
+	return nil, false
 }
 
 // iphoneHost returns what the computer lacks for iPhones, asking the
@@ -115,7 +129,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 	if guideOS != "windows" && guideOS != "linux" {
 		host = driver.HostCheck{} // macOS has usbmuxd built in
 	}
-	d := s.iphone(a)
+	d, already := s.iphoneFollowed(a)
 	cur := iphoneStep(d, host)
 	heading(c, locales.AddPhoneIPhoneTitle(), locales.AddPhoneIPhoneDetail())
 
@@ -209,10 +223,20 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			dot(c, p.green, false)
 			mg.Text(c, locales.AddPhoneReady(d.Info.Name)).FontWeight(600)
 		})
+		if already {
+			guideNote(c, locales.AddPhoneIPhoneAnother())
+		}
 		mg.Row(c).Children(func() {
 			if button(c, locales.AddPhoneDone(), btnOpt{kind: btnPrimary}).Clicked() {
 				a.selectPhone(d.Info.ID)
 				s.step = ""
+			}
+			if already {
+				// The person may have come to add an older iPhone.
+				mg.Spacer(c)
+				if quietButton(c, locales.AddPhoneOlderIPhone()).Clicked() {
+					s.old = true
+				}
 			}
 		})
 		return
