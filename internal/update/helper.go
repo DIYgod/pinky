@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-// The update helper of Windows. Pinky's installer replaces the files in the
+// The update helper of Windows and Linux. On Linux the release's archive,
+// unpacked next to the install folder, takes the installer's place: the
+// helper moves its files into the folder (install_linux.go), and the rest
+// is as below. On Windows, Pinky's installer replaces the files in the
 // install folder (%LOCALAPPDATA%\Programs\Pinky), which it cannot do while
 // Pinky runs from there, so the app leaves the work to a copy of itself in
 // the work folder next to the install folder (`Pinky.exe update-helper
@@ -99,7 +102,7 @@ var (
 )
 
 // ErrHelperOS is RunHelper on a system whose updates need no helper.
-var ErrHelperOS = errors.New("the update helper runs on Windows only")
+var ErrHelperOS = errors.New("the update helper runs on Windows and Linux only")
 
 // readJob reads job.json.
 func readJob(path string) (helperJob, error) {

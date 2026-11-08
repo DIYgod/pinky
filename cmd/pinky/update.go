@@ -115,7 +115,7 @@ func howToUpdate(l update.Location) string {
 }
 
 // runUpdateHelper is `pinky update-helper <job.json>`, which the app starts
-// on Windows from a copy of itself in the update's work folder: it installs
+// on Windows and Linux from a copy of itself in the update's work folder: it installs
 // the update once the app has quit (internal/update/helper.go).
 func runUpdateHelper(args []string) error {
 	if len(args) != 1 {

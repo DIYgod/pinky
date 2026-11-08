@@ -1,6 +1,6 @@
 # Updates
 
-How Pinky keeps itself and its Android companion app current, and tells the person what changed. Code: `internal/update` (feed, download, checks, the swap on macOS (`install_darwin.go`) and Windows (`install_windows.go`, `helper.go`), the work folder both use (`swap.go`), the changelog, state, idle rules), `ui/update.go` (cards, dialogs, Settings, the automatic installs), `cmd/pinky/update.go` (wiring, the daemon, `pinky update`, `pinky update-helper`), `internal/driver/android/companion_update.go` and `internal/gateway/companion_update.go` (the companion).
+How Pinky keeps itself and its Android companion app current, and tells the person what changed. Code: `internal/update` (feed, download, checks, the swap on macOS (`install_darwin.go`), Windows (`install_windows.go`, `helper.go`) and Linux (`install_linux.go`, the same helper), the work folder they use (`swap.go`, `install_folder.go`), the changelog, state, idle rules), `ui/update.go` (cards, dialogs, Settings, the automatic installs), `cmd/pinky/update.go` (wiring, the daemon, `pinky update`, `pinky update-helper`), `internal/driver/android/companion_update.go` and `internal/gateway/companion_update.go` (the companion).
 
 ## The feed
 
@@ -101,7 +101,29 @@ Checked on GitHub's Windows runner (Windows Server 2025, `update-windows.yml`, r
 
 ## Linux
 
-**Download** saves the release in `~/Downloads` and shows it. A Pinky that dpkg or pacman installed says to update it through the package manager; a Linuxbrew one shows `brew upgrade pinky`.
+`latest.json`'s `linux-amd64` is MyGo's archive (`pinky-<version>-linux-amd64.tar.gz`): pinky, FFmpeg, adb, the companion APK, a desktop entry and its icon, at its top, with MyGo's list of them, `.mygo-files`.
+
+| Where pinky runs | What the card offers |
+| --- | --- |
+| a folder whose `.mygo-files` names pinky (the `.tar.gz` unpacked into a folder of its own), which the person can write to, next to a folder they can write to | Update now, and by itself while idle, as on macOS and Windows |
+| the same, in a folder the person cannot write to | Download, with why |
+| a file that dpkg or pacman installed | that the package manager updates it |
+| Linuxbrew | the `brew upgrade pinky` command, with Copy |
+| an AppImage, or anything else (a build, a pinky copied into a folder of other programs) | Download: saved in `~/Downloads` and shown |
+
+The file list keeps Pinky from taking a folder for its own that is not: the helper moves everything in the folder aside.
+
+The install (`ArchiveInstaller`) is the Windows one, with the archive in the installer's place:
+
+1. Download into `<data>/updates`, checking the size and SHA-256 against the feed; as on Windows, the feed's checksum over HTTPS is the trust decision (the archive is not signed).
+2. Unpack it into `.Pinky.update-XXXX/new` next to the install folder (same volume, so the helper moves files with renames): files and folders only, every path inside the folder, at most 4 GiB; its `.mygo-files` must name pinky. A copy of the running pinky goes there too, `pinky-update`, which is the helper. `pending.json` and `job.json` (as on Windows, with `new` as the installer) follow, then Pinky starts the helper (`pinky-update update-helper job.json`, in a session of its own, without `MYGO_AUTOMATION`) and quits.
+3. The helper (`helper.go`) waits for Pinky to exit (a zombie counts as exited), moves everything in the install folder to `work/old`, moves the new files in, and checks that `pinky version` says the release's version. Linux lets it rename a pinky that an agent's `pinky mcp` still runs, and remove it later.
+4. It starts the new pinky from the install folder with the old one's arguments (`--background` when its window was closed) and Pinky's own variables; the new version writes `launched` and `started` (`CheckSwap`, `Confirm`) and shows What's new.
+5. Once it is up, the helper moves back what only the old folder had (a person's files next to pinky, an `iOS_DDI` folder) and removes the old files. When the new version does not install or start, it puts the old one back as on Windows, leaves `rolled-back` with why, and starts the old version, which records the version as failed and does not try it again by itself.
+
+Paths stay the same, so a desktop entry or a link to `pinky` that the person made keeps working. `pinky update` swaps the files at once while no Pinky runs (`SwapNow`).
+
+Checked on Arch Linux (KDE Plasma, Wayland) with `TestLinuxUpdate` (below).
 
 ## The daemon and the command line
 
@@ -127,10 +149,12 @@ Checked on GitHub's Windows runner (Windows Server 2025, `update-windows.yml`, r
 
 - `go test ./internal/update/`: versions, the feed (bad assets, redirects to HTTP, size limits), downloads (checksum, size, nothing left behind), the changelog, the state, idle rules, and on macOS staging (wrong version, identifier, two apps, not a zip, an unsigned bundle), the swap with a fake running app and a fake `open` (success, rollback after a crash, rollback when nothing launches), leftovers, `Locate` (translocated, read-only, ad hoc, Homebrew). `PINKY_SIGNED_APP=<an unzipped release>/Pinky.app PINKY_E2E_SIGN="Developer ID Application: … (492J8Q67PF)" go test -run TestSignatureOfARelease ./internal/update/` checks the requirements against a real release (notarized and stapled), a modified copy, and a modified copy signed again with the Developer ID, which is the team's but not notarized.
 - `go test -run 'TestHelper|TestMoveAll|TestReadJob|TestSetupLocation|TestCheckSwapOfAnInstallFolder' ./internal/update/`, on every system: the Windows helper with fakes for the installer and the processes (the update, a slow start, the installer failing or installing another version, the new version crashing, exiting before it is up or never launching, Pinky not quitting, the person's files that will not go back), and where a Windows Pinky updates itself.
+- `go test -run 'TestArchive|TestUnpackArchive|TestProcessExited' ./internal/update/`, on Linux: `.mygo-files` deciding where Pinky replaces itself, unpacking (paths out of the folder and links refused), `SwapNow`, and the helper with the real operations and a shell script for pinky (the update, and the rollback of a version that exits at once).
 - `go test ./ui -run 'Update|WhatsNew|Companion(UpdatesWhen|Waits)|SettingsCheckNow|RelaunchArgs'`: the cards and dialogs in `ui.Tester` against a local feed and a fake installer, automatic installs waiting for an agent, the person and the setting, Homebrew and download-only installs, What's new, the companion's automatic update with the fake gateway.
 - `scripts/devlock.sh <emulator> env PINKY_DEVICE=<emulator> PINKY_COMPANION_OLD=<older apk> PINKY_COMPANION_APK=<bundled apk> go test -tags device -run TestDeviceCompanionUpdate -v ./internal/driver/android/`: off stays off, on stays on with the app's own settings, and what Android does by itself; it leaves the bundled build installed and the setting and the app's settings as found. Passed on `emulator-5562` (Android 10) and `emulator-5560` (Android 16), with builds 75 and 130.
 - `go test -run 'TestShimReconnectsAfterAnUpdate|TestShimWaitsForPinkyToOpenAgain' ./cmd/pinky/`: an agent's session through `pinky mcp` survives a restart marked as an update, and a plain quit until Pinky is opened again.
 - `PINKY_E2E_SIGN="Developer ID Application: … (492J8Q67PF)" go test -tags e2e -run TestUpdateEndToEnd -v -timeout 10m ./cmd/pinky/`: two e2e builds signed with the Developer ID in a temporary Applications folder and a local feed; the older one, left alone in the menu bar, updates itself, the newer one starts, drops the old bundle and shows What's new over MyGo's automation socket (in English or Simplified Chinese: the e2e build shares Pinky.app's defaults, so the language picked in Pinky's Settings on that Mac). Passed on this Mac on 2026-11-07 after the notarization and Windows changes, in 71 s, with the person's own Pinky running alongside.
+- `go test -tags e2e -run TestLinuxUpdate -v -timeout 30m ./cmd/pinky/`, in a Linux desktop session: three e2e builds as archives; the oldest, unpacked into a temporary folder, with a file of the person's next to it and its window closed, updates itself from a local feed (pinky's version, the person's file, update.json, What's new, the work folder gone), with an agent's `pinky mcp` session going on across it; then the newest, which exits as it starts, is rolled back and not tried again.
 - `.github/workflows/update-windows.yml` (GitHub's Windows runner; on changes to the update code, the Windows packaging or the workflow, and by hand): three e2e builds with their installers, and `TestWindowsUpdate` (`cmd/pinky/update_windows_e2e_test.go`) installs the oldest quietly into a temporary folder, lets it update itself from a local feed (Pinky.exe's version, Settings › Apps, update.json, What's new, the work folder gone), then serves the newest, which exits as it starts (`PINKY_E2E_CRASH_VERSION`, e2e builds only): the helper must put the version before it back, files and Settings › Apps entry, and that version must not try it again. It uninstalls Pinky at the end.
 
 ## Open questions

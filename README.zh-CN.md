@@ -53,7 +53,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 - **Windows**：下载 `pinky-setup-<version>-amd64.exe` 并运行。它会把 Pinky 装在你自己的账户下，不需要管理员权限。安装程序暂时还没有签名，所以 SmartScreen 可能会提示「Windows 已保护你的电脑」：点「更多信息」，再点「仍要运行」。不想安装的话，解压 `pinky-<version>-windows-amd64.zip`，打开里面的 `Pinky.exe` 就行。
 - **Linux**：Debian 和 Ubuntu 下载 `pinky_<version>_amd64.deb`，用 `sudo apt install ./pinky_<version>_amd64.deb` 安装。其他系统把 `pinky-<version>-linux-amd64.tar.gz` 解压到一个单独的文件夹，运行里面的 `pinky`。
 
-Pinky 会自己检查新版本；Mac 版和用 Windows 安装程序装的 Pinky 还会自己装好更新（见[更新](#更新)）。
+Pinky 会自己检查新版本；Mac 版、用 Windows 安装程序装的 Pinky 和从 Linux 的 `.tar.gz` 解压出来的 Pinky 还会自己装好更新（见[更新](#更新)）。
 
 ### 2. 连接手机
 
@@ -202,7 +202,7 @@ Pinky 在启动时和之后每隔几小时检查一次新版本，有新版本�
 
 - **macOS**：Pinky.app 会先核对下载文件的校验和、确认它由 Pinky 的开发者签名并经过 Apple 公证，再替换自己；新版本启动不了就退回旧版本。Homebrew cask 装的那份也会这样自己更新，它已经是最新时 `brew upgrade` 不会动它。直接从磁盘映像里运行的、或者放在你没有写权限的文件夹里的 Pinky，会告诉你怎么更新。
 - **Windows**：用安装程序装的 Pinky 会在核对校验和后静默运行新的安装程序，启动新版本，新版本启动不了就退回旧版本。免安装版会帮你下载安装程序。
-- **Linux**：Pinky 会把新版本下载好，由你来安装。
+- **Linux**：从 `.tar.gz` 解压到单独文件夹的 Pinky 会先核对下载的校验和，再用新版本的文件替换自己的文件，启动新版本，新版本起不来就换回旧版本。`.deb` 由包管理器更新；其他方式运行的 Pinky 会把新版本下载好，由你来安装。
 - **终端**：Pinky 没在运行时，`pinkyctl update` 会安装更新；`pinkyctl daemon` 只会在日志里提示有新版本。
 
 详情见 [docs/notes/updates.md](docs/notes/updates.md)。

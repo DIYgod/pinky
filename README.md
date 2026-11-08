@@ -53,7 +53,7 @@ Get Pinky from [the latest release](https://github.com/DIYgod/pinky/releases/lat
 - **Windows:** download `pinky-setup-<version>-amd64.exe` and run it. It installs Pinky for your account, without administrator rights. The installer is not signed yet, so SmartScreen may say that Windows protected your PC: choose **More info**, then **Run anyway**. To use Pinky without installing it, unzip `pinky-<version>-windows-amd64.zip` and open `Pinky.exe`.
 - **Linux:** on Debian and Ubuntu, download `pinky_<version>_amd64.deb` and install it with `sudo apt install ./pinky_<version>_amd64.deb`. On other systems, unpack `pinky-<version>-linux-amd64.tar.gz` into a folder of its own and run `pinky` in it.
 
-Pinky looks for new versions by itself and, on a Mac and with the Windows installer, installs them too ([Updates](#updates)).
+Pinky looks for new versions by itself and, on a Mac, with the Windows installer and unpacked from the Linux `.tar.gz`, installs them too ([Updates](#updates)).
 
 ### 2. Connect your phone
 
@@ -202,7 +202,7 @@ Pinky looks for a new version at launch and every few hours, and shows a card wi
 
 - **macOS:** Pinky.app replaces itself after checking the download's checksum, that it is signed by Pinky's developer and that Apple notarized it, and goes back to the old version if the new one does not start. The Homebrew cask's copy updates itself the same way, and `brew upgrade` leaves it alone while it is current. A copy run from the disk image or from a folder you cannot write to says how to update it instead.
 - **Windows:** a Pinky that its installer installed runs the new installer quietly, after checking its checksum, starts the new version and goes back to the old one if that does not start. The portable copy downloads the installer for you.
-- **Linux:** Pinky downloads the release for you to install.
+- **Linux:** a Pinky unpacked from the `.tar.gz` into a folder of its own replaces its files with the new release's, after checking its checksum, starts the new version and goes back to the old one if that does not start. Your package manager updates the `.deb`; other copies download the release for you to install.
 - **Terminal:** `pinkyctl update` installs an update while Pinky is not running; `pinkyctl daemon` only logs that one is out.
 
 Details: [docs/notes/updates.md](docs/notes/updates.md).

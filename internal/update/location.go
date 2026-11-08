@@ -1,6 +1,7 @@
 package update
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -88,14 +89,58 @@ func setupLocation(exe, registered string, writable func(dir string) error) Loca
 		return l
 	}
 	l.App, l.Method = dir, MethodSelf
-	// The helper works in a folder next to the install folder.
+	l.Problem = folderProblem(dir, writable)
+	return l
+}
+
+// archiveLocation is locate on Linux for a Pinky unpacked from the
+// release's archive into a folder of its own, which the archive's file list
+// (.mygo-files, MyGo's) shows: Pinky replaces the folder's files with the
+// next archive's and starts again. Any other copy (a build, a pinky copied
+// into a folder of other programs) downloads the release for the person.
+func archiveLocation(exe string, writable func(dir string) error) Location {
+	l := Location{Exe: exe, App: exe, Method: MethodDownload}
+	dir := filepath.Dir(exe)
+	if !listsFile(filepath.Join(dir, fileList), filepath.Base(exe)) {
+		return l
+	}
+	l.App, l.Method = dir, MethodSelf
+	l.Problem = folderProblem(dir, writable)
+	return l
+}
+
+// folderProblem says why Pinky cannot replace the files of its install
+// folder dir, or "": the helper works in a folder next to it.
+func folderProblem(dir string, writable func(dir string) error) string {
 	for _, d := range []string{dir, filepath.Dir(dir)} {
 		if writable(d) != nil {
-			l.Problem = "Pinky can't write to " + d + ", where it is installed."
-			break
+			return "Pinky can't write to " + d + ", where it is installed."
 		}
 	}
-	return l
+	return ""
+}
+
+// fileList is the list of the files of a release's archive, which MyGo
+// writes into it: one name a line.
+const fileList = ".mygo-files"
+
+// listsFile reports whether the file list at path names name.
+func listsFile(path, name string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, 1<<20))
+	if err != nil {
+		return false
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.TrimSpace(line) == name {
+			return true
+		}
+	}
+	return false
 }
 
 // writableDir reports whether a folder can take new entries, by making
