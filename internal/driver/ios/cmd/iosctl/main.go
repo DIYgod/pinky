@@ -766,5 +766,11 @@ func orient(ctx context.Context, d *pios.Device, args []string) error {
 		}
 		fmt.Printf("  %-40q %v\n", e.Label, e.Bounds)
 	}
-	return stream(ctx, d, []string{"-seconds", strconv.Itoa(*secs), "-out", *out + "/video.hevc"})
+	if err := stream(ctx, d, []string{"-seconds", strconv.Itoa(*secs), "-out", *out + "/video.hevc"}); err != nil {
+		return err
+	}
+	for _, e := range d.HeaderExtensions() {
+		fmt.Printf("RTP header extension % x\n", e)
+	}
+	return nil
 }

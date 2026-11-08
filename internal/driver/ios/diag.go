@@ -151,3 +151,15 @@ func (d *Device) Orientation(ctx context.Context) (OrientationReport, error) {
 	}
 	return r, nil
 }
+
+// HeaderExtensions returns the different RTP header extensions the video
+// stream carried so far, for iosctl orient.
+func (d *Device) HeaderExtensions() [][]byte {
+	d.mu.Lock()
+	m := d.m
+	d.mu.Unlock()
+	if m == nil {
+		return nil
+	}
+	return m.headerExts()
+}

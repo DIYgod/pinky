@@ -284,6 +284,32 @@ The protocol, as iOS 27.0.1 speaks it:
 - Placement matches labels to text in rounds (equal, truncated with an ellipsis, label inside a line, line inside the label) in reading order. Text that appears twice can be matched to the wrong element (a search field whose value equals a result title); elements without visible text (icons, dock apps, images) get no position.
 - The on-screen keyboard is detected from OCR (five or more single letters in the lower half) and its keys are dropped from the output.
 
+## Orientation
+
+Pinky's coordinates on an iPhone or iPad are the screen as the person sees it, the right way up, in every orientation: element bounds, taps, swipes, screenshots, OCR and the mirror's picture agree, and `Screen.Width`/`Height` swap in landscape, as on Android. iPads rotate everything, the home screen included; iPhones rotate only in apps that allow it (Safari, Calculator), and iPhones with Face ID never turn upside down. Taps that landed in the wrong place on an iPad Pro (GitHub issue #2) are the likeliest result of the old portrait-only mapping.
+
+### Through the WebDriverAgent helper
+
+Measured on the iPad Pro 11-inch (M5) and iPhone 17e Simulators, iOS 26.5, WebDriverAgent 16.17.6, in all four orientations (`/session/:id/orientation`), in Settings, Safari and the home screen:
+
+| What | In landscape | Upside down (iPad) |
+| --- | --- | --- |
+| The tree's frames, `/wda/screen`, `/window/size` | The interface's points (1210×834 on the iPad) | The interface's points |
+| Gestures (W3C actions) | The interface's points: taps on the right half of a landscape iPad opened the rows there | The interface's points (Camera opened) |
+| `/screenshot` | Upright, 2420×1668 | **The panel as it is** (upside down) |
+| MJPEG frames | **The panel as it is** (834×1210 at half size), with EXIF orientation 8 (`LANDSCAPE`) or 6 (`LANDSCAPERIGHT`) | The panel as it is, EXIF 1 |
+| An alert's window (Settings' Enable Dictation?) | **The panel's frame**: a window of 834×1210 points, its buttons tall and narrow | |
+| `GET /orientation` | `LANDSCAPE` either way | `PORTRAIT` (WebDriver folds the four into two) |
+
+So Pinky:
+
+- reads the screen's size the right way up from the orientation the last read, gesture or mirror touch saw (`WDADevice.size`): before, it kept the size it read at open, so in landscape every tap was clamped to the portrait width and element frames were scaled by 1210/1668 instead of 2;
+- turns MJPEG frames upright by their EXIF tag (`exifTurn`, `turnNV12`; 8 is three quarter turns clockwise, 6 one, checked against the screenshots), so the mirror shows landscape the right way up, and maps the mirror's touches by the picture's shape;
+- turns a window of the size of the screen turned sideways upright, the way the picture turns (`sidewaysWindows`, `turnTree`; the way from the stream's last frame, else one frame of the MJPEG server), so an alert's buttons are where they show: tapping Not Now by its bounds dismissed the alert in both landscapes;
+- leaves upside down as XCTest reports it: the tree and taps are right, the screenshot and the picture come upside down, and XCTest says portrait, so nothing tells Pinky which way to turn them.
+
+`iosctl -wda … observe`, `tap` and `stream` in landscape on the iPad Simulator: 2420×1668, the detail pane's rows out to x 2388, a tap at x 2200 opened Keyboard, a 1210×834 upright picture. `TestWDASim` still passes on the iPhone 17e Simulator in portrait.
+
 ## iPhones below iOS 27
 
 Built on 2026-11-07. No iPhone below iOS 27 was at hand, so what follows separates what ran somewhere from what is only built to spec.

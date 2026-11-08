@@ -1,6 +1,7 @@
 package ios
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -80,6 +81,7 @@ type media struct {
 	ready    chan struct{}
 	isReady  bool
 	frameLog []frameMark // recent frames, for settle detection and stats
+	exts     [][]byte    // RTP header extensions seen (noteExt)
 	stats    mediaStats
 	lastFIR  time.Time // the last keyframe request
 }
@@ -243,6 +245,9 @@ func (m *media) receive() {
 		p, err := parseRTP(pkt)
 		if err != nil {
 			continue
+		}
+		if p.Ext != nil {
+			m.noteExt(p.Ext)
 		}
 		m.onRTP(p, n)
 	}
@@ -678,6 +683,28 @@ func (m *media) size() (int, int) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.width, m.height
+}
+
+// noteExt keeps the RTP header extensions the stream carried, the first
+// few different ones, for diagnostics (iosctl orient).
+func (m *media) noteExt(ext []byte) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, e := range m.exts {
+		if bytes.Equal(e, ext) {
+			return
+		}
+	}
+	if len(m.exts) < 16 {
+		m.exts = append(m.exts, bytes.Clone(ext))
+	}
+}
+
+// headerExts returns the different RTP header extensions seen so far.
+func (m *media) headerExts() [][]byte {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([][]byte(nil), m.exts...)
 }
 
 func (m *media) snapshot() mediaStats {
