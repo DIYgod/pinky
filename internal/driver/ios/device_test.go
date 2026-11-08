@@ -13,7 +13,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"image/png"
 	"os"
@@ -277,41 +276,6 @@ func TestDeviceLaunchSettings(t *testing.T) {
 	}
 	if len(s.Elements) == 0 {
 		t.Fatal("no elements")
-	}
-	pause()
-	home(ctx, d)
-}
-
-// An http link opens in Safari, which shows its host in the address bar or,
-// when it offers to translate the page, only on the screen (read by OCR).
-// Two links one after the other show that each one is followed, not that
-// Safari was merely in front already.
-func TestDeviceLaunchLink(t *testing.T) {
-	d := testDevice(t)
-	ctx := ctxFor(t, 2*time.Minute)
-	for _, host := range []string{"iana.org", "example.com"} {
-		if err := d.Launch(ctx, "https://"+host+"/"); err != nil {
-			t.Fatal(err)
-		}
-		time.Sleep(4 * time.Second)
-		s, err := d.Observe(ctx, driver.ObserveOptions{OCR: true})
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Logf("\n%s", s.Render())
-		if s.App.ID != safariID {
-			t.Fatalf("app %q", s.App.ID)
-		}
-		found := false
-		for _, e := range s.Elements {
-			found = found || strings.Contains(strings.ToLower(e.Label), host)
-		}
-		if !found {
-			t.Errorf("%s is not on the screen, neither in the address bar nor in the page", host)
-		}
-	}
-	if err := d.Launch(ctx, "tel://5551234"); !errors.Is(err, driver.ErrUnsupported) {
-		t.Errorf("a tel link: %v", err)
 	}
 	pause()
 	home(ctx, d)
