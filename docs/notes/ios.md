@@ -54,7 +54,7 @@ What these mean for the design:
 | `ddi.go`, `mount.go`, `prepare.go`, `host.go` | Preparing a phone without Xcode: finding the developer disk image on the computer, mounting it, the Developer Mode switch, pairing on Windows, the background jobs and the steps in `Info.Setup`, and what the computer lacks (usbmuxd) |
 | `framestream.go`, `mjpeg.go`, `h264_darwin.go`, `h264_other.go`, `settle_frames.go` | Frames (JPEG from WDA, screenshots) to H.264 through VideoToolbox, for the mirror and the recorder, and settling by them |
 
-Coordinates are screenshot pixels: 1125x2436 on an iPhone 13 mini, which is the size UIKit renders (375x812 points at 3x); the panel is 1080x2340 and the video 1136x2464. `Toucher` points are video pixels (the contract since 5e83552). Matching decoded frames against screenshots (row and column brightness profiles, correlation 0.998 and better on Settings and Calculator) showed the video is the screen at 1:1 in the top-left corner with black padding, 11 columns on the right and 28 rows at the bottom, so a video point is the same screen point and `Touch` only clamps points in the padding to the screen's edge. A video smaller than the screen would be scaled back up; no phone tested does that.
+Coordinates are screenshot pixels, the screen the right way up in any orientation (see "Orientation"): 1125x2436 on an iPhone 13 mini in portrait, which is the size UIKit renders (375x812 points at 3x); the panel is 1080x2340 and the video 1136x2464. `Toucher` points are video pixels (the contract since 5e83552). Matching decoded frames against screenshots (row and column brightness profiles, correlation 0.998 and better on Settings and Calculator) showed the video is the screen at 1:1 in the top-left corner with black padding, 11 columns on the right and 28 rows at the bottom, so a video point is the same screen point and `Touch` only clamps points in the padding to the screen's edge. A video smaller than the screen would be scaled back up; no phone tested does that.
 
 ### Decisions
 
@@ -110,6 +110,8 @@ scripts/devlock.sh <udid> /tmp/pinky-iosctl -udid <udid> locked     # lockdown o
 
 `iosctl unlock` reads a passcode from standard input and unlocks: only for the owner (see "What the owner should try").
 
+`iosctl orient` prints what the phone says about its orientation (the display info, the frontmost app's frame, the first elements, Observe's screen, the RTP header extensions) and saves a screenshot and a few seconds of video in a folder under `/tmp/pinky-*`; `iosctl stream` counts the packets by the turn they carry.
+
 `iosctl devices` lists every phone usbmuxd sees and opens a tunnel to each to check its services, so do not run it while other sessions use their phones. Keep captures under `/tmp/pinky-*` and delete them afterwards.
 
 `iosctl observe` prints where the tree came from (`remoteax`, `remoteax-push` or `inspector`) and the timings; `ObserveStats.Trace` says what the remoteax path waited for. `iosctl type` prints how it typed (paste or keys) and what happened to the pasteboard, never the text. Each `iosctl` command is a new process with no earlier input, so it always walks; the device tests below measure the push path.
@@ -145,7 +147,7 @@ All 16 pass on the iPhone 13 mini (inspect, stream, home screen observe, swipe a
 
 ### Input
 
-- Touch positions are 0..65535 on each axis of the panel in its native (portrait) orientation. Landscape is not handled yet: the mapping assumes `rot0`.
+- Touch positions are 0..65535 on each axis of the touch panel, in the frame of the device held the usual way up, whatever way it is turned; see "Orientation".
 - `Key(back)` swipes from the left edge at mid-height over 250 ms. It starts at x=0 so the system gesture wins; a stray drag cannot select anything, but avoid screens where a drag at mid-height matters.
 - The virtual keyboard makes iOS treat the phone as having a hardware keyboard while the session lasts; the software keyboard still showed in Settings until a key was pressed. It is registered at the first key, not at `Open` (registering takes about 0.35 s), and goes away when the HID connection closes. `Type` without `Append` sends Command-A and Delete first.
 - Keys go through the active input method. On the test phone the Pinyin keyboard was active: "clock" typed as keys became a composition (Command-A did not select it, one Delete left "c lo c" with U+2006 spaces between the syllables), and Escape appeared to cancel it. That is why `Type` pastes (the owner's choice between pasting and switching keyboards); keys remain only as the fallback above. Command-V and Command-A work with Pinyin active as long as nothing is being composed.
@@ -288,6 +290,39 @@ The protocol, as iOS 27.0.1 speaks it:
 
 Pinky's coordinates on an iPhone or iPad are the screen as the person sees it, the right way up, in every orientation: element bounds, taps, swipes, screenshots, OCR and the mirror's picture agree, and `Screen.Width`/`Height` swap in landscape, as on Android. iPads rotate everything, the home screen included; iPhones rotate only in apps that allow it (Safari, Calculator), and iPhones with Face ID never turn upside down. Taps that landed in the wrong place on an iPad Pro (GitHub issue #2) are the likeliest result of the old portrait-only mapping.
 
+### On iOS 27
+
+Measured on 2026-11-08 on the iPhone 13 mini (Calculator) and an iPad Pro 11-inch (3rd generation, iPad13,4; Settings › General), iOS 27.0.1, over USB, in every orientation each allows, the owner turning the devices (`iosctl orient`, then taps checked by what opened):
+
+| What | iPhone 13 mini | iPad Pro 11-inch |
+| --- | --- | --- |
+| Display info `bounds`, `nativeSize` | 1125x2436, 1080x2340, in every orientation | 2388x1668 in every orientation: the panel is mounted landscape |
+| `nativeOrientation` | `rot0` | `rot270` |
+| `currentOrientation` | portrait `rot0`; turned counterclockwise `rot270`, clockwise `rot90` | held the usual way up `rot90`; counterclockwise `rot0`; clockwise `rot180`; upside down `rot270` |
+| Screenshots | Upright: 2436x1125 in landscape | Upright: 1668x2388 in portrait |
+| remoteAXService's frames | Upright points (Calculator 812x375 in landscape) | Not seen: the service did not answer this iPad at all that night (below) |
+| Video | The display's frame, 1136x2464, whatever the orientation; turning it `currentOrientation` clockwise puts it upright | The same: 2400x1680, upright after `currentOrientation` |
+| Touch panel | The display's frame | **The frame of the device held the usual way up**, which the display is turned `rot270` from |
+
+So the display info describes the display as mounted, `currentOrientation` turns it into the interface, and `nativeOrientation` turns the frame of the device held the usual way up into the display; the touch panel's 0..65535 is in that last frame, so a tap turns by both (`screenInfo.touchTurn`). On the iPad a tap at the display's own coordinates landed on an empty part of General's header, and one turned by both opened Screen Capture, the row at the point aimed at.
+
+Before, Pinky read the display info once at `Open` and mapped taps straight onto the display's frame: on that iPad, Pinky saw a 2388x1668 landscape screen while it was held in portrait, placed elements by the wrong scale and tapped the wrong places in every orientation, which matches GitHub issue #2 (an iPad Pro M5, taps in the wrong place); on iPhones landscape was wrong the same way.
+
+Now:
+
+- The screen's size and its orientation are the interface's (`screenInfo.upright`, `orientationOf`); element frames, OCR, screenshots, keys and swipes work in it unchanged.
+- The display info is read with every screen read (beside the walk, ~12 ms over USB), before a gesture when the last read is more than a second old (`freshDisplay`), and every second while a view of the video is open (`orientLoop`).
+- Taps and swipes go through `panelPoint`: the upright point turned back by `touchTurn` into the touch panel's frame.
+- The video's packets carry the turn that puts them upright (`driver.Packet.Turn`, new and additive; `media.setTurn`). The player passes it on (`video.Frame.Turn`), and the mirror draws the picture turned (`drawTurned`), lays itself out in the upright shape, sends touches back in the picture's own pixels (`mirror.toPicture`) and saves screenshots upright. `Device.Touch` takes the picture's pixels, so a drag maps through one description of the screen even while the device turns.
+- OCR from the live video over Wi-Fi cuts the screen out of the frame in the display's frame and turns it upright.
+- Below iOS 27 without the helper (`AXDevice`), which has no display info, each read takes the screen's size from its screenshot, which is upright.
+
+Checked with the new code on both devices: the iPhone in portrait and landscape (Calculator's 7 and AC by their bounds, the packets' turn 0 and 1), the iPad in portrait and landscape (Keyboard and Screen Capture opened by their OCR bounds, General back from the sidebar, the packets' turn 1 and 0). The mirror's turning is covered by `TestMirrorTurnsPicture` (a test stream marked with a quarter turn) and not yet looked at with a real iPad.
+
+The video's RTP packets carry a one-word header extension (profile `0x9301`, `0x9311` on some), whose data counts up packet by packet (`00 01 60 65`, `00 01 60 66`, …): nothing in it follows the orientation, so Pinky reads the display info instead.
+
+Also seen on the iPad that night: remoteAXService timed out on its first request (`deviceAPIVersion`) in every session, over USB, though the tunnel, display info, screenshots, video and HID worked; reads fell back to the inspector and OCR. Its first video frame came 1 to 1.5 s after the stream started, against 0.6 s on the iPhone.
+
 ### Through the WebDriverAgent helper
 
 Measured on the iPad Pro 11-inch (M5) and iPhone 17e Simulators, iOS 26.5, WebDriverAgent 16.17.6, in all four orientations (`/session/:id/orientation`), in Settings, Safari and the home screen:
@@ -308,7 +343,7 @@ So Pinky:
 - turns a window of the size of the screen turned sideways upright, the way the picture turns (`sidewaysWindows`, `turnTree`; the way from the stream's last frame, else one frame of the MJPEG server), so an alert's buttons are where they show: tapping Not Now by its bounds dismissed the alert in both landscapes;
 - leaves upside down as XCTest reports it: the tree and taps are right, the screenshot and the picture come upside down, and XCTest says portrait, so nothing tells Pinky which way to turn them.
 
-`iosctl -wda … observe`, `tap` and `stream` in landscape on the iPad Simulator: 2420×1668, the detail pane's rows out to x 2388, a tap at x 2200 opened Keyboard, a 1210×834 upright picture. `TestWDASim` still passes on the iPhone 17e Simulator in portrait.
+`iosctl -wda … observe`, `tap` and `stream` in landscape on the iPad Simulator: 2420×1668, the detail pane's rows out to x 2388, a tap at x 2200 opened Keyboard, a 1210×834 upright picture. `TestWDASim` still passes on the iPhone 17e Simulator in portrait, and `TestWDASimOrientations` (Safari turned through both landscapes and back: the size, every element on the screen, elements past the portrait width, a landscape picture) passes on the iPad Pro 11-inch (M5) and iPhone 17e Simulators.
 
 ## iPhones below iOS 27
 
@@ -461,7 +496,7 @@ Also found:
 - `Waker` through the helper; `Unlock` wakes the phone by itself.
 - Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now, and Pinky reminds them before the signature runs out ("When the helper's signature runs out"). go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
 - The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
-- Landscape on both paths.
+- Landscape through the helper upside down (XCTest reports portrait; see "Orientation").
 
 ## Preparing a phone without Xcode
 
@@ -564,7 +599,7 @@ The demo (`go run ./cmd/pinky-ui-demo`) has Demo › Plug In a New iPhone, which
 - Elements behind a sheet can be listed with the sheet's (Settings' search).
 - The pushed-tree rules trust timing: two inputs less than about 0.3 s apart (faster than the pacing rule allows) could still get the first one's push.
 - While Pinky is connected the phone's accessibility runtime is on and it pushes a tree after every change: up to 1.7 MB (home screen) over the tunnel each time.
-- Landscape: touch mapping, element frames and the screen size assume portrait.
+- Orientation (see "Orientation"): recordings keep the video as the phone sends it, so an iPad's portrait or an iPhone's landscape plays back turned (the recording format does not store `driver.Packet.Turn`); remoteAXService's frames on a turned iPad were not seen (the service did not answer); through the helper, upside down shows the picture upside down.
 - A pasteboard the phone does not let anyone read (a Universal Clipboard item, a password, transient content) cannot be saved; `Type` empties it after pasting. When reading every representation stalls, only each item's first one is put back. Restored contents stay on the phone (no Universal Clipboard) and carry Pinky's source metadata.
 - Typing by keys (only without the pasteboard service): ASCII, the first letter capitalized by Latin keyboards, 4–5 s per call with a keyboard switch (each probe walks the tree, slowly while the phone pushes one).
 - Wi-Fi: screenshots take about 5 s (the screenshot services send a 16-bit PNG of 5 to 7 MB, and only PNG); OCR reads the live video instead, which is not yet measured on a phone. A sleeping phone is reachable only now and then, so Pinky waits until it is unlocked. After several sessions were cut off, the test iPad's services answered slowly over Wi-Fi for at least ten minutes (see "Wi-Fi").
@@ -612,5 +647,6 @@ If the pad does not come up after the swipe (the phone may want Home instead wit
 - The phone was left on its home screen; Settings was only browsed (back navigation, scrolling, searches for "wallpaper" and "clock" that were cancelled, and closed again through the close button). Once a test's cleanup tap landed on a search result and opened Settings > Apps > Clock; nothing there was touched (its Mobile Data switch stayed on), and the test no longer taps after typing. Calculator was left cleared.
 - Round three: the phone's pasteboard held a Universal Clipboard item, which the phone does not let anyone read, so it could not be kept; the typing tests set their own pasteboard contents and leave it empty. The keyboard was switched to English (UK) and back to Pinyin by the keys test; it was left on Pinyin. The phone stayed unlocked and awake throughout; nothing was locked, no passcode typed, no setting changed.
 - The on-screen keyboard check from OCR needs single letters spread across the screen: a list's alphabetical section index (Settings > Apps) fooled the first version.
+- `driver.Packet.Turn` is new (additive, shared contract): quarter turns clockwise that put a packet's picture upright; the iOS 27 driver sets it, everything else leaves 0. `video.Frame.Turn` carries it to the mirror, which turns the picture and maps touches back (`ui/mirror.go`). The recorder ignores it for now.
 - `driver.ConnectionChooser` is new and optional (additive): the iOS provider implements it, and the gateway's `Connections` and `SetConnection` serve Settings › Phones. The choice lives in the history store's `device_connections` table (schema 3).
 - With the helper, Pinky sees the phone's passcode request for automation in the runner's log and lists the phone as needing setup until it is answered (see "Choosing the connection"); an agent gets that detail when it opens the phone meanwhile.

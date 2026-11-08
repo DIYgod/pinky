@@ -14,6 +14,7 @@ package ios
 import (
 	"bytes"
 	"context"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -301,4 +302,63 @@ func TestWDASim(t *testing.T) {
 		}
 		d.Key(simCtx(t, 20*time.Second), driver.KeyHome)
 	})
+}
+
+// TestWDASimOrientations turns the Simulator through each orientation in
+// Safari, which turns on iPhones and iPads: the screen's size follows it,
+// every element lies on the screen, a landscape screen has elements past
+// the portrait width, and the live picture comes the right way up.
+//
+//	PINKY_WDA_URL=… PINKY_MJPEG_URL=… go test -tags wdasim -count=1 -v -run TestWDASimOrientations ./internal/driver/ios/
+func TestWDASimOrientations(t *testing.T) {
+	d := simDevice(t)
+	setOrientation := func(o string) {
+		t.Helper()
+		if err := d.c.do(simCtx(t, 20*time.Second), d.c.hc, http.MethodPost, "/orientation", map[string]any{"orientation": o}, nil); err != nil {
+			t.Fatalf("orientation %s: %v", o, err)
+		}
+		time.Sleep(1500 * time.Millisecond)
+	}
+	t.Cleanup(func() { setOrientation("PORTRAIT") })
+	if err := d.Launch(simCtx(t, 30*time.Second), "com.apple.mobilesafari"); err != nil {
+		t.Fatal(err)
+	}
+	short := min(d.width, d.height)
+	for _, o := range []string{"LANDSCAPE", "UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT", "PORTRAIT"} {
+		t.Run(o, func(t *testing.T) {
+			setOrientation(o)
+			landscape := o != "PORTRAIT"
+			s := simWait(t, d, "Safari "+o, func(s *screen.Screen) bool {
+				return s.App.ID == "com.apple.mobilesafari" && (s.Width > s.Height) == landscape
+			})
+			if s.Orientation != orientationOf(s.Width, s.Height) {
+				t.Fatalf("%dx%d named %s", s.Width, s.Height, s.Orientation)
+			}
+			far := 0
+			for _, e := range s.Elements {
+				b := e.Bounds
+				if b.Empty() {
+					continue
+				}
+				if b.X < 0 || b.Y < 0 || b.X+b.W > s.Width+2 || b.Y+b.H > s.Height+2 {
+					t.Errorf("%q at %+v, off a %dx%d screen", e.Label, b, s.Width, s.Height)
+				}
+				far = max(far, b.X+b.W)
+			}
+			if landscape && far <= short {
+				t.Errorf("no element past the portrait width %d (furthest edge %d)", short, far)
+			}
+			if os.Getenv("PINKY_MJPEG_URL") == "" {
+				return
+			}
+			st, err := d.Stream(simCtx(t, 20*time.Second), driver.StreamOptions{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer st.Close()
+			if w, h := st.Size(); (w > h) != landscape {
+				t.Errorf("the picture is %dx%d in %s", w, h, o)
+			}
+		})
+	}
 }
