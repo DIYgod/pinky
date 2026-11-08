@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1108.10 (2026-11-08)
 
 - Pinky now knows when the WebDriverAgent helper on an iPhone stops working: with a free Apple ID its signature lasts 7 days. Two days before, the phone's page and its checkup remind you to install it again from Xcode, with how to do it.
 - Once the helper's signature has run out, the iPhone shows as needing setup and says why, instead of failing to start the helper.
