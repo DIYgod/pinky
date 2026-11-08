@@ -124,6 +124,8 @@ PINKY_DEVICE=<udid> scripts/devlock.sh <udid> go test -tags device -count=1 -v .
 
 All 16 pass on the iPhone 13 mini (inspect, stream, home screen observe, swipe and raw touch, apps, launch Settings by name, Calculator tap, screenshot, lock state, unsupported keys, latency, typing by paste into Settings' search with the pasteboard checked after each call, typing by keys with the keyboard switch, waking, a Calculator key tapped where Observe puts it and the display read back as `7`, Observe timing after launches). `TestDeviceConnection` measures one connection in a session of its own: `PINKY_CONN=usb` or `wifi`, run alone with `-run TestDeviceConnection`. `PINKY_NO_SETTLE=1` makes the timing test observe right after each launch; `PINKY_SHOTS=1` saves the typing test's screenshots under `/tmp/pinky-ios` (delete them afterwards).
 
+`Launch` takes an `http` or `https` link too: Safari comes up with it, through `payloadURL` in the launch request's options (the field `devicectl device process launch --payload-url` fills; the same key inside `platformSpecificOptions` as `__PayloadURL` did nothing). `TestDeviceLaunchLink` checks it on an iPhone with iOS 27: Safari shows the link's host (in the address bar, or read by OCR when Safari offers to translate the page), and a `tel://` link returns `ErrUnsupported`. The WebDriverAgent path (`wda_device.go`) and Android do not open links yet: they return `not_found`.
+
 ## Details and data
 
 ### Tunnel
