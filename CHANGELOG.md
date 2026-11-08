@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Typing on an iPhone no longer adds a space where you didn't type one, as when text is added after a word.
+
 ## 2026.1108.16 (2026-11-08)
 
 - `pinkyctl daemon` now keeps the computer awake while an agent task runs and while a phone is connected through Tailscale, as the app does, so it no longer needs `caffeinate`.
