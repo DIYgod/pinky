@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.2 (2026-11-09)
 
 - When Apple won't sign the developer disk image of Xcode on your Mac, Add phone now also offers to download the image from the third-party mirror, and Pinky then uses that image instead of the refused one, also after a restart.
 - When a phone drops for a moment and comes back, an agent's request now waits until Pinky has reconnected it, instead of failing as offline.
