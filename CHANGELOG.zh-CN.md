@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在 Mac 上，拔线后没有通过 Wi-Fi 回来的 iPhone 或 iPad，Pinky 现在大约 10 秒内就会提示：Mac 的设备服务把它弄丢了时显示「Wi-Fi 上找不到」；完全看不到时显示「Wi-Fi 上看不到」，并说明可能的原因，比如不在同一个网络、访客网络或开着 VPN。
+
 ## 2026.1109.5 (2026-11-09)
 
 - iPhone 和 iPad 的「体检」新增了 Wi-Fi 一项：它的 Wi-Fi 连接开没开、是不是 Pinky 打开的、没开的话原因是什么，以及这台电脑现在能不能在网络上看到它。反馈附带的诊断信息里也有这一项。
