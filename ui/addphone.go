@@ -15,7 +15,7 @@ import (
 // watching Devices for one it did not know when the step began; over
 // Wi-Fi the gateway's pairing says which phone paired.
 type addState struct {
-	step     string // "choose", "android", "qr", "iphone"
+	step     string // "choose", "android", "qr", "tailnet", "iphone"
 	known    map[string]bool
 	old      bool   // the older-iPhone path
 	oldPick  string // "helper" or "mirror"
@@ -77,7 +77,7 @@ func (a *app) addPhonePage(c *mg.Context) {
 			mg.Row(c).MinHeight(22).AlignItems(mg.Center).Margin(0, 0, -6, 0).Children(func() {
 				if s.step != "choose" && linkButton(c, locales.AddPhoneBack()).Clicked() {
 					switch s.step {
-					case "qr":
+					case "qr", "tailnet":
 						s.step = "android"
 					default:
 						s.step, s.old, s.oldPick, s.since = "choose", false, "", time.Time{}
@@ -94,6 +94,8 @@ func (a *app) addPhonePage(c *mg.Context) {
 				a.addAndroid(c)
 			case "qr":
 				a.addQR(c)
+			case "tailnet":
+				a.addTailnet(c)
 			case "iphone":
 				a.addIPhone(c)
 			default:
@@ -180,15 +182,28 @@ func (a *app) addQR(c *mg.Context) {
 			})
 		})
 	}
-	if canPair && !st.form {
-		statusBox(c, func() {
-			switch st.state {
-			case "failed":
-				mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot)
+	if canPair && !st.form && st.state == "failed" {
+		// Why it failed, with what to do next under it: the code where it
+		// may help, and a new QR code.
+		mg.Column(c).Gap(10).Padding(12, 14).Radius(10).Background(p.bg2).Role(mg.RoleStatus).Children(func() {
+			mg.Row(c).Gap(10).AlignItems(mg.Start).Children(func() {
+				mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot).Shrink(0)
 				mg.Text(c, st.err).Grow(1).MinWidth(0)
+			})
+			mg.Row(c).Gap(10).Justify(mg.End).Wrap().Children(func() {
+				if st.errCode && button(c, locales.PairingUseCode(), btnOpt{small: true}).Clicked() {
+					a.stopPairing()
+					st.form, st.formErr = true, ""
+					return
+				}
 				if button(c, locales.AddPhoneTryAgain(), btnOpt{small: true}).Clicked() {
 					a.startPairing()
 				}
+			})
+		})
+	} else if canPair && !st.form {
+		statusBox(c, func() {
+			switch st.state {
 			case "waiting":
 				spinner(c)
 				c.After(time.Second) // the progress has no events
@@ -221,8 +236,9 @@ func (a *app) addQR(c *mg.Context) {
 		return
 	}
 	mg.Row(c).Gap(16).Wrap().Children(func() {
-		// A stuck pairing offers the pairing code in its note.
-		if canPair && (st.form || !stuck) {
+		// A stuck pairing offers the pairing code in its note, a failed one
+		// next to Try again.
+		if canPair && (st.form || !stuck && !(st.state == "failed" && st.errCode)) {
 			other := locales.PairingUseCode()
 			if st.form {
 				other = locales.PairingUseQR()

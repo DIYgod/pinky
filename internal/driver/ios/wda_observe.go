@@ -2,6 +2,7 @@ package ios
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/DIYgod/pinky/internal/screen"
@@ -135,50 +136,103 @@ func wdaIsElement(accessible bool, e raxElement) bool {
 	return false
 }
 
+// XCUIElementType numbers of the bars content scrolls under.
+const (
+	xcNavigationBar = 21
+	xcToolbar       = 24
+)
+
 // wdaScreenElements flattens WDA's page source into Pinky's elements, in
 // pixels, in the tree's order (which is reading order). The keyboard's keys
 // only mark the keyboard as shown, and the status bar is left out, as on the
 // iOS 27 path.
+//
+// Two things WDA lists that a person does not see as separate (GitHub
+// issue #7, WeChat's chat list): a text inside an element whose label
+// already says it (a cell that is one accessibility element, whose labels
+// XCTest still lists), and elements scrolled under the navigation bar, a
+// tab bar, a toolbar, the status bar or the keyboard, which WDA counts as
+// visible. The texts are left out; covered elements too, unless a good part
+// of them shows, as on the iOS 27 path (unoccluded).
 func wdaScreenElements(root *wdaNode, scale float64, w, h int, appID string) ([]screen.Element, bool) {
 	var out []screen.Element
+	var over []occluder
 	keyboard := false
-	var walk func(n *wdaNode, path string, inKeyboard, inTabBar bool, depth int)
-	walk = func(n *wdaNode, path string, inKeyboard, inTabBar bool, depth int) {
+	var walk func(n *wdaNode, path string, inKeyboard, inTabBar bool, said string, depth int)
+	walk = func(n *wdaNode, path string, inKeyboard, inTabBar bool, said string, depth int) {
 		if depth > 80 {
 			return
 		}
 		e := raxFromWDA(n)
+		child := path
+		if depth > 0 {
+			child = path + "/" + xcName(e)
+		}
+		bar := screen.Rect{}
+		if e.Visible && e.HasFrame && depth > 0 {
+			bar = pixelRect(e.Frame, scale, w, h)
+		}
 		switch e.Type {
 		case xcStatusBar:
+			if !bar.Empty() && bar.H <= h/8 {
+				over = append(over, occluder{r: bar})
+			}
 			return
 		case xcKeyboard:
 			inKeyboard = true
 			if e.Visible {
 				keyboard = true
+				if !bar.Empty() {
+					over = append(over, occluder{r: bar})
+				}
 			}
 		case xcTabBar:
 			inTabBar = true
+		}
+		if isBar(e.Type, bar, h) {
+			barPath, r := child, bar
+			over = append(over, occluder{r: bar, member: func(el screen.Element) bool {
+				return strings.HasPrefix(el.Path, barPath) || (el.Path == path && el.Bounds == r)
+			}})
 		}
 		if depth > 0 && !inKeyboard && wdaIsElement(bool(n.Accessible), e) {
 			if r := pixelRect(e.Frame, scale, w, h); !r.Empty() {
 				role, states := raxRole(e, inTabBar)
 				label := raxLabel(e, role)
-				if label != "" || role != screen.RoleOther {
+				switch {
+				case role == screen.RoleText && said != "" && norm(label) != "" && strings.Contains(said, norm(label)):
+					// Its element says it already.
+				case label != "" || role != screen.RoleOther:
 					out = append(out, screen.Element{
 						Role: role, Label: label, Bounds: r, States: states,
 						Source: screen.SourceTree, Path: path, ID: e.Ident,
 					})
+					if label != "" {
+						said = norm(label)
+					}
 				}
 			}
 		}
-		child := path
-		if depth > 0 {
-			child = path + "/" + xcName(e)
-		}
 		for i := range n.Children {
-			walk(&n.Children[i], child, inKeyboard, inTabBar, depth+1)
+			walk(&n.Children[i], child, inKeyboard, inTabBar, said, depth+1)
 		}
 	}
-	walk(root, appID, false, false, 0)
-	return out, keyboard
+	walk(root, appID, false, false, "", 0)
+	return unoccluded(out, over, int(math.Round(minVisiblePoints*scale))), keyboard
+}
+
+// isBar reports whether a node is a bar that content scrolls under: a
+// navigation bar along the top, or a tab bar or toolbar along the bottom,
+// no taller than a quarter of the screen.
+func isBar(typ int, r screen.Rect, h int) bool {
+	if r.Empty() || r.H > h/4 {
+		return false
+	}
+	switch typ {
+	case xcNavigationBar:
+		return r.Y < h/4
+	case xcTabBar, xcToolbar:
+		return r.Y+r.H > h*3/4
+	}
+	return false
 }

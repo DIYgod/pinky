@@ -23,10 +23,25 @@ func (d *WDADevice) Unlock(ctx context.Context, pin string) error {
 
 // lockState reads whether the phone needs its passcode: from lockdown, as
 // the CoreDevice path does, or from WDA on a simulator, which has no
-// lockdown.
+// lockdown, or when lockdown does not answer (over Wi-Fi it can fail, and
+// a failure must not read as unlocked: GitHub issue #7).
 func (d *WDADevice) lockState(ctx context.Context) (bool, error) {
 	if d.entry.DeviceID == 0 {
 		return d.c.locked(ctx)
+	}
+	locked, err := d.lockdownLocked(ctx)
+	if err != nil && ctx.Err() == nil {
+		if l, werr := d.c.locked(ctx); werr == nil {
+			return l, nil
+		}
+	}
+	return locked, err
+}
+
+// lockdownLocked reads lockdown's PasswordProtected.
+func (d *WDADevice) lockdownLocked(ctx context.Context) (bool, error) {
+	if d.lockdownFn != nil {
+		return d.lockdownFn(ctx)
 	}
 	type result struct {
 		v   bool
@@ -103,14 +118,15 @@ func (p *wdaPower) pressHome(ctx context.Context) error {
 // swipeUp swipes from the bottom edge to the middle of the screen, which on
 // the lock screen brings up the passcode pad.
 func (p *wdaPower) swipeUp(ctx context.Context) error {
-	x := p.d.width / 2
-	return p.d.Swipe(ctx, screen.Point{X: x, Y: p.d.height - 1}, screen.Point{X: x, Y: p.d.height / 2}, 300*time.Millisecond)
+	w, h := p.d.sizeNow(ctx)
+	x := w / 2
+	return p.d.Swipe(ctx, screen.Point{X: x, Y: h - 1}, screen.Point{X: x, Y: h / 2}, 300*time.Millisecond)
 }
 
 // keypadShown looks for the passcode pad in the tree WDA reads (SpringBoard
 // on the lock screen) and remembers where its digit keys are.
 func (p *wdaPower) keypadShown(ctx context.Context) (bool, error) {
-	root, err := p.d.c.source(ctx)
+	root, err := p.d.source(ctx)
 	if err != nil {
 		return false, err
 	}

@@ -4,8 +4,8 @@ Pinky releases often, several times a day when there is something to ship, and n
 
 ## How a release happens
 
-1. The notes wait in [CHANGELOG.md](../CHANGELOG.md) under `## Unreleased`.
-2. `scripts/release.sh tag -push` gives them the next version, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together (`git push --atomic`).
+1. The notes wait in [CHANGELOG.md](../CHANGELOG.md) under `## Unreleased`, and the same notes in Simplified Chinese under `## Unreleased` in [CHANGELOG.zh-CN.md](../CHANGELOG.zh-CN.md).
+2. `scripts/release.sh tag -push` gives them the next version in both files, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together (`git push --atomic`).
 3. The tag starts [.github/workflows/release.yml](../.github/workflows/release.yml), which runs the scripts as they are at the tag, on GitHub's runners (free, macOS's too, as the repository is public):
    - **Companion APK** (Ubuntu): checks the tag and its notes, then `scripts/dist.sh companion`, which builds the companion's release build signed with its release key ([below](#the-companions-signing-key)).
    - **Linux and Windows** (Ubuntu): `scripts/dist.sh windows`, `scripts/dist.sh linux`, with their FFmpeg and adb (below), then decodes test streams with the FFmpeg that the `.tar.gz` carries and starts a server with its adb.
@@ -81,6 +81,7 @@ Every build until 8 November 2026 was signed with a key committed in this reposi
   "tag": "v2026.1107.1",
   "date": "2026-11-07T08:09:10Z",
   "notes": "- The version's notes from CHANGELOG.md, in Markdown.",
+  "localized_notes": { "zh-Hans": "- The version's notes from CHANGELOG.zh-CN.md." },
   "assets": {
     "darwin-amd64": { "url": "https://github.com/DIYgod/pinky/releases/download/v2026.1107.1/pinky-2026.1107.1-darwin-amd64.zip", "sha256": "…", "size": 17931709 },
     "darwin-arm64": { "url": "…/pinky-2026.1107.1-darwin-arm64.zip", "sha256": "…", "size": 16508868 },
@@ -90,11 +91,13 @@ Every build until 8 November 2026 was signed with a key committed in this reposi
 }
 ```
 
-`https://github.com/DIYgod/pinky/releases/latest/download/latest.json` is always the newest release's: a release becomes the latest only when no newer one is out, and `latest.json` is uploaded after the files it names, before the release is published. `date` is when the release was assembled, in UTC. `notes` is the version's section of CHANGELOG.md without its heading, which `go run ./scripts/release notes <version>` prints.
+`https://github.com/DIYgod/pinky/releases/latest/download/latest.json` is always the newest release's: a release becomes the latest only when no newer one is out, and `latest.json` is uploaded after the files it names, before the release is published. `date` is when the release was assembled, in UTC. `notes` is the version's section of CHANGELOG.md without its heading, which `go run ./scripts/release notes <version>` prints. `localized_notes` has the version's section of each translation of the changelog, by the language tag of the app's catalogs (`zh-Hans`: CHANGELOG.zh-CN.md, which `go run ./scripts/release notes -lang zh-Hans <version>` prints); a translation without the version is left out, with a warning, and the app shows `notes` in its place. Versions of the app from before the field (8 November 2026) read only `notes`.
 
 ### CHANGELOG.md
 
 Newest first. Each release is a `## <version> (<YYYY-MM-DD>)` heading followed by short bullets for people; notes not released yet wait under `## Unreleased` at the top, which a dev build of the app should leave out. A heading's first word is its version (as MyGo's `update.ReleaseNotes` reads it too), and headings inside fenced code blocks do not count.
+
+[CHANGELOG.zh-CN.md](../CHANGELOG.zh-CN.md) is its Simplified Chinese translation, which Pinky shows in What's new and on the update card when the app is in Chinese (`zh-Hans`), and which the release's page on GitHub shows below the English notes, after a rule and the heading 中文 (`release notes -page -manifest latest.json`, which `scripts/publish.sh` takes; a release without Chinese notes has only the English ones). It has the same headings, and under each a Chinese bullet for each English one, in the same order: whoever releases writes both. `tag` stamps both files' `## Unreleased` with the version and commits them together, and refuses a release whose Chinese notes are missing or have another number of bullets than the English ones. `go test ./scripts/release` checks the files against each other (`TestChangelogTranslations`): the same headings in the same order, and as many bullets under each. Translations are listed in `scripts/release/changelog.go` (`translations`) and embedded by the root package (`pinky.ChangelogTranslations`); another language takes an entry in both.
 
 ### The command
 
@@ -165,6 +168,6 @@ To build a tag on GitHub and publish nothing, to check the workflow say, run it 
 
 ## Changing the pipeline
 
-The build and publish steps are the scripts here (`scripts/dist.sh`, `scripts/publish.sh`, `scripts/release/`), and each release runs them as they are at its tag. The tap's workflow lives in the tap: change it in `scripts/release/homebrew-tap/` and run `scripts/release.sh setup`. `go test ./scripts/release` tests the versions, the changelog, the tag, the manifest (and that the app reads it, `TestFeedTheAppReads`) and the cask.
+The build and publish steps are the scripts here (`scripts/dist.sh`, `scripts/publish.sh`, `scripts/release/`), and each release runs them as they are at its tag. The tap's workflow lives in the tap: change it in `scripts/release/homebrew-tap/` and run `scripts/release.sh setup`. `go test ./scripts/release` tests the versions, the changelog and its translations, the tag, the manifest (and that the app reads it, in English and in Chinese, `TestFeedTheAppReads`) and the cask.
 
 Installed apps update from what a release publishes (`docs/notes/updates.md`): Pinky.app from the zips, which must stay signed, notarized and stapled, and a Windows Pinky by running the installer quietly, which [.github/workflows/update-windows.yml](../.github/workflows/update-windows.yml) checks on GitHub's Windows runner whenever the update code, the Windows packaging (`cmd/pinky/mygo.json`, MyGo's version in `go.mod`) or the workflow change.

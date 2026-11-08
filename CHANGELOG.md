@@ -2,6 +2,124 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1109.6 (2026-11-09)
+
+- When you unplug an iPhone or iPad that doesn't come back over Wi-Fi, Pinky now says so within about 10 seconds on a Mac: Lost on Wi-Fi when your Mac's device service lost it, or Not seen on Wi-Fi, with what may be hiding it, such as another network, a guest network, or a VPN.
+
+## 2026.1109.5 (2026-11-09)
+
+- An iPhone's or iPad's Checkup now has a Wi-Fi item: whether its Wi-Fi connection is on and whether Pinky turned it on, why not if it isn't, and whether this computer sees the phone on the network now. Feedback diagnostics include it too.
+- On iPhones with iOS 27, a blocked app's notification banner over another app is now hidden from agents too, and covered in their screenshots.
+- Settings › Privacy now says that screen recordings show a blocked app's notifications and its card in recent apps as they were; recordings stay on your computer.
+
+## 2026.1109.4 (2026-11-09)
+
+- iPhones and iPads now work in landscape: taps, swipes and what Pinky reads of the screen land in the right place whichever way the device is turned, and the mirror shows the screen the right way up.
+- On iPads whose screen is mounted sideways, such as the iPad Pro, taps no longer land in the wrong place, in portrait too.
+- Through the WebDriverAgent helper, alerts that show in landscape can now be tapped where they appear, an iPad held upside down shows the right way up, and Back on an iPad goes back instead of opening dictation.
+- Recordings of an iPhone or iPad play back the right way up, also when the device was turned while recording.
+
+## 2026.1109.3 (2026-11-09)
+
+- A blocked app's notifications are now hidden from agents in the notification shade, on the lock screen and in banners, and its card in recent apps too: the agent reads only that something is hidden there, and its screenshots, and those in Activity, cover it with a gray box.
+- Notifications of an app you blocked by its name are now hidden as well, not only those of apps blocked by their package.
+- Settings › Safety › Add app now offers the apps on your phones to pick from, and warns when the name you type matches none of them.
+- More Chinese banks' credit card apps are blocked by default, such as 买单吧, 发现精彩, 动卡空间, 浦大喜奔 and 全民生活, and Shanghai Pudong Development Bank's app is now recognized by its package.
+- A disk image you put in Pinky's folder yourself now gets the same offer to download the third-party mirror's image when Apple won't sign it.
+
+## 2026.1109.2 (2026-11-09)
+
+- When Apple won't sign the developer disk image of Xcode on your Mac, Add phone now also offers to download the image from the third-party mirror, and Pinky then uses that image instead of the refused one, also after a restart.
+- When a phone drops for a moment and comes back, an agent's request now waits until Pinky has reconnected it, instead of failing as offline.
+- On a slow computer, pairing over Wi-Fi no longer ends with "The phone didn't answer in time" when the phone paired but Pinky couldn't find it on the network; it asks for the address Wireless debugging shows, as on other computers.
+
+## 2026.1109.1 (2026-11-09)
+
+- On iOS 27.2, "Unlock from this computer" works again instead of failing with "unknown backlight state".
+- On Linux, iPhones no longer get stuck in "Needs setup" because Pinky didn't trust Apple's signing server. A certificate problem with that server now shows the actual error instead of asking you to check the internet connection.
+- On Linux with KDE Wallet, "Unlock from this computer" now asks for the wallet's password instead of failing with "Can't lock object".
+
+## 2026.1108.25 (2026-11-08)
+
+- One-time codes are now hidden from agents everywhere on the phone's screen, not only in notifications: a code in a text message, an email or an iPhone banner reaches the agent as ••••••, and screenshots agents get, and those in Activity, cover it with a gray box. Screen recordings, which stay on your computer, are not covered.
+- Agents connected over HTTP keep the phone from one call to the next, also when their client never sends back the session id (such as Grok Bot) or opens a new connection for every call. No proxy in front of Pinky is needed any more.
+- All phones now scrolls when you have more phones than fit in the window, and a last row that isn't full lines up under the phones above instead of sitting in the middle.
+- With many phones, the sidebar's list of phones scrolls too, so Add phone, Activity, Settings and Stop all stay within reach.
+
+## 2026.1108.24 (2026-11-08)
+
+- When a phone isn't on your tailnet, Settings › Phones now says whether Tailscale isn't connected on it or is signed in to another account, with Set up Tailscale to open the steps.
+- Pinky now says that Android runs one VPN at a time: another VPN or proxy app on the phone turns Tailscale off.
+- Feedback diagnostics now include Tailscale's state and the Android devices on your tailnet, without their names.
+- When pairing over Wi-Fi fails, Pinky now says why: the phone ended the pairing, nothing at that address was waiting to pair, the phone didn't answer, or the computer's adb is too old. It no longer says the pairing code didn't match when you scanned a QR code.
+- A QR pairing that fails now offers Pair with a code instead next to Try again.
+- adb's own words for a failed pairing now go to Pinky's log, so feedback diagnostics include them.
+
+## 2026.1108.23 (2026-11-08)
+
+- When Apple won't sign the developer disk image Pinky has for an iPhone (the images of Xcode 26 and earlier no longer work for iOS 27), Add phone and the phone's Checkup now say which image it was and what to do: install or update Xcode from the App Store and open it once. Pinky no longer retries the same image, and tries again as soon as a newer one is there.
+- On iPhones, apps are now found by the name their home screen shows: a task for 微信 opens WeChat, not 微信读书. A name that is only part of other apps' names no longer opens one of them; agents are told which apps it may mean.
+- iPhones connected through the WebDriverAgent helper: a locked phone no longer reads as an app with an empty screen, and lists such as WeChat's chats no longer repeat each row's texts or show rows hidden under the navigation bar.
+- Agents that reach Pinky over HTTP from another computer can now hand it a file for an Android phone: `phone_files` takes an upload, a small file right in the call or a file of up to 200 MB through a one-time link, and pushing it to the phone still asks you first.
+
+## 2026.1108.22 (2026-11-08)
+
+- Settings › Safety now describes Hide codes from agents as it works: one-time codes in notifications are masked before an agent reads them. It never blurred the screen itself.
+
+## 2026.1108.21 (2026-11-08)
+
+- On an iPhone with iOS 27, agents now see the elements of web pages in Safari (links, buttons and fields) rather than only the text read from the picture, and a web page's password field counts as one, so agents can't type into it.
+- On an iPhone with iOS 27, agents can open http and https links with `phone_launch`: they open in Safari, and Pinky judges them by Safari's rules too, so blocking Safari or leaving it out of an agent's scope stops its links. The Installs and links rule still asks.
+- Deleting old activity now stops if Pinky cannot finish reading which screenshots belonged to those tasks, instead of deleting the tasks and leaving the screenshots behind.
+
+## 2026.1108.20 (2026-11-08)
+
+- Plugging in an iPhone or iPad now turns on its Wi-Fi connection, as Finder's "Show this iPhone when on Wi-Fi" does, so it keeps working over Wi-Fi when you unplug it; you no longer need Finder or Xcode for that.
+- Over Wi-Fi, screenshots of an iPhone or iPad for approvals, history and agents now come from the live picture, in a fraction of a second instead of up to half a minute.
+- On iPhones, Pinky no longer takes a picture of a blocked app you haven't allowed, not even in memory.
+- On Linux, `pinkyctl daemon` no longer says it keeps the computer awake when the system refuses a moment later; it reports the refusal and tries again in 5 minutes.
+
+## 2026.1108.19 (2026-11-08)
+
+- Android phones now read text that apps draw without describing it, as in mini-programs and other pages inside super-apps, games and maps: Pinky reads it from the screen on macOS and Windows, and agents can read and tap it. `phone_observe` takes `ocr: true` to read all the text on the screen.
+- A blocked app you allow for a task is read this way too: agents get its text, never a picture of it.
+- Taps on Android where the screen says little, such as a "Pay" button that is a picture, are now checked against the text drawn there.
+- Pinky now reads text from screen pictures on Windows too.
+
+## 2026.1108.18 (2026-11-08)
+
+- Pinky in Chinese now shows What's new and the update notes in Chinese.
+
+## 2026.1108.17 (2026-11-08)
+
+- Typing on an iPhone no longer adds a space where you didn't type one, as when text is added after a word.
+
+## 2026.1108.16 (2026-11-08)
+
+- `pinkyctl daemon` now keeps the computer awake while an agent task runs and while a phone is connected through Tailscale, as the app does, so it no longer needs `caffeinate`.
+
+## 2026.1108.15 (2026-11-08)
+
+- Watching a phone takes about a third of the CPU it did: the video's frames go to the GPU as the phone sends them, without converting each one first. Recordings play the same way.
+- Screenshots saved from a phone's screen are at the phone's full resolution.
+- Windows and Linux computers stay awake while an agent task runs, and while a phone is connected through Tailscale with Keep this computer awake for phones away on, as Macs already did.
+
+## 2026.1108.14 (2026-11-08)
+
+- iPhones and iPads now work over Wi-Fi too, on by default: one you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as your computer, and a running task moves between the cable and Wi-Fi by itself. Turn it off in Settings › Phones.
+- When Pinky finds an iPhone or iPad on Wi-Fi that it hasn't used, such as a family member's iPad paired with your computer, it shows it as Found on Wi-Fi and leaves it alone until you choose Use or Ignore.
+- A locked iPhone or iPad on Wi-Fi shows as Locked on Wi-Fi, and Pinky connects once you unlock it; it leaves a sleeping phone alone, also one without a passcode, so its screen doesn't light up. An agent that needs it asks you to unlock it.
+- Over Wi-Fi, Pinky reads the text on an iPhone's screen from the live picture, which is much quicker than a screenshot there (about 5 seconds).
+- When a Mac's device service loses an iPhone on Wi-Fi, which it can do for up to an hour after the phone's connection broke once, Pinky notices, shows it as Lost on Wi-Fi and offers to restart the service: macOS asks for an administrator's password, and every iPhone and iPad disconnects for a second or two. To notice it, Pinky looks for your iPhones on the local network, so macOS may ask whether Pinky may do that.
+- Add phone › iPhone says which steps need the cable: trusting the computer, and making the Developer Mode switch appear; the rest works over Wi-Fi.
+- A phone Pinky is connecting to, or moving between the cable and Wi-Fi, shows as Connecting or Moving to Wi-Fi rather than offline.
+- iPads are called iPads, with their model names.
+- Use your Android phone when it's away from your computer's network, as when you're out and the computer is at home, through Tailscale: turn on Use away from home for the phone in Settings › Phones once while it's near the computer, and Pinky keeps reaching it wherever it is. Add phone › Android has the steps, with buttons to get or open Tailscale and to connect the phones on your tailnet.
+- Pinky says what Use away from home opens before turning it on (the phone's adb listens on the network until it restarts) and turns it off with one click, or when you remove the phone.
+- New in Settings › Phones: Keep this computer awake for phones away, on by default, so agents can still reach a phone connected through Tailscale.
+- Through Tailscale, Pinky streams the phone's screen lighter (1 Mbit/s, 15 frames a second), since the phone's upload carries it.
+- Android 10 phones, which have no Wireless debugging, can now leave the cable too: plug the phone in and choose Use Wi-Fi instead… in the ⋯ menu under its picture. Pinky reconnects it by itself when it comes back to the network, and after the phone restarts its page says to plug it in once and choose Use Wi-Fi again; Stop the Wi-Fi connection turns it off.
+
 ## 2026.1108.13 (2026-11-08)
 
 - On Windows, a task's screen recording no longer takes in a moment of your own use of the phone from just before the task started or just after it ended.

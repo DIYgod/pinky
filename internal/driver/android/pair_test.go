@@ -38,6 +38,8 @@ type fakeADB struct {
 	props         map[string]string // getprop output by serial; none fails the shell
 	connectOK     map[string]bool   // addresses host:connect reaches; nil: all
 	quitOnConnect bool              // the server crashes on host:connect, as platform-tools 37 can
+	slowDevices   time.Duration     // how long host:devices-l takes, as on a busy computer
+	connectsOff   bool              // a phone host:connect reaches stays offline
 
 	known     []string // the phones the server paired with (adb_known_hosts.pb)
 	own       []string // what the driver's search sees, as services
@@ -45,6 +47,14 @@ type fakeADB struct {
 	browseErr error    // Browse fails
 	browses   int
 	closes    int
+
+	// run answers the other services on a phone's connection (shell
+	// commands, tcpip:, usb:), by serial; false: unsupported.
+	run func(serial, service string) (string, bool)
+	// unreachable addresses time out on host:connect, as a phone that
+	// left the network does.
+	unreachable map[string]bool
+	probes      []string // addresses the network code probed
 }
 
 func newFakeADB(t *testing.T) (*fakeADB, *Provider) {
@@ -106,18 +116,33 @@ func (f *fakeADB) handle(c net.Conn) {
 	if serial, ok := strings.CutPrefix(req, "host:transport:"); ok {
 		f.mu.Lock()
 		out, has := f.props[serial]
+		run := f.run
 		f.mu.Unlock()
 		if !has {
 			fail("device '" + serial + "' not found")
 			return
 		}
 		io.WriteString(c, "OKAY")
-		if next, ok := readRequest(r); ok && strings.HasPrefix(next, "shell:getprop ro.product.model") {
+		next, ok := readRequest(r)
+		switch {
+		case ok && strings.HasPrefix(next, "shell:getprop ro.product.model"):
 			io.WriteString(c, "OKAY"+out)
-		} else {
+		case ok && run != nil:
+			if out, ok := run(serial, next); ok {
+				io.WriteString(c, "OKAY"+out)
+				return
+			}
+			fail("unsupported")
+		default:
 			fail("unsupported")
 		}
 		return
+	}
+	if req == "host:devices-l" {
+		f.mu.Lock()
+		slow := f.slowDevices
+		f.mu.Unlock()
+		time.Sleep(slow)
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -160,11 +185,19 @@ func (f *fakeADB) handle(c net.Conn) {
 			f.ln.Close()
 			return
 		}
+		if f.unreachable[addr] {
+			reply("failed to connect to '" + addr + "': Operation timed out")
+			return
+		}
 		if f.connectOK != nil && !f.connectOK[addr] {
 			reply("failed to connect to '" + addr + "': Connection refused")
 			return
 		}
-		f.devices = append(f.devices, addr+"\tdevice product:x model:Pixel_9 device:x transport_id:8")
+		if f.connectsOff {
+			f.devices = append(f.devices, addr+"\toffline transport_id:8")
+		} else {
+			f.devices = append(f.devices, addr+"\tdevice product:x model:Pixel_9 device:x transport_id:8")
+		}
 		reply("connected to " + addr)
 	case strings.HasPrefix(req, "host:disconnect:"):
 		// As platform-tools 37: the argument is an address, with port 5555
@@ -456,7 +489,8 @@ func TestPairWithCode(t *testing.T) {
 	if _, err := p.PairWithCode(ctx, "192.168.1.42:99999", "482913"); err == nil {
 		t.Error("a port out of range was accepted")
 	}
-	if _, err := p.PairWithCode(ctx, "192.168.1.42:37123", "000000"); !errors.Is(err, adb.ErrPairing) {
+	if _, err := p.PairWithCode(ctx, "192.168.1.42:37123", "000000"); !errors.Is(err, adb.ErrPairing) || !errors.Is(err, driver.ErrPairRejected) ||
+		!strings.Contains(err.Error(), "Wrong password or connection was dropped") {
 		t.Errorf("wrong code: %v", err)
 	}
 	info, err := p.PairWithCode(ctx, " 192.168.1.42:37123 ", "482913")
@@ -470,6 +504,40 @@ func TestPairWithCode(t *testing.T) {
 	defer f.mu.Unlock()
 	if len(f.connects) != 0 {
 		t.Errorf("connected by hand although the server had: %q", f.connects)
+	}
+}
+
+// TestPairError says why adb could not pair from its words and how long
+// it took, as adb 37 answers (checked with refused, closed, TLS and silent
+// addresses): a refused connection, the phone ending the pairing, an
+// address that does not answer, and a server without host:pair.
+func TestPairError(t *testing.T) {
+	for _, c := range []struct {
+		msg  string
+		took time.Duration
+		want error
+	}{
+		{"Unable to start pairing client.", 0, driver.ErrPairNotListening},
+		{"Wrong password or connection was dropped.", 40 * time.Millisecond, driver.ErrPairRejected},
+		{"Wrong password or connection was dropped.", 5040 * time.Millisecond, driver.ErrPairUnreachable},
+		{"unknown host service", 0, driver.ErrPairOldTool},
+		{"Successfully paired but server returned unknown response=", 0, nil},
+	} {
+		err := pairError(fmt.Errorf("%w: %s", adb.ErrPairing, c.msg), "192.168.1.42:37123", c.took)
+		if c.want != nil && !errors.Is(err, c.want) {
+			t.Errorf("%q after %v: %v, want %v", c.msg, c.took, err, c.want)
+		}
+		for _, other := range []error{driver.ErrPairNotListening, driver.ErrPairRejected, driver.ErrPairUnreachable, driver.ErrPairOldTool} {
+			if other != c.want && errors.Is(err, other) {
+				t.Errorf("%q after %v: %v is also %v", c.msg, c.took, err, other)
+			}
+		}
+		if !errors.Is(err, adb.ErrPairing) || !strings.Contains(err.Error(), c.msg) || !strings.Contains(err.Error(), "192.168.1.42:37123") {
+			t.Errorf("%q: %v lost adb's words or the address", c.msg, err)
+		}
+	}
+	if err := pairError(context.DeadlineExceeded, "192.168.1.42:37123", time.Minute); !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("a deadline: %v", err)
 	}
 }
 
@@ -520,6 +588,72 @@ func TestPairWithCodeNotFound(t *testing.T) {
 	}
 	if info.ID != "192.168.1.42:41000" || info.State != driver.StateOnline {
 		t.Errorf("ConnectWiFi = %+v", info)
+	}
+}
+
+// TestPairWaitEndsInRequest: when the wait for a paired or connected phone
+// runs out during a request to a slow adb server, rather than between two,
+// the phone is still not found, or not online, as when it runs out between
+// them; not the request's timeout.
+func TestPairWaitEndsInRequest(t *testing.T) {
+	f, p := newFakeADB(t)
+	old := connectTimeout
+	connectTimeout = time.Second
+	defer func() { connectTimeout = old }()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	// Each listing takes 400 ms: the second starts at about 0.9 s and is
+	// cut at 1 s.
+	f.set(func(f *fakeADB) {
+		f.code, f.guid, f.slowDevices = "482913", "adb-R5CN20ABC-x1y2z3", 400*time.Millisecond
+	})
+	if _, err := p.PairWithCode(ctx, "192.168.1.42:37123", "482913"); !errors.Is(err, driver.ErrPairedNotFound) {
+		t.Errorf("PairWithCode = %v", err)
+	}
+	// Connected, but never online.
+	f.set(func(f *fakeADB) { f.connectsOff = true })
+	if _, err := p.ConnectWiFi(ctx, "192.168.1.42:41000"); !errors.Is(err, driver.ErrOffline) {
+		t.Errorf("ConnectWiFi = %v", err)
+	}
+	// The person leaving still ends it as such.
+	gone, stop := context.WithCancel(ctx)
+	stop()
+	if _, err := p.ConnectWiFi(gone, "192.168.1.42:41000"); errors.Is(err, driver.ErrOffline) {
+		t.Errorf("ConnectWiFi after the person left = %v", err)
+	}
+}
+
+// lateCtx is a context whose deadline has passed while Err does not say
+// so yet, as a timeout's timer lags the connection deadline set from it.
+type lateCtx struct{ context.Context }
+
+func (lateCtx) Deadline() (time.Time, bool) { return time.Now().Add(-time.Millisecond), true }
+
+// TestWaitRanOut tells a wait's own timeout from the caller ending it.
+func TestWaitRanOut(t *testing.T) {
+	bg := context.Background()
+	over, stop := context.WithTimeout(bg, -time.Second)
+	defer stop()
+	gone, cancel := context.WithCancel(bg)
+	cancel()
+	goneWait, stop2 := context.WithTimeout(gone, -time.Second)
+	defer stop2()
+	waiting, stop3 := context.WithTimeout(bg, time.Hour)
+	defer stop3()
+	for _, c := range []struct {
+		name         string
+		parent, wait context.Context
+		want         bool
+	}{
+		{"its timeout", bg, over, true},
+		{"its deadline, before Err says so", bg, lateCtx{bg}, true},
+		{"still waiting", bg, waiting, false},
+		{"the caller left", gone, goneWait, false},
+		{"the caller's deadline", over, over, false},
+	} {
+		if got := waitRanOut(c.parent, c.wait); got != c.want {
+			t.Errorf("%s: %v, want %v", c.name, got, c.want)
+		}
 	}
 }
 

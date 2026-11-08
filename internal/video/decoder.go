@@ -29,8 +29,9 @@ type DecoderOptions struct {
 }
 
 // Decoder decodes one H.264 or HEVC stream of Annex B packets and converts
-// its pictures to RGBA. It is not safe for concurrent use: a mirror runs
-// it on its own goroutine.
+// its pictures to RGBA (Convert) or copies their Y′CbCr planes for a UI
+// that converts them as it draws (ConvertYUV). It is not safe for
+// concurrent use: a mirror runs it on its own goroutine.
 type Decoder struct {
 	l        *lib
 	codec    driver.Codec
@@ -287,23 +288,11 @@ func (d *Decoder) Convert(dst *image.RGBA) error {
 		return errors.New("video: Convert needs an image.NewRGBA picture")
 	}
 	l := d.l
-	src := d.frame
-	if d.hwPixFmt >= 0 && getInt32(src, frameFormat) == d.hwPixFmt {
-		// Map the GPU surface for reading where the platform can (no
-		// copy on VideoToolbox), else copy it to the CPU.
-		l.av_frame_unref(d.sw)
-		if r := d.mapFrame(src); r < 0 {
-			d.mapFails++
-			l.av_frame_unref(d.sw)
-			if r := l.av_hwframe_transfer_data(d.sw, src, 0); r < 0 {
-				return l.averror("copy picture from GPU", r)
-			}
-		}
-		// The decoder's color description holds for the mapped copy.
-		for _, off := range []uintptr{frameColorRange, frameColorPrim, frameColorTRC, frameColorspace, frameChromaLoc} {
-			putInt32(d.sw, off, getInt32(src, off))
-		}
-		src = d.sw
+	src, err := d.onCPU()
+	if err != nil {
+		return err
+	}
+	if src == d.sw {
 		defer l.av_frame_unref(d.sw)
 	}
 
@@ -334,6 +323,31 @@ func (d *Decoder) Convert(dst *image.RGBA) error {
 		return l.averror("convert picture", r)
 	}
 	return nil
+}
+
+// onCPU returns the last picture where the CPU can read it: the decoder's
+// own frame, or for a picture of the hardware decoder, its GPU surface
+// mapped for reading where the platform can (no copy on VideoToolbox),
+// else copied to the CPU. The caller unrefs d.sw when it returns that.
+func (d *Decoder) onCPU() (unsafe.Pointer, error) {
+	l := d.l
+	src := d.frame
+	if d.hwPixFmt < 0 || getInt32(src, frameFormat) != d.hwPixFmt {
+		return src, nil
+	}
+	l.av_frame_unref(d.sw)
+	if r := d.mapFrame(src); r < 0 {
+		d.mapFails++
+		l.av_frame_unref(d.sw)
+		if r := l.av_hwframe_transfer_data(d.sw, src, 0); r < 0 {
+			return nil, l.averror("copy picture from GPU", r)
+		}
+	}
+	// The decoder's color description holds for the mapped copy.
+	for _, off := range []uintptr{frameColorRange, frameColorPrim, frameColorTRC, frameColorspace, frameChromaLoc} {
+		putInt32(d.sw, off, getInt32(src, off))
+	}
+	return d.sw, nil
 }
 
 // tagBT709 relabels a picture's matrix, primaries and transfer as BT.709,

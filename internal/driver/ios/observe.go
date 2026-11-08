@@ -1,8 +1,12 @@
 package ios
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"image"
+	"image/png"
 	"sort"
 	"strings"
 	"sync"
@@ -89,19 +93,26 @@ func (d *Device) axReady(ctx context.Context) (*axSession, error) {
 
 // ObserveStats describe the last Observe, for diagnostics.
 type ObserveStats struct {
-	Source    string // "remoteax" (frames from the phone) or "inspector" (OCR places elements)
-	Elements  int
-	Placed    int // elements with a position: from the phone, or by OCR on the inspector path
-	OCRLines  int
-	Walk      time.Duration
-	Shot      time.Duration
-	OCR       time.Duration
-	Total     time.Duration
-	Complete  bool // the walk came back to its start
-	WalkError error
-	OCRError  error
-	RAXError  error    // why the remoteax path was not used
-	Trace     []string // what the remoteax path waited for, with times
+	Source   string // "remoteax" (frames from the phone) or "inspector" (OCR places elements)
+	Elements int
+	Placed   int // elements with a position: from the phone, or by OCR on the inspector path
+	OCRLines int
+	Walk     time.Duration
+	Shot     time.Duration
+	ShotFrom string // what OCR read: "screenshot", or "video" (a frame of the live video, over Wi-Fi)
+	// Capture says when the picture for OCR started (captureGate): "at
+	// once" (no MayCapture), "after the app", "after the read", or "" when
+	// the screen could not be captured; CaptureWait is how long into the
+	// read.
+	Capture     string
+	CaptureWait time.Duration
+	OCR         time.Duration
+	Total       time.Duration
+	Complete    bool // the walk came back to its start
+	WalkError   error
+	OCRError    error
+	RAXError    error    // why the remoteax path was not used
+	Trace       []string // what the remoteax path waited for, with times
 }
 
 // Observe implements driver.Device. It reads the screen through the
@@ -117,6 +128,11 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 
 // ObserveWithStats is Observe with timings.
 func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ObserveStats, error) {
+	s, st, err := d.observeWithStats(ctx, opt)
+	return s, st, d.gone(err)
+}
+
+func (d *Device) observeWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ObserveStats, error) {
 	var st ObserveStats
 	s, err := d.observeRAX(ctx, opt, &st)
 	if err == nil {
@@ -145,17 +161,20 @@ func (d *Device) lockedScreen() *screen.Screen {
 	return &screen.Screen{
 		Width: si.Width, Height: si.Height,
 		App:         screen.App{Name: "Home Screen", ID: springBoard},
-		Orientation: orientationName(si.Orientation),
+		Orientation: orientationOf(si.Width, si.Height),
 		Locked:      true,
 		CapturedAt:  time.Now(),
 	}
 }
 
 // observeInspector is Observe through the inspector walk and OCR.
+// errEmptyRead is a read in which neither the accessibility tree nor OCR
+// found anything.
+var errEmptyRead = errors.New("the iPhone answered with an empty screen")
+
 func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions, st ObserveStats) (*screen.Screen, ObserveStats, error) {
 	start := time.Now()
 	st.Source = "inspector"
-	si := d.screen()
 	ax, err := d.axReady(ctx)
 	if err != nil {
 		return nil, st, err
@@ -174,29 +193,78 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	}()
 	var lines []ocrLine
 	var ocrErr error
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		t := time.Now()
-		png, err := d.ScreenshotPNG(ctx)
-		st.Shot = time.Since(t)
-		if err != nil {
-			ocrErr = err
-			return
-		}
-		t = time.Now()
-		lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
-		st.OCR = time.Since(t)
-	}()
+	var shotW, shotH int // the picture OCR read, the right way up
+	var pictured sync.WaitGroup
+	// The picture places the elements and adds OCR's text; it waits until
+	// the read may take it (capturegate.go), here once the walk named the
+	// app: on this path, a fallback, the walk is the read.
+	gate := newCaptureGate(opt.MayCapture, func() {
+		pictured.Add(1)
+		go func() {
+			defer pictured.Done()
+			t := time.Now()
+			png, pic, from, err := d.ocrPicture(ctx, opt)
+			st.Shot, st.ShotFrom = time.Since(t), from
+			if err != nil {
+				ocrErr = err
+				return
+			}
+			shotW, shotH = pictureSize(png, pic)
+			t = time.Now()
+			lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
+			st.OCR = time.Since(t)
+		}()
+	})
 	var locked bool
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		locked, _ = d.Locked(ctx)
 	}()
+	if d.hasDisplayInfo() {
+		// The display's orientation, read while the walk runs.
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			d.readDisplayNow(ctx)
+		}()
+	}
 	wg.Wait()
-	if walkErr != nil && len(nodes) == 0 {
+	si := d.screen()
+	appName, appID := ax.foreground()
+	if app, ok := d.appForPID(ctx, ownerPID(nodes)); ok {
+		appName, appID = app.Name, app.ID
+	}
+	s := &screen.Screen{
+		Width: si.Width, Height: si.Height,
+		App:         screen.App{Name: appName, ID: appID},
+		Orientation: orientationOf(si.Width, si.Height),
+		Locked:      locked,
+		CapturedAt:  time.Now(),
+	}
+	use := gate.late(s)
+	pictured.Wait()
+	st.Capture, st.CaptureWait = gate.stats()
+	if !use {
+		lines, ocrErr = nil, nil
+	}
+	if !d.hasDisplayInfo() && shotW > 0 && shotH > 0 {
+		// Without display info (below iOS 27) the screenshot, which is
+		// always upright, gives the screen's size as it is now.
+		d.mu.Lock()
+		d.scr.Width, d.scr.Height = shotW, shotH
+		d.mu.Unlock()
+		si = d.screen()
+		s.Width, s.Height, s.Orientation = si.Width, si.Height, orientationOf(si.Width, si.Height)
+	}
+	if len(nodes) == 0 {
 		if ocrErr != nil || len(lines) == 0 {
+			// Nothing to show is not a screen: the phone's services did not
+			// answer (seen over Wi-Fi after a session dropped), and an
+			// empty read would tell the agent the screen is blank.
+			if walkErr == nil {
+				walkErr = errEmptyRead
+			}
 			return nil, st, walkErr
 		}
 		// Without the tree the screen is still worth reading: fall back to
@@ -207,17 +275,6 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	st.OCRError = ocrErr
 	st.Complete = complete
 
-	appName, appID := ax.foreground()
-	if app, ok := d.appForPID(ctx, ownerPID(nodes)); ok {
-		appName, appID = app.Name, app.ID
-	}
-	s := &screen.Screen{
-		Width: si.Width, Height: si.Height,
-		App:         screen.App{Name: appName, ID: appID},
-		Orientation: orientationName(si.Orientation),
-		Locked:      locked,
-		CapturedAt:  time.Now(),
-	}
 	parts := make([]captionParts, len(nodes))
 	firsts := make([]string, len(nodes))
 	for i, n := range nodes {
@@ -338,29 +395,6 @@ func (d *Device) appForPID(ctx context.Context, pid uint64) (driver.App, bool) {
 // pidRecheck is how long a process that is no app is not looked up again.
 const pidRecheck = 30 * time.Second
 
-// keyboardFromOCR finds an on-screen keyboard in OCR lines: at least five
-// single letters in the lower half of the screen, spread across most of its
-// width (a list's section index is a column of single letters too). It
-// returns the keyboard's top edge, normalized.
-func keyboardFromOCR(lines []ocrLine) (float64, bool) {
-	top, n := 1.0, 0
-	left, right := 1.0, 0.0
-	for _, l := range lines {
-		t := []rune(strings.TrimSpace(l.Text))
-		if l.Y < 0.5 || len(t) != 1 || !unicode.IsLetter(t[0]) {
-			continue
-		}
-		n++
-		top = min(top, l.Y)
-		left = min(left, l.X)
-		right = max(right, l.X+l.W)
-	}
-	if n < 5 || right-left < 0.5 {
-		return 0, false
-	}
-	return top - 0.02, true
-}
-
 // ownerPID is the process that owns most of the walked elements: the app
 // on screen.
 func ownerPID(nodes []axNode) uint64 {
@@ -377,25 +411,6 @@ func ownerPID(nodes []axNode) uint64 {
 		}
 	}
 	return best
-}
-
-// ocrLanguages are the languages Vision reads, in priority order.
-var ocrLanguages = []string{"zh-Hans", "zh-Hant", "en-US"}
-
-func orientationName(rot string) string {
-	switch rot {
-	case "rot90", "rot270":
-		return "landscape"
-	default:
-		return "portrait"
-	}
-}
-
-func ocrRect(l ocrLine, w, h int) screen.Rect {
-	return screen.Rect{
-		X: int(l.X * float64(w)), Y: int(l.Y * float64(h)),
-		W: int(l.W * float64(w)), H: int(l.H * float64(h)),
-	}
 }
 
 // norm folds a string for matching: lower case, letters and digits only.
@@ -557,4 +572,16 @@ func shareOf(r screen.Rect, text, label string) screen.Rect {
 	r.X += r.W * off / len(t)
 	r.W = r.W * len(l) / len(t)
 	return r
+}
+
+// pictureSize is the size of the picture OCR read: the decoded one, else
+// the PNG's header.
+func pictureSize(b []byte, img image.Image) (int, int) {
+	if img != nil {
+		return img.Bounds().Dx(), img.Bounds().Dy()
+	}
+	if cfg, err := png.DecodeConfig(bytes.NewReader(b)); err == nil {
+		return cfg.Width, cfg.Height
+	}
+	return 0, 0
 }

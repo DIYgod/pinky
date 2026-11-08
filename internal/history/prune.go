@@ -99,6 +99,13 @@ func (s *Store) dropTasks(ctx context.Context, tx *sql.Tx, ids []string, out *Pr
 				}
 			}
 		}
+		// Next stops on a read error as well as at the end. Deleting after a
+		// short read would drop the tasks and leave the screenshots it never
+		// saw, and the error would be gone.
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, nil, err
+		}
 		rows.Close()
 		recs, err := txStrings(ctx, tx, `SELECT path FROM recordings WHERE task_id IN (`+in+`)`, cargs...)
 		if err != nil {

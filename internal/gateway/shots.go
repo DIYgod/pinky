@@ -21,7 +21,9 @@ import (
 // (phone_connect, phone_observe, phone_wait_for, a hand-back) get one the
 // same way, so the action that follows has a "before" picture too.
 //
-// A blocked app is never captured or stored. A background screenshot is
+// A blocked app is never captured or stored here. (OCR may read one the
+// person allowed for the task, from a picture the driver keeps in memory
+// only: mayCapture.) A background screenshot is
 // bracketed by two reads, like the screenshots agents get: it is kept only
 // when the read just before it and a later read, started after the
 // screenshot returned, show the same app, which is not blocked, on an
@@ -60,6 +62,11 @@ type bgShot struct {
 	img    image.Image // until written to history; at history size
 	id     string      // media id once written
 	uses   []shotUse   // step pictures that show it once kept
+	// reads are the reads it shows, which place the one-time codes it
+	// covers when written (codes.go); covered is set when they are
+	// covered already.
+	reads   []*screen.Screen
+	covered bool
 }
 
 // shotUse is a step picture waiting for a screenshot.
@@ -114,7 +121,7 @@ func (g *Gateway) startShot(d *device, s *screen.Screen) *bgShot {
 		}
 		g.dropShotLocked(d, p)
 	}
-	p := &bgShot{key: key, app: s.App, inputs: d.inputs, done: make(chan struct{})}
+	p := &bgShot{key: key, app: s.App, inputs: d.inputs, done: make(chan struct{}), reads: []*screen.Screen{s}}
 	d.shot = p
 	g.shots.add()
 	dev, bg := g.screenOfLocked(d)
@@ -164,6 +171,7 @@ func (g *Gateway) confirmShotLocked(d *device, s *screen.Screen, start time.Time
 		g.dropShotLocked(d, p)
 		return
 	}
+	p.reads = append(p.reads, s)
 	g.keepShotLocked(d, p)
 }
 
@@ -252,12 +260,13 @@ func (g *Gateway) confirmAtEndLocked(d *device) {
 
 // keepImage keeps a screenshot that a caller took and checked right after
 // read s (the approval panel's, or one the agent asked for), so steps can
-// reuse it. It returns nil for a blocked app or without history screenshots.
-func (g *Gateway) keepImage(d *device, s *screen.Screen, img image.Image) *bgShot {
+// reuse it; covered says its one-time codes are covered already. It
+// returns nil for a blocked app or without history screenshots.
+func (g *Gateway) keepImage(d *device, s *screen.Screen, img image.Image, covered bool) *bgShot {
 	if !g.recording() || img == nil || !recordableScreen(g.policy, s) {
 		return nil
 	}
-	p := &bgShot{key: shotKey(s), app: s.App, img: img, state: shotKept}
+	p := &bgShot{key: shotKey(s), app: s.App, img: img, state: shotKept, reads: []*screen.Screen{s}, covered: covered}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if d.person {
@@ -298,13 +307,39 @@ func (g *Gateway) shotID(p *bgShot) string {
 	return g.writeShotLocked(p)
 }
 
+// writeShotLocked writes p to history, with its one-time codes and what
+// its reads hid of blocked apps (hidden.go) covered where the reads place
+// them; a picture with a code or a hidden card they could not place is not
+// kept.
 func (g *Gateway) writeShotLocked(p *bgShot) string {
 	if p.id != "" || p.img == nil || g.store == nil {
 		return p.id
 	}
-	id, img := history.NewID("m_"), p.img
-	p.id, p.img = id, nil
+	img := p.img
+	var boxes []image.Rectangle
+	if !p.covered {
+		b := img.Bounds()
+		var unplaced bool
+		// Blocked apps' notifications and cards (hidden.go).
+		if boxes, unplaced = hiddenPlaces(b.Dx(), b.Dy(), p.reads...); unplaced {
+			p.img = nil
+			return ""
+		}
+		if g.policy.HideCodes() {
+			var codes []image.Rectangle
+			if codes, unplaced = codePlaces(b.Dx(), b.Dy(), p.reads...); unplaced {
+				p.img = nil
+				return ""
+			}
+			boxes = append(boxes, codes...)
+		}
+	}
+	id := history.NewID("m_")
+	p.id, p.img, p.reads = id, nil, nil
 	g.rec.do(func(ctx context.Context) error {
+		if len(boxes) > 0 {
+			img = coverBoxes(img, boxes)
+		}
 		_, err := g.store.SaveScreenshotAs(ctx, id, img)
 		return err
 	})

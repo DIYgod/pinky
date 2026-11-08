@@ -9,7 +9,8 @@ import (
 	"image/png"
 	"time"
 
-	"github.com/danielpaulus/go-ios/ios/instruments"
+	goios "github.com/danielpaulus/go-ios/ios"
+	dtx "github.com/danielpaulus/go-ios/ios/dtx_codec"
 )
 
 const (
@@ -50,17 +51,82 @@ func (d *Device) ScreenshotPNG(ctx context.Context) ([]byte, error) {
 	return nil, fmt.Errorf("screenshot: %w", errors.Join(err1, err2))
 }
 
+// shotTimeouts bound one screenshot from each service. Over USB a PNG of a
+// busy screen (7 MB) arrives within a second, so a service that has not
+// answered in a few seconds is stuck and the other one is asked. Over Wi-Fi
+// the PNG arrives at about 1 MB/s: a busy iPad screen (5 to 15 MB) took 5
+// to 26 s on 2026-11-08, and go-ios's own 5 s for the instruments channel
+// failed every one of them, after which the capture service sent the same
+// screen again, 16 bits a channel.
+func shotTimeouts(conn string) (instruments, capture time.Duration) {
+	if conn == "wifi" {
+		return 30 * time.Second, 30 * time.Second
+	}
+	return 5 * time.Second, 10 * time.Second
+}
+
+// The instruments screenshot channel, opened as go-ios's ScreenshotService
+// opens it, and asked with Pinky's deadline instead of its 5 s.
+const (
+	instrumentsScreenshot = "com.apple.instruments.server.services.screenshot"
+	instrumentsRemote     = "com.apple.instruments.remoteserver"
+	instrumentsRemote14   = "com.apple.instruments.remoteserver.DVTSecureSocketProxy"
+)
+
+type instShot struct {
+	conn *dtx.Connection
+	ch   *dtx.Channel
+}
+
+// ackDispatcher acknowledges what the phone sends on the connection unasked.
+type ackDispatcher struct{ conn *dtx.Connection }
+
+func (a ackDispatcher) Dispatch(m dtx.Message) { dtx.SendAckIfNeeded(a.conn, m) }
+
+func openInstShot(e goios.DeviceEntry, timeout time.Duration) (*instShot, error) {
+	var conn *dtx.Connection
+	var err error
+	if e.SupportsRsd() {
+		conn, err = dtx.NewTunnelConnection(e, instrumentsService)
+	} else if conn, err = dtx.NewUsbmuxdConnection(e, instrumentsRemote); err != nil {
+		conn, err = dtx.NewUsbmuxdConnection(e, instrumentsRemote14)
+	}
+	if err != nil {
+		return nil, err
+	}
+	ch := conn.RequestChannelIdentifier(instrumentsScreenshot, ackDispatcher{conn}, dtx.WithTimeout(uint32(timeout/time.Second)))
+	return &instShot{conn: conn, ch: ch}, nil
+}
+
+func (s *instShot) take(ctx context.Context) ([]byte, error) {
+	msg, err := s.ch.MethodCallWithContext(ctx, "takeScreenshot")
+	if err != nil {
+		return nil, fmt.Errorf("TakeScreenshot: %w", err)
+	}
+	if len(msg.Payload) == 0 {
+		return nil, errors.New("TakeScreenshot: empty response payload")
+	}
+	b, ok := msg.Payload[0].([]byte)
+	if !ok {
+		return nil, fmt.Errorf("TakeScreenshot: unexpected payload type %T", msg.Payload[0])
+	}
+	return b, nil
+}
+
+func (s *instShot) Close() { s.conn.Close() }
+
 // instrumentsShot uses the instruments screenshot channel. Callers hold
 // svcMu.
 func (d *Device) instrumentsShot(ctx context.Context) ([]byte, error) {
+	limit, _ := shotTimeouts(d.info.Connection)
 	if d.inst == nil {
 		type result struct {
-			s   *instruments.ScreenshotService
+			s   *instShot
 			err error
 		}
 		ch := make(chan result, 1)
 		go func() {
-			s, err := instruments.NewScreenshotService(d.l.entry)
+			s, err := openInstShot(d.l.entry, limit)
 			ch <- result{s, err}
 		}()
 		select {
@@ -85,32 +151,20 @@ func (d *Device) instrumentsShot(ctx context.Context) ([]byte, error) {
 			return nil, ctx.Err()
 		}
 	}
-	type result struct {
-		b   []byte
-		err error
-	}
-	ch := make(chan result, 1)
 	s := d.inst
-	go func() {
-		b, err := s.TakeScreenshot()
-		ch <- result{b, err}
-	}()
-	var r result
-	select {
-	case r = <-ch:
-	case <-ctx.Done():
-		r.err = ctx.Err()
-	}
-	if r.err != nil || len(r.b) == 0 {
+	tctx, cancel := context.WithTimeout(ctx, limit)
+	b, err := s.take(tctx)
+	cancel()
+	if err != nil || len(b) == 0 {
 		// The connection's state is unknown now; start over next time.
 		s.Close()
 		d.inst = nil
-		if r.err == nil {
-			r.err = errors.New("empty image")
+		if err == nil {
+			err = errors.New("empty image")
 		}
-		return nil, fmt.Errorf("instruments: %w", r.err)
+		return nil, fmt.Errorf("instruments: %w", err)
 	}
-	return r.b, nil
+	return b, nil
 }
 
 // captureShot uses CoreDevice's screen capture service. Callers hold svcMu.
@@ -123,7 +177,8 @@ func (d *Device) captureShot(ctx context.Context) ([]byte, error) {
 			}
 			d.shot = svc
 		}
-		c, cancel := context.WithTimeout(ctx, 10*time.Second)
+		_, limit := shotTimeouts(d.info.Connection)
+		c, cancel := context.WithTimeout(ctx, limit)
 		out, err := d.shot.invoke(c, featureCaptureScreenshot, actionCaptureScreenshot, map[string]any{"requestedFormat": "png"})
 		cancel()
 		if err != nil {
@@ -146,7 +201,7 @@ func (d *Device) captureShot(ctx context.Context) ([]byte, error) {
 func (d *Device) Screenshot(ctx context.Context) (image.Image, error) {
 	b, err := d.ScreenshotPNG(ctx)
 	if err != nil {
-		return nil, err
+		return nil, d.gone(err)
 	}
 	img, err := png.Decode(bytes.NewReader(b))
 	if err != nil {

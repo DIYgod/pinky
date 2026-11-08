@@ -299,9 +299,20 @@ type fakeWDA struct {
 	sessions int
 	bodies   map[string][]string
 	expire   bool // the next session request fails as WDA does after a restart
+
+	// For reads.
+	app         string        // /wda/activeAppInfo's value
+	locked      bool          // /wda/locked
+	sourceDelay time.Duration // before /source answers; set before the first request
+	shots       int           // /screenshot requests
+	shotAt      time.Time     // the last one
+	sourceAt    time.Time     // when /source last answered
 }
 
 func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/source") && f.sourceDelay > 0 {
+		time.Sleep(f.sourceDelay) // a phone's tree takes long; other requests go on
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	b, _ := io.ReadAll(r.Body)
@@ -331,6 +342,19 @@ func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"value":{"sessionId":"s%d","capabilities":{}},"sessionId":"s%d"}`, f.sessions, f.sessions)
 	case "POST /appium/settings", "POST /actions", "POST /wda/keys", "POST /element/E1/clear":
 		fmt.Fprint(w, `{"value":null}`)
+	case "GET /wda/activeAppInfo":
+		fmt.Fprintf(w, `{"value":%s}`, f.app)
+	case "GET /wda/locked":
+		fmt.Fprintf(w, `{"value":%v}`, f.locked)
+	case "GET /source":
+		f.sourceAt = time.Now()
+		fmt.Fprint(w, `{"value":{"type":"XCUIElementTypeApplication","label":"App","rect":{"x":0,"y":0,"width":100,"height":200},"isVisible":"1",`+
+			`"children":[{"type":"XCUIElementTypeButton","label":"Pay","rect":{"x":10,"y":10,"width":50,"height":20},"isVisible":"1","isAccessible":"1"}]}}`)
+	case "GET /screenshot":
+		f.shots++
+		f.shotAt = time.Now()
+		w.WriteHeader(500) // the read goes on without OCR's text
+		fmt.Fprint(w, `{"value":{"error":"unknown error","message":"no picture in tests"}}`)
 	case "GET /element/active":
 		if strings.Contains(r.URL.RawQuery, "none") {
 			w.WriteHeader(404)
@@ -469,5 +493,34 @@ func TestFrameSettle(t *testing.T) {
 	}
 	if ok, took := run(time.Hour, 600*time.Millisecond); ok || took > time.Second {
 		t.Errorf("endless motion: settled %v after %v, want false at the limit", ok, took)
+	}
+}
+
+// An iPad's Settings in a split view, as WDA gave it on the iPad Simulator
+// (iPadOS 26.5) on General › Keyboards: the sidebar's bar first, holding
+// the search field and its Dictate button, then the page's bar with its
+// back button past the screen's left third.
+const wdaSplitViewTree = `{"type":"Application","label":"Settings","isVisible":"1","rect":{"x":0,"y":0,"width":834,"height":1210},"children":[
+ {"type":"NavigationBar","name":"Settings","isVisible":"1","rect":{"x":10,"y":32,"width":320,"height":114},"children":[
+  {"type":"SearchField","name":"Search","label":"Search","isVisible":"1","rect":{"x":26,"y":87,"width":288,"height":44},"children":[
+   {"type":"Button","name":"Dictate","label":"Dictate","rawIdentifier":"Dictate","isVisible":"1","rect":{"x":281,"y":98,"width":17,"height":22}}]}]},
+ {"type":"NavigationBar","name":"Keyboards","isVisible":"1","rect":{"x":0,"y":32,"width":834,"height":54},"children":[
+  {"type":"Button","name":"BackButton","label":"General","rawIdentifier":"BackButton","isVisible":"1","rect":{"x":350,"y":32,"width":44,"height":44}},
+  {"type":"StaticText","name":"Keyboards","label":"Keyboards","isVisible":"1","rect":{"x":544,"y":43,"width":86,"height":22}}]}]}`
+
+func TestBackButtonSplitView(t *testing.T) {
+	var root wdaNode
+	if err := json.Unmarshal([]byte(wdaSplitViewTree), &root); err != nil {
+		t.Fatal(err)
+	}
+	p, ok := backButton(&root, 2)
+	if !ok || p != (screen.Point{X: 744, Y: 108}) {
+		t.Fatalf("back button %v %v, want the page's at 744,108", p, ok)
+	}
+	// Without a BackButton, the sidebar's Dictate button is still not it
+	// (it is in the search field): Back then swipes from the edge.
+	root.Children[1].Children[0].Name, root.Children[1].Children[0].Identifier = nil, nil
+	if p, ok = backButton(&root, 2); ok {
+		t.Fatalf("leading button %v", p)
 	}
 }

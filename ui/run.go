@@ -79,9 +79,13 @@ type Options struct {
 	// switch for usage statistics and crash reports.
 	Telemetry *telemetry.Client
 	// Updates finds and installs new versions of Pinky; nil leaves updates
-	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new.
-	Updates   *update.Updater
-	Changelog string
+	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new, and
+	// ChangelogTranslations are its translations by the catalogs' language
+	// tags ("zh-Hans": CHANGELOG.zh-CN.md), which What's new shows in their
+	// language, with CHANGELOG.md's notes of a version they lack.
+	Updates               *update.Updater
+	Changelog             string
+	ChangelogTranslations map[string]string
 	// AgentSetup finds the agents on this computer and adds Pinky to them
 	// when the person clicks Connect in Settings › Agents, or in the
 	// sidebar's card while no agent can reach Pinky; nil shows only the
@@ -109,6 +113,12 @@ type Settings struct {
 	// AutoUpdate installs new versions of Pinky, and of the companion app
 	// on Android phones, by themselves while no one uses them.
 	AutoUpdate bool
+	// KeepAwakeAway keeps the computer from idle sleep while a phone is
+	// connected through Tailscale, away from its network.
+	KeepAwakeAway bool
+	// IOSWiFi uses iPhones and iPads over Wi-Fi when this computer reaches
+	// them there (gateway.SetWiFi); off, only on a cable.
+	IOSWiFi bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -138,8 +148,10 @@ func DefaultSettings() Settings {
 			{Name: "Northbank", Kind: "Banking"}, {Name: "Vaultly", Kind: "Passwords"}, {Name: "Coinpouch", Kind: "Wallet"},
 		},
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
-		UsageStats: usageStatsByDefault,
-		AutoUpdate: true,
+		UsageStats:    usageStatsByDefault,
+		AutoUpdate:    true,
+		KeepAwakeAway: true,
+		IOSWiFi:       true,
 	}
 }
 
@@ -177,6 +189,7 @@ type app struct {
 	page      page
 	panelPage page   // the page syncPanel last saw, to sync again when it changes
 	sel       string // the selected phone, or allPhones
+	selShown  string // the selection the sidebar last scrolled into view
 
 	mirrors map[string]*mirror
 	shots   map[string]*mg.Bitmap // approval screenshots by need ID
@@ -209,6 +222,7 @@ type app struct {
 	chk      checkupState    // the phones' checkups
 	more     map[string]bool // the More phone controls popover, per device
 	rm       removeState     // the Remove this phone dialog (removephone.go)
+	found    foundState      // phones found on Wi-Fi: Use and Ignore on their way (wifi.go)
 	toasts   []string
 
 	// control is the banner above each phone's mirror as it shows, which
@@ -231,6 +245,7 @@ type app struct {
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
 	always     alwaysState       // Settings › Safety › Always allowed
+	apps       appsState         // Settings › Safety › Add app's apps on the phones
 	rules      rulesState        // Settings › Safety › Rules
 	files      fileProblemsState // rules files edited by hand that cannot be used
 	gwSet      gwSettingsState   // what the gateway keeps of the settings, read again after hand edits
@@ -239,20 +254,26 @@ type app struct {
 	postWin *mygo.Window // the main window, once ready made it; post waits for it
 	early   []func()     // posts made before that
 
-	pin    pinState       // PINs for unlocking from this computer
-	t      telState       // usage statistics, crash reports and feedback
-	comp   companionState // the Android companion app, per phone
-	bg     bgState        // background displays, per phone
-	conn   connState      // iPhones: how Pinky connects, per phone
-	rec    recState       // task recordings in Activity
-	remote remoteState    // Settings › Agents › Remote agents
-	setup  setupState     // Settings › Agents › Connect an agent, and the sidebar's card
-	upd    updateState    // new versions of Pinky and the companion app
+	pin       pinState       // PINs for unlocking from this computer
+	t         telState       // usage statistics, crash reports and feedback
+	comp      companionState // the Android companion app, per phone
+	bg        bgState        // background displays, per phone
+	conn      connState      // iPhones: how Pinky connects, per phone
+	rec       recState       // task recordings in Activity
+	remote    remoteState    // Settings › Agents › Remote agents
+	setup     setupState     // Settings › Agents › Connect an agent, and the sidebar's card
+	upd       updateState    // new versions of Pinky and the companion app
+	tn        tailnetState   // phones away from this computer's network, through Tailscale
+	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 
-	awake    func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
-	awakeOn  bool
-	exportTo func() (string, error) // where exports go; tests replace it
-	reveal   func(path string)      // shows an exported file; tests replace it
+	awake   func(on bool) // keeps the computer awake while agent tasks run; tests replace it
+	awakeOn bool
+	// awayAwake keeps it awake while a phone is away (tailnet.go); tests
+	// replace it.
+	awayAwake   func(on bool)
+	awayAwakeOn bool
+	exportTo    func() (string, error) // where exports go; tests replace it
+	reveal      func(path string)      // shows an exported file; tests replace it
 }
 
 // Run starts the client and returns when it quits. It owns the main
@@ -296,7 +317,7 @@ func newApp(api gateway.API, opt Options) *app {
 		notified: map[string]bool{}, seenNeed: map[string]bool{}, unlocks: map[string]bool{}, more: map[string]bool{},
 		callQueue:  map[string]chan func(){},
 		mediaCache: map[string]*mediaEntry{}, previews: map[string]bool{},
-		awake: keepMacAwake, exportTo: exportFolder, reveal: revealFile,
+		awake: keepAwake, awayAwake: keepAwakeAway, exportTo: exportFolder, reveal: revealFile,
 	}
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
@@ -325,7 +346,7 @@ func newApp(api gateway.API, opt Options) *app {
 }
 
 func (a *app) ready() {
-	keepAppAwake()
+	keepRunning()
 	// Load FFmpeg now, so a missing one is reported at start rather than
 	// as the first mirror opens.
 	if err := video.Load(); err != nil {
@@ -404,6 +425,7 @@ func (a *app) ready() {
 func (a *app) shutdown() {
 	a.end()
 	a.setAwake(false)
+	a.setAwayAwake(false)
 	for id, m := range a.mirrors {
 		m.close()
 		delete(a.mirrors, id)
@@ -540,6 +562,7 @@ func (a *app) afterRefresh(first bool) {
 	}
 	a.loadPINs()
 	a.setAwake(a.anyRunning())
+	a.setAwayAwake(a.settings.KeepAwakeAway && a.anyAway())
 	a.updateTray()
 	a.syncPanel()
 }
@@ -563,8 +586,8 @@ func (a *app) anyRunning() bool {
 	return false
 }
 
-// setAwake keeps the Mac from sleeping while agent tasks run, and lets it
-// sleep again once they end.
+// setAwake keeps the computer from sleeping while agent tasks run, and
+// lets it sleep again once they end.
 func (a *app) setAwake(on bool) {
 	if on == a.awakeOn || a.awake == nil {
 		return

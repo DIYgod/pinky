@@ -108,6 +108,62 @@ func TestAddIPhoneStuck(t *testing.T) {
 		t.Errorf("the reason or the retry note is missing: %q", tt.Texts())
 	}
 
+	// Apple's signing server refused Xcode's image: no retry with it, the
+	// image named, and Xcode to update.
+	refused := driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupDiskImageRefused,
+		Detail:    "Apple's signing server would not sign the developer disk image Pinky found for this iPhone.",
+		DiskImage: &driver.DiskImage{Source: driver.DiskImageFromXcode, Build: "17B48", Version: "17.2.48.0", Dir: "/Library/Developer/DeveloperDiskImages/iOS_DDI/Restore"}}
+	ta.api.SetIPhone(id, refused)
+	ta.waitFor(t, "the refused image", func() bool { tt.Frame(); return hasText(tt, "Apple won't sign this developer disk image") })
+	for _, want := range []string{"Xcode installed on this Mac: build 17B48, version 17.2.48.0", "Install or update Xcode from the App Store", "as soon as another image is on this computer"} {
+		if !hasText(tt, want) {
+			t.Errorf("no %q in %q", want, tt.Texts())
+		}
+	}
+	if hasText(tt, "Pinky tries again by itself.") || hasText(tt, "Pinky could not finish this step.") {
+		t.Errorf("a refused image is not one to retry: %q", tt.Texts())
+	}
+	if _, ok := tt.Find("Get Xcode in the App Store"); !ok {
+		t.Error("no App Store link for Xcode's image")
+	}
+	// The other way: the third-party mirror's image, on a click.
+	if !hasText(tt, "Or download it from a third-party mirror") {
+		t.Errorf("no mirror offered after Xcode's image was refused: %q", tt.Texts())
+	}
+	if _, ok := tt.Find("Download (32 MB)"); !ok {
+		t.Errorf("no Download button: %q", tt.Texts())
+	}
+	refused.DiskImage = &driver.DiskImage{Source: driver.DiskImageFromMirror, Build: "27A5228h", Version: "27.1.5228.8"}
+	ta.api.SetIPhone(id, refused)
+	ta.waitFor(t, "the refused mirror image", func() bool { tt.Frame(); return hasText(tt, "downloaded from the third-party mirror: build 27A5228h") })
+	if !hasText(tt, "Install or update Xcode") || !hasText(tt, "update Pinky once a version with a newer image is out") {
+		t.Errorf("no word of a newer Xcode or Pinky: %q", tt.Texts())
+	}
+	if hasText(tt, "Or download it from a third-party mirror") {
+		t.Errorf("the mirror offered again after Apple refused its image: %q", tt.Texts())
+	}
+	refused.DiskImage = &driver.DiskImage{Source: driver.DiskImageFromFolder, Build: "17B48", Dir: "/Users/me/Pinky/DeveloperDiskImages/iOS_DDI/Restore"}
+	ta.api.SetIPhone(id, refused)
+	ta.waitFor(t, "the refused image in Pinky's folder", func() bool {
+		tt.Frame()
+		return hasText(tt, "in /Users/me/Pinky/DeveloperDiskImages/iOS_DDI/Restore: build 17B48, version –")
+	})
+	if _, ok := tt.Find("Get Xcode in the App Store"); ok {
+		t.Errorf("Xcode offered for an image the person put in Pinky's folder: %q", tt.Texts())
+	}
+	// Windows and Linux have no Xcode: the mirror's image is the other way.
+	if !hasText(tt, "Or download it from a third-party mirror") {
+		t.Errorf("no mirror offered after the image in Pinky's folder was refused: %q", tt.Texts())
+	}
+	// PINKY_DDI's image is the only one Pinky uses while it is set: no
+	// download would be used.
+	refused.DiskImage = &driver.DiskImage{Source: driver.DiskImageFromEnv, Build: "17B48", Version: "17.2.48.0", Dir: "/opt/ddi/Restore"}
+	ta.api.SetIPhone(id, refused)
+	ta.waitFor(t, "the refused PINKY_DDI image", func() bool { tt.Frame(); return hasText(tt, "in /opt/ddi/Restore: build 17B48") })
+	if hasText(tt, "Or download it from a third-party mirror") {
+		t.Errorf("the mirror offered for PINKY_DDI's image: %q", tt.Texts())
+	}
+
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUnlock})
 	ta.waitFor(t, "the unlock step", func() bool { tt.Frame(); return hasText(tt, "Unlock the iPhone so Pinky can finish.") })
 
@@ -174,6 +230,7 @@ func TestAddIPhoneScreenshots(t *testing.T) {
 		{"iphone-preparing", driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupPreparing}},
 		{"iphone-noimage", driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupNoDiskImage, Detail: "Pinky needs Apple's developer disk image, which comes with Xcode."}},
 		{"iphone-failed", driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupDiskImage, Detail: "Pinky could not reach Apple's signing server (gs.apple.com), which signs the developer disk image for each iPhone. Check the internet connection."}},
+		{"iphone-refused", refusedXcodeImage},
 		{"iphone-ready", driver.Info{State: driver.StateOnline}},
 	} {
 		ta.api.SetIPhone(id, st.info)
@@ -187,7 +244,16 @@ func TestAddIPhoneScreenshots(t *testing.T) {
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupNoDiskImage})
 	ta.waitFor(t, "the missing image in Chinese", func() bool { tt.Frame(); return hasText(tt, "开发者磁盘映像") })
 	shoot("iphone-noimage-zh")
+	ta.api.SetIPhone(id, refusedXcodeImage)
+	ta.waitFor(t, "the refused image in Chinese", func() bool { tt.Frame(); return hasText(tt, "Apple 不再为这个开发者磁盘映像签名") })
+	shoot("iphone-refused-zh")
 }
+
+// refusedXcodeImage is an iPhone whose mount Apple's signing server refused,
+// with Xcode 26.0.1's image.
+var refusedXcodeImage = driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupDiskImageRefused,
+	Detail:    "Apple's signing server would not sign the developer disk image Pinky found for this iPhone.",
+	DiskImage: &driver.DiskImage{Source: driver.DiskImageFromXcode, Build: "17B48", Version: "17.2.48.0", Dir: "/Library/Developer/DeveloperDiskImages/iOS_DDI/Restore"}}
 
 // TestAddIPhoneAlreadyReady says that an iPhone connected and ready before
 // Add phone opened is ready, rather than waiting for one to be plugged in,

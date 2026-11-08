@@ -44,6 +44,7 @@ func (g *Gateway) PairWithCode(ctx context.Context, addr, code string) (driver.I
 				g.unremove(info.ID)
 				g.discover(ctx)
 			}
+			g.logPairing(ctx, "code", err)
 			return info, err
 		}
 	}
@@ -62,6 +63,7 @@ func (g *Gateway) ConnectWiFi(ctx context.Context, addr string) (driver.Info, er
 				g.unremove(info.ID)
 				g.discover(ctx)
 			}
+			g.logPairing(ctx, "connect", err)
 			return info, err
 		}
 	}
@@ -82,7 +84,18 @@ func (p *discoverOnPair) Wait(ctx context.Context) (driver.Info, error) {
 		p.g.unremove(info.ID)
 		p.g.discover(ctx)
 	}
+	p.g.logPairing(ctx, "qr", err)
 	return info, err
+}
+
+// logPairing logs why pairing over Wi-Fi failed, in the driver's and the
+// pairing tool's own words, which the client words for the person: the
+// diagnostics then show them. Not when the person walked away.
+func (g *Gateway) logPairing(ctx context.Context, how string, err error) {
+	if err == nil || ctx.Err() != nil || errors.Is(err, context.Canceled) {
+		return
+	}
+	g.log.Info("pairing over Wi-Fi failed", "how", how, "err", err)
 }
 
 // Progress passes the pairing's progress on (driver.PairingReporter).

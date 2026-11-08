@@ -23,10 +23,20 @@ type device struct {
 	// read again happen as one unit per device.
 	act sync.Mutex
 
-	info         driver.Info
-	dev          driver.Device // nil while offline or not opened yet
-	opening      bool
-	online       bool
+	info    driver.Info
+	dev     driver.Device // nil while offline or not opened yet
+	over    string        // the connection dev was opened over ("usb", "wifi")
+	opening bool
+	// openingAt is when Pinky began opening it: calls wait for that open
+	// (connectWait).
+	openingAt time.Time
+	online    bool
+	// moving is set while the phone moves between its cable and Wi-Fi
+	// (wifi.go): until then calls wait for it to be back.
+	moving time.Time
+	// closing is closed once the last session's Close returned, so the
+	// next one does not start while it stops.
+	closing      chan struct{}
 	removed      bool // the person removed it (remove.go); a new device takes its place if it comes back
 	offlineSince time.Time
 	offlineWhy   string
@@ -78,6 +88,9 @@ type device struct {
 	// unlistedAt is when its provider stopped listing the phone; zero
 	// while it is listed.
 	unlistedAt time.Time
+	// hide is what reads need to hide blocked apps' notifications and
+	// cards (hidden.go); nil until a read needs it.
+	hide *hideState
 }
 
 func newDevice(p driver.Provider, info driver.Info) *device {

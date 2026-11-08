@@ -34,6 +34,7 @@ type Options struct {
 	HandoffTimeout  time.Duration // default 15 min
 	IdleTimeout     time.Duration // default 10 min without calls ends a lease
 	ReconnectGrace  time.Duration // default 60 s a lease survives a dropped device
+	ResumeGrace     time.Duration // default 2 min a resuming agent's closed session keeps its leases for its next one
 	SettleMax       time.Duration // default 3 s
 	PollInterval    time.Duration // default 250 ms, for settling and phone_wait_for
 	DiscoverEvery   time.Duration // default 2 s
@@ -68,6 +69,7 @@ func (o *Options) defaults() {
 	set(&o.HandoffTimeout, 15*time.Minute)
 	set(&o.IdleTimeout, 10*time.Minute)
 	set(&o.ReconnectGrace, 60*time.Second)
+	set(&o.ResumeGrace, 2*time.Minute)
 	set(&o.SettleMax, 3*time.Second)
 	set(&o.PollInterval, 250*time.Millisecond)
 	set(&o.DiscoverEvery, 2*time.Second)
@@ -90,12 +92,14 @@ type Gateway struct {
 	approvals *approval.Center
 	rec       *recorder
 
-	mu       sync.Mutex
-	devices  map[string]*device
-	sessions map[string]*Session
-	ended    []*task // recently ended tasks, newest last
-	agents   map[string]*agentState
-	apSteps  map[string]stepRef // approval id -> the step it holds
+	mu          sync.Mutex
+	devices     map[string]*device
+	sessions    map[string]*Session
+	sessionSeq  uint64       // the last Session.seq
+	resumeStops []resumeStop // recent Stops of resuming agents (resume.go)
+	ended       []*task      // recently ended tasks, newest last
+	agents      map[string]*agentState
+	apSteps     map[string]stepRef // approval id -> the step it holds
 
 	subMu sync.Mutex
 	subs  map[chan Event]struct{}
@@ -107,11 +111,14 @@ type Gateway struct {
 	hubsClosed bool
 
 	// Guarded by mu.
-	recordOn   bool            // record the screen of new tasks
-	background map[string]bool // the person's choice per phone: agents on a background display, or not
-	removed    map[string]bool // phones the person removed, kept off the list while listed over the network (remove.go)
-	keepDays   int             // history retention; 0 keeps everything
-	prune      chan struct{}   // asks the retention loop to run now
+	recordOn   bool                      // record the screen of new tasks
+	background map[string]bool           // the person's choice per phone: agents on a background display, or not
+	removed    map[string]bool           // phones the person removed, kept off the list while listed over the network (remove.go)
+	known      map[string]bool           // phones that are the person's, which providers may open over Wi-Fi (wifi.go)
+	names      map[string]history.Device // what the history store calls the phones Pinky has seen (wifi.go)
+	wifiOn     bool                      // the providers use phones over Wi-Fi (SetWiFi)
+	keepDays   int                       // history retention; 0 keeps everything
+	prune      chan struct{}             // asks the retention loop to run now
 
 	ctx        context.Context
 	cancel     context.CancelFunc
@@ -140,6 +147,8 @@ func New(o Options) (*Gateway, error) {
 		hubs:       map[string]*hub{},
 		background: map[string]bool{},
 		removed:    map[string]bool{},
+		known:      map[string]bool{},
+		names:      map[string]history.Device{},
 		prune:      make(chan struct{}, 1),
 	}
 	if g.policy == nil {
@@ -164,6 +173,7 @@ func New(o Options) (*Gateway, error) {
 			g.log.Warn("history: connections", "err", err)
 		}
 		g.loadRemoved()
+		g.loadKnown()
 	}
 	g.approvals = approval.New(approval.Options{
 		Timeout:  o.ApprovalTimeout,
@@ -199,8 +209,11 @@ func (g *Gateway) Close() error {
 	}
 	g.mu.Unlock()
 	for _, s := range sessions {
-		s.end("gateway stopped")
+		s.end("gateway stopped", false)
 	}
+	g.mu.Lock()
+	g.endKeptLocked("gateway stopped")
+	g.mu.Unlock()
 	g.approvals.Close()
 	g.cancel()
 	// Recordings close their files, which needs the history queue.
@@ -313,11 +326,18 @@ func (g *Gateway) discover(ctx context.Context) {
 			switch {
 			case d.online:
 				gone = append(gone, d)
-			case !d.opened && !d.opening && d.lease == nil && now.Sub(d.unlistedAt) >= unopenedGrace:
+			case foundLocked(d) && !g.known[id] && d.lease == nil:
+				// Found on Wi-Fi and never used: nothing to keep once it
+				// is gone (wifi.go).
+				delete(g.devices, id)
+				left = append(left, id)
+			case !d.opened && !d.opening && d.lease == nil && !g.known[id] && now.Sub(d.unlistedAt) >= unopenedGrace:
 				// Never opened, and gone: it never became one of the
 				// person's phones (an iPhone unplugged before it trusted
 				// the computer, the entry Windows lists for a phone
-				// without a USB driver once the driver is installed).
+				// without a USB driver once the driver is installed). One
+				// that is the person's (wifi.go), such as an iPhone that
+				// stayed locked on Wi-Fi, stays.
 				delete(g.devices, id)
 				left = append(left, id)
 				g.log.Info("device forgotten", "device", id, "why", "never opened, and no longer listed")
@@ -381,6 +401,21 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		g.devices[info.ID] = d
 	}
 	old := d.info
+	if info.Name == "" {
+		// Listed without a name, as an iPhone usbmuxd lost (wifi.go): the
+		// name it had.
+		if rec, ok := g.names[info.ID]; ok && rec.Name != "" {
+			info.Name = rec.Name
+			if info.Model == "" {
+				info.Model = rec.Model
+			}
+			if info.OSVersion == "" {
+				info.OSVersion = rec.OSVersion
+			}
+		} else if old.Name != "" {
+			info.Name, info.Model, info.OSVersion = old.Name, old.Model, old.OSVersion
+		}
+	}
 	d.info = info
 	d.nameV.Store(info.Name)
 	d.provider = p
@@ -390,9 +425,30 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		// any phone that drops from now (expireOffline).
 		d.offlineSince = time.Now()
 	}
-	open := info.State == driver.StateOnline && d.dev == nil && !d.opening
+	if cabled(info) && info.State != driver.StateUnauthorized {
+		g.knowLocked(d) // a phone on a cable that trusts the computer is the person's (wifi.go)
+	}
+	// The phone moved between its cable and Wi-Fi: its session goes with
+	// the old connection, and it opens again over the new one below, while
+	// calls wait for it (wifi.go).
+	from := d.over
+	moved := info.State == driver.StateOnline && d.dev != nil && from != "" && info.Connection != "" && info.Connection != from
+	if moved {
+		d.moving = time.Now().Add(moveWait)
+	}
+	g.mu.Unlock()
+	if moved {
+		g.log.Info("device moving", "device", d.id, "from", from, "to", info.Connection)
+		g.setOffline(d, movingWhy(info.Connection))
+	}
+	g.mu.Lock()
+	open := info.State == driver.StateOnline && d.dev == nil && !d.opening && !d.removed
 	if open {
-		d.opening = true
+		d.opening, d.openingAt = true, time.Now()
+		if time.Now().Before(d.moving) {
+			// Back on its other connection: calls wait while it opens.
+			d.moving = time.Now().Add(moveWait)
+		}
 	}
 	offline := info.State != driver.StateOnline && d.online
 	g.mu.Unlock()
@@ -409,10 +465,27 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 }
 
 func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
+	g.mu.Lock()
+	closing := d.closing
+	g.mu.Unlock()
+	if closing != nil {
+		// The last session still stops (its video stream, its tunnel).
+		t := time.NewTimer(closeWait)
+		select {
+		case <-closing:
+		case <-t.C:
+		case <-ctx.Done():
+		}
+		t.Stop()
+	}
+	g.mu.Lock()
+	listed := d.info.Connection // what it opens over (connectionOf)
+	g.mu.Unlock()
 	dev, err := p.Open(ctx, d.id)
 	g.mu.Lock()
 	d.opening = false
 	if err != nil || g.closed || d.removed {
+		g.wakeLocked(d) // calls waiting for the open (connectWait) go on
 		g.mu.Unlock()
 		if err == nil {
 			dev.Close()
@@ -422,9 +495,11 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 		return
 	}
 	d.dev = dev
+	d.over = connectionOf(listed, dev)
 	d.online = true
 	d.opened = true
 	d.offlineSince = time.Time{}
+	d.moving = time.Time{}
 	d.workSent = false
 	g.noteWorkLocked(d)
 	info := d.info
@@ -435,7 +510,7 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	}
 	g.wakeLocked(d)
 	g.mu.Unlock()
-	g.log.Info("device online", "device", d.id, "name", info.Name)
+	g.log.Info("device online", "device", d.id, "name", info.Name, "connection", d.over)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	g.readyNow(d)
 	if w, ok := dev.(driver.PersonWatcher); ok {
@@ -478,6 +553,18 @@ func (g *Gateway) setOffline(d *device, why string) {
 	d.offlineSince = time.Now()
 	if why != "" {
 		d.offlineWhy = why
+	} else if d.over == "usb" && g.wifiOn && g.known[d.id] && time.Now().After(d.moving) {
+		// The session dropped: on a phone the person uses over Wi-Fi too,
+		// most likely its cable was pulled, and it may be back on Wi-Fi in
+		// a moment (wifi.go).
+		if _, ok := d.provider.(driver.WiFiFinder); ok {
+			d.moving = time.Now().Add(dropWait)
+		}
+	}
+	var closed chan struct{}
+	if dev != nil {
+		closed = make(chan struct{})
+		d.closing = closed
 	}
 	// Anything may happen on the phone while it is away.
 	g.inputLocked(d)
@@ -495,7 +582,10 @@ func (g *Gateway) setOffline(d *device, why string) {
 		go bg.Close()
 	}
 	if dev != nil {
-		go dev.Close()
+		go func() {
+			dev.Close()
+			close(closed)
+		}()
 	}
 	g.log.Info("device offline", "device", d.id, "why", why)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})

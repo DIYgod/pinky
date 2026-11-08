@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/awake"
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
@@ -45,15 +46,27 @@ func runDaemon(args []string) error {
 		return err
 	}
 	defer rg.Close()
-	// Recording, retention and usage statistics follow the app's settings,
-	// when there are any.
+	// Recording, retention, iPhones over Wi-Fi and usage statistics follow
+	// the app's settings, when there are any.
 	s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
 	rg.G.SetRecording(s.Record)
 	rg.G.SetRetention(s.KeepDays)
+	rg.G.SetWiFi(s.IOSWiFi)
 	tctx, tstop := context.WithCancel(context.Background())
 	defer tstop()
 	tel := startTelemetry(tctx, rg, c.Crashes, s, "daemon", c.Fake, c.Log)
 	defer tel.Close()
+	if !c.Fake {
+		// The computer stays awake as for the app (awake.go); fake phones
+		// need none of that.
+		actx, astop := context.WithCancel(context.Background())
+		adone := make(chan struct{})
+		go func() {
+			defer close(adone)
+			keepDaemonAwake(actx, rg.G, s.KeepAwakeAway, awake.Hold, c.Log)
+		}()
+		defer func() { astop(); <-adone }()
+	}
 	if *httpAddr != "" {
 		if err := rg.Remote.Set(true, *httpAddr); err != nil {
 			return err

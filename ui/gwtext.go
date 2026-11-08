@@ -43,11 +43,12 @@ var (
 	reListFolder = re(`^[Ll]ist the phone's Pinky folder$`)
 	reCopyFrom   = re(`^[Cc]opy from the phone$`)
 	reCopyTo     = re(`^[Cc]opy to the phone$`)
+	reReceive    = re(`^[Rr]eceive “(.*)” from the agent$`)
 )
 
 // action is a parsed action, which says itself as done or as asked.
 type action struct {
-	verb                 string // tap, longpress, type, swipe, swipefrom, press, open, copy, copymany, list, copyfrom, copyto
+	verb                 string // tap, longpress, type, swipe, swipefrom, press, open, copy, copymany, list, copyfrom, copyto, receive
 	label, text, x, y    string
 	x2, y2, dir, key     string
 	app, files, phone    string
@@ -86,10 +87,13 @@ func parseAction(s string) (action, bool) {
 }
 
 // parseAsked reads what the files steps word in the imperative: "copy to
-// the phone", "Copy “a.txt” to Pixel 9".
+// the phone", "Copy “a.txt” to Pixel 9", "receive “a.png” from the agent".
 func parseAsked(s string) (action, bool) {
 	if m := reCopyOne.FindStringSubmatch(s); m != nil {
 		return action{verb: "copy", label: m[1], phone: m[2]}, true
+	}
+	if m := reReceive.FindStringSubmatch(s); m != nil {
+		return action{verb: "receive", label: m[1]}, true
 	}
 	if m := reCopyMany.FindStringSubmatch(s); m != nil {
 		return action{verb: "copymany", files: m[1], phone: m[2]}, true
@@ -205,6 +209,8 @@ func (a action) ask() string {
 		return locales.GwDoCopyFromPhone()
 	case "copyto":
 		return locales.GwDoCopyToPhone()
+	case "receive":
+		return locales.GwDoReceiveFile(a.label)
 	}
 	return ""
 }
@@ -265,6 +271,7 @@ var (
 	reAskedTake = re(`^Asked you to take over: (.*)$`)
 	reListed    = re(`^Listed the phone's Pinky folder \((\d+) files?\)$`)
 	reCopied    = re(`^Copied (\d+) files? (from|to) the phone(: .*)?$`)
+	reReceived  = re(`^Received “(.*)” \(([^()]+)\) from the agent$`)
 	reYouDid    = re(`^You (allowed|denied): (.*)$`)
 	reYourNote  = re(`^Your note: (.*)$`)
 	reAlways    = re(`^Always allowed: “(.*?)” in (.+)$`)
@@ -340,6 +347,9 @@ func stepText(s string) string {
 			return locales.GwStepCopiedFrom(m[1], names)
 		}
 		return locales.GwStepCopiedTo(m[1], names)
+	}
+	if m := reReceived.FindStringSubmatch(s); m != nil {
+		return locales.GwStepReceivedFile(m[1], m[2])
 	}
 	if m := reYouDid.FindStringSubmatch(s); m != nil {
 		if m[1] == "allowed" {
@@ -524,6 +534,20 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusInControl()
 	case "Needs setup":
 		return locales.GwStatusNeedsSetup()
+	case "Found on Wi-Fi":
+		return locales.GwStatusFoundOnWiFi()
+	case "Locked on Wi-Fi":
+		return locales.GwStatusLockedOnWiFi()
+	case "Lost on Wi-Fi":
+		return locales.GwStatusLostOnWiFi()
+	case "Not seen on Wi-Fi":
+		return locales.GwStatusNotSeenOnWiFi()
+	case "Connecting":
+		return locales.GwStatusConnecting()
+	case "Moving to Wi-Fi":
+		return locales.GwStatusMovingWiFi()
+	case "Moving to the cable":
+		return locales.GwStatusMovingCable()
 	}
 	if m := reReconnecting.FindStringSubmatch(s); m != nil {
 		return locales.GwStatusReconnecting(m[1])

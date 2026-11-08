@@ -52,10 +52,9 @@ func OpenAccessibility(ctx context.Context, info driver.Info) (*AXDevice, error)
 		l.Close()
 		return nil, fmt.Errorf("screenshot: %w", err)
 	}
-	d.scr = screenInfo{Width: cfg.Width, Height: cfg.Height, Scale: 1, Orientation: "rot0"}
-	if cfg.Width > cfg.Height {
-		d.scr.Orientation = "rot90"
-	}
+	// Screenshots are the screen the right way up, so they are its size;
+	// each read takes it again from its screenshot (observeInspector).
+	d.scr = screenInfo{Width: cfg.Width, Height: cfg.Height, Scale: 1}
 	// Connect the accessibility daemon now; its first walk is slow.
 	go func() {
 		c, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -113,6 +112,9 @@ func (a *AXDevice) Key(ctx context.Context, k driver.Key) error {
 
 // Launch implements driver.Device, through CoreDevice's app service.
 func (a *AXDevice) Launch(ctx context.Context, app string) error { return a.d.Launch(ctx, app) }
+
+// LinkApp is the app that opens the links Launch is given.
+func (a *AXDevice) LinkApp() driver.App { return a.d.LinkApp() }
 
 // Apps implements driver.Device.
 func (a *AXDevice) Apps(ctx context.Context) ([]driver.App, error) { return a.d.Apps(ctx) }

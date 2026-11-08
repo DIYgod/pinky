@@ -74,6 +74,8 @@ const (
 	axpAttrIsRemoteElement  = 66
 	axpAttrRemoteElementPID = 69 // the process a remote element shows
 	axpAttrTraits           = 77 // UIAccessibilityTraits, private bits included
+
+	axpAttrApplicationOrientation = 129 // of an application: its interface orientation
 )
 
 // raxWalkAttrs are the attributes a walk asks for, for every element.
@@ -484,6 +486,7 @@ type raxElement struct {
 	Selected    bool
 	Focused     bool
 	Visible     bool
+	Web         bool // an element of WebKit's web content process (see markWebContent)
 	Remote      bool // a view showing another process's elements
 	RemotePID   int  // that process
 	Children    int

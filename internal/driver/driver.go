@@ -57,7 +57,58 @@ type Info struct {
 	// Clients remind the person HelperReminder before; once it has passed
 	// the phone needs setup, with SetupInstallHelper.
 	HelperExpires time.Time `json:",omitzero"`
+	// Via says how a phone connected over the network ("wifi") is reached
+	// when that is not the local network: ViaTailscale through Tailscale;
+	// "" on the computer's own network or by cable.
+	Via string
+	// DiskImage is the developer disk image a phone waiting with
+	// SetupDiskImageRefused was refused; nil otherwise.
+	DiskImage *DiskImage `json:",omitempty"`
+	// WiFi is what the provider knows of reaching an iPhone or iPad over
+	// Wi-Fi, for its checkup and diagnostics; zero for other phones.
+	WiFi WiFiConnection `json:",omitzero"`
 }
+
+// WiFiConnection is what an iPhone's provider knows of its Wi-Fi connection:
+// whether the phone allows this computer to reach it over Wi-Fi (Finder's
+// "Show this iPhone when on Wi-Fi", Xcode's "Connect via network", the
+// lockdown value EnableWifiConnections), who turned that on, and whether
+// this computer lists it over the network now.
+type WiFiConnection struct {
+	// Connections is one of the WiFiConnections values; "" when the driver
+	// does not tell.
+	Connections string
+	// Detail says, in English, why turning them on failed or why Pinky did
+	// not look.
+	Detail string `json:",omitempty"`
+	// Seen: this computer lists the phone over the network now.
+	Seen bool `json:",omitempty"`
+}
+
+// WiFiConnection.Connections values.
+const (
+	WiFiConnectionsOn       = "on"        // they are on: listed over the network, or read so on a cable
+	WiFiConnectionsTurnedOn = "turned_on" // Pinky turned them on when the phone was plugged in
+	WiFiConnectionsFailed   = "failed"    // Pinky could not turn them on: Detail says why
+	WiFiConnectionsOff      = "off"       // Pinky does not use phones over Wi-Fi (Settings › Phones), so it did not look
+	WiFiConnectionsUnknown  = "unknown"   // not looked at: the phone does not trust this computer or did not answer (Detail), or was not plugged in since Pinky started
+)
+
+// DiskImage is a developer disk image on the computer (iPhones).
+type DiskImage struct {
+	Source  string // where it was found, one of the DiskImageFrom constants
+	Build   string // the Xcode build it came with, such as "27B52"
+	Version string // its version on the phone, such as "27.2.52.0"; "" for images older than Xcode 16
+	Dir     string // its folder
+}
+
+// Where a developer disk image was found, in DiskImage.Source.
+const (
+	DiskImageFromXcode  = "xcode"  // installed by Xcode on this Mac
+	DiskImageFromMirror = "mirror" // downloaded from the third-party mirror (DiskImageDownloader)
+	DiskImageFromFolder = "pinky"  // put in Pinky's own folder
+	DiskImageFromEnv    = "env"    // named by the PINKY_DDI environment variable
+)
 
 // Setup steps, in Info.Setup.
 const (
@@ -70,6 +121,34 @@ const (
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
 	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
+	// SetupDiskImageRefused: Apple's signing server would not sign the
+	// developer disk image on the computer (Info.DiskImage) for the phone,
+	// as it does with images it no longer signs, such as those of Xcode
+	// before 27. Trying the same image again cannot help: the computer
+	// needs a newer one, which the provider tries as soon as it is there.
+	SetupDiskImageRefused = "disk_image_refused"
+	// A phone reached over the network (WiFiSwitch, Tailnet) that is
+	// offline: its adb stopped listening, as when it restarted (plug it in
+	// once and turn its Wi-Fi connection on again), or it is not on the
+	// network now (Pinky connects again by itself).
+	SetupNetworkOff  = "network_off"
+	SetupNetworkAway = "network_away"
+	// SetupConfirmWiFi: the phone is reachable only over Wi-Fi and Pinky
+	// has not used it, so it may not be the person's (a family member's
+	// iPad once paired with this computer): the person says whether it is
+	// theirs. Until then nothing is done on the phone (WiFiFinder).
+	SetupConfirmWiFi = "confirm_wifi"
+	// SetupDeviceService: the computer's device service (usbmuxd on a Mac)
+	// lost the phone on Wi-Fi: the phone is on the network, but the service
+	// no longer lists it, and will not for up to an hour. Restarting the
+	// service (DeviceServiceRestarter) brings it back.
+	SetupDeviceService = "device_service"
+	// SetupNotOnWiFi: an iPhone whose cable was just pulled, and whose
+	// Wi-Fi connection is on, is not seen on Wi-Fi: neither the device
+	// service lists it nor does the network show it (another network, one
+	// that keeps devices apart, a VPN, asleep). Listed offline: it is not
+	// connected, and no step on the computer brings it back.
+	SetupNotOnWiFi = "not_on_wifi"
 )
 
 // Provider discovers and opens the devices of one platform.
@@ -122,7 +201,33 @@ type Device interface {
 // ObserveOptions tune Observe.
 type ObserveOptions struct {
 	// OCR asks the driver to add OCR elements for areas the tree misses.
+	// A driver may find that its tree misses nothing and read no pixels:
+	// Android reads by OCR only where the tree is empty or sparse over a
+	// web view or a canvas, unless OCRAll is set as well.
 	OCR bool
+	// OCRAll, with OCR, asks for OCR elements for all the text the tree
+	// does not show, however complete the tree looks: the agent asked for
+	// the screen's text, or the gateway checks the text under a finger.
+	// Drivers that read every OCR read this way (iOS) ignore it.
+	OCRAll bool
+	// Frame, when set, returns a picture of the screen decoded from its
+	// live video, which the gateway shares with the mirror. A driver may
+	// read OCR's text from it where its own screenshots are slow (an
+	// iPhone over Wi-Fi: about 5 s a screenshot; an Android background
+	// display, which has none); nil means none.
+	Frame func(ctx context.Context) (image.Image, error)
+	// MayCapture, when set, reports whether the driver may capture the
+	// screen it read, as a screenshot or a frame of the video kept in
+	// memory only, to read its text by OCR: not of a locked phone, nor of
+	// a blocked app unless the person allowed it for the task. The
+	// picture must not outlive the read: no file, no cache. A driver asks
+	// it with the screen as read, before it captures, and adds no OCR
+	// elements when it may not: Android once it has the tree, iOS as soon
+	// as it knows the app in front and the lock state, which it asks again
+	// with the screen it returns. The gateway sets it on every read, also
+	// without OCR: the iOS inspector path takes a picture to place the
+	// tree's elements. nil means it may.
+	MayCapture func(s *screen.Screen) bool
 }
 
 // TapOptions tune Tap.
@@ -141,6 +246,10 @@ type App struct {
 	ID     string // package name or bundle id
 	Name   string
 	System bool
+	// Aliases are other names the person knows the app by: on an iPhone,
+	// the name its home screen shows when that differs from the app's own
+	// ("微信" for WeChat, whose bundle is named WeChat in every language).
+	Aliases []string
 }
 
 // Key is a hardware or navigation key.
@@ -186,6 +295,12 @@ type Packet struct {
 	PTS      time.Duration
 	Config   bool // codec configuration (SPS/PPS/VPS)
 	KeyFrame bool
+	// Turn is how many quarter turns clockwise put the picture the right
+	// way up, 0 to 3. Most streams are upright and leave it 0; an iPhone or
+	// iPad on iOS 27 sends its display as the panel is mounted, whatever
+	// way the device is turned. Touches go back in the picture's own
+	// pixels, before the turn.
+	Turn int
 }
 
 // Stream is a live encoded video stream.
@@ -232,6 +347,42 @@ type LockReporter interface {
 	Locked(ctx context.Context) (bool, error)
 }
 
+// TextReader is a Device that can read text from the screen's pixels (OCR)
+// on this computer when ObserveOptions asks it to, also on screens where
+// it has not done so yet. The gateway then checks a tap on a spot the tree
+// says little about against the text there (an image button that shows
+// "Pay"), before any read has returned OCR elements.
+type TextReader interface {
+	ReadsText() bool
+}
+
+// FrameShooter is a Device whose screenshots are slow where a frame of its
+// live video is not: an iPhone over Wi-Fi, whose screenshot is a PNG of up
+// to 15 MB. ScreenshotFromFrame returns the screen taken from frame (a
+// picture of the live video, as ObserveOptions.Frame gives), cropped to the
+// screenshot's size, when the driver prefers it now; ok false means take a
+// screenshot. The gateway takes approval cards', history's and agents'
+// screenshots this way first.
+type FrameShooter interface {
+	ScreenshotFromFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool)
+}
+
+// NotificationLister lists the notifications the phone holds now, with the
+// app that posted each. The notification shade shows many of them without
+// their app's name (a collapsed row on Android 12 and later), so the
+// gateway finds a blocked app's rows there by their text.
+type NotificationLister interface {
+	Notifications(ctx context.Context) ([]Notification, error)
+}
+
+// Notification is one notification the phone holds.
+type Notification struct {
+	App string // package name or bundle id of the app that posted it
+	// Texts are what it says: its title, text, big text, sub text and the
+	// like, each as the app set it.
+	Texts []string
+}
+
 // Clipboard reads and writes the phone's clipboard.
 type Clipboard interface {
 	SetClipboard(ctx context.Context, text string) error
@@ -272,8 +423,9 @@ type Unlocker interface {
 }
 
 // DiskImageDownloader is a Provider that can download the developer disk
-// image a computer without Xcode lacks (iPhones), from a third-party
-// mirror, when the person asks.
+// image a computer without Xcode lacks, or whose image Apple's signing
+// server refused (iPhones), from a third-party mirror, when the person
+// asks.
 type DiskImageDownloader interface {
 	// DiskImageMirror says where the download comes from.
 	DiskImageMirror() DiskImageMirror
@@ -457,6 +609,159 @@ type WiFiConnector interface {
 	ConnectWiFi(ctx context.Context, addr string) (Info, error)
 }
 
+// Phones away from the computer's network. A Tailnet provider reaches
+// phones through Tailscale, the mesh VPN that keeps a person's devices
+// connected to each other wherever each one is (the computer at home, the
+// phone out on mobile data): it lists the phones on the computer's
+// tailnet, connects to one by its Tailscale address, and sets a phone up
+// to be reached that way ("away from home").
+
+// ViaTailscale is Info.Via for a phone reached through Tailscale.
+const ViaTailscale = "tailscale"
+
+// Tailnet is a Provider that reaches phones through Tailscale.
+type Tailnet interface {
+	// Tailnet says what Tailscale on this computer reports, and lists the
+	// phones on its tailnet.
+	Tailnet(ctx context.Context) (TailnetStatus, error)
+	// ConnectTailnet connects to a phone on the tailnet at its Tailscale
+	// address, with a port or without one (the port Away uses), and
+	// returns it once it is online or waits for the person to allow this
+	// computer. A phone that does not listen there gives an error
+	// wrapping ErrNotListening.
+	ConnectTailnet(ctx context.Context, addr string) (Info, error)
+	// Away says whether a phone is set up to be reached through
+	// Tailscale, and what is missing when it cannot be.
+	Away(ctx context.Context, id string) (Away, error)
+	// SetAway sets a phone up to be reached through Tailscale, or stops
+	// that. On (Android) makes the phone's adb listen on the network, on
+	// every network the phone joins, until the phone restarts; the
+	// provider then connects to it through Tailscale whenever it can.
+	// Off makes adb stop listening and forgets the phone's address: a
+	// phone away is then out of reach until it is back.
+	SetAway(ctx context.Context, id string, on bool) (Away, error)
+}
+
+// TailnetStatus is Tailscale on this computer, and the phones on its
+// tailnet.
+type TailnetStatus struct {
+	// State is one of the Tailnet* states.
+	State string
+	// Detail is Tailscale's own words when it is not running.
+	Detail string
+	// Tailnet is the tailnet's name, such as "example.com" or
+	// "someone@gmail.com"; Self this computer's name on it.
+	Tailnet, Self string
+	Phones        []TailnetPhone
+}
+
+// Tailscale's states on this computer, in TailnetStatus.State.
+const (
+	TailnetNotInstalled = "not_installed" // no Tailscale on this computer
+	TailnetNotRunning   = "not_running"   // installed, but not running (the app is closed)
+	TailnetNeedsLogin   = "needs_login"   // not signed in, or its key expired
+	TailnetStopped      = "stopped"       // signed in and turned off
+	TailnetStarting     = "starting"
+	TailnetRunning      = "running"
+)
+
+// TailnetPhone is a phone on the tailnet.
+type TailnetPhone struct {
+	Name string // its name on the tailnet
+	Addr string // its Tailscale address
+	// Online reports whether Tailscale sees it connected; LastSeen is when
+	// it last was, while it is not.
+	Online   bool
+	LastSeen time.Time
+	// ID is the phone Pinky knows it as, "" when Pinky has not seen it
+	// connected.
+	ID string
+	// Connected reports whether Pinky reaches it through Tailscale now;
+	// Relayed whether that goes through one of Tailscale's relay servers
+	// rather than straight to the phone.
+	Connected, Relayed bool
+}
+
+// Away is whether a phone can be reached through Tailscale, away from the
+// computer's network.
+type Away struct {
+	// On reports whether the phone is set up for it: the provider connects
+	// to it through Tailscale whenever it can.
+	On bool
+	// Listening reports whether the phone's adb listens on the network
+	// now, as far as the provider knows: it stops when the phone restarts.
+	Listening bool
+	// Addr is the phone's Tailscale address, "" when it is not on the
+	// tailnet; Port where its adb listens.
+	Addr string
+	Port int
+	// Missing says what keeps the phone from being set up, one of the
+	// Away* values; "" when nothing does.
+	Missing string
+	// Detail says the same in a sentence.
+	Detail string
+}
+
+// What keeps a phone from being set up to be reached away from home, in
+// Away.Missing.
+const (
+	AwayNoTailscaleHere  = "tailscale_here"  // Tailscale does not run on this computer
+	AwayNoTailscaleThere = "tailscale_phone" // Tailscale is not connected on the phone, as when another VPN is on
+	AwayOtherTailnet     = "tailscale_other" // the phone's Tailscale is on another tailnet than this computer's
+	AwayNotConnected     = "not_connected"   // the phone is not connected to set it up (cable or Wi-Fi)
+)
+
+// ErrNotListening is wrapped when a phone does not take connections at
+// the address and port: its adb does not listen on the network.
+var ErrNotListening = errors.New("the phone's adb does not listen on the network there")
+
+// WiFiSwitch is a Provider that moves a phone plugged in by cable to
+// Wi-Fi without Wireless debugging (which Android 10 lacks): the phone's
+// adb listens on the network (adb tcpip) until the phone restarts, and the
+// provider connects to it at its Wi-Fi address, and again by itself
+// whenever it is back on the network. The person turns it on for each
+// phone, unlike WiFiFinder, which finds iPhones on Wi-Fi by itself.
+type WiFiSwitch interface {
+	// PhoneWiFi says whether a phone is on Wi-Fi this way, and what keeps
+	// it from being moved there.
+	PhoneWiFi(ctx context.Context, id string) (WiFiState, error)
+	// SetPhoneWiFi moves a phone to Wi-Fi, over its cable, or stops that:
+	// its adb then stops listening on the network, which also ends its use
+	// away from home (Tailnet), and the provider forgets its addresses.
+	SetPhoneWiFi(ctx context.Context, id string, on bool) (WiFiState, error)
+}
+
+// WiFiState is whether a phone is moved to Wi-Fi without Wireless
+// debugging.
+type WiFiState struct {
+	// On reports whether it is: the provider reaches the phone at Addr.
+	On bool
+	// Connected reports whether it is connected there now.
+	Connected bool
+	// Listening reports whether the phone's adb listens on the network now,
+	// as far as the provider knows.
+	Listening bool
+	// Stopped is set while On but the phone's adb no longer listens, as
+	// after the phone restarted: plug it in and turn it on again.
+	Stopped bool
+	// Addr is the phone's Wi-Fi address; Port where its adb listens.
+	Addr string
+	Port int
+	// Away reports whether the phone is used away from home too (Tailnet),
+	// which turning this off ends.
+	Away bool
+	// Missing says what keeps it from being turned on, one of the WiFi*
+	// values; "" when nothing does. Detail says the same in a sentence.
+	Missing string
+	Detail  string
+}
+
+// What keeps a phone from being moved to Wi-Fi, in WiFiState.Missing.
+const (
+	WiFiNeedsCable = "cable"   // the phone is not plugged in
+	WiFiNoWiFi     = "no_wifi" // the phone is not on Wi-Fi
+)
+
 // Forgetter is a Provider that connects to phones by itself, as Android's
 // reconnects the phones paired over Wi-Fi. The gateway tells it which
 // phones the person removed from Pinky, so it leaves them alone: Forget
@@ -474,12 +779,65 @@ type Forgetter interface {
 	Disconnect(ctx context.Context, id string) error
 }
 
+// WiFiFinder is a Provider that also reaches phones over Wi-Fi by itself:
+// iPhones and iPads that usbmuxd lists over the network. Those include
+// phones that are not the person's, such as a family member's iPad that was
+// once paired with this computer, so the provider leaves a phone it reaches
+// only over Wi-Fi alone until the gateway says the phone is the person's:
+// it lists that phone with SetupConfirmWiFi, having read no more than its
+// name, model and OS version, and neither prepares nor opens it. A phone
+// on a cable is always prepared and opened, as before. A phone the gateway
+// told it to Forget (Forgetter) it does not list over Wi-Fi at all.
+type WiFiFinder interface {
+	// SetWiFi turns using phones over Wi-Fi on or off; off, the provider
+	// lists phones on a cable only. It starts off.
+	SetWiFi(on bool)
+	// UseOverWiFi says a phone is the person's: Pinky used it before, it
+	// was on a cable, or the person chose to use it. The provider then
+	// prepares and opens it over Wi-Fi too.
+	UseOverWiFi(id string)
+}
+
+// DeviceServiceRestarter is a Provider whose phones go through a service of
+// the computer that it can restart when that service lost a phone
+// (SetupDeviceService): usbmuxd on a Mac. The system asks an administrator
+// to allow it, and every phone of the platform, also on a cable,
+// disconnects for a moment.
+type DeviceServiceRestarter interface {
+	// RestartDeviceService restarts the service. reason is shown in the
+	// system's request for an administrator's password. It returns
+	// ErrCanceled when the person declines.
+	RestartDeviceService(ctx context.Context, reason string) error
+}
+
+// ErrCanceled is a request the person declined, such as the system's
+// request for an administrator's password.
+var ErrCanceled = errors.New("canceled")
+
 // ErrPairedNotFound is wrapped by PairWithCode and Pairing.Wait when the
 // phone paired but the driver could not find where to connect to it: its
 // wireless debugging service did not show up on the network.
 // WiFiConnector then connects with the address the person reads off the
 // phone.
 var ErrPairedNotFound = errors.New("the phone paired, but its wireless debugging address was not found on the network")
+
+// Why pairing over Wi-Fi failed, wrapped by PairWithCode and Pairing.Wait
+// with the pairing tool's own words. adb says the same when the phone
+// refused the code and when the connection dropped, so ErrPairRejected
+// covers both.
+var (
+	// ErrPairNotListening: nothing at the address took the connection, as
+	// a wrong port, or a pairing dialog or QR screen the phone closed.
+	ErrPairNotListening = errors.New("nothing at that address takes pairing requests")
+	// ErrPairUnreachable: the address did not answer.
+	ErrPairUnreachable = errors.New("the phone did not answer at that address")
+	// ErrPairRejected: the phone ended the pairing: a wrong code, a port
+	// that is not the pairing dialog's, or a connection that dropped.
+	ErrPairRejected = errors.New("the phone ended the pairing")
+	// ErrPairOldTool: the pairing tool cannot pair over Wi-Fi, as an adb
+	// server older than platform-tools 30.
+	ErrPairOldTool = errors.New("this computer's adb server cannot pair over Wi-Fi")
+)
 
 // ConnectionChooser is a Provider that can reach a phone in more than one
 // way and lets the person choose, per phone (iPhone: Xcode's CoreDevice
@@ -592,6 +950,8 @@ const (
 	FixLocalNetwork     = "local_network"      // allow Pinky under Privacy & Security › Local Network
 	FixLocked           = "locked"             // unlock the phone, then check again
 	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
+	FixSameNetwork      = "same_network"       // put the phone on the same Wi-Fi as this computer, one that lets devices reach each other
+	FixWiFiSetting      = "wifi_setting"       // turn on Use iPhones and iPads over Wi-Fi in Settings › Phones
 )
 
 // Setup steps of Android phones, in Info.Setup with the Setup constants:

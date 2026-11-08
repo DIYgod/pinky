@@ -23,6 +23,10 @@ func TestFeedTheAppReads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	m.LocalizedNotes = map[string]string{}
+	for _, tr := range translations {
+		m.LocalizedNotes[tr.lang] = "- 一。"
+	}
 	path := filepath.Join(dir, "latest.json")
 	if err := writeJSON(path, m); err != nil {
 		t.Fatal(err)
@@ -37,6 +41,16 @@ func TestFeedTheAppReads(t *testing.T) {
 	}
 	if f.Version != "2026.1107.1" || f.Tag != "v2026.1107.1" || f.Notes != "- One." || !f.Date.Equal(time.Date(2026, 11, 7, 8, 9, 10, 0, time.UTC)) {
 		t.Errorf("the app reads %+v", f)
+	}
+	// The app in each translation's language shows its notes, and in
+	// English the English ones.
+	for _, tr := range translations {
+		if got := f.NotesIn(tr.lang); got != "- 一。" {
+			t.Errorf("the app in %s reads the notes %q", tr.lang, got)
+		}
+	}
+	if got := f.NotesIn("en"); got != "- One." {
+		t.Errorf("the app in English reads the notes %q", got)
 	}
 	for _, platform := range []string{"darwin-arm64", "darwin-amd64", "windows-amd64", "linux-amd64"} {
 		a, ok := f.Asset(platform)

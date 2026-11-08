@@ -76,8 +76,9 @@ type recPlayer struct {
 	cancel context.CancelFunc
 	player *video.Player
 	bitmap *mg.Bitmap
-	picW   int
+	picW   int // the picture's size the right way up
 	picH   int
+	turn   int    // quarter turns clockwise that put the picture upright
 	state  string // "loading", "playing", "paused", "ended", "failed"
 	err    error
 	pos    time.Duration // where the picture shown is, from the recording's start
@@ -133,7 +134,7 @@ func (pl *recPlayer) play(from time.Duration) {
 		}
 		var p *video.Player
 		if err == nil {
-			if p, err = video.NewPlayer(s, video.PlayerOptions{}); err != nil {
+			if p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true}); err != nil {
 				s.Close()
 			}
 		}
@@ -189,20 +190,21 @@ func (pl *recPlayer) seek(at time.Duration) {
 }
 
 // take shows the newest picture, at paint time.
-func (pl *recPlayer) take(pt *mg.Painter, r mg.Rect) {
+func (pl *recPlayer) take(pt *mg.Painter) {
 	p := pl.player
 	if p == nil {
 		return
 	}
-	s := pt.Scale()
-	p.SetSize(int(r.W*s+0.5), int(r.H*s+0.5))
 	if f := p.Take(); f != nil {
-		if pl.bitmap == nil {
-			pl.bitmap = mg.NewBitmap(f.Image)
-		} else {
-			pl.bitmap.Update(f.Image)
+		pl.bitmap = showPlanes(pl.bitmap, f.YUV)
+		w, h := f.Width, f.Height
+		if f.Turn%2 == 1 {
+			w, h = h, w
 		}
-		pl.picW, pl.picH = f.Width, f.Height
+		if pl.picW > 0 && (w != pl.picW || h != pl.picH) {
+			pl.a.post(func() {}) // the phone turned: lay the player out again
+		}
+		pl.picW, pl.picH, pl.turn = w, h, f.Turn
 		if pl.first {
 			// PTS count from the recording's start, as recording.Open
 			// sends them; a stream counting from where it opened starts
@@ -247,9 +249,9 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 			Children(func() {
 				scr := mg.Box(c).Fill().Radius(28).Clip().Background(hex("#000000"))
 				scr.Draw(func(pt *mg.Painter, r mg.Rect) {
-					pl.take(pt, r)
+					pl.take(pt)
 					if pl.bitmap != nil {
-						pt.Clip(r, 28, func() { pt.Image(pl.bitmap, r, mg.Contain) })
+						pt.Clip(r, 28, func() { drawTurned(pt, pl.bitmap, r, pl.turn) })
 					}
 					// What the step at this moment acted on, for a moment after
 					// its mark.

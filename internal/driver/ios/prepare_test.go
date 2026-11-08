@@ -170,7 +170,9 @@ func TestClassifyMountError(t *testing.T) {
 		{errors.New("MountImage: mount command failed: MountImage: device responded with error: DeviceLocked"), problemLocked},
 		{errors.New("MountImage: device responded with error: DeveloperModeIsNotEnabled"), problemDevMode},
 		{errors.New(`MountImage: failed to get Cryptex1 ticket from Apple: requestTicket: failed to send request: Post "https://gs.apple.com/TSS/controller?action=2": dial tcp: lookup gs.apple.com: no such host`), problemNetwork},
+		{errors.New(`MountImage: failed to get Cryptex1 ticket from Apple: requestTicket: failed to send request: Post "https://gs.apple.com/TSS/controller?action=2": tls: failed to verify certificate: x509: certificate signed by unknown authority`), problemOther},
 		{errors.New(`MountImage: failed to get signature from Apple: unexpected status in response 94: "This device isn't eligible for the requested build."`), problemRefused},
+		{errors.New(appleRefused), problemRefused},
 		{errors.New("MountImage: findCryptexIdentity: no Cryptex1 identity for chip 0xff10"), problemNotFor},
 		{errors.Join(errors.New("as a cryptex: x"), errNewerImageMounted), problemNewer},
 		{errNoDiskImage, problemNoImage},
@@ -322,6 +324,271 @@ func TestPreparerLogs(t *testing.T) {
 	}
 }
 
+// appleRefused is how a mount fails when Apple's signing server refuses
+// the image: what the cryptex package returns for gs.apple.com's answer
+// (TestCryptexMountRefusedByApple), as users of iOS 27.3 saw it with an
+// image Apple no longer signs.
+const appleRefused = `MountImage: failed to get Cryptex1 ticket from Apple: unexpected status in response 94: "This device isn't eligible for the requested build."`
+
+// TestPreparerRefusedImage does not try an image Apple's signing server
+// refused again, but tries at once when the computer has another image or
+// the phone reconnects.
+func TestPreparerRefusedImage(t *testing.T) {
+	var pr preparer
+	f := newFakePrep(t, &pr)
+	old := diskImage{Source: sourceXcode, Dir: "/Library/Developer/DeveloperDiskImages/iOS_DDI/Restore", Build: "17B48", Version: "17.2.48.0"}
+	img, finds := old, 0
+	pr.findFn = func(string) (diskImage, error) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		finds++
+		if img.Dir == "" {
+			return diskImage{}, errNoDiskImage
+		}
+		return img, nil
+	}
+	setImage := func(i diskImage) {
+		f.mu.Lock()
+		img = i
+		f.mu.Unlock()
+	}
+	var buf bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&buf, nil))
+	e := entry("phone", 1, "USB")
+	ok := func(context.Context, goios.DeviceEntry) (bool, error) { return true, nil }
+	state := func() mountJob { return pr.mountState(e, "", ok, func() { f.done <- "done" }, log) }
+	refuse := func() {
+		t.Helper()
+		<-f.started
+		f.results <- errors.New(appleRefused)
+		<-f.done
+	}
+
+	state()
+	refuse()
+	for _, wait := range []time.Duration{0, time.Second, 10 * time.Minute, 24 * time.Hour} {
+		f.advance(wait)
+		if j := state(); j.running || !imageRefused(j.err) || f.count() != 1 {
+			t.Fatalf("%v after the refusal: %+v, %d mounts; the same image is not tried again", wait, j, f.count())
+		}
+	}
+	if finds < 5 {
+		t.Errorf("looked for an image %d times; each look checks whether it changed", finds)
+	}
+	if out := buf.String(); !strings.Contains(out, `msg="iphone: Apple's signing server refused the developer disk image" device=phone image="Xcode's image 17B48" version=17.2.48.0`) ||
+		!strings.Contains(out, `retry="once another image is on this computer"`) {
+		t.Errorf("the log says not which image or when it is tried again:\n%s", out)
+	}
+
+	info := diskImageState(driver.Info{OSVersion: "27.3"}, state(), "")
+	want := &driver.DiskImage{Source: driver.DiskImageFromXcode, Build: "17B48", Version: "17.2.48.0", Dir: old.Dir}
+	if info.Setup != driver.SetupDiskImageRefused || info.DiskImage == nil || *info.DiskImage != *want {
+		t.Fatalf("refused: %+v, want %s with %+v", info, driver.SetupDiskImageRefused, want)
+	}
+	for _, says := range []string{"Xcode's image 17B48, version 17.2.48.0, in " + old.Dir, `status 94: "This device isn't eligible for the requested build."`, "Install or update Xcode from the App Store"} {
+		if !strings.Contains(info.Detail, says) {
+			t.Errorf("%q does not say %q", info.Detail, says)
+		}
+	}
+
+	// Xcode was updated: its newer image is tried at once.
+	setImage(diskImage{Source: sourceXcode, Dir: old.Dir, Build: "27B52", Version: "27.2.52.0"})
+	if j := state(); !j.running {
+		t.Fatalf("with a newer image: %+v; want a new mount", j)
+	}
+	refuse()
+	// It went: the job ends with no image, which says where to get one.
+	setImage(diskImage{})
+	if j := state(); !j.running {
+		t.Fatalf("without an image: %+v; want a new look", j)
+	}
+	<-f.done
+	if j := state(); !errors.Is(j.err, errNoDiskImage) {
+		t.Fatalf("without an image: %+v", j)
+	}
+	// The same image again after the phone reconnects: one more try.
+	setImage(old)
+	f.advance(time.Minute)
+	state()
+	refuse()
+	n := f.count()
+	e = entry("phone", 2, "USB")
+	if j := state(); !j.running {
+		t.Fatalf("after a reconnect: %+v; want a new mount", j)
+	}
+	refuse()
+	if f.count() != n+1 {
+		t.Fatalf("%d mounts, want %d", f.count(), n+1)
+	}
+}
+
+// writeMirrorImage puts an image in Pinky's folder as the download from
+// the third-party mirror leaves it.
+func writeMirrorImage(t *testing.T, own, build, version string) {
+	t.Helper()
+	if err := os.Rename(writeDiskImage(t, t.TempDir(), build, version), filepath.Join(own, mirrorFolder)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestFindDiskImageAvoiding passes over images Apple refused while there is
+// another: an official copy gives way to the mirror's download. The copy
+// is in Pinky's folder, which every system looks in; Xcode's, only on a
+// Mac, is passed over the same way.
+func TestFindDiskImageAvoiding(t *testing.T) {
+	defer func(d string) { xcodeDDI = d }(xcodeDDI)
+	t.Setenv(ddiEnv, "")
+	xcodeDDI = filepath.Join(t.TempDir(), "none")
+	own := t.TempDir()
+	writeDiskImage(t, own, "17B48", "17.2.48.0")
+	refused := map[string]bool{}
+	pick := func(what string, source, build string) {
+		t.Helper()
+		img, err := findDiskImageAvoiding(own, func(img diskImage) bool { return refused[img.Build] })
+		if err != nil || img.Source != source || img.Build != build {
+			t.Errorf("%s: %+v, %v; want %s's %s", what, img, err, source, build)
+		}
+	}
+	pick("the official copy alone", sourcePinky, "17B48")
+	refused["17B48"] = true
+	pick("the official copy refused, alone", sourcePinky, "17B48")
+	writeMirrorImage(t, own, "27A5228h", "27.1.5228.8")
+	pick("the official copy refused, the mirror's downloaded", sourceMirror, "27A5228h")
+	if img, err := findDiskImage(own); err != nil || img.Source != sourcePinky {
+		t.Errorf("without refusals the official copy still wins: %+v, %v", img, err)
+	}
+	refused["27A5228h"] = true
+	pick("both refused", sourceMirror, "27A5228h")
+	writeDiskImage(t, own, "27B52", "27.2.52.0")
+	pick("a newer official copy", sourcePinky, "27B52")
+}
+
+// imageMounter mounts with images it is told Apple refuses, by build, and
+// keeps the builds it was asked to mount.
+type imageMounter struct {
+	mu      sync.Mutex
+	refuse  map[string]bool
+	mounted []string
+	done    chan struct{}
+}
+
+func (m *imageMounter) prep(pr *preparer) {
+	m.done = make(chan struct{}, 10)
+	pr.mountFn = func(_ context.Context, _ goios.DeviceEntry, img diskImage) (mountResult, error) {
+		m.mu.Lock()
+		defer m.mu.Unlock()
+		m.mounted = append(m.mounted, img.Build)
+		if m.refuse[img.Build] {
+			return mountResult{How: mountCryptex}, errors.New(appleRefused)
+		}
+		return mountResult{How: mountCryptex}, nil
+	}
+}
+
+func (m *imageMounter) mounts() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return strings.Join(m.mounted, " ")
+}
+
+// TestPreparerMirrorAfterRefusal mounts the mirror's download in the same
+// job when Apple refuses the official copy (here in Pinky's folder; Xcode's
+// goes the same way), keeps using it after a restart, and reports the
+// mirror's refusal without trying again when Apple refuses that one too.
+func TestPreparerMirrorAfterRefusal(t *testing.T) {
+	defer func(d string) { xcodeDDI = d }(xcodeDDI)
+	t.Setenv(ddiEnv, "")
+	xcodeDDI = filepath.Join(t.TempDir(), "none")
+	own := t.TempDir()
+	writeDiskImage(t, own, "17B48", "17.2.48.0")
+	writeMirrorImage(t, own, "27A5228h", "27.1.5228.8")
+	ok := func(context.Context, goios.DeviceEntry) (bool, error) { return true, nil }
+	e := entry("phone", 1, "USB")
+	run := func(pr *preparer, m *imageMounter) mountJob {
+		t.Helper()
+		pr.mountState(e, own, ok, func() { m.done <- struct{}{} }, nil)
+		select {
+		case <-m.done:
+		case <-time.After(5 * time.Second):
+			t.Fatal("the mount did not end")
+		}
+		return pr.mountState(e, own, ok, nil, nil)
+	}
+
+	var pr preparer
+	m := &imageMounter{refuse: map[string]bool{"17B48": true}}
+	m.prep(&pr)
+	if j := run(&pr, m); j.err != nil || j.img.Source != sourceMirror || m.mounts() != "17B48 27A5228h" {
+		t.Fatalf("the official copy refused: %+v after mounting %q; want the mirror's in the same job", j, m.mounts())
+	}
+	b, err := os.ReadFile(filepath.Join(own, refusedFile))
+	if err != nil || !strings.Contains(string(b), `"17B48 17.2.48.0"`) {
+		t.Fatalf("the refusal is not kept: %s, %v", b, err)
+	}
+
+	// After a restart, the refused copy is not tried again.
+	var again preparer
+	m = &imageMounter{}
+	m.prep(&again)
+	if j := run(&again, m); j.err != nil || m.mounts() != "27A5228h" {
+		t.Fatalf("after a restart: %+v after mounting %q; want the mirror's alone", j, m.mounts())
+	}
+
+	// Apple refuses the mirror's too: reported once, not tried again.
+	var later preparer
+	f := newFakePrep(t, &later)
+	later.findFn = nil
+	m = &imageMounter{refuse: map[string]bool{"17B48": true, "27A5228h": true}}
+	m.prep(&later)
+	j := run(&later, m)
+	if !imageRefused(j.err) || j.img.Source != sourceMirror || m.mounts() != "27A5228h" {
+		t.Fatalf("every image refused: %+v after mounting %q; want the mirror's refusal", j, m.mounts())
+	}
+	info := diskImageState(driver.Info{OSVersion: "27.3"}, j, own)
+	if info.Setup != driver.SetupDiskImageRefused || info.DiskImage == nil || info.DiskImage.Source != driver.DiskImageFromMirror {
+		t.Fatalf("every image refused: %+v", info)
+	}
+	for _, wait := range []time.Duration{time.Minute, time.Hour} {
+		f.advance(wait)
+		if j := later.mountState(e, own, ok, nil, nil); j.running || m.mounts() != "27A5228h" {
+			t.Fatalf("%v later: %+v after mounting %q; nothing is tried again", wait, j, m.mounts())
+		}
+	}
+	// A signature clears the refusal.
+	m.mu.Lock()
+	m.refuse = map[string]bool{}
+	m.mu.Unlock()
+	e = entry("phone", 2, "USB")
+	if j := run(&later, m); j.err != nil || m.mounts() != "27A5228h 27A5228h" {
+		t.Fatalf("after a reconnect, signed: %+v after mounting %q", j, m.mounts())
+	}
+	if later.isRefused(own, diskImage{Build: "27A5228h", Version: "27.1.5228.8"}) {
+		t.Error("the mirror's image is still marked refused after Apple signed it")
+	}
+}
+
+// TestRefusedDetail says how to get an image Apple signs, by where the
+// refused one came from.
+func TestRefusedDetail(t *testing.T) {
+	err := errors.New(appleRefused)
+	for _, c := range []struct {
+		img  diskImage
+		says string
+	}{
+		{diskImage{Source: sourceXcode, Build: "17B48", Version: "17.2.48.0", Dir: "/x"}, "Install or update Xcode from the App Store and open it once"},
+		{diskImage{Source: sourceMirror, Build: "27A5228h", Version: "27.1.5228.8", Dir: "/m"}, "update Pinky when a version with a newer image is out"},
+		{diskImage{Source: sourcePinky, Build: "17B48", Dir: "/p"}, "Replace it with the iOS_DDI folder"},
+		{diskImage{Source: sourceEnv, Build: "17B48", Dir: "/e"}, "Replace it with the iOS_DDI folder"},
+	} {
+		d := refusedDetail(c.img, err)
+		for _, says := range []string{c.says, imageName(c.img), "in " + c.img.Dir, "status 94"} {
+			if !strings.Contains(d, says) {
+				t.Errorf("%s image: %q does not say %q", c.img.Source, d, says)
+			}
+		}
+	}
+}
+
 func TestPreparerServicesMissing(t *testing.T) {
 	defer func(d time.Duration) { serviceWait = d }(serviceWait)
 	serviceWait = 200 * time.Millisecond
@@ -362,7 +629,7 @@ func TestDiskImageState(t *testing.T) {
 		{mountJob{img: img, err: errors.New("device responded with error: DeviceLocked")}, driver.SetupUnlock, "Unlock the iPhone"},
 		{mountJob{err: errNoDiskImage}, driver.SetupNoDiskImage, "comes with Xcode"},
 		{mountJob{img: img, err: errors.New("requestTicket: failed to send request: dial tcp: i/o timeout")}, driver.SetupDiskImage, "gs.apple.com"},
-		{mountJob{img: img, err: errors.New(`unexpected status in response 94: "This device isn't eligible"`)}, driver.SetupDiskImage, "would not sign"},
+		{mountJob{img: img, err: errors.New(`unexpected status in response 94: "This device isn't eligible"`)}, driver.SetupDiskImageRefused, "would not sign"},
 		{mountJob{img: img, err: errors.New("findCryptexIdentity: no Cryptex1 identity")}, driver.SetupDiskImage, "Xcode 27B52"},
 		{mountJob{img: img, err: errors.New("as a cryptex: boom\nas a personalized image: bang")}, driver.SetupDiskImage, "could not mount the developer disk image: as a personalized image: bang"},
 	} {

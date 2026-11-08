@@ -26,6 +26,12 @@ var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 	var noADB sync.Once
+	var netFile string
+	if dirs, err := api.DefaultDirs(); err == nil {
+		// The phones Pinky reaches over the network without Wireless
+		// debugging: moved to Wi-Fi, or away from home through Tailscale.
+		netFile = filepath.Join(dirs.Config, "network-phones.json")
+	}
 	return android.NewProvider(android.Config{
 		Client: &adb.Client{},
 		// Pinky uses the adb server that runs, or starts one, with the
@@ -53,6 +59,7 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 		// phones paired over Wi-Fi itself. Not while PINKY_DEVICES limits
 		// Pinky to some phones: the others belong to other tools.
 		ReconnectWiFi: strings.TrimSpace(os.Getenv("PINKY_DEVICES")) == "",
+		NetworkFile:   netFile,
 		Logf: func(format string, args ...any) {
 			log.Debug(fmt.Sprintf(format, args...), "platform", "android")
 		},
@@ -66,6 +73,9 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 	p := ios.NewProvider()
 	p.Log = log
+	// Under PINKY_DEVICES the provider does not even look at the other
+	// phones, over a cable or Wi-Fi: other tools use them.
+	p.Only = onlyDevices()
 	if dirs, err := api.DefaultDirs(); err == nil {
 		// Where Pinky looks for Apple's developer disk image before Xcode's.
 		p.DiskImageDir = filepath.Join(dirs.Data, "DeveloperDiskImages")
@@ -82,13 +92,7 @@ func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 // list of device ids, limits Pinky to those phones (for development, when
 // other tools use the rest).
 func realProviders(log *slog.Logger) []driver.Provider {
-	var only map[string]bool
-	if v := strings.TrimSpace(os.Getenv("PINKY_DEVICES")); v != "" {
-		only = map[string]bool{}
-		for _, id := range strings.Split(v, ",") {
-			only[strings.TrimSpace(id)] = true
-		}
-	}
+	only := onlyDevices()
 	var out []driver.Provider
 	for _, f := range providerFactories {
 		p, err := f(log)
@@ -102,10 +106,26 @@ func realProviders(log *slog.Logger) []driver.Provider {
 			if pr, ok := op.Provider.(driver.Pairer); ok {
 				p = &onlyPairer{onlyProvider: op, pairer: pr}
 			}
+			if w, ok := op.Provider.(wifiProvider); ok {
+				p = &onlyWiFi{onlyProvider: op, wifi: w}
+			}
 		}
 		out = append(out, p)
 	}
 	return out
+}
+
+// onlyDevices reads PINKY_DEVICES: nil when it is not set.
+func onlyDevices() map[string]bool {
+	v := strings.TrimSpace(os.Getenv("PINKY_DEVICES"))
+	if v == "" {
+		return nil
+	}
+	only := map[string]bool{}
+	for _, id := range strings.Split(v, ",") {
+		only[strings.TrimSpace(id)] = true
+	}
+	return only
 }
 
 // onlyProvider hides every device not in only. It is used as a pointer,
@@ -183,6 +203,95 @@ func (p *onlyPairer) ConnectWiFi(ctx context.Context, addr string) (driver.Info,
 		p.allow(info.ID)
 	}
 	return info, err
+}
+
+// Tailnet, ConnectTailnet, Away and SetAway pass Tailscale on
+// (driver.Tailnet); a phone connected through it joins the phones Pinky
+// may use, as a pairing does.
+func (p *onlyPairer) Tailnet(ctx context.Context) (driver.TailnetStatus, error) {
+	t, ok := p.pairer.(driver.Tailnet)
+	if !ok {
+		return driver.TailnetStatus{}, fmt.Errorf("tailscale: %w", driver.ErrUnsupported)
+	}
+	return t.Tailnet(ctx)
+}
+
+func (p *onlyPairer) ConnectTailnet(ctx context.Context, addr string) (driver.Info, error) {
+	t, ok := p.pairer.(driver.Tailnet)
+	if !ok {
+		return driver.Info{}, fmt.Errorf("tailscale: %w", driver.ErrUnsupported)
+	}
+	info, err := t.ConnectTailnet(ctx, addr)
+	if err == nil {
+		p.allow(info.ID)
+	}
+	return info, err
+}
+
+func (p *onlyPairer) Away(ctx context.Context, id string) (driver.Away, error) {
+	t, ok := p.pairer.(driver.Tailnet)
+	if !ok || !p.allowed(id) {
+		return driver.Away{}, fmt.Errorf("tailscale: %w", driver.ErrUnsupported)
+	}
+	return t.Away(ctx, id)
+}
+
+func (p *onlyPairer) SetAway(ctx context.Context, id string, on bool) (driver.Away, error) {
+	t, ok := p.pairer.(driver.Tailnet)
+	if !ok || !p.allowed(id) {
+		return driver.Away{}, fmt.Errorf("tailscale: %w", driver.ErrUnsupported)
+	}
+	return t.SetAway(ctx, id, on)
+}
+
+// PhoneWiFi and SetPhoneWiFi pass the Wi-Fi switch for Android phones
+// without Wireless debugging on (driver.WiFiSwitch).
+func (p *onlyPairer) PhoneWiFi(ctx context.Context, id string) (driver.WiFiState, error) {
+	w, ok := p.pairer.(driver.WiFiSwitch)
+	if !ok || !p.allowed(id) {
+		return driver.WiFiState{}, fmt.Errorf("wi-fi: %w", driver.ErrUnsupported)
+	}
+	return w.PhoneWiFi(ctx, id)
+}
+
+func (p *onlyPairer) SetPhoneWiFi(ctx context.Context, id string, on bool) (driver.WiFiState, error) {
+	w, ok := p.pairer.(driver.WiFiSwitch)
+	if !ok || !p.allowed(id) {
+		return driver.WiFiState{}, fmt.Errorf("wi-fi: %w", driver.ErrUnsupported)
+	}
+	return w.SetPhoneWiFi(ctx, id, on)
+}
+
+// wifiProvider is a provider that reaches phones over Wi-Fi by itself and
+// is told which phones the person removed (iPhones).
+type wifiProvider interface {
+	driver.WiFiFinder
+	driver.Forgetter
+}
+
+// onlyWiFi is an onlyProvider whose provider reaches phones over Wi-Fi by
+// itself: it passes on which phones are the person's, which to leave
+// alone, and whether to use Wi-Fi at all.
+type onlyWiFi struct {
+	*onlyProvider
+	wifi wifiProvider
+}
+
+func (p *onlyWiFi) SetWiFi(on bool)       { p.wifi.SetWiFi(on) }
+func (p *onlyWiFi) UseOverWiFi(id string) { p.wifi.UseOverWiFi(id) }
+func (p *onlyWiFi) Forget(id string)      { p.wifi.Forget(id) }
+func (p *onlyWiFi) Remember(id string)    { p.wifi.Remember(id) }
+func (p *onlyWiFi) Disconnect(ctx context.Context, id string) error {
+	return p.wifi.Disconnect(ctx, id)
+}
+
+// RestartDeviceService passes the restart of usbmuxd on, when the provider
+// can.
+func (p *onlyWiFi) RestartDeviceService(ctx context.Context, reason string) error {
+	if r, ok := p.wifi.(driver.DeviceServiceRestarter); ok {
+		return r.RestartDeviceService(ctx, reason)
+	}
+	return fmt.Errorf("restarting the device service: %w", driver.ErrUnsupported)
 }
 
 type allowOnPair struct {

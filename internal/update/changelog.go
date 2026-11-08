@@ -92,9 +92,33 @@ func Since(entries []Entry, from, to string) []Entry {
 	return out
 }
 
+// Translate returns entries with the bodies of the same versions in
+// translation, a translation of the changelog (CHANGELOG.zh-CN.md), where
+// it has them, and their own elsewhere.
+func Translate(entries, translation []Entry) []Entry {
+	bodies := map[string]string{}
+	for _, e := range translation {
+		if e.Body != "" {
+			bodies[e.Version] = e.Body
+		}
+	}
+	out := make([]Entry, len(entries))
+	for i, e := range entries {
+		if b, ok := bodies[e.Version]; ok {
+			e.Body = b
+		}
+		out[i] = e
+	}
+	return out
+}
+
 // Markdown puts entries back together for a What's new view: a heading
-// for each version with its date, then its bullets.
-func Markdown(entries []Entry) string {
+// for each version with its date, as date writes it ("November 7, 2026"
+// when nil), then its bullets.
+func Markdown(entries []Entry, date func(time.Time) string) string {
+	if date == nil {
+		date = func(t time.Time) string { return t.Format("January 2, 2006") }
+	}
 	var b strings.Builder
 	for i, e := range entries {
 		if i > 0 {
@@ -102,7 +126,7 @@ func Markdown(entries []Entry) string {
 		}
 		b.WriteString("### " + e.Version)
 		if !e.Date.IsZero() {
-			b.WriteString(" · " + e.Date.Format("January 2, 2006"))
+			b.WriteString(" · " + date(e.Date))
 		}
 		if e.Body != "" {
 			b.WriteString("\n\n" + e.Body)

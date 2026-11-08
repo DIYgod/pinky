@@ -6,7 +6,8 @@
 //
 //	release next                     the version the next release gets
 //	release tag [-push] [-n]         release: CHANGELOG.md's Unreleased notes
-//	                                 under the next version, a commit, its tag
+//	                                 (and their translations) under the next
+//	                                 version, a commit, its tag
 //	release notes <version>          a version's notes from CHANGELOG.md
 //	release stamp <version>          the version into cmd/pinky/mygo.json
 //	release manifest -dir <dir> ...  latest.json, the cask and SHA256SUMS
@@ -27,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -43,12 +45,18 @@ func usage() {
 
   next                       print the version the next release gets
   tag [-push] [-n] [-trailer <line>]...
-                             give CHANGELOG.md's Unreleased notes the next
-                             version, commit that and tag it v<version>;
-                             -push pushes main and the tag together
-  notes <version>            print a version's notes from CHANGELOG.md
-  notes -manifest <latest.json>
+                             give CHANGELOG.md's Unreleased notes, and
+                             CHANGELOG.zh-CN.md's, the next version, commit
+                             that and tag it v<version>; -push pushes main
+                             and the tag together
+  notes [-lang <language>] <version>
+                             print a version's notes from CHANGELOG.md, or
+                             from its translation into language (zh-Hans)
+  notes [-lang <language>] -manifest <latest.json>
                              print a release's notes from its manifest
+  notes -page -manifest <latest.json>
+                             print the notes of its release page: the
+                             English ones, then each translation's
   stamp <version>            write the version into cmd/pinky/mygo.json
   manifest -dir <dir> -version <version> [-repo owner/name]
                              write latest.json, the cask (pinky.rb) and
@@ -206,12 +214,16 @@ func runTag(args []string) error {
 	if err != nil {
 		return err
 	}
+	files := []string{changelogFile}
+	for _, t := range translations {
+		files = append(files, t.file)
+	}
 	for _, line := range strings.Split(status, "\n") {
 		if line == "" || strings.HasPrefix(line, "??") {
 			continue
 		}
-		if path := strings.TrimSpace(line[2:]); path != changelogFile {
-			return fmt.Errorf("commit or put aside the changes first (%s); only %s may wait", strings.TrimSpace(line), changelogFile)
+		if path := strings.TrimSpace(line[2:]); !slices.Contains(files, path) {
+			return fmt.Errorf("commit or put aside the changes first (%s); only %s may wait", strings.TrimSpace(line), strings.Join(files, " and "))
 		}
 	}
 	if _, err := git(root, "fetch", "--quiet", *remote, *branch); err != nil {
@@ -235,43 +247,79 @@ func runTag(args []string) error {
 	for _, t := range tags {
 		tagged[strings.TrimPrefix(t, "v")] = true
 	}
-	path := filepath.Join(root, changelogFile)
-	text, err := os.ReadFile(path)
+	isTagged := func(version string) bool { return tagged[version] }
+	// The changelog and its translations, as they are and stamped.
+	type book struct {
+		file          string
+		text, stamped []byte
+		notes         string
+	}
+	var books []book
+	text, err := os.ReadFile(filepath.Join(root, changelogFile))
 	if err != nil {
 		return err
 	}
-	stamped, notes, err := Stamp(string(text), v, func(version string) bool { return tagged[version] })
+	stamped, notes, err := Stamp(string(text), v, isTagged)
 	if err != nil {
 		return err
+	}
+	books = append(books, book{changelogFile, text, []byte(stamped), notes})
+	for _, t := range translations {
+		text, err := os.ReadFile(filepath.Join(root, t.file))
+		if err != nil {
+			return fmt.Errorf("%w: every release's notes go in %s too", err, t.file)
+		}
+		stamped, translated, err := StampTranslation(t.file, string(text), v, notes, isTagged)
+		if err != nil {
+			return err
+		}
+		books = append(books, book{t.file, text, []byte(stamped), translated})
 	}
 	if *dryRun {
 		fmt.Printf("Would release %s (tag %s) with these notes:\n\n%s\n", v, v.Tag(), notes)
+		for _, b := range books[1:] {
+			fmt.Printf("\nand in %s:\n\n%s\n", b.file, b.notes)
+		}
 		return nil
 	}
 
 	// Commit and tag; undone when a step fails, so that the checkout is
 	// as it was and the command can run again.
-	if err := os.WriteFile(path, []byte(stamped), 0o644); err != nil {
-		return err
-	}
-	committed := false
+	written, committed := 0, false
 	undo := func(cause error) error {
 		if committed {
 			_, _ = git(root, "tag", "--delete", v.Tag())
 			_, _ = git(root, "reset", "--soft", "HEAD~1")
 		}
-		_, _ = git(root, "restore", "--staged", "--", changelogFile)
-		if err := os.WriteFile(path, text, 0o644); err != nil {
-			return fmt.Errorf("%w; and putting %s back failed: %v", cause, changelogFile, err)
+		restore := []string{"restore", "--staged", "--"}
+		for _, b := range books {
+			restore = append(restore, b.file)
+		}
+		_, _ = git(root, restore...)
+		for _, b := range books[:written] {
+			if err := os.WriteFile(filepath.Join(root, b.file), b.text, 0o644); err != nil {
+				return fmt.Errorf("%w; and putting %s back failed: %v", cause, b.file, err)
+			}
 		}
 		return cause
+	}
+	for _, b := range books {
+		if err := os.WriteFile(filepath.Join(root, b.file), b.stamped, 0o644); err != nil {
+			return undo(err)
+		}
+		written++
 	}
 	commit := []string{"commit", "--quiet", "-m", "chore(release): " + v.String()}
 	for _, t := range trailers {
 		commit = append(commit, "--trailer", t)
 	}
-	commit = append(commit, "--", changelogFile)
-	if _, err := git(root, "add", "--", changelogFile); err != nil {
+	add := []string{"add", "--"}
+	commit = append(commit, "--")
+	for _, b := range books {
+		add = append(add, b.file)
+		commit = append(commit, b.file)
+	}
+	if _, err := git(root, add...); err != nil {
 		return undo(err)
 	}
 	if _, err := git(root, commit...); err != nil {
@@ -297,23 +345,44 @@ func runTag(args []string) error {
 
 func runNotes(args []string) error {
 	fs := flag.NewFlagSet("notes", flag.ContinueOnError)
-	file := fs.String("changelog", "", "the changelog (default: CHANGELOG.md of the source)")
+	file := fs.String("changelog", "", "the changelog (default: CHANGELOG.md of the source, or the translation into -lang)")
 	manifest := fs.String("manifest", "", "print the notes of this latest.json instead")
+	lang := fs.String("lang", "", "the language of the notes, as zh-Hans (default: English)")
+	page := fs.Bool("page", false, "with -manifest: the notes of the release page, in English and every language the manifest has")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if *page && (*manifest == "" || *lang != "" || fs.NArg() > 0) {
+		return errors.New("usage: release notes -page -manifest <latest.json>")
+	}
+	name := changelogFile
+	if *lang != "" {
+		var ok bool
+		if name, ok = translationFile(*lang); !ok {
+			return fmt.Errorf("the changelog has no translation into %q", *lang)
+		}
 	}
 	if *manifest != "" && fs.NArg() == 0 {
 		m, err := readManifest(*manifest)
 		if err != nil {
 			return err
 		}
-		fmt.Println(m.Notes)
+		notes := m.Notes
+		if *page {
+			notes = PageNotes(m)
+		}
+		if *lang != "" {
+			if notes = m.LocalizedNotes[*lang]; notes == "" {
+				return fmt.Errorf("%s has no notes in %s", *manifest, *lang)
+			}
+		}
+		fmt.Println(notes)
 		return nil
 	}
 	if fs.NArg() != 1 {
-		return errors.New("usage: release notes [-changelog file] <version>, or release notes -manifest <latest.json>")
+		return errors.New("usage: release notes [-lang language] [-changelog file] <version>, or release notes [-lang language] -manifest <latest.json>")
 	}
-	path, err := sourceFile(*file, changelogFile)
+	path, err := sourceFile(*file, name)
 	if err != nil {
 		return err
 	}
@@ -321,7 +390,7 @@ func runNotes(args []string) error {
 	if err != nil {
 		return err
 	}
-	notes, err := Notes(string(text), fs.Arg(0))
+	notes, err := notesIn(name, string(text), fs.Arg(0))
 	if err != nil {
 		return err
 	}
@@ -397,7 +466,16 @@ func runManifest(args []string) error {
 	if *dir == "" || *version == "" || fs.NArg() > 0 {
 		return errors.New("usage: release manifest -dir <dir> -version <version> [-repo owner/name]")
 	}
+	// The version's notes, or the Unreleased ones for a dry run.
+	notesOf := func(file, text string) (string, error) {
+		notes, err := notesIn(file, text, *version)
+		if err != nil && *unreleasedOK {
+			notes, err = notesIn(file, text, unreleased)
+		}
+		return notes, err
+	}
 	notes := *given
+	var localized map[string]string
 	if notes == "" {
 		path, err := sourceFile(*file, changelogFile)
 		if err != nil {
@@ -407,18 +485,32 @@ func runManifest(args []string) error {
 		if err != nil {
 			return err
 		}
-		notes, err = Notes(string(text), *version)
-		if err != nil && *unreleasedOK {
-			notes, err = Notes(string(text), unreleased)
-		}
-		if err != nil {
+		if notes, err = notesOf(changelogFile, string(text)); err != nil {
 			return err
+		}
+		// The translations, next to the changelog, where they have the
+		// version's notes; the app shows the English ones where not.
+		for _, t := range translations {
+			text, err := os.ReadFile(filepath.Join(filepath.Dir(path), t.file))
+			var translated string
+			if err == nil {
+				translated, err = notesOf(t.file, string(text))
+			}
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "release manifest: warning: latest.json has no notes in %s: %v\n", t.lang, err)
+				continue
+			}
+			if localized == nil {
+				localized = map[string]string{}
+			}
+			localized[t.lang] = translated
 		}
 	}
 	m, missing, err := BuildManifest(*dir, *version, *repo, notes, time.Now(), *partial)
 	if err != nil {
 		return err
 	}
+	m.LocalizedNotes = localized
 	if len(missing) > 0 {
 		fmt.Fprintf(os.Stderr, "release manifest: warning: latest.json leaves out %s, which %s lacks\n", strings.Join(missing, ", "), *dir)
 	}

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/ios/cryptex"
 	"howett.net/plist"
 )
@@ -33,10 +34,10 @@ type diskImage struct {
 
 // Where a disk image was found.
 const (
-	sourceEnv    = "env"    // PINKY_DDI
-	sourcePinky  = "pinky"  // Pinky's own folder
-	sourceXcode  = "xcode"  // installed by Xcode
-	sourceMirror = "mirror" // downloaded from the third-party mirror (mirror.go)
+	sourceEnv    = driver.DiskImageFromEnv    // PINKY_DDI
+	sourcePinky  = driver.DiskImageFromFolder // Pinky's own folder
+	sourceXcode  = driver.DiskImageFromXcode  // installed by Xcode
+	sourceMirror = driver.DiskImageFromMirror // downloaded from the third-party mirror (mirror.go)
 )
 
 // ddiEnv names a developer disk image folder to use instead of the others:
@@ -72,7 +73,20 @@ func diskImageDirs(ownDir string) []struct{ dir, source string } {
 // over. Only when there is no official copy does it take the one the person
 // downloaded from the third-party mirror.
 func findDiskImage(ownDir string) (diskImage, error) {
-	var best diskImage
+	return findDiskImageAvoiding(ownDir, nil)
+}
+
+// findDiskImageAvoiding is findDiskImage passing over the images refused
+// reports (nil: none), those Apple's signing server refused to sign: an
+// official copy Apple refused gives way to another one, then to the
+// mirror's download. When Apple refused every image here, it returns the
+// mirror's download if there is one, else the newest official copy, for
+// the mount to report; PINKY_DDI's image is returned either way.
+func findDiskImageAvoiding(ownDir string, refused func(diskImage) bool) (diskImage, error) {
+	if refused == nil {
+		refused = func(diskImage) bool { return false }
+	}
+	var best, bestRefused diskImage
 	var errs []string
 	for _, c := range diskImageDirs(ownDir) {
 		img, err := readDiskImage(c.dir)
@@ -89,6 +103,12 @@ func findDiskImage(ownDir string) (diskImage, error) {
 		if c.source == sourceEnv {
 			return img, nil
 		}
+		if refused(img) {
+			if bestRefused.Dir == "" || newerImage(img, bestRefused) {
+				bestRefused = img
+			}
+			continue
+		}
 		if best.Dir == "" || newerImage(img, best) {
 			best = img
 		}
@@ -101,6 +121,9 @@ func findDiskImage(ownDir string) (diskImage, error) {
 			img.Source = sourceMirror
 			return img, nil
 		}
+	}
+	if bestRefused.Dir != "" {
+		return bestRefused, nil
 	}
 	if len(errs) > 0 {
 		return diskImage{}, fmt.Errorf("%w (%s)", errNoDiskImage, strings.Join(errs, "; "))

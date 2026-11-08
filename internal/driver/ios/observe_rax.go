@@ -54,6 +54,24 @@ const raxRecheckFailures = 30 * time.Second
 // raxLimits bound one walk over remoteAXService.
 var raxLimits = walkLimits{MaxElements: 400, Budget: 4 * time.Second}
 
+// raxLimitsWiFi bound one walk over Wi-Fi, where each of its requests (one
+// per node, one after the other) takes tens of milliseconds instead of a
+// few, and more in a session that just started, while the app builds its
+// accessibility tree: on an iPad Pro 11-inch the first read of a new
+// session over Wi-Fi gave 5 to 17 of the 19 elements Settings showed, cut
+// at 4 s, and later reads of the same session all 19 in about 2 s
+// (2026-11-08).
+var raxLimitsWiFi = walkLimits{MaxElements: 400, Budget: 8 * time.Second}
+
+// walkLimits returns the bounds of a walk over remoteAXService on this
+// phone's connection.
+func (d *Device) walkLimits() walkLimits {
+	if d.info.Connection == "wifi" {
+		return raxLimitsWiFi
+	}
+	return raxLimits
+}
+
 // raxReady returns the remote accessibility session, connecting on first
 // use. A phone that refused it is asked again only after a while, so every
 // Observe on it does not pay for a failed connection.
@@ -99,17 +117,34 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	// What SpringBoard shows over the app, looked at in the background
 	// while the app's tree comes (see springboard.go).
 	sbDone := d.kickSpringBoard(rax)
-	si := d.screen()
-	var wg sync.WaitGroup
+	// The display's orientation, read while the tree comes: the person
+	// may have turned the device since the last read.
+	shown := make(chan struct{})
+	go func() {
+		defer close(shown)
+		d.readDisplayNow(ctx)
+	}()
+	var locked bool
+	lockKnown := make(chan struct{})
+	go func() {
+		defer close(lockKnown)
+		locked, _ = d.Locked(ctx)
+	}()
+	front := make(chan *axpObject, 1)
 	var els []raxElement
 	var complete bool
 	var walkErr error
-	wg.Add(1)
+	walked := make(chan struct{})
 	go func() {
-		defer wg.Done()
+		defer close(walked)
 		t := time.Now()
 		var pushed bool
-		els, complete, pushed, walkErr = d.raxTree(ctx, rax, &st.Trace)
+		els, complete, pushed, walkErr = d.raxTree(ctx, rax, &st.Trace, func(app *axpObject) {
+			select {
+			case front <- app:
+			default:
+			}
+		})
 		st.Walk = time.Since(t)
 		if pushed {
 			st.Source = "remoteax-push"
@@ -118,55 +153,101 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	var lines []ocrLine
 	var ocrErr error
 	var shot image.Image // the screenshot, for what it does not show (capture.go)
+	var pictured sync.WaitGroup
+	var gate *captureGate
 	if opt.OCR {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			t := time.Now()
-			png, err := d.ScreenshotPNG(ctx)
-			st.Shot = time.Since(t)
-			if err != nil {
-				ocrErr = err
-				return
-			}
-			decoded := make(chan image.Image, 1)
-			go func() { decoded <- decodeShot(png) }()
-			t = time.Now()
-			lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
-			st.OCR = time.Since(t)
-			shot = <-decoded
-		}()
+		// The picture waits until the read may take it (capturegate.go).
+		gate = newCaptureGate(opt.MayCapture, func() {
+			pictured.Add(1)
+			go func() {
+				defer pictured.Done()
+				t := time.Now()
+				png, pic, from, err := d.ocrPicture(ctx, opt)
+				st.Shot, st.ShotFrom = time.Since(t), from
+				if err != nil {
+					ocrErr = err
+					return
+				}
+				decoded := make(chan image.Image, 1)
+				go func() {
+					if pic != nil {
+						decoded <- pic
+						return
+					}
+					decoded <- decodeShot(png)
+				}()
+				t = time.Now()
+				lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
+				st.OCR = time.Since(t)
+				shot = <-decoded
+			}()
+		})
 	}
-	var locked bool
-	wg.Add(1)
+	asked := make(chan struct{})
 	go func() {
-		defer wg.Done()
-		locked, _ = d.Locked(ctx)
+		// Ask as soon as the frontmost app and the lock state are known.
+		defer close(asked)
+		if gate == nil || opt.MayCapture == nil {
+			return
+		}
+		var app *axpObject
+		select {
+		case app = <-front:
+		case <-walked:
+			return
+		}
+		<-lockKnown
+		apps, ok := d.appCandidates(ctx, app.PID, locked)
+		if !ok {
+			return
+		}
+		<-shown
+		si := d.screen()
+		var screens []*screen.Screen
+		for _, a := range apps {
+			screens = append(screens, &screen.Screen{Width: si.Width, Height: si.Height,
+				Orientation: orientationOf(si.Width, si.Height), App: a, Locked: locked})
+		}
+		gate.early(screens)
 	}()
-	wg.Wait()
+	<-walked
+	<-lockKnown
+	<-asked
+	<-shown
+	si := d.screen()
 	if len(els) == 0 {
+		pictured.Wait() // a picture begun after the app is not left running
 		if walkErr == nil {
 			walkErr = errRAXTimeout
 		}
 		return nil, walkErr
 	}
 	st.WalkError = walkErr
-	st.OCRError = ocrErr
 	st.Complete = complete && walkErr == nil
 	if st.Source == "" {
 		st.Source = "remoteax"
 	}
 
+	els = d.markWebContent(ctx, els)
 	app := els[0]
 	s := &screen.Screen{
 		Width: si.Width, Height: si.Height,
-		Orientation: orientationName(si.Orientation),
+		Orientation: orientationOf(si.Width, si.Height),
 		Locked:      locked,
 		CapturedAt:  time.Now(),
 	}
 	s.App = d.screenApp(ctx, els, locked, func(format string, args ...any) {
 		st.Trace = append(st.Trace, fmt.Sprintf(format, args...))
 	})
+	if gate != nil {
+		use := gate.late(s)
+		pictured.Wait()
+		st.Capture, st.CaptureWait = gate.stats()
+		if !use {
+			lines, shot, ocrErr = nil, nil, nil
+		}
+		st.OCRError = ocrErr
+	}
 	scale := si.Scale
 	if app.HasFrame && app.Frame.W > 0 {
 		scale = float64(si.Width) / app.Frame.W
@@ -175,11 +256,11 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	frontSB := frontApp.ID == springBoard
 	d.noteFront(app.Object, frontSB)
 	var covered []screen.Rect
-	var dialog []screen.Element
+	var dialog, notes []screen.Element
 	if !frontSB {
 		if over, ok := d.springBoardOverlays(sbDone); ok && len(over) > 0 {
 			var dlg []raxElement
-			s.Events, covered, dlg = d.overlayEvents(ctx, over, scale, si.Width, si.Height)
+			s.Events, covered, dlg, notes = d.overlayEvents(ctx, over, scale, si.Width, si.Height)
 			dialog = dialogElements(d.springBoardElement(), dlg, scale, si.Width, si.Height)
 			st.Trace = append(st.Trace, fmt.Sprintf("SpringBoard shows %d overlays over the app", len(over)))
 		} else if ok {
@@ -187,7 +268,13 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		}
 	}
 	s.Elements, s.Keyboard = raxScreenElements(els, scale, si.Width, si.Height, s.App.ID, covered...)
-	s.Elements = append(s.Elements, dialog...)
+	// Notifications over the app come first, as they are on top.
+	s.Elements = append(append(notes, s.Elements...), dialog...)
+	if asleepRead(ctx, s, d.ScreenOn) {
+		s.Locked = true
+		lines, shot = nil, nil // a dark screen
+		st.Trace = append(st.Trace, "the screen is off: read as locked")
+	}
 	if opt.OCR && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {
 			s.Keyboard = true
@@ -215,6 +302,22 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	st.OCRLines = len(lines)
 	st.Total = time.Since(start)
 	return s, nil
+}
+
+// asleepRead reports whether a read that found next to nothing, of a phone
+// that does not read as locked, is of a phone asleep: its screen is off.
+// The tree of a dark screen has the app's element and one more at most,
+// and a phone without a passcode, or one that locks a while after its
+// screen went off, reads as unlocked (seen on an iPad Pro 11-inch over
+// Wi-Fi for 28 s, until it left the network: 2026-11-08). Such a read
+// counts as locked, as the lock screen it shows once woken: an agent is
+// told the phone is locked instead of getting an empty screen.
+func asleepRead(ctx context.Context, s *screen.Screen, screenOn func(context.Context) (bool, error)) bool {
+	if s.Locked || len(s.Elements) > 1 {
+		return false
+	}
+	on, err := screenOn(ctx)
+	return err == nil && !on
 }
 
 // AccessibilityPlatformTranslation roles seen on iOS 27 (AXPAttributeRole).
@@ -246,6 +349,11 @@ const xcPickerWheel = 39
 // keyboard, for one). Observed on iOS 27; not public.
 const traitRemoteHost = 1 << 34
 
+// traitSecureText marks a password field of a web page: WebKit's text
+// fields have no AutomationType, and a password field differs from a plain
+// one in this trait only (observed on iOS 27; not public).
+const traitSecureText = 1 << 24
+
 const (
 	// raxPushAfter: a push whose first tree arrives sooner than this after
 	// an input may describe the screen before it. The phone pushes 1.1–1.5 s
@@ -272,8 +380,10 @@ const (
 // push at once, and takes whichever comes first. A push counts only when
 // its first tree came at least raxPushAfter after the input and its app is
 // the frontmost app the walk found first: a push can arrive late, after
-// the next input, and then describes the screen before it.
-func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) ([]raxElement, bool, bool, error) {
+// the next input, and then describes the screen before it. onApp, when
+// set, learns the frontmost app as soon as the walk finds it, before the
+// tree.
+func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string, onApp func(*axpObject)) ([]raxElement, bool, bool, error) {
 	input := d.lastInputAt()
 	trusted := time.Since(input) < raxPushTrust
 	t0 := time.Now()
@@ -283,7 +393,12 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) 
 	note("input %v ago, trusted %v", t0.Sub(input).Round(time.Millisecond), trusted)
 	var stop atomic.Bool
 	apps := make(chan *axpObject, 1)
-	walked := walkDetached(ctx, rax, &stop, func(app *axpObject) { apps <- app })
+	walked := walkDetached(ctx, rax, d.walkLimits(), &stop, func(app *axpObject) {
+		if onApp != nil {
+			onApp(app)
+		}
+		apps <- app
+	})
 	if !trusted {
 		select {
 		case r := <-walked:
@@ -335,7 +450,7 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string) 
 			walked = nil
 		case <-empty:
 			note("walk again")
-			walked = walkDetached(ctx, rax, &stop, nil)
+			walked = walkDetached(ctx, rax, d.walkLimits(), &stop, nil)
 			empty = nil
 			rewalked = true
 		case app = <-apps:
@@ -372,12 +487,12 @@ type walkResult struct {
 // reach: a request cut short would leave its answer in flight and spoil
 // the session. A caller that gives up sets stop, and the walk ends between
 // two requests.
-func walkDetached(ctx context.Context, rax *raxSession, stop *atomic.Bool, onApp func(*axpObject)) <-chan walkResult {
-	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), raxLimits.Budget+raxRequestTimeout)
+func walkDetached(ctx context.Context, rax *raxSession, lim walkLimits, stop *atomic.Bool, onApp func(*axpObject)) <-chan walkResult {
+	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), lim.Budget+raxRequestTimeout)
 	ch := make(chan walkResult, 1)
 	go func() {
 		defer cancel()
-		els, complete, err := rax.walkUntil(wctx, raxLimits, stop, onApp)
+		els, complete, err := rax.walkUntil(wctx, lim, stop, onApp)
 		ch <- walkResult{els, complete, err}
 	}()
 	return ch
@@ -391,9 +506,10 @@ func walkDetached(ctx context.Context, rax *raxSession, stop *atomic.Bool, onApp
 // Elements of other processes come with frames relative to the view that
 // hosts them. A host is marked by traitRemoteHost and comes right before
 // them in the walk; elements of a process with no such host (home screen
-// widgets) cannot be placed and are left out. A process whose elements are
-// mostly single characters is the on-screen keyboard: it only marks the
-// keyboard as shown.
+// widgets) cannot be placed and are left out, except those of web content
+// (Web), which a browser lists without a host and with frames in screen
+// points. A process whose elements are mostly single characters is the
+// on-screen keyboard: it only marks the keyboard as shown.
 func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, covered ...screen.Rect) ([]screen.Element, bool) {
 	if len(els) == 0 {
 		return nil, false
@@ -403,8 +519,8 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, 
 	keyboardPID := map[int]bool{}
 	chars := map[int]int{}
 	for _, e := range els {
-		if e.Object.PID != appPID && isKeyChar(e.Label) {
-			chars[e.Object.PID]++
+		if e.Object.PID != appPID && !e.Web && isKeyChar(e.Label) {
+			chars[e.Object.PID]++ // a page's own one-letter links are no keys
 		}
 	}
 	for pid, n := range chars {
@@ -449,10 +565,10 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, 
 				offset[pid] = host.Frame
 			}
 			hf, ok := offset[pid]
-			if !ok && !keyboardPID[pid] {
+			if !ok && !keyboardPID[pid] && !e.Web {
 				continue // no host to place it by
 			}
-			placed = ok
+			placed = ok || e.Web
 			e.Frame.X += hf.X
 			e.Frame.Y += hf.Y
 		}
@@ -710,6 +826,9 @@ func raxRole(e raxElement, inTabBar bool) (string, []string) {
 		case axpRoleTextField:
 			role = screen.RoleInput
 			states = appendState(states, screen.StateEditable)
+			if e.Traits&traitSecureText != 0 {
+				states = appendState(states, screen.StatePassword)
+			}
 		case axpRoleImage:
 			if role == screen.RoleOther {
 				role = screen.RoleImage
@@ -787,31 +906,4 @@ func raxLabel(e raxElement, role string) string {
 		label += ", " + value
 	}
 	return label
-}
-
-// ocrExtras returns the OCR lines no element already shows, as OCR
-// elements: a line counts as shown when its center lies in an element whose
-// label contains its text.
-func ocrExtras(els []screen.Element, lines []ocrLine, w, h int) []screen.Element {
-	var out []screen.Element
-	for _, l := range lines {
-		text := strings.TrimSpace(l.Text)
-		if text == "" || l.Confidence < 0.3 {
-			continue
-		}
-		r := ocrRect(l, w, h)
-		c := r.Center()
-		nt := norm(text)
-		shown := false
-		for _, e := range els {
-			if e.Bounds.Contains(c) && strings.Contains(norm(e.Label), nt) {
-				shown = true
-				break
-			}
-		}
-		if !shown {
-			out = append(out, screen.Element{Role: screen.RoleText, Label: text, Source: screen.SourceOCR, Bounds: r})
-		}
-	}
-	return out
 }

@@ -1,7 +1,12 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -87,5 +92,68 @@ func TestPairingExtras(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("the phone is not in Devices: %+v", g.Devices())
+	}
+}
+
+// failingPairer fails each pairing with the driver's words.
+type failingPairer struct {
+	*demo.Provider
+	err error
+}
+
+func (p *failingPairer) StartPairing(context.Context) (driver.Pairing, error) {
+	return failedPairing{p.err}, nil
+}
+
+func (p *failingPairer) PairWithCode(context.Context, string, string) (driver.Info, error) {
+	return driver.Info{}, p.err
+}
+
+type failedPairing struct{ err error }
+
+func (failedPairing) QR() string { return "WIFI:T:ADB;S:pinky-x;P:y;;" }
+func (p failedPairing) Wait(ctx context.Context) (driver.Info, error) {
+	if ctx.Err() != nil {
+		return driver.Info{}, ctx.Err()
+	}
+	return driver.Info{}, p.err
+}
+func (failedPairing) Close() error { return nil }
+
+// TestPairingFailureLogged: a failed pairing is logged with the pairing
+// tool's own words, by QR code and by code, so the diagnostics show them;
+// one the person walked away from is not.
+func TestPairingFailureLogged(t *testing.T) {
+	var logs bytes.Buffer
+	why := fmt.Errorf("android: pairing with 192.168.1.42:37123 failed: %w (adb: pairing failed: Wrong password or connection was dropped.)", driver.ErrPairRejected)
+	p := &failingPairer{Provider: demo.NewProvider(driver.Android), err: why}
+	g, err := New(Options{Providers: []driver.Provider{p}, DataDir: t.TempDir(), NoScreenshots: true, DiscoverEvery: time.Hour,
+		Logger: slog.New(slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelInfo}))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	ctx := context.Background()
+	if _, err := g.PairWithCode(ctx, "192.168.1.42:37123", "000000"); !errors.Is(err, driver.ErrPairRejected) {
+		t.Fatalf("PairWithCode: %v", err)
+	}
+	pg, err := g.StartPairing(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pg.Wait(ctx); !errors.Is(err, driver.ErrPairRejected) {
+		t.Fatalf("Wait: %v", err)
+	}
+	gone, cancel := context.WithCancel(ctx)
+	cancel()
+	pg.Wait(gone)
+	out := logs.String()
+	for _, how := range []string{"how=code", "how=qr"} {
+		if n := strings.Count(out, how); n != 1 {
+			t.Errorf("%s logged %d times:\n%s", how, n, out)
+		}
+	}
+	if n := strings.Count(out, "Wrong password or connection was dropped."); n != 2 {
+		t.Errorf("adb's words logged %d times, want 2:\n%s", n, out)
 	}
 }

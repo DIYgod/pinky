@@ -312,9 +312,52 @@ func TestChangelog(t *testing.T) {
 	if got := Since(es, "", "2026.1107.2"); len(got) != 1 || got[0].Version != "2026.1107.2" {
 		t.Errorf("only this version: %+v", got)
 	}
-	md := Markdown(Since(es, "2026.1107.1", "2026.1107.2"))
+	md := Markdown(Since(es, "2026.1107.1", "2026.1107.2"), nil)
 	if md != "### 2026.1107.2 · November 7, 2026\n\n- Faster mirroring\n- Fixed: **Mi 10 Pro** unlocks" {
 		t.Errorf("Markdown:\n%s", md)
+	}
+}
+
+func TestTranslate(t *testing.T) {
+	es := ParseChangelog(changelog)
+	zh := ParseChangelog("# 更新日志\n\n## 2026.1201.1 (2026-12-01)\n\n- Pinky 会自己更新手机上的 companion 应用\n\n## 2026.1107.2 (2026-11-07)\n\n")
+	got := Translate(Since(es, "2026.1107.1", "2026.1201.1"), zh)
+	if len(got) != 2 || got[0].Body != "- Pinky 会自己更新手机上的 companion 应用" || got[1].Body != es[1].Body || !got[0].Date.Equal(es[0].Date) {
+		t.Errorf("Translate: %+v", got)
+	}
+	if es[0].Body != "- Pinky updates the companion app by itself" {
+		t.Errorf("Translate changed the entries: %+v", es[0])
+	}
+	md := Markdown(got[:1], func(d time.Time) string { return d.Format("2006 年 1 月 2 日") })
+	if md != "### 2026.1201.1 · 2026 年 12 月 1 日\n\n- Pinky 会自己更新手机上的 companion 应用" {
+		t.Errorf("Markdown:\n%s", md)
+	}
+}
+
+func TestNotesIn(t *testing.T) {
+	s := strings.Repeat("ab", 32)
+	data := strings.Replace(fmt.Sprintf(feedJSON, s, s, s), `"assets"`, `"localized_notes": {"zh-Hans": "- 镜像更快了", "fr": " "},
+  "assets"`, 1)
+	f, err := ParseFeed([]byte(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for lang, want := range map[string]string{
+		"zh-Hans":    "- 镜像更快了",
+		"zh-Hans-CN": "- 镜像更快了",
+		"en":         f.Notes,
+		"":           f.Notes,
+		"zh-Hant":    f.Notes, // another script
+		"fr":         f.Notes, // empty notes
+	} {
+		if got := f.NotesIn(lang); got != want {
+			t.Errorf("NotesIn(%q) = %q, want %q", lang, got, want)
+		}
+	}
+	// A feed of a release without translations, or of an older one.
+	f.LocalizedNotes = nil
+	if got := f.NotesIn("zh-Hans"); got != f.Notes {
+		t.Errorf("NotesIn without translations = %q", got)
 	}
 }
 

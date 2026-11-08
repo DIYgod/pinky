@@ -107,6 +107,7 @@ Diagnostics hold:
 - Pinky's version, the computer's system, whether usage statistics are on, and the last crash's reason when there is one;
 - the settings that change how Pinky behaves (the approval preset, read-only mode, unlocking from the computer, hiding codes, recording, how long activity is kept, remote agents, developer mode) and the video decoder;
 - each connected phone's platform, system version, model, connection, backend and state;
+- Tailscale's state on the computer, the Android devices on its tailnet (online or not, which are Pinky's phones, by model, and whether Pinky reaches them), and each Android phone's **Use away from home** (on or off, and what keeps it from being set up); the tailnet's name and the devices' names are left out;
 - the end of `pinky.log` and `daemon.log`, as much as fits in the issue's address (the last 300 lines at most).
 
 Phone ids and the names people give their phones, the home folder, the user's name, e-mail and IP addresses, long hex strings, adb's Wi-Fi names for phones, and the values of log fields that may name apps, tasks, files or what a screen showed (`app=`, `task=`, `name=`, `path=`, …) are replaced with placeholders such as `<phone-1>` and `<redacted>`. A link to GitHub holds about 7 KB, so older log lines are left out when they do not fit; **Copy** puts the message and the whole diagnostics on the clipboard, to paste into the issue or send another way.

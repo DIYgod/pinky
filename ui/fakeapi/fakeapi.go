@@ -27,6 +27,7 @@ type Scenario string
 const (
 	OnePhone    Scenario = "one"        // Pixel 9 reorders lunch, then asks to pay
 	ThreePhones Scenario = "three"      // and an iPhone in an onboarding test, and an offline Galaxy
+	ManyPhones  Scenario = "many"       // Three phones' and five more: more tiles than a window shows at once
 	Locked      Scenario = "locked"     // Pixel 9 is locked while the agent replies to Sam
 	Takeover    Scenario = "takeover"   // the person took over Pixel 9 to change the note
 	Handoff     Scenario = "handoff"    // the agent asks the person to sign in to Dinely
@@ -38,7 +39,7 @@ const (
 )
 
 // Scenarios lists them in menu order.
-var Scenarios = []Scenario{OnePhone, ThreePhones, Locked, Takeover, Handoff, NewAgent, Companion, Background, NoPhones, Checkup}
+var Scenarios = []Scenario{OnePhone, ThreePhones, ManyPhones, Locked, Takeover, Handoff, NewAgent, Companion, Background, NoPhones, Checkup}
 
 // Title names a scenario for menus.
 func (s Scenario) Title() string {
@@ -47,6 +48,8 @@ func (s Scenario) Title() string {
 		return "One phone"
 	case ThreePhones:
 		return "Three phones"
+	case ManyPhones:
+		return "Eight phones"
 	case Locked:
 		return "Locked phone"
 	case Takeover:
@@ -136,8 +139,12 @@ type API struct {
 	fileProblems []gateway.FileProblem
 	removals     []Removal // RemoveDevice calls (remove.go)
 
-	iosHost driver.HostCheck // what the computer lacks for iPhones (iphone.go)
-	dlErr   error            // what DownloadDiskImage fails with (iphone.go)
+	iosHost    driver.HostCheck // what the computer lacks for iPhones (iphone.go)
+	wifiOff    bool             // iPhones over Wi-Fi turned off (wifi.go)
+	restarts   []string         // RestartDeviceService reasons (wifi.go)
+	restartErr error
+	dlErr      error        // what DownloadDiskImage fails with (iphone.go)
+	tn         *fakeTailnet // Tailscale on this computer (tailnet.go)
 }
 
 type device struct {
@@ -161,6 +168,7 @@ type device struct {
 	// companion updates need the person.
 	updateAsks bool
 	way        string // iPhone: the connection the person chose
+	connecting string // the status line while the fake "opens" it (wifi.go)
 }
 
 type task struct {
@@ -232,7 +240,8 @@ func (a *API) Play(s Scenario) {
 	}
 	iphone := &device{
 		info: driver.Info{ID: "iphone-17", Platform: driver.IOS, Name: "iPhone 17", Model: "iPhone 17",
-			OSVersion: "27.1", Connection: "wifi", Backend: "coredevice", State: driver.StateOnline},
+			OSVersion: "27.1", Connection: "wifi", Backend: "coredevice", State: driver.StateOnline,
+			WiFi: driver.WiFiConnection{Connections: driver.WiFiConnectionsTurnedOn, Seen: true}},
 		width: 1206, height: 2622, codec: driver.HEVC, source: "testsrc",
 	}
 	galaxy := &device{
@@ -247,6 +256,9 @@ func (a *API) Play(s Scenario) {
 		scripts = append(scripts, a.lunch(gen, pixel, false))
 	case ThreePhones:
 		a.devices = []*device{pixel, iphone, galaxy}
+		scripts = append(scripts, a.lunch(gen, pixel, false), a.onboarding(gen, iphone))
+	case ManyPhones:
+		a.devices = append([]*device{pixel, iphone, galaxy}, morePhones()...)
 		scripts = append(scripts, a.lunch(gen, pixel, false), a.onboarding(gen, iphone))
 	case Locked:
 		a.devices = []*device{pixel}
@@ -287,6 +299,33 @@ func (a *API) Play(s Scenario) {
 	a.emit(gateway.Event{Kind: gateway.EventDevices})
 	a.emit(gateway.Event{Kind: gateway.EventTasks})
 	a.emit(gateway.Event{Kind: gateway.EventNeeds})
+}
+
+// morePhones are the five phones ManyPhones adds to Three phones': idle
+// ones on a cable and over Wi-Fi, a locked one and another offline.
+func morePhones() []*device {
+	phone := func(id, name string, platform driver.Platform, os, conn, source string) *device {
+		backend, codec, w, h := "scrcpy", driver.H264, 1080, 2400
+		if platform == driver.IOS {
+			backend, codec, w, h = "coredevice", driver.HEVC, 1179, 2556
+		}
+		return &device{
+			info: driver.Info{ID: id, Platform: platform, Name: name, Model: name, OSVersion: os,
+				Connection: conn, Backend: backend, State: driver.StateOnline},
+			width: w, height: h, codec: codec, source: source,
+		}
+	}
+	oneplus := phone("oneplus-13", "OnePlus 13", driver.Android, "16", "wifi", "rgbtestsrc")
+	oneplus.locked = true
+	moto := phone("moto-g", "Moto G", driver.Android, "15", "usb", "smptebars")
+	moto.info.State, moto.info.Detail = driver.StateOffline, "Last seen yesterday"
+	return []*device{
+		phone("pixel-8a", "Pixel 8a", driver.Android, "16", "usb", "testsrc"),
+		phone("iphone-16e", "iPhone 16e", driver.IOS, "27.1", "usb", "testsrc2"),
+		oneplus,
+		phone("iphone-15-pro", "iPhone 15 Pro", driver.IOS, "26.4", "wifi", "smptehdbars"),
+		moto,
+	}
 }
 
 // ConnectPhone plugs in a new Android phone, as the Add phone flow waits
@@ -377,8 +416,17 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.TaskID = d.task.view.ID
 	}
 	switch {
+	case d.connecting != "":
+		v.Status, v.StatusLine = gateway.DeviceConnecting, d.connecting
+		v.Info.State = driver.StateOffline
+	case d.info.Setup == driver.SetupUnlock && d.info.State == driver.StateNeedsSetup && d.info.Connection == "wifi" && !running:
+		v.Status, v.StatusLine = gateway.DeviceOffline, "Locked on Wi-Fi"
 	case d.info.State == driver.StateOffline:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Offline"
+	case d.info.Setup == driver.SetupConfirmWiFi && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Found on Wi-Fi"
+	case d.info.Setup == driver.SetupDeviceService && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Lost on Wi-Fi"
 	case d.info.State != driver.StateOnline:
 		// Plugged in, waiting for a step, as the gateway lists such a phone
 		// (statusLocked), also while a task waits for it.

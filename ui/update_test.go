@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -58,7 +59,10 @@ func (f *fakeInstaller) swapped() []update.StartOptions {
 	return append([]update.StartOptions(nil), f.swaps...)
 }
 
-const testNotes = "- Faster mirroring\n- Pinky updates itself"
+const (
+	testNotes   = "- Faster mirroring\n- Pinky updates itself"
+	testNotesZh = "- 镜像更快了\n- Pinky 会自己更新"
+)
 
 // feed serves latest.json for version and its zip.
 func feed(t *testing.T, version string) (*httptest.Server, []byte) {
@@ -69,8 +73,8 @@ func feed(t *testing.T, version string) (*httptest.Server, []byte) {
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/latest.json":
-			fmt.Fprintf(w, `{"version": %q, "tag": "v%s", "date": "2026-11-07T10:00:00Z", "notes": %q, "assets": {%q: {"url": %q, "sha256": %q, "size": %d}}}`,
-				version, version, testNotes, update.Platform(), srv.URL+"/Pinky.zip", hexenc.EncodeToString(h[:]), len(asset))
+			fmt.Fprintf(w, `{"version": %q, "tag": "v%s", "date": "2026-11-07T10:00:00Z", "notes": %q, "localized_notes": {"zh-Hans": %q}, "assets": {%q: {"url": %q, "sha256": %q, "size": %d}}}`,
+				version, version, testNotes, testNotesZh, update.Platform(), srv.URL+"/Pinky.zip", hexenc.EncodeToString(h[:]), len(asset))
 		case "/Pinky.zip":
 			w.Write(asset)
 		default:
@@ -149,6 +153,23 @@ func TestUpdateCardThenUpdateNow(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "Restarting Pinky") {
 		t.Errorf("the card while restarting: %q", tt.Texts())
+	}
+}
+
+// TestReleaseNotesInTheAppsLanguage: the update card's release notes are
+// the feed's in the language the app shows.
+func TestReleaseNotesInTheAppsLanguage(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	ut.check(t)
+	tt := mg.NewTester(ut.view, 1280, 820)
+	inLanguage(t, "zh-Hans", tt)
+	tt.Frame()
+	if err := tt.Click(locales.UpdateWhatsNewIn("2026.1107.2")); err != nil {
+		t.Fatalf("%v: %q", err, tt.Texts())
+	}
+	tt.Frame()
+	if !hasText(tt, "镜像更快了") || hasText(tt, "Faster mirroring") {
+		t.Errorf("the release notes in Chinese: %q", tt.Texts())
 	}
 }
 
@@ -376,6 +397,41 @@ func TestWhatsNewAfterAnUpdate(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "Pinky updates itself") {
 		t.Errorf("Settings' What's new: %q", tt.Texts())
+	}
+}
+
+// TestWhatsNewInTheAppsLanguage: What's new shows the changelog's
+// translation into the app's language, with the dates in it, and the
+// English notes of a version the translation lacks.
+func TestWhatsNewInTheAppsLanguage(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	ut.u.Version, ut.opt.Version = "2026.1107.3", "2026.1107.3"
+	ut.opt.Changelog = strings.Replace(testChangelog, "## 2026.1107.2", "## 2026.1107.3 (2026-11-07)\n\n- Typing works\n\n## 2026.1107.2", 1)
+	ut.opt.ChangelogTranslations = map[string]string{"zh-Hans": "# 更新日志\n\n## 2026.1107.3 (2026-11-07)\n\n- 打字正常了\n\n## 2026.1107.1 (2026-11-06)\n\n- 第一个版本\n"}
+	ut.u.Change(func(s *update.State) { s.Launched("2026.1107.1") })
+	ut.u.Change(func(s *update.State) { s.Launched("2026.1107.3") })
+	tt := mg.NewTester(ut.view, 1280, 820)
+	inLanguage(t, "zh-Hans", tt)
+	tt.Frame()
+	if err := tt.Click(locales.UpdateNewsSee()); err != nil {
+		t.Fatalf("%v: %q", err, tt.Texts())
+	}
+	tt.Frame()
+	day := locales.DayOtherYear(time.Date(2026, 11, 7, 0, 0, 0, 0, time.UTC))
+	if !hasText(tt, "打字正常了") || !hasText(tt, "2026.1107.3 · "+day) || hasText(tt, "Typing works") {
+		t.Errorf("What's new in Chinese: %q", tt.Texts())
+	}
+	if !hasText(tt, "Pinky updates itself") {
+		t.Errorf("What's new leaves out the version without Chinese notes: %q", tt.Texts())
+	}
+	if hasText(tt, "第一个版本") {
+		t.Errorf("What's new shows the version that ran before: %q", tt.Texts())
+	}
+	// In English, the English notes.
+	inLanguage(t, "en", tt)
+	tt.Frame()
+	if !hasText(tt, "Typing works") || !hasText(tt, "2026.1107.3 · November 7, 2026") || hasText(tt, "打字正常了") {
+		t.Errorf("What's new in English: %q", tt.Texts())
 	}
 }
 

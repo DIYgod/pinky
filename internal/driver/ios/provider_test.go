@@ -25,12 +25,24 @@ func TestProviderEntries(t *testing.T) {
 	p := NewProvider()
 	got := p.entries(list)
 	if len(got) != 2 || got[0].Properties.SerialNumber != "a" || got[1].DeviceID != 4 {
-		t.Fatalf("entries without Wireless = %+v", got)
+		t.Fatalf("entries with Wi-Fi off = %+v", got)
 	}
-	p.Wireless = true
+	p.SetWiFi(true)
 	got = p.entries(list)
 	if len(got) != 3 || got[1].DeviceID != 4 || got[2].Properties.SerialNumber != "ipad" {
-		t.Fatalf("entries with Wireless = %+v", got)
+		t.Fatalf("entries with Wi-Fi on = %+v", got)
+	}
+	p.Forget("ipad")
+	if got = p.entries(list); len(got) != 2 {
+		t.Fatalf("entries with the iPad forgotten = %+v", got)
+	}
+	p.Remember("ipad")
+	if got = p.entries(list); len(got) != 3 {
+		t.Fatalf("entries with the iPad remembered = %+v", got)
+	}
+	p.Only = map[string]bool{"ipad": true}
+	if got = p.entries(list); len(got) != 1 || got[0].Properties.SerialNumber != "ipad" {
+		t.Fatalf("entries with Only = %+v", got)
 	}
 }
 

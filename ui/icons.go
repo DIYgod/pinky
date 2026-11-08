@@ -31,6 +31,7 @@ var (
 	icPerson   = icon(`<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>`)
 	icTouchID  = icon(`<path d="M12 11v3c0 2-.5 3.6-1.4 5"/><path d="M8.5 7.6A5 5 0 0 1 17 11v1.5"/><path d="M7 11.3a5 5 0 0 1 .4-2"/><path d="M7 14.5c0 1.4-.3 2.6-.9 3.6"/><path d="M17 15.5c0 1.5-.3 2.9-.8 4"/><path d="M14.8 13.5c0 2.6-.6 4.7-1.7 6.5"/><path d="M4.6 9.2a8.5 8.5 0 0 1 15.2-1.4"/>`)
 	icLock     = icon(`<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>`)
+	icWifi     = icon(`<path d="M12 20h.01"/><path d="M2 8.82a15 15 0 0 1 20 0"/><path d="M5 12.86a10 10 0 0 1 14 0"/><path d="M8.5 16.43a5 5 0 0 1 7 0"/>`)
 	icWifiOff  = icon(`<path d="M2 2l20 20"/><path d="M8.5 16a5 5 0 0 1 7 0"/><path d="M5 12.5a10 10 0 0 1 5.17-2.78"/><path d="M19 12.5a10 10 0 0 0-2.4-1.73"/><path d="M12 19.5h.01"/>`)
 	icSearch   = icon(`<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>`)
 	icPlay     = icon(`<path d="M7 4l13 8-13 8z"/>`)

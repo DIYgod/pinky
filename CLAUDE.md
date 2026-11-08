@@ -20,16 +20,17 @@ Whoever pushes to `main` decides whether the push is a release:
 
 To release:
 
-1. Write the notes in [CHANGELOG.md](CHANGELOG.md) under the `## Unreleased` heading at its top (add the heading when it is not there; notes of earlier pushes may already wait under it). Write short bullets in English for the people who use Pinky: what changed for them, not how. "Unlocking a phone from the computer now works when it asks for a fingerprint first", not "fix(android): handle the fingerprint prompt". Commit them with the change.
-2. On an up-to-date `main` with nothing else to commit, run
+1. Write the notes in [CHANGELOG.md](CHANGELOG.md) under the `## Unreleased` heading at its top (add the heading when it is not there; notes of earlier pushes may already wait under it). Write short bullets in English for the people who use Pinky: what changed for them, not how. "Unlocking a phone from the computer now works when it asks for a fingerprint first", not "fix(android): handle the fingerprint prompt".
+2. Write the same bullets in Simplified Chinese under `## Unreleased` at the top of [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md), one for each English bullet and in the same order: Pinky in Chinese shows these in What's new and on the update card. Write natural Chinese for users, with the app's own names for menus and buttons from `cmd/pinky/locales/zh-Hans.json` in 「」 ("「设置 › 手机」"), and a space between Chinese and Latin letters or digits, as [README.zh-CN.md](README.zh-CN.md) does. Commit both files with the change.
+3. On an up-to-date `main` with nothing else to commit, run
 
    ```sh
    scripts/release.sh tag -push -trailer "Co-Authored-By: <the line your commits end with>"
    ```
 
-   It gives the notes the next version, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together. The tag starts the release workflow, which builds, signs, notarizes and publishes the release, and the Homebrew tap picks up its cask; build nothing yourself. `-n` shows what it would do.
-3. If the push is refused because `origin/main` moved, the script undoes its commit and tag: `git pull --rebase origin main`, then run it again.
+   It gives the notes in both files the next version, commits `chore(release): <version>`, tags it `v<version>` and pushes `main` and the tag together. It refuses when CHANGELOG.zh-CN.md has no notes under `## Unreleased` or another number of bullets than CHANGELOG.md. The tag starts the release workflow, which builds, signs, notarizes and publishes the release, and the Homebrew tap picks up its cask; build nothing yourself. `-n` shows what it would do.
+4. If the push is refused because `origin/main` moved, the script undoes its commit and tag: `git pull --rebase origin main`, then run it again.
 
-A push that is not a release leaves `## Unreleased` as it is. Never change a released section's heading, never move or reuse a tag, and never push a `v*` tag other than through `scripts/release.sh tag`.
+A push that is not a release leaves `## Unreleased` as it is, in both files. Never change a released section's heading, never move or reuse a tag, and never push a `v*` tag other than through `scripts/release.sh tag`.
 
-Working on a branch that someone else merges? Leave CHANGELOG.md alone (parallel branches would conflict there) and end your report with the bullets you suggest for the notes; whoever merges and pushes writes them.
+Working on a branch that someone else merges? Leave CHANGELOG.md and CHANGELOG.zh-CN.md alone (parallel branches would conflict there) and end your report with the bullets you suggest for the notes, in English and in Chinese; whoever merges and pushes writes them.

@@ -79,6 +79,9 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 		// Steps in the person's words say it all, except why a mount
 		// failed.
 		w.detail = ck.Fix == driver.SetupDiskImage
+		if ck.Fix == driver.SetupDiskImageRefused && refusedOffersMirror(d.Info.DiskImage) {
+			w.note = locales.CheckDiskImageRefusedNote()
+		}
 		return w, true
 	case driver.CheckDeveloperMode:
 		if pass {
@@ -139,8 +142,19 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 	switch step {
 	case driver.SetupTrust:
+		if d.Info.Connection == "wifi" {
+			// The phone asks to trust a computer only on a cable.
+			return locales.AddPhoneIPhoneStepTrust(), locales.AddPhoneIPhoneTrustWiFi(d.Info.Name), ""
+		}
 		return locales.AddPhoneIPhoneStepTrust(), locales.AddPhoneIPhoneStepTrustDetail(), ""
+	case driver.SetupConfirmWiFi:
+		return locales.AddPhoneIPhoneFoundTitle(), locales.FoundDetail(), ""
+	case driver.SetupDeviceService:
+		return locales.LostTitle(d.Info.Name), locales.LostDetail(d.Info.Name), locales.LostManual()
 	case driver.SetupDeveloperMode:
+		if d.Info.Connection == "wifi" {
+			return locales.CheckDeveloperModeTitle(), locales.AddPhoneIPhoneStepDevModeDetail(), locales.AddPhoneIPhoneDevModeWiFiNote(d.Info.Name)
+		}
 		return locales.CheckDeveloperModeTitle(), locales.AddPhoneIPhoneStepDevModeDetail(), locales.AddPhoneIPhoneStepDevModeNote()
 	case driver.SetupUnlock:
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStepUnlock(), ""
@@ -154,6 +168,15 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.AddPhoneIPhoneNoImageTitle(), text, locales.CheckDiskImageDownloadNote()
 	case driver.SetupDiskImage:
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStuck(), locales.AddPhoneIPhoneRetrying()
+	case driver.SetupDiskImageRefused:
+		if d.Info.DiskImage == nil {
+			text := d.Info.Detail
+			if text == "" {
+				text = locales.AddPhoneIPhoneStuck()
+			}
+			return locales.AddPhoneIPhoneRefusedTitle(), text, locales.AddPhoneIPhoneRefusedRetry()
+		}
+		return locales.AddPhoneIPhoneRefusedTitle(), refusedWords(*d.Info.DiskImage), locales.AddPhoneIPhoneRefusedRetry()
 	case driver.SetupUpdate:
 		return locales.AddPhoneIPhoneTooOldTitle(d.Info.Name), locales.AddPhoneIPhoneTooOld(d.Info.OSVersion), ""
 	case driver.SetupPasscode:
@@ -170,6 +193,42 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.CheckHelperTitle(), locales.CheckHelperMissing(), ""
 	}
 	return "", "", ""
+}
+
+// refusedWords says which developer disk image Apple's signing server
+// would not sign (driver.SetupDiskImageRefused) and how to get one it
+// signs, by where the image came from.
+func refusedWords(img driver.DiskImage) string {
+	build, version := img.Build, img.Version
+	if build == "" {
+		build = "–"
+	}
+	if version == "" {
+		version = "–"
+	}
+	switch img.Source {
+	case driver.DiskImageFromXcode:
+		return locales.AddPhoneIPhoneRefusedXcode(build, version)
+	case driver.DiskImageFromMirror:
+		return locales.AddPhoneIPhoneRefusedMirror(build, version)
+	}
+	return locales.AddPhoneIPhoneRefusedFolder(img.Dir, build, version)
+}
+
+// refusedNeedsXcode reports whether the way to an image Apple signs, after
+// it refused img, is installing or updating Xcode from the App Store: for
+// Xcode's own image and the mirror's, on a Mac.
+func refusedNeedsXcode(img *driver.DiskImage) bool {
+	return guideOS == "darwin" && img != nil && (img.Source == driver.DiskImageFromXcode || img.Source == driver.DiskImageFromMirror)
+}
+
+// refusedOffersMirror reports whether the steps offer to download an image
+// from the third-party mirror after Apple refused img: when img came with
+// Xcode or was put in Pinky's folder. Not for the mirror's own download,
+// which says to update Xcode or Pinky, nor for PINKY_DDI's image, the only
+// one Pinky uses while it is set.
+func refusedOffersMirror(img *driver.DiskImage) bool {
+	return img != nil && (img.Source == driver.DiskImageFromXcode || img.Source == driver.DiskImageFromFolder)
 }
 
 // chooseConnection opens Settings › Phones, where an iPhone's connection
@@ -248,7 +307,7 @@ func helperReminderHeight(c *mg.Context, text, label string, width float32) floa
 func (a *app) iphoneCheckAction(c *mg.Context, d gateway.DeviceView, ck driver.Check) bool {
 	switch ck.Fix {
 	case driver.SetupTrust, driver.SetupDeveloperMode, driver.SetupUnlock, driver.SetupPreparing,
-		driver.SetupNoDiskImage, driver.SetupDiskImage:
+		driver.SetupNoDiskImage, driver.SetupDiskImage, driver.SetupDiskImageRefused:
 		mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
 			if button(c, locales.PhoneSetUpIPhone(), btnOpt{small: true}).Clicked() {
 				a.page = pageAddPhone

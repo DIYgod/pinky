@@ -447,6 +447,22 @@ func (msgs Messages) AddAndroidNoPrompt() string {
 	return Catalog.Format(msgs.locale, "addAndroidNoPrompt", nil)
 }
 
+// AddAndroidNoWirelessDebugging says "This phone has no Wireless debugging. To use it without the cable, keep it on this computer's Wi-Fi:"
+// in the language the app shows.
+//
+// Add phone › Android, last step, for a phone without Wireless debugging
+// on a cable: above the button wiFiUse.
+func AddAndroidNoWirelessDebugging() string { return In(i18n.Locale()).AddAndroidNoWirelessDebugging() }
+
+// AddAndroidNoWirelessDebugging says "This phone has no Wireless debugging. To use it without the cable, keep it on this computer's Wi-Fi:"
+// in the language of msgs.
+//
+// Add phone › Android, last step, for a phone without Wireless debugging
+// on a cable: above the button wiFiUse.
+func (msgs Messages) AddAndroidNoWirelessDebugging() string {
+	return Catalog.Format(msgs.locale, "addAndroidNoWirelessDebugging", nil)
+}
+
 // AddAndroidNotSeen says "Nothing yet? Check that USB debugging is on, unlock the phone, and try another cable or port."
 // in the language the app shows.
 //
@@ -717,6 +733,24 @@ func (msgs Messages) AddAndroidStepsLabel() string {
 	return Catalog.Format(msgs.locale, "addAndroidStepsLabel", nil)
 }
 
+// AddAndroidTailnet says "Phone not on this network? Use Tailscale"
+// in the language the app shows.
+//
+// Add phone › Android: the link next to addPhoneOrWiFi that opens the
+// steps to connect a phone through Tailscale, for a phone away from this
+// computer's network. Tailscale and tailnet are product words: keep them.
+func AddAndroidTailnet() string { return In(i18n.Locale()).AddAndroidTailnet() }
+
+// AddAndroidTailnet says "Phone not on this network? Use Tailscale"
+// in the language of msgs.
+//
+// Add phone › Android: the link next to addPhoneOrWiFi that opens the
+// steps to connect a phone through Tailscale, for a phone away from this
+// computer's network. Tailscale and tailnet are product words: keep them.
+func (msgs Messages) AddAndroidTailnet() string {
+	return Catalog.Format(msgs.locale, "addAndroidTailnet", nil)
+}
+
 // AddAndroidTitle says "Connect your Android phone"
 // in the language the app shows.
 //
@@ -937,6 +971,54 @@ func AddPhoneIPhoneDetail() string { return In(i18n.Locale()).AddPhoneIPhoneDeta
 // Add phone › iPhone: the line under the title, above the steps.
 func (msgs Messages) AddPhoneIPhoneDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneDetail", nil)
+}
+
+// AddPhoneIPhoneDevModeWiFiNote says "Don't see Developer Mode in Privacy & Security? Plug {name} in once: Pinky can make the switch appear only over the c…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the checkup: under the Developer Mode step of a
+// phone on Wi-Fi. name is its name.
+func AddPhoneIPhoneDevModeWiFiNote(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneDevModeWiFiNote(name)
+}
+
+// AddPhoneIPhoneDevModeWiFiNote says "Don't see Developer Mode in Privacy & Security? Plug {name} in once: Pinky can make the switch appear only over the c…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the checkup: under the Developer Mode step of a
+// phone on Wi-Fi. name is its name.
+func (msgs Messages) AddPhoneIPhoneDevModeWiFiNote(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneDevModeWiFiNote", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneFoundDetail says "Pinky leaves these alone until you say they're yours. If one is yours, choose Use: Pinky sets it up over Wi-Fi, no ca…"
+// in the language the app shows.
+//
+// Add phone › iPhone: under addPhoneIPhoneFoundTitle.
+func AddPhoneIPhoneFoundDetail() string { return In(i18n.Locale()).AddPhoneIPhoneFoundDetail() }
+
+// AddPhoneIPhoneFoundDetail says "Pinky leaves these alone until you say they're yours. If one is yours, choose Use: Pinky sets it up over Wi-Fi, no ca…"
+// in the language of msgs.
+//
+// Add phone › iPhone: under addPhoneIPhoneFoundTitle.
+func (msgs Messages) AddPhoneIPhoneFoundDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneFoundDetail", nil)
+}
+
+// AddPhoneIPhoneFoundTitle says "Found on Wi-Fi"
+// in the language the app shows.
+//
+// Add phone › iPhone: above the steps, the iPhones and iPads Pinky found
+// on Wi-Fi and has not used, each with Use and Ignore.
+func AddPhoneIPhoneFoundTitle() string { return In(i18n.Locale()).AddPhoneIPhoneFoundTitle() }
+
+// AddPhoneIPhoneFoundTitle says "Found on Wi-Fi"
+// in the language of msgs.
+//
+// Add phone › iPhone: above the steps, the iPhones and iPads Pinky found
+// on Wi-Fi and has not used, each with Use and Ignore.
+func (msgs Messages) AddPhoneIPhoneFoundTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneFoundTitle", nil)
 }
 
 // AddPhoneIPhoneGetXcode says "Get Xcode in the App Store"
@@ -1199,6 +1281,152 @@ func (msgs Messages) AddPhoneIPhoneNoImageTitle() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageTitle", nil)
 }
 
+// AddPhoneIPhoneRefusedFolder says "Pinky used the developer disk image in {folder}: build {build}, version {version}. Apple's signing server no longer s…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// is one the person put in a folder (Pinky's own, or the one the PINKY_DDI
+// environment variable names); for Pinky's own folder, the offer to
+// download an image from a third-party mirror instead
+// (addPhoneIPhoneMirrorTitle) comes below it. folder is that folder; build
+// is the Xcode build the image came with; version is the image's version,
+// or a dash when unknown. iOS_DDI is a folder name.
+func AddPhoneIPhoneRefusedFolder(folder string, build string, version string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneRefusedFolder(folder, build, version)
+}
+
+// AddPhoneIPhoneRefusedFolder says "Pinky used the developer disk image in {folder}: build {build}, version {version}. Apple's signing server no longer s…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// is one the person put in a folder (Pinky's own, or the one the PINKY_DDI
+// environment variable names); for Pinky's own folder, the offer to
+// download an image from a third-party mirror instead
+// (addPhoneIPhoneMirrorTitle) comes below it. folder is that folder; build
+// is the Xcode build the image came with; version is the image's version,
+// or a dash when unknown. iOS_DDI is a folder name.
+func (msgs Messages) AddPhoneIPhoneRefusedFolder(folder string, build string, version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedFolder", map[string]any{"folder": folder, "build": build, "version": version})
+}
+
+// AddPhoneIPhoneRefusedMirror says "Pinky used the developer disk image downloaded from the third-party mirror: build {build}, version {version}. Apple's…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// was downloaded from the third-party mirror (addPhoneIPhoneMirrorTitle).
+// build is the Xcode build the image came with; version is the image's
+// version, or a dash when unknown.
+func AddPhoneIPhoneRefusedMirror(build string, version string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneRefusedMirror(build, version)
+}
+
+// AddPhoneIPhoneRefusedMirror says "Pinky used the developer disk image downloaded from the third-party mirror: build {build}, version {version}. Apple's…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// was downloaded from the third-party mirror (addPhoneIPhoneMirrorTitle).
+// build is the Xcode build the image came with; version is the image's
+// version, or a dash when unknown.
+func (msgs Messages) AddPhoneIPhoneRefusedMirror(build string, version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedMirror", map[string]any{"build": build, "version": version})
+}
+
+// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as another image is on this computer."
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: a small note under the
+// box.
+func AddPhoneIPhoneRefusedRetry() string { return In(i18n.Locale()).AddPhoneIPhoneRefusedRetry() }
+
+// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as another image is on this computer."
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: a small note under the
+// box.
+func (msgs Messages) AddPhoneIPhoneRefusedRetry() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedRetry", nil)
+}
+
+// AddPhoneIPhoneRefusedTitle says "Apple won't sign this developer disk image"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the title of the box.
+func AddPhoneIPhoneRefusedTitle() string { return In(i18n.Locale()).AddPhoneIPhoneRefusedTitle() }
+
+// AddPhoneIPhoneRefusedTitle says "Apple won't sign this developer disk image"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the title of the box.
+func (msgs Messages) AddPhoneIPhoneRefusedTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedTitle", nil)
+}
+
+// AddPhoneIPhoneRefusedXcode says "Pinky used the developer disk image that Xcode installed on this Mac: build {build}, version {version}. Apple's signi…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// came with Xcode on this Mac; below it come the App Store link
+// (addPhoneIPhoneGetXcode) and the offer to download an image from a
+// third-party mirror instead (addPhoneIPhoneMirrorTitle). build is the
+// Xcode build the image came with; version is the image's version, or a
+// dash when unknown.
+func AddPhoneIPhoneRefusedXcode(build string, version string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneRefusedXcode(build, version)
+}
+
+// AddPhoneIPhoneRefusedXcode says "Pinky used the developer disk image that Xcode installed on this Mac: build {build}, version {version}. Apple's signi…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// came with Xcode on this Mac; below it come the App Store link
+// (addPhoneIPhoneGetXcode) and the offer to download an image from a
+// third-party mirror instead (addPhoneIPhoneMirrorTitle). build is the
+// Xcode build the image came with; version is the image's version, or a
+// dash when unknown.
+func (msgs Messages) AddPhoneIPhoneRefusedXcode(build string, version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedXcode", map[string]any{"build": build, "version": version})
+}
+
 // AddPhoneIPhoneRetrying says "Pinky tries again by itself."
 // in the language the app shows.
 //
@@ -1269,6 +1497,24 @@ func AddPhoneIPhoneStepDevModeNote() string { return In(i18n.Locale()).AddPhoneI
 // Pinky did.
 func (msgs Messages) AddPhoneIPhoneStepDevModeNote() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeNote", nil)
+}
+
+// AddPhoneIPhoneStepDevModeWiFi says "Done on the iPhone; if the switch isn't there, plug it in once"
+// in the language the app shows.
+//
+// Add phone › iPhone: under the Developer Mode step's title while Pinky
+// uses iPhones over Wi-Fi: the person turns it on, on the phone, over Wi-Fi
+// too, but only a cable lets Pinky make the hidden switch appear.
+func AddPhoneIPhoneStepDevModeWiFi() string { return In(i18n.Locale()).AddPhoneIPhoneStepDevModeWiFi() }
+
+// AddPhoneIPhoneStepDevModeWiFi says "Done on the iPhone; if the switch isn't there, plug it in once"
+// in the language of msgs.
+//
+// Add phone › iPhone: under the Developer Mode step's title while Pinky
+// uses iPhones over Wi-Fi: the person turns it on, on the phone, over Wi-Fi
+// too, but only a cable lets Pinky make the hidden switch appear.
+func (msgs Messages) AddPhoneIPhoneStepDevModeWiFi() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeWiFi", nil)
 }
 
 // AddPhoneIPhoneStepDriver says "Install Apple's iPhone driver"
@@ -1397,6 +1643,22 @@ func (msgs Messages) AddPhoneIPhoneStepPlugDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPlugDetail", nil)
 }
 
+// AddPhoneIPhoneStepPlugWiFi says "Once it trusts this computer, Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” d…"
+// in the language the app shows.
+//
+// Add phone › iPhone: a note under the plug-in step while Pinky uses
+// iPhones over Wi-Fi.
+func AddPhoneIPhoneStepPlugWiFi() string { return In(i18n.Locale()).AddPhoneIPhoneStepPlugWiFi() }
+
+// AddPhoneIPhoneStepPlugWiFi says "Once it trusts this computer, Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” d…"
+// in the language of msgs.
+//
+// Add phone › iPhone: a note under the plug-in step while Pinky uses
+// iPhones over Wi-Fi.
+func (msgs Messages) AddPhoneIPhoneStepPlugWiFi() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPlugWiFi", nil)
+}
+
 // AddPhoneIPhoneStepPrepare says "Prepare the iPhone"
 // in the language the app shows.
 //
@@ -1433,6 +1695,22 @@ func (msgs Messages) AddPhoneIPhoneStepPrepareDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPrepareDetail", nil)
 }
 
+// AddPhoneIPhoneStepPrepareWiFi says "Also works over Wi-Fi, more slowly"
+// in the language the app shows.
+//
+// Add phone › iPhone: under the title of the step where Pinky mounts the
+// developer disk image, while Pinky uses iPhones over Wi-Fi.
+func AddPhoneIPhoneStepPrepareWiFi() string { return In(i18n.Locale()).AddPhoneIPhoneStepPrepareWiFi() }
+
+// AddPhoneIPhoneStepPrepareWiFi says "Also works over Wi-Fi, more slowly"
+// in the language of msgs.
+//
+// Add phone › iPhone: under the title of the step where Pinky mounts the
+// developer disk image, while Pinky uses iPhones over Wi-Fi.
+func (msgs Messages) AddPhoneIPhoneStepPrepareWiFi() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPrepareWiFi", nil)
+}
+
 // AddPhoneIPhoneStepPreparing says "Preparing the iPhone…"
 // in the language the app shows.
 //
@@ -1465,6 +1743,20 @@ func (msgs Messages) AddPhoneIPhoneStepTrust() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrust", nil)
 }
 
+// AddPhoneIPhoneStepTrustCable says "This step needs the cable: an iPhone asks to trust a computer only while it's plugged in."
+// in the language the app shows.
+//
+// Add phone › iPhone: a note under the trust step.
+func AddPhoneIPhoneStepTrustCable() string { return In(i18n.Locale()).AddPhoneIPhoneStepTrustCable() }
+
+// AddPhoneIPhoneStepTrustCable says "This step needs the cable: an iPhone asks to trust a computer only while it's plugged in."
+// in the language of msgs.
+//
+// Add phone › iPhone: a note under the trust step.
+func (msgs Messages) AddPhoneIPhoneStepTrustCable() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustCable", nil)
+}
+
 // AddPhoneIPhoneStepTrustDetail says "When the iPhone asks “Trust This Computer?”, tap Trust and enter its passcode. If it does not ask, unlock it; if …"
 // in the language the app shows.
 //
@@ -1483,6 +1775,22 @@ func (msgs Messages) AddPhoneIPhoneStepTrustDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustDetail", nil)
 }
 
+// AddPhoneIPhoneStepTrustHint says "Needs the cable"
+// in the language the app shows.
+//
+// Add phone › iPhone: under the trust step's title while Pinky uses
+// iPhones over Wi-Fi: this step needs the iPhone plugged in.
+func AddPhoneIPhoneStepTrustHint() string { return In(i18n.Locale()).AddPhoneIPhoneStepTrustHint() }
+
+// AddPhoneIPhoneStepTrustHint says "Needs the cable"
+// in the language of msgs.
+//
+// Add phone › iPhone: under the trust step's title while Pinky uses
+// iPhones over Wi-Fi: this step needs the iPhone plugged in.
+func (msgs Messages) AddPhoneIPhoneStepTrustHint() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustHint", nil)
+}
+
 // AddPhoneIPhoneStepTrustWaiting says "Waiting for the iPhone to trust this computer…"
 // in the language the app shows.
 //
@@ -1499,6 +1807,26 @@ func AddPhoneIPhoneStepTrustWaiting() string {
 // step.
 func (msgs Messages) AddPhoneIPhoneStepTrustWaiting() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustWaiting", nil)
+}
+
+// AddPhoneIPhoneStepTrustWiFiOn says "Then Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does. Turning off Use iPho…"
+// in the language the app shows.
+//
+// Add phone › iPhone: a note under the trust step while Pinky uses
+// iPhones over Wi-Fi: Pinky turns on the iPhone's Wi-Fi connection
+// (lockdown's EnableWifiConnections, Finder's checkbox) once it trusts the
+// computer.
+func AddPhoneIPhoneStepTrustWiFiOn() string { return In(i18n.Locale()).AddPhoneIPhoneStepTrustWiFiOn() }
+
+// AddPhoneIPhoneStepTrustWiFiOn says "Then Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does. Turning off Use iPho…"
+// in the language of msgs.
+//
+// Add phone › iPhone: a note under the trust step while Pinky uses
+// iPhones over Wi-Fi: Pinky turns on the iPhone's Wi-Fi connection
+// (lockdown's EnableWifiConnections, Finder's checkbox) once it trusts the
+// computer.
+func (msgs Messages) AddPhoneIPhoneStepTrustWiFiOn() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustWiFiOn", nil)
 }
 
 // AddPhoneIPhoneStepUnlock says "Unlock the iPhone so Pinky can finish."
@@ -1631,6 +1959,42 @@ func AddPhoneIPhoneTooOldTitle(name string) string {
 // when the iPhone's iOS is too old. name is the iPhone's name.
 func (msgs Messages) AddPhoneIPhoneTooOldTitle(name string) string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneTooOldTitle", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneTrustWiFi says "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust."
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's page: an iPhone on Wi-Fi that no
+// longer trusts this computer. name is its name.
+func AddPhoneIPhoneTrustWiFi(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneTrustWiFi(name)
+}
+
+// AddPhoneIPhoneTrustWiFi says "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust."
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's page: an iPhone on Wi-Fi that no
+// longer trusts this computer. name is its name.
+func (msgs Messages) AddPhoneIPhoneTrustWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTrustWiFi", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneUnlockWiFi says "Unlock {name}: Pinky connects to it over Wi-Fi once it's unlocked."
+// in the language the app shows.
+//
+// Add phone › iPhone: the phone the steps follow is on Wi-Fi and locked.
+// name is its name.
+func AddPhoneIPhoneUnlockWiFi(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneUnlockWiFi(name)
+}
+
+// AddPhoneIPhoneUnlockWiFi says "Unlock {name}: Pinky connects to it over Wi-Fi once it's unlocked."
+// in the language of msgs.
+//
+// Add phone › iPhone: the phone the steps follow is on Wi-Fi and locked.
+// name is its name.
+func (msgs Messages) AddPhoneIPhoneUnlockWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneUnlockWiFi", map[string]any{"name": name})
 }
 
 // AddPhoneIPhoneUsbmuxdStopped says "Not showing up? usbmuxd is installed but not running. Plug the iPhone in again, or start it with sudo systemctl start…"
@@ -1937,6 +2301,386 @@ func AgentRequestAskedAt(time_ string) string { return In(i18n.Locale()).AgentRe
 // 03:51.
 func (msgs Messages) AgentRequestAskedAt(time_ string) string {
 	return Catalog.Format(msgs.locale, "agentRequestAskedAt", map[string]any{"time": time_})
+}
+
+// AwayBusy says "Setting up…"
+// in the language the app shows.
+//
+// Under awayTitle while it changes.
+func AwayBusy() string { return In(i18n.Locale()).AwayBusy() }
+
+// AwayBusy says "Setting up…"
+// in the language of msgs.
+//
+// Under awayTitle while it changes.
+func (msgs Messages) AwayBusy() string {
+	return Catalog.Format(msgs.locale, "awayBusy", nil)
+}
+
+// AwayDialogCancel says "Cancel"
+// in the language the app shows.
+//
+// The dialog's cancel button.
+func AwayDialogCancel() string { return In(i18n.Locale()).AwayDialogCancel() }
+
+// AwayDialogCancel says "Cancel"
+// in the language of msgs.
+//
+// The dialog's cancel button.
+func (msgs Messages) AwayDialogCancel() string {
+	return Catalog.Format(msgs.locale, "awayDialogCancel", nil)
+}
+
+// AwayDialogConfirm says "Turn on"
+// in the language the app shows.
+//
+// The dialog's button that turns it on.
+func AwayDialogConfirm() string { return In(i18n.Locale()).AwayDialogConfirm() }
+
+// AwayDialogConfirm says "Turn on"
+// in the language of msgs.
+//
+// The dialog's button that turns it on.
+func (msgs Messages) AwayDialogConfirm() string {
+	return Catalog.Format(msgs.locale, "awayDialogConfirm", nil)
+}
+
+// AwayDialogDrop says "The phone's connection drops for a moment while adb restarts."
+// in the language the app shows.
+//
+// The dialog: what happens as it turns on.
+func AwayDialogDrop() string { return In(i18n.Locale()).AwayDialogDrop() }
+
+// AwayDialogDrop says "The phone's connection drops for a moment while adb restarts."
+// in the language of msgs.
+//
+// The dialog: what happens as it turns on.
+func (msgs Messages) AwayDialogDrop() string {
+	return Catalog.Format(msgs.locale, "awayDialogDrop", nil)
+}
+
+// AwayDialogExposure says "The phone listens on every network it joins, not only Tailscale: on a café's Wi-Fi, another device there could ask t…"
+// in the language the app shows.
+//
+// The dialog: what it exposes.
+func AwayDialogExposure() string { return In(i18n.Locale()).AwayDialogExposure() }
+
+// AwayDialogExposure says "The phone listens on every network it joins, not only Tailscale: on a café's Wi-Fi, another device there could ask t…"
+// in the language of msgs.
+//
+// The dialog: what it exposes.
+func (msgs Messages) AwayDialogExposure() string {
+	return Catalog.Format(msgs.locale, "awayDialogExposure", nil)
+}
+
+// AwayDialogTitle says "Use {name} away from home?"
+// in the language the app shows.
+//
+// The dialog before turning Use away from home on: its title.
+func AwayDialogTitle(name string) string { return In(i18n.Locale()).AwayDialogTitle(name) }
+
+// AwayDialogTitle says "Use {name} away from home?"
+// in the language of msgs.
+//
+// The dialog before turning Use away from home on: its title.
+func (msgs Messages) AwayDialogTitle(name string) string {
+	return Catalog.Format(msgs.locale, "awayDialogTitle", map[string]any{"name": name})
+}
+
+// AwayDialogUntil says "It lasts until the phone restarts. Turn it off here any time; once it's off, you can turn it on again only while the …"
+// in the language the app shows.
+//
+// The dialog: how long it lasts and how to turn it off.
+func AwayDialogUntil() string { return In(i18n.Locale()).AwayDialogUntil() }
+
+// AwayDialogUntil says "It lasts until the phone restarts. Turn it off here any time; once it's off, you can turn it on again only while the …"
+// in the language of msgs.
+//
+// The dialog: how long it lasts and how to turn it off.
+func (msgs Messages) AwayDialogUntil() string {
+	return Catalog.Format(msgs.locale, "awayDialogUntil", nil)
+}
+
+// AwayDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it through Tailscale…"
+// in the language the app shows.
+//
+// The dialog: what turning it on does. adb tcpip is a command; keep it.
+func AwayDialogWhat() string { return In(i18n.Locale()).AwayDialogWhat() }
+
+// AwayDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it through Tailscale…"
+// in the language of msgs.
+//
+// The dialog: what turning it on does. adb tcpip is a command; keep it.
+func (msgs Messages) AwayDialogWhat() string {
+	return Catalog.Format(msgs.locale, "awayDialogWhat", nil)
+}
+
+// AwayFailed says "Couldn't change Use away from home for {name}: {error}"
+// in the language the app shows.
+//
+// When turning it on or off failed; error is in English.
+func AwayFailed(name string, error string) string { return In(i18n.Locale()).AwayFailed(name, error) }
+
+// AwayFailed says "Couldn't change Use away from home for {name}: {error}"
+// in the language of msgs.
+//
+// When turning it on or off failed; error is in English.
+func (msgs Messages) AwayFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "awayFailed", map[string]any{"name": name, "error": error})
+}
+
+// AwayHowTo says "Set up Tailscale"
+// in the language the app shows.
+//
+// Button by awayNoTailscaleHere, awayNoTailscalePhone and awayOtherTailnet:
+// opens Add phone › Android › Tailscale.
+func AwayHowTo() string { return In(i18n.Locale()).AwayHowTo() }
+
+// AwayHowTo says "Set up Tailscale"
+// in the language of msgs.
+//
+// Button by awayNoTailscaleHere, awayNoTailscalePhone and awayOtherTailnet:
+// opens Add phone › Android › Tailscale.
+func (msgs Messages) AwayHowTo() string {
+	return Catalog.Format(msgs.locale, "awayHowTo", nil)
+}
+
+// AwayKeepAwake says "Keep this computer awake for phones away"
+// in the language the app shows.
+//
+// Settings › Phones, under the phones: the switch's title.
+func AwayKeepAwake() string { return In(i18n.Locale()).AwayKeepAwake() }
+
+// AwayKeepAwake says "Keep this computer awake for phones away"
+// in the language of msgs.
+//
+// Settings › Phones, under the phones: the switch's title.
+func (msgs Messages) AwayKeepAwake() string {
+	return Catalog.Format(msgs.locale, "awayKeepAwake", nil)
+}
+
+// AwayKeepAwakeDesc says "While a phone is connected through Tailscale, this computer doesn't sleep when idle, so agents can reach the phone. A…"
+// in the language the app shows.
+//
+// Under awayKeepAwake.
+func AwayKeepAwakeDesc() string { return In(i18n.Locale()).AwayKeepAwakeDesc() }
+
+// AwayKeepAwakeDesc says "While a phone is connected through Tailscale, this computer doesn't sleep when idle, so agents can reach the phone. A…"
+// in the language of msgs.
+//
+// Under awayKeepAwake.
+func (msgs Messages) AwayKeepAwakeDesc() string {
+	return Catalog.Format(msgs.locale, "awayKeepAwakeDesc", nil)
+}
+
+// AwayNoTailscaleHere says "Needs Tailscale on this computer, signed in."
+// in the language the app shows.
+//
+// Under awayTitle when Tailscale does not run on this computer.
+func AwayNoTailscaleHere() string { return In(i18n.Locale()).AwayNoTailscaleHere() }
+
+// AwayNoTailscaleHere says "Needs Tailscale on this computer, signed in."
+// in the language of msgs.
+//
+// Under awayTitle when Tailscale does not run on this computer.
+func (msgs Messages) AwayNoTailscaleHere() string {
+	return Catalog.Format(msgs.locale, "awayNoTailscaleHere", nil)
+}
+
+// AwayNoTailscalePhone says "Tailscale isn't connected on {name}. Install it there, open it and sign in to the same account as on this computer."
+// in the language the app shows.
+//
+// Under awayTitle when the phone has no Tailscale connection: Tailscale is
+// not installed, signed out or off on it, or another VPN is on instead.
+// awayOneVPN follows.
+func AwayNoTailscalePhone(name string) string { return In(i18n.Locale()).AwayNoTailscalePhone(name) }
+
+// AwayNoTailscalePhone says "Tailscale isn't connected on {name}. Install it there, open it and sign in to the same account as on this computer."
+// in the language of msgs.
+//
+// Under awayTitle when the phone has no Tailscale connection: Tailscale is
+// not installed, signed out or off on it, or another VPN is on instead.
+// awayOneVPN follows.
+func (msgs Messages) AwayNoTailscalePhone(name string) string {
+	return Catalog.Format(msgs.locale, "awayNoTailscalePhone", map[string]any{"name": name})
+}
+
+// AwayNotConnected says "Connect {name} by cable or on this computer's Wi-Fi to set it up."
+// in the language the app shows.
+//
+// Under awayTitle when the phone is not connected.
+func AwayNotConnected(name string) string { return In(i18n.Locale()).AwayNotConnected(name) }
+
+// AwayNotConnected says "Connect {name} by cable or on this computer's Wi-Fi to set it up."
+// in the language of msgs.
+//
+// Under awayTitle when the phone is not connected.
+func (msgs Messages) AwayNotConnected(name string) string {
+	return Catalog.Format(msgs.locale, "awayNotConnected", map[string]any{"name": name})
+}
+
+// AwayOffDesc says "Reach {name} through Tailscale when it's away from this computer's network."
+// in the language the app shows.
+//
+// Under awayTitle while it is off.
+func AwayOffDesc(name string) string { return In(i18n.Locale()).AwayOffDesc(name) }
+
+// AwayOffDesc says "Reach {name} through Tailscale when it's away from this computer's network."
+// in the language of msgs.
+//
+// Under awayTitle while it is off.
+func (msgs Messages) AwayOffDesc(name string) string {
+	return Catalog.Format(msgs.locale, "awayOffDesc", map[string]any{"name": name})
+}
+
+// AwayOnDesc says "On. When {name} is away from this computer's network, Pinky reaches it through Tailscale at {addr}."
+// in the language the app shows.
+//
+// Under awayTitle while it is on: addr is the phone's Tailscale address.
+func AwayOnDesc(name string, addr string) string { return In(i18n.Locale()).AwayOnDesc(name, addr) }
+
+// AwayOnDesc says "On. When {name} is away from this computer's network, Pinky reaches it through Tailscale at {addr}."
+// in the language of msgs.
+//
+// Under awayTitle while it is on: addr is the phone's Tailscale address.
+func (msgs Messages) AwayOnDesc(name string, addr string) string {
+	return Catalog.Format(msgs.locale, "awayOnDesc", map[string]any{"name": name, "addr": addr})
+}
+
+// AwayOneVPN says "Android runs one VPN at a time: while another VPN or proxy app is on, Tailscale is off. Turn that one off, then turn …"
+// in the language the app shows.
+//
+// Under awayNoTailscalePhone, and under the phone's step of the Tailscale
+// steps (tailnetPhoneSteps): why Tailscale can be off on a phone that has
+// it.
+func AwayOneVPN() string { return In(i18n.Locale()).AwayOneVPN() }
+
+// AwayOneVPN says "Android runs one VPN at a time: while another VPN or proxy app is on, Tailscale is off. Turn that one off, then turn …"
+// in the language of msgs.
+//
+// Under awayNoTailscalePhone, and under the phone's step of the Tailscale
+// steps (tailnetPhoneSteps): why Tailscale can be off on a phone that has
+// it.
+func (msgs Messages) AwayOneVPN() string {
+	return Catalog.Format(msgs.locale, "awayOneVPN", nil)
+}
+
+// AwayOtherTailnet says "{name}'s Tailscale is signed in to another tailnet than this computer's. Sign in to the same account on both."
+// in the language the app shows.
+//
+// Under awayTitle when the phone's Tailscale is connected, but to another
+// tailnet (another account) than this computer's.
+func AwayOtherTailnet(name string) string { return In(i18n.Locale()).AwayOtherTailnet(name) }
+
+// AwayOtherTailnet says "{name}'s Tailscale is signed in to another tailnet than this computer's. Sign in to the same account on both."
+// in the language of msgs.
+//
+// Under awayTitle when the phone's Tailscale is connected, but to another
+// tailnet (another account) than this computer's.
+func (msgs Messages) AwayOtherTailnet(name string) string {
+	return Catalog.Format(msgs.locale, "awayOtherTailnet", map[string]any{"name": name})
+}
+
+// AwayStoppedDesc says "{name}'s adb stopped listening on the network, as it does when the phone restarts. Turn it on again before you leave."
+// in the language the app shows.
+//
+// Under awayTitle while it is on but the phone's adb no longer listens.
+func AwayStoppedDesc(name string) string { return In(i18n.Locale()).AwayStoppedDesc(name) }
+
+// AwayStoppedDesc says "{name}'s adb stopped listening on the network, as it does when the phone restarts. Turn it on again before you leave."
+// in the language of msgs.
+//
+// Under awayTitle while it is on but the phone's adb no longer listens.
+func (msgs Messages) AwayStoppedDesc(name string) string {
+	return Catalog.Format(msgs.locale, "awayStoppedDesc", map[string]any{"name": name})
+}
+
+// AwayTitle says "Use away from home"
+// in the language the app shows.
+//
+// Settings › Phones, per Android phone: the title of the setting that
+// reaches the phone through Tailscale when it is away from this computer's
+// network.
+func AwayTitle() string { return In(i18n.Locale()).AwayTitle() }
+
+// AwayTitle says "Use away from home"
+// in the language of msgs.
+//
+// Settings › Phones, per Android phone: the title of the setting that
+// reaches the phone through Tailscale when it is away from this computer's
+// network.
+func (msgs Messages) AwayTitle() string {
+	return Catalog.Format(msgs.locale, "awayTitle", nil)
+}
+
+// AwayTurnOff says "Turn off"
+// in the language the app shows.
+//
+// Button: turns Use away from home off.
+func AwayTurnOff() string { return In(i18n.Locale()).AwayTurnOff() }
+
+// AwayTurnOff says "Turn off"
+// in the language of msgs.
+//
+// Button: turns Use away from home off.
+func (msgs Messages) AwayTurnOff() string {
+	return Catalog.Format(msgs.locale, "awayTurnOff", nil)
+}
+
+// AwayTurnOn says "Turn on…"
+// in the language the app shows.
+//
+// Button: opens the dialog that turns Use away from home on.
+func AwayTurnOn() string { return In(i18n.Locale()).AwayTurnOn() }
+
+// AwayTurnOn says "Turn on…"
+// in the language of msgs.
+//
+// Button: opens the dialog that turns Use away from home on.
+func (msgs Messages) AwayTurnOn() string {
+	return Catalog.Format(msgs.locale, "awayTurnOn", nil)
+}
+
+// AwayTurnOnAgain says "Turn on again"
+// in the language the app shows.
+//
+// Button by awayStoppedDesc.
+func AwayTurnOnAgain() string { return In(i18n.Locale()).AwayTurnOnAgain() }
+
+// AwayTurnOnAgain says "Turn on again"
+// in the language of msgs.
+//
+// Button by awayStoppedDesc.
+func (msgs Messages) AwayTurnOnAgain() string {
+	return Catalog.Format(msgs.locale, "awayTurnOnAgain", nil)
+}
+
+// AwayTurnedOff says "Use away from home is off for {name}"
+// in the language the app shows.
+//
+// A toast once Use away from home is off.
+func AwayTurnedOff(name string) string { return In(i18n.Locale()).AwayTurnedOff(name) }
+
+// AwayTurnedOff says "Use away from home is off for {name}"
+// in the language of msgs.
+//
+// A toast once Use away from home is off.
+func (msgs Messages) AwayTurnedOff(name string) string {
+	return Catalog.Format(msgs.locale, "awayTurnedOff", map[string]any{"name": name})
+}
+
+// AwayTurnedOn says "{name} can now be used away from home"
+// in the language the app shows.
+//
+// A toast once Use away from home is on.
+func AwayTurnedOn(name string) string { return In(i18n.Locale()).AwayTurnedOn(name) }
+
+// AwayTurnedOn says "{name} can now be used away from home"
+// in the language of msgs.
+//
+// A toast once Use away from home is on.
+func (msgs Messages) AwayTurnedOn(name string) string {
+	return Catalog.Format(msgs.locale, "awayTurnedOn", map[string]any{"name": name})
 }
 
 // BackgroundChangeFailed says "Couldn't change background work on {phone}: {reason}"
@@ -2695,6 +3439,22 @@ func (msgs Messages) CheckConnectionFail(name string) string {
 	return Catalog.Format(msgs.locale, "checkConnectionFail", map[string]any{"name": name})
 }
 
+// CheckConnectionTailscale says "Connected through Tailscale."
+// in the language the app shows.
+//
+// The checkup, connection: passed, through Tailscale (the phone is away
+// from this computer's network).
+func CheckConnectionTailscale() string { return In(i18n.Locale()).CheckConnectionTailscale() }
+
+// CheckConnectionTailscale says "Connected through Tailscale."
+// in the language of msgs.
+//
+// The checkup, connection: passed, through Tailscale (the phone is away
+// from this computer's network).
+func (msgs Messages) CheckConnectionTailscale() string {
+	return Catalog.Format(msgs.locale, "checkConnectionTailscale", nil)
+}
+
 // CheckConnectionTitle says "Connection"
 // in the language the app shows.
 //
@@ -2785,6 +3545,34 @@ func CheckDiskImageDownloadNote() string { return In(i18n.Locale()).CheckDiskIma
 // download from a third-party mirror.
 func (msgs Messages) CheckDiskImageDownloadNote() string {
 	return Catalog.Format(msgs.locale, "checkDiskImageDownloadNote", nil)
+}
+
+// CheckDiskImageRefusedNote says "Show the steps to download an image from a third-party mirror instead. Pinky tries again by itself as soon as another…"
+// in the language the app shows.
+//
+// The phone's checkup, under the developer disk image item when Apple's
+// signing server refused to sign the image that came with Xcode on this Mac
+// (addPhoneIPhoneRefusedXcode) or one the person put in Pinky's folder
+// (addPhoneIPhoneRefusedFolder): a note saying that the setup steps (the
+// button phoneSetUpIPhone) also offer to download an image from a
+// third-party mirror (addPhoneIPhoneMirrorTitle), and that Pinky tries
+// again once another image is there. Say it as checkDiskImageDownloadNote
+// does.
+func CheckDiskImageRefusedNote() string { return In(i18n.Locale()).CheckDiskImageRefusedNote() }
+
+// CheckDiskImageRefusedNote says "Show the steps to download an image from a third-party mirror instead. Pinky tries again by itself as soon as another…"
+// in the language of msgs.
+//
+// The phone's checkup, under the developer disk image item when Apple's
+// signing server refused to sign the image that came with Xcode on this Mac
+// (addPhoneIPhoneRefusedXcode) or one the person put in Pinky's folder
+// (addPhoneIPhoneRefusedFolder): a note saying that the setup steps (the
+// button phoneSetUpIPhone) also offer to download an image from a
+// third-party mirror (addPhoneIPhoneMirrorTitle), and that Pinky tries
+// again once another image is there. Say it as checkDiskImageDownloadNote
+// does.
+func (msgs Messages) CheckDiskImageRefusedNote() string {
+	return Catalog.Format(msgs.locale, "checkDiskImageRefusedNote", nil)
 }
 
 // CheckDiskImageMissing says "Not mounted, so the iPhone doesn't offer what Pinky needs."
@@ -3465,6 +4253,108 @@ func CheckWiFiFail() string { return In(i18n.Locale()).CheckWiFiFail() }
 // The checkup, Wi-Fi: failed.
 func (msgs Messages) CheckWiFiFail() string {
 	return Catalog.Format(msgs.locale, "checkWiFiFail", nil)
+}
+
+// CheckWiFiIPhoneFail says "Pinky couldn't turn on its Wi-Fi connection. Plug it in again to try once more, or tick “Show this iPhone when on W…"
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky could not turn on
+// the phone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's
+// checkbox); the error shows under it.
+func CheckWiFiIPhoneFail() string { return In(i18n.Locale()).CheckWiFiIPhoneFail() }
+
+// CheckWiFiIPhoneFail says "Pinky couldn't turn on its Wi-Fi connection. Plug it in again to try once more, or tick “Show this iPhone when on W…"
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky could not turn on
+// the phone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's
+// checkbox); the error shows under it.
+func (msgs Messages) CheckWiFiIPhoneFail() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneFail", nil)
+}
+
+// CheckWiFiIPhoneNotSeen says "Its Wi-Fi connection is on, but this computer doesn't see it on Wi-Fi. Check that both are on the same Wi-Fi network:…"
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: the phone's Wi-Fi
+// connection is on, but the computer's device service does not list it over
+// the network.
+func CheckWiFiIPhoneNotSeen() string { return In(i18n.Locale()).CheckWiFiIPhoneNotSeen() }
+
+// CheckWiFiIPhoneNotSeen says "Its Wi-Fi connection is on, but this computer doesn't see it on Wi-Fi. Check that both are on the same Wi-Fi network:…"
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: the phone's Wi-Fi
+// connection is on, but the computer's device service does not list it over
+// the network.
+func (msgs Messages) CheckWiFiIPhoneNotSeen() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneNotSeen", nil)
+}
+
+// CheckWiFiIPhoneOff says "Use iPhones and iPads over Wi-Fi is off in Settings › Phones, so Pinky leaves its Wi-Fi connection as it is."
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky's Wi-Fi setting is
+// off, so it did not look at the phone's Wi-Fi connection.
+func CheckWiFiIPhoneOff() string { return In(i18n.Locale()).CheckWiFiIPhoneOff() }
+
+// CheckWiFiIPhoneOff says "Use iPhones and iPads over Wi-Fi is off in Settings › Phones, so Pinky leaves its Wi-Fi connection as it is."
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky's Wi-Fi setting is
+// off, so it did not look at the phone's Wi-Fi connection.
+func (msgs Messages) CheckWiFiIPhoneOff() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneOff", nil)
+}
+
+// CheckWiFiIPhoneSeen says "Its Wi-Fi connection is on, and this computer sees it on Wi-Fi: unplugged, it keeps working while it's on the same Wi…"
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, while the phone is on its
+// cable and also listed over the network.
+func CheckWiFiIPhoneSeen() string { return In(i18n.Locale()).CheckWiFiIPhoneSeen() }
+
+// CheckWiFiIPhoneSeen says "Its Wi-Fi connection is on, and this computer sees it on Wi-Fi: unplugged, it keeps working while it's on the same Wi…"
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, while the phone is on its
+// cable and also listed over the network.
+func (msgs Messages) CheckWiFiIPhoneSeen() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneSeen", nil)
+}
+
+// CheckWiFiIPhoneTurnedOn says "Pinky turned it on when you plugged it in, as Finder's “Show this iPhone when on Wi-Fi” does."
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, a note under the Wi-Fi item: Pinky turned
+// on the phone's Wi-Fi connection itself.
+func CheckWiFiIPhoneTurnedOn() string { return In(i18n.Locale()).CheckWiFiIPhoneTurnedOn() }
+
+// CheckWiFiIPhoneTurnedOn says "Pinky turned it on when you plugged it in, as Finder's “Show this iPhone when on Wi-Fi” does."
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, a note under the Wi-Fi item: Pinky turned
+// on the phone's Wi-Fi connection itself.
+func (msgs Messages) CheckWiFiIPhoneTurnedOn() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneTurnedOn", nil)
+}
+
+// CheckWiFiIPhoneUnknown says "Pinky turns on its Wi-Fi connection once it's plugged in and trusts this computer."
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, before Pinky could look at
+// the phone's Wi-Fi connection (not plugged in since Pinky started, or not
+// trusting the computer yet).
+func CheckWiFiIPhoneUnknown() string { return In(i18n.Locale()).CheckWiFiIPhoneUnknown() }
+
+// CheckWiFiIPhoneUnknown says "Pinky turns on its Wi-Fi connection once it's plugged in and trusts this computer."
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, before Pinky could look at
+// the phone's Wi-Fi connection (not plugged in since Pinky started, or not
+// trusting the computer yet).
+func (msgs Messages) CheckWiFiIPhoneUnknown() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneUnknown", nil)
 }
 
 // CheckWiFiOld says "Pairing over Wi-Fi needs Android 11 or later (this phone has Android {version}). Use USB."
@@ -6489,6 +7379,182 @@ func (msgs Messages) FlyoutUnlock() string {
 	return Catalog.Format(msgs.locale, "flyoutUnlock", nil)
 }
 
+// FoundDetail says "It's on the same Wi-Fi as this computer and was set up before to connect to it over Wi-Fi, in Finder, Xcode or Pinky.…"
+// in the language the app shows.
+//
+// Under foundTitle, and in Add phone and the checkup: why Pinky waits for
+// the person.
+func FoundDetail() string { return In(i18n.Locale()).FoundDetail() }
+
+// FoundDetail says "It's on the same Wi-Fi as this computer and was set up before to connect to it over Wi-Fi, in Finder, Xcode or Pinky.…"
+// in the language of msgs.
+//
+// Under foundTitle, and in Add phone and the checkup: why Pinky waits for
+// the person.
+func (msgs Messages) FoundDetail() string {
+	return Catalog.Format(msgs.locale, "foundDetail", nil)
+}
+
+// FoundIgnore says "Ignore"
+// in the language the app shows.
+//
+// The button that leaves a phone Pinky found on Wi-Fi alone: it goes off
+// the list until it is plugged in.
+func FoundIgnore() string { return In(i18n.Locale()).FoundIgnore() }
+
+// FoundIgnore says "Ignore"
+// in the language of msgs.
+//
+// The button that leaves a phone Pinky found on Wi-Fi alone: it goes off
+// the list until it is plugged in.
+func (msgs Messages) FoundIgnore() string {
+	return Catalog.Format(msgs.locale, "foundIgnore", nil)
+}
+
+// FoundIgnoreFailed says "Couldn't ignore {name}: {error}"
+// in the language the app shows.
+//
+// A notice when choosing Ignore for a phone found on Wi-Fi failed. name is
+// the phone's name, error what went wrong.
+func FoundIgnoreFailed(name string, error string) string {
+	return In(i18n.Locale()).FoundIgnoreFailed(name, error)
+}
+
+// FoundIgnoreFailed says "Couldn't ignore {name}: {error}"
+// in the language of msgs.
+//
+// A notice when choosing Ignore for a phone found on Wi-Fi failed. name is
+// the phone's name, error what went wrong.
+func (msgs Messages) FoundIgnoreFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "foundIgnoreFailed", map[string]any{"name": name, "error": error})
+}
+
+// FoundIgnoreLabel says "Ignore {name}"
+// in the language the app shows.
+//
+// What assistive technology reads for foundIgnore. name is the phone's
+// name.
+func FoundIgnoreLabel(name string) string { return In(i18n.Locale()).FoundIgnoreLabel(name) }
+
+// FoundIgnoreLabel says "Ignore {name}"
+// in the language of msgs.
+//
+// What assistive technology reads for foundIgnore. name is the phone's
+// name.
+func (msgs Messages) FoundIgnoreLabel(name string) string {
+	return Catalog.Format(msgs.locale, "foundIgnoreLabel", map[string]any{"name": name})
+}
+
+// FoundIgnoreNote says "If you ignore it, it stays off the list until you plug it into this computer."
+// in the language the app shows.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi.
+func FoundIgnoreNote() string { return In(i18n.Locale()).FoundIgnoreNote() }
+
+// FoundIgnoreNote says "If you ignore it, it stays off the list until you plug it into this computer."
+// in the language of msgs.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi.
+func (msgs Messages) FoundIgnoreNote() string {
+	return Catalog.Format(msgs.locale, "foundIgnoreNote", nil)
+}
+
+// FoundIgnored says "Ignoring {name}. To use it after all, plug it in."
+// in the language the app shows.
+//
+// A notice after the person chose Ignore for a phone found on Wi-Fi. name
+// is the phone's name.
+func FoundIgnored(name string) string { return In(i18n.Locale()).FoundIgnored(name) }
+
+// FoundIgnored says "Ignoring {name}. To use it after all, plug it in."
+// in the language of msgs.
+//
+// A notice after the person chose Ignore for a phone found on Wi-Fi. name
+// is the phone's name.
+func (msgs Messages) FoundIgnored(name string) string {
+	return Catalog.Format(msgs.locale, "foundIgnored", map[string]any{"name": name})
+}
+
+// FoundTitle says "Found {phone} on Wi-Fi"
+// in the language the app shows.
+//
+// The page of a phone Pinky found on Wi-Fi and has not used. phone is its
+// name.
+func FoundTitle(phone string) string { return In(i18n.Locale()).FoundTitle(phone) }
+
+// FoundTitle says "Found {phone} on Wi-Fi"
+// in the language of msgs.
+//
+// The page of a phone Pinky found on Wi-Fi and has not used. phone is its
+// name.
+func (msgs Messages) FoundTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "foundTitle", map[string]any{"phone": phone})
+}
+
+// FoundUse says "Use"
+// in the language the app shows.
+//
+// The button that lets Pinky use a phone it found on Wi-Fi: the person says
+// it is theirs. Pinky then sets it up and connects to it.
+func FoundUse() string { return In(i18n.Locale()).FoundUse() }
+
+// FoundUse says "Use"
+// in the language of msgs.
+//
+// The button that lets Pinky use a phone it found on Wi-Fi: the person says
+// it is theirs. Pinky then sets it up and connects to it.
+func (msgs Messages) FoundUse() string {
+	return Catalog.Format(msgs.locale, "foundUse", nil)
+}
+
+// FoundUseFailed says "Couldn't use {name}: {error}"
+// in the language the app shows.
+//
+// A notice when choosing Use for a phone found on Wi-Fi failed. name is the
+// phone's name, error what went wrong.
+func FoundUseFailed(name string, error string) string {
+	return In(i18n.Locale()).FoundUseFailed(name, error)
+}
+
+// FoundUseFailed says "Couldn't use {name}: {error}"
+// in the language of msgs.
+//
+// A notice when choosing Use for a phone found on Wi-Fi failed. name is the
+// phone's name, error what went wrong.
+func (msgs Messages) FoundUseFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "foundUseFailed", map[string]any{"name": name, "error": error})
+}
+
+// FoundUseLabel says "Use {name}"
+// in the language the app shows.
+//
+// What assistive technology reads for foundUse. name is the phone's name.
+func FoundUseLabel(name string) string { return In(i18n.Locale()).FoundUseLabel(name) }
+
+// FoundUseLabel says "Use {name}"
+// in the language of msgs.
+//
+// What assistive technology reads for foundUse. name is the phone's name.
+func (msgs Messages) FoundUseLabel(name string) string {
+	return Catalog.Format(msgs.locale, "foundUseLabel", map[string]any{"name": name})
+}
+
+// FoundUseNote says "Pinky then sets it up over Wi-Fi; a step that needs the cable says so."
+// in the language the app shows.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi: what Use
+// does.
+func FoundUseNote() string { return In(i18n.Locale()).FoundUseNote() }
+
+// FoundUseNote says "Pinky then sets it up over Wi-Fi; a step that needs the cable says so."
+// in the language of msgs.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi: what Use
+// does.
+func (msgs Messages) FoundUseNote() string {
+	return Catalog.Format(msgs.locale, "foundUseNote", nil)
+}
+
 // GuideHonorAbout says "Settings › About phone"
 // in the language the app shows.
 //
@@ -8205,6 +9271,24 @@ func (msgs Messages) GwDoPress(key string) string {
 	return Catalog.Format(msgs.locale, "gwDoPress", map[string]any{"key": key})
 }
 
+// GwDoReceiveFile says "receive “{path}” from the agent"
+// in the language the app shows.
+//
+// What a step tried: take a file the agent sent (phone_files upload) into
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDoReceiveFile(path string) string { return In(i18n.Locale()).GwDoReceiveFile(path) }
+
+// GwDoReceiveFile says "receive “{path}” from the agent"
+// in the language of msgs.
+//
+// What a step tried: take a file the agent sent (phone_files upload) into
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoReceiveFile(path string) string {
+	return Catalog.Format(msgs.locale, "gwDoReceiveFile", map[string]any{"path": path})
+}
+
 // GwDoSwipe says "swipe {direction}"
 // in the language the app shows.
 //
@@ -8815,6 +9899,42 @@ func (msgs Messages) GwStatusBackground(work string) string {
 	return Catalog.Format(msgs.locale, "gwStatusBackground", map[string]any{"work": work})
 }
 
+// GwStatusConnecting says "Connecting"
+// in the language the app shows.
+//
+// A phone's status line while Pinky opens it (listed and ready, online in a
+// moment). Shown only in other languages; in English the gateway's own
+// words show.
+func GwStatusConnecting() string { return In(i18n.Locale()).GwStatusConnecting() }
+
+// GwStatusConnecting says "Connecting"
+// in the language of msgs.
+//
+// A phone's status line while Pinky opens it (listed and ready, online in a
+// moment). Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStatusConnecting() string {
+	return Catalog.Format(msgs.locale, "gwStatusConnecting", nil)
+}
+
+// GwStatusFoundOnWiFi says "Found on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: Pinky found it on Wi-Fi and waits for the person
+// to say whether it is theirs. Shown only in other languages; in English
+// the gateway's own words show.
+func GwStatusFoundOnWiFi() string { return In(i18n.Locale()).GwStatusFoundOnWiFi() }
+
+// GwStatusFoundOnWiFi says "Found on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: Pinky found it on Wi-Fi and waits for the person
+// to say whether it is theirs. Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwStatusFoundOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusFoundOnWiFi", nil)
+}
+
 // GwStatusIdle says "Idle"
 // in the language the app shows.
 //
@@ -8881,6 +10001,26 @@ func (msgs Messages) GwStatusLocked() string {
 	return Catalog.Format(msgs.locale, "gwStatusLocked", nil)
 }
 
+// GwStatusLockedOnWiFi says "Locked on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: an iPhone or iPad on Wi-Fi that is locked, which
+// Pinky connects to only once it is unlocked (so as not to wake its
+// screen). Shown only in other languages; in English the gateway's own
+// words show.
+func GwStatusLockedOnWiFi() string { return In(i18n.Locale()).GwStatusLockedOnWiFi() }
+
+// GwStatusLockedOnWiFi says "Locked on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: an iPhone or iPad on Wi-Fi that is locked, which
+// Pinky connects to only once it is unlocked (so as not to wake its
+// screen). Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStatusLockedOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusLockedOnWiFi", nil)
+}
+
 // GwStatusLockedTask says "Locked · unlock to continue {task}"
 // in the language the app shows.
 //
@@ -8895,6 +10035,56 @@ func GwStatusLockedTask(task string) string { return In(i18n.Locale()).GwStatusL
 // in other languages; in English the gateway's own words show.
 func (msgs Messages) GwStatusLockedTask(task string) string {
 	return Catalog.Format(msgs.locale, "gwStatusLockedTask", map[string]any{"task": task})
+}
+
+// GwStatusLostOnWiFi says "Lost on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: the Mac's device service (usbmuxd) stopped listing
+// an iPhone that is on the same Wi-Fi. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStatusLostOnWiFi() string { return In(i18n.Locale()).GwStatusLostOnWiFi() }
+
+// GwStatusLostOnWiFi says "Lost on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: the Mac's device service (usbmuxd) stopped listing
+// an iPhone that is on the same Wi-Fi. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStatusLostOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusLostOnWiFi", nil)
+}
+
+// GwStatusMovingCable says "Moving to the cable"
+// in the language the app shows.
+//
+// A phone's status line while Pinky opens it again over its cable after it
+// was plugged in. Shown only in other languages.
+func GwStatusMovingCable() string { return In(i18n.Locale()).GwStatusMovingCable() }
+
+// GwStatusMovingCable says "Moving to the cable"
+// in the language of msgs.
+//
+// A phone's status line while Pinky opens it again over its cable after it
+// was plugged in. Shown only in other languages.
+func (msgs Messages) GwStatusMovingCable() string {
+	return Catalog.Format(msgs.locale, "gwStatusMovingCable", nil)
+}
+
+// GwStatusMovingWiFi says "Moving to Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line while Pinky opens it again over Wi-Fi after its
+// cable was pulled. Shown only in other languages.
+func GwStatusMovingWiFi() string { return In(i18n.Locale()).GwStatusMovingWiFi() }
+
+// GwStatusMovingWiFi says "Moving to Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line while Pinky opens it again over Wi-Fi after its
+// cable was pulled. Shown only in other languages.
+func (msgs Messages) GwStatusMovingWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusMovingWiFi", nil)
 }
 
 // GwStatusNeedsSetup says "Needs setup"
@@ -8929,6 +10119,22 @@ func GwStatusNeedsYou(title string) string { return In(i18n.Locale()).GwStatusNe
 // own words show.
 func (msgs Messages) GwStatusNeedsYou(title string) string {
 	return Catalog.Format(msgs.locale, "gwStatusNeedsYou", map[string]any{"title": title})
+}
+
+// GwStatusNotSeenOnWiFi says "Not seen on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi.
+func GwStatusNotSeenOnWiFi() string { return In(i18n.Locale()).GwStatusNotSeenOnWiFi() }
+
+// GwStatusNotSeenOnWiFi says "Not seen on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi.
+func (msgs Messages) GwStatusNotSeenOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusNotSeenOnWiFi", nil)
 }
 
 // GwStatusOffline says "Offline"
@@ -9203,6 +10409,26 @@ func (msgs Messages) GwStepOutside(action string) string {
 	return Catalog.Format(msgs.locale, "gwStepOutside", map[string]any{"action": action})
 }
 
+// GwStepReceivedFile says "Received “{path}” ({size}) from the agent"
+// in the language the app shows.
+//
+// A step: the agent sent a file (phone_files upload), which Pinky saved in
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepReceivedFile(path string, size string) string {
+	return In(i18n.Locale()).GwStepReceivedFile(path, size)
+}
+
+// GwStepReceivedFile says "Received “{path}” ({size}) from the agent"
+// in the language of msgs.
+//
+// A step: the agent sent a file (phone_files upload), which Pinky saved in
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepReceivedFile(path string, size string) string {
+	return Catalog.Format(msgs.locale, "gwStepReceivedFile", map[string]any{"path": path, "size": size})
+}
+
 // GwStepUnlocked says "Unlocked from the computer"
 // in the language the app shows.
 //
@@ -9411,6 +10637,174 @@ func ListSeparator() string { return In(i18n.Locale()).ListSeparator() }
 // Joins the names of a list before its last one (see listMany).
 func (msgs Messages) ListSeparator() string {
 	return Catalog.Format(msgs.locale, "listSeparator", nil)
+}
+
+// LostConfirmButton says "Restart"
+// in the language the app shows.
+//
+// The button of the dialog that restarts macOS's device service.
+func LostConfirmButton() string { return In(i18n.Locale()).LostConfirmButton() }
+
+// LostConfirmButton says "Restart"
+// in the language of msgs.
+//
+// The button of the dialog that restarts macOS's device service.
+func (msgs Messages) LostConfirmButton() string {
+	return Catalog.Format(msgs.locale, "lostConfirmButton", nil)
+}
+
+// LostConfirmMessage says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language the app shows.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service. phone is the lost iPhone's name.
+func LostConfirmMessage(phone string) string { return In(i18n.Locale()).LostConfirmMessage(phone) }
+
+// LostConfirmMessage says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language of msgs.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service. phone is the lost iPhone's name.
+func (msgs Messages) LostConfirmMessage(phone string) string {
+	return Catalog.Format(msgs.locale, "lostConfirmMessage", map[string]any{"phone": phone})
+}
+
+// LostConfirmTitle says "Restart the device service?"
+// in the language the app shows.
+//
+// The dialog that asks before Pinky restarts macOS's device service.
+func LostConfirmTitle() string { return In(i18n.Locale()).LostConfirmTitle() }
+
+// LostConfirmTitle says "Restart the device service?"
+// in the language of msgs.
+//
+// The dialog that asks before Pinky restarts macOS's device service.
+func (msgs Messages) LostConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "lostConfirmTitle", nil)
+}
+
+// LostDetail says "{phone} is on the same Wi-Fi, but macOS's device service (usbmuxd) stopped listing it after its connection broke once…"
+// in the language the app shows.
+//
+// Under lostTitle, and in Add phone and the checkup. phone is its name.
+func LostDetail(phone string) string { return In(i18n.Locale()).LostDetail(phone) }
+
+// LostDetail says "{phone} is on the same Wi-Fi, but macOS's device service (usbmuxd) stopped listing it after its connection broke once…"
+// in the language of msgs.
+//
+// Under lostTitle, and in Add phone and the checkup. phone is its name.
+func (msgs Messages) LostDetail(phone string) string {
+	return Catalog.Format(msgs.locale, "lostDetail", map[string]any{"phone": phone})
+}
+
+// LostManual says "Or restart it yourself: run sudo killall usbmuxd in Terminal."
+// in the language the app shows.
+//
+// Under the restart button, or in its place where Pinky cannot restart the
+// service itself.
+func LostManual() string { return In(i18n.Locale()).LostManual() }
+
+// LostManual says "Or restart it yourself: run sudo killall usbmuxd in Terminal."
+// in the language of msgs.
+//
+// Under the restart button, or in its place where Pinky cannot restart the
+// service itself.
+func (msgs Messages) LostManual() string {
+	return Catalog.Format(msgs.locale, "lostManual", nil)
+}
+
+// LostReason says "Pinky wants to restart the device service (usbmuxd) so that this Mac finds your iPhone on Wi-Fi again."
+// in the language the app shows.
+//
+// Shown in macOS's own request for an administrator's password when Pinky
+// restarts the device service.
+func LostReason() string { return In(i18n.Locale()).LostReason() }
+
+// LostReason says "Pinky wants to restart the device service (usbmuxd) so that this Mac finds your iPhone on Wi-Fi again."
+// in the language of msgs.
+//
+// Shown in macOS's own request for an administrator's password when Pinky
+// restarts the device service.
+func (msgs Messages) LostReason() string {
+	return Catalog.Format(msgs.locale, "lostReason", nil)
+}
+
+// LostRestart says "Restart device service…"
+// in the language the app shows.
+//
+// The button that restarts macOS's device service (usbmuxd) so it finds a
+// lost iPhone again; it asks first.
+func LostRestart() string { return In(i18n.Locale()).LostRestart() }
+
+// LostRestart says "Restart device service…"
+// in the language of msgs.
+//
+// The button that restarts macOS's device service (usbmuxd) so it finds a
+// lost iPhone again; it asks first.
+func (msgs Messages) LostRestart() string {
+	return Catalog.Format(msgs.locale, "lostRestart", nil)
+}
+
+// LostRestartFailed says "Couldn't restart the device service: {error}"
+// in the language the app shows.
+//
+// A notice when restarting macOS's device service failed. error is what
+// went wrong.
+func LostRestartFailed(error string) string { return In(i18n.Locale()).LostRestartFailed(error) }
+
+// LostRestartFailed says "Couldn't restart the device service: {error}"
+// in the language of msgs.
+//
+// A notice when restarting macOS's device service failed. error is what
+// went wrong.
+func (msgs Messages) LostRestartFailed(error string) string {
+	return Catalog.Format(msgs.locale, "lostRestartFailed", map[string]any{"error": error})
+}
+
+// LostRestartNote says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an admi…"
+// in the language the app shows.
+//
+// Under the Restart device service button.
+func LostRestartNote() string { return In(i18n.Locale()).LostRestartNote() }
+
+// LostRestartNote says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an admi…"
+// in the language of msgs.
+//
+// Under the Restart device service button.
+func (msgs Messages) LostRestartNote() string {
+	return Catalog.Format(msgs.locale, "lostRestartNote", nil)
+}
+
+// LostRestarted says "Restarted the device service. {phone} shows up again in a few seconds."
+// in the language the app shows.
+//
+// A notice after Pinky restarted macOS's device service. phone is the lost
+// iPhone's name.
+func LostRestarted(phone string) string { return In(i18n.Locale()).LostRestarted(phone) }
+
+// LostRestarted says "Restarted the device service. {phone} shows up again in a few seconds."
+// in the language of msgs.
+//
+// A notice after Pinky restarted macOS's device service. phone is the lost
+// iPhone's name.
+func (msgs Messages) LostRestarted(phone string) string {
+	return Catalog.Format(msgs.locale, "lostRestarted", map[string]any{"phone": phone})
+}
+
+// LostTitle says "This Mac lost {phone} on Wi-Fi"
+// in the language the app shows.
+//
+// The page of an iPhone that macOS's device service stopped listing though
+// it is on the same Wi-Fi. phone is its name.
+func LostTitle(phone string) string { return In(i18n.Locale()).LostTitle(phone) }
+
+// LostTitle says "This Mac lost {phone} on Wi-Fi"
+// in the language of msgs.
+//
+// The page of an iPhone that macOS's device service stopped listing though
+// it is on the same Wi-Fi. phone is its name.
+func (msgs Messages) LostTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "lostTitle", map[string]any{"phone": phone})
 }
 
 // MenuActivity says "Activity"
@@ -10537,6 +11931,24 @@ func (msgs Messages) PairingErrNoAdb() string {
 	return Catalog.Format(msgs.locale, "pairingErrNoAdb", nil)
 }
 
+// PairingErrNotListening says "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog…"
+// in the language the app shows.
+//
+// Pair with a code: the error when nothing at the address typed took the
+// connection (a wrong port, or the dialog closed). Pair device with pairing
+// code is Android's own name.
+func PairingErrNotListening() string { return In(i18n.Locale()).PairingErrNotListening() }
+
+// PairingErrNotListening says "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog…"
+// in the language of msgs.
+//
+// Pair with a code: the error when nothing at the address typed took the
+// connection (a wrong port, or the dialog closed). Pair device with pairing
+// code is Android's own name.
+func (msgs Messages) PairingErrNotListening() string {
+	return Catalog.Format(msgs.locale, "pairingErrNotListening", nil)
+}
+
 // PairingErrOther says "Couldn't pair: {detail}"
 // in the language the app shows.
 //
@@ -10551,6 +11963,78 @@ func PairingErrOther(detail string) string { return In(i18n.Locale()).PairingErr
 // is the error, in English.
 func (msgs Messages) PairingErrOther(detail string) string {
 	return Catalog.Format(msgs.locale, "pairingErrOther", map[string]any{"detail": detail})
+}
+
+// PairingErrQRNotListening says "The phone stopped waiting to pair, as it does when it leaves the scanning screen. Scan the code again, or pair with a…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi by QR code: the error when the phone's pairing service no
+// longer took the connection. Shown with pairingUseCode and
+// addPhoneTryAgain.
+func PairingErrQRNotListening() string { return In(i18n.Locale()).PairingErrQRNotListening() }
+
+// PairingErrQRNotListening says "The phone stopped waiting to pair, as it does when it leaves the scanning screen. Scan the code again, or pair with a…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi by QR code: the error when the phone's pairing service no
+// longer took the connection. Shown with pairingUseCode and
+// addPhoneTryAgain.
+func (msgs Messages) PairingErrQRNotListening() string {
+	return Catalog.Format(msgs.locale, "pairingErrQRNotListening", nil)
+}
+
+// PairingErrQRRejected says "The phone ended the pairing before it finished. Keep the phone on the same Wi-Fi as this computer and on its scanning…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi by QR code: the error when the phone ended the pairing
+// (adb cannot tell why; the code is Pinky's, so never say it was wrong).
+// Shown with pairingUseCode and addPhoneTryAgain.
+func PairingErrQRRejected() string { return In(i18n.Locale()).PairingErrQRRejected() }
+
+// PairingErrQRRejected says "The phone ended the pairing before it finished. Keep the phone on the same Wi-Fi as this computer and on its scanning…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi by QR code: the error when the phone ended the pairing
+// (adb cannot tell why; the code is Pinky's, so never say it was wrong).
+// Shown with pairingUseCode and addPhoneTryAgain.
+func (msgs Messages) PairingErrQRRejected() string {
+	return Catalog.Format(msgs.locale, "pairingErrQRRejected", nil)
+}
+
+// PairingErrQRUnreachable says "The phone showed up on the network, but Pinky couldn't connect to it. A VPN or firewall on this computer, or a networ…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi by QR code: the error when the phone showed up on the
+// network but its pairing address did not answer.
+func PairingErrQRUnreachable() string { return In(i18n.Locale()).PairingErrQRUnreachable() }
+
+// PairingErrQRUnreachable says "The phone showed up on the network, but Pinky couldn't connect to it. A VPN or firewall on this computer, or a networ…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi by QR code: the error when the phone showed up on the
+// network but its pairing address did not answer.
+func (msgs Messages) PairingErrQRUnreachable() string {
+	return Catalog.Format(msgs.locale, "pairingErrQRUnreachable", nil)
+}
+
+// PairingErrRejected says "The phone didn't accept the pairing. Check the code, and that the port is the one in the Pair device with pairing cod…"
+// in the language the app shows.
+//
+// Pair with a code: the error when the phone ended the pairing, which adb
+// reports the same way for a wrong code, a port that is not the pairing
+// dialog's and a dropped connection. Pair device with pairing code and
+// Wireless debugging are Android's own names.
+func PairingErrRejected() string { return In(i18n.Locale()).PairingErrRejected() }
+
+// PairingErrRejected says "The phone didn't accept the pairing. Check the code, and that the port is the one in the Pair device with pairing cod…"
+// in the language of msgs.
+//
+// Pair with a code: the error when the phone ended the pairing, which adb
+// reports the same way for a wrong code, a port that is not the pairing
+// dialog's and a dropped connection. Pair device with pairing code and
+// Wireless debugging are Android's own names.
+func (msgs Messages) PairingErrRejected() string {
+	return Catalog.Format(msgs.locale, "pairingErrRejected", nil)
 }
 
 // PairingErrTimeout says "The phone didn't answer in time. Check that it's on the same Wi-Fi as this computer and that Wireless debugging is on…"
@@ -10572,15 +12056,15 @@ func (msgs Messages) PairingErrTimeout() string {
 // PairingErrUnreachable says "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they cha…"
 // in the language the app shows.
 //
-// Pair with a code: the error when nothing answered at the address typed.
-// Pair device with pairing code is Android's own name.
+// Pair with a code: the error when the address typed did not answer. Pair
+// device with pairing code is Android's own name.
 func PairingErrUnreachable() string { return In(i18n.Locale()).PairingErrUnreachable() }
 
 // PairingErrUnreachable says "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they cha…"
 // in the language of msgs.
 //
-// Pair with a code: the error when nothing answered at the address typed.
-// Pair device with pairing code is Android's own name.
+// Pair with a code: the error when the address typed did not answer. Pair
+// device with pairing code is Android's own name.
 func (msgs Messages) PairingErrUnreachable() string {
 	return Catalog.Format(msgs.locale, "pairingErrUnreachable", nil)
 }
@@ -10599,22 +12083,6 @@ func PairingErrUnsupported() string { return In(i18n.Locale()).PairingErrUnsuppo
 // Wi-Fi.
 func (msgs Messages) PairingErrUnsupported() string {
 	return Catalog.Format(msgs.locale, "pairingErrUnsupported", nil)
-}
-
-// PairingErrWrongCode says "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairi…"
-// in the language the app shows.
-//
-// Pair with a code: the error when the pairing code typed was wrong. Pair
-// device with pairing code is Android's own name.
-func PairingErrWrongCode() string { return In(i18n.Locale()).PairingErrWrongCode() }
-
-// PairingErrWrongCode says "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairi…"
-// in the language of msgs.
-//
-// Pair with a code: the error when the pairing code typed was wrong. Pair
-// device with pairing code is Android's own name.
-func (msgs Messages) PairingErrWrongCode() string {
-	return Catalog.Format(msgs.locale, "pairingErrWrongCode", nil)
 }
 
 // PairingFound says "Found the phone. Pairing…"
@@ -11575,6 +13043,22 @@ func (msgs Messages) PhoneAllPhones() string {
 	return Catalog.Format(msgs.locale, "phoneAllPhones", nil)
 }
 
+// PhoneAwayOff says "{name} stopped taking connections from afar, as it does when the phone restarts. When it's near this computer again, …"
+// in the language the app shows.
+//
+// An offline phone's page, for a phone used away from home whose adb
+// stopped listening.
+func PhoneAwayOff(name string) string { return In(i18n.Locale()).PhoneAwayOff(name) }
+
+// PhoneAwayOff says "{name} stopped taking connections from afar, as it does when the phone restarts. When it's near this computer again, …"
+// in the language of msgs.
+//
+// An offline phone's page, for a phone used away from home whose adb
+// stopped listening.
+func (msgs Messages) PhoneAwayOff(name string) string {
+	return Catalog.Format(msgs.locale, "phoneAwayOff", map[string]any{"name": name})
+}
+
 // PhoneBackgroundDesc says "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task."
 // in the language the app shows.
 //
@@ -11739,6 +13223,34 @@ func (msgs Messages) PhoneConnected(count int) string {
 	return Catalog.Format(msgs.locale, "phoneConnected", map[string]any{"count": count})
 }
 
+// PhoneConnectingTask says "The task on it waits until it's connected."
+// in the language the app shows.
+//
+// Under the connecting page's title when an agent's task runs on the phone.
+func PhoneConnectingTask() string { return In(i18n.Locale()).PhoneConnectingTask() }
+
+// PhoneConnectingTask says "The task on it waits until it's connected."
+// in the language of msgs.
+//
+// Under the connecting page's title when an agent's task runs on the phone.
+func (msgs Messages) PhoneConnectingTask() string {
+	return Catalog.Format(msgs.locale, "phoneConnectingTask", nil)
+}
+
+// PhoneConnectingTitle says "Connecting to {phone}…"
+// in the language the app shows.
+//
+// The page of a phone Pinky is opening. phone is its name.
+func PhoneConnectingTitle(phone string) string { return In(i18n.Locale()).PhoneConnectingTitle(phone) }
+
+// PhoneConnectingTitle says "Connecting to {phone}…"
+// in the language of msgs.
+//
+// The page of a phone Pinky is opening. phone is its name.
+func (msgs Messages) PhoneConnectingTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneConnectingTitle", map[string]any{"phone": phone})
+}
+
 // PhoneHandBack says "Hand back"
 // in the language the app shows.
 //
@@ -11821,6 +13333,36 @@ func (msgs Messages) PhoneKeysAgentScreen(agent string) string {
 	return Catalog.Format(msgs.locale, "phoneKeysAgentScreen", map[string]any{"agent": agent})
 }
 
+// PhoneLockedWiFiDetail says "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn'…"
+// in the language the app shows.
+//
+// Under phoneLockedWiFiTitle.
+func PhoneLockedWiFiDetail() string { return In(i18n.Locale()).PhoneLockedWiFiDetail() }
+
+// PhoneLockedWiFiDetail says "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn'…"
+// in the language of msgs.
+//
+// Under phoneLockedWiFiTitle.
+func (msgs Messages) PhoneLockedWiFiDetail() string {
+	return Catalog.Format(msgs.locale, "phoneLockedWiFiDetail", nil)
+}
+
+// PhoneLockedWiFiTitle says "{phone} is locked"
+// in the language the app shows.
+//
+// The page of an iPhone or iPad on Wi-Fi that is locked, which Pinky
+// connects to only once it is unlocked. phone is its name.
+func PhoneLockedWiFiTitle(phone string) string { return In(i18n.Locale()).PhoneLockedWiFiTitle(phone) }
+
+// PhoneLockedWiFiTitle says "{phone} is locked"
+// in the language of msgs.
+//
+// The page of an iPhone or iPad on Wi-Fi that is locked, which Pinky
+// connects to only once it is unlocked. phone is its name.
+func (msgs Messages) PhoneLockedWiFiTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneLockedWiFiTitle", map[string]any{"phone": phone})
+}
+
 // PhoneMoreControls says "More phone controls"
 // in the language the app shows.
 //
@@ -11839,6 +13381,40 @@ func (msgs Messages) PhoneMoreControls() string {
 	return Catalog.Format(msgs.locale, "phoneMoreControls", nil)
 }
 
+// PhoneMovingCableTitle says "Moving {phone} to the cable…"
+// in the language the app shows.
+//
+// The page of a phone that was plugged in, while Pinky opens it again over
+// the cable. phone is its name.
+func PhoneMovingCableTitle(phone string) string {
+	return In(i18n.Locale()).PhoneMovingCableTitle(phone)
+}
+
+// PhoneMovingCableTitle says "Moving {phone} to the cable…"
+// in the language of msgs.
+//
+// The page of a phone that was plugged in, while Pinky opens it again over
+// the cable. phone is its name.
+func (msgs Messages) PhoneMovingCableTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneMovingCableTitle", map[string]any{"phone": phone})
+}
+
+// PhoneMovingWiFiTitle says "Moving {phone} to Wi-Fi…"
+// in the language the app shows.
+//
+// The page of a phone whose cable was pulled, while Pinky opens it again
+// over Wi-Fi. phone is its name.
+func PhoneMovingWiFiTitle(phone string) string { return In(i18n.Locale()).PhoneMovingWiFiTitle(phone) }
+
+// PhoneMovingWiFiTitle says "Moving {phone} to Wi-Fi…"
+// in the language of msgs.
+//
+// The page of a phone whose cable was pulled, while Pinky opens it again
+// over Wi-Fi. phone is its name.
+func (msgs Messages) PhoneMovingWiFiTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneMovingWiFiTitle", map[string]any{"phone": phone})
+}
+
 // PhoneNeedsSetup says "{phone} needs setup"
 // in the language the app shows.
 //
@@ -11853,6 +13429,36 @@ func PhoneNeedsSetup(phone string) string { return In(i18n.Locale()).PhoneNeedsS
 // debugging off, not trusted); the system's reason shows under it.
 func (msgs Messages) PhoneNeedsSetup(phone string) string {
 	return Catalog.Format(msgs.locale, "phoneNeedsSetup", map[string]any{"phone": phone})
+}
+
+// PhoneNetworkAway says "{name} isn't on this network now. Pinky connects again by itself once it's back."
+// in the language the app shows.
+//
+// An offline phone's page, for a phone moved to Wi-Fi that does not answer.
+func PhoneNetworkAway(name string) string { return In(i18n.Locale()).PhoneNetworkAway(name) }
+
+// PhoneNetworkAway says "{name} isn't on this network now. Pinky connects again by itself once it's back."
+// in the language of msgs.
+//
+// An offline phone's page, for a phone moved to Wi-Fi that does not answer.
+func (msgs Messages) PhoneNetworkAway(name string) string {
+	return Catalog.Format(msgs.locale, "phoneNetworkAway", map[string]any{"name": name})
+}
+
+// PhoneNetworkOff says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again i…"
+// in the language the app shows.
+//
+// An offline phone's page, for a phone moved to Wi-Fi whose adb stopped
+// listening (it restarted).
+func PhoneNetworkOff(name string) string { return In(i18n.Locale()).PhoneNetworkOff(name) }
+
+// PhoneNetworkOff says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again i…"
+// in the language of msgs.
+//
+// An offline phone's page, for a phone moved to Wi-Fi whose adb stopped
+// listening (it restarted).
+func (msgs Messages) PhoneNetworkOff(name string) string {
+	return Catalog.Format(msgs.locale, "phoneNetworkOff", map[string]any{"name": name})
 }
 
 // PhoneNoPhones says "No phones yet"
@@ -11899,6 +13505,24 @@ func PhoneNotConnected() string { return In(i18n.Locale()).PhoneNotConnected() }
 // Reconnect link.
 func (msgs Messages) PhoneNotConnected() string {
 	return Catalog.Format(msgs.locale, "phoneNotConnected", nil)
+}
+
+// PhoneNotSeenOnWiFi says "This computer doesn't see {name} on Wi-Fi. It may be asleep (unlock it), on another Wi-Fi network, or on one that kee…"
+// in the language the app shows.
+//
+// The Phone screen of an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi: neither the device service lists it nor
+// does the network show it. {name} is the phone's name.
+func PhoneNotSeenOnWiFi(name string) string { return In(i18n.Locale()).PhoneNotSeenOnWiFi(name) }
+
+// PhoneNotSeenOnWiFi says "This computer doesn't see {name} on Wi-Fi. It may be asleep (unlock it), on another Wi-Fi network, or on one that kee…"
+// in the language of msgs.
+//
+// The Phone screen of an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi: neither the device service lists it nor
+// does the network show it. {name} is the phone's name.
+func (msgs Messages) PhoneNotSeenOnWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "phoneNotSeenOnWiFi", map[string]any{"name": name})
 }
 
 // PhoneOffline says "{phone} is offline"
@@ -12169,6 +13793,22 @@ func PhoneShowOnMirror() string { return In(i18n.Locale()).PhoneShowOnMirror() }
 // agent's screen and the phone's.
 func (msgs Messages) PhoneShowOnMirror() string {
 	return Catalog.Format(msgs.locale, "phoneShowOnMirror", nil)
+}
+
+// PhoneTailnetAway says "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online."
+// in the language the app shows.
+//
+// An offline phone's page, for a phone used away from home that does not
+// answer through Tailscale.
+func PhoneTailnetAway(name string) string { return In(i18n.Locale()).PhoneTailnetAway(name) }
+
+// PhoneTailnetAway says "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online."
+// in the language of msgs.
+//
+// An offline phone's page, for a phone used away from home that does not
+// answer through Tailscale.
+func (msgs Messages) PhoneTailnetAway(name string) string {
+	return Catalog.Format(msgs.locale, "phoneTailnetAway", map[string]any{"name": name})
 }
 
 // PhoneTakeOver says "Take over"
@@ -15167,6 +16807,36 @@ func (msgs Messages) SettingsPhonesConnected() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesConnected", nil)
 }
 
+// SettingsPhonesConnecting says "Connecting…"
+// in the language the app shows.
+//
+// Settings › Phones: the status of a phone Pinky is opening.
+func SettingsPhonesConnecting() string { return In(i18n.Locale()).SettingsPhonesConnecting() }
+
+// SettingsPhonesConnecting says "Connecting…"
+// in the language of msgs.
+//
+// Settings › Phones: the status of a phone Pinky is opening.
+func (msgs Messages) SettingsPhonesConnecting() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesConnecting", nil)
+}
+
+// SettingsPhonesFound says "Found on Wi-Fi"
+// in the language the app shows.
+//
+// Settings › Phones: the status of a phone Pinky found on Wi-Fi and has
+// not used; Use and Ignore follow it.
+func SettingsPhonesFound() string { return In(i18n.Locale()).SettingsPhonesFound() }
+
+// SettingsPhonesFound says "Found on Wi-Fi"
+// in the language of msgs.
+//
+// Settings › Phones: the status of a phone Pinky found on Wi-Fi and has
+// not used; Use and Ignore follow it.
+func (msgs Messages) SettingsPhonesFound() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesFound", nil)
+}
+
 // SettingsPhonesIntro says "Phones this computer can reach."
 // in the language the app shows.
 //
@@ -15227,6 +16897,36 @@ func SettingsPhonesOffline() string { return In(i18n.Locale()).SettingsPhonesOff
 // hollow dot: not reachable.
 func (msgs Messages) SettingsPhonesOffline() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesOffline", nil)
+}
+
+// SettingsPhonesWiFi says "Use iPhones and iPads over Wi-Fi"
+// in the language the app shows.
+//
+// Settings › Phones: the switch that lets Pinky reach iPhones and iPads
+// over Wi-Fi when this computer finds them there, besides the cable.
+func SettingsPhonesWiFi() string { return In(i18n.Locale()).SettingsPhonesWiFi() }
+
+// SettingsPhonesWiFi says "Use iPhones and iPads over Wi-Fi"
+// in the language of msgs.
+//
+// Settings › Phones: the switch that lets Pinky reach iPhones and iPads
+// over Wi-Fi when this computer finds them there, besides the cable.
+func (msgs Messages) SettingsPhonesWiFi() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesWiFi", nil)
+}
+
+// SettingsPhonesWiFiDesc says "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer:…"
+// in the language the app shows.
+//
+// Settings › Phones: under settingsPhonesWiFi.
+func SettingsPhonesWiFiDesc() string { return In(i18n.Locale()).SettingsPhonesWiFiDesc() }
+
+// SettingsPhonesWiFiDesc says "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer:…"
+// in the language of msgs.
+//
+// Settings › Phones: under settingsPhonesWiFi.
+func (msgs Messages) SettingsPhonesWiFiDesc() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesWiFiDesc", nil)
 }
 
 // SettingsPrivacyCannotDelete says "This gateway cannot delete its history"
@@ -15475,14 +17175,14 @@ func (msgs Messages) SettingsPrivacyRecord() string {
 	return Catalog.Format(msgs.locale, "settingsPrivacyRecord", nil)
 }
 
-// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open."
+// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent …"
 // in the language the app shows.
 //
 // Settings › Privacy: the line under Record the screen during tasks.
 // Activity is the page of finished tasks.
 func SettingsPrivacyRecordDesc() string { return In(i18n.Locale()).SettingsPrivacyRecordDesc() }
 
-// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open."
+// SettingsPrivacyRecordDesc says "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent …"
 // in the language of msgs.
 //
 // Settings › Privacy: the line under Record the screen during tasks.
@@ -16473,6 +18173,26 @@ func (msgs Messages) SettingsSafetyAppLabel() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAppLabel", nil)
 }
 
+// SettingsSafetyAppNoMatch says "No app on your phones is named “{name}”. Pinky blocks only that exact name: check the spelling, or pick the app f…"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: a warning under the field when what the
+// person typed is not the name or package of any app on the connected
+// phones. name is what they typed.
+func SettingsSafetyAppNoMatch(name string) string {
+	return In(i18n.Locale()).SettingsSafetyAppNoMatch(name)
+}
+
+// SettingsSafetyAppNoMatch says "No app on your phones is named “{name}”. Pinky blocks only that exact name: check the spelling, or pick the app f…"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: a warning under the field when what the
+// person typed is not the name or package of any app on the connected
+// phones. name is what they typed.
+func (msgs Messages) SettingsSafetyAppNoMatch(name string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppNoMatch", map[string]any{"name": name})
+}
+
 // SettingsSafetyAppPlaceholder says "App name or package"
 // in the language the app shows.
 //
@@ -16487,6 +18207,70 @@ func SettingsSafetyAppPlaceholder() string { return In(i18n.Locale()).SettingsSa
 // which takes the app's name or its package name, as com.example.app.
 func (msgs Messages) SettingsSafetyAppPlaceholder() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAppPlaceholder", nil)
+}
+
+// SettingsSafetyAppsLoading says "Looking for the apps on your phones…"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: under the field while Pinky lists the
+// apps on the connected phones.
+func SettingsSafetyAppsLoading() string { return In(i18n.Locale()).SettingsSafetyAppsLoading() }
+
+// SettingsSafetyAppsLoading says "Looking for the apps on your phones…"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: under the field while Pinky lists the
+// apps on the connected phones.
+func (msgs Messages) SettingsSafetyAppsLoading() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsLoading", nil)
+}
+
+// SettingsSafetyAppsMore says "{count, plural, one {# more app: type more of its name} other {# more apps: type more of the name}}"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: under the apps it offers, when more apps
+// match than it shows.
+func SettingsSafetyAppsMore(count int) string { return In(i18n.Locale()).SettingsSafetyAppsMore(count) }
+
+// SettingsSafetyAppsMore says "{count, plural, one {# more app: type more of its name} other {# more apps: type more of the name}}"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: under the apps it offers, when more apps
+// match than it shows.
+func (msgs Messages) SettingsSafetyAppsMore(count int) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsMore", map[string]any{"count": count})
+}
+
+// SettingsSafetyAppsNoPhone says "Connect a phone to pick from its apps, or type the app's exact name or package."
+// in the language the app shows.
+//
+// Settings › Safety › Add app: under the field when no connected phone
+// could list its apps.
+func SettingsSafetyAppsNoPhone() string { return In(i18n.Locale()).SettingsSafetyAppsNoPhone() }
+
+// SettingsSafetyAppsNoPhone says "Connect a phone to pick from its apps, or type the app's exact name or package."
+// in the language of msgs.
+//
+// Settings › Safety › Add app: under the field when no connected phone
+// could list its apps.
+func (msgs Messages) SettingsSafetyAppsNoPhone() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsNoPhone", nil)
+}
+
+// SettingsSafetyAppsOnPhones says "On your phones"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: the heading of the apps on the connected
+// phones that match what is typed, which the person can click to block.
+func SettingsSafetyAppsOnPhones() string { return In(i18n.Locale()).SettingsSafetyAppsOnPhones() }
+
+// SettingsSafetyAppsOnPhones says "On your phones"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: the heading of the apps on the connected
+// phones that match what is typed, which the person can click to block.
+func (msgs Messages) SettingsSafetyAppsOnPhones() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsOnPhones", nil)
 }
 
 // SettingsSafetyAskGroup says "When agents ask"
@@ -16537,6 +18321,24 @@ func (msgs Messages) SettingsSafetyBlock() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyBlock", nil)
 }
 
+// SettingsSafetyBlockApp says "Block {name}"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: the accessibility label of an app it
+// offers, which blocks it when clicked.
+func SettingsSafetyBlockApp(name string) string {
+	return In(i18n.Locale()).SettingsSafetyBlockApp(name)
+}
+
+// SettingsSafetyBlockApp says "Block {name}"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: the accessibility label of an app it
+// offers, which blocks it when clicked.
+func (msgs Messages) SettingsSafetyBlockApp(name string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyBlockApp", map[string]any{"name": name})
+}
+
 // SettingsSafetyBlockedApps says "Blocked apps"
 // in the language the app shows.
 //
@@ -16553,13 +18355,13 @@ func (msgs Messages) SettingsSafetyBlockedApps() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyBlockedApps", nil)
 }
 
-// SettingsSafetyBlockedIntro says "Agents can't open these apps or see their screens."
+// SettingsSafetyBlockedIntro says "Agents can't open these apps, see their screens or read their notifications."
 // in the language the app shows.
 //
 // Settings › Safety: the line under Blocked apps.
 func SettingsSafetyBlockedIntro() string { return In(i18n.Locale()).SettingsSafetyBlockedIntro() }
 
-// SettingsSafetyBlockedIntro says "Agents can't open these apps or see their screens."
+// SettingsSafetyBlockedIntro says "Agents can't open these apps, see their screens or read their notifications."
 // in the language of msgs.
 //
 // Settings › Safety: the line under Blocked apps.
@@ -16570,29 +18372,33 @@ func (msgs Messages) SettingsSafetyBlockedIntro() string {
 // SettingsSafetyHideCodes says "Hide codes from agents"
 // in the language the app shows.
 //
-// Settings › Safety: the switch that hides passwords and one-time codes
-// on the phone's screen from agents.
+// Settings › Safety: the switch that hides one-time codes, on the phone's
+// screen and in its notifications, from agents.
 func SettingsSafetyHideCodes() string { return In(i18n.Locale()).SettingsSafetyHideCodes() }
 
 // SettingsSafetyHideCodes says "Hide codes from agents"
 // in the language of msgs.
 //
-// Settings › Safety: the switch that hides passwords and one-time codes
-// on the phone's screen from agents.
+// Settings › Safety: the switch that hides one-time codes, on the phone's
+// screen and in its notifications, from agents.
 func (msgs Messages) SettingsSafetyHideCodes() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyHideCodes", nil)
 }
 
-// SettingsSafetyHideCodesDesc says "Passwords and one-time codes are blurred before an agent sees the screen"
+// SettingsSafetyHideCodesDesc says "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. …"
 // in the language the app shows.
 //
-// Settings › Safety: the line under Hide codes from agents.
+// Settings › Safety: the line under Hide codes from agents. Screenshots
+// are the ones agents get and the ones Activity keeps; recordings are the
+// screen recordings of tasks, which are not covered.
 func SettingsSafetyHideCodesDesc() string { return In(i18n.Locale()).SettingsSafetyHideCodesDesc() }
 
-// SettingsSafetyHideCodesDesc says "Passwords and one-time codes are blurred before an agent sees the screen"
+// SettingsSafetyHideCodesDesc says "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. …"
 // in the language of msgs.
 //
-// Settings › Safety: the line under Hide codes from agents.
+// Settings › Safety: the line under Hide codes from agents. Screenshots
+// are the ones agents get and the ones Activity keeps; recordings are the
+// screen recordings of tasks, which are not covered.
 func (msgs Messages) SettingsSafetyHideCodesDesc() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyHideCodesDesc", nil)
 }
@@ -17723,6 +19529,528 @@ func StepYouSaidNo(question string) string { return In(i18n.Locale()).StepYouSai
 // A step: the person said no to the agent's question, in quotes.
 func (msgs Messages) StepYouSaidNo(question string) string {
 	return Catalog.Format(msgs.locale, "stepYouSaidNo", map[string]any{"question": question})
+}
+
+// TailnetAllow says "Allow this computer on {name}: unlock it and tap Allow."
+// in the language the app shows.
+//
+// When the phone asks the person to allow this computer. Allow is
+// addAndroidSketchAllow.
+func TailnetAllow(name string) string { return In(i18n.Locale()).TailnetAllow(name) }
+
+// TailnetAllow says "Allow this computer on {name}: unlock it and tap Allow."
+// in the language of msgs.
+//
+// When the phone asks the person to allow this computer. Allow is
+// addAndroidSketchAllow.
+func (msgs Messages) TailnetAllow(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetAllow", map[string]any{"name": name})
+}
+
+// TailnetConnect says "Connect"
+// in the language the app shows.
+//
+// Button by a phone on the tailnet: connects to it.
+func TailnetConnect() string { return In(i18n.Locale()).TailnetConnect() }
+
+// TailnetConnect says "Connect"
+// in the language of msgs.
+//
+// Button by a phone on the tailnet: connects to it.
+func (msgs Messages) TailnetConnect() string {
+	return Catalog.Format(msgs.locale, "tailnetConnect", nil)
+}
+
+// TailnetConnectDetail says "Set each phone up once while it's near this computer, by cable or on the same Wi-Fi: turn on Use away from home for i…"
+// in the language the app shows.
+//
+// Step 3: above the list of phones on the tailnet. Use away from home is
+// awayTitle; Settings › Phones is settingsPageTitle ›
+// settingsSectionPhones.
+func TailnetConnectDetail() string { return In(i18n.Locale()).TailnetConnectDetail() }
+
+// TailnetConnectDetail says "Set each phone up once while it's near this computer, by cable or on the same Wi-Fi: turn on Use away from home for i…"
+// in the language of msgs.
+//
+// Step 3: above the list of phones on the tailnet. Use away from home is
+// awayTitle; Settings › Phones is settingsPageTitle ›
+// settingsSectionPhones.
+func (msgs Messages) TailnetConnectDetail() string {
+	return Catalog.Format(msgs.locale, "tailnetConnectDetail", nil)
+}
+
+// TailnetConnectFailed says "Couldn't connect to {name}: {error}"
+// in the language the app shows.
+//
+// When connecting through Tailscale failed otherwise; error is in English.
+func TailnetConnectFailed(name string, error string) string {
+	return In(i18n.Locale()).TailnetConnectFailed(name, error)
+}
+
+// TailnetConnectFailed says "Couldn't connect to {name}: {error}"
+// in the language of msgs.
+//
+// When connecting through Tailscale failed otherwise; error is in English.
+func (msgs Messages) TailnetConnectFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "tailnetConnectFailed", map[string]any{"name": name, "error": error})
+}
+
+// TailnetConnectPort says "Connect at this port"
+// in the language the app shows.
+//
+// Accessible name of the Connect button by the Wireless debugging port
+// field.
+func TailnetConnectPort() string { return In(i18n.Locale()).TailnetConnectPort() }
+
+// TailnetConnectPort says "Connect at this port"
+// in the language of msgs.
+//
+// Accessible name of the Connect button by the Wireless debugging port
+// field.
+func (msgs Messages) TailnetConnectPort() string {
+	return Catalog.Format(msgs.locale, "tailnetConnectPort", nil)
+}
+
+// TailnetConnected says "Connected to {name} through Tailscale"
+// in the language the app shows.
+//
+// A toast once a phone connected through Tailscale.
+func TailnetConnected(name string) string { return In(i18n.Locale()).TailnetConnected(name) }
+
+// TailnetConnected says "Connected to {name} through Tailscale"
+// in the language of msgs.
+//
+// A toast once a phone connected through Tailscale.
+func (msgs Messages) TailnetConnected(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetConnected", map[string]any{"name": name})
+}
+
+// TailnetDetail says "Use your phone when it's away from this computer's network, as when you're out and this computer is at home. Tailscal…"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: the line under the heading.
+func TailnetDetail() string { return In(i18n.Locale()).TailnetDetail() }
+
+// TailnetDetail says "Use your phone when it's away from this computer's network, as when you're out and this computer is at home. Tailscal…"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: the line under the heading.
+func (msgs Messages) TailnetDetail() string {
+	return Catalog.Format(msgs.locale, "tailnetDetail", nil)
+}
+
+// TailnetGet says "Get Tailscale"
+// in the language the app shows.
+//
+// Button: opens Tailscale's download page.
+func TailnetGet() string { return In(i18n.Locale()).TailnetGet() }
+
+// TailnetGet says "Get Tailscale"
+// in the language of msgs.
+//
+// Button: opens Tailscale's download page.
+func (msgs Messages) TailnetGet() string {
+	return Catalog.Format(msgs.locale, "tailnetGet", nil)
+}
+
+// TailnetHereLinux says "Turn Tailscale on: run {command} in a terminal."
+// in the language the app shows.
+//
+// Step 1 on Linux, where Tailscale has no app to open: command is a shell
+// command.
+func TailnetHereLinux(command string) string { return In(i18n.Locale()).TailnetHereLinux(command) }
+
+// TailnetHereLinux says "Turn Tailscale on: run {command} in a terminal."
+// in the language of msgs.
+//
+// Step 1 on Linux, where Tailscale has no app to open: command is a shell
+// command.
+func (msgs Messages) TailnetHereLinux(command string) string {
+	return Catalog.Format(msgs.locale, "tailnetHereLinux", map[string]any{"command": command})
+}
+
+// TailnetHereNeedsLogin says "Sign in to Tailscale on this computer."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is not signed in.
+func TailnetHereNeedsLogin() string { return In(i18n.Locale()).TailnetHereNeedsLogin() }
+
+// TailnetHereNeedsLogin says "Sign in to Tailscale on this computer."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is not signed in.
+func (msgs Messages) TailnetHereNeedsLogin() string {
+	return Catalog.Format(msgs.locale, "tailnetHereNeedsLogin", nil)
+}
+
+// TailnetHereNotInstalled says "Install Tailscale on this computer and sign in."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is not installed.
+func TailnetHereNotInstalled() string { return In(i18n.Locale()).TailnetHereNotInstalled() }
+
+// TailnetHereNotInstalled says "Install Tailscale on this computer and sign in."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is not installed.
+func (msgs Messages) TailnetHereNotInstalled() string {
+	return Catalog.Format(msgs.locale, "tailnetHereNotInstalled", nil)
+}
+
+// TailnetHereNotRunning says "Open Tailscale and sign in."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is installed but not running.
+func TailnetHereNotRunning() string { return In(i18n.Locale()).TailnetHereNotRunning() }
+
+// TailnetHereNotRunning says "Open Tailscale and sign in."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is installed but not running.
+func (msgs Messages) TailnetHereNotRunning() string {
+	return Catalog.Format(msgs.locale, "tailnetHereNotRunning", nil)
+}
+
+// TailnetHereRunning says "Connected to {tailnet} as {name}."
+// in the language the app shows.
+//
+// Under step 1 once done: tailnet is the tailnet's name (an email address
+// or a domain), name this computer's name on it.
+func TailnetHereRunning(tailnet string, name string) string {
+	return In(i18n.Locale()).TailnetHereRunning(tailnet, name)
+}
+
+// TailnetHereRunning says "Connected to {tailnet} as {name}."
+// in the language of msgs.
+//
+// Under step 1 once done: tailnet is the tailnet's name (an email address
+// or a domain), name this computer's name on it.
+func (msgs Messages) TailnetHereRunning(tailnet string, name string) string {
+	return Catalog.Format(msgs.locale, "tailnetHereRunning", map[string]any{"tailnet": tailnet, "name": name})
+}
+
+// TailnetHereStarting says "Tailscale is connecting…"
+// in the language the app shows.
+//
+// Step 1 while Tailscale connects.
+func TailnetHereStarting() string { return In(i18n.Locale()).TailnetHereStarting() }
+
+// TailnetHereStarting says "Tailscale is connecting…"
+// in the language of msgs.
+//
+// Step 1 while Tailscale connects.
+func (msgs Messages) TailnetHereStarting() string {
+	return Catalog.Format(msgs.locale, "tailnetHereStarting", nil)
+}
+
+// TailnetHereStopped says "Tailscale is turned off on this computer. Open it and turn it on."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is signed in but turned off.
+func TailnetHereStopped() string { return In(i18n.Locale()).TailnetHereStopped() }
+
+// TailnetHereStopped says "Tailscale is turned off on this computer. Open it and turn it on."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is signed in but turned off.
+func (msgs Messages) TailnetHereStopped() string {
+	return Catalog.Format(msgs.locale, "tailnetHereStopped", nil)
+}
+
+// TailnetNotListening says "{name} doesn't take connections from Pinky yet"
+// in the language the app shows.
+//
+// When connecting to a phone found nothing listening: its adb does not
+// listen on the network.
+func TailnetNotListening(name string) string { return In(i18n.Locale()).TailnetNotListening(name) }
+
+// TailnetNotListening says "{name} doesn't take connections from Pinky yet"
+// in the language of msgs.
+//
+// When connecting to a phone found nothing listening: its adb does not
+// listen on the network.
+func (msgs Messages) TailnetNotListening(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetNotListening", map[string]any{"name": name})
+}
+
+// TailnetNotListeningDetail says "Set it up once while it's near this computer: connect it by cable or on the same Wi-Fi, then turn on Use away from ho…"
+// in the language the app shows.
+//
+// Under tailnetNotListening. Wireless debugging and IP address & Port are
+// Android's own names; use those of Android's Simplified Chinese settings.
+func TailnetNotListeningDetail() string { return In(i18n.Locale()).TailnetNotListeningDetail() }
+
+// TailnetNotListeningDetail says "Set it up once while it's near this computer: connect it by cable or on the same Wi-Fi, then turn on Use away from ho…"
+// in the language of msgs.
+//
+// Under tailnetNotListening. Wireless debugging and IP address & Port are
+// Android's own names; use those of Android's Simplified Chinese settings.
+func (msgs Messages) TailnetNotListeningDetail() string {
+	return Catalog.Format(msgs.locale, "tailnetNotListeningDetail", nil)
+}
+
+// TailnetOpen says "Open Tailscale"
+// in the language the app shows.
+//
+// Button: opens Tailscale's app on this computer.
+func TailnetOpen() string { return In(i18n.Locale()).TailnetOpen() }
+
+// TailnetOpen says "Open Tailscale"
+// in the language of msgs.
+//
+// Button: opens Tailscale's app on this computer.
+func (msgs Messages) TailnetOpen() string {
+	return Catalog.Format(msgs.locale, "tailnetOpen", nil)
+}
+
+// TailnetPhoneConnected says "connected"
+// in the language the app shows.
+//
+// After a phone's Tailscale address: Pinky is connected to it through
+// Tailscale.
+func TailnetPhoneConnected() string { return In(i18n.Locale()).TailnetPhoneConnected() }
+
+// TailnetPhoneConnected says "connected"
+// in the language of msgs.
+//
+// After a phone's Tailscale address: Pinky is connected to it through
+// Tailscale.
+func (msgs Messages) TailnetPhoneConnected() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneConnected", nil)
+}
+
+// TailnetPhoneNone says "Waiting for an Android phone on your tailnet…"
+// in the language the app shows.
+//
+// Step 2, by a spinner, while the tailnet has no Android device. Tailscale
+// and tailnet are product words: keep them.
+func TailnetPhoneNone() string { return In(i18n.Locale()).TailnetPhoneNone() }
+
+// TailnetPhoneNone says "Waiting for an Android phone on your tailnet…"
+// in the language of msgs.
+//
+// Step 2, by a spinner, while the tailnet has no Android device. Tailscale
+// and tailnet are product words: keep them.
+func (msgs Messages) TailnetPhoneNone() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneNone", nil)
+}
+
+// TailnetPhoneOffline says "offline"
+// in the language the app shows.
+//
+// After a phone's Tailscale address: Tailscale does not see it.
+func TailnetPhoneOffline() string { return In(i18n.Locale()).TailnetPhoneOffline() }
+
+// TailnetPhoneOffline says "offline"
+// in the language of msgs.
+//
+// After a phone's Tailscale address: Tailscale does not see it.
+func (msgs Messages) TailnetPhoneOffline() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneOffline", nil)
+}
+
+// TailnetPhoneOnline says "online"
+// in the language the app shows.
+//
+// After a phone's Tailscale address in step 3's list: Tailscale sees it
+// connected. Lower case: it follows "100.101.2.2 · ".
+func TailnetPhoneOnline() string { return In(i18n.Locale()).TailnetPhoneOnline() }
+
+// TailnetPhoneOnline says "online"
+// in the language of msgs.
+//
+// After a phone's Tailscale address in step 3's list: Tailscale sees it
+// connected. Lower case: it follows "100.101.2.2 · ".
+func (msgs Messages) TailnetPhoneOnline() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneOnline", nil)
+}
+
+// TailnetPhoneRelayed says "connected through a Tailscale relay, which is slower"
+// in the language the app shows.
+//
+// After a phone's Tailscale address: connected, but through one of
+// Tailscale's relay servers rather than straight to the phone.
+func TailnetPhoneRelayed() string { return In(i18n.Locale()).TailnetPhoneRelayed() }
+
+// TailnetPhoneRelayed says "connected through a Tailscale relay, which is slower"
+// in the language of msgs.
+//
+// After a phone's Tailscale address: connected, but through one of
+// Tailscale's relay servers rather than straight to the phone.
+func (msgs Messages) TailnetPhoneRelayed() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneRelayed", nil)
+}
+
+// TailnetPhoneSteps says "On the phone, install Tailscale from Google Play, open it and sign in to the same account as on this computer."
+// in the language the app shows.
+//
+// Step 2: what to do on the phone.
+func TailnetPhoneSteps() string { return In(i18n.Locale()).TailnetPhoneSteps() }
+
+// TailnetPhoneSteps says "On the phone, install Tailscale from Google Play, open it and sign in to the same account as on this computer."
+// in the language of msgs.
+//
+// Step 2: what to do on the phone.
+func (msgs Messages) TailnetPhoneSteps() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneSteps", nil)
+}
+
+// TailnetPortField says "Wireless debugging port"
+// in the language the app shows.
+//
+// Accessible name of the field for the port Wireless debugging shows.
+func TailnetPortField() string { return In(i18n.Locale()).TailnetPortField() }
+
+// TailnetPortField says "Wireless debugging port"
+// in the language of msgs.
+//
+// Accessible name of the field for the port Wireless debugging shows.
+func (msgs Messages) TailnetPortField() string {
+	return Catalog.Format(msgs.locale, "tailnetPortField", nil)
+}
+
+// TailnetReadFailed says "Couldn't read Tailscale's status on this computer"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: when asking Tailscale on this
+// computer failed; its error follows in English.
+func TailnetReadFailed() string { return In(i18n.Locale()).TailnetReadFailed() }
+
+// TailnetReadFailed says "Couldn't read Tailscale's status on this computer"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: when asking Tailscale on this
+// computer failed; its error follows in English.
+func (msgs Messages) TailnetReadFailed() string {
+	return Catalog.Format(msgs.locale, "tailnetReadFailed", nil)
+}
+
+// TailnetReading says "Looking for Tailscale on this computer…"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: while the first answer is on its
+// way.
+func TailnetReading() string { return In(i18n.Locale()).TailnetReading() }
+
+// TailnetReading says "Looking for Tailscale on this computer…"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: while the first answer is on its
+// way.
+func (msgs Messages) TailnetReading() string {
+	return Catalog.Format(msgs.locale, "tailnetReading", nil)
+}
+
+// TailnetSafety says "Tailscale encrypts everything between your devices. Pinky only reads Tailscale's status; it doesn't change Tailscale'…"
+// in the language the app shows.
+//
+// The note under the steps.
+func TailnetSafety() string { return In(i18n.Locale()).TailnetSafety() }
+
+// TailnetSafety says "Tailscale encrypts everything between your devices. Pinky only reads Tailscale's status; it doesn't change Tailscale'…"
+// in the language of msgs.
+//
+// The note under the steps.
+func (msgs Messages) TailnetSafety() string {
+	return Catalog.Format(msgs.locale, "tailnetSafety", nil)
+}
+
+// TailnetShow says "Show"
+// in the language the app shows.
+//
+// Button by a phone that is connected: shows it.
+func TailnetShow() string { return In(i18n.Locale()).TailnetShow() }
+
+// TailnetShow says "Show"
+// in the language of msgs.
+//
+// Button by a phone that is connected: shows it.
+func (msgs Messages) TailnetShow() string {
+	return Catalog.Format(msgs.locale, "tailnetShow", nil)
+}
+
+// TailnetStepConnect says "Connect the phone"
+// in the language the app shows.
+//
+// Step 3's title.
+func TailnetStepConnect() string { return In(i18n.Locale()).TailnetStepConnect() }
+
+// TailnetStepConnect says "Connect the phone"
+// in the language of msgs.
+//
+// Step 3's title.
+func (msgs Messages) TailnetStepConnect() string {
+	return Catalog.Format(msgs.locale, "tailnetStepConnect", nil)
+}
+
+// TailnetStepHere says "Tailscale on this computer"
+// in the language the app shows.
+//
+// Step 1's title.
+func TailnetStepHere() string { return In(i18n.Locale()).TailnetStepHere() }
+
+// TailnetStepHere says "Tailscale on this computer"
+// in the language of msgs.
+//
+// Step 1's title.
+func (msgs Messages) TailnetStepHere() string {
+	return Catalog.Format(msgs.locale, "tailnetStepHere", nil)
+}
+
+// TailnetStepPhone says "Tailscale on your phone"
+// in the language the app shows.
+//
+// Step 2's title.
+func TailnetStepPhone() string { return In(i18n.Locale()).TailnetStepPhone() }
+
+// TailnetStepPhone says "Tailscale on your phone"
+// in the language of msgs.
+//
+// Step 2's title.
+func (msgs Messages) TailnetStepPhone() string {
+	return Catalog.Format(msgs.locale, "tailnetStepPhone", nil)
+}
+
+// TailnetStepsLabel says "Steps to connect through Tailscale"
+// in the language the app shows.
+//
+// Accessible name of the list of steps.
+func TailnetStepsLabel() string { return In(i18n.Locale()).TailnetStepsLabel() }
+
+// TailnetStepsLabel says "Steps to connect through Tailscale"
+// in the language of msgs.
+//
+// Accessible name of the list of steps.
+func (msgs Messages) TailnetStepsLabel() string {
+	return Catalog.Format(msgs.locale, "tailnetStepsLabel", nil)
+}
+
+// TailnetTitle says "Connect through Tailscale"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: the heading.
+func TailnetTitle() string { return In(i18n.Locale()).TailnetTitle() }
+
+// TailnetTitle says "Connect through Tailscale"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: the heading.
+func (msgs Messages) TailnetTitle() string {
+	return Catalog.Format(msgs.locale, "tailnetTitle", nil)
+}
+
+// TailnetUnreachable says "Couldn't reach {name} through Tailscale. Check that Tailscale is on on the phone and the phone has internet."
+// in the language the app shows.
+//
+// When connecting through Tailscale timed out.
+func TailnetUnreachable(name string) string { return In(i18n.Locale()).TailnetUnreachable(name) }
+
+// TailnetUnreachable says "Couldn't reach {name} through Tailscale. Check that Tailscale is on on the phone and the phone has internet."
+// in the language of msgs.
+//
+// When connecting through Tailscale timed out.
+func (msgs Messages) TailnetUnreachable(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetUnreachable", map[string]any{"name": name})
 }
 
 // TasksDetails says "Details"
@@ -20303,4 +22631,304 @@ func UpdateWhereUnsigned() string { return In(i18n.Locale()).UpdateWhereUnsigned
 // other languages; in English internal/update's own words show.
 func (msgs Messages) UpdateWhereUnsigned() string {
 	return Catalog.Format(msgs.locale, "updateWhereUnsigned", nil)
+}
+
+// WiFiAlsoAway says "Stopping it also stops Use away from home."
+// in the language the app shows.
+//
+// After wiFiOnDesc when the phone is used away from home too. Use away from
+// home is awayTitle.
+func WiFiAlsoAway() string { return In(i18n.Locale()).WiFiAlsoAway() }
+
+// WiFiAlsoAway says "Stopping it also stops Use away from home."
+// in the language of msgs.
+//
+// After wiFiOnDesc when the phone is used away from home too. Use away from
+// home is awayTitle.
+func (msgs Messages) WiFiAlsoAway() string {
+	return Catalog.Format(msgs.locale, "wiFiAlsoAway", nil)
+}
+
+// WiFiBusy says "Switching…"
+// in the language the app shows.
+//
+// Under wiFiTitle while the switch changes.
+func WiFiBusy() string { return In(i18n.Locale()).WiFiBusy() }
+
+// WiFiBusy says "Switching…"
+// in the language of msgs.
+//
+// Under wiFiTitle while the switch changes.
+func (msgs Messages) WiFiBusy() string {
+	return Catalog.Format(msgs.locale, "wiFiBusy", nil)
+}
+
+// WiFiDialogCancel says "Cancel"
+// in the language the app shows.
+//
+// The dialog's cancel button.
+func WiFiDialogCancel() string { return In(i18n.Locale()).WiFiDialogCancel() }
+
+// WiFiDialogCancel says "Cancel"
+// in the language of msgs.
+//
+// The dialog's cancel button.
+func (msgs Messages) WiFiDialogCancel() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogCancel", nil)
+}
+
+// WiFiDialogConfirm says "Use Wi-Fi"
+// in the language the app shows.
+//
+// The dialog's button that moves the phone to Wi-Fi.
+func WiFiDialogConfirm() string { return In(i18n.Locale()).WiFiDialogConfirm() }
+
+// WiFiDialogConfirm says "Use Wi-Fi"
+// in the language of msgs.
+//
+// The dialog's button that moves the phone to Wi-Fi.
+func (msgs Messages) WiFiDialogConfirm() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogConfirm", nil)
+}
+
+// WiFiDialogRisk says "While it's on, any computer on the same network can try to connect to the phone. If the phone asks \"Allow USB debuggi…"
+// in the language the app shows.
+//
+// The dialog: the risk, in a warning box. Allow USB debugging? is Android's
+// own prompt; use its words in Android's Simplified Chinese.
+func WiFiDialogRisk() string { return In(i18n.Locale()).WiFiDialogRisk() }
+
+// WiFiDialogRisk says "While it's on, any computer on the same network can try to connect to the phone. If the phone asks \"Allow USB debuggi…"
+// in the language of msgs.
+//
+// The dialog: the risk, in a warning box. Allow USB debugging? is Android's
+// own prompt; use its words in Android's Simplified Chinese.
+func (msgs Messages) WiFiDialogRisk() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogRisk", nil)
+}
+
+// WiFiDialogTitle says "Use {name} over Wi-Fi?"
+// in the language the app shows.
+//
+// The dialog before moving a phone to Wi-Fi: its title.
+func WiFiDialogTitle(name string) string { return In(i18n.Locale()).WiFiDialogTitle(name) }
+
+// WiFiDialogTitle says "Use {name} over Wi-Fi?"
+// in the language of msgs.
+//
+// The dialog before moving a phone to Wi-Fi: its title.
+func (msgs Messages) WiFiDialogTitle(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiDialogTitle", map[string]any{"name": name})
+}
+
+// WiFiDialogUntil says "It lasts until the phone restarts: then plug it in once and choose Use Wi-Fi again. Stop it any time from the ⋯ men…"
+// in the language the app shows.
+//
+// The dialog: how long it lasts and how to stop it.
+func WiFiDialogUntil() string { return In(i18n.Locale()).WiFiDialogUntil() }
+
+// WiFiDialogUntil says "It lasts until the phone restarts: then plug it in once and choose Use Wi-Fi again. Stop it any time from the ⋯ men…"
+// in the language of msgs.
+//
+// The dialog: how long it lasts and how to stop it.
+func (msgs Messages) WiFiDialogUntil() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogUntil", nil)
+}
+
+// WiFiDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it over Wi-Fi at {ad…"
+// in the language the app shows.
+//
+// The dialog: what it does. addr is the phone's Wi-Fi address. adb tcpip is
+// a command; keep it.
+func WiFiDialogWhat(addr string) string { return In(i18n.Locale()).WiFiDialogWhat(addr) }
+
+// WiFiDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it over Wi-Fi at {ad…"
+// in the language of msgs.
+//
+// The dialog: what it does. addr is the phone's Wi-Fi address. adb tcpip is
+// a command; keep it.
+func (msgs Messages) WiFiDialogWhat(addr string) string {
+	return Catalog.Format(msgs.locale, "wiFiDialogWhat", map[string]any{"addr": addr})
+}
+
+// WiFiFailed says "Couldn't change {name}'s Wi-Fi connection: {error}"
+// in the language the app shows.
+//
+// When moving the phone to Wi-Fi or back failed; error is in English.
+func WiFiFailed(name string, error string) string { return In(i18n.Locale()).WiFiFailed(name, error) }
+
+// WiFiFailed says "Couldn't change {name}'s Wi-Fi connection: {error}"
+// in the language of msgs.
+//
+// When moving the phone to Wi-Fi or back failed; error is in English.
+func (msgs Messages) WiFiFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "wiFiFailed", map[string]any{"name": name, "error": error})
+}
+
+// WiFiNeedsCable says "Plug {name} in to turn this on."
+// in the language the app shows.
+//
+// Under wiFiTitle while the phone is not on a cable.
+func WiFiNeedsCable(name string) string { return In(i18n.Locale()).WiFiNeedsCable(name) }
+
+// WiFiNeedsCable says "Plug {name} in to turn this on."
+// in the language of msgs.
+//
+// Under wiFiTitle while the phone is not on a cable.
+func (msgs Messages) WiFiNeedsCable(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiNeedsCable", map[string]any{"name": name})
+}
+
+// WiFiNoWiFi says "{name} isn't on Wi-Fi. Connect it to the same Wi-Fi as this computer."
+// in the language the app shows.
+//
+// Under wiFiTitle while the phone has no Wi-Fi address.
+func WiFiNoWiFi(name string) string { return In(i18n.Locale()).WiFiNoWiFi(name) }
+
+// WiFiNoWiFi says "{name} isn't on Wi-Fi. Connect it to the same Wi-Fi as this computer."
+// in the language of msgs.
+//
+// Under wiFiTitle while the phone has no Wi-Fi address.
+func (msgs Messages) WiFiNoWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiNoWiFi", map[string]any{"name": name})
+}
+
+// WiFiOffDesc says "{name} has no Wireless debugging. Keep it on this computer's Wi-Fi, and Pinky can reach it without the cable."
+// in the language the app shows.
+//
+// Under wiFiTitle while it is off. Wireless debugging is Android's own
+// name.
+func WiFiOffDesc(name string) string { return In(i18n.Locale()).WiFiOffDesc(name) }
+
+// WiFiOffDesc says "{name} has no Wireless debugging. Keep it on this computer's Wi-Fi, and Pinky can reach it without the cable."
+// in the language of msgs.
+//
+// Under wiFiTitle while it is off. Wireless debugging is Android's own
+// name.
+func (msgs Messages) WiFiOffDesc(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiOffDesc", map[string]any{"name": name})
+}
+
+// WiFiOffToast says "Stopped {name}'s Wi-Fi connection"
+// in the language the app shows.
+//
+// A toast once the Wi-Fi connection stopped.
+func WiFiOffToast(name string) string { return In(i18n.Locale()).WiFiOffToast(name) }
+
+// WiFiOffToast says "Stopped {name}'s Wi-Fi connection"
+// in the language of msgs.
+//
+// A toast once the Wi-Fi connection stopped.
+func (msgs Messages) WiFiOffToast(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiOffToast", map[string]any{"name": name})
+}
+
+// WiFiOnDesc says "On: Pinky reaches {name} over Wi-Fi at {addr}, and again by itself whenever it is back on this network."
+// in the language the app shows.
+//
+// Under wiFiTitle while it is on: addr is the phone's Wi-Fi address.
+func WiFiOnDesc(name string, addr string) string { return In(i18n.Locale()).WiFiOnDesc(name, addr) }
+
+// WiFiOnDesc says "On: Pinky reaches {name} over Wi-Fi at {addr}, and again by itself whenever it is back on this network."
+// in the language of msgs.
+//
+// Under wiFiTitle while it is on: addr is the phone's Wi-Fi address.
+func (msgs Messages) WiFiOnDesc(name string, addr string) string {
+	return Catalog.Format(msgs.locale, "wiFiOnDesc", map[string]any{"name": name, "addr": addr})
+}
+
+// WiFiOnToast says "{name} is connected over Wi-Fi at {addr}. You can unplug it now."
+// in the language the app shows.
+//
+// A toast once the phone moved to Wi-Fi.
+func WiFiOnToast(name string, addr string) string { return In(i18n.Locale()).WiFiOnToast(name, addr) }
+
+// WiFiOnToast says "{name} is connected over Wi-Fi at {addr}. You can unplug it now."
+// in the language of msgs.
+//
+// A toast once the phone moved to Wi-Fi.
+func (msgs Messages) WiFiOnToast(name string, addr string) string {
+	return Catalog.Format(msgs.locale, "wiFiOnToast", map[string]any{"name": name, "addr": addr})
+}
+
+// WiFiStop says "Stop the Wi-Fi connection"
+// in the language the app shows.
+//
+// The ⋯ menu and Settings › Phones: has the phone's adb stop listening
+// on the network (adb usb). Pinky then reaches it by cable only.
+func WiFiStop() string { return In(i18n.Locale()).WiFiStop() }
+
+// WiFiStop says "Stop the Wi-Fi connection"
+// in the language of msgs.
+//
+// The ⋯ menu and Settings › Phones: has the phone's adb stop listening
+// on the network (adb usb). Pinky then reaches it by cable only.
+func (msgs Messages) WiFiStop() string {
+	return Catalog.Format(msgs.locale, "wiFiStop", nil)
+}
+
+// WiFiStoppedDesc says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again."
+// in the language the app shows.
+//
+// Under wiFiTitle when the phone's adb no longer listens on the network.
+// Use Wi-Fi again is wiFiUseAgain.
+func WiFiStoppedDesc(name string) string { return In(i18n.Locale()).WiFiStoppedDesc(name) }
+
+// WiFiStoppedDesc says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again."
+// in the language of msgs.
+//
+// Under wiFiTitle when the phone's adb no longer listens on the network.
+// Use Wi-Fi again is wiFiUseAgain.
+func (msgs Messages) WiFiStoppedDesc(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiStoppedDesc", map[string]any{"name": name})
+}
+
+// WiFiTitle says "Wi-Fi connection"
+// in the language the app shows.
+//
+// Settings › Phones, under an Android phone without Wireless debugging:
+// the title of its Wi-Fi switch.
+func WiFiTitle() string { return In(i18n.Locale()).WiFiTitle() }
+
+// WiFiTitle says "Wi-Fi connection"
+// in the language of msgs.
+//
+// Settings › Phones, under an Android phone without Wireless debugging:
+// the title of its Wi-Fi switch.
+func (msgs Messages) WiFiTitle() string {
+	return Catalog.Format(msgs.locale, "wiFiTitle", nil)
+}
+
+// WiFiUse says "Use Wi-Fi instead…"
+// in the language the app shows.
+//
+// The ⋯ menu under the mirror, Settings › Phones and Add phone, for an
+// Android phone without Wireless debugging (Android 10) on a cable: opens
+// the dialog that moves it to Wi-Fi.
+func WiFiUse() string { return In(i18n.Locale()).WiFiUse() }
+
+// WiFiUse says "Use Wi-Fi instead…"
+// in the language of msgs.
+//
+// The ⋯ menu under the mirror, Settings › Phones and Add phone, for an
+// Android phone without Wireless debugging (Android 10) on a cable: opens
+// the dialog that moves it to Wi-Fi.
+func (msgs Messages) WiFiUse() string {
+	return Catalog.Format(msgs.locale, "wiFiUse", nil)
+}
+
+// WiFiUseAgain says "Use Wi-Fi again"
+// in the language the app shows.
+//
+// The same, for a phone whose Wi-Fi connection stopped when it restarted,
+// now plugged in again: moves it to Wi-Fi at once.
+func WiFiUseAgain() string { return In(i18n.Locale()).WiFiUseAgain() }
+
+// WiFiUseAgain says "Use Wi-Fi again"
+// in the language of msgs.
+//
+// The same, for a phone whose Wi-Fi connection stopped when it restarted,
+// now plugged in again: moves it to Wi-Fi at once.
+func (msgs Messages) WiFiUseAgain() string {
+	return Catalog.Format(msgs.locale, "wiFiUseAgain", nil)
 }

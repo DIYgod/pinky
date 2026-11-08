@@ -239,15 +239,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 			}
 		})
 		if a.set.adding {
-			mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-				in := mg.TextInput(c.Key("new-blocked"), &a.set.newApp).Placeholder(locales.SettingsSafetyAppPlaceholder()).Grow(1).AutoFocus().Label(locales.SettingsSafetyAppLabel())
-				add := button(c, locales.SettingsSafetyBlock(), btnOpt{kind: btnPrimary})
-				if (in.Submitted() || add.Clicked()) && strings.TrimSpace(a.set.newApp) != "" {
-					st.BlockedApps = append(st.BlockedApps, BlockedApp{Name: strings.TrimSpace(a.set.newApp), Kind: "Blocked by you"})
-					a.set.newApp, a.set.adding = "", false
-					a.changed()
-				}
-			})
+			a.addBlockedApp(c)
 		}
 		mg.Column(c).Children(func() {
 			for i, b := range st.BlockedApps {
@@ -348,6 +340,22 @@ func (a *app) settingsPhones(c *mg.Context) {
 				box.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
 			}
 			box.Children(func() {
+				if foundOnWiFi(d) {
+					// Found on Wi-Fi: nothing to set until the person says
+					// it is theirs (wifi.go).
+					mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+						mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+							mg.Text(c, d.Info.Name).FontWeight(600)
+							line := locales.SettingsPhonesFound()
+							if l := foundLine(d); l != "" {
+								line = l + " · " + line
+							}
+							mg.Text(c, line).FontSize(13.5).TextColor(p.ink2)
+						})
+						a.foundButtons(c, d, true)
+					})
+					return
+				}
 				mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
 					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 						mg.Text(c, d.Info.Name).FontWeight(600)
@@ -360,6 +368,9 @@ func (a *app) settingsPhones(c *mg.Context) {
 					mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 						word := locales.SettingsPhonesConnected()
 						switch {
+						case d.Status == gateway.DeviceConnecting:
+							dot(c, p.ink3, false)
+							word = locales.SettingsPhonesConnecting()
 						case d.Status == gateway.DeviceOffline:
 							hollowDot(c)
 							word = locales.SettingsPhonesOffline()
@@ -388,6 +399,8 @@ func (a *app) settingsPhones(c *mg.Context) {
 					a.backgroundRow(c, d, true)
 				}
 				a.connectionRows(c, d)
+				a.awayRow(c, d)
+				a.phoneWiFiRow(c, d)
 				mg.Row(c).Padding(4, 0, 0, 0).Children(func() {
 					if linkButton(c, locales.PhoneCheckup()).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
 						a.openCheckup(d)
@@ -402,6 +415,12 @@ func (a *app) settingsPhones(c *mg.Context) {
 			a.add.reset(a)
 		}
 	})
+	mg.Column(c).Label(locales.SettingsPhonesWiFi()).Children(func() {
+		if a.toggleRow(c, "ios-wifi", locales.SettingsPhonesWiFi(), locales.SettingsPhonesWiFiDesc(), true, &a.settings.IOSWiFi) {
+			a.applyWiFi(a.settings.IOSWiFi)
+		}
+	})
+	a.awayKeepAwakeRow(c)
 }
 
 // agentsState is Settings › Agents': the gateway's agents and the scopes

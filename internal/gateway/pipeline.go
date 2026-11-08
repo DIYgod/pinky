@@ -197,6 +197,10 @@ func (s *Session) Act(ctx context.Context, c Call, a Action) *Result {
 func (g *Gateway) gate(l *lease, approvalID string, action bool) *Result {
 	g.mu.Lock()
 	d := l.dev
+	for !l.ended && g.waitMovingLocked(l.ctx, d) {
+		// It was moving between its cable and Wi-Fi, or Pinky was opening
+		// it again (wifi.go).
+	}
 	switch {
 	case l.ended:
 		g.mu.Unlock()
@@ -484,10 +488,10 @@ func (p *prep) finger() (screen.Point, bool) {
 // next to the finger of a tap or swipe: on web views and canvas apps
 // "还款" or "Pay" may be nowhere in the element tree. The read an action
 // starts from has no OCR (it would slow every action), so on phones whose
-// driver reads text (d.ocr) it reads again with OCR, but only where the
-// tree says little about the point: no element there, an unlabelled one,
-// or a large one such as a web view. Without a second read the action is
-// checked as before.
+// driver reads text (readsText) it reads again with all the OCR text, but
+// only where the tree says little about the point: no element there, an
+// unlabelled one, or a large one such as a web view. Without a second read
+// the action is checked as before.
 func (g *Gateway) ocrForVerdict(ctx context.Context, d *device, p *prep, cur *screen.Screen) {
 	pt, ok := p.finger()
 	if !ok || cur == nil {
@@ -495,13 +499,10 @@ func (g *Gateway) ocrForVerdict(ctx context.Context, d *device, p *prep, cur *sc
 	}
 	src := cur
 	if !hasOCR(cur) {
-		g.mu.Lock()
-		reads := d.ocr
-		g.mu.Unlock()
-		if !reads || !vagueAt(cur, p.target) {
+		if !vagueAt(cur, p.target) || !g.readsText(d) {
 			return
 		}
-		o, err := g.observe(ctx, d, true)
+		o, err := g.observeOCR(ctx, d, ocrAll)
 		if err != nil {
 			return
 		}
@@ -702,8 +703,17 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		}
 		p.launch, p.url = app, url
 		p.input.Launch = screen.App{ID: app.ID, Name: app.Name}
+		opener := false
+		if lo, ok := g.driverOf(d).(linkOpener); ok && url {
+			// The rules judge the app that opens the link: blocking or
+			// scoping it covers its links too, and so does the person's
+			// allowing it for the task.
+			browser := lo.LinkApp()
+			p.input.Launch = screen.App{ID: browser.ID, Name: browser.Name}
+			opener = true
+		}
 		p.input.LaunchURL = url
-		p.input.AllowBlocked = !url && g.allows(l, p.input.Launch)
+		p.input.AllowBlocked = (!url || opener) && g.allows(l, p.input.Launch)
 	}
 	p.input.Target = p.target
 	p.desc = describe(a, p)
@@ -869,6 +879,11 @@ func hitTest(s *screen.Screen, p screen.Point) *screen.Element {
 	return &cp
 }
 
+// linkOpener is implemented by drivers that open a link in a fixed app.
+type linkOpener interface {
+	LinkApp() driver.App
+}
+
 // resolveLaunch finds the app phone_launch names.
 func (g *Gateway) resolveLaunch(ctx context.Context, d *device, name string) (driver.App, bool, *Result) {
 	name = strings.TrimSpace(name)
@@ -886,93 +901,15 @@ func (g *Gateway) resolveLaunch(ctx context.Context, d *device, name string) (dr
 	if err != nil {
 		return driver.App{}, false, errResult(ErrInternal, "Listing apps failed: %v", err)
 	}
-	if a, ok := matchApp(apps, name); ok {
-		return a, false, nil
+	m := findApp(apps, name)
+	if m.ok {
+		return m.app, false, nil
+	}
+	if len(m.similar) > 0 {
+		return driver.App{}, false, errResult(ErrNotFound, "No installed app is named %q. Similar: %s. Call phone_launch again with the exact name or id of the one you mean.",
+			name, appList(m.similar))
 	}
 	return driver.App{}, false, errResult(ErrNotFound, "No installed app matches %q; call phone_apps to see what is installed.", name)
-}
-
-// matchApp finds an app by id, then by exact name, then by a unique part of
-// its name.
-func matchApp(apps []driver.App, name string) (driver.App, bool) {
-	for _, a := range apps {
-		if a.ID == name {
-			return a, true
-		}
-	}
-	var exact, part []driver.App
-	q := strings.ToLower(name)
-	for _, a := range apps {
-		n := strings.ToLower(a.Name)
-		switch {
-		case n == q:
-			exact = append(exact, a)
-		case strings.Contains(n, q):
-			part = append(part, a)
-		}
-	}
-	pick := func(list []driver.App) (driver.App, bool) {
-		if len(list) == 1 {
-			return list[0], true
-		}
-		var user []driver.App
-		for _, a := range list {
-			if !a.System {
-				user = append(user, a)
-			}
-		}
-		if len(user) == 1 {
-			return user[0], true
-		}
-		return driver.App{}, false
-	}
-	if a, ok := pick(exact); ok {
-		return a, true
-	}
-	if len(exact) == 0 && len(part) > 0 {
-		return pick(part)
-	}
-	if len(exact) == 0 {
-		// No name matches, as an English name on a phone in another
-		// language ("Calculator" for 计算器): try the package or bundle
-		// id's parts (com.google.android.calculator).
-		return pick(idMatches(apps, q))
-	}
-	return driver.App{}, false
-}
-
-// idMatches returns the apps whose id has a part equal to q, or else a
-// part that contains it ("clock" in com.google.android.deskclock). q is
-// lower case; parts shorter than four letters only match whole.
-func idMatches(apps []driver.App, q string) []driver.App {
-	q = strings.ReplaceAll(q, " ", "")
-	if len(q) < 3 {
-		return nil
-	}
-	var whole, part []driver.App
-	for _, a := range apps {
-		matched := false
-		for i, seg := range strings.Split(strings.ToLower(a.ID), ".") {
-			if i == 0 && (seg == "com" || seg == "org" || seg == "net" || seg == "app") {
-				continue
-			}
-			switch {
-			case seg == q:
-				whole = append(whole, a)
-				matched = true
-			case len(q) >= 4 && strings.Contains(seg, q) && !matched:
-				part = append(part, a)
-				matched = true
-			}
-			if matched {
-				break
-			}
-		}
-	}
-	if len(whole) > 0 {
-		return whole
-	}
-	return part
 }
 
 // ask opens an approval for an action and records the waiting step.
@@ -1012,7 +949,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	if res := g.afterOpen(l, info); res != nil {
 		return info, res
 	}
-	before := g.shotID(g.keepImage(l.dev, cur, shot))
+	before := g.shotID(g.keepImage(l.dev, cur, shot, false))
 	g.openStep(l, info, "phone_"+a.Tool, a.args(c), "Waiting for you: "+p.desc, target, p.point, before)
 	return info, nil
 }
@@ -1620,8 +1557,33 @@ func (g *Gateway) readError(l *lease, err error) *Result {
 // model (15 s measured, about a minute the first time on a new Mac).
 const observeTimeout = 60 * time.Second
 
-// observe reads the screen, assigns refs and collects events.
+// readOCR is how a read asks the driver for OCR.
+type readOCR int
+
+const (
+	ocrOff readOCR = iota
+	// ocrAuto: the text the driver finds its tree misses (iOS: what OCR
+	// reads that no element shows; Android: over web views and canvases
+	// whose tree is empty or sparse).
+	ocrAuto
+	// ocrAll: all the text no element shows, however complete the tree
+	// looks: the agent asked for it, or a finger's spot is checked
+	// (driver.ObserveOptions.OCRAll).
+	ocrAll
+)
+
+// observe reads the screen, assigns refs and collects events. With ocr,
+// the driver adds the text its tree misses (ocrAuto).
 func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Screen, error) {
+	mode := ocrOff
+	if ocr {
+		mode = ocrAuto
+	}
+	return g.observeOCR(ctx, d, mode)
+}
+
+// observeOCR is observe with the kind of OCR the read asks for.
+func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*screen.Screen, error) {
 	g.mu.Lock()
 	dev, onBG := g.screenOfLocked(d)
 	video := d.video
@@ -1638,7 +1600,19 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	if video != nil {
 		readTok = video.readStarting(start)
 	}
-	s, err := dev.Observe(ctx, driver.ObserveOptions{OCR: ocr})
+	opt := driver.ObserveOptions{OCR: mode != ocrOff, OCRAll: mode == ocrAll}
+	// Asked on every read: an iPhone whose remoteAXService fails, or one
+	// below iOS 27 without the helper, takes a picture to place the tree's
+	// elements, OCR or not.
+	opt.MayCapture = func(s *screen.Screen) bool { return g.mayCapture(d, s) }
+	if opt.OCR {
+		// A picture from the live video, for drivers whose screenshots are
+		// slow (an iPhone over Wi-Fi) or missing (an Android background
+		// display); it shares the mirror's stream.
+		key := hubKey(d.id, onBG)
+		opt.Frame = func(ctx context.Context) (image.Image, error) { return g.frameShot(ctx, key, dev) }
+	}
+	s, err := dev.Observe(ctx, opt)
 	if err != nil && video != nil {
 		video.readFailed(readTok)
 	}
@@ -1655,7 +1629,7 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		g.mu.Unlock()
 		if left {
 			g.wake(ctx, d)
-			return g.observe(ctx, d, ocr)
+			return g.observeOCR(ctx, d, mode)
 		}
 	}
 	if err != nil {
@@ -1670,8 +1644,14 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		}
 		return nil, errors.New("the driver returned no screen")
 	}
+	// One-time codes are masked before anything else sees the read: the
+	// agent, history, approvals and refs (policy.MaskScreen).
+	g.policy.MaskScreen(s)
+	// So are blocked apps' notifications and cards on other screens
+	// (hidden.go); their notification events are matched by name too.
+	names := g.hideBlocked(ctx, d, dev, s)
 	d.refs.Assign(s)
-	evs := g.policy.FilterEvents(s.Events)
+	evs := g.policy.FilterEventsNamed(s.Events, names)
 	_, blocked := g.policy.Blocked(s.App)
 	s.Events = nil
 	g.mu.Lock()
@@ -1684,7 +1664,7 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 		d.events = append([]screen.Event(nil), d.events[n-50:]...)
 	}
 	d.last = s
-	if ocr && !d.ocr {
+	if mode != ocrOff && !d.ocr {
 		d.ocr = hasOCR(s)
 	}
 	g.confirmShotLocked(d, s, start)
@@ -1709,6 +1689,59 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	return s, nil
 }
 
+// mayCapture reports whether a driver may capture a screen it read, to
+// read its text by OCR (driver.ObserveOptions.MayCapture): not a locked
+// phone, whose lock screen can show any app's notifications, nor an app
+// Pinky cannot name, nor a blocked app, unless the person allowed that app
+// for the lease's task (the person chose so on 2026-11-08). The picture
+// stays in the driver's memory and is dropped once read: only text and
+// positions come back, which the agent sees only where it sees the screen
+// (agentView). Screenshots, history and recordings still take no picture
+// of a blocked app (recordableScreen).
+func (g *Gateway) mayCapture(d *device, s *screen.Screen) bool {
+	if recordableScreen(g.policy, s) {
+		return true
+	}
+	if s == nil || s.Locked {
+		return false
+	}
+	if _, blocked := g.policy.Blocked(s.App); !blocked {
+		return false // an app Pinky cannot name
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return allowsLocked(d.lease, s.App)
+}
+
+// readsText reports whether reads with OCR may add text on the device's
+// screen: one has (an iPhone's), or its driver can read text from pixels
+// on this computer (driver.TextReader).
+func (g *Gateway) readsText(d *device) bool {
+	g.mu.Lock()
+	seen := d.ocr
+	dev, _ := g.screenOfLocked(d)
+	g.mu.Unlock()
+	if seen {
+		return true
+	}
+	// Without the lock: the first answer may load the recognizer.
+	tr, ok := dev.(driver.TextReader)
+	return ok && tr.ReadsText()
+}
+
+// noOCR reports whether the driver of the device's screen says that this
+// computer cannot read text from pixels.
+func (g *Gateway) noOCR(d *device) bool {
+	g.mu.Lock()
+	dev, _ := g.screenOfLocked(d)
+	g.mu.Unlock()
+	tr, ok := dev.(driver.TextReader)
+	return ok && !tr.ReadsText()
+}
+
+// noOCRMessage answers phone_observe { ocr: true } where noOCR.
+const noOCRMessage = "This computer cannot read text from the screen's pixels (no OCR), so text that no element shows is missing; a screenshot shows it."
+
 func notificationsOnly(evs []screen.Event) []screen.Event {
 	var keep []screen.Event
 	for _, ev := range evs {
@@ -1726,33 +1759,51 @@ var errScreenChanged = errors.New("the screen changed while the screenshot was t
 // notifications from blocked apps.
 var errLockedShot = errors.New("the phone is locked, and its lock screen can show notifications from blocked apps")
 
-// screenshot takes a screenshot of the screen s describes. It reads the
-// screen again afterwards and drops the image when the foreground app
-// changed, is blocked or unknown, or the phone locked, so a blocked app
-// that comes to the front in between is never captured.
-func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (image.Image, error) {
+// shotCover counts the boxes a screenshot got: over one-time codes, and
+// over blocked apps' notifications and cards (hidden.go).
+type shotCover struct{ codes, hidden int }
+
+// screenshot takes a screenshot of the screen s describes, for an agent.
+// It reads the screen again afterwards and drops the image when the
+// foreground app changed, is blocked or unknown, or the phone locked, so a
+// blocked app that comes to the front in between is never captured. What
+// the reads hid of blocked apps is covered (coverHidden), and so are
+// one-time codes (coverCodes).
+func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (img image.Image, cov shotCover, err error) {
 	dev, bg := g.screenOf(d)
 	if dev == nil {
-		return nil, driver.ErrOffline
+		return nil, cov, driver.ErrOffline
 	}
 	if s.Locked {
-		return nil, errLockedShot
+		return nil, cov, errLockedShot
 	}
 	if !recordableScreen(g.policy, s) {
-		return nil, errScreenChanged
+		return nil, cov, errScreenChanged
 	}
-	img, err := g.shotOf(ctx, d, dev, bg)
+	if _, unplaced := hiddenPlaces(1, 1, s); unplaced {
+		return nil, cov, errHiddenShot
+	}
+	img, err = g.shotOf(ctx, d, dev, bg)
 	if err != nil {
-		return nil, err
+		return nil, cov, err
 	}
 	after, err := g.observe(ctx, d, false)
 	if err != nil {
-		return nil, err
+		return nil, cov, err
 	}
 	if !recordableScreen(g.policy, after) || after.App != s.App {
-		return nil, errScreenChanged
+		return nil, cov, errScreenChanged
 	}
-	return img, nil
+	img, cov.hidden, err = coverHidden(img, s, after)
+	if err != nil {
+		return nil, shotCover{}, err
+	}
+	img, codes, ok := g.coverCodes(img, true, s, after)
+	if !ok {
+		return nil, shotCover{}, errCodeShot
+	}
+	cov.codes = codes
+	return img, cov, nil
 }
 
 // agentView hides a blocked app's screen, unless the person allowed the

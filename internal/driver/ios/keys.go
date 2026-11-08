@@ -91,6 +91,11 @@ var asciiPunct = map[rune]struct {
 // system's left-edge swipe, and editing and arrow keys go through a virtual
 // keyboard. iPhone has no Recents key.
 func (d *Device) Key(ctx context.Context, k driver.Key) error {
+	return d.gone(d.key(ctx, k))
+}
+
+// key is Key without marking a dropped connection (gone).
+func (d *Device) key(ctx context.Context, k driver.Key) error {
 	switch k {
 	case driver.KeyHome:
 		d.inputMu.Lock()
@@ -101,7 +106,7 @@ func (d *Device) Key(ctx context.Context, k driver.Key) error {
 		}
 		return h.button(ctx, consumerPage, usageHome, 60*time.Millisecond)
 	case driver.KeyBack:
-		s := d.screen()
+		s := d.freshDisplay(ctx).upright()
 		y := s.Height / 2
 		return d.Swipe(ctx, screen.Point{X: 0, Y: y}, screen.Point{X: s.Width * 7 / 10, Y: y}, 250*time.Millisecond)
 	case driver.KeyRecents:

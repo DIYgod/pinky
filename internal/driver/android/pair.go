@@ -90,9 +90,10 @@ func (p *Provider) PairWithCode(ctx context.Context, addr, code string) (driver.
 	// Search while the phone pairs: its connect service is there already.
 	own, _ := p.browse(adb.ServiceConnect)
 	defer closeBrowse(own)
+	start := time.Now()
 	guid, err := p.cfg.Client.Pair(ctx, addr, code)
 	if err != nil {
-		return driver.Info{}, pairError(err)
+		return driver.Info{}, pairError(err, addr, time.Since(start))
 	}
 	return p.connectPaired(ctx, guid, host, own)
 }
@@ -105,14 +106,21 @@ func (p *Provider) ConnectWiFi(ctx context.Context, addr string) (driver.Info, e
 	if _, err := splitAddr(addr); err != nil {
 		return driver.Info{}, err
 	}
+	parent := ctx
 	ctx, cancel := context.WithTimeout(ctx, connectTimeout)
 	defer cancel()
 	if err := p.cfg.Client.Connect(ctx, addr); err != nil {
 		return driver.Info{}, wrapErr(err)
 	}
+	offline := func() error {
+		return fmt.Errorf("android: adb connected to %s, but the phone did not come online: %w", addr, driver.ErrOffline)
+	}
 	for {
 		entries, err := p.cfg.Client.Devices(ctx)
 		if err != nil {
+			if waitRanOut(parent, ctx) {
+				return driver.Info{}, offline()
+			}
 			return driver.Info{}, wrapErr(err)
 		}
 		for _, e := range entries {
@@ -121,9 +129,31 @@ func (p *Provider) ConnectWiFi(ctx context.Context, addr string) (driver.Info, e
 			}
 		}
 		if err := sleepCtx(ctx, pairPoll); err != nil {
-			return driver.Info{}, fmt.Errorf("android: adb connected to %s, but the phone did not come online: %w", addr, driver.ErrOffline)
+			return driver.Info{}, offline()
 		}
 	}
+}
+
+// waitRanOut reports whether wait, a wait for a phone made from parent
+// with a timeout, ended by its own timeout rather than the caller's: an
+// adb request it cut then means the phone did not show up in time, as when
+// the timeout falls between two requests, not that adb failed. A slow
+// computer or adb server makes that likelier. It goes by the clock: a
+// request's connection times out at the wait's deadline, a moment before
+// wait.Err() may say so.
+func waitRanOut(parent, wait context.Context) bool {
+	now := time.Now()
+	if parent.Err() != nil {
+		return false
+	}
+	if d, ok := parent.Deadline(); ok && !now.Before(d) {
+		return false
+	}
+	if errors.Is(wait.Err(), context.DeadlineExceeded) {
+		return true
+	}
+	d, ok := wait.Deadline()
+	return ok && !now.Before(d)
 }
 
 // splitAddr checks an address and port the person typed and returns the
@@ -191,9 +221,10 @@ func (q *qrPairing) Wait(ctx context.Context) (driver.Info, error) {
 	}
 	q.update(func(pr *driver.PairingProgress) { pr.Found = true })
 	q.p.cfg.logf("android: pairing with the phone at %s", addr)
+	start := time.Now()
 	guid, err := q.p.cfg.Client.Pair(ctx, addr, q.pass)
 	if err != nil {
-		return driver.Info{}, q.closedErr(ctx, pairError(err))
+		return driver.Info{}, q.closedErr(ctx, pairError(err, addr, time.Since(start)))
 	}
 	q.update(func(pr *driver.PairingProgress) { pr.Paired = true })
 	host, _, _ := net.SplitHostPort(addr)
@@ -240,11 +271,12 @@ func pairingAddr(svcs []adb.MDNSService, name string) string {
 	return ""
 }
 
-// Close implements driver.Pairing; a Wait in progress returns.
+// Close implements driver.Pairing; a Wait in progress returns, once the
+// search is closed too.
 func (q *qrPairing) Close() error {
 	q.once.Do(func() {
-		close(q.done)
 		closeBrowse(q.own)
+		close(q.done)
 	})
 	return nil
 }
@@ -273,14 +305,24 @@ func closeBrowse(b Browse) {
 // server lists or the driver's own search found, by the phone's guid, or
 // by the address it paired from when the server reported no guid.
 func (p *Provider) connectPaired(ctx context.Context, guid, host string, own Browse) (driver.Info, error) {
+	parent := ctx
 	ctx, cancel := context.WithTimeout(ctx, connectTimeout)
 	defer cancel()
 	c := p.cfg.Client
 	var connected string // the address the driver connected to
+	notFound := func() error {
+		if connected == "" {
+			return fmt.Errorf("android: the phone paired, but its wireless debugging service did not show up; check that Wireless debugging is still on and the phone is on the same network: %w", driver.ErrPairedNotFound)
+		}
+		return fmt.Errorf("android: the phone paired and adb connected to %s, but it did not come online: %w", connected, driver.ErrOffline)
+	}
 	start := time.Now()
 	for {
 		entries, err := c.Devices(ctx)
 		if err != nil {
+			if waitRanOut(parent, ctx) {
+				return driver.Info{}, notFound()
+			}
 			return driver.Info{}, wrapErr(err)
 		}
 		for _, e := range entries {
@@ -309,10 +351,7 @@ func (p *Provider) connectPaired(ctx context.Context, guid, host string, own Bro
 			}
 		}
 		if err := sleepCtx(ctx, pairPoll); err != nil {
-			if connected == "" {
-				return driver.Info{}, fmt.Errorf("android: the phone paired, but its wireless debugging service did not show up; check that Wireless debugging is still on and the phone is on the same network: %w", driver.ErrPairedNotFound)
-			}
-			return driver.Info{}, fmt.Errorf("android: the phone paired and adb connected to %s, but it did not come online: %w", connected, driver.ErrOffline)
+			return driver.Info{}, notFound()
 		}
 	}
 }
@@ -375,11 +414,43 @@ func connectAddr(svcs []adb.MDNSService, guid, host string) string {
 	return ""
 }
 
-func pairError(err error) error {
-	if errors.Is(err, adb.ErrPairing) {
-		return fmt.Errorf("android: pairing failed (a wrong code, or the phone closed the pairing dialog): %w", err)
+// pairNoAnswer is how long adb waits for a pairing address to answer: it
+// then says what it says when the phone ends the pairing.
+const pairNoAnswer = 5 * time.Second
+
+// pairError says why adb could not pair with the phone at addr, as far as
+// adb's words and how long it took tell (checked against adb 37):
+//   - "Unable to start pairing client" at once: the connection was refused
+//     (or had no route), so nothing at addr takes pairing requests;
+//   - "Wrong password or connection was dropped" at once: the phone ended
+//     the pairing, for a wrong code, a port that is not the pairing
+//     dialog's (adbd's own TLS port says the same), or a dropped
+//     connection;
+//   - the same after pairNoAnswer: addr did not answer;
+//   - "unknown host service": a server without host:pair (before
+//     platform-tools 30).
+//
+// The error keeps adb's words.
+func pairError(err error, addr string, took time.Duration) error {
+	if !errors.Is(err, adb.ErrPairing) {
+		return wrapErr(err)
 	}
-	return wrapErr(err)
+	msg := strings.ToLower(err.Error())
+	var why error
+	switch {
+	case strings.Contains(msg, "unknown host service") || strings.Contains(msg, "unknown command"):
+		why = driver.ErrPairOldTool
+	case strings.Contains(msg, "unable to start pairing client"):
+		why = driver.ErrPairNotListening
+	case strings.Contains(msg, "wrong password") || strings.Contains(msg, "connection was dropped"):
+		why = driver.ErrPairRejected
+		if took >= pairNoAnswer-500*time.Millisecond {
+			why = driver.ErrPairUnreachable
+		}
+	default:
+		return fmt.Errorf("android: pairing with %s failed: %w", addr, err)
+	}
+	return fmt.Errorf("android: pairing with %s failed: %w (%w)", addr, why, err)
 }
 
 func sixDigits(s string) bool {
