@@ -64,10 +64,12 @@ Pinky 会自己检查新版本；Mac 版和用 Windows 安装程序装的 Pinky 
 「添加手机 › Android」会按你手机的品牌给出下面这些步骤，用的是这个品牌自己的菜单名称，也会列出要额外打开的开关：小米、OPPO、vivo、荣耀、华为、三星和 Pixel，其他品牌给通用步骤。
 
 1. 在手机上打开 USB 调试：在「设置 › 关于手机」里连续点「版本号」7 次，然后在「设置 › 系统 › 开发者选项」里打开「USB 调试」。有些品牌的菜单名称略有不同。
-2. 把手机插到电脑上。手机问是否允许 USB 调试时，点「允许」。Android 11 及以上也可以在「添加手机」里改用 Wi-Fi 配对。
+2. 把手机插到电脑上。手机问是否允许 USB 调试时，点「允许」。Android 11 及以上也可以在「添加手机」里改用 Wi-Fi 配对。Android 10 没有「无线调试」：插上线后，用「改用 Wi-Fi 连接…」就能换成 Wi-Fi（[见下文](#手机)）。
 3. Pinky 会提出给手机装 Pinky Companion。这是它在手机上的应用，能让读屏快很多倍，还能让 Pinky 输入任何语言。手机可能会让你允许安装一次。
 
 每台手机都有「体检」，在投屏下方的 ··· 菜单里。它会列出哪些能用、没通过的怎么改，比如小米的「USB 调试（安全设置）」开关。
+
+要带手机出门？装上 Tailscale 后，Pinky 在外面也能连到它（[怎么做](#不在家里的手机)）。
 
 <table>
 <tr>
@@ -129,6 +131,7 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
 ### 手机
 
 - **Android**：通过 USB 或 Wi-Fi 连接（[见上文](#android)）。Pinky 通过 adb 和内置的 scrcpy server 工作。它的伴侣应用随 Pinky 一起提供，读一次屏约 70 毫秒（不装要 2 秒），输入任何语言都不经过剪贴板：手机页面会提出帮你安装（手机可能会让你允许一次）。在 Android 13 及以上，Agent 在后台显示器上工作，手机自己的屏幕可以熄屏锁着。
+- **Android 10 的 Wi-Fi 连接**：Android 10 没有「无线调试」。插上手机后，在手机画面下方的 ⋯ 菜单（或「设置 › 手机」）里选「改用 Wi-Fi 连接…」：Pinky 会让手机的 adb 在网络上监听（`adb tcpip`，5555 端口），再通过手机的 Wi-Fi 地址连上它，并告诉你什么时候可以拔线。手机回到这个网络时会自动重连，地址变了也能找到。开着时，同一个网络里的任何电脑都可以尝试连接这台手机：如果不是你自己在连接时手机弹出「允许 USB 调试吗？」，请点「取消」；只在你信任的 Wi-Fi 上使用。这会持续到手机重启；重启后插一次线，再点「重新启用 Wi-Fi 连接」。同一个菜单里的「停止 Wi-Fi 连接」可以关掉它（[详情](docs/away-from-home.md#wi-fi-without-wireless-debugging)）。
 - **iPhone**：通过 USB 连接，由 Pinky 准备好（[见上文](#iphone)）。Pinky 能做什么，取决于 iOS 版本和连接方式；连接方式可以在「设置 › 手机」里为每台 iPhone 单独选（「自动」按版本选，见下表）：
 
   | iOS | 方式 | 能做什么 | 测试过的设备 |
@@ -142,6 +145,17 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
 - **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。改用 WebDriverAgent 辅助应用连接这台 iPhone（「设置 › 手机」）：这样手机不共享屏幕，Agent 也能用这些 App。
 - **锁着的手机**：Pinky 从不让手机一直亮着，只在每一步之前唤醒屏幕。在「设置 › 手机」里保存手机的 PIN 码，就能在电脑上用 Touch ID 解锁。Agent 永远看不到 PIN 码。Android 上，这在 AOSP 风格的锁屏上验证过（Mi 10 Pro 上的 LineageOS，Android 10、16 和 17 模拟器）；小米、三星、OPPO、一加、vivo、荣耀和华为的锁屏只有根据已知信息写的测试覆盖，Pinky 读不准 PIN 码键盘时什么都不会输入（[详情](docs/notes/integration.md#unlocking-other-android-phones)）。
 - **移除手机**：手机 ⋯ 菜单里的「移除这台手机…」（手机离线时它的页面上、「所有手机」里它的卡片上、侧栏里它的右键菜单和「设置 › 手机」里也有）会把它从列表里去掉，并删除它保存的 PIN 码和设置。它的任务、截图和录屏会留在「活动」里，除非你勾选把它们也删掉；正在这台手机上运行的任务会停止。插着线的手机会立刻作为一台新手机回来，直到你拔掉它。通过 Wi-Fi 连接的手机会断开，并且不再出现在列表里，即使 adb 自己又连上了它；要加回来，就在「添加手机」里重新配对，或者插上线。Pinky 不会解除手机和电脑的配对：它的 USB 调试或无线调试配对，以及 iPhone 的信任，都会留给其他应用使用（[详情](docs/notes/gateway.md#removing-a-phone)）。
+
+### 不在家里的手机
+
+Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [Tailscale](https://tailscale.com) 并登录同一个账号后，Pinky 就能经它连到手机：电脑留在家里，手机带出门，用移动数据或别的 Wi-Fi 都行。
+
+1. 趁手机在电脑旁（插线或连同一个 Wi-Fi）设置一次：「设置 › 手机 › 离家时使用 › 打开…」。「添加手机 › Android › 手机不在这个网络里？用 Tailscale」会带你在两边装好 Tailscale，并列出你 tailnet 里的手机。
+2. Pinky 会让手机的 adb 在网络上监听（`adb tcpip`，5555 端口），再通过手机的 Tailscale 地址连接它。手机在电脑所在的网络里没有连接时，Pinky 就用这条连接，所以出门时手机会一直留在列表里。
+3. 之后手机的 adb 会在它连上的每个网络上接受连接，只放行它已经信任的电脑，其他电脑连过来时手机会询问你。只有经 Tailscale 的那条连接是加密的。这会持续到手机重启，点「关闭」可以立即停止。Pinky 只读取 Tailscale 的状态，不会更改它的设置。
+4. 「为离家的手机保持电脑唤醒」（「设置 › 手机」，默认开启）会在有手机通过 Tailscale 连接时阻止电脑空闲睡眠。合上 MacBook 的盖子它仍会睡眠。
+
+<!-- away-measurements -->详情、流量和连不上时怎么办：[docs/away-from-home.md](docs/away-from-home.md)。Agent 也可以不在这台电脑上：见[远程 Agent](docs/mcp.md#over-http)。
 
 ### 更新
 
@@ -223,6 +237,7 @@ make app     # macOS：带 FFmpeg 和伴侣应用的 Pinky.app，以及 .dmg
 - [验收清单](docs/ACCEPTANCE.md)
 - [设计](docs/DESIGN.md)
 - [Agent 指南（SKILL.md）](docs/SKILL.md)和 [MCP 参考](docs/mcp.md)
+- [不在家里的手机](docs/away-from-home.md)
 - [参与开发须知](docs/WORKING.md)
 - [使用统计、崩溃报告和反馈](docs/TELEMETRY.md)
 - [更新日志](CHANGELOG.md)

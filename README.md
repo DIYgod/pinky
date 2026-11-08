@@ -64,10 +64,12 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 **Add phone › Android** shows these steps for your phone's brand, with its own menu names and extra switches: Xiaomi, OPPO, vivo, HONOR, HUAWEI, Samsung and Pixel, and general steps for the rest.
 
 1. On the phone, turn on USB debugging: in Settings › About phone, tap **Build number** 7 times, then turn on **USB debugging** in Settings › System › Developer options. Some brands name these menus a little differently.
-2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone**.
+2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone**. Android 10 has no Wireless debugging: once it is plugged in, **Use Wi-Fi instead…** moves it to Wi-Fi ([below](#phones)).
 3. Pinky offers to install Pinky Companion, its app for the phone, which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
 
 Each phone has a **Checkup**, in the ··· menu under its mirror, that lists what works and how to fix what doesn't, such as a Xiaomi's USB debugging (Security settings) switch.
+
+Taking the phone out? With Tailscale, Pinky reaches it away from home too ([how](#phones-away-from-home)).
 
 <table>
 <tr>
@@ -129,6 +131,7 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 ### Phones
 
 - **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Its companion app, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
+- **Wi-Fi on Android 10:** Android 10 has no Wireless debugging. Plug the phone in and choose **Use Wi-Fi instead…** in the ⋯ menu under its picture (or in Settings › Phones): Pinky has the phone's adb listen on the network (`adb tcpip`, port 5555), connects to it at its Wi-Fi address and says when you can unplug it. It connects again by itself when the phone is back on the network, also at a new address. While it is on, any computer on the same network can try to connect to the phone: if the phone asks **Allow USB debugging?** when you are not connecting it yourself, tap **Cancel**, and use it only on Wi-Fi you trust. It lasts until the phone restarts; then plug it in once and choose **Use Wi-Fi again**. **Stop the Wi-Fi connection** in the same menu turns it off ([details](docs/away-from-home.md#wi-fi-without-wireless-debugging)).
 - **iPhone:** connected over USB and prepared by Pinky ([above](#iphone)). What Pinky can do depends on the iOS version and on how Pinky connects, which you can choose for each iPhone in Settings › Phones (Automatic picks by version, as below):
 
   | iOS | How | What works | Tested on |
@@ -142,6 +145,17 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 - **Screen sharing on iPhone:** while Pinky streams an iPhone's screen, iOS tells apps that the screen is being shared, and some banking apps (DBS digibank and China Merchants Bank among them) refuse to run or warn you. Pinky streams it while the phone's page or tile is open in Pinky, while an agent works on it, and for 30 seconds after; then such apps work again. Over CoreDevice, agents cannot use them. Connect that iPhone through the WebDriverAgent helper instead (Settings › Phones): the phone then shares no screen, and agents can use those apps too.
 - **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN. On Android this is checked on AOSP-style lock screens (LineageOS on a Mi 10 Pro, the Android 10, 16 and 17 emulators); the lock screens of Xiaomi, Samsung, OPPO, OnePlus, vivo, Honor and Huawei are only covered by tests made from what is known of them, and where Pinky cannot read the PIN pad with confidence it enters nothing ([details](docs/notes/integration.md#unlocking-other-android-phones)).
 - **Removing a phone:** **Remove this phone…** in the phone's ⋯ menu (also on its page while it is offline, on its tile in All phones, in its right-click menu in the sidebar and in Settings › Phones) takes it off the list and deletes its saved PIN and its settings. Its tasks, screenshots and recordings stay in Activity unless you tick the box to delete them too, and a task running on it stops. A phone on a cable comes back at once, as a new phone, until you unplug it. A phone on Wi-Fi is disconnected and stays off the list, even when adb connects it again by itself; to add it back, pair it again in Add phone or plug it in. Pinky does not unpair the phone from your computer: its USB or wireless debugging pairing, or the iPhone's trust, stays for other apps ([details](docs/notes/gateway.md#removing-a-phone)).
+
+### Phones away from home
+
+An Android phone does not have to be on the computer's network. With [Tailscale](https://tailscale.com) on the computer and on the phone, signed in to the same account, Pinky reaches the phone through it: leave the computer at home and take the phone out, on mobile data or another Wi-Fi.
+
+1. Set the phone up once while it is near the computer, by cable or on the same Wi-Fi: **Settings › Phones › Use away from home › Turn on…**. **Add phone › Android › Phone not on this network? Use Tailscale** walks you through Tailscale on both sides and lists the phones on your tailnet.
+2. Pinky has the phone's adb listen on the network (`adb tcpip`, port 5555) and connects to the phone at its Tailscale address. It uses that connection whenever the phone has no connection on the computer's network, so the phone stays in the list as you leave.
+3. The phone's adb then takes connections on every network the phone joins, from the computers it already trusts; any other computer makes the phone ask. Only the way through Tailscale is encrypted. It lasts until the phone restarts, and **Turn off** stops it at once. Pinky only reads Tailscale's status and never changes its settings.
+4. **Keep this computer awake for phones away** (Settings › Phones, on by default) stops the computer's idle sleep while a phone is connected through Tailscale. A MacBook still sleeps when its lid closes.
+
+<!-- away-measurements -->Details, data use and what to do when it does not connect: [docs/away-from-home.md](docs/away-from-home.md). An agent can be away from the computer too: [Remote agents](docs/mcp.md#over-http).
 
 ### Updates
 
@@ -297,6 +311,7 @@ docs/                         design, agent guide, MCP reference and notes
 - [Acceptance checklist](docs/ACCEPTANCE.md)
 - [Design](docs/DESIGN.md)
 - [Agent guide (SKILL.md)](docs/SKILL.md) and [MCP reference](docs/mcp.md)
+- [Phones away from home](docs/away-from-home.md)
 - [Working on Pinky](docs/WORKING.md)
 - [Usage statistics, crash reports and feedback](docs/TELEMETRY.md)
 - Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md), [updates](docs/notes/updates.md), [telemetry](docs/notes/telemetry.md)
