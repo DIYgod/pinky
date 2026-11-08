@@ -194,6 +194,9 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 		st := d.LastTypeStats()
 		fmt.Printf("typed by %s in %v: pasteboard saved %q in %v, %q in %v; the field changed: %v\n",
 			st.Method, st.Total.Round(time.Millisecond), st.Saved, st.Save.Round(time.Millisecond), st.Restore, st.Restored.Round(time.Millisecond), st.Confirmed)
+		if st.Spaces != "" {
+			fmt.Printf("spaces iOS added next to the text: %s\n", st.Spaces)
+		}
 		return err
 	case "screen":
 		on, err := d.ScreenOn(ctx)
