@@ -272,7 +272,7 @@ func TestGoneMarksOffline(t *testing.T) {
 }
 
 // TestWiFiLockedHeld: a phone the person uses that is locked on Wi-Fi is
-// listed offline, waiting to be unlocked, also while it drops off
+// listed as waiting to be unlocked, also while it drops off
 // usbmuxd's list as it sleeps, for sleepHold; unlocked, it is not.
 func TestWiFiLockedHeld(t *testing.T) {
 	w := newWiFiProvider()
