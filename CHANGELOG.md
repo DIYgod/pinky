@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- The app can show its windows and menus in Japanese (Settings › Advanced › Language).
+
 ## 2026.1108.13 (2026-11-08)
 
 - On Windows, a task's screen recording no longer takes in a moment of your own use of the phone from just before the task started or just after it ended.

@@ -228,8 +228,21 @@ func TestLanguageSetting(t *testing.T) {
 	tt := mg.NewTester(ta.view, 1280, 820)
 	tt.Frame()
 	tags, labels := languageChoices()
-	if len(tags) != 3 || tags[0] != "" || labels[0] != "System" || labels[1] != "English" || labels[2] != i18n.Autonym("zh-Hans") {
+	if len(tags) != 4 || tags[0] != "" || labels[0] != "System" {
 		t.Fatalf("choices %q %q", tags, labels)
+	}
+	got := map[string]string{}
+	for i := 1; i < len(tags); i++ {
+		got[tags[i]] = labels[i]
+	}
+	want := map[string]string{"en": "English", "ja": i18n.Autonym("ja"), "zh-Hans": i18n.Autonym("zh-Hans")}
+	if len(got) != len(want) {
+		t.Fatalf("choices %q %q", tags, labels)
+	}
+	for tag, label := range want {
+		if got[tag] != label {
+			t.Fatalf("tag %q label %q, want %q (choices %q %q)", tag, got[tag], label, tags, labels)
+		}
 	}
 	if !tt.HasText("Language") || languageNow() != "" {
 		t.Fatalf("Settings › Advanced shows no Language row following the system (now %q)", languageNow())
