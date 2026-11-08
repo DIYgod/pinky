@@ -581,6 +581,9 @@ func TestManifestCommand(t *testing.T) {
 	if m.Notes != "- One." || m.LocalizedNotes != nil || !strings.HasPrefix(m.Assets["linux-amd64"].URL, "https://github.com/DIYgod/pinky/releases/download/v2026.1107.1/") {
 		t.Errorf("latest.json without a translation = %+v", m)
 	}
+	if page := PageNotes(m); page != "- One." {
+		t.Errorf("the release page without a translation:\n%s", page)
+	}
 	// The translations next to the changelog give the notes in their
 	// languages.
 	write(t, filepath.Join(filepath.Dir(changelog), translations[0].file), translationHead+"## 2026.1107.1 (2026-11-07)\n\n- 一。\n")
@@ -592,6 +595,10 @@ func TestManifestCommand(t *testing.T) {
 	}
 	if m.Notes != "- One." || len(m.LocalizedNotes) != 1 || m.LocalizedNotes["zh-Hans"] != "- 一。" {
 		t.Errorf("latest.json = %+v", m)
+	}
+	// The release page has the English notes, then the Chinese ones.
+	if page := PageNotes(m); page != "- One.\n\n---\n\n### 中文\n\n- 一。" {
+		t.Errorf("the release page:\n%s", page)
 	}
 	cask, err := os.ReadFile(filepath.Join(dir, caskFile))
 	if err != nil || !strings.Contains(string(cask), `homepage "https://github.com/DIYgod/pinky"`) {

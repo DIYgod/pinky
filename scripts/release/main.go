@@ -54,6 +54,9 @@ func usage() {
                              from its translation into language (zh-Hans)
   notes [-lang <language>] -manifest <latest.json>
                              print a release's notes from its manifest
+  notes -page -manifest <latest.json>
+                             print the notes of its release page: the
+                             English ones, then each translation's
   stamp <version>            write the version into cmd/pinky/mygo.json
   manifest -dir <dir> -version <version> [-repo owner/name]
                              write latest.json, the cask (pinky.rb) and
@@ -345,8 +348,12 @@ func runNotes(args []string) error {
 	file := fs.String("changelog", "", "the changelog (default: CHANGELOG.md of the source, or the translation into -lang)")
 	manifest := fs.String("manifest", "", "print the notes of this latest.json instead")
 	lang := fs.String("lang", "", "the language of the notes, as zh-Hans (default: English)")
+	page := fs.Bool("page", false, "with -manifest: the notes of the release page, in English and every language the manifest has")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if *page && (*manifest == "" || *lang != "" || fs.NArg() > 0) {
+		return errors.New("usage: release notes -page -manifest <latest.json>")
 	}
 	name := changelogFile
 	if *lang != "" {
@@ -361,6 +368,9 @@ func runNotes(args []string) error {
 			return err
 		}
 		notes := m.Notes
+		if *page {
+			notes = PageNotes(m)
+		}
 		if *lang != "" {
 			if notes = m.LocalizedNotes[*lang]; notes == "" {
 				return fmt.Errorf("%s has no notes in %s", *manifest, *lang)

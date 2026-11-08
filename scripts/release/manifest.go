@@ -111,6 +111,19 @@ func BuildManifest(dir, version, repo, notes string, now time.Time, partial bool
 	return m, missing, nil
 }
 
+// PageNotes returns the notes of a release's page on GitHub: the English
+// ones, then the notes in each language the manifest has them in, after a
+// rule and a heading in that language.
+func PageNotes(m *Manifest) string {
+	page := m.Notes
+	for _, t := range translations {
+		if notes := strings.TrimSpace(m.LocalizedNotes[t.lang]); notes != "" {
+			page += "\n\n---\n\n### " + t.heading + "\n\n" + notes
+		}
+	}
+	return page
+}
+
 // writeJSON writes v to path as indented JSON.
 func writeJSON(path string, v any) error {
 	data, err := json.MarshalIndent(v, "", "  ")

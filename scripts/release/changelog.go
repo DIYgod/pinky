@@ -28,9 +28,10 @@ import (
 const unreleased = "Unreleased"
 
 // translations are the changelog's translations: the language, as the
-// app's catalogs and latest.json name it (cmd/pinky/locales), and the file.
-var translations = []struct{ lang, file string }{
-	{"zh-Hans", "CHANGELOG.zh-CN.md"},
+// app's catalogs and latest.json name it (cmd/pinky/locales), the file, and
+// the heading of its notes on the release page, in that language.
+var translations = []struct{ lang, file, heading string }{
+	{"zh-Hans", "CHANGELOG.zh-CN.md", "中文"},
 }
 
 // translationFile returns the changelog of lang, or false when there is
