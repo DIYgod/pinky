@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1108.21 (2026-11-08)
 
 - 在 iOS 27 的 iPhone 上，智能体现在能看到 Safari 网页里的元素（链接、按钮、输入框），不再只有从画面里识别出的文字；网页里的密码框也会被当作密码框，智能体不能往里输入。
 - 在 iOS 27 的 iPhone 上，智能体现在可以用 `phone_launch` 打开 http 和 https 链接，链接在 Safari 里打开。Pinky 也会按 Safari 的规则判断：屏蔽了 Safari，或者没把它放进智能体的权限范围，它的链接也打不开；「安装和链接」规则照常询问。
