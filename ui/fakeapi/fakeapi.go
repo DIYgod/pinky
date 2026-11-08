@@ -374,7 +374,9 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 	case d.info.State == driver.StateOffline:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Offline"
 	case d.info.State != driver.StateOnline:
-		v.Status, v.StatusLine = gateway.DeviceNeedsYou, "Needs setup"
+		// Plugged in, waiting for a step, as the gateway lists such a phone
+		// (statusLocked), also while a task waits for it.
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Needs setup"
 	case running && (a.hasNeed(d, gateway.NeedApproval) || a.hasNeed(d, gateway.NeedHandoff)):
 		v.Status, v.StatusLine = gateway.DeviceNeedsYou, d.statusLine
 	case d.locked && running:

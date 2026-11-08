@@ -131,12 +131,13 @@ func XiaomiCheckup() driver.Checkup {
 // Install via USB is off.
 var errRestricted = errors.New("android: install pinky-companion.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]")
 
-// Unplug takes a phone offline, as when its cable comes out.
+// Unplug takes a phone offline, as when its cable comes out: like the
+// gateway, without the step it may have waited for.
 func (a *API) Unplug(deviceID string) {
 	a.mu.Lock()
 	d := a.device(deviceID)
 	if d != nil {
-		d.info.State, d.info.Detail = driver.StateOffline, ""
+		d.info.State, d.info.Setup, d.info.Detail = driver.StateOffline, "", ""
 	}
 	a.mu.Unlock()
 	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})

@@ -171,16 +171,10 @@ func TestIPhoneHelperRanOut(t *testing.T) {
 	if err := tt.Click(locales.CheckHelperHow()); err != nil || *opened != helperAgainDocs {
 		t.Fatalf("how to install it again: %v, opened %q", err, *opened)
 	}
-	// The gateway lists a phone it does not open as offline, with its
-	// reason: the page and the sidebar still say it needs setup.
-	for i := range ta.devices {
-		if ta.devices[i].Info.ID == id {
-			ta.devices[i].Status, ta.devices[i].StatusLine = gateway.DeviceOffline, "Offline · "+detail
-		}
-	}
-	tt.Frame()
-	if !hasText(tt, ranOut) || hasText(tt, detail) || hasText(tt, locales.PhoneOffline(d.Info.Name)) || !hasText(tt, locales.GwStatusNeedsSetup()) {
-		t.Fatalf("listed as offline by the gateway: %q", tt.Texts())
+	// Listed, not opened: it needs setup, in the sidebar too.
+	if _, ok := tt.Find(locales.SidebarPhoneRow(d.Info.Name, locales.GwStatusNeedsSetup())); !ok ||
+		d.Status != gateway.DeviceNeedsSetup || hasText(tt, locales.PhoneOffline(d.Info.Name)) {
+		t.Fatalf("listed as %q: %q", d.Status, tt.Texts())
 	}
 
 	*opened = ""

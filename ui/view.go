@@ -184,13 +184,13 @@ func footRow(c *mg.Context, ic *mg.SVG, text string, on bool, click func()) {
 }
 
 // statusDot is a phone's dot: green and pulsing while an agent works,
-// amber when it needs the person, gray at rest, a ring offline.
+// amber when it needs the person or setup, gray at rest, a ring offline.
 func statusDot(c *mg.Context, d gateway.DeviceView) mg.Element {
 	p := pal(c)
 	switch d.Status {
 	case gateway.DeviceWorking:
 		return dot(c, p.green, true)
-	case gateway.DeviceNeedsYou, gateway.DeviceLocked:
+	case gateway.DeviceNeedsYou, gateway.DeviceNeedsSetup, gateway.DeviceLocked:
 		return dot(c, p.amberDot, false)
 	case gateway.DeviceOffline:
 		return hollowDot(c)

@@ -301,17 +301,40 @@ func (g *Gateway) discover(ctx context.Context) {
 		}
 		g.mu.Lock()
 		var gone []*device
+		var left []string
 		for _, d := range g.devices {
-			if d.provider == p && !seen[d.id] && d.online {
+			if d.provider != p || seen[d.id] {
+				continue
+			}
+			if d.online {
 				gone = append(gone, d)
+			} else if unlisted(d) {
+				left = append(left, d.id)
 			}
 		}
 		g.mu.Unlock()
 		for _, d := range gone {
 			g.setOffline(d, "the phone disconnected")
 		}
+		for _, id := range left {
+			g.emit(Event{Kind: EventDevices, DeviceID: id})
+		}
 	}
 	wg.Wait()
+}
+
+// unlisted marks a phone its provider no longer lists, and that the
+// gateway has not opened, as offline: it went away while it waited for a
+// step, or after it was listed offline, so the step and the reason no
+// longer hold. It reports whether that changed the phone. The caller holds
+// g.mu.
+func unlisted(d *device) bool {
+	if d.opening || d.info.State == driver.StateOnline {
+		return false // an online one that went away is shown offline (Devices)
+	}
+	was := d.info
+	d.info.State, d.info.Setup, d.info.Detail = driver.StateOffline, "", ""
+	return d.info != was
 }
 
 // updateDevice records what the provider says and returns the device when it

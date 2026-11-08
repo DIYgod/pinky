@@ -466,6 +466,20 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 	return w
 }
 
+// setupStep is the step a phone that is connected but not online waits
+// for, in the words its checkup gives the step (the "authorized" item,
+// whose fix is the step): an iPhone's setup steps (setupWords), allowing
+// USB debugging, the computer's access to the phone over USB; the
+// driver's words for a step the client has none for.
+func (a *app) setupStep(d gateway.DeviceView) checkWords {
+	for _, ck := range gateway.ConnectionChecks(d.Info) {
+		if ck.ID == driver.CheckAuthorized {
+			return a.checkWords(d, gateway.CheckupView{DeviceID: d.Info.ID, Platform: d.Info.Platform}, ck)
+		}
+	}
+	return checkWords{text: d.Info.Detail}
+}
+
 // hostWords says what the computer lacks for Android phones, by the
 // Android driver's HostCheck codes; "" for codes of other platforms.
 func hostWords(missing string) string {

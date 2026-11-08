@@ -81,11 +81,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.checkupPanel(c, d)
 		return
 	}
-	// An iPhone whose helper is missing or ran out is listed but not
-	// opened, which the gateway shows as offline: its page says why and
-	// how to install the helper, in words (checkup_iphone.go).
-	helper := needsHelper(d)
-	if !helper && (d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline) {
+	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		mg.Column(c).AlignItems(mg.Center).Gap(12).Children(func() {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 				mg.Icon(c, icWifiOff).FontSize(30).TextColor(p.ink3)
@@ -112,21 +108,25 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		return
 	}
 	if d.Info.State != driver.StateOnline {
+		// Connected, and waiting for a step (gateway.DeviceNeedsSetup),
+		// which the page says as the phone's checkup does.
+		w := a.setupStep(d)
 		mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(420).Children(func() {
 			mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
 			mg.Text(c, locales.PhoneNeedsSetup(d.Info.Name)).FontSize(16).FontWeight(600)
-			detail := d.Info.Detail
-			if helper {
-				_, detail, _ = setupWords(d, d.Info.Setup)
+			if w.text != "" {
+				mg.Text(c, w.text).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
 			}
-			if detail != "" {
-				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+			if w.detail && d.Info.Detail != "" && d.Info.Detail != w.text {
+				// What the words leave to the driver: which USB driver
+				// to install, why the disk image did not mount.
+				mg.Text(c, d.Info.Detail).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
 			}
 			if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
 				a.openCheckup(d)
 			}
 			switch {
-			case helper:
+			case needsHelper(d):
 				if linkButton(c, locales.CheckHelperHow()).Clicked() {
 					openURL(c, helperLink(d), func(error) {})
 				}
@@ -406,8 +406,10 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 		for _, d := range a.devices {
 			d := d
 			t := a.taskOf(d.Info.ID)
-			asks := d.Status == gateway.DeviceNeedsYou || a.isLocked(d)
+			asks := d.Status == gateway.DeviceNeedsYou || d.Status == gateway.DeviceNeedsSetup || a.isLocked(d)
 			offline := d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline
+			// Connected, waiting for a step: not open, so nothing to mirror.
+			setup := !offline && d.Info.State != driver.StateOnline
 			tile := mg.Box(c.Key("tile-"+d.Info.ID)).Basis(200).Grow(1).MaxWidth(232).MinWidth(196).Radius(14).Border(1, p.line).Background(p.panel)
 			if asks {
 				tile.Border(1, p.amberEdge).Shadow(0, 0, 0, 1, p.amberEdge)
@@ -430,6 +432,10 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 					case offline:
 						mini.Radius(24).Border(2, p.line2).Background(p.bg3).Center().Children(func() {
 							mg.Icon(c, icWifiOff).FontSize(26).TextColor(p.ink3)
+						})
+					case setup:
+						mini.Radius(24).Border(2, p.line2).Background(p.bg3).Center().Children(func() {
+							mg.Icon(c, icAlert).FontSize(26).TextColor(p.amberDot)
 						})
 					default:
 						radius := float32(26)
@@ -459,7 +465,7 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 				run := t != nil && running(t.State)
 				_, handoff := a.handoffFor(d.Info.ID)
 				inControl := d.Status == gateway.DeviceInControl || (handoff && !a.isLocked(d))
-				if (run || inControl) && !offline {
+				if (run || inControl) && !offline && !setup {
 					act := mg.Row(c).Absolute().Left(0).Right(0).Top(150).Justify(mg.Center).Gap(6)
 					act.IgnoreInput(!hovered).Opacity(act.Animate("show", b2f(hovered), 150*time.Millisecond))
 					act.Children(func() {
