@@ -4,6 +4,10 @@ Pinky lets AI agents operate a person's real iPhone or Android phone over MCP, w
 
 Read [docs/WORKING.md](docs/WORKING.md) before you change anything: who owns which part of the code, how to use the real phones safely, and the rules for code and commits. Build and test with `make check` (build, vet, test); [README.md](README.md) has the rest.
 
+## README
+
+The README comes in English, [README.md](README.md), and in Simplified Chinese, [README.zh-CN.md](README.zh-CN.md), which follows it section by section (building from source is only summed up there). Change both in the same commit. Write the Chinese with the app's own names for menus and buttons (`cmd/pinky/locales/zh-Hans.json`), and give a new picture with words in it a Chinese copy next to the English one (`assets/readme/*-zh.*`).
+
 ## Releases
 
 Pinky releases often, several times a day when there is something to ship. Versions are the date in Asia/Shanghai and that day's count, `YYYY.MDD.N` (`2026.1107.2` is the second release of 7 November 2026), and are never written by hand. [docs/RELEASING.md](docs/RELEASING.md) explains the whole pipeline.
