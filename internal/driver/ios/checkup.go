@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/ios/cryptex"
 	goios "github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/imagemounter"
 )
@@ -136,7 +137,7 @@ func mountedImage(ctx context.Context, l *link) string {
 	ch := make(chan result, 1)
 	go func() {
 		if l.has(cryptexService) {
-			if m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry); err == nil {
+			if m, err := cryptex.NewCryptexDeveloperDiskImageMounter(l.entry); err == nil {
 				if list, err := m.ListCryptexes(); err == nil {
 					for _, cx := range list {
 						if cx.Identifier == ddiCryptex {
@@ -225,17 +226,38 @@ func (d *Device) checkInput(ctx context.Context) driver.Check {
 	return c
 }
 
-// checkHelper asks the WebDriverAgent helper for its status.
+// checkHelper asks the WebDriverAgent helper for its status, and reads when
+// its provisioning profile runs out: it warns driver.HelperReminder before,
+// and once it has run out, as iOS then no longer starts the helper.
 func (d *WDADevice) checkHelper(ctx context.Context) driver.Check {
 	c := driver.Check{ID: driver.CheckHelper}
+	exp, expErr := d.helperExpires(ctx)
+	now := time.Now()
 	st, err := d.c.status(ctx)
 	if err != nil {
 		c.Status, c.Fix, c.Detail = driver.CheckFail, driver.FixInstallHelper, "WebDriverAgent does not answer: "+err.Error()
+		if !exp.IsZero() && !now.Before(exp) {
+			c.Detail = helperExpired(exp) + " (" + err.Error() + ")"
+		}
 		return c
 	}
 	c.Status, c.Detail = driver.CheckPass, "WebDriverAgent answers"
 	if st.Build.Version != "" {
 		c.Detail += " (version " + st.Build.Version + ")"
+	}
+	switch {
+	case expErr != nil:
+		c.Detail += "; when its provisioning profile runs out is unknown: " + expErr.Error()
+	case exp.IsZero():
+	case !now.Before(exp):
+		// It runs until it stops; iOS will not start it again.
+		c.Status, c.Fix = driver.CheckWarn, driver.FixInstallHelper
+		c.Detail += "; but its provisioning profile ran out on " + helperDate(exp) + ", so iOS will not start it again: install it again from Xcode"
+	case exp.Sub(now) <= driver.HelperReminder:
+		c.Status, c.Fix = driver.CheckWarn, driver.FixInstallHelper
+		c.Detail += "; its provisioning profile runs out on " + helperDate(exp) + ": install it again from Xcode before then"
+	default:
+		c.Detail += "; its provisioning profile runs out on " + helperDate(exp)
 	}
 	return c
 }

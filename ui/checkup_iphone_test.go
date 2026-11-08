@@ -81,7 +81,7 @@ func TestCheckupOfIPhoneWaitingForAStep(t *testing.T) {
 func TestIPhoneSetupWords(t *testing.T) {
 	d := gateway.DeviceView{Info: driver.Info{Platform: driver.IOS, Name: "iPhone 8", OSVersion: "16.7"}}
 	for _, step := range []string{driver.SetupTrust, driver.SetupDeveloperMode, driver.SetupUnlock, driver.SetupPreparing,
-		driver.SetupNoDiskImage, driver.SetupDiskImage, driver.SetupUpdate} {
+		driver.SetupNoDiskImage, driver.SetupDiskImage, driver.SetupUpdate, driver.SetupInstallHelper} {
 		if title, text, _ := setupWords(d, step); title == "" || text == "" {
 			t.Errorf("no words for %q", step)
 		}

@@ -405,6 +405,7 @@ func TestProviderLegacyBackend(t *testing.T) {
 	runner := ""
 	p.legacySetup = func(context.Context, goios.DeviceEntry) (bool, error) { return ok, nil }
 	p.findRunner = func(goios.DeviceEntry) (string, error) { return runner, nil }
+	p.helperFn = func(context.Context, goios.DeviceEntry, wdaRunner) (time.Time, error) { return time.Time{}, nil }
 	e := entry("old", 1, "USB")
 	base := driver.Info{ID: "old", State: driver.StateOnline, Backend: backendCoreDevice, OSVersion: "18.6"}
 	if got := p.inspectLegacy(context.Background(), e, base); got.State != driver.StateOnline || got.Backend != backendAccessibility {

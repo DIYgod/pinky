@@ -214,6 +214,10 @@ type app struct {
 	rm       removeState     // the Remove this phone dialog (removephone.go)
 	toasts   []string
 
+	// control is the banner above each phone's mirror as it shows, which
+	// changes between the person's gestures on the mirror (phone.go).
+	control map[string]controlText
+
 	quitting  bool
 	focused   bool // the main window has the keyboard
 	shortcut  string
@@ -309,6 +313,7 @@ func newApp(api gateway.API, opt Options) *app {
 		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
 	a.rec = recState{views: map[string]*recEntry{}}
+	a.control = map[string]controlText{}
 	if opt.Settings != nil {
 		a.settings = opt.Settings.clone()
 	} else {

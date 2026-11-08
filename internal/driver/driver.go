@@ -49,6 +49,14 @@ type Info struct {
 	// its own words; "" when the driver does not say. Detail says the same
 	// in a sentence.
 	Setup string
+	// HelperExpires is when the app the phone is driven through stops
+	// starting because the provisioning profile it was signed with runs
+	// out: iPhones driven through the WebDriverAgent helper, whose profile
+	// lasts 7 days with a free Apple ID and a year with a paid developer
+	// account. Zero when unknown, and for phones driven another way.
+	// Clients remind the person HelperReminder before; once it has passed
+	// the phone needs setup, with SetupInstallHelper.
+	HelperExpires time.Time `json:",omitzero"`
 	// Via says how a phone connected over the network ("wifi") is reached
 	// when that is not the local network: ViaTailscale through Tailscale;
 	// "" on the computer's own network or by cable.
@@ -302,7 +310,12 @@ const (
 	CheckDiskImage     = "disk_image"     // the developer disk image is mounted, and the computer can mount it again after a restart
 	CheckHelper        = "helper"         // the WebDriverAgent helper answers, where Pinky drives the phone through it
 	FixInstallHelper   = "install_helper" // install the WebDriverAgent helper on the phone
+	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again) from Xcode, as it is missing or its profile ran out (Info.HelperExpires)
 )
+
+// HelperReminder is how long before Info.HelperExpires clients remind the
+// person to install the WebDriverAgent helper again.
+const HelperReminder = 48 * time.Hour
 
 // FileInfo is one entry of the phone's Pinky folder.
 type FileInfo struct {
@@ -361,10 +374,13 @@ type CompanionState string
 
 // Companion states.
 const (
-	CompanionOn       CompanionState = "on"       // installed, current and its service is running
-	CompanionOff      CompanionState = "off"      // installed, but its accessibility service is off
+	CompanionOn  CompanionState = "on"  // installed, current and its service is running
+	CompanionOff CompanionState = "off" // installed, but its accessibility service is off and Pinky could not turn it on
+	// CompanionReady: installed and current; its service is off, and Pinky
+	// turns it on while an agent works on the phone (WorkWatcher).
+	CompanionReady    CompanionState = "ready"
 	CompanionMissing  CompanionState = "missing"  // not installed
-	CompanionOutdated CompanionState = "outdated" // installed, older than the one Pinky bundles
+	CompanionOutdated CompanionState = "outdated" // installed, older than the one Pinky bundles or signed with another key
 	CompanionNoAPK    CompanionState = "no_apk"   // Pinky has no APK to install (a build without it)
 )
 
@@ -373,10 +389,22 @@ const (
 // the client; the driver never installs anything by itself.
 type CompanionInstaller interface {
 	CompanionState(ctx context.Context) (CompanionState, error)
-	// InstallCompanion installs or updates it and turns its service on.
+	// InstallCompanion installs or updates it and checks that its service
+	// comes on, which it then is only while an agent works on the phone.
 	// The phone may ask the person to allow the install (Google Play
 	// Protect); the call waits for that, up to ctx.
 	InstallCompanion(ctx context.Context) error
+}
+
+// WorkWatcher is told whether an agent works on the phone: from the start
+// of a task to its end, except while the person is in control. A driver
+// keeps on, only while one does, what agents need and the phone's apps can
+// see: Android's Pinky Companion, whose accessibility service banking apps
+// refuse to sign in next to. The gateway calls AgentWorking right after it
+// opens the device and whenever the answer changes; it must return at once
+// and do any work in the background.
+type WorkWatcher interface {
+	AgentWorking(on bool)
 }
 
 // Pairer pairs phones over the network: Android's wireless debugging, by

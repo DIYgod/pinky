@@ -76,6 +76,12 @@ func featuresOf(dev driver.Device) Features {
 func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, string) {
 	l := d.lease
 	if !d.online {
+		if waitsForStep(d.info.State) {
+			// Listed but not opened: the phone is connected and waits for
+			// the person, even while a task waits for it to reconnect.
+			// One that goes away is listed offline (discover).
+			return DeviceNeedsSetup, "Needs setup"
+		}
 		line := "Offline"
 		if d.info.Detail != "" && d.info.State != driver.StateOnline {
 			line += " · " + d.info.Detail
@@ -113,6 +119,12 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		return DeviceWorking, line
 	}
 	return DeviceIdle, "Idle"
+}
+
+// waitsForStep reports whether a driver lists a phone that is connected
+// but waits for a step before it can be opened (Info.Setup).
+func waitsForStep(s driver.State) bool {
+	return s == driver.StateUnauthorized || s == driver.StateNeedsSetup
 }
 
 // Tasks implements API: running tasks, then tasks that ended in the last
@@ -366,6 +378,7 @@ func (g *Gateway) takeOver(d *device, byInput bool) {
 	changed := !d.person
 	if changed {
 		d.person = true
+		g.noteWorkLocked(d)
 		if l != nil {
 			l.tookOverSeen = false
 			l.handedBack, l.handBackNote = false, ""
@@ -404,6 +417,7 @@ func (g *Gateway) HandBack(deviceID, note string) error {
 	}
 	g.mu.Lock()
 	d.person, d.personInput = false, false
+	g.noteWorkLocked(d)
 	l := d.lease
 	if l == nil {
 		g.wakeLocked(d)

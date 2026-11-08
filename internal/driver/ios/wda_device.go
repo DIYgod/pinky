@@ -43,6 +43,8 @@ type WDADevice struct {
 	closeOnce sync.Once
 
 	imageDir string // Pinky's folder for developer disk images (checkup.go)
+
+	helperFn func(context.Context) (time.Time, error) // for tests: helperExpires
 }
 
 // openWDA connects to a WDA server that is running and reads the screen's

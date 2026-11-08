@@ -1,0 +1,206 @@
+package ui
+
+import (
+	"context"
+	"errors"
+	"slices"
+	"sync"
+	"testing"
+	"time"
+
+	mg "github.com/egoist/mygo/ui"
+
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
+	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/ui/demogw"
+)
+
+// stepsProvider lists the phones a test sets, as their driver would while
+// they wait for a step, and opens none.
+type stepsProvider struct {
+	platform driver.Platform
+	mu       sync.Mutex
+	infos    []driver.Info
+}
+
+func (p *stepsProvider) Platform() driver.Platform { return p.platform }
+
+func (p *stepsProvider) List(context.Context) ([]driver.Info, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return slices.Clone(p.infos), nil
+}
+
+func (p *stepsProvider) Open(context.Context, string) (driver.Device, error) {
+	return nil, driver.ErrOffline
+}
+
+// list lists infos from the next discovery on; none unplugs every phone.
+func (p *stepsProvider) list(infos ...driver.Info) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.infos = infos
+}
+
+// newStepsApp is the client on the real gateway, with phones from ps.
+func newStepsApp(t *testing.T, ps ...driver.Provider) *gwApp {
+	t.Helper()
+	g, err := gateway.New(gateway.Options{Providers: ps, Policy: policy.Default(), TrustNewAgents: true,
+		DiscoverEvery: 20 * time.Millisecond, NoScreenshots: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ga := &gwApp{w: &demogw.World{Gateway: g}}
+	ga.app = newApp(g, Options{NoTray: true, Shortcut: "-"})
+	testHooks(t, ga.app)
+	ga.app.videoErr = errors.New("no video in tests")
+	ga.app.postHook = func(fn func()) {
+		ga.mu.Lock()
+		ga.q = append(ga.q, fn)
+		ga.mu.Unlock()
+	}
+	t.Cleanup(func() {
+		ga.app.end()
+		g.Close()
+	})
+	return ga
+}
+
+// TestPhonesThatNeedSetup: on the real gateway, phones their drivers list
+// as waiting for a step (an Android phone to allow USB debugging, an
+// iPhone to trust the computer, then Developer Mode) need setup; they are
+// not offline. The sidebar, the tiles and the menu bar flyout say so, and
+// each phone's page says the step in the person's words, as its checkup
+// does, with See what's wrong and, for the iPhone, its steps in Add
+// phone. Unplugged, they are offline and say no step. In English and
+// Chinese.
+func TestPhonesThatNeedSetup(t *testing.T) {
+	droid, ios := &stepsProvider{platform: driver.Android}, &stepsProvider{platform: driver.IOS}
+	pixel := driver.Info{ID: "px-8a", Platform: driver.Android, Name: "Pixel 8a", Model: "Pixel 8a", OSVersion: "16",
+		Connection: "usb", Backend: "scrcpy", State: driver.StateUnauthorized,
+		Detail: "Unlock the phone and allow USB debugging for this computer."}
+	iphone := driver.Info{ID: "00008140-0016", Platform: driver.IOS, Name: "iPhone 16", Model: "iPhone 16", OSVersion: "27.1",
+		Connection: "usb", Backend: "coredevice", State: driver.StateUnauthorized, Setup: driver.SetupTrust,
+		Detail: "Unlock the iPhone and tap Trust on the \"Trust This Computer?\" prompt, then enter its passcode."}
+	droid.list(pixel)
+	ios.list(iphone)
+	ga := newStepsApp(t, droid, ios)
+	is := func(id string, st gateway.DeviceStatus) bool { return ga.device(id).Status == st }
+	ga.waitFor(t, "both phones", func() bool {
+		return is(pixel.ID, gateway.DeviceNeedsSetup) && is(iphone.ID, gateway.DeviceNeedsSetup)
+	})
+
+	const w, h = 1280, 820
+	for _, lang := range []string{"en", "zh-Hans"} {
+		tt := mg.NewTester(ga.view, w, h)
+		inLanguage(t, lang, tt)
+		status := locales.GwStatusNeedsSetup()
+		page := func(name string, want, not []string) {
+			t.Helper()
+			tt.Frame()
+			tt.Frame()
+			for _, s := range want {
+				if !hasText(tt, s) {
+					t.Errorf("%s: %s's page lacks %q: %q", lang, name, s, tt.Texts())
+				}
+			}
+			for _, s := range not {
+				if hasText(tt, s) {
+					t.Errorf("%s: %s's page shows %q: %q", lang, name, s, tt.Texts())
+				}
+			}
+			for _, d := range []driver.Info{pixel, iphone} {
+				if _, ok := tt.Find(locales.SidebarPhoneRow(d.Name, status)); !ok {
+					t.Errorf("%s: the sidebar does not say %s needs setup: %q", lang, d.Name, tt.Texts())
+				}
+			}
+		}
+
+		ga.chk.showing = ""
+		ga.selectPhone(pixel.ID)
+		page("Pixel 8a", []string{locales.PhoneNeedsSetup(pixel.Name), locales.CheckAuthorizedAndroidFail(), locales.PhoneCheckupFix()},
+			[]string{locales.PhoneOffline(pixel.Name), locales.PhoneReconnect(), locales.PhoneSetUpIPhone(), pixel.Detail})
+		ga.selectPhone(iphone.ID)
+		page("iPhone 16", []string{locales.PhoneNeedsSetup(iphone.Name), locales.AddPhoneIPhoneStepTrustDetail(),
+			locales.PhoneCheckupFix(), locales.PhoneSetUpIPhone()},
+			[]string{locales.PhoneOffline(iphone.Name), locales.PhoneReconnect(), iphone.Detail})
+
+		// All phones: both tiles say it, and neither counts as offline.
+		ga.sel = allPhones
+		tt.Frame()
+		tiles := 0
+		for _, s := range tt.Texts() {
+			if s == status {
+				tiles++
+			}
+		}
+		if tiles < 4 || !hasText(tt, locales.PhoneConnected(2)) || hasText(tt, locales.PhoneOfflineCount(1)) {
+			t.Errorf("%s: All phones shows %d × %q: %q", lang, tiles, status, tt.Texts())
+		}
+
+		// The menu bar flyout: a click on a phone shows its page.
+		ft := mg.NewTester(ga.flyoutView, 320, ga.flyoutHeight())
+		inLanguage(t, lang, ft)
+		ft.Frame()
+		for _, d := range []driver.Info{pixel, iphone} {
+			if _, ok := ft.Find(locales.FlyoutPhoneLabel(d.Name, status)); !ok {
+				t.Errorf("%s: the flyout does not say %s needs setup: %q", lang, d.Name, ft.Texts())
+			}
+		}
+		if err := ft.Click(locales.FlyoutPhoneLabel(pixel.Name, status)); err != nil || ga.sel != pixel.ID || ga.page != pagePhones {
+			t.Errorf("%s: the flyout's Pixel 8a: %v, showing %q on page %v", lang, err, ga.sel, ga.page)
+		}
+	}
+
+	// See what's wrong: the checkup says the same step.
+	tt := mg.NewTester(ga.view, w, h)
+	ga.selectPhone(pixel.ID)
+	tt.Frame()
+	if err := tt.Click(locales.PhoneCheckupFix()); err != nil {
+		t.Fatal(err)
+	}
+	ga.waitFor(t, "the checkup", func() bool { tt.Frame(); r := ga.checkupOf(pixel.ID); return r != nil && r.have && !r.running })
+	tt.Frame()
+	if ga.chk.showing != pixel.ID || !hasText(tt, locales.CheckAuthorizedAndroidFail()) {
+		t.Errorf("the checkup of the Pixel: %q", tt.Texts())
+	}
+	ga.chk.showing = ""
+
+	// Show the steps: Add phone › iPhone follows the iPhone.
+	ga.selectPhone(iphone.ID)
+	tt.Frame()
+	if err := tt.Click(locales.PhoneSetUpIPhone()); err != nil || ga.page != pageAddPhone || ga.add.focus != iphone.ID {
+		t.Errorf("Show the steps: %v, page %v, following %q", err, ga.page, ga.add.focus)
+	}
+
+	// The iPhone trusts the computer and waits for Developer Mode.
+	iphone.State, iphone.Setup = driver.StateNeedsSetup, driver.SetupDeveloperMode
+	iphone.Detail = "Turn on Developer Mode: on the iPhone, open Settings > Privacy & Security > Developer Mode, turn it on and tap Restart."
+	ios.list(iphone)
+	ga.waitFor(t, "Developer Mode", func() bool { return ga.device(iphone.ID).Info.Setup == driver.SetupDeveloperMode })
+	ga.selectPhone(iphone.ID)
+	tt.Frame()
+	if !hasText(tt, locales.AddPhoneIPhoneStepDevModeDetail()) || hasText(tt, iphone.Detail) || hasText(tt, locales.AddPhoneIPhoneStepTrustDetail()) {
+		t.Errorf("waiting for Developer Mode: %q", tt.Texts())
+	}
+
+	// Unplugged while they wait: offline, without the step.
+	droid.list()
+	ios.list()
+	ga.waitFor(t, "both phones offline", func() bool {
+		return is(pixel.ID, gateway.DeviceOffline) && is(iphone.ID, gateway.DeviceOffline)
+	})
+	tt.Frame()
+	tt.Frame()
+	if !hasText(tt, locales.PhoneOffline(iphone.Name)) || !hasText(tt, locales.PhoneNotConnected()) ||
+		hasText(tt, locales.PhoneNeedsSetup(iphone.Name)) || hasText(tt, locales.AddPhoneIPhoneStepDevModeDetail()) {
+		t.Errorf("the unplugged iPhone's page: %q", tt.Texts())
+	}
+	for _, d := range []driver.Info{pixel, iphone} {
+		if _, ok := tt.Find(locales.SidebarPhoneRow(d.Name, locales.GwStatusOffline())); !ok || hasText(tt, locales.GwStatusNeedsSetup()) {
+			t.Errorf("the sidebar for the unplugged %s: %q", d.Name, tt.Texts())
+		}
+	}
+}

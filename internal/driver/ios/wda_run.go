@@ -40,22 +40,39 @@ var wdaEnv = map[string]any{
 // findWDARunner returns the bundle id of the WebDriverAgent runner
 // installed on the phone, or "" when there is none.
 func findWDARunner(e goios.DeviceEntry) (string, error) {
+	r, err := findRunnerApp(e)
+	return r.BundleID, err
+}
+
+// wdaRunner is the WebDriverAgent runner installed on a phone.
+type wdaRunner struct {
+	BundleID string
+	// AppID is its application identifier, "<team>.<bundle id>", from
+	// the entitlements it was signed with; "" when unknown.
+	AppID string
+}
+
+// findRunnerApp finds the WebDriverAgent runner installed on the phone;
+// its BundleID is "" when there is none.
+func findRunnerApp(e goios.DeviceEntry) (wdaRunner, error) {
 	conn, err := installationproxy.New(e)
 	if err != nil {
-		return "", fmt.Errorf("installation proxy: %w", err)
+		return wdaRunner{}, fmt.Errorf("installation proxy: %w", err)
 	}
 	defer conn.Close()
 	apps, err := conn.BrowseUserApps()
 	if err != nil {
-		return "", fmt.Errorf("list apps: %w", err)
+		return wdaRunner{}, fmt.Errorf("list apps: %w", err)
 	}
-	return pickWDARunner(apps), nil
+	return pickRunnerApp(apps), nil
 }
 
 // pickWDARunner chooses the runner among the installed apps: a test runner
 // named after WebDriverAgent. Pinky's own build wins over others.
-func pickWDARunner(apps []installationproxy.AppInfo) string {
-	var best string
+func pickWDARunner(apps []installationproxy.AppInfo) string { return pickRunnerApp(apps).BundleID }
+
+func pickRunnerApp(apps []installationproxy.AppInfo) wdaRunner {
+	var best wdaRunner
 	for _, a := range apps {
 		id, _ := a["CFBundleIdentifier"].(string)
 		if !strings.HasSuffix(id, ".xctrunner") {
@@ -66,8 +83,11 @@ func pickWDARunner(apps []installationproxy.AppInfo) string {
 		if !strings.Contains(strings.ToLower(id+" "+name+" "+exe), "webdriveragentrunner") {
 			continue
 		}
-		if best == "" || strings.Contains(strings.ToLower(id), "pinky") {
-			best = id
+		if best.BundleID == "" || strings.Contains(strings.ToLower(id), "pinky") {
+			best = wdaRunner{BundleID: id}
+			if ent, ok := a["Entitlements"].(map[string]any); ok {
+				best.AppID, _ = ent["application-identifier"].(string)
+			}
 		}
 	}
 	return best

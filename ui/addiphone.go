@@ -211,6 +211,16 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				// The person chose to offer a third-party copy too, after
 				// the official ways and only on a click.
 				a.mirrorOffer(c)
+			case driver.SetupInstallHelper:
+				// Driven through the helper, which is missing or ran out:
+				// nothing for Pinky to retry (checkup_iphone.go).
+				title, text, _ := setupWords(*d, d.Info.Setup)
+				guideProblem(c, title, text)
+				mg.Row(c).Children(func() {
+					if linkButton(c, locales.CheckHelperHow()).Clicked() {
+						openURL(c, helperLink(*d), func(error) {})
+					}
+				})
 			default:
 				guideProblem(c, locales.AddPhoneIPhoneStuck(), d.Info.Detail)
 				guideNote(c, locales.AddPhoneIPhoneRetrying())

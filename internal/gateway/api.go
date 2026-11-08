@@ -48,19 +48,24 @@ type DeviceStatus string
 
 // Device statuses, in the order the UI ranks them.
 const (
-	DeviceNeedsYou  DeviceStatus = "needs_you"
-	DeviceLocked    DeviceStatus = "locked"
-	DeviceInControl DeviceStatus = "in_control" // the person took over
-	DeviceWorking   DeviceStatus = "working"
-	DeviceIdle      DeviceStatus = "idle"
-	DeviceOffline   DeviceStatus = "offline"
+	DeviceNeedsYou DeviceStatus = "needs_you"
+	// DeviceNeedsSetup: the phone is connected, but Pinky cannot open it
+	// until the person does a step, on the phone or on the computer: its
+	// driver lists it as StateUnauthorized or StateNeedsSetup, and
+	// Info.Setup and Info.Detail say which step.
+	DeviceNeedsSetup DeviceStatus = "needs_setup"
+	DeviceLocked     DeviceStatus = "locked"
+	DeviceInControl  DeviceStatus = "in_control" // the person took over
+	DeviceWorking    DeviceStatus = "working"
+	DeviceIdle       DeviceStatus = "idle"
+	DeviceOffline    DeviceStatus = "offline"
 )
 
 // DeviceView is one row of the sidebar.
 type DeviceView struct {
 	Info       driver.Info
 	Status     DeviceStatus
-	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Offline"
+	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Needs setup", "Offline"
 	TaskID     string // the running task, if any
 	// Features says what the phone's driver offers, so the client shows
 	// only the controls that work. All false while the phone is offline.

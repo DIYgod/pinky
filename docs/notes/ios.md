@@ -127,7 +127,8 @@ All 16 pass on the iPhone 13 mini (inspect, stream, home screen observe, swipe a
 
 - The device gives each tunnel its own /64 (macOS's own tunnel was `fd3e:…`, ours `fd4f:…`), so both coexist. macOS 27's own tunnel is not routable from other processes (no utun route), so Pinky cannot borrow it.
 - The device grants the MTU asked for (16000), which keeps per-packet overhead low. Over USB a 6.9 MB screenshot arrives in about 0.75 s including the phone's PNG encoding, so the userspace stack moves at least 9 MB/s; gVisor's TCP receive autotuning is on.
-- `HandshakeAsHost` once per tunnel matters (go-ios's finding, not re-tested here): without the host's RemoteXPC version flags, services that send large replies (screenshots) crash on the device.
+- Sending the device much data needs a small MTU. With 16000, the first full-size packets of an upload (the developer disk image) went out and the device then sent nothing more on the tunnel, not even their ACKs: the tunnel's counters stopped, gVisor retransmitted with backoff, and 18 s later the device's TCP gave up ("Operation timed out", 2026-11-08, iOS 27.0.1). The tunnel that mounts the image asks for 1280 (`uploadMTU`), as go-ios's tunnels do; the image then goes over in half a second. Other tunnels keep 16000: their packets to the device are small.
+- `HandshakeAsHost` once per tunnel matters: without the host's RemoteXPC version flags, services that send large replies (screenshots) crash on the device, and cryptexd logs "Invalid or missing remote device connection version flags". The phone takes the announcement only once it has settled TLS on that RSD connection; closing the connection right after sending it lost it on about half of the tunnels ("Device must renegotiate TLS"). The connection now stays open for 2 s (`rsdLinger`), and every tunnel got its flags.
 
 ### Video
 
@@ -288,11 +289,39 @@ Once per phone, on a Mac with Xcode:
 2. Open `WebDriverAgent.xcodeproj`. For the WebDriverAgentRunner target, under Signing & Capabilities, pick your team (a free Apple ID works). If Xcode says the bundle identifier is taken, change its prefix (`com.<you>.WebDriverAgentRunner`), keeping WebDriverAgentRunner in it so Pinky finds it.
 3. Pick the iPhone as the destination and run Product › Test once. Xcode installs WebDriverAgentRunner and starts it; with a free Apple ID the phone first asks you to trust the developer in Settings › General › VPN & Device Management. Stop the test once Xcode's log shows `ServerURLHere`.
 
-From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days; after that, repeat step 3. The same from a terminal:
+From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, repeat step 3 (see "When the helper's signature runs out"). The same from a terminal:
 
 ```sh
 xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
   -destination id=<udid> -allowProvisioningUpdates DEVELOPMENT_TEAM=<team id> test
+```
+
+### When the helper's signature runs out
+
+Built on 2026-11-08 after a user's report. The helper is signed with the person's Apple ID, and the provisioning profile it is signed with runs out: 7 days after Xcode installed it with a free Apple ID, a year with a paid developer account. iOS then no longer starts it, and Pinky used to say only that the helper did not start.
+
+To install it again, plug the iPhone in and repeat step 3 of "Installing the WebDriverAgent helper" (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Xcode signs the helper anew and installs it over the old one; nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
+
+What Pinky does (`wda_profile.go`):
+
+- **Reading.** Pinky lists the phone's provisioning profiles with misagent's `CopyAll` (the lockdown service `com.apple.misagent`, over usbmuxd), which only reads. go-ios's `misagent` package sends that request but drops the answer, so Pinky has its own small client. Each profile is a CMS signed message; Pinky takes the property list inside without checking the signature and reads `ExpirationDate`, the `application-identifier` entitlement and `ProvisionedDevices`. It reads BER as well as DER (indefinite lengths, the content in a constructed OCTET STRING), which `encoding/asn1` refuses.
+- **Matching.** The helper's profile is one that grants the runner on this phone: its `application-identifier` names the runner's bundle id, or a wildcard (`<team>.*`) covers it, for the runner's team, which is the prefix of the runner's own `application-identifier` in the installation proxy's app list. Of several, the one that runs out last counts: iOS starts the app while any of them lasts, and an old profile stays next to a new one.
+- **The date.** `driver.Info.HelperExpires` (new, additive; zero when unknown) carries it for phones driven through the helper, Automatic below iOS 27 or chosen in Settings › Phones. List reads it while inspecting such a phone, again every 30 minutes while the phone is online, and every minute within the reminder (`driver.HelperReminder`, 48 hours), so a helper installed again while the phone stays plugged in is noticed.
+- **Once it ran out**, List inspects the phone again and lists it as `needs_setup` with `Setup` `install_helper` (`driver.SetupInstallHelper`, new) and a `Detail` that says when it ran out and how to install it again. The gateway then closes the phone, though a runner already running might have gone on until it ended: Pinky stops at the time it announced. A helper chosen in Settings › Phones but not installed now also gets `install_helper`.
+- **A profile Pinky cannot read** changes nothing: the phone works as before, without a reminder. Pinky's log gets each read (`iphone: the helper's provisioning profile`, expires), a change of the date, and a read that failed.
+- **The client.** Two days before, the phone's page shows a reminder above the phone: "The helper on <phone> stops working on <day and time>: install it again from Xcode", with How to install it. Once it ran out, the page of the phone that needs setup says so in the same words, with How to install it in place of the steps of Add phone, and Add phone › iPhone shows it too instead of "stuck, retrying". The checkup's `helper` item warns two days before, notes the day when it is further off, and fails with those words once it ran out (`ui/checkup_iphone.go`).
+
+What ran where:
+
+| What | Where | Result |
+| --- | --- | --- |
+| Reading the profiles and matching the helper's (`TestHelperProfileOnPhone`, read only) | iPhone 13 mini, iOS 27.0.1, 2026-11-08 | 59 profiles in 113 to 127 ms, all parsed (DER). The runner the owner had installed for another tool (bundle id ending in `.wda.xctrunner`) is granted by its team's wildcard profile, "iOS Team Provisioning Profile: *", from a paid account: 365 days, running out on 2027-10-08. The installation proxy's list gave the runner's `application-identifier` |
+| BER profiles, matching, the reminder and the expiry in the provider, the checkup item, the client's words and layout | Unit tests (`wda_profile_test.go`, `ui/helper_test.go`), the client's tester in English and Chinese, light and dark | Pass |
+| A profile that actually ran out; a free Apple ID's 7-day profile | Not yet | No such phone at hand. Whether iOS keeps an expired profile listed is not seen: if it removes it, Pinky finds no profile and shows the old failure to start |
+
+```sh
+PINKY_DEVICE=<udid> scripts/devlock.sh <udid> go test -tags device -count=1 -v -run TestHelperProfileOnPhone ./internal/driver/ios/
+PINKY_SCREENSHOTS=<dir> go test ./ui -run TestIPhoneHelperScreenshots
 ```
 
 ### Choosing the connection
@@ -335,19 +364,19 @@ Also found:
 - Mirroring a phone that Pinky drives on iOS 27 can leave its accessibility services stuck, so Pinky reads by OCR alone until the phone restarts (seen once, iOS 27.0.1 and macOS 27.2). Pinky does not notice it yet; a check that tells the person to restart the phone would help.
 - iPhone Mirroring as a way in: macOS 15 or later, iOS 18 or later, the same Apple Account on both, the phone locked nearby, not in the EU; window capture and mouse and keyboard events would need Screen Recording and Accessibility for Pinky. With no tree from the phone while it mirrors (above), it would read the screen by OCR alone, as DESIGN.md's planned Mirroring backend does; not built.
 - `Waker` through the helper; `Unlock` wakes the phone by itself.
-- Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now. go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
+- Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now, and Pinky reminds them before the signature runs out ("When the helper's signature runs out"). go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
 - The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
 - Landscape on both paths.
 
 ## Preparing a phone without Xcode
 
-Built on 2026-11-08. Before, Pinky needed Xcode for two steps: showing the Developer Mode switch (iOS hides it until a developer tool has seen the phone) and mounting the developer disk image (Xcode's Devices window did it; below iOS 27 nothing did it again after the phone restarted). Now Pinky does both, except that its cryptex install does not work on iOS 27.0.1 yet ("The mount", below). What remains of Xcode is the image itself, which Pinky does not ship.
+Built on 2026-11-08. Before, Pinky needed Xcode for two steps: showing the Developer Mode switch (iOS hides it until a developer tool has seen the phone) and mounting the developer disk image (Xcode's Devices window did it; below iOS 27 nothing did it again after the phone restarted). Now Pinky does both. What remains of Xcode is the image itself, which Pinky does not ship.
 
 | Step | Before | Now |
 | --- | --- | --- |
 | Trusting the computer | The system asks: macOS when a phone is plugged in, Linux's usbmuxd too | The same on macOS and Linux. On Windows, where nothing else may ask, Pinky asks the phone itself (go-ios `Pair`) while it has no pair record, at most every 4 s |
 | The Developer Mode switch | Xcode reveals it when it sees the phone | Pinky sends AMFI's reveal (`com.apple.amfi.lockdown`, action 0) once per attach while Developer Mode is off. The person turns it on, the phone restarts and asks them to confirm. Pinky never confirms for them (AMFI's action 2 would): that question is the person's |
-| The developer disk image | Xcode mounts it. Below iOS 27 a restart drops it and nothing mounts it again until Xcode runs; iOS 27 keeps it (seen on 27.0.1) | Pinky mounts it in the background whenever the developer services are missing (see below): below iOS 27 after every restart, on any iOS when another tool took it off. Not working yet on iOS 27.0.1 |
+| The developer disk image | Xcode mounts it. Below iOS 27 a restart drops it and nothing mounts it again until Xcode runs; iOS 27 keeps it (seen on 27.0.1) | Pinky mounts it in the background whenever the developer services are missing (see below): below iOS 27 after every restart, on any iOS when another tool took it off. |
 | The tunnel | Pinky's own (lockdown's CoreDeviceProxy, userspace) | Unchanged |
 
 ### Where the image comes from
@@ -376,11 +405,15 @@ Clients reach it through `driver.DiskImageDownloader` (the iOS provider) and the
 - `List` asks a phone that waits for a step again sooner than other phones that are not online: every 2 s while it waits for Trust, every 3 s while it is being prepared or must be unlocked, so Add phone moves on soon after the person's step.
 - The developer services are checked once per usbmuxd attach, so a phone that reconnects or restarts is always looked at again, and every minute while a phone is online (`recheckOnline`): an image taken off while the cable stays in is mounted again. A failed look keeps the phone online; only services seen missing count. A CoreDevice `Open` that fails forgets the phone, so the next `List` looks again. Before 2026-11-08 (2026.1108.7) an online phone was looked at only when it reconnected, and a "services there" result was reused for 5 minutes across reconnects.
 - Each step goes to Pinky's log (`Provider.Log`): `iphone: mounting the developer disk image` (image, folder), `iphone: developer disk image ready` (way, kept, replaced, took), `iphone: could not mount the developer disk image` (way, took, err, retry_in), `iphone: the developer services went away`, the Developer Mode switch, the trust request on Windows and the mirror download.
-- **The cryptex install does not work on iOS 27.0.1 yet** (2026-11-08, Pinky.app 2026.1108.7, the phone unlocked; "What ran where"). go-ios's `installCryptex` opens the five file-transfer streams, sending a FileOpen message on each, then sends the install request, then waits on each stream for the phone's FileOpenReply before it writes the data (`xpc.FileTransferStream.WaitAccepted`). cryptexd took the request and the streams and waited for the data, sending no such reply, so both sides waited until the mount's 90 s timeout. Apple's devicectl sent the same request on the same six streams and its data went through in half a second. Likely the order: go-ios's own comment says the phone accepts a file transfer only after the message that references it, yet it opens the streams first. The fix belongs in go-ios (send the request, then open each stream; or write without waiting) and needs a try on a phone. Until then, mount the image once with Xcode (open it with the iPhone plugged in): iOS 27 keeps it across restarts.
+- **The cryptex install on iOS 27.0.1** needed three fixes (2026-11-08, iPhone 13 mini; "What ran where"). Before them every install waited until the mount's 90 s timeout, the phone unlocked, while Apple's devicectl installed the same image in half a second.
+  1. go-ios's `installCryptex` waited on each payload's stream for the phone's FileOpenReply before it wrote the payload (`xpc.FileTransferStream.WaitAccepted`). cryptexd sends that reply only after the payload. Pinky mounts with a copy of go-ios's cryptex code that sends each payload at once (`internal/driver/ios/cryptex`, MIT, its README says what changed); pymobiledevice3, written from devicectl's traffic, does the same and notes that a device resets a stream held open waiting for the reply. A fake cryptexd that behaves this way shows go-ios's install waiting forever and the copy installing.
+  2. Pinky closed the RSD connection right after announcing the host, sometimes before the phone took the announcement, which left the tunnel a legacy peer's (see "Tunnel"). Fixed with `rsdLinger`.
+  3. The upload stalled after the first full-size packets with the tunnel's 16000 MTU (see "Tunnel"). The mount's tunnel asks for 1280 (`uploadMTU`).
+  With all three, Pinky's provider mounted Xcode's 27B52 in 1.4 s after the image had been taken off, and the phone was online again 2.3 s after the take-off.
 
 ### Steps for clients
 
-`driver.Info.Setup` (new, additive) names the step a phone waits for: `trust`, `developer_mode`, `unlock`, `preparing`, `no_disk_image`, `disk_image` (the mount failed; `Detail` says why) and `update` (iOS too old). `Detail` still says it in a sentence. Add phone › iPhone (`ui/addiphone.go`) shows them as numbered steps, each saying what to do on the phone, and the reason when one is stuck; the Phone screen of an iPhone that needs setup links to them. The steps replace the pairing-code form, which no iPhone used.
+`driver.Info.Setup` (new, additive) names the step a phone waits for: `trust`, `developer_mode`, `unlock`, `preparing`, `no_disk_image`, `disk_image` (the mount failed; `Detail` says why), `update` (iOS too old) and `install_helper` (the helper is missing, or its signature ran out: see "When the helper's signature runs out"). `Detail` still says it in a sentence. Add phone › iPhone (`ui/addiphone.go`) shows them as numbered steps, each saying what to do on the phone, and the reason when one is stuck; the Phone screen of an iPhone that needs setup links to them. The steps replace the pairing-code form, which no iPhone used.
 
 ### The computer
 
@@ -394,7 +427,7 @@ iPhones answer the checkup page (`driver.Checker`, `checkup.go`), reading only: 
 | --- | --- | --- |
 | `developer_mode` | The image mounter's `QueryDeveloperModeStatus` | Fix `developer_mode` |
 | `disk_image` | What the phone has mounted (cryptexd's list, else the image mounter's), the services the path needs (screen and HID on CoreDevice, `legacyReady`'s below iOS 27), and whether this computer has an image to mount again should it go missing (`findDiskImage` in Pinky's folder, Xcode's, the download) | Fails with fix `disk_image` when the services are missing; warns with `no_disk_image` when nothing here could mount it again |
-| `helper` | WebDriverAgent's `/status`, on the helper's path; without the helper it fails | Fix `install_helper` |
+| `helper` | WebDriverAgent's `/status`, on the helper's path, and when its signature runs out, read afresh; without the helper it fails | Fix `install_helper`; warns two days before the signature runs out, and once it ran out fails, or warns while the helper still runs |
 | `screen` | A screenshot | Fix `screenshot` |
 | `input` | CoreDevice: the HID service accepts a connection, which is closed again without an event (any event would reach the phone). Without the helper: fails | Fix `install_helper` below iOS 27 |
 
@@ -411,6 +444,8 @@ The gateway puts the connection items first; for an iPhone that is not online, t
 | The checkup (`TestCheckupOnPhone`, read only) | iPhone 13 mini, iOS 27.0.1, 2026-11-08, after the image was put back | All four items pass in 1.0 s: Developer Mode on; the image 27.2.52.0 mounted as a cryptex, and Xcode's 27B52 here to mount again; a 1125×2436 screenshot; the HID service answers (no event sent) |
 | A restart, Pinky.app 2026.1108.7 running, Xcode quit (read only) | iPhone 13 mini, iOS 27.0.1, 2026-11-08 11:13 | The phone came back with the cryptex 27.2.52.0 already there: Pinky opened it 52 s after boot (launchd's start in the process list), though nothing on the Mac mounted it (no mount in CoreDeviceService's log, no lookup of Apple's signing server by any process). iOS 27 keeps the cryptex image across restarts |
 | Pinky.app's own mount: the image taken off (3 s) and the cable plugged in again, the phone unlocked, with the owner's leave | iPhone 13 mini, iOS 27.0.1, 2026-11-08 11:43 | While the cable stayed in, Pinky.app did not notice for 2 minutes (it looked at online phones only when they reconnected; now every minute). Plugged in again, it saw the services missing in 11 s and mounted Xcode's 27B52 the cryptex way: three tries, each waiting until its 90 s timeout. cryptexd's log: the request and five file streams arrived, then nothing for 31 s until the connection closed ("image file transfer: Broken pipe" for all five). devicectl then mounted the image in 2.5 s, and Pinky showed the phone online 3 s later |
+| Finding why the install hung (with the owner's leave; the image taken off and put back with devicectl each time) | iPhone 13 mini, iOS 27.0.1, 2026-11-08 13:25 to 13:59 | Sending the payloads at once alone: still waits. The phone's syslog: cryptexd said "Invalid or missing remote device connection version flags" on the tunnels where remoted had logged "Device must renegotiate TLS" (the RSD connection closed too soon); with the RSD connection kept open every tunnel got its flags, and the install still stalled after 1,047,632 bytes of the image. The tunnel's counters: after the first 27 full-size packets nothing came back from the phone, gVisor retransmitted 7 times, and the phone's TCP timed out after 18 s. The goroutines: the tunnel's reader waiting on the network, its writer idle. Once at 13:46 Apple's signing server failed TLS with an expired certificate, through this Mac's proxy; a few minutes later it was valid again |
+| Pinky's own mount, all three fixes (with the owner's leave) | iPhone 13 mini, iOS 27.0.1, 2026-11-08 14:03 and 14:06 | `mountOn`: the image (17.2 MB) in 0.5 s, installed 6.7 s after the start. The provider, as the gateway runs it, after the image was taken off: missing services seen in 0.2 s, "iphone: developer disk image ready" way=cryptex took=1.418s, online again 2.3 s after the take-off; then the checkup, all four items pass |
 | The home screen's tree after the restart (read only) | iPhone 13 mini, iOS 27.0.1, 2026-11-08 11:53 | "Home Screen" (SpringBoard), 25 elements from the tree, no OCR, 0.56 s; no "no frontmost app" |
 | Downloading the mirror's image (`TestDownloadMirrorLive`) | This Mac, from GitHub | 32 MB in 37 s, every file matched its pin, the assembled image read as 27A5228h, cryptex version 27.1.5228.8 |
 | The Developer Mode switch | Not yet | The test phone has Developer Mode on, and turning it off is not allowed |
@@ -443,7 +478,7 @@ The demo (`go run ./cmd/pinky-ui-demo`) has Demo › Plug In a New iPhone, which
 - Banking apps that refuse to run while the screen is shared cannot be used by agents: the stream must run for input. They work for the person 30 s after the last view or input.
 - iOS 17.4 to 26 is built but not tried on a phone (see "iPhones below iOS 27"); 17.3 and earlier are not supported. Windows and Linux cross-compile, untested.
 - Instruments (`com.apple.instruments.dtservicehub`) is not in Xcode 27.2's developer disk image, and iOS 27 lists it without one, so its presence does not show that an image is mounted. The check below iOS 27 (`probeLegacyServices`) therefore also wants one of the services the image itself publishes (display, HID, screen capture, pasteboard or device info). Not checked on a phone below iOS 27.
-- Pinky's own mount of the developer disk image does not work on iOS 27.0.1 yet: go-ios's cryptex install waits for a reply the phone does not send ("The mount"). Mount the image once with Xcode; iOS 27 keeps it. The image downloaded from the mirror, the Developer Mode switch and pairing on Windows are built but not yet tried on a phone (see "Preparing a phone without Xcode"). A computer without Xcode's image (a Mac that never had Xcode, Windows, Linux) needs a copy from a Mac with Xcode, or the mirror's beta image.
+- The image downloaded from the mirror, the Developer Mode switch and pairing on Windows are built but not yet tried on a phone (see "Preparing a phone without Xcode"). A computer without Xcode's image (a Mac that never had Xcode, Windows, Linux) needs a copy from a Mac with Xcode, or the mirror's beta image.
 - `WaitSettled` uses frame sizes (and accessibility notifications when they come); animated widgets keep it from ever settling on such home screens (it times out), and after motion the encoder's slowly falling bitrate can keep it waiting a little after the picture stopped.
 
 ## What the owner should try

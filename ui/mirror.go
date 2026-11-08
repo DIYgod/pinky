@@ -297,12 +297,20 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 	scr.Children(func() {
 		switch {
 		case locked:
-			// The lock: the screen dimmed, and a pill naming it.
-			mg.Box(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Background(mg.RGBA(10, 12, 18, 0.62)).PassThrough()
+			// The lock: the screen dimmed, and a pill naming it. On the
+			// Phone screen both give way while the pointer is on the
+			// mirror, which then shows the lock screen as it is, for the
+			// person to unlock by hand: the pill sits where the PIN pad
+			// comes up. Clicks go through them either way.
+			shown := float32(1)
+			if !tile {
+				shown = scr.Animate("lock", b2f(!scr.Hovered()), 150*time.Millisecond)
+			}
+			mg.Box(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Background(mg.RGBA(10, 12, 18, 0.62)).Opacity(shown).PassThrough()
 			// The pill sits a little below the middle, as on the prototype's lock screen.
 			pill := mg.Row(c).Attach(mg.AnchorCenter, mg.AnchorCenter).Top(m.boxH*0.04).Gap(8).AlignItems(mg.Center).
 				Padding(9, 14).Radius(999).Background(mg.RGBA(255, 255, 255, 0.14)).Border(1, mg.RGBA(255, 255, 255, 0.22)).
-				TextColor(hex("#ffffff")).PassThrough()
+				TextColor(hex("#ffffff")).Opacity(shown).PassThrough()
 			if tile {
 				pill.Padding(6, 10).Gap(6)
 			}

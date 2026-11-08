@@ -42,7 +42,7 @@ Install Pinky, connect your phone and add Pinky to your agent. Then ask the agen
 | **Windows** | Windows 10 or 11, 64-bit (x64) |
 | **Linux** | A 64-bit PC (x86-64) with Ubuntu 20.04, Debian 11 or a newer system (glibc 2.29 or later), and GTK 3 |
 | **Android phone** | Android 10 to 17 and a USB cable. Pinky brings its own adb; on Windows some phones need a USB driver, and on Linux USB access ([below](#usb-on-windows-and-linux)) |
-| **iPhone** | iOS 17.4 or later and a USB cable. Pinky prepares it with Apple's developer disk image, which comes with Xcode or which Pinky can download from a third-party mirror when you ask. On iOS 27 Pinky can't mount the image itself yet: open Xcode once with the iPhone plugged in, and the image stays ([below](#iphone)). On iOS 17.4 to 26 also a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
+| **iPhone** | iOS 17.4 or later and a USB cable. Pinky prepares it itself, with Apple's developer disk image, which comes with Xcode or which Pinky can download from a third-party mirror when you ask ([below](#iphone)). On iOS 17.4 to 26 also a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
 | **Agent** | Any agent that can use MCP servers, such as Claude Code, Claude Desktop, Codex or Cursor |
 
 ### 1. Download and install Pinky
@@ -89,7 +89,7 @@ Pinky brings its own adb, the tool it reaches Android phones with, built from An
 
 #### iPhone
 
-Pinky prepares an iPhone itself, except for one step on iOS 27 for now (below); **Add phone › iPhone** walks you through it.
+Pinky prepares an iPhone itself; **Add phone › iPhone** walks you through it.
 
 1. Plug the iPhone into the computer, unlock it, tap **Trust** and enter its passcode. On Windows, install Apple Devices from the Microsoft Store (or iTunes) first; on Linux, the `usbmuxd` package. Add phone says when they are missing.
 2. On the iPhone, turn on **Developer Mode** in Settings › Privacy & Security: Pinky makes the switch appear there. The iPhone restarts; unlock it, tap **Turn On** and enter the passcode.
@@ -97,11 +97,11 @@ Pinky prepares an iPhone itself, except for one step on iOS 27 for now (below); 
 
 The developer disk image comes with [Xcode](https://apps.apple.com/app/xcode/id497799835), Apple's free app for developers, and Pinky does not ship it. On a Mac, install Xcode once and open it: Pinky uses the image it installs, and Xcode never has to run again. On Windows and Linux, copy `/Library/Developer/DeveloperDiskImages/iOS_DDI` from such a Mac into Pinky's folder ([where](docs/notes/ios.md#preparing-a-phone-without-xcode)). Without either, Add phone offers to download the image from a third-party mirror, github.com/doronz88/DeveloperDiskImage (Xcode 27.0 beta 4, 32 MB, kept by the author of pymobiledevice3, not by Apple), only when you click Download; Pinky checks every file against the checksum it expects. On iOS 27 and later, no app gets installed on the iPhone.
 
-Checked on the iPhone 13 mini (iOS 27.0.1): finding Xcode's image, keeping the image already on the phone, and that the iPhone keeps the image when it restarts. Pinky mounting the image itself does not work there yet: the install waits until it times out. Until it does, mount the image once by opening Xcode with the iPhone plugged in; it then stays. Not yet tried on a phone: the downloaded image, the Developer Mode switch, iPhones below iOS 27, and iPhones on Windows or Linux.
+Checked on the iPhone 13 mini (iOS 27.0.1): Pinky mounting Xcode's image itself (in about 1.5 s, after the image had been taken off), keeping the image already on the phone, and that the iPhone keeps the image when it restarts. Not yet tried on a phone: the downloaded image, the Developer Mode switch, iPhones below iOS 27, and iPhones on Windows or Linux.
 
 #### iPhones on iOS 17.4 to 26
 
-Below iOS 27, an iPhone takes taps and typing from a computer only through a helper app on the phone: WebDriverAgent, which you build and install once from Xcode with your Apple ID ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)). With a free Apple ID it has to be installed again every 7 days. It has not been tried on an iPhone below iOS 27 yet. Without it, Pinky can only show and read the screen (on a Mac) and open apps: no taps, swipes or typing. iOS 17.3 and earlier are not supported.
+Below iOS 27, an iPhone takes taps and typing from a computer only through a helper app on the phone: WebDriverAgent, which you build and install once from Xcode with your Apple ID ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)). With a free Apple ID it has to be installed again every 7 days: two days before, the phone's page and its checkup remind you, and once it has run out the phone shows as needing setup and says why ([how to install it again](docs/notes/ios.md#when-the-helpers-signature-runs-out)). It has not been tried on an iPhone below iOS 27 yet. Without it, Pinky can only show and read the screen (on a Mac) and open apps: no taps, swipes or typing. iOS 17.3 and earlier are not supported.
 
 ### 3. Add Pinky to your agent
 
@@ -130,7 +130,7 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 
 ### Phones
 
-- **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Its companion app, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
+- **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Its companion app, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). Its accessibility service is on only while an agent works on the phone, as banking apps refuse to run next to one ([why](#faq)). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
 - **Wi-Fi on Android 10:** Android 10 has no Wireless debugging. Plug the phone in and choose **Use Wi-Fi instead…** in the ⋯ menu under its picture (or in Settings › Phones): Pinky has the phone's adb listen on the network (`adb tcpip`, port 5555), connects to it at its Wi-Fi address and says when you can unplug it. It connects again by itself when the phone is back on the network, also at a new address. While it is on, any computer on the same network can try to connect to the phone: if the phone asks **Allow USB debugging?** when you are not connecting it yourself, tap **Cancel**, and use it only on Wi-Fi you trust. It lasts until the phone restarts; then plug it in once and choose **Use Wi-Fi again**. **Stop the Wi-Fi connection** in the same menu turns it off ([details](docs/away-from-home.md#wi-fi-without-wireless-debugging)).
 - **iPhone:** connected over USB and prepared by Pinky ([above](#iphone)). What Pinky can do depends on the iOS version and on how Pinky connects, which you can choose for each iPhone in Settings › Phones (Automatic picks by version, as below):
 
@@ -141,7 +141,7 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
   | 17.4 to 26, without it | The developer services alone; nothing installed | Watching (a few frames a second, macOS only), reading the screen (placed by OCR, macOS only) and opening apps. No tapping, swiping, typing or Home: the phone offers no input without the helper | The same services on iOS 27.0.1; not yet on a phone below iOS 27 |
   | 17.3 and earlier | | Not supported: before 17.4 the connection needs administrator rights, and iOS 16 and earlier need a developer disk image that current Xcode no longer includes | |
 
-  The helper is Appium's WebDriverAgent, signed with your own Apple ID; with a free Apple ID it has to be installed again every 7 days.
+  The helper is Appium's WebDriverAgent, signed with your own Apple ID. The signature lasts 7 days with a free Apple ID and a year with a paid developer account. Pinky reads on the iPhone when it runs out: two days before, the phone's page and its checkup remind you to install the helper again from Xcode, and once it has run out the phone shows as needing setup and says why, instead of failing to start the helper ([how](docs/notes/ios.md#when-the-helpers-signature-runs-out)).
 - **Screen sharing on iPhone:** while Pinky streams an iPhone's screen, iOS tells apps that the screen is being shared, and some banking apps (DBS digibank and China Merchants Bank among them) refuse to run or warn you. Pinky streams it while the phone's page or tile is open in Pinky, while an agent works on it, and for 30 seconds after; then such apps work again. Over CoreDevice, agents cannot use them. Connect that iPhone through the WebDriverAgent helper instead (Settings › Phones): the phone then shares no screen, and agents can use those apps too.
 - **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN. On Android this is checked on AOSP-style lock screens (LineageOS on a Mi 10 Pro, the Android 10, 16 and 17 emulators); the lock screens of Xiaomi, Samsung, OPPO, OnePlus, vivo, Honor and Huawei are only covered by tests made from what is known of them, and where Pinky cannot read the PIN pad with confidence it enters nothing ([details](docs/notes/integration.md#unlocking-other-android-phones)).
 - **Removing a phone:** **Remove this phone…** in the phone's ⋯ menu (also on its page while it is offline, on its tile in All phones, in its right-click menu in the sidebar and in Settings › Phones) takes it off the list and deletes its saved PIN and its settings. Its tasks, screenshots and recordings stay in Activity unless you tick the box to delete them too, and a task running on it stops. A phone on a cable comes back at once, as a new phone, until you unplug it. A phone on Wi-Fi is disconnected and stays off the list, even when adb connects it again by itself; to add it back, pair it again in Add phone or plug it in. Pinky does not unpair the phone from your computer: its USB or wireless debugging pairing, or the iPhone's trust, stays for other apps ([details](docs/notes/gateway.md#removing-a-phone)).
@@ -159,7 +159,7 @@ An Android phone does not have to be on the computer's network. With [Tailscale]
 
 ### Updates
 
-Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free, keeping its accessibility service as it was. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md)).
+Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free; its accessibility service stays off until the next task. A Pinky Companion signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md)).
 
 - **macOS:** Pinky.app replaces itself after checking the download's checksum, that it is signed by Pinky's developer and that Apple notarized it, and goes back to the old version if the new one does not start. The Homebrew cask's copy updates itself the same way, and `brew upgrade` leaves it alone while it is current. A copy run from the disk image or from a folder you cannot write to says how to update it instead.
 - **Windows:** a Pinky that its installer installed runs the new installer quietly, after checking its checksum, starts the new version and goes back to the old one if that does not start. The portable copy downloads the installer for you.
@@ -205,7 +205,18 @@ Not through Pinky. Screenshots, recordings and history stay on your computer, fo
 <details>
 <summary><b>What does Pinky install on my phone?</b></summary>
 
-On Android, Pinky Companion, when you click Install; Pinky keeps it up to date. On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does (on iOS 27, for now, Xcode has to mount it once; [details](#iphone)). On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)).
+On Android, Pinky Companion, when you click Install; Pinky keeps it up to date and turns its accessibility service on only while an agent works ([why](#faq)). On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does. On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)).
+
+</details>
+
+<details>
+<summary><b>Will banking or other apps notice Pinky Companion?</b></summary>
+
+While its accessibility service is on, they can. Malware abuses accessibility services, so many banking apps refuse to sign in while an app from outside an app store has one turned on: in Malaysia (Maybank, CIMB, HSBC and the other members of the Association of Banks in Malaysia, since 2024) and in Singapore (DBS, OCBC and UOB, since 2023) among others. Pinky Companion is such an app, as Pinky installs it over USB. Apps such as WeChat, Douyin and Xiaohongshu can see the service too and watch for automated use; we know of no report that they flagged Pinky Companion, but letting an agent use them may be against their terms.
+
+So Pinky turns the service on only while an agent works on the phone: as a task starts, and off again a few seconds after the task ends or you take over the phone, or a minute after the agent's last step. The rest of the time it is off, and those apps work as usual. While an agent works, even on the phone's background display, they see it: to use one of them then, click **Take over** in Pinky first, or end the task.
+
+To keep Pinky from turning the service on at all, uninstall Pinky Companion on the phone (Android's Settings › Apps). Pinky works without it, only more slowly: it reads a screen in about 2 s instead of 70 ms, and types text other than plain English through the phone's clipboard. **Not now** on the phone's page puts away Pinky's offer to install it again.
 
 </details>
 

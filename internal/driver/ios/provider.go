@@ -47,6 +47,11 @@ type Provider struct {
 	wdaWaits    map[string]*wdaStart // by UDID: a runner waiting for the passcode (see wdaState)
 	wdaHolds    map[string]wdaHold   // by UDID: no new runner until then
 
+	// The helper's provisioning profile (wda_profile.go): by UDID, the
+	// helper whose profile List reads again, and for tests how it is read.
+	helpers  map[string]helperRead
+	helperFn func(ctx context.Context, e goios.DeviceEntry, r wdaRunner) (time.Time, error)
+
 	// For tests: how a phone is inspected, and the clock.
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
@@ -181,6 +186,9 @@ func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 		if info, waiting := p.wdaState(ctx, key, k.info); waiting {
 			return info
 		}
+		var lasts bool
+		k.info, lasts = p.helperStill(ctx, e, k)
+		ok = ok && lasts // its provisioning profile ran out: inspect it again
 	}
 	if ok && k.key == key && k.info.State == driver.StateOnline && k.info.Backend != backendAccessibility {
 		if p.clock().Sub(k.at) < recheckOnline || p.servicesStill(ctx, e, k) {
@@ -231,6 +239,7 @@ func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 			delete(p.wdaHolds, id)
 		}
 	}
+	p.forgetHelpers(listed)
 	p.mu.Unlock()
 	for _, s := range stop {
 		go s.stop()
@@ -472,8 +481,9 @@ func (p *Provider) inspectLegacy(ctx context.Context, e goios.DeviceEntry, info 
 		return p.diskImageMissing(e, info, p.legacySetup)
 	}
 	info.Backend = backendAccessibility
-	if id, err := p.runner(e); err == nil && id != "" {
+	if r, err := p.runnerApp(e); err == nil && r.BundleID != "" {
 		info.Backend = backendWDA
+		return p.withHelper(ctx, e, info, r)
 	}
 	return info
 }
@@ -492,13 +502,14 @@ func (p *Provider) inspectWDA(ctx context.Context, e goios.DeviceEntry, info dri
 	case !ok:
 		return p.diskImageMissing(e, info, p.legacySetup)
 	}
-	if id, err := p.runner(e); err != nil || id == "" {
-		info.State = driver.StateNeedsSetup
+	r, err := p.runnerApp(e)
+	if err != nil || r.BundleID == "" {
+		info.State, info.Setup = driver.StateNeedsSetup, driver.SetupInstallHelper
 		info.Detail = wdaMissing
 		return info
 	}
 	info.Backend = backendWDA
-	return info
+	return p.withHelper(ctx, e, info, r)
 }
 
 func (p *Provider) runner(e goios.DeviceEntry) (string, error) {
