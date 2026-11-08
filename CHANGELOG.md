@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.7 (2026-11-09)
 
 - Pinky now speaks Japanese: choose 日本語 in Settings › Advanced › Language, or let it follow a computer set to Japanese. Thanks to tarou-jp for the translation.
 - On Linux, iPhones and iPads work over Wi-Fi: unplugged, Pinky moves them to Wi-Fi instead of showing them offline. Nothing to install beyond `usbmuxd`. Thanks to pseudoyu.
