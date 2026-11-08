@@ -43,7 +43,31 @@ What it cannot stop:
 
 ## Speed and data
 
-<!-- measurements: filled in from the field test -->
+Measured on 2026-11-08 with the Mi 10 Pro (Android 17) and a MacBook Pro at home, on a background display scrolling Settings once a second. "Swipe to picture" is the time from sending a swipe to the first frame that shows it.
+
+| Where the phone is, and how Pinky reaches it | Stream | Frames a second | Swipe to picture (median / 90th percentile) | adb round trip |
+| --- | --- | --- | --- | --- |
+| Home Wi-Fi, Wireless debugging | 2.5 Mbit/s, 30 fps | 22.4–23.6 | 146–164 ms / 208–212 ms | |
+| Home Wi-Fi, adb tcpip | 2.5 Mbit/s, 30 fps | 23.6–23.7 | 138–149 ms / 201–225 ms | |
+| Home Wi-Fi, through Tailscale (a direct path over the home network) | 2.5 Mbit/s, 30 fps | 23.9 | 118 ms / 393 ms | 35–110 ms |
+| A phone's 4G hotspot with a weak signal, through a Tailscale relay | 2.5 Mbit/s, 30 fps | frames in bursts, seconds apart | | 0.4–4.8 s; adb's connection dropped after 98 s |
+| The same hotspot | 1 Mbit/s, 15 fps (Pinky's default through Tailscale) | frames in bursts every 2–4 s | | 1.4–4.6 s; the connection held |
+
+- **At home**, Tailscale finds the direct path over the home network: as fast as Wi-Fi. Pinky still uses the local connection while it has one.
+- **The phone's upload is what counts away from home**: the picture goes up from the phone. That hotspot passed 0.35 to 0.5 Mbit/s up (its ping to the internet: 116 ms on average), so any stream over that queued, and taps waited behind it. A usual 4G or 5G upload (several Mbit/s) carries Pinky's 1 Mbit/s with room to spare. Through Tailscale, Pinky streams at 1 Mbit/s and 15 frames a second instead of the 2.5 Mbit/s and 30 it uses on the local network.
+- **Relayed or direct.** On this home network the computer's traffic leaves through a proxy gateway, so Tailscale could not open a direct path to the phone on the hotspot and relayed it through its Singapore server (32 ms from the computer). A direct path, when Tailscale can make one, saves that detour.
+- **Moving between networks.** Coming home, the connection through Tailscale paused for about 5 s and carried on, and adb connected Wireless debugging again 2 s later. Leaving home, adb dropped the Wireless debugging connection as the phone changed networks, and Pinky went on through Tailscale. Android 17 kept Wireless debugging on when the phone joined the hotspot; Android 11 to 16 turn it off.
+
+Data, as Tailscale counted it at home (the same on mobile data):
+
+| What Pinky does with the phone | Data |
+| --- | --- |
+| Connected, no picture open | about 2 kbit/s each way: under 2 MB an hour |
+| Picture open, screen still | 250 kbit/s: about 110 MB an hour |
+| An agent tapping every 5 s (2.5 Mbit/s stream) | 2.3 Mbit/s: about 1 GB an hour |
+| Scrolling every second (2.5 Mbit/s stream) | 6.6 Mbit/s: about 3 GB an hour, as the encoder spends what it saved while the screen was still |
+
+At 1 Mbit/s, steady change takes about 450 MB an hour. The away-from-home tests above used about 55 MB of the hotspot's data.
 
 ## When it does not work
 
@@ -64,7 +88,7 @@ Pinky keeps the address and connects again whenever the phone is back on the net
 
 When the phone restarts, its adb stops listening: the phone's page says so, instead of only "offline". Plug it in once and choose **Use Wi-Fi again**. **Stop the Wi-Fi connection** (the same menu, or Settings › Phones) turns it off for good: the phone's adb stops listening (`adb usb`), and Pinky reaches the phone only by cable. On a phone also used away from home, it ends that too.
 
-Measured on the Mi 10 Pro (Android 17, which also takes this switch, standing in for an Android 10 phone): moving it to Wi-Fi took 0.4 s, a dropped connection came back in 62 ms, and a phone at a new address was found and connected again in 4.9 s.
+Checked on a Pixel (2016, Android 10) on 2026-11-08: moved to Wi-Fi in 1.4 s, with no prompt on the phone (it trusted the computer over USB already); a dropped connection came back in 134 ms; unplugged, it went on over Wi-Fi at once; restarted, it was offline at once and said "plug it in once" as soon as it refused the connection (about 40 s later, once it was up); plugged in, **Use Wi-Fi again** took 1.6 s; **Stop the Wi-Fi connection** left nothing listening. On the Mi 10 Pro (Android 17, which takes the same switch), a phone at a new address was found with mDNS and connected again in 4.9 s.
 
 ## How it works
 
@@ -76,4 +100,5 @@ For developers; the code is in `internal/tailnet` and `internal/driver/android/n
 - A kept phone with no connection at all is listed offline, with `driver.Info.Setup` `network_off` once its adb refused (it restarted: plug it in once) or `network_away` while it does not answer; the client words them.
 - The phone's addresses come from the phone (`ip -o addr show`): the first IPv4 address of a `wlan` interface, and the VPN interface's addresses in 100.64.0.0/10, which carriers use too, matched against the tailnet's devices.
 - A phone with several connections is listed once, by the best (USB, then the local network, then Tailscale), so it moves to the next when one goes; `driver.Info.Via` is `tailscale` when Tailscale is the one.
-- Turning either on runs `tcpip:5555` over a connection the phone has (adbd restarts; the connection comes back in about 2 s) and connects at the new address; off runs `usb:`. Removing the phone from Pinky turns both off.
+- Turning either on runs `tcpip:5555` over a connection the phone has (adbd restarts; the connection comes back in about 2 s; on Android 17 over Wireless debugging its reply may not get through, so the connection at the new address confirms it) and connects at the new address; off runs `usb:`. Removing the phone from Pinky turns both off.
+- A phone reached through Tailscale streams at 1 Mbit/s and 15 frames a second (`tailnetBitRate`), unless Pinky's configuration sets a rate; the settle threshold (about 300 bytes a packet) and screenshots (`screencap`) do not depend on it.

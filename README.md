@@ -155,7 +155,7 @@ An Android phone does not have to be on the computer's network. With [Tailscale]
 3. The phone's adb then takes connections on every network the phone joins, from the computers it already trusts; any other computer makes the phone ask. Only the way through Tailscale is encrypted. It lasts until the phone restarts, and **Turn off** stops it at once. Pinky only reads Tailscale's status and never changes its settings.
 4. **Keep this computer awake for phones away** (Settings › Phones, on by default) stops the computer's idle sleep while a phone is connected through Tailscale. A MacBook still sleeps when its lid closes.
 
-<!-- away-measurements -->Details, data use and what to do when it does not connect: [docs/away-from-home.md](docs/away-from-home.md). An agent can be away from the computer too: [Remote agents](docs/mcp.md#over-http).
+At home, Tailscale is as fast as Wi-Fi; away, the phone's upload carries the picture, so Pinky streams lighter through Tailscale (1 Mbit/s), and on a weak 4G hotspot each step takes seconds. Details, measurements, data use and what to do when it does not connect: [docs/away-from-home.md](docs/away-from-home.md). An agent can be away from the computer too: [Remote agents](docs/mcp.md#over-http).
 
 ### Updates
 

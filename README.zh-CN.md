@@ -155,7 +155,7 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 3. 之后手机的 adb 会在它连上的每个网络上接受连接，只放行它已经信任的电脑，其他电脑连过来时手机会询问你。只有经 Tailscale 的那条连接是加密的。这会持续到手机重启，点「关闭」可以立即停止。Pinky 只读取 Tailscale 的状态，不会更改它的设置。
 4. 「为离家的手机保持电脑唤醒」（「设置 › 手机」，默认开启）会在有手机通过 Tailscale 连接时阻止电脑空闲睡眠。合上 MacBook 的盖子它仍会睡眠。
 
-<!-- away-measurements -->详情、流量和连不上时怎么办：[docs/away-from-home.md](docs/away-from-home.md)。Agent 也可以不在这台电脑上：见[远程 Agent](docs/mcp.md#over-http)。
+在家时经 Tailscale 和直接走 Wi-Fi 一样快；在外面时，画面靠手机的上行带宽传回来，所以经 Tailscale 时 Pinky 会降低画面码率（1 Mbit/s），信号不好的 4G 热点上每一步都要等几秒。详情、实测数据、流量和连不上时怎么办：[docs/away-from-home.md](docs/away-from-home.md)。Agent 也可以不在这台电脑上：见[远程 Agent](docs/mcp.md#over-http)。
 
 ### 更新
 
