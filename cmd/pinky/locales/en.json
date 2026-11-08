@@ -4144,15 +4144,15 @@
   },
   "phoneBannerHandBackHint": "Hand back to let agents use this phone again.",
   "@phoneBannerHandBackHint": {
-    "description": "The banner over the mirror, after the bold phoneBannerInControl, when no agent waits: Hand back is the banner's button."
+    "description": "The banner above the mirror, after the bold phoneBannerInControl, when no agent waits: Hand back is the banner's button."
   },
   "phoneBannerInControl": "You're in control. ",
   "@phoneBannerInControl": {
-    "description": "The bold start of the banner over the mirror while the person controls the phone; the rest follows in normal weight (phoneBannerPaused or phoneBannerHandBackHint). English ends with a space before the rest."
+    "description": "The bold start of the banner above the mirror while the person controls the phone; the rest follows in normal weight (phoneBannerPaused or phoneBannerHandBackHint). English ends with a space before the rest."
   },
   "phoneBannerPaused": "{agent} is paused.",
   "@phoneBannerPaused": {
-    "description": "The banner over the mirror, after the bold phoneBannerInControl: the agent waits until the person hands the phone back.",
+    "description": "The banner above the mirror, after the bold phoneBannerInControl: the agent waits until the person hands the phone back.",
     "placeholders": {
       "agent": {
         "type": "String",
@@ -4162,7 +4162,7 @@
   },
   "phoneBannerWaits": "{agent} waits for you: {reason}",
   "@phoneBannerWaits": {
-    "description": "The banner over the mirror, after the bold phoneBannerYourTurn. reason is the agent's own words, what it asked the person to do (in English with a lower-case first letter).",
+    "description": "The banner above the mirror, after the bold phoneBannerYourTurn. reason is the agent's own words, what it asked the person to do (in English with a lower-case first letter).",
     "placeholders": {
       "agent": {
         "type": "String",
@@ -4176,7 +4176,7 @@
   },
   "phoneBannerYourTurn": "Your turn. ",
   "@phoneBannerYourTurn": {
-    "description": "The bold start of the banner over the mirror when the agent asked the person to do something on the phone; phoneBannerWaits follows in normal weight. English ends with a space before the rest."
+    "description": "The bold start of the banner above the mirror when the agent asked the person to do something on the phone; phoneBannerWaits follows in normal weight. English ends with a space before the rest."
   },
   "phoneCheckup": "Checkup",
   "@phoneCheckup": {
@@ -4198,7 +4198,7 @@
   },
   "phoneHandBack": "Hand back",
   "@phoneHandBack": {
-    "description": "Button that gives the phone back to the agents after the person took over: on the banner over the mirror and on All phones tiles."
+    "description": "Button that gives the phone back to the agents after the person took over: on the banner above the mirror and on All phones tiles."
   },
   "phoneKeyBack": "Back",
   "@phoneKeyBack": {

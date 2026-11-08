@@ -158,6 +158,7 @@ Interaction rules:
 
 - Everything that needs the person, approvals and unlocks alike, appears in one place: the Needs you section, or the floating panel when the window is not in front. The panel never takes keyboard focus; after the person clicks it, Return means Allow once and Esc means Deny.
 - Touching the mirror pauses the agent and shows the "you're in control" banner. On Android, touches on the phone itself do too; on iPhone they cannot be detected, so the person uses the mirror or Stop.
+- Nothing Pinky draws hides a part of the phone's screen the person may click. The "you're in control" banner sits above the mirror, which shrinks to leave it room, and comes or goes only between the person's gestures; a locked phone's dimming and pill give way while the pointer is on the mirror.
 - Developer mode adds a Details toggle to the expanded task card, with the tool calls and what the agent sees.
 - Closing the main window keeps the gateway running in the menu bar.
 

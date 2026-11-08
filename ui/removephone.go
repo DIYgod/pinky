@@ -242,6 +242,7 @@ func (a *app) forgetPhone(id string, history bool) {
 	}
 	delete(a.more, id)
 	delete(a.more, "tile:"+id)
+	delete(a.control, id) // the banner above its mirror
 	if history && a.act.loaded {
 		a.act.load(a)
 	}

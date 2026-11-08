@@ -136,31 +136,46 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	}
 	inControl := d.Status == gateway.DeviceInControl
 	ho, handoff := a.handoffFor(d.Info.ID)
+	var want controlText
 	switch {
 	case handoff && !a.isLocked(d) && t != nil && t.State == gateway.TaskPaused:
 		// The person took over and the agent waits with phone_handoff.
 		inControl = true
-		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerPaused(agentOf(ho)))
+		want = controlText{locales.PhoneBannerInControl(), locales.PhoneBannerPaused(agentOf(ho))}
 	case handoff && !a.isLocked(d):
 		// The agent asked for the person: the phone is theirs until they
 		// hand it back, here or with Done on the card.
 		inControl = true
 		reason := strings.TrimSuffix(strings.TrimSuffix(needTitle(ho), "."), "\u3002") // the agent's words, without the final period
-		a.controlBanner(c, d.Info.ID, locales.PhoneBannerYourTurn(), locales.PhoneBannerWaits(agentOf(ho), lowerFirst(reason)))
+		want = controlText{locales.PhoneBannerYourTurn(), locales.PhoneBannerWaits(agentOf(ho), lowerFirst(reason))}
 	case inControl && agent != "":
-		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerPaused(agent))
+		want = controlText{locales.PhoneBannerInControl(), locales.PhoneBannerPaused(agent)}
 	case inControl:
-		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerHandBackHint())
+		want = controlText{locales.PhoneBannerInControl(), locales.PhoneBannerHandBackHint()}
 	}
+
+	// While an agent works on its own display in the background, the
+	// mirror shows that display, unless the person chose the phone's own
+	// screen; the agent's outline belongs on its display only.
+	m, bgTask := a.screenFor(d, t, false)
+
+	// The banner has its own room above the mirror, which shrinks for it:
+	// over the phone's screen it would hide what the person wants to
+	// click there. It comes and goes between the person's gestures on the
+	// mirror, as a touch starts the takeover that shows it: a mirror
+	// moving under a finger still down would end the touch elsewhere.
+	if !m.down && !m.scrolling {
+		a.control[d.Info.ID] = want
+	}
+	banner := a.control[d.Info.ID]
 
 	// Size the phone to the room the window gives it.
 	w, h := c.Size()
 	availH := h - 58 - 32 - 14 - 36
 	availW := w - 220 - 320 - 32
-	// While an agent works on its own display in the background, the
-	// mirror shows that display, unless the person chose the phone's own
-	// screen; the agent's outline belongs on its display only.
-	m, bgTask := a.screenFor(d, t, false)
+	if banner != (controlText{}) {
+		availH -= a.controlBanner(c, d.Info.ID, banner, min(460, availW)) + 14
+	}
 	watching := m.agent
 	shown := t
 	if bgTask && !watching {
@@ -178,7 +193,9 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	scale := (ph - 2*bezel) / 614 // the prototype's screen is 614 high
 	radius, inner = radius*max(scale, 0.6), inner*max(scale, 0.6)
 
-	fig := mg.Box(c).Width(sw + 2*bezel).Height(ph).Shrink(0).Radius(radius).Background(p.phone).Padding(bezel)
+	// Keyed, the phone and its keys stay themselves as the banner comes
+	// and goes before them: the mirror keeps the keyboard's focus.
+	fig := mg.Box(c.Key("phone-" + d.Info.ID)).Width(sw + 2*bezel).Height(ph).Shrink(0).Radius(radius).Background(p.phone).Padding(bezel)
 	fig = shadow(c, fig)
 	if inControl {
 		fig.Shadow(0, 0, 0, 2, p.ink2)
@@ -189,7 +206,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 
 	// The keys: Back, Home and Recents on Android, Home on iPhone, after
 	// the switch between the agent's screen and the phone's own.
-	mg.Row(c).Gap(4).AlignItems(mg.Center).Children(func() {
+	mg.Row(c.Key("keys-" + d.Info.ID)).Gap(4).AlignItems(mg.Center).Children(func() {
 		if bgTask && (watching || a.phoneChosen(d.Info.ID, t)) {
 			which := 0
 			if !watching {
@@ -233,25 +250,46 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	})
 }
 
-// controlBanner is the "You're in control" banner over the mirror, with
-// Hand back. The person keeps control after the agent left, until they
-// hand the phone back.
-func (a *app) controlBanner(c *mg.Context, id, bold, rest string) {
+// controlText is what the "You're in control" banner says: its bold start
+// and the rest.
+type controlText struct{ bold, rest string }
+
+// controlLines is as many lines as the banner's text takes; an agent's
+// longer words end with an ellipsis, and the Needs you card has them all.
+const controlLines = 3
+
+// controlBanner is the "You're in control" banner above the mirror, with
+// Hand back, width wide. The person keeps control after the agent left,
+// until they hand the phone back. It returns its height, for the mirror
+// to leave it room.
+func (a *app) controlBanner(c *mg.Context, id string, text controlText, width float32) float32 {
 	p := pal(c)
-	w, _ := c.Size()
-	b := mg.Row(c).Attach(mg.AnchorTop, mg.AnchorTop).Top(16).Width(min(460, w-220-320-32)).
+	spans := []mg.Span{{Text: text.bold, Weight: 650, Color: p.ink}, {Text: text.rest, Color: p.ink2}}
+	label := locales.PhoneHandBack()
+	height := controlBannerHeight(c, spans, label, width)
+	b := mg.Row(c).Width(width).Height(height).Shrink(0).
 		Padding(10, 10, 10, 16).Radius(12).Background(p.panel).Border(1, p.line2).Gap(10).AlignItems(mg.Center).
 		Role(mg.RoleStatus)
 	shadow(c, b).Children(func() {
 		mg.Icon(c, icHand).FontSize(18).TextColor(p.ink2)
-		mg.RichText(c,
-			mg.Span{Text: bold, Weight: 650, Color: p.ink},
-			mg.Span{Text: rest, Color: p.ink2},
-		).Grow(1).MinWidth(0)
-		if button(c, locales.PhoneHandBack(), btnOpt{kind: btnPrimary}).Clicked() {
+		mg.RichText(c, spans...).Grow(1).MinWidth(0).MaxLines(controlLines)
+		if button(c, label, btnOpt{kind: btnPrimary}).Clicked() {
 			a.handBack(id)
 		}
 	})
+	return height
+}
+
+// controlBannerHeight works out the banner's height as its row lays it
+// out: the words wrap, up to controlLines lines, in what width leaves
+// after the padding, the border, the icon, the gaps and Hand back (its
+// label, padding and border), and the banner is no shorter than Hand back.
+func controlBannerHeight(c *mg.Context, spans []mg.Span, label string, width float32) float32 {
+	lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: 14, Weight: 500})
+	tw := width - (16 + 10 + 2) - 18 - 2*10 - (lw + 2*14 + 2)
+	_, th := c.MeasureText(max(tw, 1), spans...)
+	_, line := c.MeasureText(0, spans...)
+	return max(min(th, controlLines*line), 34) + 2*10 + 2
 }
 
 // moreControls is the ⋯ button under the mirror and its popover.
