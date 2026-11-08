@@ -900,93 +900,15 @@ func (g *Gateway) resolveLaunch(ctx context.Context, d *device, name string) (dr
 	if err != nil {
 		return driver.App{}, false, errResult(ErrInternal, "Listing apps failed: %v", err)
 	}
-	if a, ok := matchApp(apps, name); ok {
-		return a, false, nil
+	m := findApp(apps, name)
+	if m.ok {
+		return m.app, false, nil
+	}
+	if len(m.similar) > 0 {
+		return driver.App{}, false, errResult(ErrNotFound, "No installed app is named %q. Similar: %s. Call phone_launch again with the exact name or id of the one you mean.",
+			name, appList(m.similar))
 	}
 	return driver.App{}, false, errResult(ErrNotFound, "No installed app matches %q; call phone_apps to see what is installed.", name)
-}
-
-// matchApp finds an app by id, then by exact name, then by a unique part of
-// its name.
-func matchApp(apps []driver.App, name string) (driver.App, bool) {
-	for _, a := range apps {
-		if a.ID == name {
-			return a, true
-		}
-	}
-	var exact, part []driver.App
-	q := strings.ToLower(name)
-	for _, a := range apps {
-		n := strings.ToLower(a.Name)
-		switch {
-		case n == q:
-			exact = append(exact, a)
-		case strings.Contains(n, q):
-			part = append(part, a)
-		}
-	}
-	pick := func(list []driver.App) (driver.App, bool) {
-		if len(list) == 1 {
-			return list[0], true
-		}
-		var user []driver.App
-		for _, a := range list {
-			if !a.System {
-				user = append(user, a)
-			}
-		}
-		if len(user) == 1 {
-			return user[0], true
-		}
-		return driver.App{}, false
-	}
-	if a, ok := pick(exact); ok {
-		return a, true
-	}
-	if len(exact) == 0 && len(part) > 0 {
-		return pick(part)
-	}
-	if len(exact) == 0 {
-		// No name matches, as an English name on a phone in another
-		// language ("Calculator" for 计算器): try the package or bundle
-		// id's parts (com.google.android.calculator).
-		return pick(idMatches(apps, q))
-	}
-	return driver.App{}, false
-}
-
-// idMatches returns the apps whose id has a part equal to q, or else a
-// part that contains it ("clock" in com.google.android.deskclock). q is
-// lower case; parts shorter than four letters only match whole.
-func idMatches(apps []driver.App, q string) []driver.App {
-	q = strings.ReplaceAll(q, " ", "")
-	if len(q) < 3 {
-		return nil
-	}
-	var whole, part []driver.App
-	for _, a := range apps {
-		matched := false
-		for i, seg := range strings.Split(strings.ToLower(a.ID), ".") {
-			if i == 0 && (seg == "com" || seg == "org" || seg == "net" || seg == "app") {
-				continue
-			}
-			switch {
-			case seg == q:
-				whole = append(whole, a)
-				matched = true
-			case len(q) >= 4 && strings.Contains(seg, q) && !matched:
-				part = append(part, a)
-				matched = true
-			}
-			if matched {
-				break
-			}
-		}
-	}
-	if len(whole) > 0 {
-		return whole
-	}
-	return part
 }
 
 // ask opens an approval for an action and records the waiting step.

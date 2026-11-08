@@ -226,9 +226,9 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `app` | string, required | Package name, bundle id, or name (exact, then a unique part of it); on an iPhone without the WebDriverAgent helper also an `http` or `https` link, which opens in Safari |
+| `app` | string, required | Package name, bundle id, or name (the app's name, its home screen name or a well-known one; part of a name is not enough); on an iPhone without the WebDriverAgent helper also an `http` or `https` link, which opens in Safari |
 
-Opening a blocked banking or wallet app, or one the person blocked, asks the person like an Ask action (rule `Finance apps` or `Blocked by you`; up to 45 s, then `approval_pending`). If they allow it, it stays allowed for the rest of the task: the agent may open it and read its screen, and everything else the rules ask about there still asks; Pinky keeps no screenshots, recording or screen text of it (its `ocr` lines come from a picture kept in memory only, and no screenshot is returned), and Settings do not change. If they deny it, later launches of it in the task return `blocked_by_policy` at once. Password managers return `blocked_by_policy` without asking. Apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A URL (`https://…`) counts as opening a link (rule `Installs and links`), which asks the person when they chose to approve more than payments; the app that opens the link (Safari on an iPhone) is judged too, so blocking it or leaving it out of the agent's scope refuses its links. Other phones return `not_found` for a link, and an iPhone returns `unsupported` for a link that is not `http` or `https`.
+Opening a blocked banking or wallet app, or one the person blocked, asks the person like an Ask action (rule `Finance apps` or `Blocked by you`; up to 45 s, then `approval_pending`). If they allow it, it stays allowed for the rest of the task: the agent may open it and read its screen, and everything else the rules ask about there still asks; Pinky keeps no screenshots, recording or screen text of it (its `ocr` lines come from a picture kept in memory only, and no screenshot is returned), and Settings do not change. If they deny it, later launches of it in the task return `blocked_by_policy` at once. Password managers return `blocked_by_policy` without asking. Apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A name finds an app only by its id, its name, its home screen name or a well-known name (微信 for WeChat): a name that is only part of other apps' names (微信 in 微信读书) finds nothing, and `not_found` lists those apps as similar. The task's `apps` list in `phone_connect` takes names the same way, and its message lists similar apps for a name it could not place. A URL (`https://…`) counts as opening a link (rule `Installs and links`), which asks the person when they chose to approve more than payments; the app that opens the link (Safari on an iPhone) is judged too, so blocking it or leaving it out of the agent's scope refuses its links. Other phones return `not_found` for a link, and an iPhone returns `unsupported` for a link that is not `http` or `https`.
 
 ### phone_apps
 
@@ -236,7 +236,7 @@ Opening a blocked banking or wallet app, or one the person blocked, asks the per
 | --- | --- | --- |
 | `query` | string | Only apps whose name or id contains it |
 
-Lists installed apps inside the agent's scope, user apps first, one per line: `Name (id)`, with `· system` for system apps. Blocked apps are never listed.
+Lists installed apps inside the agent's scope, user apps first, one per line: `Name (id)`, with `· system` for system apps. An iPhone app whose home screen shows another name than its own (`WeChat · 微信 (com.tencent.xin)`) lists both. Blocked apps are never listed.
 
 ### phone_batch
 

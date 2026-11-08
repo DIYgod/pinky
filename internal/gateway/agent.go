@@ -464,7 +464,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		ro := l.readOnly
 		g.mu.Unlock()
 		defer s.done(l)
-		var unknown []string
+		var unknown []unknownApp
 		if len(req.Apps) > 0 {
 			unknown = g.resolveTaskApps(ctx, l)
 		}
@@ -576,11 +576,19 @@ func appendUniq(list []string, s string) []string {
 	return append(list, s)
 }
 
+// unknownApp is a name in a task's app list that no installed app has for
+// sure, with the apps it may mean.
+type unknownApp struct {
+	name    string
+	similar []driver.App
+}
+
 // resolveTaskApps adds the ids and names of installed apps that the task's
 // allow-list names, so the list matches either. It returns the names that
-// match no installed app, such as 天气 on a phone whose Weather app has an
-// English name; nil when the phone cannot list its apps.
-func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []string {
+// match no installed app for sure, such as 天气 on a phone whose Weather app
+// has an English name, or 微信 where only 微信读书 holds it (findApp); nil
+// when the phone cannot list its apps.
+func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []unknownApp {
 	g.mu.Lock()
 	want := append([]string(nil), l.apps...)
 	g.mu.Unlock()
@@ -596,15 +604,15 @@ func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []string {
 		return nil
 	}
 	out := append([]string(nil), want...)
-	var unknown []string
+	var unknown []unknownApp
 	for _, w := range want {
-		if a, ok := matchApp(apps, w); ok {
-			out = appendUniq(out, a.ID)
-			if a.Name != "" {
-				out = appendUniq(out, a.Name)
+		if m := findApp(apps, w); m.ok {
+			out = appendUniq(out, m.app.ID)
+			if m.app.Name != "" {
+				out = appendUniq(out, m.app.Name)
 			}
 		} else {
-			unknown = append(unknown, w)
+			unknown = append(unknown, unknownApp{name: w, similar: m.similar})
 		}
 	}
 	g.mu.Lock()
@@ -615,17 +623,24 @@ func (g *Gateway) resolveTaskApps(ctx context.Context, l *lease) []string {
 
 // withUnknownApps tells the agent at once which names in its task's app
 // list match no installed app, rather than at the first refused launch.
-func withUnknownApps(res *Result, unknown []string) *Result {
+func withUnknownApps(res *Result, unknown []unknownApp) *Result {
 	if len(unknown) == 0 || res == nil || res.IsError() {
 		return res
 	}
 	names := make([]string, len(unknown))
+	var similar []string
 	for i, u := range unknown {
-		names[i] = "“" + u + "”"
+		names[i] = "“" + u.name + "”"
+		if len(u.similar) > 0 {
+			similar = append(similar, fmt.Sprintf("for “%s”: %s", u.name, appList(u.similar)))
+		}
 	}
 	res.Message = strings.TrimSpace(res.Message + fmt.Sprintf(
-		" No installed app matches %s in the task's app list, so opening those apps will be refused. Call phone_apps for the names this phone uses, then phone_connect again with the same task and the corrected apps.",
-		strings.Join(names, ", ")))
+		" No installed app matches %s in the task's app list, so opening those apps will be refused.", strings.Join(names, ", ")))
+	if len(similar) > 0 {
+		res.Message += " Similar names " + strings.Join(similar, "; ") + "."
+	}
+	res.Message += " Call phone_apps for the names this phone uses, then phone_connect again with the same task and the exact names or ids."
 	return res
 }
 

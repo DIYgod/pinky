@@ -109,7 +109,11 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 	}
 	if len(res.Apps) > 0 {
 		for _, a := range res.Apps {
-			l := a.Name + " (" + a.ID + ")"
+			l := a.Name
+			if len(a.Aliases) > 0 {
+				l += " · " + strings.Join(a.Aliases, " · ")
+			}
+			l += " (" + a.ID + ")"
 			if a.System {
 				l += " · system"
 			}

@@ -212,6 +212,10 @@ type App struct {
 	ID     string // package name or bundle id
 	Name   string
 	System bool
+	// Aliases are other names the person knows the app by: on an iPhone,
+	// the name its home screen shows when that differs from the app's own
+	// ("微信" for WeChat, whose bundle is named WeChat in every language).
+	Aliases []string
 }
 
 // Key is a hardware or navigation key.

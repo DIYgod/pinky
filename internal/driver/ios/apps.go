@@ -12,6 +12,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/danielpaulus/go-ios/ios/installationproxy"
+	"github.com/danielpaulus/go-ios/ios/springboard"
 	"howett.net/plist"
 )
 
@@ -129,8 +130,106 @@ func browseApps(l *link) ([]driver.App, map[string]driver.App, error) {
 			out = append(out, app)
 		}
 	}
+	// The home screen names apps in the phone's language, while the
+	// bundle's own name may be English ("WeChat" for 微信): agents and
+	// people use the home screen's.
+	if names, err := homeScreenNames(l, homeScreenWait); err == nil {
+		addHomeScreenNames(out, names)
+	}
 	sort.Slice(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
 	return out, byPath, nil
+}
+
+// homeScreenWait bounds reading the home screen's names: the app list
+// waits for it, and does without when SpringBoard does not answer.
+const homeScreenWait = 3 * time.Second
+
+// homeScreenNames reads the names the home screen shows, by bundle id,
+// from SpringBoard's icon layout: apps on its pages, in the dock and in
+// folders. Apps only in the App Library are not in it.
+func homeScreenNames(l *link, wait time.Duration) (map[string]string, error) {
+	type result struct {
+		names map[string]string
+		err   error
+	}
+	ch := make(chan result, 1)
+	var mu sync.Mutex
+	var client *springboard.Client
+	timedOut := false
+	go func() {
+		c, err := springboard.NewClient(l.base)
+		if err != nil {
+			ch <- result{err: err}
+			return
+		}
+		mu.Lock()
+		if timedOut {
+			mu.Unlock()
+			c.Close()
+			return
+		}
+		client = c
+		mu.Unlock()
+		defer c.Close()
+		layout, err := c.GetIconLayout("2")
+		if err != nil {
+			ch <- result{err: err}
+			return
+		}
+		names := map[string]string{}
+		collectIconNames(layout, names, 0)
+		ch <- result{names: names}
+	}()
+	select {
+	case r := <-ch:
+		return r.names, r.err
+	case <-time.After(wait):
+		mu.Lock()
+		timedOut = true
+		if client != nil {
+			client.Close() // ends the read that waits
+		}
+		mu.Unlock()
+		return nil, fmt.Errorf("SpringBoard did not answer in %v", wait)
+	}
+}
+
+// collectIconNames walks an icon layout (pages of icons, folders with
+// pages of their own) for icons with a bundle id and a display name.
+func collectIconNames(v any, names map[string]string, depth int) {
+	if depth > 12 {
+		return
+	}
+	switch x := v.(type) {
+	case []any:
+		for _, e := range x {
+			collectIconNames(e, names, depth+1)
+		}
+	case map[string]any:
+		id, _ := x["bundleIdentifier"].(string)
+		name, _ := x["displayName"].(string)
+		if id != "" && strings.TrimSpace(name) != "" {
+			names[id] = strings.TrimSpace(name)
+		}
+		for _, e := range x {
+			switch e.(type) {
+			case []any, map[string]any:
+				collectIconNames(e, names, depth+1)
+			}
+		}
+	}
+}
+
+// addHomeScreenNames gives apps whose home screen name differs from their
+// own that name as an alias.
+func addHomeScreenNames(apps []driver.App, names map[string]string) {
+	for i := range apps {
+		n := names[apps[i].ID]
+		if n == "" || strings.EqualFold(n, apps[i].Name) {
+			continue
+		}
+		apps[i].Aliases = append(apps[i].Aliases, n)
+	}
 }
 
 // appForExecutable maps a process's executable path to its app.
