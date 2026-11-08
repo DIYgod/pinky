@@ -235,40 +235,77 @@ func TestConvertYUV(t *testing.T) {
 	}
 }
 
-// A picture in another layout, as 10-bit HEVC's, is converted to I420,
-// which Convert's RGBA cannot do: it shows as the same picture in 8 bits.
-func TestConvertYUVTenBit(t *testing.T) {
-	needFFmpeg(t)
+// hevcBars starts a stream of ffmpeg's full color bars in HEVC, in the
+// pixel format given ("yuv420p10le" for 10 bits), or skips the test when
+// ffmpeg has no libx265 to make it.
+func hevcBars(t *testing.T, ctx context.Context, pixFmt string) *TestStream {
+	t.Helper()
 	if out, _ := exec.Command("ffmpeg", "-hide_banner", "-encoders").Output(); !bytes.Contains(out, []byte("libx265")) {
 		t.Skip("no libx265 to make a 10-bit stream")
 	}
 	ffmpeg, _ := exec.LookPath("ffmpeg")
-	stream := func(ctx context.Context, pixFmt string) (*TestStream, error) {
-		args := []string{"-hide_banner", "-loglevel", "error", "-nostdin", "-re", "-f", "lavfi", "-i", "pal100bars=size=360x800:rate=30",
-			"-pix_fmt", pixFmt, "-c:v", "libx265", "-preset", "ultrafast", "-tune", "zerolatency", "-x265-params", "log-level=error",
-			"-bsf:v", "hevc_metadata=aud=insert", "-f", "hevc", "-"}
-		return startFFmpeg(ctx, ffmpeg, args, TestStreamOptions{Codec: driver.HEVC, Width: 360, Height: 800, FPS: 30}, nil)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	s8, err := stream(ctx, "yuv420p")
+	args := []string{"-hide_banner", "-loglevel", "error", "-nostdin", "-re", "-f", "lavfi", "-i", "pal100bars=size=360x800:rate=30",
+		"-pix_fmt", pixFmt, "-c:v", "libx265", "-preset", "ultrafast", "-tune", "zerolatency", "-x265-params", "log-level=error",
+		"-bsf:v", "hevc_metadata=aud=insert", "-f", "hevc", "-"}
+	s, err := startFFmpeg(ctx, ffmpeg, args, TestStreamOptions{Codec: driver.HEVC, Width: 360, Height: 800, FPS: 30}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s8.Close()
-	_, want := decodeYUV(t, s8, true, 5)
+	t.Cleanup(func() { s.Close() })
+	return s
+}
+
+// A picture in another layout, as 10-bit HEVC's, is converted to I420: it
+// shows as the same picture in 8 bits.
+func TestConvertYUVTenBit(t *testing.T) {
+	needFFmpeg(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	_, want := decodeYUV(t, hevcBars(t, ctx, "yuv420p"), true, 5)
 	for _, software := range []bool{false, true} {
-		s, err := stream(ctx, "yuv420p10le")
-		if err != nil {
-			t.Fatal(err)
-		}
-		dec, y := decodeYUV(t, s, software, 5)
-		s.Close()
+		dec, y := decodeYUV(t, hevcBars(t, ctx, "yuv420p10le"), software, 5)
 		if y.NV12 || y.Width != 360 || y.Height != 800 || y.Matrix != BT601 {
 			t.Errorf("software=%v: decoder %q gave %dx%d, NV12 %v, matrix %d; want I420 360x800 in BT.601", software, dec.Hardware(), y.Width, y.Height, y.NV12, y.Matrix)
 		}
 		if d := medianDiff(y.RGBA(), want.RGBA()); d > 3 {
 			t.Errorf("software=%v: the 10-bit picture shows %d levels from the 8-bit one", software, d)
+		}
+	}
+}
+
+// Convert turns a 10-bit picture into RGBA, as the gateway's screenshots
+// from a phone's video do (frameshot.go): the same picture as in 8 bits.
+// It still does after ConvertYUV converted the picture to I420, which
+// used to leave reserved colors on the frame Convert describes its RGBA
+// with, so that swscale refused it.
+func TestConvertTenBit(t *testing.T) {
+	needFFmpeg(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	dec8 := decodeOne(t, hevcBars(t, ctx, "yuv420p"), true, 5)
+	want := image.NewRGBA(image.Rect(0, 0, 360, 800))
+	if err := dec8.Convert(want); err != nil {
+		t.Fatal(err)
+	}
+	for _, software := range []bool{false, true} {
+		dec := decodeOne(t, hevcBars(t, ctx, "yuv420p10le"), software, 5)
+		got := image.NewRGBA(image.Rect(0, 0, 360, 800))
+		if err := dec.Convert(got); err != nil {
+			t.Fatalf("software=%v: decoder %q: %v", software, dec.Hardware(), err)
+		}
+		if d := medianDiff(got, want); d > 3 {
+			t.Errorf("software=%v: the 10-bit picture shows %d levels from the 8-bit one", software, d)
+		}
+		var y YUV
+		if err := dec.ConvertYUV(&y); err != nil {
+			t.Fatal(err)
+		}
+		again := image.NewRGBA(image.Rect(0, 0, 360, 800))
+		if err := dec.Convert(again); err != nil {
+			t.Fatalf("software=%v: after ConvertYUV: %v", software, err)
+		}
+		if !bytes.Equal(again.Pix, got.Pix) {
+			t.Errorf("software=%v: after ConvertYUV, Convert shows %d levels from before", software, medianDiff(again, got))
 		}
 	}
 }

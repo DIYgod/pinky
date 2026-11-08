@@ -136,6 +136,11 @@ func (y *YUV) copyFrom(frame unsafe.Pointer) error {
 func (d *Decoder) toI420(dst *YUV, src unsafe.Pointer) error {
 	l := d.l
 	out := d.dst
+	colors := [...]uintptr{frameColorRange, frameColorPrim, frameColorTRC, frameColorspace, frameChromaLoc}
+	var kept [len(colors)]int32
+	for i, off := range colors {
+		kept[i] = getInt32(out, off)
+	}
 	if d.asBT709 {
 		tagBT709(src)
 	}
@@ -163,14 +168,15 @@ func (d *Decoder) toI420(dst *YUV, src unsafe.Pointer) error {
 		tagBT709(out)
 		r = l.sws_scale_frame(d.sws, out, src)
 	}
-	// out describes dst only during the call; Convert's RGBA pictures
-	// take no color description.
+	// out describes dst only during the call. Its colors go back to what
+	// they were, FFmpeg's "unspecified" that Convert's RGBA pictures take:
+	// zero would be reserved primaries and transfer, which swscale refuses.
 	for i := range 3 {
 		putPtr(out, frameData+uintptr(8*i), nil)
 		putInt32(out, frameLinesize+uintptr(4*i), 0)
 	}
-	for _, off := range []uintptr{frameColorRange, frameColorPrim, frameColorTRC, frameColorspace, frameChromaLoc} {
-		putInt32(out, off, 0)
+	for i, off := range colors {
+		putInt32(out, off, kept[i])
 	}
 	runtime.KeepAlive(dst)
 	if r < 0 {
