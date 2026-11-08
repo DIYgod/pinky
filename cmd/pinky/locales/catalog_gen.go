@@ -1288,9 +1288,11 @@ func (msgs Messages) AddPhoneIPhoneNoImageTitle() string {
 // developer services; it comes with Xcode), as Apple does with images it no
 // longer signs, such as those of Xcode before 27: the text when the image
 // is one the person put in a folder (Pinky's own, or the one the PINKY_DDI
-// environment variable names). folder is that folder; build is the Xcode
-// build the image came with; version is the image's version, or a dash when
-// unknown. iOS_DDI is a folder name.
+// environment variable names); for Pinky's own folder, the offer to
+// download an image from a third-party mirror instead
+// (addPhoneIPhoneMirrorTitle) comes below it. folder is that folder; build
+// is the Xcode build the image came with; version is the image's version,
+// or a dash when unknown. iOS_DDI is a folder name.
 func AddPhoneIPhoneRefusedFolder(folder string, build string, version string) string {
 	return In(i18n.Locale()).AddPhoneIPhoneRefusedFolder(folder, build, version)
 }
@@ -1304,9 +1306,11 @@ func AddPhoneIPhoneRefusedFolder(folder string, build string, version string) st
 // developer services; it comes with Xcode), as Apple does with images it no
 // longer signs, such as those of Xcode before 27: the text when the image
 // is one the person put in a folder (Pinky's own, or the one the PINKY_DDI
-// environment variable names). folder is that folder; build is the Xcode
-// build the image came with; version is the image's version, or a dash when
-// unknown. iOS_DDI is a folder name.
+// environment variable names); for Pinky's own folder, the offer to
+// download an image from a third-party mirror instead
+// (addPhoneIPhoneMirrorTitle) comes below it. folder is that folder; build
+// is the Xcode build the image came with; version is the image's version,
+// or a dash when unknown. iOS_DDI is a folder name.
 func (msgs Messages) AddPhoneIPhoneRefusedFolder(folder string, build string, version string) string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedFolder", map[string]any{"folder": folder, "build": build, "version": version})
 }
@@ -3546,7 +3550,8 @@ func (msgs Messages) CheckDiskImageDownloadNote() string {
 //
 // The phone's checkup, under the developer disk image item when Apple's
 // signing server refused to sign the image that came with Xcode on this Mac
-// (addPhoneIPhoneRefusedXcode): a note saying that the setup steps (the
+// (addPhoneIPhoneRefusedXcode) or one the person put in Pinky's folder
+// (addPhoneIPhoneRefusedFolder): a note saying that the setup steps (the
 // button phoneSetUpIPhone) also offer to download an image from a
 // third-party mirror (addPhoneIPhoneMirrorTitle), and that Pinky tries
 // again once another image is there. Say it as checkDiskImageDownloadNote
@@ -3558,7 +3563,8 @@ func CheckDiskImageRefusedNote() string { return In(i18n.Locale()).CheckDiskImag
 //
 // The phone's checkup, under the developer disk image item when Apple's
 // signing server refused to sign the image that came with Xcode on this Mac
-// (addPhoneIPhoneRefusedXcode): a note saying that the setup steps (the
+// (addPhoneIPhoneRefusedXcode) or one the person put in Pinky's folder
+// (addPhoneIPhoneRefusedFolder): a note saying that the setup steps (the
 // button phoneSetUpIPhone) also offer to download an image from a
 // third-party mirror (addPhoneIPhoneMirrorTitle), and that Pinky tries
 // again once another image is there. Say it as checkDiskImageDownloadNote

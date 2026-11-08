@@ -224,9 +224,11 @@ func refusedNeedsXcode(img *driver.DiskImage) bool {
 
 // refusedOffersMirror reports whether the steps offer to download an image
 // from the third-party mirror after Apple refused img: when img came with
-// Xcode. A refused download of the mirror's says to update Xcode or Pinky.
+// Xcode or was put in Pinky's folder. Not for the mirror's own download,
+// which says to update Xcode or Pinky, nor for PINKY_DDI's image, the only
+// one Pinky uses while it is set.
 func refusedOffersMirror(img *driver.DiskImage) bool {
-	return img != nil && img.Source == driver.DiskImageFromXcode
+	return img != nil && (img.Source == driver.DiskImageFromXcode || img.Source == driver.DiskImageFromFolder)
 }
 
 // chooseConnection opens Settings › Phones, where an iPhone's connection

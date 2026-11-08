@@ -148,8 +148,20 @@ func TestAddIPhoneStuck(t *testing.T) {
 		tt.Frame()
 		return hasText(tt, "in /Users/me/Pinky/DeveloperDiskImages/iOS_DDI/Restore: build 17B48, version –")
 	})
-	if _, ok := tt.Find("Get Xcode in the App Store"); ok || hasText(tt, "Or download it from a third-party mirror") {
-		t.Errorf("Xcode or the mirror offered for an image the person put in a folder: %q", tt.Texts())
+	if _, ok := tt.Find("Get Xcode in the App Store"); ok {
+		t.Errorf("Xcode offered for an image the person put in Pinky's folder: %q", tt.Texts())
+	}
+	// Windows and Linux have no Xcode: the mirror's image is the other way.
+	if !hasText(tt, "Or download it from a third-party mirror") {
+		t.Errorf("no mirror offered after the image in Pinky's folder was refused: %q", tt.Texts())
+	}
+	// PINKY_DDI's image is the only one Pinky uses while it is set: no
+	// download would be used.
+	refused.DiskImage = &driver.DiskImage{Source: driver.DiskImageFromEnv, Build: "17B48", Version: "17.2.48.0", Dir: "/opt/ddi/Restore"}
+	ta.api.SetIPhone(id, refused)
+	ta.waitFor(t, "the refused PINKY_DDI image", func() bool { tt.Frame(); return hasText(tt, "in /opt/ddi/Restore: build 17B48") })
+	if hasText(tt, "Or download it from a third-party mirror") {
+		t.Errorf("the mirror offered for PINKY_DDI's image: %q", tt.Texts())
 	}
 
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUnlock})
