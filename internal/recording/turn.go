@@ -12,9 +12,10 @@ import (
 // (driver.Packet.Turn); recordings keep them, so playback shows the screen
 // the right way up as the mirror did.
 //
-//   - The track header's matrix turns the first picture, so other players
-//     (QuickTime, VLC, a browser) show the recording upright as long as the
-//     phone was not turned during it.
+//   - The track header's matrix turns the first picture, the standard way
+//     a video says it is turned (FFmpeg reads it as a rotation of -90 for a
+//     quarter turn), so players that honour it show the recording upright
+//     as long as the phone was not turned during it.
 //   - Every turn after that goes into a box of its own right before the
 //     fragment whose samples it starts at: a 'uuid' box with turnBoxID,
 //     a version byte, then a 32-bit count and per turn the sample's decode
