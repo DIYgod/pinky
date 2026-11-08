@@ -2,6 +2,15 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- When a phone isn't on your tailnet, Settings › Phones now says whether Tailscale isn't connected on it or is signed in to another account, with Set up Tailscale to open the steps.
+- Pinky now says that Android runs one VPN at a time: another VPN or proxy app on the phone turns Tailscale off.
+- Feedback diagnostics now include Tailscale's state and the Android devices on your tailnet, without their names.
+- When pairing over Wi-Fi fails, Pinky now says why: the phone ended the pairing, nothing at that address was waiting to pair, the phone didn't answer, or the computer's adb is too old. It no longer says the pairing code didn't match when you scanned a QR code.
+- A QR pairing that fails now offers Pair with a code instead next to Try again.
+- adb's own words for a failed pairing now go to Pinky's log, so feedback diagnostics include them.
+
 ## 2026.1108.23 (2026-11-08)
 
 - When Apple won't sign the developer disk image Pinky has for an iPhone (the images of Xcode 26 and earlier no longer work for iOS 27), Add phone and the phone's Checkup now say which image it was and what to do: install or update Xcode from the App Store and open it once. Pinky no longer retries the same image, and tries again as soon as a newer one is there.
