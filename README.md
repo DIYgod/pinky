@@ -1,21 +1,31 @@
 <p align="center"><img src="assets/icon/pinky-macos-1024.png" width="112" alt=""></p>
 <h1 align="center">Pinky</h1>
 <p align="center"><b>Let any AI agent use your iPhone or Android phone, from macOS, Windows or Linux, with you in the loop.</b></p>
-<p align="center"><a href="https://github.com/DIYgod/pinky/releases/latest">Download</a> · <a href="#get-started">Get started</a> · <a href="https://discord.gg/S27b7SHjng">Discord</a></p>
-<p align="center"><img src="assets/readme/hero.png" width="880" alt="Pinky's window: Claude Code replies to a text on an Android phone, and the Send tap waits for approval"></p>
-
-Pinky lets any agent (Claude Code, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
-
+<p align="center"><a href="https://github.com/DIYgod/pinky/releases/latest">Download</a> · <a href="#get-started">Get started</a> · <a href="#faq">FAQ</a> · <a href="https://discord.gg/S27b7SHjng">Discord</a></p>
 <p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator. Pinky asks before payments by default; this run also asks before messages.</sub></p>
 
+Pinky lets any agent (Claude Code, Claude Desktop, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
+
 - **Every platform.** One app for macOS (Apple silicon and Intel), Windows and Linux. It drives Android phones (Android 10 to 17) and iPhones on iOS 17.4 or later: nothing to install on iOS 27 and later, and a helper installed once from Xcode on iOS 17.4 to 26, which you can also choose on iOS 27 (tried there and on Simulators, not yet on a phone below 27; [details](#phones)).
-- **Tiny and native.** The window is drawn by [MyGo](https://github.com/egoist/mygo) on the GPU, with no Electron and no webview: a 14–18 MB download that idles at about 70 MB of memory and 0% CPU on a Mac.
+- **Tiny and native.** The window is drawn by [MyGo](https://github.com/egoist/mygo) on the GPU, with no Electron and no webview: a 16–22 MB download that idles at about 70 MB of memory and 0% CPU on a Mac.
+- **Any agent, one click.** Settings › Agents connects Claude Code, Claude Desktop, Codex, Cursor and more, and any agent that can use MCP servers works, on the same computer or over HTTP.
+- **Locked phone? Unlock it from your computer.** Save the phone's PIN in Pinky once, then confirm each unlock with Touch ID, Windows Hello or your keyring's password. Agents never see the PIN.
 - **Free and open source** under the Apache-2.0 license, with no account to create.
-- **You approve the risky steps.** Payments, trades and transfers wait for your click; in Settings › Safety you can have sends, orders, deletions, calls, installs, links that leave the app and settings changes wait too, or every step. Pinky spots these buttons in 10 languages. The rules run in Pinky's gateway, so an agent can't approve itself, even when text on the screen tries to talk it into it.
-- **Your phone stays yours.** On Android 13 and later, agents work on a hidden second screen, so the phone can stay off and locked. Click the mirror to take over; on Android, touching the phone yourself pauses the agent too. Stop all is ⌥⌘. from anywhere.
-- **Off-limits by default.** Banking, wallet and password-manager apps are invisible to agents, and agents can't type into password or one-time-code fields. When an agent needs a banking or wallet app for a task, it asks, and you can allow that app for that task only. Every new agent needs your approval and gets only the scope you give it.
-- **Locked phone? Unlock it from your computer** with Touch ID. The PIN stays in the Keychain; agents never see it.
-- **Every run is on the record.** Each step in plain words, screenshots and a screen recording with a mark per step, exportable as an HTML report. It all stays on your computer.
+
+<table>
+<tr>
+<td width="50%" valign="top"><img src="assets/readme/card-approval.jpg" width="100%" alt="You decide what waits: Pinky's window holds an agent's Send tap until you click Allow"><br><b>You approve the risky steps.</b> Payments, trades and transfers wait for your click; in Settings › Safety you can have sends, orders, deletions, calls, installs, links that leave the app and settings changes wait too, or every step. Pinky spots these buttons in 10 languages. The rules run in Pinky's gateway, so an agent can't approve itself, even when text on the screen tries to talk it into it.</td>
+<td width="50%" valign="top"><img src="assets/readme/card-off-limits.jpg" width="100%" alt="Off-limits by default: Settings › Safety with when agents ask you, and the blocked apps"><br><b>Off-limits by default.</b> Banking, wallet and password-manager apps are invisible to agents, and agents can't type into password or one-time-code fields. When an agent needs a banking or wallet app for a task, it asks, and you can allow that app for that task only. Every new agent needs your approval and gets only the scope you give it.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="assets/readme/card-second-screen.jpg" width="100%" alt="A hidden second screen for the agent: the agent's screen beside the phone's own home screen"><br><b>Your phone stays yours.</b> On Android 13 and later, agents work on a hidden second screen, so the phone's own screen stays yours, or off and locked. On older Android phones and on iPhones they use the main screen.</td>
+<td width="50%" valign="top"><img src="assets/readme/card-take-over.jpg" width="100%" alt="Take over any time: Claude Code is paused while you are in control, until you hand back"><br><b>Take over any time.</b> Click the mirror and the agent pauses until you hand back; on Android, touching the phone yourself pauses it too. Stop all is ⌥⌘. (Ctrl+Alt+. on Windows and Linux) from anywhere.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><img src="assets/readme/card-recording.jpg" width="100%" alt="Every run, on the record: a finished task's steps beside its screen recording"><br><b>Every run is on the record.</b> Each step in plain words, screenshots and a screen recording with a mark per step, exportable as an HTML report. It all stays on your computer.</td>
+<td width="50%" valign="top"><img src="assets/readme/card-iphone.jpg" width="100%" alt="On iPhone too: Pinky holds a Delete tap in Photos until you click Allow"><br><b>iPhones too.</b> The same gateway, approvals and records work on iOS 17.4 and later (<a href="#phones">what works</a>). Shown here on the iOS Simulator, with deletions set to ask.</td>
+</tr>
+</table>
 
 **Status:** pre-alpha. Claude Code has used real phones through it end to end (an Android phone over USB and an iPhone on iOS 27), and agents can connect over stdio or HTTP. Unlocking from the computer, background work on Android, recordings, export, Wi-Fi pairing and the phone's files are built; some of it still waits for a person to try it. See [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md) for what works today and how to try it.
 
@@ -58,6 +68,13 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 
 Each phone has a **Checkup**, in the ··· menu under its mirror, that lists what works and how to fix what doesn't, such as a Xiaomi's USB debugging (Security settings) switch.
 
+<table>
+<tr>
+<td width="50%" valign="top"><img src="assets/readme/add-android.png" width="100%" alt="Add phone › Android with a Xiaomi picked: where to turn on Developer options, and the three USB debugging switches"><br><sub><b>Add phone › Android</b>, with a Xiaomi picked.</sub></td>
+<td width="50%" valign="top"><img src="assets/readme/checkup.png" width="100%" alt="A Redmi's checkup: adb, the connection and debugging pass; Pinky Companion and tapping need fixing, with the steps"><br><sub>A Redmi's <b>Checkup</b>, with two things to fix.</sub></td>
+</tr>
+</table>
+
 #### Android tools
 
 Pinky brings its own adb, the tool it reaches Android phones with, built from Android's source, so nothing else needs installing. When the computer has Android's platform tools already, from Android Studio, Homebrew or the system's packages, Pinky uses those, and shares their adb server with Android Studio and other tools.
@@ -87,6 +104,8 @@ Below iOS 27, an iPhone takes taps and typing from a computer only through a hel
 
 In Pinky, open **Settings › Agents** and click **Connect** next to your agent. Pinky finds Claude Code, Claude Desktop, Codex, Cursor, VS Code, Copilot CLI, Windsurf (Devin Desktop) and Gemini CLI on your computer and adds itself to the agent's MCP servers, by the app's own path: with the agent's own command where it has one, such as `claude mcp add`, or in its settings file, which Pinky copies first and changes only in Pinky's entry. It also installs Pinky's agent guide, [SKILL.md](docs/SKILL.md), where the agent reads skills. Until an agent is connected, a card in Pinky's sidebar offers to do it, or says where to get one.
 
+<p align="center"><img src="assets/readme/agents.png" width="620" alt="Settings › Agents › Connect an agent: Claude Code connected; Claude Desktop, Codex, Cursor and VS Code with Connect buttons"></p>
+
 - **Claude Desktop:** Connect opens Pinky's extension in Claude Desktop; click **Install** there. Double-clicking `pinky-<version>.mcpb` from the [release page](https://github.com/DIYgod/pinky/releases/latest) does the same.
 - **Other agents:** **Settings › Agents › Add an agent by hand** shows the command for your copy of Pinky, with buttons that copy it. Add an MCP server (stdio) that runs it. In a JSON config, with the Homebrew cask or a Linux package:
 
@@ -108,7 +127,7 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 
 ### Phones
 
-- **Android:** turn on USB debugging, plug the phone in and accept the computer's key, or pair over Wi-Fi from Add phone. Pinky works over adb and a bundled scrcpy server. Its companion app, which ships inside Pinky.app, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
+- **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Its companion app, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
 - **iPhone:** connected over USB and prepared by Pinky ([above](#iphone)). What Pinky can do depends on the iOS version and on how Pinky connects, which you can choose for each iPhone in Settings › Phones (Automatic picks by version, as below):
 
   | iOS | How | What works | Tested on |
@@ -125,11 +144,69 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 
 ### Updates
 
-Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free, keeping its accessibility service as it was. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md)). On macOS Pinky.app replaces itself after checking the download's checksum, that it is signed by Pinky's developer and that Apple notarized it, and goes back to the old version if the new one does not start; the Homebrew cask's copy updates itself the same way, and `brew upgrade` leaves it alone while it is current; a copy run from the disk image or from a folder you cannot write to says how to update it instead. On Windows a Pinky that its installer installed runs the new installer quietly, after checking its checksum, starts the new version and goes back to the old one if that does not start; the portable copy downloads the installer for you, and on Linux Pinky downloads the release for you to install. `pinkyctl update` installs an update from the terminal while Pinky is not running; `pinkyctl daemon` only logs that one is out. Details: [docs/notes/updates.md](docs/notes/updates.md).
+Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free, keeping its accessibility service as it was. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md)).
+
+- **macOS:** Pinky.app replaces itself after checking the download's checksum, that it is signed by Pinky's developer and that Apple notarized it, and goes back to the old version if the new one does not start. The Homebrew cask's copy updates itself the same way, and `brew upgrade` leaves it alone while it is current. A copy run from the disk image or from a folder you cannot write to says how to update it instead.
+- **Windows:** a Pinky that its installer installed runs the new installer quietly, after checking its checksum, starts the new version and goes back to the old one if that does not start. The portable copy downloads the installer for you.
+- **Linux:** Pinky downloads the release for you to install.
+- **Terminal:** `pinkyctl update` installs an update while Pinky is not running; `pinkyctl daemon` only logs that one is out.
+
+Details: [docs/notes/updates.md](docs/notes/updates.md).
 
 ### Usage statistics, crash reports and feedback
 
 Pinky shares anonymous usage statistics (counters such as tasks run, tools called and phones connected, about once a day, with a random install id) and crash reports; turn both off in Settings › Privacy or with `DO_NOT_TRACK=1`. Screens, typed text, app names, phone names and ids, PINs and file names are never sent. Help › Send Feedback… opens a GitHub issue with your message and diagnostics filled in, which you read and submit yourself. [docs/TELEMETRY.md](docs/TELEMETRY.md) lists everything.
+
+## FAQ
+
+<details>
+<summary><b>Which agents work with Pinky?</b></summary>
+
+Any agent that can use MCP servers: over stdio, by running `pinkyctl mcp`, or over HTTP with an agent token ([how](docs/mcp.md#over-http)). **Settings › Agents** connects Claude Code, Claude Desktop, Codex, Cursor and other agents it finds on your computer in one click. Claude Code is the one that has used real phones end to end so far. Pinky brings no model of its own: your agent does the thinking.
+
+</details>
+
+<details>
+<summary><b>Can an agent approve its own risky step, or be talked into it?</b></summary>
+
+No. The rules run in Pinky's gateway, between the agent and the phone. A step that needs you comes back to the agent as `approval_pending`, and nothing happens on the phone until you click **Allow** in Pinky; the agent has nothing it could send to confirm it. Before acting, Pinky checks that the button is still where it was, and no answer within 60 seconds means no. Pinky finds these buttons by their labels in 10 languages, so an unusual one could slip through: for more control, Settings › Safety has **Ask before every action** and **Read-only mode**.
+
+</details>
+
+<details>
+<summary><b>What can't agents see?</b></summary>
+
+Banking, wallet and password-manager apps, from a list that comes with Pinky and that you can add to in Settings › Safety: agents get no screen from them, and their notifications are hidden. Agents can't type into password or one-time-code fields, and codes in notifications are masked. When an agent needs a banking or wallet app for a task, Pinky asks you first. If you allow it, the agent may open and read that app for the rest of the task, what your rules ask about there still asks, and Pinky keeps no screenshots or recordings of it. Password managers are never offered.
+
+</details>
+
+<details>
+<summary><b>Does my phone's screen go to the cloud?</b></summary>
+
+Not through Pinky. Screenshots, recordings and history stay on your computer, for 30 days unless you change it in Settings › Privacy, where you can also delete them. What the agent reads goes to the agent you chose, as with any tool you give it. Pinky's anonymous usage statistics never include screens, typed text or app names ([below](#usage-statistics-crash-reports-and-feedback)).
+
+</details>
+
+<details>
+<summary><b>What does Pinky install on my phone?</b></summary>
+
+On Android, Pinky Companion, when you click Install; Pinky keeps it up to date. On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does. On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)).
+
+</details>
+
+<details>
+<summary><b>How is Pinky different from other phone tools for agents?</b></summary>
+
+We looked at more than a dozen before building it. None of the open-source ones covers iPhone and Android, runs on macOS, Windows and Linux, works with any agent and keeps a person in the loop, all at once. Most leave it to the agent to ask first, or block whole kinds of actions; Pinky holds the one risky tap itself, outside the agent, and records every run.
+
+</details>
+
+<details>
+<summary><b>Is it safe to give my phone to an agent that can run commands?</b></summary>
+
+An agent that can run commands as you could reach the phone without Pinky, through adb for example, and skip its rules. Run such agents in a sandbox without access to the phone, or plug the phone into another computer and let the agent connect to Pinky there over HTTP ([how](docs/mcp.md#over-http)).
+
+</details>
 
 ## Build from source
 
