@@ -28,6 +28,7 @@ const httpSessionTimeout = time.Hour
 // for phone_files without the agent token: each link's own token is the
 // key, for one file, once.
 type HTTP struct {
+	s       *Server
 	srv     *sdk.Server
 	handler http.Handler
 	token   string
@@ -44,7 +45,7 @@ func (s *Server) HTTP(token string) *HTTP {
 	mux := http.NewServeMux()
 	mux.Handle(HTTPPath, http.NewCrossOriginProtection().Handler(h))
 	mux.Handle(UploadPath, http.NewCrossOriginProtection().Handler(http.HandlerFunc(s.serveUpload)))
-	return &HTTP{srv: srv, handler: mux, token: token}
+	return &HTTP{s: s, srv: srv, handler: mux, token: token}
 }
 
 // ServeHTTP checks the bearer token, then serves MCP. Upload links need
@@ -57,6 +58,14 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !h.authorized(r) {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="pinky"`)
 		http.Error(w, "Pinky needs the agent token: send Authorization: Bearer <token>.", http.StatusUnauthorized)
+		return
+	}
+	if r.Method == http.MethodGet && r.Header.Get("Mcp-Session-Id") == "" {
+		// No session, no stream to offer: 405 tells a client that keeps
+		// no session id to go on with POST alone, where the SDK's 400
+		// would read as a failure.
+		w.Header().Set("Allow", "POST")
+		http.Error(w, "Pinky offers a GET stream only within a session (Mcp-Session-Id); send requests with POST.", http.StatusMethodNotAllowed)
 		return
 	}
 	if base := linkBase(r); base != "" {
@@ -77,13 +86,21 @@ func (h *HTTP) authorized(r *http.Request) bool {
 }
 
 // CloseSessions ends every HTTP session, with their leases and approvals,
-// as when the person turns remote agents off.
+// as when the person turns remote agents off: at once, also the leases
+// kept for an agent's next session.
 func (h *HTTP) CloseSessions() {
 	var all []*sdk.ServerSession
 	for ss := range h.srv.Sessions() {
 		all = append(all, ss)
 	}
 	for _, ss := range all {
+		h.s.mu.Lock()
+		gs := h.s.sessions[ss]
+		h.s.mu.Unlock()
+		if gs != nil {
+			gs.CloseNow()
+		}
 		ss.Close()
 	}
+	h.s.g.EndKeptLeases()
 }

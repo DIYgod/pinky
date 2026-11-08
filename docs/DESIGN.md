@@ -187,7 +187,7 @@ Every action tool also takes `device?` (required when the session holds more tha
 
 ### Sessions and leases
 
-- A lease belongs to one MCP session, which may hold several devices. It ends on `phone_release`, when the session closes, after 10 idle minutes (configurable), or on Stop.
+- A lease belongs to one MCP session, which may hold several devices. It ends on `phone_release`, when the session closes, after 10 idle minutes (configurable), or on Stop. Over HTTP, a newer session of the same agent continues the leases its older sessions are not using, and a closed session's leases wait 2 minutes for it: some clients open a session for every call ([mcp.md](mcp.md#what-http-clients-may-do)).
 - Another session asking for a held device gets `lease_held` with the holder's task name. The person can revoke a lease from the device card.
 - A device that drops mid-action returns `uncertain`, then `device_offline`; if it reconnects within 60 s, the lease survives.
 - An MCP cancellation, or a session that closes, withdraws any open approval panel without acting.
