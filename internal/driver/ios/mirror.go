@@ -80,9 +80,13 @@ func (p *Provider) DownloadDiskImage(ctx context.Context, progress func(done, to
 		return errors.New("Pinky has no folder to keep the developer disk image in")
 	}
 	client := &http.Client{Timeout: 10 * time.Minute}
+	log, start := p.logger(), time.Now()
+	log.Info("iphone: downloading the developer disk image", "from", mirrorName, "commit", mirrorCommit, "build", mirrorBuild)
 	if err := downloadMirror(ctx, client, mirrorBase, mirrorFiles, p.DiskImageDir, progress); err != nil {
+		log.Warn("iphone: could not download the developer disk image", "from", mirrorName, "err", err)
 		return err
 	}
+	log.Info("iphone: downloaded the developer disk image", "to", filepath.Join(p.DiskImageDir, mirrorFolder), "took", time.Since(start).Round(time.Millisecond))
 	p.retryNow()
 	return nil
 }

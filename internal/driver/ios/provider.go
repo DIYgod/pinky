@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +32,11 @@ type Provider struct {
 	// (an iOS_DDI folder in it), looked in before Xcode's; "" for none.
 	DiskImageDir string
 
+	// Log gets a line for each step Pinky takes to prepare a phone:
+	// mounting the developer disk image, showing the Developer Mode
+	// switch, asking for trust, downloading the image. nil for none.
+	Log *slog.Logger
+
 	mu          sync.Mutex
 	ddi         map[string]ddiCheck // by UDID
 	known       map[string]known    // by UDID, what List last found
@@ -55,10 +61,15 @@ type Provider struct {
 
 // recheckOffline is how often List asks a phone that is not online again,
 // and one driven without the WebDriverAgent helper, so a helper installed
-// meanwhile is noticed. Other online phones are asked again only when their
+// meanwhile is noticed. Other online phones are asked again when their
 // usbmuxd entry changes, which it does when the phone reconnects or
-// restarts.
+// restarts, and when their developer services go away (recheckOnline).
 const recheckOffline = 30 * time.Second
+
+// recheckOnline is how often List looks at an online phone's developer
+// services again: another tool can take the developer disk image off while
+// the phone stays attached, and Pinky then mounts it again.
+const recheckOnline = time.Minute
 
 // wdaHold keeps Pinky from starting the helper on a phone again for a
 // while, after the phone asked for its passcode to allow automation and
@@ -100,6 +111,7 @@ type ddiCheck struct {
 	ok  bool
 	at  time.Time
 	err string
+	key entryKey // the attach it was seen through: a phone that reconnects, or restarts, is looked at again
 }
 
 // NewProvider returns an iOS provider.
@@ -156,8 +168,10 @@ func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 }
 
 // info returns what is known about the phone behind e. It inspects the
-// phone again only when its entry changed, or every recheckOffline while it
-// is not online, so a phone that stays attached costs no lockdown round trip.
+// phone again only when its entry changed, every recheckOffline while it is
+// not online, or when its developer services went away (recheckOnline), so
+// a phone that stays attached costs little more than a look at its services
+// a minute.
 func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 	id, key := e.Properties.SerialNumber, keyOf(e)
 	p.mu.Lock()
@@ -168,7 +182,11 @@ func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 			return info
 		}
 	}
-	if ok && k.key == key && ((k.info.State == driver.StateOnline && k.info.Backend != backendAccessibility) || p.clock().Sub(k.at) < recheckFor(k.info)) {
+	if ok && k.key == key && k.info.State == driver.StateOnline && k.info.Backend != backendAccessibility {
+		if p.clock().Sub(k.at) < recheckOnline || p.servicesStill(ctx, e, k) {
+			return k.info
+		}
+	} else if ok && k.key == key && p.clock().Sub(k.at) < recheckFor(k.info) {
 		return k.info
 	}
 	inspect := p.inspectFn
@@ -310,6 +328,8 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 	return nil, err
 }
 
+func (p *Provider) logger() *slog.Logger { return logTo(p.Log) }
+
 func (p *Provider) clock() time.Time {
 	if p.now != nil {
 		return p.now()
@@ -335,7 +355,7 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 			info.Detail = "The iPhone does not answer: " + err.Error()
 			return info
 		}
-		p.prep.askTrust(e)
+		p.prep.askTrust(e, p.logger())
 		return trustState(info, err)
 	}
 	info.Name = values.Value.DeviceName
@@ -389,18 +409,18 @@ func (p *Provider) services(ctx context.Context, e goios.DeviceEntry) (bool, err
 // servicesWith is services with the check to run, cached by the phone and
 // the check's name.
 func (p *Provider) servicesWith(ctx context.Context, e goios.DeviceEntry, check string, setup func(context.Context, goios.DeviceEntry) (bool, error)) (bool, error) {
-	id := e.Properties.SerialNumber + "|" + check
+	id, key := e.Properties.SerialNumber+"|"+check, keyOf(e)
 	p.mu.Lock()
 	c, ok := p.ddi[id]
 	p.mu.Unlock()
-	if ok && ((c.ok && time.Since(c.at) < 5*time.Minute) || (!c.ok && time.Since(c.at) < 10*time.Second)) {
+	if ok && c.key == key && ((c.ok && time.Since(c.at) < 5*time.Minute) || (!c.ok && time.Since(c.at) < 10*time.Second)) {
 		if c.err != "" {
 			return false, errors.New(c.err)
 		}
 		return c.ok, nil
 	}
 	ok, err := setup(ctx, e)
-	c = ddiCheck{ok: ok, at: time.Now()}
+	c = ddiCheck{ok: ok, at: time.Now(), key: key}
 	if err != nil {
 		c.err = err.Error()
 	}
@@ -408,6 +428,34 @@ func (p *Provider) servicesWith(ctx context.Context, e goios.DeviceEntry, check 
 	p.ddi[id] = c
 	p.mu.Unlock()
 	return ok, err
+}
+
+// servicesStill looks again at the developer services of a phone List knows
+// as online, and reports whether they are still there. A failed look counts
+// as there; only services seen missing make List inspect the phone again,
+// which mounts the image.
+func (p *Provider) servicesStill(ctx context.Context, e goios.DeviceEntry, k known) bool {
+	check, setup := "display", p.setup
+	if k.info.Backend == backendWDA {
+		check, setup = "developer", p.legacySetup
+	}
+	ok, err := setup(ctx, e)
+	id := e.Properties.SerialNumber
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if err == nil && !ok {
+		if p.ddi == nil {
+			p.ddi = map[string]ddiCheck{}
+		}
+		p.ddi[id+"|"+check] = ddiCheck{at: time.Now(), key: k.key}
+		p.logger().Info("iphone: the developer services went away; looking at the phone again", "device", id)
+		return false
+	}
+	if now, still := p.known[id]; still && now.key == k.key {
+		now.at = p.clock()
+		p.known[id] = now
+	}
+	return true
 }
 
 // inspectLegacy finishes inspecting a phone on iOS 17.4 to 26: the
@@ -636,6 +684,11 @@ func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 	}
 	dev, err := p.openBackend(ctx, info)
 	if err != nil {
+		if info.Backend == backendCoreDevice {
+			// Most often the developer services went away since List
+			// looked: the next List looks again, and mounts the image.
+			p.forgetPhone(id)
+		}
 		return nil, err
 	}
 	if s, ok := dev.(imageDirSetter); ok {

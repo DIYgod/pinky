@@ -34,9 +34,10 @@ func TestCheckImage(t *testing.T) {
 	if c := checkImage(ctx, fakeLink(instrumentsService), "", true); c.Status != driver.CheckFail || c.Fix != driver.SetupDiskImage {
 		t.Errorf("services missing: %+v", c)
 	}
-	// Mounted, but nothing on this computer to mount again after a restart.
+	// Mounted, but nothing on this computer to mount again should it go
+	// missing.
 	l := fakeLink(displayService, universalHIDService)
-	if c := checkImage(ctx, l, t.TempDir(), true); c.Status != driver.CheckWarn || c.Fix != driver.SetupNoDiskImage || !strings.Contains(c.Detail, "after the iPhone restarts") {
+	if c := checkImage(ctx, l, t.TempDir(), true); c.Status != driver.CheckWarn || c.Fix != driver.SetupNoDiskImage || !strings.Contains(c.Detail, "should it go missing") {
 		t.Errorf("no image here: %+v", c)
 	}
 	// With an image in Pinky's folder.
@@ -45,9 +46,13 @@ func TestCheckImage(t *testing.T) {
 	if c := checkImage(ctx, l, own, true); c.Status != driver.CheckPass || !strings.Contains(c.Detail, "Pinky's folder 27B52") {
 		t.Errorf("an image in Pinky's folder: %+v", c)
 	}
-	// Below iOS 27 the screen and HID services are not asked for.
-	if c := checkImage(ctx, fakeLink(instrumentsService), own, false); c.Status != driver.CheckPass {
+	// Below iOS 27 the screen and HID services are not asked for, but one
+	// of the image's own: iOS lists instruments with no image mounted.
+	if c := checkImage(ctx, fakeLink(instrumentsService, deviceInfoService), own, false); c.Status != driver.CheckPass {
 		t.Errorf("below iOS 27: %+v", c)
+	}
+	if c := checkImage(ctx, fakeLink(instrumentsService), own, false); c.Status != driver.CheckFail || c.Fix != driver.SetupDiskImage {
+		t.Errorf("below iOS 27 without the image: %+v", c)
 	}
 }
 

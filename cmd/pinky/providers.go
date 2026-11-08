@@ -65,6 +65,7 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 // finds phones once usbmuxd runs.
 func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 	p := ios.NewProvider()
+	p.Log = log
 	if dirs, err := api.DefaultDirs(); err == nil {
 		// Where Pinky looks for Apple's developer disk image before Xcode's.
 		p.DiskImageDir = filepath.Join(dirs.Data, "DeveloperDiskImages")

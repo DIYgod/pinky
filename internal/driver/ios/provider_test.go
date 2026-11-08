@@ -88,6 +88,65 @@ func TestProviderCachesInspect(t *testing.T) {
 	}
 }
 
+// TestServicesCachedPerAttach checks the developer services again when the
+// phone reconnects or restarts, which gives it a new usbmuxd entry: a
+// restart below iOS 27 drops the developer disk image.
+func TestServicesCachedPerAttach(t *testing.T) {
+	p := NewProvider()
+	probes := 0
+	setup := func(context.Context, goios.DeviceEntry) (bool, error) { probes++; return true, nil }
+	ctx := context.Background()
+	p.servicesWith(ctx, entry("phone", 1, "USB"), "display", setup)
+	p.servicesWith(ctx, entry("phone", 1, "USB"), "display", setup)
+	if probes != 1 {
+		t.Fatalf("%d probes for one attach, want 1", probes)
+	}
+	p.servicesWith(ctx, entry("phone", 2, "USB"), "display", setup)
+	if probes != 2 {
+		t.Fatalf("%d probes after the phone reconnected, want 2", probes)
+	}
+}
+
+// TestOnlinePhoneRechecked looks at an online phone's developer services
+// every minute while it stays attached, and inspects it again (which mounts
+// the image) once they are gone. A failed look keeps it online.
+func TestOnlinePhoneRechecked(t *testing.T) {
+	now := time.Unix(1000, 0)
+	p := NewProvider()
+	p.now = func() time.Time { return now }
+	inspects, probes := 0, 0
+	var there bool
+	var probeErr error
+	p.inspectFn = func(_ context.Context, e goios.DeviceEntry) driver.Info {
+		inspects++
+		if there {
+			return driver.Info{ID: "phone", State: driver.StateOnline, Backend: backendCoreDevice}
+		}
+		return driver.Info{ID: "phone", State: driver.StateNeedsSetup, Setup: driver.SetupPreparing}
+	}
+	p.setup = func(context.Context, goios.DeviceEntry) (bool, error) { probes++; return there, probeErr }
+	ctx, e := context.Background(), entry("phone", 1, "USB")
+	there = true
+	if got := p.info(ctx, e); got.State != driver.StateOnline {
+		t.Fatalf("first look: %+v", got)
+	}
+	step := func(d time.Duration, wantState driver.State, wantInspects, wantProbes int) {
+		t.Helper()
+		now = now.Add(d)
+		if got := p.info(ctx, e); got.State != wantState || inspects != wantInspects || probes != wantProbes {
+			t.Fatalf("after %v more: %s, %d inspections and %d probes; want %s, %d and %d", d, got.State, inspects, probes, wantState, wantInspects, wantProbes)
+		}
+	}
+	step(30*time.Second, driver.StateOnline, 1, 0) // within the minute: nothing asked
+	step(31*time.Second, driver.StateOnline, 1, 1) // a minute on: services still there
+	step(30*time.Second, driver.StateOnline, 1, 1) // the look counts as the minute's
+	probeErr = errors.New("tunnel: the iPhone does not answer")
+	there = false
+	step(31*time.Second, driver.StateOnline, 1, 2) // a failed look keeps it online
+	probeErr = nil
+	step(61*time.Second, driver.StateNeedsSetup, 2, 3) // gone: inspected again
+}
+
 func TestFromVideo(t *testing.T) {
 	for _, c := range []struct {
 		p              screen.Point

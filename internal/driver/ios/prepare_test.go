@@ -1,9 +1,11 @@
 package ios
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -235,7 +237,7 @@ func TestPreparerMounts(t *testing.T) {
 	e := entry("phone", 1, "USB")
 	ok := func(context.Context, goios.DeviceEntry) (bool, error) { return true, nil }
 	done := func() { f.done <- "done" }
-	state := func() mountJob { return pr.mountState(e, "", ok, done) }
+	state := func() mountJob { return pr.mountState(e, "", ok, done, nil) }
 
 	if j := state(); !j.running {
 		t.Fatalf("first look: %+v, want a mount running", j)
@@ -289,6 +291,37 @@ func TestPreparerMounts(t *testing.T) {
 	<-f.done
 }
 
+// TestPreparerLogs writes a line when a mount starts and when it ends: the
+// way it went and how long it took, or why it failed and when it is tried
+// again.
+func TestPreparerLogs(t *testing.T) {
+	var pr preparer
+	f := newFakePrep(t, &pr)
+	var buf bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&buf, nil))
+	ok := func(context.Context, goios.DeviceEntry) (bool, error) { return true, nil }
+	pr.mountState(entry("phone", 1, "USB"), "", ok, func() { f.done <- "done" }, log)
+	<-f.started
+	f.results <- nil
+	<-f.done
+	// The next attach, whose mount times out.
+	pr.mountState(entry("phone", 2, "USB"), "", ok, func() { f.done <- "done" }, log)
+	<-f.started
+	f.results <- errors.New("mounting the developer disk image: context deadline exceeded")
+	<-f.done
+	out := buf.String()
+	for _, want := range []string{
+		`level=INFO msg="iphone: mounting the developer disk image" device=phone image="the image 27B52" dir=/x`,
+		`level=INFO msg="iphone: developer disk image ready" device=phone way=cryptex kept=false replaced="" took=`,
+		`level=WARN msg="iphone: could not mount the developer disk image" device=phone way=cryptex took=`,
+		`err="mounting the developer disk image: context deadline exceeded" retry_in=30s`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("the log lacks %s:\n%s", want, out)
+		}
+	}
+}
+
 func TestPreparerServicesMissing(t *testing.T) {
 	defer func(d time.Duration) { serviceWait = d }(serviceWait)
 	serviceWait = 200 * time.Millisecond
@@ -296,7 +329,7 @@ func TestPreparerServicesMissing(t *testing.T) {
 	f := newFakePrep(t, &pr)
 	e := entry("phone", 1, "USB")
 	missing := func(context.Context, goios.DeviceEntry) (bool, error) { return false, nil }
-	pr.mountState(e, "", missing, func() { f.done <- "done" })
+	pr.mountState(e, "", missing, func() { f.done <- "done" }, nil)
 	<-f.started
 	f.results <- nil
 	select {
@@ -304,7 +337,7 @@ func TestPreparerServicesMissing(t *testing.T) {
 	case <-time.After(15 * time.Second):
 		t.Fatal("the mount did not end")
 	}
-	j := pr.mountState(e, "", missing, nil)
+	j := pr.mountState(e, "", missing, nil, nil)
 	if j.running || !errors.Is(j.err, errServicesMissing) {
 		t.Fatalf("services missing after a mount: %+v", j)
 	}
@@ -431,13 +464,13 @@ func TestAskTrustThrottles(t *testing.T) {
 		return errors.New("Please accept the PairingDialog on the device and run pairing again!")
 	}
 	e := entry("phone", 1, "USB")
-	pr.askTrust(e)
-	pr.askTrust(e)
+	pr.askTrust(e, nil)
+	pr.askTrust(e, nil)
 	if asks != 1 {
 		t.Fatalf("%d pairing requests at once, want 1", asks)
 	}
 	now = now.Add(5 * time.Second)
-	pr.askTrust(e)
+	pr.askTrust(e, nil)
 	if asks != 2 {
 		t.Fatalf("%d pairing requests 5 s later, want 2", asks)
 	}

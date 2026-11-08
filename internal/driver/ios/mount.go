@@ -88,6 +88,8 @@ func mountDiskImage(ctx context.Context, l *link, img diskImage, major int) (mou
 		err error
 	}
 	ch := make(chan result, 1)
+	// The way, for what a failure reports; mountWith picks it again.
+	way, _ := mountWay(major, img, l.has(cryptexService))
 	// go-ios takes no context; the call goes on in the background if ctx
 	// ends first, and its connections close with the link.
 	go func() {
@@ -96,9 +98,12 @@ func mountDiskImage(ctx context.Context, l *link, img diskImage, major int) (mou
 	}()
 	select {
 	case r := <-ch:
+		if r.r.How == "" {
+			r.r.How = way
+		}
 		return r.r, r.err
 	case <-ctx.Done():
-		return mountResult{}, fmt.Errorf("mounting the developer disk image: %w", ctx.Err())
+		return mountResult{How: way}, fmt.Errorf("mounting the developer disk image: %w", ctx.Err())
 	}
 }
 

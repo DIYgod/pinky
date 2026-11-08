@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -18,15 +19,16 @@ import (
 
 // Preparing a phone for Pinky: the steps Xcode used to take. Pinky shows
 // the Developer Mode switch in Settings while Developer Mode is off, mounts
-// the developer disk image when the developer services are missing (after
-// every restart, since the phone drops the image when it restarts), and on
-// Windows asks the phone to trust this computer. Mounting runs in the
+// the developer disk image when the developer services are missing (below
+// iOS 27 after every restart, which drops the image; on iOS 27, which keeps
+// it, when another tool took it off), and on Windows asks the phone to
+// trust this computer. Mounting runs in the
 // background, so List says where a phone stands without waiting for it.
 
 // devModeOff is a phone with Developer Mode off: Pinky shows the switch in
 // Settings and says how to turn it on.
 func (p *Provider) devModeOff(e goios.DeviceEntry, info driver.Info) driver.Info {
-	p.prep.revealDevMode(e)
+	p.prep.revealDevMode(e, p.logger())
 	info.State = driver.StateNeedsSetup
 	info.Setup = driver.SetupDeveloperMode
 	info.Detail = devModeDetail
@@ -38,7 +40,7 @@ func (p *Provider) devModeOff(e goios.DeviceEntry, info driver.Info) driver.Info
 // that goes. When a mount ends, List looks at the phone again at once.
 func (p *Provider) diskImageMissing(e goios.DeviceEntry, info driver.Info, check func(context.Context, goios.DeviceEntry) (bool, error)) driver.Info {
 	id := e.Properties.SerialNumber
-	j := p.prep.mountState(e, p.DiskImageDir, check, func() { p.forgetPhone(id) })
+	j := p.prep.mountState(e, p.DiskImageDir, check, func() { p.forgetPhone(id) }, p.logger())
 	return diskImageState(info, j, p.DiskImageDir)
 }
 
@@ -107,8 +109,9 @@ func (pr *preparer) clock() time.Time {
 
 // mountState returns the phone's mount job, starting one when none ran for
 // this attach or when the last one failed long enough ago. check tells
-// whether the services Pinky needs are there; done runs when a job ends.
-func (pr *preparer) mountState(e goios.DeviceEntry, ownDir string, check func(context.Context, goios.DeviceEntry) (bool, error), done func()) mountJob {
+// whether the services Pinky needs are there; done runs when a job ends;
+// log gets a line when a job starts and when it ends.
+func (pr *preparer) mountState(e goios.DeviceEntry, ownDir string, check func(context.Context, goios.DeviceEntry) (bool, error), done func(), log *slog.Logger) mountJob {
 	id, key := e.Properties.SerialNumber, keyOf(e)
 	pr.mu.Lock()
 	defer pr.mu.Unlock()
@@ -121,11 +124,11 @@ func (pr *preparer) mountState(e goios.DeviceEntry, ownDir string, check func(co
 	}
 	j = &mountJob{key: key, running: true}
 	pr.jobs[id] = j
-	go pr.run(j, e, ownDir, check, done)
+	go pr.run(j, e, ownDir, check, done, logTo(log))
 	return *j
 }
 
-func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check func(context.Context, goios.DeviceEntry) (bool, error), done func()) {
+func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check func(context.Context, goios.DeviceEntry) (bool, error), done func(), log *slog.Logger) {
 	find, mount := pr.findFn, pr.mountFn
 	if find == nil {
 		find = findDiskImage
@@ -135,13 +138,24 @@ func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check f
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), mountTimeout+time.Minute)
 	defer cancel()
+	id, start := e.Properties.SerialNumber, time.Now()
 	img, err := find(ownDir)
 	var res mountResult
 	if err == nil {
+		log.Info("iphone: mounting the developer disk image", "device", id, "image", imageName(img), "dir", img.Dir)
 		res, err = mount(ctx, e, img)
 	}
 	if err == nil {
 		err = waitForServices(ctx, e, check)
+	}
+	took := time.Since(start).Round(time.Millisecond)
+	switch {
+	case err == nil:
+		log.Info("iphone: developer disk image ready", "device", id, "way", res.How, "kept", res.Already, "replaced", res.Replaced, "took", took)
+	case img.Dir == "":
+		log.Warn("iphone: no developer disk image to mount", "device", id, "err", err, "retry_in", retryAfter(err))
+	default:
+		log.Warn("iphone: could not mount the developer disk image", "device", id, "way", res.How, "took", took, "err", err, "retry_in", retryAfter(err))
 	}
 	pr.mu.Lock()
 	j.running, j.ended, j.img, j.res, j.err = false, pr.clock(), img, res, err
@@ -273,7 +287,8 @@ func (pr *preparer) forget(id string) {
 // revealDevMode shows the Developer Mode switch in the phone's Settings ›
 // Privacy & Security, as Xcode does: iOS hides it until a developer tool
 // has seen the phone. Once per attach, in the background.
-func (pr *preparer) revealDevMode(e goios.DeviceEntry) {
+func (pr *preparer) revealDevMode(e goios.DeviceEntry, log *slog.Logger) {
+	log = logTo(log)
 	id, key := e.Properties.SerialNumber, keyOf(e)
 	pr.mu.Lock()
 	if pr.revealed == nil {
@@ -293,12 +308,15 @@ func (pr *preparer) revealDevMode(e goios.DeviceEntry) {
 		// The person's step is the same either way; a failed reveal is
 		// sent again at the next look.
 		if err := reveal(e); err != nil {
+			log.Warn("iphone: could not show the Developer Mode switch", "device", id, "err", err)
 			pr.mu.Lock()
 			if pr.revealed[id] == key {
 				delete(pr.revealed, id)
 			}
 			pr.mu.Unlock()
+			return
 		}
+		log.Info("iphone: showed the Developer Mode switch in Settings", "device", id)
 	}()
 }
 
@@ -316,7 +334,7 @@ func revealDevMode(e goios.DeviceEntry) error {
 // themselves when a phone is plugged in, and a second pairing there could
 // race theirs. At most every 4 s while the phone waits; a pairing that the
 // person accepted saves its record through usbmuxd, as Apple's tools do.
-func (pr *preparer) askTrust(e goios.DeviceEntry) error {
+func (pr *preparer) askTrust(e goios.DeviceEntry, log *slog.Logger) error {
 	pair := pr.pairFn
 	if pair == nil {
 		if runtime.GOOS != "windows" {
@@ -332,13 +350,21 @@ func (pr *preparer) askTrust(e goios.DeviceEntry) error {
 	if pr.asked == nil {
 		pr.asked = map[string]time.Time{}
 	}
-	if t, ok := pr.asked[id]; ok && pr.clock().Sub(t) < 4*time.Second {
+	t, asked := pr.asked[id]
+	if asked && pr.clock().Sub(t) < 4*time.Second {
 		pr.mu.Unlock()
 		return nil
 	}
 	pr.asked[id] = pr.clock()
 	pr.mu.Unlock()
-	return pair(e)
+	if !asked {
+		logTo(log).Info("iphone: asking the iPhone to trust this computer", "device", id)
+	}
+	err := pair(e)
+	if err == nil {
+		logTo(log).Info("iphone: the iPhone trusts this computer", "device", id)
+	}
+	return err
 }
 
 // Sentences for the steps, in driver.Info.Detail.
@@ -480,4 +506,14 @@ func phoneStateOf(ctx context.Context, e goios.DeviceEntry) (phoneState, error) 
 func lockedEntry(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 	st, err := phoneStateOf(ctx, e)
 	return st.locked, err
+}
+
+// discard takes the lines of a provider without a Log.
+var discard = slog.New(slog.DiscardHandler)
+
+func logTo(l *slog.Logger) *slog.Logger {
+	if l == nil {
+		return discard
+	}
+	return l
 }

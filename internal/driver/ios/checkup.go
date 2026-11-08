@@ -13,7 +13,8 @@ import (
 )
 
 // An iPhone's checkup (driver.Checker): Developer Mode, the developer disk
-// image and whether this computer can mount it again after a restart, the
+// image and whether this computer has one to mount again should it go
+// missing, the
 // WebDriverAgent helper where Pinky drives the phone through it, a
 // screenshot, and the input service. It only reads: no taps, no keys, no
 // settings, nothing mounted.
@@ -104,15 +105,15 @@ func checkDevMode(e goios.DeviceEntry) driver.Check {
 
 // checkImage says which developer disk image the phone has, whether the
 // services Pinky uses are there (the screen and HID with coreDevice, else
-// instruments), and whether this computer has an image to mount again
-// after the phone restarts, which drops it.
+// legacyReady's), and whether this computer has an image to mount again
+// should it go missing: iPhones below iOS 27 drop it when they restart.
 func checkImage(ctx context.Context, l *link, ownDir string, coreDevice bool) driver.Check {
 	c := driver.Check{ID: driver.CheckDiskImage}
 	if l == nil {
 		c.Status, c.Detail = driver.CheckSkip, "no tunnel to the iPhone"
 		return c
 	}
-	if coreDevice && !(l.has(displayService) && l.has(universalHIDService)) {
+	if coreDevice && !(l.has(displayService) && l.has(universalHIDService)) || !coreDevice && !legacyReady(l) {
 		c.Status, c.Fix, c.Detail = driver.CheckFail, driver.SetupDiskImage, errServicesMissing.Error()
 		return c
 	}
@@ -120,11 +121,11 @@ func checkImage(ctx context.Context, l *link, ownDir string, coreDevice bool) dr
 	img, err := findDiskImage(ownDir)
 	if err != nil {
 		c.Status, c.Fix = driver.CheckWarn, driver.SetupNoDiskImage
-		c.Detail = mounted + "; this computer has no developer disk image to mount again after the iPhone restarts (" + err.Error() + ")"
+		c.Detail = mounted + "; this computer has no developer disk image to mount again should it go missing, as it does below iOS 27 when the iPhone restarts (" + err.Error() + ")"
 		return c
 	}
 	c.Status = driver.CheckPass
-	c.Detail = fmt.Sprintf("%s; after a restart Pinky mounts %s again (%s)", mounted, imageName(img), img.Dir)
+	c.Detail = fmt.Sprintf("%s; should it go missing, Pinky mounts %s again (%s)", mounted, imageName(img), img.Dir)
 	return c
 }
 
