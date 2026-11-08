@@ -52,6 +52,7 @@ type fakeADB struct {
 	// unreachable addresses time out on host:connect, as a phone that
 	// left the network does.
 	unreachable map[string]bool
+	probes      []string // addresses the network code probed
 }
 
 func newFakeADB(t *testing.T) (*fakeADB, *Provider) {

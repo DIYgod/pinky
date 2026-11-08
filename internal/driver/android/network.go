@@ -500,12 +500,34 @@ const (
 )
 
 // netLook is how long a pass looks for a phone's adb on the network when
-// its address does not answer.
-var netLook = 3 * time.Second
+// its address does not answer: a dozing phone may take five seconds to
+// answer mDNS.
+var netLook = 6 * time.Second
+
+// probeWait is how long a pass waits for a kept address to take a TCP
+// connection before it asks the adb server to connect there: the server
+// waits for the system's own timeout (75 s on macOS) at an address
+// nothing answers, and answers nothing else meanwhile.
+var probeWait = 3 * time.Second
+
+// probe checks that something takes TCP connections at an address. adbd
+// takes the connection and closes it once it sees nothing come, without
+// a prompt on the phone. It returns an error wrapping
+// driver.ErrNotListening when the phone answered but its adb does not
+// listen there.
+func probe(ctx context.Context, serial string) error {
+	d := net.Dialer{Timeout: probeWait}
+	c, err := d.DialContext(ctx, "tcp", serial)
+	if err != nil {
+		return connectErr(serial, err)
+	}
+	return c.Close()
+}
 
 type netLink struct {
-	p   *Provider
-	now func() time.Time
+	p     *Provider
+	now   func() time.Time
+	probe func(ctx context.Context, serial string) error // tests replace it
 
 	mu      sync.Mutex
 	running bool
@@ -523,7 +545,7 @@ type netTry struct {
 }
 
 func newNetLink(p *Provider) *netLink {
-	return &netLink{p: p, now: time.Now, tries: map[string]netTry{}, noted: map[string]string{}}
+	return &netLink{p: p, now: time.Now, probe: probe, tries: map[string]netTry{}, noted: map[string]string{}}
 }
 
 // soon has the next pass come in a few seconds.
@@ -625,20 +647,34 @@ func (t *netLink) lan(ctx context.Context, n netPhone, entries []adb.DeviceEntry
 	if t.holdBack(serial) {
 		return false
 	}
-	err := p.cfg.Client.Connect(ctx, serial)
+	err := t.connect(ctx, serial)
 	if err == nil {
 		t.ok(n.ID, serial, "android: connected to "+n.ID+" over Wi-Fi at "+serial)
 		return true
 	}
+	// The phone may have another address now (the old one answering for
+	// another device, or nothing).
 	if addr := t.look(n); addr != "" && serialHost(addr) != n.LAN {
-		n = t.moved(n, serialHost(addr))
-		if err2 := p.cfg.Client.Connect(ctx, n.lanSerial()); err2 == nil {
+		if err2 := t.connect(ctx, addr); err2 == nil {
+			n = t.moved(n, serialHost(addr))
 			t.ok(n.ID, n.lanSerial(), "android: connected to "+n.ID+" over Wi-Fi at its new address "+n.lanSerial())
 			return true
 		}
 	}
-	t.fail(n.ID, serial, connectErr(serial, err), "over Wi-Fi")
+	t.fail(n.ID, serial, err, "over Wi-Fi")
 	return false
+}
+
+// connect has the adb server connect at an address once a probe found
+// something listening there.
+func (t *netLink) connect(ctx context.Context, serial string) error {
+	if err := t.probe(ctx, serial); err != nil {
+		return err
+	}
+	if err := t.p.cfg.Client.Connect(ctx, serial); err != nil {
+		return connectErr(serial, err)
+	}
+	return nil
 }
 
 // moved keeps a phone's new address on the computer's network.
@@ -706,8 +742,8 @@ func (t *netLink) tail(ctx context.Context, n netPhone, st tailnet.Status, entri
 	if t.holdBack(serial) {
 		return false
 	}
-	if err := p.cfg.Client.Connect(ctx, serial); err != nil {
-		t.fail(n.ID, serial, connectErr(serial, err), "through Tailscale")
+	if err := t.connect(ctx, serial); err != nil {
+		t.fail(n.ID, serial, err, "through Tailscale")
 		return false
 	}
 	t.ok(n.ID+"/tail", serial, "android: connected to "+n.ID+" through Tailscale at "+serial)

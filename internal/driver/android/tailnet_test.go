@@ -127,13 +127,34 @@ func newNetFake(t *testing.T) (*fakeADB, *fakePhone, *fakeTailnet, *Provider) {
 	cfg := f.config()
 	cfg.Tailnet = ts.read
 	cfg.NetworkFile = filepath.Join(t.TempDir(), "network-phones.json")
-	return f, ph, ts, NewProvider(cfg)
+	p := NewProvider(cfg)
+	// What answers at an address is the fake server's to say.
+	p.link.probe = func(ctx context.Context, serial string) error {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		f.probes = append(f.probes, serial)
+		switch {
+		case f.unreachable[serial]:
+			return errors.New("dial tcp " + serial + ": i/o timeout")
+		case f.connectOK != nil && !f.connectOK[serial]:
+			return connectErr(serial, errors.New("dial tcp "+serial+": connect: connection refused"))
+		}
+		return nil
+	}
+	return f, ph, ts, p
 }
 
 func (f *fakeADB) connected() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return slices.Clone(f.connects)
+}
+
+// tried returns the addresses the network code tried, connected or not.
+func (f *fakeADB) tried() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.probes)
 }
 
 func TestParsePhoneAddrs(t *testing.T) {
@@ -489,8 +510,8 @@ func TestLANReconnect(t *testing.T) {
 	if n, _ := p.net.get(piHW); n.LAN != "192.168.1.77" {
 		t.Fatalf("kept %+v", n)
 	}
-	if c := f.connected(); slices.Contains(c, "192.168.1.143:5555") {
-		t.Fatalf("connected to another phone's adb: %q", c)
+	if c := f.tried(); slices.Contains(c, "192.168.1.143:5555") {
+		t.Fatalf("tried another phone's adb: %q", c)
 	}
 	infos, _ = p.List(ctx)
 	if len(infos) != 1 || infos[0].State != driver.StateOnline || infos[0].ID != piHW {
@@ -521,27 +542,27 @@ func TestTailReconnect(t *testing.T) {
 	p.link.now = func() time.Time { return now }
 	p.net.update(piHW, func(n *netPhone) { n.Node, n.Tailnet = "nPixel", tailAddr })
 	// adb does not listen: a failed try, then none until the wait is over.
-	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.connected()) != 1 {
-		t.Fatalf("refused: missing %v, connects %q", missing, f.connected())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.tried()) != 1 || len(f.connected()) != 0 {
+		t.Fatalf("refused: missing %v, tried %q, connects %q", missing, f.tried(), f.connected())
 	}
 	p.link.reconnect(ctx, p.net.list(), entries(t, p))
-	if len(f.connected()) != 1 {
-		t.Fatalf("tried again at once: %q", f.connected())
+	if len(f.tried()) != 1 {
+		t.Fatalf("tried again at once: %q", f.tried())
 	}
 	now = now.Add(netFirst + time.Second)
 	f.set(func(f *fakeADB) { f.connectOK[tailSerial] = true })
-	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.connected()) != 2 {
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.connected()) != 1 {
 		t.Fatalf("listening: missing %v, connects %q", missing, f.connected())
 	}
 	// Connected: nothing to do.
-	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.connected()) != 2 {
-		t.Fatalf("connected: missing %v, connects %q", missing, f.connected())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.tried()) != 2 {
+		t.Fatalf("connected: missing %v, tried %q", missing, f.tried())
 	}
 	// Offline on the tailnet: no try.
 	f.set(func(f *fakeADB) { f.devices = nil })
 	ts.set(func(s *tailnet.Status) { s.Peers[0].Online = false })
-	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.connected()) != 2 {
-		t.Fatalf("offline: missing %v, connects %q", missing, f.connected())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.tried()) != 2 {
+		t.Fatalf("offline: missing %v, tried %q", missing, f.tried())
 	}
 	// A new address: kept, and used.
 	ts.set(func(s *tailnet.Status) {
@@ -559,15 +580,15 @@ func TestTailReconnect(t *testing.T) {
 	// Removed from Pinky: left alone.
 	f.set(func(f *fakeADB) { f.devices = nil })
 	p.Forget(piHW)
-	n := len(f.connected())
-	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.connected()) != n {
-		t.Fatalf("forgotten: missing %v, connects %q", missing, f.connected())
+	n := len(f.tried())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.tried()) != n {
+		t.Fatalf("forgotten: missing %v, tried %q", missing, f.tried())
 	}
 	// Tailscale off here: nothing to try.
 	p.Remember(piHW)
 	ts.set(func(s *tailnet.Status) { s.State = tailnet.Stopped })
-	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.connected()) != n {
-		t.Fatalf("Tailscale off: missing %v, connects %q", missing, f.connected())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.tried()) != n {
+		t.Fatalf("Tailscale off: missing %v, tried %q", missing, f.tried())
 	}
 }
 
