@@ -189,6 +189,19 @@ func TestWiFiScreenshots(t *testing.T) {
 		ta.waitFor(t, "the iPad locked", func() bool { d := ta.device(id); return d != nil && lockedOnWiFi(*d) })
 		ta.page, ta.sel = pagePhones, id
 		shoot("wifi-locked-page", 1280, 820)
+		ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline})
+		ta.api.SetConnecting(id, "Moving to Wi-Fi")
+		ta.waitFor(t, "the iPad moving", func() bool { d := ta.device(id); return d != nil && d.Status == gateway.DeviceConnecting })
+		shoot("wifi-moving-page", 1280, 820)
+		ta.api.SetConnecting(id, "")
+		ta.api.LoseOnWiFi(id)
+		ta.waitFor(t, "the iPad lost", func() bool { d := ta.device(id); return d != nil && lostOnWiFi(*d) })
+		defer func(os string) { guideOS = os }(guideOS)
+		guideOS = "darwin"
+		shoot("wifi-lost-page", 1280, 820)
+		ta.found.asking, ta.found.askFor = true, id
+		shoot("wifi-lost-dialog", 1280, 820)
+		ta.found.asking, ta.found.askFor = false, ""
 	}
 }
 
