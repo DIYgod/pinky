@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Pinky now knows when the WebDriverAgent helper on an iPhone stops working: with a free Apple ID its signature lasts 7 days. Two days before, the phone's page and its checkup remind you to install it again from Xcode, with how to do it.
+- Once the helper's signature has run out, the iPhone shows as needing setup and says why, instead of failing to start the helper.
+- An iPhone set to connect through the helper without it installed now says so in your language, with how to install it.
+- Phones waiting for a step before Pinky can use them (allowing USB debugging, trusting the computer, Developer Mode, the developer disk image, a USB driver) now show as needing setup instead of offline, and their page says what to do in your language.
+- A phone unplugged while it waited for a step now shows as offline instead of still asking for that step.
+
 ## 2026.1108.9 (2026-11-08)
 
 - Pinky now mounts Apple's developer disk image on iPhones with iOS 27 by itself, in a second or two. This corrects 2026.1108.8: Xcode is no longer needed to mount it once.
