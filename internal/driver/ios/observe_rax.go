@@ -99,7 +99,13 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	// What SpringBoard shows over the app, looked at in the background
 	// while the app's tree comes (see springboard.go).
 	sbDone := d.kickSpringBoard(rax)
-	si := d.screen()
+	// The display's orientation, read while the tree comes: the person
+	// may have turned the device since the last read.
+	shown := make(chan struct{})
+	go func() {
+		defer close(shown)
+		d.readDisplayNow(ctx)
+	}()
 	var wg sync.WaitGroup
 	var els []raxElement
 	var complete bool
@@ -150,6 +156,8 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		locked, _ = d.Locked(ctx)
 	}()
 	wg.Wait()
+	<-shown
+	si := d.screen()
 	if len(els) == 0 {
 		if walkErr == nil {
 			walkErr = errRAXTimeout
@@ -166,7 +174,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	app := els[0]
 	s := &screen.Screen{
 		Width: si.Width, Height: si.Height,
-		Orientation: orientationName(si.Orientation),
+		Orientation: orientationOf(si.Width, si.Height),
 		Locked:      locked,
 		CapturedAt:  time.Now(),
 	}

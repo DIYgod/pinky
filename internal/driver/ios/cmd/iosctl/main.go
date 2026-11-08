@@ -159,10 +159,12 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 	case "tap":
 		fs := flag.NewFlagSet("tap", flag.ContinueOnError)
 		long := fs.Bool("long", false, "long press")
+		after := fs.Duration("after", 0, "wait this long after the session opens")
 		pts, err := ints(fs, args, 2)
 		if err != nil {
 			return err
 		}
+		time.Sleep(*after)
 		return d.Tap(ctx, screen.Point{X: pts[0], Y: pts[1]}, driver.TapOptions{LongPress: *long})
 	case "swipe":
 		fs := flag.NewFlagSet("swipe", flag.ContinueOnError)
@@ -627,6 +629,7 @@ func stream(ctx context.Context, d *pios.Device, args []string) error {
 	w, h := s.Size()
 	fmt.Printf("codec %s, %dx%d\n", s.Codec(), w, h)
 	var frames, keys, configs int
+	turns := map[int]int{} // packets by the turn they carry
 	var bytes int64
 	var first, last time.Duration
 	sizes := []int{}
@@ -645,6 +648,7 @@ loop:
 			if f != nil {
 				f.Write(p.Data)
 			}
+			turns[p.Turn]++
 			if p.Config {
 				configs++
 				continue
@@ -678,6 +682,7 @@ loop:
 	st, _ := d.StreamStats()
 	fmt.Printf("%d frames in %v: %.1f fps by arrival, %.1f fps by timestamp; %d keyframes, %d config packets\n",
 		frames, el.Round(time.Millisecond), float64(frames)/el.Seconds(), float64(frames-1)/(last-first).Seconds(), keys, configs)
+	fmt.Printf("packets by turn (quarter turns clockwise to upright): %v\n", turns)
 	fmt.Printf("%.2f Mbit/s, median frame %d bytes; since the session started: %d packets lost, %d frames dropped, %d keyframe requests\n",
 		float64(bytes)*8/el.Seconds()/1e6, med, st.Lost, st.Dropped, st.KeyRequests)
 	if st.DelayKnown {
@@ -740,6 +745,9 @@ func orient(ctx context.Context, d *pios.Device, args []string) error {
 	for _, k := range keys {
 		fmt.Printf("  %s: %v\n", k, r.Display[k])
 	}
+	if r.RAXErr != nil {
+		fmt.Println("remoteAXService:", r.RAXErr)
+	}
 	fmt.Printf("app %q: frame %v, orientation %v\n", r.App, r.AppAttrs[21], r.AppAttrs[129])
 	for _, e := range r.Elements {
 		fmt.Printf("  %-40q x %.0f y %.0f w %.0f h %.0f\n", e.Label, e.X, e.Y, e.W, e.H)
@@ -755,16 +763,16 @@ func orient(ctx context.Context, d *pios.Device, args []string) error {
 	if cfg, err := png.DecodeConfig(strings.NewReader(string(b))); err == nil {
 		fmt.Printf("screenshot %dx%d: %s\n", cfg.Width, cfg.Height, shot)
 	}
-	scr, err := d.Observe(ctx, driver.ObserveOptions{})
-	if err != nil {
-		return err
-	}
-	fmt.Printf("observe: %dx%d %s, %d elements\n", scr.Width, scr.Height, scr.Orientation, len(scr.Elements))
-	for i, e := range scr.Elements {
-		if i == 8 {
-			break
+	if scr, err := d.Observe(ctx, driver.ObserveOptions{}); err != nil {
+		fmt.Println("observe:", err)
+	} else {
+		fmt.Printf("observe: %dx%d %s, %d elements\n", scr.Width, scr.Height, scr.Orientation, len(scr.Elements))
+		for i, e := range scr.Elements {
+			if i == 8 {
+				break
+			}
+			fmt.Printf("  %-40q %v\n", e.Label, e.Bounds)
 		}
-		fmt.Printf("  %-40q %v\n", e.Label, e.Bounds)
 	}
 	if err := stream(ctx, d, []string{"-seconds", strconv.Itoa(*secs), "-out", *out + "/video.hevc"}); err != nil {
 		return err

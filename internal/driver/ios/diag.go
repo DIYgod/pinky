@@ -96,6 +96,7 @@ type OrientationReport struct {
 	App      string         // the frontmost app's label
 	AppAttrs map[int]any    // the app element's frame (21) and orientation (129), raw
 	Elements []OrientationElement
+	RAXErr   error // why remoteAXService gave nothing, when it did not
 }
 
 // OrientationElement is one element's label and frame, in points.
@@ -117,18 +118,21 @@ func (d *Device) Orientation(ctx context.Context) (OrientationReport, error) {
 	r.Display = disp
 	rax, err := d.raxReady(ctx)
 	if err != nil {
-		return r, err
+		r.RAXErr = err
+		return r, nil
 	}
 	app, err := rax.frontmostApp(ctx)
 	if err != nil {
-		return r, err
+		r.RAXErr = err
+		return r, nil
 	}
 	resp, err := rax.request(ctx, axpRequest{
 		Type: axpReqAttributes, Client: raxClientType, Object: app,
 		Params: map[string]any{"attributes": []int{axpAttrFrame, axpAttrLabel, axpAttrApplicationOrientation}},
 	})
 	if err != nil {
-		return r, err
+		r.RAXErr = err
+		return r, nil
 	}
 	ad, _ := resp.Result.(axpDict)
 	r.AppAttrs = map[int]any{}
@@ -138,7 +142,7 @@ func (d *Device) Orientation(ctx context.Context) (OrientationReport, error) {
 	r.App, _ = ad[axpAttrLabel].(string)
 	els, _, err := rax.walk(ctx, raxLimits)
 	if err != nil && len(els) == 0 {
-		return r, err
+		r.RAXErr = err
 	}
 	for _, e := range els {
 		if !e.HasFrame || e.Label == "" {

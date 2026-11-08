@@ -82,8 +82,10 @@ type media struct {
 	isReady  bool
 	frameLog []frameMark // recent frames, for settle detection and stats
 	exts     [][]byte    // RTP header extensions seen (noteExt)
-	stats    mediaStats
-	lastFIR  time.Time // the last keyframe request
+
+	turn    atomic.Int32 // the interface's turn from the display's frame, for packets (setTurn)
+	stats   mediaStats
+	lastFIR time.Time // the last keyframe request
 }
 
 type frameMark struct {
@@ -440,7 +442,8 @@ func (m *media) finishAU() {
 		close(m.ready)
 	}
 	cfgData := m.config
-	pkt := driver.Packet{Data: data, PTS: pts, KeyFrame: key}
+	turn := int(m.turn.Load())
+	pkt := driver.Packet{Data: data, PTS: pts, KeyFrame: key, Turn: turn}
 	for s := range m.subs {
 		if s.closed {
 			continue
@@ -449,7 +452,7 @@ func (m *media) finishAU() {
 			if !key {
 				continue
 			}
-			if !m.offer(s, driver.Packet{Data: cfgData, PTS: pts, Config: true}) {
+			if !m.offer(s, driver.Packet{Data: cfgData, PTS: pts, Config: true, Turn: turn}) {
 				continue
 			}
 			s.needKey = false
@@ -684,6 +687,10 @@ func (m *media) size() (int, int) {
 	defer m.mu.Unlock()
 	return m.width, m.height
 }
+
+// setTurn sets the turn the packets carry from now on: how far the
+// interface is turned from the display's frame, which the picture is in.
+func (m *media) setTurn(q quarter) { m.turn.Store(int32(q & 3)) }
 
 // noteExt keeps the RTP header extensions the stream carried, the first
 // few different ones, for diagnostics (iosctl orient).

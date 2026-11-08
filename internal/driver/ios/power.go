@@ -338,7 +338,7 @@ func (p devicePower) pressHome(ctx context.Context) error {
 // swipeUp swipes from the bottom edge to the middle of the screen, which on
 // the lock screen brings up the passcode pad.
 func (p devicePower) swipeUp(ctx context.Context) error {
-	s := p.d.screen()
+	s := p.d.freshDisplay(ctx).upright()
 	x := s.Width / 2
 	return p.d.Swipe(ctx, screen.Point{X: x, Y: s.Height - 1}, screen.Point{X: x, Y: s.Height / 2}, 300*time.Millisecond)
 }

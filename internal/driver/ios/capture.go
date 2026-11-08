@@ -184,7 +184,11 @@ func (c *captureMarks) apply(s *screen.Screen) {
 func (d *Device) ocrPicture(ctx context.Context, opt driver.ObserveOptions) (data []byte, img image.Image, from string, err error) {
 	if opt.Frame != nil && d.info.Connection == "wifi" {
 		if f, ferr := opt.Frame(ctx); ferr == nil {
-			if s, ok := screenOfFrame(f, d.screen()); ok {
+			// The video is in the display's own frame: cut the screen out
+			// of it there, then turn it upright as screenshots are.
+			si := d.freshDisplay(ctx)
+			if s, ok := screenOfFrame(f, si); ok {
+				s = turnImage(s, si.turn())
 				var buf bytes.Buffer
 				if jerr := jpeg.Encode(&buf, s, &jpeg.Options{Quality: 95}); jerr == nil {
 					return buf.Bytes(), s, "video", nil
@@ -203,8 +207,8 @@ func (d *Device) ocrPicture(ctx context.Context, opt driver.ObserveOptions) (dat
 }
 
 // screenOfFrame is the screen in a frame of the live video, in the
-// screenshot's pixels: the phone puts its screen at 1:1 in the picture's
-// top-left corner and pads the rest (fromVideo). ok is false for a picture
+// display's own frame (si's Width and Height): the phone puts its screen at
+// 1:1 in the picture's top-left corner and pads the rest (fromVideo). ok is false for a picture
 // smaller than the screen, which no tested phone sends, or without a known
 // screen size.
 func screenOfFrame(f image.Image, si screenInfo) (image.Image, bool) {
