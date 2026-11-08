@@ -224,9 +224,9 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `app` | string, required | Package name, bundle id, or name (exact, then a unique part of it) |
+| `app` | string, required | Package name, bundle id, or name (exact, then a unique part of it); on an iPhone without the WebDriverAgent helper also an `http` or `https` link, which opens in Safari |
 
-Opening a blocked banking or wallet app, or one the person blocked, asks the person like an Ask action (rule `Finance apps` or `Blocked by you`; up to 45 s, then `approval_pending`). If they allow it, it stays allowed for the rest of the task: the agent may open it and read its screen, and everything else the rules ask about there still asks; Pinky keeps no screenshots, recording or screen text of it, and Settings do not change. If they deny it, later launches of it in the task return `blocked_by_policy` at once. Password managers return `blocked_by_policy` without asking. Apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A URL (`https://…`) counts as opening a link (rule `Installs and links`), which asks the person when they chose to approve more than payments.
+Opening a blocked banking or wallet app, or one the person blocked, asks the person like an Ask action (rule `Finance apps` or `Blocked by you`; up to 45 s, then `approval_pending`). If they allow it, it stays allowed for the rest of the task: the agent may open it and read its screen, and everything else the rules ask about there still asks; Pinky keeps no screenshots, recording or screen text of it, and Settings do not change. If they deny it, later launches of it in the task return `blocked_by_policy` at once. Password managers return `blocked_by_policy` without asking. Apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A URL (`https://…`) counts as opening a link (rule `Installs and links`), which asks the person when they chose to approve more than payments; the app that opens the link (Safari on an iPhone) is judged too, so blocking it or leaving it out of the agent's scope refuses its links. Other phones return `not_found` for a link, and an iPhone returns `unsupported` for a link that is not `http` or `https`.
 
 ### phone_apps
 

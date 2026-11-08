@@ -86,7 +86,7 @@ type keyIn struct {
 
 type launchIn struct {
 	actionArgs
-	App string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it."`
+	App string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it; or an http(s) link on an iPhone without the WebDriverAgent helper."`
 }
 
 type appsIn struct {
@@ -277,7 +277,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_launch", Title: "Open an app",
-		Description: "Open an app by name, package name or bundle id, and return its screen. Apps outside the task's list return scope_denied. " +
+		Description: "Open an app by name, package name or bundle id, and return its screen. An iPhone without the WebDriverAgent helper also opens an http(s) link, in Safari. Apps outside the task's list return scope_denied. " +
 			"Blocked banking and wallet apps ask the person, who may allow the app for the rest of the task (approval_pending; repeat with approval_id); password managers are refused.",
 		InputSchema: schema[launchIn](nil), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in launchIn) (*sdk.CallToolResult, any, error) {

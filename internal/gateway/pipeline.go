@@ -705,8 +705,17 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		}
 		p.launch, p.url = app, url
 		p.input.Launch = screen.App{ID: app.ID, Name: app.Name}
+		opener := false
+		if lo, ok := g.driverOf(d).(linkOpener); ok && url {
+			// The rules judge the app that opens the link: blocking or
+			// scoping it covers its links too, and so does the person's
+			// allowing it for the task.
+			browser := lo.LinkApp()
+			p.input.Launch = screen.App{ID: browser.ID, Name: browser.Name}
+			opener = true
+		}
 		p.input.LaunchURL = url
-		p.input.AllowBlocked = !url && g.allows(l, p.input.Launch)
+		p.input.AllowBlocked = (!url || opener) && g.allows(l, p.input.Launch)
 	}
 	p.input.Target = p.target
 	p.desc = describe(a, p)
@@ -870,6 +879,11 @@ func hitTest(s *screen.Screen, p screen.Point) *screen.Element {
 	}
 	cp := *best
 	return &cp
+}
+
+// linkOpener is implemented by drivers that open a link in a fixed app.
+type linkOpener interface {
+	LinkApp() driver.App
 }
 
 // resolveLaunch finds the app phone_launch names.

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -214,38 +215,38 @@ func visibleApp(a installationproxy.AppInfo) bool {
 	return true
 }
 
-// Launch implements driver.Device. app is a bundle id or a display name.
-// A running app is brought to the front, not restarted.
+// safariID is the app an http or https link opens in.
+const safariID = "com.apple.mobilesafari"
+
+// LinkApp is the app that opens the links Launch is given, for the rules
+// that judge apps (the gateway's linkOpener).
+func (d *Device) LinkApp() driver.App {
+	return driver.App{ID: safariID, Name: "Safari"}
+}
+
+// Launch implements driver.Device. app is a bundle id, a display name or an
+// http or https link, which Safari opens. A running app is brought to the
+// front, not restarted.
 func (d *Device) Launch(ctx context.Context, app string) error {
 	return d.gone(d.launch(ctx, app))
 }
 
 // launch is Launch without marking a dropped connection (gone).
 func (d *Device) launch(ctx context.Context, app string) error {
-	id, err := d.resolveApp(ctx, app)
+	link, isLink, err := linkTarget(app)
 	if err != nil {
 		return err
 	}
-	d.markInput()
-	var opts bytes.Buffer
-	if err := plist.NewBinaryEncoder(&opts).Encode(map[string]any{}); err != nil {
-		return err
+	id := safariID
+	if !isLink {
+		if id, err = d.resolveApp(ctx, app); err != nil {
+			return err
+		}
 	}
-	input := map[string]any{
-		"applicationSpecifier": map[string]any{
-			"bundleIdentifier": map[string]any{"_0": id},
-		},
-		"options": map[string]any{
-			"arguments":                     []any{},
-			"environmentVariables":          map[string]any{},
-			"platformSpecificOptions":       opts.Bytes(),
-			"standardIOUsesPseudoterminals": true,
-			"startStopped":                  false,
-			"terminateExisting":             false,
-			"user":                          map[string]any{"active": true},
-			"workingDirectory":              nil,
-		},
-		"standardIOIdentifiers": map[string]any{},
+	d.markInput()
+	input, err := launchInput(id, link)
+	if err != nil {
+		return err
 	}
 	svc, err := dialCoreDevice(d.l.entry, appService)
 	if err != nil {
@@ -258,6 +259,49 @@ func (d *Device) launch(ctx context.Context, app string) error {
 		return fmt.Errorf("launch %s: %w", id, err)
 	}
 	return nil
+}
+
+// linkTarget tells whether app names a link rather than an app, which
+// only http and https links may.
+func linkTarget(app string) (link string, isLink bool, err error) {
+	app = strings.TrimSpace(app)
+	if !strings.Contains(app, "://") {
+		return "", false, nil
+	}
+	u, err := url.Parse(app)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", true, fmt.Errorf("only http and https links can be opened: %w", driver.ErrUnsupported)
+	}
+	return app, true, nil
+}
+
+// launchInput is the launch request for an app, with the link the app opens
+// when it comes up (payloadURL, as in devicectl's --payload-url).
+func launchInput(id, link string) (map[string]any, error) {
+	var platform bytes.Buffer
+	if err := plist.NewBinaryEncoder(&platform).Encode(map[string]any{}); err != nil {
+		return nil, err
+	}
+	opts := map[string]any{
+		"arguments":                     []any{},
+		"environmentVariables":          map[string]any{},
+		"platformSpecificOptions":       platform.Bytes(),
+		"standardIOUsesPseudoterminals": true,
+		"startStopped":                  false,
+		"terminateExisting":             false,
+		"user":                          map[string]any{"active": true},
+		"workingDirectory":              nil,
+	}
+	if link != "" {
+		opts["payloadURL"] = map[string]any{"relative": link}
+	}
+	return map[string]any{
+		"applicationSpecifier": map[string]any{
+			"bundleIdentifier": map[string]any{"_0": id},
+		},
+		"options":               opts,
+		"standardIOIdentifiers": map[string]any{},
+	}, nil
 }
 
 // resolveApp turns a bundle id or display name into a bundle id.
