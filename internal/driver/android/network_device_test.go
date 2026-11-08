@@ -4,6 +4,7 @@ package android
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -376,5 +377,81 @@ func TestDeviceAway(t *testing.T) {
 		if in.ID == id {
 			t.Logf("listed: %s over %s via=%q", in.State, in.Connection, in.Via)
 		}
+	}
+}
+
+// TestDeviceAwayFailover follows a phone set up for away from home as the
+// gateway does while the person takes it off the computer's network: the
+// phone is opened by its id (the best connection: the local one at home),
+// and every second the test asks whether it is locked, as the gateway's
+// checks do; an offline error closes it and the next second opens it again
+// by its id, which picks whatever connection is left. The log shows each
+// change of the connections adb lists, which connection the phone is
+// opened on, and how long it did not answer.
+//
+//	PINKY_DEVICE=<phone id> PINKY_NET_FILE=/tmp/x.json PINKY_WATCH_SECONDS=240 go test -tags device -run TestDeviceAwayFailover
+func TestDeviceAwayFailover(t *testing.T) {
+	id, file := os.Getenv("PINKY_DEVICE"), os.Getenv("PINKY_NET_FILE")
+	if id == "" || file == "" {
+		t.Skip("PINKY_DEVICE or PINKY_NET_FILE not set")
+	}
+	seconds := 240
+	if s := os.Getenv("PINKY_WATCH_SECONDS"); s != "" {
+		fmt.Sscan(s, &seconds)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(seconds+60)*time.Second)
+	defer cancel()
+	p := NewProvider(Config{Logf: t.Logf, NetworkFile: file})
+	var d *Device
+	defer func() {
+		if d != nil {
+			d.Close()
+		}
+	}()
+	start := time.Now()
+	at := func() string { return fmt.Sprintf("t=%5.1fs", time.Since(start).Seconds()) }
+	lastConns, lastAns := "", time.Now()
+	for time.Since(start) < time.Duration(seconds)*time.Second {
+		tick := time.Now()
+		p.List(ctx) // kicks the reconnect pass, as the gateway's discovery does
+		entries, _ := p.cfg.Client.Devices(ctx)
+		conns := ""
+		for _, e := range entries {
+			if pr, err := p.deviceProps(ctx, e); (err == nil && phoneID(e, pr) == id) || e.Serial == id || serialHost(e.Serial) != "" {
+				conns += " " + e.Serial + "=" + e.State
+			}
+		}
+		if conns != lastConns {
+			t.Logf("%s adb lists:%s", at(), conns)
+			lastConns = conns
+		}
+		if d == nil {
+			nd, err := p.OpenDevice(ctx, id)
+			if err != nil {
+				t.Logf("%s open: %v", at(), err)
+			} else {
+				d = nd
+				t.Logf("%s opened on %s (%s, via %q)", at(), d.Serial(), d.info.Connection, d.info.Via)
+			}
+		}
+		if d != nil {
+			cctx, ccancel := context.WithTimeout(ctx, 2*time.Second)
+			_, err := d.Locked(cctx)
+			ccancel()
+			switch {
+			case err == nil:
+				if gap := time.Since(lastAns); gap > 2500*time.Millisecond {
+					t.Logf("%s answers again on %s after %.1fs", at(), d.Serial(), gap.Seconds())
+				}
+				lastAns = time.Now()
+			case errors.Is(err, driver.ErrOffline):
+				t.Logf("%s offline on %s: %v; opening again", at(), d.Serial(), err)
+				d.Close()
+				d = nil
+			default:
+				t.Logf("%s no answer on %s for %.1fs: %v", at(), d.Serial(), time.Since(lastAns).Seconds(), err)
+			}
+		}
+		time.Sleep(time.Until(tick.Add(time.Second)))
 	}
 }
