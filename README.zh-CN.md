@@ -108,6 +108,8 @@ iPhone 或 iPad 和电脑在同一个 Wi-Fi 下，并且电脑在 Wi-Fi 上列�
 
 通过 Wi-Fi 时每一步都比有线慢，截图最明显。在 iPad Pro 11 英寸（第三代，iPadOS 27.0.1）上实测，Wi-Fi 对比有线：滑动后 80 到 210 毫秒画面出现变化（有线 60 到 90 毫秒），读一次主屏幕 0.6 到 2.6 秒（0.5 到 0.6 秒），截一张图 5 秒（1 秒），视频丢包 0.2%（有线为 0）。拔掉线后，正在运行的任务约 5 秒切到 Wi-Fi；插回线后 2 到 6 秒切回有线（[详情](docs/notes/ios.md#wi-fi)）。
 
+在同一个 Wi-Fi 下的 iPhone 却没出现：在 Mac 上，系统的 usbmuxd 在和 Wi-Fi 上的手机的连接断过一次之后（比如手机的 Wi-Fi 关了又开），可能会把它弄丢，最长约一小时内都不再找它。在「终端」里运行 `sudo killall usbmuxd` 会让它立刻重新查找；所有 iPhone 和 iPad（包括插着线的）都会断开一两秒。
+
 #### iOS 17.4 到 26 的 iPhone
 
 iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自电脑的点按和输入：WebDriverAgent，要你用自己的 Apple ID 从 Xcode 构建并安装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）。用免费 Apple ID 的话，每 7 天要重新安装一次：到期前两天，手机页面和体检会提醒你；到期后，手机会显示为「需要设置」并说明原因（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。目前还没在 iOS 27 以下的 iPhone 上试过。不装它的话，Pinky 只能显示和读取屏幕（限 Mac）、打开 App，不能点按、滑动或输入。不支持 iOS 17.3 及更早版本。

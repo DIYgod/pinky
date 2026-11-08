@@ -108,6 +108,8 @@ Pinky also uses an iPhone or iPad over Wi-Fi while it is on the same Wi-Fi as th
 
 Over Wi-Fi each step is slower than on the cable, screenshots most of all. Measured on an iPad Pro 11-inch (3rd generation, iPadOS 27.0.1), Wi-Fi against the cable: a swipe shows on screen after 80 to 210 ms (60 to 90 ms), the home screen reads in 0.6 to 2.6 s (0.5 to 0.6 s), a screenshot takes 5 s (1 s), and 0.2 % of the video's packets were lost (none). Unplugging moved a running task to Wi-Fi in about 5 s, and plugging in moved it back in 2 to 6 s ([details](docs/notes/ios.md#wi-fi)).
 
+An iPhone on the same Wi-Fi that does not show up: on a Mac, the system's usbmuxd can lose a phone over Wi-Fi after its connection broke once (its Wi-Fi turned off and on, say) and not look for it again for up to about an hour. `sudo killall usbmuxd` in Terminal makes it look again at once; every iPhone and iPad, also on a cable, drops for a second or two.
+
 #### iPhones on iOS 17.4 to 26
 
 Below iOS 27, an iPhone takes taps and typing from a computer only through a helper app on the phone: WebDriverAgent, which you build and install once from Xcode with your Apple ID ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)). With a free Apple ID it has to be installed again every 7 days: two days before, the phone's page and its checkup remind you, and once it has run out the phone shows as needing setup and says why ([how to install it again](docs/notes/ios.md#when-the-helpers-signature-runs-out)). It has not been tried on an iPhone below iOS 27 yet. Without it, Pinky can only show and read the screen (on a Mac) and open apps: no taps, swipes or typing. iOS 17.3 and earlier are not supported.
