@@ -6430,7 +6430,7 @@
   "@settingsSafetyHideCodes": {
     "description": "Settings › Safety: the switch that hides passwords and one-time codes on the phone's screen from agents."
   },
-  "settingsSafetyHideCodesDesc": "Passwords and one-time codes are blurred before an agent sees the screen",
+  "settingsSafetyHideCodesDesc": "One-time codes in notifications are masked before an agent reads them",
   "@settingsSafetyHideCodesDesc": {
     "description": "Settings › Safety: the line under Hide codes from agents."
   },

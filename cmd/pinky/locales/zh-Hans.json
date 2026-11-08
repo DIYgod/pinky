@@ -1097,7 +1097,7 @@
   "settingsSafetyBlockedApps": "已屏蔽的应用",
   "settingsSafetyBlockedIntro": "智能体无法打开这些应用，也看不到它们的画面。",
   "settingsSafetyHideCodes": "对智能体隐藏验证码",
-  "settingsSafetyHideCodesDesc": "在智能体看到屏幕前，密码和一次性验证码会被模糊处理",
+  "settingsSafetyHideCodesDesc": "通知里的一次性验证码会在智能体读到之前被打码",
   "settingsSafetyIntro": "Pinky 会在每个操作到达手机前进行检查。智能体无法更改这些设置。",
   "settingsSafetyKindBanking": "银行",
   "settingsSafetyKindBrowsers": "浏览器",

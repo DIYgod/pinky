@@ -17819,13 +17819,13 @@ func (msgs Messages) SettingsSafetyHideCodes() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyHideCodes", nil)
 }
 
-// SettingsSafetyHideCodesDesc says "Passwords and one-time codes are blurred before an agent sees the screen"
+// SettingsSafetyHideCodesDesc says "One-time codes in notifications are masked before an agent reads them"
 // in the language the app shows.
 //
 // Settings › Safety: the line under Hide codes from agents.
 func SettingsSafetyHideCodesDesc() string { return In(i18n.Locale()).SettingsSafetyHideCodesDesc() }
 
-// SettingsSafetyHideCodesDesc says "Passwords and one-time codes are blurred before an agent sees the screen"
+// SettingsSafetyHideCodesDesc says "One-time codes in notifications are masked before an agent reads them"
 // in the language of msgs.
 //
 // Settings › Safety: the line under Hide codes from agents.

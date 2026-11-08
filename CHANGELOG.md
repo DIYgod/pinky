@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Settings › Safety now describes Hide codes from agents as it works: one-time codes in notifications are masked before an agent reads them. It never blurred the screen itself.
+
 ## 2026.1108.21 (2026-11-08)
 
 - On an iPhone with iOS 27, agents now see the elements of web pages in Safari (links, buttons and fields) rather than only the text read from the picture, and a web page's password field counts as one, so agents can't type into it.
