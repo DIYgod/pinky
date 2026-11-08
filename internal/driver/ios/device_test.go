@@ -762,3 +762,59 @@ func TestDeviceObserveTiming(t *testing.T) {
 }
 
 const pauseBetween = 400 * time.Millisecond
+
+// A web page's elements come from the web content process: a password
+// field is listed with the password state, a plain one without. The page
+// is a data: URL typed into Safari's address bar, so it needs no network.
+func TestDeviceWebPage(t *testing.T) {
+	d := testDevice(t)
+	ctx := ctxFor(t, time.Minute)
+	if err := d.Launch(ctx, "com.apple.mobilesafari"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(2 * time.Second)
+	s, err := d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bar screen.Element
+	for _, e := range s.Elements {
+		if e.Role == screen.RoleInput && strings.HasPrefix(e.Label, "Address") {
+			bar = e
+		}
+	}
+	if bar.Bounds.Empty() {
+		t.Fatalf("no address bar:\n%s", s.Render())
+	}
+	if err := d.Tap(ctx, bar.Bounds.Center(), driver.TapOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Second)
+	page := `data:text/html,<h1>Pinky</h1><input type=password aria-label=Secret><input type=text aria-label=Plain>`
+	if err := d.Type(ctx, page, driver.TypeOptions{Submit: true}); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(3 * time.Second)
+	s, err = d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("\n%s", s.Render())
+	find := func(label string) screen.Element {
+		for _, e := range s.Elements {
+			if e.Label == label {
+				return e
+			}
+		}
+		t.Fatalf("no %q on the screen", label)
+		return screen.Element{}
+	}
+	if e := find("Secret"); e.Role != screen.RoleInput || !e.Has(screen.StatePassword) {
+		t.Errorf("the password field is %+v", e)
+	}
+	if e := find("Plain"); e.Role != screen.RoleInput || e.Has(screen.StatePassword) {
+		t.Errorf("the plain field is %+v", e)
+	}
+	pause()
+	home(ctx, d)
+}

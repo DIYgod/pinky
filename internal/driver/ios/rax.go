@@ -484,6 +484,7 @@ type raxElement struct {
 	Selected    bool
 	Focused     bool
 	Visible     bool
+	Web         bool // an element of WebKit's web content process (see markWebContent)
 	Remote      bool // a view showing another process's elements
 	RemotePID   int  // that process
 	Children    int
