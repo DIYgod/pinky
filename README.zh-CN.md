@@ -123,6 +123,15 @@ iPhone 或 iPad 和电脑在同一个 Wi-Fi 下，并且电脑在 Wi-Fi 上列�
 
 在 Mac 上，系统的设备服务 usbmuxd 在和 Wi-Fi 上的 iPhone 的连接断过一次之后（比如手机的 Wi-Fi 关了又开），可能会把它弄丢，最长约一小时都不再找它，「访达」里也看不到。Pinky 发现你用的手机明明在网络上却不再被列出时，会显示「Wi-Fi 上找不到」，并在它的页面上提供「重启设备服务…」：你确认后，macOS 会要求输入管理员密码，所有 iPhone 和 iPad（包括插着线的）都会断开一两秒。在「终端」里运行 `sudo killall usbmuxd` 效果相同。
 
+在 Linux 上，`usbmuxd` 软件包只列出插着线的 iPhone 和 iPad，所以 Pinky 没法把手机切到 Wi-Fi：拔掉线，手机就离线了。[netmuxd](https://github.com/jkcoxson/netmuxd)（0.4.3 或更新的版本，在它的 Releases 页面下载）能补上 Wi-Fi 上的手机：它自己在网络上找手机，插着线的手机仍交给 usbmuxd。让它和 usbmuxd 一起运行，再带上指向它的 `USBMUXD_SOCKET_ADDRESS` 启动 Pinky：
+
+```sh
+netmuxd --upstream-usbmuxd /var/run/usbmuxd --socket-path "$XDG_RUNTIME_DIR/netmuxd.sock"
+USBMUXD_SOCKET_ADDRESS="unix://$XDG_RUNTIME_DIR/netmuxd.sock" pinky
+```
+
+在 Arch Linux 上用 netmuxd 0.4.3 试过：Pinky 通过 Wi-Fi 列出了一台 iPhone 和一台 iPad，并读到了它们的名字和 iOS 版本。这样通过 Wi-Fi 打开手机还没试过。
+
 Pinky 打开手机、或者在有线和 Wi-Fi 之间切换时，会显示「正在连接」或「正在切换到 Wi-Fi」，而不是离线。通过 Wi-Fi 时，Pinky 从实时画面识别文字，不再用截图（Wi-Fi 下截一张图约 5 秒）。没设锁屏密码的 iPhone 或 iPad 读不出“已锁定”，所以它休眠掉线后再出现时，Pinky 要等它连续在线 30 秒才连接。
 
 #### iOS 17.4 到 26 的 iPhone

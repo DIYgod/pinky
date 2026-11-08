@@ -123,6 +123,15 @@ Over Wi-Fi each step is slower than on the cable, screenshots most of all. Measu
 
 On a Mac, the system's device service, usbmuxd, can lose an iPhone on Wi-Fi after its connection broke once (its Wi-Fi turned off and on, say), and not look for it again for up to about an hour; Finder loses it too. Pinky notices when a phone you use is on the network but no longer listed, shows it as **Lost on Wi-Fi**, and offers **Restart device service…** on its page: after you confirm, macOS asks for an administrator's password, and every iPhone and iPad, also on a cable, disconnects for a second or two. `sudo killall usbmuxd` in Terminal does the same.
 
+On Linux, the `usbmuxd` package lists iPhones and iPads only on the cable, so Pinky cannot move one to Wi-Fi there: unplugged, it goes offline. [netmuxd](https://github.com/jkcoxson/netmuxd) (0.4.3 or later, from its releases page) adds the phones on Wi-Fi: it looks for them on the network itself and passes the ones on the cable on to usbmuxd. Run it next to usbmuxd, and start Pinky with `USBMUXD_SOCKET_ADDRESS` pointing at it:
+
+```sh
+netmuxd --upstream-usbmuxd /var/run/usbmuxd --socket-path "$XDG_RUNTIME_DIR/netmuxd.sock"
+USBMUXD_SOCKET_ADDRESS="unix://$XDG_RUNTIME_DIR/netmuxd.sock" pinky
+```
+
+Tried on Arch Linux with netmuxd 0.4.3: Pinky listed an iPhone and an iPad over Wi-Fi and read their names and iOS versions. Opening a phone over Wi-Fi this way is not tried yet.
+
 While Pinky opens a phone, or moves it between the cable and Wi-Fi, it shows **Connecting** or **Moving to Wi-Fi** rather than offline. Over Wi-Fi Pinky reads text from the live picture rather than from screenshots, which take about 5 s there. An iPhone or iPad without a passcode never reads as locked, so after it has dropped off the network to sleep, Pinky connects to it only once it has been back for 30 seconds.
 
 #### iPhones on iOS 17.4 to 26
