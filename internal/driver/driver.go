@@ -287,6 +287,17 @@ type TextReader interface {
 	ReadsText() bool
 }
 
+// FrameShooter is a Device whose screenshots are slow where a frame of its
+// live video is not: an iPhone over Wi-Fi, whose screenshot is a PNG of up
+// to 15 MB. ScreenshotFromFrame returns the screen taken from frame (a
+// picture of the live video, as ObserveOptions.Frame gives), cropped to the
+// screenshot's size, when the driver prefers it now; ok false means take a
+// screenshot. The gateway takes approval cards', history's and agents'
+// screenshots this way first.
+type FrameShooter interface {
+	ScreenshotFromFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool)
+}
+
 // Clipboard reads and writes the phone's clipboard.
 type Clipboard interface {
 	SetClipboard(ctx context.Context, text string) error

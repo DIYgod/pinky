@@ -86,3 +86,40 @@ func absDiff(a, b uint32) int {
 	}
 	return int(b - a)
 }
+
+// frameFirst is a phone whose driver prefers pictures from the video
+// (driver.FrameShooter), as an iPhone over Wi-Fi does.
+type frameFirst struct {
+	*demo.Device
+	ok           bool
+	asked, shots int
+}
+
+func (f *frameFirst) ScreenshotFromFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool) {
+	f.asked++
+	if frame == nil || !f.ok {
+		return nil, false
+	}
+	return image.NewRGBA(image.Rect(0, 0, 3, 7)), true
+}
+
+func (f *frameFirst) Screenshot(context.Context) (image.Image, error) {
+	f.shots++
+	return image.NewRGBA(image.Rect(0, 0, 5, 5)), nil
+}
+
+// TestShotFromFrameFirst: a driver that prefers the video gets asked first,
+// and a screenshot is taken only when it has no picture.
+func TestShotFromFrameFirst(t *testing.T) {
+	g, d := &Gateway{}, &device{id: "iphone"}
+	f := &frameFirst{Device: demo.NewDevice("iphone", "iPhone", driver.IOS), ok: true}
+	img, err := g.shotOf(context.Background(), d, f, false)
+	if err != nil || img.Bounds().Dx() != 3 || f.asked != 1 || f.shots != 0 {
+		t.Fatalf("from the video: %v, %v, asked %d, screenshots %d", img, err, f.asked, f.shots)
+	}
+	f.ok = false
+	img, err = g.shotOf(context.Background(), d, f, false)
+	if err != nil || img.Bounds().Dx() != 5 || f.asked != 2 || f.shots != 1 {
+		t.Fatalf("no frame: %v, %v, asked %d, screenshots %d", img, err, f.asked, f.shots)
+	}
+}

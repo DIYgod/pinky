@@ -47,6 +47,8 @@ One fragmented MP4 per task, remuxed without re-encoding (`internal/recording`, 
 
 Agents' own screenshots (`phone_observe { screenshot: true }`) now follow the same rule: none while the phone is locked (its lock screen can show notifications from blocked apps) or when a read names no app.
 
+Every screenshot the gateway takes (history, approval cards, agents' own) goes through `shotOf`, which asks a driver that prefers pictures from the video (`driver.FrameShooter`: an iPhone over Wi-Fi, whose screenshot is a PNG of up to 15 MB at about 1 MB/s) for the screen from a frame first (`frameShot`), and takes a screenshot when it has none. The rules above apply to either picture alike.
+
 ### Retention and export
 
 - `SetRetention(days)` (`retention.go`) deletes tasks that ended more than `days` ago (or, for tasks that never ended, as after a crash, started), with their steps, approvals, screenshots and recordings, and sessions left without tasks; at once and every 24 hours after. Running tasks stay; a screenshot that another task's step still shows stays. 0 keeps everything (the gateway's default; the app and daemon apply `Settings.KeepDays`, 30). `Retention()` reads it.

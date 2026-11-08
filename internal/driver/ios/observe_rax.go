@@ -54,6 +54,24 @@ const raxRecheckFailures = 30 * time.Second
 // raxLimits bound one walk over remoteAXService.
 var raxLimits = walkLimits{MaxElements: 400, Budget: 4 * time.Second}
 
+// raxLimitsWiFi bound one walk over Wi-Fi, where each of its requests (one
+// per node, one after the other) takes tens of milliseconds instead of a
+// few, and more in a session that just started, while the app builds its
+// accessibility tree: on an iPad Pro 11-inch the first read of a new
+// session over Wi-Fi gave 5 to 17 of the 19 elements Settings showed, cut
+// at 4 s, and later reads of the same session all 19 in about 2 s
+// (2026-11-08).
+var raxLimitsWiFi = walkLimits{MaxElements: 400, Budget: 8 * time.Second}
+
+// walkLimits returns the bounds of a walk over remoteAXService on this
+// phone's connection.
+func (d *Device) walkLimits() walkLimits {
+	if d.info.Connection == "wifi" {
+		return raxLimitsWiFi
+	}
+	return raxLimits
+}
+
 // raxReady returns the remote accessibility session, connecting on first
 // use. A phone that refused it is asked again only after a while, so every
 // Observe on it does not pay for a failed connection.
@@ -240,6 +258,11 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	}
 	s.Elements, s.Keyboard = raxScreenElements(els, scale, si.Width, si.Height, s.App.ID, covered...)
 	s.Elements = append(s.Elements, dialog...)
+	if asleepRead(ctx, s, d.ScreenOn) {
+		s.Locked = true
+		lines, shot = nil, nil // a dark screen
+		st.Trace = append(st.Trace, "the screen is off: read as locked")
+	}
 	if opt.OCR && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {
 			s.Keyboard = true
@@ -267,6 +290,22 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	st.OCRLines = len(lines)
 	st.Total = time.Since(start)
 	return s, nil
+}
+
+// asleepRead reports whether a read that found next to nothing, of a phone
+// that does not read as locked, is of a phone asleep: its screen is off.
+// The tree of a dark screen has the app's element and one more at most,
+// and a phone without a passcode, or one that locks a while after its
+// screen went off, reads as unlocked (seen on an iPad Pro 11-inch over
+// Wi-Fi for 28 s, until it left the network: 2026-11-08). Such a read
+// counts as locked, as the lock screen it shows once woken: an agent is
+// told the phone is locked instead of getting an empty screen.
+func asleepRead(ctx context.Context, s *screen.Screen, screenOn func(context.Context) (bool, error)) bool {
+	if s.Locked || len(s.Elements) > 1 {
+		return false
+	}
+	on, err := screenOn(ctx)
+	return err == nil && !on
 }
 
 // AccessibilityPlatformTranslation roles seen on iOS 27 (AXPAttributeRole).
@@ -337,7 +376,7 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string, 
 	note("input %v ago, trusted %v", t0.Sub(input).Round(time.Millisecond), trusted)
 	var stop atomic.Bool
 	apps := make(chan *axpObject, 1)
-	walked := walkDetached(ctx, rax, &stop, func(app *axpObject) {
+	walked := walkDetached(ctx, rax, d.walkLimits(), &stop, func(app *axpObject) {
 		if onApp != nil {
 			onApp(app)
 		}
@@ -394,7 +433,7 @@ func (d *Device) raxTree(ctx context.Context, rax *raxSession, trace *[]string, 
 			walked = nil
 		case <-empty:
 			note("walk again")
-			walked = walkDetached(ctx, rax, &stop, nil)
+			walked = walkDetached(ctx, rax, d.walkLimits(), &stop, nil)
 			empty = nil
 			rewalked = true
 		case app = <-apps:
@@ -431,12 +470,12 @@ type walkResult struct {
 // reach: a request cut short would leave its answer in flight and spoil
 // the session. A caller that gives up sets stop, and the walk ends between
 // two requests.
-func walkDetached(ctx context.Context, rax *raxSession, stop *atomic.Bool, onApp func(*axpObject)) <-chan walkResult {
-	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), raxLimits.Budget+raxRequestTimeout)
+func walkDetached(ctx context.Context, rax *raxSession, lim walkLimits, stop *atomic.Bool, onApp func(*axpObject)) <-chan walkResult {
+	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), lim.Budget+raxRequestTimeout)
 	ch := make(chan walkResult, 1)
 	go func() {
 		defer cancel()
-		els, complete, err := rax.walkUntil(wctx, raxLimits, stop, onApp)
+		els, complete, err := rax.walkUntil(wctx, lim, stop, onApp)
 		ch <- walkResult{els, complete, err}
 	}()
 	return ch
