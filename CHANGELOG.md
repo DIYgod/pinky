@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Android phones now read text that apps draw without describing it, as in mini-programs and other pages inside super-apps, games and maps: Pinky reads it from the screen on macOS and Windows, and agents can read and tap it. `phone_observe` takes `ocr: true` to read all the text on the screen.
+- A blocked app you allow for a task is read this way too: agents get its text, never a picture of it.
+- Taps on Android where the screen says little, such as a "Pay" button that is a picture, are now checked against the text drawn there.
+- Pinky now reads text from screen pictures on Windows too.
+
 ## 2026.1108.18 (2026-11-08)
 
 - Pinky in Chinese now shows What's new and the update notes in Chinese.
