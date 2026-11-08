@@ -240,6 +240,8 @@ On Android, Pinky Companion, when you click Install; Pinky keeps it up to date a
 
 While its accessibility service is on, they can. Malware abuses accessibility services, so many banking apps refuse to sign in while an app from outside an app store has one turned on: in Malaysia (Maybank, CIMB, HSBC and the other members of the Association of Banks in Malaysia, since 2024) and in Singapore (DBS, OCBC and UOB, since 2023) among others. Pinky Companion is such an app, as Pinky installs it over USB. Apps such as WeChat, Douyin and Xiaohongshu can see the service too and watch for automated use; we know of no report that they flagged Pinky Companion, but letting an agent use them may be against their terms.
 
+Apps can also see that USB debugging or Wireless debugging is on, which Pinky needs on every Android phone; some apps, banking apps among them, warn you or refuse to run while it is. It stays on for as long as you use the phone with Pinky.
+
 So Pinky turns the service on only while an agent works on the phone: as a task starts, and off again a few seconds after the task ends or you take over the phone, or a minute after the agent's last step. The rest of the time it is off, and those apps work as usual. While an agent works, even on the phone's background display, they see it: to use one of them then, click **Take over** in Pinky first, or end the task.
 
 To keep Pinky from turning the service on at all, uninstall Pinky Companion on the phone (Android's Settings › Apps). Pinky works without it, only more slowly: it reads a screen in about 2 s instead of 70 ms, and types text other than plain English through the phone's clipboard. **Not now** on the phone's page puts away Pinky's offer to install it again.
