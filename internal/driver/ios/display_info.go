@@ -84,6 +84,15 @@ func readDisplay(ctx context.Context, svc *cdService) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	m, ok := primaryDisplay(out)
+	if !ok {
+		return nil, fmt.Errorf("display info: no main display")
+	}
+	return m, nil
+}
+
+// primaryDisplay finds the main display's entry in a getdisplayinfo reply.
+func primaryDisplay(out map[string]any) (map[string]any, bool) {
 	displays, _ := out["displays"].([]any)
 	for _, d := range displays {
 		m, ok := d.(map[string]any)
@@ -91,16 +100,25 @@ func readDisplay(ctx context.Context, svc *cdService) (map[string]any, error) {
 			continue
 		}
 		if p, _ := m["primary"].(bool); p {
-			return m, nil
+			return m, true
 		}
 	}
-	return nil, fmt.Errorf("display info: no main display")
+	return nil, false
 }
 
 func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
-	m, err := readDisplay(ctx, svc)
+	out, err := svc.invoke(ctx, featureGetDisplayInfo, "", nil)
 	if err != nil {
 		return screenInfo{}, err
+	}
+	return parseScreenInfo(out)
+}
+
+// parseScreenInfo reads the main display from a getdisplayinfo reply.
+func parseScreenInfo(out map[string]any) (screenInfo, error) {
+	m, ok := primaryDisplay(out)
+	if !ok {
+		return screenInfo{}, fmt.Errorf("display info: no main display")
 	}
 	si := screenInfo{Scale: 1}
 	if b, ok := m["bounds"].([]any); ok && len(b) == 2 {
@@ -114,6 +132,10 @@ func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
 	si.Orientation, _ = m["currentOrientation"].(string)
 	si.Native, _ = m["nativeOrientation"].(string)
 	si.Backlight, _ = m["backlightState"].(string)
+	if si.Backlight == "" {
+		// iOS 27.2 moved it next to "displays".
+		si.Backlight, _ = out["backlightState"].(string)
+	}
 	if si.Width <= 0 || si.Height <= 0 {
 		return si, fmt.Errorf("display info: no size for the main display")
 	}
