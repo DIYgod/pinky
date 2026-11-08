@@ -49,6 +49,10 @@ type Info struct {
 	// its own words; "" when the driver does not say. Detail says the same
 	// in a sentence.
 	Setup string
+	// Via says how a phone connected over the network ("wifi") is reached
+	// when that is not the local network: ViaTailscale through Tailscale;
+	// "" on the computer's own network or by cable.
+	Via string
 }
 
 // Setup steps, in Info.Setup.
@@ -421,6 +425,111 @@ type PairingProgress struct {
 type WiFiConnector interface {
 	ConnectWiFi(ctx context.Context, addr string) (Info, error)
 }
+
+// Phones away from the computer's network. A Tailnet provider reaches
+// phones through Tailscale, the mesh VPN that keeps a person's devices
+// connected to each other wherever each one is (the computer at home, the
+// phone out on mobile data): it lists the phones on the computer's
+// tailnet, connects to one by its Tailscale address, and sets a phone up
+// to be reached that way ("away from home").
+
+// ViaTailscale is Info.Via for a phone reached through Tailscale.
+const ViaTailscale = "tailscale"
+
+// Tailnet is a Provider that reaches phones through Tailscale.
+type Tailnet interface {
+	// Tailnet says what Tailscale on this computer reports, and lists the
+	// phones on its tailnet.
+	Tailnet(ctx context.Context) (TailnetStatus, error)
+	// ConnectTailnet connects to a phone on the tailnet at its Tailscale
+	// address, with a port or without one (the port Away uses), and
+	// returns it once it is online or waits for the person to allow this
+	// computer. A phone that does not listen there gives an error
+	// wrapping ErrNotListening.
+	ConnectTailnet(ctx context.Context, addr string) (Info, error)
+	// Away says whether a phone is set up to be reached through
+	// Tailscale, and what is missing when it cannot be.
+	Away(ctx context.Context, id string) (Away, error)
+	// SetAway sets a phone up to be reached through Tailscale, or stops
+	// that. On (Android) makes the phone's adb listen on the network, on
+	// every network the phone joins, until the phone restarts; the
+	// provider then connects to it through Tailscale whenever it can.
+	// Off makes adb stop listening and forgets the phone's address: a
+	// phone away is then out of reach until it is back.
+	SetAway(ctx context.Context, id string, on bool) (Away, error)
+}
+
+// TailnetStatus is Tailscale on this computer, and the phones on its
+// tailnet.
+type TailnetStatus struct {
+	// State is one of the Tailnet* states.
+	State string
+	// Detail is Tailscale's own words when it is not running.
+	Detail string
+	// Tailnet is the tailnet's name, such as "example.com" or
+	// "someone@gmail.com"; Self this computer's name on it.
+	Tailnet, Self string
+	Phones        []TailnetPhone
+}
+
+// Tailscale's states on this computer, in TailnetStatus.State.
+const (
+	TailnetNotInstalled = "not_installed" // no Tailscale on this computer
+	TailnetNotRunning   = "not_running"   // installed, but not running (the app is closed)
+	TailnetNeedsLogin   = "needs_login"   // not signed in, or its key expired
+	TailnetStopped      = "stopped"       // signed in and turned off
+	TailnetStarting     = "starting"
+	TailnetRunning      = "running"
+)
+
+// TailnetPhone is a phone on the tailnet.
+type TailnetPhone struct {
+	Name string // its name on the tailnet
+	Addr string // its Tailscale address
+	// Online reports whether Tailscale sees it connected; LastSeen is when
+	// it last was, while it is not.
+	Online   bool
+	LastSeen time.Time
+	// ID is the phone Pinky knows it as, "" when Pinky has not seen it
+	// connected.
+	ID string
+	// Connected reports whether Pinky reaches it through Tailscale now;
+	// Relayed whether that goes through one of Tailscale's relay servers
+	// rather than straight to the phone.
+	Connected, Relayed bool
+}
+
+// Away is whether a phone can be reached through Tailscale, away from the
+// computer's network.
+type Away struct {
+	// On reports whether the phone is set up for it: the provider connects
+	// to it through Tailscale whenever it can.
+	On bool
+	// Listening reports whether the phone's adb listens on the network
+	// now, as far as the provider knows: it stops when the phone restarts.
+	Listening bool
+	// Addr is the phone's Tailscale address, "" when it is not on the
+	// tailnet; Port where its adb listens.
+	Addr string
+	Port int
+	// Missing says what keeps the phone from being set up, one of the
+	// Away* values; "" when nothing does.
+	Missing string
+	// Detail says the same in a sentence.
+	Detail string
+}
+
+// What keeps a phone from being set up to be reached away from home, in
+// Away.Missing.
+const (
+	AwayNoTailscaleHere  = "tailscale_here"  // Tailscale does not run on this computer
+	AwayNoTailscaleThere = "tailscale_phone" // the phone is not on this computer's tailnet
+	AwayNotConnected     = "not_connected"   // the phone is not connected to set it up (cable or Wi-Fi)
+)
+
+// ErrNotListening is wrapped when a phone does not take connections at
+// the address and port: its adb does not listen on the network.
+var ErrNotListening = errors.New("the phone's adb does not listen on the network there")
 
 // Forgetter is a Provider that connects to phones by itself, as Android's
 // reconnects the phones paired over Wi-Fi. The gateway tells it which

@@ -15,6 +15,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
+	"github.com/DIYgod/pinky/internal/tailnet"
 )
 
 // Config tunes the driver. The zero value works.
@@ -58,6 +59,13 @@ type Config struct {
 	// ~/.android/adb_known_hosts.pb.
 	KnownHosts func() ([]string, error)
 
+	// Tailnet reads Tailscale's status on this computer, for the phones
+	// away from its network (tailnet.go); nil means tailnet.Read.
+	Tailnet func(ctx context.Context) (tailnet.Status, error)
+	// AwayFile keeps the phones set up to be reached through Tailscale;
+	// "" keeps them in memory only.
+	AwayFile string
+
 	// StartServer, when set, starts an adb server when List finds none
 	// (cmd/pinky passes adb.StartServer): at once the first time, and
 	// when a server that ran went away, once it has stayed away for
@@ -80,6 +88,9 @@ func (c *Config) defaults() {
 	}
 	if c.KnownHosts == nil {
 		c.KnownHosts = readKnownHosts
+	}
+	if c.Tailnet == nil {
+		c.Tailnet = tailnet.Read
 	}
 	if c.SettleMax <= 0 {
 		c.SettleMax = 3 * time.Second
@@ -106,6 +117,10 @@ type Provider struct {
 	forgotten map[string]bool
 
 	wifi *reconnector // nil without Config.ReconnectWiFi
+	// away keeps the phones set up to be reached through Tailscale, and
+	// tail reconnects them (tailnet.go).
+	away *awayStore
+	tail *tailLink
 
 	server serverWatch
 	// usbNodes lists the computer's USB devices as Windows sees them, to
@@ -120,6 +135,8 @@ func NewProvider(cfg Config) *Provider {
 	if cfg.ReconnectWiFi {
 		p.wifi = newReconnector(p)
 	}
+	p.away = &awayStore{path: cfg.AwayFile, logf: cfg.logf}
+	p.tail = newTailLink(p)
 	return p
 }
 
@@ -164,6 +181,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	if p.wifi != nil {
 		p.wifi.kick(entries)
 	}
+	p.tail.kick(entries)
 	infos := make([]driver.Info, len(entries))
 	var wg sync.WaitGroup
 	for i, e := range entries {
@@ -229,12 +247,16 @@ func mergeTransports(infos []driver.Info) []driver.Info {
 }
 
 // better reports whether a connection of a phone is the one to use rather
-// than another: an online one before one that is not, then USB before Wi-Fi.
+// than another: an online one before one that is not, then USB before
+// Wi-Fi, then the local network before Tailscale.
 func better(a, b driver.Info) bool {
 	if (a.State == driver.StateOnline) != (b.State == driver.StateOnline) {
 		return a.State == driver.StateOnline
 	}
-	return a.Connection == "usb" && b.Connection != "usb"
+	if (a.Connection == "usb") != (b.Connection == "usb") {
+		return a.Connection == "usb"
+	}
+	return a.Via == "" && b.Via != ""
 }
 
 func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (deviceProps, error) {
@@ -283,6 +305,9 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 	}
 	if e.Wireless() {
 		info.Connection = "wifi"
+		if viaTailnet(e.Serial) {
+			info.Via = driver.ViaTailscale
+		}
 	}
 	if info.Name == "" {
 		info.Name = e.Serial

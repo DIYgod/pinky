@@ -45,6 +45,10 @@ type fakeADB struct {
 	browseErr error    // Browse fails
 	browses   int
 	closes    int
+
+	// run answers the other services on a phone's connection (shell
+	// commands, tcpip:, usb:), by serial; false: unsupported.
+	run func(serial, service string) (string, bool)
 }
 
 func newFakeADB(t *testing.T) (*fakeADB, *Provider) {
@@ -106,15 +110,24 @@ func (f *fakeADB) handle(c net.Conn) {
 	if serial, ok := strings.CutPrefix(req, "host:transport:"); ok {
 		f.mu.Lock()
 		out, has := f.props[serial]
+		run := f.run
 		f.mu.Unlock()
 		if !has {
 			fail("device '" + serial + "' not found")
 			return
 		}
 		io.WriteString(c, "OKAY")
-		if next, ok := readRequest(r); ok && strings.HasPrefix(next, "shell:getprop ro.product.model") {
+		next, ok := readRequest(r)
+		switch {
+		case ok && strings.HasPrefix(next, "shell:getprop ro.product.model"):
 			io.WriteString(c, "OKAY"+out)
-		} else {
+		case ok && run != nil:
+			if out, ok := run(serial, next); ok {
+				io.WriteString(c, "OKAY"+out)
+				return
+			}
+			fail("unsupported")
+		default:
 			fail("unsupported")
 		}
 		return
