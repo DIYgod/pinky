@@ -1366,7 +1366,7 @@
   "@checkWiFiIPhoneFail": {
     "description": "An iPhone's or iPad's checkup, the Wi-Fi item: Pinky could not turn on the phone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's checkbox); the error shows under it."
   },
-  "checkWiFiIPhoneNotSeen": "Its Wi-Fi connection is on, but this computer doesn't see it on Wi-Fi. Check that both are on the same Wi-Fi network: guest networks and some routers keep devices apart. A phone whose Wi-Fi connection was just turned on can take a minute to show up.",
+  "checkWiFiIPhoneNotSeen": "Its Wi-Fi connection is on, but this computer doesn't see it on Wi-Fi. Check that both are on the same Wi-Fi network: guest networks and some routers keep devices apart, and a VPN on either can hide it. A phone whose Wi-Fi connection was just turned on can take a minute to show up.",
   "@checkWiFiIPhoneNotSeen": {
     "description": "An iPhone's or iPad's checkup, the Wi-Fi item: the phone's Wi-Fi connection is on, but the computer's device service does not list it over the network."
   },
@@ -3578,6 +3578,10 @@
       }
     }
   },
+  "gwStatusNotSeenOnWiFi": "Not seen on Wi-Fi",
+  "@gwStatusNotSeenOnWiFi": {
+    "description": "A phone's status line: an iPhone or iPad unplugged a moment ago that this computer does not see on Wi-Fi."
+  },
   "gwStatusOffline": "Offline",
   "@gwStatusOffline": {
     "description": "A phone's status line in the sidebar and tiles: the phone is offline. Shown only in other languages; in English the gateway's own words show."
@@ -4965,6 +4969,10 @@
   "phoneNotConnected": "It is not connected.",
   "@phoneNotConnected": {
     "description": "Under phoneOffline when the system says nothing more, before the Reconnect link."
+  },
+  "phoneNotSeenOnWiFi": "This computer doesn't see {name} on Wi-Fi. It may be asleep (unlock it), on another Wi-Fi network, or on one that keeps devices apart, as guest networks and some routers do. A VPN on the computer or the phone can hide it too, and so can Pinky not being allowed on the local network (System Settings › Privacy & Security › Local Network). Plug it in to keep using it.",
+  "@phoneNotSeenOnWiFi": {
+    "description": "The Phone screen of an iPhone or iPad unplugged a moment ago that this computer does not see on Wi-Fi: neither the device service lists it nor does the network show it. {name} is the phone's name."
   },
   "phoneOffline": "{phone} is offline",
   "@phoneOffline": {

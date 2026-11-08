@@ -10119,6 +10119,22 @@ func (msgs Messages) GwStatusNeedsYou(title string) string {
 	return Catalog.Format(msgs.locale, "gwStatusNeedsYou", map[string]any{"title": title})
 }
 
+// GwStatusNotSeenOnWiFi says "Not seen on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi.
+func GwStatusNotSeenOnWiFi() string { return In(i18n.Locale()).GwStatusNotSeenOnWiFi() }
+
+// GwStatusNotSeenOnWiFi says "Not seen on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi.
+func (msgs Messages) GwStatusNotSeenOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusNotSeenOnWiFi", nil)
+}
+
 // GwStatusOffline says "Offline"
 // in the language the app shows.
 //
@@ -13487,6 +13503,24 @@ func PhoneNotConnected() string { return In(i18n.Locale()).PhoneNotConnected() }
 // Reconnect link.
 func (msgs Messages) PhoneNotConnected() string {
 	return Catalog.Format(msgs.locale, "phoneNotConnected", nil)
+}
+
+// PhoneNotSeenOnWiFi says "This computer doesn't see {name} on Wi-Fi. It may be asleep (unlock it), on another Wi-Fi network, or on one that kee…"
+// in the language the app shows.
+//
+// The Phone screen of an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi: neither the device service lists it nor
+// does the network show it. {name} is the phone's name.
+func PhoneNotSeenOnWiFi(name string) string { return In(i18n.Locale()).PhoneNotSeenOnWiFi(name) }
+
+// PhoneNotSeenOnWiFi says "This computer doesn't see {name} on Wi-Fi. It may be asleep (unlock it), on another Wi-Fi network, or on one that kee…"
+// in the language of msgs.
+//
+// The Phone screen of an iPhone or iPad unplugged a moment ago that this
+// computer does not see on Wi-Fi: neither the device service lists it nor
+// does the network show it. {name} is the phone's name.
+func (msgs Messages) PhoneNotSeenOnWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "phoneNotSeenOnWiFi", map[string]any{"name": name})
 }
 
 // PhoneOffline says "{phone} is offline"

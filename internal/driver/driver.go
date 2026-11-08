@@ -143,6 +143,12 @@ const (
 	// no longer lists it, and will not for up to an hour. Restarting the
 	// service (DeviceServiceRestarter) brings it back.
 	SetupDeviceService = "device_service"
+	// SetupNotOnWiFi: an iPhone whose cable was just pulled, and whose
+	// Wi-Fi connection is on, is not seen on Wi-Fi: neither the device
+	// service lists it nor does the network show it (another network, one
+	// that keeps devices apart, a VPN, asleep). Listed offline: it is not
+	// connected, and no step on the computer brings it back.
+	SetupNotOnWiFi = "not_on_wifi"
 )
 
 // Provider discovers and opens the devices of one platform.

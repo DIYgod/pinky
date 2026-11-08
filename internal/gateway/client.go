@@ -97,6 +97,10 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 			// One that goes away is listed offline (discover).
 			return DeviceNeedsSetup, "Needs setup"
 		}
+		if d.info.Setup == driver.SetupNotOnWiFi && l == nil {
+			// Unplugged, and not seen on Wi-Fi (wifi.go).
+			return DeviceOffline, "Not seen on Wi-Fi"
+		}
 		line := "Offline"
 		if d.info.Detail != "" && d.info.State != driver.StateOnline {
 			line += " · " + d.info.Detail

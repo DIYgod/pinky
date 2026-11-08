@@ -218,3 +218,13 @@ func TestWiFiCheck(t *testing.T) {
 		}
 	}
 }
+
+// TestNotSeenOnWiFiStatus: an iPhone unplugged a moment ago that is not seen
+// on Wi-Fi says so on its status line, unless a task waits for it.
+func TestNotSeenOnWiFiStatus(t *testing.T) {
+	g := &Gateway{}
+	d := &device{info: driver.Info{Platform: driver.IOS, State: driver.StateOffline, Setup: driver.SetupNotOnWiFi, Detail: "Not seen on Wi-Fi"}}
+	if st, line := g.statusLocked(d, nil); st != DeviceOffline || line != "Not seen on Wi-Fi" {
+		t.Fatalf("status %q %q", st, line)
+	}
+}

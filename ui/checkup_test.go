@@ -383,3 +383,13 @@ func TestIPhoneWiFiText(t *testing.T) {
 		}
 	}
 }
+
+// TestNotSeenOnWiFiWords: the status line and the Phone screen of an iPhone
+// not seen on Wi-Fi.
+func TestNotSeenOnWiFiWords(t *testing.T) {
+	d := gateway.DeviceView{Status: gateway.DeviceOffline, StatusLine: "Not seen on Wi-Fi",
+		Info: driver.Info{Name: "Ada's iPhone", Platform: driver.IOS, State: driver.StateOffline, Setup: driver.SetupNotOnWiFi}}
+	if got := networkOfflineText(d); got != locales.PhoneNotSeenOnWiFi("Ada's iPhone") || !strings.Contains(got, "VPN") {
+		t.Fatalf("Phone screen: %q", got)
+	}
+}

@@ -181,13 +181,16 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	// Phones usbmuxd lost on Wi-Fi though they are on the network (lost.go).
 	onMux := map[string]bool{}
 	onNet := map[string]bool{}
+	onUSB := map[string]bool{}
 	for _, e := range list {
 		onMux[e.Properties.SerialNumber] = true
 		if e.Properties.ConnectionType == "Network" {
 			onNet[e.Properties.SerialNumber] = true
+		} else {
+			onUSB[e.Properties.SerialNumber] = true
 		}
 	}
-	for _, info := range p.lostPhones(onMux) {
+	for _, info := range p.lostPhones(onMux, onUSB, onNet) {
 		if !ids[info.ID] && (p.Only == nil || p.Only[info.ID]) {
 			kept = append(kept, info)
 		}
