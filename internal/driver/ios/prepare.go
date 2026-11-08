@@ -172,7 +172,8 @@ func (pr *preparer) run(j *mountJob, e goios.DeviceEntry, ownDir string, check f
 // within a couple of seconds, rather than after the mount's timeout.
 func mountOn(ctx context.Context, e goios.DeviceEntry, img diskImage) (mountResult, error) {
 	return mountOnWith(ctx, e, img, phoneStateOf, func(ctx context.Context, img diskImage, major int) (mountResult, error) {
-		l, err := dialLinkEntry(ctx, e)
+		// The image is 16 MB sent to the phone: see uploadMTU.
+		l, err := dialLinkEntryMTU(ctx, e, uploadMTU)
 		if err != nil {
 			return mountResult{}, err
 		}

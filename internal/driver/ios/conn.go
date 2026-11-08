@@ -38,8 +38,13 @@ func dialLink(ctx context.Context, udid string, wifi bool) (*link, error) {
 
 // dialLinkEntry opens a tunnel through one usbmuxd entry.
 func dialLinkEntry(ctx context.Context, base goios.DeviceEntry) (*link, error) {
+	return dialLinkEntryMTU(ctx, base, requestedMTU)
+}
+
+// dialLinkEntryMTU is dialLinkEntry asking the device for an MTU of mtu.
+func dialLinkEntryMTU(ctx context.Context, base goios.DeviceEntry, mtu int) (*link, error) {
 	udid := base.Properties.SerialNumber
-	t, err := OpenTunnel(ctx, base)
+	t, err := openTunnel(ctx, base, mtu)
 	if err != nil {
 		return nil, err
 	}

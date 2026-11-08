@@ -37,6 +37,14 @@ const coreDeviceProxy = "com.apple.internal.devicecompute.CoreDeviceProxy"
 // video stream; the lockdown link is a TCP stream, so there is no path MTU.
 const requestedMTU = 16000
 
+// uploadMTU is what a tunnel that sends the device much data asks for: the
+// developer disk image's 16 MB. With 16000, the iPhone 13 mini (iOS 27.0.1)
+// took the first full-size packets of the upload and then sent nothing more
+// on the tunnel, not even the ACKs for them, until its TCP gave up 18 s
+// later (2026-11-08); the small packets of everything else Pinky sends had
+// never shown it. go-ios's own tunnels ask for 1280.
+const uploadMTU = 1280
+
 // Tunnel is a userspace CoreDevice tunnel to one device. It runs a gVisor
 // network stack in this process, so it needs no root and no utun interface,
 // and unlike go-ios's own userspace tunnel it carries UDP as well as TCP: the
@@ -84,13 +92,18 @@ type tunnelParams struct {
 // next to macOS's own CoreDevice tunnel (Xcode, devicectl): the device gives
 // each tunnel its own addresses.
 func OpenTunnel(ctx context.Context, entry goios.DeviceEntry) (*Tunnel, error) {
+	return openTunnel(ctx, entry, requestedMTU)
+}
+
+// openTunnel is OpenTunnel asking the device for an MTU of mtu.
+func openTunnel(ctx context.Context, entry goios.DeviceEntry, mtu int) (*Tunnel, error) {
 	conn, err := goios.ConnectToService(entry, coreDeviceProxy)
 	if err != nil {
 		return nil, fmt.Errorf("start %s: %w", coreDeviceProxy, err)
 	}
 	// The handshake has no deadline of its own; closing the stream ends it.
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
-	params, err := tunnelHandshake(conn, requestedMTU)
+	params, err := tunnelHandshake(conn, mtu)
 	if !stop() && err == nil {
 		err = ctx.Err() // ctx ended as the handshake finished: conn is closed
 	}
