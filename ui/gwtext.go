@@ -510,6 +510,10 @@ var (
 // menu bar flyout.
 func statusLine(d gateway.DeviceView) string {
 	s := d.StatusLine
+	if needsHelper(d) {
+		// Listed, not offline: the gateway words it "Offline · <why>".
+		return locales.GwStatusNeedsSetup()
+	}
 	if !translated() {
 		return s
 	}

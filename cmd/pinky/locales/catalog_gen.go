@@ -2789,6 +2789,30 @@ func (msgs Messages) CheckDiskImageTitle() string {
 	return Catalog.Format(msgs.locale, "checkDiskImageTitle", nil)
 }
 
+// CheckHelperExpired says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again from X…"
+// in the language the app shows.
+//
+// Checkup and the Phone screen, an iPhone's helper (WebDriverAgent): the
+// signature (provisioning profile) made with the person's Apple ID ran out,
+// so the iPhone no longer starts the helper; the button below opens how to
+// install it. phone is the iPhone's name; when is when it ran out, with the
+// time.
+func CheckHelperExpired(phone string, when time.Time) string {
+	return In(i18n.Locale()).CheckHelperExpired(phone, when)
+}
+
+// CheckHelperExpired says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again from X…"
+// in the language of msgs.
+//
+// Checkup and the Phone screen, an iPhone's helper (WebDriverAgent): the
+// signature (provisioning profile) made with the person's Apple ID ran out,
+// so the iPhone no longer starts the helper; the button below opens how to
+// install it. phone is the iPhone's name; when is when it ran out, with the
+// time.
+func (msgs Messages) CheckHelperExpired(phone string, when time.Time) string {
+	return Catalog.Format(msgs.locale, "checkHelperExpired", map[string]any{"phone": phone, "when": when})
+}
+
 // CheckHelperHow says "How to install it"
 // in the language the app shows.
 //
@@ -2833,6 +2857,30 @@ func (msgs Messages) CheckHelperPass() string {
 	return Catalog.Format(msgs.locale, "checkHelperPass", nil)
 }
 
+// CheckHelperSoon says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again from Xcode."
+// in the language the app shows.
+//
+// Checkup and a reminder on the Phone screen, an iPhone's helper
+// (WebDriverAgent): its signature (provisioning profile) runs out within
+// two days, after which the iPhone no longer starts the helper; the button
+// beside it opens how to install it. phone is the iPhone's name; when is
+// when it runs out, with the time.
+func CheckHelperSoon(phone string, when time.Time) string {
+	return In(i18n.Locale()).CheckHelperSoon(phone, when)
+}
+
+// CheckHelperSoon says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again from Xcode."
+// in the language of msgs.
+//
+// Checkup and a reminder on the Phone screen, an iPhone's helper
+// (WebDriverAgent): its signature (provisioning profile) runs out within
+// two days, after which the iPhone no longer starts the helper; the button
+// beside it opens how to install it. phone is the iPhone's name; when is
+// when it runs out, with the time.
+func (msgs Messages) CheckHelperSoon(phone string, when time.Time) string {
+	return Catalog.Format(msgs.locale, "checkHelperSoon", map[string]any{"phone": phone, "when": when})
+}
+
 // CheckHelperTitle says "Pinky helper"
 // in the language the app shows.
 //
@@ -2847,6 +2895,24 @@ func CheckHelperTitle() string { return In(i18n.Locale()).CheckHelperTitle() }
 // helper, the app Pinky drives iPhones below iOS 27 through.
 func (msgs Messages) CheckHelperTitle() string {
 	return Catalog.Format(msgs.locale, "checkHelperTitle", nil)
+}
+
+// CheckHelperUntil says "Its signature lasts until {when, date, ::yMMMMd}. Pinky reminds you two days before."
+// in the language the app shows.
+//
+// Checkup, an iPhone's helper (WebDriverAgent) that works: a note on when
+// its signature (provisioning profile) runs out. when is that day, with the
+// year.
+func CheckHelperUntil(when time.Time) string { return In(i18n.Locale()).CheckHelperUntil(when) }
+
+// CheckHelperUntil says "Its signature lasts until {when, date, ::yMMMMd}. Pinky reminds you two days before."
+// in the language of msgs.
+//
+// Checkup, an iPhone's helper (WebDriverAgent) that works: a note on when
+// its signature (provisioning profile) runs out. when is that day, with the
+// year.
+func (msgs Messages) CheckHelperUntil(when time.Time) string {
+	return Catalog.Format(msgs.locale, "checkHelperUntil", map[string]any{"when": when})
 }
 
 // CheckHostADBOld says "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such …"

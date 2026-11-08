@@ -868,6 +868,20 @@
   "@checkDiskImageTitle": {
     "description": "Checkup, an iPhone's item: the title of the item about Apple's developer disk image, the add-on that gives the iPhone its developer services."
   },
+  "checkHelperExpired": "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again from Xcode; signed with a free Apple ID, it lasts 7 days.",
+  "@checkHelperExpired": {
+    "description": "Checkup and the Phone screen, an iPhone's helper (WebDriverAgent): the signature (provisioning profile) made with the person's Apple ID ran out, so the iPhone no longer starts the helper; the button below opens how to install it. phone is the iPhone's name; when is when it ran out, with the time.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      },
+      "when": {
+        "type": "DateTime",
+        "example": "Friday, November 13 at 2:05 PM"
+      }
+    }
+  },
   "checkHelperHow": "How to install it",
   "@checkHelperHow": {
     "description": "Checkup, an iPhone's item: the button that opens the instructions for installing the helper."
@@ -880,9 +894,33 @@
   "@checkHelperPass": {
     "description": "Checkup, an iPhone's item: the helper answers."
   },
+  "checkHelperSoon": "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again from Xcode.",
+  "@checkHelperSoon": {
+    "description": "Checkup and a reminder on the Phone screen, an iPhone's helper (WebDriverAgent): its signature (provisioning profile) runs out within two days, after which the iPhone no longer starts the helper; the button beside it opens how to install it. phone is the iPhone's name; when is when it runs out, with the time.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      },
+      "when": {
+        "type": "DateTime",
+        "example": "Friday, November 13 at 2:05 PM"
+      }
+    }
+  },
   "checkHelperTitle": "Pinky helper",
   "@checkHelperTitle": {
     "description": "Checkup, an iPhone's item: the title of the item about the WebDriverAgent helper, the app Pinky drives iPhones below iOS 27 through."
+  },
+  "checkHelperUntil": "Its signature lasts until {when, date, ::yMMMMd}. Pinky reminds you two days before.",
+  "@checkHelperUntil": {
+    "description": "Checkup, an iPhone's helper (WebDriverAgent) that works: a note on when its signature (provisioning profile) runs out. when is that day, with the year.",
+    "placeholders": {
+      "when": {
+        "type": "DateTime",
+        "example": "October 8, 2027"
+      }
+    }
   },
   "checkHostADBOld": "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such as an old Android SDK's tools, or update them: Pinky then starts its own.",
   "@checkHostADBOld": {

@@ -81,7 +81,8 @@ func (a *API) AdvanceIPhone() {
 	}
 }
 
-// SetIPhone puts a phone at a step: its State, Setup and Detail from step.
+// SetIPhone puts a phone at a step: its State, Setup, Detail and
+// HelperExpires from step.
 func (a *API) SetIPhone(id string, step driver.Info) {
 	a.mu.Lock()
 	d := a.device(id)
@@ -96,6 +97,7 @@ func (a *API) SetIPhone(id string, step driver.Info) {
 
 func setStep(info *driver.Info, step driver.Info) {
 	info.State, info.Setup, info.Detail = step.State, step.Setup, step.Detail
+	info.HelperExpires = step.HelperExpires
 }
 
 // HostChecks implements the client's host check (gateway.HostChecks):

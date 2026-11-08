@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
@@ -14,8 +16,21 @@ import (
 // iOS driver's checkup. Fixes that are steps of Add phone › iPhone get a
 // link to those steps.
 
-// helperDocs is how to install the WebDriverAgent helper.
-const helperDocs = "https://github.com/DIYgod/pinky/blob/main/docs/notes/ios.md#installing-the-webdriveragent-helper"
+// helperDocs is how to install the WebDriverAgent helper, and
+// helperAgainDocs how to install it again when its signature runs out.
+const (
+	helperDocs      = "https://github.com/DIYgod/pinky/blob/main/docs/notes/ios.md#installing-the-webdriveragent-helper"
+	helperAgainDocs = "https://github.com/DIYgod/pinky/blob/main/docs/notes/ios.md#when-the-helpers-signature-runs-out"
+)
+
+// helperLink is how to install an iPhone's helper: again, when Pinky knows
+// when its signature runs out.
+func helperLink(d gateway.DeviceView) string {
+	if !d.Info.HelperExpires.IsZero() {
+		return helperAgainDocs
+	}
+	return helperDocs
+}
 
 // iphoneCheckTitle names the items only iPhones have; "" for others.
 func iphoneCheckTitle(id string) string {
@@ -85,10 +100,24 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 		}
 		return w, true
 	case driver.CheckHelper:
-		if pass {
-			w.text, w.detail = locales.CheckHelperPass(), false
-		} else {
-			w.text, w.detail = locales.CheckHelperMissing(), false
+		w.detail = false
+		now := time.Now()
+		text, ranOut := helperWords(d, now)
+		exp := d.Info.HelperExpires
+		switch {
+		case pass:
+			w.text = locales.CheckHelperPass()
+			if exp.After(now) {
+				w.note = locales.CheckHelperUntil(exp.Local())
+			}
+		case text != "" && (ck.Status == driver.CheckWarn || ranOut):
+			// It stops soon, or its signature ran out: iOS won't start it
+			// again, though it may still run.
+			w.text = text
+		case ck.Status == driver.CheckWarn:
+			w.text, w.detail = locales.CheckHelperPass(), true
+		default:
+			w.text = locales.CheckHelperMissing()
 		}
 		return w, true
 	case driver.CheckInput:
@@ -127,8 +156,79 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStuck(), locales.AddPhoneIPhoneRetrying()
 	case driver.SetupUpdate:
 		return locales.AddPhoneIPhoneTooOldTitle(d.Info.Name), locales.AddPhoneIPhoneTooOld(d.Info.OSVersion), ""
+	case driver.SetupInstallHelper:
+		// Its signature ran out (Info.HelperExpires), or it is missing.
+		if text, ranOut := helperWords(d, time.Now()); ranOut {
+			return locales.CheckHelperTitle(), text, ""
+		}
+		return locales.CheckHelperTitle(), locales.CheckHelperMissing(), ""
 	}
 	return "", "", ""
+}
+
+// needsHelper reports whether an iPhone waits for its helper to be
+// installed, as it is missing or its signature ran out.
+func needsHelper(d gateway.DeviceView) bool {
+	return d.Info.Platform == driver.IOS && d.Info.State == driver.StateNeedsSetup && d.Info.Setup == driver.SetupInstallHelper
+}
+
+// helperWords says when the helper an iPhone is driven through stops
+// working (Info.HelperExpires): within driver.HelperReminder, or that it
+// did, which ranOut reports. "" when it lasts longer or is not known.
+func helperWords(d gateway.DeviceView, now time.Time) (text string, ranOut bool) {
+	exp := d.Info.HelperExpires
+	switch {
+	case exp.IsZero():
+		return "", false
+	case !now.Before(exp):
+		return locales.CheckHelperExpired(d.Info.Name, exp.Local()), true
+	case exp.Sub(now) <= driver.HelperReminder:
+		return locales.CheckHelperSoon(d.Info.Name, exp.Local()), false
+	}
+	return "", false
+}
+
+// helperReminder draws the Phone screen's reminder that the helper an
+// iPhone is driven through stops working soon, with how to install it
+// again, and returns the room it takes above the phone, 0 when it shows
+// none. Once the helper has stopped, the phone needs setup and says so in
+// its place.
+func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView) float32 {
+	if d.Info.Platform != driver.IOS || d.Info.HelperExpires.IsZero() {
+		return 0
+	}
+	now := c.Now()
+	text, _ := helperWords(d, now)
+	if text == "" {
+		// Draw it when the time comes.
+		c.After(min(d.Info.HelperExpires.Add(-driver.HelperReminder).Sub(now), time.Hour))
+		return 0
+	}
+	p := pal(c)
+	w, _ := c.Size()
+	width := min(520, w-220-320-32)
+	label := locales.CheckHelperHow()
+	height := helperReminderHeight(c, text, label, width)
+	mg.Row(c).Width(width).Height(height).Shrink(0).Padding(8, 8, 8, 14).Radius(12).Background(p.amberTint).Border(1, p.amberLine).
+		Gap(10).AlignItems(mg.Center).Role(mg.RoleStatus).Label(text).Children(func() {
+		mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot)
+		mg.Text(c, text).FontSize(13).Grow(1).MinWidth(0)
+		if button(c, label, btnOpt{small: true}).Clicked() {
+			openURL(c, helperAgainDocs, func(error) {})
+		}
+	})
+	return height + 14
+}
+
+// helperReminderHeight works out the reminder's height as its row lays it
+// out: the words wrap in what the width leaves after the padding, the
+// border, the icon, the gaps and the button (its label, padding and
+// border), and the reminder is no shorter than the button.
+func helperReminderHeight(c *mg.Context, text, label string, width float32) float32 {
+	lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: 13, Weight: 500})
+	tw := width - (14 + 8 + 2) - 16 - 2*10 - (lw + 2*10 + 2)
+	_, th := c.MeasureText(max(tw, 1), mg.Span{Text: text, Size: 13})
+	return max(th, 28) + 2*8 + 2
 }
 
 // iphoneCheckAction draws what an iPhone's item offers to do, and reports
@@ -149,7 +249,7 @@ func (a *app) iphoneCheckAction(c *mg.Context, d gateway.DeviceView, ck driver.C
 	case driver.FixInstallHelper:
 		mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
 			if button(c, locales.CheckHelperHow(), btnOpt{small: true}).Clicked() {
-				openURL(c, helperDocs, func(error) {})
+				openURL(c, helperLink(d), func(error) {})
 			}
 		})
 		return true

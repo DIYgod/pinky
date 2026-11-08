@@ -81,7 +81,11 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.checkupPanel(c, d)
 		return
 	}
-	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
+	// An iPhone whose helper is missing or ran out is listed but not
+	// opened, which the gateway shows as offline: its page says why and
+	// how to install the helper, in words (checkup_iphone.go).
+	helper := needsHelper(d)
+	if !helper && (d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline) {
 		mg.Column(c).AlignItems(mg.Center).Gap(12).Children(func() {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 				mg.Icon(c, icWifiOff).FontSize(30).TextColor(p.ink3)
@@ -111,18 +115,29 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(420).Children(func() {
 			mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
 			mg.Text(c, locales.PhoneNeedsSetup(d.Info.Name)).FontSize(16).FontWeight(600)
-			if d.Info.Detail != "" {
-				mg.Text(c, d.Info.Detail).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+			detail := d.Info.Detail
+			if helper {
+				_, detail, _ = setupWords(d, d.Info.Setup)
+			}
+			if detail != "" {
+				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
 			}
 			if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
 				a.openCheckup(d)
 			}
-			// An iPhone's steps are in Add phone, which follows a phone
-			// that waits for one (addiphone.go).
-			if d.Info.Platform == driver.IOS && linkButton(c, locales.PhoneSetUpIPhone()).Clicked() {
-				a.page = pageAddPhone
-				a.add.reset(a)
-				a.add.step, a.add.focus = "iphone", d.Info.ID
+			switch {
+			case helper:
+				if linkButton(c, locales.CheckHelperHow()).Clicked() {
+					openURL(c, helperLink(d), func(error) {})
+				}
+			case d.Info.Platform == driver.IOS:
+				// An iPhone's steps are in Add phone, which follows a
+				// phone that waits for one (addiphone.go).
+				if linkButton(c, locales.PhoneSetUpIPhone()).Clicked() {
+					a.page = pageAddPhone
+					a.add.reset(a)
+					a.add.step, a.add.focus = "iphone", d.Info.ID
+				}
 			}
 			a.removeLink(c, d)
 		})
@@ -136,6 +151,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	}
 	inControl := d.Status == gateway.DeviceInControl
 	ho, handoff := a.handoffFor(d.Info.ID)
+	banner := inControl || (handoff && !a.isLocked(d)) // the switch below shows one
 	switch {
 	case handoff && !a.isLocked(d) && t != nil && t.State == gateway.TaskPaused:
 		// The person took over and the agent waits with phone_handoff.
@@ -153,9 +169,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.controlBanner(c, d.Info.ID, locales.PhoneBannerInControl(), locales.PhoneBannerHandBackHint())
 	}
 
+	// A reminder that the helper stops working soon goes above the phone,
+	// where no banner is (checkup_iphone.go).
+	var reminder float32
+	if !banner {
+		reminder = a.helperReminder(c, d)
+	}
+
 	// Size the phone to the room the window gives it.
 	w, h := c.Size()
-	availH := h - 58 - 32 - 14 - 36
+	availH := h - 58 - 32 - 14 - 36 - reminder
 	availW := w - 220 - 320 - 32
 	// While an agent works on its own display in the background, the
 	// mirror shows that display, unless the person chose the phone's own
