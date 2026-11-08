@@ -32,6 +32,7 @@ type HTTP struct {
 	srv     *sdk.Server
 	handler http.Handler
 	token   string
+	sl      *sessionless // clients that send no session id (sessionless.go)
 }
 
 // HTTP returns the Streamable HTTP endpoint for the server's tools, at
@@ -45,7 +46,7 @@ func (s *Server) HTTP(token string) *HTTP {
 	mux := http.NewServeMux()
 	mux.Handle(HTTPPath, http.NewCrossOriginProtection().Handler(h))
 	mux.Handle(UploadPath, http.NewCrossOriginProtection().Handler(http.HandlerFunc(s.serveUpload)))
-	return &HTTP{s: s, srv: srv, handler: mux, token: token}
+	return &HTTP{s: s, srv: srv, handler: mux, token: token, sl: newSessionless()}
 }
 
 // ServeHTTP checks the bearer token, then serves MCP. Upload links need
@@ -60,7 +61,7 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Pinky needs the agent token: send Authorization: Bearer <token>.", http.StatusUnauthorized)
 		return
 	}
-	if r.Method == http.MethodGet && r.Header.Get("Mcp-Session-Id") == "" {
+	if r.Method == http.MethodGet && r.Header.Get(sessionIDHeader) == "" {
 		// No session, no stream to offer: 405 tells a client that keeps
 		// no session id to go on with POST alone, where the SDK's 400
 		// would read as a failure.
@@ -72,6 +73,13 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Header.Set(linkBaseHeader, base)
 	} else {
 		r.Header.Del(linkBaseHeader)
+	}
+	if r.Method == http.MethodPost {
+		if sid := r.Header.Get(sessionIDHeader); sid != "" {
+			h.sl.claim(sid)
+		} else if h.serveWithoutID(w, r) {
+			return
+		}
 	}
 	h.handler.ServeHTTP(w, r)
 }
@@ -103,4 +111,5 @@ func (h *HTTP) CloseSessions() {
 		ss.Close()
 	}
 	h.s.g.EndKeptLeases()
+	h.sl.reset()
 }
