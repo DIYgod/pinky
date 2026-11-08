@@ -4,12 +4,16 @@ package android
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/DIYgod/pinky/internal/tailnet"
 )
 
 // TestDeviceWiFiSwitch moves a real phone to Wi-Fi (adb tcpip, then a
@@ -86,4 +90,208 @@ func TestDeviceWiFiSwitch(t *testing.T) {
 			t.Errorf("off: %+v, %v", st, err)
 		}
 	}
+}
+
+// TestDeviceTailnetRoam watches a phone connected through Tailscale while
+// the person moves it to another network: a background display scrolls
+// Settings, and every second the test logs the frames that arrived, the
+// longest gap between two, and whether a shell command answers, so the
+// log shows how long the picture stopped and whether the connection
+// survived. It also logs what Tailscale counted for the phone.
+//
+//	PINKY_DEVICE=100.x.y.z:5555 PINKY_ROAM_SECONDS=180 go test -tags device -run TestDeviceTailnetRoam
+//
+// It needs the phone's screen off and the phone locked, as
+// TestDeviceWifiStream does.
+func TestDeviceTailnetRoam(t *testing.T) {
+	serial := os.Getenv("PINKY_DEVICE")
+	if serial == "" || !viaTailnet(serial) {
+		t.Skip("PINKY_DEVICE is not a connection through Tailscale")
+	}
+	seconds := 120
+	if s := os.Getenv("PINKY_ROAM_SECONDS"); s != "" {
+		fmt.Sscan(s, &seconds)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(seconds+120)*time.Second)
+	defer cancel()
+	d := openOff(t, ctx)
+	b, err := d.OpenDisplay(ctx, DisplayOptions{App: "com.android.settings"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	st, err := b.Stream(ctx, driver.StreamOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	type sec struct {
+		frames, bytes int
+		gap           time.Duration
+	}
+	var mu sync.Mutex
+	secs := map[int]*sec{}
+	start := time.Now()
+	last := start
+	go func() {
+		for p := range st.Packets() {
+			if p.Config {
+				continue
+			}
+			now := time.Now()
+			mu.Lock()
+			i := int(now.Sub(start) / time.Second)
+			s := secs[i]
+			if s == nil {
+				s = &sec{}
+				secs[i] = s
+			}
+			s.frames++
+			s.bytes += len(p.Data)
+			s.gap = max(s.gap, now.Sub(last))
+			last = now
+			mu.Unlock()
+		}
+	}()
+	host := serialHost(serial)
+	peerBytes := func() string {
+		s, err := tailnet.Read(ctx)
+		if err != nil {
+			return err.Error()
+		}
+		for _, p := range s.Peers {
+			if p.IPv4().String() == host {
+				path := "direct " + p.Direct
+				if p.Direct == "" {
+					path = "relay " + p.Relay
+				}
+				return fmt.Sprintf("rx %d tx %d, %s", p.RxBytes, p.TxBytes, path)
+			}
+		}
+		return "not on the tailnet"
+	}
+	t.Logf("tailscale at the start: %s", peerBytes())
+	for i := 0; i < seconds; i++ {
+		from, to := screen.Point{X: 540, Y: 1500}, screen.Point{X: 540, Y: 600}
+		if i%2 == 1 {
+			from, to = to, from
+		}
+		sctx, scancel := context.WithTimeout(ctx, 900*time.Millisecond)
+		swipeErr := b.Swipe(sctx, from, to, 300*time.Millisecond)
+		scancel()
+		ectx, ecancel := context.WithTimeout(ctx, 900*time.Millisecond)
+		t0 := time.Now()
+		_, echoErr := d.client.Shell(ectx, serial, "echo")
+		rtt := time.Since(t0)
+		ecancel()
+		time.Sleep(time.Until(start.Add(time.Duration(i+1) * time.Second)))
+		mu.Lock()
+		s := secs[i]
+		if s == nil {
+			s = &sec{}
+		}
+		silent := time.Since(last)
+		mu.Unlock()
+		line := fmt.Sprintf("t=%3ds frames %2d, %5.0f kbit/s, longest gap %4dms, silent %5dms, echo ", i, s.frames, float64(s.bytes)*8/1000, s.gap.Milliseconds(), silent.Milliseconds())
+		if echoErr != nil {
+			line += "failed: " + echoErr.Error()
+		} else {
+			line += rtt.Round(time.Millisecond).String()
+		}
+		if swipeErr != nil {
+			line += "; swipe failed: " + swipeErr.Error()
+		}
+		t.Log(line)
+		if i%30 == 29 {
+			t.Logf("tailscale: %s", peerBytes())
+		}
+	}
+	t.Logf("tailscale at the end: %s", peerBytes())
+}
+
+// TestDeviceTailnetIdle counts what a phone's stream sends through
+// Tailscale while nothing on its screen moves, then while it scrolls, to
+// estimate the data an hour of each takes.
+//
+//	PINKY_DEVICE=100.x.y.z:5555 go test -tags device -run TestDeviceTailnetIdle
+func TestDeviceTailnetIdle(t *testing.T) {
+	serial := os.Getenv("PINKY_DEVICE")
+	if serial == "" || !viaTailnet(serial) {
+		t.Skip("PINKY_DEVICE is not a connection through Tailscale")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	d := openOff(t, ctx)
+	b, err := d.OpenDisplay(ctx, DisplayOptions{App: "com.android.settings"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	st, err := b.Stream(ctx, driver.StreamOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	var mu sync.Mutex
+	var bytes, frames int
+	go func() {
+		for p := range st.Packets() {
+			mu.Lock()
+			bytes += len(p.Data)
+			frames++
+			mu.Unlock()
+		}
+	}()
+	host := serialHost(serial)
+	peer := func() (rx, tx int64) {
+		s, err := tailnet.Read(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range s.Peers {
+			if p.IPv4().String() == host {
+				return p.RxBytes, p.TxBytes
+			}
+		}
+		t.Fatalf("%s is not on the tailnet", host)
+		return 0, 0
+	}
+	measure := func(name string, dur time.Duration, act func(i int)) {
+		time.Sleep(3 * time.Second) // let the last part settle
+		tailnet.Default.Forget()
+		rx0, tx0 := peer()
+		mu.Lock()
+		b0, f0 := bytes, frames
+		mu.Unlock()
+		start := time.Now()
+		for i := 0; time.Since(start) < dur; i++ {
+			if act != nil {
+				act(i)
+			}
+			time.Sleep(time.Until(start.Add(time.Duration(i+1) * time.Second)))
+		}
+		el := time.Since(start)
+		tailnet.Default.Forget()
+		rx1, tx1 := peer()
+		mu.Lock()
+		b1, f1 := bytes, frames
+		mu.Unlock()
+		rx, tx := rx1-rx0, tx1-tx0
+		perHour := func(n int64) float64 { return float64(n) / el.Hours() / 1e6 }
+		t.Logf("%s, %v: video %d frames, %.0f kbit/s; Tailscale received %d B (%.0f kbit/s, %.0f MB/h), sent %d B (%.0f MB/h)",
+			name, el.Round(time.Second), f1-f0, float64(b1-b0)*8/el.Seconds()/1000, rx, float64(rx)*8/el.Seconds()/1000, perHour(rx), tx, perHour(tx))
+	}
+	measure("still screen", 60*time.Second, nil)
+	measure("scrolling every second", 30*time.Second, func(i int) {
+		from, to := screen.Point{X: 540, Y: 1500}, screen.Point{X: 540, Y: 600}
+		if i%2 == 1 {
+			from, to = to, from
+		}
+		b.Swipe(ctx, from, to, 300*time.Millisecond)
+	})
+	measure("a tap every 5 s", 30*time.Second, func(i int) {
+		if i%5 == 0 {
+			b.Swipe(ctx, screen.Point{X: 540, Y: 1500}, screen.Point{X: 540, Y: 1100}, 200*time.Millisecond)
+		}
+	})
 }
