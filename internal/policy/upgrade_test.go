@@ -41,6 +41,7 @@ func TestUntouchedDefaultsTakeTheNewPreset(t *testing.T) {
 	}
 	for _, name := range olds {
 		old, _ := oldDefaults.ReadFile(name)
+		old = lf(old) // as committed, whatever the checkout made of it
 		for _, data := range [][]byte{old, bytes.ReplaceAll(old, []byte("\n"), []byte("\r\n"))} {
 			e, after := loadFile(t, data)
 			if e.Preset() != PresetPayments || !bytes.Equal(after, defaultRulesYAML) {
@@ -103,5 +104,23 @@ func TestUntouchedDefaultsTakeTheNewPreset(t *testing.T) {
 	mine := append(append([]byte(nil), legacy...), []byte("  - name: No Chatter\n    match: { app: Chatter }\n    decision: deny\n")...)
 	if e, _ := loadFile(t, mine); e.Preset() != PresetCommits {
 		t.Errorf("an edited file from before presets: preset %d, want %d", e.Preset(), PresetCommits)
+	}
+}
+
+// TestBundledFilesAsCommitted: the rules files Pinky bundles have Unix
+// line ends on every system, as they are committed. A checkout that gives
+// them Windows ones (Git for Windows' core.autocrlf, which .gitattributes
+// turns off) builds a Pinky unlike the released one, and the tests that
+// edit rules.yaml by hand, line by line, fail on it.
+func TestBundledFilesAsCommitted(t *testing.T) {
+	files := map[string][]byte{"defaults.yaml": defaultRulesYAML, "apps.yaml": bundledAppsYAML}
+	olds, _ := fs.Glob(oldDefaults, "olddefaults/*.yaml")
+	for _, name := range olds {
+		files[name], _ = oldDefaults.ReadFile(name)
+	}
+	for name, data := range files {
+		if bytes.Contains(data, []byte("\r")) {
+			t.Errorf("%s has Windows line ends: the checkout changed it (see .gitattributes)", name)
+		}
 	}
 }
