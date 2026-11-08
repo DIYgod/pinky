@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- A blocked app's notifications are now hidden from agents in the notification shade, on the lock screen and in banners, and its card in recent apps too: the agent reads only that something is hidden there, and its screenshots, and those in Activity, cover it with a gray box.
+- Notifications of an app you blocked by its name are now hidden as well, not only those of apps blocked by their package.
+- Settings › Safety › Add app now offers the apps on your phones to pick from, and warns when the name you type matches none of them.
+- More Chinese banks' credit card apps are blocked by default, such as 买单吧, 发现精彩, 动卡空间, 浦大喜奔 and 全民生活, and Shanghai Pudong Development Bank's app is now recognized by its package.
+- A disk image you put in Pinky's folder yourself now gets the same offer to download the third-party mirror's image when Apple won't sign it.
+
 ## 2026.1109.2 (2026-11-09)
 
 - When Apple won't sign the developer disk image of Xcode on your Mac, Add phone now also offers to download the image from the third-party mirror, and Pinky then uses that image instead of the refused one, also after a restart.
