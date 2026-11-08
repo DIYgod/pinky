@@ -6,6 +6,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
@@ -140,4 +141,80 @@ func TestUseAwayFromHome(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "off", func() bool { tt.Frame(); return hasText(tt, "Use away from home is off for Pixel 9") })
+}
+
+// TestUseWiFiInstead moves an Android 10 phone on a cable to Wi-Fi from the
+// ⋯ menu under its mirror, through the dialog that says what it opens; a
+// restart then leaves it offline with what to do, and Settings › Phones
+// stops it.
+func TestUseWiFiInstead(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	id := ta.api.AddAndroid10("Pixel")
+	ta.sync()
+	ta.selectPhone(id)
+	tt := mg.NewTester(ta.view, 1280, 1000)
+	ta.waitFor(t, "the Wi-Fi switch", func() bool { tt.Frame(); _, ok := ta.wifi.got[id]; return ok })
+	if err := tt.Click(locales.PhoneMoreControls()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click("Use Wi-Fi instead…"); err != nil {
+		t.Fatalf("%v: %q", err, tt.Texts())
+	}
+	tt.Frame()
+	for _, want := range []string{"Use Pixel over Wi-Fi?", "192.168.1.42", "tap Cancel, never Allow", "use it only on Wi-Fi you trust"} {
+		if !hasText(tt, want) {
+			t.Fatalf("dialog lacks %q: %q", want, tt.Texts())
+		}
+	}
+	if err := tt.Click("Use Wi-Fi"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "on", func() bool { tt.Frame(); return hasText(tt, "Pixel is connected over Wi-Fi at 192.168.1.42. You can unplug it now.") })
+
+	// It restarts off the cable: its page says to plug it in once.
+	ta.api.RestartOnWiFi(id)
+	ta.sync()
+	tt.Frame()
+	if !hasText(tt, "Pixel's Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again in the ⋯ menu under its picture.") {
+		t.Fatalf("offline page: %q", tt.Texts())
+	}
+
+	// Settings › Phones says the same, and stops it.
+	ta.page, ta.set.sec = pageSettings, secPhones
+	ta.wifi.at[id] = ta.wifi.at[id].AddDate(0, 0, -1)
+	ta.waitFor(t, "the row", func() bool { tt.Frame(); return hasText(tt, "Pixel's Wi-Fi connection stopped") })
+}
+
+// TestWiFiRow: Settings › Phones offers the switch for an Android 10 phone
+// on a cable, not for a newer one.
+func TestWiFiRow(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	id := ta.api.AddAndroid10("Pixel")
+	ta.sync()
+	ta.page, ta.set.sec = pageSettings, secPhones
+	tt := mg.NewTester(ta.view, 1280, 1400)
+	ta.waitFor(t, "the row", func() bool { tt.Frame(); return hasText(tt, "Wi-Fi connection") })
+	tt.Frame()
+	if !hasText(tt, "Pixel has no Wireless debugging. Keep it on this computer's Wi-Fi, and Pinky can reach it without the cable.") {
+		t.Fatalf("row: %q", tt.Texts())
+	}
+	if hasText(tt, "Pixel 9 has no Wireless debugging") {
+		t.Error("offered to Android 16")
+	}
+	if err := tt.Click("Use Wi-Fi instead…"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click("Use Wi-Fi"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "on", func() bool { tt.Frame(); return hasText(tt, "On: Pinky reaches Pixel over Wi-Fi at 192.168.1.42") })
+	if err := tt.Click("Stop the Wi-Fi connection"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "off", func() bool { tt.Frame(); return hasText(tt, "Stopped Pixel's Wi-Fi connection") })
+	if st, _ := ta.api.WiFi(ta.ctx, id); st.On {
+		t.Fatalf("still on: %+v", st)
+	}
 }

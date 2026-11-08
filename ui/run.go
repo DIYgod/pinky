@@ -248,6 +248,7 @@ type app struct {
 	setup  setupState     // Settings › Agents › Connect an agent, and the sidebar's card
 	upd    updateState    // new versions of Pinky and the companion app
 	tn     tailnetState   // phones away from this computer's network, through Tailscale
+	wifi   wifiState      // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 
 	awake   func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
 	awakeOn bool

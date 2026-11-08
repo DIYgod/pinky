@@ -389,6 +389,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 				}
 				a.connectionRows(c, d)
 				a.awayRow(c, d)
+				a.wifiRow(c, d)
 				mg.Row(c).Padding(4, 0, 0, 0).Children(func() {
 					if linkButton(c, locales.PhoneCheckup()).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
 						a.openCheckup(d)

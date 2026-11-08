@@ -445,6 +445,22 @@ func (msgs Messages) AddAndroidNoPrompt() string {
 	return Catalog.Format(msgs.locale, "addAndroidNoPrompt", nil)
 }
 
+// AddAndroidNoWirelessDebugging says "This phone has no Wireless debugging. To use it without the cable, keep it on this computer's Wi-Fi:"
+// in the language the app shows.
+//
+// Add phone › Android, last step, for a phone without Wireless debugging
+// on a cable: above the button wiFiUse.
+func AddAndroidNoWirelessDebugging() string { return In(i18n.Locale()).AddAndroidNoWirelessDebugging() }
+
+// AddAndroidNoWirelessDebugging says "This phone has no Wireless debugging. To use it without the cable, keep it on this computer's Wi-Fi:"
+// in the language of msgs.
+//
+// Add phone › Android, last step, for a phone without Wireless debugging
+// on a cable: above the button wiFiUse.
+func (msgs Messages) AddAndroidNoWirelessDebugging() string {
+	return Catalog.Format(msgs.locale, "addAndroidNoWirelessDebugging", nil)
+}
+
 // AddAndroidNotSeen says "Nothing yet? Check that USB debugging is on, unlock the phone, and try another cable or port."
 // in the language the app shows.
 //
@@ -11687,6 +11703,22 @@ func (msgs Messages) PhoneAllPhones() string {
 	return Catalog.Format(msgs.locale, "phoneAllPhones", nil)
 }
 
+// PhoneAwayOff says "{name} stopped taking connections from afar, as it does when the phone restarts. When it's near this computer again, …"
+// in the language the app shows.
+//
+// An offline phone's page, for a phone used away from home whose adb
+// stopped listening.
+func PhoneAwayOff(name string) string { return In(i18n.Locale()).PhoneAwayOff(name) }
+
+// PhoneAwayOff says "{name} stopped taking connections from afar, as it does when the phone restarts. When it's near this computer again, …"
+// in the language of msgs.
+//
+// An offline phone's page, for a phone used away from home whose adb
+// stopped listening.
+func (msgs Messages) PhoneAwayOff(name string) string {
+	return Catalog.Format(msgs.locale, "phoneAwayOff", map[string]any{"name": name})
+}
+
 // PhoneBackgroundDesc says "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task."
 // in the language the app shows.
 //
@@ -11965,6 +11997,36 @@ func PhoneNeedsSetup(phone string) string { return In(i18n.Locale()).PhoneNeedsS
 // debugging off, not trusted); the system's reason shows under it.
 func (msgs Messages) PhoneNeedsSetup(phone string) string {
 	return Catalog.Format(msgs.locale, "phoneNeedsSetup", map[string]any{"phone": phone})
+}
+
+// PhoneNetworkAway says "{name} isn't on this network now. Pinky connects again by itself once it's back."
+// in the language the app shows.
+//
+// An offline phone's page, for a phone moved to Wi-Fi that does not answer.
+func PhoneNetworkAway(name string) string { return In(i18n.Locale()).PhoneNetworkAway(name) }
+
+// PhoneNetworkAway says "{name} isn't on this network now. Pinky connects again by itself once it's back."
+// in the language of msgs.
+//
+// An offline phone's page, for a phone moved to Wi-Fi that does not answer.
+func (msgs Messages) PhoneNetworkAway(name string) string {
+	return Catalog.Format(msgs.locale, "phoneNetworkAway", map[string]any{"name": name})
+}
+
+// PhoneNetworkOff says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again i…"
+// in the language the app shows.
+//
+// An offline phone's page, for a phone moved to Wi-Fi whose adb stopped
+// listening (it restarted).
+func PhoneNetworkOff(name string) string { return In(i18n.Locale()).PhoneNetworkOff(name) }
+
+// PhoneNetworkOff says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again i…"
+// in the language of msgs.
+//
+// An offline phone's page, for a phone moved to Wi-Fi whose adb stopped
+// listening (it restarted).
+func (msgs Messages) PhoneNetworkOff(name string) string {
+	return Catalog.Format(msgs.locale, "phoneNetworkOff", map[string]any{"name": name})
 }
 
 // PhoneNoPhones says "No phones yet"
@@ -12281,6 +12343,22 @@ func PhoneShowOnMirror() string { return In(i18n.Locale()).PhoneShowOnMirror() }
 // agent's screen and the phone's.
 func (msgs Messages) PhoneShowOnMirror() string {
 	return Catalog.Format(msgs.locale, "phoneShowOnMirror", nil)
+}
+
+// PhoneTailnetAway says "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online."
+// in the language the app shows.
+//
+// An offline phone's page, for a phone used away from home that does not
+// answer through Tailscale.
+func PhoneTailnetAway(name string) string { return In(i18n.Locale()).PhoneTailnetAway(name) }
+
+// PhoneTailnetAway says "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online."
+// in the language of msgs.
+//
+// An offline phone's page, for a phone used away from home that does not
+// answer through Tailscale.
+func (msgs Messages) PhoneTailnetAway(name string) string {
+	return Catalog.Format(msgs.locale, "phoneTailnetAway", map[string]any{"name": name})
 }
 
 // PhoneTakeOver says "Take over"
@@ -20845,4 +20923,304 @@ func UpdateWhereUnsigned() string { return In(i18n.Locale()).UpdateWhereUnsigned
 // other languages; in English internal/update's own words show.
 func (msgs Messages) UpdateWhereUnsigned() string {
 	return Catalog.Format(msgs.locale, "updateWhereUnsigned", nil)
+}
+
+// WiFiAlsoAway says "Stopping it also stops Use away from home."
+// in the language the app shows.
+//
+// After wiFiOnDesc when the phone is used away from home too. Use away from
+// home is awayTitle.
+func WiFiAlsoAway() string { return In(i18n.Locale()).WiFiAlsoAway() }
+
+// WiFiAlsoAway says "Stopping it also stops Use away from home."
+// in the language of msgs.
+//
+// After wiFiOnDesc when the phone is used away from home too. Use away from
+// home is awayTitle.
+func (msgs Messages) WiFiAlsoAway() string {
+	return Catalog.Format(msgs.locale, "wiFiAlsoAway", nil)
+}
+
+// WiFiBusy says "Switching…"
+// in the language the app shows.
+//
+// Under wiFiTitle while the switch changes.
+func WiFiBusy() string { return In(i18n.Locale()).WiFiBusy() }
+
+// WiFiBusy says "Switching…"
+// in the language of msgs.
+//
+// Under wiFiTitle while the switch changes.
+func (msgs Messages) WiFiBusy() string {
+	return Catalog.Format(msgs.locale, "wiFiBusy", nil)
+}
+
+// WiFiDialogCancel says "Cancel"
+// in the language the app shows.
+//
+// The dialog's cancel button.
+func WiFiDialogCancel() string { return In(i18n.Locale()).WiFiDialogCancel() }
+
+// WiFiDialogCancel says "Cancel"
+// in the language of msgs.
+//
+// The dialog's cancel button.
+func (msgs Messages) WiFiDialogCancel() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogCancel", nil)
+}
+
+// WiFiDialogConfirm says "Use Wi-Fi"
+// in the language the app shows.
+//
+// The dialog's button that moves the phone to Wi-Fi.
+func WiFiDialogConfirm() string { return In(i18n.Locale()).WiFiDialogConfirm() }
+
+// WiFiDialogConfirm says "Use Wi-Fi"
+// in the language of msgs.
+//
+// The dialog's button that moves the phone to Wi-Fi.
+func (msgs Messages) WiFiDialogConfirm() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogConfirm", nil)
+}
+
+// WiFiDialogRisk says "While it's on, any computer on the same network can try to connect to the phone. If the phone asks \"Allow USB debuggi…"
+// in the language the app shows.
+//
+// The dialog: the risk, in a warning box. Allow USB debugging? is Android's
+// own prompt; use its words in Android's Simplified Chinese.
+func WiFiDialogRisk() string { return In(i18n.Locale()).WiFiDialogRisk() }
+
+// WiFiDialogRisk says "While it's on, any computer on the same network can try to connect to the phone. If the phone asks \"Allow USB debuggi…"
+// in the language of msgs.
+//
+// The dialog: the risk, in a warning box. Allow USB debugging? is Android's
+// own prompt; use its words in Android's Simplified Chinese.
+func (msgs Messages) WiFiDialogRisk() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogRisk", nil)
+}
+
+// WiFiDialogTitle says "Use {name} over Wi-Fi?"
+// in the language the app shows.
+//
+// The dialog before moving a phone to Wi-Fi: its title.
+func WiFiDialogTitle(name string) string { return In(i18n.Locale()).WiFiDialogTitle(name) }
+
+// WiFiDialogTitle says "Use {name} over Wi-Fi?"
+// in the language of msgs.
+//
+// The dialog before moving a phone to Wi-Fi: its title.
+func (msgs Messages) WiFiDialogTitle(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiDialogTitle", map[string]any{"name": name})
+}
+
+// WiFiDialogUntil says "It lasts until the phone restarts: then plug it in once and choose Use Wi-Fi again. Stop it any time from the ⋯ men…"
+// in the language the app shows.
+//
+// The dialog: how long it lasts and how to stop it.
+func WiFiDialogUntil() string { return In(i18n.Locale()).WiFiDialogUntil() }
+
+// WiFiDialogUntil says "It lasts until the phone restarts: then plug it in once and choose Use Wi-Fi again. Stop it any time from the ⋯ men…"
+// in the language of msgs.
+//
+// The dialog: how long it lasts and how to stop it.
+func (msgs Messages) WiFiDialogUntil() string {
+	return Catalog.Format(msgs.locale, "wiFiDialogUntil", nil)
+}
+
+// WiFiDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it over Wi-Fi at {ad…"
+// in the language the app shows.
+//
+// The dialog: what it does. addr is the phone's Wi-Fi address. adb tcpip is
+// a command; keep it.
+func WiFiDialogWhat(addr string) string { return In(i18n.Locale()).WiFiDialogWhat(addr) }
+
+// WiFiDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it over Wi-Fi at {ad…"
+// in the language of msgs.
+//
+// The dialog: what it does. addr is the phone's Wi-Fi address. adb tcpip is
+// a command; keep it.
+func (msgs Messages) WiFiDialogWhat(addr string) string {
+	return Catalog.Format(msgs.locale, "wiFiDialogWhat", map[string]any{"addr": addr})
+}
+
+// WiFiFailed says "Couldn't change {name}'s Wi-Fi connection: {error}"
+// in the language the app shows.
+//
+// When moving the phone to Wi-Fi or back failed; error is in English.
+func WiFiFailed(name string, error string) string { return In(i18n.Locale()).WiFiFailed(name, error) }
+
+// WiFiFailed says "Couldn't change {name}'s Wi-Fi connection: {error}"
+// in the language of msgs.
+//
+// When moving the phone to Wi-Fi or back failed; error is in English.
+func (msgs Messages) WiFiFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "wiFiFailed", map[string]any{"name": name, "error": error})
+}
+
+// WiFiNeedsCable says "Plug {name} in to turn this on."
+// in the language the app shows.
+//
+// Under wiFiTitle while the phone is not on a cable.
+func WiFiNeedsCable(name string) string { return In(i18n.Locale()).WiFiNeedsCable(name) }
+
+// WiFiNeedsCable says "Plug {name} in to turn this on."
+// in the language of msgs.
+//
+// Under wiFiTitle while the phone is not on a cable.
+func (msgs Messages) WiFiNeedsCable(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiNeedsCable", map[string]any{"name": name})
+}
+
+// WiFiNoWiFi says "{name} isn't on Wi-Fi. Connect it to the same Wi-Fi as this computer."
+// in the language the app shows.
+//
+// Under wiFiTitle while the phone has no Wi-Fi address.
+func WiFiNoWiFi(name string) string { return In(i18n.Locale()).WiFiNoWiFi(name) }
+
+// WiFiNoWiFi says "{name} isn't on Wi-Fi. Connect it to the same Wi-Fi as this computer."
+// in the language of msgs.
+//
+// Under wiFiTitle while the phone has no Wi-Fi address.
+func (msgs Messages) WiFiNoWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiNoWiFi", map[string]any{"name": name})
+}
+
+// WiFiOffDesc says "{name} has no Wireless debugging. Keep it on this computer's Wi-Fi, and Pinky can reach it without the cable."
+// in the language the app shows.
+//
+// Under wiFiTitle while it is off. Wireless debugging is Android's own
+// name.
+func WiFiOffDesc(name string) string { return In(i18n.Locale()).WiFiOffDesc(name) }
+
+// WiFiOffDesc says "{name} has no Wireless debugging. Keep it on this computer's Wi-Fi, and Pinky can reach it without the cable."
+// in the language of msgs.
+//
+// Under wiFiTitle while it is off. Wireless debugging is Android's own
+// name.
+func (msgs Messages) WiFiOffDesc(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiOffDesc", map[string]any{"name": name})
+}
+
+// WiFiOffToast says "Stopped {name}'s Wi-Fi connection"
+// in the language the app shows.
+//
+// A toast once the Wi-Fi connection stopped.
+func WiFiOffToast(name string) string { return In(i18n.Locale()).WiFiOffToast(name) }
+
+// WiFiOffToast says "Stopped {name}'s Wi-Fi connection"
+// in the language of msgs.
+//
+// A toast once the Wi-Fi connection stopped.
+func (msgs Messages) WiFiOffToast(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiOffToast", map[string]any{"name": name})
+}
+
+// WiFiOnDesc says "On: Pinky reaches {name} over Wi-Fi at {addr}, and again by itself whenever it is back on this network."
+// in the language the app shows.
+//
+// Under wiFiTitle while it is on: addr is the phone's Wi-Fi address.
+func WiFiOnDesc(name string, addr string) string { return In(i18n.Locale()).WiFiOnDesc(name, addr) }
+
+// WiFiOnDesc says "On: Pinky reaches {name} over Wi-Fi at {addr}, and again by itself whenever it is back on this network."
+// in the language of msgs.
+//
+// Under wiFiTitle while it is on: addr is the phone's Wi-Fi address.
+func (msgs Messages) WiFiOnDesc(name string, addr string) string {
+	return Catalog.Format(msgs.locale, "wiFiOnDesc", map[string]any{"name": name, "addr": addr})
+}
+
+// WiFiOnToast says "{name} is connected over Wi-Fi at {addr}. You can unplug it now."
+// in the language the app shows.
+//
+// A toast once the phone moved to Wi-Fi.
+func WiFiOnToast(name string, addr string) string { return In(i18n.Locale()).WiFiOnToast(name, addr) }
+
+// WiFiOnToast says "{name} is connected over Wi-Fi at {addr}. You can unplug it now."
+// in the language of msgs.
+//
+// A toast once the phone moved to Wi-Fi.
+func (msgs Messages) WiFiOnToast(name string, addr string) string {
+	return Catalog.Format(msgs.locale, "wiFiOnToast", map[string]any{"name": name, "addr": addr})
+}
+
+// WiFiStop says "Stop the Wi-Fi connection"
+// in the language the app shows.
+//
+// The ⋯ menu and Settings › Phones: has the phone's adb stop listening
+// on the network (adb usb). Pinky then reaches it by cable only.
+func WiFiStop() string { return In(i18n.Locale()).WiFiStop() }
+
+// WiFiStop says "Stop the Wi-Fi connection"
+// in the language of msgs.
+//
+// The ⋯ menu and Settings › Phones: has the phone's adb stop listening
+// on the network (adb usb). Pinky then reaches it by cable only.
+func (msgs Messages) WiFiStop() string {
+	return Catalog.Format(msgs.locale, "wiFiStop", nil)
+}
+
+// WiFiStoppedDesc says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again."
+// in the language the app shows.
+//
+// Under wiFiTitle when the phone's adb no longer listens on the network.
+// Use Wi-Fi again is wiFiUseAgain.
+func WiFiStoppedDesc(name string) string { return In(i18n.Locale()).WiFiStoppedDesc(name) }
+
+// WiFiStoppedDesc says "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again."
+// in the language of msgs.
+//
+// Under wiFiTitle when the phone's adb no longer listens on the network.
+// Use Wi-Fi again is wiFiUseAgain.
+func (msgs Messages) WiFiStoppedDesc(name string) string {
+	return Catalog.Format(msgs.locale, "wiFiStoppedDesc", map[string]any{"name": name})
+}
+
+// WiFiTitle says "Wi-Fi connection"
+// in the language the app shows.
+//
+// Settings › Phones, under an Android phone without Wireless debugging:
+// the title of its Wi-Fi switch.
+func WiFiTitle() string { return In(i18n.Locale()).WiFiTitle() }
+
+// WiFiTitle says "Wi-Fi connection"
+// in the language of msgs.
+//
+// Settings › Phones, under an Android phone without Wireless debugging:
+// the title of its Wi-Fi switch.
+func (msgs Messages) WiFiTitle() string {
+	return Catalog.Format(msgs.locale, "wiFiTitle", nil)
+}
+
+// WiFiUse says "Use Wi-Fi instead…"
+// in the language the app shows.
+//
+// The ⋯ menu under the mirror, Settings › Phones and Add phone, for an
+// Android phone without Wireless debugging (Android 10) on a cable: opens
+// the dialog that moves it to Wi-Fi.
+func WiFiUse() string { return In(i18n.Locale()).WiFiUse() }
+
+// WiFiUse says "Use Wi-Fi instead…"
+// in the language of msgs.
+//
+// The ⋯ menu under the mirror, Settings › Phones and Add phone, for an
+// Android phone without Wireless debugging (Android 10) on a cable: opens
+// the dialog that moves it to Wi-Fi.
+func (msgs Messages) WiFiUse() string {
+	return Catalog.Format(msgs.locale, "wiFiUse", nil)
+}
+
+// WiFiUseAgain says "Use Wi-Fi again"
+// in the language the app shows.
+//
+// The same, for a phone whose Wi-Fi connection stopped when it restarted,
+// now plugged in again: moves it to Wi-Fi at once.
+func WiFiUseAgain() string { return In(i18n.Locale()).WiFiUseAgain() }
+
+// WiFiUseAgain says "Use Wi-Fi again"
+// in the language of msgs.
+//
+// The same, for a phone whose Wi-Fi connection stopped when it restarted,
+// now plugged in again: moves it to Wi-Fi at once.
+func (msgs Messages) WiFiUseAgain() string {
+	return Catalog.Format(msgs.locale, "wiFiUseAgain", nil)
 }

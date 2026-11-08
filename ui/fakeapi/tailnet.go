@@ -19,6 +19,7 @@ type fakeTailnet struct {
 	st        driver.TailnetStatus
 	listening map[string]bool // addresses where adb listens, "addr:port"
 	away      map[string]driver.Away
+	wifi      map[string]driver.WiFiState // phones moved to Wi-Fi (wifiswitch)
 }
 
 // tailnetLocked returns the fake's Tailscale, set up on first use.
@@ -29,6 +30,7 @@ func (a *API) tailnetLocked() *fakeTailnet {
 				Phones: []driver.TailnetPhone{{Name: "pixel-8a", Addr: "100.101.2.2", Online: true}}},
 			listening: map[string]bool{},
 			away:      map[string]driver.Away{},
+			wifi:      map[string]driver.WiFiState{},
 		}
 	}
 	return a.tn
@@ -149,4 +151,98 @@ func (a *API) SetAway(ctx context.Context, deviceID string, on bool) (driver.Awa
 	}
 	a.mu.Unlock()
 	return aw, nil
+}
+
+// AddAndroid10 adds an online Android 10 phone on a cable, which has no
+// Wireless debugging, and returns its id.
+func (a *API) AddAndroid10(name string) string {
+	a.mu.Lock()
+	a.nextID++
+	id := fmt.Sprintf("%s-%d", strings.ToLower(strings.ReplaceAll(name, " ", "-")), a.nextID)
+	d := &device{
+		info: driver.Info{ID: id, Platform: driver.Android, Name: name, Model: name, OSVersion: "10",
+			Connection: "usb", Backend: "scrcpy", State: driver.StateOnline},
+		width: 1080, height: 1920, codec: driver.H264, source: "rgbtestsrc", companion: driver.CompanionOn,
+	}
+	a.devices = append(a.devices, d)
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	return id
+}
+
+// RestartOnWiFi has a phone moved to Wi-Fi restart off its cable: its adb
+// no longer listens on the network, so it is offline until plugged in.
+func (a *API) RestartOnWiFi(deviceID string) {
+	a.mu.Lock()
+	if d := a.device(deviceID); d != nil {
+		d.info.State, d.info.Connection, d.info.Setup = driver.StateOffline, "wifi", driver.SetupNetworkOff
+		tn := a.tailnetLocked()
+		st := tn.wifi[deviceID]
+		st.Listening, st.Connected, st.Stopped = false, false, true
+		tn.wifi[deviceID] = st
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+}
+
+// WiFi implements the client's wifiSwitcher: an Android phone on a cable
+// can be moved to Wi-Fi.
+func (a *API) WiFi(ctx context.Context, deviceID string) (driver.WiFiState, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	d := a.device(deviceID)
+	if d == nil {
+		return driver.WiFiState{}, fmt.Errorf("fakeapi: no device %q: %w", deviceID, driver.ErrNotFound)
+	}
+	if d.info.Platform != driver.Android {
+		return driver.WiFiState{}, fmt.Errorf("%s cannot move to Wi-Fi this way: %w", d.info.Name, driver.ErrUnsupported)
+	}
+	tn := a.tailnetLocked()
+	if st, ok := tn.wifi[deviceID]; ok {
+		return st, nil
+	}
+	st := driver.WiFiState{Port: 5555, Addr: "192.168.1.42"}
+	if d.info.Connection != "usb" || d.info.State != driver.StateOnline {
+		st.Addr, st.Missing = "", driver.WiFiNeedsCable
+	}
+	return st, nil
+}
+
+// SetWiFi implements the client's wifiSwitcher, taking a moment as adb
+// restarts.
+func (a *API) SetWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error) {
+	st, err := a.WiFi(ctx, deviceID)
+	if err != nil {
+		return st, err
+	}
+	if on && st.Missing != "" {
+		return st, fmt.Errorf("fakeapi: %s: %w", st.Missing, driver.ErrOffline)
+	}
+	select {
+	case <-ctx.Done():
+		return driver.WiFiState{}, ctx.Err()
+	case <-time.After(time.Duration(float64(1500*time.Millisecond) / a.opt.Speed)):
+	}
+	a.mu.Lock()
+	tn := a.tailnetLocked()
+	if on {
+		st = driver.WiFiState{On: true, Connected: true, Listening: true, Addr: nonEmpty(st.Addr, "192.168.1.42"), Port: 5555}
+		tn.wifi[deviceID] = st
+		if d := a.device(deviceID); d != nil {
+			d.info.Setup = ""
+		}
+	} else {
+		delete(tn.wifi, deviceID)
+		st = driver.WiFiState{Port: 5555}
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+	return st, nil
+}
+
+func nonEmpty(s, or string) string {
+	if s == "" {
+		return or
+	}
+	return s
 }

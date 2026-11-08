@@ -150,6 +150,7 @@ func (a *app) addAndroid(c *mg.Context) {
 				}
 			})
 			a.checkupList(c, *d, run, true)
+			a.addAndroidWiFi(c, *d)
 		})
 	})
 	if online {

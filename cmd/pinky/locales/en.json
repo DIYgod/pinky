@@ -140,6 +140,10 @@
   "@addAndroidNoPrompt": {
     "description": "Add phone › Android, step 3, and the checkup: what to try when the phone shows no prompt to allow this computer. File transfer and Revoke USB debugging authorizations are Android's own names: use those of Android's Simplified Chinese settings."
   },
+  "addAndroidNoWirelessDebugging": "This phone has no Wireless debugging. To use it without the cable, keep it on this computer's Wi-Fi:",
+  "@addAndroidNoWirelessDebugging": {
+    "description": "Add phone › Android, last step, for a phone without Wireless debugging on a cable: above the button wiFiUse."
+  },
   "addAndroidNotSeen": "Nothing yet? Check that USB debugging is on, unlock the phone, and try another cable or port.",
   "@addAndroidNotSeen": {
     "description": "Add phone › Android, step 3: under the spinner while no phone shows up."
@@ -4300,6 +4304,16 @@
   "@phoneAllPhones": {
     "description": "The Phones page's title when it shows every phone as live tiles."
   },
+  "phoneAwayOff": "{name} stopped taking connections from afar, as it does when the phone restarts. When it's near this computer again, turn Use away from home on again in Settings › Phones.",
+  "@phoneAwayOff": {
+    "description": "An offline phone's page, for a phone used away from home whose adb stopped listening.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
   "phoneBackgroundDesc": "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task.",
   "@phoneBackgroundDesc": {
     "description": "Under Work in the background in ⋯ under the mirror: what the switch does, and that it applies from the agent's next task."
@@ -4399,6 +4413,26 @@
       "phone": {
         "type": "String",
         "example": "Pixel 9"
+      }
+    }
+  },
+  "phoneNetworkAway": "{name} isn't on this network now. Pinky connects again by itself once it's back.",
+  "@phoneNetworkAway": {
+    "description": "An offline phone's page, for a phone moved to Wi-Fi that does not answer.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "phoneNetworkOff": "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again in the ⋯ menu under its picture.",
+  "@phoneNetworkOff": {
+    "description": "An offline phone's page, for a phone moved to Wi-Fi whose adb stopped listening (it restarted).",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
       }
     }
   },
@@ -4537,6 +4571,16 @@
   "phoneShowOnMirror": "Show on the mirror",
   "@phoneShowOnMirror": {
     "description": "The accessibility label of the switch under the mirror between the agent's screen and the phone's."
+  },
+  "phoneTailnetAway": "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online.",
+  "@phoneTailnetAway": {
+    "description": "An offline phone's page, for a phone used away from home that does not answer through Tailscale.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
   },
   "phoneTakeOver": "Take over",
   "@phoneTakeOver": {
@@ -7557,5 +7601,157 @@
   "updateWhereUnsigned": "This copy of Pinky isn't signed by Pinky's developer (a build made on this Mac), so it doesn't replace itself.",
   "@updateWhereUnsigned": {
     "description": "Why this Pinky cannot update itself: it is a local build. Shown only in other languages; in English internal/update's own words show."
+  },
+  "wiFiAlsoAway": "Stopping it also stops Use away from home.",
+  "@wiFiAlsoAway": {
+    "description": "After wiFiOnDesc when the phone is used away from home too. Use away from home is awayTitle."
+  },
+  "wiFiBusy": "Switching…",
+  "@wiFiBusy": {
+    "description": "Under wiFiTitle while the switch changes."
+  },
+  "wiFiDialogCancel": "Cancel",
+  "@wiFiDialogCancel": {
+    "description": "The dialog's cancel button."
+  },
+  "wiFiDialogConfirm": "Use Wi-Fi",
+  "@wiFiDialogConfirm": {
+    "description": "The dialog's button that moves the phone to Wi-Fi."
+  },
+  "wiFiDialogRisk": "While it's on, any computer on the same network can try to connect to the phone. If the phone asks \"Allow USB debugging?\" when you aren't connecting it yourself, tap Cancel, never Allow. The connection isn't encrypted, so use it only on Wi-Fi you trust.",
+  "@wiFiDialogRisk": {
+    "description": "The dialog: the risk, in a warning box. Allow USB debugging? is Android's own prompt; use its words in Android's Simplified Chinese."
+  },
+  "wiFiDialogTitle": "Use {name} over Wi-Fi?",
+  "@wiFiDialogTitle": {
+    "description": "The dialog before moving a phone to Wi-Fi: its title.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiDialogUntil": "It lasts until the phone restarts: then plug it in once and choose Use Wi-Fi again. Stop it any time from the ⋯ menu under the phone's picture or in Settings › Phones.",
+  "@wiFiDialogUntil": {
+    "description": "The dialog: how long it lasts and how to stop it."
+  },
+  "wiFiDialogWhat": "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it over Wi-Fi at {addr}. You can then unplug it.",
+  "@wiFiDialogWhat": {
+    "description": "The dialog: what it does. addr is the phone's Wi-Fi address. adb tcpip is a command; keep it.",
+    "placeholders": {
+      "addr": {
+        "type": "String",
+        "example": "192.168.1.42"
+      }
+    }
+  },
+  "wiFiFailed": "Couldn't change {name}'s Wi-Fi connection: {error}",
+  "@wiFiFailed": {
+    "description": "When moving the phone to Wi-Fi or back failed; error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone is not on Wi-Fi"
+      }
+    }
+  },
+  "wiFiNeedsCable": "Plug {name} in to turn this on.",
+  "@wiFiNeedsCable": {
+    "description": "Under wiFiTitle while the phone is not on a cable.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiNoWiFi": "{name} isn't on Wi-Fi. Connect it to the same Wi-Fi as this computer.",
+  "@wiFiNoWiFi": {
+    "description": "Under wiFiTitle while the phone has no Wi-Fi address.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiOffDesc": "{name} has no Wireless debugging. Keep it on this computer's Wi-Fi, and Pinky can reach it without the cable.",
+  "@wiFiOffDesc": {
+    "description": "Under wiFiTitle while it is off. Wireless debugging is Android's own name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiOffToast": "Stopped {name}'s Wi-Fi connection",
+  "@wiFiOffToast": {
+    "description": "A toast once the Wi-Fi connection stopped.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiOnDesc": "On: Pinky reaches {name} over Wi-Fi at {addr}, and again by itself whenever it is back on this network.",
+  "@wiFiOnDesc": {
+    "description": "Under wiFiTitle while it is on: addr is the phone's Wi-Fi address.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      },
+      "addr": {
+        "type": "String",
+        "example": "192.168.1.42"
+      }
+    }
+  },
+  "wiFiOnToast": "{name} is connected over Wi-Fi at {addr}. You can unplug it now.",
+  "@wiFiOnToast": {
+    "description": "A toast once the phone moved to Wi-Fi.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      },
+      "addr": {
+        "type": "String",
+        "example": "192.168.1.42"
+      }
+    }
+  },
+  "wiFiStop": "Stop the Wi-Fi connection",
+  "@wiFiStop": {
+    "description": "The ⋯ menu and Settings › Phones: has the phone's adb stop listening on the network (adb usb). Pinky then reaches it by cable only."
+  },
+  "wiFiStoppedDesc": "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again.",
+  "@wiFiStoppedDesc": {
+    "description": "Under wiFiTitle when the phone's adb no longer listens on the network. Use Wi-Fi again is wiFiUseAgain.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiTitle": "Wi-Fi connection",
+  "@wiFiTitle": {
+    "description": "Settings › Phones, under an Android phone without Wireless debugging: the title of its Wi-Fi switch."
+  },
+  "wiFiUse": "Use Wi-Fi instead…",
+  "@wiFiUse": {
+    "description": "The ⋯ menu under the mirror, Settings › Phones and Add phone, for an Android phone without Wireless debugging (Android 10) on a cable: opens the dialog that moves it to Wi-Fi."
+  },
+  "wiFiUseAgain": "Use Wi-Fi again",
+  "@wiFiUseAgain": {
+    "description": "The same, for a phone whose Wi-Fi connection stopped when it restarted, now plugged in again: moves it to Wi-Fi at once."
   }
 }
