@@ -21,7 +21,9 @@ func TestAddTailnet(t *testing.T) {
 	ta.page = pageAddPhone
 	ta.add.reset(ta.app)
 	ta.add.step = "android"
-	tt := mg.NewTester(ta.view, 1280, 1000)
+	// Tall enough for the steps of every system (Windows adds the USB
+	// driver's), so the link is in view.
+	tt := mg.NewTester(ta.view, 1280, 1700)
 	tt.Frame()
 	if err := tt.Click("Phone not on this network? Use Tailscale"); err != nil {
 		t.Fatal(err)
@@ -170,7 +172,10 @@ func TestUseWiFiInstead(t *testing.T) {
 	if err := tt.Click("Use Wi-Fi"); err != nil {
 		t.Fatal(err)
 	}
-	ta.waitFor(t, "on", func() bool { tt.Frame(); return hasText(tt, "Pixel is connected over Wi-Fi at 192.168.1.42. You can unplug it now.") })
+	ta.waitFor(t, "on", func() bool {
+		tt.Frame()
+		return hasText(tt, "Pixel is connected over Wi-Fi at 192.168.1.42. You can unplug it now.")
+	})
 
 	// It restarts off the cable: its page says to plug it in once.
 	ta.api.RestartOnWiFi(id)

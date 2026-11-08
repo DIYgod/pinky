@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -228,7 +229,7 @@ func TestNetStore(t *testing.T) {
 	if err := s.update("other", func(n *netPhone) { n.LAN = "192.168.1.7" }); err != nil {
 		t.Fatal(err)
 	}
-	if fi, err := os.Stat(path); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(path); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("file: %v, %v", fi, err)
 	}
 	// Read back from the file.
