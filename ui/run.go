@@ -79,9 +79,13 @@ type Options struct {
 	// switch for usage statistics and crash reports.
 	Telemetry *telemetry.Client
 	// Updates finds and installs new versions of Pinky; nil leaves updates
-	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new.
-	Updates   *update.Updater
-	Changelog string
+	// out (tests, the demo). Changelog is CHANGELOG.md, for What's new, and
+	// ChangelogTranslations are its translations by the catalogs' language
+	// tags ("zh-Hans": CHANGELOG.zh-CN.md), which What's new shows in their
+	// language, with CHANGELOG.md's notes of a version they lack.
+	Updates               *update.Updater
+	Changelog             string
+	ChangelogTranslations map[string]string
 	// AgentSetup finds the agents on this computer and adds Pinky to them
 	// when the person clicks Connect in Settings › Agents, or in the
 	// sidebar's card while no agent can reach Pinky; nil shows only the

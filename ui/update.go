@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/markdown"
 
@@ -532,7 +533,7 @@ func (a *app) updateCard(c *mg.Context) {
 			})
 		default:
 			head(locales.UpdateAvailable(v))
-			if s.rel.Notes != "" {
+			if s.rel.NotesIn(i18n.Locale()) != "" {
 				if linkButton(c, locales.UpdateWhatsNew()).AlignSelf(mg.Start).Label(locales.UpdateWhatsNewIn(v)).Clicked() {
 					s.notesOpen = true
 				}
@@ -621,7 +622,10 @@ func (a *app) news(all bool) (title, line, md string, show bool) {
 	var parts []string
 	if update.IsRelease(from) || all {
 		entries := update.Since(update.ParseChangelog(a.opt.Changelog), from, a.opt.Version)
-		if md := update.Markdown(entries); md != "" {
+		if tr := update.InLanguage(a.opt.ChangelogTranslations, i18n.Locale()); tr != "" {
+			entries = update.Translate(entries, update.ParseChangelog(tr))
+		}
+		if md := update.Markdown(entries, locales.DayOtherYear); md != "" {
 			parts = append(parts, md)
 		}
 	}
@@ -711,7 +715,7 @@ func (a *app) updateDialogs(c *mg.Context) {
 	if s.notesOpen && s.rel != nil {
 		r := s.rel
 		mg.Modal(c.Key("release-notes"), &s.notesOpen, func() {
-			a.notesDialog(c, "Pinky "+r.Version, r.Date, r.Notes, func() {
+			a.notesDialog(c, "Pinky "+r.Version, r.Date, r.NotesIn(i18n.Locale()), func() {
 				if s.phase == updIdle || s.phase == updFailed {
 					if button(c, locales.UpdateNowButton(), btnOpt{kind: btnPrimary}).Clicked() {
 						s.notesOpen = false

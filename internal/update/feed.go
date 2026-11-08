@@ -12,9 +12,11 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo/i18n"
 	"github.com/egoist/mygo/netproxy"
 )
 
@@ -55,11 +57,47 @@ func Platform() string { return runtime.GOOS + "-" + runtime.GOARCH }
 
 // Feed is latest.json: the newest release.
 type Feed struct {
-	Version string           `json:"version"`
-	Tag     string           `json:"tag"`
-	Date    time.Time        `json:"-"`
-	Notes   string           `json:"notes"` // Markdown
-	Assets  map[string]Asset `json:"assets"`
+	Version string    `json:"version"`
+	Tag     string    `json:"tag"`
+	Date    time.Time `json:"-"`
+	Notes   string    `json:"notes"` // Markdown, in English
+	// LocalizedNotes are the notes in other languages, by the language tags
+	// of the app's catalogs (zh-Hans); a release without a translation has
+	// none.
+	LocalizedNotes map[string]string `json:"localized_notes"`
+	Assets         map[string]Asset  `json:"assets"`
+}
+
+// NotesIn returns the release's notes in lang, the language the app shows,
+// or the English ones when the feed has none in it.
+func (f Feed) NotesIn(lang string) string {
+	if n := InLanguage(f.LocalizedNotes, lang); n != "" {
+		return n
+	}
+	return f.Notes
+}
+
+// InLanguage returns the text of byLang, texts by language tag, that suits
+// a reader of lang (the same tag, or as i18n.Match finds), or "" when none
+// does or that one is blank.
+func InLanguage(byLang map[string]string, lang string) string {
+	if lang == "" || len(byLang) == 0 {
+		return ""
+	}
+	if t := strings.TrimSpace(byLang[lang]); t != "" {
+		return t
+	}
+	langs := make([]string, 0, len(byLang))
+	for l, t := range byLang {
+		if strings.TrimSpace(t) != "" {
+			langs = append(langs, l)
+		}
+	}
+	sort.Strings(langs)
+	if m := i18n.Match([]string{lang}, langs); m != "" {
+		return strings.TrimSpace(byLang[m])
+	}
+	return ""
 }
 
 // Asset is one platform's download.

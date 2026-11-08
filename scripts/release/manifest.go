@@ -17,11 +17,16 @@ import (
 // https://github.com/<releases repo>/releases/latest/download/latest.json,
 // where the app's updater reads it.
 type Manifest struct {
-	Version string           `json:"version"` // 2026.1107.1
-	Tag     string           `json:"tag"`     // v2026.1107.1
-	Date    string           `json:"date"`    // RFC 3339, when the release was assembled
-	Notes   string           `json:"notes"`   // Markdown: the version's section of CHANGELOG.md
-	Assets  map[string]Asset `json:"assets"`  // by platform, as darwin-arm64
+	Version string `json:"version"` // 2026.1107.1
+	Tag     string `json:"tag"`     // v2026.1107.1
+	Date    string `json:"date"`    // RFC 3339, when the release was assembled
+	Notes   string `json:"notes"`   // Markdown: the version's section of CHANGELOG.md
+	// LocalizedNotes are Notes in other languages, by the language tags of
+	// the app's catalogs (zh-Hans): the version's section of each
+	// translation of the changelog that has one. Versions of the app before
+	// it read only Notes.
+	LocalizedNotes map[string]string `json:"localized_notes,omitempty"`
+	Assets         map[string]Asset  `json:"assets"` // by platform, as darwin-arm64
 }
 
 // Asset is the archive of one platform that the updater installs.
