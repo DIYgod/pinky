@@ -165,6 +165,12 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStuck(), locales.AddPhoneIPhoneRetrying()
 	case driver.SetupUpdate:
 		return locales.AddPhoneIPhoneTooOldTitle(d.Info.Name), locales.AddPhoneIPhoneTooOld(d.Info.OSVersion), ""
+	case driver.SetupPasscode:
+		// iOS asks now and then before the helper may control the phone.
+		return locales.AddPhoneIPhoneStepPasscode(), locales.AddPhoneIPhoneStepPasscodeDetail(), ""
+	case driver.SetupConnection:
+		// Set to CoreDevice below iOS 27 (Settings › Phones).
+		return locales.ConnectionTitle(), locales.ConnectionChosenNeedsIOS27(d.Info.OSVersion), ""
 	case driver.SetupInstallHelper:
 		// Its signature ran out (Info.HelperExpires), or it is missing.
 		if text, ranOut := helperWords(d, time.Now()); ranOut {
@@ -173,6 +179,13 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.CheckHelperTitle(), locales.CheckHelperMissing(), ""
 	}
 	return "", "", ""
+}
+
+// chooseConnection opens Settings › Phones, where an iPhone's connection
+// is chosen (connectionRows), for a phone whose chosen connection does
+// not work with it (driver.SetupConnection).
+func (a *app) chooseConnection() {
+	a.page, a.set.sec = pageSettings, secPhones
 }
 
 // needsHelper reports whether an iPhone waits for its helper to be
@@ -257,6 +270,13 @@ func (a *app) iphoneCheckAction(c *mg.Context, d gateway.DeviceView, ck driver.C
 		mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
 			if button(c, locales.CheckHelperHow(), btnOpt{small: true}).Clicked() {
 				openURL(c, helperLink(d), func(error) {})
+			}
+		})
+		return true
+	case driver.SetupConnection:
+		mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
+			if button(c, locales.ConnectionChoose(), btnOpt{small: true}).Clicked() {
+				a.chooseConnection()
 			}
 		})
 		return true

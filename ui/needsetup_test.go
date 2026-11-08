@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/ui/demogw"
+	"github.com/DIYgod/pinky/ui/fakeapi"
 )
 
 // stepsProvider lists the phones a test sets, as their driver would while
@@ -202,5 +204,178 @@ func TestPhonesThatNeedSetup(t *testing.T) {
 		if _, ok := tt.Find(locales.SidebarPhoneRow(d.Name, locales.GwStatusOffline())); !ok || hasText(tt, locales.GwStatusNeedsSetup()) {
 			t.Errorf("the sidebar for the unplugged %s: %q", d.Name, tt.Texts())
 		}
+	}
+}
+
+// TestIPhonePasscodeStep: while iOS asks for its passcode before the
+// WebDriverAgent helper may control the iPhone, the phone's page, Add
+// phone › iPhone and the checkup say so in the person's language, not in
+// the driver's English, and not as a step Pinky could not finish.
+func TestIPhonePasscodeStep(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, HoldSetup: true})
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the iPhone", func() bool { return len(ta.devices) > 1 })
+	id := ta.iphoneView(t).Info.ID
+	const detail = "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone."
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupPasscode, Detail: detail})
+	ta.sync()
+	for _, lang := range []string{"en", "zh-Hans"} {
+		tt := mg.NewTester(ta.view, 1280, 820)
+		inLanguage(t, lang, tt)
+		want := locales.AddPhoneIPhoneStepPasscodeDetail()
+		english := func(where string) {
+			t.Helper()
+			if lang != "en" && hasText(tt, detail) {
+				t.Errorf("%s: %s shows the driver's English: %q", lang, where, tt.Texts())
+			}
+		}
+
+		ta.chk.showing = ""
+		ta.selectPhone(id)
+		tt.Frame()
+		tt.Frame()
+		if !hasText(tt, locales.PhoneNeedsSetup(ta.iphoneView(t).Info.Name)) || !hasText(tt, want) {
+			t.Errorf("%s: the phone's page: %q", lang, tt.Texts())
+		}
+		english("the phone's page")
+
+		ta.openCheckup(ta.iphoneView(t))
+		ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf(id); return r != nil && r.have && !r.running })
+		if !hasText(tt, locales.AddPhoneIPhoneStepPasscode()) || !hasText(tt, want) {
+			t.Errorf("%s: the checkup: %q", lang, tt.Texts())
+		}
+		english("the checkup")
+		ta.chk.showing = ""
+
+		ta.page = pageAddPhone
+		ta.add.reset(ta.app)
+		ta.add.step, ta.add.focus = "iphone", id
+		tt.Frame()
+		tt.Frame()
+		if !hasText(tt, want) || hasText(tt, locales.AddPhoneIPhoneStuck()) || hasText(tt, locales.AddPhoneIPhoneRetrying()) {
+			t.Errorf("%s: Add phone › iPhone: %q", lang, tt.Texts())
+		}
+		english("Add phone")
+	}
+}
+
+// shows reports whether the frame has an element showing or labeled s
+// exactly, such as a button.
+func shows(tt *mg.Tester, s string) bool {
+	_, ok := tt.Find(s)
+	return ok
+}
+
+// TestAgentWaitsForSetupStep: on the real gateway, an agent connects to a
+// phone that waits for a step and asks the person to do it. Its task card
+// says the phone needs setup, without Take over; the handoff card says the
+// agent goes on once the phone is ready, with Decline and Done but no Take
+// over. Done before the step tells the agent the phone still waits.
+func TestAgentWaitsForSetupStep(t *testing.T) {
+	droid := &stepsProvider{platform: driver.Android}
+	pixel := driver.Info{ID: "px-8a", Platform: driver.Android, Name: "Pixel 8a", Model: "Pixel 8a", OSVersion: "16",
+		Connection: "usb", Backend: "scrcpy", State: driver.StateUnauthorized,
+		Detail: "Unlock the phone and allow USB debugging for this computer."}
+	droid.list(pixel)
+	ga := newStepsApp(t, droid)
+	ga.waitFor(t, "the phone", func() bool { return ga.device(pixel.ID).Status == gateway.DeviceNeedsSetup })
+	ctx := context.Background()
+	s := ga.w.Gateway.OpenSession(gateway.AgentInfo{Name: "Claude Code"})
+	defer s.Close()
+	if res := s.Connect(ctx, gateway.ConnectRequest{Call: gateway.Call{Device: pixel.ID}, Task: "Reorder lunch"}); res.Status != gateway.StatusNeedsSetup {
+		t.Fatalf("connecting: %+v", res)
+	}
+	ga.waitFor(t, "the task", func() bool { return ga.taskOf(pixel.ID) != nil })
+	ga.selectPhone(pixel.ID)
+	for _, lang := range []string{"en", "zh-Hans"} {
+		tt := mg.NewTester(ga.view, 1280, 820)
+		inLanguage(t, lang, tt)
+		tt.Frame()
+		if !hasText(tt, locales.TasksStatusNeedsSetup()) || !hasText(tt, locales.TasksStop()) || shows(tt, locales.PhoneTakeOver()) ||
+			hasText(tt, locales.TasksStatusWorking()) {
+			t.Errorf("%s: the task card: %q", lang, tt.Texts())
+		}
+	}
+
+	done := make(chan *gateway.Result, 1)
+	go func() {
+		done <- s.Handoff(ctx, gateway.HandoffRequest{Reason: "Allow USB debugging on the Pixel"})
+	}()
+	ga.waitFor(t, "the handoff", func() bool { return len(ga.needs) > 0 })
+	var tt *mg.Tester
+	for _, lang := range []string{"zh-Hans", "en"} {
+		tt = mg.NewTester(ga.view, 1280, 820)
+		inLanguage(t, lang, tt)
+		tt.Frame()
+		if !hasText(tt, locales.NeedsHandoffSetup("Claude Code")) || !shows(tt, locales.NeedsDecline()) || !shows(tt, locales.NeedsDone()) ||
+			shows(tt, locales.PhoneTakeOver()) {
+			t.Errorf("%s: the handoff card: %q", lang, tt.Texts())
+		}
+	}
+	if err := tt.Click(locales.NeedsDone()); err != nil {
+		t.Fatal(err)
+	}
+	ga.sync()
+	select {
+	case r := <-done:
+		if r.Status != gateway.StatusNeedsSetup || !strings.Contains(r.Message, "still waits") {
+			t.Errorf("Done before the step: %+v", r)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Done did not answer the handoff")
+	}
+}
+
+// TestIPhoneConnectionStep: an iPhone below iOS 27 set to connect through
+// CoreDevice says, in the person's language, that it needs another
+// connection, on its page, in its checkup and in Add phone, each with a
+// way to Settings › Phones, where the connection is chosen; not the
+// driver's English, the steps of Add phone, or a step Pinky retries.
+func TestIPhoneConnectionStep(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, HoldSetup: true})
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the iPhone", func() bool { return len(ta.devices) > 1 })
+	id := ta.iphoneView(t).Info.ID
+	const detail = "Connecting without the helper needs iOS 27 or later; this iPhone runs iOS 18.6. Choose Automatic or WebDriverAgent in Settings > Phones."
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupConnection, Detail: detail, OSVersion: "18.6"})
+	ta.sync()
+	for _, lang := range []string{"en", "zh-Hans"} {
+		tt := mg.NewTester(ta.view, 1280, 820)
+		inLanguage(t, lang, tt)
+		want := locales.ConnectionChosenNeedsIOS27("18.6")
+		check := func(where string, ok bool) {
+			t.Helper()
+			if !ok || hasText(tt, detail) {
+				t.Errorf("%s: %s: %q", lang, where, tt.Texts())
+			}
+		}
+		toSettings := func(where string) {
+			t.Helper()
+			if err := tt.Click(locales.ConnectionChoose()); err != nil || ta.page != pageSettings || ta.set.sec != secPhones {
+				t.Errorf("%s: %s, Choose the connection: %v, page %v, section %v", lang, where, err, ta.page, ta.set.sec)
+			}
+		}
+
+		ta.chk.showing = ""
+		ta.selectPhone(id)
+		tt.Frame()
+		tt.Frame()
+		check("the phone's page", hasText(tt, locales.PhoneNeedsSetup(ta.iphoneView(t).Info.Name)) && hasText(tt, want) &&
+			!shows(tt, locales.PhoneSetUpIPhone()))
+		toSettings("the phone's page")
+
+		ta.openCheckup(ta.iphoneView(t))
+		ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf(id); return r != nil && r.have && !r.running })
+		check("the checkup", hasText(tt, locales.ConnectionTitle()) && hasText(tt, want))
+		toSettings("the checkup")
+		ta.chk.showing = ""
+
+		ta.page = pageAddPhone
+		ta.add.reset(ta.app)
+		ta.add.step, ta.add.focus = "iphone", id
+		tt.Frame()
+		tt.Frame()
+		check("Add phone › iPhone", hasText(tt, want) && !hasText(tt, locales.AddPhoneIPhoneStuck()) && !hasText(tt, locales.AddPhoneIPhoneRetrying()))
+		toSettings("Add phone › iPhone")
 	}
 }

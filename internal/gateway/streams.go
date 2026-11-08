@@ -152,7 +152,7 @@ func (h *hub) open(dev driver.Device, opt driver.StreamOptions) {
 		return
 	}
 	for p := range src.Packets() {
-		h.fanOut(timedPacket{p: p, at: time.Now()})
+		h.fanOut(timedPacket{p: p, at: stamp()}) // ordered against reads (clock.go)
 	}
 	err = src.Err()
 	if err == nil {

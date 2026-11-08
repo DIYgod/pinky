@@ -279,7 +279,7 @@ func TestWiFiLockedHeld(t *testing.T) {
 	w.SetWiFi(true)
 	w.UseOverWiFi("ipad")
 	info := w.lockedOnWiFi(driver.Info{ID: "ipad", Platform: driver.IOS, Name: "iPad", Connection: "wifi", State: driver.StateOnline})
-	if info.State != driver.StateOffline || info.Setup != driver.SetupUnlock {
+	if info.State != driver.StateNeedsSetup || info.Setup != driver.SetupUnlock {
 		t.Fatalf("locked on Wi-Fi: %+v", info)
 	}
 	w.after(sleepHold - time.Second)

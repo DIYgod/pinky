@@ -182,7 +182,7 @@ func TestWiFiScreenshots(t *testing.T) {
 		ta.add.reset(ta.app)
 		ta.add.step = "iphone"
 		shoot("wifi-add-iphone", 1280, 1100)
-		ta.api.SetIPhone(id, driver.Info{State: driver.StateOffline, Setup: driver.SetupUnlock, Detail: "Locked on Wi-Fi."})
+		ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUnlock, Detail: "Unlock the iPhone."})
 		ta.waitFor(t, "the iPad locked", func() bool { d := ta.device(id); return d != nil && lockedOnWiFi(*d) })
 		ta.page, ta.sel = pagePhones, id
 		shoot("wifi-locked-page", 1280, 820)
@@ -193,7 +193,7 @@ func TestWiFiScreenshots(t *testing.T) {
 // Pinky waits.
 func TestLockedOnWiFiPage(t *testing.T) {
 	ta, id := foundApp(t, true)
-	ta.api.SetIPhone(id, driver.Info{State: driver.StateOffline, Setup: driver.SetupUnlock, Detail: "Locked on Wi-Fi."})
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupUnlock, Detail: "Unlock the iPhone."})
 	ta.waitFor(t, "the iPad locked", func() bool { d := ta.device(id); return d != nil && lockedOnWiFi(*d) })
 	ta.sel = id
 	tt := mg.NewTester(ta.view, 1280, 820)

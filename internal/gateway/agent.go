@@ -42,6 +42,11 @@ const (
 	StatusPaused    Status = "paused"
 	StatusStopped   Status = "stopped"
 	StatusLocked    Status = "device_locked"
+	// StatusNeedsSetup: the phone is connected, but Pinky cannot use it
+	// until the person does a step on it or on the computer (trust this
+	// computer, allow USB debugging, Developer Mode, …); Result.Setup names
+	// the step and the message says what to do. The lease waits with it.
+	StatusNeedsSetup Status = "device_needs_setup"
 )
 
 // ErrorCode is an error a call returns instead of a status.
@@ -79,6 +84,7 @@ type Result struct {
 	Note       string
 	Decision   string // phone_request_approval: "allow" or "deny"
 	Holder     string // lease_held: who holds the device
+	Setup      string // device_needs_setup: the step the phone waits for (driver.Info.Setup), "" when its driver does not say
 	Matched    *bool  // phone_wait_for
 	Apps       []driver.App
 	Screenshot image.Image
@@ -352,7 +358,11 @@ func (g *Gateway) deviceListLocked() string {
 			continue // found on Wi-Fi, and maybe not the person's (wifi.go)
 		}
 		state := "online"
-		if !d.online {
+		switch {
+		case d.online:
+		case waitsForStep(d.info.State):
+			state = "connected, needs setup"
+		default:
 			state = "offline"
 		}
 		out = append(out, fmt.Sprintf("%s (device %q, %s)", d.name(), d.id, state))
@@ -395,11 +405,21 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			d = l.dev
 		}
 	} else {
-		var online []*device
+		// The phone that is online, or with none, the one that waits for
+		// a step: connecting to it says which step.
+		var online, waiting []*device
 		for _, x := range g.devices {
-			if x.online {
+			switch {
+			case x.online:
 				online = append(online, x)
+			case foundLocked(x):
+				// Found on Wi-Fi, and maybe not the person's (wifi.go).
+			case waitsForStep(x.info.State):
+				waiting = append(waiting, x)
 			}
+		}
+		if len(online) == 0 {
+			online = waiting
 		}
 		switch len(online) {
 		case 0:
@@ -417,12 +437,8 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		g.mu.Unlock()
 		return statusResult(StatusStopped, "The person stopped this agent's task on %s; this session may not use it again. End the task.", d.name())
 	}
-	if !d.online {
-		locked := lockedOnWiFi(d)
+	if !d.online && !waitsForStep(d.info.State) {
 		g.mu.Unlock()
-		if locked {
-			return errResult(ErrDeviceOffline, "%s is locked, and Pinky connects to it over Wi-Fi only once it is unlocked. Ask the person to unlock it, then call phone_connect again.", d.name())
-		}
 		return errResult(ErrDeviceOffline, "%s is offline.", d.name())
 	}
 	if l := d.lease; l != nil && l.session != s {
@@ -476,6 +492,41 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	return readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), req.ReadOnly)
 }
 
+// waitingLocked reports whether a phone is connected but not open because
+// it waits for a step (gateway.DeviceNeedsSetup). The caller holds g.mu.
+func waitingLocked(d *device) bool {
+	return !d.online && waitsForStep(d.info.State)
+}
+
+// setupResultLocked is device_needs_setup for a phone that waits for a
+// step: the first sentence, the step in its driver's words, and what the
+// agent can do meanwhile. The caller holds g.mu.
+func setupResultLocked(d *device, first string) *Result {
+	msg := first
+	if what := strings.TrimSpace(d.info.Detail); what != "" {
+		if !strings.HasSuffix(what, ".") {
+			what += "."
+		}
+		msg += " " + what
+	}
+	switch d.info.Setup {
+	case driver.SetupPreparing:
+		msg += " Nothing for the person to do: wait a few seconds, then call phone_observe."
+	case driver.SetupUpdate:
+		msg += " Pinky cannot use the phone until the person updates it: tell them, and end the task."
+	case driver.SetupUSBDriver:
+		msg += " Ask the person to install the driver with phone_handoff. Afterwards the phone shows up under another device id: call phone_connect again."
+	default:
+		msg += " Ask the person to do it with phone_handoff, saying what to do; the handoff ends by itself once the phone is ready."
+	}
+	res := statusResult(StatusNeedsSetup, "%s", msg)
+	res.Setup = d.info.Setup
+	if res.Setup == "" && d.info.State == driver.StateUnauthorized {
+		res.Setup = driver.FixAuthorize // as the checkup names it (ConnectionChecks)
+	}
+	return res
+}
+
 // readOnlyNote tells an agent that asked for read-only what that means.
 func readOnlyNote(res *Result, readOnly bool) *Result {
 	if readOnly && !res.IsError() {
@@ -505,6 +556,7 @@ func (g *Gateway) newLeaseLocked(s *Session, d *device, title string, apps []str
 		t.state = TaskPaused
 		l.tookOverSeen = true
 	}
+	g.noteWorkLocked(d)
 	d.events = nil
 	s.leases[d.id] = l
 	s.used = appendUniq(s.used, d.id)
@@ -574,8 +626,18 @@ func withUnknownApps(res *Result, unknown []string) *Result {
 	return res
 }
 
-// firstScreen reads the whole screen for a new lease.
+// firstScreen reads the whole screen for a new lease, or says which step
+// the phone waits for.
 func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
+	g.mu.Lock()
+	if waitingLocked(l.dev) {
+		res := setupResultLocked(l.dev, fmt.Sprintf("Connected to %s for “%s”. The phone is connected but waits for a step before Pinky can use it.",
+			l.dev.name(), l.task.title))
+		res.Task = l.task.id
+		g.mu.Unlock()
+		return g.finish(l, res)
+	}
+	g.mu.Unlock()
 	ctx, cancel := mergeCtx(ctx, l.ctx)
 	defer cancel()
 	g.readyScreen(ctx, l)
@@ -1229,8 +1291,15 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 	g := s.g
 	ctx, cancel := mergeCtx(ctx, l.ctx)
 	defer cancel()
-	if res := g.gate(l, req.ApprovalID, false); res != nil {
-		return g.finish(l, res)
+	// A phone that waits for a step is what a handoff is for: it passes
+	// the gate that holds other calls (device_needs_setup).
+	g.mu.Lock()
+	waiting := waitingLocked(l.dev) && !l.ended
+	g.mu.Unlock()
+	if !waiting {
+		if res := g.gate(l, req.ApprovalID, false); res != nil {
+			return g.finish(l, res)
+		}
 	}
 	b := approval.Binding{Session: s.id, Device: l.dev.id, Lease: l.id, Tool: "phone_handoff"}
 	g.mu.Lock()
@@ -1272,12 +1341,20 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 		if endsOnUnlock {
 			l.unlockHandoffs = append(l.unlockHandoffs, info.ID)
 		}
+		if waiting {
+			// It asks for the step the phone waits for: it ends once the
+			// gateway opens the phone (readyNow).
+			l.readyHandoffs = append(l.readyHandoffs, info.ID)
+		}
 		g.mu.Unlock()
 		if endsOnUnlock {
 			// An unlock from the computer as soon as the card showed may
 			// have finished before the line above and found nothing to
 			// answer: answer now if the phone is unlocked.
 			g.answerUnlockHandoffs(l.dev)
+		}
+		if waiting {
+			g.readyNow(l.dev) // it may have opened meanwhile
 		}
 		if res := g.afterOpen(l, info); res != nil {
 			return g.finish(l, res)
@@ -1314,6 +1391,14 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 }
 
 func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *Result {
+	g.mu.Lock()
+	if waitingLocked(l.dev) {
+		res := setupResultLocked(l.dev, fmt.Sprintf("The person handed control back, but %s still waits for a step before Pinky can use it.", l.dev.name()))
+		res.Note = note
+		g.mu.Unlock()
+		return g.finish(l, res)
+	}
+	g.mu.Unlock()
 	g.readyScreen(ctx, l)
 	cur, err := g.observe(ctx, l.dev, true)
 	if err != nil {

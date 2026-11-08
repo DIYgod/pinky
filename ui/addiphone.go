@@ -192,10 +192,6 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			if wifi && cur == iphonePlug {
 				guideNote(c, locales.AddPhoneIPhoneStepPlugWiFi())
 			}
-			if d != nil && lockedOnWiFi(*d) {
-				guideWaiting(c, locales.AddPhoneIPhoneUnlockWiFi(d.Info.Name))
-				return
-			}
 			if d != nil && d.Info.State == driver.StateOffline {
 				guideProblem(c, locales.AddPhoneIPhoneNoAnswer(d.Info.Name), d.Info.Detail)
 				return
@@ -237,7 +233,24 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			case driver.SetupPreparing:
 				guideWaiting(c, locales.AddPhoneIPhoneStepPreparing())
 			case driver.SetupUnlock:
-				guideProblem(c, locales.AddPhoneIPhoneStepUnlock(), "")
+				if lockedOnWiFi(*d) {
+					// Pinky connects to it over Wi-Fi once it is unlocked.
+					guideWaiting(c, locales.AddPhoneIPhoneUnlockWiFi(d.Info.Name))
+				} else {
+					guideProblem(c, locales.AddPhoneIPhoneStepUnlock(), "")
+				}
+			case driver.SetupPasscode:
+				// Driven through the helper, which iOS lets control the
+				// phone only once its passcode is entered.
+				guideProblem(c, locales.AddPhoneIPhoneStepPasscodeDetail(), "")
+			case driver.SetupConnection:
+				// Set to a connection it cannot use: nothing to retry.
+				guideProblem(c, locales.ConnectionChosenNeedsIOS27(d.Info.OSVersion), "")
+				mg.Row(c).Children(func() {
+					if linkButton(c, locales.ConnectionChoose()).Clicked() {
+						a.chooseConnection()
+					}
+				})
 			case driver.SetupNoDiskImage:
 				// Apple's image comes with Xcode; Pinky does not ship it.
 				if guideOS == "darwin" {

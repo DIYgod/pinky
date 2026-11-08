@@ -155,7 +155,13 @@ type device struct {
 	background bool                  // agents work on a background display
 	checkup    *driver.Checkup       // what its own checkup finds; nil for the default
 	installErr error                 // what installing the companion app fails with
-	way        string                // iPhone: the connection the person chose
+	// signedElsewhere: the installed companion is signed with the public
+	// key of builds until 2026-11-08, so updating replaces it.
+	signedElsewhere bool
+	// updateAsks: the phone asks before installs over USB, so automatic
+	// companion updates need the person.
+	updateAsks bool
+	way        string // iPhone: the connection the person chose
 }
 
 type task struct {
@@ -372,7 +378,7 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.TaskID = d.task.view.ID
 	}
 	switch {
-	case d.info.Setup == driver.SetupUnlock && d.info.State == driver.StateOffline && d.info.Connection == "wifi" && !running:
+	case d.info.Setup == driver.SetupUnlock && d.info.State == driver.StateNeedsSetup && d.info.Connection == "wifi" && !running:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Locked on Wi-Fi"
 	case d.info.State == driver.StateOffline:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Offline"

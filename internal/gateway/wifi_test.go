@@ -363,14 +363,25 @@ func TestWiFiLockedPhone(t *testing.T) {
 	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p} })
 	g.SetWiFi(true)
 	waitFor(t, "the locked iPad", func() bool { v, _ := viewOf(g, "ipad"); return v.StatusLine == "Locked on Wi-Fi" })
+	if v, _ := viewOf(g, "ipad"); v.Status != DeviceOffline {
+		t.Fatalf("at rest, the locked iPad = %+v", v)
+	}
+	// An agent leases it as a phone that waits for a step, and goes on
+	// once it is unlocked.
 	s := g.OpenSession(agent)
 	t.Cleanup(s.Close)
 	res := s.Connect(context.Background(), ConnectRequest{Task: "look", Device: "ipad"})
-	if res.Error != ErrDeviceOffline || !strings.Contains(res.Message, "unlock") {
+	if res.Status != StatusNeedsSetup || res.Setup != driver.SetupUnlock {
 		t.Fatalf("connect to the locked iPad: %+v", res)
 	}
+	if v, _ := viewOf(g, "ipad"); v.Status != DeviceNeedsSetup {
+		t.Fatalf("with an agent waiting, the locked iPad = %+v", v)
+	}
 	p.locked.Store(false)
-	waitFor(t, "the iPad unlocked", func() bool { v, _ := viewOf(g, "ipad"); return v.Status == DeviceIdle })
+	waitFor(t, "the iPad unlocked", func() bool { v, _ := viewOf(g, "ipad"); return v.Status == DeviceWorking })
+	if res := s.Observe(context.Background(), ObserveRequest{}); res.IsError() || res.Screen == nil {
+		t.Fatalf("a read once unlocked: %+v", res)
+	}
 }
 
 // lockedProvider lists its phones on Wi-Fi locked while locked is set, as
@@ -384,7 +395,7 @@ func (p *lockedProvider) List(ctx context.Context) ([]driver.Info, error) {
 	infos, err := p.airProvider.List(ctx)
 	for i, info := range infos {
 		if info.Connection == "wifi" && info.State == driver.StateOnline && p.locked.Load() {
-			infos[i].State, infos[i].Setup, infos[i].Detail = driver.StateOffline, driver.SetupUnlock, "Locked on Wi-Fi."
+			infos[i].State, infos[i].Setup, infos[i].Detail = driver.StateNeedsSetup, driver.SetupUnlock, "Unlock the iPhone."
 		}
 	}
 	return infos, err

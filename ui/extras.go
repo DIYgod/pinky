@@ -313,6 +313,8 @@ func stepDisplay(t gateway.TaskView, i int) (text, sub string, kind stepKind) {
 		sub = locales.StepPhoneLocked()
 	case "device_offline":
 		sub = locales.StepPhoneOffline()
+	case "device_needs_setup":
+		sub = locales.StepPhoneNeedsSetup()
 	case "lease_held", "scope_denied", "not_found", "unsupported", "invalid_argument", "internal":
 		sub = locales.StepFailedCode(failureName(s.Status))
 	}

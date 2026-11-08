@@ -100,7 +100,7 @@ note: "<the person's note>"
 <the screen, or the lines that changed>
 ```
 
-- The first line is the status, or `error: <code>` for errors (then the MCP result also has `isError: true`). Details follow as `key: value`, separated by ` · `: `approval_id`, `rule`, `decision`, `settle`, `matched`, `holder`, and `no change` when the screen did not change.
+- The first line is the status, or `error: <code>` for errors (then the MCP result also has `isError: true`). Details follow as `key: value`, separated by ` · `: `approval_id`, `rule`, `decision`, `settle`, `matched`, `holder`, `setup`, and `no change` when the screen did not change.
 - The screen is the format in DESIGN.md: a header line, then events (`toast:`, `notification:`, `dialog:`), then one element per line `[ref] role "label" @x,y state`, then `ocr` lines.
 - After an action, only the changes are sent: `+` added, `-` removed, `~` changed (including `~ screen …` for a changed header). A new app, size, orientation or lock state, or a diff longer than the screen, sends the whole screen.
 - `phone_connect`, `phone_observe` and `phone_handoff` always send the whole screen.
@@ -120,6 +120,7 @@ note: "<the person's note>"
 | `paused` | The person is in control. Wait with `phone_handoff` |
 | `stopped` | The person pressed Stop; the lease is gone, and this session may not use that phone again |
 | `device_locked` | The phone is locked. Call `phone_handoff` |
+| `device_needs_setup` | The phone is connected, but Pinky cannot use it until the person does a step on it or on the computer, and nothing was done. `setup` names the step and the message says what to do: on an iPhone `trust`, `developer_mode`, `unlock`, `passcode` (iOS asks for it before the WebDriverAgent helper may control the phone), `no_disk_image`, `disk_image`, `install_helper`, `connection` (the connection chosen in Settings › Phones does not work with the phone: the person chooses another); on Android `authorize` (allow USB debugging), `usb_permission`, `usb_driver`; `preparing` (Pinky prepares the phone: wait a few seconds, then observe) and `update` (the phone's iOS is too old: end the task) are no steps to hand off. Otherwise call `phone_handoff` asking for the step: it ends by itself once the phone is ready, with the whole screen. After `usb_driver` the phone comes back under another id: call `phone_connect` again. The lease waits with the phone instead of ending after 60 s |
 
 ### Errors
 
@@ -154,11 +155,11 @@ Leases a phone for a task and returns its first screen.
 | Argument | Type | Meaning |
 | --- | --- | --- |
 | `task` | string, required | One line naming the task, shown to the person |
-| `device` | string | Optional when exactly one phone is online, or the session already holds one |
+| `device` | string | Optional when exactly one phone is online, or the session already holds one, or none is online and exactly one is connected but needs setup |
 | `apps` | string[] | Optional app allow-list for the task (names or ids). Launching another app returns `scope_denied`; typing into one asks the person. Launchers and system UI are always allowed |
 | `read_only` | boolean | Run the task read-only, whatever the agent's scope: anything the person's rules would ask about is refused (`blocked_by_policy`, rule `Read-only`), and typing works only in search fields. Connecting again for the same task never widens it. A new agent's approval card then offers read-only access first |
 
-The first connection of an agent the person has not approved yet returns `approval_pending` (rule `New agent`); repeat with `approval_id`. Another session's phone returns `lease_held`. Calling again with the same task keeps the lease; another task name ends the previous task (outcome `replaced`) and starts a new one. After the person pressed Stop, the session cannot connect to that phone again. While the person is in control of the phone (they took over and have not handed back, whichever task was running), the lease starts paused and the result is `paused`: call `phone_handoff`.
+The first connection of an agent the person has not approved yet returns `approval_pending` (rule `New agent`); repeat with `approval_id`. Another session's phone returns `lease_held`. Calling again with the same task keeps the lease; another task name ends the previous task (outcome `replaced`) and starts a new one. After the person pressed Stop, the session cannot connect to that phone again. While the person is in control of the phone (they took over and have not handed back, whichever task was running), the lease starts paused and the result is `paused`: call `phone_handoff`. A phone that is connected but waits for a step (Trust, Allow USB debugging, Developer Mode, …) is leased all the same and returns `device_needs_setup`, without a screen, so `phone_handoff` can ask the person for the step; other calls return `device_needs_setup` until the phone is ready.
 
 ### phone_release
 
@@ -286,7 +287,7 @@ Returns `settled` with `decision: allow`, or `approval_denied`, with the person'
 | --- | --- | --- |
 | `reason` | string, required | What the person should do |
 
-Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer, if unlocking is all its `reason` asks for ("Please unlock the phone"); one that asks for more ("Unlock the phone, then sign in to Wise") stays open until the person hands back, and so does any handoff after an unlock on the phone itself. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
+Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone waits for a step (`device_needs_setup`) ends by itself once Pinky has opened the phone, with `note: "The phone is ready."`; if the person hands back before that, the result is `device_needs_setup` again, with their note. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer, if unlocking is all its `reason` asks for ("Please unlock the phone"); one that asks for more ("Unlock the phone, then sign in to Wise") stays open until the person hands back, and so does any handoff after an unlock on the phone itself. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
 
 ## Approvals
 

@@ -60,11 +60,7 @@ func runDevices(args []string) error {
 				}
 			}
 			for _, info := range infos {
-				st := gateway.DeviceIdle
-				if info.State != driver.StateOnline {
-					st = gateway.DeviceOffline
-				}
-				devs = append(devs, gateway.DeviceView{Info: info, Status: st, StatusLine: string(info.State)})
+				devs = append(devs, listedView(info))
 			}
 		}
 	}
@@ -83,16 +79,39 @@ func runDevices(args []string) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "NAME\tID\tPLATFORM\tCONNECTION\tSTATUS")
 	for _, d := range devs {
-		line := d.StatusLine
-		if d.Info.Detail != "" && d.Info.State != driver.StateOnline {
-			line += " · " + d.Info.Detail
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", d.Info.Name, d.Info.ID, d.Info.Platform, d.Info.Connection, line)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", d.Info.Name, d.Info.ID, d.Info.Platform, d.Info.Connection, statusColumn(d))
 	}
 	if source != "gateway" {
 		fmt.Fprintf(w, "(%s)\n", source)
 	}
 	return w.Flush()
+}
+
+// listedView is a phone as its provider lists it when no gateway runs,
+// with the status the gateway gives a phone it has not opened: one that
+// waits for a step needs setup (gateway.DeviceNeedsSetup), not offline.
+// The status line is the driver's state.
+func listedView(info driver.Info) gateway.DeviceView {
+	v := gateway.DeviceView{Info: info, Status: gateway.DeviceIdle, StatusLine: string(info.State)}
+	switch info.State {
+	case driver.StateOnline:
+	case driver.StateUnauthorized, driver.StateNeedsSetup:
+		v.Status = gateway.DeviceNeedsSetup
+	default:
+		v.Status = gateway.DeviceOffline
+	}
+	return v
+}
+
+// statusColumn is a phone's STATUS: its status line, then the driver's
+// detail when the phone is not online, unless the line already ends with
+// it (the gateway's "Offline · <detail>").
+func statusColumn(d gateway.DeviceView) string {
+	line := d.StatusLine
+	if d.Info.Detail != "" && d.Info.State != driver.StateOnline && !strings.HasSuffix(line, d.Info.Detail) {
+		line += " · " + d.Info.Detail
+	}
+	return line
 }
 
 // runNeeds lists what waits for the person. A development aid.

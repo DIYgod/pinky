@@ -208,7 +208,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_connect", Title: "Connect to a phone",
 		Description: "Start a task on a phone: leases the phone to this session and returns its first screen. " +
 			"The task name shows in Pinky, so the person knows what you are doing. The first connection of a new agent waits for the person's approval (approval_pending; repeat with approval_id). " +
-			"Another session's phone returns lease_held. Call phone_release when done.",
+			"Another session's phone returns lease_held. A phone that waits for the person to do a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode) " +
+			"returns device_needs_setup with the step: ask the person with phone_handoff. Call phone_release when done.",
 		InputSchema: schema[connectIn](nil), Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in connectIn) (*sdk.CallToolResult, any, error) {
 			return render(s.session(req, remote).Connect(ctx, gateway.ConnectRequest{
@@ -351,7 +352,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_handoff", Title: "Hand over to the person",
 		Description: "Ask the person to do something on the phone (sign in, enter a code, unlock, solve a captcha) and wait until they hand control back; returns their note and the screen. " +
-			"Call it after user_took_over, paused or device_locked too. Blocks up to 45 s, then returns approval_pending with an approval_id to repeat the call with.",
+			"Call it after user_took_over, paused, device_locked or device_needs_setup too; for device_needs_setup it ends by itself once the phone is ready. " +
+			"Blocks up to 45 s, then returns approval_pending with an approval_id to repeat the call with.",
 		InputSchema: schema[handoffIn](nil), Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in handoffIn) (*sdk.CallToolResult, any, error) {
 			return render(s.session(req, remote).Handoff(ctx, gateway.HandoffRequest{

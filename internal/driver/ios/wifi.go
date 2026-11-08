@@ -145,8 +145,9 @@ func (p *Provider) listedOverWiFi(id string) bool {
 // stream, which lights its screen, every time (iPad Pro, iPadOS 27.0.1,
 // 2026-11-08), and the session ends a few seconds later with the listing.
 // So Pinky reads only lockdown (whether it is locked) while it is locked on
-// Wi-Fi, lists it offline with driver.SetupUnlock, and opens it once it is
-// unlocked; agents ask the person to unlock it. On a cable nothing changes.
+// Wi-Fi, lists it as waiting for the person to unlock it (needs_setup with
+// driver.SetupUnlock), and opens it once it is unlocked; agents ask the
+// person to unlock it. On a cable nothing changes.
 
 // sleepHold is how long List keeps listing a phone found locked on Wi-Fi
 // after usbmuxd stopped listing it, so one that sleeps reads as locked all
@@ -155,7 +156,7 @@ const sleepHold = 3 * time.Minute
 
 // lockedOnWiFi is a phone the person uses that is locked on Wi-Fi.
 func (p *Provider) lockedOnWiFi(info driver.Info) driver.Info {
-	info.State, info.Setup, info.Detail = driver.StateOffline, driver.SetupUnlock, lockedWiFiDetail
+	info.State, info.Setup, info.Detail = driver.StateNeedsSetup, driver.SetupUnlock, lockedWiFiDetail
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.wifi.asleep == nil {
@@ -209,7 +210,7 @@ func (p *Provider) heldAsleep(listed map[string]bool) []driver.Info {
 
 // Sentences for a phone over Wi-Fi.
 const (
-	lockedWiFiDetail = "Locked on Wi-Fi: Pinky connects to it once it is unlocked, so as not to wake its screen."
+	lockedWiFiDetail = "Unlock the iPhone: it is on Wi-Fi, where Pinky connects to it only once it is unlocked, so as not to wake its screen."
 	foundDetail      = "Found on Wi-Fi: this iPhone or iPad was paired with this computer before, in Finder or Xcode, and Pinky has not used it. Pinky leaves it alone until you choose Use in Pinky."
 	trustWiFiDetail  = "This computer cannot read the iPhone over Wi-Fi: it no longer trusts this computer. Plug it in with a cable, unlock it and tap Trust; it asks only on a cable."
 )

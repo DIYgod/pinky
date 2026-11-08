@@ -67,7 +67,7 @@ Each counter counts within the report's period. `<platform>` is `android`, `ios`
 | `agents.connected.<agent>` | MCP sessions, by agent product as above |
 | `agents.scope.<mode>` | scopes the person gave agents: `everything`, `read_only`, `watch_only`, `apps` |
 | `tools.<tool>` | tool calls, by tool: `phone_connect`, `phone_tap`, … (Pinky's own tool names; anything else is `other`) |
-| `results.<status>` | tool results, by status: `settled`, `uncertain`, `blocked_by_policy`, `approval_denied`, `approval_pending`, `stale`, `user_took_over`, `paused`, `stopped`, `device_locked`, `ok` (a result without a status); by error code: `error.device_offline`, `error.lease_held`, `error.scope_denied`, `error.not_found`, `error.unsupported`, `error.invalid_argument`, `error.internal`, `error.other` |
+| `results.<status>` | tool results, by status: `settled`, `uncertain`, `blocked_by_policy`, `approval_denied`, `approval_pending`, `stale`, `user_took_over`, `paused`, `stopped`, `device_locked`, `device_needs_setup`, `ok` (a result without a status); by error code: `error.device_offline`, `error.lease_held`, `error.scope_denied`, `error.not_found`, `error.unsupported`, `error.invalid_argument`, `error.internal`, `error.other` |
 | `needs.<kind>.asked` | what Pinky asked the person: `approval`, `new_agent` (an agent's first connection), `handoff`, `unlock` |
 | `needs.approval.rule.<rule>` | approvals by the rule that asked, for Pinky's built-in rules (`payments`, `messages`, `commits`, `installs_and_links`, `calls`, `settings_changes`, `every_action`, …); the person's own rules count as `custom` |
 | `needs.<kind>.<answer>` | how the person answered: `allow_once`, `allow_task`, `allow_always`, `deny`, `take_over`, or `error` |

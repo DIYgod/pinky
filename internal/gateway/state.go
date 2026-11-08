@@ -44,7 +44,10 @@ type device struct {
 	person bool
 	// personInput is true once the person used the phone during a takeover.
 	personInput bool
-	locked      bool
+	// working is what the driver was last told (driver.WorkWatcher): an
+	// agent works on the phone. workSent: dev was told at all.
+	working, workSent bool
+	locked            bool
 	// inflight cancels the driver call of the action in progress, so a
 	// takeover interrupts it.
 	inflight context.CancelFunc
@@ -75,6 +78,13 @@ type device struct {
 	touch    *touchState
 	// wake is closed and replaced on every state change, to wake waiting calls.
 	wake chan struct{}
+	// opened is set once the gateway opened the phone. One it never
+	// opened is forgotten a while after its provider stops listing it
+	// (discover, unopenedGrace).
+	opened bool
+	// unlistedAt is when its provider stopped listing the phone; zero
+	// while it is listed.
+	unlistedAt time.Time
 }
 
 func newDevice(p driver.Provider, info driver.Info) *device {
@@ -185,6 +195,9 @@ type lease struct {
 	// unlockHandoffs are handoffs opened while the phone was locked that ask
 	// only for unlocking (unlockOnly); Unlock from the computer ends them.
 	unlockHandoffs []string
+	// readyHandoffs are handoffs opened while the phone waited for a step
+	// (device_needs_setup); they end once the gateway opens it (readyNow).
+	readyHandoffs []string
 	// after is the read that ended the last action, if it settled; the next
 	// step of a phone_batch reuses it while it is fresh.
 	after   *screen.Screen
