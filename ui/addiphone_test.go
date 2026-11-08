@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -230,6 +231,61 @@ func TestAddIPhoneAlreadyReady(t *testing.T) {
 	if hasText(tt, "To add another iPhone") {
 		t.Errorf("the steps still show the ready iPhone: %q", tt.Texts())
 	}
+}
+
+// TestAddIPhoneShortWindow reaches the mirror offer's button in a window too
+// short to show it, as people do: the card scrolls under a mouse wheel, and
+// Tab brings the button it reaches into view.
+func TestAddIPhoneShortWindow(t *testing.T) {
+	defer func(os string) { guideOS = os }(guideOS)
+	guideOS = "linux"
+	const label = "Download (32 MB)"
+	shows := func(tt *mg.Tester) bool {
+		r, _ := tt.Find(label)
+		return r.H > 0 && r.Y >= 0 && r.Y+r.H <= 640
+	}
+	open := func() (*testApp, *mg.Tester) {
+		ta, _ := addIPhoneApp(t)
+		tt := mg.NewTester(ta.view, 1280, 640)
+		ta.api.ConnectIPhone()
+		ta.waitFor(t, "the phone", func() bool { tt.Frame(); return ta.add.iphone(ta.app) != nil })
+		ta.api.SetIPhone(ta.add.iphone(ta.app).Info.ID, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupNoDiskImage})
+		ta.waitFor(t, "the offer", func() bool { tt.Frame(); return hasText(tt, "Or download it from a third-party mirror") })
+		if shows(tt) {
+			r, _ := tt.Find(label)
+			t.Fatalf("the button shows at %v without scrolling: the window is not short enough for this test", r)
+		}
+		return ta, tt
+	}
+
+	// A mouse wheel over the card, to its end.
+	ta, tt := open()
+	for range 20 {
+		tt.Wheel(640, 300, 0, 120)
+		tt.Advance(400 * time.Millisecond)
+		tt.Frame()
+	}
+	if !shows(tt) {
+		r, _ := tt.Find(label)
+		t.Fatalf("the wheel did not bring the button into view: %v", r)
+	}
+	if err := tt.Click(label); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the download, after the wheel", func() bool { tt.Frame(); return ta.add.dl.seq != 0 })
+
+	// The keyboard alone.
+	ta, tt = open()
+	for i := 0; i < 60 && !tt.Focused(label); i++ {
+		tt.Key(0, mg.KeyTab)
+		tt.Frame()
+	}
+	if !tt.Focused(label) || !shows(tt) {
+		r, _ := tt.Find(label)
+		t.Fatalf("Tab did not bring the button into view: focused %v, at %v", tt.Focused(label), r)
+	}
+	tt.Key(0, mg.KeyEnter)
+	ta.waitFor(t, "the download, from the keyboard", func() bool { tt.Frame(); return ta.add.dl.seq != 0 })
 }
 
 // TestAddIPhoneDownload offers the developer disk image from the mirror
