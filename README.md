@@ -2,6 +2,7 @@
 <h1 align="center">Pinky</h1>
 <p align="center"><b>Let any AI agent use your iPhone or Android phone, from macOS, Windows or Linux, with you in the loop.</b></p>
 <p align="center"><a href="https://github.com/DIYgod/pinky/releases/latest">Download</a> · <a href="#get-started">Get started</a> · <a href="#faq">FAQ</a> · <a href="https://discord.gg/S27b7SHjng">Discord</a></p>
+<p align="center">English · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center"><img src="assets/readme/demo.gif" width="760" alt="Claude Code types a reply in Messages; Pinky holds the Send tap until it is allowed, then the text goes out"><br><sub>A real Claude Code run on an Android 16 emulator. Pinky asks before payments by default; this run also asks before messages.</sub></p>
 
 Pinky lets any agent (Claude Code, Claude Desktop, Codex, Cursor or a script) operate a real iPhone or Android phone over MCP, while you watch on your computer, approve risky steps, take over and review what happened. Approvals are enforced by Pinky's gateway, not by instructions to the agent.
@@ -183,7 +184,7 @@ Banking, wallet and password-manager apps, from a list that comes with Pinky and
 <details>
 <summary><b>Does my phone's screen go to the cloud?</b></summary>
 
-Not through Pinky. Screenshots, recordings and history stay on your computer, for 30 days unless you change it in Settings › Privacy, where you can also delete them. What the agent reads goes to the agent you chose, as with any tool you give it. Pinky's anonymous usage statistics never include screens, typed text or app names ([below](#usage-statistics-crash-reports-and-feedback)).
+Not through Pinky. Screenshots, recordings and history stay on your computer, for 30 days unless you change it in Settings › Privacy, where you can also delete them. What the agent reads goes to the agent you chose, as with any tool you give it. Pinky's anonymous usage statistics never include screens, typed text or app names ([above](#usage-statistics-crash-reports-and-feedback)).
 
 </details>
 
