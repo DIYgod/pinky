@@ -13,8 +13,8 @@ import (
 type Frame struct {
 	// Image holds the picture in RGBA, scaled to fit the size the player
 	// was asked for; nil with PlayerOptions.YUV. It belongs to the player:
-	// it stays as it is until the second Take after the one that returned
-	// it.
+	// it stays as it is until the next Take, after which the player may
+	// write into it again (two conversions later at the earliest).
 	Image *image.RGBA
 	// YUV holds the picture's planes at the stream's size with
 	// PlayerOptions.YUV, else nil. It belongs to the player as Image does.
