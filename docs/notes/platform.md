@@ -57,7 +57,7 @@ The platform session's work in round three: PINs in the system keychain on macOS
 
 `.github/workflows/ci.yml` runs on pushes to `main` and `claude/platform-*`, on pull requests and by hand, with one run per ref at a time (`cancel-in-progress`):
 
-- Linux (ubuntu-latest, Ubuntu 26.04 today) and Windows (windows-latest, Windows Server 2025): FFmpeg 9 from BtbN's shared GPL builds (their ffmpeg command has x264 and x265 for the test streams; nothing of them ships), build, vet, test with `CGO_ENABLED=0`, and the decoder and keyring tests again with `-v` so the log shows what they did.
+- Linux (ubuntu-latest, Ubuntu 26.04 today) and Windows (windows-latest, Windows Server 2025): FFmpeg 9 from FFmpeg-Builds' (formerly BtbN's) shared GPL builds, kept in the Actions cache and fetched through GitHub's API (`gh release download`) only when the cache has none (their ffmpeg command has x264 and x265 for the test streams; nothing of them ships), build, vet, test with `CGO_ENABLED=0`, and the decoder and keyring tests again with `-v` so the log shows what they did.
 - macOS (macos-latest): build and vet only.
 - All three: `scripts/smoke.sh`, which builds pinky and `scripts/mcpcall`, starts `pinky daemon --fake` in a private `PINKY_HOME`, checks `pinky devices` lists both fake phones, and drives connect, launch Calculator, observe and release through `pinky mcp`.
 - Linux: `go tool mygo build` for Linux and Windows (checks the packaging), then the e2e build of the app under Xvfb (with a session bus from `dbus-launch`); `scripts/uicapture` waits for its window through MyGo's automation socket, checks that it shows "Pixel 9 (fake)", and captures it. MyGo draws it without a GPU. The captures and logs are kept for a week as artifacts.
@@ -79,4 +79,4 @@ What CI found and what was fixed (platform-only, small):
 - A universal (arm64 + amd64) app: `make ffmpeg` builds the host's architecture; a universal app needs both and `lipo`.
 - The Windows and Linux builds carry no FFmpeg (decision 11 covers Pinky.app); MyGo's platform resources could ship LGPL builds next to the executable.
 - On Windows the packaged `Pinky.exe` is a windowed program: agents reach `Pinky.exe mcp` over pipes, but commands in a terminal print nothing; a console build (`go build ./cmd/pinky`) is the way there today.
-- CI uses BtbN's rolling `latest` FFmpeg 9 builds, not a pinned one (their dated releases are pruned).
+- CI takes FFmpeg-Builds' rolling `latest` FFmpeg 9 build once and keeps it in the Actions cache under a fixed key (`ci-<archive name>`); change the key in `ci.yml` to take a newer one (their dated releases are pruned, so there is nothing to pin). The release downloads its static Windows build the same way, through the API, each run. On 8 November 2026 github.com's release download links answered 504 for hours (also Pinky's own, and other projects'), while the API's asset downloads worked.

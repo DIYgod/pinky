@@ -166,15 +166,26 @@ jobs:
         with:
           name: linux-windows
           path: ${{ runner.temp }}/dist
-      - name: Unpack the Windows zip, and get an ffmpeg command for the test streams
+      - name: Download an ffmpeg command for the test streams
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A static build, so that no other FFmpeg DLLs are around. Through
+          # GitHub's API (gh), as in ci.yml, since the releases' download
+          # links have answered 504 for hours at a time.
+          for try in 1 2 3; do
+            gh release download latest --repo FFmpeg-Builds/FFmpeg-Builds --pattern ffmpeg-n9.0-latest-win64-gpl-9.0.zip --dir "$RUNNER_TEMP" --clobber && exit 0
+            sleep 30
+          done
+          exit 1
+      - name: Unpack the Windows zip and the ffmpeg command
         shell: pwsh
         run: |
           $ProgressPreference = 'SilentlyContinue'
           $version = $env:TAG.TrimStart('v')
           Expand-Archive "$env:RUNNER_TEMP\dist\pinky-$version-windows-amd64.zip" -DestinationPath "$env:RUNNER_TEMP\windows-package"
-          # A static build, so that no other FFmpeg DLLs are around.
-          Invoke-WebRequest "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n9.0-latest-win64-gpl-9.0.zip" -OutFile "$env:RUNNER_TEMP\ffmpeg.zip"
-          Expand-Archive "$env:RUNNER_TEMP\ffmpeg.zip" -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
+          Expand-Archive "$env:RUNNER_TEMP\ffmpeg-n9.0-latest-win64-gpl-9.0.zip" -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
           (Get-ChildItem "$env:RUNNER_TEMP\ffmpeg" -Directory | Select-Object -First 1).FullName + "\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
           Get-ChildItem "$env:RUNNER_TEMP\windows-package"
       - name: Check that the Windows package's FFmpeg decodes
