@@ -24,8 +24,10 @@ const (
 var ErrUnsupported = errors.New("keeping the computer awake is not supported here")
 
 // Hold keeps the computer from sleeping when idle, under reason, until
-// release is called. Calling release more than once does nothing. The
-// system drops the hold when the process exits, however it exits.
+// release is called. It returns once the system holds it, or with the
+// system's refusal, which on Linux can take seconds. Calling release more
+// than once does nothing. The system drops the hold when the process
+// exits, however it exits.
 func Hold(reason string) (release func(), err error) {
 	r, err := hold(reason)
 	if err != nil {
