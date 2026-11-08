@@ -58,6 +58,7 @@ type Device struct {
 	apps        *appCatalog
 	pidApps     map[uint64]driver.App
 	pidMiss     map[uint64]time.Time          // processes that are no app, and when that was found
+	web         webCache                      // which processes of a walk are WebKit's web content
 	foreground  func(context.Context) []axApp // for tests: the app states the inspector reported
 	sb          springBoardWatch
 	capture     captureMarks // what screenshots did not show (capture.go)

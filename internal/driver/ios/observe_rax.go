@@ -218,6 +218,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		st.Source = "remoteax"
 	}
 
+	els = d.markWebContent(ctx, els)
 	app := els[0]
 	s := &screen.Screen{
 		Width: si.Width, Height: si.Height,
@@ -336,6 +337,11 @@ const xcPickerWheel = 39
 // traitRemoteHost marks a view that shows another process's elements (the
 // keyboard, for one). Observed on iOS 27; not public.
 const traitRemoteHost = 1 << 34
+
+// traitSecureText marks a password field of a web page: WebKit's text
+// fields have no AutomationType, and a password field differs from a plain
+// one in this trait only (observed on iOS 27; not public).
+const traitSecureText = 1 << 24
 
 const (
 	// raxPushAfter: a push whose first tree arrives sooner than this after
@@ -489,9 +495,10 @@ func walkDetached(ctx context.Context, rax *raxSession, lim walkLimits, stop *at
 // Elements of other processes come with frames relative to the view that
 // hosts them. A host is marked by traitRemoteHost and comes right before
 // them in the walk; elements of a process with no such host (home screen
-// widgets) cannot be placed and are left out. A process whose elements are
-// mostly single characters is the on-screen keyboard: it only marks the
-// keyboard as shown.
+// widgets) cannot be placed and are left out, except those of web content
+// (Web), which a browser lists without a host and with frames in screen
+// points. A process whose elements are mostly single characters is the
+// on-screen keyboard: it only marks the keyboard as shown.
 func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, covered ...screen.Rect) ([]screen.Element, bool) {
 	if len(els) == 0 {
 		return nil, false
@@ -501,8 +508,8 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, 
 	keyboardPID := map[int]bool{}
 	chars := map[int]int{}
 	for _, e := range els {
-		if e.Object.PID != appPID && isKeyChar(e.Label) {
-			chars[e.Object.PID]++
+		if e.Object.PID != appPID && !e.Web && isKeyChar(e.Label) {
+			chars[e.Object.PID]++ // a page's own one-letter links are no keys
 		}
 	}
 	for pid, n := range chars {
@@ -547,10 +554,10 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, 
 				offset[pid] = host.Frame
 			}
 			hf, ok := offset[pid]
-			if !ok && !keyboardPID[pid] {
+			if !ok && !keyboardPID[pid] && !e.Web {
 				continue // no host to place it by
 			}
-			placed = ok
+			placed = ok || e.Web
 			e.Frame.X += hf.X
 			e.Frame.Y += hf.Y
 		}
@@ -808,6 +815,9 @@ func raxRole(e raxElement, inTabBar bool) (string, []string) {
 		case axpRoleTextField:
 			role = screen.RoleInput
 			states = appendState(states, screen.StateEditable)
+			if e.Traits&traitSecureText != 0 {
+				states = appendState(states, screen.StatePassword)
+			}
 		case axpRoleImage:
 			if role == screen.RoleOther {
 				role = screen.RoleImage

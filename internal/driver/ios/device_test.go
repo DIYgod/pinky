@@ -802,3 +802,4 @@ func TestDeviceObserveTiming(t *testing.T) {
 }
 
 const pauseBetween = 400 * time.Millisecond
+

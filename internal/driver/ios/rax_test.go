@@ -219,6 +219,55 @@ func TestRAXScreenElements(t *testing.T) {
 	}
 }
 
+// Safari lists a page's elements from the web content process, beside its
+// own, with no host view and with frames in screen points. A widget's
+// process looks the same but its frames are relative to the widget.
+func TestRAXScreenElementsWebContent(t *testing.T) {
+	const app, web, widget = 10, 20, 30
+	el := func(pid, typ, role int, label string, f axpRect) raxElement {
+		return raxElement{Object: &axpObject{PID: pid, ID: uint64(len(label) + int(f.X) + int(f.Y))}, Parent: 0, Type: typ, AXRole: role,
+			Label: label, Frame: f, HasFrame: true, IsElement: true, Enabled: true, Visible: true, Web: pid == web}
+	}
+	user := el(web, 0, axpRoleTextField, "Username", axpRect{16, 244, 370, 37})
+	pass := el(web, 0, axpRoleTextField, "Foo", axpRect{16, 326, 370, 37})
+	pass.Traits = traitSecureText
+	hidden := el(web, xcLink, axpRoleButton, "Below the fold", axpRect{16, 855, 157, 25})
+	hidden.Visible = false
+	els := []raxElement{
+		{Object: &axpObject{PID: app, IsApp: true}, Parent: -1, Label: "Safari", Frame: axpRect{0, 0, 402, 874}, HasFrame: true, Type: xcOther},
+		el(web, xcLink, axpRoleButton, "Forgot your password?", axpRect{109, 525, 184, 24}),
+		user, pass, hidden,
+		el(app, xcButton, axpRoleButton, "Tabs", axpRect{320, 792, 48, 48}),
+		el(widget, xcImage, axpRoleImage, "Featured Photo", axpRect{0, 0, 159, 159}),
+	}
+	// A page's pagination, eight one-digit links, is not a keyboard.
+	for i := 1; i <= 8; i++ {
+		els = append(els, el(web, xcLink, axpRoleButton, string(rune('0'+i)), axpRect{float64(10 * i), 600, 8, 20}))
+	}
+	got, keyboard := raxScreenElements(els, 3, 1206, 2622, "com.apple.mobilesafari")
+	if keyboard {
+		t.Error("a page's one-digit links took for a keyboard")
+	}
+	type row struct {
+		role, label string
+		states      []string
+		bounds      screen.Rect
+	}
+	var rows []row
+	for _, e := range got {
+		rows = append(rows, row{e.Role, e.Label, e.States, e.Bounds})
+	}
+	want := []row{
+		{screen.RoleLink, "Forgot your password?", nil, screen.Rect{X: 327, Y: 1575, W: 552, H: 72}},
+		{screen.RoleInput, "Username", []string{screen.StateEditable}, screen.Rect{X: 48, Y: 732, W: 1110, H: 111}},
+		{screen.RoleInput, "Foo", []string{screen.StateEditable, screen.StatePassword}, screen.Rect{X: 48, Y: 978, W: 1110, H: 111}},
+		{screen.RoleButton, "Tabs", nil, screen.Rect{X: 960, Y: 2376, W: 144, H: 144}},
+	}
+	if len(rows) != len(want)+8 || !reflect.DeepEqual(rows[:len(want)], want) {
+		t.Errorf("elements = %+v\nwant %+v and 8 links", rows, want)
+	}
+}
+
 func TestRAXRole(t *testing.T) {
 	for _, c := range []struct {
 		e      raxElement
@@ -232,6 +281,7 @@ func TestRAXRole(t *testing.T) {
 		{raxElement{Traits: traitKeyboardKey, Enabled: true}, screen.RoleButton, nil},
 		{raxElement{AXRole: axpRoleSwitch, Value: "1", Enabled: true}, screen.RoleSwitch, []string{screen.StateChecked}},
 		{raxElement{AXRole: axpRoleTextField, Enabled: true}, screen.RoleInput, []string{screen.StateEditable}},
+		{raxElement{AXRole: axpRoleTextField, Traits: traitSecureText, Enabled: true}, screen.RoleInput, []string{screen.StateEditable, screen.StatePassword}},
 		{raxElement{AXRole: axpRoleButton, Enabled: true}, screen.RoleButton, nil},
 		{raxElement{Traits: traitStaticText | traitHeader, Enabled: true}, screen.RoleText, nil},
 	} {
