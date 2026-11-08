@@ -129,13 +129,17 @@ func (p *airProvider) state(id string) (used, forgot bool, opens []string) {
 // overDevice is a session over one connection, which dies with it.
 type overDevice struct {
 	driver.Device
-	conn string
-	dead atomic.Bool
+	conn   string
+	dead   atomic.Bool
+	frames atomic.Bool // the last read with OCR was offered frames of the live video
 }
 
 func (d *overDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	if d.dead.Load() {
 		return nil, fmt.Errorf("the tunnel stopped: %w", driver.ErrOffline)
+	}
+	if opt.OCR {
+		d.frames.Store(opt.Frame != nil)
 	}
 	return d.Device.Observe(ctx, opt)
 }
@@ -465,4 +469,21 @@ func TestWiFiLostPhone(t *testing.T) {
 		t.Fatalf("restarts %d, reason %v", p2.restarts.Load(), p2.reason.Load())
 	}
 	waitFor(t, "the iPhone back", func() bool { v, _ := viewOf(g2, "iphone"); return v.Status == DeviceIdle })
+}
+
+// TestObserveOffersFrames: a read with OCR offers the driver pictures from
+// the live video, which an iPhone over Wi-Fi reads text from.
+func TestObserveOffersFrames(t *testing.T) {
+	p := newAirProvider(demo.NewDevice("iphone", "iPhone", driver.IOS))
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p} })
+	s, _ := connect(t, g, "Read the screen")
+	if res := s.Observe(context.Background(), ObserveRequest{}); res.IsError() {
+		t.Fatal(res.Message)
+	}
+	p.mu.Lock()
+	od := p.sessions["iphone"][len(p.sessions["iphone"])-1]
+	p.mu.Unlock()
+	if !od.frames.Load() {
+		t.Fatal("phone_observe offered the driver no frames of the live video")
+	}
 }

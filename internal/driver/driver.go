@@ -133,6 +133,11 @@ type Device interface {
 type ObserveOptions struct {
 	// OCR asks the driver to add OCR elements for areas the tree misses.
 	OCR bool
+	// Frame, when set, returns a picture of the screen decoded from its
+	// live video, which the gateway shares with the mirror. A driver may
+	// read OCR's text from it where its own screenshots are slow (an
+	// iPhone over Wi-Fi: about 5 s a screenshot); nil means none.
+	Frame func(ctx context.Context) (image.Image, error)
 }
 
 // TapOptions tune Tap.

@@ -2,12 +2,16 @@ package ios
 
 import (
 	"bytes"
+	"context"
 	"image"
+	"image/draw"
+	"image/jpeg"
 	"image/png"
 	"math"
 	"sync"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -170,4 +174,54 @@ func (c *captureMarks) apply(s *screen.Screen) {
 			s.Elements[i].States = appendState(s.Elements[i].States, stateNotInScreenshot)
 		}
 	}
+}
+
+// ocrPicture is the picture OCR reads, encoded for Vision, and decoded for
+// the capture marks: over Wi-Fi a frame of the live video, when the gateway
+// offers one (driver.ObserveOptions.Frame), since a screenshot costs about
+// 5 s there against well under a second for a frame; else, or when the
+// frame fails, a screenshot. from says which.
+func (d *Device) ocrPicture(ctx context.Context, opt driver.ObserveOptions) (data []byte, img image.Image, from string, err error) {
+	if opt.Frame != nil && d.info.Connection == "wifi" {
+		if f, ferr := opt.Frame(ctx); ferr == nil {
+			if s, ok := screenOfFrame(f, d.screen()); ok {
+				var buf bytes.Buffer
+				if jerr := jpeg.Encode(&buf, s, &jpeg.Options{Quality: 95}); jerr == nil {
+					return buf.Bytes(), s, "video", nil
+				}
+			}
+		}
+		if ctx.Err() != nil {
+			return nil, nil, "", ctx.Err()
+		}
+	}
+	png, err := d.ScreenshotPNG(ctx)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	return png, nil, "screenshot", nil
+}
+
+// screenOfFrame is the screen in a frame of the live video, in the
+// screenshot's pixels: the phone puts its screen at 1:1 in the picture's
+// top-left corner and pads the rest (fromVideo). ok is false for a picture
+// smaller than the screen, which no tested phone sends, or without a known
+// screen size.
+func screenOfFrame(f image.Image, si screenInfo) (image.Image, bool) {
+	if f == nil || si.Width <= 0 || si.Height <= 0 {
+		return nil, false
+	}
+	b := f.Bounds()
+	if b.Dx() < si.Width || b.Dy() < si.Height {
+		return nil, false
+	}
+	r := image.Rect(b.Min.X, b.Min.Y, b.Min.X+si.Width, b.Min.Y+si.Height)
+	if sub, ok := f.(interface {
+		SubImage(image.Rectangle) image.Image
+	}); ok {
+		return sub.SubImage(r), true
+	}
+	out := image.NewRGBA(image.Rect(0, 0, si.Width, si.Height))
+	draw.Draw(out, out.Bounds(), f, r.Min, draw.Src)
+	return out, true
 }

@@ -1,10 +1,14 @@
 package ios
 
 import (
+	"bytes"
+	"context"
 	"image"
 	"image/color"
+	"image/jpeg"
 	"testing"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
@@ -117,5 +121,41 @@ func TestUncapturedThinSymbols(t *testing.T) {
 	}
 	if got := uncaptured(els, img, nil, w, h); got != nil {
 		t.Errorf("drawn keys marked: %v", got)
+	}
+}
+
+// TestScreenOfFrame: the screen sits at 1:1 in the top-left corner of the
+// video's picture, so OCR reads the frame cropped to the screen, in the
+// screenshot's pixels; a smaller picture is not used.
+func TestScreenOfFrame(t *testing.T) {
+	f := image.NewRGBA(image.Rect(0, 0, 1136, 2464))
+	f.Set(10, 20, color.RGBA{R: 255, A: 255})
+	got, ok := screenOfFrame(f, screenInfo{Width: 1125, Height: 2436})
+	if !ok || got.Bounds() != image.Rect(0, 0, 1125, 2436) {
+		t.Fatalf("screenOfFrame = %v, %v", got.Bounds(), ok)
+	}
+	if r, _, _, _ := got.At(10, 20).RGBA(); r>>8 != 255 {
+		t.Fatal("the crop moved the picture")
+	}
+	if _, ok := screenOfFrame(image.NewRGBA(image.Rect(0, 0, 568, 1232)), screenInfo{Width: 1125, Height: 2436}); ok {
+		t.Fatal("a picture smaller than the screen was used")
+	}
+	if _, ok := screenOfFrame(f, screenInfo{}); ok {
+		t.Fatal("used without a screen size")
+	}
+}
+
+// TestOCRPictureFromVideo: over Wi-Fi, OCR reads a frame of the live video
+// when the gateway offers one, encoded for Vision.
+func TestOCRPictureFromVideo(t *testing.T) {
+	d := &Device{info: driver.Info{ID: "ipad", Connection: "wifi"}, scr: screenInfo{Width: 1668, Height: 2388}}
+	frame := image.NewRGBA(image.Rect(0, 0, 1680, 2400))
+	opt := driver.ObserveOptions{OCR: true, Frame: func(context.Context) (image.Image, error) { return frame, nil }}
+	data, pic, from, err := d.ocrPicture(context.Background(), opt)
+	if err != nil || from != "video" || pic.Bounds().Dx() != 1668 {
+		t.Fatalf("ocrPicture = %v, %v, %v", from, pic.Bounds(), err)
+	}
+	if img, err := jpeg.Decode(bytes.NewReader(data)); err != nil || img.Bounds().Dy() != 2388 {
+		t.Fatalf("the picture for Vision: %v, %v", img.Bounds(), err)
 	}
 }

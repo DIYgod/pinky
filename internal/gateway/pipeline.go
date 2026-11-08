@@ -1641,7 +1641,14 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	if video != nil {
 		readTok = video.readStarting(start)
 	}
-	s, err := dev.Observe(ctx, driver.ObserveOptions{OCR: ocr})
+	opt := driver.ObserveOptions{OCR: ocr}
+	if ocr {
+		// A picture from the live video, for drivers whose screenshots are
+		// slow (an iPhone over Wi-Fi); it shares the mirror's stream.
+		key := hubKey(d.id, onBG)
+		opt.Frame = func(ctx context.Context) (image.Image, error) { return g.frameShot(ctx, key, dev) }
+	}
+	s, err := dev.Observe(ctx, opt)
 	if err != nil && video != nil {
 		video.readFailed(readTok)
 	}
