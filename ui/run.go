@@ -260,7 +260,7 @@ type app struct {
 	tn        tailnetState   // phones away from this computer's network, through Tailscale
 	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 
-	awake   func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
+	awake   func(on bool) // keeps the computer awake while agent tasks run; tests replace it
 	awakeOn bool
 	// awayAwake keeps it awake while a phone is away (tailnet.go); tests
 	// replace it.
@@ -311,7 +311,7 @@ func newApp(api gateway.API, opt Options) *app {
 		notified: map[string]bool{}, seenNeed: map[string]bool{}, unlocks: map[string]bool{}, more: map[string]bool{},
 		callQueue:  map[string]chan func(){},
 		mediaCache: map[string]*mediaEntry{}, previews: map[string]bool{},
-		awake: keepMacAwake, awayAwake: keepMacAwakeAway, exportTo: exportFolder, reveal: revealFile,
+		awake: keepAwake, awayAwake: keepAwakeAway, exportTo: exportFolder, reveal: revealFile,
 	}
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
@@ -340,7 +340,7 @@ func newApp(api gateway.API, opt Options) *app {
 }
 
 func (a *app) ready() {
-	keepAppAwake()
+	keepRunning()
 	// Load FFmpeg now, so a missing one is reported at start rather than
 	// as the first mirror opens.
 	if err := video.Load(); err != nil {
@@ -580,8 +580,8 @@ func (a *app) anyRunning() bool {
 	return false
 }
 
-// setAwake keeps the Mac from sleeping while agent tasks run, and lets it
-// sleep again once they end.
+// setAwake keeps the computer from sleeping while agent tasks run, and
+// lets it sleep again once they end.
 func (a *app) setAwake(on bool) {
 	if on == a.awakeOn || a.awake == nil {
 		return
