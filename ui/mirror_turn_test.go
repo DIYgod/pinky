@@ -5,11 +5,13 @@ import (
 	"image"
 	"os/exec"
 	"testing"
+	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/video"
 	"github.com/DIYgod/pinky/ui/fakeapi"
@@ -121,5 +123,55 @@ func TestMirrorTurnsPicture(t *testing.T) {
 	}
 	if b := turnRGBA(pic.RGBA(), turn).Bounds(); b != image.Rect(0, 0, 2400, 1080) {
 		t.Fatalf("an upright screenshot of %v", b)
+	}
+}
+
+// turnRecAPI plays the fake's recordings marked with a quarter turn, as a
+// recording of a turned iPhone or iPad plays back (recording.Open).
+type turnRecAPI struct{ *fakeapi.API }
+
+func (a turnRecAPI) OpenRecording(ctx context.Context, rec gateway.RecordingView, from time.Duration) (driver.Stream, error) {
+	s, err := a.API.OpenRecording(ctx, rec, from)
+	if err != nil {
+		return nil, err
+	}
+	return turned(s, 1), nil
+}
+
+// TestRecordingTurnsPicture plays a recording of a turned phone: the
+// player takes the upright shape and shows the picture turned.
+func TestRecordingTurnsPicture(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("needs the ffmpeg command")
+	}
+	if err := video.Load(); err != nil {
+		t.Skip(err)
+	}
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.app.api = turnRecAPI{ta.api}
+	ta.page = pageActivity
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "Activity", func() bool { tt.Frame(); return ta.act.loaded })
+	ta.act.sel = "h-lunch"
+	ta.waitFor(t, "the recording", func() bool { tt.Frame(); return hasText(tt, "Watch recording") })
+	if err := tt.Click("Watch recording"); err != nil {
+		t.Fatal(err)
+	}
+	pl := ta.rec.pl
+	t.Cleanup(ta.closeRecording)
+	ta.waitFor(t, "the turned picture", func() bool {
+		tt.Frame()
+		return pl.bitmap != nil && pl.picW == 1200 && pl.picH == 540
+	})
+	if pl.turn != 1 {
+		t.Fatalf("turn %d", pl.turn)
+	}
+	tt.Frame()
+	r, ok := tt.Find("Recording of Reorder last week's lunch")
+	if !ok {
+		t.Fatal("no player")
+	}
+	if r.W <= r.H {
+		t.Fatalf("the player is %vx%v, not landscape", r.W, r.H)
 	}
 }
