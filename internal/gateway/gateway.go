@@ -471,6 +471,9 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 		}
 		t.Stop()
 	}
+	g.mu.Lock()
+	listed := d.info.Connection // what it opens over (connectionOf)
+	g.mu.Unlock()
 	dev, err := p.Open(ctx, d.id)
 	g.mu.Lock()
 	d.opening = false
@@ -484,7 +487,7 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 		return
 	}
 	d.dev = dev
-	d.over = connectionOf(dev, d.info)
+	d.over = connectionOf(listed, dev)
 	d.online = true
 	d.opened = true
 	d.offlineSince = time.Time{}

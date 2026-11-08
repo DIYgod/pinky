@@ -487,3 +487,55 @@ func TestObserveOffersFrames(t *testing.T) {
 		t.Fatal("phone_observe offered the driver no frames of the live video")
 	}
 }
+
+// openCounter counts a provider's opens, by phone.
+type openCounter struct {
+	*netProvider
+	mu    sync.Mutex
+	opens map[string]int
+}
+
+func (c *openCounter) Open(ctx context.Context, id string) (driver.Device, error) {
+	c.mu.Lock()
+	c.opens[id]++
+	c.mu.Unlock()
+	return c.netProvider.Open(ctx, id)
+}
+
+func (c *openCounter) count(id string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.opens[id]
+}
+
+// TestWiFiListedConnection: a phone whose sessions name another connection
+// than its provider lists (the Mi, listed on Wi-Fi, whose demo sessions say
+// "usb") opens once, not again at every discovery, and the listing changing
+// is still a move. While the gateway took the session's word for it, the Mi
+// of TestRemoveDevice reopened every 20 ms, and now and then the read after
+// an action found it offline (main's CI on Windows, 2026-11-08).
+func TestWiFiListedConnection(t *testing.T) {
+	p, _, _ := newTwoPhones()
+	c := &openCounter{netProvider: p, opens: map[string]int{}}
+	g, err := New(Options{Providers: []driver.Provider{c}, Policy: testPolicy(t), TrustNewAgents: true,
+		DiscoverEvery: 20 * time.Millisecond, NoScreenshots: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	waitOpen(t, g, "mi")
+	time.Sleep(300 * time.Millisecond) // some fifteen discoveries
+	if n := c.count("mi"); n != 1 {
+		t.Fatalf("the Mi opened %d times, want once", n)
+	}
+
+	p.mu.Lock()
+	p.conn["mi"] = "usb"
+	p.mu.Unlock()
+	waitFor(t, "the Mi to open over its cable", func() bool { return c.count("mi") == 2 })
+	waitOpen(t, g, "mi")
+	time.Sleep(300 * time.Millisecond)
+	if n := c.count("mi"); n != 2 {
+		t.Fatalf("the Mi opened %d times once it moved, want twice", n)
+	}
+}

@@ -184,12 +184,18 @@ func connectingLine(d *device) string {
 	return "Connecting"
 }
 
-// connectionOf is the connection a session was opened over.
-func connectionOf(dev driver.Device, info driver.Info) string {
-	if c := dev.Info().Connection; c != "" {
-		return c
+// connectionOf is the connection a phone opened over: listed, the one its
+// provider listed as Open began (Pinky's drivers pick a phone's connection
+// the same way for List and Open), or the session's word when the listing
+// named none. A move is the listing naming another connection than this one
+// (updateDevice), so it comes from the listing too: a driver whose sessions
+// name another connection than its List (a test's fake listing a demo phone
+// on Wi-Fi) would else be moved, and opened again, at every discovery.
+func connectionOf(listed string, dev driver.Device) string {
+	if listed != "" {
+		return listed
 	}
-	return info.Connection
+	return dev.Info().Connection
 }
 
 // expectedBack reports whether a phone that is offline is expected back in
