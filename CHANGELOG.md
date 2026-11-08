@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1108.9 (2026-11-08)
 
 - Pinky now mounts Apple's developer disk image on iPhones with iOS 27 by itself, in a second or two. This corrects 2026.1108.8: Xcode is no longer needed to mount it once.
 - Fixed iPhone connections that could treat Pinky as an old host, which broke large transfers on that connection.
