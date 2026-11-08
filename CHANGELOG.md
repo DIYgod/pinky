@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- iPhones and iPads now work in landscape: taps, swipes and what Pinky reads of the screen land in the right place whichever way the device is turned, and the mirror shows the screen the right way up.
+- On iPads whose screen is mounted sideways, such as the iPad Pro, taps no longer land in the wrong place, in portrait too.
+- Through the WebDriverAgent helper, alerts that show in landscape can now be tapped where they appear, an iPad held upside down shows the right way up, and Back on an iPad goes back instead of opening dictation.
+- Recordings of an iPhone or iPad play back the right way up, also when the device was turned while recording.
+
 ## 2026.1109.3 (2026-11-09)
 
 - A blocked app's notifications are now hidden from agents in the notification shade, on the lock screen and in banners, and its card in recent apps too: the agent reads only that something is hidden there, and its screenshots, and those in Activity, cover it with a gray box.
