@@ -79,6 +79,11 @@ type Element struct {
 	// Masked is set when Pinky masked a one-time code in Label (policy);
 	// pictures of the screen cover Bounds. It is never shown to agents.
 	Masked bool
+	// Hidden is set on the element that stands in for what Pinky hid from
+	// agents on another app's screen: a blocked app's notification in the
+	// shade, or its card in recent apps. Label says so; pictures of the
+	// screen cover Bounds, and are not taken when Bounds is empty.
+	Hidden bool
 }
 
 // Has reports whether the element is in the given state.

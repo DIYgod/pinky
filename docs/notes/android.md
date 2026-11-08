@@ -367,3 +367,7 @@ Pinky's own adb (2026-11-08):
 - **Screenshot on a virtual display** returns `ErrUnsupported` (`screencap` rejects virtual display ids); decode a frame from the display's stream.
 - **Screens that never stop moving** reach the settle limit; the phone app's favorites page on the Android 16 emulator is one.
 - **uiautomator unbinds every accessibility service** while it dumps; with the companion on, the driver never runs it.
+
+## The phone's notifications (`driver.NotificationLister`, 2026-11-09)
+
+`Device.Notifications` lists the notifications the phone holds, each with its package and texts, so the gateway can find a blocked app's rows in the notification shade, which name the app only while expanded (docs/notes/gateway.md, "Blocked apps on other screens"). It runs `dumpsys notification --noredact` and keeps on the phone only the section headings, the `NotificationRecord(… pkg=…)` lines and the `android.title`, `text`, `bigText`, `subText`, `summaryText`, `infoText`, `conversationTitle` and `title.big` extras (`notificationsCmd`), then reads the "Notification List" section (`parseNotifications`). A text over several lines keeps its first; without `--noredact` the dump gives only lengths, which are skipped. About 70 ms on the Android 16 emulator. Not checked on the Pixel (Android 10) or the Mi 10 Pro: the test emulators hold no one's notifications, the phones do.

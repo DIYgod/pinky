@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -635,6 +636,60 @@ func (g *Gateway) BlockedApps(ctx context.Context) []policy.BlockedApp {
 		}
 	}
 	return g.policy.BlockedApps(installed)
+}
+
+// InstalledApp is an app on a connected phone, which Settings › Safety ›
+// Add app offers to block.
+type InstalledApp struct {
+	ID   string // package name or bundle id
+	Name string
+	// Aliases are other names the phone shows for it (driver.App.Aliases).
+	Aliases []string
+	Phone   string // the name of a phone that has it
+	System  bool   // it came with the phone
+	// Blocked is set when a rule blocks it already.
+	Blocked bool
+}
+
+// InstalledApps lists the apps on the connected phones, each id once,
+// sorted by name. Phones that cannot list their apps are skipped.
+func (g *Gateway) InstalledApps(ctx context.Context) []InstalledApp {
+	type phone struct {
+		dev  driver.Device
+		name string
+	}
+	g.mu.Lock()
+	var phones []phone
+	for _, d := range g.devices {
+		if d.dev != nil {
+			phones = append(phones, phone{d.dev, d.name()})
+		}
+	}
+	g.mu.Unlock()
+	seen := map[string]bool{}
+	var out []InstalledApp
+	for _, p := range phones {
+		apps, err := p.dev.Apps(ctx)
+		if err != nil {
+			continue
+		}
+		for _, a := range apps {
+			if a.ID == "" || seen[a.ID] {
+				continue
+			}
+			seen[a.ID] = true
+			_, blocked := g.policy.Blocked(screen.App{ID: a.ID, Name: a.Name})
+			out = append(out, InstalledApp{ID: a.ID, Name: a.Name, Aliases: a.Aliases, Phone: p.name, System: a.System, Blocked: blocked})
+		}
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := strings.ToLower(out[i].Name), strings.ToLower(out[j].Name)
+		if a != b {
+			return a < b
+		}
+		return out[i].ID < out[j].ID
+	})
+	return out
 }
 
 // SetAppBlocked blocks or unblocks an app for agents and saves apps.yaml.

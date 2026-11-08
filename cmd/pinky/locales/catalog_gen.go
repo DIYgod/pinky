@@ -18029,6 +18029,26 @@ func (msgs Messages) SettingsSafetyAppLabel() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAppLabel", nil)
 }
 
+// SettingsSafetyAppNoMatch says "No app on your phones is named “{name}”. Pinky blocks only that exact name: check the spelling, or pick the app f…"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: a warning under the field when what the
+// person typed is not the name or package of any app on the connected
+// phones. name is what they typed.
+func SettingsSafetyAppNoMatch(name string) string {
+	return In(i18n.Locale()).SettingsSafetyAppNoMatch(name)
+}
+
+// SettingsSafetyAppNoMatch says "No app on your phones is named “{name}”. Pinky blocks only that exact name: check the spelling, or pick the app f…"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: a warning under the field when what the
+// person typed is not the name or package of any app on the connected
+// phones. name is what they typed.
+func (msgs Messages) SettingsSafetyAppNoMatch(name string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppNoMatch", map[string]any{"name": name})
+}
+
 // SettingsSafetyAppPlaceholder says "App name or package"
 // in the language the app shows.
 //
@@ -18043,6 +18063,70 @@ func SettingsSafetyAppPlaceholder() string { return In(i18n.Locale()).SettingsSa
 // which takes the app's name or its package name, as com.example.app.
 func (msgs Messages) SettingsSafetyAppPlaceholder() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAppPlaceholder", nil)
+}
+
+// SettingsSafetyAppsLoading says "Looking for the apps on your phones…"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: under the field while Pinky lists the
+// apps on the connected phones.
+func SettingsSafetyAppsLoading() string { return In(i18n.Locale()).SettingsSafetyAppsLoading() }
+
+// SettingsSafetyAppsLoading says "Looking for the apps on your phones…"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: under the field while Pinky lists the
+// apps on the connected phones.
+func (msgs Messages) SettingsSafetyAppsLoading() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsLoading", nil)
+}
+
+// SettingsSafetyAppsMore says "{count, plural, one {# more app: type more of its name} other {# more apps: type more of the name}}"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: under the apps it offers, when more apps
+// match than it shows.
+func SettingsSafetyAppsMore(count int) string { return In(i18n.Locale()).SettingsSafetyAppsMore(count) }
+
+// SettingsSafetyAppsMore says "{count, plural, one {# more app: type more of its name} other {# more apps: type more of the name}}"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: under the apps it offers, when more apps
+// match than it shows.
+func (msgs Messages) SettingsSafetyAppsMore(count int) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsMore", map[string]any{"count": count})
+}
+
+// SettingsSafetyAppsNoPhone says "Connect a phone to pick from its apps, or type the app's exact name or package."
+// in the language the app shows.
+//
+// Settings › Safety › Add app: under the field when no connected phone
+// could list its apps.
+func SettingsSafetyAppsNoPhone() string { return In(i18n.Locale()).SettingsSafetyAppsNoPhone() }
+
+// SettingsSafetyAppsNoPhone says "Connect a phone to pick from its apps, or type the app's exact name or package."
+// in the language of msgs.
+//
+// Settings › Safety › Add app: under the field when no connected phone
+// could list its apps.
+func (msgs Messages) SettingsSafetyAppsNoPhone() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsNoPhone", nil)
+}
+
+// SettingsSafetyAppsOnPhones says "On your phones"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: the heading of the apps on the connected
+// phones that match what is typed, which the person can click to block.
+func SettingsSafetyAppsOnPhones() string { return In(i18n.Locale()).SettingsSafetyAppsOnPhones() }
+
+// SettingsSafetyAppsOnPhones says "On your phones"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: the heading of the apps on the connected
+// phones that match what is typed, which the person can click to block.
+func (msgs Messages) SettingsSafetyAppsOnPhones() string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAppsOnPhones", nil)
 }
 
 // SettingsSafetyAskGroup says "When agents ask"
@@ -18093,6 +18177,24 @@ func (msgs Messages) SettingsSafetyBlock() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyBlock", nil)
 }
 
+// SettingsSafetyBlockApp says "Block {name}"
+// in the language the app shows.
+//
+// Settings › Safety › Add app: the accessibility label of an app it
+// offers, which blocks it when clicked.
+func SettingsSafetyBlockApp(name string) string {
+	return In(i18n.Locale()).SettingsSafetyBlockApp(name)
+}
+
+// SettingsSafetyBlockApp says "Block {name}"
+// in the language of msgs.
+//
+// Settings › Safety › Add app: the accessibility label of an app it
+// offers, which blocks it when clicked.
+func (msgs Messages) SettingsSafetyBlockApp(name string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyBlockApp", map[string]any{"name": name})
+}
+
 // SettingsSafetyBlockedApps says "Blocked apps"
 // in the language the app shows.
 //
@@ -18109,13 +18211,13 @@ func (msgs Messages) SettingsSafetyBlockedApps() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyBlockedApps", nil)
 }
 
-// SettingsSafetyBlockedIntro says "Agents can't open these apps or see their screens."
+// SettingsSafetyBlockedIntro says "Agents can't open these apps, see their screens or read their notifications."
 // in the language the app shows.
 //
 // Settings › Safety: the line under Blocked apps.
 func SettingsSafetyBlockedIntro() string { return In(i18n.Locale()).SettingsSafetyBlockedIntro() }
 
-// SettingsSafetyBlockedIntro says "Agents can't open these apps or see their screens."
+// SettingsSafetyBlockedIntro says "Agents can't open these apps, see their screens or read their notifications."
 // in the language of msgs.
 //
 // Settings › Safety: the line under Blocked apps.

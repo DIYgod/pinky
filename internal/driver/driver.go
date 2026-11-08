@@ -327,6 +327,22 @@ type FrameShooter interface {
 	ScreenshotFromFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool)
 }
 
+// NotificationLister lists the notifications the phone holds now, with the
+// app that posted each. The notification shade shows many of them without
+// their app's name (a collapsed row on Android 12 and later), so the
+// gateway finds a blocked app's rows there by their text.
+type NotificationLister interface {
+	Notifications(ctx context.Context) ([]Notification, error)
+}
+
+// Notification is one notification the phone holds.
+type Notification struct {
+	App string // package name or bundle id of the app that posted it
+	// Texts are what it says: its title, text, big text, sub text and the
+	// like, each as the app set it.
+	Texts []string
+}
+
 // Clipboard reads and writes the phone's clipboard.
 type Clipboard interface {
 	SetClipboard(ctx context.Context, text string) error

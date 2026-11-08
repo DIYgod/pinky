@@ -307,21 +307,31 @@ func (g *Gateway) shotID(p *bgShot) string {
 	return g.writeShotLocked(p)
 }
 
-// writeShotLocked writes p to history, with its one-time codes covered
-// where its reads place them; a picture with a code they could not place
-// is not kept.
+// writeShotLocked writes p to history, with its one-time codes and what
+// its reads hid of blocked apps (hidden.go) covered where the reads place
+// them; a picture with a code or a hidden card they could not place is not
+// kept.
 func (g *Gateway) writeShotLocked(p *bgShot) string {
 	if p.id != "" || p.img == nil || g.store == nil {
 		return p.id
 	}
 	img := p.img
 	var boxes []image.Rectangle
-	if !p.covered && g.policy.HideCodes() {
+	if !p.covered {
 		b := img.Bounds()
 		var unplaced bool
-		if boxes, unplaced = codePlaces(b.Dx(), b.Dy(), p.reads...); unplaced {
+		// Blocked apps' notifications and cards (hidden.go).
+		if boxes, unplaced = hiddenPlaces(b.Dx(), b.Dy(), p.reads...); unplaced {
 			p.img = nil
 			return ""
+		}
+		if g.policy.HideCodes() {
+			var codes []image.Rectangle
+			if codes, unplaced = codePlaces(b.Dx(), b.Dy(), p.reads...); unplaced {
+				p.img = nil
+				return ""
+			}
+			boxes = append(boxes, codes...)
 		}
 	}
 	id := history.NewID("m_")

@@ -245,6 +245,7 @@ type app struct {
 	previews   map[string]bool        // steps whose screenshot shows in a task card
 	agents     agentsState
 	always     alwaysState       // Settings › Safety › Always allowed
+	apps       appsState         // Settings › Safety › Add app's apps on the phones
 	rules      rulesState        // Settings › Safety › Rules
 	files      fileProblemsState // rules files edited by hand that cannot be used
 	gwSet      gwSettingsState   // what the gateway keeps of the settings, read again after hand edits

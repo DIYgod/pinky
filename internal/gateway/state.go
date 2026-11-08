@@ -88,6 +88,9 @@ type device struct {
 	// unlistedAt is when its provider stopped listing the phone; zero
 	// while it is listed.
 	unlistedAt time.Time
+	// hide is what reads need to hide blocked apps' notifications and
+	// cards (hidden.go); nil until a read needs it.
+	hide *hideState
 }
 
 func newDevice(p driver.Provider, info driver.Info) *device {

@@ -6514,9 +6514,41 @@
   "@settingsSafetyAppLabel": {
     "description": "Settings › Safety: the accessibility label of the field of an app to block."
   },
+  "settingsSafetyAppNoMatch": "No app on your phones is named “{name}”. Pinky blocks only that exact name: check the spelling, or pick the app from your phones.",
+  "@settingsSafetyAppNoMatch": {
+    "description": "Settings › Safety › Add app: a warning under the field when what the person typed is not the name or package of any app on the connected phones. name is what they typed.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Nortbank"
+      }
+    }
+  },
   "settingsSafetyAppPlaceholder": "App name or package",
   "@settingsSafetyAppPlaceholder": {
     "description": "Settings › Safety: the placeholder of the field of an app to block, which takes the app's name or its package name, as com.example.app."
+  },
+  "settingsSafetyAppsLoading": "Looking for the apps on your phones…",
+  "@settingsSafetyAppsLoading": {
+    "description": "Settings › Safety › Add app: under the field while Pinky lists the apps on the connected phones."
+  },
+  "settingsSafetyAppsMore": "{count, plural, one {# more app: type more of its name} other {# more apps: type more of the name}}",
+  "@settingsSafetyAppsMore": {
+    "description": "Settings › Safety › Add app: under the apps it offers, when more apps match than it shows.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "settingsSafetyAppsNoPhone": "Connect a phone to pick from its apps, or type the app's exact name or package.",
+  "@settingsSafetyAppsNoPhone": {
+    "description": "Settings › Safety › Add app: under the field when no connected phone could list its apps."
+  },
+  "settingsSafetyAppsOnPhones": "On your phones",
+  "@settingsSafetyAppsOnPhones": {
+    "description": "Settings › Safety › Add app: the heading of the apps on the connected phones that match what is typed, which the person can click to block."
   },
   "settingsSafetyAskGroup": "When agents ask",
   "@settingsSafetyAskGroup": {
@@ -6530,11 +6562,21 @@
   "@settingsSafetyBlock": {
     "description": "Settings › Safety: the button next to the field that adds the app typed to the blocked apps."
   },
+  "settingsSafetyBlockApp": "Block {name}",
+  "@settingsSafetyBlockApp": {
+    "description": "Settings › Safety › Add app: the accessibility label of an app it offers, which blocks it when clicked.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Northbank"
+      }
+    }
+  },
   "settingsSafetyBlockedApps": "Blocked apps",
   "@settingsSafetyBlockedApps": {
     "description": "Settings › Safety: the heading of the apps agents may never open, and the accessibility label of that part."
   },
-  "settingsSafetyBlockedIntro": "Agents can't open these apps or see their screens.",
+  "settingsSafetyBlockedIntro": "Agents can't open these apps, see their screens or read their notifications.",
   "@settingsSafetyBlockedIntro": {
     "description": "Settings › Safety: the line under Blocked apps."
   },

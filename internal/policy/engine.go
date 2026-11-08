@@ -361,6 +361,15 @@ func contains(list []string, s string) bool {
 // FilterEvents removes notifications from blocked apps and masks one-time
 // codes in the rest, and in toasts and dialogs, as the rules file says.
 func (e *Engine) FilterEvents(events []screen.Event) []screen.Event {
+	return e.FilterEventsNamed(events, nil)
+}
+
+// FilterEventsNamed is FilterEvents with the display names of the apps
+// that posted the notifications: name returns an app id's name, "" when it
+// is not known, and may be nil. An app blocked by its name in Settings ›
+// Safety, or by a name that says it is a bank, is matched by it as well as
+// by its id.
+func (e *Engine) FilterEventsNamed(events []screen.Event, name func(id string) string) []screen.Event {
 	if len(events) == 0 {
 		return events
 	}
@@ -369,10 +378,8 @@ func (e *Engine) FilterEvents(events []screen.Event) []screen.Event {
 	e.mu.RUnlock()
 	out := make([]screen.Event, 0, len(events))
 	for _, ev := range events {
-		if ev.Kind == screen.EventNotification && ev.App != "" {
-			if _, blocked := e.Blocked(screen.App{ID: ev.App, Name: ev.App}); blocked {
-				continue
-			}
+		if ev.Kind == screen.EventNotification && e.NotificationBlocked(ev, name) {
+			continue
 		}
 		if mask {
 			ev.Text = MaskCodes(ev.Text)
@@ -380,4 +387,32 @@ func (e *Engine) FilterEvents(events []screen.Event) []screen.Event {
 		out = append(out, ev)
 	}
 	return out
+}
+
+// NotificationBlocked reports whether a notification event comes from a
+// blocked app: by its app's id and name (name may be nil, see
+// FilterEventsNamed), or, when the driver could not tell the app, by the
+// name that starts its text the way an iPhone's banners do ("Chase, Payment
+// received").
+func (e *Engine) NotificationBlocked(ev screen.Event, name func(id string) string) bool {
+	if ev.Kind != screen.EventNotification {
+		return false
+	}
+	if ev.App == "" {
+		n, _, ok := strings.Cut(ev.Text, ", ")
+		if !ok {
+			return false
+		}
+		_, blocked := e.Blocked(screen.App{Name: strings.TrimSpace(n)})
+		return blocked
+	}
+	// A driver that knows no id passes the app's name.
+	app := screen.App{ID: ev.App, Name: ev.App}
+	if name != nil {
+		if n := strings.TrimSpace(name(ev.App)); n != "" {
+			app.Name = n
+		}
+	}
+	_, blocked := e.Blocked(app)
+	return blocked
 }

@@ -350,7 +350,7 @@ always_allow:
 - A per-task app allow-list (M1), such as "this task may only use Dinely"; typing into any other app is Ask.
 - Emergency stop: a global shortcut (Option-Command-Period on macOS, Ctrl+Alt+Period elsewhere) and Stop all in the menu bar. It ends every lease and cancels every pending action.
 - Credentials never reach the model. The gateway refuses `phone_type` into password and one-time-code fields (`blocked_by_policy`, rule: credentials) and tells the agent to call `phone_handoff` (M1). From M2 the client can fill the value from the OS keychain, and the agent only learns that it was filled.
-- Notifications from blocked apps are never listed. One-time codes are masked by default, on the screen (elements and OCR lines) and in notifications, and covered in the screenshots agents get and history keeps; recordings, which never reach agents, are not covered.
+- Notifications from blocked apps are never listed, matched by the app's id or name. Where another screen shows a blocked app (its notification in the shade, on the lock screen or as a heads-up banner, its card in recent apps), the agent gets one hidden element in its place, covered in screenshots. One-time codes are masked by default, on the screen (elements and OCR lines) and in notifications, and covered in the screenshots agents get and history keeps; recordings, which never reach agents, are not covered.
 - `phone_files` reaches only the phone's `Pinky/` folder. Writing to the phone is Ask, and read-only mode turns it off.
 - An agent's first connection needs approval and a scope.
 
