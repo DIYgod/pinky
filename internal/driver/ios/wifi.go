@@ -35,6 +35,13 @@ type wifiState struct {
 	found  map[string]foundPhone // what was read of phones found over Wi-Fi only
 	asleep map[string]heldPhone  // phones the person uses, found locked on Wi-Fi
 
+	// For phones without a passcode, which never read as locked (dozing):
+	// the phones seen locked, when usbmuxd last stopped listing a phone
+	// over Wi-Fi, and since when it lists it there this time.
+	seenLocked map[string]bool
+	dropped    map[string]time.Time
+	since      map[string]time.Time
+
 	namesFn func(ctx context.Context, e goios.DeviceEntry) (phoneNames, error) // for tests: readNames
 }
 
@@ -165,6 +172,10 @@ func (p *Provider) lockedOnWiFi(info driver.Info) driver.Info {
 	if _, was := p.wifi.asleep[info.ID]; !was {
 		p.logger().Info("iphone: locked on Wi-Fi; waiting until it is unlocked", "device", info.ID)
 	}
+	if p.wifi.seenLocked == nil {
+		p.wifi.seenLocked = map[string]bool{}
+	}
+	p.wifi.seenLocked[info.ID] = true
 	p.wifi.asleep[info.ID] = heldPhone{info: info, seen: p.clock()}
 	return info
 }
@@ -180,6 +191,87 @@ func (p *Provider) stillAsleep(id string) (driver.Info, bool) {
 		return driver.Info{}, false
 	}
 	return h.info, true
+}
+
+// A phone without a passcode never reads as locked, also while it sleeps,
+// so the lock rule above does not hold it back, and an iPad without one
+// would light its screen each time it shows up while it sleeps. Pinky
+// knows a phone sleeps when usbmuxd dropped it from its Wi-Fi list a
+// moment ago; it then opens it only once usbmuxd has listed it for
+// awakeAfter in a row, which an awake phone is and a sleeping one rarely
+// (10 to 30 s at a time, now and then 44 s). Until then it is not listed,
+// so it stays offline. A phone seen locked has a passcode, and the lock
+// rule covers it without the wait.
+const (
+	dozeWindow = 3 * time.Minute
+	awakeAfter = 30 * time.Second
+)
+
+// noteLocked notes that a phone has a passcode: it was seen locked.
+func (p *Provider) noteLocked(id string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.wifi.seenLocked == nil {
+		p.wifi.seenLocked = map[string]bool{}
+	}
+	p.wifi.seenLocked[id] = true
+}
+
+// noteWiFiListing notes, after a List, since when usbmuxd lists each phone
+// over Wi-Fi only, and when it stopped listing one there that was.
+func (p *Provider) noteWiFiListing(entries []goios.DeviceEntry) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.wifi.since == nil {
+		p.wifi.since = map[string]time.Time{}
+		p.wifi.dropped = map[string]time.Time{}
+	}
+	now := p.clock()
+	onWiFi := map[string]bool{}
+	for _, e := range entries {
+		if e.Properties.ConnectionType == "Network" {
+			id := e.Properties.SerialNumber
+			onWiFi[id] = true
+			if _, ok := p.wifi.since[id]; !ok {
+				p.wifi.since[id] = now
+			}
+		}
+	}
+	listed := map[string]bool{}
+	for _, e := range entries {
+		listed[e.Properties.SerialNumber] = true
+	}
+	for id := range p.wifi.since {
+		if onWiFi[id] {
+			continue
+		}
+		delete(p.wifi.since, id)
+		if !listed[id] && p.wifi.on {
+			p.wifi.dropped[id] = now // gone from the list, not onto a cable
+		}
+	}
+	for id, t := range p.wifi.dropped {
+		if now.Sub(t) >= dozeWindow {
+			delete(p.wifi.dropped, id)
+		}
+	}
+}
+
+// dozing reports whether a phone the person uses, listed over Wi-Fi, most
+// likely sleeps: it has no passcode that Pinky knows of, usbmuxd dropped
+// it a moment ago, and lists it again for less than awakeAfter.
+func (p *Provider) dozing(id string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.wifi.seenLocked[id] {
+		return false
+	}
+	dropped, ok := p.wifi.dropped[id]
+	if !ok || p.clock().Sub(dropped) >= dozeWindow {
+		return false
+	}
+	since, ok := p.wifi.since[id]
+	return ok && p.clock().Sub(since) < awakeAfter
 }
 
 // awake notes that a phone is not locked on Wi-Fi (any more).

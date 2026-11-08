@@ -307,3 +307,54 @@ func TestWiFiLockedHeld(t *testing.T) {
 		t.Fatalf("held after it was removed: %+v", got)
 	}
 }
+
+// TestWiFiDozing: a phone without a passcode that comes back on Wi-Fi a
+// moment after it dropped off is most likely asleep: it is neither listed
+// nor inspected (which opens it) until usbmuxd has listed it for
+// awakeAfter. One seen locked has a passcode and does not wait.
+func TestWiFiDozing(t *testing.T) {
+	w := newWiFiProvider(entry("ipad", 7, "Network"))
+	w.SetWiFi(true)
+	w.UseOverWiFi("ipad")
+	if got := listed(t, w.Provider); got["ipad"].State != driver.StateOnline {
+		t.Fatalf("first seen: %+v", got)
+	}
+	w.set() // asleep: off usbmuxd's list
+	w.after(20 * time.Second)
+	listed(t, w.Provider)
+	w.set(entry("ipad", 8, "Network")) // back for a moment
+	if got := listed(t, w.Provider); len(got) != 0 {
+		t.Fatalf("back a moment after it dropped: %+v", got)
+	}
+	n, _ := w.counts("ipad")
+	w.after(awakeAfter - time.Second)
+	if got := listed(t, w.Provider); len(got) != 0 {
+		t.Fatalf("listed for less than awakeAfter: %+v", got)
+	}
+	if m, _ := w.counts("ipad"); m != n {
+		t.Fatal("a dozing phone was inspected")
+	}
+	w.after(2 * time.Second)
+	if got := listed(t, w.Provider); got["ipad"].State != driver.StateOnline {
+		t.Fatalf("listed for awakeAfter: %+v", got)
+	}
+
+	// With a passcode (seen locked), the lock rule covers its sleep.
+	w.noteLocked("ipad")
+	w.set()
+	listed(t, w.Provider)
+	w.set(entry("ipad", 9, "Network"))
+	if got := listed(t, w.Provider); got["ipad"].ID == "" {
+		t.Fatalf("a phone with a passcode waited: %+v", got)
+	}
+
+	// Plugged in and unplugged is not a drop.
+	w2 := newWiFiProvider(entry("phone", 1, "USB"), entry("phone", 2, "Network"))
+	w2.SetWiFi(true)
+	w2.UseOverWiFi("phone")
+	listed(t, w2.Provider)
+	w2.set(entry("phone", 2, "Network"))
+	if got := listed(t, w2.Provider); got["phone"].Connection != "wifi" {
+		t.Fatalf("unplugged: %+v", got)
+	}
+}

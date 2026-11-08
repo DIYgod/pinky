@@ -138,6 +138,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		return nil, err // nil without usbmuxd: CheckHost says what to install
 	}
 	entries := p.entries(list)
+	p.noteWiFiListing(entries)
 	out := make([]driver.Info, len(entries))
 	listed := make([]bool, len(entries))
 	var wg sync.WaitGroup
@@ -149,6 +150,11 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 				// Over Wi-Fi only, and not the person's yet: its name and
 				// nothing else (wifi.go).
 				out[i], listed[i] = p.foundInfo(ctx, e)
+				return
+			}
+			if e.Properties.ConnectionType == "Network" && p.dozing(e.Properties.SerialNumber) {
+				// Back on Wi-Fi a moment after it dropped off, with no
+				// passcode to tell: most likely asleep (wifi.go).
 				return
 			}
 			out[i], listed[i] = p.info(ctx, e), true
@@ -416,10 +422,13 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)
 	info.OSVersion = values.Value.ProductVersion
-	if info.Connection == "wifi" && values.Value.PasswordProtected {
-		// Locked on Wi-Fi, most likely asleep: Pinky waits until it is
-		// unlocked (wifi.go).
-		return p.lockedOnWiFi(info)
+	if values.Value.PasswordProtected {
+		p.noteLocked(info.ID) // it has a passcode (wifi.go, dozing)
+		if info.Connection == "wifi" {
+			// Locked on Wi-Fi, most likely asleep: Pinky waits until it
+			// is unlocked (wifi.go).
+			return p.lockedOnWiFi(info)
+		}
 	}
 	p.awake(info.ID)
 	kind, why := pathFor(parseVersion(info.OSVersion))
