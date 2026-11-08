@@ -238,15 +238,19 @@ func (g *Gateway) waitMovingLocked(ctx context.Context, d *device) bool {
 func (g *Gateway) RestartDeviceService(ctx context.Context, deviceID, reason string) error {
 	g.mu.Lock()
 	d := g.devices[deviceID]
+	var p driver.Provider
+	if d != nil {
+		p = d.provider // discovery sets it again under g.mu
+	}
 	g.mu.Unlock()
 	if d == nil {
 		return ErrUnknownDevice
 	}
-	r, ok := d.provider.(driver.DeviceServiceRestarter)
+	r, ok := p.(driver.DeviceServiceRestarter)
 	if !ok {
 		return fmt.Errorf("%s: %w", d.name(), driver.ErrUnsupported)
 	}
-	g.log.Info("restarting the device service", "platform", d.provider.Platform(), "for", deviceID)
+	g.log.Info("restarting the device service", "platform", p.Platform(), "for", deviceID)
 	if err := r.RestartDeviceService(ctx, reason); err != nil {
 		g.log.Warn("restart the device service", "err", err)
 		return err
