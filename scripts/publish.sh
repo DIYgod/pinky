@@ -42,9 +42,10 @@ version=$(sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$dir/latest.json" | head
 release newer "$version" || die "latest.json has no release version"
 tag=v$version
 
-# The release page: the notes, then where to get Pinky.
+# The release page: the notes, in English and then in each language
+# latest.json has them in, then where to get Pinky.
 {
-	release notes -manifest "$dir/latest.json"
+	release notes -page -manifest "$dir/latest.json"
 	cat <<EOF
 
 ---

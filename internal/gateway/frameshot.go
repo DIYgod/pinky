@@ -32,9 +32,16 @@ const (
 )
 
 // shotOf takes a screenshot of the screen dev shows (the phone's own, or
-// the lease's background display when background is set), from the video
-// when the driver cannot.
+// the lease's background display when background is set): from the video
+// first when the driver prefers it (driver.FrameShooter: an iPhone over
+// Wi-Fi), and when the driver cannot take one.
 func (g *Gateway) shotOf(ctx context.Context, d *device, dev driver.Device, background bool) (image.Image, error) {
+	if fs, ok := dev.(driver.FrameShooter); ok {
+		key := hubKey(d.id, background)
+		if img, ok := fs.ScreenshotFromFrame(ctx, func(ctx context.Context) (image.Image, error) { return g.frameShot(ctx, key, dev) }); ok {
+			return img, nil
+		}
+	}
 	img, err := dev.Screenshot(ctx)
 	if err == nil || !errors.Is(err, driver.ErrUnsupported) {
 		return img, err

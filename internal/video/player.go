@@ -9,12 +9,16 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 )
 
-// Frame is a decoded picture, converted to RGBA.
+// Frame is a decoded picture, converted to RGBA or as its planes.
 type Frame struct {
-	// Image holds the picture, scaled to fit the size the player was asked
-	// for. It belongs to the player: it stays as it is until the second
-	// Take after the one that returned it.
+	// Image holds the picture in RGBA, scaled to fit the size the player
+	// was asked for; nil with PlayerOptions.YUV. It belongs to the player:
+	// it stays as it is until the next Take, after which the player may
+	// write into it again (two conversions later at the earliest).
 	Image *image.RGBA
+	// YUV holds the picture's planes at the stream's size with
+	// PlayerOptions.YUV, else nil. It belongs to the player as Image does.
+	YUV *YUV
 	// Width and Height are the stream's picture size, in the device's
 	// pixels, whatever size Image has.
 	Width, Height int
@@ -34,6 +38,11 @@ type PlayerOptions struct {
 	// MaxBacklog is the number of queued packets beyond which the player
 	// skips to the next key frame to catch up; default 30.
 	MaxBacklog int
+	// YUV hands pictures over as their Y′CbCr planes (Frame.YUV) at the
+	// stream's size, copied as the decoder gives them, for a UI that
+	// converts and scales them as it draws them (MyGo's Bitmap.UpdateYUV):
+	// the least CPU a picture can cost. SetSize then changes nothing.
+	YUV bool
 }
 
 // Stats describe a player's work so far.
@@ -46,7 +55,7 @@ type Stats struct {
 	Idle       uint64        // pictures decoded but not converted, as nobody took any
 	Errors     uint64        // packets the decoder rejected
 	Decode     time.Duration // mean time from a packet's arrival to its picture out of the decoder
-	Convert    time.Duration // mean time to convert a picture to RGBA
+	Convert    time.Duration // mean time to convert a picture to RGBA, or to copy its planes
 	Latency    time.Duration // mean time from a packet's arrival to its picture being ready
 	FPS        float64       // pictures ready per second, over the last second or so
 	OutW, OutH int           // the size pictures are converted to
@@ -228,10 +237,20 @@ func (p *Player) convert(dec *Decoder, pic Picture, received, decoded time.Time)
 	f := p.spare
 	p.spare = nil
 	p.mu.Unlock()
-	if f == nil || f.Image == nil || f.Image.Rect.Dx() != w || f.Image.Rect.Dy() != h {
-		f = &Frame{Image: image.NewRGBA(image.Rect(0, 0, w, h))}
+	var err error
+	if p.opt.YUV {
+		if f == nil || f.YUV == nil {
+			f = &Frame{YUV: &YUV{}}
+		}
+		err = dec.ConvertYUV(f.YUV)
+		w, h = f.YUV.Width, f.YUV.Height
+	} else {
+		if f == nil || f.Image == nil || f.Image.Rect.Dx() != w || f.Image.Rect.Dy() != h {
+			f = &Frame{Image: image.NewRGBA(image.Rect(0, 0, w, h))}
+		}
+		err = dec.Convert(f.Image)
 	}
-	if err := dec.Convert(f.Image); err != nil {
+	if err != nil {
 		p.mu.Lock()
 		p.stats.Errors++
 		p.spare = f

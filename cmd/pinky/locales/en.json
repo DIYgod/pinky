@@ -140,6 +140,10 @@
   "@addAndroidNoPrompt": {
     "description": "Add phone › Android, step 3, and the checkup: what to try when the phone shows no prompt to allow this computer. File transfer and Revoke USB debugging authorizations are Android's own names: use those of Android's Simplified Chinese settings."
   },
+  "addAndroidNoWirelessDebugging": "This phone has no Wireless debugging. To use it without the cable, keep it on this computer's Wi-Fi:",
+  "@addAndroidNoWirelessDebugging": {
+    "description": "Add phone › Android, last step, for a phone without Wireless debugging on a cable: above the button wiFiUse."
+  },
   "addAndroidNotSeen": "Nothing yet? Check that USB debugging is on, unlock the phone, and try another cable or port.",
   "@addAndroidNotSeen": {
     "description": "Add phone › Android, step 3: under the spinner while no phone shows up."
@@ -241,6 +245,10 @@
   "addAndroidStepsLabel": "Steps to connect an Android phone",
   "@addAndroidStepsLabel": {
     "description": "Add phone › Android: the accessible name of the list of steps."
+  },
+  "addAndroidTailnet": "Phone not on this network? Use Tailscale",
+  "@addAndroidTailnet": {
+    "description": "Add phone › Android: the link next to addPhoneOrWiFi that opens the steps to connect a phone through Tailscale, for a phone away from this computer's network. Tailscale and tailnet are product words: keep them."
   },
   "addAndroidTitle": "Connect your Android phone",
   "@addAndroidTitle": {
@@ -480,7 +488,7 @@
   "@addPhoneIPhoneStepPlugDetail": {
     "description": "Add phone › iPhone, the step list: under the plug-in step."
   },
-  "addPhoneIPhoneStepPlugWiFi": "If it's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode, Pinky finds it there and asks you first, no cable needed.",
+  "addPhoneIPhoneStepPlugWiFi": "Once it trusts this computer, Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does, so it keeps working when you unplug it while it's on the same Wi-Fi. One already connected to this computer over Wi-Fi shows up here without the cable, and Pinky asks you first.",
   "@addPhoneIPhoneStepPlugWiFi": {
     "description": "Add phone › iPhone: a note under the plug-in step while Pinky uses iPhones over Wi-Fi."
   },
@@ -519,6 +527,10 @@
   "addPhoneIPhoneStepTrustWaiting": "Waiting for the iPhone to trust this computer…",
   "@addPhoneIPhoneStepTrustWaiting": {
     "description": "Add phone › iPhone, the step list: next to a spinner under the Trust step."
+  },
+  "addPhoneIPhoneStepTrustWiFiOn": "Then Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does. Turning off Use iPhones and iPads over Wi-Fi leaves it on; Finder can turn it off.",
+  "@addPhoneIPhoneStepTrustWiFiOn": {
+    "description": "Add phone › iPhone: a note under the trust step while Pinky uses iPhones over Wi-Fi: Pinky turns on the iPhone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's checkbox) once it trusts the computer."
   },
   "addPhoneIPhoneStepUnlock": "Unlock the iPhone so Pinky can finish.",
   "@addPhoneIPhoneStepUnlock": {
@@ -669,6 +681,164 @@
       "time": {
         "type": "String",
         "example": "03:51"
+      }
+    }
+  },
+  "awayBusy": "Setting up…",
+  "@awayBusy": {
+    "description": "Under awayTitle while it changes."
+  },
+  "awayDialogCancel": "Cancel",
+  "@awayDialogCancel": {
+    "description": "The dialog's cancel button."
+  },
+  "awayDialogConfirm": "Turn on",
+  "@awayDialogConfirm": {
+    "description": "The dialog's button that turns it on."
+  },
+  "awayDialogDrop": "The phone's connection drops for a moment while adb restarts.",
+  "@awayDialogDrop": {
+    "description": "The dialog: what happens as it turns on."
+  },
+  "awayDialogExposure": "The phone listens on every network it joins, not only Tailscale: on a café's Wi-Fi, another device there could ask to debug it. The phone then asks you; tap Cancel. Only computers it already trusts get in without asking, and only the way through Tailscale is encrypted.",
+  "@awayDialogExposure": {
+    "description": "The dialog: what it exposes."
+  },
+  "awayDialogTitle": "Use {name} away from home?",
+  "@awayDialogTitle": {
+    "description": "The dialog before turning Use away from home on: its title.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayDialogUntil": "It lasts until the phone restarts. Turn it off here any time; once it's off, you can turn it on again only while the phone is near this computer.",
+  "@awayDialogUntil": {
+    "description": "The dialog: how long it lasts and how to turn it off."
+  },
+  "awayDialogWhat": "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it through Tailscale wherever the phone is.",
+  "@awayDialogWhat": {
+    "description": "The dialog: what turning it on does. adb tcpip is a command; keep it."
+  },
+  "awayFailed": "Couldn't change Use away from home for {name}: {error}",
+  "@awayFailed": {
+    "description": "When turning it on or off failed; error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone went offline"
+      }
+    }
+  },
+  "awayHowTo": "Set up Tailscale",
+  "@awayHowTo": {
+    "description": "Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale."
+  },
+  "awayKeepAwake": "Keep this computer awake for phones away",
+  "@awayKeepAwake": {
+    "description": "Settings › Phones, under the phones: the switch's title."
+  },
+  "awayKeepAwakeDesc": "While a phone is connected through Tailscale, this computer doesn't sleep when idle, so agents can reach the phone. A MacBook still sleeps when you close its lid, unless it's plugged in with an external display.",
+  "@awayKeepAwakeDesc": {
+    "description": "Under awayKeepAwake."
+  },
+  "awayNoTailscaleHere": "Needs Tailscale on this computer, signed in.",
+  "@awayNoTailscaleHere": {
+    "description": "Under awayTitle when Tailscale does not run on this computer."
+  },
+  "awayNoTailscalePhone": "Install Tailscale on {name}, open it and sign in to the same account as on this computer.",
+  "@awayNoTailscalePhone": {
+    "description": "Under awayTitle when the phone is not on this computer's tailnet.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayNotConnected": "Connect {name} by cable or on this computer's Wi-Fi to set it up.",
+  "@awayNotConnected": {
+    "description": "Under awayTitle when the phone is not connected.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayOffDesc": "Reach {name} through Tailscale when it's away from this computer's network.",
+  "@awayOffDesc": {
+    "description": "Under awayTitle while it is off.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayOnDesc": "On. When {name} is away from this computer's network, Pinky reaches it through Tailscale at {addr}.",
+  "@awayOnDesc": {
+    "description": "Under awayTitle while it is on: addr is the phone's Tailscale address.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      },
+      "addr": {
+        "type": "String",
+        "example": "100.101.2.2"
+      }
+    }
+  },
+  "awayStoppedDesc": "{name}'s adb stopped listening on the network, as it does when the phone restarts. Turn it on again before you leave.",
+  "@awayStoppedDesc": {
+    "description": "Under awayTitle while it is on but the phone's adb no longer listens.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayTitle": "Use away from home",
+  "@awayTitle": {
+    "description": "Settings › Phones, per Android phone: the title of the setting that reaches the phone through Tailscale when it is away from this computer's network."
+  },
+  "awayTurnOff": "Turn off",
+  "@awayTurnOff": {
+    "description": "Button: turns Use away from home off."
+  },
+  "awayTurnOn": "Turn on…",
+  "@awayTurnOn": {
+    "description": "Button: opens the dialog that turns Use away from home on."
+  },
+  "awayTurnOnAgain": "Turn on again",
+  "@awayTurnOnAgain": {
+    "description": "Button by awayStoppedDesc."
+  },
+  "awayTurnedOff": "Use away from home is off for {name}",
+  "@awayTurnedOff": {
+    "description": "A toast once Use away from home is off.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayTurnedOn": "{name} can now be used away from home",
+  "@awayTurnedOn": {
+    "description": "A toast once Use away from home is on.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
       }
     }
   },
@@ -897,6 +1067,10 @@
         "example": "iPhone"
       }
     }
+  },
+  "checkConnectionTailscale": "Connected through Tailscale.",
+  "@checkConnectionTailscale": {
+    "description": "The checkup, connection: passed, through Tailscale (the phone is away from this computer's network)."
   },
   "checkConnectionTitle": "Connection",
   "@checkConnectionTitle": {
@@ -2226,7 +2400,7 @@
   "@flyoutUnlock": {
     "description": "Menu bar flyout: the action at the end of a locked phone's Needs you row; a click opens the phone to unlock it."
   },
-  "foundDetail": "It's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode. Pinky hasn't used it, so it leaves it alone until you say it's yours: it doesn't connect to it, change anything on it or let agents use it.",
+  "foundDetail": "It's on the same Wi-Fi as this computer and was set up before to connect to it over Wi-Fi, in Finder, Xcode or Pinky. Pinky hasn't used it, so it leaves it alone until you say it's yours: it doesn't connect to it, change anything on it or let agents use it.",
   "@foundDetail": {
     "description": "Under foundTitle, and in Add phone and the checkup: why Pinky waits for the person."
   },
@@ -3986,7 +4160,7 @@
   "@needsThenClickDone": {
     "description": "Ends the sentence that says how to unlock a phone on a handoff card (\"Unlock it on the phone, then click Done.\"): it starts with a comma and ends the sentence. Done is the card's button (needsDone)."
   },
-  "needsUnblockHow": "{app} is blocked by “{rule}”. Allowing lets {agent} open it and read its screen until this task ends. What your rules ask about still asks, Pinky takes no pictures of it, and it stays blocked in Settings.",
+  "needsUnblockHow": "{app} is blocked by “{rule}”. Allowing lets {agent} open it and read its screen until this task ends. What your rules ask about still asks, Pinky keeps no screenshots or recordings of it (it reads text from its screen without keeping a picture), and it stays blocked in Settings.",
   "@needsUnblockHow": {
     "description": "On the card that asks whether an agent may open a blocked app for its task, above Deny and needsAllowTask. rule is the rule that blocks it, such as Finance apps.",
     "placeholders": {
@@ -4464,6 +4638,16 @@
   "@phoneAllPhones": {
     "description": "The Phones page's title when it shows every phone as live tiles."
   },
+  "phoneAwayOff": "{name} stopped taking connections from afar, as it does when the phone restarts. When it's near this computer again, turn Use away from home on again in Settings › Phones.",
+  "@phoneAwayOff": {
+    "description": "An offline phone's page, for a phone used away from home whose adb stopped listening.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
   "phoneBackgroundDesc": "Agents use a hidden second screen, so the phone stays yours and can stay locked. From the next task.",
   "@phoneBackgroundDesc": {
     "description": "Under Work in the background in ⋯ under the mirror: what the switch does, and that it applies from the agent's next task."
@@ -4614,6 +4798,26 @@
       }
     }
   },
+  "phoneNetworkAway": "{name} isn't on this network now. Pinky connects again by itself once it's back.",
+  "@phoneNetworkAway": {
+    "description": "An offline phone's page, for a phone moved to Wi-Fi that does not answer.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "phoneNetworkOff": "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again in the ⋯ menu under its picture.",
+  "@phoneNetworkOff": {
+    "description": "An offline phone's page, for a phone moved to Wi-Fi whose adb stopped listening (it restarted).",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
   "phoneNoPhones": "No phones yet",
   "@phoneNoPhones": {
     "description": "The Phones page before any phone is added, above the Add phone button."
@@ -4749,6 +4953,16 @@
   "phoneShowOnMirror": "Show on the mirror",
   "@phoneShowOnMirror": {
     "description": "The accessibility label of the switch under the mirror between the agent's screen and the phone's."
+  },
+  "phoneTailnetAway": "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online.",
+  "@phoneTailnetAway": {
+    "description": "An offline phone's page, for a phone used away from home that does not answer through Tailscale.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
   },
   "phoneTakeOver": "Take over",
   "@phoneTakeOver": {
@@ -5796,7 +6010,7 @@
   "@settingsPhonesWiFi": {
     "description": "Settings › Phones: the switch that lets Pinky reach iPhones and iPads over Wi-Fi when this computer finds them there, besides the cable."
   },
-  "settingsPhonesWiFiDesc": "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer. Pinky asks before it uses one it finds there. Over Wi-Fi the live picture is less smooth and each step is slower.",
+  "settingsPhonesWiFiDesc": "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer: once one trusts this computer on a cable, Pinky turns on its Wi-Fi connection, as Finder's “Show this iPhone when on Wi-Fi” does. Pinky asks before it uses one it finds there. Over Wi-Fi the live picture is less smooth and each step is slower.",
   "@settingsPhonesWiFiDesc": {
     "description": "Settings › Phones: under settingsPhonesWiFi."
   },
@@ -6585,6 +6799,196 @@
       "question": {
         "type": "String",
         "example": "“Is 3pm fine?”"
+      }
+    }
+  },
+  "tailnetAllow": "Allow this computer on {name}: unlock it and tap Allow.",
+  "@tailnetAllow": {
+    "description": "When the phone asks the person to allow this computer. Allow is addAndroidSketchAllow.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "tailnetConnect": "Connect",
+  "@tailnetConnect": {
+    "description": "Button by a phone on the tailnet: connects to it."
+  },
+  "tailnetConnectDetail": "Set each phone up once while it's near this computer, by cable or on the same Wi-Fi: turn on Use away from home for it in Settings › Phones. Pinky then reaches it through Tailscale wherever it is.",
+  "@tailnetConnectDetail": {
+    "description": "Step 3: above the list of phones on the tailnet. Use away from home is awayTitle; Settings › Phones is settingsPageTitle › settingsSectionPhones."
+  },
+  "tailnetConnectFailed": "Couldn't connect to {name}: {error}",
+  "@tailnetConnectFailed": {
+    "description": "When connecting through Tailscale failed otherwise; error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      },
+      "error": {
+        "type": "String",
+        "example": "the adb server stopped"
+      }
+    }
+  },
+  "tailnetConnectPort": "Connect at this port",
+  "@tailnetConnectPort": {
+    "description": "Accessible name of the Connect button by the Wireless debugging port field."
+  },
+  "tailnetConnected": "Connected to {name} through Tailscale",
+  "@tailnetConnected": {
+    "description": "A toast once a phone connected through Tailscale.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "tailnetDetail": "Use your phone when it's away from this computer's network, as when you're out and this computer is at home. Tailscale, a free app, connects your own devices to each other privately, wherever they are.",
+  "@tailnetDetail": {
+    "description": "Add phone › Android › Tailscale: the line under the heading."
+  },
+  "tailnetGet": "Get Tailscale",
+  "@tailnetGet": {
+    "description": "Button: opens Tailscale's download page."
+  },
+  "tailnetHereLinux": "Turn Tailscale on: run {command} in a terminal.",
+  "@tailnetHereLinux": {
+    "description": "Step 1 on Linux, where Tailscale has no app to open: command is a shell command.",
+    "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "sudo tailscale up"
+      }
+    }
+  },
+  "tailnetHereNeedsLogin": "Sign in to Tailscale on this computer.",
+  "@tailnetHereNeedsLogin": {
+    "description": "Step 1 when Tailscale is not signed in."
+  },
+  "tailnetHereNotInstalled": "Install Tailscale on this computer and sign in.",
+  "@tailnetHereNotInstalled": {
+    "description": "Step 1 when Tailscale is not installed."
+  },
+  "tailnetHereNotRunning": "Open Tailscale and sign in.",
+  "@tailnetHereNotRunning": {
+    "description": "Step 1 when Tailscale is installed but not running."
+  },
+  "tailnetHereRunning": "Connected to {tailnet} as {name}.",
+  "@tailnetHereRunning": {
+    "description": "Under step 1 once done: tailnet is the tailnet's name (an email address or a domain), name this computer's name on it.",
+    "placeholders": {
+      "tailnet": {
+        "type": "String",
+        "example": "someone@gmail.com"
+      },
+      "name": {
+        "type": "String",
+        "example": "Someone's MacBook"
+      }
+    }
+  },
+  "tailnetHereStarting": "Tailscale is connecting…",
+  "@tailnetHereStarting": {
+    "description": "Step 1 while Tailscale connects."
+  },
+  "tailnetHereStopped": "Tailscale is turned off on this computer. Open it and turn it on.",
+  "@tailnetHereStopped": {
+    "description": "Step 1 when Tailscale is signed in but turned off."
+  },
+  "tailnetNotListening": "{name} doesn't take connections from Pinky yet",
+  "@tailnetNotListening": {
+    "description": "When connecting to a phone found nothing listening: its adb does not listen on the network.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "tailnetNotListeningDetail": "Set it up once while it's near this computer: connect it by cable or on the same Wi-Fi, then turn on Use away from home for it in Settings › Phones. If Wireless debugging is on on the phone, you can also enter the port it shows under IP address & Port.",
+  "@tailnetNotListeningDetail": {
+    "description": "Under tailnetNotListening. Wireless debugging and IP address & Port are Android's own names; use those of Android's Simplified Chinese settings."
+  },
+  "tailnetOpen": "Open Tailscale",
+  "@tailnetOpen": {
+    "description": "Button: opens Tailscale's app on this computer."
+  },
+  "tailnetPhoneConnected": "connected",
+  "@tailnetPhoneConnected": {
+    "description": "After a phone's Tailscale address: Pinky is connected to it through Tailscale."
+  },
+  "tailnetPhoneNone": "Waiting for an Android phone on your tailnet…",
+  "@tailnetPhoneNone": {
+    "description": "Step 2, by a spinner, while the tailnet has no Android device. Tailscale and tailnet are product words: keep them."
+  },
+  "tailnetPhoneOffline": "offline",
+  "@tailnetPhoneOffline": {
+    "description": "After a phone's Tailscale address: Tailscale does not see it."
+  },
+  "tailnetPhoneOnline": "online",
+  "@tailnetPhoneOnline": {
+    "description": "After a phone's Tailscale address in step 3's list: Tailscale sees it connected. Lower case: it follows \"100.101.2.2 · \"."
+  },
+  "tailnetPhoneRelayed": "connected through a Tailscale relay, which is slower",
+  "@tailnetPhoneRelayed": {
+    "description": "After a phone's Tailscale address: connected, but through one of Tailscale's relay servers rather than straight to the phone."
+  },
+  "tailnetPhoneSteps": "On the phone, install Tailscale from Google Play, open it and sign in to the same account as on this computer.",
+  "@tailnetPhoneSteps": {
+    "description": "Step 2: what to do on the phone."
+  },
+  "tailnetPortField": "Wireless debugging port",
+  "@tailnetPortField": {
+    "description": "Accessible name of the field for the port Wireless debugging shows."
+  },
+  "tailnetReadFailed": "Couldn't read Tailscale's status on this computer",
+  "@tailnetReadFailed": {
+    "description": "Add phone › Android › Tailscale: when asking Tailscale on this computer failed; its error follows in English."
+  },
+  "tailnetReading": "Looking for Tailscale on this computer…",
+  "@tailnetReading": {
+    "description": "Add phone › Android › Tailscale: while the first answer is on its way."
+  },
+  "tailnetSafety": "Tailscale encrypts everything between your devices. Pinky only reads Tailscale's status; it doesn't change Tailscale's settings.",
+  "@tailnetSafety": {
+    "description": "The note under the steps."
+  },
+  "tailnetShow": "Show",
+  "@tailnetShow": {
+    "description": "Button by a phone that is connected: shows it."
+  },
+  "tailnetStepConnect": "Connect the phone",
+  "@tailnetStepConnect": {
+    "description": "Step 3's title."
+  },
+  "tailnetStepHere": "Tailscale on this computer",
+  "@tailnetStepHere": {
+    "description": "Step 1's title."
+  },
+  "tailnetStepPhone": "Tailscale on your phone",
+  "@tailnetStepPhone": {
+    "description": "Step 2's title."
+  },
+  "tailnetStepsLabel": "Steps to connect through Tailscale",
+  "@tailnetStepsLabel": {
+    "description": "Accessible name of the list of steps."
+  },
+  "tailnetTitle": "Connect through Tailscale",
+  "@tailnetTitle": {
+    "description": "Add phone › Android › Tailscale: the heading."
+  },
+  "tailnetUnreachable": "Couldn't reach {name} through Tailscale. Check that Tailscale is on on the phone and the phone has internet.",
+  "@tailnetUnreachable": {
+    "description": "When connecting through Tailscale timed out.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
       }
     }
   },
@@ -7631,5 +8035,157 @@
   "updateWhereUnsigned": "This copy of Pinky isn't signed by Pinky's developer (a build made on this Mac), so it doesn't replace itself.",
   "@updateWhereUnsigned": {
     "description": "Why this Pinky cannot update itself: it is a local build. Shown only in other languages; in English internal/update's own words show."
+  },
+  "wiFiAlsoAway": "Stopping it also stops Use away from home.",
+  "@wiFiAlsoAway": {
+    "description": "After wiFiOnDesc when the phone is used away from home too. Use away from home is awayTitle."
+  },
+  "wiFiBusy": "Switching…",
+  "@wiFiBusy": {
+    "description": "Under wiFiTitle while the switch changes."
+  },
+  "wiFiDialogCancel": "Cancel",
+  "@wiFiDialogCancel": {
+    "description": "The dialog's cancel button."
+  },
+  "wiFiDialogConfirm": "Use Wi-Fi",
+  "@wiFiDialogConfirm": {
+    "description": "The dialog's button that moves the phone to Wi-Fi."
+  },
+  "wiFiDialogRisk": "While it's on, any computer on the same network can try to connect to the phone. If the phone asks \"Allow USB debugging?\" when you aren't connecting it yourself, tap Cancel, never Allow. The connection isn't encrypted, so use it only on Wi-Fi you trust.",
+  "@wiFiDialogRisk": {
+    "description": "The dialog: the risk, in a warning box. Allow USB debugging? is Android's own prompt; use its words in Android's Simplified Chinese."
+  },
+  "wiFiDialogTitle": "Use {name} over Wi-Fi?",
+  "@wiFiDialogTitle": {
+    "description": "The dialog before moving a phone to Wi-Fi: its title.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiDialogUntil": "It lasts until the phone restarts: then plug it in once and choose Use Wi-Fi again. Stop it any time from the ⋯ menu under the phone's picture or in Settings › Phones.",
+  "@wiFiDialogUntil": {
+    "description": "The dialog: how long it lasts and how to stop it."
+  },
+  "wiFiDialogWhat": "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it over Wi-Fi at {addr}. You can then unplug it.",
+  "@wiFiDialogWhat": {
+    "description": "The dialog: what it does. addr is the phone's Wi-Fi address. adb tcpip is a command; keep it.",
+    "placeholders": {
+      "addr": {
+        "type": "String",
+        "example": "192.168.1.42"
+      }
+    }
+  },
+  "wiFiFailed": "Couldn't change {name}'s Wi-Fi connection: {error}",
+  "@wiFiFailed": {
+    "description": "When moving the phone to Wi-Fi or back failed; error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone is not on Wi-Fi"
+      }
+    }
+  },
+  "wiFiNeedsCable": "Plug {name} in to turn this on.",
+  "@wiFiNeedsCable": {
+    "description": "Under wiFiTitle while the phone is not on a cable.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiNoWiFi": "{name} isn't on Wi-Fi. Connect it to the same Wi-Fi as this computer.",
+  "@wiFiNoWiFi": {
+    "description": "Under wiFiTitle while the phone has no Wi-Fi address.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiOffDesc": "{name} has no Wireless debugging. Keep it on this computer's Wi-Fi, and Pinky can reach it without the cable.",
+  "@wiFiOffDesc": {
+    "description": "Under wiFiTitle while it is off. Wireless debugging is Android's own name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiOffToast": "Stopped {name}'s Wi-Fi connection",
+  "@wiFiOffToast": {
+    "description": "A toast once the Wi-Fi connection stopped.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiOnDesc": "On: Pinky reaches {name} over Wi-Fi at {addr}, and again by itself whenever it is back on this network.",
+  "@wiFiOnDesc": {
+    "description": "Under wiFiTitle while it is on: addr is the phone's Wi-Fi address.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      },
+      "addr": {
+        "type": "String",
+        "example": "192.168.1.42"
+      }
+    }
+  },
+  "wiFiOnToast": "{name} is connected over Wi-Fi at {addr}. You can unplug it now.",
+  "@wiFiOnToast": {
+    "description": "A toast once the phone moved to Wi-Fi.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      },
+      "addr": {
+        "type": "String",
+        "example": "192.168.1.42"
+      }
+    }
+  },
+  "wiFiStop": "Stop the Wi-Fi connection",
+  "@wiFiStop": {
+    "description": "The ⋯ menu and Settings › Phones: has the phone's adb stop listening on the network (adb usb). Pinky then reaches it by cable only."
+  },
+  "wiFiStoppedDesc": "{name}'s Wi-Fi connection stopped, as it does when the phone restarts. Plug it in once, then choose Use Wi-Fi again.",
+  "@wiFiStoppedDesc": {
+    "description": "Under wiFiTitle when the phone's adb no longer listens on the network. Use Wi-Fi again is wiFiUseAgain.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel"
+      }
+    }
+  },
+  "wiFiTitle": "Wi-Fi connection",
+  "@wiFiTitle": {
+    "description": "Settings › Phones, under an Android phone without Wireless debugging: the title of its Wi-Fi switch."
+  },
+  "wiFiUse": "Use Wi-Fi instead…",
+  "@wiFiUse": {
+    "description": "The ⋯ menu under the mirror, Settings › Phones and Add phone, for an Android phone without Wireless debugging (Android 10) on a cable: opens the dialog that moves it to Wi-Fi."
+  },
+  "wiFiUseAgain": "Use Wi-Fi again",
+  "@wiFiUseAgain": {
+    "description": "The same, for a phone whose Wi-Fi connection stopped when it restarted, now plugged in again: moves it to Wi-Fi at once."
   }
 }

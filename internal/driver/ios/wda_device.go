@@ -226,42 +226,72 @@ func (d *WDADevice) toPoints(p screen.Point) wdaPoint {
 // Observe implements driver.Device: WDA's page source, with frames.
 func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	var (
-		wg      sync.WaitGroup
-		root    *wdaNode
-		srcErr  error
-		app     wdaApp
-		locked  bool
-		lines   []ocrLine
-		ocrDone bool
+		wg       sync.WaitGroup
+		root     *wdaNode
+		srcErr   error
+		app      wdaApp
+		locked   bool
+		lines    []ocrLine
+		ocrDone  bool
+		pictured sync.WaitGroup
+		gate     *captureGate
 	)
+	known := make(chan struct{}) // the app and the lock state
+	var knowing sync.WaitGroup
+	knowing.Add(2)
+	go func() { knowing.Wait(); close(known) }()
 	wg.Add(3)
 	go func() { defer wg.Done(); root, srcErr = d.c.source(ctx) }()
-	go func() { defer wg.Done(); app, _ = d.c.activeApp(ctx) }()
-	go func() { defer wg.Done(); locked, _ = d.lockState(ctx) }()
+	go func() { defer wg.Done(); defer knowing.Done(); app, _ = d.c.activeApp(ctx) }()
+	go func() { defer wg.Done(); defer knowing.Done(); locked, _ = d.lockState(ctx) }()
 	if opt.OCR {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			png, err := d.c.screenshot(ctx)
-			if err != nil {
-				return
-			}
-			if l, err := recognizeText(png, ocrOptions{Languages: ocrLanguages}); err == nil {
-				lines, ocrDone = l, true
-			}
-		}()
+		// The picture waits until the read may take it (capturegate.go):
+		// WDA names the app in front long before the page source comes.
+		gate = newCaptureGate(opt.MayCapture, func() {
+			pictured.Add(1)
+			go func() {
+				defer pictured.Done()
+				png, err := d.c.screenshot(ctx)
+				if err != nil {
+					return
+				}
+				if l, err := recognizeText(png, ocrOptions{Languages: ocrLanguages}); err == nil {
+					lines, ocrDone = l, true
+				}
+			}()
+		})
+		if opt.MayCapture != nil {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-known
+				if app.BundleID != "" {
+					gate.early([]*screen.Screen{{Width: d.width, Height: d.height, Orientation: "portrait",
+						App: d.appInfo(ctx, app, nil), Locked: locked}})
+				}
+			}()
+		}
 	}
 	wg.Wait()
-	if srcErr != nil {
-		return nil, fmt.Errorf("observe: %w", srcErr)
-	}
 	s := &screen.Screen{
 		Width: d.width, Height: d.height,
 		Orientation: "portrait",
 		Locked:      locked,
 		CapturedAt:  time.Now(),
 	}
-	s.App = d.appInfo(ctx, app, root)
+	if srcErr == nil {
+		s.App = d.appInfo(ctx, app, root)
+	}
+	if gate != nil {
+		use := gate.late(s)
+		pictured.Wait()
+		if !use {
+			lines, ocrDone = nil, false
+		}
+	}
+	if srcErr != nil {
+		return nil, fmt.Errorf("observe: %w", srcErr)
+	}
 	scale := d.scale
 	if root.Rect.Width > 0 {
 		scale = float64(d.width) / root.Rect.Width

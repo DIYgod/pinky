@@ -17,11 +17,16 @@ import (
 // https://github.com/<releases repo>/releases/latest/download/latest.json,
 // where the app's updater reads it.
 type Manifest struct {
-	Version string           `json:"version"` // 2026.1107.1
-	Tag     string           `json:"tag"`     // v2026.1107.1
-	Date    string           `json:"date"`    // RFC 3339, when the release was assembled
-	Notes   string           `json:"notes"`   // Markdown: the version's section of CHANGELOG.md
-	Assets  map[string]Asset `json:"assets"`  // by platform, as darwin-arm64
+	Version string `json:"version"` // 2026.1107.1
+	Tag     string `json:"tag"`     // v2026.1107.1
+	Date    string `json:"date"`    // RFC 3339, when the release was assembled
+	Notes   string `json:"notes"`   // Markdown: the version's section of CHANGELOG.md
+	// LocalizedNotes are Notes in other languages, by the language tags of
+	// the app's catalogs (zh-Hans): the version's section of each
+	// translation of the changelog that has one. Versions of the app before
+	// it read only Notes.
+	LocalizedNotes map[string]string `json:"localized_notes,omitempty"`
+	Assets         map[string]Asset  `json:"assets"` // by platform, as darwin-arm64
 }
 
 // Asset is the archive of one platform that the updater installs.
@@ -104,6 +109,19 @@ func BuildManifest(dir, version, repo, notes string, now time.Time, partial bool
 		return nil, missing, fmt.Errorf("%s lacks %s", dir, strings.Join(missing, ", "))
 	}
 	return m, missing, nil
+}
+
+// PageNotes returns the notes of a release's page on GitHub: the English
+// ones, then the notes in each language the manifest has them in, after a
+// rule and a heading in that language.
+func PageNotes(m *Manifest) string {
+	page := m.Notes
+	for _, t := range translations {
+		if notes := strings.TrimSpace(m.LocalizedNotes[t.lang]); notes != "" {
+			page += "\n\n---\n\n### " + t.heading + "\n\n" + notes
+		}
+	}
+	return page
 }
 
 // writeJSON writes v to path as indented JSON.

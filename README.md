@@ -64,10 +64,12 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 **Add phone › Android** shows these steps for your phone's brand, with its own menu names and extra switches: Xiaomi, OPPO, vivo, HONOR, HUAWEI, Samsung and Pixel, and general steps for the rest.
 
 1. On the phone, turn on USB debugging: in Settings › About phone, tap **Build number** 7 times, then turn on **USB debugging** in Settings › System › Developer options. Some brands name these menus a little differently.
-2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone**.
+2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone** ([when it fails](#when-pairing-over-wi-fi-fails)). Android 10 has no Wireless debugging: once it is plugged in, **Use Wi-Fi instead…** moves it to Wi-Fi ([below](#phones)).
 3. Pinky offers to install Pinky Companion, its app for the phone, which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
 
 Each phone has a **Checkup**, in the ··· menu under its mirror, that lists what works and how to fix what doesn't, such as a Xiaomi's USB debugging (Security settings) switch.
+
+Taking the phone out? With Tailscale, Pinky reaches it away from home too ([how](#phones-away-from-home)).
 
 <table>
 <tr>
@@ -85,6 +87,17 @@ Pinky brings its own adb, the tool it reaches Android phones with, built from An
 - **Windows:** the phone's USB debugging needs a driver. Windows installs one by itself for many phones; when it has none, Pinky lists the phone as needing setup and says which driver to install: the [Google USB Driver](https://developer.android.com/studio/run/win-usb) for Pixels, [Samsung's](https://developer.samsung.com/android-usb-driver) for Samsung phones, the [phone maker's](https://developer.android.com/studio/run/oem-usb) for others. Unplug the phone and plug it in again afterwards.
 - **Linux:** the computer must let Pinky open the phone's USB device, which takes udev rules for Android phones: `sudo apt install android-sdk-platform-tools-common` on Debian and Ubuntu, `android-udev` on Arch, `android-tools` on Fedora. You may also need to be in the `plugdev` group. Then plug the phone in again. Pinky says so when they are missing.
 
+#### When pairing over Wi-Fi fails
+
+When a phone works on the cable but **Pair over Wi-Fi** does not finish, the pairing page says within half a minute what Pinky sees:
+
+- **The phone hasn't shown up on the network yet:** check that Wireless debugging is on and that the phone is on the same Wi-Fi as the computer. Guest Wi-Fi, routers with AP (client) isolation and many office networks keep devices from finding each other. There, choose **Pair with a code instead**: on the phone, tap **Pair device with pairing code** and enter the IP address and port and the six-digit code it shows, which change each time that dialog opens. Pinky then needs no search to pair; if it still cannot find the phone afterwards, it asks for the IP address and port at the top of Wireless debugging (not the pairing dialog's) and connects there. If it cannot reach the phone at those addresses either, the network keeps its devices apart: use a Wi-Fi where they can reach each other, such as your home network rather than its guest network, or the cable.
+- **Pinky isn't allowed to look for phones on this network:** on a Mac, Pinky needs Local Network access, and macOS gives no error without it: the search just finds nothing. Choose **Open Local Network settings**, turn on Pinky under System Settings › Privacy & Security › Local Network and try again (if macOS asks whether Pinky may find devices on your local network, click **Allow**). On a Mac, a phone's **Checkup** shows this too, under **Local network**. On Windows and Linux, a firewall can block the search the same way: let Pinky use the local network, or pair with a code.
+- **Pinky can't look for phones on this network:** check that the computer is connected to Wi-Fi or Ethernet.
+- **The phone showed up, but pairing hasn't finished:** if the phone shows an error or went back to Wireless debugging, scan the code again, or pair with a code.
+
+Pairing over Wi-Fi needs Android 11 or later; an Android 10 phone moves to Wi-Fi from the cable instead (**Use Wi-Fi instead…**, [below](#phones)). Up to Android 16, Wireless debugging turns itself off when the phone leaves the Wi-Fi network, even for another access point of it, or restarts: turn it on again, or pair again from **Add phone**.
+
 #### iPhone
 
 Pinky prepares an iPhone itself; **Add phone › iPhone** walks you through it.
@@ -99,7 +112,7 @@ Checked on the iPhone 13 mini (iOS 27.0.1): Pinky mounting Xcode's image itself 
 
 #### iPhones and iPads over Wi-Fi
 
-Pinky also uses an iPhone or iPad over Wi-Fi while it is on the same Wi-Fi as the computer, and the computer lists it there, which it does once the phone was paired with it with Wi-Fi allowed (Finder's **Show this iPhone when on Wi-Fi**, or Xcode). It is on by default; **Settings › Phones › Use iPhones and iPads over Wi-Fi** turns it off.
+Pinky also uses an iPhone or iPad over Wi-Fi while it is on the same Wi-Fi as the computer, and the computer lists it there, which it does once Wi-Fi connections are on for the phone. Pinky turns them on when you plug the phone in and it trusts the computer: it is the same setting as Finder's **Show this iPhone when on Wi-Fi**, so a phone already set up that way stays as it is. It is on by default; **Settings › Phones › Use iPhones and iPads over Wi-Fi** turns it off, which leaves the phones' setting alone (Finder turns it off).
 
 - An iPhone or iPad Pinky has used keeps working when you unplug it, as the same phone with its settings: Pinky moves it to Wi-Fi by itself, and back to the cable when you plug it in, and an agent's task goes on; its calls wait a few seconds meanwhile.
 - One Pinky has not used, such as a family member's iPad paired with this computer, shows as **Found on Wi-Fi**. Pinky reads its name, model and iOS version and does nothing else, and agents don't see it, until you choose **Use**, which sets it up over Wi-Fi, or **Ignore**, which keeps it off the list until you plug it in.
@@ -143,7 +156,8 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 
 ### Phones
 
-- **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Its companion app, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). Its accessibility service is on only while an agent works on the phone, as banking apps refuse to run next to one ([why](#faq)). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked.
+- **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Its companion app, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). Its accessibility service is on only while an agent works on the phone, as banking apps refuse to run next to one ([why](#faq)). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked. Text that an app draws without describing it to the accessibility tree, as in mini-programs and other web pages inside super-apps, games and maps, is read from the screen's pixels (OCR) on macOS and Windows, so agents can read it and tap it. Pinky reads a blocked app this way only once you allow it for the task, never a locked phone, and keeps no picture.
+- **Wi-Fi on Android 10:** Android 10 has no Wireless debugging. Plug the phone in and choose **Use Wi-Fi instead…** in the ⋯ menu under its picture (or in Settings › Phones): Pinky has the phone's adb listen on the network (`adb tcpip`, port 5555), connects to it at its Wi-Fi address and says when you can unplug it. It connects again by itself when the phone is back on the network, also at a new address. While it is on, any computer on the same network can try to connect to the phone: if the phone asks **Allow USB debugging?** when you are not connecting it yourself, tap **Cancel**, and use it only on Wi-Fi you trust. It lasts until the phone restarts; then plug it in once and choose **Use Wi-Fi again**. **Stop the Wi-Fi connection** in the same menu turns it off ([details](docs/away-from-home.md#wi-fi-without-wireless-debugging)).
 - **iPhone:** connected over USB or Wi-Fi ([above](#iphones-and-ipads-over-wi-fi)) and prepared by Pinky ([above](#iphone)); iPads work the same way. What Pinky can do depends on the iOS version and on how Pinky connects, which you can choose for each iPhone in Settings › Phones (Automatic picks by version, as below):
 
   | iOS | How | What works | Tested on |
@@ -158,9 +172,20 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 - **Locked phones:** Pinky never keeps a phone awake. It wakes the screen before a step; save the phone's PIN in Settings › Phones to unlock it from the computer with Touch ID. Agents never see the PIN. On Android this is checked on AOSP-style lock screens (LineageOS on a Mi 10 Pro, the Android 10, 16 and 17 emulators); the lock screens of Xiaomi, Samsung, OPPO, OnePlus, vivo, Honor and Huawei are only covered by tests made from what is known of them, and where Pinky cannot read the PIN pad with confidence it enters nothing ([details](docs/notes/integration.md#unlocking-other-android-phones)).
 - **Removing a phone:** **Remove this phone…** in the phone's ⋯ menu (also on its page while it is offline, on its tile in All phones, in its right-click menu in the sidebar and in Settings › Phones) takes it off the list and deletes its saved PIN and its settings. Its tasks, screenshots and recordings stay in Activity unless you tick the box to delete them too, and a task running on it stops. A phone on a cable comes back at once, as a new phone, until you unplug it. A phone on Wi-Fi is disconnected and stays off the list, even when adb connects it again by itself; to add it back, pair it again in Add phone or plug it in. An iPhone or iPad on Wi-Fi stays off the list until you plug it in. Pinky does not unpair the phone from your computer: its USB or wireless debugging pairing, or the iPhone's trust, stays for other apps ([details](docs/notes/gateway.md#removing-a-phone)).
 
+### Phones away from home
+
+An Android phone does not have to be on the computer's network. With [Tailscale](https://tailscale.com) on the computer and on the phone, signed in to the same account, Pinky reaches the phone through it: leave the computer at home and take the phone out, on mobile data or another Wi-Fi.
+
+1. Set the phone up once while it is near the computer, by cable or on the same Wi-Fi: **Settings › Phones › Use away from home › Turn on…**. **Add phone › Android › Phone not on this network? Use Tailscale** walks you through Tailscale on both sides and lists the phones on your tailnet.
+2. Pinky has the phone's adb listen on the network (`adb tcpip`, port 5555) and connects to the phone at its Tailscale address. It uses that connection whenever the phone has no connection on the computer's network, so the phone stays in the list as you leave.
+3. The phone's adb then takes connections on every network the phone joins, from the computers it already trusts; any other computer makes the phone ask. Only the way through Tailscale is encrypted. It lasts until the phone restarts, and **Turn off** stops it at once. Pinky only reads Tailscale's status and never changes its settings.
+4. **Keep this computer awake for phones away** (Settings › Phones, on by default) stops the computer's idle sleep while a phone is connected through Tailscale. A MacBook still sleeps when its lid closes.
+
+At home, Tailscale is as fast as Wi-Fi; away, the phone's upload carries the picture, so Pinky streams lighter through Tailscale (1 Mbit/s), and on a weak 4G hotspot each step takes seconds. Details, measurements, data use and what to do when it does not connect: [docs/away-from-home.md](docs/away-from-home.md). An agent can be away from the computer too: [Remote agents](docs/mcp.md#over-http).
+
 ### Updates
 
-Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free; its accessibility service stays off until the next task. A Pinky Companion signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you; on a phone that asks before installing apps over USB, the phone's page says why and waits for your **Update**. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md)).
+Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free; its accessibility service stays off until the next task. A Pinky Companion signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you; on a phone that asks before installing apps over USB, the phone's page says why and waits for your **Update**. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md), or its Chinese version, [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md), when Pinky is in Chinese).
 
 - **macOS:** Pinky.app replaces itself after checking the download's checksum, that it is signed by Pinky's developer and that Apple notarized it, and goes back to the old version if the new one does not start. The Homebrew cask's copy updates itself the same way, and `brew upgrade` leaves it alone while it is current. A copy run from the disk image or from a folder you cannot write to says how to update it instead.
 - **Windows:** a Pinky that its installer installed runs the new installer quietly, after checking its checksum, starts the new version and goes back to the old one if that does not start. The portable copy downloads the installer for you.
@@ -192,7 +217,7 @@ No. The rules run in Pinky's gateway, between the agent and the phone. A step th
 <details>
 <summary><b>What can't agents see?</b></summary>
 
-Banking, wallet and password-manager apps, from a list that comes with Pinky and that you can add to in Settings › Safety: agents get no screen from them, and their notifications are hidden. Agents can't type into password or one-time-code fields, and codes in notifications are masked. When an agent needs a banking or wallet app for a task, Pinky asks you first. If you allow it, the agent may open and read that app for the rest of the task, what your rules ask about there still asks, and Pinky keeps no screenshots or recordings of it. Password managers are never offered.
+Banking, wallet and password-manager apps, from a list that comes with Pinky and that you can add to in Settings › Safety: agents get no screen from them, and their notifications are hidden. Agents can't type into password or one-time-code fields, and codes in notifications are masked. When an agent needs a banking or wallet app for a task, Pinky asks you first. If you allow it, the agent may open and read that app for the rest of the task, what your rules ask about there still asks, and Pinky keeps no screenshots or recordings of it: to read text that only its pixels show, Pinky looks at its screen in memory and gives the agent the text, never the picture. Password managers are never offered.
 
 </details>
 
@@ -323,6 +348,7 @@ docs/                         design, agent guide, MCP reference and notes
 - [Acceptance checklist](docs/ACCEPTANCE.md)
 - [Design](docs/DESIGN.md)
 - [Agent guide (SKILL.md)](docs/SKILL.md) and [MCP reference](docs/mcp.md)
+- [Phones away from home](docs/away-from-home.md)
 - [Working on Pinky](docs/WORKING.md)
 - [Usage statistics, crash reports and feedback](docs/TELEMETRY.md)
 - Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md), [updates](docs/notes/updates.md), [telemetry](docs/notes/telemetry.md)

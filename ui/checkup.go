@@ -341,6 +341,8 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		}
 	case driver.CheckConnection:
 		switch {
+		case pass && d.Info.Via == driver.ViaTailscale:
+			w.text = locales.CheckConnectionTailscale()
 		case pass && d.Info.Connection == "wifi":
 			w.text = locales.CheckConnectionWiFi()
 		case pass:
@@ -443,6 +445,8 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		}
 	case driver.CheckWiFi:
 		switch {
+		case pass && d.Info.Via == driver.ViaTailscale:
+			w.text, w.detail = locales.CheckConnectionTailscale(), false
 		case pass && d.Info.Connection == "wifi":
 			w.text, w.detail = locales.CheckConnectionWiFi(), false
 		case pass:

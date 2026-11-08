@@ -17,12 +17,14 @@ import (
 )
 
 // bench decodes ffmpeg test streams in real time and reports the CPU the
-// decoder uses and how long a picture takes from its packet to RGBA.
+// decoder uses and how long a picture takes from its packet to RGBA, or
+// with -yuv to the planes the mirror hands MyGo.
 func bench(args []string) error {
 	fs := flag.NewFlagSet("bench", flag.ExitOnError)
 	dur := fs.Duration("t", 20*time.Second, "how long each run decodes")
 	only := fs.String("run", "", "only runs whose name contains this")
 	threads := fs.Int("convert-threads", 0, "threads that convert pictures to RGBA; 0 is the decoder's default")
+	yuv := fs.Bool("yuv", false, "hand pictures over as their planes at the stream's size, as the mirror does, rather than RGBA at the run's")
 	fs.Parse(args)
 	if err := video.Load(); err != nil {
 		return err
@@ -50,7 +52,7 @@ func bench(args []string) error {
 		if *only != "" && !strings.Contains(r.name, *only) {
 			continue
 		}
-		res, err := benchOne(r.codec, r.w, r.h, r.outW, r.outH, r.software, r.source, *dur, *threads)
+		res, err := benchOne(r.codec, r.w, r.h, r.outW, r.outH, r.software, r.source, *dur, *threads, *yuv)
 		if err != nil {
 			fmt.Printf("%s: %v\n", r.name, err)
 			continue
@@ -60,7 +62,7 @@ func bench(args []string) error {
 	return nil
 }
 
-func benchOne(codec driver.Codec, w, h, outW, outH int, software bool, source string, dur time.Duration, threads int) (string, error) {
+func benchOne(codec driver.Codec, w, h, outW, outH int, software bool, source string, dur time.Duration, threads int, yuv bool) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), dur+30*time.Second)
 	defer cancel()
 	s, err := video.StartTestStream(ctx, video.TestStreamOptions{Codec: codec, Width: w, Height: h, FPS: 60, Source: source})
@@ -70,6 +72,7 @@ func benchOne(codec driver.Codec, w, h, outW, outH int, software bool, source st
 	frames := make(chan struct{}, 1)
 	p, err := video.NewPlayer(s, video.PlayerOptions{
 		Decoder: video.DecoderOptions{Software: software, ConvertThreads: threads},
+		YUV:     yuv,
 		OnFrame: func() {
 			select {
 			case frames <- struct{}{}:
@@ -134,7 +137,11 @@ func benchOne(codec driver.Codec, w, h, outW, outH int, software bool, source st
 	if vt1 >= 0 && vt0 >= 0 && hw == "videotoolbox" {
 		out += fmt.Sprintf(" + %.0f%% in VTDecoderXPCService", (vt1-vt0).Seconds()/el.Seconds()*100)
 	}
-	out += fmt.Sprintf("\n  packet → RGBA: median %v, p95 %v, max %v · decode %v + convert %v (means) · dropped %d of %d",
+	to := "RGBA"
+	if yuv {
+		to = "planes"
+	}
+	out += fmt.Sprintf("\n  packet → %s: median %v, p95 %v, max %v · decode %v + convert %v (means) · dropped %d of %d", to,
 		pct(0.5).Round(10*time.Microsecond), pct(0.95).Round(10*time.Microsecond), pct(1).Round(10*time.Microsecond),
 		after.Decode.Round(10*time.Microsecond), after.Convert.Round(10*time.Microsecond), after.Dropped-before.Dropped, n)
 	return out, nil

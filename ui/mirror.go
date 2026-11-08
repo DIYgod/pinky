@@ -124,7 +124,7 @@ func (m *mirror) open() {
 		}
 		var p *video.Player
 		if err == nil {
-			p, err = video.NewPlayer(s, video.PlayerOptions{})
+			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true})
 			if err != nil {
 				s.Close()
 			}
@@ -208,15 +208,35 @@ func (m *mirror) aspect(d gateway.DeviceView) float32 {
 	return 9.0 / 20
 }
 
-// lastImage copies the picture the mirror shows, for a screenshot.
-func (m *mirror) lastImage() image.Image {
-	if m.frame == nil || m.frame.Image == nil {
+// lastPicture copies the picture the mirror shows, for a screenshot: the
+// player writes its planes again.
+func (m *mirror) lastPicture() *video.YUV {
+	if m.frame == nil || m.frame.YUV == nil {
 		return nil
 	}
-	src := m.frame.Image
-	dst := image.NewRGBA(src.Rect)
-	copy(dst.Pix, src.Pix)
-	return dst
+	return m.frame.YUV.Clone()
+}
+
+// showPlanes shows a picture's planes in bm, made for the first one, and
+// returns it. MyGo's renderers convert and scale the planes as they draw
+// them, so a picture costs the CPU no more than the decoder's copy.
+func showPlanes(bm *mg.Bitmap, pic *video.YUV) *mg.Bitmap {
+	img := mg.YUVImage{Format: mg.I420, Width: pic.Width, Height: pic.Height,
+		Planes: pic.Planes, Strides: pic.Strides, Matrix: mg.BT601, FullRange: pic.FullRange}
+	if pic.NV12 {
+		img.Format = mg.NV12
+	}
+	switch pic.Matrix {
+	case video.BT709:
+		img.Matrix = mg.BT709
+	case video.BT2020:
+		img.Matrix = mg.BT2020
+	}
+	if bm == nil {
+		bm = mg.NewBitmap(image.NewRGBA(image.Rect(0, 0, 1, 1)))
+	}
+	bm.UpdateYUV(&img)
+	return bm
 }
 
 // overlayStep is the step whose target the mirror outlines: the one in
@@ -263,18 +283,14 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 	scr.Draw(func(pt *mg.Painter, r mg.Rect) {
 		m.boxW, m.boxH = r.W, r.H
 		if pl := m.player; pl != nil {
-			s := pt.Scale()
-			pl.SetSize(int(r.W*s+0.5), int(r.H*s+0.5))
 			if f := pl.Take(); f != nil {
 				if m.bitmap == nil {
-					m.bitmap = mg.NewBitmap(f.Image)
 					// The view was built before the first picture, with
 					// the Connecting overlay; painting does not build it
 					// again, and a still screen sends nothing else.
 					a.post(func() {})
-				} else {
-					m.bitmap.Update(f.Image)
 				}
+				m.bitmap = showPlanes(m.bitmap, f.YUV)
 				m.frame = f
 				m.picW, m.picH = f.Width, f.Height
 			}

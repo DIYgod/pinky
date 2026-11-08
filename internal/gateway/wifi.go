@@ -184,12 +184,18 @@ func connectingLine(d *device) string {
 	return "Connecting"
 }
 
-// connectionOf is the connection a session was opened over.
-func connectionOf(dev driver.Device, info driver.Info) string {
-	if c := dev.Info().Connection; c != "" {
-		return c
+// connectionOf is the connection a phone opened over: listed, the one its
+// provider listed as Open began (Pinky's drivers pick a phone's connection
+// the same way for List and Open), or the session's word when the listing
+// named none. A move is the listing naming another connection than this one
+// (updateDevice), so it comes from the listing too: a driver whose sessions
+// name another connection than its List (a test's fake listing a demo phone
+// on Wi-Fi) would else be moved, and opened again, at every discovery.
+func connectionOf(listed string, dev driver.Device) string {
+	if listed != "" {
+		return listed
 	}
-	return info.Connection
+	return dev.Info().Connection
 }
 
 // expectedBack reports whether a phone that is offline is expected back in
@@ -232,15 +238,19 @@ func (g *Gateway) waitMovingLocked(ctx context.Context, d *device) bool {
 func (g *Gateway) RestartDeviceService(ctx context.Context, deviceID, reason string) error {
 	g.mu.Lock()
 	d := g.devices[deviceID]
+	var p driver.Provider
+	if d != nil {
+		p = d.provider // discovery sets it again under g.mu
+	}
 	g.mu.Unlock()
 	if d == nil {
 		return ErrUnknownDevice
 	}
-	r, ok := d.provider.(driver.DeviceServiceRestarter)
+	r, ok := p.(driver.DeviceServiceRestarter)
 	if !ok {
 		return fmt.Errorf("%s: %w", d.name(), driver.ErrUnsupported)
 	}
-	g.log.Info("restarting the device service", "platform", d.provider.Platform(), "for", deviceID)
+	g.log.Info("restarting the device service", "platform", p.Platform(), "for", deviceID)
 	if err := r.RestartDeviceService(ctx, reason); err != nil {
 		g.log.Warn("restart the device service", "err", err)
 		return err

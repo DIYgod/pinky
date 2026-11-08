@@ -2,7 +2,39 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1108.20 (2026-11-08)
+
+- Plugging in an iPhone or iPad now turns on its Wi-Fi connection, as Finder's "Show this iPhone when on Wi-Fi" does, so it keeps working over Wi-Fi when you unplug it; you no longer need Finder or Xcode for that.
+- Over Wi-Fi, screenshots of an iPhone or iPad for approvals, history and agents now come from the live picture, in a fraction of a second instead of up to half a minute.
+- On iPhones, Pinky no longer takes a picture of a blocked app you haven't allowed, not even in memory.
+- On Linux, `pinkyctl daemon` no longer says it keeps the computer awake when the system refuses a moment later; it reports the refusal and tries again in 5 minutes.
+
+## 2026.1108.19 (2026-11-08)
+
+- Android phones now read text that apps draw without describing it, as in mini-programs and other pages inside super-apps, games and maps: Pinky reads it from the screen on macOS and Windows, and agents can read and tap it. `phone_observe` takes `ocr: true` to read all the text on the screen.
+- A blocked app you allow for a task is read this way too: agents get its text, never a picture of it.
+- Taps on Android where the screen says little, such as a "Pay" button that is a picture, are now checked against the text drawn there.
+- Pinky now reads text from screen pictures on Windows too.
+
+## 2026.1108.18 (2026-11-08)
+
+- Pinky in Chinese now shows What's new and the update notes in Chinese.
+
+## 2026.1108.17 (2026-11-08)
+
+- Typing on an iPhone no longer adds a space where you didn't type one, as when text is added after a word.
+
+## 2026.1108.16 (2026-11-08)
+
+- `pinkyctl daemon` now keeps the computer awake while an agent task runs and while a phone is connected through Tailscale, as the app does, so it no longer needs `caffeinate`.
+
+## 2026.1108.15 (2026-11-08)
+
+- Watching a phone takes about a third of the CPU it did: the video's frames go to the GPU as the phone sends them, without converting each one first. Recordings play the same way.
+- Screenshots saved from a phone's screen are at the phone's full resolution.
+- Windows and Linux computers stay awake while an agent task runs, and while a phone is connected through Tailscale with Keep this computer awake for phones away on, as Macs already did.
+
+## 2026.1108.14 (2026-11-08)
 
 - iPhones and iPads now work over Wi-Fi too, on by default: one you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as your computer, and a running task moves between the cable and Wi-Fi by itself. Turn it off in Settings › Phones.
 - When Pinky finds an iPhone or iPad on Wi-Fi that it hasn't used, such as a family member's iPad paired with your computer, it shows it as Found on Wi-Fi and leaves it alone until you choose Use or Ignore.
@@ -12,6 +44,11 @@ What changed for people in each release of Pinky, newest first. A version is the
 - Add phone › iPhone says which steps need the cable: trusting the computer, and making the Developer Mode switch appear; the rest works over Wi-Fi.
 - A phone Pinky is connecting to, or moving between the cable and Wi-Fi, shows as Connecting or Moving to Wi-Fi rather than offline.
 - iPads are called iPads, with their model names.
+- Use your Android phone when it's away from your computer's network, as when you're out and the computer is at home, through Tailscale: turn on Use away from home for the phone in Settings › Phones once while it's near the computer, and Pinky keeps reaching it wherever it is. Add phone › Android has the steps, with buttons to get or open Tailscale and to connect the phones on your tailnet.
+- Pinky says what Use away from home opens before turning it on (the phone's adb listens on the network until it restarts) and turns it off with one click, or when you remove the phone.
+- New in Settings › Phones: Keep this computer awake for phones away, on by default, so agents can still reach a phone connected through Tailscale.
+- Through Tailscale, Pinky streams the phone's screen lighter (1 Mbit/s, 15 frames a second), since the phone's upload carries it.
+- Android 10 phones, which have no Wireless debugging, can now leave the cable too: plug the phone in and choose Use Wi-Fi instead… in the ⋯ menu under its picture. Pinky reconnects it by itself when it comes back to the network, and after the phone restarts its page says to plug it in once and choose Use Wi-Fi again; Stop the Wi-Fi connection turns it off.
 
 ## 2026.1108.13 (2026-11-08)
 

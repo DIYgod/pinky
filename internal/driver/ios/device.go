@@ -11,7 +11,6 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
-	"github.com/danielpaulus/go-ios/ios/instruments"
 )
 
 // inputSettle is how long the device needs after a stream starts before it
@@ -51,7 +50,7 @@ type Device struct {
 	svcMu       sync.Mutex
 	info2       *cdService // deviceinfo
 	shot        *cdService // screencapture
-	inst        *instruments.ScreenshotService
+	inst        *instShot
 	ax          *axSession
 	rax         *raxSession
 	raxErr      error // why rax could not connect, until raxFailedAt+raxRecheckFailures
@@ -64,7 +63,8 @@ type Device struct {
 	capture     captureMarks // what screenshots did not show (capture.go)
 	pb          *pbConn
 
-	typeStats TypeStats // guarded by mu
+	typeStats   TypeStats // guarded by mu
+	framesAfter time.Time // no frames of the video for pictures until then (capture.go); guarded by mu
 
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.

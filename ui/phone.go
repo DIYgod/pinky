@@ -105,9 +105,12 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			mg.Text(c, locales.PhoneOffline(d.Info.Name)).FontSize(16).FontWeight(600)
 			mg.Row(c).Gap(4).AlignItems(mg.Baseline).Children(func() {
 				detail := d.Info.Detail
-				if detail == "" {
+				switch {
+				case networkOfflineText(d) != "":
+					detail = networkOfflineText(d)
+				case detail == "":
 					detail = locales.PhoneNotConnected()
-				} else {
+				default:
 					detail += "."
 				}
 				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2)
@@ -347,6 +350,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 	p := pal(c)
 	id := d.Info.ID
 	open := a.more[id]
+	a.phoneWiFiOf(c, d) // read before the menu opens, which may offer to move it to Wi-Fi
 	b := mg.ButtonBase(c.Key("more-"+id)).Size(40, 36).Radius(9).Center().Label(locales.PhoneMoreControls()).Tooltip(locales.PhoneMoreControls())
 	col := p.ink2
 	if b.Hovered() || open {
@@ -367,6 +371,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 			open = false
 			a.openCheckup(d)
 		}
+		a.phoneWiFiMenu(c, d, func() { open = false })
 		menuItem(c, locales.PhoneRecordScreen(), p.ink3).Disabled(true).Tooltip(locales.PhoneRecordScreenTooltip())
 		menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
@@ -401,8 +406,8 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 // saveScreenshot writes the mirror's last picture to the Desktop (or the
 // home folder) as a PNG.
 func (a *app) saveScreenshot(m *mirror, name string) {
-	img := m.lastImage()
-	if img == nil {
+	pic := m.lastPicture()
+	if pic == nil {
 		a.toasts = append(a.toasts, locales.PhoneNoPicture())
 		return
 	}
@@ -413,6 +418,7 @@ func (a *app) saveScreenshot(m *mirror, name string) {
 	now := time.Now()
 	path := filepath.Join(dir, locales.PhoneScreenshotName(name, now.Format("2006-01-02"), now.Format("15.04.05"))+".png")
 	go func() {
+		img := pic.RGBA()
 		f, err := os.Create(path)
 		if err == nil {
 			err = png.Encode(f, img)

@@ -140,7 +140,8 @@ type API struct {
 	wifiOff    bool             // iPhones over Wi-Fi turned off (wifi.go)
 	restarts   []string         // RestartDeviceService reasons (wifi.go)
 	restartErr error
-	dlErr      error // what DownloadDiskImage fails with (iphone.go)
+	dlErr      error        // what DownloadDiskImage fails with (iphone.go)
+	tn         *fakeTailnet // Tailscale on this computer (tailnet.go)
 }
 
 type device struct {

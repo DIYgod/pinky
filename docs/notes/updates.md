@@ -12,6 +12,7 @@ How Pinky keeps itself and its Android companion app current, and tells the pers
   "tag": "v2026.1107.2",
   "date": "2026-11-07T10:00:00Z",
   "notes": "- Markdown, shown on the update card",
+  "localized_notes": {"zh-Hans": "- The same notes in Simplified Chinese"},
   "assets": {
     "darwin-arm64": {"url": "https://github.com/DIYgod/pinky/releases/download/v2026.1107.2/pinky-2026.1107.2-darwin-arm64.zip", "sha256": "<64 hex>", "size": 41234567},
     "darwin-amd64": {"url": "…/pinky-2026.1107.2-darwin-amd64.zip", "sha256": "…", "size": 0},
@@ -24,6 +25,7 @@ How Pinky keeps itself and its Android companion app current, and tells the pers
 - Asset keys are `GOOS-GOARCH`. An asset whose URL is not HTTPS, whose sha256 is not 64 hex digits or whose size is not between 1 byte and 2 GiB is dropped; the feed itself must parse and name a release version, and is at most 1 MiB.
 - The macOS asset is a zip of the signed, notarized and stapled `Pinky.app`, made with `ditto -c -k --keepParent Pinky.app`. Its `CFBundleShortVersionString` must equal `version`.
 - Versions are dot-separated integers (`2026.1107.1`, date-based `YYYY.MDD.N`), compared part by part as numbers, missing parts counting as 0; a leading `v` is ignored. `0.0.0-dev` and anything else that does not parse never update and never see an update.
+- `notes` are in English. `localized_notes` (since 2026-11-08) has them in other languages, by the language tags of the app's catalogs (`zh-Hans`): the card and its dialog show the one of the app's language (`Feed.NotesIn`, matched as `i18n.Match` does), `notes` when it has none. Versions before it ignore the field and show `notes`.
 - Requests carry `User-Agent: Pinky/<version> (<os>; <arch>)` and go through the system's proxy (MyGo's `netproxy`), as browsers do.
 
 ## When Pinky looks and installs
@@ -118,6 +120,7 @@ Checked on GitHub's Windows runner (Windows Server 2025, `update-windows.yml`, r
 ## What's new
 
 - `CHANGELOG.md` at the repository's root is embedded through the root package (`pinky.Changelog`): newest first, `## <version> (<YYYY-MM-DD>)` per release with bullets; headings without a version (`## Unreleased`) are skipped, and `## [2026.1107.1] - 2026-11-07` is read too.
+- Its translations are embedded too (`pinky.ChangelogTranslations`, by catalog language: `zh-Hans` is `CHANGELOG.zh-CN.md`, with the same headings). What's new takes the versions from `CHANGELOG.md` and each one's bullets from the translation into the app's language where it has them (`update.Translate`), and writes the dates in that language (`locales.DayOtherYear`).
 - `update.json` (next to the settings) keeps `last_run`. A start of a newer version sets `notes_from` to the version that ran before; the card **Pinky was updated** opens the entries after it, up to the running version, and the companion updates since. Closing it clears both. A first install shows nothing; Settings › Advanced › What's new shows this version's entries at any time.
 
 ## Tests

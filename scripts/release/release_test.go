@@ -9,9 +9,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	pinky "github.com/DIYgod/pinky"
 )
 
 func TestParseVersion(t *testing.T) {
@@ -94,7 +97,10 @@ func TestNext(t *testing.T) {
 	}
 }
 
-const changelogHead = "# Changelog\n\nWhat changed in each release.\n\n"
+const (
+	changelogHead   = "# Changelog\n\nWhat changed in each release.\n\n"
+	translationHead = "# 更新日志\n\n"
+)
 
 func TestStamp(t *testing.T) {
 	v := Version{2026, 1107, 2}
@@ -135,6 +141,80 @@ func TestStamp(t *testing.T) {
 	}
 	if _, _, err := Stamp(changelogHead+released, v, func(string) bool { return true }); !errors.Is(err, errNoRelease) {
 		t.Errorf("Stamp(nothing new) = %v, want errNoRelease", err)
+	}
+}
+
+func TestStampTranslation(t *testing.T) {
+	v := Version{2026, 1107, 2}
+	none := func(string) bool { return false }
+	const file = "CHANGELOG.zh-CN.md"
+	head := "# 更新日志\n\n"
+	released := "## 2026.1107.1 (2026-11-07)\n\n- 第一条。\n"
+	got, notes, err := StampTranslation(file, head+"## Unreleased\n\n- 第二条。\n- 还有。\n\n"+released, v, "- Second.\n- Also.", none)
+	if err != nil || got != head+"## 2026.1107.2 (2026-11-07)\n\n- 第二条。\n- 还有。\n\n"+released || notes != "- 第二条。\n- 还有。" {
+		t.Errorf("StampTranslation = %q, %q, %v", got, notes, err)
+	}
+	for name, text := range map[string]string{
+		"no Unreleased":  head + released,
+		"no notes":       head + "## Unreleased\n\n" + released,
+		"a note missing": head + "## Unreleased\n\n- 第二条。\n\n" + released,
+		"a note more":    head + "## Unreleased\n\n- 第二条。\n- 还有。\n- 多的。\n\n" + released,
+	} {
+		tagged := func(s string) bool { return s == "2026.1107.1" }
+		_, _, err := StampTranslation(file, text, v, "- Second.\n- Also.", tagged)
+		if err == nil || !strings.Contains(err.Error(), file) {
+			t.Errorf("StampTranslation(%s) = %v, want an error naming %s", name, err, file)
+		}
+	}
+}
+
+// TestChangelogTranslations: each translation of the repository's
+// changelog has CHANGELOG.md's headings, in its order, and a bullet for
+// each of CHANGELOG.md's under each (a version it lacks shows in English).
+func TestChangelogTranslations(t *testing.T) {
+	en, err := os.ReadFile(filepath.Join("..", "..", changelogFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]section{}
+	var order []string
+	enLines := splitLines(string(en))
+	for _, s := range sections(string(en)) {
+		want[s.version] = s
+		order = append(order, s.version)
+	}
+	for _, tr := range translations {
+		text, err := os.ReadFile(filepath.Join("..", "..", tr.file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		// The app shows it in its catalog's language.
+		if _, err := os.Stat(filepath.Join("..", "..", "cmd", "pinky", "locales", tr.lang+".json")); err != nil {
+			t.Errorf("%s is in %s, which the app's catalogs lack: %v", tr.file, tr.lang, err)
+		}
+		if pinky.ChangelogTranslations[tr.lang] != string(text) {
+			t.Errorf("the app does not embed %s as its changelog in %s", tr.file, tr.lang)
+		}
+		lines := splitLines(string(text))
+		last := -1
+		for _, s := range sections(string(text)) {
+			w, ok := want[s.version]
+			if !ok {
+				t.Errorf("%s has a section %q that %s lacks", tr.file, lines[s.line], changelogFile)
+				continue
+			}
+			if lines[s.line] != enLines[w.line] {
+				t.Errorf("%s's heading %q is %q in %s", tr.file, lines[s.line], enLines[w.line], changelogFile)
+			}
+			if i := slices.Index(order, s.version); i < last {
+				t.Errorf("%s has %s out of %s's order", tr.file, s.version, changelogFile)
+			} else {
+				last = i
+			}
+			if got, n := bullets(s.notes), bullets(w.notes); got != n {
+				t.Errorf("%s has %d notes for %s, %s %d", tr.file, got, s.version, changelogFile, n)
+			}
+		}
 	}
 }
 
@@ -335,6 +415,9 @@ func gitRepo(t *testing.T) (clone, remote string) {
 	run(base, "init", "--quiet", "--initial-branch=main", clone)
 	run(clone, "remote", "add", "origin", remote)
 	write(t, filepath.Join(clone, changelogFile), changelogHead+"## 2026.1106.1 (2026-11-06)\n\n- Old.\n")
+	for _, tr := range translations {
+		write(t, filepath.Join(clone, tr.file), translationHead+"## 2026.1106.1 (2026-11-06)\n\n- 旧的。\n")
+	}
 	run(clone, "add", ".")
 	run(clone, "commit", "--quiet", "-m", "feat: first")
 	run(clone, "tag", "--annotate", "-m", "old", "v2026.1106.1")
@@ -362,15 +445,33 @@ func TestTag(t *testing.T) {
 		t.Fatalf("tag without notes = %v, want errNoRelease", err)
 	}
 
-	// Notes left uncommitted are part of the release commit.
+	// Notes without their translation are not released.
+	zh := translations[0].file
 	notes := "## Unreleased\n\n- New.\n\n"
 	write(t, filepath.Join(clone, changelogFile), changelogHead+notes+"## 2026.1106.1 (2026-11-06)\n\n- Old.\n")
+	headBefore, _ := git(clone, "rev-parse", "HEAD")
+	if err := runTag([]string{"-push"}); err == nil || !strings.Contains(err.Error(), zh) {
+		t.Fatalf("tag without the notes in %s = %v", zh, err)
+	}
+	if head, _ := git(clone, "rev-parse", "HEAD"); head != headBefore {
+		t.Fatal("tag without a translation committed")
+	}
+
+	// Notes left uncommitted are part of the release commit.
+	write(t, filepath.Join(clone, zh), translationHead+"## Unreleased\n\n- 新的。\n\n## 2026.1106.1 (2026-11-06)\n\n- 旧的。\n")
 	if err := runTag([]string{"-push", "-trailer", "Co-Authored-By: Someone <someone@example.com>"}); err != nil {
 		t.Fatal(err)
 	}
 	text, _ := os.ReadFile(filepath.Join(clone, changelogFile))
 	if !strings.Contains(string(text), "## "+want.String()+" ("+want.Date()+")\n\n- New.") {
 		t.Errorf("CHANGELOG.md after tag:\n%s", text)
+	}
+	zhText, _ := os.ReadFile(filepath.Join(clone, zh))
+	if !strings.Contains(string(zhText), "## "+want.String()+" ("+want.Date()+")\n\n- 新的。") {
+		t.Errorf("%s after tag:\n%s", zh, zhText)
+	}
+	if status, _ := git(clone, "status", "--porcelain"); status != "" {
+		t.Errorf("after tag: git status %q", status)
 	}
 	msg, _ := git(clone, "log", "-1", "--format=%B")
 	if !strings.HasPrefix(msg, "chore(release): "+want.String()) || !strings.Contains(msg, "Co-Authored-By: Someone <someone@example.com>") {
@@ -411,8 +512,10 @@ func TestTag(t *testing.T) {
 		t.Fatal(err)
 	}
 	write(t, filepath.Join(clone, changelogFile), strings.Replace(string(text), "# Changelog\n\nWhat changed in each release.\n\n", changelogHead+"## Unreleased\n\n- Newer.\n\n", 1))
+	write(t, filepath.Join(clone, zh), strings.Replace(string(zhText), translationHead, translationHead+"## Unreleased\n\n- 更新的。\n\n", 1))
 	before, _ := os.ReadFile(filepath.Join(clone, changelogFile))
-	headBefore, _ := git(clone, "rev-parse", "HEAD")
+	zhBefore, _ := os.ReadFile(filepath.Join(clone, zh))
+	headBefore, _ = git(clone, "rev-parse", "HEAD")
 	write(t, filepath.Join(remote, "hooks", "pre-receive"), "#!/bin/sh\necho no pushes today >&2\nexit 1\n")
 	if err := os.Chmod(filepath.Join(remote, "hooks", "pre-receive"), 0o755); err != nil {
 		t.Fatal(err)
@@ -421,12 +524,28 @@ func TestTag(t *testing.T) {
 		t.Fatal("tag with a refused push: no error")
 	}
 	after, _ := os.ReadFile(filepath.Join(clone, changelogFile))
+	zhAfter, _ := os.ReadFile(filepath.Join(clone, zh))
 	headAfter, _ := git(clone, "rev-parse", "HEAD")
 	localTagList, _ := localTags(clone)
 	status, _ := git(clone, "status", "--porcelain")
-	if string(after) != string(before) || headAfter != headBefore || len(localTagList) != 2 || status != "M "+changelogFile && status != " M "+changelogFile {
-		t.Errorf("after a refused push: CHANGELOG.md changed %v, HEAD %s (was %s), tags %v, status %q", string(after) != string(before), headAfter, headBefore, localTagList, status)
+	if string(after) != string(before) || string(zhAfter) != string(zhBefore) || headAfter != headBefore || len(localTagList) != 2 || !modified(status, changelogFile, zh) {
+		t.Errorf("after a refused push: CHANGELOG.md changed %v, %s changed %v, HEAD %s (was %s), tags %v, status %q", string(after) != string(before), zh, string(zhAfter) != string(zhBefore), headAfter, headBefore, localTagList, status)
 	}
+}
+
+// modified tells whether git status --porcelain says that files, and
+// nothing else, are changed and not staged.
+func modified(status string, files ...string) bool {
+	lines := strings.Split(strings.TrimSpace(status), "\n")
+	if len(lines) != len(files) {
+		return false
+	}
+	for i, l := range lines {
+		if strings.TrimSpace(l) != "M "+files[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func TestNewer(t *testing.T) {
@@ -459,8 +578,27 @@ func TestManifestCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m.Notes != "- One." || !strings.HasPrefix(m.Assets["linux-amd64"].URL, "https://github.com/DIYgod/pinky/releases/download/v2026.1107.1/") {
+	if m.Notes != "- One." || m.LocalizedNotes != nil || !strings.HasPrefix(m.Assets["linux-amd64"].URL, "https://github.com/DIYgod/pinky/releases/download/v2026.1107.1/") {
+		t.Errorf("latest.json without a translation = %+v", m)
+	}
+	if page := PageNotes(m); page != "- One." {
+		t.Errorf("the release page without a translation:\n%s", page)
+	}
+	// The translations next to the changelog give the notes in their
+	// languages.
+	write(t, filepath.Join(filepath.Dir(changelog), translations[0].file), translationHead+"## 2026.1107.1 (2026-11-07)\n\n- 一。\n")
+	if err := runManifest([]string{"-dir", dir, "-version", "2026.1107.1", "-changelog", changelog}); err != nil {
+		t.Fatal(err)
+	}
+	if m, err = readManifest(filepath.Join(dir, "latest.json")); err != nil {
+		t.Fatal(err)
+	}
+	if m.Notes != "- One." || len(m.LocalizedNotes) != 1 || m.LocalizedNotes["zh-Hans"] != "- 一。" {
 		t.Errorf("latest.json = %+v", m)
+	}
+	// The release page has the English notes, then the Chinese ones.
+	if page := PageNotes(m); page != "- One.\n\n---\n\n### 中文\n\n- 一。" {
+		t.Errorf("the release page:\n%s", page)
 	}
 	cask, err := os.ReadFile(filepath.Join(dir, caskFile))
 	if err != nil || !strings.Contains(string(cask), `homepage "https://github.com/DIYgod/pinky"`) {

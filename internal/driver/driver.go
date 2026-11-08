@@ -57,6 +57,10 @@ type Info struct {
 	// Clients remind the person HelperReminder before; once it has passed
 	// the phone needs setup, with SetupInstallHelper.
 	HelperExpires time.Time `json:",omitzero"`
+	// Via says how a phone connected over the network ("wifi") is reached
+	// when that is not the local network: ViaTailscale through Tailscale;
+	// "" on the computer's own network or by cable.
+	Via string
 }
 
 // Setup steps, in Info.Setup.
@@ -70,6 +74,12 @@ const (
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
 	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
+	// A phone reached over the network (WiFiSwitch, Tailnet) that is
+	// offline: its adb stopped listening, as when it restarted (plug it in
+	// once and turn its Wi-Fi connection on again), or it is not on the
+	// network now (Pinky connects again by itself).
+	SetupNetworkOff  = "network_off"
+	SetupNetworkAway = "network_away"
 	// SetupConfirmWiFi: the phone is reachable only over Wi-Fi and Pinky
 	// has not used it, so it may not be the person's (a family member's
 	// iPad once paired with this computer): the person says whether it is
@@ -132,12 +142,33 @@ type Device interface {
 // ObserveOptions tune Observe.
 type ObserveOptions struct {
 	// OCR asks the driver to add OCR elements for areas the tree misses.
+	// A driver may find that its tree misses nothing and read no pixels:
+	// Android reads by OCR only where the tree is empty or sparse over a
+	// web view or a canvas, unless OCRAll is set as well.
 	OCR bool
+	// OCRAll, with OCR, asks for OCR elements for all the text the tree
+	// does not show, however complete the tree looks: the agent asked for
+	// the screen's text, or the gateway checks the text under a finger.
+	// Drivers that read every OCR read this way (iOS) ignore it.
+	OCRAll bool
 	// Frame, when set, returns a picture of the screen decoded from its
 	// live video, which the gateway shares with the mirror. A driver may
 	// read OCR's text from it where its own screenshots are slow (an
-	// iPhone over Wi-Fi: about 5 s a screenshot); nil means none.
+	// iPhone over Wi-Fi: about 5 s a screenshot; an Android background
+	// display, which has none); nil means none.
 	Frame func(ctx context.Context) (image.Image, error)
+	// MayCapture, when set, reports whether the driver may capture the
+	// screen it read, as a screenshot or a frame of the video kept in
+	// memory only, to read its text by OCR: not of a locked phone, nor of
+	// a blocked app unless the person allowed it for the task. The
+	// picture must not outlive the read: no file, no cache. A driver asks
+	// it with the screen as read, before it captures, and adds no OCR
+	// elements when it may not: Android once it has the tree, iOS as soon
+	// as it knows the app in front and the lock state, which it asks again
+	// with the screen it returns. The gateway sets it on every read, also
+	// without OCR: the iOS inspector path takes a picture to place the
+	// tree's elements. nil means it may.
+	MayCapture func(s *screen.Screen) bool
 }
 
 // TapOptions tune Tap.
@@ -245,6 +276,26 @@ type PersonWatcher interface {
 // LockReporter reports whether the phone is locked.
 type LockReporter interface {
 	Locked(ctx context.Context) (bool, error)
+}
+
+// TextReader is a Device that can read text from the screen's pixels (OCR)
+// on this computer when ObserveOptions asks it to, also on screens where
+// it has not done so yet. The gateway then checks a tap on a spot the tree
+// says little about against the text there (an image button that shows
+// "Pay"), before any read has returned OCR elements.
+type TextReader interface {
+	ReadsText() bool
+}
+
+// FrameShooter is a Device whose screenshots are slow where a frame of its
+// live video is not: an iPhone over Wi-Fi, whose screenshot is a PNG of up
+// to 15 MB. ScreenshotFromFrame returns the screen taken from frame (a
+// picture of the live video, as ObserveOptions.Frame gives), cropped to the
+// screenshot's size, when the driver prefers it now; ok false means take a
+// screenshot. The gateway takes approval cards', history's and agents'
+// screenshots this way first.
+type FrameShooter interface {
+	ScreenshotFromFrame(ctx context.Context, frame func(context.Context) (image.Image, error)) (image.Image, bool)
 }
 
 // Clipboard reads and writes the phone's clipboard.
@@ -471,6 +522,158 @@ type PairingProgress struct {
 type WiFiConnector interface {
 	ConnectWiFi(ctx context.Context, addr string) (Info, error)
 }
+
+// Phones away from the computer's network. A Tailnet provider reaches
+// phones through Tailscale, the mesh VPN that keeps a person's devices
+// connected to each other wherever each one is (the computer at home, the
+// phone out on mobile data): it lists the phones on the computer's
+// tailnet, connects to one by its Tailscale address, and sets a phone up
+// to be reached that way ("away from home").
+
+// ViaTailscale is Info.Via for a phone reached through Tailscale.
+const ViaTailscale = "tailscale"
+
+// Tailnet is a Provider that reaches phones through Tailscale.
+type Tailnet interface {
+	// Tailnet says what Tailscale on this computer reports, and lists the
+	// phones on its tailnet.
+	Tailnet(ctx context.Context) (TailnetStatus, error)
+	// ConnectTailnet connects to a phone on the tailnet at its Tailscale
+	// address, with a port or without one (the port Away uses), and
+	// returns it once it is online or waits for the person to allow this
+	// computer. A phone that does not listen there gives an error
+	// wrapping ErrNotListening.
+	ConnectTailnet(ctx context.Context, addr string) (Info, error)
+	// Away says whether a phone is set up to be reached through
+	// Tailscale, and what is missing when it cannot be.
+	Away(ctx context.Context, id string) (Away, error)
+	// SetAway sets a phone up to be reached through Tailscale, or stops
+	// that. On (Android) makes the phone's adb listen on the network, on
+	// every network the phone joins, until the phone restarts; the
+	// provider then connects to it through Tailscale whenever it can.
+	// Off makes adb stop listening and forgets the phone's address: a
+	// phone away is then out of reach until it is back.
+	SetAway(ctx context.Context, id string, on bool) (Away, error)
+}
+
+// TailnetStatus is Tailscale on this computer, and the phones on its
+// tailnet.
+type TailnetStatus struct {
+	// State is one of the Tailnet* states.
+	State string
+	// Detail is Tailscale's own words when it is not running.
+	Detail string
+	// Tailnet is the tailnet's name, such as "example.com" or
+	// "someone@gmail.com"; Self this computer's name on it.
+	Tailnet, Self string
+	Phones        []TailnetPhone
+}
+
+// Tailscale's states on this computer, in TailnetStatus.State.
+const (
+	TailnetNotInstalled = "not_installed" // no Tailscale on this computer
+	TailnetNotRunning   = "not_running"   // installed, but not running (the app is closed)
+	TailnetNeedsLogin   = "needs_login"   // not signed in, or its key expired
+	TailnetStopped      = "stopped"       // signed in and turned off
+	TailnetStarting     = "starting"
+	TailnetRunning      = "running"
+)
+
+// TailnetPhone is a phone on the tailnet.
+type TailnetPhone struct {
+	Name string // its name on the tailnet
+	Addr string // its Tailscale address
+	// Online reports whether Tailscale sees it connected; LastSeen is when
+	// it last was, while it is not.
+	Online   bool
+	LastSeen time.Time
+	// ID is the phone Pinky knows it as, "" when Pinky has not seen it
+	// connected.
+	ID string
+	// Connected reports whether Pinky reaches it through Tailscale now;
+	// Relayed whether that goes through one of Tailscale's relay servers
+	// rather than straight to the phone.
+	Connected, Relayed bool
+}
+
+// Away is whether a phone can be reached through Tailscale, away from the
+// computer's network.
+type Away struct {
+	// On reports whether the phone is set up for it: the provider connects
+	// to it through Tailscale whenever it can.
+	On bool
+	// Listening reports whether the phone's adb listens on the network
+	// now, as far as the provider knows: it stops when the phone restarts.
+	Listening bool
+	// Addr is the phone's Tailscale address, "" when it is not on the
+	// tailnet; Port where its adb listens.
+	Addr string
+	Port int
+	// Missing says what keeps the phone from being set up, one of the
+	// Away* values; "" when nothing does.
+	Missing string
+	// Detail says the same in a sentence.
+	Detail string
+}
+
+// What keeps a phone from being set up to be reached away from home, in
+// Away.Missing.
+const (
+	AwayNoTailscaleHere  = "tailscale_here"  // Tailscale does not run on this computer
+	AwayNoTailscaleThere = "tailscale_phone" // the phone is not on this computer's tailnet
+	AwayNotConnected     = "not_connected"   // the phone is not connected to set it up (cable or Wi-Fi)
+)
+
+// ErrNotListening is wrapped when a phone does not take connections at
+// the address and port: its adb does not listen on the network.
+var ErrNotListening = errors.New("the phone's adb does not listen on the network there")
+
+// WiFiSwitch is a Provider that moves a phone plugged in by cable to
+// Wi-Fi without Wireless debugging (which Android 10 lacks): the phone's
+// adb listens on the network (adb tcpip) until the phone restarts, and the
+// provider connects to it at its Wi-Fi address, and again by itself
+// whenever it is back on the network. The person turns it on for each
+// phone, unlike WiFiFinder, which finds iPhones on Wi-Fi by itself.
+type WiFiSwitch interface {
+	// PhoneWiFi says whether a phone is on Wi-Fi this way, and what keeps
+	// it from being moved there.
+	PhoneWiFi(ctx context.Context, id string) (WiFiState, error)
+	// SetPhoneWiFi moves a phone to Wi-Fi, over its cable, or stops that:
+	// its adb then stops listening on the network, which also ends its use
+	// away from home (Tailnet), and the provider forgets its addresses.
+	SetPhoneWiFi(ctx context.Context, id string, on bool) (WiFiState, error)
+}
+
+// WiFiState is whether a phone is moved to Wi-Fi without Wireless
+// debugging.
+type WiFiState struct {
+	// On reports whether it is: the provider reaches the phone at Addr.
+	On bool
+	// Connected reports whether it is connected there now.
+	Connected bool
+	// Listening reports whether the phone's adb listens on the network now,
+	// as far as the provider knows.
+	Listening bool
+	// Stopped is set while On but the phone's adb no longer listens, as
+	// after the phone restarted: plug it in and turn it on again.
+	Stopped bool
+	// Addr is the phone's Wi-Fi address; Port where its adb listens.
+	Addr string
+	Port int
+	// Away reports whether the phone is used away from home too (Tailnet),
+	// which turning this off ends.
+	Away bool
+	// Missing says what keeps it from being turned on, one of the WiFi*
+	// values; "" when nothing does. Detail says the same in a sentence.
+	Missing string
+	Detail  string
+}
+
+// What keeps a phone from being moved to Wi-Fi, in WiFiState.Missing.
+const (
+	WiFiNeedsCable = "cable"   // the phone is not plugged in
+	WiFiNoWiFi     = "no_wifi" // the phone is not on Wi-Fi
+)
 
 // Forgetter is a Provider that connects to phones by itself, as Android's
 // reconnects the phones paired over Wi-Fi. The gateway tells it which

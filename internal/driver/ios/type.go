@@ -28,6 +28,7 @@ type TypeStats struct {
 	Saved     string // what was saved: "full", "primary" (each item's first representation), "empty", "unreadable"
 	Restore   string // "restored", "cleared", "left" (the pasteboard changed meanwhile), or why it failed
 	Confirmed bool   // the field's value changed before the pasteboard was put back
+	Spaces    string // spaces iOS's smart insert added next to the paste: "" (none), "removed", "kept" (not taken off: Pinky could not tell where they were), "unconfirmed" (taken off, but the field did not read as expected)
 	Save      time.Duration
 	Paste     time.Duration // SET to the field showing the text
 	Restored  time.Duration
@@ -186,8 +187,12 @@ func (d *Device) paste(ctx context.Context, pb *pbConn, saved *pbSnapshot, text 
 	}
 	// Put the pasteboard back only once the app has read it: restoring
 	// first would paste the person's own clipboard into the field.
-	st.Confirmed = d.waitValueChange(ctx, field, before)
+	var after string
+	st.Confirmed, after = d.waitValueChange(ctx, field, before)
 	st.Paste = time.Since(t1)
+	if st.Confirmed {
+		st.Spaces = d.undoSmartSpaces(ctx, field, before, after, text)
+	}
 	return nil
 }
 
@@ -291,29 +296,35 @@ func (d *Device) focusedValue(ctx context.Context) (*axpObject, string) {
 	return el, v
 }
 
-// waitValueChange waits until field's value differs from before. Without a
-// field it waits a fixed time, which a responsive app needs far less of.
-func (d *Device) waitValueChange(ctx context.Context, field *axpObject, before string) bool {
+// waitValueChange waits until field's value differs from before, and returns
+// the new value. Without a field it waits a fixed time, which a responsive
+// app needs far less of.
+func (d *Device) waitValueChange(ctx context.Context, field *axpObject, before string) (bool, string) {
+	return d.waitValue(ctx, field, func(v string) bool { return v != before })
+}
+
+// waitValue waits until field's value satisfies done, and returns it.
+func (d *Device) waitValue(ctx context.Context, field *axpObject, done func(string) bool) (bool, string) {
 	rax, err := d.raxNow()
 	if field == nil || err != nil {
 		sleepCtx(ctx, pasteBlind)
-		return false
+		return false, ""
 	}
 	deadline := time.Now().Add(pasteConfirm)
 	for time.Now().Before(deadline) {
 		if sleepCtx(ctx, 40*time.Millisecond) != nil {
-			return false
+			return false, ""
 		}
 		v, err := rax.stringAttribute(context.WithoutCancel(ctx), field, axpAttrValue)
 		if err != nil {
 			sleepCtx(ctx, pasteBlind)
-			return false
+			return false, ""
 		}
-		if v != before {
-			return true
+		if done(v) {
+			return true, v
 		}
 	}
-	return false
+	return false, ""
 }
 
 // raxNow returns the remoteAXService session if it is connected, without
@@ -424,8 +435,9 @@ func (d *Device) latinKeyboard(ctx context.Context, rax *raxSession, note func(s
 			return false, err
 		}
 		field, value := d.focusedValue(ctx)
-		wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), raxLimits.Budget+raxRequestTimeout)
-		els, _, err := rax.walk(wctx, raxLimits)
+		lim := d.walkLimits()
+		wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), lim.Budget+raxRequestTimeout)
+		els, _, err := rax.walk(wctx, lim)
 		cancel()
 		if err != nil {
 			return false, err

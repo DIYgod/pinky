@@ -478,6 +478,10 @@ func TestDeviceType(t *testing.T) {
 		{"English, empty pasteboard", []any{}, "hello", false, "hello", "empty", "empty"},
 		{"Chinese replaces it", person, "你好", false, "你好", "full", "same"},
 		{"emoji appended", person, "👋🏽", true, "你好👋🏽", "full", "same"},
+		// iOS's smart insert adds a space between two pasted words; Type
+		// takes it off.
+		{"English word", person, "Wall", false, "Wall", "full", "same"},
+		{"word appended to a word", person, "paper", true, "Wallpaper", "full", "same"},
 		{"unreadable pasteboard", unreadable, "clock", false, "clock", "unreadable", "empty"},
 	}
 	for _, step := range steps {

@@ -58,6 +58,7 @@ func testHooks(t *testing.T, a *app) {
 		a.opt.Secrets = &secret.Memory{}
 	}
 	a.awake = func(bool) {}
+	a.awayAwake = func(bool) {}
 	dir := t.TempDir()
 	a.exportTo = func() (string, error) { return dir, nil }
 	a.reveal = func(string) {}

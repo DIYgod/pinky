@@ -73,6 +73,8 @@ const (
 	swsFastBilinear       = 1                   // SWS_FAST_BILINEAR
 	swsBilinear           = 2                   // SWS_BILINEAR
 	avOptSearchChildren   = 1                   // AV_OPT_SEARCH_CHILDREN
+	avColorRangeMPEG      = 1                   // AVCOL_RANGE_MPEG, video's 16 to 235
+	avColorRangeJPEG      = 2                   // AVCOL_RANGE_JPEG, all of 0 to 255
 	maxPlausibleDimension = 16384
 )
 
@@ -135,7 +137,10 @@ type lib struct {
 	sws_free_context  func(*unsafe.Pointer)
 	sws_scale_frame   func(unsafe.Pointer, unsafe.Pointer, unsafe.Pointer) int32
 
-	pixRGBA int32 // AV_PIX_FMT_RGBA
+	pixRGBA     int32 // AV_PIX_FMT_RGBA
+	pixNV12     int32 // AV_PIX_FMT_NV12, as hardware decoders leave pictures
+	pixYUV420P  int32 // AV_PIX_FMT_YUV420P (I420), as the software decoder does
+	pixYUVJ420P int32 // AV_PIX_FMT_YUVJ420P, the same in full range
 }
 
 var (
@@ -382,8 +387,11 @@ func load() (*lib, error) {
 		l.av_log_set_level(avLogError)
 	}
 	l.pixRGBA = l.av_get_pix_fmt("rgba")
-	if l.pixRGBA < 0 {
-		return nil, errors.New("video: FFmpeg does not know the rgba pixel format")
+	l.pixNV12 = l.av_get_pix_fmt("nv12")
+	l.pixYUV420P = l.av_get_pix_fmt("yuv420p")
+	l.pixYUVJ420P = l.av_get_pix_fmt("yuvj420p")
+	if l.pixRGBA < 0 || l.pixNV12 < 0 || l.pixYUV420P < 0 {
+		return nil, errors.New("video: FFmpeg does not know the rgba, nv12 or yuv420p pixel format")
 	}
 	if err := checkLayout(l); err != nil {
 		return nil, err
