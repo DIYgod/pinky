@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.1 (2026-11-09)
 
 - On iOS 27.2, "Unlock from this computer" works again instead of failing with "unknown backlight state".
 - On Linux, iPhones no longer get stuck in "Needs setup" because Pinky didn't trust Apple's signing server. A certificate problem with that server now shows the actual error instead of asking you to check the internet connection.
