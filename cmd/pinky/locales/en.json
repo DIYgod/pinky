@@ -6536,11 +6536,11 @@
   },
   "settingsSafetyHideCodes": "Hide codes from agents",
   "@settingsSafetyHideCodes": {
-    "description": "Settings › Safety: the switch that hides passwords and one-time codes on the phone's screen from agents."
+    "description": "Settings › Safety: the switch that hides one-time codes, on the phone's screen and in its notifications, from agents."
   },
-  "settingsSafetyHideCodesDesc": "One-time codes in notifications are masked before an agent reads them",
+  "settingsSafetyHideCodesDesc": "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. Recordings, which stay on this computer, show them.",
   "@settingsSafetyHideCodesDesc": {
-    "description": "Settings › Safety: the line under Hide codes from agents."
+    "description": "Settings › Safety: the line under Hide codes from agents. Screenshots are the ones agents get and the ones Activity keeps; recordings are the screen recordings of tasks, which are not covered."
   },
   "settingsSafetyIntro": "Pinky checks every action before it reaches the phone. Agents can't change these settings.",
   "@settingsSafetyIntro": {

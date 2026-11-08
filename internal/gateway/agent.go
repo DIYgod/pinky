@@ -1018,15 +1018,18 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		case blocked:
 			res.Message = strings.TrimSpace(res.Message + " " + blockedShotMessage(g.readsText(l.dev)))
 		default:
-			img, err := g.screenshot(ctx, l.dev, cur)
+			img, covered, err := g.screenshot(ctx, l.dev, cur)
 			switch {
 			case err == nil:
 				res.Screenshot = img
+				if covered > 0 {
+					res.Message = strings.TrimSpace(res.Message + " One-time codes on the screen are covered in the screenshot.")
+				}
 				// Checked against reads on both sides: steps may reuse it.
-				g.keepImage(l.dev, cur, img)
+				g.keepImage(l.dev, cur, img, true)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
-			case errors.Is(err, errLockedShot):
+			case errors.Is(err, errLockedShot), errors.Is(err, errCodeShot):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: " + err.Error() + ".")
 			case errors.Is(err, errScreenChanged):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: the screen changed while it was taken; observe again.")

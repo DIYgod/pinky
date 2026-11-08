@@ -93,7 +93,7 @@ Each feature is tagged with the milestone that first ships it (see Roadmap). A b
 | Agent access | Live screen inside MCP hosts that support MCP Apps | M4 |
 | Safety | Default policy: commit detection, Ask categories, blocked finance apps; approval panel with Allow once, Deny and Take over; no answer in 60 s denies | M1 |
 | Safety | Emergency stop (global shortcut and Stop all); read-only mode; per-task app allow-list | M1 |
-| Safety | Typing into password and code fields refused; codes in notifications masked; notifications from blocked apps hidden | M1 |
+| Safety | Typing into password and code fields refused; one-time codes masked on the screen and in notifications, and covered in screenshots; notifications from blocked apps hidden | M1 |
 | Safety | Rules editor, per-app rules, "Allow for this task" and "Always allow this kind" | M2 |
 | Safety | Credentials filled from the OS keychain; wider redaction | M2 |
 | Safety | Approve from a notification, a phone push or a chat app | M4 |
@@ -350,7 +350,7 @@ always_allow:
 - A per-task app allow-list (M1), such as "this task may only use Dinely"; typing into any other app is Ask.
 - Emergency stop: a global shortcut (Option-Command-Period on macOS, Ctrl+Alt+Period elsewhere) and Stop all in the menu bar. It ends every lease and cancels every pending action.
 - Credentials never reach the model. The gateway refuses `phone_type` into password and one-time-code fields (`blocked_by_policy`, rule: credentials) and tells the agent to call `phone_handoff` (M1). From M2 the client can fill the value from the OS keychain, and the agent only learns that it was filled.
-- Notifications from blocked apps are never listed, and digit codes in notifications are masked by default.
+- Notifications from blocked apps are never listed. One-time codes are masked by default, on the screen (elements and OCR lines) and in notifications, and covered in the screenshots agents get and history keeps; recordings, which never reach agents, are not covered.
 - `phone_files` reaches only the phone's `Pinky/` folder. Writing to the phone is Ask, and read-only mode turns it off.
 - An agent's first connection needs approval and a scope.
 

@@ -948,7 +948,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	if res := g.afterOpen(l, info); res != nil {
 		return info, res
 	}
-	before := g.shotID(g.keepImage(l.dev, cur, shot))
+	before := g.shotID(g.keepImage(l.dev, cur, shot, false))
 	g.openStep(l, info, "phone_"+a.Tool, a.args(c), "Waiting for you: "+p.desc, target, p.point, before)
 	return info, nil
 }
@@ -1643,6 +1643,9 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 		}
 		return nil, errors.New("the driver returned no screen")
 	}
+	// One-time codes are masked before anything else sees the read: the
+	// agent, history, approvals and refs (policy.MaskScreen).
+	g.policy.MaskScreen(s)
 	d.refs.Assign(s)
 	evs := g.policy.FilterEvents(s.Events)
 	_, blocked := g.policy.Blocked(s.App)
@@ -1752,33 +1755,38 @@ var errScreenChanged = errors.New("the screen changed while the screenshot was t
 // notifications from blocked apps.
 var errLockedShot = errors.New("the phone is locked, and its lock screen can show notifications from blocked apps")
 
-// screenshot takes a screenshot of the screen s describes. It reads the
-// screen again afterwards and drops the image when the foreground app
-// changed, is blocked or unknown, or the phone locked, so a blocked app
-// that comes to the front in between is never captured.
-func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (image.Image, error) {
+// screenshot takes a screenshot of the screen s describes, for an agent.
+// It reads the screen again afterwards and drops the image when the
+// foreground app changed, is blocked or unknown, or the phone locked, so a
+// blocked app that comes to the front in between is never captured. One-time
+// codes are covered (coverCodes); covered counts the boxes.
+func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (img image.Image, covered int, err error) {
 	dev, bg := g.screenOf(d)
 	if dev == nil {
-		return nil, driver.ErrOffline
+		return nil, 0, driver.ErrOffline
 	}
 	if s.Locked {
-		return nil, errLockedShot
+		return nil, 0, errLockedShot
 	}
 	if !recordableScreen(g.policy, s) {
-		return nil, errScreenChanged
+		return nil, 0, errScreenChanged
 	}
-	img, err := g.shotOf(ctx, d, dev, bg)
+	img, err = g.shotOf(ctx, d, dev, bg)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	after, err := g.observe(ctx, d, false)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !recordableScreen(g.policy, after) || after.App != s.App {
-		return nil, errScreenChanged
+		return nil, 0, errScreenChanged
 	}
-	return img, nil
+	img, covered, ok := g.coverCodes(img, true, s, after)
+	if !ok {
+		return nil, 0, errCodeShot
+	}
+	return img, covered, nil
 }
 
 // agentView hides a blocked app's screen, unless the person allowed the

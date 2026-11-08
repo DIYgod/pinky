@@ -18094,29 +18094,33 @@ func (msgs Messages) SettingsSafetyBlockedIntro() string {
 // SettingsSafetyHideCodes says "Hide codes from agents"
 // in the language the app shows.
 //
-// Settings › Safety: the switch that hides passwords and one-time codes
-// on the phone's screen from agents.
+// Settings › Safety: the switch that hides one-time codes, on the phone's
+// screen and in its notifications, from agents.
 func SettingsSafetyHideCodes() string { return In(i18n.Locale()).SettingsSafetyHideCodes() }
 
 // SettingsSafetyHideCodes says "Hide codes from agents"
 // in the language of msgs.
 //
-// Settings › Safety: the switch that hides passwords and one-time codes
-// on the phone's screen from agents.
+// Settings › Safety: the switch that hides one-time codes, on the phone's
+// screen and in its notifications, from agents.
 func (msgs Messages) SettingsSafetyHideCodes() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyHideCodes", nil)
 }
 
-// SettingsSafetyHideCodesDesc says "One-time codes in notifications are masked before an agent reads them"
+// SettingsSafetyHideCodesDesc says "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. …"
 // in the language the app shows.
 //
-// Settings › Safety: the line under Hide codes from agents.
+// Settings › Safety: the line under Hide codes from agents. Screenshots
+// are the ones agents get and the ones Activity keeps; recordings are the
+// screen recordings of tasks, which are not covered.
 func SettingsSafetyHideCodesDesc() string { return In(i18n.Locale()).SettingsSafetyHideCodesDesc() }
 
-// SettingsSafetyHideCodesDesc says "One-time codes in notifications are masked before an agent reads them"
+// SettingsSafetyHideCodesDesc says "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. …"
 // in the language of msgs.
 //
-// Settings › Safety: the line under Hide codes from agents.
+// Settings › Safety: the line under Hide codes from agents. Screenshots
+// are the ones agents get and the ones Activity keeps; recordings are the
+// screen recordings of tasks, which are not covered.
 func (msgs Messages) SettingsSafetyHideCodesDesc() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyHideCodesDesc", nil)
 }

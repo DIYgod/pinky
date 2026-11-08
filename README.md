@@ -228,7 +228,9 @@ No. The rules run in Pinky's gateway, between the agent and the phone. A step th
 <details>
 <summary><b>What can't agents see?</b></summary>
 
-Banking, wallet and password-manager apps, from a list that comes with Pinky and that you can add to in Settings › Safety: agents get no screen from them, and their notifications are hidden. Agents can't type into password or one-time-code fields, and codes in notifications are masked. When an agent needs a banking or wallet app for a task, Pinky asks you first. If you allow it, the agent may open and read that app for the rest of the task, what your rules ask about there still asks, and Pinky keeps no screenshots or recordings of it: to read text that only its pixels show, Pinky looks at its screen in memory and gives the agent the text, never the picture. Password managers are never offered.
+Banking, wallet and password-manager apps, from a list that comes with Pinky and that you can add to in Settings › Safety: agents get no screen from them, and their notifications are hidden. Agents can't type into password or one-time-code fields. When an agent needs a banking or wallet app for a task, Pinky asks you first. If you allow it, the agent may open and read that app for the rest of the task, what your rules ask about there still asks, and Pinky keeps no screenshots or recordings of it: to read text that only its pixels show, Pinky looks at its screen in memory and gives the agent the text, never the picture. Password managers are never offered.
+
+One-time codes are masked before an agent reads them: in a text message, an email, a notification or anywhere else on the screen, "Your code is 482913" reaches the agent as "Your code is ••••••", and the screenshots it gets, and those in Activity, have the code covered with a gray box. Prices, phone numbers, dates and numbers in text that is not about a code stay as they are. Screen recordings, which stay on your computer and never go to agents, show codes as they were. You can turn this off in Settings › Safety › Hide codes from agents.
 
 </details>
 
