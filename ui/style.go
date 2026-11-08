@@ -79,6 +79,9 @@ func applyTheme(c *mg.Context) *palette {
 	t.SurfaceHover, t.SurfacePressed = p.bg3, p.sel
 	t.Border, t.Text, t.TextMuted = p.line2, p.ink, p.ink2
 	t.Accent, t.AccentHover, t.AccentPressed, t.AccentText = p.accentBtn, p.accentBtn, p.accentBtn, p.white
+	// MyGo's own controls keep the accent in a window that is not active,
+	// as the client's buttons, drawn in the palette's colors, do.
+	t.InactiveAccent = t.Accent
 	t.Danger, t.Warning, t.Success = p.red, p.amberDot, p.green
 	t.Focus = p.brand
 	t.Selection = p.accent.Alpha(0.28)
