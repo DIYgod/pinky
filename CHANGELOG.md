@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1108.22 (2026-11-08)
 
 - Settings › Safety now describes Hide codes from agents as it works: one-time codes in notifications are masked before an agent reads them. It never blurred the screen itself.
 
