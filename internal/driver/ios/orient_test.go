@@ -3,11 +3,13 @@ package ios
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -419,5 +421,80 @@ func TestTurnTree(t *testing.T) {
 	root.Rect = wdaRect{Width: 834, Height: 1210}
 	if w := sidewaysWindows(&root); len(w) != 0 {
 		t.Fatalf("portrait: sideways windows %v", w)
+	}
+}
+
+// rotationWDA answers GET /rotation, /screenshot and nothing else: an iPad
+// upside down, whose screenshot XCTest leaves as the panel is.
+type rotationWDA struct {
+	z    int
+	shot []byte
+}
+
+func (f *rotationWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/rotation":
+		fmt.Fprintf(w, `{"value":{"x":0,"y":0,"z":%d}}`, f.z)
+	case "/session":
+		fmt.Fprint(w, `{"value":{"sessionId":"s1","capabilities":{}},"sessionId":"s1"}`)
+	case "/session/s1/appium/settings":
+		fmt.Fprint(w, `{"value":null}`)
+	case "/session/s1/screenshot", "/screenshot":
+		fmt.Fprintf(w, `{"value":%q}`, base64.StdEncoding.EncodeToString(f.shot))
+	default:
+		w.WriteHeader(404)
+		fmt.Fprintf(w, `{"value":{"error":"unknown command","message":"%s"}}`, r.URL.Path)
+	}
+}
+
+func TestWDAUpsideDown(t *testing.T) {
+	// A 4×6 screenshot with its top-left pixel red, as XCTest gives it
+	// upside down: the panel as it is, so red is the screen's bottom right.
+	img := image.NewNRGBA(image.Rect(0, 0, 4, 6))
+	img.Set(0, 0, color.NRGBA{255, 0, 0, 255})
+	var b bytes.Buffer
+	png.Encode(&b, img)
+	f := &rotationWDA{z: 180, shot: b.Bytes()}
+	srv := httptest.NewServer(f)
+	defer srv.Close()
+	d := &WDADevice{c: newWDAURL(srv.URL, ""), scale: 1, width: 4, height: 6}
+	ctx := context.Background()
+	got, err := d.Screenshot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r, _, _, _ := got.At(3, 5).RGBA(); r>>8 != 255 {
+		t.Fatalf("upside down, the screenshot is not turned: bottom right %v", got.At(3, 5))
+	}
+	if q := d.cachedPictureTurn(); q != 2 {
+		t.Fatalf("frames' extra turn %d", q)
+	}
+	// The MJPEG reader gives frames tagged up the extra turn.
+	var s bytes.Buffer
+	j := jpegBytes(t, 8, 12, color.White)
+	fmt.Fprintf(&s, "--BoundaryString\r\nContent-Length: %d\r\n\r\n", len(j))
+	s.Write(j)
+	r := newMJPEGReader(&s, nil)
+	r.upside = d.cachedPictureTurn
+	if fr, err := r.next(ctx); err != nil || fr.turn != 2 {
+		t.Fatalf("frame turn %d, %v", fr.turn, err)
+	}
+	// OCR reads it upright too.
+	if up := d.uprightShot(ctx, b.Bytes()); bytes.Equal(up, b.Bytes()) {
+		t.Fatal("OCR's picture not turned")
+	}
+
+	// In landscape GET /rotation says which way, for the sideways windows,
+	// and the screenshots are left as WDA turned them.
+	d = &WDADevice{c: newWDAURL(srv.URL, ""), scale: 1, width: 4, height: 6}
+	f.z = 270
+	if q := d.landscapeTurn(ctx); q != 3 {
+		t.Fatalf("landscape turn %d, want 3", q)
+	}
+	if q := d.pictureTurn(ctx); q != 0 {
+		t.Fatalf("landscape picture turn %d", q)
+	}
+	if up := d.uprightShot(ctx, b.Bytes()); !bytes.Equal(up, b.Bytes()) {
+		t.Fatal("a landscape screenshot was turned again")
 	}
 }

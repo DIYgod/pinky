@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/jpeg"
 	"image/png"
 	"log/slog"
 	"math"
@@ -38,6 +39,8 @@ type WDADevice struct {
 	// up for the orientation last seen.
 	width, height int
 	landscape     atomic.Int32 // orientation as last seen: 0 not yet, 1 portrait, 2 landscape
+	ui            atomic.Int32 // the interface's turn from GET /rotation, plus one; 0 not read yet
+	uiAt          atomic.Int64 // when ui was read, unix nanos
 
 	inputMu sync.Mutex // one gesture or text entry at a time
 	appMu   sync.Mutex
@@ -232,8 +235,10 @@ func (d *WDADevice) Info() driver.Info { return d.info }
 // an iPad Simulator, iPadOS 26.5, in all four), so only the screen's width
 // and height change places. The MJPEG picture is the panel as it is, with
 // the orientation in its EXIF tag, and is turned upright (frame.turn).
-// Upside down, XCTest itself reports portrait: the tree and the taps stay
-// right, but the screenshots and the picture come upside down.
+// Upside down, the tree and the taps stay right, but the screenshots and
+// the picture come as the panel is with their tag saying up; GET /rotation
+// (the app's interface orientation, unlike GET /orientation, which folds
+// upside down into portrait) tells, and they are turned (pictureTurn).
 
 const (
 	wdaPortrait  = 1
@@ -294,11 +299,15 @@ func turnTree(n *wdaNode, w, h float64, q quarter) {
 	}
 }
 
-// landscapeTurn is how far the panel is turned in landscape: from the
-// picture's last frame when a stream runs, else from one frame of the
-// MJPEG server; XCTest says only landscape, not which way. A quarter turn
-// clockwise when neither answers.
+// landscapeTurn is how far the panel is turned in landscape: from GET
+// /rotation (the interface's turn: 90 in LANDSCAPERIGHT, 270 in LANDSCAPE,
+// the same as the MJPEG frames' EXIF), else from the picture's last frame
+// when a stream runs, else from one frame of the MJPEG server. A quarter
+// turn clockwise when none answers.
 func (d *WDADevice) landscapeTurn(ctx context.Context) quarter {
+	if q := d.interfaceTurn(ctx); q.swaps() {
+		return q
+	}
 	d.videoMu.Lock()
 	s, _ := d.video.(*frameStream)
 	d.videoMu.Unlock()
@@ -410,6 +419,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 				if err != nil {
 					return
 				}
+				png = d.uprightShot(ctx, png)
 				if l, err := recognizeText(png, ocrOptions{Languages: ocrLanguages}); err == nil {
 					lines, ocrDone = l, true
 				}
@@ -550,7 +560,7 @@ func (d *WDADevice) Screenshot(ctx context.Context) (image.Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("screenshot: decode: %w", err)
 	}
-	return img, nil
+	return turnImage(img, d.pictureTurn(ctx)), nil
 }
 
 // Tap implements driver.Device.
@@ -650,17 +660,23 @@ func (d *WDADevice) back(ctx context.Context) error {
 	return d.c.gesturePath(ctx, []wdaPoint{from, from, to}, []time.Duration{0, 50 * time.Millisecond, 250 * time.Millisecond}, 0)
 }
 
-// backButton finds a navigation bar's back button: the bar's first button,
-// in the left third of the screen.
+// backButton finds a navigation bar's back button. UIKit names it
+// BackButton (its label is the page it goes back to); an iPad's split view
+// has a bar for the sidebar and one for the page beside it, and the back
+// button of the widest, the page's, wins. Without one, the first button at
+// the leading edge of a bar, outside its search field: before, the first
+// bar's first button in the screen's left third, which on an iPad's
+// Settings was the sidebar search field's Dictate button (iPad Simulator,
+// iPadOS 26.5).
 func backButton(root *wdaNode, scale float64) (screen.Point, bool) {
-	var bar *wdaNode
+	var bars []*wdaNode
 	var find func(n *wdaNode, depth int)
 	find = func(n *wdaNode, depth int) {
-		if bar != nil || depth > 60 {
+		if depth > 60 {
 			return
 		}
 		if n.Type == "NavigationBar" && bool(n.Visible) {
-			bar = n
+			bars = append(bars, n)
 			return
 		}
 		for i := range n.Children {
@@ -668,25 +684,16 @@ func backButton(root *wdaNode, scale float64) (screen.Point, bool) {
 		}
 	}
 	find(root, 0)
-	if bar == nil {
-		return screen.Point{}, false
-	}
-	third := root.Rect.Width / 3
 	var btn *wdaNode
-	var first func(n *wdaNode, depth int)
-	first = func(n *wdaNode, depth int) {
-		if btn != nil || depth > 10 {
-			return
-		}
-		if n.Type == "Button" && bool(n.Visible) && n.Rect.Width > 0 && n.Rect.X < third {
-			btn = n
-			return
-		}
-		for i := range n.Children {
-			first(&n.Children[i], depth+1)
+	var barW float64
+	for _, bar := range bars {
+		if b := namedBack(bar, 0); b != nil && bar.Rect.Width >= barW {
+			btn, barW = b, bar.Rect.Width
 		}
 	}
-	first(bar, 0)
+	for i := 0; btn == nil && i < len(bars); i++ {
+		btn = leadingButton(bars[i], bars[i].Rect.X+bars[i].Rect.Width/3, 0)
+	}
 	if btn == nil {
 		return screen.Point{}, false
 	}
@@ -694,6 +701,40 @@ func backButton(root *wdaNode, scale float64) (screen.Point, bool) {
 		X: int(math.Round((btn.Rect.X + btn.Rect.Width/2) * scale)),
 		Y: int(math.Round((btn.Rect.Y + btn.Rect.Height/2) * scale)),
 	}, true
+}
+
+// namedBack finds the button UIKit names BackButton below n.
+func namedBack(n *wdaNode, depth int) *wdaNode {
+	if depth > 10 {
+		return nil
+	}
+	if n.Type == "Button" && bool(n.Visible) && n.Rect.Width > 0 &&
+		(strOr(n.Identifier) == "BackButton" || strOr(n.Name) == "BackButton") {
+		return n
+	}
+	for i := range n.Children {
+		if b := namedBack(&n.Children[i], depth+1); b != nil {
+			return b
+		}
+	}
+	return nil
+}
+
+// leadingButton finds the first button below n that starts before limit,
+// leaving out search fields and what is in them.
+func leadingButton(n *wdaNode, limit float64, depth int) *wdaNode {
+	if depth > 10 || n.Type == "SearchField" {
+		return nil
+	}
+	if n.Type == "Button" && bool(n.Visible) && n.Rect.Width > 0 && n.Rect.X < limit {
+		return n
+	}
+	for i := range n.Children {
+		if b := leadingButton(&n.Children[i], limit, depth+1); b != nil {
+			return b
+		}
+	}
+	return nil
 }
 
 // Launch implements driver.Device. A running app comes to the front without
@@ -790,16 +831,104 @@ func (d *WDADevice) Stream(ctx context.Context, opt driver.StreamOptions) (drive
 	if _, err := d.c.session(ctx); err != nil { // applies the MJPEG settings
 		return nil, err
 	}
+	d.interfaceTurn(ctx) // the first frames' turn
 	s, err := startFrameStream(ctx, func(ctx context.Context) (frameSource, error) {
-		return openMJPEG(ctx, d.c.long, d.c.mjpeg)
+		src, err := openMJPEG(ctx, d.c.long, d.c.mjpeg)
+		if r, ok := src.(*mjpegReader); ok {
+			// Upside down, the frames' EXIF says up (see pictureTurn).
+			r.upside = d.cachedPictureTurn
+		}
+		return src, err
 	}, d.width, d.height)
 	if err != nil {
 		return nil, err
+	}
+	if fs, ok := s.(*frameStream); ok {
+		go d.followRotation(fs.done)
 	}
 	d.videoMu.Lock()
 	d.video = s
 	d.videoMu.Unlock()
 	return s, nil
+}
+
+// rotationFresh is how long a read of GET /rotation is trusted.
+const rotationFresh = time.Second
+
+// interfaceTurn is how far the interface is turned clockwise from portrait,
+// from GET /rotation, read again when the last read is older than
+// rotationFresh. 0 when WDA does not say.
+func (d *WDADevice) interfaceTurn(ctx context.Context) quarter {
+	if at := d.uiAt.Load(); at != 0 && time.Since(time.Unix(0, at)) < rotationFresh {
+		return quarter(d.ui.Load()-1) & 3
+	}
+	rctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	z, err := d.c.rotation(rctx)
+	cancel()
+	if err != nil {
+		if n := d.ui.Load(); n > 0 {
+			return quarter(n-1) & 3
+		}
+		return 0
+	}
+	q := quarter((z/90)%4+4) & 3
+	d.ui.Store(int32(q) + 1)
+	d.uiAt.Store(time.Now().UnixNano())
+	return q
+}
+
+// pictureTurn is the turn XCTest's pictures need beyond their own EXIF tag:
+// upside down, XCTest's screenshots and MJPEG frames are the panel as it is
+// and their tag says up, though the tree and the gestures are the
+// interface's (iPad Simulator, iPadOS 26.5). In landscape the tag is right
+// and WDA's screenshots come upright already.
+func (d *WDADevice) pictureTurn(ctx context.Context) quarter {
+	if d.interfaceTurn(ctx) == 2 {
+		return 2
+	}
+	return 0
+}
+
+// cachedPictureTurn is pictureTurn from the last read, for the MJPEG
+// frames, which followRotation keeps fresh.
+func (d *WDADevice) cachedPictureTurn() quarter {
+	if d.ui.Load() == 3 { // two quarter turns, plus one
+		return 2
+	}
+	return 0
+}
+
+// followRotation reads GET /rotation every second until done is closed, so
+// the picture turns with the device.
+func (d *WDADevice) followRotation(done <-chan struct{}) {
+	t := time.NewTicker(rotationFresh)
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+			d.interfaceTurn(context.Background())
+		case <-done:
+			return
+		}
+	}
+}
+
+// uprightShot turns a screenshot upright for OCR when XCTest left it
+// upside down (pictureTurn), as a JPEG, which Vision reads as well.
+func (d *WDADevice) uprightShot(ctx context.Context, b []byte) []byte {
+	q := d.pictureTurn(ctx)
+	if q == 0 {
+		return b
+	}
+	img, err := png.Decode(bytes.NewReader(b))
+	if err != nil {
+		return b
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, turnImage(img, q), &jpeg.Options{Quality: 95}); err != nil {
+		return b
+	}
+	return buf.Bytes()
 }
 
 // videoSize is the size of the last stream's picture now, or 0, 0: it
