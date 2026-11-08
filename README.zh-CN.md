@@ -42,7 +42,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 | **Windows** | Windows 10 或 11，64 位（x64） |
 | **Linux** | 64 位 PC（x86-64），Ubuntu 20.04、Debian 11 或更新的系统（glibc 2.29 或更高），以及 GTK 3 |
 | **Android 手机** | Android 10 到 17，一根 USB 线。Pinky 自带 adb；Windows 上个别手机要装 USB 驱动，Linux 上要开放 USB 访问权限（[见下文](#windows-和-linux-上的-usb)） |
-| **iPhone** | iOS 17.4 或更高版本，一根 USB 线。Pinky 会自己准备好 iPhone，用的是 Apple 的开发者磁盘映像：它随 Xcode 提供，你也可以让 Pinky 从第三方镜像下载（[见下文](#iphone)）。iOS 17.4 到 26 还要在 iPhone 上装一个辅助应用（[见下文](#ios-174-到-26-的-iphone)） |
+| **iPhone 或 iPad** | iOS 17.4 或更高版本，设置时需要一根 USB 线；之后也可以通过 Wi-Fi 使用（[见下文](#通过-wi-fi-使用-iphone-和-ipad)）。Pinky 会自己准备好 iPhone，用的是 Apple 的开发者磁盘映像：它随 Xcode 提供，你也可以让 Pinky 从第三方镜像下载（[见下文](#iphone)）。iOS 17.4 到 26 还要在 iPhone 上装一个辅助应用（[见下文](#ios-174-到-26-的-iphone)） |
 | **Agent** | 任何能用 MCP 服务器的 Agent，比如 Claude Code、Claude Desktop、Codex 或 Cursor |
 
 ### 1. 下载并安装 Pinky
@@ -97,6 +97,17 @@ Pinky 会自己准备好 iPhone，「添加手机 › iPhone」会一步步带�
 
 在 iPhone 13 mini（iOS 27.0.1）上验证过：映像被卸掉后 Pinky 自己挂上 Xcode 的映像（约 1.5 秒），沿用手机上已有的映像，以及 iPhone 重启后映像还在。还没在真机上试过：下载的映像、开发者模式开关、iOS 27 以下的 iPhone，以及在 Windows 或 Linux 上连接 iPhone。
 
+#### 通过 Wi-Fi 使用 iPhone 和 iPad
+
+iPhone 或 iPad 和电脑在同一个 Wi-Fi 下，并且电脑在 Wi-Fi 上列出了它时，Pinky 也会通过 Wi-Fi 使用它。手机以允许 Wi-Fi 的方式和这台电脑配对过（在「访达」里勾选在 Wi-Fi 上显示这台 iPhone 的选项，英文为 Show this iPhone when on Wi-Fi；或者用过 Xcode）之后，电脑就会列出它。这项功能默认打开；在「设置 › 手机 › 通过 Wi-Fi 使用 iPhone 和 iPad」里可以关掉。
+
+- Pinky 用过的 iPhone 或 iPad 拔掉线后仍可继续使用，还是同一台手机、同样的设置：Pinky 会自己把它切到 Wi-Fi，插回线时再切回有线，Agent 的任务会继续；切换期间它的调用会等几秒。
+- Pinky 没用过的，比如家人和这台电脑配对过的 iPad，会显示为「在 Wi-Fi 上发现」。在你选择「使用」（Pinky 会通过 Wi-Fi 完成准备）或「忽略」（插上线之前它都不会再出现在列表里）之前，Pinky 只读取它的名字、型号和 iOS 版本，不做任何其他事，Agent 也看不到它。
+- 锁定的 iPhone 或 iPad 在 Wi-Fi 上会显示为「已锁定（Wi-Fi）」，你解锁后 Pinky 才会连接它：它休眠时大约每分钟都会从网络上掉线一次，这时去连接会点亮它的屏幕。
+- 通过 Wi-Fi 准备手机：信任这台电脑需要插线；开发者模式开关还没显示出来时，让它出现也需要插线（用过 Xcode 的手机上它已经显示了）。打开开发者模式是在手机上完成的，挂载开发者磁盘映像也可以通过 Wi-Fi 完成，约 9 秒（有线约 1.5 秒）。「添加手机 › iPhone」会写明哪一步需要插线。
+
+通过 Wi-Fi 时每一步都比有线慢，截图最明显。在 iPad Pro 11 英寸（第三代，iPadOS 27.0.1）上实测，Wi-Fi 对比有线：滑动后 80 到 210 毫秒画面出现变化（有线 60 到 90 毫秒），读一次主屏幕 0.6 到 2.6 秒（0.5 到 0.6 秒），截一张图 5 秒（1 秒），视频丢包 0.2%（有线为 0）。拔掉线后，正在运行的任务约 5 秒切到 Wi-Fi；插回线后 2 到 6 秒切回有线（[详情](docs/notes/ios.md#wi-fi)）。
+
 #### iOS 17.4 到 26 的 iPhone
 
 iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自电脑的点按和输入：WebDriverAgent，要你用自己的 Apple ID 从 Xcode 构建并安装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）。用免费 Apple ID 的话，每 7 天要重新安装一次：到期前两天，手机页面和体检会提醒你；到期后，手机会显示为「需要设置」并说明原因（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。目前还没在 iOS 27 以下的 iPhone 上试过。不装它的话，Pinky 只能显示和读取屏幕（限 Mac）、打开 App，不能点按、滑动或输入。不支持 iOS 17.3 及更早版本。
@@ -129,7 +140,7 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
 ### 手机
 
 - **Android**：通过 USB 或 Wi-Fi 连接（[见上文](#android)）。Pinky 通过 adb 和内置的 scrcpy server 工作。它的伴侣应用随 Pinky 一起提供，读一次屏约 70 毫秒（不装要 2 秒），输入任何语言都不经过剪贴板：手机页面会提出帮你安装（手机可能会让你允许一次）。在 Android 13 及以上，Agent 在后台显示器上工作，手机自己的屏幕可以熄屏锁着。
-- **iPhone**：通过 USB 连接，由 Pinky 准备好（[见上文](#iphone)）。Pinky 能做什么，取决于 iOS 版本和连接方式；连接方式可以在「设置 › 手机」里为每台 iPhone 单独选（「自动」按版本选，见下表）：
+- **iPhone**：通过 USB 或 Wi-Fi 连接（[见上文](#通过-wi-fi-使用-iphone-和-ipad)），由 Pinky 准备好（[见上文](#iphone)）；iPad 也一样。Pinky 能做什么，取决于 iOS 版本和连接方式；连接方式可以在「设置 › 手机」里为每台 iPhone 单独选（「自动」按版本选，见下表）：
 
   | iOS | 方式 | 能做什么 | 测试过的设备 |
   | --- | --- | --- | --- |
@@ -141,7 +152,7 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
   辅助应用是 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你用 Xcode 重新安装；到期后，手机会显示为「需要设置」并说明原因，而不是启动辅助应用失败（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。
 - **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。改用 WebDriverAgent 辅助应用连接这台 iPhone（「设置 › 手机」）：这样手机不共享屏幕，Agent 也能用这些 App。
 - **锁着的手机**：Pinky 从不让手机一直亮着，只在每一步之前唤醒屏幕。在「设置 › 手机」里保存手机的 PIN 码，就能在电脑上用 Touch ID 解锁。Agent 永远看不到 PIN 码。Android 上，这在 AOSP 风格的锁屏上验证过（Mi 10 Pro 上的 LineageOS，Android 10、16 和 17 模拟器）；小米、三星、OPPO、一加、vivo、荣耀和华为的锁屏只有根据已知信息写的测试覆盖，Pinky 读不准 PIN 码键盘时什么都不会输入（[详情](docs/notes/integration.md#unlocking-other-android-phones)）。
-- **移除手机**：手机 ⋯ 菜单里的「移除这台手机…」（手机离线时它的页面上、「所有手机」里它的卡片上、侧栏里它的右键菜单和「设置 › 手机」里也有）会把它从列表里去掉，并删除它保存的 PIN 码和设置。它的任务、截图和录屏会留在「活动」里，除非你勾选把它们也删掉；正在这台手机上运行的任务会停止。插着线的手机会立刻作为一台新手机回来，直到你拔掉它。通过 Wi-Fi 连接的手机会断开，并且不再出现在列表里，即使 adb 自己又连上了它；要加回来，就在「添加手机」里重新配对，或者插上线。Pinky 不会解除手机和电脑的配对：它的 USB 调试或无线调试配对，以及 iPhone 的信任，都会留给其他应用使用（[详情](docs/notes/gateway.md#removing-a-phone)）。
+- **移除手机**：手机 ⋯ 菜单里的「移除这台手机…」（手机离线时它的页面上、「所有手机」里它的卡片上、侧栏里它的右键菜单和「设置 › 手机」里也有）会把它从列表里去掉，并删除它保存的 PIN 码和设置。它的任务、截图和录屏会留在「活动」里，除非你勾选把它们也删掉；正在这台手机上运行的任务会停止。插着线的手机会立刻作为一台新手机回来，直到你拔掉它。通过 Wi-Fi 连接的手机会断开，并且不再出现在列表里，即使 adb 自己又连上了它；要加回来，就在「添加手机」里重新配对，或者插上线。通过 Wi-Fi 连接的 iPhone 或 iPad，在你插上线之前都不会再出现在列表里。Pinky 不会解除手机和电脑的配对：它的 USB 调试或无线调试配对，以及 iPhone 的信任，都会留给其他应用使用（[详情](docs/notes/gateway.md#removing-a-phone)）。
 
 ### 更新
 
