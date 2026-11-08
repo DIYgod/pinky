@@ -30,7 +30,7 @@ type airProvider struct {
 	conn      map[string]string   // by id; "usb" when unset
 	opens     map[string][]string // the connection of each Open, by id
 	sessions  map[string][]*overDevice
-	openDelay time.Duration // Open over Wi-Fi takes this long
+	openDelay time.Duration // Open takes this long
 }
 
 func newAirProvider(devs ...*demo.Device) *airProvider {
@@ -72,7 +72,7 @@ func (p *airProvider) Open(ctx context.Context, id string) (driver.Device, error
 	if c == "wifi" && !used {
 		return nil, errors.New("found on Wi-Fi; not used yet")
 	}
-	if c == "wifi" && delay > 0 {
+	if delay > 0 {
 		time.Sleep(delay)
 	}
 	dev, err := p.Provider.Open(ctx, id)
@@ -274,7 +274,10 @@ func TestWiFiCableMoves(t *testing.T) {
 	ctx := context.Background()
 
 	p.set("iphone", "wifi") // the cable is pulled
-	waitFor(t, "the move", func() bool { v, _ := viewOf(g, "iphone"); return v.Status == DeviceOffline })
+	waitFor(t, "the move", func() bool {
+		v, _ := viewOf(g, "iphone")
+		return v.Status == DeviceConnecting && v.StatusLine == "Moving to Wi-Fi" && v.Info.State == driver.StateOffline
+	})
 	res := s.Observe(ctx, ObserveRequest{})
 	if res.IsError() || res.Screen == nil {
 		t.Fatalf("a call during the move: %+v", res)
@@ -284,6 +287,10 @@ func TestWiFiCableMoves(t *testing.T) {
 	}
 
 	p.set("iphone", "usb") // plugged in again
+	waitFor(t, "moving to the cable", func() bool {
+		v, _ := viewOf(g, "iphone")
+		return v.Status == DeviceConnecting && v.StatusLine == "Moving to the cable"
+	})
 	waitFor(t, "back on the cable", func() bool {
 		_, _, opens := p.state("iphone")
 		v, _ := viewOf(g, "iphone")

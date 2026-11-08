@@ -376,6 +376,9 @@ func (a *app) settingsPhones(c *mg.Context) {
 					mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 						word := locales.SettingsPhonesConnected()
 						switch {
+						case d.Status == gateway.DeviceConnecting:
+							dot(c, p.ink3, false)
+							word = locales.SettingsPhonesConnecting()
 						case d.Status == gateway.DeviceOffline:
 							hollowDot(c)
 							word = locales.SettingsPhonesOffline()

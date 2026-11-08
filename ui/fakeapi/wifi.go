@@ -86,3 +86,15 @@ func (a *API) UseFoundPhone(deviceID string) error {
 func (a *API) IgnoreFoundPhone(ctx context.Context, deviceID string) error {
 	return a.RemoveDevice(ctx, deviceID, gateway.RemoveOptions{})
 }
+
+// SetConnecting shows a phone as being opened, with the gateway's status
+// line ("Connecting", "Moving to Wi-Fi", "Moving to the cable"), or, with
+// "", as it was.
+func (a *API) SetConnecting(deviceID, line string) {
+	a.mu.Lock()
+	if d := a.device(deviceID); d != nil {
+		d.connecting = line
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+}

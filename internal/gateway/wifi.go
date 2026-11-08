@@ -169,6 +169,19 @@ func movingWhy(to string) string {
 	return "moving to the cable"
 }
 
+// connectingLine is the status line of a phone being opened: "Moving to
+// Wi-Fi" or "Moving to the cable" while it moves, else "Connecting". The
+// caller holds g.mu.
+func connectingLine(d *device) string {
+	if time.Now().Before(d.moving) {
+		if d.info.Connection == "wifi" {
+			return "Moving to Wi-Fi"
+		}
+		return "Moving to the cable"
+	}
+	return "Connecting"
+}
+
 // connectionOf is the connection a session was opened over.
 func connectionOf(dev driver.Device, info driver.Info) string {
 	if c := dev.Info().Connection; c != "" {

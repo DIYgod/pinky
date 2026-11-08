@@ -59,6 +59,11 @@ const (
 	DeviceWorking    DeviceStatus = "working"
 	DeviceIdle       DeviceStatus = "idle"
 	DeviceOffline    DeviceStatus = "offline"
+	// DeviceConnecting: Pinky is opening the phone, which is listed and
+	// ready, or opening it again over its other connection as it moves
+	// between its cable and Wi-Fi; it is online in a moment. Info.State
+	// reads offline until then, as for a phone that is not open.
+	DeviceConnecting DeviceStatus = "connecting"
 )
 
 // DeviceView is one row of the sidebar.

@@ -397,7 +397,7 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 			})
 			// Not while the phone is not open: offline, or waiting for a step.
 			canTake := run && t.State != gateway.TaskPaused && d != nil && !a.isLocked(*d) && d.Status != gateway.DeviceInControl &&
-				d.Status != gateway.DeviceNeedsSetup && d.Status != gateway.DeviceOffline
+				d.Status != gateway.DeviceNeedsSetup && d.Status != gateway.DeviceOffline && d.Status != gateway.DeviceConnecting
 			if canTake && button(c, locales.PhoneTakeOver(), btnOpt{small: true}).Clicked() {
 				a.takeOver(t.DeviceID)
 			}

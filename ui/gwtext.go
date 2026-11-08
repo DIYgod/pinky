@@ -528,6 +528,12 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusFoundOnWiFi()
 	case "Locked on Wi-Fi":
 		return locales.GwStatusLockedOnWiFi()
+	case "Connecting":
+		return locales.GwStatusConnecting()
+	case "Moving to Wi-Fi":
+		return locales.GwStatusMovingWiFi()
+	case "Moving to the cable":
+		return locales.GwStatusMovingCable()
 	}
 	if m := reReconnecting.FindStringSubmatch(s); m != nil {
 		return locales.GwStatusReconnecting(m[1])

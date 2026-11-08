@@ -210,3 +210,26 @@ func (a *app) foundBox(c *mg.Context) {
 		guideNote(c, locales.FoundIgnoreNote())
 	})
 }
+
+// connectingPage is the Phone screen while Pinky opens the phone, or opens
+// it again over its other connection as it moves between its cable and
+// Wi-Fi (gateway.DeviceConnecting).
+func (a *app) connectingPage(c *mg.Context, d gateway.DeviceView) {
+	p := pal(c)
+	title := locales.PhoneConnectingTitle(d.Info.Name)
+	switch d.StatusLine {
+	case "Moving to Wi-Fi":
+		title = locales.PhoneMovingWiFiTitle(d.Info.Name)
+	case "Moving to the cable":
+		title = locales.PhoneMovingCableTitle(d.Info.Name)
+	}
+	mg.Column(c).AlignItems(mg.Center).Gap(12).MaxWidth(420).Role(mg.RoleStatus).Children(func() {
+		mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
+			spinner(c)
+		})
+		mg.Text(c, title).FontSize(16).FontWeight(600).TextAlign(mg.Center)
+		if d.TaskID != "" {
+			mg.Text(c, locales.PhoneConnectingTask()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		}
+	})
+}

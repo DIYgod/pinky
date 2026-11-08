@@ -3228,6 +3228,10 @@
       }
     }
   },
+  "gwStatusConnecting": "Connecting",
+  "@gwStatusConnecting": {
+    "description": "A phone's status line while Pinky opens it (listed and ready, online in a moment). Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStatusFoundOnWiFi": "Found on Wi-Fi",
   "@gwStatusFoundOnWiFi": {
     "description": "A phone's status line: Pinky found it on Wi-Fi and waits for the person to say whether it is theirs. Shown only in other languages; in English the gateway's own words show."
@@ -3267,6 +3271,14 @@
         "example": "Reorder lunch"
       }
     }
+  },
+  "gwStatusMovingCable": "Moving to the cable",
+  "@gwStatusMovingCable": {
+    "description": "A phone's status line while Pinky opens it again over its cable after it was plugged in. Shown only in other languages."
+  },
+  "gwStatusMovingWiFi": "Moving to Wi-Fi",
+  "@gwStatusMovingWiFi": {
+    "description": "A phone's status line while Pinky opens it again over Wi-Fi after its cable was pulled. Shown only in other languages."
   },
   "gwStatusNeedsSetup": "Needs setup",
   "@gwStatusNeedsSetup": {
@@ -4436,6 +4448,20 @@
       }
     }
   },
+  "phoneConnectingTask": "The task on it waits until it's connected.",
+  "@phoneConnectingTask": {
+    "description": "Under the connecting page's title when an agent's task runs on the phone."
+  },
+  "phoneConnectingTitle": "Connecting to {phone}…",
+  "@phoneConnectingTitle": {
+    "description": "The page of a phone Pinky is opening. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
   "phoneHandBack": "Hand back",
   "@phoneHandBack": {
     "description": "Button that gives the phone back to the agents after the person took over: on the banner above the mirror and on All phones tiles."
@@ -4479,6 +4505,26 @@
   "phoneMoreControls": "More phone controls",
   "@phoneMoreControls": {
     "description": "The accessibility label and tooltip of the ⋯ button under the mirror, which opens Take screenshot, Record screen, Rotate and Work in the background."
+  },
+  "phoneMovingCableTitle": "Moving {phone} to the cable…",
+  "@phoneMovingCableTitle": {
+    "description": "The page of a phone that was plugged in, while Pinky opens it again over the cable. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "phoneMovingWiFiTitle": "Moving {phone} to Wi-Fi…",
+  "@phoneMovingWiFiTitle": {
+    "description": "The page of a phone whose cable was pulled, while Pinky opens it again over Wi-Fi. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
   },
   "phoneNeedsSetup": "{phone} needs setup",
   "@phoneNeedsSetup": {
@@ -5643,6 +5689,10 @@
   "settingsPhonesConnected": "Connected",
   "@settingsPhonesConnected": {
     "description": "Settings › Phones: the state at the end of a phone's row, next to a green dot: online and ready."
+  },
+  "settingsPhonesConnecting": "Connecting…",
+  "@settingsPhonesConnecting": {
+    "description": "Settings › Phones: the status of a phone Pinky is opening."
   },
   "settingsPhonesFound": "Found on Wi-Fi",
   "@settingsPhonesFound": {

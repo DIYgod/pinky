@@ -11,6 +11,7 @@ import (
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
 
@@ -202,4 +203,27 @@ func TestLockedOnWiFiPage(t *testing.T) {
 	if hasText(tt, "is offline") {
 		t.Errorf("the page calls it offline: %q", tt.Texts())
 	}
+}
+
+// TestConnectingPage: a phone Pinky is opening, or moving to Wi-Fi, says so
+// on its page, in its header and in Settings, and offers no Take over.
+func TestConnectingPage(t *testing.T) {
+	ta, id := foundApp(t, true)
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline})
+	ta.api.SetConnecting(id, "Moving to Wi-Fi")
+	ta.waitFor(t, "the iPad moving", func() bool { d := ta.device(id); return d != nil && d.Status == gateway.DeviceConnecting })
+	ta.sel = id
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	mustHave(t, tt, "Moving Sam's iPad to Wi-Fi…", "iPad · Moving to Wi-Fi")
+	if hasText(tt, "is offline") || hasText(tt, "Take over") {
+		t.Errorf("a moving phone reads as offline or can be taken over: %q", tt.Texts())
+	}
+	ta.api.SetConnecting(id, "Connecting")
+	ta.waitFor(t, "the iPad connecting", func() bool { d := ta.device(id); return d != nil && d.StatusLine == "Connecting" })
+	tt.Frame()
+	mustHave(t, tt, "Connecting to Sam's iPad…")
+	ta.page, ta.set.sec = pageSettings, secPhones
+	tt.Frame()
+	mustHave(t, tt, "Connecting…")
 }

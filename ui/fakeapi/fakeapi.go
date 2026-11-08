@@ -162,6 +162,7 @@ type device struct {
 	// companion updates need the person.
 	updateAsks bool
 	way        string // iPhone: the connection the person chose
+	connecting string // the status line while the fake "opens" it (wifi.go)
 }
 
 type task struct {
@@ -378,6 +379,9 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.TaskID = d.task.view.ID
 	}
 	switch {
+	case d.connecting != "":
+		v.Status, v.StatusLine = gateway.DeviceConnecting, d.connecting
+		v.Info.State = driver.StateOffline
 	case d.info.Setup == driver.SetupUnlock && d.info.State == driver.StateNeedsSetup && d.info.Connection == "wifi" && !running:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Locked on Wi-Fi"
 	case d.info.State == driver.StateOffline:

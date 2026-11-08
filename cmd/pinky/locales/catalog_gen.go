@@ -9153,6 +9153,24 @@ func (msgs Messages) GwStatusBackground(work string) string {
 	return Catalog.Format(msgs.locale, "gwStatusBackground", map[string]any{"work": work})
 }
 
+// GwStatusConnecting says "Connecting"
+// in the language the app shows.
+//
+// A phone's status line while Pinky opens it (listed and ready, online in a
+// moment). Shown only in other languages; in English the gateway's own
+// words show.
+func GwStatusConnecting() string { return In(i18n.Locale()).GwStatusConnecting() }
+
+// GwStatusConnecting says "Connecting"
+// in the language of msgs.
+//
+// A phone's status line while Pinky opens it (listed and ready, online in a
+// moment). Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStatusConnecting() string {
+	return Catalog.Format(msgs.locale, "gwStatusConnecting", nil)
+}
+
 // GwStatusFoundOnWiFi says "Found on Wi-Fi"
 // in the language the app shows.
 //
@@ -9271,6 +9289,38 @@ func GwStatusLockedTask(task string) string { return In(i18n.Locale()).GwStatusL
 // in other languages; in English the gateway's own words show.
 func (msgs Messages) GwStatusLockedTask(task string) string {
 	return Catalog.Format(msgs.locale, "gwStatusLockedTask", map[string]any{"task": task})
+}
+
+// GwStatusMovingCable says "Moving to the cable"
+// in the language the app shows.
+//
+// A phone's status line while Pinky opens it again over its cable after it
+// was plugged in. Shown only in other languages.
+func GwStatusMovingCable() string { return In(i18n.Locale()).GwStatusMovingCable() }
+
+// GwStatusMovingCable says "Moving to the cable"
+// in the language of msgs.
+//
+// A phone's status line while Pinky opens it again over its cable after it
+// was plugged in. Shown only in other languages.
+func (msgs Messages) GwStatusMovingCable() string {
+	return Catalog.Format(msgs.locale, "gwStatusMovingCable", nil)
+}
+
+// GwStatusMovingWiFi says "Moving to Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line while Pinky opens it again over Wi-Fi after its
+// cable was pulled. Shown only in other languages.
+func GwStatusMovingWiFi() string { return In(i18n.Locale()).GwStatusMovingWiFi() }
+
+// GwStatusMovingWiFi says "Moving to Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line while Pinky opens it again over Wi-Fi after its
+// cable was pulled. Shown only in other languages.
+func (msgs Messages) GwStatusMovingWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusMovingWiFi", nil)
 }
 
 // GwStatusNeedsSetup says "Needs setup"
@@ -12115,6 +12165,34 @@ func (msgs Messages) PhoneConnected(count int) string {
 	return Catalog.Format(msgs.locale, "phoneConnected", map[string]any{"count": count})
 }
 
+// PhoneConnectingTask says "The task on it waits until it's connected."
+// in the language the app shows.
+//
+// Under the connecting page's title when an agent's task runs on the phone.
+func PhoneConnectingTask() string { return In(i18n.Locale()).PhoneConnectingTask() }
+
+// PhoneConnectingTask says "The task on it waits until it's connected."
+// in the language of msgs.
+//
+// Under the connecting page's title when an agent's task runs on the phone.
+func (msgs Messages) PhoneConnectingTask() string {
+	return Catalog.Format(msgs.locale, "phoneConnectingTask", nil)
+}
+
+// PhoneConnectingTitle says "Connecting to {phone}…"
+// in the language the app shows.
+//
+// The page of a phone Pinky is opening. phone is its name.
+func PhoneConnectingTitle(phone string) string { return In(i18n.Locale()).PhoneConnectingTitle(phone) }
+
+// PhoneConnectingTitle says "Connecting to {phone}…"
+// in the language of msgs.
+//
+// The page of a phone Pinky is opening. phone is its name.
+func (msgs Messages) PhoneConnectingTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneConnectingTitle", map[string]any{"phone": phone})
+}
+
 // PhoneHandBack says "Hand back"
 // in the language the app shows.
 //
@@ -12243,6 +12321,40 @@ func PhoneMoreControls() string { return In(i18n.Locale()).PhoneMoreControls() }
 // background.
 func (msgs Messages) PhoneMoreControls() string {
 	return Catalog.Format(msgs.locale, "phoneMoreControls", nil)
+}
+
+// PhoneMovingCableTitle says "Moving {phone} to the cable…"
+// in the language the app shows.
+//
+// The page of a phone that was plugged in, while Pinky opens it again over
+// the cable. phone is its name.
+func PhoneMovingCableTitle(phone string) string {
+	return In(i18n.Locale()).PhoneMovingCableTitle(phone)
+}
+
+// PhoneMovingCableTitle says "Moving {phone} to the cable…"
+// in the language of msgs.
+//
+// The page of a phone that was plugged in, while Pinky opens it again over
+// the cable. phone is its name.
+func (msgs Messages) PhoneMovingCableTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneMovingCableTitle", map[string]any{"phone": phone})
+}
+
+// PhoneMovingWiFiTitle says "Moving {phone} to Wi-Fi…"
+// in the language the app shows.
+//
+// The page of a phone whose cable was pulled, while Pinky opens it again
+// over Wi-Fi. phone is its name.
+func PhoneMovingWiFiTitle(phone string) string { return In(i18n.Locale()).PhoneMovingWiFiTitle(phone) }
+
+// PhoneMovingWiFiTitle says "Moving {phone} to Wi-Fi…"
+// in the language of msgs.
+//
+// The page of a phone whose cable was pulled, while Pinky opens it again
+// over Wi-Fi. phone is its name.
+func (msgs Messages) PhoneMovingWiFiTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneMovingWiFiTitle", map[string]any{"phone": phone})
 }
 
 // PhoneNeedsSetup says "{phone} needs setup"
@@ -15571,6 +15683,20 @@ func SettingsPhonesConnected() string { return In(i18n.Locale()).SettingsPhonesC
 // green dot: online and ready.
 func (msgs Messages) SettingsPhonesConnected() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesConnected", nil)
+}
+
+// SettingsPhonesConnecting says "Connecting…"
+// in the language the app shows.
+//
+// Settings › Phones: the status of a phone Pinky is opening.
+func SettingsPhonesConnecting() string { return In(i18n.Locale()).SettingsPhonesConnecting() }
+
+// SettingsPhonesConnecting says "Connecting…"
+// in the language of msgs.
+//
+// Settings › Phones: the status of a phone Pinky is opening.
+func (msgs Messages) SettingsPhonesConnecting() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesConnecting", nil)
 }
 
 // SettingsPhonesFound says "Found on Wi-Fi"

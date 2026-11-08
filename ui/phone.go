@@ -81,6 +81,10 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.checkupPanel(c, d)
 		return
 	}
+	if d.Status == gateway.DeviceConnecting {
+		a.connectingPage(c, d)
+		return
+	}
 	if lockedOnWiFi(d) {
 		// Locked on Wi-Fi: Pinky waits until it is unlocked (wifi.go).
 		mg.Column(c).AlignItems(mg.Center).Gap(12).MaxWidth(420).Children(func() {
