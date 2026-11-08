@@ -1279,6 +1279,142 @@ func (msgs Messages) AddPhoneIPhoneNoImageTitle() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneNoImageTitle", nil)
 }
 
+// AddPhoneIPhoneRefusedFolder says "Pinky used the developer disk image in {folder}: build {build}, version {version}. Apple's signing server no longer s…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// is one the person put in a folder (Pinky's own, or the one the PINKY_DDI
+// environment variable names). folder is that folder; build is the Xcode
+// build the image came with; version is the image's version, or a dash when
+// unknown. iOS_DDI is a folder name.
+func AddPhoneIPhoneRefusedFolder(folder string, build string, version string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneRefusedFolder(folder, build, version)
+}
+
+// AddPhoneIPhoneRefusedFolder says "Pinky used the developer disk image in {folder}: build {build}, version {version}. Apple's signing server no longer s…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// is one the person put in a folder (Pinky's own, or the one the PINKY_DDI
+// environment variable names). folder is that folder; build is the Xcode
+// build the image came with; version is the image's version, or a dash when
+// unknown. iOS_DDI is a folder name.
+func (msgs Messages) AddPhoneIPhoneRefusedFolder(folder string, build string, version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedFolder", map[string]any{"folder": folder, "build": build, "version": version})
+}
+
+// AddPhoneIPhoneRefusedMirror says "Pinky used the developer disk image downloaded from the third-party mirror: build {build}, version {version}. Apple's…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// was downloaded from the third-party mirror (addPhoneIPhoneMirrorTitle).
+// build is the Xcode build the image came with; version is the image's
+// version, or a dash when unknown.
+func AddPhoneIPhoneRefusedMirror(build string, version string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneRefusedMirror(build, version)
+}
+
+// AddPhoneIPhoneRefusedMirror says "Pinky used the developer disk image downloaded from the third-party mirror: build {build}, version {version}. Apple's…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// was downloaded from the third-party mirror (addPhoneIPhoneMirrorTitle).
+// build is the Xcode build the image came with; version is the image's
+// version, or a dash when unknown.
+func (msgs Messages) AddPhoneIPhoneRefusedMirror(build string, version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedMirror", map[string]any{"build": build, "version": version})
+}
+
+// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as a newer image is on this computer."
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: a small note under the
+// box.
+func AddPhoneIPhoneRefusedRetry() string { return In(i18n.Locale()).AddPhoneIPhoneRefusedRetry() }
+
+// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as a newer image is on this computer."
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: a small note under the
+// box.
+func (msgs Messages) AddPhoneIPhoneRefusedRetry() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedRetry", nil)
+}
+
+// AddPhoneIPhoneRefusedTitle says "Apple won't sign this developer disk image"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the title of the box.
+func AddPhoneIPhoneRefusedTitle() string { return In(i18n.Locale()).AddPhoneIPhoneRefusedTitle() }
+
+// AddPhoneIPhoneRefusedTitle says "Apple won't sign this developer disk image"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the title of the box.
+func (msgs Messages) AddPhoneIPhoneRefusedTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedTitle", nil)
+}
+
+// AddPhoneIPhoneRefusedXcode says "Pinky used the developer disk image that Xcode installed on this Mac: build {build}, version {version}. Apple's signi…"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// came with Xcode on this Mac. build is the Xcode build the image came
+// with; version is the image's version, or a dash when unknown.
+func AddPhoneIPhoneRefusedXcode(build string, version string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneRefusedXcode(build, version)
+}
+
+// AddPhoneIPhoneRefusedXcode says "Pinky used the developer disk image that Xcode installed on this Mac: build {build}, version {version}. Apple's signi…"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's checkup, under the preparation step
+// when Apple's signing server refused to sign the developer disk image
+// Pinky found on this computer (Apple's add-on that gives a phone its
+// developer services; it comes with Xcode), as Apple does with images it no
+// longer signs, such as those of Xcode before 27: the text when the image
+// came with Xcode on this Mac. build is the Xcode build the image came
+// with; version is the image's version, or a dash when unknown.
+func (msgs Messages) AddPhoneIPhoneRefusedXcode(build string, version string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedXcode", map[string]any{"build": build, "version": version})
+}
+
 // AddPhoneIPhoneRetrying says "Pinky tries again by itself."
 // in the language the app shows.
 //

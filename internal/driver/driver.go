@@ -61,7 +61,26 @@ type Info struct {
 	// when that is not the local network: ViaTailscale through Tailscale;
 	// "" on the computer's own network or by cable.
 	Via string
+	// DiskImage is the developer disk image a phone waiting with
+	// SetupDiskImageRefused was refused; nil otherwise.
+	DiskImage *DiskImage `json:",omitempty"`
 }
+
+// DiskImage is a developer disk image on the computer (iPhones).
+type DiskImage struct {
+	Source  string // where it was found, one of the DiskImageFrom constants
+	Build   string // the Xcode build it came with, such as "27B52"
+	Version string // its version on the phone, such as "27.2.52.0"; "" for images older than Xcode 16
+	Dir     string // its folder
+}
+
+// Where a developer disk image was found, in DiskImage.Source.
+const (
+	DiskImageFromXcode  = "xcode"  // installed by Xcode on this Mac
+	DiskImageFromMirror = "mirror" // downloaded from the third-party mirror (DiskImageDownloader)
+	DiskImageFromFolder = "pinky"  // put in Pinky's own folder
+	DiskImageFromEnv    = "env"    // named by the PINKY_DDI environment variable
+)
 
 // Setup steps, in Info.Setup.
 const (
@@ -74,6 +93,12 @@ const (
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
 	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
+	// SetupDiskImageRefused: Apple's signing server would not sign the
+	// developer disk image on the computer (Info.DiskImage) for the phone,
+	// as it does with images it no longer signs, such as those of Xcode
+	// before 27. Trying the same image again cannot help: the computer
+	// needs a newer one, which the provider tries as soon as it is there.
+	SetupDiskImageRefused = "disk_image_refused"
 	// A phone reached over the network (WiFiSwitch, Tailnet) that is
 	// offline: its adb stopped listening, as when it restarted (plug it in
 	// once and turn its Wi-Fi connection on again), or it is not on the

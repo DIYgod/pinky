@@ -440,6 +440,60 @@
   "@addPhoneIPhoneNoImageTitle": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the title of the box."
   },
+  "addPhoneIPhoneRefusedFolder": "Pinky used the developer disk image in {folder}: build {build}, version {version}. Apple's signing server no longer signs it, so it can't be mounted on this iPhone. Replace it with the iOS_DDI folder of a Mac where the latest Xcode from the App Store was opened once.",
+  "@addPhoneIPhoneRefusedFolder": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the text when the image is one the person put in a folder (Pinky's own, or the one the PINKY_DDI environment variable names). folder is that folder; build is the Xcode build the image came with; version is the image's version, or a dash when unknown. iOS_DDI is a folder name.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "/Users/me/Library/Application Support/Pinky/DeveloperDiskImages/iOS_DDI/Restore"
+      },
+      "build": {
+        "type": "String",
+        "example": "17B48"
+      },
+      "version": {
+        "type": "String",
+        "example": "17.2.48.0"
+      }
+    }
+  },
+  "addPhoneIPhoneRefusedMirror": "Pinky used the developer disk image downloaded from the third-party mirror: build {build}, version {version}. Apple's signing server no longer signs it, so it can't be mounted on this iPhone. Install Xcode from the App Store and open it once, then you can quit it; or update Pinky once a version with a newer image is out.",
+  "@addPhoneIPhoneRefusedMirror": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the text when the image was downloaded from the third-party mirror (addPhoneIPhoneMirrorTitle). build is the Xcode build the image came with; version is the image's version, or a dash when unknown.",
+    "placeholders": {
+      "build": {
+        "type": "String",
+        "example": "17B48"
+      },
+      "version": {
+        "type": "String",
+        "example": "17.2.48.0"
+      }
+    }
+  },
+  "addPhoneIPhoneRefusedRetry": "Pinky tries again by itself as soon as a newer image is on this computer.",
+  "@addPhoneIPhoneRefusedRetry": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: a small note under the box."
+  },
+  "addPhoneIPhoneRefusedTitle": "Apple won't sign this developer disk image",
+  "@addPhoneIPhoneRefusedTitle": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the title of the box."
+  },
+  "addPhoneIPhoneRefusedXcode": "Pinky used the developer disk image that Xcode installed on this Mac: build {build}, version {version}. Apple's signing server no longer signs it, so it can't be mounted on this iPhone. Install or update Xcode from the App Store and open it once: it installs a newer image, and you can quit it then.",
+  "@addPhoneIPhoneRefusedXcode": {
+    "description": "Add phone › iPhone and the phone's checkup, under the preparation step when Apple's signing server refused to sign the developer disk image Pinky found on this computer (Apple's add-on that gives a phone its developer services; it comes with Xcode), as Apple does with images it no longer signs, such as those of Xcode before 27: the text when the image came with Xcode on this Mac. build is the Xcode build the image came with; version is the image's version, or a dash when unknown.",
+    "placeholders": {
+      "build": {
+        "type": "String",
+        "example": "17B48"
+      },
+      "version": {
+        "type": "String",
+        "example": "17.2.48.0"
+      }
+    }
+  },
   "addPhoneIPhoneRetrying": "Pinky tries again by itself.",
   "@addPhoneIPhoneRetrying": {
     "description": "Add phone › iPhone, the step list: a small note under a failed preparation step."

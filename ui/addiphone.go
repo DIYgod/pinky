@@ -274,6 +274,19 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				// The person chose to offer a third-party copy too, after
 				// the official ways and only on a click.
 				a.mirrorOffer(c)
+			case driver.SetupDiskImageRefused:
+				// Apple will not sign the image on this computer: trying
+				// it again cannot help, a newer one can.
+				title, text, note := setupWords(*d, d.Info.Setup)
+				guideProblem(c, title, text)
+				if refusedNeedsXcode(d.Info.DiskImage) {
+					mg.Row(c).Children(func() {
+						if linkButton(c, locales.AddPhoneIPhoneGetXcode()).Clicked() {
+							openURL(c, xcodeAppStore, func(error) {})
+						}
+					})
+				}
+				guideNote(c, note)
 			case driver.SetupInstallHelper:
 				// Driven through the helper, which is missing or ran out:
 				// nothing for Pinky to retry (checkup_iphone.go).

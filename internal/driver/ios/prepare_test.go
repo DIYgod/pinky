@@ -171,6 +171,7 @@ func TestClassifyMountError(t *testing.T) {
 		{errors.New("MountImage: device responded with error: DeveloperModeIsNotEnabled"), problemDevMode},
 		{errors.New(`MountImage: failed to get Cryptex1 ticket from Apple: requestTicket: failed to send request: Post "https://gs.apple.com/TSS/controller?action=2": dial tcp: lookup gs.apple.com: no such host`), problemNetwork},
 		{errors.New(`MountImage: failed to get signature from Apple: unexpected status in response 94: "This device isn't eligible for the requested build."`), problemRefused},
+		{errors.New(appleRefused), problemRefused},
 		{errors.New("MountImage: findCryptexIdentity: no Cryptex1 identity for chip 0xff10"), problemNotFor},
 		{errors.Join(errors.New("as a cryptex: x"), errNewerImageMounted), problemNewer},
 		{errNoDiskImage, problemNoImage},
@@ -322,6 +323,126 @@ func TestPreparerLogs(t *testing.T) {
 	}
 }
 
+// appleRefused is how a mount fails when Apple's signing server refuses
+// the image: what the cryptex package returns for gs.apple.com's answer
+// (TestCryptexMountRefusedByApple), as users of iOS 27.3 saw it with an
+// image Apple no longer signs.
+const appleRefused = `MountImage: failed to get Cryptex1 ticket from Apple: unexpected status in response 94: "This device isn't eligible for the requested build."`
+
+// TestPreparerRefusedImage does not try an image Apple's signing server
+// refused again, but tries at once when the computer has another image or
+// the phone reconnects.
+func TestPreparerRefusedImage(t *testing.T) {
+	var pr preparer
+	f := newFakePrep(t, &pr)
+	old := diskImage{Source: sourceXcode, Dir: "/Library/Developer/DeveloperDiskImages/iOS_DDI/Restore", Build: "17B48", Version: "17.2.48.0"}
+	img, finds := old, 0
+	pr.findFn = func(string) (diskImage, error) {
+		f.mu.Lock()
+		defer f.mu.Unlock()
+		finds++
+		if img.Dir == "" {
+			return diskImage{}, errNoDiskImage
+		}
+		return img, nil
+	}
+	setImage := func(i diskImage) {
+		f.mu.Lock()
+		img = i
+		f.mu.Unlock()
+	}
+	var buf bytes.Buffer
+	log := slog.New(slog.NewTextHandler(&buf, nil))
+	e := entry("phone", 1, "USB")
+	ok := func(context.Context, goios.DeviceEntry) (bool, error) { return true, nil }
+	state := func() mountJob { return pr.mountState(e, "", ok, func() { f.done <- "done" }, log) }
+	refuse := func() {
+		t.Helper()
+		<-f.started
+		f.results <- errors.New(appleRefused)
+		<-f.done
+	}
+
+	state()
+	refuse()
+	for _, wait := range []time.Duration{0, time.Second, 10 * time.Minute, 24 * time.Hour} {
+		f.advance(wait)
+		if j := state(); j.running || !imageRefused(j.err) || f.count() != 1 {
+			t.Fatalf("%v after the refusal: %+v, %d mounts; the same image is not tried again", wait, j, f.count())
+		}
+	}
+	if finds < 5 {
+		t.Errorf("looked for an image %d times; each look checks whether it changed", finds)
+	}
+	if out := buf.String(); !strings.Contains(out, `msg="iphone: Apple's signing server refused the developer disk image" device=phone image="Xcode's image 17B48" version=17.2.48.0`) ||
+		!strings.Contains(out, `retry="once another image is on this computer"`) {
+		t.Errorf("the log says not which image or when it is tried again:\n%s", out)
+	}
+
+	info := diskImageState(driver.Info{OSVersion: "27.3"}, state(), "")
+	want := &driver.DiskImage{Source: driver.DiskImageFromXcode, Build: "17B48", Version: "17.2.48.0", Dir: old.Dir}
+	if info.Setup != driver.SetupDiskImageRefused || info.DiskImage == nil || *info.DiskImage != *want {
+		t.Fatalf("refused: %+v, want %s with %+v", info, driver.SetupDiskImageRefused, want)
+	}
+	for _, says := range []string{"Xcode's image 17B48, version 17.2.48.0, in " + old.Dir, `status 94: "This device isn't eligible for the requested build."`, "Install or update Xcode from the App Store"} {
+		if !strings.Contains(info.Detail, says) {
+			t.Errorf("%q does not say %q", info.Detail, says)
+		}
+	}
+
+	// Xcode was updated: its newer image is tried at once.
+	setImage(diskImage{Source: sourceXcode, Dir: old.Dir, Build: "27B52", Version: "27.2.52.0"})
+	if j := state(); !j.running {
+		t.Fatalf("with a newer image: %+v; want a new mount", j)
+	}
+	refuse()
+	// It went: the job ends with no image, which says where to get one.
+	setImage(diskImage{})
+	if j := state(); !j.running {
+		t.Fatalf("without an image: %+v; want a new look", j)
+	}
+	<-f.done
+	if j := state(); !errors.Is(j.err, errNoDiskImage) {
+		t.Fatalf("without an image: %+v", j)
+	}
+	// The same image again after the phone reconnects: one more try.
+	setImage(old)
+	f.advance(time.Minute)
+	state()
+	refuse()
+	n := f.count()
+	e = entry("phone", 2, "USB")
+	if j := state(); !j.running {
+		t.Fatalf("after a reconnect: %+v; want a new mount", j)
+	}
+	refuse()
+	if f.count() != n+1 {
+		t.Fatalf("%d mounts, want %d", f.count(), n+1)
+	}
+}
+
+// TestRefusedDetail says how to get an image Apple signs, by where the
+// refused one came from.
+func TestRefusedDetail(t *testing.T) {
+	err := errors.New(appleRefused)
+	for _, c := range []struct {
+		img  diskImage
+		says string
+	}{
+		{diskImage{Source: sourceXcode, Build: "17B48", Version: "17.2.48.0", Dir: "/x"}, "Install or update Xcode from the App Store and open it once"},
+		{diskImage{Source: sourceMirror, Build: "27A5228h", Version: "27.1.5228.8", Dir: "/m"}, "update Pinky when a version with a newer image is out"},
+		{diskImage{Source: sourcePinky, Build: "17B48", Dir: "/p"}, "Replace it with the iOS_DDI folder"},
+		{diskImage{Source: sourceEnv, Build: "17B48", Dir: "/e"}, "Replace it with the iOS_DDI folder"},
+	} {
+		d := refusedDetail(c.img, err)
+		for _, says := range []string{c.says, imageName(c.img), "in " + c.img.Dir, "status 94"} {
+			if !strings.Contains(d, says) {
+				t.Errorf("%s image: %q does not say %q", c.img.Source, d, says)
+			}
+		}
+	}
+}
+
 func TestPreparerServicesMissing(t *testing.T) {
 	defer func(d time.Duration) { serviceWait = d }(serviceWait)
 	serviceWait = 200 * time.Millisecond
@@ -362,7 +483,7 @@ func TestDiskImageState(t *testing.T) {
 		{mountJob{img: img, err: errors.New("device responded with error: DeviceLocked")}, driver.SetupUnlock, "Unlock the iPhone"},
 		{mountJob{err: errNoDiskImage}, driver.SetupNoDiskImage, "comes with Xcode"},
 		{mountJob{img: img, err: errors.New("requestTicket: failed to send request: dial tcp: i/o timeout")}, driver.SetupDiskImage, "gs.apple.com"},
-		{mountJob{img: img, err: errors.New(`unexpected status in response 94: "This device isn't eligible"`)}, driver.SetupDiskImage, "would not sign"},
+		{mountJob{img: img, err: errors.New(`unexpected status in response 94: "This device isn't eligible"`)}, driver.SetupDiskImageRefused, "would not sign"},
 		{mountJob{img: img, err: errors.New("findCryptexIdentity: no Cryptex1 identity")}, driver.SetupDiskImage, "Xcode 27B52"},
 		{mountJob{img: img, err: errors.New("as a cryptex: boom\nas a personalized image: bang")}, driver.SetupDiskImage, "could not mount the developer disk image: as a personalized image: bang"},
 	} {

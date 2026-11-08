@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/ios/cryptex"
 	"howett.net/plist"
 )
@@ -33,10 +34,10 @@ type diskImage struct {
 
 // Where a disk image was found.
 const (
-	sourceEnv    = "env"    // PINKY_DDI
-	sourcePinky  = "pinky"  // Pinky's own folder
-	sourceXcode  = "xcode"  // installed by Xcode
-	sourceMirror = "mirror" // downloaded from the third-party mirror (mirror.go)
+	sourceEnv    = driver.DiskImageFromEnv    // PINKY_DDI
+	sourcePinky  = driver.DiskImageFromFolder // Pinky's own folder
+	sourceXcode  = driver.DiskImageFromXcode  // installed by Xcode
+	sourceMirror = driver.DiskImageFromMirror // downloaded from the third-party mirror (mirror.go)
 )
 
 // ddiEnv names a developer disk image folder to use instead of the others:
