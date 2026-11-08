@@ -11414,14 +11414,14 @@ func (msgs Messages) PhoneBackgroundUnsupported() string {
 // PhoneBannerHandBackHint says "Hand back to let agents use this phone again."
 // in the language the app shows.
 //
-// The banner over the mirror, after the bold phoneBannerInControl, when no
+// The banner above the mirror, after the bold phoneBannerInControl, when no
 // agent waits: Hand back is the banner's button.
 func PhoneBannerHandBackHint() string { return In(i18n.Locale()).PhoneBannerHandBackHint() }
 
 // PhoneBannerHandBackHint says "Hand back to let agents use this phone again."
 // in the language of msgs.
 //
-// The banner over the mirror, after the bold phoneBannerInControl, when no
+// The banner above the mirror, after the bold phoneBannerInControl, when no
 // agent waits: Hand back is the banner's button.
 func (msgs Messages) PhoneBannerHandBackHint() string {
 	return Catalog.Format(msgs.locale, "phoneBannerHandBackHint", nil)
@@ -11430,7 +11430,7 @@ func (msgs Messages) PhoneBannerHandBackHint() string {
 // PhoneBannerInControl says "You're in control. "
 // in the language the app shows.
 //
-// The bold start of the banner over the mirror while the person controls
+// The bold start of the banner above the mirror while the person controls
 // the phone; the rest follows in normal weight (phoneBannerPaused or
 // phoneBannerHandBackHint). English ends with a space before the rest.
 func PhoneBannerInControl() string { return In(i18n.Locale()).PhoneBannerInControl() }
@@ -11438,7 +11438,7 @@ func PhoneBannerInControl() string { return In(i18n.Locale()).PhoneBannerInContr
 // PhoneBannerInControl says "You're in control. "
 // in the language of msgs.
 //
-// The bold start of the banner over the mirror while the person controls
+// The bold start of the banner above the mirror while the person controls
 // the phone; the rest follows in normal weight (phoneBannerPaused or
 // phoneBannerHandBackHint). English ends with a space before the rest.
 func (msgs Messages) PhoneBannerInControl() string {
@@ -11448,14 +11448,14 @@ func (msgs Messages) PhoneBannerInControl() string {
 // PhoneBannerPaused says "{agent} is paused."
 // in the language the app shows.
 //
-// The banner over the mirror, after the bold phoneBannerInControl: the
+// The banner above the mirror, after the bold phoneBannerInControl: the
 // agent waits until the person hands the phone back.
 func PhoneBannerPaused(agent string) string { return In(i18n.Locale()).PhoneBannerPaused(agent) }
 
 // PhoneBannerPaused says "{agent} is paused."
 // in the language of msgs.
 //
-// The banner over the mirror, after the bold phoneBannerInControl: the
+// The banner above the mirror, after the bold phoneBannerInControl: the
 // agent waits until the person hands the phone back.
 func (msgs Messages) PhoneBannerPaused(agent string) string {
 	return Catalog.Format(msgs.locale, "phoneBannerPaused", map[string]any{"agent": agent})
@@ -11464,9 +11464,9 @@ func (msgs Messages) PhoneBannerPaused(agent string) string {
 // PhoneBannerWaits says "{agent} waits for you: {reason}"
 // in the language the app shows.
 //
-// The banner over the mirror, after the bold phoneBannerYourTurn. reason is
-// the agent's own words, what it asked the person to do (in English with a
-// lower-case first letter).
+// The banner above the mirror, after the bold phoneBannerYourTurn. reason
+// is the agent's own words, what it asked the person to do (in English with
+// a lower-case first letter).
 func PhoneBannerWaits(agent string, reason string) string {
 	return In(i18n.Locale()).PhoneBannerWaits(agent, reason)
 }
@@ -11474,9 +11474,9 @@ func PhoneBannerWaits(agent string, reason string) string {
 // PhoneBannerWaits says "{agent} waits for you: {reason}"
 // in the language of msgs.
 //
-// The banner over the mirror, after the bold phoneBannerYourTurn. reason is
-// the agent's own words, what it asked the person to do (in English with a
-// lower-case first letter).
+// The banner above the mirror, after the bold phoneBannerYourTurn. reason
+// is the agent's own words, what it asked the person to do (in English with
+// a lower-case first letter).
 func (msgs Messages) PhoneBannerWaits(agent string, reason string) string {
 	return Catalog.Format(msgs.locale, "phoneBannerWaits", map[string]any{"agent": agent, "reason": reason})
 }
@@ -11484,7 +11484,7 @@ func (msgs Messages) PhoneBannerWaits(agent string, reason string) string {
 // PhoneBannerYourTurn says "Your turn. "
 // in the language the app shows.
 //
-// The bold start of the banner over the mirror when the agent asked the
+// The bold start of the banner above the mirror when the agent asked the
 // person to do something on the phone; phoneBannerWaits follows in normal
 // weight. English ends with a space before the rest.
 func PhoneBannerYourTurn() string { return In(i18n.Locale()).PhoneBannerYourTurn() }
@@ -11492,7 +11492,7 @@ func PhoneBannerYourTurn() string { return In(i18n.Locale()).PhoneBannerYourTurn
 // PhoneBannerYourTurn says "Your turn. "
 // in the language of msgs.
 //
-// The bold start of the banner over the mirror when the agent asked the
+// The bold start of the banner above the mirror when the agent asked the
 // person to do something on the phone; phoneBannerWaits follows in normal
 // weight. English ends with a space before the rest.
 func (msgs Messages) PhoneBannerYourTurn() string {
@@ -11547,14 +11547,14 @@ func (msgs Messages) PhoneConnected(count int) string {
 // in the language the app shows.
 //
 // Button that gives the phone back to the agents after the person took
-// over: on the banner over the mirror and on All phones tiles.
+// over: on the banner above the mirror and on All phones tiles.
 func PhoneHandBack() string { return In(i18n.Locale()).PhoneHandBack() }
 
 // PhoneHandBack says "Hand back"
 // in the language of msgs.
 //
 // Button that gives the phone back to the agents after the person took
-// over: on the banner over the mirror and on All phones tiles.
+// over: on the banner above the mirror and on All phones tiles.
 func (msgs Messages) PhoneHandBack() string {
 	return Catalog.Format(msgs.locale, "phoneHandBack", nil)
 }

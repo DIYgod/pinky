@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/driver/ios/cryptex"
 	goios "github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/imagemounter"
 )
@@ -121,7 +122,7 @@ func mountWith(l *link, img diskImage, major int) (mountResult, error) {
 // mountAsCryptex installs img through cryptexd, the way CoreDevice does.
 func mountAsCryptex(l *link, img diskImage) (mountResult, error) {
 	r := mountResult{How: mountCryptex}
-	m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry)
+	m, err := cryptex.NewCryptexDeveloperDiskImageMounter(l.entry)
 	if err != nil {
 		return r, err
 	}

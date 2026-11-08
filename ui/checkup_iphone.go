@@ -188,12 +188,12 @@ func helperWords(d gateway.DeviceView, now time.Time) (text string, ranOut bool)
 	return "", false
 }
 
-// helperReminder draws the Phone screen's reminder that the helper an
-// iPhone is driven through stops working soon, with how to install it
-// again, and returns the room it takes above the phone, 0 when it shows
-// none. Once the helper has stopped, the phone needs setup and says so in
-// its place.
-func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView) float32 {
+// helperReminder draws the Phone screen's reminder above the mirror that
+// the helper an iPhone is driven through stops working soon, with how to
+// install it again, width wide, and returns the room it takes, with its
+// gap: 0 when it shows none. Once the helper has stopped, the phone needs
+// setup and says so in its place.
+func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width float32) float32 {
 	if d.Info.Platform != driver.IOS || d.Info.HelperExpires.IsZero() {
 		return 0
 	}
@@ -205,8 +205,6 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView) float32 {
 		return 0
 	}
 	p := pal(c)
-	w, _ := c.Size()
-	width := min(520, w-220-320-32)
 	label := locales.CheckHelperHow()
 	height := helperReminderHeight(c, text, label, width)
 	mg.Row(c).Width(width).Height(height).Shrink(0).Padding(8, 8, 8, 14).Radius(12).Background(p.amberTint).Border(1, p.amberLine).

@@ -5,11 +5,14 @@ package ios
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/ios/cryptex"
 	goios "github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/imagemounter"
 )
@@ -44,7 +47,7 @@ func TestDiskImageStatus(t *testing.T) {
 	t.Logf("services: cryptexd %v, display %v, hid %v, instruments %v", l.has(cryptexService), l.has(displayService), l.has(universalHIDService), l.has(instrumentsService))
 
 	if l.has(cryptexService) {
-		cm, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry)
+		cm, err := cryptex.NewCryptexDeveloperDiskImageMounter(l.entry)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -95,7 +98,7 @@ func TestDiskImageMountKeeps(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer l.Close()
-	m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry)
+	m, err := cryptex.NewCryptexDeveloperDiskImageMounter(l.entry)
 	if err != nil {
 		t.Skip(err)
 	}
@@ -135,7 +138,7 @@ func TestDiskImageRemount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cryptexes := func(what string) []imagemounter.RemoteCryptex {
+	cryptexes := func(what string) []cryptex.RemoteCryptex {
 		t.Helper()
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
@@ -144,7 +147,7 @@ func TestDiskImageRemount(t *testing.T) {
 			t.Fatalf("%s: %v", what, err)
 		}
 		defer l.Close()
-		m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry)
+		m, err := cryptex.NewCryptexDeveloperDiskImageMounter(l.entry)
 		if err != nil {
 			t.Fatalf("%s: %v", what, err)
 		}
@@ -152,7 +155,7 @@ func TestDiskImageRemount(t *testing.T) {
 		t.Logf("%s: cryptexes %+v err=%v; display %v, hid %v", what, list, err, l.has(displayService), l.has(universalHIDService))
 		return list
 	}
-	has := func(list []imagemounter.RemoteCryptex) bool {
+	has := func(list []cryptex.RemoteCryptex) bool {
 		for _, c := range list {
 			if c.Identifier == ddiCryptex && c.Version == img.Version {
 				return true
@@ -202,7 +205,7 @@ func TestDiskImageRemount(t *testing.T) {
 		cancel()
 		t.Fatal(err)
 	}
-	m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry)
+	m, err := cryptex.NewCryptexDeveloperDiskImageMounter(l.entry)
 	if err == nil {
 		start := time.Now()
 		err = m.UnmountImage()
@@ -217,8 +220,10 @@ func TestDiskImageRemount(t *testing.T) {
 		t.Fatal("the image is still there")
 	}
 
-	// The provider, as the gateway runs it: List every 2 s.
+	// The provider, as the gateway runs it: List every 2 s. Its log lines
+	// say which way the mount went and how long it took.
 	p := NewProvider()
+	p.Log = slog.New(slog.NewTextHandler(testLog{t}, nil))
 	start := time.Now()
 	last := ""
 	for {
@@ -287,4 +292,12 @@ func TestCheckupOnPhone(t *testing.T) {
 			t.Errorf("%s failed: %s", c.ID, c.Detail)
 		}
 	}
+}
+
+// testLog writes a provider's log lines to the test's output.
+type testLog struct{ t *testing.T }
+
+func (w testLog) Write(p []byte) (int, error) {
+	w.t.Log(strings.TrimRight(string(p), "\n"))
+	return len(p), nil
 }
