@@ -367,8 +367,9 @@ type Unlocker interface {
 }
 
 // DiskImageDownloader is a Provider that can download the developer disk
-// image a computer without Xcode lacks (iPhones), from a third-party
-// mirror, when the person asks.
+// image a computer without Xcode lacks, or whose Xcode image Apple's
+// signing server refused (iPhones), from a third-party mirror, when the
+// person asks.
 type DiskImageDownloader interface {
 	// DiskImageMirror says where the download comes from.
 	DiskImageMirror() DiskImageMirror
