@@ -4253,6 +4253,108 @@ func (msgs Messages) CheckWiFiFail() string {
 	return Catalog.Format(msgs.locale, "checkWiFiFail", nil)
 }
 
+// CheckWiFiIPhoneFail says "Pinky couldn't turn on its Wi-Fi connection. Plug it in again to try once more, or tick “Show this iPhone when on W…"
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky could not turn on
+// the phone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's
+// checkbox); the error shows under it.
+func CheckWiFiIPhoneFail() string { return In(i18n.Locale()).CheckWiFiIPhoneFail() }
+
+// CheckWiFiIPhoneFail says "Pinky couldn't turn on its Wi-Fi connection. Plug it in again to try once more, or tick “Show this iPhone when on W…"
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky could not turn on
+// the phone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's
+// checkbox); the error shows under it.
+func (msgs Messages) CheckWiFiIPhoneFail() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneFail", nil)
+}
+
+// CheckWiFiIPhoneNotSeen says "Its Wi-Fi connection is on, but this computer doesn't see it on Wi-Fi. Check that both are on the same Wi-Fi network:…"
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: the phone's Wi-Fi
+// connection is on, but the computer's device service does not list it over
+// the network.
+func CheckWiFiIPhoneNotSeen() string { return In(i18n.Locale()).CheckWiFiIPhoneNotSeen() }
+
+// CheckWiFiIPhoneNotSeen says "Its Wi-Fi connection is on, but this computer doesn't see it on Wi-Fi. Check that both are on the same Wi-Fi network:…"
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: the phone's Wi-Fi
+// connection is on, but the computer's device service does not list it over
+// the network.
+func (msgs Messages) CheckWiFiIPhoneNotSeen() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneNotSeen", nil)
+}
+
+// CheckWiFiIPhoneOff says "Use iPhones and iPads over Wi-Fi is off in Settings › Phones, so Pinky leaves its Wi-Fi connection as it is."
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky's Wi-Fi setting is
+// off, so it did not look at the phone's Wi-Fi connection.
+func CheckWiFiIPhoneOff() string { return In(i18n.Locale()).CheckWiFiIPhoneOff() }
+
+// CheckWiFiIPhoneOff says "Use iPhones and iPads over Wi-Fi is off in Settings › Phones, so Pinky leaves its Wi-Fi connection as it is."
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item: Pinky's Wi-Fi setting is
+// off, so it did not look at the phone's Wi-Fi connection.
+func (msgs Messages) CheckWiFiIPhoneOff() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneOff", nil)
+}
+
+// CheckWiFiIPhoneSeen says "Its Wi-Fi connection is on, and this computer sees it on Wi-Fi: unplugged, it keeps working while it's on the same Wi…"
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, while the phone is on its
+// cable and also listed over the network.
+func CheckWiFiIPhoneSeen() string { return In(i18n.Locale()).CheckWiFiIPhoneSeen() }
+
+// CheckWiFiIPhoneSeen says "Its Wi-Fi connection is on, and this computer sees it on Wi-Fi: unplugged, it keeps working while it's on the same Wi…"
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, while the phone is on its
+// cable and also listed over the network.
+func (msgs Messages) CheckWiFiIPhoneSeen() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneSeen", nil)
+}
+
+// CheckWiFiIPhoneTurnedOn says "Pinky turned it on when you plugged it in, as Finder's “Show this iPhone when on Wi-Fi” does."
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, a note under the Wi-Fi item: Pinky turned
+// on the phone's Wi-Fi connection itself.
+func CheckWiFiIPhoneTurnedOn() string { return In(i18n.Locale()).CheckWiFiIPhoneTurnedOn() }
+
+// CheckWiFiIPhoneTurnedOn says "Pinky turned it on when you plugged it in, as Finder's “Show this iPhone when on Wi-Fi” does."
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, a note under the Wi-Fi item: Pinky turned
+// on the phone's Wi-Fi connection itself.
+func (msgs Messages) CheckWiFiIPhoneTurnedOn() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneTurnedOn", nil)
+}
+
+// CheckWiFiIPhoneUnknown says "Pinky turns on its Wi-Fi connection once it's plugged in and trusts this computer."
+// in the language the app shows.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, before Pinky could look at
+// the phone's Wi-Fi connection (not plugged in since Pinky started, or not
+// trusting the computer yet).
+func CheckWiFiIPhoneUnknown() string { return In(i18n.Locale()).CheckWiFiIPhoneUnknown() }
+
+// CheckWiFiIPhoneUnknown says "Pinky turns on its Wi-Fi connection once it's plugged in and trusts this computer."
+// in the language of msgs.
+//
+// An iPhone's or iPad's checkup, the Wi-Fi item, before Pinky could look at
+// the phone's Wi-Fi connection (not plugged in since Pinky started, or not
+// trusting the computer yet).
+func (msgs Messages) CheckWiFiIPhoneUnknown() string {
+	return Catalog.Format(msgs.locale, "checkWiFiIPhoneUnknown", nil)
+}
+
 // CheckWiFiOld says "Pairing over Wi-Fi needs Android 11 or later (this phone has Android {version}). Use USB."
 // in the language the app shows.
 //

@@ -1362,6 +1362,30 @@
   "@checkWiFiFail": {
     "description": "The checkup, Wi-Fi: failed."
   },
+  "checkWiFiIPhoneFail": "Pinky couldn't turn on its Wi-Fi connection. Plug it in again to try once more, or tick “Show this iPhone when on Wi-Fi” in Finder.",
+  "@checkWiFiIPhoneFail": {
+    "description": "An iPhone's or iPad's checkup, the Wi-Fi item: Pinky could not turn on the phone's Wi-Fi connection (lockdown's EnableWifiConnections, Finder's checkbox); the error shows under it."
+  },
+  "checkWiFiIPhoneNotSeen": "Its Wi-Fi connection is on, but this computer doesn't see it on Wi-Fi. Check that both are on the same Wi-Fi network: guest networks and some routers keep devices apart. A phone whose Wi-Fi connection was just turned on can take a minute to show up.",
+  "@checkWiFiIPhoneNotSeen": {
+    "description": "An iPhone's or iPad's checkup, the Wi-Fi item: the phone's Wi-Fi connection is on, but the computer's device service does not list it over the network."
+  },
+  "checkWiFiIPhoneOff": "Use iPhones and iPads over Wi-Fi is off in Settings › Phones, so Pinky leaves its Wi-Fi connection as it is.",
+  "@checkWiFiIPhoneOff": {
+    "description": "An iPhone's or iPad's checkup, the Wi-Fi item: Pinky's Wi-Fi setting is off, so it did not look at the phone's Wi-Fi connection."
+  },
+  "checkWiFiIPhoneSeen": "Its Wi-Fi connection is on, and this computer sees it on Wi-Fi: unplugged, it keeps working while it's on the same Wi-Fi.",
+  "@checkWiFiIPhoneSeen": {
+    "description": "An iPhone's or iPad's checkup, the Wi-Fi item, while the phone is on its cable and also listed over the network."
+  },
+  "checkWiFiIPhoneTurnedOn": "Pinky turned it on when you plugged it in, as Finder's “Show this iPhone when on Wi-Fi” does.",
+  "@checkWiFiIPhoneTurnedOn": {
+    "description": "An iPhone's or iPad's checkup, a note under the Wi-Fi item: Pinky turned on the phone's Wi-Fi connection itself."
+  },
+  "checkWiFiIPhoneUnknown": "Pinky turns on its Wi-Fi connection once it's plugged in and trusts this computer.",
+  "@checkWiFiIPhoneUnknown": {
+    "description": "An iPhone's or iPad's checkup, the Wi-Fi item, before Pinky could look at the phone's Wi-Fi connection (not plugged in since Pinky started, or not trusting the computer yet)."
+  },
   "checkWiFiOld": "Pairing over Wi-Fi needs Android 11 or later (this phone has Android {version}). Use USB.",
   "@checkWiFiOld": {
     "description": "The checkup, Wi-Fi: not on Android 10.",

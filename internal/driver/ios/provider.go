@@ -180,13 +180,21 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	p.remember(kept)
 	// Phones usbmuxd lost on Wi-Fi though they are on the network (lost.go).
 	onMux := map[string]bool{}
+	onNet := map[string]bool{}
 	for _, e := range list {
 		onMux[e.Properties.SerialNumber] = true
+		if e.Properties.ConnectionType == "Network" {
+			onNet[e.Properties.SerialNumber] = true
+		}
 	}
 	for _, info := range p.lostPhones(onMux) {
 		if !ids[info.ID] && (p.Only == nil || p.Only[info.ID]) {
 			kept = append(kept, info)
 		}
+	}
+	// What each one's Wi-Fi connection is (wifiallow.go).
+	for i := range kept {
+		kept[i].WiFi = p.wifiConnection(kept[i].ID, onNet[kept[i].ID])
 	}
 	return kept, nil
 }
@@ -278,11 +286,6 @@ func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 	for id := range p.known {
 		if !listed[id] {
 			delete(p.known, id)
-		}
-	}
-	for id, a := range p.wifi.allowed {
-		if !listed[id] && !a.running {
-			delete(p.wifi.allowed, id)
 		}
 	}
 	for id, f := range p.wifi.found {

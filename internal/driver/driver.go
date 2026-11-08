@@ -64,7 +64,35 @@ type Info struct {
 	// DiskImage is the developer disk image a phone waiting with
 	// SetupDiskImageRefused was refused; nil otherwise.
 	DiskImage *DiskImage `json:",omitempty"`
+	// WiFi is what the provider knows of reaching an iPhone or iPad over
+	// Wi-Fi, for its checkup and diagnostics; zero for other phones.
+	WiFi WiFiConnection `json:",omitzero"`
 }
+
+// WiFiConnection is what an iPhone's provider knows of its Wi-Fi connection:
+// whether the phone allows this computer to reach it over Wi-Fi (Finder's
+// "Show this iPhone when on Wi-Fi", Xcode's "Connect via network", the
+// lockdown value EnableWifiConnections), who turned that on, and whether
+// this computer lists it over the network now.
+type WiFiConnection struct {
+	// Connections is one of the WiFiConnections values; "" when the driver
+	// does not tell.
+	Connections string
+	// Detail says, in English, why turning them on failed or why Pinky did
+	// not look.
+	Detail string `json:",omitempty"`
+	// Seen: this computer lists the phone over the network now.
+	Seen bool `json:",omitempty"`
+}
+
+// WiFiConnection.Connections values.
+const (
+	WiFiConnectionsOn       = "on"        // they are on: listed over the network, or read so on a cable
+	WiFiConnectionsTurnedOn = "turned_on" // Pinky turned them on when the phone was plugged in
+	WiFiConnectionsFailed   = "failed"    // Pinky could not turn them on: Detail says why
+	WiFiConnectionsOff      = "off"       // Pinky does not use phones over Wi-Fi (Settings › Phones), so it did not look
+	WiFiConnectionsUnknown  = "unknown"   // not looked at: the phone does not trust this computer or did not answer (Detail), or was not plugged in since Pinky started
+)
 
 // DiskImage is a developer disk image on the computer (iPhones).
 type DiskImage struct {
@@ -916,6 +944,8 @@ const (
 	FixLocalNetwork     = "local_network"      // allow Pinky under Privacy & Security › Local Network
 	FixLocked           = "locked"             // unlock the phone, then check again
 	FixRestart          = "restart"            // restart the phone: a setting it has takes effect only then
+	FixSameNetwork      = "same_network"       // put the phone on the same Wi-Fi as this computer, one that lets devices reach each other
+	FixWiFiSetting      = "wifi_setting"       // turn on Use iPhones and iPads over Wi-Fi in Settings › Phones
 )
 
 // Setup steps of Android phones, in Info.Setup with the Setup constants:

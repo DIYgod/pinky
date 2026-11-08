@@ -240,7 +240,8 @@ func (a *API) Play(s Scenario) {
 	}
 	iphone := &device{
 		info: driver.Info{ID: "iphone-17", Platform: driver.IOS, Name: "iPhone 17", Model: "iPhone 17",
-			OSVersion: "27.1", Connection: "wifi", Backend: "coredevice", State: driver.StateOnline},
+			OSVersion: "27.1", Connection: "wifi", Backend: "coredevice", State: driver.StateOnline,
+			WiFi: driver.WiFiConnection{Connections: driver.WiFiConnectionsTurnedOn, Seen: true}},
 		width: 1206, height: 2622, codec: driver.HEVC, source: "testsrc",
 	}
 	galaxy := &device{
