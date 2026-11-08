@@ -1,3 +1,8 @@
+//go:build !windows
+
+// Pinky runs its own usbmuxd on Linux only (netmux.go); these tests serve
+// it on a Unix socket in /tmp, which Windows does not have.
+
 package ios
 
 import (
