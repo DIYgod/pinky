@@ -32,14 +32,14 @@ Why not Wireless debugging? Android turns Wireless debugging off when the phone 
 
 ## Keeping the computer awake
 
-A sleeping computer cannot reach the phone. **Settings › Phones › Keep this computer awake for phones away** (on by default) keeps it from sleeping when idle while a phone is connected through Tailscale. On a Mac it shows in `pmset -g assertions` as "Pinky: a phone is connected through Tailscale". The display may still sleep.
+A sleeping computer cannot reach the phone. **Settings › Phones › Keep this computer awake for phones away** (on by default) keeps it from sleeping when idle while a phone is connected through Tailscale, as Pinky does anyway while an agent task runs. On a Mac it shows in `pmset -g assertions` as "Pinky: a phone is connected through Tailscale"; on Windows the app makes a power request with that reason, and on Linux it asks the desktop's portal. The display may still sleep.
+
+`pinkyctl daemon`, which has no window, does the same, following the app's setting as it reads it at start: an assertion of the same name on a Mac, the same power request on Windows, and on Linux a systemd lock, which `systemd-inhibit --list` shows. That needs systemd, and logind's policy may refuse the lock to a process outside a login session; the daemon then logs "cannot keep the computer awake" and tries again 5 minutes later.
 
 What it cannot stop:
 
 - **A MacBook's lid.** Closing the lid puts a Mac laptop to sleep, unless it runs in clamshell mode (plugged in, with an external display). To keep a closed MacBook awake anyway, `sudo pmset -a disablesleep 1` turns sleep off altogether (`sudo pmset -a disablesleep 0` turns it back on); it is a system setting, so mind the battery.
 - **Sleep when nothing runs.** On a Mac that should stay up while you are out, also turn on System Settings › Battery › Options › **Prevent automatic sleeping on power adapter when the display is off** (or Energy on a desktop Mac).
-- **Without a window.** `pinkyctl daemon` holds no such assertion: on a Mac, run it as `caffeinate -i pinkyctl daemon`.
-- **Windows and Linux.** Pinky holds nothing there: set the computer not to sleep while plugged in (Windows: Settings › System › Power › Sleep), or on Linux run Pinky under `systemd-inhibit --what=idle:sleep`.
 
 ## Speed and data
 

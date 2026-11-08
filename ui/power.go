@@ -4,13 +4,15 @@ import (
 	"sync"
 
 	"github.com/egoist/mygo"
+
+	"github.com/DIYgod/pinky/internal/awake"
 )
 
 // The reasons Pinky keeps the computer awake, as `pmset -g assertions`
-// lists them on a Mac.
+// lists them on a Mac: the same as pinky daemon's (internal/awake).
 const (
-	awakeReason = "Pinky: an agent task is running"
-	awayReason  = "Pinky: a phone is connected through Tailscale"
+	awakeReason = awake.ReasonTask
+	awayReason  = awake.ReasonAway
 )
 
 var (

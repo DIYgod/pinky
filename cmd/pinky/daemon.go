@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/awake"
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
@@ -55,6 +56,17 @@ func runDaemon(args []string) error {
 	defer tstop()
 	tel := startTelemetry(tctx, rg, c.Crashes, s, "daemon", c.Fake, c.Log)
 	defer tel.Close()
+	if !c.Fake {
+		// The computer stays awake as for the app (awake.go); fake phones
+		// need none of that.
+		actx, astop := context.WithCancel(context.Background())
+		adone := make(chan struct{})
+		go func() {
+			defer close(adone)
+			keepDaemonAwake(actx, rg.G, s.KeepAwakeAway, awake.Hold, c.Log)
+		}()
+		defer func() { astop(); <-adone }()
+	}
 	if *httpAddr != "" {
 		if err := rg.Remote.Set(true, *httpAddr); err != nil {
 			return err
