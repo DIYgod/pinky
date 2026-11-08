@@ -4,6 +4,7 @@ What changed for people in each release of Pinky, newest first. A version is the
 
 ## Unreleased
 
+- When something in Pinky gets in an agent's way, the agent now tells you afterwards and suggests reporting it with Help › Send Feedback…, leaving out what was on your screen. It never posts a report without your yes. Update in Settings › Agents gives your agents the new guide.
 - On iPhones below iOS 27, Pinky now notices when the developer disk image is not mounted, instead of failing later when it starts the WebDriverAgent helper.
 
 ## 2026.1108.7 (2026-11-08)

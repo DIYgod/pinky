@@ -97,3 +97,12 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - `phone_observe { screenshot: true }` only when the element list is not enough; screenshots are large.
 - An iPhone that restarted is offline until the person unlocks it once; then Pinky prepares it again by itself, which takes a few seconds. If an iPhone you need is offline, tell the person to unlock it (and to keep it plugged in), then call `phone_connect` again.
 - An iPhone below iOS 27 without Pinky's helper can only be read and have apps opened: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`. Read the screen, open apps with `phone_launch`, and tell the person the task needs the helper.
+
+## When Pinky gets in your way
+
+Pinky's developers want to hear where it fell short. Keep note of anything in Pinky that got in your way: a tool that failed or returned something wrong, a screen it read badly, a step it could not do, a rule that stopped something harmless, a tool or option you missed, an error that did not say what to do.
+
+- After the task (also when you give up), tell the person in a sentence or two and suggest reporting it. Help › Send Feedback… in Pinky opens a GitHub issue form with Pinky's version and diagnostics filled in. Offer them the text for it: what you tried, the call you made, the status or error line you got, and what you expected.
+- Issues are public. Leave out everything personal: what was on the screen (names, messages, amounts, accounts), screenshots, phone names and numbers. Write "the checkout page of a food delivery app", not what was in the cart.
+- Never post it yourself without the person's yes. If they say yes and you can use GitHub, show them the exact text first, then file it at https://github.com/DIYgod/pinky/issues (for example with `gh issue create --repo DIYgod/pinky`).
+- Only problems with Pinky belong there, not problems with the phone's apps.
