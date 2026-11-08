@@ -210,12 +210,19 @@ func (e *Env) lookPath(name string) string {
 		}
 		for _, ext := range exts {
 			p := filepath.Join(dir, name+ext)
-			if fi, err := os.Stat(p); err == nil && !fi.IsDir() && (e.GOOS == "windows" || fi.Mode()&0o111 != 0) {
+			if fi, err := os.Stat(p); err == nil && e.runs(fi) {
 				return p
 			}
 		}
 	}
 	return ""
+}
+
+// runs reports whether a file found on the search path may be run: one
+// with an execute bit. Windows has no execute bits (Go reports none on
+// it), so there, and for an Env of Windows, any file may.
+func (e *Env) runs(fi os.FileInfo) bool {
+	return !fi.IsDir() && (e.GOOS == "windows" || runtime.GOOS == "windows" || fi.Mode()&0o111 != 0)
 }
 
 // getenv reads the environment, never failing.

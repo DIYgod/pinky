@@ -193,12 +193,17 @@ func TestConnectRefusesABrokenFile(t *testing.T) {
 
 func TestOutdatedEntries(t *testing.T) {
 	ts := newTestSetup(t)
+	// A path in JSON, whose backslashes on Windows need escapes.
+	quote := func(s string) string {
+		b, _ := json.Marshal(s)
+		return string(b)
+	}
 	gone := filepath.Join(ts.home, "Downloads", "Pinky.app", "Contents", "MacOS", "Pinky")
 	other := ts.write(t, "dev/pinky", "")
 	cases := map[string]Why{
 		`{"command": "pinky", "args": ["mcp"]}`:                       WhyCoreutils,
-		`{"command": "` + gone + `", "args": ["mcp"]}`:                WhyMissing,
-		`{"command": "` + other + `", "args": ["mcp"]}`:               WhyOtherPinky,
+		`{"command": ` + quote(gone) + `, "args": ["mcp"]}`:           WhyMissing,
+		`{"command": ` + quote(other) + `, "args": ["mcp"]}`:          WhyOtherPinky,
 		`{"command": "npx", "args": ["some-mcp"]}`:                    WhyOtherCommand,
 		`{"command": "/Applications/Pinky.app/Contents/MacOS/Pinky"}`: WhyOtherCommand,
 	}
@@ -380,10 +385,13 @@ func TestPathsByOS(t *testing.T) {
 	if got := filepath.Join(userConfig(win), "Claude"); !strings.HasSuffix(got, filepath.Join("Roaming", "Claude")) {
 		t.Errorf("Claude Desktop on Windows: %s", got)
 	}
-	lin := &Env{GOOS: "linux", Home: "/home/jane", Getenv: func(k string) string {
-		return map[string]string{"XDG_CONFIG_HOME": "/home/jane/.xdg"}[k]
+	// Paths the computer the test runs on takes as absolute, as an
+	// XDG_CONFIG_HOME must be: /home/jane is not one on Windows.
+	root := t.TempDir()
+	lin := &Env{GOOS: "linux", Home: filepath.Join(root, "jane"), Getenv: func(k string) string {
+		return map[string]string{"XDG_CONFIG_HOME": filepath.Join(root, "xdg")}[k]
 	}}
-	if got := copilotPlaces(lin)[1].file; got != filepath.Join("/home/jane/.xdg", "Code", "User", "mcp.json") {
+	if got := copilotPlaces(lin)[1].file; got != filepath.Join(root, "xdg", "Code", "User", "mcp.json") {
 		t.Errorf("VS Code on Linux: %s", got)
 	}
 	mac := &Env{GOOS: "darwin", Home: "/Users/jane", Getenv: func(k string) string {
