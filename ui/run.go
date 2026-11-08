@@ -189,6 +189,7 @@ type app struct {
 	page      page
 	panelPage page   // the page syncPanel last saw, to sync again when it changes
 	sel       string // the selected phone, or allPhones
+	selShown  string // the selection the sidebar last scrolled into view
 
 	mirrors map[string]*mirror
 	shots   map[string]*mg.Bitmap // approval screenshots by need ID
