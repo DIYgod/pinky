@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1109.4 (2026-11-09)
 
 - iPhone 和 iPad 横屏也能用了：不管设备怎么转，点按、滑动和读到的屏幕内容都在正确的位置，投屏画面也是正的。
 - 屏幕横着安装的 iPad（比如 iPad Pro）上，点按不再点歪，竖屏也一样。

@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.4 (2026-11-09)
 
 - iPhones and iPads now work in landscape: taps, swipes and what Pinky reads of the screen land in the right place whichever way the device is turned, and the mirror shows the screen the right way up.
 - On iPads whose screen is mounted sideways, such as the iPad Pro, taps no longer land in the wrong place, in portrait too.
