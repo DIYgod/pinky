@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"runtime"
 	"strings"
 	"testing"
 
@@ -60,18 +61,23 @@ func TestAddTailnet(t *testing.T) {
 }
 
 // TestAddTailnetHere: without Tailscale running here, the first step says
-// what to do and offers the app or its download.
+// what to do and offers the app or its download. On Linux, where Tailscale
+// has no app to open, it gives the command that turns it on.
 func TestAddTailnetHere(t *testing.T) {
 	ta := newTestApp(t, fakeapi.OnePhone)
 	ta.sync()
 	ta.page, ta.add.step = pageAddPhone, "tailnet"
 	tt := mg.NewTester(ta.view, 1280, 1000)
+	stopped, login, open := "Tailscale is turned off on this computer. Open it and turn it on.", "Sign in to Tailscale on this computer.", "Open Tailscale"
+	if runtime.GOOS == "linux" {
+		stopped, login, open = "Turn Tailscale on: run sudo tailscale up in a terminal.", "Turn Tailscale on: run sudo tailscale up in a terminal.", ""
+	}
 	for _, c := range []struct {
 		state, text, button string
 	}{
 		{driver.TailnetNotInstalled, "Install Tailscale on this computer and sign in.", "Get Tailscale"},
-		{driver.TailnetStopped, "Tailscale is turned off on this computer. Open it and turn it on.", "Open Tailscale"},
-		{driver.TailnetNeedsLogin, "Sign in to Tailscale on this computer.", "Open Tailscale"},
+		{driver.TailnetStopped, stopped, open},
+		{driver.TailnetNeedsLogin, login, open},
 	} {
 		ta.api.SetTailnet(driver.TailnetStatus{State: c.state})
 		ta.tn.at = ta.tn.at.AddDate(0, 0, -1)
@@ -80,8 +86,11 @@ func TestAddTailnetHere(t *testing.T) {
 		if !hasText(tt, c.text) {
 			t.Errorf("%s: no %q: %q", c.state, c.text, tt.Texts())
 		}
-		if _, ok := tt.Find(c.button); !ok {
+		if _, ok := tt.Find(c.button); c.button != "" && !ok {
 			t.Errorf("%s: no %q button", c.state, c.button)
+		}
+		if _, ok := tt.Find("Open Tailscale"); c.button == "" && ok {
+			t.Errorf("%s: an Open Tailscale button on Linux", c.state)
 		}
 	}
 }
