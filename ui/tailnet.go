@@ -252,7 +252,7 @@ func (a *app) tailnetPortForm(c *mg.Context, ph driver.TailnetPhone, name string
 		s.port[ph.Addr] = port
 		n, err := strconv.Atoi(strings.TrimSpace(port))
 		ok := err == nil && n > 0 && n < 65536
-		b := button(c, locales.TailnetConnect(), btnOpt{small: true}).Disabled(!ok || s.connecting[ph.Addr])
+		b := button(c, locales.TailnetConnect(), btnOpt{small: true}).Label(locales.TailnetConnectPort()).Disabled(!ok || s.connecting[ph.Addr])
 		if (b.Clicked() || in.Submitted()) && ok && !s.connecting[ph.Addr] {
 			a.connectTailnetAt(ph.Addr, ph.Addr+":"+strconv.Itoa(n), name)
 		}

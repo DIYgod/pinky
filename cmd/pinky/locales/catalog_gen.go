@@ -17883,6 +17883,22 @@ func (msgs Messages) TailnetConnectFailed(name string, error string) string {
 	return Catalog.Format(msgs.locale, "tailnetConnectFailed", map[string]any{"name": name, "error": error})
 }
 
+// TailnetConnectPort says "Connect at this port"
+// in the language the app shows.
+//
+// Accessible name of the Connect button by the Wireless debugging port
+// field.
+func TailnetConnectPort() string { return In(i18n.Locale()).TailnetConnectPort() }
+
+// TailnetConnectPort says "Connect at this port"
+// in the language of msgs.
+//
+// Accessible name of the Connect button by the Wireless debugging port
+// field.
+func (msgs Messages) TailnetConnectPort() string {
+	return Catalog.Format(msgs.locale, "tailnetConnectPort", nil)
+}
+
 // TailnetConnected says "Connected to {name} through Tailscale"
 // in the language the app shows.
 //

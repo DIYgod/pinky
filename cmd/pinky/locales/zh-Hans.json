@@ -1108,6 +1108,7 @@
   "tailnetConnect": "连接",
   "tailnetConnectDetail": "每台手机要先在这台电脑旁设置一次（插数据线或连同一个 Wi-Fi）：在“设置 › 手机”里为它打开“离家时使用”。之后无论手机在哪，Pinky 都能通过 Tailscale 连上它。",
   "tailnetConnectFailed": "无法连接 {name}：{error}",
+  "tailnetConnectPort": "用这个端口连接",
   "tailnetConnected": "已通过 Tailscale 连接 {name}",
   "tailnetDetail": "手机不在这台电脑所在的网络里时也能用，比如你出门了，电脑留在家里。Tailscale 是一款免费应用，能让你自己的各台设备无论在哪都私密地互相连通。",
   "tailnetGet": "获取 Tailscale",

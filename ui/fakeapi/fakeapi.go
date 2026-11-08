@@ -138,6 +138,7 @@ type API struct {
 
 	iosHost driver.HostCheck // what the computer lacks for iPhones (iphone.go)
 	dlErr   error            // what DownloadDiskImage fails with (iphone.go)
+	tn      *fakeTailnet     // Tailscale on this computer (tailnet.go)
 }
 
 type device struct {

@@ -6388,6 +6388,10 @@
       }
     }
   },
+  "tailnetConnectPort": "Connect at this port",
+  "@tailnetConnectPort": {
+    "description": "Accessible name of the Connect button by the Wireless debugging port field."
+  },
   "tailnetConnected": "Connected to {name} through Tailscale",
   "@tailnetConnected": {
     "description": "A toast once a phone connected through Tailscale.",
