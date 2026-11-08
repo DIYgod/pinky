@@ -175,7 +175,7 @@ No phone at hand? Quit Pinky and start it with two scripted demo phones (a payme
 
 ### Phones away from home
 
-An Android phone does not have to be on the computer's network. With [Tailscale](https://tailscale.com) on the computer and on the phone, signed in to the same account, Pinky reaches the phone through it: leave the computer at home and take the phone out, on mobile data or another Wi-Fi.
+An Android phone does not have to be on the computer's network. With [Tailscale](https://tailscale.com) on the computer and on the phone, signed in to the same account, Pinky reaches the phone through it: leave the computer at home and take the phone out, on mobile data or another Wi-Fi. Android runs one VPN at a time, so keep other VPN and proxy apps off on the phone: they turn Tailscale off.
 
 1. Set the phone up once while it is near the computer, by cable or on the same Wi-Fi: **Settings › Phones › Use away from home › Turn on…**. **Add phone › Android › Phone not on this network? Use Tailscale** walks you through Tailscale on both sides and lists the phones on your tailnet.
 2. Pinky has the phone's adb listen on the network (`adb tcpip`, port 5555) and connects to the phone at its Tailscale address. It uses that connection whenever the phone has no connection on the computer's network, so the phone stays in the list as you leave.

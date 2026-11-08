@@ -792,7 +792,7 @@
   },
   "awayHowTo": "Set up Tailscale",
   "@awayHowTo": {
-    "description": "Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale."
+    "description": "Button by awayNoTailscaleHere, awayNoTailscalePhone and awayOtherTailnet: opens Add phone › Android › Tailscale."
   },
   "awayKeepAwake": "Keep this computer awake for phones away",
   "@awayKeepAwake": {
@@ -806,9 +806,9 @@
   "@awayNoTailscaleHere": {
     "description": "Under awayTitle when Tailscale does not run on this computer."
   },
-  "awayNoTailscalePhone": "Install Tailscale on {name}, open it and sign in to the same account as on this computer.",
+  "awayNoTailscalePhone": "Tailscale isn't connected on {name}. Install it there, open it and sign in to the same account as on this computer.",
   "@awayNoTailscalePhone": {
-    "description": "Under awayTitle when the phone is not on this computer's tailnet.",
+    "description": "Under awayTitle when the phone has no Tailscale connection: Tailscale is not installed, signed out or off on it, or another VPN is on instead. awayOneVPN follows.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -847,6 +847,20 @@
       "addr": {
         "type": "String",
         "example": "100.101.2.2"
+      }
+    }
+  },
+  "awayOneVPN": "Android runs one VPN at a time: while another VPN or proxy app is on, Tailscale is off. Turn that one off, then turn Tailscale on.",
+  "@awayOneVPN": {
+    "description": "Under awayNoTailscalePhone, and under the phone's step of the Tailscale steps (tailnetPhoneSteps): why Tailscale can be off on a phone that has it."
+  },
+  "awayOtherTailnet": "{name}'s Tailscale is signed in to another tailnet than this computer's. Sign in to the same account on both.",
+  "@awayOtherTailnet": {
+    "description": "Under awayTitle when the phone's Tailscale is connected, but to another tailnet (another account) than this computer's.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Galaxy S23"
       }
     }
   },

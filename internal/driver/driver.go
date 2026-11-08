@@ -649,7 +649,8 @@ type Away struct {
 // Away.Missing.
 const (
 	AwayNoTailscaleHere  = "tailscale_here"  // Tailscale does not run on this computer
-	AwayNoTailscaleThere = "tailscale_phone" // the phone is not on this computer's tailnet
+	AwayNoTailscaleThere = "tailscale_phone" // Tailscale is not connected on the phone, as when another VPN is on
+	AwayOtherTailnet     = "tailscale_other" // the phone's Tailscale is on another tailnet than this computer's
 	AwayNotConnected     = "not_connected"   // the phone is not connected to set it up (cable or Wi-Fi)
 )
 

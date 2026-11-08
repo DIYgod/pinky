@@ -2420,13 +2420,15 @@ func (msgs Messages) AwayFailed(name string, error string) string {
 // AwayHowTo says "Set up Tailscale"
 // in the language the app shows.
 //
-// Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale.
+// Button by awayNoTailscaleHere, awayNoTailscalePhone and awayOtherTailnet:
+// opens Add phone › Android › Tailscale.
 func AwayHowTo() string { return In(i18n.Locale()).AwayHowTo() }
 
 // AwayHowTo says "Set up Tailscale"
 // in the language of msgs.
 //
-// Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale.
+// Button by awayNoTailscaleHere, awayNoTailscalePhone and awayOtherTailnet:
+// opens Add phone › Android › Tailscale.
 func (msgs Messages) AwayHowTo() string {
 	return Catalog.Format(msgs.locale, "awayHowTo", nil)
 }
@@ -2473,16 +2475,20 @@ func (msgs Messages) AwayNoTailscaleHere() string {
 	return Catalog.Format(msgs.locale, "awayNoTailscaleHere", nil)
 }
 
-// AwayNoTailscalePhone says "Install Tailscale on {name}, open it and sign in to the same account as on this computer."
+// AwayNoTailscalePhone says "Tailscale isn't connected on {name}. Install it there, open it and sign in to the same account as on this computer."
 // in the language the app shows.
 //
-// Under awayTitle when the phone is not on this computer's tailnet.
+// Under awayTitle when the phone has no Tailscale connection: Tailscale is
+// not installed, signed out or off on it, or another VPN is on instead.
+// awayOneVPN follows.
 func AwayNoTailscalePhone(name string) string { return In(i18n.Locale()).AwayNoTailscalePhone(name) }
 
-// AwayNoTailscalePhone says "Install Tailscale on {name}, open it and sign in to the same account as on this computer."
+// AwayNoTailscalePhone says "Tailscale isn't connected on {name}. Install it there, open it and sign in to the same account as on this computer."
 // in the language of msgs.
 //
-// Under awayTitle when the phone is not on this computer's tailnet.
+// Under awayTitle when the phone has no Tailscale connection: Tailscale is
+// not installed, signed out or off on it, or another VPN is on instead.
+// awayOneVPN follows.
 func (msgs Messages) AwayNoTailscalePhone(name string) string {
 	return Catalog.Format(msgs.locale, "awayNoTailscalePhone", map[string]any{"name": name})
 }
@@ -2527,6 +2533,40 @@ func AwayOnDesc(name string, addr string) string { return In(i18n.Locale()).Away
 // Under awayTitle while it is on: addr is the phone's Tailscale address.
 func (msgs Messages) AwayOnDesc(name string, addr string) string {
 	return Catalog.Format(msgs.locale, "awayOnDesc", map[string]any{"name": name, "addr": addr})
+}
+
+// AwayOneVPN says "Android runs one VPN at a time: while another VPN or proxy app is on, Tailscale is off. Turn that one off, then turn …"
+// in the language the app shows.
+//
+// Under awayNoTailscalePhone, and under the phone's step of the Tailscale
+// steps (tailnetPhoneSteps): why Tailscale can be off on a phone that has
+// it.
+func AwayOneVPN() string { return In(i18n.Locale()).AwayOneVPN() }
+
+// AwayOneVPN says "Android runs one VPN at a time: while another VPN or proxy app is on, Tailscale is off. Turn that one off, then turn …"
+// in the language of msgs.
+//
+// Under awayNoTailscalePhone, and under the phone's step of the Tailscale
+// steps (tailnetPhoneSteps): why Tailscale can be off on a phone that has
+// it.
+func (msgs Messages) AwayOneVPN() string {
+	return Catalog.Format(msgs.locale, "awayOneVPN", nil)
+}
+
+// AwayOtherTailnet says "{name}'s Tailscale is signed in to another tailnet than this computer's. Sign in to the same account on both."
+// in the language the app shows.
+//
+// Under awayTitle when the phone's Tailscale is connected, but to another
+// tailnet (another account) than this computer's.
+func AwayOtherTailnet(name string) string { return In(i18n.Locale()).AwayOtherTailnet(name) }
+
+// AwayOtherTailnet says "{name}'s Tailscale is signed in to another tailnet than this computer's. Sign in to the same account on both."
+// in the language of msgs.
+//
+// Under awayTitle when the phone's Tailscale is connected, but to another
+// tailnet (another account) than this computer's.
+func (msgs Messages) AwayOtherTailnet(name string) string {
+	return Catalog.Format(msgs.locale, "awayOtherTailnet", map[string]any{"name": name})
 }
 
 // AwayStoppedDesc says "{name}'s adb stopped listening on the network, as it does when the phone restarts. Turn it on again before you leave."

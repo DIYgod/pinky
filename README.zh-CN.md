@@ -175,7 +175,7 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
 
 ### 不在家里的手机
 
-Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [Tailscale](https://tailscale.com) 并登录同一个账号后，Pinky 就能经它连到手机：电脑留在家里，手机带出门，用移动数据或别的 Wi-Fi 都行。
+Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [Tailscale](https://tailscale.com) 并登录同一个账号后，Pinky 就能经它连到手机：电脑留在家里，手机带出门，用移动数据或别的 Wi-Fi 都行。Android 同一时间只能开一个 VPN，所以手机上别的 VPN 和代理应用要关着：它们一开，Tailscale 就会关闭。
 
 1. 趁手机在电脑旁（插线或连同一个 Wi-Fi）设置一次：「设置 › 手机 › 离家时使用 › 打开…」。「添加手机 › Android › 手机不在这个网络里？用 Tailscale」会带你在两边装好 Tailscale，并列出你 tailnet 里的手机。
 2. Pinky 会让手机的 adb 在网络上监听（`adb tcpip`，5555 端口），再通过手机的 Tailscale 地址连接它。手机在电脑所在的网络里没有连接时，Pinky 就用这条连接，所以出门时手机会一直留在列表里。

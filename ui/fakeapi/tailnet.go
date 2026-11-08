@@ -43,6 +43,14 @@ func (a *API) SetTailnet(st driver.TailnetStatus) {
 	a.mu.Unlock()
 }
 
+// SetPhoneAway sets what Away says about a phone, as Tailscale off on it
+// (driver.AwayNoTailscaleThere) or on another tailnet.
+func (a *API) SetPhoneAway(deviceID string, aw driver.Away) {
+	a.mu.Lock()
+	a.tailnetLocked().away[deviceID] = aw
+	a.mu.Unlock()
+}
+
 // Tailnet implements the client's tailnetter.
 func (a *API) Tailnet(ctx context.Context) (driver.TailnetStatus, error) {
 	a.mu.Lock()

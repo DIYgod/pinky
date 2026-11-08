@@ -1,8 +1,10 @@
 package ui
 
 import (
+	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	mg "github.com/egoist/mygo/ui"
 
@@ -54,7 +56,13 @@ func (a *app) openFeedback() {
 		phones = append(phones, d.Info)
 	}
 	extra := a.diagnosticLines()
+	tn, _ := a.api.(tailnetter)
 	go func() {
+		if tn != nil {
+			ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
+			extra = append(extra, tailnetDiagnostics(ctx, tn, phones)...)
+			cancel()
+		}
 		d := tel.Diagnostics(phones, extra...)
 		a.post(func() {
 			if seq == fb.seq {
