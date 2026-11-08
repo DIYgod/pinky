@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1108.24 (2026-11-08)
 
 - 手机不在你的 tailnet 里时，「设置 › 手机」现在会说明是手机上的 Tailscale 没连上，还是登录了别的账号，并提供「设置 Tailscale」按钮打开设置步骤。
 - Pinky 现在会提醒：安卓同一时间只能开一个 VPN，手机上的其他 VPN 或代理 App 会把 Tailscale 顶掉。
