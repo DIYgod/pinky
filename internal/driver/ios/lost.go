@@ -50,6 +50,12 @@ const (
 	// pairRetry is how soon a pair record that could not be read is read
 	// again.
 	pairRetry = 10 * time.Minute
+	// A search that has not seen any missing phone on the network for
+	// lostQuiet pauses for lostPause, so a phone that is away all day
+	// (taken out of the house) does not keep Pinky asking the network
+	// every few seconds.
+	lostQuiet = 10 * time.Minute
+	lostPause = 5 * time.Minute
 )
 
 // mobdevService is the service type a phone advertises for Wi-Fi sync.
@@ -61,6 +67,9 @@ type lostState struct {
 	mu      sync.Mutex
 	src     bonjourSource
 	srcErr  error
+	started time.Time            // when the search started
+	onNet   time.Time            // when it last saw a missing phone on the network
+	paused  time.Time            // no search until then
 	needed  time.Time            // when a phone was last missing
 	macs    map[string]pairMAC   // by UDID
 	seen    map[string]time.Time // by UDID: on the network since, while missing from usbmuxd's list
@@ -170,9 +179,16 @@ func (p *Provider) lostPhones(listed map[string]bool) []driver.Info {
 	if on && len(wanted) > 0 {
 		w.needed = now
 	}
-	if !on || now.Sub(w.needed) >= lostIdle {
+	if !on || now.Sub(w.needed) >= lostIdle || now.Before(w.paused) {
 		w.stopLocked()
 		w.seen = map[string]time.Time{}
+		return nil
+	}
+	if w.src != nil && now.Sub(w.started) >= lostQuiet && now.Sub(w.onNet) >= lostQuiet {
+		// None of them came by for a while: away, not lost.
+		w.stopLocked()
+		w.seen = map[string]time.Time{}
+		w.paused = now.Add(lostPause)
 		return nil
 	}
 	if w.src == nil {
@@ -181,6 +197,7 @@ func (p *Provider) lostPhones(listed map[string]bool) []driver.Info {
 			browse = func() (bonjourSource, error) { return mdns.Browse([]string{mobdevService}, mdns.Options{}) }
 		}
 		w.src, w.srcErr = browse()
+		w.started = now
 		if w.srcErr != nil {
 			p.logger().Warn("iphone: cannot look for phones on the network", "err", w.srcErr)
 			return nil
@@ -201,6 +218,7 @@ func (p *Provider) lostPhones(listed map[string]bool) []driver.Info {
 			delete(w.reports, id)
 			continue
 		}
+		w.onNet = now
 		since, ok := w.seen[id]
 		if !ok {
 			w.seen[id] = now

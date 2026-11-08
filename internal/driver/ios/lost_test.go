@@ -131,3 +131,35 @@ func TestRestartDeviceService(t *testing.T) {
 		t.Fatalf("declined: %v", err)
 	}
 }
+
+// TestLostSearchPauses: a search that sees none of the missing phones on
+// the network for lostQuiet pauses for lostPause, then looks again.
+func TestLostSearchPauses(t *testing.T) {
+	w := newWiFiProvider()
+	w.lost.anyOS = true
+	browses := 0
+	var last *fakeBonjour
+	w.lost.browseFn = func() (bonjourSource, error) { browses++; last = &fakeBonjour{}; return last, nil }
+	w.lost.pairFn = func(string) (string, error) { return "08:87:c7:2a:8a:db", nil }
+	w.SetWiFi(true)
+	w.UseOverWiFi("iphone") // away from home: not on usbmuxd's list, not on the network
+	listed(t, w.Provider)
+	if browses != 1 {
+		t.Fatalf("%d searches, want 1", browses)
+	}
+	w.after(lostQuiet)
+	listed(t, w.Provider)
+	if !last.closed {
+		t.Fatal("the search went on with nothing to find")
+	}
+	w.after(lostPause - time.Second)
+	listed(t, w.Provider)
+	if browses != 1 {
+		t.Fatal("searched again during the pause")
+	}
+	w.after(2 * time.Second)
+	listed(t, w.Provider)
+	if browses != 2 {
+		t.Fatalf("%d searches after the pause, want 2", browses)
+	}
+}
