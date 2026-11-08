@@ -118,7 +118,7 @@ Pinky 会自己准备好 iPhone，「添加手机 › iPhone」会一步步带�
 
 开发者磁盘映像随 [Xcode](https://apps.apple.com/app/xcode/id497799835)（Apple 给开发者的免费应用）提供，Pinky 不自带。在 Mac 上装一次 Xcode 并打开一次：Pinky 会用它装好的映像，之后 Xcode 不用再打开。iOS 27 及以上的 iPhone 需要 Xcode 27 或更新版本的映像：Apple 的签名服务器已不再为更早的映像签名，这时「添加手机」会写明 Pinky 用的是哪个映像，以及怎么换成新的。在 Windows 和 Linux 上，把这样一台 Mac 上的 `/Library/Developer/DeveloperDiskImages/iOS_DDI` 复制到 Pinky 的文件夹里（[放在哪](docs/notes/ios.md#preparing-a-phone-without-xcode)）。两样都没有的话，「添加手机」会提出从第三方镜像 github.com/doronz88/DeveloperDiskImage 下载映像（Xcode 27.0 beta 4，32 MB，由 pymobiledevice3 的作者维护，不是 Apple），只在你点「下载」时才下载；Pinky 会按预期的校验和核对每一个文件。iOS 27 及以上，iPhone 上不会装任何应用。
 
-在 iPhone 13 mini（iOS 27.0.1）上验证过：映像被卸掉后 Pinky 自己挂上 Xcode 的映像（约 1.5 秒），沿用手机上已有的映像，以及 iPhone 重启后映像还在。还没在真机上试过：下载的映像、开发者模式开关、iOS 27 以下的 iPhone，以及在 Windows 或 Linux 上连接 iPhone。
+在 iPhone 13 mini（iOS 27.0.1）上验证过：映像被卸掉后 Pinky 自己挂上 Xcode 的映像（约 1.5 秒），沿用手机上已有的映像，以及 iPhone 重启后映像还在。还没在真机上试过：下载的映像、开发者模式开关、iOS 27 以下的 iPhone，以及在 Windows 上连接 iPhone。在 Linux（Arch Linux）上，贡献者已经用 iOS 27.2 的 iPhone 和 iPad 跑通了有线和 Wi-Fi 连接，当时手机上已经有映像。
 
 #### 通过 Wi-Fi 使用 iPhone 和 iPad
 

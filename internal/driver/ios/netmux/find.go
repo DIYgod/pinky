@@ -59,9 +59,13 @@ type PairInfo struct {
 // can lack its TXT strings or address for a while though the phone is
 // there. So once a record matched, the Finder remembers its name and the
 // phone's address, and lockdown decides: it lists a phone while lockdown
-// on it takes a connection, which it tries every few seconds, and drops it
-// once lockdown has not answered for dropAfter. A phone dropped at once
-// took Pinky's session on it down with it.
+// on it takes a connection, and drops it once lockdown has not answered for
+// dropAfter from the first time it did not. A phone dropped at once took
+// Pinky's session on it down with it. Lockdown is asked at every look while a phone is new or has just
+// stopped answering, and less often, up to every probeSteady, while it
+// keeps answering or keeps not answering; the search's questions back off
+// too (mdns.Options.MaxEvery), since every phone on the network answers
+// them.
 type Finder struct {
 	Mux   *Mux
 	UDIDs func() []string // the phones this computer paired with
@@ -91,15 +95,21 @@ const (
 	browseRetry = time.Minute
 	// probeTimeout bounds one lockdown connection.
 	probeTimeout = 2 * time.Second
+	// probeSteady is the longest lockdown on a phone goes unasked: the wait
+	// doubles from the Finder's Interval while the phone keeps answering,
+	// or keeps not answering. Well below dropAfter, so that a listed phone
+	// that left is asked again, at every look, before it is dropped.
+	probeSteady = 30 * time.Second
+	// askEvery is the longest the search goes between rounds of questions
+	// (mdns.Options.MaxEvery); a phone that joins the network announces
+	// itself anyway.
+	askEvery = time.Minute
 )
 
 // Run looks for phones until ctx ends, and then lists none.
 func (f *Finder) Run(ctx context.Context) {
 	log := f.logOrDiscard()
-	interval := f.Interval
-	if interval <= 0 {
-		interval = 3 * time.Second
-	}
+	interval := f.interval()
 	s := newFindState(f, log)
 	defer func() {
 		f.Mux.SetPhones(nil)
@@ -119,8 +129,16 @@ func (f *Finder) Run(ctx context.Context) {
 	}
 }
 
+func (f *Finder) interval() time.Duration {
+	if f.Interval <= 0 {
+		return 3 * time.Second
+	}
+	return f.Interval
+}
+
 func newFindState(f *Finder, log *slog.Logger) *findState {
-	return &findState{f: f, log: log, pairs: map[string]pairEntry{}, lastOK: map[string]time.Time{}, names: map[string]string{}, listed: map[string]netip.Addr{}, seen: map[string]bool{}}
+	return &findState{f: f, log: log, pairs: map[string]pairEntry{}, failSince: map[string]time.Time{}, names: map[string]string{},
+		listed: map[string]netip.Addr{}, seen: map[string]bool{}, probes: map[string]probeState{}}
 }
 
 func (f *Finder) logOrDiscard() *slog.Logger {
@@ -136,10 +154,22 @@ type findState struct {
 	src      Source
 	srcErrAt time.Time
 	pairs    map[string]pairEntry
-	lastOK   map[string]time.Time // by UDID: when lockdown last answered
-	names    map[string]string    // instance name to UDID, once matched
-	listed   map[string]netip.Addr
-	seen     map[string]bool // found before
+	// failSince is when lockdown on a listed phone first did not answer,
+	// by UDID, until it answers again.
+	failSince map[string]time.Time
+	names     map[string]string // instance name to UDID, once matched
+	listed    map[string]netip.Addr
+	seen      map[string]bool       // found before
+	probes    map[string]probeState // by UDID: when lockdown is next asked
+}
+
+// probeState is when lockdown on a phone is asked next, and what it said
+// last.
+type probeState struct {
+	addr  netip.Addr
+	ok    bool
+	every time.Duration // the wait after the last time
+	next  time.Time
 }
 
 type pairEntry struct {
@@ -163,7 +193,7 @@ func (s *findState) tick(ctx context.Context) {
 		browse := s.f.BrowseFn
 		if browse == nil {
 			browse = func() (Source, error) {
-				return mdns.Browse([]string{ServiceType}, mdns.Options{MulticastAnswers: true})
+				return mdns.Browse([]string{ServiceType}, mdns.Options{MulticastAnswers: true, MaxEvery: askEvery})
 			}
 		}
 		src, err := browse()
@@ -229,10 +259,18 @@ func (s *findState) tick(ctx context.Context) {
 	if probe == nil {
 		probe = probeLockdown
 	}
+	// Lockdown is asked about the phones whose turn it is, or whose address
+	// changed; for the others its last answer stands.
 	answered := map[string]bool{}
+	probed := map[string]bool{}
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	for id, addr := range found {
+		if ps, ok := s.probes[id]; ok && ps.addr == addr && now.Before(ps.next) {
+			answered[id] = ps.ok
+			continue
+		}
+		probed[id] = true
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -246,17 +284,34 @@ func (s *findState) tick(ctx context.Context) {
 	if ctx.Err() != nil {
 		return
 	}
+	for id := range probed {
+		s.probes[id] = s.nextProbe(now, id, found[id], answered[id])
+	}
+	for id := range s.probes {
+		if _, ok := found[id]; !ok {
+			delete(s.probes, id)
+		}
+	}
 
 	next := map[string]netip.Addr{}
 	for id, addr := range found {
 		if answered[id] {
-			s.lastOK[id] = now
+			delete(s.failSince, id)
 			next[id] = addr
 			continue
 		}
-		if _, ok := s.listed[id]; ok && now.Sub(s.lastOK[id]) < dropAfter {
-			s.log.Debug("netmux: lockdown did not answer; still listed", "device", id, "since", now.Sub(s.lastOK[id]).Round(time.Second))
-			next[id] = s.listed[id]
+		// Counted from the first time it did not answer, not from its last
+		// answer, which may be probeSteady older.
+		if _, ok := s.listed[id]; ok {
+			since, failing := s.failSince[id]
+			if !failing {
+				since = now
+				s.failSince[id] = now
+			}
+			if now.Sub(since) < dropAfter {
+				s.log.Debug("netmux: lockdown did not answer; still listed", "device", id, "since", now.Sub(since).Round(time.Second))
+				next[id] = s.listed[id]
+			}
 		}
 	}
 	// A phone that sleeps comes and goes every minute or so: only the
@@ -274,7 +329,9 @@ func (s *findState) tick(ctx context.Context) {
 	for id := range s.listed {
 		if _, ok := next[id]; !ok {
 			s.log.Debug("iphone: no longer on Wi-Fi", "device", id)
-			delete(s.lastOK, id)
+			delete(s.failSince, id)
+			// Asked again at the next look, should it answer again.
+			delete(s.probes, id)
 		}
 	}
 	s.listed = next
@@ -284,6 +341,26 @@ func (s *findState) tick(ctx context.Context) {
 	}
 	sort.Slice(list, func(i, j int) bool { return list[i].UDID < list[j].UDID })
 	s.f.Mux.SetPhones(list)
+}
+
+// nextProbe says when lockdown on a phone is asked again after it answered
+// ok, or not: at the next look while the phone is new or a listed one has
+// just stopped answering, and twice as long each time, up to probeSteady,
+// while it keeps answering or keeps not answering.
+func (s *findState) nextProbe(now time.Time, id string, addr netip.Addr, ok bool) probeState {
+	interval := s.f.interval()
+	last, had := s.probes[id]
+	every := interval
+	_, listed := s.listed[id]
+	switch {
+	case !had || last.addr != addr || last.ok != ok:
+		// New, moved, or it changed its answer.
+	case !ok && listed:
+		// Just stopped answering: asked at every look until it is dropped.
+	default:
+		every = min(2*last.every, probeSteady)
+	}
+	return probeState{addr: addr, ok: ok, every: every, next: now.Add(every)}
 }
 
 // ipv4 returns the service's IPv4 address. Link-local IPv6 addresses need

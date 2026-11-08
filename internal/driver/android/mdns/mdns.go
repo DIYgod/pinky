@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -84,17 +85,30 @@ type Options struct {
 	// group: a question from another port gets its answer by unicast to
 	// that port (RFC 6762 §6.7), which a firewall that lets mDNS in but
 	// nothing else (ufw's default rules) drops. Linux only: there a socket
-	// bound to the group's address sends from the interface's own.
+	// bound to the group's address sends from the interface's own; other
+	// systems ignore it.
 	MulticastAnswers bool
+	// MaxEvery, when set, spaces the rounds of questions as RFC 6762 §5.2
+	// asks of a search that runs for long: 1 s after the first, then twice
+	// as long each time, up to MaxEvery, so that the responders on the
+	// network, which all answer each round, are not woken every few
+	// seconds. The rounds start over when this computer's network
+	// addresses change. Zero keeps the quick schedule below, for searches
+	// that last seconds.
+	MaxEvery time.Duration
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
 }
 
 // The questions go out at once, then after these delays, then every
-// steadyEvery: a phone whose Wi-Fi dozes misses the first ones.
+// steadyEvery: a phone whose Wi-Fi dozes misses the first ones. With
+// Options.MaxEvery they back off instead (schedule).
 var (
 	queryDelays = []time.Duration{time.Second, time.Second, 2 * time.Second, 2 * time.Second, 4 * time.Second}
 	steadyEvery = 5 * time.Second
+	// netWatch is how often a search with Options.MaxEvery looks whether
+	// the computer's network addresses changed, to start its rounds over.
+	netWatch = 5 * time.Second
 	// followUp is how soon a service that showed up without its port or
 	// address is asked for them, at most once per followEvery.
 	followUp    = 300 * time.Millisecond
@@ -138,6 +152,9 @@ type Browser struct {
 func Browse(types []string, opt Options) (*Browser, error) {
 	if len(types) == 0 {
 		return nil, errors.New("mdns: no service types to browse")
+	}
+	if runtime.GOOS != "linux" {
+		opt.MulticastAnswers = false
 	}
 	b := &Browser{opt: opt, joined: map[int]bool{}, kick: make(chan struct{}, 1), closed: make(chan struct{})}
 	for _, t := range types {
@@ -219,23 +236,33 @@ func (b *Browser) now() time.Time {
 // service shows up without its port or address.
 func (b *Browser) run() {
 	defer b.wg.Done()
-	step := 0
+	sched := schedule{max: b.opt.MaxEvery}
 	next := time.NewTimer(0)
 	defer next.Stop()
 	var follow <-chan time.Time
 	var followed time.Time
+	var watch <-chan time.Time
+	var addrs string
+	if b.opt.MaxEvery > 0 {
+		t := time.NewTicker(netWatch)
+		defer t.Stop()
+		watch = t.C
+		addrs = b.netKey()
+	}
 	for {
 		select {
 		case <-b.closed:
 			return
 		case <-next.C:
 			b.ask(true)
-			d := steadyEvery
-			if step < len(queryDelays) {
-				d = queryDelays[step]
-				step++
+			next.Reset(sched.next())
+		case <-watch:
+			// Another network: the services there are asked for at once.
+			if k := b.netKey(); k != addrs {
+				addrs = k
+				sched.restart()
+				next.Reset(0)
 			}
-			next.Reset(d)
 		case <-b.kick:
 			// A responder that never sends the missing records is asked
 			// again by the rounds above, not in a loop.
@@ -247,6 +274,50 @@ func (b *Browser) run() {
 			b.ask(false)
 		}
 	}
+}
+
+// schedule is how long to wait after each round of questions.
+type schedule struct {
+	max   time.Duration // Options.MaxEvery; zero: queryDelays, then steadyEvery
+	step  int
+	every time.Duration // with max: the last wait
+}
+
+func (s *schedule) next() time.Duration {
+	if s.max > 0 {
+		s.every = min(max(2*s.every, time.Second), max(s.max, time.Second))
+		return s.every
+	}
+	if s.step < len(queryDelays) {
+		s.step++
+		return queryDelays[s.step-1]
+	}
+	return steadyEvery
+}
+
+// restart starts the waits over, as for a search just started.
+func (s *schedule) restart() { s.step, s.every = 0, 0 }
+
+// interfaceAddrs lists an interface's addresses; tests replace it.
+var interfaceAddrs = func(ifi *net.Interface) ([]net.Addr, error) { return ifi.Addrs() }
+
+// netKey sums up the interfaces the search uses and their addresses, which
+// change when the computer joins another network.
+func (b *Browser) netKey() string {
+	ifs, err := b.interfaces()
+	if err != nil {
+		return ""
+	}
+	var sb strings.Builder
+	for i := range ifs {
+		sb.WriteString(ifs[i].Name)
+		addrs, _ := interfaceAddrs(&ifs[i])
+		for _, a := range addrs {
+			sb.WriteString(" " + a.String())
+		}
+		sb.WriteString("\n")
+	}
+	return sb.String()
 }
 
 // ask sends one round of questions: the types (when all is set) and the
@@ -564,9 +635,15 @@ func parse(msg []byte) ([]record, bool) {
 				}
 				r.target, r.port = rr.Target.String(), rr.Port
 			case dnsmessage.TypeTXT:
+				// A TXT record that does not parse is skipped, not the
+				// rest of the message: the services' PTR, SRV and address
+				// records often come after it, and none of them needs it.
 				rr, err := p.TXTResource()
 				if err != nil {
-					return out, len(out) > 0
+					if err := s.skip(); err != nil {
+						return out, len(out) > 0
+					}
+					continue
 				}
 				r.txt = rr.TXT
 			case dnsmessage.TypeA:

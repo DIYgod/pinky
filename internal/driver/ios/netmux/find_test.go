@@ -132,16 +132,17 @@ func TestFinder(t *testing.T) {
 		src.mu.Unlock()
 	}
 
-	// Lockdown does not answer: still listed for dropAfter, then dropped.
+	// Lockdown does not answer: still listed for dropAfter from the first
+	// look that asked it, which comes within probeSteady, then dropped.
 	answers = false
-	now = now.Add(3 * time.Second)
+	now = now.Add(probeSteady)
 	s.tick(ctx)
-	now = now.Add(dropAfter - 4*time.Second)
+	now = now.Add(dropAfter - 3*time.Second)
 	s.tick(ctx)
 	if !listed() {
 		t.Error("dropped before dropAfter")
 	}
-	now = now.Add(2 * time.Second)
+	now = now.Add(3 * time.Second)
 	s.tick(ctx)
 	if listed() {
 		t.Error("still listed after dropAfter")
@@ -179,6 +180,8 @@ func TestFinder(t *testing.T) {
 	// Without a record and without answers, it is dropped after dropAfter
 	// and not asked again.
 	answers = false
+	now = now.Add(probeSteady)
+	s.tick(ctx)
 	now = now.Add(dropAfter + time.Second)
 	s.tick(ctx)
 	if listed() {
@@ -199,6 +202,81 @@ func TestFinder(t *testing.T) {
 	s.tick(ctx)
 	if listed() {
 		t.Error("listed with only a link-local address")
+	}
+}
+
+// TestFinderProbePace: lockdown on a phone that keeps answering is asked
+// less and less often, up to every probeSteady; once it stops, at every
+// look until it is dropped; and at once when it shows up again.
+func TestFinderProbePace(t *testing.T) {
+	m := New("unix:///nonexistent", nil)
+	src := &fakeSource{svcs: []mdns.Service{iphoneService("192.168.33.187")}}
+	now := time.Unix(1_000_000, 0)
+	answers, probes := true, 0
+	f := &Finder{
+		Mux:      m,
+		UDIDs:    func() []string { return []string{"IPHONE"} },
+		BrowseFn: func() (Source, error) { return src, nil },
+		PairFn:   func(string) (PairInfo, error) { return PairInfo{HostID: testHostID}, nil },
+		ProbeFn:  func(context.Context, netip.Addr) bool { probes++; return answers },
+		NowFn:    func() time.Time { return now },
+	}
+	s := newFindState(f, f.logOrDiscard())
+	ctx := context.Background()
+	look := func(d time.Duration) {
+		for end := now.Add(d); now.Before(end); now = now.Add(f.interval()) {
+			s.tick(ctx)
+		}
+	}
+	// Five minutes of looks every 3 s: 100 looks, a dozen questions.
+	look(5 * time.Minute)
+	if probes > 15 {
+		t.Errorf("lockdown asked %d times in 5 minutes", probes)
+	}
+	if len(m.Phones()) != 1 {
+		t.Fatal("not listed")
+	}
+	// A drop shorter than dropAfter (the computer's Wi-Fi renewing its
+	// address) does not drop it, wherever it falls between two answers.
+	answers = false
+	for range 13 {
+		now = now.Add(f.interval())
+		s.tick(ctx)
+		if len(m.Phones()) != 1 {
+			t.Fatal("dropped during a 39 s drop")
+		}
+	}
+	answers = true
+	look(time.Minute)
+	// It stops answering: asked at every look from its next turn, which
+	// comes within probeSteady, and dropped dropAfter later.
+	answers, probes = false, 0
+	look(probeSteady + dropAfter + 6*time.Second)
+	if len(m.Phones()) != 0 {
+		t.Fatal("still listed")
+	}
+	if n := int(dropAfter / f.interval()); probes < n-2 {
+		t.Errorf("lockdown asked %d times while the phone was gone, want about %d or more", probes, n)
+	}
+	// Its record stays (it sleeps, say): asked less and less often.
+	probes = 0
+	look(5 * time.Minute)
+	if probes > 15 {
+		t.Errorf("lockdown asked %d times in 5 minutes of no answers", probes)
+	}
+	// Its record goes, and comes back with the phone: asked at once.
+	src.mu.Lock()
+	svcs := src.svcs
+	src.svcs = nil
+	src.mu.Unlock()
+	look(f.interval())
+	src.mu.Lock()
+	src.svcs = svcs
+	src.mu.Unlock()
+	answers, probes = true, 0
+	s.tick(ctx)
+	if probes != 1 || len(m.Phones()) != 1 {
+		t.Errorf("back: asked %d times, listed %v", probes, m.Phones())
 	}
 }
 
