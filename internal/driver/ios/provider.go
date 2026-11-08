@@ -385,6 +385,7 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		p.mu.Lock()
 		delete(p.wdaHolds, info.ID)
 		p.mu.Unlock()
+		d.log = p.logger()
 		return d, nil
 	case errors.Is(err, errAutomation):
 		p.mu.Lock()

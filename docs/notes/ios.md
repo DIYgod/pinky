@@ -565,6 +565,15 @@ PINKY_MIRROR_LIVE=1 go test -count=1 -v -run TestDownloadMirrorLive ./internal/d
 
 The demo (`go run ./cmd/pinky-ui-demo`) has Demo › Plug In a New iPhone, which walks a made-up iPhone through the steps.
 
+## GitHub issue #7: WeChat through WebDriverAgent (2026-11-08)
+
+A person drove WeChat on an iPhone 16 Pro (iOS 26.7.1, the WDA path, over Wi-Fi) from ChatGPT, on 2026.1108.14. Four reports; what came of them:
+
+1. **微信 opened 微信读书.** Confirmed in the code: the app list has each bundle's own name, which is "WeChat" in every language, while WeRead's is "微信读书"; the gateway took the only name holding "微信". Now the list also has the name the home screen shows (`driver.App.Aliases`, read from SpringBoard's icon layout through `com.apple.springboardservices`, within 3 s, `homeScreenNames`; apps only in the App Library have none), and the gateway takes a name only by id, name, alias or a short table of well-known names (`internal/gateway/appnames.go`); a name that only part of an app's name holds finds nothing, and the result lists those apps as similar (`phone_launch`, the task's `apps`). Unit-tested; the icon layout read from the iPhone 13 mini over Wi-Fi gave 99 names in 1 s (that phone is in English: WeChat's icon says WeChat there).
+2. **A first read gave WeChat with only the lock screen's charging line.** Likely the lock screen: the WDA path reads the lock from lockdown's PasswordProtected only and took a failure for unlocked. Now a failure falls back to WDA's `/wda/locked`, and a read whose tree shows nothing of the app asks WDA too and reads as locked, without elements. Unit-tested with a fake WDA; not reproduced on a phone.
+3. **Taps of 20 s in WeChat.** Not confirmed. Each action reads the tree twice (before and after), and the read after also takes a screenshot for OCR; a big tree like WeChat's chat list takes WDA seconds, and over Wi-Fi the screenshot too. A read of 3 s or more now logs its parts (`iphone: slow screen read through WebDriverAgent`: source, nodes, lock, screenshot, OCR) so that a report with logs says which.
+4. **Rows repeated, and rows under the navigation bar.** WDA lists a row that is one accessibility element and, again, the texts inside it, and counts rows scrolled under the bars as visible. Now a text its element already says is left out, and elements under the navigation bar, a tab bar, a toolbar, the status bar or the keyboard go as on the iOS 27 path (`unoccluded`, a covered element keeps a part that shows when it is big enough). Unit-tested on a made-up tree; WeChat's own tree not seen.
+
 ## What does not work yet
 
 - Elements scrolled out of view are not listed (the phone lists what is on screen); agents scroll and observe again.
