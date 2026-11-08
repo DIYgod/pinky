@@ -1631,7 +1631,7 @@ func (g *Gateway) observe(ctx context.Context, d *device, ocr bool) (*screen.Scr
 	}
 	ctx, cancel := context.WithTimeout(ctx, observeTimeout)
 	defer cancel()
-	start := time.Now()
+	start := stamp() // ordered against the pictures it vouches for (clock.go)
 	// The recording learns of the read before it runs: while it runs, what
 	// it may show limits what other reads vouch for (video.go).
 	var readTok uint64

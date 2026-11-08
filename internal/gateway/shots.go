@@ -140,7 +140,7 @@ func (g *Gateway) takeShot(d *device, dev driver.Device, background bool, p *bgS
 	case err != nil || img == nil || d.inputs != p.inputs:
 		g.dropShotLocked(d, p)
 	default:
-		p.img, p.state, p.doneAt = img, shotWaiting, time.Now()
+		p.img, p.state, p.doneAt = img, shotWaiting, stamp() // ordered against reads (clock.go)
 		p.expire = time.AfterFunc(shotWait, func() {
 			g.mu.Lock()
 			if p.state == shotWaiting {

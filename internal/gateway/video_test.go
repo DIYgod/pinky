@@ -326,9 +326,10 @@ func TestRecordingOverlappingReads(t *testing.T) {
 	if !v.paused {
 		t.Fatal("a read from before the lock resumed the recording")
 	}
-	fresh := v.readStarting(time.Now())
+	now := stamp()
+	fresh := v.readStarting(now)
 	send(v, pkts[11], 60) // a key frame from before the lock, replayed
-	v.read(fresh, time.Now(), true)
+	v.read(fresh, now, true)
 	send(v, pkts[12], 70)
 	if len(v.held) != 0 || len(v.ready) != 3 {
 		t.Fatalf("old packets taken after the lock: %d held, %d written", len(v.held), len(v.ready))
@@ -360,6 +361,107 @@ func TestRecordingEndsWithTheTask(t *testing.T) {
 	if info.Frames != 10 {
 		t.Fatalf("recorded %d frames, want the 10 of the task", info.Frames)
 	}
+}
+
+// On Windows, time.Now moves only with the system's clock tick, so events
+// in one tick have the same time. The recorder took a picture of the
+// person's own use that arrived in the tick the task ended in for the
+// task's, and wrote it when the last read came a tick later; the same at
+// the start, with pictures from before the task in the tick it started
+// in; and a read that started in the tick the phone locked in, before the
+// lock, resumed the recording.
+func TestRecordingOnAWindowsClock(t *testing.T) {
+	ctx := context.Background()
+	t.Run("end", func(t *testing.T) {
+		clk := windowsClock(t)
+		v := newVideoDev("pixel")
+		g := newVideoGateway(t, v)
+		g.SetRecording(true)
+		s, _ := connect(t, g, "Lunch")
+		id := taskID(t, g, s)
+		st := newStreamer(t, v.open(t))
+		st.config()
+		st.pictures(10, true)
+		clk.tick()
+		// The last read waits for an action in progress: it comes a tick
+		// after the task ended.
+		d := deviceOf(t, g, "pixel")
+		d.act.Lock()
+		mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
+		st.pictures(6, false) // the person's own use, in the tick the task ended in
+		clk.tick()
+		d.act.Unlock()
+		g.Flush()
+		if n := recordedFrames(t, g, id); n != 10 {
+			t.Fatalf("recorded %d frames, want the 10 of the task", n)
+		}
+	})
+	t.Run("start", func(t *testing.T) {
+		clk := windowsClock(t)
+		v := newVideoDev("pixel")
+		g := newVideoGateway(t, v)
+		mirror, err := g.Stream(ctx, "pixel", driver.StreamOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer mirror.Close()
+		st := newStreamer(t, v.open(t))
+		st.config()
+		st.pictures(8, true) // the person's own use, which the hub keeps for late viewers
+		g.SetRecording(true)
+		s, _ := connect(t, g, "Lunch") // in the same tick
+		id := taskID(t, g, s)
+		clk.tick()
+		st.pictures(3, false)
+		st.pictures(4, true)
+		clk.tick()
+		mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
+		g.Flush()
+		if n := recordedFrames(t, g, id); n != 4 {
+			t.Fatalf("recorded %d frames, want the 4 from the task's first key frame", n)
+		}
+	})
+	t.Run("lock", func(t *testing.T) {
+		windowsClock(t) // every stamp in one tick
+		pkts := testPackets(t)
+		v := &taskVideo{floor: stamp(), needKey: true}
+		v.cond = sync.NewCond(&v.mu)
+		send := func(p driver.Packet) { v.packet(timedPacket{p: p, at: stamp()}, driver.H264) }
+		send(pkts[0])
+		send(pkts[1])
+		start := stamp()
+		running := v.readStarting(start)
+		v.pause() // the phone locks
+		send(pkts[2])
+		v.read(running, start, true) // the screen it saw before the lock
+		if !v.paused || len(v.held) != 0 || len(v.ready) != 0 {
+			t.Fatalf("a read from before the lock resumed the recording: paused %v, %d held, %d written", v.paused, len(v.held), len(v.ready))
+		}
+	})
+}
+
+func deviceOf(t *testing.T, g *Gateway, id string) *device {
+	t.Helper()
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	d := g.findDeviceLocked(id)
+	if d == nil {
+		t.Fatalf("no device %q", id)
+	}
+	return d
+}
+
+func recordedFrames(t *testing.T, g *Gateway, id string) int {
+	t.Helper()
+	rec, err := g.Recording(context.Background(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := recording.Probe(rec.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return info.Frames
 }
 
 // closingDev is a phone's device that stops working once closed, as a
