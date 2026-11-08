@@ -2,6 +2,12 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Pinky Companion's accessibility service is now on only while an agent works on the phone: it turns on as a task starts and off a few seconds after the task ends or you take over. Banking apps that refuse to run next to an accessibility service from outside an app store work again the rest of the time.
+- Pinky Companion is now signed with Pinky's private key. Builds signed with the old key, which was public, are removed and installed again by themselves when the phone is free, and Pinky tells you; phones that ask before installing over USB wait for you to tap Update.
+- The FAQ says which apps can notice Pinky Companion and what to do about it.
+
 ## 2026.1108.10 (2026-11-08)
 
 - Pinky now knows when the WebDriverAgent helper on an iPhone stops working: with a free Apple ID its signature lasts 7 days. Two days before, the phone's page and its checkup remind you to install it again from Xcode, with how to do it.
