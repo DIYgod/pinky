@@ -2,6 +2,12 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On an iPhone with iOS 27, agents now see the elements of web pages in Safari (links, buttons and fields) rather than only the text read from the picture, and a web page's password field counts as one, so agents can't type into it.
+- On an iPhone with iOS 27, agents can open http and https links with `phone_launch`: they open in Safari, and Pinky judges them by Safari's rules too, so blocking Safari or leaving it out of an agent's scope stops its links. The Installs and links rule still asks.
+- Deleting old activity now stops if Pinky cannot finish reading which screenshots belonged to those tasks, instead of deleting the tasks and leaving the screenshots behind.
+
 ## 2026.1108.20 (2026-11-08)
 
 - Plugging in an iPhone or iPad now turns on its Wi-Fi connection, as Finder's "Show this iPhone when on Wi-Fi" does, so it keeps working over Wi-Fi when you unplug it; you no longer need Finder or Xcode for that.
