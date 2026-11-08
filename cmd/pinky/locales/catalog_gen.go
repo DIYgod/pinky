@@ -2575,6 +2575,24 @@ func (msgs Messages) CheckCompanionPass() string {
 	return Catalog.Format(msgs.locale, "checkCompanionPass", nil)
 }
 
+// CheckCompanionPublicKey says "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key."
+// in the language the app shows.
+//
+// The checkup, Pinky Companion: the installed app is signed with the key of
+// the builds until 8 November 2026, which was public, so anyone could make
+// a fake update of it; an Update button follows.
+func CheckCompanionPublicKey() string { return In(i18n.Locale()).CheckCompanionPublicKey() }
+
+// CheckCompanionPublicKey says "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key."
+// in the language of msgs.
+//
+// The checkup, Pinky Companion: the installed app is signed with the key of
+// the builds until 8 November 2026, which was public, so anyone could make
+// a fake update of it; an Update button follows.
+func (msgs Messages) CheckCompanionPublicKey() string {
+	return Catalog.Format(msgs.locale, "checkCompanionPublicKey", nil)
+}
+
 // CheckCompanionTitle says "Pinky Companion"
 // in the language the app shows.
 //
@@ -4153,6 +4171,24 @@ func (msgs Messages) CompanionLineOutdated() string {
 	return Catalog.Format(msgs.locale, "companionLineOutdated", nil)
 }
 
+// CompanionLinePublicKey says "Pinky Companion has a security update"
+// in the language the app shows.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the
+// installed app is signed with the old public key and this Pinky carries
+// the version signed with its private key.
+func CompanionLinePublicKey() string { return In(i18n.Locale()).CompanionLinePublicKey() }
+
+// CompanionLinePublicKey says "Pinky Companion has a security update"
+// in the language of msgs.
+//
+// Settings › Phones: a phone's line about Pinky Companion when the
+// installed app is signed with the old public key and this Pinky carries
+// the version signed with its private key.
+func (msgs Messages) CompanionLinePublicKey() string {
+	return Catalog.Format(msgs.locale, "companionLinePublicKey", nil)
+}
+
 // CompanionLineReady says "Pinky Companion turns on only while an agent works"
 // in the language the app shows.
 //
@@ -4205,6 +4241,30 @@ func CompanionOnToast(name string) string { return In(i18n.Locale()).CompanionOn
 // only while an agent works on the phone. name is the phone's name.
 func (msgs Messages) CompanionOnToast(name string) string {
 	return Catalog.Format(msgs.locale, "companionOnToast", map[string]any{"name": name})
+}
+
+// CompanionPublicKeyBody says "Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it. The…"
+// in the language the app shows.
+//
+// The Pinky Companion card, when the installed app is signed with the key
+// of the builds until 8 November 2026, which was public, and this Pinky
+// carries the version signed with its private key: why to update soon.
+// Shown in place of the usual update text, often on phones where the person
+// has to click Update because the phone asks before installs over USB. Keep
+// it plain, not alarming. The card is in a narrow side panel.
+func CompanionPublicKeyBody() string { return In(i18n.Locale()).CompanionPublicKeyBody() }
+
+// CompanionPublicKeyBody says "Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it. The…"
+// in the language of msgs.
+//
+// The Pinky Companion card, when the installed app is signed with the key
+// of the builds until 8 November 2026, which was public, and this Pinky
+// carries the version signed with its private key: why to update soon.
+// Shown in place of the usual update text, often on phones where the person
+// has to click Update because the phone asks before installs over USB. Keep
+// it plain, not alarming. The card is in a narrow side panel.
+func (msgs Messages) CompanionPublicKeyBody() string {
+	return Catalog.Format(msgs.locale, "companionPublicKeyBody", nil)
 }
 
 // CompanionStillWaiting says "Still waiting for the phone. Look for a prompt on its screen."

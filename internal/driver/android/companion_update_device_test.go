@@ -171,8 +171,12 @@ func TestDeviceCompanionUpdate(t *testing.T) {
 		}
 	}
 	before := setting()
-	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionOutdated {
-		t.Fatalf("CompanionState = %v, %v; want outdated", st, err)
+	want := driver.CompanionOutdated
+	if replaces && oldV.Signer == companion.OldPublicSigner {
+		want = driver.CompanionPublicKey
+	}
+	if st, err := d.CompanionState(ctx); err != nil || st != want {
+		t.Fatalf("CompanionState = %v, %v; want %s", st, err, want)
 	}
 	res, err := d.UpdateCompanion(ctx)
 	if err != nil {
@@ -357,8 +361,12 @@ func TestDevicePhoneCompanionReplace(t *testing.T) {
 	d.AgentWorking(false)
 	time.Sleep(time.Second)
 
-	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionOutdated {
-		t.Fatalf("CompanionState = %v, %v; want outdated", st, err)
+	want := driver.CompanionOutdated
+	if before.Signer == companion.OldPublicSigner {
+		want = driver.CompanionPublicKey
+	}
+	if st, err := d.CompanionState(ctx); err != nil || st != want {
+		t.Fatalf("CompanionState = %v, %v; want %s", st, err, want)
 	}
 	start := time.Now()
 	res, err := d.SetUpCompanion(ctx, false)

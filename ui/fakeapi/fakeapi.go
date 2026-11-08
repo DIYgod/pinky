@@ -157,7 +157,10 @@ type device struct {
 	// signedElsewhere: the installed companion is signed with the public
 	// key of builds until 2026-11-08, so updating replaces it.
 	signedElsewhere bool
-	way             string // iPhone: the connection the person chose
+	// updateAsks: the phone asks before installs over USB, so automatic
+	// companion updates need the person.
+	updateAsks bool
+	way        string // iPhone: the connection the person chose
 }
 
 type task struct {

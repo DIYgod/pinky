@@ -800,6 +800,10 @@
   "@checkCompanionPass": {
     "description": "The checkup, Pinky Companion: passed. Pinky turns the app's accessibility service on only while an agent works on the phone, and off again afterwards."
   },
+  "checkCompanionPublicKey": "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key.",
+  "@checkCompanionPublicKey": {
+    "description": "The checkup, Pinky Companion: the installed app is signed with the key of the builds until 8 November 2026, which was public, so anyone could make a fake update of it; an Update button follows."
+  },
   "checkCompanionTitle": "Pinky Companion",
   "@checkCompanionTitle": {
     "description": "The checkup: the item for Pinky's companion app on the phone. Pinky Companion is the app's name: keep it as it is."
@@ -1294,6 +1298,10 @@
   "@companionLineOutdated": {
     "description": "Settings › Phones: a phone's line about Pinky Companion when this Pinky comes with a newer version."
   },
+  "companionLinePublicKey": "Pinky Companion has a security update",
+  "@companionLinePublicKey": {
+    "description": "Settings › Phones: a phone's line about Pinky Companion when the installed app is signed with the old public key and this Pinky carries the version signed with its private key."
+  },
   "companionLineReady": "Pinky Companion turns on only while an agent works",
   "@companionLineReady": {
     "description": "Settings › Phones: a phone's line about Pinky Companion, Pinky's app for the phone, when it is installed and ready: Pinky turns its accessibility service on only while an agent works on the phone, so that the phone's apps (banking apps check for such services) see it only then."
@@ -1311,6 +1319,10 @@
         "example": "Pixel 9"
       }
     }
+  },
+  "companionPublicKeyBody": "Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it. The new version is signed with Pinky's private key: once you update, it is safe.",
+  "@companionPublicKeyBody": {
+    "description": "The Pinky Companion card, when the installed app is signed with the key of the builds until 8 November 2026, which was public, and this Pinky carries the version signed with its private key: why to update soon. Shown in place of the usual update text, often on phones where the person has to click Update because the phone asks before installs over USB. Keep it plain, not alarming. The card is in a narrow side panel."
   },
   "companionStillWaiting": "Still waiting for the phone. Look for a prompt on its screen.",
   "@companionStillWaiting": {

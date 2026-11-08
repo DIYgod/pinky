@@ -372,7 +372,12 @@ const (
 	CompanionReady    CompanionState = "ready"
 	CompanionMissing  CompanionState = "missing"  // not installed
 	CompanionOutdated CompanionState = "outdated" // installed, older than the one Pinky bundles or signed with another key
-	CompanionNoAPK    CompanionState = "no_apk"   // Pinky has no APK to install (a build without it)
+	// CompanionPublicKey: installed, but signed with the key of the builds
+	// until 2026-11-08, which is public, so anyone could sign an update of
+	// it. The bundled build, signed with Pinky's private key, replaces it.
+	// Clients treat it as CompanionOutdated and say why.
+	CompanionPublicKey CompanionState = "public_key"
+	CompanionNoAPK     CompanionState = "no_apk" // Pinky has no APK to install (a build without it)
 )
 
 // CompanionInstaller installs or updates the phone's companion app from the
