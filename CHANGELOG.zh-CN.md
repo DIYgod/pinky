@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1108.20 (2026-11-08)
 
 - 插线连接 iPhone 或 iPad 后，Pinky 现在会自己打开它的 Wi-Fi 连接，作用和「访达」里的“Show this iPhone when on Wi-Fi”一样，拔线后也能继续通过 Wi-Fi 使用，不用再去「访达」或 Xcode 里设置。
 - 通过 Wi-Fi 连接时，审批卡片、历史记录和给智能体的 iPhone、iPad 截图现在从实时画面里取，不到一秒就好，不再需要等最长半分钟。
