@@ -2,6 +2,11 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- Pinky 现在支持日语界面：在「设置 › 高级 › 语言」里选择「日本語」，或让它跟随设为日语的电脑。感谢 tarou-jp 的翻译。
+- 在 Linux 上，iPhone 和 iPad 也能通过 Wi-Fi 使用了：拔掉线后，Pinky 会把它们切到 Wi-Fi，而不是显示离线。除了 `usbmuxd`，不用另外安装什么。感谢 pseudoyu。
+
 ## 2026.1109.6 (2026-11-09)
 
 - 在 Mac 上，拔线后没有通过 Wi-Fi 回来的 iPhone 或 iPad，Pinky 现在大约 10 秒内就会提示：Mac 的设备服务把它弄丢了时显示「Wi-Fi 上找不到」；完全看不到时显示「Wi-Fi 上看不到」，并说明可能的原因，比如不在同一个网络、访客网络或开着 VPN。
