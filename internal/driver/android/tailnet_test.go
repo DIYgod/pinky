@@ -612,3 +612,20 @@ func TestRemoveNetworkPhone(t *testing.T) {
 		t.Fatalf("restarts %q", r)
 	}
 }
+
+// TestTailnetStream: a phone reached through Tailscale streams lighter
+// than one on the local network, unless the configuration says otherwise.
+func TestTailnetStream(t *testing.T) {
+	local := newDevice(Config{}, driver.Info{ID: localWiFi, Connection: "wifi"}, deviceProps{})
+	tail := newDevice(Config{}, driver.Info{ID: tailSerial, Connection: "wifi", Via: driver.ViaTailscale}, deviceProps{})
+	if o := local.baseOptions(); o.VideoBitRate != wifiBitRate || o.MaxFPS != wifiMaxFPS {
+		t.Fatalf("local: %+v", o)
+	}
+	if o := tail.baseOptions(); o.VideoBitRate != tailnetBitRate || o.MaxFPS != tailnetMaxFPS || o.VideoCodec != "h265" {
+		t.Fatalf("through Tailscale: %+v", o)
+	}
+	set := newDevice(Config{VideoBitRate: 4_000_000, MaxFPS: 60}, driver.Info{ID: tailSerial, Connection: "wifi", Via: driver.ViaTailscale}, deviceProps{})
+	if o := set.baseOptions(); o.VideoBitRate != 4_000_000 || o.MaxFPS != 60 {
+		t.Fatalf("configured: %+v", o)
+	}
+}

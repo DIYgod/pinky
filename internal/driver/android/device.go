@@ -187,6 +187,19 @@ func (d *Device) baseOptions() scrcpy.Options {
 		if o.MaxFPS == 0 {
 			o.MaxFPS = wifiMaxFPS
 		}
+		if d.info.Via == driver.ViaTailscale {
+			// Away from home, often on mobile data: the phone's uplink
+			// carries the stream. A weak 4G hotspot passed 0.35 to 0.5
+			// Mbit/s, under which 2.5 Mbit/s queued for seconds and took
+			// taps and adb's own connection down with it. 1 Mbit/s at 15
+			// frames a second takes about 450 MB an hour of steady change.
+			if d.cfg.VideoBitRate == 0 {
+				o.VideoBitRate = tailnetBitRate
+			}
+			if d.cfg.MaxFPS == 0 {
+				o.MaxFPS = tailnetMaxFPS
+			}
+		}
 		if o.VideoCodec == "" {
 			o.VideoCodec = "h265"
 		}
@@ -197,10 +210,13 @@ func (d *Device) baseOptions() scrcpy.Options {
 	return o
 }
 
-// The stream over wireless debugging (see baseOptions).
+// The stream over wireless debugging, and through Tailscale (see
+// baseOptions).
 const (
-	wifiBitRate = 2_500_000
-	wifiMaxFPS  = 30
+	wifiBitRate    = 2_500_000
+	wifiMaxFPS     = 30
+	tailnetBitRate = 1_000_000
+	tailnetMaxFPS  = 15
 )
 
 // session returns the running main-display session, starting one if

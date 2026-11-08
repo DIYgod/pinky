@@ -113,10 +113,28 @@ func TestDeviceTailnetRoam(t *testing.T) {
 	if s := os.Getenv("PINKY_ROAM_SECONDS"); s != "" {
 		fmt.Sscan(s, &seconds)
 	}
+	// How long each swipe and shell command may take: a relayed path
+	// needs several round trips of 0.1 to 0.5 s to start a session.
+	wait := 900 * time.Millisecond
+	if s := os.Getenv("PINKY_ROAM_WAIT"); s != "" {
+		if d, err := time.ParseDuration(s); err == nil {
+			wait = d
+		}
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(seconds+120)*time.Second)
 	defer cancel()
 	d := openOff(t, ctx)
-	b, err := d.OpenDisplay(ctx, DisplayOptions{App: "com.android.settings"})
+	// PINKY_ROAM_BITRATE (bits a second) and PINKY_ROAM_FPS try another
+	// stream than the one Pinky picks.
+	fps := 0
+	if s := os.Getenv("PINKY_ROAM_BITRATE"); s != "" {
+		fmt.Sscan(s, &d.cfg.VideoBitRate)
+	}
+	if s := os.Getenv("PINKY_ROAM_FPS"); s != "" {
+		fmt.Sscan(s, &fps)
+	}
+	t.Logf("stream: %+v, fps %d", d.baseOptions(), fps)
+	b, err := d.OpenDisplay(ctx, DisplayOptions{App: "com.android.settings", MaxFPS: fps})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,10 +195,10 @@ func TestDeviceTailnetRoam(t *testing.T) {
 		if i%2 == 1 {
 			from, to = to, from
 		}
-		sctx, scancel := context.WithTimeout(ctx, 900*time.Millisecond)
+		sctx, scancel := context.WithTimeout(ctx, wait)
 		swipeErr := b.Swipe(sctx, from, to, 300*time.Millisecond)
 		scancel()
-		ectx, ecancel := context.WithTimeout(ctx, 900*time.Millisecond)
+		ectx, ecancel := context.WithTimeout(ctx, wait)
 		t0 := time.Now()
 		_, echoErr := d.client.Shell(ectx, serial, "echo")
 		rtt := time.Since(t0)
@@ -193,7 +211,7 @@ func TestDeviceTailnetRoam(t *testing.T) {
 		}
 		silent := time.Since(last)
 		mu.Unlock()
-		line := fmt.Sprintf("t=%3ds frames %2d, %5.0f kbit/s, longest gap %4dms, silent %5dms, echo ", i, s.frames, float64(s.bytes)*8/1000, s.gap.Milliseconds(), silent.Milliseconds())
+		line := fmt.Sprintf("t=%3ds (%5.1fs) frames %2d, %5.0f kbit/s, longest gap %4dms, silent %5dms, echo ", i, time.Since(start).Seconds(), s.frames, float64(s.bytes)*8/1000, s.gap.Milliseconds(), silent.Milliseconds())
 		if echoErr != nil {
 			line += "failed: " + echoErr.Error()
 		} else {
