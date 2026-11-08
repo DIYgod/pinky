@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/danielpaulus/go-ios/ios/imagemounter"
+	"github.com/DIYgod/pinky/internal/driver/ios/cryptex"
 	"howett.net/plist"
 )
 
@@ -133,7 +133,7 @@ func readDiskImage(dir string) (diskImage, error) {
 			}
 		}
 	}
-	if v, err := imagemounter.CryptexImageVersion(restore); err == nil {
+	if v, err := cryptex.CryptexImageVersion(restore); err == nil {
 		img.Version = v.Version
 	}
 	if err := checkManifestFiles(restore); err != nil {

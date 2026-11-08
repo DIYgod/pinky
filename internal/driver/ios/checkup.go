@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/ios/cryptex"
 	goios "github.com/danielpaulus/go-ios/ios"
 	"github.com/danielpaulus/go-ios/ios/imagemounter"
 )
@@ -136,7 +137,7 @@ func mountedImage(ctx context.Context, l *link) string {
 	ch := make(chan result, 1)
 	go func() {
 		if l.has(cryptexService) {
-			if m, err := imagemounter.NewCryptexDeveloperDiskImageMounter(l.entry); err == nil {
+			if m, err := cryptex.NewCryptexDeveloperDiskImageMounter(l.entry); err == nil {
 				if list, err := m.ListCryptexes(); err == nil {
 					for _, cx := range list {
 						if cx.Identifier == ddiCryptex {
