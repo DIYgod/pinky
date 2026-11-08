@@ -156,6 +156,9 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStuck(), locales.AddPhoneIPhoneRetrying()
 	case driver.SetupUpdate:
 		return locales.AddPhoneIPhoneTooOldTitle(d.Info.Name), locales.AddPhoneIPhoneTooOld(d.Info.OSVersion), ""
+	case driver.SetupPasscode:
+		// iOS asks now and then before the helper may control the phone.
+		return locales.AddPhoneIPhoneStepPasscode(), locales.AddPhoneIPhoneStepPasscodeDetail(), ""
 	case driver.SetupInstallHelper:
 		// Its signature ran out (Info.HelperExpires), or it is missing.
 		if text, ranOut := helperWords(d, time.Now()); ranOut {

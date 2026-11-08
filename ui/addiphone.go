@@ -195,6 +195,10 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				guideWaiting(c, locales.AddPhoneIPhoneStepPreparing())
 			case driver.SetupUnlock:
 				guideProblem(c, locales.AddPhoneIPhoneStepUnlock(), "")
+			case driver.SetupPasscode:
+				// Driven through the helper, which iOS lets control the
+				// phone only once its passcode is entered.
+				guideProblem(c, locales.AddPhoneIPhoneStepPasscodeDetail(), "")
 			case driver.SetupNoDiskImage:
 				// Apple's image comes with Xcode; Pinky does not ship it.
 				if guideOS == "darwin" {

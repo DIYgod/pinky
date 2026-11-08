@@ -1325,6 +1325,46 @@ func (msgs Messages) AddPhoneIPhoneStepDriverWaiting() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDriverWaiting", nil)
 }
 
+// AddPhoneIPhoneStepPasscode says "Enter the passcode"
+// in the language the app shows.
+//
+// Add phone › iPhone, the phone's page and the checkup: the title of the
+// step where the iPhone asks for its passcode before the WebDriverAgent
+// helper may control it, as iOS does now and then.
+func AddPhoneIPhoneStepPasscode() string { return In(i18n.Locale()).AddPhoneIPhoneStepPasscode() }
+
+// AddPhoneIPhoneStepPasscode says "Enter the passcode"
+// in the language of msgs.
+//
+// Add phone › iPhone, the phone's page and the checkup: the title of the
+// step where the iPhone asks for its passcode before the WebDriverAgent
+// helper may control it, as iOS does now and then.
+func (msgs Messages) AddPhoneIPhoneStepPasscode() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPasscode", nil)
+}
+
+// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone…"
+// in the language the app shows.
+//
+// Add phone › iPhone, the phone's page and the checkup: what to do while
+// the iPhone asks for its passcode before the WebDriverAgent helper may
+// control it. WebDriverAgent is a name. Pinky starts the helper again later
+// when nobody entered the passcode.
+func AddPhoneIPhoneStepPasscodeDetail() string {
+	return In(i18n.Locale()).AddPhoneIPhoneStepPasscodeDetail()
+}
+
+// AddPhoneIPhoneStepPasscodeDetail says "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone…"
+// in the language of msgs.
+//
+// Add phone › iPhone, the phone's page and the checkup: what to do while
+// the iPhone asks for its passcode before the WebDriverAgent helper may
+// control it. WebDriverAgent is a name. Pinky starts the helper again later
+// when nobody entered the passcode.
+func (msgs Messages) AddPhoneIPhoneStepPasscodeDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPasscodeDetail", nil)
+}
+
 // AddPhoneIPhoneStepPlug says "Plug in the iPhone"
 // in the language the app shows.
 //
@@ -9983,6 +10023,26 @@ func (msgs Messages) NeedsHandoffNotePlaceholder() string {
 	return Catalog.Format(msgs.locale, "needsHandoffNotePlaceholder", nil)
 }
 
+// NeedsHandoffSetup says "Do it as asked. Once the phone is ready, {agent} goes on by itself."
+// in the language the app shows.
+//
+// A handoff card, when the agent asked the person to do the setup step the
+// phone waits for (such as trusting the computer; its request is the
+// title): there is nothing to take over, and the agent goes on by itself
+// once the phone is ready.
+func NeedsHandoffSetup(agent string) string { return In(i18n.Locale()).NeedsHandoffSetup(agent) }
+
+// NeedsHandoffSetup says "Do it as asked. Once the phone is ready, {agent} goes on by itself."
+// in the language of msgs.
+//
+// A handoff card, when the agent asked the person to do the setup step the
+// phone waits for (such as trusting the computer; its request is the
+// title): there is nothing to take over, and the agent goes on by itself
+// once the phone is ready.
+func (msgs Messages) NeedsHandoffSetup(agent string) string {
+	return Catalog.Format(msgs.locale, "needsHandoffSetup", map[string]any{"agent": agent})
+}
+
 // NeedsLetAgent says "Let {agent}"
 // in the language the app shows.
 //
@@ -17431,6 +17491,24 @@ func (msgs Messages) StepPhoneLocked() string {
 	return Catalog.Format(msgs.locale, "stepPhoneLocked", nil)
 }
 
+// StepPhoneNeedsSetup says "The phone needed setup first"
+// in the language the app shows.
+//
+// The second line of a step that was not done because the phone waited for
+// a setup step first, such as trusting the computer or allowing USB
+// debugging.
+func StepPhoneNeedsSetup() string { return In(i18n.Locale()).StepPhoneNeedsSetup() }
+
+// StepPhoneNeedsSetup says "The phone needed setup first"
+// in the language of msgs.
+//
+// The second line of a step that was not done because the phone waited for
+// a setup step first, such as trusting the computer or allowing USB
+// debugging.
+func (msgs Messages) StepPhoneNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "stepPhoneNeedsSetup", nil)
+}
+
 // StepPhoneOffline says "The phone went offline"
 // in the language the app shows.
 //
@@ -17711,6 +17789,22 @@ func (msgs Messages) TasksRowLocked() string {
 	return Catalog.Format(msgs.locale, "tasksRowLocked", nil)
 }
 
+// TasksRowNeedsSetup says "needs setup"
+// in the language the app shows.
+//
+// The short state at the end of a one-line task row: the phone waits for a
+// setup step before the agent can use it.
+func TasksRowNeedsSetup() string { return In(i18n.Locale()).TasksRowNeedsSetup() }
+
+// TasksRowNeedsSetup says "needs setup"
+// in the language of msgs.
+//
+// The short state at the end of a one-line task row: the phone waits for a
+// setup step before the agent can use it.
+func (msgs Messages) TasksRowNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "tasksRowNeedsSetup", nil)
+}
+
 // TasksRowPaused says "paused"
 // in the language the app shows.
 //
@@ -17863,6 +17957,22 @@ func TasksStatusLocked() string { return In(i18n.Locale()).TasksStatusLocked() }
 // waits for it to be unlocked.
 func (msgs Messages) TasksStatusLocked() string {
 	return Catalog.Format(msgs.locale, "tasksStatusLocked", nil)
+}
+
+// TasksStatusNeedsSetup says "Phone needs setup"
+// in the language the app shows.
+//
+// A task card's status, next to a dot: the phone waits for a setup step
+// (such as trusting the computer) before the agent can use it.
+func TasksStatusNeedsSetup() string { return In(i18n.Locale()).TasksStatusNeedsSetup() }
+
+// TasksStatusNeedsSetup says "Phone needs setup"
+// in the language of msgs.
+//
+// A task card's status, next to a dot: the phone waits for a setup step
+// (such as trusting the computer) before the agent can use it.
+func (msgs Messages) TasksStatusNeedsSetup() string {
+	return Catalog.Format(msgs.locale, "tasksStatusNeedsSetup", nil)
 }
 
 // TasksStatusPaused says "Paused · You're in control"

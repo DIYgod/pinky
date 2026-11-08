@@ -158,7 +158,13 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 	for _, t := range a.tasks {
 		holding = holding || (t.ID == n.TaskID && t.State == gateway.TaskPaused)
 	}
+	// The phone waits for the step the agent asks for: nothing to take
+	// over, and the gateway ends the handoff once the phone is ready.
+	d := a.device(n.DeviceID)
+	setup := d != nil && d.Status == gateway.DeviceNeedsSetup
 	switch {
+	case setup:
+		mg.Text(c, locales.NeedsHandoffSetup(agent)).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case holding && !locked:
 		mg.Text(c, locales.NeedsHandoffInControl(agent)).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case locked && a.canUnlockHere(n.DeviceID):
@@ -188,7 +194,7 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 		a.notes[n.ID] = note
 	}
 	note := strings.TrimSpace(a.notes[n.ID])
-	declineButton := locked || holding
+	declineButton := locked || holding || setup
 	mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {
 		if declineButton {
 			if button(c, locales.NeedsDecline(), btnOpt{}).Tooltip(locales.NeedsDeclineTooltip(agent)).Clicked() {
@@ -328,6 +334,11 @@ func (a *app) taskStatus(c *mg.Context, t gateway.TaskView) (string, mg.Color, b
 		if d != nil && a.isLocked(*d) {
 			return locales.TasksStatusLocked(), p.amberDot, false
 		}
+		if d != nil && d.Status == gateway.DeviceNeedsSetup {
+			// Connected while the phone waited for a step, or it needs one
+			// again: the agent waits for the person (device_needs_setup).
+			return locales.TasksStatusNeedsSetup(), p.amberDot, false
+		}
 		return locales.TasksStatusWorking(), p.green, true
 	case gateway.TaskWaiting:
 		if d != nil && a.isLocked(*d) {
@@ -366,6 +377,8 @@ func (a *app) stepWord(t gateway.TaskView, d gateway.DeviceView) string {
 		return locales.TasksRowLocked()
 	case t.State == gateway.TaskWaiting:
 		return locales.TasksRowWaiting()
+	case d.Status == gateway.DeviceNeedsSetup:
+		return locales.TasksRowNeedsSetup()
 	}
 	return locales.TasksRowStep(len(t.Steps))
 }
@@ -382,7 +395,9 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 				dot(c, col, live)
 				mg.Text(c, status).FontSize(13).TextColor(p.ink2).SingleLine()
 			})
-			canTake := run && t.State != gateway.TaskPaused && d != nil && !a.isLocked(*d) && d.Status != gateway.DeviceInControl
+			// Not while the phone is not open: offline, or waiting for a step.
+			canTake := run && t.State != gateway.TaskPaused && d != nil && !a.isLocked(*d) && d.Status != gateway.DeviceInControl &&
+				d.Status != gateway.DeviceNeedsSetup && d.Status != gateway.DeviceOffline
 			if canTake && button(c, locales.PhoneTakeOver(), btnOpt{small: true}).Clicked() {
 				a.takeOver(t.DeviceID)
 			}

@@ -237,6 +237,22 @@ func (g *Gateway) answerUnlockHandoffs(d *device) {
 	}
 }
 
+// readyNow ends the handoffs opened while the phone waited for a step
+// (device_needs_setup), once the gateway has opened it: the step is done.
+// The agent gets the screen, as from a hand-back.
+func (g *Gateway) readyNow(d *device) {
+	g.mu.Lock()
+	var ids []string
+	if d.online && d.lease != nil {
+		ids = d.lease.readyHandoffs
+		d.lease.readyHandoffs = nil
+	}
+	g.mu.Unlock()
+	for _, id := range ids {
+		_ = g.approvals.Decide(id, approval.AllowOnce, "The phone is ready.")
+	}
+}
+
 // lockedNow asks the phone whether it is locked, by its LockReporter or a
 // read of its screen; known is false when it cannot tell.
 func (g *Gateway) lockedNow(ctx context.Context, dev driver.Device) (locked, known bool) {

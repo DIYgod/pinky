@@ -268,7 +268,7 @@ func (p *Provider) wdaState(ctx context.Context, key entryKey, info driver.Info)
 			return info, false
 		}
 		if s.running() {
-			info.State, info.Detail = driver.StateNeedsSetup, automationAsk
+			info.State, info.Setup, info.Detail = driver.StateNeedsSetup, driver.SetupPasscode, automationAsk
 			return info, true
 		}
 		// The runner gave up waiting: nobody entered the passcode.
@@ -297,7 +297,7 @@ func (p *Provider) wdaState(ctx context.Context, key entryKey, info driver.Info)
 	h, held := p.wdaHolds[id]
 	p.mu.Unlock()
 	if held && h.key == key && p.clock().Before(h.until) {
-		info.State, info.Detail = driver.StateNeedsSetup, automationMissed
+		info.State, info.Setup, info.Detail = driver.StateNeedsSetup, driver.SetupPasscode, automationMissed
 		return info, true
 	}
 	return info, false

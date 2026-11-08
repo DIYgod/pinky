@@ -442,6 +442,14 @@
   "@addPhoneIPhoneStepDriverWaiting": {
     "description": "Add phone › iPhone, the step list: next to a spinner under the driver or usbmuxd step: Pinky notices by itself once it is installed."
   },
+  "addPhoneIPhoneStepPasscode": "Enter the passcode",
+  "@addPhoneIPhoneStepPasscode": {
+    "description": "Add phone › iPhone, the phone's page and the checkup: the title of the step where the iPhone asks for its passcode before the WebDriverAgent helper may control it, as iOS does now and then."
+  },
+  "addPhoneIPhoneStepPasscodeDetail": "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone. If the iPhone no longer asks, Pinky tries again in a few minutes, or at once when you plug it in again.",
+  "@addPhoneIPhoneStepPasscodeDetail": {
+    "description": "Add phone › iPhone, the phone's page and the checkup: what to do while the iPhone asks for its passcode before the WebDriverAgent helper may control it. WebDriverAgent is a name. Pinky starts the helper again later when nobody entered the passcode."
+  },
   "addPhoneIPhoneStepPlug": "Plug in the iPhone",
   "@addPhoneIPhoneStepPlug": {
     "description": "Add phone › iPhone, the step list: the step of connecting the iPhone with a cable."
@@ -3662,6 +3670,16 @@
   "@needsHandoffNotePlaceholder": {
     "description": "The placeholder of the note field on a handoff card: what the person did on the phone, or what the agent should do next."
   },
+  "needsHandoffSetup": "Do it as asked. Once the phone is ready, {agent} goes on by itself.",
+  "@needsHandoffSetup": {
+    "description": "A handoff card, when the agent asked the person to do the setup step the phone waits for (such as trusting the computer; its request is the title): there is nothing to take over, and the agent goes on by itself once the phone is ready.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
   "needsLetAgent": "Let {agent}",
   "@needsLetAgent": {
     "description": "On an agent's first-connection card: the label above (and the accessibility label of) the menu of what the agent may do. In English it reads on into the choice: \"Let Claude Code\" + \"All apps except blocked ones\", \"Only the apps I choose\", \"Read only: browse, never commit\" or \"Watch only: no taps or typing\".",
@@ -6170,6 +6188,10 @@
   "@stepPhoneLocked": {
     "description": "The second line of a step that failed because the phone was locked."
   },
+  "stepPhoneNeedsSetup": "The phone needed setup first",
+  "@stepPhoneNeedsSetup": {
+    "description": "The second line of a step that was not done because the phone waited for a setup step first, such as trusting the computer or allowing USB debugging."
+  },
   "stepPhoneOffline": "The phone went offline",
   "@stepPhoneOffline": {
     "description": "The second line of a step that failed because the phone went offline."
@@ -6282,6 +6304,10 @@
   "@tasksRowLocked": {
     "description": "The short state at the end of a one-line task row: the phone is locked."
   },
+  "tasksRowNeedsSetup": "needs setup",
+  "@tasksRowNeedsSetup": {
+    "description": "The short state at the end of a one-line task row: the phone waits for a setup step before the agent can use it."
+  },
   "tasksRowPaused": "paused",
   "@tasksRowPaused": {
     "description": "The short state at the end of a one-line row of another phone's task: the person took over."
@@ -6327,6 +6353,10 @@
   "tasksStatusLocked": "Locked",
   "@tasksStatusLocked": {
     "description": "A task card's status, next to a dot: the phone is locked and the agent waits for it to be unlocked."
+  },
+  "tasksStatusNeedsSetup": "Phone needs setup",
+  "@tasksStatusNeedsSetup": {
+    "description": "A task card's status, next to a dot: the phone waits for a setup step (such as trusting the computer) before the agent can use it."
   },
   "tasksStatusPaused": "Paused · You're in control",
   "@tasksStatusPaused": {
