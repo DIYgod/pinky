@@ -329,18 +329,18 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 }
 
 func (g *Gateway) findDeviceLocked(ref string) *device {
-	if d, ok := g.devices[ref]; ok {
+	if d, ok := g.devices[ref]; ok && !foundLocked(d) {
 		return d
 	}
 	var match []*device
 	for _, d := range g.devices {
-		if equalFold(d.name(), ref) {
+		if equalFold(d.name(), ref) && !foundLocked(d) {
 			match = append(match, d)
 		}
 	}
 	if len(match) == 0 && len(ref) >= 4 {
 		for _, d := range g.devices {
-			if hasPrefixFold(d.id, ref) {
+			if hasPrefixFold(d.id, ref) && !foundLocked(d) {
 				match = append(match, d)
 			}
 		}
@@ -354,6 +354,9 @@ func (g *Gateway) findDeviceLocked(ref string) *device {
 func (g *Gateway) deviceListLocked() string {
 	var out []string
 	for _, d := range g.sortedDevicesLocked() {
+		if foundLocked(d) {
+			continue // found on Wi-Fi, and maybe not the person's (wifi.go)
+		}
 		state := "online"
 		switch {
 		case d.online:
@@ -409,6 +412,8 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			switch {
 			case x.online:
 				online = append(online, x)
+			case foundLocked(x):
+				// Found on Wi-Fi, and maybe not the person's (wifi.go).
 			case waitsForStep(x.info.State):
 				waiting = append(waiting, x)
 			}
@@ -904,6 +909,14 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		g.waitChange(ctx, l, time.Duration(req.WaitMS)*time.Millisecond, req.Progress)
 	}
 	cur, err := g.observe(ctx, l.dev, true)
+	if err != nil && errors.Is(err, driver.ErrOffline) && g.expectedBack(l.dev) {
+		// The phone dropped as it moves between its cable and Wi-Fi: read
+		// it again once it is back (wifi.go).
+		if res := g.gate(l, req.ApprovalID, false); res != nil {
+			return g.finish(l, res)
+		}
+		cur, err = g.observe(ctx, l.dev, true)
+	}
 	if err != nil {
 		return g.finish(l, g.readError(l, err))
 	}

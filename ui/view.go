@@ -43,7 +43,7 @@ func (a *app) view(c *mg.Context) {
 	a.shotDialog(c)
 	a.removeDialog(c)
 	a.awayDialog(c)
-	a.wifiDialog(c)
+	a.phoneWiFiDialog(c)
 	a.sweepMirrors()
 	// A QR pairing lasts while its step shows, and a recording plays while
 	// Activity does.

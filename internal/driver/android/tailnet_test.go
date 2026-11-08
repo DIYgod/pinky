@@ -397,18 +397,18 @@ func TestSetWiFi(t *testing.T) {
 	f, ph, _, p := newNetFake(t)
 	ctx := context.Background()
 	// Not plugged in.
-	if w, err := p.WiFi(ctx, piHW); err != nil || w.On || w.Missing != driver.WiFiNeedsCable {
+	if w, err := p.PhoneWiFi(ctx, piHW); err != nil || w.On || w.Missing != driver.WiFiNeedsCable {
 		t.Fatalf("not plugged in: %+v, %v", w, err)
 	}
-	if _, err := p.SetWiFi(ctx, piHW, true); !errors.Is(err, driver.ErrOffline) {
+	if _, err := p.SetPhoneWiFi(ctx, piHW, true); !errors.Is(err, driver.ErrOffline) {
 		t.Fatalf("moved a phone that is not plugged in: %v", err)
 	}
 	f.set(func(f *fakeADB) { f.devices = []string{usbLine} })
-	w, err := p.WiFi(ctx, piHW)
+	w, err := p.PhoneWiFi(ctx, piHW)
 	if err != nil || w.On || w.Listening || w.Addr != wifiAddr || w.Missing != "" {
 		t.Fatalf("plugged in: %+v, %v", w, err)
 	}
-	w, err = p.SetWiFi(ctx, piHW, true)
+	w, err = p.SetPhoneWiFi(ctx, piHW, true)
 	if err != nil || !w.On || !w.Connected || !w.Listening || w.Addr != wifiAddr || w.Stopped {
 		t.Fatalf("on: %+v, %v", w, err)
 	}
@@ -428,10 +428,10 @@ func TestSetWiFi(t *testing.T) {
 	if _, err := p.SetAway(ctx, piHW, true); err != nil {
 		t.Fatal(err)
 	}
-	if w, _ := p.WiFi(ctx, piHW); !w.Away {
+	if w, _ := p.PhoneWiFi(ctx, piHW); !w.Away {
 		t.Fatalf("away not said: %+v", w)
 	}
-	w, err = p.SetWiFi(ctx, piHW, false)
+	w, err = p.SetPhoneWiFi(ctx, piHW, false)
 	if err != nil || w.On {
 		t.Fatalf("off: %+v, %v", w, err)
 	}
@@ -446,10 +446,10 @@ func TestSetWiFi(t *testing.T) {
 	ph.mu.Lock()
 	ph.addrs = "40: rmnet_data1    inet 10.1.2.3/30 scope global rmnet_data1\n"
 	ph.mu.Unlock()
-	if w, _ := p.WiFi(ctx, piHW); w.Missing != driver.WiFiNoWiFi {
+	if w, _ := p.PhoneWiFi(ctx, piHW); w.Missing != driver.WiFiNoWiFi {
 		t.Fatalf("no Wi-Fi: %+v", w)
 	}
-	if _, err := p.SetWiFi(ctx, piHW, true); err == nil {
+	if _, err := p.SetPhoneWiFi(ctx, piHW, true); err == nil {
 		t.Fatal("moved a phone that has no Wi-Fi")
 	}
 }
@@ -463,7 +463,7 @@ func TestSetWiFiUnreachable(t *testing.T) {
 	ph.mu.Lock()
 	ph.addrs = "30: wlan0    inet 10.9.9.9/24 scope global wlan0\n" // another network
 	ph.mu.Unlock()
-	if _, err := p.SetWiFi(ctx, piHW, true); err == nil {
+	if _, err := p.SetPhoneWiFi(ctx, piHW, true); err == nil {
 		t.Fatal("moved to an address that does not answer")
 	}
 	if r := ph.restarted(); !slices.Equal(r, []string{"tcpip:5555", "usb:" + piHW}) {
@@ -495,7 +495,7 @@ func TestLANReconnect(t *testing.T) {
 		infos[0].Setup != driver.SetupNetworkOff {
 		t.Fatalf("restarted: %+v", infos)
 	}
-	if w, _ := p.WiFi(ctx, piHW); !w.On || !w.Stopped {
+	if w, _ := p.PhoneWiFi(ctx, piHW); !w.On || !w.Stopped {
 		t.Fatalf("restarted: %+v", w)
 	}
 	// Listening at a new address that mDNS finds.

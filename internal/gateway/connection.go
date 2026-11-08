@@ -79,6 +79,9 @@ func (g *Gateway) SetConnection(deviceID, way string) error {
 		id := d.id
 		g.rec.do(func(ctx context.Context) error { return g.store.SetDeviceConnection(ctx, id, way) })
 	}
+	g.mu.Lock()
+	d.moving = time.Now().Add(moveWait) // calls wait while it reconnects
+	g.mu.Unlock()
 	g.setOffline(d, "reconnecting the way you chose")
 	go func() {
 		ctx, cancel := context.WithTimeout(g.ctx, reconnectTimeout)

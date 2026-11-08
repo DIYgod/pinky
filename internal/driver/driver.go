@@ -80,6 +80,16 @@ const (
 	// network now (Pinky connects again by itself).
 	SetupNetworkOff  = "network_off"
 	SetupNetworkAway = "network_away"
+	// SetupConfirmWiFi: the phone is reachable only over Wi-Fi and Pinky
+	// has not used it, so it may not be the person's (a family member's
+	// iPad once paired with this computer): the person says whether it is
+	// theirs. Until then nothing is done on the phone (WiFiFinder).
+	SetupConfirmWiFi = "confirm_wifi"
+	// SetupDeviceService: the computer's device service (usbmuxd on a Mac)
+	// lost the phone on Wi-Fi: the phone is on the network, but the service
+	// no longer lists it, and will not for up to an hour. Restarting the
+	// service (DeviceServiceRestarter) brings it back.
+	SetupDeviceService = "device_service"
 )
 
 // Provider discovers and opens the devices of one platform.
@@ -133,6 +143,11 @@ type Device interface {
 type ObserveOptions struct {
 	// OCR asks the driver to add OCR elements for areas the tree misses.
 	OCR bool
+	// Frame, when set, returns a picture of the screen decoded from its
+	// live video, which the gateway shares with the mirror. A driver may
+	// read OCR's text from it where its own screenshots are slow (an
+	// iPhone over Wi-Fi: about 5 s a screenshot); nil means none.
+	Frame func(ctx context.Context) (image.Image, error)
 }
 
 // TapOptions tune Tap.
@@ -576,15 +591,16 @@ var ErrNotListening = errors.New("the phone's adb does not listen on the network
 // Wi-Fi without Wireless debugging (which Android 10 lacks): the phone's
 // adb listens on the network (adb tcpip) until the phone restarts, and the
 // provider connects to it at its Wi-Fi address, and again by itself
-// whenever it is back on the network.
+// whenever it is back on the network. The person turns it on for each
+// phone, unlike WiFiFinder, which finds iPhones on Wi-Fi by itself.
 type WiFiSwitch interface {
-	// WiFi says whether a phone is on Wi-Fi this way, and what keeps it
-	// from being moved there.
-	WiFi(ctx context.Context, id string) (WiFiState, error)
-	// SetWiFi moves a phone to Wi-Fi, over its cable, or stops that: its
-	// adb then stops listening on the network, which also ends its use
+	// PhoneWiFi says whether a phone is on Wi-Fi this way, and what keeps
+	// it from being moved there.
+	PhoneWiFi(ctx context.Context, id string) (WiFiState, error)
+	// SetPhoneWiFi moves a phone to Wi-Fi, over its cable, or stops that:
+	// its adb then stops listening on the network, which also ends its use
 	// away from home (Tailnet), and the provider forgets its addresses.
-	SetWiFi(ctx context.Context, id string, on bool) (WiFiState, error)
+	SetPhoneWiFi(ctx context.Context, id string, on bool) (WiFiState, error)
 }
 
 // WiFiState is whether a phone is moved to Wi-Fi without Wireless
@@ -634,6 +650,41 @@ type Forgetter interface {
 	// stays, and the phone with it.
 	Disconnect(ctx context.Context, id string) error
 }
+
+// WiFiFinder is a Provider that also reaches phones over Wi-Fi by itself:
+// iPhones and iPads that usbmuxd lists over the network. Those include
+// phones that are not the person's, such as a family member's iPad that was
+// once paired with this computer, so the provider leaves a phone it reaches
+// only over Wi-Fi alone until the gateway says the phone is the person's:
+// it lists that phone with SetupConfirmWiFi, having read no more than its
+// name, model and OS version, and neither prepares nor opens it. A phone
+// on a cable is always prepared and opened, as before. A phone the gateway
+// told it to Forget (Forgetter) it does not list over Wi-Fi at all.
+type WiFiFinder interface {
+	// SetWiFi turns using phones over Wi-Fi on or off; off, the provider
+	// lists phones on a cable only. It starts off.
+	SetWiFi(on bool)
+	// UseOverWiFi says a phone is the person's: Pinky used it before, it
+	// was on a cable, or the person chose to use it. The provider then
+	// prepares and opens it over Wi-Fi too.
+	UseOverWiFi(id string)
+}
+
+// DeviceServiceRestarter is a Provider whose phones go through a service of
+// the computer that it can restart when that service lost a phone
+// (SetupDeviceService): usbmuxd on a Mac. The system asks an administrator
+// to allow it, and every phone of the platform, also on a cable,
+// disconnects for a moment.
+type DeviceServiceRestarter interface {
+	// RestartDeviceService restarts the service. reason is shown in the
+	// system's request for an administrator's password. It returns
+	// ErrCanceled when the person declines.
+	RestartDeviceService(ctx context.Context, reason string) error
+}
+
+// ErrCanceled is a request the person declined, such as the system's
+// request for an administrator's password.
+var ErrCanceled = errors.New("canceled")
 
 // ErrPairedNotFound is wrapped by PairWithCode and Pairing.Wait when the
 // phone paired but the driver could not find where to connect to it: its

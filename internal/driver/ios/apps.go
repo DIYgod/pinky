@@ -33,6 +33,12 @@ const appCacheTTL = 30 * time.Second
 // Apps implements driver.Device. It lists the apps a person can open from
 // the home screen, through the installation proxy.
 func (d *Device) Apps(ctx context.Context) ([]driver.App, error) {
+	list, err := d.listApps(ctx)
+	return list, d.gone(err)
+}
+
+// listApps is Apps without marking a dropped connection (gone).
+func (d *Device) listApps(ctx context.Context) ([]driver.App, error) {
 	c, err := d.catalog(ctx)
 	if err != nil {
 		return nil, err
@@ -211,6 +217,11 @@ func visibleApp(a installationproxy.AppInfo) bool {
 // Launch implements driver.Device. app is a bundle id or a display name.
 // A running app is brought to the front, not restarted.
 func (d *Device) Launch(ctx context.Context, app string) error {
+	return d.gone(d.launch(ctx, app))
+}
+
+// launch is Launch without marking a dropped connection (gone).
+func (d *Device) launch(ctx context.Context, app string) error {
 	id, err := d.resolveApp(ctx, app)
 	if err != nil {
 		return err

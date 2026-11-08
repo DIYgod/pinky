@@ -33,7 +33,7 @@ func TestDeviceConnectionWay(t *testing.T) {
 	if os.Getenv("PINKY_WDA_LOG") != "" {
 		wdaLog = os.Stderr
 	}
-	p := NewProvider()
+	p := deviceProvider(t, id)
 	if err := p.SetConnection(id, way); err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +272,7 @@ func TestDeviceWDAStart(t *testing.T) {
 		}
 	})
 	defer func() { wdaLog = io.Discard }()
-	p := NewProvider()
+	p := deviceProvider(t, id)
 	if err := p.SetConnection(id, backendWDA); err != nil {
 		t.Fatal(err)
 	}

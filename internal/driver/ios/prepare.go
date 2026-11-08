@@ -28,10 +28,17 @@ import (
 // devModeOff is a phone with Developer Mode off: Pinky shows the switch in
 // Settings and says how to turn it on.
 func (p *Provider) devModeOff(e goios.DeviceEntry, info driver.Info) driver.Info {
-	p.prep.revealDevMode(e, p.logger())
 	info.State = driver.StateNeedsSetup
 	info.Setup = driver.SetupDeveloperMode
 	info.Detail = devModeDetail
+	if e.Properties.ConnectionType == "Network" {
+		// AMFI takes the reveal only over a cable: over Wi-Fi it closes the
+		// connection without an answer (iPadOS 27.0.1, 2026-11-08), where
+		// the same request over USB succeeds.
+		info.Detail = devModeWiFiDetail
+		return info
+	}
+	p.prep.revealDevMode(e, p.logger())
 	return info
 }
 
@@ -373,6 +380,7 @@ const (
 	trustDetail       = "Unlock the iPhone and tap Trust on the \"Trust This Computer?\" prompt, then enter its passcode."
 	trustDeniedDetail = "The iPhone was told not to trust this computer. Unplug it and plug it in again, then tap Trust."
 	devModeDetail     = "Turn on Developer Mode: on the iPhone, open Settings > Privacy & Security > Developer Mode, turn it on and tap Restart. After the restart, unlock the iPhone, tap Turn On and enter its passcode."
+	devModeWiFiDetail = devModeDetail + " If Developer Mode is not in Privacy & Security, plug the iPhone in once: Pinky can make the switch appear only over a cable."
 	preparingDetail   = "Pinky is preparing the iPhone: it mounts Apple's developer disk image, which takes a few seconds."
 	unlockDetail      = "Unlock the iPhone so Pinky can finish preparing it."
 )

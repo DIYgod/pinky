@@ -136,9 +136,12 @@ type API struct {
 	fileProblems []gateway.FileProblem
 	removals     []Removal // RemoveDevice calls (remove.go)
 
-	iosHost driver.HostCheck // what the computer lacks for iPhones (iphone.go)
-	dlErr   error            // what DownloadDiskImage fails with (iphone.go)
-	tn      *fakeTailnet     // Tailscale on this computer (tailnet.go)
+	iosHost    driver.HostCheck // what the computer lacks for iPhones (iphone.go)
+	wifiOff    bool             // iPhones over Wi-Fi turned off (wifi.go)
+	restarts   []string         // RestartDeviceService reasons (wifi.go)
+	restartErr error
+	dlErr      error        // what DownloadDiskImage fails with (iphone.go)
+	tn         *fakeTailnet // Tailscale on this computer (tailnet.go)
 }
 
 type device struct {
@@ -162,6 +165,7 @@ type device struct {
 	// companion updates need the person.
 	updateAsks bool
 	way        string // iPhone: the connection the person chose
+	connecting string // the status line while the fake "opens" it (wifi.go)
 }
 
 type task struct {
@@ -378,8 +382,17 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.TaskID = d.task.view.ID
 	}
 	switch {
+	case d.connecting != "":
+		v.Status, v.StatusLine = gateway.DeviceConnecting, d.connecting
+		v.Info.State = driver.StateOffline
+	case d.info.Setup == driver.SetupUnlock && d.info.State == driver.StateNeedsSetup && d.info.Connection == "wifi" && !running:
+		v.Status, v.StatusLine = gateway.DeviceOffline, "Locked on Wi-Fi"
 	case d.info.State == driver.StateOffline:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Offline"
+	case d.info.Setup == driver.SetupConfirmWiFi && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Found on Wi-Fi"
+	case d.info.Setup == driver.SetupDeviceService && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Lost on Wi-Fi"
 	case d.info.State != driver.StateOnline:
 		// Plugged in, waiting for a step, as the gateway lists such a phone
 		// (statusLocked), also while a task waits for it.

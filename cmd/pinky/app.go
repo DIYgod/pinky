@@ -194,10 +194,11 @@ func policySettings(rg *runningGateway, since int) (ui.Settings, int, bool) {
 }
 
 // startSettings applies what the gateway takes from Settings at start:
-// recording, retention and remote agents.
+// recording, retention, iPhones over Wi-Fi and remote agents.
 func startSettings(rg *runningGateway, s ui.Settings, log *slog.Logger) {
 	rg.G.SetRecording(s.Record)
 	rg.G.SetRetention(s.KeepDays)
+	rg.G.SetWiFi(s.IOSWiFi)
 	if s.RemoteAgents {
 		if err := rg.Remote.Set(true, remoteAddr(s)); err != nil {
 			log.Warn("settings: remote agents", "err", err)
@@ -258,6 +259,9 @@ func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
 	}
 	if s.KeepDays != old.KeepDays {
 		rg.G.SetRetention(s.KeepDays)
+	}
+	if s.IOSWiFi != old.IOSWiFi {
+		rg.G.SetWiFi(s.IOSWiFi)
 	}
 	if rg.Remote != nil && (s.RemoteAgents != old.RemoteAgents || remoteAddr(s) != remoteAddr(old)) {
 		warn("remote agents", rg.Remote.Set(s.RemoteAgents, remoteAddr(s)))

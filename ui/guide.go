@@ -24,6 +24,12 @@ const (
 // guideRow is one step: its number (a check once done), its title, and for
 // the step the person is at, what to do.
 func guideRow(c *mg.Context, n int, title string, state guideState, body func()) {
+	guideRowHint(c, n, title, "", state, body)
+}
+
+// guideRowHint is guideRow with a hint under the title that every step
+// shows, whatever its state, such as whether it needs the cable.
+func guideRowHint(c *mg.Context, n int, title, hint string, state guideState, body func()) {
 	p := pal(c)
 	mg.Row(c.Key(n)).Gap(12).AlignItems(mg.Start).Role(mg.RoleListItem).Children(func() {
 		mark := mg.Box(c).Size(24, 24).Radius(12).Center().Shrink(0)
@@ -45,6 +51,9 @@ func guideRow(c *mg.Context, n int, title string, state guideState, body func())
 			t := mg.Text(c, title).FontSize(14.5).FontWeight(600)
 			if state == guideLater {
 				t.TextColor(p.ink3)
+			}
+			if hint != "" {
+				mg.Text(c, hint).FontSize(12.5).TextColor(p.ink3).Margin(-6, 0, 0, 0)
 			}
 			if state == guideNow && body != nil {
 				body()

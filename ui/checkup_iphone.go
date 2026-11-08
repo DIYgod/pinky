@@ -139,8 +139,19 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 	switch step {
 	case driver.SetupTrust:
+		if d.Info.Connection == "wifi" {
+			// The phone asks to trust a computer only on a cable.
+			return locales.AddPhoneIPhoneStepTrust(), locales.AddPhoneIPhoneTrustWiFi(d.Info.Name), ""
+		}
 		return locales.AddPhoneIPhoneStepTrust(), locales.AddPhoneIPhoneStepTrustDetail(), ""
+	case driver.SetupConfirmWiFi:
+		return locales.AddPhoneIPhoneFoundTitle(), locales.FoundDetail(), ""
+	case driver.SetupDeviceService:
+		return locales.LostTitle(d.Info.Name), locales.LostDetail(d.Info.Name), locales.LostManual()
 	case driver.SetupDeveloperMode:
+		if d.Info.Connection == "wifi" {
+			return locales.CheckDeveloperModeTitle(), locales.AddPhoneIPhoneStepDevModeDetail(), locales.AddPhoneIPhoneDevModeWiFiNote(d.Info.Name)
+		}
 		return locales.CheckDeveloperModeTitle(), locales.AddPhoneIPhoneStepDevModeDetail(), locales.AddPhoneIPhoneStepDevModeNote()
 	case driver.SetupUnlock:
 		return locales.CheckDiskImageTitle(), locales.AddPhoneIPhoneStepUnlock(), ""

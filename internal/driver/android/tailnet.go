@@ -204,7 +204,7 @@ func (p *Provider) Away(ctx context.Context, id string) (driver.Away, error) {
 }
 
 // SetAway implements driver.Tailnet. Off on a phone moved to Wi-Fi
-// (SetWiFi) only stops reaching it through Tailscale: its adb keeps
+// (SetPhoneWiFi) only stops reaching it through Tailscale: its adb keeps
 // listening for the computer's network.
 func (p *Provider) SetAway(ctx context.Context, id string, on bool) (driver.Away, error) {
 	if !on {

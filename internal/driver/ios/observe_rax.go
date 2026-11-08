@@ -123,14 +123,20 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 		go func() {
 			defer wg.Done()
 			t := time.Now()
-			png, err := d.ScreenshotPNG(ctx)
-			st.Shot = time.Since(t)
+			png, pic, from, err := d.ocrPicture(ctx, opt)
+			st.Shot, st.ShotFrom = time.Since(t), from
 			if err != nil {
 				ocrErr = err
 				return
 			}
 			decoded := make(chan image.Image, 1)
-			go func() { decoded <- decodeShot(png) }()
+			go func() {
+				if pic != nil {
+					decoded <- pic
+					return
+				}
+				decoded <- decodeShot(png)
+			}()
 			t = time.Now()
 			lines, ocrErr = recognizeText(png, ocrOptions{Languages: ocrLanguages})
 			st.OCR = time.Since(t)

@@ -2,6 +2,17 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- iPhones and iPads now work over Wi-Fi too, on by default: one you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as your computer, and a running task moves between the cable and Wi-Fi by itself. Turn it off in Settings › Phones.
+- When Pinky finds an iPhone or iPad on Wi-Fi that it hasn't used, such as a family member's iPad paired with your computer, it shows it as Found on Wi-Fi and leaves it alone until you choose Use or Ignore.
+- A locked iPhone or iPad on Wi-Fi shows as Locked on Wi-Fi, and Pinky connects once you unlock it; it leaves a sleeping phone alone, also one without a passcode, so its screen doesn't light up. An agent that needs it asks you to unlock it.
+- Over Wi-Fi, Pinky reads the text on an iPhone's screen from the live picture, which is much quicker than a screenshot there (about 5 seconds).
+- When a Mac's device service loses an iPhone on Wi-Fi, which it can do for up to an hour after the phone's connection broke once, Pinky notices, shows it as Lost on Wi-Fi and offers to restart the service: macOS asks for an administrator's password, and every iPhone and iPad disconnects for a second or two. To notice it, Pinky looks for your iPhones on the local network, so macOS may ask whether Pinky may do that.
+- Add phone › iPhone says which steps need the cable: trusting the computer, and making the Developer Mode switch appear; the rest works over Wi-Fi.
+- A phone Pinky is connecting to, or moving between the cable and Wi-Fi, shows as Connecting or Moving to Wi-Fi rather than offline.
+- iPads are called iPads, with their model names.
+
 ## 2026.1108.13 (2026-11-08)
 
 - On Windows, a task's screen recording no longer takes in a moment of your own use of the phone from just before the task started or just after it ended.

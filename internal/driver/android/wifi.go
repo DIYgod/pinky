@@ -18,8 +18,8 @@ import (
 // phone is offline with driver.SetupNetworkOff until it is plugged in and
 // moved to Wi-Fi again.
 
-// WiFi implements driver.WiFiSwitch.
-func (p *Provider) WiFi(ctx context.Context, id string) (driver.WiFiState, error) {
+// PhoneWiFi implements driver.WiFiSwitch.
+func (p *Provider) PhoneWiFi(ctx context.Context, id string) (driver.WiFiState, error) {
 	n, kept := p.net.get(id)
 	on := kept && n.LAN != ""
 	out := driver.WiFiState{On: on, Port: n.port(), Away: n.Tailnet != ""}
@@ -56,12 +56,12 @@ func (p *Provider) WiFi(ctx context.Context, id string) (driver.WiFiState, error
 	return out, nil
 }
 
-// SetWiFi implements driver.WiFiSwitch. On has the phone's adb listen on
-// the network over its cable (or another connection it has) and connects
+// SetPhoneWiFi implements driver.WiFiSwitch. On has the phone's adb listen
+// on the network over its cable (or another connection it has) and connects
 // at its Wi-Fi address; a phone that cannot be reached there stops
 // listening again. Off has its adb stop listening, which also ends its
 // use away from home, and forgets its addresses.
-func (p *Provider) SetWiFi(ctx context.Context, id string, on bool) (driver.WiFiState, error) {
+func (p *Provider) SetPhoneWiFi(ctx context.Context, id string, on bool) (driver.WiFiState, error) {
 	if !on {
 		n, _ := p.net.get(id)
 		if err := p.net.update(id, func(m *netPhone) { *m = netPhone{} }); err != nil {
@@ -72,7 +72,7 @@ func (p *Provider) SetWiFi(ctx context.Context, id string, on bool) (driver.WiFi
 		}
 		// adbd restarts: what the phone says may have to wait, and its
 		// cable's connection may be gone for a moment.
-		st, err := p.WiFi(ctx, id)
+		st, err := p.PhoneWiFi(ctx, id)
 		if err != nil {
 			return driver.WiFiState{Port: AwayPort}, nil
 		}
@@ -122,7 +122,7 @@ func (p *Provider) SetWiFi(ctx context.Context, id string, on bool) (driver.WiFi
 	}
 	p.link.forgive(serial)
 	p.link.soon()
-	return p.WiFi(ctx, id)
+	return p.PhoneWiFi(ctx, id)
 }
 
 // undoListen has the phone's adb stop listening on the network again after

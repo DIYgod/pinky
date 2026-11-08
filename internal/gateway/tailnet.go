@@ -112,25 +112,26 @@ func (g *Gateway) wifiSwitchOf(deviceID string) (*device, driver.WiFiSwitch, err
 	return d, w, nil
 }
 
-// WiFi says whether a phone is moved to Wi-Fi without Wireless debugging
-// (driver.WiFiSwitch), and what keeps it from being moved.
-func (g *Gateway) WiFi(ctx context.Context, deviceID string) (driver.WiFiState, error) {
+// PhoneWiFi says whether a phone is moved to Wi-Fi without Wireless
+// debugging (driver.WiFiSwitch), and what keeps it from being moved. It is
+// not SetWiFi's switch for iPhones over Wi-Fi.
+func (g *Gateway) PhoneWiFi(ctx context.Context, deviceID string) (driver.WiFiState, error) {
 	d, w, err := g.wifiSwitchOf(deviceID)
 	if err != nil {
 		return driver.WiFiState{}, err
 	}
-	return w.WiFi(ctx, d.id)
+	return w.PhoneWiFi(ctx, d.id)
 }
 
-// SetWiFi moves a phone plugged in by cable to Wi-Fi, or stops that. Either
-// restarts the phone's adb, which drops its connections for a moment: a
-// task on it survives that like a short disconnection.
-func (g *Gateway) SetWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error) {
+// SetPhoneWiFi moves a phone plugged in by cable to Wi-Fi, or stops that.
+// Either restarts the phone's adb, which drops its connections for a
+// moment: a task on it survives that like a short disconnection.
+func (g *Gateway) SetPhoneWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error) {
 	d, w, err := g.wifiSwitchOf(deviceID)
 	if err != nil {
 		return driver.WiFiState{}, err
 	}
-	st, err := w.SetWiFi(ctx, d.id, on)
+	st, err := w.SetPhoneWiFi(ctx, d.id, on)
 	g.discover(ctx)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	return st, err

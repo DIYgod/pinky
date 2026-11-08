@@ -71,17 +71,25 @@ func (s *addState) iphone(a *app) *gateway.DeviceView {
 // ready already: the steps then say so, and that another iPhone is added
 // by plugging it in, which they then follow.
 func (s *addState) iphoneFollowed(a *app) (d *gateway.DeviceView, already bool) {
-	if d := s.fresh(a, driver.IOS); d != nil {
-		return d, false
+	// Phones found on Wi-Fi wait above the steps until the person says
+	// they are theirs (foundBox); then the steps follow them.
+	var fresh *gateway.DeviceView
+	for i := range a.devices {
+		if d := &a.devices[i]; !s.known[d.Info.ID] && d.Info.Platform == driver.IOS && !foundOnWiFi(*d) {
+			fresh = d
+		}
+	}
+	if fresh != nil {
+		return fresh, false
 	}
 	for i := range a.devices {
-		if d := &a.devices[i]; s.focus != "" && d.Info.ID == s.focus {
+		if d := &a.devices[i]; s.focus != "" && d.Info.ID == s.focus && !foundOnWiFi(*d) {
 			return d, false
 		}
 	}
 	for i := range a.devices {
 		d := &a.devices[i]
-		if d.Info.Platform == driver.IOS && (d.Info.State == driver.StateUnauthorized || d.Info.State == driver.StateNeedsSetup) {
+		if d.Info.Platform == driver.IOS && (d.Info.State == driver.StateUnauthorized || d.Info.State == driver.StateNeedsSetup) && !foundOnWiFi(*d) {
 			return d, false
 		}
 	}
@@ -132,6 +140,10 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 	d, already := s.iphoneFollowed(a)
 	cur := iphoneStep(d, host)
 	heading(c, locales.AddPhoneIPhoneTitle(), locales.AddPhoneIPhoneDetail())
+	a.foundBox(c)
+	// Which steps need the cable, while Pinky also uses iPhones over Wi-Fi.
+	wifi := a.settings.IOSWiFi
+	onWiFi := d != nil && d.Info.Connection == "wifi"
 
 	if d != nil && d.Info.Setup == driver.SetupUpdate {
 		mg.Column(c).Padding(16, 18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(8).Role(mg.RoleStatus).Children(func() {
@@ -151,7 +163,18 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 		case step == cur:
 			state = guideNow
 		}
-		guideRow(c, n, title, state, body)
+		hint := ""
+		if wifi {
+			switch step {
+			case iphoneTrust:
+				hint = locales.AddPhoneIPhoneStepTrustHint()
+			case iphoneDevMode:
+				hint = locales.AddPhoneIPhoneStepDevModeWiFi()
+			case iphonePrepare:
+				hint = locales.AddPhoneIPhoneStepPrepareWiFi()
+			}
+		}
+		guideRowHint(c, n, title, hint, state, body)
 	}
 	mg.Column(c).Gap(14).Role(mg.RoleList).Label(locales.AddPhoneIPhoneStepsLabel()).Children(func() {
 		if guideOS == "windows" || guideOS == "linux" {
@@ -166,6 +189,9 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 		}
 		row(iphonePlug, locales.AddPhoneIPhoneStepPlug(), func() {
 			guideText(c, locales.AddPhoneIPhoneStepPlugDetail())
+			if wifi && cur == iphonePlug {
+				guideNote(c, locales.AddPhoneIPhoneStepPlugWiFi())
+			}
 			if d != nil && d.Info.State == driver.StateOffline {
 				guideProblem(c, locales.AddPhoneIPhoneNoAnswer(d.Info.Name), d.Info.Detail)
 				return
@@ -181,20 +207,42 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			mg.Text(c, strings.TrimSpace(locales.AddPhoneFoundIOS(d.Info.Name, d.Info.OSVersion))).FontSize(13).TextColor(p.ink2).Margin(-10, 0, 0, 36)
 		}
 		row(iphoneTrust, locales.AddPhoneIPhoneStepTrust(), func() {
+			if onWiFi && cur == iphoneTrust {
+				// It asks only on a cable.
+				guideProblem(c, locales.AddPhoneIPhoneTrustWiFi(d.Info.Name), "")
+				return
+			}
 			guideText(c, locales.AddPhoneIPhoneStepTrustDetail())
+			if wifi {
+				guideNote(c, locales.AddPhoneIPhoneStepTrustCable())
+			}
 			guideWaiting(c, locales.AddPhoneIPhoneStepTrustWaiting())
 		})
 		row(iphoneDevMode, locales.AddPhoneIPhoneStepDevMode(), func() {
 			guideText(c, locales.AddPhoneIPhoneStepDevModeDetail())
-			guideNote(c, locales.AddPhoneIPhoneStepDevModeNote())
+			if onWiFi {
+				// Only a cable lets Pinky make the hidden switch appear.
+				guideNote(c, locales.AddPhoneIPhoneDevModeWiFiNote(d.Info.Name))
+			} else {
+				guideNote(c, locales.AddPhoneIPhoneStepDevModeNote())
+			}
 		})
 		row(iphonePrepare, locales.AddPhoneIPhoneStepPrepare(), func() {
 			guideText(c, locales.AddPhoneIPhoneStepPrepareDetail())
 			switch d.Info.Setup {
 			case driver.SetupPreparing:
 				guideWaiting(c, locales.AddPhoneIPhoneStepPreparing())
+			case driver.SetupDeviceService:
+				// macOS's device service lost it on Wi-Fi (wifi.go).
+				guideProblem(c, locales.LostTitle(d.Info.Name), locales.LostDetail(d.Info.Name))
+				a.restartControls(c, *d, false)
 			case driver.SetupUnlock:
-				guideProblem(c, locales.AddPhoneIPhoneStepUnlock(), "")
+				if lockedOnWiFi(*d) {
+					// Pinky connects to it over Wi-Fi once it is unlocked.
+					guideWaiting(c, locales.AddPhoneIPhoneUnlockWiFi(d.Info.Name))
+				} else {
+					guideProblem(c, locales.AddPhoneIPhoneStepUnlock(), "")
+				}
 			case driver.SetupPasscode:
 				// Driven through the helper, which iOS lets control the
 				// phone only once its passcode is entered.

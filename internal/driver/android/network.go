@@ -54,7 +54,7 @@ type netPhone struct {
 	Name string `json:"name,omitempty"` // for the logs and while it is offline
 	Port int    `json:"port,omitempty"`
 	// LAN is its address on the computer's network, for a phone moved to
-	// Wi-Fi (SetWiFi); "" when Pinky does not reach it there this way.
+	// Wi-Fi (SetPhoneWiFi); "" when Pinky does not reach it there this way.
 	LAN string `json:"lan,omitempty"`
 	// Node and Tailnet are its Tailscale node id and address, for a phone
 	// used away from home (SetAway); "" when it is not.

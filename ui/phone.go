@@ -81,6 +81,22 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.checkupPanel(c, d)
 		return
 	}
+	if d.Status == gateway.DeviceConnecting {
+		a.connectingPage(c, d)
+		return
+	}
+	if lockedOnWiFi(d) {
+		// Locked on Wi-Fi: Pinky waits until it is unlocked (wifi.go).
+		mg.Column(c).AlignItems(mg.Center).Gap(12).MaxWidth(420).Children(func() {
+			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
+				mg.Icon(c, icLock).FontSize(30).TextColor(p.ink3)
+			})
+			mg.Text(c, locales.PhoneLockedWiFiTitle(d.Info.Name)).FontSize(16).FontWeight(600)
+			mg.Text(c, locales.PhoneLockedWiFiDetail()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+			a.removeLink(c, d)
+		})
+		return
+	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		mg.Column(c).AlignItems(mg.Center).Gap(12).Children(func() {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
@@ -108,6 +124,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			}
 			a.removeLink(c, d)
 		})
+		return
+	}
+	if foundOnWiFi(d) {
+		// Found on Wi-Fi, and maybe not the person's (wifi.go).
+		a.foundPage(c, d)
+		return
+	}
+	if lostOnWiFi(d) {
+		// The device service lost it on Wi-Fi (wifi.go).
+		a.lostPage(c, d)
 		return
 	}
 	if d.Info.State != driver.StateOnline {
@@ -324,7 +350,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 	p := pal(c)
 	id := d.Info.ID
 	open := a.more[id]
-	a.wifiOf(c, d) // read before the menu opens, which may offer to move it to Wi-Fi
+	a.phoneWiFiOf(c, d) // read before the menu opens, which may offer to move it to Wi-Fi
 	b := mg.ButtonBase(c.Key("more-"+id)).Size(40, 36).Radius(9).Center().Label(locales.PhoneMoreControls()).Tooltip(locales.PhoneMoreControls())
 	col := p.ink2
 	if b.Hovered() || open {
@@ -345,7 +371,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 			open = false
 			a.openCheckup(d)
 		}
-		a.wifiMenu(c, d, func() { open = false })
+		a.phoneWiFiMenu(c, d, func() { open = false })
 		menuItem(c, locales.PhoneRecordScreen(), p.ink3).Disabled(true).Tooltip(locales.PhoneRecordScreenTooltip())
 		menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 4)

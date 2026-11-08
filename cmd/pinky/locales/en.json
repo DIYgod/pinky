@@ -334,6 +334,24 @@
   "@addPhoneIPhoneDetail": {
     "description": "Add phone › iPhone: the line under the title, above the steps."
   },
+  "addPhoneIPhoneDevModeWiFiNote": "Don't see Developer Mode in Privacy & Security? Plug {name} in once: Pinky can make the switch appear only over the cable.",
+  "@addPhoneIPhoneDevModeWiFiNote": {
+    "description": "Add phone › iPhone and the checkup: under the Developer Mode step of a phone on Wi-Fi. name is its name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "addPhoneIPhoneFoundDetail": "Pinky leaves these alone until you say they're yours. If one is yours, choose Use: Pinky sets it up over Wi-Fi, no cable needed.",
+  "@addPhoneIPhoneFoundDetail": {
+    "description": "Add phone › iPhone: under addPhoneIPhoneFoundTitle."
+  },
+  "addPhoneIPhoneFoundTitle": "Found on Wi-Fi",
+  "@addPhoneIPhoneFoundTitle": {
+    "description": "Add phone › iPhone: above the steps, the iPhones and iPads Pinky found on Wi-Fi and has not used, each with Use and Ignore."
+  },
   "addPhoneIPhoneGetXcode": "Get Xcode in the App Store",
   "@addPhoneIPhoneGetXcode": {
     "description": "Add phone › iPhone, under the preparation step when this computer has no developer disk image (Apple's add-on that gives a phone its developer services; it comes with Xcode): the link that opens Xcode's page in the Mac App Store."
@@ -438,6 +456,10 @@
   "@addPhoneIPhoneStepDevModeNote": {
     "description": "Add phone › iPhone, the step list: a small note under the Developer Mode step: iOS hides the switch until a developer tool asks for it, and Pinky did."
   },
+  "addPhoneIPhoneStepDevModeWiFi": "Done on the iPhone; if the switch isn't there, plug it in once",
+  "@addPhoneIPhoneStepDevModeWiFi": {
+    "description": "Add phone › iPhone: under the Developer Mode step's title while Pinky uses iPhones over Wi-Fi: the person turns it on, on the phone, over Wi-Fi too, but only a cable lets Pinky make the hidden switch appear."
+  },
   "addPhoneIPhoneStepDriver": "Install Apple's iPhone driver",
   "@addPhoneIPhoneStepDriver": {
     "description": "Add phone › iPhone, the step list: the first step on Windows, while Apple's driver (which comes with the Apple Devices app or iTunes) is missing."
@@ -466,6 +488,10 @@
   "@addPhoneIPhoneStepPlugDetail": {
     "description": "Add phone › iPhone, the step list: under the plug-in step."
   },
+  "addPhoneIPhoneStepPlugWiFi": "If it's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode, Pinky finds it there and asks you first, no cable needed.",
+  "@addPhoneIPhoneStepPlugWiFi": {
+    "description": "Add phone › iPhone: a note under the plug-in step while Pinky uses iPhones over Wi-Fi."
+  },
   "addPhoneIPhoneStepPrepare": "Prepare the iPhone",
   "@addPhoneIPhoneStepPrepare": {
     "description": "Add phone › iPhone, the step list: the step Pinky does by itself: mounting Apple's developer disk image on the iPhone."
@@ -473,6 +499,10 @@
   "addPhoneIPhoneStepPrepareDetail": "Pinky mounts Apple's developer disk image on the iPhone, which takes a few seconds. iPhones on iOS 27 keep it when they restart; older ones drop it, and Pinky mounts it again by itself.",
   "@addPhoneIPhoneStepPrepareDetail": {
     "description": "Add phone › iPhone, the step list: under the preparation step. The developer disk image is Apple's add-on that gives a phone its developer services."
+  },
+  "addPhoneIPhoneStepPrepareWiFi": "Also works over Wi-Fi, more slowly",
+  "@addPhoneIPhoneStepPrepareWiFi": {
+    "description": "Add phone › iPhone: under the title of the step where Pinky mounts the developer disk image, while Pinky uses iPhones over Wi-Fi."
   },
   "addPhoneIPhoneStepPreparing": "Preparing the iPhone…",
   "@addPhoneIPhoneStepPreparing": {
@@ -482,9 +512,17 @@
   "@addPhoneIPhoneStepTrust": {
     "description": "Add phone › iPhone, the step list: the step of tapping Trust on the iPhone's “Trust This Computer?” question."
   },
+  "addPhoneIPhoneStepTrustCable": "This step needs the cable: an iPhone asks to trust a computer only while it's plugged in.",
+  "@addPhoneIPhoneStepTrustCable": {
+    "description": "Add phone › iPhone: a note under the trust step."
+  },
   "addPhoneIPhoneStepTrustDetail": "When the iPhone asks “Trust This Computer?”, tap Trust and enter its passcode. If it does not ask, unlock it; if you tapped Don't Trust, unplug it and plug it in again.",
   "@addPhoneIPhoneStepTrustDetail": {
     "description": "Add phone › iPhone, the step list: under the Trust step. “Trust This Computer?”, Trust and Don't Trust are the iPhone's own words; use the words iOS shows in your language."
+  },
+  "addPhoneIPhoneStepTrustHint": "Needs the cable",
+  "@addPhoneIPhoneStepTrustHint": {
+    "description": "Add phone › iPhone: under the trust step's title while Pinky uses iPhones over Wi-Fi: this step needs the iPhone plugged in."
   },
   "addPhoneIPhoneStepTrustWaiting": "Waiting for the iPhone to trust this computer…",
   "@addPhoneIPhoneStepTrustWaiting": {
@@ -531,6 +569,26 @@
       "name": {
         "type": "String",
         "example": "iPhone 8"
+      }
+    }
+  },
+  "addPhoneIPhoneTrustWiFi": "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust.",
+  "@addPhoneIPhoneTrustWiFi": {
+    "description": "Add phone › iPhone and the phone's page: an iPhone on Wi-Fi that no longer trusts this computer. name is its name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "addPhoneIPhoneUnlockWiFi": "Unlock {name}: Pinky connects to it over Wi-Fi once it's unlocked.",
+  "@addPhoneIPhoneUnlockWiFi": {
+    "description": "Add phone › iPhone: the phone the steps follow is on Wi-Fi and locked. name is its name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
       }
     }
   },
@@ -2338,6 +2396,94 @@
   "@flyoutUnlock": {
     "description": "Menu bar flyout: the action at the end of a locked phone's Needs you row; a click opens the phone to unlock it."
   },
+  "foundDetail": "It's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode. Pinky hasn't used it, so it leaves it alone until you say it's yours: it doesn't connect to it, change anything on it or let agents use it.",
+  "@foundDetail": {
+    "description": "Under foundTitle, and in Add phone and the checkup: why Pinky waits for the person."
+  },
+  "foundIgnore": "Ignore",
+  "@foundIgnore": {
+    "description": "The button that leaves a phone Pinky found on Wi-Fi alone: it goes off the list until it is plugged in."
+  },
+  "foundIgnoreFailed": "Couldn't ignore {name}: {error}",
+  "@foundIgnoreFailed": {
+    "description": "A notice when choosing Ignore for a phone found on Wi-Fi failed. name is the phone's name, error what went wrong.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone does not answer"
+      }
+    }
+  },
+  "foundIgnoreLabel": "Ignore {name}",
+  "@foundIgnoreLabel": {
+    "description": "What assistive technology reads for foundIgnore. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "foundIgnoreNote": "If you ignore it, it stays off the list until you plug it into this computer.",
+  "@foundIgnoreNote": {
+    "description": "Under the Use and Ignore buttons of a phone found on Wi-Fi."
+  },
+  "foundIgnored": "Ignoring {name}. To use it after all, plug it in.",
+  "@foundIgnored": {
+    "description": "A notice after the person chose Ignore for a phone found on Wi-Fi. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "foundTitle": "Found {phone} on Wi-Fi",
+  "@foundTitle": {
+    "description": "The page of a phone Pinky found on Wi-Fi and has not used. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "foundUse": "Use",
+  "@foundUse": {
+    "description": "The button that lets Pinky use a phone it found on Wi-Fi: the person says it is theirs. Pinky then sets it up and connects to it."
+  },
+  "foundUseFailed": "Couldn't use {name}: {error}",
+  "@foundUseFailed": {
+    "description": "A notice when choosing Use for a phone found on Wi-Fi failed. name is the phone's name, error what went wrong.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone does not answer"
+      }
+    }
+  },
+  "foundUseLabel": "Use {name}",
+  "@foundUseLabel": {
+    "description": "What assistive technology reads for foundUse. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "foundUseNote": "Pinky then sets it up over Wi-Fi; a step that needs the cable says so.",
+  "@foundUseNote": {
+    "description": "Under the Use and Ignore buttons of a phone found on Wi-Fi: what Use does."
+  },
   "guideHonorAbout": "Settings › About phone",
   "@guideHonorAbout": {
     "description": "Add phone › Android, step 1 on HONOR phones: where the item to tap 7 times is. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
@@ -3252,6 +3398,14 @@
       }
     }
   },
+  "gwStatusConnecting": "Connecting",
+  "@gwStatusConnecting": {
+    "description": "A phone's status line while Pinky opens it (listed and ready, online in a moment). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusFoundOnWiFi": "Found on Wi-Fi",
+  "@gwStatusFoundOnWiFi": {
+    "description": "A phone's status line: Pinky found it on Wi-Fi and waits for the person to say whether it is theirs. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStatusIdle": "Idle",
   "@gwStatusIdle": {
     "description": "A phone's status line: nothing runs on it. Shown only in other languages; in English the gateway's own words show."
@@ -3274,6 +3428,10 @@
   "@gwStatusLocked": {
     "description": "A phone's status line: the phone is locked. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwStatusLockedOnWiFi": "Locked on Wi-Fi",
+  "@gwStatusLockedOnWiFi": {
+    "description": "A phone's status line: an iPhone or iPad on Wi-Fi that is locked, which Pinky connects to only once it is unlocked (so as not to wake its screen). Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStatusLockedTask": "Locked · unlock to continue {task}",
   "@gwStatusLockedTask": {
     "description": "A phone's status line: the phone is locked and a task waits. Shown only in other languages; in English the gateway's own words show.",
@@ -3283,6 +3441,18 @@
         "example": "Reorder lunch"
       }
     }
+  },
+  "gwStatusLostOnWiFi": "Lost on Wi-Fi",
+  "@gwStatusLostOnWiFi": {
+    "description": "A phone's status line: the Mac's device service (usbmuxd) stopped listing an iPhone that is on the same Wi-Fi. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusMovingCable": "Moving to the cable",
+  "@gwStatusMovingCable": {
+    "description": "A phone's status line while Pinky opens it again over its cable after it was plugged in. Shown only in other languages."
+  },
+  "gwStatusMovingWiFi": "Moving to Wi-Fi",
+  "@gwStatusMovingWiFi": {
+    "description": "A phone's status line while Pinky opens it again over Wi-Fi after its cable was pulled. Shown only in other languages."
   },
   "gwStatusNeedsSetup": "Needs setup",
   "@gwStatusNeedsSetup": {
@@ -3579,6 +3749,80 @@
   "listSeparator": ", ",
   "@listSeparator": {
     "description": "Joins the names of a list before its last one (see listMany)."
+  },
+  "lostConfirmButton": "Restart",
+  "@lostConfirmButton": {
+    "description": "The button of the dialog that restarts macOS's device service."
+  },
+  "lostConfirmMessage": "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two, and tasks on them wait. Then macOS asks for an administrator's password.",
+  "@lostConfirmMessage": {
+    "description": "The message of the dialog that asks before Pinky restarts macOS's device service. phone is the lost iPhone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "lostConfirmTitle": "Restart the device service?",
+  "@lostConfirmTitle": {
+    "description": "The dialog that asks before Pinky restarts macOS's device service."
+  },
+  "lostDetail": "{phone} is on the same Wi-Fi, but macOS's device service (usbmuxd) stopped listing it after its connection broke once, and may not list it again for up to an hour. Restarting the service makes it look again.",
+  "@lostDetail": {
+    "description": "Under lostTitle, and in Add phone and the checkup. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "lostManual": "Or restart it yourself: run sudo killall usbmuxd in Terminal.",
+  "@lostManual": {
+    "description": "Under the restart button, or in its place where Pinky cannot restart the service itself."
+  },
+  "lostReason": "Pinky wants to restart the device service (usbmuxd) so that this Mac finds your iPhone on Wi-Fi again.",
+  "@lostReason": {
+    "description": "Shown in macOS's own request for an administrator's password when Pinky restarts the device service."
+  },
+  "lostRestart": "Restart device service…",
+  "@lostRestart": {
+    "description": "The button that restarts macOS's device service (usbmuxd) so it finds a lost iPhone again; it asks first."
+  },
+  "lostRestartFailed": "Couldn't restart the device service: {error}",
+  "@lostRestartFailed": {
+    "description": "A notice when restarting macOS's device service failed. error is what went wrong.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "osascript: the command failed"
+      }
+    }
+  },
+  "lostRestartNote": "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an administrator's password.",
+  "@lostRestartNote": {
+    "description": "Under the Restart device service button."
+  },
+  "lostRestarted": "Restarted the device service. {phone} shows up again in a few seconds.",
+  "@lostRestarted": {
+    "description": "A notice after Pinky restarted macOS's device service. phone is the lost iPhone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "lostTitle": "This Mac lost {phone} on Wi-Fi",
+  "@lostTitle": {
+    "description": "The page of an iPhone that macOS's device service stopped listing though it is on the same Wi-Fi. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
   },
   "menuActivity": "Activity",
   "@menuActivity": {
@@ -4462,6 +4706,20 @@
       }
     }
   },
+  "phoneConnectingTask": "The task on it waits until it's connected.",
+  "@phoneConnectingTask": {
+    "description": "Under the connecting page's title when an agent's task runs on the phone."
+  },
+  "phoneConnectingTitle": "Connecting to {phone}…",
+  "@phoneConnectingTitle": {
+    "description": "The page of a phone Pinky is opening. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
   "phoneHandBack": "Hand back",
   "@phoneHandBack": {
     "description": "Button that gives the phone back to the agents after the person took over: on the banner above the mirror and on All phones tiles."
@@ -4488,9 +4746,43 @@
       }
     }
   },
+  "phoneLockedWiFiDetail": "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn't wake its screen.",
+  "@phoneLockedWiFiDetail": {
+    "description": "Under phoneLockedWiFiTitle."
+  },
+  "phoneLockedWiFiTitle": "{phone} is locked",
+  "@phoneLockedWiFiTitle": {
+    "description": "The page of an iPhone or iPad on Wi-Fi that is locked, which Pinky connects to only once it is unlocked. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
   "phoneMoreControls": "More phone controls",
   "@phoneMoreControls": {
     "description": "The accessibility label and tooltip of the ⋯ button under the mirror, which opens Take screenshot, Record screen, Rotate and Work in the background."
+  },
+  "phoneMovingCableTitle": "Moving {phone} to the cable…",
+  "@phoneMovingCableTitle": {
+    "description": "The page of a phone that was plugged in, while Pinky opens it again over the cable. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "phoneMovingWiFiTitle": "Moving {phone} to Wi-Fi…",
+  "@phoneMovingWiFiTitle": {
+    "description": "The page of a phone whose cable was pulled, while Pinky opens it again over Wi-Fi. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
   },
   "phoneNeedsSetup": "{phone} needs setup",
   "@phoneNeedsSetup": {
@@ -5686,6 +5978,14 @@
   "@settingsPhonesConnected": {
     "description": "Settings › Phones: the state at the end of a phone's row, next to a green dot: online and ready."
   },
+  "settingsPhonesConnecting": "Connecting…",
+  "@settingsPhonesConnecting": {
+    "description": "Settings › Phones: the status of a phone Pinky is opening."
+  },
+  "settingsPhonesFound": "Found on Wi-Fi",
+  "@settingsPhonesFound": {
+    "description": "Settings › Phones: the status of a phone Pinky found on Wi-Fi and has not used; Use and Ignore follow it."
+  },
   "settingsPhonesIntro": "Phones this computer can reach.",
   "@settingsPhonesIntro": {
     "description": "Settings › Phones: the line under the page title."
@@ -5701,6 +6001,14 @@
   "settingsPhonesOffline": "Offline",
   "@settingsPhonesOffline": {
     "description": "Settings › Phones: the state at the end of a phone's row, next to a hollow dot: not reachable."
+  },
+  "settingsPhonesWiFi": "Use iPhones and iPads over Wi-Fi",
+  "@settingsPhonesWiFi": {
+    "description": "Settings › Phones: the switch that lets Pinky reach iPhones and iPads over Wi-Fi when this computer finds them there, besides the cable."
+  },
+  "settingsPhonesWiFiDesc": "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer. Pinky asks before it uses one it finds there. Over Wi-Fi the live picture is less smooth and each step is slower.",
+  "@settingsPhonesWiFiDesc": {
+    "description": "Settings › Phones: under settingsPhonesWiFi."
   },
   "settingsPrivacyCannotDelete": "This gateway cannot delete its history",
   "@settingsPrivacyCannotDelete": {

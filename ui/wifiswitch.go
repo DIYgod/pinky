@@ -16,19 +16,19 @@ import (
 // Wi-Fi for Android phones without Wireless debugging (Android 10): Use
 // Wi-Fi instead in the ⋯ menu under the mirror, in Settings › Phones and
 // at the end of Add phone moves a phone on a cable to Wi-Fi (the gateway's
-// SetWiFi: adb tcpip, then a connection at its Wi-Fi address), after a
+// SetPhoneWiFi: adb tcpip, then a connection at its Wi-Fi address), after a
 // dialog that says what it opens; Stop the Wi-Fi connection undoes it. A
 // phone whose Wi-Fi connection stopped (it restarted) says on its page to
 // plug it in once and choose Use Wi-Fi again.
 
 // wifiSwitcher is a gateway that moves phones to Wi-Fi this way.
 type wifiSwitcher interface {
-	WiFi(ctx context.Context, deviceID string) (driver.WiFiState, error)
-	SetWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error)
+	PhoneWiFi(ctx context.Context, deviceID string) (driver.WiFiState, error)
+	SetPhoneWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error)
 }
 
-// wifiState is the client's part of it, by phone.
-type wifiState struct {
+// phoneWiFiState is the client's part of it, by phone.
+type phoneWiFiState struct {
 	got     map[string]driver.WiFiState
 	at      map[string]time.Time
 	loading map[string]bool
@@ -41,7 +41,7 @@ type wifiState struct {
 	askOpen bool
 }
 
-func (s *wifiState) init() {
+func (s *phoneWiFiState) init() {
 	if s.got != nil {
 		return
 	}
@@ -67,11 +67,11 @@ func noWirelessDebugging(d gateway.DeviceView) bool {
 	return err == nil && n < 11
 }
 
-// wifiOf returns what the gateway last said about a phone's Wi-Fi switch,
+// phoneWiFiOf returns what the gateway last said about a phone's Wi-Fi switch,
 // and reads it again off the main thread when it is old.
-func (a *app) wifiOf(c *mg.Context, d gateway.DeviceView) (driver.WiFiState, bool) {
+func (a *app) phoneWiFiOf(c *mg.Context, d gateway.DeviceView) (driver.WiFiState, bool) {
 	ws, ok := a.api.(wifiSwitcher)
-	s := &a.wifi
+	s := &a.phoneWiFi
 	if !ok || d.Info.Platform != driver.Android {
 		return driver.WiFiState{}, false
 	}
@@ -82,7 +82,7 @@ func (a *app) wifiOf(c *mg.Context, d gateway.DeviceView) (driver.WiFiState, boo
 		go func() {
 			ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
 			defer cancel()
-			st, err := ws.WiFi(ctx, id)
+			st, err := ws.PhoneWiFi(ctx, id)
 			a.post(func() {
 				s.loading[id], s.at[id] = false, time.Now()
 				if err == nil {
@@ -98,53 +98,53 @@ func (a *app) wifiOf(c *mg.Context, d gateway.DeviceView) (driver.WiFiState, boo
 	return st, have
 }
 
-// wifiOffered reports whether a phone shows the Wi-Fi switch: one without
+// phoneWiFiOffered reports whether a phone shows the Wi-Fi switch: one without
 // Wireless debugging on a cable, or one moved to Wi-Fi already.
-func wifiOffered(d gateway.DeviceView, st driver.WiFiState) bool {
+func phoneWiFiOffered(d gateway.DeviceView, st driver.WiFiState) bool {
 	return st.On || (noWirelessDebugging(d) && d.Info.Connection == "usb")
 }
 
-// wifiMenu is the switch in the ⋯ menu under the mirror; close closes the
+// phoneWiFiMenu is the switch in the ⋯ menu under the mirror; close closes the
 // menu.
-func (a *app) wifiMenu(c *mg.Context, d gateway.DeviceView, close func()) {
-	st, have := a.wifiOf(c, d)
-	if !have || !wifiOffered(d, st) || a.wifi.busy[d.Info.ID] {
+func (a *app) phoneWiFiMenu(c *mg.Context, d gateway.DeviceView, close func()) {
+	st, have := a.phoneWiFiOf(c, d)
+	if !have || !phoneWiFiOffered(d, st) || a.phoneWiFi.busy[d.Info.ID] {
 		return
 	}
 	switch {
 	case st.Stopped && d.Info.Connection == "usb":
 		if menuItem(c, locales.WiFiUseAgain(), mg.Color{}).Clicked() {
 			close()
-			a.setWiFi(d, true)
+			a.setPhoneWiFi(d, true)
 		}
 	case st.On:
 		if menuItem(c, locales.WiFiStop(), mg.Color{}).Clicked() {
 			close()
-			a.setWiFi(d, false)
+			a.setPhoneWiFi(d, false)
 		}
 	case st.Missing == "":
 		if menuItem(c, locales.WiFiUse(), mg.Color{}).Clicked() {
 			close()
-			a.askWiFi(d)
+			a.askPhoneWiFi(d)
 		}
 	}
 }
 
-// askWiFi opens the dialog that moves a phone to Wi-Fi.
-func (a *app) askWiFi(d gateway.DeviceView) {
-	s := &a.wifi
+// askPhoneWiFi opens the dialog that moves a phone to Wi-Fi.
+func (a *app) askPhoneWiFi(d gateway.DeviceView) {
+	s := &a.phoneWiFi
 	s.init()
 	s.ask, s.askName, s.askOpen = d.Info.ID, d.Info.Name, true
 }
 
-// wifiRow is a phone's Wi-Fi switch in Settings › Phones.
-func (a *app) wifiRow(c *mg.Context, d gateway.DeviceView) {
-	st, have := a.wifiOf(c, d)
+// phoneWiFiRow is a phone's Wi-Fi switch in Settings › Phones.
+func (a *app) phoneWiFiRow(c *mg.Context, d gateway.DeviceView) {
+	st, have := a.phoneWiFiOf(c, d)
 	if !have || !(st.On || noWirelessDebugging(d)) {
 		return
 	}
 	p := pal(c)
-	s := &a.wifi
+	s := &a.phoneWiFi
 	id, name := d.Info.ID, d.Info.Name
 	usb := d.Info.Connection == "usb" && d.Status != gateway.DeviceOffline
 	var desc string
@@ -157,7 +157,7 @@ func (a *app) wifiRow(c *mg.Context, d gateway.DeviceView) {
 		if usb {
 			action = func() {
 				if button(c, locales.WiFiUseAgain(), btnOpt{small: true, kind: btnPrimary}).Clicked() {
-					a.setWiFi(d, true)
+					a.setPhoneWiFi(d, true)
 				}
 			}
 		}
@@ -168,7 +168,7 @@ func (a *app) wifiRow(c *mg.Context, d gateway.DeviceView) {
 		}
 		action = func() {
 			if button(c, locales.WiFiStop(), btnOpt{small: true}).Clicked() {
-				a.setWiFi(d, false)
+				a.setPhoneWiFi(d, false)
 			}
 		}
 	case st.Missing == driver.WiFiNoWiFi:
@@ -179,7 +179,7 @@ func (a *app) wifiRow(c *mg.Context, d gateway.DeviceView) {
 		desc = locales.WiFiOffDesc(name)
 		action = func() {
 			if button(c, locales.WiFiUse(), btnOpt{small: true}).Clicked() {
-				a.askWiFi(d)
+				a.askPhoneWiFi(d)
 			}
 		}
 	}
@@ -201,10 +201,10 @@ func (a *app) wifiRow(c *mg.Context, d gateway.DeviceView) {
 	})
 }
 
-// setWiFi moves a phone to Wi-Fi, or stops that.
-func (a *app) setWiFi(d gateway.DeviceView, on bool) {
+// setPhoneWiFi moves a phone to Wi-Fi, or stops that.
+func (a *app) setPhoneWiFi(d gateway.DeviceView, on bool) {
 	ws, ok := a.api.(wifiSwitcher)
-	s := &a.wifi
+	s := &a.phoneWiFi
 	id, name := d.Info.ID, d.Info.Name
 	if !ok || s.busy[id] {
 		return
@@ -214,7 +214,7 @@ func (a *app) setWiFi(d gateway.DeviceView, on bool) {
 	go func() {
 		ctx, cancel := context.WithTimeout(a.ctx, time.Minute)
 		defer cancel()
-		st, err := ws.SetWiFi(ctx, id, on)
+		st, err := ws.SetPhoneWiFi(ctx, id, on)
 		a.post(func() {
 			s.busy[id] = false
 			s.at[id] = time.Time{}
@@ -236,9 +236,9 @@ func (a *app) setWiFi(d gateway.DeviceView, on bool) {
 	}()
 }
 
-// wifiDialog asks before a phone's adb listens on the network.
-func (a *app) wifiDialog(c *mg.Context) {
-	s := &a.wifi
+// phoneWiFiDialog asks before a phone's adb listens on the network.
+func (a *app) phoneWiFiDialog(c *mg.Context) {
+	s := &a.phoneWiFi
 	if !s.askOpen {
 		return
 	}
@@ -267,7 +267,7 @@ func (a *app) wifiDialog(c *mg.Context) {
 				}
 				if button(c, locales.WiFiDialogConfirm(), btnOpt{kind: btnPrimary}).Clicked() {
 					s.askOpen = false
-					a.setWiFi(*d, true)
+					a.setPhoneWiFi(*d, true)
 				}
 			})
 		})
@@ -296,15 +296,15 @@ func networkOfflineText(d gateway.DeviceView) string {
 // addAndroidWiFi is the end of Add phone › Android for a phone without
 // Wireless debugging on a cable: how to use it without the cable.
 func (a *app) addAndroidWiFi(c *mg.Context, d gateway.DeviceView) {
-	st, have := a.wifiOf(c, d)
+	st, have := a.phoneWiFiOf(c, d)
 	if !have || st.On || st.Missing != "" || !noWirelessDebugging(d) || d.Info.Connection != "usb" {
 		return
 	}
 	mg.Column(c).Gap(8).Children(func() {
 		guideNote(c, locales.AddAndroidNoWirelessDebugging())
 		mg.Row(c).Children(func() {
-			if button(c, locales.WiFiUse(), btnOpt{small: true}).Disabled(a.wifi.busy[d.Info.ID]).Clicked() {
-				a.askWiFi(d)
+			if button(c, locales.WiFiUse(), btnOpt{small: true}).Disabled(a.phoneWiFi.busy[d.Info.ID]).Clicked() {
+				a.askPhoneWiFi(d)
 			}
 		})
 	})

@@ -39,7 +39,7 @@ func (d *Device) Locked(ctx context.Context) (bool, error) {
 	}()
 	select {
 	case r := <-ch:
-		return r.v, r.err
+		return r.v, d.gone(r.err)
 	case <-ctx.Done():
 		return false, ctx.Err()
 	}

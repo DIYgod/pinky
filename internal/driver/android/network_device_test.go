@@ -38,10 +38,10 @@ func TestDeviceWiFiSwitch(t *testing.T) {
 	if _, err := p.List(ctx); err != nil {
 		t.Fatal(err)
 	}
-	st, err := p.WiFi(ctx, id)
+	st, err := p.PhoneWiFi(ctx, id)
 	t.Logf("before: %+v, %v", st, err)
 	start := time.Now()
-	st, err = p.SetWiFi(ctx, id, true)
+	st, err = p.SetPhoneWiFi(ctx, id, true)
 	if err != nil || !st.On || !st.Connected {
 		t.Fatalf("on: %+v, %v", st, err)
 	}
@@ -85,7 +85,7 @@ func TestDeviceWiFiSwitch(t *testing.T) {
 		}
 	}
 	if os.Getenv("PINKY_WIFI_OFF") == "1" {
-		st, err = p.SetWiFi(ctx, id, false)
+		st, err = p.SetPhoneWiFi(ctx, id, false)
 		t.Logf("off: %+v, %v", st, err)
 		if err != nil || st.On {
 			t.Errorf("off: %+v, %v", st, err)
@@ -353,7 +353,7 @@ func TestDeviceWiFiWatch(t *testing.T) {
 		}
 		time.Sleep(2 * time.Second)
 	}
-	if st, err := p.WiFi(ctx, id); err == nil {
+	if st, err := p.PhoneWiFi(ctx, id); err == nil {
 		t.Logf("at the end: %+v", st)
 	}
 }
@@ -489,19 +489,19 @@ func TestDeviceWiFiAgain(t *testing.T) {
 	if _, err := p.List(ctx); err != nil {
 		t.Fatal(err)
 	}
-	st, err := p.WiFi(ctx, id)
+	st, err := p.PhoneWiFi(ctx, id)
 	t.Logf("plugged in after the restart: %+v, %v", st, err)
 	if !st.On || !st.Stopped {
 		t.Errorf("not said to have stopped: %+v", st)
 	}
 	start := time.Now()
-	st, err = p.SetWiFi(ctx, id, true)
+	st, err = p.SetPhoneWiFi(ctx, id, true)
 	if err != nil || !st.Connected {
 		t.Fatalf("again: %+v, %v", st, err)
 	}
 	t.Logf("on again in %v: %+v", time.Since(start).Round(time.Millisecond), st)
 	if os.Getenv("PINKY_WIFI_OFF") == "1" {
-		st, err = p.SetWiFi(ctx, id, false)
+		st, err = p.SetPhoneWiFi(ctx, id, false)
 		t.Logf("off: %+v, %v", st, err)
 	}
 }

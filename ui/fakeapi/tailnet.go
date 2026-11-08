@@ -185,9 +185,9 @@ func (a *API) RestartOnWiFi(deviceID string) {
 	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
 }
 
-// WiFi implements the client's wifiSwitcher: an Android phone on a cable
-// can be moved to Wi-Fi.
-func (a *API) WiFi(ctx context.Context, deviceID string) (driver.WiFiState, error) {
+// PhoneWiFi implements the client's wifiSwitcher: an Android phone on a
+// cable can be moved to Wi-Fi.
+func (a *API) PhoneWiFi(ctx context.Context, deviceID string) (driver.WiFiState, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	d := a.device(deviceID)
@@ -208,10 +208,10 @@ func (a *API) WiFi(ctx context.Context, deviceID string) (driver.WiFiState, erro
 	return st, nil
 }
 
-// SetWiFi implements the client's wifiSwitcher, taking a moment as adb
+// SetPhoneWiFi implements the client's wifiSwitcher, taking a moment as adb
 // restarts.
-func (a *API) SetWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error) {
-	st, err := a.WiFi(ctx, deviceID)
+func (a *API) SetPhoneWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error) {
+	st, err := a.PhoneWiFi(ctx, deviceID)
 	if err != nil {
 		return st, err
 	}

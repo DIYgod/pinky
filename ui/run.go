@@ -112,6 +112,9 @@ type Settings struct {
 	// KeepAwakeAway keeps the computer from idle sleep while a phone is
 	// connected through Tailscale, away from its network.
 	KeepAwakeAway bool
+	// IOSWiFi uses iPhones and iPads over Wi-Fi when this computer reaches
+	// them there (gateway.SetWiFi); off, only on a cable.
+	IOSWiFi bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -141,8 +144,10 @@ func DefaultSettings() Settings {
 			{Name: "Northbank", Kind: "Banking"}, {Name: "Vaultly", Kind: "Passwords"}, {Name: "Coinpouch", Kind: "Wallet"},
 		},
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
-		UsageStats: usageStatsByDefault,
-		AutoUpdate: true, KeepAwakeAway: true,
+		UsageStats:    usageStatsByDefault,
+		AutoUpdate:    true,
+		KeepAwakeAway: true,
+		IOSWiFi:       true,
 	}
 }
 
@@ -212,6 +217,7 @@ type app struct {
 	chk      checkupState    // the phones' checkups
 	more     map[string]bool // the More phone controls popover, per device
 	rm       removeState     // the Remove this phone dialog (removephone.go)
+	found    foundState      // phones found on Wi-Fi: Use and Ignore on their way (wifi.go)
 	toasts   []string
 
 	// control is the banner above each phone's mirror as it shows, which
@@ -242,17 +248,17 @@ type app struct {
 	postWin *mygo.Window // the main window, once ready made it; post waits for it
 	early   []func()     // posts made before that
 
-	pin    pinState       // PINs for unlocking from this computer
-	t      telState       // usage statistics, crash reports and feedback
-	comp   companionState // the Android companion app, per phone
-	bg     bgState        // background displays, per phone
-	conn   connState      // iPhones: how Pinky connects, per phone
-	rec    recState       // task recordings in Activity
-	remote remoteState    // Settings › Agents › Remote agents
-	setup  setupState     // Settings › Agents › Connect an agent, and the sidebar's card
-	upd    updateState    // new versions of Pinky and the companion app
-	tn     tailnetState   // phones away from this computer's network, through Tailscale
-	wifi   wifiState      // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
+	pin       pinState       // PINs for unlocking from this computer
+	t         telState       // usage statistics, crash reports and feedback
+	comp      companionState // the Android companion app, per phone
+	bg        bgState        // background displays, per phone
+	conn      connState      // iPhones: how Pinky connects, per phone
+	rec       recState       // task recordings in Activity
+	remote    remoteState    // Settings › Agents › Remote agents
+	setup     setupState     // Settings › Agents › Connect an agent, and the sidebar's card
+	upd       updateState    // new versions of Pinky and the companion app
+	tn        tailnetState   // phones away from this computer's network, through Tailscale
+	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 
 	awake   func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
 	awakeOn bool

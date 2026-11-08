@@ -160,6 +160,12 @@ func connectionLine(d gateway.DeviceView) string {
 	kind := "Android"
 	if d.Info.Platform == driver.IOS {
 		kind = "iPhone"
+		if strings.HasPrefix(d.Info.Model, "iPad") {
+			kind = "iPad"
+		}
+	}
+	if lockedOnWiFi(d) || d.Status == gateway.DeviceConnecting {
+		return kind + " · " + statusLine(d)
 	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		return locales.ConnectionOffline(kind)
@@ -184,6 +190,9 @@ func osLine(d gateway.DeviceView) string {
 		kind = "iOS"
 	}
 	s := strings.TrimSpace(kind + " " + d.Info.OSVersion)
+	if lockedOnWiFi(d) {
+		return s + " · " + statusLine(d)
+	}
 	if d.Status == gateway.DeviceOffline {
 		if d.Info.Detail != "" {
 			return s + " · " + lowerFirst(d.Info.Detail)

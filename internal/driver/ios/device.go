@@ -241,6 +241,24 @@ func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
 // Info implements driver.Device.
 func (d *Device) Info() driver.Info { return d.info }
 
+// gone wraps err as driver.ErrOffline once the connection the device was
+// opened over is gone: its tunnel stopped, as it does when the cable is
+// pulled or the phone leaves the network. Calls then fail in many ways (a
+// lockdown connection refused, a service that does not answer); the
+// gateway reads driver.ErrOffline as the phone having dropped, and opens it
+// again over the connection it is on now.
+func (d *Device) gone(err error) error {
+	if err == nil || errors.Is(err, driver.ErrOffline) || d.l == nil || d.l.tunnel == nil {
+		return err
+	}
+	select {
+	case <-d.l.tunnel.Done():
+		return fmt.Errorf("%v: %w", err, driver.ErrOffline)
+	default:
+	}
+	return err
+}
+
 // Stream implements driver.Device. Each call returns a new view of the
 // device's stream that starts at the next keyframe. Closing the view does
 // not stop the device's stream, which HID input needs; it stops once no

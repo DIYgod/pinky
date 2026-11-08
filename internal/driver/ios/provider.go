@@ -21,12 +21,13 @@ import (
 const minIOS = 27
 
 // Provider discovers iPhones through usbmuxd (Apple Devices on Windows,
-// usbmuxd on Linux, built in on macOS).
+// usbmuxd on Linux, built in on macOS): on a cable, and over Wi-Fi once
+// SetWiFi turns that on (wifi.go).
 type Provider struct {
-	// Wireless also lists devices usbmuxd reaches over Wi-Fi. It is off by
-	// default: those include every iPad and iPhone ever paired with Xcode
-	// or Finder over the network, and the gateway opens whatever it lists.
-	Wireless bool
+	// Only, when set, limits the provider to these phones, by UDID: it does
+	// not look at the others usbmuxd lists at all, not even their names
+	// (PINKY_DEVICES, tests).
+	Only map[string]bool
 
 	// DiskImageDir is Pinky's own folder for Apple's developer disk image
 	// (an iOS_DDI folder in it), looked in before Xcode's; "" for none.
@@ -56,8 +57,11 @@ type Provider struct {
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
 
-	prep       preparer // Developer Mode and the developer disk image (prepare.go)
-	muxErr     error    // usbmuxd's answer to the last List
+	wifi       wifiState                                               // phones over Wi-Fi (wifi.go)
+	lost       lostState                                               // phones usbmuxd lost on Wi-Fi (lost.go)
+	restartFn  func(ctx context.Context, command, reason string) error // for tests: runAsAdmin
+	prep       preparer                                                // Developer Mode and the developer disk image (prepare.go)
+	muxErr     error                                                   // usbmuxd's answer to the last List
 	muxChecked bool
 	muxFails   int                              // Lists in a row that usbmuxd did not answer
 	muxPhones  int                              // phones the last answered List found
@@ -136,26 +140,73 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		return nil, err // nil without usbmuxd: CheckHost says what to install
 	}
 	entries := p.entries(list)
+	p.noteWiFiListing(entries)
 	out := make([]driver.Info, len(entries))
+	listed := make([]bool, len(entries))
 	var wg sync.WaitGroup
 	for i, e := range entries {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			out[i] = p.info(ctx, e)
+			if p.foundOnly(e) {
+				// Over Wi-Fi only, and not the person's yet: its name and
+				// nothing else (wifi.go).
+				out[i], listed[i] = p.foundInfo(ctx, e)
+				return
+			}
+			if e.Properties.ConnectionType == "Network" && p.dozing(e.Properties.SerialNumber) {
+				// Back on Wi-Fi a moment after it dropped off, with no
+				// passcode to tell: most likely asleep (wifi.go).
+				return
+			}
+			out[i], listed[i] = p.info(ctx, e), true
 		}()
 	}
 	wg.Wait()
 	p.forgetExcept(entries)
-	return out, nil
+	kept := out[:0]
+	ids := map[string]bool{}
+	for i, info := range out {
+		if listed[i] {
+			kept = append(kept, info)
+			ids[info.ID] = true
+		}
+	}
+	// Phones on Wi-Fi that dropped off usbmuxd's list a moment ago, as one
+	// that sleeps does (wifi.go).
+	kept = append(kept, p.heldFound(ids)...)
+	kept = append(kept, p.heldAsleep(ids)...)
+	p.remember(kept)
+	// Phones usbmuxd lost on Wi-Fi though they are on the network (lost.go).
+	onMux := map[string]bool{}
+	for _, e := range list {
+		onMux[e.Properties.SerialNumber] = true
+	}
+	for _, info := range p.lostPhones(onMux) {
+		if !ids[info.ID] && (p.Only == nil || p.Only[info.ID]) {
+			kept = append(kept, info)
+		}
+	}
+	return kept, nil
+}
+
+// foundOnly reports whether Pinky reaches the phone behind e only over
+// Wi-Fi and may not prepare or open it yet (wifi.go).
+func (p *Provider) foundOnly(e goios.DeviceEntry) bool {
+	return e.Properties.ConnectionType == "Network" && !p.usesOverWiFi(e.Properties.SerialNumber)
 }
 
 // entries picks one usbmuxd entry per phone, sorted by UDID. A phone on USB
-// and Wi-Fi at once is listed twice; USB wins.
+// and Wi-Fi at once is listed twice; USB wins. Entries over the network
+// count only while Pinky uses phones over Wi-Fi, and not for phones the
+// person removed or ignored (wifi.go).
 func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 	byID := map[string]goios.DeviceEntry{}
 	for _, e := range list {
-		if e.Properties.ConnectionType == "Network" && !p.Wireless {
+		if p.Only != nil && !p.Only[e.Properties.SerialNumber] {
+			continue
+		}
+		if e.Properties.ConnectionType == "Network" && !p.listedOverWiFi(e.Properties.SerialNumber) {
 			continue
 		}
 		id := e.Properties.SerialNumber
@@ -226,6 +277,11 @@ func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 	for id := range p.known {
 		if !listed[id] {
 			delete(p.known, id)
+		}
+	}
+	for id, f := range p.wifi.found {
+		if !listed[id] && p.clock().Sub(f.at) >= foundReread && p.clock().Sub(f.seen) >= foundHold {
+			delete(p.wifi.found, id)
 		}
 	}
 	for id, s := range p.wdaWaits {
@@ -357,11 +413,21 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	if e.Properties.ConnectionType == "Network" {
 		info.Connection = "wifi"
 	}
-	values, err := goios.GetValues(e)
+	values, err := getValues(ctx, e)
 	if err != nil {
+		if held, ok := p.stillAsleep(info.ID); ok && info.Connection == "wifi" {
+			// Locked a moment ago, and asleep: it answers now and then.
+			return held
+		}
 		if !isPairingError(err) {
 			info.State = driver.StateOffline
 			info.Detail = "The iPhone does not answer: " + err.Error()
+			return info
+		}
+		if info.Connection == "wifi" {
+			// The phone asks to trust a computer only on a cable.
+			info = trustState(info, err)
+			info.Detail = trustWiFiDetail
 			return info
 		}
 		p.prep.askTrust(e, p.logger())
@@ -370,6 +436,15 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)
 	info.OSVersion = values.Value.ProductVersion
+	if values.Value.PasswordProtected {
+		p.noteLocked(info.ID) // it has a passcode (wifi.go, dozing)
+		if info.Connection == "wifi" {
+			// Locked on Wi-Fi, most likely asleep: Pinky waits until it
+			// is unlocked (wifi.go).
+			return p.lockedOnWiFi(info)
+		}
+	}
+	p.awake(info.ID)
 	kind, why := pathFor(parseVersion(info.OSVersion))
 	if kind == pathUnsupported {
 		info.State = driver.StateNeedsSetup
@@ -379,7 +454,7 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 		}
 		return info
 	}
-	dev, err := imagemounter.IsDevModeEnabled(e)
+	dev, err := bounded(ctx, lockdownTimeout, func() (bool, error) { return imagemounter.IsDevModeEnabled(e) })
 	if err == nil && !dev {
 		return p.devModeOff(e, info)
 	}
@@ -590,7 +665,11 @@ func (p *Provider) Connections(ctx context.Context, id string) driver.Connection
 	offline := func(c *driver.Connection, err error) {
 		c.Reason, c.Detail = "offline", "The iPhone does not answer: "+err.Error()
 	}
-	e, err := findEntry(id, false)
+	e, err := p.entryFor(id)
+	if err == nil && e.Properties.ConnectionType == "Network" && (!p.listedOverWiFi(id) || !p.usesOverWiFi(id)) {
+		// Not the person's yet, or Wi-Fi is off: nothing is asked of it.
+		err = errors.New("the iPhone is not connected by cable, and Pinky does not use it over Wi-Fi")
+	}
 	if err != nil {
 		offline(&cd, err)
 		offline(&wda, err)
@@ -599,7 +678,7 @@ func (p *Provider) Connections(ctx context.Context, id string) driver.Connection
 	}
 	version := k.info.OSVersion
 	if !seen || version == "" {
-		if values, err := goios.GetValues(e); err == nil {
+		if values, err := getValues(ctx, e); err == nil {
 			version = values.Value.ProductVersion
 		} else {
 			offline(&cd, err)
@@ -689,12 +768,20 @@ func probeServices(ctx context.Context, e goios.DeviceEntry) (bool, error) {
 // Open implements driver.Provider. It checks only the phone it opens, and
 // reuses what List found when the phone's entry has not changed.
 func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
-	entry, err := findEntry(id, false)
+	if p.Only != nil && !p.Only[id] {
+		return nil, fmt.Errorf("%s is not among the phones this provider may use: %w", id, driver.ErrNotFound)
+	}
+	entry, err := p.entryFor(id)
 	if err != nil {
 		return nil, fmt.Errorf("%v: %w", err, driver.ErrNotFound)
 	}
-	if entry.Properties.ConnectionType == "Network" && !p.Wireless {
-		return nil, fmt.Errorf("%s is reachable only over Wi-Fi and Wireless is off: %w", id, driver.ErrNotFound)
+	if entry.Properties.ConnectionType == "Network" {
+		switch {
+		case !p.listedOverWiFi(id):
+			return nil, fmt.Errorf("%s is reachable only over Wi-Fi, which Pinky does not use for it: %w", id, driver.ErrNotFound)
+		case !p.usesOverWiFi(id):
+			return nil, fmt.Errorf("%s was found on Wi-Fi, and the person has not chosen to use it", id)
+		}
 	}
 	info := p.info(ctx, entry)
 	if info.State != driver.StateOnline {
@@ -743,7 +830,8 @@ func major(version string) int {
 }
 
 // modelName turns a product type into a marketing name, for the models
-// Pinky can drive (iOS 17.4 runs on iPhone XS, XR and later).
+// Pinky can drive (iOS 17.4 runs on iPhone XS, XR and later, and iPadOS 17
+// on iPads from 2018 on).
 func modelName(productType string) string {
 	if n, ok := models[productType]; ok {
 		return n
@@ -762,6 +850,27 @@ var models = map[string]string{
 	"iPhone17,1": "iPhone 16 Pro", "iPhone17,2": "iPhone 16 Pro Max", "iPhone17,3": "iPhone 16", "iPhone17,4": "iPhone 16 Plus", "iPhone17,5": "iPhone 16e",
 	"iPhone18,1": "iPhone 17 Pro", "iPhone18,2": "iPhone 17 Pro Max", "iPhone18,3": "iPhone 17", "iPhone18,4": "iPhone Air",
 	"iPhone19,2": "iPhone 18 Pro",
+
+	"iPad7,11": "iPad (7th generation)", "iPad7,12": "iPad (7th generation)",
+	"iPad11,6": "iPad (8th generation)", "iPad11,7": "iPad (8th generation)",
+	"iPad12,1": "iPad (9th generation)", "iPad12,2": "iPad (9th generation)",
+	"iPad13,18": "iPad (10th generation)", "iPad13,19": "iPad (10th generation)",
+	"iPad11,1": "iPad mini (5th generation)", "iPad11,2": "iPad mini (5th generation)",
+	"iPad14,1": "iPad mini (6th generation)", "iPad14,2": "iPad mini (6th generation)",
+	"iPad11,3": "iPad Air (3rd generation)", "iPad11,4": "iPad Air (3rd generation)",
+	"iPad13,1": "iPad Air (4th generation)", "iPad13,2": "iPad Air (4th generation)",
+	"iPad13,16": "iPad Air (5th generation)", "iPad13,17": "iPad Air (5th generation)",
+	"iPad8,1": "iPad Pro 11-inch", "iPad8,2": "iPad Pro 11-inch", "iPad8,3": "iPad Pro 11-inch", "iPad8,4": "iPad Pro 11-inch",
+	"iPad8,9": "iPad Pro 11-inch (2nd generation)", "iPad8,10": "iPad Pro 11-inch (2nd generation)",
+	"iPad13,4": "iPad Pro 11-inch (3rd generation)", "iPad13,5": "iPad Pro 11-inch (3rd generation)",
+	"iPad13,6": "iPad Pro 11-inch (3rd generation)", "iPad13,7": "iPad Pro 11-inch (3rd generation)",
+	"iPad14,3": "iPad Pro 11-inch (4th generation)", "iPad14,4": "iPad Pro 11-inch (4th generation)",
+	"iPad8,5": "iPad Pro 12.9-inch (3rd generation)", "iPad8,6": "iPad Pro 12.9-inch (3rd generation)",
+	"iPad8,7": "iPad Pro 12.9-inch (3rd generation)", "iPad8,8": "iPad Pro 12.9-inch (3rd generation)",
+	"iPad8,11": "iPad Pro 12.9-inch (4th generation)", "iPad8,12": "iPad Pro 12.9-inch (4th generation)",
+	"iPad13,8": "iPad Pro 12.9-inch (5th generation)", "iPad13,9": "iPad Pro 12.9-inch (5th generation)",
+	"iPad13,10": "iPad Pro 12.9-inch (5th generation)", "iPad13,11": "iPad Pro 12.9-inch (5th generation)",
+	"iPad14,5": "iPad Pro 12.9-inch (6th generation)", "iPad14,6": "iPad Pro 12.9-inch (6th generation)",
 }
 
 var (

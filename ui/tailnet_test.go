@@ -164,7 +164,7 @@ func TestUseWiFiInstead(t *testing.T) {
 	ta.sync()
 	ta.selectPhone(id)
 	tt := mg.NewTester(ta.view, 1280, 1000)
-	ta.waitFor(t, "the Wi-Fi switch", func() bool { tt.Frame(); _, ok := ta.wifi.got[id]; return ok })
+	ta.waitFor(t, "the Wi-Fi switch", func() bool { tt.Frame(); _, ok := ta.phoneWiFi.got[id]; return ok })
 	if err := tt.Click(locales.PhoneMoreControls()); err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +196,7 @@ func TestUseWiFiInstead(t *testing.T) {
 
 	// Settings › Phones says the same, and stops it.
 	ta.page, ta.set.sec = pageSettings, secPhones
-	ta.wifi.at[id] = ta.wifi.at[id].AddDate(0, 0, -1)
+	ta.phoneWiFi.at[id] = ta.phoneWiFi.at[id].AddDate(0, 0, -1)
 	ta.waitFor(t, "the row", func() bool { tt.Frame(); return hasText(tt, "Pixel's Wi-Fi connection stopped") })
 }
 
@@ -228,7 +228,7 @@ func TestWiFiRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "off", func() bool { tt.Frame(); return hasText(tt, "Stopped Pixel's Wi-Fi connection") })
-	if st, _ := ta.api.WiFi(ta.ctx, id); st.On {
+	if st, _ := ta.api.PhoneWiFi(ta.ctx, id); st.On {
 		t.Fatalf("still on: %+v", st)
 	}
 }
