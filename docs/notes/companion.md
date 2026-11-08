@@ -82,8 +82,12 @@ What turning it on costs, from writing the setting until the service answers, th
 | --- | --- | --- | --- |
 | Android 16 emulator (`emulator-5560`), process alive | median 238 ms | 8 ms | 3 ms |
 | Android 16 emulator, process stopped | median 241 ms | 10 ms | 7 ms |
+| Mi 10 Pro (Android 17, adb over Wi-Fi), process alive | median 333 ms | 102 ms | 60 ms |
+| Mi 10 Pro, process stopped | median 691 ms | 84 ms | 60 ms |
 
-On the same emulator, through the driver: the service came on in 220 ms after `AgentWorking(true)`, and the task's first Observe, called right after it, returned 16 elements of the launcher 435 ms after the task started (a later Observe took 371 ms there, most of it the window manager's state, which every read asks for). The release build ran minified there. The Pixel and the Mi 10 Pro were not available (the Pixel was not connected, the Mi was locked).
+Through the driver, with the release build signed with the release key (CI run 42457681518): on the emulator the service came on in 177 ms after `AgentWorking(true)`, and the task's first Observe, called right after it, returned 32 elements 212 ms after the task started; on the Mi 10 Pro it came on in 323 ms and the first Observe returned 404 ms after the start (a later one took 677 ms there, most of it the window manager's state over Wi-Fi, which every read asks for). It went off 0.2 s (emulator) and 0.4 s (Mi) after the task. So a task's first read costs 0.2 to 0.8 s more than with the service kept on, once per task (and after each pause of a minute), and phone_connect starts the video meanwhile: no setting to keep it on was added. The Pixel (Android 10, the slowest) was not connected.
+
+**Replacing on a phone with Google Play Protect** (Mi 10 Pro, Google Play services 26.43.30, `package_verifier_user_consent` 1, the verifier settings unset, so `installAsks` says the phone may ask and automatic updates wait for the person's Update): the person's path (`SetUpCompanion`) replaced release 2026.1108.3, signed with the public key, with the release build in 2.6 s, with no dialog, keeping the owner's other accessibility service (Mika) in the setting. Putting the public-key 2026.1108.8 build back afterwards (`pm install` after an uninstall) showed Play Protect's "Send app for a security check?" and waited 90 s until the owner answered (Don't send); consent stayed 1. So an install over USB can ask even with consent given, and `installAsks` stays as it is. Checked by `TestDevicePhoneCompanionReplace` (opt-in for phones, `PINKY_COMPANION_PHONE_OK=1`), which puts the phone back as it was; Pinky 2026.1108.8 ran meanwhile and turned the service off when the test ended, so the test's last step had to be repeated with `companionctl keepon`.
 
 ## Background displays
 

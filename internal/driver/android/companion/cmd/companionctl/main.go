@@ -30,6 +30,9 @@ commands:
                        already has this exact file
   installed            print the installed version
   enable               turn the accessibility service on and leave it on
+  keepon               turn it on and keep it on until it is turned off
+                       (idle_disable_ms 0), as Pinky's Install did until
+                       2026-11-08, to put a phone back as it was
   disable              remove Pinky's entry from the setting
   status               show whether the service is listed and answering
   ping                 print the ping result
@@ -118,6 +121,8 @@ func dispatch(ctx context.Context, c *companion.Client, run *companion.ExecRunne
 	case "enable":
 		// Leaves the service on; "disable" turns it off again.
 		return c.Enable(ctx)
+	case "keepon":
+		return c.TurnOn(ctx)
 	case "disable":
 		return c.ForceDisable(ctx)
 	case "status":
