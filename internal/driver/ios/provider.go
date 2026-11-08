@@ -33,6 +33,12 @@ type Provider struct {
 	// (an iOS_DDI folder in it), looked in before Xcode's; "" for none.
 	DiskImageDir string
 
+	// WiFiMux lets the provider run a usbmuxd of its own on Linux, whose
+	// usbmuxd lists phones on a cable only, to find phones on Wi-Fi
+	// (netmux.go). Only the app's provider sets it: it points go-ios, for
+	// the whole process, at that usbmuxd.
+	WiFiMux bool
+
 	// Log gets a line for each step Pinky takes to prepare a phone:
 	// mounting the developer disk image, showing the Developer Mode
 	// switch, asking for trust, downloading the image. nil for none.
@@ -59,6 +65,7 @@ type Provider struct {
 
 	wifi       wifiState                                               // phones over Wi-Fi (wifi.go)
 	lost       lostState                                               // phones usbmuxd lost on Wi-Fi (lost.go)
+	nmux       muxState                                                // a usbmuxd of its own on Linux (netmux.go)
 	restartFn  func(ctx context.Context, command, reason string) error // for tests: runAsAdmin
 	prep       preparer                                                // Developer Mode and the developer disk image (prepare.go)
 	muxErr     error                                                   // usbmuxd's answer to the last List

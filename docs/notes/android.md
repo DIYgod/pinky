@@ -114,7 +114,7 @@ On a phone the device tests use only the home screen, Settings search and the Ca
 **How the Mi answers mDNS** (LineageOS 24, Android 17, measured from the Mac):
 
 - A question with the unicast-response bit from another port than 5353 gets its answer straight back, with the SRV, TXT, A, AAAA and NSEC records in the additional section. A plain question gets a multicast answer (which the group socket reads); a plain question sent straight to the phone gets a multicast answer too. It does not answer a legacy unicast question (`dig @224.0.0.251 -p 5353`) with its id.
-- Asleep, it misses the first questions: answers came from the second to the fourth (1–5 s), and at times it answered nothing for a minute. The search asks at 0, 1, 2, 4, 6 and 10 s, then every 5 s.
+- Asleep, it misses the first questions: answers came from the second to the fourth (1–5 s), and at times it answered nothing for a minute. The search asks at 0, 1, 2, 4, 6 and 10 s, then every 5 s. A search that runs for long, as the one for iPhones on Linux (`docs/notes/ios.md`), sets `Options.MaxEvery` instead: 1 s, then twice as long each time up to it (RFC 6762 §5.2), from the start again when the computer's addresses change. The Android searches keep the quick schedule: they last seconds.
 - After the pairing dialog closes, its pairing service says goodbye (TTL 0) and leaves the search's list at once.
 
 ### macOS Local Network privacy
