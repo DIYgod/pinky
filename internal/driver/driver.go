@@ -64,6 +64,12 @@ const (
 	SetupNoDiskImage   = "no_disk_image"  // the computer has no developer disk image; Detail says where to get one
 	SetupDiskImage     = "disk_image"     // the developer disk image did not mount; Detail says why
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
+	// A phone reached over the network (WiFiSwitch, Tailnet) that is
+	// offline: its adb stopped listening, as when it restarted (plug it in
+	// once and turn its Wi-Fi connection on again), or it is not on the
+	// network now (Pinky connects again by itself).
+	SetupNetworkOff  = "network_off"
+	SetupNetworkAway = "network_away"
 )
 
 // Provider discovers and opens the devices of one platform.
@@ -530,6 +536,52 @@ const (
 // ErrNotListening is wrapped when a phone does not take connections at
 // the address and port: its adb does not listen on the network.
 var ErrNotListening = errors.New("the phone's adb does not listen on the network there")
+
+// WiFiSwitch is a Provider that moves a phone plugged in by cable to
+// Wi-Fi without Wireless debugging (which Android 10 lacks): the phone's
+// adb listens on the network (adb tcpip) until the phone restarts, and the
+// provider connects to it at its Wi-Fi address, and again by itself
+// whenever it is back on the network.
+type WiFiSwitch interface {
+	// WiFi says whether a phone is on Wi-Fi this way, and what keeps it
+	// from being moved there.
+	WiFi(ctx context.Context, id string) (WiFiState, error)
+	// SetWiFi moves a phone to Wi-Fi, over its cable, or stops that: its
+	// adb then stops listening on the network, which also ends its use
+	// away from home (Tailnet), and the provider forgets its addresses.
+	SetWiFi(ctx context.Context, id string, on bool) (WiFiState, error)
+}
+
+// WiFiState is whether a phone is moved to Wi-Fi without Wireless
+// debugging.
+type WiFiState struct {
+	// On reports whether it is: the provider reaches the phone at Addr.
+	On bool
+	// Connected reports whether it is connected there now.
+	Connected bool
+	// Listening reports whether the phone's adb listens on the network now,
+	// as far as the provider knows.
+	Listening bool
+	// Stopped is set while On but the phone's adb no longer listens, as
+	// after the phone restarted: plug it in and turn it on again.
+	Stopped bool
+	// Addr is the phone's Wi-Fi address; Port where its adb listens.
+	Addr string
+	Port int
+	// Away reports whether the phone is used away from home too (Tailnet),
+	// which turning this off ends.
+	Away bool
+	// Missing says what keeps it from being turned on, one of the WiFi*
+	// values; "" when nothing does. Detail says the same in a sentence.
+	Missing string
+	Detail  string
+}
+
+// What keeps a phone from being moved to Wi-Fi, in WiFiState.Missing.
+const (
+	WiFiNeedsCable = "cable"   // the phone is not plugged in
+	WiFiNoWiFi     = "no_wifi" // the phone is not on Wi-Fi
+)
 
 // Forgetter is a Provider that connects to phones by itself, as Android's
 // reconnects the phones paired over Wi-Fi. The gateway tells it which

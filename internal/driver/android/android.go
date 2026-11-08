@@ -62,9 +62,10 @@ type Config struct {
 	// Tailnet reads Tailscale's status on this computer, for the phones
 	// away from its network (tailnet.go); nil means tailnet.Read.
 	Tailnet func(ctx context.Context) (tailnet.Status, error)
-	// AwayFile keeps the phones set up to be reached through Tailscale;
-	// "" keeps them in memory only.
-	AwayFile string
+	// NetworkFile keeps the phones whose adb Pinky had listen on the
+	// network, with their addresses (network.go); "" keeps them in memory
+	// only.
+	NetworkFile string
 
 	// StartServer, when set, starts an adb server when List finds none
 	// (cmd/pinky passes adb.StartServer): at once the first time, and
@@ -117,10 +118,10 @@ type Provider struct {
 	forgotten map[string]bool
 
 	wifi *reconnector // nil without Config.ReconnectWiFi
-	// away keeps the phones set up to be reached through Tailscale, and
-	// tail reconnects them (tailnet.go).
-	away *awayStore
-	tail *tailLink
+	// net keeps the phones reached over the network without Wireless
+	// debugging, and link reconnects them (network.go).
+	net  *netStore
+	link *netLink
 
 	server serverWatch
 	// usbNodes lists the computer's USB devices as Windows sees them, to
@@ -135,8 +136,8 @@ func NewProvider(cfg Config) *Provider {
 	if cfg.ReconnectWiFi {
 		p.wifi = newReconnector(p)
 	}
-	p.away = &awayStore{path: cfg.AwayFile, logf: cfg.logf}
-	p.tail = newTailLink(p)
+	p.net = &netStore{path: cfg.NetworkFile, logf: cfg.logf}
+	p.link = newNetLink(p)
 	return p
 }
 
@@ -181,7 +182,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	if p.wifi != nil {
 		p.wifi.kick(entries)
 	}
-	p.tail.kick(entries)
+	p.link.kick(entries)
 	infos := make([]driver.Info, len(entries))
 	var wg sync.WaitGroup
 	for i, e := range entries {
@@ -203,7 +204,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		}()
 	}
 	wg.Wait()
-	infos = mergeTransports(infos)
+	infos = mergeTransports(p.netInfos(infos))
 	return append(infos, p.driverlessPhones(infos)...), nil
 }
 

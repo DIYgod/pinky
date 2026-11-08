@@ -21,22 +21,25 @@ import (
 const (
 	tailAddr   = "100.101.2.2"
 	tailSerial = tailAddr + ":5555"
-	localWiFi  = "192.168.1.42:41000" // the phone over wireless debugging
-	piHW       = "R5CN20ABC"          // its hardware serial
+	wifiAddr   = "192.168.1.42"
+	lanSerial  = wifiAddr + ":5555"  // adb tcpip at the phone's Wi-Fi address
+	localWiFi  = wifiAddr + ":41000" // the phone over Wireless debugging
+	piHW       = "R5CN20ABC"         // its hardware serial
+	usbLine    = piHW + "\tdevice usb:1-1 product:x model:Pixel_9 device:x transport_id:5"
+	tlsLine    = localWiFi + "\tdevice product:x model:Pixel_9 device:x transport_id:7"
+	phoneProps = "Pixel 9\n16\n36\nPixel 9\n" + piHW + "\n" // deviceProps' getprop line
 )
 
 // fakeTailnet is Tailscale on the computer, as Config.Tailnet reads it.
 type fakeTailnet struct {
-	mu    sync.Mutex
-	st    tailnet.Status
-	err   error
-	reads int
+	mu  sync.Mutex
+	st  tailnet.Status
+	err error
 }
 
 func (f *fakeTailnet) read(context.Context) (tailnet.Status, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.reads++
 	return f.st, f.err
 }
 
@@ -57,10 +60,7 @@ func runningTailnet() *fakeTailnet {
 	}}
 }
 
-// phoneProps is the answer to deviceProps' getprop line.
-const phoneProps = "Pixel 9\n16\n36\nPixel 9\n" + piHW + "\n"
-
-// fakePhone is the phone's side of the services the tailnet code uses: its
+// fakePhone is the phone's side of the services network.go uses: its
 // interfaces, and adb listening on the network.
 type fakePhone struct {
 	mu       sync.Mutex
@@ -84,48 +84,71 @@ func (ph *fakePhone) run(serial, service string) (string, bool) {
 	case strings.HasPrefix(service, "tcpip:"):
 		ph.restarts = append(ph.restarts, service)
 		ph.port = 5555
-		go ph.f.set(func(f *fakeADB) { f.connectOK[tailSerial] = true })
+		go ph.f.set(func(f *fakeADB) { f.connectOK[tailSerial], f.connectOK[lanSerial] = true, true })
 		return "restarting in TCP mode port: 5555\n", true
 	case service == "usb:":
 		ph.restarts = append(ph.restarts, service+serial)
 		ph.port = 0
-		go ph.f.set(func(f *fakeADB) { delete(f.connectOK, tailSerial) })
+		go ph.f.set(func(f *fakeADB) {
+			delete(f.connectOK, tailSerial)
+			delete(f.connectOK, lanSerial)
+			f.devices = slices.DeleteFunc(f.devices, func(l string) bool {
+				return strings.HasPrefix(l, tailSerial+"\t") || strings.HasPrefix(l, lanSerial+"\t")
+			})
+		})
 		return "restarting in USB mode\n", true
 	}
 	return "", false
 }
 
-func newTailnetFake(t *testing.T) (*fakeADB, *fakePhone, *fakeTailnet, *Provider) {
+func (ph *fakePhone) restarted() []string {
+	ph.mu.Lock()
+	defer ph.mu.Unlock()
+	return slices.Clone(ph.restarts)
+}
+
+const phoneAddrs = "1: lo    inet 127.0.0.1/8 scope host lo\n" +
+	"30: wlan0    inet " + wifiAddr + "/24 brd 192.168.1.255 scope global wlan0\n" +
+	"31: tun0    inet " + tailAddr + "/32 scope global tun0\n" +
+	"31: tun0    inet6 fd7a:115c:a1e0::2/128 scope global\n"
+
+func newNetFake(t *testing.T) (*fakeADB, *fakePhone, *fakeTailnet, *Provider) {
+	oldLook, oldUp := netLook, upWait
+	netLook, upWait = 300*time.Millisecond, 3*time.Second
+	t.Cleanup(func() { netLook, upWait = oldLook, oldUp })
 	f := startFakeADB(t)
 	ts := runningTailnet()
-	ph := &fakePhone{f: f, addrs: "1: lo    inet 127.0.0.1/8 scope host lo\n" +
-		"30: wlan0    inet 192.168.1.42/24 brd 192.168.1.255 scope global wlan0\n" +
-		"31: tun0    inet " + tailAddr + "/32 scope global tun0\n" +
-		"31: tun0    inet6 fd7a:115c:a1e0::2/128 scope global\n"}
+	ph := &fakePhone{f: f, addrs: phoneAddrs}
 	f.set(func(f *fakeADB) {
-		f.props = map[string]string{localWiFi: phoneProps, tailSerial: phoneProps}
+		f.props = map[string]string{piHW: phoneProps, localWiFi: phoneProps, tailSerial: phoneProps, lanSerial: phoneProps}
 		f.connectOK = map[string]bool{}
 		f.run = ph.run
 	})
 	cfg := f.config()
 	cfg.Tailnet = ts.read
-	cfg.AwayFile = filepath.Join(t.TempDir(), "away-phones.json")
+	cfg.NetworkFile = filepath.Join(t.TempDir(), "network-phones.json")
 	return f, ph, ts, NewProvider(cfg)
 }
 
-func TestParseTailnetAddrs(t *testing.T) {
+func (f *fakeADB) connected() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.connects)
+}
+
+func TestParsePhoneAddrs(t *testing.T) {
 	out := "1: lo    inet 127.0.0.1/8 scope host lo\\       valid_lft forever preferred_lft forever\n" +
 		"30: wlan0    inet 192.168.5.137/24 brd 192.168.5.255 scope global wlan0\n" +
 		"31: tun0    inet6 fd7a:115c:a1e0::2/128 scope global\n" +
 		"31: tun0    inet 100.101.2.2/32 scope global tun0\n" +
 		"40: rmnet_data1    inet 100.70.8.9/30 scope global rmnet_data1\n" // carrier NAT shares the range
-	got := parseTailnetAddrs(out)
+	wifi, tail := parsePhoneAddrs(out)
 	want := []netip.Addr{netip.MustParseAddr("100.101.2.2"), netip.MustParseAddr("fd7a:115c:a1e0::2")}
-	if !slices.Equal(got, want) {
-		t.Fatalf("addrs = %v; want %v", got, want)
+	if wifi != netip.MustParseAddr("192.168.5.137") || !slices.Equal(tail, want) {
+		t.Fatalf("wifi %v, tailnet %v", wifi, tail)
 	}
-	if got := parseTailnetAddrs("30: wlan0    inet 192.168.5.137/24\n"); len(got) != 0 {
-		t.Fatalf("no Tailscale: %v", got)
+	if wifi, tail := parsePhoneAddrs("40: rmnet_data1    inet 10.1.2.3/30 scope global rmnet_data1\n"); wifi.IsValid() || len(tail) != 0 {
+		t.Fatalf("mobile data only: %v, %v", wifi, tail)
 	}
 }
 
@@ -155,7 +178,7 @@ func TestViaTailnet(t *testing.T) {
 	if !viaTailnet(tailSerial) || viaTailnet(localWiFi) || viaTailnet("adb-x._adb-tls-connect._tcp") || viaTailnet("3e8be48e") {
 		t.Fatal("viaTailnet")
 	}
-	e := entriesFrom(tailSerial + "\tdevice product:x model:Pixel_9 device:x transport_id:8")
+	e := adb.ParseDevices(tailSerial + "\tdevice product:x model:Pixel_9 device:x transport_id:8")
 	if info := infoFromEntry(e[0]); info.Connection != "wifi" || info.Via != driver.ViaTailscale {
 		t.Fatalf("info = %+v", info)
 	}
@@ -169,52 +192,50 @@ func TestViaTailnet(t *testing.T) {
 	if !better(tail, driver.Info{State: driver.StateOffline, Connection: "usb"}) {
 		t.Fatal("an online Tailscale connection before an offline cable")
 	}
+	if !legacyInstance("adb-FA6C20303860", "FA6C20303860") || !legacyInstance("adb-3e8be48e-kIY2HE", "3e8be48e") ||
+		legacyInstance("adb-K9307038251L00335", "FA6C20303860") || legacyInstance("adb-", "") {
+		t.Fatal("legacyInstance")
+	}
 }
 
-func entriesFrom(lines ...string) []adb.DeviceEntry {
-	return adb.ParseDevices(strings.Join(lines, "\n"))
-}
-
-func TestAwayStore(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "sub", "away-phones.json")
-	s := &awayStore{path: path, logf: t.Logf}
-	if err := s.put(awayPhone{ID: piHW, Name: "Pixel 9", Node: "nPixel", Addr: tailAddr, Port: 5555}); err != nil {
+func TestNetStore(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sub", "network-phones.json")
+	s := &netStore{path: path, logf: t.Logf}
+	if err := s.update(piHW, func(n *netPhone) { n.Name, n.Node, n.Tailnet = "Pixel 9", "nPixel", tailAddr }); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.put(awayPhone{ID: "other", Addr: "100.101.3.3"}); err != nil {
+	if err := s.update("other", func(n *netPhone) { n.LAN = "192.168.1.7" }); err != nil {
 		t.Fatal(err)
 	}
 	if fi, err := os.Stat(path); err != nil || fi.Mode().Perm() != 0o600 {
 		t.Fatalf("file: %v, %v", fi, err)
 	}
 	// Read back from the file.
-	again := &awayStore{path: path, logf: t.Logf}
+	again := &netStore{path: path, logf: t.Logf}
 	got, ok := again.get(piHW)
-	if !ok || got.Node != "nPixel" || got.serial() != tailSerial || len(again.list()) != 2 {
+	if !ok || got.Node != "nPixel" || got.tailSerial() != tailSerial || got.lanSerial() != "" || len(again.list()) != 2 {
 		t.Fatalf("read back %+v, %v; list %+v", got, ok, again.list())
 	}
-	if o, _ := again.get("other"); o.serial() != "100.101.3.3:5555" {
-		t.Fatalf("no port means 5555: %s", o.serial())
+	if o, _ := again.get("other"); o.lanSerial() != "192.168.1.7:5555" {
+		t.Fatalf("no port means 5555: %s", o.lanSerial())
 	}
-	if removed, err := again.remove(piHW); !removed || err != nil {
-		t.Fatalf("remove: %v, %v", removed, err)
+	// A phone left with no address is forgotten.
+	if err := again.update(piHW, func(n *netPhone) { n.Tailnet = "" }); err != nil {
+		t.Fatal(err)
 	}
-	if removed, _ := again.remove(piHW); removed {
-		t.Fatal("removed twice")
-	}
-	third := &awayStore{path: path, logf: t.Logf}
+	third := &netStore{path: path, logf: t.Logf}
 	if _, ok := third.get(piHW); ok || len(third.list()) != 1 {
-		t.Fatalf("after remove: %+v", third.list())
+		t.Fatalf("after clearing: %+v", third.list())
 	}
 	// A broken file is no phones, not a failure.
 	os.WriteFile(path, []byte("{"), 0o600)
-	if l := (&awayStore{path: path, logf: t.Logf}).list(); len(l) != 0 {
+	if l := (&netStore{path: path, logf: t.Logf}).list(); len(l) != 0 {
 		t.Fatalf("broken file: %+v", l)
 	}
 }
 
 func TestTailnetList(t *testing.T) {
-	f, _, ts, p := newTailnetFake(t)
+	f, _, ts, p := newNetFake(t)
 	ctx := context.Background()
 	st, err := p.Tailnet(ctx)
 	if err != nil || st.State != driver.TailnetRunning || st.Tailnet != "someone@example.com" || st.Self != "macbook" {
@@ -243,13 +264,13 @@ func TestTailnetList(t *testing.T) {
 }
 
 func TestConnectTailnet(t *testing.T) {
-	f, _, ts, p := newTailnetFake(t)
+	f, _, ts, p := newNetFake(t)
 	ctx := context.Background()
 	// adb does not listen there.
 	if _, err := p.ConnectTailnet(ctx, tailAddr); !errors.Is(err, driver.ErrNotListening) {
 		t.Fatalf("refused: %v", err)
 	}
-	if _, kept := p.away.get(piHW); kept {
+	if _, kept := p.net.get(piHW); kept {
 		t.Fatal("kept a phone that refused")
 	}
 	// It does: connected, and kept as set up for away from home.
@@ -258,16 +279,16 @@ func TestConnectTailnet(t *testing.T) {
 	if err != nil || info.ID != piHW || info.Via != driver.ViaTailscale || info.State != driver.StateOnline {
 		t.Fatalf("connect: %+v, %v", info, err)
 	}
-	if a, kept := p.away.get(piHW); !kept || a.Node != "nPixel" || a.serial() != tailSerial {
-		t.Fatalf("kept %+v, %v", a, kept)
+	if n, kept := p.net.get(piHW); !kept || n.Node != "nPixel" || n.tailSerial() != tailSerial || n.LAN != "" {
+		t.Fatalf("kept %+v, %v", n, kept)
 	}
 	// At Wireless debugging's port: connected, not kept (the port changes).
-	p.away.remove(piHW)
+	p.net.update(piHW, func(n *netPhone) { *n = netPhone{} })
 	f.set(func(f *fakeADB) { f.connectOK[tailAddr+":37000"] = true; f.props[tailAddr+":37000"] = phoneProps })
 	if _, err := p.ConnectTailnet(ctx, tailAddr+":37000"); err != nil {
 		t.Fatal(err)
 	}
-	if _, kept := p.away.get(piHW); kept {
+	if _, kept := p.net.get(piHW); kept {
 		t.Fatal("kept a phone reached at Wireless debugging's port")
 	}
 	// Not an address on the tailnet; Tailscale off.
@@ -281,11 +302,9 @@ func TestConnectTailnet(t *testing.T) {
 }
 
 func TestSetAway(t *testing.T) {
-	f, ph, ts, p := newTailnetFake(t)
+	f, ph, ts, p := newNetFake(t)
 	ctx := context.Background()
-	f.set(func(f *fakeADB) {
-		f.devices = []string{localWiFi + "\tdevice product:x model:Pixel_9 device:x transport_id:7"}
-	})
+	f.set(func(f *fakeADB) { f.devices = []string{tlsLine} })
 	a, err := p.Away(ctx, piHW)
 	if err != nil || a.On || a.Listening || a.Addr != tailAddr || a.Missing != "" {
 		t.Fatalf("before: %+v, %v", a, err)
@@ -294,23 +313,17 @@ func TestSetAway(t *testing.T) {
 	if err != nil || !a.On || !a.Listening || a.Addr != tailAddr || a.Port != 5555 {
 		t.Fatalf("on: %+v, %v", a, err)
 	}
-	ph.mu.Lock()
-	restarts := slices.Clone(ph.restarts)
-	ph.mu.Unlock()
-	if !slices.Equal(restarts, []string{"tcpip:5555"}) {
-		t.Fatalf("restarts = %q", restarts)
+	if r := ph.restarted(); !slices.Equal(r, []string{"tcpip:5555"}) {
+		t.Fatalf("restarts = %q", r)
 	}
-	if kept, ok := p.away.get(piHW); !ok || kept.Node != "nPixel" || kept.Name != "Pixel 9" {
-		t.Fatalf("kept %+v", kept)
+	if n, ok := p.net.get(piHW); !ok || n.Node != "nPixel" || n.Name != "Pixel 9" || n.LAN != "" {
+		t.Fatalf("kept %+v", n)
 	}
 	// On again: adb listens already, nothing restarts.
 	if _, err := p.SetAway(ctx, piHW, true); err != nil {
 		t.Fatal(err)
 	}
-	ph.mu.Lock()
-	n := len(ph.restarts)
-	ph.mu.Unlock()
-	if n != 1 {
+	if n := len(ph.restarted()); n != 1 {
 		t.Fatalf("restarted adb again: %d", n)
 	}
 	// Off: adb stops listening, the Tailscale connection goes.
@@ -318,11 +331,8 @@ func TestSetAway(t *testing.T) {
 	if err != nil || a.On {
 		t.Fatalf("off: %+v, %v", a, err)
 	}
-	ph.mu.Lock()
-	restarts = slices.Clone(ph.restarts)
-	ph.mu.Unlock()
-	if restarts[len(restarts)-1] != "usb:"+localWiFi {
-		t.Fatalf("restarts = %q", restarts)
+	if r := ph.restarted(); r[len(r)-1] != "usb:"+localWiFi {
+		t.Fatalf("restarts = %q", r)
 	}
 	f.mu.Lock()
 	disc := slices.Clone(f.disconnects)
@@ -330,7 +340,7 @@ func TestSetAway(t *testing.T) {
 	if !slices.Contains(disc, tailSerial) {
 		t.Fatalf("disconnects = %q", disc)
 	}
-	if _, kept := p.away.get(piHW); kept {
+	if _, kept := p.net.get(piHW); kept {
 		t.Fatal("still kept")
 	}
 
@@ -360,39 +370,178 @@ func TestSetAway(t *testing.T) {
 	}
 }
 
-func TestTailReconnect(t *testing.T) {
-	f, _, ts, p := newTailnetFake(t)
+// TestSetWiFi moves a phone on a cable to Wi-Fi and back.
+func TestSetWiFi(t *testing.T) {
+	f, ph, _, p := newNetFake(t)
+	ctx := context.Background()
+	// Not plugged in.
+	if w, err := p.WiFi(ctx, piHW); err != nil || w.On || w.Missing != driver.WiFiNeedsCable {
+		t.Fatalf("not plugged in: %+v, %v", w, err)
+	}
+	if _, err := p.SetWiFi(ctx, piHW, true); !errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("moved a phone that is not plugged in: %v", err)
+	}
+	f.set(func(f *fakeADB) { f.devices = []string{usbLine} })
+	w, err := p.WiFi(ctx, piHW)
+	if err != nil || w.On || w.Listening || w.Addr != wifiAddr || w.Missing != "" {
+		t.Fatalf("plugged in: %+v, %v", w, err)
+	}
+	w, err = p.SetWiFi(ctx, piHW, true)
+	if err != nil || !w.On || !w.Connected || !w.Listening || w.Addr != wifiAddr || w.Stopped {
+		t.Fatalf("on: %+v, %v", w, err)
+	}
+	if n, ok := p.net.get(piHW); !ok || n.LAN != wifiAddr || n.Tailnet != "" || n.Name != "Pixel 9" {
+		t.Fatalf("kept %+v", n)
+	}
+	// Unplugged: listed over Wi-Fi, by its own id.
+	f.set(func(f *fakeADB) {
+		f.devices = slices.DeleteFunc(f.devices, func(l string) bool { return l == usbLine })
+	})
+	infos, err := p.List(ctx)
+	if err != nil || len(infos) != 1 || infos[0].ID != piHW || infos[0].Connection != "wifi" || infos[0].Via != "" ||
+		infos[0].State != driver.StateOnline {
+		t.Fatalf("unplugged: %+v, %v", infos, err)
+	}
+	// Away from home too; Wi-Fi off ends both.
+	if _, err := p.SetAway(ctx, piHW, true); err != nil {
+		t.Fatal(err)
+	}
+	if w, _ := p.WiFi(ctx, piHW); !w.Away {
+		t.Fatalf("away not said: %+v", w)
+	}
+	w, err = p.SetWiFi(ctx, piHW, false)
+	if err != nil || w.On {
+		t.Fatalf("off: %+v, %v", w, err)
+	}
+	if r := ph.restarted(); r[len(r)-1] != "usb:"+lanSerial {
+		t.Fatalf("restarts = %q", r)
+	}
+	if _, kept := p.net.get(piHW); kept {
+		t.Fatal("still kept")
+	}
+	// Not on Wi-Fi.
+	f.set(func(f *fakeADB) { f.devices = []string{usbLine} })
+	ph.mu.Lock()
+	ph.addrs = "40: rmnet_data1    inet 10.1.2.3/30 scope global rmnet_data1\n"
+	ph.mu.Unlock()
+	if w, _ := p.WiFi(ctx, piHW); w.Missing != driver.WiFiNoWiFi {
+		t.Fatalf("no Wi-Fi: %+v", w)
+	}
+	if _, err := p.SetWiFi(ctx, piHW, true); err == nil {
+		t.Fatal("moved a phone that has no Wi-Fi")
+	}
+}
+
+// TestSetWiFiUnreachable: a phone that cannot be reached at its Wi-Fi
+// address is left with its adb not listening.
+func TestSetWiFiUnreachable(t *testing.T) {
+	f, ph, _, p := newNetFake(t)
+	ctx := context.Background()
+	f.set(func(f *fakeADB) { f.devices = []string{usbLine} })
+	ph.mu.Lock()
+	ph.addrs = "30: wlan0    inet 10.9.9.9/24 scope global wlan0\n" // another network
+	ph.mu.Unlock()
+	if _, err := p.SetWiFi(ctx, piHW, true); err == nil {
+		t.Fatal("moved to an address that does not answer")
+	}
+	if r := ph.restarted(); !slices.Equal(r, []string{"tcpip:5555", "usb:" + piHW}) {
+		t.Fatalf("restarts = %q", r)
+	}
+	if _, kept := p.net.get(piHW); kept {
+		t.Fatal("kept")
+	}
+}
+
+// TestLANReconnect: a phone moved to Wi-Fi is connected again at its
+// address, at a new one mDNS finds, and listed offline with why while it
+// cannot be.
+func TestLANReconnect(t *testing.T) {
+	f, ph, _, p := newNetFake(t)
 	ctx := context.Background()
 	now := time.Now()
-	p.tail.now = func() time.Time { return now }
-	p.away.put(awayPhone{ID: piHW, Node: "nPixel", Addr: tailAddr, Port: 5555})
-	connects := func() []string {
-		f.mu.Lock()
-		defer f.mu.Unlock()
-		return slices.Clone(f.connects)
+	p.link.now = func() time.Time { return now }
+	p.net.update(piHW, func(n *netPhone) { n.Name, n.LAN = "Pixel 9", wifiAddr })
+	// Not listening (it restarted): offline, plug it in.
+	ph.mu.Lock()
+	ph.port = 0
+	ph.mu.Unlock()
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing {
+		t.Fatal("not missing")
 	}
+	infos, _ := p.List(ctx)
+	if len(infos) != 1 || infos[0].ID != piHW || infos[0].Name != "Pixel 9" || infos[0].State != driver.StateOffline ||
+		infos[0].Setup != driver.SetupNetworkOff {
+		t.Fatalf("restarted: %+v", infos)
+	}
+	if w, _ := p.WiFi(ctx, piHW); !w.On || !w.Stopped {
+		t.Fatalf("restarted: %+v", w)
+	}
+	// Listening at a new address that mDNS finds.
+	now = now.Add(netFirst + time.Second)
+	f.set(func(f *fakeADB) {
+		f.connectOK["192.168.1.77:5555"] = true
+		f.props["192.168.1.77:5555"] = phoneProps
+		f.own = []string{"adb-K9307038251L00335\t_adb._tcp\t192.168.1.143:5555", "adb-" + piHW + "\t_adb._tcp\t192.168.1.77:5555"}
+	})
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing {
+		t.Fatalf("missing after the new address; connects %q", f.connected())
+	}
+	if n, _ := p.net.get(piHW); n.LAN != "192.168.1.77" {
+		t.Fatalf("kept %+v", n)
+	}
+	if c := f.connected(); slices.Contains(c, "192.168.1.143:5555") {
+		t.Fatalf("connected to another phone's adb: %q", c)
+	}
+	infos, _ = p.List(ctx)
+	if len(infos) != 1 || infos[0].State != driver.StateOnline || infos[0].ID != piHW {
+		t.Fatalf("back: %+v", infos)
+	}
+	// Gone from the network: offline, back by itself.
+	f.set(func(f *fakeADB) {
+		f.devices, f.connectOK, f.own = nil, map[string]bool{}, nil
+		f.unreachable = map[string]bool{"192.168.1.77:5555": true}
+	})
+	now = now.Add(time.Hour)
+	p.link.reconnect(ctx, p.net.list(), entries(t, p))
+	infos, _ = p.List(ctx)
+	if len(infos) != 1 || infos[0].State != driver.StateOffline || infos[0].Setup != driver.SetupNetworkAway {
+		t.Fatalf("away: %+v", infos)
+	}
+	// Removed from Pinky: not listed, not connected.
+	p.Forget(piHW)
+	if infos, _ := p.List(ctx); len(infos) != 0 {
+		t.Fatalf("forgotten: %+v", infos)
+	}
+}
+
+func TestTailReconnect(t *testing.T) {
+	f, _, ts, p := newNetFake(t)
+	ctx := context.Background()
+	now := time.Now()
+	p.link.now = func() time.Time { return now }
+	p.net.update(piHW, func(n *netPhone) { n.Node, n.Tailnet = "nPixel", tailAddr })
 	// adb does not listen: a failed try, then none until the wait is over.
-	if missing := p.tail.reconnect(ctx, p.away.list(), entries(t, p)); !missing || len(connects()) != 1 {
-		t.Fatalf("refused: missing %v, connects %q", missing, connects())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.connected()) != 1 {
+		t.Fatalf("refused: missing %v, connects %q", missing, f.connected())
 	}
-	p.tail.reconnect(ctx, p.away.list(), entries(t, p))
-	if len(connects()) != 1 {
-		t.Fatalf("tried again at once: %q", connects())
+	p.link.reconnect(ctx, p.net.list(), entries(t, p))
+	if len(f.connected()) != 1 {
+		t.Fatalf("tried again at once: %q", f.connected())
 	}
-	now = now.Add(tailFirst + time.Second)
+	now = now.Add(netFirst + time.Second)
 	f.set(func(f *fakeADB) { f.connectOK[tailSerial] = true })
-	if missing := p.tail.reconnect(ctx, p.away.list(), entries(t, p)); missing || len(connects()) != 2 {
-		t.Fatalf("listening: missing %v, connects %q", missing, connects())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.connected()) != 2 {
+		t.Fatalf("listening: missing %v, connects %q", missing, f.connected())
 	}
 	// Connected: nothing to do.
-	if missing := p.tail.reconnect(ctx, p.away.list(), entries(t, p)); missing || len(connects()) != 2 {
-		t.Fatalf("connected: missing %v, connects %q", missing, connects())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.connected()) != 2 {
+		t.Fatalf("connected: missing %v, connects %q", missing, f.connected())
 	}
 	// Offline on the tailnet: no try.
 	f.set(func(f *fakeADB) { f.devices = nil })
 	ts.set(func(s *tailnet.Status) { s.Peers[0].Online = false })
-	if missing := p.tail.reconnect(ctx, p.away.list(), entries(t, p)); !missing || len(connects()) != 2 {
-		t.Fatalf("offline: missing %v, connects %q", missing, connects())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.connected()) != 2 {
+		t.Fatalf("offline: missing %v, connects %q", missing, f.connected())
 	}
 	// A new address: kept, and used.
 	ts.set(func(s *tailnet.Status) {
@@ -400,36 +549,34 @@ func TestTailReconnect(t *testing.T) {
 		s.Peers[0].Addrs = []netip.Addr{netip.MustParseAddr("100.101.9.9")}
 	})
 	f.set(func(f *fakeADB) { f.connectOK["100.101.9.9:5555"] = true })
-	p.tail.reconnect(ctx, p.away.list(), entries(t, p))
-	if c := connects(); c[len(c)-1] != "100.101.9.9:5555" {
+	p.link.reconnect(ctx, p.net.list(), entries(t, p))
+	if c := f.connected(); c[len(c)-1] != "100.101.9.9:5555" {
 		t.Fatalf("connects %q", c)
 	}
-	if a, _ := p.away.get(piHW); a.Addr != "100.101.9.9" {
-		t.Fatalf("kept %+v", a)
+	if n, _ := p.net.get(piHW); n.Tailnet != "100.101.9.9" {
+		t.Fatalf("kept %+v", n)
 	}
 	// Removed from Pinky: left alone.
 	f.set(func(f *fakeADB) { f.devices = nil })
 	p.Forget(piHW)
-	n := len(connects())
-	if missing := p.tail.reconnect(ctx, p.away.list(), entries(t, p)); missing || len(connects()) != n {
-		t.Fatalf("forgotten: missing %v, connects %q", missing, connects())
+	n := len(f.connected())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); missing || len(f.connected()) != n {
+		t.Fatalf("forgotten: missing %v, connects %q", missing, f.connected())
 	}
 	// Tailscale off here: nothing to try.
 	p.Remember(piHW)
 	ts.set(func(s *tailnet.Status) { s.State = tailnet.Stopped })
-	if missing := p.tail.reconnect(ctx, p.away.list(), entries(t, p)); !missing || len(connects()) != n {
-		t.Fatalf("Tailscale off: missing %v, connects %q", missing, connects())
+	if missing := p.link.reconnect(ctx, p.net.list(), entries(t, p)); !missing || len(f.connected()) != n {
+		t.Fatalf("Tailscale off: missing %v, connects %q", missing, f.connected())
 	}
 }
 
-// TestRemoveAwayPhone: removing a phone set up for away from home stops
-// its adb listening and forgets its address.
-func TestRemoveAwayPhone(t *testing.T) {
-	f, ph, _, p := newTailnetFake(t)
+// TestRemoveNetworkPhone: removing a phone reached over the network stops
+// its adb listening and forgets its addresses.
+func TestRemoveNetworkPhone(t *testing.T) {
+	f, ph, _, p := newNetFake(t)
 	ctx := context.Background()
-	f.set(func(f *fakeADB) {
-		f.devices = []string{localWiFi + "\tdevice product:x model:Pixel_9 device:x transport_id:7"}
-	})
+	f.set(func(f *fakeADB) { f.devices = []string{tlsLine} })
 	if _, err := p.SetAway(ctx, piHW, true); err != nil {
 		t.Fatal(err)
 	}
@@ -437,12 +584,10 @@ func TestRemoveAwayPhone(t *testing.T) {
 	if err := p.Disconnect(ctx, piHW); err != nil {
 		t.Fatal(err)
 	}
-	if _, kept := p.away.get(piHW); kept {
-		t.Fatal("still set up")
+	if _, kept := p.net.get(piHW); kept {
+		t.Fatal("still kept")
 	}
-	ph.mu.Lock()
-	defer ph.mu.Unlock()
-	if last := ph.restarts[len(ph.restarts)-1]; last != "usb:"+localWiFi {
-		t.Fatalf("restarts %q", ph.restarts)
+	if r := ph.restarted(); r[len(r)-1] != "usb:"+localWiFi {
+		t.Fatalf("restarts %q", r)
 	}
 }

@@ -49,6 +49,9 @@ type fakeADB struct {
 	// run answers the other services on a phone's connection (shell
 	// commands, tcpip:, usb:), by serial; false: unsupported.
 	run func(serial, service string) (string, bool)
+	// unreachable addresses time out on host:connect, as a phone that
+	// left the network does.
+	unreachable map[string]bool
 }
 
 func newFakeADB(t *testing.T) (*fakeADB, *Provider) {
@@ -171,6 +174,10 @@ func (f *fakeADB) handle(c net.Conn) {
 		f.connects = append(f.connects, addr)
 		if f.quitOnConnect {
 			f.ln.Close()
+			return
+		}
+		if f.unreachable[addr] {
+			reply("failed to connect to '" + addr + "': Operation timed out")
 			return
 		}
 		if f.connectOK != nil && !f.connectOK[addr] {

@@ -8,10 +8,10 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 )
 
-// Phones away from the computer's network, through Tailscale
-// (driver.Tailnet): what Tailscale on this computer reports and the phones
-// on its tailnet, connecting to one there, and setting a phone up to be
-// reached that way.
+// Phones reached over the network without Wireless debugging: away from
+// the computer's network, through Tailscale (driver.Tailnet), with what
+// Tailscale on this computer reports and the phones on its tailnet; and
+// phones without Wireless debugging moved to Wi-Fi (driver.WiFiSwitch).
 
 // ErrNoTailnet is returned when no provider reaches phones through
 // Tailscale.
@@ -93,4 +93,45 @@ func (g *Gateway) SetAway(ctx context.Context, deviceID string, on bool) (driver
 	g.discover(ctx)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	return a, err
+}
+
+// wifiSwitchOf returns a phone and its provider, which must move phones to
+// Wi-Fi without Wireless debugging.
+func (g *Gateway) wifiSwitchOf(deviceID string) (*device, driver.WiFiSwitch, error) {
+	d, err := g.device(deviceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	g.mu.Lock()
+	p := d.provider
+	g.mu.Unlock()
+	w, ok := p.(driver.WiFiSwitch)
+	if !ok {
+		return nil, nil, fmt.Errorf("%s cannot move to Wi-Fi this way: %w", d.name(), driver.ErrUnsupported)
+	}
+	return d, w, nil
+}
+
+// WiFi says whether a phone is moved to Wi-Fi without Wireless debugging
+// (driver.WiFiSwitch), and what keeps it from being moved.
+func (g *Gateway) WiFi(ctx context.Context, deviceID string) (driver.WiFiState, error) {
+	d, w, err := g.wifiSwitchOf(deviceID)
+	if err != nil {
+		return driver.WiFiState{}, err
+	}
+	return w.WiFi(ctx, d.id)
+}
+
+// SetWiFi moves a phone plugged in by cable to Wi-Fi, or stops that. Either
+// restarts the phone's adb, which drops its connections for a moment: a
+// task on it survives that like a short disconnection.
+func (g *Gateway) SetWiFi(ctx context.Context, deviceID string, on bool) (driver.WiFiState, error) {
+	d, w, err := g.wifiSwitchOf(deviceID)
+	if err != nil {
+		return driver.WiFiState{}, err
+	}
+	st, err := w.SetWiFi(ctx, d.id, on)
+	g.discover(ctx)
+	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+	return st, err
 }

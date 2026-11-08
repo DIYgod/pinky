@@ -26,11 +26,11 @@ var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 	var noADB sync.Once
-	var awayFile string
+	var netFile string
 	if dirs, err := api.DefaultDirs(); err == nil {
-		// The phones set up to be reached through Tailscale, away from
-		// this computer's network.
-		awayFile = filepath.Join(dirs.Config, "away-phones.json")
+		// The phones Pinky reaches over the network without Wireless
+		// debugging: moved to Wi-Fi, or away from home through Tailscale.
+		netFile = filepath.Join(dirs.Config, "network-phones.json")
 	}
 	return android.NewProvider(android.Config{
 		Client: &adb.Client{},
@@ -59,7 +59,7 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 		// phones paired over Wi-Fi itself. Not while PINKY_DEVICES limits
 		// Pinky to some phones: the others belong to other tools.
 		ReconnectWiFi: strings.TrimSpace(os.Getenv("PINKY_DEVICES")) == "",
-		AwayFile:      awayFile,
+		NetworkFile:   netFile,
 		Logf: func(format string, args ...any) {
 			log.Debug(fmt.Sprintf(format, args...), "platform", "android")
 		},
@@ -229,6 +229,23 @@ func (p *onlyPairer) SetAway(ctx context.Context, id string, on bool) (driver.Aw
 		return driver.Away{}, fmt.Errorf("tailscale: %w", driver.ErrUnsupported)
 	}
 	return t.SetAway(ctx, id, on)
+}
+
+// WiFi and SetWiFi pass the Wi-Fi switch on (driver.WiFiSwitch).
+func (p *onlyPairer) WiFi(ctx context.Context, id string) (driver.WiFiState, error) {
+	w, ok := p.pairer.(driver.WiFiSwitch)
+	if !ok || !p.allowed(id) {
+		return driver.WiFiState{}, fmt.Errorf("wi-fi: %w", driver.ErrUnsupported)
+	}
+	return w.WiFi(ctx, id)
+}
+
+func (p *onlyPairer) SetWiFi(ctx context.Context, id string, on bool) (driver.WiFiState, error) {
+	w, ok := p.pairer.(driver.WiFiSwitch)
+	if !ok || !p.allowed(id) {
+		return driver.WiFiState{}, fmt.Errorf("wi-fi: %w", driver.ErrUnsupported)
+	}
+	return w.SetWiFi(ctx, id, on)
 }
 
 type allowOnPair struct {
