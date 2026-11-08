@@ -24,9 +24,13 @@ permissions:
 env:
   CGO_ENABLED: "0"
   # FFmpeg 9's shared libraries and the ffmpeg command for the decoder
-  # tests: BtbN's GPL builds (x264 and x265 make the test streams). They
-  # stay on the runner; Pinky.app ships its own LGPL build (make ffmpeg).
-  FFMPEG_BUILDS: https://github.com/BtbN/FFmpeg-Builds/releases/download/latest
+  # tests: FFmpeg-Builds' (formerly BtbN's) GPL builds, whose x264 and x265
+  # make the test streams. They stay on the runner; Pinky.app ships its own
+  # LGPL build (make ffmpeg). The archive is kept in the Actions cache and
+  # fetched only when the cache has none, through GitHub's API (gh), since
+  # the releases' download links have answered 504 for hours at a time.
+  # Change the cache key to take a newer build.
+  FFMPEG_REPO: FFmpeg-Builds/FFmpeg-Builds
 
 jobs:
   check:
@@ -37,9 +41,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: Linux, os: ubuntu-latest, test: true }
-          - { name: Windows, os: windows-latest, test: true }
+          - { name: Linux, os: ubuntu-latest, test: true, ffmpeg: ffmpeg-n9.0-latest-linux64-gpl-shared-9.0.tar.xz }
+          - { name: Windows, os: windows-latest, test: true, ffmpeg: ffmpeg-n9.0-latest-win64-gpl-shared-9.0.zip }
           - { name: macOS, os: macos-latest, test: false }
+    env:
+      FFMPEG: ${{ matrix.ffmpeg }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -55,12 +61,39 @@ jobs:
           sudo apt-get install -y -qq --no-install-recommends dbus dbus-x11 xvfb xauth libegl1 libegl-mesa0 libgl1-mesa-dri libepoxy0 >/dev/null
           sudo apt-get install -y -qq --no-install-recommends libgtk-3-0t64 >/dev/null || sudo apt-get install -y -qq --no-install-recommends libgtk-3-0 >/dev/null
 
+      - name: Restore FFmpeg 9 from the cache
+        id: ffmpeg
+        if: matrix.ffmpeg
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/ffmpeg-archive
+          key: ci-${{ matrix.ffmpeg }}
+
+      - name: Download FFmpeg 9
+        if: matrix.ffmpeg && steps.ffmpeg.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for try in 1 2 3; do
+            gh release download latest --repo "$FFMPEG_REPO" --pattern "$FFMPEG" --dir "$RUNNER_TEMP/ffmpeg-archive" --clobber && exit 0
+            sleep 30
+          done
+          exit 1
+
+      # Right away, so that a run whose tests fail keeps it too.
+      - name: Keep FFmpeg 9 in the cache
+        if: matrix.ffmpeg && steps.ffmpeg.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/ffmpeg-archive
+          key: ci-${{ matrix.ffmpeg }}
+
       - name: Install FFmpeg 9 (Linux)
         if: runner.os == 'Linux'
         run: |
-          curl -fsSL --retry 3 -o "$RUNNER_TEMP/ffmpeg.tar.xz" "$FFMPEG_BUILDS/ffmpeg-n9.0-latest-linux64-gpl-shared-9.0.tar.xz"
           mkdir -p "$RUNNER_TEMP/ffmpeg"
-          tar -xJf "$RUNNER_TEMP/ffmpeg.tar.xz" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+          tar -xJf "$RUNNER_TEMP/ffmpeg-archive/$FFMPEG" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
           echo "PINKY_FFMPEG_DIR=$RUNNER_TEMP/ffmpeg/lib" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/ffmpeg/bin" >> "$GITHUB_PATH"
           "$RUNNER_TEMP/ffmpeg/bin/ffmpeg" -hide_banner -version | head -1
@@ -70,8 +103,7 @@ jobs:
         shell: pwsh
         run: |
           $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest "$env:FFMPEG_BUILDS/ffmpeg-n9.0-latest-win64-gpl-shared-9.0.zip" -OutFile "$env:RUNNER_TEMP\ffmpeg.zip"
-          Expand-Archive "$env:RUNNER_TEMP\ffmpeg.zip" -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
+          Expand-Archive "$env:RUNNER_TEMP\ffmpeg-archive\$env:FFMPEG" -DestinationPath "$env:RUNNER_TEMP\ffmpeg"
           $bin = (Get-ChildItem "$env:RUNNER_TEMP\ffmpeg" -Directory | Select-Object -First 1).FullName + "\bin"
           "PINKY_FFMPEG_DIR=$bin" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           $bin | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
