@@ -337,9 +337,11 @@ func TestWiFiCablePulledMidRead(t *testing.T) {
 	g.SetWiFi(true)
 	s, _ := connect(t, g, "Check the weather")
 	p.pull("iphone")
+	// usbmuxd lists it on Wi-Fi now; a discovery pass sees that a moment
+	// later (whichever runs first: SetWiFi's or this one).
+	p.set("iphone", "wifi")
 	go func() {
 		time.Sleep(150 * time.Millisecond)
-		p.set("iphone", "wifi") // usbmuxd catches up
 		g.Refresh(context.Background())
 	}()
 	res := s.Observe(context.Background(), ObserveRequest{})
