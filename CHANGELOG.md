@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- One-time codes are now hidden from agents everywhere on the phone's screen, not only in notifications: a code in a text message, an email or an iPhone banner reaches the agent as ••••••, and screenshots agents get, and those in Activity, cover it with a gray box. Screen recordings, which stay on your computer, are not covered.
+- Agents connected over HTTP keep the phone from one call to the next, also when their client never sends back the session id (such as Grok Bot) or opens a new connection for every call. No proxy in front of Pinky is needed any more.
+- All phones now scrolls when you have more phones than fit in the window, and a last row that isn't full lines up under the phones above instead of sitting in the middle.
+- With many phones, the sidebar's list of phones scrolls too, so Add phone, Activity, Settings and Stop all stay within reach.
+
 ## 2026.1108.24 (2026-11-08)
 
 - When a phone isn't on your tailnet, Settings › Phones now says whether Tailscale isn't connected on it or is signed in to another account, with Set up Tailscale to open the steps.
