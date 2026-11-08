@@ -70,7 +70,16 @@ func (p *Provider) SetWiFi(ctx context.Context, id string, on bool) (driver.WiFi
 		if err := p.stopListening(ctx, id, n); err != nil {
 			return driver.WiFiState{}, err
 		}
-		return p.WiFi(ctx, id)
+		// adbd restarts: what the phone says may have to wait, and its
+		// cable's connection may be gone for a moment.
+		st, err := p.WiFi(ctx, id)
+		if err != nil {
+			return driver.WiFiState{Port: AwayPort}, nil
+		}
+		if st.Missing == driver.WiFiNeedsCable {
+			st.Missing, st.Detail = "", ""
+		}
+		return st, nil
 	}
 	entries, err := p.cfg.Client.Devices(ctx)
 	if err != nil {

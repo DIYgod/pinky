@@ -211,7 +211,16 @@ func (p *Provider) SetAway(ctx context.Context, id string, on bool) (driver.Away
 		if err := p.awayOff(ctx, id); err != nil {
 			return driver.Away{}, err
 		}
-		return p.Away(ctx, id)
+		// adbd restarts: what the phone says may have to wait, and its
+		// connection may be gone for a moment.
+		a, err := p.Away(ctx, id)
+		if err != nil {
+			return driver.Away{Port: AwayPort}, nil
+		}
+		if a.Missing == driver.AwayNotConnected {
+			a.Missing, a.Detail = "", ""
+		}
+		return a, nil
 	}
 	st, err := p.tailnetStatus(ctx)
 	if err != nil {

@@ -473,3 +473,59 @@ func TestDeviceAwayFailover(t *testing.T) {
 		time.Sleep(time.Until(tick.Add(time.Second)))
 	}
 }
+
+// TestDeviceWiFiAgain plays "Use Wi-Fi again" on a phone kept in
+// PINKY_NET_FILE whose adb stopped listening when it restarted, now
+// plugged in: the switch says it stopped, and turning it on again moves
+// the phone to Wi-Fi. PINKY_WIFI_OFF=1 then stops it.
+func TestDeviceWiFiAgain(t *testing.T) {
+	id, file := os.Getenv("PINKY_DEVICE"), os.Getenv("PINKY_NET_FILE")
+	if id == "" || file == "" {
+		t.Skip("PINKY_DEVICE or PINKY_NET_FILE not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	p := NewProvider(Config{Logf: t.Logf, NetworkFile: file})
+	if _, err := p.List(ctx); err != nil {
+		t.Fatal(err)
+	}
+	st, err := p.WiFi(ctx, id)
+	t.Logf("plugged in after the restart: %+v, %v", st, err)
+	if !st.On || !st.Stopped {
+		t.Errorf("not said to have stopped: %+v", st)
+	}
+	start := time.Now()
+	st, err = p.SetWiFi(ctx, id, true)
+	if err != nil || !st.Connected {
+		t.Fatalf("again: %+v, %v", st, err)
+	}
+	t.Logf("on again in %v: %+v", time.Since(start).Round(time.Millisecond), st)
+	if os.Getenv("PINKY_WIFI_OFF") == "1" {
+		st, err = p.SetWiFi(ctx, id, false)
+		t.Logf("off: %+v, %v", st, err)
+	}
+}
+
+// TestDeviceAwayOff turns Use away from home off for a phone kept in
+// PINKY_NET_FILE: its adb stops listening, its connection through
+// Tailscale goes.
+func TestDeviceAwayOff(t *testing.T) {
+	id, file := os.Getenv("PINKY_DEVICE"), os.Getenv("PINKY_NET_FILE")
+	if id == "" || file == "" {
+		t.Skip("PINKY_DEVICE or PINKY_NET_FILE not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	p := NewProvider(Config{Logf: t.Logf, NetworkFile: file})
+	if _, err := p.List(ctx); err != nil {
+		t.Fatal(err)
+	}
+	a, err := p.SetAway(ctx, id, false)
+	t.Logf("off: %+v, %v", a, err)
+	if err != nil || a.On {
+		t.Fatalf("off: %+v, %v", a, err)
+	}
+	time.Sleep(3 * time.Second)
+	a, err = p.Away(ctx, id)
+	t.Logf("after: %+v, %v", a, err)
+}
