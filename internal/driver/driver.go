@@ -68,6 +68,11 @@ const (
 	SetupNoDiskImage   = "no_disk_image"  // the computer has no developer disk image; Detail says where to get one
 	SetupDiskImage     = "disk_image"     // the developer disk image did not mount; Detail says why
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
+	// SetupConfirmWiFi: the phone is reachable only over Wi-Fi and Pinky
+	// has not used it, so it may not be the person's (a family member's
+	// iPad once paired with this computer): the person says whether it is
+	// theirs. Until then nothing is done on the phone (WiFiFinder).
+	SetupConfirmWiFi = "confirm_wifi"
 )
 
 // Provider discovers and opens the devices of one platform.
@@ -450,6 +455,25 @@ type Forgetter interface {
 	// provider can drop, as the person removes it. A cable's connection
 	// stays, and the phone with it.
 	Disconnect(ctx context.Context, id string) error
+}
+
+// WiFiFinder is a Provider that also reaches phones over Wi-Fi by itself:
+// iPhones and iPads that usbmuxd lists over the network. Those include
+// phones that are not the person's, such as a family member's iPad that was
+// once paired with this computer, so the provider leaves a phone it reaches
+// only over Wi-Fi alone until the gateway says the phone is the person's:
+// it lists that phone with SetupConfirmWiFi, having read no more than its
+// name, model and OS version, and neither prepares nor opens it. A phone
+// on a cable is always prepared and opened, as before. A phone the gateway
+// told it to Forget (Forgetter) it does not list over Wi-Fi at all.
+type WiFiFinder interface {
+	// SetWiFi turns using phones over Wi-Fi on or off; off, the provider
+	// lists phones on a cable only. It starts off.
+	SetWiFi(on bool)
+	// UseOverWiFi says a phone is the person's: Pinky used it before, it
+	// was on a cable, or the person chose to use it. The provider then
+	// prepares and opens it over Wi-Fi too.
+	UseOverWiFi(id string)
 }
 
 // ErrPairedNotFound is wrapped by PairWithCode and Pairing.Wait when the

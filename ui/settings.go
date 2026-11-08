@@ -348,6 +348,22 @@ func (a *app) settingsPhones(c *mg.Context) {
 				box.BorderWidth(0, 0, 1, 0).BorderColor(p.line)
 			}
 			box.Children(func() {
+				if foundOnWiFi(d) {
+					// Found on Wi-Fi: nothing to set until the person says
+					// it is theirs (wifi.go).
+					mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+						mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+							mg.Text(c, d.Info.Name).FontWeight(600)
+							line := locales.SettingsPhonesFound()
+							if l := foundLine(d); l != "" {
+								line = l + " · " + line
+							}
+							mg.Text(c, line).FontSize(13.5).TextColor(p.ink2)
+						})
+						a.foundButtons(c, d, true)
+					})
+					return
+				}
 				mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
 					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 						mg.Text(c, d.Info.Name).FontWeight(600)
@@ -400,6 +416,11 @@ func (a *app) settingsPhones(c *mg.Context) {
 		if button(c, locales.SettingsPhonesAdd(), btnOpt{}).Clicked() {
 			a.page = pageAddPhone
 			a.add.reset(a)
+		}
+	})
+	mg.Column(c).Label(locales.SettingsPhonesWiFi()).Children(func() {
+		if a.toggleRow(c, "ios-wifi", locales.SettingsPhonesWiFi(), locales.SettingsPhonesWiFiDesc(), true, &a.settings.IOSWiFi) {
+			a.applyWiFi(a.settings.IOSWiFi)
 		}
 	})
 }

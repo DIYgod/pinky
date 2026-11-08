@@ -937,6 +937,36 @@ func (msgs Messages) AddPhoneIPhoneDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneDetail", nil)
 }
 
+// AddPhoneIPhoneFoundDetail says "Pinky leaves these alone until you say they're yours. If one is yours, choose Use: Pinky sets it up over Wi-Fi, no ca…"
+// in the language the app shows.
+//
+// Add phone › iPhone: under addPhoneIPhoneFoundTitle.
+func AddPhoneIPhoneFoundDetail() string { return In(i18n.Locale()).AddPhoneIPhoneFoundDetail() }
+
+// AddPhoneIPhoneFoundDetail says "Pinky leaves these alone until you say they're yours. If one is yours, choose Use: Pinky sets it up over Wi-Fi, no ca…"
+// in the language of msgs.
+//
+// Add phone › iPhone: under addPhoneIPhoneFoundTitle.
+func (msgs Messages) AddPhoneIPhoneFoundDetail() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneFoundDetail", nil)
+}
+
+// AddPhoneIPhoneFoundTitle says "Found on Wi-Fi"
+// in the language the app shows.
+//
+// Add phone › iPhone: above the steps, the iPhones and iPads Pinky found
+// on Wi-Fi and has not used, each with Use and Ignore.
+func AddPhoneIPhoneFoundTitle() string { return In(i18n.Locale()).AddPhoneIPhoneFoundTitle() }
+
+// AddPhoneIPhoneFoundTitle says "Found on Wi-Fi"
+// in the language of msgs.
+//
+// Add phone › iPhone: above the steps, the iPhones and iPads Pinky found
+// on Wi-Fi and has not used, each with Use and Ignore.
+func (msgs Messages) AddPhoneIPhoneFoundTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneFoundTitle", nil)
+}
+
 // AddPhoneIPhoneGetXcode says "Get Xcode in the App Store"
 // in the language the app shows.
 //
@@ -1269,6 +1299,22 @@ func (msgs Messages) AddPhoneIPhoneStepDevModeNote() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeNote", nil)
 }
 
+// AddPhoneIPhoneStepDevModeWiFi says "Also works over Wi-Fi"
+// in the language the app shows.
+//
+// Add phone › iPhone: under the Developer Mode step's title while Pinky
+// uses iPhones over Wi-Fi: the step can be done without the cable.
+func AddPhoneIPhoneStepDevModeWiFi() string { return In(i18n.Locale()).AddPhoneIPhoneStepDevModeWiFi() }
+
+// AddPhoneIPhoneStepDevModeWiFi says "Also works over Wi-Fi"
+// in the language of msgs.
+//
+// Add phone › iPhone: under the Developer Mode step's title while Pinky
+// uses iPhones over Wi-Fi: the step can be done without the cable.
+func (msgs Messages) AddPhoneIPhoneStepDevModeWiFi() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepDevModeWiFi", nil)
+}
+
 // AddPhoneIPhoneStepDriver says "Install Apple's iPhone driver"
 // in the language the app shows.
 //
@@ -1355,6 +1401,22 @@ func (msgs Messages) AddPhoneIPhoneStepPlugDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPlugDetail", nil)
 }
 
+// AddPhoneIPhoneStepPlugWiFi says "If it's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode, Pinky finds it there an…"
+// in the language the app shows.
+//
+// Add phone › iPhone: a note under the plug-in step while Pinky uses
+// iPhones over Wi-Fi.
+func AddPhoneIPhoneStepPlugWiFi() string { return In(i18n.Locale()).AddPhoneIPhoneStepPlugWiFi() }
+
+// AddPhoneIPhoneStepPlugWiFi says "If it's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode, Pinky finds it there an…"
+// in the language of msgs.
+//
+// Add phone › iPhone: a note under the plug-in step while Pinky uses
+// iPhones over Wi-Fi.
+func (msgs Messages) AddPhoneIPhoneStepPlugWiFi() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPlugWiFi", nil)
+}
+
 // AddPhoneIPhoneStepPrepare says "Prepare the iPhone"
 // in the language the app shows.
 //
@@ -1391,6 +1453,22 @@ func (msgs Messages) AddPhoneIPhoneStepPrepareDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPrepareDetail", nil)
 }
 
+// AddPhoneIPhoneStepPrepareWiFi says "Also works over Wi-Fi, more slowly"
+// in the language the app shows.
+//
+// Add phone › iPhone: under the title of the step where Pinky mounts the
+// developer disk image, while Pinky uses iPhones over Wi-Fi.
+func AddPhoneIPhoneStepPrepareWiFi() string { return In(i18n.Locale()).AddPhoneIPhoneStepPrepareWiFi() }
+
+// AddPhoneIPhoneStepPrepareWiFi says "Also works over Wi-Fi, more slowly"
+// in the language of msgs.
+//
+// Add phone › iPhone: under the title of the step where Pinky mounts the
+// developer disk image, while Pinky uses iPhones over Wi-Fi.
+func (msgs Messages) AddPhoneIPhoneStepPrepareWiFi() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepPrepareWiFi", nil)
+}
+
 // AddPhoneIPhoneStepPreparing says "Preparing the iPhone…"
 // in the language the app shows.
 //
@@ -1423,6 +1501,20 @@ func (msgs Messages) AddPhoneIPhoneStepTrust() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrust", nil)
 }
 
+// AddPhoneIPhoneStepTrustCable says "This step needs the cable: an iPhone asks to trust a computer only while it's plugged in."
+// in the language the app shows.
+//
+// Add phone › iPhone: a note under the trust step.
+func AddPhoneIPhoneStepTrustCable() string { return In(i18n.Locale()).AddPhoneIPhoneStepTrustCable() }
+
+// AddPhoneIPhoneStepTrustCable says "This step needs the cable: an iPhone asks to trust a computer only while it's plugged in."
+// in the language of msgs.
+//
+// Add phone › iPhone: a note under the trust step.
+func (msgs Messages) AddPhoneIPhoneStepTrustCable() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustCable", nil)
+}
+
 // AddPhoneIPhoneStepTrustDetail says "When the iPhone asks “Trust This Computer?”, tap Trust and enter its passcode. If it does not ask, unlock it; if …"
 // in the language the app shows.
 //
@@ -1439,6 +1531,22 @@ func AddPhoneIPhoneStepTrustDetail() string { return In(i18n.Locale()).AddPhoneI
 // words iOS shows in your language.
 func (msgs Messages) AddPhoneIPhoneStepTrustDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustDetail", nil)
+}
+
+// AddPhoneIPhoneStepTrustHint says "Needs the cable"
+// in the language the app shows.
+//
+// Add phone › iPhone: under the trust step's title while Pinky uses
+// iPhones over Wi-Fi: this step needs the iPhone plugged in.
+func AddPhoneIPhoneStepTrustHint() string { return In(i18n.Locale()).AddPhoneIPhoneStepTrustHint() }
+
+// AddPhoneIPhoneStepTrustHint says "Needs the cable"
+// in the language of msgs.
+//
+// Add phone › iPhone: under the trust step's title while Pinky uses
+// iPhones over Wi-Fi: this step needs the iPhone plugged in.
+func (msgs Messages) AddPhoneIPhoneStepTrustHint() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneStepTrustHint", nil)
 }
 
 // AddPhoneIPhoneStepTrustWaiting says "Waiting for the iPhone to trust this computer…"
@@ -1589,6 +1697,24 @@ func AddPhoneIPhoneTooOldTitle(name string) string {
 // when the iPhone's iOS is too old. name is the iPhone's name.
 func (msgs Messages) AddPhoneIPhoneTooOldTitle(name string) string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneTooOldTitle", map[string]any{"name": name})
+}
+
+// AddPhoneIPhoneTrustWiFi says "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust."
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's page: an iPhone on Wi-Fi that no
+// longer trusts this computer. name is its name.
+func AddPhoneIPhoneTrustWiFi(name string) string {
+	return In(i18n.Locale()).AddPhoneIPhoneTrustWiFi(name)
+}
+
+// AddPhoneIPhoneTrustWiFi says "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust."
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's page: an iPhone on Wi-Fi that no
+// longer trusts this computer. name is its name.
+func (msgs Messages) AddPhoneIPhoneTrustWiFi(name string) string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTrustWiFi", map[string]any{"name": name})
 }
 
 // AddPhoneIPhoneUsbmuxdStopped says "Not showing up? usbmuxd is installed but not running. Plug the iPhone in again, or start it with sudo systemctl start…"
@@ -6313,6 +6439,182 @@ func (msgs Messages) FlyoutUnlock() string {
 	return Catalog.Format(msgs.locale, "flyoutUnlock", nil)
 }
 
+// FoundDetail says "It's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode. Pinky hasn't used it, so i…"
+// in the language the app shows.
+//
+// Under foundTitle, and in Add phone and the checkup: why Pinky waits for
+// the person.
+func FoundDetail() string { return In(i18n.Locale()).FoundDetail() }
+
+// FoundDetail says "It's on the same Wi-Fi as this computer and was paired with it before, in Finder or Xcode. Pinky hasn't used it, so i…"
+// in the language of msgs.
+//
+// Under foundTitle, and in Add phone and the checkup: why Pinky waits for
+// the person.
+func (msgs Messages) FoundDetail() string {
+	return Catalog.Format(msgs.locale, "foundDetail", nil)
+}
+
+// FoundIgnore says "Ignore"
+// in the language the app shows.
+//
+// The button that leaves a phone Pinky found on Wi-Fi alone: it goes off
+// the list until it is plugged in.
+func FoundIgnore() string { return In(i18n.Locale()).FoundIgnore() }
+
+// FoundIgnore says "Ignore"
+// in the language of msgs.
+//
+// The button that leaves a phone Pinky found on Wi-Fi alone: it goes off
+// the list until it is plugged in.
+func (msgs Messages) FoundIgnore() string {
+	return Catalog.Format(msgs.locale, "foundIgnore", nil)
+}
+
+// FoundIgnoreFailed says "Couldn't ignore {name}: {error}"
+// in the language the app shows.
+//
+// A notice when choosing Ignore for a phone found on Wi-Fi failed. name is
+// the phone's name, error what went wrong.
+func FoundIgnoreFailed(name string, error string) string {
+	return In(i18n.Locale()).FoundIgnoreFailed(name, error)
+}
+
+// FoundIgnoreFailed says "Couldn't ignore {name}: {error}"
+// in the language of msgs.
+//
+// A notice when choosing Ignore for a phone found on Wi-Fi failed. name is
+// the phone's name, error what went wrong.
+func (msgs Messages) FoundIgnoreFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "foundIgnoreFailed", map[string]any{"name": name, "error": error})
+}
+
+// FoundIgnoreLabel says "Ignore {name}"
+// in the language the app shows.
+//
+// What assistive technology reads for foundIgnore. name is the phone's
+// name.
+func FoundIgnoreLabel(name string) string { return In(i18n.Locale()).FoundIgnoreLabel(name) }
+
+// FoundIgnoreLabel says "Ignore {name}"
+// in the language of msgs.
+//
+// What assistive technology reads for foundIgnore. name is the phone's
+// name.
+func (msgs Messages) FoundIgnoreLabel(name string) string {
+	return Catalog.Format(msgs.locale, "foundIgnoreLabel", map[string]any{"name": name})
+}
+
+// FoundIgnoreNote says "If you ignore it, it stays off the list until you plug it into this computer."
+// in the language the app shows.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi.
+func FoundIgnoreNote() string { return In(i18n.Locale()).FoundIgnoreNote() }
+
+// FoundIgnoreNote says "If you ignore it, it stays off the list until you plug it into this computer."
+// in the language of msgs.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi.
+func (msgs Messages) FoundIgnoreNote() string {
+	return Catalog.Format(msgs.locale, "foundIgnoreNote", nil)
+}
+
+// FoundIgnored says "Ignoring {name}. To use it after all, plug it in."
+// in the language the app shows.
+//
+// A notice after the person chose Ignore for a phone found on Wi-Fi. name
+// is the phone's name.
+func FoundIgnored(name string) string { return In(i18n.Locale()).FoundIgnored(name) }
+
+// FoundIgnored says "Ignoring {name}. To use it after all, plug it in."
+// in the language of msgs.
+//
+// A notice after the person chose Ignore for a phone found on Wi-Fi. name
+// is the phone's name.
+func (msgs Messages) FoundIgnored(name string) string {
+	return Catalog.Format(msgs.locale, "foundIgnored", map[string]any{"name": name})
+}
+
+// FoundTitle says "Found {phone} on Wi-Fi"
+// in the language the app shows.
+//
+// The page of a phone Pinky found on Wi-Fi and has not used. phone is its
+// name.
+func FoundTitle(phone string) string { return In(i18n.Locale()).FoundTitle(phone) }
+
+// FoundTitle says "Found {phone} on Wi-Fi"
+// in the language of msgs.
+//
+// The page of a phone Pinky found on Wi-Fi and has not used. phone is its
+// name.
+func (msgs Messages) FoundTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "foundTitle", map[string]any{"phone": phone})
+}
+
+// FoundUse says "Use"
+// in the language the app shows.
+//
+// The button that lets Pinky use a phone it found on Wi-Fi: the person says
+// it is theirs. Pinky then sets it up and connects to it.
+func FoundUse() string { return In(i18n.Locale()).FoundUse() }
+
+// FoundUse says "Use"
+// in the language of msgs.
+//
+// The button that lets Pinky use a phone it found on Wi-Fi: the person says
+// it is theirs. Pinky then sets it up and connects to it.
+func (msgs Messages) FoundUse() string {
+	return Catalog.Format(msgs.locale, "foundUse", nil)
+}
+
+// FoundUseFailed says "Couldn't use {name}: {error}"
+// in the language the app shows.
+//
+// A notice when choosing Use for a phone found on Wi-Fi failed. name is the
+// phone's name, error what went wrong.
+func FoundUseFailed(name string, error string) string {
+	return In(i18n.Locale()).FoundUseFailed(name, error)
+}
+
+// FoundUseFailed says "Couldn't use {name}: {error}"
+// in the language of msgs.
+//
+// A notice when choosing Use for a phone found on Wi-Fi failed. name is the
+// phone's name, error what went wrong.
+func (msgs Messages) FoundUseFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "foundUseFailed", map[string]any{"name": name, "error": error})
+}
+
+// FoundUseLabel says "Use {name}"
+// in the language the app shows.
+//
+// What assistive technology reads for foundUse. name is the phone's name.
+func FoundUseLabel(name string) string { return In(i18n.Locale()).FoundUseLabel(name) }
+
+// FoundUseLabel says "Use {name}"
+// in the language of msgs.
+//
+// What assistive technology reads for foundUse. name is the phone's name.
+func (msgs Messages) FoundUseLabel(name string) string {
+	return Catalog.Format(msgs.locale, "foundUseLabel", map[string]any{"name": name})
+}
+
+// FoundUseNote says "Pinky then sets it up over Wi-Fi; a step that needs the cable says so."
+// in the language the app shows.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi: what Use
+// does.
+func FoundUseNote() string { return In(i18n.Locale()).FoundUseNote() }
+
+// FoundUseNote says "Pinky then sets it up over Wi-Fi; a step that needs the cable says so."
+// in the language of msgs.
+//
+// Under the Use and Ignore buttons of a phone found on Wi-Fi: what Use
+// does.
+func (msgs Messages) FoundUseNote() string {
+	return Catalog.Format(msgs.locale, "foundUseNote", nil)
+}
+
 // GuideHonorAbout says "Settings › About phone"
 // in the language the app shows.
 //
@@ -8637,6 +8939,24 @@ func GwStatusBackground(work string) string { return In(i18n.Locale()).GwStatusB
 // own words show.
 func (msgs Messages) GwStatusBackground(work string) string {
 	return Catalog.Format(msgs.locale, "gwStatusBackground", map[string]any{"work": work})
+}
+
+// GwStatusFoundOnWiFi says "Found on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: Pinky found it on Wi-Fi and waits for the person
+// to say whether it is theirs. Shown only in other languages; in English
+// the gateway's own words show.
+func GwStatusFoundOnWiFi() string { return In(i18n.Locale()).GwStatusFoundOnWiFi() }
+
+// GwStatusFoundOnWiFi says "Found on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: Pinky found it on Wi-Fi and waits for the person
+// to say whether it is theirs. Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwStatusFoundOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusFoundOnWiFi", nil)
 }
 
 // GwStatusIdle says "Idle"
@@ -14971,6 +15291,22 @@ func (msgs Messages) SettingsPhonesConnected() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesConnected", nil)
 }
 
+// SettingsPhonesFound says "Found on Wi-Fi"
+// in the language the app shows.
+//
+// Settings › Phones: the status of a phone Pinky found on Wi-Fi and has
+// not used; Use and Ignore follow it.
+func SettingsPhonesFound() string { return In(i18n.Locale()).SettingsPhonesFound() }
+
+// SettingsPhonesFound says "Found on Wi-Fi"
+// in the language of msgs.
+//
+// Settings › Phones: the status of a phone Pinky found on Wi-Fi and has
+// not used; Use and Ignore follow it.
+func (msgs Messages) SettingsPhonesFound() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesFound", nil)
+}
+
 // SettingsPhonesIntro says "Phones this computer can reach."
 // in the language the app shows.
 //
@@ -15031,6 +15367,36 @@ func SettingsPhonesOffline() string { return In(i18n.Locale()).SettingsPhonesOff
 // hollow dot: not reachable.
 func (msgs Messages) SettingsPhonesOffline() string {
 	return Catalog.Format(msgs.locale, "settingsPhonesOffline", nil)
+}
+
+// SettingsPhonesWiFi says "Use iPhones and iPads over Wi-Fi"
+// in the language the app shows.
+//
+// Settings › Phones: the switch that lets Pinky reach iPhones and iPads
+// over Wi-Fi when this computer finds them there, besides the cable.
+func SettingsPhonesWiFi() string { return In(i18n.Locale()).SettingsPhonesWiFi() }
+
+// SettingsPhonesWiFi says "Use iPhones and iPads over Wi-Fi"
+// in the language of msgs.
+//
+// Settings › Phones: the switch that lets Pinky reach iPhones and iPads
+// over Wi-Fi when this computer finds them there, besides the cable.
+func (msgs Messages) SettingsPhonesWiFi() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesWiFi", nil)
+}
+
+// SettingsPhonesWiFiDesc says "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer.…"
+// in the language the app shows.
+//
+// Settings › Phones: under settingsPhonesWiFi.
+func SettingsPhonesWiFiDesc() string { return In(i18n.Locale()).SettingsPhonesWiFiDesc() }
+
+// SettingsPhonesWiFiDesc says "An iPhone or iPad you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as this computer.…"
+// in the language of msgs.
+//
+// Settings › Phones: under settingsPhonesWiFi.
+func (msgs Messages) SettingsPhonesWiFiDesc() string {
+	return Catalog.Format(msgs.locale, "settingsPhonesWiFiDesc", nil)
 }
 
 // SettingsPrivacyCannotDelete says "This gateway cannot delete its history"

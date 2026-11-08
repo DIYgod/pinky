@@ -86,6 +86,27 @@ func TestRemovedDevices(t *testing.T) {
 	}
 }
 
+func TestDeviceIDs(t *testing.T) {
+	ctx := context.Background()
+	s, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	for _, id := range []string{"pixel", "iphone", "ipad"} {
+		if err := s.SaveDevice(ctx, Device{ID: id, LastSeen: time.Now()}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.SetDeviceRemoved(ctx, "pixel", true); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.DeviceIDs(ctx)
+	if err != nil || !slices.Equal(got, []string{"ipad", "iphone"}) {
+		t.Fatalf("DeviceIDs = %v, %v; want the phones seen and not removed", got, err)
+	}
+}
+
 func TestDeleteDeviceHistory(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()

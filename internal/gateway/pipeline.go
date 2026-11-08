@@ -197,6 +197,9 @@ func (s *Session) Act(ctx context.Context, c Call, a Action) *Result {
 func (g *Gateway) gate(l *lease, approvalID string, action bool) *Result {
 	g.mu.Lock()
 	d := l.dev
+	for !l.ended && g.waitMovingLocked(l.ctx, d) {
+		// It was moving between its cable and Wi-Fi (wifi.go).
+	}
 	switch {
 	case l.ended:
 		g.mu.Unlock()

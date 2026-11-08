@@ -109,6 +109,9 @@ type Settings struct {
 	// AutoUpdate installs new versions of Pinky, and of the companion app
 	// on Android phones, by themselves while no one uses them.
 	AutoUpdate bool
+	// IOSWiFi uses iPhones and iPads over Wi-Fi when this computer reaches
+	// them there (gateway.SetWiFi); off, only on a cable.
+	IOSWiFi bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -140,6 +143,7 @@ func DefaultSettings() Settings {
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
 		UsageStats: usageStatsByDefault,
 		AutoUpdate: true,
+		IOSWiFi:    true,
 	}
 }
 
@@ -209,6 +213,7 @@ type app struct {
 	chk      checkupState    // the phones' checkups
 	more     map[string]bool // the More phone controls popover, per device
 	rm       removeState     // the Remove this phone dialog (removephone.go)
+	found    foundState      // phones found on Wi-Fi: Use and Ignore on their way (wifi.go)
 	toasts   []string
 
 	// control is the banner above each phone's mirror as it shows, which

@@ -1,0 +1,88 @@
+package fakeapi
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"time"
+
+	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/gateway"
+)
+
+// iPhones and iPads over Wi-Fi, as the gateway's (gateway.SetWiFi,
+// UseFoundPhone, IgnoreFoundPhone): a phone found on Wi-Fi waits for Use
+// or Ignore; Use takes it through being prepared to online.
+
+// FindOnWiFi puts an iPad on the list that Pinky found on Wi-Fi and has
+// not used, as the iOS driver lists one (driver.SetupConfirmWiFi). It
+// returns its id. Nothing shows while Wi-Fi is off.
+func (a *API) FindOnWiFi() string {
+	a.mu.Lock()
+	a.nextID++
+	id := fmt.Sprintf("ipad-%d", a.nextID)
+	d := &device{
+		info: driver.Info{ID: id, Platform: driver.IOS, Name: "Sam's iPad", Model: "iPad Pro 11-inch (3rd generation)", OSVersion: "27.0.1",
+			Connection: "wifi", Backend: "coredevice", State: driver.StateNeedsSetup, Setup: driver.SetupConfirmWiFi,
+			Detail: "Found on Wi-Fi: this iPhone or iPad was paired with this computer before, in Finder or Xcode, and Pinky has not used it. Pinky leaves it alone until you choose Use in Pinky."},
+		width: 1668, height: 2388, codec: driver.HEVC, source: "testsrc",
+	}
+	if !a.wifiOff {
+		a.devices = append(a.devices, d)
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	return id
+}
+
+// SetWiFi implements the client's switch: off, phones on Wi-Fi leave the
+// list.
+func (a *API) SetWiFi(on bool) {
+	a.mu.Lock()
+	a.wifiOff = !on
+	if !on {
+		a.devices = slices.DeleteFunc(a.devices, func(d *device) bool {
+			return d.info.Connection == "wifi" && d.info.Platform == driver.IOS
+		})
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices})
+}
+
+// WiFi reports whether iPhones over Wi-Fi are on.
+func (a *API) WiFi() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return !a.wifiOff
+}
+
+// UseFoundPhone implements the client's Use: the phone is prepared, then
+// online, a step every couple of seconds at Speed (or at once with
+// HoldSetup: then AdvanceIPhone moves it on).
+func (a *API) UseFoundPhone(deviceID string) error {
+	a.mu.Lock()
+	d := a.device(deviceID)
+	if d == nil {
+		a.mu.Unlock()
+		return fmt.Errorf("fakeapi: no device %q: %w", deviceID, gateway.ErrUnknownDevice)
+	}
+	gen := a.gen
+	setStep(&d.info, iphoneSteps[2]) // preparing
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+	if a.opt.HoldSetup {
+		return nil
+	}
+	go func() {
+		if a.sleepGen(gen, 2*time.Second) {
+			a.SetIPhone(deviceID, iphoneSteps[3])
+		}
+	}()
+	return nil
+}
+
+// IgnoreFoundPhone implements the client's Ignore: the phone leaves the
+// list, as RemoveDevice does.
+func (a *API) IgnoreFoundPhone(ctx context.Context, deviceID string) error {
+	return a.RemoveDevice(ctx, deviceID, gateway.RemoveOptions{})
+}

@@ -45,11 +45,12 @@ func runDaemon(args []string) error {
 		return err
 	}
 	defer rg.Close()
-	// Recording, retention and usage statistics follow the app's settings,
-	// when there are any.
+	// Recording, retention, iPhones over Wi-Fi and usage statistics follow
+	// the app's settings, when there are any.
 	s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
 	rg.G.SetRecording(s.Record)
 	rg.G.SetRetention(s.KeepDays)
+	rg.G.SetWiFi(s.IOSWiFi)
 	tctx, tstop := context.WithCancel(context.Background())
 	defer tstop()
 	tel := startTelemetry(tctx, rg, c.Crashes, s, "daemon", c.Fake, c.Log)

@@ -137,6 +137,7 @@ type API struct {
 	removals     []Removal // RemoveDevice calls (remove.go)
 
 	iosHost driver.HostCheck // what the computer lacks for iPhones (iphone.go)
+	wifiOff bool             // iPhones over Wi-Fi turned off (wifi.go)
 	dlErr   error            // what DownloadDiskImage fails with (iphone.go)
 }
 
@@ -373,6 +374,8 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 	switch {
 	case d.info.State == driver.StateOffline:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Offline"
+	case d.info.Setup == driver.SetupConfirmWiFi && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Found on Wi-Fi"
 	case d.info.State != driver.StateOnline:
 		// Plugged in, waiting for a step, as the gateway lists such a phone
 		// (statusLocked), also while a task waits for it.

@@ -29,6 +29,8 @@ var (
 	_ historyExporter    = (*gateway.Gateway)(nil)
 	_ checkupRunner      = (*gateway.Gateway)(nil)
 	_ phoneRemover       = (*gateway.Gateway)(nil)
+	_ wifiSetter         = (*gateway.Gateway)(nil)
+	_ foundChooser       = (*gateway.Gateway)(nil)
 
 	_ mediaPather         = (*fakeapi.API)(nil)
 	_ agentLister         = (*fakeapi.API)(nil)
@@ -54,4 +56,6 @@ var (
 	_ recordingPlayer     = (*fakeapi.API)(nil)
 	_ checkupRunner       = (*fakeapi.API)(nil)
 	_ phoneRemover        = (*fakeapi.API)(nil)
+	_ wifiSetter          = (*fakeapi.API)(nil)
+	_ foundChooser        = (*fakeapi.API)(nil)
 )

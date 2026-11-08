@@ -107,6 +107,11 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		})
 		return
 	}
+	if foundOnWiFi(d) {
+		// Found on Wi-Fi, and maybe not the person's (wifi.go).
+		a.foundPage(c, d)
+		return
+	}
 	if d.Info.State != driver.StateOnline {
 		// Connected, and waiting for a step (gateway.DeviceNeedsSetup),
 		// which the page says as the phone's checkup does.

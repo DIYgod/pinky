@@ -524,6 +524,8 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusInControl()
 	case "Needs setup":
 		return locales.GwStatusNeedsSetup()
+	case "Found on Wi-Fi":
+		return locales.GwStatusFoundOnWiFi()
 	}
 	if m := reReconnecting.FindStringSubmatch(s); m != nil {
 		return locales.GwStatusReconnecting(m[1])

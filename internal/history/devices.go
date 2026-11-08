@@ -60,6 +60,14 @@ func (s *Store) RemovedDevices(ctx context.Context) ([]string, error) {
 	return s.strings(ctx, `SELECT device_id FROM removed_devices ORDER BY removed_at, device_id`)
 }
 
+// DeviceIDs returns the phones Pinky has seen and the person has not
+// removed: those it opened, and those listed on a cable.
+func (s *Store) DeviceIDs(ctx context.Context) ([]string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.strings(ctx, `SELECT id FROM devices WHERE id NOT IN (SELECT device_id FROM removed_devices) ORDER BY id`)
+}
+
 // DeleteDeviceHistory deletes the phone's tasks that started before
 // before, with their steps, approvals, screenshots and recordings, and the
 // sessions that used the phone, ended and have no task left. A screenshot

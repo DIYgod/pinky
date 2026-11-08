@@ -23,10 +23,17 @@ type device struct {
 	// read again happen as one unit per device.
 	act sync.Mutex
 
-	info         driver.Info
-	dev          driver.Device // nil while offline or not opened yet
-	opening      bool
-	online       bool
+	info    driver.Info
+	dev     driver.Device // nil while offline or not opened yet
+	over    string        // the connection dev was opened over ("usb", "wifi")
+	opening bool
+	online  bool
+	// moving is set while the phone moves between its cable and Wi-Fi
+	// (wifi.go): until then calls wait for it to be back.
+	moving time.Time
+	// closing is closed once the last session's Close returned, so the
+	// next one does not start while it stops.
+	closing      chan struct{}
 	removed      bool // the person removed it (remove.go); a new device takes its place if it comes back
 	offlineSince time.Time
 	offlineWhy   string

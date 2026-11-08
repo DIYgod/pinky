@@ -102,6 +102,9 @@ func realProviders(log *slog.Logger) []driver.Provider {
 			if pr, ok := op.Provider.(driver.Pairer); ok {
 				p = &onlyPairer{onlyProvider: op, pairer: pr}
 			}
+			if w, ok := op.Provider.(wifiProvider); ok {
+				p = &onlyWiFi{onlyProvider: op, wifi: w}
+			}
 		}
 		out = append(out, p)
 	}
@@ -183,6 +186,29 @@ func (p *onlyPairer) ConnectWiFi(ctx context.Context, addr string) (driver.Info,
 		p.allow(info.ID)
 	}
 	return info, err
+}
+
+// wifiProvider is a provider that reaches phones over Wi-Fi by itself and
+// is told which phones the person removed (iPhones).
+type wifiProvider interface {
+	driver.WiFiFinder
+	driver.Forgetter
+}
+
+// onlyWiFi is an onlyProvider whose provider reaches phones over Wi-Fi by
+// itself: it passes on which phones are the person's, which to leave
+// alone, and whether to use Wi-Fi at all.
+type onlyWiFi struct {
+	*onlyProvider
+	wifi wifiProvider
+}
+
+func (p *onlyWiFi) SetWiFi(on bool)       { p.wifi.SetWiFi(on) }
+func (p *onlyWiFi) UseOverWiFi(id string) { p.wifi.UseOverWiFi(id) }
+func (p *onlyWiFi) Forget(id string)      { p.wifi.Forget(id) }
+func (p *onlyWiFi) Remember(id string)    { p.wifi.Remember(id) }
+func (p *onlyWiFi) Disconnect(ctx context.Context, id string) error {
+	return p.wifi.Disconnect(ctx, id)
 }
 
 type allowOnPair struct {

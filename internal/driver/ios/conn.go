@@ -90,6 +90,24 @@ func findEntry(udid string, wifi bool) (goios.DeviceEntry, error) {
 	if err != nil {
 		return goios.DeviceEntry{}, fmt.Errorf("usbmuxd: %w", err)
 	}
+	return pickEntry(list, udid, wifi)
+}
+
+// entryFor is findEntry(id, false) through the provider's usbmuxd list,
+// which tests replace.
+func (p *Provider) entryFor(id string) (goios.DeviceEntry, error) {
+	if p.listFn == nil {
+		return findEntry(id, false)
+	}
+	list, err := p.listFn()
+	if err != nil {
+		return goios.DeviceEntry{}, fmt.Errorf("usbmuxd: %w", err)
+	}
+	return pickEntry(list, id, false)
+}
+
+// pickEntry is findEntry's choice in a list usbmuxd gave.
+func pickEntry(list goios.DeviceList, udid string, wifi bool) (goios.DeviceEntry, error) {
 	var found *goios.DeviceEntry
 	for i, e := range list.DeviceList {
 		if e.Properties.SerialNumber != udid {

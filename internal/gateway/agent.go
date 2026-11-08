@@ -323,18 +323,18 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 }
 
 func (g *Gateway) findDeviceLocked(ref string) *device {
-	if d, ok := g.devices[ref]; ok {
+	if d, ok := g.devices[ref]; ok && !foundLocked(d) {
 		return d
 	}
 	var match []*device
 	for _, d := range g.devices {
-		if equalFold(d.name(), ref) {
+		if equalFold(d.name(), ref) && !foundLocked(d) {
 			match = append(match, d)
 		}
 	}
 	if len(match) == 0 && len(ref) >= 4 {
 		for _, d := range g.devices {
-			if hasPrefixFold(d.id, ref) {
+			if hasPrefixFold(d.id, ref) && !foundLocked(d) {
 				match = append(match, d)
 			}
 		}
@@ -348,6 +348,9 @@ func (g *Gateway) findDeviceLocked(ref string) *device {
 func (g *Gateway) deviceListLocked() string {
 	var out []string
 	for _, d := range g.sortedDevicesLocked() {
+		if foundLocked(d) {
+			continue // found on Wi-Fi, and maybe not the person's (wifi.go)
+		}
 		state := "online"
 		if !d.online {
 			state = "offline"
