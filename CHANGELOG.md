@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.5 (2026-11-09)
 
 - An iPhone's or iPad's Checkup now has a Wi-Fi item: whether its Wi-Fi connection is on and whether Pinky turned it on, why not if it isn't, and whether this computer sees the phone on the network now. Feedback diagnostics include it too.
 - On iPhones with iOS 27, a blocked app's notification banner over another app is now hidden from agents too, and covered in their screenshots.

@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1109.5 (2026-11-09)
 
 - iPhone 和 iPad 的「体检」新增了 Wi-Fi 一项：它的 Wi-Fi 连接开没开、是不是 Pinky 打开的、没开的话原因是什么，以及这台电脑现在能不能在网络上看到它。反馈附带的诊断信息里也有这一项。
 - 在 iOS 27 的 iPhone 上，被屏蔽 App 叠在其他 App 上的通知横幅现在也会对智能体隐藏，它拿到的截图里也会遮住。
