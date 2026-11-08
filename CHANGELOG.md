@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Pinky now mounts Apple's developer disk image on iPhones with iOS 27 by itself, in a second or two. This corrects 2026.1108.8: Xcode is no longer needed to mount it once.
+- Fixed iPhone connections that could treat Pinky as an old host, which broke large transfers on that connection.
+- The "You're in control" bar now sits above the phone in Pinky's window instead of over the top of its screen, so buttons there, such as an app's back button or menu, can be clicked from the computer.
+- Clicking the phone in Pinky's window to take over now always finishes that tap on the phone (it could stay held down), and what you type right after reaches the phone.
+- On a locked phone, the dimming and the "is locked" label step aside while the pointer is on the phone in Pinky's window, so you can unlock it there by hand.
+
 ## 2026.1108.8 (2026-11-08)
 
 - A correction to the last release: on iOS 27, Pinky can't yet mount Apple's developer disk image by itself (it waits until it times out). Open Xcode once with the iPhone plugged in; the iPhone keeps the image when it restarts.
