@@ -77,11 +77,11 @@ Decoding:
 
 1. A configuration packet (SPS/PPS/VPS) is held and prepended to the next packet, as scrcpy's client does.
 2. With `hw_device_ctx` set to a VideoToolbox device (D3D11VA on Windows, VA-API on Linux), FFmpeg's default `get_format` picks the hardware format, and falls back to software by itself when the hardware refuses a stream. Software decoding uses slice threads only, which add no latency, and `low_delay`.
-3. A hardware picture is mapped (`av_hwframe_map`, no copy on VideoToolbox) or else copied (`av_hwframe_transfer_data`), then `sws_scale_frame` converts NV12 or YUV420P to RGBA straight into an `image.RGBA` of the size the mirror shows it at, with the stream's color description.
+3. A hardware picture is mapped (`av_hwframe_map`, no copy on VideoToolbox) or else copied (`av_hwframe_transfer_data`). For mirrors and recordings, `Decoder.ConvertYUV` copies its planes as they are, at the stream's size: NV12 from the hardware decoders, I420 from the software one, and pictures in another layout (10-bit HEVC) converted to I420 by `sws_scale_frame`. It names the matrix swscale reads from the stream's tag: BT.601 for a stream that names none, BT.709 for one whose matrix swscale cannot convert (the Mi 10 Pro's YCgCo). `Decoder.Convert` converts to RGBA with `sws_scale_frame`, into an `image.RGBA` of any size, for the gateway's screenshots from video (`internal/gateway/frameshot.go`) and the bench; it cannot convert 10-bit pictures.
 4. `video.Player` decodes on a goroutine of its own and triple-buffers: the picture on screen, the newest one waiting, the one being converted. A player that falls more than 30 packets behind skips to the next key frame. While nobody takes pictures for a second (the window is covered or the screen locked, so it paints nothing), it goes on decoding but converts nothing.
-5. The mirror element takes the newest picture in its `Draw` callback, calls `Bitmap.Update` (which reuses the texture for same-size pictures and takes the `*image.RGBA` without a copy) and asks for the next paint with `AnimationFrameRate(60)`. So video frames repaint the window without rebuilding the view, and nothing is converted while the window is hidden.
+5. The mirror element takes the newest picture in its `Draw` callback, hands its planes to `Bitmap.UpdateYUV` (MyGo's, from egoist/mygo#1487: NV12's planes are taken without a copy, I420's chroma is interleaved into a plane the bitmap keeps, a picture of the same size keeps the textures, and the GPU converts and scales the planes as it samples them) and asks for the next paint with `AnimationFrameRate(60)`. So video frames repaint the window without rebuilding the view, and nothing is converted while the window is hidden. Recordings play the same way. A screenshot from the mirror copies the planes on the main thread and converts them to RGBA off it (`video.YUV.RGBA`, as MyGo's CPU renderer converts them), at the phone's full resolution.
 
-Pictures are converted at the pixel size they are shown at (the bezel's screen box times the display scale), so a 1080×2400 stream shown 300 points wide on a 2× display is converted and uploaded at about 600×1332, and All phones' tiles at about 316×700. MyGo would otherwise halve a much larger bitmap on the CPU for every frame.
+Until 2026-11-08 pictures were converted to RGBA by libswscale at the pixel size they were shown at (the bezel's screen box times the display scale): about 600×1332 for a 1080×2400 stream shown 300 points wide on a 2× display, and 316×700 for All phones' tiles. The planes go over at the stream's size instead: copying them costs a fifth of scaling them, and the GPU samples them bilinearly, two taps each way, as libswscale's fast bilinear scaled them. MyGo makes no halved copies of YUV pictures (its author's answer on #1487: apps pass frames at the size they show), so a mirror shown at a quarter of its stream or less would alias more than it did; the smallest tiles are about a third.
 
 ### Measurements
 
@@ -108,7 +108,20 @@ What the numbers say:
 - **Converting at the shown size matters:** a 1080×2400 stream shown at 600×1332 costs half the CPU of converting it whole.
 - **Not measured:** the upload in `Bitmap.Update`, painting, and the whole client's CPU while it mirrors. The screen was locked for most of this overnight session, and macOS draws no windows then, so the client paints nothing. Earlier interactive runs played smoothly; Activity Monitor next to `go run ./cmd/pinky-ui-demo` shows the client's share.
 
-Ways to cut the CPU further, in the order I would try them: ask VideoToolbox for planar YUV or BGRA output through `hw_frames_ctx` (needs a `get_format` callback through purego), which removes the slow NV12 path or the YUV conversion; MyGo's NV12 or I420 bitmap updates converted in a shader (the design's first upstream ask); and zero-copy CVPixelBuffer to Metal (#973).
+Ways to cut the CPU further, in the order I would try them: ask VideoToolbox for planar YUV or BGRA output through `hw_frames_ctx` (needs a `get_format` callback through purego), which removes the slow NV12 path or the YUV conversion; MyGo's NV12 or I420 bitmap updates converted in a shader (the design's first upstream ask); and zero-copy CVPixelBuffer to Metal (#973). The second is done (below); MyGo's author left the third for later.
+
+### Planes instead of RGBA (2026-11-08)
+
+The same machine and bench, with and without `-yuv`, two runs each, for a 1080×2400 H.264 stream at 60 fps shown at 600×1332:
+
+| Handing a picture to MyGo | Decoder | CPU, process + VT service | Packet → picture, median | Convert or copy, mean |
+| --- | --- | --- | --- | --- |
+| RGBA at 600×1332, `Bitmap.Update` (before) | VideoToolbox | 17–18% + 3% | 3.5 ms | 1.2 ms |
+| Planes at 1080×2400, `Bitmap.UpdateYUV` | VideoToolbox | 4% + 3% | 2.4 ms | 0.12 ms |
+| RGBA at 600×1332, `Bitmap.Update` (before) | software | 25–26% | 1.7 ms | 1.2 ms |
+| Planes at 1080×2400, `Bitmap.UpdateYUV` | software | 12% | 0.58 ms | 0.15 ms |
+
+Drawing costs the main thread a little more: MyGo's Metal renderer encodes a full-size NV12 picture, its upload included, in 0.43 ms of CPU, against 0.28 ms for an RGBA picture of 600×1332 (its offscreen bench, measured for egoist/mygo#1487), and I420 from the software decoder costs another 0.25 ms to interleave its chroma. At 60 fps a mirror then takes about 7% of a core with VideoToolbox instead of 19%, and about 16% in software instead of 27%, besides VideoToolbox's service. Not measured: the whole client with a window showing the mirror. MyGo's `TestDrawsVideoAsTheCPURenderer` checks on this Mac that Metal draws NV12 planes as its CPU renderer does, and captures of `pinky-ui-demo` over the automation socket, which MyGo draws on the CPU, show the demo's video in its colors. `TestMirrorShowsPlanes` plays a phone through the mirror as a USB stream (H.264, 30 fps) that ends and opens again as a phone moving to Wi-Fi or Tailscale does, at another size, in HEVC at 15 fps and 1 Mbit/s: each shows in the colors ffmpeg made, within 3 levels, at its aspect, also between the slower stream's pictures, and a screenshot has the stream's size.
 
 ## How the client reads gateway.API
 

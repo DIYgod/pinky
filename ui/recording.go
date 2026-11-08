@@ -133,7 +133,7 @@ func (pl *recPlayer) play(from time.Duration) {
 		}
 		var p *video.Player
 		if err == nil {
-			if p, err = video.NewPlayer(s, video.PlayerOptions{}); err != nil {
+			if p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true}); err != nil {
 				s.Close()
 			}
 		}
@@ -189,19 +189,13 @@ func (pl *recPlayer) seek(at time.Duration) {
 }
 
 // take shows the newest picture, at paint time.
-func (pl *recPlayer) take(pt *mg.Painter, r mg.Rect) {
+func (pl *recPlayer) take(pt *mg.Painter) {
 	p := pl.player
 	if p == nil {
 		return
 	}
-	s := pt.Scale()
-	p.SetSize(int(r.W*s+0.5), int(r.H*s+0.5))
 	if f := p.Take(); f != nil {
-		if pl.bitmap == nil {
-			pl.bitmap = mg.NewBitmap(f.Image)
-		} else {
-			pl.bitmap.Update(f.Image)
-		}
+		pl.bitmap = showPlanes(pl.bitmap, f.YUV)
 		pl.picW, pl.picH = f.Width, f.Height
 		if pl.first {
 			// PTS count from the recording's start, as recording.Open
@@ -247,7 +241,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 			Children(func() {
 				scr := mg.Box(c).Fill().Radius(28).Clip().Background(hex("#000000"))
 				scr.Draw(func(pt *mg.Painter, r mg.Rect) {
-					pl.take(pt, r)
+					pl.take(pt)
 					if pl.bitmap != nil {
 						pt.Clip(r, 28, func() { pt.Image(pl.bitmap, r, mg.Contain) })
 					}

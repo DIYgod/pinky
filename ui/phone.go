@@ -406,8 +406,8 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 // saveScreenshot writes the mirror's last picture to the Desktop (or the
 // home folder) as a PNG.
 func (a *app) saveScreenshot(m *mirror, name string) {
-	img := m.lastImage()
-	if img == nil {
+	pic := m.lastPicture()
+	if pic == nil {
 		a.toasts = append(a.toasts, locales.PhoneNoPicture())
 		return
 	}
@@ -418,6 +418,7 @@ func (a *app) saveScreenshot(m *mirror, name string) {
 	now := time.Now()
 	path := filepath.Join(dir, locales.PhoneScreenshotName(name, now.Format("2006-01-02"), now.Format("15.04.05"))+".png")
 	go func() {
+		img := pic.RGBA()
 		f, err := os.Create(path)
 		if err == nil {
 			err = png.Encode(f, img)
