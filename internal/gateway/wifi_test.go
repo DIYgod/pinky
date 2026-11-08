@@ -30,7 +30,7 @@ type airProvider struct {
 	conn      map[string]string   // by id; "usb" when unset
 	opens     map[string][]string // the connection of each Open, by id
 	sessions  map[string][]*overDevice
-	openDelay time.Duration // Open over Wi-Fi takes this long
+	openDelay time.Duration // Open takes this long
 }
 
 func newAirProvider(devs ...*demo.Device) *airProvider {
@@ -72,7 +72,7 @@ func (p *airProvider) Open(ctx context.Context, id string) (driver.Device, error
 	if c == "wifi" && !used {
 		return nil, errors.New("found on Wi-Fi; not used yet")
 	}
-	if c == "wifi" && delay > 0 {
+	if delay > 0 {
 		time.Sleep(delay)
 	}
 	dev, err := p.Provider.Open(ctx, id)
@@ -129,13 +129,17 @@ func (p *airProvider) state(id string) (used, forgot bool, opens []string) {
 // overDevice is a session over one connection, which dies with it.
 type overDevice struct {
 	driver.Device
-	conn string
-	dead atomic.Bool
+	conn   string
+	dead   atomic.Bool
+	frames atomic.Bool // the last read with OCR was offered frames of the live video
 }
 
 func (d *overDevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	if d.dead.Load() {
 		return nil, fmt.Errorf("the tunnel stopped: %w", driver.ErrOffline)
+	}
+	if opt.OCR {
+		d.frames.Store(opt.Frame != nil)
 	}
 	return d.Device.Observe(ctx, opt)
 }
@@ -274,7 +278,10 @@ func TestWiFiCableMoves(t *testing.T) {
 	ctx := context.Background()
 
 	p.set("iphone", "wifi") // the cable is pulled
-	waitFor(t, "the move", func() bool { v, _ := viewOf(g, "iphone"); return v.Status == DeviceOffline })
+	waitFor(t, "the move", func() bool {
+		v, _ := viewOf(g, "iphone")
+		return v.Status == DeviceConnecting && v.StatusLine == "Moving to Wi-Fi" && v.Info.State == driver.StateOffline
+	})
 	res := s.Observe(ctx, ObserveRequest{})
 	if res.IsError() || res.Screen == nil {
 		t.Fatalf("a call during the move: %+v", res)
@@ -284,6 +291,10 @@ func TestWiFiCableMoves(t *testing.T) {
 	}
 
 	p.set("iphone", "usb") // plugged in again
+	waitFor(t, "moving to the cable", func() bool {
+		v, _ := viewOf(g, "iphone")
+		return v.Status == DeviceConnecting && v.StatusLine == "Moving to the cable"
+	})
 	waitFor(t, "back on the cable", func() bool {
 		_, _, opens := p.state("iphone")
 		v, _ := viewOf(g, "iphone")
@@ -401,4 +412,78 @@ func (p *lockedProvider) List(ctx context.Context) ([]driver.Info, error) {
 		}
 	}
 	return infos, err
+}
+
+// restartingProvider lists a phone that usbmuxd lost, without a name as the
+// iOS provider does after Pinky restarted, and records restarts.
+type restartingProvider struct {
+	*airProvider
+	lost     atomic.Bool
+	restarts atomic.Int32
+	reason   atomic.Value
+}
+
+func (p *restartingProvider) List(ctx context.Context) ([]driver.Info, error) {
+	infos, err := p.airProvider.List(ctx)
+	if p.lost.Load() {
+		return []driver.Info{{ID: "iphone", Platform: driver.IOS, Connection: "wifi", State: driver.StateNeedsSetup,
+			Setup: driver.SetupDeviceService, Detail: "This Mac's device service lost the iPhone on Wi-Fi."}}, err
+	}
+	return infos, err
+}
+
+func (p *restartingProvider) RestartDeviceService(_ context.Context, reason string) error {
+	p.restarts.Add(1)
+	p.reason.Store(reason)
+	p.lost.Store(false)
+	return nil
+}
+
+// TestWiFiLostPhone: a phone the device service lost reads as such, with
+// the name Pinky saved, and restarting the service brings it back.
+func TestWiFiLostPhone(t *testing.T) {
+	dir := t.TempDir()
+	iphone := demo.NewDevice("iphone", "DIYgod's iPhone", driver.IOS)
+	p := &restartingProvider{airProvider: newAirProvider(iphone)}
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p}; o.DataDir = dir })
+	waitFor(t, "the iPhone online", func() bool { v, _ := viewOf(g, "iphone"); return v.Status == DeviceIdle })
+	g.Flush()
+	g.Close()
+
+	// Pinky starts again while usbmuxd has lost the phone.
+	p2 := &restartingProvider{airProvider: newAirProvider(iphone)}
+	p2.lost.Store(true)
+	g2, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p2}; o.DataDir = dir })
+	g2.SetWiFi(true)
+	v, _ := viewOf(g2, "iphone")
+	if v.Status != DeviceNeedsSetup || v.StatusLine != "Lost on Wi-Fi" || v.Info.Name != "DIYgod's iPhone" {
+		t.Fatalf("the lost iPhone = %+v", v)
+	}
+	if err := g2.RestartDeviceService(context.Background(), "nobody", ""); !errors.Is(err, ErrUnknownDevice) {
+		t.Fatalf("restart for an unknown phone: %v", err)
+	}
+	if err := g2.RestartDeviceService(context.Background(), "iphone", "Pinky restarts the device service."); err != nil {
+		t.Fatal(err)
+	}
+	if p2.restarts.Load() != 1 || p2.reason.Load() != "Pinky restarts the device service." {
+		t.Fatalf("restarts %d, reason %v", p2.restarts.Load(), p2.reason.Load())
+	}
+	waitFor(t, "the iPhone back", func() bool { v, _ := viewOf(g2, "iphone"); return v.Status == DeviceIdle })
+}
+
+// TestObserveOffersFrames: a read with OCR offers the driver pictures from
+// the live video, which an iPhone over Wi-Fi reads text from.
+func TestObserveOffersFrames(t *testing.T) {
+	p := newAirProvider(demo.NewDevice("iphone", "iPhone", driver.IOS))
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p} })
+	s, _ := connect(t, g, "Read the screen")
+	if res := s.Observe(context.Background(), ObserveRequest{}); res.IsError() {
+		t.Fatal(res.Message)
+	}
+	p.mu.Lock()
+	od := p.sessions["iphone"][len(p.sessions["iphone"])-1]
+	p.mu.Unlock()
+	if !od.frames.Load() {
+		t.Fatal("phone_observe offered the driver no frames of the live video")
+	}
 }

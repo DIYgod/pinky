@@ -108,7 +108,9 @@ Pinky also uses an iPhone or iPad over Wi-Fi while it is on the same Wi-Fi as th
 
 Over Wi-Fi each step is slower than on the cable, screenshots most of all. Measured on an iPad Pro 11-inch (3rd generation, iPadOS 27.0.1), Wi-Fi against the cable: a swipe shows on screen after 80 to 210 ms (60 to 90 ms), the home screen reads in 0.6 to 2.6 s (0.5 to 0.6 s), a screenshot takes 5 s (1 s), and 0.2 % of the video's packets were lost (none). Unplugging moved a running task to Wi-Fi in about 5 s, and plugging in moved it back in 2 to 6 s ([details](docs/notes/ios.md#wi-fi)).
 
-An iPhone on the same Wi-Fi that does not show up: on a Mac, the system's usbmuxd can lose a phone over Wi-Fi after its connection broke once (its Wi-Fi turned off and on, say) and not look for it again for up to about an hour. `sudo killall usbmuxd` in Terminal makes it look again at once; every iPhone and iPad, also on a cable, drops for a second or two.
+On a Mac, the system's device service, usbmuxd, can lose an iPhone on Wi-Fi after its connection broke once (its Wi-Fi turned off and on, say), and not look for it again for up to about an hour; Finder loses it too. Pinky notices when a phone you use is on the network but no longer listed, shows it as **Lost on Wi-Fi**, and offers **Restart device service…** on its page: after you confirm, macOS asks for an administrator's password, and every iPhone and iPad, also on a cable, disconnects for a second or two. `sudo killall usbmuxd` in Terminal does the same.
+
+While Pinky opens a phone, or moves it between the cable and Wi-Fi, it shows **Connecting** or **Moving to Wi-Fi** rather than offline. Over Wi-Fi Pinky reads text from the live picture rather than from screenshots, which take about 5 s there. An iPhone or iPad without a passcode never reads as locked, so after it has dropped off the network to sleep, Pinky connects to it only once it has been back for 30 seconds.
 
 #### iPhones on iOS 17.4 to 26
 

@@ -3228,6 +3228,10 @@
       }
     }
   },
+  "gwStatusConnecting": "Connecting",
+  "@gwStatusConnecting": {
+    "description": "A phone's status line while Pinky opens it (listed and ready, online in a moment). Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStatusFoundOnWiFi": "Found on Wi-Fi",
   "@gwStatusFoundOnWiFi": {
     "description": "A phone's status line: Pinky found it on Wi-Fi and waits for the person to say whether it is theirs. Shown only in other languages; in English the gateway's own words show."
@@ -3267,6 +3271,18 @@
         "example": "Reorder lunch"
       }
     }
+  },
+  "gwStatusLostOnWiFi": "Lost on Wi-Fi",
+  "@gwStatusLostOnWiFi": {
+    "description": "A phone's status line: the Mac's device service (usbmuxd) stopped listing an iPhone that is on the same Wi-Fi. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStatusMovingCable": "Moving to the cable",
+  "@gwStatusMovingCable": {
+    "description": "A phone's status line while Pinky opens it again over its cable after it was plugged in. Shown only in other languages."
+  },
+  "gwStatusMovingWiFi": "Moving to Wi-Fi",
+  "@gwStatusMovingWiFi": {
+    "description": "A phone's status line while Pinky opens it again over Wi-Fi after its cable was pulled. Shown only in other languages."
   },
   "gwStatusNeedsSetup": "Needs setup",
   "@gwStatusNeedsSetup": {
@@ -3563,6 +3579,80 @@
   "listSeparator": ", ",
   "@listSeparator": {
     "description": "Joins the names of a list before its last one (see listMany)."
+  },
+  "lostConfirmButton": "Restart",
+  "@lostConfirmButton": {
+    "description": "The button of the dialog that restarts macOS's device service."
+  },
+  "lostConfirmMessage": "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two, and tasks on them wait. Then macOS asks for an administrator's password.",
+  "@lostConfirmMessage": {
+    "description": "The message of the dialog that asks before Pinky restarts macOS's device service. phone is the lost iPhone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "lostConfirmTitle": "Restart the device service?",
+  "@lostConfirmTitle": {
+    "description": "The dialog that asks before Pinky restarts macOS's device service."
+  },
+  "lostDetail": "{phone} is on the same Wi-Fi, but macOS's device service (usbmuxd) stopped listing it after its connection broke once, and may not list it again for up to an hour. Restarting the service makes it look again.",
+  "@lostDetail": {
+    "description": "Under lostTitle, and in Add phone and the checkup. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "lostManual": "Or restart it yourself: run sudo killall usbmuxd in Terminal.",
+  "@lostManual": {
+    "description": "Under the restart button, or in its place where Pinky cannot restart the service itself."
+  },
+  "lostReason": "Pinky wants to restart the device service (usbmuxd) so that this Mac finds your iPhone on Wi-Fi again.",
+  "@lostReason": {
+    "description": "Shown in macOS's own request for an administrator's password when Pinky restarts the device service."
+  },
+  "lostRestart": "Restart device service…",
+  "@lostRestart": {
+    "description": "The button that restarts macOS's device service (usbmuxd) so it finds a lost iPhone again; it asks first."
+  },
+  "lostRestartFailed": "Couldn't restart the device service: {error}",
+  "@lostRestartFailed": {
+    "description": "A notice when restarting macOS's device service failed. error is what went wrong.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "osascript: the command failed"
+      }
+    }
+  },
+  "lostRestartNote": "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an administrator's password.",
+  "@lostRestartNote": {
+    "description": "Under the Restart device service button."
+  },
+  "lostRestarted": "Restarted the device service. {phone} shows up again in a few seconds.",
+  "@lostRestarted": {
+    "description": "A notice after Pinky restarted macOS's device service. phone is the lost iPhone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "lostTitle": "This Mac lost {phone} on Wi-Fi",
+  "@lostTitle": {
+    "description": "The page of an iPhone that macOS's device service stopped listing though it is on the same Wi-Fi. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
   },
   "menuActivity": "Activity",
   "@menuActivity": {
@@ -4436,6 +4526,20 @@
       }
     }
   },
+  "phoneConnectingTask": "The task on it waits until it's connected.",
+  "@phoneConnectingTask": {
+    "description": "Under the connecting page's title when an agent's task runs on the phone."
+  },
+  "phoneConnectingTitle": "Connecting to {phone}…",
+  "@phoneConnectingTitle": {
+    "description": "The page of a phone Pinky is opening. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
   "phoneHandBack": "Hand back",
   "@phoneHandBack": {
     "description": "Button that gives the phone back to the agents after the person took over: on the banner above the mirror and on All phones tiles."
@@ -4479,6 +4583,26 @@
   "phoneMoreControls": "More phone controls",
   "@phoneMoreControls": {
     "description": "The accessibility label and tooltip of the ⋯ button under the mirror, which opens Take screenshot, Record screen, Rotate and Work in the background."
+  },
+  "phoneMovingCableTitle": "Moving {phone} to the cable…",
+  "@phoneMovingCableTitle": {
+    "description": "The page of a phone that was plugged in, while Pinky opens it again over the cable. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
+  },
+  "phoneMovingWiFiTitle": "Moving {phone} to Wi-Fi…",
+  "@phoneMovingWiFiTitle": {
+    "description": "The page of a phone whose cable was pulled, while Pinky opens it again over Wi-Fi. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPad"
+      }
+    }
   },
   "phoneNeedsSetup": "{phone} needs setup",
   "@phoneNeedsSetup": {
@@ -5643,6 +5767,10 @@
   "settingsPhonesConnected": "Connected",
   "@settingsPhonesConnected": {
     "description": "Settings › Phones: the state at the end of a phone's row, next to a green dot: online and ready."
+  },
+  "settingsPhonesConnecting": "Connecting…",
+  "@settingsPhonesConnecting": {
+    "description": "Settings › Phones: the status of a phone Pinky is opening."
   },
   "settingsPhonesFound": "Found on Wi-Fi",
   "@settingsPhonesFound": {

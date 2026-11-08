@@ -145,13 +145,15 @@ func (g *Gateway) knowLocked(d *device) {
 // reach phones over Wi-Fi by themselves that they are the person's, before
 // the first discovery.
 func (g *Gateway) loadKnown() {
-	ids, err := g.store.DeviceIDs(context.Background())
+	recs, err := g.store.SeenDevices(context.Background())
 	if err != nil {
 		g.log.Warn("history: devices", "err", err)
 		return
 	}
-	for _, id := range ids {
+	for _, rec := range recs {
+		id := rec.ID
 		g.known[id] = true
+		g.names[id] = rec
 		for _, p := range g.opt.Providers {
 			if w, ok := p.(driver.WiFiFinder); ok {
 				w.UseOverWiFi(id)
@@ -167,6 +169,19 @@ func movingWhy(to string) string {
 		return "moving to Wi-Fi"
 	}
 	return "moving to the cable"
+}
+
+// connectingLine is the status line of a phone being opened: "Moving to
+// Wi-Fi" or "Moving to the cable" while it moves, else "Connecting". The
+// caller holds g.mu.
+func connectingLine(d *device) string {
+	if time.Now().Before(d.moving) {
+		if d.info.Connection == "wifi" {
+			return "Moving to Wi-Fi"
+		}
+		return "Moving to the cable"
+	}
+	return "Connecting"
 }
 
 // connectionOf is the connection a session was opened over.
@@ -205,4 +220,31 @@ func (g *Gateway) waitMovingLocked(ctx context.Context, d *device) bool {
 	t.Stop()
 	g.mu.Lock()
 	return ctx.Err() == nil
+}
+
+// RestartDeviceService restarts the computer's service a phone goes through,
+// when its provider can (driver.DeviceServiceRestarter: usbmuxd, which can
+// lose an iPhone on Wi-Fi), as the person asked on the phone's page. The
+// system asks for an administrator's password, showing reason; every phone of
+// the platform disconnects for a moment, and tasks on them wait as for any
+// short disconnection. It returns driver.ErrCanceled when the person
+// declines.
+func (g *Gateway) RestartDeviceService(ctx context.Context, deviceID, reason string) error {
+	g.mu.Lock()
+	d := g.devices[deviceID]
+	g.mu.Unlock()
+	if d == nil {
+		return ErrUnknownDevice
+	}
+	r, ok := d.provider.(driver.DeviceServiceRestarter)
+	if !ok {
+		return fmt.Errorf("%s: %w", d.name(), driver.ErrUnsupported)
+	}
+	g.log.Info("restarting the device service", "platform", d.provider.Platform(), "for", deviceID)
+	if err := r.RestartDeviceService(ctx, reason); err != nil {
+		g.log.Warn("restart the device service", "err", err)
+		return err
+	}
+	g.discoverSoon()
+	return nil
 }

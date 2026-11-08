@@ -57,9 +57,11 @@ type Provider struct {
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
 
-	wifi       wifiState // phones over Wi-Fi (wifi.go)
-	prep       preparer  // Developer Mode and the developer disk image (prepare.go)
-	muxErr     error     // usbmuxd's answer to the last List
+	wifi       wifiState                                               // phones over Wi-Fi (wifi.go)
+	lost       lostState                                               // phones usbmuxd lost on Wi-Fi (lost.go)
+	restartFn  func(ctx context.Context, command, reason string) error // for tests: runAsAdmin
+	prep       preparer                                                // Developer Mode and the developer disk image (prepare.go)
+	muxErr     error                                                   // usbmuxd's answer to the last List
 	muxChecked bool
 	muxFails   int                              // Lists in a row that usbmuxd did not answer
 	muxPhones  int                              // phones the last answered List found
@@ -138,6 +140,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 		return nil, err // nil without usbmuxd: CheckHost says what to install
 	}
 	entries := p.entries(list)
+	p.noteWiFiListing(entries)
 	out := make([]driver.Info, len(entries))
 	listed := make([]bool, len(entries))
 	var wg sync.WaitGroup
@@ -149,6 +152,11 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 				// Over Wi-Fi only, and not the person's yet: its name and
 				// nothing else (wifi.go).
 				out[i], listed[i] = p.foundInfo(ctx, e)
+				return
+			}
+			if e.Properties.ConnectionType == "Network" && p.dozing(e.Properties.SerialNumber) {
+				// Back on Wi-Fi a moment after it dropped off, with no
+				// passcode to tell: most likely asleep (wifi.go).
 				return
 			}
 			out[i], listed[i] = p.info(ctx, e), true
@@ -167,7 +175,19 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	// Phones on Wi-Fi that dropped off usbmuxd's list a moment ago, as one
 	// that sleeps does (wifi.go).
 	kept = append(kept, p.heldFound(ids)...)
-	return append(kept, p.heldAsleep(ids)...), nil
+	kept = append(kept, p.heldAsleep(ids)...)
+	p.remember(kept)
+	// Phones usbmuxd lost on Wi-Fi though they are on the network (lost.go).
+	onMux := map[string]bool{}
+	for _, e := range list {
+		onMux[e.Properties.SerialNumber] = true
+	}
+	for _, info := range p.lostPhones(onMux) {
+		if !ids[info.ID] && (p.Only == nil || p.Only[info.ID]) {
+			kept = append(kept, info)
+		}
+	}
+	return kept, nil
 }
 
 // foundOnly reports whether Pinky reaches the phone behind e only over
@@ -416,10 +436,13 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)
 	info.OSVersion = values.Value.ProductVersion
-	if info.Connection == "wifi" && values.Value.PasswordProtected {
-		// Locked on Wi-Fi, most likely asleep: Pinky waits until it is
-		// unlocked (wifi.go).
-		return p.lockedOnWiFi(info)
+	if values.Value.PasswordProtected {
+		p.noteLocked(info.ID) // it has a passcode (wifi.go, dozing)
+		if info.Connection == "wifi" {
+			// Locked on Wi-Fi, most likely asleep: Pinky waits until it
+			// is unlocked (wifi.go).
+			return p.lockedOnWiFi(info)
+		}
 	}
 	p.awake(info.ID)
 	kind, why := pathFor(parseVersion(info.OSVersion))

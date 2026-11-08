@@ -11,7 +11,7 @@
     "icon": "../../assets/icon/Pinky.icns",
     "minimumSystemVersion": "12.0",
     "infoPlist": {
-      "NSLocalNetworkUsageDescription": "Pinky looks for your Android phones on this network to pair them and connect to them over Wi-Fi."
+      "NSLocalNetworkUsageDescription": "Pinky looks for your phones on this network to connect to them over Wi-Fi: Android phones to pair them, and iPhones and iPads that this Mac stopped listing."
     }
   },
   "linux": {

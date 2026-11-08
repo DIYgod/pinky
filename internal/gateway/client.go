@@ -76,12 +76,19 @@ func featuresOf(dev driver.Device) Features {
 func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, string) {
 	l := d.lease
 	if !d.online {
+		if d.opening && d.info.State == driver.StateOnline {
+			return DeviceConnecting, connectingLine(d)
+		}
 		if foundLocked(d) {
 			// Found on Wi-Fi: the person says whether it is theirs (wifi.go).
 			return DeviceNeedsSetup, "Found on Wi-Fi"
 		}
 		if lockedOnWiFi(d) && l == nil {
 			return DeviceOffline, "Locked on Wi-Fi"
+		}
+		if d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupDeviceService {
+			// The computer's device service lost it on Wi-Fi (wifi.go).
+			return DeviceNeedsSetup, "Lost on Wi-Fi"
 		}
 		if waitsForStep(d.info.State) {
 			// Listed but not opened: the phone is connected and waits for

@@ -164,7 +164,7 @@ func connectionLine(d gateway.DeviceView) string {
 			kind = "iPad"
 		}
 	}
-	if lockedOnWiFi(d) {
+	if lockedOnWiFi(d) || d.Status == gateway.DeviceConnecting {
 		return kind + " · " + statusLine(d)
 	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {

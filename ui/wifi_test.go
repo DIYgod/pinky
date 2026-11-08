@@ -1,16 +1,19 @@
 package ui
 
 import (
+	"fmt"
 	"image/png"
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
 
@@ -186,6 +189,19 @@ func TestWiFiScreenshots(t *testing.T) {
 		ta.waitFor(t, "the iPad locked", func() bool { d := ta.device(id); return d != nil && lockedOnWiFi(*d) })
 		ta.page, ta.sel = pagePhones, id
 		shoot("wifi-locked-page", 1280, 820)
+		ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline})
+		ta.api.SetConnecting(id, "Moving to Wi-Fi")
+		ta.waitFor(t, "the iPad moving", func() bool { d := ta.device(id); return d != nil && d.Status == gateway.DeviceConnecting })
+		shoot("wifi-moving-page", 1280, 820)
+		ta.api.SetConnecting(id, "")
+		ta.api.LoseOnWiFi(id)
+		ta.waitFor(t, "the iPad lost", func() bool { d := ta.device(id); return d != nil && lostOnWiFi(*d) })
+		defer func(os string) { guideOS = os }(guideOS)
+		guideOS = "darwin"
+		shoot("wifi-lost-page", 1280, 820)
+		ta.found.asking, ta.found.askFor = true, id
+		shoot("wifi-lost-dialog", 1280, 820)
+		ta.found.asking, ta.found.askFor = false, ""
 	}
 }
 
@@ -201,5 +217,83 @@ func TestLockedOnWiFiPage(t *testing.T) {
 	mustHave(t, tt, "Sam's iPad is locked", locales.PhoneLockedWiFiDetail(), "Locked on Wi-Fi")
 	if hasText(tt, "is offline") {
 		t.Errorf("the page calls it offline: %q", tt.Texts())
+	}
+}
+
+// TestConnectingPage: a phone Pinky is opening, or moving to Wi-Fi, says so
+// on its page, in its header and in Settings, and offers no Take over.
+func TestConnectingPage(t *testing.T) {
+	ta, id := foundApp(t, true)
+	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline})
+	ta.api.SetConnecting(id, "Moving to Wi-Fi")
+	ta.waitFor(t, "the iPad moving", func() bool { d := ta.device(id); return d != nil && d.Status == gateway.DeviceConnecting })
+	ta.sel = id
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	mustHave(t, tt, "Moving Sam's iPad to Wi-Fi…", "iPad · Moving to Wi-Fi")
+	if hasText(tt, "is offline") || hasText(tt, "Take over") {
+		t.Errorf("a moving phone reads as offline or can be taken over: %q", tt.Texts())
+	}
+	ta.api.SetConnecting(id, "Connecting")
+	ta.waitFor(t, "the iPad connecting", func() bool { d := ta.device(id); return d != nil && d.StatusLine == "Connecting" })
+	tt.Frame()
+	mustHave(t, tt, "Connecting to Sam's iPad…")
+	ta.page, ta.set.sec = pageSettings, secPhones
+	tt.Frame()
+	mustHave(t, tt, "Connecting…")
+}
+
+// TestLostOnWiFiPage: an iPhone the device service lost on Wi-Fi says so,
+// and its Restart button asks first, then restarts the service with the
+// reason macOS shows, and brings the phone back. Declined, nothing is said.
+func TestLostOnWiFiPage(t *testing.T) {
+	defer func(os string) { guideOS = os }(guideOS)
+	guideOS = "darwin"
+	ta, id := foundApp(t, true)
+	ta.api.UseFoundPhone(id)
+	ta.api.LoseOnWiFi(id)
+	ta.waitFor(t, "the iPad lost", func() bool { d := ta.device(id); return d != nil && lostOnWiFi(*d) })
+	ta.sel = id
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	mustHave(t, tt, "This Mac lost Sam's iPad on Wi-Fi", locales.LostDetail("Sam's iPad"), locales.LostRestartNote(), "sudo killall usbmuxd", "Lost on Wi-Fi")
+	if err := tt.Click("Restart device service…"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	mustHave(t, tt, "Restart the device service?", locales.LostConfirmMessage("Sam's iPad"))
+	if len(ta.api.Restarts()) != 0 {
+		t.Fatal("restarted before the person confirmed")
+	}
+	if err := tt.Click("Restart"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the restart", func() bool { return len(ta.api.Restarts()) == 1 && !ta.found.restarting })
+	if got := ta.api.Restarts(); got[0] != locales.LostReason() {
+		t.Errorf("reason %q", got[0])
+	}
+	if !slices.Contains(ta.toasts, "Restarted the device service. Sam's iPad shows up again in a few seconds.") {
+		t.Errorf("toasts %q", ta.toasts)
+	}
+	ta.waitFor(t, "the iPad back", func() bool { d := ta.device(id); return d != nil && d.Info.State == driver.StateOnline })
+
+	// Declined in macOS's request: no notice.
+	ta.api.LoseOnWiFi(id)
+	ta.api.SetRestartError(fmt.Errorf("restarting the device service: %w", driver.ErrCanceled))
+	ta.waitFor(t, "lost again", func() bool { d := ta.device(id); return d != nil && lostOnWiFi(*d) })
+	ta.toasts = nil
+	tt.Frame()
+	if err := tt.Click("Restart device service…"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if err := tt.Click("Restart"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the declined restart", func() bool { return len(ta.api.Restarts()) == 2 && !ta.found.restarting })
+	for _, toast := range ta.toasts {
+		if strings.Contains(toast, "device service") {
+			t.Errorf("a notice for a declined restart: %q", toast)
+		}
 	}
 }

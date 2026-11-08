@@ -105,6 +105,13 @@ func TestDeviceIDs(t *testing.T) {
 	if err != nil || !slices.Equal(got, []string{"ipad", "iphone"}) {
 		t.Fatalf("DeviceIDs = %v, %v; want the phones seen and not removed", got, err)
 	}
+	if err := s.SaveDevice(ctx, Device{ID: "iphone", Name: "DIYgod's iPhone", Model: "iPhone 13 mini", LastSeen: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	recs, err := s.SeenDevices(ctx)
+	if err != nil || len(recs) != 2 || recs[1].ID != "iphone" || recs[1].Name != "DIYgod's iPhone" || recs[1].Model != "iPhone 13 mini" {
+		t.Fatalf("SeenDevices = %+v, %v", recs, err)
+	}
 }
 
 func TestDeleteDeviceHistory(t *testing.T) {

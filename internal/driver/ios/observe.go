@@ -96,6 +96,7 @@ type ObserveStats struct {
 	OCRLines  int
 	Walk      time.Duration
 	Shot      time.Duration
+	ShotFrom  string // what OCR read: "screenshot", or "video" (a frame of the live video, over Wi-Fi)
 	OCR       time.Duration
 	Total     time.Duration
 	Complete  bool // the walk came back to its start
@@ -188,8 +189,8 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	go func() {
 		defer wg.Done()
 		t := time.Now()
-		png, err := d.ScreenshotPNG(ctx)
-		st.Shot = time.Since(t)
+		png, _, from, err := d.ocrPicture(ctx, opt)
+		st.Shot, st.ShotFrom = time.Since(t), from
 		if err != nil {
 			ocrErr = err
 			return
