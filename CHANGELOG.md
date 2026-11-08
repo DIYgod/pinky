@@ -2,6 +2,12 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- An iPhone's or iPad's Checkup now has a Wi-Fi item: whether its Wi-Fi connection is on and whether Pinky turned it on, why not if it isn't, and whether this computer sees the phone on the network now. Feedback diagnostics include it too.
+- On iPhones with iOS 27, a blocked app's notification banner over another app is now hidden from agents too, and covered in their screenshots.
+- Settings › Privacy now says that screen recordings show a blocked app's notifications and its card in recent apps as they were; recordings stay on your computer.
+
 ## 2026.1109.4 (2026-11-09)
 
 - iPhones and iPads now work in landscape: taps, swipes and what Pinky reads of the screen land in the right place whichever way the device is turned, and the mirror shows the screen the right way up.
