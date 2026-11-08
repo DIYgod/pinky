@@ -118,7 +118,7 @@ func (m *mjpegReader) next(ctx context.Context) (frame, error) {
 		}
 		return frame{}, fmt.Errorf("MJPEG: %w", err)
 	}
-	return frame{key: frameKey(b), decode: func() (image.Image, error) { return jpeg.Decode(bytes.NewReader(b)) }}, nil
+	return frame{key: frameKey(b), turn: exifTurn(b), decode: func() (image.Image, error) { return jpeg.Decode(bytes.NewReader(b)) }}, nil
 }
 
 func (m *mjpegReader) Close() error {

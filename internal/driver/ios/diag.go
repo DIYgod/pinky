@@ -87,3 +87,67 @@ func (d *Device) SwipeLatency(ctx context.Context, n int, vertical bool) ([]time
 	}
 	return out, nil
 }
+
+// OrientationReport is what the phone says about its screen's orientation,
+// for iosctl orient: the main display as CoreDevice describes it, and the
+// frontmost app and its first elements as remoteAXService gives them.
+type OrientationReport struct {
+	Display  map[string]any // the main display's entry of getdisplayinfo
+	App      string         // the frontmost app's label
+	AppAttrs map[int]any    // the app element's frame (21) and orientation (129), raw
+	Elements []OrientationElement
+}
+
+// OrientationElement is one element's label and frame, in points.
+type OrientationElement struct {
+	Label      string
+	X, Y, W, H float64
+}
+
+// Orientation reads what OrientationReport describes. It only reads.
+func (d *Device) Orientation(ctx context.Context) (OrientationReport, error) {
+	var r OrientationReport
+	d.svcMu.Lock()
+	svc := d.info2
+	d.svcMu.Unlock()
+	disp, err := readDisplay(ctx, svc)
+	if err != nil {
+		return r, err
+	}
+	r.Display = disp
+	rax, err := d.raxReady(ctx)
+	if err != nil {
+		return r, err
+	}
+	app, err := rax.frontmostApp(ctx)
+	if err != nil {
+		return r, err
+	}
+	resp, err := rax.request(ctx, axpRequest{
+		Type: axpReqAttributes, Client: raxClientType, Object: app,
+		Params: map[string]any{"attributes": []int{axpAttrFrame, axpAttrLabel, axpAttrApplicationOrientation}},
+	})
+	if err != nil {
+		return r, err
+	}
+	ad, _ := resp.Result.(axpDict)
+	r.AppAttrs = map[int]any{}
+	for k, v := range ad {
+		r.AppAttrs[toInt(k)] = v
+	}
+	r.App, _ = ad[axpAttrLabel].(string)
+	els, _, err := rax.walk(ctx, raxLimits)
+	if err != nil && len(els) == 0 {
+		return r, err
+	}
+	for _, e := range els {
+		if !e.HasFrame || e.Label == "" {
+			continue
+		}
+		r.Elements = append(r.Elements, OrientationElement{Label: e.Label, X: e.Frame.X, Y: e.Frame.Y, W: e.Frame.W, H: e.Frame.H})
+		if len(r.Elements) == 12 {
+			break
+		}
+	}
+	return r, nil
+}

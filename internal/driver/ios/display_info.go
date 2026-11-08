@@ -22,10 +22,12 @@ type screenInfo struct {
 	Backlight     string  // activeOn, off, ...
 }
 
-func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
+// readDisplay returns the main display's entry of CoreDevice's display
+// info, as the phone sends it.
+func readDisplay(ctx context.Context, svc *cdService) (map[string]any, error) {
 	out, err := svc.invoke(ctx, featureGetDisplayInfo, "", nil)
 	if err != nil {
-		return screenInfo{}, err
+		return nil, err
 	}
 	displays, _ := out["displays"].([]any)
 	for _, d := range displays {
@@ -33,26 +35,33 @@ func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
 		if !ok {
 			continue
 		}
-		if p, _ := m["primary"].(bool); !p {
-			continue
+		if p, _ := m["primary"].(bool); p {
+			return m, nil
 		}
-		si := screenInfo{Scale: 1}
-		if b, ok := m["bounds"].([]any); ok && len(b) == 2 {
-			if wh, ok := b[1].([]any); ok && len(wh) == 2 {
-				si.Width, si.Height = int(toFloat(wh[0])), int(toFloat(wh[1]))
-			}
-		}
-		if s := toFloat(m["pointScale"]); s > 0 {
-			si.Scale = s
-		}
-		si.Orientation, _ = m["currentOrientation"].(string)
-		si.Backlight, _ = m["backlightState"].(string)
-		if si.Width <= 0 || si.Height <= 0 {
-			return si, fmt.Errorf("display info: no size for the main display")
-		}
-		return si, nil
 	}
-	return screenInfo{}, fmt.Errorf("display info: no main display")
+	return nil, fmt.Errorf("display info: no main display")
+}
+
+func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
+	m, err := readDisplay(ctx, svc)
+	if err != nil {
+		return screenInfo{}, err
+	}
+	si := screenInfo{Scale: 1}
+	if b, ok := m["bounds"].([]any); ok && len(b) == 2 {
+		if wh, ok := b[1].([]any); ok && len(wh) == 2 {
+			si.Width, si.Height = int(toFloat(wh[0])), int(toFloat(wh[1]))
+		}
+	}
+	if s := toFloat(m["pointScale"]); s > 0 {
+		si.Scale = s
+	}
+	si.Orientation, _ = m["currentOrientation"].(string)
+	si.Backlight, _ = m["backlightState"].(string)
+	if si.Width <= 0 || si.Height <= 0 {
+		return si, fmt.Errorf("display info: no size for the main display")
+	}
+	return si, nil
 }
 
 func toFloat(v any) float64 {
