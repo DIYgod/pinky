@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- An agent that connects to a phone waiting for a step (trusting the computer, allowing USB debugging, Developer Mode) now hears which step, instead of being told the phone is offline, and can ask you for it. Pinky's request card then says the agent goes on by itself once the phone is ready.
+- An iPhone waiting for its passcode before the WebDriverAgent helper may control it now says so in your language.
+- A phone that never connected fully and was unplugged leaves the phone list after two minutes, such as the extra entry Windows showed for a phone before its USB driver was installed.
+- `pinkyctl devices` no longer prints an offline phone's reason twice, and lists phones that need setup as such.
+- On phones that ask before installing apps over USB, the Update card for Pinky Companion now says why to update when it is signed with the old public key: anyone could make a fake update of it, and the new version is signed with Pinky's private key.
+
 ## 2026.1108.11 (2026-11-08)
 
 - Pinky Companion's accessibility service is now on only while an agent works on the phone: it turns on as a task starts and off a few seconds after the task ends or you take over. Banking apps that refuse to run next to an accessibility service from outside an app store work again the rest of the time.
