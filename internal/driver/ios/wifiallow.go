@@ -18,7 +18,9 @@ import (
 // phone on a cable that trusts this computer, as Finder does when the box
 // is ticked, and reads it first: a phone that has it on is left as it is.
 // It never turns it off: turning Pinky's switch off, or removing the phone,
-// leaves the phone's value alone (Finder turns it off). Once per attach;
+// leaves the phone's value alone. (Unticking Finder's box does not turn it
+// off either: on 2026-11-09 the iPhone 13 mini read it as on afterwards,
+// and usbmuxd listed the phone over Wi-Fi.) Once per attach;
 // after a failure (a phone that did not answer in time) again after
 // wifiAllowRetry.
 

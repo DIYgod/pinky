@@ -102,7 +102,7 @@
   "addPhoneIPhoneStepTrustDetail": "iPhone 询问“要信任此电脑吗？”时，轻点“信任”并输入锁屏密码。如果没有弹出询问，请先解锁；如果点了“不信任”，请拔下后重新插上。",
   "addPhoneIPhoneStepTrustHint": "需要插线",
   "addPhoneIPhoneStepTrustWaiting": "正在等待 iPhone 信任这台电脑…",
-  "addPhoneIPhoneStepTrustWiFiOn": "之后 Pinky 会打开它的 Wi-Fi 连接，和在“访达”里勾选让 iPhone 在 Wi-Fi 上显示的选项作用相同。关闭“通过 Wi-Fi 使用 iPhone 和 iPad”不会把它关掉；可以在“访达”里关掉。",
+  "addPhoneIPhoneStepTrustWiFiOn": "之后 Pinky 会打开它的 Wi-Fi 连接，和在“访达”里勾选让 iPhone 在 Wi-Fi 上显示的选项作用相同。关闭“通过 Wi-Fi 使用 iPhone 和 iPad”不会把它关掉。",
   "addPhoneIPhoneStepUnlock": "请解锁 iPhone，Pinky 才能完成准备。",
   "addPhoneIPhoneStepUsbmuxd": "安装 usbmuxd",
   "addPhoneIPhoneStepUsbmuxdDetail": "安装 usbmuxd 软件包，例如运行 sudo apt install usbmuxd。Pinky 通过它与 iPhone 通信；插上 iPhone 时它会自动启动。",
