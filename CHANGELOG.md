@@ -2,6 +2,12 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Watching a phone takes about a third of the CPU it did: the video's frames go to the GPU as the phone sends them, without converting each one first. Recordings play the same way.
+- Screenshots saved from a phone's screen are at the phone's full resolution.
+- Windows and Linux computers stay awake while an agent task runs, and while a phone is connected through Tailscale with Keep this computer awake for phones away on, as Macs already did.
+
 ## 2026.1108.14 (2026-11-08)
 
 - iPhones and iPads now work over Wi-Fi too, on by default: one you use with Pinky keeps working when you unplug it, while it's on the same Wi-Fi as your computer, and a running task moves between the cable and Wi-Fi by itself. Turn it off in Settings › Phones.
