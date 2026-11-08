@@ -49,6 +49,7 @@ type Service struct {
 	Host     string       // the SRV target, "Android_X32DXQ4S.local."
 	Port     int          // 0 until the SRV record came
 	Addrs    []netip.Addr // the host's addresses, IPv4 first
+	TXT      []string     // the instance's TXT strings ("key=value"), nil until its TXT record came
 }
 
 // Addr is where the service listens, "192.168.5.137:38161", or "" while
@@ -78,6 +79,13 @@ type Options struct {
 	Interfaces func() ([]net.Interface, error)
 	// NoGroup skips listening on the mDNS group, for tests.
 	NoGroup bool
+	// MulticastAnswers asks from port 5353 (the group socket) and without
+	// the unicast-response bit, so that responders answer to the mDNS
+	// group: a question from another port gets its answer by unicast to
+	// that port (RFC 6762 §6.7), which a firewall that lets mDNS in but
+	// nothing else (ufw's default rules) drops. Linux only: there a socket
+	// bound to the group's address sends from the interface's own.
+	MulticastAnswers bool
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
 }
@@ -254,7 +262,7 @@ func (b *Browser) ask(all bool) {
 	if all {
 		types = b.types
 	}
-	msg, err := query(types, srv, hosts)
+	msg, err := query(types, srv, hosts, !b.opt.MulticastAnswers)
 	if err != nil {
 		b.setErr(err)
 		return
@@ -326,14 +334,18 @@ func (b *Browser) send(msg []byte) error {
 		return ErrNoNetwork
 	}
 	group := net.UDPAddrFromAddrPort(Group)
+	pc := b.upc
+	if b.opt.MulticastAnswers && b.gpc != nil {
+		pc = b.gpc
+	}
 	var first error
 	sent := false
 	for i := range ifs {
 		ifi := &ifs[i]
 		b.join(ifi)
-		err := b.upc.SetMulticastInterface(ifi)
+		err := pc.SetMulticastInterface(ifi)
 		if err == nil {
-			_, err = b.upc.WriteTo(msg, nil, group)
+			_, err = pc.WriteTo(msg, nil, group)
 		}
 		if err == nil {
 			sent = true
@@ -447,14 +459,17 @@ func (b *Browser) handle(msg []byte) {
 
 // query builds a message with questions for the types' instances (PTR),
 // the instances' SRV and TXT records and the hosts' addresses, each with
-// the unicast-response bit set (RFC 6762 §5.4).
-func query(types, instances, hosts []string) ([]byte, error) {
+// the unicast-response bit set when unicast (RFC 6762 §5.4).
+func query(types, instances, hosts []string, unicast bool) ([]byte, error) {
 	b := dnsmessage.NewBuilder(make([]byte, 0, 512), dnsmessage.Header{})
 	b.EnableCompression()
 	if err := b.StartQuestions(); err != nil {
 		return nil, err
 	}
-	qu := dnsmessage.ClassINET | unicastBit
+	qu := dnsmessage.ClassINET
+	if unicast {
+		qu |= unicastBit
+	}
 	q := func(name string, t dnsmessage.Type) error {
 		n, err := dnsmessage.NewName(name)
 		if err != nil {
@@ -496,10 +511,11 @@ type record struct {
 	target string // PTR and SRV: as sent
 	port   uint16 // SRV
 	addr   netip.Addr
+	txt    []string // TXT
 }
 
-// parse reads the PTR, SRV, A and AAAA records of an mDNS response, in
-// every section; it skips the other types (TXT, NSEC, OPT) and questions.
+// parse reads the PTR, SRV, TXT, A and AAAA records of an mDNS response,
+// in every section; it skips the other types (NSEC, OPT) and questions.
 func parse(msg []byte) ([]record, bool) {
 	var p dnsmessage.Parser
 	h, err := p.Start(msg)
@@ -547,6 +563,12 @@ func parse(msg []byte) ([]record, bool) {
 					return out, len(out) > 0
 				}
 				r.target, r.port = rr.Target.String(), rr.Port
+			case dnsmessage.TypeTXT:
+				rr, err := p.TXTResource()
+				if err != nil {
+					return out, len(out) > 0
+				}
+				r.txt = rr.TXT
 			case dnsmessage.TypeA:
 				rr, err := p.AResource()
 				if err != nil {
@@ -576,6 +598,7 @@ func parse(msg []byte) ([]record, bool) {
 type cache struct {
 	ptrs  map[ptrKey]time.Time  // a type's instance, until it expires
 	srvs  map[string]srvRecord  // by the instance's full name, lower case
+	txts  map[string]txtRecord  // by the instance's full name, lower case
 	addrs map[string][]addrItem // by host name, lower case
 }
 
@@ -587,6 +610,11 @@ type ptrKey struct {
 type srvRecord struct {
 	target  string
 	port    uint16
+	expires time.Time
+}
+
+type txtRecord struct {
+	txt     []string
 	expires time.Time
 }
 
@@ -602,6 +630,7 @@ const maxHosts = 256
 func (c *cache) init() {
 	c.ptrs = map[ptrKey]time.Time{}
 	c.srvs = map[string]srvRecord{}
+	c.txts = map[string]txtRecord{}
 	c.addrs = map[string][]addrItem{}
 }
 
@@ -666,6 +695,15 @@ func (c *cache) add(now time.Time, types []string, recs []record) bool {
 			}
 			c.srvs[r.name] = srvRecord{target: r.target, port: r.port, expires: expiry(r.ttl)}
 			hosts[strings.ToLower(r.target)] = true
+		case dnsmessage.TypeTXT:
+			if inst, _ := instanceOf(r.name, types); inst == "" {
+				continue
+			}
+			if r.ttl == 0 {
+				delete(c.txts, r.name)
+				continue
+			}
+			c.txts[r.name] = txtRecord{txt: r.txt, expires: expiry(r.ttl)}
 		}
 	}
 	flushed := map[string]bool{}
@@ -708,6 +746,11 @@ func (c *cache) prune(now time.Time) {
 	for k, s := range c.srvs {
 		if !now.Before(s.expires) {
 			delete(c.srvs, k)
+		}
+	}
+	for k, t := range c.txts {
+		if !now.Before(t.expires) {
+			delete(c.txts, k)
 		}
 	}
 	for h, items := range c.addrs {
@@ -769,7 +812,11 @@ func (c *cache) services(now time.Time, types []string) []Service {
 			continue
 		}
 		svc := Service{Instance: k.instance, Type: k.typ}
-		if s, ok := c.srvs[strings.ToLower(k.instance+"."+k.typ+".local.")]; ok && now.Before(s.expires) {
+		fqdn := strings.ToLower(k.instance + "." + k.typ + ".local.")
+		if t, ok := c.txts[fqdn]; ok && now.Before(t.expires) {
+			svc.TXT = append([]string(nil), t.txt...)
+		}
+		if s, ok := c.srvs[fqdn]; ok && now.Before(s.expires) {
 			svc.Host, svc.Port = s.target, int(s.port)
 			for _, it := range c.addrs[strings.ToLower(s.target)] {
 				if now.Before(it.expires) {

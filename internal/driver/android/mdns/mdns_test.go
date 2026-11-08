@@ -176,7 +176,7 @@ func TestOtherTypesAndQueries(t *testing.T) {
 	now := time.Now()
 	types := []string{connectType}
 	// A query (from another computer) and another service's answer.
-	q, err := query([]string{connectType}, nil, nil)
+	q, err := query([]string{connectType}, nil, nil, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +216,7 @@ func TestCacheFlush(t *testing.T) {
 }
 
 func TestQueryQuestions(t *testing.T) {
-	msg, err := query([]string{connectType}, []string{"adb-x._adb-tls-connect._tcp.local."}, []string{"phone.local."})
+	msg, err := query([]string{connectType}, []string{"adb-x._adb-tls-connect._tcp.local."}, []string{"phone.local."}, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -434,5 +434,68 @@ func TestEchoCheck(t *testing.T) {
 	}
 	if err := b.Err(); err != nil {
 		t.Errorf("after the echo: %v", err)
+	}
+}
+
+func TestTXT(t *testing.T) {
+	const typ = "_apple-mobdev2._tcp"
+	inst := "fa:df:90:f6:dd:2a@fe80::f8df:90ff:fef6:dd2a-supportsRP-26." + typ + ".local."
+	b := dnsmessage.NewBuilder(nil, dnsmessage.Header{Response: true, Authoritative: true})
+	b.EnableCompression()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	must(b.StartAnswers())
+	must(b.PTRResource(dnsmessage.ResourceHeader{Name: dnsmessage.MustNewName(typ + ".local."), Class: dnsmessage.ClassINET, TTL: 4500},
+		dnsmessage.PTRResource{PTR: dnsmessage.MustNewName(inst)}))
+	must(b.StartAdditionals())
+	must(b.TXTResource(dnsmessage.ResourceHeader{Name: dnsmessage.MustNewName(inst), Class: dnsmessage.ClassINET | unicastBit, TTL: 4500},
+		dnsmessage.TXTResource{TXT: []string{"identifier=abc", "authTag=AAAAAAAAAAA="}}))
+	must(b.SRVResource(dnsmessage.ResourceHeader{Name: dnsmessage.MustNewName(inst), Class: dnsmessage.ClassINET | unicastBit, TTL: 120},
+		dnsmessage.SRVResource{Target: dnsmessage.MustNewName("iphone.local."), Port: 32498}))
+	must(b.AResource(dnsmessage.ResourceHeader{Name: dnsmessage.MustNewName("iphone.local."), Class: dnsmessage.ClassINET | unicastBit, TTL: 120},
+		dnsmessage.AResource{A: [4]byte{192, 168, 33, 187}}))
+	msg, err := b.Finish()
+	must(err)
+
+	c := newCache()
+	now := time.Now()
+	addMsg(t, c, now, []string{typ}, msg)
+	svcs := c.services(now, []string{typ})
+	if len(svcs) != 1 || strings.Join(svcs[0].TXT, "|") != "identifier=abc|authTag=AAAAAAAAAAA=" || svcs[0].Addr() != "192.168.33.187:32498" {
+		t.Fatalf("services = %+v", svcs)
+	}
+	if svcs := c.services(now.Add(4501*time.Second), []string{typ}); len(svcs) != 0 {
+		t.Errorf("after the TTLs: %+v", svcs)
+	}
+
+	// A goodbye for the TXT record drops it, and the service stays.
+	bye := response(t, nil, []rr{{name: inst, typ: dnsmessage.TypeTXT, ttl: 0, data: "identifier=abc"}})
+	addMsg(t, c, now, []string{typ}, bye)
+	if svcs := c.services(now, []string{typ}); len(svcs) != 1 || svcs[0].TXT != nil {
+		t.Errorf("after the goodbye: %+v", svcs)
+	}
+}
+
+func TestQueryMulticastAnswers(t *testing.T) {
+	msg, err := query([]string{connectType}, []string{"adb-x._adb-tls-connect._tcp.local."}, nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var p dnsmessage.Parser
+	if _, err := p.Start(msg); err != nil {
+		t.Fatal(err)
+	}
+	qs, err := p.AllQuestions()
+	if err != nil || len(qs) != 2 {
+		t.Fatal(qs, err)
+	}
+	for _, q := range qs {
+		if q.Class != dnsmessage.ClassINET {
+			t.Errorf("%v asks for a unicast answer", q)
+		}
 	}
 }
