@@ -109,6 +109,9 @@ type Settings struct {
 	// AutoUpdate installs new versions of Pinky, and of the companion app
 	// on Android phones, by themselves while no one uses them.
 	AutoUpdate bool
+	// KeepAwakeAway keeps the computer from idle sleep while a phone is
+	// connected through Tailscale, away from its network.
+	KeepAwakeAway bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -139,7 +142,7 @@ func DefaultSettings() Settings {
 		},
 		UnlockFromComputer: true, HideCodes: true, KeepDays: 30, Record: true, RemoteAddr: DefaultRemoteAddr,
 		UsageStats: usageStatsByDefault,
-		AutoUpdate: true,
+		AutoUpdate: true, KeepAwakeAway: true,
 	}
 }
 
@@ -244,11 +247,16 @@ type app struct {
 	remote remoteState    // Settings › Agents › Remote agents
 	setup  setupState     // Settings › Agents › Connect an agent, and the sidebar's card
 	upd    updateState    // new versions of Pinky and the companion app
+	tn     tailnetState   // phones away from this computer's network, through Tailscale
 
-	awake    func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
-	awakeOn  bool
-	exportTo func() (string, error) // where exports go; tests replace it
-	reveal   func(path string)      // shows an exported file; tests replace it
+	awake   func(on bool) // keeps the Mac awake while agent tasks run; tests replace it
+	awakeOn bool
+	// awayAwake keeps it awake while a phone is away (tailnet.go); tests
+	// replace it.
+	awayAwake   func(on bool)
+	awayAwakeOn bool
+	exportTo    func() (string, error) // where exports go; tests replace it
+	reveal      func(path string)      // shows an exported file; tests replace it
 }
 
 // Run starts the client and returns when it quits. It owns the main
@@ -292,7 +300,7 @@ func newApp(api gateway.API, opt Options) *app {
 		notified: map[string]bool{}, seenNeed: map[string]bool{}, unlocks: map[string]bool{}, more: map[string]bool{},
 		callQueue:  map[string]chan func(){},
 		mediaCache: map[string]*mediaEntry{}, previews: map[string]bool{},
-		awake: keepMacAwake, exportTo: exportFolder, reveal: revealFile,
+		awake: keepMacAwake, awayAwake: keepMacAwakeAway, exportTo: exportFolder, reveal: revealFile,
 	}
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
@@ -399,6 +407,7 @@ func (a *app) ready() {
 func (a *app) shutdown() {
 	a.end()
 	a.setAwake(false)
+	a.setAwayAwake(false)
 	for id, m := range a.mirrors {
 		m.close()
 		delete(a.mirrors, id)
@@ -535,6 +544,7 @@ func (a *app) afterRefresh(first bool) {
 	}
 	a.loadPINs()
 	a.setAwake(a.anyRunning())
+	a.setAwayAwake(a.settings.KeepAwakeAway && a.anyAway())
 	a.updateTray()
 	a.syncPanel()
 }

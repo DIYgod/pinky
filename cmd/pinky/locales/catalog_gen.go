@@ -715,6 +715,24 @@ func (msgs Messages) AddAndroidStepsLabel() string {
 	return Catalog.Format(msgs.locale, "addAndroidStepsLabel", nil)
 }
 
+// AddAndroidTailnet says "Phone not on this network? Use Tailscale"
+// in the language the app shows.
+//
+// Add phone › Android: the link next to addPhoneOrWiFi that opens the
+// steps to connect a phone through Tailscale, for a phone away from this
+// computer's network. Tailscale and tailnet are product words: keep them.
+func AddAndroidTailnet() string { return In(i18n.Locale()).AddAndroidTailnet() }
+
+// AddAndroidTailnet says "Phone not on this network? Use Tailscale"
+// in the language of msgs.
+//
+// Add phone › Android: the link next to addPhoneOrWiFi that opens the
+// steps to connect a phone through Tailscale, for a phone away from this
+// computer's network. Tailscale and tailnet are product words: keep them.
+func (msgs Messages) AddAndroidTailnet() string {
+	return Catalog.Format(msgs.locale, "addAndroidTailnet", nil)
+}
+
 // AddAndroidTitle says "Connect your Android phone"
 // in the language the app shows.
 //
@@ -1897,6 +1915,346 @@ func (msgs Messages) AgentRequestAskedAt(time_ string) string {
 	return Catalog.Format(msgs.locale, "agentRequestAskedAt", map[string]any{"time": time_})
 }
 
+// AwayBusy says "Setting up…"
+// in the language the app shows.
+//
+// Under awayTitle while it changes.
+func AwayBusy() string { return In(i18n.Locale()).AwayBusy() }
+
+// AwayBusy says "Setting up…"
+// in the language of msgs.
+//
+// Under awayTitle while it changes.
+func (msgs Messages) AwayBusy() string {
+	return Catalog.Format(msgs.locale, "awayBusy", nil)
+}
+
+// AwayDialogCancel says "Cancel"
+// in the language the app shows.
+//
+// The dialog's cancel button.
+func AwayDialogCancel() string { return In(i18n.Locale()).AwayDialogCancel() }
+
+// AwayDialogCancel says "Cancel"
+// in the language of msgs.
+//
+// The dialog's cancel button.
+func (msgs Messages) AwayDialogCancel() string {
+	return Catalog.Format(msgs.locale, "awayDialogCancel", nil)
+}
+
+// AwayDialogConfirm says "Turn on"
+// in the language the app shows.
+//
+// The dialog's button that turns it on.
+func AwayDialogConfirm() string { return In(i18n.Locale()).AwayDialogConfirm() }
+
+// AwayDialogConfirm says "Turn on"
+// in the language of msgs.
+//
+// The dialog's button that turns it on.
+func (msgs Messages) AwayDialogConfirm() string {
+	return Catalog.Format(msgs.locale, "awayDialogConfirm", nil)
+}
+
+// AwayDialogDrop says "The phone's connection drops for a moment while adb restarts."
+// in the language the app shows.
+//
+// The dialog: what happens as it turns on.
+func AwayDialogDrop() string { return In(i18n.Locale()).AwayDialogDrop() }
+
+// AwayDialogDrop says "The phone's connection drops for a moment while adb restarts."
+// in the language of msgs.
+//
+// The dialog: what happens as it turns on.
+func (msgs Messages) AwayDialogDrop() string {
+	return Catalog.Format(msgs.locale, "awayDialogDrop", nil)
+}
+
+// AwayDialogExposure says "The phone listens on every network it joins, not only Tailscale: on a café's Wi-Fi, another device there could ask t…"
+// in the language the app shows.
+//
+// The dialog: what it exposes.
+func AwayDialogExposure() string { return In(i18n.Locale()).AwayDialogExposure() }
+
+// AwayDialogExposure says "The phone listens on every network it joins, not only Tailscale: on a café's Wi-Fi, another device there could ask t…"
+// in the language of msgs.
+//
+// The dialog: what it exposes.
+func (msgs Messages) AwayDialogExposure() string {
+	return Catalog.Format(msgs.locale, "awayDialogExposure", nil)
+}
+
+// AwayDialogTitle says "Use {name} away from home?"
+// in the language the app shows.
+//
+// The dialog before turning Use away from home on: its title.
+func AwayDialogTitle(name string) string { return In(i18n.Locale()).AwayDialogTitle(name) }
+
+// AwayDialogTitle says "Use {name} away from home?"
+// in the language of msgs.
+//
+// The dialog before turning Use away from home on: its title.
+func (msgs Messages) AwayDialogTitle(name string) string {
+	return Catalog.Format(msgs.locale, "awayDialogTitle", map[string]any{"name": name})
+}
+
+// AwayDialogUntil says "It lasts until the phone restarts. Turn it off here any time; once it's off, you can turn it on again only while the …"
+// in the language the app shows.
+//
+// The dialog: how long it lasts and how to turn it off.
+func AwayDialogUntil() string { return In(i18n.Locale()).AwayDialogUntil() }
+
+// AwayDialogUntil says "It lasts until the phone restarts. Turn it off here any time; once it's off, you can turn it on again only while the …"
+// in the language of msgs.
+//
+// The dialog: how long it lasts and how to turn it off.
+func (msgs Messages) AwayDialogUntil() string {
+	return Catalog.Format(msgs.locale, "awayDialogUntil", nil)
+}
+
+// AwayDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it through Tailscale…"
+// in the language the app shows.
+//
+// The dialog: what turning it on does. adb tcpip is a command; keep it.
+func AwayDialogWhat() string { return In(i18n.Locale()).AwayDialogWhat() }
+
+// AwayDialogWhat says "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it through Tailscale…"
+// in the language of msgs.
+//
+// The dialog: what turning it on does. adb tcpip is a command; keep it.
+func (msgs Messages) AwayDialogWhat() string {
+	return Catalog.Format(msgs.locale, "awayDialogWhat", nil)
+}
+
+// AwayFailed says "Couldn't change Use away from home for {name}: {error}"
+// in the language the app shows.
+//
+// When turning it on or off failed; error is in English.
+func AwayFailed(name string, error string) string { return In(i18n.Locale()).AwayFailed(name, error) }
+
+// AwayFailed says "Couldn't change Use away from home for {name}: {error}"
+// in the language of msgs.
+//
+// When turning it on or off failed; error is in English.
+func (msgs Messages) AwayFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "awayFailed", map[string]any{"name": name, "error": error})
+}
+
+// AwayHowTo says "Set up Tailscale"
+// in the language the app shows.
+//
+// Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale.
+func AwayHowTo() string { return In(i18n.Locale()).AwayHowTo() }
+
+// AwayHowTo says "Set up Tailscale"
+// in the language of msgs.
+//
+// Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale.
+func (msgs Messages) AwayHowTo() string {
+	return Catalog.Format(msgs.locale, "awayHowTo", nil)
+}
+
+// AwayKeepAwake says "Keep this computer awake for phones away"
+// in the language the app shows.
+//
+// Settings › Phones, under the phones: the switch's title.
+func AwayKeepAwake() string { return In(i18n.Locale()).AwayKeepAwake() }
+
+// AwayKeepAwake says "Keep this computer awake for phones away"
+// in the language of msgs.
+//
+// Settings › Phones, under the phones: the switch's title.
+func (msgs Messages) AwayKeepAwake() string {
+	return Catalog.Format(msgs.locale, "awayKeepAwake", nil)
+}
+
+// AwayKeepAwakeDesc says "While a phone is connected through Tailscale, this computer doesn't sleep when idle, so agents can reach the phone. A…"
+// in the language the app shows.
+//
+// Under awayKeepAwake.
+func AwayKeepAwakeDesc() string { return In(i18n.Locale()).AwayKeepAwakeDesc() }
+
+// AwayKeepAwakeDesc says "While a phone is connected through Tailscale, this computer doesn't sleep when idle, so agents can reach the phone. A…"
+// in the language of msgs.
+//
+// Under awayKeepAwake.
+func (msgs Messages) AwayKeepAwakeDesc() string {
+	return Catalog.Format(msgs.locale, "awayKeepAwakeDesc", nil)
+}
+
+// AwayNoTailscaleHere says "Needs Tailscale on this computer, signed in."
+// in the language the app shows.
+//
+// Under awayTitle when Tailscale does not run on this computer.
+func AwayNoTailscaleHere() string { return In(i18n.Locale()).AwayNoTailscaleHere() }
+
+// AwayNoTailscaleHere says "Needs Tailscale on this computer, signed in."
+// in the language of msgs.
+//
+// Under awayTitle when Tailscale does not run on this computer.
+func (msgs Messages) AwayNoTailscaleHere() string {
+	return Catalog.Format(msgs.locale, "awayNoTailscaleHere", nil)
+}
+
+// AwayNoTailscalePhone says "Install Tailscale on {name}, open it and sign in to the same account as on this computer."
+// in the language the app shows.
+//
+// Under awayTitle when the phone is not on this computer's tailnet.
+func AwayNoTailscalePhone(name string) string { return In(i18n.Locale()).AwayNoTailscalePhone(name) }
+
+// AwayNoTailscalePhone says "Install Tailscale on {name}, open it and sign in to the same account as on this computer."
+// in the language of msgs.
+//
+// Under awayTitle when the phone is not on this computer's tailnet.
+func (msgs Messages) AwayNoTailscalePhone(name string) string {
+	return Catalog.Format(msgs.locale, "awayNoTailscalePhone", map[string]any{"name": name})
+}
+
+// AwayNotConnected says "Connect {name} by cable or on this computer's Wi-Fi to set it up."
+// in the language the app shows.
+//
+// Under awayTitle when the phone is not connected.
+func AwayNotConnected(name string) string { return In(i18n.Locale()).AwayNotConnected(name) }
+
+// AwayNotConnected says "Connect {name} by cable or on this computer's Wi-Fi to set it up."
+// in the language of msgs.
+//
+// Under awayTitle when the phone is not connected.
+func (msgs Messages) AwayNotConnected(name string) string {
+	return Catalog.Format(msgs.locale, "awayNotConnected", map[string]any{"name": name})
+}
+
+// AwayOffDesc says "Reach {name} through Tailscale when it's away from this computer's network."
+// in the language the app shows.
+//
+// Under awayTitle while it is off.
+func AwayOffDesc(name string) string { return In(i18n.Locale()).AwayOffDesc(name) }
+
+// AwayOffDesc says "Reach {name} through Tailscale when it's away from this computer's network."
+// in the language of msgs.
+//
+// Under awayTitle while it is off.
+func (msgs Messages) AwayOffDesc(name string) string {
+	return Catalog.Format(msgs.locale, "awayOffDesc", map[string]any{"name": name})
+}
+
+// AwayOnDesc says "On. When {name} is away from this computer's network, Pinky reaches it through Tailscale at {addr}."
+// in the language the app shows.
+//
+// Under awayTitle while it is on: addr is the phone's Tailscale address.
+func AwayOnDesc(name string, addr string) string { return In(i18n.Locale()).AwayOnDesc(name, addr) }
+
+// AwayOnDesc says "On. When {name} is away from this computer's network, Pinky reaches it through Tailscale at {addr}."
+// in the language of msgs.
+//
+// Under awayTitle while it is on: addr is the phone's Tailscale address.
+func (msgs Messages) AwayOnDesc(name string, addr string) string {
+	return Catalog.Format(msgs.locale, "awayOnDesc", map[string]any{"name": name, "addr": addr})
+}
+
+// AwayStoppedDesc says "{name}'s adb stopped listening on the network, as it does when the phone restarts. Turn it on again before you leave."
+// in the language the app shows.
+//
+// Under awayTitle while it is on but the phone's adb no longer listens.
+func AwayStoppedDesc(name string) string { return In(i18n.Locale()).AwayStoppedDesc(name) }
+
+// AwayStoppedDesc says "{name}'s adb stopped listening on the network, as it does when the phone restarts. Turn it on again before you leave."
+// in the language of msgs.
+//
+// Under awayTitle while it is on but the phone's adb no longer listens.
+func (msgs Messages) AwayStoppedDesc(name string) string {
+	return Catalog.Format(msgs.locale, "awayStoppedDesc", map[string]any{"name": name})
+}
+
+// AwayTitle says "Use away from home"
+// in the language the app shows.
+//
+// Settings › Phones, per Android phone: the title of the setting that
+// reaches the phone through Tailscale when it is away from this computer's
+// network.
+func AwayTitle() string { return In(i18n.Locale()).AwayTitle() }
+
+// AwayTitle says "Use away from home"
+// in the language of msgs.
+//
+// Settings › Phones, per Android phone: the title of the setting that
+// reaches the phone through Tailscale when it is away from this computer's
+// network.
+func (msgs Messages) AwayTitle() string {
+	return Catalog.Format(msgs.locale, "awayTitle", nil)
+}
+
+// AwayTurnOff says "Turn off"
+// in the language the app shows.
+//
+// Button: turns Use away from home off.
+func AwayTurnOff() string { return In(i18n.Locale()).AwayTurnOff() }
+
+// AwayTurnOff says "Turn off"
+// in the language of msgs.
+//
+// Button: turns Use away from home off.
+func (msgs Messages) AwayTurnOff() string {
+	return Catalog.Format(msgs.locale, "awayTurnOff", nil)
+}
+
+// AwayTurnOn says "Turn on…"
+// in the language the app shows.
+//
+// Button: opens the dialog that turns Use away from home on.
+func AwayTurnOn() string { return In(i18n.Locale()).AwayTurnOn() }
+
+// AwayTurnOn says "Turn on…"
+// in the language of msgs.
+//
+// Button: opens the dialog that turns Use away from home on.
+func (msgs Messages) AwayTurnOn() string {
+	return Catalog.Format(msgs.locale, "awayTurnOn", nil)
+}
+
+// AwayTurnOnAgain says "Turn on again"
+// in the language the app shows.
+//
+// Button by awayStoppedDesc.
+func AwayTurnOnAgain() string { return In(i18n.Locale()).AwayTurnOnAgain() }
+
+// AwayTurnOnAgain says "Turn on again"
+// in the language of msgs.
+//
+// Button by awayStoppedDesc.
+func (msgs Messages) AwayTurnOnAgain() string {
+	return Catalog.Format(msgs.locale, "awayTurnOnAgain", nil)
+}
+
+// AwayTurnedOff says "Use away from home is off for {name}"
+// in the language the app shows.
+//
+// A toast once Use away from home is off.
+func AwayTurnedOff(name string) string { return In(i18n.Locale()).AwayTurnedOff(name) }
+
+// AwayTurnedOff says "Use away from home is off for {name}"
+// in the language of msgs.
+//
+// A toast once Use away from home is off.
+func (msgs Messages) AwayTurnedOff(name string) string {
+	return Catalog.Format(msgs.locale, "awayTurnedOff", map[string]any{"name": name})
+}
+
+// AwayTurnedOn says "{name} can now be used away from home"
+// in the language the app shows.
+//
+// A toast once Use away from home is on.
+func AwayTurnedOn(name string) string { return In(i18n.Locale()).AwayTurnedOn(name) }
+
+// AwayTurnedOn says "{name} can now be used away from home"
+// in the language of msgs.
+//
+// A toast once Use away from home is on.
+func (msgs Messages) AwayTurnedOn(name string) string {
+	return Catalog.Format(msgs.locale, "awayTurnedOn", map[string]any{"name": name})
+}
+
 // BackgroundChangeFailed says "Couldn't change background work on {phone}: {reason}"
 // in the language the app shows.
 //
@@ -2629,6 +2987,22 @@ func CheckConnectionFail(name string) string { return In(i18n.Locale()).CheckCon
 // The checkup, connection: a phone that is not connected.
 func (msgs Messages) CheckConnectionFail(name string) string {
 	return Catalog.Format(msgs.locale, "checkConnectionFail", map[string]any{"name": name})
+}
+
+// CheckConnectionTailscale says "Connected through Tailscale."
+// in the language the app shows.
+//
+// The checkup, connection: passed, through Tailscale (the phone is away
+// from this computer's network).
+func CheckConnectionTailscale() string { return In(i18n.Locale()).CheckConnectionTailscale() }
+
+// CheckConnectionTailscale says "Connected through Tailscale."
+// in the language of msgs.
+//
+// The checkup, connection: passed, through Tailscale (the phone is away
+// from this computer's network).
+func (msgs Messages) CheckConnectionTailscale() string {
+	return Catalog.Format(msgs.locale, "checkConnectionTailscale", nil)
 }
 
 // CheckConnectionTitle says "Connection"
@@ -17443,6 +17817,512 @@ func StepYouSaidNo(question string) string { return In(i18n.Locale()).StepYouSai
 // A step: the person said no to the agent's question, in quotes.
 func (msgs Messages) StepYouSaidNo(question string) string {
 	return Catalog.Format(msgs.locale, "stepYouSaidNo", map[string]any{"question": question})
+}
+
+// TailnetAllow says "Allow this computer on {name}: unlock it and tap Allow."
+// in the language the app shows.
+//
+// When the phone asks the person to allow this computer. Allow is
+// addAndroidSketchAllow.
+func TailnetAllow(name string) string { return In(i18n.Locale()).TailnetAllow(name) }
+
+// TailnetAllow says "Allow this computer on {name}: unlock it and tap Allow."
+// in the language of msgs.
+//
+// When the phone asks the person to allow this computer. Allow is
+// addAndroidSketchAllow.
+func (msgs Messages) TailnetAllow(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetAllow", map[string]any{"name": name})
+}
+
+// TailnetConnect says "Connect"
+// in the language the app shows.
+//
+// Button by a phone on the tailnet: connects to it.
+func TailnetConnect() string { return In(i18n.Locale()).TailnetConnect() }
+
+// TailnetConnect says "Connect"
+// in the language of msgs.
+//
+// Button by a phone on the tailnet: connects to it.
+func (msgs Messages) TailnetConnect() string {
+	return Catalog.Format(msgs.locale, "tailnetConnect", nil)
+}
+
+// TailnetConnectDetail says "Set each phone up once while it's near this computer, by cable or on the same Wi-Fi: turn on Use away from home for i…"
+// in the language the app shows.
+//
+// Step 3: above the list of phones on the tailnet. Use away from home is
+// awayTitle; Settings › Phones is settingsPageTitle ›
+// settingsSectionPhones.
+func TailnetConnectDetail() string { return In(i18n.Locale()).TailnetConnectDetail() }
+
+// TailnetConnectDetail says "Set each phone up once while it's near this computer, by cable or on the same Wi-Fi: turn on Use away from home for i…"
+// in the language of msgs.
+//
+// Step 3: above the list of phones on the tailnet. Use away from home is
+// awayTitle; Settings › Phones is settingsPageTitle ›
+// settingsSectionPhones.
+func (msgs Messages) TailnetConnectDetail() string {
+	return Catalog.Format(msgs.locale, "tailnetConnectDetail", nil)
+}
+
+// TailnetConnectFailed says "Couldn't connect to {name}: {error}"
+// in the language the app shows.
+//
+// When connecting through Tailscale failed otherwise; error is in English.
+func TailnetConnectFailed(name string, error string) string {
+	return In(i18n.Locale()).TailnetConnectFailed(name, error)
+}
+
+// TailnetConnectFailed says "Couldn't connect to {name}: {error}"
+// in the language of msgs.
+//
+// When connecting through Tailscale failed otherwise; error is in English.
+func (msgs Messages) TailnetConnectFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "tailnetConnectFailed", map[string]any{"name": name, "error": error})
+}
+
+// TailnetConnected says "Connected to {name} through Tailscale"
+// in the language the app shows.
+//
+// A toast once a phone connected through Tailscale.
+func TailnetConnected(name string) string { return In(i18n.Locale()).TailnetConnected(name) }
+
+// TailnetConnected says "Connected to {name} through Tailscale"
+// in the language of msgs.
+//
+// A toast once a phone connected through Tailscale.
+func (msgs Messages) TailnetConnected(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetConnected", map[string]any{"name": name})
+}
+
+// TailnetDetail says "Use your phone when it's away from this computer's network, as when you're out and this computer is at home. Tailscal…"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: the line under the heading.
+func TailnetDetail() string { return In(i18n.Locale()).TailnetDetail() }
+
+// TailnetDetail says "Use your phone when it's away from this computer's network, as when you're out and this computer is at home. Tailscal…"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: the line under the heading.
+func (msgs Messages) TailnetDetail() string {
+	return Catalog.Format(msgs.locale, "tailnetDetail", nil)
+}
+
+// TailnetGet says "Get Tailscale"
+// in the language the app shows.
+//
+// Button: opens Tailscale's download page.
+func TailnetGet() string { return In(i18n.Locale()).TailnetGet() }
+
+// TailnetGet says "Get Tailscale"
+// in the language of msgs.
+//
+// Button: opens Tailscale's download page.
+func (msgs Messages) TailnetGet() string {
+	return Catalog.Format(msgs.locale, "tailnetGet", nil)
+}
+
+// TailnetHereLinux says "Turn Tailscale on: run {command} in a terminal."
+// in the language the app shows.
+//
+// Step 1 on Linux, where Tailscale has no app to open: command is a shell
+// command.
+func TailnetHereLinux(command string) string { return In(i18n.Locale()).TailnetHereLinux(command) }
+
+// TailnetHereLinux says "Turn Tailscale on: run {command} in a terminal."
+// in the language of msgs.
+//
+// Step 1 on Linux, where Tailscale has no app to open: command is a shell
+// command.
+func (msgs Messages) TailnetHereLinux(command string) string {
+	return Catalog.Format(msgs.locale, "tailnetHereLinux", map[string]any{"command": command})
+}
+
+// TailnetHereNeedsLogin says "Sign in to Tailscale on this computer."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is not signed in.
+func TailnetHereNeedsLogin() string { return In(i18n.Locale()).TailnetHereNeedsLogin() }
+
+// TailnetHereNeedsLogin says "Sign in to Tailscale on this computer."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is not signed in.
+func (msgs Messages) TailnetHereNeedsLogin() string {
+	return Catalog.Format(msgs.locale, "tailnetHereNeedsLogin", nil)
+}
+
+// TailnetHereNotInstalled says "Install Tailscale on this computer and sign in."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is not installed.
+func TailnetHereNotInstalled() string { return In(i18n.Locale()).TailnetHereNotInstalled() }
+
+// TailnetHereNotInstalled says "Install Tailscale on this computer and sign in."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is not installed.
+func (msgs Messages) TailnetHereNotInstalled() string {
+	return Catalog.Format(msgs.locale, "tailnetHereNotInstalled", nil)
+}
+
+// TailnetHereNotRunning says "Open Tailscale and sign in."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is installed but not running.
+func TailnetHereNotRunning() string { return In(i18n.Locale()).TailnetHereNotRunning() }
+
+// TailnetHereNotRunning says "Open Tailscale and sign in."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is installed but not running.
+func (msgs Messages) TailnetHereNotRunning() string {
+	return Catalog.Format(msgs.locale, "tailnetHereNotRunning", nil)
+}
+
+// TailnetHereRunning says "Connected to {tailnet} as {name}."
+// in the language the app shows.
+//
+// Under step 1 once done: tailnet is the tailnet's name (an email address
+// or a domain), name this computer's name on it.
+func TailnetHereRunning(tailnet string, name string) string {
+	return In(i18n.Locale()).TailnetHereRunning(tailnet, name)
+}
+
+// TailnetHereRunning says "Connected to {tailnet} as {name}."
+// in the language of msgs.
+//
+// Under step 1 once done: tailnet is the tailnet's name (an email address
+// or a domain), name this computer's name on it.
+func (msgs Messages) TailnetHereRunning(tailnet string, name string) string {
+	return Catalog.Format(msgs.locale, "tailnetHereRunning", map[string]any{"tailnet": tailnet, "name": name})
+}
+
+// TailnetHereStarting says "Tailscale is connecting…"
+// in the language the app shows.
+//
+// Step 1 while Tailscale connects.
+func TailnetHereStarting() string { return In(i18n.Locale()).TailnetHereStarting() }
+
+// TailnetHereStarting says "Tailscale is connecting…"
+// in the language of msgs.
+//
+// Step 1 while Tailscale connects.
+func (msgs Messages) TailnetHereStarting() string {
+	return Catalog.Format(msgs.locale, "tailnetHereStarting", nil)
+}
+
+// TailnetHereStopped says "Tailscale is turned off on this computer. Open it and turn it on."
+// in the language the app shows.
+//
+// Step 1 when Tailscale is signed in but turned off.
+func TailnetHereStopped() string { return In(i18n.Locale()).TailnetHereStopped() }
+
+// TailnetHereStopped says "Tailscale is turned off on this computer. Open it and turn it on."
+// in the language of msgs.
+//
+// Step 1 when Tailscale is signed in but turned off.
+func (msgs Messages) TailnetHereStopped() string {
+	return Catalog.Format(msgs.locale, "tailnetHereStopped", nil)
+}
+
+// TailnetNotListening says "{name} doesn't take connections from Pinky yet"
+// in the language the app shows.
+//
+// When connecting to a phone found nothing listening: its adb does not
+// listen on the network.
+func TailnetNotListening(name string) string { return In(i18n.Locale()).TailnetNotListening(name) }
+
+// TailnetNotListening says "{name} doesn't take connections from Pinky yet"
+// in the language of msgs.
+//
+// When connecting to a phone found nothing listening: its adb does not
+// listen on the network.
+func (msgs Messages) TailnetNotListening(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetNotListening", map[string]any{"name": name})
+}
+
+// TailnetNotListeningDetail says "Set it up once while it's near this computer: connect it by cable or on the same Wi-Fi, then turn on Use away from ho…"
+// in the language the app shows.
+//
+// Under tailnetNotListening. Wireless debugging and IP address & Port are
+// Android's own names; use those of Android's Simplified Chinese settings.
+func TailnetNotListeningDetail() string { return In(i18n.Locale()).TailnetNotListeningDetail() }
+
+// TailnetNotListeningDetail says "Set it up once while it's near this computer: connect it by cable or on the same Wi-Fi, then turn on Use away from ho…"
+// in the language of msgs.
+//
+// Under tailnetNotListening. Wireless debugging and IP address & Port are
+// Android's own names; use those of Android's Simplified Chinese settings.
+func (msgs Messages) TailnetNotListeningDetail() string {
+	return Catalog.Format(msgs.locale, "tailnetNotListeningDetail", nil)
+}
+
+// TailnetOpen says "Open Tailscale"
+// in the language the app shows.
+//
+// Button: opens Tailscale's app on this computer.
+func TailnetOpen() string { return In(i18n.Locale()).TailnetOpen() }
+
+// TailnetOpen says "Open Tailscale"
+// in the language of msgs.
+//
+// Button: opens Tailscale's app on this computer.
+func (msgs Messages) TailnetOpen() string {
+	return Catalog.Format(msgs.locale, "tailnetOpen", nil)
+}
+
+// TailnetPhoneConnected says "connected"
+// in the language the app shows.
+//
+// After a phone's Tailscale address: Pinky is connected to it through
+// Tailscale.
+func TailnetPhoneConnected() string { return In(i18n.Locale()).TailnetPhoneConnected() }
+
+// TailnetPhoneConnected says "connected"
+// in the language of msgs.
+//
+// After a phone's Tailscale address: Pinky is connected to it through
+// Tailscale.
+func (msgs Messages) TailnetPhoneConnected() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneConnected", nil)
+}
+
+// TailnetPhoneNone says "Waiting for an Android phone on your tailnet…"
+// in the language the app shows.
+//
+// Step 2, by a spinner, while the tailnet has no Android device. Tailscale
+// and tailnet are product words: keep them.
+func TailnetPhoneNone() string { return In(i18n.Locale()).TailnetPhoneNone() }
+
+// TailnetPhoneNone says "Waiting for an Android phone on your tailnet…"
+// in the language of msgs.
+//
+// Step 2, by a spinner, while the tailnet has no Android device. Tailscale
+// and tailnet are product words: keep them.
+func (msgs Messages) TailnetPhoneNone() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneNone", nil)
+}
+
+// TailnetPhoneOffline says "offline"
+// in the language the app shows.
+//
+// After a phone's Tailscale address: Tailscale does not see it.
+func TailnetPhoneOffline() string { return In(i18n.Locale()).TailnetPhoneOffline() }
+
+// TailnetPhoneOffline says "offline"
+// in the language of msgs.
+//
+// After a phone's Tailscale address: Tailscale does not see it.
+func (msgs Messages) TailnetPhoneOffline() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneOffline", nil)
+}
+
+// TailnetPhoneOnline says "online"
+// in the language the app shows.
+//
+// After a phone's Tailscale address in step 3's list: Tailscale sees it
+// connected. Lower case: it follows "100.101.2.2 · ".
+func TailnetPhoneOnline() string { return In(i18n.Locale()).TailnetPhoneOnline() }
+
+// TailnetPhoneOnline says "online"
+// in the language of msgs.
+//
+// After a phone's Tailscale address in step 3's list: Tailscale sees it
+// connected. Lower case: it follows "100.101.2.2 · ".
+func (msgs Messages) TailnetPhoneOnline() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneOnline", nil)
+}
+
+// TailnetPhoneRelayed says "connected through a Tailscale relay, which is slower"
+// in the language the app shows.
+//
+// After a phone's Tailscale address: connected, but through one of
+// Tailscale's relay servers rather than straight to the phone.
+func TailnetPhoneRelayed() string { return In(i18n.Locale()).TailnetPhoneRelayed() }
+
+// TailnetPhoneRelayed says "connected through a Tailscale relay, which is slower"
+// in the language of msgs.
+//
+// After a phone's Tailscale address: connected, but through one of
+// Tailscale's relay servers rather than straight to the phone.
+func (msgs Messages) TailnetPhoneRelayed() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneRelayed", nil)
+}
+
+// TailnetPhoneSteps says "On the phone, install Tailscale from Google Play, open it and sign in to the same account as on this computer."
+// in the language the app shows.
+//
+// Step 2: what to do on the phone.
+func TailnetPhoneSteps() string { return In(i18n.Locale()).TailnetPhoneSteps() }
+
+// TailnetPhoneSteps says "On the phone, install Tailscale from Google Play, open it and sign in to the same account as on this computer."
+// in the language of msgs.
+//
+// Step 2: what to do on the phone.
+func (msgs Messages) TailnetPhoneSteps() string {
+	return Catalog.Format(msgs.locale, "tailnetPhoneSteps", nil)
+}
+
+// TailnetPortField says "Wireless debugging port"
+// in the language the app shows.
+//
+// Accessible name of the field for the port Wireless debugging shows.
+func TailnetPortField() string { return In(i18n.Locale()).TailnetPortField() }
+
+// TailnetPortField says "Wireless debugging port"
+// in the language of msgs.
+//
+// Accessible name of the field for the port Wireless debugging shows.
+func (msgs Messages) TailnetPortField() string {
+	return Catalog.Format(msgs.locale, "tailnetPortField", nil)
+}
+
+// TailnetReadFailed says "Couldn't read Tailscale's status on this computer"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: when asking Tailscale on this
+// computer failed; its error follows in English.
+func TailnetReadFailed() string { return In(i18n.Locale()).TailnetReadFailed() }
+
+// TailnetReadFailed says "Couldn't read Tailscale's status on this computer"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: when asking Tailscale on this
+// computer failed; its error follows in English.
+func (msgs Messages) TailnetReadFailed() string {
+	return Catalog.Format(msgs.locale, "tailnetReadFailed", nil)
+}
+
+// TailnetReading says "Looking for Tailscale on this computer…"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: while the first answer is on its
+// way.
+func TailnetReading() string { return In(i18n.Locale()).TailnetReading() }
+
+// TailnetReading says "Looking for Tailscale on this computer…"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: while the first answer is on its
+// way.
+func (msgs Messages) TailnetReading() string {
+	return Catalog.Format(msgs.locale, "tailnetReading", nil)
+}
+
+// TailnetSafety says "Tailscale encrypts everything between your devices. Pinky only reads Tailscale's status; it doesn't change Tailscale'…"
+// in the language the app shows.
+//
+// The note under the steps.
+func TailnetSafety() string { return In(i18n.Locale()).TailnetSafety() }
+
+// TailnetSafety says "Tailscale encrypts everything between your devices. Pinky only reads Tailscale's status; it doesn't change Tailscale'…"
+// in the language of msgs.
+//
+// The note under the steps.
+func (msgs Messages) TailnetSafety() string {
+	return Catalog.Format(msgs.locale, "tailnetSafety", nil)
+}
+
+// TailnetShow says "Show"
+// in the language the app shows.
+//
+// Button by a phone that is connected: shows it.
+func TailnetShow() string { return In(i18n.Locale()).TailnetShow() }
+
+// TailnetShow says "Show"
+// in the language of msgs.
+//
+// Button by a phone that is connected: shows it.
+func (msgs Messages) TailnetShow() string {
+	return Catalog.Format(msgs.locale, "tailnetShow", nil)
+}
+
+// TailnetStepConnect says "Connect the phone"
+// in the language the app shows.
+//
+// Step 3's title.
+func TailnetStepConnect() string { return In(i18n.Locale()).TailnetStepConnect() }
+
+// TailnetStepConnect says "Connect the phone"
+// in the language of msgs.
+//
+// Step 3's title.
+func (msgs Messages) TailnetStepConnect() string {
+	return Catalog.Format(msgs.locale, "tailnetStepConnect", nil)
+}
+
+// TailnetStepHere says "Tailscale on this computer"
+// in the language the app shows.
+//
+// Step 1's title.
+func TailnetStepHere() string { return In(i18n.Locale()).TailnetStepHere() }
+
+// TailnetStepHere says "Tailscale on this computer"
+// in the language of msgs.
+//
+// Step 1's title.
+func (msgs Messages) TailnetStepHere() string {
+	return Catalog.Format(msgs.locale, "tailnetStepHere", nil)
+}
+
+// TailnetStepPhone says "Tailscale on your phone"
+// in the language the app shows.
+//
+// Step 2's title.
+func TailnetStepPhone() string { return In(i18n.Locale()).TailnetStepPhone() }
+
+// TailnetStepPhone says "Tailscale on your phone"
+// in the language of msgs.
+//
+// Step 2's title.
+func (msgs Messages) TailnetStepPhone() string {
+	return Catalog.Format(msgs.locale, "tailnetStepPhone", nil)
+}
+
+// TailnetStepsLabel says "Steps to connect through Tailscale"
+// in the language the app shows.
+//
+// Accessible name of the list of steps.
+func TailnetStepsLabel() string { return In(i18n.Locale()).TailnetStepsLabel() }
+
+// TailnetStepsLabel says "Steps to connect through Tailscale"
+// in the language of msgs.
+//
+// Accessible name of the list of steps.
+func (msgs Messages) TailnetStepsLabel() string {
+	return Catalog.Format(msgs.locale, "tailnetStepsLabel", nil)
+}
+
+// TailnetTitle says "Connect through Tailscale"
+// in the language the app shows.
+//
+// Add phone › Android › Tailscale: the heading.
+func TailnetTitle() string { return In(i18n.Locale()).TailnetTitle() }
+
+// TailnetTitle says "Connect through Tailscale"
+// in the language of msgs.
+//
+// Add phone › Android › Tailscale: the heading.
+func (msgs Messages) TailnetTitle() string {
+	return Catalog.Format(msgs.locale, "tailnetTitle", nil)
+}
+
+// TailnetUnreachable says "Couldn't reach {name} through Tailscale. Check that Tailscale is on on the phone and the phone has internet."
+// in the language the app shows.
+//
+// When connecting through Tailscale timed out.
+func TailnetUnreachable(name string) string { return In(i18n.Locale()).TailnetUnreachable(name) }
+
+// TailnetUnreachable says "Couldn't reach {name} through Tailscale. Check that Tailscale is on on the phone and the phone has internet."
+// in the language of msgs.
+//
+// When connecting through Tailscale timed out.
+func (msgs Messages) TailnetUnreachable(name string) string {
+	return Catalog.Format(msgs.locale, "tailnetUnreachable", map[string]any{"name": name})
 }
 
 // TasksDetails says "Details"

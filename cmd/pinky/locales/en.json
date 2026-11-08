@@ -242,6 +242,10 @@
   "@addAndroidStepsLabel": {
     "description": "Add phone › Android: the accessible name of the list of steps."
   },
+  "addAndroidTailnet": "Phone not on this network? Use Tailscale",
+  "@addAndroidTailnet": {
+    "description": "Add phone › Android: the link next to addPhoneOrWiFi that opens the steps to connect a phone through Tailscale, for a phone away from this computer's network. Tailscale and tailnet are product words: keep them."
+  },
   "addAndroidTitle": "Connect your Android phone",
   "@addAndroidTitle": {
     "description": "Add phone › Android: the heading of the steps that prepare and connect an Android phone."
@@ -606,6 +610,164 @@
       }
     }
   },
+  "awayBusy": "Setting up…",
+  "@awayBusy": {
+    "description": "Under awayTitle while it changes."
+  },
+  "awayDialogCancel": "Cancel",
+  "@awayDialogCancel": {
+    "description": "The dialog's cancel button."
+  },
+  "awayDialogConfirm": "Turn on",
+  "@awayDialogConfirm": {
+    "description": "The dialog's button that turns it on."
+  },
+  "awayDialogDrop": "The phone's connection drops for a moment while adb restarts.",
+  "@awayDialogDrop": {
+    "description": "The dialog: what happens as it turns on."
+  },
+  "awayDialogExposure": "The phone listens on every network it joins, not only Tailscale: on a café's Wi-Fi, another device there could ask to debug it. The phone then asks you; tap Cancel. Only computers it already trusts get in without asking, and only the way through Tailscale is encrypted.",
+  "@awayDialogExposure": {
+    "description": "The dialog: what it exposes."
+  },
+  "awayDialogTitle": "Use {name} away from home?",
+  "@awayDialogTitle": {
+    "description": "The dialog before turning Use away from home on: its title.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayDialogUntil": "It lasts until the phone restarts. Turn it off here any time; once it's off, you can turn it on again only while the phone is near this computer.",
+  "@awayDialogUntil": {
+    "description": "The dialog: how long it lasts and how to turn it off."
+  },
+  "awayDialogWhat": "Pinky has the phone's adb listen on the network at port 5555, as adb tcpip does, and connects to it through Tailscale wherever the phone is.",
+  "@awayDialogWhat": {
+    "description": "The dialog: what turning it on does. adb tcpip is a command; keep it."
+  },
+  "awayFailed": "Couldn't change Use away from home for {name}: {error}",
+  "@awayFailed": {
+    "description": "When turning it on or off failed; error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone went offline"
+      }
+    }
+  },
+  "awayHowTo": "Set up Tailscale",
+  "@awayHowTo": {
+    "description": "Button by awayNoTailscaleHere: opens Add phone › Android › Tailscale."
+  },
+  "awayKeepAwake": "Keep this computer awake for phones away",
+  "@awayKeepAwake": {
+    "description": "Settings › Phones, under the phones: the switch's title."
+  },
+  "awayKeepAwakeDesc": "While a phone is connected through Tailscale, this computer doesn't sleep when idle, so agents can reach the phone. A MacBook still sleeps when you close its lid, unless it's plugged in with an external display.",
+  "@awayKeepAwakeDesc": {
+    "description": "Under awayKeepAwake."
+  },
+  "awayNoTailscaleHere": "Needs Tailscale on this computer, signed in.",
+  "@awayNoTailscaleHere": {
+    "description": "Under awayTitle when Tailscale does not run on this computer."
+  },
+  "awayNoTailscalePhone": "Install Tailscale on {name}, open it and sign in to the same account as on this computer.",
+  "@awayNoTailscalePhone": {
+    "description": "Under awayTitle when the phone is not on this computer's tailnet.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayNotConnected": "Connect {name} by cable or on this computer's Wi-Fi to set it up.",
+  "@awayNotConnected": {
+    "description": "Under awayTitle when the phone is not connected.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayOffDesc": "Reach {name} through Tailscale when it's away from this computer's network.",
+  "@awayOffDesc": {
+    "description": "Under awayTitle while it is off.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayOnDesc": "On. When {name} is away from this computer's network, Pinky reaches it through Tailscale at {addr}.",
+  "@awayOnDesc": {
+    "description": "Under awayTitle while it is on: addr is the phone's Tailscale address.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      },
+      "addr": {
+        "type": "String",
+        "example": "100.101.2.2"
+      }
+    }
+  },
+  "awayStoppedDesc": "{name}'s adb stopped listening on the network, as it does when the phone restarts. Turn it on again before you leave.",
+  "@awayStoppedDesc": {
+    "description": "Under awayTitle while it is on but the phone's adb no longer listens.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayTitle": "Use away from home",
+  "@awayTitle": {
+    "description": "Settings › Phones, per Android phone: the title of the setting that reaches the phone through Tailscale when it is away from this computer's network."
+  },
+  "awayTurnOff": "Turn off",
+  "@awayTurnOff": {
+    "description": "Button: turns Use away from home off."
+  },
+  "awayTurnOn": "Turn on…",
+  "@awayTurnOn": {
+    "description": "Button: opens the dialog that turns Use away from home on."
+  },
+  "awayTurnOnAgain": "Turn on again",
+  "@awayTurnOnAgain": {
+    "description": "Button by awayStoppedDesc."
+  },
+  "awayTurnedOff": "Use away from home is off for {name}",
+  "@awayTurnedOff": {
+    "description": "A toast once Use away from home is off.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "awayTurnedOn": "{name} can now be used away from home",
+  "@awayTurnedOn": {
+    "description": "A toast once Use away from home is on.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
   "backgroundChangeFailed": "Couldn't change background work on {phone}: {reason}",
   "@backgroundChangeFailed": {
     "description": "A toast when turning Work in the background on or off failed. phone is the phone's name, reason the error in English.",
@@ -827,6 +989,10 @@
         "example": "iPhone"
       }
     }
+  },
+  "checkConnectionTailscale": "Connected through Tailscale.",
+  "@checkConnectionTailscale": {
+    "description": "The checkup, connection: passed, through Tailscale (the phone is away from this computer's network)."
   },
   "checkConnectionTitle": "Connection",
   "@checkConnectionTitle": {
@@ -6187,6 +6353,192 @@
       "question": {
         "type": "String",
         "example": "“Is 3pm fine?”"
+      }
+    }
+  },
+  "tailnetAllow": "Allow this computer on {name}: unlock it and tap Allow.",
+  "@tailnetAllow": {
+    "description": "When the phone asks the person to allow this computer. Allow is addAndroidSketchAllow.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "tailnetConnect": "Connect",
+  "@tailnetConnect": {
+    "description": "Button by a phone on the tailnet: connects to it."
+  },
+  "tailnetConnectDetail": "Set each phone up once while it's near this computer, by cable or on the same Wi-Fi: turn on Use away from home for it in Settings › Phones. Pinky then reaches it through Tailscale wherever it is.",
+  "@tailnetConnectDetail": {
+    "description": "Step 3: above the list of phones on the tailnet. Use away from home is awayTitle; Settings › Phones is settingsPageTitle › settingsSectionPhones."
+  },
+  "tailnetConnectFailed": "Couldn't connect to {name}: {error}",
+  "@tailnetConnectFailed": {
+    "description": "When connecting through Tailscale failed otherwise; error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      },
+      "error": {
+        "type": "String",
+        "example": "the adb server stopped"
+      }
+    }
+  },
+  "tailnetConnected": "Connected to {name} through Tailscale",
+  "@tailnetConnected": {
+    "description": "A toast once a phone connected through Tailscale.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "tailnetDetail": "Use your phone when it's away from this computer's network, as when you're out and this computer is at home. Tailscale, a free app, connects your own devices to each other privately, wherever they are.",
+  "@tailnetDetail": {
+    "description": "Add phone › Android › Tailscale: the line under the heading."
+  },
+  "tailnetGet": "Get Tailscale",
+  "@tailnetGet": {
+    "description": "Button: opens Tailscale's download page."
+  },
+  "tailnetHereLinux": "Turn Tailscale on: run {command} in a terminal.",
+  "@tailnetHereLinux": {
+    "description": "Step 1 on Linux, where Tailscale has no app to open: command is a shell command.",
+    "placeholders": {
+      "command": {
+        "type": "String",
+        "example": "sudo tailscale up"
+      }
+    }
+  },
+  "tailnetHereNeedsLogin": "Sign in to Tailscale on this computer.",
+  "@tailnetHereNeedsLogin": {
+    "description": "Step 1 when Tailscale is not signed in."
+  },
+  "tailnetHereNotInstalled": "Install Tailscale on this computer and sign in.",
+  "@tailnetHereNotInstalled": {
+    "description": "Step 1 when Tailscale is not installed."
+  },
+  "tailnetHereNotRunning": "Open Tailscale and sign in.",
+  "@tailnetHereNotRunning": {
+    "description": "Step 1 when Tailscale is installed but not running."
+  },
+  "tailnetHereRunning": "Connected to {tailnet} as {name}.",
+  "@tailnetHereRunning": {
+    "description": "Under step 1 once done: tailnet is the tailnet's name (an email address or a domain), name this computer's name on it.",
+    "placeholders": {
+      "tailnet": {
+        "type": "String",
+        "example": "someone@gmail.com"
+      },
+      "name": {
+        "type": "String",
+        "example": "Someone's MacBook"
+      }
+    }
+  },
+  "tailnetHereStarting": "Tailscale is connecting…",
+  "@tailnetHereStarting": {
+    "description": "Step 1 while Tailscale connects."
+  },
+  "tailnetHereStopped": "Tailscale is turned off on this computer. Open it and turn it on.",
+  "@tailnetHereStopped": {
+    "description": "Step 1 when Tailscale is signed in but turned off."
+  },
+  "tailnetNotListening": "{name} doesn't take connections from Pinky yet",
+  "@tailnetNotListening": {
+    "description": "When connecting to a phone found nothing listening: its adb does not listen on the network.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
+      }
+    }
+  },
+  "tailnetNotListeningDetail": "Set it up once while it's near this computer: connect it by cable or on the same Wi-Fi, then turn on Use away from home for it in Settings › Phones. If Wireless debugging is on on the phone, you can also enter the port it shows under IP address & Port.",
+  "@tailnetNotListeningDetail": {
+    "description": "Under tailnetNotListening. Wireless debugging and IP address & Port are Android's own names; use those of Android's Simplified Chinese settings."
+  },
+  "tailnetOpen": "Open Tailscale",
+  "@tailnetOpen": {
+    "description": "Button: opens Tailscale's app on this computer."
+  },
+  "tailnetPhoneConnected": "connected",
+  "@tailnetPhoneConnected": {
+    "description": "After a phone's Tailscale address: Pinky is connected to it through Tailscale."
+  },
+  "tailnetPhoneNone": "Waiting for an Android phone on your tailnet…",
+  "@tailnetPhoneNone": {
+    "description": "Step 2, by a spinner, while the tailnet has no Android device. Tailscale and tailnet are product words: keep them."
+  },
+  "tailnetPhoneOffline": "offline",
+  "@tailnetPhoneOffline": {
+    "description": "After a phone's Tailscale address: Tailscale does not see it."
+  },
+  "tailnetPhoneOnline": "online",
+  "@tailnetPhoneOnline": {
+    "description": "After a phone's Tailscale address in step 3's list: Tailscale sees it connected. Lower case: it follows \"100.101.2.2 · \"."
+  },
+  "tailnetPhoneRelayed": "connected through a Tailscale relay, which is slower",
+  "@tailnetPhoneRelayed": {
+    "description": "After a phone's Tailscale address: connected, but through one of Tailscale's relay servers rather than straight to the phone."
+  },
+  "tailnetPhoneSteps": "On the phone, install Tailscale from Google Play, open it and sign in to the same account as on this computer.",
+  "@tailnetPhoneSteps": {
+    "description": "Step 2: what to do on the phone."
+  },
+  "tailnetPortField": "Wireless debugging port",
+  "@tailnetPortField": {
+    "description": "Accessible name of the field for the port Wireless debugging shows."
+  },
+  "tailnetReadFailed": "Couldn't read Tailscale's status on this computer",
+  "@tailnetReadFailed": {
+    "description": "Add phone › Android › Tailscale: when asking Tailscale on this computer failed; its error follows in English."
+  },
+  "tailnetReading": "Looking for Tailscale on this computer…",
+  "@tailnetReading": {
+    "description": "Add phone › Android › Tailscale: while the first answer is on its way."
+  },
+  "tailnetSafety": "Tailscale encrypts everything between your devices. Pinky only reads Tailscale's status; it doesn't change Tailscale's settings.",
+  "@tailnetSafety": {
+    "description": "The note under the steps."
+  },
+  "tailnetShow": "Show",
+  "@tailnetShow": {
+    "description": "Button by a phone that is connected: shows it."
+  },
+  "tailnetStepConnect": "Connect the phone",
+  "@tailnetStepConnect": {
+    "description": "Step 3's title."
+  },
+  "tailnetStepHere": "Tailscale on this computer",
+  "@tailnetStepHere": {
+    "description": "Step 1's title."
+  },
+  "tailnetStepPhone": "Tailscale on your phone",
+  "@tailnetStepPhone": {
+    "description": "Step 2's title."
+  },
+  "tailnetStepsLabel": "Steps to connect through Tailscale",
+  "@tailnetStepsLabel": {
+    "description": "Accessible name of the list of steps."
+  },
+  "tailnetTitle": "Connect through Tailscale",
+  "@tailnetTitle": {
+    "description": "Add phone › Android › Tailscale: the heading."
+  },
+  "tailnetUnreachable": "Couldn't reach {name} through Tailscale. Check that Tailscale is on on the phone and the phone has internet.",
+  "@tailnetUnreachable": {
+    "description": "When connecting through Tailscale timed out.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Mi 10 Pro"
       }
     }
   },

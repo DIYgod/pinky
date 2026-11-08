@@ -155,9 +155,13 @@ func (a *app) addAndroid(c *mg.Context) {
 	if online {
 		return
 	}
-	mg.Row(c).Children(func() {
+	mg.Row(c).Gap(18).Wrap().Children(func() {
 		if linkButton(c, locales.AddPhoneOrWiFi()).Clicked() {
 			s.step = "qr"
+			s.snapshot(a)
+		}
+		if _, ok := a.api.(tailnetter); ok && linkButton(c, locales.AddAndroidTailnet()).Clicked() {
+			s.step = "tailnet"
 			s.snapshot(a)
 		}
 	})

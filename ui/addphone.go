@@ -15,7 +15,7 @@ import (
 // watching Devices for one it did not know when the step began; over
 // Wi-Fi the gateway's pairing says which phone paired.
 type addState struct {
-	step     string // "choose", "android", "qr", "iphone"
+	step     string // "choose", "android", "qr", "tailnet", "iphone"
 	known    map[string]bool
 	old      bool   // the older-iPhone path
 	oldPick  string // "helper" or "mirror"
@@ -77,7 +77,7 @@ func (a *app) addPhonePage(c *mg.Context) {
 			mg.Row(c).MinHeight(22).AlignItems(mg.Center).Margin(0, 0, -6, 0).Children(func() {
 				if s.step != "choose" && linkButton(c, locales.AddPhoneBack()).Clicked() {
 					switch s.step {
-					case "qr":
+					case "qr", "tailnet":
 						s.step = "android"
 					default:
 						s.step, s.old, s.oldPick, s.since = "choose", false, "", time.Time{}
@@ -94,6 +94,8 @@ func (a *app) addPhonePage(c *mg.Context) {
 				a.addAndroid(c)
 			case "qr":
 				a.addQR(c)
+			case "tailnet":
+				a.addTailnet(c)
 			case "iphone":
 				a.addIPhone(c)
 			default:

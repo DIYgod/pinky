@@ -164,12 +164,14 @@ func connectionLine(d gateway.DeviceView) string {
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		return locales.ConnectionOffline(kind)
 	}
-	switch d.Info.Connection {
-	case "wifi":
+	switch {
+	case d.Info.Via == driver.ViaTailscale:
+		return kind + " · Tailscale"
+	case d.Info.Connection == "wifi":
 		return kind + " · Wi-Fi"
-	case "usb":
+	case d.Info.Connection == "usb":
 		return kind + " · USB"
-	case "":
+	case d.Info.Connection == "":
 		return kind
 	}
 	return kind + " · " + d.Info.Connection
@@ -188,10 +190,12 @@ func osLine(d gateway.DeviceView) string {
 		}
 		return locales.ConnectionOffline(s)
 	}
-	switch d.Info.Connection {
-	case "wifi":
+	switch {
+	case d.Info.Via == driver.ViaTailscale:
+		return s + " · Tailscale"
+	case d.Info.Connection == "wifi":
 		return s + " · Wi-Fi"
-	case "usb":
+	case d.Info.Connection == "usb":
 		return s + " · USB"
 	}
 	return s

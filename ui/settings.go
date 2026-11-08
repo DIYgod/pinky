@@ -388,6 +388,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 					a.backgroundRow(c, d, true)
 				}
 				a.connectionRows(c, d)
+				a.awayRow(c, d)
 				mg.Row(c).Padding(4, 0, 0, 0).Children(func() {
 					if linkButton(c, locales.PhoneCheckup()).Label(locales.SettingsPhonesCheckupLabel(d.Info.Name)).Clicked() {
 						a.openCheckup(d)
@@ -396,6 +397,7 @@ func (a *app) settingsPhones(c *mg.Context) {
 			})
 		}
 	})
+	a.awayKeepAwakeRow(c)
 	mg.Row(c).Children(func() {
 		if button(c, locales.SettingsPhonesAdd(), btnOpt{}).Clicked() {
 			a.page = pageAddPhone

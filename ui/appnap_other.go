@@ -9,3 +9,7 @@ func keepAppAwake() {}
 // keepMacAwake keeps a Mac awake while agent tasks run; other systems are
 // left to their own sleep settings for now.
 func keepMacAwake(bool) {}
+
+// keepMacAwakeAway keeps a Mac awake while a phone is away; other systems
+// are left as they are.
+func keepMacAwakeAway(bool) {}

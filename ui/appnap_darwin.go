@@ -25,8 +25,12 @@ const (
 )
 
 // awakeReason names Pinky's assertion while agent tasks run, as
-// `pmset -g assertions` lists it.
-const awakeReason = "Pinky: an agent task is running"
+// `pmset -g assertions` lists it; awayReason the one while a phone is
+// connected through Tailscale.
+const (
+	awakeReason = "Pinky: an agent task is running"
+	awayReason  = "Pinky: a phone is connected through Tailscale"
+)
 
 var (
 	appNapOnce  sync.Once
@@ -34,6 +38,7 @@ var (
 
 	awakeMu    sync.Mutex
 	awakeToken objc.ID
+	awayToken  objc.ID
 )
 
 // keepAppAwake holds a process activity for the app's lifetime, so macOS
@@ -58,6 +63,22 @@ func keepMacAwake(on bool) {
 	case !on && awakeToken != 0:
 		endActivity(awakeToken)
 		awakeToken = 0
+	}
+}
+
+// keepMacAwakeAway holds NSActivityUserInitiated while on, as keepMacAwake
+// does, for a phone away from the Mac's network: agents reach it through
+// the Mac. A closed lid still sleeps the Mac, unless it runs in clamshell
+// mode (power and an external display).
+func keepMacAwakeAway(on bool) {
+	awakeMu.Lock()
+	defer awakeMu.Unlock()
+	switch {
+	case on && awayToken == 0:
+		awayToken = beginActivity(activityUserInitiated|activityLatencyCritical, awayReason)
+	case !on && awayToken != 0:
+		endActivity(awayToken)
+		awayToken = 0
 	}
 }
 
