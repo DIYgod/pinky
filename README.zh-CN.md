@@ -42,7 +42,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 | **Windows** | Windows 10 或 11，64 位（x64） |
 | **Linux** | 64 位 PC（x86-64），Ubuntu 20.04、Debian 11 或更新的系统（glibc 2.29 或更高），以及 GTK 3 |
 | **Android 手机** | Android 10 到 17，一根 USB 线。Pinky 自带 adb；Windows 上个别手机要装 USB 驱动，Linux 上要开放 USB 访问权限（[见下文](#windows-和-linux-上的-usb)） |
-| **iPhone** | iOS 17.4 或更高版本，一根 USB 线。Pinky 会自己准备好 iPhone，用的是 Apple 的开发者磁盘映像：它随 Xcode 提供，你也可以让 Pinky 从第三方镜像下载（[见下文](#iphone)）。iOS 17.4 到 26 还要在 iPhone 上装一个辅助应用（[见下文](#ios-174-到-26-的-iphone)） |
+| **iPhone** | iOS 17.4 或更高版本，一根 USB 线。Pinky 用 Apple 的开发者磁盘映像准备 iPhone：映像随 Xcode 提供，你也可以让 Pinky 从第三方镜像下载。iOS 27 上 Pinky 暂时还不能自己挂载映像：插着 iPhone 打开一次 Xcode，映像就会一直在（[见下文](#iphone)）。iOS 17.4 到 26 还要在 iPhone 上装一个辅助应用（[见下文](#ios-174-到-26-的-iphone)） |
 | **Agent** | 任何能用 MCP 服务器的 Agent，比如 Claude Code、Claude Desktop、Codex 或 Cursor |
 
 ### 1. 下载并安装 Pinky
@@ -87,7 +87,7 @@ Pinky 自带 adb，这是它连接 Android 手机用的工具，从 Android 源�
 
 #### iPhone
 
-Pinky 会自己准备好 iPhone，「添加手机 › iPhone」会一步步带你操作。
+Pinky 会自己准备好 iPhone，只是 iOS 27 上暂时有一步要用 Xcode（见下文）；「添加手机 › iPhone」会一步步带你操作。
 
 1. 把 iPhone 插到电脑上，解锁，点「信任」并输入锁屏密码。在 Windows 上要先从 Microsoft Store 装「Apple 设备」（或者 iTunes）；在 Linux 上要装 `usbmuxd` 软件包。缺这些时「添加手机」会提示。
 2. 在 iPhone 上打开「设置 › 隐私与安全性」里的「开发者模式」：这个开关是 Pinky 让它出现的。iPhone 会重启；解锁后点「打开」，再输入锁屏密码。
@@ -191,7 +191,7 @@ Pinky 不会传。截图、录屏和记录都存在你的电脑上，默认保�
 <details>
 <summary><b>Pinky 会在手机上装什么？</b></summary>
 
-Android 上，你点「安装」后会装上 Pinky Companion，之后 Pinky 会帮它保持最新。iPhone 上，iOS 27 及以上不装任何应用：Pinky 只是像 Xcode 那样挂载 Apple 的开发者磁盘映像。iOS 17.4 到 26 上是 WebDriverAgent 辅助应用，要你从 Xcode 装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）。
+Android 上，你点「安装」后会装上 Pinky Companion，之后 Pinky 会帮它保持最新。iPhone 上，iOS 27 及以上不装任何应用：Pinky 只是像 Xcode 那样挂载 Apple 的开发者磁盘映像（iOS 27 上暂时还要用 Xcode 挂载一次，[详情](#iphone)）。iOS 17.4 到 26 上是 WebDriverAgent 辅助应用，要你从 Xcode 装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）。
 
 </details>
 

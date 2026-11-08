@@ -4,6 +4,10 @@ What changed for people in each release of Pinky, newest first. A version is the
 
 ## Unreleased
 
+- A correction to the last release: on iOS 27, Pinky can't yet mount Apple's developer disk image by itself (it waits until it times out). Open Xcode once with the iPhone plugged in; the iPhone keeps the image when it restarts.
+- Pinky now notices within a minute when an iPhone's developer disk image goes away while it stays plugged in, and checks again whenever an iPhone is plugged in or restarts, instead of still showing it as connected.
+- Add phone › iPhone shows an iPhone that is already connected and ready, instead of looking for one.
+- Pinky's log now records each step of preparing an iPhone: mounting the developer disk image (how, how long, and why it failed), the Developer Mode switch, the trust request and the image download.
 - When something in Pinky gets in an agent's way, the agent now tells you afterwards and suggests reporting it with Help › Send Feedback…, leaving out what was on your screen. It never posts a report without your yes. Update in Settings › Agents gives your agents the new guide.
 - On iPhones below iOS 27, Pinky now notices when the developer disk image is not mounted, instead of failing later when it starts the WebDriverAgent helper.
 

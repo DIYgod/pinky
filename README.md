@@ -42,7 +42,7 @@ Install Pinky, connect your phone and add Pinky to your agent. Then ask the agen
 | **Windows** | Windows 10 or 11, 64-bit (x64) |
 | **Linux** | A 64-bit PC (x86-64) with Ubuntu 20.04, Debian 11 or a newer system (glibc 2.29 or later), and GTK 3 |
 | **Android phone** | Android 10 to 17 and a USB cable. Pinky brings its own adb; on Windows some phones need a USB driver, and on Linux USB access ([below](#usb-on-windows-and-linux)) |
-| **iPhone** | iOS 17.4 or later and a USB cable. Pinky prepares it itself, with Apple's developer disk image, which comes with Xcode or which Pinky can download from a third-party mirror when you ask ([below](#iphone)). On iOS 17.4 to 26 also a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
+| **iPhone** | iOS 17.4 or later and a USB cable. Pinky prepares it with Apple's developer disk image, which comes with Xcode or which Pinky can download from a third-party mirror when you ask. On iOS 27 Pinky can't mount the image itself yet: open Xcode once with the iPhone plugged in, and the image stays ([below](#iphone)). On iOS 17.4 to 26 also a helper app on the iPhone ([below](#iphones-on-ios-174-to-26)) |
 | **Agent** | Any agent that can use MCP servers, such as Claude Code, Claude Desktop, Codex or Cursor |
 
 ### 1. Download and install Pinky
@@ -87,7 +87,7 @@ Pinky brings its own adb, the tool it reaches Android phones with, built from An
 
 #### iPhone
 
-Pinky prepares an iPhone itself; **Add phone › iPhone** walks you through it.
+Pinky prepares an iPhone itself, except for one step on iOS 27 for now (below); **Add phone › iPhone** walks you through it.
 
 1. Plug the iPhone into the computer, unlock it, tap **Trust** and enter its passcode. On Windows, install Apple Devices from the Microsoft Store (or iTunes) first; on Linux, the `usbmuxd` package. Add phone says when they are missing.
 2. On the iPhone, turn on **Developer Mode** in Settings › Privacy & Security: Pinky makes the switch appear there. The iPhone restarts; unlock it, tap **Turn On** and enter the passcode.
@@ -191,7 +191,7 @@ Not through Pinky. Screenshots, recordings and history stay on your computer, fo
 <details>
 <summary><b>What does Pinky install on my phone?</b></summary>
 
-On Android, Pinky Companion, when you click Install; Pinky keeps it up to date. On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does. On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)).
+On Android, Pinky Companion, when you click Install; Pinky keeps it up to date. On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does (on iOS 27, for now, Xcode has to mount it once; [details](#iphone)). On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)).
 
 </details>
 
