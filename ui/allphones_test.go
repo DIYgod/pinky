@@ -320,10 +320,10 @@ func TestSidebarFollowsSelection(t *testing.T) {
 }
 
 // TestAllPhonesScreenshots draws All phones with eight phones into
-// $PINKY_SCREENSHOTS, for the notes: at the top and scrolled to the end,
-// in English and Chinese, light and dark, and the sidebar of twelve
-// phones in the smallest window, scrolled to its end. The fake's phones
-// show no picture.
+// $PINKY_SCREENSHOTS, for the notes: at the top and scrolled to the end, in
+// each of the client's languages, light and dark, and the sidebar of twelve
+// phones in the smallest window, scrolled to its end. The fake's phones show
+// no picture.
 func TestAllPhonesScreenshots(t *testing.T) {
 	dir := os.Getenv("PINKY_SCREENSHOTS")
 	if dir == "" {
@@ -340,11 +340,8 @@ func TestAllPhonesScreenshots(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, lang := range []string{"en", "zh-Hans"} {
-		suffix := "-en"
-		if lang != "en" {
-			suffix = "-zh"
-		}
+	for _, lang := range testLanguages() {
+		suffix := "-" + langShort(lang)
 		inLanguage(t, lang)
 		ta := newTestApp(t, fakeapi.ManyPhones)
 		ta.waitFor(t, "the lunch task", func() bool { return ta.taskOf("pixel-9") != nil })

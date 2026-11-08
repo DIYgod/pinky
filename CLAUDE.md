@@ -8,6 +8,12 @@ Read [docs/WORKING.md](docs/WORKING.md) before you change anything: who owns whi
 
 The README comes in English, [README.md](README.md), and in Simplified Chinese, [README.zh-CN.md](README.zh-CN.md), which follows it section by section (building from source is only summed up there). Change both in the same commit. Write the Chinese with the app's own names for menus and buttons (`cmd/pinky/locales/zh-Hans.json`), and give a new picture with words in it a Chinese copy next to the English one (`assets/readme/*-zh.*`).
 
+[README.ja.md](README.ja.md) is a community translation into Japanese. It may lag behind the English, and a commit that changes the README need not change it.
+
+## The app's languages
+
+The app speaks English, Simplified Chinese and Japanese. Every message it shows lives in `cmd/pinky/locales`: add or change the English in `en.json` (with its `@key` description) and, in the same commit, the Chinese in `zh-Hans.json` and the Japanese in `ja.json`; when the English of a message changes, recheck both translations. Then run `go tool mygo generate cmd/pinky`; `go test ./cmd/pinky/locales` fails when a catalog lacks a message, and `go tool mygo i18n check cmd/pinky` lists what is missing. Write the Japanese with the terms `ja.json` already uses (スマホ, パソコン, 「設定 › スマホ」) and with the names Apple and Android give their settings in Japanese. [docs/notes/client.md](docs/notes/client.md) ("i18n") has the details. Release notes stay English and Chinese only (below): Pinky in Japanese shows the English ones.
+
 ## Releases
 
 Pinky releases often, several times a day when there is something to ship. Versions are the date in Asia/Shanghai and that day's count, `YYYY.MDD.N` (`2026.1107.2` is the second release of 7 November 2026), and are never written by hand. [docs/RELEASING.md](docs/RELEASING.md) explains the whole pipeline.
