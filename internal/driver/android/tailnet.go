@@ -164,11 +164,17 @@ func (p *Provider) Away(ctx context.Context, id string) (driver.Away, error) {
 		out.Port, _ = strconv.Atoi(ps)
 	case local != "":
 		if _, addrs, err := p.phoneAddrs(ctx, local); err == nil {
+			// The first address the tailnet knows, IPv4 first; else the
+			// first, to say it is another tailnet's.
 			out.Addr = ""
 			for _, a := range addrs {
-				if _, known := st.Device(a.String()); known || out.Addr == "" {
+				if _, known := st.Device(a.String()); known {
 					out.Addr = a.String()
+					break
 				}
+			}
+			if out.Addr == "" && len(addrs) > 0 {
+				out.Addr = addrs[0].String()
 			}
 		}
 		out.Listening = p.listenPort(ctx, local) == out.Port

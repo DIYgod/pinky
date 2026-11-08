@@ -295,3 +295,86 @@ func TestDeviceTailnetIdle(t *testing.T) {
 		}
 	})
 }
+
+// TestDeviceWiFiWatch lists the phones every 2 s for a while, with the
+// network phones kept in PINKY_NET_FILE and reconnected as Pinky does,
+// and logs each change of how the phone is listed: so the person can
+// unplug it, let it sleep, wake it or restart it, and the log shows what
+// Pinky made of it.
+//
+//	PINKY_DEVICE=<phone id> PINKY_NET_FILE=/tmp/x.json PINKY_WATCH_SECONDS=300 go test -tags device -run TestDeviceWiFiWatch
+func TestDeviceWiFiWatch(t *testing.T) {
+	id, file := os.Getenv("PINKY_DEVICE"), os.Getenv("PINKY_NET_FILE")
+	if id == "" || file == "" {
+		t.Skip("PINKY_DEVICE or PINKY_NET_FILE not set")
+	}
+	seconds := 300
+	if s := os.Getenv("PINKY_WATCH_SECONDS"); s != "" {
+		fmt.Sscan(s, &seconds)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(seconds+60)*time.Second)
+	defer cancel()
+	p := NewProvider(Config{Logf: t.Logf, NetworkFile: file})
+	start := time.Now()
+	last := ""
+	for time.Since(start) < time.Duration(seconds)*time.Second {
+		infos, err := p.List(ctx)
+		now := "not listed"
+		if err != nil {
+			now = "list failed: " + err.Error()
+		}
+		for _, in := range infos {
+			if in.ID == id {
+				now = fmt.Sprintf("%s over %s via=%q setup=%q", in.State, in.Connection, in.Via, in.Setup)
+			}
+		}
+		if now != last {
+			t.Logf("t=%5.1fs %s", time.Since(start).Seconds(), now)
+			last = now
+		}
+		time.Sleep(2 * time.Second)
+	}
+	if st, err := p.WiFi(ctx, id); err == nil {
+		t.Logf("at the end: %+v", st)
+	}
+}
+
+// TestDeviceAway lists the tailnet's phones and sets a real phone up for
+// away from home: adb tcpip over the connection it has, then a connection
+// at its Tailscale address. The phones it sets up go to PINKY_NET_FILE.
+//
+//	PINKY_DEVICE=<phone id> PINKY_NET_FILE=/tmp/x.json go test -tags device -run TestDeviceAway
+func TestDeviceAway(t *testing.T) {
+	id, file := os.Getenv("PINKY_DEVICE"), os.Getenv("PINKY_NET_FILE")
+	if id == "" || file == "" {
+		t.Skip("PINKY_DEVICE or PINKY_NET_FILE not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	p := NewProvider(Config{Logf: t.Logf, NetworkFile: file})
+	if _, err := p.List(ctx); err != nil {
+		t.Fatal(err)
+	}
+	st, err := p.Tailnet(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("tailnet %q, this computer %q, state %s", st.Tailnet, st.Self, st.State)
+	for _, ph := range st.Phones {
+		t.Logf("  phone %s %s online=%v connected=%v relayed=%v id=%q", ph.Name, ph.Addr, ph.Online, ph.Connected, ph.Relayed, ph.ID)
+	}
+	a, err := p.Away(ctx, id)
+	t.Logf("before: %+v, %v", a, err)
+	start := time.Now()
+	a, err = p.SetAway(ctx, id, true)
+	if err != nil || !a.On || !a.Listening {
+		t.Fatalf("on: %+v, %v", a, err)
+	}
+	t.Logf("on in %v: %+v", time.Since(start).Round(time.Millisecond), a)
+	infos, _ := p.List(ctx)
+	for _, in := range infos {
+		if in.ID == id {
+			t.Logf("listed: %s over %s via=%q", in.State, in.Connection, in.Via)
+		}
+	}
+}

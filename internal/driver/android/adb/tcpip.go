@@ -28,12 +28,13 @@ func (c *Client) USB(ctx context.Context, serial string) error {
 }
 
 // restart asks adbd to restart in another mode and checks its answer.
+// adbd may restart before its answer gets through (Android 17 over
+// Wireless debugging): no answer at all counts as restarting, which the
+// caller confirms by connecting.
 func (c *Client) restart(ctx context.Context, serial, service, want string) error {
 	out, err := c.readAll(ctx, serial, service)
 	reply := strings.TrimSpace(string(out))
-	if strings.HasPrefix(reply, want) {
-		// adbd may drop the connection as it restarts, before the end of
-		// the reply reads cleanly.
+	if strings.HasPrefix(reply, want) || (reply == "" && (err == nil || isClosedErr(err))) {
 		return nil
 	}
 	if err != nil {
