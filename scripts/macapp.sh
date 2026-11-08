@@ -33,13 +33,22 @@ frameworks=$contents/Frameworks
 libs="libavutil.61 libswscale.10 libavcodec.63 libavformat.63"
 
 # hdiutil fails with "Resource busy" while Spotlight or an antivirus holds
-# an image; try again, as mygo build does.
+# an image; try again, as mygo build does. A detach on GitHub's macOS
+# runners once failed with "No such file or directory" (Release
+# v2026.1108.20): when nothing is mounted there any more, the volume is
+# gone and the detach is done; otherwise try again.
 hdiutil_retry() {
 	n=0
 	until out=$(hdiutil "$@" 2>&1); do
 		n=$((n + 1))
 		case $out in
 		*"Resource busy"*) [ $n -lt 5 ] && sleep $((2 << n)) && continue ;;
+		*"No such file or directory"*)
+			if [ "$1" = detach ] && ! mount | grep -qF " on $2 ("; then
+				return 0
+			fi
+			[ $n -lt 3 ] && sleep $((2 << n)) && continue
+			;;
 		esac
 		echo "hdiutil $*: $out" >&2
 		return 1
