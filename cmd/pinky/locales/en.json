@@ -3198,6 +3198,16 @@
       }
     }
   },
+  "gwDoReceiveFile": "receive “{path}” from the agent",
+  "@gwDoReceiveFile": {
+    "description": "What a step tried: take a file the agent sent (phone_files upload) into the folder on the computer that is copied to the phone. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "photo.jpg"
+      }
+    }
+  },
   "gwDoSwipe": "swipe {direction}",
   "@gwDoSwipe": {
     "description": "What a step asked for: a swipe; direction is gwDirUp and the like. Shown only in other languages; in English the gateway's own words show.",
@@ -3687,6 +3697,20 @@
       "action": {
         "type": "String",
         "example": "open Northbank"
+      }
+    }
+  },
+  "gwStepReceivedFile": "Received “{path}” ({size}) from the agent",
+  "@gwStepReceivedFile": {
+    "description": "A step: the agent sent a file (phone_files upload), which Pinky saved in the folder on the computer that is copied to the phone. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "photo.jpg"
+      },
+      "size": {
+        "type": "String",
+        "example": "1.2 MB"
       }
     }
   },

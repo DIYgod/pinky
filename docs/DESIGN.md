@@ -179,7 +179,7 @@ Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the sc
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
 | `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
-| `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only) |
+| `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 

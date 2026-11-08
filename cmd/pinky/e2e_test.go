@@ -8,6 +8,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"net/http"
 	"os"
 	"os/exec"
@@ -393,11 +394,66 @@ func TestDaemonServesHTTP(t *testing.T) {
 	if isErr || !strings.HasPrefix(text, "settled · Pixel 9 (fake)") {
 		t.Fatalf("connect over HTTP:\n%s", text)
 	}
+
+	// The agent's files are on its own machine: it hands them to Pinky, in
+	// the call or through a link it sends the file to, and pushes them,
+	// which the person allows.
+	text, isErr = c.call(t, "phone_files", map[string]any{"action": "upload", "paths": []string{"hello.txt"},
+		"content": base64.StdEncoding.EncodeToString([]byte("hi"))})
+	if isErr || !strings.Contains(text, "Saved hello.txt (2 B)") {
+		t.Fatalf("upload in the call:\n%s", text)
+	}
+	text, isErr = c.call(t, "phone_files", map[string]any{"action": "upload", "paths": []string{"Pictures/cat.png"}})
+	m := regexp.MustCompile(`curl --upload-file <your file> '([^']+)'`).FindStringSubmatch(text)
+	if isErr || m == nil {
+		t.Fatalf("upload link:\n%s", text)
+	}
+	img := bytes.Repeat([]byte{0x89, 'P', 'N', 'G'}, 50_000)
+	req, _ := http.NewRequest(http.MethodPut, m[1], bytes.NewReader(img))
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var answer bytes.Buffer
+	answer.ReadFrom(resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK || !strings.Contains(answer.String(), "Saved Pictures/cat.png (200 KB)") {
+		t.Fatalf("PUT to the link: %d\n%s", resp.StatusCode, answer.String())
+	}
+	pushed := make(chan string, 1)
+	go func() {
+		text, _ := c.call(t, "phone_files", map[string]any{"action": "push", "intent": "Send the cat picture"})
+		pushed <- text
+	}()
+	ctl, err := api.DialControl(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ctl.Close()
+	var needs []api.NeedInfo
+	for i := 0; i < 200 && len(needs) == 0; i++ {
+		if err := ctl.Call("needs", nil, &needs); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	if len(needs) != 1 || needs[0].Rule != "Files" || needs[0].Title != "Copy 2 files to Pixel 9 (fake)?" {
+		t.Fatalf("needs: %+v", needs)
+	}
+	run(t, bin, home, "decide", needs[0].ID, "allow")
+	if text := <-pushed; !strings.HasPrefix(text, "settled") || !strings.Contains(text, "Copied 2 files to the phone") {
+		t.Fatalf("push:\n%s", text)
+	}
+	text, _ = c.call(t, "phone_files", map[string]any{})
+	if !strings.Contains(text, "hello.txt · 2 B · ") || !strings.Contains(text, "Pictures/cat.png · 200 KB · ") || strings.Count(text, " · both") != 2 {
+		t.Fatalf("list after the push:\n%s", text)
+	}
+
 	if text, _ := c.call(t, "phone_release", map[string]any{}); !strings.HasPrefix(text, "settled") {
 		t.Fatalf("release:\n%s", text)
 	}
 	// Without the token: refused.
-	resp, err := http.Post(url, "application/json", strings.NewReader(`{}`))
+	resp, err = http.Post(url, "application/json", strings.NewReader(`{}`))
 	if err != nil {
 		t.Fatal(err)
 	}

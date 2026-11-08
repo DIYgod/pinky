@@ -74,11 +74,13 @@ Payments wait for the person: paying, buying, selling, swapping, trading, repayi
 
 ## Files
 
-On Android phones, `phone_files` moves files between the phone's Pinky folder (`/sdcard/Pinky`, the only place on the phone you may reach) and a folder on this computer, which the result names. Work on the files there with your own file tools.
+On Android phones, `phone_files` moves files between the phone's Pinky folder (`/sdcard/Pinky`, the only place on the phone you may reach) and a folder on the computer running Pinky, which the result names. Work on the files there with your own file tools.
 
 - `phone_files {}` lists both sides: each file with its size, time and where it is (`both`, `phone`, `computer` or `differs`).
 - `phone_files { action: "pull" }` copies what the phone has and the computer lacks; pass `paths` for some files or folders.
 - `phone_files { action: "push", intent: "Put the edited photo where Gallery can open it" }` copies new and changed files to the phone. The person approves it first, like a Pay tap (`approval_pending`, then repeat with `approval_id`). Read-only agents may only list and pull.
+- Pictures pushed to the phone show in its gallery and photo pickers, so you can attach them in an app.
+- Not on that computer (connected over HTTP from another machine)? Hand Pinky the file first: `phone_files { action: "upload", paths: ["photo.jpg"] }` returns a one-time link; send the file to it from your own shell, `curl --upload-file photo.jpg '<link>'` (up to 200 MB, within 10 minutes), then push it. Small files (up to 10 MB) can go in the call instead, base64-encoded: `content: "<base64>"`, which works over stdio too. A different file of the same name is replaced only with `replace: true`.
 - iPhones return `unsupported`.
 
 ## Things you must not do

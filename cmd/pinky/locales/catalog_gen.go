@@ -9089,6 +9089,24 @@ func (msgs Messages) GwDoPress(key string) string {
 	return Catalog.Format(msgs.locale, "gwDoPress", map[string]any{"key": key})
 }
 
+// GwDoReceiveFile says "receive “{path}” from the agent"
+// in the language the app shows.
+//
+// What a step tried: take a file the agent sent (phone_files upload) into
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDoReceiveFile(path string) string { return In(i18n.Locale()).GwDoReceiveFile(path) }
+
+// GwDoReceiveFile says "receive “{path}” from the agent"
+// in the language of msgs.
+//
+// What a step tried: take a file the agent sent (phone_files upload) into
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoReceiveFile(path string) string {
+	return Catalog.Format(msgs.locale, "gwDoReceiveFile", map[string]any{"path": path})
+}
+
 // GwDoSwipe says "swipe {direction}"
 // in the language the app shows.
 //
@@ -10191,6 +10209,26 @@ func GwStepOutside(action string) string { return In(i18n.Locale()).GwStepOutsid
 // languages; in English the gateway's own words show.
 func (msgs Messages) GwStepOutside(action string) string {
 	return Catalog.Format(msgs.locale, "gwStepOutside", map[string]any{"action": action})
+}
+
+// GwStepReceivedFile says "Received “{path}” ({size}) from the agent"
+// in the language the app shows.
+//
+// A step: the agent sent a file (phone_files upload), which Pinky saved in
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepReceivedFile(path string, size string) string {
+	return In(i18n.Locale()).GwStepReceivedFile(path, size)
+}
+
+// GwStepReceivedFile says "Received “{path}” ({size}) from the agent"
+// in the language of msgs.
+//
+// A step: the agent sent a file (phone_files upload), which Pinky saved in
+// the folder on the computer that is copied to the phone. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepReceivedFile(path string, size string) string {
+	return Catalog.Format(msgs.locale, "gwStepReceivedFile", map[string]any{"path": path, "size": size})
 }
 
 // GwStepUnlocked says "Unlocked from the computer"

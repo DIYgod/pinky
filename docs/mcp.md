@@ -81,7 +81,8 @@ A JSON config:
 { "mcpServers": { "pinky": { "type": "http", "url": "http://127.0.0.1:7465/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
 ```
 
-- Without the token, or with another one, requests get `401`. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
+- Without the token, or with another one, requests get `401`; only upload links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
+- A remote agent's files are on its own machine, out of reach of the folder `phone_files` copies to the phone from. It uploads them into that folder instead (`phone_files { action: "upload" }`, [below](#uploading-a-file)): in the call, or to a one-time link at `http://<address>/upload/<token>`, which takes the file without the agent token.
 - Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. The agent's name gets " (remote)" after it ("Claude Code (remote)"), so a remote agent is asked about on its own first connection and never gets the scope the person gave the agent of that name on this computer. Closing it (`DELETE`), an hour without requests, or turning Remote agents off ends it, with its leases and open approvals.
 
 - Protocol: the official Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0), newline-delimited JSON-RPC over stdio; the SDK negotiates the protocol version.
@@ -259,12 +260,14 @@ Returns `settled` with `matched: true` or `matched: false` and the screen change
 
 ### phone_files
 
-Copies files between the phone's Pinky folder (`/sdcard/Pinky` on Android, the only place on the phone agents may reach) and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools. Needs a `phone_connect` lease like the other tools. iPhones return `unsupported`.
+Copies files between the phone's Pinky folder (`/sdcard/Pinky` on Android, the only place on the phone agents may reach) and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools; agents that cannot (on another computer, over HTTP) upload files into it. Needs a `phone_connect` lease like the other tools. iPhones return `unsupported`.
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `action` | `list` \| `pull` \| `push` | `list` (default) shows both sides; `pull` copies from the phone; `push` copies to the phone |
-| `paths` | string[] | Files or folders, relative to the Pinky folder. Default: everything; for `push`, the files that are new or changed on the computer |
+| `action` | `list` \| `pull` \| `push` \| `upload` | `list` (default) shows both sides; `pull` copies from the phone; `push` copies to the phone; `upload` saves a file the agent sends in the computer's folder. With `content` and no `action`, `upload` |
+| `paths` | string[] | Files or folders, relative to the Pinky folder. Default: everything; for `push`, the files that are new or changed on the computer. For `upload`: the one file's name, such as `photo.jpg` or `Pictures/photo.jpg` |
+| `content` | string | For `upload`: the file's bytes in base64 (standard or URL alphabet, padding and line breaks optional, or a `data:…;base64,` URL), up to 10 MB |
+| `replace` | boolean | For `upload`: replace a different file of the same name |
 | `intent` | string | For `push`: one sentence on why, shown on the approval panel |
 | `approval_id` | string | From `approval_pending`: repeat the same call with it |
 
@@ -273,6 +276,18 @@ The result lists the folder, then one line per file: `path · size · modified �
 - `push` asks the person first (rule `Files`), like an Ask action: up to 45 s, then `approval_pending`. "Allow for this task" covers later pushes in the task. Read-only mode refuses it (`blocked_by_policy`, rule `Read-only`), and read-only and watch-only agents get `scope_denied`: they may only list and pull.
 - Paths that leave the folder (`..`, absolute paths) are `invalid_argument`; files that are not there are `not_found`. Symbolic links in the computer's folder are not copied, and a pull replaces a link in its way instead of writing through it.
 - Each call is a step in the task's history ("Copied 2 files from the phone: a.txt, b.png").
+- Files pushed to Android show in the phone's gallery and photo pickers: Pinky asks the media scanner for them on Android 10 and earlier, and later versions find them by themselves.
+
+#### Uploading a file
+
+`upload` writes one file into the computer's folder and nothing to the phone, so it asks nothing; the `push` after it asks the person as usual. It is the first half of a push and follows its rules: read-only and watch-only agents get `scope_denied`, and read-only mode `blocked_by_policy` (rule `Read-only`).
+
+- **Names** are paths inside the folder; missing folders are made. `invalid_argument` for `..`, absolute paths, names that start with a dot, control characters, `< > : " | ? *`, names that end in a space or a dot, Windows device names (`CON`, `NUL`, `COM1`, `LPT1`…, with any extension), names over 255 bytes and paths over 1000 bytes: the file is made on this computer, which may run Windows, and then on the phone.
+- **A name already taken:** the same bytes settle without change; a different file is `invalid_argument` unless `replace: true`. A symbolic link in the way is replaced, never written through, and a folder on the way that is a link is refused.
+- **`content`** carries up to 10 MB, checked before anything is decoded or written. Over HTTP Pinky takes requests of up to 16 MiB for it, as over stdio (the SDK's own HTTP default is 4 MiB). A model has to write every byte of it out, so it suits small files and agents that call tools from code.
+- **Without `content`, over HTTP,** Pinky checks the upload (scope, name, a taken name) and returns a link instead: `http://<address>/upload/<token>`, at the address the agent reached Pinky at (or the `X-Forwarded-Proto` and `X-Forwarded-Host` of a proxy in front of it). The agent sends the file as the request body with `PUT` or `POST`, from its own shell: `curl --upload-file photo.jpg '<link>'`. A link works once, for 10 minutes, for files up to 200 MB, and only for its session, phone, name and `replace`; it ends with the session. It needs no agent token: its own random 128-bit token is the key. Forms (`multipart/form-data`) get `415`, larger files `413` (or `400` once past the limit when no length was sent), and unknown, used or expired links `404`. The answer is the text the tool would return, with `200`, or `400`, `403`, `503` or `500`.
+- **Without `content`, over stdio,** the call is `invalid_argument` and names the folder: an agent on this computer writes the file there itself.
+- Each upload is a step in the task's history: "Received “photo.jpg” (1.2 MB) from the agent".
 
 ### phone_request_approval
 

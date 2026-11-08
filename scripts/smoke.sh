@@ -7,7 +7,9 @@
 # It builds pinky and scripts/mcpcall into outdir (build/smoke), starts
 # `pinky daemon --fake` with its own PINKY_HOME there, lists the phones
 # with `pinky devices`, and drives a short task through `pinky mcp` as an
-# agent would. The daemon's log and the outputs stay in outdir.
+# agent would, with a file it hands Pinky and pushes to the phone (the
+# person's approval comes from `pinky decide`). The daemon's log and the
+# outputs stay in outdir.
 set -euo pipefail
 
 out=${1:-build/smoke}
@@ -28,6 +30,7 @@ rm -rf "$PINKY_HOME"
 "$pinky" daemon --fake >"$out/daemon.log" 2>&1 &
 daemon=$!
 stop() {
+	if [ -n "${approver:-}" ]; then kill "$approver" 2>/dev/null || true; fi
 	kill "$daemon" 2>/dev/null || true
 	wait "$daemon" 2>/dev/null || true
 }
@@ -50,15 +53,37 @@ grep -q "fake-pixel-9" "$out/devices.txt"
 grep -q "fake-iphone-17" "$out/devices.txt"
 
 echo "== pinky mcp"
+# Pushing a file to the phone asks the person: answer for them, as they
+# would in the app.
+(
+	for _ in $(seq 1 120); do
+		id=$("$pinky" needs | awk 'NR > 1 && /Files/ { print $1; exit }')
+		if [ -n "$id" ]; then
+			"$pinky" decide "$id" allow
+			exit 0
+		fi
+		sleep 0.5
+	done
+	echo "smoke: no approval to copy the file to the phone" >&2
+	exit 1
+) &
+approver=$!
 "$mcpcall" -pinky "$pinky" -delay 100ms \
 	phone_connect '{"task":"Smoke run","device":"fake-pixel-9"}' \
 	phone_launch '{"app":"Calculator"}' \
 	phone_observe '{}' \
+	phone_files '{"action":"upload","paths":["Smoke/hello.txt"],"content":"aGkgZnJvbSB0aGUgc21va2UgcnVu"}' \
+	phone_files '{"action":"push","intent":"Smoke run"}' \
+	phone_files '{}' \
 	phone_release '{"summary":"Smoke run done"}' | tee "$out/mcp.txt"
+wait "$approver"
 if grep -q "error=true" "$out/mcp.txt"; then
 	echo "smoke: a tool call failed" >&2
 	exit 1
 fi
+grep -q "Saved Smoke/hello.txt (21 B)" "$out/mcp.txt"
+grep -q "Copied 1 file to the phone" "$out/mcp.txt"
+grep -q "Smoke/hello.txt · 21 B · .* · both" "$out/mcp.txt"
 grep -q "Released Pixel 9 (fake)" "$out/mcp.txt"
 
 # `pinky quit` ends the daemon on every system, Windows included, which
