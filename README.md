@@ -64,7 +64,7 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 **Add phone › Android** shows these steps for your phone's brand, with its own menu names and extra switches: Xiaomi, OPPO, vivo, HONOR, HUAWEI, Samsung and Pixel, and general steps for the rest.
 
 1. On the phone, turn on USB debugging: in Settings › About phone, tap **Build number** 7 times, then turn on **USB debugging** in Settings › System › Developer options. Some brands name these menus a little differently.
-2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone**. Android 10 has no Wireless debugging: once it is plugged in, **Use Wi-Fi instead…** moves it to Wi-Fi ([below](#phones)).
+2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone** ([when it fails](#when-pairing-over-wi-fi-fails)). Android 10 has no Wireless debugging: once it is plugged in, **Use Wi-Fi instead…** moves it to Wi-Fi ([below](#phones)).
 3. Pinky offers to install Pinky Companion, its app for the phone, which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
 
 Each phone has a **Checkup**, in the ··· menu under its mirror, that lists what works and how to fix what doesn't, such as a Xiaomi's USB debugging (Security settings) switch.
@@ -86,6 +86,17 @@ Pinky brings its own adb, the tool it reaches Android phones with, built from An
 
 - **Windows:** the phone's USB debugging needs a driver. Windows installs one by itself for many phones; when it has none, Pinky lists the phone as needing setup and says which driver to install: the [Google USB Driver](https://developer.android.com/studio/run/win-usb) for Pixels, [Samsung's](https://developer.samsung.com/android-usb-driver) for Samsung phones, the [phone maker's](https://developer.android.com/studio/run/oem-usb) for others. Unplug the phone and plug it in again afterwards.
 - **Linux:** the computer must let Pinky open the phone's USB device, which takes udev rules for Android phones: `sudo apt install android-sdk-platform-tools-common` on Debian and Ubuntu, `android-udev` on Arch, `android-tools` on Fedora. You may also need to be in the `plugdev` group. Then plug the phone in again. Pinky says so when they are missing.
+
+#### When pairing over Wi-Fi fails
+
+When a phone works on the cable but **Pair over Wi-Fi** does not finish, the pairing page says within half a minute what Pinky sees:
+
+- **The phone hasn't shown up on the network yet:** check that Wireless debugging is on and that the phone is on the same Wi-Fi as the computer. Guest Wi-Fi, routers with AP (client) isolation and many office networks keep devices from finding each other. There, choose **Pair with a code instead**: on the phone, tap **Pair device with pairing code** and enter the IP address and port and the six-digit code it shows, which change each time that dialog opens. Pinky then needs no search to pair; if it still cannot find the phone afterwards, it asks for the IP address and port at the top of Wireless debugging (not the pairing dialog's) and connects there. If it cannot reach the phone at those addresses either, the network keeps its devices apart: use a Wi-Fi where they can reach each other, such as your home network rather than its guest network, or the cable.
+- **Pinky isn't allowed to look for phones on this network:** on a Mac, Pinky needs Local Network access, and macOS gives no error without it: the search just finds nothing. Choose **Open Local Network settings**, turn on Pinky under System Settings › Privacy & Security › Local Network and try again (if macOS asks whether Pinky may find devices on your local network, click **Allow**). On a Mac, a phone's **Checkup** shows this too, under **Local network**. On Windows and Linux, a firewall can block the search the same way: let Pinky use the local network, or pair with a code.
+- **Pinky can't look for phones on this network:** check that the computer is connected to Wi-Fi or Ethernet.
+- **The phone showed up, but pairing hasn't finished:** if the phone shows an error or went back to Wireless debugging, scan the code again, or pair with a code.
+
+Pairing over Wi-Fi needs Android 11 or later; an Android 10 phone moves to Wi-Fi from the cable instead (**Use Wi-Fi instead…**, [below](#phones)). Up to Android 16, Wireless debugging turns itself off when the phone leaves the Wi-Fi network, even for another access point of it, or restarts: turn it on again, or pair again from **Add phone**.
 
 #### iPhone
 
