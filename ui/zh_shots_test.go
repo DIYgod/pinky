@@ -3,6 +3,7 @@ package ui
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"image"
 	"image/png"
 	"os"
@@ -197,7 +198,7 @@ func TestChineseScreenshots(t *testing.T) {
 	main(ta, "pair-qr", nil)
 	ta.stopPairing()
 	ta.add.pair.form, ta.add.pair.addr, ta.add.pair.pin = true, "192.168.1.20:37123", "000000"
-	ta.add.pair.formErr = pairError(errorString("adb: failed to pair: Wrong password or connection was dropped"))
+	ta.add.pair.formErr = pairError(fmt.Errorf("android: pairing with 192.168.1.20:37123 failed: %w", driver.ErrPairRejected), false)
 	main(ta, "pair-code", nil)
 	// A QR pairing that waited 30 s for the phone, one the Mac keeps
 	// off the local network, and the connect step of a phone that paired

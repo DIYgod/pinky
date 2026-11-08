@@ -764,6 +764,24 @@ var ErrCanceled = errors.New("canceled")
 // phone.
 var ErrPairedNotFound = errors.New("the phone paired, but its wireless debugging address was not found on the network")
 
+// Why pairing over Wi-Fi failed, wrapped by PairWithCode and Pairing.Wait
+// with the pairing tool's own words. adb says the same when the phone
+// refused the code and when the connection dropped, so ErrPairRejected
+// covers both.
+var (
+	// ErrPairNotListening: nothing at the address took the connection, as
+	// a wrong port, or a pairing dialog or QR screen the phone closed.
+	ErrPairNotListening = errors.New("nothing at that address takes pairing requests")
+	// ErrPairUnreachable: the address did not answer.
+	ErrPairUnreachable = errors.New("the phone did not answer at that address")
+	// ErrPairRejected: the phone ended the pairing: a wrong code, a port
+	// that is not the pairing dialog's, or a connection that dropped.
+	ErrPairRejected = errors.New("the phone ended the pairing")
+	// ErrPairOldTool: the pairing tool cannot pair over Wi-Fi, as an adb
+	// server older than platform-tools 30.
+	ErrPairOldTool = errors.New("this computer's adb server cannot pair over Wi-Fi")
+)
+
 // ConnectionChooser is a Provider that can reach a phone in more than one
 // way and lets the person choose, per phone (iPhone: Xcode's CoreDevice
 // protocol, or the WebDriverAgent helper). The choice takes effect at the

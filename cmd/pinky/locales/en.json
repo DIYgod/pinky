@@ -4340,6 +4340,10 @@
   "@pairingErrNoAdb": {
     "description": "Pair over Wi-Fi: the error when adb does not work on this computer (no adb, or its server does not run); Add phone › Android, one step back, says why."
   },
+  "pairingErrNotListening": "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog, and keep it open until Pinky is done.",
+  "@pairingErrNotListening": {
+    "description": "Pair with a code: the error when nothing at the address typed took the connection (a wrong port, or the dialog closed). Pair device with pairing code is Android's own name."
+  },
   "pairingErrOther": "Couldn't pair: {detail}",
   "@pairingErrOther": {
     "description": "Pair over Wi-Fi: the error when pairing failed for another reason. detail is the error, in English.",
@@ -4350,21 +4354,33 @@
       }
     }
   },
+  "pairingErrQRNotListening": "The phone stopped waiting to pair, as it does when it leaves the scanning screen. Scan the code again, or pair with a code instead.",
+  "@pairingErrQRNotListening": {
+    "description": "Pair over Wi-Fi by QR code: the error when the phone's pairing service no longer took the connection. Shown with pairingUseCode and addPhoneTryAgain."
+  },
+  "pairingErrQRRejected": "The phone ended the pairing before it finished. Keep the phone on the same Wi-Fi as this computer and on its scanning screen until Pinky is done, then try again, or pair with a code instead.",
+  "@pairingErrQRRejected": {
+    "description": "Pair over Wi-Fi by QR code: the error when the phone ended the pairing (adb cannot tell why; the code is Pinky's, so never say it was wrong). Shown with pairingUseCode and addPhoneTryAgain."
+  },
+  "pairingErrQRUnreachable": "The phone showed up on the network, but Pinky couldn't connect to it. A VPN or firewall on this computer, or a network that keeps devices apart, such as guest Wi-Fi, can block it. Try another network, or a USB cable.",
+  "@pairingErrQRUnreachable": {
+    "description": "Pair over Wi-Fi by QR code: the error when the phone showed up on the network but its pairing address did not answer."
+  },
+  "pairingErrRejected": "The phone didn't accept the pairing. Check the code, and that the port is the one in the Pair device with pairing code dialog, not the one at the top of Wireless debugging. Both change each time the dialog opens.",
+  "@pairingErrRejected": {
+    "description": "Pair with a code: the error when the phone ended the pairing, which adb reports the same way for a wrong code, a port that is not the pairing dialog's and a dropped connection. Pair device with pairing code and Wireless debugging are Android's own names."
+  },
   "pairingErrTimeout": "The phone didn't answer in time. Check that it's on the same Wi-Fi as this computer and that Wireless debugging is on, then try again.",
   "@pairingErrTimeout": {
     "description": "Pair over Wi-Fi: the error when the phone did not answer in time. Wireless debugging is Android's setting."
   },
   "pairingErrUnreachable": "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they change each time it opens.",
   "@pairingErrUnreachable": {
-    "description": "Pair with a code: the error when nothing answered at the address typed. Pair device with pairing code is Android's own name."
+    "description": "Pair with a code: the error when the address typed did not answer. Pair device with pairing code is Android's own name."
   },
   "pairingErrUnsupported": "Pairing over Wi-Fi isn't available here. Use a USB cable instead.",
   "@pairingErrUnsupported": {
     "description": "Pair over Wi-Fi: the error when the phone's driver cannot pair over Wi-Fi."
-  },
-  "pairingErrWrongCode": "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairing code.",
-  "@pairingErrWrongCode": {
-    "description": "Pair with a code: the error when the pairing code typed was wrong. Pair device with pairing code is Android's own name."
   },
   "pairingFound": "Found the phone. Pairing…",
   "@pairingFound": {

@@ -47,6 +47,7 @@ type pairing struct {
 	scanned chan struct{}
 	closed  chan struct{}
 	once    sync.Once
+	err     error // FailPairing's, under a.mu
 }
 
 // StartPairing begins a QR pairing. A fake phone "scans" the code after a
@@ -79,6 +80,21 @@ func (a *API) ScanPairing() {
 	}
 }
 
+// FailPairing has the open QR pairings fail with err, as the driver's
+// errors do (driver.ErrPairRejected and the rest).
+func (a *API) FailPairing(err error) {
+	a.mu.Lock()
+	ps := a.pairings
+	a.pairings = nil
+	for _, p := range ps {
+		p.err = err
+	}
+	a.mu.Unlock()
+	for _, p := range ps {
+		p.scan()
+	}
+}
+
 func (p *pairing) scan() {
 	select {
 	case <-p.scanned:
@@ -96,6 +112,12 @@ func (p *pairing) Wait(ctx context.Context) (driver.Info, error) {
 	case <-p.closed:
 		return driver.Info{}, errors.New("fakeapi: the pairing was closed")
 	case <-p.scanned:
+		p.a.mu.Lock()
+		err := p.err
+		p.a.mu.Unlock()
+		if err != nil {
+			return driver.Info{}, err
+		}
 		return p.a.addWiFiPhone(), nil
 	}
 }
@@ -123,8 +145,9 @@ func (a *API) SetPairingProgress(pr driver.PairingProgress) {
 }
 
 // PairWithCode pairs a fake phone by pairing code. The code 000000 is
-// wrong, port 1 refuses, and a phone at port 2 pairs but does not show up
-// on the network (ConnectWiFi then connects it), to show the errors.
+// wrong, port 1 refuses, port 3 does not answer, and a phone at port 2
+// pairs but does not show up on the network (ConnectWiFi then connects
+// it), to show the errors, worded as the driver's.
 func (a *API) PairWithCode(ctx context.Context, addr, code string) (driver.Info, error) {
 	select {
 	case <-ctx.Done():
@@ -133,9 +156,11 @@ func (a *API) PairWithCode(ctx context.Context, addr, code string) (driver.Info,
 	}
 	switch {
 	case code == "000000":
-		return driver.Info{}, errors.New("adb: failed to pair: Wrong password or connection was dropped")
+		return driver.Info{}, fmt.Errorf("android: pairing with %s failed: %w (adb: pairing failed: Wrong password or connection was dropped.)", addr, driver.ErrPairRejected)
 	case strings.HasSuffix(addr, ":1"):
-		return driver.Info{}, fmt.Errorf("adb: dial tcp %s: connect: connection refused", addr)
+		return driver.Info{}, fmt.Errorf("android: pairing with %s failed: %w (adb: pairing failed: Unable to start pairing client.)", addr, driver.ErrPairNotListening)
+	case strings.HasSuffix(addr, ":3"):
+		return driver.Info{}, fmt.Errorf("android: pairing with %s failed: %w (adb: pairing failed: Wrong password or connection was dropped.)", addr, driver.ErrPairUnreachable)
 	case strings.HasSuffix(addr, ":2"):
 		return driver.Info{}, fmt.Errorf("android: the phone paired, but its wireless debugging service did not show up: %w", driver.ErrPairedNotFound)
 	}

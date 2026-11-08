@@ -11773,6 +11773,24 @@ func (msgs Messages) PairingErrNoAdb() string {
 	return Catalog.Format(msgs.locale, "pairingErrNoAdb", nil)
 }
 
+// PairingErrNotListening says "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog…"
+// in the language the app shows.
+//
+// Pair with a code: the error when nothing at the address typed took the
+// connection (a wrong port, or the dialog closed). Pair device with pairing
+// code is Android's own name.
+func PairingErrNotListening() string { return In(i18n.Locale()).PairingErrNotListening() }
+
+// PairingErrNotListening says "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog…"
+// in the language of msgs.
+//
+// Pair with a code: the error when nothing at the address typed took the
+// connection (a wrong port, or the dialog closed). Pair device with pairing
+// code is Android's own name.
+func (msgs Messages) PairingErrNotListening() string {
+	return Catalog.Format(msgs.locale, "pairingErrNotListening", nil)
+}
+
 // PairingErrOther says "Couldn't pair: {detail}"
 // in the language the app shows.
 //
@@ -11787,6 +11805,78 @@ func PairingErrOther(detail string) string { return In(i18n.Locale()).PairingErr
 // is the error, in English.
 func (msgs Messages) PairingErrOther(detail string) string {
 	return Catalog.Format(msgs.locale, "pairingErrOther", map[string]any{"detail": detail})
+}
+
+// PairingErrQRNotListening says "The phone stopped waiting to pair, as it does when it leaves the scanning screen. Scan the code again, or pair with a…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi by QR code: the error when the phone's pairing service no
+// longer took the connection. Shown with pairingUseCode and
+// addPhoneTryAgain.
+func PairingErrQRNotListening() string { return In(i18n.Locale()).PairingErrQRNotListening() }
+
+// PairingErrQRNotListening says "The phone stopped waiting to pair, as it does when it leaves the scanning screen. Scan the code again, or pair with a…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi by QR code: the error when the phone's pairing service no
+// longer took the connection. Shown with pairingUseCode and
+// addPhoneTryAgain.
+func (msgs Messages) PairingErrQRNotListening() string {
+	return Catalog.Format(msgs.locale, "pairingErrQRNotListening", nil)
+}
+
+// PairingErrQRRejected says "The phone ended the pairing before it finished. Keep the phone on the same Wi-Fi as this computer and on its scanning…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi by QR code: the error when the phone ended the pairing
+// (adb cannot tell why; the code is Pinky's, so never say it was wrong).
+// Shown with pairingUseCode and addPhoneTryAgain.
+func PairingErrQRRejected() string { return In(i18n.Locale()).PairingErrQRRejected() }
+
+// PairingErrQRRejected says "The phone ended the pairing before it finished. Keep the phone on the same Wi-Fi as this computer and on its scanning…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi by QR code: the error when the phone ended the pairing
+// (adb cannot tell why; the code is Pinky's, so never say it was wrong).
+// Shown with pairingUseCode and addPhoneTryAgain.
+func (msgs Messages) PairingErrQRRejected() string {
+	return Catalog.Format(msgs.locale, "pairingErrQRRejected", nil)
+}
+
+// PairingErrQRUnreachable says "The phone showed up on the network, but Pinky couldn't connect to it. A VPN or firewall on this computer, or a networ…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi by QR code: the error when the phone showed up on the
+// network but its pairing address did not answer.
+func PairingErrQRUnreachable() string { return In(i18n.Locale()).PairingErrQRUnreachable() }
+
+// PairingErrQRUnreachable says "The phone showed up on the network, but Pinky couldn't connect to it. A VPN or firewall on this computer, or a networ…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi by QR code: the error when the phone showed up on the
+// network but its pairing address did not answer.
+func (msgs Messages) PairingErrQRUnreachable() string {
+	return Catalog.Format(msgs.locale, "pairingErrQRUnreachable", nil)
+}
+
+// PairingErrRejected says "The phone didn't accept the pairing. Check the code, and that the port is the one in the Pair device with pairing cod…"
+// in the language the app shows.
+//
+// Pair with a code: the error when the phone ended the pairing, which adb
+// reports the same way for a wrong code, a port that is not the pairing
+// dialog's and a dropped connection. Pair device with pairing code and
+// Wireless debugging are Android's own names.
+func PairingErrRejected() string { return In(i18n.Locale()).PairingErrRejected() }
+
+// PairingErrRejected says "The phone didn't accept the pairing. Check the code, and that the port is the one in the Pair device with pairing cod…"
+// in the language of msgs.
+//
+// Pair with a code: the error when the phone ended the pairing, which adb
+// reports the same way for a wrong code, a port that is not the pairing
+// dialog's and a dropped connection. Pair device with pairing code and
+// Wireless debugging are Android's own names.
+func (msgs Messages) PairingErrRejected() string {
+	return Catalog.Format(msgs.locale, "pairingErrRejected", nil)
 }
 
 // PairingErrTimeout says "The phone didn't answer in time. Check that it's on the same Wi-Fi as this computer and that Wireless debugging is on…"
@@ -11808,15 +11898,15 @@ func (msgs Messages) PairingErrTimeout() string {
 // PairingErrUnreachable says "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they cha…"
 // in the language the app shows.
 //
-// Pair with a code: the error when nothing answered at the address typed.
-// Pair device with pairing code is Android's own name.
+// Pair with a code: the error when the address typed did not answer. Pair
+// device with pairing code is Android's own name.
 func PairingErrUnreachable() string { return In(i18n.Locale()).PairingErrUnreachable() }
 
 // PairingErrUnreachable says "Couldn't reach the phone at that address. Check the IP address and port under Pair device with pairing code; they cha…"
 // in the language of msgs.
 //
-// Pair with a code: the error when nothing answered at the address typed.
-// Pair device with pairing code is Android's own name.
+// Pair with a code: the error when the address typed did not answer. Pair
+// device with pairing code is Android's own name.
 func (msgs Messages) PairingErrUnreachable() string {
 	return Catalog.Format(msgs.locale, "pairingErrUnreachable", nil)
 }
@@ -11835,22 +11925,6 @@ func PairingErrUnsupported() string { return In(i18n.Locale()).PairingErrUnsuppo
 // Wi-Fi.
 func (msgs Messages) PairingErrUnsupported() string {
 	return Catalog.Format(msgs.locale, "pairingErrUnsupported", nil)
-}
-
-// PairingErrWrongCode says "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairi…"
-// in the language the app shows.
-//
-// Pair with a code: the error when the pairing code typed was wrong. Pair
-// device with pairing code is Android's own name.
-func PairingErrWrongCode() string { return In(i18n.Locale()).PairingErrWrongCode() }
-
-// PairingErrWrongCode says "The pairing code didn't match. Use the code the phone shows now; it changes each time you open Pair device with pairi…"
-// in the language of msgs.
-//
-// Pair with a code: the error when the pairing code typed was wrong. Pair
-// device with pairing code is Android's own name.
-func (msgs Messages) PairingErrWrongCode() string {
-	return Catalog.Format(msgs.locale, "pairingErrWrongCode", nil)
 }
 
 // PairingFound says "Found the phone. Pairing…"

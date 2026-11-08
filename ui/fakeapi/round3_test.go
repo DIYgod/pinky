@@ -77,11 +77,14 @@ func TestPairingByQRCode(t *testing.T) {
 func TestPairWithCode(t *testing.T) {
 	a := New(Options{Scenario: OnePhone, Speed: 50})
 	ctx := context.Background()
-	if _, err := a.PairWithCode(ctx, "192.168.1.20:37123", "000000"); err == nil || !strings.Contains(err.Error(), "Wrong password") {
+	if _, err := a.PairWithCode(ctx, "192.168.1.20:37123", "000000"); !errors.Is(err, driver.ErrPairRejected) || !strings.Contains(err.Error(), "Wrong password") {
 		t.Errorf("wrong code: %v", err)
 	}
-	if _, err := a.PairWithCode(ctx, "192.168.1.20:1", "123456"); err == nil || !strings.Contains(err.Error(), "refused") {
+	if _, err := a.PairWithCode(ctx, "192.168.1.20:1", "123456"); !errors.Is(err, driver.ErrPairNotListening) {
 		t.Errorf("refused: %v", err)
+	}
+	if _, err := a.PairWithCode(ctx, "192.168.1.20:3", "123456"); !errors.Is(err, driver.ErrPairUnreachable) {
+		t.Errorf("no answer: %v", err)
 	}
 	info, err := a.PairWithCode(ctx, "192.168.1.20:37123", "123456")
 	if err != nil || info.Name != "Pixel 8a" {

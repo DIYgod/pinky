@@ -477,7 +477,8 @@ func TestPairWithCode(t *testing.T) {
 	if _, err := p.PairWithCode(ctx, "192.168.1.42:99999", "482913"); err == nil {
 		t.Error("a port out of range was accepted")
 	}
-	if _, err := p.PairWithCode(ctx, "192.168.1.42:37123", "000000"); !errors.Is(err, adb.ErrPairing) {
+	if _, err := p.PairWithCode(ctx, "192.168.1.42:37123", "000000"); !errors.Is(err, adb.ErrPairing) || !errors.Is(err, driver.ErrPairRejected) ||
+		!strings.Contains(err.Error(), "Wrong password or connection was dropped") {
 		t.Errorf("wrong code: %v", err)
 	}
 	info, err := p.PairWithCode(ctx, " 192.168.1.42:37123 ", "482913")
@@ -491,6 +492,40 @@ func TestPairWithCode(t *testing.T) {
 	defer f.mu.Unlock()
 	if len(f.connects) != 0 {
 		t.Errorf("connected by hand although the server had: %q", f.connects)
+	}
+}
+
+// TestPairError says why adb could not pair from its words and how long
+// it took, as adb 37 answers (checked with refused, closed, TLS and silent
+// addresses): a refused connection, the phone ending the pairing, an
+// address that does not answer, and a server without host:pair.
+func TestPairError(t *testing.T) {
+	for _, c := range []struct {
+		msg  string
+		took time.Duration
+		want error
+	}{
+		{"Unable to start pairing client.", 0, driver.ErrPairNotListening},
+		{"Wrong password or connection was dropped.", 40 * time.Millisecond, driver.ErrPairRejected},
+		{"Wrong password or connection was dropped.", 5040 * time.Millisecond, driver.ErrPairUnreachable},
+		{"unknown host service", 0, driver.ErrPairOldTool},
+		{"Successfully paired but server returned unknown response=", 0, nil},
+	} {
+		err := pairError(fmt.Errorf("%w: %s", adb.ErrPairing, c.msg), "192.168.1.42:37123", c.took)
+		if c.want != nil && !errors.Is(err, c.want) {
+			t.Errorf("%q after %v: %v, want %v", c.msg, c.took, err, c.want)
+		}
+		for _, other := range []error{driver.ErrPairNotListening, driver.ErrPairRejected, driver.ErrPairUnreachable, driver.ErrPairOldTool} {
+			if other != c.want && errors.Is(err, other) {
+				t.Errorf("%q after %v: %v is also %v", c.msg, c.took, err, other)
+			}
+		}
+		if !errors.Is(err, adb.ErrPairing) || !strings.Contains(err.Error(), c.msg) || !strings.Contains(err.Error(), "192.168.1.42:37123") {
+			t.Errorf("%q: %v lost adb's words or the address", c.msg, err)
+		}
+	}
+	if err := pairError(context.DeadlineExceeded, "192.168.1.42:37123", time.Minute); !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("a deadline: %v", err)
 	}
 }
 

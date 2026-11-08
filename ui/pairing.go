@@ -36,7 +36,10 @@ type pairState struct {
 	text   string // what the QR code says
 	code   *qr.Code
 	err    string
-	since  time.Time // when the code showed
+	// errCode: pairing with a code may get past what went wrong, so the
+	// failed QR pairing offers it.
+	errCode bool
+	since   time.Time // when the code showed
 	// progress is the pairing's (driver.PairingReporter); nil when it
 	// reports none.
 	progress func() driver.PairingProgress
@@ -84,7 +87,7 @@ func (a *app) startPairing() {
 		if err != nil {
 			a.post(func() {
 				if st.seq == seq {
-					st.state, st.err = "failed", pairError(err)
+					st.state, st.err, st.errCode = "failed", pairError(err, true), false
 				}
 			})
 			return
@@ -125,7 +128,7 @@ func (a *app) stopPairing() {
 		st.cancel = nil
 	}
 	st.seq++
-	st.state, st.err = "", ""
+	st.state, st.err, st.errCode = "", "", false
 	st.progress = nil
 }
 
@@ -207,9 +210,9 @@ func (a *app) paired(seq int, info driver.Info, err error, form bool) {
 			case form && st.connect:
 				st.formErr = connectError(err)
 			case form:
-				st.formErr = pairError(err)
+				st.formErr = pairError(err, false)
 			case st.seq == seq:
-				st.state, st.err = "failed", pairError(err)
+				st.state, st.err, st.errCode = "failed", pairError(err, true), pairCodeHelps(err)
 			}
 			return
 		}
@@ -252,22 +255,48 @@ func checkPairAddr(addr string) string {
 	return ""
 }
 
-// pairError says in plain words why pairing failed.
-func pairError(err error) string {
+// pairError says in plain words why pairing failed, by QR code (qr) or by
+// pairing code, from the reason the driver gives (driver.ErrPairRejected
+// and the rest). A QR pairing never blames a code: Pinky made it.
+func pairError(err error, qr bool) string {
 	msg := strings.ToLower(err.Error())
+	pick := func(code, scan string) string {
+		if qr {
+			return scan
+		}
+		return code
+	}
 	switch {
 	case errors.Is(err, gateway.ErrNoPairing) || strings.Contains(msg, "adb server not running"):
 		return locales.PairingErrNoAdb()
+	case errors.Is(err, driver.ErrPairOldTool):
+		return locales.CheckHostADBOld()
+	case errors.Is(err, driver.ErrPairRejected):
+		return pick(locales.PairingErrRejected(), locales.PairingErrQRRejected())
+	case errors.Is(err, driver.ErrPairNotListening):
+		return pick(locales.PairingErrNotListening(), locales.PairingErrQRNotListening())
+	case errors.Is(err, driver.ErrPairUnreachable):
+		return pick(locales.PairingErrUnreachable(), locales.PairingErrQRUnreachable())
 	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(msg, "timeout") || strings.Contains(msg, "timed out"):
 		return locales.PairingErrTimeout()
 	case errors.Is(err, driver.ErrUnsupported):
 		return locales.PairingErrUnsupported()
-	case strings.Contains(msg, "password") || strings.Contains(msg, "wrong") || strings.Contains(msg, "incorrect"):
-		return locales.PairingErrWrongCode()
-	case strings.Contains(msg, "refused") || strings.Contains(msg, "unreachable") || strings.Contains(msg, "no route") || strings.Contains(msg, "connect"):
-		return locales.PairingErrUnreachable()
+	case strings.Contains(msg, "refused") || strings.Contains(msg, "unreachable") || strings.Contains(msg, "no route"):
+		return pick(locales.PairingErrUnreachable(), locales.PairingErrQRUnreachable())
 	}
 	return locales.PairingErrOther(err.Error())
+}
+
+// pairCodeHelps reports whether pairing with a code may succeed where a
+// QR pairing failed: not when adb cannot pair at all, nor when the network
+// keeps the phone out of reach, which a code does not change.
+func pairCodeHelps(err error) bool {
+	switch {
+	case errors.Is(err, gateway.ErrNoPairing), errors.Is(err, driver.ErrPairOldTool),
+		errors.Is(err, driver.ErrPairUnreachable), errors.Is(err, driver.ErrUnsupported):
+		return false
+	}
+	return true
 }
 
 // connectError says in plain words why connecting at an address failed.

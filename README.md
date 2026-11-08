@@ -96,6 +96,16 @@ When a phone works on the cable but **Pair over Wi-Fi** does not finish, the pai
 - **Pinky can't look for phones on this network:** check that the computer is connected to Wi-Fi or Ethernet.
 - **The phone showed up, but pairing hasn't finished:** if the phone shows an error or went back to Wireless debugging, scan the code again, or pair with a code.
 
+When pairing stops with an error, the page says what adb reported:
+
+- **The phone ended the pairing before it finished** (QR code): the phone left its scanning screen, changed Wi-Fi, or something between it and the computer cut the connection; adb cannot tell which. Keep the phone on the scanning screen and try again, or choose **Pair with a code instead** next to the message.
+- **The phone didn't accept the pairing** (pairing code): a wrong code, or a port that is not the pairing dialog's. The address at the top of Wireless debugging is for connecting, not pairing, and adb answers the same way for both mistakes.
+- **Nothing at that address is waiting to pair** or **The phone stopped waiting to pair:** the pairing dialog or the scanning screen closed, or the port is wrong. Open it again and use what it shows now.
+- **Couldn't reach the phone at that address** or **Pinky couldn't connect to it:** the network keeps the computer and the phone apart, as above; a VPN or firewall on the computer can too.
+- **The adb server running on this computer is too old:** another program started an adb older than platform-tools 30. Quit it, or update it, and Pinky starts its own.
+
+Pinky writes adb's own words to its log, which **Help › Send Feedback…** attaches with the diagnostics.
+
 Pairing over Wi-Fi needs Android 11 or later; an Android 10 phone moves to Wi-Fi from the cable instead (**Use Wi-Fi instead…**, [below](#phones)). Up to Android 16, Wireless debugging turns itself off when the phone leaves the Wi-Fi network, even for another access point of it, or restarts: turn it on again, or pair again from **Add phone**.
 
 #### iPhone
