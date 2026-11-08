@@ -214,3 +214,31 @@ func TestLegacyReady(t *testing.T) {
 		}
 	}
 }
+
+// closeCounter counts its closes.
+type closeCounter struct {
+	mu sync.Mutex
+	n  int
+}
+
+func (c *closeCounter) Close() error {
+	c.mu.Lock()
+	c.n++
+	c.mu.Unlock()
+	return nil
+}
+
+// TestLinkClosesRSDOnce: the RSD connection the host was announced on is
+// closed once, by the linger timer or with the link, whichever comes first.
+func TestLinkClosesRSDOnce(t *testing.T) {
+	c := &closeCounter{}
+	l := &link{rsdConn: c}
+	time.AfterFunc(10*time.Millisecond, l.closeRSD)
+	time.Sleep(50 * time.Millisecond)
+	l.closeRSD()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.n != 1 {
+		t.Fatalf("closed %d times, want once", c.n)
+	}
+}

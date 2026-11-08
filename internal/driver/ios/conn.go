@@ -3,6 +3,8 @@ package ios
 import (
 	"context"
 	"fmt"
+	"io"
+	"sync"
 	"time"
 
 	goios "github.com/danielpaulus/go-ios/ios"
@@ -16,6 +18,9 @@ type link struct {
 	tunnel *Tunnel
 	rsd    goios.RsdHandshakeResponse
 	entry  goios.DeviceEntry // routes go-ios connections through the tunnel
+
+	rsdConn  io.Closer // the RSD connection the host was announced on, open for rsdLinger
+	rsdClose sync.Once
 }
 
 // dialLink opens a tunnel to the device and reads its service list. The
@@ -40,14 +45,36 @@ func dialLinkEntry(ctx context.Context, base goios.DeviceEntry) (*link, error) {
 	}
 	l := &link{udid: udid, base: base, tunnel: t}
 	l.entry = t.Entry(base, nil)
-	rsd, err := l.handshake(ctx, true)
+	rsd, conn, err := l.handshake(ctx, true)
 	if err != nil {
 		t.Close()
 		return nil, err
 	}
 	l.rsd = rsd
 	l.entry = t.Entry(base, rsd)
+	l.rsdConn = conn
+	time.AfterFunc(rsdLinger, l.closeRSD)
 	return l, nil
+}
+
+// rsdLinger is how long the RSD connection the host was announced on stays
+// open. The phone takes the announcement only once it has also settled TLS
+// on that connection, which can take longer than the host takes to send
+// it: closed at once, the connection sometimes ended first, and the phone
+// logged "Device must renegotiate TLS" and kept the tunnel as a legacy
+// peer's ("Invalid or missing remote device connection version flags").
+// On such a tunnel cryptexd never read the developer disk image Pinky sent
+// (iOS 27.0.1, 2026-11-08). Once taken, the announcement outlasts the
+// connection.
+var rsdLinger = 2 * time.Second
+
+// closeRSD closes the RSD connection the host was announced on, once.
+func (l *link) closeRSD() {
+	l.rsdClose.Do(func() {
+		if l.rsdConn != nil {
+			l.rsdConn.Close()
+		}
+	})
 }
 
 // findEntry returns the usbmuxd entry for a device. A phone that is on USB
@@ -80,10 +107,14 @@ func findEntry(udid string, wifi bool) (goios.DeviceEntry, error) {
 	return *found, nil
 }
 
-func (l *link) handshake(ctx context.Context, asHost bool) (goios.RsdHandshakeResponse, error) {
+// handshake reads the device's service list on a new RSD connection, as
+// the host when asHost. It returns that connection open: the caller closes
+// it (see rsdLinger).
+func (l *link) handshake(ctx context.Context, asHost bool) (goios.RsdHandshakeResponse, io.Closer, error) {
 	type result struct {
-		h   goios.RsdHandshakeResponse
-		err error
+		h    goios.RsdHandshakeResponse
+		conn io.Closer
+		err  error
 	}
 	ch := make(chan result, 1)
 	go func() {
@@ -92,29 +123,46 @@ func (l *link) handshake(ctx context.Context, asHost bool) (goios.RsdHandshakeRe
 			ch <- result{err: err}
 			return
 		}
-		defer s.Close()
 		var h goios.RsdHandshakeResponse
 		if asHost {
 			h, err = s.HandshakeAsHost()
 		} else {
 			h, err = s.Handshake()
 		}
-		ch <- result{h, err}
+		if err != nil {
+			s.Close()
+			ch <- result{err: err}
+			return
+		}
+		ch <- result{h, s, nil}
 	}()
+	// A handshake given up on closes its connection when it ends.
+	abandon := func() {
+		go func() {
+			if r := <-ch; r.conn != nil {
+				r.conn.Close()
+			}
+		}()
+	}
 	select {
 	case r := <-ch:
 		if r.err != nil {
-			return r.h, fmt.Errorf("RSD handshake: %w", r.err)
+			return r.h, nil, fmt.Errorf("RSD handshake: %w", r.err)
 		}
-		return r.h, nil
+		return r.h, r.conn, nil
 	case <-ctx.Done():
-		return goios.RsdHandshakeResponse{}, fmt.Errorf("RSD handshake: %w", ctx.Err())
+		abandon()
+		return goios.RsdHandshakeResponse{}, nil, fmt.Errorf("RSD handshake: %w", ctx.Err())
 	case <-time.After(15 * time.Second):
-		return goios.RsdHandshakeResponse{}, fmt.Errorf("RSD handshake: timed out")
+		abandon()
+		return goios.RsdHandshakeResponse{}, nil, fmt.Errorf("RSD handshake: timed out")
 	}
 }
 
 // has reports whether the device offers a service.
 func (l *link) has(service string) bool { return l.rsd.GetPort(service) != 0 }
 
-func (l *link) Close() error { return l.tunnel.Close() }
+func (l *link) Close() error {
+	l.closeRSD()
+	return l.tunnel.Close()
+}
