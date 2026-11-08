@@ -107,13 +107,14 @@ type Gateway struct {
 	hubsClosed bool
 
 	// Guarded by mu.
-	recordOn   bool            // record the screen of new tasks
-	background map[string]bool // the person's choice per phone: agents on a background display, or not
-	removed    map[string]bool // phones the person removed, kept off the list while listed over the network (remove.go)
-	known      map[string]bool // phones that are the person's, which providers may open over Wi-Fi (wifi.go)
-	wifiOn     bool            // the providers use phones over Wi-Fi (SetWiFi)
-	keepDays   int             // history retention; 0 keeps everything
-	prune      chan struct{}   // asks the retention loop to run now
+	recordOn   bool                      // record the screen of new tasks
+	background map[string]bool           // the person's choice per phone: agents on a background display, or not
+	removed    map[string]bool           // phones the person removed, kept off the list while listed over the network (remove.go)
+	known      map[string]bool           // phones that are the person's, which providers may open over Wi-Fi (wifi.go)
+	names      map[string]history.Device // what the history store calls the phones Pinky has seen (wifi.go)
+	wifiOn     bool                      // the providers use phones over Wi-Fi (SetWiFi)
+	keepDays   int                       // history retention; 0 keeps everything
+	prune      chan struct{}             // asks the retention loop to run now
 
 	ctx        context.Context
 	cancel     context.CancelFunc
@@ -143,6 +144,7 @@ func New(o Options) (*Gateway, error) {
 		background: map[string]bool{},
 		removed:    map[string]bool{},
 		known:      map[string]bool{},
+		names:      map[string]history.Device{},
 		prune:      make(chan struct{}, 1),
 	}
 	if g.policy == nil {
@@ -392,6 +394,21 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		g.devices[info.ID] = d
 	}
 	old := d.info
+	if info.Name == "" {
+		// Listed without a name, as an iPhone usbmuxd lost (wifi.go): the
+		// name it had.
+		if rec, ok := g.names[info.ID]; ok && rec.Name != "" {
+			info.Name = rec.Name
+			if info.Model == "" {
+				info.Model = rec.Model
+			}
+			if info.OSVersion == "" {
+				info.OSVersion = rec.OSVersion
+			}
+		} else if old.Name != "" {
+			info.Name, info.Model, info.OSVersion = old.Name, old.Model, old.OSVersion
+		}
+	}
 	d.info = info
 	d.nameV.Store(info.Name)
 	d.provider = p

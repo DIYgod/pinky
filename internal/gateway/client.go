@@ -86,6 +86,10 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		if lockedOnWiFi(d) && l == nil {
 			return DeviceOffline, "Locked on Wi-Fi"
 		}
+		if d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupDeviceService {
+			// The computer's device service lost it on Wi-Fi (wifi.go).
+			return DeviceNeedsSetup, "Lost on Wi-Fi"
+		}
 		if waitsForStep(d.info.State) {
 			// Listed but not opened: the phone is connected and waits for
 			// the person, even while a task waits for it to reconnect.

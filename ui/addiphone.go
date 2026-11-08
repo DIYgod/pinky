@@ -232,6 +232,10 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			switch d.Info.Setup {
 			case driver.SetupPreparing:
 				guideWaiting(c, locales.AddPhoneIPhoneStepPreparing())
+			case driver.SetupDeviceService:
+				// macOS's device service lost it on Wi-Fi (wifi.go).
+				guideProblem(c, locales.LostTitle(d.Info.Name), locales.LostDetail(d.Info.Name))
+				a.restartControls(c, *d, false)
 			case driver.SetupUnlock:
 				if lockedOnWiFi(*d) {
 					// Pinky connects to it over Wi-Fi once it is unlocked.

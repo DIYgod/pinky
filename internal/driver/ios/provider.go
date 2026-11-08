@@ -57,9 +57,11 @@ type Provider struct {
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
 
-	wifi       wifiState // phones over Wi-Fi (wifi.go)
-	prep       preparer  // Developer Mode and the developer disk image (prepare.go)
-	muxErr     error     // usbmuxd's answer to the last List
+	wifi       wifiState                                               // phones over Wi-Fi (wifi.go)
+	lost       lostState                                               // phones usbmuxd lost on Wi-Fi (lost.go)
+	restartFn  func(ctx context.Context, command, reason string) error // for tests: runAsAdmin
+	prep       preparer                                                // Developer Mode and the developer disk image (prepare.go)
+	muxErr     error                                                   // usbmuxd's answer to the last List
 	muxChecked bool
 	muxFails   int                              // Lists in a row that usbmuxd did not answer
 	muxPhones  int                              // phones the last answered List found
@@ -173,7 +175,19 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	// Phones on Wi-Fi that dropped off usbmuxd's list a moment ago, as one
 	// that sleeps does (wifi.go).
 	kept = append(kept, p.heldFound(ids)...)
-	return append(kept, p.heldAsleep(ids)...), nil
+	kept = append(kept, p.heldAsleep(ids)...)
+	p.remember(kept)
+	// Phones usbmuxd lost on Wi-Fi though they are on the network (lost.go).
+	onMux := map[string]bool{}
+	for _, e := range list {
+		onMux[e.Properties.SerialNumber] = true
+	}
+	for _, info := range p.lostPhones(onMux) {
+		if !ids[info.ID] && (p.Only == nil || p.Only[info.ID]) {
+			kept = append(kept, info)
+		}
+	}
+	return kept, nil
 }
 
 // foundOnly reports whether Pinky reaches the phone behind e only over

@@ -409,3 +409,60 @@ func (p *lockedProvider) List(ctx context.Context) ([]driver.Info, error) {
 	}
 	return infos, err
 }
+
+// restartingProvider lists a phone that usbmuxd lost, without a name as the
+// iOS provider does after Pinky restarted, and records restarts.
+type restartingProvider struct {
+	*airProvider
+	lost     atomic.Bool
+	restarts atomic.Int32
+	reason   atomic.Value
+}
+
+func (p *restartingProvider) List(ctx context.Context) ([]driver.Info, error) {
+	infos, err := p.airProvider.List(ctx)
+	if p.lost.Load() {
+		return []driver.Info{{ID: "iphone", Platform: driver.IOS, Connection: "wifi", State: driver.StateNeedsSetup,
+			Setup: driver.SetupDeviceService, Detail: "This Mac's device service lost the iPhone on Wi-Fi."}}, err
+	}
+	return infos, err
+}
+
+func (p *restartingProvider) RestartDeviceService(_ context.Context, reason string) error {
+	p.restarts.Add(1)
+	p.reason.Store(reason)
+	p.lost.Store(false)
+	return nil
+}
+
+// TestWiFiLostPhone: a phone the device service lost reads as such, with
+// the name Pinky saved, and restarting the service brings it back.
+func TestWiFiLostPhone(t *testing.T) {
+	dir := t.TempDir()
+	iphone := demo.NewDevice("iphone", "DIYgod's iPhone", driver.IOS)
+	p := &restartingProvider{airProvider: newAirProvider(iphone)}
+	g, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p}; o.DataDir = dir })
+	waitFor(t, "the iPhone online", func() bool { v, _ := viewOf(g, "iphone"); return v.Status == DeviceIdle })
+	g.Flush()
+	g.Close()
+
+	// Pinky starts again while usbmuxd has lost the phone.
+	p2 := &restartingProvider{airProvider: newAirProvider(iphone)}
+	p2.lost.Store(true)
+	g2, _ := newTestGateway(t, func(o *Options) { o.Providers = []driver.Provider{p2}; o.DataDir = dir })
+	g2.SetWiFi(true)
+	v, _ := viewOf(g2, "iphone")
+	if v.Status != DeviceNeedsSetup || v.StatusLine != "Lost on Wi-Fi" || v.Info.Name != "DIYgod's iPhone" {
+		t.Fatalf("the lost iPhone = %+v", v)
+	}
+	if err := g2.RestartDeviceService(context.Background(), "nobody", ""); !errors.Is(err, ErrUnknownDevice) {
+		t.Fatalf("restart for an unknown phone: %v", err)
+	}
+	if err := g2.RestartDeviceService(context.Background(), "iphone", "Pinky restarts the device service."); err != nil {
+		t.Fatal(err)
+	}
+	if p2.restarts.Load() != 1 || p2.reason.Load() != "Pinky restarts the device service." {
+		t.Fatalf("restarts %d, reason %v", p2.restarts.Load(), p2.reason.Load())
+	}
+	waitFor(t, "the iPhone back", func() bool { v, _ := viewOf(g2, "iphone"); return v.Status == DeviceIdle })
+}

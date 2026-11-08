@@ -75,6 +75,11 @@ const (
 	// iPad once paired with this computer): the person says whether it is
 	// theirs. Until then nothing is done on the phone (WiFiFinder).
 	SetupConfirmWiFi = "confirm_wifi"
+	// SetupDeviceService: the computer's device service (usbmuxd on a Mac)
+	// lost the phone on Wi-Fi: the phone is on the network, but the service
+	// no longer lists it, and will not for up to an hour. Restarting the
+	// service (DeviceServiceRestarter) brings it back.
+	SetupDeviceService = "device_service"
 )
 
 // Provider discovers and opens the devices of one platform.
@@ -497,6 +502,22 @@ type WiFiFinder interface {
 	// prepares and opens it over Wi-Fi too.
 	UseOverWiFi(id string)
 }
+
+// DeviceServiceRestarter is a Provider whose phones go through a service of
+// the computer that it can restart when that service lost a phone
+// (SetupDeviceService): usbmuxd on a Mac. The system asks an administrator
+// to allow it, and every phone of the platform, also on a cable,
+// disconnects for a moment.
+type DeviceServiceRestarter interface {
+	// RestartDeviceService restarts the service. reason is shown in the
+	// system's request for an administrator's password. It returns
+	// ErrCanceled when the person declines.
+	RestartDeviceService(ctx context.Context, reason string) error
+}
+
+// ErrCanceled is a request the person declined, such as the system's
+// request for an administrator's password.
+var ErrCanceled = errors.New("canceled")
 
 // ErrPairedNotFound is wrapped by PairWithCode and Pairing.Wait when the
 // phone paired but the driver could not find where to connect to it: its

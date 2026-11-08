@@ -68,6 +68,30 @@ func (s *Store) DeviceIDs(ctx context.Context) ([]string, error) {
 	return s.strings(ctx, `SELECT id FROM devices WHERE id NOT IN (SELECT device_id FROM removed_devices) ORDER BY id`)
 }
 
+// SeenDevices returns the records of the phones Pinky has seen and the
+// person has not removed, by id.
+func (s *Store) SeenDevices(ctx context.Context) ([]Device, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	rows, err := s.db.QueryContext(ctx, `SELECT id, platform, name, model, os_version, backend, pairing_ref, last_seen FROM devices
+		WHERE id NOT IN (SELECT device_id FROM removed_devices) ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Device
+	for rows.Next() {
+		var d Device
+		var seen int64
+		if err := rows.Scan(&d.ID, &d.Platform, &d.Name, &d.Model, &d.OSVersion, &d.Backend, &d.PairingRef, &seen); err != nil {
+			return nil, err
+		}
+		d.LastSeen = fromMS(seen)
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
 // DeleteDeviceHistory deletes the phone's tasks that started before
 // before, with their steps, approvals, screenshots and recordings, and the
 // sessions that used the phone, ended and have no task left. A screenshot

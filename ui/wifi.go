@@ -30,11 +30,21 @@ type (
 		UseFoundPhone(deviceID string) error
 		IgnoreFoundPhone(ctx context.Context, deviceID string) error
 	}
+	// deviceServiceRestarter restarts the computer's device service, which
+	// lost a phone on Wi-Fi (gateway.RestartDeviceService).
+	deviceServiceRestarter interface {
+		RestartDeviceService(ctx context.Context, deviceID, reason string) error
+	}
 )
 
-// foundState is the person's choices on their way to the gateway, by phone.
+// foundState is the person's choices on their way to the gateway, by phone,
+// and the restart of the device service: asked about for which phone, and
+// whether it runs.
 type foundState struct {
-	busy map[string]bool
+	busy       map[string]bool
+	asking     bool
+	askFor     string
+	restarting bool
 }
 
 // foundOnWiFi reports whether a phone waits for the person to say whether
@@ -232,4 +242,92 @@ func (a *app) connectingPage(c *mg.Context, d gateway.DeviceView) {
 			mg.Text(c, locales.PhoneConnectingTask()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
 		}
 	})
+}
+
+// lostOnWiFi reports whether the computer's device service lost the phone on
+// Wi-Fi though it is on the network (driver.SetupDeviceService).
+func lostOnWiFi(d gateway.DeviceView) bool {
+	return d.Info.State == driver.StateNeedsSetup && d.Info.Setup == driver.SetupDeviceService
+}
+
+// lostPage is the Phone screen of a phone the device service lost: what
+// happened, and the restart.
+func (a *app) lostPage(c *mg.Context, d gateway.DeviceView) {
+	p := pal(c)
+	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
+		mg.Icon(c, icWifiOff).FontSize(28).TextColor(p.amberDot)
+		mg.Text(c, locales.LostTitle(d.Info.Name)).FontSize(16).FontWeight(600).TextAlign(mg.Center)
+		mg.Text(c, locales.LostDetail(d.Info.Name)).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		mg.Box(c).Height(4)
+		a.restartControls(c, d, true)
+	})
+}
+
+// restartControls are the restart button, what it does, and how to do it by
+// hand; with only the latter where the gateway cannot restart the service.
+func (a *app) restartControls(c *mg.Context, d gateway.DeviceView, center bool) {
+	p := pal(c)
+	note := func(s string) {
+		t := mg.Text(c, s).FontSize(12.5).TextColor(p.ink3)
+		if center {
+			t.TextAlign(mg.Center)
+		}
+	}
+	if _, ok := a.api.(deviceServiceRestarter); ok && guideOS == "darwin" {
+		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
+			b := button(c.Key("restart-"+d.Info.ID), locales.LostRestart(), btnOpt{kind: btnPrimary}).Disabled(a.found.restarting)
+			if b.Clicked() {
+				a.found.asking, a.found.askFor = true, d.Info.ID
+			}
+			if a.found.restarting {
+				spinner(c)
+			}
+		})
+		note(locales.LostRestartNote())
+	}
+	note(locales.LostManual())
+	a.restartDialog(c, d)
+}
+
+// restartDialog asks before restarting the device service for a phone.
+func (a *app) restartDialog(c *mg.Context, d gateway.DeviceView) {
+	st := &a.found
+	if !st.asking || st.askFor != d.Info.ID {
+		return
+	}
+	if mg.AlertDialog(c.Key("restart-ask"), &st.asking, locales.LostConfirmTitle(), locales.LostConfirmMessage(d.Info.Name),
+		locales.SettingsCancel(), locales.LostConfirmButton()) == 1 {
+		a.restartDeviceService(d)
+	}
+	if !st.asking {
+		st.askFor = ""
+	}
+}
+
+// restartDeviceService asks the gateway to restart the device service; macOS
+// then asks for an administrator's password.
+func (a *app) restartDeviceService(d gateway.DeviceView) {
+	r, ok := a.api.(deviceServiceRestarter)
+	st := &a.found
+	if !ok || st.restarting {
+		return
+	}
+	st.asking, st.askFor, st.restarting = false, "", true
+	id, name := d.Info.ID, d.Info.Name
+	reason := locales.LostReason()
+	go func() {
+		ctx, cancel := context.WithTimeout(a.ctx, 5*time.Minute) // the person types a password
+		defer cancel()
+		err := r.RestartDeviceService(ctx, id, reason)
+		a.post(func() {
+			st.restarting = false
+			switch {
+			case err == nil:
+				a.toasts = append(a.toasts, locales.LostRestarted(name))
+			case errors.Is(err, driver.ErrCanceled):
+			default:
+				a.toasts = append(a.toasts, locales.LostRestartFailed(err.Error()))
+			}
+		})
+	}()
 }

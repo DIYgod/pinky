@@ -98,3 +98,52 @@ func (a *API) SetConnecting(deviceID, line string) {
 	a.mu.Unlock()
 	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
 }
+
+// LoseOnWiFi shows a phone as one macOS's device service lost on Wi-Fi
+// (driver.SetupDeviceService).
+func (a *API) LoseOnWiFi(deviceID string) {
+	a.mu.Lock()
+	if d := a.device(deviceID); d != nil {
+		d.info.Connection = "wifi"
+		setStep(&d.info, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupDeviceService,
+			Detail: "This Mac's device service (usbmuxd) lost the iPhone on Wi-Fi."})
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+}
+
+// RestartDeviceService implements the client's restart: the phones the
+// service lost come back online, or it fails with what SetRestartError set.
+func (a *API) RestartDeviceService(ctx context.Context, deviceID, reason string) error {
+	a.mu.Lock()
+	a.restarts = append(a.restarts, reason)
+	err := a.restartErr
+	var back []string
+	if err == nil {
+		for _, d := range a.devices {
+			if d.info.Setup == driver.SetupDeviceService {
+				setStep(&d.info, driver.Info{State: driver.StateOnline})
+				back = append(back, d.info.ID)
+			}
+		}
+	}
+	a.mu.Unlock()
+	for _, id := range back {
+		a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	}
+	return err
+}
+
+// Restarts returns the reasons RestartDeviceService was called with.
+func (a *API) Restarts() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return slices.Clone(a.restarts)
+}
+
+// SetRestartError makes RestartDeviceService fail with err.
+func (a *API) SetRestartError(err error) {
+	a.mu.Lock()
+	a.restartErr = err
+	a.mu.Unlock()
+}

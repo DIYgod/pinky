@@ -221,6 +221,15 @@ func (p *onlyWiFi) Disconnect(ctx context.Context, id string) error {
 	return p.wifi.Disconnect(ctx, id)
 }
 
+// RestartDeviceService passes the restart of usbmuxd on, when the provider
+// can.
+func (p *onlyWiFi) RestartDeviceService(ctx context.Context, reason string) error {
+	if r, ok := p.wifi.(driver.DeviceServiceRestarter); ok {
+		return r.RestartDeviceService(ctx, reason)
+	}
+	return fmt.Errorf("restarting the device service: %w", driver.ErrUnsupported)
+}
+
 type allowOnPair struct {
 	driver.Pairing
 	p *onlyProvider

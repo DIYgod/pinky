@@ -9291,6 +9291,24 @@ func (msgs Messages) GwStatusLockedTask(task string) string {
 	return Catalog.Format(msgs.locale, "gwStatusLockedTask", map[string]any{"task": task})
 }
 
+// GwStatusLostOnWiFi says "Lost on Wi-Fi"
+// in the language the app shows.
+//
+// A phone's status line: the Mac's device service (usbmuxd) stopped listing
+// an iPhone that is on the same Wi-Fi. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStatusLostOnWiFi() string { return In(i18n.Locale()).GwStatusLostOnWiFi() }
+
+// GwStatusLostOnWiFi says "Lost on Wi-Fi"
+// in the language of msgs.
+//
+// A phone's status line: the Mac's device service (usbmuxd) stopped listing
+// an iPhone that is on the same Wi-Fi. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStatusLostOnWiFi() string {
+	return Catalog.Format(msgs.locale, "gwStatusLostOnWiFi", nil)
+}
+
 // GwStatusMovingCable says "Moving to the cable"
 // in the language the app shows.
 //
@@ -9837,6 +9855,174 @@ func ListSeparator() string { return In(i18n.Locale()).ListSeparator() }
 // Joins the names of a list before its last one (see listMany).
 func (msgs Messages) ListSeparator() string {
 	return Catalog.Format(msgs.locale, "listSeparator", nil)
+}
+
+// LostConfirmButton says "Restart"
+// in the language the app shows.
+//
+// The button of the dialog that restarts macOS's device service.
+func LostConfirmButton() string { return In(i18n.Locale()).LostConfirmButton() }
+
+// LostConfirmButton says "Restart"
+// in the language of msgs.
+//
+// The button of the dialog that restarts macOS's device service.
+func (msgs Messages) LostConfirmButton() string {
+	return Catalog.Format(msgs.locale, "lostConfirmButton", nil)
+}
+
+// LostConfirmMessage says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language the app shows.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service. phone is the lost iPhone's name.
+func LostConfirmMessage(phone string) string { return In(i18n.Locale()).LostConfirmMessage(phone) }
+
+// LostConfirmMessage says "Pinky restarts macOS's device service, usbmuxd, so that it looks for {phone} again. Every iPhone and iPad connected t…"
+// in the language of msgs.
+//
+// The message of the dialog that asks before Pinky restarts macOS's device
+// service. phone is the lost iPhone's name.
+func (msgs Messages) LostConfirmMessage(phone string) string {
+	return Catalog.Format(msgs.locale, "lostConfirmMessage", map[string]any{"phone": phone})
+}
+
+// LostConfirmTitle says "Restart the device service?"
+// in the language the app shows.
+//
+// The dialog that asks before Pinky restarts macOS's device service.
+func LostConfirmTitle() string { return In(i18n.Locale()).LostConfirmTitle() }
+
+// LostConfirmTitle says "Restart the device service?"
+// in the language of msgs.
+//
+// The dialog that asks before Pinky restarts macOS's device service.
+func (msgs Messages) LostConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "lostConfirmTitle", nil)
+}
+
+// LostDetail says "{phone} is on the same Wi-Fi, but macOS's device service (usbmuxd) stopped listing it after its connection broke once…"
+// in the language the app shows.
+//
+// Under lostTitle, and in Add phone and the checkup. phone is its name.
+func LostDetail(phone string) string { return In(i18n.Locale()).LostDetail(phone) }
+
+// LostDetail says "{phone} is on the same Wi-Fi, but macOS's device service (usbmuxd) stopped listing it after its connection broke once…"
+// in the language of msgs.
+//
+// Under lostTitle, and in Add phone and the checkup. phone is its name.
+func (msgs Messages) LostDetail(phone string) string {
+	return Catalog.Format(msgs.locale, "lostDetail", map[string]any{"phone": phone})
+}
+
+// LostManual says "Or restart it yourself: run sudo killall usbmuxd in Terminal."
+// in the language the app shows.
+//
+// Under the restart button, or in its place where Pinky cannot restart the
+// service itself.
+func LostManual() string { return In(i18n.Locale()).LostManual() }
+
+// LostManual says "Or restart it yourself: run sudo killall usbmuxd in Terminal."
+// in the language of msgs.
+//
+// Under the restart button, or in its place where Pinky cannot restart the
+// service itself.
+func (msgs Messages) LostManual() string {
+	return Catalog.Format(msgs.locale, "lostManual", nil)
+}
+
+// LostReason says "Pinky wants to restart the device service (usbmuxd) so that this Mac finds your iPhone on Wi-Fi again."
+// in the language the app shows.
+//
+// Shown in macOS's own request for an administrator's password when Pinky
+// restarts the device service.
+func LostReason() string { return In(i18n.Locale()).LostReason() }
+
+// LostReason says "Pinky wants to restart the device service (usbmuxd) so that this Mac finds your iPhone on Wi-Fi again."
+// in the language of msgs.
+//
+// Shown in macOS's own request for an administrator's password when Pinky
+// restarts the device service.
+func (msgs Messages) LostReason() string {
+	return Catalog.Format(msgs.locale, "lostReason", nil)
+}
+
+// LostRestart says "Restart device service…"
+// in the language the app shows.
+//
+// The button that restarts macOS's device service (usbmuxd) so it finds a
+// lost iPhone again; it asks first.
+func LostRestart() string { return In(i18n.Locale()).LostRestart() }
+
+// LostRestart says "Restart device service…"
+// in the language of msgs.
+//
+// The button that restarts macOS's device service (usbmuxd) so it finds a
+// lost iPhone again; it asks first.
+func (msgs Messages) LostRestart() string {
+	return Catalog.Format(msgs.locale, "lostRestart", nil)
+}
+
+// LostRestartFailed says "Couldn't restart the device service: {error}"
+// in the language the app shows.
+//
+// A notice when restarting macOS's device service failed. error is what
+// went wrong.
+func LostRestartFailed(error string) string { return In(i18n.Locale()).LostRestartFailed(error) }
+
+// LostRestartFailed says "Couldn't restart the device service: {error}"
+// in the language of msgs.
+//
+// A notice when restarting macOS's device service failed. error is what
+// went wrong.
+func (msgs Messages) LostRestartFailed(error string) string {
+	return Catalog.Format(msgs.locale, "lostRestartFailed", map[string]any{"error": error})
+}
+
+// LostRestartNote says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an admi…"
+// in the language the app shows.
+//
+// Under the Restart device service button.
+func LostRestartNote() string { return In(i18n.Locale()).LostRestartNote() }
+
+// LostRestartNote says "Every iPhone and iPad connected to this Mac, also on a cable, disconnects for a second or two. macOS asks for an admi…"
+// in the language of msgs.
+//
+// Under the Restart device service button.
+func (msgs Messages) LostRestartNote() string {
+	return Catalog.Format(msgs.locale, "lostRestartNote", nil)
+}
+
+// LostRestarted says "Restarted the device service. {phone} shows up again in a few seconds."
+// in the language the app shows.
+//
+// A notice after Pinky restarted macOS's device service. phone is the lost
+// iPhone's name.
+func LostRestarted(phone string) string { return In(i18n.Locale()).LostRestarted(phone) }
+
+// LostRestarted says "Restarted the device service. {phone} shows up again in a few seconds."
+// in the language of msgs.
+//
+// A notice after Pinky restarted macOS's device service. phone is the lost
+// iPhone's name.
+func (msgs Messages) LostRestarted(phone string) string {
+	return Catalog.Format(msgs.locale, "lostRestarted", map[string]any{"phone": phone})
+}
+
+// LostTitle says "This Mac lost {phone} on Wi-Fi"
+// in the language the app shows.
+//
+// The page of an iPhone that macOS's device service stopped listing though
+// it is on the same Wi-Fi. phone is its name.
+func LostTitle(phone string) string { return In(i18n.Locale()).LostTitle(phone) }
+
+// LostTitle says "This Mac lost {phone} on Wi-Fi"
+// in the language of msgs.
+//
+// The page of an iPhone that macOS's device service stopped listing though
+// it is on the same Wi-Fi. phone is its name.
+func (msgs Messages) LostTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "lostTitle", map[string]any{"phone": phone})
 }
 
 // MenuActivity says "Activity"
