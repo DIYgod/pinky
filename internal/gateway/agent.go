@@ -989,8 +989,8 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 	}
 	cur, err := g.observeOCR(ctx, l.dev, mode)
 	if err != nil && errors.Is(err, driver.ErrOffline) && g.expectedBack(l.dev) {
-		// The phone dropped as it moves between its cable and Wi-Fi: read
-		// it again once it is back (wifi.go).
+		// The phone dropped as it moves between its cable and Wi-Fi, or is
+		// back and being opened: read it again once it is (wifi.go).
 		if res := g.gate(l, req.ApprovalID, false); res != nil {
 			return g.finish(l, res)
 		}

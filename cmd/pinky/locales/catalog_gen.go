@@ -1341,7 +1341,7 @@ func (msgs Messages) AddPhoneIPhoneRefusedMirror(build string, version string) s
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedMirror", map[string]any{"build": build, "version": version})
 }
 
-// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as a newer image is on this computer."
+// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as another image is on this computer."
 // in the language the app shows.
 //
 // Add phone › iPhone and the phone's checkup, under the preparation step
@@ -1352,7 +1352,7 @@ func (msgs Messages) AddPhoneIPhoneRefusedMirror(build string, version string) s
 // box.
 func AddPhoneIPhoneRefusedRetry() string { return In(i18n.Locale()).AddPhoneIPhoneRefusedRetry() }
 
-// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as a newer image is on this computer."
+// AddPhoneIPhoneRefusedRetry says "Pinky tries again by itself as soon as another image is on this computer."
 // in the language of msgs.
 //
 // Add phone › iPhone and the phone's checkup, under the preparation step
@@ -1395,8 +1395,11 @@ func (msgs Messages) AddPhoneIPhoneRefusedTitle() string {
 // Pinky found on this computer (Apple's add-on that gives a phone its
 // developer services; it comes with Xcode), as Apple does with images it no
 // longer signs, such as those of Xcode before 27: the text when the image
-// came with Xcode on this Mac. build is the Xcode build the image came
-// with; version is the image's version, or a dash when unknown.
+// came with Xcode on this Mac; below it come the App Store link
+// (addPhoneIPhoneGetXcode) and the offer to download an image from a
+// third-party mirror instead (addPhoneIPhoneMirrorTitle). build is the
+// Xcode build the image came with; version is the image's version, or a
+// dash when unknown.
 func AddPhoneIPhoneRefusedXcode(build string, version string) string {
 	return In(i18n.Locale()).AddPhoneIPhoneRefusedXcode(build, version)
 }
@@ -1409,8 +1412,11 @@ func AddPhoneIPhoneRefusedXcode(build string, version string) string {
 // Pinky found on this computer (Apple's add-on that gives a phone its
 // developer services; it comes with Xcode), as Apple does with images it no
 // longer signs, such as those of Xcode before 27: the text when the image
-// came with Xcode on this Mac. build is the Xcode build the image came
-// with; version is the image's version, or a dash when unknown.
+// came with Xcode on this Mac; below it come the App Store link
+// (addPhoneIPhoneGetXcode) and the offer to download an image from a
+// third-party mirror instead (addPhoneIPhoneMirrorTitle). build is the
+// Xcode build the image came with; version is the image's version, or a
+// dash when unknown.
 func (msgs Messages) AddPhoneIPhoneRefusedXcode(build string, version string) string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneRefusedXcode", map[string]any{"build": build, "version": version})
 }
@@ -3533,6 +3539,32 @@ func CheckDiskImageDownloadNote() string { return In(i18n.Locale()).CheckDiskIma
 // download from a third-party mirror.
 func (msgs Messages) CheckDiskImageDownloadNote() string {
 	return Catalog.Format(msgs.locale, "checkDiskImageDownloadNote", nil)
+}
+
+// CheckDiskImageRefusedNote says "Show the steps to download an image from a third-party mirror instead. Pinky tries again by itself as soon as another…"
+// in the language the app shows.
+//
+// The phone's checkup, under the developer disk image item when Apple's
+// signing server refused to sign the image that came with Xcode on this Mac
+// (addPhoneIPhoneRefusedXcode): a note saying that the setup steps (the
+// button phoneSetUpIPhone) also offer to download an image from a
+// third-party mirror (addPhoneIPhoneMirrorTitle), and that Pinky tries
+// again once another image is there. Say it as checkDiskImageDownloadNote
+// does.
+func CheckDiskImageRefusedNote() string { return In(i18n.Locale()).CheckDiskImageRefusedNote() }
+
+// CheckDiskImageRefusedNote says "Show the steps to download an image from a third-party mirror instead. Pinky tries again by itself as soon as another…"
+// in the language of msgs.
+//
+// The phone's checkup, under the developer disk image item when Apple's
+// signing server refused to sign the image that came with Xcode on this Mac
+// (addPhoneIPhoneRefusedXcode): a note saying that the setup steps (the
+// button phoneSetUpIPhone) also offer to download an image from a
+// third-party mirror (addPhoneIPhoneMirrorTitle), and that Pinky tries
+// again once another image is there. Say it as checkDiskImageDownloadNote
+// does.
+func (msgs Messages) CheckDiskImageRefusedNote() string {
+	return Catalog.Format(msgs.locale, "checkDiskImageRefusedNote", nil)
 }
 
 // CheckDiskImageMissing says "Not mounted, so the iPhone doesn't offer what Pinky needs."

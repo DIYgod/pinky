@@ -84,7 +84,9 @@ func TestClientWithoutSessionID(t *testing.T) {
 		t.Fatalf("pay:\n%s", text)
 	}
 	done := make(chan string, 1)
-	go func() { done <- grok.call("phone_tap", map[string]any{"ref": place, "intent": "Pay $12.80", "approval_id": m[1]}) }()
+	go func() {
+		done <- grok.call("phone_tap", map[string]any{"ref": place, "intent": "Pay $12.80", "approval_id": m[1]})
+	}()
 	time.Sleep(100 * time.Millisecond)
 	if err := h.g.Decide(m[1], gateway.AllowOnce, ""); err != nil {
 		t.Fatal(err)
