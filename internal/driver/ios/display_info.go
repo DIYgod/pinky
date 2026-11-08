@@ -27,6 +27,11 @@ func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
 	if err != nil {
 		return screenInfo{}, err
 	}
+	return parseScreenInfo(out)
+}
+
+// parseScreenInfo reads the main display from a getdisplayinfo reply.
+func parseScreenInfo(out map[string]any) (screenInfo, error) {
 	displays, _ := out["displays"].([]any)
 	for _, d := range displays {
 		m, ok := d.(map[string]any)
@@ -47,6 +52,10 @@ func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
 		}
 		si.Orientation, _ = m["currentOrientation"].(string)
 		si.Backlight, _ = m["backlightState"].(string)
+		if si.Backlight == "" {
+			// iOS 27.2 moved it next to "displays".
+			si.Backlight, _ = out["backlightState"].(string)
+		}
 		if si.Width <= 0 || si.Height <= 0 {
 			return si, fmt.Errorf("display info: no size for the main display")
 		}
