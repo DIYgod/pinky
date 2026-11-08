@@ -133,6 +133,8 @@ iPhone 或 iPad 和电脑在同一个 Wi-Fi 下，并且电脑在 Wi-Fi 上列�
 
 在 Mac 上，系统的设备服务 usbmuxd 在和 Wi-Fi 上的 iPhone 的连接断过一次之后（比如手机的 Wi-Fi 关了又开），可能会把它弄丢，最长约一小时都不再找它，「访达」里也看不到。Pinky 发现你用的手机明明在网络上却不再被列出时，会显示「Wi-Fi 上找不到」，并在它的页面上提供「重启设备服务…」：你确认后，macOS 会要求输入管理员密码，所有 iPhone 和 iPad（包括插着线的）都会断开一两秒。在「终端」里运行 `sudo killall usbmuxd` 效果相同。
 
+在 Linux 上，系统的设备服务（`usbmuxd` 软件包）只列出插着线的 iPhone 和 iPad，所以 Pinky 会自己在 Wi-Fi 上找：它在网络上找到和这台电脑配对过的手机，直接连过去。除了 `usbmuxd`，不用另外安装或设置什么。如果你运行了一个自己就能列出 Wi-Fi 上手机的设备服务（比如 netmuxd），并带上指向它的 `USBMUXD_SOCKET_ADDRESS` 启动 Pinky，Pinky 就用它。
+
 Pinky 打开手机、或者在有线和 Wi-Fi 之间切换时，会显示「正在连接」或「正在切换到 Wi-Fi」，而不是离线。通过 Wi-Fi 时，Pinky 从实时画面识别文字，不再用截图（Wi-Fi 下截一张图约 5 秒）。没设锁屏密码的 iPhone 或 iPad 读不出“已锁定”，所以它休眠掉线后再出现时，Pinky 要等它连续在线 30 秒才连接。
 
 #### iOS 17.4 到 26 的 iPhone
