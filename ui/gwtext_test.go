@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 
@@ -259,9 +260,40 @@ func TestLanguageSetting(t *testing.T) {
 	if !tt.HasText(zh.SettingsLanguage()) || !tt.HasText(zh.SettingsAdvancedDevMode()) || languageNow() != "zh-Hans" {
 		t.Errorf("after picking Simplified Chinese: Language row %v, now %q", tt.HasText(zh.SettingsLanguage()), languageNow())
 	}
+	pickLanguage("ja")
+	tt.Frame()
+	ja := locales.In("ja")
+	if !tt.HasText(ja.SettingsLanguage()) || !tt.HasText(ja.SettingsAdvancedDevMode()) || languageNow() != "ja" {
+		t.Errorf("after picking Japanese: Language row %v, now %q", tt.HasText(ja.SettingsLanguage()), languageNow())
+	}
 	pickLanguage("")
 	tt.Frame()
 	if !tt.HasText("Language") || languageNow() != "" {
 		t.Errorf("after picking System: now %q", languageNow())
+	}
+}
+
+// TestLanguageFollowsAJapaneseSystem: a computer that prefers Japanese
+// reads Pinky in Japanese, and Settings › Advanced › Language says it
+// follows the system.
+func TestLanguageFollowsAJapaneseSystem(t *testing.T) {
+	t.Cleanup(func() { langPicked, langPickedSet = "", false })
+	prefer := appPreferred
+	t.Cleanup(func() { appPreferred = prefer })
+	appPreferred = func() []string { return []string{"ja-JP", "en-US"} }
+	// MyGo shows the catalog's language that i18n.Match finds for the
+	// system's languages.
+	if got := i18n.Match(appPreferred(), mygo.App.Languages()); got != "ja" {
+		t.Fatalf("a computer that prefers Japanese reads %q", got)
+	}
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.sync()
+	ta.page, ta.set.sec = pageSettings, secAdvanced
+	tt := mg.NewTester(ta.view, 1280, 820)
+	inLanguage(t, "ja", tt)
+	tt.Frame()
+	ja := locales.In("ja")
+	if languageNow() != "" || !tt.HasText(ja.SettingsLanguageSystem()) || !tt.HasText(ja.SettingsLanguage()) {
+		t.Errorf("on a Japanese system: now %q, %q", languageNow(), tt.Texts())
 	}
 }
