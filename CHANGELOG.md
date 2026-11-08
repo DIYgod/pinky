@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1108.23 (2026-11-08)
 
 - When Apple won't sign the developer disk image Pinky has for an iPhone (the images of Xcode 26 and earlier no longer work for iOS 27), Add phone and the phone's Checkup now say which image it was and what to do: install or update Xcode from the App Store and open it once. Pinky no longer retries the same image, and tries again as soon as a newer one is there.
 - On iPhones, apps are now found by the name their home screen shows: a task for 微信 opens WeChat, not 微信读书. A name that is only part of other apps' names no longer opens one of them; agents are told which apps it may mean.
