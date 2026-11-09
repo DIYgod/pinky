@@ -25,7 +25,7 @@ type addState struct {
 	// The iPhone steps (addiphone.go): when they began, and what the
 	// computer lacks for iPhones, asked every 2 s.
 	since    time.Time
-	focus    string // the iPhone the Phone screen sent the person here for
+	focus    string // the iPhone sent here for setup, or the native HarmonyOS phone being followed
 	host     driver.HostCheck
 	hostAt   time.Time
 	hostBusy bool

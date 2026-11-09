@@ -10625,6 +10625,54 @@ func (msgs Messages) HarmonyBackendMissing() string {
 	return Catalog.Format(msgs.locale, "harmonyBackendMissing", nil)
 }
 
+// HarmonyGuideDetail says "This phone runs native HarmonyOS and connects through HDC. Android ADB settings and Pinky Companion do not apply; Pin…"
+// in the language the app shows.
+//
+// Add phone, after an HDC-only HarmonyOS phone is found: replace Android
+// setup steps with connection diagnostics.
+func HarmonyGuideDetail() string { return In(i18n.Locale()).HarmonyGuideDetail() }
+
+// HarmonyGuideDetail says "This phone runs native HarmonyOS and connects through HDC. Android ADB settings and Pinky Companion do not apply; Pin…"
+// in the language of msgs.
+//
+// Add phone, after an HDC-only HarmonyOS phone is found: replace Android
+// setup steps with connection diagnostics.
+func (msgs Messages) HarmonyGuideDetail() string {
+	return Catalog.Format(msgs.locale, "harmonyGuideDetail", nil)
+}
+
+// HarmonyHandshakeNote says "HDC may briefly report an unauthorized state while its handshake completes. A computer the phone already trusts needs…"
+// in the language the app shows.
+//
+// Add phone: an already trusted HDC device may be briefly Unauthorized
+// during its handshake and need no new phone prompt.
+func HarmonyHandshakeNote() string { return In(i18n.Locale()).HarmonyHandshakeNote() }
+
+// HarmonyHandshakeNote says "HDC may briefly report an unauthorized state while its handshake completes. A computer the phone already trusts needs…"
+// in the language of msgs.
+//
+// Add phone: an already trusted HDC device may be briefly Unauthorized
+// during its handshake and need no new phone prompt.
+func (msgs Messages) HarmonyHandshakeNote() string {
+	return Catalog.Format(msgs.locale, "harmonyHandshakeNote", nil)
+}
+
+// HarmonyGuideTitle says "Connect a HarmonyOS phone"
+// in the language the app shows.
+//
+// Add phone title when a native HarmonyOS HDC device is detected, replacing
+// the Android-only setup title.
+func HarmonyGuideTitle() string { return In(i18n.Locale()).HarmonyGuideTitle() }
+
+// HarmonyGuideTitle says "Connect a HarmonyOS phone"
+// in the language of msgs.
+//
+// Add phone title when a native HarmonyOS HDC device is detected, replacing
+// the Android-only setup title.
+func (msgs Messages) HarmonyGuideTitle() string {
+	return Catalog.Format(msgs.locale, "harmonyGuideTitle", nil)
+}
+
 // HarmonyHDCMissing says "This phone uses native HarmonyOS, which Pinky cannot control yet. This computer also has no HDC tool for connection d…"
 // in the language the app shows.
 //

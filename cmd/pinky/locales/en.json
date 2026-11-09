@@ -3854,6 +3854,18 @@
   "@harmonyBackendMissing": {
     "description": "A native HarmonyOS phone is connected through HDC, but this build cannot control it."
   },
+  "harmonyGuideDetail": "This phone runs native HarmonyOS and connects through HDC. Android ADB settings and Pinky Companion do not apply; Pinky currently shows connection diagnostics only.",
+  "@harmonyGuideDetail": {
+    "description": "Add phone, after an HDC-only HarmonyOS phone is found: replace Android setup steps with connection diagnostics."
+  },
+  "harmonyHandshakeNote": "HDC may briefly report an unauthorized state while its handshake completes. A computer the phone already trusts needs no new authorization prompt; this page updates as the connection settles.",
+  "@harmonyHandshakeNote": {
+    "description": "Add phone: an already trusted HDC device may be briefly Unauthorized during its handshake and need no new phone prompt."
+  },
+  "harmonyGuideTitle": "Connect a HarmonyOS phone",
+  "@harmonyGuideTitle": {
+    "description": "Add phone title when a native HarmonyOS HDC device is detected, replacing the Android-only setup title."
+  },
   "harmonyHDCMissing": "This phone uses native HarmonyOS, which Pinky cannot control yet. This computer also has no HDC tool for connection diagnostics; Android USB debugging and Pinky Companion do not apply.",
   "@harmonyHDCMissing": {
     "description": "Setup instructions when macOS sees an HDC USB interface but hdc is not installed."

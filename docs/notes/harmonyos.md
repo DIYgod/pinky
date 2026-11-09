@@ -15,11 +15,17 @@ devices. Its executable comes from `PINKY_HDC`, `PATH`, `HDC_SDK_PATH`,
 does not restart existing SDK servers. An explicit tool path may be needed
 when launching the desktop app outside a terminal.
 
-The device list, phone page, and checkup show the missing tool,
+The device list, phone page, checkup, and Add phone wizard show the missing tool,
 authorization, or backend limitation; setup text is available in English,
 Simplified Chinese, and Japanese. Installing an SDK gives more diagnostic
 detail, not control support. The provider never advertises these phones as
 online or tries to open them through scrcpy or install Android Companion.
+
+When an HDC phone appears in Add phone, the Huawei path replaces the ADB
+switches, Companion instructions, Android pairing links, and searching
+spinner with the HDC device's status. It also follows a native phone that
+was found before the wizard opened or disconnects while the wizard is
+shown. A newly connected Android phone still takes its normal setup path.
 
 ## Current limits
 
@@ -49,13 +55,22 @@ PINKY_HDC=/path/to/sdk/toolchains/hdc PINKY_DEVICE=<serial> \
 To verify the SDK-free macOS path, repeat the device test with
 `PINKY_HDC=/nonexistent/hdc`. The test reads connection metadata only.
 
-On 2026-11-09, both paths were verified on one real Huawei phone attached
-by USB to an Apple silicon Mac. With OpenHarmony SDK's hdc 3.2.0b the
-phone was `Unauthorized`; without hdc the USB descriptors still produced
-a HarmonyOS device waiting for the missing diagnostic tool. No device
-shell or screen-control operation was tested, because the phone had not
-authorized the computer. The SDK archive was obtained from the official
-OpenHarmony release repository and checked against its published SHA-256.
+On 2026-11-09, both discovery paths were verified on one real Huawei
+phone attached by USB to an Apple silicon Mac, using OpenHarmony SDK's
+hdc 3.2.0b. The first listing showed `Unauthorized`, but repeated listings
+settled to `Connected`, and the HDC log reported `daemonauthstatus =
+SUCCESS`. The phone already trusted the computer and needed no new
+prompt. Do not infer persistent missing authorization from a single
+startup listing; discovery updates the state on subsequent passes.
+
+With authorization confirmed, development-only HDC probes read the model,
+OS/API version, screen-lock status, window metadata, application metadata
+for Settings/Calculator, and a UITest component tree of the unlocked home
+screen. These commands are not part of the discovery provider. No screen
+input, settings change, screenshot, or app install was performed. The
+component-tree probe's temporary files were removed. The SDK archive was
+obtained from the official OpenHarmony release repository and checked
+against its published SHA-256.
 
 References: [Huawei HDC documentation](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/hdc/),
 [Huawei UITest documentation](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/uitest-guidelines/).

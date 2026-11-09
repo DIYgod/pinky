@@ -79,3 +79,83 @@ func TestHarmonySetupPages(t *testing.T) {
 		}
 	}
 }
+
+// A native Huawei phone must not be left on the ADB setup instructions
+// or the Android pairing spinner, including when other phones are listed.
+func TestAddHarmonyReplacesADBGuide(t *testing.T) {
+	p := &stepsProvider{platform: driver.HarmonyOS}
+	droid := &stepsProvider{platform: driver.Android}
+	droid.list(driver.Info{ID: "other-android", Platform: driver.Android, Name: "Other Android", State: driver.StateUnauthorized})
+	ga := newStepsApp(t, p, droid)
+	ga.waitFor(t, "existing Android", func() bool { return ga.device("other-android").Info.ID == "other-android" })
+	ga.page = pageAddPhone
+	ga.add.reset(ga.app)
+	ga.add.step, ga.droid.brand = "android", "huawei"
+	info := driver.Info{ID: "native-huawei", Platform: driver.HarmonyOS, Name: "HarmonyOS phone", Connection: "usb", Backend: "hdc", State: driver.StateUnauthorized, Setup: driver.FixAuthorize}
+	p.list(info)
+	ga.waitFor(t, "native phone", func() bool { return ga.device(info.ID).Info.ID == info.ID })
+	for _, step := range []string{driver.FixAuthorize, "harmony_backend", "hdc"} {
+		info.Setup, info.State = step, driver.StateNeedsSetup
+		if step == driver.FixAuthorize {
+			info.State = driver.StateUnauthorized
+		}
+		p.list(info)
+		ga.waitFor(t, step, func() bool { return ga.device(info.ID).Info.Setup == step })
+		for _, lang := range testLanguages() {
+			tt := mg.NewTester(ga.view, 1280, 820)
+			inLanguage(t, lang, tt)
+			tt.Frame()
+			tt.Frame()
+			for _, want := range []string{locales.HarmonyGuideTitle(), locales.HarmonyGuideDetail(), locales.AddPhoneFound(info.Name)} {
+				if !hasText(tt, want) {
+					t.Errorf("%s/%s: missing %q: %q", step, lang, want, tt.Texts())
+				}
+			}
+			for _, unwanted := range []string{locales.AddPhoneLooking(), locales.AddAndroidStepDev(), locales.GuideHuaweiSwitchCharge(), locales.AddPhoneOrWiFi()} {
+				if hasText(tt, unwanted) {
+					t.Errorf("%s/%s: wrong ADB instruction %q", step, lang, unwanted)
+				}
+			}
+			if step == driver.FixAuthorize && !hasText(tt, locales.HarmonyHandshakeNote()) {
+				t.Error("missing handshake explanation")
+			}
+			if dir := os.Getenv("PINKY_SCREENSHOTS"); dir != "" {
+				f, err := os.Create(filepath.Join(dir, "add-harmony-"+step+"-"+langShort(lang)+".png"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				err = png.Encode(f, tt.Image())
+				f.Close()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}
+	// Opening Add phone after discovery must still explain this phone.
+	ga.add.reset(ga.app)
+	ga.add.step, ga.droid.brand = "android", "huawei"
+	tt := mg.NewTester(ga.view, 1280, 820)
+	inLanguage(t, "en", tt)
+	tt.Frame()
+	tt.Frame()
+	if !hasText(tt, locales.HarmonyGuideTitle()) {
+		t.Fatal("known native phone lost in Android guide")
+	}
+	// Disconnecting the followed phone must not silently switch to ADB.
+	info.State, info.Detail = driver.StateOffline, "The phone disconnected."
+	p.list(info)
+	ga.waitFor(t, "offline native phone", func() bool { return ga.device(info.ID).Info.State == driver.StateOffline })
+	tt.Frame()
+	tt.Frame()
+	if !hasText(tt, locales.PhoneOffline(info.Name)) || hasText(tt, locales.AddPhoneLooking()) {
+		t.Fatalf("offline page = %q", tt.Texts())
+	}
+	// A different brand remains on its normal Android instructions.
+	ga.droid.brand = "pixel"
+	tt.Frame()
+	tt.Frame()
+	if hasText(tt, locales.HarmonyGuideTitle()) || !hasText(tt, locales.AddAndroidStepDev()) {
+		t.Fatalf("other brand page = %q", tt.Texts())
+	}
+}
