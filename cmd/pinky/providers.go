@@ -21,15 +21,22 @@ import (
 
 // providerFactories builds the real device providers. The gateway itself
 // never branches on the platform.
-var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
-	newAndroidProvider,
-	newIOSProvider,
-}
+var providerFactories = platformFactories(true, true)
 
-func init() {
-	if runtime.GOOS == "darwin" {
-		providerFactories = append(providerFactories, newSimProvider)
+// platformFactories returns the providers for Android and for iOS, which
+// on a Mac has its Simulators too.
+func platformFactories(android, iOS bool) []func(log *slog.Logger) (driver.Provider, error) {
+	var f []func(log *slog.Logger) (driver.Provider, error)
+	if android {
+		f = append(f, newAndroidProvider)
 	}
+	if iOS {
+		f = append(f, newIOSProvider)
+		if runtime.GOOS == "darwin" {
+			f = append(f, newSimProvider)
+		}
+	}
+	return f
 }
 
 // newSimProvider lists the iOS Simulators booted on this Mac as iPhones
