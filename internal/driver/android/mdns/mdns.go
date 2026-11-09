@@ -53,6 +53,25 @@ type Service struct {
 	TXT      []string     // the instance's TXT strings ("key=value"), nil until its TXT record came
 }
 
+// Usable reports whether an address in a record can be a device's on the
+// network: not unspecified, loopback or multicast, not in 0.0.0.0/8 or the
+// IPv4 broadcast address, and not an IPv4 address written as IPv6 (a
+// device sends those in an A record). A record that names any other
+// points searchers at this computer or at nobody: by mistake, or by
+// someone who replays a phone's record with another address. The cache
+// skips such records, so they are neither dialed nor flush the host's
+// addresses.
+func Usable(a netip.Addr) bool {
+	switch {
+	case !a.IsValid(), a.IsUnspecified(), a.IsLoopback(), a.IsMulticast(), a.Is4In6():
+		return false
+	case a.Is4():
+		b := a.As4()
+		return b[0] != 0 && b != [4]byte{255, 255, 255, 255}
+	}
+	return true
+}
+
 // Addr is where the service listens, "192.168.5.137:38161", or "" while
 // its port or address is unknown. It prefers IPv4 and leaves out
 // link-local IPv6 addresses, which need an interface to dial.
@@ -785,7 +804,7 @@ func (c *cache) add(now time.Time, types []string, recs []record) bool {
 	}
 	flushed := map[string]bool{}
 	for _, r := range recs {
-		if (r.typ != dnsmessage.TypeA && r.typ != dnsmessage.TypeAAAA) || !hosts[r.name] {
+		if (r.typ != dnsmessage.TypeA && r.typ != dnsmessage.TypeAAAA) || !hosts[r.name] || !Usable(r.addr) {
 			continue
 		}
 		items := c.addrs[r.name]
