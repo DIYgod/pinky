@@ -87,6 +87,9 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 	if res.Task != "" {
 		line("device: " + res.Device)
 	}
+	for _, f := range res.Saved {
+		line(fmt.Sprintf("saved: %s · %s", f.Path, gateway.SizeText(f.Size)))
+	}
 	for i, st := range res.Steps {
 		b.WriteString(indent)
 		fmt.Fprintf(b, "step %d: ", i+1)

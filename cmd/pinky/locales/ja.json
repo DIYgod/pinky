@@ -630,6 +630,8 @@
   "gwStepListedFolder": "スマホの Pinky フォルダを一覧しました（{count} 個のファイル）",
   "gwStepOutside": "許可範囲外：{action}",
   "gwStepReceivedFile": "エージェントから “{path}”（{size}）を受信しました",
+  "gwStepSavedReport": "エージェント向けにタスクのレポートを保存しました",
+  "gwStepSavedScreenshot": "スクリーンショットを “{path}” として保存しました",
   "gwStepUnlocked": "パソコンからロック解除しました",
   "gwStepWaited": "“{text}” を待ちました",
   "gwStepWaiting": "確認待ち：{action}",

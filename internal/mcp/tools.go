@@ -48,12 +48,14 @@ type releaseIn struct {
 	Device  string `json:"device,omitempty" jsonschema:"The phone to release; default every phone this session holds."`
 	Outcome string `json:"outcome,omitempty" jsonschema:"How the task ended: done, failed, partial or cancelled. Default done."`
 	Summary string `json:"summary,omitempty" jsonschema:"One or two sentences on what happened, for the person's history."`
+	Export  bool   `json:"export,omitempty" jsonschema:"Also save the task's report in the phone's folder on Pinky's computer once it ends, for a bug report or a pull request: an HTML page of its steps with the screenshots Pinky kept, and the same as JSON. Returns their paths, or over HTTP one-time download links. Its screen recording stays with the person."`
 }
 
 type observeIn struct {
 	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
 	WaitMS     int    `json:"wait_ms,omitempty" jsonschema:"Wait up to this many milliseconds (at most 30000) for the screen to change, for example while something loads."`
 	Screenshot bool   `json:"screenshot,omitempty" jsonschema:"Also return a screenshot. Use it only when the element list is not enough."`
+	Save       string `json:"save,omitempty" jsonschema:"Save a full-resolution screenshot under this name in the phone's folder on Pinky's computer, for a bug report or a pull request: onboarding-1.png (.png unless you name .jpg; a file of that name is replaced). Returns its path, or over HTTP a one-time download link. The image comes back to you only with screenshot: true."`
 	OCR        bool   `json:"ocr,omitempty" jsonschema:"Also read all the text the screen's pixels show that no element does (text in images, maps, games, web pages), as ocr lines. Android adds them by itself where the list looks empty or sparse; iPhones on every read."`
 }
 
@@ -243,8 +245,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		InputSchema: schema[releaseIn](func(p map[string]*jsonschema.Schema) { enum(p["outcome"], outcomes...) }),
 		Annotations: &sdk.ToolAnnotations{IdempotentHint: true, OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in releaseIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req, remote).Release(ctx, gateway.ReleaseRequest{
-				Call: gateway.Call{Device: strings.TrimSpace(in.Device)}, Outcome: in.Outcome, Summary: in.Summary})), nil, nil
+			return s.result(req, remote, s.session(req, remote).Release(ctx, gateway.ReleaseRequest{
+				Call: gateway.Call{Device: strings.TrimSpace(in.Device)}, Outcome: in.Outcome, Summary: in.Summary, Export: in.Export})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_observe", Title: "Read the screen",
@@ -253,9 +255,9 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		InputSchema: schema[observeIn](func(p map[string]*jsonschema.Schema) { bounds(p["wait_ms"], 0, 30000) }),
 		Annotations: readOnly},
 		func(ctx context.Context, req *sdk.CallToolRequest, in observeIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req, remote).Observe(ctx, gateway.ObserveRequest{
+			return s.result(req, remote, s.session(req, remote).Observe(ctx, gateway.ObserveRequest{
 				Call:   gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
-				WaitMS: in.WaitMS, Screenshot: in.Screenshot, OCR: in.OCR})), nil, nil
+				WaitMS: in.WaitMS, Screenshot: in.Screenshot, OCR: in.OCR, Save: in.Save})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_tap", Title: "Tap",

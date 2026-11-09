@@ -112,6 +112,8 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Received “Pictures/cat.png” (1.2 MB) from the agent":      zh.GwStepReceivedFile("Pictures/cat.png", "1.2 MB"),
 		"Blocked by “Read-only”: receive “cat.png” from the agent": zh.GwStepBlocked(zh.RuleReadOnly(), zh.GwDoReceiveFile("cat.png")),
 		"Failed: receive “cat.png” from the agent":                 zh.GwStepFailed(zh.GwDoReceiveFile("cat.png")),
+		"Saved a screenshot as “bugs/onboarding-1.png”":            zh.GwStepSavedScreenshot("bugs/onboarding-1.png"),
+		"Saved the task's report for the agent":                    zh.GwStepSavedReport(),
 		"Added 1 chicken rice bowl":                                "Added 1 chicken rice bowl",
 		"Copied 7 files to the phone: a, b, and 2 more":            zh.GwStepCopiedTo("7", zh.GwFilesList("a"+zh.ListSeparator()+"b"+zh.ListSeparator()+zh.GwFilesMore("2"))),
 	}

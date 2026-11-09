@@ -630,6 +630,8 @@
   "gwStepListedFolder": "列出了手机的 Pinky 文件夹（{count} 个文件）",
   "gwStepOutside": "超出允许范围：{action}",
   "gwStepReceivedFile": "从智能体收到了“{path}”（{size}）",
+  "gwStepSavedReport": "为智能体保存了任务报告",
+  "gwStepSavedScreenshot": "保存了截图“{path}”",
   "gwStepUnlocked": "已从电脑解锁",
   "gwStepWaited": "等待了“{text}”",
   "gwStepWaiting": "等你确认：{action}",

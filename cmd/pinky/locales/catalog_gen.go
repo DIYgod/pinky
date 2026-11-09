@@ -10429,6 +10429,48 @@ func (msgs Messages) GwStepReceivedFile(path string, size string) string {
 	return Catalog.Format(msgs.locale, "gwStepReceivedFile", map[string]any{"path": path, "size": size})
 }
 
+// GwStepSavedReport says "Saved the task's report for the agent"
+// in the language the app shows.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) saved in the phone's folder on
+// the computer, for a bug report or a pull request (phone_release export).
+// The screen recording is not in it. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepSavedReport() string { return In(i18n.Locale()).GwStepSavedReport() }
+
+// GwStepSavedReport says "Saved the task's report for the agent"
+// in the language of msgs.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) saved in the phone's folder on
+// the computer, for a bug report or a pull request (phone_release export).
+// The screen recording is not in it. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepSavedReport() string {
+	return Catalog.Format(msgs.locale, "gwStepSavedReport", nil)
+}
+
+// GwStepSavedScreenshot says "Saved a screenshot as “{path}”"
+// in the language the app shows.
+//
+// A step: the agent saved a screenshot of the phone as a file in the
+// phone's folder on the computer, for a bug report or a pull request
+// (phone_observe save). path is the file's name in that folder. Shown only
+// in other languages; in English the gateway's own words show.
+func GwStepSavedScreenshot(path string) string { return In(i18n.Locale()).GwStepSavedScreenshot(path) }
+
+// GwStepSavedScreenshot says "Saved a screenshot as “{path}”"
+// in the language of msgs.
+//
+// A step: the agent saved a screenshot of the phone as a file in the
+// phone's folder on the computer, for a bug report or a pull request
+// (phone_observe save). path is the file's name in that folder. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepSavedScreenshot(path string) string {
+	return Catalog.Format(msgs.locale, "gwStepSavedScreenshot", map[string]any{"path": path})
+}
+
 // GwStepUnlocked says "Unlocked from the computer"
 // in the language the app shows.
 //
