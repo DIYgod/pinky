@@ -19,6 +19,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
 	goios "github.com/danielpaulus/go-ios/ios"
+	"github.com/danielpaulus/go-ios/ios/instruments"
 )
 
 // WDADevice drives an iPhone through the WebDriverAgent helper: iOS 17.4 to
@@ -51,6 +52,10 @@ type WDADevice struct {
 	video   driver.Stream // the last stream, whose picture the mirror's touches are in
 
 	closeOnce sync.Once
+
+	logs    appLogs // the apps whose logs a task reads (logs.go)
+	procMu  sync.Mutex
+	procSvc *instruments.DeviceInfoService // lists processes for logs
 
 	imageDir string // Pinky's folder for developer disk images (checkup.go)
 
@@ -747,6 +752,7 @@ func (d *WDADevice) Launch(ctx context.Context, app string) error {
 	if err := d.c.activate(ctx, id); err != nil {
 		return fmt.Errorf("launch %s: %w", id, err)
 	}
+	d.logs.launched(id, 0)
 	return nil
 }
 
@@ -947,6 +953,7 @@ func (d *WDADevice) videoSize() (int, int) {
 // the test run Pinky started; WDA itself stays installed.
 func (d *WDADevice) Close() error {
 	d.closeOnce.Do(func() {
+		d.StopAppLogs()
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		d.c.deleteSession(ctx)
 		cancel()

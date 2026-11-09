@@ -649,7 +649,7 @@ type LogResult struct {
 // CrashReport is one crash of an app.
 type CrashReport struct {
 	Time    time.Time
-	Kind    string // "crash", "native crash" or "ANR" (not responding)
+	Kind    string // "crash", "native crash", "ANR" (not responding) or "watchdog" (iPhone: ended for not answering in time)
 	Process string
 	PID     int
 	// Summary is one line: the exception and its message, or the signal.

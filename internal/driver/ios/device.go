@@ -65,6 +65,8 @@ type Device struct {
 	capture     captureMarks // what screenshots did not show (capture.go)
 	pb          *pbConn
 
+	logs appLogs // the apps whose logs a task reads (logs.go)
+
 	typeStats   TypeStats // guarded by mu
 	inputNote   string    // for the agent, about the last Type (TakeInputNote); guarded by mu
 	keysOnly    bool      // Type skips the pasteboard (TypeByKeys); guarded by mu
@@ -663,6 +665,7 @@ func (d *Device) Close() error {
 		d.pb.Close()
 	}
 	d.svcMu.Unlock()
+	d.logs.stopAll()
 	errs = append(errs, d.l.Close())
 	return errors.Join(errs...)
 }
