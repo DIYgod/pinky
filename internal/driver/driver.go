@@ -70,6 +70,10 @@ type Info struct {
 	// WiFi is what the provider knows of reaching an iPhone or iPad over
 	// Wi-Fi, for its checkup and diagnostics; zero for other phones.
 	WiFi WiFiConnection `json:",omitzero"`
+	// Virtual marks a phone that runs on this computer: an iOS Simulator
+	// or an Android emulator (VirtualLauncher). Its Connection is "usb",
+	// as for a phone on a cable.
+	Virtual bool `json:",omitempty"`
 }
 
 // WiFiConnection is what an iPhone's provider knows of its Wi-Fi connection:
@@ -124,6 +128,12 @@ const (
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
 	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
+	// SetupSimulatorHelper: an iOS Simulator that Pinky cannot drive yet,
+	// as building the WebDriverAgent helper for it with Xcode failed
+	// (Xcode's license not agreed to, its iOS platform not installed, the
+	// helper's source not downloaded). Detail says why. Pinky tries again
+	// by itself, and at once when the person starts the Simulator again.
+	SetupSimulatorHelper = "simulator_helper"
 	// SetupDiskImageRefused: Apple's signing server would not sign the
 	// developer disk image on the computer (Info.DiskImage) for the phone,
 	// as it does with images it no longer signs, such as those of Xcode
@@ -194,6 +204,54 @@ type OpenChecker interface {
 	// failed: nil when it opened, was not tried or failed for a reason the
 	// provider has no item for.
 	OpenChecks(deviceID string) []Check
+}
+
+// VirtualLauncher is a Provider that lists the virtual phones this computer
+// has (iOS Simulators, Android emulators) and starts and stops them. Only
+// the person does that, from the client: agents get no tool for it. A
+// virtual phone that runs is listed by List like any phone, with
+// Info.Virtual.
+type VirtualLauncher interface {
+	VirtualPhones(ctx context.Context) (VirtualPhones, error)
+	// StartVirtual starts a virtual phone by its VirtualPhone.ID and
+	// returns once it started; it may still be booting.
+	StartVirtual(ctx context.Context, id string) error
+	// StopVirtual shuts a running virtual phone down.
+	StopVirtual(ctx context.Context, id string) error
+}
+
+// VirtualPhones is what a VirtualLauncher found.
+type VirtualPhones struct {
+	Platform Platform
+	Phones   []VirtualPhone
+	// Missing is a code clients put into words when the computer lacks
+	// what the platform's virtual phones need: "xcode" (no Xcode, or its
+	// command line tools selected instead), "android_sdk" (no Android SDK
+	// found), "emulator" (an SDK without its emulator). "" when nothing is
+	// missing; there may still be no phones, as before any is created.
+	Missing string
+	Detail  string // the same in a sentence
+	// Where says where the tools were found: the Xcode or the Android SDK
+	// folder.
+	Where string
+}
+
+// VirtualPhone is one virtual phone: an iOS Simulator device, or an
+// Android Virtual Device.
+type VirtualPhone struct {
+	ID        string // the Simulator's UDID, or the AVD's name
+	Name      string // the name the person gave it
+	Model     string // the device it is made as: "iPhone 17", "Pixel 9"
+	OSVersion string // "26.5", "16"
+	Running   bool
+	// DeviceID is its phone's ID while it runs (Info.ID): the Simulator's
+	// UDID, or the emulator's adb serial; "" when it is not running.
+	DeviceID string
+	// Starting says it is booting; DeviceID may not be listed yet.
+	Starting bool
+	// Unavailable says why it cannot start, as when its system image or
+	// its runtime is missing; "" when it can.
+	Unavailable string
 }
 
 // Device is an open, long-lived session with one phone. Methods must be safe

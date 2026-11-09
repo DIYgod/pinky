@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/driver"
@@ -22,6 +24,26 @@ import (
 var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
 	newAndroidProvider,
 	newIOSProvider,
+}
+
+func init() {
+	if runtime.GOOS == "darwin" {
+		providerFactories = append(providerFactories, newSimProvider)
+	}
+}
+
+// newSimProvider lists the iOS Simulators booted on this Mac as iPhones
+// and iPads, and starts them from Add phone. It builds the WebDriverAgent
+// helper they are driven through with the Mac's Xcode, into Pinky's data
+// folder.
+func newSimProvider(log *slog.Logger) (driver.Provider, error) {
+	dirs, err := api.DefaultDirs()
+	if err != nil {
+		return nil, err
+	}
+	p := ios.NewSimProvider(filepath.Join(dirs.Data, "WebDriverAgent"))
+	p.Log = log
+	return p, nil
 }
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
@@ -154,6 +176,53 @@ type onlyProvider struct {
 
 	mu   sync.Mutex
 	only map[string]bool
+}
+
+// VirtualPhones, StartVirtual and StopVirtual pass the provider's virtual
+// phones on (driver.VirtualLauncher). One the person starts joins the
+// phones Pinky may use, once it runs; one already running, at once.
+func (p *onlyProvider) VirtualPhones(ctx context.Context) (driver.VirtualPhones, error) {
+	l, ok := p.Provider.(driver.VirtualLauncher)
+	if !ok {
+		return driver.VirtualPhones{}, fmt.Errorf("virtual phones: %w", driver.ErrUnsupported)
+	}
+	return l.VirtualPhones(ctx)
+}
+
+func (p *onlyProvider) StartVirtual(ctx context.Context, id string) error {
+	l, ok := p.Provider.(driver.VirtualLauncher)
+	if !ok {
+		return fmt.Errorf("virtual phones: %w", driver.ErrUnsupported)
+	}
+	if err := l.StartVirtual(ctx, id); err != nil {
+		return err
+	}
+	// An emulator's adb serial is known once it runs.
+	go func() {
+		for range 90 {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			vp, err := l.VirtualPhones(ctx)
+			cancel()
+			if err == nil {
+				for _, v := range vp.Phones {
+					if v.ID == id && v.DeviceID != "" {
+						p.allow(v.DeviceID)
+						return
+					}
+				}
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
+	return nil
+}
+
+func (p *onlyProvider) StopVirtual(ctx context.Context, id string) error {
+	l, ok := p.Provider.(driver.VirtualLauncher)
+	if !ok {
+		return fmt.Errorf("virtual phones: %w", driver.ErrUnsupported)
+	}
+	return l.StopVirtual(ctx, id)
 }
 
 func (p *onlyProvider) allowed(id string) bool {

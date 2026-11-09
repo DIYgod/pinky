@@ -64,6 +64,10 @@ type WDADevice struct {
 
 	log *slog.Logger // slow reads, with what took the time; nil: none
 
+	// appsFn lists a Simulator's apps (simctl), which has no installation
+	// proxy; nil on a phone.
+	appsFn func(context.Context) ([]driver.App, error)
+
 	helperFn   func(context.Context) (time.Time, error) // for tests: helperExpires
 	lockdownFn func(context.Context) (bool, error)      // for tests: lockdownLocked
 }
@@ -760,13 +764,13 @@ func (d *WDADevice) Launch(ctx context.Context, app string) error {
 }
 
 // resolveApp turns a display name into a bundle id through the app list.
-// Without one (a simulator), the name is taken as a bundle id.
+// Without one (WDA at a URL), the name is taken as a bundle id.
 func (d *WDADevice) resolveApp(ctx context.Context, app string) (string, error) {
 	app = strings.TrimSpace(app)
 	if app == "" {
 		return "", fmt.Errorf("no app given: %w", driver.ErrNotFound)
 	}
-	if d.entry.DeviceID == 0 {
+	if d.entry.DeviceID == 0 && d.appsFn == nil {
 		return app, nil
 	}
 	apps, err := d.Apps(ctx)
@@ -786,8 +790,12 @@ func (d *WDADevice) resolveApp(ctx context.Context, app string) (string, error) 
 	return "", fmt.Errorf("app %q: %w", app, driver.ErrNotFound)
 }
 
-// Apps implements driver.Device, through the installation proxy.
+// Apps implements driver.Device, through the installation proxy, or simctl
+// on a Simulator.
 func (d *WDADevice) Apps(ctx context.Context) ([]driver.App, error) {
+	if d.appsFn != nil {
+		return d.appsFn(ctx)
+	}
 	if d.entry.DeviceID == 0 {
 		return nil, fmt.Errorf("app list: %w", driver.ErrUnsupported)
 	}
