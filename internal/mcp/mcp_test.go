@@ -342,3 +342,45 @@ func TestStatusLine(t *testing.T) {
 		t.Fatal(got)
 	}
 }
+
+// Every action tool and batch step takes settle_ms, from 0 to 3000; 0 reads
+// the screen without waiting for it to settle, which the result says.
+func TestSettleMS(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-code")
+	res, err := c.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	acting := map[string]bool{"phone_tap": true, "phone_type": true, "phone_swipe": true, "phone_key": true, "phone_launch": true, "phone_batch": true}
+	for _, tool := range res.Tools {
+		schema, _ := json.Marshal(tool.InputSchema)
+		has := strings.Contains(string(schema), `"settle_ms":{`)
+		if has != acting[tool.Name] {
+			t.Fatalf("%s: settle_ms in schema %v: %s", tool.Name, has, schema)
+		}
+		if has && !strings.Contains(string(schema), `"maximum":3000,"minimum":0,"type":"integer"`) {
+			t.Fatalf("%s: settle_ms not an integer from 0 to 3000: %s", tool.Name, schema)
+		}
+	}
+
+	c.call(t, "phone_connect", map[string]any{"task": "Calc"})
+	text, isErr := c.call(t, "phone_swipe", map[string]any{"direction": "up"})
+	if isErr || strings.Contains(firstLine(text), "settle: timeout") {
+		t.Fatalf("swipe:\n%s", text)
+	}
+	text, isErr = c.call(t, "phone_swipe", map[string]any{"direction": "down", "settle_ms": 0})
+	if isErr || !strings.HasPrefix(firstLine(text), "settled · Pixel 9 · settle: timeout") {
+		t.Fatalf("swipe with settle_ms 0:\n%s", text)
+	}
+	if text, isErr = c.call(t, "phone_tap", map[string]any{"x": 10, "y": 10, "settle_ms": 3001}); !isErr {
+		t.Fatalf("settle_ms 3001 accepted:\n%s", text)
+	}
+	text, isErr = c.call(t, "phone_batch", map[string]any{"steps": []map[string]any{
+		{"tool": "swipe", "direction": "up", "settle_ms": 0},
+		{"tool": "swipe", "direction": "down", "settle_ms": 500},
+	}})
+	if isErr || !strings.Contains(text, "step 2: settled") {
+		t.Fatalf("batch with settle_ms:\n%s", text)
+	}
+}

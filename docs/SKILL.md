@@ -43,7 +43,7 @@ The first line of every result is its status (or `error: <code>`), with details 
 
 | Status | What it means | What you do |
 | --- | --- | --- |
-| `settled` | Done; the screen stopped changing (`settle: timeout` if it kept moving for 3 s) | Continue |
+| `settled` | Done; the screen stopped changing (`settle: timeout` if it kept moving for 3 s, or for the `settle_ms` you gave) | Continue |
 | `uncertain` | It may or may not have happened, e.g. the phone dropped after Send | `phone_observe` first. Never repeat it blindly |
 | `approval_pending` | The person is still deciding; nothing happened yet | Repeat the **same** call, same arguments, plus `approval_id` |
 | `approval_denied` | The person said no, or nobody answered in time | Read `note`; do not try the same thing another way |
@@ -98,6 +98,7 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - `phone_type` replaces the field's text; `append: true` adds to it. Pass `ref` to pick the field, or it types into the focused one. Any language works.
 - `phone_wait_for { text: "Order placed" }` waits for loading better than repeated observing; `phone_observe { wait_ms: 3000 }` returns as soon as the screen changes.
 - `phone_batch` runs several steps in one call and stops at the first that does not settle. If a step returns `approval_pending`, repeat that step alone with its `approval_id`, then carry on.
+- Where results keep saying `settle: timeout` (games, videos, live maps: screens that never stop moving), every action waits the whole 3 s for nothing. Pass `settle_ms: 300` or so to actions there, and to `phone_batch` steps; `0` reads the screen right after the action. Read again with `phone_observe` or `phone_wait_for` when you need to see where the screen ends up.
 - `phone_apps { query: "din" }` finds an app's exact name before `phone_launch`.
 - On some Android phones the task runs on a background display, so the person's own screen stays free (or off and locked). `phone_connect` says so. That display starts empty, with no home screen: open apps with `phone_launch` rather than looking for their icons.
 - `phone_observe { screenshot: true }` only when the element list is not enough; screenshots are large.

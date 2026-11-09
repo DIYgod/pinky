@@ -171,7 +171,7 @@ Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the sc
 | `phone_connect` | `device?`, `task` | A lease on the device and the first screen; the task name shows in the client |
 | `phone_release` | `outcome?`, `summary?` | Ends the task and frees the device |
 | `phone_observe` | `wait_ms?` (up to 30000), `screenshot?` | The current screen, plus a screenshot on request |
-| `phone_tap` | `ref` or `x,y`; `long_press?` | Result and new screen |
+| `phone_tap` | `ref` or `x,y`; `long_press?`; `settle_ms?` (up to 3000, like every action) | Result and new screen |
 | `phone_type` | `text` (up to 16384 chars); `ref?`; `append?`; `submit?` | Result and new screen |
 | `phone_swipe` | `direction`, a `ref`, or `from` and `to`; `duration_ms` (80 to 1200) | Result and new screen |
 | `phone_key` | `key`: back, home, recents, enter, tab, delete, escape, dpad keys, page\_up, page\_down | Result and new screen |
@@ -389,7 +389,7 @@ A lock on the local socket keeps a second gateway from starting. Nothing under `
 2. **Policy.** Rules and the commit detector decide Allow, Ask or Deny.
 3. **Approval.** For Ask, the approval center holds the call until the person decides or the timeout denies.
 4. **Execute.** The driver performs the action on the long-lived device session.
-5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet.
+5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet. An action's `settle_ms` lowers the limit, for screens that never stop moving.
 6. **Verify and observe.** A fresh screen is read and diffed against the last one.
 7. **Record.** The step, its before and after screenshots and any approval go to the history store.
 

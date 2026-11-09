@@ -126,7 +126,7 @@ note: "<the person's note>"
 
 | Status | Meaning |
 | --- | --- |
-| `settled` | The call ran and the screen stopped changing, or settling hit its 3 s limit (`settle: timeout`) |
+| `settled` | The call ran and the screen stopped changing, or settling hit its limit, 3 s or the action's `settle_ms` (`settle: timeout`) |
 | `uncertain` | The action may have happened (the driver failed mid-action, the phone dropped). Observe before anything else |
 | `blocked_by_policy` | A rule denied the action; `rule` names it (`credentials` for password and code fields, `Read-only`, `Finance apps`, …) |
 | `approval_denied` | The person said no, or nobody answered in time; `note` may say why |
@@ -159,6 +159,7 @@ Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_key`, `phone
 | `device` | string | The phone, by id, name or a unique id prefix. Required when the session holds more than one phone |
 | `intent` | string | One sentence on why, shown on the approval panel and in history |
 | `approval_id` | string | From `approval_pending`: repeat the same call with it to keep waiting |
+| `settle_ms` | 0–3000 | How long to wait for the screen to stop changing before it is read; default 3000. Where the screen never stops moving (games, video, live maps) every action otherwise waits the whole 3 s and returns `settle: timeout`: a lower limit returns sooner, and 0 reads the screen right after the action. It never changes what is approved: an `approval_id` may be repeated with another `settle_ms` |
 
 `phone_observe`, `phone_apps`, `phone_wait_for` and `phone_release` take `device`; `phone_files`, `phone_request_approval` and `phone_handoff` take `device` and `approval_id` (and `phone_files` takes `intent`). Unknown arguments are rejected.
 
@@ -257,7 +258,7 @@ Lists installed apps inside the agent's scope, user apps first, one per line: `N
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent` and `approval_id` |
+| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent`, `approval_id` and `settle_ms` |
 | `intent` | string | For steps without their own |
 
 Steps run in order, each settling first, and the batch stops at the first step that does not settle. The result's first line is the last step's status; then `step N:` blocks follow with each step's status and changes. To finish a batch that stopped at `approval_pending`, repeat that step alone as its own tool call with the `approval_id`.
@@ -347,7 +348,7 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 | Longest block of one call | 45 s |
 | Approval timeout | 60 s |
 | Handoff timeout | 15 min |
-| Settle limit | 3 s |
+| Settle limit | 3 s, or less with `settle_ms` |
 | Idle lease | 10 min |
 | Reconnect grace | 60 s |
 | `text` | 16384 characters |

@@ -36,6 +36,11 @@ type Action struct {
 	// Intent and ApprovalID are per step in phone_batch.
 	Intent     string
 	ApprovalID string
+	// Settle caps how long the action waits for the screen to settle
+	// before it reads it; nil waits up to SettleMax, and 0 reads it right
+	// away. Where the screen never stops moving (games, video, live maps)
+	// every action would otherwise wait the whole limit.
+	Settle *time.Duration
 }
 
 // Keys agents may press.
@@ -99,7 +104,19 @@ func (a Action) check() *Result {
 	default:
 		return bad("unknown action %q.", a.Tool)
 	}
+	if a.Settle != nil && (*a.Settle < 0 || *a.Settle > MaxSettle) {
+		return bad("settle_ms must be between 0 and %d.", MaxSettle.Milliseconds())
+	}
 	return nil
+}
+
+// settleLimit is how long the action waits for the screen to settle:
+// max, or less when the agent asked for less.
+func (a Action) settleLimit(max time.Duration) time.Duration {
+	if a.Settle != nil && *a.Settle < max {
+		return *a.Settle
+	}
+	return max
 }
 
 func validDirection(d string) bool { return d == "up" || d == "down" || d == "left" || d == "right" }
@@ -159,6 +176,9 @@ func (a Action) args(c Call) string {
 	}
 	if a.App != "" {
 		m["app"] = a.App
+	}
+	if a.Settle != nil {
+		m["settle_ms"] = a.Settle.Milliseconds()
 	}
 	if c.Intent != "" {
 		m["intent"] = c.Intent
@@ -1381,7 +1401,7 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
-	settled := g.settle(ctx, d)
+	settled := g.settle(ctx, d, a.settleLimit(g.opt.SettleMax))
 	next, err := g.observe(ctx, d, true)
 	if err != nil {
 		res := statusResult(StatusUncertain, "The action was sent, but the screen could not be read afterwards (%v). Observe before anything else; do not repeat it blindly.", err)
@@ -1465,7 +1485,7 @@ func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, ne
 		if stillIn(s, from) {
 			continue
 		}
-		settled = g.settle(ctx, d)
+		settled = g.settle(ctx, d, g.opt.SettleMax)
 		if o, err := g.observe(ctx, d, true); err == nil {
 			return o, settled
 		}
@@ -1861,17 +1881,21 @@ func (g *Gateway) screenResult(l *lease, raw *screen.Screen, full bool) *Result 
 	return res
 }
 
-// settle waits until the screen stops changing, up to SettleMax.
-func (g *Gateway) settle(ctx context.Context, d *device) bool {
+// settle waits until the screen stops changing, up to limit. A limit of 0
+// does not wait, and reports the screen as not settled.
+func (g *Gateway) settle(ctx context.Context, d *device, limit time.Duration) bool {
+	if limit <= 0 {
+		return false
+	}
 	dev, _ := g.screenOf(d)
 	if dev == nil {
 		return false
 	}
 	if s, ok := dev.(driver.Settler); ok {
-		settled, err := s.WaitSettled(ctx, g.opt.SettleMax)
+		settled, err := s.WaitSettled(ctx, limit)
 		return err == nil && settled
 	}
-	deadline := time.Now().Add(g.opt.SettleMax)
+	deadline := time.Now().Add(limit)
 	if !sleepCtx(ctx, g.opt.PollInterval, nil) {
 		return false
 	}
