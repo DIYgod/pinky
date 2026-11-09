@@ -123,10 +123,10 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 	if broken != "" {
 		return nil, fmt.Errorf("android: the phone's video encoder fails (%s), and a virtual display needs it: %w", broken, driver.ErrUnsupported)
 	}
-	var pkg string
+	var app launchTarget
 	if opt.App != "" {
 		var err error
-		if pkg, err = d.resolveApp(ctx, opt.App); err != nil {
+		if app, err = d.resolveApp(ctx, opt.App); err != nil {
 			return nil, err
 		}
 	}
@@ -224,8 +224,8 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 		go b.keepAwake(func() bool { return true })
 	}
 	d.addBackground(b)
-	if pkg != "" {
-		if err := b.startApp(ctx, pkg); err != nil {
+	if app.pkg != "" {
+		if err := b.startApp(ctx, app); err != nil {
 			b.Close()
 			return nil, err
 		}
@@ -528,19 +528,19 @@ func (b *Background) Key(ctx context.Context, k driver.Key) error {
 
 // Launch implements driver.Device: the app starts on the virtual display.
 func (b *Background) Launch(ctx context.Context, app string) error {
-	pkg, err := b.d.resolveApp(ctx, app)
+	t, err := b.d.resolveApp(ctx, app)
 	if err != nil {
 		return err
 	}
 	if err := b.ready(ctx); err != nil {
 		return err
 	}
-	return b.startApp(ctx, pkg)
+	return b.startApp(ctx, t)
 }
 
 // startApp starts an app on the display, noting first which tasks are
 // elsewhere, so that one the start moves here can be given back.
-func (b *Background) startApp(ctx context.Context, pkg string) error {
+func (b *Background) startApp(ctx context.Context, t launchTarget) error {
 	if b.theirs != nil {
 		roots, err := b.d.rootTasks(ctx)
 		if err != nil {
@@ -556,7 +556,7 @@ func (b *Background) startApp(ctx context.Context, pkg string) error {
 		}
 		b.mu.Unlock()
 	}
-	if err := b.l.startApp(ctx, pkg); err != nil {
+	if err := b.d.start(ctx, b.l, t, b.display); err != nil {
 		return err
 	}
 	b.started.Store(true)

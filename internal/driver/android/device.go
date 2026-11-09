@@ -63,6 +63,10 @@ type Device struct {
 	apps        []driver.App
 	appsAt      time.Time
 	appsLoading atomic.Bool
+	clones      map[string]clone // how to start the app clones in apps, by id
+	cloneUsers  string           // the clone spaces last logged
+	// listApps, set by tests, stands in for scrcpy's app list.
+	listApps func(ctx context.Context) ([]scrcpy.App, error)
 
 	comp    companionLink
 	person  personWatch
