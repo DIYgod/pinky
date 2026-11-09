@@ -92,3 +92,16 @@ func TestLumaDiff(t *testing.T) {
 		t.Errorf("10 of 1000 moved samples count as %.3f", d)
 	}
 }
+
+func TestMovedRows(t *testing.T) {
+	// Three rows of four samples; one sample in the last row moves, and one
+	// in the first moves too little to count.
+	a := []byte{100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100}
+	b := []byte{110, 100, 100, 100, 100, 100, 100, 100, 100, 100, 200, 100}
+	if n, top, bottom := movedRows(a, b, 4); n != 1 || top != 2 || bottom != 2 {
+		t.Errorf("movedRows = %d, %d, %d; want 1, 2, 2", n, top, bottom)
+	}
+	if n, top, bottom := movedRows(a, a, 4); n != 0 || top != -1 || bottom != -1 {
+		t.Errorf("movedRows of the same picture = %d, %d, %d; want 0, -1, -1", n, top, bottom)
+	}
+}

@@ -13,6 +13,9 @@ type pic struct {
 	bytes   int       // the packet's size
 	changed bool      // differs from the picture before it
 	diff    float64   // the share of samples that changed
+	moved   int       // samples that moved past the threshold, changed or not
+	top     float64   // the highest and lowest of them, as shares of the height
+	bottom  float64
 }
 
 // trial is one drag and the pictures that came while it ran.
@@ -170,6 +173,28 @@ const (
 	// picture to count as changed: a few hundred of a phone's samples.
 	changedShare = 0.002
 )
+
+// movedRows finds the samples, in rows of cols, that moved by more than
+// the threshold: how many, and the first and last row that holds one (-1
+// for none). It tells where a picture that hardly changed changed.
+func movedRows(a, b []byte, cols int) (n, top, bottom int) {
+	top, bottom = -1, -1
+	if len(a) != len(b) || cols <= 0 {
+		return 0, top, bottom
+	}
+	for i := range a {
+		d := int(a[i]) - int(b[i])
+		if d > lumaThreshold || d < -lumaThreshold {
+			n++
+			r := i / cols
+			if top < 0 {
+				top = r
+			}
+			bottom = r
+		}
+	}
+	return n, top, bottom
+}
 
 // sample reads every step-th luma sample of each step-th row into dst.
 func sample(dst []byte, plane []byte, stride, w, h, step int) []byte {

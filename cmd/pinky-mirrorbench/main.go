@@ -105,6 +105,7 @@ type summary struct {
 	ColdPktMS  float64 `json:"cold_first_packet_ms"`
 	WarmMS     float64 `json:"warm_first_picture_ms"`
 	StillFPS   float64 `json:"still_pictures_per_s"`
+	StillMoved float64 `json:"still_changed_per_s"`
 	StillKbps  float64 `json:"still_kbit_per_s"`
 	Trials     int     `json:"trials"`
 	LatencyMS  float64 `json:"latency_ms"`
@@ -183,13 +184,25 @@ func run(ctx context.Context, c config) error {
 			return err
 		}
 		pics := rec.since(from)
-		bytes := 0
+		bytes, changed, moved := 0, 0, 0
+		top, bottom := 1.0, 0.0
 		for _, p := range pics {
 			bytes += p.bytes
+			if p.changed {
+				changed++
+			}
+			if p.moved > 0 {
+				moved++
+				top, bottom = min(top, p.top), max(bottom, p.bottom)
+			}
 		}
 		sum.StillFPS = float64(len(pics)) / c.still.Seconds()
+		sum.StillMoved = float64(changed) / c.still.Seconds()
 		sum.StillKbps = float64(bytes*8) / c.still.Seconds() / 1000
-		logf("still screen: %.1f pictures/s, %.0f kbit/s", sum.StillFPS, sum.StillKbps)
+		logf("still screen: %.1f pictures/s (%.1f changed), %.0f kbit/s", sum.StillFPS, sum.StillMoved, sum.StillKbps)
+		if c.verbose && moved > 0 {
+			logf("  %d of them moved a few samples, from %.0f%% to %.0f%% of the height", moved, top*100, bottom*100)
+		}
 	}
 
 	// The drags.
@@ -299,6 +312,10 @@ func open(ctx context.Context, c config) (driver.Device, *gfxInfo, error) {
 		return d, gfx, sleep(ctx, 1500*time.Millisecond)
 	case c.ios != "":
 		p := ios.NewProvider()
+		// As Pinky does when the person uses the phone over Wi-Fi, so a
+		// phone without a cable can be measured too.
+		p.SetWiFi(true)
+		p.UseOverWiFi(c.ios)
 		if _, err := p.List(ctx); err != nil {
 			return nil, nil, err
 		}

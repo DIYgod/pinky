@@ -136,16 +136,23 @@ func (r *recorder) decodeLoop(dec *video.Decoder) {
 			} else {
 				q = pending{at: ready}
 			}
-			cur = sample(cur, yuv.Planes[0], yuv.Strides[0], yuv.Width, yuv.Height, 4)
-			d := 1.0
+			const step = 4
+			cur = sample(cur, yuv.Planes[0], yuv.Strides[0], yuv.Width, yuv.Height, step)
+			pc := pic{at: q.at, ready: ready, bytes: q.bytes, diff: 1}
 			if prev != nil {
-				d = lumaDiff(prev, cur)
+				pc.diff = lumaDiff(prev, cur)
+				n, top, bottom := movedRows(prev, cur, (yuv.Width+step-1)/step)
+				if n > 0 {
+					h := float64(yuv.Height)
+					pc.moved, pc.top, pc.bottom = n, float64(top*step)/h, min(1, float64((bottom+1)*step)/h)
+				}
 			}
 			prev, cur = cur, prev
-			changed := d > changedShare
+			pc.changed = pc.diff > changedShare
+			changed := pc.changed
 			r.mu.Lock()
 			r.undecoded += k
-			r.pics = append(r.pics, pic{at: q.at, ready: ready, bytes: q.bytes, changed: changed, diff: d})
+			r.pics = append(r.pics, pc)
 			if changed {
 				r.lastMove = q.at
 			}
@@ -302,7 +309,12 @@ func drag(ctx context.Context, dev driver.Device, rec *recorder, gfx *gfxInfo, u
 	if y1 < y0 {
 		dir = -1
 	}
+	// The app's frames count from the reset to the end of the move, each
+	// taken halfway through its adb call, as that is about when it ran on
+	// the phone.
+	r0 := time.Now()
 	gfx.reset(ctx)
+	from := r0.Add(time.Since(r0) / 2)
 	down := time.Now()
 	if err := t.Touch(ctx, driver.TouchDown, screenPoint{X: x, Y: y0}); err != nil {
 		return trial{}, err
@@ -336,7 +348,13 @@ func drag(ctx context.Context, dev driver.Device, rec *recorder, gfx *gfxInfo, u
 		}
 	}
 	end := time.Now()
-	if err := sleep(ctx, 200*time.Millisecond); err != nil {
+	app, appAt := -1, time.Duration(0)
+	if gfx != nil {
+		c0 := time.Now()
+		app = gfx.frames(ctx)
+		appAt = c0.Add(time.Since(c0) / 2).Sub(from)
+	}
+	if err := sleep(ctx, 200*time.Millisecond-time.Since(end)); err != nil {
 		return trial{}, err
 	}
 	err := t.Touch(ctx, driver.TouchUp, screenPoint{X: x, Y: y})
@@ -347,7 +365,7 @@ func drag(ctx context.Context, dev driver.Device, rec *recorder, gfx *gfxInfo, u
 	if err := sleep(ctx, 800*time.Millisecond); err != nil {
 		return trial{}, err
 	}
-	tr := trial{move: move, end: end, pics: rec.between(down, time.Now()), app: gfx.frames(ctx), appAt: end.Sub(move)}
+	tr := trial{move: move, end: end, pics: rec.between(down, time.Now()), app: app, appAt: appAt}
 	return tr, nil
 }
 
