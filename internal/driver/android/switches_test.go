@@ -151,6 +151,7 @@ func fakeConsole(t *testing.T, token string, reply func(cmd string) string) (int
 func TestEmuCommand(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home) // os.UserHomeDir on Windows
 	if err := os.WriteFile(filepath.Join(home, ".emulator_console_auth_token"), []byte("s3cret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -464,7 +465,7 @@ func TestIdentityFirstCheckMarksAKnownPhone(t *testing.T) {
 	if got := rec.Phones[markSerial].Mark; got != sum(f.data) {
 		t.Fatalf("recorded %s, want the mark's hash %s", got, sum(f.data))
 	}
-	if fi, err := os.Stat(file); err != nil || fi.Mode().Perm() != 0o600 {
+	if fi, err := os.Stat(file); err != nil || (runtime.GOOS != "windows" && fi.Mode().Perm() != 0o600) {
 		t.Fatalf("identity file: %v, %v", fi.Mode(), err)
 	}
 }

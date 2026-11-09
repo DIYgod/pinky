@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -177,7 +178,8 @@ func TestPackApp(t *testing.T) {
 	var names []string
 	for _, f := range z.File {
 		names = append(names, f.Name)
-		if f.Name == "Payload/Dinely.app/Dinely" && f.Mode().Perm()&0o100 == 0 {
+		// Windows keeps no executable bit to pack.
+		if f.Name == "Payload/Dinely.app/Dinely" && runtime.GOOS != "windows" && f.Mode().Perm()&0o100 == 0 {
 			t.Errorf("executable lost its mode: %v", f.Mode())
 		}
 	}

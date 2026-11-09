@@ -10,6 +10,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -222,7 +223,8 @@ func TestUntar(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(dir, "README.md")); string(b) != "hello" {
 		t.Errorf("README.md = %q", b)
 	}
-	if st, err := os.Stat(filepath.Join(dir, "Scripts", "build.sh")); err != nil || st.Mode()&0o111 == 0 {
+	// Windows keeps no executable bit (and builds no WebDriverAgent).
+	if st, err := os.Stat(filepath.Join(dir, "Scripts", "build.sh")); err != nil || (runtime.GOOS != "windows" && st.Mode()&0o111 == 0) {
 		t.Errorf("build.sh: %v, %v", st, err)
 	}
 	// The same files hash the same, whatever the archive.
@@ -420,7 +422,13 @@ func TestSimListCachesSimctl(t *testing.T) {
 	if n := f.count("list -j devices"); n != 1 {
 		t.Errorf("simctl listed %d times with no change", n)
 	}
+	// Rewritten at the same size, a second later: a clock as coarse as
+	// Windows' would otherwise give it the same time.
 	os.WriteFile(plistPath, []byte("state 1"), 0o644)
+	later := time.Now().Add(time.Second)
+	if err := os.Chtimes(plistPath, later, later); err != nil {
+		t.Fatal(err)
+	}
 	p.List(ctx)
 	if n := f.count("list -j devices"); n != 2 {
 		t.Errorf("simctl listed %d times after a change", n)
