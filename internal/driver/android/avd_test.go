@@ -58,7 +58,7 @@ type avdFixture struct {
 	ports     []int // the port of each launch
 	killed    []string
 	launchErr error
-	portErr   error        // a launch on a given port fails so
+	portErr   error         // a launch on a given port fails so
 	quits     []func(error) // each launch's quit, to end its emulator
 }
 
@@ -431,5 +431,19 @@ func TestConsoleKill(t *testing.T) {
 	}
 	if err := consoleKill(context.Background(), "3e8be48e", token); err == nil {
 		t.Error("killed a phone")
+	}
+}
+
+func TestEmulatorArgs(t *testing.T) {
+	for _, c := range []struct {
+		port int
+		want string
+	}{
+		{0, "-avd Pixel_9 -no-audio"},
+		{5560, "-avd Pixel_9 -no-audio -port 5560"},
+	} {
+		if got := strings.Join(emulatorArgs("Pixel_9", c.port), " "); got != c.want {
+			t.Errorf("port %d: %q, want %q", c.port, got, c.want)
+		}
 	}
 }

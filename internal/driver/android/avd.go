@@ -487,11 +487,16 @@ func runOutput(ctx context.Context, name string, args ...string) ([]byte, error)
 	return out, err
 }
 
-// launchEmulator starts `emulator -avd <name>`, with -port unless port
-// is 0, in a session of its own, with its output in a log file in the
-// temporary folder, and waits a few seconds for it to quit at once, as
-// when the AVD runs already or its system image is missing. When it
+// launchEmulator starts `emulator -avd <name> -no-audio`, with -port
+// unless port is 0, in a session of its own, with its output in a log file
+// in the temporary folder, and waits a few seconds for it to quit at once,
+// as when the AVD runs already or its system image is missing. When it
 // quits later, quit gets why.
+//
+// Without -no-audio the emulator opens the computer's microphone while it
+// boots, though it passes the guest only silence: a Bluetooth headset then
+// switches to its call mode, and one that takes 15 seconds to do so stalls
+// the emulator until its own hang detector ends it.
 func launchEmulator(emulator, name string, port int, quit func(error)) error {
 	logPath := filepath.Join(os.TempDir(), "pinky-emulator-"+name+".log")
 	f, err := os.Create(logPath)
@@ -499,10 +504,7 @@ func launchEmulator(emulator, name string, port int, quit func(error)) error {
 		return err
 	}
 	defer f.Close()
-	args := []string{"-avd", name}
-	if port != 0 {
-		args = append(args, "-port", strconv.Itoa(port))
-	}
+	args := emulatorArgs(name, port)
 	cmd := exec.Command(emulator, args...)
 	cmd.Dir = filepath.Dir(emulator)
 	cmd.Stdout, cmd.Stderr = f, f
@@ -528,6 +530,16 @@ func launchEmulator(emulator, name string, port int, quit func(error)) error {
 		}()
 		return nil
 	}
+}
+
+// emulatorArgs are the emulator's arguments to start the AVD name on the
+// console port given, or the first free one when port is 0.
+func emulatorArgs(name string, port int) []string {
+	args := []string{"-avd", name, "-no-audio"}
+	if port != 0 {
+		args = append(args, "-port", strconv.Itoa(port))
+	}
+	return args
 }
 
 // emulatorQuit is err with the emulator's last error line from its log.
