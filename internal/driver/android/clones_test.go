@@ -164,10 +164,10 @@ func TestCloneName(t *testing.T) {
 
 func TestAMStartError(t *testing.T) {
 	for out, want := range map[string]string{
-		"Starting: Intent { act=android.intent.action.MAIN cmp=com.tencent.mm/.ui.LauncherUI }\n":                                "",
-		"Starting: Intent { ... }\nWarning: Activity not started, its current task has been brought to the front\n":            "",
-		"Starting: Intent { ... }\nError type 3\nError: Activity class {com.x/com.x.Main} does not exist.\n":                  "Error: Activity class {com.x/com.x.Main} does not exist.",
-		"Starting: Intent { ... }\nError: Activity not started, unable to resolve Intent { ... }\n":                            "Error: Activity not started, unable to resolve Intent { ... }",
+		"Starting: Intent { act=android.intent.action.MAIN cmp=com.tencent.mm/.ui.LauncherUI }\n":                                 "",
+		"Starting: Intent { ... }\nWarning: Activity not started, its current task has been brought to the front\n":               "",
+		"Starting: Intent { ... }\nError type 3\nError: Activity class {com.x/com.x.Main} does not exist.\n":                      "Error: Activity class {com.x/com.x.Main} does not exist.",
+		"Starting: Intent { ... }\nError: Activity not started, unable to resolve Intent { ... }\n":                               "Error: Activity not started, unable to resolve Intent { ... }",
 		"Starting: Intent { ... }\njava.lang.SecurityException: Permission Denial: startActivityAsUser asks to run as user 999\n": "java.lang.SecurityException: Permission Denial: startActivityAsUser asks to run as user 999",
 	} {
 		got, failed := amStartError(out)

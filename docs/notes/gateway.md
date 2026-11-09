@@ -362,6 +362,7 @@ An independent review of the round three code (read-only, by a subagent) found t
 - `internal/screen`, `internal/driver/driver.go`, `internal/driver/fake`: unchanged.
 - 2026-11-08: `screen.Element` gained `Masked bool` (additive): the policy masked a one-time code in the element's label, and pictures of the screen cover its bounds. It is not part of `Line`, so agents never see it.
 - `go.mod` gains `github.com/modelcontextprotocol/go-sdk v1.8.0`, `modernc.org/sqlite v1.61.1`, `go.yaml.in/yaml/v3 v3.0.6`, `golang.org/x/sys`, and in round three `github.com/Eyevinn/mp4ff v0.62.0`; other branches add their own requires, so expect a `go.mod` merge and a `go mod tidy`.
+- 2026-11-09: `driver.App` gained `CloneOf *App` with `App.Original`, `driver.CloneID` and `driver.ParseCloneID` (additive), for Android's app clones ("App clones" below).
 - Round three: `Options.Unlock` became `Options.PIN` (nothing outside the gateway set it); `Result` gained `Folder` and `Files`; streams may implement an optional `RequestKeyFrame()` (gateway-side interface, not in `driver.go`).
 
 ## Tests
@@ -502,3 +503,7 @@ What still needs a phone, and the screen the person sets for each run:
 | Xiaomi, HyperOS or MIUI | Recent apps, the Calculator's card in view | `7731` typed into the Calculator | `com.miui.calculator` |
 
 Afterwards: delete the reminder and the shell notification (swipe it away), clear the Calculator. A FAIL's output names the resource ids and places to make the rules fit that phone; the output has no screen text, but the session that runs it should not add any either, and should keep no screenshot.
+
+## App clones (GitHub issue #18, 2026-11-09)
+
+Android drivers list app clones (应用分身, Dual apps, App Twin) as apps of their own: `driver.App{ID: "com.tencent.mm@999", Name: "微信（分身）", CloneOf: &{com.tencent.mm 微信}}` (docs/notes/android.md, "App clones"). A clone reads like its original on the screen, so the gateway judges it as its original wherever the rules look (`driver.App.Original`): the launch's policy input, `leaves`, `phone_apps`' blocked and scope filters, the hidden-icon check, and the task's app list, which gets both the clone's and the original's id and name. `BlockedApps` and `InstalledApps` (Settings › Safety) skip clones. The policy engine reads a clone id as its package in `appIn`, `Categories`, exemptions and `SetAppBlocked` (`clonePackage`), in case one reaches it. The launch approval, the unblock card and the history name the clone by its name. Tests: `internal/gateway/clones_test.go`, `TestAppCloneIDs` in `internal/policy`.
