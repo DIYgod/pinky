@@ -43,7 +43,9 @@ type mirror struct {
 
 	// A mirror paints again while pictures come and stops a moment after
 	// the last (mirrorPaintFor): a still screen costs no frames. asleep
-	// then has the player's next picture wake the windows (wake).
+	// then has the player's next picture wake the windows (wake). The
+	// player hands over no picture the same as the one before, so the
+	// pictures a phone goes on sending after its screen stops wake nothing.
 	shownAt time.Time // the frame that took the last new picture (Painter.Now)
 	asleep  atomic.Bool
 
@@ -133,7 +135,7 @@ func (m *mirror) open() {
 		}
 		var p *video.Player
 		if err == nil {
-			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true, OnFrame: m.wake})
+			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true, SkipRepeats: true, OnFrame: m.wake})
 			if err != nil {
 				s.Close()
 			}

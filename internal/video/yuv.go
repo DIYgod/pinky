@@ -1,6 +1,7 @@
 package video
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"image"
@@ -193,6 +194,27 @@ func (y *YUV) Clone() *YUV {
 		c.Planes[i] = append([]byte(nil), p...)
 	}
 	return &c
+}
+
+// Equal reports whether two pictures are the same sample for sample, at
+// the same size and in the same layout and colors. Phones go on sending a
+// still screen for a while, as pictures that decode to the same samples.
+// It costs a memory comparison of the planes, a fraction of a millisecond
+// for a phone's screen, and stops at the first difference.
+func (y *YUV) Equal(o *YUV) bool {
+	if y == nil || o == nil {
+		return y == o
+	}
+	if y.NV12 != o.NV12 || y.Width != o.Width || y.Height != o.Height || y.Strides != o.Strides ||
+		y.Matrix != o.Matrix || y.FullRange != o.FullRange {
+		return false
+	}
+	for i := range y.Planes {
+		if !bytes.Equal(y.Planes[i], o.Planes[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 // RGBA converts the picture to RGBA as MyGo shows its planes, for a
