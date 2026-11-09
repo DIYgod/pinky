@@ -408,9 +408,12 @@ func (d *Device) startApp(ctx context.Context, id, link string) error {
 	defer svc.Close()
 	c, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
-	if _, err := svc.invoke(c, featureLaunchApplication, "", input); err != nil {
+	out, err := svc.invoke(c, featureLaunchApplication, "", input)
+	if err != nil {
 		return fmt.Errorf("launch %s: %w", id, err)
 	}
+	tok, _ := out["processToken"].(map[string]any)
+	d.logs.launched(id, int(toInt64(tok["processIdentifier"])))
 	return nil
 }
 

@@ -266,15 +266,6 @@ func shortValue(v any) string {
 	return s
 }
 
-func sortedKeys(m map[string]any) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
 // countList writes counts by key, keys in order: "1×500 19×1".
 func countList[K uint8 | int](c map[K]int) string {
 	keys := make([]K, 0, len(c))
