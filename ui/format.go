@@ -158,7 +158,9 @@ func taskDuration(t gateway.TaskView, now time.Time) time.Duration {
 // connectionLine is the header's second line: "Android · USB".
 func connectionLine(d gateway.DeviceView) string {
 	kind := "Android"
-	if d.Info.Platform == driver.IOS {
+	if d.Info.Platform == driver.HarmonyOS {
+		kind = "HarmonyOS"
+	} else if d.Info.Platform == driver.IOS {
 		kind = "iPhone"
 		if strings.HasPrefix(d.Info.Model, "iPad") {
 			kind = "iPad"
@@ -186,7 +188,9 @@ func connectionLine(d gateway.DeviceView) string {
 // osLine is the settings line: "Android 16 · USB".
 func osLine(d gateway.DeviceView) string {
 	kind := "Android"
-	if d.Info.Platform == driver.IOS {
+	if d.Info.Platform == driver.HarmonyOS {
+		kind = "HarmonyOS"
+	} else if d.Info.Platform == driver.IOS {
 		kind = "iOS"
 	}
 	s := strings.TrimSpace(kind + " " + d.Info.OSVersion)

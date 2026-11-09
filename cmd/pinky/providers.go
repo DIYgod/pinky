@@ -14,6 +14,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
+	"github.com/DIYgod/pinky/internal/driver/harmonyos"
 	"github.com/DIYgod/pinky/internal/driver/ios"
 )
 
@@ -96,8 +97,14 @@ func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 // other tools use the rest).
 func realProviders(log *slog.Logger) []driver.Provider {
 	only := onlyDevices()
+	factories := providerFactories
+	if hdc := os.Getenv("PINKY_HARMONYOS_HDC"); filepath.IsAbs(hdc) {
+		factories = append(append([]func(*slog.Logger) (driver.Provider, error)(nil), factories...), func(*slog.Logger) (driver.Provider, error) {
+			return harmonyos.NewProvider(hdc), nil
+		})
+	}
 	var out []driver.Provider
-	for _, f := range providerFactories {
+	for _, f := range factories {
 		p, err := f(log)
 		if err != nil {
 			log.Warn("device provider unavailable", "err", err)

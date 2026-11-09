@@ -46,6 +46,12 @@ type PlayerOptions struct {
 	// converts and scales them as it draws them (MyGo's Bitmap.UpdateYUV):
 	// the least CPU a picture can cost. SetSize then changes nothing.
 	YUV bool
+	// UntaggedChroma is the optional chroma strength (1–100 percent) of
+	// untagged full-range screen video with a known content size.
+	UntaggedChroma int
+	// UntaggedBT709 interprets untagged, full-range CoreDevice pictures
+	// as BT.709 when the driver supplies their content size.
+	UntaggedBT709 bool
 }
 
 // Stats describe a player's work so far.
@@ -71,6 +77,7 @@ type Stats struct {
 type Player struct {
 	stream driver.Stream
 	opt    PlayerOptions
+	chroma *[256]byte
 
 	mu       sync.Mutex
 	wantW    int // the size to fit pictures into, in pixels; 0 = the stream's
@@ -95,14 +102,18 @@ type Player struct {
 // NewPlayer starts decoding stream. The player owns the stream and closes
 // it with Close.
 func NewPlayer(stream driver.Stream, opt PlayerOptions) (*Player, error) {
+	if opt.MaxBacklog <= 0 {
+		opt.MaxBacklog = 30
+	}
+	p := &Player{chroma: chromaTable(opt.UntaggedChroma), stream: stream, opt: opt, done: make(chan struct{}), fpsStart: time.Now(), lastTake: time.Now()}
+	if stream.Codec() == driver.MJPEG {
+		go p.runJPEG()
+		return p, nil
+	}
 	dec, err := NewDecoder(stream.Codec(), opt.Decoder)
 	if err != nil {
 		return nil, err
 	}
-	if opt.MaxBacklog <= 0 {
-		opt.MaxBacklog = 30
-	}
-	p := &Player{stream: stream, opt: opt, done: make(chan struct{}), fpsStart: time.Now(), lastTake: time.Now()}
 	go p.run(dec)
 	return p, nil
 }
@@ -246,7 +257,11 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 		if f == nil || f.YUV == nil {
 			f = &Frame{YUV: &YUV{}}
 		}
-		err = dec.ConvertYUV(f.YUV)
+		var visible image.Point
+		if src, ok := p.stream.(driver.ContentSizedStream); ok {
+			visible.X, visible.Y = src.ContentSize()
+		}
+		err = dec.convertYUV(f.YUV, visible, p.chroma, p.opt.UntaggedBT709)
 		w, h = f.YUV.Width, f.YUV.Height
 	} else {
 		if f == nil || f.Image == nil || f.Image.Rect.Dx() != w || f.Image.Rect.Dy() != h {
@@ -263,14 +278,22 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 	}
 	now := time.Now()
 	f.Width, f.Height = pic.Width, pic.Height
+	if p.opt.YUV {
+		f.Width, f.Height = w, h
+	}
 	f.Turn = turn & 3
 	f.PTS, f.Received, f.Ready = pic.PTS, received, now
 
+	p.publish(f, dec.Hardware(), w, h, received, decoded, now)
+	return true
+}
+
+func (p *Player) publish(f *Frame, hardware string, w, h int, received, decoded, now time.Time) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.stats.Decoded++
 	f.Seq = p.stats.Decoded
-	p.stats.Hardware = dec.Hardware()
+	p.stats.Hardware = hardware
 	p.stats.OutW, p.stats.OutH = w, h
 	p.sumDec += decoded.Sub(received)
 	p.sumConv += now.Sub(decoded)
@@ -286,7 +309,6 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 	// The old pending picture, taken or not, becomes the spare.
 	p.spare, p.pending = p.pending, f
 	p.ready = true
-	return true
 }
 
 // fitSize returns the size to convert a w×h picture to so it fits inside

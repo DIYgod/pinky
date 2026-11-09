@@ -109,6 +109,8 @@ func (d *Device) key(ctx context.Context, k driver.Key) error {
 		s := d.freshDisplay(ctx).upright()
 		y := s.Height / 2
 		return d.Swipe(ctx, screen.Point{X: 0, Y: y}, screen.Point{X: s.Width * 7 / 10, Y: y}, 250*time.Millisecond)
+	case driver.KeyRotate:
+		return fmt.Errorf("iPhone rotation requires the WebDriverAgent helper: %w", driver.ErrUnsupported)
 	case driver.KeyRecents:
 		return fmt.Errorf("recents on iPhone: %w", driver.ErrUnsupported)
 	}

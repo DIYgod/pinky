@@ -524,3 +524,49 @@ func TestBackButtonSplitView(t *testing.T) {
 		t.Fatalf("leading button %v", p)
 	}
 }
+
+func TestWDARotateVerifiesForegroundOrientation(t *testing.T) {
+	var mu sync.Mutex
+	angle := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/wda/locked":
+			json.NewEncoder(w).Encode(map[string]any{"value": false})
+		case r.Method == http.MethodGet && r.URL.Path == "/rotation":
+			json.NewEncoder(w).Encode(map[string]any{"value": map[string]int{"z": angle}})
+		case r.Method == http.MethodPost && r.URL.Path == "/session/rotate-test/orientation":
+			var in struct{ Orientation string }
+			if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			switch in.Orientation {
+			case "LANDSCAPE":
+				angle = 270
+			case "PORTRAIT":
+				angle = 0
+			default:
+				http.Error(w, "unexpected orientation", http.StatusBadRequest)
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]any{"value": nil})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	d := &WDADevice{
+		c:     &wdaClient{base: srv.URL, hc: srv.Client(), sid: "rotate-test"},
+		width: 1170, height: 2532,
+	}
+	for _, want := range []screen.Point{{X: 2532, Y: 1170}, {X: 1170, Y: 2532}} {
+		if err := d.Key(context.Background(), driver.KeyRotate); err != nil {
+			t.Fatal(err)
+		}
+		if w, h := d.size(); w != want.X || h != want.Y {
+			t.Fatalf("got %dx%d after rotation, want %dx%d", w, h, want.X, want.Y)
+		}
+	}
+}

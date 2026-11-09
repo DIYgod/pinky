@@ -9,6 +9,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/DIYgod/pinky/internal/swipetrace"
 )
 
 type actionArgs struct {
@@ -266,6 +267,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		Description: "Swipe the screen in a direction (where the finger moves: up shows content below), inside an element (ref with direction), or from one point to another.",
 		InputSchema: schema[swipeIn](patchSwipe), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in swipeIn) (*sdk.CallToolResult, any, error) {
+			ctx, finish := swipetrace.Start(ctx)
+			defer finish()
 			a := gateway.Action{Tool: "swipe", Ref: in.Ref, Direction: strings.ToLower(strings.TrimSpace(in.Direction)),
 				From: in.From.screen(), To: in.To.screen(), DurationMS: in.DurationMS}
 			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil

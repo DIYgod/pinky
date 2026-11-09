@@ -32,6 +32,11 @@ type watchedStream struct {
 	once sync.Once
 }
 
+func (w *watchedStream) ContentSize() (int, int) {
+	screen := w.d.display()
+	return screen.Width, screen.Height
+}
+
 func (w *watchedStream) Close() error {
 	w.once.Do(func() { w.d.unwatch() })
 	return w.mediaStream.Close()

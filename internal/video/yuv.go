@@ -41,6 +41,10 @@ const (
 // and converted to I420 when it came in another layout, as 10-bit pictures
 // do. Its matrix is the one Convert reads it with.
 func (d *Decoder) ConvertYUV(dst *YUV) error {
+	return d.convertYUV(dst, image.Point{}, nil, false)
+}
+
+func (d *Decoder) convertYUV(dst *YUV, visible image.Point, chroma *[256]byte, untaggedBT709 bool) error {
 	if !d.have {
 		return errors.New("video: no picture to convert")
 	}
@@ -54,13 +58,48 @@ func (d *Decoder) ConvertYUV(dst *YUV) error {
 	}
 	format := getInt32(src, frameFormat)
 	nv12 := format == l.pixNV12
-	dst.layout(nv12, int(getInt32(src, frameWidth)), int(getInt32(src, frameHeight)))
-	dst.Matrix = matrixOf(getInt32(src, frameColorspace))
-	dst.FullRange = getInt32(src, frameColorRange) == avColorRangeJPEG || format == l.pixYUVJ420P
-	if nv12 || format == l.pixYUV420P || format == l.pixYUVJ420P {
-		return dst.copyFrom(src)
+	nativeLayout := nv12 || format == l.pixYUV420P || format == l.pixYUVJ420P
+	w, h := int(getInt32(src, frameWidth)), int(getInt32(src, frameHeight))
+	if nativeLayout && visible.X > 0 && visible.Y > 0 && visible.X <= w && visible.Y <= h {
+		w, h = visible.X, visible.Y
 	}
-	return d.toI420(dst, src)
+	dst.layout(nv12, w, h)
+	colorspace := getInt32(src, frameColorspace)
+	dst.Matrix = matrixOf(colorspace)
+	dst.FullRange = getInt32(src, frameColorRange) == avColorRangeJPEG || format == l.pixYUVJ420P
+	if !nativeLayout {
+		return d.toI420(dst, src)
+	}
+	if err := dst.copyFrom(src); err != nil {
+		return err
+	}
+	const unspecified = 2
+	if visible.X > 0 && visible.Y > 0 && dst.FullRange && colorspace == unspecified &&
+		getInt32(src, frameColorPrim) == unspecified && getInt32(src, frameColorTRC) == unspecified {
+		if untaggedBT709 {
+			dst.Matrix = BT709
+		}
+		if chroma != nil {
+			for _, plane := range dst.Planes[1:] {
+				for i, sample := range plane {
+					plane[i] = chroma[sample]
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// chromaTable scales chroma around its neutral point, leaving luma intact.
+func chromaTable(percent int) *[256]byte {
+	if percent <= 0 || percent >= 100 {
+		return nil
+	}
+	table := new([256]byte)
+	for i := range table {
+		table[i] = byte((128*(100-percent) + i*percent + 50) / 100)
+	}
+	return table
 }
 
 // matrixOf is the matrix swscale reads a picture's samples with in Convert,

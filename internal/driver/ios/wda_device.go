@@ -629,6 +629,8 @@ func (d *WDADevice) Key(ctx context.Context, k driver.Key) error {
 		return d.c.home(ctx)
 	case driver.KeyBack:
 		return d.back(ctx)
+	case driver.KeyRotate:
+		return d.rotate(ctx)
 	case driver.KeyRecents:
 		return fmt.Errorf("recents on iPhone: %w", driver.ErrUnsupported)
 	}
@@ -639,6 +641,62 @@ func (d *WDADevice) Key(ctx context.Context, k driver.Key) error {
 	d.inputMu.Lock()
 	defer d.inputMu.Unlock()
 	return d.c.keys(ctx, s)
+}
+
+// rotate asks XCTest to simulate a device turn and verifies that the
+// foreground app's interface actually adopted the other orientation.
+func (d *WDADevice) rotate(ctx context.Context) error {
+	d.inputMu.Lock()
+	defer d.inputMu.Unlock()
+	locked, err := d.c.locked(ctx)
+	if err != nil {
+		return err
+	}
+	if locked {
+		return driver.ErrLocked
+	}
+	z, err := d.c.rotation(ctx)
+	if err != nil {
+		return err
+	}
+	wantLandscape := z%180 == 0
+	orientation := "PORTRAIT"
+	if wantLandscape {
+		orientation = "LANDSCAPE"
+	}
+	if err := d.c.setOrientation(ctx, orientation); err != nil {
+		return err
+	}
+
+	check, cancel := context.WithTimeout(ctx, 4*time.Second)
+	defer cancel()
+	poll := time.NewTicker(100 * time.Millisecond)
+	defer poll.Stop()
+	for {
+		z, err = d.c.rotation(check)
+		if err == nil && (z%180 != 0) == wantLandscape {
+			q := quarter((z/90)%4+4) & 3
+			d.ui.Store(int32(q) + 1)
+			d.uiAt.Store(time.Now().UnixNano())
+			w, h := min(d.width, d.height), max(d.width, d.height)
+			if wantLandscape {
+				w, h = h, w
+			}
+			d.seeOrientation(float64(w), float64(h))
+			return nil
+		}
+		if err != nil && check.Err() == nil {
+			return err
+		}
+		select {
+		case <-poll.C:
+		case <-check.Done():
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return fmt.Errorf("the iPhone app did not adopt the requested orientation")
+		}
+	}
 }
 
 // back taps the navigation bar's back button when the screen has one, and

@@ -442,8 +442,16 @@ func (v *viewer) finish() {
 	v.mu.Unlock()
 }
 
-func (v *viewer) Codec() driver.Codec           { <-v.h.ready; return v.h.codec }
-func (v *viewer) Size() (int, int)              { <-v.h.ready; return v.h.w, v.h.h }
+func (v *viewer) Codec() driver.Codec { <-v.h.ready; return v.h.codec }
+func (v *viewer) Size() (int, int)    { <-v.h.ready; return v.h.w, v.h.h }
+func (v *viewer) ContentSize() (int, int) {
+	<-v.h.ready
+	if src, ok := v.h.src.(driver.ContentSizedStream); ok {
+		return src.ContentSize()
+	}
+	return 0, 0
+}
+
 func (v *viewer) Packets() <-chan driver.Packet { return v.out }
 
 // Err says why the stream ended: the device stream's error, or nil after

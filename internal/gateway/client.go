@@ -561,6 +561,9 @@ func (g *Gateway) Key(deviceID string, k driver.Key) error {
 	}
 	ctx, cancel := context.WithTimeout(g.ctx, 10*time.Second)
 	defer cancel()
+	if mk, ok := dev.(driver.MirrorKeyer); ok {
+		return mk.MirrorKey(ctx, k)
+	}
 	return dev.Key(ctx, k)
 }
 

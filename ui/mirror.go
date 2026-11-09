@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"image"
 	"math"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,9 +42,14 @@ type mirror struct {
 	used    int
 	closed  bool
 
-	picW, picH int     // the stream's picture size the right way up: the device's pixels
-	turn       int     // quarter turns clockwise that put the picture upright (driver.Packet.Turn)
-	boxW, boxH float32 // the screen's size on the window, in DIPs
+	eventDriven bool
+	picW, picH  int     // the stream's picture size the right way up: the device's pixels
+	turn        int     // quarter turns clockwise that put the picture upright (driver.Packet.Turn)
+	boxX, boxY  float32 // inset from the input box to the picture
+	boxW, boxH  float32 // the screen's size on the window, in DIPs
+	maskPath    *mg.Path
+	maskRect    mg.Rect
+	mask        *screen.DisplayMask
 
 	down      bool         // a touch is down
 	lastMove  time.Time    // throttles moves
@@ -110,6 +117,8 @@ func (m *mirror) open() {
 	}
 	m.opening = true
 	a := m.a
+	d := a.device(m.id)
+	coreDevice := d != nil && d.Info.Platform == driver.IOS && d.Info.Backend == "coredevice"
 	go func() {
 		logf("pinky: mirror %s: opening the stream (gen %d, agent %v)", m.id, gen, m.agent)
 		var s driver.Stream
@@ -124,8 +133,17 @@ func (m *mirror) open() {
 			s, err = a.api.Stream(ctx, m.id, driver.StreamOptions{})
 		}
 		var p *video.Player
+		var events bool
 		if err == nil {
-			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true})
+			opt := video.PlayerOptions{YUV: true, UntaggedBT709: coreDevice}
+			if coreDevice {
+				opt.UntaggedChroma, _ = strconv.Atoi(os.Getenv("PINKY_IOS_MIRROR_SATURATION"))
+			}
+			events = s.Codec() == driver.MJPEG
+			if events {
+				opt.OnFrame = func() { a.post(func() {}) }
+			}
+			p, err = video.NewPlayer(s, opt)
 			if err != nil {
 				s.Close()
 			}
@@ -150,7 +168,7 @@ func (m *mirror) open() {
 				m.retryLater()
 				return
 			}
-			m.player, m.state = p, "playing"
+			m.player, m.state, m.eventDriven = p, "playing", events
 			go func() {
 				<-p.Done()
 				a.post(func() {
@@ -214,6 +232,28 @@ func (m *mirror) lastPicture() (pic *video.YUV, turn int) {
 		return nil, 0
 	}
 	return m.frame.YUV.Clone(), m.turn
+}
+
+// clipMirror gives the image and its input overlay the same physical outline.
+func (m *mirror) clipMirror(pt *mg.Painter, r mg.Rect, radius float32, mask *screen.DisplayMask, draw func()) {
+	if mask == nil || r.W <= 0 || r.H <= 0 {
+		pt.Clip(r, radius, draw)
+		return
+	}
+	if m.maskPath == nil || m.mask != mask || m.maskRect != r {
+		path := new(mg.Path)
+		sx, sy := r.W/float32(mask.Width), r.H/float32(mask.Height)
+		for i, p := range mask.Vertices {
+			x, y := r.X+float32(p.X)*sx, r.Y+float32(p.Y)*sy
+			if i == 0 {
+				path.MoveTo(x, y)
+			} else {
+				path.LineTo(x, y)
+			}
+		}
+		m.maskPath, m.maskRect, m.mask = path.Close(), r, mask
+	}
+	pt.ClipPath(m.maskPath, draw)
 }
 
 // drawTurned draws a picture into r turned turn quarter turns clockwise,
@@ -308,7 +348,10 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 	// person uses the phone's screen.
 	locked := a.isLocked(d) && !m.agent
 	step, kind, outline := overlayStep(t)
-	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
+	scr := mg.Box(c).Fill().Clip()
+	if screen.PhysicalDisplayMask(d.Info.Model, 0) == nil {
+		scr.Radius(radius).Background(hex("#000000"))
+	}
 	switch {
 	case m.agent:
 		scr.Label(locales.MirrorAgentScreenLabel(agentOrTheAgent(t), d.Info.Name))
@@ -318,7 +361,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 		scr.TextCaret(mg.Rect{X: m.boxW/2 - 1, Y: m.boxH * 0.8, W: 2, H: 20})
 	}
 	scr.Draw(func(pt *mg.Painter, r mg.Rect) {
-		m.boxW, m.boxH = r.W, r.H
+		m.boxX, m.boxY, m.boxW, m.boxH = 0, 0, r.W, r.H
 		if pl := m.player; pl != nil {
 			if f := pl.Take(); f != nil {
 				if m.bitmap == nil {
@@ -342,19 +385,24 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			}
 			// Repaint at the stream's rate, picking up the newest
 			// picture each time, without building the view again.
-			pt.AnimationFrameRate(60)
+			if !m.eventDriven {
+				pt.AnimationFrameRate(60)
+			}
 		}
-		if m.bitmap != nil && m.state == "playing" {
-			pt.Clip(r, radius, func() { drawTurned(pt, m.bitmap, r, m.turn) })
+		mask := screen.UprightDisplayMask(d.Info.Model, m.turn, m.picW, m.picH)
+		if mask != nil && m.picW > 0 && m.picH > 0 {
+			view := fitMirrorPicture(r, m.picW, m.picH)
+			m.boxX, m.boxY, m.boxW, m.boxH = view.X-r.X, view.Y-r.Y, view.W, view.H
+			r = view
 		}
-		if outline && !locked && m.picW > 0 {
-			// Clipped to the screen: targets are in screen pixels, which on
-			// an iPhone differ from the picture's by about 1%, so an
-			// outline at the edge may reach a little past it.
-			pt.Clip(r, radius, func() {
+		m.clipMirror(pt, r, radius, mask, func() {
+			if m.bitmap != nil && m.state == "playing" {
+				drawTurned(pt, m.bitmap, r, m.turn)
+			}
+			if outline && !locked && m.picW > 0 {
 				drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
-			})
-		}
+			}
+		})
 	})
 	scr.Children(func() {
 		switch {
@@ -478,6 +526,24 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		return false
 	}
 	id := d.Info.ID
+	if d.Info.Platform == driver.HarmonyOS {
+		switch ev.Kind {
+		case mg.InputPointerUp:
+			if ev.Canceled {
+				m.down = false
+				return true
+			}
+		case mg.InputPointerDown, mg.InputScroll:
+			if ev.X < m.boxX || ev.Y < m.boxY || ev.X >= m.boxX+m.boxW || ev.Y >= m.boxY+m.boxH {
+				return false
+			}
+			if ev.Kind == mg.InputPointerDown && ev.Button != 0 {
+				return false
+			}
+		case mg.InputText, mg.InputCompose, mg.InputKeyDown:
+			return false
+		}
+	}
 	toDevice := m.toDevice
 	touch := func(act driver.TouchAction, pt screen.Point) {
 		pt = m.toPicture(pt)
@@ -494,8 +560,13 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 	case mg.InputPointerDown:
 		switch ev.Button {
 		case 0:
+			point := toDevice(ev.X, ev.Y)
+			mask := screen.UprightDisplayMask(d.Info.Model, m.turn, m.picW, m.picH)
+			if !mask.Visible(screen.Rect{X: point.X, Y: point.Y, W: 1, H: 1}, m.picW, m.picH) {
+				return false
+			}
 			m.down = true
-			touch(driver.TouchDown, toDevice(ev.X, ev.Y))
+			touch(driver.TouchDown, point)
 		case 1:
 			key(driver.KeyBack) // right click is Back
 		case 2:
@@ -557,11 +628,18 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 	return false
 }
 
+// fitMirrorPicture fits the captured pixels inside the actual paint box.
+func fitMirrorPicture(r mg.Rect, w, h int) mg.Rect {
+	scale := min(r.W/float32(w), r.H/float32(h))
+	width, height := float32(w)*scale, float32(h)*scale
+	return mg.Rect{X: r.X + (r.W-width)/2, Y: r.Y + (r.H-height)/2, W: width, H: height}
+}
+
 // toDevice maps a point on the mirror, in DIPs from its corner, to the
 // device's pixels.
 func (m *mirror) toDevice(x, y float32) screen.Point {
-	px := int(float64(x) / float64(m.boxW) * float64(m.picW))
-	py := int(float64(y) / float64(m.boxH) * float64(m.picH))
+	px := int(float64(x-m.boxX) / float64(m.boxW) * float64(m.picW))
+	py := int(float64(y-m.boxY) / float64(m.boxH) * float64(m.picH))
 	return screen.Point{X: clampInt(px, 0, m.picW-1), Y: clampInt(py, 0, m.picH-1)}
 }
 

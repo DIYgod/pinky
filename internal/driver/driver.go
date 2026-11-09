@@ -20,8 +20,9 @@ type Platform string
 
 // Platforms.
 const (
-	Android Platform = "android"
-	IOS     Platform = "ios"
+	Android   Platform = "android"
+	IOS       Platform = "ios"
+	HarmonyOS Platform = "harmonyos"
 )
 
 // State is a device's connection state.
@@ -297,6 +298,7 @@ type Key string
 const (
 	KeyBack          Key = "back"
 	KeyHome          Key = "home"
+	KeyRotate        Key = "rotate"
 	KeyRecents       Key = "recents"
 	KeyEnter         Key = "enter"
 	KeyTab           Key = "tab"
@@ -322,8 +324,9 @@ type Codec string
 
 // Codecs.
 const (
-	H264 Codec = "h264"
-	HEVC Codec = "hevc"
+	H264  Codec = "h264"
+	HEVC  Codec = "hevc"
+	MJPEG Codec = "mjpeg"
 )
 
 // Packet is one encoded unit of the video stream.
@@ -340,6 +343,13 @@ type Packet struct {
 	Turn int
 }
 
+// ContentSizedStream reports the actual screen area at the top left of a
+// decoded picture. Size still describes the encoded picture, including padding.
+// A stream without a known screen area returns zero dimensions.
+type ContentSizedStream interface {
+	ContentSize() (width, height int)
+}
+
 // Stream is a live encoded video stream.
 type Stream interface {
 	Codec() Codec
@@ -347,6 +357,11 @@ type Stream interface {
 	Packets() <-chan Packet // closed when the stream ends; Err says why
 	Err() error
 	Close() error
+}
+
+// MirrorOnly marks an owner preview stream that is unavailable to task video and screenshots.
+type MirrorOnly interface {
+	MirrorOnly() bool
 }
 
 // Optional capabilities. The gateway checks for them with type assertions.
@@ -367,6 +382,11 @@ const (
 // screen size (iOS pads its video) convert to screen pixels themselves.
 type Toucher interface {
 	Touch(ctx context.Context, a TouchAction, p screen.Point) error
+}
+
+// MirrorKeyer sends navigation keys from the person's desktop mirror.
+type MirrorKeyer interface {
+	MirrorKey(ctx context.Context, key Key) error
 }
 
 // PersonWatcher reports input the person makes on the phone itself, so the
