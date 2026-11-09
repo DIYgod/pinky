@@ -359,6 +359,9 @@ func (d *Device) startMain(ctx context.Context, opt scrcpy.Options) (*live, erro
 	if err != nil {
 		return nil, wrapErr(err)
 	}
+	if l.video {
+		go l.watchResets(time.Second, resetStall)
+	}
 	return l, nil
 }
 
@@ -464,6 +467,7 @@ type live struct {
 	frames     int
 	encoderErr string // the server's encoder failed before any frame
 	sub        *stream
+	resetAt    time.Time // when the unanswered reset-video went out; zero if none
 
 	settle settleTracker
 	stats  streamStats
@@ -564,6 +568,7 @@ func (l *live) run() {
 		if p.Session {
 			l.mu.Lock()
 			l.vw, l.vh = p.Width, p.Height
+			l.resetAt = time.Time{} // answers the reset in flight
 			l.mu.Unlock()
 			l.sizedOnce.Do(func() { close(l.sized) })
 			l.settle.resize(now, p.Width, p.Height)
@@ -674,6 +679,68 @@ func (l *live) send(msg []byte) error {
 		return l.failure()
 	}
 	return nil
+}
+
+// resetVideo restarts the encoder for a fresh configuration and key frame.
+// While a reset waits for its answer, which serves every caller, no other
+// is sent, so each session header answers the one in flight.
+func (l *live) resetVideo() error {
+	if !l.askReset(time.Now()) {
+		return nil
+	}
+	return l.send(scrcpy.ResetVideo())
+}
+
+// askReset notes a reset at now and reports whether to send it.
+func (l *live) askReset(now time.Time) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.resetAt.IsZero() {
+		return false
+	}
+	l.resetAt = now
+	return true
+}
+
+// resetWait returns how long the reset in flight has waited at now, or 0.
+func (l *live) resetWait(now time.Time) time.Duration {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.resetAt.IsZero() {
+		return 0
+	}
+	return now.Sub(l.resetAt)
+}
+
+// resetStall bounds a reset's answer, which comes within a second even on
+// a still or dark screen.
+const resetStall = 5 * time.Second
+
+// errResetStalled ends a session whose encoder stopped after a reset.
+var errResetStalled = errors.New("android: the video encoder stopped after a reset")
+
+// watchResets replaces the session when a reset goes unanswered: some
+// encoders, reset after a still screen, never drain the end of stream the
+// server waits for, and the video stops for good. Input still works, so it
+// waits for a gesture like any replacement.
+func (l *live) watchResets(every, stall time.Duration) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-l.done:
+			return
+		case <-t.C:
+		}
+		wait := l.resetWait(time.Now())
+		if wait < stall {
+			continue
+		}
+		l.cfg.logf("android: %s: no video %v after asking the %s encoder to start over; restarting the session",
+			l.serial, wait.Round(time.Second), l.codec)
+		l.replace(errResetStalled)
+		return
+	}
 }
 
 var (

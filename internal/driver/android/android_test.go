@@ -463,3 +463,32 @@ func TestOnePhoneOverUSBAndWiFi(t *testing.T) {
 		t.Errorf("USB not usable, Wi-Fi online: %+v", out)
 	}
 }
+
+func TestResetWait(t *testing.T) {
+	l := &live{cfg: &Config{}, video: true, sized: make(chan struct{}), done: make(chan struct{})}
+	t0 := time.Now()
+	if w := l.resetWait(t0); w != 0 {
+		t.Fatalf("no reset sent: waited %v", w)
+	}
+	if !l.askReset(t0) {
+		t.Fatal("the first reset was not sent")
+	}
+	// A second ask waits for the first one's answer instead of going out.
+	if l.askReset(t0.Add(time.Second)) {
+		t.Error("a second reset went out while the first waited")
+	}
+	if w := l.resetWait(t0.Add(3 * time.Second)); w != 3*time.Second {
+		t.Errorf("waited %v, want the 3s since the first ask", w)
+	}
+	// The session header answers it (run clears resetAt).
+	l.resetAt = time.Time{}
+	if w := l.resetWait(t0.Add(time.Hour)); w != 0 {
+		t.Errorf("answered: waited %v", w)
+	}
+	if !l.askReset(t0.Add(4 * time.Second)) {
+		t.Fatal("a reset after the answer was not sent")
+	}
+	if w := l.resetWait(t0.Add(4*time.Second + resetStall)); w < resetStall {
+		t.Errorf("unanswered: waited %v, want at least %v", w, resetStall)
+	}
+}
