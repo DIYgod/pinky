@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Pinky now checks that an iPhone or iPad it connects to is the one paired with this computer, by the certificate from pairing, so another device on the network can't stand in for it over Wi-Fi.
+
 ## 2026.1109.14 (2026-11-09)
 
 - Agents can have a tap, swipe, typing, key press or app launch wait less for the screen to settle (`settle_ms`), so in games and videos, whose screens never stop moving, an action no longer waits 3 s for nothing. Actions you approve still wait the full time. Thanks to chenzl25.
