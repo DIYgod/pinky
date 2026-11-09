@@ -98,8 +98,9 @@ type Result struct {
 	Task       string    // phone_connect: the task id
 	Folder     string    // phone_files: the folder on the computer
 	Files      []FileView
-	Saved      []SavedFile // files written for the agent on Pinky's computer (save.go)
-	Log        string      // phone_logs: the log lines or crash reports, as text
+	Saved      []SavedFile  // files written for the agent on Pinky's computer (save.go)
+	Log        string       // phone_logs: the log lines or crash reports, as text
+	Switches   []SwitchView // phone_device
 }
 
 // IsError reports whether the result is an error rather than a status.

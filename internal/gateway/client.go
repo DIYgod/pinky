@@ -343,7 +343,8 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 // in its app for the rest of the task (awaitApproval), and once copying
 // files is allowed, later copies do not ask (askToPush), nor do installs
 // of the same app by the same signer, or uninstalls or stops of the same
-// app (askApp). An agent's own question gets a yes for that question only:
+// app (askApp), nor do the task's other changes of the phone's settings
+// (askSettings). An agent's own question gets a yes for that question only:
 // each one is the person's consent to what it says, and answering the next
 // ones by itself would let the agent claim consent the person never gave.
 func canAllowTask(info approval.Info) bool {
@@ -356,7 +357,7 @@ func canAllowTask(info approval.Info) bool {
 	if _, ok := info.Data.(*appAsk); ok {
 		return true
 	}
-	return info.Rule == filesRule || info.Rule == policy.RuleAppLogs
+	return info.Rule == filesRule || info.Rule == policy.RuleAppLogs || info.Rule == settingsRule
 }
 
 func (g *Gateway) decide(id string, d approval.Decision, note string) error {

@@ -226,17 +226,25 @@ func joinNote(a, b string) string {
 // refused the background display, and returns the phone's device to
 // launch it on, or a result when the phone cannot take it now.
 func (g *Gateway) leaveForLaunch(ctx context.Context, l *lease, p *prep, cause error) (driver.Device, *Result) {
-	d := l.dev
 	name := p.launch.Name
 	if name == "" {
 		name = p.launch.ID
 	}
+	g.log.Info("app refused the background display", "device", l.dev.id, "app", name, "err", cause)
+	return g.leaveForPhone(ctx, l, name+" does not run on a background display", "nothing was opened")
+}
+
+// leaveForPhone moves the task to the phone's own screen for the rest of
+// it, for the reason why ("Dinely does not run on a background display"),
+// and returns the phone's device, or a result saying that nothing
+// happened ("nothing was opened") when the phone cannot take it now.
+func (g *Gateway) leaveForPhone(ctx context.Context, l *lease, why, nothing string) (driver.Device, *Result) {
+	d := l.dev
 	g.mu.Lock()
-	g.leaveBackgroundLocked(l, fmt.Sprintf("%s does not run on a background display, so the task moved to the phone's own screen.", name))
+	g.leaveBackgroundLocked(l, why+", so the task moved to the phone's own screen.")
 	dev := d.dev
 	using := time.Since(d.personAt) < personRecent
 	g.mu.Unlock()
-	g.log.Info("app refused the background display", "device", d.id, "app", name, "err", cause)
 	if dev == nil {
 		return nil, errResult(ErrDeviceOffline, "%s is offline. Nothing was done.", d.name())
 	}
@@ -247,7 +255,7 @@ func (g *Gateway) leaveForLaunch(ctx context.Context, l *lease, p *prep, cause e
 		g.mu.Lock()
 		l.tookOverSeen = true
 		g.mu.Unlock()
-		return nil, statusResult(StatusTookOver, "%s does not run on a background display, and the person is using the phone's own screen, so nothing was opened and the agent is paused. Call phone_handoff to wait until they let you use it.", name)
+		return nil, statusResult(StatusTookOver, "%s, and the person is using the phone's own screen, so %s and the agent is paused. Call phone_handoff to wait until they let you use it.", why, nothing)
 	}
 	g.wake(ctx, d)
 	g.checkLock(ctx, d)
@@ -255,7 +263,7 @@ func (g *Gateway) leaveForLaunch(ctx context.Context, l *lease, p *prep, cause e
 	locked := d.locked
 	g.mu.Unlock()
 	if locked {
-		return nil, statusResult(StatusLocked, "%s does not run on a background display, and the phone's own screen is locked, so nothing was opened. Call phone_handoff so the person can unlock it.", name)
+		return nil, statusResult(StatusLocked, "%s, and the phone's own screen is locked, so %s. Call phone_handoff so the person can unlock it.", why, nothing)
 	}
 	return dev, nil
 }

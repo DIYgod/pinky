@@ -115,6 +115,16 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 			line(fmt.Sprintf("%s · %s · %s · %s", f.Path, gateway.SizeText(f.Size), f.ModTime.Format("2006-01-02 15:04"), f.Where))
 		}
 	}
+	for _, sw := range res.Switches {
+		switch {
+		case sw.Unsupported != "":
+			line(sw.Name + ": unsupported · " + sw.Unsupported)
+		case sw.Changed:
+			line(sw.Name + ": " + switchValue(sw.Value) + " (was " + switchValue(sw.Was) + ")")
+		default:
+			line(sw.Name + ": " + switchValue(sw.Value))
+		}
+	}
 	if len(res.Apps) > 0 {
 		for _, a := range res.Apps {
 			l := a.Name
@@ -138,6 +148,15 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 	case len(res.Diff) > 0:
 		line(strings.Join(res.Diff, "\n"))
 	}
+}
+
+// switchValue is a switch's value in a phone_device result: none for no
+// simulated location.
+func switchValue(v string) string {
+	if v == "" {
+		return "none"
+	}
+	return v
 }
 
 func indentLines(s, prefix string) string {

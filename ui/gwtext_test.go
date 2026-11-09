@@ -63,6 +63,10 @@ var gatewaySteps = []string{
 	"Waiting for you: Read the logs of Example",
 	"Blocked by “Finance apps”: read the logs of Northbank",
 	"Added 1 chicken rice bowl", // the fake's own words
+	"Set the screen's rotation to landscape",
+	"Opened Settings in ja-JP",
+	"Put the appearance back to light",
+	"Stopped the simulated location",
 }
 
 func TestGatewayWordsInEnglish(t *testing.T) {
@@ -261,6 +265,63 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		if got := statusLine(gateway.DeviceView{StatusLine: in, Status: gateway.DeviceWorking}); got != out {
 			t.Errorf("statusLine(%q) = %q, want %q", in, got, out)
 		}
+	}
+}
+
+// TestPhoneSettingsWordsInChinese checks phone_device's steps and
+// approvals, and phone_launch's with a language (gateway/switches.go).
+func TestPhoneSettingsWordsInChinese(t *testing.T) {
+	inLanguage(t, "zh-Hans")
+	zh := locales.In("zh-Hans")
+	rotation, appearance, location := zh.GwSwitchRotation(), zh.GwSwitchAppearance(), zh.GwSwitchLocation()
+	steps := map[string]string{
+		"Set the screen's rotation to landscape":             zh.GwDidSetSwitch(rotation, zh.GwValueLandscape()),
+		"Set the screen's rotation to reverse landscape":     zh.GwDidSetSwitch(rotation, zh.GwValueReverseLandscape()),
+		"Set the appearance to dark":                         zh.GwDidSetSwitch(appearance, zh.GwValueDark()),
+		"Set the location to 35.6812, 139.7671":              zh.GwDidSetSwitch(location, zh.GwValuePlace("35.6812, 139.7671")),
+		"Opened Settings in ja-JP":                           zh.GwDidOpenIn("Settings", "ja-JP"),
+		"Opened Settings in zh-Hans-CN":                      zh.GwDidOpenIn("Settings", "zh-Hans-CN"),
+		"Opened Settings with region JP":                     zh.GwDidOpenRegion("Settings", "JP"),
+		"Opened Made in US":                                  zh.GwDidOpen("Made in US"),
+		"Waiting for you: Set the appearance to dark":        zh.GwStepWaiting(zh.GwDoSetSwitch(appearance, zh.GwValueDark())),
+		"Waiting for you: Opened Settings in ja-JP":          zh.GwStepWaiting(zh.GwDoOpenIn("Settings", "ja-JP")),
+		"Failed: set the screen's rotation to upside down":   zh.GwStepFailed(zh.GwDoSetSwitch(rotation, zh.GwValueUpsideDown())),
+		"Put the screen's rotation back to auto-rotate":      zh.GwStepSwitchBack(rotation, zh.GwValueAutoRotate()),
+		"Put the appearance back to automatic":               zh.GwStepSwitchBack(appearance, zh.GwValueAutomatic()),
+		"Put the location back to 39.237255, -123.150032":    zh.GwStepSwitchBack(location, zh.GwValuePlace("39.237255, -123.150032")),
+		"Stopped the simulated location":                     zh.GwDidStopLocation(),
+		"Left the appearance as the person set it":           zh.GwStepSwitchLeft(appearance),
+		"Could not put the location back to none":            zh.GwStepSwitchNotBack(location, zh.GwValueNoLocation()),
+		"Put the language of Settings back":                  zh.GwStepLanguageBack("Settings"),
+		"Left the language of Settings as the person set it": zh.GwStepLanguageLeft("Settings"),
+		"Could not put the language of Settings back":        zh.GwStepLanguageNotBack("Settings"),
+		"Waiting for you: Set the screen's rotation to landscape; set the appearance to dark": zh.GwStepWaiting(
+			zh.GwDoSetSwitch(rotation, zh.GwValueLandscape()) + zh.ListSeparator() + zh.GwDoSetSwitch(appearance, zh.GwValueDark())),
+		"Blocked by “Read-only”: set the appearance to dark; set the location to 1, 2": zh.GwStepBlocked(zh.RuleReadOnly(),
+			zh.GwDoSetSwitch(appearance, zh.GwValueDark())+zh.ListSeparator()+zh.GwDoSetSwitch(location, zh.GwValuePlace("1, 2"))),
+	}
+	for in, out := range steps {
+		if got := stepText(in); got != out {
+			t.Errorf("stepText(%q) = %q, want %q", in, got, out)
+		}
+	}
+	titles := map[string]string{
+		"Set the appearance to dark?":                                       zh.GwAskQuestion(zh.GwDoSetSwitch(appearance, zh.GwValueDark())),
+		"Set the screen's rotation to landscape; set the location to none?": zh.GwAskQuestion(zh.GwDoSetSwitch(rotation, zh.GwValueLandscape()) + zh.ListSeparator() + zh.GwDoSetSwitch(location, zh.GwValueNoLocation())),
+		"Open Settings in ja-JP?":                                           zh.GwAskQuestion(zh.GwDoOpenIn("Settings", "ja-JP")),
+		"Open Settings with region JP?":                                     zh.GwAskQuestion(zh.GwDoOpenRegion("Settings", "JP")),
+	}
+	for in, out := range titles {
+		n := gateway.NeedView{Kind: gateway.NeedApproval, Title: in, Rule: "Phone settings", Detail: "Claude Code · Pinky puts it back when the task ends"}
+		if got := needTitle(n); got != out {
+			t.Errorf("needTitle(%q) = %q, want %q", in, got, out)
+		}
+		if got, want := needDetail(n), zh.GwSettingsDetail("Claude Code"); got != want {
+			t.Errorf("needDetail = %q, want %q", got, want)
+		}
+	}
+	if got := ruleName("Phone settings"); got != zh.RuleSettingsPhone() {
+		t.Errorf("rule name %q", got)
 	}
 }
 

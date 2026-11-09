@@ -51,6 +51,7 @@ func init() {
 			Connection: "usb",
 			Backend:    "wda",
 			State:      driver.StateOnline,
+			Virtual:    true,
 		},
 		mjpeg: os.Getenv("PINKY_MJPEG_URL"),
 		udid:  os.Getenv("PINKY_SIM_UDID"),
@@ -103,14 +104,22 @@ type simDevice struct {
 func (d *simDevice) Apps(context.Context) ([]driver.App, error) { return d.apps, nil }
 
 func (d *simDevice) Launch(ctx context.Context, app string) error {
+	return d.WDADevice.Launch(ctx, d.bundleID(app))
+}
+
+func (d *simDevice) LaunchLocale(ctx context.Context, app string, loc driver.Locale) (func(context.Context) error, error) {
+	return d.WDADevice.LaunchLocale(ctx, d.bundleID(app), loc)
+}
+
+// bundleID is the bundle id of the app with this name, or app itself.
+func (d *simDevice) bundleID(app string) string {
 	want := strings.TrimSpace(app)
 	for _, a := range d.apps {
 		if strings.EqualFold(a.Name, want) {
-			want = a.ID
-			break
+			return a.ID
 		}
 	}
-	return d.WDADevice.Launch(ctx, want)
+	return want
 }
 
 // simApps lists a simulator's apps with their names, through simctl, and

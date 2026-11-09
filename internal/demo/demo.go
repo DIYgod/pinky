@@ -134,6 +134,11 @@ type Device struct {
 	// built-in apps uninstalled, by id.
 	added   map[string]added
 	removed map[string]bool
+	// switches, noSwitch and appLocales are phone_device's switches
+	// and the apps' languages (switches.go).
+	switches   map[string]string
+	noSwitch   map[string]string
+	appLocales map[string]string
 }
 
 // NewDevice returns a demo phone. Android phones use the Pixel launcher,

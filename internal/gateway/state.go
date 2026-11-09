@@ -238,6 +238,12 @@ type lease struct {
 	// logsRead is set once the agent read an app's logs: the driver may
 	// listen to the phone until the task ends (driver.LogListener).
 	logsRead bool
+	// settingsGranted is set when the person allowed changing the phone's
+	// settings for the rest of the task (switches.go).
+	settingsGranted bool
+	// changes lists the phone's settings the task changed, which Pinky
+	// puts back when it ends (switches.go).
+	changes []change
 	// recorded is set once the task's recording started (video.go).
 	recorded bool
 

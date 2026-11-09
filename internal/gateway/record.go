@@ -329,6 +329,7 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 	if ll, ok := d.dev.(driver.LogListener); ok && l.logsRead {
 		go ll.StopAppLogs()
 	}
+	g.putBackLocked(l)
 	g.wakeLocked(d)
 	g.recordTaskLocked(t)
 	leaseID := l.id

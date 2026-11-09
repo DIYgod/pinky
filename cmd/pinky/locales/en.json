@@ -3284,6 +3284,34 @@
       }
     }
   },
+  "gwDidOpenIn": "Opened {app} in {language}",
+  "@gwDidOpenIn": {
+    "description": "A step: the agent opened this app in another language than the phone's, given as a language tag such as ja-JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "language": {
+        "type": "String",
+        "example": "ja-JP"
+      }
+    }
+  },
+  "gwDidOpenRegion": "Opened {app} with region {region}",
+  "@gwDidOpenRegion": {
+    "description": "A step: the agent opened this app with another region's dates, numbers and currency, given as a region code such as JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "region": {
+        "type": "String",
+        "example": "JP"
+      }
+    }
+  },
   "gwDidOpenLink": "Opened “{link}” in {app}",
   "@gwDidOpenLink": {
     "description": "A step: the agent opened this link in this app. Shown only in other languages; in English the gateway's own words show.",
@@ -3307,6 +3335,24 @@
         "example": "home"
       }
     }
+  },
+  "gwDidSetSwitch": "Set {setting} to {value}",
+  "@gwDidSetSwitch": {
+    "description": "A step: the agent changed one of the phone's settings for testing, such as the screen's rotation, to this value. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the screen's rotation"
+      },
+      "value": {
+        "type": "String",
+        "example": "landscape"
+      }
+    }
+  },
+  "gwDidStopLocation": "Stopped the simulated location",
+  "@gwDidStopLocation": {
+    "description": "A step: Pinky stopped the place it made the phone report, so the phone reports where it really is again. Shown only in other languages; in English the gateway's own words show."
   },
   "gwDidSwipe": "Swiped {direction}",
   "@gwDidSwipe": {
@@ -3700,6 +3746,34 @@
       }
     }
   },
+  "gwDoOpenIn": "open {app} in {language}",
+  "@gwDoOpenIn": {
+    "description": "What a step asked for: open this app in another language than the phone's, given as a language tag such as ja-JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "language": {
+        "type": "String",
+        "example": "ja-JP"
+      }
+    }
+  },
+  "gwDoOpenRegion": "open {app} with region {region}",
+  "@gwDoOpenRegion": {
+    "description": "What a step asked for: open this app with another region's dates, numbers and currency, given as a region code such as JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "region": {
+        "type": "String",
+        "example": "JP"
+      }
+    }
+  },
   "gwDoOpenLink": "open “{link}” in {app}",
   "@gwDoOpenLink": {
     "description": "What a step asked for: open this link in this app. Shown only in other languages; in English the gateway's own words show.",
@@ -3741,6 +3815,20 @@
       "path": {
         "type": "String",
         "example": "photo.jpg"
+      }
+    }
+  },
+  "gwDoSetSwitch": "set {setting} to {value}",
+  "@gwDoSetSwitch": {
+    "description": "What a step asked for: change one of the phone's settings for testing, such as the screen's rotation, to this value. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the screen's rotation"
+      },
+      "value": {
+        "type": "String",
+        "example": "landscape"
       }
     }
   },
@@ -4086,6 +4174,16 @@
   "@gwOutcomeStopped": {
     "description": "How a task ended, inside gwStepFinished: stopped. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwSettingsDetail": "{agent} · Pinky puts it back when the task ends",
+  "@gwSettingsDetail": {
+    "description": "The second line of an approval to change the phone's settings for testing: the agent asking, and that Pinky undoes the change when the task ends. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
   "gwStatusBackground": "{work} · in the background",
   "@gwStatusBackground": {
     "description": "A phone's status line: an agent works on a background display; work is \"agent · task\". Shown only in other languages; in English the gateway's own words show.",
@@ -4318,6 +4416,36 @@
       }
     }
   },
+  "gwStepLanguageBack": "Put the language of {app} back",
+  "@gwStepLanguageBack": {
+    "description": "A step at the end of a task: an app the agent opened in another language is in the phone's language again. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "gwStepLanguageLeft": "Left the language of {app} as the person set it",
+  "@gwStepLanguageLeft": {
+    "description": "A step at the end of a task: Pinky did not put back an app's language, because the person changed it meanwhile. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "gwStepLanguageNotBack": "Could not put the language of {app} back",
+  "@gwStepLanguageNotBack": {
+    "description": "A step at the end of a task: Pinky could not put back the language of an app the agent opened in another language. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
   "gwStepListedFolder": "Listed the phone's Pinky folder ({count} files)",
   "@gwStepListedFolder": {
     "description": "A step: the agent listed the files in the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show.",
@@ -4474,6 +4602,44 @@
       }
     }
   },
+  "gwStepSwitchBack": "Put {setting} back to {value}",
+  "@gwStepSwitchBack": {
+    "description": "A step at the end of a task (or when the agent asked): Pinky put a setting it had changed back to what it was. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the appearance"
+      },
+      "value": {
+        "type": "String",
+        "example": "light"
+      }
+    }
+  },
+  "gwStepSwitchLeft": "Left {setting} as the person set it",
+  "@gwStepSwitchLeft": {
+    "description": "A step at the end of a task: Pinky did not put this setting back, because the person changed it meanwhile. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the appearance"
+      }
+    }
+  },
+  "gwStepSwitchNotBack": "Could not put {setting} back to {value}",
+  "@gwStepSwitchNotBack": {
+    "description": "A step at the end of a task: Pinky could not put a setting it had changed back to what it was (the phone went offline, or cannot). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the appearance"
+      },
+      "value": {
+        "type": "String",
+        "example": "light"
+      }
+    }
+  },
   "gwStepSavedReport": "Saved the task's report for the agent",
   "@gwStepSavedReport": {
     "description": "A step: as the task ended, the agent had its report (an HTML page of the steps with screenshots, and a JSON file) saved in the phone's folder on the computer, for a bug report or a pull request (phone_release export). The screen recording is not in it (gwStepSavedReportVideo is the step where it is). Shown only in other languages; in English the gateway's own words show."
@@ -4554,6 +4720,18 @@
       }
     }
   },
+  "gwSwitchAppearance": "the appearance",
+  "@gwSwitchAppearance": {
+    "description": "Names a phone setting inside a step: light or dark appearance (dark mode). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwSwitchLocation": "the location",
+  "@gwSwitchLocation": {
+    "description": "Names a phone setting inside a step: the place the phone reports. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwSwitchRotation": "the screen's rotation",
+  "@gwSwitchRotation": {
+    "description": "Names a phone setting inside a step, such as “Set the screen's rotation to landscape”. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwUnlockDetail": "{agent} is waiting for the phone to unlock · {task}",
   "@gwUnlockDetail": {
     "description": "The second line of the unlock card. Shown only in other languages; in English the gateway's own words show.",
@@ -4577,6 +4755,56 @@
         "example": "Pixel 9"
       }
     }
+  },
+  "gwValueAutomatic": "automatic",
+  "@gwValueAutomatic": {
+    "description": "A value of the phone's appearance: light by day, dark by night. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueAutoRotate": "auto-rotate",
+  "@gwValueAutoRotate": {
+    "description": "A value of the screen's rotation: it turns with how the phone is held. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueCustom": "custom",
+  "@gwValueCustom": {
+    "description": "A value of the phone's appearance on Android: dark between times the person set. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueDark": "dark",
+  "@gwValueDark": {
+    "description": "A value of the phone's appearance (dark mode). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueLandscape": "landscape",
+  "@gwValueLandscape": {
+    "description": "A value of the screen's rotation: turned to the left, the top on the left. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueLight": "light",
+  "@gwValueLight": {
+    "description": "A value of the phone's appearance. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueNoLocation": "none",
+  "@gwValueNoLocation": {
+    "description": "A value of the phone's location: no simulated place, the phone reports where it is. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValuePlace": "{place}",
+  "@gwValuePlace": {
+    "description": "A value of the phone's location: the place it reports, as latitude and longitude. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "place": {
+        "type": "String",
+        "example": "35.6812, 139.7671"
+      }
+    }
+  },
+  "gwValuePortrait": "portrait",
+  "@gwValuePortrait": {
+    "description": "A value of the screen's rotation: upright. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueReverseLandscape": "reverse landscape",
+  "@gwValueReverseLandscape": {
+    "description": "A value of the screen's rotation: turned to the right, the top on the right. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueUpsideDown": "upside down",
+  "@gwValueUpsideDown": {
+    "description": "A value of the screen's rotation. Shown only in other languages; in English the gateway's own words show."
   },
   "listMany": "{rest} and {last}",
   "@listMany": {
@@ -6577,6 +6805,10 @@
   "ruleSettingsChanges": "Settings changes",
   "@ruleSettingsChanges": {
     "description": "The name of the policy rule that asks before changing a setting."
+  },
+  "ruleSettingsPhone": "Phone settings",
+  "@ruleSettingsPhone": {
+    "description": "The name of the built-in rule that asks before an agent changes a phone's settings for testing: the screen's rotation, light or dark appearance, a simulated location, or an app's language."
   },
   "ruleTaskApps": "Task apps",
   "@ruleTaskApps": {

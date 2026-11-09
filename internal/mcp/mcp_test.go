@@ -122,7 +122,7 @@ func TestToolList(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_key",
-		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_app", "phone_logs", "phone_request_approval", "phone_handoff"}
+		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_app", "phone_logs", "phone_device", "phone_request_approval", "phone_handoff"}
 	got := map[string]*sdk.Tool{}
 	for _, tool := range res.Tools {
 		got[tool.Name] = tool
@@ -150,8 +150,60 @@ func TestToolList(t *testing.T) {
 	if !strings.Contains(string(schema), `"maxItems":50`) || !strings.Contains(string(schema), `"launch"`) {
 		t.Fatalf("phone_batch schema: %s", schema)
 	}
+	schema, _ = json.Marshal(got["phone_device"].InputSchema)
+	for _, s := range []string{`"reverse_landscape"`, `"dark"`, `"latitude"`, `"maximum":180`, `"all"`} {
+		if !strings.Contains(string(schema), s) {
+			t.Fatalf("phone_device schema misses %s: %s", s, schema)
+		}
+	}
+	schema, _ = json.Marshal(got["phone_launch"].InputSchema)
+	if !strings.Contains(string(schema), `"language"`) || !strings.Contains(string(schema), `"region"`) {
+		t.Fatalf("phone_launch schema: %s", schema)
+	}
 	if c.cs.InitializeResult().Instructions == "" {
 		t.Fatal("no server instructions")
+	}
+}
+
+func TestPhoneDevice(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-code")
+	c.call(t, "phone_connect", map[string]any{"task": "Test dark mode"})
+	text, isErr := c.call(t, "phone_device", nil)
+	if isErr || !strings.Contains(text, "\nrotation: portrait\nappearance: light\nlocation: none") {
+		t.Fatalf("read:\n%s", text)
+	}
+	// A real phone asks first.
+	go func() {
+		deadline := time.Now().Add(2 * time.Second)
+		for time.Now().Before(deadline) {
+			if needs := h.g.Needs(); len(needs) > 0 {
+				h.g.Decide(needs[0].ID, gateway.AllowTask, "")
+				return
+			}
+			time.Sleep(2 * time.Millisecond)
+		}
+	}()
+	text, isErr = c.call(t, "phone_device", map[string]any{"appearance": "dark", "location": map[string]any{"latitude": 35.6812, "longitude": 139.7671}})
+	if isErr || !strings.HasPrefix(text, "settled") || !strings.Contains(text, "appearance: dark (was light)") ||
+		!strings.Contains(text, "location: 35.6812,139.7671 (was none)") {
+		t.Fatalf("set:\n%s", text)
+	}
+	text, isErr = c.call(t, "phone_device", map[string]any{"reset": []string{"location"}})
+	if isErr || !strings.Contains(text, "Stopped the simulated location.") || !strings.Contains(text, "location: none (was 35.6812,139.7671)") {
+		t.Fatalf("reset:\n%s", text)
+	}
+	if text, isErr = c.call(t, "phone_device", map[string]any{"rotation": "sideways"}); !isErr {
+		t.Fatalf("a bad rotation:\n%s", text)
+	}
+	text, isErr = c.call(t, "phone_launch", map[string]any{"app": "Settings", "language": "ja"})
+	if isErr || !strings.HasPrefix(text, "settled") || h.dev.AppLocale("com.android.settings") != "ja" {
+		t.Fatalf("launch in Japanese:\n%s", text)
+	}
+	c.call(t, "phone_release", nil)
+	h.g.Flush()
+	if h.dev.SwitchValue(driver.SwitchAppearance) != "light" || h.dev.AppLocale("com.android.settings") != "" {
+		t.Fatal("not put back after the task")
 	}
 }
 

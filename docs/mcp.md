@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 17 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 18 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -269,8 +269,15 @@ The fingers stay inside the element and clear of the screen's edges, so the edge
 | Argument | Type | Meaning |
 | --- | --- | --- |
 | `app` | string, required | Package name, bundle id, or name (the app's name, its home screen name or a well-known one; part of a name is not enough); or a link: `https://…`, an app's own link (`myapp://…`), `tel:`, `sms:`, `mailto:` and the like ([Opening a link](#opening-a-link)) |
+| `language` | string | Open the app in this language, a BCP 47 tag (`ja`, `zh-Hans`, `pt-BR`), without changing the phone's. A region in the tag sets the region too |
+| `region` | string | Open the app with this region's dates, numbers and currency (`JP`, `DE`, `419`). Alone, the app keeps the phone's language |
 
 Opening a blocked banking or wallet app, or one the person blocked, asks the person like an Ask action (rule `Finance apps` or `Blocked by you`; up to 45 s, then `approval_pending`). If they allow it, it stays allowed for the rest of the task: the agent may open it and read its screen, and everything else the rules ask about there still asks; Pinky keeps no screenshots, recording or screen text of it (its `ocr` lines come from a picture kept in memory only, and no screenshot is returned), and Settings do not change. If they deny it, later launches of it in the task return `blocked_by_policy` at once. Password managers return `blocked_by_policy` without asking. Apps outside the agent's scope or the task's list return `scope_denied`; unknown apps return `not_found`. A name finds an app only by its id, its name, its home screen name or a well-known name (微信 for WeChat): a name that is only part of other apps' names (微信 in 微信读书) finds nothing, and `not_found` lists those apps as similar. The task's `apps` list in `phone_connect` takes names the same way, and its message lists similar apps for a name it could not place.
+
+With `language` or `region`, the launch changes the phone's settings for that app, as [phone_device](#phone_device) does for the whole phone, under the same rule `Phone settings`: on a real phone it asks the person (besides what the rules say about the launch itself), read-only agents get `scope_denied` and read-only mode `blocked_by_policy`. A running app restarts, since apps read their language when they start. Pinky puts the language back when the task ends, or on `phone_device { reset: ["language"] }`. History says "Opened Settings in ja-JP", or "with region JP". A link keeps the language of the app it opens in: `language` or `region` with a link is `invalid_argument`.
+
+- **Android 13 and later** set the app's own language (`cmd locale set-app-locales`), as the phone's Settings › Apps › Language would; the app changes at once. Earlier versions return `unsupported`.
+- **iPhones and iOS Simulators** pass `-AppleLanguages` and `-AppleLocale` as launch arguments, after quitting the app if it runs. The app keeps that language until it quits, so putting it back quits the app if it still runs (with the WebDriverAgent helper; through CoreDevice, without it, the app stays in that language until it quits).
 
 #### Opening a link
 
@@ -382,6 +389,33 @@ The result's message says what it holds ("120 log lines of Example since 14:05:0
 - **Android** reads logcat (the main, system and crash buffers) for the app's user id, and crash reports from the drop box (`data_app_crash`, `data_app_native_crash`, `data_app_anr`) and the crash buffer. An app that shares its user id with others is `unsupported`, as their lines cannot be told apart. What a phone still holds depends on its buffers: a busy phone may have dropped older lines.
 - Each call is a step in the task's history, with what was read and never the text: "Read 120 log lines of Example", "Read 1 crash report of Example".
 
+### phone_device
+
+The switches developers flip to test an app: the screen's rotation, light or dark appearance, and a simulated location. Without arguments it reads them; read-only and watch-only agents may only read.
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `rotation` | `portrait` \| `landscape` \| `upside_down` \| `reverse_landscape` \| `auto` | Turn the screen. `landscape` is turned to the left, the top on the left; `auto` (Android) turns with how the phone is held |
+| `appearance` | `light` \| `dark` | Light or dark appearance (dark mode) |
+| `location` | `{latitude, longitude}` | Make every app on the phone see this place |
+| `reset` | string[] | Put back sooner what this task changed: `rotation`, `appearance`, `location`, `language` (apps opened in another language with `phone_launch`), or `all` |
+| `intent` | string | One sentence on why, shown on the approval panel |
+| `approval_id` | string | From `approval_pending`: repeat the same call with it |
+
+The result has one line per switch, after the screen's changes: `rotation: landscape (was portrait)`, `appearance: dark`, `location: none`, or `location: unsupported · <why>`. Several switches in one call are read first, so one the phone lacks fails the call before anything changes, then set in the order rotation, appearance, location.
+
+- **Asking.** On a real phone a change asks the person (rule `Phone settings`; up to 45 s, then `approval_pending`), with Allow once and Allow for this task, which covers the task's later changes and language launches; there is no Always allow. On an emulator or a Simulator it asks only when the person chose to approve more than payments in Settings › Safety. Read-only agents get `scope_denied`, read-only mode `blocked_by_policy` (rule `Read-only`). `reset` never asks.
+- **Putting back.** When the task ends, however it ends (released, stopped, the session gone), Pinky puts back every change, the last made first, as steps after "Finished" in history: "Put the appearance back to light", "Stopped the simulated location". A switch the person changed meanwhile stays as they set it ("Left the appearance as the person set it"), and a phone offline at the end keeps the change ("Could not put …").
+- **Each change is a step** in history: "Set the screen's rotation to landscape", "Set the location to 35.6812, 139.7671".
+- **Rotation** turns what the app in front allows: an app that only runs upright stays upright, though the phone counts as turned and is turned back.
+
+| | Rotation | Appearance | Location |
+| --- | --- | --- | --- |
+| Android emulator | yes | yes | yes, through the emulator's console; it cannot stop a simulated location, so one set on an emulator that had none stays |
+| Android phone | yes | yes | `unsupported` |
+| iOS Simulator, iPhone with the WebDriverAgent helper | yes, but not `auto` | yes | yes |
+| iPhone without the helper | `unsupported` | `unsupported` | `unsupported` |
+
 ### phone_request_approval
 
 | Argument | Type | Meaning |
@@ -420,7 +454,7 @@ An agent that writes a bug report or a pull request can keep what it saw as file
 - While an approval is open on a phone, other actions on it return `approval_pending` with that approval's id; reads still work.
 - Before acting on Allow, Pinky reads the screen again and compares the target's role, label, states and position (a few pixels of tolerance) and the screen's text and states (status bar excluded; OCR text only when the screen has no element text). Any change returns `stale`.
 - "Allow for this task" covers the rules that asked, in that app, for the rest of the task. An action that another rule also asks about still asks. `phone_request_approval` has no such answer: each question asks the person.
-- "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files`, `phone_app`, `phone_launch` or `phone_logs`.
+- "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files`, `phone_app`, `phone_launch`, `phone_logs` or `phone_device`.
 - An MCP cancellation of the blocked call, a closed session, Stop and Take over all withdraw the panel without acting.
 - Only the client's `Decide` answers approvals. No tool can.
 
@@ -430,6 +464,7 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 
 ## Limits
 
+- `phone_device` changes are kept in memory: if Pinky quits during a task, or the phone is offline when it ends, they stay. An Android emulator's location is read back as the last place Pinky sent it, so one set in the emulator's extended controls meanwhile is replaced when the task ends.
 - iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper; `phone_pinch` returns `unsupported` too. With the helper, everything works; reading the screen takes 0.5 to 3 s, and about 7 s on a home screen.
 - iPhones through Device Hub (iOS 27 and later without the helper) cannot pinch: `phone_pinch` returns `unsupported` before it asks the person or touches the phone. With the WebDriverAgent helper chosen for the phone in Settings › Phones, they pinch.
 

@@ -40,7 +40,10 @@ var (
 	reTurn       = re(`^Turned (?:“(.*)” )?with two fingers$`)
 	rePressed    = re(`^Pressed (.+)$`)
 	reOpenedLink = re(`^Opened “(.*)” in (.+)$`)
+	reOpenedIn   = re(`^Opened (.+) in ([a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)$`)
+	reOpenedReg  = re(`^Opened (.+) with region ([A-Z]{2}|[0-9]{3})$`)
 	reOpened     = re(`^Opened (.+)$`)
+	reSetSwitch  = re(`^[Ss]et (the screen's rotation|the appearance|the location) to ([^;]+)$`)
 	reCopyOne    = re(`^[Cc]opy “(.*)” to (.+)$`)
 	reCopyMany   = re(`^[Cc]opy (\d+) files? to (.+)$`)
 	reListFolder = re(`^[Ll]ist the phone's Pinky folder$`)
@@ -64,11 +67,13 @@ var (
 
 // action is a parsed action, which says itself as done or as asked.
 type action struct {
-	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, copy, copymany, list, copyfrom, copyto, receive, install, update, uninstall, stop, installfrom, readlogs
+	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, openin, openregion, set, stoplocation, copy, copymany, list, copyfrom, copyto, receive, install, update, uninstall, stop, installfrom, readlogs
 	label, text, x, y    string
 	x2, y2, dir, key     string
 	app, files, phone    string
 	version              string
+	locale               string // openin's language tag, openregion's region
+	setting, value       string // set's switch and value, in the gateway's words
 	into, submit, placed bool
 }
 
@@ -106,10 +111,69 @@ func parseAction(s string) (action, bool) {
 	if m := reOpenedLink.FindStringSubmatch(s); m != nil {
 		return action{verb: "openlink", label: m[1], app: m[2]}, true
 	}
+	if m := reOpenedIn.FindStringSubmatch(s); m != nil {
+		return action{verb: "openin", app: m[1], locale: m[2]}, true
+	}
+	if m := reOpenedReg.FindStringSubmatch(s); m != nil {
+		return action{verb: "openregion", app: m[1], locale: m[2]}, true
+	}
 	if m := reOpened.FindStringSubmatch(s); m != nil {
 		return action{verb: "open", app: m[1]}, true
 	}
+	if m := reSetSwitch.FindStringSubmatch(s); m != nil {
+		return action{verb: "set", setting: m[1], value: m[2]}, true
+	}
+	if s == "Stopped the simulated location" {
+		return action{verb: "stoplocation"}, true
+	}
 	return action{}, false
+}
+
+// askSteps says what several steps asked for, as phone_device joins them:
+// "Set the screen's rotation to landscape; set the appearance to dark".
+func askSteps(s string) (string, bool) {
+	parts := strings.Split(s, "; ")
+	if len(parts) < 2 {
+		return "", false
+	}
+	for i, p := range parts {
+		a, ok := parseAction(p)
+		if !ok {
+			return "", false
+		}
+		parts[i] = a.ask()
+	}
+	return strings.Join(parts, locales.ListSeparator()), true
+}
+
+// The phone's settings phone_device changes, and their values, as the
+// gateway words them in its steps.
+var switchNames = map[string]func() string{
+	"the screen's rotation": locales.GwSwitchRotation,
+	"the appearance":        locales.GwSwitchAppearance,
+	"the location":          locales.GwSwitchLocation,
+}
+
+var switchValues = map[string]func() string{
+	"portrait": locales.GwValuePortrait, "landscape": locales.GwValueLandscape, "upside down": locales.GwValueUpsideDown,
+	"reverse landscape": locales.GwValueReverseLandscape, "auto-rotate": locales.GwValueAutoRotate,
+	"light": locales.GwValueLight, "dark": locales.GwValueDark, "automatic": locales.GwValueAutomatic,
+	"custom": locales.GwValueCustom, "none": locales.GwValueNoLocation,
+}
+
+func switchName(s string) string {
+	if f := switchNames[s]; f != nil {
+		return f()
+	}
+	return s
+}
+
+// switchValue says a setting's value; a place is "35.6812, 139.7671".
+func switchValue(s string) string {
+	if f := switchValues[s]; f != nil {
+		return f()
+	}
+	return locales.GwValuePlace(s)
 }
 
 // parseAsked reads what the files, app and logs steps word in the
@@ -231,6 +295,12 @@ func (a action) done() string {
 		return locales.GwDidOpen(a.app)
 	case "openlink":
 		return locales.GwDidOpenLink(a.label, a.app)
+	case "openin":
+		return locales.GwDidOpenIn(a.app, a.locale)
+	case "openregion":
+		return locales.GwDidOpenRegion(a.app, a.locale)
+	case "set":
+		return locales.GwDidSetSwitch(switchName(a.setting), switchValue(a.value))
 	}
 	return a.ask()
 }
@@ -292,6 +362,14 @@ func (a action) ask() string {
 		return locales.GwDoOpen(a.app)
 	case "openlink":
 		return locales.GwDoOpenLink(a.label, a.app)
+	case "openin":
+		return locales.GwDoOpenIn(a.app, a.locale)
+	case "openregion":
+		return locales.GwDoOpenRegion(a.app, a.locale)
+	case "set":
+		return locales.GwDoSetSwitch(switchName(a.setting), switchValue(a.value))
+	case "stoplocation":
+		return locales.GwDidStopLocation() // never asked: only ever a step that happened
 	case "copy":
 		return locales.GwDoCopyFile(a.label, a.phone)
 	case "copymany":
@@ -365,6 +443,9 @@ func actionAsked(past string) string {
 		}
 		if a, ok := parseAsked(past); ok {
 			return a.ask()
+		}
+		if ask, ok := askSteps(past); ok {
+			return ask
 		}
 	}
 	return imperative(past)
@@ -451,6 +532,9 @@ func stepText(s string) string {
 		if give, ok := giveRecordings(rest); ok {
 			return give
 		}
+		if ask, ok := askSteps(rest); ok {
+			return ask
+		}
 		return rest
 	}
 	switch s {
@@ -467,6 +551,9 @@ func stepText(s string) string {
 	}
 	if m := reWaiting.FindStringSubmatch(s); m != nil {
 		return locales.GwStepWaiting(asked(m[1]))
+	}
+	if t, ok := putBackText(s); ok {
+		return t
 	}
 	if m := reBlocked.FindStringSubmatch(s); m != nil {
 		return locales.GwStepBlocked(ruleName(m[1]), asked(m[2]))
@@ -545,6 +632,39 @@ func stepText(s string) string {
 		return locales.GwStepYouDenied(asked(m[2]))
 	}
 	return s
+}
+
+// What Pinky did when a task ended to put back the settings an agent
+// changed (gateway/switches.go).
+var (
+	reSwitchBack      = re(`^Put (the screen's rotation|the appearance|the location) back to (.+)$`)
+	reSwitchLeft      = re(`^Left (the screen's rotation|the appearance|the location) as the person set it$`)
+	reSwitchNotBack   = re(`^Could not put (the screen's rotation|the appearance|the location) back to (.+)$`)
+	reLanguageBack    = re(`^Put the language of (.+) back$`)
+	reLanguageLeft    = re(`^Left the language of (.+) as the person set it$`)
+	reLanguageNotBack = re(`^Could not put the language of (.+) back$`)
+)
+
+func putBackText(s string) (string, bool) {
+	if m := reSwitchBack.FindStringSubmatch(s); m != nil {
+		return locales.GwStepSwitchBack(switchName(m[1]), switchValue(m[2])), true
+	}
+	if m := reSwitchLeft.FindStringSubmatch(s); m != nil {
+		return locales.GwStepSwitchLeft(switchName(m[1])), true
+	}
+	if m := reSwitchNotBack.FindStringSubmatch(s); m != nil {
+		return locales.GwStepSwitchNotBack(switchName(m[1]), switchValue(m[2])), true
+	}
+	if m := reLanguageBack.FindStringSubmatch(s); m != nil {
+		return locales.GwStepLanguageBack(m[1]), true
+	}
+	if m := reLanguageLeft.FindStringSubmatch(s); m != nil {
+		return locales.GwStepLanguageLeft(m[1]), true
+	}
+	if m := reLanguageNotBack.FindStringSubmatch(s); m != nil {
+		return locales.GwStepLanguageNotBack(m[1]), true
+	}
+	return "", false
 }
 
 // stepSub says a step's second line as the gateway (or the fake) wrote
@@ -647,12 +767,20 @@ func approvalText(s string) string {
 		return locales.GwAskOpenLink(m[1], m[2])
 	}
 	if m := reOpenTitle.FindStringSubmatch(s); m != nil && !strings.Contains(m[1], "“") {
+		// "Open Settings in ja-JP?"
+		if a, ok := parseAction("Opened " + m[1]); ok && a.verb != "open" {
+			return locales.GwAskQuestion(a.ask())
+		}
 		return locales.GwAskOpen(m[1])
 	}
-	// What describe says, capitalized, as a question: "Tapped at 540,1200?".
+	// What describe says, capitalized, as a question: "Tapped at 540,1200?",
+	// and phone_device's "Set the appearance to dark; set …?".
 	if m := reQuestion.FindStringSubmatch(s); m != nil {
 		if a, ok := parseAction(m[1]); ok {
 			return locales.GwAskQuestion(a.ask())
+		}
+		if ask, ok := askSteps(m[1]); ok {
+			return locales.GwAskQuestion(ask)
 		}
 	}
 	return s
@@ -692,6 +820,7 @@ var (
 	reUnlockDetail = re(`^(.+) is waiting for the phone to unlock · (.*)$`)
 	reAgentWants   = re(`^(.+) wants to connect for “(.*)”\.(?: Allowing gives it (\S+) access\.)?$`)
 	reFilesDetail  = re(`^(.+) · into the phone's Pinky folder(: .*)?$`)
+	reSettingsBack = re(`^(.+) · Pinky puts it back when the task ends$`)
 )
 
 // needDetail is a Needs you card's second line.
@@ -717,6 +846,9 @@ func needDetail(n gateway.NeedView) string {
 	}
 	if n.Rule == "Installing from the computer" || n.Rule == "Uninstalling apps" {
 		return appDetail(n.Detail)
+	}
+	if m := reSettingsBack.FindStringSubmatch(n.Detail); m != nil {
+		return locales.GwSettingsDetail(m[1])
 	}
 	return n.Detail
 }

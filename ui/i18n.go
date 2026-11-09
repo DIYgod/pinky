@@ -25,6 +25,7 @@ var ruleNames = map[string]func() string{
 	"Installs and links": locales.RuleInstallsLinks,
 	"Calls":              locales.RuleCalls,
 	"Settings changes":   locales.RuleSettingsChanges,
+	"Phone settings":     locales.RuleSettingsPhone,
 	"Every action":       locales.RuleEveryAction,
 	"Blocked by you":     locales.RuleBlockedByYou,
 	"credentials":        locales.RuleCredentials,

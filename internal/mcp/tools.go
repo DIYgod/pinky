@@ -102,7 +102,9 @@ type keyIn struct {
 
 type launchIn struct {
 	actionArgs
-	App string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it; or a link to open: https://…, an app's own link (myapp://…), tel:, sms:, mailto:."`
+	App      string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it; or a link to open: https://…, an app's own link (myapp://…), tel:, sms:, mailto:."`
+	Language string `json:"language,omitempty" jsonschema:"Open the app in this language, a BCP 47 tag such as ja, zh-Hans or pt-BR, without changing the phone's. It changes the phone's settings, so the person may be asked (rule Phone settings), and Pinky puts the app's language back when the task ends."`
+	Region   string `json:"region,omitempty" jsonschema:"Open the app with this region's dates, numbers and currency, a code such as JP or DE. Alone it keeps the phone's language."`
 }
 
 type appsIn struct {
@@ -127,6 +129,8 @@ type batchStep struct {
 	Rotation   float64 `json:"rotation,omitempty" jsonschema:"As in phone_pinch."`
 	Key        string  `json:"key,omitempty" jsonschema:"As in phone_key."`
 	App        string  `json:"app,omitempty" jsonschema:"As in phone_launch."`
+	Language   string  `json:"language,omitempty" jsonschema:"As in phone_launch."`
+	Region     string  `json:"region,omitempty" jsonschema:"As in phone_launch."`
 	Intent     string  `json:"intent,omitempty" jsonschema:"Why this step, shown to the person."`
 	ApprovalID string  `json:"approval_id,omitempty" jsonschema:"From an approval_pending result for this step."`
 	SettleMS   *int    `json:"settle_ms,omitempty" jsonschema:"As in phone_tap."`
@@ -174,6 +178,21 @@ type logsIn struct {
 	Limit      int    `json:"limit,omitempty" jsonschema:"At most this many lines (default 200, at most 500) or crash reports (default 3, at most 10); the newest are kept."`
 	Intent     string `json:"intent,omitempty" jsonschema:"One sentence on why, shown to the person when Pinky asks them first."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with this id to keep waiting."`
+}
+
+type deviceIn struct {
+	Device     string    `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Rotation   string    `json:"rotation,omitempty" jsonschema:"Turn the screen: portrait, landscape (turned to the left, the top on the left), upside_down, reverse_landscape, or auto (Android: turn with how the phone is held)."`
+	Appearance string    `json:"appearance,omitempty" jsonschema:"light or dark."`
+	Location   *location `json:"location,omitempty" jsonschema:"Make the phone report this place, until reset or the end of the task."`
+	Reset      []string  `json:"reset,omitempty" jsonschema:"Put back what this task changed, before the task ends: rotation, appearance, location, language (the apps opened in another language), or all."`
+	Intent     string    `json:"intent,omitempty" jsonschema:"One sentence on why, shown to the person on the approval panel and in history."`
+	ApprovalID string    `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with the same arguments and this id to keep waiting."`
+}
+
+type location struct {
+	Latitude  float64 `json:"latitude" jsonschema:"Degrees north, -90 to 90."`
+	Longitude float64 `json:"longitude" jsonschema:"Degrees east, -180 to 180."`
 }
 
 type requestApprovalIn struct {
@@ -366,7 +385,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			"file:, content:, intent:, javascript:, data: and Shortcuts links are refused; a link no app opens returns not_found, and one several apps open with none set as the default returns unsupported, naming them.",
 		InputSchema: schema[launchIn](patchSettle), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in launchIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App, Settle: settleArg(in.SettleMS)})), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App,
+				Language: in.Language, Region: in.Region, Settle: settleArg(in.SettleMS)})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_apps", Title: "List apps",
@@ -396,7 +416,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			for _, st := range in.Steps {
 				a := gateway.Action{Tool: strings.TrimPrefix(st.Tool, "phone_"), Ref: st.Ref, LongPress: st.LongPress, Text: st.Text,
 					Append: st.Append, Submit: st.Submit, Direction: strings.ToLower(st.Direction), From: st.From.screen(), To: st.To.screen(),
-					DurationMS: st.DurationMS, Scale: st.Scale, Rotation: st.Rotation, Key: st.Key, App: st.App, Intent: st.Intent, ApprovalID: st.ApprovalID,
+					DurationMS: st.DurationMS, Scale: st.Scale, Rotation: st.Rotation, Key: st.Key, App: st.App, Language: st.Language, Region: st.Region, Intent: st.Intent, ApprovalID: st.ApprovalID,
 					Settle: settleArg(st.SettleMS)}
 				if res := pointArg(st.X, st.Y, &a.Point); res != nil {
 					return res, nil, nil
@@ -462,6 +482,33 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Intent: strings.TrimSpace(in.Intent),
 					ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
 				App: in.App, Kind: in.Kind, Since: in.Since, Filter: in.Filter, Level: in.Level, Limit: in.Limit})), nil, nil
+		})
+
+	sdk.AddTool(srv, &sdk.Tool{Name: "phone_device", Title: "Phone settings for testing",
+		Description: "Turn the screen, switch light or dark appearance, or simulate a location, as developers do to test an app; without arguments, read them. " +
+			"Pinky puts back everything a task changed when it ends, and reset puts it back sooner. These change the phone's settings: on a real phone they always ask the person " +
+			"(rule Phone settings; up to 45 s, then approval_pending with an approval_id to repeat the call with), on emulators and Simulators only when the person chose to approve more. " +
+			"Read-only and watch-only agents may only read. What a phone cannot do returns unsupported with why: location works on Android emulators, iOS Simulators and iPhones with the WebDriverAgent helper, not on Android phones.",
+		InputSchema: schema[deviceIn](func(p map[string]*jsonschema.Schema) {
+			enum(p["rotation"], "portrait", "landscape", "upside_down", "reverse_landscape", "auto")
+			enum(p["appearance"], "light", "dark")
+			enum(p["reset"].Items, "rotation", "appearance", "location", "language", "all")
+			nonNull(p, "location")
+			ll := p["location"].Properties
+			bounds(ll["latitude"], -90, 90)
+			bounds(ll["longitude"], -180, 180)
+		}),
+		Annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(false), IdempotentHint: true, OpenWorldHint: boolp(false)}},
+		func(ctx context.Context, req *sdk.CallToolRequest, in deviceIn) (*sdk.CallToolResult, any, error) {
+			dr := gateway.DeviceRequest{
+				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Intent: strings.TrimSpace(in.Intent),
+					ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
+				Rotation: strings.ToLower(strings.TrimSpace(in.Rotation)), Appearance: strings.ToLower(strings.TrimSpace(in.Appearance)),
+				Reset: in.Reset}
+			if in.Location != nil {
+				dr.Location = &gateway.Location{Latitude: in.Location.Latitude, Longitude: in.Location.Longitude}
+			}
+			return render(s.session(req, remote).Device(ctx, dr)), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_request_approval", Title: "Ask the person",

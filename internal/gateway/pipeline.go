@@ -38,6 +38,10 @@ type Action struct {
 	Scale, Rotation float64
 	Key             string
 	App             string
+	// Language and Region open the app in another language or region
+	// (phone_launch, switches.go): a BCP 47 language such as "ja" or
+	// "zh-Hans", and a two-letter region such as "JP".
+	Language, Region string
 	// Intent and ApprovalID are per step in phone_batch.
 	Intent     string
 	ApprovalID string
@@ -113,8 +117,14 @@ func (a Action) check() *Result {
 		if strings.TrimSpace(a.App) == "" {
 			return bad("app is required: a name, package name or bundle id.")
 		}
+		if _, err := parseLocale(a.Language, a.Region); err != nil {
+			return bad("%v", err)
+		}
 	default:
 		return bad("unknown action %q.", a.Tool)
+	}
+	if a.Tool != "launch" && (a.Language != "" || a.Region != "") {
+		return bad("language and region go with phone_launch only.")
 	}
 	if a.Settle != nil && (*a.Settle < 0 || *a.Settle > MaxSettle) {
 		return bad("settle_ms must be between 0 and %d.", MaxSettle.Milliseconds())
@@ -145,6 +155,10 @@ func (a Action) digest() string {
 		a.Tool, a.Ref, p(a.Point), a.LongPress, a.Text, a.Append, a.Submit, a.Direction, p(a.From), p(a.To), a.DurationMS, a.Key, a.App)
 	if a.Scale != 0 || a.Rotation != 0 {
 		s += fmt.Sprintf("|scale=%g|rot=%g", a.Scale, a.Rotation)
+	}
+	if a.localized() {
+		loc := a.locale()
+		s += "|lang=" + loc.Language + "|region=" + loc.Region
 	}
 	return digest(s)
 }
@@ -198,6 +212,12 @@ func (a Action) args(c Call) string {
 	}
 	if a.App != "" {
 		m["app"] = a.App
+	}
+	if a.Language != "" {
+		m["language"] = a.Language
+	}
+	if a.Region != "" {
+		m["region"] = a.Region
 	}
 	if a.Settle != nil {
 		m["settle_ms"] = a.Settle.Milliseconds()
@@ -349,6 +369,9 @@ type prep struct {
 	// unblock is set when the approval for this launch asks the person to
 	// allow a blocked app for the task (unblock.go).
 	unblock bool
+	// localeUndo puts back the language a launch gave its app, which
+	// stays until the task ends (switches.go).
+	localeUndo func(context.Context) error
 	// settleFull ignores the action's settle_ms: the person approved it,
 	// allowed its rule for the task or always allows it in the app. Its
 	// result should show what it did before the agent decides whether to
@@ -414,6 +437,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	g.ocrForVerdict(ctx, d, p, cur)
 	v := g.evaluate(p, cur)
 	v, _ = g.unblockAsk(l, p, v)
+	v = g.settingsVerdict(l, a, p, v)
 	switch v.Decision {
 	case policy.Deny:
 		d.act.Unlock()
@@ -482,6 +506,7 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 	if ask {
 		return nil // the person may allow the blocked app: ask with the screen read
 	}
+	v = g.settingsVerdict(l, a, p, v)
 	switch {
 	case v.Decision == policy.Deny:
 		res := refusal(v)
@@ -784,6 +809,16 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		}
 	case "launch":
 		p.input.Op = policy.OpLaunch
+		if a.localized() {
+			if policy.IsLink(a.App) {
+				return p, errResult(ErrInvalidArgument, "A link opens in the browser, which keeps its language; open an app in another language instead. Nothing was done.")
+			}
+			if dev, _ := g.screenOf(d); dev != nil {
+				if _, ok := dev.(driver.LocaleLauncher); !ok {
+					return p, errResult(ErrUnsupported, "%s cannot open an app in another language: Android 13 and later, iOS Simulators and iPhones can. Nothing was done.", d.name())
+				}
+			}
+		}
 		if policy.IsLink(a.App) {
 			p.url, p.link = true, strings.TrimSpace(a.App)
 			p.input.LaunchURL, p.input.Link = true, p.link
@@ -1140,7 +1175,7 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 		}
 		return "Send the message?"
 	case a.Tool == "launch":
-		return fmt.Sprintf("Open %s?", p.launch.Name)
+		return fmt.Sprintf("Open %s%s?", p.launch.Name, localeWords(a))
 	case v.Has(policy.ChangeSetting) && label != "":
 		return fmt.Sprintf("Change “%s”?", label)
 	case label != "" && a.Tool != "pinch":
@@ -1407,7 +1442,7 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 		return g.attachScreen(l, statusResult(StatusStale,
 			"The screen changed while the approval waited, so nothing was done. Observe and decide again."), cur)
 	}
-	v := g.evaluate(p, cur)
+	v := g.settingsVerdict(l, a, p, g.evaluate(p, cur))
 	if v.Decision == policy.Deny {
 		res := refusal(v)
 		g.closeStep(info.ID, notRunStatus(res), out.Waited)
@@ -1521,6 +1556,12 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	d.inflight = nil
 	g.mu.Unlock()
 	cancel()
+	if p.localeUndo != nil {
+		// The app keeps its language until the task ends.
+		g.mu.Lock()
+		g.noteLanguageLocked(l, p.launch, p.localeUndo)
+		g.mu.Unlock()
+	}
 	if err != nil {
 		res := g.actionError(l, err)
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
@@ -1768,6 +1809,15 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 		id := p.launch.ID
 		if id == "" {
 			id = p.launch.Name
+		}
+		if a.localized() {
+			ll, ok := dev.(driver.LocaleLauncher)
+			if !ok {
+				return fmt.Errorf("this phone opens apps in its own language only: %w", driver.ErrUnsupported)
+			}
+			undo, err := ll.LaunchLocale(ctx, id, a.locale())
+			p.localeUndo = undo
+			return err
 		}
 		return dev.Launch(ctx, id)
 	}
@@ -2454,7 +2504,7 @@ func describe(a Action, p *prep) string {
 			}
 			return fmt.Sprintf("Opened “%s” in %s", clip(p.link, maxLinkText), appLabel(screen.App{ID: p.launch.ID, Name: p.launch.Name}))
 		}
-		return "Opened " + name
+		return "Opened " + name + localeWords(a)
 	}
 	return a.Tool
 }

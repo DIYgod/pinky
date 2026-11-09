@@ -243,6 +243,7 @@ var knownRules = map[string]bool{
 	"Blocked by you": true, "credentials": true, "Finance apps": true, "Password managers": true,
 	"Task apps": true, "Agent scope": true, "New agent": true, "Files": true, "Recordings": true, "App logs": true,
 	"Installing from the computer": true, "Uninstalling apps": true, "Pinky's own apps": true, "System apps": true,
+	"Phone settings": true,
 }
 
 func ruleName(rule string) string {
