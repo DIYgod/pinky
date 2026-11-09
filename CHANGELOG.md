@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Adding an iPhone on a Windows computer no longer fails with "certificate signed by unknown authority" when Windows has not downloaded Apple's root certificate.
+
 ## 2026.1109.22 (2026-11-09)
 
 - `phone_observe` now tells agents that their app may show them a smaller copy of a screenshot, and that `save` keeps it at full resolution. Thanks to ferrraridave-coder.
