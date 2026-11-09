@@ -84,6 +84,7 @@ type Result struct {
 	Diff       []string
 	Full       bool
 	Settle     string // "timeout" when settling hit its limit
+	Early      bool   // settle_ms ended the wait while the screen changed: it may not show the action's effect yet
 	ApprovalID string
 	Rule       string
 	Note       string

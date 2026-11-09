@@ -16,7 +16,7 @@ type actionArgs struct {
 	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
 	Intent     string `json:"intent,omitempty" jsonschema:"One sentence on why you do this, shown to the person on the approval panel and in history."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with the same arguments and this id to keep waiting for the person's answer."`
-	SettleMS   *int   `json:"settle_ms,omitempty" jsonschema:"How long to wait for the screen to stop changing before it is read, 0 to 3000 milliseconds; default 3000. Lower it where results keep saying settle: timeout (games, video, live maps), where every action else waits the whole 3 s; 0 reads the screen right away."`
+	SettleMS   *int   `json:"settle_ms,omitempty" jsonschema:"The most milliseconds (0 to 3000, default 3000) to wait for the screen to stop changing before it is read. Lower it only where results keep saying settle: timeout (games, video, live maps), never to pay, send or confirm. Below about 500 the result always says settle: timeout, and a read cut short may not show what the action did yet: observe before repeating it. The next action still waits out the rest of the 3 s before it reads the screen."`
 }
 
 func (a actionArgs) call(ctx context.Context, req *sdk.CallToolRequest) gateway.Call {
@@ -314,7 +314,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_batch", Title: "Run several steps",
-		Description: "Run up to 50 tap, type, swipe, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that does not settle. " +
+		Description: "Run up to 50 tap, type, swipe, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that is not settled (approval_pending, uncertain or an error; a screen that kept moving, settle: timeout, does not stop it). " +
 			"If a step returns approval_pending, repeat that step alone (with its approval_id), then continue.",
 		InputSchema: schema[batchIn](func(p map[string]*jsonschema.Schema) {
 			item := p["steps"].Items

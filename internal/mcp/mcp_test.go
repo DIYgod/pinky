@@ -369,8 +369,10 @@ func TestSettleMS(t *testing.T) {
 	if isErr || strings.Contains(firstLine(text), "settle: timeout") {
 		t.Fatalf("swipe:\n%s", text)
 	}
+	// The screen did not change, but a read made early by settle_ms proves
+	// nothing: no "no change", and the message says why.
 	text, isErr = c.call(t, "phone_swipe", map[string]any{"direction": "down", "settle_ms": 0})
-	if isErr || !strings.HasPrefix(firstLine(text), "settled · Pixel 9 · settle: timeout") {
+	if isErr || firstLine(text) != "settled · Pixel 9 · settle: timeout" || !strings.Contains(text, "Read before the screen settled") {
 		t.Fatalf("swipe with settle_ms 0:\n%s", text)
 	}
 	if text, isErr = c.call(t, "phone_tap", map[string]any{"x": 10, "y": 10, "settle_ms": 3001}); !isErr {

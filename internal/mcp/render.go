@@ -61,7 +61,9 @@ func StatusLine(res *gateway.Result) string {
 	if res.Setup != "" {
 		parts = append(parts, "setup: "+res.Setup)
 	}
-	if !res.Full && res.Screen != nil && len(res.Diff) == 0 && len(res.Steps) == 0 {
+	if !res.Full && res.Screen != nil && len(res.Diff) == 0 && len(res.Steps) == 0 && !res.Early {
+		// After a read that settle_ms made early, the action may not have
+		// shown yet: "no change" could make the agent repeat it.
 		parts = append(parts, "no change")
 	}
 	return strings.Join(parts, " · ")
