@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -42,14 +43,17 @@ type mirror struct {
 	used    int
 	closed  bool
 
-	eventDriven bool
-	picW, picH  int     // the stream's picture size the right way up: the device's pixels
-	turn        int     // quarter turns clockwise that put the picture upright (driver.Packet.Turn)
-	boxX, boxY  float32 // inset from the input box to the picture
-	boxW, boxH  float32 // the screen's size on the window, in DIPs
-	maskPath    *mg.Path
-	maskRect    mg.Rect
-	mask        *screen.DisplayMask
+	// The mirror can sleep while the phone's picture stays still.
+	shownAt time.Time
+	asleep  atomic.Bool
+
+	picW, picH int     // the stream's upright picture size, in device pixels
+	turn       int     // clockwise quarter turns to put the picture upright
+	boxX, boxY float32 // inset from the input box to the picture
+	boxW, boxH float32 // the picture's size on the window, in DIPs
+	maskPath   *mg.Path
+	maskRect   mg.Rect
+	mask       *screen.DisplayMask
 
 	down      bool         // a touch is down
 	lastMove  time.Time    // throttles moves
@@ -57,7 +61,8 @@ type mirror struct {
 	scrollAt  screen.Point // where its finger started
 	scrollPos [2]float64   // where its finger is
 	scrollSeq int
-	compose   string // an input method's composition
+	pinch     *mirrorPinch // two fingers are down (mirrorpinch.go)
+	compose   string       // an input method's composition
 }
 
 // mirrorFor returns the phone's mirror, opening its stream if needed.
@@ -133,15 +138,13 @@ func (m *mirror) open() {
 			s, err = a.api.Stream(ctx, m.id, driver.StreamOptions{})
 		}
 		var p *video.Player
-		var events bool
 		if err == nil {
-			opt := video.PlayerOptions{YUV: true, UntaggedBT709: coreDevice}
+			opt := video.PlayerOptions{
+				YUV: true, SkipRepeats: s.Codec() != driver.MJPEG, OnFrame: m.wake,
+				UntaggedBT709: coreDevice,
+			}
 			if coreDevice {
 				opt.UntaggedChroma, _ = strconv.Atoi(os.Getenv("PINKY_IOS_MIRROR_SATURATION"))
-			}
-			events = s.Codec() == driver.MJPEG
-			if events {
-				opt.OnFrame = func() { a.post(func() {}) }
 			}
 			p, err = video.NewPlayer(s, opt)
 			if err != nil {
@@ -168,7 +171,7 @@ func (m *mirror) open() {
 				m.retryLater()
 				return
 			}
-			m.player, m.state, m.eventDriven = p, "playing", events
+			m.player, m.state = p, "playing"
 			go func() {
 				<-p.Done()
 				a.post(func() {
@@ -201,6 +204,32 @@ func (m *mirror) retryLater() {
 // as before a background task starts it.
 func (m *mirror) missing() bool {
 	return m.state == "failed" && errors.Is(m.err, driver.ErrNotFound)
+}
+
+// mirrorPaintFor is how long a mirror goes on painting after its last
+// picture: longer than the gaps between the pictures of a moving screen,
+// even at 15 a second, so that it does not stop and wake between them.
+const mirrorPaintFor = 250 * time.Millisecond
+
+// sleep stops painting on a still screen, unless a picture came
+// meanwhile, and reports whether it did.
+func (m *mirror) sleep(pl *video.Player) bool {
+	m.asleep.Store(true)
+	if pl.Pending() {
+		// It came before asleep was set, so it woke nothing.
+		m.asleep.Store(false)
+		return false
+	}
+	return true
+}
+
+// wake has the windows paint the mirror's new picture once it stopped
+// painting on a still screen. The player calls it, on its goroutine,
+// after each picture.
+func (m *mirror) wake() {
+	if m.asleep.CompareAndSwap(true, false) {
+		m.a.post(func() {})
+	}
 }
 
 func (m *mirror) close() {
@@ -382,10 +411,12 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 					a.post(func() {})
 				}
 				m.picW, m.picH, m.turn = w, h, f.Turn
+				m.shownAt = pt.Now()
 			}
-			// Repaint at the stream's rate, picking up the newest
-			// picture each time, without building the view again.
-			if !m.eventDriven {
+			// Paint again at up to 60 frames a second, without building
+			// the view, to pick up the next picture, until the screen
+			// stays still.
+			if pt.Now().Sub(m.shownAt) < mirrorPaintFor || !m.sleep(pl) {
 				pt.AnimationFrameRate(60)
 			}
 		}
@@ -401,6 +432,9 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			}
 			if outline && !locked && m.picW > 0 {
 				drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
+			}
+			if !tile {
+				drawFingers(pt, r, m)
 			}
 		})
 	})
@@ -518,9 +552,9 @@ func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind
 	pt.AnimationFrame()
 }
 
-// mirrorInput turns the person's pointer, wheel and keys on the mirror
-// into touches, keys and text in device pixels. The gateway pauses the
-// agent on any of them.
+// mirrorInput turns the person's pointer, wheel, pinches and keys on the
+// mirror into touches, keys and text in device pixels. The gateway pauses
+// the agent on any of them.
 func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) bool {
 	if m.picW == 0 || m.boxW == 0 || d.Status == gateway.DeviceOffline {
 		return false
@@ -556,14 +590,26 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		}
 		a.call(id, locales.MirrorCallKey(name), func() error { return a.api.Key(id, k) })
 	}
+	liftScroll := func() {
+		if m.scrolling {
+			m.scrolling = false
+			touch(driver.TouchUp, screen.Point{X: clampInt(int(m.scrollPos[0]), 0, m.picW-1), Y: clampInt(int(m.scrollPos[1]), 0, m.picH-1)})
+		}
+	}
 	switch ev.Kind {
 	case mg.InputPointerDown:
 		switch ev.Button {
 		case 0:
+			a.endPinch(m, id)
 			point := toDevice(ev.X, ev.Y)
 			mask := screen.UprightDisplayMask(d.Info.Model, m.turn, m.picW, m.picH)
 			if !mask.Visible(screen.Rect{X: point.X, Y: point.Y, W: 1, H: 1}, m.picW, m.picH) {
 				return false
+			}
+			if ev.Mods&mg.Alt != 0 && a.canPinch(d) {
+				liftScroll()
+				a.mirrorDrag(m, id, driver.TouchDown, point)
+				return true
 			}
 			m.down = true
 			touch(driver.TouchDown, point)
@@ -574,6 +620,13 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		}
 		return true
 	case mg.InputPointerMove:
+		if p := m.pinch; p != nil && p.drag && ev.Button == 0 {
+			if time.Since(m.lastMove) >= 8*time.Millisecond {
+				m.lastMove = time.Now()
+				a.mirrorDrag(m, id, driver.TouchMove, toDevice(ev.X, ev.Y))
+			}
+			return true
+		}
 		if m.down && ev.Button == 0 {
 			if time.Since(m.lastMove) >= 8*time.Millisecond {
 				m.lastMove = time.Now()
@@ -583,13 +636,29 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		}
 		return false
 	case mg.InputPointerUp:
+		if p := m.pinch; p != nil && p.drag && ev.Button == 0 {
+			a.mirrorDrag(m, id, driver.TouchUp, toDevice(ev.X, ev.Y))
+			return true
+		}
 		if ev.Button == 0 && m.down {
 			m.down = false
 			touch(driver.TouchUp, toDevice(ev.X, ev.Y))
 		}
 		return true
 	case mg.InputScroll:
-		a.mirrorScroll(m, id, ev, toDevice, touch)
+		if m.pinch == nil {
+			a.mirrorScroll(m, id, ev, toDevice, touch)
+		}
+		return true
+	case mg.InputZoom:
+		if !a.canPinch(d) {
+			return false
+		}
+		if m.down || (m.pinch != nil && m.pinch.drag) {
+			return true // a finger is down already
+		}
+		liftScroll()
+		a.mirrorZoom(m, id, ev)
 		return true
 	case mg.InputKeyDown:
 		if ev.Mods&mg.Cmd != 0 && ev.Key == mg.KeyV {

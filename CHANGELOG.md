@@ -2,6 +2,81 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1109.22 (2026-11-09)
+
+- `phone_observe` now tells agents that their app may show them a smaller copy of a screenshot, and that `save` keeps it at full resolution. Thanks to ferrraridave-coder.
+- Stopping an app on an iPhone from a Windows computer now works.
+- When an agent saves a task's report just as the screen recording starts, Pinky now still asks whether to give it the recording.
+
+## 2026.1109.21 (2026-11-09)
+
+- Agents can now turn the screen, switch between light and dark appearance, simulate a location and open an app in another language to test it. On a real phone you approve these first, and Pinky puts everything back when the task ends.
+
+## 2026.1109.20 (2026-11-09)
+
+- The live picture of a phone stops redrawing sooner once the phone's screen goes still, which saves power.
+
+## 2026.1109.19 (2026-11-09)
+
+- Agents can now install, update, uninstall and force-quit apps you build (an APK, or an `.ipa`/`.app` signed for your iPhone) from the phone's folder on the computer. Installing and uninstalling always ask you, with the app's name, version and signer, and **Allow for this task** covers an agent's next builds of the same app.
+- Agents on another computer can now upload files for an iPhone, to install apps from.
+- Agents can now read the log lines and crash reports of an app they are testing, to see why it failed. The first time in a task Pinky asks you (**Allow for this task** stops it asking again), except for development builds. Agents only get that app's own lines, and never the logs of banking, wallet, password-manager or blocked apps.
+- A task's history shows how many log lines or crash reports an agent read, never what they said.
+- Agents can now open links with `phone_launch` on Android (also on the background display) and iPhone: web pages, an app's own links (`myapp://…`), and call, message and email links. A link is judged as the app that opens it and as the tap it stands for, so blocked apps stay blocked and a payment link asks like a Pay button; the approval and Activity name the link and the app.
+- Links that reach past the app they open in (`file:`, `content:`, `intent:`, `javascript:`, `data:`, Shortcuts) are never opened, under the new rule Unsafe links.
+- Agents can pinch to zoom maps, photos and pages in and out, and turn them with two fingers (`phone_pinch`); iPhones need the WebDriverAgent helper for it.
+- You can pinch on the phone's picture too: pinch on the trackpad, or drag with Option held (Alt on Windows and Linux) as in Xcode's Simulator.
+- Agents can now save a screenshot as a file (`phone_observe` with `save`) and, as a task ends, its report as HTML and JSON (`phone_release` with `export`), for a bug report or a pull request. They go into the phone's folder on your computer and show only what the agent may see; agents on another computer get one-time download links.
+- When an agent exports a recorded task, Pinky asks you whether it gets the screen recording too. Recordings show one-time codes and blocked apps' notifications, so they stay on your computer unless you allow it, each time; if you decline, the agent gets the report alone.
+- Start an iOS Simulator or an Android emulator from **Add phone › Virtual phone** and use it as a phone, with the live picture, recordings, approvals and rules. Only you can start one.
+- An emulator that quits while it starts now says why.
+- Emulators Pinky starts have no sound, so they no longer crash while a Bluetooth headset switches to its microphone.
+- An Android phone that is still starting up shows as starting, instead of getting a garbled name and no picture.
+- On Android, Pinky can now type into text fields that refuse its usual way in, such as WeChat's chat box, including on the background display and with Chinese keyboards.
+- On Android, when typed text does not reach the field, or the field ends up reading something else, the agent now gets an error instead of a silent "no change".
+- Pinky now makes sure an Android phone it reaches over Wi-Fi is the phone you set up: another device on the network can no longer answer in its place. If you reset a phone yourself, its page offers to trust it again, or plug it in once.
+- Android phones connected over Wireless debugging that Pinky hasn't used now wait for you to choose Use before Pinky touches them.
+- iPhones with two screens, such as the iPhone Duo, now connect with the screen in use, unfolded or folded, and switch when you fold or unfold while connected.
+- When an iPhone sends no live picture, the error now says which screen Pinky asked for, its checkup says what came instead, and Send feedback includes the details.
+- Pinky now knows the iPhone 17e, iPhone 18 Pro Max, iPhone Duo and recent iPads by name.
+
+## 2026.1109.18 (2026-11-09)
+
+- In Settings › Agents, removing Pinky from an agent that changes its settings through its own command now shows an error when Pinky cannot read those settings, instead of saying Removed while the agent may still use Pinky. Thanks to tarou-jp.
+
+## 2026.1109.17 (2026-11-09)
+
+- On Linux, a Pinky unpacked from the `.tar.gz` now installs updates by itself: it checks the download, swaps in the new version's files, restarts into it, and goes back to the old version if the new one does not start. Other files in the same folder stay where they are. Thanks to pseudoyu.
+
+## 2026.1109.16 (2026-11-09)
+
+- On Linux and Windows, a paired iPhone or iPad on Wi-Fi now keeps its address while it answers there, so a forged network announcement can no longer pull Pinky's connection elsewhere; addresses no phone can have are ignored.
+- On Windows, saving in Settings › Rules no longer fails when another program, such as a virus scanner, a backup or your editor, has the rules file open for a moment.
+
+## 2026.1109.15 (2026-11-09)
+
+- Pinky now checks that an iPhone or iPad it connects to is the one paired with this computer, by the certificate from pairing, so another device on the network can't stand in for it over Wi-Fi.
+
+## 2026.1109.14 (2026-11-09)
+
+- Agents can have a tap, swipe, typing, key press or app launch wait less for the screen to settle (`settle_ms`), so in games and videos, whose screens never stop moving, an action no longer waits 3 s for nothing. Actions you approve still wait the full time. Thanks to chenzl25.
+- On an iPhone, Pinky now checks what typing put in the field: text that came out different, for example with a keyboard layout other than U.S., is reported instead of counting as typed. When typing key by key would enter the wrong letters, Pinky says why instead of typing them. Typing also no longer drops the first space after switching away from a Chinese keyboard, or waits twice for a phone clipboard that does not answer. Thanks to theniceboy.
+- On Android, when an app opened on the background display does not show up there yet, Pinky now waits a few seconds and nudges the display. If the screen stays empty, it tells the agent so instead of returning an empty screen, and a screenshot then gives the right reason. Thanks to crown3.
+- On Android 17, a task no longer moves to the phone's own screen when the background display cannot be read for a moment right after an app opens there.
+
+## 2026.1109.13 (2026-11-09)
+
+- An Android phone that hides its serial number from other apps is no longer listed once for each of its Wi-Fi connections, which could fill Phones and the menu bar with dozens of copies of the same phone. Pinky also no longer opens a second Wi-Fi connection to a phone that is already connected over Wi-Fi.
+
+## 2026.1109.12 (2026-11-09)
+
+- On Windows, an iPhone now keeps working over Wi-Fi when you unplug its cable, instead of going offline or staying "Locked on Wi-Fi" though it was unlocked. Thanks to yaoqiangyao.
+- On Windows, Pinky no longer leaves an adb console window open when the adb on your PATH comes from scoop.
+
+## 2026.1109.11 (2026-11-09)
+
+- An Android phone's picture no longer stays on "Connecting…" when its video encoder stops after a still screen: Pinky restarts the video within a few seconds. Thanks to NaNhkNaN.
+
 ## 2026.1109.10 (2026-11-09)
 
 - Agents can now find and open Android app clones (Dual apps, App Twin, Dual Messenger): each clone is listed as an app of its own, such as "WeChat (clone)", and opens on the phone's screen or in the background. A clone of a blocked app is blocked too.

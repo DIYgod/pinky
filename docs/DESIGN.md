@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 18 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -174,16 +174,20 @@ Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the sc
 | `phone_tap` | `ref` or `x,y`; `long_press?` | Result and new screen |
 | `phone_type` | `text` (up to 16384 chars); `ref?`; `append?`; `submit?` | Result and new screen |
 | `phone_swipe` | `direction`, a `ref`, or `from` and `to`; `duration_ms` (80 to 1200) | Result and new screen |
+| `phone_pinch` | `scale` (0.25 to 4) and/or `rotation` (-180 to 180); a `ref` or `x,y`; `duration_ms` (200 to 2000) | Result and new screen |
 | `phone_key` | `key`: back, home, recents, enter, tab, delete, escape, dpad keys, page\_up, page\_down | Result and new screen |
-| `phone_launch` | `app`: name, bundle id or package | Result and new screen |
+| `phone_launch` | `app`: name, bundle id or package; `language?`, `region?` | Result and new screen |
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
 | `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
+| `phone_app` | `action` (install, uninstall, stop); `paths` or `app` | Installs or updates an app from that local folder (an APK, an IPA or a `.app`), uninstalls an app, or force-quits it |
+| `phone_logs` | `app`, `kind?` (logs or crashes), `since?`, `filter?`, `level?`, `limit?` | One app's own log lines or crash reports ([notes/app-logs.md](notes/app-logs.md)) |
+| `phone_device` | `rotation?`, `appearance?`, `location?`, `reset?` | The switches developers test with, read or set; Pinky puts them back when the task ends ([notes/device-switches.md](notes/device-switches.md)) |
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 
-Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history) and `approval_id?` (to keep waiting on a pending approval).
+Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history), `approval_id?` (to keep waiting on a pending approval) and `settle_ms?` (0 to 3000: the most to wait for the screen to settle, for screens that never stop moving; see the action pipeline's Settle step).
 
 ### Sessions and leases
 
@@ -215,7 +219,7 @@ ocr "Delivery in 25–35 min" @200,300
 
 | Status | Meaning | What the agent should do |
 | --- | --- | --- |
-| `settled` | The action ran and the screen stopped changing, or settling hit its 3 s limit (`settle: timeout`) | Continue |
+| `settled` | The action ran and the screen stopped changing, or settling hit its limit, 3 s or the action's `settle_ms` (`settle: timeout`) | Continue |
 | `uncertain` | The action may have happened, for example a timeout after Send | Observe before anything else; never repeat it blindly |
 | `blocked_by_policy` | A rule denied the action; the result names the rule | Choose another way or ask the person |
 | `approval_denied` | The person said no; `note` may say why | Follow the note |
@@ -338,7 +342,7 @@ always_allow:
 - It also allows the rest of the task, as Allow for this task does; that is what covers a task's app list, for that task only.
 - It matches the app by package name or bundle id, and by name when the phone reports no id.
 - While "Ask before every action" is on, exemptions do not apply and the panel does not offer Always allow; they apply again with another preset.
-- The panel offers it only for actions the policy asked about in an app: not for the agent's own questions (`phone_request_approval`), copying files, or opening apps and links. Where it cannot be kept it counts as Allow for this task, and on the agent's own questions as Allow once.
+- The panel offers it only for actions the policy asked about in an app: not for the agent's own questions (`phone_request_approval`), copying files, installing or uninstalling apps, or opening apps and links. Where it cannot be kept it counts as Allow for this task, and on the agent's own questions as Allow once.
 - The answer is kept when the person gives it, even when the agent's call is no longer waiting for it.
 - Settings › Safety › Always allowed lists the exemptions; removing one makes its rules ask again.
 - The agent learns of it: the approved call says the rule no longer asks in that app, and a later action that runs because of it says `No approval needed: the person always allows "Payments" in Dinely.`
@@ -350,8 +354,10 @@ always_allow:
 - A per-task app allow-list (M1), such as "this task may only use Dinely"; typing into any other app is Ask.
 - Emergency stop: a global shortcut (Option-Command-Period on macOS, Ctrl+Alt+Period elsewhere) and Stop all in the menu bar. It ends every lease and cancels every pending action.
 - Credentials never reach the model. The gateway refuses `phone_type` into password and one-time-code fields (`blocked_by_policy`, rule: credentials) and tells the agent to call `phone_handoff` (M1). From M2 the client can fill the value from the OS keychain, and the agent only learns that it was filled.
-- Notifications from blocked apps are never listed, matched by the app's id or name. Where another screen shows a blocked app (its notification in the shade, on the lock screen or as a heads-up banner, its card in recent apps), the agent gets one hidden element in its place, covered in screenshots. One-time codes are masked by default, on the screen (elements and OCR lines) and in notifications, and covered in the screenshots agents get and history keeps; recordings, which never reach agents, are not covered.
+- Notifications from blocked apps are never listed, matched by the app's id or name. Where another screen shows a blocked app (its notification in the shade, on the lock screen or as a heads-up banner, its card in recent apps), the agent gets one hidden element in its place, covered in screenshots. One-time codes are masked by default, on the screen (elements and OCR lines) and in notifications, and covered in the screenshots agents get and history keeps; recordings are not covered, so an agent gets one only when the person allows it on a card each time it exports a task's report.
 - `phone_files` reaches only the phone's `Pinky/` folder. Writing to the phone is Ask, and read-only mode turns it off.
+- `phone_app` installs only from the phone's folder on the computer, and installing and uninstalling always ask, whatever the preset; Allow for this task covers the same app from the same signer, and there is no Always allow. It never touches Pinky's own apps, system apps, finance apps, password managers or blocked apps ([notes/apps.md](notes/apps.md)).
+- `phone_logs` reads one app's own lines and crash reports, never another process's, and only of apps in the agent's scope and the task's list; never of blocked, finance, password-manager, system or Pinky's own apps. The first read of an app in a task is Ask (rule `App logs`) unless the app is a development build; history keeps the count, not the text.
 - An agent's first connection needs approval and a scope.
 
 ### Threat model
@@ -389,7 +395,7 @@ A lock on the local socket keeps a second gateway from starting. Nothing under `
 2. **Policy.** Rules and the commit detector decide Allow, Ask or Deny.
 3. **Approval.** For Ask, the approval center holds the call until the person decides or the timeout denies.
 4. **Execute.** The driver performs the action on the long-lived device session.
-5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet.
+5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet. An action's `settle_ms` lowers the limit, for screens that never stop moving (not for an action the person approved, allowed for the task or always allows). The rest of a wait that ended early (`settle_ms`, a cancelled call, an input that failed after it went out) is owed: the next action waits it out, or until the screen settles, before it reads the screen for step 2, so the policy never judges an action against a screen from before the previous one took effect.
 6. **Verify and observe.** A fresh screen is read and diffed against the last one.
 7. **Record.** The step, its before and after screenshots and any approval go to the history store.
 

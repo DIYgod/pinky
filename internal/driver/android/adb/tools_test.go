@@ -72,6 +72,15 @@ func fakeADBMain(args []string) {
 				case "host:kill":
 					io.WriteString(c, "OKAY")
 					os.Exit(0)
+				case "host:pinky-autoconnect":
+					// The server's ADB_MDNS_AUTO_CONNECT, for
+					// TestStartServerNoAutoConnect.
+					v, ok := os.LookupEnv("ADB_MDNS_AUTO_CONNECT")
+					if !ok {
+						v = "unset"
+					}
+					io.WriteString(c, "OKAY")
+					writeStr(c, v)
 				default:
 					fail(c, "unknown host service")
 				}
@@ -386,13 +395,57 @@ func TestStartServer(t *testing.T) {
 	}
 	// Starting another one where one listens: it quits, and the running
 	// one is left alone.
-	if err := spawnServer(ctx, adb); err == nil {
+	if err := spawnServer(ctx, adb, ServerOptions{}); err == nil {
 		t.Errorf("a second server started")
 	} else {
 		t.Logf("a second server: %v", err)
 	}
 	if v, err := c.Version(ctx); err != nil || v != 41 {
 		t.Errorf("the first server after the second: %d %v", v, err)
+	}
+}
+
+// TestStartServerNoAutoConnect: a server started with NoAutoConnect gets
+// ADB_MDNS_AUTO_CONNECT=0 in place of the computer's, and one started
+// without it the computer's.
+func TestStartServerNoAutoConnect(t *testing.T) {
+	t.Setenv("ADB_SERVER_SOCKET", "")
+	t.Setenv("ANDROID_ADB_SERVER_ADDRESS", "")
+	t.Setenv("PINKY_FAKE_ADB", "1")
+	t.Setenv("PINKY_FAKE_ADB_VERSION", "37.0.0-fake")
+	t.Setenv("ADB_MDNS_AUTO_CONNECT", "adb-tls-connect")
+	adb := fakeADB(t, t.TempDir())
+	t.Setenv(EnvADB, adb)
+	for _, tc := range []struct {
+		opt  ServerOptions
+		want string
+	}{
+		{ServerOptions{NoAutoConnect: true}, "0"},
+		{ServerOptions{}, "adb-tls-connect"},
+	} {
+		t.Setenv("ANDROID_ADB_SERVER_PORT", freePort(t))
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		if _, err := StartServerWith(ctx, tc.opt); err != nil {
+			cancel()
+			t.Fatal(err)
+		}
+		got, err := (&Client{}).query(ctx, "host:pinky-autoconnect")
+		cancel()
+		if conn, err := net.Dial("tcp", ServerAddr()); err == nil {
+			writeRequest(conn, "host:kill")
+			readStatus(conn)
+			conn.Close()
+		}
+		if err != nil || got != tc.want {
+			t.Errorf("%+v: the server's ADB_MDNS_AUTO_CONNECT is %q (%v), want %q", tc.opt, got, err, tc.want)
+		}
+	}
+	env := ServerOptions{NoAutoConnect: true}.env([]string{"HOME=/h", "ADB_MDNS_AUTO_CONNECT=1", "adb_mdns_auto_connect=all", "PATH=/bin"})
+	if strings.Join(env, " ") != "HOME=/h PATH=/bin ADB_MDNS_AUTO_CONNECT=0" {
+		t.Errorf("env: %q", env)
+	}
+	if env := (ServerOptions{}).env([]string{"HOME=/h"}); env != nil {
+		t.Errorf("env without options: %q (want the computer's)", env)
 	}
 }
 
@@ -415,7 +468,7 @@ func TestStartServerOld(t *testing.T) {
 		}
 	})
 	missing := Tool{Path: filepath.Join(t.TempDir(), "adb"), Source: FromSDK}
-	tool, err := startServer(ctx, func() []Tool { return []Tool{{Path: old, Source: FromPath}, missing} })
+	tool, err := startServer(ctx, func() []Tool { return []Tool{{Path: old, Source: FromPath}, missing} }, ServerOptions{})
 	if err != nil || tool.Path != old || tool.Version != "29.0.6-debian" {
 		t.Fatalf("started with %+v: %v", tool, err)
 	}

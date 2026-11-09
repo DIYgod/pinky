@@ -36,9 +36,17 @@ func (g *Gateway) Checkup(ctx context.Context, deviceID string) (CheckupView, er
 	v := CheckupView{DeviceID: deviceID, Platform: info.Platform, At: time.Now()}
 	// A phone is open once it is online; one that went away while open
 	// keeps the state it was last listed in (discover marks the others
-	// offline).
+	// offline). One listed online that did not open is offline too, unless
+	// its provider says why the open failed (driver.OpenChecker): it is
+	// connected and allows this computer, and those items say what fails.
+	var openChecks []driver.Check
 	if info.State == driver.StateOnline && (!online || dev == nil) {
-		info.State = driver.StateOffline
+		if oc, ok := prov.(driver.OpenChecker); ok {
+			openChecks = oc.OpenChecks(deviceID)
+		}
+		if len(openChecks) == 0 {
+			info.State = driver.StateOffline
+		}
 	}
 	// What the computer lacks for the phone's platform comes first: the
 	// adb server that keeps being replaced, the usbmuxd that is missing.
@@ -52,6 +60,10 @@ func (g *Gateway) Checkup(ctx context.Context, deviceID string) (CheckupView, er
 		// Also while offline: a phone unplugged that does not show up on
 		// Wi-Fi says here why.
 		v.Checks = append(v.Checks, c)
+	}
+	if len(openChecks) > 0 {
+		v.Checks = append(v.Checks, openChecks...)
+		return v, nil
 	}
 	if info.State != driver.StateOnline {
 		return v, nil

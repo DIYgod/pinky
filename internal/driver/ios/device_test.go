@@ -552,7 +552,7 @@ func TestDeviceTypeKeys(t *testing.T) {
 	strokes, _ := asciiStrokes("clock")
 	var st TypeStats
 	d.inputMu.Lock()
-	err = d.typeKeys(ctx, strokes, &st)
+	err = d.typeKeys(ctx, strokes, func() error { return nil }, nil, &st)
 	d.inputMu.Unlock()
 	t.Logf("Latin keyboard active before: %v; typed in %v; %s", latinBefore, time.Since(start).Round(time.Millisecond), strings.Join(st.Trace, "; "))
 	if err != nil {

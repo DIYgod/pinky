@@ -17,7 +17,7 @@ import (
 // the port of ServerAddr, and waits for the server's "OK\n" on that pipe,
 // which it writes once it has looked for devices and listens. A server
 // that cannot listen (another one does) exits, and so does this wait.
-func spawnServer(ctx context.Context, path string) error {
+func spawnServer(ctx context.Context, path string, opt ServerOptions) error {
 	host, port, err := net.SplitHostPort(ServerAddr())
 	if err != nil {
 		return err
@@ -36,6 +36,7 @@ func spawnServer(ctx context.Context, path string) error {
 		w.Close()
 		return err
 	}
+	cmd.Env = opt.env(os.Environ())
 	// The server's first words, until it writes to its own log (adb.log
 	// in the temporary folder) instead.
 	stderr := &tailBuffer{max: 2048}

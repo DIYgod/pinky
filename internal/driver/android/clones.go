@@ -312,27 +312,9 @@ func (d *Device) startClone(ctx context.Context, c clone, display int) error {
 	if !componentRE.MatchString(c.component) {
 		return fmt.Errorf("android: launch %s in user %d: no launcher activity: %w", c.pkg, c.user, driver.ErrNotFound)
 	}
-	start := func(withDisplay bool) (string, error) {
-		cmd := fmt.Sprintf("am start --user %d", c.user)
-		if withDisplay {
-			cmd += fmt.Sprintf(" --display %d", display)
-		}
-		cmd += fmt.Sprintf(" -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10200000 -n '%s'", c.component)
-		out, err := d.client.Shell(ctx, d.info.ID, cmd+" 2>&1")
-		return string(out), wrapErr(err)
-	}
-	out, err := start(true)
-	if err == nil && display == 0 && strings.Contains(out, "Unknown option: --display") {
-		out, err = start(false) // Android 7 and earlier
-	}
-	if err != nil {
+	args := fmt.Sprintf("-a android.intent.action.MAIN -c android.intent.category.LAUNCHER -f 0x10200000 -n '%s'", c.component)
+	if err := d.amStart(ctx, strconv.Itoa(c.user), display, args, fmt.Sprintf("launch %s in user %d", c.pkg, c.user)); err != nil {
 		return err
-	}
-	if msg, ok := amStartError(out); ok {
-		if strings.Contains(msg, "does not exist") || strings.Contains(msg, "unable to resolve") {
-			return fmt.Errorf("android: launch %s in user %d: %s: %w", c.pkg, c.user, msg, driver.ErrNotFound)
-		}
-		return fmt.Errorf("android: launch %s in user %d: %s", c.pkg, c.user, msg)
 	}
 	d.cfg.logf("android: %s: started %s in user %d on display %d", d.info.ID, c.component, c.user, display)
 	return nil

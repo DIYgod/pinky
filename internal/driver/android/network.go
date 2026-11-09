@@ -300,7 +300,7 @@ func (p *Provider) conns(ctx context.Context, entries []adb.DeviceEntry, id stri
 			continue
 		}
 		pr, err := p.deviceProps(ctx, e)
-		if err != nil || (e.Serial != id && phoneID(e, pr) != id) {
+		if err != nil || (e.Serial != id && p.phoneID(e, pr) != id) {
 			continue
 		}
 		switch {
@@ -367,7 +367,7 @@ func (p *Provider) connectWhenUp(ctx context.Context, serial string) error {
 	for {
 		err := p.cfg.Client.Connect(ctx, serial)
 		if err == nil {
-			_, err = p.waitConnected(ctx, serial)
+			_, err = p.waitConnected(ctx, serial, false)
 			return err
 		}
 		if sleepCtx(ctx, time.Second) != nil {
@@ -377,10 +377,11 @@ func (p *Provider) connectWhenUp(ctx context.Context, serial string) error {
 }
 
 // waitConnected waits for the connection with this serial to come online,
-// and returns the phone. A phone that asks the person to allow this
-// computer is returned as it is (unauthorized) once it has asked for a
-// while: the person may be away from it.
-func (p *Provider) waitConnected(ctx context.Context, serial string) (driver.Info, error) {
+// and returns the phone, marked as the person's when they made the
+// connection (trust; identity.go). A phone that asks the person to allow
+// this computer is returned as it is (unauthorized) once it has asked for
+// a while: the person may be away from it.
+func (p *Provider) waitConnected(ctx context.Context, serial string, trust bool) (driver.Info, error) {
 	var asking time.Time
 	for {
 		entries, err := p.cfg.Client.Devices(ctx)
@@ -393,6 +394,9 @@ func (p *Provider) waitConnected(ctx context.Context, serial string) (driver.Inf
 			}
 			switch e.State {
 			case adb.StateDevice:
+				if trust {
+					p.trustConn(ctx, e)
+				}
 				return p.infoFor(ctx, serial)
 			case adb.StateUnauthorized:
 				if asking.IsZero() {

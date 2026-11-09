@@ -20,6 +20,9 @@ type Forward struct {
 // the port that was picked when local is "tcp:0". Without rebind, an
 // existing forward on local is an error.
 func (c *Client) Forward(ctx context.Context, serial, local, remote string, rebind bool) (string, error) {
+	if err := c.guard(ctx, serial); err != nil {
+		return "", err
+	}
 	svc := "host-serial:" + serial + ":forward:"
 	if !rebind {
 		svc += "norebind:"

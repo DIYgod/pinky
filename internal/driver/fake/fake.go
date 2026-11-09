@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"strings"
 	"sync"
 	"time"
 
@@ -57,10 +58,13 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 
 // Action is one recorded input.
 type Action struct {
-	Kind string // tap, swipe, type, key, launch, touch
+	Kind string // tap, swipe, pinch, type, key, launch, link, touch, touch2
 	P    screen.Point
 	To   screen.Point
 	Text string
+	App  string // link: the id of the app it opened in
+	// Pinch is the gesture of a pinch.
+	Pinch driver.Pinch
 }
 
 // Device is a fake phone. Its screen is whatever SetScreen last set, and
@@ -71,6 +75,19 @@ type Device struct {
 	scr     *screen.Screen
 	actions []Action
 	onInput func(Action)
+	links   []linkHandler
+	// apps are listed after Settings; logs and crashes are what AppLogger
+	// returns for them (logs.go).
+	apps      []driver.App
+	logs      map[string][]driver.LogLine
+	crashes   map[string][]driver.CrashReport
+	devBuilds map[string]bool
+}
+
+// linkHandler is the apps that open links starting with prefix.
+type linkHandler struct {
+	prefix string
+	apps   []driver.App
 }
 
 // NewDevice returns an online fake Android device.
@@ -152,6 +169,14 @@ func (d *Device) Swipe(_ context.Context, from, to screen.Point, _ time.Duration
 	return nil
 }
 
+// Pinch implements driver.Pincher: P and To are where the fingers touch
+// down.
+func (d *Device) Pinch(_ context.Context, g driver.Pinch) error {
+	a, b := g.At(0)
+	d.record(Action{Kind: "pinch", P: a, To: b, Pinch: g})
+	return nil
+}
+
 // Type implements driver.Device.
 func (d *Device) Type(_ context.Context, text string, _ driver.TypeOptions) error {
 	d.record(Action{Kind: "type", Text: text})
@@ -170,9 +195,52 @@ func (d *Device) Launch(_ context.Context, app string) error {
 	return nil
 }
 
+// SetLinkApps sets the apps that open links starting with prefix
+// ("https://", "myapp://"), compared without regard to case; the longest
+// prefix decides. One app opens such links, several make LinkApp report
+// a choice, and none makes them open in no app.
+func (d *Device) SetLinkApps(prefix string, apps ...driver.App) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for i, h := range d.links {
+		if strings.EqualFold(h.prefix, prefix) {
+			d.links[i].apps = apps
+			return
+		}
+	}
+	d.links = append(d.links, linkHandler{prefix: prefix, apps: apps})
+}
+
+// LinkApp implements driver.LinkOpener, as SetLinkApps says.
+func (d *Device) LinkApp(_ context.Context, link string) (driver.App, error) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	var best *linkHandler
+	for i, h := range d.links {
+		if len(link) >= len(h.prefix) && strings.EqualFold(link[:len(h.prefix)], h.prefix) && (best == nil || len(h.prefix) > len(best.prefix)) {
+			best = &d.links[i]
+		}
+	}
+	switch {
+	case best == nil || len(best.apps) == 0:
+		return driver.App{}, fmt.Errorf("fake: no app opens %q: %w", link, driver.ErrNotFound)
+	case len(best.apps) > 1:
+		return driver.App{}, &driver.LinkChoiceError{Link: link, Apps: append([]driver.App(nil), best.apps...)}
+	}
+	return best.apps[0], nil
+}
+
+// OpenLink implements driver.LinkOpener: it records the link and the app.
+func (d *Device) OpenLink(_ context.Context, link string, app driver.App) error {
+	d.record(Action{Kind: "link", Text: link, App: app.ID})
+	return nil
+}
+
 // Apps implements driver.Device.
 func (d *Device) Apps(context.Context) ([]driver.App, error) {
-	return []driver.App{{ID: "com.android.settings", Name: "Settings", System: true}}, nil
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return append([]driver.App{{ID: "com.android.settings", Name: "Settings", System: true}}, d.apps...), nil
 }
 
 // Stream implements driver.Device. Fake devices have no video.
@@ -186,11 +254,20 @@ func (d *Device) Touch(_ context.Context, a driver.TouchAction, p screen.Point) 
 	return nil
 }
 
+// Touch2 implements driver.MultiToucher.
+func (d *Device) Touch2(_ context.Context, a driver.TouchAction, p, q screen.Point) error {
+	d.record(Action{Kind: "touch2:" + string(a), P: p, To: q})
+	return nil
+}
+
 // Close implements driver.Device.
 func (d *Device) Close() error { return nil }
 
 var (
-	_ driver.Provider = (*Provider)(nil)
-	_ driver.Device   = (*Device)(nil)
-	_ driver.Toucher  = (*Device)(nil)
+	_ driver.Provider     = (*Provider)(nil)
+	_ driver.Device       = (*Device)(nil)
+	_ driver.Toucher      = (*Device)(nil)
+	_ driver.Pincher      = (*Device)(nil)
+	_ driver.MultiToucher = (*Device)(nil)
+	_ driver.LinkOpener   = (*Device)(nil)
 )

@@ -395,6 +395,36 @@ func TestSetupLocation(t *testing.T) {
 	}
 }
 
+// TestArchiveLocation: on Linux, a pinky that the archive's file list names
+// replaces the files of its folder; any other copy downloads the release.
+func TestArchiveLocation(t *testing.T) {
+	ok := func(string) error { return nil }
+	dir := filepath.Join(t.TempDir(), "Pinky")
+	exe := filepath.Join(dir, "pinky")
+	writeTree(t, dir, map[string]string{"pinky": "", "adb": ""})
+
+	if l := archiveLocation(exe, ok); l.Method != MethodDownload || l.CanReplace() || l.App != exe {
+		t.Errorf("a pinky without the archive's file list: %+v", l)
+	}
+	writeTree(t, dir, map[string]string{fileList: "adb\npinkyctl\n"})
+	if l := archiveLocation(exe, ok); l.Method != MethodDownload {
+		t.Errorf("a pinky that the file list does not name: %+v", l)
+	}
+	writeTree(t, dir, map[string]string{fileList: "adb\npinky\npinky.png\n"})
+	if l := archiveLocation(exe, ok); l.Method != MethodSelf || !l.CanReplace() || l.App != dir {
+		t.Errorf("the archive's pinky: %+v", l)
+	}
+	readOnly := func(d string) error {
+		if d == filepath.Dir(dir) {
+			return errors.New("denied")
+		}
+		return nil
+	}
+	if l := archiveLocation(exe, readOnly); l.CanReplace() || !strings.Contains(l.Problem, filepath.Dir(dir)) {
+		t.Errorf("where the work folder cannot go: %+v", l)
+	}
+}
+
 func TestMethodForAnInstalledWindowsPinky(t *testing.T) {
 	u := &Updater{Location: Location{Method: MethodSelf, Setup: true, App: `C:\Programs\Pinky`}}
 	for url, want := range map[string]Method{

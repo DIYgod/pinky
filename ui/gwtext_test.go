@@ -29,6 +29,9 @@ var gatewaySteps = []string{
 	"Pressed home",
 	"Pressed forward delete",
 	"Opened Messages",
+	"Opened “https://example.com/menu” in Safari",
+	"Waiting for you: Opened “dinely://order/42” in Dinely",
+	"Blocked by “Unsafe links”: Opened “javascript:alert(1)” in Chrome",
 	"Waiting for you: Tapped “Send SMS”",
 	"Blocked by “Payments”: Tapped “Pay”",
 	"Outside the scope: Opened Northbank",
@@ -47,7 +50,23 @@ var gatewaySteps = []string{
 	"Received “Pictures/cat.png” (1.2 MB) from the agent",
 	"Blocked by “Read-only”: receive “cat.png” from the agent",
 	"Failed: receive “cat.png” from the agent",
+	"Listed the phone's folder on the computer (2 files)",
+	"Installed “Dinely” 1.3 (14) from “app-debug.apk”",
+	"Updated “Dinely” to 1.4 (15) from “base.apk” and 2 more files",
+	"Uninstalled “Dinely”",
+	"Stopped “Dinely”",
+	"Waiting for you: Install “Dinely” 1.3 (14) on Pixel 9",
+	"Blocked by “Pinky's own apps”: uninstall “Pinky Companion”",
+	"Failed: install from “base.apk” and 1 more file",
+	"Read 120 log lines of Example",
+	"Read 1 crash report of Example",
+	"Waiting for you: Read the logs of Example",
+	"Blocked by “Finance apps”: read the logs of Northbank",
 	"Added 1 chicken rice bowl", // the fake's own words
+	"Set the screen's rotation to landscape",
+	"Opened Settings in ja-JP",
+	"Put the appearance back to light",
+	"Stopped the simulated location",
 }
 
 func TestGatewayWordsInEnglish(t *testing.T) {
@@ -89,17 +108,20 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Typed “no cilantro” into “Note”":                  zh.GwDidTypeInto("no cilantro", "Note"),
 		"Typed “chicken rice” and submitted":               zh.GwDidTypeSubmit("chicken rice"),
 		"Typed “chicken rice” into “Search” and submitted": zh.GwDidTypeIntoSubmit("chicken rice", "Search"),
-		"Swiped up":                                                zh.GwDidSwipe(zh.GwDirUp()),
-		"Swiped down in “Messages”":                                zh.GwDidSwipeIn(zh.GwDirDown(), "Messages"),
-		"Swiped from 540,1800 to 540,600":                          zh.GwDidSwipeFromTo("540", "1800", "540", "600"),
-		"Pressed home":                                             zh.GwDidPress(zh.GwKeyHome()),
-		"Pressed forward delete":                                   zh.GwDidPress(zh.GwKeyForwardDelete()),
-		"Opened Messages":                                          zh.GwDidOpen("Messages"),
-		"Waiting for you: Tapped “Send SMS”":                       zh.GwStepWaiting(zh.GwDoTap("Send SMS")),
-		"Blocked by “Payments”: Tapped “Pay”":                      zh.GwStepBlocked(zh.RulePayments(), zh.GwDoTap("Pay")),
-		"Outside the scope: Opened Northbank":                      zh.GwStepOutside(zh.GwDoOpen("Northbank")),
-		"Failed: Tapped “Pay”":                                     zh.GwStepFailed(zh.GwDoTap("Pay")),
-		"Connected to Pixel 9 for “Reorder lunch”":                 zh.GwStepConnected("Pixel 9", "Reorder lunch"),
+		"Swiped up":                                   zh.GwDidSwipe(zh.GwDirUp()),
+		"Swiped down in “Messages”":                   zh.GwDidSwipeIn(zh.GwDirDown(), "Messages"),
+		"Swiped from 540,1800 to 540,600":             zh.GwDidSwipeFromTo("540", "1800", "540", "600"),
+		"Pressed home":                                zh.GwDidPress(zh.GwKeyHome()),
+		"Pressed forward delete":                      zh.GwDidPress(zh.GwKeyForwardDelete()),
+		"Opened Messages":                             zh.GwDidOpen("Messages"),
+		"Opened “https://example.com/menu” in Safari": zh.GwDidOpenLink("https://example.com/menu", "Safari"),
+		"Waiting for you: Opened “dinely://order/42” in Dinely":      zh.GwStepWaiting(zh.GwDoOpenLink("dinely://order/42", "Dinely")),
+		"Blocked by “Unsafe links”: Opened “javascript:x” in Chrome": zh.GwStepBlocked(zh.RuleUnsafeLinks(), zh.GwDoOpenLink("javascript:x", "Chrome")),
+		"Waiting for you: Tapped “Send SMS”":                         zh.GwStepWaiting(zh.GwDoTap("Send SMS")),
+		"Blocked by “Payments”: Tapped “Pay”":                        zh.GwStepBlocked(zh.RulePayments(), zh.GwDoTap("Pay")),
+		"Outside the scope: Opened Northbank":                        zh.GwStepOutside(zh.GwDoOpen("Northbank")),
+		"Failed: Tapped “Pay”":                                       zh.GwStepFailed(zh.GwDoTap("Pay")),
+		"Connected to Pixel 9 for “Reorder lunch”":                   zh.GwStepConnected("Pixel 9", "Reorder lunch"),
 		"Finished: done":                                           zh.GwStepFinished(zh.GwOutcomeDone()),
 		"Waited for “Order placed”":                                zh.GwStepWaited("Order placed"),
 		"Asked you: “Is 3pm fine?”":                                zh.GwStepAskedYou("“Is 3pm fine?”"),
@@ -112,8 +134,40 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Received “Pictures/cat.png” (1.2 MB) from the agent":      zh.GwStepReceivedFile("Pictures/cat.png", "1.2 MB"),
 		"Blocked by “Read-only”: receive “cat.png” from the agent": zh.GwStepBlocked(zh.RuleReadOnly(), zh.GwDoReceiveFile("cat.png")),
 		"Failed: receive “cat.png” from the agent":                 zh.GwStepFailed(zh.GwDoReceiveFile("cat.png")),
+		"Saved a screenshot as “bugs/onboarding-1.png”":            zh.GwStepSavedScreenshot("bugs/onboarding-1.png"),
+		"Saved the task's report for the agent":                    zh.GwStepSavedReport(),
 		"Added 1 chicken rice bowl":                                "Added 1 chicken rice bowl",
+		"Zoomed in on “Map”":                                       zh.GwDidZoomInOn("Map"),
+		"Zoomed out":                                               zh.GwDidZoomOut(),
+		"Turned with two fingers":                                  zh.GwDidTurn(),
+		"Turned “Photo” with two fingers":                          zh.GwDidTurnOn("Photo"),
+		"Read 120 log lines of Example":                            zh.GwStepReadLogLines("120", "Example"),
+		"Read 1 crash report of Example":                           zh.GwStepReadCrashes("1", "Example"),
+		"Waiting for you: Read the logs of Example":                zh.GwStepWaiting(zh.GwDoReadLogs("Example")),
+		"Blocked by “Finance apps”: read the logs of Northbank":    zh.GwStepBlocked(zh.RuleFinanceApps(), zh.GwDoReadLogs("Northbank")),
+		"You allowed: Read the logs of Example":                    zh.GwStepYouAllowed(zh.GwDoReadLogs("Example")),
 		"Copied 7 files to the phone: a, b, and 2 more":            zh.GwStepCopiedTo("7", zh.GwFilesList("a"+zh.ListSeparator()+"b"+zh.ListSeparator()+zh.GwFilesMore("2"))),
+
+		// The Recordings card and its export.
+		"Saved the task's report and screen recording for the agent":                zh.GwStepSavedReportVideo(),
+		"Waiting for you: Give Claude Code the screen recording of “Reorder lunch”": zh.GwStepWaiting(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),
+		"Waiting for you: Give Codex the screen recordings of 2 tasks":              zh.GwStepWaiting(zh.GwDoGiveRecordings("Codex", "2")),
+		"Listed the phone's folder on the computer (2 files)":                       zh.GwStepListedComputerFolder("2"),
+		"Installed “Dinely” 1.3 (14) from “app-debug.apk”":                          zh.GwStepInstalledApp("Dinely", "1.3 (14)", "“app-debug.apk”"),
+		"Installed “Dinely” from “app-debug.apk”":                                   zh.GwStepInstalledAppBare("Dinely", "“app-debug.apk”"),
+		"Updated “Dinely” to 1.4 (15) from “base.apk” and 2 more files":             zh.GwStepUpdatedApp("Dinely", "1.4 (15)", zh.GwAppFilesMore("base.apk", "2")),
+		"Uninstalled “Dinely”":                                                      zh.GwStepUninstalledApp("Dinely"),
+		"Stopped “Dinely”":                                                          zh.GwStepStoppedApp("Dinely"),
+		"Waiting for you: Install “Dinely” 1.3 (14) on Pixel 9":                     zh.GwStepWaiting(zh.GwDoOnPhone(zh.GwDoInstallApp("Dinely", "1.3 (14)"), "Pixel 9")),
+		"Waiting for you: Update “Dinely” on Pixel 9":                               zh.GwStepWaiting(zh.GwDoOnPhone(zh.GwDoUpdateAppBare("Dinely"), "Pixel 9")),
+		"Waiting for you: Uninstall “Dinely” from Pixel 9":                          zh.GwStepWaiting(zh.GwDoFromPhone(zh.GwDoUninstallApp("Dinely"), "Pixel 9")),
+		"Blocked by “Finance apps”: stop “Northbank”":                               zh.GwStepBlocked(zh.RuleFinanceApps(), zh.GwDoStopApp("Northbank")),
+		"Blocked by “Pinky's own apps”: uninstall “Pinky Companion”":                zh.GwStepBlocked(zh.RulePinkyApps(), zh.GwDoUninstallApp("Pinky Companion")),
+		"Blocked by “System apps”: stop “Settings”":                                 zh.GwStepBlocked(zh.RuleSystemApps(), zh.GwDoStopApp("Settings")),
+		"Outside the scope: update “Dinely” to 1.4 (15)":                            zh.GwStepOutside(zh.GwDoUpdateApp("Dinely", "1.4 (15)")),
+		"Failed: install “Dinely”":                                                  zh.GwStepFailed(zh.GwDoInstallAppBare("Dinely")),
+		"Failed: install from “base.apk” and 1 more file":                           zh.GwStepFailed(zh.GwDoInstallFrom(zh.GwAppFilesMore("base.apk", "1"))),
+		"Waiting for you: Stop “Dinely” on Pixel 9":                                 zh.GwStepWaiting(zh.GwDoOnPhone(zh.GwDoStopApp("Dinely"), "Pixel 9")),
 	}
 	for in, out := range want {
 		if got := stepText(in); got != out {
@@ -124,19 +178,30 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		}
 	}
 	titles := map[string]string{
-		"Pay: “Place order · $12.80”?":     zh.GwAskPay("Place order · $12.80"),
-		"Send “See you at 3”?":             zh.GwAskSend("See you at 3"),
-		"Send the message?":                zh.GwAskSendMessage(),
-		"Open Northbank?":                  zh.GwAskOpen("Northbank"),
-		"Change “Wi-Fi”?":                  zh.GwAskChange("Wi-Fi"),
-		"Tap “Delete”?":                    zh.GwAskTap("Delete"),
-		"Type into “Message”?":             zh.GwAskTypeInto("Message"),
-		"Press enter in “Message”?":        zh.GwAskPressIn(zh.GwKeyEnter(), "Message"),
-		"Tapped at 540,1200?":              zh.GwAskQuestion(zh.GwDoTapAt("540", "1200")),
-		"Let Codex use your phones?":       zh.GwAskAgent("Codex"),
-		"Copy “ticket.pdf” to Pixel 9?":    zh.GwAskQuestion(zh.GwDoCopyFile("ticket.pdf", "Pixel 9")),
-		"Copy 3 files to Pixel 9?":         zh.GwAskQuestion(zh.GwDoCopyFiles("3", "Pixel 9")),
-		"Something the gateway never says": "Something the gateway never says",
+		"Pay: “Place order · $12.80”?":               zh.GwAskPay("Place order · $12.80"),
+		"Send “See you at 3”?":                       zh.GwAskSend("See you at 3"),
+		"Send the message?":                          zh.GwAskSendMessage(),
+		"Open “https://example.com/menu” in Safari?": zh.GwAskOpenLink("https://example.com/menu", "Safari"),
+		"Open Northbank?":                            zh.GwAskOpen("Northbank"),
+		"Change “Wi-Fi”?":                            zh.GwAskChange("Wi-Fi"),
+		"Tap “Delete”?":                              zh.GwAskTap("Delete"),
+		"Type into “Message”?":                       zh.GwAskTypeInto("Message"),
+		"Press enter in “Message”?":                  zh.GwAskPressIn(zh.GwKeyEnter(), "Message"),
+		"Tapped at 540,1200?":                        zh.GwAskQuestion(zh.GwDoTapAt("540", "1200")),
+		"Let Codex use your phones?":                 zh.GwAskAgent("Codex"),
+		"Copy “ticket.pdf” to Pixel 9?":              zh.GwAskQuestion(zh.GwDoCopyFile("ticket.pdf", "Pixel 9")),
+		"Copy 3 files to Pixel 9?":                   zh.GwAskQuestion(zh.GwDoCopyFiles("3", "Pixel 9")),
+		"Zoomed out on “Map”?":                       zh.GwAskQuestion(zh.GwDoZoomOutOn("Map")),
+		"Turned with two fingers?":                   zh.GwAskQuestion(zh.GwDoTurn()),
+		"Install “Dinely” 1.3 (14) on Pixel 9?":      zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoInstallApp("Dinely", "1.3 (14)"), "Pixel 9")),
+		"Update “Dinely” to 1.4 (15) on Pixel 9?":    zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoUpdateApp("Dinely", "1.4 (15)"), "Pixel 9")),
+		"Uninstall “Dinely” from Pixel 9?":           zh.GwAskQuestion(zh.GwDoFromPhone(zh.GwDoUninstallApp("Dinely"), "Pixel 9")),
+		"Stop “Dinely” on Pixel 9?":                  zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoStopApp("Dinely"), "Pixel 9")),
+		"Read the logs of Example?":                  zh.GwAskQuestion(zh.GwDoReadLogs("Example")),
+		"Something the gateway never says":           "Something the gateway never says",
+
+		"Give Claude Code the screen recording of “Reorder lunch”?": zh.GwAskQuestion(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),
+		"Give Codex the screen recordings of 2 tasks?":              zh.GwAskQuestion(zh.GwDoGiveRecordings("Codex", "2")),
 	}
 	for in, out := range titles {
 		n := gateway.NeedView{Kind: gateway.NeedApproval, Title: in, Rule: "Payments"}
@@ -145,6 +210,27 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		}
 		if got := needTitle(n); got != out {
 			t.Errorf("needTitle(%q) = %q, want %q", in, got, out)
+		}
+	}
+	recordings := gateway.NeedView{Kind: gateway.NeedApproval, Rule: "Recordings",
+		Detail: "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."}
+	if got, want := needDetail(recordings), zh.GwRecordingsDetail(); got != want {
+		t.Errorf("recordings detail: %q, want %q", got, want)
+	}
+	if got, want := ruleName("Recordings"), zh.RuleRecordings(); got != want {
+		t.Errorf("ruleName(Recordings) = %q, want %q", got, want)
+	}
+	// An app approval's second line: the agent's own words, last, stay.
+	for in, out := range map[gateway.NeedView]string{
+		{Rule: "Installing from the computer", Detail: "Claude Code · com.dinely.app · signed by Dinely Ltd (AB12) · from “base.apk” and 2 more files · replaces 1.3 (14) · replaces the Monday build"}: "Claude Code · com.dinely.app · " +
+			zh.GwAppSignedBy("Dinely Ltd (AB12)") + " · " + zh.GwAppFrom(zh.GwAppFilesMore("base.apk", "2")) + " · " + zh.GwAppReplaces("1.3 (14)") + " · replaces the Monday build",
+		{Rule: "Installing from the computer", Detail: "Codex · app.pinky.testapp · from “a.apk” · from “b.apk” please"}: "Codex · app.pinky.testapp · " + zh.GwAppFrom("“a.apk”") + " · from “b.apk” please",
+		{Rule: "Uninstalling apps", Detail: "Codex · com.dinely.app · its data on the phone is deleted too · clean up"}:  "Codex · com.dinely.app · " + zh.GwAppDataDeleted() + " · clean up",
+		{Rule: "Every action", Detail: "Codex · com.dinely.app · from “x”"}:                                              "Codex · com.dinely.app · from “x”",
+	} {
+		in.Kind = gateway.NeedApproval
+		if got := needDetail(in); got != out {
+			t.Errorf("needDetail(%q) = %q, want %q", in.Detail, got, out)
 		}
 	}
 	handoff := gateway.NeedView{Kind: gateway.NeedHandoff, Title: "Sign in to Dinely?"}
@@ -179,6 +265,63 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		if got := statusLine(gateway.DeviceView{StatusLine: in, Status: gateway.DeviceWorking}); got != out {
 			t.Errorf("statusLine(%q) = %q, want %q", in, got, out)
 		}
+	}
+}
+
+// TestPhoneSettingsWordsInChinese checks phone_device's steps and
+// approvals, and phone_launch's with a language (gateway/switches.go).
+func TestPhoneSettingsWordsInChinese(t *testing.T) {
+	inLanguage(t, "zh-Hans")
+	zh := locales.In("zh-Hans")
+	rotation, appearance, location := zh.GwSwitchRotation(), zh.GwSwitchAppearance(), zh.GwSwitchLocation()
+	steps := map[string]string{
+		"Set the screen's rotation to landscape":             zh.GwDidSetSwitch(rotation, zh.GwValueLandscape()),
+		"Set the screen's rotation to reverse landscape":     zh.GwDidSetSwitch(rotation, zh.GwValueReverseLandscape()),
+		"Set the appearance to dark":                         zh.GwDidSetSwitch(appearance, zh.GwValueDark()),
+		"Set the location to 35.6812, 139.7671":              zh.GwDidSetSwitch(location, zh.GwValuePlace("35.6812, 139.7671")),
+		"Opened Settings in ja-JP":                           zh.GwDidOpenIn("Settings", "ja-JP"),
+		"Opened Settings in zh-Hans-CN":                      zh.GwDidOpenIn("Settings", "zh-Hans-CN"),
+		"Opened Settings with region JP":                     zh.GwDidOpenRegion("Settings", "JP"),
+		"Opened Made in US":                                  zh.GwDidOpen("Made in US"),
+		"Waiting for you: Set the appearance to dark":        zh.GwStepWaiting(zh.GwDoSetSwitch(appearance, zh.GwValueDark())),
+		"Waiting for you: Opened Settings in ja-JP":          zh.GwStepWaiting(zh.GwDoOpenIn("Settings", "ja-JP")),
+		"Failed: set the screen's rotation to upside down":   zh.GwStepFailed(zh.GwDoSetSwitch(rotation, zh.GwValueUpsideDown())),
+		"Put the screen's rotation back to auto-rotate":      zh.GwStepSwitchBack(rotation, zh.GwValueAutoRotate()),
+		"Put the appearance back to automatic":               zh.GwStepSwitchBack(appearance, zh.GwValueAutomatic()),
+		"Put the location back to 39.237255, -123.150032":    zh.GwStepSwitchBack(location, zh.GwValuePlace("39.237255, -123.150032")),
+		"Stopped the simulated location":                     zh.GwDidStopLocation(),
+		"Left the appearance as the person set it":           zh.GwStepSwitchLeft(appearance),
+		"Could not put the location back to none":            zh.GwStepSwitchNotBack(location, zh.GwValueNoLocation()),
+		"Put the language of Settings back":                  zh.GwStepLanguageBack("Settings"),
+		"Left the language of Settings as the person set it": zh.GwStepLanguageLeft("Settings"),
+		"Could not put the language of Settings back":        zh.GwStepLanguageNotBack("Settings"),
+		"Waiting for you: Set the screen's rotation to landscape; set the appearance to dark": zh.GwStepWaiting(
+			zh.GwDoSetSwitch(rotation, zh.GwValueLandscape()) + zh.ListSeparator() + zh.GwDoSetSwitch(appearance, zh.GwValueDark())),
+		"Blocked by “Read-only”: set the appearance to dark; set the location to 1, 2": zh.GwStepBlocked(zh.RuleReadOnly(),
+			zh.GwDoSetSwitch(appearance, zh.GwValueDark())+zh.ListSeparator()+zh.GwDoSetSwitch(location, zh.GwValuePlace("1, 2"))),
+	}
+	for in, out := range steps {
+		if got := stepText(in); got != out {
+			t.Errorf("stepText(%q) = %q, want %q", in, got, out)
+		}
+	}
+	titles := map[string]string{
+		"Set the appearance to dark?":                                       zh.GwAskQuestion(zh.GwDoSetSwitch(appearance, zh.GwValueDark())),
+		"Set the screen's rotation to landscape; set the location to none?": zh.GwAskQuestion(zh.GwDoSetSwitch(rotation, zh.GwValueLandscape()) + zh.ListSeparator() + zh.GwDoSetSwitch(location, zh.GwValueNoLocation())),
+		"Open Settings in ja-JP?":                                           zh.GwAskQuestion(zh.GwDoOpenIn("Settings", "ja-JP")),
+		"Open Settings with region JP?":                                     zh.GwAskQuestion(zh.GwDoOpenRegion("Settings", "JP")),
+	}
+	for in, out := range titles {
+		n := gateway.NeedView{Kind: gateway.NeedApproval, Title: in, Rule: "Phone settings", Detail: "Claude Code · Pinky puts it back when the task ends"}
+		if got := needTitle(n); got != out {
+			t.Errorf("needTitle(%q) = %q, want %q", in, got, out)
+		}
+		if got, want := needDetail(n), zh.GwSettingsDetail("Claude Code"); got != want {
+			t.Errorf("needDetail = %q, want %q", got, want)
+		}
+	}
+	if got := ruleName("Phone settings"); got != zh.RuleSettingsPhone() {
+		t.Errorf("rule name %q", got)
 	}
 }
 

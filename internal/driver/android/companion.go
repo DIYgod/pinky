@@ -430,9 +430,14 @@ func (k *companionLink) windowSince(display int, t time.Time) (changed, ok bool)
 // displays reports whether the app on the phone takes displays other than
 // the main one for set_text (Android 11 and later, apps from round 3).
 func (k *companionLink) displays() bool {
+	return k.has(companion.FeatureDisplays)
+}
+
+// has reports whether the app on the phone is on and has a feature.
+func (k *companionLink) has(feature string) bool {
 	k.mu.Lock()
 	defer k.mu.Unlock()
-	return k.on && k.info != nil && k.info.Has(companion.FeatureDisplays)
+	return k.on && k.info != nil && k.info.Has(feature)
 }
 
 // settleCond is the companion's settle condition for a display, or false
@@ -663,9 +668,11 @@ func refusedText(err error) bool {
 // typeCompanion writes text with the companion into the focused field of
 // a display, or else into the field under the last tap there (tap
 // returns it), and presses Enter with enter when Submit was asked and the
-// companion could not submit. It returns done=false when the companion
-// refused and the caller should type another way.
-func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, text string, append, submit bool, display int, tap func() (screen.Point, bool), enter func() error) (bool, error) {
+// companion could not submit. It returns done=false, with the companion's
+// refusal, when the caller should type another way. An app with
+// FeatureSetTextFallback reads the field back: text that reads otherwise
+// is an error, and is not submitted.
+func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, text string, append, submit bool, display int, tap func() (screen.Point, bool), enter func() error) (done bool, refused, err error) {
 	o := companion.SetTextOptions{Append: append, Submit: submit, Display: display}
 	res, err := c.SetText(ctx, companion.Target{}, text, o)
 	if refusedText(err) {
@@ -675,18 +682,29 @@ func (d *Device) typeCompanion(ctx context.Context, c *companion.Client, text st
 	}
 	switch {
 	case err == nil:
-		if submit && !res.Submitted {
-			return true, enter()
+		if res.Method != "" && res.Method != companion.MethodSetText {
+			d.cfg.logf("android: %s: the companion wrote the text by %s", d.info.ID, res.Method)
 		}
-		return true, nil
+		if d.comp.has(companion.FeatureSetTextFallback) {
+			switch {
+			case res.Password:
+				d.setInputNote(noteHidden)
+			case !res.Verified:
+				return true, nil, typedOtherwise(res.Text, text, append, submit, "")
+			}
+		}
+		if submit && !res.Submitted {
+			return true, nil, enter()
+		}
+		return true, nil, nil
 	case refusedText(err):
 		d.cfg.logf("android: %s: the companion could not set the text (%v); typing it instead", d.info.ID, err)
-		return false, nil
+		return false, err, nil
 	default:
 		// The request may have reached the phone; typing the text again
 		// could enter it twice, so report it instead.
 		d.companionFailed(err)
-		return true, fmt.Errorf("android: set text through the companion: %w", err)
+		return true, nil, fmt.Errorf("android: set text through the companion: %w", err)
 	}
 }
 

@@ -298,6 +298,18 @@
   "@addPhoneChooseTitle": {
     "description": "Add phone, first step: the heading above two cards to pick from, Android and iPhone."
   },
+  "addPhoneChooseVirtual": "Virtual phone",
+  "@addPhoneChooseVirtual": {
+    "description": "Add phone, first step: the title of the card below Android and iPhone, for iOS Simulators and Android emulators that run on this computer."
+  },
+  "addPhoneChooseVirtualMac": "An iOS Simulator or an Android emulator on this Mac",
+  "@addPhoneChooseVirtualMac": {
+    "description": "Add phone, first step, on a Mac: under \"Virtual phone\" on its card."
+  },
+  "addPhoneChooseVirtualPC": "An Android emulator on this computer",
+  "@addPhoneChooseVirtualPC": {
+    "description": "Add phone, first step, on Windows and Linux: under \"Virtual phone\" on its card."
+  },
   "addPhoneDone": "Done",
   "@addPhoneDone": {
     "description": "Add phone: the button that ends the wizard once the new phone is ready, and opens its page."
@@ -720,6 +732,142 @@
   "@addPhoneTryAgain": {
     "description": "Add phone: the button that looks for the phone again after it needed setup, and that asks for a new QR code after pairing over Wi-Fi failed."
   },
+  "addVirtualAndroid": "Android emulators",
+  "@addVirtualAndroid": {
+    "description": "Add phone › Virtual phone: the label above the list of Android Virtual Devices."
+  },
+  "addVirtualCantStart": "Can't start: {reason}",
+  "@addVirtualCantStart": {
+    "description": "Add phone › Virtual phone: under a Simulator or emulator that cannot start. reason is the system's, in English.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "its system image is not installed"
+      }
+    }
+  },
+  "addVirtualDetailMac": "Start an iOS Simulator or an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them; agents can't.",
+  "@addVirtualDetailMac": {
+    "description": "Add phone › Virtual phone on a Mac: the line under the heading."
+  },
+  "addVirtualDetailPC": "Start an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them; agents can't.",
+  "@addVirtualDetailPC": {
+    "description": "Add phone › Virtual phone on Windows and Linux: the line under the heading."
+  },
+  "addVirtualHelperNote": "The first time, Pinky builds its helper for Simulators (WebDriverAgent) with Xcode, which takes a minute or two.",
+  "@addVirtualHelperNote": {
+    "description": "Add phone › Virtual phone: the note under the list of iOS Simulators. WebDriverAgent is a name."
+  },
+  "addVirtualIOS": "iOS Simulators",
+  "@addVirtualIOS": {
+    "description": "Add phone › Virtual phone: the label above the list of iOS Simulators."
+  },
+  "addVirtualListFailed": "Couldn't list them: {error}",
+  "@addVirtualListFailed": {
+    "description": "Add phone › Virtual phone: under a platform's label when listing its Simulators or emulators failed. error is the system's, in English.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "simctl: exit status 1"
+      }
+    }
+  },
+  "addVirtualLooking": "Looking for virtual phones…",
+  "@addVirtualLooking": {
+    "description": "Add phone › Virtual phone: next to a spinner until the list comes."
+  },
+  "addVirtualNoAVDs": "No emulators yet. Create one in Android Studio's Device Manager.",
+  "@addVirtualNoAVDs": {
+    "description": "Add phone › Virtual phone, under Android emulators: the computer has the emulator but no Android Virtual Device. Device Manager is Android Studio's name."
+  },
+  "addVirtualNoEmulator": "The Android SDK in {folder} has no emulator. Install Android Emulator in Android Studio's SDK Manager.",
+  "@addVirtualNoEmulator": {
+    "description": "Add phone › Virtual phone, under Android emulators: the SDK lacks its emulator. Android Emulator and SDK Manager are Android Studio's names.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "/Users/me/Library/Android/sdk"
+      }
+    }
+  },
+  "addVirtualNoSDK": "Android emulators need the Android SDK, which Android Studio installs. Install Android Studio, then create a virtual device in its Device Manager.",
+  "@addVirtualNoSDK": {
+    "description": "Add phone › Virtual phone, under Android emulators: Pinky found no Android SDK. Device Manager is Android Studio's name."
+  },
+  "addVirtualNoSimulators": "No Simulators yet. Add one in Xcode, under Window › Devices and Simulators.",
+  "@addVirtualNoSimulators": {
+    "description": "Add phone › Virtual phone, under iOS Simulators: Xcode has no Simulator. Window › Devices and Simulators is Xcode's menu, which is in English."
+  },
+  "addVirtualNoXcode": "iOS Simulators need Xcode, from the Mac App Store. After installing it, open it once so it can finish setting up.",
+  "@addVirtualNoXcode": {
+    "description": "Add phone › Virtual phone, under iOS Simulators: the Mac has no Xcode."
+  },
+  "addVirtualOpen": "Open",
+  "@addVirtualOpen": {
+    "description": "Add phone › Virtual phone: the button next to a running Simulator or emulator that is one of Pinky's phones; opens its page."
+  },
+  "addVirtualRunning": "Running",
+  "@addVirtualRunning": {
+    "description": "Add phone › Virtual phone: at the end of a running Simulator's or emulator's second line, after its model and OS version."
+  },
+  "addVirtualShowAll": "Show all ({count})",
+  "@addVirtualShowAll": {
+    "description": "Add phone › Virtual phone: the link under a long list of Simulators or emulators that shows the rest.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "24"
+      }
+    }
+  },
+  "addVirtualShutDown": "Shut down",
+  "@addVirtualShutDown": {
+    "description": "Add phone › Virtual phone: the button next to a running Simulator or emulator that shuts it down."
+  },
+  "addVirtualStart": "Start",
+  "@addVirtualStart": {
+    "description": "Add phone › Virtual phone, and the page of a Simulator or emulator that is offline: the button that starts it."
+  },
+  "addVirtualStartFailed": "Couldn't start {name}: {error}",
+  "@addVirtualStartFailed": {
+    "description": "Add phone › Virtual phone, and a virtual phone's page: starting a Simulator or emulator failed. error is the system's, in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 17"
+      },
+      "error": {
+        "type": "String",
+        "example": "Unable to boot device in current state: Booted"
+      }
+    }
+  },
+  "addVirtualStarting": "Starting…",
+  "@addVirtualStarting": {
+    "description": "Add phone › Virtual phone, and the page of a Simulator or emulator: next to a spinner while it starts."
+  },
+  "addVirtualStopFailed": "Couldn't shut down {name}: {error}",
+  "@addVirtualStopFailed": {
+    "description": "Add phone › Virtual phone: shutting a Simulator or emulator down failed. error is the system's, in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 17"
+      },
+      "error": {
+        "type": "String",
+        "example": "Unable to shutdown device in current state: Shutdown"
+      }
+    }
+  },
+  "addVirtualTitle": "Virtual phones",
+  "@addVirtualTitle": {
+    "description": "Add phone › Virtual phone: the heading."
+  },
+  "addVirtualUse": "Use",
+  "@addVirtualUse": {
+    "description": "Add phone › Virtual phone: the button next to a running Simulator or emulator that is not one of Pinky's phones, as when the person removed it; makes it one again."
+  },
   "agentGeneric": "the agent",
   "@agentGeneric": {
     "description": "Names an agent whose name is unknown, inside a sentence: \"Note for the agent\"."
@@ -998,6 +1146,92 @@
   "@callTakeOver": {
     "description": "Inside toastCouldNot: taking over a phone failed."
   },
+  "changedConfirmButton": "Trust",
+  "@changedConfirmButton": {
+    "description": "The button of the dialog that trusts a device on the network that lacks Pinky's mark (changedConfirmTitle)."
+  },
+  "changedConfirmMessage": "Pinky then uses the device on the network as {phone}, with its settings, and lets agents use it. Do this only if you reset {phone} or set it up again yourself.",
+  "@changedConfirmMessage": {
+    "description": "The message of the dialog that asks before Pinky trusts a device on the network that claims to be a phone Pinky set up but lacks the mark Pinky left on it. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedConfirmTitle": "Trust this phone?",
+  "@changedConfirmTitle": {
+    "description": "The dialog that asks before Pinky trusts a device on the network that lacks Pinky's mark."
+  },
+  "changedDetail": "A device on the network claims to be {phone}, but it lacks the mark Pinky left on that phone, so Pinky doesn't use it, and agents can't either. That happens when the phone was reset, or when another device poses as it.",
+  "@changedDetail": {
+    "description": "Under changedTitle, and in the checkup: why Pinky does not use a device on the network that claims to be a phone it set up. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTitle": "This may not be {phone}",
+  "@changedTitle": {
+    "description": "The page of a phone whose connection over the network leads to a device that lacks the mark Pinky left on the phone: maybe the phone was reset, maybe another device poses as it. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTrust": "Trust this phone…",
+  "@changedTrust": {
+    "description": "The button that trusts a device on the network that lacks Pinky's mark, as the phone Pinky set up under its name; it asks first."
+  },
+  "changedTrusted": "Trusting {name}. Pinky connects to it again in a few seconds.",
+  "@changedTrusted": {
+    "description": "A notice after the person trusted a phone on the network. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTrustFailed": "Couldn't trust {name}: {error}",
+  "@changedTrustFailed": {
+    "description": "A notice when trusting a phone on the network failed. name is the phone's name, error what went wrong.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone does not answer"
+      }
+    }
+  },
+  "changedTrustLabel": "Trust {name}…",
+  "@changedTrustLabel": {
+    "description": "What assistive technology reads for changedTrust. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTrustNote": "Trust it only if you reset {phone} or set it up again yourself. Or plug it into this computer: Pinky then knows it's yours.",
+  "@changedTrustNote": {
+    "description": "Under the Trust this phone button. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
   "checkADBFail": "Pinky can't reach adb, the Android tools it talks to phones through.",
   "@checkADBFail": {
     "description": "The checkup, adb: failed."
@@ -1147,6 +1381,10 @@
   "checkConnectionUSB": "Connected over USB.",
   "@checkConnectionUSB": {
     "description": "The checkup, connection: passed, over a USB cable."
+  },
+  "checkConnectionVirtual": "Running on this computer.",
+  "@checkConnectionVirtual": {
+    "description": "The checkup, connection: passed, for an iOS Simulator or an Android emulator."
   },
   "checkConnectionWiFi": "Connected over Wi-Fi.",
   "@checkConnectionWiFi": {
@@ -1330,6 +1568,10 @@
   "@checkScreenFail": {
     "description": "The checkup, seeing the screen: failed."
   },
+  "checkScreenNoLivePicture": "The phone sends no live picture, so Pinky can't connect to it. Restart the phone, then check again. If that doesn't help, send feedback: its diagnostics include the details below.",
+  "@checkScreenNoLivePicture": {
+    "description": "The checkup, seeing the screen, of an iPhone that Pinky could not open because the phone sent no live picture of its screen; the driver's details (in English) follow. \"Send feedback\" is feedbackTitle."
+  },
   "checkScreenNoVideo": "The phone's video encoder doesn't work with Pinky, so the mirror shows still pictures. Agents still see the screen.",
   "@checkScreenNoVideo": {
     "description": "The checkup, seeing the screen: works without the live picture."
@@ -1341,6 +1583,26 @@
   "checkScreenTitle": "Seeing the screen",
   "@checkScreenTitle": {
     "description": "The checkup: the item for screenshots and the live picture."
+  },
+  "checkSimHelperBuilding": "Pinky is building its helper for Simulators with Xcode. The first time takes a minute or two.",
+  "@checkSimHelperBuilding": {
+    "description": "An iOS Simulator's page and checkup: while Pinky builds WebDriverAgent for Simulators."
+  },
+  "checkSimHelperFailed": "Pinky couldn't build its helper for Simulators with Xcode. It tries again in a few minutes, or now with Try again.",
+  "@checkSimHelperFailed": {
+    "description": "An iOS Simulator's page and checkup: building WebDriverAgent failed; Xcode's reason shows under it. Try again is checkSimHelperRetry."
+  },
+  "checkSimHelperPass": "Pinky's helper for Simulators is ready.",
+  "@checkSimHelperPass": {
+    "description": "The checkup of an iOS Simulator: the helper item passed."
+  },
+  "checkSimHelperRetry": "Try again",
+  "@checkSimHelperRetry": {
+    "description": "An iOS Simulator's page and checkup: the button that builds the helper for Simulators again after it failed."
+  },
+  "checkSimHelperTitle": "Helper for Simulators",
+  "@checkSimHelperTitle": {
+    "description": "The checkup of an iOS Simulator: the title of the item for the WebDriverAgent helper Pinky builds with Xcode."
   },
   "checkTrustedPass": "The iPhone trusts this computer.",
   "@checkTrustedPass": {
@@ -2500,6 +2762,10 @@
   "@foundDetail": {
     "description": "Under foundTitle, and in Add phone and the checkup: why Pinky waits for the person."
   },
+  "foundDetailAndroid": "It's connected to this computer over Wireless debugging, but Pinky hasn't used it, so it leaves it alone until you say it's yours: it doesn't change anything on it or let agents use it.",
+  "@foundDetailAndroid": {
+    "description": "foundDetail for an Android phone: it is connected over Wireless debugging (by adb, another tool, or a pairing made outside Pinky), and Pinky waits for the person."
+  },
   "foundIgnore": "Ignore",
   "@foundIgnore": {
     "description": "The button that leaves a phone Pinky found on Wi-Fi alone: it goes off the list until it is plugged in."
@@ -2888,6 +3154,20 @@
       }
     }
   },
+  "gwAskOpenLink": "Open “{link}” in {app}?",
+  "@gwAskOpenLink": {
+    "description": "An approval's title: open this link in this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "link": {
+        "type": "String",
+        "example": "https://example.com/menu"
+      },
+      "app": {
+        "type": "String",
+        "example": "Safari"
+      }
+    }
+  },
   "gwAskPay": "Pay: “{label}”?",
   "@gwAskPay": {
     "description": "An approval's title: pay with the button that has this label. Shown only in other languages; in English the gateway's own words show.",
@@ -3004,6 +3284,48 @@
       }
     }
   },
+  "gwDidOpenIn": "Opened {app} in {language}",
+  "@gwDidOpenIn": {
+    "description": "A step: the agent opened this app in another language than the phone's, given as a language tag such as ja-JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "language": {
+        "type": "String",
+        "example": "ja-JP"
+      }
+    }
+  },
+  "gwDidOpenRegion": "Opened {app} with region {region}",
+  "@gwDidOpenRegion": {
+    "description": "A step: the agent opened this app with another region's dates, numbers and currency, given as a region code such as JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "region": {
+        "type": "String",
+        "example": "JP"
+      }
+    }
+  },
+  "gwDidOpenLink": "Opened “{link}” in {app}",
+  "@gwDidOpenLink": {
+    "description": "A step: the agent opened this link in this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "link": {
+        "type": "String",
+        "example": "https://example.com/menu"
+      },
+      "app": {
+        "type": "String",
+        "example": "Safari"
+      }
+    }
+  },
   "gwDidPress": "Pressed {key}",
   "@gwDidPress": {
     "description": "A step: the agent pressed a key; key is gwKeyHome and the like. Shown only in other languages; in English the gateway's own words show.",
@@ -3013,6 +3335,24 @@
         "example": "home"
       }
     }
+  },
+  "gwDidSetSwitch": "Set {setting} to {value}",
+  "@gwDidSetSwitch": {
+    "description": "A step: the agent changed one of the phone's settings for testing, such as the screen's rotation, to this value. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the screen's rotation"
+      },
+      "value": {
+        "type": "String",
+        "example": "landscape"
+      }
+    }
+  },
+  "gwDidStopLocation": "Stopped the simulated location",
+  "@gwDidStopLocation": {
+    "description": "A step: Pinky stopped the place it made the phone report, so the phone reports where it really is again. Shown only in other languages; in English the gateway's own words show."
   },
   "gwDidSwipe": "Swiped {direction}",
   "@gwDidSwipe": {
@@ -3088,6 +3428,20 @@
   "@gwDidTapBare": {
     "description": "A step: the agent tapped, without a known place. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwDidTurn": "Turned with two fingers",
+  "@gwDidTurn": {
+    "description": "A step: the agent turned something on the screen with two fingers (phone_pinch with a rotation). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidTurnOn": "Turned “{label}” with two fingers",
+  "@gwDidTurnOn": {
+    "description": "A step: the agent turned the element with this label with two fingers. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
   "gwDidType": "Typed “{text}”",
   "@gwDidType": {
     "description": "A step: the agent typed this text. Shown only in other languages; in English the gateway's own words show.",
@@ -3136,6 +3490,34 @@
       }
     }
   },
+  "gwDidZoomIn": "Zoomed in",
+  "@gwDidZoomIn": {
+    "description": "A step: the agent zoomed in by spreading two fingers (phone_pinch). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidZoomInOn": "Zoomed in on “{label}”",
+  "@gwDidZoomInOn": {
+    "description": "A step: the agent zoomed in on the element with this label by spreading two fingers. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
+  "gwDidZoomOut": "Zoomed out",
+  "@gwDidZoomOut": {
+    "description": "A step: the agent zoomed out by pinching two fingers together (phone_pinch). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidZoomOutOn": "Zoomed out on “{label}”",
+  "@gwDidZoomOutOn": {
+    "description": "A step: the agent zoomed out on the element with this label by pinching two fingers together. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
   "gwDirDown": "down",
   "@gwDirDown": {
     "description": "A swipe's direction inside gwDidSwipe and gwDoSwipe: down. Shown only in other languages; in English the gateway's own words show."
@@ -3180,6 +3562,34 @@
       }
     }
   },
+  "gwDoGiveRecording": "give {agent} the screen recording of “{task}”",
+  "@gwDoGiveRecording": {
+    "description": "What a step asked for, and with gwAskQuestion the title of its approval: give the agent the screen recording of the task that ends, with its report (phone_release export). task is the agent's name for the task. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "task": {
+        "type": "String",
+        "example": "Reorder lunch"
+      }
+    }
+  },
+  "gwDoGiveRecordings": "give {agent} the screen recordings of {count} tasks",
+  "@gwDoGiveRecordings": {
+    "description": "What a step asked for, and with gwAskQuestion the title of its approval: give the agent the screen recordings of several tasks that end together, with their reports (phone_release export); count is 2 or more. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
   "gwDoCopyFromPhone": "copy from the phone",
   "@gwDoCopyFromPhone": {
     "description": "What a step tried: copy files from the phone to the computer. Shown only in other languages; in English the gateway's own words show."
@@ -3191,6 +3601,112 @@
   "gwDoListFolder": "list the phone's Pinky folder",
   "@gwDoListFolder": {
     "description": "What a step tried: list the files in the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoInstallApp": "install “{app}” {version}",
+  "@gwDoInstallApp": {
+    "description": "What a step tried, or an approval asks: install this app at this version from the computer. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.3 (14)"
+      }
+    }
+  },
+  "gwDoInstallAppBare": "install “{app}”",
+  "@gwDoInstallAppBare": {
+    "description": "What a step tried, or an approval asks: install this app from the computer (its version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoUpdateApp": "update “{app}” to {version}",
+  "@gwDoUpdateApp": {
+    "description": "What a step tried, or an approval asks: update this installed app to this version from the computer. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.4 (15)"
+      }
+    }
+  },
+  "gwDoUpdateAppBare": "update “{app}”",
+  "@gwDoUpdateAppBare": {
+    "description": "What a step tried, or an approval asks: update this installed app from the computer (the new version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoUninstallApp": "uninstall “{app}”",
+  "@gwDoUninstallApp": {
+    "description": "What a step tried, or an approval asks: uninstall this app, with its data. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoStopApp": "stop “{app}”",
+  "@gwDoStopApp": {
+    "description": "What a step tried, or an approval asks: force-quit this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoInstallFrom": "install from {files}",
+  "@gwDoInstallFrom": {
+    "description": "What a step tried: install an app from these files on the computer, before Pinky could read which app they hold. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwDoOnPhone": "{action} on {phone}",
+  "@gwDoOnPhone": {
+    "description": "An app change on a phone, in an approval's title or a step that waits for the person: “install “Dinely” 1.3 (14)” on “Pixel 9”. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "install “Dinely” 1.3 (14)"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "gwDoFromPhone": "{action} from {phone}",
+  "@gwDoFromPhone": {
+    "description": "An app removed from a phone, in an approval's title or a step that waits for the person: “uninstall “Dinely”” from “Pixel 9”. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "uninstall “Dinely”"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
   },
   "gwDoLongPress": "long-press “{label}”",
   "@gwDoLongPress": {
@@ -3230,6 +3746,48 @@
       }
     }
   },
+  "gwDoOpenIn": "open {app} in {language}",
+  "@gwDoOpenIn": {
+    "description": "What a step asked for: open this app in another language than the phone's, given as a language tag such as ja-JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "language": {
+        "type": "String",
+        "example": "ja-JP"
+      }
+    }
+  },
+  "gwDoOpenRegion": "open {app} with region {region}",
+  "@gwDoOpenRegion": {
+    "description": "What a step asked for: open this app with another region's dates, numbers and currency, given as a region code such as JP. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      },
+      "region": {
+        "type": "String",
+        "example": "JP"
+      }
+    }
+  },
+  "gwDoOpenLink": "open “{link}” in {app}",
+  "@gwDoOpenLink": {
+    "description": "What a step asked for: open this link in this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "link": {
+        "type": "String",
+        "example": "https://example.com/menu"
+      },
+      "app": {
+        "type": "String",
+        "example": "Safari"
+      }
+    }
+  },
   "gwDoPress": "press {key}",
   "@gwDoPress": {
     "description": "What a step asked for: press a key; key is gwKeyHome and the like. Shown only in other languages; in English the gateway's own words show.",
@@ -3240,6 +3798,16 @@
       }
     }
   },
+  "gwDoReadLogs": "read the logs of {app}",
+  "@gwDoReadLogs": {
+    "description": "What a step asked for: give the agent an app's own log lines or crash reports (phone_logs). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Example"
+      }
+    }
+  },
   "gwDoReceiveFile": "receive “{path}” from the agent",
   "@gwDoReceiveFile": {
     "description": "What a step tried: take a file the agent sent (phone_files upload) into the folder on the computer that is copied to the phone. Shown only in other languages; in English the gateway's own words show.",
@@ -3247,6 +3815,20 @@
       "path": {
         "type": "String",
         "example": "photo.jpg"
+      }
+    }
+  },
+  "gwDoSetSwitch": "set {setting} to {value}",
+  "@gwDoSetSwitch": {
+    "description": "What a step asked for: change one of the phone's settings for testing, such as the screen's rotation, to this value. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the screen's rotation"
+      },
+      "value": {
+        "type": "String",
+        "example": "landscape"
       }
     }
   },
@@ -3324,6 +3906,20 @@
   "@gwDoTapBare": {
     "description": "What a step asked for: a tap without a known place. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwDoTurn": "turn with two fingers",
+  "@gwDoTurn": {
+    "description": "What a step asked for: turn something on the screen with two fingers. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoTurnOn": "turn “{label}” with two fingers",
+  "@gwDoTurnOn": {
+    "description": "What a step asked for: turn the element with this label with two fingers. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
   "gwDoType": "type “{text}”",
   "@gwDoType": {
     "description": "What a step asked for: type this text. Shown only in other languages; in English the gateway's own words show.",
@@ -3372,6 +3968,34 @@
       }
     }
   },
+  "gwDoZoomIn": "zoom in",
+  "@gwDoZoomIn": {
+    "description": "What a step asked for: zoom in by spreading two fingers. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoZoomInOn": "zoom in on “{label}”",
+  "@gwDoZoomInOn": {
+    "description": "What a step asked for: zoom in on the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
+  "gwDoZoomOut": "zoom out",
+  "@gwDoZoomOut": {
+    "description": "What a step asked for: zoom out by pinching two fingers together. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoZoomOutOn": "zoom out on “{label}”",
+  "@gwDoZoomOutOn": {
+    "description": "What a step asked for: zoom out on the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
   "gwFilesDetail": "{agent} · into the phone's Pinky folder{names}",
   "@gwFilesDetail": {
     "description": "The second line of an approval to copy files to the phone; names is gwFilesList or empty. Shown only in other languages; in English the gateway's own words show.",
@@ -3386,6 +4010,54 @@
       }
     }
   },
+  "gwAppFilesMore": "“{file}” and {count} more files",
+  "@gwAppFilesMore": {
+    "description": "The files an app is installed from when there are several: the first one and how many more (split APKs). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "base.apk"
+      },
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "gwAppSignedBy": "signed by {signer}",
+  "@gwAppSignedBy": {
+    "description": "Part of an install approval's second line: who signed the app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "signer": {
+        "type": "String",
+        "example": "Someone (Personal Team) (A1B2C3D4E5)"
+      }
+    }
+  },
+  "gwAppFrom": "from {files}",
+  "@gwAppFrom": {
+    "description": "Part of an install approval's second line: the files on the computer the app is installed from. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwAppReplaces": "replaces {version}",
+  "@gwAppReplaces": {
+    "description": "Part of an update approval's second line: the version on the phone that the update replaces. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.3 (14)"
+      }
+    }
+  },
+  "gwAppDataDeleted": "its data on the phone is deleted too",
+  "@gwAppDataDeleted": {
+    "description": "Part of an uninstall approval's second line: uninstalling deletes the app's data on the phone. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwFilesList": ": {names}",
   "@gwFilesList": {
     "description": "Lists file names after a files step or approval.",
@@ -3395,6 +4067,10 @@
         "example": "a.txt, b.png"
       }
     }
+  },
+  "gwRecordingsDetail": "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications.",
+  "@gwRecordingsDetail": {
+    "description": "The second line of the approval that gives an agent a task's screen recording: what the person agrees to. Screenshots are the ones agents get, with codes covered; blocked apps are the banking, wallet and password-manager apps and those the person blocked. Shown only in other languages; in English the gateway's own words show."
   },
   "gwFilesMore": "and {count} more",
   "@gwFilesMore": {
@@ -3498,6 +4174,16 @@
   "@gwOutcomeStopped": {
     "description": "How a task ended, inside gwStepFinished: stopped. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwSettingsDetail": "{agent} · Pinky puts it back when the task ends",
+  "@gwSettingsDetail": {
+    "description": "The second line of an approval to change the phone's settings for testing: the agent asking, and that Pinky undoes the change when the task ends. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      }
+    }
+  },
   "gwStatusBackground": "{work} · in the background",
   "@gwStatusBackground": {
     "description": "A phone's status line: an agent works on a background display; work is \"agent · task\". Shown only in other languages; in English the gateway's own words show.",
@@ -3595,6 +4281,10 @@
         "example": "USB debugging is off"
       }
     }
+  },
+  "gwStatusPhoneChanged": "Not the same phone",
+  "@gwStatusPhoneChanged": {
+    "description": "A phone's status line: its connection over the network leads to a device that lacks the mark Pinky left on the phone, and Pinky waits for the person. Shown only in other languages; in English the gateway's own words show."
   },
   "gwStatusReconnecting": "Offline · reconnecting for {task}",
   "@gwStatusReconnecting": {
@@ -3726,6 +4416,36 @@
       }
     }
   },
+  "gwStepLanguageBack": "Put the language of {app} back",
+  "@gwStepLanguageBack": {
+    "description": "A step at the end of a task: an app the agent opened in another language is in the phone's language again. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "gwStepLanguageLeft": "Left the language of {app} as the person set it",
+  "@gwStepLanguageLeft": {
+    "description": "A step at the end of a task: Pinky did not put back an app's language, because the person changed it meanwhile. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
+  "gwStepLanguageNotBack": "Could not put the language of {app} back",
+  "@gwStepLanguageNotBack": {
+    "description": "A step at the end of a task: Pinky could not put back the language of an app the agent opened in another language. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Settings"
+      }
+    }
+  },
   "gwStepListedFolder": "Listed the phone's Pinky folder ({count} files)",
   "@gwStepListedFolder": {
     "description": "A step: the agent listed the files in the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show.",
@@ -3736,6 +4456,100 @@
       }
     }
   },
+  "gwStepListedComputerFolder": "Listed the phone's folder on the computer ({count} files)",
+  "@gwStepListedComputerFolder": {
+    "description": "A step: the agent listed the files in the phone's folder on the computer, which apps are installed from (an iPhone has no Pinky folder of its own). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "gwStepInstalledApp": "Installed “{app}” {version} from {files}",
+  "@gwStepInstalledApp": {
+    "description": "A step: the agent installed this app at this version from these files on the computer. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.3 (14)"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepInstalledAppBare": "Installed “{app}” from {files}",
+  "@gwStepInstalledAppBare": {
+    "description": "A step: the agent installed this app from these files on the computer (its version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepUpdatedApp": "Updated “{app}” to {version} from {files}",
+  "@gwStepUpdatedApp": {
+    "description": "A step: the agent updated this installed app to this version from these files on the computer; its data was kept. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.4 (15)"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepUpdatedAppBare": "Updated “{app}” from {files}",
+  "@gwStepUpdatedAppBare": {
+    "description": "A step: the agent updated this installed app from these files on the computer (the new version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepUninstalledApp": "Uninstalled “{app}”",
+  "@gwStepUninstalledApp": {
+    "description": "A step: the agent uninstalled this app, with its data. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwStepStoppedApp": "Stopped “{app}”",
+  "@gwStepStoppedApp": {
+    "description": "A step: the agent force-quit this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
   "gwStepOutside": "Outside the scope: {action}",
   "@gwStepOutside": {
     "description": "A step outside what the person allowed the agent. Shown only in other languages; in English the gateway's own words show.",
@@ -3743,6 +4557,34 @@
       "action": {
         "type": "String",
         "example": "open Northbank"
+      }
+    }
+  },
+  "gwStepReadCrashes": "Read {count} crash reports of {app}",
+  "@gwStepReadCrashes": {
+    "description": "A step: the agent read an app's crash reports (phone_logs); history keeps only this line, not the reports. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      },
+      "app": {
+        "type": "String",
+        "example": "Example"
+      }
+    }
+  },
+  "gwStepReadLogLines": "Read {count} log lines of {app}",
+  "@gwStepReadLogLines": {
+    "description": "A step: the agent read an app's own log lines (phone_logs); history keeps only this line, not the lines. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "120"
+      },
+      "app": {
+        "type": "String",
+        "example": "Example"
       }
     }
   },
@@ -3757,6 +4599,62 @@
       "size": {
         "type": "String",
         "example": "1.2 MB"
+      }
+    }
+  },
+  "gwStepSwitchBack": "Put {setting} back to {value}",
+  "@gwStepSwitchBack": {
+    "description": "A step at the end of a task (or when the agent asked): Pinky put a setting it had changed back to what it was. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the appearance"
+      },
+      "value": {
+        "type": "String",
+        "example": "light"
+      }
+    }
+  },
+  "gwStepSwitchLeft": "Left {setting} as the person set it",
+  "@gwStepSwitchLeft": {
+    "description": "A step at the end of a task: Pinky did not put this setting back, because the person changed it meanwhile. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the appearance"
+      }
+    }
+  },
+  "gwStepSwitchNotBack": "Could not put {setting} back to {value}",
+  "@gwStepSwitchNotBack": {
+    "description": "A step at the end of a task: Pinky could not put a setting it had changed back to what it was (the phone went offline, or cannot). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "setting": {
+        "type": "String",
+        "example": "the appearance"
+      },
+      "value": {
+        "type": "String",
+        "example": "light"
+      }
+    }
+  },
+  "gwStepSavedReport": "Saved the task's report for the agent",
+  "@gwStepSavedReport": {
+    "description": "A step: as the task ended, the agent had its report (an HTML page of the steps with screenshots, and a JSON file) saved in the phone's folder on the computer, for a bug report or a pull request (phone_release export). The screen recording is not in it (gwStepSavedReportVideo is the step where it is). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepSavedReportVideo": "Saved the task's report and screen recording for the agent",
+  "@gwStepSavedReportVideo": {
+    "description": "A step: as the task ended, the agent had its report (an HTML page of the steps with screenshots, and a JSON file) and its screen recording (an MP4 file, which the person allowed) saved in the phone's folder on the computer, for a bug report or a pull request (phone_release export). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepSavedScreenshot": "Saved a screenshot as “{path}”",
+  "@gwStepSavedScreenshot": {
+    "description": "A step: the agent saved a screenshot of the phone as a file in the phone's folder on the computer, for a bug report or a pull request (phone_observe save). path is the file's name in that folder. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "onboarding-1.png"
       }
     }
   },
@@ -3822,6 +4720,18 @@
       }
     }
   },
+  "gwSwitchAppearance": "the appearance",
+  "@gwSwitchAppearance": {
+    "description": "Names a phone setting inside a step: light or dark appearance (dark mode). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwSwitchLocation": "the location",
+  "@gwSwitchLocation": {
+    "description": "Names a phone setting inside a step: the place the phone reports. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwSwitchRotation": "the screen's rotation",
+  "@gwSwitchRotation": {
+    "description": "Names a phone setting inside a step, such as “Set the screen's rotation to landscape”. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwUnlockDetail": "{agent} is waiting for the phone to unlock · {task}",
   "@gwUnlockDetail": {
     "description": "The second line of the unlock card. Shown only in other languages; in English the gateway's own words show.",
@@ -3845,6 +4755,56 @@
         "example": "Pixel 9"
       }
     }
+  },
+  "gwValueAutomatic": "automatic",
+  "@gwValueAutomatic": {
+    "description": "A value of the phone's appearance: light by day, dark by night. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueAutoRotate": "auto-rotate",
+  "@gwValueAutoRotate": {
+    "description": "A value of the screen's rotation: it turns with how the phone is held. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueCustom": "custom",
+  "@gwValueCustom": {
+    "description": "A value of the phone's appearance on Android: dark between times the person set. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueDark": "dark",
+  "@gwValueDark": {
+    "description": "A value of the phone's appearance (dark mode). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueLandscape": "landscape",
+  "@gwValueLandscape": {
+    "description": "A value of the screen's rotation: turned to the left, the top on the left. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueLight": "light",
+  "@gwValueLight": {
+    "description": "A value of the phone's appearance. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueNoLocation": "none",
+  "@gwValueNoLocation": {
+    "description": "A value of the phone's location: no simulated place, the phone reports where it is. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValuePlace": "{place}",
+  "@gwValuePlace": {
+    "description": "A value of the phone's location: the place it reports, as latitude and longitude. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "place": {
+        "type": "String",
+        "example": "35.6812, 139.7671"
+      }
+    }
+  },
+  "gwValuePortrait": "portrait",
+  "@gwValuePortrait": {
+    "description": "A value of the screen's rotation: upright. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueReverseLandscape": "reverse landscape",
+  "@gwValueReverseLandscape": {
+    "description": "A value of the screen's rotation: turned to the right, the top on the right. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwValueUpsideDown": "upside down",
+  "@gwValueUpsideDown": {
+    "description": "A value of the screen's rotation. Shown only in other languages; in English the gateway's own words show."
   },
   "listMany": "{rest} and {last}",
   "@listMany": {
@@ -3999,6 +4959,10 @@
   "mirrorCallPaste": "paste",
   "@mirrorCallPaste": {
     "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when ⌘V on the mirror cannot paste the Mac's clipboard on the phone."
+  },
+  "mirrorCallPinch": "send the pinch",
+  "@mirrorCallPinch": {
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when a pinch on the mirror (a touchpad's pinch or an Option-drag) cannot reach the phone."
   },
   "mirrorCallTouch": "send the touch",
   "@mirrorCallTouch": {
@@ -4890,6 +5854,14 @@
       }
     }
   },
+  "phoneKindEmulator": "Emulator",
+  "@phoneKindEmulator": {
+    "description": "After Android or the Android version in a phone's header and Settings › Phones, for an Android emulator, as USB is for a phone on a cable."
+  },
+  "phoneKindSimulator": "Simulator",
+  "@phoneKindSimulator": {
+    "description": "After iPhone or the iOS version in a phone's header and Settings › Phones, for an iOS Simulator, as USB is for a phone on a cable."
+  },
   "phoneLockedWiFiDetail": "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn't wake its screen.",
   "@phoneLockedWiFiDetail": {
     "description": "Under phoneLockedWiFiTitle."
@@ -5115,6 +6087,10 @@
   "phoneTakeScreenshot": "Take screenshot",
   "@phoneTakeScreenshot": {
     "description": "Item of ⋯ under the mirror: saves the phone's screen as a picture on the Desktop."
+  },
+  "phoneVirtualNotRunning": "It isn't running.",
+  "@phoneVirtualNotRunning": {
+    "description": "Under phoneOffline for an iOS Simulator or Android emulator that is shut down, above the Start button."
   },
   "phoneWorkInBackground": "Work in the background",
   "@phoneWorkInBackground": {
@@ -5620,6 +6596,10 @@
   "@removePhoneTrust": {
     "description": "In the Remove phone dialog: Pinky does not unpair the phone from the computer (USB debugging, wireless debugging, iPhone trust)."
   },
+  "removePhoneVirtual": "Pinky stops using it, even while it runs. To add it back, start or use it in Add phone › Virtual phone.",
+  "@removePhoneVirtual": {
+    "description": "A note in the Remove phone dialog for an iOS Simulator or Android emulator."
+  },
   "removePhoneWiFi": "Pinky disconnects from it and won't connect to it again by itself. To add it back, pair it again in Add phone, or plug it in.",
   "@removePhoneWiFi": {
     "description": "In the Remove phone dialog, for an Android phone connected over Wi-Fi now. Add phone is the sidebar's sidebarAddPhone."
@@ -5746,6 +6726,10 @@
   "@ruleAgentScope": {
     "description": "The name of the rule that keeps an agent to what the person allowed it."
   },
+  "ruleAppLogs": "App logs",
+  "@ruleAppLogs": {
+    "description": "The name of the rule that asks before an agent first reads an app's logs or crash reports in a task (apps that are not development builds)."
+  },
   "ruleBlockedByYou": "Blocked by you",
   "@ruleBlockedByYou": {
     "description": "The name of the policy rule that denies the apps the person blocked."
@@ -5770,6 +6754,26 @@
   "@ruleFiles": {
     "description": "The name of the rule that asks before copying files to the phone."
   },
+  "ruleRecordings": "Recordings",
+  "@ruleRecordings": {
+    "description": "The name of the rule that asks before an agent gets a task's screen recording with its report. It asks every time: no preset or Always allow skips it."
+  },
+  "ruleInstallFromComputer": "Installing from the computer",
+  "@ruleInstallFromComputer": {
+    "description": "The name of the built-in rule that always asks before an agent installs or updates an app from the computer."
+  },
+  "ruleUninstallApps": "Uninstalling apps",
+  "@ruleUninstallApps": {
+    "description": "The name of the built-in rule that always asks before an agent uninstalls an app."
+  },
+  "rulePinkyApps": "Pinky's own apps",
+  "@rulePinkyApps": {
+    "description": "The name of the built-in rule that keeps agents from installing over, uninstalling or stopping Pinky's own apps on the phone."
+  },
+  "ruleSystemApps": "System apps",
+  "@ruleSystemApps": {
+    "description": "The name of the built-in rule that keeps agents from uninstalling or stopping the phone's system apps."
+  },
   "ruleFinanceApps": "Finance apps",
   "@ruleFinanceApps": {
     "description": "The name of the default rule that blocks finance apps."
@@ -5786,6 +6790,10 @@
   "@rulePasswordManagers": {
     "description": "The name of the default rule that blocks password managers."
   },
+  "ruleUnsafeLinks": "Unsafe links",
+  "@ruleUnsafeLinks": {
+    "description": "The name of the built-in rule that refuses links Pinky never opens, such as file: and javascript: links or links that run a shortcut."
+  },
   "rulePayments": "Payments",
   "@rulePayments": {
     "description": "The name of the policy rule that asks before payments, as approvals and steps name it."
@@ -5797,6 +6805,10 @@
   "ruleSettingsChanges": "Settings changes",
   "@ruleSettingsChanges": {
     "description": "The name of the policy rule that asks before changing a setting."
+  },
+  "ruleSettingsPhone": "Phone settings",
+  "@ruleSettingsPhone": {
+    "description": "The name of the built-in rule that asks before an agent changes a phone's settings for testing: the screen's rotation, light or dark appearance, a simulated location, or an app's language."
   },
   "ruleTaskApps": "Task apps",
   "@ruleTaskApps": {
@@ -6234,7 +7246,7 @@
   "@settingsPrivacyRecord": {
     "description": "Settings › Privacy: the switch that records the phone's screen while agents work."
   },
-  "settingsPrivacyRecordDesc": "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent apps are recorded as they show. Recordings stay on this computer.",
+  "settingsPrivacyRecordDesc": "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent apps are recorded as they show. Recordings stay on this computer: an agent gets one only when you allow it, as it saves a task's report.",
   "@settingsPrivacyRecordDesc": {
     "description": "Settings › Privacy: the line under Record the screen during tasks. Activity is the page of finished tasks."
   },
@@ -6616,7 +7628,7 @@
   "@settingsSafetyHideCodes": {
     "description": "Settings › Safety: the switch that hides one-time codes, on the phone's screen and in its notifications, from agents."
   },
-  "settingsSafetyHideCodesDesc": "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. Recordings, which stay on this computer, show them.",
+  "settingsSafetyHideCodesDesc": "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. Recordings show them, so an agent gets one only when you allow it.",
   "@settingsSafetyHideCodesDesc": {
     "description": "Settings › Safety: the line under Hide codes from agents. Screenshots are the ones agents get and the ones Activity keeps; recordings are the screen recordings of tasks, which are not covered."
   },

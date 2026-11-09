@@ -72,8 +72,8 @@ func noWirelessDebugging(d gateway.DeviceView) bool {
 func (a *app) phoneWiFiOf(c *mg.Context, d gateway.DeviceView) (driver.WiFiState, bool) {
 	ws, ok := a.api.(wifiSwitcher)
 	s := &a.phoneWiFi
-	if !ok || d.Info.Platform != driver.Android {
-		return driver.WiFiState{}, false
+	if !ok || d.Info.Platform != driver.Android || d.Info.Virtual {
+		return driver.WiFiState{}, false // an emulator has no Wi-Fi of its own
 	}
 	s.init()
 	id := d.Info.ID

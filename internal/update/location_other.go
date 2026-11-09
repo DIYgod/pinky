@@ -9,8 +9,10 @@ import (
 	"strings"
 )
 
-// locate on Linux and elsewhere: Pinky downloads the release for the person
-// to install; Linux packages are updated by the package manager.
+// locate on Linux and elsewhere: Pinky unpacked from the release's archive
+// replaces itself (archiveLocation); Linux packages are updated by the
+// package manager; other copies download the release for the person to
+// install.
 func locate(exe string) Location {
 	l := Location{Exe: exe, App: exe, Method: MethodDownload}
 	switch runtime.GOOS {
@@ -24,6 +26,8 @@ func locate(exe string) Location {
 			}
 		case strings.Contains(exe, "/.linuxbrew/") || strings.Contains(exe, "/home/linuxbrew/"):
 			l.Method, l.Manager, l.Command = MethodManager, "Homebrew", "brew upgrade pinky"
+		default:
+			return archiveLocation(exe, writableDir)
 		}
 	}
 	return l

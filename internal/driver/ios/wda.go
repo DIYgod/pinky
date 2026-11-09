@@ -479,6 +479,12 @@ func (c *wdaClient) activate(ctx context.Context, bundleID string) error {
 	return c.do(ctx, c.long, http.MethodPost, "/wda/apps/activate", map[string]any{"bundleId": bundleID}, nil)
 }
 
+// terminate ends an app, as XCTest's terminate does; one not running is
+// left as it is.
+func (c *wdaClient) terminate(ctx context.Context, bundleID string) error {
+	return c.do(ctx, c.long, http.MethodPost, "/wda/apps/terminate", map[string]any{"bundleId": bundleID}, nil)
+}
+
 type wdaApp struct {
 	BundleID string `json:"bundleId"`
 	Name     string `json:"name"`

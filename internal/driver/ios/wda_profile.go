@@ -38,6 +38,8 @@ type provisioningProfile struct {
 	Devices    []string // the UDIDs it runs on
 	AllDevices bool     // an enterprise profile, for any device
 	Expires    time.Time
+	TeamName   string
+	TeamID     string
 }
 
 // grants reports whether the profile lets the runner run: its application
@@ -193,6 +195,8 @@ func parseProfile(b []byte) (provisioningProfile, error) {
 		ProvisionedDevices   []string       `plist:"ProvisionedDevices"`
 		ProvisionsAllDevices bool           `plist:"ProvisionsAllDevices"`
 		Entitlements         map[string]any `plist:"Entitlements"`
+		TeamName             string         `plist:"TeamName"`
+		TeamIdentifier       []string       `plist:"TeamIdentifier"`
 	}
 	if _, err := plist.Unmarshal(content, &raw); err != nil {
 		return provisioningProfile{}, fmt.Errorf("the profile's property list: %w", err)
@@ -201,11 +205,15 @@ func parseProfile(b []byte) (provisioningProfile, error) {
 		return provisioningProfile{}, errors.New("the profile has no expiration date")
 	}
 	appID, _ := raw.Entitlements["application-identifier"].(string)
-	return provisioningProfile{
+	pr := provisioningProfile{
 		Name: raw.Name, UUID: raw.UUID, AppID: appID,
 		Devices: raw.ProvisionedDevices, AllDevices: raw.ProvisionsAllDevices,
-		Expires: raw.ExpirationDate.UTC(),
-	}, nil
+		Expires: raw.ExpirationDate.UTC(), TeamName: strings.TrimSpace(raw.TeamName),
+	}
+	if len(raw.TeamIdentifier) > 0 {
+		pr.TeamID = raw.TeamIdentifier[0]
+	}
+	return pr, nil
 }
 
 // errBER is an encoding signedContent cannot read.

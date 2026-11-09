@@ -125,6 +125,7 @@ func (p *Provider) ConnectWiFi(ctx context.Context, addr string) (driver.Info, e
 		}
 		for _, e := range entries {
 			if e.Serial == addr && e.State == adb.StateDevice {
+				p.trustConn(ctx, e) // the person typed the address
 				return p.infoFor(ctx, e.Serial)
 			}
 		}
@@ -327,6 +328,7 @@ func (p *Provider) connectPaired(ctx context.Context, guid, host string, own Bro
 		}
 		for _, e := range entries {
 			if pairedSerial(e.Serial, guid, connected) && e.State == adb.StateDevice {
+				p.trustPaired(ctx, e, guid, host)
 				return p.infoFor(ctx, e.Serial)
 			}
 		}
@@ -337,16 +339,23 @@ func (p *Provider) connectPaired(ctx context.Context, guid, host string, own Bro
 			if addr == "" && own != nil {
 				addr = connectAddr(own.Services(), guid, host)
 			}
-			// A server that lists the phone connects to it by itself; give it
-			// a moment first. One that does not will never connect.
+			// A server that lists the phone may connect to it by itself (one
+			// Pinky did not start); give it a moment first, then connect by
+			// the phone's service name, which gives the connection the
+			// serial the server's own would have. One that does not list it
+			// will never connect: connect to the address Pinky found.
 			if addr != "" && (!byServer || time.Since(start) > serverGrace) {
+				target := addr
+				if byServer && guid != "" {
+					target = guid + connectSuffix
+				}
 				if !byServer {
 					p.cfg.logf("android: the adb server's discovery does not list the paired phone; connecting to %s, which Pinky found", addr)
 				}
-				if err := c.Connect(ctx, addr); err != nil {
-					p.cfg.logf("android: connecting to %s: %v", addr, err)
+				if err := c.Connect(ctx, target); err != nil {
+					p.cfg.logf("android: connecting to %s: %v", target, err)
 				} else {
-					connected = addr
+					connected = target
 				}
 			}
 		}
@@ -371,7 +380,7 @@ func (p *Provider) infoFor(ctx context.Context, serial string) (driver.Info, err
 				continue
 			}
 			if pr, err := p.deviceProps(ctx, e); err == nil {
-				id = phoneID(e, pr) // read once per connection: List did
+				id = p.phoneID(e, pr) // read once per connection: List did
 			}
 		}
 	}

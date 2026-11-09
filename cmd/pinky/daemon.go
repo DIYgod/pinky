@@ -167,7 +167,7 @@ func startGateway(c gatewayConfig) (*runningGateway, error) {
 	} else {
 		providers = realProviders(log)
 		if len(providers) == 0 {
-			log.Warn("no device provider could start (adb server, usbmuxd); use --fake to try Pinky with fake phones")
+			log.Warn("no device provider could start (adb server, usbmuxd); start an iOS Simulator or Android emulator from the app's Add phone, or use --fake to try Pinky with fake phones")
 		}
 	}
 

@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -66,6 +67,19 @@ type PairInfo struct {
 // keeps answering or keeps not answering; the search's questions back off
 // too (mdns.Options.MaxEvery), since every phone on the network answers
 // them.
+//
+// Nor do the records prove that an address is the phone's: anyone on the
+// network can send one with the phone's name and TXT strings, which go out
+// in the clear, and another address. Lockdown's TLS is pinned to the pair
+// record, but WebDriverAgent's HTTP below iOS 27 is not, so whoever answers
+// at a phone's address would see what Pinky types. So a listed phone stays
+// at its address on Wi-Fi while lockdown there answers, whatever the records
+// say, and goes to another address they name only once it has not answered
+// there for dropAfter, or at once when that one is on the cable's link
+// (phoneLink); a phone not listed goes back to the address it was last
+// listed at while its records still name that one. Records that name an
+// address no phone can have, such as this computer's own, are skipped
+// (usableAddrs).
 type Finder struct {
 	Mux   *Mux
 	UDIDs func() []string // the phones this computer paired with
@@ -79,6 +93,7 @@ type Finder struct {
 	PairFn   func(udid string) (PairInfo, error)
 	ProbeFn  func(ctx context.Context, addr netip.Addr) bool
 	NowFn    func() time.Time
+	LocalFn  func() []netip.Addr // this computer's addresses
 }
 
 const (
@@ -138,7 +153,7 @@ func (f *Finder) interval() time.Duration {
 
 func newFindState(f *Finder, log *slog.Logger) *findState {
 	return &findState{f: f, log: log, pairs: map[string]pairEntry{}, failSince: map[string]time.Time{}, names: map[string]string{},
-		listed: map[string]netip.Addr{}, seen: map[string]bool{}, probes: map[string]probeState{}}
+		listed: map[string]netip.Addr{}, last: map[string]netip.Addr{}, seen: map[string]bool{}, probes: map[string]probeState{}}
 }
 
 func (f *Finder) logOrDiscard() *slog.Logger {
@@ -159,6 +174,7 @@ type findState struct {
 	failSince map[string]time.Time
 	names     map[string]string // instance name to UDID, once matched
 	listed    map[string]netip.Addr
+	last      map[string]netip.Addr // the address a phone was last listed at, also once dropped
 	seen      map[string]bool       // found before
 	probes    map[string]probeState // by UDID: when lockdown is next asked
 }
@@ -234,7 +250,9 @@ func (s *findState) tick(ctx context.Context) {
 
 	// The phones on the network, and whether they answer: those whose
 	// record matched, now or before, and those listed.
-	found := map[string]netip.Addr{}
+	addrs := map[string][]netip.Addr{}
+	var own []netip.Addr // this computer's addresses, read once a record matched
+	ownRead := false
 	for _, svc := range s.src.Services() {
 		id := Match(svc, known)
 		if id != "" {
@@ -245,9 +263,39 @@ func (s *findState) tick(ctx context.Context) {
 		if id == "" {
 			continue
 		}
-		if addr, ok := ipv4(svc); ok {
-			found[id] = addr
+		if !ownRead {
+			own, ownRead = s.localAddrs(), true
 		}
+		list, refused := usableAddrs(svc, own)
+		if len(refused) > 0 {
+			s.log.Debug("netmux: a record names addresses no phone can have; skipped", "device", id, "addrs", refused)
+		}
+		addrs[id] = append(addrs[id], list...)
+	}
+	// Where lockdown is asked about each phone. One listed on Wi-Fi is asked
+	// there, whatever its records say; another address they name is alt,
+	// where it goes once lockdown no longer answers there: at once when
+	// that is on the cable's link, after dropAfter otherwise (a sleeping
+	// phone does not answer for a while about every minute, and a record
+	// replayed with someone else's address must not take it then).
+	found := map[string]netip.Addr{}
+	alt := map[string]netip.Addr{}
+	for id, list := range addrs {
+		cur, listed := s.listed[id]
+		last := cur
+		if !listed {
+			last = s.last[id]
+		}
+		addr, ok := pickAddr(list, last)
+		if !ok {
+			continue
+		}
+		if listed && addr != cur && !phoneLink.Contains(cur) {
+			s.log.Debug("netmux: a listed phone's records name another address; staying while lockdown answers where it is", "device", id, "addr", cur, "other", addr)
+			found[id], alt[id] = cur, addr
+			continue
+		}
+		found[id] = addr
 	}
 	for id, addr := range s.listed {
 		if _, ok := found[id]; !ok {
@@ -260,15 +308,18 @@ func (s *findState) tick(ctx context.Context) {
 		probe = probeLockdown
 	}
 	// Lockdown is asked about the phones whose turn it is, or whose address
-	// changed; for the others its last answer stands.
+	// changed; for the others its last answer stands. A phone that would go
+	// to the cable's link is asked at every look, so that it goes at once.
 	answered := map[string]bool{}
 	probed := map[string]bool{}
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	for id, addr := range found {
-		if ps, ok := s.probes[id]; ok && ps.addr == addr && now.Before(ps.next) {
-			answered[id] = ps.ok
-			continue
+		if other, kept := alt[id]; !kept || !phoneLink.Contains(other) {
+			if ps, ok := s.probes[id]; ok && ps.addr == addr && now.Before(ps.next) {
+				answered[id] = ps.ok
+				continue
+			}
 		}
 		probed[id] = true
 		wg.Add(1)
@@ -283,6 +334,25 @@ func (s *findState) tick(ctx context.Context) {
 	wg.Wait()
 	if ctx.Err() != nil {
 		return
+	}
+	for id, other := range alt {
+		if answered[id] {
+			continue
+		}
+		if !phoneLink.Contains(other) {
+			since, failing := s.failSince[id]
+			if !failing || now.Sub(since) < dropAfter {
+				continue
+			}
+		}
+		if probe(ctx, other) {
+			level := slog.LevelInfo // worth a line: so a forged record would show
+			if phoneLink.Contains(other) {
+				level = slog.LevelDebug
+			}
+			s.log.Log(ctx, level, "iphone: lockdown no longer answers at the phone's address; moving to the other one its records name", "device", id, "from", found[id], "to", other)
+			found[id], answered[id], probed[id] = other, true, true
+		}
 	}
 	for id := range probed {
 		s.probes[id] = s.nextProbe(now, id, found[id], answered[id])
@@ -335,6 +405,9 @@ func (s *findState) tick(ctx context.Context) {
 		}
 	}
 	s.listed = next
+	for id, addr := range next {
+		s.last[id] = addr
+	}
 	var list []Phone
 	for id, addr := range next {
 		list = append(list, Phone{UDID: id, Addr: addr})
@@ -363,15 +436,76 @@ func (s *findState) nextProbe(now time.Time, id string, addr netip.Addr, ok bool
 	return probeState{addr: addr, ok: ok, every: every, next: now.Add(every)}
 }
 
-// ipv4 returns the service's IPv4 address. Link-local IPv6 addresses need
-// an interface to dial, which usbmuxd's clients do not give.
-func ipv4(s mdns.Service) (netip.Addr, bool) {
-	for _, a := range s.Addrs {
-		if a.Is4() {
-			return a, true
+// usableAddrs returns the service's IPv4 addresses that can be a phone's,
+// and those it names that cannot: unspecified, loopback, multicast or
+// broadcast ones (mdns.Usable), and this computer's own (own), where
+// whatever listens on LockdownPort would get what Pinky sends the phone.
+// Addresses outside this computer's networks stay: an mDNS reflector
+// brings records from other ones. Link-local IPv6 addresses need an
+// interface to dial, which usbmuxd's clients do not give.
+func usableAddrs(svc mdns.Service, own []netip.Addr) (ok, refused []netip.Addr) {
+	for _, a := range svc.Addrs {
+		switch {
+		case !a.Is4():
+		case !mdns.Usable(a) || slices.Contains(own, a):
+			refused = append(refused, a)
+		default:
+			ok = append(ok, a)
 		}
 	}
-	return netip.Addr{}, false
+	return ok, refused
+}
+
+// localAddrs returns this computer's addresses.
+func (s *findState) localAddrs() []netip.Addr {
+	if s.f.LocalFn != nil {
+		return s.f.LocalFn()
+	}
+	ifAddrs, err := net.InterfaceAddrs()
+	if err != nil {
+		s.log.Debug("netmux: cannot read this computer's addresses", "err", err)
+		return nil
+	}
+	var out []netip.Addr
+	for _, a := range ifAddrs {
+		if n, ok := a.(*net.IPNet); ok {
+			if ip, ok := netip.AddrFromSlice(n.IP); ok {
+				out = append(out, ip.Unmap())
+			}
+		}
+	}
+	return out
+}
+
+// phoneLink is the network an iPhone makes with a computer on its cable
+// (and for its Personal Hotspot), where the phone is 172.20.10.1. On a
+// cable the phone answers the search there too, and lockdown answers there,
+// but it is not Wi-Fi and it goes with the cable: with both, the phone's
+// address flipped between the two every few seconds, a new attach each
+// time (Windows, "Apple Mobile Device Ethernet", 2026-11-09).
+var phoneLink = netip.MustParsePrefix("172.20.10.0/28")
+
+// pickAddr picks the address a phone is listed at among those its records
+// name: one outside phoneLink when there is one, and the one it was listed
+// at (last) while that is still among the best, so it does not move.
+func pickAddr(addrs []netip.Addr, last netip.Addr) (netip.Addr, bool) {
+	var best []netip.Addr
+	for _, a := range addrs {
+		if !phoneLink.Contains(a) {
+			best = append(best, a)
+		}
+	}
+	if len(best) == 0 {
+		best = addrs
+	}
+	if len(best) == 0 {
+		return netip.Addr{}, false
+	}
+	if slices.Contains(best, last) {
+		return last, true
+	}
+	slices.SortFunc(best, netip.Addr.Compare)
+	return best[0], true
 }
 
 // Match returns the UDID of the phone that advertises svc for this
@@ -492,5 +626,17 @@ func PairedUDIDs(dir string) []string {
 	return out
 }
 
-// LockdownDir is where libimobiledevice's usbmuxd keeps pair records.
-var LockdownDir = filepath.FromSlash("/var/lib/lockdown")
+// LockdownDir is where the system's usbmuxd keeps pair records:
+// libimobiledevice's on Linux, Apple's (Apple Devices, iTunes) on Windows.
+var LockdownDir = lockdownDir()
+
+func lockdownDir() string {
+	if runtime.GOOS == "windows" {
+		base := os.Getenv("ProgramData")
+		if base == "" {
+			base = `C:\ProgramData`
+		}
+		return filepath.Join(base, "Apple", "Lockdown")
+	}
+	return filepath.FromSlash("/var/lib/lockdown")
+}

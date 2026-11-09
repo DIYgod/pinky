@@ -79,7 +79,10 @@ const orientPoll = time.Second
 
 // orientLoop reads the display's orientation every orientPoll while a view
 // of the video is open. Nothing else tells Pinky the device turned: the
-// picture keeps the display's own frame and size.
+// picture keeps the display's own frame and size. Nor that a foldable was
+// folded or unfolded: the stream then goes on showing the display put
+// away, and starts again on the one in use (live), which ends the views
+// open on it; the mirror opens a new one.
 func (d *Device) orientLoop() {
 	t := time.NewTicker(orientPoll)
 	defer t.Stop()
@@ -93,6 +96,9 @@ func (d *Device) orientLoop() {
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 				d.readDisplayNow(ctx)
 				cancel()
+				if d.displayMoved() {
+					d.live(context.Background())
+				}
 			}
 		case <-d.done:
 			return

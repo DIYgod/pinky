@@ -25,6 +25,7 @@ var ruleNames = map[string]func() string{
 	"Installs and links": locales.RuleInstallsLinks,
 	"Calls":              locales.RuleCalls,
 	"Settings changes":   locales.RuleSettingsChanges,
+	"Phone settings":     locales.RuleSettingsPhone,
 	"Every action":       locales.RuleEveryAction,
 	"Blocked by you":     locales.RuleBlockedByYou,
 	"credentials":        locales.RuleCredentials,
@@ -33,8 +34,16 @@ var ruleNames = map[string]func() string{
 	"Agent scope":        locales.RuleAgentScope,
 	"Finance apps":       locales.RuleFinanceApps,
 	"Password managers":  locales.RulePasswordManagers,
+	"Unsafe links":       locales.RuleUnsafeLinks,
 	"Files":              locales.RuleFiles,
+	"Recordings":         locales.RuleRecordings,
+	"App logs":           locales.RuleAppLogs,
 	"Agent request":      locales.RuleAgentRequest,
+
+	"Installing from the computer": locales.RuleInstallFromComputer,
+	"Uninstalling apps":            locales.RuleUninstallApps,
+	"Pinky's own apps":             locales.RulePinkyApps,
+	"System apps":                  locales.RuleSystemApps,
 }
 
 // ruleName names a rule as the person reads it: "Payments". A rule of the

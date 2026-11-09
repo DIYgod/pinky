@@ -13,13 +13,17 @@ import (
 )
 
 // Reconnecting paired phones over Wi-Fi (Config.ReconnectWiFi). The adb
-// server connects by itself to the phones it paired with when their
-// connect service shows up on the network, but only while its own
-// discovery works. After the computer's network changes it sees nothing
-// until it restarts, so a phone whose connection dropped (it slept, or
-// left the network for a while) stays away. List then looks for the paired
-// phones that are not connected with the driver's own search, and connects
-// to them by address, as the server would.
+// server can connect by itself to the phones it paired with when their
+// connect service shows up on the network, but Pinky starts it with that
+// turned off (adb.ServerOptions.NoAutoConnect), so that a phone is
+// connected only when Pinky asks: List connects the paired phones the
+// server's discovery lists by their service name, which gives them the
+// serials the server's auto-connect would. The server's discovery sees
+// nothing after the computer's network changes until it restarts, so a
+// phone whose connection dropped (it slept, or left the network for a
+// while) would stay away; List looks for the paired phones the server
+// does not list with the driver's own search, and connects to them by
+// address.
 
 // reconnectSearch is how long a pass searches the network: a dozing phone
 // may take five seconds to answer.
@@ -127,14 +131,38 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 	// Phones the person removed from Pinky stay away until they add them
 	// back (Forget).
 	want = slices.DeleteFunc(want, func(g string) bool { return p.forgot(guidSerial(g)) })
+	want = slices.DeleteFunc(want, func(g string) bool { return r.onWiFi(ctx, g, entries) })
 	if len(want) == 0 {
 		return false, false
 	}
-	// A phone the server's discovery lists, the server connects by itself.
+	// A phone the server's discovery lists is connected by its service
+	// name, as the server's own auto-connect does (Pinky starts the server
+	// with it off, so that only Pinky decides what to connect): the
+	// connection gets the serial the server would give it.
 	listed, _ := p.cfg.Client.MDNSServices(ctx)
-	want = slices.DeleteFunc(want, func(g string) bool { return serviceAddr(listed, g) != "" })
+	rest := want[:0]
+	for _, g := range want {
+		if serviceAddr(listed, g) == "" {
+			rest = append(rest, g)
+			continue
+		}
+		name := g + connectSuffix
+		if r.holdBack(g, name) {
+			away = true
+			continue
+		}
+		r.note(g, "android: "+g+" is on the network and the adb server lists it; connecting it by its name")
+		if err := p.cfg.Client.Connect(ctx, name); err != nil {
+			r.refuse(ctx, g, name, err)
+			away = true
+			continue
+		}
+		r.connectedNamed(g)
+		connected = true
+	}
+	want = rest
 	if len(want) == 0 {
-		return false, false
+		return away, connected
 	}
 	b, err := p.browse(adb.ServiceConnect)
 	if err != nil {
@@ -169,6 +197,41 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 		connected = true
 	}
 	return away, connected
+}
+
+// onWiFi reports whether a paired phone is connected on the computer's
+// network already in a way that missing does not see: at an address that
+// neither the server's discovery nor this driver connected, such as adb
+// tcpip's port 5555, another tool's connection, one that Pinky made before
+// it restarted, or the phone's other address (IPv6 rather than IPv4). One
+// more connection would be the same phone again. A cable's and Tailscale's
+// do not count: the server's discovery would connect the phone at home all
+// the same.
+func (r *reconnector) onWiFi(ctx context.Context, guid string, entries []adb.DeviceEntry) bool {
+	serial := guidSerial(guid)
+	if serial == "" {
+		return false
+	}
+	for _, e := range entries {
+		if e.State != adb.StateDevice || !e.Wireless() || viaTailnet(e.Serial) {
+			continue
+		}
+		pctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		pr, err := r.p.deviceProps(pctx, e)
+		cancel()
+		if err == nil && r.p.phoneID(e, pr) == serial {
+			return true
+		}
+	}
+	return false
+}
+
+// guidAt returns the guid of the paired phone this driver connected at an
+// address, "" for an address it did not connect.
+func (r *reconnector) guidAt(addr string) string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.byAddr[addr]
 }
 
 // holdBack reports whether a phone refused a connection at this address
@@ -253,6 +316,14 @@ func (r *reconnector) search(ctx context.Context, b Browse, want []string) map[s
 			return found
 		}
 	}
+}
+
+// connectedNamed forgets a phone's failed connections once it connected by
+// its name.
+func (r *reconnector) connectedNamed(guid string) {
+	r.mu.Lock()
+	delete(r.refused, guid)
+	r.mu.Unlock()
 }
 
 func (r *reconnector) remember(addr, guid string) {

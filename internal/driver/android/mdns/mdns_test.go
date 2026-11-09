@@ -151,6 +151,52 @@ func TestParseAndCache(t *testing.T) {
 	}
 }
 
+// TestUnusableAddresses: records that name an address no device on the
+// network can have (this computer's loopback, nobody, a group) are
+// skipped, and their cache-flush bit does not drop the host's real
+// addresses.
+func TestUnusableAddresses(t *testing.T) {
+	for _, c := range []struct {
+		addr string
+		want bool
+	}{
+		{"192.168.5.137", true}, {"10.0.0.2", true}, {"169.254.3.4", true}, {"8.8.8.8", true},
+		{"fe80::1", true}, {"2001:db8::7", true},
+		{"127.0.0.1", false}, {"127.1.2.3", false}, {"0.0.0.0", false}, {"0.1.2.3", false},
+		{"224.0.0.251", false}, {"239.255.255.250", false}, {"255.255.255.255", false},
+		{"::", false}, {"::1", false}, {"ff02::fb", false}, {"::ffff:127.0.0.1", false}, {"::ffff:192.168.5.137", false},
+	} {
+		if got := Usable(netip.MustParseAddr(c.addr)); got != c.want {
+			t.Errorf("Usable(%s) = %v, want %v", c.addr, got, c.want)
+		}
+	}
+	if Usable(netip.Addr{}) {
+		t.Error("the zero address is usable")
+	}
+
+	cache := newCache()
+	now := time.Now()
+	types := []string{connectType}
+	addMsg(t, cache, now, types, miResponse(t, 120))
+	host := "Android_X32DXQ4S.local."
+	var bad []rr
+	for _, a := range []string{"127.0.0.1", "0.0.0.0", "224.0.0.251", "255.255.255.255"} {
+		bad = append(bad, rr{name: host, typ: dnsmessage.TypeA, ttl: 120, flush: true, data: a})
+	}
+	for _, a := range []string{"::1", "::", "ff02::fb", "::ffff:127.0.0.1"} {
+		bad = append(bad, rr{name: host, typ: dnsmessage.TypeAAAA, ttl: 120, flush: true, data: a})
+	}
+	addMsg(t, cache, now.Add(2*time.Second), types, response(t, bad, nil))
+	svcs := cache.services(now.Add(2*time.Second), types)
+	if len(svcs) != 1 {
+		t.Fatalf("services = %v", svcs)
+	}
+	want := []netip.Addr{netip.MustParseAddr("192.168.5.137"), netip.MustParseAddr("fe80::334a:20d0:55c3:8bac")}
+	if !slices.Equal(svcs[0].Addrs, want) || svcs[0].Addr() != "192.168.5.137:38161" {
+		t.Errorf("addresses = %v (%s), want %v", svcs[0].Addrs, svcs[0].Addr(), want)
+	}
+}
+
 func TestGoodbye(t *testing.T) {
 	c := newCache()
 	now := time.Now()

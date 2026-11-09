@@ -94,9 +94,10 @@ type Options struct {
 // Input is one input the person sent through the mirror.
 type Input struct {
 	Device string
-	Kind   string // "touch", "key", "text"
+	Kind   string // "touch", "touch2", "key", "text"
 	Action driver.TouchAction
 	Point  screen.Point
+	Point2 screen.Point // the second finger of "touch2"
 	Key    driver.Key
 	Text   string
 }
@@ -143,8 +144,10 @@ type API struct {
 	wifiOff    bool             // iPhones over Wi-Fi turned off (wifi.go)
 	restarts   []string         // RestartDeviceService reasons (wifi.go)
 	restartErr error
-	dlErr      error        // what DownloadDiskImage fails with (iphone.go)
-	tn         *fakeTailnet // Tailscale on this computer (tailnet.go)
+	trusted    []string      // TrustPhone's phones (wifi.go)
+	dlErr      error         // what DownloadDiskImage fails with (iphone.go)
+	tn         *fakeTailnet  // Tailscale on this computer (tailnet.go)
+	virt       *virtualState // Simulators and emulators (virtual.go)
 }
 
 type device struct {
@@ -233,6 +236,9 @@ func (a *API) Play(s Scenario) {
 	a.needs = nil
 	a.tasks = nil
 	a.devices = nil
+	if a.virt != nil {
+		a.virt.starting = map[string]bool{}
+	}
 	pixel := &device{
 		info: driver.Info{ID: "pixel-9", Platform: driver.Android, Name: "Pixel 9", Model: "Pixel 9",
 			OSVersion: "16", Connection: "usb", Backend: "scrcpy", State: driver.StateOnline},
@@ -427,6 +433,8 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Found on Wi-Fi"
 	case d.info.Setup == driver.SetupDeviceService && d.info.State == driver.StateNeedsSetup:
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Lost on Wi-Fi"
+	case d.info.Setup == driver.SetupPhoneChanged && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Not the same phone"
 	case d.info.State != driver.StateOnline:
 		// Plugged in, waiting for a step, as the gateway lists such a phone
 		// (statusLocked), also while a task waits for it.
@@ -760,6 +768,12 @@ func (a *API) Stream(ctx context.Context, deviceID string, opt driver.StreamOpti
 // Touch implements gateway.API. Input from the person pauses the agent.
 func (a *API) Touch(deviceID string, act driver.TouchAction, p screen.Point) error {
 	return a.input(Input{Device: deviceID, Kind: "touch", Action: act, Point: p})
+}
+
+// Touch2 is the gateway's two-finger touch, for the person's pinch on the
+// mirror.
+func (a *API) Touch2(deviceID string, act driver.TouchAction, p, q screen.Point) error {
+	return a.input(Input{Device: deviceID, Kind: "touch2", Action: act, Point: p, Point2: q})
 }
 
 // Key implements gateway.API.

@@ -169,7 +169,9 @@ func (a *agent) remove(ctx context.Context, s *Setup) (Result, error) {
 
 func (a *agent) removeWith(ctx context.Context, s *Setup, path string, pl place) ([]string, error) {
 	var backups []string
-	if data, existed, _ := readFile(pl.file); existed && len(data) > 0 {
+	if data, existed, err := readFile(pl.file); err != nil {
+		return nil, err
+	} else if existed && len(data) > 0 {
 		b, err := backup(s.backups(), a.id, pl.file, data, s.now())
 		if err != nil {
 			return nil, fmt.Errorf("Pinky did not change %s: it could not keep a copy of its settings: %w", a.name(s.Env), err)
@@ -179,7 +181,11 @@ func (a *agent) removeWith(ctx context.Context, s *Setup, path string, pl place)
 	if err := a.cli.run(ctx, s.Env, path, a.cli.remove); err != nil {
 		return backups, err
 	}
-	if _, ok, _ := pl.store.read(pl.file); ok {
+	_, ok, err := pl.store.read(pl.file)
+	if err != nil {
+		return backups, err
+	}
+	if ok {
 		return backups, fmt.Errorf("%s: %w (%s)", filepath.Base(path), errNoEntry, pl.file)
 	}
 	return backups, nil

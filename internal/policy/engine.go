@@ -156,6 +156,9 @@ func (e *Engine) Blocked(app screen.App) (rule string, blocked bool) {
 func (e *Engine) Evaluate(in Input) Verdict {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
+	if in.Op.AppChange() {
+		return e.appChangeLocked(in)
+	}
 
 	app := in.App
 	if in.Op == OpLaunch {
@@ -168,6 +171,14 @@ func (e *Engine) Evaluate(in Input) Verdict {
 	if in.Op == OpType && IsCredentialField(in.Target) {
 		return Verdict{Decision: Deny, Rule: RuleCredentials, Kinds: kinds,
 			Reason: "Pinky never types into password or one-time-code fields; call phone_handoff so the person can fill it."}
+	}
+	if in.Op == OpLaunch && in.LaunchURL {
+		if why, refused := LinkRefused(in.Link); refused {
+			return Verdict{Decision: Deny, Rule: RuleUnsafeLinks, Kinds: kinds, Reason: why}
+		}
+		if why, refused := linkAppRefused(in.Link, app); refused {
+			return Verdict{Decision: Deny, Rule: RuleUnsafeLinks, Kinds: kinds, Reason: why}
+		}
 	}
 	if len(in.ScopeApps) > 0 && !system && !appIn(app, in.ScopeApps) && !(in.Op == OpKey && in.Key == "home") {
 		return Verdict{Decision: Deny, Rule: RuleAgentScope, Kinds: kinds, Scope: true,

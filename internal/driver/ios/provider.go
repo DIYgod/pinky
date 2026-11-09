@@ -33,10 +33,11 @@ type Provider struct {
 	// (an iOS_DDI folder in it), looked in before Xcode's; "" for none.
 	DiskImageDir string
 
-	// WiFiMux lets the provider run a usbmuxd of its own on Linux, whose
-	// usbmuxd lists phones on a cable only, to find phones on Wi-Fi
-	// (netmux.go). Only the app's provider sets it: it points go-ios, for
-	// the whole process, at that usbmuxd.
+	// WiFiMux lets the provider run a usbmuxd of its own on Linux and
+	// Windows, whose usbmuxd lists phones on Wi-Fi not at all or only while
+	// they are on a cable too, to find phones on Wi-Fi (netmux.go). Only the
+	// app's provider sets it: it points go-ios, for the whole process, at
+	// that usbmuxd, which then carries every connection to an iPhone.
 	WiFiMux bool
 
 	// Log gets a line for each step Pinky takes to prepare a phone:
@@ -73,6 +74,7 @@ type Provider struct {
 	muxFails   int                              // Lists in a row that usbmuxd did not answer
 	muxPhones  int                              // phones the last answered List found
 	listFn     func() (goios.DeviceList, error) // for tests: usbmuxd's list
+	openFails  map[string]string                // by UDID: why the last open got no picture (noVideoError.Detail)
 }
 
 // recheckOffline is how often List asks a phone that is not online again,
@@ -307,6 +309,11 @@ func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 		if !listed[id] {
 			stop = append(stop, s)
 			delete(p.wdaWaits, id)
+		}
+	}
+	for id := range p.openFails {
+		if !listed[id] {
+			delete(p.openFails, id)
 		}
 	}
 	for id := range p.wdaHolds {
@@ -808,6 +815,7 @@ func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 		return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
 	}
 	dev, err := p.openBackend(ctx, info)
+	p.noteOpen(id, err)
 	if err != nil {
 		if info.Backend == backendCoreDevice {
 			// Most often the developer services went away since List
@@ -830,7 +838,43 @@ func (p *Provider) openBackend(ctx context.Context, info driver.Info) (driver.De
 	case backendAccessibility:
 		return OpenAccessibility(ctx, info)
 	}
-	return Open(ctx, info)
+	return open(ctx, info, p.logger())
+}
+
+// noteOpen remembers an open that failed for want of a picture, for the
+// phone's checkup (OpenChecks), and forgets it once the phone opens or
+// fails otherwise.
+func (p *Provider) noteOpen(id string, err error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	var nv *noVideoError
+	if !errors.As(err, &nv) {
+		delete(p.openFails, id)
+		return
+	}
+	if p.openFails == nil {
+		p.openFails = map[string]string{}
+	}
+	p.openFails[id] = nv.Detail()
+}
+
+// OpenChecks implements driver.OpenChecker: a phone whose last open got no
+// picture from it fails the checkup's screen item, with what came instead.
+func (p *Provider) OpenChecks(id string) []driver.Check {
+	p.mu.Lock()
+	detail, ok := p.openFails[id]
+	p.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	return []driver.Check{noVideoCheck(detail)}
+}
+
+// noVideoCheck is the checkup's screen item of a phone that sends no
+// picture: restarting it is what helps first.
+func noVideoCheck(detail string) driver.Check {
+	return driver.Check{ID: driver.CheckScreen, Status: driver.CheckFail, Fix: driver.FixRestart,
+		Detail: "no live picture from the phone. " + detail}
 }
 
 func isPairingError(err error) bool {
@@ -852,6 +896,22 @@ func major(version string) int {
 // modelName turns a product type into a marketing name, for the models
 // Pinky can drive (iOS 17.4 runs on iPhone XS, XR and later, and iPadOS 17
 // on iPads from 2018 on).
+// twoScreenModels are the phones with two screens of their own, by
+// product type: the iPhone Duo folds, with a display inside and one
+// outside (display_info.go).
+var twoScreenModels = []string{"iPhone19,4"}
+
+// twoScreens reports whether model, as driver.Info.Model names it
+// (modelName), has two screens.
+func twoScreens(model string) bool {
+	for _, pt := range twoScreenModels {
+		if model == pt || model == modelName(pt) {
+			return true
+		}
+	}
+	return false
+}
+
 func modelName(productType string) string {
 	if n, ok := models[productType]; ok {
 		return n
@@ -868,32 +928,46 @@ var models = map[string]string{
 	"iPhone15,2": "iPhone 14 Pro", "iPhone15,3": "iPhone 14 Pro Max", "iPhone15,4": "iPhone 15", "iPhone15,5": "iPhone 15 Plus",
 	"iPhone16,1": "iPhone 15 Pro", "iPhone16,2": "iPhone 15 Pro Max",
 	"iPhone17,1": "iPhone 16 Pro", "iPhone17,2": "iPhone 16 Pro Max", "iPhone17,3": "iPhone 16", "iPhone17,4": "iPhone 16 Plus", "iPhone17,5": "iPhone 16e",
-	"iPhone18,1": "iPhone 17 Pro", "iPhone18,2": "iPhone 17 Pro Max", "iPhone18,3": "iPhone 17", "iPhone18,4": "iPhone Air",
-	"iPhone19,2": "iPhone 18 Pro",
+	"iPhone18,1": "iPhone 17 Pro", "iPhone18,2": "iPhone 17 Pro Max", "iPhone18,3": "iPhone 17", "iPhone18,4": "iPhone Air", "iPhone18,5": "iPhone 17e",
+	"iPhone19,2": "iPhone 18 Pro", "iPhone19,3": "iPhone 18 Pro Max", "iPhone19,7": "iPhone 18 Pro Max", "iPhone19,4": "iPhone Duo",
 
 	"iPad7,11": "iPad (7th generation)", "iPad7,12": "iPad (7th generation)",
 	"iPad11,6": "iPad (8th generation)", "iPad11,7": "iPad (8th generation)",
 	"iPad12,1": "iPad (9th generation)", "iPad12,2": "iPad (9th generation)",
 	"iPad13,18": "iPad (10th generation)", "iPad13,19": "iPad (10th generation)",
+	"iPad15,7": "iPad (A16)", "iPad15,8": "iPad (A16)",
 	"iPad11,1": "iPad mini (5th generation)", "iPad11,2": "iPad mini (5th generation)",
 	"iPad14,1": "iPad mini (6th generation)", "iPad14,2": "iPad mini (6th generation)",
+	"iPad16,1": "iPad mini (A17 Pro)", "iPad16,2": "iPad mini (A17 Pro)",
+	"iPad19,1": "iPad mini (A20 Pro)", "iPad19,2": "iPad mini (A20 Pro)",
 	"iPad11,3": "iPad Air (3rd generation)", "iPad11,4": "iPad Air (3rd generation)",
 	"iPad13,1": "iPad Air (4th generation)", "iPad13,2": "iPad Air (4th generation)",
 	"iPad13,16": "iPad Air (5th generation)", "iPad13,17": "iPad Air (5th generation)",
+	"iPad14,8": "iPad Air 11-inch (M2)", "iPad14,9": "iPad Air 11-inch (M2)",
+	"iPad14,10": "iPad Air 13-inch (M2)", "iPad14,11": "iPad Air 13-inch (M2)",
+	"iPad15,3": "iPad Air 11-inch (M3)", "iPad15,4": "iPad Air 11-inch (M3)",
+	"iPad15,5": "iPad Air 13-inch (M3)", "iPad15,6": "iPad Air 13-inch (M3)",
+	"iPad16,8": "iPad Air 11-inch (M4)", "iPad16,9": "iPad Air 11-inch (M4)",
+	"iPad16,10": "iPad Air 13-inch (M4)", "iPad16,11": "iPad Air 13-inch (M4)",
 	"iPad8,1": "iPad Pro 11-inch", "iPad8,2": "iPad Pro 11-inch", "iPad8,3": "iPad Pro 11-inch", "iPad8,4": "iPad Pro 11-inch",
 	"iPad8,9": "iPad Pro 11-inch (2nd generation)", "iPad8,10": "iPad Pro 11-inch (2nd generation)",
 	"iPad13,4": "iPad Pro 11-inch (3rd generation)", "iPad13,5": "iPad Pro 11-inch (3rd generation)",
 	"iPad13,6": "iPad Pro 11-inch (3rd generation)", "iPad13,7": "iPad Pro 11-inch (3rd generation)",
 	"iPad14,3": "iPad Pro 11-inch (4th generation)", "iPad14,4": "iPad Pro 11-inch (4th generation)",
+	"iPad16,3": "iPad Pro 11-inch (M4)", "iPad16,4": "iPad Pro 11-inch (M4)",
+	"iPad17,1": "iPad Pro 11-inch (M5)", "iPad17,2": "iPad Pro 11-inch (M5)",
 	"iPad8,5": "iPad Pro 12.9-inch (3rd generation)", "iPad8,6": "iPad Pro 12.9-inch (3rd generation)",
 	"iPad8,7": "iPad Pro 12.9-inch (3rd generation)", "iPad8,8": "iPad Pro 12.9-inch (3rd generation)",
 	"iPad8,11": "iPad Pro 12.9-inch (4th generation)", "iPad8,12": "iPad Pro 12.9-inch (4th generation)",
 	"iPad13,8": "iPad Pro 12.9-inch (5th generation)", "iPad13,9": "iPad Pro 12.9-inch (5th generation)",
 	"iPad13,10": "iPad Pro 12.9-inch (5th generation)", "iPad13,11": "iPad Pro 12.9-inch (5th generation)",
 	"iPad14,5": "iPad Pro 12.9-inch (6th generation)", "iPad14,6": "iPad Pro 12.9-inch (6th generation)",
+	"iPad16,5": "iPad Pro 13-inch (M4)", "iPad16,6": "iPad Pro 13-inch (M4)",
+	"iPad17,3": "iPad Pro 13-inch (M5)", "iPad17,4": "iPad Pro 13-inch (M5)",
 }
 
 var (
 	_ driver.Provider          = (*Provider)(nil)
 	_ driver.ConnectionChooser = (*Provider)(nil)
+	_ driver.OpenChecker       = (*Provider)(nil)
 )

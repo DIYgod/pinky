@@ -1,7 +1,7 @@
 //go:build !windows
 
-// Pinky runs its own usbmuxd on Linux only (netmux.go); these tests serve
-// it on a Unix socket in /tmp, which Windows does not have.
+// Pinky runs its own usbmuxd on Linux and Windows (netmux.go); these
+// tests serve it on a Unix socket in /tmp, which Windows does not have.
 
 package netmux
 
@@ -294,6 +294,15 @@ func TestMuxWithoutUpstream(t *testing.T) {
 	if info, err := m.readPair("NET-PHONE"); err != nil || info.HostID != "HOST-2" {
 		t.Errorf("readPair = %+v, %v", info, err)
 	}
+	// Where the Mux does not hand pair records out (Windows), its clients
+	// get none from PairDir; the Finder still reads them for itself.
+	m.ServePairDir = false
+	if _, err := goios.ReadPairRecord("NET-PHONE"); err == nil {
+		t.Error("handed out a pair record with ServePairDir off")
+	}
+	if info, err := m.readPair("NET-PHONE"); err != nil || info.HostID != "HOST-2" {
+		t.Errorf("readPair with ServePairDir off = %+v, %v", info, err)
+	}
 }
 
 func TestSetPhonesIDs(t *testing.T) {
@@ -344,7 +353,7 @@ func TestMuxKeepsAPhoneThroughABlip(t *testing.T) {
 	up := startUpstream(t, dir)
 	m := startMux(t, dir, up)
 	up.l.Close()
-	src := &fakeSource{svcs: []mdns.Service{iphoneService("127.0.0.1")}}
+	src := &fakeSource{svcs: []mdns.Service{iphoneService("192.0.2.10")}}
 	now := time.Unix(1_000_000, 0)
 	answers := true
 	f := &Finder{

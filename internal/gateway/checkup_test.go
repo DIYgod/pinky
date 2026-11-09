@@ -228,3 +228,55 @@ func TestNotSeenOnWiFiStatus(t *testing.T) {
 		t.Fatalf("status %q %q", st, line)
 	}
 }
+
+// openFailProvider lists a phone online that it cannot open, and says why
+// (driver.OpenChecker). The gateway compares providers, so it is used by
+// pointer.
+type openFailProvider struct {
+	listedProvider
+	checks []driver.Check
+}
+
+func (p *openFailProvider) OpenChecks(id string) []driver.Check {
+	if id != p.info.ID {
+		return nil
+	}
+	return p.checks
+}
+
+// A phone listed online that did not open is offline, unless its provider
+// says why the open failed: then it is connected and allows this computer,
+// and the provider's items say what fails.
+func TestCheckupOpenFailed(t *testing.T) {
+	info := driver.Info{ID: "duo", Platform: driver.IOS, Name: "iPhone", Connection: "usb", State: driver.StateOnline}
+	screen := driver.Check{ID: driver.CheckScreen, Status: driver.CheckFail, Fix: driver.FixRestart, Detail: "no live picture from the phone"}
+	for _, c := range []struct {
+		name   string
+		checks []driver.Check
+		want   []driver.CheckStatus
+	}{
+		{"said why", []driver.Check{screen}, []driver.CheckStatus{driver.CheckPass, driver.CheckPass, driver.CheckFail}},
+		{"said nothing", nil, []driver.CheckStatus{driver.CheckFail, driver.CheckSkip}},
+	} {
+		g := checkupGateway(t, &openFailProvider{listedProvider{info}, c.checks})
+		deadline := time.Now().Add(2 * time.Second)
+		for len(g.Devices()) == 0 && time.Now().Before(deadline) {
+			time.Sleep(5 * time.Millisecond)
+		}
+		v, err := g.Checkup(context.Background(), "duo")
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if len(v.Checks) != len(c.want) {
+			t.Fatalf("%s: checks = %+v", c.name, v.Checks)
+		}
+		for i, s := range c.want {
+			if v.Checks[i].Status != s {
+				t.Errorf("%s: check %d = %+v, want %s", c.name, i, v.Checks[i], s)
+			}
+		}
+		if len(c.checks) > 0 && v.Checks[2] != screen {
+			t.Errorf("%s: screen = %+v", c.name, v.Checks[2])
+		}
+	}
+}

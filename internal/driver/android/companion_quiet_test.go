@@ -39,7 +39,11 @@ type quietPhone struct {
 	uninstalls int
 	writes     int // settings put and delete
 	conns      map[net.Conn]bool
-	others     int // connections of other clients, counted in ping
+	others     int      // connections of other clients, counted in ping
+	features   []string // what ping lists
+	// reply answers a request instead of the defaults when it returns a
+	// result or an error.
+	reply func(req map[string]any) (any, *companion.Error)
 }
 
 func init() { companionRest = 100 * time.Millisecond }
@@ -122,21 +126,34 @@ func (p *quietPhone) handle(c net.Conn) {
 			return
 		}
 		var result any
+		var cerr *companion.Error
+		if reply := get(p, func() func(map[string]any) (any, *companion.Error) { return p.reply }); reply != nil {
+			result, cerr = reply(req)
+		}
 		switch req["cmd"] {
 		case "ping":
 			p.mu.Lock()
 			n := len(p.conns) + p.others
+			features := p.features
 			p.mu.Unlock()
 			result = map[string]any{"protocol": companion.ProtocolVersion, "version": "2026.1108.9", "connections": n,
-				"idle_disable_ms": 60000, "time": time.Now().UnixMilli(), "displays": []int{0}}
+				"idle_disable_ms": 60000, "time": time.Now().UnixMilli(), "displays": []int{0}, "features": features}
 		case "events":
 			result = map[string]any{"kinds": req["kinds"]}
 		case "tree":
-			result = map[string]any{"display": map[string]any{"id": 0, "width": 1080, "height": 2400}, "windows": []any{}, "time": time.Now().UnixMilli()}
+			if result == nil && cerr == nil {
+				result = map[string]any{"display": map[string]any{"id": 0, "width": 1080, "height": 2400}, "windows": []any{}, "time": time.Now().UnixMilli()}
+			}
 		default:
-			result = map[string]any{}
+			if result == nil && cerr == nil {
+				result = map[string]any{}
+			}
 		}
-		b, _ := json.Marshal(map[string]any{"id": req["id"], "ok": true, "result": result})
+		msg := map[string]any{"id": req["id"], "ok": true, "result": result}
+		if cerr != nil {
+			msg = map[string]any{"id": req["id"], "ok": false, "error": cerr}
+		}
+		b, _ := json.Marshal(msg)
 		if _, err := c.Write(append(b, '\n')); err != nil {
 			return
 		}

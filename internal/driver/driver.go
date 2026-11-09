@@ -6,6 +6,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"image"
 	"io"
 	"strconv"
@@ -70,6 +71,13 @@ type Info struct {
 	// WiFi is what the provider knows of reaching an iPhone or iPad over
 	// Wi-Fi, for its checkup and diagnostics; zero for other phones.
 	WiFi WiFiConnection `json:",omitzero"`
+	// Virtual marks a phone that runs on this computer: an iOS Simulator
+	// or an Android emulator (VirtualLauncher). Its Connection is "usb",
+	// as for a phone on a cable.
+	Virtual bool `json:",omitempty"`
+	// VirtualID is the VirtualPhone.ID a virtual phone runs as, to start
+	// it again from its page while it is offline; "" when not known.
+	VirtualID string `json:",omitempty"`
 }
 
 // WiFiConnection is what an iPhone's provider knows of its Wi-Fi connection:
@@ -124,6 +132,12 @@ const (
 	SetupUpdate        = "update"         // the phone's OS is too old for Pinky
 	SetupPasscode      = "passcode"       // enter the passcode where the phone asks for it: iOS does now and then before the WebDriverAgent helper may control it
 	SetupConnection    = "connection"     // the connection chosen for the phone (Settings › Phones) does not work with it; Detail says why and what to choose
+	// SetupSimulatorHelper: an iOS Simulator that Pinky cannot drive yet,
+	// as building the WebDriverAgent helper for it with Xcode failed
+	// (Xcode's license not agreed to, its iOS platform not installed, the
+	// helper's source not downloaded). Detail says why. Pinky tries again
+	// by itself, and at once when the person starts the Simulator again.
+	SetupSimulatorHelper = "simulator_helper"
 	// SetupDiskImageRefused: Apple's signing server would not sign the
 	// developer disk image on the computer (Info.DiskImage) for the phone,
 	// as it does with images it no longer signs, such as those of Xcode
@@ -146,6 +160,12 @@ const (
 	// no longer lists it, and will not for up to an hour. Restarting the
 	// service (DeviceServiceRestarter) brings it back.
 	SetupDeviceService = "device_service"
+	// SetupPhoneChanged: an Android phone reached over the network is not
+	// the phone Pinky set up under its id: it lacks the identity mark
+	// Pinky left on that phone (a phone that was reset, or another device
+	// on the network that claims to be it). Nothing is done on it until
+	// the person trusts it (PhoneTruster) or plugs the phone in.
+	SetupPhoneChanged = "phone_changed"
 	// SetupNotOnWiFi: an iPhone whose cable was just pulled, and whose
 	// Wi-Fi connection is on, is not seen on Wi-Fi: neither the device
 	// service lists it nor does the network show it (another network, one
@@ -178,6 +198,68 @@ type HostCheck struct {
 	// installed, but not running; it starts when an iPhone is plugged in).
 	Missing string
 	Detail  string // the same in a sentence
+}
+
+// OpenChecker is a Provider that can tell why a phone it lists as online
+// did not open, for the phone's checkup, which otherwise says only that the
+// phone is not connected.
+type OpenChecker interface {
+	// OpenChecks returns checkup items about the phone's last open, which
+	// failed: nil when it opened, was not tried or failed for a reason the
+	// provider has no item for.
+	OpenChecks(deviceID string) []Check
+}
+
+// VirtualLauncher is a Provider that lists the virtual phones this computer
+// has (iOS Simulators, Android emulators) and starts and stops them. Only
+// the person does that, from the client: agents get no tool for it. A
+// virtual phone that runs is listed by List like any phone, with
+// Info.Virtual.
+type VirtualLauncher interface {
+	VirtualPhones(ctx context.Context) (VirtualPhones, error)
+	// StartVirtual starts a virtual phone by its VirtualPhone.ID and
+	// returns once it started; it may still be booting.
+	StartVirtual(ctx context.Context, id string) error
+	// StopVirtual shuts a running virtual phone down.
+	StopVirtual(ctx context.Context, id string) error
+}
+
+// VirtualPhones is what a VirtualLauncher found.
+type VirtualPhones struct {
+	Platform Platform
+	Phones   []VirtualPhone
+	// Missing is a code clients put into words when the computer lacks
+	// what the platform's virtual phones need: "xcode" (no Xcode, or its
+	// command line tools selected instead), "android_sdk" (no Android SDK
+	// found), "emulator" (an SDK without its emulator). "" when nothing is
+	// missing; there may still be no phones, as before any is created.
+	Missing string
+	Detail  string // the same in a sentence
+	// Where says where the tools were found: the Xcode or the Android SDK
+	// folder.
+	Where string
+}
+
+// VirtualPhone is one virtual phone: an iOS Simulator device, or an
+// Android Virtual Device.
+type VirtualPhone struct {
+	ID        string // the Simulator's UDID, or the AVD's name
+	Name      string // the name the person gave it
+	Model     string // the device it is made as: "iPhone 17", "Pixel 9"
+	OSVersion string // "26.5", "16"
+	Running   bool
+	// DeviceID is its phone's ID while it runs (Info.ID): the Simulator's
+	// UDID, or the emulator's adb serial; "" when it is not running.
+	DeviceID string
+	// Starting says it is booting; DeviceID may not be listed yet.
+	Starting bool
+	// Failed says why it quit while it was starting, as an emulator that
+	// crashed while it booted; "" otherwise, and once it runs or starts
+	// again.
+	Failed string `json:",omitempty"`
+	// Unavailable says why it cannot start, as when its system image or
+	// its runtime is missing; "" when it can.
+	Unavailable string
 }
 
 // Device is an open, long-lived session with one phone. Methods must be safe
@@ -399,6 +481,14 @@ type PersonWatcher interface {
 	PersonInput() <-chan struct{}
 }
 
+// InputNoter is an optional Device interface: a note for the agent about
+// the last input, which worked but left something unsure, such as typed
+// text that could not be read back to check it. TakeInputNote returns the
+// note and forgets it; "" when there is none.
+type InputNoter interface {
+	TakeInputNote() string
+}
+
 // LockReporter reports whether the phone is locked.
 type LockReporter interface {
 	Locked(ctx context.Context) (bool, error)
@@ -539,6 +629,136 @@ type Files interface {
 	Push(ctx context.Context, path string, r io.Reader, size int64, mtime time.Time) error
 }
 
+// AppLogger reads one app's own logs and crash reports, for an agent that
+// tests the app (phone_logs). Every line and report comes from the app's
+// own processes only; a driver that cannot tell them apart from other
+// processes' returns ErrUnsupported rather than more. The gateway decides
+// which apps may be read: drivers refuse Pinky's own apps on the phone
+// (ErrNotFound).
+type AppLogger interface {
+	// AppLogs returns the app's log lines since q.Since that pass q.Keep,
+	// oldest first. When more than q.Max pass, the newest q.Max are kept
+	// and Dropped counts the older ones left out.
+	AppLogs(ctx context.Context, q LogQuery) (LogResult, error)
+	// AppCrashes returns the app's crash reports since q.Since, newest
+	// first, at most q.Max. Filter and Level do not apply.
+	AppCrashes(ctx context.Context, q LogQuery) ([]CrashReport, error)
+	// DevBuild reports whether the app is a development build: debuggable
+	// on Android, signed with get-task-allow on an iPhone.
+	DevBuild(ctx context.Context, app App) (bool, error)
+}
+
+// LogListener is an AppLogger that only has the lines it collected since
+// it was first asked for an app (an iPhone keeps no history a computer can
+// read back). StopAppLogs stops collecting and forgets the lines; the
+// gateway calls it when the task ends.
+type LogListener interface {
+	StopAppLogs()
+}
+
+// LogLevel is a log line's priority.
+type LogLevel string
+
+// Log levels, from the least to the most severe.
+const (
+	LevelVerbose LogLevel = "verbose"
+	LevelDebug   LogLevel = "debug"
+	LevelInfo    LogLevel = "info"
+	LevelWarn    LogLevel = "warn"
+	LevelError   LogLevel = "error"
+	LevelFatal   LogLevel = "fatal"
+)
+
+// Rank orders levels: 0 for verbose up to 5 for fatal, -1 for none.
+func (l LogLevel) Rank() int {
+	switch l {
+	case LevelVerbose:
+		return 0
+	case LevelDebug:
+		return 1
+	case LevelInfo:
+		return 2
+	case LevelWarn:
+		return 3
+	case LevelError:
+		return 4
+	case LevelFatal:
+		return 5
+	}
+	return -1
+}
+
+// Letter is the level's letter as logcat writes it: V, D, I, W, E or F.
+func (l LogLevel) Letter() string {
+	switch l {
+	case LevelVerbose:
+		return "V"
+	case LevelDebug:
+		return "D"
+	case LevelInfo:
+		return "I"
+	case LevelWarn:
+		return "W"
+	case LevelError:
+		return "E"
+	case LevelFatal:
+		return "F"
+	}
+	return "?"
+}
+
+// LogQuery asks AppLogger for one app's lines or crash reports.
+type LogQuery struct {
+	App   App       // the app as Apps lists it; a clone is read as itself
+	Since time.Time // zero means as far back as the phone keeps
+	// Filter keeps lines whose tag or text contains it, ignoring case.
+	Filter string
+	// Level keeps lines of this level or more severe; empty keeps all.
+	Level LogLevel
+	Max   int // at most this many lines or reports; 0 means no limit
+}
+
+// Keep reports whether a line passes the query's filter and level.
+func (q LogQuery) Keep(l LogLine) bool {
+	if q.Level != "" && l.Level.Rank() < q.Level.Rank() {
+		return false
+	}
+	if q.Filter == "" {
+		return true
+	}
+	f := strings.ToLower(q.Filter)
+	return strings.Contains(strings.ToLower(l.Tag), f) || strings.Contains(strings.ToLower(l.Text), f)
+}
+
+// LogLine is one line of an app's log.
+type LogLine struct {
+	Time  time.Time
+	PID   int
+	Level LogLevel
+	Tag   string // Android's tag; an iPhone's subsystem or sender
+	Text  string
+}
+
+// LogResult is what AppLogs returns.
+type LogResult struct {
+	Lines   []LogLine // oldest first
+	Dropped int       // older lines that passed but were left out
+	// From is when the lines start: the time asked for, or later when the
+	// phone has nothing older (an iPhone listens from the first call).
+	From time.Time
+}
+
+// CrashReport is one crash of an app.
+type CrashReport struct {
+	Time    time.Time
+	Kind    string // "crash", "native crash", "ANR" (not responding) or "watchdog" (iPhone: ended for not answering in time)
+	Process string
+	PID     int
+	// Summary is one line: the exception and its message, or the signal.
+	Summary string
+	Text    string // the report as the phone wrote it, or its main parts
+}
+
 // BackgroundOptions configure Backgrounder.OpenBackground.
 type BackgroundOptions struct {
 	// App is started on the new display once it exists (package, bundle id
@@ -553,6 +773,41 @@ type BackgroundOptions struct {
 // phone's own Device keeps working on the main screen.
 type Backgrounder interface {
 	OpenBackground(ctx context.Context, opt BackgroundOptions) (Device, error)
+}
+
+// LinkOpener is a Device that opens links: web addresses and app links
+// (deep links) such as myapp://item/42. The gateway asks LinkApp which app
+// opens a link and judges that app by the rules; OpenLink then opens the
+// link in that app and no other, so a link cannot end up in an app the
+// rules did not see.
+type LinkOpener interface {
+	// LinkApp returns the app that opens link on this phone, the one a
+	// tap on the link would open without asking the person. Its error
+	// wraps ErrNotFound when no app opens the link, and is a
+	// *LinkChoiceError when the phone would ask which of several apps
+	// should.
+	LinkApp(ctx context.Context, link string) (App, error)
+	// OpenLink opens link in app, as LinkApp returned it or a clone of it
+	// (App.CloneOf), and never in another app.
+	OpenLink(ctx context.Context, link string, app App) error
+}
+
+// LinkChoiceError is LinkApp's error when several apps open a link and
+// the phone would ask the person which: Pinky does not choose for them.
+type LinkChoiceError struct {
+	Link string
+	Apps []App
+}
+
+func (e *LinkChoiceError) Error() string {
+	names := make([]string, len(e.Apps))
+	for i, a := range e.Apps {
+		names[i] = a.Name
+		if names[i] == "" {
+			names[i] = a.ID
+		}
+	}
+	return fmt.Sprintf("several apps open %s: %s", e.Link, strings.Join(names, ", "))
 }
 
 // BackgroundDefaulter says whether agents should work on a background
@@ -601,6 +856,59 @@ type CompanionInstaller interface {
 	// Protect); the call waits for that, up to ctx.
 	InstallCompanion(ctx context.Context) error
 }
+
+// AppManager installs, updates, uninstalls and stops apps for agents
+// (phone_app, docs/notes/apps.md). The gateway asks the person first and
+// refuses Pinky's own apps and system apps itself; a driver only does what
+// it is told.
+type AppManager interface {
+	// InspectPackage reads the app the files at paths hold, as the phone
+	// would install it: one .apk, the split APKs of one app, one .ipa, or
+	// one .app folder. An error wrapping ErrPackage says in plain words why
+	// the phone cannot take it (a Simulator build, a profile that does not
+	// list the phone).
+	InspectPackage(ctx context.Context, paths []string) (Package, error)
+	// InstallPackage installs or updates the app the files hold. An error
+	// wrapping ErrPackage says in plain words why the phone refused it.
+	InstallPackage(ctx context.Context, paths []string) error
+	// UninstallApp removes an installed app and its data. id may name an
+	// app clone (CloneID), which alone goes.
+	UninstallApp(ctx context.Context, id string) error
+	// StopApp force-quits an app, as swiping it away does.
+	StopApp(ctx context.Context, id string) error
+}
+
+// Package is an app in files on the computer, as AppManager reads it.
+type Package struct {
+	ID      string // package name or bundle id
+	Name    string // the name under its icon; ID when it has none
+	Version string // "1.3 (14)": the version people see and the build number
+	// Signer names who signed it, for the person to recognise: the
+	// certificate's common name and the start of its SHA-256 on Android,
+	// the team on iPhone.
+	Signer string
+	// SignerKey identifies the signer exactly: the certificate's SHA-256,
+	// or the team id.
+	SignerKey string
+	// Installed is the version of the app with this id on the phone now;
+	// "" when it is not installed.
+	Installed string
+}
+
+// ErrPackage marks an app the phone cannot take; the error's text says why
+// in plain words.
+var ErrPackage = errors.New("the phone cannot install this app")
+
+// PackageError returns an error wrapping ErrPackage whose text is the
+// plain-words reason alone.
+func PackageError(format string, args ...any) error {
+	return &packageError{fmt.Sprintf(format, args...)}
+}
+
+type packageError struct{ msg string }
+
+func (e *packageError) Error() string        { return e.msg }
+func (e *packageError) Is(target error) bool { return target == ErrPackage }
 
 // WorkWatcher is told whether an agent works on the phone: from the start
 // of a task to its end, except while the person is in control. A driver
@@ -849,10 +1157,28 @@ type WiFiFinder interface {
 	// SetWiFi turns using phones over Wi-Fi on or off; off, the provider
 	// lists phones on a cable only. It starts off.
 	SetWiFi(on bool)
+	WiFiUser
+}
+
+// WiFiUser is a Provider that waits for the gateway to say a phone it
+// reaches only over the network is the person's (WiFiFinder; Android's,
+// for a phone that Pinky has no identity mark of yet), listing it with
+// SetupConfirmWiFi until then.
+type WiFiUser interface {
 	// UseOverWiFi says a phone is the person's: Pinky used it before, it
 	// was on a cable, or the person chose to use it. The provider then
 	// prepares and opens it over Wi-Fi too.
 	UseOverWiFi(id string)
+}
+
+// PhoneTruster is a Provider that checks that a phone reached over the
+// network is the one Pinky set up under its id, and lists one that is not
+// with SetupPhoneChanged.
+type PhoneTruster interface {
+	// TrustPhone takes the phone now listed under id as the person's, as
+	// the person chose on its page after resetting it or pairing it again:
+	// Pinky marks it anew and opens it.
+	TrustPhone(ctx context.Context, id string) error
 }
 
 // DeviceServiceRestarter is a Provider whose phones go through a service of
