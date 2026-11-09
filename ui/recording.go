@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -85,7 +86,8 @@ type recPlayer struct {
 	turn   int    // quarter turns clockwise that put the picture upright
 	state  string // "loading", "playing", "paused", "ended", "failed"
 	err    error
-	pos    time.Duration // where the picture shown is, from the recording's start
+	pos    time.Duration // the clock: where the player is, from the recording's start
+	pic    time.Duration // the shown picture's PTS, which may sit before pos while paused
 	from   time.Duration // where the stream was opened
 	rebase bool          // the stream is a fake's, whose PTS may count from where it opened
 	base   time.Duration // added to the stream's PTS, when they count from where it opened
@@ -99,6 +101,10 @@ type recPlayer struct {
 	leadAt  time.Time
 	settled bool // the picture at from shows
 	still   bool // paused: the stream only fetches the picture at from
+	// catching is set while Open feeds catch-up pictures through OnFrame:
+	// Take only keeps the newest, so each decoded picture is taken there
+	// before the next overwrites it, then advanced on the main thread.
+	catching atomic.Bool
 	// A paused seek may show its lead after a newer Take, when the player
 	// may write into it again, so it keeps the lead in one of copies: the
 	// one the bitmap does not show (shownCopy, or -1).
@@ -150,10 +156,12 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 	pl.cancel = cancel
 	pl.from, pl.pos, pl.err, pl.first = from, from, nil, true
 	pl.lead, pl.settled, pl.still = nil, false, !run
+	pl.catching.Store(true)
 	pl.state = "paused"
 	if run {
 		pl.state = "loading"
 	}
+	// pic stays until advance shows a new one, so a jump does not flash.
 	a, rec := pl.a, pl.rec
 	go func() {
 		var s driver.Stream
@@ -166,7 +174,37 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 		}
 		var p *video.Player
 		if err == nil {
-			if p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true}); err != nil {
+			// Catch-up frames decode faster than paints: Take only keeps the
+			// newest, so take each picture here before the next overwrites it.
+			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true, OnFrame: func() {
+				if !pl.catching.Load() {
+					return
+				}
+				f := p.Take()
+				if f == nil {
+					return
+				}
+				held := cloneRecFrame(f)
+				a.post(func() {
+					if pl.gen != gen || a.rec.pl != pl {
+						return
+					}
+					if pl.player == nil {
+						pl.player, pl.rebase = p, rebase
+						if pl.state == "loading" {
+							pl.state = "playing"
+						}
+					}
+					if pl.player != p || pl.settled {
+						return
+					}
+					pl.advance(held)
+					if pl.settled {
+						pl.catching.Store(false)
+					}
+				})
+			}})
+			if err != nil {
 				s.Close()
 			}
 		}
@@ -178,12 +216,15 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 				return
 			}
 			if err != nil {
+				pl.catching.Store(false)
 				pl.state, pl.err = "failed", err
 				return
 			}
-			pl.player, pl.rebase = p, rebase
-			if pl.state == "loading" {
-				pl.state = "playing"
+			if pl.player == nil {
+				pl.player, pl.rebase = p, rebase
+				if pl.state == "loading" {
+					pl.state = "playing"
+				}
 			}
 			go func() {
 				<-p.Done()
@@ -200,8 +241,16 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 // ended follows the end of the stream p, the one playing.
 func (pl *recPlayer) ended(p *video.Player) {
 	still := pl.still
+	pl.catching.Store(false)
 	if !pl.settled {
-		pl.settle()
+		// Take may still hold the last catch-up picture; a paint often has
+		// not run yet when the stream ends right after those frames.
+		if f := p.Take(); f != nil {
+			pl.advance(f)
+		}
+		if !pl.settled {
+			pl.settle()
+		}
 	}
 	pl.still = false
 	pl.stop()
@@ -264,20 +313,28 @@ func (pl *recPlayer) take(pt *mg.Painter) {
 		return
 	}
 	pt.AnimationFrameRate(60)
-	f := p.Take()
-	if f == nil {
-		if !pl.settled && pl.lead != nil && time.Since(pl.leadAt) >= leadSettle {
+	if !pl.settled {
+		if pl.lead != nil && time.Since(pl.leadAt) >= leadSettle {
 			pl.settle()
 		}
 		return
 	}
+	if f := p.Take(); f != nil {
+		pl.advance(f)
+	}
+}
+
+// advance places f: catch-up frames wait in lead; once past from, a paused
+// seek shows the lead when Take dropped nothing between them (f follows
+// lead's Seq), else f itself.
+func (pl *recPlayer) advance(f *video.Frame) {
 	at := pl.frameAt(f)
 	switch {
 	case pl.settled:
 		pl.show(f, max(pl.pos, at))
 	case at < pl.from:
 		pl.keep(f)
-	case pl.still && at > pl.from && pl.lead != nil:
+	case pl.still && at > pl.from && pl.lead != nil && f.Seq == pl.lead.Seq+1:
 		pl.settle()
 	default:
 		pl.lead, pl.settled = nil, true
@@ -295,10 +352,28 @@ func (pl *recPlayer) settle() {
 		pl.lead = nil
 	}
 	pl.settled = true
+	pl.catching.Store(false)
 	if pl.still {
 		pl.still = false
 		pl.stop()
 	}
+}
+
+// cloneRecFrame copies f so it still holds after the player reuses the original.
+func cloneRecFrame(f *video.Frame) *video.Frame {
+	if f == nil {
+		return nil
+	}
+	out := *f
+	if f.YUV == nil {
+		return &out
+	}
+	y := *f.YUV
+	for i, p := range f.YUV.Planes {
+		y.Planes[i] = append([]byte(nil), p...)
+	}
+	out.YUV = &y
+	return &out
 }
 
 // keep holds f as the lead, the newest picture before from.
@@ -339,7 +414,8 @@ func (pl *recPlayer) frameAt(f *video.Frame) time.Duration {
 	return max(0, min(pl.base+f.PTS, pl.rec.Length))
 }
 
-// show puts f on screen, at at in the recording.
+// show puts f on screen; at is the clock, which may sit past the picture's
+// PTS while a paused seek holds the last frame before from.
 func (pl *recPlayer) show(f *video.Frame, at time.Duration) {
 	pl.bitmap = showPlanes(pl.bitmap, f.YUV)
 	pl.shownCopy = -1
@@ -355,7 +431,8 @@ func (pl *recPlayer) show(f *video.Frame, at time.Duration) {
 	if pl.picW > 0 && (w != pl.picW || h != pl.picH) {
 		pl.a.post(func() {}) // the phone turned: lay the player out again
 	}
-	pl.picW, pl.picH, pl.turn, pl.pos = w, h, f.Turn, at
+	pl.picW, pl.picH, pl.turn = w, h, f.Turn
+	pl.pos, pl.pic = at, max(0, min(pl.base+f.PTS, pl.rec.Length))
 }
 
 // markAt returns the index of the last mark at or before at, or -1.

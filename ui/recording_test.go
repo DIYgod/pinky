@@ -252,25 +252,34 @@ type fileRecAPI struct{ gateway.API }
 // two seconds: key frames at 0 and 6 s, 8 s long.
 func writeStillRecording(t *testing.T) string {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "still.mp4")
+	return writeTestRecording(t, func(frame int) time.Duration {
+		at := time.Duration(frame) * 100 * time.Millisecond
+		if frame >= 10 {
+			at += 5 * time.Second
+		}
+		return at
+	}, 8*time.Second)
+}
+
+// writeTestRecording records testsrc.h264 (30 frames, 10 a second) at the
+// times at(frame) and closes at end.
+func writeTestRecording(t *testing.T, at func(frame int) time.Duration, end time.Duration) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "t.mp4")
 	w, err := recording.Create(path, driver.H264)
 	if err != nil {
 		t.Fatal(err)
 	}
 	frame := 0
 	for _, p := range recordingtest.Packets(driver.H264, recordingtest.H264()) {
-		at := time.Duration(frame) * 100 * time.Millisecond
-		if frame >= 10 {
-			at += 5 * time.Second
-		}
-		if err := w.Write(p, at); err != nil {
+		if err := w.Write(p, at(frame)); err != nil {
 			t.Fatal(err)
 		}
 		if !p.Config {
 			frame++
 		}
 	}
-	if err := w.Close(8 * time.Second); err != nil {
+	if err := w.Close(end); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -339,5 +348,60 @@ func TestRecordingSeekFromKeyFrame(t *testing.T) {
 	})
 	if pl.state != "paused" || pl.pos != 7950*time.Millisecond {
 		t.Errorf("after a paused seek to 7.95 s: %s at %v", pl.state, pl.pos)
+	}
+	if pl.pic != 7900*time.Millisecond {
+		t.Errorf("picture at %v after a paused seek to 7.95 s, want 7.9 s", pl.pic)
+	}
+}
+
+// TestRecordingPausedSeekPicture checks which picture a paused seek shows,
+// not only the clock: at 10 fps a seek to 1.899 s must show the 1.8 s
+// frame, and a seek past the end the last frame, even when ended runs
+// before a paint takes it.
+func TestRecordingPausedSeekPicture(t *testing.T) {
+	if err := video.Load(); err != nil {
+		t.Skip(err)
+	}
+	const length = 3 * time.Second
+	path := writeTestRecording(t, func(frame int) time.Duration {
+		return time.Duration(frame) * 100 * time.Millisecond
+	}, length)
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.app.api = fileRecAPI{ta.api}
+	ta.openRecording("t", gateway.RecordingView{Path: path, Length: length})
+	pl := ta.rec.pl
+	t.Cleanup(ta.closeRecording)
+	tt := mg.NewTester(func(c *mg.Context) {
+		ta.sync()
+		ta.recordingView(c, gateway.TaskView{ID: "t"}, pl)
+	}, 1280, 820)
+	ta.waitFor(t, "the first pictures", func() bool {
+		tt.Frame()
+		return pl.state == "playing" && pl.pic >= 300*time.Millisecond
+	})
+	pl.pause()
+
+	pl.seek(1899 * time.Millisecond)
+	ta.waitFor(t, "the 1.8 s picture", func() bool {
+		tt.Frame()
+		return pl.settled && pl.player == nil
+	})
+	if pl.state != "paused" || pl.pos != 1899*time.Millisecond {
+		t.Errorf("after a paused seek to 1.899 s: %s at %v", pl.state, pl.pos)
+	}
+	if pl.pic != 1800*time.Millisecond {
+		t.Errorf("picture at %v after a paused seek to 1.899 s, want 1.8 s", pl.pic)
+	}
+
+	pl.seek(length)
+	ta.waitFor(t, "the last picture", func() bool {
+		tt.Frame()
+		return pl.settled && pl.player == nil
+	})
+	if pl.state != "paused" || pl.pos != length {
+		t.Errorf("after a paused seek to the end: %s at %v", pl.state, pl.pos)
+	}
+	if pl.pic != 2900*time.Millisecond {
+		t.Errorf("picture at %v after a paused seek to the end, want 2.9 s", pl.pic)
 	}
 }
