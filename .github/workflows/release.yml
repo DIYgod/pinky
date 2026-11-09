@@ -63,6 +63,17 @@ jobs:
         # does not have the tag's notes yet.
         if: github.event_name == 'push' || inputs.publish
         run: go run ./scripts/release notes "${TAG#v}" > /dev/null
+      - name: Download Gradle
+        # services.gradle.org sometimes stalls past the wrapper's network
+        # timeout (Release v2026.1109.11 and v2026.1109.13): fetch the
+        # wrapper's Gradle here, trying again, before the build needs it.
+        working-directory: android/companion
+        run: |
+          for i in 1 2 3; do
+            ./gradlew --version > /dev/null && exit 0
+            sleep $((i * 15))
+          done
+          exit 1
       - name: Build
         # Signed with Pinky's release key, which only these secrets hold:
         # Android installs an update of the app only when it is signed with
