@@ -364,6 +364,7 @@ An independent review of the round three code (read-only, by a subagent) found t
 - `go.mod` gains `github.com/modelcontextprotocol/go-sdk v1.8.0`, `modernc.org/sqlite v1.61.1`, `go.yaml.in/yaml/v3 v3.0.6`, `golang.org/x/sys`, and in round three `github.com/Eyevinn/mp4ff v0.62.0`; other branches add their own requires, so expect a `go.mod` merge and a `go mod tidy`.
 - 2026-11-09: `driver.App` gained `CloneOf *App` with `App.Original`, `driver.CloneID` and `driver.ParseCloneID` (additive), for Android's app clones ("App clones" below).
 - 2026-11-09 (pinching, all additive): `driver.Pinch`, `driver.Pincher` and `driver.MultiToucher` (`internal/driver/pinch.go`); `gateway.Action.Scale` and `Rotation`; `NeedView.Point2`/`To2` and `approval.Request.Point2`/`To2` (the second finger); `Features.Pinch`; `Gateway.Touch2`; the MCP tool `phone_pinch` (15 tools) and the batch step `pinch`; `ui/fakeapi`'s `Input.Kind` "touch2" with `Point2`. The fake and demo phones pinch.
+- 2026-11-09: `driver.go` gained the optional `LinkOpener` interface (`LinkApp(ctx, link)`, `OpenLink(ctx, link, app)`) and `*LinkChoiceError` (additive), for opening links ("Links" below). The gateway's own `linkOpener` (`LinkApp() driver.App`, iOS's fixed Safari) is gone, and with it `ios.Device.LinkApp()`'s old signature.
 - Round three: `Options.Unlock` became `Options.PIN` (nothing outside the gateway set it); `Result` gained `Folder` and `Files`; streams may implement an optional `RequestKeyFrame()` (gateway-side interface, not in `driver.go`).
 
 ## Tests
@@ -532,3 +533,21 @@ Android drivers list app clones (应用分身, Dual apps, App Twin) as apps of t
 - **The person's pinch** (`Gateway.Touch2`) goes to a `driver.MultiToucher` and takes over like the person's `Touch` (`PersonTouched`).
 
 Checked on emulator-5900 through a temporary device test (android.md, "Pinching"): `ref` with scale 2 and x,y with scale 0.5 and rotation 45 settled on the main display and on a background display, the app's content followed, and history read "Zoomed in on “Zoom area”"; a pinch at 20,20 gave `invalid_argument`.
+
+## Links (2026-11-09)
+
+`phone_launch` takes a link as well as an app: `https://…`, an app's own link (`myapp://…`), `tel:`, `sms:`, `mailto:` and the like (`policy.IsLink`: a scheme with `//`, or one of the schemes the policy knows without it, so "Notes: today" stays an app name). The rule the work keeps: a link never gets past a rule a tap would meet.
+
+**Before anything opens** (`prepare`, `resolveLink`):
+
+1. A scheme Pinky never opens (`policy.LinkRefused`: `file`, `content`, `data`, `blob`, `intent`, `android-app`, `javascript`, `vbscript`, `itms-services`, Shortcuts' `shortcuts`, `shortcuts-production` and `workflow`) skips the driver and is denied by the engine under `Unsafe links` (`RuleUnsafeLinks`), whatever the preset, and also when the person allowed the app for the task.
+2. Otherwise the driver names the app the phone would open the link in (`driver.LinkOpener.LinkApp`). Several apps with none the default (`*driver.LinkChoiceError`) is `unsupported`, naming them: Pinky does not choose, and the agent can launch the app it means and open the link from inside. No app is `not_found`. A driver without `LinkOpener` is `unsupported`.
+3. On a phone with app clones, the link goes to the clone the agent opened last (`launch.clone`, set by a launch by name) while that clone's app is in front and it is the app the link opens in; otherwise to the app itself, as the phone would.
+
+**Judging.** The link is judged as `OpLaunch` of that app (`Input.Launch` is the app's original, `LaunchURL` set, `Input.Link` the link), so blocked apps, finance apps, password managers, the agent's scope, the task's app list and the person's "allow for this task" all apply to it as to a launch. On top, `detect.go` adds the kinds of the tap the link stands for (`linkKinds`): `tel:`, `facetime:` and their kin are a call, `sms:`, `mailto:`, `imessage:` sending a message, payment schemes (`upi`, `alipay(s)`, `paypal`, `bitcoin` and other wallets, `weixin://` and `wechat://` with a pay path) a payment, under the rules a tap on Call, Send or Pay meets. `OpenURL` is always there, so each link asks under `Installs and links` where that rule asks. The Shortcuts app is refused as a link's opener (`refusedLinkApps`): it runs shortcuts under schemes a list cannot hold. Launching Shortcuts by name is unchanged.
+
+**Approval and history.** The approval reads "Open “<link>” in <app>?" (`gwAskOpenLink`), the step "Opened “<link>” in <app>" (`gwDidOpenLink`), the link clipped to 120 characters (`maxLinkText`). The approval's snapshot keeps the app (`snapshot.opener`), so an approval for a link the phone would now open in another app is stale and asks again. `perform` calls `OpenLink(ctx, link, app)` with the judged app; the drivers open it there and nowhere else (Android starts that app's activity by name; iPhone gives the bundle id to Device Hub or WebDriverAgent).
+
+**Drivers.** Android: docs/notes/android.md, "Links". iPhone: docs/notes/ios.md, "Links". The fake phone (`fake.Device.SetLinkApps(prefix, apps...)`: one app opens such links, several are a `LinkChoiceError`, none `ErrNotFound`; `OpenLink` records a `link` action) and the demo phones (Dinely opens `dinely://` and pages on dinely.app, Chatter `chatter://`; no app opens other links) implement `LinkOpener` too.
+
+Tests: `internal/policy/links_test.go` (refused schemes, links as the taps they stand for in presets 1 and 2, scope and task apps), `internal/gateway/linkapp_test.go` (judged as the app that opens it, a blocked opener and the person allowing it for the task, a payment link asks, refused schemes, choice and not found, a phone without links, stale approvals, step text, clones), `internal/driver/fake/fake_test.go`; on the emulator `TestEmulatorLinks` (tag `device`, docs/notes/android.md has the command). `ui/gwtext.go` translates the new texts and the rule.
