@@ -483,6 +483,9 @@ func detect(in Input, cats []string) []Kind {
 	case OpLaunch:
 		if in.LaunchURL {
 			add(OpenURL)
+			for _, k := range linkKinds(in.Link) {
+				add(k)
+			}
 		}
 	}
 	return kinds

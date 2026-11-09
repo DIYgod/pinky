@@ -95,8 +95,10 @@ type Input struct {
 	// opened and App is ignored.
 	App    screen.App
 	Launch screen.App
-	// LaunchURL is set when the launch target is a URL rather than an app.
+	// LaunchURL is set when the launch target is a link rather than an
+	// app; Link is the link, and Launch the app that opens it.
 	LaunchURL bool
+	Link      string
 	Screen    *screen.Screen  // the current screen, may be nil
 	Target    *screen.Element // the element acted on, may be nil
 	Text      string          // OpType
