@@ -9,3 +9,9 @@ import "os/exec"
 func simArch() string { return "x86_64" }
 
 func ownGroup(*exec.Cmd) {}
+
+type runGuard struct{}
+
+func guardRun(int, string) (*runGuard, error) { return nil, nil }
+
+func (*runGuard) release() {}

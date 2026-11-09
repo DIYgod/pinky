@@ -387,6 +387,7 @@ type simRun struct {
 	stopOnce    sync.Once
 	waitErr     error
 	stopTimeout time.Duration
+	guard       *runGuard // ends the run when Pinky is killed
 }
 
 // startRun starts WebDriverAgent's test on a booted Simulator, from the
@@ -435,8 +436,15 @@ func startRun(x xcode, products, udid, runs string) (*simRun, error) {
 		os.RemoveAll(dir)
 		return nil, fmt.Errorf("starting xcodebuild: %w", err)
 	}
+	if r.guard, err = guardRun(r.cmd.Process.Pid, dir); err != nil {
+		r.cmd.Process.Kill()
+		r.cmd.Wait()
+		os.RemoveAll(dir)
+		return nil, err
+	}
 	go func() {
 		r.waitErr = r.cmd.Wait()
+		r.guard.release()
 		close(r.done)
 	}()
 	return r, nil
