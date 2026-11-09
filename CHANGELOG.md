@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- The live picture of a phone stops redrawing sooner once the phone's screen goes still, which saves power.
+
 ## 2026.1109.19 (2026-11-09)
 
 - Agents can now install, update, uninstall and force-quit apps you build (an APK, or an `.ipa`/`.app` signed for your iPhone) from the phone's folder on the computer. Installing and uninstalling always ask you, with the app's name, version and signer, and **Allow for this task** covers an agent's next builds of the same app.
