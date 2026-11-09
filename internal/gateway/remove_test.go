@@ -145,7 +145,7 @@ func (q *pairedNow) Wait(context.Context) (driver.Info, error) { return q.info, 
 func (q *pairedNow) Close() error                              { return nil }
 
 // twoPhones is a gateway with a Pixel on a cable and a Mi over Wi-Fi.
-func twoPhones(t *testing.T, dir string, p *netProvider) *Gateway {
+func twoPhones(t *testing.T, dir string, p driver.Provider) *Gateway {
 	t.Helper()
 	g, err := New(Options{Providers: []driver.Provider{p}, Policy: testPolicy(t), DataDir: dir, TrustNewAgents: true,
 		ApprovalTimeout: 3 * time.Second, MaxBlock: 2 * time.Second, SettleMax: 200 * time.Millisecond,
