@@ -10,11 +10,13 @@ import (
 	"io"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/android/adb"
 	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/driver/android/scrcpy"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -67,6 +69,11 @@ type Background struct {
 	// the display has no window, which accessibility reports as it does a
 	// display it cannot see, so Observe shows it as empty.
 	started atomic.Bool
+	// launch is the app last started on the display, when, and how many
+	// nudges its reads have sent since (nudgeAfterLaunch). Guarded by mu.
+	launch     launchTarget
+	launchedAt time.Time
+	nudges     int
 	// shared: the display is in the main display's group and follows its
 	// power (Android 17), and Pinky keeps the phone awake and dark while
 	// it is open (dark.go); false where it has a group of its own.
@@ -416,9 +423,18 @@ func (b *Background) observeTree(ctx context.Context) (*screen.Screen, *companio
 		}
 	}
 	if err != nil {
-		if !b.started.Load() && errors.Is(err, driver.ErrUnsupported) && ctx.Err() == nil {
-			s, err := b.emptyScreen(ctx)
-			return s, nil, err
+		if errors.Is(err, driver.ErrUnsupported) && ctx.Err() == nil {
+			// Accessibility does not track the display (yet). It is not
+			// the companion's failure: before an app started there, or
+			// for a while after one did, the display reads as empty.
+			if !b.started.Load() || b.sinceLaunch() < launchGrace {
+				s, err := b.emptyScreen(ctx)
+				if err == nil && b.started.Load() {
+					b.nudge(ctx, nil)
+				}
+				return s, nil, err
+			}
+			return nil, nil, err
 		}
 		if ctx.Err() == nil {
 			b.d.companionFailed(err)
@@ -428,6 +444,9 @@ func (b *Background) observeTree(ctx context.Context) (*screen.Screen, *companio
 	s := t.Screen(companion.ScreenOptions{})
 	s.CapturedAt = c.HostTime(t.Time)
 	s.App.Name = b.d.companionAppName(s.App)
+	if s.App.ID == "" && b.started.Load() {
+		b.nudge(ctx, t)
+	}
 	// The phone's lock screen is on the main display; from Android 13 the
 	// virtual display is always unlocked.
 	s.Locked = t.Locked && !b.d.alwaysUnlocked()
@@ -560,7 +579,108 @@ func (b *Background) startApp(ctx context.Context, t launchTarget) error {
 		return err
 	}
 	b.started.Store(true)
+	b.mu.Lock()
+	b.launch, b.launchedAt, b.nudges = t, time.Now(), 0
+	b.mu.Unlock()
 	return nil
+}
+
+// Right after an app starts on the display, accessibility may show no
+// window of it there for a while: the display is not tracked yet (the
+// companion says it is not open to accessibility services), or its only
+// window is the splash screen's, which accessibility leaves out. On the
+// emulators that lasts up to 4 s. A user on a Pixel saw it last until the
+// first key on the display (GitHub issue #30, not reproduced here), so a
+// read that still finds no app nudges the display, once each: a key that
+// does nothing (the keep-awake key, which counts as input on the display
+// and as activity for its power group), then a second start of the app,
+// which brings its task to the front as a tap on its icon does. Each
+// nudge is logged with what the display and the app's activity look like,
+// for the next report.
+const (
+	launchGrace      = 10 * time.Second // reads after a launch that may see no window yet
+	nudgeKeyAfter    = 1500 * time.Millisecond
+	nudgeStartAfter  = 4 * time.Second
+	nudgeAfterLaunch = 15 * time.Second // no nudges once a launch is this old
+)
+
+// sinceLaunch is how long ago an app was last started on the display, or
+// a long time when none was.
+func (b *Background) sinceLaunch() time.Duration {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.launchedAt.IsZero() {
+		return time.Duration(1<<63 - 1)
+	}
+	return time.Since(b.launchedAt)
+}
+
+// nudge sends the next nudge (see launchGrace) when a read after a launch
+// found no app on the display, and it is time for one. t is the read's
+// tree, nil when the display was not tracked.
+func (b *Background) nudge(ctx context.Context, t *companion.Tree) {
+	b.mu.Lock()
+	since := time.Since(b.launchedAt)
+	step, target := b.nudges, b.launch
+	due := !b.launchedAt.IsZero() && since < nudgeAfterLaunch &&
+		((step == 0 && since >= nudgeKeyAfter) || (step == 1 && since >= nudgeStartAfter))
+	if due {
+		b.nudges++
+	}
+	b.mu.Unlock()
+	if !due {
+		return
+	}
+	d := b.d
+	d.cfg.logf("android: %s: %s shows no window on display %d %v after its start (%s; %s)", d.info.ID, target.pkg, b.display,
+		since.Round(100*time.Millisecond), describeWindows(t), b.activityState(ctx, target.pkg))
+	var err error
+	what := "a key that does nothing"
+	if step == 0 {
+		err = b.l.input(func() error { return b.l.key(keycodeUnknown, 0) })
+	} else {
+		what = "starting it again"
+		err = d.start(ctx, b.l, target, b.display)
+	}
+	if err != nil {
+		d.cfg.logf("android: %s: nudging display %d with %s: %v", d.info.ID, b.display, what, err)
+		return
+	}
+	d.cfg.logf("android: %s: nudged display %d with %s", d.info.ID, b.display, what)
+}
+
+// describeWindows sums up a tree's windows for the log: their types and
+// packages, and whether their roots could be read.
+func describeWindows(t *companion.Tree) string {
+	if t == nil {
+		return "the display is not tracked by accessibility"
+	}
+	if len(t.Windows) == 0 {
+		return "no windows"
+	}
+	var parts []string
+	for _, w := range t.Windows {
+		p := w.Type + " " + w.Package
+		if w.Root == nil {
+			p += " without a root"
+		}
+		parts = append(parts, p)
+	}
+	return "windows: " + strings.Join(parts, ", ")
+}
+
+// activityState is what Android says of an app's activities, for the log:
+// their states and whether they are visible, and the sleeping displays.
+func (b *Background) activityState(ctx context.Context, pkg string) string {
+	if pkg == "" {
+		return "no app"
+	}
+	out, err := b.d.client.Shell(ctx, b.d.info.ID, "dumpsys activity -p "+adb.Quote(pkg)+
+		" activities | grep -E 'Display #|isSleeping|state=|nowVisible|visibleRequested|mResumedActivity' | head -12")
+	if err != nil {
+		return "activities unknown: " + err.Error()
+	}
+	return "activities: " + strings.Join(strings.Fields(strings.ReplaceAll(string(out), "\n", " | ")), " ")
 }
 
 // emptyScreen is the display before an app was started on it: nothing to

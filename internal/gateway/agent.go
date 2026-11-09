@@ -1013,6 +1013,9 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		res.Status = StatusLocked
 		res.Message = "The phone is locked; call phone_handoff so the person can unlock it."
 	}
+	if _, onBG := g.screenOf(l.dev); onBG && noApp(cur) {
+		res.Message = strings.TrimSpace(res.Message + " " + emptyBackgroundMessage)
+	}
 	if req.OCR && g.noOCR(l.dev) {
 		res.Message = strings.TrimSpace(res.Message + " " + noOCRMessage)
 	}
@@ -1040,7 +1043,7 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 				g.keepImage(l.dev, cur, img, true)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
-			case errors.Is(err, errLockedShot), errors.Is(err, errCodeShot), errors.Is(err, errHiddenShot):
+			case errors.Is(err, errLockedShot), errors.Is(err, errCodeShot), errors.Is(err, errHiddenShot), errors.Is(err, errNoAppShot):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: " + err.Error() + ".")
 			case errors.Is(err, errScreenChanged):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: the screen changed while it was taken; observe again.")
