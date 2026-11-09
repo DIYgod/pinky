@@ -200,28 +200,49 @@ func (d *Device) Key(ctx context.Context, k driver.Key) error {
 
 // Type implements driver.Device. With the companion app it writes the
 // text with ACTION_SET_TEXT into the focused field (or the field under the
-// last tap): any script, no keyboard, no clipboard. Otherwise, or when the
-// companion refuses, printable ASCII is typed as key events, unless the
-// phone's keyboard may turn letters into a composition (pinyin and other
-// CJK input methods) and is showing; that text, and anything that is not
-// printable ASCII (CJK, emoji, newlines), is set as the clipboard and
-// pasted, which replaces the clipboard's content. Without Append the
-// field's text is selected first (Ctrl+A) and replaced.
+// last tap): any script, no keyboard, no clipboard. A view that refuses it
+// gets the text through its input connection or as a paste (see
+// TextSetter in the companion). Otherwise, or when the companion refuses,
+// printable ASCII is typed as key events, unless the phone's keyboard may
+// turn letters into a composition (pinyin and other CJK input methods)
+// and is showing; that text, and anything that is not printable ASCII
+// (CJK, emoji, newlines), is set as the clipboard and pasted, which
+// replaces the clipboard's content. Without Append the field's text is
+// selected first (Ctrl+A) and replaced. With the companion the field is
+// read back afterwards: text that did not land, or reads otherwise, is an
+// error and is not submitted.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	d.used()
+	d.setInputNote("")
 	if _, err := d.inputSession(ctx); err != nil {
 		return err
 	}
-	if c := d.companionClient(ctx); c != nil {
-		enter := func() error {
-			return d.withInput(ctx, false, func(l *live) error { return l.key(keycodeEnter, 0) })
-		}
-		if done, err := d.typeCompanion(ctx, c, text, opt.Append, opt.Submit, 0, d.recentTap, enter); done {
+	enter := func() error {
+		return d.withInput(ctx, false, func(l *live) error { return l.key(keycodeEnter, 0) })
+	}
+	c := d.companionClient(ctx)
+	var refused error
+	if c != nil {
+		done, why, err := d.typeCompanion(ctx, c, text, opt.Append, opt.Submit, 0, d.recentTap, enter)
+		if done {
 			return err
 		}
+		refused = why
 	}
 	keys := plainASCII(text) && d.keysReachField(ctx)
-	return d.withInput(ctx, false, func(l *live) error { return l.typeText(ctx, text, opt, keys) })
+	check := d.checkField(ctx, c, 0)
+	o := opt
+	o.Submit = false // after the check: text that did not land is not sent
+	if err := d.withInput(ctx, false, func(l *live) error { return l.typeText(ctx, text, o, keys) }); err != nil {
+		return err
+	}
+	if err := check.after(ctx, text, opt.Append, opt.Submit, keys, refused, !d.keyTyping(ctx)); err != nil {
+		return err
+	}
+	if opt.Submit {
+		return enter()
+	}
+	return nil
 }
 
 // keysReachField reports whether typed letters reach the app as they are:

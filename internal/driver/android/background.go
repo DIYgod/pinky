@@ -515,22 +515,39 @@ func (b *Background) Touch(ctx context.Context, a driver.TouchAction, p screen.P
 }
 
 // Type implements driver.Device. With a companion that reads other
-// displays (Android 11 and later) the text goes in with ACTION_SET_TEXT
-// on this display, as on the main one; otherwise as key events or a
-// paste.
+// displays (Android 11 and later) the text goes in through the companion
+// on this display, as on the main one, and is read back; otherwise as key
+// events or a paste (Device.Type).
 func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	b.d.used()
+	b.d.setInputNote("")
 	if err := b.ready(ctx); err != nil {
 		return err
 	}
-	if c := b.d.companionClientFor(ctx, forBackground); c != nil && b.d.comp.displays() {
-		enter := func() error { return b.l.input(func() error { return b.l.key(keycodeEnter, 0) }) }
-		if done, err := b.d.typeCompanion(ctx, c, text, opt.Append, opt.Submit, b.display, b.recentTap, enter); done {
+	enter := func() error { return b.l.input(func() error { return b.l.key(keycodeEnter, 0) }) }
+	c := b.d.companionClientFor(ctx, forBackground)
+	var refused error
+	if c != nil && b.d.comp.displays() {
+		done, why, err := b.d.typeCompanion(ctx, c, text, opt.Append, opt.Submit, b.display, b.recentTap, enter)
+		if done {
 			return err
 		}
+		refused = why
 	}
 	keys := plainASCII(text) && b.d.keysReachField(ctx)
-	return b.l.input(func() error { return b.l.typeText(ctx, text, opt, keys) })
+	check := b.d.checkField(ctx, c, b.display)
+	o := opt
+	o.Submit = false // after the check: text that did not land is not sent
+	if err := b.l.input(func() error { return b.l.typeText(ctx, text, o, keys) }); err != nil {
+		return err
+	}
+	if err := check.after(ctx, text, opt.Append, opt.Submit, keys, refused, !b.d.keyTyping(ctx)); err != nil {
+		return err
+	}
+	if opt.Submit {
+		return enter()
+	}
+	return nil
 }
 
 // Key implements driver.Device.

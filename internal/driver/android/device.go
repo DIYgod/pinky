@@ -59,6 +59,8 @@ type Device struct {
 	tapPoint screen.Point // the last tap, for typing into the field under it
 	tapAt    time.Time
 
+	inputNote string // for the agent, about the last Type (TakeInputNote)
+
 	appsMu      sync.Mutex
 	apps        []driver.App
 	appsAt      time.Time

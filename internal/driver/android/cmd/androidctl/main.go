@@ -219,9 +219,13 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 		submit := fs.Bool("submit", false, "press Enter afterwards")
 		fs.Parse(args)
 		text := strings.Join(fs.Args(), " ")
-		return timed("type", func() error {
+		err := timed("type", func() error {
 			return d.Type(ctx, text, driver.TypeOptions{Append: *appendText, Submit: *submit})
 		})
+		if n := d.TakeInputNote(); n != "" {
+			fmt.Println("note:", n)
+		}
+		return err
 	case "key":
 		if len(args) != 1 {
 			return errors.New("usage: key NAME")
@@ -613,6 +617,11 @@ func runSteps(ctx context.Context, d stepper, st statser, steps []string) error 
 			err = d.Key(ctx, driver.Key(arg))
 		case "type":
 			err = d.Type(ctx, arg, driver.TypeOptions{})
+			if n, ok := d.(driver.InputNoter); ok {
+				if note := n.TakeInputNote(); note != "" {
+					fmt.Println("note:", note)
+				}
+			}
 		case "launch":
 			err = d.Launch(ctx, arg)
 		case "sleep":
