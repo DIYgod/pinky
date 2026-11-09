@@ -4,6 +4,7 @@ package harmony
 
 import (
 	"context"
+	"image"
 	"os"
 	"strings"
 	"testing"
@@ -177,4 +178,104 @@ read:
 		t.Fatal("live preview did not produce two frames")
 	}
 	t.Log("Screenshot-based live preview produced H.264 frames")
+}
+
+// Measure only Calculator and Home, without storing any image or tree.
+func TestDevicePreviewLatency(t *testing.T) {
+	id := os.Getenv("PINKY_DEVICE")
+	if id == "" {
+		t.Skip("set PINKY_DEVICE; use scripts/devlock.sh")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	dev, err := NewProvider().Open(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := dev.(*Device)
+	defer d.Close()
+	if err := d.Launch(ctx, "com.huawei.hmos.calculator"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(350 * time.Millisecond)
+	s, err := d.Observe(ctx, driver.ObserveOptions{MayCapture: func(*screen.Screen) bool { return false }})
+	if err != nil || s.Locked || s.App.ID != "com.huawei.hmos.calculator" {
+		t.Fatalf("unexpected foreground; stopped: %v", err)
+	}
+	for _, e := range s.Elements {
+		if strings.Contains(e.Label, "同意") || strings.Contains(e.Label, "允许") || strings.Contains(strings.ToLower(e.Label), "agree") {
+			t.Fatal("unexpected dialog; stopped")
+		}
+	}
+	defer func() {
+		clean, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		cur, err := d.Observe(clean, driver.ObserveOptions{MayCapture: func(*screen.Screen) bool { return false }})
+		if err == nil && !cur.Locked && cur.App.ID == "com.huawei.hmos.calculator" {
+			_ = d.Key(clean, driver.KeyHome)
+		}
+	}()
+	originalRun := d.run
+	d.run = func(ctx context.Context, path string, args ...string) ([]byte, error) {
+		start := time.Now()
+		out, err := originalRun(ctx, path, args...)
+		step := "guards"
+		if strings.Contains(args[len(args)-1], "'snapshot_display'") {
+			step = "JPEG"
+		}
+		t.Logf("capture step %s: %v", step, time.Since(start))
+		return out, err
+	}
+	for i := range 3 {
+		start := time.Now()
+		if _, err := d.Screenshot(ctx); err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("capture %d: %v", i+1, time.Since(start))
+	}
+	for i := range 2 {
+		start := time.Now()
+		d.mu.Lock()
+		img, err := d.capturePreview(ctx, image.Pt(s.Width, s.Height))
+		d.mu.Unlock()
+		if err != nil || img.Bounds().Size() != image.Pt(s.Width, s.Height) {
+			t.Fatalf("preview capture failed: %v", err)
+		}
+		t.Logf("scaled preview capture %d: %v", i+1, time.Since(start))
+	}
+	d.run = originalRun
+	start := time.Now()
+	st, err := d.Stream(ctx, driver.StreamOptions{MaxFPS: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	frames := 0
+	for frames < 2 {
+		select {
+		case pkt, ok := <-st.Packets():
+			if !ok {
+				t.Fatalf("stream ended: %v", st.Err())
+			}
+			if !pkt.Config {
+				frames++
+				t.Logf("preview frame %d after %v", frames, time.Since(start))
+			}
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	// Tap only the Calculator key identified from this run's tree.
+	for _, e := range s.Elements {
+		if e.Label == "2" {
+			time.Sleep(350 * time.Millisecond)
+			start := time.Now()
+			if err := d.Tap(ctx, e.Bounds.Center(), driver.TapOptions{}); err != nil {
+				t.Fatal(err)
+			}
+			t.Logf("tap while mirroring: %v", time.Since(start))
+			return
+		}
+	}
+	t.Fatal("Calculator digit not identified; no input sent")
 }

@@ -162,6 +162,8 @@ func (d *Device) Launch(ctx context.Context, app string) error {
 		}
 		app = id
 	}
+	done := d.preferInput()
+	defer done()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if err := d.requireUnlocked(ctx); err != nil {

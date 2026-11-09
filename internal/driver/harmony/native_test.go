@@ -7,9 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"image"
+	"image/color"
 	"image/jpeg"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -17,27 +19,107 @@ import (
 
 const unlockedState = "* deviceLocked false 100\n* screenLocked false 100\n"
 
+func TestPreviewKeepsNativeCoordinatesAndRejectsRotation(t *testing.T) {
+	src := image.NewRGBA(image.Rect(0, 0, 80, 1600))
+	for y := range 1600 {
+		for x := range 80 {
+			c := color.RGBA{R: 255, A: 255}
+			if y >= 800 {
+				c = color.RGBA{B: 255, A: 255}
+			}
+			src.SetRGBA(x, y, c)
+		}
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, src, nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, rotated := range []bool{false, true} {
+		d := &Device{run: func(_ context.Context, _ string, args ...string) ([]byte, error) {
+			cmd := args[len(args)-1]
+			if strings.Contains(cmd, "'ScreenlockService'") {
+				return []byte(unlockedState + "calculator 0 100 7 1 1 0 10 0\nFocus window: 7\n"), nil
+			}
+			if strings.Contains(cmd, "'snapshot_display'") {
+				if !strings.Contains(cmd, "'-w' '80' '-h' '1600'") {
+					t.Fatal("preview was not scaled on the phone")
+				}
+				header := "process: display 0, file type: jpeg, width: 100, height: 2000\n"
+				if rotated {
+					header = "process: display 0, file type: jpeg, width: 2000, height: 100\n"
+				}
+				return []byte(header + "success: snapshot display\n__PINKY_JPEG__\n" + base64.StdEncoding.EncodeToString(buf.Bytes())), nil
+			}
+			if strings.HasPrefix(cmd, "'rm' ") {
+				return nil, nil
+			}
+			t.Fatalf("unexpected command: %s", cmd)
+			return nil, nil
+		}}
+		img, err := d.capturePreview(context.Background(), image.Pt(100, 2000))
+		if rotated {
+			if !errors.Is(err, errDisplayChanged) || img != nil {
+				t.Fatalf("rotation accepted: %v", err)
+			}
+			continue
+		}
+		if err != nil || img.Bounds().Size() != image.Pt(100, 2000) {
+			t.Fatalf("native coordinates changed: %v", err)
+		}
+		r, _, b, _ := img.At(50, 500).RGBA()
+		if r < 60000 || b > 5000 {
+			t.Fatal("top of image mapped incorrectly")
+		}
+		r, _, b, _ = img.At(50, 1500).RGBA()
+		if b < 60000 || r > 5000 {
+			t.Fatal("bottom of image mapped incorrectly")
+		}
+	}
+}
+
+func TestInputPreemptsPreview(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	d := &Device{previewCancel: cancel, run: func(_ context.Context, _ string, args ...string) ([]byte, error) {
+		if strings.Contains(args[len(args)-1], "'uiInput'") {
+			return []byte("No Error"), nil
+		}
+		return []byte(unlockedState), nil
+	}}
+	d.mu.Lock() // The mirror is in a slow capture.
+	go func() { <-ctx.Done(); d.mu.Unlock() }()
+	start := time.Now()
+	if err := d.Tap(context.Background(), screen.Point{X: 10, Y: 10}, driver.TapOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if time.Since(start) > 500*time.Millisecond {
+		t.Fatal("input waited for the preview instead of interrupting it")
+	}
+	if d.inputs != 0 {
+		t.Fatal("input priority was not released")
+	}
+}
+
 func TestJPEGTransportAndCleanup(t *testing.T) {
 	var encoded bytes.Buffer
 	if err := jpeg.Encode(&encoded, image.NewRGBA(image.Rect(0, 0, 8, 16)), nil); err != nil {
 		t.Fatal(err)
 	}
 	for _, corrupt := range []bool{false, true} {
-		cleaned, captured := false, false
+		trapped, fallback, captured := false, false, false
 		d := &Device{run: func(_ context.Context, _ string, args ...string) ([]byte, error) {
 			cmd := args[len(args)-1]
 			switch {
-			case strings.HasPrefix(cmd, "'snapshot_display' "):
-				captured = strings.HasSuffix(cmd, "'-t' 'jpeg'")
-				return []byte("success: snapshot display"), nil
-			case strings.HasPrefix(cmd, "'base64' "):
+			case strings.Contains(cmd, "'snapshot_display' "):
+				trapped = strings.HasPrefix(cmd, "'trap' ") && strings.Contains(cmd, "rm") && strings.Contains(cmd, "'EXIT'")
+				captured = strings.Contains(cmd, "'-t' 'jpeg'") && strings.Contains(cmd, "'base64' ")
 				if corrupt {
-					return []byte("invalid!"), nil
+					return []byte("success: snapshot display\n__PINKY_JPEG__\ninvalid!"), nil
 				}
 				value := base64.StdEncoding.EncodeToString(encoded.Bytes())
-				return []byte(value[:40] + "\r\n" + value[40:] + "\r\n"), nil
+				return []byte("success: snapshot display\r\n__PINKY_JPEG__\r\n" + value[:40] + "\r\n" + value[40:] + "\r\n"), nil
 			case strings.HasPrefix(cmd, "'rm' '-f' "):
-				cleaned = true
+				fallback = true
 				return nil, nil
 			default:
 				t.Fatalf("unexpected command: %s", cmd)
@@ -45,8 +127,8 @@ func TestJPEGTransportAndCleanup(t *testing.T) {
 			}
 		}}
 		raw, err := d.tempOutput(context.Background(), "snapshot_display", ".jpeg")
-		if !captured || !cleaned {
-			t.Fatalf("capture=%v cleanup=%v", captured, cleaned)
+		if !captured || !trapped || fallback != corrupt {
+			t.Fatalf("capture=%v trap=%v fallback=%v", captured, trapped, fallback)
 		}
 		if corrupt {
 			if err == nil {
@@ -57,6 +139,49 @@ func TestJPEGTransportAndCleanup(t *testing.T) {
 		if err != nil || !bytes.Equal(raw, encoded.Bytes()) {
 			t.Fatalf("JPEG bytes changed: %v", err)
 		}
+	}
+}
+
+func TestBatchedCaptureGuards(t *testing.T) {
+	window := "calculator 0 100 7 1 1 0 10 0\nFocus window: 7\n"
+	good := unlockedState + window
+	for _, tc := range []struct {
+		name, before, after string
+		captured            bool
+	}{
+		{"locked before", strings.Replace(good, "deviceLocked false", "deviceLocked true", 1), good, false},
+		{"unknown before", window, good, false},
+		{"locked after", good, strings.Replace(good, "screenLocked false", "screenLocked true", 1), true},
+		{"unknown after", good, window, true},
+		{"changed window", good, strings.ReplaceAll(good, "7", "8"), true},
+		{"notification after", good, good + "SCBBannerNotificatio 0 10 14 2106 1 0 2000 0\n", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			guards, captured := 0, false
+			d := &Device{run: func(_ context.Context, _ string, args ...string) ([]byte, error) {
+				cmd := args[len(args)-1]
+				if strings.Contains(cmd, "'ScreenlockService'") {
+					guards++
+					if !strings.Contains(cmd, "'WindowManagerService'") {
+						t.Fatal("missing window guard")
+					}
+					if guards == 1 {
+						return []byte(tc.before), nil
+					}
+					return []byte(tc.after), nil
+				}
+				if strings.Contains(cmd, "'snapshot_display'") {
+					captured = true
+					return []byte("success: snapshot display\n__PINKY_JPEG__\nAA=="), nil
+				}
+				t.Fatalf("unexpected command: %s", cmd)
+				return nil, nil
+			}}
+			img, err := d.Screenshot(context.Background())
+			if err == nil || img != nil || captured != tc.captured {
+				t.Fatalf("image=%v error=%v captured=%v", img, err, captured)
+			}
+		})
 	}
 }
 

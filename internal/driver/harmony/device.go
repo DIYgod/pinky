@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"image"
 	_ "image/jpeg"
@@ -17,30 +18,54 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/ocr"
 	"github.com/DIYgod/pinky/internal/screen"
+	"golang.org/x/image/draw"
 )
 
 type Device struct {
-	info    driver.Info
-	path    string
-	run     func(context.Context, string, ...string) ([]byte, error)
-	mu      sync.Mutex // UITest is single-session; serialize reads, input and screenshots.
-	closed  bool
-	labels  map[string]string
-	apps    []driver.App
-	appsAt  time.Time
-	cancel  context.CancelFunc
-	touchMu sync.Mutex
-	down    screen.Point
-	downAt  time.Time
+	info          driver.Info
+	path          string
+	run           func(context.Context, string, ...string) ([]byte, error)
+	mu            sync.Mutex // UITest is single-session; serialize reads, input and screenshots.
+	closed        bool
+	labels        map[string]string
+	apps          []driver.App
+	appsAt        time.Time
+	cancel        context.CancelFunc
+	previewMu     sync.Mutex
+	previewCancel context.CancelFunc
+	inputs        int
+	touchMu       sync.Mutex
+	down          screen.Point
+	downAt        time.Time
+}
+
+// User and agent input preempt the optional mirror capture, rather than
+// waiting behind an entire screenshot. Input still checks the lock itself.
+func (d *Device) preferInput() func() {
+	d.previewMu.Lock()
+	d.inputs++
+	if d.previewCancel != nil {
+		d.previewCancel()
+	}
+	d.previewMu.Unlock()
+	return func() {
+		d.previewMu.Lock()
+		d.inputs--
+		d.previewMu.Unlock()
+	}
 }
 
 func (d *Device) Info() driver.Info { return d.info }
 
 func (d *Device) shell(ctx context.Context, args ...string) ([]byte, error) {
+	return d.shellScript(ctx, shellCommand(args...))
+}
+
+func (d *Device) shellScript(ctx context.Context, command string) ([]byte, error) {
 	if d.closed {
 		return nil, driver.ErrOffline
 	}
-	return d.run(ctx, d.path, "-t", d.info.ID, "shell", shellCommand(args...))
+	return d.run(ctx, d.path, "-t", d.info.ID, "shell", command)
 }
 
 func (d *Device) locked(ctx context.Context) (bool, error) {
@@ -68,28 +93,59 @@ func (d *Device) requireUnlocked(ctx context.Context) error {
 	return nil
 }
 
-// tempOutput reads an explicitly named UITest output and removes it before
+// tempOutput reads an explicitly named native output and removes it before
 // returning. Images are never written to the host filesystem or cached.
 func (d *Device) tempOutput(ctx context.Context, tool, ext string, extra ...string) ([]byte, error) {
+	return d.tempOutputChecked(ctx, tool, ext, nil, extra...)
+}
+
+func (d *Device) tempOutputChecked(ctx context.Context, tool, ext string, checkHeader func([]byte) error, extra ...string) ([]byte, error) {
 	var nonce [12]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
 		return nil, err
 	}
 	remote := "/data/local/tmp/pinky-" + hex.EncodeToString(nonce[:]) + ext
+	cleaned := false
 	defer func() {
+		if cleaned {
+			return
+		}
 		clean, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		_, _ = d.shell(clean, "rm", "-f", remote)
 	}()
-	args := append([]string{"uitest", tool, "-p", remote}, extra...)
 	if tool == "snapshot_display" {
-		args = []string{tool, "-f", remote, "-t", "jpeg"}
+		// Keep capture, transport and cleanup in one shell session. A trap
+		// also removes the file if capture/encoding fails on the device;
+		// the deferred command is a fallback when the session is interrupted.
+		const marker = "__PINKY_JPEG__"
+		args := append([]string{tool, "-f", remote, "-t", "jpeg"}, extra...)
+		command := shellCommand("trap", shellCommand("rm", "-f", remote), "EXIT") + "; " +
+			shellCommand(args...) + " && " +
+			shellCommand("printf", "\n"+marker+"\n") + " && " + shellCommand("base64", remote)
+		out, err := d.shellScript(ctx, command)
+		if err != nil {
+			return nil, err
+		}
+		header, payload, ok := bytes.Cut(out, []byte(marker))
+		if !ok || !bytes.Contains(header, []byte("success: snapshot display")) {
+			return nil, fmt.Errorf("harmony: snapshot did not produce output")
+		}
+		if checkHeader != nil {
+			if err := checkHeader(header); err != nil {
+				return nil, err
+			}
+		}
+		raw, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(string(payload)), ""))
+		cleaned = err == nil
+		return raw, err
 	}
+	args := append([]string{"uitest", tool, "-p", remote}, extra...)
 	out, err := d.shell(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
-	if !bytes.Contains(out, []byte("saved to")) && !(tool == "snapshot_display" && bytes.Contains(out, []byte("success: snapshot display"))) {
+	if !bytes.Contains(out, []byte("saved to")) {
 		return nil, fmt.Errorf("harmony: %s did not produce output: %s", tool, strings.TrimSpace(string(out)))
 	}
 	if ext == ".png" || ext == ".jpeg" {
@@ -100,6 +156,28 @@ func (d *Device) tempOutput(ctx context.Context, tool, ext string, extra ...stri
 		return base64.StdEncoding.DecodeString(strings.Join(strings.Fields(string(encoded)), ""))
 	}
 	return d.shell(ctx, "cat", remote)
+}
+
+// screenState batches the two read-only guards without caching either one.
+// Every capture still checks both lock and visible windows before and after.
+func (d *Device) screenState(ctx context.Context) (string, error) {
+	out, err := d.shellScript(ctx, shellCommand("hidumper", "-s", "ScreenlockService", "-a", "-all")+" && "+
+		shellCommand("hidumper", "-s", "WindowManagerService", "-a", "-a"))
+	if err != nil {
+		return "", err
+	}
+	locked, err := parseLock(string(out))
+	if err != nil {
+		return "", err
+	}
+	if locked {
+		return "", driver.ErrLocked
+	}
+	focus, err := focusedWindow(string(out))
+	if err != nil {
+		return "", err
+	}
+	return focus, safeWindow(string(out), focus)
 }
 
 func (d *Device) tree(ctx context.Context) (*screen.Screen, error) {
@@ -175,45 +253,70 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 }
 
 func (d *Device) capture(ctx context.Context) (image.Image, error) {
-	if err := d.requireUnlocked(ctx); err != nil {
-		return nil, err
+	return d.capturePreview(ctx, image.Point{})
+}
+
+var errDisplayChanged = errors.New("harmony: display dimensions changed")
+
+func displaySize(header []byte) image.Point {
+	for _, line := range strings.Split(string(header), "\n") {
+		var id, w, h int
+		var kind string
+		if _, err := fmt.Sscanf(strings.TrimSpace(line), "process: display %d, file type: %s width: %d, height: %d", &id, &kind, &w, &h); err == nil && w > 0 && h > 0 {
+			return image.Pt(w, h)
+		}
 	}
-	before, err := d.shell(ctx, "hidumper", "-s", "WindowManagerService", "-a", "-a")
+	return image.Point{}
+}
+
+// The live mirror captures fewer pixels, then restores the native coordinate
+// space on the host. Agent screenshots and OCR retain full resolution.
+func (d *Device) capturePreview(ctx context.Context, native image.Point) (image.Image, error) {
+	focus, err := d.screenState(ctx)
 	if err != nil {
-		return nil, err
-	}
-	focus, err := focusedWindow(string(before))
-	if err != nil {
-		return nil, err
-	}
-	if err := safeWindow(string(before), focus); err != nil {
 		return nil, err
 	}
 	// JPEG keeps a busy home screen small enough for HDC's shell channel.
 	// Raw binary shell output is unsafe: HDC transforms control bytes, so
 	// even compressed images are transported as base64 and decoded here.
-	raw, err := d.tempOutput(ctx, "snapshot_display", ".jpeg")
+	var raw []byte
+	want := native
+	scaled := false
+	if side := max(native.X, native.Y); side > 1600 {
+		w, h := max(2, native.X*1600/side)&^1, max(2, native.Y*1600/side)&^1
+		want, scaled = image.Pt(w, h), true
+		raw, err = d.tempOutputChecked(ctx, "snapshot_display", ".jpeg", func(header []byte) error {
+			actual := displaySize(header)
+			if actual == (image.Point{}) {
+				return fmt.Errorf("harmony: snapshot lacks native display dimensions")
+			}
+			if actual != native {
+				return errDisplayChanged
+			}
+			return nil
+		}, "-w", fmt.Sprint(w), "-h", fmt.Sprint(h))
+	} else {
+		raw, err = d.tempOutput(ctx, "snapshot_display", ".jpeg")
+	}
 	if err != nil {
 		return nil, err
 	}
-	if err := d.requireUnlocked(ctx); err != nil {
-		return nil, err
-	}
-	after, err := d.shell(ctx, "hidumper", "-s", "WindowManagerService", "-a", "-a")
-	if err != nil {
-		return nil, err
-	}
-	focusAfter, err := focusedWindow(string(after))
+	focusAfter, err := d.screenState(ctx)
 	if err != nil {
 		return nil, err
 	}
 	if focusAfter != focus {
 		return nil, fmt.Errorf("harmony: window changed during screenshot")
 	}
-	if err := safeWindow(string(after), focusAfter); err != nil {
-		return nil, err
-	}
 	img, _, err := image.Decode(bytes.NewReader(raw))
+	if err == nil && native.X > 0 && img.Bounds().Size() != want {
+		return nil, errDisplayChanged
+	}
+	if err == nil && scaled {
+		full := image.NewRGBA(image.Rectangle{Max: native})
+		draw.ApproxBiLinear.Scale(full, full.Bounds(), img, img.Bounds(), draw.Src, nil)
+		img = full
+	}
 	return img, err
 }
 

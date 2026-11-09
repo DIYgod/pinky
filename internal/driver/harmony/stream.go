@@ -2,6 +2,7 @@ package harmony
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
 
@@ -34,11 +35,38 @@ func (d *Device) Stream(ctx context.Context, opt driver.StreamOptions) (driver.S
 		cancel()
 		return nil, fmt.Errorf("harmony: live preview needs ffmpeg: %w", driver.ErrUnsupported)
 	}
-	st, err := video.FrameStreamWithFFmpeg(sctx, w, h, fps, encoder, func() image.Image {
+	st, err := video.LowLatencyFrameStream(sctx, w, h, fps, encoder, func() image.Image {
 		d.mu.Lock()
 		defer d.mu.Unlock()
-		img, err := d.capture(sctx)
+		d.previewMu.Lock()
+		if d.inputs > 0 || d.closed {
+			d.previewMu.Unlock()
+			first = nil
+			return nil
+		}
+		captureCtx, captureCancel := context.WithCancel(sctx)
+		d.previewCancel = captureCancel
+		d.previewMu.Unlock()
+		defer func() {
+			captureCancel()
+			d.previewMu.Lock()
+			d.previewCancel = nil
+			d.previewMu.Unlock()
+		}()
+		if first != nil {
+			img := first
+			first = nil
+			return img
+		}
+		img, err := d.capturePreview(captureCtx, image.Pt(w, h))
+		if captureCtx.Err() != nil {
+			return nil // Input interrupted this optional frame.
+		}
 		if err != nil {
+			if errors.Is(err, errDisplayChanged) {
+				cancel()
+				return nil
+			}
 			return blank
 		}
 		// Rotation requires a new stream with its new dimensions.

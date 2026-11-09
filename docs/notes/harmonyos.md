@@ -43,6 +43,17 @@ additive Info.SetupCheck field. Existing drivers keep their default.
   adds an explicit-encoder-path FrameStream variant; old callers retain
   their behavior.
 
+The mirror batches each pair of lock/window guards and captures/transports
+JPEGs in one shell session with trap-based cleanup. It reuses its initial
+capture and feeds a duplicate picture to release each H.264 access unit
+without waiting for the next screenshot. A blocked-next-capture regression
+test covers this latency. Normal FrameStream callers are unchanged.
+Input cancels an in-flight optional preview capture, then performs its own
+fresh lock check. Preview captures use at most 1600 pixels on the long side;
+the host restores the native coordinate space before encoding. Full-resolution
+agent screenshots and OCR are unchanged. The original display dimensions
+are checked on every scaled capture, so rotation restarts the stream.
+
 Automatic text entry is unsupported until UITest password/input metadata
 can be verified reliably; the person must enter text on the phone.
 Recents, background displays, file transfer and physical-input detection
@@ -83,6 +94,15 @@ change or power action, and persisted no real-screen artifact. Synthetic
 UI tests cover setup and the ready checkup in English, Chinese and Japanese.
 The native desktop app also passed its checkup and displayed the real Home
 screen after switching screenshot transport to JPEG over base64.
+
+The Calculator latency smoke test measured first preview packet arrival
+from about 5.06 s to 1.49 s, and a tap during mirroring from 2.03 s to
+0.69 s after batching, immediate encoding and input preemption. Scaled
+preview captures took 1.18–1.27 s versus 1.48–1.63 s at full resolution
+in the same run. These are USB measurements on this phone, not latency
+guarantees. The screenshot transport still limits smoothness; it is not a
+continuous on-device video stream. TestDevicePreviewLatency measures the
+same safe Calculator/Home path without storing any screen artifact.
 
 Windows/Linux provider builds compile; real operation there is unverified.
 SDK-free USB discovery is macOS-only. HDC TCP listings are parsed but real

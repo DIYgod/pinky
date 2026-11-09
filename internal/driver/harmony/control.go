@@ -27,6 +27,8 @@ func (d *Device) input(ctx context.Context, args ...string) error {
 }
 
 func (d *Device) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
+	done := d.preferInput()
+	defer done()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if p.X < 0 || p.Y < 0 {
@@ -40,6 +42,8 @@ func (d *Device) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions)
 }
 
 func (d *Device) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
+	done := d.preferInput()
+	defer done()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	if min(from.X, from.Y, to.X, to.Y) < 0 {
@@ -65,6 +69,8 @@ func (d *Device) Key(ctx context.Context, key driver.Key) error {
 	if !ok {
 		return fmt.Errorf("harmony: key %s: %w", key, driver.ErrUnsupported)
 	}
+	done := d.preferInput()
+	defer done()
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.input(ctx, "keyEvent", code)
