@@ -203,8 +203,25 @@ func (pl *recPlayer) resume() {
 func (pl *recPlayer) seek(at time.Duration) {
 	pl.scrubbing = false
 	at = max(0, min(at, pl.rec.Length))
-	run := pl.state == "playing" || pl.state == "loading"
-	pl.playFrom(at, run)
+	pl.playFrom(at, pl.running())
+}
+
+// running is whether a seek should keep playing afterward: loading for a
+// paused seek is not running.
+func (pl *recPlayer) running() bool {
+	return pl.state == "playing" || (pl.state == "loading" && !pl.holdPause)
+}
+
+// showPlay picks the play control, not pause, for a stopped recording and
+// while a paused seek is loading its frame.
+func (pl *recPlayer) showPlay() bool {
+	switch pl.state {
+	case "paused", "failed", "ended":
+		return true
+	case "loading":
+		return pl.holdPause
+	}
+	return false
 }
 
 func (pl *recPlayer) shownPos() time.Duration {
@@ -263,7 +280,7 @@ func (pl *recPlayer) markAt(at time.Duration) int {
 // shows it, Play and Pause, the time, and a timeline with a mark per step.
 func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 	p := pal(c)
-	if pl.state == "playing" || pl.state == "loading" {
+	if pl.running() {
 		c.After(250 * time.Millisecond) // the time and the current step move on
 	}
 	mg.Row(c).Gap(20).AlignItems(mg.Start).Wrap().Children(func() {
@@ -352,11 +369,11 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 	// Play, the timeline and the time.
 	mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
 		label, icon := locales.RecordingPause(), icPause
-		switch pl.state {
-		case "paused", "failed":
+		if pl.showPlay() {
 			label, icon = locales.RecordingPlay(), icPlay
-		case "ended":
-			label, icon = locales.RecordingPlayAgain(), icPlay
+			if pl.state == "ended" {
+				label, icon = locales.RecordingPlayAgain(), icPlay
+			}
 		}
 		b := button(c, "", btnOpt{icon: icon, label: label}).Width(34).Padding(0).Tooltip(label)
 		if b.Clicked() {

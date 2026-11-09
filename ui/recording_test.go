@@ -153,3 +153,48 @@ func TestRecordingTimelineSeekWhilePaused(t *testing.T) {
 		t.Errorf("after the seek: %s at %v", pl.state, pl.pos)
 	}
 }
+
+// TestRecordingSeekAgainWhilePaused seeks twice in a row while paused and
+// expects the player to stay paused, not to show as playing in between.
+func TestRecordingSeekAgainWhilePaused(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("needs the ffmpeg command")
+	}
+	if err := video.Load(); err != nil {
+		t.Skip(err)
+	}
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.page = pageActivity
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "Activity", func() bool { tt.Frame(); return ta.act.loaded })
+	ta.act.sel = "h-lunch"
+	ta.waitFor(t, "the recording", func() bool { tt.Frame(); return hasText(tt, "Watch recording") })
+	if err := tt.Click("Watch recording"); err != nil {
+		t.Fatal(err)
+	}
+	pl := ta.rec.pl
+	t.Cleanup(ta.closeRecording)
+	ta.waitFor(t, "the first pictures", func() bool {
+		tt.Frame()
+		return pl.bitmap != nil && pl.pos > 300*time.Millisecond
+	})
+	if err := tt.Click("Pause"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	r, ok := tt.Find(locales.RecordingPosition())
+	if !ok {
+		t.Fatal("no timeline")
+	}
+	for _, frac := range []float32{0.4, 0.7} {
+		tt.ClickAt(r.X+r.W*frac, r.Y+r.H/2)
+		tt.Frame()
+		if pl.running() {
+			t.Fatalf("after seek at %.0f%%, state %s holdPause %v", frac*100, pl.state, pl.holdPause)
+		}
+	}
+	ta.waitFor(t, "both seeks", func() bool {
+		tt.Frame()
+		return pl.state == "paused" && pl.pos >= pl.rec.Length/2
+	})
+}
