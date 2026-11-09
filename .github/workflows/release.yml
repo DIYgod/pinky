@@ -164,6 +164,7 @@ jobs:
         env:
           STRICT: "1"
           COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
+          GH_TOKEN: ${{ github.token }} # scripts/adb.sh, when github.com's release downloads fail
         run: |
           go run ./scripts/release stamp "${TAG#v}"
           scripts/dist.sh windows "$RUNNER_TEMP/dist"
@@ -310,6 +311,7 @@ jobs:
           STRICT: "1"
           COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
           SIGN: ${{ vars.MACOS_SIGN_IDENTITY }}
+          GH_TOKEN: ${{ github.token }} # scripts/adb.sh, when github.com's release downloads fail
         run: |
           go run ./scripts/release stamp "${TAG#v}"
           scripts/dist.sh darwin "$RUNNER_TEMP/dist"
