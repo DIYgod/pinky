@@ -387,7 +387,7 @@ Pinky is one Go program that runs in three modes, with exactly one gateway per u
 
 (Diagram: see the design doc at https://claude.ai/artifact/1tETTimeUQMqvjvQf5ALsn)
 
-A lock on the local socket keeps a second gateway from starting. Nothing under `internal/` imports MyGo, so the gateway runs without any UI.
+A lock in the data folder keeps a second gateway from starting. Nothing under `internal/` imports MyGo, so the gateway runs without any UI.
 
 ### Action pipeline
 
