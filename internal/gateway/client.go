@@ -301,6 +301,10 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 		return g.decide(needID, dec, note)
 	}
 	if d == TakeOver {
+		if info.Rule == recordingsRule {
+			// Nothing on the phone waits on it: taking over answers no.
+			return g.decide(needID, approval.Deny, note)
+		}
 		// The panel's Take over: the person does it themselves.
 		return g.TakeOver(info.Binding.Device)
 	}
@@ -419,9 +423,10 @@ func (g *Gateway) takeOver(d *device, byInput bool) {
 	}
 	g.mu.Unlock()
 	// Withdraw open approvals even when the person was already in control:
-	// one may have opened in the meantime.
+	// one may have opened in the meantime. A Recordings card stays: it asks
+	// about files on this computer, not about the phone.
 	gone := g.approvals.WithdrawWhere(func(i approval.Info) bool {
-		return i.Binding.Device == d.id && i.Kind != approval.KindHandoff
+		return i.Binding.Device == d.id && i.Kind != approval.KindHandoff && i.Rule != recordingsRule
 	}, reasonTookOver)
 	g.closePendingSteps(gone, string(StatusTookOver))
 	if changed {

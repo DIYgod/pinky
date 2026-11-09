@@ -45,10 +45,11 @@ type connectIn struct {
 }
 
 type releaseIn struct {
-	Device  string `json:"device,omitempty" jsonschema:"The phone to release; default every phone this session holds."`
-	Outcome string `json:"outcome,omitempty" jsonschema:"How the task ended: done, failed, partial or cancelled. Default done."`
-	Summary string `json:"summary,omitempty" jsonschema:"One or two sentences on what happened, for the person's history."`
-	Export  bool   `json:"export,omitempty" jsonschema:"Also save the task's report in the phone's folder on Pinky's computer once it ends, for a bug report or a pull request: an HTML page of its steps with the screenshots Pinky kept, and the same as JSON. Returns their paths, or over HTTP one-time download links. Its screen recording stays with the person."`
+	Device     string `json:"device,omitempty" jsonschema:"The phone to release; default every phone this session holds."`
+	Outcome    string `json:"outcome,omitempty" jsonschema:"How the task ended: done, failed, partial or cancelled. Default done."`
+	Summary    string `json:"summary,omitempty" jsonschema:"One or two sentences on what happened, for the person's history."`
+	Export     bool   `json:"export,omitempty" jsonschema:"Also save the task's report in the phone's folder on Pinky's computer once it ends, for a bug report or a pull request: an HTML page of its steps with the screenshots Pinky kept, and the same as JSON. Returns their paths, or over HTTP one-time download links. If Pinky recorded the task's screen, the person is asked whether you get the recording too (an MP4 next to the report); if they decline or do not answer, you get the report alone."`
+	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with the same arguments and this id to keep waiting for the person's answer."`
 }
 
 type observeIn struct {
@@ -241,12 +242,14 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_release", Title: "Release the phone",
-		Description: "End the task and free the phone, with how it went. Without device, releases every phone this session holds.",
+		Description: "End the task and free the phone, with how it went. Without device, releases every phone this session holds. " +
+			"With export, when the task was recorded, it first asks the person about the recording: up to 45 s, then approval_pending with an approval_id to repeat the call with.",
 		InputSchema: schema[releaseIn](func(p map[string]*jsonschema.Schema) { enum(p["outcome"], outcomes...) }),
 		Annotations: &sdk.ToolAnnotations{IdempotentHint: true, OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in releaseIn) (*sdk.CallToolResult, any, error) {
 			return s.result(req, remote, s.session(req, remote).Release(ctx, gateway.ReleaseRequest{
-				Call: gateway.Call{Device: strings.TrimSpace(in.Device)}, Outcome: in.Outcome, Summary: in.Summary, Export: in.Export})), nil, nil
+				Call:    gateway.Call{Device: strings.TrimSpace(in.Device), ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
+				Outcome: in.Outcome, Summary: in.Summary, Export: in.Export})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_observe", Title: "Read the screen",

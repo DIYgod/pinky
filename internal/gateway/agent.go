@@ -964,17 +964,58 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 			ls = append(ls, l)
 		}
 	}
+	// The tasks whose screen recordings the person may give the agent.
+	videos := map[*lease]*taskVideo{}
+	if req.Export {
+		for _, l := range ls {
+			if v := l.dev.video; v != nil && v.t.id == l.task.id {
+				videos[l] = v
+			}
+		}
+	}
+	g.mu.Unlock()
+	if len(ls) == 0 {
+		return &Result{Status: StatusSettled, Message: "Nothing to release."}
+	}
+	sort.Slice(ls, func(i, j int) bool { return ls[i].dev.id < ls[j].dev.id })
+	var asked []*lease
+	for _, l := range ls {
+		if v := videos[l]; v != nil {
+			if _, ok := v.view(); ok {
+				asked = append(asked, l)
+			}
+		}
+	}
+	// Each export with a recording asks the person, before the task ends:
+	// an answer still pending leaves it running for the agent to repeat
+	// the call with approval_id.
+	var answer approval.Outcome
+	if len(asked) > 0 {
+		out, res := g.askRecordings(ctx, s, asked, req, outcome)
+		if res != nil {
+			return res
+		}
+		answer = out
+	}
+	give := answer.Decision.Allows()
+	g.mu.Lock()
 	var names []string
 	var exports []taskExport
+	var released []*lease
 	for _, l := range ls {
+		if l.ended {
+			continue
+		}
+		released = append(released, l)
 		names = append(names, l.dev.name())
 		if req.Export {
-			g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"export": true}),
-				Text: exportStepText, Status: string(StatusSettled), At: time.Now()}, "", "")
-			e := taskExport{task: l.task.id, device: l.dev.name(), dir: g.FilesDir(l.dev.id)}
-			if v := l.dev.video; v != nil && v.t.id == l.task.id {
-				e.video = v
+			e := taskExport{task: l.task.id, device: l.dev.name(), dir: g.FilesDir(l.dev.id), video: give && videos[l] != nil}
+			text := exportStepText
+			if e.video {
+				text = exportVideoStepText
 			}
+			g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"export": true}),
+				Text: text, Status: string(StatusSettled), At: time.Now()}, "", "")
 			exports = append(exports, e)
 		}
 		g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"outcome": outcome, "summary": req.Summary}),
@@ -982,16 +1023,20 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 		g.endLeaseLocked(l, outcome, req.Summary)
 	}
 	g.mu.Unlock()
-	if len(ls) == 0 {
+	if len(released) == 0 {
 		return &Result{Status: StatusSettled, Message: "Nothing to release."}
 	}
 	sort.Strings(names)
 	res := &Result{Status: StatusSettled, Message: fmt.Sprintf("Released %s.", strings.Join(names, ", "))}
-	if len(ls) == 1 {
-		res.Device, res.DeviceName = ls[0].dev.id, ls[0].dev.name()
+	if len(released) == 1 {
+		res.Device, res.DeviceName = released[0].dev.id, released[0].dev.name()
 	}
 	if len(exports) > 0 {
 		g.exportForAgent(ctx, exports, res)
+	}
+	if len(asked) > 0 && !give {
+		res.Message += recordingsWithheld(answer, len(asked))
+		res.Note = answer.Note
 	}
 	return res
 }

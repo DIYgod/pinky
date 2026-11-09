@@ -3274,6 +3274,34 @@
       }
     }
   },
+  "gwDoGiveRecording": "give {agent} the screen recording of “{task}”",
+  "@gwDoGiveRecording": {
+    "description": "What a step asked for, and with gwAskQuestion the title of its approval: give the agent the screen recording of the task that ends, with its report (phone_release export). task is the agent's name for the task. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "task": {
+        "type": "String",
+        "example": "Reorder lunch"
+      }
+    }
+  },
+  "gwDoGiveRecordings": "give {agent} the screen recordings of {count} tasks",
+  "@gwDoGiveRecordings": {
+    "description": "What a step asked for, and with gwAskQuestion the title of its approval: give the agent the screen recordings of several tasks that end together, with their reports (phone_release export); count is 2 or more. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
   "gwDoCopyFromPhone": "copy from the phone",
   "@gwDoCopyFromPhone": {
     "description": "What a step tried: copy files from the phone to the computer. Shown only in other languages; in English the gateway's own words show."
@@ -3489,6 +3517,10 @@
         "example": "a.txt, b.png"
       }
     }
+  },
+  "gwRecordingsDetail": "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications.",
+  "@gwRecordingsDetail": {
+    "description": "The second line of the approval that gives an agent a task's screen recording: what the person agrees to. Screenshots are the ones agents get, with codes covered; blocked apps are the banking, wallet and password-manager apps and those the person blocked. Shown only in other languages; in English the gateway's own words show."
   },
   "gwFilesMore": "and {count} more",
   "@gwFilesMore": {
@@ -3860,7 +3892,11 @@
   },
   "gwStepSavedReport": "Saved the task's report for the agent",
   "@gwStepSavedReport": {
-    "description": "A step: as the task ended, the agent had its report (an HTML page of the steps with screenshots, and a JSON file) saved in the phone's folder on the computer, for a bug report or a pull request (phone_release export). The screen recording is not in it. Shown only in other languages; in English the gateway's own words show."
+    "description": "A step: as the task ended, the agent had its report (an HTML page of the steps with screenshots, and a JSON file) saved in the phone's folder on the computer, for a bug report or a pull request (phone_release export). The screen recording is not in it (gwStepSavedReportVideo is the step where it is). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepSavedReportVideo": "Saved the task's report and screen recording for the agent",
+  "@gwStepSavedReportVideo": {
+    "description": "A step: as the task ended, the agent had its report (an HTML page of the steps with screenshots, and a JSON file) and its screen recording (an MP4 file, which the person allowed) saved in the phone's folder on the computer, for a bug report or a pull request (phone_release export). Shown only in other languages; in English the gateway's own words show."
   },
   "gwStepSavedScreenshot": "Saved a screenshot as “{path}”",
   "@gwStepSavedScreenshot": {
@@ -5882,6 +5918,10 @@
   "@ruleFiles": {
     "description": "The name of the rule that asks before copying files to the phone."
   },
+  "ruleRecordings": "Recordings",
+  "@ruleRecordings": {
+    "description": "The name of the rule that asks before an agent gets a task's screen recording with its report. It asks every time: no preset or Always allow skips it."
+  },
   "ruleFinanceApps": "Finance apps",
   "@ruleFinanceApps": {
     "description": "The name of the default rule that blocks finance apps."
@@ -6346,7 +6386,7 @@
   "@settingsPrivacyRecord": {
     "description": "Settings › Privacy: the switch that records the phone's screen while agents work."
   },
-  "settingsPrivacyRecordDesc": "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent apps are recorded as they show. Recordings stay on this computer.",
+  "settingsPrivacyRecordDesc": "Used for replays in Activity. Recording pauses while a blocked app is open; its notifications and its card in recent apps are recorded as they show. Recordings stay on this computer: an agent gets one only when you allow it, as it saves a task's report.",
   "@settingsPrivacyRecordDesc": {
     "description": "Settings › Privacy: the line under Record the screen during tasks. Activity is the page of finished tasks."
   },
@@ -6728,7 +6768,7 @@
   "@settingsSafetyHideCodes": {
     "description": "Settings › Safety: the switch that hides one-time codes, on the phone's screen and in its notifications, from agents."
   },
-  "settingsSafetyHideCodesDesc": "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. Recordings, which stay on this computer, show them.",
+  "settingsSafetyHideCodesDesc": "One-time codes on the screen and in notifications are masked before an agent reads them, and covered in screenshots. Recordings show them, so an agent gets one only when you allow it.",
   "@settingsSafetyHideCodesDesc": {
     "description": "Settings › Safety: the line under Hide codes from agents. Screenshots are the ones agents get and the ones Activity keeps; recordings are the screen recordings of tasks, which are not covered."
   },

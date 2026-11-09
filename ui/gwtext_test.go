@@ -116,6 +116,11 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Saved the task's report for the agent":                    zh.GwStepSavedReport(),
 		"Added 1 chicken rice bowl":                                "Added 1 chicken rice bowl",
 		"Copied 7 files to the phone: a, b, and 2 more":            zh.GwStepCopiedTo("7", zh.GwFilesList("a"+zh.ListSeparator()+"b"+zh.ListSeparator()+zh.GwFilesMore("2"))),
+
+		// The Recordings card and its export.
+		"Saved the task's report and screen recording for the agent":                zh.GwStepSavedReportVideo(),
+		"Waiting for you: Give Claude Code the screen recording of “Reorder lunch”": zh.GwStepWaiting(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),
+		"Waiting for you: Give Codex the screen recordings of 2 tasks":              zh.GwStepWaiting(zh.GwDoGiveRecordings("Codex", "2")),
 	}
 	for in, out := range want {
 		if got := stepText(in); got != out {
@@ -139,6 +144,9 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Copy “ticket.pdf” to Pixel 9?":    zh.GwAskQuestion(zh.GwDoCopyFile("ticket.pdf", "Pixel 9")),
 		"Copy 3 files to Pixel 9?":         zh.GwAskQuestion(zh.GwDoCopyFiles("3", "Pixel 9")),
 		"Something the gateway never says": "Something the gateway never says",
+
+		"Give Claude Code the screen recording of “Reorder lunch”?": zh.GwAskQuestion(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),
+		"Give Codex the screen recordings of 2 tasks?":              zh.GwAskQuestion(zh.GwDoGiveRecordings("Codex", "2")),
 	}
 	for in, out := range titles {
 		n := gateway.NeedView{Kind: gateway.NeedApproval, Title: in, Rule: "Payments"}
@@ -148,6 +156,14 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		if got := needTitle(n); got != out {
 			t.Errorf("needTitle(%q) = %q, want %q", in, got, out)
 		}
+	}
+	recordings := gateway.NeedView{Kind: gateway.NeedApproval, Rule: "Recordings",
+		Detail: "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."}
+	if got, want := needDetail(recordings), zh.GwRecordingsDetail(); got != want {
+		t.Errorf("recordings detail: %q, want %q", got, want)
+	}
+	if got, want := ruleName("Recordings"), zh.RuleRecordings(); got != want {
+		t.Errorf("ruleName(Recordings) = %q, want %q", got, want)
 	}
 	handoff := gateway.NeedView{Kind: gateway.NeedHandoff, Title: "Sign in to Dinely?"}
 	if got := needTitle(handoff); got != handoff.Title {
