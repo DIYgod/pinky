@@ -90,6 +90,8 @@ type recPlayer struct {
 	base      time.Duration // added to the stream's PTS, when they count from where it opened
 	first     bool          // the next picture is the stream's first
 	holdPause bool          // stop once the seeked frame is shown
+	scrubbing bool          // the timeline is held: show scrubTo, seek once it lets go
+	scrubTo   time.Duration // the time under the pointer while scrubbing
 }
 
 // openRecording starts playing a task's recording from its start.
@@ -199,9 +201,17 @@ func (pl *recPlayer) resume() {
 }
 
 func (pl *recPlayer) seek(at time.Duration) {
+	pl.scrubbing = false
 	at = max(0, min(at, pl.rec.Length))
 	run := pl.state == "playing" || pl.state == "loading"
 	pl.playFrom(at, run)
+}
+
+func (pl *recPlayer) shownPos() time.Duration {
+	if pl.scrubbing {
+		return pl.scrubTo
+	}
+	return pl.pos
 }
 
 // take shows the newest picture, at paint time.
@@ -357,7 +367,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 			}
 		}
 		a.recordingTimeline(c, t, pl).Grow(1).MinWidth(0)
-		mg.Text(c, clock(pl.pos)+" / "+clock(pl.rec.Length)).FontSize(13).TextColor(p.ink2).Shrink(0)
+		mg.Text(c, clock(pl.shownPos())+" / "+clock(pl.rec.Length)).FontSize(13).TextColor(p.ink2).Shrink(0)
 	})
 }
 
@@ -367,13 +377,15 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 	p := pal(c)
 	length := max(pl.rec.Length, time.Millisecond)
 	bar := mg.Box(c).Height(30).Focusable().Role(mg.RoleSlider).Label(locales.RecordingPosition()).Cursor(mg.CursorPointer)
-	bar.Range(0, length.Seconds(), pl.pos.Seconds())
+	bar.Range(0, length.Seconds(), pl.shownPos().Seconds())
 	bounds := bar.LayoutBounds()
 	if bounds.W > 0 {
-		if x, _, ok := bar.PointerPosition(); ok && bar.Pressed() {
-			at := recordingAt(x, bounds.W, length)
-			if bar.PressedInside() || absDur(at-pl.pos) > 100*time.Millisecond {
-				pl.seek(at)
+		if x, _, ok := bar.PointerPosition(); ok {
+			if bar.Pressed() {
+				pl.scrubbing, pl.scrubTo = true, recordingAt(x, bounds.W, length)
+			} else if pl.scrubbing {
+				pl.scrubbing = false
+				pl.seek(pl.scrubTo)
 			}
 		}
 	}
@@ -385,7 +397,7 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 	bar.Draw(func(pt *mg.Painter, r mg.Rect) {
 		y := r.Y + r.H/2
 		pt.Fill(mg.Rect{X: r.X, Y: y - 2, W: r.W, H: 4}, p.bg3, 2)
-		done := r.W * float32(float64(pl.pos)/float64(length))
+		done := r.W * float32(float64(pl.shownPos())/float64(length))
 		pt.Fill(mg.Rect{X: r.X, Y: y - 2, W: done, H: 4}, p.accent, 2)
 		for _, mk := range pl.rec.Marks {
 			x := r.X + r.W*float32(float64(mk.At)/float64(length))
@@ -412,13 +424,6 @@ func recordingAt(x, width float32, length time.Duration) time.Duration {
 	}
 	frac := max(0, min(x/width, 1))
 	return time.Duration(float64(length) * float64(frac))
-}
-
-func absDur(d time.Duration) time.Duration {
-	if d < 0 {
-		return -d
-	}
-	return d
 }
 
 func recordingError(err error) string {
