@@ -54,3 +54,8 @@ require (
 )
 
 tool github.com/egoist/mygo/cmd/mygo
+
+// go-ios's main (6910f3b) plus one commit that pins the phone's TLS certificate to the
+// pair record (branch pin-device-certificate of github.com/DIYgod/go-ios). Drop it once
+// go-ios has the change; see "go-ios from main" in docs/notes/ios.md.
+replace github.com/danielpaulus/go-ios => github.com/DIYgod/go-ios v0.0.0-20261108182015-53a1fc8154fc
