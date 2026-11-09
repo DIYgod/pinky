@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.14 (2026-11-09)
 
 - Agents can have a tap, swipe, typing, key press or app launch wait less for the screen to settle (`settle_ms`), so in games and videos, whose screens never stop moving, an action no longer waits 3 s for nothing. Actions you approve still wait the full time. Thanks to chenzl25.
 - On an iPhone, Pinky now checks what typing put in the field: text that came out different, for example with a keyboard layout other than U.S., is reported instead of counting as typed. When typing key by key would enter the wrong letters, Pinky says why instead of typing them. Typing also no longer drops the first space after switching away from a Chinese keyboard, or waits twice for a phone clipboard that does not answer. Thanks to theniceboy.
