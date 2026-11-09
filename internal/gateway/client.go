@@ -356,7 +356,7 @@ func canAllowTask(info approval.Info) bool {
 	if _, ok := info.Data.(*appAsk); ok {
 		return true
 	}
-	return info.Rule == filesRule
+	return info.Rule == filesRule || info.Rule == policy.RuleAppLogs
 }
 
 func (g *Gateway) decide(id string, d approval.Decision, note string) error {

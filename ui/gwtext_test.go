@@ -58,6 +58,10 @@ var gatewaySteps = []string{
 	"Waiting for you: Install “Dinely” 1.3 (14) on Pixel 9",
 	"Blocked by “Pinky's own apps”: uninstall “Pinky Companion”",
 	"Failed: install from “base.apk” and 1 more file",
+	"Read 120 log lines of Example",
+	"Read 1 crash report of Example",
+	"Waiting for you: Read the logs of Example",
+	"Blocked by “Finance apps”: read the logs of Northbank",
 	"Added 1 chicken rice bowl", // the fake's own words
 }
 
@@ -133,6 +137,11 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Zoomed out":                                               zh.GwDidZoomOut(),
 		"Turned with two fingers":                                  zh.GwDidTurn(),
 		"Turned “Photo” with two fingers":                          zh.GwDidTurnOn("Photo"),
+		"Read 120 log lines of Example":                            zh.GwStepReadLogLines("120", "Example"),
+		"Read 1 crash report of Example":                           zh.GwStepReadCrashes("1", "Example"),
+		"Waiting for you: Read the logs of Example":                zh.GwStepWaiting(zh.GwDoReadLogs("Example")),
+		"Blocked by “Finance apps”: read the logs of Northbank":    zh.GwStepBlocked(zh.RuleFinanceApps(), zh.GwDoReadLogs("Northbank")),
+		"You allowed: Read the logs of Example":                    zh.GwStepYouAllowed(zh.GwDoReadLogs("Example")),
 		"Copied 7 files to the phone: a, b, and 2 more":            zh.GwStepCopiedTo("7", zh.GwFilesList("a"+zh.ListSeparator()+"b"+zh.ListSeparator()+zh.GwFilesMore("2"))),
 
 		// The Recordings card and its export.
@@ -184,6 +193,7 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Update “Dinely” to 1.4 (15) on Pixel 9?":    zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoUpdateApp("Dinely", "1.4 (15)"), "Pixel 9")),
 		"Uninstall “Dinely” from Pixel 9?":           zh.GwAskQuestion(zh.GwDoFromPhone(zh.GwDoUninstallApp("Dinely"), "Pixel 9")),
 		"Stop “Dinely” on Pixel 9?":                  zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoStopApp("Dinely"), "Pixel 9")),
+		"Read the logs of Example?":                  zh.GwAskQuestion(zh.GwDoReadLogs("Example")),
 		"Something the gateway never says":           "Something the gateway never says",
 
 		"Give Claude Code the screen recording of “Reorder lunch”?": zh.GwAskQuestion(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),

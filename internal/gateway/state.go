@@ -232,6 +232,12 @@ type lease struct {
 	// appGrants holds what the person allowed phone_app to do for the rest
 	// of the task (appGrantKey).
 	appGrants map[string]bool
+	// logsGranted holds the apps (by id) whose logs the person allowed
+	// the agent to read for the rest of the task (logs.go).
+	logsGranted map[string]bool
+	// logsRead is set once the agent read an app's logs: the driver may
+	// listen to the phone until the task ends (driver.LogListener).
+	logsRead bool
 	// recorded is set once the task's recording started (video.go).
 	recorded bool
 

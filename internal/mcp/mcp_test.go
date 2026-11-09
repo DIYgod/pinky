@@ -122,7 +122,7 @@ func TestToolList(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_key",
-		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_app", "phone_request_approval", "phone_handoff"}
+		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_app", "phone_logs", "phone_request_approval", "phone_handoff"}
 	got := map[string]*sdk.Tool{}
 	for _, tool := range res.Tools {
 		got[tool.Name] = tool

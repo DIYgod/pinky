@@ -3552,6 +3552,16 @@
       }
     }
   },
+  "gwDoReadLogs": "read the logs of {app}",
+  "@gwDoReadLogs": {
+    "description": "What a step asked for: give the agent an app's own log lines or crash reports (phone_logs). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Example"
+      }
+    }
+  },
   "gwDoReceiveFile": "receive “{path}” from the agent",
   "@gwDoReceiveFile": {
     "description": "What a step tried: take a file the agent sent (phone_files upload) into the folder on the computer that is copied to the phone. Shown only in other languages; in English the gateway's own words show.",
@@ -4247,6 +4257,34 @@
       "action": {
         "type": "String",
         "example": "open Northbank"
+      }
+    }
+  },
+  "gwStepReadCrashes": "Read {count} crash reports of {app}",
+  "@gwStepReadCrashes": {
+    "description": "A step: the agent read an app's crash reports (phone_logs); history keeps only this line, not the reports. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      },
+      "app": {
+        "type": "String",
+        "example": "Example"
+      }
+    }
+  },
+  "gwStepReadLogLines": "Read {count} log lines of {app}",
+  "@gwStepReadLogLines": {
+    "description": "A step: the agent read an app's own log lines (phone_logs); history keeps only this line, not the lines. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "120"
+      },
+      "app": {
+        "type": "String",
+        "example": "Example"
       }
     }
   },
@@ -6271,6 +6309,10 @@
   "ruleAgentScope": "Agent scope",
   "@ruleAgentScope": {
     "description": "The name of the rule that keeps an agent to what the person allowed it."
+  },
+  "ruleAppLogs": "App logs",
+  "@ruleAppLogs": {
+    "description": "The name of the rule that asks before an agent first reads an app's logs or crash reports in a task (apps that are not development builds)."
   },
   "ruleBlockedByYou": "Blocked by you",
   "@ruleBlockedByYou": {

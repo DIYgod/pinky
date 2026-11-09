@@ -58,11 +58,13 @@ var (
 	reUninstall   = re(`^[Uu]ninstall “(.*?)”(?: from (.+))?$`)
 	reStopApp     = re(`^[Ss]top “(.*?)”(?: on (.+))?$`)
 	reInstallFrom = re(`^install from (“.*)$`)
+
+	reReadLogs = re(`^[Rr]ead the logs of (.+)$`)
 )
 
 // action is a parsed action, which says itself as done or as asked.
 type action struct {
-	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, copy, copymany, list, copyfrom, copyto, receive, install, update, uninstall, stop, installfrom
+	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, copy, copymany, list, copyfrom, copyto, receive, install, update, uninstall, stop, installfrom, readlogs
 	label, text, x, y    string
 	x2, y2, dir, key     string
 	app, files, phone    string
@@ -110,9 +112,10 @@ func parseAction(s string) (action, bool) {
 	return action{}, false
 }
 
-// parseAsked reads what the files and app steps word in the imperative:
-// "copy to the phone", "Copy “a.txt” to Pixel 9", "receive “a.png” from
-// the agent", "Install “Dinely” 1.3 (14) on Pixel 9".
+// parseAsked reads what the files, app and logs steps word in the
+// imperative: "copy to the phone", "Copy “a.txt” to Pixel 9", "receive
+// “a.png” from the agent", "Install “Dinely” 1.3 (14) on Pixel 9", "read
+// the logs of Example".
 func parseAsked(s string) (action, bool) {
 	if a, ok := parseAppAsked(s); ok {
 		return a, true
@@ -125,6 +128,9 @@ func parseAsked(s string) (action, bool) {
 	}
 	if m := reCopyMany.FindStringSubmatch(s); m != nil {
 		return action{verb: "copymany", files: m[1], phone: m[2]}, true
+	}
+	if m := reReadLogs.FindStringSubmatch(s); m != nil {
+		return action{verb: "readlogs", app: m[1]}, true
 	}
 	switch {
 	case reListFolder.MatchString(s):
@@ -302,6 +308,8 @@ func (a action) ask() string {
 		return a.appAsk()
 	case "installfrom":
 		return locales.GwDoInstallFrom(appFiles(a.files))
+	case "readlogs":
+		return locales.GwDoReadLogs(a.app)
 	}
 	return ""
 }
@@ -412,6 +420,8 @@ var (
 	reSavedShot = re(`^Saved a screenshot as “(.*)”$`)
 	reGiveVideo = re(`^[Gg]ive (.+) the screen recording of “(.*)”$`)
 	reGiveVids  = re(`^[Gg]ive (.+) the screen recordings of (\d+) tasks$`)
+	reLogLines  = re(`^Read (\d+) log lines? of (.+)$`)
+	reCrashes   = re(`^Read (\d+) crash reports? of (.+)$`)
 	reYouDid    = re(`^You (allowed|denied): (.*)$`)
 	reYourNote  = re(`^Your note: (.*)$`)
 	reAlways    = re(`^Always allowed: “(.*?)” in (.+)$`)
@@ -522,6 +532,12 @@ func stepText(s string) string {
 	if m := reSavedShot.FindStringSubmatch(s); m != nil {
 		return locales.GwStepSavedScreenshot(m[1])
 	}
+	if m := reLogLines.FindStringSubmatch(s); m != nil {
+		return locales.GwStepReadLogLines(m[1], m[2])
+	}
+	if m := reCrashes.FindStringSubmatch(s); m != nil {
+		return locales.GwStepReadCrashes(m[1], m[2])
+	}
 	if m := reYouDid.FindStringSubmatch(s); m != nil {
 		if m[1] == "allowed" {
 			return locales.GwStepYouAllowed(asked(m[2]))
@@ -568,7 +584,7 @@ func fileNames(s string) string {
 	return locales.GwFilesList(strings.Join(parts, locales.ListSeparator()))
 }
 
-// Approval titles, as approvalTitle and the files, app and agent steps
+// Approval titles, as approvalTitle and the files, app, logs and agent steps
 // write them.
 var (
 	rePayTitle    = re(`^Pay: “(.*)”\?$`)
@@ -579,7 +595,7 @@ var (
 	reTapTitle    = re(`^(Tap|Long-press|Type into|Swipe) “(.*)”\?$`)
 	rePressTitle  = re(`^Press (\S+) in “(.*)”\?$`)
 	reAgentTitle  = re(`^Let (.+) use your phones\?$`)
-	reAskedTitle  = re(`^((?:Copy|Install|Update|Uninstall|Stop) .+)\?$`)
+	reAskedTitle  = re(`^((?:Copy|Install|Update|Uninstall|Stop) .+|Read the logs of .+)\?$`)
 	reQuestion    = re(`^(.+)\?$`)
 )
 

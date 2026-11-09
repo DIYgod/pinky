@@ -9839,6 +9839,24 @@ func (msgs Messages) GwDoPress(key string) string {
 	return Catalog.Format(msgs.locale, "gwDoPress", map[string]any{"key": key})
 }
 
+// GwDoReadLogs says "read the logs of {app}"
+// in the language the app shows.
+//
+// What a step asked for: give the agent an app's own log lines or crash
+// reports (phone_logs). Shown only in other languages; in English the
+// gateway's own words show.
+func GwDoReadLogs(app string) string { return In(i18n.Locale()).GwDoReadLogs(app) }
+
+// GwDoReadLogs says "read the logs of {app}"
+// in the language of msgs.
+//
+// What a step asked for: give the agent an app's own log lines or crash
+// reports (phone_logs). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDoReadLogs(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoReadLogs", map[string]any{"app": app})
+}
+
 // GwDoReceiveFile says "receive “{path}” from the agent"
 // in the language the app shows.
 //
@@ -11335,6 +11353,46 @@ func GwStepOutside(action string) string { return In(i18n.Locale()).GwStepOutsid
 // languages; in English the gateway's own words show.
 func (msgs Messages) GwStepOutside(action string) string {
 	return Catalog.Format(msgs.locale, "gwStepOutside", map[string]any{"action": action})
+}
+
+// GwStepReadCrashes says "Read {count} crash reports of {app}"
+// in the language the app shows.
+//
+// A step: the agent read an app's crash reports (phone_logs); history keeps
+// only this line, not the reports. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepReadCrashes(count string, app string) string {
+	return In(i18n.Locale()).GwStepReadCrashes(count, app)
+}
+
+// GwStepReadCrashes says "Read {count} crash reports of {app}"
+// in the language of msgs.
+//
+// A step: the agent read an app's crash reports (phone_logs); history keeps
+// only this line, not the reports. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepReadCrashes(count string, app string) string {
+	return Catalog.Format(msgs.locale, "gwStepReadCrashes", map[string]any{"count": count, "app": app})
+}
+
+// GwStepReadLogLines says "Read {count} log lines of {app}"
+// in the language the app shows.
+//
+// A step: the agent read an app's own log lines (phone_logs); history keeps
+// only this line, not the lines. Shown only in other languages; in English
+// the gateway's own words show.
+func GwStepReadLogLines(count string, app string) string {
+	return In(i18n.Locale()).GwStepReadLogLines(count, app)
+}
+
+// GwStepReadLogLines says "Read {count} log lines of {app}"
+// in the language of msgs.
+//
+// A step: the agent read an app's own log lines (phone_logs); history keeps
+// only this line, not the lines. Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwStepReadLogLines(count string, app string) string {
+	return Catalog.Format(msgs.locale, "gwStepReadLogLines", map[string]any{"count": count, "app": app})
 }
 
 // GwStepReceivedFile says "Received “{path}” ({size}) from the agent"
@@ -16643,6 +16701,22 @@ func RuleAgentScope() string { return In(i18n.Locale()).RuleAgentScope() }
 // The name of the rule that keeps an agent to what the person allowed it.
 func (msgs Messages) RuleAgentScope() string {
 	return Catalog.Format(msgs.locale, "ruleAgentScope", nil)
+}
+
+// RuleAppLogs says "App logs"
+// in the language the app shows.
+//
+// The name of the rule that asks before an agent first reads an app's logs
+// or crash reports in a task (apps that are not development builds).
+func RuleAppLogs() string { return In(i18n.Locale()).RuleAppLogs() }
+
+// RuleAppLogs says "App logs"
+// in the language of msgs.
+//
+// The name of the rule that asks before an agent first reads an app's logs
+// or crash reports in a task (apps that are not development builds).
+func (msgs Messages) RuleAppLogs() string {
+	return Catalog.Format(msgs.locale, "ruleAppLogs", nil)
 }
 
 // RuleBlockedByYou says "Blocked by you"

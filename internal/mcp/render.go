@@ -84,6 +84,9 @@ func writeResult(b *strings.Builder, res *gateway.Result, indent string) {
 	if res.Message != "" {
 		line(res.Message)
 	}
+	if res.Log != "" {
+		line(res.Log)
+	}
 	if res.Task != "" {
 		line("device: " + res.Device)
 	}
