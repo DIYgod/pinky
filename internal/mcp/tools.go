@@ -55,7 +55,7 @@ type releaseIn struct {
 type observeIn struct {
 	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
 	WaitMS     int    `json:"wait_ms,omitempty" jsonschema:"Wait up to this many milliseconds (at most 30000) for the screen to change, for example while something loads."`
-	Screenshot bool   `json:"screenshot,omitempty" jsonschema:"Also return a screenshot. Use it only when the element list is not enough."`
+	Screenshot bool   `json:"screenshot,omitempty" jsonschema:"Also return a screenshot. Use it only when the element list is not enough. Some clients show you a smaller copy of tool images: to keep the full-resolution picture, use save."`
 	Save       string `json:"save,omitempty" jsonschema:"Save a full-resolution screenshot under this name in the phone's folder on Pinky's computer, for a bug report or a pull request: onboarding-1.png (.png unless you name .jpg; a file of that name is replaced). Returns its path, or over HTTP a one-time download link. The image comes back to you only with screenshot: true."`
 	OCR        bool   `json:"ocr,omitempty" jsonschema:"Also read all the text the screen's pixels show that no element does (text in images, maps, games, web pages), as ocr lines. Android adds them by itself where the list looks empty or sparse; iPhones on every read."`
 }
