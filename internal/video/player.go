@@ -79,7 +79,6 @@ type Player struct {
 	pending  *Frame // the newest picture, not yet taken
 	spare    *Frame // free for the decoder
 	ready    bool   // pending holds a picture Take has not returned
-	lastTake time.Time
 	err      error
 	stats    Stats
 	sumDec   time.Duration
@@ -102,7 +101,7 @@ func NewPlayer(stream driver.Stream, opt PlayerOptions) (*Player, error) {
 	if opt.MaxBacklog <= 0 {
 		opt.MaxBacklog = 30
 	}
-	p := &Player{stream: stream, opt: opt, done: make(chan struct{}), fpsStart: time.Now(), lastTake: time.Now()}
+	p := &Player{stream: stream, opt: opt, done: make(chan struct{}), fpsStart: time.Now()}
 	go p.run(dec)
 	return p, nil
 }
@@ -122,7 +121,6 @@ func (p *Player) SetSize(w, h int) {
 func (p *Player) Take() *Frame {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.lastTake = time.Now()
 	if !p.ready {
 		return nil
 	}
@@ -130,6 +128,13 @@ func (p *Player) Take() *Frame {
 	p.ready = false
 	p.stats.Shown++
 	return p.front
+}
+
+// Pending reports whether a picture waits for Take.
+func (p *Player) Pending() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.ready
 }
 
 // Done is closed when the stream ended or failed.
@@ -229,10 +234,12 @@ func (p *Player) run(dec *Decoder) {
 // convert writes the picture into the spare buffer and publishes it.
 // While nobody takes pictures (a window out of sight paints nothing), it
 // keeps the one waiting and converts nothing: decoding goes on, as later
-// pictures depend on earlier ones.
+// pictures depend on earlier ones. Nobody takes them when the picture
+// waiting has waited for over a second, not when Take has not been called
+// for a while: a mirror of a still screen calls it only when OnFrame woke it.
 func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded time.Time) bool {
 	p.mu.Lock()
-	if p.ready && time.Since(p.lastTake) > time.Second {
+	if p.ready && time.Since(p.pending.Ready) > time.Second {
 		p.stats.Idle++
 		p.mu.Unlock()
 		return false

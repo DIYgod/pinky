@@ -7,6 +7,7 @@ import (
 	"image"
 	"math"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -39,6 +40,12 @@ type mirror struct {
 	retry   time.Time
 	used    int
 	closed  bool
+
+	// A mirror paints again while pictures come and stops a moment after
+	// the last (mirrorPaintFor): a still screen costs no frames. asleep
+	// then has the player's next picture wake the windows (wake).
+	shownAt time.Time // the frame that took the last new picture (Painter.Now)
+	asleep  atomic.Bool
 
 	picW, picH int     // the stream's picture size the right way up: the device's pixels
 	turn       int     // quarter turns clockwise that put the picture upright (driver.Packet.Turn)
@@ -126,7 +133,7 @@ func (m *mirror) open() {
 		}
 		var p *video.Player
 		if err == nil {
-			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true})
+			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true, OnFrame: m.wake})
 			if err != nil {
 				s.Close()
 			}
@@ -184,6 +191,32 @@ func (m *mirror) retryLater() {
 // as before a background task starts it.
 func (m *mirror) missing() bool {
 	return m.state == "failed" && errors.Is(m.err, driver.ErrNotFound)
+}
+
+// mirrorPaintFor is how long a mirror goes on painting after its last
+// picture: longer than the gaps between the pictures of a moving screen,
+// even at 15 a second, so that it does not stop and wake between them.
+const mirrorPaintFor = 250 * time.Millisecond
+
+// sleep stops painting on a still screen, unless a picture came
+// meanwhile, and reports whether it did.
+func (m *mirror) sleep(pl *video.Player) bool {
+	m.asleep.Store(true)
+	if pl.Pending() {
+		// It came before asleep was set, so it woke nothing.
+		m.asleep.Store(false)
+		return false
+	}
+	return true
+}
+
+// wake has the windows paint the mirror's new picture once it stopped
+// painting on a still screen. The player calls it, on its goroutine,
+// after each picture.
+func (m *mirror) wake() {
+	if m.asleep.CompareAndSwap(true, false) {
+		m.a.post(func() {})
+	}
 }
 
 func (m *mirror) close() {
@@ -340,10 +373,14 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 					a.post(func() {})
 				}
 				m.picW, m.picH, m.turn = w, h, f.Turn
+				m.shownAt = pt.Now()
 			}
-			// Repaint at the stream's rate, picking up the newest
-			// picture each time, without building the view again.
-			pt.AnimationFrameRate(60)
+			// Paint again at up to 60 frames a second, without building
+			// the view, to pick up the next picture, until the screen
+			// stays still.
+			if pt.Now().Sub(m.shownAt) < mirrorPaintFor || !m.sleep(pl) {
+				pt.AnimationFrameRate(60)
+			}
 		}
 		if m.bitmap != nil && m.state == "playing" {
 			pt.Clip(r, radius, func() { drawTurned(pt, m.bitmap, r, m.turn) })
