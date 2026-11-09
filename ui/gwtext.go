@@ -536,6 +536,8 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusNeedsSetup()
 	case "Found on Wi-Fi":
 		return locales.GwStatusFoundOnWiFi()
+	case "Not the same phone":
+		return locales.GwStatusPhoneChanged()
 	case "Locked on Wi-Fi":
 		return locales.GwStatusLockedOnWiFi()
 	case "Lost on Wi-Fi":

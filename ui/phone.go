@@ -137,6 +137,11 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.lostPage(c, d)
 		return
 	}
+	if changedOnWiFi(d) {
+		// What answers for it over the network lacks its mark (wifi.go).
+		a.changedPage(c, d)
+		return
+	}
 	if d.Info.State != driver.StateOnline {
 		// Connected, and waiting for a step (gateway.DeviceNeedsSetup),
 		// which the page says as the phone's checkup does.

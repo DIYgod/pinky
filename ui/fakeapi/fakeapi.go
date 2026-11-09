@@ -143,6 +143,7 @@ type API struct {
 	wifiOff    bool             // iPhones over Wi-Fi turned off (wifi.go)
 	restarts   []string         // RestartDeviceService reasons (wifi.go)
 	restartErr error
+	trusted    []string     // TrustPhone's phones (wifi.go)
 	dlErr      error        // what DownloadDiskImage fails with (iphone.go)
 	tn         *fakeTailnet // Tailscale on this computer (tailnet.go)
 }
@@ -427,6 +428,8 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Found on Wi-Fi"
 	case d.info.Setup == driver.SetupDeviceService && d.info.State == driver.StateNeedsSetup:
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Lost on Wi-Fi"
+	case d.info.Setup == driver.SetupPhoneChanged && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Not the same phone"
 	case d.info.State != driver.StateOnline:
 		// Plugged in, waiting for a step, as the gateway lists such a phone
 		// (statusLocked), also while a task waits for it.

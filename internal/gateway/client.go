@@ -84,6 +84,11 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 			// Found on Wi-Fi: the person says whether it is theirs (wifi.go).
 			return DeviceNeedsSetup, "Found on Wi-Fi"
 		}
+		if changedLocked(d) {
+			// What answers over the network lacks the phone's mark: the
+			// person trusts it, or plugs the phone in (wifi.go).
+			return DeviceNeedsSetup, "Not the same phone"
+		}
 		if lockedOnWiFi(d) && l == nil {
 			return DeviceOffline, "Locked on Wi-Fi"
 		}

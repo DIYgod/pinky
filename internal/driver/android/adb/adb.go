@@ -32,6 +32,18 @@ const DefaultAddr = "127.0.0.1:5037"
 type Client struct {
 	// Addr is the server's host:port. Empty means ServerAddr().
 	Addr string
+	// Guard, when set, runs before Dial and Forward reach a device, and
+	// an error from it stops them: the Android driver refuses a
+	// connection over the network that is not the phone it set up.
+	Guard func(ctx context.Context, serial string) error
+}
+
+// guard runs Guard for serial.
+func (c *Client) guard(ctx context.Context, serial string) error {
+	if c == nil || c.Guard == nil {
+		return nil
+	}
+	return c.Guard(ctx, serial)
 }
 
 // ServerAddr returns the adb server address the adb tool itself would use:
@@ -257,6 +269,9 @@ func (c *Client) Features(ctx context.Context, serial string) (map[string]bool, 
 func (c *Client) Dial(ctx context.Context, serial, service string) (net.Conn, error) {
 	if serial == "" {
 		return nil, errors.New("adb: empty serial")
+	}
+	if err := c.guard(ctx, serial); err != nil {
+		return nil, err
 	}
 	conn, stop, err := c.dial(ctx)
 	if err != nil {

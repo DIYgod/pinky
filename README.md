@@ -69,6 +69,8 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 
 Each phone has a **Checkup**, in the ··· menu under its mirror, that lists what works and how to fix what doesn't, such as a Xiaomi's USB debugging (Security settings) switch.
 
+Over Wi-Fi, Pinky makes sure the phone that answers is yours: it leaves a mark on each phone it sets up, which only the phone's debugging connection can read, and checks it whenever adb connects the phone, so another device on the network can't answer in its place. A phone connected over Wireless debugging that Pinky hasn't used, by another tool for example, shows as found on Wi-Fi, and Pinky leaves it alone until you choose **Use**. If a phone's page says **This may not be …** after you reset the phone or set it up again yourself, choose **Trust this phone…** there, or plug it in once.
+
 Taking the phone out? With Tailscale, Pinky reaches it away from home too ([how](#phones-away-from-home)).
 
 <table>

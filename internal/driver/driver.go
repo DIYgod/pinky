@@ -145,6 +145,12 @@ const (
 	// no longer lists it, and will not for up to an hour. Restarting the
 	// service (DeviceServiceRestarter) brings it back.
 	SetupDeviceService = "device_service"
+	// SetupPhoneChanged: an Android phone reached over the network is not
+	// the phone Pinky set up under its id: it lacks the identity mark
+	// Pinky left on that phone (a phone that was reset, or another device
+	// on the network that claims to be it). Nothing is done on it until
+	// the person trusts it (PhoneTruster) or plugs the phone in.
+	SetupPhoneChanged = "phone_changed"
 	// SetupNotOnWiFi: an iPhone whose cable was just pulled, and whose
 	// Wi-Fi connection is on, is not seen on Wi-Fi: neither the device
 	// service lists it nor does the network show it (another network, one
@@ -837,10 +843,28 @@ type WiFiFinder interface {
 	// SetWiFi turns using phones over Wi-Fi on or off; off, the provider
 	// lists phones on a cable only. It starts off.
 	SetWiFi(on bool)
+	WiFiUser
+}
+
+// WiFiUser is a Provider that waits for the gateway to say a phone it
+// reaches only over the network is the person's (WiFiFinder; Android's,
+// for a phone that Pinky has no identity mark of yet), listing it with
+// SetupConfirmWiFi until then.
+type WiFiUser interface {
 	// UseOverWiFi says a phone is the person's: Pinky used it before, it
 	// was on a cable, or the person chose to use it. The provider then
 	// prepares and opens it over Wi-Fi too.
 	UseOverWiFi(id string)
+}
+
+// PhoneTruster is a Provider that checks that a phone reached over the
+// network is the one Pinky set up under its id, and lists one that is not
+// with SetupPhoneChanged.
+type PhoneTruster interface {
+	// TrustPhone takes the phone now listed under id as the person's, as
+	// the person chose on its page after resetting it or pairing it again:
+	// Pinky marks it anew and opens it.
+	TrustPhone(ctx context.Context, id string) error
 }
 
 // DeviceServiceRestarter is a Provider whose phones go through a service of
