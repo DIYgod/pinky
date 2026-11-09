@@ -37,12 +37,18 @@ func shortDirs(t *testing.T) Dirs {
 
 func startServer(t *testing.T, d Dirs, trusted bool) (*gateway.Gateway, *Listener) {
 	t.Helper()
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	return startServerWith(t, d, trusted, demo.NewProvider(driver.Android, dev))
+}
+
+// startServerWith serves a gateway with this provider's phones.
+func startServerWith(t *testing.T, d Dirs, trusted bool, p driver.Provider) (*gateway.Gateway, *Listener) {
+	t.Helper()
 	ln, err := Listen(d)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
-	g, err := gateway.New(gateway.Options{Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)},
+	g, err := gateway.New(gateway.Options{Providers: []driver.Provider{p},
 		TrustNewAgents: true, NoScreenshots: true, PollInterval: 5 * time.Millisecond, MaxBlock: 50 * time.Millisecond})
 	if err != nil {
 		t.Fatal(err)

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -89,6 +90,20 @@ type (
 		Before time.Time `json:"before,omitempty"`
 		Limit  int       `json:"limit,omitempty"`
 	}
+	// VirtualParams name a virtual phone: its platform and the id
+	// virtual_phones gave it (a Simulator's UDID, an emulator's AVD name).
+	VirtualParams struct {
+		Platform driver.Platform `json:"platform"`
+		ID       string          `json:"id"`
+	}
+)
+
+// How long the virtual phone methods may take, as long as Add phone gives
+// them: listing runs simctl and the emulator's tools, and starting one
+// waits until it runs.
+const (
+	virtualListTimeout = 30 * time.Second
+	virtualTimeout     = 2 * time.Minute
 )
 
 func (s *Server) control(ctx context.Context, c net.Conn, br *bufio.Reader) {
@@ -226,6 +241,27 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 			return nil, err
 		}
 		return nil, g.WipeHistory(ctx)
+	// Virtual phones, as Add phone › Virtual phone lists, starts and stops
+	// them. Any process of the person's can start a Simulator or an
+	// emulator on this computer anyway, so these need no person.
+	case "virtual_phones":
+		ctx, cancel := context.WithTimeout(ctx, virtualListTimeout)
+		defer cancel()
+		return g.VirtualPhones(ctx)
+	case "start_virtual", "stop_virtual":
+		var p VirtualParams
+		if err := params(&p); err != nil {
+			return nil, err
+		}
+		if p.Platform == "" || p.ID == "" {
+			return nil, &RPCError{Code: CodeParams, Message: "platform and id are required"}
+		}
+		ctx, cancel := context.WithTimeout(ctx, virtualTimeout)
+		defer cancel()
+		if req.Method == "start_virtual" {
+			return nil, g.StartVirtual(ctx, p.Platform, p.ID)
+		}
+		return nil, g.StopVirtual(ctx, p.Platform, p.ID)
 	}
 	return nil, &RPCError{Code: CodeMethod, Message: "unknown method " + strconv.Quote(req.Method)}
 }
