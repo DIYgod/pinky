@@ -48,7 +48,7 @@ type config struct {
 	app                      string
 	trials, warm             int
 	drag                     time.Duration
-	still                    time.Duration
+	still, settle            time.Duration
 	// scrcpy's settings, for trying others (Android only).
 	maxFPS, bitRate, maxSize int
 	codec                    string
@@ -67,6 +67,7 @@ func main() {
 	flag.IntVar(&c.warm, "warm", 3, "times to reopen the stream for the first picture")
 	flag.DurationVar(&c.drag, "drag", time.Second, "how long each drag moves")
 	flag.DurationVar(&c.still, "still", 3*time.Second, "how long to watch a still screen")
+	flag.DurationVar(&c.settle, "settle", 8*time.Second, "how long to watch the screen after the last drag")
 	flag.IntVar(&c.maxFPS, "max-fps", 0, "Android: scrcpy's max_fps (0: the driver's default)")
 	flag.IntVar(&c.bitRate, "bitrate", 0, "Android: scrcpy's video bit rate in bits per second (0: the driver's default)")
 	flag.IntVar(&c.maxSize, "max-size", 0, "Android: scrcpy's max_size (0: native)")
@@ -106,6 +107,7 @@ type summary struct {
 	WarmMS     float64 `json:"warm_first_picture_ms"`
 	StillFPS   float64 `json:"still_pictures_per_s"`
 	StillMoved float64 `json:"still_changed_per_s"`
+	StillReps  float64 `json:"still_repeats_per_s"`
 	StillKbps  float64 `json:"still_kbit_per_s"`
 	Trials     int     `json:"trials"`
 	LatencyMS  float64 `json:"latency_ms"`
@@ -119,6 +121,8 @@ type summary struct {
 	Drop60     float64 `json:"paint60_drop"`
 	Drop120    float64 `json:"paint120_drop"`
 	AppFPS     float64 `json:"app_fps,omitempty"`
+	SettleS    float64 `json:"after_drag_pictures_s"`
+	SettleNewS float64 `json:"after_drag_new_pictures_s"`
 	DecodeMS   float64 `json:"decode_ms"`
 	DecodeMax  float64 `json:"decode_max_ms"`
 	Undecoded  int     `json:"undecoded"`
@@ -184,12 +188,18 @@ func run(ctx context.Context, c config) error {
 			return err
 		}
 		pics := rec.since(from)
-		bytes, changed, moved := 0, 0, 0
+		bytes, changed, moved, repeats := 0, 0, 0, 0
 		top, bottom := 1.0, 0.0
+		var lastNew time.Duration
 		for _, p := range pics {
 			bytes += p.bytes
 			if p.changed {
 				changed++
+			}
+			if p.repeat {
+				repeats++
+			} else {
+				lastNew = p.at.Sub(from)
 			}
 			if p.moved > 0 {
 				moved++
@@ -198,8 +208,12 @@ func run(ctx context.Context, c config) error {
 		}
 		sum.StillFPS = float64(len(pics)) / c.still.Seconds()
 		sum.StillMoved = float64(changed) / c.still.Seconds()
+		sum.StillReps = float64(repeats) / c.still.Seconds()
 		sum.StillKbps = float64(bytes*8) / c.still.Seconds() / 1000
-		logf("still screen: %.1f pictures/s (%.1f changed), %.0f kbit/s", sum.StillFPS, sum.StillMoved, sum.StillKbps)
+		logf("still screen: %.1f pictures/s (%.1f changed, %.1f repeats), %.0f kbit/s", sum.StillFPS, sum.StillMoved, sum.StillReps, sum.StillKbps)
+		if c.verbose && repeats < len(pics) {
+			logf("  the last picture that was not a repeat came %.2f s in", lastNew.Seconds())
+		}
 		if c.verbose && moved > 0 {
 			logf("  %d of them moved a few samples, from %.0f%% to %.0f%% of the height", moved, top*100, bottom*100)
 		}
@@ -207,6 +221,7 @@ func run(ctx context.Context, c config) error {
 
 	// The drags.
 	var results []trialResult
+	var lastMove time.Time
 	for i := 0; i < c.trials; i++ {
 		if !rec.waitStill(ctx, 700*time.Millisecond, 5*time.Second) {
 			logf("drag %d: the screen did not stop changing; dragging anyway", i+1)
@@ -216,6 +231,7 @@ func run(ctx context.Context, c config) error {
 		if err != nil {
 			return fmt.Errorf("drag %d: %w", i+1, err)
 		}
+		lastMove = t.end
 		r, ok := analyze(t)
 		if !ok {
 			logf("drag %d: no picture changed", i+1)
@@ -233,6 +249,22 @@ func run(ctx context.Context, c config) error {
 	}
 	if len(results) == 0 {
 		return errors.New("no drag moved the picture")
+	}
+	// How long the phone goes on sending after the screen stops: the
+	// mirror paints until a moment after the last picture that is not a
+	// repeat of the one before.
+	if c.settle > 0 {
+		if err := sleep(ctx, time.Until(lastMove.Add(c.settle))); err != nil {
+			return err
+		}
+		var sent, fresh time.Duration
+		for _, p := range rec.between(lastMove, lastMove.Add(c.settle)) {
+			sent = p.at.Sub(lastMove)
+			if !p.repeat {
+				fresh = sent
+			}
+		}
+		sum.SettleS, sum.SettleNewS = sent.Seconds(), fresh.Seconds()
 	}
 	pick := func(f func(trialResult) float64) float64 {
 		v := make([]float64, len(results))
@@ -267,6 +299,13 @@ func run(ctx context.Context, c config) error {
 	fmt.Printf("  painting drops     %.0f%% at 60 Hz, %.0f%% at 120 Hz\n", sum.Drop60*100, sum.Drop120*100)
 	if sum.AppFPS > 0 {
 		fmt.Printf("  the app drew       %.1f frames/s\n", sum.AppFPS)
+	}
+	if c.settle > 0 {
+		more := ""
+		if c.settle.Seconds()-sum.SettleS < 0.5 {
+			more = ", and on when it stopped watching"
+		}
+		fmt.Printf("  after last drag    pictures for %.2f s%s; not repeats for %.2f s\n", sum.SettleS, more, sum.SettleNewS)
 	}
 	fmt.Printf("  decode             %.1f ms median, %.1f ms max; %d packets without a picture, %d errors\n", sum.DecodeMS, sum.DecodeMax, sum.Undecoded, sum.DecodeErrs)
 	return nil

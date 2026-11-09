@@ -12,6 +12,7 @@ type pic struct {
 	ready   time.Time // when it was decoded and its planes copied, as the mirror has it
 	bytes   int       // the packet's size
 	changed bool      // differs from the picture before it
+	repeat  bool      // the same as the picture before it, sample for sample
 	diff    float64   // the share of samples that changed
 	moved   int       // samples that moved past the threshold, changed or not
 	top     float64   // the highest and lowest of them, as shares of the height

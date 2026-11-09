@@ -89,6 +89,8 @@ func (r *recorder) decodeLoop(dec *video.Decoder) {
 	var queue []pending
 	var yuv video.YUV
 	var prev, cur []byte
+	var last video.YUV // the picture before, to tell a repeat as the mirror does
+	haveLast := false
 	var once sync.Once
 	for sp := range r.pkts {
 		if sp.p.Config {
@@ -138,7 +140,11 @@ func (r *recorder) decodeLoop(dec *video.Decoder) {
 			}
 			const step = 4
 			cur = sample(cur, yuv.Planes[0], yuv.Strides[0], yuv.Width, yuv.Height, step)
-			pc := pic{at: q.at, ready: ready, bytes: q.bytes, diff: 1}
+			pc := pic{at: q.at, ready: ready, bytes: q.bytes, diff: 1, repeat: haveLast && yuv.Equal(&last)}
+			if !pc.repeat {
+				keepPlanes(&last, &yuv)
+				haveLast = true
+			}
 			if prev != nil {
 				pc.diff = lumaDiff(prev, cur)
 				n, top, bottom := movedRows(prev, cur, (yuv.Width+step-1)/step)
@@ -173,6 +179,15 @@ func (r *recorder) decodeLoop(dec *video.Decoder) {
 			r.mu.Unlock()
 			queue = queue[len(queue)-64:]
 		}
+	}
+}
+
+// keepPlanes copies src into dst, reusing dst's planes.
+func keepPlanes(dst, src *video.YUV) {
+	planes := dst.Planes
+	*dst = *src
+	for i, p := range src.Planes {
+		dst.Planes[i] = append(planes[i][:0], p...)
 	}
 }
 
