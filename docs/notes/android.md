@@ -548,3 +548,11 @@ The person starts the Android Virtual Devices (AVDs) that Android Studio made fr
 - **Shutting down**: the emulator console's `kill` on its console port on 127.0.0.1, with the token from `~/.emulator_console_auth_token` when the console asks for it. Its phone goes offline, as an unplugged one does.
 
 Tests: `avd_test.go` (the list, versions and models, the AVD folder, missing SDK and emulator, unavailable images, starting on the same port and on another, the emulator's arguments, the console's `kill` against a fake console, an emulator that quits while it starts and its log's last error line, one listed before it has booted); `ui/addvirtual_test.go` for what Add phone and the phone's page show then. On this Mac, with the AVDs the sibling sessions use running, see "Virtual phones end to end" in `ios.md` for the app.
+
+## How smooth the stream is (2026-11-09)
+
+Measured with `cmd/pinky-mirrorbench` on `pinky-api36` (Android 16, 1080×2400); the numbers and the method are in [mirror-smoothness.md](mirror-smoothness.md).
+
+- With `-gpu host`, scrcpy's defaults over USB (H.264, 8 Mbit/s, no frame cap) give 60 changed pictures a second while a list moves, on the main display and on a background display, 65 to 70 ms from the finger's first move to the picture, and 80 ms to the first picture of a stream opened again.
+- At 16 Mbit/s the encoder uses the bits and sends the same 60 frames: the bit rate does not hold frames back on an emulator. A real phone's hardware encoder is still to be measured.
+- A software-rendered emulator (swangle, the headless default without `-gpu host`) gives 22 to 30 fps, because the app itself draws only about 44 frames a second and the guest's software encoder keeps up with less. The emulator's own gRPC screen stream gives the same rates (60 and about 30) and is not worth a driver path of its own.
