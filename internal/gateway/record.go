@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/approval"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/history"
 	"github.com/DIYgod/pinky/internal/screen"
 )
@@ -324,6 +325,9 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 	}
 	g.stopVideoLocked(d, outcome != OutcomeStopped)
 	g.closeBackgroundLocked(l)
+	if ll, ok := d.dev.(driver.LogListener); ok && l.logsRead {
+		go ll.StopAppLogs()
+	}
 	g.wakeLocked(d)
 	g.recordTaskLocked(t)
 	leaseID := l.id

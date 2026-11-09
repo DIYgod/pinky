@@ -342,7 +342,7 @@ func canAllowTask(info approval.Info) bool {
 	if snap, ok := info.Data.(*snapshot); ok {
 		return len(snap.asks) > 0
 	}
-	return info.Rule == filesRule
+	return info.Rule == filesRule || info.Rule == policy.RuleAppLogs
 }
 
 func (g *Gateway) decide(id string, d approval.Decision, note string) error {

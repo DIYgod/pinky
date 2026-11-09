@@ -235,7 +235,7 @@ var knownRules = map[string]bool{
 	"Payments": true, "Messages": true, "Commits": true, "Installs and links": true, "Calls": true,
 	"Settings changes": true, "Every action": true, "Agent request": true, "Handoff": true, "Read-only": true,
 	"Blocked by you": true, "credentials": true, "Finance apps": true, "Password managers": true,
-	"Task apps": true, "Agent scope": true, "New agent": true, "Files": true,
+	"Task apps": true, "Agent scope": true, "New agent": true, "Files": true, "App logs": true,
 }
 
 func ruleName(rule string) string {

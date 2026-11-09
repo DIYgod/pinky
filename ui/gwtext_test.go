@@ -47,6 +47,10 @@ var gatewaySteps = []string{
 	"Received “Pictures/cat.png” (1.2 MB) from the agent",
 	"Blocked by “Read-only”: receive “cat.png” from the agent",
 	"Failed: receive “cat.png” from the agent",
+	"Read 120 log lines of Example",
+	"Read 1 crash report of Example",
+	"Waiting for you: Read the logs of Example",
+	"Blocked by “Finance apps”: read the logs of Northbank",
 	"Added 1 chicken rice bowl", // the fake's own words
 }
 
@@ -113,6 +117,11 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Blocked by “Read-only”: receive “cat.png” from the agent": zh.GwStepBlocked(zh.RuleReadOnly(), zh.GwDoReceiveFile("cat.png")),
 		"Failed: receive “cat.png” from the agent":                 zh.GwStepFailed(zh.GwDoReceiveFile("cat.png")),
 		"Added 1 chicken rice bowl":                                "Added 1 chicken rice bowl",
+		"Read 120 log lines of Example":                            zh.GwStepReadLogLines("120", "Example"),
+		"Read 1 crash report of Example":                           zh.GwStepReadCrashes("1", "Example"),
+		"Waiting for you: Read the logs of Example":                zh.GwStepWaiting(zh.GwDoReadLogs("Example")),
+		"Blocked by “Finance apps”: read the logs of Northbank":    zh.GwStepBlocked(zh.RuleFinanceApps(), zh.GwDoReadLogs("Northbank")),
+		"You allowed: Read the logs of Example":                    zh.GwStepYouAllowed(zh.GwDoReadLogs("Example")),
 		"Copied 7 files to the phone: a, b, and 2 more":            zh.GwStepCopiedTo("7", zh.GwFilesList("a"+zh.ListSeparator()+"b"+zh.ListSeparator()+zh.GwFilesMore("2"))),
 	}
 	for in, out := range want {
@@ -136,6 +145,7 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Let Codex use your phones?":       zh.GwAskAgent("Codex"),
 		"Copy “ticket.pdf” to Pixel 9?":    zh.GwAskQuestion(zh.GwDoCopyFile("ticket.pdf", "Pixel 9")),
 		"Copy 3 files to Pixel 9?":         zh.GwAskQuestion(zh.GwDoCopyFiles("3", "Pixel 9")),
+		"Read the logs of Example?":        zh.GwAskQuestion(zh.GwDoReadLogs("Example")),
 		"Something the gateway never says": "Something the gateway never says",
 	}
 	for in, out := range titles {

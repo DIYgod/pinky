@@ -456,9 +456,10 @@ func drawEnlarge(pt *mg.Painter, r, away mg.Rect, strong bool) {
 // missingShot says why an approval about the screen has no screenshot:
 // the phone is locked, Pinky takes none of a blocked app, or the phone
 // sent none. It is empty for approvals that are about no screen: copying
-// files, and the agent's own questions and first connection.
+// files, reading an app's logs, and the agent's own questions and first
+// connection.
 func (a *app) missingShot(n gateway.NeedView) (string, *mg.SVG) {
-	if n.Screenshot != nil || n.Kind != gateway.NeedApproval || newAgentNeed(n) || n.Rule == "Agent request" || n.Rule == "Files" {
+	if n.Screenshot != nil || n.Kind != gateway.NeedApproval || newAgentNeed(n) || n.Rule == "Agent request" || n.Rule == "Files" || n.Rule == "App logs" {
 		return "", nil
 	}
 	if d := a.device(n.DeviceID); d != nil && a.isLocked(*d) {
