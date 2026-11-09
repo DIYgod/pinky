@@ -63,7 +63,7 @@ Any client that takes a JSON config:
 { "mcpServers": { "pinky": { "command": "pinkyctl", "args": ["mcp"] } } }
 ```
 
-To try Pinky without a phone, use `pinkyctl mcp --fake` (it starts `pinkyctl daemon --fake` when no gateway runs) or run `pinkyctl daemon --fake` yourself first.
+To try Pinky without a phone, start an iOS Simulator or an Android emulator in the app (**Add phone › Virtual phone**; only the person can start one, agents have no tool for it), and agents use it like a phone. Or use `pinkyctl mcp --fake` (it starts `pinkyctl daemon --fake` when no gateway runs) or run `pinkyctl daemon --fake` yourself first.
 
 ### Over HTTP
 

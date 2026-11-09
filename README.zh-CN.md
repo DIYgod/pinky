@@ -43,6 +43,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 | **Linux** | 64 位 PC（x86-64），Ubuntu 20.04、Debian 11 或更新的系统（glibc 2.29 或更高），以及 GTK 3 |
 | **Android 手机** | Android 10 到 17，一根 USB 线。Pinky 自带 adb；Windows 上个别手机要装 USB 驱动，Linux 上要开放 USB 访问权限（[见下文](#windows-和-linux-上的-usb)） |
 | **iPhone 或 iPad** | iOS 17.4 或更高版本，设置时需要一根 USB 线；之后也可以通过 Wi-Fi 使用（[见下文](#通过-wi-fi-使用-iphone-和-ipad)）。Pinky 会自己准备好 iPhone，用的是 Apple 的开发者磁盘映像：它随 Xcode 提供，你也可以让 Pinky 从第三方镜像下载（[见下文](#iphone)）。iOS 17.4 到 26 还要在 iPhone 上装一个辅助应用（[见下文](#ios-174-到-26-的-iphone)） |
+| **模拟器** | 可选，代替手机或者和手机一起用：装了 Xcode 的 Mac 上的 iOS 模拟器，或者 Android Studio 的 Android 模拟器。模拟器在它们那里创建，由 Pinky 启动（[见下文](#手机)） |
 | **Agent** | 任何能用 MCP 服务器的 Agent，比如 Claude Code、Claude Desktop、Codex 或 Cursor |
 
 ### 1. 下载并安装 Pinky
@@ -165,7 +166,7 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
 
 让 Agent 在你的手机上做点什么，比如「打开手机上的短信，告诉 Sam 我要晚点到」。Agent 第一次连接时，Pinky 会问你是否允许，以及允许它做什么。付款会在 Pinky 的窗口里等你点头；在「设置 › 安全」里，还可以让发送、删除等操作也先问你。
 
-手边没有手机？退出 Pinky，再用两台脚本模拟的演示手机启动它（有一笔待批准的付款、一个被屏蔽的银行 App 和一个密码框）：Mac 上运行 `/Applications/Pinky.app/Contents/MacOS/Pinky --fake`，Linux 上运行 `pinkyctl --fake`，Windows 上在 PowerShell 里运行 `& "$env:LOCALAPPDATA\Programs\Pinky\Pinky.exe" --fake`。
+手边没有手机？在「添加手机 › 虚拟手机」里启动一台 iOS 模拟器或 Android 模拟器（[见下文](#手机)）。也可以退出 Pinky，再用两台脚本模拟的演示手机启动它（有一笔待批准的付款、一个被屏蔽的银行 App 和一个密码框）：Mac 上运行 `/Applications/Pinky.app/Contents/MacOS/Pinky --fake`，Linux 上运行 `pinkyctl --fake`，Windows 上在 PowerShell 里运行 `& "$env:LOCALAPPDATA\Programs\Pinky\Pinky.exe" --fake`。
 
 ## 使用 Pinky
 
@@ -184,6 +185,7 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
 
   辅助应用是 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你用 Xcode 重新安装；到期后，手机会显示为「需要设置」并说明原因，而不是启动辅助应用失败（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。
 - **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。改用 WebDriverAgent 辅助应用连接这台 iPhone（「设置 › 手机」）：这样手机不共享屏幕，Agent 也能用这些 App。
+- **模拟器**：iOS 模拟器（Mac 上要装 Xcode）和 Android 模拟器（来自 Android Studio）也能当手机用。「添加手机 › 虚拟手机」列出这台电脑上的模拟器：点「启动」启动一台，运行起来后它就作为手机出现，标着「模拟器」；点「关闭」关掉它。Pinky 启动的 Android 模拟器没有声音，这样蓝牙耳机不会被切到麦克风模式。只有你能启动模拟器，Agent 没有这个工具。实时画面、录屏、审批和规则都和真机一样。Pinky 像 Android Studio 那样找 Android SDK（先看 `ANDROID_HOME`，再看 `ANDROID_SDK_ROOT`，最后是 Android Studio 默认的安装位置），找到后 Android 模拟器用起来就像一台插着线的 Android 手机。iOS 模拟器第一次用时，Pinky 会用你的 Xcode 构建 Appium 的 WebDriverAgent：源码来自固定的一个版本，构建前先校验文件，不签名，也不需要 Apple ID。这需要 20 秒到几分钟，构建结果一直沿用到 Xcode 更新。Pinky 不会创建模拟器，也不会下载系统映像：请在 Xcode（Window › Devices and Simulators）或 Android Studio 的 Device Manager 里创建（[详情](docs/notes/ios.md#ios-simulators)）。
 - **锁着的手机**：Pinky 从不让手机一直亮着，只在每一步之前唤醒屏幕。在「设置 › 手机」里保存手机的 PIN 码，就能在电脑上用 Touch ID 解锁。Agent 永远看不到 PIN 码。Android 上，这在 AOSP 风格的锁屏上验证过（Mi 10 Pro 上的 LineageOS，Android 10、16 和 17 模拟器）；小米、三星、OPPO、一加、vivo、荣耀和华为的锁屏只有根据已知信息写的测试覆盖，Pinky 读不准 PIN 码键盘时什么都不会输入（[详情](docs/notes/integration.md#unlocking-other-android-phones)）。
 - **双指缩放**：Agent 可以用两根手指放大、缩小地图、照片和网页，也可以双指旋转它们。你在 Pinky 的手机画面上也可以：在触控板上双指捏合（Linux 上仅限 Wayland），或者像 Xcode 的 Simulator 那样按住 Option（Windows 和 Linux 上是 Alt）拖动，第二根手指会出现在屏幕中心另一侧、和指针相对的位置。和你的其他触摸一样，这会让 Agent 暂停。iPhone 通过 WebDriverAgent 辅助应用双指缩放；通过 Device Hub 连接时（iOS 27 且没装辅助应用）不行，Agent 会收到说明。
 - **文件**：在 Android 上，Agent 可以在手机的 Pinky 文件夹（`/sdcard/Pinky`，手机上它们唯一能碰到的地方）和电脑上的一个文件夹之间拷贝文件，往手机上拷贝之前会先问你。拷到那里的图片会出现在手机的相册和图片选择器里，Agent 可以在聊天应用里把它发出去。另一台电脑上的 Agent 碰不到电脑上的那个文件夹，所以它会先把文件发给 Pinky：小文件直接放在调用里，大一些的发到 Pinky 给它的一次性链接。之后把文件拷到手机上，照样要你同意（[详情](docs/mcp.md#uploading-a-file)）。iPhone 上没有这个功能。

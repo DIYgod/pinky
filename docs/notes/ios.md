@@ -663,6 +663,75 @@ PINKY_MIRROR_LIVE=1 go test -count=1 -v -run TestDownloadMirrorLive ./internal/d
 
 The demo (`go run ./cmd/pinky-ui-demo`) has Demo › Plug In a New iPhone, which walks a made-up iPhone through the steps.
 
+## iOS Simulators
+
+(2026-11-09) On macOS, every booted iOS Simulator is an iPhone or iPad in Pinky (`sim.go`, `simwda.go`, `SimProvider`), with `Info.Virtual` set: the app and Settings › Phones say "Simulator" where a phone says USB or Wi-Fi. It goes through the gateway like any phone, so approvals, rules, the mirror and recordings are the same. The person starts and shuts Simulators down in **Add phone › Virtual phone** (`driver.VirtualLauncher`: `simctl boot`, with Simulator.app opened on the device so it shows, and `simctl shutdown`); agents have no tool for either. Xcode 27 has no Simulator.app: its Device Hub (`Contents/Applications/DeviceHub.app`, `com.apple.dt.Devices`) opens on the device it showed last, on this Mac the owner's iPhone, and takes no device to show (no `-CurrentDeviceUDID`, and its `devices:` URL scheme is undocumented), so Pinky opens nothing there and the person sees the Simulator in Pinky's mirror. Pinky creates no Simulators and downloads no runtimes. A Simulator shows no app installs, logs or links: other work adds those for phones.
+
+### How Pinky drives one
+
+- **Xcode.** Found the way `xcrun` finds it, without running `xcrun` (which on a Mac without the command line tools asks to install them): `DEVELOPER_DIR`, then xcode-select's folder (`/var/db/xcode_select_link`), then the Xcode apps in `/Applications`, `Xcode.app` first. Looked for again every half minute. Without Xcode, Add phone says that iOS Simulators need Xcode (`VirtualPhones.Missing = "xcode"`); a Mac without Xcode still uses iPhones, so `SimProvider` is no `driver.HostChecker`.
+- **Listing.** `simctl list -j devices`, iPhones and iPads only, and only runtimes that are available (`isAvailable`). It costs 0.2 to 0.4 s, so Pinky reads it again only when the device set changed: CoreSimulator writes each device's state to its `device.plist`, and the names, times and sizes of those files are the stamp (`setStamp`).
+- **The helper.** Appium's WebDriverAgent, built by Pinky with the Mac's Xcode (below). Until it is built, a booted Simulator needs setup (`SetupPreparing`, "building"); when the build fails, `SetupSimulatorHelper` with Xcode's reason, built again after 5 minutes or at **Try again**. No iPhone steps (Developer Mode, the disk image, trust) apply.
+- **Running it.** Each Simulator Pinky opens gets its own `xcodebuild test-without-building` run of that build, the way Xcode's Test starts it, with WDA and its MJPEG server on free ports of the loopback (`TEST_RUNNER_USE_IP=127.0.0.1`, `TEST_RUNNER_USE_PORT`, `TEST_RUNNER_MJPEG_SERVER_PORT`, which xcodebuild hands to the test without the prefix): a Simulator shares the Mac's network, and WDA would else listen on every interface. Then the device is the WDA path of "iPhones below iOS 27" (`WDADevice`), with the app list from `simctl listapps`. Closing the phone stops the run with SIGTERM, which ends xcodebuild and WDA within 3 s; SIGINT makes xcodebuild collect diagnostics for minutes. Each run has its own derived data folder in `<data>/WebDriverAgent/runs`, removed when it stops, so Xcode's own DerivedData stays untouched; xcodebuild runs in its own process group, so a Ctrl-C in the terminal that runs Pinky does not reach it.
+
+### Where WebDriverAgent comes from
+
+Pinky ships no WebDriverAgent and downloads no binary. The first time a Simulator needs it, Pinky downloads the source of one release, [Appium's WebDriverAgent](https://github.com/appium/WebDriverAgent) v16.15.3 (Apache 2.0, the latest release on 2026-10-16), as the archive GitHub makes of its commit (`02cb92f0e93c8b021443bcbb8eeb80932c113220`), and checks it before building anything:
+
+- The archive may be at most 16 MB, and so may what it unpacks to. Only regular files and folders are unpacked (no links, which could point out of the folder), and names that would leave the folder are refused.
+- The files must hash to `wdaSourceTree` (`treeHash`: the SHA-256 of one line per file, sorted by path, with its mode, 644 or 755, its SHA-256 and its path), not the archive's bytes, whose compression GitHub may change. A mismatch is `errSourceMismatch`, and nothing is built.
+
+Why this source: Appium's WDA is what Pinky's iPhone helper already is (the person installs it from Xcode), it is open source under a permissive license, and building it from a pinned, hashed source means nothing Pinky did not check runs on the Mac. A Simulator needs no signing (`CODE_SIGNING_ALLOWED=NO`), so the build needs no Apple ID or team.
+
+`xcodebuild build-for-testing -scheme WebDriverAgentRunner -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ARCHS=<the Mac's>`, in a folder of its own, builds it; the Products folder moves to `<data>/WebDriverAgent/builds/<version>-xcode<build>-<arch>` (`16.15.3-xcode27B52-arm64`), and builds for other keys are removed. A new Xcode build, a new WDA release or another CPU builds again. On this Mac (M-series, Xcode 27.2, 27B52) the build took 20 s; the first build after an Xcode update, when Xcode compiles its Simulator modules too, can take minutes, so the build may run 15. The archive (0.6 MB), the build (25 MB) and the last build's log (3.4 MB) are about 30 MB together.
+
+### iOS 27 Simulators: nothing better than WDA
+
+What iOS 27 phones use, and the Simulator lacks:
+
+- On a phone, Pinky's iOS 27 path (Device Hub's protocol) runs over a RemoteXPC tunnel to the phone's services: `remoteAXService` for the tree, the HID service for touch, the screen stream. A Simulator has no RSD tunnel and no such services: it shares the Mac's kernel, and CoreSimulator talks to it through its own private frameworks (SimulatorKit, and IndigoHID for touches and buttons, which Simulator.app uses).
+- The iOS 27.0 Simulator runtime has `axauditd` (`com.apple.accessibility.axAuditDaemon.deviceservice.plist`), whose `remoteAXService` is the service Pinky reads on phones; on a Simulator it is only reachable through RemoteXPC, and its client needs an AppleInternal entitlement. No `dtuhidd` either.
+- Xcode 27's DeviceKit (Device Hub) pairs Simulators and sets their location; it does not share their screen or send input to them.
+- `simctl` has no input or accessibility commands: `io screenshot` and `io recordVideo` for pictures, nothing to tap or read.
+
+So WDA stays the way: a tree with frames, touches, typing and an MJPEG picture, the same code as the iPhone helper. Driving IndigoHID through private frameworks would give faster input but no tree, and would break with each Xcode.
+
+On this Mac the iOS 27.0 runtime (24A434) is listed by `simctl list runtimes`, but its disk image is missing, and booting a Simulator on it fails ("The iOS 27.0 simulator runtime is not available", SimError 401). Pinky leaves Simulators of unavailable runtimes out of the list. Testing used iOS 26.5 and 18.5.
+
+### What ran where
+
+| What | Where | Result |
+| --- | --- | --- |
+| `TestSimProvider` (`-tags wdasim`): download and check the source, build, list the Simulator as preparing then online, start WDA, list the apps (Settings there, the runner not), open Settings, read the screen, go home, the lock state, the checkup, close (WDA gone, the run's folder removed) | iPhone 17e Simulator, iOS 26.5, Xcode 27.2 (27B52), Apple silicon | Pass. Build 20 s; boot 7 s; WDA answering 18 s after the run started; only 127.0.0.1 listening |
+| The WDA path itself (`TestWDASim`, "What ran where" above) | iOS 18.5 and 26.5 Simulators | Pass |
+| The app: Add phone › Virtual phone, Start, the phone online, the mirror, an agent's task through MCP, Shut down, Start from the phone's page | iPhone 17e Simulator, iOS 26.5, Xcode 27.2 (27B52), Apple silicon; see "Virtual phones end to end" below | Pass |
+| The app with an Android emulator: the same steps | AVD with Android 16 (API 36 `google_apis`, arm64-v8a), emulator 37.2.13, Apple silicon; see "Virtual phones end to end" below | Pass |
+| Listing, the stamp, Xcode lookup, the archive and tree checks, build keys and retries, starting and stopping, unavailable runtimes | Unit tests (`sim_test.go`) | Pass |
+
+### Virtual phones end to end
+
+`cmd/pinky/virtual_e2e_test.go` (`-tags e2e`) drives the e2e build of the app as the person would: Add phone › Virtual phone lists the Simulator or AVD, **Start** starts it, it turns up online in the phone list with its kind ("Simulator", "Emulator") on its page and its live picture, an agent's first `phone_connect` waits for the person (rule "New agent", pressed **Approve**, the same as for a phone), the agent opens Settings in a task and releases it, the task is in history with its recording, **Shut down** in Add phone takes it offline, and **Start** on its page ("It isn't running.") brings it back under the same id. The app runs with `PINKY_DEVICES=none` and usbmuxd out of reach, so only the virtual phone the test started joins it.
+
+```sh
+# A Simulator that exists and is shut down; the test shuts it down again:
+PINKY_E2E_SIMULATOR=<udid> PINKY_E2E_SIMULATOR_OS=26.5 \
+  go test -tags e2e -run TestVirtualSimulatorInTheApp -timeout 30m ./cmd/pinky
+# An AVD that exists and does not run; the test kills its emulator again:
+PINKY_E2E_AVD=<name> go test -tags e2e -run TestVirtualEmulatorInTheApp -timeout 30m ./cmd/pinky
+# PINKY_SCREENSHOTS=<dir> keeps pictures of the phone's page and the task, and the app's log.
+# PINKY_E2E_WDA_ARCHIVE=<file> seeds the WebDriverAgent source archive (see below).
+```
+
+- **The Simulator** (iPhone 17e, iOS 26.5, Xcode 27.2 27B52, Apple silicon, 2026-11-09): pass, several runs. The first start with nothing in the data folder (download, check, build) was online in 44 s; with the archive seeded, 25 to 27 s (build 17 s, WDA answering 6 s after the run started). Start again from the phone's page, with the helper built: online in 10 s, once 22 s after a short offline at 19.5 s while WDA came up. The mirror showed the Simulator's screen, Settings opened through MCP, the task's recording (`.mp4`) was written, and quitting the app ended the xcodebuild run and removed its folder. WDA's runner app (WebDriverAgentRunner) shows on the Simulator's home screen once it ran, as Xcode's test runners do.
+- **Little Snitch on this Mac** holds each new unsigned test binary's first connection to github.com until someone answers, so the download timed out there (setup "simulator_helper", tried again after 5 minutes as designed). `PINKY_E2E_WDA_ARCHIVE` puts the archive in the test's data folder first; Pinky still checks its tree hash and builds it. The signed app asks once, like any app.
+- **No Simulator.app.** Xcode 27 has none (see "iOS Simulators"), so the person sees a Simulator in Pinky's mirror only; the first runs logged `opening Simulator.app err="exit status 1"` until Pinky stopped trying.
+- **The emulator** runs against an adb server of the test's own (port 5097, `ADB_USB=0`, `ADB_MDNS=0`, `emulator_helpers_test.go`), so the owner's Android phone on the shared adb server is never asked about itself: Pinky's Android provider asks every device adb lists for its properties, even ones `PINKY_DEVICES` leaves out. It gives the emulator a crash folder of its own (`ANDROID_EMU_CRASH_REPORTING_DATABASE`), so a crash leaves no report that would make the next windowed emulator on this Mac wait for an answer, and fails at once with what Add phone shows when the emulator quits while it starts.
+- **The emulator results** (an AVD made for the test from the installed image, pixel_6 with Android 16, API 36 `google_apis` arm64-v8a, emulator 37.2.13, Apple silicon, 2026-11-09): pass, three runs. A cold boot (no snapshot) was online 20 s after Start, a quick boot from the AVD's snapshot 3 s; Start again from the phone's page brought it back in 3 to 4 s as the same phone (`emulator-5554`). The phone was named as its AVD, the mirror showed the emulator's screen, Settings opened through MCP, the task's recording was written, and Shut down stopped the emulator.
+  - Before Pinky passed `-no-audio`, every start on this Mac died about 30 s in: the emulator waited for the Bluetooth headset's microphone until its hang detector killed it (android.md, "Android emulators from Add phone", **No sound**). Add phone and the phone's page said so ("Couldn't start pinky-virtual-e2e: signal: segmentation fault: detected a hanging thread 'QEMU2 main loop'…").
+  - Before Pinky waited for `sys.boot_completed`, the cold boot was online at 15 s as "cmd: Can't find service: settings", and its page showed "No picture: … cannot read the display size" (android.md, **Booting**).
+  - An Android 10 AVD passed every step but the recording: that emulator's video encoder fails (android.md), so the task had no video. The test wants Android 11 or later.
+- **Killed, not quit.** When the app is killed (a failed test's cleanup), its xcodebuild run outlives it in its own process group and keeps the run's folder; a normal quit leaves neither.
+
 ## GitHub issue #7: WeChat through WebDriverAgent (2026-11-08)
 
 A person drove WeChat on an iPhone 16 Pro (iOS 26.7.1, the WDA path, over Wi-Fi) from ChatGPT, on 2026.1108.14. Four reports; what came of them:
