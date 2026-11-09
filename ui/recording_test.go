@@ -2,6 +2,7 @@ package ui
 
 import (
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -9,7 +10,10 @@ import (
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/recording"
+	"github.com/DIYgod/pinky/internal/recording/recordingtest"
 	"github.com/DIYgod/pinky/internal/video"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
@@ -147,10 +151,10 @@ func TestRecordingTimelineSeekWhilePaused(t *testing.T) {
 	}
 	ta.waitFor(t, "the paused picture", func() bool {
 		tt.Frame()
-		return pl.state == "paused" && pl.pos >= want-time.Second
+		return pl.settled && pl.player == nil
 	})
-	if pl.state != "paused" {
-		t.Errorf("after the seek: %s at %v", pl.state, pl.pos)
+	if pl.state != "paused" || pl.pos < got || pl.pos > got+time.Second {
+		t.Errorf("after the seek to %v: %s at %v", got, pl.state, pl.pos)
 	}
 }
 
@@ -190,7 +194,7 @@ func TestRecordingSeekAgainWhilePaused(t *testing.T) {
 		tt.ClickAt(r.X+r.W*frac, r.Y+r.H/2)
 		tt.Frame()
 		if pl.running() {
-			t.Fatalf("after seek at %.0f%%, state %s holdPause %v", frac*100, pl.state, pl.holdPause)
+			t.Fatalf("after seek at %.0f%%, state %s", frac*100, pl.state)
 		}
 	}
 	ta.waitFor(t, "both seeks", func() bool {
@@ -233,5 +237,107 @@ func TestRecordingTimelineScrubOffBar(t *testing.T) {
 	tt.Frame()
 	if pl.scrubbing {
 		t.Fatal("scrubbing stuck after release off the bar")
+	}
+	if opens := ta.api.RecordingOpens(); opens[len(opens)-1] != pl.rec.Length {
+		t.Errorf("released past the end: opened at %v, want the end %v", opens[len(opens)-1], pl.rec.Length)
+	}
+}
+
+// fileRecAPI hides the fake's OpenRecording, so the player reads its
+// recordings with recording.Open.
+type fileRecAPI struct{ gateway.API }
+
+// writeStillRecording records the test stream's first second at 10 frames
+// a second, nothing for five seconds, as a still screen sends, and its next
+// two seconds: key frames at 0 and 6 s, 8 s long.
+func writeStillRecording(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "still.mp4")
+	w, err := recording.Create(path, driver.H264)
+	if err != nil {
+		t.Fatal(err)
+	}
+	frame := 0
+	for _, p := range recordingtest.Packets(driver.H264, recordingtest.H264()) {
+		at := time.Duration(frame) * 100 * time.Millisecond
+		if frame >= 10 {
+			at += 5 * time.Second
+		}
+		if err := w.Write(p, at); err != nil {
+			t.Fatal(err)
+		}
+		if !p.Config {
+			frame++
+		}
+	}
+	if err := w.Close(8 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// TestRecordingSeekFromKeyFrame plays a real recording, whose stream opens
+// at the key frame before where it seeks and sends the pictures from there
+// at once: neither the picture nor the time goes back before the seek, and
+// a paused seek stops at once on the picture at the time asked for, though
+// the next picture is seconds away.
+func TestRecordingSeekFromKeyFrame(t *testing.T) {
+	if err := video.Load(); err != nil {
+		t.Skip(err)
+	}
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.app.api = fileRecAPI{ta.api}
+	ta.openRecording("t", gateway.RecordingView{Path: writeStillRecording(t), Length: 8 * time.Second})
+	pl := ta.rec.pl
+	t.Cleanup(ta.closeRecording)
+	tt := mg.NewTester(func(c *mg.Context) {
+		ta.sync()
+		ta.recordingView(c, gateway.TaskView{ID: "t"}, pl)
+	}, 1280, 820)
+	ta.waitFor(t, "the first pictures", func() bool {
+		tt.Frame()
+		return pl.state == "playing" && pl.pos >= 500*time.Millisecond
+	})
+
+	// Playing, to 6.5 s: the stream opens at 6 s.
+	pl.seek(6500 * time.Millisecond)
+	for start := time.Now(); pl.pos < 7*time.Second; {
+		tt.Frame()
+		if pl.pos < 6500*time.Millisecond {
+			t.Fatalf("at %v after a seek to 6.5 s", pl.pos)
+		}
+		if time.Since(start) > 10*time.Second {
+			t.Fatalf("stuck at %v, %s", pl.pos, pl.state)
+		}
+	}
+
+	// Paused, to 3 s: the stream opens at 0 s, and its next picture after
+	// 3 s is at 6 s.
+	pl.pause()
+	pl.seek(3 * time.Second)
+	start := time.Now()
+	ta.waitFor(t, "the paused picture", func() bool {
+		tt.Frame()
+		if pl.pos != 3*time.Second {
+			t.Fatalf("at %v during a paused seek to 3 s", pl.pos)
+		}
+		return pl.settled && pl.player == nil
+	})
+	if took := time.Since(start); took > 2*time.Second {
+		t.Errorf("the paused seek took %v", took)
+	}
+	if pl.state != "paused" || pl.pos != 3*time.Second || pl.bitmap == nil {
+		t.Errorf("after a paused seek to 3 s: %s at %v", pl.state, pl.pos)
+	}
+
+	// Paused, past the last picture, at 7.9 s: the stream ends without one
+	// past where it seeks, and the player stays paused there.
+	pl.seek(7950 * time.Millisecond)
+	ta.waitFor(t, "the last picture", func() bool {
+		tt.Frame()
+		return pl.settled && pl.player == nil
+	})
+	if pl.state != "paused" || pl.pos != 7950*time.Millisecond {
+		t.Errorf("after a paused seek to 7.95 s: %s at %v", pl.state, pl.pos)
 	}
 }
