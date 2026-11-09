@@ -94,9 +94,10 @@ type Options struct {
 // Input is one input the person sent through the mirror.
 type Input struct {
 	Device string
-	Kind   string // "touch", "key", "text"
+	Kind   string // "touch", "touch2", "key", "text"
 	Action driver.TouchAction
 	Point  screen.Point
+	Point2 screen.Point // the second finger of "touch2"
 	Key    driver.Key
 	Text   string
 }
@@ -763,6 +764,12 @@ func (a *API) Stream(ctx context.Context, deviceID string, opt driver.StreamOpti
 // Touch implements gateway.API. Input from the person pauses the agent.
 func (a *API) Touch(deviceID string, act driver.TouchAction, p screen.Point) error {
 	return a.input(Input{Device: deviceID, Kind: "touch", Action: act, Point: p})
+}
+
+// Touch2 is the gateway's two-finger touch, for the person's pinch on the
+// mirror.
+func (a *API) Touch2(deviceID string, act driver.TouchAction, p, q screen.Point) error {
+	return a.input(Input{Device: deviceID, Kind: "touch2", Action: act, Point: p, Point2: q})
 }
 
 // Key implements gateway.API.

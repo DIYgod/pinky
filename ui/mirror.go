@@ -50,7 +50,8 @@ type mirror struct {
 	scrollAt  screen.Point // where its finger started
 	scrollPos [2]float64   // where its finger is
 	scrollSeq int
-	compose   string // an input method's composition
+	pinch     *mirrorPinch // two fingers are down (mirrorpinch.go)
+	compose   string       // an input method's composition
 }
 
 // mirrorFor returns the phone's mirror, opening its stream if needed.
@@ -355,6 +356,9 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 				drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
 			})
 		}
+		if !tile {
+			drawFingers(pt, r, m)
+		}
 	})
 	scr.Children(func() {
 		switch {
@@ -470,9 +474,9 @@ func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind
 	pt.AnimationFrame()
 }
 
-// mirrorInput turns the person's pointer, wheel and keys on the mirror
-// into touches, keys and text in device pixels. The gateway pauses the
-// agent on any of them.
+// mirrorInput turns the person's pointer, wheel, pinches and keys on the
+// mirror into touches, keys and text in device pixels. The gateway pauses
+// the agent on any of them.
 func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) bool {
 	if m.picW == 0 || m.boxW == 0 || d.Status == gateway.DeviceOffline {
 		return false
@@ -490,10 +494,22 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		}
 		a.call(id, locales.MirrorCallKey(name), func() error { return a.api.Key(id, k) })
 	}
+	liftScroll := func() {
+		if m.scrolling {
+			m.scrolling = false
+			touch(driver.TouchUp, screen.Point{X: clampInt(int(m.scrollPos[0]), 0, m.picW-1), Y: clampInt(int(m.scrollPos[1]), 0, m.picH-1)})
+		}
+	}
 	switch ev.Kind {
 	case mg.InputPointerDown:
 		switch ev.Button {
 		case 0:
+			a.endPinch(m, id)
+			if ev.Mods&mg.Alt != 0 && a.canPinch(d) {
+				liftScroll()
+				a.mirrorDrag(m, id, driver.TouchDown, toDevice(ev.X, ev.Y))
+				return true
+			}
 			m.down = true
 			touch(driver.TouchDown, toDevice(ev.X, ev.Y))
 		case 1:
@@ -503,6 +519,13 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		}
 		return true
 	case mg.InputPointerMove:
+		if p := m.pinch; p != nil && p.drag && ev.Button == 0 {
+			if time.Since(m.lastMove) >= 8*time.Millisecond {
+				m.lastMove = time.Now()
+				a.mirrorDrag(m, id, driver.TouchMove, toDevice(ev.X, ev.Y))
+			}
+			return true
+		}
 		if m.down && ev.Button == 0 {
 			if time.Since(m.lastMove) >= 8*time.Millisecond {
 				m.lastMove = time.Now()
@@ -512,13 +535,29 @@ func (a *app) mirrorInput(m *mirror, d gateway.DeviceView, ev mg.InputEvent) boo
 		}
 		return false
 	case mg.InputPointerUp:
+		if p := m.pinch; p != nil && p.drag && ev.Button == 0 {
+			a.mirrorDrag(m, id, driver.TouchUp, toDevice(ev.X, ev.Y))
+			return true
+		}
 		if ev.Button == 0 && m.down {
 			m.down = false
 			touch(driver.TouchUp, toDevice(ev.X, ev.Y))
 		}
 		return true
 	case mg.InputScroll:
-		a.mirrorScroll(m, id, ev, toDevice, touch)
+		if m.pinch == nil {
+			a.mirrorScroll(m, id, ev, toDevice, touch)
+		}
+		return true
+	case mg.InputZoom:
+		if !a.canPinch(d) {
+			return false
+		}
+		if m.down || (m.pinch != nil && m.pinch.drag) {
+			return true // a finger is down already
+		}
+		liftScroll()
+		a.mirrorZoom(m, id, ev)
 		return true
 	case mg.InputKeyDown:
 		if ev.Mods&mg.Cmd != 0 && ev.Key == mg.KeyV {

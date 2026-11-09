@@ -355,7 +355,7 @@ func upperFirst(s string) string {
 func imperative(s string) string {
 	for _, v := range [][2]string{
 		{"Long-pressed ", "long-press "}, {"Tapped ", "tap "}, {"Typed ", "type "}, {"Swiped ", "swipe "},
-		{"Pressed ", "press "}, {"Opened ", "open "},
+		{"Pressed ", "press "}, {"Opened ", "open "}, {"Zoomed ", "zoom "}, {"Turned ", "turn "},
 	} {
 		if rest, ok := strings.CutPrefix(s, v[0]); ok {
 			return v[1] + rest

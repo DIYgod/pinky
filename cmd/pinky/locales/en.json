@@ -3182,6 +3182,20 @@
   "@gwDidTapBare": {
     "description": "A step: the agent tapped, without a known place. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwDidTurn": "Turned with two fingers",
+  "@gwDidTurn": {
+    "description": "A step: the agent turned something on the screen with two fingers (phone_pinch with a rotation). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidTurnOn": "Turned “{label}” with two fingers",
+  "@gwDidTurnOn": {
+    "description": "A step: the agent turned the element with this label with two fingers. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
   "gwDidType": "Typed “{text}”",
   "@gwDidType": {
     "description": "A step: the agent typed this text. Shown only in other languages; in English the gateway's own words show.",
@@ -3227,6 +3241,34 @@
       "text": {
         "type": "String",
         "example": "chicken rice"
+      }
+    }
+  },
+  "gwDidZoomIn": "Zoomed in",
+  "@gwDidZoomIn": {
+    "description": "A step: the agent zoomed in by spreading two fingers (phone_pinch). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidZoomInOn": "Zoomed in on “{label}”",
+  "@gwDidZoomInOn": {
+    "description": "A step: the agent zoomed in on the element with this label by spreading two fingers. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
+  "gwDidZoomOut": "Zoomed out",
+  "@gwDidZoomOut": {
+    "description": "A step: the agent zoomed out by pinching two fingers together (phone_pinch). Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidZoomOutOn": "Zoomed out on “{label}”",
+  "@gwDidZoomOutOn": {
+    "description": "A step: the agent zoomed out on the element with this label by pinching two fingers together. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
       }
     }
   },
@@ -3446,6 +3488,20 @@
   "@gwDoTapBare": {
     "description": "What a step asked for: a tap without a known place. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwDoTurn": "turn with two fingers",
+  "@gwDoTurn": {
+    "description": "What a step asked for: turn something on the screen with two fingers. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoTurnOn": "turn “{label}” with two fingers",
+  "@gwDoTurnOn": {
+    "description": "What a step asked for: turn the element with this label with two fingers. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
   "gwDoType": "type “{text}”",
   "@gwDoType": {
     "description": "What a step asked for: type this text. Shown only in other languages; in English the gateway's own words show.",
@@ -3491,6 +3547,34 @@
       "text": {
         "type": "String",
         "example": "See you at 3"
+      }
+    }
+  },
+  "gwDoZoomIn": "zoom in",
+  "@gwDoZoomIn": {
+    "description": "What a step asked for: zoom in by spreading two fingers. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoZoomInOn": "zoom in on “{label}”",
+  "@gwDoZoomInOn": {
+    "description": "What a step asked for: zoom in on the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
+      }
+    }
+  },
+  "gwDoZoomOut": "zoom out",
+  "@gwDoZoomOut": {
+    "description": "What a step asked for: zoom out by pinching two fingers together. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoZoomOutOn": "zoom out on “{label}”",
+  "@gwDoZoomOutOn": {
+    "description": "What a step asked for: zoom out on the element with this label. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Map"
       }
     }
   },
@@ -4147,6 +4231,10 @@
   "mirrorCallPaste": "paste",
   "@mirrorCallPaste": {
     "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when ⌘V on the mirror cannot paste the Mac's clipboard on the phone."
+  },
+  "mirrorCallPinch": "send the pinch",
+  "@mirrorCallPinch": {
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when a pinch on the mirror (a touchpad's pinch or an Option-drag) cannot reach the phone."
   },
   "mirrorCallTouch": "send the touch",
   "@mirrorCallTouch": {

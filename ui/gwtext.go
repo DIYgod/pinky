@@ -36,6 +36,8 @@ var (
 	reSwipeIn    = re(`^Swiped (\S+) in “(.*)”$`)
 	reSwipeFrom  = re(`^Swiped from (-?\d+),(-?\d+) to (-?\d+),(-?\d+)$`)
 	reSwipe      = re(`^Swiped (\S+)$`)
+	reZoom       = re(`^Zoomed (in|out)(?: on “(.*)”)?$`)
+	reTurn       = re(`^Turned (?:“(.*)” )?with two fingers$`)
 	rePressed    = re(`^Pressed (.+)$`)
 	reOpened     = re(`^Opened (.+)$`)
 	reCopyOne    = re(`^[Cc]opy “(.*)” to (.+)$`)
@@ -48,7 +50,7 @@ var (
 
 // action is a parsed action, which says itself as done or as asked.
 type action struct {
-	verb                 string // tap, longpress, type, swipe, swipefrom, press, open, copy, copymany, list, copyfrom, copyto, receive
+	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, copy, copymany, list, copyfrom, copyto, receive
 	label, text, x, y    string
 	x2, y2, dir, key     string
 	app, files, phone    string
@@ -76,6 +78,12 @@ func parseAction(s string) (action, bool) {
 	}
 	if m := reSwipe.FindStringSubmatch(s); m != nil {
 		return action{verb: "swipe", dir: m[1]}, true
+	}
+	if m := reZoom.FindStringSubmatch(s); m != nil {
+		return action{verb: "zoom" + m[1], label: m[2], into: m[2] != ""}, true
+	}
+	if m := reTurn.FindStringSubmatch(s); m != nil {
+		return action{verb: "turn", label: m[1], into: m[1] != ""}, true
 	}
 	if m := rePressed.FindStringSubmatch(s); m != nil {
 		return action{verb: "press", key: m[1]}, true
@@ -151,6 +159,21 @@ func (a action) done() string {
 		return locales.GwDidSwipe(dirName(a.dir))
 	case "swipefrom":
 		return locales.GwDidSwipeFromTo(a.x, a.y, a.x2, a.y2)
+	case "zoomin":
+		if a.into {
+			return locales.GwDidZoomInOn(a.label)
+		}
+		return locales.GwDidZoomIn()
+	case "zoomout":
+		if a.into {
+			return locales.GwDidZoomOutOn(a.label)
+		}
+		return locales.GwDidZoomOut()
+	case "turn":
+		if a.into {
+			return locales.GwDidTurnOn(a.label)
+		}
+		return locales.GwDidTurn()
 	case "press":
 		return locales.GwDidPress(keyName(a.key))
 	case "open":
@@ -195,6 +218,21 @@ func (a action) ask() string {
 		return locales.GwDoSwipe(dirName(a.dir))
 	case "swipefrom":
 		return locales.GwDoSwipeFromTo(a.x, a.y, a.x2, a.y2)
+	case "zoomin":
+		if a.into {
+			return locales.GwDoZoomInOn(a.label)
+		}
+		return locales.GwDoZoomIn()
+	case "zoomout":
+		if a.into {
+			return locales.GwDoZoomOutOn(a.label)
+		}
+		return locales.GwDoZoomOut()
+	case "turn":
+		if a.into {
+			return locales.GwDoTurnOn(a.label)
+		}
+		return locales.GwDoTurn()
 	case "press":
 		return locales.GwDoPress(keyName(a.key))
 	case "open":

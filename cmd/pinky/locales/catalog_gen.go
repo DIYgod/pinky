@@ -9177,6 +9177,40 @@ func (msgs Messages) GwDidTapBare() string {
 	return Catalog.Format(msgs.locale, "gwDidTapBare", nil)
 }
 
+// GwDidTurn says "Turned with two fingers"
+// in the language the app shows.
+//
+// A step: the agent turned something on the screen with two fingers
+// (phone_pinch with a rotation). Shown only in other languages; in English
+// the gateway's own words show.
+func GwDidTurn() string { return In(i18n.Locale()).GwDidTurn() }
+
+// GwDidTurn says "Turned with two fingers"
+// in the language of msgs.
+//
+// A step: the agent turned something on the screen with two fingers
+// (phone_pinch with a rotation). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwDidTurn() string {
+	return Catalog.Format(msgs.locale, "gwDidTurn", nil)
+}
+
+// GwDidTurnOn says "Turned “{label}” with two fingers"
+// in the language the app shows.
+//
+// A step: the agent turned the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDidTurnOn(label string) string { return In(i18n.Locale()).GwDidTurnOn(label) }
+
+// GwDidTurnOn says "Turned “{label}” with two fingers"
+// in the language of msgs.
+//
+// A step: the agent turned the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidTurnOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidTurnOn", map[string]any{"label": label})
+}
+
 // GwDidType says "Typed “{text}”"
 // in the language the app shows.
 //
@@ -9243,6 +9277,76 @@ func GwDidTypeSubmit(text string) string { return In(i18n.Locale()).GwDidTypeSub
 // languages; in English the gateway's own words show.
 func (msgs Messages) GwDidTypeSubmit(text string) string {
 	return Catalog.Format(msgs.locale, "gwDidTypeSubmit", map[string]any{"text": text})
+}
+
+// GwDidZoomIn says "Zoomed in"
+// in the language the app shows.
+//
+// A step: the agent zoomed in by spreading two fingers (phone_pinch). Shown
+// only in other languages; in English the gateway's own words show.
+func GwDidZoomIn() string { return In(i18n.Locale()).GwDidZoomIn() }
+
+// GwDidZoomIn says "Zoomed in"
+// in the language of msgs.
+//
+// A step: the agent zoomed in by spreading two fingers (phone_pinch). Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidZoomIn() string {
+	return Catalog.Format(msgs.locale, "gwDidZoomIn", nil)
+}
+
+// GwDidZoomInOn says "Zoomed in on “{label}”"
+// in the language the app shows.
+//
+// A step: the agent zoomed in on the element with this label by spreading
+// two fingers. Shown only in other languages; in English the gateway's own
+// words show.
+func GwDidZoomInOn(label string) string { return In(i18n.Locale()).GwDidZoomInOn(label) }
+
+// GwDidZoomInOn says "Zoomed in on “{label}”"
+// in the language of msgs.
+//
+// A step: the agent zoomed in on the element with this label by spreading
+// two fingers. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwDidZoomInOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidZoomInOn", map[string]any{"label": label})
+}
+
+// GwDidZoomOut says "Zoomed out"
+// in the language the app shows.
+//
+// A step: the agent zoomed out by pinching two fingers together
+// (phone_pinch). Shown only in other languages; in English the gateway's
+// own words show.
+func GwDidZoomOut() string { return In(i18n.Locale()).GwDidZoomOut() }
+
+// GwDidZoomOut says "Zoomed out"
+// in the language of msgs.
+//
+// A step: the agent zoomed out by pinching two fingers together
+// (phone_pinch). Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwDidZoomOut() string {
+	return Catalog.Format(msgs.locale, "gwDidZoomOut", nil)
+}
+
+// GwDidZoomOutOn says "Zoomed out on “{label}”"
+// in the language the app shows.
+//
+// A step: the agent zoomed out on the element with this label by pinching
+// two fingers together. Shown only in other languages; in English the
+// gateway's own words show.
+func GwDidZoomOutOn(label string) string { return In(i18n.Locale()).GwDidZoomOutOn(label) }
+
+// GwDidZoomOutOn says "Zoomed out on “{label}”"
+// in the language of msgs.
+//
+// A step: the agent zoomed out on the element with this label by pinching
+// two fingers together. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDidZoomOutOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidZoomOutOn", map[string]any{"label": label})
 }
 
 // GwDirDown says "down"
@@ -9639,6 +9743,38 @@ func (msgs Messages) GwDoTapBare() string {
 	return Catalog.Format(msgs.locale, "gwDoTapBare", nil)
 }
 
+// GwDoTurn says "turn with two fingers"
+// in the language the app shows.
+//
+// What a step asked for: turn something on the screen with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoTurn() string { return In(i18n.Locale()).GwDoTurn() }
+
+// GwDoTurn says "turn with two fingers"
+// in the language of msgs.
+//
+// What a step asked for: turn something on the screen with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTurn() string {
+	return Catalog.Format(msgs.locale, "gwDoTurn", nil)
+}
+
+// GwDoTurnOn says "turn “{label}” with two fingers"
+// in the language the app shows.
+//
+// What a step asked for: turn the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoTurnOn(label string) string { return In(i18n.Locale()).GwDoTurnOn(label) }
+
+// GwDoTurnOn says "turn “{label}” with two fingers"
+// in the language of msgs.
+//
+// What a step asked for: turn the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTurnOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoTurnOn", map[string]any{"label": label})
+}
+
 // GwDoType says "type “{text}”"
 // in the language the app shows.
 //
@@ -9705,6 +9841,70 @@ func GwDoTypeSubmit(text string) string { return In(i18n.Locale()).GwDoTypeSubmi
 // languages; in English the gateway's own words show.
 func (msgs Messages) GwDoTypeSubmit(text string) string {
 	return Catalog.Format(msgs.locale, "gwDoTypeSubmit", map[string]any{"text": text})
+}
+
+// GwDoZoomIn says "zoom in"
+// in the language the app shows.
+//
+// What a step asked for: zoom in by spreading two fingers. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDoZoomIn() string { return In(i18n.Locale()).GwDoZoomIn() }
+
+// GwDoZoomIn says "zoom in"
+// in the language of msgs.
+//
+// What a step asked for: zoom in by spreading two fingers. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomIn() string {
+	return Catalog.Format(msgs.locale, "gwDoZoomIn", nil)
+}
+
+// GwDoZoomInOn says "zoom in on “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: zoom in on the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoZoomInOn(label string) string { return In(i18n.Locale()).GwDoZoomInOn(label) }
+
+// GwDoZoomInOn says "zoom in on “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: zoom in on the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomInOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoZoomInOn", map[string]any{"label": label})
+}
+
+// GwDoZoomOut says "zoom out"
+// in the language the app shows.
+//
+// What a step asked for: zoom out by pinching two fingers together. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoZoomOut() string { return In(i18n.Locale()).GwDoZoomOut() }
+
+// GwDoZoomOut says "zoom out"
+// in the language of msgs.
+//
+// What a step asked for: zoom out by pinching two fingers together. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomOut() string {
+	return Catalog.Format(msgs.locale, "gwDoZoomOut", nil)
+}
+
+// GwDoZoomOutOn says "zoom out on “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: zoom out on the element with this label. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoZoomOutOn(label string) string { return In(i18n.Locale()).GwDoZoomOutOn(label) }
+
+// GwDoZoomOutOn says "zoom out on “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: zoom out on the element with this label. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomOutOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoZoomOutOn", map[string]any{"label": label})
 }
 
 // GwFilesDetail says "{agent} · into the phone's Pinky folder{names}"
@@ -11289,6 +11489,24 @@ func MirrorCallPaste() string { return In(i18n.Locale()).MirrorCallPaste() }
 // on the mirror cannot paste the Mac's clipboard on the phone.
 func (msgs Messages) MirrorCallPaste() string {
 	return Catalog.Format(msgs.locale, "mirrorCallPaste", nil)
+}
+
+// MirrorCallPinch says "send the pinch"
+// in the language the app shows.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" when a
+// pinch on the mirror (a touchpad's pinch or an Option-drag) cannot reach
+// the phone.
+func MirrorCallPinch() string { return In(i18n.Locale()).MirrorCallPinch() }
+
+// MirrorCallPinch says "send the pinch"
+// in the language of msgs.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" when a
+// pinch on the mirror (a touchpad's pinch or an Option-drag) cannot reach
+// the phone.
+func (msgs Messages) MirrorCallPinch() string {
+	return Catalog.Format(msgs.locale, "mirrorCallPinch", nil)
 }
 
 // MirrorCallTouch says "send the touch"

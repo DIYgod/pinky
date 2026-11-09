@@ -115,6 +115,10 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Saved a screenshot as “bugs/onboarding-1.png”":            zh.GwStepSavedScreenshot("bugs/onboarding-1.png"),
 		"Saved the task's report for the agent":                    zh.GwStepSavedReport(),
 		"Added 1 chicken rice bowl":                                "Added 1 chicken rice bowl",
+		"Zoomed in on “Map”":                                       zh.GwDidZoomInOn("Map"),
+		"Zoomed out":                                               zh.GwDidZoomOut(),
+		"Turned with two fingers":                                  zh.GwDidTurn(),
+		"Turned “Photo” with two fingers":                          zh.GwDidTurnOn("Photo"),
 		"Copied 7 files to the phone: a, b, and 2 more":            zh.GwStepCopiedTo("7", zh.GwFilesList("a"+zh.ListSeparator()+"b"+zh.ListSeparator()+zh.GwFilesMore("2"))),
 
 		// The Recordings card and its export.
@@ -143,6 +147,8 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Let Codex use your phones?":       zh.GwAskAgent("Codex"),
 		"Copy “ticket.pdf” to Pixel 9?":    zh.GwAskQuestion(zh.GwDoCopyFile("ticket.pdf", "Pixel 9")),
 		"Copy 3 files to Pixel 9?":         zh.GwAskQuestion(zh.GwDoCopyFiles("3", "Pixel 9")),
+		"Zoomed out on “Map”?":             zh.GwAskQuestion(zh.GwDoZoomOutOn("Map")),
+		"Turned with two fingers?":         zh.GwAskQuestion(zh.GwDoTurn()),
 		"Something the gateway never says": "Something the gateway never says",
 
 		"Give Claude Code the screen recording of “Reorder lunch”?": zh.GwAskQuestion(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),
