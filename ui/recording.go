@@ -252,12 +252,12 @@ func (pl *recPlayer) take(pt *mg.Painter) {
 			// sends them; a stream counting from where it opened starts
 			// near zero instead, well before from.
 			pl.first, pl.base = false, 0
-			if f.PTS < pl.from {
+			if pl.from > 10*time.Second && f.PTS < pl.from-10*time.Second {
 				pl.base = pl.from - f.PTS
 			}
 		}
 		pl.pos = max(0, min(pl.base+f.PTS, pl.rec.Length))
-		if pl.holdPause {
+		if pl.holdPause && pl.pos >= pl.from {
 			pl.holdPause = false
 			pl.pause()
 		}
@@ -397,13 +397,14 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 	bar.Range(0, length.Seconds(), pl.shownPos().Seconds())
 	bounds := bar.LayoutBounds()
 	if bounds.W > 0 {
-		if x, _, ok := bar.PointerPosition(); ok {
-			if bar.Pressed() {
-				pl.scrubbing, pl.scrubTo = true, recordingAt(x, bounds.W, length)
-			} else if pl.scrubbing {
-				pl.scrubbing = false
-				pl.seek(pl.scrubTo)
-			}
+		if _, pressing := bar.PressedButton(); pressing {
+			x, _, _ := bar.PointerPosition()
+			x = max(0, min(x, bounds.W))
+			pl.scrubbing = true
+			pl.scrubTo = recordingAt(x, bounds.W, length)
+		} else if pl.scrubbing {
+			pl.scrubbing = false
+			pl.seek(pl.scrubTo)
 		}
 	}
 	if bar.Shortcut(0, mg.KeyLeft) {

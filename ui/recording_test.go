@@ -198,3 +198,40 @@ func TestRecordingSeekAgainWhilePaused(t *testing.T) {
 		return pl.state == "paused" && pl.pos >= pl.rec.Length/2
 	})
 }
+
+// TestRecordingTimelineScrubOffBar presses the timeline, drags off it, and
+// releases elsewhere; scrubbing must end and not stick for the next hover.
+func TestRecordingTimelineScrubOffBar(t *testing.T) {
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.page = pageActivity
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "Activity", func() bool { tt.Frame(); return ta.act.loaded })
+	ta.act.sel = "h-lunch"
+	ta.waitFor(t, "the recording", func() bool { tt.Frame(); return hasText(tt, "Watch recording") })
+	if err := tt.Click("Watch recording"); err != nil {
+		t.Fatal(err)
+	}
+	pl := ta.rec.pl
+	t.Cleanup(ta.closeRecording)
+	tt.Frame()
+	r, ok := tt.Find(locales.RecordingPosition())
+	if !ok {
+		t.Fatal("no timeline")
+	}
+	mid := r.X + r.W*0.5
+	tt.Press(mid, r.Y+r.H/2)
+	ta.waitFor(t, "scrub started", func() bool {
+		tt.Frame()
+		return pl.scrubbing
+	})
+	off := r.X + r.W + 40
+	tt.Release(off, r.Y-40)
+	ta.waitFor(t, "scrub ended", func() bool {
+		tt.Frame()
+		return !pl.scrubbing
+	})
+	tt.Frame()
+	if pl.scrubbing {
+		t.Fatal("scrubbing stuck after release off the bar")
+	}
+}
