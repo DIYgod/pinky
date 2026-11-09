@@ -5,6 +5,8 @@ What changed for people in each release of Pinky, newest first. A version is the
 ## Unreleased
 
 - `phone_observe` now tells agents that their app may show them a smaller copy of a screenshot, and that `save` keeps it at full resolution. Thanks to ferrraridave-coder.
+- Stopping an app on an iPhone from a Windows computer now works.
+- When an agent saves a task's report just as the screen recording starts, Pinky now still asks whether to give it the recording.
 
 ## 2026.1109.21 (2026-11-09)
 
