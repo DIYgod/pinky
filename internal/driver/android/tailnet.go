@@ -35,7 +35,7 @@ func (p *Provider) Tailnet(ctx context.Context) (driver.TailnetStatus, error) {
 		return driver.TailnetStatus{}, err
 	}
 	out := driver.TailnetStatus{State: string(st.State), Detail: st.Detail, Tailnet: st.Tailnet, Self: st.Self.Name}
-	entries, _ := p.cfg.Client.Devices(ctx)
+	entries, _ := p.devices(ctx)
 	kept := p.net.list()
 	for _, d := range st.AndroidPeers() {
 		addr := d.IPv4().String()
@@ -151,7 +151,7 @@ func (p *Provider) Away(ctx context.Context, id string) (driver.Away, error) {
 	if err != nil {
 		return out, err
 	}
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return out, wrapErr(err)
 	}
@@ -244,7 +244,7 @@ func (p *Provider) SetAway(ctx context.Context, id string, on bool) (driver.Away
 	if !st.Running() {
 		return driver.Away{}, fmt.Errorf("android: Tailscale is not running on this computer (%s): %w", st.State, driver.ErrUnsupported)
 	}
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return driver.Away{}, wrapErr(err)
 	}
@@ -318,7 +318,7 @@ func (p *Provider) awayOff(ctx context.Context, id string) error {
 	if !kept || n.Tailnet == "" {
 		// Not set up; still stop a listening adb Pinky reaches through
 		// Tailscale, as the person asked.
-		entries, err := p.cfg.Client.Devices(ctx)
+		entries, err := p.devices(ctx)
 		if err != nil {
 			return wrapErr(err)
 		}

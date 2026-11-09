@@ -551,7 +551,7 @@ func (s *identity) passes(serial, want string) bool {
 
 // checkNow checks a connection for the guard.
 func (s *identity) checkNow(ctx context.Context, serial, want string) error {
-	entries, err := s.p.cfg.Client.Devices(ctx)
+	entries, err := s.p.devices(ctx)
 	if err != nil {
 		return err
 	}
@@ -767,7 +767,7 @@ func (p *Provider) TrustPhone(ctx context.Context, id string) error {
 	if p.ids == nil {
 		return fmt.Errorf("android: checking phones: %w", driver.ErrUnsupported)
 	}
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return wrapErr(err)
 	}

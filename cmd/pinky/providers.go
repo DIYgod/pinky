@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -149,7 +150,13 @@ func realProviders(log *slog.Logger) []driver.Provider {
 			continue
 		}
 		if only != nil {
-			op := &onlyProvider{Provider: p, only: only}
+			// Each provider adds the phones the person adds to its own
+			// copy.
+			op := &onlyProvider{Provider: p, only: maps.Clone(only)}
+			if l, ok := p.(limiter); ok {
+				// The provider leaves the other phones alone itself.
+				l.Limit(op.allowed)
+			}
 			p = op
 			if pr, ok := op.Provider.(driver.Pairer); ok {
 				p = &onlyPairer{onlyProvider: op, pairer: pr}
@@ -161,6 +168,12 @@ func realProviders(log *slog.Logger) []driver.Provider {
 		out = append(out, p)
 	}
 	return out
+}
+
+// limiter is a provider that can leave alone, by itself, the phones Pinky
+// may not use: it does not even ask them what they are (Android).
+type limiter interface {
+	Limit(allowed func(id string) bool)
 }
 
 // onlyDevices reads PINKY_DEVICES: nil when it is not set.

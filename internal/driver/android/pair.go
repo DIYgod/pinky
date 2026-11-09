@@ -125,6 +125,7 @@ func (p *Provider) ConnectWiFi(ctx context.Context, addr string) (driver.Info, e
 		}
 		for _, e := range entries {
 			if e.Serial == addr && e.State == adb.StateDevice {
+				p.allowConn(e.Serial)
 				p.trustConn(ctx, e) // the person typed the address
 				return p.infoFor(ctx, e.Serial)
 			}
@@ -328,6 +329,7 @@ func (p *Provider) connectPaired(ctx context.Context, guid, host string, own Bro
 		}
 		for _, e := range entries {
 			if pairedSerial(e.Serial, guid, connected) && e.State == adb.StateDevice {
+				p.allowConn(e.Serial)
 				p.trustPaired(ctx, e, guid, host)
 				return p.infoFor(ctx, e.Serial)
 			}
@@ -374,7 +376,7 @@ func (p *Provider) infoFor(ctx context.Context, serial string) (driver.Info, err
 		return driver.Info{}, err
 	}
 	id := serial
-	if entries, err := p.cfg.Client.Devices(ctx); err == nil {
+	if entries, err := p.devices(ctx); err == nil {
 		for _, e := range entries {
 			if e.Serial != serial || e.State != adb.StateDevice {
 				continue

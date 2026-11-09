@@ -55,6 +55,7 @@ type fakeADB struct {
 	// left the network does.
 	unreachable map[string]bool
 	probes      []string // addresses the network code probed
+	transports  []string // the serials of the devices requests went to
 }
 
 func newFakeADB(t *testing.T) (*fakeADB, *Provider) {
@@ -115,6 +116,7 @@ func (f *fakeADB) handle(c net.Conn) {
 	fail := func(msg string) { fmt.Fprintf(c, "FAIL%04x%s", len(msg), msg) }
 	if serial, ok := strings.CutPrefix(req, "host:transport:"); ok {
 		f.mu.Lock()
+		f.transports = append(f.transports, serial)
 		out, has := f.props[serial]
 		run := f.run
 		f.mu.Unlock()

@@ -48,7 +48,10 @@ type avdLauncher struct {
 	launch func(emulator, avd string, port int, quit func(error)) error
 	// kill asks a running emulator to quit, by its adb serial.
 	kill func(ctx context.Context, serial string) error
-	now  func() time.Time
+	// portFree reports whether nothing on this computer uses a console
+	// port and the adb port after it.
+	portFree func(port int) bool
+	now      func() time.Time
 
 	mu       sync.Mutex
 	starting map[string]time.Time // AVDs Pinky started, by name
@@ -59,6 +62,18 @@ type avdLauncher struct {
 	// name. Started again, it runs there again, so its adb serial, and
 	// with it its phone in Pinky, stays the same.
 	ports map[string]int
+	// started holds the adb serials of the emulators Pinky started on a
+	// port it picked, until they quit, with when (Limit).
+	started map[string]time.Time
+}
+
+// mine reports whether the emulator with this adb serial is one Pinky
+// started and that has not quit.
+func (l *avdLauncher) mine(serial string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	_, ok := l.started[serial]
+	return ok
 }
 
 // ranAt notes the adb serial an AVD's emulator runs as.
@@ -81,7 +96,7 @@ func (l *avdLauncher) ranAtLocked(avd, serial string) {
 
 func newAVDLauncher() *avdLauncher {
 	l := &avdLauncher{goos: runtime.GOOS, getenv: os.Getenv, sdks: adb.SDKs, run: runOutput,
-		launch: launchEmulator, kill: killEmulator, now: time.Now}
+		launch: launchEmulator, kill: killEmulator, portFree: localPortFree, now: time.Now}
 	l.home, _ = os.UserHomeDir()
 	return l
 }
@@ -274,7 +289,7 @@ func emulatorSerial(serial string) bool { return strings.HasPrefix(serial, "emul
 // the property each emulator reads its AVD's name into (deviceProps). An
 // AVD started twice, read-only, has the lowest serial.
 func (p *Provider) avdSerials(ctx context.Context) (map[string]string, error) {
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return nil, wrapErr(err)
 	}
@@ -396,11 +411,15 @@ func (p *Provider) StartVirtual(ctx context.Context, id string) error {
 	// watchdog ends it: then it no longer counts as starting, and Add
 	// phone says why.
 	var at time.Time
+	var serial string // the emulator's adb serial, when Pinky picked its port
 	ready := make(chan struct{})
 	quit := func(err error) {
 		<-ready
 		l.mu.Lock()
 		defer l.mu.Unlock()
+		if got, ok := l.started[serial]; ok && got.Equal(at) {
+			delete(l.started, serial)
+		}
 		if got, ok := l.starting[id]; !ok || !got.Equal(at) {
 			return // it ran, or was started again
 		}
@@ -413,11 +432,24 @@ func (p *Provider) StartVirtual(ctx context.Context, id string) error {
 		}
 		p.cfg.logf("android: the emulator for %s quit while it started: %v", id, err)
 	}
-	port := p.freePort(ctx, id)
+	limited := p.limit() != nil
+	port := p.freePort(ctx, id, 0)
+	if limited && port == 0 {
+		close(ready)
+		return fmt.Errorf("start %s: no free port for its emulator", v.Name)
+	}
 	err = l.launch(t.Emulator, id, port, quit)
 	if err != nil && port != 0 {
-		// Its port was taken after all: any free one.
-		err = l.launch(t.Emulator, id, 0, quit)
+		// Its port was taken after all: any free one, or under Limit
+		// the next one Pinky finds free.
+		failed := port
+		port = 0
+		if limited {
+			port = p.freePort(ctx, id, failed)
+		}
+		if !limited || port != 0 {
+			err = l.launch(t.Emulator, id, port, quit)
+		}
 	}
 	if err != nil {
 		close(ready)
@@ -430,31 +462,81 @@ func (p *Provider) StartVirtual(ctx context.Context, id string) error {
 	}
 	at = l.now()
 	l.starting[id] = at
+	if port != 0 {
+		serial = "emulator-" + strconv.Itoa(port)
+		if l.started == nil {
+			l.started = map[string]time.Time{}
+		}
+		l.started[serial] = at
+	}
 	l.mu.Unlock()
 	close(ready)
 	return nil
 }
 
-// freePort is the console port the AVD's emulator last ran on while no
-// other emulator uses it; 0 when there is none.
-func (p *Provider) freePort(ctx context.Context, id string) int {
+// The console ports an emulator may run on: even ones, each with the next
+// one for adb.
+const (
+	firstConsolePort = 5554
+	lastConsolePort  = 5682
+)
+
+// freePort is the console port to start the AVD's emulator on, above
+// after: the one it last ran on while no other emulator uses it, else 0
+// (the emulator takes the first free one). Under Limit, it is one Pinky
+// finds free, so that Pinky knows which emulator it started (mine); 0
+// when there is none.
+func (p *Provider) freePort(ctx context.Context, id string, after int) int {
+	limited := p.limit() != nil
 	p.avd.mu.Lock()
 	port := p.avd.ports[id]
 	p.avd.mu.Unlock()
-	if port == 0 {
+	if port <= after {
+		port = 0
+	}
+	if port == 0 && !limited {
 		return 0
 	}
+	// Every emulator adb lists, those Pinky may not use too: listing
+	// them asks them nothing.
 	entries, err := p.cfg.Client.Devices(ctx)
-	if err != nil {
+	if err != nil && !limited {
 		return 0
 	}
-	for _, e := range entries {
-		// An emulator takes its console port and the next for adb.
-		if n, err := strconv.Atoi(strings.TrimPrefix(e.Serial, "emulator-")); err == nil && emulatorSerial(e.Serial) && n >= port-1 && n <= port+1 {
-			return 0
+	taken := func(port int) bool {
+		for _, e := range entries {
+			// An emulator takes its console port and the next for adb.
+			if n, err := strconv.Atoi(strings.TrimPrefix(e.Serial, "emulator-")); err == nil && emulatorSerial(e.Serial) && n >= port-1 && n <= port+1 {
+				return true
+			}
+		}
+		return false
+	}
+	if port != 0 && !taken(port) {
+		return port
+	}
+	if !limited {
+		return 0
+	}
+	for port := firstConsolePort; port <= lastConsolePort; port += 2 {
+		if port > after && !taken(port) && p.avd.portFree(port) {
+			return port
 		}
 	}
-	return port
+	return 0
+}
+
+// localPortFree reports whether a console port and the adb port after it
+// are free on this computer.
+func localPortFree(port int) bool {
+	for _, n := range []int{port, port + 1} {
+		ln, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(n)))
+		if err != nil {
+			return false
+		}
+		ln.Close()
+	}
+	return true
 }
 
 // StopVirtual implements driver.VirtualLauncher: it asks the AVD's

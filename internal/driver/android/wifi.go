@@ -26,7 +26,7 @@ func (p *Provider) PhoneWiFi(ctx context.Context, id string) (driver.WiFiState, 
 	if on {
 		out.Addr = n.LAN
 	}
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return out, wrapErr(err)
 	}
@@ -81,7 +81,7 @@ func (p *Provider) SetPhoneWiFi(ctx context.Context, id string, on bool) (driver
 		}
 		return st, nil
 	}
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return driver.WiFiState{}, wrapErr(err)
 	}

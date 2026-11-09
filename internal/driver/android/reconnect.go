@@ -129,8 +129,8 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 	}
 	want := r.missing(guids, entries)
 	// Phones the person removed from Pinky stay away until they add them
-	// back (Forget).
-	want = slices.DeleteFunc(want, func(g string) bool { return p.forgot(guidSerial(g)) })
+	// back (Forget), and those Pinky may not use (Limit) away for good.
+	want = slices.DeleteFunc(want, func(g string) bool { return p.forgot(guidSerial(g)) || !p.mayUseID(guidSerial(g)) })
 	want = slices.DeleteFunc(want, func(g string) bool { return r.onWiFi(ctx, g, entries) })
 	if len(want) == 0 {
 		return false, false

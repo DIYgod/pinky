@@ -333,7 +333,7 @@ func (p *Provider) listen(ctx context.Context, id, serial string) error {
 // the first connection it has, and drops its connections at addresses
 // Pinky kept.
 func (p *Provider) stopListening(ctx context.Context, id string, n netPhone) error {
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return wrapErr(err)
 	}
@@ -394,6 +394,7 @@ func (p *Provider) waitConnected(ctx context.Context, serial string, trust bool)
 			}
 			switch e.State {
 			case adb.StateDevice:
+				p.allowConn(serial)
 				if trust {
 					p.trustConn(ctx, e)
 				}
@@ -605,7 +606,7 @@ func (t *netLink) reconnect(ctx context.Context, phones []netPhone, entries []ad
 	p := t.p
 	var st *tailnet.Status
 	for _, n := range phones {
-		if p.forgot(n.ID) {
+		if p.forgot(n.ID) || !p.mayUseID(n.ID) {
 			continue
 		}
 		if n.LAN != "" && !serialInUse(entries, n.lanSerial()) && !t.lan(ctx, n, entries) {

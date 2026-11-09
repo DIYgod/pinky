@@ -65,7 +65,7 @@ func (p *Provider) Disconnect(ctx context.Context, id string) error {
 			p.cfg.logf("android: %s: %v", id, err)
 		}
 	}
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return wrapErr(err)
 	}

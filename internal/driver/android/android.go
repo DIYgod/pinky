@@ -146,6 +146,12 @@ type Provider struct {
 	usbNodes func() ([]usbNode, error)
 	// avd starts the Android Virtual Devices (avd.go).
 	avd *avdLauncher
+
+	// only limits the driver to some phones, by id; nil: all (limit.go).
+	only func(id string) bool
+	// letIn holds the adb serials of the connections to the phones the
+	// person added in Pinky while it is limited.
+	letIn map[string]bool
 }
 
 // NewProvider returns a provider with the given configuration.
@@ -208,6 +214,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 			p.server.setVersion(v)
 		}
 	}
+	entries = p.usable(entries)
 	if p.wifi != nil {
 		p.wifi.kick(entries)
 	}
@@ -385,6 +392,9 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 	if ok {
 		return pr, nil
 	}
+	if !p.mayUse(e) {
+		return deviceProps{}, errNotUsed(e.Serial)
+	}
 	out, err := p.cfg.Client.Shell(ctx, e.Serial, propsCommand)
 	if err != nil {
 		return deviceProps{}, err
@@ -538,7 +548,7 @@ func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 // OpenDevice is Open with the concrete type, for callers that use the
 // Android-only features (background mode).
 func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return nil, wrapErr(err)
 	}

@@ -109,6 +109,7 @@ func newAVDFixture(t *testing.T, p *Provider) *avdFixture {
 		}
 		return fx.launchErr
 	}
+	l.portFree = func(int) bool { return true }
 	l.kill = func(_ context.Context, serial string) error {
 		fx.mu.Lock()
 		defer fx.mu.Unlock()
