@@ -368,7 +368,7 @@ func TestSimListBuildsHelper(t *testing.T) {
 		t.Fatalf("listed %+v, want the booted iPhone", infos)
 	}
 	i := infos[0]
-	if i.ID != "AAA" || !i.Virtual || i.Platform != driver.IOS || i.Connection != "usb" || i.Model != "iPhone 17e" ||
+	if i.ID != "AAA" || !i.Virtual || i.VirtualID != "AAA" || i.Platform != driver.IOS || i.Connection != "usb" || i.Model != "iPhone 17e" ||
 		i.OSVersion != "26.5" || i.State != driver.StateNeedsSetup || i.Setup != driver.SetupPreparing {
 		t.Errorf("while building: %+v", i)
 	}

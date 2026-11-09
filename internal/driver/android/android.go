@@ -227,6 +227,10 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 			defer cancel()
 			if pr, err := p.deviceProps(pctx, e); err == nil {
 				infos[i].Name, infos[i].Model, infos[i].OSVersion = pr.Name, pr.Model, pr.OSVersion
+				if infos[i].Virtual {
+					infos[i].VirtualID = pr.AVD
+					p.avd.ranAt(pr.AVD, e.Serial)
+				}
 				props[i] = &pr
 			} else {
 				p.cfg.logf("android: read properties of %s: %v", e.Serial, err)

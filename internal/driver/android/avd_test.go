@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -54,8 +55,10 @@ type avdFixture struct {
 	sdk, home string
 	mu        sync.Mutex
 	launched  []string
+	ports     []int // the port of each launch
 	killed    []string
 	launchErr error
+	portErr   error // a launch on a given port fails so
 }
 
 func newAVDFixture(t *testing.T, p *Provider) *avdFixture {
@@ -94,10 +97,14 @@ func newAVDFixture(t *testing.T, p *Provider) *avdFixture {
 		}
 		return []byte("INFO    | Storing crashdata in: /tmp\nMedium_Phone_API_37\npinky-api29\npinky-api36\n"), nil
 	}
-	l.launch = func(emulator, avd string) error {
+	l.launch = func(emulator, avd string, port int) error {
 		fx.mu.Lock()
 		defer fx.mu.Unlock()
 		fx.launched = append(fx.launched, avd)
+		fx.ports = append(fx.ports, port)
+		if port != 0 && fx.portErr != nil {
+			return fx.portErr
+		}
 		return fx.launchErr
 	}
 	l.kill = func(_ context.Context, serial string) error {
@@ -132,7 +139,7 @@ func TestAVDs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(infos) != 1 || infos[0].ID != "emulator-5554" || !infos[0].Virtual || infos[0].Name != "pinky-api36" ||
+	if len(infos) != 1 || infos[0].ID != "emulator-5554" || !infos[0].Virtual || infos[0].VirtualID != "pinky-api36" || infos[0].Name != "pinky-api36" ||
 		infos[0].Model != "Pixel 6" || infos[0].OSVersion != "16" || infos[0].Connection != "usb" {
 		t.Fatalf("listed %+v", infos)
 	}
@@ -193,6 +200,62 @@ func TestAVDs(t *testing.T) {
 	launched, killed := fx.calls()
 	if !slices.Equal(launched, []string{"pinky-api29", "pinky-api29"}) || !slices.Equal(killed, []string{"emulator-5554"}) {
 		t.Errorf("launched %q, killed %q", launched, killed)
+	}
+}
+
+// TestAVDSamePort: an emulator started again runs on the port it ran on,
+// so its phone keeps its id, unless another emulator took that port; a
+// launch on the port that fails starts it on any.
+func TestAVDSamePort(t *testing.T) {
+	f, p := newFakeADB(t)
+	fx := newAVDFixture(t, p)
+	// running sets the emulators adb lists: serial, AVD, serial, AVD…
+	// Each is a new connection, as an emulator started again is.
+	transport := 0
+	running := func(pairs ...string) {
+		f.set(func(f *fakeADB) {
+			f.devices, f.props = nil, map[string]string{}
+			for i := 0; i < len(pairs); i += 2 {
+				s, avd := pairs[i], pairs[i+1]
+				transport++
+				f.devices = append(f.devices, s+"\tdevice product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 device:emu64a transport_id:"+strconv.Itoa(transport))
+				f.props[s] = "sdk_gphone64_arm64\n16\n36\nsdk_gphone64_arm64\nEMULATOR36X1X11X0\npinky-boot=\npinky-avd=" + avd + "\n"
+			}
+		})
+	}
+	ctx := context.Background()
+	// Seen running on 5560 by the phone list alone.
+	running("emulator-5560", "pinky-api29")
+	if _, err := p.List(ctx); err != nil {
+		t.Fatal(err)
+	}
+	running()
+	if err := p.StartVirtual(ctx, "pinky-api29"); err != nil {
+		t.Fatal(err)
+	}
+	// Taken by another emulator meanwhile: any port.
+	p.avd.mu.Lock()
+	p.avd.starting = nil
+	p.avd.mu.Unlock()
+	running("emulator-5560", "pinky-api36")
+	if err := p.StartVirtual(ctx, "pinky-api29"); err != nil {
+		t.Fatal(err)
+	}
+	// A launch on the port that fails tries again on any.
+	p.avd.mu.Lock()
+	p.avd.starting = nil
+	p.avd.mu.Unlock()
+	running()
+	fx.portErr = errors.New("the emulator quit: ERROR | port 5560 is used")
+	if err := p.StartVirtual(ctx, "pinky-api36"); err != nil {
+		t.Fatal(err)
+	}
+	launched, _ := fx.calls()
+	fx.mu.Lock()
+	ports := slices.Clone(fx.ports)
+	fx.mu.Unlock()
+	if !slices.Equal(launched, []string{"pinky-api29", "pinky-api29", "pinky-api36", "pinky-api36"}) || !slices.Equal(ports, []int{5560, 0, 5560, 0}) {
+		t.Errorf("launched %q on %v", launched, ports)
 	}
 }
 

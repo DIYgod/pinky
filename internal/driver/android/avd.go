@@ -41,15 +41,38 @@ type avdLauncher struct {
 	sdks   func() []string
 	// run runs the emulator (-list-avds) and returns its output.
 	run func(ctx context.Context, name string, args ...string) ([]byte, error)
-	// launch starts an AVD with the emulator, detached from Pinky, and
-	// returns an error when it quits at once.
-	launch func(emulator, avd string) error
+	// launch starts an AVD with the emulator, detached from Pinky, on
+	// the console port given (0: the first free one), and returns an
+	// error when it quits at once.
+	launch func(emulator, avd string, port int) error
 	// kill asks a running emulator to quit, by its adb serial.
 	kill func(ctx context.Context, serial string) error
 	now  func() time.Time
 
 	mu       sync.Mutex
 	starting map[string]time.Time // AVDs Pinky started, by name
+	// ports is the console port each AVD's emulator last ran on, by
+	// name. Started again, it runs there again, so its adb serial, and
+	// with it its phone in Pinky, stays the same.
+	ports map[string]int
+}
+
+// ranAt notes the adb serial an AVD's emulator runs as.
+func (l *avdLauncher) ranAt(avd, serial string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.ranAtLocked(avd, serial)
+}
+
+func (l *avdLauncher) ranAtLocked(avd, serial string) {
+	port, err := strconv.Atoi(strings.TrimPrefix(serial, "emulator-"))
+	if avd == "" || !emulatorSerial(serial) || err != nil {
+		return
+	}
+	if l.ports == nil {
+		l.ports = map[string]int{}
+	}
+	l.ports[avd] = port
 }
 
 func newAVDLauncher() *avdLauncher {
@@ -304,6 +327,7 @@ func (p *Provider) avdList(ctx context.Context) (driver.VirtualPhones, avdTools,
 		if s := running[name]; s != "" {
 			v.Running, v.DeviceID = true, s
 			delete(l.starting, name)
+			l.ranAtLocked(name, s)
 		} else if at, ok := l.starting[name]; ok {
 			if now.Sub(at) < avdStarting {
 				v.Starting = true
@@ -357,7 +381,13 @@ func (p *Provider) StartVirtual(ctx context.Context, id string) error {
 	if v.Unavailable != "" {
 		return fmt.Errorf("%s cannot start: %s", v.Name, v.Unavailable)
 	}
-	if err := p.avd.launch(t.Emulator, id); err != nil {
+	port := p.freePort(ctx, id)
+	err = p.avd.launch(t.Emulator, id, port)
+	if err != nil && port != 0 {
+		// Its port was taken after all: any free one.
+		err = p.avd.launch(t.Emulator, id, 0)
+	}
+	if err != nil {
 		return fmt.Errorf("start %s: %w", v.Name, err)
 	}
 	p.cfg.logf("android: started the emulator for %s", id)
@@ -368,6 +398,28 @@ func (p *Provider) StartVirtual(ctx context.Context, id string) error {
 	p.avd.starting[id] = p.avd.now()
 	p.avd.mu.Unlock()
 	return nil
+}
+
+// freePort is the console port the AVD's emulator last ran on while no
+// other emulator uses it; 0 when there is none.
+func (p *Provider) freePort(ctx context.Context, id string) int {
+	p.avd.mu.Lock()
+	port := p.avd.ports[id]
+	p.avd.mu.Unlock()
+	if port == 0 {
+		return 0
+	}
+	entries, err := p.cfg.Client.Devices(ctx)
+	if err != nil {
+		return 0
+	}
+	for _, e := range entries {
+		// An emulator takes its console port and the next for adb.
+		if n, err := strconv.Atoi(strings.TrimPrefix(e.Serial, "emulator-")); err == nil && emulatorSerial(e.Serial) && n >= port-1 && n <= port+1 {
+			return 0
+		}
+	}
+	return port
 }
 
 // StopVirtual implements driver.VirtualLauncher: it asks the AVD's
@@ -400,18 +452,22 @@ func runOutput(ctx context.Context, name string, args ...string) ([]byte, error)
 	return out, err
 }
 
-// launchEmulator starts `emulator -avd <name>` in a session of its own,
-// with its output in a log file in the temporary folder, and waits a few
-// seconds for it to quit at once, as when the AVD runs already or its
-// system image is missing.
-func launchEmulator(emulator, name string) error {
+// launchEmulator starts `emulator -avd <name>`, with -port unless port
+// is 0, in a session of its own, with its output in a log file in the
+// temporary folder, and waits a few seconds for it to quit at once, as
+// when the AVD runs already or its system image is missing.
+func launchEmulator(emulator, name string, port int) error {
 	logPath := filepath.Join(os.TempDir(), "pinky-emulator-"+name+".log")
 	f, err := os.Create(logPath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	cmd := exec.Command(emulator, "-avd", name)
+	args := []string{"-avd", name}
+	if port != 0 {
+		args = append(args, "-port", strconv.Itoa(port))
+	}
+	cmd := exec.Command(emulator, args...)
 	cmd.Dir = filepath.Dir(emulator)
 	cmd.Stdout, cmd.Stderr = f, f
 	detachEmulator(cmd)

@@ -431,6 +431,7 @@ func (p *SimProvider) List(ctx context.Context) ([]driver.Info, error) {
 			Connection: "usb",
 			Backend:    backendWDA,
 			Virtual:    true,
+			VirtualID:  d.UDID,
 		})
 	}
 	p.mu.Lock()

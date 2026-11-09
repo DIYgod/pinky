@@ -74,6 +74,9 @@ type Info struct {
 	// or an Android emulator (VirtualLauncher). Its Connection is "usb",
 	// as for a phone on a cable.
 	Virtual bool `json:",omitempty"`
+	// VirtualID is the VirtualPhone.ID a virtual phone runs as, to start
+	// it again from its page while it is offline; "" when not known.
+	VirtualID string `json:",omitempty"`
 }
 
 // WiFiConnection is what an iPhone's provider knows of its Wi-Fi connection:
