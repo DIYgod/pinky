@@ -122,7 +122,7 @@ func TestToolList(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_key",
-		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_request_approval", "phone_handoff"}
+		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_watch", "phone_files", "phone_request_approval", "phone_handoff"}
 	got := map[string]*sdk.Tool{}
 	for _, tool := range res.Tools {
 		got[tool.Name] = tool
@@ -384,5 +384,25 @@ func TestSettleMS(t *testing.T) {
 	}})
 	if isErr || !strings.Contains(text, "step 2: settled") {
 		t.Fatalf("batch with settle_ms:\n%s", text)
+	}
+}
+
+func TestWatch(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-code")
+	if text, _ := c.call(t, "phone_connect", map[string]any{"task": "Wait for lunch"}); !strings.HasPrefix(text, "settled") {
+		t.Fatalf("connect:\n%s", text)
+	}
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		h.dev.Notify(demo.Dinely, "Your order from Dinely has arrived")
+	}()
+	text, isErr := c.call(t, "phone_watch", map[string]any{"text": "has arrived", "minutes": 5})
+	if isErr || !strings.HasPrefix(text, "settled") || !strings.Contains(text, "matched: true") ||
+		!strings.Contains(text, "“has arrived” appeared after") || !strings.Contains(text, "Your order from Dinely has arrived") {
+		t.Fatalf("watch:\n%s", text)
+	}
+	if text, isErr := c.call(t, "phone_watch", map[string]any{"text": "x", "minutes": 61}); !isErr {
+		t.Fatalf("61 minutes:\n%s", text)
 	}
 }

@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 15 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -179,6 +179,7 @@ Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the sc
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
 | `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
+| `phone_watch` | `text`, `gone?`, `minutes?` (up to 60) | Like `phone_wait_for`, for things that take minutes; blocks until then |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
@@ -229,7 +230,7 @@ ocr "Delivery in 25–35 min" @200,300
 
 Errors: `device_offline`, `lease_held`, `scope_denied` (an app outside the agent's scope or the task's allow-list), `not_found` (the ref is gone), `unsupported` (the backend cannot do this, such as `recents` on iPhone).
 
-Any call that could block longer than 45 s returns a pending status with an id instead, and the agent repeats the call with that id: Ask actions, `phone_request_approval`, `phone_handoff`, `phone_wait_for`, and long `phone_type` on iPhone. That stays under the 60 s request timeout common in MCP clients. Progress notifications are sent only when the request carries a `progressToken`.
+Any call that could block longer than 45 s returns a pending status with an id instead, and the agent repeats the call with that id: Ask actions, `phone_request_approval`, `phone_handoff`, `phone_wait_for`, and long `phone_type` on iPhone. That stays under the 60 s request timeout common in MCP clients. The one exception is `phone_watch`, which blocks for as long as it waits: Claude Code in a terminal moves such a call to the background and starts the agent's next turn when it returns, which is how a phone event reaches an idle agent ([notes/gateway.md](notes/gateway.md#phone_watch-waking-an-idle-agent)). Progress notifications are sent only when the request carries a `progressToken`.
 
 ### Example session
 

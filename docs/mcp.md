@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 15 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -170,7 +170,7 @@ Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_key`, `phone
 - It is ignored when the person approves the action, allowed its rule for the task, or always allows it in the app: such an action waits the whole 3 s.
 - It is not part of what an approval binds: an `approval_id` may be repeated with another `settle_ms`.
 
-`phone_observe`, `phone_apps`, `phone_wait_for` and `phone_release` take `device`; `phone_files`, `phone_request_approval` and `phone_handoff` take `device` and `approval_id` (and `phone_files` takes `intent`). Unknown arguments are rejected.
+`phone_observe`, `phone_apps`, `phone_wait_for`, `phone_watch` and `phone_release` take `device`; `phone_files`, `phone_request_approval` and `phone_handoff` take `device` and `approval_id` (and `phone_files` takes `intent`). Unknown arguments are rejected.
 
 ## Tools
 
@@ -282,6 +282,23 @@ Steps run in order, each settling first, and the batch stops at the first step t
 
 Returns `settled` with `matched: true` or `matched: false` and the screen changes.
 
+### phone_watch
+
+`phone_wait_for` for things that take minutes: a delivery, a download, a reply.
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `text` | string, required | Matched as in `phone_wait_for` |
+| `gone` | boolean | Wait for it to disappear |
+| `minutes` | 0–60 | Default 10 |
+
+Returns like `phone_wait_for`, when the text appears (or disappears) or when the time is up. Unlike every other call it blocks for as long as it waits, past 45 s, so that a client that runs long calls in the background can start the agent's next turn when it returns (see [notes/gateway.md](notes/gateway.md#phone_watch-waking-an-idle-agent)):
+
+- It reads the screen every 2 s, and with OCR every 15 s, and sends progress every 15 s. The phone is woken once, as for every call; then its own screen timeout and lock apply. A locked phone is read as it is: a notification on its lock screen counts, and a locked screen never counts as the text being gone. When the phone is locked at the end, the message says so.
+- The task's lease does not expire while it runs. The person sees the step "Watching for “text”", which becomes "Waited for “text”".
+- While the person has the phone (Take over, or their own input), it does not read the screen. When they hand back, it goes on, and the message says they took over; when they hand back with a note, it returns at once with `note`. If they still have the phone at the end, it returns `paused`.
+- Stop, `phone_release`, the session closing or the client cancelling the call end it; a cancelled watch returns an `internal` error, and the task goes on.
+
 ### phone_files
 
 Copies files between the phone's Pinky folder (`/sdcard/Pinky` on Android, the only place on the phone agents may reach) and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools; agents that cannot (on another computer, over HTTP) upload files into it. Needs a `phone_connect` lease like the other tools. iPhones return `unsupported`.
@@ -346,7 +363,7 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 
 ## Progress notifications
 
-Sent only when the request carries `_meta.progressToken`: while waiting for an approval or handoff (at the start and every 5 s), for `phone_observe` with `wait_ms`, and for `phone_wait_for` (every 5 s). `progress` and `total` are seconds.
+Sent only when the request carries `_meta.progressToken`: while waiting for an approval or handoff (at the start and every 5 s), for `phone_observe` with `wait_ms`, for `phone_wait_for` (every 5 s), and for `phone_watch` (every 15 s). `progress` and `total` are seconds.
 
 ## Limits
 

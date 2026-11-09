@@ -130,6 +130,13 @@ type waitForIn struct {
 	TimeoutMS int    `json:"timeout_ms,omitempty" jsonschema:"Give up after this many milliseconds, at most 45000; default 10000."`
 }
 
+type watchIn struct {
+	Device  string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Text    string `json:"text" jsonschema:"Text to watch for, matched like phone_wait_for: without case in element labels and new toasts or notifications, whole words only in languages that put spaces between words."`
+	Gone    bool   `json:"gone,omitempty" jsonschema:"Watch for the text to disappear instead."`
+	Minutes int    `json:"minutes,omitempty" jsonschema:"Give up after this many minutes, at most 60; default 10."`
+}
+
 type filesIn struct {
 	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
 	Action     string   `json:"action,omitempty" jsonschema:"list (default): the files on the phone and on the computer; pull: copy from the phone to the computer; push: copy from the computer to the phone, which asks the person first; upload: send Pinky a file for the computer's folder, when you cannot write there yourself (from another computer), then push it."`
@@ -349,6 +356,20 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			return render(s.session(req, remote).WaitFor(ctx, gateway.WaitForRequest{
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
 				Text: in.Text, Gone: in.Gone, TimeoutMS: in.TimeoutMS})), nil, nil
+		})
+
+	sdk.AddTool(srv, &sdk.Tool{Name: "phone_watch", Title: "Watch for text",
+		Description: "Watch the phone for up to an hour until text appears (or disappears, with gone), for what takes minutes: a delivery, a download, a reply. " +
+			"Pinky keeps your task, reads the screen every few seconds without keeping the phone awake (a locked phone is read as it is), " +
+			"and pauses while the person has the phone. Returns like phone_wait_for, when it happens or at the end. " +
+			"Claude Code in a terminal moves a call to the background after 2 minutes and starts your next turn when it returns, so you may end your turn meanwhile; " +
+			"other clients keep you waiting until then, and one that gives up on a call after a minute ends the watch early.",
+		InputSchema: schema[watchIn](func(p map[string]*jsonschema.Schema) { bounds(p["minutes"], 0, 60) }),
+		Annotations: readOnly},
+		func(ctx context.Context, req *sdk.CallToolRequest, in watchIn) (*sdk.CallToolResult, any, error) {
+			return render(s.session(req, remote).Watch(ctx, gateway.WatchRequest{
+				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
+				Text: in.Text, Gone: in.Gone, Minutes: in.Minutes})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_files", Title: "Phone files",
