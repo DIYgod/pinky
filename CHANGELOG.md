@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1110.1 (2026-11-10)
 
 - On Linux, a Pinky started by a service or another program that leaves out `XDG_RUNTIME_DIR` now finds the Pinky already running on your desktop, instead of starting a second one whose approval requests never reach the window. Thanks to pseudoyu.
 
