@@ -379,6 +379,14 @@ type PersonWatcher interface {
 	PersonInput() <-chan struct{}
 }
 
+// InputNoter is an optional Device interface: a note for the agent about
+// the last input, which worked but left something unsure, such as typed
+// text that could not be read back to check it. TakeInputNote returns the
+// note and forgets it; "" when there is none.
+type InputNoter interface {
+	TakeInputNote() string
+}
+
 // LockReporter reports whether the phone is locked.
 type LockReporter interface {
 	Locked(ctx context.Context) (bool, error)

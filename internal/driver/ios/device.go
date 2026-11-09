@@ -66,6 +66,8 @@ type Device struct {
 	pb          *pbConn
 
 	typeStats   TypeStats // guarded by mu
+	inputNote   string    // for the agent, about the last Type (TakeInputNote); guarded by mu
+	keysOnly    bool      // Type skips the pasteboard (TypeByKeys); guarded by mu
 	framesAfter time.Time // no frames of the video for pictures until then (capture.go); guarded by mu
 
 	// preferCapture is set when the screen capture service answered and the

@@ -1109,3 +1109,57 @@ func TestDefaultAsksBeforePaymentsOnly(t *testing.T) {
 		t.Fatalf("the payment did not ask: needs %+v, screen %s", n, dev.Current())
 	}
 }
+
+// notingProvider opens phones whose Type leaves a note for the agent, as
+// an iPhone does when it cannot read the field back.
+type notingProvider struct{ driver.Provider }
+
+func (p notingProvider) Open(ctx context.Context, id string) (driver.Device, error) {
+	dev, err := p.Provider.Open(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return &notingPhone{Device: dev}, nil
+}
+
+type notingPhone struct {
+	driver.Device
+	mu   sync.Mutex
+	note string
+}
+
+func (p *notingPhone) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
+	p.mu.Lock()
+	p.note = "Pinky could not read the field back to check the text."
+	p.mu.Unlock()
+	return p.Device.Type(ctx, text, opt)
+}
+
+func (p *notingPhone) TakeInputNote() string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	n := p.note
+	p.note = ""
+	return n
+}
+
+// TestTypeNote: the driver's note about a Type that worked reaches the
+// agent with the settled result, and only that one.
+func TestTypeNote(t *testing.T) {
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	g, _ := newTestGateway(t, func(o *Options) {
+		o.Providers = []driver.Provider{notingProvider{demo.NewProvider(driver.Android, dev)}}
+	})
+	s, _ := connect(t, g, "Chat")
+	dev.Show("chats")
+	res := tap(s, ref(t, s.Observe(context.Background(), ObserveRequest{}), "Sam"))
+	input := ref(t, res, "Message")
+	res = s.Act(context.Background(), Call{}, Action{Tool: "type", Ref: input, Text: "draft"})
+	mustStatus(t, res, StatusSettled)
+	if !strings.Contains(res.Message, "could not read the field back") {
+		t.Fatalf("type result: %q", res.Message)
+	}
+	if res := tap(s, input); strings.Contains(res.Message, "could not read") {
+		t.Fatalf("the note came again: %q", res.Message)
+	}
+}

@@ -1430,6 +1430,12 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
+	// What the driver could not make sure of, such as typed text it could
+	// not read back.
+	var inputNote string
+	if n, ok := dev.(driver.InputNoter); ok && a.Tool == "type" {
+		inputNote = n.TakeInputNote()
+	}
 	limit := g.opt.SettleMax
 	if !p.settleFull {
 		limit = a.settleLimit(limit)
@@ -1464,6 +1470,9 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	}
 	if next.Locked {
 		res.Message = strings.TrimSpace(res.Message + " The phone is locked now.")
+	}
+	if inputNote != "" {
+		res.Message = strings.TrimSpace(res.Message + " " + inputNote)
 	}
 	shot := g.startShot(d, next)
 	if early && shot == bshot {

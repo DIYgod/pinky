@@ -18,8 +18,10 @@ import (
 // saved stays in memory, for the length of one Type call, and is never
 // logged or shown.
 //
-// Without the pasteboard service Type falls back to keys: printable ASCII
-// only, through a Latin keyboard (see typeKeys).
+// Without the pasteboard service, or when it does not answer, Type falls
+// back to keys: printable ASCII only, through a Latin keyboard with the U.S.
+// layout (see typeKeys). Either way it reads the field back afterwards and
+// returns an error when it reads otherwise than the text (checkTyped).
 
 // TypeStats says how the last Type call went, for tests and iosctl. It
 // holds neither the text nor the pasteboard.
@@ -34,6 +36,7 @@ type TypeStats struct {
 	Restored  time.Duration
 	Total     time.Duration
 	Trace     []string // the keys path: what the keyboard probes found, with times
+	Checked   string   // the field read back: "same", "different", "hidden", "unchanged", "unreadable"
 }
 
 // LastTypeStats returns how the last Type call went.
@@ -41,6 +44,30 @@ func (d *Device) LastTypeStats() TypeStats {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.typeStats
+}
+
+// TakeInputNote implements driver.InputNoter: what the agent should know
+// about the last Type, such as a field Pinky could not read back to check.
+func (d *Device) TakeInputNote() string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	n := d.inputNote
+	d.inputNote = ""
+	return n
+}
+
+// TypeByKeys has Type skip the pasteboard and type by keys, for iosctl and
+// tests of the keys path.
+func (d *Device) TypeByKeys(on bool) {
+	d.mu.Lock()
+	d.keysOnly = on
+	d.mu.Unlock()
+}
+
+func (d *Device) byKeys() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.keysOnly
 }
 
 // Timeouts for typing. The pasteboard daemon answers in milliseconds, but
@@ -71,10 +98,12 @@ func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) 
 func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptions) error {
 	start := time.Now()
 	st := TypeStats{}
+	var note string
 	defer func() {
 		st.Total = time.Since(start)
 		d.mu.Lock()
 		d.typeStats = st
+		d.inputNote = note
 		d.mu.Unlock()
 	}()
 	d.inputMu.Lock()
@@ -86,10 +115,10 @@ func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptio
 		saved  *pbSnapshot
 		keys   []keyStroke
 		method = "keys"
+		pbErr  error
 	)
 	if text != "" {
-		var pbErr error
-		if pb = d.pasteboard(); pb != nil {
+		if pb = d.pasteboard(); pb != nil && !d.byKeys() {
 			t0 := time.Now()
 			saved, st.Saved, pbErr = savePasteboard(ctx, pb)
 			st.Save = time.Since(t0)
@@ -108,19 +137,35 @@ func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptio
 		}
 		st.Method = method
 	}
-	if !opt.Append {
-		if err := d.pressKeys(ctx, []keyStroke{{usage: keyA, mod: keyLeftGUI}, {usage: keyBackspace}}); err != nil {
+	clear := func() error {
+		if opt.Append {
+			return nil
+		}
+		return d.pressKeys(ctx, []keyStroke{{usage: keyA, mod: keyLeftGUI}, {usage: keyBackspace}})
+	}
+	if text == "" {
+		if err := clear(); err != nil {
 			return err
 		}
-	}
-	if text != "" {
+	} else {
+		_, prior := d.focusedValue(ctx)
 		var err error
 		if method == "paste" {
-			err = d.paste(ctx, pb, saved, text, &st)
+			if err = clear(); err == nil {
+				err = d.paste(ctx, pb, saved, text, &st)
+			}
 		} else {
-			err = d.typeKeys(ctx, keys, &st)
+			// Keys go only where the keyboard turns them into this text,
+			// which typeKeys checks first, clearing the field after that.
+			err = d.typeKeys(ctx, keys, clear, pbErr, &st)
 		}
 		if err != nil {
+			return err
+		}
+		if note, err = d.checkTyped(ctx, text, opt.Append, prior, method, pbErr, &st); err != nil {
+			if opt.Submit {
+				err = fmt.Errorf("%w; Return was not pressed", err)
+			}
 			return err
 		}
 	}
@@ -128,6 +173,94 @@ func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptio
 		return d.pressKeys(ctx, []keyStroke{{usage: keyEnter}})
 	}
 	return nil
+}
+
+// checkTyped reads the focused field back after typing text and returns an
+// error when it reads otherwise, so that wrong text never counts as typed:
+// keys arrive as other letters on a hardware keyboard layout other than
+// U.S., iOS corrects and capitalizes words typed as keys, and a field may
+// format or cut what is pasted. When the field cannot be read, or hides its
+// text, it returns a note for the agent instead. prior is the field's value
+// before, for appended text. Callers hold inputMu.
+func (d *Device) checkTyped(ctx context.Context, text string, appended bool, prior, method string, pbErr error, st *TypeStats) (string, error) {
+	const unread = "Pinky could not read the field back to check the text; look at the screen to be sure."
+	field, v := d.focusedValue(ctx)
+	rax, err := d.raxNow()
+	if field == nil || err != nil {
+		st.Checked = "unreadable"
+		return unread, nil
+	}
+	ok := func(v string) bool { return typedAs(v, text, appended, prior, st.Spaces) }
+	// Apps update a field's value a moment after the keys.
+	for deadline := time.Now().Add(pasteConfirm); !ok(v) && time.Now().Before(deadline); {
+		if err := sleepCtx(ctx, 40*time.Millisecond); err != nil {
+			return "", err
+		}
+		if v, err = rax.stringAttribute(context.WithoutCancel(ctx), field, axpAttrValue); err != nil {
+			st.Checked = "unreadable"
+			return unread, nil
+		}
+	}
+	switch {
+	case ok(v):
+		st.Checked = "same"
+		return "", nil
+	case hiddenText(v):
+		st.Checked = "hidden"
+		return "The field hides its text, so Pinky could not check what was typed.", nil
+	case v == prior || v == "":
+		// Its value may not follow what is typed (a view of the app's
+		// own), or the text did not go in.
+		st.Checked = "unchanged"
+		return "The field reads as it did before typing, or empty, so Pinky could not check the text; look at the screen to be sure.", nil
+	}
+	st.Checked = "different"
+	got, want := len([]rune(v)), len([]rune(text))
+	if appended {
+		want += len([]rune(prior))
+	}
+	if method == "paste" {
+		return "", fmt.Errorf("type: after pasting, the field reads otherwise than the text (%d characters where %d were expected): the field may format, cut or change what it takes; read it before going on", got, want)
+	}
+	return "", fmt.Errorf("type: after typing by keys, because %s, the field reads otherwise than the text (%d characters where %d were expected): iOS may have corrected or capitalized words as they were typed, or the phone's hardware keyboard layout is not U.S.; read the field and fix it before going on", keysWhy(pbErr), got, want)
+}
+
+// typedAs reports whether a field that reads v holds text as typed: the
+// whole of it, or appended to prior (where the cursor was, or after a
+// placeholder that went away). Spaces that smart insert added and Pinky
+// could not take off are allowed around a paste.
+func typedAs(v, text string, appended bool, prior, spaces string) bool {
+	loose := spaces == "kept" || spaces == "unconfirmed"
+	if !appended {
+		return v == text || (loose && strings.TrimSpace(v) == strings.TrimSpace(text))
+	}
+	slack := 0
+	if loose {
+		slack = 2
+	}
+	return strings.Contains(v, text) && len([]rune(v)) <= len([]rune(prior))+len([]rune(text))+slack
+}
+
+// hiddenText reports whether a field's value is a secure field's bullets.
+func hiddenText(v string) bool {
+	if v == "" {
+		return false
+	}
+	for _, r := range v {
+		if r != '•' && r != '●' {
+			return false
+		}
+	}
+	return true
+}
+
+// keysWhy says why Type typed by keys: pbErr is why the pasteboard did not
+// do, nil when the phone has no pasteboard service (or iosctl asked).
+func keysWhy(pbErr error) string {
+	if pbErr != nil {
+		return "the phone's pasteboard did not answer"
+	}
+	return "Pinky could not use the phone's pasteboard"
 }
 
 // keyStrokesFor is how Type types text without the pasteboard: as keys,
@@ -207,10 +340,13 @@ func savePasteboard(ctx context.Context, pb pbPuller) (*pbSnapshot, string, erro
 		return pb.pull(c, pbPromiseSecondary)
 	}
 	snap, err := pull()
-	if err != nil && !errors.Is(err, errPBRestricted) && ctx.Err() == nil {
+	if err != nil && !errors.Is(err, errPBRestricted) && !errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil {
 		// The phone closes the service's connection after a while idle, and
-		// the first request after that fails; the failure dropped it, so
-		// this one dials again. A read changes nothing, so it can repeat.
+		// the first request after that fails at once; the failure dropped
+		// it, so this one dials again. A read changes nothing, so it can
+		// repeat. One that timed out is not repeated: the daemon is busy,
+		// and a second wait would only double the time before typing by
+		// keys.
 		snap, err = pull()
 	}
 	switch {
@@ -356,25 +492,37 @@ func asciiStrokes(text string) ([]keyStroke, error) {
 }
 
 // typeKeys types strokes on the virtual keyboard, the fallback when the
-// phone has no pasteboard service. Keyboard reports carry key codes, not
-// text, and the phone's input method turns them into its own text (Pinyin
-// composes letters into Chinese), so a non-Latin keyboard is switched to the
-// other one with Control-Space for the duration, and switched back after.
-// Callers hold inputMu.
-func (d *Device) typeKeys(ctx context.Context, strokes []keyStroke, st *TypeStats) error {
+// pasteboard does not do. Keyboard reports carry key codes, not text, and
+// the phone turns them into its own text: an input method composes letters
+// (Pinyin into Chinese), and a hardware keyboard layout other than U.S.
+// puts other letters on the keys (Colemak, Dvorak, AZERTY). So it first
+// types probes and deletes them (probeKeyboard): a non-Latin keyboard is
+// switched to the other one with Control-Space for the duration, and
+// switched back after, and a layout other than U.S. stops it with an
+// error, unless the other keyboard has the U.S. layout. Then clear empties
+// the field, unless the text is appended, and the strokes go. pbErr is why
+// the pasteboard did not do, for the error. Callers hold inputMu.
+func (d *Device) typeKeys(ctx context.Context, strokes []keyStroke, clear func() error, pbErr error, st *TypeStats) error {
 	rax, err := d.raxNow()
 	if err != nil {
-		return d.pressKeys(ctx, strokes) // the keyboard cannot be checked
+		// The keyboard cannot be checked.
+		if err := clear(); err != nil {
+			return err
+		}
+		return d.pressKeys(ctx, strokes)
 	}
 	t0 := time.Now()
 	note := func(format string, args ...any) {
 		st.Trace = append(st.Trace, fmt.Sprintf("%v ", time.Since(t0).Round(time.Millisecond))+fmt.Sprintf(format, args...))
 	}
-	latin, err := d.latinKeyboard(ctx, rax, note)
+	first, err := d.probeKeyboard(ctx, rax, note)
 	if err != nil {
 		return err
 	}
-	if latin {
+	if first.kind == kbLatin {
+		if err := clear(); err != nil {
+			return err
+		}
 		return d.pressKeys(ctx, strokes)
 	}
 	toggle := []keyStroke{{usage: keySpace, mod: keyLeftCtrl}}
@@ -385,11 +533,19 @@ func (d *Device) typeKeys(ctx context.Context, strokes []keyStroke, st *TypeStat
 	if err := sleepCtx(ctx, keyboardSwitch); err != nil {
 		return err
 	}
-	latin, err = d.latinKeyboard(ctx, rax, note)
-	if err == nil && latin {
-		err = d.pressKeys(ctx, strokes)
+	kb, err := d.probeKeyboard(ctx, rax, note)
+	switch {
+	case err != nil:
+	case kb.kind == kbLatin:
+		if err = clear(); err == nil {
+			err = d.pressKeys(ctx, strokes)
+		}
 		note("typed")
-	} else if err == nil {
+	case kb.kind == kbLayout:
+		err = layoutError(kb, pbErr)
+	case first.kind == kbLayout:
+		err = layoutError(first, pbErr)
+	default:
 		err = fmt.Errorf("the active keyboard composes text and Control-Space did not switch to a Latin one: %w", driver.ErrUnsupported)
 	}
 	// Switch back whatever happened: the keyboard is the person's. Let the
@@ -418,21 +574,75 @@ const (
 	candidateWait  = time.Second // for an input method's candidate bar
 )
 
-// latinKeyboard types a probe letter into the focused field and reports
-// whether it arrived as itself (a Latin keyboard) rather than as an input
-// method's composition, which shows a candidate bar in the app's own tree
-// (Pinyin: cells whose identifier is the candidate), sometimes only after a
-// few hundred milliseconds. The probe is deleted again either way. Callers
-// hold inputMu.
-func (d *Device) latinKeyboard(ctx context.Context, rax *raxSession, note func(string, ...any)) (bool, error) {
+// keyboardKind is what the probes found of the active keyboard.
+type keyboardKind int
+
+const (
+	kbLatin     keyboardKind = iota // keys arrive as on a U.S. layout, or Pinky cannot tell
+	kbComposing                     // an input method composes them (Pinyin, Kana, Hangul)
+	kbLayout                        // a Latin keyboard whose hardware layout is not U.S.
+)
+
+// keyboardProbe is what probeKeyboard found: for kbLayout, the key typed
+// (as a U.S. layout has it) and what arrived instead.
+type keyboardProbe struct {
+	kind     keyboardKind
+	key, got string
+}
+
+// layoutProbe is the key that tells a U.S. hardware layout from the others:
+// semicolon's key is ";" on a U.S. layout and a letter on Colemak, Dvorak,
+// AZERTY, QWERTZ and most others ("o", "s", "m", "ö"). The first probe, "a",
+// tells input methods from Latin keyboards, but sits where it is on most
+// layouts.
+const layoutProbe = ';'
+
+// probeKeyboard types probes into the focused field at the cursor and
+// deletes them again: "a", which an input method composes (a candidate bar
+// in the app's own tree, sometimes only after a few hundred milliseconds,
+// or a non-Latin letter in the field), and then, on a Latin keyboard whose
+// field can be read, layoutProbe. Callers hold inputMu.
+func (d *Device) probeKeyboard(ctx context.Context, rax *raxSession, note func(string, ...any)) (keyboardProbe, error) {
+	kb, err := d.latinKeyboard(ctx, rax, note)
+	if err != nil || kb.kind != kbLatin {
+		return kb, err
+	}
+	field, before := d.focusedValue(ctx)
+	if field == nil {
+		return kb, nil // the layout cannot be checked
+	}
+	u, _, _ := asciiUsage(layoutProbe)
+	if err := d.pressKeys(ctx, []keyStroke{{usage: u}}); err != nil {
+		return kb, err
+	}
+	defer d.pressKeys(context.WithoutCancel(ctx), []keyStroke{{usage: keyBackspace}})
+	changed, after := d.waitValueChange(ctx, field, before)
+	if !changed {
+		note("layout probe: no change read")
+		return kb, nil
+	}
+	got := arrived(before, after)
+	note("layout probe: as on a U.S. layout %v", got == string(layoutProbe))
+	if got != string(layoutProbe) {
+		return keyboardProbe{kind: kbLayout, key: string(layoutProbe), got: got}, nil
+	}
+	return kb, nil
+}
+
+// latinKeyboard types the probe letter "a" and reports whether it arrived
+// as itself (a Latin keyboard), as an input method's composition, or as
+// another Latin letter (a Latin keyboard whose layout moves "a", such as
+// AZERTY). The probe is deleted again either way. Callers hold inputMu.
+func (d *Device) latinKeyboard(ctx context.Context, rax *raxSession, note func(string, ...any)) (keyboardProbe, error) {
+	_, before := d.focusedValue(ctx)
 	if err := d.pressKeys(ctx, []keyStroke{{usage: keyA}}); err != nil {
-		return false, err
+		return keyboardProbe{}, err
 	}
 	defer d.pressKeys(context.WithoutCancel(ctx), []keyStroke{{usage: keyBackspace}})
 	start := time.Now()
 	for {
 		if err := sleepCtx(ctx, 150*time.Millisecond); err != nil {
-			return false, err
+			return keyboardProbe{}, err
 		}
 		field, value := d.focusedValue(ctx)
 		lim := d.walkLimits()
@@ -440,17 +650,67 @@ func (d *Device) latinKeyboard(ctx context.Context, rax *raxSession, note func(s
 		els, _, err := rax.walk(wctx, lim)
 		cancel()
 		if err != nil {
-			return false, err
+			return keyboardProbe{}, err
 		}
 		cands := hasCandidates(els)
-		note("probe: field %v, arrived %v, candidates %v", field != nil, probeArrived(value), cands)
-		if cands || (field != nil && !probeArrived(value)) {
-			return false, nil
+		got := ""
+		if value != before {
+			got = arrived(before, value)
+		}
+		note("probe: field %v, arrived %v, candidates %v", field != nil, got == "a" || got == "A", cands)
+		switch {
+		case cands:
+			return keyboardProbe{kind: kbComposing}, nil
+		case got == "a" || got == "A":
+		case otherLatin(got):
+			return keyboardProbe{kind: kbLayout, key: "a", got: got}, nil
+		case got != "":
+			return keyboardProbe{kind: kbComposing}, nil // a letter of another script
 		}
 		if time.Since(start) >= candidateWait {
-			return true, nil
+			if field != nil && got == "" && !probeArrived(value) {
+				return keyboardProbe{kind: kbComposing}, nil // nothing arrived that can be read
+			}
+			return keyboardProbe{kind: kbLatin}, nil
 		}
 	}
+}
+
+// arrived returns what typing one key put into a field whose value was
+// before and is after now: the text added where the cursor was, or, when
+// after is not before with text added (a placeholder that went away), its
+// last character.
+func arrived(before, after string) string {
+	b, a := []rune(before), []rune(after)
+	if len(a) > len(b) {
+		i := 0
+		for i < len(b) && a[i] == b[i] {
+			i++
+		}
+		j := 0
+		for j < len(b)-i && a[len(a)-1-j] == b[len(b)-1-j] {
+			j++
+		}
+		if i+j == len(b) {
+			return string(a[i : len(a)-j])
+		}
+	}
+	if len(a) == 0 {
+		return ""
+	}
+	return string(a[len(a)-1])
+}
+
+// otherLatin reports whether s is a single printable ASCII character other
+// than the probe's "a": a Latin keyboard put another character on its key.
+func otherLatin(s string) bool {
+	return len(s) == 1 && s[0] > ' ' && s[0] < 0x7f && s != "a" && s != "A"
+}
+
+// layoutError says why Type typed nothing: keys would enter other text.
+func layoutError(kb keyboardProbe, pbErr error) error {
+	return fmt.Errorf("type: %s, so Pinky would type by keys, but the phone's hardware keyboard layout is not U.S. (the key that is %q on a U.S. layout typed %q), so the keys would enter other text. Nothing was typed. Try again, as the pasteboard may answer then, or set the hardware keyboard layout to U.S. in the phone's Settings › General › Keyboard › Hardware Keyboard: %w",
+		keysWhy(pbErr), kb.key, kb.got, driver.ErrUnsupported)
 }
 
 // probeArrived reports whether the field's value ends with the probe letter
