@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Agents can now find and open Android app clones (Dual apps, App Twin, Dual Messenger): each clone is listed as an app of its own, such as "WeChat (clone)", and opens on the phone's screen or in the background. A clone of a blocked app is blocked too.
+- Pinky needs macOS 13 or later, as it did in practice already: the app, its Homebrew cask and the README now say so, instead of macOS 12.
+- Choosing Use on an iPhone or iPad found on Wi-Fi no longer sometimes drops it for a moment and connects it a second time.
+- An agent waiting for your approval now gets your answer even when you answer at the very moment its call stops waiting, instead of having to repeat the call.
+
 ## 2026.1109.9 (2026-11-09)
 
 - The phone Pinky draws around a mirror now turns with the screen: an iPad or iPhone in landscape, or an iPad in portrait, gets an outline of that shape on its page, in All phones and in recordings, with corners that stay the same turned.
