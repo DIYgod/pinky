@@ -19,3 +19,6 @@ func lock(path string) (*os.File, error) {
 	}
 	return os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
 }
+
+// ownPrivateDir: no /run/user/<uid> here.
+func ownPrivateDir(string) bool { return false }

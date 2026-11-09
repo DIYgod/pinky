@@ -24,6 +24,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -76,9 +77,27 @@ func DefaultDirs() (Dirs, error) {
 	}
 	run := os.Getenv("XDG_RUNTIME_DIR")
 	if run == "" {
-		run = filepath.Join(userHome, ".local", "state")
+		run = runtimeDir(userHome)
 	}
 	return Dirs{Config: filepath.Join(cfg, "pinky"), Data: filepath.Join(data, "pinky"), Run: filepath.Join(run, "pinky")}, nil
+}
+
+// runtimeBase is where systemd-logind makes each logged-in user's runtime
+// folder, /run/user/<uid>; tests change it.
+var runtimeBase = "/run/user"
+
+// runtimeDir is the runtime folder of a Pinky started without
+// XDG_RUNTIME_DIR (by a service or a program that clears it): the user's
+// /run/user/<uid> when it is theirs alone, as a Pinky started in the
+// desktop session finds it, so that both take the same lock and socket and
+// a second gateway does not start beside the first on the same data;
+// ~/.local/state on systems without one.
+func runtimeDir(userHome string) string {
+	dir := filepath.Join(runtimeBase, strconv.Itoa(os.Getuid()))
+	if ownPrivateDir(dir) {
+		return dir
+	}
+	return filepath.Join(userHome, ".local", "state")
 }
 
 // Socket is the gateway's socket.
