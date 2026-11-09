@@ -33,3 +33,14 @@ func lock(path string) (*os.File, error) {
 	}
 	return f, nil
 }
+
+// ownPrivateDir reports whether dir is a folder of this user's that only
+// they can reach (mode 0700), as /run/user/<uid> is.
+func ownPrivateDir(dir string) bool {
+	fi, err := os.Stat(dir)
+	if err != nil || !fi.IsDir() || fi.Mode().Perm() != 0o700 {
+		return false
+	}
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	return ok && int(st.Uid) == os.Getuid()
+}
