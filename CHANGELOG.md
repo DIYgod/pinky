@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.24 (2026-11-09)
 
 - When a new agent waits for you to approve it, asking again now keeps waiting for your answer, instead of failing and starting a second approval.
 - Force-quitting Pinky no longer leaves the iOS Simulator's WebDriverAgent build running in the background.
