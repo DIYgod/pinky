@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -25,6 +26,7 @@ const inputSettle = 500 * time.Millisecond
 type Device struct {
 	info driver.Info
 	l    *link
+	log  *slog.Logger
 
 	mu      sync.Mutex // guards the fields below
 	m       *media
@@ -32,6 +34,20 @@ type Device struct {
 	scr     screenInfo // as the phone last described it (screen gives it upright)
 	scrAt   time.Time  // when scr was read
 	inputAt time.Time  // when input starts to work
+
+	// A phone with several displays (a foldable) shows one at a time; see
+	// display_info.go. dinfo is the last read of them all and want the id
+	// of the display in use there (chooseDisplay); streamFor is what want
+	// was when the running stream started, and streamOn the display it
+	// shows, another when that one gave no picture. goodFor and goodOn
+	// remember such a fallback for the next start, until the phone switches
+	// displays. scr describes the display the stream shows.
+	dinfo           displayInfo
+	want            int
+	streamFor       int
+	streamOn        int
+	goodFor, goodOn int
+	noVideo         *noVideoError // why the last stream start got no picture; nil once one did
 
 	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
 
@@ -81,11 +97,16 @@ type Device struct {
 // It goes over USB when it can, and over Wi-Fi when info.Connection is
 // "wifi".
 func Open(ctx context.Context, info driver.Info) (*Device, error) {
+	return open(ctx, info, nil)
+}
+
+// open is Open with a logger for what the stream does (nil: none).
+func open(ctx context.Context, info driver.Info, log *slog.Logger) (*Device, error) {
 	l, err := dialLink(ctx, info.ID, info.Connection == "wifi")
 	if err != nil {
 		return nil, err
 	}
-	d := &Device{info: info, l: l, done: make(chan struct{})}
+	d := &Device{info: info, l: l, log: logTo(log), done: make(chan struct{})}
 	if err := d.start(ctx); err != nil {
 		l.Close()
 		return nil, err
@@ -117,13 +138,13 @@ func (d *Device) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	scr, err := readScreenInfo(ctx, svc)
+	di, err := readDisplayInfo(ctx, svc, 0)
 	if err != nil {
 		svc.Close()
 		return err
 	}
 	d.info2 = svc
-	d.scr, d.scrAt = scr, time.Now()
+	d.noteDisplays(di)
 	if err := d.restartMedia(ctx); err != nil {
 		return err
 	}
@@ -139,9 +160,43 @@ const restartTimeout = 20 * time.Second
 // wedge the phone's media daemon.
 const restartBackoff = 5 * time.Second
 
-// restartMedia (re)starts the video stream and the HID session on it.
+// readyWait is how long a stream start waits for its first key frame.
+const readyWait = 8 * time.Second
+
+// nextDisplayWait is what each further display a restart tries adds to
+// restartTimeout: a start and readyWait.
+const nextDisplayWait = 12 * time.Second
+
+// restartMedia (re)starts the video stream and the HID session on it. It
+// asks for the display Pinky shows; on a phone with several displays, one
+// that brings no picture (no key frame within readyWait) or that the phone
+// refuses to stream is followed by the others (streamDisplays).
 func (d *Device) restartMedia(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), restartTimeout)
+	err := d.startStream(ctx)
+	var nv *noVideoError
+	if err != nil && !errors.As(err, &nv) {
+		return err
+	}
+	d.mu.Lock()
+	d.noVideo = nv // for the checkup
+	d.mu.Unlock()
+	return err
+}
+
+// startStream stops the running stream, if any, and starts one, trying the
+// displays restartMedia says.
+func (d *Device) startStream(ctx context.Context) error {
+	d.mu.Lock()
+	want, ds := d.want, d.dinfo.Displays
+	ids := streamDisplays(ds, want)
+	if want > 0 && d.goodFor == want && d.goodOn > 0 {
+		ids = preferDisplay(ids, d.goodOn)
+	}
+	d.mu.Unlock()
+	if len(ids) > 3 {
+		ids = ids[:3]
+	}
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), restartTimeout+time.Duration(len(ids)-1)*nextDisplayWait)
 	defer cancel()
 	stop := func(m *media) {
 		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
@@ -158,15 +213,16 @@ func (d *Device) restartMedia(ctx context.Context) error {
 	if old != nil {
 		stop(old)
 	}
-	m, err := startMedia(ctx, d.l)
-	if err != nil {
-		return err
+	sd := streamDisplay{
+		start:  func(ctx context.Context, id int) (*media, error) { return startMedia(ctx, d.l, id) },
+		stop:   stop,
+		gone:   d.linkGone,
+		wait:   readyWait,
+		log:    d.log,
+		device: d.info.ID,
 	}
-	rctx, rcancel := context.WithTimeout(ctx, 8*time.Second)
-	err = m.waitReady(rctx)
-	rcancel()
+	m, nv, err := sd.try(ctx, ids, ds)
 	if err != nil {
-		stop(m)
 		return err
 	}
 	h, err := newHIDSession(d.l.entry)
@@ -185,16 +241,130 @@ func (d *Device) restartMedia(ctx context.Context) error {
 	}
 	d.m, d.hid = m, h
 	d.inputAt = m.started.Add(inputSettle)
+	d.streamFor, d.streamOn = want, m.display
+	if nv != nil {
+		d.goodFor, d.goodOn = want, m.display
+	}
+	if si, ok := d.dinfo.screenFor(m.display); ok && several(ds) {
+		// Touches and the picture's size go by the display streamed, also
+		// when it is another than the one Pinky meant.
+		d.scr = si
+	}
 	m.setTurn(d.scr.turn())
 	d.mu.Unlock()
+	if several(ds) {
+		d.log.Info("iphone: streaming display", "device", d.info.ID, "display", m.display, "wanted", want, "displays", describeDisplays(ds))
+	}
 	return nil
+}
+
+// streamDisplay starts streams display by display (try); tests give it
+// fake streams.
+type streamDisplay struct {
+	start  func(ctx context.Context, id int) (*media, error)
+	stop   func(m *media)
+	gone   func() bool   // the link went down: no other display can do better
+	wait   time.Duration // how long a display has for its first picture
+	log    *slog.Logger
+	device string
+}
+
+// try starts a stream for each display of ids in turn until one brings a
+// picture, and returns that stream and what the displays before it got
+// (nil when the first one worked). It moves on to the next display when
+// the phone refused one (otherDisplayMayStart) or streamed it without a
+// picture; any other failure, the last display's or a lost link ends it.
+// The error is then a *noVideoError when any display got that far, else
+// the start's own error.
+func (s streamDisplay) try(ctx context.Context, ids []int, ds []displayEntry) (*media, *noVideoError, error) {
+	var nv *noVideoError
+	for i, id := range ids {
+		last := i == len(ids)-1
+		m, err := s.start(ctx, id)
+		if err != nil {
+			if last || !otherDisplayMayStart(err) || s.gone() {
+				return nil, nil, nv.add(err, id, ds)
+			}
+			s.log.Warn("iphone: the phone did not stream a display", "device", s.device, "display", id, "displays", describeDisplays(ds), "err", err)
+			nv = nv.with(noVideoTry{Display: id, Err: err}, err, ds)
+			continue
+		}
+		rctx, rcancel := context.WithTimeout(ctx, s.wait)
+		err = m.waitReady(rctx)
+		rcancel()
+		if err == nil {
+			return m, nv, nil
+		}
+		s.stop(m)
+		var e *noVideoError
+		if !errors.As(err, &e) {
+			return nil, nil, nv.add(err, id, ds)
+		}
+		for _, t := range e.tries {
+			s.log.Warn("iphone: no video from the phone", "device", s.device, "display", t.Display,
+				"displays", describeDisplays(ds), "answer", t.Answer, "config", t.Config, "wire", t.Wire, "err", e.cause)
+			nv = nv.with(t, e.cause, ds)
+		}
+		if last || s.gone() {
+			return nil, nil, nv
+		}
+	}
+	return nil, nil, errors.New("no display to stream")
+}
+
+// preferDisplay moves id to the front of ids.
+func preferDisplay(ids []int, id int) []int {
+	out := []int{id}
+	for _, x := range ids {
+		if x != id {
+			out = append(out, x)
+		}
+	}
+	return out
+}
+
+// otherDisplayMayStart reports whether a stream start that failed with err
+// may work for another display: the phone refused the display, not the
+// stream (an app holding the camera, which no display changes) or the
+// connection.
+func otherDisplayMayStart(err error) bool {
+	var ce *CoreDeviceError
+	return errors.As(err, &ce) && ce.Code != errMediaInUse
+}
+
+// linkGone reports whether the tunnel the device was opened over stopped.
+func (d *Device) linkGone() bool {
+	if d.l == nil || d.l.tunnel == nil {
+		return false
+	}
+	select {
+	case <-d.l.tunnel.Done():
+		return true
+	default:
+		return false
+	}
+}
+
+// displayMovedLocked reports whether a phone with several displays now
+// shows another one than the running stream was started for: it was folded
+// or unfolded, and the stream must start again on the display now in use.
+// Callers hold mu.
+func (d *Device) displayMovedLocked() bool {
+	return d.m != nil && several(d.dinfo.Displays) && d.want > 0 && d.streamFor > 0 && d.want != d.streamFor
+}
+
+// displayMoved is displayMovedLocked for callers that do not hold mu.
+func (d *Device) displayMoved() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.displayMovedLocked()
 }
 
 // live returns the running stream and HID session. It restarts the stream
 // if the phone stopped it and reconnects HID if that connection dropped.
 func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
 	d.mu.Lock()
-	closed, m, h := d.closed, d.m, d.hid
+	closed, m, h, moved := d.closed, d.m, d.hid, d.displayMovedLocked()
 	d.mu.Unlock()
 	if closed {
 		return nil, nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
@@ -204,18 +374,21 @@ func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
 		return nil, nil, fmt.Errorf("%v: %w", d.l.tunnel.Err(), driver.ErrOffline)
 	default:
 	}
-	if m != nil && !m.stopped.Load() && h != nil && h.alive() {
+	if m != nil && !m.stopped.Load() && h != nil && h.alive() && !moved {
 		return m, h, nil
 	}
 	d.restartMu.Lock()
 	defer d.restartMu.Unlock()
 	d.mu.Lock()
-	closed, m, h = d.closed, d.m, d.hid
+	closed, m, h, moved = d.closed, d.m, d.hid, d.displayMovedLocked()
+	from, to := d.streamOn, d.want
 	d.mu.Unlock()
 	if closed {
 		return nil, nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
 	}
-	if m != nil && !m.stopped.Load() {
+	if moved {
+		d.log.Info("iphone: the phone switched displays", "device", d.info.ID, "from", from, "to", to)
+	} else if m != nil && !m.stopped.Load() {
 		if h != nil && h.alive() {
 			return m, h, nil // another caller fixed it
 		}
@@ -342,7 +515,8 @@ func (d *Device) hasDisplayInfo() bool {
 const orientFresh = time.Second
 
 // readDisplayNow reads the main display again and keeps what it says: its
-// orientation above all, which the video's packets carry from then on.
+// orientation above all, which the video's packets carry from then on, and
+// on a foldable which display is in use.
 func (d *Device) readDisplayNow(ctx context.Context) (screenInfo, error) {
 	d.svcMu.Lock()
 	svc := d.info2
@@ -350,28 +524,50 @@ func (d *Device) readDisplayNow(ctx context.Context) (screenInfo, error) {
 	if svc == nil {
 		return d.display(), fmt.Errorf("display info: %w", driver.ErrOffline)
 	}
-	si, err := readScreenInfo(ctx, svc)
+	d.mu.Lock()
+	keep := d.want
+	d.mu.Unlock()
+	di, err := readDisplayInfo(ctx, svc, keep)
 	if err != nil && isClosedErr(err) && ctx.Err() == nil {
 		// The phone closed the connection (it locked, or a long session
 		// went quiet); the failed request dropped it, so this dials again.
-		si, err = readScreenInfo(ctx, svc)
+		di, err = readDisplayInfo(ctx, svc, keep)
 	}
 	if err != nil {
 		return d.display(), err
 	}
-	d.noteDisplay(si)
-	return si, nil
+	return d.noteDisplays(di), nil
 }
 
-// noteDisplay keeps a fresh description of the main display.
-func (d *Device) noteDisplay(si screenInfo) {
+// noteDisplays keeps a fresh description of the phone's displays and
+// returns the one Pinky shows. While the stream shows another display than
+// the one chosen, because the chosen one gave no picture, that is the one
+// Pinky shows; when the phone moves to another display (it was folded or
+// unfolded), the next live restarts the stream on it.
+func (d *Device) noteDisplays(di displayInfo) screenInfo {
 	d.mu.Lock()
+	si := di.Screen
+	d.want = si.DisplayID
+	if d.m != nil && several(di.Displays) {
+		switch d.want {
+		case d.streamOn:
+			d.streamFor = d.want // moved to the display already streaming
+		case d.streamFor:
+			if s, ok := di.screenFor(d.streamOn); ok {
+				si = s
+			}
+		default:
+			d.goodFor, d.goodOn = 0, 0 // moved: the fallback was for another display
+		}
+	}
+	d.dinfo = di
 	d.scr, d.scrAt = si, time.Now()
 	m := d.m
 	d.mu.Unlock()
 	if m != nil {
 		m.setTurn(si.turn())
 	}
+	return si
 }
 
 // freshDisplay returns the main display, read again when the last read is
@@ -510,6 +706,10 @@ func (d *Device) gesture(ctx context.Context, path []screen.Point, gap time.Dura
 func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.Duration, onDown func()) error {
 	d.inputMu.Lock()
 	defer d.inputMu.Unlock()
+	// The whole gesture maps through one description of the screen, read
+	// fresh: the person may have turned the device since the last one, or
+	// folded it, which waitInput then follows to the display in use.
+	d.freshDisplay(ctx)
 	h, err := d.waitInput(ctx)
 	if err != nil {
 		return err
@@ -519,8 +719,6 @@ func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.
 	if err := h.liftHeld(); err != nil {
 		return err
 	}
-	// The whole gesture maps through one description of the screen, read
-	// fresh: the person may have turned the device since the last one.
 	si := d.freshDisplay(ctx)
 	x, y := panelPoint(path[0], si)
 	if err := h.touchAt(true, x, y); err != nil {

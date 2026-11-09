@@ -258,6 +258,7 @@
   "checkLocalNetworkTitle": "本地网络",
   "checkLocalNetworkUnknown": "Pinky 无法确认能否使用本地网络。",
   "checkScreenFail": "手机没有返回截图，智能体看不到屏幕。请重启手机后重新检查。",
+  "checkScreenNoLivePicture": "手机没有发来实时画面，Pinky 无法连接它。请重启手机后重新检查。如果还不行，请「发送反馈」，诊断信息会附上下面的详情。",
   "checkScreenNoVideo": "手机的视频编码器与 Pinky 不兼容，所以镜像只显示静态画面。智能体仍然能看到屏幕。",
   "checkScreenPass": "Pinky 能看到屏幕。",
   "checkScreenTitle": "查看屏幕",

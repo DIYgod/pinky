@@ -4297,6 +4297,24 @@ func (msgs Messages) CheckScreenFail() string {
 	return Catalog.Format(msgs.locale, "checkScreenFail", nil)
 }
 
+// CheckScreenNoLivePicture says "The phone sends no live picture, so Pinky can't connect to it. Restart the phone, then check again. If that doesn't h…"
+// in the language the app shows.
+//
+// The checkup, seeing the screen, of an iPhone that Pinky could not open
+// because the phone sent no live picture of its screen; the driver's
+// details (in English) follow. "Send feedback" is feedbackTitle.
+func CheckScreenNoLivePicture() string { return In(i18n.Locale()).CheckScreenNoLivePicture() }
+
+// CheckScreenNoLivePicture says "The phone sends no live picture, so Pinky can't connect to it. Restart the phone, then check again. If that doesn't h…"
+// in the language of msgs.
+//
+// The checkup, seeing the screen, of an iPhone that Pinky could not open
+// because the phone sent no live picture of its screen; the driver's
+// details (in English) follow. "Send feedback" is feedbackTitle.
+func (msgs Messages) CheckScreenNoLivePicture() string {
+	return Catalog.Format(msgs.locale, "checkScreenNoLivePicture", nil)
+}
+
 // CheckScreenNoVideo says "The phone's video encoder doesn't work with Pinky, so the mirror shows still pictures. Agents still see the screen."
 // in the language the app shows.
 //

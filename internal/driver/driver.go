@@ -185,6 +185,16 @@ type HostCheck struct {
 	Detail  string // the same in a sentence
 }
 
+// OpenChecker is a Provider that can tell why a phone it lists as online
+// did not open, for the phone's checkup, which otherwise says only that the
+// phone is not connected.
+type OpenChecker interface {
+	// OpenChecks returns checkup items about the phone's last open, which
+	// failed: nil when it opened, was not tried or failed for a reason the
+	// provider has no item for.
+	OpenChecks(deviceID string) []Check
+}
+
 // Device is an open, long-lived session with one phone. Methods must be safe
 // to call from several goroutines; implementations serialize as needed.
 type Device interface {

@@ -123,6 +123,14 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 			w.text = locales.CheckHelperMissing()
 		}
 		return w, true
+	case driver.CheckScreen:
+		if pass || ck.Fix != driver.FixRestart {
+			return w, false
+		}
+		// Pinky could not open the phone: it sent no live picture. The
+		// driver's details say what came instead (ios.noVideoError).
+		w.text = locales.CheckScreenNoLivePicture()
+		return w, true
 	case driver.CheckInput:
 		switch {
 		case pass:

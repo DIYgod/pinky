@@ -3,6 +3,7 @@ package ios
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -36,6 +37,9 @@ type screenInfo struct {
 	Orientation   string  // rot0, rot90, rot180, rot270: the interface's turn from the display's frame
 	Native        string  // rot0, ...: the display's turn from the device held the usual way up
 	Backlight     string  // activeOn, off, ...
+	// DisplayID is the display's CoreDevice id (displayId), which a stream
+	// asks for; 0 when the reply names none.
+	DisplayID int
 }
 
 // rotQuarter reads rot0, rot90, rot180 and rot270 as quarter turns
@@ -77,69 +81,348 @@ func orientationOf(w, h int) string {
 	return "portrait"
 }
 
-// readDisplay returns the main display's entry of CoreDevice's display
-// info, as the phone sends it.
+// Several displays. A foldable iPhone (iPhone Duo, iOS 27) has a display
+// inside and one outside, and getdisplayinfo lists both. CoreDevice's own
+// model of a display (CoreDevice.Display in Xcode 27.2's
+// CoreDeviceUtilities, whose Codable keys are its property names) carries
+// displayId, uniqueId, bounds, frame, pointScale, currentOrientation,
+// nativeOrientation, primary, active, backlightState (off, activeOn,
+// activeDimmed, inactiveOn), external, type and the display's modes. Pinky
+// shows the display the person looks at: a lit one (active, or a lit
+// backlight when active is not said), the primary one among several lit
+// ones, and the primary one when none is lit. A display of another type
+// than integrated (external, wireless, virtual: the phone makes a wireless
+// one for a video stream) is never the phone's own screen, and only the
+// phone's own displays make it a phone with several. No foldable has been
+// tried: which display a folded Duo calls primary, and whether active
+// follows the fold, are not known yet.
+
+// displayEntry is one display of a getdisplayinfo reply.
+type displayEntry struct {
+	ID            int // displayId; 0 when the reply names none
+	Width, Height int // its bounds, in the display's own frame
+	Primary       bool
+	External      bool
+	Kind          string // its type, lower case: integrated, external, wireless, virtual, dfr, unknown; "" when not said
+	// Lit is 1 for a display that is on, -1 for one that is off and 0 when
+	// the reply does not say.
+	Lit       int
+	Backlight string
+	m         map[string]any
+}
+
+// displayIDKeys are the keys a display's id may come under: CoreDevice's
+// own (displayId), then spellings other versions may use.
+var displayIDKeys = []string{"displayId", "displayID", "id"}
+
+// parseDisplays reads every display of a getdisplayinfo reply, in its order.
+func parseDisplays(out map[string]any) []displayEntry {
+	list, _ := out["displays"].([]any)
+	var ds []displayEntry
+	for _, d := range list {
+		m, ok := d.(map[string]any)
+		if !ok {
+			continue
+		}
+		e := displayEntry{m: m}
+		for _, k := range displayIDKeys {
+			if v, ok := m[k]; ok {
+				e.ID = int(toInt64(v))
+				break
+			}
+		}
+		e.Width, e.Height = boundsSize(m)
+		e.Primary, _ = m["primary"].(bool)
+		e.External, _ = m["external"].(bool)
+		e.Kind = displayKind(m["type"])
+		e.Backlight, _ = m["backlightState"].(string)
+		if a, ok := m["active"].(bool); ok {
+			e.Lit = -1
+			if a {
+				e.Lit = 1
+			}
+		} else if e.Backlight != "" {
+			e.Lit = -1
+			if e.Backlight == backlightOn || e.Backlight == backlightDimmed {
+				e.Lit = 1
+			}
+		}
+		ds = append(ds, e)
+	}
+	return ds
+}
+
+// displayKind reads a display's type: a string, or an enum case encoded as
+// a map with the case's name as its only key.
+func displayKind(v any) string {
+	switch t := v.(type) {
+	case string:
+		return strings.ToLower(t)
+	case map[string]any:
+		if len(t) == 1 {
+			for k := range t {
+				return strings.ToLower(k)
+			}
+		}
+	}
+	return ""
+}
+
+// own reports whether the display is one of the phone's own screens.
+func (e displayEntry) own() bool {
+	return !e.External && (e.Kind == "" || e.Kind == "integrated" || e.Kind == "unknown")
+}
+
+// several reports whether the phone has more than one screen of its own.
+func several(ds []displayEntry) bool {
+	n := 0
+	for _, e := range ds {
+		if e.own() {
+			n++
+		}
+	}
+	return n > 1
+}
+
+// boundsSize reads a display's bounds, [[x, y], [w, h]].
+func boundsSize(m map[string]any) (int, int) {
+	if b, ok := m["bounds"].([]any); ok && len(b) == 2 {
+		if wh, ok := b[1].([]any); ok && len(wh) == 2 {
+			return int(toFloat(wh[0])), int(toFloat(wh[1]))
+		}
+	}
+	return 0, 0
+}
+
+// rankDisplays orders the displays Pinky would show, best first: the
+// phone's own displays before the others (own), lit before unknown before off, then the
+// primary one, then the reply's order.
+func rankDisplays(ds []displayEntry) []displayEntry {
+	out := append([]displayEntry(nil), ds...)
+	score := func(e displayEntry) int {
+		s := 0
+		if e.own() {
+			s += 8
+		}
+		s += 2 * (e.Lit + 1)
+		if e.Primary {
+			s++
+		}
+		return s
+	}
+	// Insertion sort keeps the reply's order among equals.
+	for i := 1; i < len(out); i++ {
+		for j := i; j > 0 && score(out[j]) > score(out[j-1]); j-- {
+			out[j], out[j-1] = out[j-1], out[j]
+		}
+	}
+	return out
+}
+
+// chooseDisplay returns the display Pinky shows (see rankDisplays). Without
+// a usable display it returns false.
+func chooseDisplay(ds []displayEntry) (displayEntry, bool) {
+	for _, e := range rankDisplays(ds) {
+		if e.Width > 0 && e.Height > 0 {
+			return e, true
+		}
+	}
+	return displayEntry{}, false
+}
+
+// anyLit reports whether a display of the phone's own says it is on.
+func anyLit(ds []displayEntry) bool {
+	for _, e := range ds {
+		if e.Lit > 0 && e.own() {
+			return true
+		}
+	}
+	return false
+}
+
+// defaultDisplayID is the display a stream asks for when the phone has one
+// display, as Xcode and go-ios do: the main display.
+const defaultDisplayID = 1
+
+// streamDisplays returns the display ids to ask a stream of, best first.
+// A phone with one display of its own gets the default id first, as
+// before Pinky knew of several, then that display's id when it is another.
+// A phone with several gets shown first (the display Pinky shows, 0 for
+// none), then its other displays in rankDisplays' order, then the default
+// id when no display has it. Other displays (an external screen, the
+// stream's own wireless display) are never asked for.
+func streamDisplays(ds []displayEntry, shown int) []int {
+	var ids []int
+	add := func(id int) {
+		if id <= 0 {
+			return
+		}
+		for _, x := range ids {
+			if x == id {
+				return
+			}
+		}
+		ids = append(ids, id)
+	}
+	if !several(ds) {
+		add(defaultDisplayID)
+		for _, e := range ds {
+			if e.own() {
+				add(e.ID)
+			}
+		}
+		return ids
+	}
+	add(shown)
+	for _, e := range rankDisplays(ds) {
+		if e.own() {
+			add(e.ID)
+		}
+	}
+	add(defaultDisplayID)
+	return ids
+}
+
+// describeDisplays sums up a reply's displays for logs and the checkup:
+// "2 displays: id 1 2200x2480 primary off, id 2 1080x2400 lit".
+func describeDisplays(ds []displayEntry) string {
+	if len(ds) == 0 {
+		return "no displays listed"
+	}
+	var b strings.Builder
+	if len(ds) == 1 {
+		b.WriteString("1 display: ")
+	} else {
+		fmt.Fprintf(&b, "%d displays: ", len(ds))
+	}
+	for i, e := range ds {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		if e.ID > 0 {
+			fmt.Fprintf(&b, "id %d ", e.ID)
+		} else {
+			b.WriteString("no id ")
+		}
+		fmt.Fprintf(&b, "%dx%d", e.Width, e.Height)
+		if e.Primary {
+			b.WriteString(" primary")
+		}
+		if e.External {
+			b.WriteString(" external")
+		}
+		if e.Kind != "" && e.Kind != "integrated" && !(e.External && e.Kind == "external") {
+			b.WriteString(" " + e.Kind)
+		}
+		switch e.Lit {
+		case 1:
+			b.WriteString(" lit")
+		case -1:
+			b.WriteString(" off")
+		}
+		if e.Backlight != "" {
+			b.WriteString(" (" + e.Backlight + ")")
+		}
+	}
+	return b.String()
+}
+
+// readDisplay returns the entry of CoreDevice's display info for the
+// display Pinky shows (chooseDisplay), as the phone sends it.
 func readDisplay(ctx context.Context, svc *cdService) (map[string]any, error) {
 	out, err := svc.invoke(ctx, featureGetDisplayInfo, "", nil)
 	if err != nil {
 		return nil, err
 	}
-	m, ok := primaryDisplay(out)
+	e, ok := chooseDisplay(parseDisplays(out))
 	if !ok {
 		return nil, fmt.Errorf("display info: no main display")
 	}
-	return m, nil
+	return e.m, nil
 }
 
-// primaryDisplay finds the main display's entry in a getdisplayinfo reply.
-func primaryDisplay(out map[string]any) (map[string]any, bool) {
-	displays, _ := out["displays"].([]any)
-	for _, d := range displays {
-		m, ok := d.(map[string]any)
-		if !ok {
-			continue
-		}
-		if p, _ := m["primary"].(bool); p {
-			return m, true
+// displayInfo is what a getdisplayinfo reply says: the display Pinky
+// shows, and every display the phone listed.
+type displayInfo struct {
+	Screen   screenInfo
+	Displays []displayEntry
+	out      map[string]any // the reply
+}
+
+// screenFor describes the listed display with id id.
+func (di displayInfo) screenFor(id int) (screenInfo, bool) {
+	for _, e := range di.Displays {
+		if e.ID == id && id > 0 && e.Width > 0 && e.Height > 0 {
+			return screenOf(e, di.out), true
 		}
 	}
-	return nil, false
+	return screenInfo{}, false
 }
 
 func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
-	out, err := svc.invoke(ctx, featureGetDisplayInfo, "", nil)
-	if err != nil {
-		return screenInfo{}, err
-	}
-	return parseScreenInfo(out)
+	di, err := readDisplayInfo(ctx, svc, 0)
+	return di.Screen, err
 }
 
-// parseScreenInfo reads the main display from a getdisplayinfo reply.
-func parseScreenInfo(out map[string]any) (screenInfo, error) {
-	m, ok := primaryDisplay(out)
-	if !ok {
-		return screenInfo{}, fmt.Errorf("display info: no main display")
+// readDisplayInfo reads the phone's displays; keep is as parseDisplayInfo
+// takes it.
+func readDisplayInfo(ctx context.Context, svc *cdService, keep int) (displayInfo, error) {
+	out, err := svc.invoke(ctx, featureGetDisplayInfo, "", nil)
+	if err != nil {
+		return displayInfo{}, err
 	}
-	si := screenInfo{Scale: 1}
-	if b, ok := m["bounds"].([]any); ok && len(b) == 2 {
-		if wh, ok := b[1].([]any); ok && len(wh) == 2 {
-			si.Width, si.Height = int(toFloat(wh[0])), int(toFloat(wh[1]))
+	return parseDisplayInfo(out, keep)
+}
+
+// parseScreenInfo reads the display Pinky shows from a getdisplayinfo
+// reply.
+func parseScreenInfo(out map[string]any) (screenInfo, error) {
+	di, err := parseDisplayInfo(out, 0)
+	return di.Screen, err
+}
+
+// parseDisplayInfo reads a getdisplayinfo reply: the display Pinky shows
+// (chooseDisplay) and the list. keep is the id of the display Pinky showed
+// so far (0: none): while no display of several is lit (the phone asleep
+// or locked), Pinky stays on it rather than move to the primary one, and
+// moves when one lights up.
+func parseDisplayInfo(out map[string]any, keep int) (displayInfo, error) {
+	ds := parseDisplays(out)
+	di := displayInfo{Displays: ds, out: out}
+	e, ok := chooseDisplay(ds)
+	if keep > 0 && several(ds) && !anyLit(ds) {
+		for _, k := range ds {
+			if k.ID == keep && k.Width > 0 && k.Height > 0 {
+				e, ok = k, true
+				break
+			}
 		}
 	}
+	if !ok {
+		if len(ds) > 0 {
+			return di, fmt.Errorf("display info: no size for the main display")
+		}
+		return di, fmt.Errorf("display info: no main display")
+	}
+	di.Screen = screenOf(e, out)
+	return di, nil
+}
+
+// screenOf describes one display of a reply.
+func screenOf(e displayEntry, out map[string]any) screenInfo {
+	m := e.m
+	si := screenInfo{Width: e.Width, Height: e.Height, Scale: 1, DisplayID: e.ID}
 	if s := toFloat(m["pointScale"]); s > 0 {
 		si.Scale = s
 	}
 	si.Orientation, _ = m["currentOrientation"].(string)
 	si.Native, _ = m["nativeOrientation"].(string)
-	si.Backlight, _ = m["backlightState"].(string)
+	si.Backlight = e.Backlight
 	if si.Backlight == "" {
 		// iOS 27.2 moved it next to "displays".
 		si.Backlight, _ = out["backlightState"].(string)
 	}
-	if si.Width <= 0 || si.Height <= 0 {
-		return si, fmt.Errorf("display info: no size for the main display")
-	}
-	return si, nil
+	return si
 }
 
 func toFloat(v any) float64 {

@@ -258,6 +258,7 @@
   "checkLocalNetworkTitle": "ローカルネットワーク",
   "checkLocalNetworkUnknown": "ローカルネットワークを使えるか確認できませんでした。",
   "checkScreenFail": "スマホがスクリーンショットを返さず、エージェントが画面を見えません。再起動してからもう一度確認してください。",
+  "checkScreenNoLivePicture": "スマホからライブ映像が届かないため、Pinky は接続できません。スマホを再起動してから、もう一度確認してください。それでも直らない場合は「フィードバックを送信」から送ってください。診断情報に下の詳細が含まれます。",
   "checkScreenNoVideo": "スマホの動画エンコーダが Pinky と合わないため、ミラーは静止画のみです。エージェントは画面を見られます。",
   "checkScreenPass": "Pinky は画面を見られます。",
   "checkScreenTitle": "画面の表示",

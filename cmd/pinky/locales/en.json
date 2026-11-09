@@ -1416,6 +1416,10 @@
   "@checkScreenFail": {
     "description": "The checkup, seeing the screen: failed."
   },
+  "checkScreenNoLivePicture": "The phone sends no live picture, so Pinky can't connect to it. Restart the phone, then check again. If that doesn't help, send feedback: its diagnostics include the details below.",
+  "@checkScreenNoLivePicture": {
+    "description": "The checkup, seeing the screen, of an iPhone that Pinky could not open because the phone sent no live picture of its screen; the driver's details (in English) follow. \"Send feedback\" is feedbackTitle."
+  },
   "checkScreenNoVideo": "The phone's video encoder doesn't work with Pinky, so the mirror shows still pictures. Agents still see the screen.",
   "@checkScreenNoVideo": {
     "description": "The checkup, seeing the screen: works without the live picture."
