@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- An Android phone that hides its serial number from other apps is no longer listed once for each of its Wi-Fi connections, which could fill Phones and the menu bar with dozens of copies of the same phone. Pinky also no longer opens a second Wi-Fi connection to a phone that is already connected over Wi-Fi.
+
 ## 2026.1109.12 (2026-11-09)
 
 - On Windows, an iPhone now keeps working over Wi-Fi when you unplug its cable, instead of going offline or staying "Locked on Wi-Fi" though it was unlocked. Thanks to yaoqiangyao.
