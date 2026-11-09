@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 15 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 16 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -181,6 +181,7 @@ Agents see one MCP server, `pinky`, with 15 tools. Every action waits for the sc
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
 | `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
+| `phone_app` | `action` (install, uninstall, stop); `paths` or `app` | Installs or updates an app from that local folder (an APK, an IPA or a `.app`), uninstalls an app, or force-quits it |
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 
@@ -339,7 +340,7 @@ always_allow:
 - It also allows the rest of the task, as Allow for this task does; that is what covers a task's app list, for that task only.
 - It matches the app by package name or bundle id, and by name when the phone reports no id.
 - While "Ask before every action" is on, exemptions do not apply and the panel does not offer Always allow; they apply again with another preset.
-- The panel offers it only for actions the policy asked about in an app: not for the agent's own questions (`phone_request_approval`), copying files, or opening apps and links. Where it cannot be kept it counts as Allow for this task, and on the agent's own questions as Allow once.
+- The panel offers it only for actions the policy asked about in an app: not for the agent's own questions (`phone_request_approval`), copying files, installing or uninstalling apps, or opening apps and links. Where it cannot be kept it counts as Allow for this task, and on the agent's own questions as Allow once.
 - The answer is kept when the person gives it, even when the agent's call is no longer waiting for it.
 - Settings › Safety › Always allowed lists the exemptions; removing one makes its rules ask again.
 - The agent learns of it: the approved call says the rule no longer asks in that app, and a later action that runs because of it says `No approval needed: the person always allows "Payments" in Dinely.`
@@ -353,6 +354,7 @@ always_allow:
 - Credentials never reach the model. The gateway refuses `phone_type` into password and one-time-code fields (`blocked_by_policy`, rule: credentials) and tells the agent to call `phone_handoff` (M1). From M2 the client can fill the value from the OS keychain, and the agent only learns that it was filled.
 - Notifications from blocked apps are never listed, matched by the app's id or name. Where another screen shows a blocked app (its notification in the shade, on the lock screen or as a heads-up banner, its card in recent apps), the agent gets one hidden element in its place, covered in screenshots. One-time codes are masked by default, on the screen (elements and OCR lines) and in notifications, and covered in the screenshots agents get and history keeps; recordings are not covered, so an agent gets one only when the person allows it on a card each time it exports a task's report.
 - `phone_files` reaches only the phone's `Pinky/` folder. Writing to the phone is Ask, and read-only mode turns it off.
+- `phone_app` installs only from the phone's folder on the computer, and installing and uninstalling always ask, whatever the preset; Allow for this task covers the same app from the same signer, and there is no Always allow. It never touches Pinky's own apps, system apps, finance apps, password managers or blocked apps ([notes/apps.md](notes/apps.md)).
 - An agent's first connection needs approval and a scope.
 
 ### Threat model

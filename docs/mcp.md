@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 15 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 16 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -82,7 +82,7 @@ A JSON config:
 ```
 
 - Without the token, or with another one, requests get `401`; only upload and download links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
-- A remote agent's files are on its own machine, out of reach of the folder `phone_files` copies to the phone from. It uploads them into that folder instead (`phone_files { action: "upload" }`, [below](#uploading-a-file)): in the call, or to a one-time link at `http://<address>/upload/<token>`, which takes the file without the agent token.
+- A remote agent's files are on its own machine, out of reach of the folder `phone_files` copies to the phone from and `phone_app` installs from. It uploads them into that folder instead (`phone_files { action: "upload" }`, [below](#uploading-a-file)): in the call, or to a one-time link at `http://<address>/upload/<token>`, which takes the file without the agent token.
 - Screenshots, task reports and the recordings the person allows that Pinky saves for a remote agent (`phone_observe { save }`, `phone_release { export }`) stay on this computer too: the agent gets a one-time link for each, `http://<address>/download/<token>`, which it fetches without the agent token ([below](#saving-screenshots-and-reports)).
 - Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. The agent's name gets " (remote)" after it ("Claude Code (remote)"), so a remote agent is asked about on its own first connection and never gets the scope the person gave the agent of that name on this computer. A newer session of the same remote agent continues the phone its older sessions left ([below](#what-http-clients-may-do)). Turning Remote agents off ends every session at once, with its leases and open approvals.
 
@@ -148,7 +148,7 @@ note: "<the person's note>"
 | `lease_held` | Another session holds the phone; `holder` names its agent and task |
 | `scope_denied` | The app is outside the agent's scope or the task's app list |
 | `not_found` | The ref is gone, no installed app matches, or no app opens the link |
-| `unsupported` | The phone or backend cannot do this, such as `recents` on iPhone, or `phone_files` on iPhone; or a link several apps open, with none set as the default |
+| `unsupported` | The phone or backend cannot do this, such as `recents` on iPhone, or `phone_files` `push` on iPhone; or a link several apps open, with none set as the default |
 | `invalid_argument` | Bad or missing arguments, a misused `approval_id`, or no phone connected in this session |
 | `internal` | The call was cancelled, or the gateway failed |
 
@@ -172,7 +172,7 @@ Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_pinch`, `pho
 - It is ignored when the person approves the action, allowed its rule for the task, or always allows it in the app: such an action waits the whole 3 s.
 - It is not part of what an approval binds: an `approval_id` may be repeated with another `settle_ms`.
 
-`phone_observe`, `phone_apps`, `phone_wait_for` and `phone_release` take `device`; `phone_files`, `phone_request_approval` and `phone_handoff` take `device` and `approval_id` (and `phone_files` takes `intent`). Unknown arguments are rejected.
+`phone_observe`, `phone_apps`, `phone_wait_for` and `phone_release` take `device`; `phone_files`, `phone_app`, `phone_request_approval` and `phone_handoff` take `device` and `approval_id` (and `phone_files` and `phone_app` take `intent`). Unknown arguments are rejected.
 
 ## Tools
 
@@ -307,7 +307,7 @@ Returns `settled` with `matched: true` or `matched: false` and the screen change
 
 ### phone_files
 
-Copies files between the phone's Pinky folder (`/sdcard/Pinky` on Android, the only place on the phone agents may reach) and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools; agents that cannot (on another computer, over HTTP) upload files into it. Needs a `phone_connect` lease like the other tools. iPhones return `unsupported`.
+Copies files between the phone's Pinky folder (`/sdcard/Pinky` on Android, the only place on the phone agents may reach) and a folder on the computer, `<data>/files/<phone id>/`, which the result names. Agents read and write that folder with their own file tools; agents that cannot (on another computer, over HTTP) upload files into it. Needs a `phone_connect` lease like the other tools. An iPhone has no Pinky folder: there `list` and `upload` work on the computer's folder only, for apps to install with `phone_app`, and `pull` and `push` return `unsupported`.
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
@@ -335,6 +335,25 @@ The result lists the folder, then one line per file: `path · size · modified �
 - **Without `content`, over HTTP,** Pinky checks the upload (scope, name, a taken name) and returns a link instead: `http://<address>/upload/<token>`, at the address the agent reached Pinky at (or the `X-Forwarded-Proto` and `X-Forwarded-Host` of a proxy in front of it). The agent sends the file as the request body with `PUT` or `POST`, from its own shell: `curl --upload-file photo.jpg '<link>'`. A link works once, for 10 minutes, for files up to 200 MB, and only for its session, phone, name and `replace`; it ends with the session. It needs no agent token: its own random 128-bit token is the key. Forms (`multipart/form-data`) get `415`, larger files `413` (or `400` once past the limit when no length was sent), and unknown, used or expired links `404`. The answer is the text the tool would return, with `200`, or `400`, `403`, `503` or `500`.
 - **Without `content`, over stdio,** the call is `invalid_argument` and names the folder: an agent on this computer writes the file there itself.
 - Each upload is a step in the task's history: "Received “photo.jpg” (1.2 MB) from the agent".
+
+### phone_app
+
+Installs, updates, uninstalls or stops (force-quits) an app: for an agent that builds an app, puts it on the phone, runs it and checks it.
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `action` | `install` \| `uninstall` \| `stop`, required | `install` installs an app from files on the computer, or updates the installed app and keeps its data; `uninstall` removes an app and its data; `stop` force-quits it |
+| `paths` | string[] | For `install`: one `.apk`, the split APKs of one app, one `.ipa` or one `.app` folder, relative to the phone's folder on the computer (the one `phone_files` names), such as `["app-debug.apk"]` |
+| `app` | string | For `uninstall` and `stop`: an installed app's name or id, found as `phone_launch` finds it |
+| `intent` | string | One sentence on why, shown on the approval panel and in history |
+| `approval_id` | string | From `approval_pending`: repeat the same call with it |
+
+- **Files.** Only files in the phone's folder on the computer install: paths that leave it (`..`, absolute paths) are `invalid_argument`, and so are symbolic links on the way; missing files are `not_found`. An agent on another computer uploads the file first with `phone_files { action: "upload" }`. Pinky reads the package before it asks and installs from a copy that it reads again, so the file cannot change after the person said yes.
+- **Android** takes an `.apk`, or the split APKs of one app (one base and its splits, one signer), and installs it for the user the phone's screen runs as. Test-only builds (Android Studio's Run) install; downgrades and an app signed with another key do not, and the message says what to do.
+- **iPhone** takes a development-signed `.ipa` or `.app` folder, over the cable or Wi-Fi, with or without the WebDriverAgent helper. Before asking, Pinky refuses (`invalid_argument`) a build for the Simulator, one without a provisioning profile, an expired profile, an App Store profile, and a profile that does not list this iPhone, naming its UDID; what the iPhone itself refuses after the transfer (a signature it does not accept, an iOS too old for the app) comes back in the same plain words. iOS Simulators return `unsupported`.
+- **Approvals.** `install` and `uninstall` always ask the person, whatever they chose in Settings › Safety (rules `Installing from the computer` and `Uninstalling apps`): up to 45 s, then `approval_pending`. The panel names the app, its id and version, who signed it, the files and, for an update, the version it replaces. "Allow for this task" covers installing the same app id signed by the same signer again (the build, install, check loop asks once), or uninstalling the same app again; there is no "Always allow". `stop` does not ask, except while every action asks.
+- **Refused** (`blocked_by_policy`, with the rule): Pinky's own apps (`Pinky's own apps`), system apps (`System apps`), finance apps, password managers and apps the person blocked, for all three actions, judged for an install by the new app's id and name. Read-only mode refuses all three (`Read-only`); read-only and watch-only agents, and apps outside the agent's scope or the task's `apps`, get `scope_denied`.
+- The result says what happened (`Installed “Dinely” 1.3 (14) (com.example.dinely). Open it with phone_launch.`), and each call is a step in the task's history: "Installed “Dinely” 1.3 (14) from “app-debug.apk”", "Updated “Dinely” to 1.4 (15) from “app-debug.apk”", "Uninstalled “Dinely”", "Stopped “Dinely”". `stop` also returns the screen's changes.
 
 ### phone_request_approval
 
@@ -374,7 +393,7 @@ An agent that writes a bug report or a pull request can keep what it saw as file
 - While an approval is open on a phone, other actions on it return `approval_pending` with that approval's id; reads still work.
 - Before acting on Allow, Pinky reads the screen again and compares the target's role, label, states and position (a few pixels of tolerance) and the screen's text and states (status bar excluded; OCR text only when the screen has no element text). Any change returns `stale`.
 - "Allow for this task" covers the rules that asked, in that app, for the rest of the task. An action that another rule also asks about still asks. `phone_request_approval` has no such answer: each question asks the person.
-- "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files` or `phone_launch`.
+- "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files`, `phone_app` or `phone_launch`.
 - An MCP cancellation of the blocked call, a closed session, Stop and Take over all withdraw the panel without acting.
 - Only the client's `Decide` answers approvals. No tool can.
 

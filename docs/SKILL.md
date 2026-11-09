@@ -83,7 +83,16 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - `phone_files { action: "push", intent: "Put the edited photo where Gallery can open it" }` copies new and changed files to the phone. The person approves it first, like a Pay tap (`approval_pending`, then repeat with `approval_id`). Read-only agents may only list and pull.
 - Pictures pushed to the phone show in its gallery and photo pickers, so you can attach them in an app.
 - Not on that computer (connected over HTTP from another machine)? Hand Pinky the file first: `phone_files { action: "upload", paths: ["photo.jpg"] }` returns a one-time link; send the file to it from your own shell, `curl --upload-file photo.jpg '<link>'` (up to 200 MB, within 10 minutes), then push it. Small files (up to 10 MB) can go in the call instead, base64-encoded: `content: "<base64>"`, which works over stdio too. A different file of the same name is replaced only with `replace: true`.
-- iPhones return `unsupported`.
+- iPhones have no Pinky folder: `list` and `upload` work on the computer's folder (to install apps from), and `pull` and `push` return `unsupported`.
+
+## Installing your app
+
+`phone_app` installs a build you made, updates it, uninstalls it and stops (force-quits) it: build, install, open, check, repeat.
+
+- Put the build in the phone's folder on the computer (`phone_files {}` names it; from another computer, `upload` it), then `phone_app { action: "install", paths: ["app-debug.apk"], intent: "Install the build with the login fix" }`. Android takes an `.apk` or the split APKs of one app; an iPhone takes an `.ipa` or `.app` folder, development-signed with a profile that lists that iPhone (not a Simulator build). Installing over the installed app updates it and keeps its data.
+- Installing and uninstalling always ask the person (`approval_pending`, then repeat with `approval_id`). If they choose Allow for this task, later installs of the same app from the same signer run at once, so the loop asks once.
+- Then `phone_launch` it. `phone_app { action: "stop", app: "Dinely" }` force-quits an app, to start it fresh; it does not ask. `phone_app { action: "uninstall", app: "Dinely" }` removes it with its data.
+- A refused install says why in plain words (signed with another key, a profile without this iPhone, an older version over a newer one) and what to change; fix the build rather than retrying. Pinky's own apps, system apps, banking and wallet apps, password managers and apps the person blocked return `blocked_by_policy`.
 
 ## Screenshots and reports as files
 
