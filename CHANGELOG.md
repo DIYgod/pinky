@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- An Android phone's picture no longer stays on "Connecting…" when its video encoder stops after a still screen: Pinky restarts the video within a few seconds. Thanks to NaNhkNaN.
+
 ## 2026.1109.10 (2026-11-09)
 
 - Agents can now find and open Android app clones (Dual apps, App Twin, Dual Messenger): each clone is listed as an app of its own, such as "WeChat (clone)", and opens on the phone's screen or in the background. A clone of a blocked app is blocked too.
