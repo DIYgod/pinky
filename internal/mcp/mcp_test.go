@@ -438,3 +438,25 @@ func TestSettleMS(t *testing.T) {
 		t.Fatalf("batch with settle_ms:\n%s", text)
 	}
 }
+
+// A new agent's phone_connect waits for the person like any other approval:
+// the agent repeats the call with the approval_id it was given.
+func TestConnectWaitsWithApprovalID(t *testing.T) {
+	h := newHarness(t, func(o *gateway.Options) { o.TrustNewAgents = false; o.MaxBlock = 30 * time.Millisecond })
+	c := h.connect(t, "codex")
+	text, isErr := c.call(t, "phone_connect", map[string]any{"task": "Lunch"})
+	if isErr || !strings.HasPrefix(text, "approval_pending") || !strings.Contains(text, "phone_connect with approval_id") {
+		t.Fatalf("first connection:\n%s", text)
+	}
+	id := regexp.MustCompile(`approval_id: (ap_\w+)`).FindStringSubmatch(text)[1]
+	// Still waiting: the same approval, not a second card.
+	text, _ = c.call(t, "phone_connect", map[string]any{"task": "Lunch", "approval_id": id})
+	if !strings.HasPrefix(text, "approval_pending") || !strings.Contains(text, id) || len(h.g.Needs()) != 1 {
+		t.Fatalf("waiting again:\n%s\nneeds: %+v", text, h.g.Needs())
+	}
+	h.g.Decide(id, gateway.AllowOnce, "")
+	text, isErr = c.call(t, "phone_connect", map[string]any{"task": "Lunch", "approval_id": id})
+	if isErr || !strings.HasPrefix(text, "settled") {
+		t.Fatalf("after the person allowed it:\n%s", text)
+	}
+}
