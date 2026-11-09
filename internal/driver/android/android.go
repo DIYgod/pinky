@@ -232,6 +232,9 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 					p.avd.ranAt(pr.AVD, e.Serial)
 				}
 				props[i] = &pr
+			} else if errors.Is(err, errStarting) {
+				infos[i].State = driver.StateOffline
+				infos[i].Detail = "The phone is still starting."
 			} else {
 				p.cfg.logf("android: read properties of %s: %v", e.Serial, err)
 			}
@@ -387,6 +390,9 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 		return deviceProps{}, err
 	}
 	lines := strings.Split(strings.ReplaceAll(string(out), "\r", ""), "\n")
+	if starting(lines) {
+		return deviceProps{}, errStarting
+	}
 	for len(lines) < 5 {
 		lines = append(lines, "")
 	}
@@ -451,13 +457,32 @@ func (p *Provider) dropProps(serial string) {
 // propsCommand reads what deviceProps keeps, one line each: the model, the
 // Android version, the SDK level, the name the person gave the phone and
 // ro.serialno; then ro.boot.serialno, an emulator's AVD (the property
-// was ro.kernel.qemu.avd_name before Android 12), and the android_id only
-// when the shell may read neither serial property (the settings command
-// takes a moment).
+// was ro.kernel.qemu.avd_name before Android 12), whether the phone has
+// finished starting, and the android_id only when the shell may read
+// neither serial property (the settings command takes a moment).
 const propsCommand = "getprop ro.product.model; getprop ro.build.version.release; getprop ro.build.version.sdk; " +
 	"settings get global device_name; getprop ro.serialno; echo pinky-boot=$(getprop ro.boot.serialno); " +
 	"echo pinky-avd=$(getprop ro.boot.qemu.avd_name)$(getprop ro.kernel.qemu.avd_name); " +
+	"echo pinky-booted=$(getprop sys.boot_completed); " +
 	"[ -n \"$(getprop ro.serialno)$(getprop ro.boot.serialno)\" ] || echo pinky-aid=$(settings get secure android_id)"
+
+// errStarting is deviceProps' error for a phone adb lists before it has
+// finished starting, as an emulator that boots or a phone that restarts:
+// its system services are not all up, so its settings answer "cmd: Can't
+// find service: settings" and it has no screen size yet. Its properties
+// are read again once it has started.
+var errStarting = fmt.Errorf("the phone is still starting: %w", driver.ErrOffline)
+
+// starting reports whether propsCommand's output says the phone has not
+// finished starting (sys.boot_completed is not 1 yet).
+func starting(lines []string) bool {
+	for _, l := range lines {
+		if v, ok := strings.CutPrefix(l, "pinky-booted="); ok {
+			return strings.TrimSpace(v) != "1"
+		}
+	}
+	return false
+}
 
 func infoFromEntry(e adb.DeviceEntry) driver.Info {
 	info := driver.Info{

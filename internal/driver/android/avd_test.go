@@ -447,3 +447,67 @@ func TestEmulatorArgs(t *testing.T) {
 		}
 	}
 }
+
+// TestAVDBooting: an emulator adb lists before it has finished booting is
+// offline and still starting, not a phone named after its settings
+// command's error; once booted it is online with its AVD's name.
+func TestAVDBooting(t *testing.T) {
+	f, p := newFakeADB(t)
+	newAVDFixture(t, p)
+	ctx := context.Background()
+	if err := p.StartVirtual(ctx, "pinky-api29"); err != nil {
+		t.Fatal(err)
+	}
+	props := func(booted string) {
+		f.set(func(f *fakeADB) {
+			f.devices = []string{"emulator-5554\tdevice product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 device:emu64a transport_id:3"}
+			f.props = map[string]string{"emulator-5554": "sdk_gphone64_arm64\n10\n29\ncmd: Can't find service: settings\nEMULATOR29X1X11X0\npinky-boot=\npinky-avd=pinky-api29\npinky-booted=" + booted + "\n"}
+		})
+	}
+
+	props("")
+	infos, err := p.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(infos) != 1 || infos[0].State != driver.StateOffline || !strings.Contains(infos[0].Detail, "still starting") || strings.Contains(infos[0].Name, "service") {
+		t.Fatalf("booting: %+v", infos)
+	}
+	if v := avdNamed(t, p, "pinky-api29"); !v.Starting || v.Running {
+		t.Errorf("booting: %+v", v)
+	}
+	if _, err := p.Open(ctx, "emulator-5554"); !errors.Is(err, driver.ErrOffline) {
+		t.Errorf("open while booting: %v", err)
+	}
+
+	props("1")
+	f.set(func(f *fakeADB) {
+		f.props["emulator-5554"] = strings.Replace(f.props["emulator-5554"], "cmd: Can't find service: settings", "null", 1)
+	})
+	infos, err = p.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(infos) != 1 || infos[0].State != driver.StateOnline || infos[0].Name != "pinky-api29" || infos[0].VirtualID != "pinky-api29" {
+		t.Fatalf("booted: %+v", infos)
+	}
+	if v := avdNamed(t, p, "pinky-api29"); !v.Running || v.Starting || v.DeviceID != "emulator-5554" {
+		t.Errorf("booted: %+v", v)
+	}
+}
+
+// avdNamed is the AVD id as Add phone lists it.
+func avdNamed(t *testing.T, p *Provider, id string) driver.VirtualPhone {
+	t.Helper()
+	vp, err := p.VirtualPhones(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range vp.Phones {
+		if v.ID == id {
+			return v
+		}
+	}
+	t.Fatalf("no AVD %s in %+v", id, vp.Phones)
+	return driver.VirtualPhone{}
+}
