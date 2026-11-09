@@ -22,6 +22,10 @@ android/companion/.gradle/
 android/companion/.kotlin/
 android/companion/**/build/
 android/companion/local.properties
+android/inputtest/.gradle/
+android/inputtest/.kotlin/
+android/inputtest/build/
+android/inputtest/local.properties
 *.apk
 *.aab
 
