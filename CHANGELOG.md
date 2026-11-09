@@ -2,6 +2,30 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Agents can now install, update, uninstall and force-quit apps you build (an APK, or an `.ipa`/`.app` signed for your iPhone) from the phone's folder on the computer. Installing and uninstalling always ask you, with the app's name, version and signer, and **Allow for this task** covers an agent's next builds of the same app.
+- Agents on another computer can now upload files for an iPhone, to install apps from.
+- Agents can now read the log lines and crash reports of an app they are testing, to see why it failed. The first time in a task Pinky asks you (**Allow for this task** stops it asking again), except for development builds. Agents only get that app's own lines, and never the logs of banking, wallet, password-manager or blocked apps.
+- A task's history shows how many log lines or crash reports an agent read, never what they said.
+- Agents can now open links with `phone_launch` on Android (also on the background display) and iPhone: web pages, an app's own links (`myapp://…`), and call, message and email links. A link is judged as the app that opens it and as the tap it stands for, so blocked apps stay blocked and a payment link asks like a Pay button; the approval and Activity name the link and the app.
+- Links that reach past the app they open in (`file:`, `content:`, `intent:`, `javascript:`, `data:`, Shortcuts) are never opened, under the new rule Unsafe links.
+- Agents can pinch to zoom maps, photos and pages in and out, and turn them with two fingers (`phone_pinch`); iPhones need the WebDriverAgent helper for it.
+- You can pinch on the phone's picture too: pinch on the trackpad, or drag with Option held (Alt on Windows and Linux) as in Xcode's Simulator.
+- Agents can now save a screenshot as a file (`phone_observe` with `save`) and, as a task ends, its report as HTML and JSON (`phone_release` with `export`), for a bug report or a pull request. They go into the phone's folder on your computer and show only what the agent may see; agents on another computer get one-time download links.
+- When an agent exports a recorded task, Pinky asks you whether it gets the screen recording too. Recordings show one-time codes and blocked apps' notifications, so they stay on your computer unless you allow it, each time; if you decline, the agent gets the report alone.
+- Start an iOS Simulator or an Android emulator from **Add phone › Virtual phone** and use it as a phone, with the live picture, recordings, approvals and rules. Only you can start one.
+- An emulator that quits while it starts now says why.
+- Emulators Pinky starts have no sound, so they no longer crash while a Bluetooth headset switches to its microphone.
+- An Android phone that is still starting up shows as starting, instead of getting a garbled name and no picture.
+- On Android, Pinky can now type into text fields that refuse its usual way in, such as WeChat's chat box, including on the background display and with Chinese keyboards.
+- On Android, when typed text does not reach the field, or the field ends up reading something else, the agent now gets an error instead of a silent "no change".
+- Pinky now makes sure an Android phone it reaches over Wi-Fi is the phone you set up: another device on the network can no longer answer in its place. If you reset a phone yourself, its page offers to trust it again, or plug it in once.
+- Android phones connected over Wireless debugging that Pinky hasn't used now wait for you to choose Use before Pinky touches them.
+- iPhones with two screens, such as the iPhone Duo, now connect with the screen in use, unfolded or folded, and switch when you fold or unfold while connected.
+- When an iPhone sends no live picture, the error now says which screen Pinky asked for, its checkup says what came instead, and Send feedback includes the details.
+- Pinky now knows the iPhone 17e, iPhone 18 Pro Max, iPhone Duo and recent iPads by name.
+
 ## 2026.1109.18 (2026-11-09)
 
 - In Settings › Agents, removing Pinky from an agent that changes its settings through its own command now shows an error when Pinky cannot read those settings, instead of saying Removed while the agent may still use Pinky. Thanks to tarou-jp.
