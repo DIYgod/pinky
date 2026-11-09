@@ -71,6 +71,12 @@ type Device struct {
 	scr     *screen.Screen
 	actions []Action
 	onInput func(Action)
+	// apps are listed after Settings; logs and crashes are what AppLogger
+	// returns for them (logs.go).
+	apps      []driver.App
+	logs      map[string][]driver.LogLine
+	crashes   map[string][]driver.CrashReport
+	devBuilds map[string]bool
 }
 
 // NewDevice returns an online fake Android device.
@@ -172,7 +178,9 @@ func (d *Device) Launch(_ context.Context, app string) error {
 
 // Apps implements driver.Device.
 func (d *Device) Apps(context.Context) ([]driver.App, error) {
-	return []driver.App{{ID: "com.android.settings", Name: "Settings", System: true}}, nil
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return append([]driver.App{{ID: "com.android.settings", Name: "Settings", System: true}}, d.apps...), nil
 }
 
 // Stream implements driver.Device. Fake devices have no video.
