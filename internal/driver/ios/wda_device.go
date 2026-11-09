@@ -46,6 +46,7 @@ type WDADevice struct {
 	appMu   sync.Mutex
 	apps    *appCatalog
 	rec     touchRecorder
+	rec2    pinchRecorder // the mirror's two-finger touches (pinch.go)
 
 	videoMu sync.Mutex
 	video   driver.Stream // the last stream, whose picture the mirror's touches are in
