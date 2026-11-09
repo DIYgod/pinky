@@ -183,7 +183,7 @@ Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the sc
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 
-Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history) and `approval_id?` (to keep waiting on a pending approval).
+Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history), `approval_id?` (to keep waiting on a pending approval) and `settle_ms?` (0 to 3000: the most to wait for the screen to settle, for screens that never stop moving; see the action pipeline's Settle step).
 
 ### Sessions and leases
 
@@ -215,7 +215,7 @@ ocr "Delivery in 25–35 min" @200,300
 
 | Status | Meaning | What the agent should do |
 | --- | --- | --- |
-| `settled` | The action ran and the screen stopped changing, or settling hit its 3 s limit (`settle: timeout`) | Continue |
+| `settled` | The action ran and the screen stopped changing, or settling hit its limit, 3 s or the action's `settle_ms` (`settle: timeout`) | Continue |
 | `uncertain` | The action may have happened, for example a timeout after Send | Observe before anything else; never repeat it blindly |
 | `blocked_by_policy` | A rule denied the action; the result names the rule | Choose another way or ask the person |
 | `approval_denied` | The person said no; `note` may say why | Follow the note |
@@ -389,7 +389,7 @@ A lock on the local socket keeps a second gateway from starting. Nothing under `
 2. **Policy.** Rules and the commit detector decide Allow, Ask or Deny.
 3. **Approval.** For Ask, the approval center holds the call until the person decides or the timeout denies.
 4. **Execute.** The driver performs the action on the long-lived device session.
-5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet.
+5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet. An action's `settle_ms` lowers the limit, for screens that never stop moving (not for an action the person approved, allowed for the task or always allows). The rest of a wait that ended early (`settle_ms`, a cancelled call, an input that failed after it went out) is owed: the next action waits it out, or until the screen settles, before it reads the screen for step 2, so the policy never judges an action against a screen from before the previous one took effect.
 6. **Verify and observe.** A fresh screen is read and diffed against the last one.
 7. **Record.** The step, its before and after screenshots and any approval go to the history store.
 

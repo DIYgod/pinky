@@ -84,6 +84,7 @@ type Result struct {
 	Diff       []string
 	Full       bool
 	Settle     string // "timeout" when settling hit its limit
+	Early      bool   // settle_ms ended the wait while the screen changed: it may not show the action's effect yet
 	ApprovalID string
 	Rule       string
 	Note       string
@@ -196,6 +197,9 @@ const (
 	MaxObserveWait = 30 * time.Second
 	MaxWaitFor     = 45 * time.Second
 	MaxBatchSteps  = 50
+	// MaxSettle is the most an action's settle_ms may ask for: the
+	// default limit, SettleMax, is never raised.
+	MaxSettle = 3 * time.Second
 )
 
 // waitForOCREvery is how often phone_wait_for also reads the screen with
@@ -1068,7 +1072,7 @@ func (g *Gateway) waitChange(ctx context.Context, l *lease, wait time.Duration, 
 		}
 		view, _ := g.agentView(l, cur)
 		if base == nil || body(view) != body(base) {
-			g.settle(ctx, l.dev)
+			g.settle(ctx, l.dev, g.opt.SettleMax)
 			return
 		}
 		if progress != nil && time.Since(lastProgress) >= 5*time.Second {

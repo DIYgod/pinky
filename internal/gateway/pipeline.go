@@ -36,6 +36,14 @@ type Action struct {
 	// Intent and ApprovalID are per step in phone_batch.
 	Intent     string
 	ApprovalID string
+	// Settle caps how long the action waits for the screen to settle
+	// before it reads it; nil waits up to SettleMax, and 0 reads it right
+	// away. Where the screen never stops moving (games, video, live maps)
+	// every action would otherwise wait the whole limit. An action the
+	// rules asked about, or let run only because the person always allows
+	// it (prep.settleFull), waits the whole limit anyway, and the next
+	// action waits out the rest of a wait this cut short (settleOwed).
+	Settle *time.Duration
 }
 
 // Keys agents may press.
@@ -99,7 +107,19 @@ func (a Action) check() *Result {
 	default:
 		return bad("unknown action %q.", a.Tool)
 	}
+	if a.Settle != nil && (*a.Settle < 0 || *a.Settle > MaxSettle) {
+		return bad("settle_ms must be between 0 and %d.", MaxSettle.Milliseconds())
+	}
 	return nil
+}
+
+// settleLimit is how long the action waits for the screen to settle:
+// max, or less when the agent asked for less.
+func (a Action) settleLimit(max time.Duration) time.Duration {
+	if a.Settle != nil && *a.Settle < max {
+		return *a.Settle
+	}
+	return max
 }
 
 func validDirection(d string) bool { return d == "up" || d == "down" || d == "left" || d == "right" }
@@ -159,6 +179,9 @@ func (a Action) args(c Call) string {
 	}
 	if a.App != "" {
 		m["app"] = a.App
+	}
+	if a.Settle != nil {
+		m["settle_ms"] = a.Settle.Milliseconds()
 	}
 	if c.Intent != "" {
 		m["intent"] = c.Intent
@@ -301,6 +324,18 @@ type prep struct {
 	// unblock is set when the approval for this launch asks the person to
 	// allow a blocked app for the task (unblock.go).
 	unblock bool
+	// settleFull ignores the action's settle_ms: the person approved it,
+	// allowed its rule for the task or always allows it in the app. Its
+	// result should show what it did before the agent decides whether to
+	// repeat it, and a payment allowed for the task does not ask again.
+	settleFull bool
+}
+
+// personAllowed reports whether an action that runs with verdict v runs
+// only because the person allowed it: for the task (an Ask that runs is a
+// granted one) or always, in the app (v.Exempted).
+func personAllowed(v policy.Verdict) bool {
+	return v.Decision == policy.Ask || len(v.Exempted) > 0
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
@@ -320,6 +355,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		d.act.Unlock()
 		return res
 	}
+	g.settleOwed(ctx, d)
 	if a.Tool == "launch" {
 		if res := g.launchUnread(ctx, l, c, a); res != nil {
 			d.act.Unlock()
@@ -370,6 +406,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		}
 	}
 	p.exempted = v.Exempted
+	p.settleFull = personAllowed(v)
 	res = g.execute(ctx, l, c, a, p, cur, -1)
 	d.act.Unlock()
 	return exemptedNote(res, v, p)
@@ -429,6 +466,7 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 		return nil
 	}
 	p.exempted = v.Exempted
+	p.settleFull = personAllowed(v)
 	return exemptedNote(g.execute(ctx, l, c, a, p, nil, -1), v, p)
 }
 
@@ -1254,6 +1292,7 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 		g.closeStep(info.ID, notRunStatus(res), out.Waited)
 		return res
 	}
+	g.settleOwed(ctx, d)
 	cur, err := g.observe(ctx, d, false)
 	if err != nil {
 		res := g.readError(l, err)
@@ -1287,6 +1326,7 @@ func (g *Gateway) runApproved(ctx context.Context, l *lease, c Call, a Action, i
 		idx = ref.index
 	}
 	g.setTaskState(l, TaskWorking)
+	p.settleFull = true
 	res = g.execute(ctx, l, c, a, p, cur, idx)
 	res.Note = out.Note
 	msg := "The person allowed this once."
@@ -1337,7 +1377,8 @@ func (g *Gateway) preflight(ctx context.Context, l *lease) *Result {
 func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *prep, cur *screen.Screen, step int) *Result {
 	d := l.dev
 	start := time.Now()
-	before := g.shotID(g.beforeShot(d, cur))
+	bshot := g.beforeShot(d, cur)
+	before := g.shotID(bshot)
 	from := g.leftFrom(d, cur)
 	if res := g.preflight(ctx, l); res != nil {
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
@@ -1349,6 +1390,14 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	dev, onBG := g.screenOfLocked(d)
 	d.inflight = cancel
 	g.inputLocked(d)
+	if dev != nil {
+		// Until the screen is seen to settle after this input, the next
+		// action waits for it (settleOwed) and no phone_batch step starts
+		// from a read made before it (startScreen), also when this call
+		// ends early: cancelled, or failed after the input went out.
+		l.after, l.afterAt = nil, time.Time{}
+		g.oweSettleLocked(d, time.Now())
+	}
 	g.mu.Unlock()
 	if dev == nil {
 		cancel()
@@ -1381,7 +1430,11 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
-	settled := g.settle(ctx, d)
+	limit := g.opt.SettleMax
+	if !p.settleFull {
+		limit = a.settleLimit(limit)
+	}
+	settled := g.settleAction(ctx, d, limit)
 	next, err := g.observe(ctx, d, true)
 	if err != nil {
 		res := statusResult(StatusUncertain, "The action was sent, but the screen could not be read afterwards (%v). Observe before anything else; do not repeat it blindly.", err)
@@ -1389,8 +1442,11 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		return res
 	}
 	if g.leaves(a, p, from) && stillIn(next, from.App) {
-		next, settled = g.awaitLeave(ctx, d, from.App, next, settled)
+		next, settled = g.awaitLeave(ctx, d, from.App, next, settled, limit)
 	}
+	// early: settle_ms ended the wait while the screen was still changing,
+	// so the read may come before the action's effect shows.
+	early := !settled && limit < g.opt.SettleMax
 	res := g.screenResult(l, next, false)
 	res.Status = StatusSettled
 	g.mu.Lock()
@@ -1402,10 +1458,19 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	if !settled {
 		res.Settle = "timeout"
 	}
+	if early {
+		res.Early = true
+		res.Message = strings.TrimSpace(res.Message + fmt.Sprintf(" Read before the screen settled (settle_ms %d): it may not show what this action did yet. Observe before repeating it.", limit.Milliseconds()))
+	}
 	if next.Locked {
 		res.Message = strings.TrimSpace(res.Message + " The phone is locked now.")
 	}
 	shot := g.startShot(d, next)
+	if early && shot == bshot {
+		// The read matched the screen from before the action, which may
+		// not have changed yet: its picture would pass for the result.
+		shot = nil
+	}
 	text := body(res.Screen)
 	if _, blocked := g.policy.Blocked(next.App); blocked {
 		text = "" // allowed for the task: history keeps the steps only
@@ -1447,12 +1512,14 @@ func (g *Gateway) leaves(a Action, p *prep, cur *screen.Screen) bool {
 }
 
 // awaitLeave waits, up to SettleMax, for a read that shows another app in
-// front than from, then settles and reads again. An iPhone names the app
-// in front with a delay, and the read right after home can still show the
-// app the agent left (field test #25): a blocked app that seemed to stay
-// in front gave the agent "no change" and refused its next action. It
-// keeps next when the app does not change.
-func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, next *screen.Screen, settled bool) (*screen.Screen, bool) {
+// front than from, then settles, up to the action's limit, and reads again.
+// An iPhone names the app in front with a delay, and the read right after
+// home can still show the app the agent left (field test #25): a blocked
+// app that seemed to stay in front gave the agent "no change" and refused
+// its next action. It keeps next when the app does not change. The wait
+// for the app is never cut short by settle_ms: the app in front decides
+// what the agent may see and do next.
+func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, next *screen.Screen, settled bool, limit time.Duration) (*screen.Screen, bool) {
 	deadline := time.Now().Add(g.opt.SettleMax)
 	for time.Now().Before(deadline) {
 		if !sleepCtx(ctx, g.opt.PollInterval, nil) {
@@ -1465,7 +1532,7 @@ func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, ne
 		if stillIn(s, from) {
 			continue
 		}
-		settled = g.settle(ctx, d)
+		settled = g.settleAction(ctx, d, limit)
 		if o, err := g.observe(ctx, d, true); err == nil {
 			return o, settled
 		}
@@ -1861,17 +1928,23 @@ func (g *Gateway) screenResult(l *lease, raw *screen.Screen, full bool) *Result 
 	return res
 }
 
-// settle waits until the screen stops changing, up to SettleMax.
-func (g *Gateway) settle(ctx context.Context, d *device) bool {
+// settle waits until the screen stops changing, up to limit. A limit of 0,
+// or under a millisecond, does not wait, and reports the screen as not
+// settled.
+func (g *Gateway) settle(ctx context.Context, d *device, limit time.Duration) bool {
+	if limit < time.Millisecond {
+		// Drivers count in milliseconds, and some read 0 as their default.
+		return false
+	}
 	dev, _ := g.screenOf(d)
 	if dev == nil {
 		return false
 	}
 	if s, ok := dev.(driver.Settler); ok {
-		settled, err := s.WaitSettled(ctx, g.opt.SettleMax)
+		settled, err := s.WaitSettled(ctx, limit)
 		return err == nil && settled
 	}
-	deadline := time.Now().Add(g.opt.SettleMax)
+	deadline := time.Now().Add(limit)
 	if !sleepCtx(ctx, g.opt.PollInterval, nil) {
 		return false
 	}
@@ -1893,6 +1966,55 @@ func (g *Gateway) settle(ctx context.Context, d *device) bool {
 		prev = cur
 	}
 	return false
+}
+
+// settleAction is settle after an action, up to the action's limit. When
+// the screen was still changing at the end, because settle_ms set a lower
+// limit or the call was cancelled, the rest of SettleMax is owed: the next
+// action waits it out before it reads the screen (settleOwed).
+func (g *Gateway) settleAction(ctx context.Context, d *device, limit time.Duration) bool {
+	from := time.Now()
+	settled := g.settle(ctx, d, limit)
+	g.mu.Lock()
+	if settled {
+		d.settleDue = time.Time{}
+	} else {
+		g.oweSettleLocked(d, from)
+	}
+	g.mu.Unlock()
+	return settled
+}
+
+// oweSettleLocked makes the next action wait for the screen to settle until
+// SettleMax after from (settleOwed). It only ever moves that time later.
+func (g *Gateway) oweSettleLocked(d *device, from time.Time) {
+	if due := from.Add(g.opt.SettleMax); due.After(d.settleDue) {
+		d.settleDue = due
+	}
+}
+
+// settleOwed waits for the screen to settle as long as an earlier action
+// left its own wait short (settle_ms, a cancelled call, an input that
+// failed after it went out): until the screen settles or SettleMax has
+// passed since that action. It runs with d.act held, before an action
+// reads the screen that the rules judge it against. Without it that read
+// could show the screen from before the earlier action took effect: a
+// phone_batch step, or a call made in parallel, that taps where Place
+// order is about to appear would be judged against the screen before it,
+// and run without asking.
+func (g *Gateway) settleOwed(ctx context.Context, d *device) {
+	g.mu.Lock()
+	due := d.settleDue
+	g.mu.Unlock()
+	left := time.Until(due)
+	if left <= 0 {
+		return
+	}
+	if g.settle(ctx, d, left) {
+		g.mu.Lock()
+		d.settleDue = time.Time{}
+		g.mu.Unlock()
+	}
 }
 
 // body is a screen without its events, for comparing screens.

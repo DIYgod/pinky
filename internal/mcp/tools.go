@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
@@ -15,6 +16,7 @@ type actionArgs struct {
 	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
 	Intent     string `json:"intent,omitempty" jsonschema:"One sentence on why you do this, shown to the person on the approval panel and in history."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with the same arguments and this id to keep waiting for the person's answer."`
+	SettleMS   *int   `json:"settle_ms,omitempty" jsonschema:"The most milliseconds (0 to 3000, default 3000) to wait for the screen to stop changing before it is read. Lower it only where results keep saying settle: timeout (games, video, live maps), never to pay, send or confirm. Below about 500 the result always says settle: timeout, and a read cut short may not show what the action did yet: observe before repeating it. The next action still waits out the rest of the 3 s before it reads the screen."`
 }
 
 func (a actionArgs) call(ctx context.Context, req *sdk.CallToolRequest) gateway.Call {
@@ -112,6 +114,7 @@ type batchStep struct {
 	App        string `json:"app,omitempty" jsonschema:"As in phone_launch."`
 	Intent     string `json:"intent,omitempty" jsonschema:"Why this step, shown to the person."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result for this step."`
+	SettleMS   *int   `json:"settle_ms,omitempty" jsonschema:"As in phone_tap."`
 }
 
 type batchIn struct {
@@ -202,6 +205,21 @@ func patchSwipe(p map[string]*jsonschema.Schema) {
 	nonNull(p, "from", "to")
 }
 
+// patchSettle bounds settle_ms and advertises it as a plain integer.
+func patchSettle(p map[string]*jsonschema.Schema) {
+	nonNull(p, "settle_ms")
+	bounds(p["settle_ms"], 0, float64(gateway.MaxSettle.Milliseconds()))
+}
+
+// settleArg is settle_ms as the gateway takes it: nil when not given.
+func settleArg(ms *int) *time.Duration {
+	if ms == nil {
+		return nil
+	}
+	d := time.Duration(*ms) * time.Millisecond
+	return &d
+}
+
 func boolp(b bool) *bool { return &b }
 
 func (s *Server) addTools(srv *sdk.Server, remote bool) {
@@ -243,9 +261,9 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_tap", Title: "Tap",
 		Description: "Tap an element by ref, or a point by x and y. Waits for the screen to settle and returns what changed. " +
 			"Taps the person's rules ask about wait for their approval (payments by default; they may also choose sends, orders, deletions and other commits): up to 45 s, then approval_pending with an approval_id to repeat the call with.",
-		InputSchema: schema[tapIn](func(p map[string]*jsonschema.Schema) { nonNull(p, "x", "y") }), Annotations: acting},
+		InputSchema: schema[tapIn](func(p map[string]*jsonschema.Schema) { nonNull(p, "x", "y"); patchSettle(p) }), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in tapIn) (*sdk.CallToolResult, any, error) {
-			a := gateway.Action{Tool: "tap", Ref: in.Ref, LongPress: in.LongPress}
+			a := gateway.Action{Tool: "tap", Ref: in.Ref, LongPress: in.LongPress, Settle: settleArg(in.SettleMS)}
 			if res := pointArg(in.X, in.Y, &a.Point); res != nil {
 				return res, nil, nil
 			}
@@ -255,36 +273,37 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_type", Title: "Type text",
 		Description: "Type text into a field (ref) or the focused field, replacing its text unless append is set; submit presses Enter. " +
 			"Pinky never types into password or one-time-code fields (blocked_by_policy, rule credentials): call phone_handoff so the person fills them.",
-		InputSchema: schema[typeIn](func(p map[string]*jsonschema.Schema) { max := 16384; p["text"].MaxLength = &max }),
+		InputSchema: schema[typeIn](func(p map[string]*jsonschema.Schema) { max := 16384; p["text"].MaxLength = &max; patchSettle(p) }),
 		Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in typeIn) (*sdk.CallToolResult, any, error) {
-			a := gateway.Action{Tool: "type", Ref: in.Ref, Text: in.Text, Append: in.Append, Submit: in.Submit}
+			a := gateway.Action{Tool: "type", Ref: in.Ref, Text: in.Text, Append: in.Append, Submit: in.Submit,
+				Settle: settleArg(in.SettleMS)}
 			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_swipe", Title: "Swipe",
 		Description: "Swipe the screen in a direction (where the finger moves: up shows content below), inside an element (ref with direction), or from one point to another.",
-		InputSchema: schema[swipeIn](patchSwipe), Annotations: acting},
+		InputSchema: schema[swipeIn](func(p map[string]*jsonschema.Schema) { patchSwipe(p); patchSettle(p) }), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in swipeIn) (*sdk.CallToolResult, any, error) {
 			a := gateway.Action{Tool: "swipe", Ref: in.Ref, Direction: strings.ToLower(strings.TrimSpace(in.Direction)),
-				From: in.From.screen(), To: in.To.screen(), DurationMS: in.DurationMS}
+				From: in.From.screen(), To: in.To.screen(), DurationMS: in.DurationMS, Settle: settleArg(in.SettleMS)}
 			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_key", Title: "Press a key",
 		Description: "Press a navigation or keyboard key. Enter in a chat app sends the message, which asks the person first if they chose to approve messages. Keys a phone lacks (recents on iPhone) return unsupported.",
-		InputSchema: schema[keyIn](func(p map[string]*jsonschema.Schema) { enum(p["key"], gateway.KeyNames()...) }),
+		InputSchema: schema[keyIn](func(p map[string]*jsonschema.Schema) { enum(p["key"], gateway.KeyNames()...); patchSettle(p) }),
 		Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in keyIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "key", Key: in.Key})), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "key", Key: in.Key, Settle: settleArg(in.SettleMS)})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_launch", Title: "Open an app",
 		Description: "Open an app by name, package name or bundle id, and return its screen. An iPhone without the WebDriverAgent helper also opens an http(s) link, in Safari. Apps outside the task's list return scope_denied. " +
 			"Blocked banking and wallet apps ask the person, who may allow the app for the rest of the task (approval_pending; repeat with approval_id); password managers are refused.",
-		InputSchema: schema[launchIn](nil), Annotations: acting},
+		InputSchema: schema[launchIn](patchSettle), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in launchIn) (*sdk.CallToolResult, any, error) {
-			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App})), nil, nil
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App, Settle: settleArg(in.SettleMS)})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_apps", Title: "List apps",
@@ -295,12 +314,13 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_batch", Title: "Run several steps",
-		Description: "Run up to 50 tap, type, swipe, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that does not settle. " +
+		Description: "Run up to 50 tap, type, swipe, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that is not settled (approval_pending, uncertain or an error; a screen that kept moving, settle: timeout, does not stop it). " +
 			"If a step returns approval_pending, repeat that step alone (with its approval_id), then continue.",
 		InputSchema: schema[batchIn](func(p map[string]*jsonschema.Schema) {
 			item := p["steps"].Items
 			enum(item.Properties["tool"], stepTools...)
 			patchSwipe(item.Properties)
+			patchSettle(item.Properties)
 			nonNull(item.Properties, "x", "y")
 			enum(item.Properties["key"], gateway.KeyNames()...)
 			max := 50
@@ -311,7 +331,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			for _, st := range in.Steps {
 				a := gateway.Action{Tool: strings.TrimPrefix(st.Tool, "phone_"), Ref: st.Ref, LongPress: st.LongPress, Text: st.Text,
 					Append: st.Append, Submit: st.Submit, Direction: strings.ToLower(st.Direction), From: st.From.screen(), To: st.To.screen(),
-					DurationMS: st.DurationMS, Key: st.Key, App: st.App, Intent: st.Intent, ApprovalID: st.ApprovalID}
+					DurationMS: st.DurationMS, Key: st.Key, App: st.App, Intent: st.Intent, ApprovalID: st.ApprovalID,
+					Settle: settleArg(st.SettleMS)}
 				if res := pointArg(st.X, st.Y, &a.Point); res != nil {
 					return res, nil, nil
 				}

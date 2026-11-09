@@ -115,7 +115,7 @@ note: "<the person's note>"
 <the screen, or the lines that changed>
 ```
 
-- The first line is the status, or `error: <code>` for errors (then the MCP result also has `isError: true`). Details follow as `key: value`, separated by ` · `: `approval_id`, `rule`, `decision`, `settle`, `matched`, `holder`, `setup`, and `no change` when the screen did not change.
+- The first line is the status, or `error: <code>` for errors (then the MCP result also has `isError: true`). Details follow as `key: value`, separated by ` · `: `approval_id`, `rule`, `decision`, `settle`, `matched`, `holder`, `setup`, and `no change` when the screen did not change (never after a read that `settle_ms` cut short, which may come before the change).
 - The screen is the format in DESIGN.md: a header line, then events (`toast:`, `notification:`, `dialog:`), then one element per line `[ref] role "label" @x,y state`, then `ocr` lines.
 - `ocr` lines are text read from the screen's pixels that no element shows; they have no ref and are tapped by `x,y`. iPhones add them on every read that shows the agent the screen. Android phones add them where the element tree is empty or sparse over a web view or a canvas (mini-programs and other pages in super-apps' own web views, games, maps), and only there; `phone_observe { ocr: true }` asks for all the text no element shows. OCR uses Vision on macOS and Windows.Media.Ocr on Windows; a computer without it (Linux) marks those Android areas with the state `no_ocr` instead. The picture OCR reads stays in memory and is dropped once read: none is taken of a locked phone, nor of a blocked app the person has not allowed for the task.
 - After an action, only the changes are sent: `+` added, `-` removed, `~` changed (including `~ screen …` for a changed header). A new app, size, orientation or lock state, or a diff longer than the screen, sends the whole screen.
@@ -126,7 +126,7 @@ note: "<the person's note>"
 
 | Status | Meaning |
 | --- | --- |
-| `settled` | The call ran and the screen stopped changing, or settling hit its 3 s limit (`settle: timeout`) |
+| `settled` | The call ran and the screen stopped changing, or settling hit its limit, 3 s or the action's `settle_ms` (`settle: timeout`) |
 | `uncertain` | The action may have happened (the driver failed mid-action, the phone dropped). Observe before anything else |
 | `blocked_by_policy` | A rule denied the action; `rule` names it (`credentials` for password and code fields, `Read-only`, `Finance apps`, …) |
 | `approval_denied` | The person said no, or nobody answered in time; `note` may say why |
@@ -159,6 +159,16 @@ Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_key`, `phone
 | `device` | string | The phone, by id, name or a unique id prefix. Required when the session holds more than one phone |
 | `intent` | string | One sentence on why, shown on the approval panel and in history |
 | `approval_id` | string | From `approval_pending`: repeat the same call with it to keep waiting |
+| `settle_ms` | 0–3000 | The most to wait for the screen to stop changing before it is read; default 3000. See below |
+
+`settle_ms` is for screens that never stop moving (games, video, live maps), where every action otherwise waits the whole 3 s and returns `settle: timeout`. A lower limit returns sooner, and 0 reads the screen right after the action.
+
+- Below about 500 ms the result always says `settle: timeout`: an iPhone waits at least 500 ms before it calls the screen settled, and an Android phone needs 400 ms without a change.
+- A read it cuts short may come before the action's effect shows (an iPhone starts to change about a third of a second after a tap). The result says so in its message and never says `no change`; observe before repeating the action. History keeps no picture after such a step when the read matched the one before it.
+- The next action on the phone waits out the rest of the 3 s, or until the screen settles, before it reads the screen it is judged by, so the rules never judge it against a screen from before this one took effect. `settle_ms` therefore saves time between calls made seconds apart; in `phone_batch` and in calls made in parallel, only the last action gains.
+- `phone_launch` and `home` still wait up to 3 s for the app in front to change; `settle_ms` limits only the wait after that.
+- It is ignored when the person approves the action, allowed its rule for the task, or always allows it in the app: such an action waits the whole 3 s.
+- It is not part of what an approval binds: an `approval_id` may be repeated with another `settle_ms`.
 
 `phone_observe`, `phone_apps`, `phone_wait_for` and `phone_release` take `device`; `phone_files`, `phone_request_approval` and `phone_handoff` take `device` and `approval_id` (and `phone_files` takes `intent`). Unknown arguments are rejected.
 
@@ -257,10 +267,10 @@ Lists installed apps inside the agent's scope, user apps first, one per line: `N
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent` and `approval_id` |
+| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent`, `approval_id` and `settle_ms` |
 | `intent` | string | For steps without their own |
 
-Steps run in order, each settling first, and the batch stops at the first step that does not settle. The result's first line is the last step's status; then `step N:` blocks follow with each step's status and changes. To finish a batch that stopped at `approval_pending`, repeat that step alone as its own tool call with the `approval_id`.
+Steps run in order, each settling first, and the batch stops at the first step that is not `settled` (`approval_pending`, `uncertain`, an error); a step whose screen kept moving (`settle: timeout`) does not stop it. The result's first line is the last step's status; then `step N:` blocks follow with each step's status and changes. To finish a batch that stopped at `approval_pending`, repeat that step alone as its own tool call with the `approval_id`.
 
 ### phone_wait_for
 
@@ -347,7 +357,7 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 | Longest block of one call | 45 s |
 | Approval timeout | 60 s |
 | Handoff timeout | 15 min |
-| Settle limit | 3 s |
+| Settle limit | 3 s, or less with `settle_ms` |
 | Idle lease | 10 min |
 | Reconnect grace | 60 s |
 | `text` | 16384 characters |
