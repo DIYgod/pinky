@@ -9143,6 +9143,50 @@ func (msgs Messages) GwDoCopyFiles(count string, phone string) string {
 	return Catalog.Format(msgs.locale, "gwDoCopyFiles", map[string]any{"count": count, "phone": phone})
 }
 
+// GwDoGiveRecording says "give {agent} the screen recording of “{task}”"
+// in the language the app shows.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recording of the task that ends, with its
+// report (phone_release export). task is the agent's name for the task.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoGiveRecording(agent string, task string) string {
+	return In(i18n.Locale()).GwDoGiveRecording(agent, task)
+}
+
+// GwDoGiveRecording says "give {agent} the screen recording of “{task}”"
+// in the language of msgs.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recording of the task that ends, with its
+// report (phone_release export). task is the agent's name for the task.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoGiveRecording(agent string, task string) string {
+	return Catalog.Format(msgs.locale, "gwDoGiveRecording", map[string]any{"agent": agent, "task": task})
+}
+
+// GwDoGiveRecordings says "give {agent} the screen recordings of {count} tasks"
+// in the language the app shows.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recordings of several tasks that end together,
+// with their reports (phone_release export); count is 2 or more. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoGiveRecordings(agent string, count string) string {
+	return In(i18n.Locale()).GwDoGiveRecordings(agent, count)
+}
+
+// GwDoGiveRecordings says "give {agent} the screen recordings of {count} tasks"
+// in the language of msgs.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recordings of several tasks that end together,
+// with their reports (phone_release export); count is 2 or more. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoGiveRecordings(agent string, count string) string {
+	return Catalog.Format(msgs.locale, "gwDoGiveRecordings", map[string]any{"agent": agent, "count": count})
+}
+
 // GwDoCopyFromPhone says "copy from the phone"
 // in the language the app shows.
 //
@@ -9491,6 +9535,28 @@ func GwFilesList(names string) string { return In(i18n.Locale()).GwFilesList(nam
 // Lists file names after a files step or approval.
 func (msgs Messages) GwFilesList(names string) string {
 	return Catalog.Format(msgs.locale, "gwFilesList", map[string]any{"names": names})
+}
+
+// GwRecordingsDetail says "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."
+// in the language the app shows.
+//
+// The second line of the approval that gives an agent a task's screen
+// recording: what the person agrees to. Screenshots are the ones agents
+// get, with codes covered; blocked apps are the banking, wallet and
+// password-manager apps and those the person blocked. Shown only in other
+// languages; in English the gateway's own words show.
+func GwRecordingsDetail() string { return In(i18n.Locale()).GwRecordingsDetail() }
+
+// GwRecordingsDetail says "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."
+// in the language of msgs.
+//
+// The second line of the approval that gives an agent a task's screen
+// recording: what the person agrees to. Screenshots are the ones agents
+// get, with codes covered; blocked apps are the banking, wallet and
+// password-manager apps and those the person blocked. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwRecordingsDetail() string {
+	return Catalog.Format(msgs.locale, "gwRecordingsDetail", nil)
 }
 
 // GwFilesMore says "and {count} more"
@@ -10435,8 +10501,9 @@ func (msgs Messages) GwStepReceivedFile(path string, size string) string {
 // A step: as the task ended, the agent had its report (an HTML page of the
 // steps with screenshots, and a JSON file) saved in the phone's folder on
 // the computer, for a bug report or a pull request (phone_release export).
-// The screen recording is not in it. Shown only in other languages; in
-// English the gateway's own words show.
+// The screen recording is not in it (gwStepSavedReportVideo is the step
+// where it is). Shown only in other languages; in English the gateway's own
+// words show.
 func GwStepSavedReport() string { return In(i18n.Locale()).GwStepSavedReport() }
 
 // GwStepSavedReport says "Saved the task's report for the agent"
@@ -10445,10 +10512,33 @@ func GwStepSavedReport() string { return In(i18n.Locale()).GwStepSavedReport() }
 // A step: as the task ended, the agent had its report (an HTML page of the
 // steps with screenshots, and a JSON file) saved in the phone's folder on
 // the computer, for a bug report or a pull request (phone_release export).
-// The screen recording is not in it. Shown only in other languages; in
-// English the gateway's own words show.
+// The screen recording is not in it (gwStepSavedReportVideo is the step
+// where it is). Shown only in other languages; in English the gateway's own
+// words show.
 func (msgs Messages) GwStepSavedReport() string {
 	return Catalog.Format(msgs.locale, "gwStepSavedReport", nil)
+}
+
+// GwStepSavedReportVideo says "Saved the task's report and screen recording for the agent"
+// in the language the app shows.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) and its screen recording (an MP4
+// file, which the person allowed) saved in the phone's folder on the
+// computer, for a bug report or a pull request (phone_release export).
+// Shown only in other languages; in English the gateway's own words show.
+func GwStepSavedReportVideo() string { return In(i18n.Locale()).GwStepSavedReportVideo() }
+
+// GwStepSavedReportVideo says "Saved the task's report and screen recording for the agent"
+// in the language of msgs.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) and its screen recording (an MP4
+// file, which the person allowed) saved in the phone's folder on the
+// computer, for a bug report or a pull request (phone_release export).
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepSavedReportVideo() string {
+	return Catalog.Format(msgs.locale, "gwStepSavedReportVideo", nil)
 }
 
 // GwStepSavedScreenshot says "Saved a screenshot as “{path}”"
@@ -15761,6 +15851,24 @@ func RuleFiles() string { return In(i18n.Locale()).RuleFiles() }
 // The name of the rule that asks before copying files to the phone.
 func (msgs Messages) RuleFiles() string {
 	return Catalog.Format(msgs.locale, "ruleFiles", nil)
+}
+
+// RuleRecordings says "Recordings"
+// in the language the app shows.
+//
+// The name of the rule that asks before an agent gets a task's screen
+// recording with its report. It asks every time: no preset or Always allow
+// skips it.
+func RuleRecordings() string { return In(i18n.Locale()).RuleRecordings() }
+
+// RuleRecordings says "Recordings"
+// in the language of msgs.
+//
+// The name of the rule that asks before an agent gets a task's screen
+// recording with its report. It asks every time: no preset or Always allow
+// skips it.
+func (msgs Messages) RuleRecordings() string {
+	return Catalog.Format(msgs.locale, "ruleRecordings", nil)
 }
 
 // RuleFinanceApps says "Finance apps"

@@ -273,6 +273,8 @@ var (
 	reCopied    = re(`^Copied (\d+) files? (from|to) the phone(: .*)?$`)
 	reReceived  = re(`^Received “(.*)” \(([^()]+)\) from the agent$`)
 	reSavedShot = re(`^Saved a screenshot as “(.*)”$`)
+	reGiveVideo = re(`^[Gg]ive (.+) the screen recording of “(.*)”$`)
+	reGiveVids  = re(`^[Gg]ive (.+) the screen recordings of (\d+) tasks$`)
 	reYouDid    = re(`^You (allowed|denied): (.*)$`)
 	reYourNote  = re(`^Your note: (.*)$`)
 	reAlways    = re(`^Always allowed: “(.*?)” in (.+)$`)
@@ -299,6 +301,9 @@ func stepText(s string) string {
 		if a, ok := parseAsked(rest); ok {
 			return a.ask()
 		}
+		if give, ok := giveRecordings(rest); ok {
+			return give
+		}
 		return rest
 	}
 	switch s {
@@ -310,6 +315,8 @@ func stepText(s string) string {
 		return locales.GwStepYouStopped()
 	case "Saved the task's report for the agent":
 		return locales.GwStepSavedReport()
+	case "Saved the task's report and screen recording for the agent":
+		return locales.GwStepSavedReportVideo()
 	}
 	if m := reWaiting.FindStringSubmatch(s); m != nil {
 		return locales.GwStepWaiting(asked(m[1]))
@@ -456,6 +463,11 @@ func approvalText(s string) string {
 			return locales.GwAskQuestion(a.ask())
 		}
 	}
+	if q, ok := strings.CutSuffix(s, "?"); ok {
+		if give, ok := giveRecordings(q); ok {
+			return locales.GwAskQuestion(give)
+		}
+	}
 	if m := reOpenTitle.FindStringSubmatch(s); m != nil && !strings.Contains(m[1], "“") {
 		return locales.GwAskOpen(m[1])
 	}
@@ -466,6 +478,19 @@ func approvalText(s string) string {
 		}
 	}
 	return s
+}
+
+// giveRecordings says the Recordings card's question, without its
+// question mark: "give Claude Code the screen recording of “Reorder
+// lunch”".
+func giveRecordings(s string) (string, bool) {
+	if m := reGiveVideo.FindStringSubmatch(s); m != nil {
+		return locales.GwDoGiveRecording(m[1], m[2]), true
+	}
+	if m := reGiveVids.FindStringSubmatch(s); m != nil {
+		return locales.GwDoGiveRecordings(m[1], m[2]), true
+	}
+	return "", false
 }
 
 // needTitle is a Needs you card's title.
@@ -508,6 +533,9 @@ func needDetail(n gateway.NeedView) string {
 	}
 	if m := reFilesDetail.FindStringSubmatch(n.Detail); m != nil {
 		return locales.GwFilesDetail(m[1], fileNames(m[2]))
+	}
+	if n.Detail == "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications." {
+		return locales.GwRecordingsDetail()
 	}
 	return n.Detail
 }

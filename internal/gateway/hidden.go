@@ -41,8 +41,8 @@ import (
 // apps (Android's task snapshot, an iPhone's app switcher card), a widget,
 // or an iPhone's notification cell, whose name comes first.
 //
-// Recordings, which stay on this computer and never go to agents, show the
-// screen as it was.
+// Recordings show the screen as it was, so they stay on this computer: an
+// agent gets one only when the person allows it at an export (save.go).
 
 // Labels of the hidden elements, which agents read.
 const (

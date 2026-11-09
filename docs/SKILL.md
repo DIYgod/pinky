@@ -90,9 +90,9 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 Testing an app for a bug report or a pull request? Keep what you saw as files in that folder on the computer running Pinky, on any phone, iPhones included:
 
 - `phone_observe { save: "onboarding-1.png" }` saves a full-resolution screenshot (a `.jpg` name saves a JPEG) and returns its path. The image comes back to you only with `screenshot: true` as well. It is the screenshot you would get: codes covered, and none while the phone is locked or a blocked app is in front.
-- `phone_release { outcome: "done", summary: "…", export: true }` also saves the task's report: an HTML page of its steps with screenshots, and the same as JSON. The screen recording stays with the person, who can add it from Pinky's Activity.
+- `phone_release { outcome: "done", summary: "…", export: true }` also saves the task's report: an HTML page of its steps with screenshots, and the same as JSON. If the task was recorded, Pinky first asks the person whether you get the recording too (an MP4 next to the report): you may get `approval_pending`, so repeat the call with its `approval_id`. If they decline, you get the report alone, which is not an error; don't ask again.
 - Connected over HTTP from another machine? You get a `curl` command for each file instead of a path: run it from your own shell within 10 minutes; each link works once.
-- Saving asks nothing and changes nothing on the phone, so read-only agents may save too. Look at a screenshot before you post it anywhere public: it shows what was on the screen.
+- Saving changes nothing on the phone and asks nothing (a recording aside), so read-only agents may save too. Look at a screenshot before you post it anywhere public: it shows what was on the screen.
 
 ## Things you must not do
 

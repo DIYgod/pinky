@@ -34,6 +34,7 @@ var ruleNames = map[string]func() string{
 	"Finance apps":       locales.RuleFinanceApps,
 	"Password managers":  locales.RulePasswordManagers,
 	"Files":              locales.RuleFiles,
+	"Recordings":         locales.RuleRecordings,
 	"Agent request":      locales.RuleAgentRequest,
 }
 

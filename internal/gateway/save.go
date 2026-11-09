@@ -3,6 +3,7 @@ package gateway
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -13,6 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/approval"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // Files for the agent: phone_observe { save } writes a screenshot, and
@@ -22,12 +26,12 @@ import (
 // (internal/mcp). They stay on this computer otherwise. What they show is
 // what the agent may see: a screenshot is taken and covered as for
 // phone_observe { screenshot: true }, and the report's screenshots are
-// those of the task's history, covered alike. The task's screen recording
-// is left out: it does not cover one-time codes or blocked apps'
-// notifications, and catches a blocked app only when a read sees it, so it
-// stays with the person, who can export it from Activity. Saving asks
-// nothing, also for read-only agents and in read-only mode: the phone is
-// not touched.
+// those of the task's history, covered alike. Saving them asks nothing,
+// also for read-only agents and in read-only mode: the phone is not
+// touched. The task's screen recording is different: it does not cover
+// one-time codes or blocked apps' notifications, and catches a blocked app
+// only when a read sees it. So it goes with the report only when the person
+// allows it on a card of its own (recordingsRule), asked at every export.
 
 // SavedFile is a file a call wrote for the agent on Pinky's computer.
 type SavedFile struct {
@@ -123,22 +127,135 @@ func (g *Gateway) saveShot(l *lease, rel string, img image.Image) (SavedFile, st
 	return f, fmt.Sprintf("%s %s (%d×%d, %s).", verb, rel, b.Dx(), b.Dy(), SizeText(f.Size)), nil
 }
 
-// exportStepText is the step phone_release { export } adds to a task.
-const exportStepText = "Saved the task's report for the agent"
+// exportStepText is the step phone_release { export } adds to a task, and
+// exportVideoStepText the one when the person gave the agent its screen
+// recording too.
+const (
+	exportStepText      = "Saved the task's report for the agent"
+	exportVideoStepText = "Saved the task's report and screen recording for the agent"
+)
+
+// recordingsRule is the card that asks the person whether an agent gets
+// the screen recordings of the tasks it releases with export. It asks at
+// every export: it carries no policy snapshot, so no preset, Always allow
+// or Allow for this task lets it through (canAlwaysAllow, canAllowTask).
+// Read-only agents get the same card. A takeover leaves it open, as
+// nothing on the phone waits on it.
+const recordingsRule = "Recordings"
+
+// recordingsDetail is the second line of the Recordings card: what the
+// person agrees to.
+const recordingsDetail = "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."
+
+// askRecordings asks the person whether the agent gets the screen
+// recordings of the tasks of ls (sorted, one card for all) with their
+// reports. It returns their answer, or a result to return instead: the
+// answer is still pending, the call was cancelled, or the person stopped
+// the task.
+func (g *Gateway) askRecordings(ctx context.Context, s *Session, ls []*lease, req ReleaseRequest, outcome string) (approval.Outcome, *Result) {
+	l := ls[0]
+	var key strings.Builder
+	fmt.Fprintf(&key, "%s\x00%s\x00%s", req.Device, outcome, req.Summary)
+	for _, x := range ls {
+		fmt.Fprintf(&key, "\x00%s", x.task.id)
+	}
+	b := approval.Binding{Session: s.id, Device: l.dev.id, Lease: l.id, Tool: "phone_release", Args: digest(key.String())}
+	id := req.ApprovalID
+	if id != "" {
+		if res := g.checkApproval(id, b); res != nil {
+			if res.Error != "" {
+				return approval.Outcome{}, res
+			}
+			id = ""
+		}
+	}
+	if id == "" {
+		// The same release while its card is open waits on that card.
+		for _, info := range g.approvals.List(true) {
+			if info.Binding == b && info.Rule == recordingsRule {
+				id = info.ID
+			}
+		}
+	}
+	var info approval.Info
+	if id == "" {
+		title := fmt.Sprintf("Give %s the screen recording of “%s”?", s.agent.Name, l.task.title)
+		if len(ls) > 1 {
+			title = fmt.Sprintf("Give %s the screen recordings of %d tasks?", s.agent.Name, len(ls))
+		}
+		info = g.approvals.Open(approval.Request{Kind: approval.KindAction, Binding: b, Rule: recordingsRule, Title: title,
+			Detail: recordingsDetail, Agent: s.agent.Name, TaskID: l.task.id, DeviceName: l.dev.name()})
+		g.mu.Lock()
+		ended, by := l.ended, l.endedBy
+		g.mu.Unlock()
+		if ended {
+			g.approvals.Withdraw(info.ID, by)
+			return approval.Outcome{}, statusResult(StatusStopped, "The lease ended (%s). Nothing was saved.", by)
+		}
+		args := argsJSON(map[string]any{"outcome": outcome, "summary": req.Summary, "export": true})
+		g.openStep(l, info, "phone_release", args, "Waiting for you: "+strings.TrimSuffix(title, "?"), screen.Rect{}, screen.Point{}, "")
+	} else {
+		info, _ = g.approvals.Get(id)
+	}
+	out, err := g.waitApproval(ctx, l, info.ID, info, req.Progress)
+	if errors.Is(err, errTaken) {
+		return out, takenResult(info.ID)
+	}
+	if err != nil {
+		return out, g.cancelled(l, info.ID)
+	}
+	switch out.State {
+	case approval.Open:
+		return out, g.pendingResult(l, info)
+	case approval.Withdrawn:
+		g.closeStep(info.ID, string(StatusDenied), 0)
+		return out, g.withdrawnResult(l, out)
+	}
+	g.recordDecision(info, out)
+	status := "allowed"
+	if !out.Decision.Allows() {
+		status = string(StatusDenied)
+	}
+	g.closeStep(info.ID, status, out.Waited)
+	return out, nil
+}
+
+// recordingsWithheld tells the agent why it did not get the screen
+// recordings the person was asked about.
+func recordingsWithheld(out approval.Outcome, n int) string {
+	what, it := "the screen recording", "it stays"
+	if n > 1 {
+		what, it = "the screen recordings", "they stay"
+	}
+	why := "the person declined"
+	if out.TimedOut {
+		why = "the person did not answer in time"
+	}
+	return fmt.Sprintf(" You did not get %s: %s, and %s on Pinky's computer.", what, why, it)
+}
 
 // taskExport is a task phone_release { export } saves the report of.
 type taskExport struct {
 	task, device, dir string
-	video             *taskVideo // its recording, if it was recording
+	video             bool // the person gave the agent its screen recording
 }
 
 // exportForAgent saves the reports of tasks that just ended in their
 // phones' folders on this computer, once their screenshots and steps are
-// written, and tells res where. It does not wait for their recordings,
-// which it leaves out.
+// written, and tells res where. It saves a task's screen recording with
+// its report only where the person allowed it (video), and waits for it to
+// be finished then.
 func (g *Gateway) exportForAgent(ctx context.Context, exports []taskExport, res *Result) {
-	g.shots.wait()
-	g.rec.flush()
+	videos := false
+	for _, e := range exports {
+		videos = videos || e.video
+	}
+	if videos {
+		g.Flush()
+	} else {
+		g.shots.wait()
+		g.rec.flush()
+	}
 	now := time.Now()
 	for _, e := range exports {
 		on := ""
@@ -153,13 +270,13 @@ func (g *Gateway) exportForAgent(ctx context.Context, exports []taskExport, res 
 			continue
 		}
 		base := uniqueBase(e.dir, "pinky-task-"+now.Format("2006-01-02-150405"))
-		out, err := g.exportTo(ctx, []string{e.task}, e.dir, base, now, false)
+		out, err := g.exportTo(ctx, []string{e.task}, e.dir, base, now, e.video)
 		if err != nil {
 			fail(err)
 			continue
 		}
-		files := make([]SavedFile, 0, 2)
-		for _, p := range []string{out.html, out.json} {
+		files := make([]SavedFile, 0, 3)
+		for _, p := range append([]string{out.html, out.json}, out.videos...) {
 			fi, err := os.Stat(p)
 			if err != nil {
 				continue
@@ -167,12 +284,15 @@ func (g *Gateway) exportForAgent(ctx context.Context, exports []taskExport, res 
 			files = append(files, SavedFile{Path: p, Name: filepath.Base(p), Size: fi.Size()})
 		}
 		res.Saved = append(res.Saved, files...)
+		if len(out.videos) > 0 {
+			res.Message += fmt.Sprintf(" Saved the report%s as %s (its steps, with the screenshots Pinky kept, and its screen recording), %s (the same as data) and %s (the recording, which the person allowed you).",
+				on, filepath.Base(out.html), filepath.Base(out.json), filepath.Base(out.videos[0]))
+			continue
+		}
 		res.Message += fmt.Sprintf(" Saved the report%s as %s (its steps, with the screenshots Pinky kept) and %s (the same as data).",
 			on, filepath.Base(out.html), filepath.Base(out.json))
-		if e.video != nil {
-			if _, ok := e.video.view(); ok {
-				res.Message += " Its screen recording stays on Pinky's computer, as it does not cover one-time codes: the person can add it with Export… in the task's ⋯ menu in Activity."
-			}
+		if e.video {
+			res.Message += " Its screen recording could not be saved."
 		}
 	}
 }

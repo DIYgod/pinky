@@ -308,7 +308,8 @@ func (a *app) approvalControls(c *mg.Context, n gateway.NeedView) {
 		if n.AlwaysAllow && m.Item(alwaysAllowLabel(n)).Chosen() {
 			a.decide(n, gateway.AllowAlways, "")
 		}
-		if m.Item(locales.PhoneTakeOver()).Chosen() {
+		// Not where nothing on the phone waits on the answer.
+		if n.Rule != "Recordings" && m.Item(locales.PhoneTakeOver()).Chosen() {
 			a.decide(n, gateway.TakeOver, "")
 		}
 		if m.Item(locales.NeedsDenyWithNote()).Chosen() {
