@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -303,11 +304,12 @@ func (d *Device) stopApp(ctx context.Context, id string) error {
 }
 
 // appProcesses picks the processes whose executable sits directly in one
-// of the bundles: the app itself, not its extensions in PlugIns.
+// of the bundles: the app itself, not its extensions in PlugIns. The paths
+// are the iPhone's, with forward slashes on every computer.
 func appProcesses(bundles []string, procs map[uint64]string) []uint64 {
 	var pids []uint64
 	for pid, exe := range procs {
-		dir := filepath.Dir(exe)
+		dir := path.Dir(exe)
 		for _, b := range bundles {
 			b = strings.TrimSuffix(b, "/")
 			if dir == b || dir == "/private"+b || "/private"+dir == b {
