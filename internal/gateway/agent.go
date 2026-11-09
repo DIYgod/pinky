@@ -98,6 +98,7 @@ type Result struct {
 	Task       string    // phone_connect: the task id
 	Folder     string    // phone_files: the folder on the computer
 	Files      []FileView
+	Saved      []SavedFile // files written for the agent on Pinky's computer (save.go)
 }
 
 // IsError reports whether the result is an error rather than a status.
@@ -146,6 +147,9 @@ type ReleaseRequest struct {
 	Call
 	Outcome string // done, failed, partial or cancelled
 	Summary string
+	// Export saves the task's report in the phone's folder on Pinky's
+	// computer once it ends (save.go).
+	Export bool
 }
 
 // ObserveRequest is phone_observe.
@@ -156,6 +160,9 @@ type ObserveRequest struct {
 	// OCR asks for all the text the screen's pixels show that no element
 	// does, however complete the tree looks (ocrAll).
 	OCR bool
+	// Save saves the screenshot under this name in the phone's folder on
+	// Pinky's computer (save.go), with or without Screenshot.
+	Save string
 }
 
 // WaitForRequest is phone_wait_for.
@@ -932,6 +939,9 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 	if outcome == "canceled" {
 		outcome = "cancelled"
 	}
+	if req.Export && g.opt.DataDir == "" {
+		return errResult(ErrUnsupported, "This Pinky keeps no data folder, so it cannot save the task's report. Release without export.")
+	}
 	g.mu.Lock()
 	var ls []*lease
 	if req.Device != "" {
@@ -955,8 +965,18 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 		}
 	}
 	var names []string
+	var exports []taskExport
 	for _, l := range ls {
 		names = append(names, l.dev.name())
+		if req.Export {
+			g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"export": true}),
+				Text: exportStepText, Status: string(StatusSettled), At: time.Now()}, "", "")
+			e := taskExport{task: l.task.id, device: l.dev.name(), dir: g.FilesDir(l.dev.id)}
+			if v := l.dev.video; v != nil && v.t.id == l.task.id {
+				e.video = v
+			}
+			exports = append(exports, e)
+		}
 		g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"outcome": outcome, "summary": req.Summary}),
 			Text: "Finished: " + outcome, Status: string(StatusSettled), At: time.Now()}, "", "")
 		g.endLeaseLocked(l, outcome, req.Summary)
@@ -970,6 +990,9 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 	if len(ls) == 1 {
 		res.Device, res.DeviceName = ls[0].dev.id, ls[0].dev.name()
 	}
+	if len(exports) > 0 {
+		g.exportForAgent(ctx, exports, res)
+	}
 	return res
 }
 
@@ -977,6 +1000,17 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 	if req.WaitMS < 0 || time.Duration(req.WaitMS)*time.Millisecond > MaxObserveWait {
 		return errResult(ErrInvalidArgument, "wait_ms must be between 0 and 30000.")
+	}
+	var save string
+	if strings.TrimSpace(req.Save) != "" {
+		name, why := shotName(req.Save)
+		if why != "" {
+			return errResult(ErrInvalidArgument, "%q cannot be a file name in the phone's folder on Pinky's computer: %s.", req.Save, why)
+		}
+		if s.g.opt.DataDir == "" {
+			return errResult(ErrUnsupported, "This Pinky keeps no data folder, so it cannot save files.")
+		}
+		save = name
 	}
 	l, res := s.acquire(req.Device)
 	if res != nil {
@@ -1022,9 +1056,10 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		res.Message = strings.TrimSpace(res.Message + " " + noOCRMessage)
 	}
 	_, blocked := g.policy.Blocked(cur.App)
-	if !req.Screenshot {
+	if !req.Screenshot && save == "" {
 		g.startShot(l.dev, cur)
 	} else {
+		tried := false // to save, so the message says how that went
 		switch {
 		case res.Rule != "":
 			res.Message = strings.TrimSpace(res.Message + " No screenshot: the app is blocked.")
@@ -1034,7 +1069,18 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 			img, cov, err := g.screenshot(ctx, l.dev, cur)
 			switch {
 			case err == nil:
-				res.Screenshot = img
+				if req.Screenshot {
+					res.Screenshot = img
+				}
+				if save != "" {
+					f, msg, err := g.saveShot(l, save, img)
+					if err != nil {
+						msg = "Saving the screenshot failed: " + err.Error() + "."
+					} else {
+						res.Saved = append(res.Saved, f)
+					}
+					res.Message, tried = strings.TrimSpace(res.Message+" "+msg), true
+				}
 				if cov.hidden > 0 {
 					res.Message = strings.TrimSpace(res.Message + " Notifications and cards of blocked apps are covered in the screenshot.")
 				}
@@ -1052,6 +1098,9 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 			default:
 				res.Message = strings.TrimSpace(res.Message + " The screenshot failed: " + err.Error())
 			}
+		}
+		if save != "" && !tried {
+			res.Message = strings.TrimSpace(res.Message + " Nothing was saved.")
 		}
 	}
 	return g.finish(l, res)

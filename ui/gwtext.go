@@ -272,6 +272,7 @@ var (
 	reListed    = re(`^Listed the phone's Pinky folder \((\d+) files?\)$`)
 	reCopied    = re(`^Copied (\d+) files? (from|to) the phone(: .*)?$`)
 	reReceived  = re(`^Received “(.*)” \(([^()]+)\) from the agent$`)
+	reSavedShot = re(`^Saved a screenshot as “(.*)”$`)
 	reYouDid    = re(`^You (allowed|denied): (.*)$`)
 	reYourNote  = re(`^Your note: (.*)$`)
 	reAlways    = re(`^Always allowed: “(.*?)” in (.+)$`)
@@ -307,6 +308,8 @@ func stepText(s string) string {
 		return locales.GwStepYouTookOver()
 	case "You stopped the task":
 		return locales.GwStepYouStopped()
+	case "Saved the task's report for the agent":
+		return locales.GwStepSavedReport()
 	}
 	if m := reWaiting.FindStringSubmatch(s); m != nil {
 		return locales.GwStepWaiting(asked(m[1]))
@@ -350,6 +353,9 @@ func stepText(s string) string {
 	}
 	if m := reReceived.FindStringSubmatch(s); m != nil {
 		return locales.GwStepReceivedFile(m[1], m[2])
+	}
+	if m := reSavedShot.FindStringSubmatch(s); m != nil {
+		return locales.GwStepSavedScreenshot(m[1])
 	}
 	if m := reYouDid.FindStringSubmatch(s); m != nil {
 		if m[1] == "allowed" {

@@ -3858,6 +3858,20 @@
       }
     }
   },
+  "gwStepSavedReport": "Saved the task's report for the agent",
+  "@gwStepSavedReport": {
+    "description": "A step: as the task ended, the agent had its report (an HTML page of the steps with screenshots, and a JSON file) saved in the phone's folder on the computer, for a bug report or a pull request (phone_release export). The screen recording is not in it. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwStepSavedScreenshot": "Saved a screenshot as “{path}”",
+  "@gwStepSavedScreenshot": {
+    "description": "A step: the agent saved a screenshot of the phone as a file in the phone's folder on the computer, for a bug report or a pull request (phone_observe save). path is the file's name in that folder. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "onboarding-1.png"
+      }
+    }
+  },
   "gwStepUnlocked": "Unlocked from the computer",
   "@gwStepUnlocked": {
     "description": "A step: the phone was unlocked from this computer with its saved PIN. Shown only in other languages; in English the gateway's own words show."

@@ -85,6 +85,15 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - Not on that computer (connected over HTTP from another machine)? Hand Pinky the file first: `phone_files { action: "upload", paths: ["photo.jpg"] }` returns a one-time link; send the file to it from your own shell, `curl --upload-file photo.jpg '<link>'` (up to 200 MB, within 10 minutes), then push it. Small files (up to 10 MB) can go in the call instead, base64-encoded: `content: "<base64>"`, which works over stdio too. A different file of the same name is replaced only with `replace: true`.
 - iPhones return `unsupported`.
 
+## Screenshots and reports as files
+
+Testing an app for a bug report or a pull request? Keep what you saw as files in that folder on the computer running Pinky, on any phone, iPhones included:
+
+- `phone_observe { save: "onboarding-1.png" }` saves a full-resolution screenshot (a `.jpg` name saves a JPEG) and returns its path. The image comes back to you only with `screenshot: true` as well. It is the screenshot you would get: codes covered, and none while the phone is locked or a blocked app is in front.
+- `phone_release { outcome: "done", summary: "…", export: true }` also saves the task's report: an HTML page of its steps with screenshots, and the same as JSON. The screen recording stays with the person, who can add it from Pinky's Activity.
+- Connected over HTTP from another machine? You get a `curl` command for each file instead of a path: run it from your own shell within 10 minutes; each link works once.
+- Saving asks nothing and changes nothing on the phone, so read-only agents may save too. Look at a screenshot before you post it anywhere public: it shows what was on the screen.
+
 ## Things you must not do
 
 - Never type passwords or one-time codes; Pinky refuses (`rule: credentials`). Call `phone_handoff { reason: "Please sign in to Dinely" }` and wait.
@@ -101,7 +110,7 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 - Where results keep saying `settle: timeout` (games, videos, live maps: screens that never stop moving), every action waits the whole 3 s for nothing. Pass `settle_ms: 300` or so to actions there; `0` reads the screen right after the action. Below about 500 the result always says `settle: timeout`, and the screen may not show what the action did yet: read again with `phone_observe` or `phone_wait_for` before you repeat an action. The next action still waits out the rest of the 3 s before it reads the screen, so in `phone_batch` only the last step gains. Never pass `settle_ms` to pay, send, order, delete or confirm.
 - `phone_apps { query: "din" }` finds an app's exact name before `phone_launch`.
 - On some Android phones the task runs on a background display, so the person's own screen stays free (or off and locked). `phone_connect` says so. That display starts empty, with no home screen: open apps with `phone_launch` rather than looking for their icons. Right after a launch there, Android may not show the app yet: Pinky waits a few seconds, and if the screen is still empty the launch returns `uncertain` and says so; observe again in a few seconds, and launch the app again if it stays empty.
-- `phone_observe { screenshot: true }` only when the element list is not enough; screenshots are large.
+- `phone_observe { screenshot: true }` only when the element list is not enough; screenshots are large. To keep one, `save` it instead ([above](#screenshots-and-reports-as-files)).
 - An iPhone that restarted can be offline until the person unlocks it once; below iOS 27 Pinky then mounts its developer disk image again by itself, which takes a few seconds. A locked iPhone or iPad on Wi-Fi returns `device_needs_setup` with `setup: unlock`: Pinky connects to it only once it is unlocked, so as not to wake its screen; ask the person to unlock it with `phone_handoff`. With `setup: device_service` the Mac's device service lost the iPhone on Wi-Fi: ask the person, with `phone_handoff`, to click Restart device service on the phone's page in Pinky. If an iPhone you need is offline, tell the person to unlock it, and to plug it in or keep it on the same Wi-Fi as the computer, then call `phone_connect` again.
 - An iPhone moves between its cable and Wi-Fi by itself when the cable is pulled or plugged in; your calls wait a few seconds meanwhile. Over Wi-Fi each step is slower: a `phone_observe` takes several seconds.
 - An iPhone below iOS 27 without Pinky's helper can only be read and have apps opened: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`. Read the screen, open apps with `phone_launch`, and tell the person the task needs the helper.

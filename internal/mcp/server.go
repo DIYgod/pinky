@@ -43,11 +43,14 @@ type Server struct {
 	sessions   map[*sdk.ServerSession]*gateway.Session
 	middleware []sdk.Middleware       // Use's, for the HTTP servers made later
 	uploads    map[string]*uploadLink // upload links by token (upload.go)
+
+	downloads map[string]*downloadLink // download links by token (download.go)
 }
 
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
-	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}, uploads: map[string]*uploadLink{}}
+	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}, uploads: map[string]*uploadLink{},
+		downloads: map[string]*downloadLink{}}
 	s.srv = s.newSDK(false)
 	return s
 }

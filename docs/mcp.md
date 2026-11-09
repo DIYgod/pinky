@@ -81,8 +81,9 @@ A JSON config:
 { "mcpServers": { "pinky": { "type": "http", "url": "http://127.0.0.1:7465/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
 ```
 
-- Without the token, or with another one, requests get `401`; only upload links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
+- Without the token, or with another one, requests get `401`; only upload and download links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
 - A remote agent's files are on its own machine, out of reach of the folder `phone_files` copies to the phone from. It uploads them into that folder instead (`phone_files { action: "upload" }`, [below](#uploading-a-file)): in the call, or to a one-time link at `http://<address>/upload/<token>`, which takes the file without the agent token.
+- Screenshots and task reports Pinky saves for a remote agent (`phone_observe { save }`, `phone_release { export }`) stay on this computer too: the agent gets a one-time link for each, `http://<address>/download/<token>`, which it fetches without the agent token ([below](#saving-screenshots-and-reports)).
 - Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. The agent's name gets " (remote)" after it ("Claude Code (remote)"), so a remote agent is asked about on its own first connection and never gets the scope the person gave the agent of that name on this computer. A newer session of the same remote agent continues the phone its older sessions left ([below](#what-http-clients-may-do)). Turning Remote agents off ends every session at once, with its leases and open approvals.
 
 #### What HTTP clients may do
@@ -97,7 +98,7 @@ Pinky is a stateful Streamable HTTP server: `initialize` returns an `Mcp-Session
 - **A `GET` without a session id** gets `405`: Pinky offers no stream outside a session, so carry on with `POST`.
 - **A `GET` stream.** A client may keep its session's `GET` stream open as long as it likes; calls (`POST`) are served alongside it. Pinky sends little on it, and a proxy that cuts idle streams only makes the client open it again.
 - **Protocol versions** 2024-11-05 to 2025-11-25. The sessionless 2026-07-28 protocol (per-request `_meta`) is not served yet.
-- **Tunnels and reverse proxies** on this computer (Cloudflare Tunnel, `tailscale serve`, nginx) must send a `Host` of `127.0.0.1:<port>` or `localhost:<port>` (cloudflared: `originRequest.httpHostHeader`), as requests to `127.0.0.1` that name another host get `403`. Upload links use the `Host` the request had, or the proxy's `X-Forwarded-Host` and `X-Forwarded-Proto`; the tool's answer says to swap in the public address if the link shows Pinky's own.
+- **Tunnels and reverse proxies** on this computer (Cloudflare Tunnel, `tailscale serve`, nginx) must send a `Host` of `127.0.0.1:<port>` or `localhost:<port>` (cloudflared: `originRequest.httpHostHeader`), as requests to `127.0.0.1` that name another host get `403`. Upload and download links use the `Host` the request had, or the proxy's `X-Forwarded-Host` and `X-Forwarded-Proto`; the tool's answer says to swap in the public address if the link shows Pinky's own.
 
 - Protocol: the official Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0), newline-delimited JSON-RPC over stdio; the SDK negotiates the protocol version.
 - Server info: name `pinky`, title `Pinky`; the server sends short usage instructions at initialization.
@@ -120,6 +121,7 @@ note: "<the person's note>"
 - `ocr` lines are text read from the screen's pixels that no element shows; they have no ref and are tapped by `x,y`. iPhones add them on every read that shows the agent the screen. Android phones add them where the element tree is empty or sparse over a web view or a canvas (mini-programs and other pages in super-apps' own web views, games, maps), and only there; `phone_observe { ocr: true }` asks for all the text no element shows. OCR uses Vision on macOS and Windows.Media.Ocr on Windows; a computer without it (Linux) marks those Android areas with the state `no_ocr` instead. The picture OCR reads stays in memory and is dropped once read: none is taken of a locked phone, nor of a blocked app the person has not allowed for the task.
 - After an action, only the changes are sent: `+` added, `-` removed, `~` changed (including `~ screen …` for a changed header). A new app, size, orientation or lock state, or a diff longer than the screen, sends the whole screen.
 - `phone_connect`, `phone_observe` and `phone_handoff` always send the whole screen.
+- Files saved for the agent ([below](#saving-screenshots-and-reports)) follow the first lines, one `saved: <path> · <size>` line each; over HTTP the sentences give download links instead.
 - A blocked app shows as `app: blocked app` with no elements; its toasts and dialogs are dropped, and no screenshot is returned. An app the person allowed for the task (see `phone_launch`) shows as usual, `ocr` lines included, but still without screenshots: OCR reads it from a picture the driver keeps in memory and drops.
 
 ### Statuses
@@ -195,6 +197,7 @@ Ends the task and frees the phone.
 | --- | --- | --- |
 | `outcome` | `done` \| `failed` \| `partial` \| `cancelled` | Default `done` |
 | `summary` | string | For the person's history |
+| `export` | boolean | Also save the task's report (HTML and JSON) for a bug report or a pull request, [below](#saving-screenshots-and-reports) |
 | `device` | string | Default: every phone the session holds |
 
 ### phone_observe
@@ -204,7 +207,8 @@ Returns the whole current screen.
 | Argument | Type | Meaning |
 | --- | --- | --- |
 | `wait_ms` | 0–30000 | Wait until the screen differs from what the agent last saw (then let it settle), or until this passes |
-| `screenshot` | boolean | Add a JPEG screenshot at the phone's full resolution, in the screen's pixel space (1125×2436 on an iPhone X-sized screen). Some clients show the model a smaller copy of tool images: to keep or pass on the picture, save the image block of the result, not that preview. None while the phone is locked or a blocked app is in front |
+| `screenshot` | boolean | Add a JPEG screenshot at the phone's full resolution, in the screen's pixel space (1125×2436 on an iPhone X-sized screen). Some clients show the model a smaller copy of tool images: to keep or pass on the picture, use `save`. None while the phone is locked or a blocked app is in front |
+| `save` | string | Save that screenshot as a file for a bug report or a pull request, such as `onboarding-1.png`, and return its path ([below](#saving-screenshots-and-reports)). The image itself comes back only with `screenshot: true` |
 | `ocr` | boolean | Add all the text the pixels show that no element does, as `ocr` lines, however complete the list looks (Android adds such lines by itself only where the list is empty or sparse). On a computer without OCR, the result says so |
 
 Works while the person is in control and while an approval is open.
@@ -329,6 +333,16 @@ Returns `settled` with `decision: allow`, or `approval_denied`, with the person'
 | `reason` | string, required | What the person should do |
 
 Shows a Needs you card and waits until the person hands control back; returns `settled` with their `note` and the whole screen. If they already handed back before the call, it returns at once. A handoff opened while the phone waits for a step (`device_needs_setup`) ends by itself once Pinky has opened the phone, with `note: "The phone is ready."`; if the person hands back before that, the result is `device_needs_setup` again, with their note. A handoff opened while the phone is locked ends by itself when the person unlocks from the computer, if unlocking is all its `reason` asks for ("Please unlock the phone"); one that asks for more ("Unlock the phone, then sign in to Wise") stays open until the person hands back, and so does any handoff after an unlock on the phone itself. The person may decline (`approval_denied`); with no answer it ends after 15 minutes. Blocks up to 45 s at a time, then `approval_pending`.
+
+## Saving screenshots and reports
+
+An agent that writes a bug report or a pull request can keep what it saw as files: `phone_observe { save: "onboarding-1.png" }` saves a screenshot, and `phone_release { export: true }` the task's report. Both write into the phone's folder on the computer, `<data>/files/<phone id>/` (the one `phone_files` uses), and nothing to the phone, so they ask nothing: read-only and watch-only agents may save, in read-only mode too. They work on every phone, iPhones included. A Pinky without a data folder returns `unsupported`.
+
+- **A screenshot** is saved at the phone's full resolution: PNG, or JPEG for a name that ends in `.jpg` or `.jpeg`; a name without an extension gets `.png`. Names follow the rules of uploads ([above](#uploading-a-file)), other extensions are `invalid_argument`, and a file of that name is replaced. It is the screenshot `screenshot: true` returns, covered the same way: one-time codes and blocked apps' notifications under gray boxes, and none while the phone is locked or a blocked app is in front, an app the person allowed for the task included (Pinky keeps no picture of those). Then the result says why, ending "Nothing was saved."
+- **The report** is written as the task ends: `pinky-task-<date>-<time>.html`, a page of the task's steps with the screenshots Pinky kept for its history (covered the same way), and a `.json` file with the same as data, as Activity's Export… writes them. The screen recording is left out: it does not cover one-time codes or blocked apps' notifications, so it stays on the computer, and the result says the person can add it with Export… in the task's ⋯ menu in Activity.
+- **On this computer** the result names each file on a `saved:` line; the agent reads or copies it with its own file tools.
+- **Over HTTP** the result gives a command for each file instead: `curl -fsS -o 'onboarding-1.png' 'http://<address>/download/<token>'`, at the address the agent reached Pinky at, as for upload links. A link works once, for 10 minutes, and needs no agent token: its own random 128-bit token is the key. Unlike an upload link it outlives the session, so a client that closes its session right after `phone_release` still gets the files; turning Remote agents off ends every link. Unknown, used or expired links, and files no longer in the folder, get `404`, and methods other than `GET` get `405`. Files come as attachments, the report as `application/octet-stream`, so it opens from the agent's disk, never from Pinky's address.
+- Each save is a step in the task's history: "Saved a screenshot as “onboarding-1.png”", "Saved the task's report for the agent".
 
 ## Approvals
 

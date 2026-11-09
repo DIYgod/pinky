@@ -92,12 +92,30 @@ func (g *Gateway) ExportHistory(ctx context.Context, taskIDs []string, dir strin
 		return "", err
 	}
 	g.Flush()
-	tasks, err := g.exportTasks(ctx, taskIDs)
+	now := time.Now()
+	out, err := g.exportTo(ctx, taskIDs, dir, uniqueBase(dir, "pinky-history-"+now.Format("2006-01-02-150405")), now, true)
 	if err != nil {
 		return "", err
 	}
-	now := time.Now()
-	base := uniqueBase(dir, "pinky-history-"+now.Format("2006-01-02-150405"))
+	return out.html, nil
+}
+
+// exported are the files an export wrote: the report, the JSON file and
+// the recordings, by path.
+type exported struct {
+	html, json string
+	videos     []string
+}
+
+// exportTo writes the report and JSON file of the tasks into dir, named
+// base.html and base.json, and with videos each task's recording next to
+// them. Callers flush first.
+func (g *Gateway) exportTo(ctx context.Context, taskIDs []string, dir, base string, now time.Time, videos bool) (exported, error) {
+	var out exported
+	tasks, err := g.exportTasks(ctx, taskIDs)
+	if err != nil {
+		return out, err
+	}
 	shots := map[string]string{} // media id -> data URL
 	for i := range tasks {
 		t := &tasks[i]
@@ -113,6 +131,9 @@ func (g *Gateway) ExportHistory(ctx context.Context, taskIDs []string, dir strin
 				}
 			}
 		}
+		if !videos {
+			t.Recording = nil
+		}
 		if t.Recording != nil {
 			name := base + "-" + t.ID + ".mp4"
 			if err := copyFile(filepath.Join(dir, name), t.Recording.File); err != nil {
@@ -121,28 +142,27 @@ func (g *Gateway) ExportHistory(ctx context.Context, taskIDs []string, dir strin
 				continue
 			}
 			t.Recording.File = name
+			out.videos = append(out.videos, filepath.Join(dir, name))
 		}
 	}
 	data, err := json.MarshalIndent(map[string]any{"exported": now, "tasks": tasks}, "", "  ")
 	if err != nil {
-		return "", err
+		return out, err
 	}
-	if err := os.WriteFile(filepath.Join(dir, base+".json"), append(data, '\n'), 0o600); err != nil {
-		return "", err
+	out.json = filepath.Join(dir, base+".json")
+	if err := os.WriteFile(out.json, append(data, '\n'), 0o600); err != nil {
+		return out, err
 	}
-	htmlPath := filepath.Join(dir, base+".html")
-	f, err := os.OpenFile(htmlPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	out.html = filepath.Join(dir, base+".html")
+	f, err := os.OpenFile(out.html, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
-		return "", err
+		return out, err
 	}
 	err = writeReport(f, now, tasks, shots)
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
-	if err != nil {
-		return "", err
-	}
-	return htmlPath, nil
+	return out, err
 }
 
 // exportTasks gathers the tasks to export, oldest first.
