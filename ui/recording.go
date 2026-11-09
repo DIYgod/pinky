@@ -73,22 +73,23 @@ const recordingWide = 640
 
 // recPlayer plays a recording. Its fields are used on the main thread.
 type recPlayer struct {
-	a      *app
-	task   string
-	rec    gateway.RecordingView
-	gen    int
-	cancel context.CancelFunc
-	player *video.Player
-	bitmap *mg.Bitmap
-	picW   int // the picture's size the right way up
-	picH   int
-	turn   int    // quarter turns clockwise that put the picture upright
-	state  string // "loading", "playing", "paused", "ended", "failed"
-	err    error
-	pos    time.Duration // where the picture shown is, from the recording's start
-	from   time.Duration // where the stream was opened
-	base   time.Duration // added to the stream's PTS, when they count from where it opened
-	first  bool          // the next picture is the stream's first
+	a         *app
+	task      string
+	rec       gateway.RecordingView
+	gen       int
+	cancel    context.CancelFunc
+	player    *video.Player
+	bitmap    *mg.Bitmap
+	picW      int // the picture's size the right way up
+	picH      int
+	turn      int    // quarter turns clockwise that put the picture upright
+	state     string // "loading", "playing", "paused", "ended", "failed"
+	err       error
+	pos       time.Duration // where the picture shown is, from the recording's start
+	from      time.Duration // where the stream was opened
+	base      time.Duration // added to the stream's PTS, when they count from where it opened
+	first     bool          // the next picture is the stream's first
+	holdPause bool          // stop once the seeked frame is shown
 }
 
 // openRecording starts playing a task's recording from its start.
@@ -122,11 +123,16 @@ func (pl *recPlayer) stop() {
 // play opens the recording at from; the picture stays until the first new
 // one, so a jump does not flash.
 func (pl *recPlayer) play(from time.Duration) {
+	pl.playFrom(from, true)
+}
+
+func (pl *recPlayer) playFrom(from time.Duration, run bool) {
 	pl.stop()
 	gen := pl.gen
 	ctx, cancel := context.WithCancel(pl.a.ctx)
 	pl.cancel = cancel
 	pl.from, pl.pos, pl.state, pl.err, pl.first = from, from, "loading", nil, true
+	pl.holdPause = !run
 	a, rec := pl.a, pl.rec
 	go func() {
 		var s driver.Stream
@@ -153,7 +159,10 @@ func (pl *recPlayer) play(from time.Duration) {
 				pl.state, pl.err = "failed", err
 				return
 			}
-			pl.player, pl.state = p, "playing"
+			pl.player = p
+			if run {
+				pl.state = "playing"
+			}
 			go func() {
 				<-p.Done()
 				a.post(func() {
@@ -190,7 +199,9 @@ func (pl *recPlayer) resume() {
 }
 
 func (pl *recPlayer) seek(at time.Duration) {
-	pl.play(max(0, min(at, pl.rec.Length)))
+	at = max(0, min(at, pl.rec.Length))
+	run := pl.state == "playing" || pl.state == "loading"
+	pl.playFrom(at, run)
 }
 
 // take shows the newest picture, at paint time.
@@ -214,11 +225,15 @@ func (pl *recPlayer) take(pt *mg.Painter) {
 			// sends them; a stream counting from where it opened starts
 			// near zero instead, well before from.
 			pl.first, pl.base = false, 0
-			if pl.from > 10*time.Second && f.PTS < pl.from-10*time.Second {
+			if f.PTS < pl.from {
 				pl.base = pl.from - f.PTS
 			}
 		}
 		pl.pos = max(0, min(pl.base+f.PTS, pl.rec.Length))
+		if pl.holdPause {
+			pl.holdPause = false
+			pl.pause()
+		}
 	}
 	pt.AnimationFrameRate(60)
 }
@@ -352,28 +367,22 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 	p := pal(c)
 	length := max(pl.rec.Length, time.Millisecond)
 	bar := mg.Box(c).Height(30).Focusable().Role(mg.RoleSlider).Label(locales.RecordingPosition()).Cursor(mg.CursorPointer)
-	var width float32
-	bar.HandleInput(func(ev mg.InputEvent) bool {
-		switch ev.Kind {
-		case mg.InputPointerDown:
-			if ev.Button == 0 && width > 0 {
-				pl.seek(time.Duration(float64(length) * float64(max(0, min(ev.X/width, 1)))))
-				return true
-			}
-		case mg.InputKeyDown:
-			switch ev.Key {
-			case mg.KeyLeft:
-				pl.seek(pl.pos - 5*time.Second)
-				return true
-			case mg.KeyRight:
-				pl.seek(pl.pos + 5*time.Second)
-				return true
+	bar.Range(0, length.Seconds(), pl.pos.Seconds())
+	bounds := bar.LayoutBounds()
+	if bounds.W > 0 {
+		if x, _, ok := bar.PointerPosition(); ok && bar.Pressed() {
+			at := recordingAt(x, bounds.W, length)
+			if bar.PressedInside() || absDur(at-pl.pos) > 100*time.Millisecond {
+				pl.seek(at)
 			}
 		}
-		return false
-	})
+	}
+	if bar.Shortcut(0, mg.KeyLeft) {
+		pl.seek(pl.pos - 5*time.Second)
+	} else if bar.Shortcut(0, mg.KeyRight) {
+		pl.seek(pl.pos + 5*time.Second)
+	}
 	bar.Draw(func(pt *mg.Painter, r mg.Rect) {
-		width = r.W
 		y := r.Y + r.H/2
 		pt.Fill(mg.Rect{X: r.X, Y: y - 2, W: r.W, H: 4}, p.bg3, 2)
 		done := r.W * float32(float64(pl.pos)/float64(length))
@@ -395,6 +404,21 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 		pt.FillPath(&head, p.accentBtn)
 	})
 	return bar
+}
+
+func recordingAt(x, width float32, length time.Duration) time.Duration {
+	if width <= 0 {
+		return 0
+	}
+	frac := max(0, min(x/width, 1))
+	return time.Duration(float64(length) * float64(frac))
+}
+
+func absDur(d time.Duration) time.Duration {
+	if d < 0 {
+		return -d
+	}
+	return d
 }
 
 func recordingError(err error) string {

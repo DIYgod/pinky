@@ -8,6 +8,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/video"
 	"github.com/DIYgod/pinky/ui/fakeapi"
@@ -94,5 +95,61 @@ func TestRecordingPlaysAndSeeks(t *testing.T) {
 	opens := ta.api.RecordingOpens()
 	if got := opens[len(opens)-1]; got != held {
 		t.Errorf("Play went on from %v, not %v", got, held)
+	}
+}
+
+// TestRecordingTimelineSeekWhilePaused clicks the timeline while paused and
+// expects playback to open there, not at the start, and to stay paused.
+func TestRecordingTimelineSeekWhilePaused(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("needs the ffmpeg command")
+	}
+	if err := video.Load(); err != nil {
+		t.Skip(err)
+	}
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.page = pageActivity
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.waitFor(t, "Activity", func() bool { tt.Frame(); return ta.act.loaded })
+	ta.act.sel = "h-lunch"
+	ta.waitFor(t, "the recording", func() bool { tt.Frame(); return hasText(tt, "Watch recording") })
+	if err := tt.Click("Watch recording"); err != nil {
+		t.Fatal(err)
+	}
+	pl := ta.rec.pl
+	t.Cleanup(ta.closeRecording)
+	ta.waitFor(t, "the first pictures", func() bool {
+		tt.Frame()
+		return pl.bitmap != nil && pl.pos > 300*time.Millisecond
+	})
+	if err := tt.Click("Pause"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if pl.state != "paused" {
+		t.Fatalf("before the seek: %s", pl.state)
+	}
+	r, ok := tt.Find(locales.RecordingPosition())
+	if !ok {
+		t.Fatal("no timeline")
+	}
+	want := pl.rec.Length * 3 / 4
+	before := len(ta.api.RecordingOpens())
+	tt.ClickAt(r.X+r.W*0.75, r.Y+r.H/2)
+	ta.waitFor(t, "the seek", func() bool {
+		tt.Frame()
+		return len(ta.api.RecordingOpens()) > before
+	})
+	opens := ta.api.RecordingOpens()
+	got := opens[len(opens)-1]
+	if got < want-time.Second || got > want+2*time.Second {
+		t.Errorf("opened at %v, want about %v", got, want)
+	}
+	ta.waitFor(t, "the paused picture", func() bool {
+		tt.Frame()
+		return pl.state == "paused" && pl.pos >= want-time.Second
+	})
+	if pl.state != "paused" {
+		t.Errorf("after the seek: %s at %v", pl.state, pl.pos)
 	}
 }
