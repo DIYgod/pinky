@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在 Linux 上，从 `.tar.gz` 解压出来的 Pinky 现在会自己装好更新：先核对下载的文件，再换上新版本的文件并重启到新版本，新版本起不来就换回旧版本。同一文件夹里的其他文件不会被动。感谢 pseudoyu。
+
 ## 2026.1109.16 (2026-11-09)
 
 - 在 Linux 和 Windows 上，Wi-Fi 上已配对的 iPhone 或 iPad 只要在原地址还有应答，就会一直使用这个地址，伪造的网络广播不能再把 Pinky 的连接引到别处；不可能属于手机的地址会被忽略。
