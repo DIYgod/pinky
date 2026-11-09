@@ -2,6 +2,12 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 新智能体等你批准时，再次发起连接会继续等你的答复，不会再报错、另起一个批准请求。
+- 强制退出 Pinky 后，iOS 模拟器的 WebDriverAgent 构建不会再留在后台运行。
+- 设置了 `PINKY_DEVICES` 时，Pinky 不再查询或重连被排除在外的 Android 手机和模拟器。
+
 ## 2026.1109.23 (2026-11-09)
 
 - 在 Windows 电脑上添加 iPhone 时，即使 Windows 还没下载 Apple 的根证书，也不会再报“certificate signed by unknown authority”了。
