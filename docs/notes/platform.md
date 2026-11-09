@@ -19,6 +19,34 @@ The platform session's work in round three: PINs in the system keychain on macOS
 - Items are generic credentials (`CredWriteW`, `CredReadW`, `CredDeleteW` through syscall) with the target `app.pinky.desktop/<account>` (as keytar and MyGo name theirs) and `CRED_PERSIST_LOCAL_MACHINE`, so a phone's PIN does not roam with a domain profile. Windows encrypts them for the user. Copies of the secret are wiped before they are freed.
 - `Reveal` asks through Windows Hello when it is set up (`presence_windows.go`): the WinRT class `Windows.Security.Credentials.UI.UserConsentVerifier`, reached with `RoGetActivationFactory` and its COM vtables. `CheckAvailabilityAsync` first; then `IUserConsentVerifierInterop::RequestVerificationForWindowAsync` owned by Pinky's window when one is in front (Windows 11), else `RequestVerificationAsync`. Async operations are waited on by polling `IAsyncInfo`; a context that ends calls `Cancel`. The interface IDs come from the SDK's headers (MinGW's IDL, win32metadata); the one of `IAsyncOperation<UserConsentVerificationResult>` is derived from its WinRT signature, which `TestAsyncOperationIID` recomputes.
 - Without Hello (not set up, not allowed, or refused to a program without a window), it asks for the signed-in account's password in `CredUIPromptForWindowsCredentials` (`CREDUIWIN_ENUMERATE_CURRENT_USER`) and checks it with `LogonUserW`, three tries, as Chrome did. That dialog cannot be taken away early: when the context ends while it shows, the answer is dropped once the person closes it.
+- `ERROR_LOGON_FAILURE` is a wrong password (the dialog asks again); any other failure is an error, with one exception for accounts without a password (issue #41, below). `passwordVerdict` (`password.go`, no build tag, so its table test runs on every system) makes that decision.
+
+### Windows: accounts without a password
+
+Windows' default policy "Accounts: Limit local account use of blank passwords to console logon only" (`HKLM\SYSTEM\CurrentControlSet\Control\Lsa\LimitBlankPasswordUse`=1) refuses a local account with a blank password any logon `LogonUserW` makes, network or interactive, with `ERROR_ACCOUNT_RESTRICTION` (1327). So a person whose account has no password could never confirm (issue #41). Now an empty password that gets 1327 counts as right when `signedInBlankAccount` agrees: the dialog's name has no domain, `.`, or this computer's name; `<computer>\<user>` resolves (`LookupAccountName`) to the SID of the account Pinky runs as; and `LogonUserW` for `<computer>\<user>` with an empty password again answers 1327 (or signs in, where the policy is off), so the decision is about the local account whatever account the dialog's name reached. Any other 1327, or a 1327 for a password that is not empty, stays an error.
+
+This is safe because Windows answers 1327 only after the blank password has matched. Measured on 2026-11-10 on GitHub's windows-latest runner (Windows Server 2025 Datacenter, build 26100, a workgroup machine), three runs (the later two with more accounts), with `LogonUserW` as `checkPassword` calls it, for each account the empty, the right and a wrong password, logon types network (3) and interactive (2), the domain NULL, the computer's name and `.`, with `LimitBlankPasswordUse` as installed (1), then 0, then 1 again (the change applies within seconds, without a restart). Network and interactive, and the three domain forms, always gave the same answer:
+
+| Account | Empty password, policy 1 | Empty password, policy 0 | Right password (1 and 0) | Wrong password (1 and 0) |
+| --- | --- | --- | --- | --- |
+| Blank password, enabled (made three ways: `New-LocalUser` with a password then cleared; `net user X "" /add`; `net user X pw /add` then cleared) | **1327** | OK | (empty is right) | 1326 |
+| Blank, disabled | 1331 | 1331 | | 1326 |
+| Blank, outside its logon hours | 1328 | 1328 | | 1326 |
+| Blank, account expired | 1793 | 1793 | | 1326 |
+| Blank, must change password (also every `New-LocalUser -NoPassword` account) | 1907 | 1907 | | 1326 |
+| Blank, locked out | 1909 | 1909 | | 1909 |
+| Password, enabled (with and without `PASSWD_NOTREQD`; also the runner's own admin account, empty and wrong only) | 1326 | 1326 | OK | 1326 |
+| Password, disabled | 1326 | 1326 | 1331 | 1326 |
+| Password, outside its logon hours | 1326 | 1326 | 1328 | 1326 |
+| Password, account expired | 1326 | 1326 | 1793 | 1326 |
+| Password, must change password | 1326 | 1326 | 1907 | 1326 |
+| Password, locked out | 1909 | 1909 | 1909 | 1909 |
+
+1326 `ERROR_LOGON_FAILURE`, 1327 `ERROR_ACCOUNT_RESTRICTION`, 1328 `ERROR_INVALID_LOGON_HOURS`, 1331 `ERROR_ACCOUNT_DISABLED`, 1793 `ERROR_ACCOUNT_EXPIRED`, 1907 `ERROR_PASSWORD_MUST_CHANGE`, 1909 `ERROR_ACCOUNT_LOCKED_OUT`. So Windows checks lockout first, then the password, then the account's restrictions, and the blank-password policy last: an account with a password never answers 1327 to an empty password, and a blank-password account with another restriction gets that restriction's error. An interactive logon through `LogonUserW` is no way around the policy.
+
+The same runs checked `checkPassword` itself, with buffers packed by `CredPackAuthenticationBufferW` as the dialog packs them: as the runner's account, an empty password for a blank-password account is an error (not its account) and for accounts with a password a wrong password; while impersonating a blank-password account, its empty password passes as `user` and `<computer>\user` (with the policy on and off), while other blank-password accounts (enabled, disabled, outside logon hours, expired) are errors and accounts with a password in every state are wrong passwords. `.\user` does not parse (`CredUIParseUserNameW`), so it reaches no account and counts as a wrong password. With the policy off, `LogonUserW` on a workgroup machine signs `NOTTHISDOMAIN\user` in as the local `user`, as before; with it on, that name gets 1327 and stays an error, as its domain is not this computer.
+
+Not checked: domain accounts and Microsoft accounts (the policy is about local accounts, a Microsoft account cannot have a blank password, and their names do not pass `signedInBlankAccount`'s domain check), an account whose password itself expired (1330; the runner could not age a password), Windows 10 or 11 on a real home PC, and the dialog with a person. `TestSignedInBlankAccount` checks on the runner that the signed-in account, which has a password, never counts as blank; it asks Windows with an empty password, a failed sign-in, so it skips outside GitHub Actions.
 
 ### Linux: the Secret Service
 
