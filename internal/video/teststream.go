@@ -153,22 +153,49 @@ func startFFmpeg(ctx context.Context, path string, args []string, opt TestStream
 // the mirror shows them and its touches land in their pixels. It fails at
 // once when ffmpeg is missing.
 func FrameStream(ctx context.Context, w, h, fps int, frame func() image.Image) (*TestStream, error) {
+	return FrameStreamWithFFmpeg(ctx, w, h, fps, "ffmpeg", frame)
+}
+
+// FrameStreamWithFFmpeg is FrameStream with an explicit host encoder path,
+// for desktop apps whose launch environment does not include Homebrew.
+func FrameStreamWithFFmpeg(ctx context.Context, w, h, fps int, encoder string, frame func() image.Image) (*TestStream, error) {
+	return frameStream(ctx, w, h, fps, encoder, frame, false)
+}
+
+// LowLatencyFrameStream encodes sparse pictures without waiting for the
+// next capture to complete the previous access unit. Each picture is fed
+// twice: the duplicate's delimiter releases the first picture immediately.
+// This costs an extra encode, but no extra capture or device round trip.
+func LowLatencyFrameStream(ctx context.Context, w, h, fps int, encoder string, frame func() image.Image) (*TestStream, error) {
+	return frameStream(ctx, w, h, fps, encoder, frame, true)
+}
+
+func frameStream(ctx context.Context, w, h, fps int, encoder string, frame func() image.Image, flush bool) (*TestStream, error) {
 	if w <= 0 || h <= 0 || w%2 != 0 || h%2 != 0 {
 		return nil, fmt.Errorf("video: frame stream size %dx%d must be positive and even", w, h)
 	}
 	if fps <= 0 {
 		fps = 15
 	}
-	path, err := exec.LookPath("ffmpeg")
+	path, err := exec.LookPath(encoder)
 	if err != nil {
 		return nil, fmt.Errorf("video: the frame stream needs the ffmpeg command: %w", err)
 	}
-	opt := TestStreamOptions{Codec: driver.H264, Width: w, Height: h, FPS: fps}
+	encodedFPS := fps
+	if flush {
+		encodedFPS *= 2
+	}
+	opt := TestStreamOptions{Codec: driver.H264, Width: w, Height: h, FPS: encodedFPS}
 	args := []string{"-hide_banner", "-loglevel", "error", "-nostdin",
-		"-f", "rawvideo", "-pix_fmt", "rgba", "-s", fmt.Sprintf("%dx%d", w, h), "-r", strconv.Itoa(fps), "-i", "-",
-		"-pix_fmt", "yuv420p", "-g", strconv.Itoa(fps * 2), "-bf", "0",
+		"-f", "rawvideo", "-pix_fmt", "rgba", "-s", fmt.Sprintf("%dx%d", w, h), "-r", strconv.Itoa(encodedFPS), "-i", "-",
+		"-pix_fmt", "yuv420p", "-g", strconv.Itoa(encodedFPS * 2), "-bf", "0",
 		"-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
 		"-bsf:v", "h264_metadata=aud=insert", "-f", "h264", "-"}
+	if flush {
+		// Raw video already has its format and dimensions. Waiting for
+		// probe frames would stall small screenshots before encoding.
+		args = append([]string{"-probesize", "32", "-analyzeduration", "0", "-fpsprobesize", "0"}, args...)
+	}
 	// -nostdin only stops ffmpeg reading commands from the terminal; the
 	// pictures still come on stdin as the input "-".
 	feed := func(ctx context.Context, out io.Writer) error {
@@ -185,6 +212,11 @@ func FrameStream(ctx context.Context, w, h, fps int, frame func() image.Image) (
 				}
 				if _, err := out.Write(pix); err != nil {
 					return err
+				}
+				if flush {
+					if _, err := out.Write(pix); err != nil {
+						return err
+					}
 				}
 			}
 			select {

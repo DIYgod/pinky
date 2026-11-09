@@ -113,6 +113,12 @@ func ConnectionChecks(info driver.Info) []driver.Check {
 			auth.Fix = info.Setup
 		}
 	case driver.StateNeedsSetup:
+		if info.SetupCheck != "" && info.SetupCheck != driver.CheckAuthorized {
+			if info.SetupCheck == driver.CheckHost {
+				auth.Status = driver.CheckSkip
+			}
+			return []driver.Check{conn, auth, {ID: info.SetupCheck, Status: driver.CheckFail, Fix: info.Setup, Detail: info.Detail}}
+		}
 		auth.Status, auth.Fix, auth.Detail = driver.CheckFail, info.Setup, info.Detail
 	}
 	return []driver.Check{conn, auth}

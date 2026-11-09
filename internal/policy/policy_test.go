@@ -313,7 +313,7 @@ func TestAsksListsEveryRule(t *testing.T) {
 
 func TestThirdPartyLaunchersAreSystem(t *testing.T) {
 	e := Default()
-	for _, id := range []string{"app.lawnchair.play", "app.lawnchair", "com.teslacoilsw.launcher", "com.apple.springboard"} {
+	for _, id := range []string{"app.lawnchair.play", "app.lawnchair", "com.teslacoilsw.launcher", "com.apple.springboard", "com.ohos.sceneboard"} {
 		if !e.IsSystem(screen.App{ID: id}) {
 			t.Errorf("%s is not a system app", id)
 		}

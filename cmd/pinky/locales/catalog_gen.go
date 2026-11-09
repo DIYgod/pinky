@@ -10595,6 +10595,180 @@ func (msgs Messages) GwUnlockTitle(phone string) string {
 	return Catalog.Format(msgs.locale, "gwUnlockTitle", map[string]any{"phone": phone})
 }
 
+// HarmonyAuthorize says "Unlock the HarmonyOS phone and allow USB debugging from this computer."
+// in the language the app shows.
+//
+// Setup instructions for an unauthorized native HarmonyOS phone.
+func HarmonyAuthorize() string { return In(i18n.Locale()).HarmonyAuthorize() }
+
+// HarmonyAuthorize says "Unlock the HarmonyOS phone and allow USB debugging from this computer."
+// in the language of msgs.
+//
+// Setup instructions for an unauthorized native HarmonyOS phone.
+func (msgs Messages) HarmonyAuthorize() string {
+	return Catalog.Format(msgs.locale, "harmonyAuthorize", nil)
+}
+
+// HarmonyBackendMissing says "The phone is authorized through HDC, but its native UITest control tools are not available."
+// in the language the app shows.
+//
+// A native HarmonyOS phone is connected through HDC, but this build cannot
+// control it.
+func HarmonyBackendMissing() string { return In(i18n.Locale()).HarmonyBackendMissing() }
+
+// HarmonyBackendMissing says "The phone is authorized through HDC, but its native UITest control tools are not available."
+// in the language of msgs.
+//
+// A native HarmonyOS phone is connected through HDC, but this build cannot
+// control it.
+func (msgs Messages) HarmonyBackendMissing() string {
+	return Catalog.Format(msgs.locale, "harmonyBackendMissing", nil)
+}
+
+// HarmonyGuideDetail says "This phone runs native HarmonyOS and connects through HDC. Android ADB settings and Pinky Companion do not apply."
+// in the language the app shows.
+//
+// Add phone, after an HDC-only HarmonyOS phone is found: replace Android
+// setup steps with connection diagnostics.
+func HarmonyGuideDetail() string { return In(i18n.Locale()).HarmonyGuideDetail() }
+
+// HarmonyGuideDetail says "This phone runs native HarmonyOS and connects through HDC. Android ADB settings and Pinky Companion do not apply."
+// in the language of msgs.
+//
+// Add phone, after an HDC-only HarmonyOS phone is found: replace Android
+// setup steps with connection diagnostics.
+func (msgs Messages) HarmonyGuideDetail() string {
+	return Catalog.Format(msgs.locale, "harmonyGuideDetail", nil)
+}
+
+// HarmonyHandshakeNote says "HDC may briefly report an unauthorized state while its handshake completes. A computer the phone already trusts needs…"
+// in the language the app shows.
+//
+// Add phone: an already trusted HDC device may be briefly Unauthorized
+// during its handshake and need no new phone prompt.
+func HarmonyHandshakeNote() string { return In(i18n.Locale()).HarmonyHandshakeNote() }
+
+// HarmonyHandshakeNote says "HDC may briefly report an unauthorized state while its handshake completes. A computer the phone already trusts needs…"
+// in the language of msgs.
+//
+// Add phone: an already trusted HDC device may be briefly Unauthorized
+// during its handshake and need no new phone prompt.
+func (msgs Messages) HarmonyHandshakeNote() string {
+	return Catalog.Format(msgs.locale, "harmonyHandshakeNote", nil)
+}
+
+// HarmonyGuideTitle says "Connect a HarmonyOS phone"
+// in the language the app shows.
+//
+// Add phone title when a native HarmonyOS HDC device is detected, replacing
+// the Android-only setup title.
+func HarmonyGuideTitle() string { return In(i18n.Locale()).HarmonyGuideTitle() }
+
+// HarmonyGuideTitle says "Connect a HarmonyOS phone"
+// in the language of msgs.
+//
+// Add phone title when a native HarmonyOS HDC device is detected, replacing
+// the Android-only setup title.
+func (msgs Messages) HarmonyGuideTitle() string {
+	return Catalog.Format(msgs.locale, "harmonyGuideTitle", nil)
+}
+
+// HarmonyHDCMissing says "This native HarmonyOS phone needs the HarmonyOS SDK's hdc tool. Set PINKY_HDC to its executable, then restart Pinky. …"
+// in the language the app shows.
+//
+// Setup instructions when macOS sees an HDC USB interface but hdc is not
+// installed.
+func HarmonyHDCMissing() string { return In(i18n.Locale()).HarmonyHDCMissing() }
+
+// HarmonyHDCMissing says "This native HarmonyOS phone needs the HarmonyOS SDK's hdc tool. Set PINKY_HDC to its executable, then restart Pinky. …"
+// in the language of msgs.
+//
+// Setup instructions when macOS sees an HDC USB interface but hdc is not
+// installed.
+func (msgs Messages) HarmonyHDCMissing() string {
+	return Catalog.Format(msgs.locale, "harmonyHDCMissing", nil)
+}
+
+// HarmonyReady says "Screen reading, taps, swipes, navigation and app launch are available. Automatic text entry is not supported yet; ent…"
+// in the language the app shows.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func HarmonyReady() string { return In(i18n.Locale()).HarmonyReady() }
+
+// HarmonyReady says "Screen reading, taps, swipes, navigation and app launch are available. Automatic text entry is not supported yet; ent…"
+// in the language of msgs.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func (msgs Messages) HarmonyReady() string {
+	return Catalog.Format(msgs.locale, "harmonyReady", nil)
+}
+
+// HarmonyControlTitle says "Native screen control"
+// in the language the app shows.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func HarmonyControlTitle() string { return In(i18n.Locale()).HarmonyControlTitle() }
+
+// HarmonyControlTitle says "Native screen control"
+// in the language of msgs.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func (msgs Messages) HarmonyControlTitle() string {
+	return Catalog.Format(msgs.locale, "harmonyControlTitle", nil)
+}
+
+// HarmonyHDCTitle says "HDC on this computer"
+// in the language the app shows.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func HarmonyHDCTitle() string { return In(i18n.Locale()).HarmonyHDCTitle() }
+
+// HarmonyHDCTitle says "HDC on this computer"
+// in the language of msgs.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func (msgs Messages) HarmonyHDCTitle() string {
+	return Catalog.Format(msgs.locale, "harmonyHDCTitle", nil)
+}
+
+// HarmonyMirrorReady says "Screenshots and a screenshot-based live preview are available, refreshing up to twice per second."
+// in the language the app shows.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func HarmonyMirrorReady() string { return In(i18n.Locale()).HarmonyMirrorReady() }
+
+// HarmonyMirrorReady says "Screenshots and a screenshot-based live preview are available, refreshing up to twice per second."
+// in the language of msgs.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func (msgs Messages) HarmonyMirrorReady() string {
+	return Catalog.Format(msgs.locale, "harmonyMirrorReady", nil)
+}
+
+// HarmonyMirrorMissing says "Screenshots are available. The live preview also needs the ffmpeg command on this computer."
+// in the language the app shows.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func HarmonyMirrorMissing() string { return In(i18n.Locale()).HarmonyMirrorMissing() }
+
+// HarmonyMirrorMissing says "Screenshots are available. The live preview also needs the ffmpeg command on this computer."
+// in the language of msgs.
+//
+// Native HarmonyOS connection/control capability in Add phone and the
+// device checkup.
+func (msgs Messages) HarmonyMirrorMissing() string {
+	return Catalog.Format(msgs.locale, "harmonyMirrorMissing", nil)
+}
+
 // ListMany says "{rest} and {last}"
 // in the language the app shows.
 //

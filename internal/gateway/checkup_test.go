@@ -141,6 +141,22 @@ func TestConnectionChecksSetup(t *testing.T) {
 	}
 }
 
+func TestSetupDoesNotMisreportAuthorization(t *testing.T) {
+	for _, item := range []string{driver.CheckHost, "harmony_control"} {
+		cs := ConnectionChecks(driver.Info{State: driver.StateNeedsSetup, Setup: "missing", SetupCheck: item})
+		if len(cs) != 3 || cs[2].ID != item || cs[2].Status != driver.CheckFail {
+			t.Fatalf("checks=%+v", cs)
+		}
+		want := driver.CheckPass
+		if item == driver.CheckHost {
+			want = driver.CheckSkip
+		}
+		if cs[1].Status != want {
+			t.Fatalf("authorization incorrectly failed for %s: %+v", item, cs[1])
+		}
+	}
+}
+
 func TestCheckupPhoneNotOnline(t *testing.T) {
 	for _, c := range []struct {
 		state        driver.State
