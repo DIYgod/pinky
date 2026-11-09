@@ -21,6 +21,7 @@ type virtualPhone struct {
 	platform driver.Platform
 	phone    driver.VirtualPhone // ID, Name, Model, OSVersion, Unavailable
 	deviceID string              // its phone's ID once it runs
+	failed   string              // why it quit while it started (FailVirtual)
 	width    int
 	height   int
 }
@@ -79,6 +80,9 @@ func (a *API) VirtualPhones(ctx context.Context) ([]driver.VirtualPhones, error)
 				ph.Running, ph.DeviceID = true, p.deviceID
 			}
 			ph.Starting = v.starting[p.deviceID] && !ph.Running
+			if !ph.Running && !ph.Starting {
+				ph.Failed = p.failed
+			}
 			vp.Phones = append(vp.Phones, ph)
 		}
 		out = append(out, vp)
@@ -142,6 +146,7 @@ func (a *API) StartVirtual(ctx context.Context, platform driver.Platform, id str
 		return nil // running already: it is in Pinky
 	}
 	v.starting[p.deviceID] = true
+	p.failed = ""
 	gen := a.gen
 	a.mu.Unlock()
 	if !a.opt.HoldSetup {
@@ -209,6 +214,22 @@ func (a *API) BootVirtual() {
 	for _, id := range ids {
 		a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
 	}
+}
+
+// FailVirtual ends every virtual phone StartVirtual started before it
+// runs, as an emulator that crashed while it booted: it is no longer
+// starting, and VirtualPhones says why.
+func (a *API) FailVirtual(why string) {
+	a.mu.Lock()
+	v := a.virtLocked()
+	for i := range v.phones {
+		if v.starting[v.phones[i].deviceID] {
+			delete(v.starting, v.phones[i].deviceID)
+			v.phones[i].failed = why
+		}
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices})
 }
 
 func (v *virtualState) find(platform driver.Platform, id string) *virtualPhone {

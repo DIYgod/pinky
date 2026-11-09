@@ -58,7 +58,8 @@ type avdFixture struct {
 	ports     []int // the port of each launch
 	killed    []string
 	launchErr error
-	portErr   error // a launch on a given port fails so
+	portErr   error        // a launch on a given port fails so
+	quits     []func(error) // each launch's quit, to end its emulator
 }
 
 func newAVDFixture(t *testing.T, p *Provider) *avdFixture {
@@ -97,11 +98,12 @@ func newAVDFixture(t *testing.T, p *Provider) *avdFixture {
 		}
 		return []byte("INFO    | Storing crashdata in: /tmp\nMedium_Phone_API_37\npinky-api29\npinky-api36\n"), nil
 	}
-	l.launch = func(emulator, avd string, port int) error {
+	l.launch = func(emulator, avd string, port int, quit func(error)) error {
 		fx.mu.Lock()
 		defer fx.mu.Unlock()
 		fx.launched = append(fx.launched, avd)
 		fx.ports = append(fx.ports, port)
+		fx.quits = append(fx.quits, quit)
 		if port != 0 && fx.portErr != nil {
 			return fx.portErr
 		}
@@ -200,6 +202,85 @@ func TestAVDs(t *testing.T) {
 	launched, killed := fx.calls()
 	if !slices.Equal(launched, []string{"pinky-api29", "pinky-api29"}) || !slices.Equal(killed, []string{"emulator-5554"}) {
 		t.Errorf("launched %q, killed %q", launched, killed)
+	}
+}
+
+// TestAVDQuitWhileStarting: an emulator that quits while it boots no
+// longer counts as starting, and Add phone says why until it starts again;
+// one that quits well says nothing, and a launch started again before
+// keeps counting only its own emulator.
+func TestAVDQuitWhileStarting(t *testing.T) {
+	_, p := newFakeADB(t)
+	fx := newAVDFixture(t, p)
+	ctx := context.Background()
+	phone := func() driver.VirtualPhone {
+		t.Helper()
+		vp, err := p.VirtualPhones(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, v := range vp.Phones {
+			if v.ID == "pinky-api29" {
+				return v
+			}
+		}
+		t.Fatal("no pinky-api29")
+		return driver.VirtualPhone{}
+	}
+	quit := func(i int, err error) {
+		fx.mu.Lock()
+		q := fx.quits[i]
+		fx.mu.Unlock()
+		q(err)
+	}
+
+	if err := p.StartVirtual(ctx, "pinky-api29"); err != nil {
+		t.Fatal(err)
+	}
+	quit(0, errors.New("signal: abort trap: detected a hanging thread 'QEMU2 main loop'. No response for 15020 ms"))
+	if v := phone(); v.Starting || v.Running || !strings.Contains(v.Failed, "hanging thread") {
+		t.Errorf("after a crash: %+v", v)
+	}
+
+	// Started again: starting, and what failed before is gone.
+	if err := p.StartVirtual(ctx, "pinky-api29"); err != nil {
+		t.Fatal(err)
+	}
+	if v := phone(); !v.Starting || v.Failed != "" {
+		t.Errorf("started again: %+v", v)
+	}
+	quit(1, nil) // the person closed its window
+	if v := phone(); v.Starting || v.Failed != "" {
+		t.Errorf("after it quit well: %+v", v)
+	}
+
+	// An emulator that outlived its starting time and quits says nothing
+	// about the one started after it.
+	if err := p.StartVirtual(ctx, "pinky-api29"); err != nil {
+		t.Fatal(err)
+	}
+	p.avd.now = func() time.Time { return time.Now().Add(avdStarting + time.Second) }
+	if err := p.StartVirtual(ctx, "pinky-api29"); err != nil {
+		t.Fatal(err)
+	}
+	quit(2, errors.New("signal: killed"))
+	if v := phone(); !v.Starting || v.Failed != "" {
+		t.Errorf("the earlier emulator's end changed the later one: %+v", v)
+	}
+}
+
+// TestLastLine: what an emulator that quit says, without its level.
+func TestLastLine(t *testing.T) {
+	for _, c := range []struct{ log, want string }{
+		{"INFO         | Android emulator version 37.2.13.0\nERROR        | detected a hanging thread 'QEMU2 main loop'. No response for 18284 ms\nINFO         | Advertising in: x.ini\n",
+			"detected a hanging thread 'QEMU2 main loop'. No response for 18284 ms"},
+		{"INFO    | Storing crashdata\nFATAL   | Running multiple emulators with the same AVD\n", "Running multiple emulators with the same AVD"},
+		{"PANIC: Missing emulator engine program for 'x86' CPU.\n", "PANIC: Missing emulator engine program for 'x86' CPU."},
+		{"INFO | a | b\n", "a | b"},
+	} {
+		if got := lastLine(c.log); got != c.want {
+			t.Errorf("lastLine(%q) = %q, want %q", c.log, got, c.want)
+		}
 	}
 }
 

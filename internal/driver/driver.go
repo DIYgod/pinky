@@ -252,6 +252,10 @@ type VirtualPhone struct {
 	DeviceID string
 	// Starting says it is booting; DeviceID may not be listed yet.
 	Starting bool
+	// Failed says why it quit while it was starting, as an emulator that
+	// crashed while it booted; "" otherwise, and once it runs or starts
+	// again.
+	Failed string `json:",omitempty"`
 	// Unavailable says why it cannot start, as when its system image or
 	// its runtime is missing; "" when it can.
 	Unavailable string

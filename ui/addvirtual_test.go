@@ -120,6 +120,60 @@ func TestAddVirtualFails(t *testing.T) {
 	}
 }
 
+// TestAddVirtualQuitWhileStarting: a virtual phone that quits while it
+// boots, as an emulator that crashed, stops showing Starting… and says
+// why, in Add phone and on its page, until it starts again.
+func TestAddVirtualQuitWhileStarting(t *testing.T) {
+	ta, tt := addVirtualApp(t)
+	ta.add.step = "virtual"
+	ta.waitFor(t, "the list", func() bool { tt.Frame(); return hasText(tt, "iPhone 17 Pro") })
+	if err := clickInView(tt, "Start"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "Starting…", func() bool { tt.Frame(); return hasText(tt, "Starting…") })
+	const why = "signal: abort trap: detected a hanging thread 'QEMU2 main loop'"
+	ta.api.FailVirtual(why)
+	ta.waitFor(t, "the reason", func() bool {
+		tt.Frame()
+		return hasText(tt, "Couldn't start iPhone 17 Pro: "+why) && !hasText(tt, "Starting…")
+	})
+
+	// Its page, once it ran and quit while it started again.
+	ta.api.BootVirtual() // nothing starts: no change
+	if err := clickInView(tt, "Start"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "Starting… again", func() bool { tt.Frame(); return hasText(tt, "Starting…") })
+	if hasText(tt, "Couldn't start") {
+		t.Error("the old reason shows while it starts again")
+	}
+	ta.api.BootVirtual()
+	ta.waitFor(t, "the phone", func() bool { d := ta.device("5F1E7A2C-SIM-17"); return d != nil && d.Info.State == driver.StateOnline })
+	if err := ta.api.StopVirtual(t.Context(), driver.IOS, "5F1E7A2C-SIM-17"); err != nil {
+		t.Fatal(err)
+	}
+	// Shut down outside Pinky soon after it started: the page shows Start
+	// once a listing says it no longer runs, not Starting… for minutes.
+	ta.selectPhone("5F1E7A2C-SIM-17")
+	ta.waitFor(t, "its page", func() bool {
+		tt.Frame()
+		_, ok := tt.Find("Start")
+		return hasText(tt, "It isn't running.") && ok && !hasText(tt, "Starting…")
+	})
+	if err := tt.Click("Start"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "Starting… on its page", func() bool { tt.Frame(); return hasText(tt, "Starting…") })
+	ta.api.FailVirtual(why)
+	ta.waitFor(t, "the reason on its page", func() bool {
+		tt.Frame()
+		return hasText(tt, "Couldn't start iPhone 17 Pro: "+why) && !hasText(tt, "Starting…")
+	})
+	if _, ok := tt.Find("Start"); !ok {
+		t.Error("no Start to try again")
+	}
+}
+
 // TestAddVirtualMissing says what the computer lacks for each platform.
 func TestAddVirtualMissing(t *testing.T) {
 	ta, tt := addVirtualApp(t)

@@ -43,14 +43,18 @@ type avdLauncher struct {
 	run func(ctx context.Context, name string, args ...string) ([]byte, error)
 	// launch starts an AVD with the emulator, detached from Pinky, on
 	// the console port given (0: the first free one), and returns an
-	// error when it quits at once.
-	launch func(emulator, avd string, port int) error
+	// error when it quits at once. When it quits later, launch calls
+	// quit with why, nil when it ended well.
+	launch func(emulator, avd string, port int, quit func(error)) error
 	// kill asks a running emulator to quit, by its adb serial.
 	kill func(ctx context.Context, serial string) error
 	now  func() time.Time
 
 	mu       sync.Mutex
 	starting map[string]time.Time // AVDs Pinky started, by name
+	// failed says why an AVD's emulator quit while it was starting, by
+	// name, until it starts again or runs.
+	failed map[string]string
 	// ports is the console port each AVD's emulator last ran on, by
 	// name. Started again, it runs there again, so its adb serial, and
 	// with it its phone in Pinky, stays the same.
@@ -327,6 +331,7 @@ func (p *Provider) avdList(ctx context.Context) (driver.VirtualPhones, avdTools,
 		if s := running[name]; s != "" {
 			v.Running, v.DeviceID = true, s
 			delete(l.starting, name)
+			delete(l.failed, name)
 			l.ranAtLocked(name, s)
 		} else if at, ok := l.starting[name]; ok {
 			if now.Sub(at) < avdStarting {
@@ -334,6 +339,8 @@ func (p *Provider) avdList(ctx context.Context) (driver.VirtualPhones, avdTools,
 			} else {
 				delete(l.starting, name)
 			}
+		} else {
+			v.Failed = l.failed[name]
 		}
 		if a.SysDir != "" && !isDir(filepath.Join(t.SDK, filepath.FromSlash(a.SysDir))) {
 			v.Unavailable = "its system image is not installed (" + strings.TrimSuffix(filepath.ToSlash(a.SysDir), "/") + ")"
@@ -381,22 +388,50 @@ func (p *Provider) StartVirtual(ctx context.Context, id string) error {
 	if v.Unavailable != "" {
 		return fmt.Errorf("%s cannot start: %s", v.Name, v.Unavailable)
 	}
+	l := p.avd
+	l.mu.Lock()
+	delete(l.failed, id)
+	l.mu.Unlock()
+	// The emulator may quit while it boots, as when it hangs and its own
+	// watchdog ends it: then it no longer counts as starting, and Add
+	// phone says why.
+	var at time.Time
+	ready := make(chan struct{})
+	quit := func(err error) {
+		<-ready
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		if got, ok := l.starting[id]; !ok || !got.Equal(at) {
+			return // it ran, or was started again
+		}
+		delete(l.starting, id)
+		if err != nil {
+			if l.failed == nil {
+				l.failed = map[string]string{}
+			}
+			l.failed[id] = err.Error()
+		}
+		p.cfg.logf("android: the emulator for %s quit while it started: %v", id, err)
+	}
 	port := p.freePort(ctx, id)
-	err = p.avd.launch(t.Emulator, id, port)
+	err = l.launch(t.Emulator, id, port, quit)
 	if err != nil && port != 0 {
 		// Its port was taken after all: any free one.
-		err = p.avd.launch(t.Emulator, id, 0)
+		err = l.launch(t.Emulator, id, 0, quit)
 	}
 	if err != nil {
+		close(ready)
 		return fmt.Errorf("start %s: %w", v.Name, err)
 	}
 	p.cfg.logf("android: started the emulator for %s", id)
-	p.avd.mu.Lock()
-	if p.avd.starting == nil {
-		p.avd.starting = map[string]time.Time{}
+	l.mu.Lock()
+	if l.starting == nil {
+		l.starting = map[string]time.Time{}
 	}
-	p.avd.starting[id] = p.avd.now()
-	p.avd.mu.Unlock()
+	at = l.now()
+	l.starting[id] = at
+	l.mu.Unlock()
+	close(ready)
 	return nil
 }
 
@@ -455,8 +490,9 @@ func runOutput(ctx context.Context, name string, args ...string) ([]byte, error)
 // launchEmulator starts `emulator -avd <name>`, with -port unless port
 // is 0, in a session of its own, with its output in a log file in the
 // temporary folder, and waits a few seconds for it to quit at once, as
-// when the AVD runs already or its system image is missing.
-func launchEmulator(emulator, name string, port int) error {
+// when the AVD runs already or its system image is missing. When it
+// quits later, quit gets why.
+func launchEmulator(emulator, name string, port int, quit func(error)) error {
 	logPath := filepath.Join(os.TempDir(), "pinky-emulator-"+name+".log")
 	f, err := os.Create(logPath)
 	if err != nil {
@@ -478,29 +514,49 @@ func launchEmulator(emulator, name string, port int) error {
 	go func() { exited <- cmd.Wait() }() // also reaps it when it quits later
 	select {
 	case err := <-exited:
-		b, _ := os.ReadFile(logPath)
-		msg := lastLine(string(b))
 		if err == nil {
 			err = errors.New("the emulator quit")
 		}
-		if msg != "" {
-			err = fmt.Errorf("%w: %s", err, msg)
-		}
-		return err
+		return emulatorQuit(err, logPath)
 	case <-time.After(3 * time.Second):
+		go func() {
+			if err := <-exited; err != nil {
+				quit(emulatorQuit(err, logPath))
+			} else {
+				quit(nil)
+			}
+		}()
 		return nil
 	}
 }
 
-// lastLine is the emulator's last error line, else its last line.
+// emulatorQuit is err with the emulator's last error line from its log.
+func emulatorQuit(err error, logPath string) error {
+	b, _ := os.ReadFile(logPath)
+	if msg := lastLine(string(b)); msg != "" {
+		return fmt.Errorf("%w: %s", err, msg)
+	}
+	return err
+}
+
+// lastLine is the emulator's last error line, else its last line,
+// without its level ("ERROR   | ").
 func lastLine(out string) string {
 	lines := strings.Split(strings.TrimSpace(strings.ReplaceAll(out, "\r", "")), "\n")
+	line := lines[len(lines)-1]
 	for i := len(lines) - 1; i >= 0; i-- {
 		if strings.Contains(lines[i], "ERROR") || strings.Contains(lines[i], "FATAL") {
-			return strings.TrimSpace(lines[i])
+			line = lines[i]
+			break
 		}
 	}
-	return strings.TrimSpace(lines[len(lines)-1])
+	if level, msg, ok := strings.Cut(line, "|"); ok {
+		switch strings.TrimSpace(level) {
+		case "FATAL", "ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE":
+			line = msg
+		}
+	}
+	return strings.TrimSpace(line)
 }
 
 // killEmulator asks the emulator with the adb serial "emulator-<port>"

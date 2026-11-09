@@ -233,6 +233,8 @@ func (a *app) virtualRow(c *mg.Context, pf driver.Platform, v driver.VirtualPhon
 				mg.Text(c, locales.AddVirtualCantStart(v.Unavailable)).FontSize(12.5).TextColor(p.amber)
 			case act != nil && act.err != "":
 				mg.Text(c, act.err).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
+			case v.Failed != "" && !starting:
+				mg.Text(c, locales.AddVirtualStartFailed(v.Name, v.Failed)).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
 			}
 		})
 		mg.Row(c).Gap(10).AlignItems(mg.Center).Shrink(0).Children(func() {
@@ -342,7 +344,8 @@ func (a *app) startVirtualPhone(d gateway.DeviceView) {
 }
 
 // startVirtualButton is Start on the page of a virtual phone that is not
-// running, then Starting… until it runs or virtualBoot passes.
+// running, then Starting… until it runs, virtualBoot passes or a listing
+// says it quit while it started.
 func (a *app) startVirtualButton(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	id := d.Info.VirtualID
@@ -351,20 +354,45 @@ func (a *app) startVirtualButton(c *mg.Context, d gateway.DeviceView) {
 	}
 	act := a.virt.acts[virtKey(d.Info.Platform, id)]
 	starting := act != nil && act.op == "start" && act.err == "" && (act.done.IsZero() || time.Since(act.done) < virtualBoot)
+	failed := ""
+	if v, ok := a.listedVirtual(d.Info.Platform, id); ok && act != nil && !act.done.IsZero() && a.virt.at.After(act.done) && !v.Starting && !v.Running {
+		starting, failed = false, v.Failed
+	}
 	mg.Column(c).AlignItems(mg.Center).Gap(8).Children(func() {
 		if starting {
 			mg.Row(c).Gap(8).AlignItems(mg.Center).Role(mg.RoleStatus).Children(func() {
 				spinner(c)
 				mg.Text(c, locales.AddVirtualStarting()).FontSize(13.5).TextColor(p.ink2)
 			})
+			if l := a.launcher(); l != nil {
+				a.pollVirtual(c, l)
+			}
 			c.After(time.Second)
 			return
 		}
 		if button(c, locales.AddVirtualStart(), btnOpt{kind: btnPrimary}).Clicked() {
 			a.startVirtualPhone(d)
 		}
-		if act != nil && act.err != "" {
+		switch {
+		case act != nil && act.err != "":
 			mg.Text(c, act.err).FontSize(13).TextColor(p.red).TextAlign(mg.Center).Role(mg.RoleStatus)
+		case failed != "":
+			mg.Text(c, locales.AddVirtualStartFailed(d.Info.Name, failed)).FontSize(13).TextColor(p.red).TextAlign(mg.Center).Role(mg.RoleStatus)
 		}
 	})
+}
+
+// listedVirtual is the virtual phone as the last listing has it.
+func (a *app) listedVirtual(pf driver.Platform, id string) (driver.VirtualPhone, bool) {
+	for _, vp := range a.virt.list {
+		if vp.Platform != pf {
+			continue
+		}
+		for _, v := range vp.Phones {
+			if v.ID == id {
+				return v, true
+			}
+		}
+	}
+	return driver.VirtualPhone{}, false
 }
