@@ -18,7 +18,7 @@ func TestTargetsDoNotPretendHDCIsADB(t *testing.T) {
 	if infos[0].State != driver.StateUnauthorized || infos[0].Setup != driver.FixAuthorize {
 		t.Fatalf("unauthorized = %+v", infos[0])
 	}
-	if infos[1].State != driver.StateNeedsSetup || infos[1].Setup != "harmony_backend" {
+	if infos[1].State != driver.StateOnline || infos[1].Setup != "" {
 		t.Fatalf("connected = %+v", infos[1])
 	}
 	if infos[2].State != driver.StateOffline || infos[2].Connection != "wifi" {

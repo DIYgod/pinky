@@ -52,6 +52,11 @@ type Info struct {
 	// its own words; "" when the driver does not say. Detail says the same
 	// in a sentence.
 	Setup string
+	// SetupCheck is the checkup item a setup step affects. Empty means
+	// authorization, for existing drivers. A missing host tool can name
+	// CheckHost; an unavailable control backend can name its own item,
+	// without falsely reporting that an authorized phone rejected trust.
+	SetupCheck string `json:",omitempty"`
 	// HelperExpires is when the app the phone is driven through stops
 	// starting because the provisioning profile it was signed with runs
 	// out: iPhones driven through the WebDriverAgent helper, whose profile

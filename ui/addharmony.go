@@ -47,6 +47,8 @@ func (a *app) addHarmony(c *mg.Context, d gateway.DeviceView) {
 	})
 	if d.Info.State == driver.StateOffline {
 		guideNote(c, d.Info.Detail)
+	} else if d.Info.State == driver.StateOnline {
+		guideText(c, locales.HarmonyReady())
 	} else {
 		guideProblem(c, a.setupStep(d).text, "")
 	}

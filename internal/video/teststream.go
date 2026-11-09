@@ -153,13 +153,19 @@ func startFFmpeg(ctx context.Context, path string, args []string, opt TestStream
 // the mirror shows them and its touches land in their pixels. It fails at
 // once when ffmpeg is missing.
 func FrameStream(ctx context.Context, w, h, fps int, frame func() image.Image) (*TestStream, error) {
+	return FrameStreamWithFFmpeg(ctx, w, h, fps, "ffmpeg", frame)
+}
+
+// FrameStreamWithFFmpeg is FrameStream with an explicit host encoder path,
+// for desktop apps whose launch environment does not include Homebrew.
+func FrameStreamWithFFmpeg(ctx context.Context, w, h, fps int, encoder string, frame func() image.Image) (*TestStream, error) {
 	if w <= 0 || h <= 0 || w%2 != 0 || h%2 != 0 {
 		return nil, fmt.Errorf("video: frame stream size %dx%d must be positive and even", w, h)
 	}
 	if fps <= 0 {
 		fps = 15
 	}
-	path, err := exec.LookPath("ffmpeg")
+	path, err := exec.LookPath(encoder)
 	if err != nil {
 		return nil, fmt.Errorf("video: the frame stream needs the ffmpeg command: %w", err)
 	}

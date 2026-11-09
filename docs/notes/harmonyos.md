@@ -1,76 +1,93 @@
-# Native HarmonyOS connection diagnostics
+# Native HarmonyOS through HDC
 
-Native HarmonyOS phones expose an HDC USB interface (class `0xff`,
-subclass `0x50`, protocol `0x01`), rather than Android's ADB interface
-(`0xff/0x42/0x01`). They therefore do not appear in `adb devices`, even
-with a working USB data cable. Android-based HarmonyOS 2–4 phones keep
-using the existing Android provider.
+Native HarmonyOS exposes HDC USB (0xff/0x50/0x01), not Android ADB
+(0xff/0x42/0x01). The native provider discovers and opens these phones
+independently. Android-based Huawei phones keep the Android provider.
 
-The `internal/driver/harmony` provider lists native phones independently
-of Android and iOS. On macOS it discovers HDC interfaces from IOKit's USB
-descriptors even without an installed SDK. If `hdc` is available, it reads
-`hdc list targets -v` and distinguishes unauthorized, connected, and offline
-devices. Its executable comes from `PINKY_HDC`, `PATH`, `HDC_SDK_PATH`,
-`HDC_HOME`, `OHOS_SDK_HOME`, or `HOS_SDK_HOME`. Pinky downloads nothing and
-does not restart existing SDK servers. An explicit tool path may be needed
-when launching the desktop app outside a terminal.
+## Setup
 
-The device list, phone page, checkup, and Add phone wizard show the missing tool,
-authorization, or backend limitation; setup text is available in English,
-Simplified Chinese, and Japanese. Installing an SDK gives more diagnostic
-detail, not control support. The provider never advertises these phones as
-online or tries to open them through scrcpy or install Android Companion.
+Install the official HarmonyOS/OpenHarmony SDK's host toolchains. Pinky
+finds hdc through PINKY_HDC, PATH, an app's Contents/Helpers, HDC_SDK_PATH,
+HDC_HOME, OHOS_SDK_HOME, or HOS_SDK_HOME. Keep the matching libusb_shared
+library next to it. Pinky downloads nothing and never restarts a shared
+HDC server. macOS also discovers the USB interface without an SDK.
 
-When an HDC phone appears in Add phone, the Huawei path replaces the ADB
-switches, Companion instructions, Android pairing links, and searching
-spinner with the HDC device's status. It also follows a native phone that
-was found before the wizard opened or disconnects while the wizard is
-shown. A newly connected Android phone still takes its normal setup path.
+Enable USB debugging and trust the computer if asked. The initial listing
+may briefly show Unauthorized during the handshake; subsequent discovery
+updates it. An already trusted computer needs no new prompt. Add phone
+replaces the ADB switches and Companion steps with the native state.
 
-## Current limits
+An authorized phone with UITest is online. Missing SDK tools and
+unavailable control tools are separate from authorization, using the
+additive Info.SetupCheck field. Existing drivers keep their default.
 
-This is discovery and diagnostics, not a native screen-control driver.
-`Open` fails closed. No HDC shell command, input, screenshot, app install,
-or authorization acceptance is performed. Before native control can be
-implemented, an authorized real phone must verify its UITest component
-tree, foreground app and lock identification, input, screenshots, app
-enumeration and launch capabilities. Existing gateway policy and approval
-checks must remain in the path. Missing foreground or lock information
-must not permit an unchecked screen capture or input.
+## Operations and limits
 
-Windows and Linux discover only through an installed `hdc`; USB descriptor
-discovery without an SDK is currently macOS-only. USB and TCP listings are
-parsed, but actual TCP discovery has not been verified on a real phone.
+- Observe the focused UITest component tree with bounds, labels, roles,
+  states and stable resource paths. OCR fills in image buttons only when
+  the gateway allows capture.
+- Tap, long press, swipe, Home, Back and common navigation keys. Mirror
+  gestures coalesce into a UITest action when the finger lifts. Power and
+  automatic unlocking are absent.
+- List bundle IDs and localized labels; six workers reduce a 300-label
+  first read from about 55 s to 7 s, with later reads cached. Launch only
+  public main abilities found in bundle metadata. System/clone
+  classification is not yet provided by the bundle list.
+- Return screenshot images in memory. Native JPEG capture avoids the
+  large PNG transfer cost on busy home screens; base64 avoids HDC shell
+  control-byte conversion. Temporary device files use unique
+  names and are removed after reads, including failed reads.
+- Show a screenshot-based H.264 live preview at up to 2 fps through the
+  existing frame encoder. The host needs ffmpeg with libx264, found through
+  PINKY_FFMPEG, PATH, or standard Homebrew locations. The shared video API
+  adds an explicit-encoder-path FrameStream variant; old callers retain
+  their behavior.
+
+Automatic text entry is unsupported until UITest password/input metadata
+can be verified reliably; the person must enter text on the phone.
+Recents, background displays, file transfer and physical-input detection
+are also absent. Rotation restarts a preview with its new dimensions.
+
+## Policy and lifecycle
+
+Agent actions retain gateway scopes, read-only mode, blocked apps and
+approvals. No automatic grant or bypass is added. SceneBoard is a system
+launcher so Home works within app-scoped tasks. Reads, captures and input
+serialize per device. Locked phones and unknown lock states receive no
+input or screenshots. OCR checks MayCapture and rejects foreground
+changes. Only the focused window tree is returned. Unknown system panels
+and visible notification surfaces prevent capture instead of exposing
+another app. Preview frames become blank when capture is refused.
+Screenshots and images stay in memory; nothing from a real screen is
+committed. Native temporary outputs are removed after each read.
 
 ## Verification
 
-```sh
-make check
-go test -race ./internal/driver/harmony
-PINKY_HDC=/path/to/sdk/toolchains/hdc PINKY_DEVICE=<serial> \
-  scripts/devlock.sh <serial> go test -tags device \
-  ./internal/driver/harmony -run TestDeviceDiscovery -v -count=1
-```
+Run make check and go test -race ./internal/driver/harmony.
 
-To verify the SDK-free macOS path, repeat the device test with
-`PINKY_HDC=/nonexistent/hdc`. The test reads connection metadata only.
+For real-device checks, set PINKY_HDC to the SDK tool and PINKY_DEVICE to
+the serial, then run through scripts/devlock.sh <serial>:
 
-On 2026-11-09, both discovery paths were verified on one real Huawei
-phone attached by USB to an Apple silicon Mac, using OpenHarmony SDK's
-hdc 3.2.0b. The first listing showed `Unauthorized`, but repeated listings
-settled to `Connected`, and the HDC log reported `daemonauthstatus =
-SUCCESS`. The phone already trusted the computer and needed no new
-prompt. Do not infer persistent missing authorization from a single
-startup listing; discovery updates the state on subsequent passes.
+go test -tags device ./internal/driver/harmony -run TestDeviceNativeControl -v -count=1
 
-With authorization confirmed, development-only HDC probes read the model,
-OS/API version, screen-lock status, window metadata, application metadata
-for Settings/Calculator, and a UITest component tree of the unlocked home
-screen. These commands are not part of the discovery provider. No screen
-input, settings change, screenshot, or app install was performed. The
-component-tree probe's temporary files were removed. The SDK archive was
-obtained from the official OpenHarmony release repository and checked
-against its published SHA-256.
+On 2026-11-09 a Huawei MIA-AL00 reporting OpenHarmony 7.0.0.111 / API 26
+was tested over USB on an Apple silicon Mac with hdc 3.2.0b. An initial
+Unauthorized result settled to Connected and the log reported
+' daemonauthstatus = SUCCESS '. No new phone prompt was necessary.
 
-References: [Huawei HDC documentation](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/hdc/),
-[Huawei UITest documentation](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/uitest-guidelines/).
+The real-device smoke test listed 300 bundles, launched Calculator,
+observed its 1224x2776 interface, verified a tap by a changed displayed
+value, checked screenshot/input dimensions, consumed H.264 preview frames,
+and returned Home. It used no personal app, credentials, install, settings
+change or power action, and persisted no real-screen artifact. Synthetic
+UI tests cover setup and the ready checkup in English, Chinese and Japanese.
+The native desktop app also passed its checkup and displayed the real Home
+screen after switching screenshot transport to JPEG over base64.
+
+Windows/Linux provider builds compile; real operation there is unverified.
+SDK-free USB discovery is macOS-only. HDC TCP listings are parsed but real
+TCP operation is unverified. This is an initial native driver, not Android
+feature parity.
+
+References: [Huawei HDC](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/hdc/),
+[Huawei UITest](https://developer.huawei.com/consumer/en/doc/harmonyos-guides/uitest-guidelines/).

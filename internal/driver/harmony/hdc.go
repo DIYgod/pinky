@@ -28,6 +28,11 @@ func findHDC() (string, error) {
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
+	if exe, err := os.Executable(); err == nil {
+		if path, err := exec.LookPath(filepath.Join(filepath.Dir(exe), "..", "Helpers", name)); err == nil {
+			return path, nil
+		}
+	}
 	for _, key := range []string{"HDC_SDK_PATH", "HDC_HOME", "OHOS_SDK_HOME", "HOS_SDK_HOME"} {
 		base := os.Getenv(key)
 		if base == "" {
@@ -35,6 +40,23 @@ func findHDC() (string, error) {
 		}
 		for _, sub := range []string{"", "toolchains", "default/openharmony/toolchains", "default/HarmonyOS/toolchains"} {
 			if path, err := exec.LookPath(filepath.Join(base, filepath.FromSlash(sub), name)); err == nil {
+				return path, nil
+			}
+		}
+	}
+	return "", exec.ErrNotFound
+}
+
+func findFFmpeg() (string, error) {
+	if path := os.Getenv("PINKY_FFMPEG"); path != "" {
+		return exec.LookPath(path)
+	}
+	if path, err := exec.LookPath("ffmpeg"); err == nil {
+		return path, nil
+	}
+	if runtime.GOOS == "darwin" {
+		for _, candidate := range []string{"/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"} {
+			if path, err := exec.LookPath(candidate); err == nil {
 				return path, nil
 			}
 		}
@@ -67,4 +89,14 @@ func runHDC(ctx context.Context, path string, args ...string) ([]byte, error) {
 		return nil, fmt.Errorf("hdc: %w: %s", err, strings.TrimSpace(string(out)+stderr.String()))
 	}
 	return out, nil
+}
+
+// shellCommand quotes arguments for the device shell. HDC joins shell
+// arguments; host exec argument separation alone does not protect them.
+func shellCommand(args ...string) string {
+	quoted := make([]string, len(args))
+	for i, arg := range args {
+		quoted[i] = "'" + strings.ReplaceAll(arg, "'", "'\\''") + "'"
+	}
+	return strings.Join(quoted, " ")
 }

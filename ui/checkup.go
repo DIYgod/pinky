@@ -332,6 +332,28 @@ type checkWords struct {
 
 // checkWords puts an item into words, with the steps of the phone's maker.
 func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.Check) checkWords {
+	if d.Info.Platform == driver.HarmonyOS {
+		switch ck.ID {
+		case "harmony_control":
+			text := locales.HarmonyReady()
+			if ck.Status != driver.CheckPass {
+				text = locales.HarmonyBackendMissing()
+			}
+			return checkWords{title: locales.HarmonyControlTitle(), text: text}
+		case driver.CheckHost:
+			if ck.Fix == "hdc" {
+				return checkWords{title: locales.HarmonyHDCTitle(), text: locales.HarmonyHDCMissing()}
+			}
+		case driver.CheckScreen:
+			text := locales.HarmonyMirrorReady()
+			if ck.Fix == "ffmpeg" {
+				text = locales.HarmonyMirrorMissing()
+			} else if ck.Status != driver.CheckPass {
+				return checkWords{title: checkTitle(ck.ID), text: locales.CheckScreenFail(), detail: true}
+			}
+			return checkWords{title: checkTitle(ck.ID), text: text}
+		}
+	}
 	if d.Info.Platform == driver.HarmonyOS && ck.ID == driver.CheckAuthorized {
 		w := checkWords{title: checkTitle(ck.ID)}
 		switch ck.Fix {
@@ -520,6 +542,13 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 // USB debugging, the computer's access to the phone over USB; the
 // driver's words for a step the client has none for.
 func (a *app) setupStep(d gateway.DeviceView) checkWords {
+	if d.Info.SetupCheck != "" {
+		for _, ck := range gateway.ConnectionChecks(d.Info) {
+			if ck.ID == d.Info.SetupCheck {
+				return a.checkWords(d, gateway.CheckupView{DeviceID: d.Info.ID, Platform: d.Info.Platform}, ck)
+			}
+		}
+	}
 	for _, ck := range gateway.ConnectionChecks(d.Info) {
 		if ck.ID == driver.CheckAuthorized {
 			return a.checkWords(d, gateway.CheckupView{DeviceID: d.Info.ID, Platform: d.Info.Platform}, ck)

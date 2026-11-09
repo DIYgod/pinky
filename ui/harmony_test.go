@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
+	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 )
@@ -30,6 +32,61 @@ func TestHarmonyOSIsNotLabelledAndroid(t *testing.T) {
 		w := app.checkWords(d, gateway.CheckupView{}, driver.Check{ID: driver.CheckAuthorized, Fix: tc.step, Status: driver.CheckFail})
 		if w.text != tc.text || w.detail {
 			t.Errorf("%s: %+v", tc.step, w)
+		}
+	}
+}
+
+type nativeReadyDevice struct{ *demo.Device }
+
+func (*nativeReadyDevice) Checkup(context.Context) (driver.Checkup, error) {
+	return driver.Checkup{Family: "huawei", Checks: []driver.Check{{ID: "harmony_control", Status: driver.CheckPass}, {ID: driver.CheckScreen, Status: driver.CheckPass}}}, nil
+}
+
+type nativeReadyProvider struct{ d *nativeReadyDevice }
+
+func (*nativeReadyProvider) Platform() driver.Platform { return driver.HarmonyOS }
+func (p *nativeReadyProvider) List(context.Context) ([]driver.Info, error) {
+	return []driver.Info{p.d.Info()}, nil
+}
+func (p *nativeReadyProvider) Open(context.Context, string) (driver.Device, error) { return p.d, nil }
+
+func TestNativeHarmonyCheckupShowsAuthorizedAndReady(t *testing.T) {
+	p := &nativeReadyProvider{d: &nativeReadyDevice{demo.NewDevice("native-ready", "Huawei native test", driver.HarmonyOS)}}
+	ga := newStepsApp(t, p)
+	ga.waitFor(t, "native device online", func() bool { return ga.device("native-ready").Status == gateway.DeviceIdle })
+	d := ga.device("native-ready")
+	ga.selectPhone(d.Info.ID)
+	ga.openCheckup(d)
+	tt := mg.NewTester(ga.view, 1280, 820)
+	ga.waitFor(t, "native checkup", func() bool { tt.Frame(); r := ga.checkupOf(d.Info.ID); return r != nil && r.have && !r.running })
+	r := ga.checkupOf(d.Info.ID)
+	for _, c := range r.view.Checks {
+		if c.ID == driver.CheckAuthorized && c.Status != driver.CheckPass {
+			t.Fatalf("authorization is misreported: %+v", c)
+		}
+	}
+	for _, lang := range testLanguages() {
+		inLanguage(t, lang, tt)
+		tt.Frame()
+		tt.Frame()
+		for _, want := range []string{locales.CheckAuthorizedPass(), locales.HarmonyControlTitle(), locales.HarmonyReady(), locales.HarmonyMirrorReady()} {
+			if !hasText(tt, want) {
+				t.Errorf("%s lacks %q: %q", lang, want, tt.Texts())
+			}
+		}
+		if hasText(tt, locales.HarmonyBackendMissing()) {
+			t.Fatal("old unsupported-control error remains")
+		}
+		if dir := os.Getenv("PINKY_SCREENSHOTS"); dir != "" {
+			f, err := os.Create(filepath.Join(dir, "native-control-checkup-"+langShort(lang)+".png"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = png.Encode(f, tt.Image())
+			f.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }

@@ -3850,11 +3850,11 @@
   "@harmonyAuthorize": {
     "description": "Setup instructions for an unauthorized native HarmonyOS phone."
   },
-  "harmonyBackendMissing": "This phone is connected through HDC, but native HarmonyOS screen control is not available in this version of Pinky.",
+  "harmonyBackendMissing": "The phone is authorized through HDC, but its native UITest control tools are not available.",
   "@harmonyBackendMissing": {
     "description": "A native HarmonyOS phone is connected through HDC, but this build cannot control it."
   },
-  "harmonyGuideDetail": "This phone runs native HarmonyOS and connects through HDC. Android ADB settings and Pinky Companion do not apply; Pinky currently shows connection diagnostics only.",
+  "harmonyGuideDetail": "This phone runs native HarmonyOS and connects through HDC. Android ADB settings and Pinky Companion do not apply.",
   "@harmonyGuideDetail": {
     "description": "Add phone, after an HDC-only HarmonyOS phone is found: replace Android setup steps with connection diagnostics."
   },
@@ -3866,9 +3866,29 @@
   "@harmonyGuideTitle": {
     "description": "Add phone title when a native HarmonyOS HDC device is detected, replacing the Android-only setup title."
   },
-  "harmonyHDCMissing": "This phone uses native HarmonyOS, which Pinky cannot control yet. This computer also has no HDC tool for connection diagnostics; Android USB debugging and Pinky Companion do not apply.",
+  "harmonyHDCMissing": "This native HarmonyOS phone needs the HarmonyOS SDK's hdc tool. Set PINKY_HDC to its executable, then restart Pinky. Android ADB and Pinky Companion do not apply.",
   "@harmonyHDCMissing": {
     "description": "Setup instructions when macOS sees an HDC USB interface but hdc is not installed."
+  },
+  "harmonyReady": "Screen reading, taps, swipes, navigation and app launch are available. Automatic text entry is not supported yet; enter text on the phone.",
+  "@harmonyReady": {
+    "description": "Native HarmonyOS connection/control capability in Add phone and the device checkup."
+  },
+  "harmonyControlTitle": "Native screen control",
+  "@harmonyControlTitle": {
+    "description": "Native HarmonyOS connection/control capability in Add phone and the device checkup."
+  },
+  "harmonyHDCTitle": "HDC on this computer",
+  "@harmonyHDCTitle": {
+    "description": "Native HarmonyOS connection/control capability in Add phone and the device checkup."
+  },
+  "harmonyMirrorReady": "Screenshots and a screenshot-based live preview are available, refreshing up to twice per second.",
+  "@harmonyMirrorReady": {
+    "description": "Native HarmonyOS connection/control capability in Add phone and the device checkup."
+  },
+  "harmonyMirrorMissing": "Screenshots are available. The live preview also needs the ffmpeg command on this computer.",
+  "@harmonyMirrorMissing": {
+    "description": "Native HarmonyOS connection/control capability in Add phone and the device checkup."
   },
   "listMany": "{rest} and {last}",
   "@listMany": {
