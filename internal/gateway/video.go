@@ -92,6 +92,7 @@ type taskVideo struct {
 	needKey  bool // the next picture moved to ready must be a key frame
 	cfg      *driver.Packet
 	ready    []vpacket
+	queued   int // pictures a read moved to ready that the write loop has not written yet
 	reading  bool
 	stopping bool
 	reads    map[uint64]time.Time // reads in progress, by token, and when they started
@@ -400,6 +401,7 @@ func (v *taskVideo) read(tok uint64, start time.Time, recordable bool) {
 			}
 			v.needKey, cfgQueued = false, false
 			v.ready = append(v.ready, vp)
+			v.queued++
 		}
 		v.heldSize -= len(vp.p.Data)
 	}
@@ -453,8 +455,17 @@ func (v *taskVideo) writeLoop() {
 		stopping := v.stopping
 		codec := v.codec
 		v.mu.Unlock()
+		pictures := 0
 		for _, vp := range batch {
 			v.write(vp, codec)
+			if !vp.p.Config {
+				pictures++
+			}
+		}
+		if pictures > 0 {
+			v.mu.Lock()
+			v.queued -= pictures
+			v.mu.Unlock()
 		}
 		if stopping && len(batch) == 0 {
 			return
@@ -596,6 +607,16 @@ func lockWithin(ctx context.Context, mu *sync.Mutex, max time.Duration) bool {
 		}
 	}
 	return true
+}
+
+// recorded reports whether the recording holds pictures, or will hold the
+// ones reads confirmed that the write loop is still writing: its first
+// picture can take a moment to reach the file (creating the file is slow
+// on Windows), and a release right then must still ask about it.
+func (v *taskVideo) recorded() bool {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return v.started || v.queued > 0
 }
 
 // view returns what the recording holds so far.

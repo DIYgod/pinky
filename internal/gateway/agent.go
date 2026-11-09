@@ -982,10 +982,8 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 	sort.Slice(ls, func(i, j int) bool { return ls[i].dev.id < ls[j].dev.id })
 	var asked []*lease
 	for _, l := range ls {
-		if v := videos[l]; v != nil {
-			if _, ok := v.view(); ok {
-				asked = append(asked, l)
-			}
+		if v := videos[l]; v != nil && v.recorded() {
+			asked = append(asked, l)
 		}
 	}
 	// Each export with a recording asks the person, before the task ends:
