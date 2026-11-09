@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- Windows 账户没有设置密码时，现在也能在 Windows 上确认是你本人了：密码留空直接确认即可。感谢 Kutius。
+
 ## 2026.1110.1 (2026-11-10)
 
 - 在 Linux 上，由服务或其他程序启动、没有 `XDG_RUNTIME_DIR` 的 Pinky，现在会找到桌面上已经在运行的 Pinky，不会再另起一个，导致批准请求到不了窗口。感谢 pseudoyu。
