@@ -121,7 +121,7 @@ func TestToolList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_key",
+	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_key",
 		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_request_approval", "phone_handoff"}
 	got := map[string]*sdk.Tool{}
 	for _, tool := range res.Tools {
@@ -352,7 +352,7 @@ func TestSettleMS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	acting := map[string]bool{"phone_tap": true, "phone_type": true, "phone_swipe": true, "phone_key": true, "phone_launch": true, "phone_batch": true}
+	acting := map[string]bool{"phone_tap": true, "phone_type": true, "phone_swipe": true, "phone_pinch": true, "phone_key": true, "phone_launch": true, "phone_batch": true}
 	for _, tool := range res.Tools {
 		schema, _ := json.Marshal(tool.InputSchema)
 		has := strings.Contains(string(schema), `"settle_ms":{`)

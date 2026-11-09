@@ -97,7 +97,7 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 
 // Input is one recorded input.
 type Input struct {
-	Kind string // tap, long_press, swipe, type, key, launch, touch
+	Kind string // tap, long_press, swipe, pinch, type, key, launch, touch, touch2
 	P    screen.Point
 	To   screen.Point
 	Text string
@@ -384,6 +384,17 @@ func (d *Device) Swipe(ctx context.Context, from, to screen.Point, _ time.Durati
 	return nil
 }
 
+// Pinch implements driver.Pincher. The demo's screens do not zoom; it
+// records where the fingers touch down.
+func (d *Device) Pinch(ctx context.Context, g driver.Pinch) error {
+	if err := d.check(ctx); err != nil {
+		return err
+	}
+	a, b := g.At(0)
+	d.record(Input{Kind: "pinch", P: a, To: b})
+	return nil
+}
+
 // Type implements driver.Device: it types into the focused field.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	if err := d.check(ctx); err != nil {
@@ -519,6 +530,16 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 		return d.Tap(ctx, p, driver.TapOptions{})
 	}
 	d.record(Input{Kind: "touch:" + string(a), P: p})
+	return nil
+}
+
+// Touch2 implements driver.MultiToucher: the person's pinch on the mirror
+// is recorded, as "touch2:down" and so on.
+func (d *Device) Touch2(ctx context.Context, a driver.TouchAction, p, q screen.Point) error {
+	if err := d.check(ctx); err != nil {
+		return err
+	}
+	d.record(Input{Kind: "touch2:" + string(a), P: p, To: q})
 	return nil
 }
 

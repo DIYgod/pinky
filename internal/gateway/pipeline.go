@@ -18,12 +18,12 @@ import (
 	"github.com/DIYgod/pinky/internal/screen"
 )
 
-// Action is one input: phone_tap, phone_type, phone_swipe, phone_key or
-// phone_launch, or a step of phone_batch.
+// Action is one input: phone_tap, phone_type, phone_swipe, phone_pinch,
+// phone_key or phone_launch, or a step of phone_batch.
 type Action struct {
-	Tool       string // tap, type, swipe, key or launch
+	Tool       string // tap, type, swipe, pinch, key or launch
 	Ref        int
-	Point      *screen.Point // tap at x,y instead of a ref
+	Point      *screen.Point // tap at x,y instead of a ref; a pinch's centre
 	LongPress  bool
 	Text       string
 	Append     bool
@@ -31,8 +31,13 @@ type Action struct {
 	Direction  string // up, down, left or right: where the finger moves
 	From, To   *screen.Point
 	DurationMS int
-	Key        string
-	App        string
+	// Scale and Rotation shape a pinch: Scale 2 spreads the fingers to
+	// twice their distance (zoom in), 0.5 brings them to half (zoom out),
+	// 0 leaves it (as 1); Rotation turns them by that many degrees,
+	// clockwise when positive.
+	Scale, Rotation float64
+	Key             string
+	App             string
 	// Intent and ApprovalID are per step in phone_batch.
 	Intent     string
 	ApprovalID string
@@ -96,6 +101,10 @@ func (a Action) check() *Result {
 		case hasDir && !validDirection(a.Direction):
 			return bad("direction must be up, down, left or right.")
 		}
+	case "pinch":
+		if res := a.checkPinch(); res != nil {
+			return res
+		}
 	case "key":
 		if _, ok := agentKeys[a.Key]; !ok {
 			return bad("unknown key %q; use one of %s.", a.Key, strings.Join(KeyNames(), ", "))
@@ -132,8 +141,12 @@ func (a Action) digest() string {
 		}
 		return fmt.Sprintf("%d,%d", pt.X, pt.Y)
 	}
-	return digest(fmt.Sprintf("%s|ref=%d|at=%s|long=%v|text=%q|append=%v|submit=%v|dir=%s|from=%s|to=%s|dur=%d|key=%s|app=%s",
-		a.Tool, a.Ref, p(a.Point), a.LongPress, a.Text, a.Append, a.Submit, a.Direction, p(a.From), p(a.To), a.DurationMS, a.Key, a.App))
+	s := fmt.Sprintf("%s|ref=%d|at=%s|long=%v|text=%q|append=%v|submit=%v|dir=%s|from=%s|to=%s|dur=%d|key=%s|app=%s",
+		a.Tool, a.Ref, p(a.Point), a.LongPress, a.Text, a.Append, a.Submit, a.Direction, p(a.From), p(a.To), a.DurationMS, a.Key, a.App)
+	if a.Scale != 0 || a.Rotation != 0 {
+		s += fmt.Sprintf("|scale=%g|rot=%g", a.Scale, a.Rotation)
+	}
+	return digest(s)
 }
 
 func digest(s string) string {
@@ -173,6 +186,12 @@ func (a Action) args(c Call) string {
 	}
 	if a.DurationMS != 0 {
 		m["duration_ms"] = a.DurationMS
+	}
+	if a.Scale != 0 {
+		m["scale"] = a.Scale
+	}
+	if a.Rotation != 0 {
+		m["rotation"] = a.Rotation
 	}
 	if a.Key != "" {
 		m["key"] = a.Key
@@ -303,6 +322,9 @@ type prep struct {
 	from   screen.Point
 	to     screen.Point
 	dur    time.Duration
+	// pinch is the gesture of a pinch, whose first finger goes from from
+	// to to, around point.
+	pinch  *driver.Pinch
 	launch driver.App
 	url    bool
 	input  policy.Input
@@ -471,21 +493,21 @@ func (g *Gateway) launchUnread(ctx context.Context, l *lease, c Call, a Action) 
 }
 
 // evaluate runs the policy on the action. A tap or swipe is checked
-// against every element under the finger, not only the smallest one, so a
-// price label inside a Pay button still counts as tapping Pay, and against
-// the text only OCR reads there (p.ocr), so "Pay" on a web page without
-// accessibility elements counts too. The strictest verdict wins;
+// against every element under the finger (both fingers of a pinch), not
+// only the smallest one, so a price label inside a Pay button still counts
+// as tapping Pay, and against the text only OCR reads there (p.ocr), so
+// "Pay" on a web page without accessibility elements counts too. The strictest verdict wins;
 // p.decider records which element decided.
 func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 	v := g.policy.Evaluate(p.input)
 	p.decider = p.target
-	pt, ok := p.finger()
-	if !ok {
+	pts := p.fingers()
+	if len(pts) == 0 {
 		return v
 	}
 	under := make([]screen.Element, 0, len(p.ocr)+8)
 	for _, e := range cur.Elements {
-		if e.Source == screen.SourceOCR || e.Bounds.Empty() || !e.Bounds.Contains(pt) {
+		if e.Source == screen.SourceOCR || e.Bounds.Empty() || !containsAny(e.Bounds, pts) {
 			continue
 		}
 		if p.target != nil && e.Ref == p.target.Ref && e.Ref != 0 {
@@ -511,15 +533,29 @@ func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 	return v
 }
 
-// finger returns where a tap or swipe first touches the screen.
-func (p *prep) finger() (screen.Point, bool) {
-	switch p.input.Op {
-	case policy.OpTap:
-		return p.point, p.hasPt
-	case policy.OpSwipe:
-		return p.from, true
+// fingers returns where a tap, swipe or pinch first touches the screen:
+// one point, or both fingers of a pinch.
+func (p *prep) fingers() []screen.Point {
+	switch {
+	case p.pinch != nil:
+		a, b := p.pinch.At(0)
+		return []screen.Point{a, b}
+	case p.input.Op == policy.OpTap && p.hasPt:
+		return []screen.Point{p.point}
+	case p.input.Op == policy.OpSwipe:
+		return []screen.Point{p.from}
 	}
-	return screen.Point{}, false
+	return nil
+}
+
+// containsAny reports whether r contains any of pts.
+func containsAny(r screen.Rect, pts []screen.Point) bool {
+	for _, pt := range pts {
+		if r.Contains(pt) {
+			return true
+		}
+	}
+	return false
 }
 
 // ocrForVerdict collects into p.ocr the text that only OCR reads under or
@@ -531,8 +567,8 @@ func (p *prep) finger() (screen.Point, bool) {
 // unlabelled one, or a large one such as a web view. Without a second read
 // the action is checked as before.
 func (g *Gateway) ocrForVerdict(ctx context.Context, d *device, p *prep, cur *screen.Screen) {
-	pt, ok := p.finger()
-	if !ok || cur == nil {
+	pts := p.fingers()
+	if len(pts) == 0 || cur == nil {
 		return
 	}
 	src := cur
@@ -547,7 +583,7 @@ func (g *Gateway) ocrForVerdict(ctx context.Context, d *device, p *prep, cur *sc
 		src = o
 	}
 	for _, e := range src.Elements {
-		if e.Source == screen.SourceOCR && e.Label != "" && !ocrInStatusBar(src, e) && ocrReach(e.Bounds).Contains(pt) {
+		if e.Source == screen.SourceOCR && e.Label != "" && !ocrInStatusBar(src, e) && containsAny(ocrReach(e.Bounds), pts) {
 			p.ocr = append(p.ocr, e)
 		}
 	}
@@ -726,6 +762,16 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 				p.target, area = e, e.Bounds
 			}
 			p.from, p.to = swipeLine(area, a.Direction)
+		}
+	case "pinch":
+		p.input.Op = policy.OpSwipe
+		if dev, _ := g.screenOf(d); dev != nil {
+			if _, ok := dev.(driver.Pincher); !ok {
+				return p, errResult(ErrUnsupported, "This phone cannot pinch. Nothing was done.")
+			}
+		}
+		if res := p.preparePinch(a, cur, byRef); res != nil {
+			return p, res
 		}
 	case "key":
 		p.input.Op = policy.OpKey
@@ -965,8 +1011,11 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	case p.hasPt:
 		target = screen.Rect{X: p.point.X - 24, Y: p.point.Y - 24, W: 48, H: 48}
 	}
-	var point, to screen.Point
+	var point, to, point2, to2 screen.Point
 	switch {
+	case p.pinch != nil:
+		point, point2 = p.pinch.At(0)
+		to, to2 = p.pinch.At(1)
 	case a.Tool == "swipe":
 		point, to = p.from, p.to
 	case p.hasPt:
@@ -985,7 +1034,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	info := g.approvals.Open(approval.Request{
 		Kind: approval.KindAction, Binding: g.binding(l, a), Rule: v.Rule, Title: approvalTitle(a, p, v),
 		Detail: detail, App: app, Agent: l.session.agent.Name, TaskID: l.task.id,
-		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Point: point, To: to, Data: takeSnapshot(cur, p, v),
+		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Point: point, To: to, Point2: point2, To2: to2, Data: takeSnapshot(cur, p, v),
 	})
 	if res := g.afterOpen(l, info); res != nil {
 		return info, res
@@ -1050,7 +1099,7 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 		return fmt.Sprintf("Open %s?", p.launch.Name)
 	case v.Has(policy.ChangeSetting) && label != "":
 		return fmt.Sprintf("Change “%s”?", label)
-	case label != "":
+	case label != "" && a.Tool != "pinch":
 		return fmt.Sprintf("%s “%s”?", capitalize(verbFor(a)), label)
 	}
 	return capitalize(p.desc) + "?"
@@ -1645,6 +1694,12 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 		return dev.Type(ctx, a.Text, driver.TypeOptions{Append: a.Append, Submit: a.Submit})
 	case "swipe":
 		return dev.Swipe(ctx, p.from, p.to, p.dur)
+	case "pinch":
+		pc, ok := dev.(driver.Pincher)
+		if !ok || p.pinch == nil {
+			return fmt.Errorf("pinching: %w", driver.ErrUnsupported)
+		}
+		return pc.Pinch(ctx, *p.pinch)
 	case "key":
 		return dev.Key(ctx, agentKeys[a.Key])
 	case "launch":
@@ -2313,6 +2368,8 @@ func describe(a Action, p *prep) string {
 			return "Swiped " + a.Direction
 		}
 		return fmt.Sprintf("Swiped from %d,%d to %d,%d", a.From.X, a.From.Y, a.To.X, a.To.Y)
+	case "pinch":
+		return describePinch(a, label)
 	case "key":
 		return "Pressed " + strings.ReplaceAll(a.Key, "_", " ")
 	case "launch":

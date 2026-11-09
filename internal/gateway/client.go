@@ -71,6 +71,7 @@ func featuresOf(dev driver.Device) Features {
 	f.Background = backgroundWorks(dev)
 	_, f.Files = dev.(driver.Files)
 	_, f.Companion = dev.(driver.CompanionInstaller)
+	_, f.Pinch = dev.(driver.MultiToucher)
 	return f
 }
 
@@ -187,7 +188,7 @@ func (g *Gateway) Needs() []NeedView {
 		out = append(out, NeedView{ID: info.ID, Kind: kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
 			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
-			Point: info.Point, To: info.To, AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info),
+			Point: info.Point, To: info.To, Point2: info.Point2, To2: info.To2, AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info),
 			Unblock: isUnblock(info), ReadOnly: askedReadOnly(info)})
 	}
 	g.mu.Lock()

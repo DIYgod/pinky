@@ -101,9 +101,10 @@ func (g *Gateway) recordStep(l *lease, step int, a Action, c Call, p *prep, res 
 		if p.target != nil {
 			st.Target = p.target.Bounds
 		}
-		if p.hasPt {
-			st.Point = p.point
-		} else if a.Tool == "swipe" {
+		switch {
+		case p.hasPt, p.pinch != nil:
+			st.Point = p.point // a pinch's centre
+		case a.Tool == "swipe":
 			st.Point = p.from
 		}
 		if len(p.exempted) > 0 && (res.Status == StatusSettled || res.Status == StatusUncertain) {

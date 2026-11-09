@@ -85,6 +85,16 @@ type swipeIn struct {
 	DurationMS int    `json:"duration_ms,omitempty" jsonschema:"How long the swipe takes, 80 to 1200 milliseconds; default 300."`
 }
 
+type pinchIn struct {
+	actionArgs
+	Ref        int     `json:"ref,omitempty" jsonschema:"Pinch around the middle of this element, such as a map, photo or page, with both fingers inside it."`
+	X          *int    `json:"x,omitempty" jsonschema:"With y, pinch around this point in screen pixels instead of a ref. Default: the middle of the screen."`
+	Y          *int    `json:"y,omitempty" jsonschema:"With x, the point to pinch around."`
+	Scale      float64 `json:"scale,omitempty" jsonschema:"How far the fingers spread: they end this many times as far apart as they start, 0.25 to 4. Above 1 zooms in (2 shows the content about twice as large), below 1 zooms out (0.5 about half as large)."`
+	Rotation   float64 `json:"rotation,omitempty" jsonschema:"Also turn both fingers around the centre by this many degrees, -180 to 180, clockwise when positive, to rotate a map or photo. Without scale, the pinch only turns."`
+	DurationMS int     `json:"duration_ms,omitempty" jsonschema:"How long the pinch takes, 200 to 2000 milliseconds; default 500."`
+}
+
 type keyIn struct {
 	actionArgs
 	Key string `json:"key" jsonschema:"The key to press."`
@@ -101,23 +111,25 @@ type appsIn struct {
 }
 
 type batchStep struct {
-	Tool       string `json:"tool" jsonschema:"The action: tap, type, swipe, key or launch."`
-	Ref        int    `json:"ref,omitempty" jsonschema:"As in phone_tap, phone_type and phone_swipe."`
-	X          *int   `json:"x,omitempty" jsonschema:"As in phone_tap."`
-	Y          *int   `json:"y,omitempty" jsonschema:"As in phone_tap."`
-	LongPress  bool   `json:"long_press,omitempty" jsonschema:"As in phone_tap."`
-	Text       string `json:"text,omitempty" jsonschema:"As in phone_type."`
-	Append     bool   `json:"append,omitempty" jsonschema:"As in phone_type."`
-	Submit     bool   `json:"submit,omitempty" jsonschema:"As in phone_type."`
-	Direction  string `json:"direction,omitempty" jsonschema:"As in phone_swipe."`
-	From       *point `json:"from,omitempty" jsonschema:"As in phone_swipe."`
-	To         *point `json:"to,omitempty" jsonschema:"As in phone_swipe."`
-	DurationMS int    `json:"duration_ms,omitempty" jsonschema:"As in phone_swipe."`
-	Key        string `json:"key,omitempty" jsonschema:"As in phone_key."`
-	App        string `json:"app,omitempty" jsonschema:"As in phone_launch."`
-	Intent     string `json:"intent,omitempty" jsonschema:"Why this step, shown to the person."`
-	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result for this step."`
-	SettleMS   *int   `json:"settle_ms,omitempty" jsonschema:"As in phone_tap."`
+	Tool       string  `json:"tool" jsonschema:"The action: tap, type, swipe, pinch, key or launch."`
+	Ref        int     `json:"ref,omitempty" jsonschema:"As in phone_tap, phone_type, phone_swipe and phone_pinch."`
+	X          *int    `json:"x,omitempty" jsonschema:"As in phone_tap and phone_pinch."`
+	Y          *int    `json:"y,omitempty" jsonschema:"As in phone_tap and phone_pinch."`
+	LongPress  bool    `json:"long_press,omitempty" jsonschema:"As in phone_tap."`
+	Text       string  `json:"text,omitempty" jsonschema:"As in phone_type."`
+	Append     bool    `json:"append,omitempty" jsonschema:"As in phone_type."`
+	Submit     bool    `json:"submit,omitempty" jsonschema:"As in phone_type."`
+	Direction  string  `json:"direction,omitempty" jsonschema:"As in phone_swipe."`
+	From       *point  `json:"from,omitempty" jsonschema:"As in phone_swipe."`
+	To         *point  `json:"to,omitempty" jsonschema:"As in phone_swipe."`
+	DurationMS int     `json:"duration_ms,omitempty" jsonschema:"As in phone_swipe and phone_pinch."`
+	Scale      float64 `json:"scale,omitempty" jsonschema:"As in phone_pinch."`
+	Rotation   float64 `json:"rotation,omitempty" jsonschema:"As in phone_pinch."`
+	Key        string  `json:"key,omitempty" jsonschema:"As in phone_key."`
+	App        string  `json:"app,omitempty" jsonschema:"As in phone_launch."`
+	Intent     string  `json:"intent,omitempty" jsonschema:"Why this step, shown to the person."`
+	ApprovalID string  `json:"approval_id,omitempty" jsonschema:"From an approval_pending result for this step."`
+	SettleMS   *int    `json:"settle_ms,omitempty" jsonschema:"As in phone_tap."`
 }
 
 type batchIn struct {
@@ -199,13 +211,18 @@ func nonNull(props map[string]*jsonschema.Schema, names ...string) {
 var (
 	directions = []string{"up", "down", "left", "right"}
 	outcomes   = []string{"done", "failed", "partial", "cancelled"}
-	stepTools  = []string{"tap", "type", "swipe", "key", "launch", "phone_tap", "phone_type", "phone_swipe", "phone_key", "phone_launch"}
+	stepTools  = []string{"tap", "type", "swipe", "pinch", "key", "launch", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_key", "phone_launch"}
 )
 
 func patchSwipe(p map[string]*jsonschema.Schema) {
 	enum(p["direction"], directions...)
 	bounds(p["duration_ms"], 80, 1200)
 	nonNull(p, "from", "to")
+}
+
+func patchPinch(p map[string]*jsonschema.Schema) {
+	bounds(p["scale"], gateway.MinPinchScale, gateway.MaxPinchScale)
+	bounds(p["rotation"], -gateway.MaxPinchRotation, gateway.MaxPinchRotation)
 }
 
 // patchSettle bounds settle_ms and advertises it as a plain integer.
@@ -295,6 +312,24 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
 		})
 
+	sdk.AddTool(srv, &sdk.Tool{Name: "phone_pinch", Title: "Pinch",
+		Description: "Pinch with two fingers to zoom a map, photo or page in or out (scale), or turn it (rotation), around an element (ref), a point (x and y) or the middle of the screen. " +
+			"The fingers stay inside the element and clear of the screen's edges. The app decides how far the content follows the fingers: observe the result and pinch again if it is not enough. The person's rules judge a pinch like a swipe.",
+		InputSchema: schema[pinchIn](func(p map[string]*jsonschema.Schema) {
+			nonNull(p, "x", "y")
+			patchPinch(p)
+			bounds(p["duration_ms"], 200, 2000)
+			patchSettle(p)
+		}), Annotations: acting},
+		func(ctx context.Context, req *sdk.CallToolRequest, in pinchIn) (*sdk.CallToolResult, any, error) {
+			a := gateway.Action{Tool: "pinch", Ref: in.Ref, Scale: in.Scale, Rotation: in.Rotation, DurationMS: in.DurationMS,
+				Settle: settleArg(in.SettleMS)}
+			if res := pointArg(in.X, in.Y, &a.Point); res != nil {
+				return res, nil, nil
+			}
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
+		})
+
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_key", Title: "Press a key",
 		Description: "Press a navigation or keyboard key. Enter in a chat app sends the message, which asks the person first if they chose to approve messages. Keys a phone lacks (recents on iPhone) return unsupported.",
 		InputSchema: schema[keyIn](func(p map[string]*jsonschema.Schema) { enum(p["key"], gateway.KeyNames()...); patchSettle(p) }),
@@ -319,12 +354,14 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_batch", Title: "Run several steps",
-		Description: "Run up to 50 tap, type, swipe, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that is not settled (approval_pending, uncertain or an error; a screen that kept moving, settle: timeout, does not stop it). " +
+		Description: "Run up to 50 tap, type, swipe, pinch, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that is not settled (approval_pending, uncertain or an error; a screen that kept moving, settle: timeout, does not stop it). " +
 			"If a step returns approval_pending, repeat that step alone (with its approval_id), then continue.",
 		InputSchema: schema[batchIn](func(p map[string]*jsonschema.Schema) {
 			item := p["steps"].Items
 			enum(item.Properties["tool"], stepTools...)
 			patchSwipe(item.Properties)
+			patchPinch(item.Properties)
+			bounds(item.Properties["duration_ms"], 80, 2000)
 			patchSettle(item.Properties)
 			nonNull(item.Properties, "x", "y")
 			enum(item.Properties["key"], gateway.KeyNames()...)
@@ -336,7 +373,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			for _, st := range in.Steps {
 				a := gateway.Action{Tool: strings.TrimPrefix(st.Tool, "phone_"), Ref: st.Ref, LongPress: st.LongPress, Text: st.Text,
 					Append: st.Append, Submit: st.Submit, Direction: strings.ToLower(st.Direction), From: st.From.screen(), To: st.To.screen(),
-					DurationMS: st.DurationMS, Key: st.Key, App: st.App, Intent: st.Intent, ApprovalID: st.ApprovalID,
+					DurationMS: st.DurationMS, Scale: st.Scale, Rotation: st.Rotation, Key: st.Key, App: st.App, Intent: st.Intent, ApprovalID: st.ApprovalID,
 					Settle: settleArg(st.SettleMS)}
 				if res := pointArg(st.X, st.Y, &a.Point); res != nil {
 					return res, nil, nil

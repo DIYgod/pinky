@@ -57,10 +57,12 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 
 // Action is one recorded input.
 type Action struct {
-	Kind string // tap, swipe, type, key, launch, touch
+	Kind string // tap, swipe, pinch, type, key, launch, touch, touch2
 	P    screen.Point
 	To   screen.Point
 	Text string
+	// Pinch is the gesture of a pinch.
+	Pinch driver.Pinch
 }
 
 // Device is a fake phone. Its screen is whatever SetScreen last set, and
@@ -152,6 +154,14 @@ func (d *Device) Swipe(_ context.Context, from, to screen.Point, _ time.Duration
 	return nil
 }
 
+// Pinch implements driver.Pincher: P and To are where the fingers touch
+// down.
+func (d *Device) Pinch(_ context.Context, g driver.Pinch) error {
+	a, b := g.At(0)
+	d.record(Action{Kind: "pinch", P: a, To: b, Pinch: g})
+	return nil
+}
+
 // Type implements driver.Device.
 func (d *Device) Type(_ context.Context, text string, _ driver.TypeOptions) error {
 	d.record(Action{Kind: "type", Text: text})
@@ -186,11 +196,19 @@ func (d *Device) Touch(_ context.Context, a driver.TouchAction, p screen.Point) 
 	return nil
 }
 
+// Touch2 implements driver.MultiToucher.
+func (d *Device) Touch2(_ context.Context, a driver.TouchAction, p, q screen.Point) error {
+	d.record(Action{Kind: "touch2:" + string(a), P: p, To: q})
+	return nil
+}
+
 // Close implements driver.Device.
 func (d *Device) Close() error { return nil }
 
 var (
-	_ driver.Provider = (*Provider)(nil)
-	_ driver.Device   = (*Device)(nil)
-	_ driver.Toucher  = (*Device)(nil)
+	_ driver.Provider     = (*Provider)(nil)
+	_ driver.Device       = (*Device)(nil)
+	_ driver.Toucher      = (*Device)(nil)
+	_ driver.Pincher      = (*Device)(nil)
+	_ driver.MultiToucher = (*Device)(nil)
 )
