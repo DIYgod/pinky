@@ -1391,8 +1391,18 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	if g.leaves(a, p, from) && stillIn(next, from.App) {
 		next, settled = g.awaitLeave(ctx, d, from.App, next, settled)
 	}
+	unread := false
+	if a.Tool == "launch" && onBG && noApp(next) {
+		next, settled = g.awaitApp(ctx, d, next, settled)
+		unread = noApp(next)
+	}
 	res := g.screenResult(l, next, false)
 	res.Status = StatusSettled
+	if unread {
+		// GitHub issue #30: not an empty settled screen, but what it is.
+		res.Status = StatusUncertain
+		res.Message = strings.TrimSpace(res.Message + " " + launchUnreadMessage(p))
+	}
 	g.mu.Lock()
 	l.after, l.afterAt = nil, time.Time{}
 	if settled {
@@ -1473,6 +1483,62 @@ func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, ne
 	}
 	return next, settled
 }
+
+// noApp reports whether a read shows no app at all: no app in front and
+// no element, as a background display shows while Android has not yet
+// let accessibility see the window of an app just started there.
+func noApp(s *screen.Screen) bool {
+	return s != nil && !s.Locked && s.App.ID == "" && s.App.Name == "" && len(s.Elements) == 0
+}
+
+// launchReadWait is how long a launch on a background display waits for
+// the app to be readable there. The driver nudges the display meanwhile
+// (1.5 s and 4 s after the start, on Android). Tests shorten it.
+var launchReadWait = 6 * time.Second
+
+// awaitApp reads the screen again, for up to launchReadWait, until it
+// shows an app, then settles and reads once more. It keeps next when no
+// app comes.
+func (g *Gateway) awaitApp(ctx context.Context, d *device, next *screen.Screen, settled bool) (*screen.Screen, bool) {
+	deadline := time.Now().Add(launchReadWait)
+	for time.Now().Before(deadline) {
+		if !sleepCtx(ctx, max(g.opt.PollInterval, 300*time.Millisecond), nil) {
+			break
+		}
+		s, err := g.observe(ctx, d, false)
+		if err != nil {
+			break
+		}
+		if noApp(s) {
+			continue
+		}
+		settled = g.settle(ctx, d)
+		if o, err := g.observe(ctx, d, true); err == nil {
+			return o, settled
+		}
+		return s, settled
+	}
+	return next, settled
+}
+
+// launchUnreadMessage tells the agent that the app it launched on the
+// background display cannot be read yet.
+func launchUnreadMessage(p *prep) string {
+	name := "The app"
+	if p != nil {
+		if n := strings.TrimSpace(p.launch.Name); n != "" {
+			name = n
+		} else if p.launch.ID != "" {
+			name = p.launch.ID
+		}
+	}
+	return fmt.Sprintf("%s was started on the background display, but Android does not show its screen there yet, so the screen is empty. "+
+		"Call phone_observe in a few seconds; if it stays empty, launch the app again.", name)
+}
+
+// emptyBackgroundMessage explains a background display that shows no app.
+const emptyBackgroundMessage = "The background display shows no app: none was started on it, or Android does not show the one just started there yet. " +
+	"Launch an app with phone_launch, or call phone_observe again in a few seconds."
 
 // stillIn reports whether s shows app in front, unlocked.
 func stillIn(s *screen.Screen, app screen.App) bool {
@@ -1759,6 +1825,11 @@ func notificationsOnly(evs []screen.Event) []screen.Event {
 // errScreenChanged means the screen changed while a screenshot was taken.
 var errScreenChanged = errors.New("the screen changed while the screenshot was taken")
 
+// errNoAppShot means the read names no app on the screen: Pinky cannot
+// check that it is not a blocked one, so it takes no picture (on a
+// background display, Android may not show an app just started yet).
+var errNoAppShot = errors.New("Pinky cannot tell which app is on the screen yet, and takes no picture of an app it cannot check; observe again in a few seconds")
+
 // errLockedShot means the phone is locked: its lock screen can show
 // notifications from blocked apps.
 var errLockedShot = errors.New("the phone is locked, and its lock screen can show notifications from blocked apps")
@@ -1780,6 +1851,9 @@ func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (
 	}
 	if s.Locked {
 		return nil, cov, errLockedShot
+	}
+	if s.App.ID == "" && s.App.Name == "" {
+		return nil, cov, errNoAppShot
 	}
 	if !recordableScreen(g.policy, s) {
 		return nil, cov, errScreenChanged
