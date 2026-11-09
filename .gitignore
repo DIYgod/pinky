@@ -3,6 +3,7 @@
 /dist/
 /build/
 /pinky
+/pinky-mirrorbench
 *.test
 *.out
 .mygo/
