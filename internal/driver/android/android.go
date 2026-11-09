@@ -217,7 +217,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	// serial in this listing already (phoneID).
 	for _, named := range []bool{true, false} {
 		for i, e := range entries {
-			if props[i] != nil && namesSerial(e) == named {
+			if props[i] != nil && p.knowsSerial(e) == named {
 				infos[i].ID = p.phoneID(e, *props[i])
 			}
 		}
@@ -271,21 +271,36 @@ func namesSerial(e adb.DeviceEntry) bool {
 	return !e.Wireless() || connectSerial(e.Serial) != ""
 }
 
+// knowsSerial reports whether a connection tells the phone's serial
+// without its shell: it names it (namesSerial), or the reconnector made it
+// for a paired phone, whose guid holds it.
+func (p *Provider) knowsSerial(e adb.DeviceEntry) bool {
+	return namesSerial(e) || (p.wifi != nil && p.wifi.guidAt(e.Serial) != "")
+}
+
 // phoneID is phoneID, also for a phone that hides its serial from the
 // shell, which then reads neither ro.serialno nor ro.boot.serialno: its
 // connections at addresses ("192.168.1.5:41235"; a new port each time
-// Wireless debugging restarts) take the serial that a connection which
-// names it (namesSerial) had with the same android_id, else
-// "android-<android_id>". Each would else be a phone of its own: a Galaxy
-// S10+ was listed some 40 times, all online.
+// Wireless debugging restarts) take the serial in the guid of the paired
+// phone the reconnector connected there, else the serial that a
+// connection which names it (namesSerial) had with the same android_id,
+// else "android-<android_id>". Each would else be a phone of its own: a
+// Galaxy S10+ was listed some 40 times, all online.
 func (p *Provider) phoneID(e adb.DeviceEntry, pr deviceProps) string {
 	id := phoneID(e, pr)
 	if pr.HardwareSerial != "" || pr.AndroidID == "" {
 		return id
 	}
+	if p.wifi != nil && !namesSerial(e) {
+		// An address the reconnector connected for a paired phone: the
+		// phone's guid holds its serial.
+		if s := guidSerial(p.wifi.guidAt(e.Serial)); s != "" {
+			id = s
+		}
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if namesSerial(e) {
+	if id != e.Serial || !e.Wireless() {
 		if p.aidSerials == nil {
 			p.aidSerials = map[string]string{}
 		}
