@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.16 (2026-11-09)
 
 - On Linux and Windows, a paired iPhone or iPad on Wi-Fi now keeps its address while it answers there, so a forged network announcement can no longer pull Pinky's connection elsewhere; addresses no phone can have are ignored.
 - On Windows, saving in Settings › Rules no longer fails when another program, such as a virus scanner, a backup or your editor, has the rules file open for a moment.
