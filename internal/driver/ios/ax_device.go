@@ -113,8 +113,15 @@ func (a *AXDevice) Key(ctx context.Context, k driver.Key) error {
 // Launch implements driver.Device, through CoreDevice's app service.
 func (a *AXDevice) Launch(ctx context.Context, app string) error { return a.d.Launch(ctx, app) }
 
-// LinkApp is the app that opens the links Launch is given.
-func (a *AXDevice) LinkApp() driver.App { return a.d.LinkApp() }
+// LinkApp implements driver.LinkOpener.
+func (a *AXDevice) LinkApp(ctx context.Context, link string) (driver.App, error) {
+	return a.d.LinkApp(ctx, link)
+}
+
+// OpenLink implements driver.LinkOpener, through CoreDevice's app service.
+func (a *AXDevice) OpenLink(ctx context.Context, link string, app driver.App) error {
+	return a.d.OpenLink(ctx, link, app)
+}
 
 // Apps implements driver.Device.
 func (a *AXDevice) Apps(ctx context.Context) ([]driver.App, error) { return a.d.Apps(ctx) }

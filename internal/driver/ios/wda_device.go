@@ -45,8 +45,10 @@ type WDADevice struct {
 	inputMu sync.Mutex // one gesture or text entry at a time
 	appMu   sync.Mutex
 	apps    *appCatalog
-	rec     touchRecorder
-	rec2    pinchRecorder // the mirror's two-finger touches (pinch.go)
+	// schemesFn, on a simulator, lists the apps by URL scheme (SetLinkSchemes).
+	schemesFn func(context.Context) (map[string][]driver.App, error)
+	rec       touchRecorder
+	rec2      pinchRecorder // the mirror's two-finger touches (pinch.go)
 
 	videoMu sync.Mutex
 	video   driver.Stream // the last stream, whose picture the mirror's touches are in
@@ -797,24 +799,21 @@ func (d *WDADevice) Apps(ctx context.Context) ([]driver.App, error) {
 		return apps, nil
 	}
 	type result struct {
-		apps   []driver.App
-		byPath map[string]driver.App
-		err    error
+		list appList
+		err  error
 	}
 	ch := make(chan result, 1)
 	go func() {
-		apps, byPath, err := browseApps(&link{base: d.entry})
-		ch <- result{apps, byPath, err}
+		list, err := browseApps(&link{base: d.entry})
+		ch <- result{list, err}
 	}()
 	select {
 	case r := <-ch:
 		if r.err != nil {
 			return nil, r.err
 		}
-		c.mu.Lock()
-		c.apps, c.byPath, c.at = r.apps, r.byPath, time.Now()
-		c.mu.Unlock()
-		return append([]driver.App(nil), r.apps...), nil
+		c.set(r.list)
+		return append([]driver.App(nil), r.list.apps...), nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}

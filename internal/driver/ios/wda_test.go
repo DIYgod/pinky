@@ -307,6 +307,7 @@ type fakeWDA struct {
 	shots       int           // /screenshot requests
 	shotAt      time.Time     // the last one
 	sourceAt    time.Time     // when /source last answered
+	version     string        // /status's build version: "" is 16.17.6, "none" none
 }
 
 func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -336,11 +337,18 @@ func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	f.bodies[r.Method+" "+path] = append(f.bodies[r.Method+" "+path], string(b))
 	switch r.Method + " " + path {
 	case "GET /status":
-		fmt.Fprint(w, `{"value":{"ready":true,"build":{"version":"16.17.6"},"os":{"version":"18.5"}},"sessionId":null}`)
+		v := f.version
+		switch v {
+		case "":
+			v = "16.17.6"
+		case "none":
+			v = ""
+		}
+		fmt.Fprintf(w, `{"value":{"ready":true,"build":{"version":%q},"os":{"version":"18.5"}},"sessionId":null}`, v)
 	case "POST /session":
 		f.sessions++
 		fmt.Fprintf(w, `{"value":{"sessionId":"s%d","capabilities":{}},"sessionId":"s%d"}`, f.sessions, f.sessions)
-	case "POST /appium/settings", "POST /actions", "POST /wda/keys", "POST /element/E1/clear":
+	case "POST /appium/settings", "POST /actions", "POST /wda/keys", "POST /element/E1/clear", "POST /url":
 		fmt.Fprint(w, `{"value":null}`)
 	case "GET /wda/activeAppInfo":
 		fmt.Fprintf(w, `{"value":%s}`, f.app)

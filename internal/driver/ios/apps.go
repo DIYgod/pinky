@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/url"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -22,12 +22,34 @@ const (
 )
 
 // appCatalog caches the installed apps for a short while; Launch resolves
-// display names through it and Observe app bundles.
+// display names through it, Observe app bundles and LinkApp URL schemes.
 type appCatalog struct {
-	mu     sync.Mutex
-	apps   []driver.App
-	byPath map[string]driver.App // bundle path -> app, hidden apps included
-	at     time.Time
+	mu      sync.Mutex
+	apps    []driver.App
+	byPath  map[string]driver.App   // bundle path -> app, hidden apps included
+	schemes map[string][]driver.App // lowercase URL scheme -> the apps that declare it
+	at      time.Time
+}
+
+// appList is what the installation proxy says about the installed apps.
+type appList struct {
+	apps    []driver.App // the apps on the home screen
+	byPath  map[string]driver.App
+	schemes map[string][]driver.App
+}
+
+// set replaces the catalog's apps with a fresh list.
+func (c *appCatalog) set(l appList) {
+	c.mu.Lock()
+	c.apps, c.byPath, c.schemes, c.at = l.apps, l.byPath, l.schemes, time.Now()
+	c.mu.Unlock()
+}
+
+// schemeApps returns the apps that declare a URL scheme.
+func (c *appCatalog) schemeApps(scheme string) []driver.App {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return append([]driver.App(nil), c.schemes[scheme]...)
 }
 
 const appCacheTTL = 30 * time.Second
@@ -80,41 +102,49 @@ func (d *Device) catalogWithin(ctx context.Context, ttl time.Duration) (*appCata
 		return c, nil
 	}
 	type result struct {
-		apps   []driver.App
-		byPath map[string]driver.App
-		err    error
+		list appList
+		err  error
 	}
 	ch := make(chan result, 1)
 	go func() {
-		apps, byPath, err := browseApps(d.l)
-		ch <- result{apps, byPath, err}
+		list, err := browseApps(d.l)
+		ch <- result{list, err}
 	}()
 	select {
 	case r := <-ch:
 		if r.err != nil {
 			return nil, r.err
 		}
-		c.mu.Lock()
-		c.apps, c.byPath, c.at = r.apps, r.byPath, time.Now()
-		c.mu.Unlock()
+		c.set(r.list)
 		return c, nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
 }
 
-func browseApps(l *link) ([]driver.App, map[string]driver.App, error) {
+func browseApps(l *link) (appList, error) {
 	conn, err := installationproxy.New(l.base)
 	if err != nil {
-		return nil, nil, fmt.Errorf("installation proxy: %w", err)
+		return appList{}, fmt.Errorf("installation proxy: %w", err)
 	}
 	defer conn.Close()
 	infos, err := conn.BrowseAllApps()
 	if err != nil {
-		return nil, nil, fmt.Errorf("list apps: %w", err)
+		return appList{}, fmt.Errorf("list apps: %w", err)
 	}
-	var out []driver.App
-	byPath := map[string]driver.App{}
+	// The home screen names apps in the phone's language, while the
+	// bundle's own name may be English ("WeChat" for 微信): agents and
+	// people use the home screen's.
+	names, _ := homeScreenNames(l, homeScreenWait)
+	return readAppInfos(infos, names), nil
+}
+
+// readAppInfos makes the app list from the installation proxy's answer and
+// the names the home screen shows, by bundle id.
+func readAppInfos(infos []installationproxy.AppInfo, names map[string]string) appList {
+	l := appList{byPath: map[string]driver.App{}, schemes: map[string][]driver.App{}}
+	declared := map[string][]string{} // scheme -> bundle ids
+	all := map[string]driver.App{}
 	for _, a := range infos {
 		id, _ := a["CFBundleIdentifier"].(string)
 		name, _ := a["CFBundleDisplayName"].(string)
@@ -124,20 +154,51 @@ func browseApps(l *link) ([]driver.App, map[string]driver.App, error) {
 		typ, _ := a["ApplicationType"].(string)
 		app := driver.App{ID: id, Name: name, System: typ != "User"}
 		if path, _ := a["Path"].(string); path != "" && id != "" {
-			byPath[strings.TrimSuffix(path, "/")] = app
+			l.byPath[strings.TrimSuffix(path, "/")] = app
+		}
+		if id == "" {
+			continue
 		}
 		if visibleApp(a) {
-			out = append(out, app)
+			l.apps = append(l.apps, app)
+		}
+		all[id] = app
+		for _, s := range urlSchemes(a) {
+			if !slices.Contains(declared[s], id) {
+				declared[s] = append(declared[s], id)
+			}
 		}
 	}
-	// The home screen names apps in the phone's language, while the
-	// bundle's own name may be English ("WeChat" for 微信): agents and
-	// people use the home screen's.
-	if names, err := homeScreenNames(l, homeScreenWait); err == nil {
-		addHomeScreenNames(out, names)
+	addHomeScreenNames(l.apps, names)
+	for _, a := range l.apps {
+		all[a.ID] = a // with the home screen's name
 	}
-	sort.Slice(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
-	return out, byPath, nil
+	for s, ids := range declared {
+		sort.Strings(ids)
+		for _, id := range ids {
+			l.schemes[s] = append(l.schemes[s], all[id])
+		}
+	}
+	sort.Slice(l.apps, func(i, j int) bool { return strings.ToLower(l.apps[i].Name) < strings.ToLower(l.apps[j].Name) })
+	return l
+}
+
+// urlSchemes lists the URL schemes an app declares (CFBundleURLTypes), in
+// lowercase: the links iOS opens in it.
+func urlSchemes(a installationproxy.AppInfo) []string {
+	types, _ := a["CFBundleURLTypes"].([]any)
+	var out []string
+	for _, t := range types {
+		m, _ := t.(map[string]any)
+		list, _ := m["CFBundleURLSchemes"].([]any)
+		for _, v := range list {
+			s, _ := v.(string)
+			if s = strings.ToLower(strings.TrimSpace(s)); s != "" && !slices.Contains(out, s) {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
 }
 
 // homeScreenWait bounds reading the home screen's names: the app list
@@ -314,34 +375,27 @@ func visibleApp(a installationproxy.AppInfo) bool {
 	return true
 }
 
-// safariID is the app an http or https link opens in.
-const safariID = "com.apple.mobilesafari"
-
-// LinkApp is the app that opens the links Launch is given, for the rules
-// that judge apps (the gateway's linkOpener).
-func (d *Device) LinkApp() driver.App {
-	return driver.App{ID: safariID, Name: "Safari"}
-}
-
-// Launch implements driver.Device. app is a bundle id, a display name or an
-// http or https link, which Safari opens. A running app is brought to the
-// front, not restarted.
+// Launch implements driver.Device. app is a bundle id or a display name; a
+// link opens through OpenLink. A running app is brought to the front, not
+// restarted.
 func (d *Device) Launch(ctx context.Context, app string) error {
 	return d.gone(d.launch(ctx, app))
 }
 
 // launch is Launch without marking a dropped connection (gone).
 func (d *Device) launch(ctx context.Context, app string) error {
-	link, isLink, err := linkTarget(app)
+	if strings.Contains(app, "://") {
+		return fmt.Errorf("launch %q: a link opens with OpenLink: %w", app, driver.ErrUnsupported)
+	}
+	id, err := d.resolveApp(ctx, app)
 	if err != nil {
 		return err
 	}
-	id := safariID
-	if !isLink {
-		if id, err = d.resolveApp(ctx, app); err != nil {
-			return err
-		}
-	}
+	return d.startApp(ctx, id, "")
+}
+
+// startApp launches an app, with a link for it to open when link is not "".
+func (d *Device) startApp(ctx context.Context, id, link string) error {
 	d.markInput()
 	input, err := launchInput(id, link)
 	if err != nil {
@@ -358,20 +412,6 @@ func (d *Device) launch(ctx context.Context, app string) error {
 		return fmt.Errorf("launch %s: %w", id, err)
 	}
 	return nil
-}
-
-// linkTarget tells whether app names a link rather than an app, which
-// only http and https links may.
-func linkTarget(app string) (link string, isLink bool, err error) {
-	app = strings.TrimSpace(app)
-	if !strings.Contains(app, "://") {
-		return "", false, nil
-	}
-	u, err := url.Parse(app)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return "", true, fmt.Errorf("only http and https links can be opened: %w", driver.ErrUnsupported)
-	}
-	return app, true, nil
 }
 
 // launchInput is the launch request for an app, with the link the app opens

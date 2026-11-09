@@ -577,6 +577,12 @@ func (b *Background) Launch(ctx context.Context, app string) error {
 // startApp starts an app on the display, noting first which tasks are
 // elsewhere, so that one the start moves here can be given back.
 func (b *Background) startApp(ctx context.Context, t launchTarget) error {
+	return b.startWith(ctx, t, func() error { return b.d.start(ctx, b.l, t, b.display) })
+}
+
+// startWith starts app t on the display with start (its launcher, or a
+// link it opens), as startApp says.
+func (b *Background) startWith(ctx context.Context, t launchTarget, start func() error) error {
 	if b.theirs != nil {
 		roots, err := b.d.rootTasks(ctx)
 		if err != nil {
@@ -592,7 +598,7 @@ func (b *Background) startApp(ctx context.Context, t launchTarget) error {
 		}
 		b.mu.Unlock()
 	}
-	if err := b.d.start(ctx, b.l, t, b.display); err != nil {
+	if err := start(); err != nil {
 		return err
 	}
 	b.started.Store(true)

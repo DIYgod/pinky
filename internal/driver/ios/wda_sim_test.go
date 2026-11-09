@@ -7,13 +7,15 @@
 //	PINKY_WDA_URL=http://127.0.0.1:8100 PINKY_MJPEG_URL=http://127.0.0.1:9100 \
 //	  go test -tags wdasim -count=1 -v -run TestWDASim ./internal/driver/ios/
 //
-// docs/notes/ios.md has the commands. They use Settings (reading only) and
-// the home screen.
+// docs/notes/ios.md has the commands. They use Settings (reading only),
+// the home screen, and Safari and Calendar for links (TestWDASimLinks, which
+// needs PINKY_SIM_UDID too).
 package ios
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"image/png"
 	"net/http"
 	"os"
@@ -25,6 +27,8 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/danielpaulus/go-ios/ios/installationproxy"
+	"howett.net/plist"
 )
 
 func simDevice(t *testing.T) *WDADevice {
@@ -436,4 +440,102 @@ func TestWDASimUpsideDown(t *testing.T) {
 	if q, ok := st.(*frameStream).lastTurn(); !ok || q != 2 {
 		t.Fatalf("the picture's frames turned %d (%v), want a half turn", q, ok)
 	}
+}
+
+// TestWDASimLinks opens a web link in Safari and a calshow:// link in
+// Calendar on the simulator, as phone_launch does: the app that opens each
+// is found first, from the apps' URL schemes, and the link opens in it by
+// bundle id. PINKY_SIM_UDID names the simulator, whose apps simctl lists.
+func TestWDASimLinks(t *testing.T) {
+	udid := os.Getenv("PINKY_SIM_UDID")
+	if udid == "" {
+		t.Skip("PINKY_SIM_UDID not set")
+	}
+	d := simDevice(t)
+	schemes, err := simSchemes(udid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.SetLinkSchemes(func(context.Context) (map[string][]driver.App, error) { return schemes, nil })
+	// Calendar asks for the location and to send notifications when it
+	// first opens. Its alerts would cover the screen for the tests that
+	// follow: grant the one simctl can, turn down the other, and quit it.
+	if out, err := exec.Command("xcrun", "simctl", "privacy", udid, "grant", "location", "com.apple.mobilecal").CombinedOutput(); err != nil {
+		t.Fatalf("simctl privacy: %v: %s", err, out)
+	}
+	t.Cleanup(func() {
+		for range 3 {
+			res, err := http.Post(os.Getenv("PINKY_WDA_URL")+"/alert/dismiss", "application/json", nil)
+			if err != nil {
+				break
+			}
+			res.Body.Close()
+			if res.StatusCode != http.StatusOK {
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+		_ = exec.Command("xcrun", "simctl", "terminate", udid, "com.apple.mobilecal").Run()
+	})
+	for _, c := range []struct{ link, app string }{
+		{"https://example.com/", safariID},
+		{"calshow://", "com.apple.mobilecal"},
+	} {
+		app, err := d.LinkApp(simCtx(t, 10*time.Second), c.link)
+		if err != nil || app.ID != c.app {
+			t.Fatalf("%s: %+v %v, want %s", c.link, app, err, c.app)
+		}
+		start := time.Now()
+		if err := d.OpenLink(simCtx(t, 30*time.Second), c.link, app); err != nil {
+			t.Fatalf("%s: %v", c.link, err)
+		}
+		// Right after the switch, WebDriverAgent can name the new app with
+		// the old one's tree: wait for both to agree.
+		s := simWait(t, d, app.Name, func(s *screen.Screen) bool { return s.App.ID == c.app && s.App.Name == app.Name })
+		t.Logf("%s opened in %s after %v (%d elements)", c.link, s.App.Name, time.Since(start), len(s.Elements))
+	}
+	if _, err := d.LinkApp(simCtx(t, 10*time.Second), "nothing-opens-this://x"); !errors.Is(err, driver.ErrNotFound) {
+		t.Errorf("a scheme no app declares: %v", err)
+	}
+	if err := d.OpenLink(simCtx(t, 10*time.Second), "calshow://", driver.App{ID: safariID}); !errors.Is(err, driver.ErrNotFound) {
+		t.Errorf("calshow:// in Safari: %v", err)
+	}
+	d.Key(simCtx(t, 20*time.Second), driver.KeyHome)
+}
+
+// simSchemes lists a simulator's apps by the URL schemes their Info.plist
+// declares.
+func simSchemes(udid string) (map[string][]driver.App, error) {
+	raw, err := exec.Command("xcrun", "simctl", "listapps", udid).Output()
+	if err != nil {
+		return nil, err
+	}
+	var apps map[string]struct {
+		CFBundleDisplayName string
+		CFBundleName        string
+		ApplicationType     string
+		Path                string
+	}
+	if _, err := plist.Unmarshal(raw, &apps); err != nil {
+		return nil, err
+	}
+	out := map[string][]driver.App{}
+	for id, a := range apps {
+		b, err := os.ReadFile(filepath.Join(a.Path, "Info.plist"))
+		if err != nil {
+			continue
+		}
+		var info installationproxy.AppInfo
+		if _, err := plist.Unmarshal(b, &info); err != nil {
+			continue
+		}
+		name := a.CFBundleDisplayName
+		if name == "" {
+			name = a.CFBundleName
+		}
+		for _, s := range urlSchemes(info) {
+			out[s] = append(out[s], driver.App{ID: id, Name: name, System: a.ApplicationType == "System"})
+		}
+	}
+	return out, nil
 }

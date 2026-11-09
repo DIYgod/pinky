@@ -6,6 +6,7 @@ package driver
 import (
 	"context"
 	"errors"
+	"fmt"
 	"image"
 	"io"
 	"strconv"
@@ -557,6 +558,41 @@ type BackgroundOptions struct {
 // phone's own Device keeps working on the main screen.
 type Backgrounder interface {
 	OpenBackground(ctx context.Context, opt BackgroundOptions) (Device, error)
+}
+
+// LinkOpener is a Device that opens links: web addresses and app links
+// (deep links) such as myapp://item/42. The gateway asks LinkApp which app
+// opens a link and judges that app by the rules; OpenLink then opens the
+// link in that app and no other, so a link cannot end up in an app the
+// rules did not see.
+type LinkOpener interface {
+	// LinkApp returns the app that opens link on this phone, the one a
+	// tap on the link would open without asking the person. Its error
+	// wraps ErrNotFound when no app opens the link, and is a
+	// *LinkChoiceError when the phone would ask which of several apps
+	// should.
+	LinkApp(ctx context.Context, link string) (App, error)
+	// OpenLink opens link in app, as LinkApp returned it or a clone of it
+	// (App.CloneOf), and never in another app.
+	OpenLink(ctx context.Context, link string, app App) error
+}
+
+// LinkChoiceError is LinkApp's error when several apps open a link and
+// the phone would ask the person which: Pinky does not choose for them.
+type LinkChoiceError struct {
+	Link string
+	Apps []App
+}
+
+func (e *LinkChoiceError) Error() string {
+	names := make([]string, len(e.Apps))
+	for i, a := range e.Apps {
+		names[i] = a.Name
+		if names[i] == "" {
+			names[i] = a.ID
+		}
+	}
+	return fmt.Sprintf("several apps open %s: %s", e.Link, strings.Join(names, ", "))
 }
 
 // BackgroundDefaulter says whether agents should work on a background
