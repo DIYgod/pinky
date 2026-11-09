@@ -13,10 +13,16 @@ import (
 )
 
 // iPhones and iPads over Wi-Fi: Settings › Phones' switch, and the phones
-// Pinky found on Wi-Fi but has not used (driver.SetupConfirmWiFi), which
-// wait for the person to choose Use or Ignore, on their page, in Settings ›
-// Phones and in Add phone › iPhone. Until then Pinky does nothing on them
-// and agents do not see them.
+// Pinky found on Wi-Fi but has not used (driver.SetupConfirmWiFi; Android
+// phones connected over Wireless debugging too), which wait for the person
+// to choose Use or Ignore, on their page, in Settings › Phones and in Add
+// phone › iPhone. Until then Pinky does nothing on them and agents do not
+// see them.
+//
+// An Android phone whose connection over the network leads to a device
+// that lacks the mark Pinky left on the phone (driver.SetupPhoneChanged)
+// waits on its page for the person to trust it, which they do when they
+// reset the phone or set it up again, or to plug the phone in.
 
 type (
 	// wifiSetter turns using iPhones and iPads over Wi-Fi on or off
@@ -29,6 +35,11 @@ type (
 	foundChooser interface {
 		UseFoundPhone(deviceID string) error
 		IgnoreFoundPhone(ctx context.Context, deviceID string) error
+	}
+	// phoneTruster trusts what answers for a phone over the network,
+	// though it lacks the phone's mark (gateway.TrustPhone).
+	phoneTruster interface {
+		TrustPhone(ctx context.Context, deviceID string) error
 	}
 	// deviceServiceRestarter restarts the computer's device service, which
 	// lost a phone on Wi-Fi (gateway.RestartDeviceService).
@@ -45,12 +56,21 @@ type foundState struct {
 	asking     bool
 	askFor     string
 	restarting bool
+	// trustAsking: the dialog that asks before trusting trustFor.
+	trustAsking bool
+	trustFor    string
 }
 
 // foundOnWiFi reports whether a phone waits for the person to say whether
 // it is theirs.
 func foundOnWiFi(d gateway.DeviceView) bool {
 	return d.Status != gateway.DeviceOffline && d.Info.State == driver.StateNeedsSetup && d.Info.Setup == driver.SetupConfirmWiFi
+}
+
+// changedOnWiFi reports whether what answers for a phone over the network
+// lacks the mark Pinky left on the phone.
+func changedOnWiFi(d gateway.DeviceView) bool {
+	return d.Status != gateway.DeviceOffline && d.Info.State == driver.StateNeedsSetup && d.Info.Setup == driver.SetupPhoneChanged
 }
 
 // lockedOnWiFi reports whether a phone waits to be unlocked on Wi-Fi: Pinky
@@ -157,7 +177,7 @@ func (a *app) foundPage(c *mg.Context, d gateway.DeviceView) {
 		if line := foundLine(d); line != "" {
 			mg.Text(c, line).FontSize(13).TextColor(p.ink3)
 		}
-		mg.Text(c, locales.FoundDetail()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		mg.Text(c, foundDetail(d)).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
 		mg.Box(c).Height(4)
 		a.foundButtons(c, d, false)
 		mg.Text(c, locales.FoundUseNote()).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
@@ -165,15 +185,28 @@ func (a *app) foundPage(c *mg.Context, d gateway.DeviceView) {
 	})
 }
 
+// foundDetail says why Pinky waits for the person to say whether a phone
+// it found is theirs.
+func foundDetail(d gateway.DeviceView) string {
+	if d.Info.Platform == driver.Android {
+		return locales.FoundDetailAndroid()
+	}
+	return locales.FoundDetail()
+}
+
 // foundLine is a found phone's model and system: "iPad Pro 11-inch (3rd
-// generation) · iOS 27.0.1".
+// generation) · iOS 27.0.1", "Pixel 9 · Android 17".
 func foundLine(d gateway.DeviceView) string {
 	s := d.Info.Model
 	if d.Info.OSVersion != "" {
 		if s != "" {
 			s += " · "
 		}
-		s += "iOS " + d.Info.OSVersion
+		system := "iOS "
+		if d.Info.Platform == driver.Android {
+			system = "Android "
+		}
+		s += system + d.Info.OSVersion
 	}
 	if s == d.Info.Name {
 		return ""
@@ -219,6 +252,76 @@ func (a *app) foundBox(c *mg.Context) {
 		}
 		guideNote(c, locales.FoundIgnoreNote())
 	})
+}
+
+// changedPage is the Phone screen of a phone whose connection over the
+// network leads to a device that lacks the mark Pinky left on the phone:
+// what happened, and Trust this phone, which asks first.
+func (a *app) changedPage(c *mg.Context, d gateway.DeviceView) {
+	p := pal(c)
+	st := &a.found
+	busy := a.foundBusy(d.Info.ID)
+	_, can := a.api.(phoneTruster)
+	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
+		mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
+		mg.Text(c, locales.ChangedTitle(d.Info.Name)).FontSize(16).FontWeight(600).TextAlign(mg.Center)
+		mg.Text(c, locales.ChangedDetail(d.Info.Name)).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		mg.Box(c).Height(4)
+		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
+			// Not the primary button: leaving it alone is the safe choice.
+			b := button(c.Key("trust-"+d.Info.ID), locales.ChangedTrust(), btnOpt{}).
+				Label(locales.ChangedTrustLabel(d.Info.Name)).Disabled(busy || !can)
+			if b.Clicked() {
+				st.trustAsking, st.trustFor = true, d.Info.ID
+			}
+			if busy {
+				spinner(c)
+			}
+		})
+		mg.Text(c, locales.ChangedTrustNote(d.Info.Name)).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
+		a.trustDialog(c, d)
+	})
+}
+
+// trustDialog asks before trusting what answers for a phone over the
+// network.
+func (a *app) trustDialog(c *mg.Context, d gateway.DeviceView) {
+	st := &a.found
+	if !st.trustAsking || st.trustFor != d.Info.ID {
+		return
+	}
+	if mg.AlertDialog(c.Key("trust-ask"), &st.trustAsking, locales.ChangedConfirmTitle(), locales.ChangedConfirmMessage(d.Info.Name),
+		locales.SettingsCancel(), locales.ChangedConfirmButton()) == 1 {
+		st.trustAsking = false
+		a.trustPhone(d)
+	}
+	if !st.trustAsking {
+		st.trustFor = ""
+	}
+}
+
+// trustPhone tells the gateway that what answers for the phone over the
+// network is the person's phone: Pinky marks it again and connects to it.
+func (a *app) trustPhone(d gateway.DeviceView) {
+	t, ok := a.api.(phoneTruster)
+	id, name := d.Info.ID, d.Info.Name
+	if !ok || a.foundBusy(id) {
+		return
+	}
+	a.setFoundBusy(id, true)
+	go func() {
+		ctx, cancel := context.WithTimeout(a.ctx, time.Minute)
+		defer cancel()
+		err := t.TrustPhone(ctx, id)
+		a.post(func() {
+			a.setFoundBusy(id, false)
+			if err != nil {
+				a.toasts = append(a.toasts, locales.ChangedTrustFailed(name, err.Error()))
+				return
+			}
+			a.toasts = append(a.toasts, locales.ChangedTrusted(name))
+		})
+	}()
 }
 
 // connectingPage is the Phone screen while Pinky opens the phone, or opens

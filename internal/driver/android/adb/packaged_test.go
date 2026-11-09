@@ -50,7 +50,7 @@ func TestPackagedADB(t *testing.T) {
 		t.Errorf("version %q is not Pinky's own build", tool.Version)
 	}
 	start := time.Now()
-	if err := spawnServer(ctx, tool.Path); err != nil {
+	if err := spawnServer(ctx, tool.Path, ServerOptions{}); err != nil {
 		t.Fatalf("starting a server: %v", err)
 	}
 	t.Logf("the server started in %v", time.Since(start).Round(time.Millisecond))

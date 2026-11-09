@@ -64,7 +64,7 @@ func presetRules(p Preset) []Rule {
 		return commitRules[:1]
 	case PresetEvery:
 		out := append([]Rule(nil), commitRules...)
-		return append(out, ask(RuleEvery, string(OpTap), string(OpType), string(OpSwipe), string(OpKey), string(OpLaunch)))
+		return append(out, ask(RuleEvery, string(OpTap), string(OpType), string(OpSwipe), string(OpKey), string(OpLaunch), string(OpStop)))
 	}
 	return nil
 }

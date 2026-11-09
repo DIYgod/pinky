@@ -259,8 +259,12 @@ func TestPhoneFilesUploadRules(t *testing.T) {
 	ig := newIPhoneGateway(t)
 	is, _ := connect(t, ig, "Files")
 	res := is.Files(context.Background(), FilesRequest{Action: "upload", Paths: []string{"cat.png"}, Body: bytes.NewReader([]byte("meow"))})
-	if res.Error != ErrUnsupported {
-		t.Fatalf("upload to an iPhone: %+v", res)
+	if res.Status != StatusSettled || !strings.HasSuffix(res.Message, "iPhone 17 has no Pinky folder, so it stays on the computer.") {
+		t.Fatalf("upload for an iPhone: %+v", res)
+	}
+	res = is.Files(context.Background(), FilesRequest{Action: "upload", Paths: []string{"build/Tool.ipa"}, Body: bytes.NewReader([]byte("PK"))})
+	if res.Status != StatusSettled || !strings.Contains(res.Message, `phone_app { action: "install", paths: ["build/Tool.ipa"] }`) {
+		t.Fatalf("upload of an app for an iPhone: %+v", res)
 	}
 }
 

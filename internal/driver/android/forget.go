@@ -65,7 +65,7 @@ func (p *Provider) Disconnect(ctx context.Context, id string) error {
 			p.cfg.logf("android: %s: %v", id, err)
 		}
 	}
-	entries, err := p.cfg.Client.Devices(ctx)
+	entries, err := p.devices(ctx)
 	if err != nil {
 		return wrapErr(err)
 	}
@@ -109,7 +109,7 @@ func (p *Provider) connectionOf(ctx context.Context, e adb.DeviceEntry, id strin
 		}
 		ok = true
 	}
-	return ok && phoneID(e, pr) == id
+	return ok && p.phoneID(e, pr) == id
 }
 
 // guidSerial returns the phone's hardware serial in its wireless debugging

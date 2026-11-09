@@ -25,8 +25,9 @@ const httpSessionTimeout = time.Hour
 // a name of its own (RemoteSuffix). The SDK refuses requests to a loopback
 // address that name another host (DNS rebinding), and cross-origin
 // browser requests are refused too. Upload links (UploadPath) take files
-// for phone_files without the agent token: each link's own token is the
-// key, for one file, once.
+// for phone_files, and download links (DownloadPath) give saved files,
+// without the agent token: each link's own token is the key, for one
+// file, once.
 type HTTP struct {
 	s       *Server
 	srv     *sdk.Server
@@ -46,13 +47,14 @@ func (s *Server) HTTP(token string) *HTTP {
 	mux := http.NewServeMux()
 	mux.Handle(HTTPPath, http.NewCrossOriginProtection().Handler(h))
 	mux.Handle(UploadPath, http.NewCrossOriginProtection().Handler(http.HandlerFunc(s.serveUpload)))
+	mux.Handle(DownloadPath, http.HandlerFunc(s.serveDownload))
 	return &HTTP{s: s, srv: srv, handler: mux, token: token, sl: newSessionless()}
 }
 
-// ServeHTTP checks the bearer token, then serves MCP. Upload links need
-// none.
+// ServeHTTP checks the bearer token, then serves MCP. Upload and download
+// links need none.
 func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if strings.HasPrefix(path.Clean(r.URL.Path), UploadPath) {
+	if p := path.Clean(r.URL.Path); strings.HasPrefix(p, UploadPath) || strings.HasPrefix(p, DownloadPath) {
 		h.handler.ServeHTTP(w, r)
 		return
 	}
@@ -111,5 +113,6 @@ func (h *HTTP) CloseSessions() {
 		ss.Close()
 	}
 	h.s.g.EndKeptLeases()
+	h.s.forgetDownloads()
 	h.sl.reset()
 }

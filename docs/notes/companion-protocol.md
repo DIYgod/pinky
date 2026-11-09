@@ -11,6 +11,7 @@ Changes since the first version, all additive:
 | 2026-11-07, round 3 | `display` on `set_text`, `events` and `wait_idle`; `display` on every event; `features` in `ping`; `tree` fails clearly for a display it cannot read | `displays` (Android 11+) |
 | 2026-11-07, round 3 | `config` values are kept until the service is turned off, across restarts | none: an older app forgets them when its service restarts; `ping` shows the current values |
 | 2026-11-07, round 3 | `region` on windows; `tree` walks an input method window that covers the screen like a sheet even without `ime` | none: an older app leaves `region` out, and a client that reads it treats its absence as "the bounds" |
+| 2026-11-09 | `set_text` writes through the field's input connection or pastes when the app refuses `ACTION_SET_TEXT` (GitHub issue #31), waits until the field shows the text, reports `method` and `password`, and runs `submit` only when the text landed | `set_text_fallback` (the input connection from Android 13; before, the paste only) |
 
 ## Transport
 
@@ -51,7 +52,7 @@ Every command that reads or writes the screen takes `display`, an Android displa
 | Field | Meaning |
 | --- | --- |
 | `protocol` | Protocol version (1) |
-| `features` | Additions this app supports on this phone, beyond protocol 1 as it first shipped: `displays` (Android 11+) means `tree`, `set_text`, `events` and `wait_idle` take displays other than 0, and events name their display. Absent in apps built before 2026-11-07. |
+| `features` | Additions this app supports on this phone, beyond protocol 1 as it first shipped: `displays` (Android 11+) means `tree`, `set_text`, `events` and `wait_idle` take displays other than 0, and events name their display; `set_text_fallback` means `set_text` has the fallbacks below and its `verified` can be trusted. Absent in apps built before 2026-11-07. |
 | `version`, `version_code` | The app's version name (Pinky's version, from `cmd/pinky/mygo.json`) and code (the number of commits up to the one built); see [companion.md](companion.md#versions-and-signing) |
 | `sdk`, `release` | Android API level and version string |
 | `manufacturer`, `model` | `Build.MANUFACTURER`, `Build.MODEL` |
@@ -123,7 +124,13 @@ By default the tree holds only views that are important for accessibility (see `
 
 ### `set_text`
 
-Writes text into an editable node with `ACTION_SET_TEXT`. The text goes straight into the field: any script works, and the clipboard and the keyboard are not involved.
+Writes text into an editable node. Any script works, and the keyboard's own composing (Pinyin and the like) is never involved. The app tries, in order, until the field shows the text:
+
+1. **`ACTION_SET_TEXT`**, when the node offers it. The clipboard and the keyboard are not involved.
+2. **The field's input connection** (`set_text_fallback`, Android 13+), the way a keyboard types: the service declares `flagInputMethodEditor`, so Android hands it the input connection of the field the keyboard is connected to (`AccessibilityService.getInputMethod()`). The app focuses the node, waits up to a second for the field to connect, checks that the connection belongs to the node's app and, from the text around the cursor, to that field (a connection that reads empty counts for a focused node that reports text, since some custom views report their hint as their text while empty), selects the field's text (or puts the cursor at its end with `append`) and commits the text. The keyboard stays as it is and sees nothing. This reaches views that are not TextViews and refuse `ACTION_SET_TEXT`, such as messaging apps' chat inputs.
+3. **A paste** (`set_text_fallback`): the app selects the field's text (or puts the cursor at its end with `append`), puts the text on the clipboard marked sensitive (`ClipDescription.EXTRA_IS_SENSITIVE`, which keeps it off Android 13's clipboard preview, one-time codes included), runs `ACTION_PASTE` on the node and clears the clipboard afterwards (`clearPrimaryClip`). Whatever the clipboard held before is lost: Android gives a background app no way to read it back. A TextView pastes only while its app may read the clipboard; an app on a background display could not while the phone was locked (Android 16 emulator), and the error says so.
+
+A way counts only when the field then reads differently from before, polled for up to 1.5 s (a password field, which cannot be read, gets a short wait instead). When every way fails, the error is `action_failed`, and its message lists why each one failed, in order, for example `the field does not offer ACTION_SET_TEXT; input connection: the field did not change; the app did not accept ACTION_PASTE`. The app logs the same under the tag `PinkyText`.
 
 ```json
 {"id":3,"cmd":"set_text","text":"你好，Pinky","target":{"id":"com.example:id/note"}}
@@ -135,7 +142,7 @@ Writes text into an editable node with `ACTION_SET_TEXT`. The text goes straight
 | `target` | Which node; see below. Absent or `{}` means the focused input. |
 | `display` | The display whose windows the target is looked up in; default 0. See [Displays](#displays). |
 | `append` | Keep the current text and add to it. Fails with `unsupported` on password fields, whose text cannot be read. |
-| `submit` | Focus the node first, then run its IME action (`ACTION_IME_ENTER`, Android 11+). On Android 10 the result has `"submitted": false` and the client should press Enter itself. |
+| `submit` | Focus the node first, then run its IME action (`ACTION_IME_ENTER`, Android 11+; where the node refuses it, on Android 13+, the input connection's editor action, or Enter through it when the field has none). With `set_text_fallback`, only once the field reads the text as requested (or is a password field). On Android 10 the result has `"submitted": false` and the client should press Enter itself. |
 | `timeout_ms` | Default 10000. |
 
 Targets, in order of precedence:
@@ -147,7 +154,7 @@ Targets, in order of precedence:
 | `{"x": 540, "y": 1296, "id": "..."}` | The smallest editable node under the point, top-most window first; among those, one with the resource id `id` if given |
 | `{"id": "com.example:id/note"}` | The first visible editable node with this resource id, top-most window first |
 
-Result: `window` and `node` (the handle of the node written), `text` (the field's text afterwards, read back from the app), `verified` (whether it equals the requested text; an app may change it, for example with a length limit), and `submitted` when `submit` was set. `text` and `verified` are left out for password fields.
+Result: `window` and `node` (the handle of the node written), `method` (`set_text`, `input_connection` or `paste`; with `set_text_fallback`), `text` (the field's text afterwards, read back from the app), `verified` (whether it equals the requested text, or the old text and the new with `append`; an app may change it, for example with a length limit), `password: true` for a password field, and `submitted` when `submit` was set. `text` and `verified` are left out for password fields.
 
 ### `events`
 

@@ -1,6 +1,7 @@
 package video
 
 import (
+	"bytes"
 	"image"
 	"io"
 	"sync"
@@ -22,7 +23,7 @@ type Frame struct {
 	// Width and Height are the stream's picture size, in the device's
 	// pixels, whatever size Image has.
 	Width, Height int
-	Seq           uint64        // counts the pictures decoded
+	Seq           uint64        // counts the pictures decoded and handed over
 	PTS           time.Duration // the packet's PTS
 	// Turn is how many quarter turns clockwise put the picture the right
 	// way up (driver.Packet.Turn), from the packet it was decoded from.
@@ -46,12 +47,20 @@ type PlayerOptions struct {
 	// converts and scales them as it draws them (MyGo's Bitmap.UpdateYUV):
 	// the least CPU a picture can cost. SetSize then changes nothing.
 	YUV bool
+	// SkipRepeats hands over no picture that is the same, sample for
+	// sample, as the one before, and calls no OnFrame for it. Phones go on
+	// sending pictures for a while after their screen stops changing (an
+	// iPhone 20 to 30 a second for 5 to 7 s); a mirror that woke for each
+	// would paint as if the screen moved. A recording's player keeps them,
+	// as their PTS move its playhead.
+	SkipRepeats bool
 }
 
 // Stats describe a player's work so far.
 type Stats struct {
 	Hardware   string        // "videotoolbox", "d3d11va", "vaapi", or "" for software
-	Decoded    uint64        // pictures decoded and converted
+	Decoded    uint64        // pictures decoded and converted, repeats aside
+	Repeats    uint64        // pictures the same as the one before, not handed over (SkipRepeats)
 	Shown      uint64        // pictures handed to Take
 	Dropped    uint64        // pictures replaced before Take saw them
 	Skipped    uint64        // packets skipped to catch up
@@ -79,7 +88,6 @@ type Player struct {
 	pending  *Frame // the newest picture, not yet taken
 	spare    *Frame // free for the decoder
 	ready    bool   // pending holds a picture Take has not returned
-	lastTake time.Time
 	err      error
 	stats    Stats
 	sumDec   time.Duration
@@ -87,6 +95,7 @@ type Player struct {
 	sumLat   time.Duration
 	fpsCount int
 	fpsStart time.Time
+	last     *Frame // the picture handed over last; the player's goroutine's only
 
 	done      chan struct{}
 	closeOnce sync.Once
@@ -102,7 +111,7 @@ func NewPlayer(stream driver.Stream, opt PlayerOptions) (*Player, error) {
 	if opt.MaxBacklog <= 0 {
 		opt.MaxBacklog = 30
 	}
-	p := &Player{stream: stream, opt: opt, done: make(chan struct{}), fpsStart: time.Now(), lastTake: time.Now()}
+	p := &Player{stream: stream, opt: opt, done: make(chan struct{}), fpsStart: time.Now()}
 	go p.run(dec)
 	return p, nil
 }
@@ -122,7 +131,6 @@ func (p *Player) SetSize(w, h int) {
 func (p *Player) Take() *Frame {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.lastTake = time.Now()
 	if !p.ready {
 		return nil
 	}
@@ -130,6 +138,13 @@ func (p *Player) Take() *Frame {
 	p.ready = false
 	p.stats.Shown++
 	return p.front
+}
+
+// Pending reports whether a picture waits for Take.
+func (p *Player) Pending() bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.ready
 }
 
 // Done is closed when the stream ended or failed.
@@ -229,10 +244,12 @@ func (p *Player) run(dec *Decoder) {
 // convert writes the picture into the spare buffer and publishes it.
 // While nobody takes pictures (a window out of sight paints nothing), it
 // keeps the one waiting and converts nothing: decoding goes on, as later
-// pictures depend on earlier ones.
+// pictures depend on earlier ones. Nobody takes them when the picture
+// waiting has waited for over a second, not when Take has not been called
+// for a while: a mirror of a still screen calls it only when OnFrame woke it.
 func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded time.Time) bool {
 	p.mu.Lock()
-	if p.ready && time.Since(p.lastTake) > time.Second {
+	if p.ready && time.Since(p.pending.Ready) > time.Second {
 		p.stats.Idle++
 		p.mu.Unlock()
 		return false
@@ -265,9 +282,19 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 	f.Width, f.Height = pic.Width, pic.Height
 	f.Turn = turn & 3
 	f.PTS, f.Received, f.Ready = pic.PTS, received, now
+	// The last picture stays as it is until this one is handed over: the
+	// UI only reads it, and the player writes only the spare.
+	if p.opt.SkipRepeats && samePicture(f, p.last) {
+		p.mu.Lock()
+		p.stats.Repeats++
+		p.spare = f
+		p.mu.Unlock()
+		return false
+	}
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.last = f
 	p.stats.Decoded++
 	f.Seq = p.stats.Decoded
 	p.stats.Hardware = dec.Hardware()
@@ -287,6 +314,18 @@ func (p *Player) convert(dec *Decoder, pic Picture, turn int, received, decoded 
 	p.spare, p.pending = p.pending, f
 	p.ready = true
 	return true
+}
+
+// samePicture reports whether a and b show the same picture the same way.
+func samePicture(a, b *Frame) bool {
+	if a == nil || b == nil || a.Width != b.Width || a.Height != b.Height || a.Turn != b.Turn {
+		return false
+	}
+	if a.YUV != nil || b.YUV != nil {
+		return a.YUV.Equal(b.YUV)
+	}
+	return a.Image != nil && b.Image != nil && a.Image.Rect == b.Image.Rect &&
+		a.Image.Stride == b.Image.Stride && bytes.Equal(a.Image.Pix, b.Image.Pix)
 }
 
 // fitSize returns the size to convert a w×h picture to so it fits inside

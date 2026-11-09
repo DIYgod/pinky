@@ -84,6 +84,7 @@ type Result struct {
 	Diff       []string
 	Full       bool
 	Settle     string // "timeout" when settling hit its limit
+	Early      bool   // settle_ms ended the wait while the screen changed: it may not show the action's effect yet
 	ApprovalID string
 	Rule       string
 	Note       string
@@ -98,6 +99,9 @@ type Result struct {
 	Task       string    // phone_connect: the task id
 	Folder     string    // phone_files: the folder on the computer
 	Files      []FileView
+	Saved      []SavedFile  // files written for the agent on Pinky's computer (save.go)
+	Log        string       // phone_logs: the log lines or crash reports, as text
+	Switches   []SwitchView // phone_device
 }
 
 // IsError reports whether the result is an error rather than a status.
@@ -146,6 +150,9 @@ type ReleaseRequest struct {
 	Call
 	Outcome string // done, failed, partial or cancelled
 	Summary string
+	// Export saves the task's report in the phone's folder on Pinky's
+	// computer once it ends (save.go).
+	Export bool
 }
 
 // ObserveRequest is phone_observe.
@@ -156,6 +163,9 @@ type ObserveRequest struct {
 	// OCR asks for all the text the screen's pixels show that no element
 	// does, however complete the tree looks (ocrAll).
 	OCR bool
+	// Save saves the screenshot under this name in the phone's folder on
+	// Pinky's computer (save.go), with or without Screenshot.
+	Save string
 }
 
 // WaitForRequest is phone_wait_for.
@@ -237,6 +247,9 @@ const (
 	MaxBatchSteps  = 50
 	MaxReadScreens = 30
 	MaxReadTime    = 45 * time.Second
+	// MaxSettle is the most an action's settle_ms may ask for: the
+	// default limit, SettleMax, is never raised.
+	MaxSettle = 3 * time.Second
 )
 
 // waitForOCREvery is how often phone_wait_for also reads the screen with
@@ -607,6 +620,8 @@ func setupResultLocked(d *device, first string) *Result {
 		msg += " Pinky cannot use the phone until the person updates it: tell them, and end the task."
 	case driver.SetupUSBDriver:
 		msg += " Ask the person to install the driver with phone_handoff. Afterwards the phone shows up under another device id: call phone_connect again."
+	case driver.SetupPhoneChanged:
+		msg += " Pinky will not use it until the person trusts it on its page in Pinky or plugs the phone in: tell them, and end the task."
 	default:
 		msg += " Ask the person to do it with phone_handoff, saying what to do; the handoff ends by itself once the phone is ready."
 	}
@@ -969,6 +984,9 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 	if outcome == "canceled" {
 		outcome = "cancelled"
 	}
+	if req.Export && g.opt.DataDir == "" {
+		return errResult(ErrUnsupported, "This Pinky keeps no data folder, so it cannot save the task's report. Release without export.")
+	}
 	g.mu.Lock()
 	var ls []*lease
 	if req.Device != "" {
@@ -991,21 +1009,77 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 			ls = append(ls, l)
 		}
 	}
-	var names []string
-	for _, l := range ls {
-		names = append(names, l.dev.name())
-		g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"outcome": outcome, "summary": req.Summary}),
-			Text: "Finished: " + outcome, Status: string(StatusSettled), At: time.Now()}, "", "")
-		g.endLeaseLocked(l, outcome, req.Summary)
+	// The tasks whose screen recordings the person may give the agent.
+	videos := map[*lease]*taskVideo{}
+	if req.Export {
+		for _, l := range ls {
+			if v := l.dev.video; v != nil && v.t.id == l.task.id {
+				videos[l] = v
+			}
+		}
 	}
 	g.mu.Unlock()
 	if len(ls) == 0 {
 		return &Result{Status: StatusSettled, Message: "Nothing to release."}
 	}
+	sort.Slice(ls, func(i, j int) bool { return ls[i].dev.id < ls[j].dev.id })
+	var asked []*lease
+	for _, l := range ls {
+		if v := videos[l]; v != nil && v.recorded() {
+			asked = append(asked, l)
+		}
+	}
+	// Each export with a recording asks the person, before the task ends:
+	// an answer still pending leaves it running for the agent to repeat
+	// the call with approval_id.
+	var answer approval.Outcome
+	if len(asked) > 0 {
+		out, res := g.askRecordings(ctx, s, asked, req, outcome)
+		if res != nil {
+			return res
+		}
+		answer = out
+	}
+	give := answer.Decision.Allows()
+	g.mu.Lock()
+	var names []string
+	var exports []taskExport
+	var released []*lease
+	for _, l := range ls {
+		if l.ended {
+			continue
+		}
+		released = append(released, l)
+		names = append(names, l.dev.name())
+		if req.Export {
+			e := taskExport{task: l.task.id, device: l.dev.name(), dir: g.FilesDir(l.dev.id), video: give && videos[l] != nil}
+			text := exportStepText
+			if e.video {
+				text = exportVideoStepText
+			}
+			g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"export": true}),
+				Text: text, Status: string(StatusSettled), At: time.Now()}, "", "")
+			exports = append(exports, e)
+		}
+		g.addStepLocked(l.task, StepView{Tool: "phone_release", Args: argsJSON(map[string]any{"outcome": outcome, "summary": req.Summary}),
+			Text: "Finished: " + outcome, Status: string(StatusSettled), At: time.Now()}, "", "")
+		g.endLeaseLocked(l, outcome, req.Summary)
+	}
+	g.mu.Unlock()
+	if len(released) == 0 {
+		return &Result{Status: StatusSettled, Message: "Nothing to release."}
+	}
 	sort.Strings(names)
 	res := &Result{Status: StatusSettled, Message: fmt.Sprintf("Released %s.", strings.Join(names, ", "))}
-	if len(ls) == 1 {
-		res.Device, res.DeviceName = ls[0].dev.id, ls[0].dev.name()
+	if len(released) == 1 {
+		res.Device, res.DeviceName = released[0].dev.id, released[0].dev.name()
+	}
+	if len(exports) > 0 {
+		g.exportForAgent(ctx, exports, res)
+	}
+	if len(asked) > 0 && !give {
+		res.Message += recordingsWithheld(answer, len(asked))
+		res.Note = answer.Note
 	}
 	return res
 }
@@ -1014,6 +1088,17 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 	if req.WaitMS < 0 || time.Duration(req.WaitMS)*time.Millisecond > MaxObserveWait {
 		return errResult(ErrInvalidArgument, "wait_ms must be between 0 and 30000.")
+	}
+	var save string
+	if strings.TrimSpace(req.Save) != "" {
+		name, why := shotName(req.Save)
+		if why != "" {
+			return errResult(ErrInvalidArgument, "%q cannot be a file name in the phone's folder on Pinky's computer: %s.", req.Save, why)
+		}
+		if s.g.opt.DataDir == "" {
+			return errResult(ErrUnsupported, "This Pinky keeps no data folder, so it cannot save files.")
+		}
+		save = name
 	}
 	l, res := s.acquire(req.Device)
 	if res != nil {
@@ -1052,13 +1137,17 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 		res.Status = StatusLocked
 		res.Message = "The phone is locked; call phone_handoff so the person can unlock it."
 	}
+	if _, onBG := g.screenOf(l.dev); onBG && noApp(cur) {
+		res.Message = strings.TrimSpace(res.Message + " " + emptyBackgroundMessage)
+	}
 	if req.OCR && g.noOCR(l.dev) {
 		res.Message = strings.TrimSpace(res.Message + " " + noOCRMessage)
 	}
 	_, blocked := g.policy.Blocked(cur.App)
-	if !req.Screenshot {
+	if !req.Screenshot && save == "" {
 		g.startShot(l.dev, cur)
 	} else {
+		tried := false // to save, so the message says how that went
 		switch {
 		case res.Rule != "":
 			res.Message = strings.TrimSpace(res.Message + " No screenshot: the app is blocked.")
@@ -1068,7 +1157,18 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 			img, cov, err := g.screenshot(ctx, l.dev, cur)
 			switch {
 			case err == nil:
-				res.Screenshot = img
+				if req.Screenshot {
+					res.Screenshot = img
+				}
+				if save != "" {
+					f, msg, err := g.saveShot(l, save, img)
+					if err != nil {
+						msg = "Saving the screenshot failed: " + err.Error() + "."
+					} else {
+						res.Saved = append(res.Saved, f)
+					}
+					res.Message, tried = strings.TrimSpace(res.Message+" "+msg), true
+				}
 				if cov.hidden > 0 {
 					res.Message = strings.TrimSpace(res.Message + " Notifications and cards of blocked apps are covered in the screenshot.")
 				}
@@ -1079,13 +1179,16 @@ func (s *Session) Observe(ctx context.Context, req ObserveRequest) *Result {
 				g.keepImage(l.dev, cur, img, true)
 			case errors.Is(err, driver.ErrUnsupported):
 				res.Message = strings.TrimSpace(res.Message + " This phone cannot take screenshots.")
-			case errors.Is(err, errLockedShot), errors.Is(err, errCodeShot), errors.Is(err, errHiddenShot):
+			case errors.Is(err, errLockedShot), errors.Is(err, errCodeShot), errors.Is(err, errHiddenShot), errors.Is(err, errNoAppShot):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: " + err.Error() + ".")
 			case errors.Is(err, errScreenChanged):
 				res.Message = strings.TrimSpace(res.Message + " No screenshot: the screen changed while it was taken; observe again.")
 			default:
 				res.Message = strings.TrimSpace(res.Message + " The screenshot failed: " + err.Error())
 			}
+		}
+		if save != "" && !tried {
+			res.Message = strings.TrimSpace(res.Message + " Nothing was saved.")
 		}
 	}
 	return g.finish(l, res)
@@ -1111,7 +1214,7 @@ func (g *Gateway) waitChange(ctx context.Context, l *lease, wait time.Duration, 
 		}
 		view, _ := g.agentView(l, cur)
 		if base == nil || body(view) != body(base) {
-			g.settle(ctx, l.dev)
+			g.settle(ctx, l.dev, g.opt.SettleMax)
 			return
 		}
 		if progress != nil && time.Since(lastProgress) >= 5*time.Second {

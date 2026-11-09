@@ -33,9 +33,22 @@ func (d *Device) Checkup(ctx context.Context) (driver.Checkup, error) {
 	return runChecks(ctx, d.info,
 		func(context.Context) driver.Check { return checkDevMode(d.l.base) },
 		func(ctx context.Context) driver.Check { return checkImage(ctx, d.l, d.imageDir, true) },
-		func(ctx context.Context) driver.Check { return checkScreenshot(ctx, d.Screenshot) },
+		d.checkScreen,
 		d.checkInput,
 	)
+}
+
+// checkScreen takes a screenshot, and fails when the last start of the
+// live picture got none: Pinky shows the phone and takes its input only
+// with that picture.
+func (d *Device) checkScreen(ctx context.Context) driver.Check {
+	d.mu.Lock()
+	nv := d.noVideo
+	d.mu.Unlock()
+	if nv != nil {
+		return noVideoCheck(nv.Detail())
+	}
+	return checkScreenshot(ctx, d.Screenshot)
 }
 
 // Checkup implements driver.Checker through the WebDriverAgent helper.

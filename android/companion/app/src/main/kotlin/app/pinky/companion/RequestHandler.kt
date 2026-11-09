@@ -110,6 +110,9 @@ class RequestHandler(
         val f = mutableListOf<String>()
         // tree, set_text, events and wait_idle take a display other than 0.
         if (service.displays.multiDisplay) f += FEATURE_DISPLAYS
+        // set_text tries the input connection and ACTION_PASTE when
+        // ACTION_SET_TEXT is refused, and says which went in (method).
+        f += FEATURE_SET_TEXT_FALLBACK
         return f
     }
 
@@ -205,6 +208,7 @@ class RequestHandler(
         private const val TAG = "PinkyRequests"
         const val PROTOCOL_VERSION = 1
         const val FEATURE_DISPLAYS = "displays"
+        const val FEATURE_SET_TEXT_FALLBACK = "set_text_fallback"
         private const val DEFAULT_TIMEOUT_MS = 10_000L
     }
 }

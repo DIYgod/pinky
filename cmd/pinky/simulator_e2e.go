@@ -10,11 +10,14 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/ios"
+	"howett.net/plist"
 )
 
 // In the e2e build, PINKY_WDA_URL adds a WebDriverAgent server, such as one
@@ -27,7 +30,8 @@ import (
 // The phone's id is the URL, so PINKY_DEVICES can name it. With
 // PINKY_WDA_ONLY=1 it is the only phone: Pinky does not look for Android
 // phones or for iPhones on USB at all. PINKY_SIM_UDID names the simulator,
-// whose app list (from simctl) lets agents open apps by name, as on a phone.
+// whose app list (from simctl) lets agents open apps by name, and links in
+// the apps that declare their schemes, as on a phone.
 func init() {
 	url := os.Getenv("PINKY_WDA_URL")
 	if url == "" {
@@ -47,6 +51,7 @@ func init() {
 			Connection: "usb",
 			Backend:    "wda",
 			State:      driver.StateOnline,
+			Virtual:    true,
 		},
 		mjpeg: os.Getenv("PINKY_MJPEG_URL"),
 		udid:  os.Getenv("PINKY_SIM_UDID"),
@@ -80,10 +85,11 @@ func (p *wdaURLProvider) Open(ctx context.Context, id string) (driver.Device, er
 	if err != nil || p.udid == "" {
 		return d, err
 	}
-	apps, err := simApps(ctx, p.udid)
+	apps, schemes, err := simApps(ctx, p.udid)
 	if err != nil {
 		return d, nil // apps open by bundle id only, as without a UDID
 	}
+	d.SetLinkSchemes(func(context.Context) (map[string][]driver.App, error) { return schemes, nil })
 	return &simDevice{WDADevice: d, apps: apps}, nil
 }
 
@@ -98,44 +104,84 @@ type simDevice struct {
 func (d *simDevice) Apps(context.Context) ([]driver.App, error) { return d.apps, nil }
 
 func (d *simDevice) Launch(ctx context.Context, app string) error {
+	return d.WDADevice.Launch(ctx, d.bundleID(app))
+}
+
+func (d *simDevice) LaunchLocale(ctx context.Context, app string, loc driver.Locale) (func(context.Context) error, error) {
+	return d.WDADevice.LaunchLocale(ctx, d.bundleID(app), loc)
+}
+
+// bundleID is the bundle id of the app with this name, or app itself.
+func (d *simDevice) bundleID(app string) string {
 	want := strings.TrimSpace(app)
 	for _, a := range d.apps {
 		if strings.EqualFold(a.Name, want) {
-			want = a.ID
-			break
+			return a.ID
 		}
 	}
-	return d.WDADevice.Launch(ctx, want)
+	return want
 }
 
-// simApps lists a simulator's apps with their names, through simctl.
-func simApps(ctx context.Context, udid string) ([]driver.App, error) {
+// simApps lists a simulator's apps with their names, through simctl, and
+// by URL scheme (lowercase) the apps that declare it in their Info.plist.
+func simApps(ctx context.Context, udid string) ([]driver.App, map[string][]driver.App, error) {
 	raw, err := exec.CommandContext(ctx, "xcrun", "simctl", "listapps", udid).Output()
 	if err != nil {
-		return nil, fmt.Errorf("simctl listapps: %w", err)
+		return nil, nil, fmt.Errorf("simctl listapps: %w", err)
 	}
 	conv := exec.CommandContext(ctx, "plutil", "-convert", "json", "-o", "-", "-")
 	conv.Stdin = bytes.NewReader(raw)
 	js, err := conv.Output()
 	if err != nil {
-		return nil, fmt.Errorf("plutil: %w", err)
+		return nil, nil, fmt.Errorf("plutil: %w", err)
 	}
 	var m map[string]struct {
 		CFBundleDisplayName string
 		CFBundleName        string
 		ApplicationType     string
+		Path                string
 	}
 	if err := json.Unmarshal(js, &m); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	apps := make([]driver.App, 0, len(m))
+	schemes := map[string][]driver.App{}
 	for id, a := range m {
 		name := a.CFBundleDisplayName
 		if name == "" {
 			name = a.CFBundleName
 		}
-		apps = append(apps, driver.App{ID: id, Name: name, System: a.ApplicationType == "System"})
+		app := driver.App{ID: id, Name: name, System: a.ApplicationType == "System"}
+		apps = append(apps, app)
+		for _, s := range bundleSchemes(a.Path) {
+			schemes[s] = append(schemes[s], app)
+		}
 	}
 	sort.Slice(apps, func(i, j int) bool { return apps[i].ID < apps[j].ID })
-	return apps, nil
+	return apps, schemes, nil
+}
+
+// bundleSchemes reads the URL schemes an app bundle declares, in lowercase.
+func bundleSchemes(bundle string) []string {
+	b, err := os.ReadFile(filepath.Join(bundle, "Info.plist"))
+	if err != nil {
+		return nil
+	}
+	var info struct {
+		CFBundleURLTypes []struct {
+			CFBundleURLSchemes []string
+		}
+	}
+	if _, err := plist.Unmarshal(b, &info); err != nil {
+		return nil
+	}
+	var out []string
+	for _, t := range info.CFBundleURLTypes {
+		for _, s := range t.CFBundleURLSchemes {
+			if s = strings.ToLower(strings.TrimSpace(s)); s != "" && !slices.Contains(out, s) {
+				out = append(out, s)
+			}
+		}
+	}
+	return out
 }

@@ -13,11 +13,16 @@ import (
 	"time"
 )
 
-// The update helper of Windows. Pinky's installer replaces the files in the
-// install folder (%LOCALAPPDATA%\Programs\Pinky), which it cannot do while
-// Pinky runs from there, so the app leaves the work to a copy of itself in
-// the work folder next to the install folder (`Pinky.exe update-helper
-// <job.json>`), which outlives it. The helper
+// The update helper of Windows and Linux. On Linux the release's archive,
+// unpacked next to the install folder, takes the installer's place: the
+// helper moves its files into the folder (install_linux.go), and the rest
+// is as below, except that the folder is the person's: only Pinky's
+// entries of it move (Listed), and none has to come back. On Windows,
+// Pinky's installer replaces the files in the install folder
+// (%LOCALAPPDATA%\Programs\Pinky), which it cannot do while Pinky runs
+// from there, so the app leaves the work to a copy of itself in the work
+// folder next to the install folder (`Pinky.exe update-helper <job.json>`),
+// which outlives it. The helper
 //
 //  1. waits for the app to exit;
 //  2. moves everything in the install folder to work\old, so that the
@@ -51,6 +56,10 @@ type helperJob struct {
 	Env     []string      `json:"env,omitempty"` // Pinky's own variables, for both versions
 	Log     string        `json:"log"`
 	Wait    time.Duration `json:"wait"` // how long the new version may take to launch
+	// Listed is a folder that is the person's, with Pinky's files in it, as
+	// an archive unpacked on Linux leaves it: only the entries its file
+	// list names, and the release's, move; the rest of the folder stays.
+	Listed bool `json:"listed,omitempty"`
 
 	work string // the folder of job.json
 }
@@ -99,7 +108,7 @@ var (
 )
 
 // ErrHelperOS is RunHelper on a system whose updates need no helper.
-var ErrHelperOS = errors.New("the update helper runs on Windows only")
+var ErrHelperOS = errors.New("the update helper runs on Windows and Linux only")
 
 // readJob reads job.json.
 func readJob(path string) (helperJob, error) {
@@ -133,6 +142,9 @@ type helper struct {
 	job     helperJob
 	ops     helperOps
 	restore func() error
+	// release is what the installer puts in the folder, for a Listed
+	// folder: the entries of the release's files.
+	release []string
 }
 
 func (h *helper) say(format string, args ...any) {
@@ -166,7 +178,16 @@ func runHelper(j helperJob, ops helperOps) error {
 		return errors.New("Pinky did not quit")
 	}
 	old := h.path("old")
-	if err := moveAll(j.Dir, old); err != nil {
+	ours, err := entries(j.Dir)
+	if j.Listed {
+		if h.release, err = entries(j.Setup); err == nil {
+			ours = archiveEntries(j.Dir, h.release)
+		}
+	}
+	if err == nil {
+		err = moveNames(j.Dir, old, ours)
+	}
+	if err != nil {
 		if errors.Is(err, errMoveBack) {
 			h.say("could not move the installed version aside, nor all of it back (%v): what moved is in %s", err, old)
 			return err
@@ -177,7 +198,7 @@ func runHelper(j helperJob, ops helperOps) error {
 	h.restore = ops.snapshot()
 	h.say("installing %s into %s", j.Version, j.Dir)
 	ctx, cancel := context.WithTimeout(context.Background(), helperSetup)
-	err := ops.install(ctx, j.Setup, j.Dir)
+	err = ops.install(ctx, j.Setup, j.Dir)
 	cancel()
 	if err != nil {
 		return h.rollBack("didn't install: "+err.Error(), nil)
@@ -197,11 +218,15 @@ func runHelper(j helperJob, ops helperOps) error {
 		return h.rollBack(why, p, launched)
 	}
 	h.say("the new version is up; removing the old one")
-	if left := keepExtras(old, j.Dir); len(left) > 0 {
-		// Not ours to remove: leave them, and the folder, for the person.
-		h.say("could not move these back into %s; they are in %s: %s", j.Dir, old, strings.Join(left, ", "))
-		h.mark("kept", strings.Join(left, "\n"))
-		return nil
+	// What the person keeps in the installer's folder on Windows moved
+	// with the old version; a Listed folder's never moved.
+	if !j.Listed {
+		if left := keepExtras(old, j.Dir); len(left) > 0 {
+			// Not ours to remove: leave them, and the folder, for the person.
+			h.say("could not move these back into %s; they are in %s: %s", j.Dir, old, strings.Join(left, ", "))
+			h.mark("kept", strings.Join(left, "\n"))
+			return nil
+		}
 	}
 	if err := os.RemoveAll(old); err != nil {
 		// A Pinky.exe that an agent's `pinky mcp` still runs; CheckSwap
@@ -279,7 +304,14 @@ func (h *helper) rollBack(why string, procs ...helperProc) error {
 		}
 	}
 	old, failed := h.path("old"), h.path("failed")
-	if err := moveAll(j.Dir, failed); err != nil {
+	release, err := entries(j.Dir)
+	if j.Listed {
+		release, err = h.release, nil
+	}
+	if err == nil {
+		err = moveNames(j.Dir, failed, release)
+	}
+	if err != nil {
 		if errors.Is(err, errMoveBack) {
 			h.say("could not move the new version aside, nor all of it back (%v): the old version is in %s, what moved of the new one in %s", err, old, failed)
 		} else {
@@ -323,16 +355,25 @@ var errMoveBack = errors.New("and could not move everything back")
 // back what it moved when one of them will not move (errMoveBack when
 // that fails too).
 func moveAll(src, dst string) error {
-	entries, err := os.ReadDir(src)
+	names, err := entries(src)
 	if err != nil {
 		return err
 	}
+	return moveNames(src, dst, names)
+}
+
+// moveNames is moveAll for the entries of src that names names; those
+// src lacks are skipped.
+func moveNames(src, dst string, names []string) error {
 	if err := os.MkdirAll(dst, 0o700); err != nil {
 		return err
 	}
 	var moved []string
-	for _, e := range entries {
-		if err := rename(filepath.Join(src, e.Name()), filepath.Join(dst, e.Name())); err != nil {
+	for _, name := range names {
+		if _, err := os.Lstat(filepath.Join(src, name)); os.IsNotExist(err) {
+			continue
+		}
+		if err := rename(filepath.Join(src, name), filepath.Join(dst, name)); err != nil {
 			for i := len(moved) - 1; i >= 0; i-- {
 				if rerr := rename(filepath.Join(dst, moved[i]), filepath.Join(src, moved[i])); rerr != nil {
 					return fmt.Errorf("%w: %w (%s: %v)", err, errMoveBack, moved[i], rerr)
@@ -340,9 +381,39 @@ func moveAll(src, dst string) error {
 			}
 			return err
 		}
-		moved = append(moved, e.Name())
+		moved = append(moved, name)
 	}
 	return nil
+}
+
+// entries are the names of the entries of dir.
+func entries(dir string) ([]string, error) {
+	list, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, len(list))
+	for i, e := range list {
+		names[i] = e.Name()
+	}
+	return names, nil
+}
+
+// archiveEntries are the entries of the install folder dir that are
+// Pinky's, as MyGo's file list has it: the top-level entries that its
+// .mygo-files names, the list itself, and those of the next release
+// (release), which take the place of what the person has there by those
+// names.
+func archiveEntries(dir string, release []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, name := range append(append(listedEntries(filepath.Join(dir, fileList)), fileList), release...) {
+		if !seen[name] {
+			seen[name] = true
+			out = append(out, name)
+		}
+	}
+	return out
 }
 
 // keepExtras moves back into dir what only old has, in subfolders too, as

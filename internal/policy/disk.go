@@ -349,11 +349,33 @@ func writeFile(path string, data []byte) (fs.FileInfo, error) {
 		os.Remove(tmp.Name())
 		return nil, err
 	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
+	if err := replace(tmp.Name(), path); err != nil {
 		os.Remove(tmp.Name())
 		return nil, err
 	}
 	return info, nil
+}
+
+// A save renames its new file over the old one. Windows refuses that rename
+// ("Access is denied") while anything holds the old file open, whatever it
+// shares: a virus scanner or a backup that reads rules.yaml for a moment,
+// or the person's editor. replace then tries again, renameWait apart, up to
+// renameTries times, as the person would after Settings said it could not
+// save.
+const (
+	renameWait  = 25 * time.Millisecond
+	renameTries = 20
+)
+
+// replace renames from over to, trying again while to is held open
+// (renameBusy).
+func replace(from, to string) error {
+	err := os.Rename(from, to)
+	for try := 1; err != nil && renameBusy(err) && try < renameTries; try++ {
+		time.Sleep(renameWait)
+		err = os.Rename(from, to)
+	}
+	return err
 }
 
 // writeNew creates a file that does not exist yet, readable only by the

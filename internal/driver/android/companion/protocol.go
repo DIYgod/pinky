@@ -38,6 +38,22 @@ type Info struct {
 // then write on the main display.
 const FeatureDisplays = "displays"
 
+// FeatureSetTextFallback means set_text does more than ACTION_SET_TEXT:
+// when the app refuses it, the text goes in through the field's input
+// connection (Android 13 and later) or as a paste, and the error lists
+// why each way was refused. The app waits for the text to land, reports
+// SetTextResult.Method and Password, and does not submit a field that
+// reads otherwise than asked. An app without it reads the field back at
+// once, so its Verified may miss text that lands a moment later.
+const FeatureSetTextFallback = "set_text_fallback"
+
+// How set_text wrote the text (SetTextResult.Method).
+const (
+	MethodSetText         = "set_text"         // ACTION_SET_TEXT
+	MethodInputConnection = "input_connection" // committed through the field's input connection
+	MethodPaste           = "paste"            // ACTION_PASTE, the clipboard cleared afterwards
+)
+
 // Has reports whether the app has a feature.
 func (i *Info) Has(feature string) bool {
 	for _, f := range i.Features {
@@ -148,8 +164,16 @@ type SetTextResult struct {
 	// and always false for password fields, whose text is unreadable.
 	Verified bool `json:"verified"`
 	// Submitted reports whether the IME action ran (Android 11+). The
-	// client falls back to the Enter key when it did not.
+	// client falls back to the Enter key when it did not, unless the field
+	// reads otherwise than asked (FeatureSetTextFallback).
 	Submitted bool `json:"submitted"`
+	// Method is how the text went in, one of the Method constants; empty
+	// from apps without FeatureSetTextFallback, which only use
+	// ACTION_SET_TEXT.
+	Method string `json:"method,omitempty"`
+	// Password reports a password field, whose text cannot be read back:
+	// Text and Verified say nothing then (FeatureSetTextFallback).
+	Password bool `json:"password,omitempty"`
 }
 
 // Error is an error the companion app returned.

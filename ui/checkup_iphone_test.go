@@ -60,6 +60,29 @@ func TestCheckupOfIPhone(t *testing.T) {
 	}
 }
 
+// TestCheckupOfIPhoneNoLivePicture: an iPhone Pinky could not open because
+// it sent no picture says so, with the driver's details for feedback.
+func TestCheckupOfIPhoneNoLivePicture(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50, HoldSetup: true})
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the iPhone", func() bool { return len(ta.devices) > 1 })
+	d := ta.iphoneView(t)
+	ta.api.SetIPhone(d.Info.ID, driver.Info{State: driver.StateOnline})
+	detail := "no live picture from the phone. Display 1: 0 RTP packets (0 bytes), 9 RTCP."
+	ta.api.SetCheckup(d.Info.ID, driver.Checkup{Checks: []driver.Check{
+		{ID: driver.CheckScreen, Status: driver.CheckFail, Fix: driver.FixRestart, Detail: detail},
+	}})
+	ta.sync()
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.openCheckup(ta.iphoneView(t))
+	ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf(d.Info.ID); return r != nil && r.have && !r.running })
+	for _, want := range []string{locales.CheckScreenNoLivePicture(), detail} {
+		if !hasText(tt, want) {
+			t.Errorf("the checkup lacks %q: %q", want, tt.Texts())
+		}
+	}
+}
+
 // TestCheckupOfIPhoneWaitingForAStep: an iPhone that is not online gets
 // its step (Info.Setup) as the authorized item, in words.
 func TestCheckupOfIPhoneWaitingForAStep(t *testing.T) {

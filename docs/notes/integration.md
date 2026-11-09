@@ -23,7 +23,7 @@ A second round on the same branches merged cleanly too:
 
 ## Wiring in `cmd/pinky`
 
-- **Providers** (`providers.go`): Android and iOS. The Android provider starts an adb server when none runs; the iOS provider is skipped when usbmuxd is missing. `PINKY_DEVICES=id1,id2` limits Pinky to those phones, for development while other tools use the rest.
+- **Providers** (`providers.go`): Android and iOS. The Android provider starts an adb server when none runs; the iOS provider is skipped when usbmuxd is missing. `PINKY_DEVICES=id1,id2` limits Pinky to those phones, for development while other tools use the rest; the Android and iOS providers then do not even ask the others what they are (`android.Provider.Limit`, `ios.Provider.Only`).
 - **The iOS provider ignores Wi-Fi devices** unless `ios.Provider.Wireless` is set: the gateway opens everything it lists, and usbmuxd lists every iPad and iPhone ever paired over the network.
 - **App mode** (`app.go`): `pinky` with no command runs the gateway, the agent socket and the client window in one process, so approvals are answered in the app (the socket refuses them for real phones). Settings persist in `config/settings.json`; read-only mode reaches the gateway; blocked apps shown in Settings come from the deny rules in `rules.yaml`. The log goes to `data/pinky.log` as well as stderr.
 - **The MCP shim** starts the app on macOS when no gateway runs (`pinky app --background`: menu bar only, the window opens when something needs the person), instead of a headless daemon that could not answer approvals for real phones. Fake phones and other platforms still get `pinky daemon`.

@@ -32,6 +32,9 @@ type extraDev struct {
 	bgs      []*bgDisplay
 	refuse   map[string]bool // apps that will not run on a background display
 	bgErr    error           // OpenBackground fails with it
+
+	pkgs      map[string]driver.Package // phone_app: a file holding a key is that package
+	installed map[string]string         // phone_app: scripted packages installed, id to version
 }
 
 type memFile struct {

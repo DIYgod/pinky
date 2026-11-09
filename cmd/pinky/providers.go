@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
 	"github.com/DIYgod/pinky/internal/driver"
@@ -19,19 +22,54 @@ import (
 
 // providerFactories builds the real device providers. The gateway itself
 // never branches on the platform.
-var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
-	newAndroidProvider,
-	newIOSProvider,
+var providerFactories = platformFactories(true, true)
+
+// platformFactories returns the providers for Android and for iOS, which
+// on a Mac has its Simulators too.
+func platformFactories(android, iOS bool) []func(log *slog.Logger) (driver.Provider, error) {
+	var f []func(log *slog.Logger) (driver.Provider, error)
+	if android {
+		f = append(f, newAndroidProvider)
+	}
+	if iOS {
+		f = append(f, newIOSProvider)
+		if runtime.GOOS == "darwin" {
+			f = append(f, newSimProvider)
+		}
+	}
+	return f
+}
+
+// newSimProvider lists the iOS Simulators booted on this Mac as iPhones
+// and iPads, and starts them from Add phone. It builds the WebDriverAgent
+// helper they are driven through with the Mac's Xcode, into Pinky's data
+// folder.
+func newSimProvider(log *slog.Logger) (driver.Provider, error) {
+	dirs, err := api.DefaultDirs()
+	if err != nil {
+		return nil, err
+	}
+	p := ios.NewSimProvider(filepath.Join(dirs.Data, "WebDriverAgent"))
+	p.Log = log
+	return p, nil
 }
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 	var noADB sync.Once
-	var netFile string
+	var netFile, idFile string
 	if dirs, err := api.DefaultDirs(); err == nil {
 		// The phones Pinky reaches over the network without Wireless
 		// debugging: moved to Wi-Fi, or away from home through Tailscale.
 		netFile = filepath.Join(dirs.Config, "network-phones.json")
+		// The marks Pinky left on its phones, to tell them over the
+		// network from a device that claims their names.
+		idFile = filepath.Join(dirs.Config, "phone-identities.json")
 	}
+	// adb's own discovery stops seeing the network after the computer's
+	// network changes; the driver then reconnects the phones paired over
+	// Wi-Fi itself. Not while PINKY_DEVICES limits Pinky to some phones:
+	// the others belong to other tools.
+	reconnect := strings.TrimSpace(os.Getenv("PINKY_DEVICES")) == ""
 	return android.NewProvider(android.Config{
 		Client: &adb.Client{},
 		// Pinky uses the adb server that runs, or starts one, with the
@@ -39,8 +77,14 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 		// (adb.StartServer): at the first List, and whenever the server
 		// went away. Without any adb (a build without Pinky's own), it
 		// lists no phones and CheckHost says why.
+		//
+		// A server Pinky starts does not connect by itself to the phones
+		// its discovery finds: the driver does (ReconnectWiFi), by the
+		// same names, and only to the phones it uses. Under PINKY_DEVICES,
+		// where the driver connects nothing by itself, the server does as
+		// it always did.
 		StartServer: func(ctx context.Context) error {
-			t, err := adb.StartServer(ctx)
+			t, err := adb.StartServerWith(ctx, adb.ServerOptions{NoAutoConnect: reconnect})
 			switch {
 			case errors.Is(err, adb.ErrNoADB):
 				noADB.Do(func() { log.Warn("android: no adb server, and no adb to start one", "err", err) })
@@ -50,16 +94,17 @@ func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {
 				return err
 			}
 			if t.Path != "" {
-				log.Info("android: started an adb server", "adb", t.Path, "from", t.Source, "version", t.Version)
+				log.Info("android: started an adb server", "adb", t.Path, "from", t.Source, "version", t.Version,
+					"auto_connect", !reconnect)
 			}
 			return nil
 		},
-		// adb's own discovery stops seeing the network after the
-		// computer's network changes; the driver then reconnects the
-		// phones paired over Wi-Fi itself. Not while PINKY_DEVICES limits
-		// Pinky to some phones: the others belong to other tools.
-		ReconnectWiFi: strings.TrimSpace(os.Getenv("PINKY_DEVICES")) == "",
+		ReconnectWiFi: reconnect,
 		NetworkFile:   netFile,
+		// A phone reached over the network must carry the mark Pinky left
+		// on it, so that a device on the network cannot pose as it.
+		VerifyWiFi:   true,
+		IdentityFile: idFile,
 		Logf: func(format string, args ...any) {
 			log.Debug(fmt.Sprintf(format, args...), "platform", "android")
 		},
@@ -105,7 +150,13 @@ func realProviders(log *slog.Logger) []driver.Provider {
 			continue
 		}
 		if only != nil {
-			op := &onlyProvider{Provider: p, only: only}
+			// Each provider adds the phones the person adds to its own
+			// copy.
+			op := &onlyProvider{Provider: p, only: maps.Clone(only)}
+			if l, ok := p.(limiter); ok {
+				// The provider leaves the other phones alone itself.
+				l.Limit(op.allowed)
+			}
 			p = op
 			if pr, ok := op.Provider.(driver.Pairer); ok {
 				p = &onlyPairer{onlyProvider: op, pairer: pr}
@@ -117,6 +168,12 @@ func realProviders(log *slog.Logger) []driver.Provider {
 		out = append(out, p)
 	}
 	return out
+}
+
+// limiter is a provider that can leave alone, by itself, the phones Pinky
+// may not use: it does not even ask them what they are (Android).
+type limiter interface {
+	Limit(allowed func(id string) bool)
 }
 
 // onlyDevices reads PINKY_DEVICES: nil when it is not set.
@@ -139,6 +196,53 @@ type onlyProvider struct {
 
 	mu   sync.Mutex
 	only map[string]bool
+}
+
+// VirtualPhones, StartVirtual and StopVirtual pass the provider's virtual
+// phones on (driver.VirtualLauncher). One the person starts joins the
+// phones Pinky may use, once it runs; one already running, at once.
+func (p *onlyProvider) VirtualPhones(ctx context.Context) (driver.VirtualPhones, error) {
+	l, ok := p.Provider.(driver.VirtualLauncher)
+	if !ok {
+		return driver.VirtualPhones{}, fmt.Errorf("virtual phones: %w", driver.ErrUnsupported)
+	}
+	return l.VirtualPhones(ctx)
+}
+
+func (p *onlyProvider) StartVirtual(ctx context.Context, id string) error {
+	l, ok := p.Provider.(driver.VirtualLauncher)
+	if !ok {
+		return fmt.Errorf("virtual phones: %w", driver.ErrUnsupported)
+	}
+	if err := l.StartVirtual(ctx, id); err != nil {
+		return err
+	}
+	// An emulator's adb serial is known once it runs.
+	go func() {
+		for range 90 {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			vp, err := l.VirtualPhones(ctx)
+			cancel()
+			if err == nil {
+				for _, v := range vp.Phones {
+					if v.ID == id && v.DeviceID != "" {
+						p.allow(v.DeviceID)
+						return
+					}
+				}
+			}
+			time.Sleep(2 * time.Second)
+		}
+	}()
+	return nil
+}
+
+func (p *onlyProvider) StopVirtual(ctx context.Context, id string) error {
+	l, ok := p.Provider.(driver.VirtualLauncher)
+	if !ok {
+		return fmt.Errorf("virtual phones: %w", driver.ErrUnsupported)
+	}
+	return l.StopVirtual(ctx, id)
 }
 
 func (p *onlyProvider) allowed(id string) bool {
@@ -264,6 +368,23 @@ func (p *onlyPairer) SetPhoneWiFi(ctx context.Context, id string, on bool) (driv
 		return driver.WiFiState{}, fmt.Errorf("wi-fi: %w", driver.ErrUnsupported)
 	}
 	return w.SetPhoneWiFi(ctx, id, on)
+}
+
+// UseOverWiFi and TrustPhone pass on what the person says about a phone
+// on the network (driver.WiFiUser, driver.PhoneTruster), for the phones
+// Pinky may use.
+func (p *onlyPairer) UseOverWiFi(id string) {
+	if w, ok := p.pairer.(driver.WiFiUser); ok && p.allowed(id) {
+		w.UseOverWiFi(id)
+	}
+}
+
+func (p *onlyPairer) TrustPhone(ctx context.Context, id string) error {
+	t, ok := p.pairer.(driver.PhoneTruster)
+	if !ok || !p.allowed(id) {
+		return fmt.Errorf("trusting a phone: %w", driver.ErrUnsupported)
+	}
+	return t.TrustPhone(ctx, id)
 }
 
 // wifiProvider is a provider that reaches phones over Wi-Fi by itself and

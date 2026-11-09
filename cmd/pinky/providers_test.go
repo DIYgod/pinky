@@ -111,3 +111,42 @@ func TestDeviceFilterKeepsPairing(t *testing.T) {
 		}
 	}
 }
+
+// limitedProvider leaves alone, by itself, the phones Pinky may not use.
+type limitedProvider struct {
+	pairingProvider
+	allowed func(id string) bool
+}
+
+func (p *limitedProvider) Limit(allowed func(id string) bool) { p.allowed = allowed }
+
+// TestDeviceFilterReachesProvider checks that PINKY_DEVICES reaches a
+// provider that leaves the other phones alone itself, with the phones the
+// person adds through it, and only through it.
+func TestDeviceFilterReachesProvider(t *testing.T) {
+	a, b := &limitedProvider{}, &limitedProvider{}
+	t.Setenv("PINKY_DEVICES", "usb-phone")
+	saved := providerFactories
+	t.Cleanup(func() { providerFactories = saved })
+	providerFactories = []func(*slog.Logger) (driver.Provider, error){
+		func(*slog.Logger) (driver.Provider, error) { return a, nil },
+		func(*slog.Logger) (driver.Provider, error) { return b, nil },
+	}
+	ps := realProviders(slog.New(slog.DiscardHandler))
+	if len(ps) != 2 || a.allowed == nil || b.allowed == nil {
+		t.Fatalf("%d providers, limited: %v %v", len(ps), a.allowed != nil, b.allowed != nil)
+	}
+	if !a.allowed("usb-phone") || a.allowed("other-phone") {
+		t.Error("the limit is not PINKY_DEVICES")
+	}
+	wc, ok := ps[0].(driver.WiFiConnector)
+	if !ok {
+		t.Fatalf("%T hides driver.WiFiConnector", ps[0])
+	}
+	if _, err := wc.ConnectWiFi(context.Background(), "10.0.0.2:41000"); err != nil {
+		t.Fatal(err)
+	}
+	if !a.allowed("connect-10.0.0.2:41000") || b.allowed("connect-10.0.0.2:41000") {
+		t.Error("the phone connected through one provider is not let in there alone")
+	}
+}

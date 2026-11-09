@@ -151,9 +151,8 @@ func (s *Server) newUploadLink(ctx context.Context, req *sdk.CallToolRequest, gs
 	return render(&gateway.Result{Status: gateway.StatusSettled, DeviceName: res.DeviceName, Message: fmt.Sprintf(
 		"Send the file to this link%s within %s, once, as the request body (up to %s), from your own shell:\n"+
 			"curl --upload-file <your file> '%s'\n"+
-			"Pinky saves it as %s in its folder for the phone, on its own computer, and answers with how it went. "+
-			"Then copy it to the phone with phone_files { action: \"push\", paths: [%q] }, which the person approves first.",
-		where, approxMinutes(uploadTTL), gateway.SizeText(gateway.MaxUpload), url, name, name)})
+			"Pinky saves it as %s in its folder for the phone, on its own computer, and answers with how it went. %s",
+		where, approxMinutes(uploadTTL), gateway.SizeText(gateway.MaxUpload), url, name, res.Message)})
 }
 
 func approxMinutes(d time.Duration) string {

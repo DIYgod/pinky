@@ -15,7 +15,7 @@ import (
 // watching Devices for one it did not know when the step began; over
 // Wi-Fi the gateway's pairing says which phone paired.
 type addState struct {
-	step     string // "choose", "android", "qr", "tailnet", "iphone"
+	step     string // "choose", "android", "qr", "tailnet", "iphone", "virtual"
 	known    map[string]bool
 	old      bool   // the older-iPhone path
 	oldPick  string // "helper" or "mirror"
@@ -98,6 +98,8 @@ func (a *app) addPhonePage(c *mg.Context) {
 				a.addTailnet(c)
 			case "iphone":
 				a.addIPhone(c)
+			case "virtual":
+				a.addVirtual(c)
 			default:
 				a.addChoose(c)
 			}
@@ -143,6 +145,31 @@ func (a *app) addChoose(c *mg.Context) {
 		}
 		choice(icAndroid, "Android", locales.AddPhoneChooseAndroid(), "android")
 		choice(icIphone, "iPhone", locales.AddPhoneChooseIPhone(), "iphone")
+	})
+	if a.launcher() == nil {
+		return
+	}
+	// Virtual phones: a row under the two, as fewer people want one.
+	title, desc := locales.AddPhoneChooseVirtual(), locales.AddPhoneChooseVirtualPC()
+	if guideOS == "darwin" {
+		desc = locales.AddPhoneChooseVirtualMac()
+	}
+	b := mg.ButtonBase(c.Key("virtual")).Padding(14, 18).Radius(12).Gap(14).AlignItems(mg.Center).Label(title)
+	border := p.line2
+	if b.Hovered() {
+		border = p.accent
+		b.Shadow(0, 0, 0, 1, p.accent)
+	}
+	if b.Clicked() {
+		s.step = "virtual"
+		s.snapshot(a)
+	}
+	b.Border(1, border).Background(p.panel).Children(func() {
+		mg.Icon(c, icMonitor).FontSize(22).TextColor(p.ink2).Shrink(0)
+		mg.Column(c).Gap(2).Grow(1).MinWidth(0).AlignItems(mg.Start).Children(func() {
+			mg.Text(c, title).FontSize(15).FontWeight(650)
+			mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+		})
 	})
 }
 

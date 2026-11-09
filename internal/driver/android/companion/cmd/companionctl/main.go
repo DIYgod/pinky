@@ -36,7 +36,8 @@ commands:
   disable              remove Pinky's entry from the setting
   status               show whether the service is listed and answering
   ping                 print the ping result
-  tree [-raw] [-ime]   print the screen (or the raw JSON tree)
+  tree [-raw] [-ime] [-display N]
+                       print the screen (or the raw JSON tree)
   settext [-append] [-submit] [-id ID] [-x X -y Y] TEXT
                        write TEXT into the focused (or chosen) field
   events [KIND...]     print events until interrupted
@@ -211,11 +212,12 @@ func tree(ctx context.Context, c *companion.Client, args []string) error {
 	raw := fs.Bool("raw", false, "print the raw JSON tree")
 	ime := fs.Bool("ime", false, "include the keyboard")
 	bars := fs.Bool("bars", false, "include the status and navigation bars")
+	display := fs.Int("display", 0, "the display to read, such as Pinky's background display")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	start := time.Now()
-	t, err := c.Dump(ctx, companion.DumpOptions{IME: *ime, Bars: *bars})
+	t, err := c.Dump(ctx, companion.DumpOptions{IME: *ime, Bars: *bars, Display: *display})
 	if err != nil {
 		return err
 	}

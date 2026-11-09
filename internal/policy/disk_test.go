@@ -435,6 +435,34 @@ func TestRemovedFilesStartOver(t *testing.T) {
 	}
 }
 
+// TestSaveWhileRulesAreOpen saves a change from Settings while another
+// program holds rules.yaml open for a moment, as a virus scanner or the
+// person's editor may. Windows refuses the save's rename over the open file
+// ("Access is denied"); the save tries again once it is closed, rather than
+// fail.
+func TestSaveWhileRulesAreOpen(t *testing.T) {
+	e, rules, _ := loadIn(t)
+	f, err := os.Open(rules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hold := time.AfterFunc(150*time.Millisecond, func() { f.Close() })
+	t.Cleanup(func() {
+		hold.Stop()
+		f.Close() // before the folder is removed: Windows keeps an open file
+	})
+	if err := e.SetPreset(PresetEvery); err != nil {
+		t.Fatalf("saving while rules.yaml is open: %v", err)
+	}
+	if e.Preset() != PresetEvery {
+		t.Errorf("preset %d", e.Preset())
+	}
+	fileHas(t, rules, "saved", "preset: 3")
+	if left, _ := filepath.Glob(filepath.Join(filepath.Dir(rules), ".rules.yaml.*")); len(left) != 0 {
+		t.Errorf("left behind: %v", left)
+	}
+}
+
 // TestHalfDoneSaveIsNotRead saves rules.yaml as an editor that writes in
 // place does, with the file empty for a moment: the engine waits for the
 // save, rather than take in a file with no rules.

@@ -3,6 +3,7 @@
 /dist/
 /build/
 /pinky
+/pinky-mirrorbench
 *.test
 *.out
 .mygo/
@@ -22,7 +23,12 @@ android/companion/.gradle/
 android/companion/.kotlin/
 android/companion/**/build/
 android/companion/local.properties
+android/inputtest/.gradle/
+android/inputtest/.kotlin/
+android/inputtest/build/
+android/inputtest/local.properties
 *.apk
+!internal/apppkg/testdata/*.apk
 *.aab
 
 # Local tools and worktrees

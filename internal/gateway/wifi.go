@@ -10,7 +10,8 @@ import (
 )
 
 // Phones over Wi-Fi (driver.WiFiFinder: iPhones and iPads that usbmuxd lists
-// over the network). Such a provider leaves a phone it reaches only over
+// over the network; driver.WiFiUser: Android phones connected over Wireless
+// debugging). Such a provider leaves a phone it reaches only over
 // Wi-Fi alone until the gateway says the phone is the person's, which it is
 // when Pinky has seen it before (the history store's devices: phones Pinky
 // opened, and phones listed on a cable), when it is listed on a cable now,
@@ -19,6 +20,12 @@ import (
 // person to choose Use, or Ignore (IgnoreFoundPhone), which removes it as
 // RemoveDevice does, so it stays off the list until it is plugged in.
 // Agents are not told about such a phone.
+//
+// An Android phone's provider also checks that what answers over the
+// network for a phone it set up carries the mark it left on the phone. One
+// that does not waits, with driver.SetupPhoneChanged, until the person
+// trusts it (TrustPhone: they reset the phone or set it up again) or plugs
+// the phone in.
 //
 // A phone that moves between its cable and Wi-Fi, as its cable is pulled or
 // plugged in again, stays one phone with its settings and its task: the
@@ -80,7 +87,7 @@ func (g *Gateway) UseFoundPhone(deviceID string) error {
 		g.mu.Unlock()
 		return ErrUnknownDevice
 	}
-	if _, ok := d.provider.(driver.WiFiFinder); !ok {
+	if _, ok := d.provider.(driver.WiFiUser); !ok {
 		g.mu.Unlock()
 		return fmt.Errorf("%s: %w", d.name(), driver.ErrUnsupported)
 	}
@@ -121,12 +128,46 @@ func foundLocked(d *device) bool {
 	return !d.online && d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupConfirmWiFi
 }
 
+// changedLocked reports whether the phone's connection over the network
+// leads to a device that lacks the mark its provider left on the phone
+// (driver.SetupPhoneChanged). The caller holds g.mu.
+func changedLocked(d *device) bool {
+	return !d.online && d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupPhoneChanged
+}
+
+// TrustPhone tells the phone's provider that what answers for it over the
+// network is the person's phone after all (driver.PhoneTruster): one listed
+// with driver.SetupPhoneChanged that they reset or set up again themselves.
+// The provider marks it again, and the gateway opens it at the next
+// discovery.
+func (g *Gateway) TrustPhone(ctx context.Context, deviceID string) error {
+	g.mu.Lock()
+	d := g.devices[deviceID]
+	if d == nil {
+		g.mu.Unlock()
+		return ErrUnknownDevice
+	}
+	p, name := d.provider, d.name()
+	g.mu.Unlock()
+	t, ok := p.(driver.PhoneTruster)
+	if !ok {
+		return fmt.Errorf("%s: %w", name, driver.ErrUnsupported)
+	}
+	if err := t.TrustPhone(ctx, deviceID); err != nil {
+		return err
+	}
+	g.log.Info("phone trusted", "device", deviceID, "name", name)
+	g.emit(Event{Kind: EventDevices, DeviceID: deviceID})
+	g.discoverSoon()
+	return nil
+}
+
 // knowLocked records that a phone is the person's, so its provider
 // prepares and opens it over Wi-Fi too, and saves it among the phones
 // Pinky has seen. Only for providers that reach phones over Wi-Fi by
 // themselves. The caller holds g.mu.
 func (g *Gateway) knowLocked(d *device) {
-	w, ok := d.provider.(driver.WiFiFinder)
+	w, ok := d.provider.(driver.WiFiUser)
 	if !ok || g.known[d.id] {
 		return
 	}
@@ -155,7 +196,7 @@ func (g *Gateway) loadKnown() {
 		g.known[id] = true
 		g.names[id] = rec
 		for _, p := range g.opt.Providers {
-			if w, ok := p.(driver.WiFiFinder); ok {
+			if w, ok := p.(driver.WiFiUser); ok {
 				w.UseOverWiFi(id)
 			}
 		}

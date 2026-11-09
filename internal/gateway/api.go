@@ -83,6 +83,7 @@ type Features struct {
 	Background bool // driver.Backgrounder: agents can work on a background display
 	Files      bool // driver.Files: the phone's Pinky folder
 	Companion  bool // driver.CompanionInstaller: an Android companion app to install
+	Pinch      bool // driver.MultiToucher: the person pinches on the mirror (Touch2)
 }
 
 // TaskState is the state of an agent task.
@@ -163,8 +164,10 @@ type NeedView struct {
 	Target     screen.Rect // the element the action targets, in Screenshot pixels
 	// Point is where the finger goes down and, for a swipe, To where it
 	// lifts, in Screenshot pixels; both zero when the action has no
-	// position (a key, opening an app).
-	Point, To screen.Point
+	// position (a key, opening an app). Point2 and To2 are the second
+	// finger's of a pinch, zero for other actions.
+	Point, To   screen.Point
+	Point2, To2 screen.Point
 	// AlwaysAllow is set when the approval can be answered with
 	// AllowAlways: from then on, Rule (and the rules that asked with it)
 	// no longer asks about such steps in App, until the person takes it

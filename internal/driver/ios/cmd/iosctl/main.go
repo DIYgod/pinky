@@ -183,10 +183,11 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 		fs := flag.NewFlagSet("type", flag.ContinueOnError)
 		appendText := fs.Bool("append", false, "keep the field's text")
 		submit := fs.Bool("submit", false, "press return afterwards")
+		keys := fs.Bool("keys", false, "type by keys, without the pasteboard")
 		var text []string
 		var flags []string
 		for _, a := range args {
-			if a == "-append" || a == "-submit" || a == "--append" || a == "--submit" {
+			if a == "-append" || a == "-submit" || a == "-keys" || a == "--append" || a == "--submit" || a == "--keys" {
 				flags = append(flags, a)
 			} else {
 				text = append(text, a)
@@ -198,12 +199,19 @@ func run(ctx context.Context, cmd, udid string, args []string) error {
 		if len(text) != 1 {
 			return errors.New("type: one text argument (quote text with spaces)")
 		}
+		d.TypeByKeys(*keys)
 		err := d.Type(ctx, text[0], driver.TypeOptions{Append: *appendText, Submit: *submit})
 		st := d.LastTypeStats()
-		fmt.Printf("typed by %s in %v: pasteboard saved %q in %v, %q in %v; the field changed: %v\n",
-			st.Method, st.Total.Round(time.Millisecond), st.Saved, st.Save.Round(time.Millisecond), st.Restore, st.Restored.Round(time.Millisecond), st.Confirmed)
+		fmt.Printf("typed by %s in %v: pasteboard saved %q in %v, %q in %v; the field changed: %v; read back: %s\n",
+			st.Method, st.Total.Round(time.Millisecond), st.Saved, st.Save.Round(time.Millisecond), st.Restore, st.Restored.Round(time.Millisecond), st.Confirmed, st.Checked)
 		if st.Spaces != "" {
 			fmt.Printf("spaces iOS added next to the text: %s\n", st.Spaces)
+		}
+		for _, t := range st.Trace {
+			fmt.Println("  " + t)
+		}
+		if n := d.TakeInputNote(); n != "" {
+			fmt.Println("note:", n)
 		}
 		return err
 	case "screen":

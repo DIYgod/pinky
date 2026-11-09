@@ -51,6 +51,11 @@ type device struct {
 	// agent works on the phone. workSent: dev was told at all.
 	working, workSent bool
 	locked            bool
+	// settleDue is when the wait after the last input would have ended
+	// had it run its whole SettleMax: set before the input goes out,
+	// cleared once the screen is seen to settle. The next action waits for
+	// the screen to settle until then before it reads it (settleOwed).
+	settleDue time.Time
 	// inflight cancels the driver call of the action in progress, so a
 	// takeover interrupts it.
 	inflight context.CancelFunc
@@ -204,6 +209,10 @@ type lease struct {
 	// readyHandoffs are handoffs opened while the phone waited for a step
 	// (device_needs_setup); they end once the gateway opens it (readyNow).
 	readyHandoffs []string
+	// clone is the app clone the agent last opened with phone_launch, until
+	// it opens another app by name: a link that clone's app opens goes to
+	// the clone while that app is in front (resolveLink).
+	clone driver.App
 	// after is the read that ended the last action, if it settled; the next
 	// step of a phone_batch reuses it while it is fresh.
 	after   *screen.Screen
@@ -220,6 +229,21 @@ type lease struct {
 	// filesGranted is set when the person allowed copying files to the
 	// phone for the rest of the task.
 	filesGranted bool
+	// appGrants holds what the person allowed phone_app to do for the rest
+	// of the task (appGrantKey).
+	appGrants map[string]bool
+	// logsGranted holds the apps (by id) whose logs the person allowed
+	// the agent to read for the rest of the task (logs.go).
+	logsGranted map[string]bool
+	// logsRead is set once the agent read an app's logs: the driver may
+	// listen to the phone until the task ends (driver.LogListener).
+	logsRead bool
+	// settingsGranted is set when the person allowed changing the phone's
+	// settings for the rest of the task (switches.go).
+	settingsGranted bool
+	// changes lists the phone's settings the task changed, which Pinky
+	// puts back when it ends (switches.go).
+	changes []change
 	// recorded is set once the task's recording started (video.go).
 	recorded bool
 

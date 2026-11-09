@@ -889,6 +889,52 @@ func (msgs Messages) AddPhoneChooseTitle() string {
 	return Catalog.Format(msgs.locale, "addPhoneChooseTitle", nil)
 }
 
+// AddPhoneChooseVirtual says "Virtual phone"
+// in the language the app shows.
+//
+// Add phone, first step: the title of the card below Android and iPhone,
+// for iOS Simulators and Android emulators that run on this computer.
+func AddPhoneChooseVirtual() string { return In(i18n.Locale()).AddPhoneChooseVirtual() }
+
+// AddPhoneChooseVirtual says "Virtual phone"
+// in the language of msgs.
+//
+// Add phone, first step: the title of the card below Android and iPhone,
+// for iOS Simulators and Android emulators that run on this computer.
+func (msgs Messages) AddPhoneChooseVirtual() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseVirtual", nil)
+}
+
+// AddPhoneChooseVirtualMac says "An iOS Simulator or an Android emulator on this Mac"
+// in the language the app shows.
+//
+// Add phone, first step, on a Mac: under "Virtual phone" on its card.
+func AddPhoneChooseVirtualMac() string { return In(i18n.Locale()).AddPhoneChooseVirtualMac() }
+
+// AddPhoneChooseVirtualMac says "An iOS Simulator or an Android emulator on this Mac"
+// in the language of msgs.
+//
+// Add phone, first step, on a Mac: under "Virtual phone" on its card.
+func (msgs Messages) AddPhoneChooseVirtualMac() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseVirtualMac", nil)
+}
+
+// AddPhoneChooseVirtualPC says "An Android emulator on this computer"
+// in the language the app shows.
+//
+// Add phone, first step, on Windows and Linux: under "Virtual phone" on its
+// card.
+func AddPhoneChooseVirtualPC() string { return In(i18n.Locale()).AddPhoneChooseVirtualPC() }
+
+// AddPhoneChooseVirtualPC says "An Android emulator on this computer"
+// in the language of msgs.
+//
+// Add phone, first step, on Windows and Linux: under "Virtual phone" on its
+// card.
+func (msgs Messages) AddPhoneChooseVirtualPC() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseVirtualPC", nil)
+}
+
 // AddPhoneDone says "Done"
 // in the language the app shows.
 //
@@ -2255,6 +2301,376 @@ func (msgs Messages) AddPhoneTryAgain() string {
 	return Catalog.Format(msgs.locale, "addPhoneTryAgain", nil)
 }
 
+// AddVirtualAndroid says "Android emulators"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the label above the list of Android Virtual
+// Devices.
+func AddVirtualAndroid() string { return In(i18n.Locale()).AddVirtualAndroid() }
+
+// AddVirtualAndroid says "Android emulators"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the label above the list of Android Virtual
+// Devices.
+func (msgs Messages) AddVirtualAndroid() string {
+	return Catalog.Format(msgs.locale, "addVirtualAndroid", nil)
+}
+
+// AddVirtualCantStart says "Can't start: {reason}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: under a Simulator or emulator that cannot
+// start. reason is the system's, in English.
+func AddVirtualCantStart(reason string) string { return In(i18n.Locale()).AddVirtualCantStart(reason) }
+
+// AddVirtualCantStart says "Can't start: {reason}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: under a Simulator or emulator that cannot
+// start. reason is the system's, in English.
+func (msgs Messages) AddVirtualCantStart(reason string) string {
+	return Catalog.Format(msgs.locale, "addVirtualCantStart", map[string]any{"reason": reason})
+}
+
+// AddVirtualDetailMac says "Start an iOS Simulator or an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Onl…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone on a Mac: the line under the heading.
+func AddVirtualDetailMac() string { return In(i18n.Locale()).AddVirtualDetailMac() }
+
+// AddVirtualDetailMac says "Start an iOS Simulator or an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Onl…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone on a Mac: the line under the heading.
+func (msgs Messages) AddVirtualDetailMac() string {
+	return Catalog.Format(msgs.locale, "addVirtualDetailMac", nil)
+}
+
+// AddVirtualDetailPC says "Start an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone on Windows and Linux: the line under the
+// heading.
+func AddVirtualDetailPC() string { return In(i18n.Locale()).AddVirtualDetailPC() }
+
+// AddVirtualDetailPC says "Start an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone on Windows and Linux: the line under the
+// heading.
+func (msgs Messages) AddVirtualDetailPC() string {
+	return Catalog.Format(msgs.locale, "addVirtualDetailPC", nil)
+}
+
+// AddVirtualHelperNote says "The first time, Pinky builds its helper for Simulators (WebDriverAgent) with Xcode, which takes a minute or two."
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the note under the list of iOS Simulators.
+// WebDriverAgent is a name.
+func AddVirtualHelperNote() string { return In(i18n.Locale()).AddVirtualHelperNote() }
+
+// AddVirtualHelperNote says "The first time, Pinky builds its helper for Simulators (WebDriverAgent) with Xcode, which takes a minute or two."
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the note under the list of iOS Simulators.
+// WebDriverAgent is a name.
+func (msgs Messages) AddVirtualHelperNote() string {
+	return Catalog.Format(msgs.locale, "addVirtualHelperNote", nil)
+}
+
+// AddVirtualIOS says "iOS Simulators"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the label above the list of iOS Simulators.
+func AddVirtualIOS() string { return In(i18n.Locale()).AddVirtualIOS() }
+
+// AddVirtualIOS says "iOS Simulators"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the label above the list of iOS Simulators.
+func (msgs Messages) AddVirtualIOS() string {
+	return Catalog.Format(msgs.locale, "addVirtualIOS", nil)
+}
+
+// AddVirtualListFailed says "Couldn't list them: {error}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: under a platform's label when listing its
+// Simulators or emulators failed. error is the system's, in English.
+func AddVirtualListFailed(error string) string { return In(i18n.Locale()).AddVirtualListFailed(error) }
+
+// AddVirtualListFailed says "Couldn't list them: {error}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: under a platform's label when listing its
+// Simulators or emulators failed. error is the system's, in English.
+func (msgs Messages) AddVirtualListFailed(error string) string {
+	return Catalog.Format(msgs.locale, "addVirtualListFailed", map[string]any{"error": error})
+}
+
+// AddVirtualLooking says "Looking for virtual phones…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: next to a spinner until the list comes.
+func AddVirtualLooking() string { return In(i18n.Locale()).AddVirtualLooking() }
+
+// AddVirtualLooking says "Looking for virtual phones…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: next to a spinner until the list comes.
+func (msgs Messages) AddVirtualLooking() string {
+	return Catalog.Format(msgs.locale, "addVirtualLooking", nil)
+}
+
+// AddVirtualNoAVDs says "No emulators yet. Create one in Android Studio's Device Manager."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under Android emulators: the computer has
+// the emulator but no Android Virtual Device. Device Manager is Android
+// Studio's name.
+func AddVirtualNoAVDs() string { return In(i18n.Locale()).AddVirtualNoAVDs() }
+
+// AddVirtualNoAVDs says "No emulators yet. Create one in Android Studio's Device Manager."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under Android emulators: the computer has
+// the emulator but no Android Virtual Device. Device Manager is Android
+// Studio's name.
+func (msgs Messages) AddVirtualNoAVDs() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoAVDs", nil)
+}
+
+// AddVirtualNoEmulator says "The Android SDK in {folder} has no emulator. Install Android Emulator in Android Studio's SDK Manager."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under Android emulators: the SDK lacks its
+// emulator. Android Emulator and SDK Manager are Android Studio's names.
+func AddVirtualNoEmulator(folder string) string {
+	return In(i18n.Locale()).AddVirtualNoEmulator(folder)
+}
+
+// AddVirtualNoEmulator says "The Android SDK in {folder} has no emulator. Install Android Emulator in Android Studio's SDK Manager."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under Android emulators: the SDK lacks its
+// emulator. Android Emulator and SDK Manager are Android Studio's names.
+func (msgs Messages) AddVirtualNoEmulator(folder string) string {
+	return Catalog.Format(msgs.locale, "addVirtualNoEmulator", map[string]any{"folder": folder})
+}
+
+// AddVirtualNoSDK says "Android emulators need the Android SDK, which Android Studio installs. Install Android Studio, then create a virtual …"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under Android emulators: Pinky found no
+// Android SDK. Device Manager is Android Studio's name.
+func AddVirtualNoSDK() string { return In(i18n.Locale()).AddVirtualNoSDK() }
+
+// AddVirtualNoSDK says "Android emulators need the Android SDK, which Android Studio installs. Install Android Studio, then create a virtual …"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under Android emulators: Pinky found no
+// Android SDK. Device Manager is Android Studio's name.
+func (msgs Messages) AddVirtualNoSDK() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoSDK", nil)
+}
+
+// AddVirtualNoSimulators says "No Simulators yet. Add one in Xcode, under Window › Devices and Simulators."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under iOS Simulators: Xcode has no
+// Simulator. Window › Devices and Simulators is Xcode's menu, which is in
+// English.
+func AddVirtualNoSimulators() string { return In(i18n.Locale()).AddVirtualNoSimulators() }
+
+// AddVirtualNoSimulators says "No Simulators yet. Add one in Xcode, under Window › Devices and Simulators."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under iOS Simulators: Xcode has no
+// Simulator. Window › Devices and Simulators is Xcode's menu, which is in
+// English.
+func (msgs Messages) AddVirtualNoSimulators() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoSimulators", nil)
+}
+
+// AddVirtualNoXcode says "iOS Simulators need Xcode, from the Mac App Store. After installing it, open it once so it can finish setting up."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under iOS Simulators: the Mac has no Xcode.
+func AddVirtualNoXcode() string { return In(i18n.Locale()).AddVirtualNoXcode() }
+
+// AddVirtualNoXcode says "iOS Simulators need Xcode, from the Mac App Store. After installing it, open it once so it can finish setting up."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under iOS Simulators: the Mac has no Xcode.
+func (msgs Messages) AddVirtualNoXcode() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoXcode", nil)
+}
+
+// AddVirtualOpen says "Open"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is one of Pinky's phones; opens its page.
+func AddVirtualOpen() string { return In(i18n.Locale()).AddVirtualOpen() }
+
+// AddVirtualOpen says "Open"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is one of Pinky's phones; opens its page.
+func (msgs Messages) AddVirtualOpen() string {
+	return Catalog.Format(msgs.locale, "addVirtualOpen", nil)
+}
+
+// AddVirtualRunning says "Running"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: at the end of a running Simulator's or
+// emulator's second line, after its model and OS version.
+func AddVirtualRunning() string { return In(i18n.Locale()).AddVirtualRunning() }
+
+// AddVirtualRunning says "Running"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: at the end of a running Simulator's or
+// emulator's second line, after its model and OS version.
+func (msgs Messages) AddVirtualRunning() string {
+	return Catalog.Format(msgs.locale, "addVirtualRunning", nil)
+}
+
+// AddVirtualShowAll says "Show all ({count})"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the link under a long list of Simulators or
+// emulators that shows the rest.
+func AddVirtualShowAll(count int) string { return In(i18n.Locale()).AddVirtualShowAll(count) }
+
+// AddVirtualShowAll says "Show all ({count})"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the link under a long list of Simulators or
+// emulators that shows the rest.
+func (msgs Messages) AddVirtualShowAll(count int) string {
+	return Catalog.Format(msgs.locale, "addVirtualShowAll", map[string]any{"count": count})
+}
+
+// AddVirtualShutDown says "Shut down"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that shuts it down.
+func AddVirtualShutDown() string { return In(i18n.Locale()).AddVirtualShutDown() }
+
+// AddVirtualShutDown says "Shut down"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that shuts it down.
+func (msgs Messages) AddVirtualShutDown() string {
+	return Catalog.Format(msgs.locale, "addVirtualShutDown", nil)
+}
+
+// AddVirtualStart says "Start"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator that
+// is offline: the button that starts it.
+func AddVirtualStart() string { return In(i18n.Locale()).AddVirtualStart() }
+
+// AddVirtualStart says "Start"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator that
+// is offline: the button that starts it.
+func (msgs Messages) AddVirtualStart() string {
+	return Catalog.Format(msgs.locale, "addVirtualStart", nil)
+}
+
+// AddVirtualStartFailed says "Couldn't start {name}: {error}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, and a virtual phone's page: starting a
+// Simulator or emulator failed. error is the system's, in English.
+func AddVirtualStartFailed(name string, error string) string {
+	return In(i18n.Locale()).AddVirtualStartFailed(name, error)
+}
+
+// AddVirtualStartFailed says "Couldn't start {name}: {error}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, and a virtual phone's page: starting a
+// Simulator or emulator failed. error is the system's, in English.
+func (msgs Messages) AddVirtualStartFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "addVirtualStartFailed", map[string]any{"name": name, "error": error})
+}
+
+// AddVirtualStarting says "Starting…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator:
+// next to a spinner while it starts.
+func AddVirtualStarting() string { return In(i18n.Locale()).AddVirtualStarting() }
+
+// AddVirtualStarting says "Starting…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator:
+// next to a spinner while it starts.
+func (msgs Messages) AddVirtualStarting() string {
+	return Catalog.Format(msgs.locale, "addVirtualStarting", nil)
+}
+
+// AddVirtualStopFailed says "Couldn't shut down {name}: {error}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: shutting a Simulator or emulator down
+// failed. error is the system's, in English.
+func AddVirtualStopFailed(name string, error string) string {
+	return In(i18n.Locale()).AddVirtualStopFailed(name, error)
+}
+
+// AddVirtualStopFailed says "Couldn't shut down {name}: {error}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: shutting a Simulator or emulator down
+// failed. error is the system's, in English.
+func (msgs Messages) AddVirtualStopFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "addVirtualStopFailed", map[string]any{"name": name, "error": error})
+}
+
+// AddVirtualTitle says "Virtual phones"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the heading.
+func AddVirtualTitle() string { return In(i18n.Locale()).AddVirtualTitle() }
+
+// AddVirtualTitle says "Virtual phones"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the heading.
+func (msgs Messages) AddVirtualTitle() string {
+	return Catalog.Format(msgs.locale, "addVirtualTitle", nil)
+}
+
+// AddVirtualUse says "Use"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is not one of Pinky's phones, as when the person removed
+// it; makes it one again.
+func AddVirtualUse() string { return In(i18n.Locale()).AddVirtualUse() }
+
+// AddVirtualUse says "Use"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is not one of Pinky's phones, as when the person removed
+// it; makes it one again.
+func (msgs Messages) AddVirtualUse() string {
+	return Catalog.Format(msgs.locale, "addVirtualUse", nil)
+}
+
 // AgentGeneric says "the agent"
 // in the language the app shows.
 //
@@ -2959,6 +3375,174 @@ func (msgs Messages) CallTakeOver() string {
 	return Catalog.Format(msgs.locale, "callTakeOver", nil)
 }
 
+// ChangedConfirmButton says "Trust"
+// in the language the app shows.
+//
+// The button of the dialog that trusts a device on the network that lacks
+// Pinky's mark (changedConfirmTitle).
+func ChangedConfirmButton() string { return In(i18n.Locale()).ChangedConfirmButton() }
+
+// ChangedConfirmButton says "Trust"
+// in the language of msgs.
+//
+// The button of the dialog that trusts a device on the network that lacks
+// Pinky's mark (changedConfirmTitle).
+func (msgs Messages) ChangedConfirmButton() string {
+	return Catalog.Format(msgs.locale, "changedConfirmButton", nil)
+}
+
+// ChangedConfirmMessage says "Pinky then uses the device on the network as {phone}, with its settings, and lets agents use it. Do this only if you …"
+// in the language the app shows.
+//
+// The message of the dialog that asks before Pinky trusts a device on the
+// network that claims to be a phone Pinky set up but lacks the mark Pinky
+// left on it. phone is the phone's name.
+func ChangedConfirmMessage(phone string) string {
+	return In(i18n.Locale()).ChangedConfirmMessage(phone)
+}
+
+// ChangedConfirmMessage says "Pinky then uses the device on the network as {phone}, with its settings, and lets agents use it. Do this only if you …"
+// in the language of msgs.
+//
+// The message of the dialog that asks before Pinky trusts a device on the
+// network that claims to be a phone Pinky set up but lacks the mark Pinky
+// left on it. phone is the phone's name.
+func (msgs Messages) ChangedConfirmMessage(phone string) string {
+	return Catalog.Format(msgs.locale, "changedConfirmMessage", map[string]any{"phone": phone})
+}
+
+// ChangedConfirmTitle says "Trust this phone?"
+// in the language the app shows.
+//
+// The dialog that asks before Pinky trusts a device on the network that
+// lacks Pinky's mark.
+func ChangedConfirmTitle() string { return In(i18n.Locale()).ChangedConfirmTitle() }
+
+// ChangedConfirmTitle says "Trust this phone?"
+// in the language of msgs.
+//
+// The dialog that asks before Pinky trusts a device on the network that
+// lacks Pinky's mark.
+func (msgs Messages) ChangedConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "changedConfirmTitle", nil)
+}
+
+// ChangedDetail says "A device on the network claims to be {phone}, but it lacks the mark Pinky left on that phone, so Pinky doesn't use it…"
+// in the language the app shows.
+//
+// Under changedTitle, and in the checkup: why Pinky does not use a device
+// on the network that claims to be a phone it set up. phone is the phone's
+// name.
+func ChangedDetail(phone string) string { return In(i18n.Locale()).ChangedDetail(phone) }
+
+// ChangedDetail says "A device on the network claims to be {phone}, but it lacks the mark Pinky left on that phone, so Pinky doesn't use it…"
+// in the language of msgs.
+//
+// Under changedTitle, and in the checkup: why Pinky does not use a device
+// on the network that claims to be a phone it set up. phone is the phone's
+// name.
+func (msgs Messages) ChangedDetail(phone string) string {
+	return Catalog.Format(msgs.locale, "changedDetail", map[string]any{"phone": phone})
+}
+
+// ChangedTitle says "This may not be {phone}"
+// in the language the app shows.
+//
+// The page of a phone whose connection over the network leads to a device
+// that lacks the mark Pinky left on the phone: maybe the phone was reset,
+// maybe another device poses as it. phone is the phone's name.
+func ChangedTitle(phone string) string { return In(i18n.Locale()).ChangedTitle(phone) }
+
+// ChangedTitle says "This may not be {phone}"
+// in the language of msgs.
+//
+// The page of a phone whose connection over the network leads to a device
+// that lacks the mark Pinky left on the phone: maybe the phone was reset,
+// maybe another device poses as it. phone is the phone's name.
+func (msgs Messages) ChangedTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "changedTitle", map[string]any{"phone": phone})
+}
+
+// ChangedTrust says "Trust this phone…"
+// in the language the app shows.
+//
+// The button that trusts a device on the network that lacks Pinky's mark,
+// as the phone Pinky set up under its name; it asks first.
+func ChangedTrust() string { return In(i18n.Locale()).ChangedTrust() }
+
+// ChangedTrust says "Trust this phone…"
+// in the language of msgs.
+//
+// The button that trusts a device on the network that lacks Pinky's mark,
+// as the phone Pinky set up under its name; it asks first.
+func (msgs Messages) ChangedTrust() string {
+	return Catalog.Format(msgs.locale, "changedTrust", nil)
+}
+
+// ChangedTrusted says "Trusting {name}. Pinky connects to it again in a few seconds."
+// in the language the app shows.
+//
+// A notice after the person trusted a phone on the network. name is the
+// phone's name.
+func ChangedTrusted(name string) string { return In(i18n.Locale()).ChangedTrusted(name) }
+
+// ChangedTrusted says "Trusting {name}. Pinky connects to it again in a few seconds."
+// in the language of msgs.
+//
+// A notice after the person trusted a phone on the network. name is the
+// phone's name.
+func (msgs Messages) ChangedTrusted(name string) string {
+	return Catalog.Format(msgs.locale, "changedTrusted", map[string]any{"name": name})
+}
+
+// ChangedTrustFailed says "Couldn't trust {name}: {error}"
+// in the language the app shows.
+//
+// A notice when trusting a phone on the network failed. name is the phone's
+// name, error what went wrong.
+func ChangedTrustFailed(name string, error string) string {
+	return In(i18n.Locale()).ChangedTrustFailed(name, error)
+}
+
+// ChangedTrustFailed says "Couldn't trust {name}: {error}"
+// in the language of msgs.
+//
+// A notice when trusting a phone on the network failed. name is the phone's
+// name, error what went wrong.
+func (msgs Messages) ChangedTrustFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "changedTrustFailed", map[string]any{"name": name, "error": error})
+}
+
+// ChangedTrustLabel says "Trust {name}…"
+// in the language the app shows.
+//
+// What assistive technology reads for changedTrust. name is the phone's
+// name.
+func ChangedTrustLabel(name string) string { return In(i18n.Locale()).ChangedTrustLabel(name) }
+
+// ChangedTrustLabel says "Trust {name}…"
+// in the language of msgs.
+//
+// What assistive technology reads for changedTrust. name is the phone's
+// name.
+func (msgs Messages) ChangedTrustLabel(name string) string {
+	return Catalog.Format(msgs.locale, "changedTrustLabel", map[string]any{"name": name})
+}
+
+// ChangedTrustNote says "Trust it only if you reset {phone} or set it up again yourself. Or plug it into this computer: Pinky then knows it's …"
+// in the language the app shows.
+//
+// Under the Trust this phone button. phone is the phone's name.
+func ChangedTrustNote(phone string) string { return In(i18n.Locale()).ChangedTrustNote(phone) }
+
+// ChangedTrustNote says "Trust it only if you reset {phone} or set it up again yourself. Or plug it into this computer: Pinky then knows it's …"
+// in the language of msgs.
+//
+// Under the Trust this phone button. phone is the phone's name.
+func (msgs Messages) ChangedTrustNote(phone string) string {
+	return Catalog.Format(msgs.locale, "changedTrustNote", map[string]any{"phone": phone})
+}
+
 // CheckADBFail says "Pinky can't reach adb, the Android tools it talks to phones through."
 // in the language the app shows.
 //
@@ -3481,6 +4065,22 @@ func CheckConnectionUSB() string { return In(i18n.Locale()).CheckConnectionUSB()
 // The checkup, connection: passed, over a USB cable.
 func (msgs Messages) CheckConnectionUSB() string {
 	return Catalog.Format(msgs.locale, "checkConnectionUSB", nil)
+}
+
+// CheckConnectionVirtual says "Running on this computer."
+// in the language the app shows.
+//
+// The checkup, connection: passed, for an iOS Simulator or an Android
+// emulator.
+func CheckConnectionVirtual() string { return In(i18n.Locale()).CheckConnectionVirtual() }
+
+// CheckConnectionVirtual says "Running on this computer."
+// in the language of msgs.
+//
+// The checkup, connection: passed, for an iOS Simulator or an Android
+// emulator.
+func (msgs Messages) CheckConnectionVirtual() string {
+	return Catalog.Format(msgs.locale, "checkConnectionVirtual", nil)
 }
 
 // CheckConnectionWiFi says "Connected over Wi-Fi."
@@ -4129,6 +4729,24 @@ func (msgs Messages) CheckScreenFail() string {
 	return Catalog.Format(msgs.locale, "checkScreenFail", nil)
 }
 
+// CheckScreenNoLivePicture says "The phone sends no live picture, so Pinky can't connect to it. Restart the phone, then check again. If that doesn't h…"
+// in the language the app shows.
+//
+// The checkup, seeing the screen, of an iPhone that Pinky could not open
+// because the phone sent no live picture of its screen; the driver's
+// details (in English) follow. "Send feedback" is feedbackTitle.
+func CheckScreenNoLivePicture() string { return In(i18n.Locale()).CheckScreenNoLivePicture() }
+
+// CheckScreenNoLivePicture says "The phone sends no live picture, so Pinky can't connect to it. Restart the phone, then check again. If that doesn't h…"
+// in the language of msgs.
+//
+// The checkup, seeing the screen, of an iPhone that Pinky could not open
+// because the phone sent no live picture of its screen; the driver's
+// details (in English) follow. "Send feedback" is feedbackTitle.
+func (msgs Messages) CheckScreenNoLivePicture() string {
+	return Catalog.Format(msgs.locale, "checkScreenNoLivePicture", nil)
+}
+
 // CheckScreenNoVideo says "The phone's video encoder doesn't work with Pinky, so the mirror shows still pictures. Agents still see the screen."
 // in the language the app shows.
 //
@@ -4169,6 +4787,84 @@ func CheckScreenTitle() string { return In(i18n.Locale()).CheckScreenTitle() }
 // The checkup: the item for screenshots and the live picture.
 func (msgs Messages) CheckScreenTitle() string {
 	return Catalog.Format(msgs.locale, "checkScreenTitle", nil)
+}
+
+// CheckSimHelperBuilding says "Pinky is building its helper for Simulators with Xcode. The first time takes a minute or two."
+// in the language the app shows.
+//
+// An iOS Simulator's page and checkup: while Pinky builds WebDriverAgent
+// for Simulators.
+func CheckSimHelperBuilding() string { return In(i18n.Locale()).CheckSimHelperBuilding() }
+
+// CheckSimHelperBuilding says "Pinky is building its helper for Simulators with Xcode. The first time takes a minute or two."
+// in the language of msgs.
+//
+// An iOS Simulator's page and checkup: while Pinky builds WebDriverAgent
+// for Simulators.
+func (msgs Messages) CheckSimHelperBuilding() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperBuilding", nil)
+}
+
+// CheckSimHelperFailed says "Pinky couldn't build its helper for Simulators with Xcode. It tries again in a few minutes, or now with Try again."
+// in the language the app shows.
+//
+// An iOS Simulator's page and checkup: building WebDriverAgent failed;
+// Xcode's reason shows under it. Try again is checkSimHelperRetry.
+func CheckSimHelperFailed() string { return In(i18n.Locale()).CheckSimHelperFailed() }
+
+// CheckSimHelperFailed says "Pinky couldn't build its helper for Simulators with Xcode. It tries again in a few minutes, or now with Try again."
+// in the language of msgs.
+//
+// An iOS Simulator's page and checkup: building WebDriverAgent failed;
+// Xcode's reason shows under it. Try again is checkSimHelperRetry.
+func (msgs Messages) CheckSimHelperFailed() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperFailed", nil)
+}
+
+// CheckSimHelperPass says "Pinky's helper for Simulators is ready."
+// in the language the app shows.
+//
+// The checkup of an iOS Simulator: the helper item passed.
+func CheckSimHelperPass() string { return In(i18n.Locale()).CheckSimHelperPass() }
+
+// CheckSimHelperPass says "Pinky's helper for Simulators is ready."
+// in the language of msgs.
+//
+// The checkup of an iOS Simulator: the helper item passed.
+func (msgs Messages) CheckSimHelperPass() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperPass", nil)
+}
+
+// CheckSimHelperRetry says "Try again"
+// in the language the app shows.
+//
+// An iOS Simulator's page and checkup: the button that builds the helper
+// for Simulators again after it failed.
+func CheckSimHelperRetry() string { return In(i18n.Locale()).CheckSimHelperRetry() }
+
+// CheckSimHelperRetry says "Try again"
+// in the language of msgs.
+//
+// An iOS Simulator's page and checkup: the button that builds the helper
+// for Simulators again after it failed.
+func (msgs Messages) CheckSimHelperRetry() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperRetry", nil)
+}
+
+// CheckSimHelperTitle says "Helper for Simulators"
+// in the language the app shows.
+//
+// The checkup of an iOS Simulator: the title of the item for the
+// WebDriverAgent helper Pinky builds with Xcode.
+func CheckSimHelperTitle() string { return In(i18n.Locale()).CheckSimHelperTitle() }
+
+// CheckSimHelperTitle says "Helper for Simulators"
+// in the language of msgs.
+//
+// The checkup of an iOS Simulator: the title of the item for the
+// WebDriverAgent helper Pinky builds with Xcode.
+func (msgs Messages) CheckSimHelperTitle() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperTitle", nil)
 }
 
 // CheckTrustedPass says "The iPhone trusts this computer."
@@ -7395,6 +8091,24 @@ func (msgs Messages) FoundDetail() string {
 	return Catalog.Format(msgs.locale, "foundDetail", nil)
 }
 
+// FoundDetailAndroid says "It's connected to this computer over Wireless debugging, but Pinky hasn't used it, so it leaves it alone until you sa…"
+// in the language the app shows.
+//
+// foundDetail for an Android phone: it is connected over Wireless debugging
+// (by adb, another tool, or a pairing made outside Pinky), and Pinky waits
+// for the person.
+func FoundDetailAndroid() string { return In(i18n.Locale()).FoundDetailAndroid() }
+
+// FoundDetailAndroid says "It's connected to this computer over Wireless debugging, but Pinky hasn't used it, so it leaves it alone until you sa…"
+// in the language of msgs.
+//
+// foundDetail for an Android phone: it is connected over Wireless debugging
+// (by adb, another tool, or a pairing made outside Pinky), and Pinky waits
+// for the person.
+func (msgs Messages) FoundDetailAndroid() string {
+	return Catalog.Format(msgs.locale, "foundDetailAndroid", nil)
+}
+
 // FoundIgnore says "Ignore"
 // in the language the app shows.
 //
@@ -8661,6 +9375,22 @@ func (msgs Messages) GwAskOpen(app string) string {
 	return Catalog.Format(msgs.locale, "gwAskOpen", map[string]any{"app": app})
 }
 
+// GwAskOpenLink says "Open “{link}” in {app}?"
+// in the language the app shows.
+//
+// An approval's title: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func GwAskOpenLink(link string, app string) string { return In(i18n.Locale()).GwAskOpenLink(link, app) }
+
+// GwAskOpenLink says "Open “{link}” in {app}?"
+// in the language of msgs.
+//
+// An approval's title: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwAskOpenLink(link string, app string) string {
+	return Catalog.Format(msgs.locale, "gwAskOpenLink", map[string]any{"link": link, "app": app})
+}
+
 // GwAskPay says "Pay: “{label}”?"
 // in the language the app shows.
 //
@@ -8855,6 +9585,62 @@ func (msgs Messages) GwDidOpen(app string) string {
 	return Catalog.Format(msgs.locale, "gwDidOpen", map[string]any{"app": app})
 }
 
+// GwDidOpenIn says "Opened {app} in {language}"
+// in the language the app shows.
+//
+// A step: the agent opened this app in another language than the phone's,
+// given as a language tag such as ja-JP. Shown only in other languages; in
+// English the gateway's own words show.
+func GwDidOpenIn(app string, language string) string {
+	return In(i18n.Locale()).GwDidOpenIn(app, language)
+}
+
+// GwDidOpenIn says "Opened {app} in {language}"
+// in the language of msgs.
+//
+// A step: the agent opened this app in another language than the phone's,
+// given as a language tag such as ja-JP. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDidOpenIn(app string, language string) string {
+	return Catalog.Format(msgs.locale, "gwDidOpenIn", map[string]any{"app": app, "language": language})
+}
+
+// GwDidOpenRegion says "Opened {app} with region {region}"
+// in the language the app shows.
+//
+// A step: the agent opened this app with another region's dates, numbers
+// and currency, given as a region code such as JP. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDidOpenRegion(app string, region string) string {
+	return In(i18n.Locale()).GwDidOpenRegion(app, region)
+}
+
+// GwDidOpenRegion says "Opened {app} with region {region}"
+// in the language of msgs.
+//
+// A step: the agent opened this app with another region's dates, numbers
+// and currency, given as a region code such as JP. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDidOpenRegion(app string, region string) string {
+	return Catalog.Format(msgs.locale, "gwDidOpenRegion", map[string]any{"app": app, "region": region})
+}
+
+// GwDidOpenLink says "Opened “{link}” in {app}"
+// in the language the app shows.
+//
+// A step: the agent opened this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDidOpenLink(link string, app string) string { return In(i18n.Locale()).GwDidOpenLink(link, app) }
+
+// GwDidOpenLink says "Opened “{link}” in {app}"
+// in the language of msgs.
+//
+// A step: the agent opened this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDidOpenLink(link string, app string) string {
+	return Catalog.Format(msgs.locale, "gwDidOpenLink", map[string]any{"link": link, "app": app})
+}
+
 // GwDidPress says "Pressed {key}"
 // in the language the app shows.
 //
@@ -8869,6 +9655,44 @@ func GwDidPress(key string) string { return In(i18n.Locale()).GwDidPress(key) }
 // only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwDidPress(key string) string {
 	return Catalog.Format(msgs.locale, "gwDidPress", map[string]any{"key": key})
+}
+
+// GwDidSetSwitch says "Set {setting} to {value}"
+// in the language the app shows.
+//
+// A step: the agent changed one of the phone's settings for testing, such
+// as the screen's rotation, to this value. Shown only in other languages;
+// in English the gateway's own words show.
+func GwDidSetSwitch(setting string, value string) string {
+	return In(i18n.Locale()).GwDidSetSwitch(setting, value)
+}
+
+// GwDidSetSwitch says "Set {setting} to {value}"
+// in the language of msgs.
+//
+// A step: the agent changed one of the phone's settings for testing, such
+// as the screen's rotation, to this value. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwDidSetSwitch(setting string, value string) string {
+	return Catalog.Format(msgs.locale, "gwDidSetSwitch", map[string]any{"setting": setting, "value": value})
+}
+
+// GwDidStopLocation says "Stopped the simulated location"
+// in the language the app shows.
+//
+// A step: Pinky stopped the place it made the phone report, so the phone
+// reports where it really is again. Shown only in other languages; in
+// English the gateway's own words show.
+func GwDidStopLocation() string { return In(i18n.Locale()).GwDidStopLocation() }
+
+// GwDidStopLocation says "Stopped the simulated location"
+// in the language of msgs.
+//
+// A step: Pinky stopped the place it made the phone report, so the phone
+// reports where it really is again. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDidStopLocation() string {
+	return Catalog.Format(msgs.locale, "gwDidStopLocation", nil)
 }
 
 // GwDidSwipe says "Swiped {direction}"
@@ -8973,6 +9797,40 @@ func (msgs Messages) GwDidTapBare() string {
 	return Catalog.Format(msgs.locale, "gwDidTapBare", nil)
 }
 
+// GwDidTurn says "Turned with two fingers"
+// in the language the app shows.
+//
+// A step: the agent turned something on the screen with two fingers
+// (phone_pinch with a rotation). Shown only in other languages; in English
+// the gateway's own words show.
+func GwDidTurn() string { return In(i18n.Locale()).GwDidTurn() }
+
+// GwDidTurn says "Turned with two fingers"
+// in the language of msgs.
+//
+// A step: the agent turned something on the screen with two fingers
+// (phone_pinch with a rotation). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwDidTurn() string {
+	return Catalog.Format(msgs.locale, "gwDidTurn", nil)
+}
+
+// GwDidTurnOn says "Turned “{label}” with two fingers"
+// in the language the app shows.
+//
+// A step: the agent turned the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDidTurnOn(label string) string { return In(i18n.Locale()).GwDidTurnOn(label) }
+
+// GwDidTurnOn says "Turned “{label}” with two fingers"
+// in the language of msgs.
+//
+// A step: the agent turned the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidTurnOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidTurnOn", map[string]any{"label": label})
+}
+
 // GwDidType says "Typed “{text}”"
 // in the language the app shows.
 //
@@ -9039,6 +9897,76 @@ func GwDidTypeSubmit(text string) string { return In(i18n.Locale()).GwDidTypeSub
 // languages; in English the gateway's own words show.
 func (msgs Messages) GwDidTypeSubmit(text string) string {
 	return Catalog.Format(msgs.locale, "gwDidTypeSubmit", map[string]any{"text": text})
+}
+
+// GwDidZoomIn says "Zoomed in"
+// in the language the app shows.
+//
+// A step: the agent zoomed in by spreading two fingers (phone_pinch). Shown
+// only in other languages; in English the gateway's own words show.
+func GwDidZoomIn() string { return In(i18n.Locale()).GwDidZoomIn() }
+
+// GwDidZoomIn says "Zoomed in"
+// in the language of msgs.
+//
+// A step: the agent zoomed in by spreading two fingers (phone_pinch). Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidZoomIn() string {
+	return Catalog.Format(msgs.locale, "gwDidZoomIn", nil)
+}
+
+// GwDidZoomInOn says "Zoomed in on “{label}”"
+// in the language the app shows.
+//
+// A step: the agent zoomed in on the element with this label by spreading
+// two fingers. Shown only in other languages; in English the gateway's own
+// words show.
+func GwDidZoomInOn(label string) string { return In(i18n.Locale()).GwDidZoomInOn(label) }
+
+// GwDidZoomInOn says "Zoomed in on “{label}”"
+// in the language of msgs.
+//
+// A step: the agent zoomed in on the element with this label by spreading
+// two fingers. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwDidZoomInOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidZoomInOn", map[string]any{"label": label})
+}
+
+// GwDidZoomOut says "Zoomed out"
+// in the language the app shows.
+//
+// A step: the agent zoomed out by pinching two fingers together
+// (phone_pinch). Shown only in other languages; in English the gateway's
+// own words show.
+func GwDidZoomOut() string { return In(i18n.Locale()).GwDidZoomOut() }
+
+// GwDidZoomOut says "Zoomed out"
+// in the language of msgs.
+//
+// A step: the agent zoomed out by pinching two fingers together
+// (phone_pinch). Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwDidZoomOut() string {
+	return Catalog.Format(msgs.locale, "gwDidZoomOut", nil)
+}
+
+// GwDidZoomOutOn says "Zoomed out on “{label}”"
+// in the language the app shows.
+//
+// A step: the agent zoomed out on the element with this label by pinching
+// two fingers together. Shown only in other languages; in English the
+// gateway's own words show.
+func GwDidZoomOutOn(label string) string { return In(i18n.Locale()).GwDidZoomOutOn(label) }
+
+// GwDidZoomOutOn says "Zoomed out on “{label}”"
+// in the language of msgs.
+//
+// A step: the agent zoomed out on the element with this label by pinching
+// two fingers together. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDidZoomOutOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidZoomOutOn", map[string]any{"label": label})
 }
 
 // GwDirDown says "down"
@@ -9143,6 +10071,50 @@ func (msgs Messages) GwDoCopyFiles(count string, phone string) string {
 	return Catalog.Format(msgs.locale, "gwDoCopyFiles", map[string]any{"count": count, "phone": phone})
 }
 
+// GwDoGiveRecording says "give {agent} the screen recording of “{task}”"
+// in the language the app shows.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recording of the task that ends, with its
+// report (phone_release export). task is the agent's name for the task.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoGiveRecording(agent string, task string) string {
+	return In(i18n.Locale()).GwDoGiveRecording(agent, task)
+}
+
+// GwDoGiveRecording says "give {agent} the screen recording of “{task}”"
+// in the language of msgs.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recording of the task that ends, with its
+// report (phone_release export). task is the agent's name for the task.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoGiveRecording(agent string, task string) string {
+	return Catalog.Format(msgs.locale, "gwDoGiveRecording", map[string]any{"agent": agent, "task": task})
+}
+
+// GwDoGiveRecordings says "give {agent} the screen recordings of {count} tasks"
+// in the language the app shows.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recordings of several tasks that end together,
+// with their reports (phone_release export); count is 2 or more. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoGiveRecordings(agent string, count string) string {
+	return In(i18n.Locale()).GwDoGiveRecordings(agent, count)
+}
+
+// GwDoGiveRecordings says "give {agent} the screen recordings of {count} tasks"
+// in the language of msgs.
+//
+// What a step asked for, and with gwAskQuestion the title of its approval:
+// give the agent the screen recordings of several tasks that end together,
+// with their reports (phone_release export); count is 2 or more. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoGiveRecordings(agent string, count string) string {
+	return Catalog.Format(msgs.locale, "gwDoGiveRecordings", map[string]any{"agent": agent, "count": count})
+}
+
 // GwDoCopyFromPhone says "copy from the phone"
 // in the language the app shows.
 //
@@ -9189,6 +10161,174 @@ func GwDoListFolder() string { return In(i18n.Locale()).GwDoListFolder() }
 // in other languages; in English the gateway's own words show.
 func (msgs Messages) GwDoListFolder() string {
 	return Catalog.Format(msgs.locale, "gwDoListFolder", nil)
+}
+
+// GwDoInstallApp says "install “{app}” {version}"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: install this app at this version
+// from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func GwDoInstallApp(app string, version string) string {
+	return In(i18n.Locale()).GwDoInstallApp(app, version)
+}
+
+// GwDoInstallApp says "install “{app}” {version}"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: install this app at this version
+// from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDoInstallApp(app string, version string) string {
+	return Catalog.Format(msgs.locale, "gwDoInstallApp", map[string]any{"app": app, "version": version})
+}
+
+// GwDoInstallAppBare says "install “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: install this app from the
+// computer (its version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func GwDoInstallAppBare(app string) string { return In(i18n.Locale()).GwDoInstallAppBare(app) }
+
+// GwDoInstallAppBare says "install “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: install this app from the
+// computer (its version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDoInstallAppBare(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoInstallAppBare", map[string]any{"app": app})
+}
+
+// GwDoUpdateApp says "update “{app}” to {version}"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: update this installed app to this
+// version from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func GwDoUpdateApp(app string, version string) string {
+	return In(i18n.Locale()).GwDoUpdateApp(app, version)
+}
+
+// GwDoUpdateApp says "update “{app}” to {version}"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: update this installed app to this
+// version from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDoUpdateApp(app string, version string) string {
+	return Catalog.Format(msgs.locale, "gwDoUpdateApp", map[string]any{"app": app, "version": version})
+}
+
+// GwDoUpdateAppBare says "update “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: update this installed app from
+// the computer (the new version is unknown). Shown only in other languages;
+// in English the gateway's own words show.
+func GwDoUpdateAppBare(app string) string { return In(i18n.Locale()).GwDoUpdateAppBare(app) }
+
+// GwDoUpdateAppBare says "update “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: update this installed app from
+// the computer (the new version is unknown). Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwDoUpdateAppBare(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoUpdateAppBare", map[string]any{"app": app})
+}
+
+// GwDoUninstallApp says "uninstall “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: uninstall this app, with its
+// data. Shown only in other languages; in English the gateway's own words
+// show.
+func GwDoUninstallApp(app string) string { return In(i18n.Locale()).GwDoUninstallApp(app) }
+
+// GwDoUninstallApp says "uninstall “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: uninstall this app, with its
+// data. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwDoUninstallApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoUninstallApp", map[string]any{"app": app})
+}
+
+// GwDoStopApp says "stop “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: force-quit this app. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoStopApp(app string) string { return In(i18n.Locale()).GwDoStopApp(app) }
+
+// GwDoStopApp says "stop “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: force-quit this app. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoStopApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoStopApp", map[string]any{"app": app})
+}
+
+// GwDoInstallFrom says "install from {files}"
+// in the language the app shows.
+//
+// What a step tried: install an app from these files on the computer,
+// before Pinky could read which app they hold. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoInstallFrom(files string) string { return In(i18n.Locale()).GwDoInstallFrom(files) }
+
+// GwDoInstallFrom says "install from {files}"
+// in the language of msgs.
+//
+// What a step tried: install an app from these files on the computer,
+// before Pinky could read which app they hold. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoInstallFrom(files string) string {
+	return Catalog.Format(msgs.locale, "gwDoInstallFrom", map[string]any{"files": files})
+}
+
+// GwDoOnPhone says "{action} on {phone}"
+// in the language the app shows.
+//
+// An app change on a phone, in an approval's title or a step that waits for
+// the person: “install “Dinely” 1.3 (14)” on “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoOnPhone(action string, phone string) string {
+	return In(i18n.Locale()).GwDoOnPhone(action, phone)
+}
+
+// GwDoOnPhone says "{action} on {phone}"
+// in the language of msgs.
+//
+// An app change on a phone, in an approval's title or a step that waits for
+// the person: “install “Dinely” 1.3 (14)” on “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoOnPhone(action string, phone string) string {
+	return Catalog.Format(msgs.locale, "gwDoOnPhone", map[string]any{"action": action, "phone": phone})
+}
+
+// GwDoFromPhone says "{action} from {phone}"
+// in the language the app shows.
+//
+// An app removed from a phone, in an approval's title or a step that waits
+// for the person: “uninstall “Dinely”” from “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoFromPhone(action string, phone string) string {
+	return In(i18n.Locale()).GwDoFromPhone(action, phone)
+}
+
+// GwDoFromPhone says "{action} from {phone}"
+// in the language of msgs.
+//
+// An app removed from a phone, in an approval's title or a step that waits
+// for the person: “uninstall “Dinely”” from “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoFromPhone(action string, phone string) string {
+	return Catalog.Format(msgs.locale, "gwDoFromPhone", map[string]any{"action": action, "phone": phone})
 }
 
 // GwDoLongPress says "long-press “{label}”"
@@ -9255,6 +10395,62 @@ func (msgs Messages) GwDoOpen(app string) string {
 	return Catalog.Format(msgs.locale, "gwDoOpen", map[string]any{"app": app})
 }
 
+// GwDoOpenIn says "open {app} in {language}"
+// in the language the app shows.
+//
+// What a step asked for: open this app in another language than the
+// phone's, given as a language tag such as ja-JP. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoOpenIn(app string, language string) string {
+	return In(i18n.Locale()).GwDoOpenIn(app, language)
+}
+
+// GwDoOpenIn says "open {app} in {language}"
+// in the language of msgs.
+//
+// What a step asked for: open this app in another language than the
+// phone's, given as a language tag such as ja-JP. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoOpenIn(app string, language string) string {
+	return Catalog.Format(msgs.locale, "gwDoOpenIn", map[string]any{"app": app, "language": language})
+}
+
+// GwDoOpenRegion says "open {app} with region {region}"
+// in the language the app shows.
+//
+// What a step asked for: open this app with another region's dates, numbers
+// and currency, given as a region code such as JP. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoOpenRegion(app string, region string) string {
+	return In(i18n.Locale()).GwDoOpenRegion(app, region)
+}
+
+// GwDoOpenRegion says "open {app} with region {region}"
+// in the language of msgs.
+//
+// What a step asked for: open this app with another region's dates, numbers
+// and currency, given as a region code such as JP. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoOpenRegion(app string, region string) string {
+	return Catalog.Format(msgs.locale, "gwDoOpenRegion", map[string]any{"app": app, "region": region})
+}
+
+// GwDoOpenLink says "open “{link}” in {app}"
+// in the language the app shows.
+//
+// What a step asked for: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoOpenLink(link string, app string) string { return In(i18n.Locale()).GwDoOpenLink(link, app) }
+
+// GwDoOpenLink says "open “{link}” in {app}"
+// in the language of msgs.
+//
+// What a step asked for: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoOpenLink(link string, app string) string {
+	return Catalog.Format(msgs.locale, "gwDoOpenLink", map[string]any{"link": link, "app": app})
+}
+
 // GwDoPress says "press {key}"
 // in the language the app shows.
 //
@@ -9269,6 +10465,24 @@ func GwDoPress(key string) string { return In(i18n.Locale()).GwDoPress(key) }
 // only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwDoPress(key string) string {
 	return Catalog.Format(msgs.locale, "gwDoPress", map[string]any{"key": key})
+}
+
+// GwDoReadLogs says "read the logs of {app}"
+// in the language the app shows.
+//
+// What a step asked for: give the agent an app's own log lines or crash
+// reports (phone_logs). Shown only in other languages; in English the
+// gateway's own words show.
+func GwDoReadLogs(app string) string { return In(i18n.Locale()).GwDoReadLogs(app) }
+
+// GwDoReadLogs says "read the logs of {app}"
+// in the language of msgs.
+//
+// What a step asked for: give the agent an app's own log lines or crash
+// reports (phone_logs). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDoReadLogs(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoReadLogs", map[string]any{"app": app})
 }
 
 // GwDoReceiveFile says "receive “{path}” from the agent"
@@ -9287,6 +10501,26 @@ func GwDoReceiveFile(path string) string { return In(i18n.Locale()).GwDoReceiveF
 // other languages; in English the gateway's own words show.
 func (msgs Messages) GwDoReceiveFile(path string) string {
 	return Catalog.Format(msgs.locale, "gwDoReceiveFile", map[string]any{"path": path})
+}
+
+// GwDoSetSwitch says "set {setting} to {value}"
+// in the language the app shows.
+//
+// What a step asked for: change one of the phone's settings for testing,
+// such as the screen's rotation, to this value. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoSetSwitch(setting string, value string) string {
+	return In(i18n.Locale()).GwDoSetSwitch(setting, value)
+}
+
+// GwDoSetSwitch says "set {setting} to {value}"
+// in the language of msgs.
+//
+// What a step asked for: change one of the phone's settings for testing,
+// such as the screen's rotation, to this value. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoSetSwitch(setting string, value string) string {
+	return Catalog.Format(msgs.locale, "gwDoSetSwitch", map[string]any{"setting": setting, "value": value})
 }
 
 // GwDoSwipe says "swipe {direction}"
@@ -9391,6 +10625,38 @@ func (msgs Messages) GwDoTapBare() string {
 	return Catalog.Format(msgs.locale, "gwDoTapBare", nil)
 }
 
+// GwDoTurn says "turn with two fingers"
+// in the language the app shows.
+//
+// What a step asked for: turn something on the screen with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoTurn() string { return In(i18n.Locale()).GwDoTurn() }
+
+// GwDoTurn says "turn with two fingers"
+// in the language of msgs.
+//
+// What a step asked for: turn something on the screen with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTurn() string {
+	return Catalog.Format(msgs.locale, "gwDoTurn", nil)
+}
+
+// GwDoTurnOn says "turn “{label}” with two fingers"
+// in the language the app shows.
+//
+// What a step asked for: turn the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoTurnOn(label string) string { return In(i18n.Locale()).GwDoTurnOn(label) }
+
+// GwDoTurnOn says "turn “{label}” with two fingers"
+// in the language of msgs.
+//
+// What a step asked for: turn the element with this label with two fingers.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoTurnOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoTurnOn", map[string]any{"label": label})
+}
+
 // GwDoType says "type “{text}”"
 // in the language the app shows.
 //
@@ -9459,6 +10725,70 @@ func (msgs Messages) GwDoTypeSubmit(text string) string {
 	return Catalog.Format(msgs.locale, "gwDoTypeSubmit", map[string]any{"text": text})
 }
 
+// GwDoZoomIn says "zoom in"
+// in the language the app shows.
+//
+// What a step asked for: zoom in by spreading two fingers. Shown only in
+// other languages; in English the gateway's own words show.
+func GwDoZoomIn() string { return In(i18n.Locale()).GwDoZoomIn() }
+
+// GwDoZoomIn says "zoom in"
+// in the language of msgs.
+//
+// What a step asked for: zoom in by spreading two fingers. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomIn() string {
+	return Catalog.Format(msgs.locale, "gwDoZoomIn", nil)
+}
+
+// GwDoZoomInOn says "zoom in on “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: zoom in on the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoZoomInOn(label string) string { return In(i18n.Locale()).GwDoZoomInOn(label) }
+
+// GwDoZoomInOn says "zoom in on “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: zoom in on the element with this label. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomInOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoZoomInOn", map[string]any{"label": label})
+}
+
+// GwDoZoomOut says "zoom out"
+// in the language the app shows.
+//
+// What a step asked for: zoom out by pinching two fingers together. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoZoomOut() string { return In(i18n.Locale()).GwDoZoomOut() }
+
+// GwDoZoomOut says "zoom out"
+// in the language of msgs.
+//
+// What a step asked for: zoom out by pinching two fingers together. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomOut() string {
+	return Catalog.Format(msgs.locale, "gwDoZoomOut", nil)
+}
+
+// GwDoZoomOutOn says "zoom out on “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: zoom out on the element with this label. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoZoomOutOn(label string) string { return In(i18n.Locale()).GwDoZoomOutOn(label) }
+
+// GwDoZoomOutOn says "zoom out on “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: zoom out on the element with this label. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoZoomOutOn(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoZoomOutOn", map[string]any{"label": label})
+}
+
 // GwFilesDetail says "{agent} · into the phone's Pinky folder{names}"
 // in the language the app shows.
 //
@@ -9479,6 +10809,96 @@ func (msgs Messages) GwFilesDetail(agent string, names string) string {
 	return Catalog.Format(msgs.locale, "gwFilesDetail", map[string]any{"agent": agent, "names": names})
 }
 
+// GwAppFilesMore says "“{file}” and {count} more files"
+// in the language the app shows.
+//
+// The files an app is installed from when there are several: the first one
+// and how many more (split APKs). Shown only in other languages; in English
+// the gateway's own words show.
+func GwAppFilesMore(file string, count string) string {
+	return In(i18n.Locale()).GwAppFilesMore(file, count)
+}
+
+// GwAppFilesMore says "“{file}” and {count} more files"
+// in the language of msgs.
+//
+// The files an app is installed from when there are several: the first one
+// and how many more (split APKs). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwAppFilesMore(file string, count string) string {
+	return Catalog.Format(msgs.locale, "gwAppFilesMore", map[string]any{"file": file, "count": count})
+}
+
+// GwAppSignedBy says "signed by {signer}"
+// in the language the app shows.
+//
+// Part of an install approval's second line: who signed the app. Shown only
+// in other languages; in English the gateway's own words show.
+func GwAppSignedBy(signer string) string { return In(i18n.Locale()).GwAppSignedBy(signer) }
+
+// GwAppSignedBy says "signed by {signer}"
+// in the language of msgs.
+//
+// Part of an install approval's second line: who signed the app. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwAppSignedBy(signer string) string {
+	return Catalog.Format(msgs.locale, "gwAppSignedBy", map[string]any{"signer": signer})
+}
+
+// GwAppFrom says "from {files}"
+// in the language the app shows.
+//
+// Part of an install approval's second line: the files on the computer the
+// app is installed from. Shown only in other languages; in English the
+// gateway's own words show.
+func GwAppFrom(files string) string { return In(i18n.Locale()).GwAppFrom(files) }
+
+// GwAppFrom says "from {files}"
+// in the language of msgs.
+//
+// Part of an install approval's second line: the files on the computer the
+// app is installed from. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwAppFrom(files string) string {
+	return Catalog.Format(msgs.locale, "gwAppFrom", map[string]any{"files": files})
+}
+
+// GwAppReplaces says "replaces {version}"
+// in the language the app shows.
+//
+// Part of an update approval's second line: the version on the phone that
+// the update replaces. Shown only in other languages; in English the
+// gateway's own words show.
+func GwAppReplaces(version string) string { return In(i18n.Locale()).GwAppReplaces(version) }
+
+// GwAppReplaces says "replaces {version}"
+// in the language of msgs.
+//
+// Part of an update approval's second line: the version on the phone that
+// the update replaces. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwAppReplaces(version string) string {
+	return Catalog.Format(msgs.locale, "gwAppReplaces", map[string]any{"version": version})
+}
+
+// GwAppDataDeleted says "its data on the phone is deleted too"
+// in the language the app shows.
+//
+// Part of an uninstall approval's second line: uninstalling deletes the
+// app's data on the phone. Shown only in other languages; in English the
+// gateway's own words show.
+func GwAppDataDeleted() string { return In(i18n.Locale()).GwAppDataDeleted() }
+
+// GwAppDataDeleted says "its data on the phone is deleted too"
+// in the language of msgs.
+//
+// Part of an uninstall approval's second line: uninstalling deletes the
+// app's data on the phone. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwAppDataDeleted() string {
+	return Catalog.Format(msgs.locale, "gwAppDataDeleted", nil)
+}
+
 // GwFilesList says ": {names}"
 // in the language the app shows.
 //
@@ -9491,6 +10911,28 @@ func GwFilesList(names string) string { return In(i18n.Locale()).GwFilesList(nam
 // Lists file names after a files step or approval.
 func (msgs Messages) GwFilesList(names string) string {
 	return Catalog.Format(msgs.locale, "gwFilesList", map[string]any{"names": names})
+}
+
+// GwRecordingsDetail says "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."
+// in the language the app shows.
+//
+// The second line of the approval that gives an agent a task's screen
+// recording: what the person agrees to. Screenshots are the ones agents
+// get, with codes covered; blocked apps are the banking, wallet and
+// password-manager apps and those the person blocked. Shown only in other
+// languages; in English the gateway's own words show.
+func GwRecordingsDetail() string { return In(i18n.Locale()).GwRecordingsDetail() }
+
+// GwRecordingsDetail says "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."
+// in the language of msgs.
+//
+// The second line of the approval that gives an agent a task's screen
+// recording: what the person agrees to. Screenshots are the ones agents
+// get, with codes covered; blocked apps are the banking, wallet and
+// password-manager apps and those the person blocked. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwRecordingsDetail() string {
+	return Catalog.Format(msgs.locale, "gwRecordingsDetail", nil)
 }
 
 // GwFilesMore says "and {count} more"
@@ -9881,6 +11323,26 @@ func (msgs Messages) GwOutcomeStopped() string {
 	return Catalog.Format(msgs.locale, "gwOutcomeStopped", nil)
 }
 
+// GwSettingsDetail says "{agent} · Pinky puts it back when the task ends"
+// in the language the app shows.
+//
+// The second line of an approval to change the phone's settings for
+// testing: the agent asking, and that Pinky undoes the change when the task
+// ends. Shown only in other languages; in English the gateway's own words
+// show.
+func GwSettingsDetail(agent string) string { return In(i18n.Locale()).GwSettingsDetail(agent) }
+
+// GwSettingsDetail says "{agent} · Pinky puts it back when the task ends"
+// in the language of msgs.
+//
+// The second line of an approval to change the phone's settings for
+// testing: the agent asking, and that Pinky undoes the change when the task
+// ends. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwSettingsDetail(agent string) string {
+	return Catalog.Format(msgs.locale, "gwSettingsDetail", map[string]any{"agent": agent})
+}
+
 // GwStatusBackground says "{work} · in the background"
 // in the language the app shows.
 //
@@ -10173,6 +11635,26 @@ func (msgs Messages) GwStatusOfflineDetail(detail string) string {
 	return Catalog.Format(msgs.locale, "gwStatusOfflineDetail", map[string]any{"detail": detail})
 }
 
+// GwStatusPhoneChanged says "Not the same phone"
+// in the language the app shows.
+//
+// A phone's status line: its connection over the network leads to a device
+// that lacks the mark Pinky left on the phone, and Pinky waits for the
+// person. Shown only in other languages; in English the gateway's own words
+// show.
+func GwStatusPhoneChanged() string { return In(i18n.Locale()).GwStatusPhoneChanged() }
+
+// GwStatusPhoneChanged says "Not the same phone"
+// in the language of msgs.
+//
+// A phone's status line: its connection over the network leads to a device
+// that lacks the mark Pinky left on the phone, and Pinky waits for the
+// person. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwStatusPhoneChanged() string {
+	return Catalog.Format(msgs.locale, "gwStatusPhoneChanged", nil)
+}
+
 // GwStatusReconnecting says "Offline · reconnecting for {task}"
 // in the language the app shows.
 //
@@ -10377,6 +11859,60 @@ func (msgs Messages) GwStepFinished(outcome string) string {
 	return Catalog.Format(msgs.locale, "gwStepFinished", map[string]any{"outcome": outcome})
 }
 
+// GwStepLanguageBack says "Put the language of {app} back"
+// in the language the app shows.
+//
+// A step at the end of a task: an app the agent opened in another language
+// is in the phone's language again. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepLanguageBack(app string) string { return In(i18n.Locale()).GwStepLanguageBack(app) }
+
+// GwStepLanguageBack says "Put the language of {app} back"
+// in the language of msgs.
+//
+// A step at the end of a task: an app the agent opened in another language
+// is in the phone's language again. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepLanguageBack(app string) string {
+	return Catalog.Format(msgs.locale, "gwStepLanguageBack", map[string]any{"app": app})
+}
+
+// GwStepLanguageLeft says "Left the language of {app} as the person set it"
+// in the language the app shows.
+//
+// A step at the end of a task: Pinky did not put back an app's language,
+// because the person changed it meanwhile. Shown only in other languages;
+// in English the gateway's own words show.
+func GwStepLanguageLeft(app string) string { return In(i18n.Locale()).GwStepLanguageLeft(app) }
+
+// GwStepLanguageLeft says "Left the language of {app} as the person set it"
+// in the language of msgs.
+//
+// A step at the end of a task: Pinky did not put back an app's language,
+// because the person changed it meanwhile. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwStepLanguageLeft(app string) string {
+	return Catalog.Format(msgs.locale, "gwStepLanguageLeft", map[string]any{"app": app})
+}
+
+// GwStepLanguageNotBack says "Could not put the language of {app} back"
+// in the language the app shows.
+//
+// A step at the end of a task: Pinky could not put back the language of an
+// app the agent opened in another language. Shown only in other languages;
+// in English the gateway's own words show.
+func GwStepLanguageNotBack(app string) string { return In(i18n.Locale()).GwStepLanguageNotBack(app) }
+
+// GwStepLanguageNotBack says "Could not put the language of {app} back"
+// in the language of msgs.
+//
+// A step at the end of a task: Pinky could not put back the language of an
+// app the agent opened in another language. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwStepLanguageNotBack(app string) string {
+	return Catalog.Format(msgs.locale, "gwStepLanguageNotBack", map[string]any{"app": app})
+}
+
 // GwStepListedFolder says "Listed the phone's Pinky folder ({count} files)"
 // in the language the app shows.
 //
@@ -10393,6 +11929,138 @@ func (msgs Messages) GwStepListedFolder(count string) string {
 	return Catalog.Format(msgs.locale, "gwStepListedFolder", map[string]any{"count": count})
 }
 
+// GwStepListedComputerFolder says "Listed the phone's folder on the computer ({count} files)"
+// in the language the app shows.
+//
+// A step: the agent listed the files in the phone's folder on the computer,
+// which apps are installed from (an iPhone has no Pinky folder of its own).
+// Shown only in other languages; in English the gateway's own words show.
+func GwStepListedComputerFolder(count string) string {
+	return In(i18n.Locale()).GwStepListedComputerFolder(count)
+}
+
+// GwStepListedComputerFolder says "Listed the phone's folder on the computer ({count} files)"
+// in the language of msgs.
+//
+// A step: the agent listed the files in the phone's folder on the computer,
+// which apps are installed from (an iPhone has no Pinky folder of its own).
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepListedComputerFolder(count string) string {
+	return Catalog.Format(msgs.locale, "gwStepListedComputerFolder", map[string]any{"count": count})
+}
+
+// GwStepInstalledApp says "Installed “{app}” {version} from {files}"
+// in the language the app shows.
+//
+// A step: the agent installed this app at this version from these files on
+// the computer. Shown only in other languages; in English the gateway's own
+// words show.
+func GwStepInstalledApp(app string, version string, files string) string {
+	return In(i18n.Locale()).GwStepInstalledApp(app, version, files)
+}
+
+// GwStepInstalledApp says "Installed “{app}” {version} from {files}"
+// in the language of msgs.
+//
+// A step: the agent installed this app at this version from these files on
+// the computer. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStepInstalledApp(app string, version string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepInstalledApp", map[string]any{"app": app, "version": version, "files": files})
+}
+
+// GwStepInstalledAppBare says "Installed “{app}” from {files}"
+// in the language the app shows.
+//
+// A step: the agent installed this app from these files on the computer
+// (its version is unknown). Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepInstalledAppBare(app string, files string) string {
+	return In(i18n.Locale()).GwStepInstalledAppBare(app, files)
+}
+
+// GwStepInstalledAppBare says "Installed “{app}” from {files}"
+// in the language of msgs.
+//
+// A step: the agent installed this app from these files on the computer
+// (its version is unknown). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepInstalledAppBare(app string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepInstalledAppBare", map[string]any{"app": app, "files": files})
+}
+
+// GwStepUpdatedApp says "Updated “{app}” to {version} from {files}"
+// in the language the app shows.
+//
+// A step: the agent updated this installed app to this version from these
+// files on the computer; its data was kept. Shown only in other languages;
+// in English the gateway's own words show.
+func GwStepUpdatedApp(app string, version string, files string) string {
+	return In(i18n.Locale()).GwStepUpdatedApp(app, version, files)
+}
+
+// GwStepUpdatedApp says "Updated “{app}” to {version} from {files}"
+// in the language of msgs.
+//
+// A step: the agent updated this installed app to this version from these
+// files on the computer; its data was kept. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwStepUpdatedApp(app string, version string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepUpdatedApp", map[string]any{"app": app, "version": version, "files": files})
+}
+
+// GwStepUpdatedAppBare says "Updated “{app}” from {files}"
+// in the language the app shows.
+//
+// A step: the agent updated this installed app from these files on the
+// computer (the new version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepUpdatedAppBare(app string, files string) string {
+	return In(i18n.Locale()).GwStepUpdatedAppBare(app, files)
+}
+
+// GwStepUpdatedAppBare says "Updated “{app}” from {files}"
+// in the language of msgs.
+//
+// A step: the agent updated this installed app from these files on the
+// computer (the new version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepUpdatedAppBare(app string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepUpdatedAppBare", map[string]any{"app": app, "files": files})
+}
+
+// GwStepUninstalledApp says "Uninstalled “{app}”"
+// in the language the app shows.
+//
+// A step: the agent uninstalled this app, with its data. Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepUninstalledApp(app string) string { return In(i18n.Locale()).GwStepUninstalledApp(app) }
+
+// GwStepUninstalledApp says "Uninstalled “{app}”"
+// in the language of msgs.
+//
+// A step: the agent uninstalled this app, with its data. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepUninstalledApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwStepUninstalledApp", map[string]any{"app": app})
+}
+
+// GwStepStoppedApp says "Stopped “{app}”"
+// in the language the app shows.
+//
+// A step: the agent force-quit this app. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepStoppedApp(app string) string { return In(i18n.Locale()).GwStepStoppedApp(app) }
+
+// GwStepStoppedApp says "Stopped “{app}”"
+// in the language of msgs.
+//
+// A step: the agent force-quit this app. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepStoppedApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwStepStoppedApp", map[string]any{"app": app})
+}
+
 // GwStepOutside says "Outside the scope: {action}"
 // in the language the app shows.
 //
@@ -10407,6 +12075,46 @@ func GwStepOutside(action string) string { return In(i18n.Locale()).GwStepOutsid
 // languages; in English the gateway's own words show.
 func (msgs Messages) GwStepOutside(action string) string {
 	return Catalog.Format(msgs.locale, "gwStepOutside", map[string]any{"action": action})
+}
+
+// GwStepReadCrashes says "Read {count} crash reports of {app}"
+// in the language the app shows.
+//
+// A step: the agent read an app's crash reports (phone_logs); history keeps
+// only this line, not the reports. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepReadCrashes(count string, app string) string {
+	return In(i18n.Locale()).GwStepReadCrashes(count, app)
+}
+
+// GwStepReadCrashes says "Read {count} crash reports of {app}"
+// in the language of msgs.
+//
+// A step: the agent read an app's crash reports (phone_logs); history keeps
+// only this line, not the reports. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepReadCrashes(count string, app string) string {
+	return Catalog.Format(msgs.locale, "gwStepReadCrashes", map[string]any{"count": count, "app": app})
+}
+
+// GwStepReadLogLines says "Read {count} log lines of {app}"
+// in the language the app shows.
+//
+// A step: the agent read an app's own log lines (phone_logs); history keeps
+// only this line, not the lines. Shown only in other languages; in English
+// the gateway's own words show.
+func GwStepReadLogLines(count string, app string) string {
+	return In(i18n.Locale()).GwStepReadLogLines(count, app)
+}
+
+// GwStepReadLogLines says "Read {count} log lines of {app}"
+// in the language of msgs.
+//
+// A step: the agent read an app's own log lines (phone_logs); history keeps
+// only this line, not the lines. Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwStepReadLogLines(count string, app string) string {
+	return Catalog.Format(msgs.locale, "gwStepReadLogLines", map[string]any{"count": count, "app": app})
 }
 
 // GwStepReceivedFile says "Received “{path}” ({size}) from the agent"
@@ -10427,6 +12135,130 @@ func GwStepReceivedFile(path string, size string) string {
 // other languages; in English the gateway's own words show.
 func (msgs Messages) GwStepReceivedFile(path string, size string) string {
 	return Catalog.Format(msgs.locale, "gwStepReceivedFile", map[string]any{"path": path, "size": size})
+}
+
+// GwStepSwitchBack says "Put {setting} back to {value}"
+// in the language the app shows.
+//
+// A step at the end of a task (or when the agent asked): Pinky put a
+// setting it had changed back to what it was. Shown only in other
+// languages; in English the gateway's own words show.
+func GwStepSwitchBack(setting string, value string) string {
+	return In(i18n.Locale()).GwStepSwitchBack(setting, value)
+}
+
+// GwStepSwitchBack says "Put {setting} back to {value}"
+// in the language of msgs.
+//
+// A step at the end of a task (or when the agent asked): Pinky put a
+// setting it had changed back to what it was. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwStepSwitchBack(setting string, value string) string {
+	return Catalog.Format(msgs.locale, "gwStepSwitchBack", map[string]any{"setting": setting, "value": value})
+}
+
+// GwStepSwitchLeft says "Left {setting} as the person set it"
+// in the language the app shows.
+//
+// A step at the end of a task: Pinky did not put this setting back, because
+// the person changed it meanwhile. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepSwitchLeft(setting string) string { return In(i18n.Locale()).GwStepSwitchLeft(setting) }
+
+// GwStepSwitchLeft says "Left {setting} as the person set it"
+// in the language of msgs.
+//
+// A step at the end of a task: Pinky did not put this setting back, because
+// the person changed it meanwhile. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepSwitchLeft(setting string) string {
+	return Catalog.Format(msgs.locale, "gwStepSwitchLeft", map[string]any{"setting": setting})
+}
+
+// GwStepSwitchNotBack says "Could not put {setting} back to {value}"
+// in the language the app shows.
+//
+// A step at the end of a task: Pinky could not put a setting it had changed
+// back to what it was (the phone went offline, or cannot). Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepSwitchNotBack(setting string, value string) string {
+	return In(i18n.Locale()).GwStepSwitchNotBack(setting, value)
+}
+
+// GwStepSwitchNotBack says "Could not put {setting} back to {value}"
+// in the language of msgs.
+//
+// A step at the end of a task: Pinky could not put a setting it had changed
+// back to what it was (the phone went offline, or cannot). Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepSwitchNotBack(setting string, value string) string {
+	return Catalog.Format(msgs.locale, "gwStepSwitchNotBack", map[string]any{"setting": setting, "value": value})
+}
+
+// GwStepSavedReport says "Saved the task's report for the agent"
+// in the language the app shows.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) saved in the phone's folder on
+// the computer, for a bug report or a pull request (phone_release export).
+// The screen recording is not in it (gwStepSavedReportVideo is the step
+// where it is). Shown only in other languages; in English the gateway's own
+// words show.
+func GwStepSavedReport() string { return In(i18n.Locale()).GwStepSavedReport() }
+
+// GwStepSavedReport says "Saved the task's report for the agent"
+// in the language of msgs.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) saved in the phone's folder on
+// the computer, for a bug report or a pull request (phone_release export).
+// The screen recording is not in it (gwStepSavedReportVideo is the step
+// where it is). Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStepSavedReport() string {
+	return Catalog.Format(msgs.locale, "gwStepSavedReport", nil)
+}
+
+// GwStepSavedReportVideo says "Saved the task's report and screen recording for the agent"
+// in the language the app shows.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) and its screen recording (an MP4
+// file, which the person allowed) saved in the phone's folder on the
+// computer, for a bug report or a pull request (phone_release export).
+// Shown only in other languages; in English the gateway's own words show.
+func GwStepSavedReportVideo() string { return In(i18n.Locale()).GwStepSavedReportVideo() }
+
+// GwStepSavedReportVideo says "Saved the task's report and screen recording for the agent"
+// in the language of msgs.
+//
+// A step: as the task ended, the agent had its report (an HTML page of the
+// steps with screenshots, and a JSON file) and its screen recording (an MP4
+// file, which the person allowed) saved in the phone's folder on the
+// computer, for a bug report or a pull request (phone_release export).
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepSavedReportVideo() string {
+	return Catalog.Format(msgs.locale, "gwStepSavedReportVideo", nil)
+}
+
+// GwStepSavedScreenshot says "Saved a screenshot as “{path}”"
+// in the language the app shows.
+//
+// A step: the agent saved a screenshot of the phone as a file in the
+// phone's folder on the computer, for a bug report or a pull request
+// (phone_observe save). path is the file's name in that folder. Shown only
+// in other languages; in English the gateway's own words show.
+func GwStepSavedScreenshot(path string) string { return In(i18n.Locale()).GwStepSavedScreenshot(path) }
+
+// GwStepSavedScreenshot says "Saved a screenshot as “{path}”"
+// in the language of msgs.
+//
+// A step: the agent saved a screenshot of the phone as a file in the
+// phone's folder on the computer, for a bug report or a pull request
+// (phone_observe save). path is the file's name in that folder. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepSavedScreenshot(path string) string {
+	return Catalog.Format(msgs.locale, "gwStepSavedScreenshot", map[string]any{"path": path})
 }
 
 // GwStepUnlocked says "Unlocked from the computer"
@@ -10559,6 +12391,58 @@ func (msgs Messages) GwStepYourNote(note string) string {
 	return Catalog.Format(msgs.locale, "gwStepYourNote", map[string]any{"note": note})
 }
 
+// GwSwitchAppearance says "the appearance"
+// in the language the app shows.
+//
+// Names a phone setting inside a step: light or dark appearance (dark
+// mode). Shown only in other languages; in English the gateway's own words
+// show.
+func GwSwitchAppearance() string { return In(i18n.Locale()).GwSwitchAppearance() }
+
+// GwSwitchAppearance says "the appearance"
+// in the language of msgs.
+//
+// Names a phone setting inside a step: light or dark appearance (dark
+// mode). Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwSwitchAppearance() string {
+	return Catalog.Format(msgs.locale, "gwSwitchAppearance", nil)
+}
+
+// GwSwitchLocation says "the location"
+// in the language the app shows.
+//
+// Names a phone setting inside a step: the place the phone reports. Shown
+// only in other languages; in English the gateway's own words show.
+func GwSwitchLocation() string { return In(i18n.Locale()).GwSwitchLocation() }
+
+// GwSwitchLocation says "the location"
+// in the language of msgs.
+//
+// Names a phone setting inside a step: the place the phone reports. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwSwitchLocation() string {
+	return Catalog.Format(msgs.locale, "gwSwitchLocation", nil)
+}
+
+// GwSwitchRotation says "the screen's rotation"
+// in the language the app shows.
+//
+// Names a phone setting inside a step, such as “Set the screen's rotation
+// to landscape”. Shown only in other languages; in English the gateway's
+// own words show.
+func GwSwitchRotation() string { return In(i18n.Locale()).GwSwitchRotation() }
+
+// GwSwitchRotation says "the screen's rotation"
+// in the language of msgs.
+//
+// Names a phone setting inside a step, such as “Set the screen's rotation
+// to landscape”. Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwSwitchRotation() string {
+	return Catalog.Format(msgs.locale, "gwSwitchRotation", nil)
+}
+
 // GwUnlockDetail says "{agent} is waiting for the phone to unlock · {task}"
 // in the language the app shows.
 //
@@ -10593,6 +12477,192 @@ func GwUnlockTitle(phone string) string { return In(i18n.Locale()).GwUnlockTitle
 // own words show.
 func (msgs Messages) GwUnlockTitle(phone string) string {
 	return Catalog.Format(msgs.locale, "gwUnlockTitle", map[string]any{"phone": phone})
+}
+
+// GwValueAutomatic says "automatic"
+// in the language the app shows.
+//
+// A value of the phone's appearance: light by day, dark by night. Shown
+// only in other languages; in English the gateway's own words show.
+func GwValueAutomatic() string { return In(i18n.Locale()).GwValueAutomatic() }
+
+// GwValueAutomatic says "automatic"
+// in the language of msgs.
+//
+// A value of the phone's appearance: light by day, dark by night. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwValueAutomatic() string {
+	return Catalog.Format(msgs.locale, "gwValueAutomatic", nil)
+}
+
+// GwValueAutoRotate says "auto-rotate"
+// in the language the app shows.
+//
+// A value of the screen's rotation: it turns with how the phone is held.
+// Shown only in other languages; in English the gateway's own words show.
+func GwValueAutoRotate() string { return In(i18n.Locale()).GwValueAutoRotate() }
+
+// GwValueAutoRotate says "auto-rotate"
+// in the language of msgs.
+//
+// A value of the screen's rotation: it turns with how the phone is held.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwValueAutoRotate() string {
+	return Catalog.Format(msgs.locale, "gwValueAutoRotate", nil)
+}
+
+// GwValueCustom says "custom"
+// in the language the app shows.
+//
+// A value of the phone's appearance on Android: dark between times the
+// person set. Shown only in other languages; in English the gateway's own
+// words show.
+func GwValueCustom() string { return In(i18n.Locale()).GwValueCustom() }
+
+// GwValueCustom says "custom"
+// in the language of msgs.
+//
+// A value of the phone's appearance on Android: dark between times the
+// person set. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwValueCustom() string {
+	return Catalog.Format(msgs.locale, "gwValueCustom", nil)
+}
+
+// GwValueDark says "dark"
+// in the language the app shows.
+//
+// A value of the phone's appearance (dark mode). Shown only in other
+// languages; in English the gateway's own words show.
+func GwValueDark() string { return In(i18n.Locale()).GwValueDark() }
+
+// GwValueDark says "dark"
+// in the language of msgs.
+//
+// A value of the phone's appearance (dark mode). Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwValueDark() string {
+	return Catalog.Format(msgs.locale, "gwValueDark", nil)
+}
+
+// GwValueLandscape says "landscape"
+// in the language the app shows.
+//
+// A value of the screen's rotation: turned to the left, the top on the
+// left. Shown only in other languages; in English the gateway's own words
+// show.
+func GwValueLandscape() string { return In(i18n.Locale()).GwValueLandscape() }
+
+// GwValueLandscape says "landscape"
+// in the language of msgs.
+//
+// A value of the screen's rotation: turned to the left, the top on the
+// left. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwValueLandscape() string {
+	return Catalog.Format(msgs.locale, "gwValueLandscape", nil)
+}
+
+// GwValueLight says "light"
+// in the language the app shows.
+//
+// A value of the phone's appearance. Shown only in other languages; in
+// English the gateway's own words show.
+func GwValueLight() string { return In(i18n.Locale()).GwValueLight() }
+
+// GwValueLight says "light"
+// in the language of msgs.
+//
+// A value of the phone's appearance. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwValueLight() string {
+	return Catalog.Format(msgs.locale, "gwValueLight", nil)
+}
+
+// GwValueNoLocation says "none"
+// in the language the app shows.
+//
+// A value of the phone's location: no simulated place, the phone reports
+// where it is. Shown only in other languages; in English the gateway's own
+// words show.
+func GwValueNoLocation() string { return In(i18n.Locale()).GwValueNoLocation() }
+
+// GwValueNoLocation says "none"
+// in the language of msgs.
+//
+// A value of the phone's location: no simulated place, the phone reports
+// where it is. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwValueNoLocation() string {
+	return Catalog.Format(msgs.locale, "gwValueNoLocation", nil)
+}
+
+// GwValuePlace says "{place}"
+// in the language the app shows.
+//
+// A value of the phone's location: the place it reports, as latitude and
+// longitude. Shown only in other languages; in English the gateway's own
+// words show.
+func GwValuePlace(place string) string { return In(i18n.Locale()).GwValuePlace(place) }
+
+// GwValuePlace says "{place}"
+// in the language of msgs.
+//
+// A value of the phone's location: the place it reports, as latitude and
+// longitude. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwValuePlace(place string) string {
+	return Catalog.Format(msgs.locale, "gwValuePlace", map[string]any{"place": place})
+}
+
+// GwValuePortrait says "portrait"
+// in the language the app shows.
+//
+// A value of the screen's rotation: upright. Shown only in other languages;
+// in English the gateway's own words show.
+func GwValuePortrait() string { return In(i18n.Locale()).GwValuePortrait() }
+
+// GwValuePortrait says "portrait"
+// in the language of msgs.
+//
+// A value of the screen's rotation: upright. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwValuePortrait() string {
+	return Catalog.Format(msgs.locale, "gwValuePortrait", nil)
+}
+
+// GwValueReverseLandscape says "reverse landscape"
+// in the language the app shows.
+//
+// A value of the screen's rotation: turned to the right, the top on the
+// right. Shown only in other languages; in English the gateway's own words
+// show.
+func GwValueReverseLandscape() string { return In(i18n.Locale()).GwValueReverseLandscape() }
+
+// GwValueReverseLandscape says "reverse landscape"
+// in the language of msgs.
+//
+// A value of the screen's rotation: turned to the right, the top on the
+// right. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwValueReverseLandscape() string {
+	return Catalog.Format(msgs.locale, "gwValueReverseLandscape", nil)
+}
+
+// GwValueUpsideDown says "upside down"
+// in the language the app shows.
+//
+// A value of the screen's rotation. Shown only in other languages; in
+// English the gateway's own words show.
+func GwValueUpsideDown() string { return In(i18n.Locale()).GwValueUpsideDown() }
+
+// GwValueUpsideDown says "upside down"
+// in the language of msgs.
+//
+// A value of the screen's rotation. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwValueUpsideDown() string {
+	return Catalog.Format(msgs.locale, "gwValueUpsideDown", nil)
 }
 
 // ListMany says "{rest} and {last}"
@@ -10933,6 +13003,24 @@ func MirrorCallPaste() string { return In(i18n.Locale()).MirrorCallPaste() }
 // on the mirror cannot paste the Mac's clipboard on the phone.
 func (msgs Messages) MirrorCallPaste() string {
 	return Catalog.Format(msgs.locale, "mirrorCallPaste", nil)
+}
+
+// MirrorCallPinch says "send the pinch"
+// in the language the app shows.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" when a
+// pinch on the mirror (a touchpad's pinch or an Option-drag) cannot reach
+// the phone.
+func MirrorCallPinch() string { return In(i18n.Locale()).MirrorCallPinch() }
+
+// MirrorCallPinch says "send the pinch"
+// in the language of msgs.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" when a
+// pinch on the mirror (a touchpad's pinch or an Option-drag) cannot reach
+// the phone.
+func (msgs Messages) MirrorCallPinch() string {
+	return Catalog.Format(msgs.locale, "mirrorCallPinch", nil)
 }
 
 // MirrorCallTouch says "send the touch"
@@ -13333,6 +15421,38 @@ func (msgs Messages) PhoneKeysAgentScreen(agent string) string {
 	return Catalog.Format(msgs.locale, "phoneKeysAgentScreen", map[string]any{"agent": agent})
 }
 
+// PhoneKindEmulator says "Emulator"
+// in the language the app shows.
+//
+// After Android or the Android version in a phone's header and Settings ›
+// Phones, for an Android emulator, as USB is for a phone on a cable.
+func PhoneKindEmulator() string { return In(i18n.Locale()).PhoneKindEmulator() }
+
+// PhoneKindEmulator says "Emulator"
+// in the language of msgs.
+//
+// After Android or the Android version in a phone's header and Settings ›
+// Phones, for an Android emulator, as USB is for a phone on a cable.
+func (msgs Messages) PhoneKindEmulator() string {
+	return Catalog.Format(msgs.locale, "phoneKindEmulator", nil)
+}
+
+// PhoneKindSimulator says "Simulator"
+// in the language the app shows.
+//
+// After iPhone or the iOS version in a phone's header and Settings ›
+// Phones, for an iOS Simulator, as USB is for a phone on a cable.
+func PhoneKindSimulator() string { return In(i18n.Locale()).PhoneKindSimulator() }
+
+// PhoneKindSimulator says "Simulator"
+// in the language of msgs.
+//
+// After iPhone or the iOS version in a phone's header and Settings ›
+// Phones, for an iOS Simulator, as USB is for a phone on a cable.
+func (msgs Messages) PhoneKindSimulator() string {
+	return Catalog.Format(msgs.locale, "phoneKindSimulator", nil)
+}
+
 // PhoneLockedWiFiDetail says "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn'…"
 // in the language the app shows.
 //
@@ -13845,6 +15965,22 @@ func PhoneTakeScreenshot() string { return In(i18n.Locale()).PhoneTakeScreenshot
 // the Desktop.
 func (msgs Messages) PhoneTakeScreenshot() string {
 	return Catalog.Format(msgs.locale, "phoneTakeScreenshot", nil)
+}
+
+// PhoneVirtualNotRunning says "It isn't running."
+// in the language the app shows.
+//
+// Under phoneOffline for an iOS Simulator or Android emulator that is shut
+// down, above the Start button.
+func PhoneVirtualNotRunning() string { return In(i18n.Locale()).PhoneVirtualNotRunning() }
+
+// PhoneVirtualNotRunning says "It isn't running."
+// in the language of msgs.
+//
+// Under phoneOffline for an iOS Simulator or Android emulator that is shut
+// down, above the Start button.
+func (msgs Messages) PhoneVirtualNotRunning() string {
+	return Catalog.Format(msgs.locale, "phoneVirtualNotRunning", nil)
 }
 
 // PhoneWorkInBackground says "Work in the background"
@@ -15237,6 +17373,22 @@ func (msgs Messages) RemovePhoneTrust() string {
 	return Catalog.Format(msgs.locale, "removePhoneTrust", nil)
 }
 
+// RemovePhoneVirtual says "Pinky stops using it, even while it runs. To add it back, start or use it in Add phone › Virtual phone."
+// in the language the app shows.
+//
+// A note in the Remove phone dialog for an iOS Simulator or Android
+// emulator.
+func RemovePhoneVirtual() string { return In(i18n.Locale()).RemovePhoneVirtual() }
+
+// RemovePhoneVirtual says "Pinky stops using it, even while it runs. To add it back, start or use it in Add phone › Virtual phone."
+// in the language of msgs.
+//
+// A note in the Remove phone dialog for an iOS Simulator or Android
+// emulator.
+func (msgs Messages) RemovePhoneVirtual() string {
+	return Catalog.Format(msgs.locale, "removePhoneVirtual", nil)
+}
+
 // RemovePhoneWiFi says "Pinky disconnects from it and won't connect to it again by itself. To add it back, pair it again in Add phone, or plu…"
 // in the language the app shows.
 //
@@ -15633,6 +17785,22 @@ func (msgs Messages) RuleAgentScope() string {
 	return Catalog.Format(msgs.locale, "ruleAgentScope", nil)
 }
 
+// RuleAppLogs says "App logs"
+// in the language the app shows.
+//
+// The name of the rule that asks before an agent first reads an app's logs
+// or crash reports in a task (apps that are not development builds).
+func RuleAppLogs() string { return In(i18n.Locale()).RuleAppLogs() }
+
+// RuleAppLogs says "App logs"
+// in the language of msgs.
+//
+// The name of the rule that asks before an agent first reads an app's logs
+// or crash reports in a task (apps that are not development builds).
+func (msgs Messages) RuleAppLogs() string {
+	return Catalog.Format(msgs.locale, "ruleAppLogs", nil)
+}
+
 // RuleBlockedByYou says "Blocked by you"
 // in the language the app shows.
 //
@@ -15721,6 +17889,88 @@ func (msgs Messages) RuleFiles() string {
 	return Catalog.Format(msgs.locale, "ruleFiles", nil)
 }
 
+// RuleRecordings says "Recordings"
+// in the language the app shows.
+//
+// The name of the rule that asks before an agent gets a task's screen
+// recording with its report. It asks every time: no preset or Always allow
+// skips it.
+func RuleRecordings() string { return In(i18n.Locale()).RuleRecordings() }
+
+// RuleRecordings says "Recordings"
+// in the language of msgs.
+//
+// The name of the rule that asks before an agent gets a task's screen
+// recording with its report. It asks every time: no preset or Always allow
+// skips it.
+func (msgs Messages) RuleRecordings() string {
+	return Catalog.Format(msgs.locale, "ruleRecordings", nil)
+}
+
+// RuleInstallFromComputer says "Installing from the computer"
+// in the language the app shows.
+//
+// The name of the built-in rule that always asks before an agent installs
+// or updates an app from the computer.
+func RuleInstallFromComputer() string { return In(i18n.Locale()).RuleInstallFromComputer() }
+
+// RuleInstallFromComputer says "Installing from the computer"
+// in the language of msgs.
+//
+// The name of the built-in rule that always asks before an agent installs
+// or updates an app from the computer.
+func (msgs Messages) RuleInstallFromComputer() string {
+	return Catalog.Format(msgs.locale, "ruleInstallFromComputer", nil)
+}
+
+// RuleUninstallApps says "Uninstalling apps"
+// in the language the app shows.
+//
+// The name of the built-in rule that always asks before an agent uninstalls
+// an app.
+func RuleUninstallApps() string { return In(i18n.Locale()).RuleUninstallApps() }
+
+// RuleUninstallApps says "Uninstalling apps"
+// in the language of msgs.
+//
+// The name of the built-in rule that always asks before an agent uninstalls
+// an app.
+func (msgs Messages) RuleUninstallApps() string {
+	return Catalog.Format(msgs.locale, "ruleUninstallApps", nil)
+}
+
+// RulePinkyApps says "Pinky's own apps"
+// in the language the app shows.
+//
+// The name of the built-in rule that keeps agents from installing over,
+// uninstalling or stopping Pinky's own apps on the phone.
+func RulePinkyApps() string { return In(i18n.Locale()).RulePinkyApps() }
+
+// RulePinkyApps says "Pinky's own apps"
+// in the language of msgs.
+//
+// The name of the built-in rule that keeps agents from installing over,
+// uninstalling or stopping Pinky's own apps on the phone.
+func (msgs Messages) RulePinkyApps() string {
+	return Catalog.Format(msgs.locale, "rulePinkyApps", nil)
+}
+
+// RuleSystemApps says "System apps"
+// in the language the app shows.
+//
+// The name of the built-in rule that keeps agents from uninstalling or
+// stopping the phone's system apps.
+func RuleSystemApps() string { return In(i18n.Locale()).RuleSystemApps() }
+
+// RuleSystemApps says "System apps"
+// in the language of msgs.
+//
+// The name of the built-in rule that keeps agents from uninstalling or
+// stopping the phone's system apps.
+func (msgs Messages) RuleSystemApps() string {
+	return Catalog.Format(msgs.locale, "ruleSystemApps", nil)
+}
+
 // RuleFinanceApps says "Finance apps"
 // in the language the app shows.
 //
@@ -15779,6 +18029,22 @@ func (msgs Messages) RulePasswordManagers() string {
 	return Catalog.Format(msgs.locale, "rulePasswordManagers", nil)
 }
 
+// RuleUnsafeLinks says "Unsafe links"
+// in the language the app shows.
+//
+// The name of the built-in rule that refuses links Pinky never opens, such
+// as file: and javascript: links or links that run a shortcut.
+func RuleUnsafeLinks() string { return In(i18n.Locale()).RuleUnsafeLinks() }
+
+// RuleUnsafeLinks says "Unsafe links"
+// in the language of msgs.
+//
+// The name of the built-in rule that refuses links Pinky never opens, such
+// as file: and javascript: links or links that run a shortcut.
+func (msgs Messages) RuleUnsafeLinks() string {
+	return Catalog.Format(msgs.locale, "ruleUnsafeLinks", nil)
+}
+
 // RulePayments says "Payments"
 // in the language the app shows.
 //
@@ -15821,6 +18087,24 @@ func RuleSettingsChanges() string { return In(i18n.Locale()).RuleSettingsChanges
 // The name of the policy rule that asks before changing a setting.
 func (msgs Messages) RuleSettingsChanges() string {
 	return Catalog.Format(msgs.locale, "ruleSettingsChanges", nil)
+}
+
+// RuleSettingsPhone says "Phone settings"
+// in the language the app shows.
+//
+// The name of the built-in rule that asks before an agent changes a phone's
+// settings for testing: the screen's rotation, light or dark appearance, a
+// simulated location, or an app's language.
+func RuleSettingsPhone() string { return In(i18n.Locale()).RuleSettingsPhone() }
+
+// RuleSettingsPhone says "Phone settings"
+// in the language of msgs.
+//
+// The name of the built-in rule that asks before an agent changes a phone's
+// settings for testing: the screen's rotation, light or dark appearance, a
+// simulated location, or an app's language.
+func (msgs Messages) RuleSettingsPhone() string {
+	return Catalog.Format(msgs.locale, "ruleSettingsPhone", nil)
 }
 
 // RuleTaskApps says "Task apps"

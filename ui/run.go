@@ -219,6 +219,7 @@ type app struct {
 	set      settingsState
 	add      addState
 	droid    droidState      // Add phone's Android steps
+	virt     virtState       // Add phone's virtual phones (addvirtual.go)
 	chk      checkupState    // the phones' checkups
 	more     map[string]bool // the More phone controls popover, per device
 	rm       removeState     // the Remove this phone dialog (removephone.go)

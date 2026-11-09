@@ -375,7 +375,7 @@ func TestAlwaysAllowNotOffered(t *testing.T) {
 				t.Errorf("need %+v", n)
 			}
 		})
-		res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "https://example.com/offer"})
+		res := s.Act(ctx, Call{}, Action{Tool: "launch", App: "https://dinely.app/offer"})
 		mustStatus(t, res, StatusDenied)
 	})
 }

@@ -1,0 +1,78 @@
+# Device switches: rotation, appearance, location, app language
+
+Branch `claude/quirky-newton-92ce6f` (2026-11-09). Agents that test an app want the switches a developer flips while testing: turn the screen, switch between light and dark, pretend to be somewhere else, and open the app in another language and region. This note says what Pinky offers, how each phone does it, and how Pinky keeps these changes safe, since every one of them changes a setting of the person's phone.
+
+## The API
+
+**`phone_device`** reads and sets the phone's switches:
+
+- `rotation`: `portrait`, `landscape` (the phone turned a quarter counterclockwise, its top to the left, the usual landscape), `upside_down`, `reverse_landscape` (turned clockwise), or `auto` (Android only: turn with how the phone is held).
+- `appearance`: `light` or `dark`.
+- `location`: `{latitude, longitude}`, a simulated location every app on the phone sees.
+- `reset`: what to put back before the task ends, as it was before the task: `rotation`, `appearance`, `location`, `language` (every app opened in another language), or `all`. Putting back never asks and works in read-only mode: it only undoes what the task did.
+- Without any of these it only reads: which switches the phone has, and their values. Read-only agents may do that.
+
+A change returns the screen afterwards, like an action, and a line per switch saying what it is now and what it was (`rotation: landscape (was portrait)`, `location: none`, `appearance: unsupported · …`). A switch the phone does not have returns `unsupported` with a sentence saying why and what would work (an emulator, the WebDriverAgent helper). Several switches in one call are set in the order rotation, appearance, location; the first that fails stops the call, and the result says which were set.
+
+**`phone_launch`** takes two more options:
+
+- `language`: a BCP 47 language tag, such as `ja`, `zh-Hans`, `pt-BR` or `ar`; a region in the tag sets the region too.
+- `region`: a two-letter region code, such as `JP` or `DE`, for the region's formats (dates, numbers, currency) whatever the language. Alone, the app keeps the phone's language with this region.
+
+The app opens in that language and region; the rest of the phone does not change. A running app restarts, since apps read their language when they start.
+
+Driver contract (`internal/driver/switches.go`): `driver.Switcher` (`Switch` reads one switch, `SetSwitch` sets it; values are strings in the forms above, `""` for a location not simulated) and `driver.LocaleLauncher` (`LaunchLocale` opens an app with a `driver.Locale`, and returns how to put the app back when the language stays set, as on Android, or nil). Both are optional: a driver without them returns `unsupported` for everything. Each switch the driver lacks returns `driver.ErrUnsupported` with its sentence.
+
+## What works where
+
+| | Rotation | Appearance | Location | Language and region at launch |
+|---|---|---|---|---|
+| Android emulator | `cmd window user-rotation lock N` | `cmd uimode night yes/no` | emulator console `geo fix` (`adb emu geo fix lon lat`) | Android 13+: `cmd locale set-app-locales` |
+| Android phone | same | same | unsupported | Android 13+: same |
+| iOS Simulator (WebDriverAgent) | `POST /orientation` | `POST /wda/device/appearance` | `/wda/simulatedLocation` | launch arguments `-AppleLanguages`, `-AppleLocale` |
+| iPhone with the WebDriverAgent helper (iOS 17.4 to 26) | same as the Simulator | same | same | same |
+| iPhone through CoreDevice or the accessibility backend (no helper) | unsupported | unsupported | unsupported | CoreDevice's launch with arguments, `terminateExisting` |
+| Demo phones | in memory | in memory | in memory | in memory |
+
+### Android
+
+- **Rotation**: `cmd window user-rotation` prints `free` (auto-rotate) or `lock N`; `lock 1` turns the screen to `ROTATION_90`, landscape with the phone's top to the left. The phone's own screen turns only when the app in front allows it: the launcher stays upright, Settings turns. Put back with what was read (`free`, or `lock N`). Older Androids without the command (before 12) fall back to `settings put system accelerometer_rotation` and `user_rotation`. On a background display (Android 13+ by default) the task moves to the phone's own screen first, as it does for an app that refuses the display: rotating the phone's screen does not turn the background display, and the person's screen would turn under them.
+- **Appearance**: `cmd uimode night` prints `Night mode: no` (or `yes`, `auto`, `custom`); set `yes` or `no`, put back what was read. Apps get the change at once.
+- **Location**: emulators only. The emulator console's `geo fix <longitude> <latitude>` (longitude first; Pinky talks to the console on the emulator's port with the token in `~/.emulator_console_auth_token`, as `adb emu` does) sets the emulator's GPS. There is nothing to read the console's fix back, and `dumpsys location`'s last location only moves while some app listens for locations (with none, it kept a position from hours before). So the driver remembers the place it sent last and reads that back; before its first one, the location before the task is the last location in `dumpsys location`, and putting it back sends that position again. A change made in the emulator's extended controls meanwhile goes unseen, so Pinky puts its own value back over it. An emulator cannot stop a simulated location: when it never had a location before, the simulated one stays, and history says so ("Could not put the location back to none", status `unsupported`). Phones would need a mock location app chosen in Developer options (`cmd location providers add-test-provider` refuses Pinky without one, and Google's fused location ignores test providers), which Pinky does not set up: `unsupported`.
+- **Language at launch**: per-app languages (Android 13+). `cmd locale get-app-locales <pkg>` reads the app's (`[]` for the phone's), `cmd locale set-app-locales <pkg> --locales ja-JP` sets it, and the running app gets the change at once (Settings came back in Japanese without a restart); `--locales ""` puts it back. The language stays until Pinky puts it back when the task ends, as the phone's Settings would show it under the app's language. The phone's own language and region come from `persist.sys.locale` for a region alone. Below Android 13: `unsupported`.
+
+### iOS
+
+- **WebDriverAgent (Simulators and iPhones with the helper)**. These routes need no session:
+  - Rotation: `GET /orientation` (`PORTRAIT`, `LANDSCAPE`) and `GET /wda/deviceOrientation` (`UIDeviceOrientationLandscapeLeft` and the rest) read; `POST /orientation` with `PORTRAIT`, `LANDSCAPE` (LandscapeLeft, the top to the left), `UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT` or `UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN` sets the device's orientation. An app that only runs upright (Settings on the iPhone) answers "Unable To Rotate Device", but the device's orientation has changed all the same, so Pinky reports that the app stayed upright and still puts the orientation back at the end. Safari turned (its window 874x402).
+  - Appearance: `GET /wda/device/info` (`userInterfaceStyle`), `POST /wda/device/appearance {"name":"dark"}`.
+  - Location: `GET /wda/simulatedLocation` (nulls when none), `POST` with `latitude` and `longitude`, `DELETE` to stop.
+  - Language at launch: `POST /session/<id>/wda/apps/launch` with `arguments` (`-AppleLanguages (ja)`, `-AppleLocale ja_JP`) only passes them when the app is not running; a running app is only brought to the front. So Pinky terminates it first (`/wda/apps/terminate`). Calendar on the Simulator came up in Japanese, then in Chinese. The arguments are not saved anywhere: the app keeps the language until it quits. So putting the language back at the end of the task (or on `reset: language`) quits the app if it still runs (`/wda/apps/state` above 1, then `/wda/apps/terminate`), and its next launch is in the phone's language; checked on the Simulator, where Settings had stayed in Japanese after a task until then. Through CoreDevice, which Pinky has no way to quit an app with yet, the app stays in that language until it quits.
+- **CoreDevice (iOS 27, and the accessibility backend on 17.4 to 26)**: the app service's launch takes `arguments` and `terminateExisting`, so language and region work the same way. CoreDevice has no rotation or appearance; a simulated location exists through the developer disk image's DVT `LocationSimulation` service (go-ios `instruments.NewLocationSimulationService`), which lasts while its connection stays open. It is not built yet: it needs a connection held for the task, and a real-device check.
+- simctl (`simctl ui appearance`, `simctl location`, `simctl launch` with arguments) does the same on a Simulator, but needs the Simulator's UDID and covers no rotation; WebDriverAgent covers all four, so Pinky uses it.
+
+## Safety
+
+These change the phone's settings, so:
+
+- **A rule of their own, "Phone settings".** The presets' "Settings changes" rule asks about taps in the Settings app (toggles, choices), judged by the screen; these switches change settings without the Settings app and are judged by the tool, so they get a built-in rule with its own approval and history step. It is not in the rules file: the person cannot always allow it, only for a task.
+
+- **Read-only never changes them.** A read-only or watch-only agent gets `scope_denied`, a read-only task (`phone_connect` with `read_only`) and a phone in read-only mode get `blocked_by_policy` (rule `Read-only`), for `phone_device` changes and for `phone_launch` with a language or region. Reading the switches is allowed.
+- **Real phones ask.** On a phone that is not an emulator or a Simulator (`driver.Info.Virtual`), the first change of a task asks the person under the rule **Phone settings** ("Set the screen's rotation to landscape?", with "Claude Code · Pinky puts it back when the task ends", or the agent's intent, under it), with Allow once and Allow for this task; allowing for the task covers the rest of its switches and language launches. There is no Always allow: the next task asks again. Virtual phones ask only when the person chose to approve more than payments (Settings › Safety: "Ask before payments, messages and deletions" or "Ask before every action"); with the default, "Ask before payments only", they change at once, as a developer expects of a test device. `phone_launch` with a language or region on a real phone asks the same way, besides what the rules say about the launch itself.
+- **Everything is put back.** The gateway keeps, per task, the value each switch had before its first change and what Pinky set it to. When the task ends, however it ends (released, stopped by the person, the agent's session gone, the phone gone for too long, the agent starting another task on the phone), Pinky puts each change back, the last made first, as steps after the task's "Finished" step. A switch the person changed meanwhile (it no longer has the value Pinky set) is left as the person set it. An agent can put one back earlier with `reset`. A phone that is offline when the task ends cannot be put back; history says what stayed changed. The changes are kept in memory only: if Pinky itself quits or crashes during a task, they stay as they were.
+- **History in plain words.** Every change and every putting back is a step: "Set the screen's rotation to landscape", "Set the appearance to dark", "Set the location to 35.6812, 139.7671", "Opened Settings in ja-JP", "Opened Settings with region JP", "Put the screen's rotation back to auto-rotate", "Put the appearance back to light", "Stopped the simulated location", "Put the language of Settings back", "Left the appearance as the person set it", "Could not put the location back to none". Blocked and failed ones too ("Blocked by “Read-only”: set the appearance to dark"). The client translates them (`ui/gwtext.go`, messages `gwDidSetSwitch`, `gwStepSwitchBack` and the like).
+- A language launch restarts a running app (iOS ignores launch arguments otherwise), and putting the language back on iOS quits it; both are in the tool's description, so an agent does not lose the person's work in an app by surprise.
+
+## Tested
+
+- Unit tests: the gateway with the demo phone (asking on real and virtual phones by preset, Allow for this task, read-only and scopes, putting back in order on release, Stop and when the agent leaves, a switch the person changed, a phone offline at the end, `reset`, language launches), the Android driver against a fake adb and a fake emulator console, the WebDriverAgent driver against a fake WDA, the MCP tool and its result lines, the client's translations.
+- iOS 26.5 Simulator through WebDriverAgent (2026-11-09): rotation to landscape, reverse landscape and upside down and back to portrait (Settings stays upright, Safari turns); dark and back to light; Tokyo and back to none; `auto` rotation returns `unsupported` with its sentence; Settings opened in ja-JP and zh-Hans; after the task Settings no longer runs (state 1) and the appearance is light again; history as above.
+- Android emulator, API 36 (2026-11-09): landscape and reverse landscape, back to auto-rotate; dark and back to light; Settings in Japanese through `cmd locale`, its app locales `[]` again after the task; Tokyo, then Paris, `reset` back to the emulator's earlier position; Singapore set and put back at release; history in the order Finished, location, appearance, rotation.
+- Not yet on real phones: an iPhone with the WebDriverAgent helper (rotation, appearance, location, a language launch and its quit), Android phones (rotation, night mode, `cmd locale` on 13+, and the background display), and the "Phone settings" approval on them.
+
+## Not done
+
+- Location on Android phones (mock location app) and on iPhones without the helper (DVT location simulation).
+- Rotation on an Android background display (`cmd window user-rotation -d <display>`), which would leave the person's screen alone.
+- Restoring a switch on a phone that comes back after it was offline when the task ended, or after Pinky quit during the task (the change log would need to be on disk).
+- Tablets whose natural orientation is landscape: `portrait` and `landscape` name the rotation from the natural one, so they are turned a quarter from what the names say there.

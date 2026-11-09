@@ -55,6 +55,7 @@ type fakeADB struct {
 	// left the network does.
 	unreachable map[string]bool
 	probes      []string // addresses the network code probed
+	transports  []string // the serials of the devices requests went to
 }
 
 func newFakeADB(t *testing.T) (*fakeADB, *Provider) {
@@ -115,6 +116,7 @@ func (f *fakeADB) handle(c net.Conn) {
 	fail := func(msg string) { fmt.Fprintf(c, "FAIL%04x%s", len(msg), msg) }
 	if serial, ok := strings.CutPrefix(req, "host:transport:"); ok {
 		f.mu.Lock()
+		f.transports = append(f.transports, serial)
 		out, has := f.props[serial]
 		run := f.run
 		f.mu.Unlock()
@@ -187,6 +189,11 @@ func (f *fakeADB) handle(c net.Conn) {
 		}
 		if f.unreachable[addr] {
 			reply("failed to connect to '" + addr + "': Operation timed out")
+			return
+		}
+		if guid, ok := strings.CutSuffix(addr, connectSuffix); ok && serviceAddr(adb.ParseMDNSServices(strings.Join(f.services, "\n")), guid) == "" {
+			// As the real server: a name is looked up in its discovery.
+			reply("failed to resolve host: '" + addr + "': nodename nor servname provided, or not known")
 			return
 		}
 		if f.connectOK != nil && !f.connectOK[addr] {
@@ -298,12 +305,16 @@ func TestQRPairing(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.ID != "192.168.1.42:41000" || info.Connection != "wifi" || info.State != driver.StateOnline {
+	// The server lists the phone, so it is connected by its service name,
+	// which is the serial the server's own auto-connect gives it. (This
+	// phone's shell reads no properties, so the serial is its id.)
+	const named = "adb-R5CN20ABC-x1y2z3._adb-tls-connect._tcp"
+	if info.ID != named || info.Connection != "wifi" || info.State != driver.StateOnline {
 		t.Errorf("Wait = %+v", info)
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if len(f.connects) != 1 || f.connects[0] != "192.168.1.42:41000" {
+	if len(f.connects) != 1 || f.connects[0] != named {
 		t.Errorf("connects = %q", f.connects)
 	}
 }

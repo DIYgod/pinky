@@ -278,7 +278,7 @@ func (g *Gateway) readListLocked(ctx context.Context, l *lease, req ReadListRequ
 			return view, withScan(g.actionError(l, err), view)
 		}
 		view.Swipes++
-		settled := g.settle(scanCtx, l.dev)
+		settled := g.settle(scanCtx, l.dev, g.opt.SettleMax)
 		if res := g.gate(l, "", true); res != nil {
 			view.Stop = readListStop(res)
 			return view, withScan(res, view)

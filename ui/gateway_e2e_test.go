@@ -97,6 +97,22 @@ func (ga *gwApp) need(match func(gateway.NeedView) bool) (gateway.NeedView, bool
 	return gateway.NeedView{}, false
 }
 
+// waitingStep reports whether the task has a step that waits for an
+// approval.
+func (ga *gwApp) waitingStep(taskID string) bool {
+	for _, tk := range ga.tasks {
+		if tk.ID != taskID {
+			continue
+		}
+		for _, s := range tk.Steps {
+			if s.Status == string(gateway.StatusPending) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (ga *gwApp) device(id string) gateway.DeviceView {
 	for _, d := range ga.devices {
 		if d.Info.ID == id {
@@ -159,9 +175,14 @@ func TestGatewayLunch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The payment asks, with the screen.
+	// The payment asks, with the screen. The gateway opens the approval a
+	// moment before it adds the task's "Waiting for you" step (it keeps the
+	// screenshot in between), so wait for both.
 	var pay gateway.NeedView
-	ga.waitFor(t, "the payment approval", func() (ok bool) { pay, ok = ga.need(isPayment); return })
+	ga.waitFor(t, "the payment approval and its step", func() (ok bool) {
+		pay, ok = ga.need(isPayment)
+		return ok && ga.waitingStep(pay.TaskID)
+	})
 	if pay.Screenshot == nil || pay.Target.Empty() || !strings.Contains(pay.Title, "$12.80") {
 		t.Fatalf("payment approval = %+v", pay)
 	}
@@ -742,7 +763,7 @@ func TestGatewayRound3(t *testing.T) {
 		t.Fatal(err)
 	}
 	ga.waitFor(t, "the phones", func() bool { return ga.device(pixel).Status == gateway.DeviceIdle })
-	if f := ga.device(pixel).Features; f != (gateway.Features{Unlock: true, Background: true, Files: true}) {
+	if f := ga.device(pixel).Features; f != (gateway.Features{Unlock: true, Background: true, Files: true, Pinch: true}) {
 		t.Errorf("the demo Pixel has features %+v", f)
 	}
 	ga.selectPhone(pixel)

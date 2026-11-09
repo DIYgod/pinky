@@ -10,6 +10,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -97,7 +98,7 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 
 // Input is one recorded input.
 type Input struct {
-	Kind string // tap, long_press, swipe, type, key, launch, touch
+	Kind string // tap, long_press, swipe, pinch, type, key, launch, link, touch, touch2
 	P    screen.Point
 	To   screen.Point
 	Text string
@@ -129,6 +130,15 @@ type Device struct {
 	files map[string]file
 	// overlay is shown over every unlocked screen (SetOverlay).
 	overlay []screen.Element
+	// added holds the apps installed from files (apps.go) and removed the
+	// built-in apps uninstalled, by id.
+	added   map[string]added
+	removed map[string]bool
+	// switches, noSwitch and appLocales are phone_device's switches
+	// and the apps' languages (switches.go).
+	switches   map[string]string
+	noSwitch   map[string]string
+	appLocales map[string]string
 }
 
 // NewDevice returns a demo phone. Android phones use the Pixel launcher,
@@ -384,6 +394,17 @@ func (d *Device) Swipe(ctx context.Context, from, to screen.Point, _ time.Durati
 	return nil
 }
 
+// Pinch implements driver.Pincher. The demo's screens do not zoom; it
+// records where the fingers touch down.
+func (d *Device) Pinch(ctx context.Context, g driver.Pinch) error {
+	if err := d.check(ctx); err != nil {
+		return err
+	}
+	a, b := g.At(0)
+	d.record(Input{Kind: "pinch", P: a, To: b})
+	return nil
+}
+
 // Type implements driver.Device: it types into the focused field.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	if err := d.check(ctx); err != nil {
@@ -441,7 +462,7 @@ func (d *Device) Launch(ctx context.Context, app string) error {
 	var scr string
 	for _, a := range d.apps() {
 		if a.ID == app || strings.EqualFold(a.Name, app) {
-			scr = appScreens[a.ID]
+			scr = screenOf(a.ID)
 		}
 	}
 	if scr == "" {
@@ -454,6 +475,57 @@ func (d *Device) Launch(ctx context.Context, app string) error {
 	}
 	d.mu.Unlock()
 	d.record(Input{Kind: "launch", Text: app})
+	return nil
+}
+
+// LinkApp implements driver.LinkOpener: Dinely opens its own links,
+// dinely://… and its web pages on dinely.app, and Chatter chatter://…; no
+// app opens any other link.
+func (d *Device) LinkApp(ctx context.Context, link string) (driver.App, error) {
+	if err := d.check(ctx); err != nil {
+		return driver.App{}, err
+	}
+	u, err := url.Parse(strings.TrimSpace(link))
+	if err != nil {
+		return driver.App{}, fmt.Errorf("link %q: %v: %w", link, err, driver.ErrNotFound)
+	}
+	host := strings.ToLower(u.Hostname())
+	var id string
+	switch strings.ToLower(u.Scheme) {
+	case "dinely":
+		id = Dinely
+	case "chatter":
+		id = Chatter
+	case "http", "https":
+		if host == "dinely.app" || strings.HasSuffix(host, ".dinely.app") {
+			id = Dinely
+		}
+	}
+	for _, a := range d.apps() {
+		if id != "" && a.ID == id {
+			return a, nil
+		}
+	}
+	return driver.App{}, fmt.Errorf("no app opens %q: %w", link, driver.ErrNotFound)
+}
+
+// OpenLink implements driver.LinkOpener: the app, or a clone of it, opens
+// on its first screen.
+func (d *Device) OpenLink(ctx context.Context, link string, app driver.App) error {
+	opener, err := d.LinkApp(ctx, link)
+	if err != nil {
+		return err
+	}
+	if opener.ID != app.Original().ID {
+		return fmt.Errorf("%s does not open %q: %w", app.ID, link, driver.ErrNotFound)
+	}
+	d.mu.Lock()
+	if !d.locked {
+		d.stack = []string{"home", appScreens[opener.ID]}
+		d.focus = ""
+	}
+	d.mu.Unlock()
+	d.record(Input{Kind: "link", Text: link})
 	return nil
 }
 
@@ -471,17 +543,33 @@ func (d *Device) Apps(context.Context) ([]driver.App, error) {
 }
 
 func (d *Device) apps() []driver.App {
-	if d.info.Platform == driver.IOS {
-		return []driver.App{
-			{ID: Dinely, Name: "Dinely"}, {ID: Chatter, Name: "Chatter"},
-			{ID: "com.apple.Preferences", Name: "Settings", System: true}, {ID: "com.apple.Passbook", Name: "Wallet", System: true},
-		}
-	}
-	return []driver.App{
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.appsLocked()
+}
+
+func (d *Device) appsLocked() []driver.App {
+	builtIn := []driver.App{
 		{ID: Dinely, Name: "Dinely"}, {ID: Chatter, Name: "Chatter"}, {ID: Calc, Name: "Calculator", System: true},
 		{ID: "com.android.settings", Name: "Settings", System: true}, {ID: Messages, Name: "Messages", System: true},
 		{ID: "com.google.android.apps.walletnfcrel", Name: "Google Wallet"},
 	}
+	if d.info.Platform == driver.IOS {
+		builtIn = []driver.App{
+			{ID: Dinely, Name: "Dinely"}, {ID: Chatter, Name: "Chatter"},
+			{ID: "com.apple.Preferences", Name: "Settings", System: true}, {ID: "com.apple.Passbook", Name: "Wallet", System: true},
+		}
+	}
+	var out []driver.App
+	for _, a := range builtIn {
+		if !d.removed[a.ID] {
+			out = append(out, a)
+		}
+	}
+	for _, a := range sortedAdded(d.added) {
+		out = append(out, driver.App{ID: a.id, Name: a.name})
+	}
+	return out
 }
 
 // Stream implements driver.Device. Demo phones have no video.
@@ -519,6 +607,16 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 		return d.Tap(ctx, p, driver.TapOptions{})
 	}
 	d.record(Input{Kind: "touch:" + string(a), P: p})
+	return nil
+}
+
+// Touch2 implements driver.MultiToucher: the person's pinch on the mirror
+// is recorded, as "touch2:down" and so on.
+func (d *Device) Touch2(ctx context.Context, a driver.TouchAction, p, q screen.Point) error {
+	if err := d.check(ctx); err != nil {
+		return err
+	}
+	d.record(Input{Kind: "touch2:" + string(a), P: p, To: q})
 	return nil
 }
 

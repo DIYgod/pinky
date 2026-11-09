@@ -161,7 +161,8 @@ func TestPickAddr(t *testing.T) {
 		{"Wi-Fi over the cable's link", []netip.Addr{link, wifi}, netip.Addr{}, wifi, true},
 		{"the same in the other order", []netip.Addr{wifi, link}, link, wifi, true},
 		{"the cable's link alone", []netip.Addr{link}, netip.Addr{}, link, true},
-		{"its Wi-Fi record missing a moment: stays", []netip.Addr{link}, wifi, wifi, true},
+		// The Finder keeps it at wifi while lockdown answers there.
+		{"its Wi-Fi record missing a moment", []netip.Addr{link}, wifi, link, true},
 		{"stays at its address", []netip.Addr{wifi, wifi2}, wifi2, wifi2, true},
 		{"moves when it left that address", []netip.Addr{wifi}, wifi2, wifi, true},
 		{"nothing", nil, netip.Addr{}, netip.Addr{}, false},

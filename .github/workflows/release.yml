@@ -63,6 +63,41 @@ jobs:
         # does not have the tag's notes yet.
         if: github.event_name == 'push' || inputs.publish
         run: go run ./scripts/release notes "${TAG#v}" > /dev/null
+      - name: Download Gradle
+        # services.gradle.org sends the wrapper on to GitHub's release
+        # downloads, which stalled or answered 504 in Release v2026.1109.11
+        # and v2026.1109.13. When the wrapper cannot fetch its Gradle, fetch
+        # the same file through GitHub's API into the folder the wrapper
+        # keeps it in (named by the base-36 MD5 of distributionUrl); the
+        # wrapper still checks it against distributionSha256Sum.
+        working-directory: android/companion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./gradlew --version > /dev/null && exit 0
+          url=$(sed -n 's/^distributionUrl=//p' gradle/wrapper/gradle-wrapper.properties | sed 's/\\:/:/g')
+          zip=${url##*/}
+          name=${zip%.zip}
+          version=${name#gradle-}
+          version=${version%-bin}
+          hash=$(python3 - "$url" <<'EOF'
+          import hashlib, sys
+          n = int.from_bytes(hashlib.md5(sys.argv[1].encode()).digest(), "big")
+          s = ""
+          while n:
+              n, r = divmod(n, 36)
+              s = "0123456789abcdefghijklmnopqrstuvwxyz"[r] + s
+          print(s)
+          EOF
+          )
+          dir=$HOME/.gradle/wrapper/dists/$name/$hash
+          mkdir -p "$dir"
+          for try in 1 2 3; do
+            gh release download "v$version" --repo gradle/gradle-distributions --pattern "$zip" --dir "$dir" --clobber && break
+            [ "$try" = 3 ] && exit 1
+            sleep 30
+          done
+          ./gradlew --version > /dev/null
       - name: Build
         # Signed with Pinky's release key, which only these secrets hold:
         # Android installs an update of the app only when it is signed with
@@ -129,6 +164,7 @@ jobs:
         env:
           STRICT: "1"
           COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
+          GH_TOKEN: ${{ github.token }} # scripts/adb.sh, when github.com's release downloads fail
         run: |
           go run ./scripts/release stamp "${TAG#v}"
           scripts/dist.sh windows "$RUNNER_TEMP/dist"
@@ -173,8 +209,11 @@ jobs:
         run: |
           # A static build, so that no other FFmpeg DLLs are around. Through
           # GitHub's API (gh), as in ci.yml, since the releases' download
-          # links have answered 504 for hours at a time.
-          for try in 1 2 3; do
+          # links have answered 504 for hours at a time. For up to ten
+          # minutes: FFmpeg-Builds deletes its latest release and makes it
+          # again with each new build, so it is missing while some 5 GB of
+          # builds upload, a few minutes.
+          for try in {1..20}; do
             gh release download latest --repo FFmpeg-Builds/FFmpeg-Builds --pattern ffmpeg-n9.0-latest-win64-gpl-9.0.zip --dir "$RUNNER_TEMP" --clobber && exit 0
             sleep 30
           done
@@ -275,6 +314,7 @@ jobs:
           STRICT: "1"
           COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
           SIGN: ${{ vars.MACOS_SIGN_IDENTITY }}
+          GH_TOKEN: ${{ github.token }} # scripts/adb.sh, when github.com's release downloads fail
         run: |
           go run ./scripts/release stamp "${TAG#v}"
           scripts/dist.sh darwin "$RUNNER_TEMP/dist"

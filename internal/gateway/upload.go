@@ -12,15 +12,17 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/DIYgod/pinky/internal/apppkg"
 )
 
 // phone_files upload: a file an agent sends Pinky, saved in the phone's
-// local folder for a push after it. Agents on this computer can write the
-// folder with their own file tools; one on another computer, over HTTP,
-// cannot. An upload is the first half of a push and follows its rules:
-// read-only and watch-only agents and read-only mode refuse it. It leaves
-// the phone alone, so it asks nothing; the push that follows asks the
-// person.
+// local folder for a push or a phone_app install after it. Agents on this
+// computer can write the folder with their own file tools; one on another
+// computer, over HTTP, cannot. An upload is the first half of a push and
+// follows its rules: read-only and watch-only agents and read-only mode
+// refuse it. It leaves the phone alone, so it asks nothing; the push or
+// install that follows asks the person.
 
 // maxUploadPath bounds an uploaded file's name, folders included.
 const maxUploadPath = 1000
@@ -94,8 +96,9 @@ func partProblem(part string) string {
 }
 
 // upload saves the file an agent sends as rel in dir, the phone's local
-// folder, or with Check only checks that it could.
-func (g *Gateway) upload(ctx context.Context, l *lease, req FilesRequest, dir, rel, args string, start time.Time) *Result {
+// folder, or with Check only checks that it could. canPush says whether
+// the phone has a Pinky folder to copy it to.
+func (g *Gateway) upload(ctx context.Context, l *lease, req FilesRequest, dir, rel, args string, canPush bool, start time.Time) *Result {
 	d := l.dev
 	if m := g.scopeOf(l.session).Mode; m == ScopeReadOnly || m == ScopeWatchOnly {
 		return errResult(ErrScopeDenied, "This agent may only list and copy from the phone: the person gave it %s access.", strings.ReplaceAll(string(m), "_", "-"))
@@ -116,8 +119,8 @@ func (g *Gateway) upload(ctx context.Context, l *lease, req FilesRequest, dir, r
 	case req.Check && old != nil && !req.Replace:
 		return existsResult(rel, old)
 	case req.Check:
-		// The phone and the cleaned name, for the link.
-		return &Result{Status: StatusSettled, Device: d.id, Files: []FileView{{Path: rel, Where: FileComputer}}}
+		// The phone, the cleaned name and what to do after, for the link.
+		return &Result{Status: StatusSettled, Device: d.id, Files: []FileView{{Path: rel, Where: FileComputer}}, Message: nextHint(rel, d.name(), canPush)}
 	case req.Body == nil:
 		return errResult(ErrInvalidArgument, "Send the file's contents with it (content), or write the file into %s with your own file tools.", dir)
 	}
@@ -157,7 +160,7 @@ func (g *Gateway) upload(ctx context.Context, l *lease, req FilesRequest, dir, r
 			return errResult(ErrInvalidArgument, "%s cannot be uploaded: a folder of that name is there.", rel)
 		case !req.Replace && fi.Mode().IsRegular() && fi.Size() == n && sameBytes(tmp.Name(), dst):
 			res := &Result{Status: StatusSettled, Files: []FileView{{Path: rel, Size: fi.Size(), ModTime: fi.ModTime(), Where: FileComputer}},
-				Message: fmt.Sprintf("The folder on Pinky's computer already has this %s; nothing changed. %s", rel, pushHint(rel))}
+				Message: fmt.Sprintf("The folder on Pinky's computer already has this %s; nothing changed. %s", rel, nextHint(rel, d.name(), canPush))}
 			g.recordFiles(l, args, fmt.Sprintf("Received %s (%s) from the agent", quoteName(rel), SizeText(n)), res, start)
 			return res
 		case !req.Replace:
@@ -175,7 +178,7 @@ func (g *Gateway) upload(ctx context.Context, l *lease, req FilesRequest, dir, r
 		mod = fi.ModTime()
 	}
 	res := &Result{Status: StatusSettled, Files: []FileView{{Path: rel, Size: n, ModTime: mod, Where: FileComputer}},
-		Message: fmt.Sprintf("%s %s (%s) in the folder on Pinky's computer. %s", verb, rel, SizeText(n), pushHint(rel))}
+		Message: fmt.Sprintf("%s %s (%s) in the folder on Pinky's computer. %s", verb, rel, SizeText(n), nextHint(rel, d.name(), canPush))}
 	g.recordFiles(l, args, fmt.Sprintf("Received %s (%s) from the agent", quoteName(rel), SizeText(n)), res, start)
 	return res
 }
@@ -214,8 +217,16 @@ func existsResult(rel string, fi fs.FileInfo) *Result {
 		rel, SizeText(fi.Size()), fi.ModTime().Format("2006-01-02 15:04"))
 }
 
-func pushHint(rel string) string {
-	return fmt.Sprintf(`Copy it to the phone with phone_files { action: "push", paths: [%q] }, which the person approves first.`, rel)
+// nextHint says what an agent can do with a file it uploaded: install an
+// app, or copy anything else to the phone's Pinky folder when it has one.
+func nextHint(rel, phone string, canPush bool) string {
+	switch {
+	case apppkg.IsAPK(rel) || apppkg.IsIOSApp(rel):
+		return fmt.Sprintf(`Install it with phone_app { action: "install", paths: [%q] }, which the person approves first.`, rel)
+	case canPush:
+		return fmt.Sprintf(`Copy it to the phone with phone_files { action: "push", paths: [%q] }, which the person approves first.`, rel)
+	}
+	return fmt.Sprintf("%s has no Pinky folder, so it stays on the computer.", phone)
 }
 
 // receiveText is an upload as steps word it when it did not happen:

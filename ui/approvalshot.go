@@ -36,19 +36,23 @@ const (
 
 // shotMarks are what an approval marks on its screenshot, in its pixels:
 // the element the action targets, where the finger goes down and, for a
-// swipe, where it lifts.
+// swipe, where it lifts; for a pinch, the second finger's too.
 type shotMarks struct {
-	target    screen.Rect
-	point, to screen.Point
+	target      screen.Rect
+	point, to   screen.Point
+	point2, to2 screen.Point
 }
 
 func marksOf(n gateway.NeedView) shotMarks {
-	return shotMarks{target: n.Target, point: n.Point, to: n.To}
+	return shotMarks{target: n.Target, point: n.Point, to: n.To, point2: n.Point2, to2: n.To2}
 }
 
+// swipe reports a finger that moves: a swipe's, or a pinch's.
 func (m shotMarks) swipe() bool {
 	return m.to != (screen.Point{}) && m.to != m.point
 }
+
+func (m shotMarks) pinch() bool { return m.point2 != (screen.Point{}) }
 
 func (m shotMarks) touch() bool { return m.point != (screen.Point{}) }
 
@@ -79,6 +83,10 @@ func (m shotMarks) focus(iw, ih int) (r screen.Rect, ok bool) {
 	case m.swipe():
 		x0, x1 := min(m.point.X, m.to.X), max(m.point.X, m.to.X)
 		y0, y1 := min(m.point.Y, m.to.Y), max(m.point.Y, m.to.Y)
+		if m.pinch() {
+			x0, x1 = min(x0, m.point2.X, m.to2.X), max(x1, m.point2.X, m.to2.X)
+			y0, y1 = min(y0, m.point2.Y, m.to2.Y), max(y1, m.point2.Y, m.to2.Y)
+		}
 		return screen.Rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}, true
 	case !m.target.Empty():
 		if t, ok := m.outlined(iw, ih); ok {
@@ -319,7 +327,7 @@ func drawScreen(pt *mg.Painter, p *palette, bm *mg.Bitmap, dst, src mg.Rect, m s
 
 // drawMarks marks m on a picture of the screenshot's part src drawn into
 // dst: the target outlined, a touch without one as a ring, a swipe as an
-// arrow from where the finger goes down.
+// arrow from where the finger goes down, and a pinch as two.
 func drawMarks(pt *mg.Painter, p *palette, dst, src mg.Rect, m shotMarks, iw, ih int, mode shotMode) {
 	thumb := mode == shotThumb
 	s := dst.W / src.W
@@ -359,6 +367,11 @@ func drawMarks(pt *mg.Painter, p *palette, dst, src mg.Rect, m shotMarks, iw, ih
 		x0, y0 := at(m.point.X, m.point.Y)
 		x1, y1 := at(m.to.X, m.to.Y)
 		drawArrow(pt, x0, y0, x1, y1, thumb, accent, halo)
+		if m.pinch() {
+			x0, y0 = at(m.point2.X, m.point2.Y)
+			x1, y1 = at(m.to2.X, m.to2.Y)
+			drawArrow(pt, x0, y0, x1, y1, thumb, accent, halo)
+		}
 	case m.touch() && !outline:
 		x, y := at(m.point.X, m.point.Y)
 		ring, dotR := float32(16), float32(3.5)
@@ -456,9 +469,11 @@ func drawEnlarge(pt *mg.Painter, r, away mg.Rect, strong bool) {
 // missingShot says why an approval about the screen has no screenshot:
 // the phone is locked, Pinky takes none of a blocked app, or the phone
 // sent none. It is empty for approvals that are about no screen: copying
-// files, and the agent's own questions and first connection.
+// files, giving the agent a recording, reading an app's logs, and the agent's own questions and
+// first connection.
 func (a *app) missingShot(n gateway.NeedView) (string, *mg.SVG) {
-	if n.Screenshot != nil || n.Kind != gateway.NeedApproval || newAgentNeed(n) || n.Rule == "Agent request" || n.Rule == "Files" {
+	if n.Screenshot != nil || n.Kind != gateway.NeedApproval || newAgentNeed(n) || n.Rule == "Agent request" || n.Rule == "Files" ||
+		n.Rule == "Recordings" || n.Rule == "App logs" {
 		return "", nil
 	}
 	if d := a.device(n.DeviceID); d != nil && a.isLocked(*d) {

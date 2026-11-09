@@ -440,6 +440,33 @@ func TestRecordingOnAWindowsClock(t *testing.T) {
 	})
 }
 
+// A read confirmed the recording's first pictures, which the write loop
+// has yet to write (creating the file took a while on Windows): the
+// recording counts as held, so a release right then asks the person about
+// it rather than leave it out.
+func TestRecordedBeforeWritten(t *testing.T) {
+	pkts := testPackets(t)
+	v := &taskVideo{floor: stamp(), needKey: true}
+	v.cond = sync.NewCond(&v.mu)
+	if v.recorded() {
+		t.Fatal("recorded before any picture")
+	}
+	for _, p := range pkts[:4] {
+		v.packet(timedPacket{p: p, at: stamp()}, driver.H264)
+	}
+	if v.recorded() {
+		t.Fatal("recorded with pictures no read confirmed")
+	}
+	start := stamp()
+	v.read(v.readStarting(start), start, true)
+	if _, ok := v.view(); ok || len(v.ready) == 0 {
+		t.Fatalf("view %v, %d ready", ok, len(v.ready))
+	}
+	if !v.recorded() {
+		t.Fatal("pictures on their way to the file do not count")
+	}
+}
+
 func deviceOf(t *testing.T, g *Gateway, id string) *device {
 	t.Helper()
 	g.mu.Lock()

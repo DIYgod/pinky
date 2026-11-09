@@ -67,6 +67,7 @@ type media struct {
 	prevTS      uint32
 	haveTS      bool
 	needKey     bool
+	codecNoted  bool   // wire.Codec is set
 	transit     uint32 // arrival minus RTP time of the last packet, in clock units
 	haveTransit bool
 	srNTP       time.Time // wall clock of the last SR
@@ -85,7 +86,10 @@ type media struct {
 
 	turn    atomic.Int32 // the interface's turn from the display's frame, for packets (setTurn)
 	stats   mediaStats
+	wire    wireStats // what came over the wire, for telling why no picture came
 	lastFIR time.Time // the last keyframe request
+
+	display int // the display id the stream was asked for
 }
 
 type frameMark struct {
@@ -107,13 +111,29 @@ type mediaStats struct {
 	SRDelaySet bool
 }
 
+// wireStats are what came over the wire since the stream started, beyond
+// mediaStats: when no picture comes, they tell a phone that sent nothing
+// from one that sent something Pinky could not read.
+type wireStats struct {
+	NotRTP       int           // packets that did not parse as RTP
+	PayloadTypes map[uint8]int // RTP packets by payload type
+	Codec        string        // what the payloads read as: hevc, h264, or "" before any did
+	Unreadable   int           // payloads that read as neither codec
+	Units        int           // access units completed
+	NALTypes     map[int]int   // NAL units of completed access units, by type
+	WaitedKey    int           // frames passed over while waiting for a key frame
+	KeyNoConfig  int           // key frames that came before any parameter sets
+	BadConfig    int           // parameter sets whose picture size did not parse
+}
+
 type subscriber struct {
 	ch      chan driver.Packet
 	needKey bool
 	closed  bool
 }
 
-func startMedia(ctx context.Context, l *link) (*media, error) {
+// startMedia starts a stream of one display (its CoreDevice id).
+func startMedia(ctx context.Context, l *link, displayID int) (*media, error) {
 	udp, err := l.tunnel.ListenUDP(8 << 20)
 	if err != nil {
 		return nil, err
@@ -125,14 +145,14 @@ func startMedia(ctx context.Context, l *link) (*media, error) {
 	}
 	m := &media{
 		l: l, svc: svc, udp: udp, done: make(chan struct{}), ready: make(chan struct{}),
-		subs: map[*subscriber]struct{}{}, needKey: true, rxNeedKey: true,
+		subs: map[*subscriber]struct{}{}, needKey: true, rxNeedKey: true, display: displayID,
 	}
 	port := udp.LocalAddr().(*net.UDPAddr).Port
 	opts := defaultOfferOptions()
 	opts.AllowRTCPFB = true // lets keyframe requests through
 	sctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	m.started = time.Now()
-	ans, err := startVideoStream(sctx, svc, l.tunnel.HostAddr().String(), port, l.tunnel.DeviceAddr().String(), 1, opts)
+	ans, err := startVideoStream(sctx, svc, l.tunnel.HostAddr().String(), port, l.tunnel.DeviceAddr().String(), displayID, opts)
 	cancel()
 	if err != nil {
 		udp.Close()
@@ -141,7 +161,7 @@ func startMedia(ctx context.Context, l *link) (*media, error) {
 		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
 		stopMediaStreamsFresh(c, l.entry)
 		cc()
-		return nil, fmt.Errorf("start display stream: %w", err)
+		return nil, fmt.Errorf("start display stream (display %d): %w", displayID, err)
 	}
 	m.ans = ans
 	if ans.SourcePort != 0 {
@@ -168,15 +188,17 @@ func (m *media) alive() bool {
 }
 
 // waitReady waits for the first keyframe, after which Size and the codec are
-// known.
+// known. When none comes in time it returns a *noVideoError, which tells
+// what came instead.
 func (m *media) waitReady(ctx context.Context) error {
 	select {
 	case <-m.ready:
 		return nil
 	case <-m.done:
-		return m.Err()
+		// The phone ended the stream before its first picture.
+		return &noVideoError{cause: m.Err(), tries: []noVideoTry{m.noVideoTry()}}
 	case <-ctx.Done():
-		return fmt.Errorf("no video from the device: %w", ctx.Err())
+		return &noVideoError{cause: ctx.Err(), tries: []noVideoTry{m.noVideoTry()}}
 	}
 }
 
@@ -246,6 +268,9 @@ func (m *media) receive() {
 		}
 		p, err := parseRTP(pkt)
 		if err != nil {
+			m.mu.Lock()
+			m.wire.NotRTP++
+			m.mu.Unlock()
 			continue
 		}
 		if p.Ext != nil {
@@ -295,6 +320,10 @@ func (m *media) onRTP(p rtpPacket, size int) {
 	m.mu.Lock()
 	m.stats.Packets++
 	m.stats.Bytes += int64(size)
+	if m.wire.PayloadTypes == nil {
+		m.wire.PayloadTypes = map[uint8]int{}
+	}
+	m.wire.PayloadTypes[p.PT]++
 	m.mu.Unlock()
 	ok, gap := m.track(p, now)
 	if !ok {
@@ -316,6 +345,15 @@ func (m *media) onRTP(p rtpPacket, size int) {
 		m.dep.reset()
 	}
 	m.au = m.dep.push(p.Payload, m.au)
+	if codec := m.dep.codec; codec == "" || !m.codecNoted {
+		m.mu.Lock()
+		if codec == "" {
+			m.wire.Unreadable++
+		} else {
+			m.wire.Codec, m.codecNoted = codec, true
+		}
+		m.mu.Unlock()
+	}
 	if p.Marker {
 		m.finishAU()
 		m.sendReceipt(p.TS)
@@ -384,6 +422,7 @@ func (m *media) finishAU() {
 	// Split before scaling: extTS*1e9 would overflow after about 107 hours.
 	pts := time.Duration(m.extTS/rtpClock)*time.Second + time.Duration(m.extTS%rtpClock)*time.Second/rtpClock
 
+	m.noteUnit(codec, nals)
 	var cfg, frame [][]byte
 	key := false
 	for _, n := range nals {
@@ -410,6 +449,9 @@ func (m *media) finishAU() {
 		m.setConfig(codec, cfg)
 	}
 	if m.needKey && !key {
+		m.mu.Lock()
+		m.wire.WaitedKey++
+		m.mu.Unlock()
 		m.requestKeyFrame()
 		return
 	}
@@ -436,6 +478,9 @@ func (m *media) finishAU() {
 	m.frameLog = append(m.frameLog, frameMark{at: time.Now(), size: len(data), key: key})
 	if len(m.frameLog) > 600 {
 		m.frameLog = append(m.frameLog[:0], m.frameLog[len(m.frameLog)-300:]...)
+	}
+	if key && !m.isReady && m.config == nil {
+		m.wire.KeyNoConfig++
 	}
 	if key && !m.isReady && m.config != nil {
 		m.isReady = true
@@ -485,11 +530,14 @@ func (m *media) offer(s *subscriber, p driver.Packet) bool {
 
 func (m *media) setConfig(codec string, nals [][]byte) {
 	w, h := 0, 0
+	sps := false
 	for _, n := range nals {
 		var err error
 		if codec == "hevc" && hevcType(n) == hevcSPS {
+			sps = true
 			w, h, err = hevcSPSSize(n)
 		} else if codec == "h264" && n[0]&0x1f == h264SPS {
+			sps = true
 			w, h, err = h264SPSSize(n)
 		}
 		if err != nil {
@@ -498,6 +546,9 @@ func (m *media) setConfig(codec string, nals [][]byte) {
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if sps && w == 0 {
+		m.wire.BadConfig++
+	}
 	m.config = annexB(nals)
 	if codec == "hevc" {
 		m.codec = driver.HEVC

@@ -64,6 +64,12 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 		}
 		return w, true
 	case driver.CheckAuthorized:
+		if pass && d.Info.Virtual {
+			// A Simulator trusts every app on the Mac; what it waits for
+			// is the helper Pinky builds for it.
+			w.title, w.text, w.detail = locales.CheckSimHelperTitle(), locales.CheckSimHelperPass(), false
+			return w, true
+		}
 		if pass {
 			// An iPhone trusts the computer; it has no USB debugging.
 			w.title, w.text, w.detail = locales.AddPhoneIPhoneStepTrust(), locales.CheckTrustedPass(), false
@@ -77,8 +83,8 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 			return w, false
 		}
 		// Steps in the person's words say it all, except why a mount
-		// failed.
-		w.detail = ck.Fix == driver.SetupDiskImage
+		// failed or the Simulator helper's build did.
+		w.detail = ck.Fix == driver.SetupDiskImage || ck.Fix == driver.SetupSimulatorHelper
 		if ck.Fix == driver.SetupDiskImageRefused && refusedOffersMirror(d.Info.DiskImage) {
 			w.note = locales.CheckDiskImageRefusedNote()
 		}
@@ -123,6 +129,14 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 			w.text = locales.CheckHelperMissing()
 		}
 		return w, true
+	case driver.CheckScreen:
+		if pass || ck.Fix != driver.FixRestart {
+			return w, false
+		}
+		// Pinky could not open the phone: it sent no live picture. The
+		// driver's details say what came instead (ios.noVideoError).
+		w.text = locales.CheckScreenNoLivePicture()
+		return w, true
 	case driver.CheckInput:
 		switch {
 		case pass:
@@ -140,6 +154,14 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 // setupWords says an iPhone's setup step (Info.Setup): a title, what to do
 // and a note.
 func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
+	if d.Info.Virtual {
+		switch step {
+		case driver.SetupPreparing:
+			return locales.CheckSimHelperTitle(), locales.CheckSimHelperBuilding(), ""
+		case driver.SetupSimulatorHelper:
+			return locales.CheckSimHelperTitle(), locales.CheckSimHelperFailed(), ""
+		}
+	}
 	switch step {
 	case driver.SetupTrust:
 		if d.Info.Connection == "wifi" {
@@ -305,6 +327,19 @@ func helperReminderHeight(c *mg.Context, text, label string, width float32) floa
 // whether it did: the steps in Add phone for a setup step, how to install
 // the helper.
 func (a *app) iphoneCheckAction(c *mg.Context, d gateway.DeviceView, ck driver.Check) bool {
+	if d.Info.Virtual {
+		// A Simulator has none of an iPhone's steps; its helper's build
+		// can be tried again.
+		if ck.Fix == driver.SetupSimulatorHelper {
+			mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
+				if button(c, locales.CheckSimHelperRetry(), btnOpt{small: true}).Clicked() {
+					a.startVirtualPhone(d)
+				}
+			})
+			return true
+		}
+		return ck.Fix == driver.SetupPreparing
+	}
 	switch ck.Fix {
 	case driver.SetupTrust, driver.SetupDeveloperMode, driver.SetupUnlock, driver.SetupPreparing,
 		driver.SetupNoDiskImage, driver.SetupDiskImage, driver.SetupDiskImageRefused:

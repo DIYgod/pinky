@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
@@ -431,20 +432,57 @@ func checkPassword(buf unsafe.Pointer, size uint32) (bool, error) {
 	if userDomain[0] == 0 && domain[0] != 0 {
 		copy(userDomain, domain)
 	}
-	var domainArg uintptr
+	var domainArg *uint16
 	if userDomain[0] != 0 {
-		domainArg = uintptr(unsafe.Pointer(&userDomain[0]))
+		domainArg = &userDomain[0]
 	}
+	err := logonUser(&user[0], domainArg, &password[0])
+	return passwordVerdict(err, password[0] == 0, func() bool { return signedInBlankAccount(user, userDomain) })
+}
+
+// logonUser asks Windows whether password signs the account in, with a
+// network logon, and returns nil when it does. domain is nil for none.
+func logonUser(user, domain, password *uint16) error {
 	token := new(windows.Handle)
-	r, _, err := procLogonUserW.Call(uintptr(unsafe.Pointer(&user[0])), domainArg,
-		uintptr(unsafe.Pointer(&password[0])), logon32LogonNetwork, logon32ProviderDefault,
+	r, _, err := procLogonUserW.Call(uintptr(unsafe.Pointer(user)), uintptr(unsafe.Pointer(domain)),
+		uintptr(unsafe.Pointer(password)), logon32LogonNetwork, logon32ProviderDefault,
 		uintptr(unsafe.Pointer(token)))
 	if r == 0 {
-		if errors.Is(err, windows.ERROR_LOGON_FAILURE) {
-			return false, nil
-		}
-		return false, fmt.Errorf("secret: check the password: %w", err)
+		return err
 	}
 	windows.CloseHandle(*token)
-	return true, nil
+	return nil
+}
+
+// signedInBlankAccount reports whether the dialog's account (user, and
+// domain when it names one) is the one Pinky runs as, a local account of
+// this computer, and has a blank password: LogonUserW answers an empty
+// password for the local account by that name with ERROR_ACCOUNT_RESTRICTION
+// (see passwordVerdict), or signs it in where the policy allows blank
+// passwords. It asks for the local account itself, whatever account the
+// dialog's name reached.
+func signedInBlankAccount(user, domain []uint16) bool {
+	computer, err := windows.ComputerName()
+	if err != nil {
+		return false
+	}
+	if d := windows.UTF16ToString(domain); d != "" && d != "." && !strings.EqualFold(d, computer) {
+		return false
+	}
+	local := computer + `\` + windows.UTF16ToString(user)
+	sid, _, _, err := windows.LookupSID("", local)
+	if err != nil {
+		return false
+	}
+	me, err := windows.GetCurrentThreadEffectiveToken().GetTokenUser()
+	if err != nil || !windows.EqualSid(sid, me.User.Sid) {
+		return false
+	}
+	computerW, err := windows.UTF16PtrFromString(computer)
+	if err != nil {
+		return false
+	}
+	empty := uint16(0)
+	err = logonUser(&user[0], computerW, &empty)
+	return err == nil || errors.Is(err, errAccountRestriction)
 }

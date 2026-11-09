@@ -16,6 +16,11 @@
 #                                     pinky-<version>-windows-amd64.zip (the app's
 #                                     files, to run it without installing)
 #   scripts/dist.sh linux <out>       pinky-<version>-linux-amd64.tar.gz and the .deb
+#   scripts/dist.sh prebuild darwin|windows|linux
+#                                     only the FFmpeg and adb that a platform's
+#                                     packages carry, into their caches, as
+#                                     building the platform makes them: for
+#                                     .github/workflows/release-cache.yml
 #
 # The version is cmd/pinky/mygo.json's, which a release writes into a
 # checkout of its tag first (go run ./scripts/release stamp <version>).
@@ -55,13 +60,18 @@ case ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} in
 *) export LC_ALL=C.UTF-8 ;;
 esac
 
-usage="usage: scripts/dist.sh companion|darwin|windows|linux <out>"
+usage="usage: scripts/dist.sh companion|darwin|windows|linux <out>, or prebuild darwin|windows|linux"
 cmd=${1:?$usage}
-out=${2:?$usage}
-case $out in /*) ;; *) out=$(pwd)/$out ;; esac
+if [ "$cmd" = prebuild ]; then
+	platform=${2:?$usage}
+	out=
+else
+	out=${2:?$usage}
+	case $out in /*) ;; *) out=$(pwd)/$out ;; esac
+fi
 cd "$(dirname "$0")/.."
 root=$(pwd)
-mkdir -p "$out"
+[ -z "$out" ] || mkdir -p "$out"
 
 DEVELOPER_ID="Developer ID Application: NATURAL SELECTION LABS PTE. LTD. (492J8Q67PF)"
 strict=${STRICT:-0}
@@ -459,7 +469,27 @@ linux() {
 	done
 }
 
+# prebuild builds only the FFmpeg and adb that a platform's packages carry,
+# into FFMPEG_CACHE and ADB_CACHE, where building the platform finds them:
+# the same builds, by the same functions. The workflow that fills the
+# release workflow's caches runs it (.github/workflows/release-cache.yml).
+prebuild() {
+	case $platform in
+	darwin)
+		[ "$(uname -s)" = Darwin ] || die "Pinky.app's FFmpeg and adb are built on macOS"
+		targets="arm64 amd64"
+		;;
+	windows | linux) targets=$platform-amd64 ;;
+	*) die "$usage" ;;
+	esac
+	for target in $targets; do
+		ff=$(ffmpeg_for "$target")
+		a=$(adb_for "$target")
+		say "$target: FFmpeg in ${ff:-(none)}, adb in ${a:-(none)}"
+	done
+}
+
 case $cmd in
-companion | darwin | windows | linux) "$cmd" ;;
+companion | darwin | windows | linux | prebuild) "$cmd" ;;
 *) die "$usage" ;;
 esac

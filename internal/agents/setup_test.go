@@ -301,6 +301,42 @@ func flat(cmds [][]string) []string {
 	return out
 }
 
+func TestRemoveFailsWhenSettingsCannotBeRead(t *testing.T) {
+	ts := newTestSetup(t)
+	ts.fakeCommand(t, "claude")
+	file := filepath.Join(ts.home, ".claude.json")
+	ts.write(t, ".claude.json", `{"numStartups": 3, "mcpServers": {"pinky": {"type": "stdio", "command": "pinky", "args": ["mcp"]}}}`)
+	claudeCLI := func(name string, args []string) ([]byte, error) {
+		data, _ := os.ReadFile(file)
+		var out []byte
+		var err error
+		switch strings.Join(args[:2], " ") {
+		case "mcp add":
+			out, err = setJSONMember(data, []string{"mcpServers"}, args[4], object{{"type", "stdio"}, {"command", args[6]}, {"args", args[7:]}, {"env", object{}}})
+		case "mcp remove":
+			out, _, err = deleteJSONMember(data, []string{"mcpServers"}, args[4])
+		}
+		if err != nil {
+			return nil, err
+		}
+		return nil, os.WriteFile(file, out, 0o600)
+	}
+	ts.effect = claudeCLI
+	if _, err := ts.Connect(context.Background(), "claude-code"); err != nil {
+		t.Fatal(err)
+	}
+	ts.effect = func(name string, args []string) ([]byte, error) {
+		if strings.Join(args[:2], " ") == "mcp remove" {
+			return nil, os.WriteFile(file, []byte("{"), 0o600)
+		}
+		return nil, nil
+	}
+	_, err := ts.Remove(context.Background(), "claude-code")
+	if err == nil {
+		t.Fatal("Remove succeeded though the settings file could not be read afterward")
+	}
+}
+
 func TestCodexWithoutItsCommand(t *testing.T) {
 	ts := newTestSetup(t)
 	const mine = "model = \"gpt-6\"\n\n[mcp_servers.github]\ncommand = \"gh\"\n"

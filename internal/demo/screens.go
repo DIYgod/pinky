@@ -2,6 +2,7 @@ package demo
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -54,8 +55,8 @@ func (d *Device) render() *screen.Screen {
 	switch name {
 	case "home":
 		s.App = d.home
-		for _, a := range d.apps() {
-			b.row(screen.RoleButton, a.Name, "home:"+appScreens[a.ID], 160)
+		for _, a := range d.appsLocked() {
+			b.row(screen.RoleButton, a.Name, "home:"+screenOf(a.ID), 160)
 		}
 	case "dinely", "orders", "cart", "done", "account":
 		s.App = screen.App{Name: "Dinely", ID: Dinely}
@@ -111,6 +112,11 @@ func (d *Device) render() *screen.Screen {
 	case "messages":
 		s.App = screen.App{Name: "Messages", ID: Messages}
 		b.row(screen.RoleText, "Dinely: Your Dinely code is 482913", "messages:0", 120)
+	default:
+		if a, ok := d.added[strings.TrimPrefix(name, addedScreen)]; ok {
+			s.App = screen.App{Name: a.name, ID: a.id}
+			b.row(screen.RoleText, a.name+" "+a.version, "added:title", 120)
+		}
 	}
 	if d.focus != "" {
 		s.Keyboard = true
@@ -178,6 +184,10 @@ func (d *Device) press(id string) {
 	push := func(s string) { d.stack = append(d.stack, s) }
 	replace := func(s string) { d.stack[top] = s }
 	toast := func(t string) { d.events = append(d.events, screen.Event{Kind: screen.EventToast, Text: t}) }
+	if strings.HasPrefix(id, "home:"+addedScreen) {
+		d.stack = []string{"home", strings.TrimPrefix(id, "home:")}
+		return
+	}
 	switch id {
 	case "home:dinely":
 		d.stack = []string{"home", "dinely"}

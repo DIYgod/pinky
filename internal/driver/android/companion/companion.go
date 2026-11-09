@@ -242,6 +242,8 @@ type SetTextOptions struct {
 
 // SetText writes text into an editable node with ACTION_SET_TEXT. Any
 // script works, and neither the clipboard nor the keyboard is involved.
+// Apps with FeatureSetTextFallback go on to the field's input connection
+// and to a paste when the app refuses it.
 func (c *Client) SetText(ctx context.Context, t Target, text string, opt SetTextOptions) (*SetTextResult, error) {
 	params := map[string]any{"text": text, "target": t.params()}
 	if opt.Display != 0 {

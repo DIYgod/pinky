@@ -147,3 +147,40 @@ func (a *API) SetRestartError(err error) {
 	a.restartErr = err
 	a.mu.Unlock()
 }
+
+// ChangeOnWiFi shows an Android phone as the driver lists one whose
+// connection over the network leads to a device that lacks the mark Pinky
+// left on the phone (driver.SetupPhoneChanged).
+func (a *API) ChangeOnWiFi(deviceID string) {
+	a.mu.Lock()
+	if d := a.device(deviceID); d != nil {
+		d.info.Connection = "wifi"
+		setStep(&d.info, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupPhoneChanged,
+			Detail: "This is not the phone Pinky set up under this name: it lacks the mark Pinky left on it. Trust it if you reset it or paired it again, or plug it in."})
+	}
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+}
+
+// TrustPhone implements the client's Trust this phone: the phone comes
+// back online.
+func (a *API) TrustPhone(ctx context.Context, deviceID string) error {
+	a.mu.Lock()
+	d := a.device(deviceID)
+	if d == nil {
+		a.mu.Unlock()
+		return fmt.Errorf("fakeapi: no device %q: %w", deviceID, gateway.ErrUnknownDevice)
+	}
+	a.trusted = append(a.trusted, deviceID)
+	setStep(&d.info, driver.Info{State: driver.StateOnline})
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: deviceID})
+	return nil
+}
+
+// Trusted returns the phones TrustPhone was called for.
+func (a *API) Trusted() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return slices.Clone(a.trusted)
+}

@@ -19,6 +19,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/screen"
 	goios "github.com/danielpaulus/go-ios/ios"
+	"github.com/danielpaulus/go-ios/ios/instruments"
 )
 
 // WDADevice drives an iPhone through the WebDriverAgent helper: iOS 17.4 to
@@ -45,16 +46,27 @@ type WDADevice struct {
 	inputMu sync.Mutex // one gesture or text entry at a time
 	appMu   sync.Mutex
 	apps    *appCatalog
-	rec     touchRecorder
+	// schemesFn, on a simulator, lists the apps by URL scheme (SetLinkSchemes).
+	schemesFn func(context.Context) (map[string][]driver.App, error)
+	rec       touchRecorder
+	rec2      pinchRecorder // the mirror's two-finger touches (pinch.go)
 
 	videoMu sync.Mutex
 	video   driver.Stream // the last stream, whose picture the mirror's touches are in
 
 	closeOnce sync.Once
 
+	logs    appLogs // the apps whose logs a task reads (logs.go)
+	procMu  sync.Mutex
+	procSvc *instruments.DeviceInfoService // lists processes for logs
+
 	imageDir string // Pinky's folder for developer disk images (checkup.go)
 
 	log *slog.Logger // slow reads, with what took the time; nil: none
+
+	// appsFn lists a Simulator's apps (simctl), which has no installation
+	// proxy; nil on a phone.
+	appsFn func(context.Context) ([]driver.App, error)
 
 	helperFn   func(context.Context) (time.Time, error) // for tests: helperExpires
 	lockdownFn func(context.Context) (bool, error)      // for tests: lockdownLocked
@@ -747,17 +759,18 @@ func (d *WDADevice) Launch(ctx context.Context, app string) error {
 	if err := d.c.activate(ctx, id); err != nil {
 		return fmt.Errorf("launch %s: %w", id, err)
 	}
+	d.logs.launched(id, 0)
 	return nil
 }
 
 // resolveApp turns a display name into a bundle id through the app list.
-// Without one (a simulator), the name is taken as a bundle id.
+// Without one (WDA at a URL), the name is taken as a bundle id.
 func (d *WDADevice) resolveApp(ctx context.Context, app string) (string, error) {
 	app = strings.TrimSpace(app)
 	if app == "" {
 		return "", fmt.Errorf("no app given: %w", driver.ErrNotFound)
 	}
-	if d.entry.DeviceID == 0 {
+	if d.entry.DeviceID == 0 && d.appsFn == nil {
 		return app, nil
 	}
 	apps, err := d.Apps(ctx)
@@ -777,8 +790,12 @@ func (d *WDADevice) resolveApp(ctx context.Context, app string) (string, error) 
 	return "", fmt.Errorf("app %q: %w", app, driver.ErrNotFound)
 }
 
-// Apps implements driver.Device, through the installation proxy.
+// Apps implements driver.Device, through the installation proxy, or simctl
+// on a Simulator.
 func (d *WDADevice) Apps(ctx context.Context) ([]driver.App, error) {
+	if d.appsFn != nil {
+		return d.appsFn(ctx)
+	}
 	if d.entry.DeviceID == 0 {
 		return nil, fmt.Errorf("app list: %w", driver.ErrUnsupported)
 	}
@@ -796,24 +813,21 @@ func (d *WDADevice) Apps(ctx context.Context) ([]driver.App, error) {
 		return apps, nil
 	}
 	type result struct {
-		apps   []driver.App
-		byPath map[string]driver.App
-		err    error
+		list appList
+		err  error
 	}
 	ch := make(chan result, 1)
 	go func() {
-		apps, byPath, err := browseApps(&link{base: d.entry})
-		ch <- result{apps, byPath, err}
+		list, err := browseApps(&link{base: d.entry})
+		ch <- result{list, err}
 	}()
 	select {
 	case r := <-ch:
 		if r.err != nil {
 			return nil, r.err
 		}
-		c.mu.Lock()
-		c.apps, c.byPath, c.at = r.apps, r.byPath, time.Now()
-		c.mu.Unlock()
-		return append([]driver.App(nil), r.apps...), nil
+		c.set(r.list)
+		return append([]driver.App(nil), r.list.apps...), nil
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	}
@@ -947,6 +961,7 @@ func (d *WDADevice) videoSize() (int, int) {
 // the test run Pinky started; WDA itself stays installed.
 func (d *WDADevice) Close() error {
 	d.closeOnce.Do(func() {
+		d.StopAppLogs()
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		d.c.deleteSession(ctx)
 		cancel()

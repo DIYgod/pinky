@@ -130,7 +130,8 @@ func reservedName(name string) bool {
 			}
 		}
 	}
-	for _, n := range []string{RuleBlocked, RuleCredentials, RuleReadOnly, RuleTaskApps, RuleAgentScope} {
+	for _, n := range []string{RuleBlocked, RuleCredentials, RuleReadOnly, RuleTaskApps, RuleAgentScope,
+		RuleInstall, RuleUninstall, RulePinkyApps, RuleSystemApps} {
 		if strings.EqualFold(n, name) {
 			return true
 		}

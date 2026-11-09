@@ -401,9 +401,11 @@ func unlisted(d *device) bool {
 func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	g.mu.Lock()
 	if g.removed[info.ID] {
-		if !cabled(info) {
+		if !cabled(info) || info.Virtual {
 			// The person removed it; the provider lists it over the
-			// network by itself.
+			// network by itself, or it is a Simulator or an emulator
+			// they run for other work. It is back once they start or use
+			// it from Add phone (StartVirtual).
 			g.mu.Unlock()
 			return nil
 		}

@@ -71,6 +71,7 @@ func featuresOf(dev driver.Device) Features {
 	f.Background = backgroundWorks(dev)
 	_, f.Files = dev.(driver.Files)
 	_, f.Companion = dev.(driver.CompanionInstaller)
+	_, f.Pinch = dev.(driver.MultiToucher)
 	return f
 }
 
@@ -83,6 +84,11 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 		if foundLocked(d) {
 			// Found on Wi-Fi: the person says whether it is theirs (wifi.go).
 			return DeviceNeedsSetup, "Found on Wi-Fi"
+		}
+		if changedLocked(d) {
+			// What answers over the network lacks the phone's mark: the
+			// person trusts it, or plugs the phone in (wifi.go).
+			return DeviceNeedsSetup, "Not the same phone"
 		}
 		if lockedOnWiFi(d) && l == nil {
 			return DeviceOffline, "Locked on Wi-Fi"
@@ -182,7 +188,7 @@ func (g *Gateway) Needs() []NeedView {
 		out = append(out, NeedView{ID: info.ID, Kind: kind, DeviceID: info.Binding.Device, DeviceName: info.DeviceName,
 			App: info.App, Agent: info.Agent, TaskID: info.TaskID, Title: info.Title, Detail: info.Detail, Rule: info.Rule,
 			Created: info.Created, Deadline: info.Deadline, Screenshot: info.Screenshot, Target: info.Target,
-			Point: info.Point, To: info.To, AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info),
+			Point: info.Point, To: info.To, Point2: info.Point2, To2: info.To2, AlwaysAllow: g.canAlwaysAllow(info), AllowTask: canAllowTask(info),
 			Unblock: isUnblock(info), ReadOnly: askedReadOnly(info)})
 	}
 	g.mu.Lock()
@@ -296,6 +302,10 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 		return g.decide(needID, dec, note)
 	}
 	if d == TakeOver {
+		if info.Rule == recordingsRule {
+			// Nothing on the phone waits on it: taking over answers no.
+			return g.decide(needID, approval.Deny, note)
+		}
 		// The panel's Take over: the person does it themselves.
 		return g.TakeOver(info.Binding.Device)
 	}
@@ -331,10 +341,12 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 // canAllowTask reports whether an approval's Allow for this task lasts:
 // for an action the policy asked about, the rules that asked no longer ask
 // in its app for the rest of the task (awaitApproval), and once copying
-// files is allowed, later copies do not ask (askToPush). An agent's own
-// question gets a yes for that question only: each one is the person's
-// consent to what it says, and answering the next ones by itself would let
-// the agent claim consent the person never gave.
+// files is allowed, later copies do not ask (askToPush), nor do installs
+// of the same app by the same signer, or uninstalls or stops of the same
+// app (askApp), nor do the task's other changes of the phone's settings
+// (askSettings). An agent's own question gets a yes for that question only:
+// each one is the person's consent to what it says, and answering the next
+// ones by itself would let the agent claim consent the person never gave.
 func canAllowTask(info approval.Info) bool {
 	if info.Kind != approval.KindAction {
 		return false
@@ -342,7 +354,10 @@ func canAllowTask(info approval.Info) bool {
 	if snap, ok := info.Data.(*snapshot); ok {
 		return len(snap.asks) > 0
 	}
-	return info.Rule == filesRule
+	if _, ok := info.Data.(*appAsk); ok {
+		return true
+	}
+	return info.Rule == filesRule || info.Rule == policy.RuleAppLogs || info.Rule == settingsRule
 }
 
 func (g *Gateway) decide(id string, d approval.Decision, note string) error {
@@ -414,9 +429,10 @@ func (g *Gateway) takeOver(d *device, byInput bool) {
 	}
 	g.mu.Unlock()
 	// Withdraw open approvals even when the person was already in control:
-	// one may have opened in the meantime.
+	// one may have opened in the meantime. A Recordings card stays: it asks
+	// about files on this computer, not about the phone.
 	gone := g.approvals.WithdrawWhere(func(i approval.Info) bool {
-		return i.Binding.Device == d.id && i.Kind != approval.KindHandoff
+		return i.Binding.Device == d.id && i.Kind != approval.KindHandoff && i.Rule != recordingsRule
 	}, reasonTookOver)
 	g.closePendingSteps(gone, string(StatusTookOver))
 	if changed {

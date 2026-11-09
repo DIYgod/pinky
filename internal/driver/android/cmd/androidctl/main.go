@@ -30,9 +30,10 @@
 //	androidctl wifi-connect ADDR
 //	androidctl wifi-reconnect [-seconds N]
 //
-// Steps for run and bg: tap:X,Y  longtap:X,Y  swipe:X1,Y1,X2,Y2[,MS]  key:NAME
-// type:TEXT  launch:APP  sleep:MS  observe  shot:FILE.png  state (bg: the
-// phone's own screen)
+// Steps for run and bg: tap:X,Y  longtap:X,Y  swipe:X1,Y1,X2,Y2[,MS]
+// pinch:CX,CY,FROM,TO[,MS[,ANGLE[,ROTATE]]] (fingers FROM then TO pixels
+// apart around CX,CY)  key:NAME  type:TEXT  launch:APP  sleep:MS  observe
+// shot:FILE.png  state (bg: the phone's own screen)
 //
 // Run commands that touch a phone through scripts/devlock.sh.
 package main
@@ -219,9 +220,13 @@ func run(ctx context.Context, p *android.Provider, serial, cmd string, args []st
 		submit := fs.Bool("submit", false, "press Enter afterwards")
 		fs.Parse(args)
 		text := strings.Join(fs.Args(), " ")
-		return timed("type", func() error {
+		err := timed("type", func() error {
 			return d.Type(ctx, text, driver.TypeOptions{Append: *appendText, Submit: *submit})
 		})
+		if n := d.TakeInputNote(); n != "" {
+			fmt.Println("note:", n)
+		}
+		return err
 	case "key":
 		if len(args) != 1 {
 			return errors.New("usage: key NAME")
@@ -564,6 +569,32 @@ loop:
 }
 
 // stepper is what run steps need: a device, optionally with settle.
+// pinchStep runs a pinch step: CX,CY,FROM,TO[,MS[,ANGLE[,ROTATE]]].
+func pinchStep(ctx context.Context, d driver.Device, arg string) error {
+	p, ok := d.(driver.Pincher)
+	if !ok {
+		return fmt.Errorf("pinch: %w", driver.ErrUnsupported)
+	}
+	v, err := atois(strings.Split(arg, ","))
+	if err != nil {
+		return err
+	}
+	if len(v) < 4 {
+		return errors.New("pinch needs CX,CY,FROM,TO")
+	}
+	g := driver.Pinch{Center: screen.Point{X: v[0], Y: v[1]}, From: v[2], To: v[3], Angle: 90, Duration: 500 * time.Millisecond}
+	if len(v) > 4 {
+		g.Duration = time.Duration(v[4]) * time.Millisecond
+	}
+	if len(v) > 5 {
+		g.Angle = float64(v[5])
+	}
+	if len(v) > 6 {
+		g.Rotate = float64(v[6])
+	}
+	return p.Pinch(ctx, g)
+}
+
 type stepper interface {
 	driver.Device
 	driver.Settler
@@ -609,10 +640,17 @@ func runSteps(ctx context.Context, d stepper, st statser, steps []string) error 
 				}
 				err = d.Swipe(ctx, screen.Point{X: v[0], Y: v[1]}, screen.Point{X: v[2], Y: v[3]}, dur)
 			}
+		case "pinch":
+			err = pinchStep(ctx, d, arg)
 		case "key":
 			err = d.Key(ctx, driver.Key(arg))
 		case "type":
 			err = d.Type(ctx, arg, driver.TypeOptions{})
+			if n, ok := d.(driver.InputNoter); ok {
+				if note := n.TakeInputNote(); note != "" {
+					fmt.Println("note:", note)
+				}
+			}
 		case "launch":
 			err = d.Launch(ctx, arg)
 		case "sleep":

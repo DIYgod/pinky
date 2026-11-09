@@ -340,3 +340,22 @@ func TestResultAndErrorNames(t *testing.T) {
 		t.Error("majorVersion")
 	}
 }
+
+// TestPlatformName: Simulators and emulators count apart from phones.
+func TestPlatformName(t *testing.T) {
+	for _, c := range []struct {
+		info driver.Info
+		want string
+	}{
+		{driver.Info{Platform: driver.Android}, "android"},
+		{driver.Info{Platform: driver.IOS}, "ios"},
+		{driver.Info{Platform: driver.Android, Virtual: true}, "android_emulator"},
+		{driver.Info{Platform: driver.IOS, Virtual: true}, "ios_simulator"},
+		{driver.Info{Platform: "harmony"}, "other"},
+		{driver.Info{Platform: "harmony", Virtual: true}, "other"},
+	} {
+		if got := platformName(c.info); got != c.want {
+			t.Errorf("platformName(%+v) = %q, want %q", c.info, got, c.want)
+		}
+	}
+}

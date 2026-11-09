@@ -59,6 +59,9 @@ type Device struct {
 	tapPoint screen.Point // the last tap, for typing into the field under it
 	tapAt    time.Time
 
+	inputNote   string // for the agent, about the last Type (TakeInputNote)
+	emuLocation string // the place last sent to the emulator's console (switches.go)
+
 	appsMu      sync.Mutex
 	apps        []driver.App
 	appsAt      time.Time
@@ -67,6 +70,8 @@ type Device struct {
 	cloneUsers  string           // the clone spaces last logged
 	// listApps, set by tests, stands in for scrcpy's app list.
 	listApps func(ctx context.Context) ([]scrcpy.App, error)
+	// pkgTest, set by tests, stands in for adb in AppManager (appmanage.go).
+	pkgTest pkgShell
 
 	comp    companionLink
 	person  personWatch
