@@ -239,8 +239,33 @@ func TestTypedAs(t *testing.T) {
 		{" world", "world", false, "", "kept", true},
 		{" world", "world", false, "", "", false},
 	} {
-		if got := typedAs(tc.v, tc.text, tc.appended, tc.prior, tc.spaces); got != tc.want {
+		if got := typedAs(tc.v, tc.text, tc.appended, &tc.prior, tc.spaces); got != tc.want {
 			t.Errorf("typedAs(%q, %q, appended %v, prior %q, %q) = %v, want %v", tc.v, tc.text, tc.appended, tc.prior, tc.spaces, got, tc.want)
+		}
+	}
+}
+
+// Without the old value, appended text is looked for alone.
+func TestTypedAsWithoutPrior(t *testing.T) {
+	if !typedAs("old text and new", " and new", true, nil, "") || typedAs("old text", " and new", true, nil, "") {
+		t.Fatal("appended text without the old value")
+	}
+}
+
+func TestSpaceProbe(t *testing.T) {
+	for _, tc := range []struct{ before, after, want string }{
+		{"one", "onex y", "x y"},
+		{"one", "onexy", "xy"},
+		{"", "X y", "x y"},     // capitalized at the start of a field
+		{"Search", "xy", "xy"}, // a placeholder that went away
+		{"Search", "x y", "x y"},
+		{"one two", "one x ytwo", "x y"}, // the cursor in the middle
+		{"one", "one", ""},
+		{"one", "onex", ""},
+		{"one", "one特惠", ""},
+	} {
+		if got := spaceProbe(tc.before, tc.after); got != tc.want {
+			t.Errorf("spaceProbe(%q, %q) = %q, want %q", tc.before, tc.after, got, tc.want)
 		}
 	}
 }

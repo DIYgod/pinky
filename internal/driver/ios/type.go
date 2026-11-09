@@ -148,7 +148,18 @@ func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptio
 			return err
 		}
 	} else {
-		_, prior := d.focusedValue(ctx)
+		if method == "keys" {
+			// The keys path checks the keyboard through remoteAXService:
+			// wait for it rather than type blind, as right after Open.
+			rctx, cancel := context.WithTimeout(ctx, raxDialWait)
+			d.raxReady(rctx)
+			cancel()
+		}
+		pfield, value := d.focusedValue(ctx)
+		var prior *string // nil when it could not be read
+		if pfield != nil {
+			prior = &value
+		}
 		var err error
 		if method == "paste" {
 			if err = clear(); err == nil {
@@ -175,14 +186,18 @@ func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptio
 	return nil
 }
 
+// raxDialWait bounds the wait for remoteAXService before typing by keys.
+const raxDialWait = 8 * time.Second
+
 // checkTyped reads the focused field back after typing text and returns an
 // error when it reads otherwise, so that wrong text never counts as typed:
 // keys arrive as other letters on a hardware keyboard layout other than
 // U.S., iOS corrects and capitalizes words typed as keys, and a field may
 // format or cut what is pasted. When the field cannot be read, or hides its
 // text, it returns a note for the agent instead. prior is the field's value
-// before, for appended text. Callers hold inputMu.
-func (d *Device) checkTyped(ctx context.Context, text string, appended bool, prior, method string, pbErr error, st *TypeStats) (string, error) {
+// before, for appended text, nil when it could not be read. Callers hold
+// inputMu.
+func (d *Device) checkTyped(ctx context.Context, text string, appended bool, prior *string, method string, pbErr error, st *TypeStats) (string, error) {
 	const unread = "Pinky could not read the field back to check the text; look at the screen to be sure."
 	field, v := d.focusedValue(ctx)
 	rax, err := d.raxNow()
@@ -208,16 +223,18 @@ func (d *Device) checkTyped(ctx context.Context, text string, appended bool, pri
 	case hiddenText(v):
 		st.Checked = "hidden"
 		return "The field hides its text, so Pinky could not check what was typed.", nil
-	case v == prior || v == "":
+	case v == "" || (appended && prior != nil && v == *prior):
 		// Its value may not follow what is typed (a view of the app's
-		// own), or the text did not go in.
+		// own), or the text did not go in. A replaced value that reads
+		// as before is not this: typing the same wrong text again (an
+		// agent trying once more) must not pass.
 		st.Checked = "unchanged"
 		return "The field reads as it did before typing, or empty, so Pinky could not check the text; look at the screen to be sure.", nil
 	}
 	st.Checked = "different"
 	got, want := len([]rune(v)), len([]rune(text))
-	if appended {
-		want += len([]rune(prior))
+	if appended && prior != nil {
+		want += len([]rune(*prior))
 	}
 	if method == "paste" {
 		return "", fmt.Errorf("type: after pasting, the field reads otherwise than the text (%d characters where %d were expected): the field may format, cut or change what it takes; read it before going on", got, want)
@@ -227,18 +244,25 @@ func (d *Device) checkTyped(ctx context.Context, text string, appended bool, pri
 
 // typedAs reports whether a field that reads v holds text as typed: the
 // whole of it, or appended to prior (where the cursor was, or after a
-// placeholder that went away). Spaces that smart insert added and Pinky
-// could not take off are allowed around a paste.
-func typedAs(v, text string, appended bool, prior, spaces string) bool {
+// placeholder that went away; nil when the old value could not be read,
+// which leaves only the text to look for). Spaces that smart insert added
+// and Pinky could not take off are allowed around a paste.
+func typedAs(v, text string, appended bool, prior *string, spaces string) bool {
 	loose := spaces == "kept" || spaces == "unconfirmed"
 	if !appended {
 		return v == text || (loose && strings.TrimSpace(v) == strings.TrimSpace(text))
+	}
+	if !strings.Contains(v, text) {
+		return false
+	}
+	if prior == nil {
+		return true
 	}
 	slack := 0
 	if loose {
 		slack = 2
 	}
-	return strings.Contains(v, text) && len([]rune(v)) <= len([]rune(prior))+len([]rune(text))+slack
+	return len([]rune(v)) <= len([]rune(*prior))+len([]rune(text))+slack
 }
 
 // hiddenText reports whether a field's value is a secure field's bullets.
@@ -537,8 +561,10 @@ func (d *Device) typeKeys(ctx context.Context, strokes []keyStroke, clear func()
 	switch {
 	case err != nil:
 	case kb.kind == kbLatin:
-		if err = clear(); err == nil {
-			err = d.pressKeys(ctx, strokes)
+		if err = d.spendSwitchSpace(ctx, note); err == nil {
+			if err = clear(); err == nil {
+				err = d.pressKeys(ctx, strokes)
+			}
 		}
 		note("typed")
 	case kb.kind == kbLayout:
@@ -565,6 +591,116 @@ func (d *Device) typeKeys(ctx context.Context, strokes []keyStroke, clear func()
 	}
 	return err
 }
+
+// spendSwitchSpace makes sure a Space goes into the field before the text
+// does: after Control-Space changed the keyboard, iOS swallows a Space,
+// which dropped the first space of the text typed next ("one two" became
+// "onetwo", GitHub issue #29); without a switch nothing is lost. It types
+// "x", Space and "y" and reads the field: "x y" means the Space went in,
+// "xy" that it was swallowed, and either is deleted again; it tries up to
+// three times. A field that reads neither, or cannot be read, is left
+// alone. The trailing Space alone would not tell, as some fields drop a
+// trailing space from their value. Callers hold inputMu, on a Latin
+// keyboard.
+func (d *Device) spendSwitchSpace(ctx context.Context, note func(string, ...any)) error {
+	rax, err := d.raxNow()
+	if err != nil {
+		return nil
+	}
+	x, _, _ := asciiUsage('x')
+	y, _, _ := asciiUsage('y')
+	for try := 1; try <= 3; try++ {
+		field, before := d.focusedValue(ctx)
+		if field == nil {
+			return nil
+		}
+		if err := d.pressKeys(ctx, []keyStroke{{usage: x}, {usage: keySpace}, {usage: y}}); err != nil {
+			return err
+		}
+		got, after := "", before
+		for deadline := time.Now().Add(switchSpaceWait); time.Now().Before(deadline); {
+			if err := sleepCtx(ctx, 50*time.Millisecond); err != nil {
+				return err
+			}
+			v, err := rax.stringAttribute(context.WithoutCancel(ctx), field, axpAttrValue)
+			if err != nil {
+				return nil
+			}
+			after = v
+			if got = spaceProbe(before, v); got != "" {
+				break
+			}
+		}
+		back := func(n int) error {
+			strokes := make([]keyStroke, n)
+			for i := range strokes {
+				strokes[i] = keyStroke{usage: keyBackspace}
+			}
+			return d.pressKeys(ctx, strokes)
+		}
+		switch got {
+		case "x y":
+			note("space after the switch: went in on try %d", try)
+			return back(3)
+		case "xy":
+			note("space after the switch: swallowed on try %d", try)
+			if err := back(2); err != nil {
+				return err
+			}
+		default:
+			// Delete what arrived, if that can be told, and leave the
+			// rest to the read-back.
+			note("space after the switch: the field read otherwise")
+			if n := len([]rune(after)) - len([]rune(before)); n > 0 && n <= 3 {
+				return back(n)
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+// spaceProbe tells what spendSwitchSpace's "x", Space and "y" put into a
+// field whose value was before and is after now: "x y", "xy" (the Space
+// swallowed), or "" when the field reads otherwise. The letters may come
+// capitalized, and an empty field's value was its placeholder.
+func spaceProbe(before, after string) string {
+	got := arrived3(before, after)
+	if got == "" {
+		got = after // a placeholder that went away
+	}
+	for _, want := range []string{"x y", "xy"} {
+		if strings.EqualFold(got, want) {
+			return want
+		}
+	}
+	return ""
+}
+
+// arrived3 is what typing put into a field whose value was before and is
+// after now, as arrived, for more than one character.
+func arrived3(before, after string) string {
+	b, a := []rune(before), []rune(after)
+	if len(a) <= len(b) {
+		return ""
+	}
+	i := 0
+	for i < len(b) && a[i] == b[i] {
+		i++
+	}
+	j := 0
+	for j < len(b)-i && a[len(a)-1-j] == b[len(b)-1-j] {
+		j++
+	}
+	if i+j != len(b) {
+		return ""
+	}
+	return string(a[i : len(a)-j])
+}
+
+// switchSpaceWait is how long spendSwitchSpace waits for its keys to show
+// in the field: they do within a few hundred milliseconds.
+const switchSpaceWait = 800 * time.Millisecond
 
 // keyboardSwitch is how long iOS takes to change keyboards; keyboardSettle
 // how long a keyboard takes with the last keys typed.
