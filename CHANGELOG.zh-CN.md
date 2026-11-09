@@ -2,6 +2,11 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在 Windows 上，拔掉数据线后 iPhone 现在会继续通过 Wi-Fi 使用，不再掉线，也不会明明已解锁却一直显示「已锁定（Wi-Fi）」。感谢 yaoqiangyao。
+- 在 Windows 上，PATH 里的 adb 来自 scoop 时，Pinky 不会再留下一个一直开着的 adb 控制台窗口。
+
 ## 2026.1109.11 (2026-11-09)
 
 - Android 手机的画面不会再因为视频编码器在画面静止后停止工作而一直显示「正在连接…」：Pinky 会在几秒内重新启动视频。感谢 NaNhkNaN。
