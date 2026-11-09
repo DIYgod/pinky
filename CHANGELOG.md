@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1109.17 (2026-11-09)
 
 - On Linux, a Pinky unpacked from the `.tar.gz` now installs updates by itself: it checks the download, swaps in the new version's files, restarts into it, and goes back to the old version if the new one does not start. Other files in the same folder stay where they are. Thanks to pseudoyu.
 
