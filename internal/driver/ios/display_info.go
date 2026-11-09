@@ -3,6 +3,7 @@ package ios
 import (
 	"context"
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -40,6 +41,11 @@ type screenInfo struct {
 	// DisplayID is the display's CoreDevice id (displayId), which a stream
 	// asks for; 0 when the reply names none.
 	DisplayID int
+	UniqueID  string // its uniqueId, which a screenshot may ask for; "" when the reply names none
+	// Key tells the display from the phone's others across reads
+	// (displayEntry.key): when it changes, the phone moved to another one.
+	Key string
+	Lit int // as displayEntry's
 }
 
 // rotQuarter reads rot0, rot90, rot180 and rot270 as quarter turns
@@ -96,11 +102,21 @@ func orientationOf(w, h int) string {
 // phone's own displays make it a phone with several. No foldable has been
 // tried: which display a folded Duo calls primary, and whether active
 // follows the fold, are not known yet.
+//
+// The replies seen from phones with one display (iOS 27.0 to 27.2) name no
+// displayId, so a foldable's may not either, nor list both its displays.
+// What is known (GitHub issue #32): a Duo folded, its outer display on,
+// streams display 1; unfolded, display 1 brings no picture. So when the
+// display in use has no id, or a phone with two screens (twoScreens) lists
+// one, the stream tries ids 1, 2 and 3 and remembers which brought the
+// display's picture (Device.good), and a fold shows as another display
+// (key: its uniqueId, else its id and size) being the one in use.
 
 // displayEntry is one display of a getdisplayinfo reply.
 type displayEntry struct {
-	ID            int // displayId; 0 when the reply names none
-	Width, Height int // its bounds, in the display's own frame
+	ID            int    // displayId; 0 when the reply names none
+	UniqueID      string // uniqueId; "" when the reply names none
+	Width, Height int    // its bounds, in the display's own frame
 	Primary       bool
 	External      bool
 	Kind          string // its type, lower case: integrated, external, wireless, virtual, dfr, unknown; "" when not said
@@ -128,6 +144,12 @@ func parseDisplays(out map[string]any) []displayEntry {
 		for _, k := range displayIDKeys {
 			if v, ok := m[k]; ok {
 				e.ID = int(toInt64(v))
+				break
+			}
+		}
+		for _, k := range []string{"uniqueId", "uniqueID"} {
+			if v, ok := m[k].(string); ok && v != "" {
+				e.UniqueID = v
 				break
 			}
 		}
@@ -182,6 +204,37 @@ func several(ds []displayEntry) bool {
 		}
 	}
 	return n > 1
+}
+
+// idsKnown reports whether the reply lists several displays of the
+// phone's own, each with an id of its own: then an id names one display.
+func idsKnown(ds []displayEntry) bool {
+	seen := map[int]bool{}
+	for _, e := range ds {
+		if !e.own() {
+			continue
+		}
+		if e.ID <= 0 || seen[e.ID] {
+			return false
+		}
+		seen[e.ID] = true
+	}
+	return len(seen) > 1
+}
+
+// key tells the display from the phone's others across reads: its
+// uniqueId, else its id and its size, the shorter side first (a display's
+// bounds are in its own frame, but turning the phone must never look like
+// another display).
+func (e displayEntry) key() string {
+	if e.UniqueID != "" {
+		return "u " + e.UniqueID
+	}
+	w, h := e.Width, e.Height
+	if w > h {
+		w, h = h, w
+	}
+	return fmt.Sprintf("%d %dx%d", e.ID, w, h)
 }
 
 // boundsSize reads a display's bounds, [[x, y], [w, h]].
@@ -247,11 +300,14 @@ const defaultDisplayID = 1
 // streamDisplays returns the display ids to ask a stream of, best first.
 // A phone with one display of its own gets the default id first, as
 // before Pinky knew of several, then that display's id when it is another.
-// A phone with several gets shown first (the display Pinky shows, 0 for
-// none), then its other displays in rankDisplays' order, then the default
-// id when no display has it. Other displays (an external screen, the
-// stream's own wireless display) are never asked for.
-func streamDisplays(ds []displayEntry, shown int) []int {
+// A phone with several, or with two screens (two) whatever the reply lists,
+// gets shown first (the id of the display Pinky shows, 0 for none), then
+// its other displays in rankDisplays' order, then the default id when no
+// display has it; and when the ids do not tell its screens apart (a
+// display of its own without one, or one listed of two), ids 2 and 3 too.
+// Other displays (an external screen, the stream's own wireless display)
+// are never asked for.
+func streamDisplays(ds []displayEntry, shown int, two bool) []int {
 	var ids []int
 	add := func(id int) {
 		if id <= 0 {
@@ -264,7 +320,7 @@ func streamDisplays(ds []displayEntry, shown int) []int {
 		}
 		ids = append(ids, id)
 	}
-	if !several(ds) {
+	if !several(ds) && !two {
 		add(defaultDisplayID)
 		for _, e := range ds {
 			if e.own() {
@@ -274,12 +330,18 @@ func streamDisplays(ds []displayEntry, shown int) []int {
 		return ids
 	}
 	add(shown)
+	unsure := !several(ds)
 	for _, e := range rankDisplays(ds) {
 		if e.own() {
 			add(e.ID)
+			unsure = unsure || e.ID <= 0
 		}
 	}
 	add(defaultDisplayID)
+	if unsure {
+		add(2)
+		add(3)
+	}
 	return ids
 }
 
@@ -349,6 +411,43 @@ type displayInfo struct {
 	out      map[string]any // the reply
 }
 
+// screenOfKey describes the listed display with key k.
+func (di displayInfo) screenOfKey(k string) (screenInfo, bool) {
+	for _, e := range di.Displays {
+		if k != "" && e.key() == k && e.Width > 0 && e.Height > 0 {
+			return screenOf(e, di.out), true
+		}
+	}
+	return screenInfo{}, false
+}
+
+// pictureOf returns the display of the phone's own that a stream's picture
+// of w x h shows, by its shape: the ratio of its sides within 3% of the
+// picture's, and no other display's so. The id a stream asks for may name
+// no listed display, or another than the reply's id would say; the
+// picture tells. A foldable's two displays differ in shape far more.
+func pictureOf(ds []displayEntry, w, h int) (displayEntry, bool) {
+	if w <= 0 || h <= 0 {
+		return displayEntry{}, false
+	}
+	ratio := func(a, b int) float64 {
+		if a > b {
+			a, b = b, a
+		}
+		return float64(a) / float64(b)
+	}
+	r := ratio(w, h)
+	var found displayEntry
+	n := 0
+	for _, e := range ds {
+		if e.own() && e.Width > 0 && e.Height > 0 && math.Abs(ratio(e.Width, e.Height)-r) <= 0.03*r {
+			found = e
+			n++
+		}
+	}
+	return found, n == 1
+}
+
 // screenFor describes the listed display with id id.
 func (di displayInfo) screenFor(id int) (screenInfo, bool) {
 	for _, e := range di.Displays {
@@ -360,13 +459,13 @@ func (di displayInfo) screenFor(id int) (screenInfo, bool) {
 }
 
 func readScreenInfo(ctx context.Context, svc *cdService) (screenInfo, error) {
-	di, err := readDisplayInfo(ctx, svc, 0)
+	di, err := readDisplayInfo(ctx, svc, "")
 	return di.Screen, err
 }
 
 // readDisplayInfo reads the phone's displays; keep is as parseDisplayInfo
 // takes it.
-func readDisplayInfo(ctx context.Context, svc *cdService, keep int) (displayInfo, error) {
+func readDisplayInfo(ctx context.Context, svc *cdService, keep string) (displayInfo, error) {
 	out, err := svc.invoke(ctx, featureGetDisplayInfo, "", nil)
 	if err != nil {
 		return displayInfo{}, err
@@ -377,22 +476,22 @@ func readDisplayInfo(ctx context.Context, svc *cdService, keep int) (displayInfo
 // parseScreenInfo reads the display Pinky shows from a getdisplayinfo
 // reply.
 func parseScreenInfo(out map[string]any) (screenInfo, error) {
-	di, err := parseDisplayInfo(out, 0)
+	di, err := parseDisplayInfo(out, "")
 	return di.Screen, err
 }
 
 // parseDisplayInfo reads a getdisplayinfo reply: the display Pinky shows
-// (chooseDisplay) and the list. keep is the id of the display Pinky showed
-// so far (0: none): while no display of several is lit (the phone asleep
-// or locked), Pinky stays on it rather than move to the primary one, and
-// moves when one lights up.
-func parseDisplayInfo(out map[string]any, keep int) (displayInfo, error) {
+// (chooseDisplay) and the list. keep is the key of the display Pinky
+// showed so far ("": none): while no display of several is lit (the phone
+// asleep or locked), Pinky stays on it rather than move to the primary
+// one, and moves when one lights up.
+func parseDisplayInfo(out map[string]any, keep string) (displayInfo, error) {
 	ds := parseDisplays(out)
 	di := displayInfo{Displays: ds, out: out}
 	e, ok := chooseDisplay(ds)
-	if keep > 0 && several(ds) && !anyLit(ds) {
+	if keep != "" && several(ds) && !anyLit(ds) {
 		for _, k := range ds {
-			if k.ID == keep && k.Width > 0 && k.Height > 0 {
+			if k.key() == keep && k.Width > 0 && k.Height > 0 {
 				e, ok = k, true
 				break
 			}
@@ -411,7 +510,7 @@ func parseDisplayInfo(out map[string]any, keep int) (displayInfo, error) {
 // screenOf describes one display of a reply.
 func screenOf(e displayEntry, out map[string]any) screenInfo {
 	m := e.m
-	si := screenInfo{Width: e.Width, Height: e.Height, Scale: 1, DisplayID: e.ID}
+	si := screenInfo{Width: e.Width, Height: e.Height, Scale: 1, DisplayID: e.ID, UniqueID: e.UniqueID, Key: e.key(), Lit: e.Lit}
 	if s := toFloat(m["pointScale"]); s > 0 {
 		si.Scale = s
 	}

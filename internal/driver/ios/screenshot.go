@@ -30,8 +30,28 @@ const (
 // ScreenshotPNG returns a PNG of the main display at the size UIKit renders
 // (1125x2436 on an iPhone 13 mini), which is the driver's coordinate space.
 func (d *Device) ScreenshotPNG(ctx context.Context) ([]byte, error) {
+	d.mu.Lock()
+	uid := ""
+	if d.multiLocked() {
+		uid = d.scr.UniqueID
+	}
+	d.mu.Unlock()
 	d.svcMu.Lock()
 	defer d.svcMu.Unlock()
+	if uid != "" && !d.shotUIDOff {
+		// A phone with several displays: the instruments service takes the
+		// main display, which may be the one folded away; the capture
+		// service takes the display the stream shows, by its uniqueId.
+		b, err := d.captureShotOf(ctx, uid)
+		if err == nil {
+			return b, nil
+		}
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("screenshot: %w", err)
+		}
+		d.shotUIDOff = true
+		d.log.Warn("iphone: no screenshot of the display in use; taking the main display's from now on", "device", d.info.ID, "display", uid, "err", err)
+	}
 	first, second := d.instrumentsShot, d.captureShot
 	if d.preferCapture {
 		first, second = second, first
@@ -169,6 +189,18 @@ func (d *Device) instrumentsShot(ctx context.Context) ([]byte, error) {
 
 // captureShot uses CoreDevice's screen capture service. Callers hold svcMu.
 func (d *Device) captureShot(ctx context.Context) ([]byte, error) {
+	return d.captureShotOf(ctx, "")
+}
+
+// captureShotOf takes a screenshot of the display with the uniqueId uid
+// ("": the main display) with CoreDevice's screen capture service, whose
+// key for it is displayUniqueID (go-ios's ScreenshotOptions). Callers hold
+// svcMu.
+func (d *Device) captureShotOf(ctx context.Context, uid string) ([]byte, error) {
+	in := map[string]any{"requestedFormat": "png"}
+	if uid != "" {
+		in["displayUniqueID"] = uid
+	}
 	for attempt := 0; ; attempt++ {
 		if d.shot == nil {
 			svc, err := dialCoreDevice(d.l.entry, screenCaptureService)
@@ -179,7 +211,7 @@ func (d *Device) captureShot(ctx context.Context) ([]byte, error) {
 		}
 		_, limit := shotTimeouts(d.info.Connection)
 		c, cancel := context.WithTimeout(ctx, limit)
-		out, err := d.shot.invoke(c, featureCaptureScreenshot, actionCaptureScreenshot, map[string]any{"requestedFormat": "png"})
+		out, err := d.shot.invoke(c, featureCaptureScreenshot, actionCaptureScreenshot, in)
 		cancel()
 		if err != nil {
 			d.shot.Close()

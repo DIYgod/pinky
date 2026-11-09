@@ -27,12 +27,12 @@ func TestNoteDisplaysFollowsFold(t *testing.T) {
 		// the display it got.
 		d.mu.Lock()
 		d.m = &media{display: on}
-		d.streamFor, d.streamOn = d.want, on
+		d.streamedLocked(d.want, on, 0, 0)
 		d.mu.Unlock()
 	}
 
 	si := d.noteDisplays(parse(true, false))
-	if si.DisplayID != 1 || d.want != 1 {
+	if si.DisplayID != 1 || d.want != innerKey {
 		t.Fatalf("unfolded: %+v", si)
 	}
 	streaming(1)
@@ -70,14 +70,16 @@ func TestNoteDisplaysFollowsFold(t *testing.T) {
 // does.
 func TestNoteDisplaysFallback(t *testing.T) {
 	d := &Device{log: discard}
-	folded, _ := parseDisplayInfo(duoReply(false, true), 0)
-	unfolded, _ := parseDisplayInfo(duoReply(true, false), 0)
+	folded, _ := parseDisplayInfo(duoReply(false, true), "")
+	unfolded, _ := parseDisplayInfo(duoReply(true, false), "")
 	d.noteDisplays(folded)
-	// Display 2 gave no picture; display 1 did.
+	if _, ids := d.streamPlanLocked(); !reflect.DeepEqual(ids, []int{2, 1}) {
+		t.Fatalf("plan %v", ids)
+	}
+	// Display 2 gave no picture; display 1 did, of the inner display.
 	d.mu.Lock()
 	d.m = &media{display: 1}
-	d.streamFor, d.streamOn = 2, 1
-	d.goodFor, d.goodOn = 2, 1
+	d.streamedLocked(outerKey, 1, 1100, 1240)
 	d.mu.Unlock()
 
 	if si := d.noteDisplays(folded); si.DisplayID != 1 || si.Width != 2200 {
@@ -91,14 +93,18 @@ func TestNoteDisplaysFallback(t *testing.T) {
 	if si := d.noteDisplays(unfolded); si.DisplayID != 1 || d.displayMoved() {
 		t.Fatalf("unfold onto the streamed display: %+v, moved %v", si, d.displayMoved())
 	}
-	if d.streamFor != 1 {
-		t.Fatalf("streamFor = %d", d.streamFor)
+	if d.streamFor != innerKey {
+		t.Fatalf("streamFor = %q", d.streamFor)
 	}
 
-	// Folded again: a move, and the next start tries display 2 again.
+	// Folded again: a move, and the next start asks first for display 1,
+	// which brought the outer display's picture last time.
 	d.noteDisplays(folded)
-	if !d.displayMoved() || d.goodFor != 0 {
-		t.Fatalf("fold: moved %v, goodFor %d", d.displayMoved(), d.goodFor)
+	if !d.displayMoved() {
+		t.Fatal("fold: no move")
+	}
+	if want, ids := d.streamPlanLocked(); want != outerKey || !reflect.DeepEqual(ids, []int{1, 2}) {
+		t.Fatalf("plan %q %v", want, ids)
 	}
 }
 
@@ -106,7 +112,7 @@ func TestNoteDisplaysFallback(t *testing.T) {
 func TestNoteDisplaysSingle(t *testing.T) {
 	d := &Device{log: discard}
 	one := func(id int, lit bool) displayInfo {
-		di, err := parseDisplayInfo(map[string]any{"displays": []any{duoDisplay(id, 1179, 2556, true, map[string]any{"active": lit})}}, 0)
+		di, err := parseDisplayInfo(map[string]any{"displays": []any{duoDisplay(id, 1179, 2556, true, map[string]any{"active": lit})}}, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -114,7 +120,7 @@ func TestNoteDisplaysSingle(t *testing.T) {
 	}
 	d.noteDisplays(one(1, true))
 	d.m = &media{display: 1}
-	d.streamFor, d.streamOn = 1, 1
+	d.streamedLocked(d.want, 1, 1179, 2556)
 	for _, di := range []displayInfo{one(1, false), one(5, true)} {
 		d.noteDisplays(di)
 		if d.displayMoved() {
@@ -123,16 +129,254 @@ func TestNoteDisplaysSingle(t *testing.T) {
 	}
 	// Nor does a foldable without a stream.
 	d.m = nil
-	folded, _ := parseDisplayInfo(duoReply(false, true), 0)
+	folded, _ := parseDisplayInfo(duoReply(false, true), "")
 	d.noteDisplays(folded)
 	if d.displayMoved() {
 		t.Fatal("moved without a stream")
 	}
 }
 
+// A foldable whose reply names no displayId, as the replies seen from
+// phones with one display come: the fold shows as another display being
+// in use, the stream tries ids 1, 2 and 3, and each display's next start
+// asks first for the id that brought its picture.
+func TestFoldWithoutIDs(t *testing.T) {
+	d := &Device{log: discard, two: twoScreens("iPhone Duo")}
+	parse := func(innerLit, outerLit bool) displayInfo {
+		t.Helper()
+		di, err := parseDisplayInfo(duoReplyNoIDs(innerLit, outerLit), d.want)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return di
+	}
+	start := func(f *fakeStreams) {
+		t.Helper()
+		d.mu.Lock()
+		want, ids := d.streamPlanLocked()
+		ds := d.dinfo.Displays
+		d.mu.Unlock()
+		m, _, err := f.streamer().try(context.Background(), ids, ds)
+		if err != nil {
+			t.Fatal(err)
+		}
+		pw, ph := m.size()
+		d.mu.Lock()
+		d.m = m
+		d.streamedLocked(want, m.display, pw, ph)
+		d.mu.Unlock()
+	}
+	// Folded, the outer display on: display 1 streams it (issue #32).
+	folded := &fakeStreams{outcome: map[int]any{1: "picture"}, size: map[int][2]int{1: {1080, 2400}}}
+	// Unfolded: display 1 ends its stream, as the report saw ("video
+	// receive: EOF"), and display 2 shows the inner one.
+	eof := errors.New("video receive: EOF")
+	unfolded := &fakeStreams{outcome: map[int]any{1: func(m *media) {
+		m.err = eof
+		m.stopped.Store(true)
+		close(m.done)
+	}, 2: "picture"}, size: map[int][2]int{2: {2200, 2480}}}
+
+	si := d.noteDisplays(parse(true, false))
+	if si.Width != 2200 || si.DisplayID != 0 {
+		t.Fatalf("unfolded: %+v", si)
+	}
+	start(unfolded)
+	if !reflect.DeepEqual(unfolded.started, []int{1, 2}) || d.streamOn != 2 {
+		t.Fatalf("unfolded: started %v, streaming %d", unfolded.started, d.streamOn)
+	}
+	if d.displayMoved() || d.streamShows != "0 2200x2480" {
+		t.Fatalf("right after the start: moved %v, shows %q", d.displayMoved(), d.streamShows)
+	}
+	d.noteDisplays(parse(true, false))
+	if d.displayMoved() {
+		t.Fatal("moved without a fold")
+	}
+
+	// Folded while streaming: a move to the outer display.
+	if si = d.noteDisplays(parse(false, true)); si.Width != 1080 || !d.displayMoved() {
+		t.Fatalf("fold: %+v, moved %v", si, d.displayMoved())
+	}
+	start(folded)
+	if !reflect.DeepEqual(folded.started, []int{1}) || d.displayMoved() {
+		t.Fatalf("folded: started %v, moved %v", folded.started, d.displayMoved())
+	}
+
+	// Unfolded again: straight to display 2.
+	d.noteDisplays(parse(true, false))
+	if !d.displayMoved() {
+		t.Fatal("unfold: no move")
+	}
+	again := &fakeStreams{outcome: unfolded.outcome, size: unfolded.size}
+	start(again)
+	if !reflect.DeepEqual(again.started, []int{2}) {
+		t.Fatalf("unfolded again: started %v", again.started)
+	}
+
+	// Asleep, both dark: Pinky stays on the display it showed.
+	d.noteDisplays(parse(false, false))
+	if d.displayMoved() || d.want != "0 2200x2480" {
+		t.Fatalf("asleep: moved %v, want %q", d.displayMoved(), d.want)
+	}
+}
+
+// A phone with two screens whose reply lists only the display in use, and
+// names it display 1 whichever it is: its size tells a fold, and the id
+// that streamed the other display does not stand for this one.
+func TestFoldOneListed(t *testing.T) {
+	d := &Device{log: discard, two: true}
+	one := func(w, h float64, extra map[string]any) displayInfo {
+		t.Helper()
+		di, err := parseDisplayInfo(map[string]any{"displays": []any{duoDisplay(1, w, h, true, extra)}}, d.want)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return di
+	}
+	inner, outer := one(2200, 2480, nil), one(1080, 2400, nil)
+	streaming := func(id int) {
+		d.mu.Lock()
+		d.m = &media{display: id}
+		d.streamedLocked(d.want, id, 0, 0)
+		d.mu.Unlock()
+	}
+
+	d.noteDisplays(inner)
+	if _, ids := d.streamPlanLocked(); !reflect.DeepEqual(ids, []int{1, 2, 3}) {
+		t.Fatalf("plan %v", ids)
+	}
+	streaming(2)
+	d.noteDisplays(outer)
+	if !d.displayMoved() {
+		t.Fatal("fold: no move")
+	}
+	streaming(1)
+	// Unfolded: display 1 is what the stream asked for and what the reply
+	// says, but it showed the outer display; the stream must move.
+	d.noteDisplays(inner)
+	if !d.displayMoved() {
+		t.Fatal("unfold: no move")
+	}
+	if _, ids := d.streamPlanLocked(); !reflect.DeepEqual(ids, []int{2, 1, 3}) {
+		t.Fatalf("unfold plan %v", ids)
+	}
+	// Turning the phone is no fold.
+	streaming(2)
+	d.noteDisplays(one(2480, 2200, map[string]any{"currentOrientation": "rot90"}))
+	if d.displayMoved() {
+		t.Fatal("a turn moved the stream")
+	}
+	// Nor is a display that says it is off, or a phone whose backlight is.
+	d.noteDisplays(one(1080, 2400, map[string]any{"active": false}))
+	if d.displayMoved() {
+		t.Fatal("moved to a dark display")
+	}
+	asleep, _ := parseDisplayInfo(map[string]any{"displays": []any{duoDisplay(1, 1080, 2400, true, nil)}, "backlightState": "off"}, "")
+	d.noteDisplays(asleep)
+	if d.displayMoved() {
+		t.Fatal("moved while the phone is asleep")
+	}
+	d.noteDisplays(outer)
+	if !d.displayMoved() {
+		t.Fatal("no move once it is on")
+	}
+}
+
+// The picture's shape tells which display a stream shows, also when the
+// reply's ids say another: sizes and touches go by it, and a fold onto that
+// display needs no new stream.
+func TestStreamShowsByPicture(t *testing.T) {
+	d := &Device{log: discard}
+	folded, _ := parseDisplayInfo(duoReply(false, true), "")
+	unfolded, _ := parseDisplayInfo(duoReply(true, false), "")
+	d.noteDisplays(unfolded)
+	// Display 1 streams the outer display, though the reply calls the
+	// inner one display 1.
+	d.mu.Lock()
+	d.m = &media{display: 1}
+	d.streamedLocked(innerKey, 1, 1088, 2416)
+	d.mu.Unlock()
+	if d.streamShows != outerKey || d.display().Width != 1080 || d.good[outerKey] != 1 {
+		t.Fatalf("shows %q, screen %+v, good %v", d.streamShows, d.display(), d.good)
+	}
+	// Still unfolded: the stream shows the other display; that is no
+	// move of the phone's, but the screen stays the one streamed.
+	if si := d.noteDisplays(unfolded); si.Width != 1080 || d.displayMoved() {
+		t.Fatalf("unfolded: %+v, moved %v", si, d.displayMoved())
+	}
+	// Folded: the phone moved to the display the stream shows.
+	if si := d.noteDisplays(folded); si.Width != 1080 || d.displayMoved() || d.streamFor != outerKey {
+		t.Fatalf("folded: %+v, moved %v, for %q", si, d.displayMoved(), d.streamFor)
+	}
+	// Unfolded again: a move.
+	d.noteDisplays(unfolded)
+	if !d.displayMoved() {
+		t.Fatal("unfold: no move")
+	}
+}
+
+func TestPictureOf(t *testing.T) {
+	ds := parseDisplays(duoReply(true, false))
+	for _, c := range []struct {
+		w, h int
+		key  string
+	}{
+		{2200, 2480, innerKey}, {1100, 1240, innerKey}, {2480, 2200, innerKey},
+		{1080, 2400, outerKey}, {1088, 2416, outerKey}, {2400, 1080, outerKey},
+		{1500, 2400, ""}, {1000, 1000, ""}, {0, 0, ""},
+	} {
+		e, ok := pictureOf(ds, c.w, c.h)
+		if got := ""; ok {
+			got = e.key()
+			if got != c.key {
+				t.Errorf("%dx%d: %q, want %q", c.w, c.h, got, c.key)
+			}
+		} else if c.key != "" {
+			t.Errorf("%dx%d: none, want %q", c.w, c.h, c.key)
+		}
+	}
+	// Two displays of one shape: the picture cannot tell.
+	same := parseDisplays(map[string]any{"displays": []any{
+		duoDisplay(1, 1080, 2400, true, nil), duoDisplay(2, 1080, 2400, false, nil),
+	}})
+	if _, ok := pictureOf(same, 1080, 2400); ok {
+		t.Error("told two displays of one shape apart")
+	}
+}
+
+// A display's uniqueId, when the reply gives one, names it across reads.
+func TestDisplayUniqueID(t *testing.T) {
+	ds := parseDisplays(map[string]any{"displays": []any{
+		duoDisplay(1, 2200, 2480, true, map[string]any{"uniqueId": "inner-uid"}),
+		duoDisplay(2, 1080, 2400, false, map[string]any{"uniqueID": "outer-uid"}),
+		duoDisplay(3, 1080, 2400, false, nil),
+	}})
+	if ds[0].UniqueID != "inner-uid" || ds[1].UniqueID != "outer-uid" {
+		t.Fatalf("%+v", ds)
+	}
+	if ds[0].key() != "u inner-uid" || ds[2].key() != "3 1080x2400" {
+		t.Fatalf("keys %q %q", ds[0].key(), ds[2].key())
+	}
+	si := screenOf(ds[0], nil)
+	if si.UniqueID != "inner-uid" || si.Key != "u inner-uid" {
+		t.Fatalf("%+v", si)
+	}
+}
+
+func TestTwoScreens(t *testing.T) {
+	for model, want := range map[string]bool{
+		"iPhone Duo": true, "iPhone19,4": true, "iPhone 17 Pro": false, "iPhone19,3": false, "": false,
+	} {
+		if got := twoScreens(model); got != want {
+			t.Errorf("twoScreens(%q) = %v", model, got)
+		}
+	}
+}
+
 // fakeStreams starts streams that bring a picture or not, by display.
 type fakeStreams struct {
-	outcome map[int]any // "picture", "none", an error to start with, or a func(*media) that ends the stream
+	outcome map[int]any    // "picture", "none", an error to start with, or a func(*media) that ends the stream
+	size    map[int][2]int // the picture's size, by display
 	started []int
 	stopped []int
 	gone    bool
@@ -143,6 +387,7 @@ func (f *fakeStreams) streamer() streamDisplay {
 		start: func(_ context.Context, id int) (*media, error) {
 			f.started = append(f.started, id)
 			m := &media{display: id, ready: make(chan struct{}), done: make(chan struct{})}
+			m.width, m.height = f.size[id][0], f.size[id][1]
 			switch o := f.outcome[id].(type) {
 			case error:
 				return nil, o
@@ -208,15 +453,15 @@ func TestStreamDisplayNoVideoAnywhere(t *testing.T) {
 	}
 }
 
-// A phone with one display tries display 1 alone, and says so as before.
+// A phone with one display tries display 1 alone, and the error names it.
 func TestStreamDisplaySingle(t *testing.T) {
 	f := &fakeStreams{outcome: map[int]any{}}
 	ds := parseDisplays(map[string]any{"displays": []any{map[string]any{
 		"primary": true, "bounds": []any{[]any{0.0, 0.0}, []any{1179.0, 2556.0}}, "backlightState": "activeOn",
 	}}})
-	ids := streamDisplays(ds, 0)
+	ids := streamDisplays(ds, 0, false)
 	_, _, err := f.streamer().try(context.Background(), ids, ds)
-	if err == nil || err.Error() != "no video from the device: context deadline exceeded" {
+	if err == nil || err.Error() != "no video from the device (display 1): context deadline exceeded" {
 		t.Fatalf("err = %v", err)
 	}
 	if !reflect.DeepEqual(f.started, []int{1}) {
@@ -291,7 +536,7 @@ func TestStreamDisplayEnded(t *testing.T) {
 		close(m.done)
 	}}}
 	_, _, err := f.streamer().try(context.Background(), []int{1}, nil)
-	if err == nil || err.Error() != "no video from the device: "+bye.Error() || !errors.Is(err, bye) {
+	if err == nil || err.Error() != "no video from the device (display 1): "+bye.Error() || !errors.Is(err, bye) {
 		t.Fatalf("err = %v", err)
 	}
 }

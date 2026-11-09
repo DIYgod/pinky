@@ -24,6 +24,10 @@ func duoDisplay(id int, w, h float64, primary bool, extra map[string]any) map[st
 	return m
 }
 
+// innerKey and outerKey are the keys (displayEntry.key) of duoReply's
+// displays.
+const innerKey, outerKey = "1 2200x2480", "2 1080x2400"
+
 // duoReply is a reply of a foldable with its inner (id 1) and outer (id 2)
 // display, either lit.
 func duoReply(innerLit, outerLit bool) map[string]any {
@@ -36,8 +40,18 @@ func duoReply(innerLit, outerLit bool) map[string]any {
 	}
 }
 
+// duoReplyNoIDs is duoReply without displayId, as the replies seen from
+// phones with one display come (iOS 27.0 to 27.2).
+func duoReplyNoIDs(innerLit, outerLit bool) map[string]any {
+	out := duoReply(innerLit, outerLit)
+	for _, d := range out["displays"].([]any) {
+		delete(d.(map[string]any), "displayId")
+	}
+	return out
+}
+
 func TestParseDisplayInfoFoldable(t *testing.T) {
-	open, err := parseDisplayInfo(duoReply(true, false), 0)
+	open, err := parseDisplayInfo(duoReply(true, false), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +62,7 @@ func TestParseDisplayInfoFoldable(t *testing.T) {
 		t.Fatalf("displays: %+v", open.Displays)
 	}
 
-	folded, err := parseDisplayInfo(duoReply(false, true), 1)
+	folded, err := parseDisplayInfo(duoReply(false, true), innerKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +87,7 @@ func TestParseDisplayInfoBacklightPerDisplay(t *testing.T) {
 		duoDisplay(1, 2200, 2480, true, map[string]any{"backlightState": "off"}),
 		duoDisplay(2, 1080, 2400, false, map[string]any{"backlightState": "activeDimmed"}),
 	}}
-	di, err := parseDisplayInfo(out, 0)
+	di, err := parseDisplayInfo(out, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,17 +120,20 @@ func TestParseDisplayInfoKeepsWhileDark(t *testing.T) {
 			duoDisplay(2, 1080, 2400, false, map[string]any{"backlightState": "off"}),
 		},
 	}
-	for _, c := range []struct{ keep, want int }{{0, 1}, {1, 1}, {2, 2}, {7, 1}} {
+	for _, c := range []struct {
+		keep string
+		want int
+	}{{"", 1}, {innerKey, 1}, {outerKey, 2}, {"7 1x1", 1}} {
 		di, err := parseDisplayInfo(dark, c.keep)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if di.Screen.DisplayID != c.want {
-			t.Errorf("keep %d: showed %d, want %d", c.keep, di.Screen.DisplayID, c.want)
+			t.Errorf("keep %q: showed %d, want %d", c.keep, di.Screen.DisplayID, c.want)
 		}
 	}
 	// Once one lights up, Pinky moves to it.
-	di, _ := parseDisplayInfo(duoReply(true, false), 2)
+	di, _ := parseDisplayInfo(duoReply(true, false), outerKey)
 	if di.Screen.DisplayID != 1 {
 		t.Errorf("lit inner display: showed %d", di.Screen.DisplayID)
 	}
@@ -132,7 +149,7 @@ func TestParseDisplayInfoTopLevelBacklight(t *testing.T) {
 		},
 		"backlightState": "activeDimmed",
 	}
-	di, err := parseDisplayInfo(out, 0)
+	di, err := parseDisplayInfo(out, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +171,7 @@ func TestChooseDisplayExternalLast(t *testing.T) {
 	if e, _ := chooseDisplay(ds); e.ID != 1 {
 		t.Fatalf("chose %d", e.ID)
 	}
-	if got := streamDisplays(ds, 1); !reflect.DeepEqual(got, []int{1}) {
+	if got := streamDisplays(ds, 1, false); !reflect.DeepEqual(got, []int{1}) {
 		t.Fatalf("streamDisplays = %v", got)
 	}
 }
@@ -172,7 +189,7 @@ func TestStreamDisplayNotOwn(t *testing.T) {
 			}}
 		}
 		for _, lit := range []bool{true, false} {
-			di, err := parseDisplayInfo(reply(lit), 1)
+			di, err := parseDisplayInfo(reply(lit), "1 1125x2436")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -182,7 +199,7 @@ func TestStreamDisplayNotOwn(t *testing.T) {
 			if several(di.Displays) {
 				t.Errorf("%v: several displays", kind)
 			}
-			if got := streamDisplays(di.Displays, di.Screen.DisplayID); !reflect.DeepEqual(got, []int{1}) {
+			if got := streamDisplays(di.Displays, di.Screen.DisplayID, false); !reflect.DeepEqual(got, []int{1}) {
 				t.Errorf("%v: streamDisplays = %v", kind, got)
 			}
 		}
@@ -192,13 +209,13 @@ func TestStreamDisplayNotOwn(t *testing.T) {
 	di, _ := parseDisplayInfo(map[string]any{"displays": []any{
 		duoDisplay(1, 1125, 2436, true, map[string]any{"active": false}),
 		duoDisplay(2, 1136, 2448, false, map[string]any{"active": true, "type": "wireless"}),
-	}}, 0)
+	}}, "")
 	d.noteDisplays(di)
 	d.m = &media{display: 1}
-	d.streamFor, d.streamOn = 1, 1
+	d.streamedLocked(d.want, 1, 1125, 2436)
 	d.noteDisplays(di)
-	if d.displayMoved() || d.want != 1 {
-		t.Fatalf("moved to %d", d.want)
+	if d.displayMoved() || d.wantID != 1 {
+		t.Fatalf("moved to %q", d.want)
 	}
 	if got := describeDisplays(di.Displays); got != "2 displays: id 1 1125x2436 primary off, id 2 1136x2448 wireless lit" {
 		t.Errorf("describe %q", got)
@@ -214,10 +231,10 @@ func TestChooseDisplaySkipsSizeless(t *testing.T) {
 	if e, ok := chooseDisplay(ds); !ok || e.ID != 1 {
 		t.Fatalf("chose %+v", e)
 	}
-	if _, err := parseDisplayInfo(map[string]any{"displays": []any{map[string]any{"primary": true}}}, 0); err == nil {
+	if _, err := parseDisplayInfo(map[string]any{"displays": []any{map[string]any{"primary": true}}}, ""); err == nil {
 		t.Fatal("a display without a size parsed")
 	}
-	if _, err := parseDisplayInfo(map[string]any{}, 0); err == nil {
+	if _, err := parseDisplayInfo(map[string]any{}, ""); err == nil {
 		t.Fatal("a reply without displays parsed")
 	}
 }
@@ -237,22 +254,30 @@ func TestStreamDisplays(t *testing.T) {
 		name  string
 		ds    []displayEntry
 		shown int
+		two   bool
 		want  []int
 	}{
-		{"nothing listed", nil, 0, []int{1}},
-		{"one display without an id (iOS 27.0)", one(nil), 0, []int{1}},
-		{"one display with id 1", one(map[string]any{"displayId": 1}), 1, []int{1}},
+		{"nothing listed", nil, 0, false, []int{1}},
+		{"one display without an id (iOS 27.0)", one(nil), 0, false, []int{1}},
+		{"one display with id 1", one(map[string]any{"displayId": 1}), 1, false, []int{1}},
 		// As before Pinky knew of displays: 1 first, then its own id.
-		{"one display with another id", one(map[string]any{"displayId": int64(5)}), 5, []int{1, 5}},
-		{"folded", duo, 2, []int{2, 1}},
-		{"unfolded", parseDisplays(duoReply(true, false)), 1, []int{1, 2}},
-		{"nothing shown yet", duo, 0, []int{2, 1}},
+		{"one display with another id", one(map[string]any{"displayId": int64(5)}), 5, false, []int{1, 5}},
+		{"folded", duo, 2, false, []int{2, 1}},
+		{"unfolded", parseDisplays(duoReply(true, false)), 1, false, []int{1, 2}},
+		{"nothing shown yet", duo, 0, false, []int{2, 1}},
 		{"ids not 1", parseDisplays(map[string]any{"displays": []any{
 			duoDisplay(4, 2200, 2480, true, map[string]any{"active": false}),
 			duoDisplay(5, 1080, 2400, false, map[string]any{"active": true}),
-		}}), 5, []int{5, 4, 1}},
+		}}), 5, false, []int{5, 4, 1}},
+		// A foldable whose ids are known needs no others, two screens or not.
+		{"folded, two screens", duo, 2, true, []int{2, 1}},
+		// Ids the reply does not give are tried in turn.
+		{"two displays without ids", parseDisplays(duoReplyNoIDs(true, false)), 0, false, []int{1, 2, 3}},
+		{"two screens, one listed without an id", one(nil), 0, true, []int{1, 2, 3}},
+		{"two screens, one listed with id 2", one(map[string]any{"displayId": 2}), 2, true, []int{2, 1, 3}},
+		{"two screens, one listed with id 1", one(map[string]any{"displayId": 1}), 1, true, []int{1, 2, 3}},
 	} {
-		if got := streamDisplays(c.ds, c.shown); !reflect.DeepEqual(got, c.want) {
+		if got := streamDisplays(c.ds, c.shown, c.two); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("%s: %v, want %v", c.name, got, c.want)
 		}
 	}
@@ -286,7 +311,7 @@ func TestParseDisplayInfoSingleUnchanged(t *testing.T) {
 		"currentOrientation": "rot0",
 		"backlightState":     "off",
 	}}}
-	di, err := parseDisplayInfo(out, 0)
+	di, err := parseDisplayInfo(out, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,10 +319,10 @@ func TestParseDisplayInfoSingleUnchanged(t *testing.T) {
 		t.Fatalf("got %+v", s)
 	}
 	// Even dark, and with a display kept from before.
-	if di, _ = parseDisplayInfo(out, 1); di.Screen.Width != 1080 {
+	if di, _ = parseDisplayInfo(out, "1 1080x2340"); di.Screen.Width != 1080 {
 		t.Fatalf("kept: %+v", di.Screen)
 	}
-	if got := streamDisplays(di.Displays, di.Screen.DisplayID); !reflect.DeepEqual(got, []int{1}) {
+	if got := streamDisplays(di.Displays, di.Screen.DisplayID, false); !reflect.DeepEqual(got, []int{1}) {
 		t.Fatalf("streamDisplays = %v", got)
 	}
 }

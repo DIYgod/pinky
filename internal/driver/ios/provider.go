@@ -896,6 +896,22 @@ func major(version string) int {
 // modelName turns a product type into a marketing name, for the models
 // Pinky can drive (iOS 17.4 runs on iPhone XS, XR and later, and iPadOS 17
 // on iPads from 2018 on).
+// twoScreenModels are the phones with two screens of their own, by
+// product type: the iPhone Duo folds, with a display inside and one
+// outside (display_info.go).
+var twoScreenModels = []string{"iPhone19,4"}
+
+// twoScreens reports whether model, as driver.Info.Model names it
+// (modelName), has two screens.
+func twoScreens(model string) bool {
+	for _, pt := range twoScreenModels {
+		if model == pt || model == modelName(pt) {
+			return true
+		}
+	}
+	return false
+}
+
 func modelName(productType string) string {
 	if n, ok := models[productType]; ok {
 		return n

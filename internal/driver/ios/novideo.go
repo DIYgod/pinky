@@ -33,15 +33,22 @@ type noVideoError struct {
 	displays string // describeDisplays of the phone's displays
 }
 
+// Error names the displays the stream asked for, so that a report tells
+// which one gave nothing: "no video from the device (display 1): context
+// deadline exceeded".
 func (e *noVideoError) Error() string {
-	if len(e.tries) > 1 {
-		ids := make([]string, len(e.tries))
-		for i, t := range e.tries {
-			ids[i] = fmt.Sprint(t.Display)
-		}
-		return fmt.Sprintf("no video from the device (displays %s): %v", strings.Join(ids, ", "), e.cause)
+	if len(e.tries) == 0 {
+		return fmt.Sprintf("no video from the device: %v", e.cause)
 	}
-	return fmt.Sprintf("no video from the device: %v", e.cause)
+	ids := make([]string, len(e.tries))
+	for i, t := range e.tries {
+		ids[i] = fmt.Sprint(t.Display)
+	}
+	word := "display"
+	if len(ids) > 1 {
+		word = "displays"
+	}
+	return fmt.Sprintf("no video from the device (%s %s): %v", word, strings.Join(ids, ", "), e.cause)
 }
 
 func (e *noVideoError) Unwrap() error { return e.cause }

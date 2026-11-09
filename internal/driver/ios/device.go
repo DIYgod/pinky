@@ -36,18 +36,26 @@ type Device struct {
 	inputAt time.Time  // when input starts to work
 
 	// A phone with several displays (a foldable) shows one at a time; see
-	// display_info.go. dinfo is the last read of them all and want the id
-	// of the display in use there (chooseDisplay); streamFor is what want
-	// was when the running stream started, and streamOn the display it
-	// shows, another when that one gave no picture. goodFor and goodOn
-	// remember such a fallback for the next start, until the phone switches
-	// displays. scr describes the display the stream shows.
-	dinfo           displayInfo
-	want            int
-	streamFor       int
-	streamOn        int
-	goodFor, goodOn int
-	noVideo         *noVideoError // why the last stream start got no picture; nil once one did
+	// display_info.go. two says the model has two screens, whatever its
+	// replies list. dinfo is the last read of them all, and want the key of
+	// the display in use there (chooseDisplay), wantID its id (0: none
+	// named) and wantLit whether it is lit (as displayEntry.Lit); streamFor
+	// is what want was when the running stream started, and streamOn the
+	// id the stream asked for, another than wantID when that one gave no
+	// picture or the reply names none, and streamShows the key of the
+	// listed display its picture shows ("": not known). good remembers, by
+	// key, the id whose stream last brought a display's picture, for the
+	// next start. scr describes the display the stream shows.
+	two         bool
+	dinfo       displayInfo
+	want        string
+	wantID      int
+	wantLit     int
+	streamFor   string
+	streamOn    int
+	streamShows string
+	good        map[string]int
+	noVideo     *noVideoError // why the last stream start got no picture; nil once one did
 
 	lastInput atomic.Int64 // unix nanos of the last input or launch Pinky sent
 
@@ -89,6 +97,9 @@ type Device struct {
 	// preferCapture is set when the screen capture service answered and the
 	// instruments one did not.
 	preferCapture bool
+	// shotUIDOff is set when the capture service failed a screenshot of
+	// one display by its uniqueId: later ones take the main display.
+	shotUIDOff bool
 
 	imageDir string // Pinky's folder for developer disk images (checkup.go)
 }
@@ -106,7 +117,7 @@ func open(ctx context.Context, info driver.Info, log *slog.Logger) (*Device, err
 	if err != nil {
 		return nil, err
 	}
-	d := &Device{info: info, l: l, log: logTo(log), done: make(chan struct{})}
+	d := &Device{info: info, l: l, log: logTo(log), done: make(chan struct{}), two: twoScreens(info.Model)}
 	if err := d.start(ctx); err != nil {
 		l.Close()
 		return nil, err
@@ -138,7 +149,7 @@ func (d *Device) start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	di, err := readDisplayInfo(ctx, svc, 0)
+	di, err := readDisplayInfo(ctx, svc, "")
 	if err != nil {
 		svc.Close()
 		return err
@@ -170,7 +181,8 @@ const nextDisplayWait = 12 * time.Second
 // restartMedia (re)starts the video stream and the HID session on it. It
 // asks for the display Pinky shows; on a phone with several displays, one
 // that brings no picture (no key frame within readyWait) or that the phone
-// refuses to stream is followed by the others (streamDisplays).
+// refuses to stream is followed by the others (streamDisplays), the one
+// that last brought this display's picture first.
 func (d *Device) restartMedia(ctx context.Context) error {
 	err := d.startStream(ctx)
 	var nv *noVideoError
@@ -187,15 +199,9 @@ func (d *Device) restartMedia(ctx context.Context) error {
 // displays restartMedia says.
 func (d *Device) startStream(ctx context.Context) error {
 	d.mu.Lock()
-	want, ds := d.want, d.dinfo.Displays
-	ids := streamDisplays(ds, want)
-	if want > 0 && d.goodFor == want && d.goodOn > 0 {
-		ids = preferDisplay(ids, d.goodOn)
-	}
+	want, ids := d.streamPlanLocked()
+	ds, multi := d.dinfo.Displays, d.multiLocked()
 	d.mu.Unlock()
-	if len(ids) > 3 {
-		ids = ids[:3]
-	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), restartTimeout+time.Duration(len(ids)-1)*nextDisplayWait)
 	defer cancel()
 	stop := func(m *media) {
@@ -221,7 +227,7 @@ func (d *Device) startStream(ctx context.Context) error {
 		log:    d.log,
 		device: d.info.ID,
 	}
-	m, nv, err := sd.try(ctx, ids, ds)
+	m, _, err := sd.try(ctx, ids, ds)
 	if err != nil {
 		return err
 	}
@@ -230,6 +236,7 @@ func (d *Device) startStream(ctx context.Context) error {
 		stop(m)
 		return err
 	}
+	pw, ph := m.size()
 	d.mu.Lock()
 	if d.closed {
 		// Close ran while this restart was under way; it waits on restartMu,
@@ -241,21 +248,66 @@ func (d *Device) startStream(ctx context.Context) error {
 	}
 	d.m, d.hid = m, h
 	d.inputAt = m.started.Add(inputSettle)
-	d.streamFor, d.streamOn = want, m.display
-	if nv != nil {
-		d.goodFor, d.goodOn = want, m.display
-	}
-	if si, ok := d.dinfo.screenFor(m.display); ok && several(ds) {
-		// Touches and the picture's size go by the display streamed, also
-		// when it is another than the one Pinky meant.
-		d.scr = si
-	}
+	d.streamedLocked(want, m.display, pw, ph)
 	m.setTurn(d.scr.turn())
 	d.mu.Unlock()
-	if several(ds) {
-		d.log.Info("iphone: streaming display", "device", d.info.ID, "display", m.display, "wanted", want, "displays", describeDisplays(ds))
+	if multi {
+		d.log.Info("iphone: streaming display", "device", d.info.ID, "display", m.display, "tried", ids,
+			"wanted", want, "picture", fmt.Sprintf("%dx%d", pw, ph), "displays", describeDisplays(ds))
 	}
 	return nil
+}
+
+// streamPlanLocked returns what a stream start is for (the key of the
+// display in use) and the display ids it tries, best first: the one whose
+// stream last brought that display's picture, then streamDisplays', three
+// at most. Callers hold mu.
+func (d *Device) streamPlanLocked() (string, []int) {
+	want := d.want
+	ids := streamDisplays(d.dinfo.Displays, d.wantID, d.two)
+	if id := d.good[want]; d.multiLocked() && want != "" && id > 0 {
+		ids = preferDisplay(ids, id)
+	}
+	if len(ids) > 3 {
+		ids = ids[:3]
+	}
+	return want, ids
+}
+
+// streamedLocked notes that a stream started for the display with key want
+// streams display id, with a picture of pw x ph (0: not known), and
+// remembers that pair for the next start. Callers hold mu.
+func (d *Device) streamedLocked(want string, id, pw, ph int) {
+	d.streamFor, d.streamOn, d.streamShows = want, id, ""
+	if !d.multiLocked() {
+		return
+	}
+	if d.good == nil {
+		d.good = map[string]int{}
+	}
+	if want != "" {
+		d.good[want] = id
+	}
+	// The listed display the picture shows: the one of its shape, else,
+	// when each display has an id of its own, the one with the id asked
+	// for. Touches and the picture's size go by it, also when it is
+	// another than the one Pinky meant.
+	ds := d.dinfo.Displays
+	if e, ok := pictureOf(ds, pw, ph); ok {
+		d.streamShows = e.key()
+	} else if idsKnown(ds) {
+		for _, e := range ds {
+			if e.own() && e.ID == id {
+				d.streamShows = e.key()
+			}
+		}
+	}
+	if si, ok := d.dinfo.screenOfKey(d.streamShows); ok {
+		d.scr = si
+		if d.streamShows != want {
+			d.good[d.streamShows] = id // the id shows that display, too
+		}
+	}
 }
 
 // streamDisplay starts streams display by display (try); tests give it
@@ -345,12 +397,19 @@ func (d *Device) linkGone() bool {
 	}
 }
 
+// multiLocked reports whether the phone has several displays of its own:
+// its reply lists them, or its model has two screens. Callers hold mu.
+func (d *Device) multiLocked() bool {
+	return d.two || several(d.dinfo.Displays)
+}
+
 // displayMovedLocked reports whether a phone with several displays now
 // shows another one than the running stream was started for: it was folded
 // or unfolded, and the stream must start again on the display now in use.
-// Callers hold mu.
+// A display that says it is off is not moved to: the phone is asleep, and
+// its stream starts again when one lights up. Callers hold mu.
 func (d *Device) displayMovedLocked() bool {
-	return d.m != nil && several(d.dinfo.Displays) && d.want > 0 && d.streamFor > 0 && d.want != d.streamFor
+	return d.m != nil && d.multiLocked() && d.want != "" && d.streamFor != "" && d.want != d.streamFor && d.wantLit >= 0
 }
 
 // displayMoved is displayMovedLocked for callers that do not hold mu.
@@ -381,13 +440,13 @@ func (d *Device) live(ctx context.Context) (*media, *hidSession, error) {
 	defer d.restartMu.Unlock()
 	d.mu.Lock()
 	closed, m, h, moved = d.closed, d.m, d.hid, d.displayMovedLocked()
-	from, to := d.streamOn, d.want
+	from, to, toID := d.streamOn, d.want, d.wantID
 	d.mu.Unlock()
 	if closed {
 		return nil, nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
 	}
 	if moved {
-		d.log.Info("iphone: the phone switched displays", "device", d.info.ID, "from", from, "to", to)
+		d.log.Info("iphone: the phone switched displays", "device", d.info.ID, "from", from, "to", to, "toID", toID)
 	} else if m != nil && !m.stopped.Load() {
 		if h != nil && h.alive() {
 			return m, h, nil // another caller fixed it
@@ -540,24 +599,25 @@ func (d *Device) readDisplayNow(ctx context.Context) (screenInfo, error) {
 }
 
 // noteDisplays keeps a fresh description of the phone's displays and
-// returns the one Pinky shows. While the stream shows another display than
-// the one chosen, because the chosen one gave no picture, that is the one
-// Pinky shows; when the phone moves to another display (it was folded or
-// unfolded), the next live restarts the stream on it.
+// returns the one Pinky shows. While the stream shows another listed
+// display than the one chosen, because the chosen one gave no picture,
+// that is the one Pinky shows; when the phone moves to another display (it
+// was folded or unfolded), the next live restarts the stream on it.
 func (d *Device) noteDisplays(di displayInfo) screenInfo {
 	d.mu.Lock()
 	si := di.Screen
-	d.want = si.DisplayID
-	if d.m != nil && several(di.Displays) {
+	d.want, d.wantID, d.wantLit = si.Key, si.DisplayID, si.Lit
+	if si.Lit == 0 && (si.Backlight == backlightOff || si.Backlight == backlightAlwaysOn) {
+		d.wantLit = -1 // the phone's backlight (iOS 27.2 says it next to the displays)
+	}
+	if d.m != nil && d.streamShows != "" {
 		switch d.want {
-		case d.streamOn:
-			d.streamFor = d.want // moved to the display already streaming
 		case d.streamFor:
-			if s, ok := di.screenFor(d.streamOn); ok {
+			if s, ok := di.screenOfKey(d.streamShows); ok {
 				si = s
 			}
-		default:
-			d.goodFor, d.goodOn = 0, 0 // moved: the fallback was for another display
+		case d.streamShows:
+			d.streamFor = d.want // moved to the display the stream already shows
 		}
 	}
 	d.dinfo = di

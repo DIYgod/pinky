@@ -161,7 +161,7 @@ func startMedia(ctx context.Context, l *link, displayID int) (*media, error) {
 		c, cc := context.WithTimeout(context.Background(), 5*time.Second)
 		stopMediaStreamsFresh(c, l.entry)
 		cc()
-		return nil, fmt.Errorf("start display stream: %w", err)
+		return nil, fmt.Errorf("start display stream (display %d): %w", displayID, err)
 	}
 	m.ans = ans
 	if ans.SourcePort != 0 {
