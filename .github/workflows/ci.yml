@@ -75,7 +75,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for try in 1 2 3; do
+          # For up to ten minutes: FFmpeg-Builds deletes its latest release
+          # and makes it again with each new build, so it is missing while
+          # the builds upload, a few minutes.
+          for try in {1..20}; do
             gh release download latest --repo "$FFMPEG_REPO" --pattern "$FFMPEG" --dir "$RUNNER_TEMP/ffmpeg-archive" --clobber && exit 0
             sleep 30
           done

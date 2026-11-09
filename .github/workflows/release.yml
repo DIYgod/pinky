@@ -209,8 +209,11 @@ jobs:
         run: |
           # A static build, so that no other FFmpeg DLLs are around. Through
           # GitHub's API (gh), as in ci.yml, since the releases' download
-          # links have answered 504 for hours at a time.
-          for try in 1 2 3; do
+          # links have answered 504 for hours at a time. For up to ten
+          # minutes: FFmpeg-Builds deletes its latest release and makes it
+          # again with each new build, so it is missing while some 5 GB of
+          # builds upload, a few minutes.
+          for try in {1..20}; do
             gh release download latest --repo FFmpeg-Builds/FFmpeg-Builds --pattern ffmpeg-n9.0-latest-win64-gpl-9.0.zip --dir "$RUNNER_TEMP" --clobber && exit 0
             sleep 30
           done
