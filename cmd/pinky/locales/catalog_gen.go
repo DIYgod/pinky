@@ -8865,6 +8865,22 @@ func (msgs Messages) GwAskOpen(app string) string {
 	return Catalog.Format(msgs.locale, "gwAskOpen", map[string]any{"app": app})
 }
 
+// GwAskOpenLink says "Open “{link}” in {app}?"
+// in the language the app shows.
+//
+// An approval's title: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func GwAskOpenLink(link string, app string) string { return In(i18n.Locale()).GwAskOpenLink(link, app) }
+
+// GwAskOpenLink says "Open “{link}” in {app}?"
+// in the language of msgs.
+//
+// An approval's title: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwAskOpenLink(link string, app string) string {
+	return Catalog.Format(msgs.locale, "gwAskOpenLink", map[string]any{"link": link, "app": app})
+}
+
 // GwAskPay says "Pay: “{label}”?"
 // in the language the app shows.
 //
@@ -9057,6 +9073,22 @@ func GwDidOpen(app string) string { return In(i18n.Locale()).GwDidOpen(app) }
 // English the gateway's own words show.
 func (msgs Messages) GwDidOpen(app string) string {
 	return Catalog.Format(msgs.locale, "gwDidOpen", map[string]any{"app": app})
+}
+
+// GwDidOpenLink says "Opened “{link}” in {app}"
+// in the language the app shows.
+//
+// A step: the agent opened this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDidOpenLink(link string, app string) string { return In(i18n.Locale()).GwDidOpenLink(link, app) }
+
+// GwDidOpenLink says "Opened “{link}” in {app}"
+// in the language of msgs.
+//
+// A step: the agent opened this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDidOpenLink(link string, app string) string {
+	return Catalog.Format(msgs.locale, "gwDidOpenLink", map[string]any{"link": link, "app": app})
 }
 
 // GwDidPress says "Pressed {key}"
@@ -9605,6 +9637,22 @@ func GwDoOpen(app string) string { return In(i18n.Locale()).GwDoOpen(app) }
 // English the gateway's own words show.
 func (msgs Messages) GwDoOpen(app string) string {
 	return Catalog.Format(msgs.locale, "gwDoOpen", map[string]any{"app": app})
+}
+
+// GwDoOpenLink says "open “{link}” in {app}"
+// in the language the app shows.
+//
+// What a step asked for: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoOpenLink(link string, app string) string { return In(i18n.Locale()).GwDoOpenLink(link, app) }
+
+// GwDoOpenLink says "open “{link}” in {app}"
+// in the language of msgs.
+//
+// What a step asked for: open this link in this app. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoOpenLink(link string, app string) string {
+	return Catalog.Format(msgs.locale, "gwDoOpenLink", map[string]any{"link": link, "app": app})
 }
 
 // GwDoPress says "press {key}"
@@ -16369,6 +16417,22 @@ func RulePasswordManagers() string { return In(i18n.Locale()).RulePasswordManage
 // The name of the default rule that blocks password managers.
 func (msgs Messages) RulePasswordManagers() string {
 	return Catalog.Format(msgs.locale, "rulePasswordManagers", nil)
+}
+
+// RuleUnsafeLinks says "Unsafe links"
+// in the language the app shows.
+//
+// The name of the built-in rule that refuses links Pinky never opens, such
+// as file: and javascript: links or links that run a shortcut.
+func RuleUnsafeLinks() string { return In(i18n.Locale()).RuleUnsafeLinks() }
+
+// RuleUnsafeLinks says "Unsafe links"
+// in the language of msgs.
+//
+// The name of the built-in rule that refuses links Pinky never opens, such
+// as file: and javascript: links or links that run a shortcut.
+func (msgs Messages) RuleUnsafeLinks() string {
+	return Catalog.Format(msgs.locale, "ruleUnsafeLinks", nil)
 }
 
 // RulePayments says "Payments"

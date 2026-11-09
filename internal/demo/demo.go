@@ -10,6 +10,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -97,7 +98,7 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 
 // Input is one recorded input.
 type Input struct {
-	Kind string // tap, long_press, swipe, pinch, type, key, launch, touch, touch2
+	Kind string // tap, long_press, swipe, pinch, type, key, launch, link, touch, touch2
 	P    screen.Point
 	To   screen.Point
 	Text string
@@ -465,6 +466,57 @@ func (d *Device) Launch(ctx context.Context, app string) error {
 	}
 	d.mu.Unlock()
 	d.record(Input{Kind: "launch", Text: app})
+	return nil
+}
+
+// LinkApp implements driver.LinkOpener: Dinely opens its own links,
+// dinely://… and its web pages on dinely.app, and Chatter chatter://…; no
+// app opens any other link.
+func (d *Device) LinkApp(ctx context.Context, link string) (driver.App, error) {
+	if err := d.check(ctx); err != nil {
+		return driver.App{}, err
+	}
+	u, err := url.Parse(strings.TrimSpace(link))
+	if err != nil {
+		return driver.App{}, fmt.Errorf("link %q: %v: %w", link, err, driver.ErrNotFound)
+	}
+	host := strings.ToLower(u.Hostname())
+	var id string
+	switch strings.ToLower(u.Scheme) {
+	case "dinely":
+		id = Dinely
+	case "chatter":
+		id = Chatter
+	case "http", "https":
+		if host == "dinely.app" || strings.HasSuffix(host, ".dinely.app") {
+			id = Dinely
+		}
+	}
+	for _, a := range d.apps() {
+		if id != "" && a.ID == id {
+			return a, nil
+		}
+	}
+	return driver.App{}, fmt.Errorf("no app opens %q: %w", link, driver.ErrNotFound)
+}
+
+// OpenLink implements driver.LinkOpener: the app, or a clone of it, opens
+// on its first screen.
+func (d *Device) OpenLink(ctx context.Context, link string, app driver.App) error {
+	opener, err := d.LinkApp(ctx, link)
+	if err != nil {
+		return err
+	}
+	if opener.ID != app.Original().ID {
+		return fmt.Errorf("%s does not open %q: %w", app.ID, link, driver.ErrNotFound)
+	}
+	d.mu.Lock()
+	if !d.locked {
+		d.stack = []string{"home", appScreens[opener.ID]}
+		d.focus = ""
+	}
+	d.mu.Unlock()
+	d.record(Input{Kind: "link", Text: link})
 	return nil
 }
 

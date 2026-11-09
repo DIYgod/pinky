@@ -324,9 +324,12 @@ type prep struct {
 	dur    time.Duration
 	// pinch is the gesture of a pinch, whose first finger goes from from
 	// to to, around point.
-	pinch  *driver.Pinch
+	pinch *driver.Pinch
+	// launch is the app phone_launch opens, or for a link (url) the app
+	// that opens link.
 	launch driver.App
 	url    bool
+	link   string
 	input  policy.Input
 	desc   string // plain-language description for history
 	// decider is the element whose verdict decided, which may enclose the
@@ -781,26 +784,39 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		}
 	case "launch":
 		p.input.Op = policy.OpLaunch
-		app, url, res := g.resolveLaunch(ctx, d, a.App)
-		if res != nil {
-			return p, res
+		if policy.IsLink(a.App) {
+			p.url, p.link = true, strings.TrimSpace(a.App)
+			p.input.LaunchURL, p.input.Link = true, p.link
+			if _, refused := policy.LinkRefused(p.link); refused {
+				break // the policy refuses it, whatever app would open it
+			}
+			// The rules judge the app that opens the link, as a launch
+			// of it: blocking or scoping that app covers its links too,
+			// and so does the person's allowing it for the task.
+			from := screen.App{}
+			if s := g.leftFrom(d, cur); s != nil {
+				from = s.App
+			}
+			g.mu.Lock()
+			clone := l.clone
+			g.mu.Unlock()
+			app, res := g.resolveLink(ctx, d, p.link, from, clone)
+			if res != nil {
+				return p, res
+			}
+			p.launch = app
+		} else {
+			app, res := g.resolveLaunch(ctx, d, a.App)
+			if res != nil {
+				return p, res
+			}
+			p.launch = app
 		}
-		p.launch, p.url = app, url
 		// An app clone is judged as the app it copies: the two read
 		// alike on the screen.
-		orig := app.Original()
+		orig := p.launch.Original()
 		p.input.Launch = screen.App{ID: orig.ID, Name: orig.Name}
-		opener := false
-		if lo, ok := g.driverOf(d).(linkOpener); ok && url {
-			// The rules judge the app that opens the link: blocking or
-			// scoping it covers its links too, and so does the person's
-			// allowing it for the task.
-			browser := lo.LinkApp()
-			p.input.Launch = screen.App{ID: browser.ID, Name: browser.Name}
-			opener = true
-		}
-		p.input.LaunchURL = url
-		p.input.AllowBlocked = (!url || opener) && g.allows(l, p.input.Launch)
+		p.input.AllowBlocked = g.allows(l, p.input.Launch)
 	}
 	p.input.Target = p.target
 	p.desc = describe(a, p)
@@ -966,37 +982,63 @@ func hitTest(s *screen.Screen, p screen.Point) *screen.Element {
 	return &cp
 }
 
-// linkOpener is implemented by drivers that open a link in a fixed app.
-type linkOpener interface {
-	LinkApp() driver.App
-}
-
 // resolveLaunch finds the app phone_launch names.
-func (g *Gateway) resolveLaunch(ctx context.Context, d *device, name string) (driver.App, bool, *Result) {
+func (g *Gateway) resolveLaunch(ctx context.Context, d *device, name string) (driver.App, *Result) {
 	name = strings.TrimSpace(name)
-	if strings.Contains(name, "://") {
-		return driver.App{ID: name, Name: name}, true, nil
-	}
 	dev := g.driverOf(d)
 	if dev == nil {
-		return driver.App{}, false, errResult(ErrDeviceOffline, "%s is offline.", d.name())
+		return driver.App{}, errResult(ErrDeviceOffline, "%s is offline.", d.name())
 	}
 	apps, err := dev.Apps(ctx)
 	if errors.Is(err, driver.ErrUnsupported) {
-		return driver.App{ID: name, Name: name}, false, nil
+		return driver.App{ID: name, Name: name}, nil
 	}
 	if err != nil {
-		return driver.App{}, false, errResult(ErrInternal, "Listing apps failed: %v", err)
+		return driver.App{}, errResult(ErrInternal, "Listing apps failed: %v", err)
 	}
 	m := findApp(apps, name)
 	if m.ok {
-		return m.app, false, nil
+		return m.app, nil
 	}
 	if len(m.similar) > 0 {
-		return driver.App{}, false, errResult(ErrNotFound, "No installed app is named %q. Similar: %s. Call phone_launch again with the exact name or id of the one you mean.",
+		return driver.App{}, errResult(ErrNotFound, "No installed app is named %q. Similar: %s. Call phone_launch again with the exact name or id of the one you mean.",
 			name, appList(m.similar))
 	}
-	return driver.App{}, false, errResult(ErrNotFound, "No installed app matches %q; call phone_apps to see what is installed.", name)
+	return driver.App{}, errResult(ErrNotFound, "No installed app matches %q; call phone_apps to see what is installed.", name)
+}
+
+// resolveLink finds the app that opens a link, as the phone would pick it
+// for a tap on the link. A link that no app opens, or that the phone would
+// let the person choose an app for, is refused: Pinky does not guess. On
+// a phone with app clones, the link opens in the clone the agent opened
+// last (clone) while the clone's app is in front (from), and in the app
+// itself otherwise.
+func (g *Gateway) resolveLink(ctx context.Context, d *device, link string, from screen.App, clone driver.App) (driver.App, *Result) {
+	dev := g.driverOf(d)
+	if dev == nil {
+		return driver.App{}, errResult(ErrDeviceOffline, "%s is offline.", d.name())
+	}
+	lo, ok := dev.(driver.LinkOpener)
+	if !ok {
+		return driver.App{}, errResult(ErrUnsupported, "%s cannot open links. Nothing was done.", d.name())
+	}
+	app, err := lo.LinkApp(ctx, link)
+	var choice *driver.LinkChoiceError
+	switch {
+	case errors.As(err, &choice):
+		return driver.App{}, errResult(ErrUnsupported, "Several apps open %s (%s), and the phone would ask which; Pinky does not choose. Nothing was done. Launch the app you mean and open the link from inside it.",
+			link, appList(choice.Apps))
+	case errors.Is(err, driver.ErrNotFound):
+		return driver.App{}, errResult(ErrNotFound, "No app on %s opens %s. Nothing was done.", d.name(), link)
+	case errors.Is(err, driver.ErrUnsupported):
+		return driver.App{}, errResult(ErrUnsupported, "%s cannot open this link: %v. Nothing was done.", d.name(), err)
+	case err != nil:
+		return driver.App{}, errResult(ErrInternal, "Finding the app that opens %s failed: %v. Nothing was done.", link, err)
+	}
+	if clone.CloneOf != nil && clone.CloneOf.ID == app.ID && from.ID == app.ID {
+		return clone, nil
+	}
+	return app, nil
 }
 
 // ask opens an approval for an action and records the waiting step.
@@ -1090,6 +1132,8 @@ func approvalTitle(a Action, p *prep, v policy.Verdict) string {
 	switch {
 	case v.Has(policy.Payment) && label != "":
 		return fmt.Sprintf("Pay: “%s”?", label)
+	case a.Tool == "launch" && p.url:
+		return fmt.Sprintf("Open “%s” in %s?", clip(p.link, maxLinkText), appLabel(screen.App{ID: p.launch.ID, Name: p.launch.Name}))
 	case v.Has(policy.SendMessage):
 		if a.Text != "" {
 			return fmt.Sprintf("Send “%s”?", clip(a.Text, 80))
@@ -1129,6 +1173,9 @@ func capitalize(s string) string {
 	r := []rune(s)
 	return strings.ToUpper(string(r[0])) + string(r[1:])
 }
+
+// maxLinkText is how much of a link steps and approvals show.
+const maxLinkText = 120
 
 func clip(s string, n int) string {
 	r := []rune(s)
@@ -1479,6 +1526,14 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
+	if a.Tool == "launch" && !p.url {
+		g.mu.Lock()
+		l.clone = driver.App{}
+		if p.launch.CloneOf != nil {
+			l.clone = p.launch
+		}
+		g.mu.Unlock()
+	}
 	// What the driver could not make sure of, such as typed text it could
 	// not read back.
 	var inputNote string
@@ -1568,7 +1623,7 @@ func (g *Gateway) leaves(a Action, p *prep, cur *screen.Screen) bool {
 	switch {
 	case a.Tool == "key" && a.Key == "home":
 		return !g.policy.IsSystem(cur.App)
-	case a.Tool == "launch" && p != nil && !p.url:
+	case a.Tool == "launch" && p != nil && (p.launch.ID != "" || p.launch.Name != ""):
 		orig := p.launch.Original() // a clone reads as its original
 		to := screen.App{ID: orig.ID, Name: orig.Name}
 		if to.ID == to.Name {
@@ -1703,6 +1758,13 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 	case "key":
 		return dev.Key(ctx, agentKeys[a.Key])
 	case "launch":
+		if p.url {
+			lo, ok := dev.(driver.LinkOpener)
+			if !ok {
+				return fmt.Errorf("opening links: %w", driver.ErrUnsupported)
+			}
+			return lo.OpenLink(ctx, p.link, p.launch)
+		}
 		id := p.launch.ID
 		if id == "" {
 			id = p.launch.Name
@@ -2186,12 +2248,18 @@ type snapshot struct {
 	// unblock is set when the launch asks to allow a blocked app for the
 	// task: any Allow does (unblock.go).
 	unblock bool
+	// opener is the app that opens a link the person was asked about: the
+	// approval is stale when another would open it now.
+	opener string
 }
 
 func takeSnapshot(s *screen.Screen, p *prep, v policy.Verdict) *snapshot {
 	snap := &snapshot{app: s.App.ID + "\x00" + s.App.Name, point: p.point, text: screenText(s),
 		asks: append([]string(nil), v.Asks...), grantApp: grantApp(p), launch: p.input.Op == policy.OpLaunch,
 		unblock: p.unblock}
+	if p.url {
+		snap.opener = p.launch.ID
+	}
 	if p.target != nil {
 		t := *p.target
 		snap.target = &t
@@ -2203,6 +2271,9 @@ func takeSnapshot(s *screen.Screen, p *prep, v policy.Verdict) *snapshot {
 // that makes the approval stale.
 func (snap *snapshot) changed(cur *screen.Screen, p *prep) bool {
 	if snap.app != cur.App.ID+"\x00"+cur.App.Name {
+		return true
+	}
+	if p.url && snap.opener != p.launch.ID {
 		return true
 	}
 	if (snap.target == nil) != (p.target == nil) {
@@ -2376,6 +2447,12 @@ func describe(a Action, p *prep) string {
 		name := a.App
 		if p != nil && p.launch.Name != "" {
 			name = p.launch.Name
+		}
+		if p != nil && p.url {
+			if p.launch.Name == "" && p.launch.ID == "" {
+				return fmt.Sprintf("Opened “%s”", clip(p.link, maxLinkText))
+			}
+			return fmt.Sprintf("Opened “%s” in %s", clip(p.link, maxLinkText), appLabel(screen.App{ID: p.launch.ID, Name: p.launch.Name}))
 		}
 		return "Opened " + name
 	}

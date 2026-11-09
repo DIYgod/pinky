@@ -102,7 +102,7 @@ type keyIn struct {
 
 type launchIn struct {
 	actionArgs
-	App string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it; or an http(s) link on an iPhone without the WebDriverAgent helper."`
+	App string `json:"app" jsonschema:"The app's name, package name or bundle id, as phone_apps lists it; or a link to open: https://…, an app's own link (myapp://…), tel:, sms:, mailto:."`
 }
 
 type appsIn struct {
@@ -339,8 +339,10 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_launch", Title: "Open an app",
-		Description: "Open an app by name, package name or bundle id, and return its screen. An iPhone without the WebDriverAgent helper also opens an http(s) link, in Safari. Apps outside the task's list return scope_denied. " +
-			"Blocked banking and wallet apps ask the person, who may allow the app for the rest of the task (approval_pending; repeat with approval_id); password managers are refused.",
+		Description: "Open an app by name, package name or bundle id, or open a link, and return its screen. Apps outside the task's list return scope_denied. " +
+			"Blocked banking and wallet apps ask the person, who may allow the app for the rest of the task (approval_pending; repeat with approval_id); password managers are refused. " +
+			"A link opens in the app the phone opens it in (Safari for web links on an iPhone), which is judged as a launch of that app and as the tap the link stands for: a payment link asks like a Pay button. " +
+			"file:, content:, intent:, javascript:, data: and Shortcuts links are refused; a link no app opens returns not_found, and one several apps open with none set as the default returns unsupported, naming them.",
 		InputSchema: schema[launchIn](patchSettle), Annotations: acting},
 		func(ctx context.Context, req *sdk.CallToolRequest, in launchIn) (*sdk.CallToolResult, any, error) {
 			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), gateway.Action{Tool: "launch", App: in.App, Settle: settleArg(in.SettleMS)})), nil, nil

@@ -39,6 +39,7 @@ var (
 	reZoom       = re(`^Zoomed (in|out)(?: on “(.*)”)?$`)
 	reTurn       = re(`^Turned (?:“(.*)” )?with two fingers$`)
 	rePressed    = re(`^Pressed (.+)$`)
+	reOpenedLink = re(`^Opened “(.*)” in (.+)$`)
 	reOpened     = re(`^Opened (.+)$`)
 	reCopyOne    = re(`^[Cc]opy “(.*)” to (.+)$`)
 	reCopyMany   = re(`^[Cc]opy (\d+) files? to (.+)$`)
@@ -50,7 +51,7 @@ var (
 
 // action is a parsed action, which says itself as done or as asked.
 type action struct {
-	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, copy, copymany, list, copyfrom, copyto, receive
+	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, copy, copymany, list, copyfrom, copyto, receive
 	label, text, x, y    string
 	x2, y2, dir, key     string
 	app, files, phone    string
@@ -87,6 +88,9 @@ func parseAction(s string) (action, bool) {
 	}
 	if m := rePressed.FindStringSubmatch(s); m != nil {
 		return action{verb: "press", key: m[1]}, true
+	}
+	if m := reOpenedLink.FindStringSubmatch(s); m != nil {
+		return action{verb: "openlink", label: m[1], app: m[2]}, true
 	}
 	if m := reOpened.FindStringSubmatch(s); m != nil {
 		return action{verb: "open", app: m[1]}, true
@@ -178,6 +182,8 @@ func (a action) done() string {
 		return locales.GwDidPress(keyName(a.key))
 	case "open":
 		return locales.GwDidOpen(a.app)
+	case "openlink":
+		return locales.GwDidOpenLink(a.label, a.app)
 	}
 	return a.ask()
 }
@@ -237,6 +243,8 @@ func (a action) ask() string {
 		return locales.GwDoPress(keyName(a.key))
 	case "open":
 		return locales.GwDoOpen(a.app)
+	case "openlink":
+		return locales.GwDoOpenLink(a.label, a.app)
 	case "copy":
 		return locales.GwDoCopyFile(a.label, a.phone)
 	case "copymany":
@@ -453,6 +461,7 @@ func fileNames(s string) string {
 var (
 	rePayTitle    = re(`^Pay: “(.*)”\?$`)
 	reSendTitle   = re(`^Send “(.*)”\?$`)
+	reLinkTitle   = re(`^Open “(.*)” in (.+)\?$`)
 	reOpenTitle   = re(`^Open (.+)\?$`)
 	reChangeTitle = re(`^Change “(.*)”\?$`)
 	reTapTitle    = re(`^(Tap|Long-press|Type into|Swipe) “(.*)”\?$`)
@@ -505,6 +514,9 @@ func approvalText(s string) string {
 		if give, ok := giveRecordings(q); ok {
 			return locales.GwAskQuestion(give)
 		}
+	}
+	if m := reLinkTitle.FindStringSubmatch(s); m != nil {
+		return locales.GwAskOpenLink(m[1], m[2])
 	}
 	if m := reOpenTitle.FindStringSubmatch(s); m != nil && !strings.Contains(m[1], "“") {
 		return locales.GwAskOpen(m[1])

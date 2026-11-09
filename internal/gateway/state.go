@@ -209,6 +209,10 @@ type lease struct {
 	// readyHandoffs are handoffs opened while the phone waited for a step
 	// (device_needs_setup); they end once the gateway opens it (readyNow).
 	readyHandoffs []string
+	// clone is the app clone the agent last opened with phone_launch, until
+	// it opens another app by name: a link that clone's app opens goes to
+	// the clone while that app is in front (resolveLink).
+	clone driver.App
 	// after is the read that ended the last action, if it settled; the next
 	// step of a phone_batch reuses it while it is fresh.
 	after   *screen.Screen

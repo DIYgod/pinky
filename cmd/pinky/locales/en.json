@@ -2982,6 +2982,20 @@
       }
     }
   },
+  "gwAskOpenLink": "Open “{link}” in {app}?",
+  "@gwAskOpenLink": {
+    "description": "An approval's title: open this link in this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "link": {
+        "type": "String",
+        "example": "https://example.com/menu"
+      },
+      "app": {
+        "type": "String",
+        "example": "Safari"
+      }
+    }
+  },
   "gwAskPay": "Pay: “{label}”?",
   "@gwAskPay": {
     "description": "An approval's title: pay with the button that has this label. Shown only in other languages; in English the gateway's own words show.",
@@ -3095,6 +3109,20 @@
       "app": {
         "type": "String",
         "example": "Messages"
+      }
+    }
+  },
+  "gwDidOpenLink": "Opened “{link}” in {app}",
+  "@gwDidOpenLink": {
+    "description": "A step: the agent opened this link in this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "link": {
+        "type": "String",
+        "example": "https://example.com/menu"
+      },
+      "app": {
+        "type": "String",
+        "example": "Safari"
       }
     }
   },
@@ -3391,6 +3419,20 @@
       "app": {
         "type": "String",
         "example": "Messages"
+      }
+    }
+  },
+  "gwDoOpenLink": "open “{link}” in {app}",
+  "@gwDoOpenLink": {
+    "description": "What a step asked for: open this link in this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "link": {
+        "type": "String",
+        "example": "https://example.com/menu"
+      },
+      "app": {
+        "type": "String",
+        "example": "Safari"
       }
     }
   },
@@ -6025,6 +6067,10 @@
   "rulePasswordManagers": "Password managers",
   "@rulePasswordManagers": {
     "description": "The name of the default rule that blocks password managers."
+  },
+  "ruleUnsafeLinks": "Unsafe links",
+  "@ruleUnsafeLinks": {
+    "description": "The name of the built-in rule that refuses links Pinky never opens, such as file: and javascript: links or links that run a shortcut."
   },
   "rulePayments": "Payments",
   "@rulePayments": {

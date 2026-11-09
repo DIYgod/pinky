@@ -33,6 +33,7 @@ var ruleNames = map[string]func() string{
 	"Agent scope":        locales.RuleAgentScope,
 	"Finance apps":       locales.RuleFinanceApps,
 	"Password managers":  locales.RulePasswordManagers,
+	"Unsafe links":       locales.RuleUnsafeLinks,
 	"Files":              locales.RuleFiles,
 	"Recordings":         locales.RuleRecordings,
 	"Agent request":      locales.RuleAgentRequest,
