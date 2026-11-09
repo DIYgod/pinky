@@ -10595,6 +10595,52 @@ func (msgs Messages) GwUnlockTitle(phone string) string {
 	return Catalog.Format(msgs.locale, "gwUnlockTitle", map[string]any{"phone": phone})
 }
 
+// HarmonyAuthorize says "Unlock the HarmonyOS phone and allow USB debugging from this computer."
+// in the language the app shows.
+//
+// Setup instructions for an unauthorized native HarmonyOS phone.
+func HarmonyAuthorize() string { return In(i18n.Locale()).HarmonyAuthorize() }
+
+// HarmonyAuthorize says "Unlock the HarmonyOS phone and allow USB debugging from this computer."
+// in the language of msgs.
+//
+// Setup instructions for an unauthorized native HarmonyOS phone.
+func (msgs Messages) HarmonyAuthorize() string {
+	return Catalog.Format(msgs.locale, "harmonyAuthorize", nil)
+}
+
+// HarmonyBackendMissing says "This phone is connected through HDC, but native HarmonyOS screen control is not available in this version of Pinky."
+// in the language the app shows.
+//
+// A native HarmonyOS phone is connected through HDC, but this build cannot
+// control it.
+func HarmonyBackendMissing() string { return In(i18n.Locale()).HarmonyBackendMissing() }
+
+// HarmonyBackendMissing says "This phone is connected through HDC, but native HarmonyOS screen control is not available in this version of Pinky."
+// in the language of msgs.
+//
+// A native HarmonyOS phone is connected through HDC, but this build cannot
+// control it.
+func (msgs Messages) HarmonyBackendMissing() string {
+	return Catalog.Format(msgs.locale, "harmonyBackendMissing", nil)
+}
+
+// HarmonyHDCMissing says "This phone uses native HarmonyOS, which Pinky cannot control yet. This computer also has no HDC tool for connection d…"
+// in the language the app shows.
+//
+// Setup instructions when macOS sees an HDC USB interface but hdc is not
+// installed.
+func HarmonyHDCMissing() string { return In(i18n.Locale()).HarmonyHDCMissing() }
+
+// HarmonyHDCMissing says "This phone uses native HarmonyOS, which Pinky cannot control yet. This computer also has no HDC tool for connection d…"
+// in the language of msgs.
+//
+// Setup instructions when macOS sees an HDC USB interface but hdc is not
+// installed.
+func (msgs Messages) HarmonyHDCMissing() string {
+	return Catalog.Format(msgs.locale, "harmonyHDCMissing", nil)
+}
+
 // ListMany says "{rest} and {last}"
 // in the language the app shows.
 //

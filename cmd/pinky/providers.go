@@ -14,6 +14,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
 	"github.com/DIYgod/pinky/internal/driver/android/adb"
+	"github.com/DIYgod/pinky/internal/driver/harmony"
 	"github.com/DIYgod/pinky/internal/driver/ios"
 )
 
@@ -22,6 +23,11 @@ import (
 var providerFactories = []func(log *slog.Logger) (driver.Provider, error){
 	newAndroidProvider,
 	newIOSProvider,
+	newHarmonyProvider,
+}
+
+func newHarmonyProvider(*slog.Logger) (driver.Provider, error) {
+	return harmony.NewProvider(), nil
 }
 
 func newAndroidProvider(log *slog.Logger) (driver.Provider, error) {

@@ -3846,6 +3846,18 @@
       }
     }
   },
+  "harmonyAuthorize": "Unlock the HarmonyOS phone and allow USB debugging from this computer.",
+  "@harmonyAuthorize": {
+    "description": "Setup instructions for an unauthorized native HarmonyOS phone."
+  },
+  "harmonyBackendMissing": "This phone is connected through HDC, but native HarmonyOS screen control is not available in this version of Pinky.",
+  "@harmonyBackendMissing": {
+    "description": "A native HarmonyOS phone is connected through HDC, but this build cannot control it."
+  },
+  "harmonyHDCMissing": "This phone uses native HarmonyOS, which Pinky cannot control yet. This computer also has no HDC tool for connection diagnostics; Android USB debugging and Pinky Companion do not apply.",
+  "@harmonyHDCMissing": {
+    "description": "Setup instructions when macOS sees an HDC USB interface but hdc is not installed."
+  },
   "listMany": "{rest} and {last}",
   "@listMany": {
     "description": "Three or more names in a sentence: rest is the names before the last, joined with listSeparator.",

@@ -20,8 +20,9 @@ type Platform string
 
 // Platforms.
 const (
-	Android Platform = "android"
-	IOS     Platform = "ios"
+	Android   Platform = "android"
+	IOS       Platform = "ios"
+	HarmonyOS Platform = "harmonyos"
 )
 
 // State is a device's connection state.

@@ -10,7 +10,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 )
 
-// In the e2e build, PINKY_PLATFORMS ("android", "ios", or both, separated
+// In the e2e build, PINKY_PLATFORMS ("android", "ios", "harmonyos", separated
 // by commas) limits the platforms Pinky looks for phones on, so a check of
 // the app with an Android emulator leaves an iPhone that is plugged in
 // alone: the iOS provider would ask it about itself even with PINKY_DEVICES
@@ -27,6 +27,8 @@ func init() {
 			keep = append(keep, newAndroidProvider)
 		case string(driver.IOS):
 			keep = append(keep, newIOSProvider)
+		case string(driver.HarmonyOS):
+			keep = append(keep, newHarmonyProvider)
 		}
 	}
 	providerFactories = keep

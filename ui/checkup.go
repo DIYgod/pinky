@@ -332,6 +332,20 @@ type checkWords struct {
 
 // checkWords puts an item into words, with the steps of the phone's maker.
 func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.Check) checkWords {
+	if d.Info.Platform == driver.HarmonyOS && ck.ID == driver.CheckAuthorized {
+		w := checkWords{title: checkTitle(ck.ID)}
+		switch ck.Fix {
+		case "hdc":
+			w.text = locales.HarmonyHDCMissing()
+		case "harmony_backend":
+			w.text = locales.HarmonyBackendMissing()
+		case driver.FixAuthorize:
+			w.text = locales.HarmonyAuthorize()
+		}
+		if w.text != "" {
+			return w
+		}
+	}
 	if d.Info.Platform == driver.IOS {
 		if w, ok := a.iphoneCheckWords(d, ck); ok {
 			return w // checkup_iphone.go
