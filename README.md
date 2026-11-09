@@ -38,7 +38,7 @@ Install Pinky, connect your phone and add Pinky to your agent. Then ask the agen
 
 | | You need |
 | --- | --- |
-| **Mac** | macOS 12 or later, with Apple silicon or Intel |
+| **Mac** | macOS 13 or later, with Apple silicon or Intel |
 | **Windows** | Windows 10 or 11, 64-bit (x64) |
 | **Linux** | A 64-bit PC (x86-64) with Ubuntu 20.04, Debian 11 or a newer system (glibc 2.29 or later), and GTK 3 |
 | **Android phone** | Android 10 to 17 and a USB cable. Pinky brings its own adb; on Windows some phones need a USB driver, and on Linux USB access ([below](#usb-on-windows-and-linux)) |

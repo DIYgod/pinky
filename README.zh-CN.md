@@ -38,7 +38,7 @@ Pinky 让任何 Agent（Claude Code、Claude Desktop、Codex、Cursor，或者�
 
 | | 需要 |
 | --- | --- |
-| **Mac** | macOS 12 或更高版本，Apple 芯片或 Intel 都行 |
+| **Mac** | macOS 13 或更高版本，Apple 芯片或 Intel 都行 |
 | **Windows** | Windows 10 或 11，64 位（x64） |
 | **Linux** | 64 位 PC（x86-64），Ubuntu 20.04、Debian 11 或更新的系统（glibc 2.29 或更高），以及 GTK 3 |
 | **Android 手机** | Android 10 到 17，一根 USB 线。Pinky 自带 adb；Windows 上个别手机要装 USB 驱动，Linux 上要开放 USB 访问权限（[见下文](#windows-和-linux-上的-usb)） |

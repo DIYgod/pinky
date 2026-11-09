@@ -149,7 +149,7 @@ Since 2026-11-08 every package of Pinky carries an adb of its own, so that a per
 
 | Package | Where | Built |
 | --- | --- | --- |
-| Pinky.app (arm64, amd64) | `Contents/Helpers/adb`, signed with the app (with the hardened runtime and a timestamp under a Developer ID) | Apple's clang for macOS 12 and later, 6.3 MB, the system's zlib; USB through libusb, adb's default on macOS |
+| Pinky.app (arm64, amd64) | `Contents/Helpers/adb`, signed with the app (with the hardened runtime and a timestamp under a Developer ID) | Apple's clang for macOS 12 and later (Pinky needs 13; see [platform.md](platform.md)), 6.3 MB, the system's zlib; USB through libusb, adb's default on macOS |
 | Windows installer and zip | `adb.exe`, `AdbWinApi.dll` and `AdbWinUsbApi.dll` next to `Pinky.exe` | a 32-bit `adb.exe` (8.4 MB), as Google's: AOSP builds AdbWinApi for 32-bit Windows only, and the two DLLs are AOSP's own (platform/development, `host/windows/prebuilt/usb`, Apache-2.0, checked by SHA-256 and the git blob). Cross-compiled with Ubuntu 24.04's mingw-w64 (posix threads, `-static`, SSE2) in Docker, with MSYS2's mingw fixes (`scripts/adb/windows.patch`). It imports Windows' own DLLs and AdbWinApi.dll only |
 | Linux `.tar.gz` and `.deb` | `adb` next to `pinky` (`/opt/pinky/adb`) | a static musl executable (8.8 MB) built in Alpine 3.22, which runs on any x86-64 Linux |
 
