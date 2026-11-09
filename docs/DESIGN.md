@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 15 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -180,6 +180,7 @@ Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the sc
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
 | `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
+| `phone_logs` | `app`, `kind?` (logs or crashes), `since?`, `filter?`, `level?`, `limit?` | One app's own log lines or crash reports ([notes/app-logs.md](notes/app-logs.md)) |
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 
@@ -352,6 +353,7 @@ always_allow:
 - Credentials never reach the model. The gateway refuses `phone_type` into password and one-time-code fields (`blocked_by_policy`, rule: credentials) and tells the agent to call `phone_handoff` (M1). From M2 the client can fill the value from the OS keychain, and the agent only learns that it was filled.
 - Notifications from blocked apps are never listed, matched by the app's id or name. Where another screen shows a blocked app (its notification in the shade, on the lock screen or as a heads-up banner, its card in recent apps), the agent gets one hidden element in its place, covered in screenshots. One-time codes are masked by default, on the screen (elements and OCR lines) and in notifications, and covered in the screenshots agents get and history keeps; recordings, which never reach agents, are not covered.
 - `phone_files` reaches only the phone's `Pinky/` folder. Writing to the phone is Ask, and read-only mode turns it off.
+- `phone_logs` reads one app's own lines and crash reports, never another process's, and only of apps in the agent's scope and the task's list; never of blocked, finance, password-manager, system or Pinky's own apps. The first read of an app in a task is Ask (rule `App logs`) unless the app is a development build; history keeps the count, not the text.
 - An agent's first connection needs approval and a scope.
 
 ### Threat model

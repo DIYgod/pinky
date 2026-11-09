@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 15 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -313,6 +313,33 @@ The result lists the folder, then one line per file: `path · size · modified �
 - **Without `content`, over stdio,** the call is `invalid_argument` and names the folder: an agent on this computer writes the file there itself.
 - Each upload is a step in the task's history: "Received “photo.jpg” (1.2 MB) from the agent".
 
+### phone_logs
+
+Reads one app's own log lines or crash reports, so an agent that tests an app on the phone can see why it failed. Needs a `phone_connect` lease like the other tools; it changes nothing on the phone (annotated read-only). Design and privacy decisions: [notes/app-logs.md](notes/app-logs.md).
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `app` | string, required | Package name, bundle id, or name, found as for `phone_launch` |
+| `kind` | `logs` \| `crashes` | `logs` (default): the app's log lines; `crashes`: its crash reports, with Android's not-responding (ANR) reports and the iPhone's watchdog ends |
+| `since` | string | Where to start: an RFC 3339 time, a date and time or a time of day on the computer's clock (`14:05` is the last 14:05 that passed), or a duration back (`10m`, `2h`, `1d`). Default: when the task started |
+| `filter` | string | For `logs`: only lines whose tag or text contains it, ignoring case |
+| `level` | `verbose` \| `debug` \| `info` \| `warn` \| `error` \| `fatal` | For `logs`: only lines of this level or more severe |
+| `limit` | 0–500 | Lines (default 200, at most 500) or crash reports (default 3, at most 10) |
+| `intent` | string | One sentence on why, shown on the approval panel |
+| `approval_id` | string | From `approval_pending`: repeat the same call with it |
+
+The result's message says what it holds ("120 log lines of Example since 14:05:00, oldest first."); the lines or reports follow it.
+
+- **Log lines** are the newest that match, shown oldest first, one per line: `14:05:31.204 4321 E Tag: text`, the time on the computer's clock, the process id, the level (`V D I W E F`), the tag (Android's tag, an iPhone line's subsystem and category or its image) and the text. A line over 2,000 bytes is cut. When more lines matched than `limit` or 64 KB allow, the message says how many older lines were left out; narrow with `since`, `filter` or `level`.
+- **Crash reports** come newest first, each with a heading: `── crash · 2026-11-09 14:05:33 · pid 4321 · com.example.app`, its kind (`crash`, `native crash`, `ANR`, `watchdog`), a one-line summary, then the report: on Android the drop box entry (an ANR cut down to the app's own threads), on an iPhone the `.ips` report cut down to the exception, the crashed thread's backtrace and the app's own binary images. When they pass 64 KB the newest is cut short and the others keep their first lines; the message says so.
+- **Only that app's own processes.** Lines of other processes, the system's included, are never returned, so system lines about the app (Android's "Process … has died") are not either; the crash reports carry what matters of them.
+- **Scope.** An app outside the agent's scope or the task's `apps` is `scope_denied`; watch-only agents get `scope_denied` for every app. Read-only agents and read-only mode may read logs.
+- **Refused apps.** Blocked apps (even one the person allowed for the task), finance apps and password managers (even with those rules off), the phone's own system apps, Pinky Companion and the iPhone's WebDriverAgent helper return `blocked_by_policy` without asking; the rule is the app's rule, or `App logs`.
+- **Asking.** The first read of an app in a task asks the person (rule `App logs`, "Read the logs of Example?"), like an Ask action: up to 45 s, then `approval_pending`. "Allow for this task" covers that app's logs and crash reports until the task ends; there is no "Always allow". A development build does not ask: an Android app that is debuggable, or an iPhone app signed for development (`get-task-allow`, as Xcode installs it). Denied: `approval_denied` with the person's note.
+- **iPhones keep no log history Pinky can read.** Pinky starts listening to the app at the first `phone_logs` call for it in a task and keeps listening until the task ends (up to 20,000 lines), so the first call returns little; the message says from when Pinky listens. Make the app do what you want to see, then call again. Pinky finds a new process of the app within a second, sooner when `phone_launch` started it, so the very first lines of a fresh start can be missing. Only what the app logs through the system log reaches it (`os_log`, `Logger`, `NSLog`), not `print`; levels are `debug`, `info`, `error` and `fatal` (a fault). Crash reports have no such limit: the phone keeps them. iOS Simulators return `unsupported`.
+- **Android** reads logcat (the main, system and crash buffers) for the app's user id, and crash reports from the drop box (`data_app_crash`, `data_app_native_crash`, `data_app_anr`) and the crash buffer. An app that shares its user id with others is `unsupported`, as their lines cannot be told apart. What a phone still holds depends on its buffers: a busy phone may have dropped older lines.
+- Each call is a step in the task's history, with what was read and never the text: "Read 120 log lines of Example", "Read 1 crash report of Example".
+
 ### phone_request_approval
 
 | Argument | Type | Meaning |
@@ -340,7 +367,7 @@ Shows a Needs you card and waits until the person hands control back; returns `s
 - While an approval is open on a phone, other actions on it return `approval_pending` with that approval's id; reads still work.
 - Before acting on Allow, Pinky reads the screen again and compares the target's role, label, states and position (a few pixels of tolerance) and the screen's text and states (status bar excluded; OCR text only when the screen has no element text). Any change returns `stale`.
 - "Allow for this task" covers the rules that asked, in that app, for the rest of the task. An action that another rule also asks about still asks. `phone_request_approval` has no such answer: each question asks the person.
-- "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files` or `phone_launch`.
+- "Always allow" keeps the answer in the rules file: in that app, the rule that asked, and the rules that asked with it, no longer ask about the steps that rule asks about, in later tasks too, until the person takes it back in Settings › Safety. The approved call's message says `from now on "Payments" no longer asks in Dinely`; a later such action returns `settled` at once, its message starting `No approval needed: the person always allows "Payments" in Dinely.` It never lifts a deny, read-only mode, the agent's scope or the task's `apps`, and it does not apply while every action asks. The panel offers it for actions only: not for `phone_request_approval`, `phone_files`, `phone_launch` or `phone_logs`.
 - An MCP cancellation of the blocked call, a closed session, Stop and Take over all withdraw the panel without acting.
 - Only the client's `Decide` answers approvals. No tool can.
 
@@ -362,3 +389,4 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 | Reconnect grace | 60 s |
 | `text` | 16384 characters |
 | `phone_batch` steps | 50 |
+| `phone_logs` result | 500 lines or 10 crash reports, 64 KB |
