@@ -771,12 +771,18 @@ func simBooted(devs []simEntry, id string) bool {
 }
 
 // showSimulator opens Simulator.app on a Simulator, so the person sees it.
-// Pinky drives it either way.
+// Pinky drives it either way. Xcode 27 has no Simulator.app: its Device
+// Hub opens on the device it showed last, often a real iPhone, and takes
+// no device to show, so the person sees the Simulator in Pinky's mirror.
 func (p *SimProvider) showSimulator(x xcode, id string) {
 	if p.simctlFn != nil {
 		return // tests
 	}
 	app := filepath.Join(x.Developer, "Applications", "Simulator.app")
+	if _, err := os.Stat(app); err != nil {
+		p.logger().Debug("ios simulator: no Simulator.app to show it in", "xcode", x.Developer)
+		return
+	}
 	cmd := exec.Command("/usr/bin/open", "-a", app, "--args", "-CurrentDeviceUDID", id)
 	cmd.Env = x.env()
 	if err := cmd.Run(); err != nil {
