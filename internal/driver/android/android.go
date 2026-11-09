@@ -144,12 +144,14 @@ type Provider struct {
 	// usbNodes lists the computer's USB devices as Windows sees them, to
 	// find phones without a driver (usbdriver.go); nil elsewhere.
 	usbNodes func() ([]usbNode, error)
+	// avd starts the Android Virtual Devices (avd.go).
+	avd *avdLauncher
 }
 
 // NewProvider returns a provider with the given configuration.
 func NewProvider(cfg Config) *Provider {
 	cfg.defaults()
-	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes}
+	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes, avd: newAVDLauncher()}
 	if cfg.ReconnectWiFi {
 		p.wifi = newReconnector(p)
 	}
@@ -174,6 +176,9 @@ type deviceProps struct {
 	// AndroidID is the phone's android_id, read only when the shell may
 	// read neither serial property (phoneID).
 	AndroidID string
+	// AVD is the name of the Android Virtual Device an emulator runs, ""
+	// on a phone.
+	AVD string
 }
 
 // List implements driver.Provider. It reads each online device's
@@ -398,6 +403,9 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 				pr.AndroidID = v
 			}
 		}
+		if v, ok := strings.CutPrefix(l, "pinky-avd="); ok && emulatorSerial(e.Serial) {
+			pr.AVD = strings.TrimSpace(v)
+		}
 	}
 	fmt.Sscan(strings.TrimSpace(lines[2]), &pr.SDK)
 	pr.Name = strings.TrimSpace(lines[3])
@@ -406,6 +414,17 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 	}
 	if pr.Model == "" {
 		pr.Model = strings.ReplaceAll(e.Model, "_", " ")
+	}
+	if pr.AVD != "" {
+		// An emulator: named as Android Studio names its AVD, unless the
+		// person renamed it in its settings, and made as the AVD's device.
+		a := readAVD(p.avd.avdHome(), pr.AVD)
+		if pr.Name == pr.Model {
+			pr.Name = a.Display
+		}
+		if a.Model != "" {
+			pr.Model = a.Model
+		}
 	}
 	p.mu.Lock()
 	p.props[key] = pr
@@ -427,11 +446,13 @@ func (p *Provider) dropProps(serial string) {
 
 // propsCommand reads what deviceProps keeps, one line each: the model, the
 // Android version, the SDK level, the name the person gave the phone and
-// ro.serialno; then ro.boot.serialno, and the android_id only when the
-// shell may read neither serial property (the settings command takes a
-// moment).
+// ro.serialno; then ro.boot.serialno, an emulator's AVD (the property
+// was ro.kernel.qemu.avd_name before Android 12), and the android_id only
+// when the shell may read neither serial property (the settings command
+// takes a moment).
 const propsCommand = "getprop ro.product.model; getprop ro.build.version.release; getprop ro.build.version.sdk; " +
 	"settings get global device_name; getprop ro.serialno; echo pinky-boot=$(getprop ro.boot.serialno); " +
+	"echo pinky-avd=$(getprop ro.boot.qemu.avd_name)$(getprop ro.kernel.qemu.avd_name); " +
 	"[ -n \"$(getprop ro.serialno)$(getprop ro.boot.serialno)\" ] || echo pinky-aid=$(settings get secure android_id)"
 
 func infoFromEntry(e adb.DeviceEntry) driver.Info {
@@ -442,6 +463,7 @@ func infoFromEntry(e adb.DeviceEntry) driver.Info {
 		Model:      strings.ReplaceAll(e.Model, "_", " "),
 		Connection: "usb",
 		Backend:    "scrcpy",
+		Virtual:    emulatorSerial(e.Serial),
 	}
 	if e.Wireless() {
 		info.Connection = "wifi"

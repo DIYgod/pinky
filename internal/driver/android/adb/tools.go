@@ -392,6 +392,11 @@ func (e env) tools() []Tool {
 	return out
 }
 
+// SDKs lists the folders an Android SDK may be in, as Android Studio
+// looks for one: ANDROID_HOME, ANDROID_SDK_ROOT, then where Android Studio
+// installs it on this OS. They may not exist.
+func SDKs() []string { return sysEnv().sdks() }
+
 // sdks lists the Android SDKs to look in: ANDROID_HOME, ANDROID_SDK_ROOT,
 // then where Android Studio installs it.
 func (e env) sdks() []string {
