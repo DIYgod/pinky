@@ -16,7 +16,7 @@ Status, 2026-11-07, round 3: background displays work (tree, `set_text`, window 
 | `.../RequestHandler.kt` | Parses requests; runs everything that touches the tree on one worker thread |
 | `.../TreeDumper.kt` | Windows and nodes to JSON, with per-window timing |
 | `.../Displays.kt` | Which windows are on which display: checks display ids for requests, lists a display's windows, and maps windows to displays for events |
-| `.../TextSetter.kt` | Target resolution and `ACTION_SET_TEXT` |
+| `.../TextSetter.kt` | Target resolution, `ACTION_SET_TEXT`, and the input connection and paste when an app refuses it |
 | `.../EventHub.kt` | Event conversion, content-change folding, subscriber queues, `wait_idle` |
 | `.../AppLabels.kt` | App display names, loaded in the background |
 | `.../MainActivity.kt` | Debug page (own process `:debug`): status, a text field, a password field, toast and notification buttons |
@@ -120,6 +120,28 @@ Found after the Android driver session reported a nearly empty Settings search t
 
 - **Settings search came back nearly empty on the Android 16 emulator** (reported by the Android driver session). Gboard had opened its "Try out your stylus" introduction: a sheet over a scrim that covered everything below the status bar (its window and touchable region `[0,128,1080,2400]`). It came up after the Android driver session injected touches through the emulator console, whose virtio touch device reports a stylus button (`BTN_STYLUS`); that session dismissed it afterwards. Android marks the nodes of a window that a higher window's touchable region covers as not visible to the user, so the app's search field and results were left out, and the input method window, not walked by default, held the only visible content. `uiautomator dump` still listed the app's nodes, most likely because it runs while no service tracks windows (it unbinds the others), so Android has nothing to tell it what covers them; taps there would have reached Gboard's sheet, whose touchable region they were in. The tree now walks an input method window that covers the screen like a sheet (see the `ime` parameter). The sheet did not come back on its own in later runs (Gboard switched to its stylus toolbar), but the toolbar's menu opens it again: tap a text field through the emulator console, then More stylus options › Try handwriting demo. Checked that way with release 2026.1107.1 (2026-11-07): the tree walks the sheet and the menu, sends none of the app's nodes under them, and the client lists exactly what the person can tap; the trees are fixtures in `internal/driver/android/companion/testdata`. The Android driver also reads the tree again with `ime` when it comes back empty while a keyboard shows, which covers older builds of the app.
 - **Gboard's stylus toolbar has a touchable region much smaller than its bounds:** a strip on the left and one at the bottom (`[[21,896,169,1586],[0,2337,1080,2400]]`) inside bounds of `[0,896,1080,2400]`. The app's nodes in between are visible and receive taps, but a client that cuts elements by the input method's bounds drops them (the search results below y 896). Windows now carry `region` on Android 13+ when it differs from the bounds.
+
+## Fields that refuse `set_text` (GitHub issue #31, 2026-11-09)
+
+A Redmi K70 (HyperOS, Android 16) with Gboard's Chinese keyboard could not type into WeChat's chat input on a background display: `phone_type` reported nothing wrong and nothing appeared. The chat input refuses `ACTION_SET_TEXT`, so the driver fell back to keys and a scrcpy paste, and Gboard's Pinyin composes keys (ASCII showed up only in its suggestion strip) and ignores the paste key and Ctrl+A. Nothing checked the field afterwards.
+
+`set_text` now goes on to the field's input connection and then to a paste, as [companion-protocol.md](companion-protocol.md#set_text) describes, and its `verified` is trustworthy (feature `set_text_fallback`). The input connection is the keyboard's own way into a field, so it reaches custom views that take text from no other way, whatever the keyboard; it needs Android 13 and `flagInputMethodEditor`, which changes nothing about the keyboard the person uses. The paste is for fields that drop committed text but paste, which few do.
+
+**The input test app** (`android/inputtest`, `app.pinky.inputtest`) has one field for each case and a line that echoes what each holds: an ordinary EditText; one that refuses `ACTION_SET_TEXT`; one that also drops committed text, so only a paste fills it; a chat input built like WeChat's (a View, not a TextView, with its own input connection; it refuses `ACTION_SET_TEXT` and `ACTION_PASTE`, reports its hint as its text while empty, and sends on its editor action); an EditText of at most 4 characters; and a chat input that takes no text at all. Build it with `android/companion/gradlew -p android/inputtest assembleDebug`. `TestEmulatorBackgroundTypeFallback` (`internal/driver/android/typing_device_test.go`) types into every field on a background display.
+
+Checked on the Android 16 emulator (`emulator-5640`, `zh-CN`, Gboard 简体中文 (拼音), the field on a background display), through the driver's `Background.Type`:
+
+| Field | Result |
+| --- | --- |
+| Ordinary EditText, "hello" | `set_text` |
+| Refuses `ACTION_SET_TEXT`, "你好" | `input_connection`, 0.35 s |
+| Drops committed text, "粘贴" | `paste`, 1.6 s (the input connection waits 1.5 s for the field to change first) |
+| Chat input, "微信", then "发送" with submit | `input_connection`, 30 ms; the editor action sent it |
+| At most 4 characters, "abcdefg" | `set_text`, `verified: false`: the driver's error says the field reads 4 characters where 7 were typed |
+| Takes no text | Refused with the three reasons; the driver's paste did not land either, and the agent gets an error saying so (5 s) |
+| Drops committed text, phone locked | `the app did not accept ACTION_PASTE (apps cannot paste while the phone is locked)`; the same field pasted once the phone was unlocked |
+
+The phone in the issue was not available. On HyperOS, check that the input connection reaches WeChat's chat input (the `PinkyText` log line names the way used) and that HyperOS does not restrict `flagInputMethodEditor` or the clipboard for accessibility services.
 
 ## Turning the service on and off
 
