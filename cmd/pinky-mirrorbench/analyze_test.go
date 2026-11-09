@@ -105,3 +105,30 @@ func TestMovedRows(t *testing.T) {
 		t.Errorf("movedRows of the same picture = %d, %d, %d; want 0, -1, -1", n, top, bottom)
 	}
 }
+
+func TestPainting(t *testing.T) {
+	t0 := time.Unix(1000, 0)
+	at := func(ms int, repeat bool) pic {
+		return pic{ready: t0.Add(time.Duration(ms) * time.Millisecond), repeat: repeat}
+	}
+	// Two pictures 100 ms apart overlap, a repeat at 1 s and a picture
+	// at 1.9 s, cut off at 2 s.
+	pics := []pic{at(0, false), at(100, false), at(1000, true), at(1900, false)}
+	to := t0.Add(2 * time.Second)
+	if got, want := painting(pics, t0, to, true), 450*time.Millisecond; got != want {
+		t.Errorf("skipping repeats: %v, want %v", got, want)
+	}
+	if got, want := painting(pics, t0, to, false), 700*time.Millisecond; got != want {
+		t.Errorf("waking for repeats: %v, want %v", got, want)
+	}
+	// From 50 ms on, the first span counts 300 ms.
+	if got, want := painting(pics[:2], t0.Add(50*time.Millisecond), to, true), 300*time.Millisecond; got != want {
+		t.Errorf("from 50 ms: %v, want %v", got, want)
+	}
+}
+
+func TestPeakDiff(t *testing.T) {
+	if got := peakDiff([]byte{10, 200, 30}, []byte{12, 180, 30}); got != 20 {
+		t.Errorf("peakDiff = %d, want 20", got)
+	}
+}

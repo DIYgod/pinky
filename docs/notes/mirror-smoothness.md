@@ -10,9 +10,10 @@ Machine: Apple M4 Pro (14 cores), macOS 27.2, Homebrew FFmpeg 9.0.2, a Dell S272
 - **The client decodes everything in time.** A 1080×2400 H.264 picture takes 2.4 to 2.9 ms in VideoToolbox; no packet was left without a picture and none was rejected.
 - **A 60 Hz window misses 4 to 10% of a 60 fps stream's pictures**, because they arrive unevenly: two within one refresh, and the first is replaced before it is shown. Painting at 120 Hz misses 0 to 1%. Left as a proposal: it raises a ProMotion display to 120 Hz.
 - **Fixed: the mirror painted 60 times a second for as long as it was open**, even while the phone's screen was still. It now stops 250 ms after the last new picture, and the player's next picture wakes it. With a still screen the app went from 60 frames a second to 0.1 to 4, and from 3 to 3.8% of a core to 0.1 to 0.6%. While the screen moves nothing changed.
-- **But real phones keep sending pictures for a while after their screen stops**, and each one woke the mirror for another 250 ms of painting. In the 3 s after the screen settled, the iPhone 13 mini over Wi-Fi sent 22 to 29 pictures a second at 1.5 to 1.8 Mbit/s, none of them changed (in the run that counted, not one sample of the bench's grid moved); it stops 5 to 7 s after the last change ([ios.md](ios.md)). The Mi 10 Pro over USB sent 64 a second at 1 Mbit/s; how long it goes on, and what changes in them, is not known yet. The emulator sends 1 to 2, WDA none.
-- **Fixed: the mirror now sleeps through pictures that repeat the one before**, sample for sample, as an encoder sends a screen that stopped. The player compares each picture with the last it handed over (74 µs for an iPhone's screen) and wakes nothing for a repeat. On the emulator the mirror sleeps up to 1.2 s sooner after a drag. Whether the real phones' trailing pictures are such repeats is still to measure on them.
-- **The real phones:** the Mi 10 Pro over USB streams 89 to 90 fps from its 90 Hz screen, 56 ms from touch to picture. The iPhone 13 mini over Wi-Fi gives 50 to 54 changed pictures a second of its 60, 278 to 283 ms from touch to picture with outliers past 1.4 s, and opening its stream again takes 1.2 to 1.5 s (once no picture in 20 s).
+- **But real phones keep sending pictures after their screen stops**, and each one woke the mirror for another 250 ms of painting. After a drag the iPhone 13 mini over Wi-Fi sent about 60 a second for 7.5 to 8.7 s; the Mi 10 Pro over USB 2.6 to 4 a second that did not stop, on a still screen too. The emulator sends 1 to 2, WDA none.
+- **Fixed: the mirror now sleeps through pictures that repeat the one before**, sample for sample. The player compares each picture with the last it handed over (74 µs for an iPhone's screen) and wakes nothing for a repeat. That helps where phones send repeats: an iPhone's still screen right after the stream opens (29 to 59 repeats a second in three runs of four; the mirror paints 0% of the time instead of 55 to 56%), and the emulator after a drag (up to 1.2 s sooner).
+- **Most trailing pictures are not repeats, though, but refinements.** After a drag, not one of the iPhone's pictures was a repeat: from 3 s on most moved no sample of the bench's grid by more than 0 to 5 levels, and the mirror still paints about 7 s after each drag. The Mi 10 Pro sent no repeat at all. Sleeping through pictures that differ by a few levels is proposal 2; done plainly it costs more CPU than the painting it saves.
+- **The real phones:** the Mi 10 Pro over USB streams 88 to 90 fps from its 90 Hz screen, 56 to 66 ms from touch to picture. The iPhone 13 mini over Wi-Fi gives 50 to 54 changed pictures a second of its 60, 119 to 348 ms from touch to picture (medians of six runs) with outliers past 1 s, and opening its stream again takes 1.2 to 1.5 s (once no picture in 20 s).
 - **Device MCP's "23 fps with scrcpy, 60 fps with the emulator's own stream" is the emulator's renderer, not the stream.** On a software-rendered emulator both streams give about 30 fps; with `-gpu host` both give 60.
 - **iOS 27 already asks for 60 fps** (55 to 66 fps while moving over USB, earlier notes; 50 to 54 over Wi-Fi, below). What Device MCP's HEVC 4:4:4 at up to 60 Mbit/s adds is sharper text and colour edges, not frames. Left as a proposal.
 
@@ -34,14 +35,14 @@ go run ./cmd/pinky-mirrorbench -wda http://127.0.0.1:18200 -mjpeg http://127.0.0
 It measures:
 
 1. **Opening and the first picture.** The time to open the phone, then the first packet and the first decoded picture after asking for the stream: once cold, then `-warm` times (3) on the open phone.
-2. **A still screen.** Pictures and bits a second over 3 s, how many of those pictures changed, how many were repeats (the same as the picture before, sample for sample, which the mirror skips), and with `-v` where on the screen the ones that moved any sample did, as shares of the height.
+2. **A still screen**, for `-still` (3 s). Pictures and bits a second, how many of those pictures changed, how many were repeats (the same as the picture before, sample for sample, which the mirror skips), and the share of the time the mirror would paint for them: from each picture it is handed until 250 ms later (`mirrorPaintFor`), with repeats skipped as the app does and, to compare, without. With `-v`, where on the screen the pictures that moved any sample did, as shares of the height, and second by second the pictures, the repeats and the largest change of a sample among the others (on the grid below), which tells an encoder refining a picture (a few levels) from content that changed.
 3. **Six drags** in Settings, which it opens first, alternately up and down, each moving for 1 s with the driver's raw touches (`driver.Toucher`; WDA's `Swipe` on a Simulator). Every 4th luma sample of every 4th row of each picture is compared with the picture before; a picture counts as changed when over 0.2% of the samples moved by more than 16 levels, which encoder noise on a still screen does not reach.
    - **Touch to picture:** from the first move past the touch slop to the first changed picture's packet, and to its decoded planes.
    - **Moving:** changed pictures a second while the content moved, and the gaps between them (median, p95, max).
    - **Bit rate** over the same span.
    - **Painting drops:** the share of changed pictures a window painting at an even 60 or 120 Hz would never show, averaged over 32 phases of the paints against the pictures.
    - **The app drew:** on Android, the frames Settings rendered from just before the touch to the end of the move (`dumpsys gfxinfo`), to tell a slow stream from a slow app. Until the evening run the bench read them 1 s after the finger lifted but divided by the 1 s of moving, which counted the frames drawn after the move too (scroll bar fading, overscroll); the first numbers below were too high.
-4. **After the last drag**, for `-settle` (8 s): how long pictures kept coming, and how long pictures that were not repeats did. The difference is how much sooner the mirror sleeps for skipping repeats. When pictures still came at the end, it says so; watch longer.
+4. **After the last drag**, for `-settle` (8 s): how long pictures kept coming, how many of them were repeats, and how long the mirror paints from the last move on, with repeats skipped and without. The difference is how much sooner it sleeps for skipping repeats. With `-v` the same second by second as for a still screen. When pictures still came at the end, it says so; watch longer.
 
 Reported numbers are medians over the drags. The bench does not paint; the painting drops are worked out from when pictures were ready. The client's own painting is measured below.
 
@@ -134,6 +135,25 @@ LineageOS, Android 17, 1080×2340 at 90 Hz, on a cable; USB defaults (H.264, 8 M
 
 The stream keeps up with the phone's 90 Hz screen, and a touch shows sooner than on the emulator, since a 90 Hz screen shows the move sooner. A 60 Hz window can show only 60 of the 90 pictures, so it misses a third of them whatever the timing; 38% is that plus the uneven arrival. At 120 Hz it misses 12%. The app's frames (104 to 197 a second) were counted with the old window and say nothing.
 
+Three more runs later that evening, four drags each (`-warm 0 -still 5s -trials 4 -settle 10s`), the same defaults:
+
+| | |
+| --- | --- |
+| First picture, cold | 228 to 245 ms |
+| Touch to picture | 58, 66 and 61 ms median (54 to 68) |
+| Moving | 88.0 to 90.4 changed pictures/s, 90.0 to 90.4 sent |
+| Gaps median / p95 / max | 10.9 to 11.0 / 23.0 to 25.4 / 26.1 to 32.2 ms |
+| Bit rate | 13.2 to 17.0 Mbit/s |
+| Painting drops, 60 / 120 Hz | 35 to 38% / 8 to 13% |
+| Settings drew (fixed count) | 82.6 to 88.7 frames/s median (69 to 90) |
+| Decode | 2.6 to 3.7 ms median, 0 errors |
+
+Settings itself draws 83 to 89 frames a second while it moves, and the stream carries at least as many changed pictures, so nothing is lost between the app and the mirror. At the same default of 8 Mbit/s the encoder used 13 to 17 Mbit/s over the second a drag moved, against 5.8 in the first run; why was not looked into (8 Mbit/s is the encoder's average, and these drags scrolled the home page's coloured icons).
+
+The first run's still screen of 64 pictures a second was Settings' own progress bar, not the encoder: the bench brings Settings to the front as it was left, on its Internet page, which scans for Wi-Fi networks with a moving bar under its title. The run that started there again sent 31 pictures a second, all of them moving a few samples at 10 to 11% of the height, where the bar is. On Settings' home page a still screen sent 2.6 and 4 pictures a second (0.6 to 0.7 Mbit/s), none of them a repeat ([Repeats](#repeats)).
+
+A fourth, longer run (`-still 20s`) is not used: the phone had locked itself by then (screen timeout), and the bench drove its lock screen. Nothing was typed; the phone was left locked.
+
 ### iOS 27 over Device Hub, iPhone 13 mini over Wi-Fi
 
 iOS 27.0.1, CoreDevice over Wi-Fi (the phone had no cable), HEVC 1136×2464. Three runs: two complete, and one that stopped when its third warm start gave no picture in 20 s.
@@ -150,6 +170,8 @@ iOS 27.0.1, CoreDevice over Wi-Fi (the phone had no cable), HEVC 1136×2464. Thr
 | Bit rate | 4.2 Mbit/s | 4.7 Mbit/s |
 | Painting drops, 60 / 120 Hz | 27% / 15% | 14% / 5% |
 | Decode | 2.5 ms median, 0 errors | 3.1 ms median, 0 errors |
+
+Four more runs later that evening, four drags each (two in the last), `-warm 0 -settle 10s`: touch to picture 119, 167, 178 and 348 ms median (88 ms to 1.09 s), 51.9 to 53.8 changed pictures a second while moving (54.0 to 65.9 sent), gaps p95 37 to 76 ms, 4.4 to 5.0 Mbit/s, and painting drops of 13 to 37% at 60 Hz and 4 to 22% at 120 Hz. The first picture took 192 to 402 ms cold.
 
 Over Wi-Fi the iPhone is the least smooth source measured. It delivers 50 to 54 of its 60 frames, in bursts: a 60 Hz window misses 14 to 27%, against 4 to 10% on the emulator. A touch takes about four times as long to show as on the emulator, and now and then a second or more; the bench cannot tell whether the touch or the picture was late then. Over USB the earlier notes ([ios.md](ios.md)) saw 55 to 66 fps while moving; a cable run of the bench is still to do.
 
@@ -173,7 +195,7 @@ Painting, before and after the fix (emulator `-gpu host`, the window on the 60 H
 | Before | 59.2, 60.0 frames/s; 3.8%, 3.0% | 59.8, 60.0 frames/s; 4.7%, 11.4% | 59.9, 59.9 frames/s; 3.5%, 3.1% |
 | After | 4.0, 0.1 frames/s; 0.6%, 0.1% | 58.3, 59.5 frames/s; 10.6%, 12.2% | 5.9, 11.3 frames/s; 0.6%, 1.0% |
 
-The still screen's remaining frames follow the emulator's pictures: it sends up to 2 a second while still, and each one paints for 250 ms. WDA sends nothing while still, so its mirror stops painting altogether. Real phones keep sending for a while (above); the mirror now sleeps through those that repeat the picture before ([below](#repeats)), and whether theirs do is still to measure. "Still again" includes the end of the last fling; both rows were measured before repeats were skipped.
+The still screen's remaining frames follow the emulator's pictures: it sends up to 2 a second while still, and each one paints for 250 ms. WDA sends nothing while still, so its mirror stops painting altogether. Real phones keep sending for a while (above); the mirror now sleeps through those that repeat the picture before ([below](#repeats)), which on the phones are only some of them. "Still again" includes the end of the last fling; both rows were measured before repeats were skipped.
 
 ## The fix
 
@@ -201,26 +223,34 @@ A phone goes on sending pictures after its screen stops, and each one woke the m
 
 Measured with the bench's `-settle` on the Android 17 emulator (`-gpu host`): after the last drag, pictures came for 1.46 to 1.48 s in four runs. In two of them the last 1.0 and 1.2 s were repeats (pictures that were not repeats for 0.46 and 0.24 s), so the mirror sleeps that much sooner; in the other two there were none. A still screen right after opening sent 1 to 4.4 pictures a second, none of them repeats.
 
-Whether the iPhone's 5 to 7 s and the Mi 10 Pro's 64 a second are repeats is still to measure on the phones (`-settle 10s -v`). Where they are not (an encoder that refines a still picture for seconds, or a status bar that changes), the mirror paints through them as before.
+On the real phones (`-settle 10s -v`; the iPhone in four runs, the Mi 10 Pro in three):
+
+- **The iPhone's still screen right after the stream opens** sent 29 to 59 repeats a second in three runs of four, at 0.3 to 0.6 Mbit/s, for the whole 5 s the bench watched. The mirror paints 0% of that time instead of 55 to 56% (in the two runs that measured it). In the fourth run (20 s) it sent 72 pictures in the first 2 s, none of them a repeat and some moving samples by up to 178 levels, and then nothing: the mirror paints 9% of the time.
+- **After a drag the iPhone sent about 60 pictures a second for 7.5 to 8.7 s, not one a repeat.** The first 2 to 3 s are the fling. From then on most pictures moved no sample of the bench's grid by more than 0 to 5 levels: the encoder refining the still picture, which nobody can see. In two of three runs a few pictures 4 to 8 s after the drag moved samples by 97 to 175 levels; what changed there was not found. The mirror paints 6.9 to 7.7 s after each drag, with repeats skipped or not.
+- **The Mi 10 Pro sent no repeat at all.** After a drag pictures came for 8.0 to 9.3 s, and on Settings' still home page 2.6 to 4 a second that had not stopped when the bench stopped watching, a few of them moving samples by more than 16 levels anywhere from the status bar to the bottom. The bench's painting share came after these runs, so how much the mirror paints for them was not measured; at 2.6 to 4 pictures a second it is up to 65 to 100% of the time, less as far as they come in bunches.
+
+So skipping repeats lets the mirror sleep when it opens on an iPhone's still screen, and on emulators; after a drag, on either phone, it paints as before. Sleeping through pictures that differ by a few levels is proposal 2.
 
 ## Proposals
 
 In order of value:
 
 1. **Paint at 120 Hz on a ProMotion display while a 60 fps stream moves.** Drops fall from 4 to 10% to 0 to 1% (emulator table above); a 90 Hz phone's from 38% to 12%. On a 60 Hz display it changes nothing. Cost: the display runs at 120 Hz while the picture moves, which is a battery cost on a MacBook. One line in `Draw` (`AnimationFrameRate(120)` while pictures come). Needs a check on the built-in display.
-2. **iOS 27 mode 7, as an option.** Sharper text at 20 to 60 Mbit/s instead of 3 to 6. Needs: the offer with mode 7 (open-screen-sharing also sends long-term references and field 12), a decode path for 4:4:4 (VideoToolbox decodes it in hardware, by Device MCP's account; `Decoder.ConvertYUV` and MyGo's `Bitmap.UpdateYUV` take only 4:2:0, so either convert to 4:2:0, which loses what 4:4:4 adds, or a 4:4:4 upload in MyGo), recordings ten times the size, and a fallback to mode 5 when the phone refuses or Wi-Fi is slow. Over Wi-Fi it would not be smoother (above). Needs the real phone.
-3. **A cross-goroutine repaint in MyGo.** Waking a sleeping mirror goes through `Window.Update`, which builds the view again (0.3 to 0.6 ms, once per wake). A call that only repaints would make even that free, and would let the mirror paint once per picture instead of at 60 Hz for 250 ms. Small; an upstream ask.
-4. **A one-picture jitter buffer.** Showing each picture one refresh late would spread pictures that arrive in pairs, so a 60 Hz window would miss almost none, at 17 ms more latency. Not worth it at 60 fps with 120 Hz available; over Wi-Fi the iPhone's bursts are longer than one picture.
-5. **Cap a faster phone's stream at the window's refresh rate.** A 90 Hz phone sends 90 pictures a second to a 60 Hz window that shows 60. scrcpy's `max_fps` at 60 would save the phone a third of its encoding and the client a third of its decoding, with nothing lost on screen; not when the window is on a 120 Hz display. Small.
-6. **Recordings paint at 60 Hz while they play**, even through still parts (`ui/recording.go`). The same sleep would cut that. Small.
-7. **Start emulators with `-gpu host`.** A software-rendered emulator gives about 30 fps whatever the stream. Pinky does not start emulators; this belongs in the Simulators-as-phones work and the README's emulator advice.
+2. **Sleep through pictures that hardly differ from the last one handed over.** After a drag the iPhone sends about 60 pictures a second for about 5 s after the screen settles, and the Mi 10 Pro a few a second without end, which move samples by a few levels: not repeats, so the mirror paints for each ([Repeats](#repeats)). A comparison with a tolerance, handing over no picture whose samples all lie within a few levels of the last one handed over, would let it sleep through most of them: on the iPhone 2 to 4.5 of the 6.9 to 7.7 s it paints after a drag, if the samples off the bench's grid change as little as those on it, which the bench does not check. Comparing with the last picture handed over, not the one before, keeps small changes from adding up: a slow fade is handed over once it has moved past the tolerance, and what is shown never strays from the phone's picture by more than the tolerance. Cost: `bytes.Equal` row by row first, then the tolerance only on rows that differ, which for a refinement is most of them. In plain Go that takes 1.3 ms for an iPhone picture (3.3 GB/s, measured on the M4 Pro), or 7.7% of a core at 60 pictures a second, more than the 3 to 3.8% the painting it saves costs. So it pays only with a vectorised compare (assembly, or Go's SIMD when it ships), or when it runs only once pictures stop changing much. Needs the real phones to check the gain.
+3. **iOS 27 mode 7, as an option.** Sharper text at 20 to 60 Mbit/s instead of 3 to 6. Needs: the offer with mode 7 (open-screen-sharing also sends long-term references and field 12), a decode path for 4:4:4 (VideoToolbox decodes it in hardware, by Device MCP's account; `Decoder.ConvertYUV` and MyGo's `Bitmap.UpdateYUV` take only 4:2:0, so either convert to 4:2:0, which loses what 4:4:4 adds, or a 4:4:4 upload in MyGo), recordings ten times the size, and a fallback to mode 5 when the phone refuses or Wi-Fi is slow. Over Wi-Fi it would not be smoother (above). Needs the real phone.
+4. **A cross-goroutine repaint in MyGo.** Waking a sleeping mirror goes through `Window.Update`, which builds the view again (0.3 to 0.6 ms, once per wake). A call that only repaints would make even that free, and would let the mirror paint once per picture instead of at 60 Hz for 250 ms. Small; an upstream ask.
+5. **A one-picture jitter buffer.** Showing each picture one refresh late would spread pictures that arrive in pairs, so a 60 Hz window would miss almost none, at 17 ms more latency. Not worth it at 60 fps with 120 Hz available; over Wi-Fi the iPhone's bursts are longer than one picture.
+6. **Cap a faster phone's stream at the window's refresh rate.** A 90 Hz phone sends 90 pictures a second to a 60 Hz window that shows 60. scrcpy's `max_fps` at 60 would save the phone a third of its encoding and the client a third of its decoding, with nothing lost on screen; not when the window is on a 120 Hz display. Small.
+7. **Recordings paint at 60 Hz while they play**, even through still parts (`ui/recording.go`). The same sleep would cut that. Small.
+8. **Start emulators with `-gpu host`.** A software-rendered emulator gives about 30 fps whatever the stream. Pinky does not start emulators; this belongs in the Simulators-as-phones work and the README's emulator advice.
 
 Not proposed: the emulator's gRPC stream (above) and a higher scrcpy bit rate (no frames gained on the emulator; the Mi 10 Pro used 5.8 of its 8 Mbit/s while moving).
 
 ## Still to check on real devices
 
 - **iPhone 13 mini on a cable**: the same bench over USB, to tell Wi-Fi from the phone, and why opening its stream again takes over a second over Wi-Fi.
-- **Repeats on both phones**: whether the pictures the iPhone and the Mi 10 Pro go on sending after a drag are repeats the mirror sleeps through, and for how long they come (`-settle 10s -v`); if they are not, what changes in them (`-still 30s -v`).
-- **Mi 10 Pro**: scrcpy at 16 against 8 Mbit/s, and what the app draws with the fixed count.
+- **The Mi 10 Pro's still screen**: how much the mirror paints for its 2.6 to 4 pictures a second, and what changes in them (`-still 30s -v` on Settings' home page, with the phone unlocked); and scrcpy at 16 against 8 Mbit/s.
+- **The iPhone's pictures 4 to 8 s after a drag** that moved samples by 97 to 175 levels: what changed.
+- **Proposal 2's gain**: how many trailing pictures on both phones lie within a few levels of the last one handed over, over every sample, not only the bench's grid.
 - **The mirror's painting with a real phone**, in a Pinky built from the branch: how soon it stops after the screen does.
 - **The 120 Hz built-in display**: the fix's numbers there, and proposal 1.

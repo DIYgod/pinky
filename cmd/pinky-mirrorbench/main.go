@@ -32,6 +32,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"time"
 
@@ -109,6 +110,8 @@ type summary struct {
 	StillMoved float64 `json:"still_changed_per_s"`
 	StillReps  float64 `json:"still_repeats_per_s"`
 	StillKbps  float64 `json:"still_kbit_per_s"`
+	StillPaint float64 `json:"still_paint_share"`
+	StillAll   float64 `json:"still_paint_share_with_repeats"`
 	Trials     int     `json:"trials"`
 	LatencyMS  float64 `json:"latency_ms"`
 	ReadyMS    float64 `json:"latency_decoded_ms"`
@@ -122,7 +125,10 @@ type summary struct {
 	Drop120    float64 `json:"paint120_drop"`
 	AppFPS     float64 `json:"app_fps,omitempty"`
 	SettleS    float64 `json:"after_drag_pictures_s"`
-	SettleNewS float64 `json:"after_drag_new_pictures_s"`
+	SettleReps int     `json:"after_drag_repeats"`
+	SettlePics int     `json:"after_drag_pictures"`
+	SettlePnt  float64 `json:"after_drag_paint_s"`
+	SettleAll  float64 `json:"after_drag_paint_s_with_repeats"`
 	DecodeMS   float64 `json:"decode_ms"`
 	DecodeMax  float64 `json:"decode_max_ms"`
 	Undecoded  int     `json:"undecoded"`
@@ -190,7 +196,7 @@ func run(ctx context.Context, c config) error {
 		pics := rec.since(from)
 		bytes, changed, moved, repeats := 0, 0, 0, 0
 		top, bottom := 1.0, 0.0
-		var lastNew time.Duration
+		var peaks []int
 		for _, p := range pics {
 			bytes += p.bytes
 			if p.changed {
@@ -198,8 +204,8 @@ func run(ctx context.Context, c config) error {
 			}
 			if p.repeat {
 				repeats++
-			} else {
-				lastNew = p.at.Sub(from)
+			} else if !p.changed {
+				peaks = append(peaks, p.peak)
 			}
 			if p.moved > 0 {
 				moved++
@@ -210,9 +216,17 @@ func run(ctx context.Context, c config) error {
 		sum.StillMoved = float64(changed) / c.still.Seconds()
 		sum.StillReps = float64(repeats) / c.still.Seconds()
 		sum.StillKbps = float64(bytes*8) / c.still.Seconds() / 1000
-		logf("still screen: %.1f pictures/s (%.1f changed, %.1f repeats), %.0f kbit/s", sum.StillFPS, sum.StillMoved, sum.StillReps, sum.StillKbps)
-		if c.verbose && repeats < len(pics) {
-			logf("  the last picture that was not a repeat came %.2f s in", lastNew.Seconds())
+		to := from.Add(c.still)
+		sum.StillPaint = painting(pics, from, to, true).Seconds() / c.still.Seconds()
+		sum.StillAll = painting(pics, from, to, false).Seconds() / c.still.Seconds()
+		logf("still screen: %.1f pictures/s (%.1f changed, %.1f repeats), %.0f kbit/s; the mirror paints %.0f%% of the time, %.0f%% if it woke for repeats",
+			sum.StillFPS, sum.StillMoved, sum.StillReps, sum.StillKbps, sum.StillPaint*100, sum.StillAll*100)
+		if c.verbose && len(peaks) > 0 {
+			slices.Sort(peaks)
+			logf("  %d were neither repeats nor changed: a sample moved by %d levels at most (median %d)", len(peaks), peaks[len(peaks)-1], median(peaks))
+		}
+		if c.verbose {
+			timeline(logf, "still screen", pics, from, c.still)
 		}
 		if c.verbose && moved > 0 {
 			logf("  %d of them moved a few samples, from %.0f%% to %.0f%% of the height", moved, top*100, bottom*100)
@@ -250,21 +264,27 @@ func run(ctx context.Context, c config) error {
 	if len(results) == 0 {
 		return errors.New("no drag moved the picture")
 	}
-	// How long the phone goes on sending after the screen stops: the
-	// mirror paints until a moment after the last picture that is not a
-	// repeat of the one before.
+	// How long the phone goes on sending after the screen stops, and how
+	// long the mirror paints for it: with repeats skipped, as the app's
+	// mirror does, and if it woke for them.
 	if c.settle > 0 {
-		if err := sleep(ctx, time.Until(lastMove.Add(c.settle))); err != nil {
+		end := lastMove.Add(c.settle)
+		if err := sleep(ctx, time.Until(end)); err != nil {
 			return err
 		}
-		var sent, fresh time.Duration
-		for _, p := range rec.between(lastMove, lastMove.Add(c.settle)) {
-			sent = p.at.Sub(lastMove)
-			if !p.repeat {
-				fresh = sent
+		pics := rec.between(lastMove, end)
+		for _, p := range pics {
+			sum.SettleS = p.at.Sub(lastMove).Seconds()
+			if p.repeat {
+				sum.SettleReps++
 			}
 		}
-		sum.SettleS, sum.SettleNewS = sent.Seconds(), fresh.Seconds()
+		sum.SettlePics = len(pics)
+		sum.SettlePnt = painting(pics, lastMove, end, true).Seconds()
+		sum.SettleAll = painting(pics, lastMove, end, false).Seconds()
+		if c.verbose {
+			timeline(logf, "after last drag", pics, lastMove, c.settle)
+		}
 	}
 	pick := func(f func(trialResult) float64) float64 {
 		v := make([]float64, len(results))
@@ -305,10 +325,32 @@ func run(ctx context.Context, c config) error {
 		if c.settle.Seconds()-sum.SettleS < 0.5 {
 			more = ", and on when it stopped watching"
 		}
-		fmt.Printf("  after last drag    pictures for %.2f s%s; not repeats for %.2f s\n", sum.SettleS, more, sum.SettleNewS)
+		fmt.Printf("  after last drag    pictures for %.2f s%s, %d of %d repeats; the mirror paints %.2f s, %.2f s if it woke for repeats\n",
+			sum.SettleS, more, sum.SettleReps, sum.SettlePics, sum.SettlePnt, sum.SettleAll)
 	}
 	fmt.Printf("  decode             %.1f ms median, %.1f ms max; %d packets without a picture, %d errors\n", sum.DecodeMS, sum.DecodeMax, sum.Undecoded, sum.DecodeErrs)
 	return nil
+}
+
+// timeline logs, second by second from from, how many pictures came, how
+// many were repeats, and how far the others moved a sample at most.
+func timeline(logf func(string, ...any), what string, pics []pic, from time.Time, d time.Duration) {
+	type second struct{ pics, reps, peak int }
+	per := make([]second, max(int(d.Round(time.Second)/time.Second), 1))
+	for _, p := range pics {
+		s := &per[min(max(int(p.at.Sub(from)/time.Second), 0), len(per)-1)]
+		s.pics++
+		if p.repeat {
+			s.reps++
+		} else {
+			s.peak = max(s.peak, p.peak)
+		}
+	}
+	for i, s := range per {
+		if s.pics > 0 {
+			logf("  %s, %d to %d s: %d pictures, %d repeats; the others moved a sample by %d levels at most", what, i, i+1, s.pics, s.reps, s.peak)
+		}
+	}
 }
 
 // open opens the phone the flags name, starts the app to drag in, and

@@ -14,6 +14,7 @@ type pic struct {
 	changed bool      // differs from the picture before it
 	repeat  bool      // the same as the picture before it, sample for sample
 	diff    float64   // the share of samples that changed
+	peak    int       // the largest change of a sample, in levels
 	moved   int       // samples that moved past the threshold, changed or not
 	top     float64   // the highest and lowest of them, as shares of the height
 	bottom  float64
@@ -174,6 +175,51 @@ const (
 	// picture to count as changed: a few hundred of a phone's samples.
 	changedShare = 0.002
 )
+
+// peakDiff returns the largest change of a sample between two luma
+// samplings of the same size.
+func peakDiff(a, b []byte) int {
+	if len(a) != len(b) {
+		return 255
+	}
+	peak := 0
+	for i := range a {
+		peak = max(peak, int(a[i])-int(b[i]), int(b[i])-int(a[i]))
+	}
+	return peak
+}
+
+// paintFor is how long the mirror paints after a picture it took
+// (ui.mirrorPaintFor).
+const paintFor = 250 * time.Millisecond
+
+// painting returns how long, between from and to, the mirror would paint
+// for these pictures: from each one it is handed until paintFor later. It
+// is handed no repeats when it skips them, as the app's mirror does.
+func painting(pics []pic, from, to time.Time, skipRepeats bool) time.Duration {
+	var total time.Duration
+	var end time.Time // the end of the span counted so far
+	for _, p := range pics {
+		if skipRepeats && p.repeat {
+			continue
+		}
+		a, b := p.ready, p.ready.Add(paintFor)
+		if a.Before(end) {
+			a = end
+		}
+		if a.Before(from) {
+			a = from
+		}
+		if b.After(to) {
+			b = to
+		}
+		if b.After(a) {
+			total += b.Sub(a)
+			end = b
+		}
+	}
+	return total
+}
 
 // movedRows finds the samples, in rows of cols, that moved by more than
 // the threshold: how many, and the first and last row that holds one (-1

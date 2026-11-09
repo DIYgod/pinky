@@ -147,6 +147,7 @@ func (r *recorder) decodeLoop(dec *video.Decoder) {
 			}
 			if prev != nil {
 				pc.diff = lumaDiff(prev, cur)
+				pc.peak = peakDiff(prev, cur)
 				n, top, bottom := movedRows(prev, cur, (yuv.Width+step-1)/step)
 				if n > 0 {
 					h := float64(yuv.Height)
