@@ -297,3 +297,50 @@ func TestLostOnWiFiPage(t *testing.T) {
 		}
 	}
 }
+
+// TestChangedOnWiFiPage: the page of an Android phone whose connection over
+// the network lacks Pinky's mark says so; Trust this phone asks first, and
+// only then tells the gateway.
+func TestChangedOnWiFiPage(t *testing.T) {
+	ta := newTestAppWith(t, fakeapi.Options{Scenario: fakeapi.OnePhone, Speed: 50})
+	const id = "pixel-9"
+	ta.waitFor(t, "the Pixel", func() bool { return ta.device(id) != nil })
+	ta.api.ChangeOnWiFi(id)
+	ta.waitFor(t, "the Pixel changed", func() bool { d := ta.device(id); return d != nil && changedOnWiFi(*d) })
+	ta.sel = id
+	tt := mg.NewTester(ta.view, 1280, 820)
+	tt.Frame()
+	mustHave(t, tt, "This may not be Pixel 9", locales.ChangedDetail("Pixel 9"), locales.ChangedTrustNote("Pixel 9"), "Not the same phone")
+	if err := tt.Click("Trust this phone…"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	mustHave(t, tt, "Trust this phone?", locales.ChangedConfirmMessage("Pixel 9"))
+	if len(ta.api.Trusted()) != 0 {
+		t.Fatal("trusted before the person confirmed")
+	}
+	if err := tt.Click("Trust"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the trust", func() bool { return len(ta.api.Trusted()) == 1 && !ta.foundBusy(id) })
+	if !slices.Contains(ta.toasts, locales.ChangedTrusted("Pixel 9")) {
+		t.Errorf("toasts %q", ta.toasts)
+	}
+	ta.waitFor(t, "the Pixel back", func() bool { d := ta.device(id); return d != nil && d.Info.State == driver.StateOnline })
+}
+
+// TestFoundAndroidWords: an Android phone found over the network is
+// described as Android's, not as an iPhone.
+func TestFoundAndroidWords(t *testing.T) {
+	d := gateway.DeviceView{Info: driver.Info{Platform: driver.Android, Name: "Pixel 9", Model: "Pixel 8a", OSVersion: "17"}}
+	if got := foundLine(d); got != "Pixel 8a · Android 17" {
+		t.Errorf("foundLine = %q", got)
+	}
+	if got := foundDetail(d); got != locales.FoundDetailAndroid() {
+		t.Errorf("foundDetail = %q", got)
+	}
+	d.Info.Platform = driver.IOS
+	if got := foundLine(d); got != "Pixel 8a · iOS 17" {
+		t.Errorf("foundLine = %q", got)
+	}
+}

@@ -135,10 +135,11 @@ func TestReconnectHiddenSerial(t *testing.T) {
 	}
 }
 
-// TestReconnectLeavesItToTheServer: phones the server's discovery lists, or
-// that it connected itself, are its own; the driver neither searches nor
-// connects.
-func TestReconnectLeavesItToTheServer(t *testing.T) {
+// TestReconnectByName: a paired phone the server's discovery lists is
+// connected by its service name, as the server's own auto-connect (which
+// Pinky turns off) would, without a search of the driver's own; one the
+// server connected already is left as it is.
+func TestReconnectByName(t *testing.T) {
 	f, p := newReconnectFake(t)
 	ctx := context.Background()
 	f.set(func(f *fakeADB) {
@@ -147,12 +148,20 @@ func TestReconnectLeavesItToTheServer(t *testing.T) {
 		f.devices = []string{guidOther + "._adb-tls-connect._tcp\tdevice product:x model:sdk device:x transport_id:3"}
 		f.own = []string{guidPixel + "\t_adb-tls-connect._tcp\t192.168.1.42:41000"}
 	})
-	if away, connected := p.wifi.reconnect(ctx, entries(t, p)); away || connected {
+	if away, connected := p.wifi.reconnect(ctx, entries(t, p)); away || !connected {
 		t.Errorf("reconnect = away %v, connected %v", away, connected)
 	}
-	if browses, connects := f.counts(); browses != 0 || len(connects) != 0 {
+	if browses, connects := f.counts(); browses != 0 || len(connects) != 1 || connects[0] != guidPixel+connectSuffix {
 		t.Errorf("browses %d, connects %q", browses, connects)
 	}
+	// Both are connected now: nothing more to do.
+	if away, connected := p.wifi.reconnect(ctx, entries(t, p)); away || connected {
+		t.Errorf("second pass = away %v, connected %v", away, connected)
+	}
+	if browses, connects := f.counts(); browses != 0 || len(connects) != 1 {
+		t.Errorf("second pass: browses %d, connects %q", browses, connects)
+	}
+	f.set(func(f *fakeADB) { f.connects = nil })
 	// An offline connection of the server's does not count.
 	f.set(func(f *fakeADB) {
 		f.services = nil

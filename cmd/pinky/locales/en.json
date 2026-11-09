@@ -998,6 +998,92 @@
   "@callTakeOver": {
     "description": "Inside toastCouldNot: taking over a phone failed."
   },
+  "changedConfirmButton": "Trust",
+  "@changedConfirmButton": {
+    "description": "The button of the dialog that trusts a device on the network that lacks Pinky's mark (changedConfirmTitle)."
+  },
+  "changedConfirmMessage": "Pinky then uses the device on the network as {phone}, with its settings, and lets agents use it. Do this only if you reset {phone} or set it up again yourself.",
+  "@changedConfirmMessage": {
+    "description": "The message of the dialog that asks before Pinky trusts a device on the network that claims to be a phone Pinky set up but lacks the mark Pinky left on it. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedConfirmTitle": "Trust this phone?",
+  "@changedConfirmTitle": {
+    "description": "The dialog that asks before Pinky trusts a device on the network that lacks Pinky's mark."
+  },
+  "changedDetail": "A device on the network claims to be {phone}, but it lacks the mark Pinky left on that phone, so Pinky doesn't use it, and agents can't either. That happens when the phone was reset, or when another device poses as it.",
+  "@changedDetail": {
+    "description": "Under changedTitle, and in the checkup: why Pinky does not use a device on the network that claims to be a phone it set up. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTitle": "This may not be {phone}",
+  "@changedTitle": {
+    "description": "The page of a phone whose connection over the network leads to a device that lacks the mark Pinky left on the phone: maybe the phone was reset, maybe another device poses as it. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTrust": "Trust this phone…",
+  "@changedTrust": {
+    "description": "The button that trusts a device on the network that lacks Pinky's mark, as the phone Pinky set up under its name; it asks first."
+  },
+  "changedTrusted": "Trusting {name}. Pinky connects to it again in a few seconds.",
+  "@changedTrusted": {
+    "description": "A notice after the person trusted a phone on the network. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTrustFailed": "Couldn't trust {name}: {error}",
+  "@changedTrustFailed": {
+    "description": "A notice when trusting a phone on the network failed. name is the phone's name, error what went wrong.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      },
+      "error": {
+        "type": "String",
+        "example": "the phone does not answer"
+      }
+    }
+  },
+  "changedTrustLabel": "Trust {name}…",
+  "@changedTrustLabel": {
+    "description": "What assistive technology reads for changedTrust. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
+  "changedTrustNote": "Trust it only if you reset {phone} or set it up again yourself. Or plug it into this computer: Pinky then knows it's yours.",
+  "@changedTrustNote": {
+    "description": "Under the Trust this phone button. phone is the phone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's Pixel"
+      }
+    }
+  },
   "checkADBFail": "Pinky can't reach adb, the Android tools it talks to phones through.",
   "@checkADBFail": {
     "description": "The checkup, adb: failed."
@@ -2500,6 +2586,10 @@
   "@foundDetail": {
     "description": "Under foundTitle, and in Add phone and the checkup: why Pinky waits for the person."
   },
+  "foundDetailAndroid": "It's connected to this computer over Wireless debugging, but Pinky hasn't used it, so it leaves it alone until you say it's yours: it doesn't change anything on it or let agents use it.",
+  "@foundDetailAndroid": {
+    "description": "foundDetail for an Android phone: it is connected over Wireless debugging (by adb, another tool, or a pairing made outside Pinky), and Pinky waits for the person."
+  },
   "foundIgnore": "Ignore",
   "@foundIgnore": {
     "description": "The button that leaves a phone Pinky found on Wi-Fi alone: it goes off the list until it is plugged in."
@@ -3595,6 +3685,10 @@
         "example": "USB debugging is off"
       }
     }
+  },
+  "gwStatusPhoneChanged": "Not the same phone",
+  "@gwStatusPhoneChanged": {
+    "description": "A phone's status line: its connection over the network leads to a device that lacks the mark Pinky left on the phone, and Pinky waits for the person. Shown only in other languages; in English the gateway's own words show."
   },
   "gwStatusReconnecting": "Offline · reconnecting for {task}",
   "@gwStatusReconnecting": {

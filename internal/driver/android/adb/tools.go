@@ -86,9 +86,46 @@ func FindADB() (string, error) {
 // StartServer starts an adb server unless one answers already, and
 // returns the adb it started it with (a zero Tool when one was running).
 // It never kills a server.
-func StartServer(ctx context.Context) (Tool, error) { return startServer(ctx, Tools) }
+func StartServer(ctx context.Context) (Tool, error) { return startServer(ctx, Tools, ServerOptions{}) }
 
-func startServer(ctx context.Context, list func() []Tool) (Tool, error) {
+// StartServerWith is StartServer, for a server started as opt says.
+func StartServerWith(ctx context.Context, opt ServerOptions) (Tool, error) {
+	return startServer(ctx, Tools, opt)
+}
+
+// ServerOptions tunes a server that StartServerWith starts. A server that
+// runs already is used as it is.
+type ServerOptions struct {
+	// NoAutoConnect starts the server with ADB_MDNS_AUTO_CONNECT=0: it then
+	// connects by itself to none of the phones its mDNS discovery finds
+	// (by default it connects to every phone it paired with that
+	// advertises Wireless debugging), and whoever started it decides what
+	// to connect to. Its discovery still lists the phones
+	// (host:mdns:services), and it still pairs, connects when asked (to an
+	// address, or to a phone's service name from that list), and
+	// reconnects a connection to an address that dropped.
+	NoAutoConnect bool
+}
+
+// env is the server's environment, from the computer's.
+func (o ServerOptions) env(base []string) []string {
+	if !o.NoAutoConnect {
+		return nil // the computer's, as is
+	}
+	out := make([]string, 0, len(base)+1)
+	for _, kv := range base {
+		if k, _, _ := strings.Cut(kv, "="); !strings.EqualFold(k, envAutoConnect) {
+			out = append(out, kv)
+		}
+	}
+	return append(out, envAutoConnect+"=0")
+}
+
+// envAutoConnect lists the mDNS services the adb server connects to by
+// itself; "0" turns that off (adb_mdns.cpp).
+const envAutoConnect = "ADB_MDNS_AUTO_CONNECT"
+
+func startServer(ctx context.Context, list func() []Tool, opt ServerOptions) (Tool, error) {
 	c := &Client{}
 	if _, err := c.Version(ctx); !errors.Is(err, ErrServerNotRunning) {
 		return Tool{}, err
@@ -103,7 +140,7 @@ func startServer(ctx context.Context, list func() []Tool) (Tool, error) {
 	// whoever started it, that is what is needed (a zero Tool when it was
 	// not t's).
 	start := func(t Tool) (Tool, bool, error) {
-		serr := spawnServer(ctx, t.Path)
+		serr := spawnServer(ctx, t.Path, opt)
 		if _, err := c.Version(ctx); err == nil {
 			if serr != nil {
 				return Tool{}, true, nil

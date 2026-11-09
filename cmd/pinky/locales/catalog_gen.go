@@ -2959,6 +2959,174 @@ func (msgs Messages) CallTakeOver() string {
 	return Catalog.Format(msgs.locale, "callTakeOver", nil)
 }
 
+// ChangedConfirmButton says "Trust"
+// in the language the app shows.
+//
+// The button of the dialog that trusts a device on the network that lacks
+// Pinky's mark (changedConfirmTitle).
+func ChangedConfirmButton() string { return In(i18n.Locale()).ChangedConfirmButton() }
+
+// ChangedConfirmButton says "Trust"
+// in the language of msgs.
+//
+// The button of the dialog that trusts a device on the network that lacks
+// Pinky's mark (changedConfirmTitle).
+func (msgs Messages) ChangedConfirmButton() string {
+	return Catalog.Format(msgs.locale, "changedConfirmButton", nil)
+}
+
+// ChangedConfirmMessage says "Pinky then uses the device on the network as {phone}, with its settings, and lets agents use it. Do this only if you …"
+// in the language the app shows.
+//
+// The message of the dialog that asks before Pinky trusts a device on the
+// network that claims to be a phone Pinky set up but lacks the mark Pinky
+// left on it. phone is the phone's name.
+func ChangedConfirmMessage(phone string) string {
+	return In(i18n.Locale()).ChangedConfirmMessage(phone)
+}
+
+// ChangedConfirmMessage says "Pinky then uses the device on the network as {phone}, with its settings, and lets agents use it. Do this only if you …"
+// in the language of msgs.
+//
+// The message of the dialog that asks before Pinky trusts a device on the
+// network that claims to be a phone Pinky set up but lacks the mark Pinky
+// left on it. phone is the phone's name.
+func (msgs Messages) ChangedConfirmMessage(phone string) string {
+	return Catalog.Format(msgs.locale, "changedConfirmMessage", map[string]any{"phone": phone})
+}
+
+// ChangedConfirmTitle says "Trust this phone?"
+// in the language the app shows.
+//
+// The dialog that asks before Pinky trusts a device on the network that
+// lacks Pinky's mark.
+func ChangedConfirmTitle() string { return In(i18n.Locale()).ChangedConfirmTitle() }
+
+// ChangedConfirmTitle says "Trust this phone?"
+// in the language of msgs.
+//
+// The dialog that asks before Pinky trusts a device on the network that
+// lacks Pinky's mark.
+func (msgs Messages) ChangedConfirmTitle() string {
+	return Catalog.Format(msgs.locale, "changedConfirmTitle", nil)
+}
+
+// ChangedDetail says "A device on the network claims to be {phone}, but it lacks the mark Pinky left on that phone, so Pinky doesn't use it…"
+// in the language the app shows.
+//
+// Under changedTitle, and in the checkup: why Pinky does not use a device
+// on the network that claims to be a phone it set up. phone is the phone's
+// name.
+func ChangedDetail(phone string) string { return In(i18n.Locale()).ChangedDetail(phone) }
+
+// ChangedDetail says "A device on the network claims to be {phone}, but it lacks the mark Pinky left on that phone, so Pinky doesn't use it…"
+// in the language of msgs.
+//
+// Under changedTitle, and in the checkup: why Pinky does not use a device
+// on the network that claims to be a phone it set up. phone is the phone's
+// name.
+func (msgs Messages) ChangedDetail(phone string) string {
+	return Catalog.Format(msgs.locale, "changedDetail", map[string]any{"phone": phone})
+}
+
+// ChangedTitle says "This may not be {phone}"
+// in the language the app shows.
+//
+// The page of a phone whose connection over the network leads to a device
+// that lacks the mark Pinky left on the phone: maybe the phone was reset,
+// maybe another device poses as it. phone is the phone's name.
+func ChangedTitle(phone string) string { return In(i18n.Locale()).ChangedTitle(phone) }
+
+// ChangedTitle says "This may not be {phone}"
+// in the language of msgs.
+//
+// The page of a phone whose connection over the network leads to a device
+// that lacks the mark Pinky left on the phone: maybe the phone was reset,
+// maybe another device poses as it. phone is the phone's name.
+func (msgs Messages) ChangedTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "changedTitle", map[string]any{"phone": phone})
+}
+
+// ChangedTrust says "Trust this phone…"
+// in the language the app shows.
+//
+// The button that trusts a device on the network that lacks Pinky's mark,
+// as the phone Pinky set up under its name; it asks first.
+func ChangedTrust() string { return In(i18n.Locale()).ChangedTrust() }
+
+// ChangedTrust says "Trust this phone…"
+// in the language of msgs.
+//
+// The button that trusts a device on the network that lacks Pinky's mark,
+// as the phone Pinky set up under its name; it asks first.
+func (msgs Messages) ChangedTrust() string {
+	return Catalog.Format(msgs.locale, "changedTrust", nil)
+}
+
+// ChangedTrusted says "Trusting {name}. Pinky connects to it again in a few seconds."
+// in the language the app shows.
+//
+// A notice after the person trusted a phone on the network. name is the
+// phone's name.
+func ChangedTrusted(name string) string { return In(i18n.Locale()).ChangedTrusted(name) }
+
+// ChangedTrusted says "Trusting {name}. Pinky connects to it again in a few seconds."
+// in the language of msgs.
+//
+// A notice after the person trusted a phone on the network. name is the
+// phone's name.
+func (msgs Messages) ChangedTrusted(name string) string {
+	return Catalog.Format(msgs.locale, "changedTrusted", map[string]any{"name": name})
+}
+
+// ChangedTrustFailed says "Couldn't trust {name}: {error}"
+// in the language the app shows.
+//
+// A notice when trusting a phone on the network failed. name is the phone's
+// name, error what went wrong.
+func ChangedTrustFailed(name string, error string) string {
+	return In(i18n.Locale()).ChangedTrustFailed(name, error)
+}
+
+// ChangedTrustFailed says "Couldn't trust {name}: {error}"
+// in the language of msgs.
+//
+// A notice when trusting a phone on the network failed. name is the phone's
+// name, error what went wrong.
+func (msgs Messages) ChangedTrustFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "changedTrustFailed", map[string]any{"name": name, "error": error})
+}
+
+// ChangedTrustLabel says "Trust {name}…"
+// in the language the app shows.
+//
+// What assistive technology reads for changedTrust. name is the phone's
+// name.
+func ChangedTrustLabel(name string) string { return In(i18n.Locale()).ChangedTrustLabel(name) }
+
+// ChangedTrustLabel says "Trust {name}…"
+// in the language of msgs.
+//
+// What assistive technology reads for changedTrust. name is the phone's
+// name.
+func (msgs Messages) ChangedTrustLabel(name string) string {
+	return Catalog.Format(msgs.locale, "changedTrustLabel", map[string]any{"name": name})
+}
+
+// ChangedTrustNote says "Trust it only if you reset {phone} or set it up again yourself. Or plug it into this computer: Pinky then knows it's …"
+// in the language the app shows.
+//
+// Under the Trust this phone button. phone is the phone's name.
+func ChangedTrustNote(phone string) string { return In(i18n.Locale()).ChangedTrustNote(phone) }
+
+// ChangedTrustNote says "Trust it only if you reset {phone} or set it up again yourself. Or plug it into this computer: Pinky then knows it's …"
+// in the language of msgs.
+//
+// Under the Trust this phone button. phone is the phone's name.
+func (msgs Messages) ChangedTrustNote(phone string) string {
+	return Catalog.Format(msgs.locale, "changedTrustNote", map[string]any{"phone": phone})
+}
+
 // CheckADBFail says "Pinky can't reach adb, the Android tools it talks to phones through."
 // in the language the app shows.
 //
@@ -7395,6 +7563,24 @@ func (msgs Messages) FoundDetail() string {
 	return Catalog.Format(msgs.locale, "foundDetail", nil)
 }
 
+// FoundDetailAndroid says "It's connected to this computer over Wireless debugging, but Pinky hasn't used it, so it leaves it alone until you sa…"
+// in the language the app shows.
+//
+// foundDetail for an Android phone: it is connected over Wireless debugging
+// (by adb, another tool, or a pairing made outside Pinky), and Pinky waits
+// for the person.
+func FoundDetailAndroid() string { return In(i18n.Locale()).FoundDetailAndroid() }
+
+// FoundDetailAndroid says "It's connected to this computer over Wireless debugging, but Pinky hasn't used it, so it leaves it alone until you sa…"
+// in the language of msgs.
+//
+// foundDetail for an Android phone: it is connected over Wireless debugging
+// (by adb, another tool, or a pairing made outside Pinky), and Pinky waits
+// for the person.
+func (msgs Messages) FoundDetailAndroid() string {
+	return Catalog.Format(msgs.locale, "foundDetailAndroid", nil)
+}
+
 // FoundIgnore says "Ignore"
 // in the language the app shows.
 //
@@ -10171,6 +10357,26 @@ func GwStatusOfflineDetail(detail string) string {
 // words show.
 func (msgs Messages) GwStatusOfflineDetail(detail string) string {
 	return Catalog.Format(msgs.locale, "gwStatusOfflineDetail", map[string]any{"detail": detail})
+}
+
+// GwStatusPhoneChanged says "Not the same phone"
+// in the language the app shows.
+//
+// A phone's status line: its connection over the network leads to a device
+// that lacks the mark Pinky left on the phone, and Pinky waits for the
+// person. Shown only in other languages; in English the gateway's own words
+// show.
+func GwStatusPhoneChanged() string { return In(i18n.Locale()).GwStatusPhoneChanged() }
+
+// GwStatusPhoneChanged says "Not the same phone"
+// in the language of msgs.
+//
+// A phone's status line: its connection over the network leads to a device
+// that lacks the mark Pinky left on the phone, and Pinky waits for the
+// person. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwStatusPhoneChanged() string {
+	return Catalog.Format(msgs.locale, "gwStatusPhoneChanged", nil)
 }
 
 // GwStatusReconnecting says "Offline · reconnecting for {task}"

@@ -382,6 +382,13 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		case android && ck.Fix == driver.FixAuthorize:
 			w.text, w.detail = locales.CheckAuthorizedAndroidFail(), false
 			w.note = locales.AddAndroidNoPrompt()
+		case ck.Fix == driver.SetupConfirmWiFi:
+			// Connected over the network, and not yet the person's (wifi.go).
+			w.text, w.detail = foundDetail(d), false
+		case ck.Fix == driver.SetupPhoneChanged:
+			// What answers over the network lacks the phone's mark (wifi.go).
+			w.text, w.detail = locales.ChangedDetail(d.Info.Name), false
+			w.note = locales.ChangedTrustNote(d.Info.Name)
 		case ck.Fix == driver.FixUSBPermission || (android && ck.Fix == "" && runtime.GOOS == "linux"):
 			// Android lists a phone as needing setup when the computer may
 			// not open its USB device (Linux without udev rules)…

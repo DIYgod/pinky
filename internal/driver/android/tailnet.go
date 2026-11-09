@@ -88,7 +88,7 @@ func (p *Provider) ConnectTailnet(ctx context.Context, addr string) (driver.Info
 	if err := p.cfg.Client.Connect(ctx, serial); err != nil {
 		return driver.Info{}, connectErr(serial, err)
 	}
-	info, err := p.waitConnected(ctx, serial)
+	info, err := p.waitConnected(ctx, serial, true) // the person typed the address
 	if err != nil {
 		return info, err
 	}

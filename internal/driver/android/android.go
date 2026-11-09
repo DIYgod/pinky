@@ -67,8 +67,19 @@ type Config struct {
 	// only.
 	NetworkFile string
 
+	// VerifyWiFi has the driver check that a phone it reaches over the
+	// network is the phone it set up, and refuse one that is not
+	// (identity.go): a phone on a cable, one the person pairs, connects or
+	// trusts in Pinky, and the first time one Pinky knew before
+	// (UseOverWiFi), is marked; any other phone on the network waits for
+	// the person. Off by default, since it writes a file on the phones.
+	VerifyWiFi bool
+	// IdentityFile keeps the phones' marks for VerifyWiFi; "" keeps them
+	// in memory only.
+	IdentityFile string
+
 	// StartServer, when set, starts an adb server when List finds none
-	// (cmd/pinky passes adb.StartServer): at once the first time, and
+	// (cmd/pinky passes adb.StartServerWith): at once the first time, and
 	// when a server that ran went away, once it has stayed away for
 	// serverAway, so that a tool that restarts it comes first (an adb
 	// client that finds a server of another version kills it and starts
@@ -125,6 +136,9 @@ type Provider struct {
 	// debugging, and link reconnects them (network.go).
 	net  *netStore
 	link *netLink
+	// ids checks the phones reached over the network (identity.go); nil
+	// without Config.VerifyWiFi.
+	ids *identity
 
 	server serverWatch
 	// usbNodes lists the computer's USB devices as Windows sees them, to
@@ -141,6 +155,9 @@ func NewProvider(cfg Config) *Provider {
 	}
 	p.net = &netStore{path: cfg.NetworkFile, logf: cfg.logf}
 	p.link = newNetLink(p)
+	if cfg.VerifyWiFi {
+		p.ids = newIdentity(p)
+	}
 	return p
 }
 
@@ -221,6 +238,9 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 				infos[i].ID = p.phoneID(e, *props[i])
 			}
 		}
+	}
+	if p.ids != nil {
+		p.ids.apply(ctx, entries, infos, props)
 	}
 	infos = mergeTransports(p.netInfos(infos))
 	return append(infos, p.driverlessPhones(infos)...), nil
@@ -393,6 +413,18 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 	return pr, nil
 }
 
+// dropProps forgets what was read of a connection's phone: adb may have
+// made it again to another device under the same serial and transport id.
+func (p *Provider) dropProps(serial string) {
+	p.mu.Lock()
+	for k := range p.props {
+		if strings.HasPrefix(k, serial+"#") {
+			delete(p.props, k)
+		}
+	}
+	p.mu.Unlock()
+}
+
 // propsCommand reads what deviceProps keeps, one line each: the model, the
 // Android version, the SDK level, the name the person gave the phone and
 // ro.serialno; then ro.boot.serialno, and the android_id only when the
@@ -464,6 +496,7 @@ func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
 	var best *driver.Info
 	var bestEntry adb.DeviceEntry
 	var bestProps deviceProps
+	var refused error // why a connection over the network was passed over
 	for _, e := range entries {
 		info := infoFromEntry(e)
 		var pr deviceProps
@@ -479,10 +512,22 @@ func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
 		if e.Serial != id && p.phoneID(e, pr) != id {
 			continue
 		}
+		if p.ids != nil && info.State == driver.StateOnline && !trusted(e) {
+			// Over the network: only the phone Pinky set up (identity.go).
+			v, err := p.ids.verify(ctx, e, p.phoneID(e, pr))
+			if err != nil || v != idSame {
+				setVerdict(&info, v, err)
+				refused = fmt.Errorf("android: %s at %s: %s: %w", id, e.Serial, info.Detail, driver.ErrOffline)
+				continue
+			}
+		}
 		if best == nil || better(info, *best) {
 			c := info
 			best, bestEntry, bestProps = &c, e, pr
 		}
+	}
+	if best == nil && refused != nil {
+		return nil, refused
 	}
 	if best == nil {
 		return nil, fmt.Errorf("android: device %q: %w", id, driver.ErrNotFound)
@@ -492,7 +537,16 @@ func (p *Provider) OpenDevice(ctx context.Context, id string) (*Device, error) {
 	}
 	info := *best
 	info.ID = bestEntry.Serial // the device talks to adb by its serial
-	d := newDevice(p.cfg, info, bestProps)
+	cfg := p.cfg
+	if p.ids != nil && !trusted(bestEntry) {
+		// Each request checks first that the connection is still the
+		// phone: adb may make it again to another device (identity.go).
+		ids := p.ids
+		cfg.Client = &adb.Client{Addr: p.cfg.Client.Addr, Guard: func(ctx context.Context, serial string) error {
+			return ids.guard(ctx, serial, id)
+		}}
+	}
+	d := newDevice(cfg, info, bestProps)
 	d.phoneID = id
 	return d, nil
 }
