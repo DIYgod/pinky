@@ -273,6 +273,13 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 		opt = scrcpy.Options{NoVideo: true}
 	}
 	l, err := d.startMain(ctx, opt)
+	if why := encoderFailure(err); why != "" && opt.VideoCodec == "h265" {
+		// The H.265 encoder failed before the stream began.
+		d.cfg.logf("android: %s: the H.265 encoder failed (%s); using H.264", d.info.ID, why)
+		d.noHEVC = true
+		opt.VideoCodec = ""
+		l, err = d.startMain(ctx, opt)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -324,6 +331,16 @@ func (d *Device) sessionWith(ctx context.Context, want *scrcpy.Options) (*live, 
 	}
 	d.main = l
 	return l, nil
+}
+
+// encoderFailure returns why the server's video encoder failed when err is
+// a session start that failed for that reason, or "".
+func encoderFailure(err error) string {
+	var ee *scrcpy.EncoderError
+	if errors.As(err, &ee) {
+		return ee.Reason
+	}
+	return ""
 }
 
 // startMain starts a session on the main display.

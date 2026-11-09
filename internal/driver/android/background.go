@@ -173,7 +173,17 @@ func (d *Device) OpenDisplay(ctx context.Context, opt DisplayOptions) (*Backgrou
 			return nil, err
 		}
 	}
-	if err := b.start(ctx, sopt); err != nil {
+	err := b.start(ctx, sopt)
+	if why := encoderFailure(err); why != "" && sopt.VideoCodec == "h265" {
+		// The H.265 encoder failed before the stream began.
+		d.mu.Lock()
+		d.noHEVC = true
+		d.mu.Unlock()
+		d.cfg.logf("android: %s: the H.265 encoder failed on a virtual display (%s); using H.264", d.info.ID, why)
+		sopt.VideoCodec = ""
+		err = b.start(ctx, sopt)
+	}
+	if err != nil {
 		if dk != nil {
 			dk.release()
 		}
