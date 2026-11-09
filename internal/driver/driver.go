@@ -544,6 +544,136 @@ type Files interface {
 	Push(ctx context.Context, path string, r io.Reader, size int64, mtime time.Time) error
 }
 
+// AppLogger reads one app's own logs and crash reports, for an agent that
+// tests the app (phone_logs). Every line and report comes from the app's
+// own processes only; a driver that cannot tell them apart from other
+// processes' returns ErrUnsupported rather than more. The gateway decides
+// which apps may be read: drivers refuse Pinky's own apps on the phone
+// (ErrNotFound).
+type AppLogger interface {
+	// AppLogs returns the app's log lines since q.Since that pass q.Keep,
+	// oldest first. When more than q.Max pass, the newest q.Max are kept
+	// and Dropped counts the older ones left out.
+	AppLogs(ctx context.Context, q LogQuery) (LogResult, error)
+	// AppCrashes returns the app's crash reports since q.Since, newest
+	// first, at most q.Max. Filter and Level do not apply.
+	AppCrashes(ctx context.Context, q LogQuery) ([]CrashReport, error)
+	// DevBuild reports whether the app is a development build: debuggable
+	// on Android, signed with get-task-allow on an iPhone.
+	DevBuild(ctx context.Context, app App) (bool, error)
+}
+
+// LogListener is an AppLogger that only has the lines it collected since
+// it was first asked for an app (an iPhone keeps no history a computer can
+// read back). StopAppLogs stops collecting and forgets the lines; the
+// gateway calls it when the task ends.
+type LogListener interface {
+	StopAppLogs()
+}
+
+// LogLevel is a log line's priority.
+type LogLevel string
+
+// Log levels, from the least to the most severe.
+const (
+	LevelVerbose LogLevel = "verbose"
+	LevelDebug   LogLevel = "debug"
+	LevelInfo    LogLevel = "info"
+	LevelWarn    LogLevel = "warn"
+	LevelError   LogLevel = "error"
+	LevelFatal   LogLevel = "fatal"
+)
+
+// Rank orders levels: 0 for verbose up to 5 for fatal, -1 for none.
+func (l LogLevel) Rank() int {
+	switch l {
+	case LevelVerbose:
+		return 0
+	case LevelDebug:
+		return 1
+	case LevelInfo:
+		return 2
+	case LevelWarn:
+		return 3
+	case LevelError:
+		return 4
+	case LevelFatal:
+		return 5
+	}
+	return -1
+}
+
+// Letter is the level's letter as logcat writes it: V, D, I, W, E or F.
+func (l LogLevel) Letter() string {
+	switch l {
+	case LevelVerbose:
+		return "V"
+	case LevelDebug:
+		return "D"
+	case LevelInfo:
+		return "I"
+	case LevelWarn:
+		return "W"
+	case LevelError:
+		return "E"
+	case LevelFatal:
+		return "F"
+	}
+	return "?"
+}
+
+// LogQuery asks AppLogger for one app's lines or crash reports.
+type LogQuery struct {
+	App   App       // the app as Apps lists it; a clone is read as itself
+	Since time.Time // zero means as far back as the phone keeps
+	// Filter keeps lines whose tag or text contains it, ignoring case.
+	Filter string
+	// Level keeps lines of this level or more severe; empty keeps all.
+	Level LogLevel
+	Max   int // at most this many lines or reports; 0 means no limit
+}
+
+// Keep reports whether a line passes the query's filter and level.
+func (q LogQuery) Keep(l LogLine) bool {
+	if q.Level != "" && l.Level.Rank() < q.Level.Rank() {
+		return false
+	}
+	if q.Filter == "" {
+		return true
+	}
+	f := strings.ToLower(q.Filter)
+	return strings.Contains(strings.ToLower(l.Tag), f) || strings.Contains(strings.ToLower(l.Text), f)
+}
+
+// LogLine is one line of an app's log.
+type LogLine struct {
+	Time  time.Time
+	PID   int
+	Level LogLevel
+	Tag   string // Android's tag; an iPhone's subsystem or sender
+	Text  string
+}
+
+// LogResult is what AppLogs returns.
+type LogResult struct {
+	Lines   []LogLine // oldest first
+	Dropped int       // older lines that passed but were left out
+	// From is when the lines start: the time asked for, or later when the
+	// phone has nothing older (an iPhone listens from the first call).
+	From time.Time
+}
+
+// CrashReport is one crash of an app.
+type CrashReport struct {
+	Time    time.Time
+	Kind    string // "crash", "native crash" or "ANR" (not responding)
+	Process string
+	PID     int
+	// Summary is one line: the exception and its message, or the signal.
+	Summary string
+	Text    string // the report as the phone wrote it, or its main parts
+}
+
 // BackgroundOptions configure Backgrounder.OpenBackground.
 type BackgroundOptions struct {
 	// App is started on the new display once it exists (package, bundle id

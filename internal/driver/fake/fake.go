@@ -76,6 +76,12 @@ type Device struct {
 	actions []Action
 	onInput func(Action)
 	links   []linkHandler
+	// apps are listed after Settings; logs and crashes are what AppLogger
+	// returns for them (logs.go).
+	apps      []driver.App
+	logs      map[string][]driver.LogLine
+	crashes   map[string][]driver.CrashReport
+	devBuilds map[string]bool
 }
 
 // linkHandler is the apps that open links starting with prefix.
@@ -232,7 +238,9 @@ func (d *Device) OpenLink(_ context.Context, link string, app driver.App) error 
 
 // Apps implements driver.Device.
 func (d *Device) Apps(context.Context) ([]driver.App, error) {
-	return []driver.App{{ID: "com.android.settings", Name: "Settings", System: true}}, nil
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return append([]driver.App{{ID: "com.android.settings", Name: "Settings", System: true}}, d.apps...), nil
 }
 
 // Stream implements driver.Device. Fake devices have no video.
