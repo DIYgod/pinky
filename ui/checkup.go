@@ -359,12 +359,16 @@ func (a *app) checkWords(d gateway.DeviceView, v gateway.CheckupView, ck driver.
 		}
 	case driver.CheckConnection:
 		switch {
+		case pass && d.Info.Virtual:
+			w.text = locales.CheckConnectionVirtual()
 		case pass && d.Info.Via == driver.ViaTailscale:
 			w.text = locales.CheckConnectionTailscale()
 		case pass && d.Info.Connection == "wifi":
 			w.text = locales.CheckConnectionWiFi()
 		case pass:
 			w.text = locales.CheckConnectionUSB()
+		case d.Info.Virtual:
+			w.text, w.detail = locales.PhoneVirtualNotRunning(), false
 		case android:
 			w.text = locales.CheckConnectionAndroidFail(d.Info.Name)
 			w.steps = []string{locales.CheckConnectionAndroidStepCable(), locales.CheckConnectionAndroidStepDebugging()}

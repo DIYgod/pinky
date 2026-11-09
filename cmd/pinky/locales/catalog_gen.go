@@ -889,6 +889,52 @@ func (msgs Messages) AddPhoneChooseTitle() string {
 	return Catalog.Format(msgs.locale, "addPhoneChooseTitle", nil)
 }
 
+// AddPhoneChooseVirtual says "Virtual phone"
+// in the language the app shows.
+//
+// Add phone, first step: the title of the card below Android and iPhone,
+// for iOS Simulators and Android emulators that run on this computer.
+func AddPhoneChooseVirtual() string { return In(i18n.Locale()).AddPhoneChooseVirtual() }
+
+// AddPhoneChooseVirtual says "Virtual phone"
+// in the language of msgs.
+//
+// Add phone, first step: the title of the card below Android and iPhone,
+// for iOS Simulators and Android emulators that run on this computer.
+func (msgs Messages) AddPhoneChooseVirtual() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseVirtual", nil)
+}
+
+// AddPhoneChooseVirtualMac says "An iOS Simulator or an Android emulator on this Mac"
+// in the language the app shows.
+//
+// Add phone, first step, on a Mac: under "Virtual phone" on its card.
+func AddPhoneChooseVirtualMac() string { return In(i18n.Locale()).AddPhoneChooseVirtualMac() }
+
+// AddPhoneChooseVirtualMac says "An iOS Simulator or an Android emulator on this Mac"
+// in the language of msgs.
+//
+// Add phone, first step, on a Mac: under "Virtual phone" on its card.
+func (msgs Messages) AddPhoneChooseVirtualMac() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseVirtualMac", nil)
+}
+
+// AddPhoneChooseVirtualPC says "An Android emulator on this computer"
+// in the language the app shows.
+//
+// Add phone, first step, on Windows and Linux: under "Virtual phone" on its
+// card.
+func AddPhoneChooseVirtualPC() string { return In(i18n.Locale()).AddPhoneChooseVirtualPC() }
+
+// AddPhoneChooseVirtualPC says "An Android emulator on this computer"
+// in the language of msgs.
+//
+// Add phone, first step, on Windows and Linux: under "Virtual phone" on its
+// card.
+func (msgs Messages) AddPhoneChooseVirtualPC() string {
+	return Catalog.Format(msgs.locale, "addPhoneChooseVirtualPC", nil)
+}
+
 // AddPhoneDone says "Done"
 // in the language the app shows.
 //
@@ -2253,6 +2299,376 @@ func AddPhoneTryAgain() string { return In(i18n.Locale()).AddPhoneTryAgain() }
 // setup, and that asks for a new QR code after pairing over Wi-Fi failed.
 func (msgs Messages) AddPhoneTryAgain() string {
 	return Catalog.Format(msgs.locale, "addPhoneTryAgain", nil)
+}
+
+// AddVirtualAndroid says "Android emulators"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the label above the list of Android Virtual
+// Devices.
+func AddVirtualAndroid() string { return In(i18n.Locale()).AddVirtualAndroid() }
+
+// AddVirtualAndroid says "Android emulators"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the label above the list of Android Virtual
+// Devices.
+func (msgs Messages) AddVirtualAndroid() string {
+	return Catalog.Format(msgs.locale, "addVirtualAndroid", nil)
+}
+
+// AddVirtualCantStart says "Can't start: {reason}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: under a Simulator or emulator that cannot
+// start. reason is the system's, in English.
+func AddVirtualCantStart(reason string) string { return In(i18n.Locale()).AddVirtualCantStart(reason) }
+
+// AddVirtualCantStart says "Can't start: {reason}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: under a Simulator or emulator that cannot
+// start. reason is the system's, in English.
+func (msgs Messages) AddVirtualCantStart(reason string) string {
+	return Catalog.Format(msgs.locale, "addVirtualCantStart", map[string]any{"reason": reason})
+}
+
+// AddVirtualDetailMac says "Start an iOS Simulator or an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Onl…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone on a Mac: the line under the heading.
+func AddVirtualDetailMac() string { return In(i18n.Locale()).AddVirtualDetailMac() }
+
+// AddVirtualDetailMac says "Start an iOS Simulator or an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Onl…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone on a Mac: the line under the heading.
+func (msgs Messages) AddVirtualDetailMac() string {
+	return Catalog.Format(msgs.locale, "addVirtualDetailMac", nil)
+}
+
+// AddVirtualDetailPC says "Start an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone on Windows and Linux: the line under the
+// heading.
+func AddVirtualDetailPC() string { return In(i18n.Locale()).AddVirtualDetailPC() }
+
+// AddVirtualDetailPC says "Start an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone on Windows and Linux: the line under the
+// heading.
+func (msgs Messages) AddVirtualDetailPC() string {
+	return Catalog.Format(msgs.locale, "addVirtualDetailPC", nil)
+}
+
+// AddVirtualHelperNote says "The first time, Pinky builds its helper for Simulators (WebDriverAgent) with Xcode, which takes a minute or two."
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the note under the list of iOS Simulators.
+// WebDriverAgent is a name.
+func AddVirtualHelperNote() string { return In(i18n.Locale()).AddVirtualHelperNote() }
+
+// AddVirtualHelperNote says "The first time, Pinky builds its helper for Simulators (WebDriverAgent) with Xcode, which takes a minute or two."
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the note under the list of iOS Simulators.
+// WebDriverAgent is a name.
+func (msgs Messages) AddVirtualHelperNote() string {
+	return Catalog.Format(msgs.locale, "addVirtualHelperNote", nil)
+}
+
+// AddVirtualIOS says "iOS Simulators"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the label above the list of iOS Simulators.
+func AddVirtualIOS() string { return In(i18n.Locale()).AddVirtualIOS() }
+
+// AddVirtualIOS says "iOS Simulators"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the label above the list of iOS Simulators.
+func (msgs Messages) AddVirtualIOS() string {
+	return Catalog.Format(msgs.locale, "addVirtualIOS", nil)
+}
+
+// AddVirtualListFailed says "Couldn't list them: {error}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: under a platform's label when listing its
+// Simulators or emulators failed. error is the system's, in English.
+func AddVirtualListFailed(error string) string { return In(i18n.Locale()).AddVirtualListFailed(error) }
+
+// AddVirtualListFailed says "Couldn't list them: {error}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: under a platform's label when listing its
+// Simulators or emulators failed. error is the system's, in English.
+func (msgs Messages) AddVirtualListFailed(error string) string {
+	return Catalog.Format(msgs.locale, "addVirtualListFailed", map[string]any{"error": error})
+}
+
+// AddVirtualLooking says "Looking for virtual phones…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: next to a spinner until the list comes.
+func AddVirtualLooking() string { return In(i18n.Locale()).AddVirtualLooking() }
+
+// AddVirtualLooking says "Looking for virtual phones…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: next to a spinner until the list comes.
+func (msgs Messages) AddVirtualLooking() string {
+	return Catalog.Format(msgs.locale, "addVirtualLooking", nil)
+}
+
+// AddVirtualNoAVDs says "No emulators yet. Create one in Android Studio's Device Manager."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under Android emulators: the computer has
+// the emulator but no Android Virtual Device. Device Manager is Android
+// Studio's name.
+func AddVirtualNoAVDs() string { return In(i18n.Locale()).AddVirtualNoAVDs() }
+
+// AddVirtualNoAVDs says "No emulators yet. Create one in Android Studio's Device Manager."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under Android emulators: the computer has
+// the emulator but no Android Virtual Device. Device Manager is Android
+// Studio's name.
+func (msgs Messages) AddVirtualNoAVDs() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoAVDs", nil)
+}
+
+// AddVirtualNoEmulator says "The Android SDK in {folder} has no emulator. Install Android Emulator in Android Studio's SDK Manager."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under Android emulators: the SDK lacks its
+// emulator. Android Emulator and SDK Manager are Android Studio's names.
+func AddVirtualNoEmulator(folder string) string {
+	return In(i18n.Locale()).AddVirtualNoEmulator(folder)
+}
+
+// AddVirtualNoEmulator says "The Android SDK in {folder} has no emulator. Install Android Emulator in Android Studio's SDK Manager."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under Android emulators: the SDK lacks its
+// emulator. Android Emulator and SDK Manager are Android Studio's names.
+func (msgs Messages) AddVirtualNoEmulator(folder string) string {
+	return Catalog.Format(msgs.locale, "addVirtualNoEmulator", map[string]any{"folder": folder})
+}
+
+// AddVirtualNoSDK says "Android emulators need the Android SDK, which Android Studio installs. Install Android Studio, then create a virtual …"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under Android emulators: Pinky found no
+// Android SDK. Device Manager is Android Studio's name.
+func AddVirtualNoSDK() string { return In(i18n.Locale()).AddVirtualNoSDK() }
+
+// AddVirtualNoSDK says "Android emulators need the Android SDK, which Android Studio installs. Install Android Studio, then create a virtual …"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under Android emulators: Pinky found no
+// Android SDK. Device Manager is Android Studio's name.
+func (msgs Messages) AddVirtualNoSDK() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoSDK", nil)
+}
+
+// AddVirtualNoSimulators says "No Simulators yet. Add one in Xcode, under Window › Devices and Simulators."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under iOS Simulators: Xcode has no
+// Simulator. Window › Devices and Simulators is Xcode's menu, which is in
+// English.
+func AddVirtualNoSimulators() string { return In(i18n.Locale()).AddVirtualNoSimulators() }
+
+// AddVirtualNoSimulators says "No Simulators yet. Add one in Xcode, under Window › Devices and Simulators."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under iOS Simulators: Xcode has no
+// Simulator. Window › Devices and Simulators is Xcode's menu, which is in
+// English.
+func (msgs Messages) AddVirtualNoSimulators() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoSimulators", nil)
+}
+
+// AddVirtualNoXcode says "iOS Simulators need Xcode, from the Mac App Store. After installing it, open it once so it can finish setting up."
+// in the language the app shows.
+//
+// Add phone › Virtual phone, under iOS Simulators: the Mac has no Xcode.
+func AddVirtualNoXcode() string { return In(i18n.Locale()).AddVirtualNoXcode() }
+
+// AddVirtualNoXcode says "iOS Simulators need Xcode, from the Mac App Store. After installing it, open it once so it can finish setting up."
+// in the language of msgs.
+//
+// Add phone › Virtual phone, under iOS Simulators: the Mac has no Xcode.
+func (msgs Messages) AddVirtualNoXcode() string {
+	return Catalog.Format(msgs.locale, "addVirtualNoXcode", nil)
+}
+
+// AddVirtualOpen says "Open"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is one of Pinky's phones; opens its page.
+func AddVirtualOpen() string { return In(i18n.Locale()).AddVirtualOpen() }
+
+// AddVirtualOpen says "Open"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is one of Pinky's phones; opens its page.
+func (msgs Messages) AddVirtualOpen() string {
+	return Catalog.Format(msgs.locale, "addVirtualOpen", nil)
+}
+
+// AddVirtualRunning says "Running"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: at the end of a running Simulator's or
+// emulator's second line, after its model and OS version.
+func AddVirtualRunning() string { return In(i18n.Locale()).AddVirtualRunning() }
+
+// AddVirtualRunning says "Running"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: at the end of a running Simulator's or
+// emulator's second line, after its model and OS version.
+func (msgs Messages) AddVirtualRunning() string {
+	return Catalog.Format(msgs.locale, "addVirtualRunning", nil)
+}
+
+// AddVirtualShowAll says "Show all ({count})"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the link under a long list of Simulators or
+// emulators that shows the rest.
+func AddVirtualShowAll(count int) string { return In(i18n.Locale()).AddVirtualShowAll(count) }
+
+// AddVirtualShowAll says "Show all ({count})"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the link under a long list of Simulators or
+// emulators that shows the rest.
+func (msgs Messages) AddVirtualShowAll(count int) string {
+	return Catalog.Format(msgs.locale, "addVirtualShowAll", map[string]any{"count": count})
+}
+
+// AddVirtualShutDown says "Shut down"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that shuts it down.
+func AddVirtualShutDown() string { return In(i18n.Locale()).AddVirtualShutDown() }
+
+// AddVirtualShutDown says "Shut down"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that shuts it down.
+func (msgs Messages) AddVirtualShutDown() string {
+	return Catalog.Format(msgs.locale, "addVirtualShutDown", nil)
+}
+
+// AddVirtualStart says "Start"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator that
+// is offline: the button that starts it.
+func AddVirtualStart() string { return In(i18n.Locale()).AddVirtualStart() }
+
+// AddVirtualStart says "Start"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator that
+// is offline: the button that starts it.
+func (msgs Messages) AddVirtualStart() string {
+	return Catalog.Format(msgs.locale, "addVirtualStart", nil)
+}
+
+// AddVirtualStartFailed says "Couldn't start {name}: {error}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, and a virtual phone's page: starting a
+// Simulator or emulator failed. error is the system's, in English.
+func AddVirtualStartFailed(name string, error string) string {
+	return In(i18n.Locale()).AddVirtualStartFailed(name, error)
+}
+
+// AddVirtualStartFailed says "Couldn't start {name}: {error}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, and a virtual phone's page: starting a
+// Simulator or emulator failed. error is the system's, in English.
+func (msgs Messages) AddVirtualStartFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "addVirtualStartFailed", map[string]any{"name": name, "error": error})
+}
+
+// AddVirtualStarting says "Starting…"
+// in the language the app shows.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator:
+// next to a spinner while it starts.
+func AddVirtualStarting() string { return In(i18n.Locale()).AddVirtualStarting() }
+
+// AddVirtualStarting says "Starting…"
+// in the language of msgs.
+//
+// Add phone › Virtual phone, and the page of a Simulator or emulator:
+// next to a spinner while it starts.
+func (msgs Messages) AddVirtualStarting() string {
+	return Catalog.Format(msgs.locale, "addVirtualStarting", nil)
+}
+
+// AddVirtualStopFailed says "Couldn't shut down {name}: {error}"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: shutting a Simulator or emulator down
+// failed. error is the system's, in English.
+func AddVirtualStopFailed(name string, error string) string {
+	return In(i18n.Locale()).AddVirtualStopFailed(name, error)
+}
+
+// AddVirtualStopFailed says "Couldn't shut down {name}: {error}"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: shutting a Simulator or emulator down
+// failed. error is the system's, in English.
+func (msgs Messages) AddVirtualStopFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "addVirtualStopFailed", map[string]any{"name": name, "error": error})
+}
+
+// AddVirtualTitle says "Virtual phones"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the heading.
+func AddVirtualTitle() string { return In(i18n.Locale()).AddVirtualTitle() }
+
+// AddVirtualTitle says "Virtual phones"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the heading.
+func (msgs Messages) AddVirtualTitle() string {
+	return Catalog.Format(msgs.locale, "addVirtualTitle", nil)
+}
+
+// AddVirtualUse says "Use"
+// in the language the app shows.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is not one of Pinky's phones, as when the person removed
+// it; makes it one again.
+func AddVirtualUse() string { return In(i18n.Locale()).AddVirtualUse() }
+
+// AddVirtualUse says "Use"
+// in the language of msgs.
+//
+// Add phone › Virtual phone: the button next to a running Simulator or
+// emulator that is not one of Pinky's phones, as when the person removed
+// it; makes it one again.
+func (msgs Messages) AddVirtualUse() string {
+	return Catalog.Format(msgs.locale, "addVirtualUse", nil)
 }
 
 // AgentGeneric says "the agent"
@@ -3651,6 +4067,22 @@ func (msgs Messages) CheckConnectionUSB() string {
 	return Catalog.Format(msgs.locale, "checkConnectionUSB", nil)
 }
 
+// CheckConnectionVirtual says "Running on this computer."
+// in the language the app shows.
+//
+// The checkup, connection: passed, for an iOS Simulator or an Android
+// emulator.
+func CheckConnectionVirtual() string { return In(i18n.Locale()).CheckConnectionVirtual() }
+
+// CheckConnectionVirtual says "Running on this computer."
+// in the language of msgs.
+//
+// The checkup, connection: passed, for an iOS Simulator or an Android
+// emulator.
+func (msgs Messages) CheckConnectionVirtual() string {
+	return Catalog.Format(msgs.locale, "checkConnectionVirtual", nil)
+}
+
 // CheckConnectionWiFi says "Connected over Wi-Fi."
 // in the language the app shows.
 //
@@ -4355,6 +4787,84 @@ func CheckScreenTitle() string { return In(i18n.Locale()).CheckScreenTitle() }
 // The checkup: the item for screenshots and the live picture.
 func (msgs Messages) CheckScreenTitle() string {
 	return Catalog.Format(msgs.locale, "checkScreenTitle", nil)
+}
+
+// CheckSimHelperBuilding says "Pinky is building its helper for Simulators with Xcode. The first time takes a minute or two."
+// in the language the app shows.
+//
+// An iOS Simulator's page and checkup: while Pinky builds WebDriverAgent
+// for Simulators.
+func CheckSimHelperBuilding() string { return In(i18n.Locale()).CheckSimHelperBuilding() }
+
+// CheckSimHelperBuilding says "Pinky is building its helper for Simulators with Xcode. The first time takes a minute or two."
+// in the language of msgs.
+//
+// An iOS Simulator's page and checkup: while Pinky builds WebDriverAgent
+// for Simulators.
+func (msgs Messages) CheckSimHelperBuilding() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperBuilding", nil)
+}
+
+// CheckSimHelperFailed says "Pinky couldn't build its helper for Simulators with Xcode. It tries again in a few minutes, or now with Try again."
+// in the language the app shows.
+//
+// An iOS Simulator's page and checkup: building WebDriverAgent failed;
+// Xcode's reason shows under it. Try again is checkSimHelperRetry.
+func CheckSimHelperFailed() string { return In(i18n.Locale()).CheckSimHelperFailed() }
+
+// CheckSimHelperFailed says "Pinky couldn't build its helper for Simulators with Xcode. It tries again in a few minutes, or now with Try again."
+// in the language of msgs.
+//
+// An iOS Simulator's page and checkup: building WebDriverAgent failed;
+// Xcode's reason shows under it. Try again is checkSimHelperRetry.
+func (msgs Messages) CheckSimHelperFailed() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperFailed", nil)
+}
+
+// CheckSimHelperPass says "Pinky's helper for Simulators is ready."
+// in the language the app shows.
+//
+// The checkup of an iOS Simulator: the helper item passed.
+func CheckSimHelperPass() string { return In(i18n.Locale()).CheckSimHelperPass() }
+
+// CheckSimHelperPass says "Pinky's helper for Simulators is ready."
+// in the language of msgs.
+//
+// The checkup of an iOS Simulator: the helper item passed.
+func (msgs Messages) CheckSimHelperPass() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperPass", nil)
+}
+
+// CheckSimHelperRetry says "Try again"
+// in the language the app shows.
+//
+// An iOS Simulator's page and checkup: the button that builds the helper
+// for Simulators again after it failed.
+func CheckSimHelperRetry() string { return In(i18n.Locale()).CheckSimHelperRetry() }
+
+// CheckSimHelperRetry says "Try again"
+// in the language of msgs.
+//
+// An iOS Simulator's page and checkup: the button that builds the helper
+// for Simulators again after it failed.
+func (msgs Messages) CheckSimHelperRetry() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperRetry", nil)
+}
+
+// CheckSimHelperTitle says "Helper for Simulators"
+// in the language the app shows.
+//
+// The checkup of an iOS Simulator: the title of the item for the
+// WebDriverAgent helper Pinky builds with Xcode.
+func CheckSimHelperTitle() string { return In(i18n.Locale()).CheckSimHelperTitle() }
+
+// CheckSimHelperTitle says "Helper for Simulators"
+// in the language of msgs.
+//
+// The checkup of an iOS Simulator: the title of the item for the
+// WebDriverAgent helper Pinky builds with Xcode.
+func (msgs Messages) CheckSimHelperTitle() string {
+	return Catalog.Format(msgs.locale, "checkSimHelperTitle", nil)
 }
 
 // CheckTrustedPass says "The iPhone trusts this computer."
@@ -14403,6 +14913,38 @@ func (msgs Messages) PhoneKeysAgentScreen(agent string) string {
 	return Catalog.Format(msgs.locale, "phoneKeysAgentScreen", map[string]any{"agent": agent})
 }
 
+// PhoneKindEmulator says "Emulator"
+// in the language the app shows.
+//
+// After Android or the Android version in a phone's header and Settings ›
+// Phones, for an Android emulator, as USB is for a phone on a cable.
+func PhoneKindEmulator() string { return In(i18n.Locale()).PhoneKindEmulator() }
+
+// PhoneKindEmulator says "Emulator"
+// in the language of msgs.
+//
+// After Android or the Android version in a phone's header and Settings ›
+// Phones, for an Android emulator, as USB is for a phone on a cable.
+func (msgs Messages) PhoneKindEmulator() string {
+	return Catalog.Format(msgs.locale, "phoneKindEmulator", nil)
+}
+
+// PhoneKindSimulator says "Simulator"
+// in the language the app shows.
+//
+// After iPhone or the iOS version in a phone's header and Settings ›
+// Phones, for an iOS Simulator, as USB is for a phone on a cable.
+func PhoneKindSimulator() string { return In(i18n.Locale()).PhoneKindSimulator() }
+
+// PhoneKindSimulator says "Simulator"
+// in the language of msgs.
+//
+// After iPhone or the iOS version in a phone's header and Settings ›
+// Phones, for an iOS Simulator, as USB is for a phone on a cable.
+func (msgs Messages) PhoneKindSimulator() string {
+	return Catalog.Format(msgs.locale, "phoneKindSimulator", nil)
+}
+
 // PhoneLockedWiFiDetail says "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn'…"
 // in the language the app shows.
 //
@@ -14915,6 +15457,22 @@ func PhoneTakeScreenshot() string { return In(i18n.Locale()).PhoneTakeScreenshot
 // the Desktop.
 func (msgs Messages) PhoneTakeScreenshot() string {
 	return Catalog.Format(msgs.locale, "phoneTakeScreenshot", nil)
+}
+
+// PhoneVirtualNotRunning says "It isn't running."
+// in the language the app shows.
+//
+// Under phoneOffline for an iOS Simulator or Android emulator that is shut
+// down, above the Start button.
+func PhoneVirtualNotRunning() string { return In(i18n.Locale()).PhoneVirtualNotRunning() }
+
+// PhoneVirtualNotRunning says "It isn't running."
+// in the language of msgs.
+//
+// Under phoneOffline for an iOS Simulator or Android emulator that is shut
+// down, above the Start button.
+func (msgs Messages) PhoneVirtualNotRunning() string {
+	return Catalog.Format(msgs.locale, "phoneVirtualNotRunning", nil)
 }
 
 // PhoneWorkInBackground says "Work in the background"
@@ -16305,6 +16863,22 @@ func RemovePhoneTrust() string { return In(i18n.Locale()).RemovePhoneTrust() }
 // computer (USB debugging, wireless debugging, iPhone trust).
 func (msgs Messages) RemovePhoneTrust() string {
 	return Catalog.Format(msgs.locale, "removePhoneTrust", nil)
+}
+
+// RemovePhoneVirtual says "Pinky stops using it, even while it runs. To add it back, start or use it in Add phone › Virtual phone."
+// in the language the app shows.
+//
+// A note in the Remove phone dialog for an iOS Simulator or Android
+// emulator.
+func RemovePhoneVirtual() string { return In(i18n.Locale()).RemovePhoneVirtual() }
+
+// RemovePhoneVirtual says "Pinky stops using it, even while it runs. To add it back, start or use it in Add phone › Virtual phone."
+// in the language of msgs.
+//
+// A note in the Remove phone dialog for an iOS Simulator or Android
+// emulator.
+func (msgs Messages) RemovePhoneVirtual() string {
+	return Catalog.Format(msgs.locale, "removePhoneVirtual", nil)
 }
 
 // RemovePhoneWiFi says "Pinky disconnects from it and won't connect to it again by itself. To add it back, pair it again in Add phone, or plu…"

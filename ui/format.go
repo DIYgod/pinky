@@ -167,10 +167,15 @@ func connectionLine(d gateway.DeviceView) string {
 	if lockedOnWiFi(d) || d.Status == gateway.DeviceConnecting {
 		return kind + " · " + statusLine(d)
 	}
+	if d.Info.Virtual {
+		kind += " · " + virtualKind(d.Info.Platform)
+	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		return locales.ConnectionOffline(kind)
 	}
 	switch {
+	case d.Info.Virtual:
+		return kind
 	case d.Info.Via == driver.ViaTailscale:
 		return kind + " · Tailscale"
 	case d.Info.Connection == "wifi":
@@ -200,6 +205,8 @@ func osLine(d gateway.DeviceView) string {
 		return locales.ConnectionOffline(s)
 	}
 	switch {
+	case d.Info.Virtual:
+		return s + " · " + virtualKind(d.Info.Platform)
 	case d.Info.Via == driver.ViaTailscale:
 		return s + " · Tailscale"
 	case d.Info.Connection == "wifi":
@@ -208,6 +215,15 @@ func osLine(d gateway.DeviceView) string {
 		return s + " · USB"
 	}
 	return s
+}
+
+// virtualKind names what a virtual phone is: an iOS Simulator or an
+// Android emulator.
+func virtualKind(pf driver.Platform) string {
+	if pf == driver.IOS {
+		return locales.PhoneKindSimulator()
+	}
+	return locales.PhoneKindEmulator()
 }
 
 // lowerFirst lowers a sentence's first letter for use mid-sentence,

@@ -75,6 +75,10 @@ func (a *app) removeLink(c *mg.Context, d gateway.DeviceView) {
 // removeNotes say what removing the phone does that depends on how it is
 // connected now: whether it comes back by itself, and how to add it back.
 func removeNotes(d *gateway.DeviceView, platform driver.Platform) []string {
+	if d != nil && d.Info.Virtual {
+		// It runs on this computer: nothing to trust or unplug.
+		return []string{locales.RemovePhoneVirtual()}
+	}
 	listed := d != nil && d.Status != gateway.DeviceOffline && d.Info.State != driver.StateOffline
 	var notes []string
 	switch {

@@ -100,8 +100,12 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
 		mg.Column(c).AlignItems(mg.Center).Gap(12).Children(func() {
+			ic := icWifiOff
+			if d.Info.Virtual {
+				ic = icMonitor
+			}
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
-				mg.Icon(c, icWifiOff).FontSize(30).TextColor(p.ink3)
+				mg.Icon(c, ic).FontSize(30).TextColor(p.ink3)
 			})
 			mg.Text(c, locales.PhoneOffline(d.Info.Name)).FontSize(16).FontWeight(600)
 			mg.Row(c).Gap(4).AlignItems(mg.Baseline).Children(func() {
@@ -109,17 +113,25 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 				switch {
 				case networkOfflineText(d) != "":
 					detail = networkOfflineText(d)
+				case detail == "" && d.Info.Virtual:
+					detail = locales.PhoneVirtualNotRunning()
 				case detail == "":
 					detail = locales.PhoneNotConnected()
 				default:
 					detail += "."
 				}
 				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2)
-				if linkButton(c, locales.PhoneReconnect()).Clicked() {
+				if !a.canStartVirtual(d) && linkButton(c, locales.PhoneReconnect()).Clicked() {
 					a.page = pageAddPhone
 					a.add.reset(a)
+					if d.Info.Virtual && a.launcher() != nil {
+						a.add.step = "virtual"
+					}
 				}
 			})
+			if a.canStartVirtual(d) {
+				a.startVirtualButton(c, d)
+			}
 			if linkButton(c, locales.PhoneCheckup()).Clicked() {
 				a.openCheckup(d)
 			}
@@ -157,10 +169,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 				// to install, why the disk image did not mount.
 				mg.Text(c, d.Info.Detail).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
 			}
-			if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
+			if d.Info.Virtual && d.Info.Setup == driver.SetupPreparing {
+				spinner(c) // the Simulator helper builds: nothing to fix
+			} else if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
 				a.openCheckup(d)
 			}
 			switch {
+			case d.Info.Virtual:
+				if d.Info.Setup == driver.SetupSimulatorHelper && linkButton(c, locales.CheckSimHelperRetry()).Clicked() {
+					a.startVirtualPhone(d)
+				}
 			case needsHelper(d):
 				if linkButton(c, locales.CheckHelperHow()).Clicked() {
 					openURL(c, helperLink(d), func(error) {})

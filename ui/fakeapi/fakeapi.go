@@ -144,9 +144,10 @@ type API struct {
 	wifiOff    bool             // iPhones over Wi-Fi turned off (wifi.go)
 	restarts   []string         // RestartDeviceService reasons (wifi.go)
 	restartErr error
-	trusted    []string     // TrustPhone's phones (wifi.go)
-	dlErr      error        // what DownloadDiskImage fails with (iphone.go)
-	tn         *fakeTailnet // Tailscale on this computer (tailnet.go)
+	trusted    []string      // TrustPhone's phones (wifi.go)
+	dlErr      error         // what DownloadDiskImage fails with (iphone.go)
+	tn         *fakeTailnet  // Tailscale on this computer (tailnet.go)
+	virt       *virtualState // Simulators and emulators (virtual.go)
 }
 
 type device struct {
@@ -235,6 +236,9 @@ func (a *API) Play(s Scenario) {
 	a.needs = nil
 	a.tasks = nil
 	a.devices = nil
+	if a.virt != nil {
+		a.virt.starting = map[string]bool{}
+	}
 	pixel := &device{
 		info: driver.Info{ID: "pixel-9", Platform: driver.Android, Name: "Pixel 9", Model: "Pixel 9",
 			OSVersion: "16", Connection: "usb", Backend: "scrcpy", State: driver.StateOnline},

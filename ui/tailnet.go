@@ -351,7 +351,7 @@ func (a *app) awayOf(c *mg.Context, id string) (driver.Away, bool) {
 
 // awayRow is a phone's Use away from home in Settings › Phones.
 func (a *app) awayRow(c *mg.Context, d gateway.DeviceView) {
-	if d.Info.Platform != driver.Android {
+	if d.Info.Platform != driver.Android || d.Info.Virtual {
 		return
 	}
 	p := pal(c)

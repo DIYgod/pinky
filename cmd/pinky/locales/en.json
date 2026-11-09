@@ -298,6 +298,18 @@
   "@addPhoneChooseTitle": {
     "description": "Add phone, first step: the heading above two cards to pick from, Android and iPhone."
   },
+  "addPhoneChooseVirtual": "Virtual phone",
+  "@addPhoneChooseVirtual": {
+    "description": "Add phone, first step: the title of the card below Android and iPhone, for iOS Simulators and Android emulators that run on this computer."
+  },
+  "addPhoneChooseVirtualMac": "An iOS Simulator or an Android emulator on this Mac",
+  "@addPhoneChooseVirtualMac": {
+    "description": "Add phone, first step, on a Mac: under \"Virtual phone\" on its card."
+  },
+  "addPhoneChooseVirtualPC": "An Android emulator on this computer",
+  "@addPhoneChooseVirtualPC": {
+    "description": "Add phone, first step, on Windows and Linux: under \"Virtual phone\" on its card."
+  },
   "addPhoneDone": "Done",
   "@addPhoneDone": {
     "description": "Add phone: the button that ends the wizard once the new phone is ready, and opens its page."
@@ -719,6 +731,142 @@
   "addPhoneTryAgain": "Try again",
   "@addPhoneTryAgain": {
     "description": "Add phone: the button that looks for the phone again after it needed setup, and that asks for a new QR code after pairing over Wi-Fi failed."
+  },
+  "addVirtualAndroid": "Android emulators",
+  "@addVirtualAndroid": {
+    "description": "Add phone › Virtual phone: the label above the list of Android Virtual Devices."
+  },
+  "addVirtualCantStart": "Can't start: {reason}",
+  "@addVirtualCantStart": {
+    "description": "Add phone › Virtual phone: under a Simulator or emulator that cannot start. reason is the system's, in English.",
+    "placeholders": {
+      "reason": {
+        "type": "String",
+        "example": "its system image is not installed"
+      }
+    }
+  },
+  "addVirtualDetailMac": "Start an iOS Simulator or an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them; agents can't.",
+  "@addVirtualDetailMac": {
+    "description": "Add phone › Virtual phone on a Mac: the line under the heading."
+  },
+  "addVirtualDetailPC": "Start an Android emulator, and Pinky uses it like a phone, with the same approvals and rules. Only you can start them; agents can't.",
+  "@addVirtualDetailPC": {
+    "description": "Add phone › Virtual phone on Windows and Linux: the line under the heading."
+  },
+  "addVirtualHelperNote": "The first time, Pinky builds its helper for Simulators (WebDriverAgent) with Xcode, which takes a minute or two.",
+  "@addVirtualHelperNote": {
+    "description": "Add phone › Virtual phone: the note under the list of iOS Simulators. WebDriverAgent is a name."
+  },
+  "addVirtualIOS": "iOS Simulators",
+  "@addVirtualIOS": {
+    "description": "Add phone › Virtual phone: the label above the list of iOS Simulators."
+  },
+  "addVirtualListFailed": "Couldn't list them: {error}",
+  "@addVirtualListFailed": {
+    "description": "Add phone › Virtual phone: under a platform's label when listing its Simulators or emulators failed. error is the system's, in English.",
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "simctl: exit status 1"
+      }
+    }
+  },
+  "addVirtualLooking": "Looking for virtual phones…",
+  "@addVirtualLooking": {
+    "description": "Add phone › Virtual phone: next to a spinner until the list comes."
+  },
+  "addVirtualNoAVDs": "No emulators yet. Create one in Android Studio's Device Manager.",
+  "@addVirtualNoAVDs": {
+    "description": "Add phone › Virtual phone, under Android emulators: the computer has the emulator but no Android Virtual Device. Device Manager is Android Studio's name."
+  },
+  "addVirtualNoEmulator": "The Android SDK in {folder} has no emulator. Install Android Emulator in Android Studio's SDK Manager.",
+  "@addVirtualNoEmulator": {
+    "description": "Add phone › Virtual phone, under Android emulators: the SDK lacks its emulator. Android Emulator and SDK Manager are Android Studio's names.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "/Users/me/Library/Android/sdk"
+      }
+    }
+  },
+  "addVirtualNoSDK": "Android emulators need the Android SDK, which Android Studio installs. Install Android Studio, then create a virtual device in its Device Manager.",
+  "@addVirtualNoSDK": {
+    "description": "Add phone › Virtual phone, under Android emulators: Pinky found no Android SDK. Device Manager is Android Studio's name."
+  },
+  "addVirtualNoSimulators": "No Simulators yet. Add one in Xcode, under Window › Devices and Simulators.",
+  "@addVirtualNoSimulators": {
+    "description": "Add phone › Virtual phone, under iOS Simulators: Xcode has no Simulator. Window › Devices and Simulators is Xcode's menu, which is in English."
+  },
+  "addVirtualNoXcode": "iOS Simulators need Xcode, from the Mac App Store. After installing it, open it once so it can finish setting up.",
+  "@addVirtualNoXcode": {
+    "description": "Add phone › Virtual phone, under iOS Simulators: the Mac has no Xcode."
+  },
+  "addVirtualOpen": "Open",
+  "@addVirtualOpen": {
+    "description": "Add phone › Virtual phone: the button next to a running Simulator or emulator that is one of Pinky's phones; opens its page."
+  },
+  "addVirtualRunning": "Running",
+  "@addVirtualRunning": {
+    "description": "Add phone › Virtual phone: at the end of a running Simulator's or emulator's second line, after its model and OS version."
+  },
+  "addVirtualShowAll": "Show all ({count})",
+  "@addVirtualShowAll": {
+    "description": "Add phone › Virtual phone: the link under a long list of Simulators or emulators that shows the rest.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "24"
+      }
+    }
+  },
+  "addVirtualShutDown": "Shut down",
+  "@addVirtualShutDown": {
+    "description": "Add phone › Virtual phone: the button next to a running Simulator or emulator that shuts it down."
+  },
+  "addVirtualStart": "Start",
+  "@addVirtualStart": {
+    "description": "Add phone › Virtual phone, and the page of a Simulator or emulator that is offline: the button that starts it."
+  },
+  "addVirtualStartFailed": "Couldn't start {name}: {error}",
+  "@addVirtualStartFailed": {
+    "description": "Add phone › Virtual phone, and a virtual phone's page: starting a Simulator or emulator failed. error is the system's, in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 17"
+      },
+      "error": {
+        "type": "String",
+        "example": "Unable to boot device in current state: Booted"
+      }
+    }
+  },
+  "addVirtualStarting": "Starting…",
+  "@addVirtualStarting": {
+    "description": "Add phone › Virtual phone, and the page of a Simulator or emulator: next to a spinner while it starts."
+  },
+  "addVirtualStopFailed": "Couldn't shut down {name}: {error}",
+  "@addVirtualStopFailed": {
+    "description": "Add phone › Virtual phone: shutting a Simulator or emulator down failed. error is the system's, in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "iPhone 17"
+      },
+      "error": {
+        "type": "String",
+        "example": "Unable to shutdown device in current state: Shutdown"
+      }
+    }
+  },
+  "addVirtualTitle": "Virtual phones",
+  "@addVirtualTitle": {
+    "description": "Add phone › Virtual phone: the heading."
+  },
+  "addVirtualUse": "Use",
+  "@addVirtualUse": {
+    "description": "Add phone › Virtual phone: the button next to a running Simulator or emulator that is not one of Pinky's phones, as when the person removed it; makes it one again."
   },
   "agentGeneric": "the agent",
   "@agentGeneric": {
@@ -1234,6 +1382,10 @@
   "@checkConnectionUSB": {
     "description": "The checkup, connection: passed, over a USB cable."
   },
+  "checkConnectionVirtual": "Running on this computer.",
+  "@checkConnectionVirtual": {
+    "description": "The checkup, connection: passed, for an iOS Simulator or an Android emulator."
+  },
   "checkConnectionWiFi": "Connected over Wi-Fi.",
   "@checkConnectionWiFi": {
     "description": "The checkup, connection and Wi-Fi: passed, over Wi-Fi."
@@ -1431,6 +1583,26 @@
   "checkScreenTitle": "Seeing the screen",
   "@checkScreenTitle": {
     "description": "The checkup: the item for screenshots and the live picture."
+  },
+  "checkSimHelperBuilding": "Pinky is building its helper for Simulators with Xcode. The first time takes a minute or two.",
+  "@checkSimHelperBuilding": {
+    "description": "An iOS Simulator's page and checkup: while Pinky builds WebDriverAgent for Simulators."
+  },
+  "checkSimHelperFailed": "Pinky couldn't build its helper for Simulators with Xcode. It tries again in a few minutes, or now with Try again.",
+  "@checkSimHelperFailed": {
+    "description": "An iOS Simulator's page and checkup: building WebDriverAgent failed; Xcode's reason shows under it. Try again is checkSimHelperRetry."
+  },
+  "checkSimHelperPass": "Pinky's helper for Simulators is ready.",
+  "@checkSimHelperPass": {
+    "description": "The checkup of an iOS Simulator: the helper item passed."
+  },
+  "checkSimHelperRetry": "Try again",
+  "@checkSimHelperRetry": {
+    "description": "An iOS Simulator's page and checkup: the button that builds the helper for Simulators again after it failed."
+  },
+  "checkSimHelperTitle": "Helper for Simulators",
+  "@checkSimHelperTitle": {
+    "description": "The checkup of an iOS Simulator: the title of the item for the WebDriverAgent helper Pinky builds with Xcode."
   },
   "checkTrustedPass": "The iPhone trusts this computer.",
   "@checkTrustedPass": {
@@ -5454,6 +5626,14 @@
       }
     }
   },
+  "phoneKindEmulator": "Emulator",
+  "@phoneKindEmulator": {
+    "description": "After Android or the Android version in a phone's header and Settings › Phones, for an Android emulator, as USB is for a phone on a cable."
+  },
+  "phoneKindSimulator": "Simulator",
+  "@phoneKindSimulator": {
+    "description": "After iPhone or the iOS version in a phone's header and Settings › Phones, for an iOS Simulator, as USB is for a phone on a cable."
+  },
   "phoneLockedWiFiDetail": "Unlock it to use it with Pinky. Over Wi-Fi, Pinky connects to an iPhone or iPad only once it's unlocked, so it doesn't wake its screen.",
   "@phoneLockedWiFiDetail": {
     "description": "Under phoneLockedWiFiTitle."
@@ -5679,6 +5859,10 @@
   "phoneTakeScreenshot": "Take screenshot",
   "@phoneTakeScreenshot": {
     "description": "Item of ⋯ under the mirror: saves the phone's screen as a picture on the Desktop."
+  },
+  "phoneVirtualNotRunning": "It isn't running.",
+  "@phoneVirtualNotRunning": {
+    "description": "Under phoneOffline for an iOS Simulator or Android emulator that is shut down, above the Start button."
   },
   "phoneWorkInBackground": "Work in the background",
   "@phoneWorkInBackground": {
@@ -6183,6 +6367,10 @@
   "removePhoneTrust": "The phone keeps trusting this computer, so other apps that use it are not affected.",
   "@removePhoneTrust": {
     "description": "In the Remove phone dialog: Pinky does not unpair the phone from the computer (USB debugging, wireless debugging, iPhone trust)."
+  },
+  "removePhoneVirtual": "Pinky stops using it, even while it runs. To add it back, start or use it in Add phone › Virtual phone.",
+  "@removePhoneVirtual": {
+    "description": "A note in the Remove phone dialog for an iOS Simulator or Android emulator."
   },
   "removePhoneWiFi": "Pinky disconnects from it and won't connect to it again by itself. To add it back, pair it again in Add phone, or plug it in.",
   "@removePhoneWiFi": {
