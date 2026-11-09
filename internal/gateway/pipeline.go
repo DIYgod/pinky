@@ -1390,6 +1390,14 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	dev, onBG := g.screenOfLocked(d)
 	d.inflight = cancel
 	g.inputLocked(d)
+	if dev != nil {
+		// Until the screen is seen to settle after this input, the next
+		// action waits for it (settleOwed) and no phone_batch step starts
+		// from a read made before it (startScreen), also when this call
+		// ends early: cancelled, or failed after the input went out.
+		l.after, l.afterAt = nil, time.Time{}
+		g.oweSettleLocked(d, time.Now())
+	}
 	g.mu.Unlock()
 	if dev == nil {
 		cancel()
@@ -1920,10 +1928,12 @@ func (g *Gateway) screenResult(l *lease, raw *screen.Screen, full bool) *Result 
 	return res
 }
 
-// settle waits until the screen stops changing, up to limit. A limit of 0
-// does not wait, and reports the screen as not settled.
+// settle waits until the screen stops changing, up to limit. A limit of 0,
+// or under a millisecond, does not wait, and reports the screen as not
+// settled.
 func (g *Gateway) settle(ctx context.Context, d *device, limit time.Duration) bool {
-	if limit <= 0 {
+	if limit < time.Millisecond {
+		// Drivers count in milliseconds, and some read 0 as their default.
 		return false
 	}
 	dev, _ := g.screenOf(d)
@@ -1959,31 +1969,39 @@ func (g *Gateway) settle(ctx context.Context, d *device, limit time.Duration) bo
 }
 
 // settleAction is settle after an action, up to the action's limit. When
-// settle_ms set that limit below SettleMax and the screen was still
-// changing at the end, the rest of the wait is owed: the next action waits
-// it out before it reads the screen (settleOwed).
+// the screen was still changing at the end, because settle_ms set a lower
+// limit or the call was cancelled, the rest of SettleMax is owed: the next
+// action waits it out before it reads the screen (settleOwed).
 func (g *Gateway) settleAction(ctx context.Context, d *device, limit time.Duration) bool {
 	from := time.Now()
 	settled := g.settle(ctx, d, limit)
 	g.mu.Lock()
-	switch {
-	case settled:
+	if settled {
 		d.settleDue = time.Time{}
-	case limit < g.opt.SettleMax:
-		d.settleDue = from.Add(g.opt.SettleMax)
+	} else {
+		g.oweSettleLocked(d, from)
 	}
 	g.mu.Unlock()
 	return settled
 }
 
-// settleOwed waits for the screen to settle as long as an earlier action's
-// settle_ms cut its own wait short (settleAction): until the screen settles
-// or SettleMax has passed since that action. It runs with d.act held,
-// before an action reads the screen that the rules judge it against.
-// Without it that read could show the screen from before the earlier
-// action took effect: a phone_batch step, or a call made in parallel, that
-// taps where Place order is about to appear would be judged against the
-// screen before it, and run without asking.
+// oweSettleLocked makes the next action wait for the screen to settle until
+// SettleMax after from (settleOwed). It only ever moves that time later.
+func (g *Gateway) oweSettleLocked(d *device, from time.Time) {
+	if due := from.Add(g.opt.SettleMax); due.After(d.settleDue) {
+		d.settleDue = due
+	}
+}
+
+// settleOwed waits for the screen to settle as long as an earlier action
+// left its own wait short (settle_ms, a cancelled call, an input that
+// failed after it went out): until the screen settles or SettleMax has
+// passed since that action. It runs with d.act held, before an action
+// reads the screen that the rules judge it against. Without it that read
+// could show the screen from before the earlier action took effect: a
+// phone_batch step, or a call made in parallel, that taps where Place
+// order is about to appear would be judged against the screen before it,
+// and run without asking.
 func (g *Gateway) settleOwed(ctx context.Context, d *device) {
 	g.mu.Lock()
 	due := d.settleDue

@@ -389,7 +389,7 @@ A lock on the local socket keeps a second gateway from starting. Nothing under `
 2. **Policy.** Rules and the commit detector decide Allow, Ask or Deny.
 3. **Approval.** For Ask, the approval center holds the call until the person decides or the timeout denies.
 4. **Execute.** The driver performs the action on the long-lived device session.
-5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet. An action's `settle_ms` lowers the limit, for screens that never stop moving (not for an action the person approved, allowed for the task or always allows). The rest of a wait it cut short is owed: the next action waits it out, or until the screen settles, before it reads the screen for step 2, so the policy never judges an action against a screen from before the previous one took effect.
+5. **Settle.** The gateway waits up to 3 s for the screen to stop changing: encoded frames shrink to idle size and accessibility events go quiet. An action's `settle_ms` lowers the limit, for screens that never stop moving (not for an action the person approved, allowed for the task or always allows). The rest of a wait that ended early (`settle_ms`, a cancelled call, an input that failed after it went out) is owed: the next action waits it out, or until the screen settles, before it reads the screen for step 2, so the policy never judges an action against a screen from before the previous one took effect.
 6. **Verify and observe.** A fresh screen is read and diffed against the last one.
 7. **Record.** The step, its before and after screenshots and any approval go to the history store.
 

@@ -51,9 +51,10 @@ type device struct {
 	// agent works on the phone. workSent: dev was told at all.
 	working, workSent bool
 	locked            bool
-	// settleDue is when the wait an action's settle_ms cut short would
-	// have ended; the next action waits for the screen to settle until
-	// then before it reads it (settleOwed).
+	// settleDue is when the wait after the last input would have ended
+	// had it run its whole SettleMax: set before the input goes out,
+	// cleared once the screen is seen to settle. The next action waits for
+	// the screen to settle until then before it reads it (settleOwed).
 	settleDue time.Time
 	// inflight cancels the driver call of the action in progress, so a
 	// takeover interrupts it.

@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -157,6 +158,10 @@ type laggyDev struct {
 	stale  *screen.Screen
 	until  time.Time
 	limits []time.Duration
+	// tapErr is what the next tap returns after it went out.
+	tapErr error
+	// failRead makes the next read fail.
+	failRead bool
 }
 
 func (d *laggyDev) behind(ctx context.Context, input func() error) error {
@@ -175,7 +180,14 @@ func (d *laggyDev) behind(ctx context.Context, input func() error) error {
 }
 
 func (d *laggyDev) Tap(ctx context.Context, p screen.Point, opt driver.TapOptions) error {
-	return d.behind(ctx, func() error { return d.Device.Tap(ctx, p, opt) })
+	if err := d.behind(ctx, func() error { return d.Device.Tap(ctx, p, opt) }); err != nil {
+		return err
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	err := d.tapErr
+	d.tapErr = nil
+	return err
 }
 
 func (d *laggyDev) Launch(ctx context.Context, app string) error {
@@ -184,8 +196,12 @@ func (d *laggyDev) Launch(ctx context.Context, app string) error {
 
 func (d *laggyDev) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	d.mu.Lock()
-	stale, until := d.stale, d.until
+	stale, until, fail := d.stale, d.until, d.failRead
+	d.failRead = false
 	d.mu.Unlock()
+	if fail {
+		return nil, errors.New("the read failed")
+	}
 	if stale == nil || !time.Now().Before(until) {
 		return d.Device.Observe(ctx, opt)
 	}
@@ -305,6 +321,72 @@ func TestSettleMSParallelCallsStillAskBeforePaying(t *testing.T) {
 	if res.Rule != "Payments" {
 		t.Fatalf("second call: %+v", res)
 	}
+	notPlaced(t, dev)
+}
+
+// A call that ends before the screen settles, without settle_ms, leaves the
+// next call waiting for the screen the same way: one cancelled while it
+// waits, and one whose tap went out but reported an error. Tapping the
+// cart and then where Place order appears still asks for the payment.
+func TestCallEndedBeforeSettlingStillAsksBeforePaying(t *testing.T) {
+	ctx := context.Background()
+	t.Run("cancelled", func(t *testing.T) {
+		g, dev, place := laggyCheckout(t)
+		s, first := connect(t, g, "Lunch")
+		cctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		dev.OnInput(func(demo.Input) { time.AfterFunc(20*time.Millisecond, cancel) })
+		start := time.Now()
+		s.Act(cctx, Call{}, Action{Tool: "tap", Ref: ref(t, first, "Cart · 1")})
+		if time.Since(start) >= dev.lag {
+			t.Fatal("the cancelled call waited for the change to show")
+		}
+		dev.OnInput(nil)
+		res := s.Act(ctx, Call{}, Action{Tool: "tap", Point: &place})
+		mustStatus(t, res, StatusPending)
+		notPlaced(t, dev)
+	})
+	t.Run("input failed after it went out", func(t *testing.T) {
+		g, dev, place := laggyCheckout(t)
+		s, first := connect(t, g, "Lunch")
+		dev.mu.Lock()
+		dev.tapErr = errors.New("the phone did not confirm the tap")
+		dev.mu.Unlock()
+		mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "tap", Ref: ref(t, first, "Cart · 1")}), StatusUncertain)
+		res := s.Act(ctx, Call{}, Action{Tool: "tap", Point: &place})
+		mustStatus(t, res, StatusPending)
+		notPlaced(t, dev)
+	})
+}
+
+// A phone_batch step starts from the read that ended the step before only
+// while no input went out since. Here a call made in parallel taps the cart
+// between two steps and its read fails: the next step must read the screen
+// again, not judge a tap where Place order appears against the order list.
+func TestBatchDoesNotReuseAReadFromBeforeAnotherTap(t *testing.T) {
+	ctx := context.Background()
+	g, dev, place := laggyCheckout(t)
+	s, first := connect(t, g, "Lunch")
+	// batchStep runs a phone_batch step after the first, as Session.Batch
+	// does; a real batch leaves no room to place the other call in between.
+	batchStep := func(a Action) *Result {
+		l, res := s.acquire("")
+		if res != nil {
+			t.Fatalf("acquire: %+v", res)
+		}
+		defer s.done(l)
+		return g.finish(l, g.act(ctx, l, Call{reuse: true}, a))
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "swipe", Direction: "up"}), StatusSettled)
+	dev.OnInput(func(demo.Input) {
+		dev.mu.Lock()
+		dev.failRead = true
+		dev.mu.Unlock()
+	})
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "tap", Ref: ref(t, first, "Cart · 1")}), StatusUncertain)
+	dev.OnInput(nil)
+	res := batchStep(Action{Tool: "tap", Point: &place})
+	mustStatus(t, res, StatusPending)
 	notPlaced(t, dev)
 }
 
