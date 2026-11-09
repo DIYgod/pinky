@@ -143,6 +143,30 @@ func listsFile(path, name string) bool {
 	return false
 }
 
+// listedEntries are the top-level entries that the file list at path
+// names ("lib" for lib/libavutil.so.61); none when it cannot be read.
+func listedEntries(path string) []string {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, 1<<20))
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, line := range strings.Split(string(data), "\n") {
+		name := filepath.Clean(filepath.FromSlash(strings.TrimSpace(line)))
+		if name == "." || !filepath.IsLocal(name) {
+			continue
+		}
+		top, _, _ := strings.Cut(name, string(filepath.Separator))
+		out = append(out, top)
+	}
+	return out
+}
+
 // writableDir reports whether a folder can take new entries, by making
 // and removing one.
 func writableDir(dir string) error {

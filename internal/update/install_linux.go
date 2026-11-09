@@ -107,7 +107,7 @@ func (st *stagedArchive) Swap(opt StartOptions) error {
 	}
 	job := filepath.Join(st.work, "job.json")
 	if err := writeJob(job, helperJob{PID: pid, Dir: s.Dir, Exe: filepath.Base(s.Exe), Setup: st.files,
-		Version: st.version, Args: opt.Args, Env: opt.Env, Log: logPath, Wait: wait}); err != nil {
+		Version: st.version, Args: opt.Args, Env: opt.Env, Log: logPath, Wait: wait, Listed: true}); err != nil {
 		return err
 	}
 	cmd := exec.Command(st.helper, "update-helper", job)
@@ -128,11 +128,15 @@ func (st *stagedArchive) Swap(opt StartOptions) error {
 func (st *stagedArchive) Discard() { os.RemoveAll(st.work) }
 
 // SwapNow swaps the files at once, while Pinky does not run (`pinky
-// update`): the old ones go aside, the new ones in, and what only the old
-// folder had comes back.
+// update`): Pinky's own entries of the folder (archiveEntries) go aside,
+// the new ones in, and the rest of the folder stays where it is.
 func (st *stagedArchive) SwapNow() error {
 	dir, old := st.in.Dir, filepath.Join(st.work, "old")
-	if err := moveAll(dir, old); err != nil {
+	release, err := entries(st.files)
+	if err == nil {
+		err = moveNames(dir, old, archiveEntries(dir, release))
+	}
+	if err != nil {
 		if errors.Is(err, errMoveBack) {
 			return fmt.Errorf("move the installed version aside: %w; what moved is in %s", err, old)
 		}
@@ -145,9 +149,6 @@ func (st *stagedArchive) SwapNow() error {
 		}
 		st.Discard()
 		return fmt.Errorf("install the update: %w", err)
-	}
-	if left := keepExtras(old, dir); len(left) > 0 {
-		return fmt.Errorf("installed, but could not move these back into %s; they are in %s: %s", dir, old, strings.Join(left, ", "))
 	}
 	st.Discard()
 	return nil

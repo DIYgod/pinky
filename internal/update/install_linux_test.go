@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -80,15 +81,47 @@ func release(t *testing.T, v string, crash bool) string {
 }
 
 // installed is an install folder of 2026.1107.1, unpacked from its
-// archive, with a file of the person's next to pinky.
+// archive, with a file and a folder of the person's next to pinky.
 func installed(t *testing.T) (dir, exe string) {
 	t.Helper()
 	dir = filepath.Join(t.TempDir(), "Pinky")
 	if err := unpackArchive(release(t, "2026.1107.1", false), dir); err != nil {
 		t.Fatal(err)
 	}
-	writeTree(t, dir, map[string]string{"notes.txt": "the person's"})
+	writeTree(t, dir, map[string]string{"notes.txt": "the person's", "photos/beach.jpg": "the person's"})
+	time.Sleep(20 * time.Millisecond) // so that a later move shows in the ctimes
 	return dir, filepath.Join(dir, "pinky")
+}
+
+// personal is when the person's file and folder in an install folder
+// last changed, which a move changes too.
+func personal(t *testing.T, dir string) map[string]syscall.Timespec {
+	t.Helper()
+	out := map[string]syscall.Timespec{}
+	for _, name := range []string{"notes.txt", "photos"} {
+		fi, err := os.Lstat(filepath.Join(dir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[name] = fi.Sys().(*syscall.Stat_t).Ctim
+	}
+	return out
+}
+
+// untouched checks that the person's file and folder never moved: Pinky
+// moves only the entries that the archive's file list names (MyGo's
+// contract), even for a moment.
+func untouched(t *testing.T, dir string, before map[string]syscall.Timespec) {
+	t.Helper()
+	got := readTree(t, dir)
+	if got["notes.txt"] != "the person's" || got["photos/beach.jpg"] != "the person's" {
+		t.Errorf("the person's files: %v", got)
+	}
+	for name, ctime := range personal(t, dir) {
+		if ctime != before[name] {
+			t.Errorf("%s moved", name)
+		}
+	}
 }
 
 func stageRelease(t *testing.T, dir, exe, v string, crash bool) *stagedArchive {
@@ -163,13 +196,15 @@ func TestArchiveStage(t *testing.T) {
 
 func TestArchiveSwapNow(t *testing.T) {
 	dir, exe := installed(t)
+	before := personal(t, dir)
 	if err := stageRelease(t, dir, exe, "2026.1107.2", false).SwapNow(); err != nil {
 		t.Fatal(err)
 	}
 	got := readTree(t, dir)
-	if got["pinky-companion.apk"] != "apk 2026.1107.2" || got["lib/libavutil.so.61"] != "ffmpeg 2026.1107.2" || got["notes.txt"] != "the person's" {
+	if got["pinky-companion.apk"] != "apk 2026.1107.2" || got["lib/libavutil.so.61"] != "ffmpeg 2026.1107.2" {
 		t.Errorf("after SwapNow: %v", got)
 	}
+	untouched(t, dir, before)
 	if v, err := exeVersion(exe); err != nil || v != "2026.1107.2" {
 		t.Errorf("pinky says %q, %v", v, err)
 	}
@@ -179,13 +214,15 @@ func TestArchiveSwapNow(t *testing.T) {
 }
 
 // helperRun swaps in version v with the real helper operations, as if
-// Pinky (a process that has exited) had staged it and quit.
-func helperRun(t *testing.T, v string, crash bool) (dir string, st *stagedArchive, err error) {
+// Pinky (a process that has exited) had staged it and quit; before is
+// personal before.
+func helperRun(t *testing.T, v string, crash bool) (dir string, st *stagedArchive, before map[string]syscall.Timespec, err error) {
 	t.Helper()
 	oldGrace := helperGrace
 	helperGrace = 300 * time.Millisecond
 	t.Cleanup(func() { helperGrace = oldGrace })
 	dir, exe := installed(t)
+	before = personal(t, dir)
 	st = stageRelease(t, dir, exe, v, crash)
 	quit := exec.Command("true")
 	if err := quit.Run(); err != nil {
@@ -196,35 +233,35 @@ func helperRun(t *testing.T, v string, crash bool) (dir string, st *stagedArchiv
 	}
 	job := filepath.Join(st.work, "job.json")
 	if err := writeJob(job, helperJob{PID: quit.Process.Pid, Dir: dir, Exe: "pinky", Setup: st.files, Version: v,
-		Env: []string{"PINKY_TEST_WORK=" + st.work}, Log: filepath.Join(t.TempDir(), "update.log"), Wait: 5 * time.Second}); err != nil {
+		Env: []string{"PINKY_TEST_WORK=" + st.work}, Log: filepath.Join(t.TempDir(), "update.log"), Wait: 5 * time.Second, Listed: true}); err != nil {
 		t.Fatal(err)
 	}
-	return dir, st, RunHelper(job)
+	return dir, st, before, RunHelper(job)
 }
 
 func TestArchiveHelperUpdates(t *testing.T) {
-	dir, st, err := helperRun(t, "2026.1107.2", false)
+	dir, st, before, err := helperRun(t, "2026.1107.2", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := readTree(t, dir)
-	if got["pinky-companion.apk"] != "apk 2026.1107.2" || got["notes.txt"] != "the person's" {
+	if got := readTree(t, dir); got["pinky-companion.apk"] != "apk 2026.1107.2" {
 		t.Errorf("after the update: %v", got)
 	}
+	untouched(t, dir, before)
 	if exists(filepath.Join(st.work, "old")) || !exists(filepath.Join(st.work, "done")) || exists(filepath.Join(st.work, "rolled-back")) {
 		t.Errorf("work folder: %v", readTree(t, st.work))
 	}
 }
 
 func TestArchiveHelperRollsBack(t *testing.T) {
-	dir, st, err := helperRun(t, "2026.1107.2", true)
+	dir, st, before, err := helperRun(t, "2026.1107.2", true)
 	if err == nil || !strings.Contains(err.Error(), "didn't start") {
 		t.Fatalf("RunHelper = %v", err)
 	}
-	got := readTree(t, dir)
-	if got["pinky-companion.apk"] != "apk 2026.1107.1" || got["notes.txt"] != "the person's" {
+	if got := readTree(t, dir); got["pinky-companion.apk"] != "apk 2026.1107.1" {
 		t.Errorf("after the rollback: %v", got)
 	}
+	untouched(t, dir, before)
 	if v, err := exeVersion(filepath.Join(dir, "pinky")); err != nil || v != "2026.1107.1" {
 		t.Errorf("pinky says %q, %v", v, err)
 	}
