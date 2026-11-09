@@ -353,7 +353,7 @@ func TestMuxKeepsAPhoneThroughABlip(t *testing.T) {
 	up := startUpstream(t, dir)
 	m := startMux(t, dir, up)
 	up.l.Close()
-	src := &fakeSource{svcs: []mdns.Service{iphoneService("127.0.0.1")}}
+	src := &fakeSource{svcs: []mdns.Service{iphoneService("192.0.2.10")}}
 	now := time.Unix(1_000_000, 0)
 	answers := true
 	f := &Finder{

@@ -331,6 +331,189 @@ func TestFinderLastAddressOnlyWhileItAnswers(t *testing.T) {
 	}
 }
 
+// addrTest runs a Finder for one phone whose lockdown answers at the
+// addresses up, and counts where lockdown was asked.
+type addrTest struct {
+	t     *testing.T
+	m     *Mux
+	src   *fakeSource
+	s     *findState
+	now   time.Time
+	every time.Duration
+	mu    sync.Mutex
+	up    map[string]bool
+	asked map[string]int
+}
+
+func newAddrTest(t *testing.T, own []netip.Addr, svcs ...mdns.Service) *addrTest {
+	a := &addrTest{t: t, m: New("unix:///nonexistent", nil), src: &fakeSource{svcs: svcs},
+		now: time.Unix(1_000_000, 0), up: map[string]bool{}, asked: map[string]int{}}
+	f := &Finder{
+		Mux:      a.m,
+		UDIDs:    func() []string { return []string{"IPHONE"} },
+		BrowseFn: func() (Source, error) { return a.src, nil },
+		PairFn:   func(string) (PairInfo, error) { return PairInfo{HostID: testHostID}, nil },
+		ProbeFn: func(_ context.Context, addr netip.Addr) bool {
+			a.mu.Lock()
+			defer a.mu.Unlock()
+			a.asked[addr.String()]++
+			return a.up[addr.String()]
+		},
+		NowFn:   func() time.Time { return a.now },
+		LocalFn: func() []netip.Addr { return own },
+	}
+	a.s = newFindState(f, f.logOrDiscard())
+	a.every = f.interval()
+	return a
+}
+
+func (a *addrTest) records(svcs ...mdns.Service) {
+	a.src.mu.Lock()
+	a.src.svcs = svcs
+	a.src.mu.Unlock()
+}
+
+// answer makes lockdown answer at addrs, and nowhere else.
+func (a *addrTest) answer(addrs ...string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.up = map[string]bool{}
+	for _, addr := range addrs {
+		a.up[addr] = true
+	}
+}
+
+// tick looks once and says where the phone is listed then, "" for nowhere.
+func (a *addrTest) tick() string {
+	a.s.tick(context.Background())
+	a.now = a.now.Add(a.every)
+	switch ps := a.m.Phones(); len(ps) {
+	case 0:
+		return ""
+	case 1:
+		return ps[0].Addr.String()
+	default:
+		return fmt.Sprint(ps)
+	}
+}
+
+// look looks for d, and fails unless the phone is listed at want ("" for
+// nowhere) after every look.
+func (a *addrTest) look(d time.Duration, want string) {
+	a.t.Helper()
+	for end := a.now.Add(d); a.now.Before(end); {
+		if got := a.tick(); got != want {
+			a.t.Fatalf("listed at %q, want %q", got, want)
+		}
+	}
+}
+
+// otherInstance is the phone's record under another instance name, as
+// someone else on the network could send it.
+func otherInstance(addr string) mdns.Service {
+	svc := iphoneService(addr)
+	svc.Instance = "02:00:00:00:00:01@fe80::1-supportsRP-26"
+	return svc
+}
+
+// TestFinderStaysWhileItAnswers: records that name another address for a
+// listed phone, someone replaying its name and TXT strings, say, do not
+// move it while lockdown answers where it is listed, nor while the phone
+// naps; lockdown is not even asked at the other address. A phone that was
+// dropped goes back to its last address while its records name that one
+// among others.
+func TestFinderStaysWhileItAnswers(t *testing.T) {
+	const phone, other = "192.168.89.20", "192.168.89.5"
+	a := newAddrTest(t, nil, iphoneService(phone))
+	a.answer(phone, other)
+	a.look(time.Minute, phone)
+	// Another record next to the phone's, and then alone (sent with the
+	// cache-flush bit, it drops the phone's address from the cache).
+	a.records(iphoneService(phone), otherInstance(other))
+	a.look(time.Minute, phone)
+	a.records(iphoneService(other))
+	a.look(5*time.Minute, phone)
+	// It naps: lockdown does not answer for 30 s.
+	a.answer(other)
+	a.look(30*time.Second, phone)
+	a.answer(phone, other)
+	a.look(time.Minute, phone)
+	// It is away long enough to be dropped, while its records name both
+	// addresses, and comes back.
+	a.records(iphoneService(phone), otherInstance(other))
+	a.answer(other)
+	for range int((probeSteady + dropAfter + 2*a.every) / a.every) {
+		a.tick()
+	}
+	if got := a.tick(); got != "" {
+		t.Fatalf("still listed at %s while away", got)
+	}
+	a.answer(phone, other)
+	for range int(probeSteady/a.every) + 1 {
+		a.tick()
+	}
+	if got := a.tick(); got != phone {
+		t.Errorf("back at %q, want %s", got, phone)
+	}
+	if n := a.asked[other]; n != 0 {
+		t.Errorf("lockdown asked %d times at %s", n, other)
+	}
+}
+
+// TestFinderFollowsAMovedPhone: a phone that got another address (a new
+// DHCP lease) stays listed at the one it had until lockdown there has not
+// answered for dropAfter, and then goes to the new one at once, without a
+// look where it is not listed. To and from the cable's link it goes at
+// once (TestFinderLastAddressOnlyWhileItAnswers).
+func TestFinderFollowsAMovedPhone(t *testing.T) {
+	const old, moved = "192.168.89.20", "192.168.89.31"
+	a := newAddrTest(t, nil, iphoneService(old))
+	a.answer(old)
+	a.look(time.Minute, old)
+	a.records(iphoneService(moved))
+	a.answer(moved)
+	start := a.now
+	movedAt := time.Duration(-1)
+	for range int((probeSteady + dropAfter + 4*a.every) / a.every) {
+		when := a.now.Sub(start)
+		got := a.tick()
+		switch {
+		case got == old && movedAt < 0:
+		case got == moved && movedAt < 0:
+			movedAt = when
+		case got == moved:
+		default:
+			t.Fatalf("%v after the move: listed at %q", when, got)
+		}
+	}
+	// Lockdown at the old address is next asked within probeSteady.
+	if movedAt < dropAfter || movedAt > probeSteady+dropAfter+a.every {
+		t.Errorf("moved %v after it did, want after %v and within %v", movedAt, dropAfter, probeSteady+dropAfter)
+	}
+}
+
+// TestFinderSkipsAddressesNoPhoneHas: an address no phone on the network
+// can have, this computer's own among them, is neither listed nor asked
+// about, alone in a record or next to the phone's.
+func TestFinderSkipsAddressesNoPhoneHas(t *testing.T) {
+	const phone = "192.168.89.20"
+	own := []netip.Addr{netip.MustParseAddr("192.168.89.2"), netip.MustParseAddr("fe80::2")}
+	for _, bad := range []string{"127.0.0.1", "127.3.2.1", "0.0.0.0", "0.1.2.3", "224.0.0.251", "239.255.255.250", "255.255.255.255", "192.168.89.2"} {
+		t.Run(bad, func(t *testing.T) {
+			a := newAddrTest(t, own, iphoneService(bad))
+			a.answer(bad, phone)
+			a.look(10*time.Second, "")
+			both := iphoneService(phone)
+			both.Addrs = append(both.Addrs, netip.MustParseAddr(bad))
+			a.records(both)
+			a.look(10*time.Second, phone)
+			if n := a.asked[bad]; n != 0 {
+				t.Errorf("lockdown asked %d times at %s", n, bad)
+			}
+		})
+	}
+}
+
 func TestFinderRunStops(t *testing.T) {
 	m := New("unix:///nonexistent", nil)
 	src := &fakeSource{svcs: []mdns.Service{iphoneService("192.168.33.187")}}
