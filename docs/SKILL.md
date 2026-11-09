@@ -10,7 +10,7 @@ Pinky gives you the person's real phone. They watch every step in the Pinky app,
 ## The loop
 
 1. `phone_connect { task: "Reorder last week's lunch" }`. The task name is what the person sees, so make it plain. If several phones are connected, pass `device` (an id or name from the error message). Optionally pass `apps: ["Dinely"]` when the task needs only those apps; Pinky then holds you to that list, which protects the person if a page tries to send you elsewhere. Pass `read_only: true` when the task only looks (reading balances, checking an order): Pinky then refuses anything that would ask the person, so a misread screen cannot turn into a payment.
-2. Act: `phone_launch`, `phone_tap`, `phone_type`, `phone_swipe`, `phone_key`. Every action waits for the screen to settle and returns what changed, so you rarely need `phone_observe`.
+2. Act: `phone_launch`, `phone_tap`, `phone_type`, `phone_swipe`, `phone_key`. Every action waits for the screen to settle and returns what changed, so you rarely need `phone_observe`. When the task is to read several screens of one list, use `phone_read_list` instead of repeating `phone_swipe` and `phone_observe`.
 3. `phone_release { outcome: "done", summary: "Ordered one chicken rice bowl for $12.80." }` when you finish, also when you give up (`failed`).
 
 ## Reading the screen
@@ -95,6 +95,7 @@ On Android phones, `phone_files` moves files between the phone's Pinky folder (`
 ## Tips
 
 - `phone_swipe { direction: "up" }` moves the finger up, which scrolls the content down to show what is below. Pass `ref` to scroll inside a list.
+- `phone_read_list { ref: 12, max_screens: 30, intent: "Read this list for a summary" }` reads a long vertical list in one call. It returns compact page-labelled text with overlap removed. On a web page that has no list element, pass `scroll_area: {x, y, width, height}` instead of `ref`. `direction: "up"` reads later content and `down` reads earlier content in document order. If the result says `partial: true`, call it again with its `continuation` when you need more; each continuation starts a fresh `max_screens` budget. Do not describe a partial result as the complete list.
 - `phone_type` replaces the field's text; `append: true` adds to it. Pass `ref` to pick the field, or it types into the focused one. Any language works.
 - `phone_wait_for { text: "Order placed" }` waits for loading better than repeated observing; `phone_observe { wait_ms: 3000 }` returns as soon as the screen changes.
 - `phone_batch` runs several steps in one call and stops at the first that does not settle. If a step returns `approval_pending`, repeat that step alone with its `approval_id`, then carry on.

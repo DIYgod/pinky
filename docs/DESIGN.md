@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 15 tools. Ordinary actions wait for the screen to settle and return the new screen, or only what changed, so agents rarely call `phone_observe`. A list read keeps its per-screen changes inside the gateway and sends back one compact transcript.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -178,12 +178,13 @@ Agents see one MCP server, `pinky`, with 14 tools. Every action waits for the sc
 | `phone_launch` | `app`: name, bundle id or package | Result and new screen |
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
+| `phone_read_list` | `ref?`, `scroll_area?`, `direction?`, `max_screens?` (up to 30), `max_ms?`, `ocr?`, `scroll_percent?`, `continuation?` | One compact, ordered transcript from a vertical list, with overlap removed; a partial result says why it stopped and carries a continuation |
 | `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 
-Every action tool also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history) and `approval_id?` (to keep waiting on a pending approval).
+Every input tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_key`, `phone_launch`) also takes `device?` (required when the session holds more than one device), `intent?` (one sentence on why, shown on the approval panel and in history) and `approval_id?` (to keep waiting on a pending approval). `phone_read_list` takes `device?` and `intent?`; Stop or takeover ends it with any pages already collected.
 
 ### Sessions and leases
 

@@ -94,6 +94,7 @@ type Result struct {
 	Apps       []driver.App
 	Screenshot image.Image
 	Steps      []*Result // phone_batch, one per step that ran
+	Scan       *ScanView // phone_read_list
 	Task       string    // phone_connect: the task id
 	Folder     string    // phone_files: the folder on the computer
 	Files      []FileView
@@ -190,12 +191,52 @@ type BatchRequest struct {
 	Steps []Action
 }
 
+// ReadListRequest is phone_read_list.
+type ReadListRequest struct {
+	Call
+	Ref           int
+	Area          *screen.Rect
+	Direction     string
+	MaxScreens    int
+	MaxMS         int
+	OCR           string // auto, all or off
+	ScrollPercent int
+	Continuation  string
+}
+
+// ScanPage is the newly exposed content from one physical screen.
+type ScanPage struct {
+	Number int
+	Lines  []string
+}
+
+// ScanView is a compact, ordered account of a list scan. The model gets
+// text rather than one screenshot or complete tree per screen.
+type ScanView struct {
+	Pages        int
+	StartScreen  int
+	Swipes       int
+	Lines        int
+	Overlap      int
+	Stop         string
+	Complete     bool
+	Truncated    bool
+	OutputBytes  int
+	Sections     []ScanPage
+	Continuation string
+	// HistoryRedacted keeps text from a blocked app that the person allowed
+	// only for this task out of stored history.
+	HistoryRedacted bool
+}
+
 // Limits from DESIGN.md's tool table.
 const (
 	MaxTextLen     = 16384
 	MaxObserveWait = 30 * time.Second
 	MaxWaitFor     = 45 * time.Second
 	MaxBatchSteps  = 50
+	MaxReadScreens = 30
+	MaxReadTime    = 45 * time.Second
 )
 
 // waitForOCREvery is how often phone_wait_for also reads the screen with
@@ -352,7 +393,9 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 	}
 	if ended && by == OutcomeStopped {
 		ran := r.Status == StatusSettled || r.Status == StatusUncertain
+		scan := r.Scan
 		r = statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
+		r.Scan = scan
 		if ran {
 			r.Message += " The last action may have happened before the stop."
 		}
