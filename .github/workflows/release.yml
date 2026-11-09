@@ -64,16 +64,40 @@ jobs:
         if: github.event_name == 'push' || inputs.publish
         run: go run ./scripts/release notes "${TAG#v}" > /dev/null
       - name: Download Gradle
-        # services.gradle.org sometimes stalls past the wrapper's network
-        # timeout (Release v2026.1109.11 and v2026.1109.13): fetch the
-        # wrapper's Gradle here, trying again, before the build needs it.
+        # services.gradle.org sends the wrapper on to GitHub's release
+        # downloads, which stalled or answered 504 in Release v2026.1109.11
+        # and v2026.1109.13. When the wrapper cannot fetch its Gradle, fetch
+        # the same file through GitHub's API into the folder the wrapper
+        # keeps it in (named by the base-36 MD5 of distributionUrl); the
+        # wrapper still checks it against distributionSha256Sum.
         working-directory: android/companion
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          for i in 1 2 3; do
-            ./gradlew --version > /dev/null && exit 0
-            sleep $((i * 15))
+          ./gradlew --version > /dev/null && exit 0
+          url=$(sed -n 's/^distributionUrl=//p' gradle/wrapper/gradle-wrapper.properties | sed 's/\\:/:/g')
+          zip=${url##*/}
+          name=${zip%.zip}
+          version=${name#gradle-}
+          version=${version%-bin}
+          hash=$(python3 - "$url" <<'EOF'
+          import hashlib, sys
+          n = int.from_bytes(hashlib.md5(sys.argv[1].encode()).digest(), "big")
+          s = ""
+          while n:
+              n, r = divmod(n, 36)
+              s = "0123456789abcdefghijklmnopqrstuvwxyz"[r] + s
+          print(s)
+          EOF
+          )
+          dir=$HOME/.gradle/wrapper/dists/$name/$hash
+          mkdir -p "$dir"
+          for try in 1 2 3; do
+            gh release download "v$version" --repo gradle/gradle-distributions --pattern "$zip" --dir "$dir" --clobber && break
+            [ "$try" = 3 ] && exit 1
+            sleep 30
           done
-          exit 1
+          ./gradlew --version > /dev/null
       - name: Build
         # Signed with Pinky's release key, which only these secrets hold:
         # Android installs an update of the app only when it is signed with
