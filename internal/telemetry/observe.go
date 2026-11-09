@@ -74,7 +74,7 @@ func (o *observer) read(api gateway.API) {
 	for _, d := range devs {
 		lines[d.Info.ID] = d.StatusLine
 		info := d.Info
-		platform := platformName(info.Platform)
+		platform := platformName(info)
 		if d.Status == gateway.DeviceOffline || info.State == driver.StateOffline {
 			continue
 		}
@@ -169,12 +169,18 @@ func needKind(n gateway.NeedView) string {
 	return "other"
 }
 
-func platformName(p driver.Platform) string {
-	switch p {
-	case driver.Android, driver.IOS:
-		return string(p)
+// platformName is a phone's platform in counter names. Simulators and
+// emulators count apart from phones: "ios_simulator", "android_emulator".
+func platformName(info driver.Info) string {
+	switch {
+	case info.Platform != driver.Android && info.Platform != driver.IOS:
+		return "other"
+	case info.Virtual && info.Platform == driver.IOS:
+		return "ios_simulator"
+	case info.Virtual:
+		return "android_emulator"
 	}
-	return "other"
+	return string(info.Platform)
 }
 
 func connectionName(c string) string {

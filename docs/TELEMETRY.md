@@ -49,7 +49,7 @@ About once a day (at most once every 24 hours, and only while Pinky runs), Pinky
 
 ### The counters
 
-Each counter counts within the report's period. `<platform>` is `android`, `ios` or `other`; the words in a name come from the lists below, never from a phone or the person.
+Each counter counts within the report's period. `<platform>` is `android`, `ios` or `other`, and `android_emulator` or `ios_simulator` for virtual phones, which count apart from phones; the words in a name come from the lists below, never from a phone or the person.
 
 | Counter | What it counts |
 | --- | --- |
