@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 14 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 15 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -154,7 +154,7 @@ note: "<the person's note>"
 
 ## Common arguments
 
-Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_key`, `phone_launch`) takes:
+Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_pinch`, `phone_key`, `phone_launch`) takes:
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
@@ -244,6 +244,18 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 | `from`, `to` | `{x, y}` | Exact points instead of a direction |
 | `duration_ms` | 80–1200 | Default 300 |
 
+### phone_pinch
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `ref` | integer | Pinch around the middle of this element (a map, photo or page), with both fingers inside it |
+| `x`, `y` | integers | A point instead of a ref (both or neither); default the middle of the screen |
+| `scale` | 0.25–4 | The fingers end this many times as far apart as they start: above 1 zooms in (2 shows the content about twice as large), below 1 zooms out (0.5 about half as large) |
+| `rotation` | -180–180 | Also turn both fingers around the centre by this many degrees, clockwise when positive. Without `scale`, the pinch only turns |
+| `duration_ms` | 200–2000 | Default 500 |
+
+The fingers stay inside the element and clear of the screen's edges, so the edges' system gestures never start; a pinch with too little room for two fingers (a small element, a point at the edge) returns `invalid_argument`. The app decides how far its content follows the fingers: observe, and pinch again if it is not enough. The rules judge a pinch like a swipe, with the elements under both fingers. Android phones pinch on their own screen and on the background display; iPhones pinch through the WebDriverAgent helper. An iPhone through Device Hub (iOS 27 without the helper) returns `unsupported` and does nothing.
+
 ### phone_key
 
 | Argument | Type | Meaning |
@@ -272,7 +284,7 @@ Lists installed apps inside the agent's scope, user apps first, one per line: `N
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent`, `approval_id` and `settle_ms` |
+| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `pinch`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent`, `approval_id` and `settle_ms` |
 | `intent` | string | For steps without their own |
 
 Steps run in order, each settling first, and the batch stops at the first step that is not `settled` (`approval_pending`, `uncertain`, an error); a step whose screen kept moving (`settle: timeout`) does not stop it. The result's first line is the last step's status; then `step N:` blocks follow with each step's status and changes. To finish a batch that stopped at `approval_pending`, repeat that step alone as its own tool call with the `approval_id`.
@@ -366,7 +378,8 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 
 ## Limits
 
-- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper. With the helper, everything works; reading the screen takes 0.5 to 3 s, and about 7 s on a home screen.
+- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper; `phone_pinch` returns `unsupported` too. With the helper, everything works; reading the screen takes 0.5 to 3 s, and about 7 s on a home screen.
+- iPhones through Device Hub (iOS 27 and later without the helper) cannot pinch: `phone_pinch` returns `unsupported` before it asks the person or touches the phone. With the WebDriverAgent helper chosen for the phone in Settings › Phones, they pinch.
 
 | Limit | Value |
 | --- | --- |

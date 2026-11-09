@@ -496,3 +496,21 @@ The report: a Redmi K70 (HyperOS, Android 16), Pinky 2026.1109.12 on Windows ove
 Before the change, the same app reproduced the report: with Gboard's Pinyin, `no_set_text` and `chat` stayed empty after `world`, `chat`, 你好 and 微信, and `Type` returned no error.
 
 **Gboard's keys on a background display** answer taps on the Android 16 emulator: the keyboard's window is on the virtual display (the IME policy is "local") with a touchable region over the keys, and tapping n, i and the space bar typed 你 into the field. `companionctl tree -ime -display N` lists the keys with their bounds. Why they did nothing on the reporter's HyperOS phone was not found; a HyperOS phone would show it with `dumpsys window windows` (the InputMethod window's `mDisplayId` and touchable region), `dumpsys input` (the keyboard window's input channel and flags) and `logcat -s InputDispatcher` while a key is tapped. Agents no longer need the keyboard for text: the input connection writes without it.
+
+## Pinching (`driver.Pincher`, `driver.MultiToucher`, 2026-11-09)
+
+`pinch.go`. A pinch goes through the scrcpy session like a swipe, with two pointers: `scrcpy.PointerGenericFinger` (-2) and `scrcpy.PointerVirtualFinger` (-3). The server turns the second pointer's down and up into `ACTION_POINTER_DOWN` and `ACTION_POINTER_UP` and injects every event on the session's display, so the same code pinches on the phone's own screen and on a background display. The agent's `Pinch` moves both fingers every 8 ms along `driver.Pinch.At` (eased in and out, so the content keeps the scale it reached instead of flinging on); the mirror's `Touch2` sends what the person's fingers do, mapped from the picture to the screen like `Touch`. `androidctl` has a `pinch:CX,CY,FROM,TO[,MS[,ANGLE[,ROTATE]]]` step.
+
+**Checked on emulator-5900 (Android 16, 1080x2400, 420 dpi)** with a small test app built locally (a `ScaleGestureDetector` and the fingers' angle, its readings in a label), not committed:
+
+| What | Result |
+| --- | --- |
+| `Pinch` on the main display, 400→1200 px, 1200→400 px, 500→1500 px, 1500→500 px | ×2.50, ×0.41, ×2.64, ×0.35 |
+| `Pinch` turning 90° and -60° | 90° and -60° |
+| `Pinch` on a background display (virtual display, `bg -app`) | ×2.72; zooming out with -60° gave -60° |
+| `Touch2` as the mirror sends it (30 moves 16 ms apart), 500→1500 px and back | ×2.65, then ×0.34 |
+| `phone_pinch` through the gateway (a temporary device test), main display: `ref` with scale 2, x,y with scale 0.5 and rotation 45 | ×1.91, ×0.51 and 45°; history "Zoomed in on “Zoom area”", "Zoomed out on “Zoom area”" |
+| The same on a background display ("in the background") | ×1.9, ×0.52 and 45° |
+| `phone_pinch` at 20,20 | `invalid_argument` (no room for two fingers), nothing sent |
+
+**Android's `ScaleGestureDetector` stops below a minimum span** (`config_minScalingSpan`, 27 mm: about 446 px at 420 dpi) and starts only after a span slop (about 42 px), so a pinch whose fingers come closer than that zooms less than asked: scale 2 from the gateway (fingers 990 to 1976 px apart, wide enough) gave ×1.9, and narrow elements or scale 4 give less. Apps decide how far to follow anyway; `phone_pinch`'s description and SKILL.md tell agents to observe and pinch again.

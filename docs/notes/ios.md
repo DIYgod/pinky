@@ -755,3 +755,22 @@ Reported on an iPhone Duo (iPhone19,4, the foldable) with iOS 27.3, from an Appl
 **Models.** From Xcode 27.2's `device_traits.db`: iPhone18,5 (iPhone 17e), iPhone19,3 and 19,7 (iPhone 18 Pro Max), iPhone19,4 (iPhone Duo), and the iPads that were missing (iPad A16, iPad mini A17 Pro and A20 Pro, iPad Air M2 to M4, iPad Pro M4 and M5).
 
 Tests: `TestParseDisplayInfoFoldable`, `TestParseDisplayInfoBacklightPerDisplay`, `TestParseDisplaysActiveWins`, `TestParseDisplayInfoKeepsWhileDark`, `TestParseDisplayInfoTopLevelBacklight`, `TestChooseDisplayExternalLast`, `TestStreamDisplayNotOwn`, `TestStreamDisplays`, `TestParseDisplayInfoSingleUnchanged` (made-up replies with CoreDevice's keys); `TestNoteDisplaysFollowsFold`, `TestNoteDisplaysFallback`, `TestNoteDisplaysSingle`, `TestFoldWithoutIDs` (both displays listed without ids: display 1 ends its stream unfolded, 2 shows the inner one, the next unfold goes to 2 at once), `TestFoldOneListed` (one display listed, always id 1), `TestStreamShowsByPicture` (display 1 streams the outer display though the reply calls the inner one 1), `TestPictureOf`, `TestDisplayUniqueID`, `TestTwoScreens`; `TestStreamDisplayFallsBack`, `TestStreamDisplayNoVideoAnywhere`, `TestStreamDisplaySingle` (the message names display 1), `TestStreamDisplayStartFails`, `TestStreamDisplayLinkGone`, `TestStreamDisplayEnded` (fake streams); `TestNoVideo*`, `TestWireSummary`, `TestAnswerSummary` (RTP and RTCP fed by hand); `TestProviderOpenChecks`; the gateway's `TestCheckupOpenFailed`; the client's `TestCheckupOfIPhoneNoLivePicture`. Not tried on a phone: none of the owner's phones has two displays, and the single-display path is unchanged but for the display info's `type`.
+
+## Pinching through WebDriverAgent (2026-11-09)
+
+`pinch.go`. `WDADevice.Pinch` sends W3C actions with two touch pointers (`POST /actions`), which XCTest performs as one multi-touch event: both pointers move to their start, go down, move together every 40 ms along `driver.Pinch.At` (at most 60 moves; a turning pinch needs a point every few degrees, as W3C moves are straight lines), and lift. The mirror's `Touch2` records both fingers while they are down (`pinchRecorder`, like `touchRecorder` for one finger) and plays the pinch back when they lift, with its timing, as `Touch` does for drags.
+
+`*Device` (Device Hub on iOS 27) and `AXDevice` (no helper, below iOS 27) do not pinch: they implement neither `driver.Pincher` nor `driver.MultiToucher`, so the gateway answers `unsupported` before it asks the person, and the mirror takes no pinch on them. Device Hub's HID reports have five contact slots, but Pinky drives one (`hid.go`); a second contact has not been tried on a phone.
+
+**Checked on the iOS 26.5 Simulator** (iPhone 17 Pro, a Simulator of its own, WDA built from Appium's copy with `IPHONEOS_DEPLOYMENT_TARGET=17.0` and run on ports 18900/19900; the Simulator was deleted afterwards), with small test apps built locally with `swiftc`, not committed:
+
+| App | What | Result |
+| --- | --- | --- |
+| UIKit: `UIPinchGestureRecognizer` and `UIRotationGestureRecognizer` together | `Pinch` 300→900 px | ×2.77 in 1.5 s |
+| | `Pinch` 900→300 px turning 45° | ×0.34 and 39° |
+| | `Pinch` turning -90° only | -95° |
+| | `Touch2` as the mirror sends it, 300→900 px in 21 touches 30 ms apart, played back on lift | ×2.77 |
+| SwiftUI: `MagnifyGesture` with `@GestureState` | `Pinch` 300→900, 900→300; `Touch2` 300→900 | ×2.99, ×0.33, ×2.99; `onEnded` every time |
+| SwiftUI: `SimultaneousGesture(MagnifyGesture(), RotateGesture())` | the same | ×2.99 while the fingers moved, then `onEnded` never came and later pinches changed nothing |
+
+The last row looks like how that test app combined the two gestures rather than the touches (the same touches work in the other two apps); worth a look on a real iPhone with an app that zooms and turns.
