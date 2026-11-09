@@ -642,6 +642,59 @@ type CompanionInstaller interface {
 	InstallCompanion(ctx context.Context) error
 }
 
+// AppManager installs, updates, uninstalls and stops apps for agents
+// (phone_app, docs/notes/apps.md). The gateway asks the person first and
+// refuses Pinky's own apps and system apps itself; a driver only does what
+// it is told.
+type AppManager interface {
+	// InspectPackage reads the app the files at paths hold, as the phone
+	// would install it: one .apk, the split APKs of one app, one .ipa, or
+	// one .app folder. An error wrapping ErrPackage says in plain words why
+	// the phone cannot take it (a Simulator build, a profile that does not
+	// list the phone).
+	InspectPackage(ctx context.Context, paths []string) (Package, error)
+	// InstallPackage installs or updates the app the files hold. An error
+	// wrapping ErrPackage says in plain words why the phone refused it.
+	InstallPackage(ctx context.Context, paths []string) error
+	// UninstallApp removes an installed app and its data. id may name an
+	// app clone (CloneID), which alone goes.
+	UninstallApp(ctx context.Context, id string) error
+	// StopApp force-quits an app, as swiping it away does.
+	StopApp(ctx context.Context, id string) error
+}
+
+// Package is an app in files on the computer, as AppManager reads it.
+type Package struct {
+	ID      string // package name or bundle id
+	Name    string // the name under its icon; ID when it has none
+	Version string // "1.3 (14)": the version people see and the build number
+	// Signer names who signed it, for the person to recognise: the
+	// certificate's common name and the start of its SHA-256 on Android,
+	// the team on iPhone.
+	Signer string
+	// SignerKey identifies the signer exactly: the certificate's SHA-256,
+	// or the team id.
+	SignerKey string
+	// Installed is the version of the app with this id on the phone now;
+	// "" when it is not installed.
+	Installed string
+}
+
+// ErrPackage marks an app the phone cannot take; the error's text says why
+// in plain words.
+var ErrPackage = errors.New("the phone cannot install this app")
+
+// PackageError returns an error wrapping ErrPackage whose text is the
+// plain-words reason alone.
+func PackageError(format string, args ...any) error {
+	return &packageError{fmt.Sprintf(format, args...)}
+}
+
+type packageError struct{ msg string }
+
+func (e *packageError) Error() string        { return e.msg }
+func (e *packageError) Is(target error) bool { return target == ErrPackage }
+
 // WorkWatcher is told whether an agent works on the phone: from the start
 // of a task to its end, except while the person is in control. A driver
 // keeps on, only while one does, what agents need and the phone's apps can

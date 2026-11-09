@@ -138,7 +138,7 @@ func TestParseProfile(t *testing.T) {
 			t.Fatalf("%s: %v", name, err)
 		}
 		if !pr.Expires.Equal(exp) || pr.AppID != "A1B2C3D4E5."+testRunner || len(pr.Devices) != 1 || pr.Devices[0] != udid ||
-			pr.UUID == "" || !strings.Contains(pr.Name, testRunner) {
+			pr.UUID == "" || !strings.Contains(pr.Name, testRunner) || pr.TeamName != "Someone (Personal Team)" || pr.TeamID != "A1B2C3D4E5" {
 			t.Errorf("%s: %+v", name, pr)
 		}
 	}

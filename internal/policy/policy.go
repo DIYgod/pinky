@@ -92,7 +92,8 @@ type Input struct {
 	Op     Op
 	Device string // device id, for per-device read-only mode
 	// App is the foreground app. For OpLaunch, Launch is the app being
-	// opened and App is ignored.
+	// opened and App is ignored; for OpInstall, OpUninstall and OpStop
+	// (appchange.go), Launch is the app acted on.
 	App    screen.App
 	Launch screen.App
 	// LaunchURL is set when the launch target is a link rather than an

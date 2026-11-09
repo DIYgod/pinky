@@ -37,6 +37,11 @@ var ruleNames = map[string]func() string{
 	"Files":              locales.RuleFiles,
 	"Recordings":         locales.RuleRecordings,
 	"Agent request":      locales.RuleAgentRequest,
+
+	"Installing from the computer": locales.RuleInstallFromComputer,
+	"Uninstalling apps":            locales.RuleUninstallApps,
+	"Pinky's own apps":             locales.RulePinkyApps,
+	"System apps":                  locales.RuleSystemApps,
 }
 
 // ruleName names a rule as the person reads it: "Payments". A rule of the

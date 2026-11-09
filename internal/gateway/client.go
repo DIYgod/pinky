@@ -341,16 +341,20 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 // canAllowTask reports whether an approval's Allow for this task lasts:
 // for an action the policy asked about, the rules that asked no longer ask
 // in its app for the rest of the task (awaitApproval), and once copying
-// files is allowed, later copies do not ask (askToPush). An agent's own
-// question gets a yes for that question only: each one is the person's
-// consent to what it says, and answering the next ones by itself would let
-// the agent claim consent the person never gave.
+// files is allowed, later copies do not ask (askToPush), nor do installs
+// of the same app by the same signer, or uninstalls or stops of the same
+// app (askApp). An agent's own question gets a yes for that question only:
+// each one is the person's consent to what it says, and answering the next
+// ones by itself would let the agent claim consent the person never gave.
 func canAllowTask(info approval.Info) bool {
 	if info.Kind != approval.KindAction {
 		return false
 	}
 	if snap, ok := info.Data.(*snapshot); ok {
 		return len(snap.asks) > 0
+	}
+	if _, ok := info.Data.(*appAsk); ok {
+		return true
 	}
 	return info.Rule == filesRule
 }

@@ -27,6 +27,7 @@ android/inputtest/.kotlin/
 android/inputtest/build/
 android/inputtest/local.properties
 *.apk
+!internal/apppkg/testdata/*.apk
 *.aab
 
 # Local tools and worktrees

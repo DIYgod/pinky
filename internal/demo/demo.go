@@ -130,6 +130,10 @@ type Device struct {
 	files map[string]file
 	// overlay is shown over every unlocked screen (SetOverlay).
 	overlay []screen.Element
+	// added holds the apps installed from files (apps.go) and removed the
+	// built-in apps uninstalled, by id.
+	added   map[string]added
+	removed map[string]bool
 }
 
 // NewDevice returns a demo phone. Android phones use the Pixel launcher,
@@ -453,7 +457,7 @@ func (d *Device) Launch(ctx context.Context, app string) error {
 	var scr string
 	for _, a := range d.apps() {
 		if a.ID == app || strings.EqualFold(a.Name, app) {
-			scr = appScreens[a.ID]
+			scr = screenOf(a.ID)
 		}
 	}
 	if scr == "" {
@@ -534,17 +538,33 @@ func (d *Device) Apps(context.Context) ([]driver.App, error) {
 }
 
 func (d *Device) apps() []driver.App {
-	if d.info.Platform == driver.IOS {
-		return []driver.App{
-			{ID: Dinely, Name: "Dinely"}, {ID: Chatter, Name: "Chatter"},
-			{ID: "com.apple.Preferences", Name: "Settings", System: true}, {ID: "com.apple.Passbook", Name: "Wallet", System: true},
-		}
-	}
-	return []driver.App{
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return d.appsLocked()
+}
+
+func (d *Device) appsLocked() []driver.App {
+	builtIn := []driver.App{
 		{ID: Dinely, Name: "Dinely"}, {ID: Chatter, Name: "Chatter"}, {ID: Calc, Name: "Calculator", System: true},
 		{ID: "com.android.settings", Name: "Settings", System: true}, {ID: Messages, Name: "Messages", System: true},
 		{ID: "com.google.android.apps.walletnfcrel", Name: "Google Wallet"},
 	}
+	if d.info.Platform == driver.IOS {
+		builtIn = []driver.App{
+			{ID: Dinely, Name: "Dinely"}, {ID: Chatter, Name: "Chatter"},
+			{ID: "com.apple.Preferences", Name: "Settings", System: true}, {ID: "com.apple.Passbook", Name: "Wallet", System: true},
+		}
+	}
+	var out []driver.App
+	for _, a := range builtIn {
+		if !d.removed[a.ID] {
+			out = append(out, a)
+		}
+	}
+	for _, a := range sortedAdded(d.added) {
+		out = append(out, driver.App{ID: a.id, Name: a.name})
+	}
+	return out
 }
 
 // Stream implements driver.Device. Demo phones have no video.

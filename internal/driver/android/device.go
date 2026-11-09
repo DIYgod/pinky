@@ -69,6 +69,8 @@ type Device struct {
 	cloneUsers  string           // the clone spaces last logged
 	// listApps, set by tests, stands in for scrcpy's app list.
 	listApps func(ctx context.Context) ([]scrcpy.App, error)
+	// pkgTest, set by tests, stands in for adb in AppManager (appmanage.go).
+	pkgTest pkgShell
 
 	comp    companionLink
 	person  personWatch

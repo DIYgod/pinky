@@ -147,11 +147,20 @@ type waitForIn struct {
 
 type filesIn struct {
 	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
-	Action     string   `json:"action,omitempty" jsonschema:"list (default): the files on the phone and on the computer; pull: copy from the phone to the computer; push: copy from the computer to the phone, which asks the person first; upload: send Pinky a file for the computer's folder, when you cannot write there yourself (from another computer), then push it."`
+	Action     string   `json:"action,omitempty" jsonschema:"list (default): the files on the phone and on the computer; pull: copy from the phone to the computer; push: copy from the computer to the phone, which asks the person first; upload: send Pinky a file for the computer's folder, when you cannot write there yourself (from another computer), then push it or install it with phone_app."`
 	Paths      []string `json:"paths,omitempty" jsonschema:"Files or folders, relative to the Pinky folder. Default: everything (for push, the files that are new or changed). For upload: the one file's name, such as photo.jpg or Pictures/photo.jpg."`
 	Content    *string  `json:"content,omitempty" jsonschema:"For upload: the file's bytes in base64, up to 10 MB. Over HTTP, leave it out to get a one-time link to send the file to with curl instead, up to 200 MB, which keeps it out of your context: better for anything but small files."`
 	Replace    bool     `json:"replace,omitempty" jsonschema:"For upload: replace a different file of the same name in the computer's folder."`
 	Intent     string   `json:"intent,omitempty" jsonschema:"For push: one sentence on why, shown to the person on the approval panel."`
+	ApprovalID string   `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with this id to keep waiting."`
+}
+
+type appIn struct {
+	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Action     string   `json:"action" jsonschema:"install: install an app, or update it keeping its data, from files in the phone's folder on the computer; uninstall: remove an app and its data; stop: force-quit an app."`
+	Paths      []string `json:"paths,omitempty" jsonschema:"For install: the .apk, the split APKs of one app, the .ipa or the .app folder, relative to the phone's folder on the computer, such as [\"app-debug.apk\"]."`
+	App        string   `json:"app,omitempty" jsonschema:"For uninstall and stop: the app's name, package name or bundle id, as phone_apps lists it."`
+	Intent     string   `json:"intent,omitempty" jsonschema:"One sentence on why, shown to the person on the approval panel and in history."`
 	ApprovalID string   `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with this id to keep waiting."`
 }
 
@@ -401,7 +410,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			"(up to 45 s, then approval_pending with an approval_id to repeat the call with). " +
 			"upload sends Pinky a file for that folder when you cannot write there yourself, as from another computer: its name in paths and its bytes in content (base64), " +
 			"or over HTTP no content, for a one-time link to send the file to with curl; then push it. " +
-			"Read-only and watch-only agents may only list and pull. iPhones return unsupported.",
+			"Read-only and watch-only agents may only list and pull. An iPhone has no Pinky folder: list and upload work on its folder on the computer, for phone_app to install from.",
 		InputSchema: schema[filesIn](func(p map[string]*jsonschema.Schema) {
 			enum(p["action"], "list", "pull", "push", "upload")
 			nonNull(p, "content")
@@ -409,6 +418,20 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		Annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(false), OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in filesIn) (*sdk.CallToolResult, any, error) {
 			return s.files(ctx, req, remote, in), nil, nil
+		})
+
+	sdk.AddTool(srv, &sdk.Tool{Name: "phone_app", Title: "Install or remove an app",
+		Description: "Install, update, uninstall or stop (force-quit) an app, to try a build you made. install takes files in the phone's folder on the computer that phone_files names " +
+			"(from another computer, phone_files upload them first): an .apk or the split APKs of one app for Android; an .ipa or .app folder, development-signed for this iPhone, for an iPhone. " +
+			"Installing over an installed app updates it and keeps its data. install and uninstall always ask the person (up to 45 s, then approval_pending with an approval_id to repeat the call with); stop does not. " +
+			"Pinky's own apps, system apps, finance apps, password managers and blocked apps return blocked_by_policy.",
+		InputSchema: schema[appIn](func(p map[string]*jsonschema.Schema) { enum(p["action"], "install", "uninstall", "stop") }),
+		Annotations: &sdk.ToolAnnotations{DestructiveHint: boolp(true), OpenWorldHint: boolp(false)}},
+		func(ctx context.Context, req *sdk.CallToolRequest, in appIn) (*sdk.CallToolResult, any, error) {
+			return render(s.session(req, remote).App(ctx, gateway.AppRequest{
+				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Intent: strings.TrimSpace(in.Intent),
+					ApprovalID: strings.TrimSpace(in.ApprovalID), Progress: progress(ctx, req)},
+				Action: in.Action, Paths: in.Paths, App: in.App})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_request_approval", Title: "Ask the person",

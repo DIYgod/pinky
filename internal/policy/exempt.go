@@ -60,7 +60,8 @@ func (x Exemption) sameApp(y Exemption) bool {
 // built-in rules that deny.
 func exemptable(rule string) bool {
 	switch rule {
-	case "", RuleTaskApps, RuleEvery, RuleCredentials, RuleReadOnly, RuleAgentScope, RuleBlocked:
+	case "", RuleTaskApps, RuleEvery, RuleCredentials, RuleReadOnly, RuleAgentScope, RuleBlocked,
+		RuleInstall, RuleUninstall, RulePinkyApps, RuleSystemApps:
 		return false
 	}
 	return true

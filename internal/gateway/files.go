@@ -139,9 +139,11 @@ func (s *Session) Files(ctx context.Context, req FilesRequest) *Result {
 	if dev == nil {
 		return g.finish(l, errResult(ErrDeviceOffline, "%s is offline.", d.name()))
 	}
+	// A phone without a Pinky folder (an iPhone) still has its folder on
+	// the computer, which phone_app installs from: list and upload work.
 	fsys, ok := dev.(driver.Files)
-	if !ok {
-		return g.finish(l, errResult(ErrUnsupported, "%s has no Pinky folder that Pinky can reach; phone_files works on Android phones.", d.name()))
+	if !ok && action != "list" && action != "upload" {
+		return g.finish(l, errResult(ErrUnsupported, "%s has no Pinky folder that Pinky can reach, so nothing is copied to or from it; list and upload work on its folder on the computer.", d.name()))
 	}
 	dir := g.FilesDir(d.id)
 	if dir == "" {
@@ -156,7 +158,7 @@ func (s *Session) Files(ctx context.Context, req FilesRequest) *Result {
 	case "push":
 		res = g.pushFiles(ctx, l, req, fsys, dir, paths, args, start)
 	case "upload":
-		res = g.upload(ctx, l, req, dir, paths[0], args, start)
+		res = g.upload(ctx, l, req, dir, paths[0], args, fsys != nil, start)
 	default:
 		res = g.listOrPull(ctx, l, action, fsys, dir, paths, args, start)
 	}
@@ -184,6 +186,9 @@ func cleanRel(p string) (string, bool) {
 }
 
 func (g *Gateway) listOrPull(ctx context.Context, l *lease, action string, fsys driver.Files, dir string, paths []string, args string, start time.Time) *Result {
+	if fsys == nil {
+		return g.listLocalOnly(l, dir, args, start)
+	}
 	phone, err := fsys.ListFiles(ctx)
 	if err != nil {
 		res := g.filesError(l, err)
@@ -227,6 +232,23 @@ func (g *Gateway) listOrPull(ctx context.Context, l *lease, action string, fsys 
 		res.Message = fmt.Sprintf("Copied %s from the phone.", count(len(copied), "file"))
 	}
 	g.recordFiles(l, args, fmt.Sprintf("Copied %s from the phone%s", count(len(copied), "file"), names(copied)), res, start)
+	return res
+}
+
+// listLocalOnly lists the folder on the computer of a phone without a
+// Pinky folder.
+func (g *Gateway) listLocalOnly(l *lease, dir string, args string, start time.Time) *Result {
+	local, err := listLocal(dir)
+	if err != nil {
+		return errResult(ErrInternal, "Reading the local folder failed: %v", err)
+	}
+	files := sortedLocal(local)
+	for i := range files {
+		files[i].Where = FileComputer
+	}
+	res := &Result{Status: StatusSettled, Files: files, Folder: dir,
+		Message: fmt.Sprintf("%s on the computer. %s has no Pinky folder; install apps from this folder with phone_app.", count(len(files), "file"), l.dev.name())}
+	g.recordFiles(l, args, fmt.Sprintf("Listed the phone's folder on the computer (%s)", count(len(files), "file")), res, start)
 	return res
 }
 

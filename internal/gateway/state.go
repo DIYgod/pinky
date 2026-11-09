@@ -229,6 +229,9 @@ type lease struct {
 	// filesGranted is set when the person allowed copying files to the
 	// phone for the rest of the task.
 	filesGranted bool
+	// appGrants holds what the person allowed phone_app to do for the rest
+	// of the task (appGrantKey).
+	appGrants map[string]bool
 	// recorded is set once the task's recording started (video.go).
 	recorded bool
 

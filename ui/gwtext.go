@@ -47,14 +47,26 @@ var (
 	reCopyFrom   = re(`^[Cc]opy from the phone$`)
 	reCopyTo     = re(`^[Cc]opy to the phone$`)
 	reReceive    = re(`^[Rr]eceive “(.*)” from the agent$`)
+
+	// phone_app's, in steps: "install “Dinely” 1.3 (14)"; and with the
+	// phone, capitalized, in titles and waiting steps: "Install “Dinely”
+	// 1.3 (14) on Pixel 9".
+	reInstallOn   = re(`^Install “(.*?)”(?: (.+?))? on (.+)$`)
+	reInstall     = re(`^install “(.*?)”(?: (.+))?$`)
+	reUpdateOn    = re(`^Update “(.*?)”(?: to (.+?))? on (.+)$`)
+	reUpdate      = re(`^update “(.*?)”(?: to (.+))?$`)
+	reUninstall   = re(`^[Uu]ninstall “(.*?)”(?: from (.+))?$`)
+	reStopApp     = re(`^[Ss]top “(.*?)”(?: on (.+))?$`)
+	reInstallFrom = re(`^install from (“.*)$`)
 )
 
 // action is a parsed action, which says itself as done or as asked.
 type action struct {
-	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, copy, copymany, list, copyfrom, copyto, receive
+	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, copy, copymany, list, copyfrom, copyto, receive, install, update, uninstall, stop, installfrom
 	label, text, x, y    string
 	x2, y2, dir, key     string
 	app, files, phone    string
+	version              string
 	into, submit, placed bool
 }
 
@@ -98,9 +110,13 @@ func parseAction(s string) (action, bool) {
 	return action{}, false
 }
 
-// parseAsked reads what the files steps word in the imperative: "copy to
-// the phone", "Copy “a.txt” to Pixel 9", "receive “a.png” from the agent".
+// parseAsked reads what the files and app steps word in the imperative:
+// "copy to the phone", "Copy “a.txt” to Pixel 9", "receive “a.png” from
+// the agent", "Install “Dinely” 1.3 (14) on Pixel 9".
 func parseAsked(s string) (action, bool) {
+	if a, ok := parseAppAsked(s); ok {
+		return a, true
+	}
 	if m := reCopyOne.FindStringSubmatch(s); m != nil {
 		return action{verb: "copy", label: m[1], phone: m[2]}, true
 	}
@@ -117,6 +133,31 @@ func parseAsked(s string) (action, bool) {
 		return action{verb: "copyfrom"}, true
 	case reCopyTo.MatchString(s):
 		return action{verb: "copyto"}, true
+	}
+	return action{}, false
+}
+
+func parseAppAsked(s string) (action, bool) {
+	if m := reInstallOn.FindStringSubmatch(s); m != nil {
+		return action{verb: "install", app: m[1], version: m[2], phone: m[3]}, true
+	}
+	if m := reInstall.FindStringSubmatch(s); m != nil {
+		return action{verb: "install", app: m[1], version: m[2]}, true
+	}
+	if m := reUpdateOn.FindStringSubmatch(s); m != nil {
+		return action{verb: "update", app: m[1], version: m[2], phone: m[3]}, true
+	}
+	if m := reUpdate.FindStringSubmatch(s); m != nil {
+		return action{verb: "update", app: m[1], version: m[2]}, true
+	}
+	if m := reUninstall.FindStringSubmatch(s); m != nil {
+		return action{verb: "uninstall", app: m[1], phone: m[2]}, true
+	}
+	if m := reStopApp.FindStringSubmatch(s); m != nil {
+		return action{verb: "stop", app: m[1], phone: m[2]}, true
+	}
+	if m := reInstallFrom.FindStringSubmatch(s); m != nil {
+		return action{verb: "installfrom", files: m[1]}, true
 	}
 	return action{}, false
 }
@@ -257,8 +298,53 @@ func (a action) ask() string {
 		return locales.GwDoCopyToPhone()
 	case "receive":
 		return locales.GwDoReceiveFile(a.label)
+	case "install", "update", "uninstall", "stop":
+		return a.appAsk()
+	case "installfrom":
+		return locales.GwDoInstallFrom(appFiles(a.files))
 	}
 	return ""
+}
+
+// appAsk says an app change in the imperative, with the phone when the
+// gateway named it.
+func (a action) appAsk() string {
+	var s string
+	switch a.verb {
+	case "install":
+		s = locales.GwDoInstallAppBare(a.app)
+		if a.version != "" {
+			s = locales.GwDoInstallApp(a.app, a.version)
+		}
+	case "update":
+		s = locales.GwDoUpdateAppBare(a.app)
+		if a.version != "" {
+			s = locales.GwDoUpdateApp(a.app, a.version)
+		}
+	case "uninstall":
+		s = locales.GwDoUninstallApp(a.app)
+		if a.phone != "" {
+			return locales.GwDoFromPhone(s, a.phone)
+		}
+		return s
+	default:
+		s = locales.GwDoStopApp(a.app)
+	}
+	if a.phone != "" {
+		return locales.GwDoOnPhone(s, a.phone)
+	}
+	return s
+}
+
+var reAppFiles = re(`^“(.*)” and (\d+) more files?$`)
+
+// appFiles says the files an app is installed from: “base.apk” and 2 more
+// files.
+func appFiles(s string) string {
+	if m := reAppFiles.FindStringSubmatch(s); m != nil {
+		return locales.GwAppFilesMore(m[1], m[2])
+	}
+	return s
 }
 
 // actionAsked says the action of a step that waited for the person, given
@@ -316,6 +402,11 @@ var (
 	reAskedYou  = re(`^Asked you: (.*)$`)
 	reAskedTake = re(`^Asked you to take over: (.*)$`)
 	reListed    = re(`^Listed the phone's Pinky folder \((\d+) files?\)$`)
+	reListedPC  = re(`^Listed the phone's folder on the computer \((\d+) files?\)$`)
+	reInstalled = re(`^Installed “(.*?)”(?: (.+?))? from (“.*)$`)
+	reUpdated   = re(`^Updated “(.*?)”(?: to (.+?))? from (“.*)$`)
+	reRemoved   = re(`^Uninstalled “(.*)”$`)
+	reStopped   = re(`^Stopped “(.*)”$`)
 	reCopied    = re(`^Copied (\d+) files? (from|to) the phone(: .*)?$`)
 	reReceived  = re(`^Received “(.*)” \(([^()]+)\) from the agent$`)
 	reSavedShot = re(`^Saved a screenshot as “(.*)”$`)
@@ -397,6 +488,27 @@ func stepText(s string) string {
 	if m := reListed.FindStringSubmatch(s); m != nil {
 		return locales.GwStepListedFolder(m[1])
 	}
+	if m := reListedPC.FindStringSubmatch(s); m != nil {
+		return locales.GwStepListedComputerFolder(m[1])
+	}
+	if m := reInstalled.FindStringSubmatch(s); m != nil {
+		if m[2] == "" {
+			return locales.GwStepInstalledAppBare(m[1], appFiles(m[3]))
+		}
+		return locales.GwStepInstalledApp(m[1], m[2], appFiles(m[3]))
+	}
+	if m := reUpdated.FindStringSubmatch(s); m != nil {
+		if m[2] == "" {
+			return locales.GwStepUpdatedAppBare(m[1], appFiles(m[3]))
+		}
+		return locales.GwStepUpdatedApp(m[1], m[2], appFiles(m[3]))
+	}
+	if m := reRemoved.FindStringSubmatch(s); m != nil {
+		return locales.GwStepUninstalledApp(m[1])
+	}
+	if m := reStopped.FindStringSubmatch(s); m != nil {
+		return locales.GwStepStoppedApp(m[1])
+	}
 	if m := reCopied.FindStringSubmatch(s); m != nil {
 		names := fileNames(m[3])
 		if m[2] == "from" {
@@ -456,8 +568,8 @@ func fileNames(s string) string {
 	return locales.GwFilesList(strings.Join(parts, locales.ListSeparator()))
 }
 
-// Approval titles, as approvalTitle and the files and agent steps write
-// them.
+// Approval titles, as approvalTitle and the files, app and agent steps
+// write them.
 var (
 	rePayTitle    = re(`^Pay: “(.*)”\?$`)
 	reSendTitle   = re(`^Send “(.*)”\?$`)
@@ -467,7 +579,7 @@ var (
 	reTapTitle    = re(`^(Tap|Long-press|Type into|Swipe) “(.*)”\?$`)
 	rePressTitle  = re(`^Press (\S+) in “(.*)”\?$`)
 	reAgentTitle  = re(`^Let (.+) use your phones\?$`)
-	reCopyTitle   = re(`^(Copy .+)\?$`)
+	reAskedTitle  = re(`^((?:Copy|Install|Update|Uninstall|Stop) .+)\?$`)
 	reQuestion    = re(`^(.+)\?$`)
 )
 
@@ -505,7 +617,7 @@ func approvalText(s string) string {
 	if m := reAgentTitle.FindStringSubmatch(s); m != nil {
 		return locales.GwAskAgent(m[1])
 	}
-	if m := reCopyTitle.FindStringSubmatch(s); m != nil {
+	if m := reAskedTitle.FindStringSubmatch(s); m != nil {
 		if a, ok := parseAsked(m[1]); ok {
 			return locales.GwAskQuestion(a.ask())
 		}
@@ -587,7 +699,47 @@ func needDetail(n gateway.NeedView) string {
 	if n.Detail == "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications." {
 		return locales.GwRecordingsDetail()
 	}
+	if n.Rule == "Installing from the computer" || n.Rule == "Uninstalling apps" {
+		return appDetail(n.Detail)
+	}
 	return n.Detail
+}
+
+var (
+	reSignedBy = re(`^signed by (.+)$`)
+	reFromApp  = re(`^from (“.*)$`)
+	reReplaces = re(`^replaces (.+)$`)
+)
+
+// appDetail says an install or uninstall approval's second line: the
+// agent, the app's id, then for an install "signed by …", "from …" and
+// "replaces …", or for an uninstall that its data goes too, and last the
+// agent's own words, which stay as they are.
+func appDetail(s string) string {
+	parts := strings.Split(s, " · ")
+	i := 2
+	if i < len(parts) && parts[i] == "its data on the phone is deleted too" {
+		parts[i] = locales.GwAppDataDeleted()
+		return strings.Join(parts, " · ")
+	}
+	if i < len(parts) {
+		if m := reSignedBy.FindStringSubmatch(parts[i]); m != nil {
+			parts[i] = locales.GwAppSignedBy(m[1])
+			i++
+		}
+	}
+	if i < len(parts) {
+		if m := reFromApp.FindStringSubmatch(parts[i]); m != nil {
+			parts[i] = locales.GwAppFrom(appFiles(m[1]))
+			i++
+			if i < len(parts) {
+				if m := reReplaces.FindStringSubmatch(parts[i]); m != nil {
+					parts[i] = locales.GwAppReplaces(m[1])
+				}
+			}
+		}
+	}
+	return strings.Join(parts, " · ")
 }
 
 var (

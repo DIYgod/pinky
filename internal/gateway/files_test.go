@@ -196,11 +196,20 @@ func TestPhoneFilesReadOnly(t *testing.T) {
 	}
 }
 
-func TestPhoneFilesUnsupported(t *testing.T) {
+// A phone without a Pinky folder lists its folder on the computer, where
+// apps to install go, and copies nothing to or from the phone.
+func TestPhoneFilesWithoutPinkyFolder(t *testing.T) {
+	ctx := context.Background()
 	g := newIPhoneGateway(t)
 	s, _ := connect(t, g, "Files")
-	if res := s.Files(context.Background(), FilesRequest{}); res.Error != ErrUnsupported || !strings.Contains(res.Message, "Android") {
-		t.Fatalf("a phone without a Pinky folder: %+v", res)
+	res := s.Files(ctx, FilesRequest{})
+	if res.Status != StatusSettled || len(res.Files) != 0 || !strings.Contains(res.Message, "iPhone 17 has no Pinky folder") {
+		t.Fatalf("list: %+v", res)
+	}
+	for _, action := range []string{"pull", "push"} {
+		if res := s.Files(ctx, FilesRequest{Action: action, Paths: []string{"a.txt"}}); res.Error != ErrUnsupported || !strings.Contains(res.Message, "no Pinky folder") {
+			t.Fatalf("%s: %+v", action, res)
+		}
 	}
 }
 

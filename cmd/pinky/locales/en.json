@@ -3384,6 +3384,112 @@
   "@gwDoListFolder": {
     "description": "What a step tried: list the files in the phone's Pinky folder. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwDoInstallApp": "install “{app}” {version}",
+  "@gwDoInstallApp": {
+    "description": "What a step tried, or an approval asks: install this app at this version from the computer. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.3 (14)"
+      }
+    }
+  },
+  "gwDoInstallAppBare": "install “{app}”",
+  "@gwDoInstallAppBare": {
+    "description": "What a step tried, or an approval asks: install this app from the computer (its version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoUpdateApp": "update “{app}” to {version}",
+  "@gwDoUpdateApp": {
+    "description": "What a step tried, or an approval asks: update this installed app to this version from the computer. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.4 (15)"
+      }
+    }
+  },
+  "gwDoUpdateAppBare": "update “{app}”",
+  "@gwDoUpdateAppBare": {
+    "description": "What a step tried, or an approval asks: update this installed app from the computer (the new version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoUninstallApp": "uninstall “{app}”",
+  "@gwDoUninstallApp": {
+    "description": "What a step tried, or an approval asks: uninstall this app, with its data. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoStopApp": "stop “{app}”",
+  "@gwDoStopApp": {
+    "description": "What a step tried, or an approval asks: force-quit this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwDoInstallFrom": "install from {files}",
+  "@gwDoInstallFrom": {
+    "description": "What a step tried: install an app from these files on the computer, before Pinky could read which app they hold. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwDoOnPhone": "{action} on {phone}",
+  "@gwDoOnPhone": {
+    "description": "An app change on a phone, in an approval's title or a step that waits for the person: “install “Dinely” 1.3 (14)” on “Pixel 9”. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "install “Dinely” 1.3 (14)"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "gwDoFromPhone": "{action} from {phone}",
+  "@gwDoFromPhone": {
+    "description": "An app removed from a phone, in an approval's title or a step that waits for the person: “uninstall “Dinely”” from “Pixel 9”. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "action": {
+        "type": "String",
+        "example": "uninstall “Dinely”"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
   "gwDoLongPress": "long-press “{label}”",
   "@gwDoLongPress": {
     "description": "What a step asked for: long-press the element with this label. Shown only in other languages; in English the gateway's own words show.",
@@ -3633,6 +3739,54 @@
         "example": ": ticket.pdf"
       }
     }
+  },
+  "gwAppFilesMore": "“{file}” and {count} more files",
+  "@gwAppFilesMore": {
+    "description": "The files an app is installed from when there are several: the first one and how many more (split APKs). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "file": {
+        "type": "String",
+        "example": "base.apk"
+      },
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "gwAppSignedBy": "signed by {signer}",
+  "@gwAppSignedBy": {
+    "description": "Part of an install approval's second line: who signed the app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "signer": {
+        "type": "String",
+        "example": "Someone (Personal Team) (A1B2C3D4E5)"
+      }
+    }
+  },
+  "gwAppFrom": "from {files}",
+  "@gwAppFrom": {
+    "description": "Part of an install approval's second line: the files on the computer the app is installed from. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwAppReplaces": "replaces {version}",
+  "@gwAppReplaces": {
+    "description": "Part of an update approval's second line: the version on the phone that the update replaces. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "version": {
+        "type": "String",
+        "example": "1.3 (14)"
+      }
+    }
+  },
+  "gwAppDataDeleted": "its data on the phone is deleted too",
+  "@gwAppDataDeleted": {
+    "description": "Part of an uninstall approval's second line: uninstalling deletes the app's data on the phone. Shown only in other languages; in English the gateway's own words show."
   },
   "gwFilesList": ": {names}",
   "@gwFilesList": {
@@ -3989,6 +4143,100 @@
       "count": {
         "type": "String",
         "example": "3"
+      }
+    }
+  },
+  "gwStepListedComputerFolder": "Listed the phone's folder on the computer ({count} files)",
+  "@gwStepListedComputerFolder": {
+    "description": "A step: the agent listed the files in the phone's folder on the computer, which apps are installed from (an iPhone has no Pinky folder of its own). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "count": {
+        "type": "String",
+        "example": "2"
+      }
+    }
+  },
+  "gwStepInstalledApp": "Installed “{app}” {version} from {files}",
+  "@gwStepInstalledApp": {
+    "description": "A step: the agent installed this app at this version from these files on the computer. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.3 (14)"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepInstalledAppBare": "Installed “{app}” from {files}",
+  "@gwStepInstalledAppBare": {
+    "description": "A step: the agent installed this app from these files on the computer (its version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepUpdatedApp": "Updated “{app}” to {version} from {files}",
+  "@gwStepUpdatedApp": {
+    "description": "A step: the agent updated this installed app to this version from these files on the computer; its data was kept. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "version": {
+        "type": "String",
+        "example": "1.4 (15)"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepUpdatedAppBare": "Updated “{app}” from {files}",
+  "@gwStepUpdatedAppBare": {
+    "description": "A step: the agent updated this installed app from these files on the computer (the new version is unknown). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "files": {
+        "type": "String",
+        "example": "“app-debug.apk”"
+      }
+    }
+  },
+  "gwStepUninstalledApp": "Uninstalled “{app}”",
+  "@gwStepUninstalledApp": {
+    "description": "A step: the agent uninstalled this app, with its data. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
+  "gwStepStoppedApp": "Stopped “{app}”",
+  "@gwStepStoppedApp": {
+    "description": "A step: the agent force-quit this app. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
       }
     }
   },
@@ -6051,6 +6299,22 @@
   "ruleRecordings": "Recordings",
   "@ruleRecordings": {
     "description": "The name of the rule that asks before an agent gets a task's screen recording with its report. It asks every time: no preset or Always allow skips it."
+  },
+  "ruleInstallFromComputer": "Installing from the computer",
+  "@ruleInstallFromComputer": {
+    "description": "The name of the built-in rule that always asks before an agent installs or updates an app from the computer."
+  },
+  "ruleUninstallApps": "Uninstalling apps",
+  "@ruleUninstallApps": {
+    "description": "The name of the built-in rule that always asks before an agent uninstalls an app."
+  },
+  "rulePinkyApps": "Pinky's own apps",
+  "@rulePinkyApps": {
+    "description": "The name of the built-in rule that keeps agents from installing over, uninstalling or stopping Pinky's own apps on the phone."
+  },
+  "ruleSystemApps": "System apps",
+  "@ruleSystemApps": {
+    "description": "The name of the built-in rule that keeps agents from uninstalling or stopping the phone's system apps."
   },
   "ruleFinanceApps": "Finance apps",
   "@ruleFinanceApps": {

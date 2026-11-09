@@ -188,7 +188,7 @@ func TestEndToEnd(t *testing.T) {
 
 	agent := startMCP(t, bin, home, "claude-code")
 	tools, err := agent.cs.ListTools(context.Background(), nil)
-	if err != nil || len(tools.Tools) != 15 {
+	if err != nil || len(tools.Tools) != 16 {
 		t.Fatalf("tools: %v %v", tools, err)
 	}
 	text, isErr := agent.call(t, "phone_connect", map[string]any{"device": "Pixel 9 (fake)", "task": "Reorder last week's lunch"})

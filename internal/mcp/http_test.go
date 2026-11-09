@@ -86,7 +86,7 @@ func TestHTTP(t *testing.T) {
 	// continued its task (ResumeGrace).
 	cs := httpClient(t, ts.URL, "secret-token", "codex")
 	tools, err := cs.ListTools(context.Background(), nil)
-	if err != nil || len(tools.Tools) != 15 {
+	if err != nil || len(tools.Tools) != 16 {
 		t.Fatalf("%d tools, %v", len(tools.Tools), err)
 	}
 	text := callText(t, cs, "phone_connect", map[string]any{"task": "Lunch"})

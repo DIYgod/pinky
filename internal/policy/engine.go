@@ -156,6 +156,9 @@ func (e *Engine) Blocked(app screen.App) (rule string, blocked bool) {
 func (e *Engine) Evaluate(in Input) Verdict {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
+	if in.Op.AppChange() {
+		return e.appChangeLocked(in)
+	}
 
 	app := in.App
 	if in.Op == OpLaunch {

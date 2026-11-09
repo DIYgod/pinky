@@ -9575,6 +9575,174 @@ func (msgs Messages) GwDoListFolder() string {
 	return Catalog.Format(msgs.locale, "gwDoListFolder", nil)
 }
 
+// GwDoInstallApp says "install “{app}” {version}"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: install this app at this version
+// from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func GwDoInstallApp(app string, version string) string {
+	return In(i18n.Locale()).GwDoInstallApp(app, version)
+}
+
+// GwDoInstallApp says "install “{app}” {version}"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: install this app at this version
+// from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDoInstallApp(app string, version string) string {
+	return Catalog.Format(msgs.locale, "gwDoInstallApp", map[string]any{"app": app, "version": version})
+}
+
+// GwDoInstallAppBare says "install “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: install this app from the
+// computer (its version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func GwDoInstallAppBare(app string) string { return In(i18n.Locale()).GwDoInstallAppBare(app) }
+
+// GwDoInstallAppBare says "install “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: install this app from the
+// computer (its version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDoInstallAppBare(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoInstallAppBare", map[string]any{"app": app})
+}
+
+// GwDoUpdateApp says "update “{app}” to {version}"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: update this installed app to this
+// version from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func GwDoUpdateApp(app string, version string) string {
+	return In(i18n.Locale()).GwDoUpdateApp(app, version)
+}
+
+// GwDoUpdateApp says "update “{app}” to {version}"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: update this installed app to this
+// version from the computer. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwDoUpdateApp(app string, version string) string {
+	return Catalog.Format(msgs.locale, "gwDoUpdateApp", map[string]any{"app": app, "version": version})
+}
+
+// GwDoUpdateAppBare says "update “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: update this installed app from
+// the computer (the new version is unknown). Shown only in other languages;
+// in English the gateway's own words show.
+func GwDoUpdateAppBare(app string) string { return In(i18n.Locale()).GwDoUpdateAppBare(app) }
+
+// GwDoUpdateAppBare says "update “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: update this installed app from
+// the computer (the new version is unknown). Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwDoUpdateAppBare(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoUpdateAppBare", map[string]any{"app": app})
+}
+
+// GwDoUninstallApp says "uninstall “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: uninstall this app, with its
+// data. Shown only in other languages; in English the gateway's own words
+// show.
+func GwDoUninstallApp(app string) string { return In(i18n.Locale()).GwDoUninstallApp(app) }
+
+// GwDoUninstallApp says "uninstall “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: uninstall this app, with its
+// data. Shown only in other languages; in English the gateway's own words
+// show.
+func (msgs Messages) GwDoUninstallApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoUninstallApp", map[string]any{"app": app})
+}
+
+// GwDoStopApp says "stop “{app}”"
+// in the language the app shows.
+//
+// What a step tried, or an approval asks: force-quit this app. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDoStopApp(app string) string { return In(i18n.Locale()).GwDoStopApp(app) }
+
+// GwDoStopApp says "stop “{app}”"
+// in the language of msgs.
+//
+// What a step tried, or an approval asks: force-quit this app. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoStopApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwDoStopApp", map[string]any{"app": app})
+}
+
+// GwDoInstallFrom says "install from {files}"
+// in the language the app shows.
+//
+// What a step tried: install an app from these files on the computer,
+// before Pinky could read which app they hold. Shown only in other
+// languages; in English the gateway's own words show.
+func GwDoInstallFrom(files string) string { return In(i18n.Locale()).GwDoInstallFrom(files) }
+
+// GwDoInstallFrom says "install from {files}"
+// in the language of msgs.
+//
+// What a step tried: install an app from these files on the computer,
+// before Pinky could read which app they hold. Shown only in other
+// languages; in English the gateway's own words show.
+func (msgs Messages) GwDoInstallFrom(files string) string {
+	return Catalog.Format(msgs.locale, "gwDoInstallFrom", map[string]any{"files": files})
+}
+
+// GwDoOnPhone says "{action} on {phone}"
+// in the language the app shows.
+//
+// An app change on a phone, in an approval's title or a step that waits for
+// the person: “install “Dinely” 1.3 (14)” on “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoOnPhone(action string, phone string) string {
+	return In(i18n.Locale()).GwDoOnPhone(action, phone)
+}
+
+// GwDoOnPhone says "{action} on {phone}"
+// in the language of msgs.
+//
+// An app change on a phone, in an approval's title or a step that waits for
+// the person: “install “Dinely” 1.3 (14)” on “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoOnPhone(action string, phone string) string {
+	return Catalog.Format(msgs.locale, "gwDoOnPhone", map[string]any{"action": action, "phone": phone})
+}
+
+// GwDoFromPhone says "{action} from {phone}"
+// in the language the app shows.
+//
+// An app removed from a phone, in an approval's title or a step that waits
+// for the person: “uninstall “Dinely”” from “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoFromPhone(action string, phone string) string {
+	return In(i18n.Locale()).GwDoFromPhone(action, phone)
+}
+
+// GwDoFromPhone says "{action} from {phone}"
+// in the language of msgs.
+//
+// An app removed from a phone, in an approval's title or a step that waits
+// for the person: “uninstall “Dinely”” from “Pixel 9”. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoFromPhone(action string, phone string) string {
+	return Catalog.Format(msgs.locale, "gwDoFromPhone", map[string]any{"action": action, "phone": phone})
+}
+
 // GwDoLongPress says "long-press “{label}”"
 // in the language the app shows.
 //
@@ -9973,6 +10141,96 @@ func GwFilesDetail(agent string, names string) string {
 // gateway's own words show.
 func (msgs Messages) GwFilesDetail(agent string, names string) string {
 	return Catalog.Format(msgs.locale, "gwFilesDetail", map[string]any{"agent": agent, "names": names})
+}
+
+// GwAppFilesMore says "“{file}” and {count} more files"
+// in the language the app shows.
+//
+// The files an app is installed from when there are several: the first one
+// and how many more (split APKs). Shown only in other languages; in English
+// the gateway's own words show.
+func GwAppFilesMore(file string, count string) string {
+	return In(i18n.Locale()).GwAppFilesMore(file, count)
+}
+
+// GwAppFilesMore says "“{file}” and {count} more files"
+// in the language of msgs.
+//
+// The files an app is installed from when there are several: the first one
+// and how many more (split APKs). Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwAppFilesMore(file string, count string) string {
+	return Catalog.Format(msgs.locale, "gwAppFilesMore", map[string]any{"file": file, "count": count})
+}
+
+// GwAppSignedBy says "signed by {signer}"
+// in the language the app shows.
+//
+// Part of an install approval's second line: who signed the app. Shown only
+// in other languages; in English the gateway's own words show.
+func GwAppSignedBy(signer string) string { return In(i18n.Locale()).GwAppSignedBy(signer) }
+
+// GwAppSignedBy says "signed by {signer}"
+// in the language of msgs.
+//
+// Part of an install approval's second line: who signed the app. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwAppSignedBy(signer string) string {
+	return Catalog.Format(msgs.locale, "gwAppSignedBy", map[string]any{"signer": signer})
+}
+
+// GwAppFrom says "from {files}"
+// in the language the app shows.
+//
+// Part of an install approval's second line: the files on the computer the
+// app is installed from. Shown only in other languages; in English the
+// gateway's own words show.
+func GwAppFrom(files string) string { return In(i18n.Locale()).GwAppFrom(files) }
+
+// GwAppFrom says "from {files}"
+// in the language of msgs.
+//
+// Part of an install approval's second line: the files on the computer the
+// app is installed from. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwAppFrom(files string) string {
+	return Catalog.Format(msgs.locale, "gwAppFrom", map[string]any{"files": files})
+}
+
+// GwAppReplaces says "replaces {version}"
+// in the language the app shows.
+//
+// Part of an update approval's second line: the version on the phone that
+// the update replaces. Shown only in other languages; in English the
+// gateway's own words show.
+func GwAppReplaces(version string) string { return In(i18n.Locale()).GwAppReplaces(version) }
+
+// GwAppReplaces says "replaces {version}"
+// in the language of msgs.
+//
+// Part of an update approval's second line: the version on the phone that
+// the update replaces. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwAppReplaces(version string) string {
+	return Catalog.Format(msgs.locale, "gwAppReplaces", map[string]any{"version": version})
+}
+
+// GwAppDataDeleted says "its data on the phone is deleted too"
+// in the language the app shows.
+//
+// Part of an uninstall approval's second line: uninstalling deletes the
+// app's data on the phone. Shown only in other languages; in English the
+// gateway's own words show.
+func GwAppDataDeleted() string { return In(i18n.Locale()).GwAppDataDeleted() }
+
+// GwAppDataDeleted says "its data on the phone is deleted too"
+// in the language of msgs.
+//
+// Part of an uninstall approval's second line: uninstalling deletes the
+// app's data on the phone. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwAppDataDeleted() string {
+	return Catalog.Format(msgs.locale, "gwAppDataDeleted", nil)
 }
 
 // GwFilesList says ": {names}"
@@ -10929,6 +11187,138 @@ func GwStepListedFolder(count string) string { return In(i18n.Locale()).GwStepLi
 // only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwStepListedFolder(count string) string {
 	return Catalog.Format(msgs.locale, "gwStepListedFolder", map[string]any{"count": count})
+}
+
+// GwStepListedComputerFolder says "Listed the phone's folder on the computer ({count} files)"
+// in the language the app shows.
+//
+// A step: the agent listed the files in the phone's folder on the computer,
+// which apps are installed from (an iPhone has no Pinky folder of its own).
+// Shown only in other languages; in English the gateway's own words show.
+func GwStepListedComputerFolder(count string) string {
+	return In(i18n.Locale()).GwStepListedComputerFolder(count)
+}
+
+// GwStepListedComputerFolder says "Listed the phone's folder on the computer ({count} files)"
+// in the language of msgs.
+//
+// A step: the agent listed the files in the phone's folder on the computer,
+// which apps are installed from (an iPhone has no Pinky folder of its own).
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepListedComputerFolder(count string) string {
+	return Catalog.Format(msgs.locale, "gwStepListedComputerFolder", map[string]any{"count": count})
+}
+
+// GwStepInstalledApp says "Installed “{app}” {version} from {files}"
+// in the language the app shows.
+//
+// A step: the agent installed this app at this version from these files on
+// the computer. Shown only in other languages; in English the gateway's own
+// words show.
+func GwStepInstalledApp(app string, version string, files string) string {
+	return In(i18n.Locale()).GwStepInstalledApp(app, version, files)
+}
+
+// GwStepInstalledApp says "Installed “{app}” {version} from {files}"
+// in the language of msgs.
+//
+// A step: the agent installed this app at this version from these files on
+// the computer. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStepInstalledApp(app string, version string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepInstalledApp", map[string]any{"app": app, "version": version, "files": files})
+}
+
+// GwStepInstalledAppBare says "Installed “{app}” from {files}"
+// in the language the app shows.
+//
+// A step: the agent installed this app from these files on the computer
+// (its version is unknown). Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepInstalledAppBare(app string, files string) string {
+	return In(i18n.Locale()).GwStepInstalledAppBare(app, files)
+}
+
+// GwStepInstalledAppBare says "Installed “{app}” from {files}"
+// in the language of msgs.
+//
+// A step: the agent installed this app from these files on the computer
+// (its version is unknown). Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepInstalledAppBare(app string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepInstalledAppBare", map[string]any{"app": app, "files": files})
+}
+
+// GwStepUpdatedApp says "Updated “{app}” to {version} from {files}"
+// in the language the app shows.
+//
+// A step: the agent updated this installed app to this version from these
+// files on the computer; its data was kept. Shown only in other languages;
+// in English the gateway's own words show.
+func GwStepUpdatedApp(app string, version string, files string) string {
+	return In(i18n.Locale()).GwStepUpdatedApp(app, version, files)
+}
+
+// GwStepUpdatedApp says "Updated “{app}” to {version} from {files}"
+// in the language of msgs.
+//
+// A step: the agent updated this installed app to this version from these
+// files on the computer; its data was kept. Shown only in other languages;
+// in English the gateway's own words show.
+func (msgs Messages) GwStepUpdatedApp(app string, version string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepUpdatedApp", map[string]any{"app": app, "version": version, "files": files})
+}
+
+// GwStepUpdatedAppBare says "Updated “{app}” from {files}"
+// in the language the app shows.
+//
+// A step: the agent updated this installed app from these files on the
+// computer (the new version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepUpdatedAppBare(app string, files string) string {
+	return In(i18n.Locale()).GwStepUpdatedAppBare(app, files)
+}
+
+// GwStepUpdatedAppBare says "Updated “{app}” from {files}"
+// in the language of msgs.
+//
+// A step: the agent updated this installed app from these files on the
+// computer (the new version is unknown). Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepUpdatedAppBare(app string, files string) string {
+	return Catalog.Format(msgs.locale, "gwStepUpdatedAppBare", map[string]any{"app": app, "files": files})
+}
+
+// GwStepUninstalledApp says "Uninstalled “{app}”"
+// in the language the app shows.
+//
+// A step: the agent uninstalled this app, with its data. Shown only in
+// other languages; in English the gateway's own words show.
+func GwStepUninstalledApp(app string) string { return In(i18n.Locale()).GwStepUninstalledApp(app) }
+
+// GwStepUninstalledApp says "Uninstalled “{app}”"
+// in the language of msgs.
+//
+// A step: the agent uninstalled this app, with its data. Shown only in
+// other languages; in English the gateway's own words show.
+func (msgs Messages) GwStepUninstalledApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwStepUninstalledApp", map[string]any{"app": app})
+}
+
+// GwStepStoppedApp says "Stopped “{app}”"
+// in the language the app shows.
+//
+// A step: the agent force-quit this app. Shown only in other languages; in
+// English the gateway's own words show.
+func GwStepStoppedApp(app string) string { return In(i18n.Locale()).GwStepStoppedApp(app) }
+
+// GwStepStoppedApp says "Stopped “{app}”"
+// in the language of msgs.
+//
+// A step: the agent force-quit this app. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwStepStoppedApp(app string) string {
+	return Catalog.Format(msgs.locale, "gwStepStoppedApp", map[string]any{"app": app})
 }
 
 // GwStepOutside says "Outside the scope: {action}"
@@ -16359,6 +16749,70 @@ func RuleRecordings() string { return In(i18n.Locale()).RuleRecordings() }
 // skips it.
 func (msgs Messages) RuleRecordings() string {
 	return Catalog.Format(msgs.locale, "ruleRecordings", nil)
+}
+
+// RuleInstallFromComputer says "Installing from the computer"
+// in the language the app shows.
+//
+// The name of the built-in rule that always asks before an agent installs
+// or updates an app from the computer.
+func RuleInstallFromComputer() string { return In(i18n.Locale()).RuleInstallFromComputer() }
+
+// RuleInstallFromComputer says "Installing from the computer"
+// in the language of msgs.
+//
+// The name of the built-in rule that always asks before an agent installs
+// or updates an app from the computer.
+func (msgs Messages) RuleInstallFromComputer() string {
+	return Catalog.Format(msgs.locale, "ruleInstallFromComputer", nil)
+}
+
+// RuleUninstallApps says "Uninstalling apps"
+// in the language the app shows.
+//
+// The name of the built-in rule that always asks before an agent uninstalls
+// an app.
+func RuleUninstallApps() string { return In(i18n.Locale()).RuleUninstallApps() }
+
+// RuleUninstallApps says "Uninstalling apps"
+// in the language of msgs.
+//
+// The name of the built-in rule that always asks before an agent uninstalls
+// an app.
+func (msgs Messages) RuleUninstallApps() string {
+	return Catalog.Format(msgs.locale, "ruleUninstallApps", nil)
+}
+
+// RulePinkyApps says "Pinky's own apps"
+// in the language the app shows.
+//
+// The name of the built-in rule that keeps agents from installing over,
+// uninstalling or stopping Pinky's own apps on the phone.
+func RulePinkyApps() string { return In(i18n.Locale()).RulePinkyApps() }
+
+// RulePinkyApps says "Pinky's own apps"
+// in the language of msgs.
+//
+// The name of the built-in rule that keeps agents from installing over,
+// uninstalling or stopping Pinky's own apps on the phone.
+func (msgs Messages) RulePinkyApps() string {
+	return Catalog.Format(msgs.locale, "rulePinkyApps", nil)
+}
+
+// RuleSystemApps says "System apps"
+// in the language the app shows.
+//
+// The name of the built-in rule that keeps agents from uninstalling or
+// stopping the phone's system apps.
+func RuleSystemApps() string { return In(i18n.Locale()).RuleSystemApps() }
+
+// RuleSystemApps says "System apps"
+// in the language of msgs.
+//
+// The name of the built-in rule that keeps agents from uninstalling or
+// stopping the phone's system apps.
+func (msgs Messages) RuleSystemApps() string {
+	return Catalog.Format(msgs.locale, "ruleSystemApps", nil)
 }
 
 // RuleFinanceApps says "Finance apps"

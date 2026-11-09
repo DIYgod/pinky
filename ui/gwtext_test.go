@@ -50,6 +50,14 @@ var gatewaySteps = []string{
 	"Received “Pictures/cat.png” (1.2 MB) from the agent",
 	"Blocked by “Read-only”: receive “cat.png” from the agent",
 	"Failed: receive “cat.png” from the agent",
+	"Listed the phone's folder on the computer (2 files)",
+	"Installed “Dinely” 1.3 (14) from “app-debug.apk”",
+	"Updated “Dinely” to 1.4 (15) from “base.apk” and 2 more files",
+	"Uninstalled “Dinely”",
+	"Stopped “Dinely”",
+	"Waiting for you: Install “Dinely” 1.3 (14) on Pixel 9",
+	"Blocked by “Pinky's own apps”: uninstall “Pinky Companion”",
+	"Failed: install from “base.apk” and 1 more file",
 	"Added 1 chicken rice bowl", // the fake's own words
 }
 
@@ -131,6 +139,22 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Saved the task's report and screen recording for the agent":                zh.GwStepSavedReportVideo(),
 		"Waiting for you: Give Claude Code the screen recording of “Reorder lunch”": zh.GwStepWaiting(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),
 		"Waiting for you: Give Codex the screen recordings of 2 tasks":              zh.GwStepWaiting(zh.GwDoGiveRecordings("Codex", "2")),
+		"Listed the phone's folder on the computer (2 files)":                       zh.GwStepListedComputerFolder("2"),
+		"Installed “Dinely” 1.3 (14) from “app-debug.apk”":                          zh.GwStepInstalledApp("Dinely", "1.3 (14)", "“app-debug.apk”"),
+		"Installed “Dinely” from “app-debug.apk”":                                   zh.GwStepInstalledAppBare("Dinely", "“app-debug.apk”"),
+		"Updated “Dinely” to 1.4 (15) from “base.apk” and 2 more files":             zh.GwStepUpdatedApp("Dinely", "1.4 (15)", zh.GwAppFilesMore("base.apk", "2")),
+		"Uninstalled “Dinely”":                                                      zh.GwStepUninstalledApp("Dinely"),
+		"Stopped “Dinely”":                                                          zh.GwStepStoppedApp("Dinely"),
+		"Waiting for you: Install “Dinely” 1.3 (14) on Pixel 9":                     zh.GwStepWaiting(zh.GwDoOnPhone(zh.GwDoInstallApp("Dinely", "1.3 (14)"), "Pixel 9")),
+		"Waiting for you: Update “Dinely” on Pixel 9":                               zh.GwStepWaiting(zh.GwDoOnPhone(zh.GwDoUpdateAppBare("Dinely"), "Pixel 9")),
+		"Waiting for you: Uninstall “Dinely” from Pixel 9":                          zh.GwStepWaiting(zh.GwDoFromPhone(zh.GwDoUninstallApp("Dinely"), "Pixel 9")),
+		"Blocked by “Finance apps”: stop “Northbank”":                               zh.GwStepBlocked(zh.RuleFinanceApps(), zh.GwDoStopApp("Northbank")),
+		"Blocked by “Pinky's own apps”: uninstall “Pinky Companion”":                zh.GwStepBlocked(zh.RulePinkyApps(), zh.GwDoUninstallApp("Pinky Companion")),
+		"Blocked by “System apps”: stop “Settings”":                                 zh.GwStepBlocked(zh.RuleSystemApps(), zh.GwDoStopApp("Settings")),
+		"Outside the scope: update “Dinely” to 1.4 (15)":                            zh.GwStepOutside(zh.GwDoUpdateApp("Dinely", "1.4 (15)")),
+		"Failed: install “Dinely”":                                                  zh.GwStepFailed(zh.GwDoInstallAppBare("Dinely")),
+		"Failed: install from “base.apk” and 1 more file":                           zh.GwStepFailed(zh.GwDoInstallFrom(zh.GwAppFilesMore("base.apk", "1"))),
+		"Waiting for you: Stop “Dinely” on Pixel 9":                                 zh.GwStepWaiting(zh.GwDoOnPhone(zh.GwDoStopApp("Dinely"), "Pixel 9")),
 	}
 	for in, out := range want {
 		if got := stepText(in); got != out {
@@ -156,6 +180,10 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Copy 3 files to Pixel 9?":                   zh.GwAskQuestion(zh.GwDoCopyFiles("3", "Pixel 9")),
 		"Zoomed out on “Map”?":                       zh.GwAskQuestion(zh.GwDoZoomOutOn("Map")),
 		"Turned with two fingers?":                   zh.GwAskQuestion(zh.GwDoTurn()),
+		"Install “Dinely” 1.3 (14) on Pixel 9?":      zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoInstallApp("Dinely", "1.3 (14)"), "Pixel 9")),
+		"Update “Dinely” to 1.4 (15) on Pixel 9?":    zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoUpdateApp("Dinely", "1.4 (15)"), "Pixel 9")),
+		"Uninstall “Dinely” from Pixel 9?":           zh.GwAskQuestion(zh.GwDoFromPhone(zh.GwDoUninstallApp("Dinely"), "Pixel 9")),
+		"Stop “Dinely” on Pixel 9?":                  zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoStopApp("Dinely"), "Pixel 9")),
 		"Something the gateway never says":           "Something the gateway never says",
 
 		"Give Claude Code the screen recording of “Reorder lunch”?": zh.GwAskQuestion(zh.GwDoGiveRecording("Claude Code", "Reorder lunch")),
@@ -177,6 +205,19 @@ func TestGatewayWordsInChinese(t *testing.T) {
 	}
 	if got, want := ruleName("Recordings"), zh.RuleRecordings(); got != want {
 		t.Errorf("ruleName(Recordings) = %q, want %q", got, want)
+	}
+	// An app approval's second line: the agent's own words, last, stay.
+	for in, out := range map[gateway.NeedView]string{
+		{Rule: "Installing from the computer", Detail: "Claude Code · com.dinely.app · signed by Dinely Ltd (AB12) · from “base.apk” and 2 more files · replaces 1.3 (14) · replaces the Monday build"}: "Claude Code · com.dinely.app · " +
+			zh.GwAppSignedBy("Dinely Ltd (AB12)") + " · " + zh.GwAppFrom(zh.GwAppFilesMore("base.apk", "2")) + " · " + zh.GwAppReplaces("1.3 (14)") + " · replaces the Monday build",
+		{Rule: "Installing from the computer", Detail: "Codex · app.pinky.testapp · from “a.apk” · from “b.apk” please"}: "Codex · app.pinky.testapp · " + zh.GwAppFrom("“a.apk”") + " · from “b.apk” please",
+		{Rule: "Uninstalling apps", Detail: "Codex · com.dinely.app · its data on the phone is deleted too · clean up"}:  "Codex · com.dinely.app · " + zh.GwAppDataDeleted() + " · clean up",
+		{Rule: "Every action", Detail: "Codex · com.dinely.app · from “x”"}:                                              "Codex · com.dinely.app · from “x”",
+	} {
+		in.Kind = gateway.NeedApproval
+		if got := needDetail(in); got != out {
+			t.Errorf("needDetail(%q) = %q, want %q", in.Detail, got, out)
+		}
 	}
 	handoff := gateway.NeedView{Kind: gateway.NeedHandoff, Title: "Sign in to Dinely?"}
 	if got := needTitle(handoff); got != handoff.Title {
