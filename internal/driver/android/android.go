@@ -86,6 +86,12 @@ type Config struct {
 	// its own). After a failure, List tries again after serverRetry,
 	// doubling up to serverRetryMax.
 	StartServer func(ctx context.Context) error
+	// StopServer stops the adb server that runs when Pinky started it, in
+	// this run or an earlier one, and returns adb.ErrNotOwnServer for any
+	// other, which it leaves running; nil means Client.StopOwnServer. The
+	// driver stops and starts again (StartServer) a server of its own that
+	// cannot reach the local network (offnet.go).
+	StopServer func(ctx context.Context) error
 
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
@@ -97,6 +103,9 @@ func (c *Config) defaults() {
 	}
 	if c.Browser == nil {
 		c.Browser = mdnsBrowser{}
+	}
+	if c.StopServer == nil {
+		c.StopServer = c.Client.StopOwnServer
 	}
 	if c.KnownHosts == nil {
 		c.KnownHosts = readKnownHosts
@@ -141,6 +150,9 @@ type Provider struct {
 	ids *identity
 
 	server serverWatch
+	// dial connects to an address on the network from Pinky's own
+	// process, to tell a server that cannot reach it (offnet.go).
+	dial func(ctx context.Context, addr string) error
 	// usbNodes lists the computer's USB devices as Windows sees them, to
 	// find phones without a driver (usbdriver.go); nil elsewhere.
 	usbNodes func() ([]usbNode, error)
@@ -157,7 +169,7 @@ type Provider struct {
 // NewProvider returns a provider with the given configuration.
 func NewProvider(cfg Config) *Provider {
 	cfg.defaults()
-	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes, avd: newAVDLauncher()}
+	p := &Provider{cfg: cfg, props: map[string]deviceProps{}, usbNodes: systemUSBNodes, avd: newAVDLauncher(), dial: dialOwn}
 	if cfg.ReconnectWiFi {
 		p.wifi = newReconnector(p)
 	}
@@ -269,9 +281,11 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 // "adb" when there is no adb to start a server with (a build without
 // Pinky's own, on a computer without one), "adb_server" when no server
 // runs and starting one failed, "adb_old" when the server that runs is
-// older than protocol 41, and "adb_restarts" when the server went away
-// three times or more within ten minutes, as when another program keeps
-// restarting it with an adb of another version.
+// older than protocol 41, "adb_no_network" when the server cannot reach
+// phones on the local network and Pinky could not restart it (offnet.go),
+// and "adb_restarts" when the server went away three times or more within
+// ten minutes, as when another program keeps restarting it with an adb of
+// another version.
 func (p *Provider) CheckHost() driver.HostCheck { return p.server.check(time.Now()) }
 
 // phoneID is the id Pinky knows a phone by: the adb serial, except over

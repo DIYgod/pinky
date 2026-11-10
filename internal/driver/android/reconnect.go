@@ -152,12 +152,16 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 			continue
 		}
 		r.note(g, "android: "+g+" is on the network and the adb server lists it; connecting it by its name")
-		if err := p.cfg.Client.Connect(ctx, name); err != nil {
-			r.refuse(ctx, g, name, err)
+		got, err := r.connect(ctx, g, name, serviceAddr(listed, g))
+		if err != nil {
 			away = true
 			continue
 		}
-		r.connectedNamed(g)
+		if got == name {
+			r.connectedNamed(g)
+		} else {
+			r.remember(got, g)
+		}
 		connected = true
 	}
 	want = rest
@@ -188,8 +192,7 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 			continue
 		}
 		r.note(g, "android: "+g+" is on the network at "+addr+", but the adb server has not connected it (its discovery stops working after the computer's network changes); connecting")
-		if err := p.cfg.Client.Connect(ctx, addr); err != nil {
-			r.refuse(ctx, g, addr, err)
+		if _, err := r.connect(ctx, g, addr, addr); err != nil {
 			away = true
 			continue
 		}
@@ -197,6 +200,42 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 		connected = true
 	}
 	return away, connected
+}
+
+// connect has the adb server connect to the paired phone guid by target,
+// its service name or its address addr, and returns what it connected to. A
+// failure is the phone's (refuse), unless the server cannot reach the
+// local network while Pinky can: then the driver restarts a server it
+// started (offnet.go) and connects to addr through the new one, and
+// otherwise leaves the phone to be tried again at the next pass, as it is
+// not the phone that refused. Nor is a failure right after a restart held
+// against the phone: a new server's first TLS handshake with a phone
+// failed once (platform-tools 37.0.1, "Handshake failed in
+// SSL_accept/SSL_connect"), and the server connected it by itself six
+// seconds later.
+func (r *reconnector) connect(ctx context.Context, guid, target, addr string) (string, error) {
+	p := r.p
+	err := p.cfg.Client.Connect(ctx, target)
+	if err == nil {
+		p.server.reached()
+		return target, nil
+	}
+	if !p.serverCutOff(ctx, addr, err) {
+		r.refuse(ctx, guid, target, err)
+		return "", err
+	}
+	if !p.serverOffNetwork(ctx, addr) {
+		return "", err
+	}
+	if err := p.cfg.Client.Connect(ctx, addr); err != nil {
+		if p.serverCutOff(ctx, addr, err) {
+			p.server.cutOff(addr)
+		}
+		p.cfg.logf("android: connecting to %s at %s through the new adb server: %v; trying again at the next pass", guid, addr, err)
+		return "", err
+	}
+	p.server.reached()
+	return addr, nil
 }
 
 // onWiFi reports whether a paired phone is connected on the computer's

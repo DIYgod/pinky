@@ -365,7 +365,7 @@ func (p *Provider) connectWhenUp(ctx context.Context, serial string) error {
 	ctx, cancel := context.WithTimeout(ctx, upWait)
 	defer cancel()
 	for {
-		err := p.cfg.Client.Connect(ctx, serial)
+		err := p.connectAddr(ctx, serial)
 		if err == nil {
 			_, err = p.waitConnected(ctx, serial, false)
 			return err
@@ -676,7 +676,7 @@ func (t *netLink) connect(ctx context.Context, serial string) error {
 	if err := t.probe(ctx, serial); err != nil {
 		return err
 	}
-	if err := t.p.cfg.Client.Connect(ctx, serial); err != nil {
+	if err := t.p.connectAddr(ctx, serial); err != nil {
 		return connectErr(serial, err)
 	}
 	return nil

@@ -226,6 +226,7 @@ func TestPairByQRCodeFails(t *testing.T) {
 		{driver.ErrPairNotListening, "The phone stopped waiting to pair, as it does when it leaves the scanning screen.", true},
 		{driver.ErrPairUnreachable, "The phone showed up on the network, but Pinky couldn't connect to it.", false},
 		{driver.ErrPairOldTool, "The adb server running on this computer is too old to pair phones over Wi-Fi.", false},
+		{driver.ErrPairNoNetwork, "This computer's adb server can't reach phones on your network, though Pinky can.", false},
 	} {
 		ta.waitFor(t, "the QR code", func() bool { tt.Frame(); return ta.add.pair.code != nil && ta.add.pair.state == "waiting" })
 		ta.api.FailPairing(fmt.Errorf("android: pairing with 192.168.1.42:37123 failed: %w (adb: pairing failed: Wrong password or connection was dropped.)", c.why))

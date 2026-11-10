@@ -1476,6 +1476,10 @@
       }
     }
   },
+  "checkHostADBNoNetwork": "The adb server on this computer can't reach phones on your network, though Pinky can, so phones on Wi-Fi can't connect. If another program started it, quit that program or run adb kill-server in Terminal: Pinky then starts its own. On a Mac, also check that Pinky is on under System Settings › Privacy & Security › Local Network.",
+  "@checkHostADBNoNetwork": {
+    "description": "The checkup and Add phone › Android: the adb server that runs gets no route to phones on the network that Pinky itself reaches (on a Mac, it lost Local Network access), and Pinky could not restart it. adb kill-server is a command: keep it as it is. System Settings, Privacy & Security and Local Network are macOS's own names: use those of macOS in Simplified Chinese."
+  },
   "checkHostADBOld": "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such as an old Android SDK's tools, or update them: Pinky then starts its own.",
   "@checkHostADBOld": {
     "description": "The checkup and Add phone › Android: the adb server that runs is older than Wi-Fi pairing needs."
@@ -5417,6 +5421,10 @@
   "pairingErrNoAdb": "Android's adb isn't working on this computer, so Pinky can't pair phones over Wi-Fi. Go back to see why, or use a USB cable.",
   "@pairingErrNoAdb": {
     "description": "Pair over Wi-Fi: the error when adb does not work on this computer (no adb, or its server does not run); Add phone › Android, one step back, says why."
+  },
+  "pairingErrNoNetwork": "This computer's adb server can't reach phones on your network, though Pinky can. Quit the program that started it, or run adb kill-server in Terminal, then try again: Pinky then starts its own adb server.",
+  "@pairingErrNoNetwork": {
+    "description": "Pair over Wi-Fi: the error when the adb server gets no route to the phone's address, which Pinky itself reaches (on a Mac, the server lost Local Network access), and Pinky could not restart it. adb kill-server is a command: keep it as it is."
   },
   "pairingErrNotListening": "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog, and keep it open until Pinky is done.",
   "@pairingErrNotListening": {

@@ -90,12 +90,37 @@ func (p *Provider) PairWithCode(ctx context.Context, addr, code string) (driver.
 	// Search while the phone pairs: its connect service is there already.
 	own, _ := p.browse(adb.ServiceConnect)
 	defer closeBrowse(own)
-	start := time.Now()
-	guid, err := p.cfg.Client.Pair(ctx, addr, code)
+	guid, err := p.pair(ctx, addr, code)
 	if err != nil {
-		return driver.Info{}, pairError(err, addr, time.Since(start))
+		return driver.Info{}, err
 	}
 	return p.connectPaired(ctx, guid, host, own)
+}
+
+// pair has the adb server pair with the phone at addr, and returns the
+// phone's guid. A server that cannot reach the local network while Pinky
+// can is restarted when Pinky started it (offnet.go), and pairs again;
+// otherwise the error wraps driver.ErrPairNoNetwork.
+func (p *Provider) pair(ctx context.Context, addr, code string) (string, error) {
+	start := time.Now()
+	guid, err := p.cfg.Client.Pair(ctx, addr, code)
+	if err == nil {
+		p.server.reached()
+		return guid, nil
+	}
+	if !p.serverCutOff(ctx, addr, err) {
+		return "", pairError(err, addr, time.Since(start))
+	}
+	if !p.serverOffNetwork(ctx, addr) {
+		return "", fmt.Errorf("android: pairing with %s failed: %w (%w)", addr, driver.ErrPairNoNetwork, err)
+	}
+	start = time.Now()
+	guid, err = p.cfg.Client.Pair(ctx, addr, code)
+	if err != nil {
+		return "", pairError(err, addr, time.Since(start))
+	}
+	p.server.reached()
+	return guid, nil
 }
 
 // ConnectWiFi implements driver.WiFiConnector: it connects to a phone
@@ -109,7 +134,7 @@ func (p *Provider) ConnectWiFi(ctx context.Context, addr string) (driver.Info, e
 	parent := ctx
 	ctx, cancel := context.WithTimeout(ctx, connectTimeout)
 	defer cancel()
-	if err := p.cfg.Client.Connect(ctx, addr); err != nil {
+	if err := p.connectAddr(ctx, addr); err != nil {
 		return driver.Info{}, wrapErr(err)
 	}
 	offline := func() error {
@@ -223,10 +248,9 @@ func (q *qrPairing) Wait(ctx context.Context) (driver.Info, error) {
 	}
 	q.update(func(pr *driver.PairingProgress) { pr.Found = true })
 	q.p.cfg.logf("android: pairing with the phone at %s", addr)
-	start := time.Now()
-	guid, err := q.p.cfg.Client.Pair(ctx, addr, q.pass)
+	guid, err := q.p.pair(ctx, addr, q.pass)
 	if err != nil {
-		return driver.Info{}, q.closedErr(ctx, pairError(err, addr, time.Since(start)))
+		return driver.Info{}, q.closedErr(ctx, err)
 	}
 	q.update(func(pr *driver.PairingProgress) { pr.Paired = true })
 	host, _, _ := net.SplitHostPort(addr)
