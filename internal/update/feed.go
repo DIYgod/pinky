@@ -66,6 +66,10 @@ type Feed struct {
 	// none.
 	LocalizedNotes map[string]string `json:"localized_notes"`
 	Assets         map[string]Asset  `json:"assets"`
+
+	// apiAssets are the API's URLs of the release's files by name, when
+	// the feed came through GitHub's API (fetchFeedAPI).
+	apiAssets map[string]string
 }
 
 // NotesIn returns the release's notes in lang, the language the app shows,
@@ -216,6 +220,11 @@ func userAgent(version string) string {
 
 // get fetches a URL that checkURL allows.
 func get(ctx context.Context, client *http.Client, raw, version string) (*http.Response, error) {
+	return fetch(ctx, client, raw, version, nil)
+}
+
+// fetch is get with more headers, which header adds.
+func fetch(ctx context.Context, client *http.Client, raw, version string, header func(http.Header)) (*http.Response, error) {
 	if err := checkURL(raw); err != nil {
 		return nil, err
 	}
@@ -225,13 +234,16 @@ func get(ctx context.Context, client *http.Client, raw, version string) (*http.R
 	}
 	req.Header.Set("User-Agent", userAgent(version))
 	req.Header.Set("Cache-Control", "no-cache")
+	if header != nil {
+		header(req.Header)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
 		resp.Body.Close()
-		return nil, fmt.Errorf("GET %s: %s", raw, resp.Status)
+		return nil, &statusError{URL: raw, Code: resp.StatusCode, Status: resp.Status}
 	}
 	return resp, nil
 }
@@ -242,6 +254,11 @@ func FetchFeed(ctx context.Context, client *http.Client, feedURL, version string
 	if err != nil {
 		return Feed{}, err
 	}
+	return readFeed(resp)
+}
+
+// readFeed reads and parses the feed from a response, and closes it.
+func readFeed(resp *http.Response) (Feed, error) {
 	defer resp.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(resp.Body, maxFeedSize+1))
 	if err != nil {
