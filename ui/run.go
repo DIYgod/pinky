@@ -134,6 +134,10 @@ type Settings struct {
 	// IOSWiFi uses iPhones and iPads over Wi-Fi when this computer reaches
 	// them there (gateway.SetWiFi); off, only on a cable.
 	IOSWiFi bool
+	// StopADBOnQuit stops, when Pinky quits, the adb server that runs the
+	// adb that comes with Pinky, unless another program uses it
+	// (adb.Client.StopPinkyADB); not when Pinky quits for an update.
+	StopADBOnQuit bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -167,6 +171,7 @@ func DefaultSettings() Settings {
 		AutoUpdate:    true,
 		KeepAwakeAway: true,
 		IOSWiFi:       true,
+		StopADBOnQuit: true,
 	}
 }
 

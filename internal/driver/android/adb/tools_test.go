@@ -30,6 +30,18 @@ func TestMain(m *testing.M) {
 
 func fakeADBMain(args []string) {
 	switch {
+	case len(args) == 2 && args[0] == "pinky-hold":
+		// Another program connected to the server, as Android Studio
+		// stays (TestStopPinkyADB): it holds a connection until the
+		// server or the test ends it.
+		c, err := net.Dial("tcp", args[1])
+		if err != nil {
+			os.Exit(1)
+		}
+		fmt.Println("connected")
+		go func() { time.Sleep(time.Minute); os.Exit(0) }()
+		io.Copy(io.Discard, c)
+		os.Exit(0)
 	case len(args) == 1 && args[0] == "version":
 		fmt.Println("Android Debug Bridge version 1.0.41")
 		fmt.Println("Version " + os.Getenv("PINKY_FAKE_ADB_VERSION"))

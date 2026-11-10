@@ -83,7 +83,7 @@ Pinky 会自己检查新版本；Mac 版、用 Windows 安装程序装的 Pinky 
 
 #### Android 工具
 
-Pinky 自带 adb，这是它连接 Android 手机用的工具，从 Android 源码构建，所以不用另装任何东西。如果电脑上已经有 Android 的 platform tools（来自 Android Studio、Homebrew 或系统的软件包），Pinky 会用它们，并和 Android Studio 等工具共用同一个 adb 服务。
+Pinky 自带 adb，这是它连接 Android 手机用的工具，从 Android 源码构建，所以不用另装任何东西。如果电脑上已经有 Android 的 platform tools（来自 Android Studio、Homebrew 或系统的软件包），Pinky 会用它们，并和 Android Studio 等工具共用同一个 adb 服务。退出 Pinky 时，它会停止自带的 adb，除非 Android Studio 等其他应用正在使用；在「设置 › 高级 › 退出 Pinky 时停止 adb」里可以关掉。你自己安装的 adb 会继续运行。
 
 #### Windows 和 Linux 上的 USB
 

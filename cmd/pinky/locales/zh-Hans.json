@@ -1158,6 +1158,8 @@
   "settingsAdvancedRulesFile": "规则文件",
   "settingsAdvancedRulesFileDesc": "“安全”设置背后的规则，以文本形式保存",
   "settingsAdvancedRulesOpenFailed": "无法打开规则文件：{reason}",
+  "settingsAdvancedStopAdb": "退出 Pinky 时停止 adb",
+  "settingsAdvancedStopAdbDesc": "退出 Pinky 时，一并停止它为 Android 手机带来的 adb，除非 Android Studio 等其他应用正在使用。你自己安装的 adb 会继续运行。",
   "settingsAdvancedVideo": "视频",
   "settingsAgentsAllowed": "已允许",
   "settingsAgentsApprove": "批准智能体",

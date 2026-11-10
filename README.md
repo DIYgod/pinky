@@ -83,7 +83,7 @@ Taking the phone out? With Tailscale, Pinky reaches it away from home too ([how]
 
 #### Android tools
 
-Pinky brings its own adb, the tool it reaches Android phones with, built from Android's source, so nothing else needs installing. When the computer has Android's platform tools already, from Android Studio, Homebrew or the system's packages, Pinky uses those, and shares their adb server with Android Studio and other tools.
+Pinky brings its own adb, the tool it reaches Android phones with, built from Android's source, so nothing else needs installing. When the computer has Android's platform tools already, from Android Studio, Homebrew or the system's packages, Pinky uses those, and shares their adb server with Android Studio and other tools. When Pinky quits, it stops the adb it brought, unless another app such as Android Studio is using it; Settings › Advanced › **Stop adb when Pinky quits** turns that off. An adb you installed keeps running.
 
 #### USB on Windows and Linux
 

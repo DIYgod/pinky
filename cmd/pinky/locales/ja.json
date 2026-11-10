@@ -1158,6 +1158,8 @@
   "settingsAdvancedRulesFile": "ルールファイル",
   "settingsAdvancedRulesFileDesc": "「安全」設定の裏にあるルール（テキスト）",
   "settingsAdvancedRulesOpenFailed": "ルールファイルを開けませんでした：{reason}",
+  "settingsAdvancedStopAdb": "Pinky の終了時に adb を停止",
+  "settingsAdvancedStopAdbDesc": "Pinky を終了すると、Android スマホ用に Pinky が同梱している adb も停止します。Android Studio など他のアプリが使用中のときは停止しません。ご自身でインストールした adb は動作し続けます。",
   "settingsAdvancedVideo": "動画",
   "settingsAgentsAllowed": "許可済み",
   "settingsAgentsApprove": "エージェントを承認",
