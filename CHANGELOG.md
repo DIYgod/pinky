@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On Linux, when Pinky started by an agent cannot open its window (no display, or missing libraries), Pinky now keeps running in the background as pinky daemon, so the agent stays connected. Thanks to pseudoyu.
+
 ## 2026.1110.21 (2026-11-10)
 
 - Swipes, taps, drags and pinches on an element now stay clear of the on-screen keyboard instead of landing on its keys. When too little of the element shows above the keyboard, the agent is told to hide the keyboard first.
