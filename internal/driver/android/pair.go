@@ -114,13 +114,22 @@ func (p *Provider) pair(ctx context.Context, addr, code string) (string, error) 
 	if !p.serverOffNetwork(ctx, addr) {
 		return "", fmt.Errorf("android: pairing with %s failed: %w (%w)", addr, driver.ErrPairNoNetwork, err)
 	}
-	start = time.Now()
-	guid, err = p.cfg.Client.Pair(ctx, addr, code)
-	if err != nil {
-		return "", pairError(err, addr, time.Since(start))
+	// Through the new server: again only while it cannot reach the phone
+	// either, since any other failure is the phone's (a dialog that
+	// closed, a wrong code).
+	err = p.afterRestart(ctx, addr, func() error {
+		start = time.Now()
+		var err error
+		guid, err = p.cfg.Client.Pair(ctx, addr, code)
+		return err
+	}, func(error) bool { return false })
+	switch {
+	case err == nil:
+		return guid, nil
+	case errors.Is(err, driver.ErrPairNoNetwork):
+		return "", err
 	}
-	p.server.reached()
-	return guid, nil
+	return "", pairError(err, addr, time.Since(start))
 }
 
 // ConnectWiFi implements driver.WiFiConnector: it connects to a phone

@@ -41,6 +41,7 @@ type fakeADB struct {
 	slowDevices   time.Duration     // how long host:devices-l takes, as on a busy computer
 	connectsOff   bool              // a phone host:connect reaches stays offline
 	noRoute       bool              // the server cannot reach the network: host:connect and host:pair get no route
+	failConnects  int               // the next host:connects fail, as a TLS handshake that failed
 
 	known     []string // the phones the server paired with (adb_known_hosts.pb)
 	own       []string // what the driver's search sees, as services
@@ -199,6 +200,11 @@ func (f *fakeADB) handle(c net.Conn) {
 		}
 		if f.noRoute {
 			reply("failed to connect to '" + addr + "': No route to host")
+			return
+		}
+		if f.failConnects > 0 {
+			f.failConnects--
+			reply("failed to connect to " + addr)
 			return
 		}
 		if guid, ok := strings.CutSuffix(addr, connectSuffix); ok && serviceAddr(adb.ParseMDNSServices(strings.Join(f.services, "\n")), guid) == "" {

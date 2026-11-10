@@ -46,9 +46,9 @@ func newCutOffFake(t *testing.T, own bool) *cutOffFake {
 		c.starts.Add(1)
 		return nil
 	}
-	old := reconnectSearch
-	reconnectSearch = 300 * time.Millisecond
-	t.Cleanup(func() { reconnectSearch = old })
+	old, oldChecks, oldWait := reconnectSearch, cutOffChecks, restartTryWait
+	reconnectSearch, cutOffChecks, restartTryWait = 300*time.Millisecond, true, 10*time.Millisecond
+	t.Cleanup(func() { reconnectSearch, cutOffChecks, restartTryWait = old, oldChecks, oldWait })
 	c.f, c.p = f, NewProvider(cfg)
 	c.p.dial = func(ctx context.Context, addr string) error {
 		c.dials.Add(1)
@@ -90,8 +90,9 @@ func TestReconnectServerCutOff(t *testing.T) {
 }
 
 // TestReconnectServerCutOffAgain: a server Pinky started anew that cannot
-// reach the network either is not restarted again within offNetRetry, and
-// CheckHost says so.
+// reach the network either is never restarted again in this run, also
+// after offNetRetry (every restart drops every connection on the server),
+// and CheckHost says so.
 func TestReconnectServerCutOffAgain(t *testing.T) {
 	c := newCutOffFake(t, true)
 	c.p.cfg.StopServer = func(ctx context.Context) error { c.stops.Add(1); return nil } // the new one is cut off too
@@ -99,6 +100,11 @@ func TestReconnectServerCutOffAgain(t *testing.T) {
 	if _, connected := c.p.wifi.reconnect(ctx, entries(t, c.p)); connected {
 		t.Fatal("connected through a server that cannot reach the network")
 	}
+	c.p.wifi.reconnect(ctx, entries(t, c.p))
+	c.p.server.mu.Lock()
+	c.p.server.triedAt = c.p.server.triedAt.Add(-2 * offNetRetry)
+	c.p.server.restartedAt = c.p.server.restartedAt.Add(-2 * offNetRetry)
+	c.p.server.mu.Unlock()
 	c.p.wifi.reconnect(ctx, entries(t, c.p))
 	if c.stops.Load() != 1 || c.starts.Load() != 1 {
 		t.Errorf("stops %d, starts %d, want one each", c.stops.Load(), c.starts.Load())
@@ -250,5 +256,114 @@ func TestConnectAddrServerCutOff(t *testing.T) {
 		if own != (err == nil) || (!own && !errors.Is(err, driver.ErrPairNoNetwork)) {
 			t.Errorf("own %v: netLink.connect = %v", own, err)
 		}
+	}
+}
+
+// TestNoHoldBackDuringRestart: a phone whose connection fails while Pinky
+// restarts the server (it went away, or answers again only just), as when
+// netLink or a pairing set the restart off, is not taken for one that
+// crashed the server: it is tried again at the next pass.
+func TestNoHoldBackDuringRestart(t *testing.T) {
+	c := newCutOffFake(t, true)
+	c.f.set(func(f *fakeADB) { f.noRoute, f.quitOnConnect = false, true })
+	if c.p.server.tryRestart(time.Now()) != restartNow {
+		t.Fatal("no restart")
+	}
+	c.p.wifi.reconnect(context.Background(), entries(t, c.p))
+	if c.p.wifi.holdBack(guidPixel, "192.168.1.42:41000") {
+		t.Error("the phone is held back while Pinky restarts the server")
+	}
+	c.p.server.restarted(time.Now(), true, true, nil)
+	if !c.p.server.justRestarted(time.Now()) || c.p.server.justRestarted(time.Now().Add(restartGrace)) {
+		t.Error("restartGrace")
+	}
+}
+
+// TestCutOffOnlyLocalMac: a server on another computer, or a computer
+// other than a Mac, is never taken for one cut off from the network, and a
+// server on another computer is never Pinky's to stop.
+func TestCutOffOnlyLocalMac(t *testing.T) {
+	c := newCutOffFake(t, true)
+	ctx := context.Background()
+	noRoute := errors.New("adb: connect 192.168.1.42:41000: failed to connect to '192.168.1.42:41000': No route to host")
+	if !c.p.serverCutOff(ctx, "192.168.1.42:41000", noRoute) {
+		t.Fatal("not cut off")
+	}
+	local := c.p.cfg.Client
+	c.p.cfg.Client = &adb.Client{Addr: "10.0.0.2:5037"}
+	if c.p.serverCutOff(ctx, "192.168.1.42:41000", noRoute) {
+		t.Error("a server on another computer is taken for one cut off")
+	}
+	if _, ok := c.p.cfg.Client.OwnServer(); ok {
+		t.Error("a server on another computer is Pinky's")
+	}
+	c.p.cfg.Client = local
+	cutOffChecks = false
+	if c.p.serverCutOff(ctx, "192.168.1.42:41000", noRoute) {
+		t.Error("cut off with cutOffChecks off")
+	}
+	if c.dials.Load() != 1 {
+		t.Errorf("Pinky dialed %d times, want once", c.dials.Load())
+	}
+}
+
+// TestPairWaitsForRestart: a pairing that finds the server cut off while a
+// restart is under way (the reconnector set it off) waits for it and pairs
+// through the new server, rather than telling the person to stop it.
+func TestPairWaitsForRestart(t *testing.T) {
+	c := newCutOffFake(t, true)
+	c.f.set(func(f *fakeADB) {
+		f.code = "482913"
+		f.guid = guidPixel
+		f.autoSerial = guidPixel + connectSuffix
+	})
+	entered, release := make(chan struct{}), make(chan struct{})
+	c.p.cfg.StopServer = func(ctx context.Context) error {
+		c.stops.Add(1)
+		close(entered)
+		<-release
+		c.f.set(func(f *fakeADB) { f.noRoute = false })
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	done := make(chan struct{})
+	go func() { c.p.wifi.reconnect(ctx, entries(t, c.p)); close(done) }()
+	<-entered
+	go func() { time.Sleep(200 * time.Millisecond); close(release) }()
+	if _, err := c.p.PairWithCode(ctx, "192.168.1.42:37123", "482913"); err != nil {
+		t.Errorf("PairWithCode during a restart: %v", err)
+	}
+	<-done
+	if c.stops.Load() != 1 {
+		t.Errorf("stops %d", c.stops.Load())
+	}
+}
+
+// TestConnectWiFiAfterRestart: Add phone's connect step forgives the new
+// server's first failed handshake, and reports one that still cannot reach
+// the network after the restart.
+func TestConnectWiFiAfterRestart(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	c := newCutOffFake(t, true)
+	c.p.cfg.StopServer = func(ctx context.Context) error {
+		c.f.set(func(f *fakeADB) { f.noRoute, f.failConnects = false, 1 })
+		return nil
+	}
+	if _, err := c.p.ConnectWiFi(ctx, "192.168.1.42:41000"); err != nil {
+		t.Errorf("ConnectWiFi after the first handshake failed: %v", err)
+	}
+	if _, connects := c.f.counts(); len(connects) != 3 {
+		t.Errorf("connects %q, want the cut-off one, the failed one and the one that worked", connects)
+	}
+
+	c = newCutOffFake(t, true)
+	c.p.cfg.StopServer = func(ctx context.Context) error { return nil } // still cut off
+	if _, err := c.p.ConnectWiFi(ctx, "192.168.1.42:41000"); !errors.Is(err, driver.ErrPairNoNetwork) {
+		t.Errorf("ConnectWiFi through a new server still cut off: %v", err)
+	}
+	if h := c.p.CheckHost(); h.Missing != hostADBNoNetwork || !strings.Contains(h.Detail, "after Pinky restarted it") {
+		t.Errorf("CheckHost = %+v", h)
 	}
 }

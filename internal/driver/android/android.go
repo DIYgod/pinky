@@ -95,6 +95,10 @@ type Config struct {
 
 	// Logf, when set, receives debug messages.
 	Logf func(format string, args ...any)
+	// Infof, when set, receives the messages worth keeping in the log at
+	// any level, such as an adb server the driver stopped; nil sends them
+	// to Logf.
+	Infof func(format string, args ...any)
 }
 
 func (c *Config) defaults() {
@@ -125,6 +129,14 @@ func (c *Config) logf(format string, args ...any) {
 	if c.Logf != nil {
 		c.Logf(format, args...)
 	}
+}
+
+func (c *Config) infof(format string, args ...any) {
+	if c.Infof != nil {
+		c.Infof(format, args...)
+		return
+	}
+	c.logf(format, args...)
 }
 
 // Provider discovers and opens Android devices.

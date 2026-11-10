@@ -1,6 +1,7 @@
 package android
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -65,11 +66,12 @@ type serverWatch struct {
 	asked   bool        // its version was asked for since it came
 	aways   []time.Time // when a server that ran went away, within restartWindow
 
-	stopping  bool      // Pinky stops the server it started, to start another (offnet.go)
-	triedAt   time.Time // when Pinky last dealt with a server cut off from the network
-	offNet    string    // an address the server that answers could not reach while Pinky could, "" for none
-	offNetOwn bool      // that server is one Pinky started (again)
-	lastOwn   bool      // the server Pinky dealt with at triedAt was its own
+	stopping    bool      // Pinky stops the server it started, to start another (offnet.go)
+	restartedAt time.Time // when it last did; once it has, it never does again in this run
+	triedAt     time.Time // when Pinky last dealt with a server cut off from the network
+	offNet      string    // an address the server that answers could not reach while Pinky could, "" for none
+	offNetOwn   bool      // that server is one Pinky started (again)
+	lastOwn     bool      // the server Pinky dealt with at triedAt was its own
 }
 
 // claim records that List found no server, and reports whether List
@@ -175,19 +177,59 @@ func (w *serverWatch) check(now time.Time) driver.HostCheck {
 	return driver.HostCheck{}
 }
 
-// tryRestart reports whether Pinky should deal with a server cut off from
-// the network now (offnet.go): not while a start is under way, and once
-// per offNetRetry. When it should, it holds off List's starts until
-// restarted, and the server's going away does not count as a restart by
-// another program.
-func (w *serverWatch) tryRestart(now time.Time) bool {
+// What tryRestart decides.
+const (
+	restartNow      = iota // stop the server and start another
+	restartUnderway        // a start or restart is under way: wait for it (waitRestart)
+	restartNo              // not now, or not again in this run
+)
+
+// tryRestart decides what to do about a server cut off from the network
+// (offnet.go). Pinky restarts a server once per run: one it started again
+// that cannot reach the network either will not after another restart,
+// and every restart drops every connection on the server, so CheckHost
+// reports it instead. A server Pinky could not restart (another
+// program's) is looked at again after offNetRetry. On restartNow it holds
+// off List's starts until restarted, and the server's going away does not
+// count as a restart by another program.
+func (w *serverWatch) tryRestart(now time.Time) int {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.starting || (!w.triedAt.IsZero() && now.Sub(w.triedAt) < offNetRetry) {
-		return false
+	switch {
+	case w.starting:
+		return restartUnderway
+	case !w.restartedAt.IsZero():
+		return restartNo
+	case !w.triedAt.IsZero() && now.Sub(w.triedAt) < offNetRetry:
+		return restartNo
 	}
 	w.starting, w.stopping, w.triedAt = true, true, now
-	return true
+	return restartNow
+}
+
+// waitRestart waits for the start or restart under way to end, and
+// reports whether a server answers then, as far as Pinky knows.
+func (w *serverWatch) waitRestart(ctx context.Context) bool {
+	for {
+		w.mu.Lock()
+		starting, err := w.starting, w.lastErr
+		w.mu.Unlock()
+		if !starting {
+			return err == nil
+		}
+		if sleepCtx(ctx, 100*time.Millisecond) != nil {
+			return false
+		}
+	}
+}
+
+// justRestarted reports whether Pinky is restarting the server, or did
+// within restartGrace: a phone that failed to connect then is not to
+// blame.
+func (w *serverWatch) justRestarted(now time.Time) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.stopping || (!w.restartedAt.IsZero() && now.Sub(w.restartedAt) < restartGrace)
 }
 
 // restarted records how a restart that tryRestart allowed went: own
@@ -201,6 +243,7 @@ func (w *serverWatch) restarted(now time.Time, own, stopped bool, err error) {
 	if !stopped {
 		return
 	}
+	w.restartedAt = now
 	w.offNet, w.offNetOwn = "", false
 	w.lastErr = err
 	if err != nil {

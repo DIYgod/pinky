@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"runtime"
 	"strings"
 	"time"
 
@@ -31,10 +32,31 @@ import (
 // leaves running, as always, and CheckHost says what to do
 // (adb_no_network).
 
-// offNetRetry is the shortest time between two restarts of a server cut
-// off from the network: one that cannot reach the network either after a
-// restart is left for CheckHost to report.
-const offNetRetry = 10 * time.Minute
+// cutOffChecks: only macOS keeps a process off the local network
+// (elsewhere "No route to host" is what a phone that left gives), so only
+// there does the driver look for a server cut off from it. Tests turn it
+// on.
+var cutOffChecks = runtime.GOOS == "darwin"
+
+const (
+	// offNetRetry is how long Pinky leaves a server cut off from the
+	// network that it could not restart (another program's) before it
+	// looks again. One it restarted it does not restart again in this run
+	// (serverWatch.tryRestart).
+	offNetRetry = 10 * time.Minute
+	// restartGrace is how long after a restart a failed connection is not
+	// held against the phone (reconnector.refuse).
+	restartGrace = 30 * time.Second
+	// After a restart, the request that found the server cut off is made
+	// again up to restartTries times, restartTryWait apart: a new server's
+	// first TLS handshake with a phone failed once (platform-tools 37.0.1,
+	// "Handshake failed in SSL_accept/SSL_connect"), and the server
+	// connected it by itself six seconds later.
+	restartTries = 3
+)
+
+// restartTryWait is the wait between those tries; tests shorten it.
+var restartTryWait = 3 * time.Second
 
 // dialWait is how long Pinky's own connection to an address may take.
 const dialWait = 3 * time.Second
@@ -51,12 +73,15 @@ func dialOwn(ctx context.Context, addr string) error {
 }
 
 // serverCutOff reports whether the adb server failed to reach addr because
-// it cannot use the local network: its words say that there was no route
-// to addr (connecting) or that it could not start its pairing client
-// (pairing; adb says that for no route and for a refused connection
-// alike), while Pinky's own connection to addr goes through.
+// it cannot use the local network: on macOS, with a server on this
+// computer, its words say that there was no route to addr (connecting) or
+// that it could not start its pairing client (pairing; adb says that for
+// no route and for a refused connection alike), while Pinky's own
+// connection to addr goes through. A server on another computer
+// (ANDROID_ADB_SERVER_ADDRESS, ADB_SERVER_SOCKET) reaches another network,
+// which Pinky's connection tells nothing about.
 func (p *Provider) serverCutOff(ctx context.Context, addr string, err error) bool {
-	if err == nil || addr == "" {
+	if !cutOffChecks || err == nil || addr == "" || !p.cfg.Client.Local() {
 		return false
 	}
 	msg := strings.ToLower(err.Error())
@@ -68,11 +93,20 @@ func (p *Provider) serverCutOff(ctx context.Context, addr string, err error) boo
 
 // serverOffNetwork deals with an adb server that could not reach addr
 // while Pinky could (serverCutOff): it stops one Pinky started and starts
-// another (Config.StopServer, Config.StartServer), at most once per
-// offNetRetry, and leaves any other running for CheckHost to report. It
-// reports whether a new server runs.
+// another (Config.StopServer, Config.StartServer), once per run, and
+// leaves any other running for CheckHost to report; while a start or
+// restart is under way, it waits for that one. It reports whether a new
+// server runs.
 func (p *Provider) serverOffNetwork(ctx context.Context, addr string) bool {
-	if p.cfg.StartServer == nil || !p.server.tryRestart(time.Now()) {
+	switch p.server.tryRestart(time.Now()) {
+	case restartUnderway:
+		return p.server.waitRestart(ctx)
+	case restartNo:
+		p.server.cutOff(addr)
+		return false
+	}
+	if p.cfg.StartServer == nil {
+		p.server.restarted(time.Now(), false, false, nil)
 		p.server.cutOff(addr)
 		return false
 	}
@@ -82,36 +116,72 @@ func (p *Provider) serverOffNetwork(ctx context.Context, addr string) bool {
 		p.server.restarted(time.Now(), own, false, nil)
 		p.server.cutOff(addr)
 		if own {
-			p.cfg.logf("android: the adb server Pinky started cannot reach %s on the local network, which Pinky reaches; stopping it: %v", addr, err)
+			p.cfg.infof("android: the adb server Pinky started cannot reach %s on the local network, which Pinky reaches, and stopping it failed: %v", addr, err)
 		} else {
-			p.cfg.logf("android: the adb server cannot reach %s on the local network, which Pinky reaches; another program started it, so Pinky leaves it running", addr)
+			p.cfg.infof("android: the adb server cannot reach %s on the local network, which Pinky reaches; another program started it, so Pinky leaves it running", addr)
 		}
 		return false
 	}
-	p.cfg.logf("android: the adb server Pinky started could not reach %s on the local network, which Pinky reaches (it lost Local Network access); Pinky stopped it and starts another", addr)
+	p.cfg.infof("android: the adb server Pinky started could not reach %s on the local network, which Pinky reaches (it lost Local Network access); Pinky stopped it (SIGTERM) and starts another", addr)
 	serr := p.cfg.StartServer(ctx)
 	p.server.restarted(time.Now(), true, true, serr)
 	if serr != nil {
-		p.cfg.logf("android: starting an adb server after stopping the one cut off from the network: %v", serr)
+		p.cfg.infof("android: starting an adb server after stopping the one cut off from the network: %v", serr)
 		return false
 	}
 	return true
 }
 
-// connectAddr has the adb server connect at addr, as Client.Connect. A
-// server that cannot reach the network while Pinky can is restarted when
-// Pinky started it, and asked again; otherwise the error wraps
-// driver.ErrPairNoNetwork.
-func (p *Provider) connectAddr(ctx context.Context, addr string) error {
-	err := p.cfg.Client.Connect(ctx, addr)
-	if err != nil && p.serverCutOff(ctx, addr, err) {
-		if !p.serverOffNetwork(ctx, addr) {
-			return fmt.Errorf("android: connecting to %s failed: %w (%w)", addr, driver.ErrPairNoNetwork, err)
+// afterRestart makes the request that found the server cut off (try) again
+// through the server that came after the restart, up to restartTries
+// times: again for any failure when retry says so, and for a server that
+// still cannot reach addr. One that still cannot is recorded for CheckHost
+// and gives an error wrapping driver.ErrPairNoNetwork.
+func (p *Provider) afterRestart(ctx context.Context, addr string, try func() error, retry func(error) bool) error {
+	var err error
+	cut := false
+	for i := range restartTries {
+		if i > 0 && sleepCtx(ctx, restartTryWait) != nil {
+			break
 		}
-		err = p.cfg.Client.Connect(ctx, addr)
+		if err = try(); err == nil {
+			p.server.reached()
+			return nil
+		}
+		if cut = p.serverCutOff(ctx, addr, err); !cut && !retry(err) {
+			return err
+		}
 	}
-	if err == nil {
-		p.server.reached()
+	if cut {
+		p.server.cutOff(addr)
+		p.cfg.infof("android: the adb server cannot reach %s on the local network either after Pinky restarted it", addr)
+		return noNetwork(addr, err)
 	}
 	return err
+}
+
+// noNetwork is the error for a request to addr that a server cut off from
+// the network could not make.
+func noNetwork(addr string, err error) error {
+	return fmt.Errorf("android: reaching %s failed: %w (%w)", addr, driver.ErrPairNoNetwork, err)
+}
+
+// connectAddr has the adb server connect at addr, as Client.Connect. A
+// server that cannot reach the network while Pinky can is restarted when
+// Pinky started it, and asked again (afterRestart); otherwise the error
+// wraps driver.ErrPairNoNetwork.
+func (p *Provider) connectAddr(ctx context.Context, addr string) error {
+	connect := func() error { return p.cfg.Client.Connect(ctx, addr) }
+	err := connect()
+	if err == nil {
+		p.server.reached()
+		return nil
+	}
+	if !p.serverCutOff(ctx, addr, err) {
+		return err
+	}
+	if !p.serverOffNetwork(ctx, addr) {
+		return noNetwork(addr, err)
+	}
+	return p.afterRestart(ctx, addr, connect, func(error) bool { return true })
 }

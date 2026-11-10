@@ -5422,7 +5422,7 @@
   "@pairingErrNoAdb": {
     "description": "Pair over Wi-Fi: the error when adb does not work on this computer (no adb, or its server does not run); Add phone › Android, one step back, says why."
   },
-  "pairingErrNoNetwork": "This computer's adb server can't reach phones on your network, though Pinky can. Quit the program that started it, or run adb kill-server in Terminal, then try again: Pinky then starts its own adb server.",
+  "pairingErrNoNetwork": "This computer's adb server can't reach phones on your network, though Pinky can. Quit the program that started it, or run adb kill-server in Terminal, and try again: Pinky then starts its own adb server.",
   "@pairingErrNoNetwork": {
     "description": "Pair over Wi-Fi: the error when the adb server gets no route to the phone's address, which Pinky itself reaches (on a Mac, the server lost Local Network access), and Pinky could not restart it. adb kill-server is a command: keep it as it is."
   },

@@ -32,12 +32,12 @@ var ErrNotOwnServer = errors.New("the adb server that runs is not one Pinky star
 
 // OwnServer returns the process id of the server at the client's address
 // when Pinky started it, in this run or an earlier one (above). It reports
-// false for any other server, when it cannot tell, and on Windows, where
-// Pinky stops no server.
+// false for any other server, for one on another computer, when it cannot
+// tell, and on Windows, where Pinky stops no server.
 func (c *Client) OwnServer() (int, bool) {
-	_, port, err := net.SplitHostPort(c.addr())
-	if err != nil {
-		return 0, false
+	host, port, err := net.SplitHostPort(c.addr())
+	if err != nil || !isLoopback(host) {
+		return 0, false // a server on another computer is never Pinky's to stop
 	}
 	procs, err := serverProcesses(port)
 	if err != nil || len(procs) != 1 {
@@ -47,6 +47,14 @@ func (c *Client) OwnServer() (int, bool) {
 		return 0, false
 	}
 	return procs[0].pid, true
+}
+
+// Local reports whether the client's server is on this computer (a
+// loopback address), rather than on another one that
+// ANDROID_ADB_SERVER_ADDRESS or ADB_SERVER_SOCKET names.
+func (c *Client) Local() bool {
+	host, _, err := net.SplitHostPort(c.addr())
+	return err == nil && isLoopback(host)
 }
 
 // process is a running process and its command line.

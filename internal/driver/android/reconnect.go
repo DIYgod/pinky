@@ -206,13 +206,9 @@ func (r *reconnector) reconnect(ctx context.Context, entries []adb.DeviceEntry) 
 // its service name or its address addr, and returns what it connected to. A
 // failure is the phone's (refuse), unless the server cannot reach the
 // local network while Pinky can: then the driver restarts a server it
-// started (offnet.go) and connects to addr through the new one, and
-// otherwise leaves the phone to be tried again at the next pass, as it is
-// not the phone that refused. Nor is a failure right after a restart held
-// against the phone: a new server's first TLS handshake with a phone
-// failed once (platform-tools 37.0.1, "Handshake failed in
-// SSL_accept/SSL_connect"), and the server connected it by itself six
-// seconds later.
+// started (offnet.go) and connects to addr through the new one
+// (afterRestart), and otherwise leaves the phone to be tried again at the
+// next pass, as it is not the phone that refused.
 func (r *reconnector) connect(ctx context.Context, guid, target, addr string) (string, error) {
 	p := r.p
 	err := p.cfg.Client.Connect(ctx, target)
@@ -227,14 +223,11 @@ func (r *reconnector) connect(ctx context.Context, guid, target, addr string) (s
 	if !p.serverOffNetwork(ctx, addr) {
 		return "", err
 	}
-	if err := p.cfg.Client.Connect(ctx, addr); err != nil {
-		if p.serverCutOff(ctx, addr, err) {
-			p.server.cutOff(addr)
-		}
+	err = p.afterRestart(ctx, addr, func() error { return p.cfg.Client.Connect(ctx, addr) }, func(error) bool { return true })
+	if err != nil {
 		p.cfg.logf("android: connecting to %s at %s through the new adb server: %v; trying again at the next pass", guid, addr, err)
 		return "", err
 	}
-	p.server.reached()
 	return addr, nil
 }
 
@@ -284,6 +277,12 @@ func (r *reconnector) holdBack(guid, addr string) bool {
 
 // refuse notes a failed connection and when to try that address again.
 func (r *reconnector) refuse(ctx context.Context, guid, addr string, err error) {
+	if r.p.server.justRestarted(time.Now()) {
+		// The server went, or came just now, because Pinky restarted it
+		// (offnet.go): not the phone's doing.
+		r.p.cfg.logf("android: connecting to %s at %s while Pinky restarts the adb server: %v; trying again at the next pass", guid, addr, err)
+		return
+	}
 	_, verr := r.p.cfg.Client.Version(ctx)
 	quit := errors.Is(verr, adb.ErrServerNotRunning)
 	r.mu.Lock()
