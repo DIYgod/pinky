@@ -46,14 +46,17 @@ func (t *Tree) Screen(opt ScreenOptions) *screen.Screen {
 	}
 	// Where touches go to the keyboard or a system bar instead of the app:
 	// the keyboard window's largest touchable part is the keyboard, and
-	// its other parts (a stylus toolbar's strips) count as covered.
+	// its other parts (a stylus toolbar's strips) count as covered. A
+	// keyboard whose own nodes came (DumpOptions.IME, or a sheet the app
+	// walked unasked) is listed and is what the agent acts on, so it lies
+	// over nothing.
 	full := screen.Rect{W: s.Width, H: s.Height}
 	for _, w := range t.Windows {
 		ime := w.Type == WindowInputMethod
 		if ime {
 			s.Keyboard = true
 		}
-		if !ime && !t.isSystemBar(w) {
+		if (ime && w.Root != nil) || (!ime && !t.isSystemBar(w)) {
 			continue
 		}
 		for _, r := range w.covers() {

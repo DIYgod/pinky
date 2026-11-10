@@ -43,8 +43,9 @@ func covers(s *screen.Screen) []cover {
 // clearPart returns the largest part of r that no cover lies on, and the
 // covers it gave way to. A system bar that holds all of r is what r
 // belongs to, such as the clock in the status bar, and leaves it as it
-// is. The keyboard's own keys are never listed on a screen that has it
-// lie over the app, so whatever lies wholly under it is the app's.
+// is. Whatever lies wholly under the keyboard is the app's: a screen that
+// lists the keyboard's own keys (Android's read of a keyboard panel over
+// an empty app) has no KeyboardFrame.
 func clearPart(s *screen.Screen, r screen.Rect) (part screen.Rect, cut []cover) {
 	for _, c := range covers(s) {
 		if (!c.keyboard && encloses(c.r, r)) || !overlaps(c.r, r) {
