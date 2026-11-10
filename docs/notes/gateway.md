@@ -588,3 +588,9 @@ Tests: `internal/policy/links_test.go` (refused schemes, links as the taps they 
 - **Not changed:** the 45 s limit, how a text matches a label, and the OCR read at most once a second (`waitForOCREvery`).
 
 Tests: `internal/gateway/waitfor_test.go` (`TestWaitForAny`, `TestWaitForArea`, `TestScreenShows`), `internal/mcp` `TestWaitForAnyAndArea` (the schema and a call of each).
+
+## iPhone switches tapped by ref (GitHub issue #51, 2026-11-10)
+
+Settings and SwiftUI give an iPhone switch the frame of its whole row, label included, so a tap by ref at its centre landed on the label and flipped nothing, while the result said settled. `switchPoint` (pipeline.go, iOS only) taps the switch itself: WebDriverAgent lists it as a narrower, unlabelled switch inside the row (Settings › General › Keyboard on the iOS 26.5 Simulator: row `{96 1239 978 87}`, switch `{891 1239 189 87}`), and its centre is used when there is one. Otherwise, for a row-shaped switch (four times as wide as tall or more), the tap lands 38 points in from the trailing end (a 51-point switch in a 16-point margin), or from the leading end when an element with the switch's label lies in the row's right half (right to left); points are 3 pixels on screens 1000 to 1400 pixels across and 2 elsewhere (`pointScale`). `phone_drag` by ref presses the same point. A tap by ref on a switch or checkbox whose checked state did not change adds "[N] is still on/off after the tap. If nothing else came up, tap the switch itself by x and y." to the result (`unflipped`).
+
+On the iOS 26.5 Simulator through the gateway: by ref, Haptic Feedback and Sound flipped both ways with the inner switch and with the trailing-end estimate alone; with the old centre tap they stayed as they were and the result carried the new sentence. Android is unchanged: on the API 36 emulator the switch is its own element (Display › Dark theme `{901 1661 137 126}`, beside the row's button) and a tap by ref flipped it both ways.
