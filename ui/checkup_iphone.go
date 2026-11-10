@@ -163,6 +163,11 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		}
 	}
 	switch step {
+	case driver.SetupTrustRecord:
+		// The phone trusts the computer; the record here is the problem, and
+		// Detail says how an administrator lets Apple's device service
+		// replace it.
+		return locales.AddPhoneIPhoneTrustRecordTitle(), d.Info.Detail, ""
 	case driver.SetupTrust:
 		if d.Info.Connection == "wifi" {
 			// The phone asks to trust a computer only on a cable.
@@ -341,7 +346,7 @@ func (a *app) iphoneCheckAction(c *mg.Context, d gateway.DeviceView, ck driver.C
 		return ck.Fix == driver.SetupPreparing
 	}
 	switch ck.Fix {
-	case driver.SetupTrust, driver.SetupDeveloperMode, driver.SetupUnlock, driver.SetupPreparing,
+	case driver.SetupTrust, driver.SetupTrustRecord, driver.SetupDeveloperMode, driver.SetupUnlock, driver.SetupPreparing,
 		driver.SetupNoDiskImage, driver.SetupDiskImage, driver.SetupDiskImageRefused:
 		mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
 			if button(c, locales.PhoneSetUpIPhone(), btnOpt{small: true}).Clicked() {

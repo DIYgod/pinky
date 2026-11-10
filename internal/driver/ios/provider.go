@@ -457,8 +457,7 @@ func (p *Provider) inspect(ctx context.Context, e goios.DeviceEntry) driver.Info
 			info.Detail = trustWiFiDetail
 			return info
 		}
-		p.prep.askTrust(e, p.logger())
-		return trustState(info, err)
+		return trustState(info, p.prep.askTrust(e, err, p.logger()))
 	}
 	info.Name = values.Value.DeviceName
 	info.Model = modelName(values.Value.ProductType)

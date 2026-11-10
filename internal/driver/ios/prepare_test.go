@@ -731,15 +731,83 @@ func TestAskTrustThrottles(t *testing.T) {
 		return errors.New("Please accept the PairingDialog on the device and run pairing again!")
 	}
 	e := entry("phone", 1, "USB")
-	pr.askTrust(e, nil)
-	pr.askTrust(e, nil)
+	pr.askTrust(e, nil, nil)
+	pr.askTrust(e, nil, nil)
 	if asks != 1 {
 		t.Fatalf("%d pairing requests at once, want 1", asks)
 	}
 	now = now.Add(5 * time.Second)
-	pr.askTrust(e, nil)
+	pr.askTrust(e, nil, nil)
 	if asks != 2 {
 		t.Fatalf("%d pairing requests 5 s later, want 2", asks)
+	}
+}
+
+// TestAskTrustAsksAgainWhenPhoneRefusesRecord: a phone that does not take the
+// pairing record this computer sends it is asked to trust it again, which is
+// what replaces the record: tapping Trust heals nothing while it stays.
+func TestAskTrustAsksAgainWhenPhoneRefusesRecord(t *testing.T) {
+	var pr preparer
+	record := goios.PairRecord{HostID: "OLD"}
+	pr.recordFn = func(string) (goios.PairRecord, error) { return record, nil }
+	pairs := 0
+	pr.pairFn = func(goios.DeviceEntry) error {
+		pairs++
+		record = goios.PairRecord{HostID: "NEW"}
+		return nil
+	}
+	if err := pr.askTrust(entry("phone", 1, "USB"), errors.New("lockdown: InvalidHostID"), nil); err != nil {
+		t.Fatalf("askTrust after InvalidHostID: %v", err)
+	}
+	if pairs != 1 {
+		t.Fatalf("%d pairings, want 1", pairs)
+	}
+}
+
+// TestAskTrustKeepsAGoodRecord: a phone that takes the record and refuses for
+// another reason, as a passcode, is not asked to pair again.
+func TestAskTrustKeepsAGoodRecord(t *testing.T) {
+	var pr preparer
+	pr.recordFn = func(string) (goios.PairRecord, error) { return goios.PairRecord{HostID: "HOST"}, nil }
+	pr.pairFn = func(goios.DeviceEntry) error {
+		t.Error("asked a phone that takes its record to pair again")
+		return nil
+	}
+	lockErr := errors.New("Lockdown error: PasswordProtected")
+	if err := pr.askTrust(entry("phone", 1, "USB"), lockErr, nil); err != lockErr {
+		t.Fatalf("askTrust = %v, want the lockdown error", err)
+	}
+}
+
+// TestAskTrustReportsARecordItCannotReplace: a pairing the phone accepts that
+// leaves the record here as it was cannot be healed by tapping Trust, so the
+// phone says how an administrator lets Apple's device service replace it.
+func TestAskTrustReportsARecordItCannotReplace(t *testing.T) {
+	var pr preparer
+	pr.recordFn = func(string) (goios.PairRecord, error) { return goios.PairRecord{HostID: "OLD"}, nil }
+	pairs := 0
+	pr.pairFn = func(goios.DeviceEntry) error {
+		pairs++
+		return nil
+	}
+	e := entry("phone", 1, "USB")
+	refused := errors.New("lockdown: InvalidHostID")
+	err := pr.askTrust(e, refused, nil)
+	var stuck recordStuckError
+	if !errors.As(err, &stuck) {
+		t.Fatalf("askTrust = %v, want a recordStuckError", err)
+	}
+	info := trustState(driver.Info{}, err)
+	if info.State != driver.StateUnauthorized || info.Setup != driver.SetupTrustRecord ||
+		!strings.Contains(info.Detail, "administrator") || !strings.Contains(info.Detail, driver.PairRecordFixCommand(e.Properties.SerialNumber)) {
+		t.Fatalf("trustState = %+v", info)
+	}
+	// Waiting for the next pairing request says the same, not to tap Trust.
+	if err := pr.askTrust(e, refused, nil); !errors.As(err, &stuck) {
+		t.Fatalf("askTrust while it waits = %v, want a recordStuckError", err)
+	}
+	if pairs != 1 {
+		t.Fatalf("%d pairings, want 1", pairs)
 	}
 }
 

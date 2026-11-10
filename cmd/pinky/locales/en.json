@@ -642,6 +642,18 @@
       }
     }
   },
+  "addPhoneIPhoneTrustRecordCopied": "Copied the command",
+  "@addPhoneIPhoneTrustRecordCopied": {
+    "description": "A toast after copying the PowerShell command that lets Apple's device service replace this computer's pairing record."
+  },
+  "addPhoneIPhoneTrustRecordCopy": "Copy the command",
+  "@addPhoneIPhoneTrustRecordCopy": {
+    "description": "Add phone › iPhone and the phone's page: the link under the pairing record problem that copies the PowerShell command an administrator runs."
+  },
+  "addPhoneIPhoneTrustRecordTitle": "The iPhone trusts this computer, but its pairing record can't be updated.",
+  "@addPhoneIPhoneTrustRecordTitle": {
+    "description": "Add phone › iPhone and the phone's page: the heading of the problem under the trust step when the iPhone trusts this computer but Apple's device service on Windows cannot replace the pairing record it holds, so tapping Trust again cannot help. Pinky's reason and the command that fixes it follow in English."
+  },
   "addPhoneIPhoneTrustWiFi": "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust.",
   "@addPhoneIPhoneTrustWiFi": {
     "description": "Add phone › iPhone and the phone's page: an iPhone on Wi-Fi that no longer trusts this computer. name is its name.",

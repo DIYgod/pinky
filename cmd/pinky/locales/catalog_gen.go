@@ -2007,6 +2007,64 @@ func (msgs Messages) AddPhoneIPhoneTooOldTitle(name string) string {
 	return Catalog.Format(msgs.locale, "addPhoneIPhoneTooOldTitle", map[string]any{"name": name})
 }
 
+// AddPhoneIPhoneTrustRecordCopied says "Copied the command"
+// in the language the app shows.
+//
+// A toast after copying the PowerShell command that lets Apple's device
+// service replace this computer's pairing record.
+func AddPhoneIPhoneTrustRecordCopied() string {
+	return In(i18n.Locale()).AddPhoneIPhoneTrustRecordCopied()
+}
+
+// AddPhoneIPhoneTrustRecordCopied says "Copied the command"
+// in the language of msgs.
+//
+// A toast after copying the PowerShell command that lets Apple's device
+// service replace this computer's pairing record.
+func (msgs Messages) AddPhoneIPhoneTrustRecordCopied() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTrustRecordCopied", nil)
+}
+
+// AddPhoneIPhoneTrustRecordCopy says "Copy the command"
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's page: the link under the pairing
+// record problem that copies the PowerShell command an administrator runs.
+func AddPhoneIPhoneTrustRecordCopy() string { return In(i18n.Locale()).AddPhoneIPhoneTrustRecordCopy() }
+
+// AddPhoneIPhoneTrustRecordCopy says "Copy the command"
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's page: the link under the pairing
+// record problem that copies the PowerShell command an administrator runs.
+func (msgs Messages) AddPhoneIPhoneTrustRecordCopy() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTrustRecordCopy", nil)
+}
+
+// AddPhoneIPhoneTrustRecordTitle says "The iPhone trusts this computer, but its pairing record can't be updated."
+// in the language the app shows.
+//
+// Add phone › iPhone and the phone's page: the heading of the problem
+// under the trust step when the iPhone trusts this computer but Apple's
+// device service on Windows cannot replace the pairing record it holds, so
+// tapping Trust again cannot help. Pinky's reason and the command that
+// fixes it follow in English.
+func AddPhoneIPhoneTrustRecordTitle() string {
+	return In(i18n.Locale()).AddPhoneIPhoneTrustRecordTitle()
+}
+
+// AddPhoneIPhoneTrustRecordTitle says "The iPhone trusts this computer, but its pairing record can't be updated."
+// in the language of msgs.
+//
+// Add phone › iPhone and the phone's page: the heading of the problem
+// under the trust step when the iPhone trusts this computer but Apple's
+// device service on Windows cannot replace the pairing record it holds, so
+// tapping Trust again cannot help. Pinky's reason and the command that
+// fixes it follow in English.
+func (msgs Messages) AddPhoneIPhoneTrustRecordTitle() string {
+	return Catalog.Format(msgs.locale, "addPhoneIPhoneTrustRecordTitle", nil)
+}
+
 // AddPhoneIPhoneTrustWiFi says "{name} is on Wi-Fi, where it can't be asked to trust this computer. Plug it in with a cable, unlock it and tap Trust."
 // in the language the app shows.
 //
