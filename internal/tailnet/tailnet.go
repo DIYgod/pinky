@@ -389,6 +389,12 @@ func (p *rawPeer) device() Device {
 
 func runCommand(ctx context.Context, path string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, path, args...)
+	if runtime.GOOS == "darwin" && os.Getenv("TERM") == "" {
+		// The Mac app is also the CLI. Without a terminal environment (as
+		// when Pinky starts from Finder), it can try to launch its GUI and
+		// print "The Tailscale GUI failed to start" instead of JSON.
+		cmd.Env = append(cmd.Environ(), "TERM=dumb")
+	}
 	hideWindow(cmd)
 	return cmd.Output()
 }
