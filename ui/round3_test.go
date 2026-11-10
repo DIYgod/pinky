@@ -147,6 +147,7 @@ func TestUnlockErrors(t *testing.T) {
 		{errors.Join(errors.New("entered"), driver.ErrLocked), "The saved PIN didn't unlock Mi 10 Pro."},
 		{errors.Join(errors.New("no pad"), driver.ErrPINNotEntered), "Pinky couldn't get to Mi 10 Pro's passcode screen, so it entered nothing."},
 		{secret.ErrNotFound, "No PIN is saved for Mi 10 Pro."},
+		{fmt.Errorf("wrapped: %w", secret.ErrMicrosoftAccount), "To unlock Mi 10 Pro, type your Microsoft account password"},
 		{secret.ErrUnsupported, notAvailableHere},
 		{gateway.ErrNoUnlock, "Unlocking from this computer isn't available."},
 		{driver.ErrOffline, "Mi 10 Pro is offline."},

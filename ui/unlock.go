@@ -139,6 +139,8 @@ func unlockError(err error, name string) string {
 		return locales.UnlockErrNoPad(name)
 	case errors.Is(err, secret.ErrNotFound):
 		return locales.UnlockErrNoPIN(name)
+	case errors.Is(err, secret.ErrMicrosoftAccount):
+		return locales.UnlockErrMicrosoftAccount(name)
 	case errors.Is(err, secret.ErrUnsupported):
 		return locales.UnlockNotAvailable()
 	case errors.Is(err, gateway.ErrNoUnlock):

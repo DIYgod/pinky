@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"runtime"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -23,7 +25,20 @@ import (
 func confirmPresence(ctx context.Context, reason string) error {
 	err := helloVerify(ctx, reason)
 	if errors.Is(err, errHelloUnavailable) {
-		return passwordVerify(ctx, reason)
+		log().Info("confirm it's you: Windows Hello is not available, asking for the password", "why", err.Error())
+		err = passwordVerify(ctx, reason)
+		if err != nil && !errors.Is(err, ErrCancelled) && ctx.Err() == nil {
+			log().Warn("confirm it's you: the password check failed", "err", err.Error())
+		}
+		return err
+	}
+	switch {
+	case err == nil:
+		log().Info("confirm it's you: confirmed with Windows Hello")
+	case errors.Is(err, ErrCancelled), ctx.Err() != nil:
+		log().Info("confirm it's you: Windows Hello was cancelled")
+	default:
+		log().Warn("confirm it's you: Windows Hello failed", "err", err.Error())
 	}
 	return err
 }
@@ -333,6 +348,8 @@ var (
 	procCredUnPackAuthenticationBufferW    = modcredui.NewProc("CredUnPackAuthenticationBufferW")
 	procCredUIParseUserNameW               = modcredui.NewProc("CredUIParseUserNameW")
 	procLogonUserW                         = modadvapi32.NewProc("LogonUserW")
+	modnetapi32                            = windows.NewLazySystemDLL("netapi32.dll")
+	procNetUserModalsGet                   = modnetapi32.NewProc("NetUserModalsGet")
 )
 
 // credUIInfoW is CREDUI_INFOW.
@@ -367,6 +384,7 @@ func passwordVerify(ctx context.Context, reason string) error {
 	caption, _ := windows.UTF16PtrFromString("Pinky")
 	info := &credUIInfoW{Parent: ownWindow(), MessageText: message, CaptionText: caption}
 	info.Size = uint32(unsafe.Sizeof(*info))
+	me := signedInUser()
 
 	authError := uintptr(0)
 	for try := 0; try < passwordTries; try++ {
@@ -387,7 +405,7 @@ func passwordVerify(ctx context.Context, reason string) error {
 		default:
 			return fmt.Errorf("secret: the credential dialog failed: %w", syscall.Errno(r))
 		}
-		ok, err := checkPassword(*out, *outSize)
+		ok, err := checkPassword(*out, *outSize, me)
 		clear(unsafe.Slice((*byte)(*out), *outSize))
 		windows.CoTaskMemFree(*out)
 		if err != nil {
@@ -401,12 +419,17 @@ func passwordVerify(ctx context.Context, reason string) error {
 		}
 		authError = uintptr(windows.ERROR_LOGON_FAILURE)
 	}
+	if me.Microsoft {
+		// Wrong every time: most likely the PIN they sign in with.
+		return ErrMicrosoftAccount
+	}
 	return ErrCancelled
 }
 
 // checkPassword unpacks the dialog's answer and asks Windows whether the
-// password signs the account in. The copies are wiped.
-func checkPassword(buf unsafe.Pointer, size uint32) (bool, error) {
+// password is the signed-in account's (passwordVerdict), and logs what
+// decided, never the password. The copies are wiped.
+func checkPassword(buf unsafe.Pointer, size uint32, me *windowsUser) (bool, error) {
 	const n = 1024
 	name := make([]uint16, n)
 	domain := make([]uint16, n)
@@ -418,6 +441,7 @@ func checkPassword(buf unsafe.Pointer, size uint32) (bool, error) {
 		uintptr(unsafe.Pointer(&name[0])), uintptr(unsafe.Pointer(nameLen)),
 		uintptr(unsafe.Pointer(&domain[0])), uintptr(unsafe.Pointer(domainLen)),
 		uintptr(unsafe.Pointer(&password[0])), uintptr(unsafe.Pointer(passwordLen))); r == 0 {
+		log().Warn("confirm with the password: could not read the dialog's answer", "err", errText(err))
 		return false, fmt.Errorf("secret: read the credential dialog's answer: %w", err)
 	}
 	// The name comes as DOMAIN\user or user@domain; LogonUser takes the
@@ -436,8 +460,51 @@ func checkPassword(buf unsafe.Pointer, size uint32) (bool, error) {
 	if userDomain[0] != 0 {
 		domainArg = &userDomain[0]
 	}
-	err := logonUser(&user[0], domainArg, &password[0])
-	return passwordVerdict(err, password[0] == 0, func() bool { return signedInBlankAccount(user, userDomain) })
+	c := passwordCheck{
+		Logon: logonUser(&user[0], domainArg, &password[0]),
+		Empty: password[0] == 0,
+	}
+	dialogUser, dialogDomain := windows.UTF16ToString(user), windows.UTF16ToString(userDomain)
+	if strings.EqualFold(dialogDomain, "MicrosoftAccount") {
+		me.microsoft("dialog")
+	}
+	c.Me = me.windowsAccount
+	attrs := []any{
+		"empty", c.Empty,
+		"dialog_name", windows.UTF16ToString(name),
+		"dialog_domain", windows.UTF16ToString(domain),
+		"user", dialogUser,
+		"domain", dialogDomain,
+		"logon", errText(c.Logon),
+	}
+	if c.Empty && c.Logon != nil {
+		isMe, why := me.named(dialogUser, dialogDomain)
+		c.DialogIsMe = isMe
+		attrs = append(attrs, "dialog_is_me", isMe)
+		if why != "" {
+			attrs = append(attrs, "dialog_lookup", why)
+		}
+	}
+	if c.Logon != nil {
+		attrs = append(attrs, me.attrs()...)
+	}
+	var blank error
+	asked := false
+	c.Blank = func() error {
+		asked = true
+		blank = me.blankLogon()
+		return blank
+	}
+	ok, step, err := passwordVerdict(c)
+	if asked {
+		attrs = append(attrs, "blank_logon", errText(blank))
+	}
+	level := slog.LevelInfo
+	if err != nil {
+		level = slog.LevelWarn
+	}
+	log().Log(context.Background(), level, "confirm with the password", append([]any{"result", step}, attrs...)...)
+	return ok, err
 }
 
 // logonUser asks Windows whether password signs the account in, with a
@@ -454,35 +521,231 @@ func logonUser(user, domain, password *uint16) error {
 	return nil
 }
 
-// signedInBlankAccount reports whether the dialog's account (user, and
-// domain when it names one) is the one Pinky runs as, a local account of
-// this computer, and has a blank password: LogonUserW answers an empty
-// password for the local account by that name with ERROR_ACCOUNT_RESTRICTION
-// (see passwordVerdict), or signs it in where the policy allows blank
-// passwords. It asks for the local account itself, whatever account the
-// dialog's name reached.
-func signedInBlankAccount(user, domain []uint16) bool {
-	computer, err := windows.ComputerName()
+// windowsUser is the account Pinky runs as, as Windows names it from the
+// thread's token: the facts passwordVerdict decides on, and what the log
+// needs to say why.
+type windowsUser struct {
+	windowsAccount
+	sid           *windows.SID
+	name, domain  string   // LookupAccountSid
+	accountDomain string   // this computer's account database's name
+	localBy       string   // what showed the account local
+	microsoftBy   []string // what showed it a Microsoft account
+	problems      []string // lookups that failed
+	computer      []string // this computer's names
+}
+
+// microsoftAccountAuthority is S-1-11. Windows adds the Microsoft
+// account's own SID, S-1-11-96-…, to the token of a Microsoft account's
+// sign-in (whoami /groups lists it as MicrosoftAccount\<e-mail>).
+var microsoftAccountAuthority = windows.SidIdentifierAuthority{Value: [6]byte{0, 0, 0, 0, 0, 11}}
+
+// signedInUser asks Windows about the account Pinky runs as. Nothing in
+// it signs in or counts as a failed sign-in.
+func signedInUser() *windowsUser {
+	u := &windowsUser{computer: computerNames()}
+	token := windows.GetCurrentThreadEffectiveToken()
+	tu, err := token.GetTokenUser()
 	if err != nil {
-		return false
+		u.problem("token user", err)
+		return u
 	}
-	if d := windows.UTF16ToString(domain); d != "" && d != "." && !strings.EqualFold(d, computer) {
-		return false
+	if u.sid, err = tu.User.Sid.Copy(); err != nil {
+		u.problem("token user", err)
+		return u
 	}
-	local := computer + `\` + windows.UTF16ToString(user)
-	sid, _, _, err := windows.LookupSID("", local)
+	if u.name, u.domain, _, err = u.sid.LookupAccount(""); err != nil {
+		u.problem("account name", err)
+		return u
+	}
+	u.Known = true
+	// Local: the SID is in this computer's account domain. Comparing
+	// names would not do: the computer has a NetBIOS name of at most 15
+	// characters and a DNS name, and either may differ from the other.
+	accountDomain, name, err := localAccountDomain()
+	switch {
+	case err == nil:
+		u.accountDomain = name
+		if inDomain(u.sid, accountDomain) {
+			u.Local, u.localBy = true, "account domain"
+		}
+	default:
+		u.problem("account domain", err)
+		for _, c := range u.computer {
+			if strings.EqualFold(c, u.domain) {
+				u.Local, u.localBy = true, "computer name"
+			}
+		}
+	}
+	if u.Local {
+		switch connected, err := microsoftConnected(u.name); {
+		case err != nil:
+			u.problem("account database", err)
+		case connected:
+			u.microsoft("account database")
+		}
+	}
+	if groups, err := token.GetTokenGroups(); err != nil {
+		u.problem("token groups", err)
+	} else {
+		for _, g := range groups.AllGroups() {
+			if g.Sid != nil && g.Sid.IdentifierAuthority() == microsoftAccountAuthority {
+				u.microsoft("token")
+				break
+			}
+		}
+	}
+	return u
+}
+
+func (u *windowsUser) problem(what string, err error) {
+	u.problems = append(u.problems, what+": "+errText(err))
+}
+
+func (u *windowsUser) microsoft(by string) {
+	u.Microsoft = true
+	if !slices.Contains(u.microsoftBy, by) {
+		u.microsoftBy = append(u.microsoftBy, by)
+	}
+}
+
+// named reports whether the account the dialog named resolves to this
+// one, without signing in; why says why not when the lookup failed.
+func (u *windowsUser) named(user, domain string) (bool, string) {
+	if u.sid == nil || user == "" {
+		return false, ""
+	}
+	name := user
+	if domain != "" {
+		name = domain + `\` + user
+	}
+	sid, _, _, err := windows.LookupSID("", name)
 	if err != nil {
-		return false
+		return false, errText(err)
 	}
-	me, err := windows.GetCurrentThreadEffectiveToken().GetTokenUser()
-	if err != nil || !windows.EqualSid(sid, me.User.Sid) {
-		return false
-	}
-	computerW, err := windows.UTF16PtrFromString(computer)
+	return windows.EqualSid(sid, u.sid), ""
+}
+
+// blankLogon asks Windows whether an empty password signs the account in,
+// by its name in this computer's account database ("."): nil, or
+// ERROR_ACCOUNT_RESTRICTION under the blank-password policy, when it has
+// no password.
+func (u *windowsUser) blankLogon() error {
+	name, err := windows.UTF16PtrFromString(u.name)
 	if err != nil {
-		return false
+		return err
 	}
+	dot, _ := windows.UTF16PtrFromString(".")
 	empty := uint16(0)
-	err = logonUser(&user[0], computerW, &empty)
-	return err == nil || errors.Is(err, errAccountRestriction)
+	return logonUser(name, dot, &empty)
+}
+
+// attrs are the account's facts for the log.
+func (u *windowsUser) attrs() []any {
+	return []any{
+		"me", u.domain + `\` + u.name,
+		"local", u.Local,
+		"local_by", u.localBy,
+		"account_domain", u.accountDomain,
+		"computer", strings.Join(u.computer, ","),
+		"microsoft", u.Microsoft,
+		"microsoft_by", strings.Join(u.microsoftBy, ","),
+		"problems", strings.Join(u.problems, "; "),
+	}
+}
+
+// userModalsInfo2 is USER_MODALS_INFO_2.
+type userModalsInfo2 struct {
+	DomainName *uint16
+	DomainID   *windows.SID
+}
+
+// localAccountDomain returns the SID and name of this computer's own
+// account database, which any user may read.
+func localAccountDomain() (*windows.SID, string, error) {
+	if err := procNetUserModalsGet.Find(); err != nil {
+		return nil, "", err
+	}
+	var buf *byte
+	if r, _, _ := procNetUserModalsGet.Call(0, 2, uintptr(unsafe.Pointer(&buf))); r != 0 {
+		return nil, "", syscall.Errno(r)
+	}
+	defer windows.NetApiBufferFree(buf)
+	info := (*userModalsInfo2)(unsafe.Pointer(buf))
+	if info.DomainID == nil {
+		return nil, "", errors.New("no domain SID")
+	}
+	sid, err := info.DomainID.Copy()
+	return sid, windows.UTF16PtrToString(info.DomainName), err
+}
+
+// inDomain reports whether sid is an account of the domain whose SID is
+// domain: the domain's SID and one more part, the account's.
+func inDomain(sid, domain *windows.SID) bool {
+	n := uint32(domain.SubAuthorityCount())
+	if uint32(sid.SubAuthorityCount()) != n+1 || sid.IdentifierAuthority() != domain.IdentifierAuthority() {
+		return false
+	}
+	for i := range n {
+		if sid.SubAuthority(i) != domain.SubAuthority(i) {
+			return false
+		}
+	}
+	return true
+}
+
+// userInfo24 is USER_INFO_24.
+type userInfo24 struct {
+	InternetIdentity      int32 // BOOL
+	Flags                 uint32
+	InternetProviderName  *uint16
+	InternetPrincipalName *uint16
+	UserSID               *windows.SID
+}
+
+// microsoftConnected reports whether the local account by this name is
+// connected to a Microsoft account.
+func microsoftConnected(name string) (bool, error) {
+	n, err := windows.UTF16PtrFromString(name)
+	if err != nil {
+		return false, err
+	}
+	var buf *byte
+	if err := windows.NetUserGetInfo(nil, n, 24, &buf); err != nil {
+		return false, err
+	}
+	defer windows.NetApiBufferFree(buf)
+	return (*userInfo24)(unsafe.Pointer(buf)).InternetIdentity != 0, nil
+}
+
+// computerNames are this computer's NetBIOS and DNS names, for the log
+// and for when the account database cannot be read.
+func computerNames() []string {
+	var names []string
+	for _, t := range []uint32{windows.ComputerNameNetBIOS, windows.ComputerNameDnsHostname,
+		windows.ComputerNamePhysicalNetBIOS, windows.ComputerNamePhysicalDnsHostname} {
+		buf := make([]uint16, 256)
+		n := uint32(len(buf))
+		if err := windows.GetComputerNameEx(t, &buf[0], &n); err != nil || n == 0 {
+			continue
+		}
+		name := windows.UTF16ToString(buf[:n])
+		if !slices.ContainsFunc(names, func(s string) bool { return strings.EqualFold(s, name) }) {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+// errText is an error for the log: Win32 errors with their number, which
+// does not depend on Windows' language.
+func errText(err error) string {
+	var errno syscall.Errno
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.As(err, &errno):
+		return fmt.Sprintf("%d %s", uint32(errno), err.Error())
+	}
+	return err.Error()
 }

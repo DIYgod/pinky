@@ -1419,6 +1419,7 @@
   "unlockBusy": "ロック解除中…",
   "unlockCallWhat": "スマホのロックを解除",
   "unlockEnd": "。",
+  "unlockErrMicrosoftAccount": "{name} を解除するには、Windows にパスワードを求められたら Microsoft アカウントのパスワードを入力してください。この Windows アカウントは Microsoft アカウントなので、PIN や Windows Hello でサインインしていてもパスワードがあります。",
   "unlockErrNoPIN": "{name} の PIN はまだ保存されていません。「設定 › スマホ」で保存してください。",
   "unlockErrNoPad": "Pinky が {name} のパスコード画面に入れなかったため、何も入力しませんでした。再試行するか、スマホで解除してください。",
   "unlockErrNoUnlock": "このパソコンからはロック解除できません。{name} で直接解除してください。",
