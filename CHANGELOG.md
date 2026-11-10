@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1110.8 (2026-11-10)
 
 - Agents can now wait for whichever of several texts shows first, and only in one part of the screen, so they no longer keep pausing and looking again when they cannot tell what comes next. Thanks to chenzl25.
 
