@@ -73,7 +73,14 @@ func Listen(d Dirs) (*Listener, error) {
 		return nil, err
 	}
 	path := d.Socket()
-	// We hold the lock, so a socket file left here is stale.
+	// The lock is in the data folder, so holding it does not make a socket
+	// here stale: a gateway on other data, or an older Pinky whose lock was
+	// next to its socket, may answer on it. Leave that one alone.
+	if c, err := net.DialTimeout("unix", path, time.Second); err == nil {
+		c.Close()
+		lk.Close()
+		return nil, &RunningError{}
+	}
 	_ = os.Remove(path)
 	ln, err := net.Listen("unix", path)
 	if err != nil {
