@@ -90,14 +90,14 @@ func (a Action) dragGesture(from screen.Point) driver.Drag {
 // element a.Ref, or a.From, and every point it passes through must lie on
 // the screen. Its target is the element it presses. The rules judge it as
 // a swipe, against the elements under every one of its points (fingers).
-func (p *prep) prepareDrag(a Action, cur *screen.Screen, byRef func(int) (*screen.Element, *Result), inBounds func(screen.Point) bool) *Result {
+func (p *prep) prepareDrag(a Action, cur *screen.Screen, platform driver.Platform, byRef func(int) (*screen.Element, *Result), inBounds func(screen.Point) bool) *Result {
 	var from screen.Point
 	if a.Ref > 0 {
 		e, res := byRef(a.Ref)
 		if res != nil {
 			return res
 		}
-		p.target, from = e, tapPoint(cur, *e)
+		p.target, from = e, tapPoint(cur, *e, platform)
 	} else {
 		from = *a.From
 		p.target = hitTest(cur, from)

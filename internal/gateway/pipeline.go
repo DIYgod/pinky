@@ -790,7 +790,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			if res != nil {
 				return p, res
 			}
-			p.target, p.point = e, tapPoint(cur, *e)
+			p.target, p.point = e, tapPoint(cur, *e, d.provider.Platform())
 		} else {
 			if !inBounds(*a.Point) {
 				return p, errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
@@ -858,7 +858,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 				return p, errResult(ErrUnsupported, "This phone cannot drag. Nothing was done.")
 			}
 		}
-		if res := p.prepareDrag(a, cur, byRef, inBounds); res != nil {
+		if res := p.prepareDrag(a, cur, d.provider.Platform(), byRef, inBounds); res != nil {
 			return p, res
 		}
 	case "key":
@@ -958,10 +958,17 @@ func swipeLine(area screen.Rect, dir string) (from, to screen.Point) {
 // place in its tree is the app's reading order, though, so for an element
 // that large every other element counts at first, and only those listed
 // after it when that leaves no point clear.
-func tapPoint(s *screen.Screen, t screen.Element) screen.Point {
+//
+// A switch on an iPhone is tapped on the switch itself (switchPoint).
+func tapPoint(s *screen.Screen, t screen.Element, platform driver.Platform) screen.Point {
 	c := t.Bounds.Center()
 	if !actionable(t) || t.Ref == 0 {
 		return c
+	}
+	if t.Role == screen.RoleSwitch && platform == driver.IOS {
+		if p, ok := switchPoint(s, t); ok {
+			return p
+		}
 	}
 	big := s.Width > 0 && s.Height > 0 && t.Bounds.W*t.Bounds.H*2 >= s.Width*s.Height
 	var all, above []screen.Rect
@@ -994,6 +1001,50 @@ func tapPoint(s *screen.Screen, t screen.Element) screen.Point {
 		}
 	}
 	return c // nowhere clear: tap where it always did
+}
+
+// switchPoint is where a tap flips the iPhone switch t when t covers its
+// whole row. Settings and SwiftUI give a switch the frame of its row, label
+// included, and a tap at its centre lands on the label, which does nothing
+// (GitHub issue #51). WebDriverAgent lists the switch itself as a narrower
+// switch inside the row, its centre within it, which is tapped when it is
+// there. Otherwise the switch lies at the trailing end of the row: about
+// 38 points in from it, the middle of a 51-point switch with the row's
+// margin, or from the leading end in a right-to-left layout, where the
+// label lies in the row's right half.
+func switchPoint(s *screen.Screen, t screen.Element) (screen.Point, bool) {
+	b := t.Bounds
+	for _, e := range s.Elements {
+		if e.Ref == t.Ref || e.Role != screen.RoleSwitch || e.Bounds.Empty() {
+			continue
+		}
+		if b.Contains(e.Bounds.Center()) && e.Bounds.W*2 <= b.W {
+			return e.Bounds.Center(), true
+		}
+	}
+	scale := pointScale(s)
+	in := 38 * scale
+	if b.W < 4*b.H || b.W < 3*in {
+		return screen.Point{}, false // shaped like a switch, not a row
+	}
+	c := b.Center()
+	for _, e := range s.Elements {
+		if e.Ref != t.Ref && e.Label != "" && e.Label == t.Label && e.Role != screen.RoleSwitch &&
+			b.Contains(e.Bounds.Center()) && e.Bounds.X > c.X && e.Bounds.W*2 < b.W {
+			return screen.Point{X: b.X + in, Y: c.Y}, true // right to left
+		}
+	}
+	return screen.Point{X: b.X + b.W - in, Y: c.Y}, true
+}
+
+// pointScale guesses the pixels per point of an iPhone or iPad screen from
+// its size: iPhones at 3x are 1080 to 1320 pixels across, those at 2x 640
+// to 828, and iPads at 2x 1488 and more.
+func pointScale(s *screen.Screen) int {
+	if w := min(s.Width, s.Height); w >= 1000 && w <= 1400 {
+		return 3
+	}
+	return 2
 }
 
 // clearPoint returns the point of area farthest from the rectangles on it,
@@ -1695,6 +1746,9 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	}
 	if inputNote != "" {
 		res.Message = strings.TrimSpace(res.Message + " " + inputNote)
+	}
+	if n := unflipped(a, p, next); n != "" {
+		res.Message = strings.TrimSpace(res.Message + " " + n)
 	}
 	if f := p.follow; f != nil && f.note != "" {
 		res.Message = strings.TrimSpace(res.Message + " " + f.note)
@@ -2601,4 +2655,24 @@ func describe(a Action, p *prep) string {
 		return "Opened " + name + localeWords(a)
 	}
 	return a.Tool
+}
+
+// unflipped says so when a tap by ref on a switch or checkbox left it as it
+// was, which a settled status alone would hide (GitHub issue #51): the tap
+// may have missed the switch, or the app may have asked something first.
+func unflipped(a Action, p *prep, next *screen.Screen) string {
+	t := p.target
+	if a.Tool != "tap" || a.Ref <= 0 || a.LongPress || t == nil || next == nil ||
+		(t.Role != screen.RoleSwitch && t.Role != screen.RoleCheckbox) {
+		return ""
+	}
+	e, ok := next.Find(t.Ref)
+	if !ok || e.Role != t.Role || e.Label != t.Label || e.Has(screen.StateChecked) != t.Has(screen.StateChecked) {
+		return ""
+	}
+	state := "off"
+	if e.Has(screen.StateChecked) {
+		state = "on"
+	}
+	return fmt.Sprintf("[%d] is still %s after the tap. If nothing else came up, tap the switch itself by x and y.", t.Ref, state)
 }
