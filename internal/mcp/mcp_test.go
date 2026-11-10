@@ -143,9 +143,20 @@ func TestToolList(t *testing.T) {
 			t.Fatalf("phone_key schema misses %s: %s", s, schema)
 		}
 	}
-	schema, _ = json.Marshal(got["phone_tap"].InputSchema)
-	if strings.Contains(string(schema), `"null"`) {
-		t.Fatalf("phone_tap schema advertises null types: %s", schema)
+	// Claude Code shows a property typed ["null", ...] with its
+	// description alone: agents then guessed phone_batch's step shape.
+	for _, name := range want {
+		if schema, _ := json.Marshal(got[name].InputSchema); strings.Contains(string(schema), `"null"`) {
+			t.Fatalf("%s schema advertises null types: %s", name, schema)
+		}
+	}
+	steps := got["phone_batch"].InputSchema.(map[string]any)["properties"].(map[string]any)["steps"].(map[string]any)
+	if steps["type"] != "array" || steps["items"].(map[string]any)["type"] != "object" {
+		t.Fatalf("phone_batch steps: %v", steps)
+	}
+	apps := got["phone_connect"].InputSchema.(map[string]any)["properties"].(map[string]any)["apps"].(map[string]any)
+	if apps["type"] != "array" || apps["items"].(map[string]any)["type"] != "string" {
+		t.Fatalf("phone_connect apps: %v", apps)
 	}
 	schema, _ = json.Marshal(got["phone_batch"].InputSchema)
 	if !strings.Contains(string(schema), `"maxItems":50`) || !strings.Contains(string(schema), `"launch"`) {
