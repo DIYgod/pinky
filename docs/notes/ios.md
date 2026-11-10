@@ -36,7 +36,7 @@ What these mean for the design:
 | `offer.go`, `display.go` | The media stream offer (adapted from go-ios, MIT) and start/stop. Payload type 100's feature list is `FLS;SW:1;` instead of Xcode's `FLS;VRAE:0;SW:1;`: VRAE:0 makes the encoder drop frames under motion (pymobiledevice3's measurement) |
 | `rtp.go`, `sps.go` | RTP parsing; RFC 7798 HEVC (single NAL, AP, FU; PACI skipped) and RFC 6184 H.264 (single, STAP-A, FU-A) depacketizers; the codec is sniffed from the NAL header because payload type 100 carries HEVC. The display service's 14-byte slice trailer is stripped. SPS parsers for the picture size |
 | `media.go` | The long-lived stream: access-unit assembly, `driver.Packet`s (a config packet before each keyframe, PTS from the 24 kHz RTP clock), RTCP receiver reports every second (the device stops after 10 s without them), a per-frame receipt like Xcode's, picture loss indications when a subscriber needs a keyframe (repeated every 600 ms until one comes), loss handling, fan-out to `Stream` subscribers |
-| `hid.go`, `keys.go` | Universal HID touch reports (surface 257), Indigo button events (Home), a virtual HID keyboard registered with `createService`, ASCII to US-layout usages |
+| `hid.go`, `keys.go` | Universal HID touch reports (surface 257), Indigo button events (Home), a virtual HID keyboard registered with `createService` on a connection of its own for the length of one call (issue #65), ASCII to US-layout usages |
 | `pasteboard.go`, `type.go`, `smartspace.go` | The pasteboard service (PULL and SET); `Type` by paste with the pasteboard saved and put back, the spaces iOS's smart insert adds to a paste taken off again, and the keys fallback with the Latin keyboard switch |
 | `power.go` | `Waker` (screen state from the backlight, Home) and `Unlocker` |
 | `device.go`, `idle.go` | The session: one tunnel, and one media stream with its HID connection while anyone watches or Pinky sends input; taps and swipes in screenshot pixels and raw touches in video pixels, mapped to the panel's 0..65535 range |
@@ -165,7 +165,7 @@ Links (`driver.LinkOpener`, `links.go`, 2026-11-09). `phone_launch` with a link 
 
 - Touch positions are 0..65535 on each axis of the touch panel, in the frame of the device held the usual way up, whatever way it is turned; see "Orientation".
 - `Key(back)` swipes from the left edge at mid-height over 250 ms. It starts at x=0 so the system gesture wins; a stray drag cannot select anything, but avoid screens where a drag at mid-height matters.
-- The virtual keyboard makes iOS treat the phone as having a hardware keyboard while the session lasts; the software keyboard still showed in Settings until a key was pressed. It is registered at the first key, not at `Open` (registering takes about 0.35 s), and goes away when the HID connection closes. `Type` without `Append` sends Command-A and Delete first.
+- The virtual keyboard makes iOS treat the phone as having a hardware keyboard while it is attached, and hides the on-screen keyboard, for the person too (GitHub issue #65, below); the software keyboard still showed in Settings until a key was pressed. It goes away only when the connection that registered it closes, so it has a connection of its own and lasts one call: registered at the first key of a `Type`, `Key` or `Unlock` (registering takes about 0.35 s, plus a 300 ms wait), removed when the call ends. `Type` without `Append` sends Command-A and Delete first.
 - Keys go through the active input method. On the test phone the Pinyin keyboard was active: "clock" typed as keys became a composition (Command-A did not select it, one Delete left "c lo c" with U+2006 spaces between the syllables), and Escape appeared to cancel it. That is why `Type` pastes (the owner's choice between pasting and switching keyboards); keys remain only as the fallback above. Command-V and Command-A work with Pinyin active as long as nothing is being composed.
 
 ### Pasteboard
@@ -179,7 +179,7 @@ Links (`driver.LinkOpener`, `links.go`, 2026-11-09). `phone_launch` with a link 
 
 - The test phone's language is English (Singapore); lockdown's `com.apple.international` `Keyboard` names the default keyboard (`en_GB@sw=QWERTY;hw=Automatic`), not the active one, which was Pinyin (Simplified Chinese).
 - With Pinyin active, a typed letter shows a candidate bar in the app's own tree (`Cell` elements labelled "啊, 叹词的啊" with the identifier "啊", and a "More suggestions" button). `AXPAttributeTextInputMarkedRange` (123) answered nothing; the field's value shows the uncommitted letters.
-- Control-Space switched Pinyin to English (UK) and back; two presses restore the keyboard. After hardware key presses iOS hides the on-screen keyboard until the field is tapped again. A probe's walk right after a switch took 1.1–1.8 s (the phone was pushing a tree).
+- Control-Space switched Pinyin to English (UK) and back; two presses restore the keyboard. After hardware key presses iOS hides the on-screen keyboard until the field is tapped again. (Seen while the keyboard stayed attached for the whole session; whether the on-screen keyboard now comes back by itself once Pinky removes its keyboard, or only at the next tap, is not checked yet.) A probe's walk right after a switch took 1.1–1.8 s (the phone was pushing a tree).
 
 ### Wi-Fi
 
@@ -919,3 +919,16 @@ Device MCP's setup says taps and typing on iOS 27 need this switch on. Pinky doe
 Not tried on a phone with the switch off: the owner decided the evidence above is enough. If a person ever reports taps refused on iOS 27, ask for the switch's state first; Pinky could only infer it from refused input.
 
 So Pinky has no setup step, Checkup line or agent error for the switch, and the README does not mention it.
+
+## The on-screen keyboard while Pinky is attached (GitHub issue #65, 2026-11-10)
+
+Reported by oceandull: iPhone 12, iOS 27.2, USB, Device Hub, Pinky 2026.1110.5 to .15. In Xianyu (闲鱼) the search field showed no on-screen keyboard while Pinky was attached, also when the person tapped it by hand, and `phone_type` returned `settled` with nothing written.
+
+**Cause.** `ensureKeyboard` registered "Pinky virtual keyboard" on the touch connection at the first key and kept it until the session ended (`Close` only released its keys). While a hardware keyboard is attached, iOS hides its on-screen keyboard; an app whose search page waits for the keyboard to show before it takes focus or text (Xianyu's, as far as the report tells) then never gets there, and the person cannot type either. And `checkTyped` returned only a note, not an error, when no element had focus after typing or the field read empty or as before, so the gateway said `settled`.
+
+**What Pinky does now.**
+
+- The keyboard registers on a connection of its own to `com.apple.coredevice.hid.universalhidservice` (`hidSession.kb`), apart from touches, and is removed when the `Type`, `Key` or `Unlock` call that used it ends (`Device.releaseKeyboard`, `hidSession.dropKeyboard`): all keys up, then that connection closes, which is the only way known to remove a registered service (go-ios has no remove message either). The whole call keeps it, so the keyboard switch with Control-Space and `spendSwitchSpace` happen on one keyboard as before. After a removal a spare connection is dialed in the background (`dialSpare`), so the next registration saves the RemoteXPC handshake (about 0.5 s on the first request of a connection, as for the pasteboard). When a second connection cannot be dialed, the keyboard registers on the touch connection as before, and removing it closes that connection; `Device.live` dials a new one at the next input (not while a finger is down).
+- `checkTyped` tells the two nils of `focusedValue` apart (`focusedField`): when remoteAXService answers that nothing has focus, `Type` returns an error ("no field has focus…", `TypeStats.Checked` "unfocused"); a field that reads empty, or as before for appended text, is an error too ("unchanged"). The gateway maps both to `uncertain` with the reason, and Return is not pressed for `submit`. The note stays for a field that cannot be read (remoteAXService not connected, or the value read fails) and for one that hides its text. This matches Android's `notLanded`.
+- Tests: `TestJudgeTyped`. Not checked on a phone yet: that a second universal HID connection can register the keyboard while the touch one is open (if it registers but its keys go nowhere, typing breaks: check `iosctl type` first), the cost of registering per call, whether the on-screen keyboard comes back by itself once the virtual one is gone or only at the next tap, and Xianyu itself.
+

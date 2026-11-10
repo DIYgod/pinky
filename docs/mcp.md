@@ -262,6 +262,8 @@ The policy checks every element under the finger, not only the smallest: tapping
 
 Typing into password and one-time-code fields is always refused (`blocked_by_policy`, rule `credentials`). So is typing without `ref` when no field reports focus and the screen has such a field.
 
+Pinky reads the field back after typing. Text that reads otherwise, or that went nowhere (no field has focus, or the field reads as before or empty), returns `uncertain` with the reason, and Return is not pressed for `submit`. When the field cannot be read back or hides its text, the result is `settled` with a note saying so.
+
 ### phone_swipe
 
 | Argument | Type | Meaning |

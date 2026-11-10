@@ -70,6 +70,11 @@ func (d *Device) Wake(ctx context.Context) error {
 // the phone is unlocked, or ErrLocked. It never types the passcode twice. A
 // phone that is already unlocked is only woken.
 func (d *Device) Unlock(ctx context.Context, pin string) error {
+	defer func() {
+		d.inputMu.Lock()
+		d.releaseKeyboard()
+		d.inputMu.Unlock()
+	}()
 	return unlock(ctx, devicePower{d}, pin)
 }
 
