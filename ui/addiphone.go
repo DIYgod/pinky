@@ -207,6 +207,18 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			mg.Text(c, strings.TrimSpace(locales.AddPhoneFoundIOS(d.Info.Name, d.Info.OSVersion))).FontSize(13).TextColor(p.ink2).Margin(-10, 0, 0, 36)
 		}
 		row(iphoneTrust, locales.AddPhoneIPhoneStepTrust(), func() {
+			if d != nil && d.Info.Setup == driver.SetupTrustRecord {
+				// The iPhone trusts this computer, but the pairing record it
+				// holds is one Apple's device service cannot replace: tapping
+				// Trust again cannot help (internal/driver/ios, askTrust).
+				guideProblem(c, locales.AddPhoneIPhoneTrustRecordTitle(), d.Info.Detail)
+				mg.Row(c).Children(func() {
+					if linkButton(c, locales.AddPhoneIPhoneTrustRecordCopy()).Clicked() {
+						a.copy(c, driver.PairRecordFixCommand(d.Info.ID), locales.AddPhoneIPhoneTrustRecordCopied())
+					}
+				})
+				return
+			}
 			if onWiFi && cur == iphoneTrust {
 				// It asks only on a cable.
 				guideProblem(c, locales.AddPhoneIPhoneTrustWiFi(d.Info.Name), "")

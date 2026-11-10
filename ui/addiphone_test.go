@@ -55,6 +55,38 @@ func addIPhoneApp(t *testing.T) (*testApp, *mg.Tester) {
 	return ta, mg.NewTester(ta.view, 1280, 820)
 }
 
+// TestAddIPhoneTrustRecord: an iPhone that trusts this computer whose pairing
+// record Apple's device service cannot replace says so instead of asking for
+// a Trust that cannot help, and the link copies the command that fixes it.
+func TestAddIPhoneTrustRecord(t *testing.T) {
+	ta, tt := addIPhoneApp(t)
+	tt.Frame()
+	ta.api.ConnectIPhone()
+	ta.waitFor(t, "the phone at the trust step", func() bool {
+		tt.Frame()
+		return hasText(tt, locales.AddPhoneIPhoneStepTrustWaiting())
+	})
+	d := ta.add.iphone(ta.app)
+	if d == nil {
+		t.Fatal("the steps do not follow the phone")
+	}
+	detail := "The iPhone trusts this computer, but Apple's device service could not replace its pairing record here."
+	ta.api.SetIPhone(d.Info.ID, driver.Info{State: driver.StateUnauthorized, Setup: driver.SetupTrustRecord, Detail: detail})
+	ta.waitFor(t, "the pairing record problem", func() bool {
+		tt.Frame()
+		return hasText(tt, locales.AddPhoneIPhoneTrustRecordTitle())
+	})
+	mustHave(t, tt, detail)
+	if hasText(tt, "tap Trust and enter its passcode") {
+		t.Errorf("the trust step still asks for a Trust that cannot help: %q", tt.Texts())
+	}
+	if err := tt.Click(locales.AddPhoneIPhoneTrustRecordCopy()); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "the copied command", func() bool { return tt.Clipboard() == driver.PairRecordFixCommand(d.Info.ID) })
+	mustHave(t, tt, locales.AddPhoneIPhoneTrustRecordCopied())
+}
+
 // TestAddIPhoneSteps walks a new iPhone through Add phone: each step says
 // what to do on the phone, and the next one shows once the phone gets there.
 func TestAddIPhoneSteps(t *testing.T) {

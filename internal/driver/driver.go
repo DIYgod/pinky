@@ -123,6 +123,7 @@ const (
 // Setup steps, in Info.Setup.
 const (
 	SetupTrust         = "trust"          // unlock the phone, tap Trust and enter its passcode
+	SetupTrustRecord   = "trust_record"   // the phone trusts the computer, but Apple's device service cannot replace the pairing record it holds; Detail says how to let it
 	SetupDeveloperMode = "developer_mode" // turn on Developer Mode, which restarts the phone
 	SetupUnlock        = "unlock"         // unlock the phone so the computer can finish preparing it
 	SetupPreparing     = "preparing"      // the computer is preparing the phone; nothing to do but wait
