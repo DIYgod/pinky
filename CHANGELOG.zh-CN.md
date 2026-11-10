@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 通过 WebDriverAgent 助手控制的 iPhone，在助手停止后会在几秒内自动重新连接，不用再重启 Pinky 才能继续操作。感谢 NaNhkNaN。
+
 ## 2026.1110.11 (2026-11-10)
 
 - 在 Windows 上，iPhone 已经信任这台电脑却仍然连不上时，Pinky 现在会说明原因，并给出可以拷贝的修复命令；iPhone 拒绝它保存的配对记录时，Pinky 会重新请 iPhone 信任这台电脑，不会再一直等一次不起作用的轻点。感谢 kingmissh。

@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- An iPhone driven through the WebDriverAgent helper now reconnects by itself within seconds when the helper stops, instead of failing every action until Pinky is restarted. Thanks to NaNhkNaN.
+
 ## 2026.1110.11 (2026-11-10)
 
 - On Windows, an iPhone that trusts this computer but still can't connect now says why, with a command to fix it that you can copy, and Pinky asks the iPhone to trust the computer again when the phone rejects its pairing record, instead of waiting for a tap that can't help. Thanks to kingmissh.
