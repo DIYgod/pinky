@@ -890,3 +890,17 @@ Tests: `TestAskTrustAsksAgainWhenPhoneRefusesRecord` (a refused record is replac
 | Hold 800, rest 700 ms at the edge, then let go over a folder's icon on that page | the app went into the folder |
 
 The home screen stays in edit mode after a drag; Done (or the home key) ends it, which SKILL.md tells agents. The first run on a fresh Simulator lost WDA about 43 s in ("Test crashed with signal kill"; the cause was not found); a second run with logging went through.
+
+## Settings › Developer › Enable UI Automation (2026-11-09)
+
+Device MCP's setup says taps and typing on iOS 27 need this switch on. Pinky does not ask for it, and nothing found on the Mac or in iOS 27.0.1's libraries reads it:
+
+- **What the switch is.** A `PSSwitchCell` in Settings' `DeveloperSettings.bundle` (`DTSettings.plist`, group `UI_AUTOMATION`): it writes `UIAutomationEnabled` in the preference domain `com.apple.UIAutomation`, has no default, and posts `com.apple.springboard.appIconVisibilityPreferencesChanged`. The bundle's code never mentions automation. Apple's names: Enable UI Automation, 启用UI自动化, UIオートメーションを有効. The same entry is in the iOS 18.5 and 26.5 simulators.
+- **Nothing reads it.** `UIAutomationEnabled` and `com.apple.UIAutomation` appear in no file but `DTSettings.plist` in: the iPhone 13 mini's iOS 27.0.1 libraries (Xcode's device support symbols, which hold SpringBoard.framework, SpringBoardFoundation, BackBoardServices, BackBoardHIDEventFoundation, AccessibilityUtilities and AXSpringBoardServerInstance), both volumes of Xcode's Developer Disk Image (27B52: `dtuhidd`, `testmanagerd`, XCTest), the iOS 18.5, 26.5 and 27.0 simulators, and Xcode.app and CoreDevice on the Mac. None of those SpringBoard and backboard frameworks mention UIAutomation at all, though SpringBoard.framework is among those listening for the notification. Not checked: the phone's executables outside the shared cache, as there is no IPSW here.
+- **Pinky's input on iOS 27 has no such gate.** Taps, swipes and keys go to `dtuhidd` (`com.apple.coredevice.hid.universalhidservice`), which by its manual page "receives HID events encoded using UniversalHID from the wire and posts them to the IOHIDEventSystem"; its binary has no check for a setting or for automation.
+- **What XCTest needs is Automation Mode, a different thing that iOS shows under the same name.** AutomationMode.framework keeps its own state (`/var/db/com.apple.dt.automationmode/automation-enabled`), and turning it on asks for the passcode in a prompt titled "Enable UI Automation" ("Authorize UI Automation Prompt" in the framework). `testmanagerd` and XCTAutomationSupport refuse automation sessions while it is off ("Rejecting automation session connection because Automation Mode is not enabled…"). That is the passcode request Pinky already handles on the helper's path (see "Choosing the connection"); the Device Hub path uses no XCTest and never brings it up.
+- **Pinky could not read the switch anyway.** CoreDevice has no feature that reads another domain's preferences, and lockdown has no domain for it.
+
+Not tried on a phone with the switch off: the owner decided the evidence above is enough. If a person ever reports taps refused on iOS 27, ask for the switch's state first; Pinky could only infer it from refused input.
+
+So Pinky has no setup step, Checkup line or agent error for the switch, and the README does not mention it.
