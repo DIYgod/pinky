@@ -91,11 +91,12 @@ type Options struct {
 	// sidebar's card while no agent can reach Pinky; nil shows only the
 	// commands to add an agent by hand.
 	AgentSetup AgentSetup
-	// CompanionAPK finds the Android companion APK that Pinky installs. A
-	// phone that refuses installs over USB gets a link that shows it in
-	// Finder or the file manager, to install by hand; nil leaves the link
-	// out.
-	CompanionAPK func() (string, error)
+	// CompanionAPK finds the Android companion APK that Pinky installs and
+	// its build (versionCode, 0 when unknown). A phone that refuses
+	// installs over USB gets a link that shows it in Finder or the file
+	// manager, to install by hand, and Pinky tries a refused build again
+	// by itself only once a newer one comes; nil leaves the link out.
+	CompanionAPK func() (path string, build int, err error)
 }
 
 // Settings are what the Settings screen changes.
@@ -328,8 +329,7 @@ func newApp(api gateway.API, opt Options) *app {
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
 	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
-		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{},
-		byHand: map[string]bool{}}
+		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
 	a.rec = recState{views: map[string]*recEntry{}}
 	a.control = map[string]controlText{}

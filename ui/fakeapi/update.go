@@ -67,7 +67,7 @@ func (a *API) UpdateCompanion(ctx context.Context, deviceID string) (driver.Comp
 	if d := a.device(deviceID); d != nil && d.installErr != nil {
 		err := d.installErr
 		a.mu.Unlock()
-		return driver.CompanionUpdate{}, err
+		return res, err
 	}
 	for _, t := range a.tasks {
 		if t.view.DeviceID == deviceID && t.view.Ended.IsZero() {

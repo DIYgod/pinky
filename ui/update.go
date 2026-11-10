@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -462,7 +463,47 @@ func (a *app) updateCards(c *mg.Context) {
 		return
 	}
 	a.newsCard(c)
+	a.companionByHandCards(c)
 	a.updateCard(c)
+}
+
+// cardClose is a sidebar card's close button.
+func cardClose(c *mg.Context, label string) bool {
+	p := pal(c)
+	x := mg.ButtonBase(c).Size(22, 22).Radius(6).Center().Label(label).Tooltip(locales.UpdateNewsDismiss())
+	if x.Hovered() {
+		x.Background(p.bg3)
+	}
+	x.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(12) })
+	return x.Clicked()
+}
+
+// companionByHandCards tell the person, once for each companion build,
+// that a phone refused Pinky's automatic update over USB, and how to
+// install the build by hand.
+func (a *app) companionByHandCards(c *mg.Context) {
+	var ids []string
+	for id, r := range a.refusals() {
+		if !r.Seen && a.refusedUSB(id) {
+			ids = append(ids, id)
+		}
+	}
+	slices.Sort(ids)
+	p := pal(c)
+	for _, id := range ids {
+		title := locales.UpdateCompanionByHandTitle()
+		sideCard(c, "companion-by-hand-"+id, title, func() {
+			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
+				mg.Icon(c, icAndroid).FontSize(15).TextColor(p.accentInk)
+				mg.Text(c, title).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
+				if cardClose(c, locales.UpdateCompanionByHandDismissLabel()) {
+					a.seenRefusal(id)
+				}
+			})
+			mg.Text(c, locales.UpdateCompanionByHandCard(a.comp.byHand[id].Phone)).FontSize(12.5).TextColor(p.ink2)
+			a.companionByHandLinks(c)
+		})
+	}
 }
 
 func sideCard(c *mg.Context, key, label string, fn func()) {
@@ -684,14 +725,9 @@ func (a *app) newsCard(c *mg.Context) {
 		mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icSparkle).FontSize(15).TextColor(p.accentInk)
 			mg.Text(c, card).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
-			x := mg.ButtonBase(c).Size(22, 22).Radius(6).Center().Label(locales.UpdateNewsDismissLabel()).Tooltip(locales.UpdateNewsDismiss())
-			if x.Hovered() {
-				x.Background(p.bg3)
-			}
-			if x.Clicked() {
+			if cardClose(c, locales.UpdateNewsDismissLabel()) {
 				a.dismissNews()
 			}
-			x.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(12) })
 		})
 		if line != "" {
 			mg.Text(c, line).FontSize(12.5).TextColor(p.ink2)
@@ -896,10 +932,14 @@ func (a *app) companionTick(now time.Time) {
 			a.companionFor(d) // asks in the background; a later tick acts on it
 			continue
 		}
-		// A phone that refused an install over USB would refuse again, or
-		// ask on its screen with nobody there: it waits for the person, or
-		// for a version they installed by hand (companionFor).
-		if a.comp.byHand[id] {
+		// A phone that refused this build over USB would refuse again, or
+		// ask on its screen with nobody there: it waits for the person, for
+		// a version they installed by hand (setCompanionState), or for a
+		// newer build, which gets one try.
+		if _, ok := a.refusals()[id]; ok && !a.companionAPK() {
+			continue // which build it refused is compared once the APK is read
+		}
+		if a.refusedUSB(id) {
 			continue
 		}
 		if cs := a.comp.state[id]; cs != driver.CompanionOutdated && cs != driver.CompanionPublicKey || !a.phoneFree(d, now) {
@@ -938,24 +978,25 @@ func (a *app) updateCompanion(cu companionUpdater, d gateway.DeviceView, ca *com
 		if ci != nil {
 			cs, serr = ci.CompanionState(ctx, id)
 		}
-		apk := ""
+		apk, build := "", 0
 		if refusedOverUSB(err) {
-			apk = a.findCompanionAPK()
+			apk, build = a.findCompanionAPK()
 		}
 		a.post(func() {
 			ca.running = false
 			if serr == nil {
-				a.comp.state[id], a.comp.checked[id] = cs, time.Now()
+				a.setCompanionState(id, cs)
 			}
 			switch {
 			case errors.Is(err, driver.ErrNeedsPerson):
 				log.Printf("pinky: companion on %s: %v", name, err)
 				ca.needsYou = true
 			case refusedOverUSB(err):
-				// Trying again in hours would not help: the card offers the
-				// person's Update and the APK to install by hand.
-				log.Printf("pinky: update the companion on %s: %v; leaving it to the person", name, err)
-				a.comp.byHand[id], a.comp.apk = true, apk
+				// Trying this build again would not help: the sidebar tells
+				// the person once how to install it by hand, and the phone's
+				// card offers their Update too.
+				log.Printf("pinky: update the companion on %s to %s: %v; leaving it to the person", name, res.To, err)
+				a.noteRefused(id, name, false, apk, build)
 			case err != nil:
 				log.Printf("pinky: update the companion on %s: %v", name, err)
 				ca.failedAt = time.Now()
@@ -985,7 +1026,7 @@ func (a *app) companionUpdating(id string) bool {
 
 // companionAutoLine is the outdated companion card's extra line.
 func (a *app) companionAutoLine(id string) string {
-	if a.comp.byHand[id] {
+	if a.refusedUSB(id) {
 		if a.comp.err[id] != "" {
 			return "" // the person's Update failed, and its error says what to do
 		}

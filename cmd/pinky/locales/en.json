@@ -8872,6 +8872,24 @@
   "@updateCompanionByHand": {
     "description": "The companion card when an update is out: Pinky's automatic update failed because the phone refuses installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time), so it leaves the update to the person. Update is the card's button (companionUpdate); the links companionShowAPK and companionByHandHow follow."
   },
+  "updateCompanionByHandCard": "{phone} refused to install the new Pinky Companion over USB, so Pinky won't try this version again. Install it on the phone by hand.",
+  "@updateCompanionByHandCard": {
+    "description": "A sidebar card, shown once: Pinky tried to update the companion app on a phone by itself (Update automatically), and the phone refused installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time). Pinky won't try this companion build again by itself; the links companionShowAPK and companionByHandHow follow, and a close button (updateNewsDismiss) hides the card.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Redmi K80"
+      }
+    }
+  },
+  "updateCompanionByHandDismissLabel": "Dismiss the Pinky Companion update",
+  "@updateCompanionByHandDismissLabel": {
+    "description": "The accessibility label of the close button of the sidebar card updateCompanionByHandTitle."
+  },
+  "updateCompanionByHandTitle": "Update Pinky Companion by hand",
+  "@updateCompanionByHandTitle": {
+    "description": "The title of the sidebar card updateCompanionByHandCard."
+  },
   "updateCompanionNeedsYou": "The phone asks before apps are installed over USB, so this update needs you.",
   "@updateCompanionNeedsYou": {
     "description": "The companion card: the phone asks the person before installs, so Pinky cannot update it by itself."
@@ -9122,7 +9140,7 @@
   },
   "updateNewsDismiss": "Dismiss",
   "@updateNewsDismiss": {
-    "description": "The tooltip of the What's new card's close button."
+    "description": "The tooltip of the close button of the sidebar's What's new card, and of its card updateCompanionByHandTitle."
   },
   "updateNewsDismissLabel": "Dismiss What's new",
   "@updateNewsDismissLabel": {

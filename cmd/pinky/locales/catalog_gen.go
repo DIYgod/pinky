@@ -23985,6 +23985,64 @@ func (msgs Messages) UpdateCompanionByHand() string {
 	return Catalog.Format(msgs.locale, "updateCompanionByHand", nil)
 }
 
+// UpdateCompanionByHandCard says "{phone} refused to install the new Pinky Companion over USB, so Pinky won't try this version again. Install it on the…"
+// in the language the app shows.
+//
+// A sidebar card, shown once: Pinky tried to update the companion app on a
+// phone by itself (Update automatically), and the phone refused installs
+// over USB (Xiaomi's Install via USB is off, or nobody allowed it on the
+// phone in time). Pinky won't try this companion build again by itself; the
+// links companionShowAPK and companionByHandHow follow, and a close button
+// (updateNewsDismiss) hides the card.
+func UpdateCompanionByHandCard(phone string) string {
+	return In(i18n.Locale()).UpdateCompanionByHandCard(phone)
+}
+
+// UpdateCompanionByHandCard says "{phone} refused to install the new Pinky Companion over USB, so Pinky won't try this version again. Install it on the…"
+// in the language of msgs.
+//
+// A sidebar card, shown once: Pinky tried to update the companion app on a
+// phone by itself (Update automatically), and the phone refused installs
+// over USB (Xiaomi's Install via USB is off, or nobody allowed it on the
+// phone in time). Pinky won't try this companion build again by itself; the
+// links companionShowAPK and companionByHandHow follow, and a close button
+// (updateNewsDismiss) hides the card.
+func (msgs Messages) UpdateCompanionByHandCard(phone string) string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHandCard", map[string]any{"phone": phone})
+}
+
+// UpdateCompanionByHandDismissLabel says "Dismiss the Pinky Companion update"
+// in the language the app shows.
+//
+// The accessibility label of the close button of the sidebar card
+// updateCompanionByHandTitle.
+func UpdateCompanionByHandDismissLabel() string {
+	return In(i18n.Locale()).UpdateCompanionByHandDismissLabel()
+}
+
+// UpdateCompanionByHandDismissLabel says "Dismiss the Pinky Companion update"
+// in the language of msgs.
+//
+// The accessibility label of the close button of the sidebar card
+// updateCompanionByHandTitle.
+func (msgs Messages) UpdateCompanionByHandDismissLabel() string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHandDismissLabel", nil)
+}
+
+// UpdateCompanionByHandTitle says "Update Pinky Companion by hand"
+// in the language the app shows.
+//
+// The title of the sidebar card updateCompanionByHandCard.
+func UpdateCompanionByHandTitle() string { return In(i18n.Locale()).UpdateCompanionByHandTitle() }
+
+// UpdateCompanionByHandTitle says "Update Pinky Companion by hand"
+// in the language of msgs.
+//
+// The title of the sidebar card updateCompanionByHandCard.
+func (msgs Messages) UpdateCompanionByHandTitle() string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHandTitle", nil)
+}
+
 // UpdateCompanionNeedsYou says "The phone asks before apps are installed over USB, so this update needs you."
 // in the language the app shows.
 //
@@ -24572,13 +24630,15 @@ func (msgs Messages) UpdateNewsCompanionUpdated() string {
 // UpdateNewsDismiss says "Dismiss"
 // in the language the app shows.
 //
-// The tooltip of the What's new card's close button.
+// The tooltip of the close button of the sidebar's What's new card, and of
+// its card updateCompanionByHandTitle.
 func UpdateNewsDismiss() string { return In(i18n.Locale()).UpdateNewsDismiss() }
 
 // UpdateNewsDismiss says "Dismiss"
 // in the language of msgs.
 //
-// The tooltip of the What's new card's close button.
+// The tooltip of the close button of the sidebar's What's new card, and of
+// its card updateCompanionByHandTitle.
 func (msgs Messages) UpdateNewsDismiss() string {
 	return Catalog.Format(msgs.locale, "updateNewsDismiss", nil)
 }

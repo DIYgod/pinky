@@ -18,7 +18,6 @@ import (
 
 	"github.com/DIYgod/pinky"
 	"github.com/DIYgod/pinky/internal/api"
-	"github.com/DIYgod/pinky/internal/driver/android"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -114,7 +113,7 @@ func runApp(args []string) error {
 		Changelog:       pinky.Changelog,
 		AgentSetup:      agentSetup(dirs),
 		// For phones that refuse installs over USB.
-		CompanionAPK: android.FindCompanionAPK,
+		CompanionAPK: bundledCompanion,
 		// What's new in the app's language.
 		ChangelogTranslations: pinky.ChangelogTranslations,
 		// The window is up: an update that just swapped this version in

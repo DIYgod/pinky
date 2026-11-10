@@ -12,6 +12,7 @@ import (
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
 
@@ -83,11 +84,11 @@ func TestCheckupOfXiaomiPhone(t *testing.T) {
 // TestXiaomiThatRefusesUSBInstalls: once a phone refuses an install over
 // USB, as a Xiaomi without a SIM card must, the checkup and the phone's
 // card show the APK to install by hand and link to the README's steps, in
-// the app's language; trying again puts that away until it refuses again.
+// the app's language, until the companion is installed.
 func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
 	ta := newTestApp(t, fakeapi.Checkup)
 	const apk = "/Applications/Pinky.app/Contents/Resources/pinky-companion.apk"
-	ta.opt.CompanionAPK = func() (string, error) { return apk, nil }
+	ta.opt.CompanionAPK = func() (string, int, error) { return apk, 480, nil }
 	var revealed, opened []string
 	ta.reveal = func(p string) { revealed = append(revealed, p) }
 	saved := openURL
@@ -106,8 +107,9 @@ func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.frameUntil(t, tt, "the install to fail", func() bool { return ta.comp.err["redmi-k80"] != "" })
-	if !ta.comp.byHand["redmi-k80"] || ta.comp.apk != apk {
-		t.Fatalf("by hand %v, APK %q", ta.comp.byHand["redmi-k80"], ta.comp.apk)
+	// The person saw it fail: no sidebar card to tell them again.
+	if r := ta.comp.byHand["redmi-k80"]; r != (update.CompanionByHand{Phone: "Redmi K80", Build: 480, Seen: true}) || ta.comp.apk != apk {
+		t.Fatalf("by hand %+v, APK %q", r, ta.comp.apk)
 	}
 	if err := tt.Click(locales.CompanionShowAPK()); err != nil {
 		t.Fatalf("%v: %q", err, tt.Texts())
@@ -138,11 +140,12 @@ func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
 	if err := tt.Click("Install Pinky Companion on Redmi K80"); err != nil {
 		t.Fatal(err)
 	}
-	if ta.comp.byHand["redmi-k80"] {
-		t.Error("trying again keeps the APK out")
+	tt.Frame()
+	if hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("the APK shows while Pinky installs: %q", tt.Texts())
 	}
 	ta.frameUntil(t, tt, "the install", func() bool { return ta.comp.installing["redmi-k80"].IsZero() })
-	if ta.comp.err["redmi-k80"] != "" || ta.comp.byHand["redmi-k80"] || hasText(tt, locales.CompanionShowAPK()) {
+	if _, ok := ta.comp.byHand["redmi-k80"]; ta.comp.err["redmi-k80"] != "" || ok || hasText(tt, locales.CompanionShowAPK()) {
 		t.Errorf("after the install: %q, %q", ta.comp.err["redmi-k80"], tt.Texts())
 	}
 }
