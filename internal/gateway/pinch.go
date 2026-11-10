@@ -139,9 +139,11 @@ func (a Action) checkPinch() *Result {
 // a.Ref, a.Point, or the middle of the screen, with the fingers inside the
 // element and clear of the screen's edges. The rules judge it as a swipe.
 func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*screen.Element, *Result)) *Result {
-	// The fingers keep clear of the keyboard and the system bars too.
-	area, cut := clearPart(cur, pinchArea(cur.Width, cur.Height))
-	c := area.Center()
+	// The fingers keep clear of the keyboard and the system bars too. raw
+	// is the room without them, to tell what leaves too little of it.
+	raw := pinchArea(cur.Width, cur.Height)
+	area, cut := clearPart(cur, raw)
+	c, rawC := area.Center(), raw.Center()
 	where := "the middle of the screen"
 	switch {
 	case a.Ref > 0:
@@ -150,12 +152,11 @@ func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*scre
 			return res
 		}
 		p.target = e
-		var cutE []cover
-		area, cutE = clearPart(cur, intersect(area, e.Bounds))
-		cut = append(cut, cutE...)
-		c = area.Center()
+		raw = intersect(raw, e.Bounds)
+		area, cut = clearPart(cur, raw)
+		c, rawC = area.Center(), raw.Center()
 		where = fmt.Sprintf("[%d]", a.Ref)
-		if area.Empty() && len(cut) > 0 {
+		if area.Empty() && !raw.Empty() {
 			cover := coverName(cut)
 			return errResult(ErrInvalidArgument, "[%d] lies under %s, which would take the fingers. Nothing was done. %s.", a.Ref, cover, hideKeyboard(cover))
 		}
@@ -163,7 +164,7 @@ func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*scre
 		if a.Point.X < 0 || a.Point.Y < 0 || (cur.Width > 0 && a.Point.X >= cur.Width) || (cur.Height > 0 && a.Point.Y >= cur.Height) {
 			return errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
 		}
-		c = *a.Point
+		c, rawC = *a.Point, *a.Point
 		p.target = hitTest(cur, c)
 		where = fmt.Sprintf("%d,%d", c.X, c.Y)
 	default:
@@ -175,8 +176,12 @@ func (p *prep) preparePinch(a Action, cur *screen.Screen, byRef func(int) (*scre
 	}
 	g, ok := pinchGesture(area, c, a.pinchScale(), a.Rotation, dur)
 	if !ok && len(cut) > 0 {
-		cover := coverName(cut)
-		return errResult(ErrInvalidArgument, "There is no room for two fingers around %s clear of %s. Nothing was done. %s.", where, cover, hideKeyboard(cover))
+		// The keyboard or a bar is to blame only when there would be room
+		// without it; else the place is too small or too near the edges.
+		if _, fits := pinchGesture(raw, rawC, a.pinchScale(), a.Rotation, dur); fits {
+			cover := coverName(cut)
+			return errResult(ErrInvalidArgument, "There is no room for two fingers around %s clear of %s. Nothing was done. %s.", where, cover, hideKeyboard(cover))
+		}
 	}
 	if !ok {
 		return errResult(ErrInvalidArgument, "There is no room for two fingers around %s, which is too small or too close to the screen's edges. Nothing was done. Pinch around a larger element or nearer the middle of the screen.", where)

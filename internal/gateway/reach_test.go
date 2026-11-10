@@ -220,3 +220,32 @@ func TestCoversThatDoNotCount(t *testing.T) {
 		t.Fatalf("with the keyboard's frame unknown: %+v, %+v", got, res)
 	}
 }
+
+// A pinch that fails because its element is too narrow or at the screen's
+// edge says so, even while the keyboard shows: hiding it would not help.
+// A keyboard whose own keys are listed has no frame, and they take taps.
+func TestPinchAtTheEdgeIsNotTheKeyboards(t *testing.T) {
+	ctx := context.Background()
+	s, res, d := keyboardGateway(t, keyboardOver(
+		screen.Element{Role: screen.RoleImage, Label: "Edge", Bounds: screen.Rect{X: 0, Y: 1400, W: 60, H: 400}},
+		screen.Element{Role: screen.RoleImage, Label: "Corner", Bounds: screen.Rect{X: 0, Y: 300, W: 60, H: 60}},
+	))
+	for _, name := range []string{"Edge", "Corner"} {
+		res := s.Act(ctx, Call{}, Action{Tool: "pinch", Ref: ref(t, res, name), Scale: 2})
+		if res.Error != ErrInvalidArgument || strings.Contains(res.Message, "keyboard") || !strings.Contains(res.Message, "edges") {
+			t.Errorf("pinch on %s: %q %q", name, res.Error, res.Message)
+		}
+	}
+	noInput(t, d, "pinch")
+
+	panel := func() *screen.Screen {
+		s := keyboardOver(screen.Element{Role: screen.RoleButton, Label: "Next", Bounds: screen.Rect{X: 600, Y: 2200, W: 400, H: 100}, Path: "input_method:"})()
+		s.KeyboardFrame = screen.Rect{}
+		return s
+	}
+	s, res, d = keyboardGateway(t, panel)
+	mustStatus(t, tap(s, ref(t, res, "Next")), StatusSettled)
+	if p := lastInput(t, d, "tap").P; p != (screen.Point{X: 800, Y: 2250}) {
+		t.Fatalf("tap on the keyboard's own key at %v", p)
+	}
+}
