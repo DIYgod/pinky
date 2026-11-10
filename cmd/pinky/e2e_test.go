@@ -272,8 +272,18 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatalf("history task: %+v", hist[0])
 	}
 
-	// Closing the agent's stdin ends its session and frees the iPhone.
+	// Closing the agent's stdin ends its session, but the iPhone keeps its
+	// task for the agent's next session (Options.LocalResumeGrace), which
+	// continues it; releasing it then frees the iPhone.
 	other.cs.Close()
+	again := startMCP(t, bin, home, "codex")
+	text, isErr = again.call(t, "phone_connect", map[string]any{"device": "fake-iphone-17", "task": "On the iPhone"})
+	if isErr || !strings.Contains(text, "iPhone 17 (fake)") {
+		t.Fatalf("continue on the iPhone:\n%s", text)
+	}
+	if text, _ = again.call(t, "phone_release", map[string]any{"outcome": "done", "summary": "Looked at the iPhone."}); !strings.HasPrefix(text, "settled") {
+		t.Fatalf("release the iPhone:\n%s", text)
+	}
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		var devs []gateway.DeviceView
@@ -286,7 +296,7 @@ func TestEndToEnd(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("leases not released after the agent left: %+v", devs)
+			t.Fatalf("leases not released: %+v", devs)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
