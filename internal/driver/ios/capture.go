@@ -6,7 +6,7 @@ import (
 	"image"
 	"image/draw"
 	"image/jpeg"
-	"image/png"
+	_ "image/png" // screenshots, for decodeShot
 	"math"
 	"sync"
 	"time"
@@ -116,9 +116,10 @@ func flat(img image.Image, r screen.Rect, sx, sy float64) bool {
 // uncapturedSamples bounds the samples flat takes of one element.
 const uncapturedSamples = 40000
 
-// decodeShot decodes a screenshot for uncaptured, nil when it cannot.
+// decodeShot decodes a screenshot or a frame (PNG or JPEG) for
+// uncaptured, nil when it cannot.
 func decodeShot(b []byte) image.Image {
-	img, err := png.Decode(bytes.NewReader(b))
+	img, _, err := image.Decode(bytes.NewReader(b))
 	if err != nil {
 		return nil
 	}

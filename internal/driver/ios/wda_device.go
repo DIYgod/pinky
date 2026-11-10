@@ -60,6 +60,8 @@ type WDADevice struct {
 	videoMu sync.Mutex
 	video   driver.Stream // the last stream, whose picture the mirror's touches are in
 
+	capture captureMarks // what screenshots did not show (capture.go)
+
 	// framesAfter is when OCR may try the MJPEG server's frames again after
 	// one did not come (ocrPicture); unix nanos, 0 at once.
 	framesAfter atomic.Int64
@@ -453,6 +455,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 		locked   bool
 		lines    []ocrLine
 		ocrDone  bool
+		shot     image.Image // OCR's picture, for what it does not show (capture.go)
 		pictured sync.WaitGroup
 		gate     *captureGate
 		tm       wdaTimes
@@ -483,10 +486,13 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 				if err != nil {
 					return
 				}
+				decoded := make(chan image.Image, 1)
+				go func() { decoded <- decodeShot(pic) }()
 				if l, err := recognizeText(pic, ocrOptions{Languages: ocrLanguages}); err == nil {
 					lines, ocrDone = l, true
 				}
 				tm.ocr = time.Since(start) - tm.shot
+				shot = <-decoded
 			}()
 		})
 		if opt.MayCapture != nil {
@@ -520,7 +526,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 		use := gate.late(s)
 		pictured.Wait()
 		if !use {
-			lines, ocrDone = nil, false
+			lines, ocrDone, shot = nil, false, nil
 		}
 	}
 	if srcErr != nil {
@@ -553,6 +559,16 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 			lines = kept
 		}
 		s.Elements = append(s.Elements, ocrExtras(s.Elements, lines, w, h)...)
+	}
+	// Some apps draw a passcode keypad in a layer that iOS leaves out of
+	// WDA's screenshots and MJPEG frames as it does out of CoreDevice's
+	// (Trust, read through the helper on 2026-11-10): mark what the
+	// picture does not show, as the CoreDevice read does (observe_rax.go),
+	// so that policy.HiddenKeypad sees the keypad on this path too.
+	if shot != nil && !s.Locked {
+		d.capture.mark(s, uncaptured(s.Elements, shot, lines, w, h))
+	} else {
+		d.capture.apply(s)
 	}
 	return s, nil
 }

@@ -1,16 +1,22 @@
 package ios
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"image"
 	"image/color"
+	"image/jpeg"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // Over Wi-Fi, OCR reads a frame of WDA's MJPEG server instead of the
@@ -75,5 +81,78 @@ func TestWDAOCRPicture(t *testing.T) {
 	frames.Store(0)
 	if _, from, _ := d.ocrPicture(ctx); from != "screenshot" || frames.Load() != 0 {
 		t.Fatalf("usb: from %q, %d frames", from, frames.Load())
+	}
+}
+
+// A passcode keypad in a layer that WDA's pictures leave out (Trust, read
+// through the helper): its keys come out marked not_in_screenshot, so the
+// credentials rule refuses taps on it, as on the CoreDevice path; reads
+// without a picture keep the marks. Keys the picture shows are not marked.
+func TestWDAObserveMarksUncaptured(t *testing.T) {
+	const w, h = 375, 812
+	var keys []string
+	var rects []screen.Rect
+	for i, l := range []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "FaceID", "0", "Backspace"} {
+		r := screen.Rect{X: 40 + (i%3)*100, Y: 360 + (i/3)*100, W: 80, H: 80}
+		rects = append(rects, r)
+		keys = append(keys, fmt.Sprintf(`{"type":"Button","label":%q,"rect":{"x":%d,"y":%d,"width":%d,"height":%d},"isVisible":"1","isAccessible":"1"}`,
+			l, r.X, r.Y, r.W, r.H))
+	}
+	f := &fakeWDA{app: `{"bundleId":"sg.trust","name":"Trust","pid":8}`,
+		source: fmt.Sprintf(`{"type":"Application","label":"Trust","rect":{"x":0,"y":0,"width":%d,"height":%d},"isVisible":"1",`+
+			`"children":[{"type":"StaticText","label":"Enter your passcode","rect":{"x":80,"y":150,"width":215,"height":40},"isVisible":"1","isAccessible":"1"},%s]}`,
+			w, h, strings.Join(keys, ","))}
+	srv := httptest.NewServer(f)
+	defer srv.Close()
+	title := screen.Rect{X: 80, Y: 150, W: 215, H: 40}
+	blank := shotWithText(w, h, title) // the keypad is left out
+	drawn := shotWithText(w, h, append([]screen.Rect{title}, rects...)...)
+	var pic atomic.Pointer[image.RGBA]
+	pic.Store(blank)
+	mj := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		var b bytes.Buffer
+		if err := jpeg.Encode(&b, pic.Load(), &jpeg.Options{Quality: 50}); err != nil {
+			t.Error(err)
+		}
+		rw.Header().Set("Content-Type", "multipart/x-mixed-replace; boundary=BoundaryString")
+		fmt.Fprintf(rw, "--BoundaryString\r\nContent-type: image/jpeg\r\nContent-Length: %d\r\n\r\n", b.Len())
+		rw.Write(b.Bytes())
+	}))
+	defer mj.Close()
+	d := &WDADevice{c: newWDAURL(srv.URL, mj.URL), width: w, height: h, scale: 1,
+		info: driver.Info{Connection: "wifi"}}
+	ctx := context.Background()
+
+	marked := func(s *screen.Screen) (n int) {
+		for _, e := range s.Elements {
+			if e.Has(screen.StateNotInScreenshot) {
+				n++
+				if e.Label == "Enter your passcode" {
+					t.Errorf("the title, which the picture shows, is marked")
+				}
+			}
+		}
+		return n
+	}
+	s, err := d.Observe(ctx, driver.ObserveOptions{OCR: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := marked(s); n != len(rects) {
+		t.Fatalf("%d elements marked; want the %d keys", n, len(rects))
+	}
+	if _, ok := policy.HiddenKeypad(s); !ok {
+		t.Fatal("policy does not see the hidden keypad")
+	}
+	// A read without OCR keeps the marks.
+	s, err = d.Observe(ctx, driver.ObserveOptions{})
+	if err != nil || marked(s) != len(rects) {
+		t.Fatalf("read without a picture: %v, %d marked", err, marked(s))
+	}
+	// A picture that shows the keys clears them.
+	pic.Store(drawn)
+	s, err = d.Observe(ctx, driver.ObserveOptions{OCR: true})
+	if err != nil || marked(s) != 0 {
+		t.Fatalf("keys shown: %v, %d marked", err, marked(s))
 	}
 }
