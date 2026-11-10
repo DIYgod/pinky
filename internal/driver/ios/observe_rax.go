@@ -349,9 +349,13 @@ const xcPickerWheel = 39
 // keyboard, for one). Observed on iOS 27; not public.
 const traitRemoteHost = 1 << 34
 
-// traitSecureText marks a password field of a web page: WebKit's text
-// fields have no AutomationType, and a password field differs from a plain
-// one in this trait only (observed on iOS 27; not public).
+// traitSecureText is UIKit's private UIAccessibilityTraitSecureTextField,
+// which every secure text field carries, native or on a web page. Without
+// an AutomationType (WebKit's text fields, elements a first push lists) it
+// alone tells a password field from a plain one. Seen on Safari's password
+// fields on iOS 27; the value is UIAccessibility.framework's (Mac Catalyst,
+// macOS 27.2), whose bit 23 is the status bar element trait the status
+// bar's items carry.
 const traitSecureText = 1 << 24
 
 const (

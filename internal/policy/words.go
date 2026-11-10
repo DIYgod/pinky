@@ -211,6 +211,13 @@ var otpWords = []string{
 
 var otpTokens = words("pin", "tan", "mtan", "otp")
 
+// idCodeQualifiers come right before "code" in identifier words written
+// without breaks that name a code field: "smscode", "etauthcode".
+var idCodeQualifiers = []string{
+	"sms", "msg", "auth", "security", "access", "login", "confirm", "confirmation", "check", "valid",
+	"pin", "onetime", "dynamic", "mobile", "phone", "mail", "twofactor",
+}
+
 var otpNegatives = []string{
 	"promo", "coupon", "discount", "gift", "referral", "invite", "invitation", "zip", "postal",
 	"postcode", "post code", "country", "area code", "voucher", "redeem", "qr", "source",
