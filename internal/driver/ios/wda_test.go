@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"image/jpeg"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -161,6 +162,45 @@ func TestWDABind(t *testing.T) {
 	}
 	if got := wdaEnv("fd10:2c3d::1")["USE_IP"]; got != "fd10:2c3d::1" {
 		t.Errorf("USE_IP = %v", got)
+	}
+}
+
+func TestWDAGone(t *testing.T) {
+	refused := func(context.Context, int) (net.Conn, error) { return nil, errors.New("connection was refused") }
+	// Starting: WDA not answering yet is no reason to drop the phone.
+	c := newWDADial(refused)
+	if _, err := c.status(context.Background()); err == nil || errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("before open: %v", err)
+	}
+	// A runner Pinky did not start: nothing listens on WDA's port any more.
+	d := &WDADevice{c: c}
+	c.gone = d.gone
+	if _, err := c.status(context.Background()); !errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("refused, runner not Pinky's: %v, want ErrOffline", err)
+	}
+	// A request that reached WDA and failed keeps the phone.
+	other := errors.New("WebDriverAgent /source: EOF")
+	if err := d.gone(other); errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("other error: %v", err)
+	}
+	// Pinky's runner, still running: a refused connection is only that.
+	d.run = &wdaRun{done: make(chan struct{})}
+	if _, err := c.status(context.Background()); err == nil || errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("refused, run going: %v, want an error that is not ErrOffline", err)
+	}
+	d.entry.DeviceID = 1 // a phone: the lock state comes from lockdown
+	d.lockdownFn = func(context.Context) (bool, error) { return false, nil }
+	if _, err := d.Locked(context.Background()); err != nil {
+		t.Fatalf("lock state, run going: %v", err)
+	}
+	// Its test ended: any failed request, and the lock state the gateway
+	// polls, which lockdown would still answer.
+	close(d.run.done)
+	if err := d.gone(other); !errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("run ended: %v, want ErrOffline", err)
+	}
+	if _, err := d.Locked(context.Background()); !errors.Is(err, driver.ErrOffline) {
+		t.Fatalf("lock state, run ended: %v, want ErrOffline", err)
 	}
 }
 
