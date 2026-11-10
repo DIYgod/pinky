@@ -31,7 +31,7 @@ ocr "Delivery in 25–35 min" @200,300
 - After an action you get only the changes: `+` added, `-` removed, `~` changed. A new app, or a big change, sends the whole screen. `no change` means the screen looks the same.
 - Toasts, notifications and dialogs since your last result are listed above the elements.
 - One-time codes are masked: "Your code is 482913", in a message, a notification, a banner or an `ocr` line, reads `Your code is ••••••`, and screenshots cover it with a gray box. Other numbers in such a text may be masked too. You cannot read codes: when a task needs one, call `phone_handoff` so the person enters it. If a code is on screen and Pinky cannot tell where, `phone_observe { screenshot: true }` returns no screenshot and says so.
-- iPhone states: `adjustable` means a swipe up or down on it changes it (picker wheels, sliders). `not_in_screenshot` means the app hides it from screenshots and from the person's view in Pinky, as some passcode keypads are: the person watching may see blank space there.
+- iPhone states: `adjustable` means a swipe up or down on it changes it (picker wheels, sliders). `not_in_screenshot` means the app hides it from screenshots and from the person's view in Pinky, as some passcode keypads are: the person watching may see blank space there. Taps on such a keypad's keys, Face ID and delete included, enter the person's passcode, so Pinky refuses them like typing a password (`rule: credentials`): call `phone_handoff`.
 - `other "Hidden by Pinky: a notification from a blocked app"` (or `… a blocked app's card`) stands where another screen shows a blocked app: its notification in the shade, on the lock screen or in a banner, its card in recent apps. Screenshots cover it with a gray box. Tapping it opens the blocked app, which stays hidden from you.
 - `app: blocked app` with no elements means the foreground app is blocked (banking, wallets, password managers): Pinky hides it from you. Press `home` or launch another app. If the task needs a banking or wallet app, `phone_launch` it: the person may allow it for this task. You then read it like any app, `ocr` lines included, but never get a screenshot of it.
 
@@ -121,6 +121,7 @@ Testing an app on the phone? `phone_logs` reads that app's own log lines and cra
 ## Things you must not do
 
 - Never type passwords or one-time codes; Pinky refuses (`rule: credentials`). Call `phone_handoff { reason: "Please sign in to Dinely" }` and wait.
+- A result that says your tool definitions come from an older Pinky means Pinky updated while your MCP connection stayed open: arguments it added since may not reach it. Tell the person, and ask them to restart Pinky's MCP server (or start a new session) when the task needs them.
 - Never retry an `uncertain` action without observing first.
 - Never try to reach the phone another way (adb, scripts) to get around a refusal.
 - Do not open apps the task does not need.

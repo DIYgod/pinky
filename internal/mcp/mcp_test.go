@@ -372,7 +372,8 @@ func TestHandoffOverMCP(t *testing.T) {
 }
 
 func TestDisplayName(t *testing.T) {
-	for in, want := range map[string]string{"claude-code": "Claude Code", "codex-mcp-client": "Codex", "my-agent": "My Agent", "": "Agent"} {
+	for in, want := range map[string]string{"claude-code": "Claude Code", "codex-mcp-client": "Codex", "my-agent": "My Agent", "": "Agent",
+		"local-agent-mode-pinky": "Claude Cowork", "local-agent-mode-phone": "Claude Cowork"} {
 		if got := DisplayName(in, ""); got != want {
 			t.Errorf("DisplayName(%q) = %q, want %q", in, got, want)
 		}

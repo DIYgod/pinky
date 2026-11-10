@@ -43,6 +43,7 @@ type shimSession struct {
 	replayID     string
 	agentDone    bool
 	seq          int
+	tools        shimTools // the tool definitions on both sides (shimtools.go)
 	outMu        sync.Mutex
 }
 
@@ -136,6 +137,9 @@ func (s *shimSession) giveUp() {
 type pendingRequest struct {
 	method string
 	line   []byte
+	tool   string   // tools/call: the tool
+	args   []string // tools/call: the names of the arguments passed
+	cursor bool     // tools/list: a later page
 }
 
 // jsonrpcHead is what the shim reads of a message.
@@ -204,7 +208,14 @@ func (s *shimSession) send(line []byte, request, method string) bool {
 	}
 	c, closed, away := s.conn, s.closed, s.away
 	if !closed && !away && request != "" {
-		s.pending[request] = pendingRequest{method: method, line: append([]byte(nil), line...)}
+		p := pendingRequest{method: method, line: append([]byte(nil), line...)}
+		switch method {
+		case "tools/call":
+			p.tool, p.args = callTarget(line)
+		case "tools/list":
+			p.cursor = hasCursor(line)
+		}
+		s.pending[request] = p
 	}
 	s.mu.Unlock()
 	if closed {
@@ -234,8 +245,12 @@ func (s *shimSession) toAgent(br *bufio.Reader) error {
 		if len(line) > 0 {
 			if h, ok := head(line); ok && len(h.ID) > 0 && h.Method == "" {
 				s.mu.Lock()
+				p, ok := s.pending[string(h.ID)]
 				delete(s.pending, string(h.ID))
 				s.mu.Unlock()
+				if ok {
+					line = s.answered(p, line)
+				}
 			}
 			s.write(line)
 		}
@@ -323,9 +338,16 @@ func (s *shimSession) connectOnce() (net.Conn, *bufio.Reader, bool) {
 	s.mu.Unlock()
 	br, err := greetMCP(conn, tok)
 	if err == nil {
-		if err = s.replay(conn, br); err == nil {
+		var started bool
+		if started, err = s.replay(conn, br); err == nil {
+			// The new version's tools may differ from those the agent
+			// listed (shimtools.go).
+			changed := started && s.refreshTools(conn, br)
 			s.settlePending(conn)
 			s.setConn(conn)
+			if changed {
+				s.write(toolsListChanged)
+			}
 			return conn, br, true
 		}
 	}
@@ -356,44 +378,51 @@ func awayAnswer(id, method, msg string) []byte {
 	return []byte(`{"jsonrpc":"2.0","id":` + id + `,"error":{"code":-32603,"message":` + string(text) + `}}` + "\n")
 }
 
-func (s *shimSession) replay(conn net.Conn, br *bufio.Reader) error {
+// replay sends the agent's initialize and initialized on a new connection,
+// if it had started its session (started), and notes the new gateway's
+// version.
+func (s *shimSession) replay(conn net.Conn, br *bufio.Reader) (started bool, err error) {
 	s.mu.Lock()
 	init, inited := s.init, s.inited
 	s.seq++
 	id := fmt.Sprintf("pinky-reconnect-%d", s.seq)
 	s.mu.Unlock()
 	if init == nil {
-		return nil // the agent had not started its session
+		return false, nil // the agent had not started its session
 	}
 	var msg map[string]json.RawMessage
 	if err := json.Unmarshal(init, &msg); err != nil {
-		return err
+		return false, err
 	}
 	msg["id"], _ = json.Marshal(id)
 	data, err := json.Marshal(msg)
 	if err != nil {
-		return err
+		return false, err
 	}
 	conn.SetDeadline(time.Now().Add(30 * time.Second))
 	defer conn.SetDeadline(time.Time{})
 	if _, err := conn.Write(append(data, '\n')); err != nil {
-		return err
+		return false, err
 	}
 	for {
 		line, err := br.ReadBytes('\n')
 		if err != nil {
-			return err
+			return false, err
 		}
-		if h, ok := head(line); ok && string(h.ID) == `"`+id+`"` {
+		var r response
+		if json.Unmarshal(line, &r) == nil && string(r.ID) == `"`+id+`"` {
+			s.mu.Lock()
+			s.tools.version = serverVersion(r.Result)
+			s.mu.Unlock()
 			break
 		}
 	}
 	if inited != nil {
 		if _, err := conn.Write(inited); err != nil {
-			return err
+			return false, err
 		}
 	}
-	return nil
+	return true, nil
 }
 
 // settlePending deals with what the old gateway left unanswered, most

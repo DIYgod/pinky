@@ -53,6 +53,8 @@ mkdir -p ~/.claude/skills/pinky && cp docs/SKILL.md ~/.claude/skills/pinky/SKILL
 
 `--scope user` makes Pinky available in every folder; without it, Claude Code adds it to the folder it runs in only.
 
+When Pinky updates, `pinkyctl mcp` keeps the agent's session and reconnects to the new version by itself. It then reads the new version's tools, and when they differ from those the agent listed it sends `notifications/tools/list_changed`. A client that ignores it keeps the old definitions, and may drop arguments they lack before they reach Pinky: until the agent lists the tools again, the result of a call of a tool that changed (once per tool), or that passes arguments its definitions lack, ends with a note that the tools come from an older Pinky and that the MCP server must be restarted to use the current ones.
+
 `pinkyctl` is the command that Homebrew's cask (`brew install --cask diygod/tap/pinky`) and the Linux packages put on the `PATH`. Without them, or for agents started from the Dock or the Start menu, which may not see the terminal's `PATH`, give the app's own executable instead: `/Applications/Pinky.app/Contents/MacOS/Pinky` on a Mac, `Pinky.exe` in `%LOCALAPPDATA%\Programs\Pinky` on Windows, `/opt/pinky/pinky` (the .deb) or `~/.local/pinky.app/pinky` (the .tar.gz's `install.sh`) on Linux.
 
 The command used to be named `pinky`, which is also a coreutils command (on many Macs through Homebrew's coreutils, and on every Linux): an agent set up with `pinky mcp` that reports "Connection closed" runs coreutils' `pinky` (`pinky --version` says GNU coreutils). Set it up again with `pinkyctl mcp` or the app's path; Settings › Agents marks such an agent and sets it right with Update.
@@ -250,6 +252,8 @@ Works while the person is in control and while an approval is open.
 | `long_press` | boolean | Press and hold |
 
 The policy checks every element under the finger, not only the smallest: tapping a price label inside a Pay button counts as tapping Pay.
+
+A passcode keypad that the app draws where screenshots do not reach (iOS marks its keys `not_in_screenshot`; nine or more of them carry a digit) takes no taps, by `ref` or by `x`,`y`, in `phone_batch` too: every key of it, Face ID and delete included, may enter or spend a passcode attempt while the person sees blank space. Such taps are refused like typing a password (`blocked_by_policy`, rule `credentials`); call `phone_handoff`.
 
 ### phone_type
 

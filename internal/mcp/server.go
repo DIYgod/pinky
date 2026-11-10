@@ -162,10 +162,18 @@ var knownClients = map[string]string{
 	"opencode": "opencode", "continue": "Continue", "mcp-inspector": "MCP Inspector",
 }
 
+// coworkPrefix starts the client names of Claude Desktop's Cowork, which
+// names its MCP client after the server: "local-agent-mode-pinky".
+const coworkPrefix = "local-agent-mode-"
+
 // DisplayName turns an MCP client name into the name shown to the person.
 func DisplayName(name, title string) string {
-	if n, ok := knownClients[strings.ToLower(strings.TrimSpace(name))]; ok {
+	key := strings.ToLower(strings.TrimSpace(name))
+	if n, ok := knownClients[key]; ok {
 		return n
+	}
+	if strings.HasPrefix(key, coworkPrefix) {
+		return "Claude Cowork"
 	}
 	if t := strings.TrimSpace(title); t != "" {
 		return t
