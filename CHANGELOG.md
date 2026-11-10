@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Scrolling the phone mirror with a mouse wheel now glides smoothly and flings like a swipe, instead of jumping a notch at a time. Thanks to @stoicneko for the report.
+
 ## 2026.1110.27 (2026-11-10)
 
 - Removing one of two blocked apps with the same name (say Trust Bank on an iPhone and Trust Wallet on an Android phone) no longer makes Pinky quit, and unblocks only that app.

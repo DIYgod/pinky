@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在投屏里用鼠标滚轮滚动时，画面现在会平滑滑动，快速滚动后还会像手指滑动一样带惯性，不再一格一格地跳。感谢 @stoicneko 的反馈。
+
 ## 2026.1110.27 (2026-11-10)
 
 - 在两个同名的已屏蔽应用（比如 iPhone 上的 Trust 银行和 Android 上的 Trust 钱包）中删除一个时，Pinky 不再闪退，也只会放行这一个应用。
