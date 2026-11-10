@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1110.10 (2026-11-10)
 
 - Agents can now tidy an Android home screen even when you have them work in the background: they can ask to use the phone's own screen for it, and you stay in control while you use the phone.
 - Dragging an app on a Pixel home screen now lets go where the target went, although the launcher shrinks the page as soon as an app is picked up.
