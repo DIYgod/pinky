@@ -23163,6 +23163,28 @@ func (msgs Messages) UnlockEnd() string {
 	return Catalog.Format(msgs.locale, "unlockEnd", nil)
 }
 
+// UnlockErrMicrosoftAccount says "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft …"
+// in the language the app shows.
+//
+// A notice on Windows when confirming the person failed because they typed
+// nothing, or only wrong passwords (most likely the PIN they sign in with),
+// in Windows' password dialog, and their Windows account is connected to a
+// Microsoft account. name is the phone's name.
+func UnlockErrMicrosoftAccount(name string) string {
+	return In(i18n.Locale()).UnlockErrMicrosoftAccount(name)
+}
+
+// UnlockErrMicrosoftAccount says "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft …"
+// in the language of msgs.
+//
+// A notice on Windows when confirming the person failed because they typed
+// nothing, or only wrong passwords (most likely the PIN they sign in with),
+// in Windows' password dialog, and their Windows account is connected to a
+// Microsoft account. name is the phone's name.
+func (msgs Messages) UnlockErrMicrosoftAccount(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrMicrosoftAccount", map[string]any{"name": name})
+}
+
 // UnlockErrNoPIN says "No PIN is saved for {name}. Save it in Settings › Phones."
 // in the language the app shows.
 //

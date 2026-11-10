@@ -54,6 +54,7 @@ func runApp(args []string) error {
 		level = slog.LevelDebug
 	}
 	c.Log = slog.New(slog.NewTextHandler(io.MultiWriter(os.Stderr, logFile), &slog.HandlerOptions{Level: level}))
+	secret.SetLogger(c.Log)
 	crashes := captureCrashes(dirs, "app", c.Log)
 	defer crashes.Stop()
 	c.Crashes = crashes

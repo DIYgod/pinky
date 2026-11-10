@@ -14,13 +14,44 @@ const (
 	errAccountRestriction = syscall.Errno(1327) // ERROR_ACCOUNT_RESTRICTION
 )
 
+// windowsAccount is what Windows says about the account Pinky runs as,
+// for the password check.
+type windowsAccount struct {
+	// Known: Windows named the account (its SID and name).
+	Known bool
+	// Local: it is an account of this computer's own account database,
+	// which the blank-password policy is about. Domain, Entra ID and
+	// other accounts are not.
+	Local bool
+	// Microsoft: it is connected to a Microsoft account, which always
+	// has a password, even when the person signs in with a PIN or Windows
+	// Hello and never types it.
+	Microsoft bool
+}
+
+// passwordCheck is what passwordVerdict decides on.
+type passwordCheck struct {
+	// Logon is LogonUserW's answer for the name the Windows credential
+	// dialog returned and the typed password: nil when it signed in.
+	Logon error
+	// Empty: nothing was typed.
+	Empty bool
+	// DialogIsMe: the dialog's name resolves to the account Pinky runs
+	// as. Only read when Empty.
+	DialogIsMe bool
+	// Me is the account Pinky runs as.
+	Me windowsAccount
+	// Blank asks LogonUserW whether an empty password signs in the
+	// account Pinky runs as, by its own name in this computer's account
+	// database. passwordVerdict calls it only when it matters.
+	Blank func() error
+}
+
 // passwordVerdict reads LogonUserW's answer to the password typed in the
-// Windows credential dialog: true when it is the account's password, false
-// with no error when it is wrong (the dialog asks again), and an error for
-// anything else. logonErr is nil when LogonUserW succeeded. emptyPassword
-// reports that nothing was typed, and signedInBlank whether the dialog's
-// account is the signed-in local account with a blank password
-// (signedInBlankAccount on Windows); it is called only when it matters.
+// Windows credential dialog: true when it is the password of the account
+// Pinky runs as, false with no error when it is wrong (the dialog asks
+// again), and an error for anything else. step says what decided, for the
+// log.
 //
 // A local account with a blank password never passes the network logon
 // the check uses: Windows' default policy "Accounts: Limit local account
@@ -34,19 +65,64 @@ const (
 // its password, account expired, with or without "password not
 // required"), or ERROR_ACCOUNT_LOCKED_OUT when locked out; a
 // blank-password account with another restriction got that restriction's
-// error, not this one. So ERROR_ACCOUNT_RESTRICTION for an empty password
-// is a correct password when signedInBlankAccount confirms it for the
-// signed-in local account. Any other account, or a password that is not
-// empty, keeps it an error.
-// docs/notes/platform.md has the measurements.
-func passwordVerdict(logonErr error, emptyPassword bool, signedInBlank func() bool) (bool, error) {
-	switch {
-	case logonErr == nil:
-		return true, nil
-	case errors.Is(logonErr, errLogonFailure):
-		return false, nil
-	case errors.Is(logonErr, errAccountRestriction) && emptyPassword && signedInBlank():
-		return true, nil
+// error, not this one. docs/notes/platform.md has the measurements.
+//
+// So an empty password counts as right when Windows, asked about the
+// account Pinky runs as by its own name in this computer's account
+// database, signs it in or answers ERROR_ACCOUNT_RESTRICTION. The dialog's
+// name only decides whether to ask: it comes in many forms (the computer's
+// NetBIOS or DNS name, a UPN, .\user), and Windows maps some of them to
+// the local account on a workgroup computer where LookupAccountName does
+// not, which is what failed in issue #41. Pinky asks when the dialog's
+// name got ERROR_ACCOUNT_RESTRICTION, or ERROR_LOGON_FAILURE while it does
+// not resolve to the signed-in account. Windows' answer about another
+// account never counts. A Microsoft account, a domain account, or a
+// password that is not empty never takes this path.
+func passwordVerdict(c passwordCheck) (ok bool, step string, err error) {
+	if c.Logon == nil {
+		return true, "signed in", nil
 	}
-	return false, fmt.Errorf("secret: check the password: %w", logonErr)
+	wrong := errors.Is(c.Logon, errLogonFailure)
+	refused := func() (bool, string, error) {
+		if wrong {
+			return false, "wrong password", nil
+		}
+		return false, "refused", fmt.Errorf("secret: check the password: %w", c.Logon)
+	}
+	if !c.Empty {
+		return refused()
+	}
+	// Nothing was typed.
+	if c.Me.Microsoft {
+		return false, "Microsoft account", ErrMicrosoftAccount
+	}
+	if !errors.Is(c.Logon, errAccountRestriction) && !(wrong && !c.DialogIsMe) {
+		return refused()
+	}
+	notBlank := func(step, why string, also error) (bool, string, error) {
+		if wrong {
+			return false, step, nil
+		}
+		err := fmt.Errorf("secret: Windows refused the empty password (%w), and Pinky could not confirm that the Windows account it runs as has no password: %s", c.Logon, why)
+		if also != nil {
+			err = fmt.Errorf("%w: %w", err, also)
+		}
+		return false, step, err
+	}
+	switch {
+	case !c.Me.Known:
+		return notBlank("blank: account unknown", "Windows did not say which account that is", nil)
+	case !c.Me.Local:
+		return notBlank("blank: not local", "it is not an account of this computer", nil)
+	}
+	switch err := c.Blank(); {
+	case err == nil, errors.Is(err, errAccountRestriction):
+		return true, "blank password", nil
+	case errors.Is(err, errLogonFailure):
+		// The account Pinky runs as has a password: whatever account the
+		// dialog's name reached, the empty password is not its.
+		return false, "blank: has a password", nil
+	default:
+		return notBlank("blank: refused", "Windows answered for it", err)
+	}
 }
