@@ -242,9 +242,11 @@ func (a *app) settingsSafety(c *mg.Context) {
 			a.addBlockedApp(c)
 		}
 		mg.Column(c).Children(func() {
-			for i, b := range st.BlockedApps {
-				i, b := i, b
-				mg.Row(c.Key("b-"+b.Name)).Gap(12).Padding(7, 0).AlignItems(mg.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
+			for _, b := range st.BlockedApps {
+				b := b
+				// Two apps may share a name (Trust Bank's iPhone app and Trust
+				// Wallet's Android app): the id tells their rows apart.
+				mg.Row(c.Key("b-"+b.ID+"\x00"+b.Name)).Gap(12).Padding(7, 0).AlignItems(mg.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
 					appIcon(c, b.Name, 28, 8, 13, blockedColor(b.Name))
 					mg.Text(c, b.Name).Grow(1)
 					mg.Text(c, blockedKind(b.Kind)).FontSize(13.5).TextColor(p.ink2)
@@ -253,7 +255,7 @@ func (a *app) settingsSafety(c *mg.Context) {
 						rm.Background(p.bg3)
 					}
 					if rm.Clicked() {
-						st.BlockedApps = append(st.BlockedApps[:i:i], st.BlockedApps[i+1:]...)
+						st.BlockedApps = withoutBlocked(st.BlockedApps, b)
 						a.changed()
 					}
 					rm.TextColor(p.ink3).Children(func() { mg.Icon(c, icX).FontSize(14) })
@@ -285,6 +287,18 @@ func (a *app) settingsSafety(c *mg.Context) {
 		})
 	})
 	a.rulesSection(c)
+}
+
+// withoutBlocked returns list without the row of b, the same app by id
+// and name; other apps of that name stay.
+func withoutBlocked(list []BlockedApp, b BlockedApp) []BlockedApp {
+	out := make([]BlockedApp, 0, len(list))
+	for _, x := range list {
+		if x.ID != b.ID || x.Name != b.Name {
+			out = append(out, x)
+		}
+	}
+	return out
 }
 
 // blockedKinds name the kinds of blocked apps, which the settings keep in

@@ -38,7 +38,9 @@ func runDaemon(args []string) error {
 	c.Log = newLogger(os.Stderr, *verbose)
 	if dirs, err := api.DefaultDirs(); err == nil && dirs.Ensure() == nil {
 		crashes := captureCrashes(dirs, "daemon", c.Log)
-		defer crashes.Stop()
+		// Not a plain Stop: a panic runs deferred calls, and a Stop removed the
+	// crash file before the runtime wrote the panic to it.
+	defer func() { crashes.Exit(recover()) }()
 		c.Crashes = crashes
 	}
 

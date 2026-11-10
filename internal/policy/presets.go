@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -296,6 +297,14 @@ var ErrBlockedByRule = errors.New("blocked by a rule in rules.yaml that names th
 // SetAppBlocked blocks or unblocks an app for agents and saves apps.yaml.
 // app needs an ID, a Name or both. Unblocking an app that the bundled table
 // blocks (a banking app) adds it to apps.yaml's exclude list.
+//
+// An app with an ID is that app alone: unblocking it never unblocks, nor
+// hides from BlockedApps, another app that the table blocks and that only
+// shares its name ("Trust": Trust Bank's iPhone app and Trust Wallet's
+// Android app). Its name is excluded too only when the name alone is
+// blocked by the table, so that reads that know only the name agree. A
+// name the person typed is one entry for every app of that name, and goes
+// when a row it blocks is removed.
 func (e *Engine) SetAppBlocked(app screen.App, blocked bool) error {
 	app.ID, app.Name = clonePackage(strings.TrimSpace(app.ID)), strings.TrimSpace(app.Name)
 	if app.ID == "" && app.Name == "" {
@@ -312,9 +321,11 @@ func (e *Engine) SetAppBlocked(app screen.App, blocked bool) error {
 	}
 	entries := o.Add[CatBlocked]
 	entries.IDs = without(entries.IDs, app.ID)
-	entries.Names = without(entries.Names, app.Name)
-	o.Exclude = without(without(o.Exclude, app.ID), app.Name)
+	if app.ID == "" {
+		entries.Names = without(entries.Names, app.Name)
+	}
 	if blocked {
+		o.Exclude = without(without(o.Exclude, app.ID), app.Name)
 		if app.ID != "" {
 			entries.IDs = append(entries.IDs, app.ID)
 		} else {
@@ -324,15 +335,30 @@ func (e *Engine) SetAppBlocked(app screen.App, blocked bool) error {
 	o.Add[CatBlocked] = entries
 	e.setOverridesLocked(o)
 	if !blocked {
-		// Still blocked by the bundled table: exclude it there.
-		if rule, ok := e.blockedLocked(app); ok && rule != RuleBlocked {
-			// The table may list it by id and by name; exclude both.
-			for _, key := range []string{app.ID, app.Name} {
-				if key != "" {
-					o.Exclude = append(o.Exclude, key)
-				}
-			}
+		// Still blocked by a name the person typed, which Settings lists
+		// on the rows of the apps of that name: removing such a row
+		// removes that name, the person's own entry.
+		if rule, ok := e.blockedLocked(app); ok && rule == RuleBlocked && app.ID != "" && app.Name != "" &&
+			slices.ContainsFunc(entries.Names, func(n string) bool { return strings.EqualFold(n, app.Name) }) {
+			entries.Names = without(entries.Names, app.Name)
+			o.Add[CatBlocked] = entries
 			e.setOverridesLocked(o)
+		}
+		// Still blocked, by the bundled table: exclude the app by its id,
+		// which takes it out of every category whatever its name
+		// (Apps.Categories), so another app of that name stays blocked.
+		if _, ok := e.blockedLocked(app); ok && app.ID != "" {
+			o.Exclude = appendFold(o.Exclude, app.ID)
+			e.setOverridesLocked(o)
+		}
+		// The name alone still blocked by the table (it lists the app by
+		// name too, or the name says bank): exclude the name as well, for
+		// reads that know only the name.
+		if app.Name != "" {
+			if rule, ok := e.blockedLocked(screen.App{Name: app.Name}); ok && rule != RuleBlocked {
+				o.Exclude = appendFold(o.Exclude, app.Name)
+				e.setOverridesLocked(o)
+			}
 		}
 	}
 	rule, still := e.blockedLocked(app)
@@ -345,6 +371,16 @@ func (e *Engine) SetAppBlocked(app screen.App, blocked bool) error {
 		return fmt.Errorf("%w (%s)", ErrBlockedByRule, rule)
 	}
 	return nil
+}
+
+// appendFold appends s to list unless list has it already, without case.
+func appendFold(list []string, s string) []string {
+	for _, x := range list {
+		if strings.EqualFold(x, s) {
+			return list
+		}
+	}
+	return append(list, s)
 }
 
 func without(list []string, s string) []string {

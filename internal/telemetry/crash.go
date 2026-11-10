@@ -153,6 +153,24 @@ func (c *Crashes) Stop() {
 	})
 }
 
+// Exit ends the capture as the process's function returns, deferred
+// first thing so that it runs last:
+//
+//	defer func() { crashes.Exit(recover()) }()
+//
+// On a clean exit (r is nil) it is Stop. A panic, though, runs deferred
+// calls on its way up, and a deferred Stop removed this run's file before
+// the runtime wrote the panic to it: the crash left no report (Settings ›
+// Safety quit Pinky so in November 2026). With a panic, Exit leaves the
+// file and panics again with r, which the runtime writes to the file with
+// the stack of the first panic still under it.
+func (c *Crashes) Exit(r any) {
+	if r != nil {
+		panic(r)
+	}
+	c.Stop()
+}
+
 func (c *Crashes) start(opt CrashOptions) {
 	sys := System()
 	now := opt.Now()

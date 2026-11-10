@@ -1,6 +1,7 @@
 package policy
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -128,4 +129,122 @@ func TestChineseCardApps(t *testing.T) {
 			t.Errorf("%+v is blocked by %q", a, rule)
 		}
 	}
+}
+
+// Two apps share a name: Trust Bank's iPhone app (sg.trust) and Trust
+// Wallet's Android app (com.sixdays.trust). Unblocking one by its id
+// neither unblocks the other nor hides it from Settings, and what Settings
+// lists is what is blocked.
+func TestUnblockOneOfTwoSameNamedApps(t *testing.T) {
+	bank := screen.App{ID: "sg.trust", Name: "Trust"}
+	wallet := screen.App{ID: "com.sixdays.trust", Name: "Trust"}
+	installed := []screen.App{bank, wallet}
+	listed := func(e *Engine) map[string]bool {
+		out := map[string]bool{}
+		for _, b := range e.BlockedApps(installed) {
+			out[b.ID+"|"+b.Name] = true
+		}
+		return out
+	}
+	agree := func(t *testing.T, e *Engine) {
+		t.Helper()
+		got := listed(e)
+		for _, a := range installed {
+			_, blocked := e.Blocked(a)
+			if got[a.ID+"|"+a.Name] != blocked {
+				t.Errorf("%s: blocked %v, listed %v (list %v)", a.ID, blocked, got[a.ID+"|"+a.Name], got)
+			}
+		}
+	}
+
+	t.Run("bundled table", func(t *testing.T) {
+		dir := t.TempDir()
+		rules, apps := filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml")
+		e, err := Load(rules, apps)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, a := range installed {
+			if _, ok := e.Blocked(a); !ok {
+				t.Fatalf("%+v is not blocked to begin with", a)
+			}
+		}
+		if err := e.SetAppBlocked(wallet, false); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := e.Blocked(wallet); ok {
+			t.Error("the wallet is still blocked")
+		}
+		if _, ok := e.Blocked(bank); !ok {
+			t.Error("unblocking the wallet unblocked the bank")
+		}
+		agree(t, e)
+		if e, err = Load(rules, apps); err != nil {
+			t.Fatal(err)
+		}
+		agree(t, e)
+		if !listed(e)["sg.trust|Trust"] {
+			t.Error("the bank is missing from the list after a restart")
+		}
+		if err := e.SetAppBlocked(bank, false); err != nil {
+			t.Fatal(err)
+		}
+		for _, a := range installed {
+			if _, ok := e.Blocked(a); ok {
+				t.Errorf("%s still blocked after unblocking both", a.ID)
+			}
+		}
+		agree(t, e)
+	})
+
+	// The owner's apps.yaml after the old Settings unblocked the wallet:
+	// it excluded the wallet's id and the name "Trust".
+	t.Run("old exclude of the name", func(t *testing.T) {
+		dir := t.TempDir()
+		rules, apps := filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml")
+		if err := os.WriteFile(apps, []byte("exclude:\n  - com.sixdays.trust\n  - Trust\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		e, err := Load(rules, apps)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := e.Blocked(bank); !ok {
+			t.Fatal("the bank is not blocked")
+		}
+		if !listed(e)["sg.trust|Trust"] {
+			t.Fatalf("the bank is blocked but not listed: %v", listed(e))
+		}
+		agree(t, e)
+	})
+
+	// The person typed the name, which Settings lists on the row of each
+	// app of it: removing the wallet's row removes that name, and the
+	// bank stays blocked by the table.
+	t.Run("blocked by name", func(t *testing.T) {
+		dir := t.TempDir()
+		e, err := Load(filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := e.SetAppBlocked(screen.App{Name: "Trust"}, true); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := e.Blocked(screen.App{ID: "com.other.trust", Name: "Trust"}); !ok {
+			t.Fatal("the name is not blocked")
+		}
+		if err := e.SetAppBlocked(wallet, false); err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := e.Blocked(wallet); ok {
+			t.Error("the wallet is still blocked")
+		}
+		if _, ok := e.Blocked(bank); !ok {
+			t.Error("unblocking the wallet unblocked the bank")
+		}
+		if got := listed(e); len(got) != 1 || !got["sg.trust|Trust"] {
+			t.Errorf("listed %v", got)
+		}
+		agree(t, e)
+	})
 }

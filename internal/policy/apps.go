@@ -119,7 +119,12 @@ func (a *Apps) Apply(o AppOverrides) {
 func (a *Apps) Categories(app screen.App) []string {
 	var out []string
 	id, name := clonePackage(strings.TrimSpace(app.ID)), strings.ToLower(strings.TrimSpace(app.Name))
-	if id != "" && !a.excluded[id] {
+	if id != "" && a.excluded[id] {
+		// An app excluded by its id is in no category, whatever its name;
+		// another app of that name keeps its own.
+		return nil
+	}
+	if id != "" {
 		out = append(out, a.ids[id]...)
 		for p, cats := range a.prefixes {
 			if strings.HasPrefix(id, p) {
@@ -134,7 +139,7 @@ func (a *Apps) Categories(app screen.App) []string {
 			out = appendUnique(out, c)
 		}
 	}
-	if !a.excluded[id] && !a.excluded[name] && financeName(name) {
+	if !a.excluded[name] && financeName(name) {
 		out = appendUnique(out, CatFinance)
 	}
 	sort.Strings(out)

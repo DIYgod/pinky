@@ -456,3 +456,12 @@ The agent's `phone_drag` (docs/notes/gateway.md, "Dragging") shows in the client
 
 The person's own drags on the mirror are unchanged: they were already played back with their timing (`Touch`).
 
+
+## Blocked apps that share a name (2026-11-10)
+
+The owner saw two rows named "Trust" in Settings › Safety › Blocked apps: Trust Bank's iPhone app (`sg.trust`) and Trust Wallet's Android app (`com.sixdays.trust`). What went wrong, and what changed:
+
+- **The crash.** Rows were keyed by name, so the two rows had one key and shared one state in MyGo (a Tester panics on that; the app only logs it). Both remove buttons answered one click, and each removed its row by index, the second past the end of the list. Rows are now keyed by id and name and removed by id and name (`withoutBlocked`); `applySettings` compares rows by id and name too, where a name-keyed map saw no change after one of the two went. Test: `TestBlockedAppsShareAName` (ui), `TestUnblockOneOfTwoSameNamedRows` (cmd/pinky).
+- **No crash report.** The app and the daemon deferred `crashes.Stop()`. A panic runs deferred calls on its way up, so Stop removed the crash file before the runtime wrote the panic to it: no report and no unclean-exit marker. They now defer `crashes.Exit(recover())`, which stops on a clean exit and panics again otherwise; the runtime writes the panic, with the first panic's stack, to the file. Test: `TestPanicThroughExitBecomesAReport`.
+- **Unblocking by id.** `SetAppBlocked(app, false)` excluded the app's name as well as its id, which reached every app of that name. Now an app with an id is excluded by its id, and an excluded id takes the app out of every category whatever its name (`Apps.Categories`); the name is excluded too only when the name alone is still blocked by the table (Wise, "DBS digibank"). A name the person typed is one entry for every app of that name, and goes when a row it blocks is removed. Test: `TestUnblockOneOfTwoSameNamedApps`.
+- **The missing row.** Settings read the blocked apps at start, before Wi-Fi iPhones were online, and again only when the policy changed; and `Gateway.BlockedApps` listed the phones' apps one after another within one 10-second budget, so a slow phone listed last could run out of it. Settings now reads the list again when the phones online change (`settingsVersion`), and the gateway lists all phones at once. The iOS driver still drops an app list that arrives after its caller gave up (`catalogWithin`); keeping it for the next call would be the iOS driver session's change.

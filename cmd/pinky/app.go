@@ -6,10 +6,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/DIYgod/pinky"
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
@@ -68,7 +71,9 @@ func runApp(args []string) error {
 	c.Log = slog.New(slog.NewTextHandler(io.MultiWriter(os.Stderr, logFile), &slog.HandlerOptions{Level: level}))
 	secret.SetLogger(c.Log)
 	crashes := captureCrashes(dirs, "app", c.Log)
-	defer crashes.Stop()
+	// Not a plain Stop: a panic runs deferred calls, and a Stop removed the
+	// crash file before the runtime wrote the panic to it.
+	defer func() { crashes.Exit(recover()) }()
 	c.Crashes = crashes
 
 	settingsPath := filepath.Join(dirs.Config, "settings.json")
@@ -253,17 +258,34 @@ func gatewaySettings(s *ui.Settings, rg *runningGateway) {
 }
 
 // policySettings is gatewaySettings for Settings to read again after hand
-// edits of the rules files: it reads the gateway only when the policy's
-// version is no longer since, which saves listing the phones' apps every
-// few seconds.
+// edits of the rules files, and when phones come online or go: it reads the
+// gateway only when the policy's version or the phones online are no longer
+// since's, which saves listing the phones' apps every few seconds. The
+// list at start is read before Wi-Fi iPhones are online, and missed their
+// banking apps until the policy changed.
 func policySettings(rg *runningGateway, since int) (ui.Settings, int, bool) {
-	v := rg.Policy.Version()
+	v := settingsVersion(rg.Policy.Version(), rg.G.Devices())
 	if v == since {
 		return ui.Settings{}, v, false
 	}
 	var s ui.Settings
 	gatewaySettings(&s, rg)
 	return s, v, true
+}
+
+// settingsVersion combines the policy's version with the phones online
+// into the version policySettings reports: never -1, Settings' "not read".
+func settingsVersion(policyVersion int, devices []gateway.DeviceView) int {
+	var ids []string
+	for _, d := range devices {
+		if d.Info.State == driver.StateOnline {
+			ids = append(ids, d.Info.ID)
+		}
+	}
+	sort.Strings(ids)
+	h := fnv.New32a()
+	fmt.Fprintf(h, "%d\x00%s", policyVersion, strings.Join(ids, "\x00"))
+	return int(h.Sum32() >> 1) // never negative, even where int has 32 bits
 }
 
 // startSettings applies what the gateway takes from Settings at start:
@@ -348,20 +370,24 @@ func applySettings(rg *runningGateway, old, s ui.Settings, log *slog.Logger) {
 	if s.ReadOnly != old.ReadOnly {
 		warn("read-only", rg.G.SetReadOnly("", s.ReadOnly))
 	}
+	// Rows by id and name: two apps may share a name (Trust Bank's iPhone
+	// app and Trust Wallet's Android app), and unblocking one is not
+	// unblocking the other.
+	key := func(b ui.BlockedApp) string { return b.ID + "\x00" + b.Name }
 	was := map[string]ui.BlockedApp{}
 	for _, b := range old.BlockedApps {
-		was[b.Name] = b
+		was[key(b)] = b
 	}
 	now := map[string]bool{}
 	for _, b := range s.BlockedApps {
-		now[b.Name] = true
-		if _, ok := was[b.Name]; !ok {
+		now[key(b)] = true
+		if _, ok := was[key(b)]; !ok {
 			warn("block "+b.Name, rg.G.SetAppBlocked(blockedApp(b), true))
 		}
 	}
-	for name, b := range was {
-		if !now[name] {
-			warn("unblock "+name, rg.G.SetAppBlocked(blockedApp(b), false))
+	for k, b := range was {
+		if !now[k] {
+			warn("unblock "+b.Name, rg.G.SetAppBlocked(blockedApp(b), false))
 		}
 	}
 }

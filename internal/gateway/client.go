@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/approval"
@@ -649,12 +650,23 @@ func (g *Gateway) BlockedApps(ctx context.Context) []policy.BlockedApp {
 		}
 	}
 	g.mu.Unlock()
+	// Each phone at once: an iPhone over Wi-Fi takes seconds to list its
+	// apps, and one after another the phones listed last ran out of ctx's
+	// time and their blocked apps were missing.
+	lists := make([][]driver.App, len(devs))
+	var wg sync.WaitGroup
+	for i, dev := range devs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if apps, err := dev.Apps(ctx); err == nil {
+				lists[i] = apps
+			}
+		}()
+	}
+	wg.Wait()
 	var installed []screen.App
-	for _, dev := range devs {
-		apps, err := dev.Apps(ctx)
-		if err != nil {
-			continue
-		}
+	for _, apps := range lists {
 		for _, a := range apps {
 			if a.CloneOf != nil {
 				continue // blocked or not with the app it copies

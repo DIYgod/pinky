@@ -142,7 +142,9 @@ func (a *app) notListed(list []gateway.InstalledApp) []gateway.InstalledApp {
 func (a *app) blockApp(b BlockedApp) {
 	st := &a.settings
 	for _, x := range st.BlockedApps {
-		if (b.ID != "" && x.ID == b.ID) || strings.EqualFold(x.Name, b.Name) {
+		// A row by name only stands for every app of that name; a row with
+		// an id for that app alone, not for another app of its name.
+		if (b.ID != "" && x.ID == b.ID) || (x.ID == "" && strings.EqualFold(x.Name, b.Name)) {
 			a.set.newApp, a.set.adding = "", false
 			return
 		}
