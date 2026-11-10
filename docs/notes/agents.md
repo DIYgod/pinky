@@ -10,7 +10,7 @@ Settings › Agents › Connect an agent, and the sidebar's card while no agent 
   - An agent's state comes from reading its settings (cached by content: `~/.claude.json` can be megabytes), never from `claude mcp list` or `get`, which start every server to check it.
 - `ui/connect.go`: the part of Settings › Agents, the sidebar's card (`agentCard`, above the update cards) and the line under Tasks (`ui/rightpanel.go`). `ui.Options.AgentSetup` is nil in tests and the demo, which then show only the commands to add an agent by hand; `cmd/pinky/agents.go` makes the real one.
 - `internal/mcp/list.go`: `mcp.Tools`, the tools as agents see them without a gateway, for the bundle's manifest. `scripts/release mcpb` writes the release's bundle; the release workflow's publish job and `scripts/release.sh build` run it.
-- The skill is `docs/SKILL.md`, embedded as `pinky.Skill` (`skill.go` at the root).
+- The skill is `docs/SKILL.md`, embedded as `pinky.Skill` (`skill.go` at the root). `Setup.RefreshSkills` rewrites every old copy of Pinky's (front matter `name: pinky`, other text) in the agents' skills folders, each folder once, and never makes one or touches someone else's; `cmd/pinky` `refreshSkills` runs it in the background when the app or the daemon starts, except in `…-dev` builds and under `PINKY_HOME`, so branches and tests never rewrite the person's copies. The Claude Desktop bundle carries no skill (the MCP server's instructions come from the running Pinky), so nothing there goes stale.
 
 ## Decisions
 

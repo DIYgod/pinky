@@ -53,6 +53,8 @@ func runDaemon(args []string) error {
 		stopADBAtQuit(s.StopADBOnQuit, c.Fake, restarting, c.Log)
 	}()
 	defer rg.Close()
+	// Agents' copies of Pinky's skill follow this version.
+	go refreshSkills(c.Log)
 	// Recording, retention, iPhones over Wi-Fi and usage statistics follow
 	// the app's settings, when there are any.
 	s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)

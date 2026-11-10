@@ -606,3 +606,70 @@ func TestWindowsSkipsAppAliases(t *testing.T) {
 		t.Errorf("lookPath(claude) = %s", got)
 	}
 }
+
+func TestRefreshSkills(t *testing.T) {
+	ts := newTestSetup(t)
+	const old = "---\nname: pinky\n---\nold guide\n"
+	const mine = "---\nname: pinky-notes\n---\nmy own\n"
+	ts.write(t, ".claude/skills/pinky/SKILL.md", old)
+	ts.write(t, ".agents/skills/pinky/SKILL.md", old)
+	ts.write(t, ".codeium/windsurf/skills/pinky/SKILL.md", mine)
+
+	files, err := ts.RefreshSkills(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		filepath.Join(ts.home, ".claude", "skills", "pinky", "SKILL.md"),
+		filepath.Join(ts.home, ".agents", "skills", "pinky", "SKILL.md"),
+	}
+	if strings.Join(files, "\n") != strings.Join(want, "\n") {
+		t.Errorf("rewrote %q, want %q (the shared folder once)", files, want)
+	}
+	for _, p := range []string{".claude/skills/pinky/SKILL.md", ".agents/skills/pinky/SKILL.md"} {
+		if got := ts.read(t, p); got != testSkill {
+			t.Errorf("%s: %q", p, got)
+		}
+	}
+	if got := ts.read(t, ".codeium/windsurf/skills/pinky/SKILL.md"); got != mine {
+		t.Errorf("someone else's skill changed: %q", got)
+	}
+	// Folders without Pinky's skill get none.
+	for _, p := range []string{".copilot/skills", ".config/devin/skills"} {
+		if exists(filepath.Join(ts.home, p)) {
+			t.Errorf("%s was made", p)
+		}
+	}
+
+	// Current copies are not written again.
+	files, err = ts.RefreshSkills(context.Background())
+	if err != nil || len(files) != 0 {
+		t.Errorf("second refresh: %q, %v", files, err)
+	}
+}
+
+func TestRefreshSkillsWithoutSkill(t *testing.T) {
+	ts := newTestSetup(t)
+	ts.Skill = ""
+	ts.write(t, ".claude/skills/pinky/SKILL.md", "---\nname: pinky\n---\nold\n")
+	if files, err := ts.RefreshSkills(context.Background()); err != nil || len(files) != 0 {
+		t.Errorf("refreshed without a skill: %q, %v", files, err)
+	}
+}
+
+func TestRefreshedSkillIsConnected(t *testing.T) {
+	ts := newTestSetup(t)
+	if _, err := ts.Connect(context.Background(), "cursor"); err != nil {
+		t.Fatal(err)
+	}
+	ts.write(t, ".agents/skills/pinky/SKILL.md", "---\nname: pinky\n---\nold\n")
+	if st := ts.status(t, "cursor"); st.State != Outdated || st.Why != WhySkill {
+		t.Fatalf("old skill: %+v", st)
+	}
+	if _, err := ts.RefreshSkills(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if st := ts.status(t, "cursor"); st.State != Connected {
+		t.Errorf("after the refresh: %+v", st)
+	}
+}
