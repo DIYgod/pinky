@@ -26,7 +26,12 @@ import (
 //   - the person's Rotate moves the phone for them, even while they are in
 //     control, and the phone goes back to CoreDevice switchBackAfter after
 //     it, once no task uses it. A turn made through the helper stays when
-//     the helper goes (iPhone Air, iOS 27.3: Calculator stayed landscape).
+//     the helper goes (iPhone Air, iOS 27.3: Calculator stayed landscape);
+//   - the person's pinch on the mirror moves it too, in the background: the
+//     gesture that starts it is lost, the next ones reach the phone;
+//   - while the phone waits to go back, each of the person's inputs on the
+//     mirror starts switchBackAfter again (personInput), so it does not go
+//     back while they use it.
 //
 // A task that changed a switch through the helper stays there until it
 // ends, so the switch is put back (useConnection's keep).
@@ -176,4 +181,31 @@ func (g *Gateway) pinchHelper(ctx context.Context, l *lease) *Result {
 		return res
 	}
 	return g.attachScreen(l, res, cur)
+}
+
+// personPinchHelper starts moving the phone to the helper for the person's
+// pinch on the mirror, when it may: the gesture that starts it is lost, as
+// are the touches until the phone is back, while its status reads
+// "Switching to the helper". It reports whether the touch is taken care
+// of so.
+func (g *Gateway) personPinchHelper(d *device, a driver.TouchAction) bool {
+	g.mu.Lock()
+	ready, switching := g.helperReadyLocked(d), d.switching != ""
+	g.mu.Unlock()
+	switch {
+	case switching:
+		return true // the move under way
+	case !ready:
+		return false
+	case a != driver.TouchDown:
+		return true // the rest of a gesture begun before
+	}
+	go func() {
+		ctx, cancel := context.WithTimeout(g.ctx, switchWait+helperCheckTimeout)
+		defer cancel()
+		if _, err := g.personHelper(ctx, d); err != nil {
+			g.log.Warn("person: pinch", "device", d.id, "err", err)
+		}
+	}()
+	return true
 }

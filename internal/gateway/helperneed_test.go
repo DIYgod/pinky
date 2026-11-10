@@ -4,14 +4,17 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // helperPhone is an iPhone on iOS 27 left on Automatic, over CoreDevice
 // with no switches and no second finger, the helper installed (or not).
-func helperPhone(t *testing.T, installed bool) (*twoWayPhone, *Gateway) {
+func helperPhone(t *testing.T, installed bool) (*demo.Device, *Gateway) {
 	t.Helper()
 	shortSwitchBack(t)
 	p, dev := newTwoWayPhone()
@@ -21,7 +24,7 @@ func helperPhone(t *testing.T, installed bool) (*twoWayPhone, *Gateway) {
 	if err := g.Policy().SetPreset(policy.PresetPayments); err != nil {
 		t.Fatal(err)
 	}
-	return p, g
+	return dev, g
 }
 
 func rotateFeature(g *Gateway) bool {
@@ -142,5 +145,97 @@ func TestPersonRotatesThroughTheHelper(t *testing.T) {
 	waitUntil(t, "Rotate gone with CoreDevice chosen", func() bool { return !rotateFeature(g) })
 	if err := g.SetDeviceSwitch(ctx, "iphone", driver.SwitchRotation, driver.RotationPortrait); err == nil {
 		t.Fatal("turned with CoreDevice chosen")
+	}
+}
+
+func pinchFeature(g *Gateway) bool {
+	ds := g.Devices()
+	return len(ds) == 1 && ds[0].Features.Pinch
+}
+
+func touches2(dev *demo.Device) int {
+	n := 0
+	for _, in := range dev.Inputs() {
+		if strings.HasPrefix(in.Kind, "touch2:") {
+			n++
+		}
+	}
+	return n
+}
+
+// The person's pinch on the mirror over CoreDevice moves the phone to the
+// helper in the background, losing that gesture; the next one reaches the
+// phone. While the person keeps using the mirror the phone stays on the
+// helper, and goes back once they stop.
+func TestPersonPinchesThroughTheHelper(t *testing.T) {
+	dev, g := helperPhone(t, true)
+	waitUntil(t, "pinch offered", func() bool { return pinchFeature(g) })
+	p, q := screen.Point{X: 400, Y: 1200}, screen.Point{X: 800, Y: 1200}
+	for _, a := range []driver.TouchAction{driver.TouchDown, driver.TouchMove, driver.TouchUp} {
+		if err := g.Touch2("iphone", a, p, q); err != nil {
+			t.Fatalf("%s over CoreDevice: %v", a, err)
+		}
+	}
+	waitUntil(t, "the phone on the helper", func() bool { return backendOf(g) == wayHelper })
+	if n := touches2(dev); n != 0 {
+		t.Fatalf("%d touches of the lost gesture reached the phone", n)
+	}
+	for _, a := range []driver.TouchAction{driver.TouchDown, driver.TouchMove, driver.TouchUp} {
+		if err := g.Touch2("iphone", a, p, q); err != nil {
+			t.Fatalf("%s on the helper: %v", a, err)
+		}
+	}
+	if n := touches2(dev); n != 3 {
+		t.Fatalf("%d touches reached the phone on the helper, want 3", n)
+	}
+	// Using it for longer than switchBackAfter keeps it there.
+	for range 8 {
+		if err := g.Touch2("iphone", driver.TouchMove, p, q); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(switchBackAfter / 4)
+	}
+	if b := backendOf(g); b != wayHelper {
+		t.Fatalf("went back to %q while the person used it", b)
+	}
+	waitUntil(t, "the phone back on CoreDevice", func() bool { return backendOf(g) == wayCoreDevice })
+}
+
+// Without the helper the person's pinch is refused, as before.
+func TestPersonPinchWithoutTheHelper(t *testing.T) {
+	_, g := helperPhone(t, false)
+	if pinchFeature(g) {
+		t.Fatal("pinch offered without the helper")
+	}
+	if err := g.Touch2("iphone", driver.TouchDown, screen.Point{X: 1, Y: 1}, screen.Point{X: 2, Y: 2}); err == nil {
+		t.Fatal("pinched over CoreDevice without the helper")
+	}
+}
+
+// Touches while the phone moves to the helper are lost quietly: the phone
+// is offline meanwhile, which is no error of the person's.
+func TestPersonPinchWhileMoving(t *testing.T) {
+	shortSwitchBack(t)
+	p, dev := newTwoWayPhone()
+	p.bareCore, p.slow = true, 300*time.Millisecond
+	g := twoWayGateway(t, p)
+	waitUntil(t, "pinch offered", func() bool { return pinchFeature(g) })
+	a, b := screen.Point{X: 400, Y: 1200}, screen.Point{X: 800, Y: 1200}
+	if err := g.Touch2("iphone", driver.TouchDown, a, b); err != nil {
+		t.Fatal(err)
+	}
+	waitUntil(t, "the move under way", func() bool {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		return g.devices["iphone"].switching != ""
+	})
+	for _, act := range []driver.TouchAction{driver.TouchMove, driver.TouchUp, driver.TouchDown, driver.TouchUp} {
+		if err := g.Touch2("iphone", act, a, b); err != nil {
+			t.Fatalf("%s while moving: %v", act, err)
+		}
+	}
+	waitUntil(t, "the phone on the helper", func() bool { return backendOf(g) == wayHelper })
+	if n := touches2(dev); n != 0 {
+		t.Fatalf("%d touches reached the phone while it moved", n)
 	}
 }
