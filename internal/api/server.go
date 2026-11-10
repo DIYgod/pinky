@@ -68,7 +68,7 @@ func Listen(d Dirs) (*Listener, error) {
 	if err := d.Ensure(); err != nil {
 		return nil, err
 	}
-	lk, err := lock(d.LockFile())
+	lk, err := lock(d.LockFile(), d.Socket())
 	if err != nil {
 		return nil, err
 	}
