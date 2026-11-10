@@ -53,7 +53,7 @@ Every command that reads or writes the screen takes `display`, an Android displa
 | --- | --- |
 | `protocol` | Protocol version (1) |
 | `features` | Additions this app supports on this phone, beyond protocol 1 as it first shipped: `displays` (Android 11+) means `tree`, `set_text`, `events` and `wait_idle` take displays other than 0, and events name their display; `set_text_fallback` means `set_text` has the fallbacks below and its `verified` can be trusted. Absent in apps built before 2026-11-07. |
-| `version`, `version_code` | The app's version name (Pinky's version, from `cmd/pinky/mygo.json`) and code (the number of commits up to the one built); see [companion.md](companion.md#versions-and-signing) |
+| `version`, `version_code` | The app's version name (Pinky's version, from `cmd/pinky/mygo.json`) and code (the number of commits up to the latest one that changed the app); see [companion.md](companion.md#versions-and-signing) |
 | `sdk`, `release` | Android API level and version string |
 | `manufacturer`, `model` | `Build.MANUFACTURER`, `Build.MODEL` |
 | `time`, `uptime_ms` | Phone wall clock (Unix ms) and uptime |

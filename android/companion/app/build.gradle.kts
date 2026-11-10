@@ -5,10 +5,26 @@ plugins {
     id("com.android.application")
 }
 
-// versionName is Pinky's version (cmd/pinky/mygo.json) and versionCode the
-// number of commits up to the one built, so a build of a newer commit
-// installs over an older one and the Go driver can compare the installed
-// app with the APK Pinky bundles. -Ppinky.versionCode=N overrides the count.
+// versionName is Pinky's version (cmd/pinky/mygo.json). versionCode is the
+// number of commits up to the latest one that changed the companion (this
+// Gradle project, android/companion), so it moves only when the app does:
+// a Pinky release that leaves the companion alone bundles the same build,
+// and a phone where Pinky cannot install over USB has nothing new to
+// install by hand. The Go driver calls the installed app outdated when its
+// versionCode is lower than the bundled APK's. -Ppinky.versionCode=N
+// overrides the count.
+//
+// "Changed" counts every commit whose android/companion differs from any of
+// its parents (git's --full-history), merges included, and the latest is
+// the one with the most commits behind it among those that no other one
+// follows (merge-base --independent). So whenever the companion differs
+// between two builds, the later build's count is higher than every commit
+// behind the earlier one, the earlier build's versionCode with them, and a
+// branch that changed the companion before merging main still lands above
+// every release made on main meanwhile. Until 2026-11-10 versionCode was the
+// count of all commits (git rev-list --count HEAD); the commit that made the
+// change is itself a companion change, so it, and every build after it,
+// counts above every build of before.
 val companionVersionName: String = providers
     .fileContents(rootProject.layout.projectDirectory.file("../../cmd/pinky/mygo.json"))
     .asText
@@ -28,13 +44,23 @@ fun git(vararg args: String): String? = try {
 val companionVersionCode: Int = providers.gradleProperty("pinky.versionCode").orNull?.toInt() ?: run {
     if (git("rev-parse", "--is-shallow-repository") == "true") {
         throw GradleException(
-            "android/companion: versionCode is the commit count, but this clone is shallow. " +
+            "android/companion: versionCode counts commits, but this clone is shallow. " +
                 "Fetch the whole history (git fetch --unshallow, or fetch-depth: 0 for actions/checkout) " +
                 "or pass -Ppinky.versionCode=N.",
         )
     }
-    git("rev-list", "--count", "HEAD")?.toIntOrNull()
-        ?: throw GradleException("android/companion: cannot count commits with git; pass -Ppinky.versionCode=N.")
+    val cannot = "android/companion: cannot count commits with git; pass -Ppinky.versionCode=N."
+    val dir = rootProject.layout.projectDirectory.asFile.path
+    fun lines(out: String?) = out?.lines()?.filter { it.isNotBlank() }.orEmpty()
+    val changes = lines(git("-C", dir, "rev-list", "--full-history", "HEAD", "--", "."))
+    if (changes.isEmpty()) {
+        throw GradleException(cannot)
+    }
+    val latest = lines(git("-C", dir, "merge-base", "--independent", *changes.toTypedArray()))
+    if (latest.isEmpty()) {
+        throw GradleException(cannot)
+    }
+    latest.maxOf { git("rev-list", "--count", it)?.toIntOrNull() ?: throw GradleException(cannot) }
 }
 
 // Release builds are signed with Pinky's private release key, which only
