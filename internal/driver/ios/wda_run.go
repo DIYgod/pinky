@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	goios "github.com/danielpaulus/go-ios/ios"
+	"github.com/danielpaulus/go-ios/ios/appservice"
 	"github.com/danielpaulus/go-ios/ios/installationproxy"
 	"github.com/danielpaulus/go-ios/ios/testmanagerd"
 )
@@ -63,6 +65,9 @@ type wdaRunner struct {
 	// AppID is its application identifier, "<team>.<bundle id>", from
 	// the entitlements it was signed with; "" when unknown.
 	AppID string
+	// Path is the app's folder on the phone, where its processes run
+	// from; "" when unknown.
+	Path string
 }
 
 // findRunnerApp finds the WebDriverAgent runner installed on the phone;
@@ -98,6 +103,7 @@ func pickRunnerApp(apps []installationproxy.AppInfo) wdaRunner {
 		}
 		if best.BundleID == "" || strings.Contains(strings.ToLower(id), "pinky") {
 			best = wdaRunner{BundleID: id}
+			best.Path, _ = a["Path"].(string)
 			if ent, ok := a["Entitlements"].(map[string]any); ok {
 				best.AppID, _ = ent["application-identifier"].(string)
 			}
@@ -115,18 +121,27 @@ type wdaRun struct {
 	done   chan struct{}
 	log    *runnerLog
 
+	// What stop needs to make sure the runner ended on the phone: the
+	// entry the run went through (the tunnel's), the phone's own entry
+	// to open another tunnel when that one is gone, and the runner app.
+	entry, base goios.DeviceEntry
+	app         wdaRunner
+	logger      *slog.Logger // what stop did; nil: nothing
+	stopOnce    sync.Once
+
 	mu  sync.Mutex
 	err error
 }
 
 // startWDA starts the runner's test, WDA listening on bind. entry must
 // reach the phone's testmanagerd: the plain usbmuxd entry below iOS 17, the
-// tunnel's entry from 17.4. The run lasts until stop, or until the test
-// ends on the phone (the person closed the runner, the phone locked for
-// long, a reboot).
-func startWDA(entry goios.DeviceEntry, bundleID, bind string) *wdaRun {
+// tunnel's entry from 17.4; base is the phone's usbmuxd entry. The run
+// lasts until stop, or until the test ends on the phone (the person closed
+// the runner, a reboot).
+func startWDA(entry, base goios.DeviceEntry, app wdaRunner, bind string) *wdaRun {
+	bundleID := app.BundleID
 	ctx, cancel := context.WithCancel(context.Background())
-	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}}
+	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}, entry: entry, base: base, app: app}
 	go func() {
 		defer close(r.done)
 		dir, err := os.MkdirTemp("", "pinky-wda-")
@@ -163,13 +178,131 @@ func (r *wdaRun) alive() (bool, error) {
 	}
 }
 
-// stop ends the run and waits a little for the phone to let go of it.
+// A runner left on the phone is the suspect when the phone stops locking
+// by itself (see "The helper's runner and auto-lock" in docs/notes/ios.md).
+// Ending the run does not make sure the runner ends: go-ios kills it
+// through appservice once its context is cancelled, but over Wi-Fi that
+// request can take longer than Pinky waited (requests took up to 25 s
+// there), the tunnel it goes through was closed right after, and a run
+// that ended with its connection (the phone left the network, the tunnel
+// failed) sends no kill at all. So stop also looks for the runner's
+// processes and kills them, through another tunnel when the run's is gone.
+
+// wdaStopWait is how long stop gives go-ios to end the run itself.
+const wdaStopWait = 5 * time.Second
+
+// wdaEndTimeout bounds making sure the runner ended.
+const wdaEndTimeout = 30 * time.Second
+
+// stop ends the run and the runner on the phone. It returns once the
+// runner is gone, or after wdaEndTimeout.
 func (r *wdaRun) stop() {
-	r.cancel()
-	select {
-	case <-r.done:
-	case <-time.After(5 * time.Second):
+	r.stopOnce.Do(func() {
+		r.cancel()
+		select {
+		case <-r.done:
+		case <-time.After(wdaStopWait):
+		}
+		if r.app.Path == "" {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), wdaEndTimeout)
+		defer cancel()
+		killed, err := endRunner(ctx, r.entry, r.base, r.app.Path)
+		lg := logTo(r.logger)
+		switch {
+		case err != nil:
+			lg.Warn("iphone: could not make sure the helper ended", "device", r.base.Properties.SerialNumber, "killed", killed, "err", err)
+		case killed > 0:
+			lg.Info("iphone: ended the helper left running", "device", r.base.Properties.SerialNumber, "killed", killed)
+		}
+	})
+}
+
+// runnerProcs lists and kills processes on a phone (appservice, iOS 17+).
+type runnerProcs interface {
+	ListProcesses() ([]appservice.Process, error)
+	KillProcess(pid int) error
+	Close() error
+}
+
+// Seams for tests.
+var (
+	openRunnerProcs = func(e goios.DeviceEntry) (runnerProcs, error) { return appservice.New(e) }
+	dialRunnerLink  = func(ctx context.Context, base goios.DeviceEntry) (goios.DeviceEntry, func(), error) {
+		l, err := dialLinkEntry(ctx, base)
+		if err != nil {
+			return goios.DeviceEntry{}, nil, err
+		}
+		return l.entry, func() { l.Close() }, nil
 	}
+	runnerRecheck = 300 * time.Millisecond
+)
+
+// endRunner kills every process running from the app at appPath and
+// returns once none is left, with how many it killed. It goes through
+// entry, or through a new tunnel from base when entry no longer reaches
+// the phone.
+func endRunner(ctx context.Context, entry, base goios.DeviceEntry, appPath string) (int, error) {
+	var pc runnerProcs
+	err := within(ctx, func() (err error) {
+		pc, err = openRunnerProcs(entry)
+		return err
+	})
+	if err != nil {
+		if base.Properties.SerialNumber == "" {
+			return 0, err
+		}
+		e, closeLink, lerr := dialRunnerLink(ctx, base)
+		if lerr != nil {
+			return 0, errors.Join(err, lerr)
+		}
+		defer closeLink()
+		if err = within(ctx, func() (err error) {
+			pc, err = openRunnerProcs(e)
+			return err
+		}); err != nil {
+			return 0, err
+		}
+	}
+	defer pc.Close()
+	killed := 0
+	for {
+		var list []appservice.Process
+		if err := within(ctx, func() (err error) {
+			list, err = pc.ListProcesses()
+			return err
+		}); err != nil {
+			return killed, fmt.Errorf("list processes: %w", err)
+		}
+		pids := runnerPids(list, appPath)
+		if len(pids) == 0 {
+			return killed, nil
+		}
+		for _, pid := range pids {
+			if within(ctx, func() error { return pc.KillProcess(pid) }) == nil {
+				killed++
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return killed, fmt.Errorf("the helper still runs: %w", ctx.Err())
+		case <-time.After(runnerRecheck):
+		}
+	}
+}
+
+// runnerPids picks the processes that run from the app at appPath.
+// appservice gives their executables as file URLs.
+func runnerPids(list []appservice.Process, appPath string) []int {
+	var pids []int
+	for _, p := range list {
+		exe := strings.TrimPrefix(p.Path, "file://")
+		if inBundle(exe, strings.TrimSuffix(appPath, "/")) {
+			pids = append(pids, p.Pid)
+		}
+	}
+	return pids
 }
 
 // asking reports whether the phone waits for its passcode to allow

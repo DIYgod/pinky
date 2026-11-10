@@ -192,11 +192,11 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	if s.ready(ctx) {
 		return s, nil
 	}
-	bundleID, err := findWDARunner(base)
+	app, err := findRunnerApp(base)
 	if err != nil {
 		return nil, err
 	}
-	if bundleID == "" {
+	if app.BundleID == "" {
 		return nil, fmt.Errorf("the WebDriverAgent helper is not installed on %s: %w", info.ID, driver.ErrNotFound)
 	}
 	l, err := dialLinkEntry(ctx, base)
@@ -207,7 +207,7 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	if bind != "127.0.0.1" {
 		s.c = newWDATunnel(l.tunnel)
 	}
-	s.run, s.l = startWDA(l.entry, bundleID, bind), l
+	s.run, s.l = startWDA(l.entry, base, app, bind), l
 	return s, nil
 }
 

@@ -541,6 +541,20 @@ Also found:
 - Settings' search field drops out of WDA's tree while results show; typing goes on into it.
 - The runner's test log went to Pinky's stderr; it is now read for the passcode wait and dropped (`wdaLog`, tests print it).
 
+### The helper's runner and auto-lock
+
+(2026-11-10) The owner's iPhone 13 mini (iOS 27, on Wi-Fi) did not lock by itself after a task that used the helper (a task connection, about 22:25 to 22:38; "back to the person's choice" at 22:38:27). The suspect: the runner (`WebDriverAgentRunner-Runner`) going on after Pinky ended its test run, with XCTest keeping the phone awake. Not reproduced; what was seen:
+
+- **How the runner was stopped.** Cancelling go-ios's run makes it kill the runner through appservice (`killTestRunner`). Pinky waited 5 s for the run to end and then closed the tunnel that request goes through. Over Wi-Fi requests to that phone took 3 to 25 s that evening (`slow screen read` in the log), so the kill could be cut off; a run that ends with its connection sends none.
+- **No runner afterwards.** At 22:55 appservice's process list had no process in the runner's bundle. The phone was locked by 22:59 (backlight off, `PasswordProtected` true), with Pinky still running and the phone open through CoreDevice since 22:38: the CoreDevice session (its stream stops after 30 s idle, `idle.go`), the lockdown heartbeat and the virtual keyboard did not keep it awake. usbmuxd carried about 1.5 KB/s, so no stream ran. powerd listed no display-sleep assertion.
+- **One more start and stop** (`TestWDAStopDevice`, Pinky's old stop, 23:06, phone unlocked): the runner started, iOS asked for the passcode to allow automation, the open returned `errAutomation` after 6 s, and go-ios's kill came back at once ("Test runner killed with success"); 4 s later no runner was listed. While the passcode request showed, SpringBoard turned its idle timer off (`SBTransientOverlayScenePresenterRequestedIdleTimer`); 15 s after the kill the request went away (`TransientOverlayDismissed`), and about 90 s later the screen was off by itself. So the request keeps the phone awake for as long as the runner waits on it (XCTest waits up to 60 s, see "The passcode for automation"). Whether a running runner that does not wait keeps the phone awake was not measured. The new stop was not run on the phone: the owner's unlocked minutes went to this run.
+
+Pinky now makes sure the runner ends (`wdaRun.stop`): after the 5 s it lists the phone's processes through appservice, kills those whose executable is in the runner's bundle (the installation proxy's `Path`), and looks again every 300 ms until none is left, for up to 30 s, through a new tunnel when the run's is gone; it logs a runner it had to end. `WDADevice.Close` and `wdaStart.stop` stop the run before closing the tunnel, so this covers the end of a task connection, a change of connection, the device closing and Pinky quitting (the gateway closes its devices). Unit-tested with a fake process table (`wda_stop_test.go`).
+
+Not covered: a runner Pinky did not start (WebDriverAgent already answering, from Xcode or a Pinky that crashed) is adopted and left running when the device closes; a runner waiting for the passcode is stopped in the background (`go s.stop()`), which a quitting Pinky may not wait for.
+
+To look again: `TestWDAStopDevice` (tag `device`, `PINKY_WDASTOP=1`, `PINKY_STOPMODE=old` for the old stop) starts and stops the helper and lists the runner's processes afterwards; `TestIdleLogProbe` (`PINKY_LOGPROBE=1`, `PINKY_LOGKEYS=idletimer,powerd`) beside it shows what turns the idle timer off. Both need the phone unlocked, and the start may bring the passcode request.
+
 ### Task connection
 
 (2026-11-10) A phone left on Automatic with the helper installed uses both ways without the person changing the setting: CoreDevice for everyday tasks, the helper for a task that needs an app refusing screen sharing (the owner's weekly bookkeeping reads DBS digibank and China Merchants Bank). `internal/gateway/taskconn.go`:

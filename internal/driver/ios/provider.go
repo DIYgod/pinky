@@ -398,6 +398,9 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		if s, err = startWDAFor(ctx, info); err != nil {
 			return nil, err
 		}
+		if s.run != nil {
+			s.run.logger = p.logger()
+		}
 	}
 	d, err := s.open(ctx, info)
 	switch {
