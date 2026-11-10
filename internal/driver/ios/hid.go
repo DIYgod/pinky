@@ -210,7 +210,11 @@ type hidSession struct {
 	mu       sync.Mutex
 	touch    *xpcLink
 	buttons  *xpcLink
-	keyboard uint64 // registered keyboard service id, 0 if none
+	keyboard uint64   // registered keyboard service id, 0 if none
+	kb       *xpcLink // the connection that registered it; nil if none
+	spare    *xpcLink // a connection dialed ahead for the next keyboard
+	dialing  bool     // a spare is being dialed
+	closed   bool
 	down     bool
 	last     [2]uint16
 	held     *[2]uint64 // a button held down: usage page and usage
@@ -324,14 +328,32 @@ func buttonEvent(page, usage, state uint64) map[string]any {
 	}
 }
 
-// ensureKeyboard registers a virtual keyboard with the device, once per
-// session. While it is attached iOS treats the phone as having a hardware
-// keyboard and hides the on-screen one.
+// ensureKeyboard registers a virtual keyboard with the device, unless one
+// is registered already. While it is attached iOS treats the phone as
+// having a hardware keyboard and hides the on-screen one, for the person
+// too (GitHub issue #65), so callers drop it again once their keys are done
+// (dropKeyboard). Nothing removes a registered service but closing the
+// connection that registered it, so the keyboard gets a connection of its
+// own, apart from touches: the touch connection when a second one cannot
+// be dialed.
 func (h *hidSession) ensureKeyboard(ctx context.Context) (uint64, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if h.keyboard != 0 {
+	if h.keyboard != 0 && h.kb != nil && h.kb.alive() {
 		return h.keyboard, nil
+	}
+	h.forgetKeyboardLocked()
+	l := h.spare
+	h.spare = nil
+	if l != nil && !l.alive() {
+		l.Close()
+		l = nil
+	}
+	if l == nil {
+		var err error
+		if l, err = dialXPC(h.entry, universalHIDService); err != nil {
+			l = h.touch
+		}
 	}
 	usagePage, usage := int64(1), int64(6)
 	storage := map[string]any{
@@ -370,29 +392,93 @@ func (h *hidSession) ensureKeyboard(ctx context.Context) (uint64, error) {
 			},
 		},
 	}
+	fail := func(err error) (uint64, error) {
+		if l != h.touch {
+			l.Close()
+		}
+		return 0, err
+	}
 	rctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	resp, err := h.touch.request(rctx, req)
+	resp, err := l.request(rctx, req)
 	cancel()
 	if err != nil {
-		return 0, fmt.Errorf("register keyboard: %w", err)
+		return fail(fmt.Errorf("register keyboard: %w", err))
 	}
 	id := surfaceKeyboard
 	if v := toInt64(resp["serviceID"]); v != 0 {
 		id = uint64(v)
 	}
 	if e, ok := resp["error"]; ok {
-		return 0, fmt.Errorf("register keyboard: %v", e)
+		return fail(fmt.Errorf("register keyboard: %v", e))
 	}
 	// iOS attaches the keyboard asynchronously and nothing reports when it
 	// is done; a Shift sent too early stays latched.
 	time.Sleep(300 * time.Millisecond)
-	h.keyboard = id
+	h.keyboard, h.kb = id, l
 	return id, nil
+}
+
+// forgetKeyboardLocked lets go of a keyboard whose connection dropped (iOS
+// removed it with the connection). Callers hold mu.
+func (h *hidSession) forgetKeyboardLocked() {
+	if h.kb != nil && !h.kb.alive() {
+		if h.kb != h.touch {
+			h.kb.Close()
+		}
+		h.keyboard, h.kb = 0, nil
+	}
 }
 
 // keys sends one keyboard report with the given usages held.
 func (h *hidSession) keys(id uint64, usages []uint8) error {
-	return h.touch.send(universalReport(id, keyboardReport(usages, hidTimestamp())), false)
+	h.mu.Lock()
+	l := h.kb
+	h.mu.Unlock()
+	if l == nil {
+		return errors.New("virtual keyboard: not registered")
+	}
+	return l.send(universalReport(id, keyboardReport(usages, hidTimestamp())), false)
+}
+
+// dropKeyboard removes the virtual keyboard, so that iOS shows its
+// on-screen keyboard again, and dials a connection for the next one in the
+// background, which saves the next key the handshake. A keyboard
+// registered on the touch connection goes with that connection, which the
+// device reconnects at the next input (Device.live); not while a contact
+// is down.
+func (h *hidSession) dropKeyboard() error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.keyboard == 0 || h.kb == nil {
+		return nil
+	}
+	if h.kb == h.touch && h.down {
+		return nil
+	}
+	err := h.kb.send(universalReport(h.keyboard, keyboardReport(nil, hidTimestamp())), false)
+	err = errors.Join(err, h.kb.Close())
+	h.keyboard, h.kb = 0, nil
+	if !h.closed && h.spare == nil && !h.dialing && h.touch.alive() {
+		h.dialing = true
+		go h.dialSpare()
+	}
+	return err
+}
+
+// dialSpare dials the connection the next keyboard registers on.
+func (h *hidSession) dialSpare() {
+	l, err := dialXPC(h.entry, universalHIDService)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.dialing = false
+	if err != nil {
+		return
+	}
+	if h.closed || h.spare != nil {
+		l.Close()
+		return
+	}
+	h.spare = l
 }
 
 // Close lifts a held contact and closes the connections.
@@ -403,8 +489,17 @@ func (h *hidSession) Close() error {
 	if h.down {
 		errs = append(errs, h.touchLocked(false, h.last[0], h.last[1]))
 	}
-	if h.keyboard != 0 {
-		errs = append(errs, h.touch.send(universalReport(h.keyboard, keyboardReport(nil, hidTimestamp())), false))
+	h.closed = true
+	if h.keyboard != 0 && h.kb != nil {
+		errs = append(errs, h.kb.send(universalReport(h.keyboard, keyboardReport(nil, hidTimestamp())), false))
+		if h.kb != h.touch {
+			errs = append(errs, h.kb.Close())
+		}
+		h.keyboard, h.kb = 0, nil
+	}
+	if h.spare != nil {
+		h.spare.Close()
+		h.spare = nil
 	}
 	if h.held != nil && h.buttons != nil {
 		errs = append(errs, h.buttons.send(buttonEvent(h.held[0], h.held[1], buttonUp), false))

@@ -289,3 +289,38 @@ func TestLayoutError(t *testing.T) {
 		t.Fatalf("without the pasteboard: %v", msg)
 	}
 }
+
+// A field that reads empty or as before after typing is an error, not a
+// note: the text most likely went nowhere (GitHub issue #65). Only a field
+// that hides its text leaves a note.
+func TestJudgeTyped(t *testing.T) {
+	str := func(s string) *string { return &s }
+	for _, tc := range []struct {
+		name     string
+		v, text  string
+		appended bool
+		prior    *string
+		checked  string
+		note     bool
+		err      string
+	}{
+		{"typed", "闲鱼", "闲鱼", false, str(""), "same", false, ""},
+		{"empty after", "", "闲鱼", false, str(""), "unchanged", false, "did not go in"},
+		{"empty, prior unread", "", "闲鱼", false, nil, "unchanged", false, "did not go in"},
+		{"appended, as before", "abc", "def", true, str("abc"), "unchanged", false, "did not go in"},
+		{"replaced, as before", "abc", "def", false, str("abc"), "different", false, "reads otherwise"},
+		{"hidden", "•••", "abc", false, str(""), "hidden", true, ""},
+		{"cut", "ab", "abc", false, str(""), "different", false, "2 characters where 3"},
+	} {
+		checked, note, err := judgeTyped(tc.v, tc.text, tc.appended, tc.prior, "paste", nil, "")
+		if checked != tc.checked || (note != "") != tc.note {
+			t.Errorf("%s: checked %q, note %q", tc.name, checked, note)
+		}
+		if tc.err == "" && err != nil || tc.err != "" && (err == nil || !strings.Contains(err.Error(), tc.err)) {
+			t.Errorf("%s: err %v, want one with %q", tc.name, err, tc.err)
+		}
+	}
+	if !strings.Contains(errUnfocused.Error(), "no field has focus") {
+		t.Error(errUnfocused)
+	}
+}
