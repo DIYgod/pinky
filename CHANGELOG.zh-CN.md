@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1110.27 (2026-11-10)
 
 - 在两个同名的已屏蔽应用（比如 iPhone 上的 Trust 银行和 Android 上的 Trust 钱包）中删除一个时，Pinky 不再闪退，也只会放行这一个应用。
 - 「已屏蔽的应用」现在会在通过 Wi-Fi 连接的 iPhone 上线后列出它的应用，智能体仍被拦着的应用不会再从列表里消失。
