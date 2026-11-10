@@ -22,6 +22,12 @@ var (
 	// Such an account always has a password, even when the person signs
 	// in with a PIN or Windows Hello.
 	ErrMicrosoftAccount = errors.New("secret: this Windows account is a Microsoft account, which has a password even when you sign in with a PIN or Windows Hello: type the Microsoft account's password")
+	// ErrAccountRestricted: Windows would not check the password of the
+	// account Pinky runs as (ERROR_ACCOUNT_RESTRICTION), and Pinky could
+	// not confirm that the account has no password. Most likely it has
+	// none and Windows' blank-password policy is in the way; a password or
+	// a Windows Hello PIN for the account makes confirming work.
+	ErrAccountRestricted = errors.New("secret: Windows won't check this account's password, most likely because it has no password: set a password or a Windows Hello PIN for it")
 )
 
 var logger atomic.Pointer[slog.Logger]

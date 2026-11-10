@@ -83,7 +83,26 @@ type passwordCheck struct {
 // it. Windows' answer about another account never counts. A Microsoft
 // account, a domain account, or a password that is not empty never takes
 // this path.
+//
+// Empty must mean the password itself is empty. The credential dialog may
+// return the password protected (CredProtect, "@@D…"), so that an empty
+// one comes back as a long string; checkPassword unprotects it first.
+// Before it did, issue #41's empty password counted as typed, and Windows,
+// which reads protected passwords, answered ERROR_ACCOUNT_RESTRICTION.
+//
+// An ERROR_ACCOUNT_RESTRICTION this does not resolve wraps
+// ErrAccountRestricted, which tells the person what to do.
 func passwordVerdict(c passwordCheck) (ok bool, step string, err error) {
+	ok, step, err = verdict(c)
+	// Whatever else it is, an ERROR_ACCOUNT_RESTRICTION that was not
+	// resolved tells the person what to do about it.
+	if err != nil && errors.Is(err, errAccountRestriction) && !errors.Is(err, ErrMicrosoftAccount) {
+		err = fmt.Errorf("%w: %w", err, ErrAccountRestricted)
+	}
+	return ok, step, err
+}
+
+func verdict(c passwordCheck) (ok bool, step string, err error) {
 	if c.Logon == nil {
 		return true, "signed in", nil
 	}

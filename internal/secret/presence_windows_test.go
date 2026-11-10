@@ -4,6 +4,7 @@ package secret
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
@@ -97,20 +98,27 @@ func TestSignedInUser(t *testing.T) {
 var (
 	procCredPackAuthenticationBufferW = modcredui.NewProc("CredPackAuthenticationBufferW")
 	procImpersonateLoggedOnUser       = modadvapi32.NewProc("ImpersonateLoggedOnUser")
+	procCredProtectW                  = modadvapi32.NewProc("CredProtectW")
 )
 
-// pack packs a name and password as the credential dialog returns them.
-func pack(t *testing.T, name, password string) []byte {
+// credPackProtectedCredentials is CRED_PACK_PROTECTED_CREDENTIALS: the
+// password is packed protected (CredProtect), as the credential dialog
+// may return it.
+const credPackProtectedCredentials = 0x1
+
+// pack packs a name and password as the credential dialog returns them,
+// plain or, with credPackProtectedCredentials, protected.
+func pack(t *testing.T, flags uintptr, name, password string) []byte {
 	t.Helper()
 	n, _ := windows.UTF16PtrFromString(name)
 	p, _ := windows.UTF16PtrFromString(password)
 	size := uint32(0)
-	procCredPackAuthenticationBufferW.Call(0, uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(p)), 0, uintptr(unsafe.Pointer(&size)))
+	procCredPackAuthenticationBufferW.Call(flags, uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(p)), 0, uintptr(unsafe.Pointer(&size)))
 	if size == 0 {
 		t.Fatalf("CredPackAuthenticationBufferW: no size for %q", name)
 	}
 	buf := make([]byte, size)
-	if r, _, err := procCredPackAuthenticationBufferW.Call(0, uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(p)),
+	if r, _, err := procCredPackAuthenticationBufferW.Call(flags, uintptr(unsafe.Pointer(n)), uintptr(unsafe.Pointer(p)),
 		uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size))); r == 0 {
 		t.Fatalf("CredPackAuthenticationBufferW %q: %v", name, err)
 	}
@@ -118,11 +126,68 @@ func pack(t *testing.T, name, password string) []byte {
 }
 
 // check runs checkPassword on what the dialog would return for name and
-// password.
+// password, packed plain and protected; both must agree.
 func check(t *testing.T, me *windowsUser, name, password string) (bool, error) {
 	t.Helper()
-	buf := pack(t, name, password)
-	return checkPassword(unsafe.Pointer(&buf[0]), uint32(len(buf)), me)
+	buf := pack(t, 0, name, password)
+	ok, err := checkPassword(unsafe.Pointer(&buf[0]), uint32(len(buf)), me)
+	buf = pack(t, credPackProtectedCredentials, name, password)
+	pok, perr := checkPassword(unsafe.Pointer(&buf[0]), uint32(len(buf)), me)
+	if ok != pok || (err == nil) != (perr == nil) {
+		t.Errorf("%q: plain ok %v, err %v; protected ok %v, err %v", name, ok, err, pok, perr)
+	}
+	return ok, err
+}
+
+// protect protects s as CredProtectW does for the credential dialog.
+func protect(t *testing.T, s string) []uint16 {
+	t.Helper()
+	in, _ := windows.UTF16FromString(s)
+	out := make([]uint16, 1024)
+	size := uint32(len(out))
+	kind := uint32(0)
+	if r, _, err := procCredProtectW.Call(0, uintptr(unsafe.Pointer(&in[0])), uintptr(len(in)),
+		uintptr(unsafe.Pointer(&out[0])), uintptr(unsafe.Pointer(&size)), uintptr(unsafe.Pointer(&kind))); r == 0 {
+		t.Fatalf("CredProtectW %q: %v", s, err)
+	}
+	return out
+}
+
+// TestUnprotect checks that a protected password, as the credential
+// dialog may return it, is read as the password itself: issue #41's
+// empty password came back as "@@D…" and so did not count as empty.
+func TestUnprotect(t *testing.T) {
+	for _, s := range []string{"", "x", "a longer pass phrase, with ünïcode"} {
+		p := protect(t, s)
+		raw := windows.UTF16ToString(p)
+		if raw == s {
+			t.Errorf("CredProtectW left %q as it was", s)
+		}
+		protection, err := unprotect(p)
+		if err != nil || protection == "no" || windows.UTF16ToString(p) != s {
+			t.Errorf("unprotect(protected %q): %q, protection %q, err %v", s, windows.UTF16ToString(p), protection, err)
+		}
+		t.Logf("%q protected: %d characters, starts %q, protection %q", s, len(raw), raw[:min(3, len(raw))], protection)
+
+		plain, _ := windows.UTF16FromString(s)
+		plain = append(plain, make([]uint16, 16)...)
+		if protection, err := unprotect(plain); err != nil || strings.HasPrefix(protection, "type") || windows.UTF16ToString(plain) != s {
+			t.Errorf("unprotect(%q): %q, protection %q, err %v", s, windows.UTF16ToString(plain), protection, err)
+		}
+	}
+	// What the dialog returned, unpacked as before the fix.
+	buf := pack(t, credPackProtectedCredentials, "user", "")
+	name, domain, password := make([]uint16, 1024), make([]uint16, 1024), make([]uint16, 1024)
+	nl, dl, pl := uint32(1024), uint32(1024), uint32(1024)
+	if r, _, err := procCredUnPackAuthenticationBufferW.Call(0, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)),
+		uintptr(unsafe.Pointer(&name[0])), uintptr(unsafe.Pointer(&nl)), uintptr(unsafe.Pointer(&domain[0])), uintptr(unsafe.Pointer(&dl)),
+		uintptr(unsafe.Pointer(&password[0])), uintptr(unsafe.Pointer(&pl))); r == 0 {
+		t.Fatal(err)
+	}
+	t.Logf("a protected empty password unpacks as %d characters", len(windows.UTF16ToString(password)))
+	if _, err := unprotect(password); err != nil || password[0] != 0 {
+		t.Errorf("a protected empty password, unpacked and unprotected: %d characters, err %v", len(windows.UTF16ToString(password)), err)
+	}
 }
 
 // as runs fn on a thread that impersonates token. The thread ends with
@@ -235,6 +300,11 @@ func TestBlankPasswordAccount(t *testing.T) {
 				t.Errorf("as %s, %q with an empty password: ok %v, err %v; want ok", user, name, ok, err)
 			}
 		}
+		// LogonUserW reads a protected password: issue #41's 1327 for a
+		// password that, unpacked as it came, was not empty.
+		if pe := protect(t, ""); !errors.Is(logonUser(u, dot, &pe[0]), errAccountRestriction) {
+			t.Errorf("as %s, a protected empty password: %v, want ERROR_ACCOUNT_RESTRICTION", user, errText(logonUser(u, dot, &pe[0])))
+		}
 		if ok, err := check(t, me, user, "x"); ok || err != nil {
 			t.Errorf("as %s, a typed password: ok %v, err %v; want a wrong password", user, ok, err)
 		}
@@ -251,9 +321,21 @@ func TestBlankPasswordAccount(t *testing.T) {
 	// with the runner's name, the runner's name, and the account that does
 	// not exist, which asks about the runner's).
 	for _, name := range []string{user, `PINKY-LONG-HOSTNAME-2026\` + runner.name, runner.name, "pinky-no-such-user"} {
-		if ok, err := check(t, runner, name, ""); ok || err != nil {
+		buf := pack(t, credPackProtectedCredentials, name, "")
+		if ok, err := checkPassword(unsafe.Pointer(&buf[0]), uint32(len(buf)), runner); ok || err != nil {
 			t.Errorf("as the runner, %q with an empty password: ok %v, err %v; want a wrong password", name, ok, err)
 		}
+	}
+
+	// An account with a password: its password passes, plain and
+	// protected alike. (net user takes at most 14 characters without
+	// asking.)
+	pw := fmt.Sprintf("Pk!%08x", uint32(time.Now().UnixNano()))
+	exec.Command("net", "user", "pinkypw", "/delete").Run()
+	netUser(t, "pinkypw", pw, "/add")
+	defer exec.Command("net", "user", "pinkypw", "/delete").Run()
+	if ok, err := check(t, runner, "pinkypw", pw); !ok || err != nil {
+		t.Errorf("pinkypw with its password: ok %v, err %v; want ok", ok, err)
 	}
 
 	// Windows checks the account's other restrictions first.

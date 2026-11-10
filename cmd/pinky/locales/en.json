@@ -8632,6 +8632,16 @@
   "@unlockEnd": {
     "description": "Ends the hints that say how to unlock a phone on it (the unlockOnPhone messages) when nothing follows them: a full stop."
   },
+  "unlockErrAccountRestricted": "Windows wouldn't check your password, so {name} wasn't unlocked. Most likely your Windows account has no password: set a password or a Windows Hello PIN in Windows Settings › Accounts › Sign-in options, then try again.",
+  "@unlockErrAccountRestricted": {
+    "description": "A notice on Windows when confirming the person failed because Windows refused to check the password of their Windows account (account restrictions, most often the policy that keeps accounts without a password from signing in this way) and Pinky could not confirm the account has no password. The Settings path is Windows' own. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
   "unlockErrMicrosoftAccount": "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft account, which has a password even if you sign in with a PIN or Windows Hello.",
   "@unlockErrMicrosoftAccount": {
     "description": "A notice on Windows when confirming the person failed because they typed nothing, or only wrong passwords (most likely the PIN they sign in with), in Windows' password dialog, and their Windows account is connected to a Microsoft account. name is the phone's name.",

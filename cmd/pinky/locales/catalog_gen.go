@@ -23661,6 +23661,32 @@ func (msgs Messages) UnlockEnd() string {
 	return Catalog.Format(msgs.locale, "unlockEnd", nil)
 }
 
+// UnlockErrAccountRestricted says "Windows wouldn't check your password, so {name} wasn't unlocked. Most likely your Windows account has no password: se…"
+// in the language the app shows.
+//
+// A notice on Windows when confirming the person failed because Windows
+// refused to check the password of their Windows account (account
+// restrictions, most often the policy that keeps accounts without a
+// password from signing in this way) and Pinky could not confirm the
+// account has no password. The Settings path is Windows' own. name is the
+// phone's name.
+func UnlockErrAccountRestricted(name string) string {
+	return In(i18n.Locale()).UnlockErrAccountRestricted(name)
+}
+
+// UnlockErrAccountRestricted says "Windows wouldn't check your password, so {name} wasn't unlocked. Most likely your Windows account has no password: se…"
+// in the language of msgs.
+//
+// A notice on Windows when confirming the person failed because Windows
+// refused to check the password of their Windows account (account
+// restrictions, most often the policy that keeps accounts without a
+// password from signing in this way) and Pinky could not confirm the
+// account has no password. The Settings path is Windows' own. name is the
+// phone's name.
+func (msgs Messages) UnlockErrAccountRestricted(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrAccountRestricted", map[string]any{"name": name})
+}
+
 // UnlockErrMicrosoftAccount says "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft …"
 // in the language the app shows.
 //
