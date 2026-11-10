@@ -128,10 +128,10 @@ func pipeName(run string) string {
 
 // socketPathLimit is the longest Unix socket path the system takes, in
 // bytes: sun_path holds 108 bytes on Linux and 104 on macOS and the BSDs,
-// where Go also keeps room for the final NUL.
+// and Go keeps room for the final NUL on both.
 func socketPathLimit(goos string) int {
 	if goos == "linux" {
-		return 108
+		return 107
 	}
 	return 103
 }

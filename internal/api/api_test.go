@@ -340,7 +340,7 @@ func TestPipeName(t *testing.T) {
 // TestSocketPathTooLong: a socket path the system cannot take fails with an
 // error that says so and names PINKY_HOME, not with "invalid argument".
 func TestSocketPathTooLong(t *testing.T) {
-	if socketPathLimit("linux") != 108 || socketPathLimit("darwin") != 103 {
+	if socketPathLimit("linux") != 107 || socketPathLimit("darwin") != 103 {
 		t.Fatal("limits")
 	}
 	if runtime.GOOS == "windows" {
