@@ -240,10 +240,12 @@ func (w *serverWatch) restarted(now time.Time, own, stopped bool, err error) {
 	defer w.mu.Unlock()
 	w.starting, w.stopping = false, false
 	w.lastOwn = own
+	if own {
+		w.restartedAt = now // once Pinky signalled its server, never again in this run
+	}
 	if !stopped {
 		return
 	}
-	w.restartedAt = now
 	w.offNet, w.offNetOwn = "", false
 	w.lastErr = err
 	if err != nil {

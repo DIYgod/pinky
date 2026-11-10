@@ -14167,22 +14167,26 @@ func (msgs Messages) PairingErrNoAdb() string {
 	return Catalog.Format(msgs.locale, "pairingErrNoAdb", nil)
 }
 
-// PairingErrNoNetwork says "This computer's adb server can't reach phones on your network, though Pinky can. Quit the program that started it, or…"
+// PairingErrNoNetwork says "This computer's adb server can't reach phones on your network, though Pinky can. If another program started it, quit …"
 // in the language the app shows.
 //
-// Pair over Wi-Fi: the error when the adb server gets no route to the
-// phone's address, which Pinky itself reaches (on a Mac, the server lost
-// Local Network access), and Pinky could not restart it. adb kill-server is
-// a command: keep it as it is.
+// Pair over Wi-Fi, and connecting through Tailscale (macOS only): the error
+// when the adb server gets no route to the phone's address, which Pinky
+// itself reaches (the server lost Local Network access), and Pinky could
+// not fix it by restarting its own server. adb kill-server is a command:
+// keep it as it is. System Settings, Privacy & Security and Local Network
+// are macOS's own names: use those of macOS in Simplified Chinese.
 func PairingErrNoNetwork() string { return In(i18n.Locale()).PairingErrNoNetwork() }
 
-// PairingErrNoNetwork says "This computer's adb server can't reach phones on your network, though Pinky can. Quit the program that started it, or…"
+// PairingErrNoNetwork says "This computer's adb server can't reach phones on your network, though Pinky can. If another program started it, quit …"
 // in the language of msgs.
 //
-// Pair over Wi-Fi: the error when the adb server gets no route to the
-// phone's address, which Pinky itself reaches (on a Mac, the server lost
-// Local Network access), and Pinky could not restart it. adb kill-server is
-// a command: keep it as it is.
+// Pair over Wi-Fi, and connecting through Tailscale (macOS only): the error
+// when the adb server gets no route to the phone's address, which Pinky
+// itself reaches (the server lost Local Network access), and Pinky could
+// not fix it by restarting its own server. adb kill-server is a command:
+// keep it as it is. System Settings, Privacy & Security and Local Network
+// are macOS's own names: use those of macOS in Simplified Chinese.
 func (msgs Messages) PairingErrNoNetwork() string {
 	return Catalog.Format(msgs.locale, "pairingErrNoNetwork", nil)
 }

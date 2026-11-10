@@ -102,6 +102,9 @@ func (p *Provider) serverOffNetwork(ctx context.Context, addr string) bool {
 	case restartUnderway:
 		return p.server.waitRestart(ctx)
 	case restartNo:
+		if p.server.justRestarted(time.Now()) {
+			return true // another request restarted it just now: ask the new one
+		}
 		p.server.cutOff(addr)
 		return false
 	}
