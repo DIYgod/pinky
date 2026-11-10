@@ -281,7 +281,13 @@ func TestRAXRole(t *testing.T) {
 		{raxElement{Traits: traitKeyboardKey, Enabled: true}, screen.RoleButton, nil},
 		{raxElement{AXRole: axpRoleSwitch, Value: "1", Enabled: true}, screen.RoleSwitch, []string{screen.StateChecked}},
 		{raxElement{AXRole: axpRoleTextField, Enabled: true}, screen.RoleInput, []string{screen.StateEditable}},
+		// UIKit's secure text field trait: native password fields carry it
+		// as well as a web page's.
 		{raxElement{AXRole: axpRoleTextField, Traits: traitSecureText, Enabled: true}, screen.RoleInput, []string{screen.StateEditable, screen.StatePassword}},
+		{raxElement{AXRole: axpRoleTextField, Traits: traitSecureText, Enabled: true, Web: true}, screen.RoleInput, []string{screen.StateEditable, screen.StatePassword}},
+		// A text view being edited (UIKit's text entry and is-editing
+		// traits, bits 18 and 21) is no password field.
+		{raxElement{AXRole: axpRoleTextField, Traits: 1<<18 | 1<<21, Enabled: true, Focused: true}, screen.RoleInput, []string{screen.StateEditable, screen.StateFocused}},
 		{raxElement{AXRole: axpRoleButton, Enabled: true}, screen.RoleButton, nil},
 		{raxElement{Traits: traitStaticText | traitHeader, Enabled: true}, screen.RoleText, nil},
 	} {

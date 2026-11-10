@@ -327,6 +327,7 @@ The protocol, as iOS 27.0.1 speaks it:
 - Request type 1 answers for SpringBoard (its element's ID was the same in every session and run) but not for a process without a user interface: asking for a daemon's or the widget renderer's element got no answer within 2 s, which drops the session.
 - While Clock is in front, SpringBoard's element has the status bar's items as children (time, signal, Wi-Fi, battery, the location arrow, the "Return to Clock" breadcrumb), all with trait bit 23; nothing of the home screen.
 - A second push can say an element is not visible that the walk right after says is ("2 min, two minutes" in Clock's recent timers): that element comes and goes between reads.
+- Traits (attribute 77) are UIKit's, public and private. The private bits, read from `UIAccessibility.framework` on macOS 27.2 (Mac Catalyst; its `_UIAXInitializeConstantValues` sets them): 17 web content, 18 text entry, 19 picker element, 20 radio button, 21 is editing, 22 launch icon, 23 status bar element (the status bar's items carry it), 24 secure text field (`traitSecureText`: native password fields as well as Safari's), 25 inactive, 34 spacer (what `traitRemoteHost` names: the keyboard's host view carries it), 45 touch container, 53 toggle. Looked up for GitHub issue #47 (Notes' body refused as a code field), to tell whether bit 24 marks web pages only: it does not.
 
 ### OCR (fallback)
 
