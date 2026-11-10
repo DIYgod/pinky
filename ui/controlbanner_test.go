@@ -174,14 +174,19 @@ func checkBanner(t *testing.T, b phoneBoxes, w, h float32) {
 // ellipsis rather than push the phone down.
 func TestControlBannerHeight(t *testing.T) {
 	long := "open Settings, then Passwords, find the Dinely account and copy its one-time code into the sign-in page, then wait for the order to load"
-	// A line of the banner's words, in this system's font.
-	lt := mg.NewTester(func(c *mg.Context) { mg.RichText(c, mg.Span{Text: "Ag", Size: 14}) }, 200, 100)
-	lt.Frame()
-	line, ok := lt.Find("Ag")
-	if !ok || line.H == 0 {
-		t.Fatal("no line to measure")
-	}
 	for _, lang := range testLanguages() {
+		// A line of the banner's words in this language, in this system's
+		// fonts: where another font draws the language's script (Noto Sans
+		// CJK on Linux), its lines are taller than a line of Latin letters.
+		inLanguage(t, lang)
+		words := "Ag " + locales.PhoneBannerYourTurn()
+		lt := mg.NewTester(func(c *mg.Context) { mg.RichText(c, mg.Span{Text: words, Size: 14}) }, 2000, 100)
+		inLanguage(t, lang, lt)
+		lt.Frame()
+		line, ok := lt.Find(words)
+		if !ok || line.H == 0 {
+			t.Fatal("no line to measure")
+		}
 		for _, reason := range []string{"Sign in to Dinely, please", long} {
 			inLanguage(t, lang)
 			ta := newTestAppTimeout(t, fakeapi.Handoff, 10*time.Minute)
