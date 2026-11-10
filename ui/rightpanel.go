@@ -96,6 +96,8 @@ func (a *app) needCard(c *mg.Context, n gateway.NeedView, floating bool) {
 			a.unlockControls(c, n)
 		case n.Kind == gateway.NeedHandoff:
 			a.handoffControls(c, n)
+		case n.Kind == gateway.NeedSetup:
+			// Done on the phone; the card goes once it is ready.
 		case newAgentNeed(n):
 			a.agentRequestControls(c, n)
 		case n.Unblock:

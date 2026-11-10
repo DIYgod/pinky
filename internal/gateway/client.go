@@ -30,6 +30,10 @@ var (
 // unlockNeedPrefix starts the ids of unlock cards: "unlock:<device id>".
 const unlockNeedPrefix = "unlock:"
 
+// setupNeedPrefix starts the ids of the cards of a step the person does
+// on the phone for a task: "setup:<device id>".
+const setupNeedPrefix = "setup:"
+
 // Devices implements API.
 func (g *Gateway) Devices() []DeviceView {
 	g.mu.Lock()
@@ -215,8 +219,28 @@ func (g *Gateway) Needs() []NeedView {
 				Detail:  fmt.Sprintf("%s is waiting for the phone to unlock · %s", l.session.agent.Name, l.task.title),
 				Created: time.Now()})
 		}
+		if n, ok := setupNeedLocked(d); ok {
+			out = append(out, n)
+		}
 	}
 	return out
+}
+
+// setupNeedLocked is the Needs you card of a task whose phone waits for
+// the person to do a step on the phone itself: for now the passcode iOS
+// asks before the WebDriverAgent helper may control the phone, a prompt
+// that goes away by itself unless someone sees it in time. The caller
+// holds g.mu.
+func setupNeedLocked(d *device) (NeedView, bool) {
+	l := d.lease
+	if l == nil || l.ended || !waitingLocked(d) || d.info.Setup != driver.SetupPasscode {
+		return NeedView{}, false
+	}
+	return NeedView{ID: setupNeedPrefix + d.id, Kind: NeedSetup, DeviceID: d.id, DeviceName: d.name(),
+		Agent: l.session.agent.Name, TaskID: l.task.id, Title: "Enter the passcode on " + d.name(),
+		Detail: fmt.Sprintf("iOS asks for it on the phone before the WebDriverAgent helper can control it, and stops asking after a while. %s is waiting · %s",
+			l.session.agent.Name, l.task.title),
+		Created: time.Now()}, true
 }
 
 // History implements API.
@@ -282,6 +306,9 @@ func (g *Gateway) Decide(needID string, d Decision, note string) error {
 			return nil
 		}
 		return g.Unlock(dev)
+	}
+	if strings.HasPrefix(needID, setupNeedPrefix) {
+		return nil // it goes once the phone is ready
 	}
 	info, err := g.approvals.Get(needID)
 	if err != nil {

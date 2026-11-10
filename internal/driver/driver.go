@@ -1284,6 +1284,26 @@ var (
 	ErrNotFound      = errors.New("not found")
 )
 
+// SetupError is a Provider.Open that failed because the phone waits for the
+// person to do a step first, the way Info.Setup and Info.Detail name a step
+// for a listed phone: the gateway shows the phone as needing setup at once,
+// without waiting for the next List to say so. Err is the driver's own
+// error.
+type SetupError struct {
+	Setup  string // a Setup* step
+	Detail string // what to do, in a sentence
+	Err    error
+}
+
+func (e *SetupError) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return e.Detail
+}
+
+func (e *SetupError) Unwrap() error { return e.Err }
+
 // Checkups. A phone's checkup checks, item by item and for real, what
 // Pinky needs on it (a key that does nothing to see that input works, a
 // screenshot, the companion app), and says what to do about each item

@@ -130,7 +130,7 @@ func (a *app) flyoutView(c *mg.Context) {
 					if a.flyout != nil {
 						a.flyout.Close()
 					}
-					if n.Kind != gateway.NeedUnlock {
+					if inPanel(n) {
 						a.showPanel(true)
 					} else {
 						a.openNeed(n.ID)
@@ -210,8 +210,11 @@ func needShort(n gateway.NeedView) string {
 		t = t[:len(t)-1]
 	}
 	t = strings.TrimSuffix(t, "\uff1f") // a translated title's full-width question mark
-	if n.Kind == gateway.NeedUnlock {
+	switch n.Kind {
+	case gateway.NeedUnlock:
 		return locales.FlyoutLocked()
+	case gateway.NeedSetup:
+		return locales.FlyoutPasscode()
 	}
 	return t
 }

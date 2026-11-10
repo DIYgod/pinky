@@ -1641,7 +1641,7 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		return g.executeOn(ctx, l, c, a, p, cur, step) // it records the refusal
 	}
 	start := time.Now()
-	res, note := g.launchConnection(ctx, l, a)
+	res, note := g.launchConnection(ctx, l, a, p)
 	if res != nil {
 		g.recordStep(l, step, a, c, p, res, start, "", "", "")
 		return res

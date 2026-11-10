@@ -605,6 +605,8 @@ func setupResultLocked(d *device, first string) *Result {
 		msg += " Pinky cannot use the phone until the person updates it: tell them, and end the task."
 	case driver.SetupUSBDriver:
 		msg += " Ask the person to install the driver with phone_handoff. Afterwards the phone shows up under another device id: call phone_connect again."
+	case driver.SetupPasscode:
+		msg += " Pinky shows the person a card in Needs you asking for it, but iOS stops asking after a while: call phone_handoff now to wait until they entered it (say so in reason); the handoff ends by itself once the phone is ready."
 	case driver.SetupPhoneChanged:
 		msg += " Pinky will not use it until the person trusts it on its page in Pinky or plugs the phone in: tell them, and end the task."
 	default:

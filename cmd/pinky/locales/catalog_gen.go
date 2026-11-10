@@ -8229,6 +8229,24 @@ func (msgs Messages) FlyoutPhones() string {
 	return Catalog.Format(msgs.locale, "flyoutPhones", nil)
 }
 
+// FlyoutPasscode says "Enter the passcode on the phone"
+// in the language the app shows.
+//
+// Menu bar flyout: what the Needs you row of an iPhone says after the
+// phone's name when iOS asks on the phone for its passcode before the
+// WebDriverAgent helper may control it.
+func FlyoutPasscode() string { return In(i18n.Locale()).FlyoutPasscode() }
+
+// FlyoutPasscode says "Enter the passcode on the phone"
+// in the language of msgs.
+//
+// Menu bar flyout: what the Needs you row of an iPhone says after the
+// phone's name when iOS asks on the phone for its passcode before the
+// WebDriverAgent helper may control it.
+func (msgs Messages) FlyoutPasscode() string {
+	return Catalog.Format(msgs.locale, "flyoutPasscode", nil)
+}
+
 // FlyoutReview says "Review"
 // in the language the app shows.
 //
@@ -12879,6 +12897,48 @@ func GwSwitchRotation() string { return In(i18n.Locale()).GwSwitchRotation() }
 // own words show.
 func (msgs Messages) GwSwitchRotation() string {
 	return Catalog.Format(msgs.locale, "gwSwitchRotation", nil)
+}
+
+// GwSetupPasscodeDetail says "iOS asks for it on the phone before the WebDriverAgent helper can control it, and stops asking after a while. {agent}…"
+// in the language the app shows.
+//
+// The second line of the card that asks the person to enter the iPhone's
+// passcode on the phone itself, so that the WebDriverAgent helper can start
+// for an agent's task. Shown only in other languages; in English the
+// gateway's own words show.
+func GwSetupPasscodeDetail(agent string, task string) string {
+	return In(i18n.Locale()).GwSetupPasscodeDetail(agent, task)
+}
+
+// GwSetupPasscodeDetail says "iOS asks for it on the phone before the WebDriverAgent helper can control it, and stops asking after a while. {agent}…"
+// in the language of msgs.
+//
+// The second line of the card that asks the person to enter the iPhone's
+// passcode on the phone itself, so that the WebDriverAgent helper can start
+// for an agent's task. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwSetupPasscodeDetail(agent string, task string) string {
+	return Catalog.Format(msgs.locale, "gwSetupPasscodeDetail", map[string]any{"agent": agent, "task": task})
+}
+
+// GwSetupPasscodeTitle says "Enter the passcode on {phone}"
+// in the language the app shows.
+//
+// The title of the card that asks the person to enter the iPhone's passcode
+// on the phone itself, where iOS asks for it before the WebDriverAgent
+// helper may control the phone. Shown only in other languages; in English
+// the gateway's own words show.
+func GwSetupPasscodeTitle(phone string) string { return In(i18n.Locale()).GwSetupPasscodeTitle(phone) }
+
+// GwSetupPasscodeTitle says "Enter the passcode on {phone}"
+// in the language of msgs.
+//
+// The title of the card that asks the person to enter the iPhone's passcode
+// on the phone itself, where iOS asks for it before the WebDriverAgent
+// helper may control the phone. Shown only in other languages; in English
+// the gateway's own words show.
+func (msgs Messages) GwSetupPasscodeTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "gwSetupPasscodeTitle", map[string]any{"phone": phone})
 }
 
 // GwUnlockDetail says "{agent} is waiting for the phone to unlock · {task}"

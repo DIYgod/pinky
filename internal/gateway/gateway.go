@@ -480,6 +480,9 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	g.mu.Unlock()
 	if !ok || old != info {
 		g.emit(Event{Kind: EventDevices, DeviceID: info.ID})
+		if waitsForStep(old.State) != waitsForStep(info.State) {
+			g.emit(Event{Kind: EventNeeds, DeviceID: info.ID}) // setupNeedLocked
+		}
 	}
 	if offline {
 		g.setOffline(d, info.Detail)
@@ -511,9 +514,22 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	g.mu.Lock()
 	d.opening = false
 	if err != nil || g.closed || d.removed {
+		step := false
+		if err != nil {
+			d.openErr = err
+			var se *driver.SetupError
+			if errors.As(err, &se) && se.Setup != "" && !g.closed && !d.removed {
+				// The phone waits for the person (the passcode before the
+				// helper starts): it needs setup from now, not from the
+				// next listing, so a task's call says so at once.
+				d.info.State, d.info.Setup, d.info.Detail = driver.StateNeedsSetup, se.Setup, se.Detail
+				step = true
+			}
+		}
 		if err != nil && d.switching != "" {
 			// It did not open over the connection a task moved it to:
-			// the task goes back at once (taskconn.go).
+			// the task goes back at once (taskconn.go), or waits with
+			// the phone for the person.
 			d.moving = time.Time{}
 		}
 		g.wakeLocked(d) // calls waiting for the open (connectWait) go on
@@ -523,8 +539,13 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 		} else {
 			g.log.Warn("open device", "device", d.id, "err", err)
 		}
+		if step {
+			g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+			g.emit(Event{Kind: EventNeeds, DeviceID: d.id})
+		}
 		return
 	}
+	d.openErr = nil
 	d.dev = dev
 	d.over = connectionOf(listed, dev)
 	d.online = true
@@ -534,6 +555,7 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	d.workSent = false
 	g.noteWorkLocked(d)
 	info := d.info
+	leased := d.lease != nil
 	if d.lease != nil {
 		// A task that connected while the phone waited for a step has not
 		// recorded yet (firstScreen); for others this does nothing.
@@ -543,6 +565,9 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	g.mu.Unlock()
 	g.log.Info("device online", "device", d.id, "name", info.Name, "connection", d.over)
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
+	if leased {
+		g.emit(Event{Kind: EventNeeds, DeviceID: d.id}) // a step it waited for is done (setupNeedLocked)
+	}
 	g.readyNow(d)
 	if w, ok := dev.(driver.PersonWatcher); ok {
 		go g.watchPerson(d.id, w.PersonInput())

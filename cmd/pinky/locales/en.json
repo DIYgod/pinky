@@ -2792,6 +2792,10 @@
   "@flyoutPhones": {
     "description": "Menu bar flyout: the heading above the phones."
   },
+  "flyoutPasscode": "Enter the passcode on the phone",
+  "@flyoutPasscode": {
+    "description": "Menu bar flyout: what the Needs you row of an iPhone says after the phone's name when iOS asks on the phone for its passcode before the WebDriverAgent helper may control it."
+  },
   "flyoutReview": "Review",
   "@flyoutReview": {
     "description": "Menu bar flyout: the action at the end of a Needs you row; a click opens the approval."
@@ -4901,6 +4905,30 @@
   "gwSwitchRotation": "the screen's rotation",
   "@gwSwitchRotation": {
     "description": "Names a phone setting inside a step, such as “Set the screen's rotation to landscape”. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwSetupPasscodeDetail": "iOS asks for it on the phone before the WebDriverAgent helper can control it, and stops asking after a while. {agent} is waiting · {task}",
+  "@gwSetupPasscodeDetail": {
+    "description": "The second line of the card that asks the person to enter the iPhone's passcode on the phone itself, so that the WebDriverAgent helper can start for an agent's task. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "task": {
+        "type": "String",
+        "example": "Bookkeeping"
+      }
+    }
+  },
+  "gwSetupPasscodeTitle": "Enter the passcode on {phone}",
+  "@gwSetupPasscodeTitle": {
+    "description": "The title of the card that asks the person to enter the iPhone's passcode on the phone itself, where iOS asks for it before the WebDriverAgent helper may control the phone. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
   },
   "gwUnlockDetail": "{agent} is waiting for the phone to unlock · {task}",
   "@gwUnlockDetail": {

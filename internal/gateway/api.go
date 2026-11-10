@@ -144,6 +144,12 @@ const (
 	// Answer it with TakeOver and HandBack, or Decide (allow = hand back
 	// with the note, Deny = decline, TakeOver = take over).
 	NeedHandoff NeedKind = "handoff"
+	// NeedSetup: a task waits for the person to do a step on the phone
+	// itself before Pinky can go on, such as entering the iPhone's
+	// passcode before the WebDriverAgent helper starts. Pinky shows it by
+	// itself, whether or not the agent calls phone_handoff, and it goes
+	// once the phone is ready; there is nothing to answer.
+	NeedSetup NeedKind = "setup"
 )
 
 // NeedView is a Needs you card.

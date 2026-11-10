@@ -46,7 +46,10 @@ type device struct {
 	removed      bool // the person removed it (remove.go); a new device takes its place if it comes back
 	offlineSince time.Time
 	offlineWhy   string
-	lease        *lease
+	// openErr is why the last Open failed, nil once it opened: a task
+	// that moved the phone tells the agent the real reason (taskconn.go).
+	openErr error
+	lease   *lease
 	// person is true while the person is in control (took over). It belongs
 	// to the device, not the lease: only HandBack clears it, so an agent
 	// cannot get control back by starting another task.

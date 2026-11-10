@@ -379,3 +379,36 @@ func TestIPhoneConnectionStep(t *testing.T) {
 		toSettings("Add phone › iPhone")
 	}
 }
+
+// TestPasscodeStepCard shows the card Pinky opens by itself while a task
+// waits for the person to enter an iPhone's passcode for the helper: in
+// the person's language, without buttons, outside the floating panel,
+// and hidden behind the agent's own handoff for that phone.
+func TestPasscodeStepCard(t *testing.T) {
+	step := gateway.NeedView{ID: "setup:iphone", Kind: gateway.NeedSetup, DeviceID: "iphone", DeviceName: "iPhone 13 mini",
+		Agent: "Claude Code", Title: "Enter the passcode on iPhone 13 mini",
+		Detail:  "iOS asks for it on the phone before the WebDriverAgent helper can control it, and stops asking after a while. Claude Code is waiting · Bookkeeping",
+		Created: time.Now()}
+	ta := shotApp(t, step)
+	if len(ta.approvals()) != 0 {
+		t.Errorf("the floating panel shows the step: %+v", ta.approvals())
+	}
+	tt := mg.NewTester(ta.rightPanel, 320, 820)
+	for _, lang := range testLanguages() {
+		inLanguage(t, lang, tt)
+		tt.Frame()
+		if !hasText(tt, locales.GwSetupPasscodeTitle("iPhone 13 mini")) || !hasText(tt, locales.GwSetupPasscodeDetail("Claude Code", "Bookkeeping")) {
+			t.Errorf("%s: the card lacks its words: %q", lang, tt.Texts())
+		}
+		if _, ok := tt.Find(locales.NeedsAllow()); ok {
+			t.Errorf("%s: the step card has Allow", lang)
+		}
+	}
+	inLanguage(t, "en", tt)
+	handoff := gateway.NeedView{ID: "h-1", Kind: gateway.NeedHandoff, DeviceID: "iphone", DeviceName: "iPhone 13 mini",
+		Title: "Please enter your passcode on the iPhone", Created: time.Now()}
+	ta.setNeeds([]gateway.NeedView{step, handoff})
+	if len(ta.needs) != 1 || ta.needs[0].ID != "h-1" {
+		t.Errorf("needs with the agent's handoff: %+v", ta.needs)
+	}
+}

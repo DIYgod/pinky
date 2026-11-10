@@ -414,6 +414,8 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		}
 		p.wdaWaits[info.ID] = s
 		p.mu.Unlock()
+		// Until the next List says so (wdaState), the error tells.
+		return nil, &driver.SetupError{Setup: driver.SetupPasscode, Detail: automationAsk, Err: err}
 	default:
 		s.stop()
 	}

@@ -707,6 +707,9 @@ func (a *app) setNeeds(n []gateway.NeedView) {
 	sort.SliceStable(n, func(i, j int) bool { return n[i].Created.Before(n[j].Created) })
 	// A handoff on a locked phone shows as one card, with the unlock
 	// button in it, rather than as a handoff and an unlock card.
+	// So does a handoff on a phone that waits for the person to do a step
+	// on it (the passcode before the helper starts): the agent asked for
+	// that step in its own words.
 	a.unlocks = map[string]bool{}
 	handoff := map[string]bool{}
 	for _, x := range n {
@@ -719,7 +722,7 @@ func (a *app) setNeeds(n []gateway.NeedView) {
 	}
 	shown := n[:0:0]
 	for _, x := range n {
-		if x.Kind != gateway.NeedUnlock || !handoff[x.DeviceID] {
+		if (x.Kind != gateway.NeedUnlock && x.Kind != gateway.NeedSetup) || !handoff[x.DeviceID] {
 			shown = append(shown, x)
 		}
 	}
@@ -792,11 +795,11 @@ func (a *app) taskOf(deviceID string) *gateway.TaskView {
 }
 
 // approvals are the needs the floating panel shows: approvals and
-// handoffs, everything but unlocks.
+// handoffs, everything but unlocks and steps on the phone.
 func (a *app) approvals() []gateway.NeedView {
 	var out []gateway.NeedView
 	for _, n := range a.needs {
-		if n.Kind != gateway.NeedUnlock {
+		if inPanel(n) {
 			out = append(out, n)
 		}
 	}
@@ -917,6 +920,13 @@ func (a *app) regularApp() {
 	a.shownOnce = true
 }
 
+// inPanel reports whether the floating panel shows a need: a card to
+// answer. An unlock card or a step on the phone (NeedSetup) is done at the
+// phone, so a click on its row or notification opens that phone instead.
+func inPanel(n gateway.NeedView) bool {
+	return n.Kind != gateway.NeedUnlock && n.Kind != gateway.NeedSetup
+}
+
 // openNeed brings the main window up at the phone a need is about.
 func (a *app) openNeed(id string) {
 	for _, n := range a.needs {
@@ -944,7 +954,7 @@ func (a *app) notify(n gateway.NeedView) {
 	}
 	nt := mygo.NewNotification(mygo.NotificationOptions{ID: n.ID, Group: "needs", Title: title, Subtitle: sub, Body: needDetail(n)})
 	nt.OnClick(func() {
-		if n.Kind != gateway.NeedUnlock {
+		if inPanel(n) {
 			a.showPanel(true)
 		} else {
 			a.openNeed(n.ID)

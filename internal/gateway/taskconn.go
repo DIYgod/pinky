@@ -65,25 +65,30 @@ func TaskConnection(s string) (way string, ok bool) {
 }
 
 // sharingRefusers are apps known to refuse to run while the screen is
-// shared (UIScreen.isCaptured), by bundle id and by the names people and
-// the phone use for them, lowercased. Seen in the field:
-// docs/notes/field-test-iphone.md item 5.
+// shared (UIScreen.isCaptured), by bundle id (iOS's, and Android's where
+// it differs) and by the names people and the phone use for them,
+// lowercased. Seen in the field: docs/notes/field-test-iphone.md item 5.
 var sharingRefusers = map[string]string{
-	"com.dbs.sg.dbsmbanking": "DBS digibank",
+	"com.dbs.sg.dbsmbanking": "DBS digibank", // the same id on iOS and Android
 	"digibank":               "DBS digibank",
 	"dbs digibank":           "DBS digibank",
 	"dbs":                    "DBS digibank",
-	"cmb.pb":                 "China Merchants Bank",
+	"com.cmbchina.mpbbank":   "China Merchants Bank", // iOS
+	"cmb.pb":                 "China Merchants Bank", // Android
 	"招商银行":                   "China Merchants Bank",
 	"china merchants bank":   "China Merchants Bank",
 	"cmb":                    "China Merchants Bank",
 }
 
-// refusesSharing reports whether app (an id or a name, as an agent passes
-// it) is known to refuse screen sharing, and its name.
-func refusesSharing(app string) (string, bool) {
-	name, ok := sharingRefusers[strings.ToLower(strings.TrimSpace(app))]
-	return name, ok
+// refusesSharing reports whether one of names (ids or names of an app) is
+// known to refuse screen sharing, and the app's name.
+func refusesSharing(names ...string) (string, bool) {
+	for _, n := range names {
+		if name, ok := sharingRefusers[strings.ToLower(strings.TrimSpace(n))]; ok {
+			return name, true
+		}
+	}
+	return "", false
 }
 
 // switchingLine is the status line of a phone moving to another
@@ -182,7 +187,10 @@ func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) 
 		// It did not come up on the helper: back to the person's choice.
 		detail := "the helper did not start"
 		g.mu.Lock()
-		if d.info.Detail != "" {
+		switch {
+		case d.openErr != nil:
+			detail = strings.TrimSuffix(d.openErr.Error(), ".") // the real reason
+		case d.info.Detail != "":
 			detail = strings.TrimSuffix(d.info.Detail, ".")
 		}
 		g.mu.Unlock()
@@ -255,6 +263,7 @@ func (g *Gateway) switchTo(ctx context.Context, d *device, cc driver.ConnectionC
 		return nil
 	}
 	d.switching = target
+	d.openErr = nil                       // an earlier failure says nothing about this switch
 	d.moving = time.Now().Add(switchWait) // calls wait while it reconnects
 	g.mu.Unlock()
 	why := "switching to CoreDevice"
@@ -380,11 +389,23 @@ func (g *Gateway) taskConnection(ctx context.Context, l *lease, way string) (*Re
 }
 
 // launchConnection moves the task to the helper before phone_launch opens
-// an app that refuses screen sharing.
-func (g *Gateway) launchConnection(ctx context.Context, l *lease, a Action) (*Result, string) {
-	name, ok := refusesSharing(a.App)
+// an app that refuses screen sharing. It judges the app the launch opens,
+// as prepare resolved it (p.launch: the agent may name it by its iOS id,
+// its Android id or its name; for a link, the app that opens it), and
+// what the agent passed.
+func (g *Gateway) launchConnection(ctx context.Context, l *lease, a Action, p *prep) (*Result, string) {
+	names := []string{a.App}
+	if p != nil {
+		orig := p.launch.Original()
+		names = append(names, p.launch.ID, p.launch.Name, orig.ID, orig.Name)
+	}
+	name, ok := refusesSharing(names...)
 	if !ok {
 		return nil, ""
 	}
-	return g.useConnection(ctx, l, wayHelper, name)
+	res, note := g.useConnection(ctx, l, wayHelper, name)
+	if res != nil && res.Status == StatusNeedsSetup {
+		res.Message += fmt.Sprintf(" Once the phone is ready, call phone_launch again to open %s.", name)
+	}
+	return res, note
 }

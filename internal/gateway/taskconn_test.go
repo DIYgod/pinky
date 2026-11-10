@@ -22,6 +22,7 @@ type twoWayPhone struct {
 	noHelper  bool          // the helper is not installed
 	helperErr error         // opening through the helper fails
 	passcode  bool          // the helper waits for the passcode
+	askOnOpen bool          // opening through the helper finds the phone asking for its passcode
 	slow      time.Duration // how long opening through the helper takes
 	opens     []string
 }
@@ -47,7 +48,7 @@ func (p *twoWayPhone) List(ctx context.Context) ([]driver.Info, error) {
 	for i := range infos {
 		infos[i].Backend = p.backendLocked()
 		if p.way == wayHelper && p.passcode && infos[i].State == driver.StateOnline {
-			infos[i].State, infos[i].Detail = driver.StateNeedsSetup, "Enter the passcode on the iPhone."
+			infos[i].State, infos[i].Setup, infos[i].Detail = driver.StateNeedsSetup, driver.SetupPasscode, "Enter the passcode on the iPhone."
 		}
 	}
 	return infos, err
@@ -58,6 +59,13 @@ func (p *twoWayPhone) Open(ctx context.Context, id string) (driver.Device, error
 	b := p.backendLocked()
 	p.opens = append(p.opens, b)
 	err, slow := p.helperErr, p.slow
+	if b == wayHelper && p.askOnOpen {
+		// As the iOS provider: the runner waits for the passcode, and the
+		// next listing says so (wdaState).
+		p.askOnOpen, p.passcode = false, true
+		err = &driver.SetupError{Setup: driver.SetupPasscode, Detail: "Enter the passcode on the iPhone.",
+			Err: errors.New("the iPhone asks on its screen for its passcode to allow automation")}
+	}
 	p.mu.Unlock()
 	if b == wayHelper && slow > 0 {
 		time.Sleep(slow)
@@ -150,7 +158,7 @@ func TestTaskConnectionWords(t *testing.T) {
 	if _, ok := TaskConnection("usb"); ok {
 		t.Error("an unknown word is taken")
 	}
-	for _, app := range []string{"com.dbs.sg.dbsmbanking", "digibank", "招商银行", "cmb.pb", "China Merchants Bank"} {
+	for _, app := range []string{"com.dbs.sg.dbsmbanking", "digibank", "招商银行", "cmb.pb", "com.cmbchina.MPBBank", "China Merchants Bank"} {
 		if _, ok := refusesSharing(app); !ok {
 			t.Errorf("%s is not known to refuse screen sharing", app)
 		}
@@ -401,7 +409,7 @@ func TestHelperMissingOrFailing(t *testing.T) {
 	p.noHelper, p.helperErr = false, errors.New("the runner quit")
 	p.mu.Unlock()
 	res = launchAllowed(g, s, "digibank")
-	if !strings.Contains(res.Message, "stays on CoreDevice") {
+	if !strings.Contains(res.Message, "stays on CoreDevice") || !strings.Contains(res.Message, "the runner quit") {
 		t.Fatalf("failing helper: %+v", res)
 	}
 	if b := backendOf(g); b != wayCoreDevice {
@@ -464,4 +472,73 @@ func TestTaskConnectionOnAndroid(t *testing.T) {
 	if res := s.Connect(context.Background(), ConnectRequest{Task: "Lunch", Connection: "usb"}); res.Error != ErrInvalidArgument {
 		t.Fatalf("an unknown connection: %+v", res)
 	}
+}
+
+// The app phone_launch opens decides, not the words the agent used: the
+// bank's iOS id, or an id the table does not know for an app with a known
+// name.
+func TestLaunchJudgesTheResolvedApp(t *testing.T) {
+	for _, tc := range []struct{ id, name, ask string }{
+		{"com.cmbchina.MPBBank", "招商银行", "com.cmbchina.MPBBank"},
+		{"com.example.bank", "China Merchants Bank", "com.example.bank"},
+	} {
+		t.Run(tc.id, func(t *testing.T) {
+			p, dev := newTwoWayPhone()
+			dev.AddApp(tc.id, tc.name)
+			g := twoWayGateway(t, p)
+			s, _ := connect(t, g, "Bookkeeping")
+			res := launchAllowed(g, s, tc.ask)
+			if !strings.Contains(res.Message, "China Merchants Bank refuses to run while the screen is shared") {
+				t.Fatalf("launch %s: %+v", tc.ask, res)
+			}
+			if b := backendOf(g); b != wayHelper {
+				t.Fatalf("backend %q after launching the bank", b)
+			}
+		})
+	}
+}
+
+// The phone asks for its passcode as the helper starts (field test,
+// 2026.1110.27): the launch says so with device_needs_setup, Pinky shows
+// a card, and the task goes on through the helper once it is entered.
+func TestLaunchWaitsForThePasscode(t *testing.T) {
+	p, _ := newTwoWayPhone()
+	p.askOnOpen = true
+	g := twoWayGateway(t, p, func(o *Options) { o.ReconnectGrace = time.Minute })
+	s, _ := connect(t, g, "Bookkeeping")
+	res := launchAllowed(g, s, "招商银行")
+	if res.Status != StatusNeedsSetup || res.Setup != driver.SetupPasscode {
+		t.Fatalf("launch: %+v", res)
+	}
+	if !strings.Contains(res.Message, "passcode") || !strings.Contains(res.Message, "phone_launch again") ||
+		strings.Contains(res.Message, "stays on CoreDevice") {
+		t.Fatalf("launch: %q", res.Message)
+	}
+	var card *NeedView
+	for _, n := range g.Needs() {
+		if n.Kind == NeedSetup {
+			card = &n
+		}
+	}
+	if card == nil || card.DeviceID != "iphone" || !strings.Contains(card.Title, "passcode") {
+		t.Fatalf("needs: %+v", g.Needs())
+	}
+	if err := g.Decide(card.ID, Deny, ""); err != nil {
+		t.Fatalf("decide a setup card: %v", err)
+	}
+	if way, _ := p.state(); way != wayHelper {
+		t.Fatalf("provider way %q while the phone waits", way)
+	}
+	// The person enters it: the helper comes up, the card goes, and the
+	// launch runs.
+	p.mu.Lock()
+	p.passcode = false
+	p.mu.Unlock()
+	waitUntil(t, "the phone on the helper", func() bool { return backendOf(g) == wayHelper })
+	for _, n := range g.Needs() {
+		if n.Kind == NeedSetup {
+			t.Fatalf("the card stayed: %+v", n)
+		}
+	}
+	mustStatus(t, launchAllowed(g, s, "招商银行"), StatusSettled)
 }
