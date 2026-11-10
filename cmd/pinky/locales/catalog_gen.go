@@ -17059,6 +17059,26 @@ func (msgs Messages) RemoteCopyCommand() string {
 	return Catalog.Format(msgs.locale, "remoteCopyCommand", nil)
 }
 
+// RemoteCopyTailnetURL says "Copy the tailnet url"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the tailnet URL (remoteTailnetURL). The English has
+// url in lower case; tailnet is Tailscale's word for the person's private
+// network: keep it.
+func RemoteCopyTailnetURL() string { return In(i18n.Locale()).RemoteCopyTailnetURL() }
+
+// RemoteCopyTailnetURL says "Copy the tailnet url"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the tailnet URL (remoteTailnetURL). The English has
+// url in lower case; tailnet is Tailscale's word for the person's private
+// network: keep it.
+func (msgs Messages) RemoteCopyTailnetURL() string {
+	return Catalog.Format(msgs.locale, "remoteCopyTailnetURL", nil)
+}
+
 // RemoteCopyToken says "Copy the agent token"
 // in the language the app shows.
 //
@@ -17239,6 +17259,106 @@ func RemoteShowToken() string { return In(i18n.Locale()).RemoteShowToken() }
 // Show button next to the agent token.
 func (msgs Messages) RemoteShowToken() string {
 	return Catalog.Format(msgs.locale, "remoteShowToken", nil)
+}
+
+// RemoteTailnetCommandLabel says "Command to serve Pinky on your tailnet"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// tailscale serve command under remoteTailnetTitle. tailnet is Tailscale's
+// word for the person's private network: keep it.
+func RemoteTailnetCommandLabel() string { return In(i18n.Locale()).RemoteTailnetCommandLabel() }
+
+// RemoteTailnetCommandLabel says "Command to serve Pinky on your tailnet"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// tailscale serve command under remoteTailnetTitle. tailnet is Tailscale's
+// word for the person's private network: keep it.
+func (msgs Messages) RemoteTailnetCommandLabel() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetCommandLabel", nil)
+}
+
+// RemoteTailnetHint says "For agents that reach this computer through Tailscale, such as Grok Bot. Run this once on this computer; they then co…"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: under remoteTailnetTitle, above
+// the tailscale serve command, while Tailscale is connected on this
+// computer but does not serve Pinky yet. url is where the agents will
+// connect, as https://macbook.tail1234.ts.net/mcp. Tailscale and Grok Bot
+// are product names: keep them.
+func RemoteTailnetHint(url string) string { return In(i18n.Locale()).RemoteTailnetHint(url) }
+
+// RemoteTailnetHint says "For agents that reach this computer through Tailscale, such as Grok Bot. Run this once on this computer; they then co…"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: under remoteTailnetTitle, above
+// the tailscale serve command, while Tailscale is connected on this
+// computer but does not serve Pinky yet. url is where the agents will
+// connect, as https://macbook.tail1234.ts.net/mcp. Tailscale and Grok Bot
+// are product names: keep them.
+func (msgs Messages) RemoteTailnetHint(url string) string {
+	return Catalog.Format(msgs.locale, "remoteTailnetHint", map[string]any{"url": url})
+}
+
+// RemoteTailnetTitle says "Agents on your tailnet"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the heading of the tailscale serve
+// command, for agents on the person's tailnet, such as Grok Bot. tailnet is
+// Tailscale's word for the person's private network of their own devices:
+// keep it.
+func RemoteTailnetTitle() string { return In(i18n.Locale()).RemoteTailnetTitle() }
+
+// RemoteTailnetTitle says "Agents on your tailnet"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the heading of the tailscale serve
+// command, for agents on the person's tailnet, such as Grok Bot. tailnet is
+// Tailscale's word for the person's private network of their own devices:
+// keep it.
+func (msgs Messages) RemoteTailnetTitle() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetTitle", nil)
+}
+
+// RemoteTailnetURL says "Tailnet URL"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the row of the URL at which
+// Tailscale (tailscale serve) gives Pinky to the person's tailnet, as
+// https://macbook.tail1234.ts.net/mcp. tailnet is Tailscale's word for the
+// person's private network: keep it.
+func RemoteTailnetURL() string { return In(i18n.Locale()).RemoteTailnetURL() }
+
+// RemoteTailnetURL says "Tailnet URL"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the row of the URL at which
+// Tailscale (tailscale serve) gives Pinky to the person's tailnet, as
+// https://macbook.tail1234.ts.net/mcp. tailnet is Tailscale's word for the
+// person's private network: keep it.
+func (msgs Messages) RemoteTailnetURL() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetURL", nil)
+}
+
+// RemoteTailnetURLDesc says "Tailscale serves Pinky here to your devices and to agents on your tailnet, such as Grok Bot. They still need the agen…"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the line under remoteTailnetURL.
+// Tailscale and Grok Bot are product names, tailnet is Tailscale's word for
+// the person's private network: keep them. The agent token is the secret
+// agents send (remoteToken).
+func RemoteTailnetURLDesc() string { return In(i18n.Locale()).RemoteTailnetURLDesc() }
+
+// RemoteTailnetURLDesc says "Tailscale serves Pinky here to your devices and to agents on your tailnet, such as Grok Bot. They still need the agen…"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the line under remoteTailnetURL.
+// Tailscale and Grok Bot are product names, tailnet is Tailscale's word for
+// the person's private network: keep them. The agent token is the secret
+// agents send (remoteToken).
+func (msgs Messages) RemoteTailnetURLDesc() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetURLDesc", nil)
 }
 
 // RemoteTitle says "Remote agents"

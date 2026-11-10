@@ -97,6 +97,10 @@ type Options struct {
 	// manager, to install by hand, and Pinky tries a refused build again
 	// by itself only once a newer one comes; nil leaves the link out.
 	CompanionAPK func() (path string, build int, err error)
+	// RemoteTailnet says how agents on the person's tailnet reach remote
+	// agents listening at addr (Settings › Agents › Remote agents); nil
+	// leaves that out.
+	RemoteTailnet func(ctx context.Context, addr string) RemoteTailnet
 }
 
 // Settings are what the Settings screen changes.

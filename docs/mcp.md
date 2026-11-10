@@ -81,10 +81,23 @@ A JSON config:
 { "mcpServers": { "pinky": { "type": "http", "url": "http://127.0.0.1:7465/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
 ```
 
-- Without the token, or with another one, requests get `401`; only upload and download links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
+- Without the token, or with another one, requests get `401`; only upload and download links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding), but for this computer's own tailnet name, which `tailscale serve` sends ([below](#grok-bot-over-tailscale)).
 - A remote agent's files are on its own machine, out of reach of the folder `phone_files` copies to the phone from and `phone_app` installs from. It uploads them into that folder instead (`phone_files { action: "upload" }`, [below](#uploading-a-file)): in the call, or to a one-time link at `http://<address>/upload/<token>`, which takes the file without the agent token.
 - Screenshots, task reports and the recordings the person allows that Pinky saves for a remote agent (`phone_observe { save }`, `phone_release { export }`) stay on this computer too: the agent gets a one-time link for each, `http://<address>/download/<token>`, which it fetches without the agent token ([below](#saving-screenshots-and-reports)).
 - Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. The agent's name gets " (remote)" after it ("Claude Code (remote)"), so a remote agent is asked about on its own first connection and never gets the scope the person gave the agent of that name on this computer. A newer session of the same remote agent continues the phone its older sessions left ([below](#what-http-clients-may-do)). Turning Remote agents off ends every session at once, with its leases and open approvals.
+
+#### Grok Bot over Tailscale
+
+Agents on your tailnet reach Pinky through Tailscale on this computer, while Pinky itself listens on this computer only. [Grok Bot](https://docs.x.ai/grok-bot/overview) is one: its Tailscale plugin joins your tailnet as a device of yours and reaches the MCP servers there ([Tailscale's announcement](https://tailscale.com/blog/oauth-apps-ga)).
+
+1. Turn on **Settings › Agents › Remote agents**, with Tailscale connected on this computer.
+2. Run the command Remote agents then shows, once, on this computer: `tailscale serve --bg 7465`. Tailscale serves Pinky to your tailnet over HTTPS from then on, also after a restart, and Remote agents shows the **Tailnet URL**, `https://<computer>.<tailnet>.ts.net/mcp`. On a tailnet without HTTPS certificates the command prints a link to turn them on. `tailscale serve --https=443 off` stops it. Pinky only reads Tailscale's state and never runs `tailscale serve` itself.
+3. In the Grok Bot desktop app, connect your tailnet: **Connect apps › Your plugins › Tailscale**, **Authenticate** on its slot (Grok Bot 0.49 or newer, on a tailnet you own or administer). Grok Bot has no field for an MCP server's headers, so add Pinky in a chat: "Add an MCP server named pinky at https://<computer>.<tailnet>.ts.net/mcp with the header Authorization: Bearer <agent token>" (**Copy the agent token** in Remote agents). The token stays in that chat. Don't authenticate the server itself: that looks for OAuth, which Pinky doesn't offer.
+4. Ask Grok Bot to do something on the phone. Its first connection waits for you in Pinky, as "Grok (remote)".
+
+- Pinky takes requests under this computer's own tailnet name, the `Host` that `tailscale serve` passes on; any other name still gets `403`, and every request still needs the agent token.
+- Your tailnet's access rules decide who reaches port 443 of this computer: Grok Bot's device must, and every other device that does reaches the endpoint too, with the same need for the agent token. A personal tailnet's default rules let all your devices in, Grok Bot's among them, as it joins untagged with your own access; don't tag it.
+- Without `tailscale serve`, Pinky can listen on this computer's Tailscale address (Remote agents › Address, `100.x.y.z:7465`), and Grok Bot connects to `http://<computer>.<tailnet>.ts.net:7465/mcp`. Pinky can't listen there while Tailscale is off, so after a restart Remote agents stays off until you save the address again.
 
 #### What HTTP clients may do
 
@@ -98,7 +111,7 @@ Pinky is a stateful Streamable HTTP server: `initialize` returns an `Mcp-Session
 - **A `GET` without a session id** gets `405`: Pinky offers no stream outside a session, so carry on with `POST`.
 - **A `GET` stream.** A client may keep its session's `GET` stream open as long as it likes; calls (`POST`) are served alongside it. Pinky sends little on it, and a proxy that cuts idle streams only makes the client open it again.
 - **Protocol versions** 2024-11-05 to 2025-11-25. The sessionless 2026-07-28 protocol (per-request `_meta`) is not served yet.
-- **Tunnels and reverse proxies** on this computer (Cloudflare Tunnel, `tailscale serve`, nginx) must send a `Host` of `127.0.0.1:<port>` or `localhost:<port>` (cloudflared: `originRequest.httpHostHeader`), as requests to `127.0.0.1` that name another host get `403`. Upload and download links use the `Host` the request had, or the proxy's `X-Forwarded-Host` and `X-Forwarded-Proto`; the tool's answer says to swap in the public address if the link shows Pinky's own.
+- **Tunnels and reverse proxies** on this computer (Cloudflare Tunnel, nginx) must send a `Host` of `127.0.0.1:<port>` or `localhost:<port>` (cloudflared: `originRequest.httpHostHeader`), as requests to `127.0.0.1` that name another host get `403`. `tailscale serve` needs nothing: it sends this computer's tailnet name, which Pinky takes ([above](#grok-bot-over-tailscale)). Upload and download links use the `Host` the request had, or the proxy's `X-Forwarded-Host` and `X-Forwarded-Proto`; the tool's answer says to swap in the public address if the link shows Pinky's own.
 
 - Protocol: the official Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0), newline-delimited JSON-RPC over stdio; the SDK negotiates the protocol version.
 - Server info: name `pinky`, title `Pinky`; the server sends short usage instructions at initialization.

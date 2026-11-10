@@ -1,8 +1,11 @@
 package mcp
 
 import (
+	"context"
 	"crypto/subtle"
+	"net"
 	"net/http"
+	"net/netip"
 	"path"
 	"strings"
 	"time"
@@ -23,8 +26,9 @@ const httpSessionTimeout = time.Hour
 // agent token as a bearer token. Each MCP session is one gateway session,
 // with the same first-connection approval and scopes as over stdio, under
 // a name of its own (RemoteSuffix). The SDK refuses requests to a loopback
-// address that name another host (DNS rebinding), and cross-origin
-// browser requests are refused too. Upload links (UploadPath) take files
+// address that name another host (DNS rebinding), but for this computer's
+// own names (OwnNames), and cross-origin browser requests are refused too.
+// Upload links (UploadPath) take files
 // for phone_files, and download links (DownloadPath) give saved files,
 // without the agent token: each link's own token is the key, for one
 // file, once.
@@ -34,6 +38,12 @@ type HTTP struct {
 	handler http.Handler
 	token   string
 	sl      *sessionless // clients that send no session id (sessionless.go)
+
+	// OwnNames, when set, returns this computer's own DNS names that a
+	// tunnel on this computer may forward requests under: its tailnet
+	// name, such as "mac.tail1234.ts.net", for `tailscale serve` in front
+	// of Pinky. Set it before serving.
+	OwnNames func(ctx context.Context) []string
 }
 
 // HTTP returns the Streamable HTTP endpoint for the server's tools, at
@@ -76,6 +86,7 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		r.Header.Del(linkBaseHeader)
 	}
+	h.ownHost(r)
 	if r.Method == http.MethodPost {
 		if sid := r.Header.Get(sessionIDHeader); sid != "" {
 			h.sl.claim(sid)
@@ -84,6 +95,61 @@ func (h *HTTP) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	h.handler.ServeHTTP(w, r)
+}
+
+// ownHost lets a request that a tunnel on this computer forwarded under one
+// of this computer's own names (OwnNames) past the SDK's DNS rebinding
+// check, by serving it as a request to localhost. The check refuses
+// requests that reach a loopback address under another host's name, as a
+// browser sends them once a page's DNS name was rebound to 127.0.0.1; but
+// `tailscale serve` forwards requests to Pinky on 127.0.0.1 with the Host
+// they had, this computer's tailnet name, and cannot change it.
+//
+// Taking that one name keeps the protection: a page can make a browser
+// send a Host only for a name whose DNS its author controls, and this
+// computer's tailnet name is Tailscale's (ts.net), which resolves to this
+// computer's own Tailscale address only, on the tailnet only. Every other
+// name is still refused, and the request still needs the agent token.
+// Links in answers use the name, from linkBase, worked out before.
+func (h *HTTP) ownHost(r *http.Request) {
+	if h.OwnNames == nil || !reachedLoopback(r) || loopbackHost(r.Host) {
+		return
+	}
+	name := r.Host
+	if host, _, err := net.SplitHostPort(r.Host); err == nil {
+		name = host
+	}
+	name = strings.TrimSuffix(name, ".")
+	if name == "" {
+		return
+	}
+	for _, own := range h.OwnNames(r.Context()) {
+		if own = strings.TrimSuffix(own, "."); own != "" && strings.EqualFold(name, own) {
+			r.Host = "localhost"
+			return
+		}
+	}
+}
+
+// reachedLoopback reports whether r came in at a loopback address, as the
+// SDK's check sees it.
+func reachedLoopback(r *http.Request) bool {
+	a, ok := r.Context().Value(http.LocalAddrContextKey).(net.Addr)
+	return ok && a != nil && loopbackHost(a.String())
+}
+
+// loopbackHost reports whether a host, with a port or without one, is
+// localhost or a loopback address, as the SDK's check takes it.
+func loopbackHost(hostport string) bool {
+	host, _, err := net.SplitHostPort(hostport)
+	if err != nil {
+		host = strings.Trim(hostport, "[]")
+	}
+	if host == "localhost" {
+		return true
+	}
+	ip, err := netip.ParseAddr(host)
+	return err == nil && ip.IsLoopback()
 }
 
 func (h *HTTP) authorized(r *http.Request) bool {
