@@ -42,9 +42,20 @@ type wdaClient struct {
 	// busy screen, a screenshot) and the MJPEG stream, which never ends.
 	long *http.Client
 
+	// gone, once the phone is open, maps a request that failed to reach WDA
+	// (WDADevice.gone).
+	gone func(error) error
+
 	mu  sync.Mutex
 	sid string // the WebDriver session
 }
+
+// wdaDialError is a connection to WDA's port on the phone that could not be
+// opened: nothing listens there any more, or the way there is gone.
+type wdaDialError struct{ err error }
+
+func (e *wdaDialError) Error() string { return e.err.Error() }
+func (e *wdaDialError) Unwrap() error { return e.err }
 
 // newWDAUSB returns a client that reaches WDA on the phone behind a usbmuxd
 // entry.
@@ -75,7 +86,11 @@ func newWDADial(dial func(ctx context.Context, port int) (net.Conn, error)) *wda
 			if strings.HasPrefix(addr, "mjpeg:") {
 				port = mjpegPort
 			}
-			return dial(ctx, port)
+			c, err := dial(ctx, port)
+			if err != nil && ctx.Err() == nil {
+				return nil, &wdaDialError{err}
+			}
+			return c, err
 		},
 		MaxIdleConns:        4,
 		IdleConnTimeout:     30 * time.Second,
@@ -178,7 +193,11 @@ func (c *wdaClient) call(ctx context.Context, hc *http.Client, method, path stri
 	}
 	resp, err := hc.Do(req)
 	if err != nil {
-		return fmt.Errorf("WebDriverAgent %s: %w", path, err)
+		err = fmt.Errorf("WebDriverAgent %s: %w", path, err)
+		if c.gone != nil {
+			err = c.gone(err)
+		}
+		return err
 	}
 	defer resp.Body.Close()
 	raw, err := io.ReadAll(resp.Body)

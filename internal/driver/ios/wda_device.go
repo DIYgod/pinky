@@ -101,7 +101,45 @@ func openWDA(ctx context.Context, info driver.Info, c *wdaClient, entry goios.De
 	if d.info.OSVersion == "" {
 		d.info.OSVersion = st.OS.Version
 	}
+	c.gone = d.gone
 	return d, nil
+}
+
+// gone wraps err, a request that failed to reach WDA, as driver.ErrOffline
+// once WDA is gone, so the phone does not stay open with every call
+// failing: the gateway reads driver.ErrOffline as the phone having dropped,
+// and opens it again, which starts the runner anew. A runner Pinky started
+// is gone when its test ended (testmanagerd ends it when the runner dies)
+// or the tunnel stopped; while it runs, a failed request is only that. A
+// runner Pinky did not start (Xcode's) gives no such sign: it is gone when
+// its port no longer takes connections.
+func (d *WDADevice) gone(err error) error {
+	if err == nil || errors.Is(err, driver.ErrOffline) {
+		return err
+	}
+	var de *wdaDialError
+	if d.ended() || (d.run == nil && errors.As(err, &de)) {
+		return fmt.Errorf("%v: %w", err, driver.ErrOffline)
+	}
+	return err
+}
+
+// ended reports whether the runner's test Pinky started has ended or the
+// tunnel it went through stopped.
+func (d *WDADevice) ended() bool {
+	if d.run != nil {
+		if alive, _ := d.run.alive(); !alive {
+			return true
+		}
+	}
+	if d.l != nil && d.l.tunnel != nil {
+		select {
+		case <-d.l.tunnel.Done():
+			return true
+		default:
+		}
+	}
+	return false
 }
 
 // wdaStartTimeout bounds starting the runner: the first start after the
@@ -840,6 +878,12 @@ func (d *WDADevice) Apps(ctx context.Context) ([]driver.App, error) {
 // Locked implements driver.LockReporter: whether the phone needs its
 // passcode, from lockdown as on the CoreDevice path.
 func (d *WDADevice) Locked(ctx context.Context) (bool, error) {
+	// The gateway asks this every few seconds of every open phone, and
+	// lockdown answers it with WDA gone: say so here, so a phone whose
+	// runner ended drops before an agent's next call fails.
+	if d.ended() {
+		return false, fmt.Errorf("the WebDriverAgent runner ended: %w", driver.ErrOffline)
+	}
 	return d.lockState(ctx)
 }
 
