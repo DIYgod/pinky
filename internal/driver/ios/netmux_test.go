@@ -7,8 +7,10 @@ package ios
 
 import (
 	"context"
+	"net"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -121,6 +123,67 @@ func TestWiFiMuxAfterAnUpdate(t *testing.T) {
 	forgetInheritedMux()
 	if v := os.Getenv("USBMUXD_SOCKET_ADDRESS"); v != "" {
 		t.Errorf("a child keeps USBMUXD_SOCKET_ADDRESS = %q", v)
+	}
+}
+
+// TestRemoveOldMuxDirs: the folders of Pinkys that ended go, a running
+// Pinky's and one that a Pinky made a moment ago stay.
+func TestRemoveOldMuxDirs(t *testing.T) {
+	base, err := os.MkdirTemp("/tmp", "pinkymux") // short: socket paths are limited
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(base) })
+	listen := func(name string) *net.UnixListener {
+		dir := filepath.Join(base, "pinky-usbmuxd-"+name)
+		if err := os.Mkdir(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		l, err := net.Listen("unix", filepath.Join(dir, "usbmuxd"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return l.(*net.UnixListener)
+	}
+	running := listen("running")
+	defer running.Close()
+	ended := listen("ended")
+	ended.SetUnlinkOnClose(false) // as a Pinky that was killed leaves it
+	ended.Close()
+	old := time.Now().Add(-time.Hour)
+	for _, name := range []string{"starting", "empty"} {
+		if err := os.Mkdir(filepath.Join(base, "pinky-usbmuxd-"+name), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Chtimes(filepath.Join(base, "pinky-usbmuxd-empty"), old, old); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(base, "pinky-usbmuxd-file"), nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(base, "other"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	removeOldMuxDirs(base)
+
+	left, err := os.ReadDir(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, e := range left {
+		names = append(names, e.Name())
+	}
+	want := "other pinky-usbmuxd-file pinky-usbmuxd-running pinky-usbmuxd-starting"
+	if got := strings.Join(names, " "); got != want {
+		t.Errorf("left: %s, want: %s", got, want)
+	}
+	if c, err := net.Dial("unix", filepath.Join(base, "pinky-usbmuxd-running", "usbmuxd")); err != nil {
+		t.Errorf("the running Pinky's socket: %v", err)
+	} else {
+		c.Close()
 	}
 }
 
