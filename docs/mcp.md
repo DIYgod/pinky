@@ -277,14 +277,18 @@ To move an app to another home screen page: press its icon with `hold_ms` about 
 
 To drop into a folder, or onto another app to make one, let go over its icon where it is during the drag. The picked-up icon keeps where the finger holds it, so press the app at its `ref` and aim from the target's ref point (a home screen ref's point is the middle of the icon and its label together).
 
-Pixel Launcher moves the icons once the drag starts: as soon as it picks an icon up, it shrinks the home screen page toward a point near the middle of the screen, and the dock stays as it was. On a 1080×2400 Pixel emulator (Android 16) the page shrank by about 0.78 toward about 540,990 (the middle across, 41% down). Photos, listed at 663,1619, sat about 120 px higher and further in during the drag:
+Pixel Launcher moves the icons once the drag starts: as soon as it picks an icon up, it shrinks the home screen page toward a point near the middle of the screen, and the dock stays as it was. On a 1080×2400 Pixel emulator (Android 16) the page shrank by about 0.78 toward about 540,990 (the middle across, 41% down), so Photos, listed at 663,1619, sat at about 634,1500 during the drag, and only a drop there made a folder. The launcher also takes the page out of the element tree while it holds an icon, so the screen cannot be read then.
 
-- Letting go at 634,1500 made a folder, with a 300 ms rest and with a 2.5 s one.
-- Letting go at 663,1619 moved Photos aside. So did aiming at the middle of its icon picture, with rests from 300 ms to 2 s.
+Pinky follows the page for you. Give `to` where the target is on the screen you read. When a drag on an Android home screen starts with `hold_ms` 300 or more, Pinky:
 
-Pinky cannot read the screen while the finger is down: the launcher takes the page out of the element tree while it holds an icon. Aim at about `centre + 0.78 × (target − centre)` yourself.
+1. takes a picture as the finger touches down,
+2. after the hold, moves the finger a tenth of the screen's width toward the first point (120 ms) and rests 250 ms, so the launcher picks the icon up and shrinks the page,
+3. takes another picture and looks for the apps around `to` in it, shrunk by 0.6 to 1 toward the middle of the screen,
+4. lets go where `to` went. The `via` points stay where they are, so a rest at the edge still turns the page.
 
-If the icons only trade places or the target moves aside, observe and aim again from where they are now; the same drag again misses the same way. Other launchers were not measured.
+A drop on the dock, or on a page that did not shrink, stays at `to`. When Pinky cannot see where `to` went (nothing labelled near it, no clear match), it lets go at `to` and the result says so; observe to check where the app landed. The result also says when it moved the drop, and history shows where the finger let go. It adds about 0.6 to 0.8 s over USB (the short move and rest, a screenshot, and about 30 ms to compare), and over Wi-Fi a frame of the mirror when it is open, else a screenshot, which can take seconds. Other launchers were not measured: one that shrinks its page evenly toward the middle is followed the same way, and one that does something else gets the drop at `to`.
+
+If the icons only trade places or the target moves aside, observe and aim again from where they are now.
 
 ```json
 {"ref": 12, "hold_ms": 800, "via": [{"x": 1170, "y": 1300, "pause_ms": 700}], "to": {"x": 187, "y": 702}}

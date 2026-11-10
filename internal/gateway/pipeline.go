@@ -421,6 +421,8 @@ type prep struct {
 	// result should show what it did before the agent decides whether to
 	// repeat it, and a payment allowed for the task does not ask again.
 	settleFull bool
+	// follow follows a home screen's page under a drag (dragfollow.go).
+	follow *dragFollow
 }
 
 // personAllowed reports whether an action that runs with verdict v runs
@@ -1592,6 +1594,9 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		g.oweSettleLocked(d, time.Now())
 	}
 	g.mu.Unlock()
+	if a.Tool == "drag" && dev != nil {
+		p.follow = g.followDrag(d, dev, onBG, cur, p)
+	}
 	if dev == nil {
 		cancel()
 		res := errResult(ErrDeviceOffline, "%s is offline. Nothing was done.", d.name())
@@ -1690,6 +1695,9 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 	}
 	if inputNote != "" {
 		res.Message = strings.TrimSpace(res.Message + " " + inputNote)
+	}
+	if f := p.follow; f != nil && f.note != "" {
+		res.Message = strings.TrimSpace(res.Message + " " + f.note)
 	}
 	shot := g.startShot(d, next)
 	if early && shot == bshot {
@@ -1862,6 +1870,16 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 		dr, ok := dev.(driver.Dragger)
 		if !ok || p.drag == nil {
 			return fmt.Errorf("dragging: %w", driver.ErrUnsupported)
+		}
+		if p.follow != nil {
+			if rp, ok := dev.(driver.DragReplanner); ok {
+				err := p.follow.run(ctx, rp, *p.drag)
+				if p.follow.moved {
+					// History shows where the finger let go.
+					p.to = p.follow.dropped
+				}
+				return err
+			}
 		}
 		return dr.Drag(ctx, *p.drag)
 	case "key":

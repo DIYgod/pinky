@@ -66,6 +66,26 @@ func (g *Gateway) frameShot(ctx context.Context, key string, dev driver.Device) 
 	if err != nil {
 		return nil, err
 	}
+	return newestFrame(ctx, st)
+}
+
+// frameShotOpen is frameShot from a stream that is open already: it never
+// opens one, which waits for the phone's input (dragfollow.go).
+func (g *Gateway) frameShotOpen(ctx context.Context, key string) (image.Image, error) {
+	if err := video.Load(); err != nil {
+		return nil, fmt.Errorf("no screenshot: FFmpeg is missing (%v): %w", err, driver.ErrUnsupported)
+	}
+	ctx, cancel := context.WithTimeout(ctx, frameShotTimeout)
+	defer cancel()
+	st, err := g.watchOpen(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return newestFrame(ctx, st)
+}
+
+// newestFrame decodes the newest picture of st and closes it.
+func newestFrame(ctx context.Context, st driver.Stream) (image.Image, error) {
 	defer st.Close()
 	dec, err := video.NewDecoder(st.Codec(), video.DecoderOptions{})
 	if err != nil {

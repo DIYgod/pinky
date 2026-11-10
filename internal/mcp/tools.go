@@ -436,8 +436,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		Description: "Drag with one finger to move something: press an element (ref) or a point (from), rest there hold_ms to pick it up, move through the via points (resting at each for its pause_ms) to to, rest pause_ms and let go, without the fling of a swipe. " +
 			"For app icons between home screen pages or into folders, list rows, sliders and map pins; use phone_swipe to scroll. A home screen turns one page while the finger rests about 0.7 s near its left or right edge, and more the longer it rests. " +
 			"To drop into a folder, or onto an app to make one, let go over its icon where it is during the drag; the picked-up icon keeps where the finger holds it, so press the app at its ref and aim from the target's ref point. " +
-			"Pixel Launcher shrinks the home screen page (not the dock) as soon as it picks an icon up, and the screen cannot be read during a drag: on a 1080x2400 Pixel emulator the page shrank by about 0.78 toward about 540,990 (the middle across, 41% down), so let go at about centre + 0.78 × (target − centre) (an app listed @663,1619 took a drop at 634,1500); other launchers were not measured. " +
-			"If the icons only traded places or moved aside, observe and aim again from where they are now; the same drag again misses the same way. " +
+			"Give to where the target is on the screen you read: on an Android home screen with hold_ms 300 or more, Pinky follows the page, which Pixel Launcher shrinks toward the middle (the dock stays) as soon as it picks an icon up. It lifts the icon a little, compares the screen with the one from before and lets go where to went; via points stay where they are. That adds under a second (more over Wi-Fi with the mirror closed), and the result says when it moved the drop or could not see where to went. " +
+			"If the icons only traded places or moved aside, observe and aim again from where they are now. " +
 			"The person's rules judge a drag like a swipe, at every point the finger presses, rests on or lets go at.",
 		InputSchema: schema[dragIn](func(p map[string]*jsonschema.Schema) {
 			patchDrag(p)

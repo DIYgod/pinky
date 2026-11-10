@@ -539,6 +539,8 @@ Not checked on a real phone: makers' resolvers (MIUI and HyperOS show their own 
 
 `phone_drag` (docs/notes/gateway.md, "Dragging") goes through the scrcpy session like a swipe, with one finger (`scrcpy.PointerGenericFinger`): down at the press point, a move every 8 ms (`swipeStep`) along `driver.Drag.Steps`, no events while the finger rests (the launcher and the system see a finger held still), and up at the drop point. Each step keeps to the drag's own clock, and the finger always lifts, also when the call is cancelled. `Device` and `Background` both implement it, so it works on the phone's own screen and on a background display.
 
+Both also implement `driver.DragReplanner`: `DragReplan` plays the stops up to `at`, calls back with the finger down and still (holding the input lock, so the callback must not send input or open a stream), and plays the stops the callback returns, or the rest as they were. The gateway uses it to follow Pixel Launcher's shrinking page (docs/notes/gateway.md, "Dragging"), which the measurements below are about.
+
 **Checked on the pinky-api36 emulator (Android 16, Pixel Launcher)** through a temporary device test that ran `phone_drag` actions through the gateway (not committed):
 
 | What | Result |
@@ -552,7 +554,7 @@ Not checked on a real phone: makers' resolvers (MIUI and HyperOS show their own 
 
 **Dropping onto an app on Pixel Launcher** (same emulator, the launcher reset with `pm clear` between runs; Gmail listed `@416,1619` dragged onto Photos listed `@663,1619`, hold 800):
 
-- As soon as the icon is picked up, the launcher shrinks the workspace page by about 0.78 toward about 540,990 (the middle across, 41% down) and shows a Remove bar; the dock does not move. A `uiautomator dump` taken while the finger rests has no workspace at all, only the drag layer, a drop-target node ("Move to row 4 column 2 in Home screen 1 of 0"), the Remove bar, the page indicator and the dock, so the gateway cannot look the target up again mid-drag.
+- As soon as the icon is picked up, the launcher shrinks the workspace page by about 0.78 toward about 540,990 (the middle across, 41% down) and shows a Remove bar; the dock does not move. A `uiautomator dump` taken while the finger rests has no workspace at all, only the drag layer, a drop-target node ("Move to row 4 column 2 in Home screen 1 of 0"), the Remove bar, the page indicator and the dock, so the gateway cannot look the target up again mid-drag: it compares pictures instead.
 - The picked-up icon keeps where the finger holds it, so the 32 px between a home screen ref's point (icon and label together) and its icon picture cancels out between two refs.
 - Letting go where Photos was before the drag (`663,1619`, or its icon picture's middle `663,1587`) never made a folder: Photos moved up a row and Gmail took its place, with rests of 300, 800, 1500 and 2000 ms and moves of 200 and 1500 ms.
 - Letting go where Photos was during the drag always made one: `416,1619 > 634,1500` (from ref points, 300 ms and 2.5 s rests), `416,1587 > 634,1468` (icon middles), and YouTube onto Gmail at `910,1619 > 443,1481` (`centre + 0.78 × (target − centre)` from Gmail's ref point).
