@@ -22,6 +22,7 @@ import (
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/secret"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui"
 )
 
@@ -75,6 +76,14 @@ func runApp(args []string) error {
 	var unlock pinSource
 	unlock.on.Store(settings.UnlockFromComputer)
 	c.PIN = unlock.pin
+	// Set when `pinky daemon` takes this app's place (below); it starts
+	// once the gateway here has let go of the socket.
+	var daemon func()
+	defer func() {
+		if daemon != nil {
+			daemon()
+		}
+	}()
 	rg, err := startGateway(c)
 	if running := (*api.RunningError)(nil); errors.As(err, &running) {
 		// An agent's `pinky daemon`, or another Pinky window.
@@ -116,7 +125,8 @@ func runApp(args []string) error {
 	}()
 
 	gatewaySettings(&settings, rg)
-	return ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
+	ready := false
+	err = ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
 		BindShow: func(f func()) { show.Store(&f) },
 		Version:  version,
 		Theme:    *theme,
@@ -145,11 +155,33 @@ func runApp(args []string) error {
 		// The window is up: an update that just swapped this version in
 		// can drop the old one.
 		OnReady: func(*mygo.Window) {
+			ready = true
 			if err := swapped.Confirm(); err != nil {
 				c.Log.Warn("update: confirm", "err", err)
 			}
 		},
 	})
+	if err != nil && *background && !ready {
+		// No display after all, or the app's libraries are missing. The
+		// gateway was up for a moment, though, and answered the agent whose
+		// `pinky mcp` started this app: too late for the shim to start the
+		// daemon instead (launchGateway). So the app leaves the daemon
+		// behind, and the restart marker keeps the agent's session, as it
+		// does when the app takes over from a daemon (takeOver).
+		c.Log.Warn("Pinky cannot show itself here; pinky daemon takes its place", "err", err)
+		upd.MarkRestart()
+		daemon = func() {
+			mode := daemonMode
+			if c.Fake {
+				mode = fakeMode
+			}
+			if _, err := startDaemon(dirs, mode); err != nil {
+				c.Log.Error("start pinky daemon", "err", err)
+				update.RestartDone(filepath.Dir(upd.StatePath))
+			}
+		}
+	}
+	return err
 }
 
 // openLog opens the app's log for appending, starting over once it passes
