@@ -272,7 +272,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 						if pl.pos-mk.At < 2*time.Second && mk.Step >= 0 && mk.Step < len(t.Steps) {
 							if s := t.Steps[mk.Step]; !s.Target.Empty() {
 								pt.Clip(r, inner, func() {
-									drawOverlay(pt, r, p, s, stepDone, float32(pl.picW), float32(pl.picH), false)
+									drawOverlay(pt, r, p, s, stepDone, shotMarks{}, float32(pl.picW), float32(pl.picH), false)
 								})
 							}
 						}
