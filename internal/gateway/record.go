@@ -326,6 +326,9 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 	}
 	g.stopVideoLocked(d, outcome != OutcomeStopped)
 	g.closeBackgroundLocked(l)
+	if d.lease == nil {
+		g.switchBackLater(d) // a connection the task moved it to (taskconn.go)
+	}
 	if ll, ok := d.dev.(driver.LogListener); ok && l.logsRead {
 		go ll.StopAppLogs()
 	}

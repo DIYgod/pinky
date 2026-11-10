@@ -390,7 +390,7 @@ func dialogElements(app *axpObject, els []raxElement, scale float64, w, h int) [
 		}
 		tree = append(tree, e)
 	}
-	out, _ := raxScreenElements(tree, scale, w, h, springBoard)
+	out, _, _ := raxScreenElements(tree, scale, w, h, springBoard)
 	return out
 }
 

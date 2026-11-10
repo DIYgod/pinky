@@ -23,6 +23,22 @@ func ocrRect(l ocrLine, w, h int) screen.Rect { return ocr.Rect(l, w, h) }
 // keyboardFromOCR finds an on-screen keyboard in OCR lines (ocr.KeyboardTop).
 func keyboardFromOCR(lines []ocrLine) (float64, bool) { return ocr.KeyboardTop(lines) }
 
+// keyboardSuggestions is how far above its top row of keys, as a part of
+// the screen's height, the keyboard starts: its suggestions bar lies
+// there, which OCR does not tell from the app.
+const keyboardSuggestions = 0.06
+
+// noteOCRKeyboard marks the keyboard as shown on s, whose keys' top row
+// OCR found at top (normalized), with its frame unless the tree gave one.
+func noteOCRKeyboard(s *screen.Screen, top float64) {
+	s.Keyboard = true
+	if !s.KeyboardFrame.Empty() || s.Width <= 0 || s.Height <= 0 {
+		return
+	}
+	y := max(0, int((top-keyboardSuggestions)*float64(s.Height)))
+	s.KeyboardFrame = screen.Rect{Y: y, W: s.Width, H: s.Height - y}
+}
+
 // ocrExtras returns the OCR lines no element already shows, as OCR
 // elements (ocr.Extras).
 func ocrExtras(els []screen.Element, lines []ocrLine, w, h int) []screen.Element {

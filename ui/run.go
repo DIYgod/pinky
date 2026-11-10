@@ -134,6 +134,10 @@ type Settings struct {
 	// IOSWiFi uses iPhones and iPads over Wi-Fi when this computer reaches
 	// them there (gateway.SetWiFi); off, only on a cable.
 	IOSWiFi bool
+	// StopADBOnQuit stops, when Pinky quits, the adb server that runs the
+	// adb that comes with Pinky, unless another program uses it
+	// (adb.Client.StopPinkyADB); not when Pinky quits for an update.
+	StopADBOnQuit bool
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -167,6 +171,7 @@ func DefaultSettings() Settings {
 		AutoUpdate:    true,
 		KeepAwakeAway: true,
 		IOSWiFi:       true,
+		StopADBOnQuit: true,
 	}
 }
 
@@ -341,7 +346,7 @@ func newApp(api gateway.API, opt Options) *app {
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
 	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
-		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
+		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, failure: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
 	a.rec = recState{views: map[string]*recEntry{}}
 	a.control = map[string]controlText{}

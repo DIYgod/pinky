@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -8,6 +9,7 @@ import (
 
 	mg "github.com/egoist/mygo/ui"
 
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
@@ -83,5 +85,30 @@ func TestFeedbackDiagnosticsStayEnglish(t *testing.T) {
 			t.Errorf("Chinese in the diagnostics: %q", lines)
 			break
 		}
+	}
+}
+
+// TestFeedbackDiagnosticsSayWhyCompanionFailed: when the companion's
+// service did not come on, the diagnostics carry what the phone showed, in
+// English, while the card says it in the app's language (issue #56: the
+// line about it in pinky.log had scrolled out of the last lines).
+func TestFeedbackDiagnosticsSayWhyCompanionFailed(t *testing.T) {
+	inLanguage(t, "zh-Hans")
+	ta := newTestApp(t, fakeapi.OnePhone)
+	ta.waitFor(t, "Pixel 9", func() bool { return ta.device("pixel-9") != nil })
+	const detail = "no answer within 10s; Android is still binding it; its app is not running"
+	ta.api.SetInstallError("pixel-9", fmt.Errorf("android: %w", &driver.CompanionStartError{Detail: detail}))
+	ta.installCompanion(*ta.device("pixel-9"))
+	ta.waitFor(t, "the install", func() bool { return ta.comp.installing["pixel-9"].IsZero() })
+	lines := strings.Join(ta.diagnosticLines(), "\n")
+	if !strings.Contains(lines, "Companion on pixel-9: ") || !strings.Contains(lines, detail) {
+		t.Errorf("the diagnostics do not say why: %q", lines)
+	}
+	// Turning it on again starts afresh.
+	ta.api.SetInstallError("pixel-9", nil)
+	ta.installCompanion(*ta.device("pixel-9"))
+	ta.waitFor(t, "the install", func() bool { return ta.comp.installing["pixel-9"].IsZero() })
+	if lines := strings.Join(ta.diagnosticLines(), "\n"); strings.Contains(lines, "Companion on") {
+		t.Errorf("an old failure stays: %q", lines)
 	}
 }

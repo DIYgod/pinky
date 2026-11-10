@@ -15,7 +15,7 @@ import (
 // order.
 func probeOut(sections map[string]string) string {
 	var b strings.Builder
-	for _, name := range []string{"setting", "user", "pid", "socket", "a11y", "log", "now", "crash"} {
+	for _, name := range []string{"setting", "user", "pid", "socket", "a11y", "log", "now", "crash", "package", "record", "bad", "system"} {
 		if s, ok := sections[name]; ok {
 			b.WriteString(probeMark + name + "\n" + s)
 		}
@@ -94,7 +94,7 @@ func TestProbe(t *testing.T) {
 1794200000.000  1700  1700 E AndroidRuntime: java.lang.OutOfMemoryError: old
 `}),
 			facts: []string{"Android lists it as enabled but has not bound it", "Android lists it as crashed",
-				"its app is not running", "it crashed: java.lang.IllegalStateException: boom"},
+				"its app is not running", "it crashed 4s ago: java.lang.IllegalStateException: boom"},
 			not: []string{"old", "UI automation"},
 		},
 		{
@@ -131,6 +131,57 @@ Ui Automation[eventTypes=TYPES_ALL_MASK, notificationTimeout=0]
      Binding services:{}]
 `}),
 			facts: []string{"something took it off enabled_accessibility_services again", "Android does not list it as enabled"},
+		},
+		{
+			// Issue #56, a Huawei Mate 10 on EMUI (Android 10) after the
+			// person turned off its launch manager's auto-manage: the
+			// setting stays and Android binds, but the app's process
+			// never starts and it never logs. logcat prints its header
+			// alone, which is not a log line of the app. What the system
+			// said is made up here: no EMUI phone was at hand.
+			name: "binding, process never started", app: Release,
+			sections: with(probeUIAutomation, map[string]string{
+				"pid":    "",
+				"socket": "0\n",
+				"log":    "--------- beginning of main\n",
+				"a11y": `User state[attributes:{id=0, installedServiceCount=1}
+     Bound services:{}
+     Enabled services:{{app.pinky.companion/app.pinky.companion.PinkyAccessibilityService}}
+     Binding services:{{app.pinky.companion/app.pinky.companion.PinkyAccessibilityService}}]
+`,
+				"crash":   "--------- beginning of crash\n",
+				"package": "stopped=true\nnotLaunched=true\n",
+				"record": `  * ServiceRecord{5d1c2e0 u0 app.pinky.companion/.PinkyAccessibilityService}
+    app=null
+    restartDepth=0 restartCount=3 restartDelay=+40s0ms restartTime=-2s crashCount=2
+`,
+				"bad": "",
+				"system": `--------- beginning of events
+1794287200.000  1000  1100 I am_proc_start: [0,9000,10200,app.pinky.companion,service,{app.pinky.companion/app.pinky.companion.PinkyAccessibilityService}]
+1794287338.100  1000  1100 I am_proc_start: [0,9100,10200,app.pinky.companion,service,{app.pinky.companion/app.pinky.companion.PinkyAccessibilityService}]
+1794287338.200  1000  1100 I am_kill : [0,9100,app.pinky.companion,900,startup forbidden]
+1794287338.300  1000  1100 I am_kill : [0,9100,app.pinky.companion,900,startup forbidden]
+`,
+			}),
+			facts: []string{"Android is still binding it", "its app is not running", "its package is stopped",
+				"its app was never opened", "Android's record of the service has no process",
+				"Android restarted it 3 times", "it crashed 2 times",
+				`the system said: "I/am_proc_start: [0,9100,10200,app.pinky.companion,service,{app.pinky.companion/app.pinky.companion.PinkyAccessibilityService}]", "I/am_kill : [0,9100,app.pinky.companion,900,startup forbidden]"`},
+			not: []string{"last log line", "beginning of", "[0,9000,", "bad process", "it crashed: ", "UI automation"},
+		},
+		{
+			// A crash from an earlier try, minutes ago, still counts; one
+			// from long before does not. The app counts as a bad process.
+			name: "crashed on an earlier try", app: Release,
+			sections: with(probeUIAutomation, map[string]string{
+				"pid":  "",
+				"a11y": "     Bound services:{}\n     Enabled services:{{app.pinky.companion/.PinkyAccessibilityService}}\n",
+				"crash": `1794287045.000  1882  1882 E AndroidRuntime: Process: app.pinky.companion, PID: 1882
+1794287045.000  1882  1882 E AndroidRuntime: java.lang.NoSuchMethodError: no method
+`,
+				"bad": "    Bad process app.pinky.companion uid 10200: crashed at time 1794287045000\n",
+			}),
+			facts: []string{"it crashed 300s ago: java.lang.NoSuchMethodError: no method", "Android counts its app as a bad process"},
 		},
 		{
 			// A phone whose shell lacks some commands: what came back

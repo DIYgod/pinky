@@ -29,6 +29,11 @@ type Updater struct {
 	Platform string
 	// Client fetches the feed and downloads; nil is NewClient().
 	Client *http.Client
+	// API is GitHub's REST API, which the feed and the package are fetched
+	// through when their links fail (a 5xx, a timeout, no connection). ""
+	// is GitHubAPI for the default feed, and no fallback for another Feed
+	// or $PINKY_UPDATE_FEED.
+	API string
 	// Cache keeps a download while it is unpacked and checked.
 	Cache string
 	// Downloads is where a release the person installs by hand goes, such
@@ -118,6 +123,16 @@ func (u *Updater) client() *http.Client {
 	return NewClient()
 }
 
+func (u *Updater) api() string {
+	if u.API != "" {
+		return u.API
+	}
+	if u.Feed == "" && strings.TrimSpace(os.Getenv(FeedEnv)) == "" {
+		return GitHubAPI
+	}
+	return ""
+}
+
 func (u *Updater) platform() string {
 	if u.Platform != "" {
 		return u.Platform
@@ -137,6 +152,14 @@ func (u *Updater) Check(ctx context.Context) (*Release, error) {
 		feedURL = FeedURL()
 	}
 	f, err := FetchFeed(ctx, u.client(), feedURL, u.Version)
+	if api := u.api(); api != "" && retryable(ctx, err) {
+		u.logger().Warn("update: the feed failed, trying GitHub's API", "err", err)
+		f2, err2 := fetchFeedAPI(ctx, u.client(), api, u.Version)
+		if err2 != nil {
+			return nil, fmt.Errorf("%w (through GitHub's API: %v)", err, err2)
+		}
+		f, err = f2, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +221,14 @@ func (u *Updater) Prepare(ctx context.Context, r Release, progress func(done, to
 	}
 	log := u.logger()
 	log.Info("update: downloading", "version", r.Version, "url", r.Asset.URL, "size", r.Asset.Size)
-	file, err := Download(ctx, u.client(), r.Asset, dir, u.Version, progress)
+	var alt opener
+	if api := u.api(); api != "" {
+		alt = func(ctx context.Context) (*http.Response, error) {
+			log.Warn("update: the download failed, trying GitHub's API", "version", r.Version)
+			return openAssetAPI(ctx, u.client(), api, u.Version, r.Feed, assetName(r.Asset.URL))
+		}
+	}
+	file, err := download(ctx, u.client(), r.Asset, dir, u.Version, progress, alt)
 	if err != nil {
 		return nil, err
 	}

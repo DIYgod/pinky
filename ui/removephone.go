@@ -228,6 +228,7 @@ func (a *app) forgetPhone(id string, history bool) {
 	delete(comp.loading, id)
 	delete(comp.installing, id)
 	delete(comp.err, id)
+	delete(comp.failure, id)
 	delete(comp.later, id)
 	a.forgetRefused(id)
 	conn := &a.conn // Settings › Phones' connection choice, read again should it come back

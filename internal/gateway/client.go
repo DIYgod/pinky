@@ -78,6 +78,10 @@ func featuresOf(dev driver.Device) Features {
 func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, string) {
 	l := d.lease
 	if !d.online {
+		if d.switching != "" && !waitsForStep(d.info.State) {
+			// Moving to another connection for a task (taskconn.go).
+			return DeviceConnecting, switchingLine(d)
+		}
 		if d.opening && d.info.State == driver.StateOnline {
 			return DeviceConnecting, connectingLine(d)
 		}

@@ -30,17 +30,41 @@ var StallTimeout = time.Minute
 // reporting progress (bytes so far, total) at most ten times a second. It
 // returns the file's path; nothing is left in dir when it fails.
 func Download(ctx context.Context, client *http.Client, a Asset, dir, version string, progress func(done, total int64)) (string, error) {
+	return download(ctx, client, a, dir, version, progress, nil)
+}
+
+// opener starts a download, through one route.
+type opener func(ctx context.Context) (*http.Response, error)
+
+// download is Download that tries alt when the asset's URL fails in a way
+// another route may not (retryable); alt may be nil.
+func download(ctx context.Context, client *http.Client, a Asset, dir, version string, progress func(done, total int64), alt opener) (string, error) {
 	if err := checkAsset(a); err != nil {
 		return "", err
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
+	file, err := downloadFrom(ctx, a, dir, progress, func(ctx context.Context) (*http.Response, error) {
+		return get(ctx, client, a.URL, version)
+	})
+	if err == nil || alt == nil || !retryable(ctx, err) {
+		return file, err
+	}
+	file, err2 := downloadFrom(ctx, a, dir, progress, alt)
+	if err2 != nil {
+		return "", fmt.Errorf("%w (through GitHub's API, after the link failed: %v)", err2, err)
+	}
+	return file, nil
+}
+
+// downloadFrom is one try of download, through open.
+func downloadFrom(ctx context.Context, a Asset, dir string, progress func(done, total int64), open opener) (string, error) {
 	ctx, cancel := context.WithCancelCause(ctx)
 	defer cancel(nil)
 	stall := time.AfterFunc(StallTimeout, func() { cancel(ErrStalled) })
 	defer stall.Stop()
-	resp, err := get(ctx, client, a.URL, version)
+	resp, err := open(ctx)
 	if err != nil {
 		return "", stalled(ctx, err)
 	}

@@ -171,6 +171,24 @@ Now the client says the install did not finish only when its own wait ran out. W
 
 Ruled out for the issue: Android 10 over Wi-Fi as such (the emulator over TCP came on in under 200 ms, and the Pixel on Android 10 works over Wi-Fi); a settings write refused without an error (Pinky's adb uses shell protocol v2, which keeps the exit status, so a refusal would show `WRITE_SECURE_SETTINGS`); a port blocked on the network (the forward runs inside adbd's connection). Not reproduced, and what the probe should now tell apart: a phone maker's autostart or battery manager that keeps the app from starting (MIUI, ColorOS, EMUI, and HarmonyOS, which reports Android 10), a crash when the service starts, and something removing the setting again.
 
+### The Huawei Mate 10 (EMUI, Android 10), second round
+
+The reporter's phone gave two answers. First: `something took it off enabled_accessibility_services again; Android does not list it as enabled; its app is not running`. On Android 10 and earlier, `AccessibilityManagerService` removes a package's services from `enabled_accessibility_services` when the package is force-stopped (`onHandleForceStop`), and EMUI's launch manager force-stops apps it manages automatically, so this fits. After the person turned off auto-manage and allowed auto-start, associated start and background activity, the setting stayed: `Android is still binding it; its app is not running; its socket is not listening`, and no log line of the app. So Android accepted the bind (it lists the service in `Binding services` only after `bindServiceAsUser` returned true) but the app's process never ran for 10 s, with no crash in the crash buffer. Stock Android starts the process for such a bind (the Android 10 emulator and the Pixel on Android 10 do, in well under 2 s); something in EMUI keeps it from starting or kills it at once. The earlier probe could not tell which: it read only the app's side.
+
+The probe now also reads the system's side:
+
+- `dumpsys package`: `stopped=true` (force-stopped, or not started since the install) and `notLaunched=true` (never opened);
+- `dumpsys activity services <package>`: whether Android's `ServiceRecord` has a process (`app=null`), its `restartCount` and `crashCount`;
+- `dumpsys activity processes`: whether Android counts the app as a bad process;
+- the system's own log lines that name the package from the events, system and main buffers in the last two minutes (`am_proc_start`, `am_proc_died`, `am_kill` with its reason, `ActivityManager: Unable to launch app …`, a phone maker's startup manager), the last four, without bookkeeping (`SettingsShellCmd`, which would also name the person's other services, `ProcessStats`, `artd`, `am_compact`);
+- a crash of the app in the last ten minutes instead of the last minute, with its age: an earlier try may have made it crash.
+
+logcat's `--------- beginning of main` header no longer passes for the app's last log line. On the Android 16 emulator the whole probe ran in about a second.
+
+The client also keeps the driver's English error for each phone whose service did not come on and puts it in the summary of Send Feedback's diagnostics (`Companion on <phone-1>: …`). Before, it was only in pinky.log, logged once per new reason, and in the reporter's diagnostics it had scrolled out of the last lines under the lease messages of a long remote session.
+
+Not tried, and worth asking the reporter: opening Pinky Companion once from the launcher (it clears `notLaunched`, and some phone makers' managers start only apps the person has opened), then turning it on again.
+
 ## Results
 
 ### Round 3: the two emulators

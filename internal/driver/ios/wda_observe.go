@@ -154,8 +154,9 @@ const (
 // tab bar, a toolbar, the status bar or the keyboard, which WDA counts as
 // visible. The texts are left out; covered elements too, unless a good part
 // of them shows, as on the iOS 27 path (unoccluded).
-func wdaScreenElements(root *wdaNode, scale float64, w, h int, appID string) ([]screen.Element, bool) {
+func wdaScreenElements(root *wdaNode, scale float64, w, h int, appID string) ([]screen.Element, bool, screen.Rect) {
 	var out []screen.Element
+	var kb screen.Rect // the keyboard's frame
 	var over []occluder
 	keyboard := false
 	var walk func(n *wdaNode, path string, inKeyboard, inTabBar bool, said string, depth int)
@@ -183,6 +184,7 @@ func wdaScreenElements(root *wdaNode, scale float64, w, h int, appID string) ([]
 			if e.Visible {
 				keyboard = true
 				if !bar.Empty() {
+					kb = union(kb, bar)
 					over = append(over, occluder{r: bar})
 				}
 			}
@@ -218,7 +220,7 @@ func wdaScreenElements(root *wdaNode, scale float64, w, h int, appID string) ([]
 		}
 	}
 	walk(root, appID, false, false, "", 0)
-	return unoccluded(out, over, int(math.Round(minVisiblePoints*scale))), keyboard
+	return unoccluded(out, over, int(math.Round(minVisiblePoints*scale))), keyboard, kb
 }
 
 // isBar reports whether a node is a bar that content scrolls under: a

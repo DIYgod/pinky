@@ -120,6 +120,7 @@ type Gateway struct {
 	removed    map[string]bool           // phones the person removed, kept off the list while listed over the network (remove.go)
 	known      map[string]bool           // phones that are the person's, which providers may open over Wi-Fi (wifi.go)
 	names      map[string]history.Device // what the history store calls the phones Pinky has seen (wifi.go)
+	chosen     map[string]string         // the connection the person chose per phone, none for Automatic (connection.go)
 	wifiOn     bool                      // the providers use phones over Wi-Fi (SetWiFi)
 	keepDays   int                       // history retention; 0 keeps everything
 	prune      chan struct{}             // asks the retention loop to run now
@@ -153,6 +154,7 @@ func New(o Options) (*Gateway, error) {
 		removed:    map[string]bool{},
 		known:      map[string]bool{},
 		names:      map[string]history.Device{},
+		chosen:     map[string]string{},
 		prune:      make(chan struct{}, 1),
 	}
 	if g.policy == nil {
@@ -459,6 +461,13 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		g.setOffline(d, movingWhy(info.Connection))
 	}
 	g.mu.Lock()
+	if d.switching != "" && waitsForStep(info.State) {
+		// Moving to another connection for a task, it waits for the
+		// person (the passcode before the helper starts): the task's
+		// call says so at once (taskconn.go).
+		d.moving = time.Time{}
+		g.wakeLocked(d)
+	}
 	open := info.State == driver.StateOnline && d.dev == nil && !d.opening && !d.removed
 	if open {
 		d.opening, d.openingAt = true, time.Now()
@@ -502,6 +511,11 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	g.mu.Lock()
 	d.opening = false
 	if err != nil || g.closed || d.removed {
+		if err != nil && d.switching != "" {
+			// It did not open over the connection a task moved it to:
+			// the task goes back at once (taskconn.go).
+			d.moving = time.Time{}
+		}
 		g.wakeLocked(d) // calls waiting for the open (connectWait) go on
 		g.mu.Unlock()
 		if err == nil {
@@ -615,8 +629,10 @@ func (g *Gateway) expireOffline() {
 	var ls []*lease
 	for _, d := range g.devices {
 		// A lease on a phone that waits for a step waits with it: the
-		// person is setting it up (device_needs_setup).
-		if !d.online && d.lease != nil && !waitsForStep(d.info.State) && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
+		// person is setting it up (device_needs_setup). So does one on a
+		// phone a task moves to another connection (taskconn.go), which
+		// may take as long as the grace and falls back when it fails.
+		if !d.online && d.lease != nil && d.switching == "" && !waitsForStep(d.info.State) && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
 			ls = append(ls, d.lease)
 		}
 	}

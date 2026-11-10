@@ -2,6 +2,23 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1110.21 (2026-11-10)
+
+- Swipes, taps, drags and pinches on an element now stay clear of the on-screen keyboard instead of landing on its keys. When too little of the element shows above the keyboard, the agent is told to hide the keyboard first.
+- An iPhone left on Automatic with the WebDriverAgent helper installed now switches a task to the helper by itself when the task opens DBS digibank or China Merchants Bank, so those apps run, and goes back to CoreDevice after the task. Agents can also ask for the helper with connection in phone_connect.
+
+## 2026.1110.20 (2026-11-10)
+
+- Quitting Pinky now also stops the adb it brought for Android phones, so no adb process is left running, unless another app such as Android Studio is using it. An adb you installed yourself keeps running. Turn this off in Settings › Advanced.
+
+## 2026.1110.19 (2026-11-10)
+
+- Unlocking a vivo phone from the computer now works when its lock screen asks for a fingerprint first: Pinky taps "Use password" and enters the PIN.
+- Checking for and downloading updates now goes through GitHub's API when GitHub's download links fail, as they did for hours on 8 November.
+- When Pinky Companion's service does not start on a phone, the message now also says what Android reported about the app's process, and Help › Send Feedback… includes it.
+- On the very first run, an agent that connected the moment Pinky started could be refused with "bad agent token". It now connects.
+- On iPhone, tapping a switch in Settings or a SwiftUI app now flips it instead of tapping its label, and the agent is told when a switch stayed as it was.
+
 ## 2026.1110.18 (2026-11-10)
 
 - Dragging the timeline of a recorded task jumps straight to that moment and shows the right picture, also while paused, instead of replaying from the start. Thanks to tarou-jp.

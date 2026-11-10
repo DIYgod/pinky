@@ -96,6 +96,11 @@ func runApp(args []string) error {
 	if err != nil {
 		return failed(err)
 	}
+	// Once the gateway has closed (deferred calls run last to first).
+	var stopADB atomic.Bool
+	stopADB.Store(settings.StopADBOnQuit)
+	var restarting bool
+	defer func() { stopADBAtQuit(stopADB.Load(), c.Fake, restarting, c.Log) }()
 	defer rg.Close()
 	rg.srv.Kind = api.KindApp
 	// Opening Pinky again shows this window (takeOver), once the client
@@ -136,6 +141,7 @@ func runApp(args []string) error {
 			applySettings(rg, old, s, c.Log)
 			applyTelemetry(tel, s)
 			unlock.on.Store(s.UnlockFromComputer)
+			stopADB.Store(s.StopADBOnQuit)
 			if err := saveSettings(settingsPath, s); err != nil {
 				c.Log.Warn("save settings", "err", err)
 			}
@@ -181,6 +187,8 @@ func runApp(args []string) error {
 			}
 		}
 	}
+	// Read after MarkRestart above, so a handover keeps adb for the daemon.
+	restarting = update.Restarting(dirs.Config)
 	return err
 }
 

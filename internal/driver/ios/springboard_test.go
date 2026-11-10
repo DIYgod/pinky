@@ -131,7 +131,7 @@ func TestRAXScreenElementsUnderBanner(t *testing.T) {
 		{Object: &axpObject{PID: 5, ID: 1}, Parent: 0, Type: xcButton, Label: "Back", Frame: axpRect{8, 50, 60, 30}, HasFrame: true, IsElement: true, Visible: true, Enabled: true},
 		{Object: &axpObject{PID: 5, ID: 2}, Parent: 0, Type: xcTextView, Label: "Note", Frame: axpRect{0, 120, 375, 600}, HasFrame: true, IsElement: true, Visible: true, Enabled: true},
 	}
-	got, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.mobilenotes", screen.Rect{X: 24, Y: 30, W: 1077, H: 240})
+	got, _, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.mobilenotes", screen.Rect{X: 24, Y: 30, W: 1077, H: 240})
 	if len(got) != 1 || got[0].Label != "Note" {
 		t.Errorf("elements %+v; want the Back button under the banner left out", got)
 	}
