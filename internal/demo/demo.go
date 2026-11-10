@@ -98,7 +98,7 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 
 // Input is one recorded input.
 type Input struct {
-	Kind string // tap, long_press, swipe, pinch, type, key, launch, link, touch, touch2
+	Kind string // tap, long_press, swipe, pinch, drag, type, key, launch, link, touch, touch2
 	P    screen.Point
 	To   screen.Point
 	Text string
@@ -405,6 +405,16 @@ func (d *Device) Pinch(ctx context.Context, g driver.Pinch) error {
 	return nil
 }
 
+// Drag implements driver.Dragger. Nothing on the demo's screens moves; it
+// records where the finger touches down and lifts.
+func (d *Device) Drag(ctx context.Context, g driver.Drag) error {
+	if err := d.check(ctx); err != nil {
+		return err
+	}
+	d.record(Input{Kind: "drag", P: g.From, To: g.To()})
+	return nil
+}
+
 // Type implements driver.Device: it types into the focused field.
 func (d *Device) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
 	if err := d.check(ctx); err != nil {
@@ -658,4 +668,6 @@ var (
 	_ driver.Toucher       = (*Device)(nil)
 	_ driver.LockReporter  = (*Device)(nil)
 	_ driver.PersonWatcher = (*Device)(nil)
+	_ driver.Pincher       = (*Device)(nil)
+	_ driver.Dragger       = (*Device)(nil)
 )

@@ -855,3 +855,23 @@ Tests: `TestParseDisplayInfoFoldable`, `TestParseDisplayInfoBacklightPerDisplay`
 | SwiftUI: `SimultaneousGesture(MagnifyGesture(), RotateGesture())` | the same | ×2.99 while the fingers moved, then `onEnded` never came and later pinches changed nothing |
 
 The last row looks like how that test app combined the two gestures rather than the touches (the same touches work in the other two apps); worth a look on a real iPhone with an app that zooms and turns.
+
+## Dragging (`driver.Dragger`, `drag.go`, 2026-11-10)
+
+`phone_drag` (docs/notes/gateway.md, "Dragging") hands the driver a `driver.Drag`: press, hold, move through stops resting at each, let go.
+
+- **WebDriverAgent** (`WDADevice.Drag`, also Simulators through `simPhone`): one W3C touch pointer (`POST /actions`): move to the press point, down, a `pause` for the hold and for each rest, `pointerMove`s 40 ms apart along `Drag.Steps` (eased in and out), and up at the drop point, in WDA's points. XCTest plays the whole drag as one event, so its timing is the drag's own.
+- **Device Hub** (`Device.Drag`, iOS 27): `Drag.Steps` at 10 ms through `gestureSteps`, the loop `gesture` (swipes, long presses) now uses too: an HID report for each step that moves and none while the finger rests. Not tried on a phone: the owner's iPhone was not used.
+- **No helper** (`AXDevice`, below iOS 27): no input, so no `driver.Dragger`; the gateway answers `unsupported` before it asks.
+
+**Checked on an iOS 26.5 Simulator of its own** (WDA as for pinching; the other sessions' "Test iPhone" was left alone), through a temporary device test that ran `phone_drag` actions through the gateway (not committed):
+
+| What | Result |
+| --- | --- |
+| Hold 300 ms on an app icon, then move | no pickup: the page scrolled |
+| Hold 600, 800, 1000 ms | the icon lifts and the home screen goes into edit mode |
+| Hold 800, rest 1200 ms near the right edge, drop | two pages turned |
+| Hold 800, rest 700 ms near the right edge, drop | one page turned, the app on the next page; the same to the left brought it back |
+| Hold 800, rest 700 ms at the edge, then let go over a folder's icon on that page | the app went into the folder |
+
+The home screen stays in edit mode after a drag; Done (or the home key) ends it, which SKILL.md tells agents. The first run on a fresh Simulator lost WDA about 43 s in ("Test crashed with signal kill"; the cause was not found); a second run with logging went through.
