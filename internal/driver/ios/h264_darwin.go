@@ -153,6 +153,10 @@ type h264Encoder struct {
 	err error
 }
 
+// encoderName is the encoder's name for the log: macOS encodes with
+// VideoToolbox.
+func (e *h264Encoder) encoderName() string { return "videotoolbox" }
+
 type encodedFrame struct {
 	data     []byte // Annex B
 	config   []byte // SPS and PPS, Annex B; only with key frames

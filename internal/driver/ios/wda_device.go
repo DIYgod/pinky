@@ -894,7 +894,7 @@ func (d *WDADevice) Stream(ctx context.Context, opt driver.StreamOptions) (drive
 		return nil, err
 	}
 	d.interfaceTurn(ctx) // the first frames' turn
-	s, err := startFrameStream(ctx, func(ctx context.Context) (frameSource, error) {
+	s, err := startFrameStreamLog(ctx, d.log, func(ctx context.Context) (frameSource, error) {
 		src, err := openMJPEG(ctx, d.c.long, d.c.mjpeg)
 		if r, ok := src.(*mjpegReader); ok {
 			// Upside down, the frames' EXIF says up (see pictureTurn).

@@ -15,6 +15,9 @@ import (
 
 type h264Encoder struct{ w, h int }
 
+// encoderName is the encoder's name for the log; this system has none.
+func (e *h264Encoder) encoderName() string { return "none" }
+
 type encodedFrame struct {
 	data     []byte
 	config   []byte
