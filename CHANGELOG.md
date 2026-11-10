@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1110.9 (2026-11-10)
 
 - On a Mac, phones on Wi-Fi now come back by themselves after Pinky updates: Pinky restarts the adb server it started when that server lost Local Network access, and the checkup says what to do when another program's adb server can't reach your network. Thanks to NaNhkNaN.
 
