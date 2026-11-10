@@ -537,6 +537,8 @@ func hostWords(missing string) string {
 		return locales.CheckHostADBOld()
 	case "adb_restarts":
 		return locales.CheckHostADBRestarts()
+	case "adb_no_network":
+		return locales.CheckHostADBNoNetwork()
 	}
 	return ""
 }

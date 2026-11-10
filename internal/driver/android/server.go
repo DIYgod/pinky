@@ -1,6 +1,7 @@
 package android
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -43,6 +44,11 @@ const (
 	// hostADBRestarts: the server keeps going away, as when another
 	// program restarts it with an adb of another version.
 	hostADBRestarts = "adb_restarts"
+	// hostADBNoNetwork: the server cannot reach phones on the local
+	// network while Pinky can, and Pinky could not restart it: another
+	// program started it, or one Pinky started again cannot either
+	// (offnet.go).
+	hostADBNoNetwork = "adb_no_network"
 )
 
 // serverWatch decides when List starts an adb server, and keeps what
@@ -59,6 +65,13 @@ type serverWatch struct {
 	version int         // the protocol version of the server that answers, 0 when unknown
 	asked   bool        // its version was asked for since it came
 	aways   []time.Time // when a server that ran went away, within restartWindow
+
+	stopping    bool      // Pinky stops the server it started, to start another (offnet.go)
+	restartedAt time.Time // when it last did; once it has, it never does again in this run
+	triedAt     time.Time // when Pinky last dealt with a server cut off from the network
+	offNet      string    // an address the server that answers could not reach while Pinky could, "" for none
+	offNetOwn   bool      // that server is one Pinky started (again)
+	lastOwn     bool      // the server Pinky dealt with at triedAt was its own
 }
 
 // claim records that List found no server, and reports whether List
@@ -69,7 +82,8 @@ func (w *serverWatch) claim(now time.Time, logf func(string, ...any)) bool {
 	if w.downSince.IsZero() {
 		w.downSince = now
 		w.version, w.asked = 0, false
-		if w.seen {
+		w.offNet, w.offNetOwn = "", false
+		if w.seen && !w.stopping {
 			w.aways = append(recent(w.aways, now), now)
 			logf("android: the adb server went away; Pinky starts one if none is back within %v", serverAway)
 		}
@@ -148,6 +162,12 @@ func (w *serverWatch) check(now time.Time) driver.HostCheck {
 	case w.downSince.IsZero() && w.version > 0 && w.version < 41:
 		return driver.HostCheck{Missing: hostADBOld,
 			Detail: fmt.Sprintf("The adb server that runs is an old one (protocol %d, from Android platform tools older than 29), which cannot pair phones over Wi-Fi. Quit the program that started it, or stop it with `adb kill-server`: Pinky then starts its own.", w.version)}
+	case w.downSince.IsZero() && w.offNet != "" && w.offNetOwn:
+		return driver.HostCheck{Missing: hostADBNoNetwork,
+			Detail: "Android's adb server cannot reach phones on the local network (it got no route to " + w.offNet + ", which Pinky reaches), also after Pinky restarted it. On a Mac, check that Pinky is on in System Settings › Privacy & Security › Local Network."}
+	case w.downSince.IsZero() && w.offNet != "":
+		return driver.HostCheck{Missing: hostADBNoNetwork,
+			Detail: "Android's adb server cannot reach phones on the local network: it got no route to " + w.offNet + ", which Pinky reaches. On a Mac, a server loses Local Network access when the app that started it quits or is updated. Pinky did not start this one, so it leaves it running: quit the program that started it, or stop it with `adb kill-server`, and Pinky starts its own."}
 	}
 	w.aways = recent(w.aways, now)
 	if n := len(w.aways); n >= restartsMin {
@@ -155,4 +175,101 @@ func (w *serverWatch) check(now time.Time) driver.HostCheck {
 			Detail: fmt.Sprintf("Android's adb server stopped %d times in the last %v, and its phones disconnected each time: another program restarts it, most often with an adb of another version (an old one on PATH, or one that comes with another tool). Keep one adb, or quit that program.", n, restartWindow)}
 	}
 	return driver.HostCheck{}
+}
+
+// What tryRestart decides.
+const (
+	restartNow      = iota // stop the server and start another
+	restartUnderway        // a start or restart is under way: wait for it (waitRestart)
+	restartNo              // not now, or not again in this run
+)
+
+// tryRestart decides what to do about a server cut off from the network
+// (offnet.go). Pinky restarts a server once per run: one it started again
+// that cannot reach the network either will not after another restart,
+// and every restart drops every connection on the server, so CheckHost
+// reports it instead. A server Pinky could not restart (another
+// program's) is looked at again after offNetRetry. On restartNow it holds
+// off List's starts until restarted, and the server's going away does not
+// count as a restart by another program.
+func (w *serverWatch) tryRestart(now time.Time) int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	switch {
+	case w.starting:
+		return restartUnderway
+	case !w.restartedAt.IsZero():
+		return restartNo
+	case !w.triedAt.IsZero() && now.Sub(w.triedAt) < offNetRetry:
+		return restartNo
+	}
+	w.starting, w.stopping, w.triedAt = true, true, now
+	return restartNow
+}
+
+// waitRestart waits for the start or restart under way to end, and
+// reports whether a server answers then, as far as Pinky knows.
+func (w *serverWatch) waitRestart(ctx context.Context) bool {
+	for {
+		w.mu.Lock()
+		starting, err := w.starting, w.lastErr
+		w.mu.Unlock()
+		if !starting {
+			return err == nil
+		}
+		if sleepCtx(ctx, 100*time.Millisecond) != nil {
+			return false
+		}
+	}
+}
+
+// justRestarted reports whether Pinky is restarting the server, or did
+// within restartGrace: a phone that failed to connect then is not to
+// blame.
+func (w *serverWatch) justRestarted(now time.Time) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.stopping || (!w.restartedAt.IsZero() && now.Sub(w.restartedAt) < restartGrace)
+}
+
+// restarted records how a restart that tryRestart allowed went: own
+// reports whether the server was Pinky's, stopped whether it went, err how
+// starting another one did.
+func (w *serverWatch) restarted(now time.Time, own, stopped bool, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.starting, w.stopping = false, false
+	w.lastOwn = own
+	if !stopped {
+		return
+	}
+	w.restartedAt = now
+	w.offNet, w.offNetOwn = "", false
+	w.lastErr = err
+	if err != nil {
+		w.wait = serverRetry
+		w.next = now.Add(w.wait)
+	} else {
+		w.wait = 0
+		w.next = time.Time{}
+	}
+}
+
+// cutOff records that the server that answers could not reach addr while
+// Pinky could, for CheckHost: one Pinky started again when the last one
+// it dealt with was its own. Nothing while a restart is under way.
+func (w *serverWatch) cutOff(addr string) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.stopping {
+		return
+	}
+	w.offNet, w.offNetOwn = addr, w.lastOwn
+}
+
+// reached records that the server reached a phone on the network.
+func (w *serverWatch) reached() {
+	w.mu.Lock()
+	w.offNet, w.offNetOwn = "", false
+	w.mu.Unlock()
 }

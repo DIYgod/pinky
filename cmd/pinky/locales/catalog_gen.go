@@ -4367,6 +4367,30 @@ func (msgs Messages) CheckHelperUntil(when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperUntil", map[string]any{"when": when})
 }
 
+// CheckHostADBNoNetwork says "The adb server on this computer can't reach phones on your network, though Pinky can, so phones on Wi-Fi can't connec…"
+// in the language the app shows.
+//
+// The checkup and Add phone › Android: the adb server that runs gets no
+// route to phones on the network that Pinky itself reaches (on a Mac, it
+// lost Local Network access), and Pinky could not restart it. adb
+// kill-server is a command: keep it as it is. System Settings, Privacy &
+// Security and Local Network are macOS's own names: use those of macOS in
+// Simplified Chinese.
+func CheckHostADBNoNetwork() string { return In(i18n.Locale()).CheckHostADBNoNetwork() }
+
+// CheckHostADBNoNetwork says "The adb server on this computer can't reach phones on your network, though Pinky can, so phones on Wi-Fi can't connec…"
+// in the language of msgs.
+//
+// The checkup and Add phone › Android: the adb server that runs gets no
+// route to phones on the network that Pinky itself reaches (on a Mac, it
+// lost Local Network access), and Pinky could not restart it. adb
+// kill-server is a command: keep it as it is. System Settings, Privacy &
+// Security and Local Network are macOS's own names: use those of macOS in
+// Simplified Chinese.
+func (msgs Messages) CheckHostADBNoNetwork() string {
+	return Catalog.Format(msgs.locale, "checkHostADBNoNetwork", nil)
+}
+
 // CheckHostADBOld says "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such …"
 // in the language the app shows.
 //
@@ -14141,6 +14165,26 @@ func PairingErrNoAdb() string { return In(i18n.Locale()).PairingErrNoAdb() }
 // says why.
 func (msgs Messages) PairingErrNoAdb() string {
 	return Catalog.Format(msgs.locale, "pairingErrNoAdb", nil)
+}
+
+// PairingErrNoNetwork says "This computer's adb server can't reach phones on your network, though Pinky can. Quit the program that started it, or…"
+// in the language the app shows.
+//
+// Pair over Wi-Fi: the error when the adb server gets no route to the
+// phone's address, which Pinky itself reaches (on a Mac, the server lost
+// Local Network access), and Pinky could not restart it. adb kill-server is
+// a command: keep it as it is.
+func PairingErrNoNetwork() string { return In(i18n.Locale()).PairingErrNoNetwork() }
+
+// PairingErrNoNetwork says "This computer's adb server can't reach phones on your network, though Pinky can. Quit the program that started it, or…"
+// in the language of msgs.
+//
+// Pair over Wi-Fi: the error when the adb server gets no route to the
+// phone's address, which Pinky itself reaches (on a Mac, the server lost
+// Local Network access), and Pinky could not restart it. adb kill-server is
+// a command: keep it as it is.
+func (msgs Messages) PairingErrNoNetwork() string {
+	return Catalog.Format(msgs.locale, "pairingErrNoNetwork", nil)
 }
 
 // PairingErrNotListening says "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog…"
