@@ -179,8 +179,8 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
   | iOS | 方式 | 能做什么 | 测试过的设备 |
   | --- | --- | --- | --- |
   | 27 及以上 | Xcode 的 Device Hub 协议；手机上什么都不装 | 除双指缩放外的全部功能。输入文字时会先粘贴，再把你的剪贴板恢复原样 | iPhone 13 mini，iOS 27.0.1 |
-  | 17.4 及以上，装了辅助应用 | WebDriverAgent 辅助应用，从 Xcode 装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）：iOS 17.4 到 26 自动使用，iOS 27 上由你选 | 全部功能，而且手机不共享屏幕，所以拒绝屏幕共享的银行 App 照常能用（测试中有星展银行 digibank 和招商银行）。比 Device Hub 慢：读一次主屏幕约 7 秒（Device Hub 不到 0.5 秒），点一下要 0.5 到 0.8 秒。辅助应用启动前，iOS 偶尔会要求在手机上输入锁屏密码。实时画面需要 macOS | iPhone 13 mini，iOS 27.0.1，选了辅助应用；iOS 18.5 和 26.5 模拟器。还没在 iOS 27 以下的真机上试过 |
-  | 17.4 到 26，不装辅助应用 | 只用开发者服务；什么都不装 | 看画面（每秒几帧，限 macOS）、读屏幕（位置靠 OCR，限 macOS）、打开 App 和链接。不能点按、滑动、输入或回到主屏幕：没有辅助应用，手机不接受输入 | 同样的服务在 iOS 27.0.1 上测过；还没在 iOS 27 以下的真机上试过 |
+  | 17.4 及以上，装了辅助应用 | WebDriverAgent 辅助应用，从 Xcode 装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）：iOS 17.4 到 26 自动使用，iOS 27 上由你选 | 全部功能，而且手机不共享屏幕，所以拒绝屏幕共享的银行 App 照常能用（测试中有星展银行 digibank 和招商银行）。比 Device Hub 慢：读一次主屏幕约 7 秒（Device Hub 不到 0.5 秒），点一下要 0.5 到 0.8 秒。辅助应用启动前，iOS 偶尔会要求在手机上输入锁屏密码。实时画面在 macOS 和 Windows 上都能用 | iPhone 13 mini，iOS 27.0.1，选了辅助应用；iOS 18.5 和 26.5 模拟器。还没在 iOS 27 以下的真机上试过 |
+  | 17.4 到 26，不装辅助应用 | 只用开发者服务；什么都不装 | 看画面（每秒几帧，限 macOS 和 Windows）、读屏幕（位置靠 OCR，限 macOS）、打开 App 和链接。不能点按、滑动、输入或回到主屏幕：没有辅助应用，手机不接受输入 | 同样的服务在 iOS 27.0.1 上测过；还没在 iOS 27 以下的真机上试过 |
   | 17.3 及更早 | | 不支持：17.4 之前的连接需要管理员权限，iOS 16 及更早还需要当前 Xcode 已不再包含的开发者磁盘映像 | |
 
   辅助应用是 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你用 Xcode 重新安装；到期后，手机会显示为「需要设置」并说明原因，而不是启动辅助应用失败（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。
