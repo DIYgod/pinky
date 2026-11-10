@@ -210,7 +210,7 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 
 ### 更新
 
-Pinky 在启动时和之后每隔几小时检查一次新版本，有新版本时会显示一张卡片，写着更新了什么，附「立即更新」和「以后再说」。打开「设置 › 高级 › 自动更新」时（默认打开），它会在没有 Agent 在干活、你也有十分钟没用 Pinky 时自己装好，还会更新空闲的 Android 手机上的 Pinky Companion，更新后它的无障碍服务保持关闭，直到下一个任务。截至 2026 年 11 月 8 日的版本都用公开的密钥签名，遇到这样的 Pinky Companion，Pinky 会卸载它，重新安装用 Pinky 私有密钥签名的版本，并告诉你；如果手机在通过 USB 安装应用前会询问，手机页面会说明原因，等你点「更新」。更新之后，「新功能」会列出自你原来的版本以来的变化（Pinky 显示中文时来自 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md)，否则来自英文的 [CHANGELOG.md](CHANGELOG.md)）。
+Pinky 在启动时和之后每隔几小时检查一次新版本，有新版本时会显示一张卡片，写着更新了什么，附「立即更新」和「以后再说」。打开「设置 › 高级 › 自动更新」时（默认打开），它会在没有 Agent 在干活、你也有十分钟没用 Pinky 时自己装好，还会更新空闲的 Android 手机上的 Pinky Companion，更新后它的无障碍服务保持关闭，直到下一个任务。截至 2026 年 11 月 8 日的版本都用公开的密钥签名，遇到这样的 Pinky Companion，Pinky 会卸载它，重新安装用 Pinky 私有密钥签名的版本，并告诉你；如果手机在通过 USB 安装应用前会询问，手机页面会说明原因，等你点「更新」；不让通过 USB 安装应用的手机，每个新版本都要你手动安装（[怎么装](#install-companion-by-hand)）。更新之后，「新功能」会列出自你原来的版本以来的变化（Pinky 显示中文时来自 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md)，否则来自英文的 [CHANGELOG.md](CHANGELOG.md)）。
 
 - **macOS**：Pinky.app 会先核对下载文件的校验和、确认它由 Pinky 的开发者签名并经过 Apple 公证，再替换自己；新版本启动不了就退回旧版本。Homebrew cask 装的那份也会这样自己更新，它已经是最新时 `brew upgrade` 不会动它。直接从磁盘映像里运行的、或者放在你没有写权限的文件夹里的 Pinky，会告诉你怎么更新。
 - **Windows**：用安装程序装的 Pinky 会在核对校验和后静默运行新的安装程序，启动新版本，新版本启动不了就退回旧版本。免安装版会帮你下载安装程序。
@@ -259,6 +259,24 @@ Pinky 不会传。截图、录屏和记录都存在你的电脑上，默认保�
 <summary><b>Pinky 会在手机上装什么？</b></summary>
 
 Android 上，你点「安装」后会装上 Pinky Companion，之后 Pinky 会帮它保持最新，并且只在 Agent 工作时开启它的无障碍服务（[原因](#常见问题)）。iPhone 上，iOS 27 及以上不装任何应用：Pinky 只是像 Xcode 那样挂载 Apple 的开发者磁盘映像。iOS 17.4 到 26 上是 WebDriverAgent 辅助应用，要你从 Xcode 装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）。
+
+</details>
+
+<a id="install-companion-by-hand"></a>
+<details>
+<summary><b>怎么手动安装 Pinky Companion？</b></summary>
+
+有的手机不让电脑通过 USB 安装应用，比如没插 SIM 卡的小米手机打不开「USB安装」，这时可以自己安装 Pinky Companion。它的安装包 `pinky-companion.apk` 就在 Pinky 里：
+
+- **macOS：** 在应用里面，路径是 `Pinky.app/Contents/Resources/pinky-companion.apk`：在「应用程序」里右键 Pinky，选「显示包内容」。
+- **Windows：** 在 Pinky 所在的文件夹里，和 `Pinky.exe` 放在一起。
+- **Linux：** 在 `.tar.gz` 解压出来的文件夹里，和 `pinky` 放在一起；用 `.deb` 安装的在 `/opt/pinky/` 里。
+
+通过 USB 安装失败时，手机页面上的「显示 pinky-companion.apk」会帮你找到这个文件。把它拷到手机上（用数据线或聊天软件发过去都行），在手机上打开安装；手机可能会先让你允许用来打开它的应用安装应用。装好后 Pinky 会认出它，因为应用和签名都一样，就不会再提示安装了。
+
+在小米、Redmi 和 POCO 手机上，Pinky 点按、输入和开启 Pinky Companion 的无障碍服务，还需要打开「开发者选项」里的「USB调试（安全设置）」，打开后要重启手机才生效。这个开关和「USB安装」一样要联网向小米核验，也可能要求插 SIM 卡。没有它，Pinky Companion 装上了也开不起来，Pinky 在这台手机上也没法点按和输入。
+
+Pinky 每次更新都会带上新版 Pinky Companion，在这样的手机上 Pinky 没法自己装：有新版时手机页面会告诉你，按上面的方法再装一次新的 `pinky-companion.apk` 就行。
 
 </details>
 
