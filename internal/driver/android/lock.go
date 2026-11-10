@@ -249,6 +249,22 @@ func (d *Device) showBouncer(ctx context.Context, l *live) (bouncer, error) {
 	if b.unsure {
 		return b, errPadUnsure
 	}
+	if !b.passwordLink.Empty() {
+		// A fingerprint page of the lock screen's own (vivo): its "use
+		// password" link brings up the PIN pad.
+		d.cfg.logf("android: %s: the lock screen asks for a fingerprint; tapping its password link for the PIN pad", d.info.ID)
+		p := b.passwordLink.Center()
+		tap := func(l *live) error { return l.tap(ctx, p, 0) }
+		if err := d.withInput(ctx, false, tap); err != nil {
+			return bouncer{}, err
+		}
+		if b, err = d.waitBouncer(ctx, bouncerWait); err != nil || b.kind != bouncerNone {
+			return b, err
+		}
+		if b.unsure {
+			return b, errPadUnsure
+		}
+	}
 	w, h, err := d.naturalSize(ctx)
 	if err != nil {
 		return bouncer{}, err
@@ -326,6 +342,15 @@ func (d *Device) waitBouncer(ctx context.Context, max time.Duration) (bouncer, e
 		switch {
 		case b.pad != nil && b.pad.same(last.pad):
 			return b, nil
+		case b.pad == nil && !b.passwordLink.Empty():
+			// A link to the PIN pad counts once it stays in place: a page
+			// still sliding in would have another link under the tap.
+			if sameRect(b.passwordLink, last.passwordLink) {
+				return b, nil
+			}
+			if now.After(deadline) {
+				return bouncer{kind: bouncerNone, fingerprint: b.fingerprint}, nil
+			}
 		case b.pad == nil && (b.kind != bouncerNone || b.fingerprint):
 			// The fingerprint screen will not turn into the PIN pad by itself.
 			return b, nil
@@ -339,6 +364,14 @@ func (d *Device) waitBouncer(ctx context.Context, max time.Duration) (bouncer, e
 		}
 		last = b
 	}
+}
+
+func sameRect(a, b screen.Rect) bool {
+	if a.Empty() || b.Empty() {
+		return false
+	}
+	ac, bc := a.Center(), b.Center()
+	return abs(ac.X-bc.X) <= 3 && abs(ac.Y-bc.Y) <= 3
 }
 
 func later(a, b time.Time) time.Time {
@@ -428,6 +461,10 @@ type bouncer struct {
 	// an under-display sensor instead of the PIN (phones with one, such as
 	// the Mi 10 Pro). A tap away from the sensor brings up the PIN pad.
 	fingerprint bool
+	// passwordLink is the "use password" link of a lock screen that opens
+	// on its own fingerprint page (vivo's OriginOS), empty when it shows
+	// none; see findPasswordLink.
+	passwordLink screen.Rect
 	// pad is set for a PIN pad read from its keys' labels and layout (OEM
 	// lock screens), which takes the PIN as taps on its keys.
 	pad *pinPad
@@ -570,7 +607,7 @@ func classifyBouncer(nodes []lockNode) bouncer {
 	} else if unsure {
 		return bouncer{kind: bouncerNone, fingerprint: fingerprint, unsure: true}
 	}
-	return bouncer{kind: bouncerNone, fingerprint: fingerprint}
+	return bouncer{kind: bouncerNone, fingerprint: fingerprint, passwordLink: findPasswordLink(nodes, fingerprint)}
 }
 
 func hasName(name string, names []string) bool {
