@@ -32,7 +32,7 @@ import (
 type Dirs struct {
 	Config string // rules, app table, agent token
 	Data   string // history database, media, daemon log
-	Run    string // socket and lock
+	Run    string // socket
 }
 
 // HomeEnv overrides every directory with one base folder, for tests and
