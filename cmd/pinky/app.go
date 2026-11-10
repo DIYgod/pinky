@@ -97,6 +97,9 @@ func runApp(args []string) error {
 		Theme:    *theme,
 		Hidden:   *background,
 		Settings: &settings,
+		// The client's own lines, as the app's log: what the person's
+		// feedback carries.
+		Log: c.Log,
 		OnSettings: func(old, s ui.Settings) {
 			applySettings(rg, old, s, c.Log)
 			applyTelemetry(tel, s)

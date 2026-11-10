@@ -122,6 +122,11 @@ func (m *mirror) open() {
 	a := m.a
 	go func() {
 		logf("pinky: mirror %s: opening the stream (gen %d, agent %v)", m.id, gen, m.agent)
+		if m.agent {
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: opening the stream", m.id), "agent", true)
+		} else {
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: opening the stream", m.id))
+		}
 		var s driver.Stream
 		var err error
 		if m.agent {
@@ -141,6 +146,11 @@ func (m *mirror) open() {
 			}
 		}
 		logf("pinky: mirror %s: stream opened (gen %d): %v", m.id, gen, err)
+		if err != nil {
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: stream opened", m.id), "err", err)
+		} else {
+			a.logInfo(fmt.Sprintf("pinky: mirror %s: stream opened", m.id))
+		}
 		a.post(func() {
 			logf("pinky: mirror %s: posted (gen %d, closed %v, current gen %d)", m.id, gen, m.closed, m.gen)
 			if m.closed || m.gen != gen {
@@ -155,9 +165,11 @@ func (m *mirror) open() {
 				m.retry = time.Now().Add(3 * time.Second)
 				if errors.Is(err, video.ErrNotFound) {
 					a.videoErr = err
+					m.logFailed(err, time.Time{}) // no retry: the decoder is missing
 					return
 				}
 				m.retryLater()
+				m.logFailed(err, m.retry)
 				return
 			}
 			m.player, m.state = p, "playing"
@@ -165,14 +177,32 @@ func (m *mirror) open() {
 				<-p.Done()
 				a.post(func() {
 					if m.player == p && !m.closed {
-						m.state, m.err = "failed", p.Err()
-						m.retry = time.Now().Add(2 * time.Second)
-						m.retryLater()
+						m.ended(p.Err())
 					}
 				})
 			}()
 		})
 	}()
+}
+
+// ended records that the mirror's stream ended after it played, and writes
+// it to the log: the mirror tries again in two seconds.
+func (m *mirror) ended(err error) {
+	m.state, m.err = "failed", err
+	m.retry = time.Now().Add(2 * time.Second)
+	m.logFailed(err, m.retry)
+	m.retryLater()
+}
+
+// logFailed writes that the mirror's stream failed, with the error and
+// when the mirror tries again: the line that shows an unstable picture in
+// the person's log. A zero retry means the mirror will not try again.
+func (m *mirror) logFailed(err error, retry time.Time) {
+	args := []any{"err", err}
+	if !retry.IsZero() {
+		args = append(args, "retry_in", time.Until(retry).Round(time.Second))
+	}
+	m.a.logInfo(fmt.Sprintf("pinky: mirror %s: stream failed", m.id), args...)
 }
 
 // retryLater opens the stream again once its retry is due, whether or not
@@ -223,6 +253,7 @@ func (m *mirror) wake() {
 
 func (m *mirror) close() {
 	logf("pinky: mirror %s: closed", m.id)
+	m.a.logInfo(fmt.Sprintf("pinky: mirror %s: closed", m.id))
 	m.closed = true
 	if m.cancel != nil {
 		m.cancel()

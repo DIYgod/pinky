@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
 	"os"
 	"runtime"
 	"slices"
@@ -101,6 +102,10 @@ type Options struct {
 	// agents listening at addr (Settings › Agents › Remote agents); nil
 	// leaves that out.
 	RemoteTailnet func(ctx context.Context, addr string) RemoteTailnet
+	// Log writes what the client does to the app's log: the log the
+	// person's feedback carries, and the one whoever fixes a broken live
+	// picture goes on. nil writes nothing, as before.
+	Log *slog.Logger
 }
 
 // Settings are what the Settings screen changes.
@@ -1010,4 +1015,14 @@ func logf(format string, args ...any) {
 	if os.Getenv("PINKY_UI_DEBUG") != "" {
 		log.Printf(format, args...)
 	}
+}
+
+// logInfo writes one line to the app's log, when it has one: the log the
+// person's feedback carries, and the one whoever fixes a broken live
+// picture goes on. The chatty traces stay in logf, behind PINKY_UI_DEBUG.
+func (a *app) logInfo(msg string, args ...any) {
+	if a.opt.Log == nil {
+		return
+	}
+	a.opt.Log.Info(msg, args...)
 }
