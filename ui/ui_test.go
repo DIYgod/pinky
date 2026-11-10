@@ -394,9 +394,10 @@ func TestMirrorInput(t *testing.T) {
 	// The person's input paused the agent.
 	ta.waitFor(t, "takeover", func() bool { return ta.devices[0].Status == gateway.DeviceInControl })
 
-	// A wheel notch becomes a finger dragging up from the pointer.
+	// A touchpad's scroll becomes a finger dragging up from the pointer
+	// (a mouse wheel's: TestMirrorWheel).
 	n := len(ta.api.Inputs())
-	in(mg.InputEvent{Kind: mg.InputScroll, X: 135, Y: 400, DY: 40})
+	in(mg.InputEvent{Kind: mg.InputScroll, X: 135, Y: 400, DY: 40, Precise: true})
 	ta.waitFor(t, "the swipe", func() bool { return len(ta.api.Inputs()) >= n+3 })
 	sw := ta.api.Inputs()[n:]
 	if sw[0].Action != driver.TouchDown || sw[1].Action != driver.TouchMove || sw[2].Action != driver.TouchUp ||
