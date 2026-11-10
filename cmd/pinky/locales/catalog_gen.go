@@ -2777,6 +2777,54 @@ func (msgs Messages) AgentRequestAskedAt(time_ string) string {
 	return Catalog.Format(msgs.locale, "agentRequestAskedAt", map[string]any{"time": time_})
 }
 
+// AppStartFailed says "Pinky could not start"
+// in the language the app shows.
+//
+// The message of the error dialog shown when Pinky, opened from its icon,
+// cannot start. The reason follows under it.
+func AppStartFailed() string { return In(i18n.Locale()).AppStartFailed() }
+
+// AppStartFailed says "Pinky could not start"
+// in the language of msgs.
+//
+// The message of the error dialog shown when Pinky, opened from its icon,
+// cannot start. The reason follows under it.
+func (msgs Messages) AppStartFailed() string {
+	return Catalog.Format(msgs.locale, "appStartFailed", nil)
+}
+
+// AppStartOtherPinky says "Another Pinky is running on this computer and did not hand over to this one. End it in Task Manager, Activity Monitor…"
+// in the language the app shows.
+//
+// Under appStartFailed, when another Pinky process holds Pinky's connection
+// and neither answered nor quit when the new one asked it to. Task Manager
+// is Windows', Activity Monitor the Mac's.
+func AppStartOtherPinky() string { return In(i18n.Locale()).AppStartOtherPinky() }
+
+// AppStartOtherPinky says "Another Pinky is running on this computer and did not hand over to this one. End it in Task Manager, Activity Monitor…"
+// in the language of msgs.
+//
+// Under appStartFailed, when another Pinky process holds Pinky's connection
+// and neither answered nor quit when the new one asked it to. Task Manager
+// is Windows', Activity Monitor the Mac's.
+func (msgs Messages) AppStartOtherPinky() string {
+	return Catalog.Format(msgs.locale, "appStartOtherPinky", nil)
+}
+
+// AppStartLog says "Pinky's log: {path}"
+// in the language the app shows.
+//
+// The last line under appStartFailed: where Pinky's log file is.
+func AppStartLog(path string) string { return In(i18n.Locale()).AppStartLog(path) }
+
+// AppStartLog says "Pinky's log: {path}"
+// in the language of msgs.
+//
+// The last line under appStartFailed: where Pinky's log file is.
+func (msgs Messages) AppStartLog(path string) string {
+	return Catalog.Format(msgs.locale, "appStartLog", map[string]any{"path": path})
+}
+
 // AwayBusy says "Setting up…"
 // in the language the app shows.
 //

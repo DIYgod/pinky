@@ -37,16 +37,27 @@ func runApp(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	// Opened from its icon, Pinky has no terminal for its errors: say in a
+	// dialog why it could not start. Started in the background, an agent's
+	// `pinky mcp` reads them from the log.
+	var logPath string
+	failed := func(err error) error {
+		if !*background {
+			showStartError(err, logPath)
+		}
+		return err
+	}
 	dirs, err := api.DefaultDirs()
 	if err != nil {
-		return err
+		return failed(err)
 	}
 	if err := dirs.Ensure(); err != nil {
-		return err
+		return failed(err)
 	}
-	logFile, err := openLog(filepath.Join(dirs.Data, "pinky.log"))
+	logPath = filepath.Join(dirs.Data, "pinky.log")
+	logFile, err := openLog(logPath)
 	if err != nil {
-		return err
+		return failed(err)
 	}
 	defer logFile.Close()
 	level := slog.LevelInfo
@@ -65,14 +76,27 @@ func runApp(args []string) error {
 	unlock.on.Store(settings.UnlockFromComputer)
 	c.PIN = unlock.pin
 	rg, err := startGateway(c)
-	if err != nil {
-		var running *api.RunningError
-		if errors.As(err, &running) {
-			return fmt.Errorf("%w; quit the other Pinky (or `pinky daemon`) first", err)
+	if running := (*api.RunningError)(nil); errors.As(err, &running) {
+		// An agent's `pinky daemon`, or another Pinky window.
+		rg, err = takeOver(c, dirs, *background, startGateway)
+		if errors.Is(err, errShownOther) {
+			c.Log.Info("Pinky is already open: showed its window")
+			return nil
 		}
-		return err
+	}
+	if err != nil {
+		return failed(err)
 	}
 	defer rg.Close()
+	rg.srv.Kind = api.KindApp
+	// Opening Pinky again shows this window (takeOver), once the client
+	// is there to show it.
+	var show atomic.Pointer[func()]
+	rg.srv.Show = func() {
+		if f := show.Load(); f != nil {
+			(*f)()
+		}
+	}
 	unlock.names = rg.G
 	startSettings(rg, settings, c.Log)
 	upd := newUpdater(dirs, c.Log)
@@ -93,6 +117,7 @@ func runApp(args []string) error {
 
 	gatewaySettings(&settings, rg)
 	return ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
+		BindShow: func(f func()) { show.Store(&f) },
 		Version:  version,
 		Theme:    *theme,
 		Hidden:   *background,

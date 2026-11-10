@@ -165,7 +165,11 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 	}
 	switch req.Method {
 	case "version":
-		return map[string]any{"version": s.Version, "protocol": Protocol, "trusted": s.Trusted}, nil
+		v := map[string]any{"version": s.Version, "protocol": Protocol, "trusted": s.Trusted}
+		if s.Kind != "" {
+			v["kind"] = s.Kind
+		}
+		return v, nil
 	case "devices":
 		return g.Devices(), nil
 	case "tasks":
@@ -235,6 +239,12 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 			time.Sleep(100 * time.Millisecond)
 			s.Quit()
 		}()
+		return nil, nil
+	case "show":
+		if s.Show == nil {
+			return nil, &RPCError{Code: CodeMethod, Message: "this gateway has no window to show"}
+		}
+		s.Show()
 		return nil, nil
 	case "wipe_history":
 		if err := trusted(); err != nil {

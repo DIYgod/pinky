@@ -44,6 +44,12 @@ type HelloReply struct {
 	Trusted bool   `json:"trusted,omitempty"`
 }
 
+// What can host a gateway (Server.Kind).
+const (
+	KindApp    = "app"
+	KindDaemon = "daemon"
+)
+
 // RunningError means another gateway already runs for this user.
 type RunningError struct{ PID string }
 
@@ -114,6 +120,12 @@ type Server struct {
 	// calls it over the socket. Windows has no signal to end a daemon, and
 	// scripts use it to end the app.
 	Quit func()
+	// Kind says what hosts the gateway, KindApp or KindDaemon; the version
+	// method reports it, so that the app can take over from a daemon.
+	Kind string
+	// Show, when set, brings the app's window to the front: the show method
+	// calls it when the person opens Pinky while it already runs.
+	Show func()
 
 	wg sync.WaitGroup
 }

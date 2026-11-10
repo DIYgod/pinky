@@ -383,7 +383,7 @@ Pinky is one Go program that runs in three modes, with exactly one gateway per u
 
 | Mode | Command | Runs |
 | --- | --- | --- |
-| Desktop app | `pinky` | Gateway and MyGo client in one process, with a menu bar icon; attaches to a running daemon instead of starting a second gateway |
+| Desktop app | `pinky` | Gateway and MyGo client in one process, with a menu bar icon; takes over from a running daemon (which quits; agents reconnect) instead of starting a second gateway, and opened again, brings the running app's window to the front |
 | Headless gateway | `pinky daemon` | Gateway only, for a Mac mini, a NAS, a Linux box or CI |
 | MCP shim | `pinky mcp` | The stdio server agents launch; it forwards to the running gateway, or starts the desktop app in tray mode (the daemon when no desktop session exists) |
 

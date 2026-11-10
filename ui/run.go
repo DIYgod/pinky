@@ -41,6 +41,11 @@ type Options struct {
 	Menus []*mygo.MenuItem
 	// OnReady runs on the main thread once the main window exists.
 	OnReady func(main *mygo.Window)
+	// BindShow receives, at start, a function that brings the main window
+	// to the front, as when the person opens Pinky again while it runs in
+	// the menu bar or tray. It may be called from any goroutine, also
+	// before the window exists.
+	BindShow func(show func())
 	// Settings are the Safety, Privacy and Advanced choices to start with;
 	// nil is the defaults. gateway.API has no settings methods yet, so the
 	// client keeps them and reports each change through OnSettings, with
@@ -291,6 +296,9 @@ type app struct {
 // thread, as MyGo's App.Run does.
 func Run(api gateway.API, opt Options) error {
 	a := newApp(api, opt)
+	if opt.BindShow != nil {
+		opt.BindShow(func() { a.post(a.showMain) })
+	}
 	if !mygo.App.IsPackaged() {
 		// A packaged app keeps the name its bundle was built with.
 		mygo.App.SetName("Pinky")

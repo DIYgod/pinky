@@ -421,3 +421,44 @@ func TestQuit(t *testing.T) {
 	}
 	<-quitted
 }
+
+// The version method says what hosts the gateway, and show brings the
+// app's window up, so that opening Pinky again finds the running one.
+func TestKindAndShow(t *testing.T) {
+	d := shortDirs(t)
+	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
+	g, err := gateway.New(gateway.Options{Providers: []driver.Provider{demo.NewProvider(driver.Android, dev)}, NoScreenshots: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	ln, err := Listen(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shown := make(chan struct{}, 1)
+	srv := &Server{Gateway: g, MCP: mcp.New(g, "test"), Version: "test", Kind: KindApp,
+		Show: func() { shown <- struct{}{} }}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() { done <- srv.Serve(ctx, ln) }()
+	defer func() { cancel(); <-done; ln.Close() }()
+
+	ctl, err := DialControl(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ctl.Close()
+	var v struct{ Kind string }
+	if err := ctl.Call("version", nil, &v); err != nil || v.Kind != KindApp {
+		t.Fatalf("version: %+v, %v", v, err)
+	}
+	if err := ctl.Call("show", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-shown:
+	default:
+		t.Error("show did not call Show")
+	}
+}

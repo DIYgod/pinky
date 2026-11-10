@@ -77,6 +77,8 @@ func runDaemon(args []string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	rg.srv.Quit = stop
+	// The app takes over from a daemon when the person opens it.
+	rg.srv.Kind = api.KindDaemon
 	upd := newUpdater(rg.Dirs, c.Log)
 	if err := startedUpdate(upd, c.Log).Confirm(); err != nil {
 		c.Log.Warn("update: confirm", "err", err)

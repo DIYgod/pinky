@@ -898,6 +898,24 @@
       }
     }
   },
+  "appStartFailed": "Pinky could not start",
+  "@appStartFailed": {
+    "description": "The message of the error dialog shown when Pinky, opened from its icon, cannot start. The reason follows under it."
+  },
+  "appStartOtherPinky": "Another Pinky is running on this computer and did not hand over to this one. End it in Task Manager, Activity Monitor or your system monitor, then open Pinky again.",
+  "@appStartOtherPinky": {
+    "description": "Under appStartFailed, when another Pinky process holds Pinky's connection and neither answered nor quit when the new one asked it to. Task Manager is Windows', Activity Monitor the Mac's."
+  },
+  "appStartLog": "Pinky's log: {path}",
+  "@appStartLog": {
+    "description": "The last line under appStartFailed: where Pinky's log file is.",
+    "placeholders": {
+      "path": {
+        "type": "String",
+        "example": "C:\\Users\\me\\AppData\\Local\\Pinky\\pinky.log"
+      }
+    }
+  },
   "awayBusy": "Setting up…",
   "@awayBusy": {
     "description": "Under awayTitle while it changes."
