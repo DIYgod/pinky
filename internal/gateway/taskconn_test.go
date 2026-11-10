@@ -24,8 +24,13 @@ type twoWayPhone struct {
 	passcode  bool          // the helper waits for the passcode
 	askOnOpen bool          // opening through the helper finds the phone asking for its passcode
 	slow      time.Duration // how long opening through the helper takes
+	bareCore  bool          // over CoreDevice it has no switches and no second finger, as the iOS provider
 	opens     []string
 }
+
+// coreOnly is a phone over CoreDevice: the device without the switches and
+// the second finger the helper adds.
+type coreOnly struct{ driver.Device }
 
 func newTwoWayPhone() (*twoWayPhone, *demo.Device) {
 	dev := demo.NewDevice("iphone", "iPhone 13 mini", driver.IOS)
@@ -73,7 +78,14 @@ func (p *twoWayPhone) Open(ctx context.Context, id string) (driver.Device, error
 	if b == wayHelper && err != nil {
 		return nil, err
 	}
-	return p.Provider.Open(ctx, id)
+	dev, err := p.Provider.Open(ctx, id)
+	p.mu.Lock()
+	bare := p.bareCore
+	p.mu.Unlock()
+	if err == nil && bare && b == wayCoreDevice {
+		return coreOnly{dev}, nil
+	}
+	return dev, err
 }
 
 func (p *twoWayPhone) SetConnection(id, way string) error {

@@ -17190,31 +17190,149 @@ func (msgs Messages) PhoneRecordScreenTooltip() string {
 // PhoneRotate says "Rotate"
 // in the language the app shows.
 //
-// Item of ⋯ under the mirror, shown disabled: would rotate the phone's
-// screen.
+// A row of ⋯ under the mirror: the buttons beside it turn the phone's
+// screen to portrait, landscape and the like. Also shown disabled, with
+// phoneRotateTooltip, on an iPhone or iPad without the WebDriverAgent
+// helper.
 func PhoneRotate() string { return In(i18n.Locale()).PhoneRotate() }
 
 // PhoneRotate says "Rotate"
 // in the language of msgs.
 //
-// Item of ⋯ under the mirror, shown disabled: would rotate the phone's
-// screen.
+// A row of ⋯ under the mirror: the buttons beside it turn the phone's
+// screen to portrait, landscape and the like. Also shown disabled, with
+// phoneRotateTooltip, on an iPhone or iPad without the WebDriverAgent
+// helper.
 func (msgs Messages) PhoneRotate() string {
 	return Catalog.Format(msgs.locale, "phoneRotate", nil)
 }
 
-// PhoneRotateTooltip says "Not in the gateway API yet"
+// PhoneRotateAuto says "Auto-rotate"
 // in the language the app shows.
 //
-// The tooltip of the disabled Rotate item.
-func PhoneRotateTooltip() string { return In(i18n.Locale()).PhoneRotateTooltip() }
+// A button of the Rotate row (Android only), as its tooltip: the screen
+// turns with how the phone is held again.
+func PhoneRotateAuto() string { return In(i18n.Locale()).PhoneRotateAuto() }
 
-// PhoneRotateTooltip says "Not in the gateway API yet"
+// PhoneRotateAuto says "Auto-rotate"
 // in the language of msgs.
 //
-// The tooltip of the disabled Rotate item.
+// A button of the Rotate row (Android only), as its tooltip: the screen
+// turns with how the phone is held again.
+func (msgs Messages) PhoneRotateAuto() string {
+	return Catalog.Format(msgs.locale, "phoneRotateAuto", nil)
+}
+
+// PhoneRotateCall says "turn the screen"
+// in the language the app shows.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" when
+// turning the phone's screen from the Rotate row fails.
+func PhoneRotateCall() string { return In(i18n.Locale()).PhoneRotateCall() }
+
+// PhoneRotateCall says "turn the screen"
+// in the language of msgs.
+//
+// A verb phrase that completes the toast "Couldn't …: <error>" when
+// turning the phone's screen from the Rotate row fails.
+func (msgs Messages) PhoneRotateCall() string {
+	return Catalog.Format(msgs.locale, "phoneRotateCall", nil)
+}
+
+// PhoneRotateDesc says "Apps that only run upright stay upright."
+// in the language the app shows.
+//
+// Under Rotate in ⋯ under the mirror: what turning does not change.
+func PhoneRotateDesc() string { return In(i18n.Locale()).PhoneRotateDesc() }
+
+// PhoneRotateDesc says "Apps that only run upright stay upright."
+// in the language of msgs.
+//
+// Under Rotate in ⋯ under the mirror: what turning does not change.
+func (msgs Messages) PhoneRotateDesc() string {
+	return Catalog.Format(msgs.locale, "phoneRotateDesc", nil)
+}
+
+// PhoneRotateLandscape says "Landscape, top to the left"
+// in the language the app shows.
+//
+// A button of the Rotate row, as its tooltip: the phone turned a quarter
+// counterclockwise, its top on the left.
+func PhoneRotateLandscape() string { return In(i18n.Locale()).PhoneRotateLandscape() }
+
+// PhoneRotateLandscape says "Landscape, top to the left"
+// in the language of msgs.
+//
+// A button of the Rotate row, as its tooltip: the phone turned a quarter
+// counterclockwise, its top on the left.
+func (msgs Messages) PhoneRotateLandscape() string {
+	return Catalog.Format(msgs.locale, "phoneRotateLandscape", nil)
+}
+
+// PhoneRotatePortrait says "Portrait"
+// in the language the app shows.
+//
+// A button of the Rotate row, as its tooltip: the phone upright.
+func PhoneRotatePortrait() string { return In(i18n.Locale()).PhoneRotatePortrait() }
+
+// PhoneRotatePortrait says "Portrait"
+// in the language of msgs.
+//
+// A button of the Rotate row, as its tooltip: the phone upright.
+func (msgs Messages) PhoneRotatePortrait() string {
+	return Catalog.Format(msgs.locale, "phoneRotatePortrait", nil)
+}
+
+// PhoneRotateReverseLandscape says "Landscape, top to the right"
+// in the language the app shows.
+//
+// A button of the Rotate row, as its tooltip: the phone turned a quarter
+// clockwise, its top on the right.
+func PhoneRotateReverseLandscape() string { return In(i18n.Locale()).PhoneRotateReverseLandscape() }
+
+// PhoneRotateReverseLandscape says "Landscape, top to the right"
+// in the language of msgs.
+//
+// A button of the Rotate row, as its tooltip: the phone turned a quarter
+// clockwise, its top on the right.
+func (msgs Messages) PhoneRotateReverseLandscape() string {
+	return Catalog.Format(msgs.locale, "phoneRotateReverseLandscape", nil)
+}
+
+// PhoneRotateTooltip says "Turning the screen needs the WebDriverAgent helper. Settings › Phones says how to install it, or lets you choose it…"
+// in the language the app shows.
+//
+// The tooltip of the disabled Rotate item on an iPhone or iPad that cannot
+// use the WebDriverAgent helper: it is not installed, or the person chose
+// CoreDevice for it in Settings › Phones. The app calls both phones.
+// Settings › Phones says how to install the helper and offers it as
+// connectionWDA. WebDriverAgent is a name.
+func PhoneRotateTooltip() string { return In(i18n.Locale()).PhoneRotateTooltip() }
+
+// PhoneRotateTooltip says "Turning the screen needs the WebDriverAgent helper. Settings › Phones says how to install it, or lets you choose it…"
+// in the language of msgs.
+//
+// The tooltip of the disabled Rotate item on an iPhone or iPad that cannot
+// use the WebDriverAgent helper: it is not installed, or the person chose
+// CoreDevice for it in Settings › Phones. The app calls both phones.
+// Settings › Phones says how to install the helper and offers it as
+// connectionWDA. WebDriverAgent is a name.
 func (msgs Messages) PhoneRotateTooltip() string {
 	return Catalog.Format(msgs.locale, "phoneRotateTooltip", nil)
+}
+
+// PhoneRotateUpsideDown says "Upside down"
+// in the language the app shows.
+//
+// A button of the Rotate row, as its tooltip: the phone turned upside down.
+func PhoneRotateUpsideDown() string { return In(i18n.Locale()).PhoneRotateUpsideDown() }
+
+// PhoneRotateUpsideDown says "Upside down"
+// in the language of msgs.
+//
+// A button of the Rotate row, as its tooltip: the phone turned upside down.
+func (msgs Messages) PhoneRotateUpsideDown() string {
+	return Catalog.Format(msgs.locale, "phoneRotateUpsideDown", nil)
 }
 
 // PhoneScreenLabel says "{phone} screen"

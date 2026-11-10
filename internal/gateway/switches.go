@@ -102,6 +102,17 @@ func (s *Session) Device(ctx context.Context, req DeviceRequest) *Result {
 		return g.finish(l, errResult(ErrDeviceOffline, "%s is offline.", d.name()))
 	}
 	sw, _ := dev.(driver.Switcher)
+	note := ""
+	if sw == nil && len(want) > 0 {
+		// An iPhone or iPad over CoreDevice: the helper has the switches
+		// (helperneed.go).
+		res, n, now := g.helperFor(ctx, l, switchNeed(want))
+		if res != nil {
+			return g.finish(l, res)
+		}
+		note = n
+		sw, _ = now.(driver.Switcher)
+	}
 	if !changing {
 		about := g.about(ctx, d)
 		if sw == nil {
@@ -116,7 +127,7 @@ func (s *Session) Device(ctx context.Context, req DeviceRequest) *Result {
 		}
 		return g.finish(l, res)
 	}
-	return g.finish(l, g.setSwitches(ctx, l, req, sw, want, resets))
+	return g.finish(l, withNote(g.setSwitches(ctx, l, req, sw, want, resets), note))
 }
 
 // check validates the request and returns the switches to set, in
@@ -170,7 +181,8 @@ func (req DeviceRequest) check() (want []switchSet, resets []string, res *Result
 }
 
 func noSwitches(name string) string {
-	return name + " has no switches Pinky can set: phone_device works on Android phones and emulators, iOS Simulators, and iPhones with the WebDriverAgent helper."
+	return name + " has no switches Pinky can set: phone_device works on Android phones and emulators, iOS Simulators, and iPhones and iPads through the WebDriverAgent helper. " +
+		"On an iPhone or iPad left on Automatic in Settings › Phones, a change moves the task to the helper by itself when it is installed."
 }
 
 // readSwitches reads every switch.
@@ -852,4 +864,94 @@ func localeWords(a Action) string {
 		return " with region " + loc.Region
 	}
 	return " in " + loc.Tag()
+}
+
+// DeviceSwitch reads one of a phone's switches for the person, such as
+// the screen's rotation the ⋯ menu under the mirror marks.
+func (g *Gateway) DeviceSwitch(ctx context.Context, deviceID, name string) (string, error) {
+	_, sw, err := g.personSwitcher(deviceID)
+	if err != nil || sw == nil {
+		return "", err // sw nil: over CoreDevice, which cannot read it
+	}
+	return sw.Switch(ctx, name)
+}
+
+// SetDeviceSwitch sets one of a phone's switches for the person: Rotate in
+// the ⋯ menu under the mirror. It is the person's own input, like a touch
+// on the mirror: it pauses an agent task on the phone's own screen, since
+// its screen turns under the agent, but not one on a background display,
+// which does not turn; while the person is in control (Take over, or an
+// agent's handoff), it only turns the screen. Nobody is asked, and nothing
+// is put back when a task ends: a task that changed the switch earlier
+// leaves it as the person set it. An iPhone or iPad over CoreDevice with
+// the helper installed moves to it first (personHelper), which takes a few
+// seconds.
+func (g *Gateway) SetDeviceSwitch(ctx context.Context, deviceID, name, value string) error {
+	if err := validSwitch(name, value); err != nil {
+		return err
+	}
+	d, now, err := g.personSwitcher(deviceID)
+	if err != nil {
+		return err
+	}
+	_, dev, err := g.personInput(deviceID)
+	if err != nil {
+		return err
+	}
+	if now == nil {
+		if dev, err = g.personHelper(ctx, d); err != nil {
+			return err
+		}
+	}
+	sw, ok := dev.(driver.Switcher)
+	if !ok {
+		return fmt.Errorf("%s: %w", name, driver.ErrUnsupported)
+	}
+	return sw.SetSwitch(ctx, name, value)
+}
+
+// personSwitcher returns a phone's switches, before anything pauses. It
+// returns no switches and no error for an iPhone or iPad that has them
+// once it moves to the helper (helperReadyLocked).
+func (g *Gateway) personSwitcher(deviceID string) (*device, driver.Switcher, error) {
+	d, err := g.device(deviceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	g.mu.Lock()
+	dev, ready := d.dev, g.helperReadyLocked(d)
+	g.mu.Unlock()
+	if dev == nil {
+		return nil, nil, driver.ErrOffline
+	}
+	sw, ok := dev.(driver.Switcher)
+	switch {
+	case ok:
+		return d, sw, nil
+	case ready:
+		return d, nil, nil
+	}
+	return nil, nil, fmt.Errorf("%s: %w", noSwitches(d.name()), driver.ErrUnsupported)
+}
+
+// validSwitch checks a value the person sets: the values phone_device
+// takes, and Android's automatic light and dark.
+func validSwitch(name, value string) error {
+	ok := false
+	switch name {
+	case driver.SwitchRotation:
+		switch value {
+		case driver.RotationPortrait, driver.RotationLandscape, driver.RotationUpsideDown, driver.RotationReverseLandscape, driver.RotationAuto:
+			ok = true
+		}
+	case driver.SwitchAppearance:
+		ok = value == driver.AppearanceLight || value == driver.AppearanceDark
+	case driver.SwitchLocation:
+		_, _, err := driver.ParseLocation(value)
+		ok = value == "" || err == nil
+	}
+	if !ok {
+		return fmt.Errorf("%s %q: %w", name, value, driver.ErrUnsupported)
+	}
+	return nil
 }

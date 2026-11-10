@@ -596,6 +596,7 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 		g.emit(Event{Kind: EventNeeds, DeviceID: d.id}) // a step it waited for is done (setupNeedLocked)
 	}
 	g.readyNow(d)
+	go g.checkHelper(d)
 	if w, ok := dev.(driver.PersonWatcher); ok {
 		go g.watchPerson(d.id, w.PersonInput())
 	}

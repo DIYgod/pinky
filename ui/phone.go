@@ -434,7 +434,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 		}
 		a.phoneWiFiMenu(c, d, func() { open = false })
 		menuItem(c, locales.PhoneRecordScreen(), p.ink3).Disabled(true).Tooltip(locales.PhoneRecordScreenTooltip())
-		menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())
+		a.rotateMenu(c, d, func() { open = false })
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
 		mg.Row(c).Gap(sp3).Padding(sp2, 10).AlignItems(mg.Center).Children(func() {
 			ink := p.ink

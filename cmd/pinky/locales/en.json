@@ -6632,11 +6632,39 @@
   },
   "phoneRotate": "Rotate",
   "@phoneRotate": {
-    "description": "Item of ⋯ under the mirror, shown disabled: would rotate the phone's screen."
+    "description": "A row of ⋯ under the mirror: the buttons beside it turn the phone's screen to portrait, landscape and the like. Also shown disabled, with phoneRotateTooltip, on an iPhone or iPad without the WebDriverAgent helper."
   },
-  "phoneRotateTooltip": "Not in the gateway API yet",
+  "phoneRotateAuto": "Auto-rotate",
+  "@phoneRotateAuto": {
+    "description": "A button of the Rotate row (Android only), as its tooltip: the screen turns with how the phone is held again."
+  },
+  "phoneRotateCall": "turn the screen",
+  "@phoneRotateCall": {
+    "description": "A verb phrase that completes the toast \"Couldn't …: <error>\" when turning the phone's screen from the Rotate row fails."
+  },
+  "phoneRotateDesc": "Apps that only run upright stay upright.",
+  "@phoneRotateDesc": {
+    "description": "Under Rotate in ⋯ under the mirror: what turning does not change."
+  },
+  "phoneRotateLandscape": "Landscape, top to the left",
+  "@phoneRotateLandscape": {
+    "description": "A button of the Rotate row, as its tooltip: the phone turned a quarter counterclockwise, its top on the left."
+  },
+  "phoneRotatePortrait": "Portrait",
+  "@phoneRotatePortrait": {
+    "description": "A button of the Rotate row, as its tooltip: the phone upright."
+  },
+  "phoneRotateReverseLandscape": "Landscape, top to the right",
+  "@phoneRotateReverseLandscape": {
+    "description": "A button of the Rotate row, as its tooltip: the phone turned a quarter clockwise, its top on the right."
+  },
+  "phoneRotateTooltip": "Turning the screen needs the WebDriverAgent helper. Settings › Phones says how to install it, or lets you choose it for this phone.",
   "@phoneRotateTooltip": {
-    "description": "The tooltip of the disabled Rotate item."
+    "description": "The tooltip of the disabled Rotate item on an iPhone or iPad that cannot use the WebDriverAgent helper: it is not installed, or the person chose CoreDevice for it in Settings › Phones. The app calls both phones. Settings › Phones says how to install the helper and offers it as connectionWDA. WebDriverAgent is a name."
+  },
+  "phoneRotateUpsideDown": "Upside down",
+  "@phoneRotateUpsideDown": {
+    "description": "A button of the Rotate row, as its tooltip: the phone turned upside down."
   },
   "phoneScreenLabel": "{phone} screen",
   "@phoneScreenLabel": {

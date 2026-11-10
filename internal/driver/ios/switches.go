@@ -121,9 +121,10 @@ func (d *WDADevice) orientation(ctx context.Context) (string, error) {
 }
 
 // setOrientation turns the device. An app that only runs upright answers
-// "Unable To Rotate Device", though the device has turned: what counts is
-// the device's orientation afterwards. The app in front turns with it when
-// it can.
+// "Unable To Rotate Device", though the device has turned (iOS 18): what
+// counts is the device's orientation afterwards. The app in front turns
+// with it when it can. On iOS 27 the device stays as the app in front
+// allows (Settings on an iPhone Air, iOS 27.3), which is said in words.
 func (d *WDADevice) setOrientation(ctx context.Context, value string) error {
 	o, ok := wdaSetOrientations[value]
 	if !ok {
@@ -138,12 +139,15 @@ func (d *WDADevice) setOrientation(ctx context.Context, value string) error {
 		if got == value {
 			return nil
 		}
-		if err == nil {
-			return fmt.Errorf("the phone stayed %s", got)
+		if err == nil || strings.Contains(err.Error(), "Unable To Rotate") {
+			return fmt.Errorf("the app in front does not turn %s, so the phone stayed %s", rotationWords(value), rotationWords(got))
 		}
 	}
 	return err
 }
+
+// rotationWords is a rotation as a sentence says it: "upside down".
+func rotationWords(v string) string { return strings.ReplaceAll(v, "_", " ") }
 
 type wdaLocation struct {
 	Latitude  *float64 `json:"latitude"`

@@ -53,6 +53,9 @@ func (g *Gateway) Devices() []DeviceView {
 		v := DeviceView{Info: info, Status: st, StatusLine: line, Paused: paused, Streaming: g.capturingLocked(d)}
 		if d.online && d.dev != nil {
 			v.Features = featuresOf(d.dev)
+			// Over CoreDevice, the person's Rotate moves to the helper
+			// (helperneed.go).
+			v.Features.Rotate = v.Features.Rotate || g.helperReadyLocked(d)
 		}
 		if d.lease != nil {
 			v.TaskID = d.lease.task.id
@@ -81,6 +84,7 @@ func featuresOf(dev driver.Device) Features {
 	_, f.Files = dev.(driver.Files)
 	_, f.Companion = dev.(driver.CompanionInstaller)
 	_, f.Pinch = dev.(driver.MultiToucher)
+	_, f.Rotate = dev.(driver.Switcher)
 	return f
 }
 

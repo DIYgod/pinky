@@ -100,13 +100,21 @@ func switchingLine(d *device) string {
 	return "Switching to CoreDevice"
 }
 
+// helperNeed is why a task moves to the helper without the agent asking:
+// an app that refuses screen sharing (app, its name), or something only the
+// helper does on an iPhone or iPad (what, as a sentence names it: "turning
+// the screen", "pinching"). The zero value is the agent asking.
+type helperNeed struct {
+	app, what string
+}
+
 // useConnection moves the task's phone to way (wayHelper, wayCoreDevice,
-// or "" for the person's choice) for the task, when it can. why names the
-// app that needs it, "" when the agent asked. It returns a result to
-// return instead of going on (the phone waits for the person, such as for
-// the passcode iOS asks before the helper starts), or a note for the
-// agent, "" when there is nothing to say.
-func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) (*Result, string) {
+// or "" for the person's choice) for the task, when it can. need says why,
+// zero when the agent asked. It returns a result to return instead of
+// going on (the phone waits for the person, such as for the passcode iOS
+// asks before the helper starts), or a note for the agent, "" when there
+// is nothing to say.
+func (g *Gateway) useConnection(ctx context.Context, l *lease, way string, need helperNeed) (*Result, string) {
 	d := l.dev
 	g.mu.Lock()
 	cc, ok := d.provider.(driver.ConnectionChooser)
@@ -117,8 +125,10 @@ func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) 
 		d.switchBack.Stop()
 		d.switchBack = nil
 	}
+	keep := way != wayHelper && moved != "" && hasSwitchChangesLocked(l)
 	g.mu.Unlock()
-	asked := why == ""
+	asked := need == helperNeed{}
+	why := need.app
 	if !ok || platform != driver.IOS {
 		if asked && way != "" {
 			return nil, fmt.Sprintf("%s connects only one way, so the connection you asked for changes nothing.", d.name())
@@ -135,11 +145,22 @@ func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) 
 	if !online {
 		return nil, "" // it is away; gate says so
 	}
+	if keep {
+		// What phone_device changed is put back through the helper when
+		// the task ends: CoreDevice could not.
+		if asked {
+			return nil, fmt.Sprintf("Pinky keeps %s on the WebDriverAgent helper until the task ends, to put back what phone_device changed through it. Call phone_device with reset first to go back now.", d.name())
+		}
+		return nil, ""
+	}
 	moving := way == wayHelper && backend != wayHelper || way != wayHelper && moved != ""
 	if moving {
 		if why := g.mayMove(l); why != "" {
-			if asked {
+			switch {
+			case asked:
 				return nil, fmt.Sprintf("Pinky did not change how %s connects, because %s. Connect again with this connection once that is over.", d.name(), why)
+			case need.what != "":
+				return nil, fmt.Sprintf("Pinky did not move %s to the WebDriverAgent helper for %s, because %s.", d.name(), need.what, why)
 			}
 			return nil, ""
 		}
@@ -171,7 +192,7 @@ func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) 
 		}
 		return nil, note
 	}
-	g.log.Info("task connection", "device", d.id, "to", wayHelper, "for", why)
+	g.log.Info("task connection", "device", d.id, "to", wayHelper, "for", why+need.what)
 	if res := g.switchTo(ctx, d, cc, wayHelper); res != nil {
 		return res, ""
 	}
@@ -205,8 +226,11 @@ func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) 
 		return nil, note
 	}
 	note := "Pinky moved this task to the WebDriverAgent helper, which shares no screen"
-	if why != "" {
+	switch {
+	case why != "":
 		note += fmt.Sprintf(", because %s refuses to run while the screen is shared", why)
+	case need.what != "":
+		note = fmt.Sprintf("Pinky moved this task to the WebDriverAgent helper for %s, which only the helper does on this phone", need.what)
 	}
 	return nil, note + ". Reading the screen is slower there (several seconds on a home screen). The phone goes back to CoreDevice after the task."
 }
@@ -378,7 +402,7 @@ func (g *Gateway) taskConnection(ctx context.Context, l *lease, way string) (*Re
 	if way == "" {
 		return nil, ""
 	}
-	res, note := g.useConnection(ctx, l, way, "")
+	res, note := g.useConnection(ctx, l, way, helperNeed{})
 	if res != nil {
 		g.mu.Lock()
 		res.Task = l.task.id
@@ -403,7 +427,7 @@ func (g *Gateway) launchConnection(ctx context.Context, l *lease, a Action, p *p
 	if !ok {
 		return nil, ""
 	}
-	res, note := g.useConnection(ctx, l, wayHelper, name)
+	res, note := g.useConnection(ctx, l, wayHelper, helperNeed{app: name})
 	if res != nil && res.Status == StatusNeedsSetup {
 		res.Message += fmt.Sprintf(" Once the phone is ready, call phone_launch again to open %s.", name)
 	}

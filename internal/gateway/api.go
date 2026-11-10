@@ -94,6 +94,7 @@ type Features struct {
 	Files      bool // driver.Files: the phone's Pinky folder
 	Companion  bool // driver.CompanionInstaller: an Android companion app to install
 	Pinch      bool // driver.MultiToucher: the person pinches on the mirror (Touch2)
+	Rotate     bool // driver.Switcher, or the helper to move to (helperneed.go): the person turns the screen from the ⋯ menu (SetDeviceSwitch)
 }
 
 // TaskState is the state of an agent task.
