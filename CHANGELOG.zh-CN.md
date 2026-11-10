@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1111.1 (2026-11-11)
 
 - Claude Code 里的智能体现在能看到批量操作每一步和应用列表该怎么写，不用再靠猜。
 - iPhone 在 Wi-Fi 下交给你解锁时，解锁那一下短暂断网不再让交接失败。

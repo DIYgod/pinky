@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1111.1 (2026-11-11)
 
 - Agents in Claude Code now see the shape of a batch's steps and of the apps list, so they no longer have to guess it.
 - Handing an iPhone on Wi-Fi to you to unlock no longer fails when the phone drops off the network for a moment as it unlocks.
