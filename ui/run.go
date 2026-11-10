@@ -91,6 +91,12 @@ type Options struct {
 	// sidebar's card while no agent can reach Pinky; nil shows only the
 	// commands to add an agent by hand.
 	AgentSetup AgentSetup
+	// CompanionAPK finds the Android companion APK that Pinky installs and
+	// its build (versionCode, 0 when unknown). A phone that refuses
+	// installs over USB gets a link that shows it in Finder or the file
+	// manager, to install by hand, and Pinky tries a refused build again
+	// by itself only once a newer one comes; nil leaves the link out.
+	CompanionAPK func() (path string, build int, err error)
 }
 
 // Settings are what the Settings screen changes.

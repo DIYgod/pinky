@@ -210,7 +210,7 @@ At home, Tailscale is as fast as Wi-Fi; away, the phone's upload carries the pic
 
 ### Updates
 
-Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free; its accessibility service stays off until the next task. A Pinky Companion signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you; on a phone that asks before installing apps over USB, the phone's page says why and waits for your **Update**. After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md), or its Chinese version, [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md), when Pinky is in Chinese).
+Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free; its accessibility service stays off until the next task. A Pinky Companion signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you; on a phone that asks before installing apps over USB, the phone's page says why and waits for your **Update**, and when a phone refuses them, a card in the sidebar tells you once about each new version, to install by hand ([how](#install-companion-by-hand)). After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md), or its Chinese version, [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md), when Pinky is in Chinese).
 
 - **macOS:** Pinky.app replaces itself after checking the download's checksum, that it is signed by Pinky's developer and that Apple notarized it, and goes back to the old version if the new one does not start. The Homebrew cask's copy updates itself the same way, and `brew upgrade` leaves it alone while it is current. A copy run from the disk image or from a folder you cannot write to says how to update it instead.
 - **Windows:** a Pinky that its installer installed runs the new installer quietly, after checking its checksum, starts the new version and goes back to the old one if that does not start. The portable copy downloads the installer for you.
@@ -259,6 +259,24 @@ Not through Pinky. Screenshots, recordings and history stay on your computer, fo
 <summary><b>What does Pinky install on my phone?</b></summary>
 
 On Android, Pinky Companion, when you click Install; Pinky keeps it up to date and turns its accessibility service on only while an agent works ([why](#faq)). On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does. On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from Xcode ([how](docs/notes/ios.md#installing-the-webdriveragent-helper)).
+
+</details>
+
+<a id="install-companion-by-hand"></a>
+<details>
+<summary><b>How do I install Pinky Companion by hand?</b></summary>
+
+When a phone won't let the computer install apps over USB, such as a Xiaomi without a SIM card, which can't turn on Install via USB, you can install Pinky Companion yourself. Its APK, `pinky-companion.apk`, comes with Pinky:
+
+- **macOS:** inside the app, at `Pinky.app/Contents/Resources/pinky-companion.apk`: in Applications, right-click Pinky and choose **Show Package Contents**.
+- **Windows:** next to `Pinky.exe` in Pinky's folder.
+- **Linux:** next to `pinky` in the folder you unpacked the `.tar.gz` into, or in `/opt/pinky/` if you installed the `.deb`.
+
+When an install over USB fails, **Show pinky-companion.apk** on the phone's page shows you the file. Copy it to the phone, over the cable or through a chat app for example, and open it there; the phone may ask you first to let the app you open it with install apps. Pinky recognizes the copy you installed, as it is the same app with the same signature, and stops offering to install it.
+
+On a Xiaomi, Redmi or POCO phone, Pinky still needs **USB debugging (Security settings)** in Developer options to tap and type, and to turn on Pinky Companion's accessibility service; restart the phone after you turn it on. Like Install via USB, that switch checks with Xiaomi online and may ask for a SIM card. Without it, Pinky Companion installs but can't come on, and Pinky can't tap or type on the phone.
+
+Pinky Companion gets a new version only when its own code changes, not with every Pinky update. With **Update automatically** on, Pinky tries once to install a new version over USB; when the phone refuses, a card in the sidebar tells you, with **Show pinky-companion.apk**, and Pinky doesn't try that version again. Install the new `pinky-companion.apk` the same way. With **Update automatically** off, the phone's page offers the new version when you open it.
 
 </details>
 

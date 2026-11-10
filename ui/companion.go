@@ -3,14 +3,17 @@ package ui
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/update"
 )
 
 // Pinky Companion is the Android app that reads the screen and types for
@@ -30,6 +33,171 @@ type companionState struct {
 	installing map[string]time.Time // installs under way, by when they began
 	err        map[string]string    // why the last install failed
 	later      map[string]bool      // phones whose card the person put off
+	// byHand: phones that refused a companion build over USB, which Pinky
+	// leaves to the person, with the APK to install by hand
+	// (companionByHand); kept in update.json, so Pinky doesn't try the
+	// same build again after a restart. nil until refusals reads it.
+	byHand map[string]update.CompanionByHand
+	// apk and build are the APK Pinky installs and its versionCode (0 when
+	// unknown), as Options.CompanionAPK found them; apkRead once it ran.
+	apk                 string
+	build               int
+	apkRead, apkReading bool
+}
+
+// companionByHandDocs is how to install the companion app by hand, in the
+// README, and companionByHandDocsZh in its Chinese version.
+const (
+	companionByHandDocs   = "https://github.com/DIYgod/pinky#install-companion-by-hand"
+	companionByHandDocsZh = "https://github.com/DIYgod/pinky/blob/main/README.zh-CN.md#install-companion-by-hand"
+)
+
+// refusedOverUSB reports whether an install failed because the phone
+// refuses installs over USB, or nobody allowed it on the phone in time:
+// Xiaomi's Install via USB, for one, which some phones cannot turn on.
+func refusedOverUSB(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "INSTALL_FAILED_USER_RESTRICTED")
+}
+
+// findCompanionAPK is the APK to show for an install by hand, "" when
+// there is none, and its build; it reads the disk, so it runs off the main
+// thread.
+func (a *app) findCompanionAPK() (string, int) {
+	if a.opt.CompanionAPK == nil {
+		return "", 0
+	}
+	p, build, err := a.opt.CompanionAPK()
+	if err != nil {
+		return "", 0
+	}
+	return p, build
+}
+
+// companionAPK reports whether Pinky knows which companion APK it has,
+// reading it in the background the first time.
+func (a *app) companionAPK() bool {
+	st := &a.comp
+	if st.apkRead || a.opt.CompanionAPK == nil {
+		return true
+	}
+	if !st.apkReading {
+		st.apkReading = true
+		go func() {
+			p, build := a.findCompanionAPK()
+			a.post(func() { st.apk, st.build, st.apkRead, st.apkReading = p, build, true, false })
+		}()
+	}
+	return false
+}
+
+// refusals are the phones that refused a companion build over USB, read
+// from update.json the first time.
+func (a *app) refusals() map[string]update.CompanionByHand {
+	st := &a.comp
+	if st.byHand == nil {
+		st.byHand = map[string]update.CompanionByHand{}
+		if a.opt.Updates != nil {
+			maps.Copy(st.byHand, a.opt.Updates.State().CompanionByHand)
+		}
+	}
+	return st.byHand
+}
+
+// refusedUSB reports whether a phone refused the companion build Pinky has
+// over USB, so Pinky leaves it to the person. A newer build gets one try:
+// the person may have allowed installs over USB since.
+func (a *app) refusedUSB(id string) bool {
+	r, ok := a.refusals()[id]
+	return ok && (a.comp.build == 0 || r.Build >= a.comp.build)
+}
+
+// noteRefused remembers that a phone refused the companion build over USB,
+// in update.json too; seen when the person was there to see it (their own
+// Update failed), else the sidebar tells them once (companionByHandCards).
+func (a *app) noteRefused(id, name string, seen bool, apk string, build int) {
+	st := &a.comp
+	if apk != "" {
+		st.apk, st.build, st.apkRead = apk, build, true
+	}
+	r := update.CompanionByHand{Phone: name, Build: st.build, Seen: seen}
+	if old, ok := a.refusals()[id]; ok && old.Build == r.Build && old.Seen {
+		r.Seen = true // told before about this build
+	}
+	a.saveRefusal(id, r)
+}
+
+// seenRefusal notes that the person dismissed a phone's sidebar card.
+func (a *app) seenRefusal(id string) {
+	if r, ok := a.refusals()[id]; ok {
+		r.Seen = true
+		a.saveRefusal(id, r)
+	}
+}
+
+func (a *app) saveRefusal(id string, r update.CompanionByHand) {
+	a.refusals()[id] = r
+	if a.opt.Updates != nil {
+		a.opt.Updates.Change(func(s *update.State) {
+			if s.CompanionByHand == nil {
+				s.CompanionByHand = map[string]update.CompanionByHand{}
+			}
+			s.CompanionByHand[id] = r
+		})
+	}
+}
+
+// forgetRefused drops a phone's refusal: it has a current companion, so
+// the next build may install over USB, or the person removed the phone.
+func (a *app) forgetRefused(id string) {
+	if _, ok := a.refusals()[id]; !ok {
+		return
+	}
+	delete(a.comp.byHand, id)
+	if a.opt.Updates != nil {
+		a.opt.Updates.Change(func(s *update.State) { delete(s.CompanionByHand, id) })
+	}
+}
+
+// setCompanionState notes what CompanionState answered for a phone.
+func (a *app) setCompanionState(id string, cs driver.CompanionState) {
+	a.comp.state[id], a.comp.checked[id] = cs, time.Now()
+	if cs == driver.CompanionOn || cs == driver.CompanionOff || cs == driver.CompanionReady {
+		a.forgetRefused(id) // installed by hand, or the phone allows installs over USB now
+	}
+}
+
+// companionByHand offers a phone that refused an install over USB the
+// way to install the app by hand: the APK on this computer, and the
+// README's steps.
+func (a *app) companionByHand(c *mg.Context, d gateway.DeviceView) {
+	if a.refusedUSB(d.Info.ID) {
+		a.companionByHandLinks(c)
+	}
+}
+
+// companionByHandLinks are the links to the APK and to the README's steps.
+func (a *app) companionByHandLinks(c *mg.Context) {
+	a.companionAPK()
+	apk := a.comp.apk
+	mg.Row(c).Gap(16).Wrap().AlignItems(mg.Center).Children(func() {
+		if apk != "" {
+			if linkButton(c, locales.CompanionShowAPK()).Tooltip(tildePath(apk)).Clicked() {
+				a.reveal(apk)
+			}
+		}
+		if linkButton(c, locales.CompanionByHandHow()).Clicked() {
+			openURL(c, companionByHandLink(), func(error) {})
+		}
+	})
+}
+
+// companionByHandLink is the README's steps in the app's language: the
+// Chinese README in Chinese, else the English one.
+func companionByHandLink() string {
+	if _, lang, ok := locales.Catalog.Message(i18n.Locale(), "companionByHandHow"); ok && strings.HasPrefix(lang, "zh") {
+		return companionByHandDocsZh
+	}
+	return companionByHandDocs
 }
 
 // companionEvery is how often the client asks again while a phone's page
@@ -55,7 +223,7 @@ func (a *app) companionFor(d gateway.DeviceView) driver.CompanionState {
 				st.loading[id] = false
 				st.checked[id] = time.Now()
 				if err == nil {
-					st.state[id] = cs
+					a.setCompanionState(id, cs)
 				}
 			})
 		}()
@@ -85,10 +253,17 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 		// shorter wait inside it (the service's) says so itself.
 		timedOut := errors.Is(ctx.Err(), context.DeadlineExceeded)
 		cs, serr := ci.CompanionState(ctx, id)
+		byHand, apk, build := refusedOverUSB(err), "", 0
+		if byHand {
+			apk, build = a.findCompanionAPK()
+		}
 		a.post(func() {
 			delete(st.installing, id)
+			if byHand {
+				a.noteRefused(id, name, true, apk, build) // the card shows why
+			}
 			if serr == nil {
-				st.state[id], st.checked[id] = cs, time.Now()
+				a.setCompanionState(id, cs)
 			}
 			// A checkup that showed the app missing or off is stale now.
 			if a.checkupOf(id) != nil {
@@ -223,6 +398,7 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		if msg := st.err[id]; msg != "" {
 			mg.Text(c, msg).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
 		}
+		a.companionByHand(c, d)
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Margin(4, 0, 0, 0).Children(func() {
 			if button(c, action, btnOpt{kind: btnPrimary}).Label(actionLabel).Clicked() {
 				a.installCompanion(d)

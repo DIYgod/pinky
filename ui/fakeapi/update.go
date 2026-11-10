@@ -62,6 +62,13 @@ func (a *API) UpdateCompanion(ctx context.Context, deviceID string) (driver.Comp
 		a.mu.Unlock()
 		return driver.CompanionUpdate{}, fmt.Errorf("Google Play Protect checks installs over USB on this phone: %w", driver.ErrNeedsPerson)
 	}
+	// A phone that blocks installs over USB (SetInstallError) blocks
+	// updates too.
+	if d := a.device(deviceID); d != nil && d.installErr != nil {
+		err := d.installErr
+		a.mu.Unlock()
+		return res, err
+	}
 	for _, t := range a.tasks {
 		if t.view.DeviceID == deviceID && t.view.Ended.IsZero() {
 			a.mu.Unlock()

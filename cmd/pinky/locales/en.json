@@ -1770,6 +1770,10 @@
   "@companionAllowHintXiaomi": {
     "description": "The Pinky Companion card and the checkup, on a Xiaomi phone, while Pinky installs the app: what to do on the phone. Install is the button of Xiaomi's prompt: use its Simplified Chinese name."
   },
+  "companionByHandHow": "How to install it by hand",
+  "@companionByHandHow": {
+    "description": "The Pinky Companion card and the checkup, after the phone refused an install over USB: a link to the README's steps for installing Pinky Companion by hand."
+  },
   "companionCardLabel": "Pinky Companion on {name}",
   "@companionCardLabel": {
     "description": "The accessibility label of the Pinky Companion card. name is the phone's name.",
@@ -1816,13 +1820,13 @@
   "@companionErrPlayProtect": {
     "description": "The Pinky Companion card: the error when Google Play Protect stopped the install. Install anyway is the button of Play Protect's prompt."
   },
-  "companionErrRestricted": "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switch such as Install via USB, turn it on. Then try again.",
+  "companionErrRestricted": "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switch such as Install via USB, turn it on. Then try again, or install the APK on the phone by hand.",
   "@companionErrRestricted": {
-    "description": "The Pinky Companion card and the checkup: the error when the phone blocked installs over USB, on a phone whose maker Pinky does not know."
+    "description": "The Pinky Companion card and the checkup: the error when the phone blocked installs over USB, on a phone whose maker Pinky does not know. The links companionShowAPK and companionByHandHow follow it, for installing the APK by hand."
   },
-  "companionErrRestrictedXiaomi": "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account), then try again with the phone unlocked, and tap Install on it within 10 seconds.",
+  "companionErrRestrictedXiaomi": "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may need a SIM card), then try again with the phone unlocked, and tap Install on it within 10 seconds. Or install the APK on the phone by hand.",
   "@companionErrRestrictedXiaomi": {
-    "description": "The Pinky Companion card and the checkup, on a Xiaomi phone: the error when the phone blocked installs over USB (the switch is off, or nobody tapped Install in time). Install via USB and Install are Xiaomi's names: use those of its Simplified Chinese settings."
+    "description": "The Pinky Companion card and the checkup, on a Xiaomi phone: the error when the phone blocked installs over USB (the switch is off, or nobody tapped Install in time). Install via USB and Install are Xiaomi's names: use those of its Simplified Chinese settings. Some Xiaomi phones cannot turn the switch on without a SIM card; the links companionShowAPK and companionByHandHow follow, for installing the APK by hand."
   },
   "companionErrSettings": "The phone refuses to let the computer turn on the app's accessibility service: {detail}",
   "@companionErrSettings": {
@@ -1885,6 +1889,10 @@
   "companionInstalling": "Installing",
   "@companionInstalling": {
     "description": "The Pinky Companion card: the accessibility label of the progress bar while the app installs."
+  },
+  "companionShowAPK": "Show pinky-companion.apk",
+  "@companionShowAPK": {
+    "description": "The Pinky Companion card and the checkup, after the phone refused an install over USB: a link that shows the companion's APK, which comes with Pinky, in Finder or the file manager, to copy to the phone and install there. Keep the file name as it is."
   },
   "companionInstallingTitle": "Installing Pinky Companion",
   "@companionInstallingTitle": {
@@ -8906,6 +8914,28 @@
   "@updateCompanionAuto": {
     "description": "The companion card when an update is out and automatic updates are on."
   },
+  "updateCompanionByHand": "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the APK on the phone by hand.",
+  "@updateCompanionByHand": {
+    "description": "The companion card when an update is out: Pinky's automatic update failed because the phone refuses installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time), so it leaves the update to the person. Update is the card's button (companionUpdate); the links companionShowAPK and companionByHandHow follow."
+  },
+  "updateCompanionByHandCard": "{phone} refused to install the new Pinky Companion over USB, so Pinky won't try this version again. Install it on the phone by hand.",
+  "@updateCompanionByHandCard": {
+    "description": "A sidebar card, shown once: Pinky tried to update the companion app on a phone by itself (Update automatically), and the phone refused installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time). Pinky won't try this companion build again by itself; the links companionShowAPK and companionByHandHow follow, and a close button (updateNewsDismiss) hides the card.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Redmi K80"
+      }
+    }
+  },
+  "updateCompanionByHandDismissLabel": "Dismiss the Pinky Companion update",
+  "@updateCompanionByHandDismissLabel": {
+    "description": "The accessibility label of the close button of the sidebar card updateCompanionByHandTitle."
+  },
+  "updateCompanionByHandTitle": "Update Pinky Companion by hand",
+  "@updateCompanionByHandTitle": {
+    "description": "The title of the sidebar card updateCompanionByHandCard."
+  },
   "updateCompanionNeedsYou": "The phone asks before apps are installed over USB, so this update needs you.",
   "@updateCompanionNeedsYou": {
     "description": "The companion card: the phone asks the person before installs, so Pinky cannot update it by itself."
@@ -9156,7 +9186,7 @@
   },
   "updateNewsDismiss": "Dismiss",
   "@updateNewsDismiss": {
-    "description": "The tooltip of the What's new card's close button."
+    "description": "The tooltip of the close button of the sidebar's What's new card, and of its card updateCompanionByHandTitle."
   },
   "updateNewsDismissLabel": "Dismiss What's new",
   "@updateNewsDismissLabel": {
