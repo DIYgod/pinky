@@ -37,7 +37,8 @@ type passwordCheck struct {
 	// Empty: nothing was typed.
 	Empty bool
 	// DialogIsMe: the dialog's name resolves to the account Pinky runs
-	// as. Only read when Empty.
+	// as, or does not resolve and its user part is that account's name.
+	// Only read when Empty.
 	DialogIsMe bool
 	// Me is the account Pinky runs as.
 	Me windowsAccount
@@ -71,13 +72,17 @@ type passwordCheck struct {
 // account Pinky runs as by its own name in this computer's account
 // database, signs it in or answers ERROR_ACCOUNT_RESTRICTION. The dialog's
 // name only decides whether to ask: it comes in many forms (the computer's
-// NetBIOS or DNS name, a UPN, .\user), and Windows maps some of them to
-// the local account on a workgroup computer where LookupAccountName does
-// not, which is what failed in issue #41. Pinky asks when the dialog's
-// name got ERROR_ACCOUNT_RESTRICTION, or ERROR_LOGON_FAILURE while it does
-// not resolve to the signed-in account. Windows' answer about another
-// account never counts. A Microsoft account, a domain account, or a
-// password that is not empty never takes this path.
+// NetBIOS or DNS name, a UPN, a display name), and Windows maps some of
+// them to the local account on a workgroup computer where
+// LookupAccountName does not, which is what failed in issue #41. Pinky
+// asks when the dialog's name got ERROR_ACCOUNT_RESTRICTION, or
+// ERROR_LOGON_FAILURE while it names another account or none
+// (DialogIsMe). The second sign-in is a failed one for an account with a
+// password, and Windows locks an account out after a few (10 in 10
+// minutes by default), so the signed-in account's own name never takes
+// it. Windows' answer about another account never counts. A Microsoft
+// account, a domain account, or a password that is not empty never takes
+// this path.
 func passwordVerdict(c passwordCheck) (ok bool, step string, err error) {
 	if c.Logon == nil {
 		return true, "signed in", nil
