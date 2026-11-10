@@ -174,8 +174,16 @@ type ObserveRequest struct {
 // WaitForRequest is phone_wait_for.
 type WaitForRequest struct {
 	Call
-	Text      string
-	Gone      bool
+	Text string
+	// Any lists more texts to wait for, for when several things may come
+	// next: the wait ends when Text or the first of them shows, or with
+	// Gone, when none of them shows any more.
+	Any  []string
+	Gone bool
+	// Area, when set, is the part of the screen whose text counts: an
+	// element counts when its centre, the @x,y on its line, lies inside.
+	// Events have no place on the screen and do not count then.
+	Area      *screen.Rect
 	TimeoutMS int
 }
 
@@ -209,7 +217,9 @@ const (
 	MaxTextLen     = 16384
 	MaxObserveWait = 30 * time.Second
 	MaxWaitFor     = 45 * time.Second
-	MaxBatchSteps  = 50
+	// MaxWaitTexts is the most texts one phone_wait_for takes (text and any).
+	MaxWaitTexts  = 10
+	MaxBatchSteps = 50
 	// MaxSettle is the most an action's settle_ms may ask for: the
 	// default limit, SettleMax, is never raised.
 	MaxSettle = 3 * time.Second
@@ -1204,9 +1214,16 @@ func (g *Gateway) waitChange(ctx context.Context, l *lease, wait time.Duration, 
 
 // WaitFor implements phone_wait_for.
 func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
-	text := strings.TrimSpace(req.Text)
-	if text == "" {
-		return errResult(ErrInvalidArgument, "text is required.")
+	texts := waitTexts(req)
+	switch {
+	case len(texts) == 0:
+		return errResult(ErrInvalidArgument, "text is required, or any with at least one text.")
+	case len(texts) > MaxWaitTexts:
+		return errResult(ErrInvalidArgument, "phone_wait_for takes at most %d texts, text and any together.", MaxWaitTexts)
+	}
+	area := req.Area
+	if area != nil && (area.X < 0 || area.Y < 0 || area.Empty()) {
+		return errResult(ErrInvalidArgument, "area needs x and y of 0 or more, and a width and height above 0.")
 	}
 	timeout := time.Duration(req.TimeoutMS) * time.Millisecond
 	switch {
@@ -1236,30 +1253,38 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 	// elements, which tree reads leave out: read with OCR as well, at most
 	// once a second, and count its answer until the next such read.
 	var lastOCR time.Time
-	ocrFound := false
-	for {
+	ocrShown := ""
+	// shown is the text the last reads found, the first in the order given:
+	// the one that appeared, or the one that keeps a Gone wait waiting.
+	shown := ""
+	for first := true; ; first = false {
 		var err error
 		cur, err = g.observe(ctx, l.dev, false)
 		if err != nil {
 			return g.finish(l, g.readError(l, err))
 		}
+		if first && area != nil && cur.Width > 0 && cur.Height > 0 && (area.X >= cur.Width || area.Y >= cur.Height) {
+			return g.finish(l, errResult(ErrInvalidArgument, "area starts outside the screen, which is %dx%d.", cur.Width, cur.Height))
+		}
 		view, _ := g.agentView(l, cur)
 		g.mu.Lock()
 		evs := append([]screen.Event(nil), l.dev.events...)
 		g.mu.Unlock()
-		found := screenHas(view, evs, text)
-		if !found && time.Since(lastOCR) >= waitForOCREvery {
+		shown = screenShows(view, evs, texts, area)
+		if shown == "" && time.Since(lastOCR) >= waitForOCREvery {
 			if o, err := g.observeOCR(ctx, l.dev, ocrAll); err == nil {
 				lastOCR = time.Now()
 				ov, _ := g.agentView(l, o)
-				ocrFound = screenHas(ov, evs, text)
-				if ocrFound || req.Gone {
+				ocrShown = screenShows(ov, evs, texts, area)
+				if ocrShown != "" || req.Gone {
 					cur = o
 				}
 			}
 		}
-		found = found || ocrFound
-		if found != req.Gone {
+		if shown == "" {
+			shown = ocrShown
+		}
+		if (shown != "") != req.Gone {
 			matched = true
 			break
 		}
@@ -1276,41 +1301,116 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 		}
 		if req.Progress != nil && time.Since(lastProgress) >= 5*time.Second {
 			lastProgress = time.Now()
-			req.Progress(time.Since(start).Seconds(), timeout.Seconds(), fmt.Sprintf("Waiting for “%s”", text))
+			req.Progress(time.Since(start).Seconds(), timeout.Seconds(), "Waiting for "+quoteList(texts, "or"))
 		}
 	}
 	res = g.screenResult(l, cur, false)
 	g.startShot(l.dev, cur)
 	res.Status = StatusSettled
 	res.Matched = &matched
-	verb := "appeared"
-	if req.Gone {
-		verb = "disappeared"
-	}
+	took := timeout
 	if matched {
-		res.Message = fmt.Sprintf("“%s” %s after %s.", text, verb, approval.Human(time.Since(start)))
-	} else {
-		res.Message = fmt.Sprintf("“%s” has not %s after %s.", text, verb, approval.Human(timeout))
+		took = time.Since(start)
 	}
-	g.addStep(l, StepView{Tool: "phone_wait_for", Args: argsJSON(map[string]any{"text": text, "gone": req.Gone, "timeout_ms": req.TimeoutMS}),
-		Text: fmt.Sprintf("Waited for “%s”", text), Status: string(StatusSettled), At: start, Elapsed: time.Since(start)})
+	res.Message = waitMessage(texts, shown, req.Gone, matched, area != nil, took)
+	args := map[string]any{"gone": req.Gone, "timeout_ms": req.TimeoutMS}
+	rest := texts
+	if strings.TrimSpace(req.Text) != "" {
+		args["text"], rest = texts[0], texts[1:]
+	}
+	if len(rest) > 0 {
+		args["any"] = rest
+	}
+	if area != nil {
+		args["area"] = map[string]any{"x": area.X, "y": area.Y, "width": area.W, "height": area.H}
+	}
+	// One pair of quotes around all the texts: the client reads the step's
+	// text back by its shape (ui/gwtext.go).
+	g.addStep(l, StepView{Tool: "phone_wait_for", Args: argsJSON(args),
+		Text: fmt.Sprintf("Waited for “%s”", strings.Join(texts, " / ")), Status: string(StatusSettled), At: start, Elapsed: time.Since(start)})
 	return g.finish(l, res)
 }
 
-// screenHas reports whether an element's label or an event shows text
-// (containsText).
-func screenHas(s *screen.Screen, evs []screen.Event, text string) bool {
-	for _, e := range s.Elements {
-		if containsText(e.Label, text) {
-			return true
+// waitTexts is what a phone_wait_for waits for: text, then any, in the
+// order given, without blanks and repeats.
+func waitTexts(req WaitForRequest) []string {
+	var texts []string
+	seen := map[string]bool{}
+	for _, t := range append([]string{req.Text}, req.Any...) {
+		t = strings.TrimSpace(t)
+		if key := strings.ToLower(t); t != "" && !seen[key] {
+			seen[key] = true
+			texts = append(texts, t)
 		}
 	}
-	for _, ev := range evs {
-		if containsText(ev.Text, text) {
-			return true
+	return texts
+}
+
+// waitMessage says how a phone_wait_for ended. shown is the text the last
+// reads found: the one that appeared, or the one still there when a gone
+// wait gave up.
+func waitMessage(texts []string, shown string, gone, matched, inArea bool, took time.Duration) string {
+	where := ""
+	if inArea {
+		where = " in the area"
+	}
+	after := approval.Human(took)
+	switch {
+	case !gone && matched:
+		return fmt.Sprintf("“%s” appeared%s after %s.", shown, where, after)
+	case !gone && len(texts) == 1:
+		return fmt.Sprintf("“%s” has not appeared%s after %s.", texts[0], where, after)
+	case !gone:
+		return fmt.Sprintf("None of %s has appeared%s after %s.", quoteList(texts, "or"), where, after)
+	case matched:
+		return fmt.Sprintf("%s disappeared%s after %s.", quoteList(texts, "and"), where, after)
+	}
+	if shown == "" {
+		shown = texts[0]
+	}
+	return fmt.Sprintf("“%s” has not disappeared%s after %s.", shown, where, after)
+}
+
+// quoteList writes texts as “a”, “b” or “c”, with or or and before the last.
+func quoteList(texts []string, last string) string {
+	var b strings.Builder
+	for i, t := range texts {
+		switch {
+		case i == 0:
+		case i == len(texts)-1:
+			b.WriteString(" " + last + " ")
+		default:
+			b.WriteString(", ")
+		}
+		b.WriteString("“" + t + "”")
+	}
+	return b.String()
+}
+
+// screenShows returns the first of texts, in the order given, that an
+// element's label or an event shows (containsText), or "" when none does.
+// With an area, an element counts only when its centre, the @x,y on its
+// line, lies inside; events have no place on the screen and do not count.
+func screenShows(s *screen.Screen, evs []screen.Event, texts []string, area *screen.Rect) string {
+	for _, t := range texts {
+		for _, e := range s.Elements {
+			if area != nil && (e.Bounds.Empty() || !area.Contains(e.Bounds.Center())) {
+				continue
+			}
+			if containsText(e.Label, t) {
+				return t
+			}
+		}
+		if area != nil {
+			continue
+		}
+		for _, ev := range evs {
+			if containsText(ev.Text, t) {
+				return t
+			}
 		}
 	}
-	return false
+	return ""
 }
 
 // containsText reports whether label contains text, ignoring case. Where a

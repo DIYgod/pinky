@@ -271,6 +271,8 @@ func pairError(err error, qr bool) string {
 		return locales.PairingErrNoAdb()
 	case errors.Is(err, driver.ErrPairOldTool):
 		return locales.CheckHostADBOld()
+	case errors.Is(err, driver.ErrPairNoNetwork):
+		return locales.PairingErrNoNetwork()
 	case errors.Is(err, driver.ErrPairRejected):
 		return pick(locales.PairingErrRejected(), locales.PairingErrQRRejected())
 	case errors.Is(err, driver.ErrPairNotListening):
@@ -293,7 +295,8 @@ func pairError(err error, qr bool) string {
 func pairCodeHelps(err error) bool {
 	switch {
 	case errors.Is(err, gateway.ErrNoPairing), errors.Is(err, driver.ErrPairOldTool),
-		errors.Is(err, driver.ErrPairUnreachable), errors.Is(err, driver.ErrUnsupported):
+		errors.Is(err, driver.ErrPairUnreachable), errors.Is(err, driver.ErrUnsupported),
+		errors.Is(err, driver.ErrPairNoNetwork):
 		return false
 	}
 	return true
@@ -303,6 +306,8 @@ func pairCodeHelps(err error) bool {
 func connectError(err error) string {
 	msg := strings.ToLower(err.Error())
 	switch {
+	case errors.Is(err, driver.ErrPairNoNetwork):
+		return locales.PairingErrNoNetwork()
 	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(msg, "timeout") || strings.Contains(msg, "timed out"):
 		return locales.PairingErrTimeout()
 	case strings.Contains(msg, "refused") || strings.Contains(msg, "unreachable") || strings.Contains(msg, "no route") ||
