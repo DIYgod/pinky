@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- iPhones that Pinky drives through the WebDriverAgent helper now connect over Wi-Fi without a cable or Xcode, instead of failing with "WebDriverAgent did not start". Thanks to NaNhkNaN.
+
 ## 2026.1110.6 (2026-11-10)
 
 - Pinky no longer refuses to type into a text field just because its hidden name contains a word like "footprint" or "barcode", which likely kept agents from typing into a note in Apple Notes on iOS 27. Thanks to KenWuqianghao.
