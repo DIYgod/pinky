@@ -36,7 +36,7 @@ type TypeStats struct {
 	Restored  time.Duration
 	Total     time.Duration
 	Trace     []string // the keys path: what the keyboard probes found, with times
-	Checked   string   // the field read back: "same", "different", "hidden", "unchanged", "unfocused", "unreadable"
+	Checked   string   // the field read back: "same", "different", "hidden", "unchanged", "unfocused", "unreadable"; or, when it could not be read, the app: "shown" (it shows the text), "unchanged"
 }
 
 // LastTypeStats returns how the last Type call went.
@@ -156,25 +156,37 @@ func (d *Device) typeText(ctx context.Context, text string, opt driver.TypeOptio
 			d.raxReady(rctx)
 			cancel()
 		}
-		pfield, value := d.focusedValue(ctx)
+		pfield, value, perr := d.focusedField(ctx)
 		var prior *string // nil when it could not be read
 		if pfield != nil {
 			prior = &value
 		}
+		// A focused field that cannot be read is checked by what the app
+		// shows instead (checkUnread), so remember that now.
+		var shown *shownText
+		look := func() {
+			if perr != nil {
+				if s, ok := d.readShown(ctx); ok {
+					shown = &s
+				}
+			}
+		}
 		var err error
 		if method == "paste" {
 			if err = clear(); err == nil {
+				look()
 				err = d.paste(ctx, pb, saved, text, &st)
 			}
 		} else {
 			// Keys go only where the keyboard turns them into this text,
 			// which typeKeys checks first, clearing the field after that.
+			look()
 			err = d.typeKeys(ctx, keys, clear, pbErr, &st)
 		}
 		if err != nil {
 			return err
 		}
-		if note, err = d.checkTyped(ctx, text, opt.Append, prior, method, pbErr, &st); err != nil {
+		if note, err = d.checkTyped(ctx, text, opt.Append, prior, shown, method, pbErr, &st); err != nil {
 			if opt.Submit {
 				err = fmt.Errorf("%w; Return was not pressed", err)
 			}
@@ -197,17 +209,20 @@ const raxDialWait = 8 * time.Second
 // format or cut what is pasted. It is an error too when the text most
 // likely went nowhere: no element of the app in front has focus, or the
 // field reads as before or empty (GitHub issue #65: a search field that
-// never took focus, and Type said nothing). Only when the field cannot be
-// read, or hides its text, does it return a note for the agent instead.
+// never took focus, and Type said nothing), or, for a field that cannot be
+// read, the app shows exactly what it did (issue #76). Only when the field
+// cannot be read and the app changed otherwise, or the field hides its
+// text, does it return a note for the agent instead.
+// When the field cannot be read, what the app shows tells instead
+// (checkUnread; shown is what it showed before typing, nil when unknown).
 // prior is the field's value before, for appended text, nil when it could
 // not be read. Callers hold inputMu.
-func (d *Device) checkTyped(ctx context.Context, text string, appended bool, prior *string, method string, pbErr error, st *TypeStats) (string, error) {
-	const unread = "Pinky could not read the field back to check the text; look at the screen to be sure."
+func (d *Device) checkTyped(ctx context.Context, text string, appended bool, prior *string, shown *shownText, method string, pbErr error, st *TypeStats) (string, error) {
+	unread := func() (string, error) { return d.checkUnread(ctx, text, shown, method, st) }
 	field, v, ferr := d.focusedField(ctx)
 	rax, err := d.raxNow()
 	if ferr != nil || err != nil {
-		st.Checked = "unreadable"
-		return unread, nil
+		return unread()
 	}
 	// The app in front may read as the on-screen keyboard's process (a
 	// keyboard extension, seen with Doubao Input) for a moment while it
@@ -219,8 +234,7 @@ func (d *Device) checkTyped(ctx context.Context, text string, appended bool, pri
 		field, v, ferr = d.focusedField(ctx)
 	}
 	if ferr != nil {
-		st.Checked = "unreadable"
-		return unread, nil
+		return unread()
 	}
 	if field == nil {
 		st.Checked = "unfocused"
@@ -233,8 +247,7 @@ func (d *Device) checkTyped(ctx context.Context, text string, appended bool, pri
 			return "", err
 		}
 		if v, err = rax.stringAttribute(context.WithoutCancel(ctx), field, axpAttrValue); err != nil {
-			st.Checked = "unreadable"
-			return unread, nil
+			return unread()
 		}
 	}
 	checked, note, err := judgeTyped(v, text, appended, prior, method, pbErr, st.Spaces)

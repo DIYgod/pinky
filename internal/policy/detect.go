@@ -361,6 +361,47 @@ func IsSearchField(e *screen.Element) bool {
 	return containsAny(text, searchWords)
 }
 
+// IsSearchBox reports whether a text field typed into is a search box:
+// target, the field, reads as one (IsSearchField), or, when the screen
+// shows no field with focus (target nil), the field is one the app draws
+// itself and the screen shows a search box at its top
+// (impliedSearchBox).
+func IsSearchBox(target *screen.Element, s *screen.Screen) bool {
+	if target != nil {
+		return IsSearchField(target)
+	}
+	return impliedSearchBox(s)
+}
+
+// impliedSearchBox reports whether the field that has focus, which s does
+// not show, is most likely the app's search box. Apps that draw their own
+// text field read as no field at all: Xianyu's search box, empty, is only
+// the text of its placeholder, "搜索宝贝/帖子/用户" (GitHub issue #76). It
+// takes all of: the keyboard up, so something takes text; no element that
+// reads as a text field, which could be the one with focus; and a search
+// box's placeholder or label, not a button, in the top quarter of the
+// screen, where apps put their search box. A chat's own compose field at
+// the bottom with a search button at the top does not count.
+func impliedSearchBox(s *screen.Screen) bool {
+	if s == nil || !s.Keyboard || s.Height <= 0 {
+		return false
+	}
+	found := false
+	for i := range s.Elements {
+		e := &s.Elements[i]
+		if e.Role == screen.RoleInput || e.Has(screen.StateEditable) || e.Has(screen.StateFocused) {
+			return false
+		}
+		if e.Role == screen.RoleButton || e.Role == screen.RoleLink || e.Bounds.Empty() {
+			continue
+		}
+		if c := e.Bounds.Center(); c.Y < s.Height/4 && IsSearchField(e) {
+			found = true
+		}
+	}
+	return found
+}
+
 // IsCredentialField reports whether typing into e would hand a password or a
 // one-time code to the agent.
 //

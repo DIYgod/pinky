@@ -257,7 +257,7 @@ func (e *Engine) Evaluate(in Input) Verdict {
 			v.Decision = Deny
 			v.Reason = fmt.Sprintf("Read-only mode is on, and this would need approval (%s).", v.Rule)
 			v.Rule = RuleReadOnly
-		case v.Decision == Allow && in.Op == OpType && !IsSearchField(in.Target):
+		case v.Decision == Allow && in.Op == OpType && !IsSearchBox(in.Target, in.Screen):
 			v.Decision, v.Rule = Deny, RuleReadOnly
 			v.Reason = "Read-only mode is on: the agent may type only into search fields."
 		}

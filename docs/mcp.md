@@ -200,7 +200,7 @@ Leases a phone for a task and returns its first screen.
 | `task` | string, required | One line naming the task, shown to the person |
 | `device` | string | Optional when exactly one phone is online, or the session already holds one, or none is online and exactly one is connected but needs setup |
 | `apps` | string[] | Optional app allow-list for the task (names or ids). Launching another app returns `scope_denied`; typing into one asks the person. Launchers and system UI are always allowed |
-| `read_only` | boolean | Run the task read-only, whatever the agent's scope: anything the person's rules would ask about is refused (`blocked_by_policy`, rule `Read-only`), and typing works only in search fields. Connecting again for the same task never widens it. A new agent's approval card then offers read-only access first |
+| `read_only` | boolean | Run the task read-only, whatever the agent's scope: anything the person's rules would ask about is refused (`blocked_by_policy`, rule `Read-only`), and typing works only in search fields (a field that reads as one, or, with no field shown as focused, the keyboard up and a search box's placeholder at the top of the screen with no other field on it). Connecting again for the same task never widens it. A new agent's approval card then offers read-only access first |
 | `connection` | string | iPhones with the WebDriverAgent helper only: `auto` (the default), `helper` or `coredevice`. `helper` moves the task to the helper, which shares no screen, so apps that refuse to run while the screen is shared work; `coredevice` moves it back. Pinky moves a task to the helper by itself when `phone_launch` opens an app known to refuse screen sharing (DBS digibank, China Merchants Bank). See [Task connection](#task-connection) |
 | `own_screen` | boolean | Work on the phone's own screen even when the person has Pinky work on a background display (Settings › Phones › Work in the background), which starts empty and has no home screen. Only for work on the home screen itself: moving app icons, folders, widgets. The task stays on the phone's own screen to its end; connecting again for the same task with it moves a task off its background display. If the person used the phone's own screen in the last minute, the task starts `paused` (they are in control until they hand it over); if that screen is locked, `device_locked`. Without background work it changes nothing |
 
@@ -260,13 +260,13 @@ A passcode keypad that the app draws where screenshots do not reach (iOS marks i
 | Argument | Type | Meaning |
 | --- | --- | --- |
 | `text` | string, ≤ 16384 chars | The text; may be empty with `submit` |
-| `ref` | integer | The field (tapped first to focus it); default the focused field. Must be a text field |
+| `ref` | integer | The field (tapped first to focus it); default the focused field. Must be a text field, or the placeholder text of a search box that the app draws itself and that reads only as text (Xianyu's "搜索宝贝/帖子/用户") |
 | `append` | boolean | Keep the field's text |
 | `submit` | boolean | Press Enter afterwards |
 
 Typing into password and one-time-code fields is always refused (`blocked_by_policy`, rule `credentials`). So is typing without `ref` when no field reports focus and the screen has such a field.
 
-Pinky reads the field back after typing. Text that reads otherwise, or that went nowhere (no field has focus, or the field reads as before or empty), returns `uncertain` with the reason, and Return is not pressed for `submit`. When the field cannot be read back or hides its text, the result is `settled` with a note saying so.
+Pinky reads the field back after typing. Text that reads otherwise, or that went nowhere (no field has focus, or the field reads as before or empty), returns `uncertain` with the reason, and Return is not pressed for `submit`. When the field cannot be read back (an app that draws its own field), Pinky compares what the app shows before and after: the text showing up counts as typed, and an app that shows exactly what it did before returns `uncertain` without pressing Return. On an iPhone that usually means iOS asked the person to Allow Paste, a prompt Pinky cannot see, because the app reads pasted text itself; the message says to call `phone_handoff` so the person can answer Don't Allow and set Settings › the app › Paste from Other Apps to Allow, then to type again. Otherwise, and for a field that hides its text, the result is `settled` with a note saying so.
 
 ### phone_swipe
 

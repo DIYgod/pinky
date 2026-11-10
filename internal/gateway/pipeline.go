@@ -825,7 +825,11 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			if res != nil {
 				return p, res
 			}
-			if e.Role != screen.RoleInput && !e.Has(screen.StateEditable) && !e.Has(screen.StateFocused) {
+			// An app that draws its own search box shows only its
+			// placeholder ("搜索宝贝/帖子/用户", GitHub issue #76): tapping
+			// that focuses the box. A search button would search instead.
+			placeholder := e.Role != screen.RoleButton && e.Role != screen.RoleLink && policy.IsSearchField(e)
+			if e.Role != screen.RoleInput && !e.Has(screen.StateEditable) && !e.Has(screen.StateFocused) && !placeholder {
 				return p, errResult(ErrInvalidArgument, "[%d] is a %s, not a text field. Nothing was done.", a.Ref, e.Role)
 			}
 			p.target, p.point, p.hasPt = e, e.Bounds.Center(), true

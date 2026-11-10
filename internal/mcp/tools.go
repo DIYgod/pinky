@@ -92,7 +92,7 @@ type tapIn struct {
 type typeIn struct {
 	actionArgs
 	Text   string `json:"text" jsonschema:"The text to type, up to 16384 characters. Any language works."`
-	Ref    int    `json:"ref,omitempty" jsonschema:"The text field to type into; default the focused field."`
+	Ref    int    `json:"ref,omitempty" jsonschema:"The text field to type into, or the placeholder text of a search box an app draws itself; default the focused field."`
 	Append bool   `json:"append,omitempty" jsonschema:"Keep the field's text and add to it; default replaces it."`
 	Submit bool   `json:"submit,omitempty" jsonschema:"Press Enter afterwards. In a chat app this sends the message, which asks the person first if they chose to approve messages."`
 }

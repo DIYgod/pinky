@@ -264,7 +264,7 @@ Approvals are decided in the client and enforced in the gateway; the agent only 
 
 ### Policy terms
 
-- **Read-only:** the agent may observe, launch apps, tap, scroll and type into search fields; anything that would be Ask becomes Deny.
+- **Read-only:** the agent may observe, launch apps, tap, scroll and type into search fields (including an app's own search box that reads only as its placeholder at the top of the screen, with the keyboard up and no other field); anything that would be Ask becomes Deny.
 - **Watch-only:** observe only.
 - **Kind:** the rule an approval matched, such as "Payments"; "Always allow payments in Dinely" keeps an exemption for that kind in that app (see [Always allow](#always-allow)).
 - An app outside the agent's scope or the task's allow-list returns `scope_denied`; a blocked app or a Deny rule returns `blocked_by_policy`.
