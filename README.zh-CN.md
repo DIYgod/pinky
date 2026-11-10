@@ -233,6 +233,15 @@ Pinky 会发送匿名的使用统计（只有计数，比如跑了几个任务�
 </details>
 
 <details>
+<summary><b>Pinky 把文件放在哪里，能换个位置吗？</b></summary>
+
+Pinky 的设置、历史记录，以及 Agent 用来连接它的 socket，都放在你的用户目录里：Mac 上是 `~/Library/Application Support/Pinky`；Windows 上是 `%APPDATA%\Pinky` 和 `%LOCALAPPDATA%\Pinky`；Linux 上是 `~/.config/pinky`、`~/.local/share/pinky` 和 `$XDG_RUNTIME_DIR/pinky`。想把它们都放到你自己选的一个文件夹里，就把环境变量 `PINKY_HOME` 设成那个文件夹，Pinky 会用其中的 `config`、`data` 和 `run`。要让 Pinky 和 Agent 都能看到这个变量，比如在 Windows 上设成用户环境变量，或者同时写进 Agent 的 MCP 设置（`"env": { "PINKY_HOME": "…" }`）：没带这个变量启动的 Pinky 会用默认位置，也就找不到另一个。macOS 和 Linux 上 socket 的路径不能太长（大约 100 个字符），`PINKY_HOME` 让它超长时 Pinky 会直接说明。
+
+Windows 上 Agent 通过命名管道连接 Pinky，Claude、Codex 桌面版这类打包（MSIX）的应用里也能连上。旧版 Pinky 用的是 AppData 里的 socket 文件，这些应用看不到它；如果其中的 Agent 连不上 Pinky，请先更新 Pinky。
+
+</details>
+
+<details>
 <summary><b>Agent 能自己批准有风险的操作，或者被人骗着批准吗？</b></summary>
 
 不能。规则在 Pinky 的网关里执行，网关挡在 Agent 和手机之间。需要你批准的步骤会以 `approval_pending` 返回给 Agent，你在 Pinky 里点「允许」之前，手机上什么都不会发生；Agent 也没有任何东西可以发来替你确认。真正执行前，Pinky 还会核对按钮是否还在原处，60 秒内没回应就当作拒绝。Pinky 靠按钮上的文字认出这些按钮，支持 10 种语言，长得特别的按钮可能会漏掉：想更严格，「设置 › 安全」里有「在每个操作前都询问」和「只读模式」。

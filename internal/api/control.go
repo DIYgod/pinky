@@ -268,7 +268,7 @@ func (s *Server) dispatch(ctx context.Context, req rpcRequest, send func(rpcResp
 
 // Dial connects to the gateway's socket.
 func Dial(d Dirs) (net.Conn, error) {
-	return net.DialTimeout("unix", d.Socket(), 2*time.Second)
+	return dialSocket(d, 2*time.Second)
 }
 
 // Greet sends the hello line and reads the reply. It returns a reader that

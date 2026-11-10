@@ -233,6 +233,15 @@ Any agent that can use MCP servers: over stdio, by running `pinkyctl mcp`, or ov
 </details>
 
 <details>
+<summary><b>Where does Pinky keep its files, and can I move them?</b></summary>
+
+Pinky keeps its settings, history and the socket agents reach it through in your user folders: `~/Library/Application Support/Pinky` on a Mac; `%APPDATA%\Pinky` and `%LOCALAPPDATA%\Pinky` on Windows; `~/.config/pinky`, `~/.local/share/pinky` and `$XDG_RUNTIME_DIR/pinky` on Linux. To keep all of them in one folder of your choice instead, set the environment variable `PINKY_HOME` to it: Pinky then uses `config`, `data` and `run` inside it. Set it where both Pinky and your agents see it, such as a user environment variable on Windows, or also in the agent's MCP settings (`"env": { "PINKY_HOME": "…" }`): a Pinky started without it uses the usual folders and doesn't see the other. On macOS and Linux the socket's path has to stay short, about 100 characters, and Pinky says so when `PINKY_HOME` makes it too long.
+
+On Windows, agents reach Pinky through a named pipe, which works from packaged (MSIX) apps such as the Claude and Codex desktop apps too. Older versions of Pinky listened on a socket file in AppData, which those apps can't see; update Pinky if an agent in one of them can't reach it.
+
+</details>
+
+<details>
 <summary><b>Can an agent approve its own risky step, or be talked into it?</b></summary>
 
 No. The rules run in Pinky's gateway, between the agent and the phone. A step that needs you comes back to the agent as `approval_pending`, and nothing happens on the phone until you click **Allow** in Pinky; the agent has nothing it could send to confirm it. Before acting, Pinky checks that the button is still where it was, and no answer within 60 seconds means no. Pinky finds these buttons by their labels in 10 languages, so an unusual one could slip through: for more control, Settings › Safety has **Ask before every action** and **Read-only mode**.

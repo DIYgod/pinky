@@ -313,9 +313,60 @@ func TestDefaultDirsHome(t *testing.T) {
 	t.Setenv(HomeEnv, "/tmp/pinky-x")
 	d, err := DefaultDirs()
 	home, _ := filepath.Abs("/tmp/pinky-x") // D:\tmp\pinky-x on Windows
-	if err != nil || d.Socket() != filepath.Join(home, "run", "pinky.sock") || d.Rules() != filepath.Join(home, "config", "rules.yaml") {
+	sock := filepath.Join(home, "run", "pinky.sock")
+	if runtime.GOOS == "windows" {
+		sock = pipeName(filepath.Join(home, "run"))
+	}
+	if err != nil || d.Socket() != sock || d.Rules() != filepath.Join(home, "config", "rules.yaml") {
 		t.Fatalf("%+v %v", d, err)
 	}
+}
+
+// TestPipeName: each runtime folder has its own pipe, the same whatever the
+// case of its path, as Windows paths ignore case.
+func TestPipeName(t *testing.T) {
+	a, b := pipeName(filepath.Join("C:", "Users", "Me", "AppData", "Local", "Pinky")), pipeName(filepath.Join("c:", "users", "me", "appdata", "local", "pinky"))
+	if a != b {
+		t.Errorf("case matters: %s, %s", a, b)
+	}
+	if !strings.HasPrefix(a, `\\.\pipe\pinky-`) || len(a) != len(`\\.\pipe\pinky-`)+16 {
+		t.Errorf("pipe name %q", a)
+	}
+	if pipeName(filepath.Join("D:", "PinkyHome", "run")) == a {
+		t.Error("two folders share a pipe")
+	}
+}
+
+// TestSocketPathTooLong: a socket path the system cannot take fails with an
+// error that says so and names PINKY_HOME, not with "invalid argument".
+func TestSocketPathTooLong(t *testing.T) {
+	if socketPathLimit("linux") != 108 || socketPathLimit("darwin") != 103 {
+		t.Fatal("limits")
+	}
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows listens on a named pipe")
+	}
+	d := shortDirs(t)
+	d.Run = filepath.Join(d.Run, strings.Repeat("x", 120))
+	var long *PathTooLongError
+	if _, err := Listen(d); !errors.As(err, &long) || !strings.Contains(err.Error(), HomeEnv) || long.Path != d.Socket() {
+		t.Fatalf("listen: %v", err)
+	}
+	if _, err := Dial(d); !errors.As(err, &long) {
+		t.Fatalf("dial: %v", err)
+	}
+	// One byte within the limit still listens.
+	d = shortDirs(t)
+	pad := socketPathLimit(runtime.GOOS) - len(filepath.Join(d.Run, "x", "pinky.sock")) + 1
+	d.Run = filepath.Join(d.Run, strings.Repeat("x", pad))
+	if len(d.Socket()) != socketPathLimit(runtime.GOOS) {
+		t.Fatalf("socket path is %d bytes", len(d.Socket()))
+	}
+	ln, err := Listen(d)
+	if err != nil {
+		t.Fatalf("at the limit: %v", err)
+	}
+	ln.Close()
 }
 
 // TestQuit ends the process hosting the gateway on request, which Windows

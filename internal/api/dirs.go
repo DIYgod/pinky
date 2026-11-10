@@ -1,5 +1,5 @@
-// Package api is the gateway's local API: a Unix socket that only the
-// current user can reach. Each connection starts with a one-line hello that
+// Package api is the gateway's local API: a Unix socket (a named pipe on
+// Windows) that only the current user can reach. Each connection starts with a one-line hello that
 // picks its role:
 //
 //   - "mcp": the rest of the connection is an MCP session (newline-delimited
@@ -17,6 +17,7 @@ package api
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -100,8 +101,60 @@ func runtimeDir(userHome string) string {
 	return filepath.Join(userHome, ".local", "state")
 }
 
-// Socket is the gateway's socket.
-func (d Dirs) Socket() string { return filepath.Join(d.Run, "pinky.sock") }
+// Socket is where the gateway listens: a Unix socket in the runtime folder,
+// or on Windows a named pipe named after that folder. Packaged (MSIX) apps
+// on Windows, such as the Claude and Codex desktop apps, see a virtualized
+// copy of AppData, so the agents they start cannot reach a socket file
+// there; named pipes are not virtualized.
+func (d Dirs) Socket() string {
+	if runtime.GOOS == "windows" {
+		return pipeName(d.Run)
+	}
+	return d.unixSocket()
+}
+
+// unixSocket is the socket file in the runtime folder. Pinky on Windows
+// listened there before it used a named pipe; clients still try it so that
+// they reach an older gateway that is running.
+func (d Dirs) unixSocket() string { return filepath.Join(d.Run, "pinky.sock") }
+
+// pipeName is the named pipe for a runtime folder: one per folder, as with
+// the socket, so that gateways with their own PINKY_HOME stay apart. Windows
+// paths ignore case.
+func pipeName(run string) string {
+	sum := sha256.Sum256([]byte(strings.ToLower(filepath.Clean(run))))
+	return `\\.\pipe\pinky-` + hex.EncodeToString(sum[:8])
+}
+
+// socketPathLimit is the longest Unix socket path the system takes, in
+// bytes: sun_path holds 108 bytes on Linux and 104 on macOS and the BSDs,
+// where Go also keeps room for the final NUL.
+func socketPathLimit(goos string) int {
+	if goos == "linux" {
+		return 108
+	}
+	return 103
+}
+
+// PathTooLongError means the socket path does not fit in a Unix socket
+// address, which the system reports only as "invalid argument".
+type PathTooLongError struct {
+	Path  string
+	Limit int
+}
+
+func (e *PathTooLongError) Error() string {
+	return fmt.Sprintf("the socket path %s is %d bytes, longer than the %d this system allows: set %s to a shorter folder", e.Path, len(e.Path), e.Limit, HomeEnv)
+}
+
+// checkSocketPath returns a PathTooLongError for a path too long to be a
+// Unix socket.
+func checkSocketPath(path string) error {
+	if limit := socketPathLimit(runtime.GOOS); len(path) > limit {
+		return &PathTooLongError{Path: path, Limit: limit}
+	}
+	return nil
+}
 
 // LockFile keeps one gateway per data folder. It lives with the data, not
 // with the socket: a runtime folder can differ between starts (logind

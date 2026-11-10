@@ -104,8 +104,9 @@ func (s *shimSession) run(conn net.Conn, br *bufio.Reader, stdin io.Reader) erro
 
 // halfClose tells the gateway the agent is done sending.
 func halfClose(c net.Conn) {
-	if uc, ok := c.(*net.UnixConn); ok {
-		uc.CloseWrite()
+	// Unix sockets and Windows message-mode pipes can close one side.
+	if hc, ok := c.(interface{ CloseWrite() error }); ok {
+		hc.CloseWrite()
 	} else if c != nil {
 		c.Close()
 	}
