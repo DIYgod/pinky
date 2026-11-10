@@ -175,7 +175,9 @@ func TestBlankPasswordAccount(t *testing.T) {
 	}
 	const user, fullName = "pinkyblank", "Pinky Blank Test"
 	exec.Command("net", "user", user, "/delete").Run()
-	netUser(t, user, "", "/add", "/fullname:"+fullName)
+	// No password argument: an empty one ("") is checked against the
+	// password policy, which refuses it on the runner.
+	netUser(t, user, "/add", "/fullname:"+fullName)
 	t.Cleanup(func() { exec.Command("net", "user", user, "/delete").Run() })
 
 	lsa, err := registry.OpenKey(registry.LOCAL_MACHINE, `SYSTEM\CurrentControlSet\Control\Lsa`, registry.QUERY_VALUE|registry.SET_VALUE)
