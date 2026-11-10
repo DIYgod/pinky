@@ -60,6 +60,8 @@ func (g *Gateway) RemoveDevice(ctx context.Context, deviceID string, opt RemoveO
 	delete(g.devices, d.id)
 	delete(g.background, d.id)
 	delete(g.known, d.id)
+	delete(g.chosen, d.id)
+	forgetTaskWay(d)
 	g.removed[d.id] = true
 	dev := d.dev
 	d.dev, d.online, d.opening = nil, false, false

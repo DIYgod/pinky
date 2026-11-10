@@ -146,6 +146,11 @@ type ConnectRequest struct {
 	// person has agents work on a background display, which has no home
 	// screen: for work on the home screen itself (useOwnScreen).
 	OwnScreen bool
+	// Connection asks for a way to connect the phone for this task, as
+	// TaskConnection reads it: "helper" (the iPhone's WebDriverAgent
+	// helper, which shares no screen), "coredevice", or "auto"/"" for
+	// Pinky's choice (taskconn.go).
+	Connection string
 }
 
 // ReleaseRequest is phone_release.
@@ -446,6 +451,10 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	if r := []rune(title); len(r) > 200 {
 		title = string(r[:200])
 	}
+	way, ok := TaskConnection(req.Connection)
+	if !ok {
+		return errResult(ErrInvalidArgument, "connection must be auto, helper or coredevice, not %q.", req.Connection)
+	}
 	if res := s.approveAgent(ctx, req.Call, title, req.ReadOnly); res != nil {
 		return res
 	}
@@ -545,7 +554,11 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			g.addStep(l, connectStep(d.name(), title, req, true))
 			g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 		}
-		return readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), ro)
+		if res, note := g.taskConnection(ctx, l, way, req.Apps); res != nil {
+			return res
+		} else {
+			return withNote(readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), ro), note)
+		}
 	} else if l != nil {
 		g.endLeaseLocked(l, OutcomeReplaced, "")
 	}
@@ -561,7 +574,11 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	g.addStep(l, connectStep(d.name(), title, req, own))
 	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
-	return readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), req.ReadOnly)
+	res, note := g.taskConnection(ctx, l, way, req.Apps)
+	if res != nil {
+		return res
+	}
+	return withNote(readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), req.ReadOnly), note)
 }
 
 // waitingLocked reports whether a phone is connected but not open because
@@ -617,6 +634,9 @@ func connectStep(device, title string, req ConnectRequest, own bool) StepView {
 	if own {
 		args["own_screen"] = true
 		text += ", on the phone's own screen"
+	}
+	if c := strings.TrimSpace(req.Connection); c != "" {
+		args["connection"] = c
 	}
 	return StepView{Tool: "phone_connect", Args: argsJSON(args), Text: text, Status: string(StatusSettled), At: time.Now()}
 }

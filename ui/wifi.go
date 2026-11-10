@@ -335,6 +335,10 @@ func (a *app) connectingPage(c *mg.Context, d gateway.DeviceView) {
 		title = locales.PhoneMovingWiFiTitle(d.Info.Name)
 	case "Moving to the cable":
 		title = locales.PhoneMovingCableTitle(d.Info.Name)
+	case "Switching to the helper":
+		title = locales.PhoneSwitchHelperTitle(d.Info.Name)
+	case "Switching to CoreDevice":
+		title = locales.PhoneSwitchCoreDeviceTitle(d.Info.Name)
 	}
 	mg.Column(c).AlignItems(mg.Center).Gap(12).MaxWidth(420).Role(mg.RoleStatus).Children(func() {
 		mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {

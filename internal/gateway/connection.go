@@ -17,6 +17,13 @@ import (
 // Ids are unique across platforms, so each provider just keeps the ones it
 // will see.
 func (g *Gateway) applyConnections(ways map[string]string) {
+	g.mu.Lock()
+	for id, way := range ways {
+		if way != driver.ConnectionAuto {
+			g.chosen[id] = way
+		}
+	}
+	g.mu.Unlock()
 	for _, p := range g.opt.Providers {
 		cc, ok := p.(driver.ConnectionChooser)
 		if !ok {
@@ -80,6 +87,12 @@ func (g *Gateway) SetConnection(deviceID, way string) error {
 		g.rec.do(func(ctx context.Context) error { return g.store.SetDeviceConnection(ctx, id, way) })
 	}
 	g.mu.Lock()
+	if way == driver.ConnectionAuto {
+		delete(g.chosen, d.id)
+	} else {
+		g.chosen[d.id] = way
+	}
+	forgetTaskWay(d) // the person's choice beats a task's (taskconn.go)
 	d.moving = time.Now().Add(moveWait) // calls wait while it reconnects
 	g.mu.Unlock()
 	g.setOffline(d, "reconnecting the way you chose")

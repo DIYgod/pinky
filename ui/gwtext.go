@@ -965,6 +965,10 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusMovingWiFi()
 	case "Moving to the cable":
 		return locales.GwStatusMovingCable()
+	case "Switching to the helper":
+		return locales.GwStatusSwitchHelper()
+	case "Switching to CoreDevice":
+		return locales.GwStatusSwitchCoreDevice()
 	}
 	if m := reReconnecting.FindStringSubmatch(s); m != nil {
 		return locales.GwStatusReconnecting(m[1])

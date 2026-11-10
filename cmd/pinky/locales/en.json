@@ -2450,7 +2450,7 @@
   "@connectionAuto": {
     "description": "Settings › Phones, an iPhone's connection choice: the first choice, which goes by the iOS version."
   },
-  "connectionAutoDesc": "Without the helper on iOS 27 and later; through the WebDriverAgent helper on older iPhones that have it.",
+  "connectionAutoDesc": "Without the helper on iOS 27 and later. If the WebDriverAgent helper is installed, a task moves to it for apps that refuse screen sharing (DBS digibank, China Merchants Bank) and comes back afterwards. Older iPhones use the helper when they have it.",
   "@connectionAutoDesc": {
     "description": "Settings › Phones, an iPhone's connection choice: what Automatic does."
   },
@@ -4438,6 +4438,14 @@
       }
     }
   },
+  "gwStatusSwitchCoreDevice": "Switching to CoreDevice",
+  "@gwStatusSwitchCoreDevice": {
+    "description": "An iPhone's status line while Pinky moves it back from the WebDriverAgent helper to CoreDevice after a task that needed the helper. Shown only in other languages."
+  },
+  "gwStatusSwitchHelper": "Switching to the helper",
+  "@gwStatusSwitchHelper": {
+    "description": "An iPhone's status line while Pinky moves an agent's task to the WebDriverAgent helper, for an app that refuses screen sharing. Shown only in other languages."
+  },
   "gwStatusWaiting": "Waiting for you · {title}",
   "@gwStatusWaiting": {
     "description": "A phone's status line: an approval waits (title is the approval's, gwAskPay and the like). Shown only in other languages; in English the gateway's own words show.",
@@ -6299,6 +6307,26 @@
   "phoneShowOnMirror": "Show on the mirror",
   "@phoneShowOnMirror": {
     "description": "The accessibility label of the switch under the mirror between the agent's screen and the phone's."
+  },
+  "phoneSwitchCoreDeviceTitle": "Moving {phone} back to CoreDevice…",
+  "@phoneSwitchCoreDeviceTitle": {
+    "description": "The page of an iPhone while Pinky moves it back from the WebDriverAgent helper to CoreDevice after a task. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "phoneSwitchHelperTitle": "Moving {phone} to the helper…",
+  "@phoneSwitchHelperTitle": {
+    "description": "The page of an iPhone while Pinky moves an agent's task to the WebDriverAgent helper, which shares no screen, for an app that refuses screen sharing. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
   },
   "phoneTailnetAway": "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online.",
   "@phoneTailnetAway": {
