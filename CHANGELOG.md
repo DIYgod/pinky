@@ -2,6 +2,14 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Phone actions now answer within 45 seconds: a slow step comes back as uncertain for the agent to check, instead of the agent's app timing out and dropping the task.
+- When a local agent's connection to Pinky restarts, its new connection carries on with the same task, keeping the apps you allowed.
+- Reading an iPhone's screen through the WebDriverAgent helper over Wi-Fi is faster, and web pages inside apps are read once their content has loaded.
+- When an iPhone app does not take pasted text (for example behind iOS's Allow Paste prompt), typing now reports that it failed and does not press Enter. Thanks to @stoicneko for the report.
+- In read-only mode, agents can type in search boxes that apps draw themselves, such as Xianyu's.
+
 ## 2026.1110.29 (2026-11-10)
 
 - Opening China Merchants Bank on an iPhone by its app id now moves the task to the WebDriverAgent helper, as opening it by name already did.
