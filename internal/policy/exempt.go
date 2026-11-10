@@ -34,12 +34,18 @@ type Exemption struct {
 	App     string `yaml:"app,omitempty"`
 	AppName string `yaml:"app_name,omitempty"`
 	// Agent and Device are set on an answer to one of the gateway's own
-	// approvals (RulePhoneSettings, RuleAppLogs; see standing.go): the
-	// agent's name and the phone's id it is for, with DeviceName how
-	// Settings names the phone. The engine never lifts asks with one.
+	// approvals (RulePhoneSettings, RuleAppLogs, RuleInstall; see
+	// standing.go): the agent's name and the phone's id it is for, with
+	// DeviceName how Settings names the phone. The engine never lifts asks
+	// with one.
 	Agent      string `yaml:"agent,omitempty"`
 	Device     string `yaml:"device,omitempty"`
 	DeviceName string `yaml:"device_name,omitempty"`
+	// Signer and SignerName are set on an answer about RuleInstall: who
+	// signed the builds it allows (the certificate's SHA-256, or the
+	// iPhone team id), and their name for the person.
+	Signer     string `yaml:"signer,omitempty"`
+	SignerName string `yaml:"signer_name,omitempty"`
 }
 
 // Rules returns Rule and With.
@@ -85,6 +91,7 @@ func checkExemptions(f *File) error {
 		x := &f.AlwaysAllow[i]
 		x.Rule, x.App, x.AppName = strings.TrimSpace(x.Rule), strings.TrimSpace(x.App), strings.TrimSpace(x.AppName)
 		x.Agent, x.Device, x.DeviceName = strings.TrimSpace(x.Agent), strings.TrimSpace(x.Device), strings.TrimSpace(x.DeviceName)
+		x.Signer, x.SignerName = strings.TrimSpace(x.Signer), strings.TrimSpace(x.SignerName)
 		for j := range x.With {
 			x.With[j] = strings.TrimSpace(x.With[j])
 		}
@@ -99,6 +106,8 @@ func checkExemptions(f *File) error {
 			return fmt.Errorf("always_allow entry %d has no rule", i+1)
 		case x.Agent != "":
 			return fmt.Errorf("always_allow %q names an agent but no device", x.Rule)
+		case x.Signer != "" || x.SignerName != "":
+			return fmt.Errorf("always_allow %q names a signer but no device", x.Rule)
 		case x.App == "" && x.AppName == "":
 			return fmt.Errorf("always_allow %q has no app or app_name", x.Rule)
 		}
@@ -181,7 +190,8 @@ func (e *Engine) Exempt(asks []string, app screen.App) (Exemption, error) {
 
 // Unexempt takes back an "Always allow", as Exemptions listed it, and
 // saves the rules file: its rules ask again in its app (for an answer
-// that names an agent and a phone, for that agent on that phone).
+// that names an agent and a phone, for that agent on that phone, and for
+// an install for builds by its signer).
 func (e *Engine) Unexempt(x Exemption) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -191,7 +201,7 @@ func (e *Engine) Unexempt(x Exemption) error {
 	kept := e.file.AlwaysAllow[:0:0]
 	found := false
 	for _, y := range e.file.AlwaysAllow {
-		if y.Rule == x.Rule && y.App == x.App && y.AppName == x.AppName && y.Agent == x.Agent && y.Device == x.Device {
+		if y.Rule == x.Rule && y.App == x.App && y.AppName == x.AppName && y.Agent == x.Agent && y.Device == x.Device && y.Signer == x.Signer {
 			found = true
 			continue
 		}

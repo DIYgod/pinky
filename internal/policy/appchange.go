@@ -18,7 +18,9 @@ const (
 
 // Built-in rules about whole apps.
 const (
-	// RuleInstall asks before every install or update from the computer.
+	// RuleInstall asks before an install or update from the computer,
+	// unless the person always allows the agent to install builds of the
+	// app by the same signer on the phone (Engine.Standing).
 	RuleInstall = "Installing from the computer"
 	// RuleUninstall asks before every uninstall.
 	RuleUninstall = "Uninstalling apps"
@@ -116,12 +118,14 @@ func (e *Engine) appChangeLocked(in Input) Verdict {
 	v := Verdict{Decision: Ask, Rule: asks[0], Asks: asks}
 	switch v.Rule {
 	case RuleInstall:
-		v.Reason = "Installing or updating an app from the computer always needs the person's approval."
+		v.Reason = "Installing or updating an app from the computer needs the person's approval."
 	case RuleUninstall:
 		v.Reason = "Uninstalling an app deletes its data on the phone and always needs the person's approval."
 	default:
 		v.Reason = reason(v, app)
 	}
-	// Always allow answers lift the person's own asks, never the two above.
+	// Always allow answers lift the person's own asks, never the two above:
+	// the gateway keeps an install's Always allow per agent, phone and
+	// signer (standing.go), and an uninstall asks every time.
 	return e.liftLocked(v, app)
 }

@@ -190,3 +190,161 @@ func TestAlwaysAllowAppLogs(t *testing.T) {
 		t.Fatalf("exemptions after forgetting the phone %+v", g.Exemptions())
 	}
 }
+
+// tryInstall installs from rel in the phone's folder and answers the
+// approval it asks with d, when it asks; it reports whether it asked.
+func tryInstall(t *testing.T, g *Gateway, s *Session, rel string, d Decision, check func(NeedView)) (bool, *Result) {
+	t.Helper()
+	done := make(chan *Result, 1)
+	go func() { done <- s.App(context.Background(), AppRequest{Action: "install", Paths: []string{rel}}) }()
+	stop := make(chan struct{})
+	defer close(stop)
+	select {
+	case res := <-done:
+		return false, res
+	case n := <-needCh(g, stop):
+		if check != nil {
+			check(n)
+		}
+		if err := g.Decide(n.ID, d, ""); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return true, <-done
+}
+
+// Always allow on installing from the computer holds for that agent on
+// that phone, for builds of that app id by that signer: the next task's
+// build goes in without asking, while another signer, another app,
+// another agent, an uninstall, every action asking and a rule of the
+// person's own still ask, and taking it back makes it ask again.
+func TestAlwaysAllowInstall(t *testing.T) {
+	dir := t.TempDir()
+	x := newExtraDev("pixel", "Pixel 9")
+	x.pkgs = map[string]driver.Package{
+		"v1":      {ID: "com.example.tool", Name: "Tool", Version: "1.0 (1)", Signer: "Example Dev (11111111)", SignerKey: "11111111aaaa"},
+		"v2":      {ID: "com.example.tool", Name: "Tool", Version: "2.0 (2)", Signer: "Example Dev (11111111)", SignerKey: "11111111aaaa"},
+		"resign":  {ID: "com.example.tool", Name: "Tool", Version: "3.0 (3)", Signer: "Someone Else (22222222)", SignerKey: "22222222bbbb"},
+		"another": {ID: "com.example.other", Name: "Tool", Version: "1.0 (1)", Signer: "Example Dev (11111111)", SignerKey: "11111111aaaa"},
+	}
+	pol := loadPolicy(t, dir)
+	g := newExtraGateway(t, x, func(o *Options) { o.Policy = pol })
+	for _, f := range []string{"v1", "v2", "resign", "another"} {
+		putFile(t, g, f+".apk", f)
+	}
+	mustAsk := func(s *Session, rel string, always bool) {
+		t.Helper()
+		asked, res := tryInstall(t, g, s, rel, Deny, func(n NeedView) {
+			if n.Rule != policy.RuleInstall || n.AlwaysAllow != always {
+				t.Errorf("%s: approval %+v", rel, n)
+			}
+		})
+		if !asked {
+			t.Fatalf("%s did not ask: %+v", rel, res)
+		}
+		mustStatus(t, res, StatusDenied)
+	}
+
+	s, _ := connect(t, g, "Build and test")
+	asked, res := tryInstall(t, g, s, "v1.apk", AllowAlways, func(n NeedView) {
+		if n.Rule != policy.RuleInstall || !n.AlwaysAllow || !n.AllowTask || n.Agent != agent.Name || n.DeviceName != "Pixel 9" || n.App != "Tool" {
+			t.Errorf("approval %+v", n)
+		}
+	})
+	if !asked {
+		t.Fatal("the first install did not ask")
+	}
+	mustStatus(t, res, StatusSettled)
+	got := g.Exemptions()
+	if len(got) != 1 || got[0].Rule != policy.RuleInstall || got[0].AppID != "com.example.tool" || got[0].AppName != "Tool" ||
+		got[0].Agent != agent.Name || got[0].DeviceID != "pixel" || got[0].DeviceName != "Pixel 9" ||
+		got[0].Signer != "11111111aaaa" || got[0].SignerName != "Example Dev (11111111)" {
+		t.Fatalf("exemptions %+v", got)
+	}
+	release(t, g, s)
+
+	// The next task: the next build goes in without asking.
+	s, _ = connect(t, g, "Build again")
+	asked, res = tryInstall(t, g, s, "v2.apk", Deny, nil)
+	if asked {
+		t.Fatal("asked again after Always allow")
+	}
+	mustStatus(t, res, StatusSettled)
+	if x.installed["com.example.tool"] != "2.0 (2)" {
+		t.Fatalf("installed %v", x.installed)
+	}
+	// Another signer, and another app with the same name, ask, and offer
+	// their own Always allow.
+	mustAsk(s, "resign.apk", true)
+	mustAsk(s, "another.apk", true)
+	release(t, g, s)
+
+	// Another agent on the same phone asks.
+	other := g.OpenSession(AgentInfo{Name: "Codex", Client: "codex 1.0"})
+	t.Cleanup(other.Close)
+	mustStatus(t, other.Connect(context.Background(), ConnectRequest{Task: "Install"}), StatusSettled)
+	mustAsk(other, "v2.apk", true)
+	release(t, g, other)
+
+	// A rule of the person's own that asks about the app still asks, and
+	// Always allow is not offered: it would not stop that rule asking.
+	if err := pol.SetFileRules(pol.FileRules(), []policy.Rule{{Name: "Tools", Decision: policy.Ask,
+		Match: policy.Match{App: policy.StringList{"Tool"}}}}); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = connect(t, g, "With a rule")
+	mustAsk(s, "v2.apk", false)
+	release(t, g, s)
+	if err := pol.SetFileRules(pol.FileRules(), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// While every action asks, it asks, and offers no Always allow.
+	if err := pol.SetPreset(policy.PresetEvery); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = connect(t, g, "Every action")
+	mustAsk(s, "v2.apk", false)
+	release(t, g, s)
+	if err := pol.SetPreset(policy.PresetCommits); err != nil {
+		t.Fatal(err)
+	}
+
+	// Read-only refuses it.
+	if err := pol.SetReadOnly("pixel", true); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = connect(t, g, "Read-only")
+	asked, res = tryInstall(t, g, s, "v2.apk", Deny, nil)
+	if asked || res.Status != StatusBlocked || res.Rule != policy.RuleReadOnly {
+		t.Fatalf("read-only: asked %v, %+v", asked, res)
+	}
+	release(t, g, s)
+	if err := pol.SetReadOnly("pixel", false); err != nil {
+		t.Fatal(err)
+	}
+
+	// Uninstalling still asks every time, with no Always allow.
+	s, _ = connect(t, g, "Uninstall")
+	done := make(chan *Result, 1)
+	go func() { done <- s.App(context.Background(), AppRequest{Action: "uninstall", App: "com.dinely.app"}) }()
+	n := waitNeedKind(t, g, NeedApproval)
+	if n.Rule != policy.RuleUninstall || n.AlwaysAllow {
+		t.Fatalf("uninstall approval %+v", n)
+	}
+	if err := g.Decide(n.ID, Deny, ""); err != nil {
+		t.Fatal(err)
+	}
+	mustStatus(t, <-done, StatusDenied)
+	release(t, g, s)
+
+	// Taken back in Settings: it asks again.
+	if err := g.RemoveExemption(g.Exemptions()[0]); err != nil {
+		t.Fatal(err)
+	}
+	if len(g.Exemptions()) != 0 {
+		t.Fatalf("exemptions %+v", g.Exemptions())
+	}
+	s, _ = connect(t, g, "Taken back")
+	mustAsk(s, "v2.apk", true)
+}

@@ -24,22 +24,22 @@ func TestStandingAnswers(t *testing.T) {
 		t.Fatal(err)
 	}
 	app := screen.App{ID: "dev.pinky.crashtest", Name: "Crash Test"}
-	if !e.CanKeepStanding(RulePhoneSettings, "Claude Code", "pixel", screen.App{}) ||
-		e.CanKeepStanding("Payments", "Claude Code", "pixel", app) || e.CanKeepStanding(RulePhoneSettings, "", "pixel", screen.App{}) ||
-		e.CanKeepStanding(RuleAppLogs, "Claude Code", "pixel", screen.App{}) {
+	if !e.CanKeepStanding(Grant{Rule: RulePhoneSettings, Agent: "Claude Code", Device: "pixel"}) ||
+		e.CanKeepStanding(Grant{Rule: "Payments", Agent: "Claude Code", Device: "pixel", App: app}) || e.CanKeepStanding(Grant{Rule: RulePhoneSettings, Agent: "", Device: "pixel"}) ||
+		e.CanKeepStanding(Grant{Rule: RuleAppLogs, Agent: "Claude Code", Device: "pixel"}) {
 		t.Fatal("CanKeepStanding")
 	}
-	if _, err := e.KeepStanding("Payments", "Claude Code", "pixel", "Pixel 9", app); err != ErrNotExemptable {
+	if _, err := e.KeepStanding(Grant{Rule: "Payments", Agent: "Claude Code", Device: "pixel", DeviceName: "Pixel 9", App: app}); err != ErrNotExemptable {
 		t.Fatalf("a rule's answer kept per phone: %v", err)
 	}
-	if _, err := e.KeepStanding(RulePhoneSettings, "Claude Code", "pixel", "Pixel 9", screen.App{}); err != nil {
+	if _, err := e.KeepStanding(Grant{Rule: RulePhoneSettings, Agent: "Claude Code", Device: "pixel", DeviceName: "Pixel 9"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.KeepStanding(RuleAppLogs, "Claude Code", "pixel", "Pixel 9", app); err != nil {
+	if _, err := e.KeepStanding(Grant{Rule: RuleAppLogs, Agent: "Claude Code", Device: "pixel", DeviceName: "Pixel 9", App: app}); err != nil {
 		t.Fatal(err)
 	}
 	// Keeping it again changes nothing.
-	if _, err := e.KeepStanding(RuleAppLogs, "Claude Code", "pixel", "Pixel 9", app); err != nil || len(e.Exemptions()) != 2 {
+	if _, err := e.KeepStanding(Grant{Rule: RuleAppLogs, Agent: "Claude Code", Device: "pixel", DeviceName: "Pixel 9", App: app}); err != nil || len(e.Exemptions()) != 2 {
 		t.Fatalf("again: %v %+v", err, e.Exemptions())
 	}
 
@@ -58,7 +58,7 @@ func TestStandingAnswers(t *testing.T) {
 			{RuleAppLogs, "Claude Code", "pixel", screen.App{ID: "com.example.notes", Name: "Notes"}, false},
 			{RuleAppLogs, "Codex", "pixel", app, false},
 		} {
-			if got := e.Standing(c.rule, c.agent, c.device, c.app); got != c.want {
+			if got := e.Standing(Grant{Rule: c.rule, Agent: c.agent, Device: c.device, App: c.app}); got != c.want {
 				t.Errorf("%s: Standing(%s, %s, %s, %+v) = %v", when, c.rule, c.agent, c.device, c.app, got)
 			}
 		}
@@ -85,7 +85,7 @@ func TestStandingAnswers(t *testing.T) {
 	if err := e.SetPreset(PresetEvery); err != nil {
 		t.Fatal(err)
 	}
-	if e.Standing(RulePhoneSettings, "Claude Code", "pixel", screen.App{}) || e.CanKeepStanding(RulePhoneSettings, "Claude Code", "pixel", screen.App{}) {
+	if e.Standing(Grant{Rule: RulePhoneSettings, Agent: "Claude Code", Device: "pixel"}) || e.CanKeepStanding(Grant{Rule: RulePhoneSettings, Agent: "Claude Code", Device: "pixel"}) {
 		t.Fatal("applies while every action asks")
 	}
 	if err := e.SetPreset(PresetPayments); err != nil {
@@ -118,7 +118,7 @@ func TestStandingAnswers(t *testing.T) {
 	if err := e.Unexempt(xs[1]); err != nil {
 		t.Fatal(err)
 	}
-	if e.Standing(RuleAppLogs, "Claude Code", "pixel", app) || !e.Standing(RulePhoneSettings, "Claude Code", "pixel", screen.App{}) {
+	if e.Standing(Grant{Rule: RuleAppLogs, Agent: "Claude Code", Device: "pixel", App: app}) || !e.Standing(Grant{Rule: RulePhoneSettings, Agent: "Claude Code", Device: "pixel"}) {
 		t.Fatal("after taking back the logs answer")
 	}
 
@@ -136,11 +136,16 @@ func TestStandingAnswers(t *testing.T) {
 
 func TestStandingInTheRulesFile(t *testing.T) {
 	bad := map[string]string{
-		"no agent":      "always_allow:\n  - rule: Phone settings\n    device: pixel\n",
-		"agent only":    "always_allow:\n  - rule: Phone settings\n    agent: Claude Code\n    app: x\n",
-		"rule's answer": "always_allow:\n  - rule: Payments\n    agent: Claude Code\n    device: pixel\n    app: com.dinely.app\n",
-		"logs, no app":  "always_allow:\n  - rule: App logs\n    agent: Claude Code\n    device: pixel\n",
-		"with":          "always_allow:\n  - rule: Phone settings\n    with: [Commits]\n    agent: Claude Code\n    device: pixel\n",
+		"no agent":           "always_allow:\n  - rule: Phone settings\n    device: pixel\n",
+		"agent only":         "always_allow:\n  - rule: Phone settings\n    agent: Claude Code\n    app: x\n",
+		"rule's answer":      "always_allow:\n  - rule: Payments\n    agent: Claude Code\n    device: pixel\n    app: com.dinely.app\n",
+		"logs, no app":       "always_allow:\n  - rule: App logs\n    agent: Claude Code\n    device: pixel\n",
+		"with":               "always_allow:\n  - rule: Phone settings\n    with: [Commits]\n    agent: Claude Code\n    device: pixel\n",
+		"install, no signer": "always_allow:\n  - rule: Installing from the computer\n    agent: Claude Code\n    device: pixel\n    app: com.example.tool\n",
+		"install, name only": "always_allow:\n  - rule: Installing from the computer\n    agent: Claude Code\n    device: pixel\n    app_name: Tool\n    signer: ab12\n",
+		"install, no device": "always_allow:\n  - rule: Installing from the computer\n    app: com.example.tool\n    signer: ab12\n",
+		"signer elsewhere":   "always_allow:\n  - rule: App logs\n    agent: Claude Code\n    device: pixel\n    app: com.example.tool\n    signer: ab12\n",
+		"uninstall":          "always_allow:\n  - rule: Uninstalling apps\n    agent: Claude Code\n    device: pixel\n    app: com.example.tool\n",
 	}
 	for name, src := range bad {
 		if _, err := ParseFile([]byte(src)); err == nil {
@@ -154,5 +159,117 @@ func TestStandingInTheRulesFile(t *testing.T) {
 	want := []Exemption{{Rule: RulePhoneSettings, Agent: "Claude Code", Device: "pixel", DeviceName: "Pixel 9"}}
 	if !reflect.DeepEqual(f.AlwaysAllow, want) {
 		t.Fatalf("parsed %+v, want %+v", f.AlwaysAllow, want)
+	}
+}
+
+// Always allow on installing from the computer holds for one agent on one
+// phone, for one app id signed by one signer: another signer, another id
+// (even with the same name) or another agent or phone still asks, and the
+// rules' own asks about installs are never lifted.
+func TestStandingInstall(t *testing.T) {
+	dir := t.TempDir()
+	rules, apps := filepath.Join(dir, "rules.yaml"), filepath.Join(dir, "apps.yaml")
+	e, err := Load(rules, apps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tool := screen.App{ID: "com.example.tool", Name: "Tool"}
+	grant := Grant{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", DeviceName: "Pixel 9", App: tool,
+		Signer: "ab12cd34", SignerName: "Example Dev (ab12cd34)"}
+	for _, g := range []Grant{
+		{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", App: tool},                                         // no signer
+		{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", App: screen.App{Name: "Tool"}, Signer: "ab12cd34"}, // no id
+		{Rule: RuleUninstall, Agent: "Claude Code", Device: "pixel", App: tool},
+	} {
+		if e.CanKeepStanding(g) {
+			t.Errorf("CanKeepStanding(%+v)", g)
+		}
+		if _, err := e.KeepStanding(g); err != ErrNotExemptable {
+			t.Errorf("KeepStanding(%+v) = %v", g, err)
+		}
+	}
+	if !e.CanKeepStanding(grant) {
+		t.Fatal("CanKeepStanding")
+	}
+	x, err := e.KeepStanding(grant)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := Exemption{Rule: RuleInstall, App: "com.example.tool", AppName: "Tool", Agent: "Claude Code", Device: "pixel",
+		DeviceName: "Pixel 9", Signer: "ab12cd34", SignerName: "Example Dev (ab12cd34)"}
+	if !reflect.DeepEqual(x, want) {
+		t.Fatalf("kept %+v", x)
+	}
+	// The same app and signer again keeps one answer; another signer is
+	// another answer.
+	if _, err := e.KeepStanding(grant); err != nil || len(e.Exemptions()) != 1 {
+		t.Fatalf("again: %v %+v", err, e.Exemptions())
+	}
+
+	check := func(e *Engine, when string) {
+		t.Helper()
+		for _, c := range []struct {
+			g    Grant
+			want bool
+		}{
+			{grant, true},
+			{Grant{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", App: screen.App{ID: "com.example.tool"}, Signer: "ab12cd34"}, true},
+			{Grant{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", App: tool, Signer: "ffff0000"}, false},
+			{Grant{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", App: tool}, false},
+			{Grant{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", App: screen.App{ID: "com.example.other", Name: "Tool"}, Signer: "ab12cd34"}, false},
+			{Grant{Rule: RuleInstall, Agent: "Claude Code", Device: "pixel", App: screen.App{Name: "Tool"}, Signer: "ab12cd34"}, false},
+			{Grant{Rule: RuleInstall, Agent: "Codex", Device: "pixel", App: tool, Signer: "ab12cd34"}, false},
+			{Grant{Rule: RuleInstall, Agent: "Claude Code", Device: "iphone", App: tool, Signer: "ab12cd34"}, false},
+			{Grant{Rule: RuleUninstall, Agent: "Claude Code", Device: "pixel", App: tool, Signer: "ab12cd34"}, false},
+			{Grant{Rule: RuleAppLogs, Agent: "Claude Code", Device: "pixel", App: tool}, false},
+		} {
+			if got := e.Standing(c.g); got != c.want {
+				t.Errorf("%s: Standing(%+v) = %v", when, c.g, got)
+			}
+		}
+	}
+	check(e, "kept")
+	data, err := os.ReadFile(rules)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{"rule: Installing from the computer", "signer: ab12cd34", "signer_name: Example Dev (ab12cd34)", "app: com.example.tool"} {
+		if !strings.Contains(string(data), s) {
+			t.Errorf("rules.yaml lacks %q:\n%s", s, data)
+		}
+	}
+	if e, err = Load(rules, apps); err != nil {
+		t.Fatal(err)
+	}
+	check(e, "loaded")
+
+	// The engine still asks: the answer is the gateway's to use.
+	if v := e.Evaluate(Input{Op: OpInstall, Device: "pixel", Launch: tool}); v.Decision != Ask || v.Rule != RuleInstall {
+		t.Fatalf("verdict %+v", v)
+	}
+
+	// Not while every action asks.
+	if err := e.SetPreset(PresetEvery); err != nil {
+		t.Fatal(err)
+	}
+	if e.Standing(grant) || e.CanKeepStanding(grant) {
+		t.Fatal("applies while every action asks")
+	}
+	if err := e.SetPreset(PresetPayments); err != nil {
+		t.Fatal(err)
+	}
+
+	// Another signer's answer is its own, and taking one back leaves the
+	// other.
+	other := grant
+	other.Signer, other.SignerName = "ffff0000", "Someone Else (ffff0000)"
+	if _, err := e.KeepStanding(other); err != nil || len(e.Exemptions()) != 2 {
+		t.Fatalf("another signer: %v %+v", err, e.Exemptions())
+	}
+	if err := e.Unexempt(e.Exemptions()[0]); err != nil {
+		t.Fatal(err)
+	}
+	if e.Standing(grant) || !e.Standing(other) {
+		t.Fatalf("after taking back one: %+v", e.Exemptions())
 	}
 }
