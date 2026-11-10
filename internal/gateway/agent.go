@@ -1198,7 +1198,7 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 	case len(texts) == 0:
 		return errResult(ErrInvalidArgument, "text is required, or any with at least one text.")
 	case len(texts) > MaxWaitTexts:
-		return errResult(ErrInvalidArgument, "phone_wait_for takes at most %d texts.", MaxWaitTexts)
+		return errResult(ErrInvalidArgument, "phone_wait_for takes at most %d texts, text and any together.", MaxWaitTexts)
 	}
 	area := req.Area
 	if area != nil && (area.X < 0 || area.Y < 0 || area.Empty()) {
@@ -1293,11 +1293,12 @@ func (s *Session) WaitFor(ctx context.Context, req WaitForRequest) *Result {
 	}
 	res.Message = waitMessage(texts, shown, req.Gone, matched, area != nil, took)
 	args := map[string]any{"gone": req.Gone, "timeout_ms": req.TimeoutMS}
-	if text := strings.TrimSpace(req.Text); text != "" {
-		args["text"] = text
+	rest := texts
+	if strings.TrimSpace(req.Text) != "" {
+		args["text"], rest = texts[0], texts[1:]
 	}
-	if len(req.Any) > 0 {
-		args["any"] = req.Any
+	if len(rest) > 0 {
+		args["any"] = rest
 	}
 	if area != nil {
 		args["area"] = map[string]any{"x": area.X, "y": area.Y, "width": area.W, "height": area.H}

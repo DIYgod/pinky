@@ -178,7 +178,7 @@ type batchIn struct {
 type waitForIn struct {
 	Device    string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
 	Text      string   `json:"text,omitempty" jsonschema:"Text to wait for, matched without case in element labels and new toasts or notifications. In languages that put spaces between words it matches whole words only, so Stop does not match Stopwatch. Required unless any is given."`
-	Any       []string `json:"any,omitempty" jsonschema:"More texts, matched like text, for when several things may come next, such as Order placed or Payment failed: the wait ends when the first of them (or text) shows, and the result names it. Up to 10 texts in all."`
+	Any       []string `json:"any,omitempty" jsonschema:"Several texts to wait for at once, instead of text or beside it, matched like text, for when one of several things may come next, such as Order placed or Payment failed: the wait ends at the first that shows, and the result names it; with gone, once none of them shows. Up to 10 texts in all, text included."`
 	Gone      bool     `json:"gone,omitempty" jsonschema:"Wait for the text to disappear instead; with any, until none of the texts shows."`
 	Area      *area    `json:"area,omitempty" jsonschema:"Count only text in this part of the screen, for a word that also shows elsewhere, such as in a tab bar or a chat: text counts when its position, the @x,y on its line, is inside. Toasts and notifications have no position and do not count then."`
 	TimeoutMS int      `json:"timeout_ms,omitempty" jsonschema:"Give up after this many milliseconds, at most 45000; default 10000."`

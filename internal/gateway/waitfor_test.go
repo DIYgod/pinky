@@ -139,7 +139,7 @@ func TestWaitForAny(t *testing.T) {
 		t.Fatalf("the second text shows: matched %v: %s", *res.Matched, res.Message)
 	}
 	steps := taskSteps(g, s)
-	if st := steps[len(steps)-1]; st.Text != "Waited for “Order placed / Payment failed / Out of stock”" || !strings.Contains(st.Args, `"any":[`) {
+	if st := steps[len(steps)-1]; st.Text != "Waited for “Order placed / Payment failed / Out of stock”" || !strings.Contains(st.Args, `"text":"Order placed"`) || !strings.Contains(st.Args, `"any":["Payment failed","Out of stock"]`) {
 		t.Fatalf("step: %q %s", st.Text, st.Args)
 	}
 	// any alone, without text.
