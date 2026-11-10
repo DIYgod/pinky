@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1110.22 (2026-11-10)
 
 - On Linux, when Pinky started by an agent cannot open its window (no display, or missing libraries), Pinky now keeps running in the background as pinky daemon, so the agent stays connected. Thanks to pseudoyu.
 
