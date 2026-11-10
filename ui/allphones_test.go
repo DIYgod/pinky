@@ -273,7 +273,9 @@ func TestAllPhonesLivePictures(t *testing.T) {
 	sa.mu.Lock()
 	again := len(sa.open) - opened
 	sa.mu.Unlock()
-	if ta.mirrors[far] != m || m.gen != gen || again != 0 {
+	// An idle iPhone's tile may hold its picture by now (tileStill),
+	// which lets the stream go but opens none.
+	if ta.mirrors[far] != m || (m.gen != gen && m.state != "still") || again != 0 {
 		t.Errorf("scrolling opened streams again: %d more, the mirror's generation %d, was %d", again, m.gen, gen)
 	}
 }
