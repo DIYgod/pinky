@@ -44,6 +44,10 @@ const (
 	StateScrollable = "scrollable"
 	StateEditable   = "editable"
 	StatePassword   = "password"
+	// StateNotInScreenshot marks an element the screenshot, and so the
+	// person watching in Pinky, does not show: the app draws it in a layer
+	// the system leaves out of screenshots and mirroring.
+	StateNotInScreenshot = "not_in_screenshot"
 )
 
 // Normalized roles. Drivers map platform classes onto these.

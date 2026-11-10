@@ -803,6 +803,13 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			p.target = hitTest(cur, p.point)
 		}
 		p.hasPt = true
+		if pad, ok := policy.HiddenKeypad(cur); ok && pad.Contains(p.point) {
+			// The app's own passcode keypad, which the person watching
+			// cannot see: a tap on it enters their passcode.
+			p.input.Target = p.target
+			p.desc = describe(a, p)
+			return p, &Result{Status: StatusBlocked, Rule: policy.RuleCredentials, Message: hiddenKeypadRefusal}
+		}
 	case "type":
 		p.input.Op = policy.OpType
 		p.input.Text, p.input.Submit = a.Text, a.Submit
@@ -925,6 +932,12 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 	p.desc = describe(a, p)
 	return p, nil
 }
+
+// hiddenKeypadRefusal answers a tap on an app's passcode keypad that the
+// screenshot does not show (policy.HiddenKeypad).
+const hiddenKeypadRefusal = "This tap is on the app's passcode keypad, which it draws where screenshots do not reach, so the person watching sees blank space there. " +
+	"Pinky treats its keys like a password field: every key, Face ID and delete included, may count as a passcode attempt. Nothing was done. " +
+	"Call phone_handoff so the person can enter the passcode."
 
 func credentialOnScreen(s *screen.Screen) bool {
 	for i := range s.Elements {
