@@ -16,7 +16,9 @@
 #
 # - libavcodec: the H.264 and HEVC decoders and parsers, with VideoToolbox
 #   on macOS and D3D11VA on Windows (internal/video decodes the phones'
-#   streams with them; on Linux it decodes in software);
+#   streams with them; on Linux it decodes in software), and on Windows
+#   the H.264 encoder of Media Foundation (h264_mf), which the iPhone
+#   driver needs to re-encode the phones' pictures (internal/driver/ios);
 # - libavutil and libswscale (hardware frames, pixel conversion);
 # - libavformat with the MP4/MOV muxer and demuxer, the raw H.264/HEVC
 #   demuxers, the file protocol and the Annex B bitstream filters, for
@@ -174,11 +176,15 @@ windows-amd64)
 	# d3d11.dll at run time, and the compiler's helpers linked in, so that
 	# they import nothing but Windows' own DLLs and one another (checked
 	# below). FFmpeg uses Windows' threads, not winpthreads.
+	# The H.264 encoder is Media Foundation's (h264_mf), which FFmpeg
+	# reaches through mfplat.dll at run time: it is FFmpeg's own code,
+	# under the LGPL, and needs nothing of Windows but mfplat.dll.
 	cross=x86_64-w64-mingw32-
 	flags="$flags
 	--enable-cross-compile --target-os=mingw32 --arch=x86_64 --cross-prefix=$cross
 	--enable-d3d11va
 	--enable-hwaccel=h264_d3d11va,h264_d3d11va2,hevc_d3d11va,hevc_d3d11va2
+	--enable-mediafoundation --enable-encoder=h264_mf
 	--extra-ldflags=-static-libgcc"
 	need_nasm
 	what="Windows x86_64"
