@@ -1652,7 +1652,13 @@ func (s *Session) Handoff(ctx context.Context, req HandoffRequest) *Result {
 	waiting := waitingLocked(l.dev) && !l.ended
 	g.mu.Unlock()
 	if !waiting {
-		if res := g.gate(l, req.ApprovalID, false); res != nil {
+		res := g.gate(l, req.ApprovalID, false)
+		if res != nil && res.Error == ErrDeviceOffline && g.waitBack(ctx, l) {
+			// It dropped for a moment, as a phone on Wi-Fi may while it is
+			// unlocked, and is back.
+			res = g.gate(l, req.ApprovalID, false)
+		}
+		if res != nil {
 			return g.finish(l, res)
 		}
 	}
@@ -1756,6 +1762,16 @@ func (g *Gateway) handedBackResult(ctx context.Context, l *lease, note string) *
 	g.mu.Unlock()
 	g.readyScreen(ctx, l)
 	cur, err := g.observe(ctx, l.dev, true)
+	if errors.Is(err, driver.ErrOffline) {
+		// A phone on Wi-Fi may drop for a moment as it is unlocked: the
+		// unlock that ended an unlock handoff, or the person's own. Wait
+		// for it to come back, then read it.
+		g.setOffline(l.dev, "")
+		if g.waitBack(ctx, l) {
+			g.readyScreen(ctx, l)
+			cur, err = g.observe(ctx, l.dev, true)
+		}
+	}
 	if err != nil {
 		return g.finish(l, g.readError(l, err))
 	}

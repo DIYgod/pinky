@@ -101,3 +101,65 @@ func TestUnlockOnly(t *testing.T) {
 		}
 	}
 }
+
+// A phone on Wi-Fi may drop for a moment while it is unlocked (an iPhone
+// 13 mini on 2026-11-10): a handoff keeps waiting for it to come back
+// instead of returning device_offline, both when the phone is away as the
+// agent repeats the call and when it drops as the person hands back.
+func TestHandoffWaitsThroughABriefDrop(t *testing.T) {
+	ctx := context.Background()
+	g, dev := newTestGateway(t, func(o *Options) {
+		o.ReconnectGrace = time.Minute
+		o.MaxBlock = 5 * time.Second
+	})
+	s, _ := connect(t, g, "Lunch")
+	const reason = "Please unlock the phone, then open the order"
+
+	// Away as the agent repeats the call: it waits, and the card stays.
+	res := make(chan *Result, 1)
+	go func() { res <- s.Handoff(ctx, HandoffRequest{Reason: reason}) }()
+	waitNeedKind(t, g, NeedHandoff)
+	dev.SetOffline(true)
+	waitUntil(t, "the phone to drop", func() bool { return g.Devices()[0].Status == DeviceOffline })
+	time.AfterFunc(100*time.Millisecond, func() { dev.SetOffline(false) })
+	if err := g.HandBack(dev.Info().ID, "done"); err != nil {
+		t.Fatal(err)
+	}
+	if r := <-res; r.Status != StatusSettled || r.Note != "done" {
+		t.Fatalf("handed back while away: %+v", r)
+	}
+
+	// Drops as the person hands back: the read waits for it.
+	go func() { res <- s.Handoff(ctx, HandoffRequest{Reason: reason}) }()
+	waitNeedKind(t, g, NeedHandoff)
+	dev.SetOffline(true) // the gateway learns of it from the read
+	time.AfterFunc(100*time.Millisecond, func() { dev.SetOffline(false) })
+	if err := g.HandBack(dev.Info().ID, "again"); err != nil {
+		t.Fatal(err)
+	}
+	if r := <-res; r.Status != StatusSettled || r.Note != "again" {
+		t.Fatalf("dropped at the hand-back: %+v", r)
+	}
+}
+
+// Away when the agent repeats a pending handoff: the call waits for the
+// phone, and the handoff goes on.
+func TestHandoffRepeatedWhileAway(t *testing.T) {
+	ctx := context.Background()
+	g, dev := newTestGateway(t, func(o *Options) {
+		o.ReconnectGrace = time.Minute
+		o.MaxBlock = 100 * time.Millisecond
+	})
+	s, _ := connect(t, g, "Lunch")
+	const reason = "Please unlock the phone, then open the order"
+	first := s.Handoff(ctx, HandoffRequest{Reason: reason})
+	mustStatus(t, first, StatusPending)
+	dev.SetOffline(true)
+	waitUntil(t, "the phone to drop", func() bool { return g.Devices()[0].Status == DeviceOffline })
+	time.AfterFunc(100*time.Millisecond, func() { dev.SetOffline(false) })
+	again := s.Handoff(ctx, HandoffRequest{Call: Call{ApprovalID: first.ApprovalID}, Reason: reason})
+	mustStatus(t, again, StatusPending)
+	if again.ApprovalID != first.ApprovalID {
+		t.Fatalf("another handoff: %+v", again)
+	}
+}
