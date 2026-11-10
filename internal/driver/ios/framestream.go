@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"image"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -46,6 +47,7 @@ const (
 // frameStream is a driver.Stream of H.264 encoded from a frameSource.
 type frameStream struct {
 	src    frameSource
+	log    *slog.Logger // what the stream says; discard when there is none
 	cancel context.CancelFunc
 	pk     chan driver.Packet
 	done   chan struct{}
@@ -56,9 +58,16 @@ type frameStream struct {
 	err error
 }
 
-// startFrameStream opens a source and starts encoding. It returns once the
-// first frame is encoded, so Size is known.
+// startFrameStream opens a source and starts encoding, without a logger.
+// It returns once the first frame is encoded, so Size is known.
 func startFrameStream(ctx context.Context, open func(context.Context) (frameSource, error), screenW, screenH int) (driver.Stream, error) {
+	return startFrameStreamLog(ctx, nil, open, screenW, screenH)
+}
+
+// startFrameStreamLog is startFrameStream with a logger for what the stream
+// does (nil: none). It returns once the first frame is encoded, so Size is
+// known.
+func startFrameStreamLog(ctx context.Context, log *slog.Logger, open func(context.Context) (frameSource, error), screenW, screenH int) (driver.Stream, error) {
 	if err := h264Available(); err != nil {
 		return nil, err
 	}
@@ -68,7 +77,7 @@ func startFrameStream(ctx context.Context, open func(context.Context) (frameSour
 		cancel()
 		return nil, fmt.Errorf("video: %w", err)
 	}
-	s := &frameStream{src: src, cancel: cancel, pk: make(chan driver.Packet, 64), done: make(chan struct{})}
+	s := &frameStream{src: src, log: logTo(log), cancel: cancel, pk: make(chan driver.Packet, 64), done: make(chan struct{})}
 	first := make(chan error, 1)
 	go s.run(sctx, first)
 	select {
@@ -143,6 +152,14 @@ func (s *frameStream) run(ctx context.Context, first chan<- error) {
 				fail(err)
 				return
 			}
+			// Say which encoder the live picture runs on: a user who drops
+			// a different FFmpeg next to Pinky.exe can see whether Media
+			// Foundation's encoder took, and what it was asked for. The
+			// encoder opens once per stream (and again when the picture
+			// changes size), so this is one line per stream, not per
+			// picture.
+			s.log.Info("iphone: encoding the live picture", "encoder", enc.encoderName(),
+				"size", fmt.Sprintf("%dx%d", w, h), "fps", frameFPS, "bitrate", frameBitRate)
 			forceKey = true
 			s.mu.Lock()
 			s.w, s.h = w, h
