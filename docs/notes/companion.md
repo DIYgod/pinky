@@ -153,6 +153,24 @@ The phone in the issue was not available. On HyperOS, check that the input conne
 - `accessibility_enabled` is never written. On the Pixel, Android set it from 0 to 1 when the service started and back to 0 when it stopped.
 - This setting is the only one Pinky changes, and only its own entry, as docs/WORKING.md requires.
 
+## When the service does not come on (GitHub issue #56, 2026-11-10)
+
+An Android 10 phone over Wi-Fi kept showing the Turn on Pinky Companion card, and Turn on said the install had not finished, asking the person to tap Allow on the phone, where nothing happened. The app was installed; its service did not answer within `Enable`'s 10 s. The wait's error wrapped `context.DeadlineExceeded` (over Wi-Fi the last ping often runs into the deadline), and the client took that for its own 5-minute wait for the phone's install prompt running out.
+
+Now the client says the install did not finish only when its own wait ran out. When the service does not answer, `waitReady` reads what the phone shows before `Enable` restores the setting (`probe.go`, one shell, about 150 ms) and returns a `driver.CompanionStartError`:
+
+- the setting read back (did something take Pinky's entry off again?);
+- `am get-started-user-state 0`: `RUNNING_LOCKED` means not unlocked since the phone started, and the app, which is not direct-boot aware, cannot start;
+- `dumpsys accessibility`, only its lines about services: whether Android lists the service as enabled, binding, bound (by its label) or crashed (Android 11+), and whether a `Ui Automation[…]` is connected;
+- `pidof` the app and its abstract socket in `/proc/net/unix`;
+- the app's last `PinkyService`/`PinkyServer` log line, and a crash of the app in the last minute from the crash buffer.
+
+`Reason` is `not_unlocked` or `ui_automation` when one of those explains it (unlocking comes first), and the client words it; otherwise the client shows `Detail`, the facts in English, with what to try. The driver logs the failure as `setting up the companion: …` (pinky.log, so it is in the diagnostics of Send feedback), and the checkup's companion item carries it.
+
+**UI automation keeps every accessibility service off.** While a UiAutomation is connected, Android unbinds all accessibility services and binds none, unless the tool asked for `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES`. `uiautomator events`, a `uiautomator dump` that hangs, uiautomator2 (ATX), Appium's UiAutomator2 driver and Maestro all hold one; people who try Pinky often have one of them around. Reproduced on the Android 10 emulator over a TCP transport (`adb connect`, as over Wi-Fi) with `uiautomator events` running: the service stayed unbound, and the error now reads `no answer within 10s; Android lists it as enabled but has not bound it; another tool holds Android's UI automation; its app is running; its socket is not listening; its last log line: "I/PinkyServer: socket closed"`. Without it the service came on in 176 ms. On the Android 17 emulator, which has a PIN and had not been unlocked since it started, both runs reported `not_unlocked`, and `Ui Automation[…]` shows on a line of its own there.
+
+Ruled out for the issue: Android 10 over Wi-Fi as such (the emulator over TCP came on in under 200 ms, and the Pixel on Android 10 works over Wi-Fi); a settings write refused without an error (Pinky's adb uses shell protocol v2, which keeps the exit status, so a refusal would show `WRITE_SECURE_SETTINGS`); a port blocked on the network (the forward runs inside adbd's connection). Not reproduced, and what the probe should now tell apart: a phone maker's autostart or battery manager that keeps the app from starting (MIUI, ColorOS, EMUI, and HarmonyOS, which reports Android 10), a crash when the service starts, and something removing the setting again.
+
 ## Results
 
 ### Round 3: the two emulators

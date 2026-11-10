@@ -81,6 +81,9 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 		ctx, cancel := context.WithTimeout(a.ctx, 5*time.Minute)
 		defer cancel()
 		err := ci.InstallCompanion(ctx, id)
+		// Only this wait running out means the install did not finish: a
+		// shorter wait inside it (the service's) says so itself.
+		timedOut := errors.Is(ctx.Err(), context.DeadlineExceeded)
 		cs, serr := ci.CompanionState(ctx, id)
 		a.post(func() {
 			delete(st.installing, id)
@@ -94,7 +97,7 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 				}
 			}
 			if err != nil {
-				st.err[id] = companionError(err, a.chk.family[id])
+				st.err[id] = companionError(err, a.chk.family[id], timedOut)
 				return
 			}
 			if replacing {
@@ -108,11 +111,13 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 
 // companionError says why installing the companion app failed and what to
 // do, in the steps of the phone's maker (family, as its checkup read it;
-// "" when unknown).
-func companionError(err error, family string) string {
+// "" when unknown). timedOut: the install's own wait ran out, while the
+// phone may have been asking the person to allow it.
+func companionError(err error, family string, timedOut bool) string {
 	msg := err.Error()
+	var start *driver.CompanionStartError
 	switch {
-	case errors.Is(err, context.DeadlineExceeded):
+	case timedOut:
 		return locales.CompanionErrTimeout()
 	case strings.Contains(msg, "INSTALL_FAILED_USER_RESTRICTED") && family == "xiaomi":
 		return locales.CompanionErrRestrictedXiaomi()
@@ -135,6 +140,13 @@ func companionError(err error, family string) string {
 		return locales.CompanionErrStorage()
 	case errors.Is(err, driver.ErrOffline):
 		return locales.CompanionErrOffline()
+	// The app is installed, and its service did not come on.
+	case errors.As(err, &start) && start.Reason == driver.CompanionStartUIAutomation:
+		return locales.CompanionErrUIAutomation()
+	case errors.As(err, &start) && start.Reason == driver.CompanionStartNotUnlocked:
+		return locales.CompanionErrNotUnlocked()
+	case errors.As(err, &start):
+		return locales.CompanionErrNoAnswer(start.Detail)
 	}
 	return locales.CompanionErrOther(msg)
 }

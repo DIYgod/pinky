@@ -13,6 +13,10 @@ import (
 // entry in it.
 const settingKey = "enabled_accessibility_services"
 
+// startWait is how long Enable and TurnOn wait for the service to answer;
+// tests shorten it.
+var startWait = 10 * time.Second
+
 // restoreState remembers the setting as Enable found it.
 type restoreState struct {
 	raw   string   // exactly as read; "" when unset
@@ -48,7 +52,7 @@ func (c *Client) Enable(ctx context.Context) error {
 			wrote = true
 		}
 	}
-	err := c.waitReady(ctx, 10*time.Second)
+	err := c.waitReady(ctx, startWait)
 	if err != nil && wrote {
 		rctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
@@ -130,7 +134,7 @@ func (c *Client) turnOn(ctx context.Context) error {
 			return err
 		}
 	}
-	return c.waitReady(ctx, 10*time.Second)
+	return c.waitReady(ctx, startWait)
 }
 
 // KeepEnabled makes Disable leave the service on: another client turned
@@ -206,12 +210,15 @@ func (c *Client) writeSetting(ctx context.Context, value string, unset bool) err
 }
 
 // waitReady pings until the service answers. Android binds the service a
-// moment after the setting changes.
+// moment after the setting changes. When it has not answered after max,
+// the error is a *driver.CompanionStartError that says what the phone
+// shows; it does not wrap context.DeadlineExceeded, which callers take for
+// their own time running out.
 func (c *Client) waitReady(ctx context.Context, max time.Duration) error {
-	ctx, cancel := context.WithTimeout(ctx, max)
+	wctx, cancel := context.WithTimeout(ctx, max)
 	defer cancel()
 	for {
-		pctx, pcancel := context.WithTimeout(ctx, 2*time.Second)
+		pctx, pcancel := context.WithTimeout(wctx, 2*time.Second)
 		_, err := c.Ping(pctx)
 		pcancel()
 		if err == nil {
@@ -221,8 +228,11 @@ func (c *Client) waitReady(ctx context.Context, max time.Duration) error {
 			return err
 		}
 		select {
-		case <-ctx.Done():
-			return fmt.Errorf("companion did not start within %s: %w", max, err)
+		case <-wctx.Done():
+			if ctx.Err() != nil {
+				return fmt.Errorf("companion did not start: %w", ctx.Err())
+			}
+			return c.startError(ctx, max)
 		case <-time.After(150 * time.Millisecond):
 		}
 	}

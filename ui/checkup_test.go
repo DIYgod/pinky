@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"strings"
 	"testing"
@@ -255,24 +257,35 @@ func TestAddAndroidSetupCodes(t *testing.T) {
 
 func TestCompanionErrors(t *testing.T) {
 	restricted := errors.New("adb: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]")
+	// The service's own wait, which the client must not take for the
+	// install's: issue #56, an Android 10 phone told to allow an install
+	// that had finished.
+	noAnswer := &driver.CompanionStartError{Detail: "no answer within 10s; Android lists it as enabled but has not bound it"}
 	for _, c := range []struct {
-		err    error
-		family string
-		want   string
+		err      error
+		family   string
+		timedOut bool
+		want     string
 	}{
-		{errors.New("context deadline exceeded: x"), "", locales.CompanionErrOther("context deadline exceeded: x")},
-		{restricted, "xiaomi", locales.CompanionErrRestrictedXiaomi()},
-		{restricted, "", locales.CompanionErrRestricted()},
-		{restricted, "vivo", locales.CompanionErrRestricted()},
-		{errors.New("adb: Failure [INSTALL_FAILED_ABORTED: User rejected permissions]"), "vivo", locales.CompanionErrDeclined()},
-		{errors.New("adb: Failure [INSTALL_FAILED_VERIFICATION_FAILURE]"), "", locales.CompanionErrPlayProtect()},
+		{errors.New("context deadline exceeded: x"), "", false, locales.CompanionErrOther("context deadline exceeded: x")},
+		{fmt.Errorf("companion did not start within 10s: %w", context.DeadlineExceeded), "", true, locales.CompanionErrTimeout()},
+		{fmt.Errorf("pinging: %w", context.DeadlineExceeded), "", false, locales.CompanionErrOther("pinging: " + context.DeadlineExceeded.Error())},
+		{noAnswer, "", false, locales.CompanionErrNoAnswer(noAnswer.Detail)},
+		{fmt.Errorf("%w (and restoring the setting failed: x)", noAnswer), "xiaomi", false, locales.CompanionErrNoAnswer(noAnswer.Detail)},
+		{&driver.CompanionStartError{Reason: driver.CompanionStartUIAutomation, Detail: "x"}, "", false, locales.CompanionErrUIAutomation()},
+		{&driver.CompanionStartError{Reason: driver.CompanionStartNotUnlocked, Detail: "x"}, "", false, locales.CompanionErrNotUnlocked()},
+		{restricted, "xiaomi", false, locales.CompanionErrRestrictedXiaomi()},
+		{restricted, "", false, locales.CompanionErrRestricted()},
+		{restricted, "vivo", false, locales.CompanionErrRestricted()},
+		{errors.New("adb: Failure [INSTALL_FAILED_ABORTED: User rejected permissions]"), "vivo", false, locales.CompanionErrDeclined()},
+		{errors.New("adb: Failure [INSTALL_FAILED_VERIFICATION_FAILURE]"), "", false, locales.CompanionErrPlayProtect()},
 		{errors.New("adb shell settings: exit status 255: java.lang.SecurityException: Permission denial, must have one of: [android.permission.WRITE_SECURE_SETTINGS]"),
-			"xiaomi", locales.CompanionErrSettingsXiaomi()},
-		{errors.New("Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS"), "oppo", locales.CompanionErrSettingsOppo()},
-		{driver.ErrOffline, "", locales.CompanionErrOffline()},
+			"xiaomi", false, locales.CompanionErrSettingsXiaomi()},
+		{errors.New("Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS"), "oppo", false, locales.CompanionErrSettingsOppo()},
+		{driver.ErrOffline, "", false, locales.CompanionErrOffline()},
 	} {
-		if got := companionError(c.err, c.family); got != c.want {
-			t.Errorf("companionError(%v, %q) = %q, want %q", c.err, c.family, got, c.want)
+		if got := companionError(c.err, c.family, c.timedOut); got != c.want {
+			t.Errorf("companionError(%v, %q, %v) = %q, want %q", c.err, c.family, c.timedOut, got, c.want)
 		}
 	}
 }
