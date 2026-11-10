@@ -118,7 +118,7 @@ Pinky is a stateful Streamable HTTP server: `initialize` returns an `Mcp-Session
 - Protocol: the official Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0), newline-delimited JSON-RPC over stdio; the SDK negotiates the protocol version.
 - Server info: name `pinky`, title `Pinky`; the server sends short usage instructions at initialization.
 - Identity: the agent's name in Pinky comes from the client's `clientInfo` (`claude-code` shows as "Claude Code"). The shim presents the agent token from `agent-token` in the config directory (mode 0600).
-- Sessions: one MCP session is one Pinky session. Closing it (the agent exits, or closes stdin) ends its leases and withdraws its open approval panels without acting.
+- Sessions: one MCP session is one Pinky session. Closing it (the agent exits, or closes stdin) withdraws its open approval panels without acting. Its phone waits 60 s for the same agent's next session before the task ends as disconnected: some clients (Claude Desktop) start the server again after a call they gave up on, and a new session continues the task when its `phone_connect` names the same task, or when the old session closed before it connected. A call that names the phone continues it too, and so does one without `device` when the agent's old session held exactly one phone. Another agent connecting to the phone in the meantime ends the waiting task at once; `phone_release` from the new session releases it.
 
 ## Results
 
@@ -144,7 +144,7 @@ note: "<the person's note>"
 | Status | Meaning |
 | --- | --- |
 | `settled` | The call ran and the screen stopped changing, or settling hit its limit, 3 s or the action's `settle_ms` (`settle: timeout`) |
-| `uncertain` | The action may have happened (the driver failed mid-action, the phone dropped). Observe before anything else |
+| `uncertain` | The action may have happened (the driver failed mid-action, the phone dropped, or the phone answered too slowly to read the screen after it within the call's 45 s). Observe before anything else |
 | `blocked_by_policy` | A rule denied the action; `rule` names it (`credentials` for password and code fields, `Read-only`, `Finance apps`, …) |
 | `approval_denied` | The person said no, or nobody answered in time; `note` may say why |
 | `approval_pending` | The call blocked for 45 s; repeat it with `approval_id` |
@@ -374,7 +374,7 @@ Lists installed apps inside the agent's scope, user apps first, one per line: `N
 | `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `pinch`, `drag`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent`, `approval_id` and `settle_ms` |
 | `intent` | string | For steps without their own |
 
-Steps run in order, each settling first, and the batch stops at the first step that is not `settled` (`approval_pending`, `uncertain`, an error); a step whose screen kept moving (`settle: timeout`) does not stop it. The result's first line is the last step's status; then `step N:` blocks follow with each step's status and changes. To finish a batch that stopped at `approval_pending`, repeat that step alone as its own tool call with the `approval_id`.
+Steps run in order, each settling first, and the batch stops at the first step that is not `settled` (`approval_pending`, `uncertain`, an error); a step whose screen kept moving (`settle: timeout`) does not stop it. A batch also stops before a step when the call's 45 s may not be enough for it (as long as its slowest step so far, at least 5 s): the result is the last step's, and its message says how many steps ran and which did not ("Ran steps 1-3 of 6, then stopped: … Not done: steps 4-6; continue with it in a new call."). The result's first line is the last step's status; then `step N:` blocks follow with each step's status and changes. To finish a batch that stopped at `approval_pending`, repeat that step alone as its own tool call with the `approval_id`.
 
 ### phone_wait_for
 
@@ -547,6 +547,7 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 | Limit | Value |
 | --- | --- |
 | Longest block of one call | 45 s |
+| Longest call | 45 s, see below |
 | Approval timeout | 60 s |
 | Handoff timeout | 15 min |
 | Settle limit | 3 s, or less with `settle_ms` |
@@ -555,3 +556,17 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 | `text` | 16384 characters |
 | `phone_batch` steps | 50 |
 | `phone_logs` result | 500 lines or 10 crash reports, 64 KB |
+
+### Call time
+
+Every call answers within 45 s of reaching Pinky, however slowly the phone answers: MCP clients give up on a call after about a minute, and some then drop the whole session. The time bounds what Pinky waits for (reading the screen, settling, approvals, `phone_batch` steps, `phone_wait_for`), never an input the phone is already performing. When it runs out:
+
+- before the action, the call returns `error: internal` saying the phone answered too slowly and nothing was done;
+- after the action, while the screen was read, the result is `uncertain`: the action was sent, so observe before anything else;
+- in `phone_batch`, between steps, the batch stops (above);
+- in `phone_wait_for`, the wait ends with `matched: false` and the last screen read;
+- in an approval wait, the call returns `approval_pending` early enough to leave 10 s for what follows.
+
+An approval's own timeout and `phone_handoff` keep their times: those calls return `approval_pending` and are repeated.
+
+After an action, a screen whose text OCR read while its accessibility tree has little (a web page shown before its links and buttons are in the tree) is read again until the tree has it, for up to 4 s and within the call's time. An app whose tree stays that way for the whole wait (a game, a canvas) is not waited for again until another app shows such a screen.

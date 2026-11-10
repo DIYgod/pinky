@@ -1773,6 +1773,9 @@ func (g *Gateway) executeOn(ctx context.Context, l *lease, c Call, a Action, p *
 		next, settled = g.awaitApp(ctx, d, next, settled, limit)
 		unread = noApp(next)
 	}
+	if !unread && g.awaitsTree(d, next) {
+		next = g.awaitTree(ctx, d, next)
+	}
 	// early: settle_ms ended the wait while the screen was still changing,
 	// so the read may come before the action's effect shows.
 	early := !settled && limit < g.opt.SettleMax

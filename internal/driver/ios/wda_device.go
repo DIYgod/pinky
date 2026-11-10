@@ -54,6 +54,10 @@ type WDADevice struct {
 	videoMu sync.Mutex
 	video   driver.Stream // the last stream, whose picture the mirror's touches are in
 
+	// framesAfter is when OCR may try the MJPEG server's frames again after
+	// one did not come (ocrPicture); unix nanos, 0 at once.
+	framesAfter atomic.Int64
+
 	closeOnce sync.Once
 
 	logs    appLogs // the apps whose logs a task reads (logs.go)
@@ -468,13 +472,12 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 			pictured.Add(1)
 			go func() {
 				defer pictured.Done()
-				png, err := d.c.screenshot(ctx)
-				tm.shot = time.Since(start)
+				pic, from, err := d.ocrPicture(ctx)
+				tm.shot, tm.from = time.Since(start), from
 				if err != nil {
 					return
 				}
-				png = d.uprightShot(ctx, png)
-				if l, err := recognizeText(png, ocrOptions{Languages: ocrLanguages}); err == nil {
+				if l, err := recognizeText(pic, ocrOptions{Languages: ocrLanguages}); err == nil {
 					lines, ocrDone = l, true
 				}
 				tm.ocr = time.Since(start) - tm.shot
@@ -550,7 +553,10 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 
 // wdaTimes are when the parts of a read ended, from its start; ocr is the
 // recognition alone.
-type wdaTimes struct{ source, lock, shot, ocr time.Duration }
+type wdaTimes struct {
+	source, lock, shot, ocr time.Duration
+	from                    string // where OCR's picture came from (ocrPicture)
+}
 
 // slowRead is how long a read may take before the log says what took the
 // time.
@@ -577,7 +583,7 @@ func (d *WDADevice) noteSlowRead(start time.Time, tm wdaTimes, root *wdaNode, oc
 	args := []any{"device", d.info.ID, "total", total.Round(time.Millisecond), "source", tm.source.Round(time.Millisecond),
 		"nodes", nodes, "lock", tm.lock.Round(time.Millisecond), "connection", d.info.Connection}
 	if ocr {
-		args = append(args, "screenshot", tm.shot.Round(time.Millisecond), "ocr", tm.ocr.Round(time.Millisecond))
+		args = append(args, "picture", tm.shot.Round(time.Millisecond), "from", tm.from, "ocr", tm.ocr.Round(time.Millisecond))
 	}
 	d.log.Info("iphone: slow screen read through WebDriverAgent", args...)
 }

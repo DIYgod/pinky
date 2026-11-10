@@ -72,6 +72,10 @@ type device struct {
 	// result, already filtered by the policy.
 	events []screen.Event
 	last   *screen.Screen // the last raw observation
+	// treeless is the app whose screen OCR read while its tree stayed
+	// sparse for all of treeWait (awaitTree): its reads are not waited
+	// for again until another app shows a sparse tree.
+	treeless screen.App
 	// ocr is set once a read with OCR returned OCR lines: the phone's
 	// driver reads text from the pixels (iPhone), so a tap on text that
 	// only OCR sees is checked against it (ocrForVerdict).
