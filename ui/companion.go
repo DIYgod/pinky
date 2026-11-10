@@ -32,7 +32,11 @@ type companionState struct {
 	loading    map[string]bool
 	installing map[string]time.Time // installs under way, by when they began
 	err        map[string]string    // why the last install failed
-	later      map[string]bool      // phones whose card the person put off
+	// failure is the driver's own words for it, in English, for the
+	// diagnostics of Send Feedback: err is the person's language, and
+	// pinky.log's line about it may have scrolled out of the last lines.
+	failure map[string]string
+	later   map[string]bool // phones whose card the person put off
 	// byHand: phones that refused a companion build over USB, which Pinky
 	// leaves to the person, with the APK to install by hand
 	// (companionByHand); kept in update.json, so Pinky doesn't try the
@@ -243,6 +247,7 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 	}
 	st.installing[id] = time.Now()
 	delete(st.err, id)
+	delete(st.failure, id)
 	// One signed with the old public key gets replaced: say so after.
 	replacing := st.state[id] == driver.CompanionPublicKey
 	go func() {
@@ -273,6 +278,7 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 			}
 			if err != nil {
 				st.err[id] = companionError(err, a.chk.family[id], timedOut)
+				st.failure[id] = err.Error()
 				return
 			}
 			if replacing {

@@ -341,7 +341,7 @@ func newApp(api gateway.API, opt Options) *app {
 	a.pin = pinState{saved: map[string]bool{}, asked: map[string]bool{}, unlocking: map[string]bool{}, later: map[string]bool{},
 		wrong: map[string]bool{}}
 	a.comp = companionState{state: map[string]driver.CompanionState{}, checked: map[string]time.Time{},
-		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, later: map[string]bool{}}
+		loading: map[string]bool{}, installing: map[string]time.Time{}, err: map[string]string{}, failure: map[string]string{}, later: map[string]bool{}}
 	a.bg = bgState{on: map[string]bool{}, busy: map[string]bool{}, phone: map[string]string{}}
 	a.rec = recState{views: map[string]*recEntry{}}
 	a.control = map[string]controlText{}

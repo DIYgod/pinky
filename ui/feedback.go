@@ -3,6 +3,8 @@ package ui
 import (
 	"context"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -90,6 +92,14 @@ func (a *app) diagnosticLines() []string {
 		onOff(s.RemoteAgents), onOff(s.DeveloperMode))}
 	if v := videoLineIn(locales.In("en"), a); v != "" {
 		lines = append(lines, "Video: "+v)
+	}
+	// Why the companion's service did not come on, as the phone showed it
+	// (issue #56), for the phones connected now: telemetry puts their
+	// tags in place of their ids.
+	for _, id := range slices.Sorted(maps.Keys(a.comp.failure)) {
+		if a.device(id) != nil {
+			lines = append(lines, fmt.Sprintf("Companion on %s: %s", id, a.comp.failure[id]))
+		}
 	}
 	return lines
 }
