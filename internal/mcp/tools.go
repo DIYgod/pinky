@@ -176,10 +176,27 @@ type batchIn struct {
 }
 
 type waitForIn struct {
-	Device    string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
-	Text      string `json:"text" jsonschema:"Text to wait for, matched without case in element labels and new toasts or notifications. In languages that put spaces between words it matches whole words only, so Stop does not match Stopwatch."`
-	Gone      bool   `json:"gone,omitempty" jsonschema:"Wait for the text to disappear instead."`
-	TimeoutMS int    `json:"timeout_ms,omitempty" jsonschema:"Give up after this many milliseconds, at most 45000; default 10000."`
+	Device    string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Text      string   `json:"text,omitempty" jsonschema:"Text to wait for, matched without case in element labels and new toasts or notifications. In languages that put spaces between words it matches whole words only, so Stop does not match Stopwatch. Required unless any is given."`
+	Any       []string `json:"any,omitempty" jsonschema:"More texts, matched like text, for when several things may come next, such as Order placed or Payment failed: the wait ends when the first of them (or text) shows, and the result names it. Up to 10 texts in all."`
+	Gone      bool     `json:"gone,omitempty" jsonschema:"Wait for the text to disappear instead; with any, until none of the texts shows."`
+	Area      *area    `json:"area,omitempty" jsonschema:"Count only text in this part of the screen, for a word that also shows elsewhere, such as in a tab bar or a chat: text counts when its position, the @x,y on its line, is inside. Toasts and notifications have no position and do not count then."`
+	TimeoutMS int      `json:"timeout_ms,omitempty" jsonschema:"Give up after this many milliseconds, at most 45000; default 10000."`
+}
+
+// area is a rectangle on the screen, in screen pixels.
+type area struct {
+	X      int `json:"x" jsonschema:"The left edge, in screen pixels."`
+	Y      int `json:"y" jsonschema:"The top edge, in screen pixels."`
+	Width  int `json:"width" jsonschema:"How wide, in pixels."`
+	Height int `json:"height" jsonschema:"How high, in pixels."`
+}
+
+func (a *area) screen() *screen.Rect {
+	if a == nil {
+		return nil
+	}
+	return &screen.Rect{X: a.X, Y: a.Y, W: a.Width, H: a.Height}
 }
 
 type filesIn struct {
@@ -487,13 +504,19 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_wait_for", Title: "Wait for text",
-		Description: "Wait until text appears on the screen (or disappears, with gone), for up to 45 s, and return the screen then.",
-		InputSchema: schema[waitForIn](func(p map[string]*jsonschema.Schema) { bounds(p["timeout_ms"], 0, 45000) }),
+		Description: "Wait until text appears on the screen (or disappears, with gone), for up to 45 s, and return the screen then. " +
+			"any waits for whichever of several texts comes first; area counts only the text in one part of the screen.",
+		InputSchema: schema[waitForIn](func(p map[string]*jsonschema.Schema) {
+			bounds(p["timeout_ms"], 0, 45000)
+			max := gateway.MaxWaitTexts
+			p["any"].MaxItems = &max
+			nonNull(p, "any", "area")
+		}),
 		Annotations: readOnly},
 		func(ctx context.Context, req *sdk.CallToolRequest, in waitForIn) (*sdk.CallToolResult, any, error) {
 			return render(s.session(req, remote).WaitFor(ctx, gateway.WaitForRequest{
 				Call: gateway.Call{Device: strings.TrimSpace(in.Device), Progress: progress(ctx, req)},
-				Text: in.Text, Gone: in.Gone, TimeoutMS: in.TimeoutMS})), nil, nil
+				Text: in.Text, Any: in.Any, Gone: in.Gone, Area: in.Area.screen(), TimeoutMS: in.TimeoutMS})), nil, nil
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_files", Title: "Phone files",

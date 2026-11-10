@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 
@@ -105,6 +106,157 @@ func TestWaitForMatchesWholeWords(t *testing.T) {
 	res = s.WaitFor(ctx, WaitForRequest{Text: "stop", TimeoutMS: 3000})
 	if res.Matched == nil || !*res.Matched {
 		t.Fatalf("“stop” not found: %s", res.Message)
+	}
+}
+
+// phone_wait_for takes several texts, for when several things may come
+// next: it ends at the first one that shows and names it, and with gone it
+// waits until none of them shows.
+func TestWaitForAny(t *testing.T) {
+	ctx := context.Background()
+	dev := &ocrDev{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android)}
+	g := newOCRGateway(t, dev)
+	s, _ := connect(t, g, "Order lunch")
+	// Blanks and repeats are dropped; three texts are left.
+	wait := func(gone bool, timeout int) *Result {
+		t.Helper()
+		res := s.WaitFor(ctx, WaitForRequest{Text: "Order placed", Any: []string{"Payment failed", " ", "order placed", "Out of stock"},
+			Gone: gone, TimeoutMS: timeout})
+		mustStatus(t, res, StatusSettled)
+		if res.Matched == nil {
+			t.Fatalf("no matched: %+v", res)
+		}
+		return res
+	}
+
+	res := wait(false, 300)
+	if *res.Matched || !strings.HasPrefix(res.Message, "None of “Order placed”, “Payment failed” or “Out of stock” has appeared after ") {
+		t.Fatalf("nothing shows: matched %v: %s", *res.Matched, res.Message)
+	}
+	dev.show("Payment failed: card declined")
+	res = wait(false, 3000)
+	if !*res.Matched || !strings.HasPrefix(res.Message, "“Payment failed” appeared after ") {
+		t.Fatalf("the second text shows: matched %v: %s", *res.Matched, res.Message)
+	}
+	steps := taskSteps(g, s)
+	if st := steps[len(steps)-1]; st.Text != "Waited for “Order placed / Payment failed / Out of stock”" || !strings.Contains(st.Args, `"any":[`) {
+		t.Fatalf("step: %q %s", st.Text, st.Args)
+	}
+	// any alone, without text.
+	res = s.WaitFor(ctx, WaitForRequest{Any: []string{"Out of stock", "Payment failed"}, TimeoutMS: 3000})
+	if res.Matched == nil || !*res.Matched || !strings.HasPrefix(res.Message, "“Payment failed” appeared after ") {
+		t.Fatalf("any without text: %+v", res)
+	}
+
+	// gone names the text that is still there, and ends once none is.
+	res = wait(true, 300)
+	if *res.Matched || !strings.HasPrefix(res.Message, "“Payment failed” has not disappeared after ") {
+		t.Fatalf("gone while one shows: matched %v: %s", *res.Matched, res.Message)
+	}
+	dev.show("")
+	res = wait(true, 3000)
+	if !*res.Matched || !strings.HasPrefix(res.Message, "“Order placed”, “Payment failed” and “Out of stock” disappeared after ") {
+		t.Fatalf("gone once none shows: matched %v: %s", *res.Matched, res.Message)
+	}
+
+	if res := s.WaitFor(ctx, WaitForRequest{Any: []string{" ", ""}}); res.Error != ErrInvalidArgument {
+		t.Fatalf("no text at all: %+v", res)
+	}
+	many := make([]string, MaxWaitTexts+1)
+	for i := range many {
+		many[i] = strings.Repeat("a", i+1)
+	}
+	if res := s.WaitFor(ctx, WaitForRequest{Any: many}); res.Error != ErrInvalidArgument {
+		t.Fatalf("%d texts accepted: %+v", len(many), res)
+	}
+	if res := s.WaitFor(ctx, WaitForRequest{Any: many[:MaxWaitTexts], TimeoutMS: 50}); res.IsError() {
+		t.Fatalf("%d texts refused: %+v", MaxWaitTexts, res)
+	}
+}
+
+// With an area, phone_wait_for counts only the text placed inside it: the
+// same word in a tab bar or a chat elsewhere on the screen neither answers
+// the wait nor keeps a gone wait waiting.
+func TestWaitForArea(t *testing.T) {
+	ctx := context.Background()
+	dev := &ocrDev{Device: demo.NewDevice("pixel", "Pixel 9", driver.Android)}
+	g := newOCRGateway(t, dev)
+	s, _ := connect(t, g, "Track the parcel")
+	dev.show("Deliveries") // ocrDev places it at 100,900 400x60: its centre is 300,930
+	top := &screen.Rect{X: 0, Y: 0, W: 1080, H: 800}
+	around := &screen.Rect{X: 200, Y: 900, W: 200, H: 100}
+	wait := func(area *screen.Rect, gone bool, timeout int) *Result {
+		t.Helper()
+		res := s.WaitFor(ctx, WaitForRequest{Text: "Deliveries", Area: area, Gone: gone, TimeoutMS: timeout})
+		mustStatus(t, res, StatusSettled)
+		if res.Matched == nil {
+			t.Fatalf("no matched: %+v", res)
+		}
+		return res
+	}
+
+	res := wait(top, false, 300)
+	if *res.Matched || !strings.HasPrefix(res.Message, "“Deliveries” has not appeared in the area after ") {
+		t.Fatalf("text outside the area: matched %v: %s", *res.Matched, res.Message)
+	}
+	res = wait(around, false, 3000)
+	if !*res.Matched || !strings.HasPrefix(res.Message, "“Deliveries” appeared in the area after ") {
+		t.Fatalf("text inside the area: matched %v: %s", *res.Matched, res.Message)
+	}
+	steps := taskSteps(g, s)
+	if st := steps[len(steps)-1]; !strings.Contains(st.Args, `"area":{"height":100,"width":200,"x":200,"y":900}`) {
+		t.Fatalf("step args: %s", st.Args)
+	}
+	if res = wait(top, true, 3000); !*res.Matched {
+		t.Fatalf("gone waits for text outside the area: %s", res.Message)
+	}
+	if res = wait(around, true, 300); *res.Matched {
+		t.Fatalf("gone although the area shows it: %s", res.Message)
+	}
+
+	for _, a := range []screen.Rect{{X: -1, Y: 0, W: 10, H: 10}, {X: 0, Y: -1, W: 10, H: 10}, {X: 0, Y: 0, W: 0, H: 10}, {X: 0, Y: 0, W: 10, H: -5}} {
+		if res := s.WaitFor(ctx, WaitForRequest{Text: "Deliveries", Area: &a}); res.Error != ErrInvalidArgument {
+			t.Fatalf("area %+v accepted: %+v", a, res)
+		}
+	}
+	// The demo phone's screen is 1080x2400.
+	res = s.WaitFor(ctx, WaitForRequest{Text: "Deliveries", Area: &screen.Rect{X: 1080, Y: 0, W: 10, H: 10}})
+	if res.Error != ErrInvalidArgument || !strings.Contains(res.Message, "1080x2400") {
+		t.Fatalf("area beside the screen: %+v", res)
+	}
+}
+
+func TestScreenShows(t *testing.T) {
+	s := &screen.Screen{Elements: []screen.Element{
+		{Label: "Chats", Bounds: screen.Rect{X: 0, Y: 2300, W: 200, H: 80}},
+		{Label: "Order placed", Bounds: screen.Rect{X: 100, Y: 400, W: 400, H: 60}},
+		{Label: "Unplaced"},
+	}}
+	evs := []screen.Event{{Kind: screen.EventToast, Text: "Saved"}}
+	top := &screen.Rect{X: 0, Y: 0, W: 1080, H: 1000}
+	for _, c := range []struct {
+		texts []string
+		area  *screen.Rect
+		want  string
+	}{
+		{[]string{"Missing"}, nil, ""},
+		{[]string{"Missing", "order placed"}, nil, "order placed"},
+		{[]string{"Chats", "Order placed"}, nil, "Chats"}, // the order given, not the screen's
+		{[]string{"Order placed", "Chats"}, nil, "Order placed"},
+		{[]string{"Chats", "Order placed"}, top, "Order placed"},
+		{[]string{"Chats"}, top, ""},
+		// A toast has no place on the screen, nor has an element without bounds.
+		{[]string{"Saved"}, nil, "Saved"},
+		{[]string{"Saved"}, top, ""},
+		{[]string{"Unplaced"}, nil, "Unplaced"},
+		{[]string{"Unplaced"}, top, ""},
+		// The centre decides: the element's edge inside the area is not enough.
+		{[]string{"Order placed"}, &screen.Rect{X: 0, Y: 0, W: 300, H: 1000}, ""},
+		{[]string{"Order placed"}, &screen.Rect{X: 0, Y: 0, W: 301, H: 1000}, "Order placed"},
+	} {
+		if got := screenShows(s, evs, c.texts, c.area); got != c.want {
+			t.Errorf("screenShows(%q, %+v) = %q, want %q", c.texts, c.area, got, c.want)
+		}
 	}
 }
 

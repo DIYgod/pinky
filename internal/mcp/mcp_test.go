@@ -440,6 +440,57 @@ func TestSettleMS(t *testing.T) {
 	}
 }
 
+// phone_wait_for takes several texts (any) and a part of the screen (area);
+// text is no longer required, since any can stand alone.
+func TestWaitForAnyAndArea(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-code")
+	res, err := c.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema string
+	for _, tool := range res.Tools {
+		if tool.Name == "phone_wait_for" {
+			b, _ := json.Marshal(tool.InputSchema)
+			schema = string(b)
+		}
+	}
+	for _, want := range []string{
+		`"maxItems":10,"type":"array"`,
+		`"required":["x","y","width","height"]`,
+	} {
+		if !strings.Contains(schema, want) {
+			t.Fatalf("phone_wait_for schema lacks %s: %s", want, schema)
+		}
+	}
+	for _, bad := range []string{`"required":["text"`, `"null"`} {
+		if strings.Contains(schema, bad) {
+			t.Fatalf("phone_wait_for schema has %s: %s", bad, schema)
+		}
+	}
+
+	text, _ := c.call(t, "phone_connect", map[string]any{"task": "Calc"})
+	if !strings.Contains(text, `"Calculator"`) {
+		t.Fatalf("no Calculator on the home screen:\n%s", text)
+	}
+	text, isErr := c.call(t, "phone_wait_for", map[string]any{"any": []string{"No such app", "Calculator"}, "timeout_ms": 2000})
+	if isErr || firstLine(text) != "settled · Pixel 9 · matched: true · no change" || !strings.Contains(text, "“Calculator” appeared after ") {
+		t.Fatalf("any:\n%s", text)
+	}
+	// An area the size of one pixel in the corner holds no text.
+	text, isErr = c.call(t, "phone_wait_for", map[string]any{"text": "Calculator", "area": map[string]any{"x": 0, "y": 0, "width": 1, "height": 1}, "timeout_ms": 100})
+	if isErr || !strings.HasPrefix(firstLine(text), "settled · Pixel 9 · matched: false") || !strings.Contains(text, "has not appeared in the area") {
+		t.Fatalf("area:\n%s", text)
+	}
+	if text, isErr = c.call(t, "phone_wait_for", map[string]any{"timeout_ms": 100}); !isErr || !strings.Contains(text, "invalid_argument") {
+		t.Fatalf("neither text nor any:\n%s", text)
+	}
+	if text, isErr = c.call(t, "phone_wait_for", map[string]any{"text": "Calculator", "area": map[string]any{"x": 0, "y": 0, "width": 0, "height": 10}}); !isErr || !strings.Contains(text, "invalid_argument") {
+		t.Fatalf("empty area:\n%s", text)
+	}
+}
+
 // A new agent's phone_connect waits for the person like any other approval:
 // the agent repeats the call with the approval_id it was given.
 func TestConnectWaitsWithApprovalID(t *testing.T) {
