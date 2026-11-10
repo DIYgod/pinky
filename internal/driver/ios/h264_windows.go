@@ -5,6 +5,7 @@ package ios
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 	"unsafe"
 
@@ -104,6 +105,12 @@ func (e *h264Encoder) open(bitRate int) error {
 	if r := l.avcodec_open2(ctx, e.codec, &opts); r < 0 {
 		return l.averror("open the "+e.name+" encoder at "+fmt.Sprintf("%dx%d", e.w, e.h), r)
 	}
+	// Say which encoder the live picture runs on: a user who drops a
+	// different FFmpeg next to Pinky.exe can see whether Media Foundation's
+	// encoder took, and what it was asked for. The encoder opens once per
+	// stream, so this is one line per stream, not per picture.
+	slog.Info("iphone: encoding the live picture", "encoder", e.name,
+		"size", fmt.Sprintf("%dx%d", e.w, e.h), "fps", e.fps, "bitrate", bitRate)
 
 	f := l.av_frame_alloc()
 	if f == nil {
