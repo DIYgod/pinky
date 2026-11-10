@@ -273,7 +273,18 @@ Presses with one finger, moves through points while it stays down, and lets go: 
 
 The whole drag (rests and moves) may take up to 30 s, and every point must be on the screen. Moves ease in and out, so the finger stops at each point before it rests or lets go.
 
-To move an app to another home screen page: press its icon with `hold_ms` about 800, rest about 700 ms at a `via` point near the left or right edge (a few pixels in, halfway down), and let go on the new page. Each rest at the edge turns one page; a longer rest turns more (1.2 s turned two pages on an iPhone). To drop into a folder, or onto another app to make one, let go over the middle of its icon, not its label, with the default rest: on an Android launcher a long rest there moves the other icon aside instead. Observe the page you want to drop on first: the screen the drag ends on is not known before it starts.
+To move an app to another home screen page: press its icon with `hold_ms` about 800, rest about 700 ms at a `via` point near the left or right edge (a few pixels in, halfway down), and let go on the new page. Each rest at the edge turns one page; a longer rest turns more (1.2 s turned two pages on an iPhone). Observe the page you want to drop on first: the screen the drag ends on is not known before it starts.
+
+To drop into a folder, or onto another app to make one, let go over its icon where it is during the drag. The picked-up icon keeps where the finger holds it, so press the app at its `ref` and aim from the target's ref point (a home screen ref's point is the middle of the icon and its label together).
+
+Pixel Launcher moves the icons once the drag starts: as soon as it picks an icon up, it shrinks the home screen page toward a point near the middle of the screen, and the dock stays as it was. On a 1080×2400 Pixel emulator (Android 16) the page shrank by about 0.78 toward about 540,990 (the middle across, 41% down). Photos, listed at 663,1619, sat about 120 px higher and further in during the drag:
+
+- Letting go at 634,1500 made a folder, with a 300 ms rest and with a 2.5 s one.
+- Letting go at 663,1619 moved Photos aside. So did aiming at the middle of its icon picture, with rests from 300 ms to 2 s.
+
+Pinky cannot read the screen while the finger is down: the launcher takes the page out of the element tree while it holds an icon. Aim at about `centre + 0.78 × (target − centre)` yourself.
+
+If the icons only trade places or the target moves aside, observe and aim again from where they are now; the same drag again misses the same way. Other launchers were not measured.
 
 ```json
 {"ref": 12, "hold_ms": 800, "via": [{"x": 1170, "y": 1300, "pause_ms": 700}], "to": {"x": 187, "y": 702}}

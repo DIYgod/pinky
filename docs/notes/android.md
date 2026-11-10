@@ -545,10 +545,17 @@ Not checked on a real phone: makers' resolvers (MIUI and HyperOS show their own 
 | --- | --- |
 | Main screen: hold 800, rest 800 ms near the right edge, drop | the launcher made a new page and the app landed there |
 | Hold 800, drop over the middle of another app's icon (above its label) with the default 300 ms rest | a folder of the two |
-| The same with an 800 ms rest at the drop | the launcher reordered the icons instead of making a folder |
+| The same with an 800 ms rest at the drop | the launcher reordered the icons instead of making a folder (put down to the long rest at the time; below, a 2.5 s rest at the shrunk point made a folder) |
 | Hold 800, rest 800 ms at the edge, then drop over a folder on that page | the app went into the folder |
 | Background display (Settings › Sound): drag the media volume slider's thumb right, then left | 4 → 15 → 1 |
 | History | "Dragged “Calculator”" and the like; on another language's app, the localised lines |
+
+**Dropping onto an app on Pixel Launcher** (same emulator, the launcher reset with `pm clear` between runs; Gmail listed `@416,1619` dragged onto Photos listed `@663,1619`, hold 800):
+
+- As soon as the icon is picked up, the launcher shrinks the workspace page by about 0.78 toward about 540,990 (the middle across, 41% down) and shows a Remove bar; the dock does not move. A `uiautomator dump` taken while the finger rests has no workspace at all, only the drag layer, a drop-target node ("Move to row 4 column 2 in Home screen 1 of 0"), the Remove bar, the page indicator and the dock, so the gateway cannot look the target up again mid-drag.
+- The picked-up icon keeps where the finger holds it, so the 32 px between a home screen ref's point (icon and label together) and its icon picture cancels out between two refs.
+- Letting go where Photos was before the drag (`663,1619`, or its icon picture's middle `663,1587`) never made a folder: Photos moved up a row and Gmail took its place, with rests of 300, 800, 1500 and 2000 ms and moves of 200 and 1500 ms.
+- Letting go where Photos was during the drag always made one: `416,1619 > 634,1500` (from ref points, 300 ms and 2.5 s rests), `416,1587 > 634,1468` (icon middles), and YouTube onto Gmail at `910,1619 > 443,1481` (`centre + 0.78 × (target − centre)` from Gmail's ref point).
 
 Two things seen on the way, not about dragging: the gateway updated the companion app in the middle of the session (to 2026.1110.3), after which the screen's tree came back empty until the harness reconnected, so a drag by `ref` was `not_found` and history read "Failed: Dragged" (which is why the bare form now has its own message); and a folder the launcher had just made was missing from the tree for a moment.
 
