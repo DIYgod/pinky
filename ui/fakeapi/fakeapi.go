@@ -174,6 +174,7 @@ type device struct {
 	way        string // iPhone: the connection the person chose
 	connecting string // the status line while the fake "opens" it (wifi.go)
 	paused     bool   // the person paused Pinky's connection to it (pause.go)
+	streams    int    // its streams open now, for DeviceView.Streaming
 }
 
 type task struct {
@@ -424,7 +425,7 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.TaskID = d.task.view.ID
 	}
 	v.Paused = d.paused
-	v.Streaming = d.info.State == driver.StateOnline && !d.paused
+	v.Streaming = d.info.State == driver.StateOnline && !d.paused && d.streams > 0
 	switch {
 	case d.paused:
 		v.Status, v.StatusLine = gateway.DeviceOffline, "Paused"
@@ -770,7 +771,38 @@ func (a *API) Stream(ctx context.Context, deviceID string, opt driver.StreamOpti
 	if opt.MaxFPS > 0 && opt.MaxFPS < fps {
 		fps = opt.MaxFPS
 	}
-	return startStream(ctx, a.opt.FFmpeg, codec, src, w, h, fps)
+	s, err := startStream(ctx, a.opt.FFmpeg, codec, src, w, h, fps)
+	if err != nil {
+		return nil, err
+	}
+	return a.counted(d, s), nil
+}
+
+// countedStream counts itself among its phone's open streams until it
+// closes, as the gateway's Streaming does.
+type countedStream struct {
+	driver.Stream
+	once sync.Once
+	done func()
+}
+
+func (s *countedStream) Close() error {
+	s.once.Do(s.done)
+	return s.Stream.Close()
+}
+
+func (a *API) counted(d *device, s driver.Stream) driver.Stream {
+	a.mu.Lock()
+	d.streams++
+	id := d.info.ID
+	a.mu.Unlock()
+	a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	return &countedStream{Stream: s, done: func() {
+		a.mu.Lock()
+		d.streams--
+		a.mu.Unlock()
+		a.emit(gateway.Event{Kind: gateway.EventDevices, DeviceID: id})
+	}}
 }
 
 // Touch implements gateway.API. Input from the person pauses the agent.

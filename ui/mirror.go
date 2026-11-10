@@ -35,7 +35,7 @@ type mirror struct {
 	player  *video.Player
 	bitmap  *mg.Bitmap
 	frame   *video.Frame // the picture the bitmap shows
-	state   string       // "connecting", "playing", "failed"
+	state   string       // "connecting", "playing", "failed", "still" (held: no stream, the last picture kept)
 	opening bool         // a try to open the stream is under way
 	err     error
 	retry   time.Time
@@ -47,8 +47,11 @@ type mirror struct {
 	// then has the player's next picture wake the windows (wake). The
 	// player hands over no picture the same as the one before, so the
 	// pictures a phone goes on sending after its screen stops wake nothing.
-	shownAt time.Time // the frame that took the last new picture (Painter.Now)
-	asleep  atomic.Bool
+	shownAt  time.Time // the frame that took the last new picture (Painter.Now)
+	openedAt time.Time // when the stream was last opened
+	firstAt  time.Time // when this stream's first picture came, zero before it
+	holdDue  bool      // a build is asked for once the picture may be held (stillFor)
+	asleep   atomic.Bool
 
 	picW, picH int     // the stream's picture size the right way up: the device's pixels
 	turn       int     // quarter turns clockwise that put the picture upright (driver.Packet.Turn)
@@ -67,7 +70,8 @@ type mirror struct {
 	compose   string       // an input method's composition
 }
 
-// mirrorFor returns the phone's mirror, opening its stream if needed.
+// mirrorFor returns the phone's mirror, opening its stream if needed: a
+// still opens it again, showing its picture until the stream's first.
 func (a *app) mirrorFor(id string) *mirror {
 	m := a.mirrors[id]
 	if m == nil {
@@ -76,19 +80,79 @@ func (a *app) mirrorFor(id string) *mirror {
 		m.open()
 	}
 	m.used = a.buildSeq
+	if m.state == "still" {
+		m.open()
+	}
 	if m.state == "failed" && !m.opening && time.Now().After(m.retry) && a.videoErr == nil {
 		m.open()
 	}
 	return m
 }
 
-// sweepMirrors closes the mirrors this build did not show.
+// stillAfter is how long a tile that shows a still waits after its
+// stream's first picture before it lets the stream go: a screen that was
+// changing as the stream opened settles meanwhile.
+const stillAfter = time.Second
+
+// stillGiveUp is how long a tile that holds a picture waits for its
+// reopened stream's first before it keeps the picture it has.
+const stillGiveUp = 10 * time.Second
+
+// stillFor returns the phone's mirror for a tile that shows the phone's
+// last picture rather than its live screen (tileStill): a mirror that
+// already has a picture holds it and lets its stream go; one without opens
+// its stream for a picture first. A stream nobody watches lets an iPhone
+// stop its display stream, and with it screen sharing, and lock.
+func (a *app) stillFor(id string) *mirror {
+	if m := a.mirrors[id]; m != nil && m.state == "still" {
+		m.used = a.buildSeq
+		return m
+	}
+	m := a.mirrorFor(id)
+	if m.bitmap == nil {
+		return m
+	}
+	// A still opened again (its page, a task) whose stream fails or sends
+	// no new picture keeps the one it has.
+	since, wait := m.firstAt, stillAfter
+	if since.IsZero() {
+		since, wait = m.openedAt, stillGiveUp
+	}
+	if wait -= time.Since(since); wait > 0 && m.state != "failed" {
+		if !m.holdDue {
+			m.holdDue = true
+			gen := m.gen
+			time.AfterFunc(wait, func() {
+				a.post(func() {
+					if m.gen == gen {
+						m.holdDue = false
+					}
+				})
+			})
+		}
+		return m
+	}
+	m.hold()
+	return m
+}
+
+// sweepMirrors lets go of the mirrors this build did not show. A phone's
+// own mirror that has a picture holds it, so that All phones shows it
+// again without opening the stream for it; agents' displays, and phones
+// gone or offline, close.
 func (a *app) sweepMirrors() {
 	for id, m := range a.mirrors {
-		if m.used != a.buildSeq {
-			m.close()
-			delete(a.mirrors, id)
+		if m.used == a.buildSeq {
+			continue
 		}
+		if d := a.device(m.id); !m.agent && m.bitmap != nil && d != nil && d.Info.State == driver.StateOnline && d.Status != gateway.DeviceOffline {
+			if m.state != "still" {
+				m.hold()
+			}
+			continue
+		}
+		m.close()
+		delete(a.mirrors, id)
 	}
 }
 
@@ -123,6 +187,7 @@ func (m *mirror) open() {
 		m.state, m.err = "connecting", nil
 	}
 	m.opening = true
+	m.openedAt, m.firstAt, m.holdDue = time.Now(), time.Time{}, false
 	a := m.a
 	go func() {
 		logf("pinky: mirror %s: opening the stream (gen %d, agent %v)", m.id, gen, m.agent)
@@ -253,6 +318,24 @@ func (m *mirror) wake() {
 	if m.asleep.CompareAndSwap(true, false) {
 		m.a.post(func() {})
 	}
+}
+
+// hold lets the mirror's stream go and keeps its picture: a still, until
+// mirrorFor opens the stream again. A stream still opening is dropped.
+func (m *mirror) hold() {
+	logf("pinky: mirror %s: holding its picture", m.id)
+	m.a.logInfo(fmt.Sprintf("pinky: mirror %s: holding its picture", m.id))
+	m.gen++
+	if m.cancel != nil {
+		m.cancel()
+		m.cancel = nil
+	}
+	if p := m.player; p != nil {
+		m.player = nil
+		go p.Close()
+	}
+	m.state, m.err, m.opening, m.holdDue = "still", nil, false, false
+	m.asleep.Store(false)
 }
 
 func (m *mirror) close() {
@@ -402,6 +485,12 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 					// again, and a still screen sends nothing else.
 					a.post(func() {})
 				}
+				if m.firstAt.IsZero() {
+					// A tile waiting to hold its picture (stillFor) waits
+					// from now.
+					m.firstAt, m.holdDue = time.Now(), false
+					a.post(func() {})
+				}
 				m.bitmap = showPlanes(m.bitmap, f.YUV)
 				m.frame = f
 				w, h := f.Width, f.Height
@@ -423,7 +512,9 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 				pt.AnimationFrameRate(60)
 			}
 		}
-		if m.bitmap != nil && m.state == "playing" {
+		// A still, or a still opening its stream again, shows the picture
+		// it holds.
+		if m.bitmap != nil && (m.state == "playing" || m.state == "still" || m.state == "connecting") {
 			pt.Clip(r, radius, func() { drawTurned(pt, m.bitmap, r, m.turn) })
 		}
 		if outline && !locked && m.picW > 0 {
@@ -466,7 +557,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 				}
 				mg.Text(c, label).FontSize(14).FontWeight(600).NoWrap()
 			})
-		case m.state == "connecting" || (m.state == "playing" && m.bitmap == nil):
+		case (m.state == "connecting" || m.state == "playing") && m.bitmap == nil:
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(10).PassThrough().Children(func() {
 				spinner(c)
 				if !tile {
