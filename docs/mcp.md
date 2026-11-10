@@ -163,7 +163,7 @@ note: "<the person's note>"
 | `not_found` | The ref is gone, no installed app matches, or no app opens the link |
 | `unsupported` | The phone or backend cannot do this, such as `recents` on iPhone, or `phone_files` `push` on iPhone; or a link several apps open, with none set as the default |
 | `invalid_argument` | Bad or missing arguments, a misused `approval_id`, or no phone connected in this session |
-| `internal` | The call was cancelled, or the gateway failed |
+| `internal` | The call was cancelled, the phone did not answer in time, or the gateway failed |
 
 ## Common arguments
 

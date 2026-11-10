@@ -1924,6 +1924,8 @@ func (g *Gateway) actionError(l *lease, err error) *Result {
 	case errors.Is(err, driver.ErrOffline):
 		g.setOffline(l.dev, "")
 		return statusResult(StatusUncertain, "The phone dropped during the action, which may or may not have happened. Observe when it is back before anything else; do not repeat it blindly.")
+	case errors.Is(err, context.DeadlineExceeded):
+		return statusResult(StatusUncertain, "The phone did not answer in time (%v), so the action may or may not have happened. Observe before anything else; do not repeat it blindly.", err)
 	}
 	return statusResult(StatusUncertain, "The action may or may not have happened (%v). Observe before anything else; do not repeat it blindly.", err)
 }
@@ -1945,8 +1947,12 @@ func (g *Gateway) readError(l *lease, err error) *Result {
 		return statusResult(StatusLocked, "The phone is locked. Call phone_handoff so the person can unlock it.")
 	case errors.Is(err, driver.ErrUnsupported):
 		return errResult(ErrUnsupported, "%v", err)
-	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+	case errors.Is(err, context.Canceled):
 		return errResult(ErrInternal, "The call was cancelled.")
+	case errors.Is(err, context.DeadlineExceeded):
+		// The read's own bound (observeTimeout) or the driver's, such as
+		// WebDriverAgent's 30 s: a slow phone or app, not a cancel.
+		return errResult(ErrInternal, "Reading the screen timed out: the phone did not answer in time (%v). Observe again; if reads keep timing out, the app in front may be stalled: go home with phone_key, or call phone_handoff.", err)
 	}
 	return errResult(ErrInternal, "Reading the screen failed: %v", err)
 }
