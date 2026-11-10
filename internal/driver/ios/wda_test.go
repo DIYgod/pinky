@@ -72,7 +72,10 @@ func settingsTree(t *testing.T) *wdaNode {
 }
 
 func TestWDAScreenElements(t *testing.T) {
-	els, kb := wdaScreenElements(settingsTree(t), 3, 1179, 2556, "com.apple.Preferences")
+	els, kb, kbFrame := wdaScreenElements(settingsTree(t), 3, 1179, 2556, "com.apple.Preferences")
+	if want := (screen.Rect{Y: 1749, W: 1179, H: 699}); kbFrame != want {
+		t.Errorf("keyboard frame %+v, want %+v", kbFrame, want)
+	}
 	if !kb {
 		t.Error("keyboard not seen")
 	}

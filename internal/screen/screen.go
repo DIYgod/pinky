@@ -187,10 +187,18 @@ type Screen struct {
 	App           App
 	Orientation   string // "portrait" or "landscape"
 	Keyboard      bool
-	Locked        bool
-	Elements      []Element
-	Events        []Event
-	CapturedAt    time.Time
+	// KeyboardFrame is where the on-screen keyboard lies, when Keyboard
+	// is set and the driver can tell; empty otherwise. Touches there go to
+	// the keyboard, not to the elements of the app under it.
+	KeyboardFrame Rect
+	// Covered lists other parts of the screen where system windows lie
+	// over the app and take touches, such as the status and navigation
+	// bars, when the driver can tell.
+	Covered    []Rect
+	Locked     bool
+	Elements   []Element
+	Events     []Event
+	CapturedAt time.Time
 }
 
 // Find returns the element with the given ref.

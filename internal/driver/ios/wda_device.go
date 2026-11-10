@@ -521,7 +521,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 	if root.Rect.Width > 0 {
 		scale = float64(w) / root.Rect.Width
 	}
-	s.Elements, s.Keyboard = wdaScreenElements(root, scale, w, h, s.App.ID)
+	s.Elements, s.Keyboard, s.KeyboardFrame = wdaScreenElements(root, scale, w, h, s.App.ID)
 	if len(s.Elements) == 0 && !locked {
 		// Nothing of the app in its tree: the lock screen may be in front
 		// while lockdown says unlocked (GitHub issue #7: a first read gave
@@ -534,7 +534,7 @@ func (d *WDADevice) Observe(ctx context.Context, opt driver.ObserveOptions) (*sc
 	}
 	if ocrDone && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {
-			s.Keyboard = true
+			noteOCRKeyboard(s, top)
 			kept := lines[:0:0]
 			for _, l := range lines {
 				if l.Y < top {

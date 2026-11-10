@@ -191,7 +191,11 @@ func TestRAXScreenElements(t *testing.T) {
 	host.Traits = traitRemoteHost
 	els = append(els, host, el(web, 0, xcLink, "Read more", axpRect{10, 20, 100, 30}))
 
-	got, keyboard := raxScreenElements(els, 3, 1125, 2436, "com.apple.Preferences")
+	got, keyboard, kbFrame := raxScreenElements(els, 3, 1125, 2436, "com.apple.Preferences")
+	// The keyboard's frame is the box of its keys, placed by their host.
+	if want := (screen.Rect{X: 9, Y: 1587, W: 206, H: 126}); kbFrame != want {
+		t.Errorf("keyboard frame %+v, want %+v", kbFrame, want)
+	}
 	if !keyboard {
 		t.Error("keyboard not detected")
 	}
@@ -244,7 +248,7 @@ func TestRAXScreenElementsWebContent(t *testing.T) {
 	for i := 1; i <= 8; i++ {
 		els = append(els, el(web, xcLink, axpRoleButton, string(rune('0'+i)), axpRect{float64(10 * i), 600, 8, 20}))
 	}
-	got, keyboard := raxScreenElements(els, 3, 1206, 2622, "com.apple.mobilesafari")
+	got, keyboard, _ := raxScreenElements(els, 3, 1206, 2622, "com.apple.mobilesafari")
 	if keyboard {
 		t.Error("a page's one-digit links took for a keyboard")
 	}

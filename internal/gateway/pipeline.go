@@ -790,7 +790,11 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			if res != nil {
 				return p, res
 			}
-			p.target, p.point = e, tapPoint(cur, *e, d.provider.Platform())
+			t, res := touchable(cur, e)
+			if res != nil {
+				return p, res
+			}
+			p.target, p.point = e, tapPoint(cur, t, d.provider.Platform())
 		} else {
 			if !inBounds(*a.Point) {
 				return p, errResult(ErrInvalidArgument, "%d,%d is outside the %dx%d screen.", a.Point.X, a.Point.Y, cur.Width, cur.Height)
@@ -831,13 +835,17 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			p.from, p.to = *a.From, *a.To
 			p.target = hitTest(cur, p.from)
 		} else {
-			area := screen.Rect{X: 0, Y: 0, W: cur.Width, H: cur.Height}
+			var e *screen.Element
 			if a.Ref > 0 {
-				e, res := byRef(a.Ref)
-				if res != nil {
+				var res *Result
+				if e, res = byRef(a.Ref); res != nil {
 					return p, res
 				}
-				p.target, area = e, e.Bounds
+				p.target = e
+			}
+			area, res := swipeArea(cur, e, a.Direction)
+			if res != nil {
+				return p, res
 			}
 			p.from, p.to = swipeLine(area, a.Direction)
 		}

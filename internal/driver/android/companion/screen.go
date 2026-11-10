@@ -44,9 +44,26 @@ func (t *Tree) Screen(opt ScreenOptions) *screen.Screen {
 			s.Orientation = "landscape"
 		}
 	}
+	// Where touches go to the keyboard or a system bar instead of the app:
+	// the keyboard window's largest touchable part is the keyboard, and
+	// its other parts (a stylus toolbar's strips) count as covered.
+	full := screen.Rect{W: s.Width, H: s.Height}
 	for _, w := range t.Windows {
-		if w.Type == WindowInputMethod {
+		ime := w.Type == WindowInputMethod
+		if ime {
 			s.Keyboard = true
+		}
+		if !ime && !t.isSystemBar(w) {
+			continue
+		}
+		for _, r := range w.covers() {
+			r = clipTo(r, full)
+			if ime && r.W*r.H > s.KeyboardFrame.W*s.KeyboardFrame.H {
+				r, s.KeyboardFrame = s.KeyboardFrame, r
+			}
+			if !r.Empty() {
+				s.Covered = append(s.Covered, r)
+			}
 		}
 	}
 	s.App = t.foreground()
@@ -56,7 +73,6 @@ func (t *Tree) Screen(opt ScreenOptions) *screen.Screen {
 		dpi = 160
 	}
 	cv := &converter{screenArea: float64(s.Width) * float64(s.Height), minTarget: minUnlabeledDP * dpi / 160}
-	full := screen.Rect{W: s.Width, H: s.Height}
 	var above []screen.Rect // what the windows above the current one cover
 	for _, w := range t.Windows {
 		wb := w.Bounds.rect()
@@ -467,6 +483,14 @@ func intersect(a, b screen.Rect) screen.Rect {
 		return screen.Rect{}
 	}
 	return screen.Rect{X: x0, Y: y0, W: x1 - x0, H: y1 - y0}
+}
+
+// clipTo returns the part of r inside full, or r when full is unknown.
+func clipTo(r, full screen.Rect) screen.Rect {
+	if full.Empty() {
+		return r
+	}
+	return intersect(r, full)
 }
 
 // largestOutside returns the largest part of a that lies above, below, left
