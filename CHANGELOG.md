@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On Windows, agents in the Claude and Codex desktop apps from the Microsoft Store now reach the Pinky you have open, instead of quietly starting a second one that Stop all could not reach. Thanks to stoicneko.
+- On Windows, opening Pinky while an agent had already started it in the background no longer quits without a word: Pinky takes over, and the agent reconnects by itself. Thanks to stoicneko.
+
 ## 2026.1110.16 (2026-11-10)
 
 - Approvals to change a phone's settings (rotation, appearance, location, language) and to read an app's logs now offer **More options › Always allow**, remembered for that agent and phone (and app, for logs) until you take it back in Settings › Safety. Thanks to vinsew.

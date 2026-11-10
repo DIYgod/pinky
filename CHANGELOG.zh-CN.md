@@ -2,6 +2,11 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在 Windows 上，从 Microsoft Store 安装的 Claude、Codex 桌面版里的智能体，现在会连到你已经打开的 Pinky，不会再悄悄另起一个「全部停止」管不到的 Pinky。感谢 stoicneko。
+- 在 Windows 上，如果智能体已经在后台启动了 Pinky，再打开 Pinky 时不会一声不响地退出了：Pinky 会接管它，智能体也会自动重新连上。感谢 stoicneko。
+
 ## 2026.1110.16 (2026-11-10)
 
 - 更改手机设置（旋转、深浅色、定位、语言）和读取应用日志的审批，现在也可以选「更多选项 › 始终允许」。Pinky 会按智能体和手机记住（日志还按应用），想恢复询问可以在「设置 › 安全」里改。感谢 vinsew。
