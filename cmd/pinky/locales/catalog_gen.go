@@ -7317,13 +7317,13 @@ func (msgs Messages) ConnectionAuto() string {
 	return Catalog.Format(msgs.locale, "connectionAuto", nil)
 }
 
-// ConnectionAutoDesc says "Without the helper on iOS 27 and later; through the WebDriverAgent helper on older iPhones that have it."
+// ConnectionAutoDesc says "Without the helper on iOS 27 and later. If the WebDriverAgent helper is installed, a task moves to it for apps that r…"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: what Automatic does.
 func ConnectionAutoDesc() string { return In(i18n.Locale()).ConnectionAutoDesc() }
 
-// ConnectionAutoDesc says "Without the helper on iOS 27 and later; through the WebDriverAgent helper on older iPhones that have it."
+// ConnectionAutoDesc says "Without the helper on iOS 27 and later. If the WebDriverAgent helper is installed, a task moves to it for apps that r…"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: what Automatic does.
@@ -12029,6 +12029,42 @@ func (msgs Messages) GwStatusReconnecting(task string) string {
 	return Catalog.Format(msgs.locale, "gwStatusReconnecting", map[string]any{"task": task})
 }
 
+// GwStatusSwitchCoreDevice says "Switching to CoreDevice"
+// in the language the app shows.
+//
+// An iPhone's status line while Pinky moves it back from the WebDriverAgent
+// helper to CoreDevice after a task that needed the helper. Shown only in
+// other languages.
+func GwStatusSwitchCoreDevice() string { return In(i18n.Locale()).GwStatusSwitchCoreDevice() }
+
+// GwStatusSwitchCoreDevice says "Switching to CoreDevice"
+// in the language of msgs.
+//
+// An iPhone's status line while Pinky moves it back from the WebDriverAgent
+// helper to CoreDevice after a task that needed the helper. Shown only in
+// other languages.
+func (msgs Messages) GwStatusSwitchCoreDevice() string {
+	return Catalog.Format(msgs.locale, "gwStatusSwitchCoreDevice", nil)
+}
+
+// GwStatusSwitchHelper says "Switching to the helper"
+// in the language the app shows.
+//
+// An iPhone's status line while Pinky moves an agent's task to the
+// WebDriverAgent helper, for an app that refuses screen sharing. Shown only
+// in other languages.
+func GwStatusSwitchHelper() string { return In(i18n.Locale()).GwStatusSwitchHelper() }
+
+// GwStatusSwitchHelper says "Switching to the helper"
+// in the language of msgs.
+//
+// An iPhone's status line while Pinky moves an agent's task to the
+// WebDriverAgent helper, for an app that refuses screen sharing. Shown only
+// in other languages.
+func (msgs Messages) GwStatusSwitchHelper() string {
+	return Catalog.Format(msgs.locale, "gwStatusSwitchHelper", nil)
+}
+
 // GwStatusWaiting says "Waiting for you · {title}"
 // in the language the app shows.
 //
@@ -16421,6 +16457,44 @@ func PhoneShowOnMirror() string { return In(i18n.Locale()).PhoneShowOnMirror() }
 // agent's screen and the phone's.
 func (msgs Messages) PhoneShowOnMirror() string {
 	return Catalog.Format(msgs.locale, "phoneShowOnMirror", nil)
+}
+
+// PhoneSwitchCoreDeviceTitle says "Moving {phone} back to CoreDevice…"
+// in the language the app shows.
+//
+// The page of an iPhone while Pinky moves it back from the WebDriverAgent
+// helper to CoreDevice after a task. phone is its name.
+func PhoneSwitchCoreDeviceTitle(phone string) string {
+	return In(i18n.Locale()).PhoneSwitchCoreDeviceTitle(phone)
+}
+
+// PhoneSwitchCoreDeviceTitle says "Moving {phone} back to CoreDevice…"
+// in the language of msgs.
+//
+// The page of an iPhone while Pinky moves it back from the WebDriverAgent
+// helper to CoreDevice after a task. phone is its name.
+func (msgs Messages) PhoneSwitchCoreDeviceTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneSwitchCoreDeviceTitle", map[string]any{"phone": phone})
+}
+
+// PhoneSwitchHelperTitle says "Moving {phone} to the helper…"
+// in the language the app shows.
+//
+// The page of an iPhone while Pinky moves an agent's task to the
+// WebDriverAgent helper, which shares no screen, for an app that refuses
+// screen sharing. phone is its name.
+func PhoneSwitchHelperTitle(phone string) string {
+	return In(i18n.Locale()).PhoneSwitchHelperTitle(phone)
+}
+
+// PhoneSwitchHelperTitle says "Moving {phone} to the helper…"
+// in the language of msgs.
+//
+// The page of an iPhone while Pinky moves an agent's task to the
+// WebDriverAgent helper, which shares no screen, for an app that refuses
+// screen sharing. phone is its name.
+func (msgs Messages) PhoneSwitchHelperTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneSwitchHelperTitle", map[string]any{"phone": phone})
 }
 
 // PhoneTailnetAway says "Pinky can't reach {name} through Tailscale now. It connects again by itself once Tailscale says the phone is online."

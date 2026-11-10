@@ -34,6 +34,12 @@ type device struct {
 	// moving is set while the phone moves between its cable and Wi-Fi
 	// (wifi.go): until then calls wait for it to be back.
 	moving time.Time
+	// taskWay is the connection a task moved the phone to without saving
+	// it (taskconn.go), "" while it runs the person's choice; switching is
+	// the way it is moving to now, and switchBack puts it back after the
+	// task.
+	taskWay, switching string
+	switchBack         *time.Timer
 	// closing is closed once the last session's Close returned, so the
 	// next one does not start while it stops.
 	closing      chan struct{}

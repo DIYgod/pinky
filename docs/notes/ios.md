@@ -541,6 +541,19 @@ Also found:
 - Settings' search field drops out of WDA's tree while results show; typing goes on into it.
 - The runner's test log went to Pinky's stderr; it is now read for the passcode wait and dropped (`wdaLog`, tests print it).
 
+### Task connection
+
+(2026-11-10) A phone left on Automatic with the helper installed uses both ways without the person changing the setting: CoreDevice for everyday tasks, the helper for a task that needs an app refusing screen sharing (the owner's weekly bookkeeping reads DBS digibank and China Merchants Bank). `internal/gateway/taskconn.go`:
+
+- **Who asks.** The agent, with `phone_connect`'s `connection` (`helper`, `coredevice`, `auto`), or Pinky, when the task's `apps` names or `phone_launch` opens an app in `sharingRefusers` (`com.dbs.sg.dbsmbanking`, `cmb.pb`, and the names people use for them). `cmb.pb` is 招商银行; `com.cmbchina.*` is 掌上生活, which is left out until it is seen to refuse. The launch hook sits in `act`, so `phone_batch` and approval resumes go through it too; tapping an app's icon does not.
+- **The move is the reconnect of a change in Settings › Phones** (`SetConnection`, `setOffline`, a discovery pass), not saved. Closing the CoreDevice session stops its media stream (`Device.Close` stops it), so no stream runs on the helper and every input goes through WDA; the mirror shows WDA's MJPEG. Calls wait for the phone (`d.moving`, `switchWait` 60 s); the phone's status reads "Switching to the helper".
+- **The passcode.** When the runner waits for it, List reports `needs_setup` `passcode`; the switch stops waiting and the call returns `device_needs_setup` (`setupResultLocked`), and the agent hands off. The agent never types it.
+- **Failure.** A helper that is not installed (per `Connections`) is not tried: the message tells the agent to tell the person. One that does not start puts the phone back on the person's choice; the task goes on over CoreDevice and the message says so.
+- **Back.** `switchBackAfter` (30 s) after the last lease ends, unless a task holds the phone again, so a round of tasks stays on the helper. A choice in Settings › Phones forgets the task's way; a restart forgets it too, as the provider starts from the saved choice.
+- **The person's choice wins.** A way chosen by hand (`g.chosen`, from `device_connections`) is kept for every task, and the agent is told.
+
+Unit-tested with a fake two-way provider (`taskconn_test.go`): asking, launching, the app list, a chosen way kept, a missing or failing helper, the passcode, a choice in Settings ending the task's way, Android. Not yet run on a phone: the switch's timing on the iPhone 13 mini, the stream really stopping (no screen-sharing indicator), DBS and China Merchants Bank opening after the switch, the passcode prompt in the middle of a switch, the switch back, and the mirror while it switches. Not done: the person marking their own apps as refusing screen sharing.
+
 ### Not done yet
 
 - Nothing below iOS 27 has run on a phone. The first such phone should get, in order: `iosctl devices` (the backend it picks), `TestAXProbeDump`, then `iosctl observe` and `stream` on each path and `tap` with the helper.

@@ -433,7 +433,21 @@ func personAllowed(v policy.Verdict) bool {
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
+// Opening an app that refuses screen sharing first moves the task to a
+// connection that shares none, where the phone has one (taskconn.go).
 func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
+	if a.Tool != "launch" {
+		return g.actOn(ctx, l, c, a)
+	}
+	if res, note := g.launchConnection(ctx, l, a); res != nil {
+		return res
+	} else {
+		return withNote(g.actOn(ctx, l, c, a), note)
+	}
+}
+
+// actOn is act once the phone is on the task's connection.
+func (g *Gateway) actOn(ctx context.Context, l *lease, c Call, a Action) *Result {
 	if res := g.gate(l, c.ApprovalID, true); res != nil {
 		return res
 	}
