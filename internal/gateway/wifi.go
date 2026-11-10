@@ -290,6 +290,41 @@ func (g *Gateway) waitMovingLocked(ctx context.Context, d *device) bool {
 	return ctx.Err() == nil
 }
 
+// waitBack waits, for a call that only waits for the person (a handoff),
+// while its phone is offline: a phone on Wi-Fi may drop for a moment as it
+// is unlocked, and come back. It waits until the phone is online, its lease
+// ends, the lease's reconnect grace (Options.ReconnectGrace) is over, or
+// ctx ends, and reports whether the phone is online.
+func (g *Gateway) waitBack(ctx context.Context, l *lease) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	d := l.dev
+	for !d.online && !l.ended {
+		until := d.offlineSince.Add(g.opt.ReconnectGrace)
+		if b := backBy(d); b.After(until) {
+			until = b
+		}
+		if !time.Now().Before(until) {
+			return false
+		}
+		ch := d.wake
+		g.mu.Unlock()
+		t := time.NewTimer(time.Until(until))
+		select {
+		case <-ch:
+		case <-t.C:
+		case <-ctx.Done():
+		case <-l.ctx.Done():
+		}
+		t.Stop()
+		g.mu.Lock()
+		if ctx.Err() != nil || l.ctx.Err() != nil {
+			return false
+		}
+	}
+	return d.online && !l.ended
+}
+
 // RestartDeviceService restarts the computer's service a phone goes through,
 // when its provider can (driver.DeviceServiceRestarter: usbmuxd, which can
 // lose an iPhone on Wi-Fi), as the person asked on the phone's page. The
