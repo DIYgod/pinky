@@ -147,7 +147,7 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
 
 ### 3. 把 Pinky 接入你的 Agent
 
-在 Pinky 里打开「设置 › 智能体」，点你的 Agent 旁边的「接入」。Pinky 会在你的电脑上找到 Claude Code、Claude Desktop、Codex、Cursor、VS Code、Copilot CLI、Windsurf（Devin Desktop）和 Gemini CLI，并用应用自身的路径把自己加进 Agent 的 MCP 服务器：Agent 有自己的命令时用它的命令（比如 `claude mcp add`），否则写进它的设置文件，写之前先备份一份，而且只改 Pinky 那一项。它还会把 Pinky 的 Agent 指南 [SKILL.md](docs/SKILL.md) 装到 Agent 读取技能的位置。在接入 Agent 之前，Pinky 侧栏里会有一张卡片，帮你接入，或者告诉你去哪里获取 Agent。
+在 Pinky 里打开「设置 › 智能体」，点你的 Agent 旁边的「接入」。Pinky 会在你的电脑上找到 Claude Code、Claude Desktop、Codex、Cursor、VS Code、Copilot CLI、Windsurf（Devin Desktop）和 Gemini CLI，并用应用自身的路径把自己加进 Agent 的 MCP 服务器：Agent 有自己的命令时用它的命令（比如 `claude mcp add`），否则写进它的设置文件，写之前先备份一份，而且只改 Pinky 那一项。它还会把 Pinky 的 Agent 指南 [SKILL.md](docs/SKILL.md) 装到 Agent 读取技能的位置，并让它保持最新：Pinky 更新后，会把装好的指南改写成新版本的内容。在接入 Agent 之前，Pinky 侧栏里会有一张卡片，帮你接入，或者告诉你去哪里获取 Agent。
 
 <p align="center"><img src="assets/readme/agents-zh.png" width="620" alt="「设置 › 智能体 › 接入智能体」：Claude Code 已接入；Claude Desktop、Codex、Cursor 和 VS Code 旁边是「接入」按钮"></p>
 

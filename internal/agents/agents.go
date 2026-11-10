@@ -3,7 +3,8 @@
 // with an agent's own command where it has one (claude mcp add), or by
 // changing its settings file, which Pinky backs up first and changes only
 // in Pinky's entry, refusing a file it cannot read. It installs Pinky's
-// skill (docs/SKILL.md) where an agent reads one, says whether each agent
+// skill (docs/SKILL.md) where an agent reads one and keeps the copies it
+// installed current (RefreshSkills), says whether each agent
 // has Pinky, and takes Pinky out again.
 package agents
 

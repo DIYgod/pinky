@@ -129,6 +129,8 @@ func runApp(args []string) error {
 		}
 	}()
 
+	// Agents' copies of Pinky's skill follow this version.
+	go refreshSkills(c.Log)
 	gatewaySettings(&settings, rg)
 	ready := false
 	err = ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{

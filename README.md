@@ -147,7 +147,7 @@ Below iOS 27, an iPhone takes taps and typing from a computer only through a hel
 
 ### 3. Add Pinky to your agent
 
-In Pinky, open **Settings › Agents** and click **Connect** next to your agent. Pinky finds Claude Code, Claude Desktop, Codex, Cursor, VS Code, Copilot CLI, Windsurf (Devin Desktop) and Gemini CLI on your computer and adds itself to the agent's MCP servers, by the app's own path: with the agent's own command where it has one, such as `claude mcp add`, or in its settings file, which Pinky copies first and changes only in Pinky's entry. It also installs Pinky's agent guide, [SKILL.md](docs/SKILL.md), where the agent reads skills. Until an agent is connected, a card in Pinky's sidebar offers to do it, or says where to get one.
+In Pinky, open **Settings › Agents** and click **Connect** next to your agent. Pinky finds Claude Code, Claude Desktop, Codex, Cursor, VS Code, Copilot CLI, Windsurf (Devin Desktop) and Gemini CLI on your computer and adds itself to the agent's MCP servers, by the app's own path: with the agent's own command where it has one, such as `claude mcp add`, or in its settings file, which Pinky copies first and changes only in Pinky's entry. It also installs Pinky's agent guide, [SKILL.md](docs/SKILL.md), where the agent reads skills, and keeps it current: when Pinky updates, it rewrites the guide it installed to the new version's. Until an agent is connected, a card in Pinky's sidebar offers to do it, or says where to get one.
 
 <p align="center"><img src="assets/readme/agents.png" width="620" alt="Settings › Agents › Connect an agent: Claude Code connected; Claude Desktop, Codex, Cursor and VS Code with Connect buttons"></p>
 
