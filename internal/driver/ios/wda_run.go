@@ -26,15 +26,28 @@ import (
 // wdaTestBundle is the runner's test bundle.
 const wdaTestBundle = "WebDriverAgentRunner.xctest"
 
-// wdaEnv is the runner's environment. WDA listens on every interface of
-// the phone by default, Wi-Fi included, where anyone on the network could
-// drive the phone around Pinky's approvals. Pinky reaches it through
-// usbmuxd, which connects on the phone's loopback, so it binds both servers
-// there.
-var wdaEnv = map[string]any{
-	"USE_IP":            "127.0.0.1",
-	"USE_PORT":          fmt.Sprint(wdaPort),
-	"MJPEG_SERVER_PORT": fmt.Sprint(mjpegPort),
+// wdaEnv is the runner's environment, binding both of WDA's servers to
+// bind. WDA listens on every interface of the phone by default, Wi-Fi
+// included, where anyone on the network could drive the phone around
+// Pinky's approvals.
+func wdaEnv(bind string) map[string]any {
+	return map[string]any{
+		"USE_IP":            bind,
+		"USE_PORT":          fmt.Sprint(wdaPort),
+		"MJPEG_SERVER_PORT": fmt.Sprint(mjpegPort),
+	}
+}
+
+// wdaBind is the address WDA listens on, which only Pinky can reach. On a
+// cable usbmuxd connects on the phone's loopback. On Wi-Fi it connects to
+// the phone's network address, which anyone on the network can reach, so
+// Pinky goes through its tunnel instead, whose address on the phone only
+// this computer reaches.
+func wdaBind(base goios.DeviceEntry, t *Tunnel) string {
+	if base.Properties.ConnectionType == "Network" && t != nil {
+		return t.DeviceAddr().String()
+	}
+	return "127.0.0.1"
 }
 
 // findWDARunner returns the bundle id of the WebDriverAgent runner
@@ -106,11 +119,12 @@ type wdaRun struct {
 	err error
 }
 
-// startWDA starts the runner's test. entry must reach the phone's
-// testmanagerd: the plain usbmuxd entry below iOS 17, the tunnel's entry
-// from 17.4. The run lasts until stop, or until the test ends on the phone
-// (the person closed the runner, the phone locked for long, a reboot).
-func startWDA(entry goios.DeviceEntry, bundleID string) *wdaRun {
+// startWDA starts the runner's test, WDA listening on bind. entry must
+// reach the phone's testmanagerd: the plain usbmuxd entry below iOS 17, the
+// tunnel's entry from 17.4. The run lasts until stop, or until the test
+// ends on the phone (the person closed the runner, the phone locked for
+// long, a reboot).
+func startWDA(entry goios.DeviceEntry, bundleID, bind string) *wdaRun {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &wdaRun{cancel: cancel, done: make(chan struct{}), log: &runnerLog{}}
 	go func() {
@@ -123,7 +137,7 @@ func startWDA(entry goios.DeviceEntry, bundleID string) *wdaRun {
 			BundleId:           bundleID,
 			TestRunnerBundleId: bundleID,
 			XctestConfigName:   wdaTestBundle,
-			Env:                wdaEnv,
+			Env:                wdaEnv(bind),
 			Device:             entry,
 			Listener:           testmanagerd.NewTestListener(r.log, r.log, dir),
 		})
