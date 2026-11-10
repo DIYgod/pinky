@@ -1488,6 +1488,10 @@
       }
     }
   },
+  "checkHostADBNoNetwork": "The adb server on this computer can't reach phones on your network, though Pinky can, so phones on Wi-Fi can't connect. If another program started it, quit that program or run adb kill-server in Terminal: Pinky then starts its own. On a Mac, also check that Pinky is on under System Settings › Privacy & Security › Local Network.",
+  "@checkHostADBNoNetwork": {
+    "description": "The checkup and Add phone › Android: the adb server that runs gets no route to phones on the network that Pinky itself reaches (on a Mac, it lost Local Network access), and Pinky could not restart it. adb kill-server is a command: keep it as it is. System Settings, Privacy & Security and Local Network are macOS's own names: use those of macOS in Simplified Chinese."
+  },
   "checkHostADBOld": "The adb server running on this computer is too old to pair phones over Wi-Fi. Quit the program that started it, such as an old Android SDK's tools, or update them: Pinky then starts its own.",
   "@checkHostADBOld": {
     "description": "The checkup and Add phone › Android: the adb server that runs is older than Wi-Fi pairing needs."
@@ -3146,6 +3150,16 @@
       }
     }
   },
+  "gwAskDrag": "Drag “{label}”?",
+  "@gwAskDrag": {
+    "description": "An approval's title: drag the element with this label, such as an app icon or a slider, to another place. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Maps"
+      }
+    }
+  },
   "gwAskLongPress": "Long-press “{label}”?",
   "@gwAskLongPress": {
     "description": "An approval's title: long-press the element with this label. Shown only in other languages; in English the gateway's own words show.",
@@ -3255,6 +3269,42 @@
       "label": {
         "type": "String",
         "example": "Message"
+      }
+    }
+  },
+  "gwDidDrag": "Dragged “{label}”",
+  "@gwDidDrag": {
+    "description": "A step: the agent dragged the element with this label to another place (phone_drag), such as an app icon to another home screen page. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Maps"
+      }
+    }
+  },
+  "gwDidDragBare": "Dragged",
+  "@gwDidDragBare": {
+    "description": "A step: the agent dragged, without a known element or place, as when the element was gone before the drag ran. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidDragFromTo": "Dragged from {fromX},{fromY} to {toX},{toY}",
+  "@gwDidDragFromTo": {
+    "description": "A step: the agent dragged something from one point to another, in pixels (phone_drag). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "fromX": {
+        "type": "String",
+        "example": "540"
+      },
+      "fromY": {
+        "type": "String",
+        "example": "1800"
+      },
+      "toX": {
+        "type": "String",
+        "example": "540"
+      },
+      "toY": {
+        "type": "String",
+        "example": "600"
       }
     }
   },
@@ -3571,6 +3621,42 @@
       "phone": {
         "type": "String",
         "example": "Pixel 9"
+      }
+    }
+  },
+  "gwDoDrag": "drag “{label}”",
+  "@gwDoDrag": {
+    "description": "What a step asked for: drag the element with this label to another place. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Maps"
+      }
+    }
+  },
+  "gwDoDragBare": "drag",
+  "@gwDoDragBare": {
+    "description": "What a step asked for: a drag without a known element or place. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoDragFromTo": "drag from {fromX},{fromY} to {toX},{toY}",
+  "@gwDoDragFromTo": {
+    "description": "What a step asked for: a drag from one point to another, in pixels. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "fromX": {
+        "type": "String",
+        "example": "540"
+      },
+      "fromY": {
+        "type": "String",
+        "example": "1800"
+      },
+      "toX": {
+        "type": "String",
+        "example": "540"
+      },
+      "toY": {
+        "type": "String",
+        "example": "600"
       }
     }
   },
@@ -5347,6 +5433,10 @@
   "pairingErrNoAdb": "Android's adb isn't working on this computer, so Pinky can't pair phones over Wi-Fi. Go back to see why, or use a USB cable.",
   "@pairingErrNoAdb": {
     "description": "Pair over Wi-Fi: the error when adb does not work on this computer (no adb, or its server does not run); Add phone › Android, one step back, says why."
+  },
+  "pairingErrNoNetwork": "This computer's adb server can't reach phones on your network, though Pinky can. If another program started it, quit that program or run adb kill-server in Terminal, and try again: Pinky then starts its own adb server. If Pinky started it, check that Pinky is on under System Settings › Privacy & Security › Local Network, and try again.",
+  "@pairingErrNoNetwork": {
+    "description": "Pair over Wi-Fi, and connecting through Tailscale (macOS only): the error when the adb server gets no route to the phone's address, which Pinky itself reaches (the server lost Local Network access), and Pinky could not fix it by restarting its own server. adb kill-server is a command: keep it as it is. System Settings, Privacy & Security and Local Network are macOS's own names: use those of macOS in Simplified Chinese."
   },
   "pairingErrNotListening": "Nothing at that address is waiting to pair. Check the IP address and port in the Pair device with pairing code dialog, and keep it open until Pinky is done.",
   "@pairingErrNotListening": {
@@ -8471,6 +8561,16 @@
   "unlockEnd": ".",
   "@unlockEnd": {
     "description": "Ends the hints that say how to unlock a phone on it (the unlockOnPhone messages) when nothing follows them: a full stop."
+  },
+  "unlockErrMicrosoftAccount": "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft account, which has a password even if you sign in with a PIN or Windows Hello.",
+  "@unlockErrMicrosoftAccount": {
+    "description": "A notice on Windows when confirming the person failed because they typed nothing, or only wrong passwords (most likely the PIN they sign in with), in Windows' password dialog, and their Windows account is connected to a Microsoft account. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
   },
   "unlockErrNoPIN": "No PIN is saved for {name}. Save it in Settings › Phones.",
   "@unlockErrNoPIN": {

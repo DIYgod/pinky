@@ -345,6 +345,10 @@ func TestCheckupHostWords(t *testing.T) {
 	if w.title != locales.CheckADBTitle() || w.text != locales.CheckHostADBOld() || !w.detail {
 		t.Errorf("an old adb: %+v", w)
 	}
+	w = ta.checkWords(android, gateway.CheckupView{}, driver.Check{ID: driver.CheckHost, Status: driver.CheckFail, Fix: "adb_no_network", Detail: "no route to 192.168.1.42:41000"})
+	if w.title != locales.CheckADBTitle() || w.text != locales.CheckHostADBNoNetwork() || !w.detail {
+		t.Errorf("a server cut off from the network: %+v", w)
+	}
 	// iPhones' codes have their own words (checkup_iphone.go); codes no
 	// client knows show their driver's.
 	w = ta.checkWords(iphone, gateway.CheckupView{}, driver.Check{ID: driver.CheckHost, Status: driver.CheckFail, Fix: "usbmuxd", Detail: "Install usbmuxd."})

@@ -26,6 +26,10 @@ var gatewaySteps = []string{
 	"Swiped up",
 	"Swiped down in “Messages”",
 	"Swiped from 540,1800 to 540,600",
+	"Dragged “Maps”",
+	"Dragged from 200,2000 to 1070,1200",
+	"Waiting for you: Dragged “Maps”",
+	"Failed: Dragged",
 	"Pressed home",
 	"Pressed forward delete",
 	"Opened Messages",
@@ -141,6 +145,11 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Zoomed out":                                               zh.GwDidZoomOut(),
 		"Turned with two fingers":                                  zh.GwDidTurn(),
 		"Turned “Photo” with two fingers":                          zh.GwDidTurnOn("Photo"),
+		"Dragged “Maps”":                                           zh.GwDidDrag("Maps"),
+		"Dragged from 200,2000 to 1070,1200":                       zh.GwDidDragFromTo("200", "2000", "1070", "1200"),
+		"Waiting for you: Dragged “Maps”":                          zh.GwStepWaiting(zh.GwDoDrag("Maps")),
+		"Failed: Dragged":                                          zh.GwStepFailed(zh.GwDoDragBare()),
+		"Blocked by “Payments”: Dragged from 1,2 to 3,4":           zh.GwStepBlocked(zh.RulePayments(), zh.GwDoDragFromTo("1", "2", "3", "4")),
 		"Read 120 log lines of Example":                            zh.GwStepReadLogLines("120", "Example"),
 		"Read 1 crash report of Example":                           zh.GwStepReadCrashes("1", "Example"),
 		"Waiting for you: Read the logs of Example":                zh.GwStepWaiting(zh.GwDoReadLogs("Example")),
@@ -193,6 +202,8 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		"Copy 3 files to Pixel 9?":                   zh.GwAskQuestion(zh.GwDoCopyFiles("3", "Pixel 9")),
 		"Zoomed out on “Map”?":                       zh.GwAskQuestion(zh.GwDoZoomOutOn("Map")),
 		"Turned with two fingers?":                   zh.GwAskQuestion(zh.GwDoTurn()),
+		"Drag “Maps”?":                               zh.GwAskDrag("Maps"),
+		"Dragged from 200,2000 to 1070,1200?":        zh.GwAskQuestion(zh.GwDoDragFromTo("200", "2000", "1070", "1200")),
 		"Install “Dinely” 1.3 (14) on Pixel 9?":      zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoInstallApp("Dinely", "1.3 (14)"), "Pixel 9")),
 		"Update “Dinely” to 1.4 (15) on Pixel 9?":    zh.GwAskQuestion(zh.GwDoOnPhone(zh.GwDoUpdateApp("Dinely", "1.4 (15)"), "Pixel 9")),
 		"Uninstall “Dinely” from Pixel 9?":           zh.GwAskQuestion(zh.GwDoFromPhone(zh.GwDoUninstallApp("Dinely"), "Pixel 9")),
@@ -221,13 +232,17 @@ func TestGatewayWordsInChinese(t *testing.T) {
 		t.Errorf("ruleName(Recordings) = %q, want %q", got, want)
 	}
 	// An app approval's second line: the agent's own words, last, stay.
-	for in, out := range map[gateway.NeedView]string{
-		{Rule: "Installing from the computer", Detail: "Claude Code · com.dinely.app · signed by Dinely Ltd (AB12) · from “base.apk” and 2 more files · replaces 1.3 (14) · replaces the Monday build"}: "Claude Code · com.dinely.app · " +
-			zh.GwAppSignedBy("Dinely Ltd (AB12)") + " · " + zh.GwAppFrom(zh.GwAppFilesMore("base.apk", "2")) + " · " + zh.GwAppReplaces("1.3 (14)") + " · replaces the Monday build",
-		{Rule: "Installing from the computer", Detail: "Codex · app.pinky.testapp · from “a.apk” · from “b.apk” please"}: "Codex · app.pinky.testapp · " + zh.GwAppFrom("“a.apk”") + " · from “b.apk” please",
-		{Rule: "Uninstalling apps", Detail: "Codex · com.dinely.app · its data on the phone is deleted too · clean up"}:  "Codex · com.dinely.app · " + zh.GwAppDataDeleted() + " · clean up",
-		{Rule: "Every action", Detail: "Codex · com.dinely.app · from “x”"}:                                              "Codex · com.dinely.app · from “x”",
+	for _, c := range []struct {
+		in  gateway.NeedView
+		out string
+	}{
+		{gateway.NeedView{Rule: "Installing from the computer", Detail: "Claude Code · com.dinely.app · signed by Dinely Ltd (AB12) · from “base.apk” and 2 more files · replaces 1.3 (14) · replaces the Monday build"}, "Claude Code · com.dinely.app · " +
+			zh.GwAppSignedBy("Dinely Ltd (AB12)") + " · " + zh.GwAppFrom(zh.GwAppFilesMore("base.apk", "2")) + " · " + zh.GwAppReplaces("1.3 (14)") + " · replaces the Monday build"},
+		{gateway.NeedView{Rule: "Installing from the computer", Detail: "Codex · app.pinky.testapp · from “a.apk” · from “b.apk” please"}, "Codex · app.pinky.testapp · " + zh.GwAppFrom("“a.apk”") + " · from “b.apk” please"},
+		{gateway.NeedView{Rule: "Uninstalling apps", Detail: "Codex · com.dinely.app · its data on the phone is deleted too · clean up"}, "Codex · com.dinely.app · " + zh.GwAppDataDeleted() + " · clean up"},
+		{gateway.NeedView{Rule: "Every action", Detail: "Codex · com.dinely.app · from “x”"}, "Codex · com.dinely.app · from “x”"},
 	} {
+		in, out := c.in, c.out
 		in.Kind = gateway.NeedApproval
 		if got := needDetail(in); got != out {
 			t.Errorf("needDetail(%q) = %q, want %q", in.Detail, got, out)

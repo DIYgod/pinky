@@ -1201,6 +1201,12 @@ var (
 	// ErrPairOldTool: the pairing tool cannot pair over Wi-Fi, as an adb
 	// server older than platform-tools 30.
 	ErrPairOldTool = errors.New("this computer's adb server cannot pair over Wi-Fi")
+	// ErrPairNoNetwork: the pairing tool cannot reach the local network,
+	// which Pinky reaches, as an adb server that lost macOS's Local Network
+	// access, and the driver could not restart it. Also wrapped by the
+	// driver's other connections at an address: WiFiConnector,
+	// ConnectTailnet and the Android driver's own reconnects.
+	ErrPairNoNetwork = errors.New("this computer's adb server cannot reach the local network")
 )
 
 // ConnectionChooser is a Provider that can reach a phone in more than one

@@ -18,7 +18,8 @@ import (
 )
 
 // Starting an adb server. Pinky uses whichever adb server runs and never
-// kills or restarts one. When none runs, StartServer starts one with the
+// kills or restarts one that another program started (one it started
+// itself it may stop: own.go). When none runs, StartServer starts one with the
 // first adb of Tools() that runs and is recent enough (MinTools): the one
 // PINKY_ADB names, else the Android SDK's (whose server Android Studio
 // shares), Homebrew's, those on PATH, and last the adb that comes with

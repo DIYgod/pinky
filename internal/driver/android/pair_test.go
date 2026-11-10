@@ -40,6 +40,8 @@ type fakeADB struct {
 	quitOnConnect bool              // the server crashes on host:connect, as platform-tools 37 can
 	slowDevices   time.Duration     // how long host:devices-l takes, as on a busy computer
 	connectsOff   bool              // a phone host:connect reaches stays offline
+	noRoute       bool              // the server cannot reach the network: host:connect and host:pair get no route
+	failConnects  int               // the next host:connects fail, as a TLS handshake that failed
 
 	known     []string // the phones the server paired with (adb_known_hosts.pb)
 	own       []string // what the driver's search sees, as services
@@ -165,6 +167,11 @@ func (f *fakeADB) handle(c net.Conn) {
 	case strings.HasPrefix(req, "host:pair:"):
 		code, addr, _ := strings.Cut(strings.TrimPrefix(req, "host:pair:"), ":")
 		f.pairs++
+		if f.noRoute {
+			msg := "Failed: Unable to start pairing client."
+			fmt.Fprintf(c, "OKAYFAIL%04x%s", len(msg), msg)
+			return
+		}
 		// As the real server: OKAY, then a second status once it is over.
 		if code != f.code {
 			msg := "Failed: Wrong password or connection was dropped."
@@ -189,6 +196,15 @@ func (f *fakeADB) handle(c net.Conn) {
 		}
 		if f.unreachable[addr] {
 			reply("failed to connect to '" + addr + "': Operation timed out")
+			return
+		}
+		if f.noRoute {
+			reply("failed to connect to '" + addr + "': No route to host")
+			return
+		}
+		if f.failConnects > 0 {
+			f.failConnects--
+			reply("failed to connect to " + addr)
 			return
 		}
 		if guid, ok := strings.CutSuffix(addr, connectSuffix); ok && serviceAddr(adb.ParseMDNSServices(strings.Join(f.services, "\n")), guid) == "" {

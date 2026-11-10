@@ -11,7 +11,7 @@
 //     presence, so the socket refuses them (except for a gateway that runs
 //     only fake devices, for tests).
 //
-// A lock file next to the socket keeps a second gateway for the same user
+// A lock file in the data folder keeps a second gateway for the same user
 // from starting.
 package api
 
@@ -32,7 +32,7 @@ import (
 type Dirs struct {
 	Config string // rules, app table, agent token
 	Data   string // history database, media, daemon log
-	Run    string // socket and lock
+	Run    string // socket
 }
 
 // HomeEnv overrides every directory with one base folder, for tests and
@@ -103,8 +103,12 @@ func runtimeDir(userHome string) string {
 // Socket is the gateway's socket.
 func (d Dirs) Socket() string { return filepath.Join(d.Run, "pinky.sock") }
 
-// LockFile keeps one gateway per user.
-func (d Dirs) LockFile() string { return filepath.Join(d.Run, "pinky.lock") }
+// LockFile keeps one gateway per data folder. It lives with the data, not
+// with the socket: a runtime folder can differ between starts (logind
+// removes /run/user/<uid> at logout; a service may not have
+// XDG_RUNTIME_DIR), and two gateways must not share one history and the
+// same phones.
+func (d Dirs) LockFile() string { return filepath.Join(d.Data, "pinky.lock") }
 
 // TokenFile holds the agent token, readable only by the user.
 func (d Dirs) TokenFile() string { return filepath.Join(d.Config, "agent-token") }

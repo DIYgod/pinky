@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 18 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 19 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -175,11 +175,12 @@ Agents see one MCP server, `pinky`, with 18 tools. Every action waits for the sc
 | `phone_type` | `text` (up to 16384 chars); `ref?`; `append?`; `submit?` | Result and new screen |
 | `phone_swipe` | `direction`, a `ref`, or `from` and `to`; `duration_ms` (80 to 1200) | Result and new screen |
 | `phone_pinch` | `scale` (0.25 to 4) and/or `rotation` (-180 to 180); a `ref` or `x,y`; `duration_ms` (200 to 2000) | Result and new screen |
+| `phone_drag` | a `ref` or `from`, and `to`; `via[]` (up to 8 points, each with `pause_ms`); `hold_ms`, `pause_ms` (0 to 5000); `duration_ms` (100 to 3000 per move) | Result and new screen |
 | `phone_key` | `key`: back, home, recents, enter, tab, delete, escape, dpad keys, page\_up, page\_down | Result and new screen |
 | `phone_launch` | `app`: name, bundle id or package; `language?`, `region?` | Result and new screen |
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
-| `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
+| `phone_wait_for` | `text` or `any[]` (up to 10 texts), `gone?`, `area?`, `timeout_ms?` (up to 45000) | The screen once one of the texts appears, or once all have disappeared; `area` counts only the text in one part of the screen |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
 | `phone_app` | `action` (install, uninstall, stop); `paths` or `app` | Installs or updates an app from that local folder (an APK, an IPA or a `.app`), uninstalls an app, or force-quits it |
 | `phone_logs` | `app`, `kind?` (logs or crashes), `since?`, `filter?`, `level?`, `limit?` | One app's own log lines or crash reports ([notes/app-logs.md](notes/app-logs.md)) |
@@ -387,7 +388,7 @@ Pinky is one Go program that runs in three modes, with exactly one gateway per u
 
 (Diagram: see the design doc at https://claude.ai/artifact/1tETTimeUQMqvjvQf5ALsn)
 
-A lock on the local socket keeps a second gateway from starting. Nothing under `internal/` imports MyGo, so the gateway runs without any UI.
+A lock in the data folder keeps a second gateway from starting. Nothing under `internal/` imports MyGo, so the gateway runs without any UI.
 
 ### Action pipeline
 

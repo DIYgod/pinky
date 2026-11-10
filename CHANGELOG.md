@@ -2,6 +2,35 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1110.9 (2026-11-10)
+
+- On a Mac, phones on Wi-Fi now come back by themselves after Pinky updates: Pinky restarts the adb server it started when that server lost Local Network access, and the checkup says what to do when another program's adb server can't reach your network. Thanks to NaNhkNaN.
+
+## 2026.1110.8 (2026-11-10)
+
+- Agents can now wait for whichever of several texts shows first, and only in one part of the screen, so they no longer keep pausing and looking again when they cannot tell what comes next. Thanks to chenzl25.
+
+## 2026.1110.7 (2026-11-10)
+
+- iPhones that Pinky drives through the WebDriverAgent helper now connect over Wi-Fi without a cable or Xcode, instead of failing with "WebDriverAgent did not start". Thanks to NaNhkNaN.
+
+## 2026.1110.6 (2026-11-10)
+
+- Pinky no longer refuses to type into a text field just because its hidden name contains a word like "footprint" or "barcode", which likely kept agents from typing into a note in Apple Notes on iOS 27. Thanks to KenWuqianghao.
+
+## 2026.1110.5 (2026-11-10)
+
+- Agents can now drag: move app icons to another home screen page or into a folder, reorder lists and move sliders, with the same approvals and rules as a swipe. Thanks to issenzhang.
+
+## 2026.1110.4 (2026-11-10)
+
+- Confirming it's you on Windows with an account that has no password now also works on the computers the previous fix missed, such as ones with long names: leave the password empty. Thanks to Kutius.
+- On Windows, if your account is a Microsoft account you sign in to with a PIN or Windows Hello, Pinky now tells you to type your Microsoft account password when confirming it's you, instead of just failing.
+
+## 2026.1110.3 (2026-11-10)
+
+- On Linux, logging out and back in no longer lets a second Pinky start on the same history and phones while the first one is still running. Thanks to pseudoyu.
+
 ## 2026.1110.2 (2026-11-10)
 
 - Confirming it's you on Windows now works when your Windows account has no password: leave the password empty and confirm. Thanks to Kutius.

@@ -1,6 +1,6 @@
 # Pinky MCP reference
 
-Pinky's gateway serves one MCP server, `pinky`, with 18 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
+Pinky's gateway serves one MCP server, `pinky`, with 19 tools. Agents launch `pinkyctl mcp` (Pinky's executable with the argument `mcp`), a stdio shim that forwards to the running gateway over its user-only Unix socket (and starts the gateway first when none runs: the Pinky app on macOS, `pinky daemon` elsewhere). Agents that cannot start a command can use Streamable HTTP instead (below). The agent-facing guide is [SKILL.md](SKILL.md); the design is in [DESIGN.md](DESIGN.md), section "Agent interface".
 
 ## Connecting an agent
 
@@ -154,7 +154,7 @@ note: "<the person's note>"
 
 ## Common arguments
 
-Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_pinch`, `phone_key`, `phone_launch`) takes:
+Every action tool (`phone_tap`, `phone_type`, `phone_swipe`, `phone_pinch`, `phone_drag`, `phone_key`, `phone_launch`) takes:
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
@@ -256,6 +256,32 @@ Typing into password and one-time-code fields is always refused (`blocked_by_pol
 
 The fingers stay inside the element and clear of the screen's edges, so the edges' system gestures never start; a pinch with too little room for two fingers (a small element, a point at the edge) returns `invalid_argument`. The app decides how far its content follows the fingers: observe, and pinch again if it is not enough. The rules judge a pinch like a swipe, with the elements under both fingers. Android phones pinch on their own screen and on the background display; iPhones pinch through the WebDriverAgent helper. An iPhone through Device Hub (iOS 27 without the helper) returns `unsupported` and does nothing.
 
+### phone_drag
+
+Presses with one finger, moves through points while it stays down, and lets go: to move an app icon to another home screen page or into a folder, reorder a list, move a slider or a map pin. Unlike `phone_swipe`, it can rest before it moves (to pick something up), on the way (to turn a page) and before it lets go (so nothing flings on), and it goes through up to eight points.
+
+| Argument | Type | Meaning |
+| --- | --- | --- |
+| `ref` | integer | Press the middle of this element: an app icon, a list row's drag handle, a slider's knob |
+| `from` | `{x, y}` | A point instead of a ref |
+| `to` | `{x, y}`, required | Where the finger lets go |
+| `via` | array of `{x, y, pause_ms}`, ≤ 8 | Points to pass through on the way, in order; the finger rests `pause_ms` (0–5000, default 0) at each |
+| `hold_ms` | 0–5000 | Rest where the finger presses before it moves; default 0. About 800 picks up what moves only after a long press (an app icon, a list row without a handle); 300 is too short |
+| `pause_ms` | 0–5000 | Rest at `to` before letting go; default 300 |
+| `duration_ms` | 100–3000 | How long each move from one point to the next takes; default 500 |
+
+The whole drag (rests and moves) may take up to 30 s, and every point must be on the screen. Moves ease in and out, so the finger stops at each point before it rests or lets go.
+
+To move an app to another home screen page: press its icon with `hold_ms` about 800, rest about 700 ms at a `via` point near the left or right edge (a few pixels in, halfway down), and let go on the new page. Each rest at the edge turns one page; a longer rest turns more (1.2 s turned two pages on an iPhone). To drop into a folder, or onto another app to make one, let go over the middle of its icon, not its label, with the default rest: on an Android launcher a long rest there moves the other icon aside instead. Observe the page you want to drop on first: the screen the drag ends on is not known before it starts.
+
+```json
+{"ref": 12, "hold_ms": 800, "via": [{"x": 1170, "y": 1300, "pause_ms": 700}], "to": {"x": 187, "y": 702}}
+```
+
+The rules judge a drag like a swipe, with the elements under every point it names: the press point, each `via` point (with or without a rest) and `to`, on the screen as it was before the drag. A drop target that shows only during a drag (a Remove or Uninstall area, a folder on another page) is judged by what was under that point before. The approval panel draws the whole route. History says `Dragged “Files”`, or `Dragged from x,y to x,y` when nothing labelled is under the press point.
+
+Android phones drag on their own screen and on the background display; iPhones drag through Device Hub and through the WebDriverAgent helper, and Simulators and emulators drag too. An iPhone below iOS 27 without the helper returns `unsupported` and does nothing.
+
 ### phone_key
 
 | Argument | Type | Meaning |
@@ -297,7 +323,7 @@ Lists installed apps inside the agent's scope, user apps first, one per line: `N
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `pinch`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent`, `approval_id` and `settle_ms` |
+| `steps` | array, ≤ 50 | Each step has `tool` (`tap`, `type`, `swipe`, `pinch`, `drag`, `key`, `launch`, with or without the `phone_` prefix) and that tool's arguments, plus its own `intent`, `approval_id` and `settle_ms` |
 | `intent` | string | For steps without their own |
 
 Steps run in order, each settling first, and the batch stops at the first step that is not `settled` (`approval_pending`, `uncertain`, an error); a step whose screen kept moving (`settle: timeout`) does not stop it. The result's first line is the last step's status; then `step N:` blocks follow with each step's status and changes. To finish a batch that stopped at `approval_pending`, repeat that step alone as its own tool call with the `approval_id`.
@@ -306,11 +332,13 @@ Steps run in order, each settling first, and the batch stops at the first step t
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `text` | string, required | Matched without case in element labels and new events. In languages that put spaces between words it matches whole words only (`Stop` does not match `Stopwatch`); Chinese, Japanese, Korean and Thai text matches anywhere in a label |
-| `gone` | boolean | Wait for it to disappear |
+| `text` | string | Matched without case in element labels and new events. In languages that put spaces between words it matches whole words only (`Stop` does not match `Stopwatch`); Chinese, Japanese, Korean and Thai text matches anywhere in a label. Required unless `any` is given |
+| `any` | array of strings, ≤ 10 texts with `text` | Several texts to wait for at once, instead of `text` or beside it, matched like `text`, for when one of several things may come next (`Order placed` or `Payment failed`): the wait ends at the first that shows, and the result names it |
+| `gone` | boolean | Wait for it to disappear; with `any`, until none of the texts shows |
+| `area` | `{x, y, width, height}` in screen pixels | Count only the text in this part of the screen, for a word that also shows elsewhere (a tab bar, a chat): an element counts when its position, the `@x,y` on its line, is inside. New events have no position and do not count with an `area` |
 | `timeout_ms` | 0–45000 | Default 10000 |
 
-Returns `settled` with `matched: true` or `matched: false` and the screen changes.
+Returns `settled` with `matched: true` or `matched: false` and the screen changes. The message names the text that appeared (the first in the order given, when several show), or for `gone` the one that is still there.
 
 ### phone_files
 
@@ -465,7 +493,7 @@ Sent only when the request carries `_meta.progressToken`: while waiting for an a
 ## Limits
 
 - `phone_device` changes are kept in memory: if Pinky quits during a task, or the phone is offline when it ends, they stay. An Android emulator's location is read back as the last place Pinky sent it, so one set in the emulator's extended controls meanwhile is replaced when the task ends.
-- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper; `phone_pinch` returns `unsupported` too. With the helper, everything works; reading the screen takes 0.5 to 3 s, and about 7 s on a home screen.
+- iPhones below iOS 27 without the WebDriverAgent helper (iOS 17.4 to 26, nothing installed) are read through the accessibility inspector and OCR and can launch apps, nothing more: `phone_tap`, `phone_swipe`, `phone_type` and `phone_key` return `unsupported`, with a sentence naming the helper; `phone_pinch` and `phone_drag` return `unsupported` too. With the helper, everything works; reading the screen takes 0.5 to 3 s, and about 7 s on a home screen.
 - iPhones through Device Hub (iOS 27 and later without the helper) cannot pinch: `phone_pinch` returns `unsupported` before it asks the person or touches the phone. With the WebDriverAgent helper chosen for the phone in Settings › Phones, they pinch.
 
 | Limit | Value |

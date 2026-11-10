@@ -310,6 +310,8 @@ func tailnetError(err error, name string) string {
 	switch {
 	case errors.Is(err, driver.ErrNotListening):
 		return locales.TailnetNotListening(name)
+	case errors.Is(err, driver.ErrPairNoNetwork):
+		return locales.PairingErrNoNetwork()
 	case errors.Is(err, context.DeadlineExceeded) || strings.Contains(msg, "timed out") || strings.Contains(msg, "timeout") ||
 		strings.Contains(msg, "no route") || strings.Contains(msg, "unreachable"):
 		return locales.TailnetUnreachable(name)

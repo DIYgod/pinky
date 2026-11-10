@@ -36,20 +36,31 @@ const (
 
 // shotMarks are what an approval marks on its screenshot, in its pixels:
 // the element the action targets, where the finger goes down and, for a
-// swipe, where it lifts; for a pinch, the second finger's too.
+// swipe, where it lifts; for a pinch, the second finger's too; for a drag
+// that stops on the way, every point it goes through.
 type shotMarks struct {
 	target      screen.Rect
 	point, to   screen.Point
 	point2, to2 screen.Point
+	path        []screen.Point
 }
 
 func marksOf(n gateway.NeedView) shotMarks {
-	return shotMarks{target: n.Target, point: n.Point, to: n.To, point2: n.Point2, to2: n.To2}
+	return shotMarks{target: n.Target, point: n.Point, to: n.To, point2: n.Point2, to2: n.To2, path: n.Path}
 }
 
-// swipe reports a finger that moves: a swipe's, or a pinch's.
+// swipe reports a finger that moves: a swipe's, a drag's or a pinch's.
 func (m shotMarks) swipe() bool {
-	return m.to != (screen.Point{}) && m.to != m.point
+	return m.to != (screen.Point{}) && m.to != m.point || len(m.path) > 2
+}
+
+// route is the points the first finger goes through, from where it goes
+// down to where it lifts.
+func (m shotMarks) route() []screen.Point {
+	if len(m.path) > 1 {
+		return m.path
+	}
+	return []screen.Point{m.point, m.to}
 }
 
 func (m shotMarks) pinch() bool { return m.point2 != (screen.Point{}) }
@@ -83,6 +94,10 @@ func (m shotMarks) focus(iw, ih int) (r screen.Rect, ok bool) {
 	case m.swipe():
 		x0, x1 := min(m.point.X, m.to.X), max(m.point.X, m.to.X)
 		y0, y1 := min(m.point.Y, m.to.Y), max(m.point.Y, m.to.Y)
+		for _, q := range m.path {
+			x0, x1 = min(x0, q.X), max(x1, q.X)
+			y0, y1 = min(y0, q.Y), max(y1, q.Y)
+		}
 		if m.pinch() {
 			x0, x1 = min(x0, m.point2.X, m.to2.X), max(x1, m.point2.X, m.to2.X)
 			y0, y1 = min(y0, m.point2.Y, m.to2.Y), max(y1, m.point2.Y, m.to2.Y)
@@ -327,7 +342,8 @@ func drawScreen(pt *mg.Painter, p *palette, bm *mg.Bitmap, dst, src mg.Rect, m s
 
 // drawMarks marks m on a picture of the screenshot's part src drawn into
 // dst: the target outlined, a touch without one as a ring, a swipe as an
-// arrow from where the finger goes down, and a pinch as two.
+// arrow from where the finger goes down, a drag as an arrow through its
+// stops, and a pinch as two arrows.
 func drawMarks(pt *mg.Painter, p *palette, dst, src mg.Rect, m shotMarks, iw, ih int, mode shotMode) {
 	thumb := mode == shotThumb
 	s := dst.W / src.W
@@ -364,13 +380,16 @@ func drawMarks(pt *mg.Painter, p *palette, dst, src mg.Rect, m shotMarks, iw, ih
 	}
 	switch {
 	case m.swipe():
-		x0, y0 := at(m.point.X, m.point.Y)
-		x1, y1 := at(m.to.X, m.to.Y)
-		drawArrow(pt, x0, y0, x1, y1, thumb, accent, halo)
+		var route []mg.Point
+		for _, q := range m.route() {
+			x, y := at(q.X, q.Y)
+			route = append(route, mg.Point{X: x, Y: y})
+		}
+		drawArrow(pt, route, thumb, accent, halo)
 		if m.pinch() {
-			x0, y0 = at(m.point2.X, m.point2.Y)
-			x1, y1 = at(m.to2.X, m.to2.Y)
-			drawArrow(pt, x0, y0, x1, y1, thumb, accent, halo)
+			x0, y0 := at(m.point2.X, m.point2.Y)
+			x1, y1 := at(m.to2.X, m.to2.Y)
+			drawArrow(pt, []mg.Point{{X: x0, Y: y0}, {X: x1, Y: y1}}, thumb, accent, halo)
 		}
 	case m.touch() && !outline:
 		x, y := at(m.point.X, m.point.Y)
@@ -414,14 +433,23 @@ func dimAround(pt *mg.Painter, r, hole mg.Rect, rad float32) {
 	pt.FillPath(&path, mg.RGBA(0, 0, 0, 0.14))
 }
 
-// drawArrow draws a swipe: a dot where the finger goes down, a line, and
-// a head where it lifts.
-func drawArrow(pt *mg.Painter, x0, y0, x1, y1 float32, thumb bool, accent, halo mg.Color) {
-	dx, dy := x1-x0, y1-y0
-	l := float32(math.Hypot(float64(dx), float64(dy)))
-	if l < 1 {
+// drawArrow draws a finger's way: a dot where it goes down, a line
+// through the points between, and a head where it lifts.
+func drawArrow(pt *mg.Painter, route []mg.Point, thumb bool, accent, halo mg.Color) {
+	var pts []mg.Point
+	for _, q := range route {
+		if n := len(pts); n == 0 || math.Hypot(float64(q.X-pts[n-1].X), float64(q.Y-pts[n-1].Y)) >= 1 {
+			pts = append(pts, q)
+		}
+	}
+	if len(pts) < 2 {
 		return
 	}
+	x0, y0 := pts[0].X, pts[0].Y
+	x1, y1 := pts[len(pts)-1].X, pts[len(pts)-1].Y
+	px, py := pts[len(pts)-2].X, pts[len(pts)-2].Y // where the last leg starts
+	dx, dy := x1-px, y1-py
+	l := float32(math.Hypot(float64(dx), float64(dy)))
 	ux, uy := dx/l, dy/l
 	width, head, dot := float32(3.5), float32(15), float32(7)
 	if thumb {
@@ -430,7 +458,11 @@ func drawArrow(pt *mg.Painter, x0, y0, x1, y1 float32, thumb bool, accent, halo 
 	head = min(head, l*0.6)
 	bx, by := x1-ux*head, y1-uy*head // the head's base
 	var line mg.Path
-	line.MoveTo(x0, y0).LineTo(bx+ux*1, by+uy*1)
+	line.MoveTo(x0, y0)
+	for _, q := range pts[1 : len(pts)-1] {
+		line.LineTo(q.X, q.Y)
+	}
+	line.LineTo(bx+ux*1, by+uy*1)
 	pt.StrokePath(&line, width+3, halo)
 	var tip mg.Path
 	wing := head * 0.62

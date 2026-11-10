@@ -16,6 +16,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 type harness struct {
@@ -121,7 +122,7 @@ func TestToolList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_key",
+	want := []string{"phone_connect", "phone_release", "phone_observe", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_drag", "phone_key",
 		"phone_launch", "phone_apps", "phone_batch", "phone_wait_for", "phone_files", "phone_app", "phone_logs", "phone_device", "phone_request_approval", "phone_handoff"}
 	got := map[string]*sdk.Tool{}
 	for _, tool := range res.Tools {
@@ -404,7 +405,7 @@ func TestSettleMS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	acting := map[string]bool{"phone_tap": true, "phone_type": true, "phone_swipe": true, "phone_pinch": true, "phone_key": true, "phone_launch": true, "phone_batch": true}
+	acting := map[string]bool{"phone_tap": true, "phone_type": true, "phone_swipe": true, "phone_pinch": true, "phone_drag": true, "phone_key": true, "phone_launch": true, "phone_batch": true}
 	for _, tool := range res.Tools {
 		schema, _ := json.Marshal(tool.InputSchema)
 		has := strings.Contains(string(schema), `"settle_ms":{`)
@@ -439,6 +440,57 @@ func TestSettleMS(t *testing.T) {
 	}
 }
 
+// phone_wait_for takes several texts (any) and a part of the screen (area);
+// text is no longer required, since any can stand alone.
+func TestWaitForAnyAndArea(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-code")
+	res, err := c.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var schema string
+	for _, tool := range res.Tools {
+		if tool.Name == "phone_wait_for" {
+			b, _ := json.Marshal(tool.InputSchema)
+			schema = string(b)
+		}
+	}
+	for _, want := range []string{
+		`"maxItems":10,"type":"array"`,
+		`"required":["x","y","width","height"]`,
+	} {
+		if !strings.Contains(schema, want) {
+			t.Fatalf("phone_wait_for schema lacks %s: %s", want, schema)
+		}
+	}
+	for _, bad := range []string{`"required":["text"`, `"null"`} {
+		if strings.Contains(schema, bad) {
+			t.Fatalf("phone_wait_for schema has %s: %s", bad, schema)
+		}
+	}
+
+	text, _ := c.call(t, "phone_connect", map[string]any{"task": "Calc"})
+	if !strings.Contains(text, `"Calculator"`) {
+		t.Fatalf("no Calculator on the home screen:\n%s", text)
+	}
+	text, isErr := c.call(t, "phone_wait_for", map[string]any{"any": []string{"No such app", "Calculator"}, "timeout_ms": 2000})
+	if isErr || firstLine(text) != "settled · Pixel 9 · matched: true · no change" || !strings.Contains(text, "“Calculator” appeared after ") {
+		t.Fatalf("any:\n%s", text)
+	}
+	// An area the size of one pixel in the corner holds no text.
+	text, isErr = c.call(t, "phone_wait_for", map[string]any{"text": "Calculator", "area": map[string]any{"x": 0, "y": 0, "width": 1, "height": 1}, "timeout_ms": 100})
+	if isErr || !strings.HasPrefix(firstLine(text), "settled · Pixel 9 · matched: false") || !strings.Contains(text, "has not appeared in the area") {
+		t.Fatalf("area:\n%s", text)
+	}
+	if text, isErr = c.call(t, "phone_wait_for", map[string]any{"timeout_ms": 100}); !isErr || !strings.Contains(text, "invalid_argument") {
+		t.Fatalf("neither text nor any:\n%s", text)
+	}
+	if text, isErr = c.call(t, "phone_wait_for", map[string]any{"text": "Calculator", "area": map[string]any{"x": 0, "y": 0, "width": 0, "height": 10}}); !isErr || !strings.Contains(text, "invalid_argument") {
+		t.Fatalf("empty area:\n%s", text)
+	}
+}
+
 // A new agent's phone_connect waits for the person like any other approval:
 // the agent repeats the call with the approval_id it was given.
 func TestConnectWaitsWithApprovalID(t *testing.T) {
@@ -458,5 +510,55 @@ func TestConnectWaitsWithApprovalID(t *testing.T) {
 	text, isErr = c.call(t, "phone_connect", map[string]any{"task": "Lunch", "approval_id": id})
 	if isErr || !strings.HasPrefix(text, "settled") {
 		t.Fatalf("after the person allowed it:\n%s", text)
+	}
+}
+
+// TestPhoneDrag drags through MCP: the schema bounds the rests and the
+// waypoints, and the drag reaches the phone with its stops, alone and as
+// a batch step.
+func TestPhoneDrag(t *testing.T) {
+	h := newHarness(t)
+	c := h.connect(t, "claude-code")
+	res, err := c.cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range res.Tools {
+		if tool.Name != "phone_drag" && tool.Name != "phone_batch" {
+			continue
+		}
+		schema, _ := json.Marshal(tool.InputSchema)
+		for _, s := range []string{`"hold_ms"`, `"pause_ms"`, `"via"`, `"maxItems":8`, `"maximum":5000`} {
+			if !strings.Contains(string(schema), s) {
+				t.Fatalf("%s schema misses %s: %s", tool.Name, s, schema)
+			}
+		}
+		if tool.Name == "phone_drag" && (strings.Contains(string(schema), `"null"`) || !strings.Contains(string(schema), `"required":["to"]`)) {
+			t.Fatalf("phone_drag schema: %s", schema)
+		}
+	}
+
+	text, _ := c.call(t, "phone_connect", map[string]any{"task": "Tidy the home screen"})
+	calc := refOf(t, text, "Calculator")
+	text, isErr := c.call(t, "phone_drag", map[string]any{"ref": calc, "hold_ms": 800,
+		"via": []any{map[string]any{"x": 1070, "y": 1200, "pause_ms": 1000}}, "to": map[string]any{"x": 540, "y": 1700}})
+	if isErr || !strings.HasPrefix(text, "settled") {
+		t.Fatalf("drag:\n%s", text)
+	}
+	in := h.dev.Inputs()[len(h.dev.Inputs())-1]
+	if in.Kind != "drag" || in.To != (screen.Point{X: 540, Y: 1700}) {
+		t.Fatalf("input %+v", in)
+	}
+	if text, isErr = c.call(t, "phone_drag", map[string]any{"ref": calc}); !isErr || !strings.Contains(text, "to") {
+		t.Fatalf("a drag without to:\n%s", text)
+	}
+	text, isErr = c.call(t, "phone_batch", map[string]any{"steps": []any{
+		map[string]any{"tool": "phone_drag", "from": map[string]any{"x": 540, "y": 648}, "to": map[string]any{"x": 540, "y": 1500}, "pause_ms": 0},
+	}})
+	if isErr || !strings.HasPrefix(text, "settled") {
+		t.Fatalf("batch:\n%s", text)
+	}
+	if in := h.dev.Inputs()[len(h.dev.Inputs())-1]; in.Kind != "drag" || in.P != (screen.Point{X: 540, Y: 648}) {
+		t.Fatalf("batch input %+v", in)
 	}
 }

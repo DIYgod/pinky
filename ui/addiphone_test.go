@@ -445,18 +445,22 @@ func testAddIPhoneDownload(t *testing.T, height int) {
 		}
 	}
 
-	// One that works: the phone is prepared next.
+	// One that works: the phone is prepared next. The fake holds it
+	// halfway until the progress shows: whole, it is over before a click
+	// and a frame are under the race detector.
 	ta.api.SetDownloadError(nil)
+	ta.api.HoldDownload(true)
 	if err := clickInView(tt, "Try again"); err != nil {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "the progress", func() bool { tt.Frame(); return hasText(tt, "Downloading…") })
+	ta.api.HoldDownload(false)
 	ta.waitFor(t, "the phone being prepared", func() bool { tt.Frame(); return hasText(tt, "Preparing the iPhone…") })
 }
 
 // clickInView clicks the element labelled s, first scrolling the Add phone
-// card while the element lies below the window or below the card's edge,
-// which clips it to nothing, as a person scrolls the card.
+// card, or the page, while the element lies below the window or below the
+// card's edge, which clips it to nothing, as a person scrolls there.
 func clickInView(tt *mg.Tester, s string) error {
 	for range 8 {
 		r, ok := tt.Find(s)

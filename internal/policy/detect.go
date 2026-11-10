@@ -363,6 +363,13 @@ func IsSearchField(e *screen.Element) bool {
 
 // IsCredentialField reports whether typing into e would hand a password or a
 // one-time code to the agent.
+//
+// The label counts as people read it: a code word anywhere in it. The
+// identifier, which agents do not see, counts by whole words (see
+// identifierWords), since apps join words there: a note's body named
+// "footprintTextView" or "barcodeNotes" must not turn into a code field
+// for the "otp" or "code" inside a longer word (GitHub issue #47). A
+// password word counts anywhere in both.
 func IsCredentialField(e *screen.Element) bool {
 	if e == nil {
 		return false
@@ -370,17 +377,109 @@ func IsCredentialField(e *screen.Element) bool {
 	if e.Has(screen.StatePassword) {
 		return true
 	}
-	text := strings.ToLower(e.Label + " " + strings.ReplaceAll(e.ID, "_", " "))
-	if containsAny(text, passwordWords) {
+	label, id := strings.ToLower(e.Label), strings.ToLower(e.ID)
+	if containsAny(label, passwordWords) || containsAny(id, passwordWords) {
 		return true
 	}
-	if containsAny(text, otpNegatives) {
+	idw := identifierWords(e.ID)
+	if containsAny(label, otpNegatives) || idHasAny(id, idw, otpNegatives) {
 		return false
 	}
-	if containsAny(text, otpWords) {
+	if containsAny(label, otpWords) || idHasAny(id, idw, otpWords) {
 		return true
 	}
-	return anyWord(tokenize(text), otpTokens)
+	if anyWord(tokenize(label), otpTokens) || anyWord(idw, otpTokens) {
+		return true
+	}
+	for _, w := range idw {
+		if isIDCodeWord(w) {
+			return true
+		}
+	}
+	return false
+}
+
+// identifierWords splits an identifier into lower-case words: at anything
+// but letters and digits, between letters and digits, and where camelCase
+// starts a word. "OTPCodeField" gives otp, code, field; "et_verify_code2"
+// gives et, verify, code, 2.
+func identifierWords(id string) []string {
+	var out []string
+	var w []rune
+	flush := func() {
+		if len(w) > 0 {
+			out = append(out, string(w))
+			w = w[:0]
+		}
+	}
+	rs := []rune(id)
+	for i, r := range rs {
+		letter := unicode.IsLetter(r) || unicode.Is(unicode.Mn, r)
+		if !letter && !unicode.IsDigit(r) {
+			flush()
+			continue
+		}
+		if i > 0 && len(w) > 0 {
+			prev := rs[i-1]
+			switch {
+			case unicode.IsDigit(r) != unicode.IsDigit(prev):
+				flush()
+			case unicode.IsUpper(r) && unicode.IsLower(prev):
+				flush()
+			case unicode.IsUpper(r) && unicode.IsUpper(prev) && i+1 < len(rs) && unicode.IsLower(rs[i+1]):
+				// The last capital of an acronym starts the next word:
+				// "OTPCode".
+				flush()
+			}
+		}
+		w = append(w, unicode.ToLower(r))
+	}
+	flush()
+	return out
+}
+
+// idHasAny reports whether an identifier holds one of the phrases: as
+// whole words of idw, or, for CJK phrases, which have no word breaks,
+// anywhere in the lower-cased identifier id.
+func idHasAny(id string, idw []string, phrases []string) bool {
+	if len(idw) == 0 {
+		return false
+	}
+	joined := " " + strings.Join(idw, " ") + " "
+	for _, p := range phrases {
+		if hasCJK(p) {
+			if strings.Contains(id, strings.ReplaceAll(p, " ", "")) {
+				return true
+			}
+			continue
+		}
+		if pw := identifierWords(p); len(pw) > 0 && strings.Contains(joined, " "+strings.Join(pw, " ")+" ") {
+			return true
+		}
+	}
+	return false
+}
+
+// isIDCodeWord reports whether an identifier word written without breaks
+// names a code field: "otpinput", "verifycode", "etsmscode", "vcode". A
+// word that only ends in "code" ("barcode", "unicode", "zipcode") does not.
+func isIDCodeWord(w string) bool {
+	if strings.HasPrefix(w, "otp") || strings.HasPrefix(w, "verify") || strings.HasPrefix(w, "verification") {
+		return true
+	}
+	q, ok := strings.CutSuffix(w, "code")
+	if !ok || q == "" {
+		return false
+	}
+	if q == "v" || strings.Contains(q, "verif") {
+		return true
+	}
+	for _, k := range idCodeQualifiers {
+		if strings.HasSuffix(q, k) {
+			return true
+		}
+	}
+	return false
 }
 
 func isInput(e *screen.Element) bool {

@@ -10,7 +10,7 @@ import (
 	"syscall"
 )
 
-// lock takes the per-user gateway lock. It fails with ErrRunning when
+// lock takes the gateway's lock at path. It fails with ErrRunning when
 // another gateway holds it; the lock goes away with the process.
 func lock(path string) (*os.File, error) {
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600)
