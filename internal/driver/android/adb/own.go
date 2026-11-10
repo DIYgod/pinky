@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"path/filepath"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -59,15 +59,16 @@ type process struct {
 // for port.
 func serverLine(port string) string { return " -L tcp:" + port + " fork-server server " }
 
-// ownCommandLine reports whether a command line is that of a server Pinky
-// started for port: an adb by its full path, the pipe at 3.
+// ownCommandLine reports whether a command line, as ps shows it on macOS
+// and Linux, is that of a server Pinky started for port: an adb by its
+// full path, the pipe at 3. Its paths are a Unix system's whatever this
+// program was built for, hence package path.
 func ownCommandLine(line, port string) bool {
 	prog, rest, ok := strings.Cut(line, serverLine(port))
 	if !ok || rest != "--reply-fd 3" {
 		return false
 	}
-	base := filepath.Base(prog)
-	return filepath.IsAbs(prog) && (base == "adb" || base == "adb.exe")
+	return path.IsAbs(prog) && path.Base(prog) == "adb"
 }
 
 // StopOwnServer stops the server at the client's address when Pinky
