@@ -164,7 +164,7 @@ Interaction rules:
 
 ## Agent interface
 
-Agents see one MCP server, `pinky`, with 18 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
+Agents see one MCP server, `pinky`, with 19 tools. Every action waits for the screen to settle and returns the new screen, or only what changed, so agents rarely call `phone_observe`.
 
 | Tool | Arguments | Returns |
 | --- | --- | --- |
@@ -175,6 +175,7 @@ Agents see one MCP server, `pinky`, with 18 tools. Every action waits for the sc
 | `phone_type` | `text` (up to 16384 chars); `ref?`; `append?`; `submit?` | Result and new screen |
 | `phone_swipe` | `direction`, a `ref`, or `from` and `to`; `duration_ms` (80 to 1200) | Result and new screen |
 | `phone_pinch` | `scale` (0.25 to 4) and/or `rotation` (-180 to 180); a `ref` or `x,y`; `duration_ms` (200 to 2000) | Result and new screen |
+| `phone_drag` | a `ref` or `from`, and `to`; `via[]` (up to 8 points, each with `pause_ms`); `hold_ms`, `pause_ms` (0 to 5000); `duration_ms` (100 to 3000 per move) | Result and new screen |
 | `phone_key` | `key`: back, home, recents, enter, tab, delete, escape, dpad keys, page\_up, page\_down | Result and new screen |
 | `phone_launch` | `app`: name, bundle id or package; `language?`, `region?` | Result and new screen |
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |

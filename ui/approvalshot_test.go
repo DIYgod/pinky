@@ -398,3 +398,25 @@ func TestApprovalShotScreenshots(t *testing.T) {
 		}
 	}
 }
+
+// TestDragMarks: an approval's screenshot of a drag zooms on its whole
+// route, also a drag that lets go where it pressed after a detour.
+func TestDragMarks(t *testing.T) {
+	press, edge, drop := screen.Point{X: 300, Y: 900}, screen.Point{X: 1070, Y: 1200}, screen.Point{X: 500, Y: 700}
+	m := marksOf(gateway.NeedView{Point: press, To: drop, Path: []screen.Point{press, edge, drop}})
+	if !m.swipe() || m.pinch() || len(m.route()) != 3 {
+		t.Fatalf("marks %+v", m)
+	}
+	r, ok := m.focus(1080, 2400)
+	if !ok || r.X != 300 || r.X+r.W != 1070 || r.Y != 700 || r.Y+r.H != 1200 {
+		t.Errorf("focus %v, want 300,700 to 1070,1200", r)
+	}
+	back := marksOf(gateway.NeedView{Point: press, To: press, Path: []screen.Point{press, edge, press}})
+	if !back.swipe() {
+		t.Errorf("a drag there and back shows no route: %+v", back)
+	}
+	swipe := marksOf(gateway.NeedView{Point: press, To: drop})
+	if r := swipe.route(); len(r) != 2 || r[0] != press || r[1] != drop {
+		t.Errorf("a swipe's route %v", r)
+	}
+}

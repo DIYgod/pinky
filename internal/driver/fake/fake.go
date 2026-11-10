@@ -58,13 +58,15 @@ func (p *Provider) Open(_ context.Context, id string) (driver.Device, error) {
 
 // Action is one recorded input.
 type Action struct {
-	Kind string // tap, swipe, pinch, type, key, launch, link, touch, touch2
+	Kind string // tap, swipe, pinch, drag, type, key, launch, link, touch, touch2
 	P    screen.Point
 	To   screen.Point
 	Text string
 	App  string // link: the id of the app it opened in
 	// Pinch is the gesture of a pinch.
 	Pinch driver.Pinch
+	// Drag is the gesture of a drag.
+	Drag driver.Drag
 }
 
 // Device is a fake phone. Its screen is whatever SetScreen last set, and
@@ -177,6 +179,13 @@ func (d *Device) Pinch(_ context.Context, g driver.Pinch) error {
 	return nil
 }
 
+// Drag implements driver.Dragger: P and To are where the finger touches
+// down and lifts.
+func (d *Device) Drag(_ context.Context, g driver.Drag) error {
+	d.record(Action{Kind: "drag", P: g.From, To: g.To(), Drag: g})
+	return nil
+}
+
 // Type implements driver.Device.
 func (d *Device) Type(_ context.Context, text string, _ driver.TypeOptions) error {
 	d.record(Action{Kind: "type", Text: text})
@@ -268,6 +277,7 @@ var (
 	_ driver.Device       = (*Device)(nil)
 	_ driver.Toucher      = (*Device)(nil)
 	_ driver.Pincher      = (*Device)(nil)
+	_ driver.Dragger      = (*Device)(nil)
 	_ driver.MultiToucher = (*Device)(nil)
 	_ driver.LinkOpener   = (*Device)(nil)
 )

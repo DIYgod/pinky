@@ -165,9 +165,12 @@ type NeedView struct {
 	// Point is where the finger goes down and, for a swipe, To where it
 	// lifts, in Screenshot pixels; both zero when the action has no
 	// position (a key, opening an app). Point2 and To2 are the second
-	// finger's of a pinch, zero for other actions.
+	// finger's of a pinch, zero for other actions. Path is every point a
+	// drag's finger presses, rests on or lets go at, in order, from Point
+	// to To; nil for other actions.
 	Point, To   screen.Point
 	Point2, To2 screen.Point
+	Path        []screen.Point `json:",omitempty"`
 	// AlwaysAllow is set when the approval can be answered with
 	// AllowAlways: from then on, Rule (and the rules that asked with it)
 	// no longer asks about such steps in App, until the person takes it

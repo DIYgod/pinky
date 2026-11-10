@@ -766,6 +766,28 @@ func (d *Device) gesture(ctx context.Context, path []screen.Point, gap time.Dura
 
 // gestureHook is gesture with a callback right after the finger goes down.
 func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.Duration, onDown func()) error {
+	steps := make([]driver.DragStep, 0, len(path)+1)
+	steps = append(steps, driver.DragStep{P: path[0]})
+	if len(path) == 1 {
+		steps = append(steps, driver.DragStep{Wait: gap, P: path[0]})
+	}
+	for _, p := range path[1:] {
+		steps = append(steps, driver.DragStep{Wait: gap, P: p})
+	}
+	return d.gestureSteps(ctx, steps, onDown)
+}
+
+// Drag implements driver.Dragger: the finger moves in reports 10 ms apart
+// and rests without reporting.
+func (d *Device) Drag(ctx context.Context, g driver.Drag) error {
+	return d.gestureSteps(ctx, g.Steps(10*time.Millisecond), nil)
+}
+
+// gestureSteps puts a finger down at steps[0], then waits each step's Wait
+// and moves the finger to its point (a step that stays put only waits),
+// and lifts it at the last. The finger always comes up, even when ctx
+// ends mid-gesture.
+func (d *Device) gestureSteps(ctx context.Context, steps []driver.DragStep, onDown func()) error {
 	d.inputMu.Lock()
 	defer d.inputMu.Unlock()
 	// The whole gesture maps through one description of the screen, read
@@ -782,7 +804,7 @@ func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.
 		return err
 	}
 	si := d.freshDisplay(ctx)
-	x, y := panelPoint(path[0], si)
+	x, y := panelPoint(steps[0].P, si)
 	if err := h.touchAt(true, x, y); err != nil {
 		return err
 	}
@@ -790,14 +812,15 @@ func (d *Device) gestureHook(ctx context.Context, path []screen.Point, gap time.
 		onDown()
 	}
 	var gerr error
-	if len(path) == 1 {
-		gerr = sleepCtx(ctx, gap)
-	}
-	for _, p := range path[1:] {
-		if gerr = sleepCtx(ctx, gap); gerr != nil {
+	for _, st := range steps[1:] {
+		if gerr = sleepCtx(ctx, st.Wait); gerr != nil {
 			break
 		}
-		x, y = panelPoint(p, si)
+		nx, ny := panelPoint(st.P, si)
+		if nx == x && ny == y {
+			continue
+		}
+		x, y = nx, ny
 		if gerr = h.touchAt(true, x, y); gerr != nil {
 			break
 		}
