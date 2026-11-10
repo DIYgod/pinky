@@ -2,6 +2,15 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 即使你让智能体在后台工作，它现在也能整理安卓主屏幕了：它可以请求为此使用手机本身的屏幕；你在用手机时，控制权在你手里。
+- 在 Pixel 主屏幕上拖动 App 时，启动器拿起图标后会把整页缩小，现在 Pinky 会在目标移动后的位置松手。
+- Pinky 显示手机画面时，等你批准的拖动、滑动或双指缩放现在会在画面上画出路线。
+- Pinky Companion 已经装好、但它的服务没有打开时，Pinky 现在会说明原因，不再说「安装没有完成」。感谢 pigracing。
+- 不允许通过 USB 安装应用的手机（比如没插 SIM 卡的小米），现在会拿到 Pinky Companion 的安装包和手动安装的步骤，Pinky 也不会再每隔几小时重试一次被拒绝的更新。感谢 kunl。
+- tailnet 上的智能体（比如 Grok Bot）现在能通过 tailscale serve 连上为远程智能体提供服务的 Pinky，不会再收到 403 错误。
+
 ## 2026.1110.9 (2026-11-10)
 
 - 在 Mac 上，Pinky 更新后，通过 Wi-Fi 连接的手机现在会自己重新连上：Pinky 启动的 adb 服务失去本地网络权限时，Pinky 会重启它；如果是别的程序启动的 adb 服务连不上网络，体检会说明怎么处理。感谢 NaNhkNaN。

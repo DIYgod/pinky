@@ -2,6 +2,15 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Agents can now tidy an Android home screen even when you have them work in the background: they can ask to use the phone's own screen for it, and you stay in control while you use the phone.
+- Dragging an app on a Pixel home screen now lets go where the target went, although the launcher shrinks the page as soon as an app is picked up.
+- While Pinky shows the phone, a drag, swipe or pinch that waits for you now draws its route on the phone's picture.
+- When Pinky Companion is installed but its service does not come on, Pinky now says why, instead of saying the install did not finish. Thanks to pigracing.
+- A phone that refuses installs over USB, such as a Xiaomi without a SIM card, now gets the Pinky Companion APK and steps to install it by hand, and Pinky no longer retries a refused update every few hours. Thanks to kunl.
+- Agents on your tailnet, such as Grok Bot, can now reach a Pinky that serves remote agents through tailscale serve, instead of getting an error 403.
+
 ## 2026.1110.9 (2026-11-10)
 
 - On a Mac, phones on Wi-Fi now come back by themselves after Pinky updates: Pinky restarts the adb server it started when that server lost Local Network access, and the checkup says what to do when another program's adb server can't reach your network. Thanks to NaNhkNaN.
