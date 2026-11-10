@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Approvals to change a phone's settings (rotation, appearance, location, language) and to read an app's logs now offer **More options › Always allow**, remembered for that agent and phone (and app, for logs) until you take it back in Settings › Safety. Thanks to vinsew.
+
 ## 2026.1110.15 (2026-11-10)
 
 - When a phone is too slow to answer, agents are now told it timed out and what to do next, instead of that the call was cancelled. Thanks to NaNhkNaN.
