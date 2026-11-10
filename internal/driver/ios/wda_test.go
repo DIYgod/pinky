@@ -377,7 +377,6 @@ type fakeWDA struct {
 	shotAt      time.Time     // the last one
 	sourceAt    time.Time     // when /source last answered
 	version     string        // /status's build version: "" is 16.17.6, "none" none
-	source      string        // /source's value; "" a Pay button
 }
 
 func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -426,10 +425,6 @@ func (f *fakeWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `{"value":%v}`, f.locked)
 	case "GET /source":
 		f.sourceAt = time.Now()
-		if f.source != "" {
-			fmt.Fprintf(w, `{"value":%s}`, f.source)
-			return
-		}
 		fmt.Fprint(w, `{"value":{"type":"XCUIElementTypeApplication","label":"App","rect":{"x":0,"y":0,"width":100,"height":200},"isVisible":"1",`+
 			`"children":[{"type":"XCUIElementTypeButton","label":"Pay","rect":{"x":10,"y":10,"width":50,"height":20},"isVisible":"1","isAccessible":"1"}]}}`)
 	case "GET /screenshot":
