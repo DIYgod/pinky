@@ -90,7 +90,7 @@ func (s *Session) Device(ctx context.Context, req DeviceRequest) *Result {
 	}
 	defer s.done(l)
 	g := s.g
-	ctx, cancel := mergeCtx(ctx, l.ctx)
+	ctx, cancel := g.callCtx(ctx, l)
 	defer cancel()
 	changing := len(want) > 0 || len(resets) > 0
 	if res := g.gate(l, req.ApprovalID, changing); res != nil {

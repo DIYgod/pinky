@@ -103,7 +103,7 @@ func (s *Session) Logs(ctx context.Context, req LogsRequest) *Result {
 	}
 	defer s.done(l)
 	g := s.g
-	ctx, cancel := mergeCtx(ctx, l.ctx)
+	ctx, cancel := g.callCtx(ctx, l)
 	defer cancel()
 	if res := g.gate(l, req.ApprovalID, false); res != nil {
 		return g.finish(l, res)

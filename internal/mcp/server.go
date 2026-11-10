@@ -140,6 +140,11 @@ func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session
 		// the last one open: a newer session continues the older ones'.
 		info.Name += RemoteSuffix
 		info.Resume = true
+	} else {
+		// A client on this computer may drop its session and start a new
+		// one, as Claude Desktop does after a call times out: the new one
+		// continues the task the old one left.
+		info.Reconnect = true
 	}
 	gs := s.g.OpenSession(info)
 	s.sessions[req.Session] = gs

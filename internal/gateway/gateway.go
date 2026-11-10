@@ -31,13 +31,17 @@ type Options struct {
 
 	ApprovalTimeout time.Duration // default 60 s, from when the panel opens
 	MaxBlock        time.Duration // default 45 s, longest a tool call blocks
+	CallBudget      time.Duration // default 45 s, the time one tool call may take in all (budget.go)
 	HandoffTimeout  time.Duration // default 15 min
 	IdleTimeout     time.Duration // default 10 min without calls ends a lease
 	ReconnectGrace  time.Duration // default 60 s a lease survives a dropped device
 	ResumeGrace     time.Duration // default 2 min a resuming agent's closed session keeps its leases for its next one
-	SettleMax       time.Duration // default 3 s
-	PollInterval    time.Duration // default 250 ms, for settling and phone_wait_for
-	DiscoverEvery   time.Duration // default 2 s
+	// LocalResumeGrace is ResumeGrace for agents on this computer
+	// (AgentInfo.Reconnect); default 60 s.
+	LocalResumeGrace time.Duration
+	SettleMax        time.Duration // default 3 s
+	PollInterval     time.Duration // default 250 ms, for settling and phone_wait_for
+	DiscoverEvery    time.Duration // default 2 s
 	// RulesEvery is how often the policy's files are checked for hand
 	// edits (policy.Engine.Refresh); default 2 s.
 	RulesEvery time.Duration
@@ -66,10 +70,12 @@ func (o *Options) defaults() {
 	}
 	set(&o.ApprovalTimeout, 60*time.Second)
 	set(&o.MaxBlock, 45*time.Second)
+	set(&o.CallBudget, 45*time.Second)
 	set(&o.HandoffTimeout, 15*time.Minute)
 	set(&o.IdleTimeout, 10*time.Minute)
 	set(&o.ReconnectGrace, 60*time.Second)
 	set(&o.ResumeGrace, 2*time.Minute)
+	set(&o.LocalResumeGrace, 60*time.Second)
 	set(&o.SettleMax, 3*time.Second)
 	set(&o.PollInterval, 250*time.Millisecond)
 	set(&o.DiscoverEvery, 2*time.Second)
@@ -218,7 +224,7 @@ func (g *Gateway) Close() error {
 		s.end("gateway stopped", false)
 	}
 	g.mu.Lock()
-	g.endKeptLocked("gateway stopped")
+	g.endKeptLocked("gateway stopped", false)
 	g.mu.Unlock()
 	g.approvals.Close()
 	g.cancel()

@@ -291,7 +291,7 @@ func (s *Session) Act(ctx context.Context, c Call, a Action) *Result {
 		return res
 	}
 	defer s.done(l)
-	ctx, cancel := mergeCtx(ctx, l.ctx)
+	ctx, cancel := s.g.callCtx(ctx, l)
 	defer cancel()
 	return s.g.finish(l, s.g.act(ctx, l, c, a))
 }
@@ -442,7 +442,14 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	}
 	g.readyScreen(ctx, l)
 	d := l.dev
-	d.act.Lock()
+	if !lockAct(ctx, d) {
+		// Another call's action still runs, as one the agent's client
+		// gave up on may.
+		if ctx.Err() != nil {
+			return errResult(ErrInternal, "The call was cancelled. Nothing was done.")
+		}
+		return errResult(ErrInternal, "Another action on the phone was still running when the call's %s ran out. Nothing was done. Observe, then try again.", human(g.opt.CallBudget))
+	}
 	// Check again under the device's action lock: another call may have
 	// opened an approval, or the person may have taken over, meanwhile.
 	if res := g.gate(l, "", true); res != nil {
@@ -1433,8 +1440,10 @@ func (g *Gateway) awaitApproval(ctx context.Context, l *lease, c Call, a Action,
 // waitApproval blocks for up to MaxBlock, sending progress every 5 s.
 func (g *Gateway) waitApproval(ctx context.Context, l *lease, id string, info approval.Info, progress Progress) (approval.Outcome, error) {
 	start := time.Now()
-	deadline := start.Add(g.opt.MaxBlock)
-	total := g.opt.MaxBlock.Seconds()
+	// It leaves the call time for what follows a decision (budget.go): an
+	// approval still open then is picked up by the agent's next call.
+	deadline := budgetBefore(ctx, start.Add(g.opt.MaxBlock), approvalReserve)
+	total := deadline.Sub(start).Seconds()
 	for {
 		left := time.Until(deadline)
 		if left <= 0 {
@@ -1750,6 +1759,9 @@ func (g *Gateway) executeOn(ctx context.Context, l *lease, c Call, a Action, p *
 	next, err := g.observe(ctx, d, true)
 	if err != nil {
 		res := statusResult(StatusUncertain, "The action was sent, but the screen could not be read afterwards (%v). Observe before anything else; do not repeat it blindly.", err)
+		if errors.Is(err, errOutOfTime) {
+			res = outOfTimeAfterAction(g.opt.CallBudget)
+		}
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
@@ -1851,7 +1863,7 @@ func (g *Gateway) leaves(a Action, p *prep, cur *screen.Screen) bool {
 // for the app is never cut short by settle_ms: the app in front decides
 // what the agent may see and do next.
 func (g *Gateway) awaitLeave(ctx context.Context, d *device, from screen.App, next *screen.Screen, settled bool, limit time.Duration) (*screen.Screen, bool) {
-	deadline := time.Now().Add(g.opt.SettleMax)
+	deadline := budgetBefore(ctx, time.Now().Add(g.opt.SettleMax), 0)
 	for time.Now().Before(deadline) {
 		if !sleepCtx(ctx, g.opt.PollInterval, nil) {
 			break
@@ -1888,7 +1900,7 @@ var launchReadWait = 6 * time.Second
 // shows an app, then settles as the action does (limit) and reads once
 // more. It keeps next when no app comes.
 func (g *Gateway) awaitApp(ctx context.Context, d *device, next *screen.Screen, settled bool, limit time.Duration) (*screen.Screen, bool) {
-	deadline := time.Now().Add(launchReadWait)
+	deadline := budgetBefore(ctx, time.Now().Add(launchReadWait), 0)
 	for time.Now().Before(deadline) {
 		if !sleepCtx(ctx, max(g.opt.PollInterval, 300*time.Millisecond), nil) {
 			break
@@ -2044,6 +2056,8 @@ func (g *Gateway) readError(l *lease, err error) *Result {
 		return statusResult(StatusLocked, "The phone is locked. Call phone_handoff so the person can unlock it.")
 	case errors.Is(err, driver.ErrUnsupported):
 		return errResult(ErrUnsupported, "%v", err)
+	case errors.Is(err, errOutOfTime):
+		return outOfTimeBeforeAction(g.opt.CallBudget)
 	case errors.Is(err, context.Canceled):
 		return errResult(ErrInternal, "The call was cancelled.")
 	case errors.Is(err, context.DeadlineExceeded):
@@ -2093,7 +2107,17 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 	if dev == nil {
 		return nil, driver.ErrOffline
 	}
-	ctx, cancel := context.WithTimeout(ctx, observeTimeout)
+	if budgetSpent(ctx) {
+		return nil, errOutOfTime
+	}
+	// A read ends with the call's budget (budget.go), and the driver's
+	// read is cancelled then: the call answers before the agent's client
+	// gives up on it.
+	timeout, byBudget := observeTimeout, false
+	if left, ok := budgetLeft(ctx); ok && left < timeout {
+		timeout, byBudget = left, true
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	start := stamp() // ordered against the pictures it vouches for (clock.go)
 	// The recording learns of the read before it runs: while it runs, what
@@ -2133,6 +2157,9 @@ func (g *Gateway) observeOCR(ctx context.Context, d *device, mode readOCR) (*scr
 			g.wake(ctx, d)
 			return g.observeOCR(ctx, d, mode)
 		}
+	}
+	if err != nil && byBudget && ctx.Err() == context.DeadlineExceeded {
+		err = fmt.Errorf("%w: %w", errOutOfTime, err)
 	}
 	if err != nil {
 		if errors.Is(err, driver.ErrOffline) {
