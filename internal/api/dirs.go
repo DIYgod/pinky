@@ -27,6 +27,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Dirs are Pinky's per-user directories.
@@ -191,10 +192,43 @@ func (d Dirs) Ensure() error {
 }
 
 // EnsureToken returns the agent token, creating it (mode 0600) when missing.
+// The gateway and agents' `pinky mcp` may call it at the same time on a
+// first run, so the file appears with its whole token at once, and every
+// caller gets the same one.
 func EnsureToken(path string) (string, error) {
-	if b, err := os.ReadFile(path); err == nil {
-		tok := strings.TrimSpace(string(b))
-		if tok != "" {
+	tok, err := readToken(path)
+	if !errors.Is(err, fs.ErrNotExist) {
+		return tok, err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return "", err
+	}
+	var b [32]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	tok = hex.EncodeToString(b[:])
+	switch err := placeToken(path, tok); {
+	case err == nil:
+		return tok, nil
+	case errors.Is(err, fs.ErrExist):
+		// Another process won the race; use its token.
+		return readToken(path)
+	default:
+		return "", err
+	}
+}
+
+// readToken reads the agent token. A file still empty is being written by
+// another process (where placeToken cannot link), so it waits a moment
+// for the token.
+func readToken(path string) (string, error) {
+	for wait := 0; ; wait++ {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		if tok := strings.TrimSpace(string(b)); tok != "" {
 			if runtime.GOOS != "windows" {
 				if st, err := os.Stat(path); err == nil && st.Mode().Perm()&0o077 != 0 {
 					if err := os.Chmod(path, 0o600); err != nil {
@@ -204,29 +238,44 @@ func EnsureToken(path string) (string, error) {
 			}
 			return tok, nil
 		}
-	} else if !errors.Is(err, fs.ErrNotExist) {
-		return "", err
+		if wait == 50 {
+			return "", fmt.Errorf("agent token %s is empty; delete it and restart Pinky", path)
+		}
+		time.Sleep(20 * time.Millisecond)
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return "", err
-	}
-	var b [32]byte
-	if _, err := rand.Read(b[:]); err != nil {
-		return "", err
-	}
-	tok := hex.EncodeToString(b[:])
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if errors.Is(err, fs.ErrExist) {
-		// Another process won the race; use its token.
-		b, err := os.ReadFile(path)
-		return strings.TrimSpace(string(b)), err
-	}
+}
+
+// placeToken creates the token file holding tok, or fails with
+// fs.ErrExist. It writes a temporary file and links it into place, so
+// nobody reads a half-written token. Where links do not work, it creates
+// the file and then writes it, and readers wait for the token.
+func placeToken(path, tok string) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".agent-token-*")
 	if err != nil {
-		return "", err
+		return err
+	}
+	_, err = tmp.WriteString(tok + "\n")
+	if cerr := tmp.Close(); err == nil {
+		err = cerr
+	}
+	if err == nil {
+		err = os.Link(tmp.Name(), path)
+	}
+	os.Remove(tmp.Name())
+	if err == nil || errors.Is(err, fs.ErrExist) {
+		return err
+	}
+	var le *os.LinkError
+	if !errors.As(err, &le) {
+		return err
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return err
 	}
 	if _, err := f.WriteString(tok + "\n"); err != nil {
 		f.Close()
-		return "", err
+		return err
 	}
-	return tok, f.Close()
+	return f.Close()
 }
