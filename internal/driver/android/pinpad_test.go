@@ -102,6 +102,7 @@ func TestPinPadDumps(t *testing.T) {
 		{"synthetic-lineage-scrambled-pin.xml", false, want{kind: bouncerPIN}},
 		{"synthetic-lineage-scrambled-pin.xml", true, want{kind: bouncerPIN, pad: true, confirm: "Enter"}},
 		{"synthetic-emergency-dialer.xml", false, want{kind: bouncerNone}},
+		{"synthetic-originos-fingerprint.xml", false, want{kind: bouncerNone}},
 	}
 	for _, c := range cases {
 		name := c.file
