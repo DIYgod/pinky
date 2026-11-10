@@ -161,7 +161,11 @@ func startWDAFor(ctx context.Context, info driver.Info) (*wdaStart, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.run, s.l = startWDA(l.entry, bundleID), l
+	bind := wdaBind(base, l.tunnel)
+	if bind != "127.0.0.1" {
+		s.c = newWDATunnel(l.tunnel)
+	}
+	s.run, s.l = startWDA(l.entry, bundleID, bind), l
 	return s, nil
 }
 

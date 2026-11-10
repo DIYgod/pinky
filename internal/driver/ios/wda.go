@@ -23,8 +23,9 @@ import (
 // screen stream and HID input. It runs as a UI test on the phone, serves
 // HTTP on port 8100 and an MJPEG picture on port 9100, and does everything
 // through XCTest: touches at any point, typing, Home, launching apps, and
-// the element tree with frames. Pinky reaches both ports through usbmuxd,
-// one connection per request, so nothing listens on the computer.
+// the element tree with frames. Pinky reaches both ports through usbmuxd
+// on a cable and through its tunnel on Wi-Fi (wdaBind), one connection per
+// request, so nothing listens on the computer.
 
 // WDA ports on the phone.
 const (
@@ -48,13 +49,33 @@ type wdaClient struct {
 // newWDAUSB returns a client that reaches WDA on the phone behind a usbmuxd
 // entry.
 func newWDAUSB(e goios.DeviceEntry) *wdaClient {
+	return newWDADial(func(ctx context.Context, port int) (net.Conn, error) {
+		return dialDevicePort(ctx, e.DeviceID, port)
+	})
+}
+
+// newWDATunnel returns a client that reaches WDA on the phone through a
+// tunnel, at the phone's address inside it.
+func newWDATunnel(t *Tunnel) *wdaClient {
+	return newWDADial(func(ctx context.Context, port int) (net.Conn, error) {
+		c, err := t.DialTCP(ctx, port)
+		if err != nil {
+			return nil, err
+		}
+		return c, nil
+	})
+}
+
+// newWDADial returns a client that opens its connections to the phone's
+// ports with dial.
+func newWDADial(dial func(ctx context.Context, port int) (net.Conn, error)) *wdaClient {
 	tr := &http.Transport{
 		DialContext: func(ctx context.Context, _, addr string) (net.Conn, error) {
 			port := wdaPort
 			if strings.HasPrefix(addr, "mjpeg:") {
 				port = mjpegPort
 			}
-			return dialDevicePort(ctx, e.DeviceID, port)
+			return dial(ctx, port)
 		},
 		MaxIdleConns:        4,
 		IdleConnTimeout:     30 * time.Second,

@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"strings"
 	"sync"
 	"testing"
@@ -135,6 +136,31 @@ func TestBackButton(t *testing.T) {
 	json.Unmarshal([]byte(`{"type":"Application","rect":{"width":393,"height":852},"children":[{"type":"Button","label":"x","isVisible":"1","rect":{"x":0,"y":0,"width":10,"height":10}}]}`), &none)
 	if _, ok := backButton(&none, 3); ok {
 		t.Fatal("found a back button without a navigation bar")
+	}
+}
+
+func TestWDABind(t *testing.T) {
+	entry := func(conn string) goios.DeviceEntry {
+		var e goios.DeviceEntry
+		e.Properties.ConnectionType = conn
+		return e
+	}
+	tun := &Tunnel{device: netip.MustParseAddr("fd10:2c3d::1")}
+	for _, c := range []struct {
+		conn string
+		t    *Tunnel
+		want string
+	}{
+		{"USB", tun, "127.0.0.1"},
+		{"Network", tun, "fd10:2c3d::1"},
+		{"Network", nil, "127.0.0.1"},
+	} {
+		if got := wdaBind(entry(c.conn), c.t); got != c.want {
+			t.Errorf("wdaBind(%s, tunnel %v) = %q, want %q", c.conn, c.t != nil, got, c.want)
+		}
+	}
+	if got := wdaEnv("fd10:2c3d::1")["USE_IP"]; got != "fd10:2c3d::1" {
+		t.Errorf("USE_IP = %v", got)
 	}
 }
 
