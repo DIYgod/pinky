@@ -782,14 +782,24 @@ func TestAskTrustKeepsAGoodRecord(t *testing.T) {
 // TestAskTrustReportsARecordItCannotReplace: a pairing the phone accepts that
 // leaves the record here as it was cannot be healed by tapping Trust, so the
 // phone says how an administrator lets Apple's device service replace it.
+// While the record stays, Pinky asks the phone to pair no more, even past
+// the 4 s window: another pairing would only make it ask to be trusted
+// again, and a pending dialog would flip the step back to "tap Trust".
 func TestAskTrustReportsARecordItCannotReplace(t *testing.T) {
 	var pr preparer
-	pr.recordFn = func(string) (goios.PairRecord, error) { return goios.PairRecord{HostID: "OLD"}, nil }
+	var record goios.PairRecord = goios.PairRecord{HostID: "OLD"}
+	pr.recordFn = func(string) (goios.PairRecord, error) { return record, nil }
+	writable := false // whether Apple's device service can replace the record
 	pairs := 0
 	pr.pairFn = func(goios.DeviceEntry) error {
 		pairs++
+		if writable {
+			record = goios.PairRecord{HostID: "PAIRED"}
+		}
 		return nil
 	}
+	now := time.Unix(1000, 0)
+	pr.now = func() time.Time { return now }
 	e := entry("phone", 1, "USB")
 	refused := errors.New("lockdown: InvalidHostID")
 	err := pr.askTrust(e, refused, nil)
@@ -802,12 +812,53 @@ func TestAskTrustReportsARecordItCannotReplace(t *testing.T) {
 		!strings.Contains(info.Detail, "administrator") || !strings.Contains(info.Detail, driver.PairRecordFixCommand(e.Properties.SerialNumber)) {
 		t.Fatalf("trustState = %+v", info)
 	}
-	// Waiting for the next pairing request says the same, not to tap Trust.
-	if err := pr.askTrust(e, refused, nil); !errors.As(err, &stuck) {
-		t.Fatalf("askTrust while it waits = %v, want a recordStuckError", err)
+	// Waiting, including past the 4 s window, says the same, not to tap
+	// Trust, and makes no new pairing request.
+	for i := 0; i < 3; i++ {
+		now = now.Add(5 * time.Second)
+		if err := pr.askTrust(e, refused, nil); !errors.As(err, &stuck) {
+			t.Fatalf("askTrust after %ds = %v, want a recordStuckError", (i+1)*5, err)
+		}
 	}
 	if pairs != 1 {
-		t.Fatalf("%d pairings, want 1", pairs)
+		t.Fatalf("%d pairings while the record is stuck, want 1", pairs)
+	}
+	// The record's host id changed: an administrator let the service
+	// replace it, so the next refusal is answered with a pairing again,
+	// and that pairing's own record lands.
+	record = goios.PairRecord{HostID: "NEW"}
+	writable = true
+	if err := pr.askTrust(e, refused, nil); err != nil {
+		t.Fatalf("askTrust after the record changed: %v", err)
+	}
+	if pairs != 2 {
+		t.Fatalf("%d pairings after the record changed, want 2", pairs)
+	}
+}
+
+// TestAskTrustLeavesStuckWhenReplugged: unplugging the phone and plugging it
+// in again clears the stuck state, as the record may have been repaired
+// while it was away. A new usbmuxd attach is a new DeviceID.
+func TestAskTrustLeavesStuckWhenReplugged(t *testing.T) {
+	var pr preparer
+	pr.recordFn = func(string) (goios.PairRecord, error) { return goios.PairRecord{HostID: "OLD"}, nil }
+	pairs := 0
+	pr.pairFn = func(goios.DeviceEntry) error {
+		pairs++
+		return nil
+	}
+	now := time.Unix(1000, 0)
+	pr.now = func() time.Time { return now }
+	refused := errors.New("lockdown: InvalidHostID")
+	if err := pr.askTrust(entry("phone", 1, "USB"), refused, nil); !errors.As(err, new(recordStuckError)) {
+		t.Fatalf("askTrust = %v, want a recordStuckError", err)
+	}
+	now = now.Add(5 * time.Second)
+	if err := pr.askTrust(entry("phone", 2, "USB"), refused, nil); !errors.As(err, new(recordStuckError)) {
+		t.Fatalf("askTrust after replugging = %v, want a recordStuckError", err)
+	}
+	if pairs != 2 {
+		t.Fatalf("%d pairings, want 2: one for each attach", pairs)
 	}
 }
 
