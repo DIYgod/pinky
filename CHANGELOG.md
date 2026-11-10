@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On Windows, confirming with the password now works for an account without a password. When Windows still refuses to check it, Pinky says to set a password or a Windows Hello PIN.
+
 ## 2026.1110.12 (2026-11-10)
 
 - An iPhone driven through the WebDriverAgent helper now reconnects by itself within seconds when the helper stops, instead of failing every action until Pinky is restarted. Thanks to NaNhkNaN.
