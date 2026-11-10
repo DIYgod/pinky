@@ -509,6 +509,10 @@ func (c *wdaClient) rotation(ctx context.Context) (int, error) {
 	return int(math.Round(r.Z)), err
 }
 
+func (c *wdaClient) setOrientation(ctx context.Context, orientation string) error {
+	return c.do(ctx, c.hc, http.MethodPost, "/orientation", map[string]string{"orientation": orientation}, nil)
+}
+
 func (c *wdaClient) locked(ctx context.Context) (bool, error) {
 	var b bool
 	err := c.call(ctx, c.hc, http.MethodGet, "/wda/locked", nil, &b)

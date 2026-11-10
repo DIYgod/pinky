@@ -57,6 +57,9 @@ func (g *Gateway) shotOf(ctx context.Context, d *device, dev driver.Device, back
 // (or opens the stream, which starts with one), and keeps the last picture
 // that arrives until the stream goes quiet.
 func (g *Gateway) frameShot(ctx context.Context, key string, dev driver.Device) (image.Image, error) {
+	if preview, ok := dev.(driver.MirrorOnly); ok && preview.MirrorOnly() {
+		return nil, fmt.Errorf("the video belongs to the desktop mirror: %w", driver.ErrUnsupported)
+	}
 	if err := video.Load(); err != nil {
 		return nil, fmt.Errorf("no screenshot: FFmpeg is missing (%v): %w", err, driver.ErrUnsupported)
 	}

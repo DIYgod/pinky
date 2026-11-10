@@ -16,6 +16,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
+	"github.com/DIYgod/pinky/internal/swipetrace"
 )
 
 // Action is one input: phone_tap, phone_type, phone_swipe, phone_pinch,
@@ -394,7 +395,9 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	if c.ApprovalID != "" {
 		return g.resume(ctx, l, c, a)
 	}
+	swipetrace.Mark(ctx, "gateway.ready_begin")
 	g.readyScreen(ctx, l)
+	swipetrace.Mark(ctx, "gateway.ready_end")
 	d := l.dev
 	d.act.Lock()
 	// Check again under the device's action lock: another call may have
@@ -410,7 +413,9 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 			return res
 		}
 	}
+	swipetrace.Mark(ctx, "gateway.read_begin")
 	cur, err := g.startScreen(ctx, l, c)
+	swipetrace.Mark(ctx, "gateway.read_end")
 	if err != nil {
 		d.act.Unlock()
 		return g.readError(l, err)
@@ -456,6 +461,7 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 	}
 	p.exempted = v.Exempted
 	p.settleFull = personAllowed(v)
+	swipetrace.Mark(ctx, "gateway.policy_end")
 	res = g.execute(ctx, l, c, a, p, cur, -1)
 	d.act.Unlock()
 	return exemptedNote(res, v, p)
@@ -719,7 +725,7 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		if !ok {
 			e, ok = relocate(seen, cur, ref)
 		}
-		if !ok {
+		if !ok || !cur.Mask.Visible(e.Bounds, cur.Width, cur.Height) {
 			return nil, g.attachScreen(l, errResult(ErrNotFound, "[%d] is not on the screen anymore. Nothing was done.", ref), cur)
 		}
 		if e.Bounds.Empty() {
@@ -729,7 +735,8 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 		return &e, nil
 	}
 	inBounds := func(pt screen.Point) bool {
-		return cur.Width <= 0 || cur.Height <= 0 || (pt.X >= 0 && pt.Y >= 0 && pt.X < cur.Width && pt.Y < cur.Height)
+		return cur.Width <= 0 || cur.Height <= 0 || (pt.X >= 0 && pt.Y >= 0 && pt.X < cur.Width && pt.Y < cur.Height &&
+			cur.Mask.Visible(screen.Rect{X: pt.X, Y: pt.Y, W: 1, H: 1}, cur.Width, cur.Height))
 	}
 
 	switch a.Tool {
@@ -1586,7 +1593,9 @@ func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *pr
 		limit = a.settleLimit(limit)
 	}
 	settled := g.settleAction(ctx, d, limit)
+	swipetrace.Mark(ctx, "gateway.settle_end")
 	next, err := g.observe(ctx, d, true)
+	swipetrace.Mark(ctx, "gateway.after_end")
 	if err != nil {
 		res := statusResult(StatusUncertain, "The action was sent, but the screen could not be read afterwards (%v). Observe before anything else; do not repeat it blindly.", err)
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
@@ -2112,7 +2121,7 @@ func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (
 	if err != nil {
 		return nil, cov, err
 	}
-	if !recordableScreen(g.policy, after) || after.App != s.App {
+	if !recordableScreen(g.policy, after) || after.App != s.App || after.Mask != s.Mask {
 		return nil, cov, errScreenChanged
 	}
 	img, cov.hidden, err = coverHidden(img, s, after)
@@ -2124,6 +2133,13 @@ func (g *Gateway) screenshot(ctx context.Context, d *device, s *screen.Screen) (
 		return nil, shotCover{}, errCodeShot
 	}
 	cov.codes = codes
+	if after.Mask != nil {
+		b := img.Bounds()
+		if !after.Mask.Fits(b.Dx(), b.Dy()) {
+			return nil, shotCover{}, errScreenChanged
+		}
+		img = after.Mask.Cover(img)
+	}
 	return img, cov, nil
 }
 
@@ -2139,7 +2155,8 @@ func (g *Gateway) agentView(l *lease, raw *screen.Screen) (*screen.Screen, strin
 	for _, e := range raw.Elements {
 		// Text read from the status bar's pixels (clock, signal and battery
 		// icons as OCR sees them) only adds noise to every diff.
-		if e.Source == screen.SourceOCR && ocrInStatusBar(raw, e) {
+		if !raw.Mask.Visible(e.Bounds, raw.Width, raw.Height) ||
+			(e.Source == screen.SourceOCR && ocrInStatusBar(raw, e)) {
 			continue
 		}
 		cp.Elements = append(cp.Elements, e)

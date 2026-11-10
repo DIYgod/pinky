@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/swipetrace"
 	"github.com/DIYgod/pinky/internal/update"
 )
 
@@ -172,8 +173,15 @@ func (s *shimSession) fromAgent(stdin io.Reader) {
 					request, method = string(h.ID), h.Method
 				}
 			}
+			traceSwipe := method == "tools/call" && swipetrace.Directory() != "" && isSwipeCall(line)
+			if traceSwipe {
+				swipetrace.Wire("stdio.read")
+			}
 			if !s.send(line, request, method) {
 				return
+			}
+			if traceSwipe {
+				swipetrace.Wire("stdio.forwarded")
 			}
 		}
 		if err != nil {
@@ -188,6 +196,15 @@ func (s *shimSession) fromAgent(stdin io.Reader) {
 	if c != nil {
 		halfClose(c)
 	}
+}
+
+func isSwipeCall(line []byte) bool {
+	var call struct {
+		Params struct {
+			Name string
+		}
+	}
+	return json.Unmarshal(line, &call) == nil && call.Params.Name == "phone_swipe"
 }
 
 // send writes one line to the gateway, waiting out a reconnect for an

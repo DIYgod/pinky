@@ -120,6 +120,9 @@ func (g *Gateway) startVideoLocked(l *lease) {
 	if !g.recordOn || g.store == nil || d.video != nil || l.ended || l.recorded || g.closed {
 		return
 	}
+	if preview, ok := d.dev.(driver.MirrorOnly); ok && preview.MirrorOnly() {
+		return
+	}
 	key := hubKey(d.id, false)
 	if l.bg != nil {
 		key = hubKey(d.id, true)

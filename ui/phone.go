@@ -13,6 +13,7 @@ import (
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/screen"
 )
 
 // phonesPage shows the selected phone, or all of them, with the Needs you
@@ -259,16 +260,11 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		shown = nil
 	}
 	aspect := m.aspect(d)
-	const bezel = 9
-	ph := min(availH, (availW-2*bezel)/aspect+2*bezel)
-	ph = max(ph, 240)
-	sw := (ph - 2*bezel) * aspect
-	// The bezel takes the screen's shape, turned with the phone (bezel.go).
-	radius, inner := bezelRadius(bezelOf(d), sw, ph-2*bezel, bezel)
+	pw, ph, bezel, radius, inner := deviceBezel(d, aspect, max(1, availW), max(1, availH), 9)
 
 	// Keyed, the phone and its keys stay themselves as the banner comes
 	// and goes before them: the mirror keeps the keyboard's focus.
-	fig := mg.Box(c.Key("phone-" + d.Info.ID)).Width(sw + 2*bezel).Height(ph).Shrink(0).Radius(radius).Background(p.phone).Padding(bezel)
+	fig := mg.Box(c.Key("phone-" + d.Info.ID)).Width(pw).Height(ph).Shrink(0).Radius(radius).Background(p.phone).Padding(bezel)
 	fig = shadow(c, fig)
 	if inControl {
 		fig.Shadow(0, 0, 0, 2, p.ink2)
@@ -315,7 +311,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			key(icBack, locales.PhoneKeyBack(), driver.KeyBack)
 		}
 		key(icHome, locales.PhoneKeyHome(), driver.KeyHome)
-		if d.Info.Platform != driver.IOS {
+		if d.Info.Platform != driver.IOS && d.Info.Platform != driver.HarmonyOS {
 			key(icRecents, locales.PhoneKeyRecents(), driver.KeyRecents)
 		}
 		mg.Box(c).Size(1, 20).Background(p.line2).Margin(0, 6)
@@ -385,7 +381,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 		menuPanel(c, panel).Width(290).Margin(6, 0, 0, 0)
 		if menuItem(c, locales.PhoneTakeScreenshot(), mg.Color{}).Clicked() {
 			open = false
-			a.saveScreenshot(m, d.Info.Name)
+			a.saveScreenshot(m, d.Info)
 		}
 		if menuItem(c, locales.PhoneCheckup(), mg.Color{}).Clicked() {
 			open = false
@@ -393,7 +389,18 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 		}
 		a.phoneWiFiMenu(c, d, func() { open = false })
 		menuItem(c, locales.PhoneRecordScreen(), p.ink3).Disabled(true).Tooltip(locales.PhoneRecordScreenTooltip())
-		menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())
+		rotationBackend := d.Info.Platform == driver.HarmonyOS ||
+			(d.Info.Platform == driver.IOS && d.Info.Backend == "wda")
+		rotate := rotationBackend && d.Status != gateway.DeviceOffline &&
+			m != nil && !m.agent && m.state == "playing" && m.picW > 0
+		if rotate {
+			if menuItem(c, locales.PhoneRotate(), mg.Color{}).Clicked() {
+				open = false
+				a.call(id, locales.PhoneRotate(), func() error { return a.api.Key(id, driver.KeyRotate) })
+			}
+		} else {
+			menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())
+		}
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
 		mg.Row(c).Gap(10).Padding(6, 10).AlignItems(mg.Center).Children(func() {
 			ink := p.ink
@@ -425,7 +432,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 
 // saveScreenshot writes the mirror's last picture to the Desktop (or the
 // home folder) as a PNG.
-func (a *app) saveScreenshot(m *mirror, name string) {
+func (a *app) saveScreenshot(m *mirror, device driver.Info) {
 	pic, turn := m.lastPicture()
 	if pic == nil {
 		a.toasts = append(a.toasts, locales.PhoneNoPicture())
@@ -436,12 +443,12 @@ func (a *app) saveScreenshot(m *mirror, name string) {
 		dir, _ = os.UserHomeDir()
 	}
 	now := time.Now()
-	path := filepath.Join(dir, locales.PhoneScreenshotName(name, now.Format("2006-01-02"), now.Format("15.04.05"))+".png")
+	path := filepath.Join(dir, locales.PhoneScreenshotName(device.Name, now.Format("2006-01-02"), now.Format("15.04.05"))+".png")
 	go func() {
 		img := turnRGBA(pic.RGBA(), turn)
 		f, err := os.Create(path)
 		if err == nil {
-			err = png.Encode(f, img)
+			err = png.Encode(f, screen.UprightDisplayMask(device.Model, turn, img.Bounds().Dx(), img.Bounds().Dy()).Cover(img))
 			if cerr := f.Close(); err == nil {
 				err = cerr
 			}
@@ -545,10 +552,9 @@ func (a *app) phoneTiles(c *mg.Context, cols []mg.Track, width float32) {
 						})
 					default:
 						m, bgTask := a.screenFor(d, t, true)
-						pw, ph, sw, sh := fitBezel(m.aspect(d), slotW, tileSlotHeight, 5)
-						radius, inner := bezelRadius(kind, sw, sh, 5)
+						pw, ph, pad, radius, inner := deviceBezel(d, m.aspect(d), slotW, tileSlotHeight, 5)
 						slot.Children(func() {
-							mg.Box(c.Key("mini-"+d.Info.ID)).Size(pw, ph).Shrink(0).Radius(radius).Background(p.phone).Padding(5).Children(func() {
+							mg.Box(c.Key("mini-"+d.Info.ID)).Size(pw, ph).Shrink(0).Radius(radius).Background(p.phone).Padding(pad).Children(func() {
 								shown := t
 								if bgTask && !m.agent {
 									shown = nil

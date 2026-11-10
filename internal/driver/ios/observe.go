@@ -129,6 +129,12 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 // ObserveWithStats is Observe with timings.
 func (d *Device) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ObserveStats, error) {
 	s, st, err := d.observeWithStats(ctx, opt)
+	if s != nil && err == nil {
+		mask := screen.PhysicalDisplayMask(d.info.Model, int(d.display().turn()))
+		if mask.Fits(s.Width, s.Height) {
+			s.Mask = mask
+		}
+	}
 	return s, st, d.gone(err)
 }
 

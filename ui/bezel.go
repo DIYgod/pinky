@@ -22,11 +22,14 @@ const (
 	bezelAndroid bezelKind = iota
 	bezelIPhone
 	bezelIPad
+	bezelHarmony
 )
 
 // bezelOf returns the kind of a device's bezel.
 func bezelOf(d gateway.DeviceView) bezelKind {
 	switch {
+	case d.Info.Platform == driver.HarmonyOS:
+		return bezelHarmony
 	case d.Info.Platform != driver.IOS:
 		return bezelAndroid
 	case strings.HasPrefix(d.Info.Model, "iPad"):
@@ -43,6 +46,8 @@ func (k bezelKind) defaultAspect() float32 {
 		return 1206.0 / 2622
 	case bezelIPad:
 		return 1668.0 / 2388
+	case bezelHarmony:
+		return 1840.0 / 2800
 	}
 	return 9.0 / 20
 }
@@ -81,4 +86,33 @@ func fitBezel(aspect, w, h, pad float32) (pw, ph, sw, sh float32) {
 	}
 	sw, sh = max(sw, 1), max(sh, 1)
 	return sw + 2*pad, sh + 2*pad, sw, sh
+}
+
+// deviceBezel scales the physical border with the display's short edge.
+// Its width is part of the fit, so maximizing or resizing never changes
+// the proportion of the phone or tablet occupied by the border.
+func deviceBezel(d gateway.DeviceView, aspect, w, h, fallback float32) (pw, ph, pad, outer, inner float32) {
+	ratio, outerCorner := float32(0), float32(0)
+	switch d.Info.Model {
+	case "iPhone 13 Pro":
+		// Apple body width (71.5 mm) and the 1170-pixel, 460-ppi panel.
+		ratio, outerCorner = 62.5/1170, 202.4/1170
+	case "BKY-W20":
+		// BKY product face: approximately 9 pixels of bezel per edge
+		// for an active short edge of 213 pixels in the reference image.
+		ratio, outerCorner = 9.0/213, 11.5/213
+	}
+	if ratio == 0 {
+		pw, ph, sw, sh := fitBezel(aspect, w, h, fallback)
+		outer, inner := bezelRadius(bezelOf(d), sw, sh, fallback)
+		return pw, ph, fallback, outer, inner
+	}
+	if aspect <= 0 {
+		aspect = bezelOf(d).defaultAspect()
+	}
+	extra := 2 * ratio * min(aspect, 1)
+	sh := min(w/(aspect+extra), h/(1+extra))
+	sw := aspect * sh
+	pad = ratio * min(sw, sh)
+	return sw + 2*pad, sh + 2*pad, pad, outerCorner * min(sw, sh), 0
 }

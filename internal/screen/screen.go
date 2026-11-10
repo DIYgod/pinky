@@ -191,6 +191,8 @@ type Screen struct {
 	Elements      []Element
 	Events        []Event
 	CapturedAt    time.Time
+	// Mask keeps the physical viewport paired with this observation's rotation.
+	Mask *DisplayMask `json:"-"`
 }
 
 // Find returns the element with the given ref.

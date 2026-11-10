@@ -2,8 +2,10 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"image"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,5 +123,18 @@ func TestShotFromFrameFirst(t *testing.T) {
 	img, err = g.shotOf(context.Background(), d, f, false)
 	if err != nil || img.Bounds().Dx() != 5 || f.asked != 2 || f.shots != 1 {
 		t.Fatalf("no frame: %v, %v, asked %d, screenshots %d", img, err, f.asked, f.shots)
+	}
+}
+
+type ownerVideo struct{ noShot }
+
+func (ownerVideo) MirrorOnly() bool { return true }
+
+func TestOwnerVideoCannotSupplyAnAgentScreenshot(t *testing.T) {
+	dev := ownerVideo{noShot{demo.NewDevice("matepad", "MatePad", driver.HarmonyOS)}}
+	g := &Gateway{}
+	img, err := g.frameShot(context.Background(), "matepad", dev)
+	if img != nil || !errors.Is(err, driver.ErrUnsupported) || !strings.Contains(err.Error(), "desktop mirror") {
+		t.Fatalf("image=%v, error=%v", img, err)
 	}
 }
