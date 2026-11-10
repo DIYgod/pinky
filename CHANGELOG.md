@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1110.19 (2026-11-10)
 
 - Unlocking a vivo phone from the computer now works when its lock screen asks for a fingerprint first: Pinky taps "Use password" and enters the PIN.
 - Checking for and downloading updates now goes through GitHub's API when GitHub's download links fail, as they did for hours on 8 November.
