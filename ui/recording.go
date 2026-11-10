@@ -156,7 +156,9 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 	pl.cancel = cancel
 	pl.from, pl.pos, pl.err, pl.first = from, from, nil, true
 	pl.lead, pl.settled, pl.still = nil, false, !run
-	pl.catching.Store(true)
+	rp, rebase := pl.a.api.(recordingPlayer)
+	// Real files catch up in OnFrame; a fake's stream is taken on paint.
+	pl.catching.Store(!rebase)
 	pl.state = "paused"
 	if run {
 		pl.state = "loading"
@@ -166,7 +168,6 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 	go func() {
 		var s driver.Stream
 		var err error
-		rp, rebase := a.api.(recordingPlayer)
 		if rebase {
 			s, err = rp.OpenRecording(ctx, rec, from)
 		} else {
@@ -174,36 +175,30 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 		}
 		var p *video.Player
 		if err == nil {
-			// Catch-up frames decode faster than paints: Take only keeps the
-			// newest, so take each picture here before the next overwrites it.
-			p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true, OnFrame: func() {
-				if !pl.catching.Load() {
-					return
-				}
-				f := p.Take()
-				if f == nil {
-					return
-				}
-				held := cloneRecFrame(f)
-				a.post(func() {
-					if pl.gen != gen || a.rec.pl != pl {
+			opt := video.PlayerOptions{YUV: true}
+			if !rebase {
+				// Catch-up frames decode faster than paints: Take only keeps
+				// the newest, so take each picture here before the next
+				// overwrites it. ready is closed after p is assigned:
+				// NewPlayer starts decoding before it returns.
+				ready := make(chan struct{})
+				opt.OnFrame = func() {
+					<-ready
+					if !pl.catching.Load() {
 						return
 					}
-					if pl.player == nil {
-						pl.player, pl.rebase = p, rebase
-						if pl.state == "loading" {
-							pl.state = "playing"
-						}
-					}
-					if pl.player != p || pl.settled {
+					f := p.Take()
+					if f == nil {
 						return
 					}
-					pl.advance(held)
-					if pl.settled {
-						pl.catching.Store(false)
-					}
-				})
-			}})
+					held := cloneRecFrame(f)
+					a.post(func() { pl.feed(gen, p, rebase, held) })
+				}
+				p, err = video.NewPlayer(s, opt)
+				close(ready)
+			} else {
+				p, err = video.NewPlayer(s, opt)
+			}
 			if err != nil {
 				s.Close()
 			}
@@ -220,11 +215,9 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 				pl.state, pl.err = "failed", err
 				return
 			}
-			if pl.player == nil {
-				pl.player, pl.rebase = p, rebase
-				if pl.state == "loading" {
-					pl.state = "playing"
-				}
+			pl.player, pl.rebase = p, rebase
+			if pl.state == "loading" {
+				pl.state = "playing"
 			}
 			go func() {
 				<-p.Done()
@@ -236,6 +229,26 @@ func (pl *recPlayer) open(from time.Duration, run bool) {
 			}()
 		})
 	}()
+}
+
+// feed is the main-thread side of a catch-up picture from OnFrame.
+func (pl *recPlayer) feed(gen int, p *video.Player, rebase bool, f *video.Frame) {
+	if pl.gen != gen || pl.a.rec.pl != pl {
+		return
+	}
+	if pl.player == nil {
+		pl.player, pl.rebase = p, rebase
+		if pl.state == "loading" {
+			pl.state = "playing"
+		}
+	}
+	if pl.player != p || pl.settled {
+		return
+	}
+	pl.advance(f)
+	if pl.settled {
+		pl.catching.Store(false)
+	}
 }
 
 // ended follows the end of the stream p, the one playing.
@@ -313,13 +326,27 @@ func (pl *recPlayer) take(pt *mg.Painter) {
 		return
 	}
 	pt.AnimationFrameRate(60)
-	if !pl.settled {
+	if pl.settled {
+		if f := p.Take(); f != nil {
+			pl.advance(f)
+		}
+		return
+	}
+	if pl.catching.Load() {
+		// OnFrame is taking catch-up pictures.
 		if pl.lead != nil && time.Since(pl.leadAt) >= leadSettle {
 			pl.settle()
 		}
 		return
 	}
-	if f := p.Take(); f != nil {
+	for !pl.settled {
+		f := p.Take()
+		if f == nil {
+			if pl.lead != nil && time.Since(pl.leadAt) >= leadSettle {
+				pl.settle()
+			}
+			return
+		}
 		pl.advance(f)
 	}
 }
