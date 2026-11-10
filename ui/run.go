@@ -91,6 +91,10 @@ type Options struct {
 	// sidebar's card while no agent can reach Pinky; nil shows only the
 	// commands to add an agent by hand.
 	AgentSetup AgentSetup
+	// RemoteTailnet says how agents on the person's tailnet reach remote
+	// agents listening at addr (Settings › Agents › Remote agents); nil
+	// leaves that out.
+	RemoteTailnet func(ctx context.Context, addr string) RemoteTailnet
 }
 
 // Settings are what the Settings screen changes.

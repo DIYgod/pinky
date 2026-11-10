@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/mcp"
+	"github.com/DIYgod/pinky/internal/tailnet"
+	"github.com/DIYgod/pinky/ui"
 )
 
 // remoteAgents serves MCP over Streamable HTTP while the person has remote
@@ -54,6 +56,7 @@ func (r *remoteAgents) Set(on bool, addr string) error {
 		return fmt.Errorf("remote agents: listen on %s: %w", addr, err)
 	}
 	h := r.mcp.HTTP(r.token)
+	h.OwnNames = tailnetNames
 	srv := &http.Server{Handler: h, ReadHeaderTimeout: 10 * time.Second}
 	r.addr, r.ln, r.srv, r.h = addr, ln, srv, h
 	go func() {
@@ -101,6 +104,36 @@ func (r *remoteAgents) stopLocked() {
 	r.srv.Shutdown(ctx)
 	r.log.Info("remote agents off", "addr", r.addr)
 	r.addr, r.ln, r.srv, r.h = "", nil, nil, nil
+}
+
+// tailnetNames returns this computer's tailnet name, which `tailscale
+// serve` forwards requests to Pinky under (mcp.HTTP.OwnNames).
+func tailnetNames(ctx context.Context) []string {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	st, _ := tailnet.Read(ctx)
+	if st.Self.DNSName == "" {
+		return nil
+	}
+	return []string{st.Self.DNSName}
+}
+
+// remoteTailnet is what Settings › Remote agents shows about reaching
+// Pinky through the tailnet: this computer's tailnet name while Tailscale
+// is connected, and the URL at which `tailscale serve` forwards to the
+// endpoint at addr. It only reads Tailscale's state.
+func remoteTailnet(ctx context.Context, addr string) ui.RemoteTailnet {
+	st, _ := tailnet.Read(ctx)
+	if !st.Running() || st.Self.DNSName == "" {
+		return ui.RemoteTailnet{}
+	}
+	out := ui.RemoteTailnet{Name: st.Self.DNSName}
+	if s, err := tailnet.ReadServe(ctx); err == nil {
+		if u := s.Forwarding(addr); u != "" {
+			out.URL = u + mcp.HTTPPath
+		}
+	}
+	return out
 }
 
 func loopback(a net.Addr) bool {

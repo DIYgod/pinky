@@ -112,6 +112,7 @@ func runApp(args []string) error {
 		Updates:         upd,
 		Changelog:       pinky.Changelog,
 		AgentSetup:      agentSetup(dirs),
+		RemoteTailnet:   remoteTailnet,
 		// What's new in the app's language.
 		ChangelogTranslations: pinky.ChangelogTranslations,
 		// The window is up: an update that just swapped this version in

@@ -6458,6 +6458,10 @@
   "@remoteCopyCommand": {
     "description": "Settings › Agents (Add an agent and Remote agents): the accessibility label of the copy button next to a command."
   },
+  "remoteCopyTailnetURL": "Copy the tailnet url",
+  "@remoteCopyTailnetURL": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the copy button next to the tailnet URL (remoteTailnetURL). The English has url in lower case; tailnet is Tailscale's word for the person's private network: keep it."
+  },
   "remoteCopyToken": "Copy the agent token",
   "@remoteCopyToken": {
     "description": "Settings › Agents › Remote agents: the accessibility label of the copy button next to the agent token."
@@ -6501,6 +6505,26 @@
   "remoteShowToken": "Show the agent token",
   "@remoteShowToken": {
     "description": "Settings › Agents › Remote agents: the accessibility label of the Show button next to the agent token."
+  },
+  "remoteTailnetCommandLabel": "Command to serve Pinky on your tailnet",
+  "@remoteTailnetCommandLabel": {
+    "description": "Settings › Agents › Remote agents: the accessibility label of the tailscale serve command under remoteTailnetTitle. tailnet is Tailscale's word for the person's private network: keep it."
+  },
+  "remoteTailnetHint": "For agents that reach this computer through Tailscale, such as Grok Bot. Run this once on this computer; they then connect at {url}.",
+  "@remoteTailnetHint": {
+    "description": "Settings › Agents › Remote agents: under remoteTailnetTitle, above the tailscale serve command, while Tailscale is connected on this computer but does not serve Pinky yet. url is where the agents will connect, as https://macbook.tail1234.ts.net/mcp. Tailscale and Grok Bot are product names: keep them."
+  },
+  "remoteTailnetTitle": "Agents on your tailnet",
+  "@remoteTailnetTitle": {
+    "description": "Settings › Agents › Remote agents: the heading of the tailscale serve command, for agents on the person's tailnet, such as Grok Bot. tailnet is Tailscale's word for the person's private network of their own devices: keep it."
+  },
+  "remoteTailnetURL": "Tailnet URL",
+  "@remoteTailnetURL": {
+    "description": "Settings › Agents › Remote agents: the row of the URL at which Tailscale (tailscale serve) gives Pinky to the person's tailnet, as https://macbook.tail1234.ts.net/mcp. tailnet is Tailscale's word for the person's private network: keep it."
+  },
+  "remoteTailnetURLDesc": "Tailscale serves Pinky here to your devices and to agents on your tailnet, such as Grok Bot. They still need the agent token.",
+  "@remoteTailnetURLDesc": {
+    "description": "Settings › Agents › Remote agents: the line under remoteTailnetURL. Tailscale and Grok Bot are product names, tailnet is Tailscale's word for the person's private network: keep them. The agent token is the secret agents send (remoteToken)."
   },
   "remoteTitle": "Remote agents",
   "@remoteTitle": {
