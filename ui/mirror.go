@@ -344,6 +344,10 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 	// person uses the phone's screen.
 	locked := a.isLocked(d) && !m.agent
 	step, kind, outline := overlayStep(t)
+	var way shotMarks
+	if outline && kind == stepWait {
+		way = a.waitingWay(t, step)
+	}
 	scr := mg.Box(c).Fill().Radius(radius).Clip().Background(hex("#000000"))
 	switch {
 	case m.agent:
@@ -392,7 +396,7 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 			// an iPhone differ from the picture's by about 1%, so an
 			// outline at the edge may reach a little past it.
 			pt.Clip(r, radius, func() {
-				drawOverlay(pt, r, p, step, kind, float32(m.picW), float32(m.picH), tile)
+				drawOverlay(pt, r, p, step, kind, way, float32(m.picW), float32(m.picH), tile)
 			})
 		}
 		if !tile {
@@ -470,9 +474,27 @@ func mirrorError(err error) string {
 	return locales.MirrorNoPicture(msg)
 }
 
+// waitingWay is how the finger of the step that waits for the person
+// would move (a swipe's, a drag's or a pinch's way), from the step's
+// approval: the step itself keeps only its target and first point. It is
+// empty for other steps.
+func (a *app) waitingWay(t *gateway.TaskView, s gateway.StepView) shotMarks {
+	for _, n := range a.needs {
+		if n.Kind != gateway.NeedApproval || n.TaskID != t.ID || !(n.Created.Equal(s.At) || n.Target == s.Target) {
+			continue
+		}
+		if m := marksOf(n); m.swipe() {
+			return m
+		}
+	}
+	return shotMarks{}
+}
+
 // drawOverlay outlines the step's target and, while the agent touches,
-// draws the touch with two ripples, as the prototype does.
-func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind stepKind, pw, ph float32, tile bool) {
+// draws the touch with two ripples, as the prototype does. A step that
+// waits for the person to allow a swipe, a drag or a pinch also shows the
+// finger's way (way), as its approval card does.
+func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind stepKind, way shotMarks, pw, ph float32, tile bool) {
 	sx, sy := r.W/pw, r.H/ph
 	if !s.Target.Empty() {
 		box := mg.Rect{
@@ -484,6 +506,18 @@ func drawOverlay(pt *mg.Painter, r mg.Rect, p *palette, s gateway.StepView, kind
 			width = 1.5
 		}
 		pt.Stroke(box, p.ovl, min(16, box.H/2), width)
+	}
+	if way.swipe() {
+		at := func(q screen.Point) mg.Point { return mg.Point{X: r.X + float32(q.X)*sx, Y: r.Y + float32(q.Y)*sy} }
+		var route []mg.Point
+		for _, q := range way.route() {
+			route = append(route, at(q))
+		}
+		halo := mg.RGBA(255, 255, 255, 0.92)
+		drawArrow(pt, route, tile, p.ovl, halo)
+		if way.pinch() {
+			drawArrow(pt, []mg.Point{at(way.point2), at(way.to2)}, tile, p.ovl, halo)
+		}
 	}
 	if kind != stepNow || s.Point == (screen.Point{}) {
 		return

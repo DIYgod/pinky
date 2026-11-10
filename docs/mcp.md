@@ -81,10 +81,23 @@ A JSON config:
 { "mcpServers": { "pinky": { "type": "http", "url": "http://127.0.0.1:7465/mcp", "headers": { "Authorization": "Bearer <token>" } } } }
 ```
 
-- Without the token, or with another one, requests get `401`; only upload and download links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding).
+- Without the token, or with another one, requests get `401`; only upload and download links (below) need none. Browser pages from other origins get `403`, and so do requests to `127.0.0.1` that name another host (DNS rebinding), but for this computer's own tailnet name, which `tailscale serve` sends ([below](#grok-bot-over-tailscale)).
 - A remote agent's files are on its own machine, out of reach of the folder `phone_files` copies to the phone from and `phone_app` installs from. It uploads them into that folder instead (`phone_files { action: "upload" }`, [below](#uploading-a-file)): in the call, or to a one-time link at `http://<address>/upload/<token>`, which takes the file without the agent token.
 - Screenshots, task reports and the recordings the person allows that Pinky saves for a remote agent (`phone_observe { save }`, `phone_release { export }`) stay on this computer too: the agent gets a one-time link for each, `http://<address>/download/<token>`, which it fetches without the agent token ([below](#saving-screenshots-and-reports)).
 - Each MCP session over HTTP is one Pinky session, with the same first-connection approval and scopes as over stdio. The agent's name gets " (remote)" after it ("Claude Code (remote)"), so a remote agent is asked about on its own first connection and never gets the scope the person gave the agent of that name on this computer. A newer session of the same remote agent continues the phone its older sessions left ([below](#what-http-clients-may-do)). Turning Remote agents off ends every session at once, with its leases and open approvals.
+
+#### Grok Bot over Tailscale
+
+Agents on your tailnet reach Pinky through Tailscale on this computer, while Pinky itself listens on this computer only. [Grok Bot](https://docs.x.ai/grok-bot/overview) is one: its Tailscale plugin joins your tailnet as a device of yours and reaches the MCP servers there ([Tailscale's announcement](https://tailscale.com/blog/oauth-apps-ga)).
+
+1. Turn on **Settings › Agents › Remote agents**, with Tailscale connected on this computer.
+2. Run the command Remote agents then shows, once, on this computer: `tailscale serve --bg 7465`. Tailscale serves Pinky to your tailnet over HTTPS from then on, also after a restart, and Remote agents shows the **Tailnet URL**, `https://<computer>.<tailnet>.ts.net/mcp`. On a tailnet without HTTPS certificates the command prints a link to turn them on. `tailscale serve --https=443 off` stops it. Pinky only reads Tailscale's state and never runs `tailscale serve` itself.
+3. In the Grok Bot desktop app, connect your tailnet: **Connect apps › Your plugins › Tailscale**, **Authenticate** on its slot (Grok Bot 0.49 or newer, on a tailnet you own or administer). Grok Bot has no field for an MCP server's headers, so add Pinky in a chat: "Add an MCP server named pinky at https://<computer>.<tailnet>.ts.net/mcp with the header Authorization: Bearer <agent token>" (**Copy the agent token** in Remote agents). The token stays in that chat. Don't authenticate the server itself: that looks for OAuth, which Pinky doesn't offer.
+4. Ask Grok Bot to do something on the phone. Its first connection waits for you in Pinky, as "Grok (remote)".
+
+- Pinky takes requests under this computer's own tailnet name, the `Host` that `tailscale serve` passes on; any other name still gets `403`, and every request still needs the agent token.
+- Your tailnet's access rules decide who reaches port 443 of this computer: Grok Bot's device must, and every other device that does reaches the endpoint too, with the same need for the agent token. A personal tailnet's default rules let all your devices in, Grok Bot's among them, as it joins untagged with your own access; don't tag it.
+- Without `tailscale serve`, Pinky can listen on this computer's Tailscale address (Remote agents › Address, `100.x.y.z:7465`), and Grok Bot connects to `http://<computer>.<tailnet>.ts.net:7465/mcp`. Pinky can't listen there while Tailscale is off, so after a restart Remote agents stays off until you save the address again.
 
 #### What HTTP clients may do
 
@@ -98,7 +111,7 @@ Pinky is a stateful Streamable HTTP server: `initialize` returns an `Mcp-Session
 - **A `GET` without a session id** gets `405`: Pinky offers no stream outside a session, so carry on with `POST`.
 - **A `GET` stream.** A client may keep its session's `GET` stream open as long as it likes; calls (`POST`) are served alongside it. Pinky sends little on it, and a proxy that cuts idle streams only makes the client open it again.
 - **Protocol versions** 2024-11-05 to 2025-11-25. The sessionless 2026-07-28 protocol (per-request `_meta`) is not served yet.
-- **Tunnels and reverse proxies** on this computer (Cloudflare Tunnel, `tailscale serve`, nginx) must send a `Host` of `127.0.0.1:<port>` or `localhost:<port>` (cloudflared: `originRequest.httpHostHeader`), as requests to `127.0.0.1` that name another host get `403`. Upload and download links use the `Host` the request had, or the proxy's `X-Forwarded-Host` and `X-Forwarded-Proto`; the tool's answer says to swap in the public address if the link shows Pinky's own.
+- **Tunnels and reverse proxies** on this computer (Cloudflare Tunnel, nginx) must send a `Host` of `127.0.0.1:<port>` or `localhost:<port>` (cloudflared: `originRequest.httpHostHeader`), as requests to `127.0.0.1` that name another host get `403`. `tailscale serve` needs nothing: it sends this computer's tailnet name, which Pinky takes ([above](#grok-bot-over-tailscale)). Upload and download links use the `Host` the request had, or the proxy's `X-Forwarded-Host` and `X-Forwarded-Proto`; the tool's answer says to swap in the public address if the link shows Pinky's own.
 
 - Protocol: the official Go SDK (`github.com/modelcontextprotocol/go-sdk` v1.8.0), newline-delimited JSON-RPC over stdio; the SDK negotiates the protocol version.
 - Server info: name `pinky`, title `Pinky`; the server sends short usage instructions at initialization.
@@ -186,6 +199,7 @@ Leases a phone for a task and returns its first screen.
 | `device` | string | Optional when exactly one phone is online, or the session already holds one, or none is online and exactly one is connected but needs setup |
 | `apps` | string[] | Optional app allow-list for the task (names or ids). Launching another app returns `scope_denied`; typing into one asks the person. Launchers and system UI are always allowed |
 | `read_only` | boolean | Run the task read-only, whatever the agent's scope: anything the person's rules would ask about is refused (`blocked_by_policy`, rule `Read-only`), and typing works only in search fields. Connecting again for the same task never widens it. A new agent's approval card then offers read-only access first |
+| `own_screen` | boolean | Work on the phone's own screen even when the person has Pinky work on a background display (Settings › Phones › Work in the background), which starts empty and has no home screen. Only for work on the home screen itself: moving app icons, folders, widgets. The task stays on the phone's own screen to its end; connecting again for the same task with it moves a task off its background display. If the person used the phone's own screen in the last minute, the task starts `paused` (they are in control until they hand it over); if that screen is locked, `device_locked`. Without background work it changes nothing |
 
 The first connection of an agent the person has not approved yet returns `approval_pending` (rule `New agent`); repeat with `approval_id`. Another session's phone returns `lease_held`. Calling again with the same task keeps the lease; another task name ends the previous task (outcome `replaced`) and starts a new one. After the person pressed Stop, the session cannot connect to that phone again. While the person is in control of the phone (they took over and have not handed back, whichever task was running), the lease starts paused and the result is `paused`: call `phone_handoff`. A phone that is connected but waits for a step (Trust, Allow USB debugging, Developer Mode, …) is leased all the same and returns `device_needs_setup`, without a screen, so `phone_handoff` can ask the person for the step; other calls return `device_needs_setup` until the phone is ready.
 
@@ -272,7 +286,22 @@ Presses with one finger, moves through points while it stays down, and lets go: 
 
 The whole drag (rests and moves) may take up to 30 s, and every point must be on the screen. Moves ease in and out, so the finger stops at each point before it rests or lets go.
 
-To move an app to another home screen page: press its icon with `hold_ms` about 800, rest about 700 ms at a `via` point near the left or right edge (a few pixels in, halfway down), and let go on the new page. Each rest at the edge turns one page; a longer rest turns more (1.2 s turned two pages on an iPhone). To drop into a folder, or onto another app to make one, let go over the middle of its icon, not its label, with the default rest: on an Android launcher a long rest there moves the other icon aside instead. Observe the page you want to drop on first: the screen the drag ends on is not known before it starts.
+To move an app to another home screen page: press its icon with `hold_ms` about 800, rest about 700 ms at a `via` point near the left or right edge (a few pixels in, halfway down), and let go on the new page. Each rest at the edge turns one page; a longer rest turns more (1.2 s turned two pages on an iPhone). Observe the page you want to drop on first: the screen the drag ends on is not known before it starts.
+
+To drop into a folder, or onto another app to make one, let go over its icon where it is during the drag. The picked-up icon keeps where the finger holds it, so press the app at its `ref` and aim from the target's ref point (a home screen ref's point is the middle of the icon and its label together).
+
+Pixel Launcher moves the icons once the drag starts: as soon as it picks an icon up, it shrinks the home screen page toward a point near the middle of the screen, and the dock stays as it was. On a 1080×2400 Pixel emulator (Android 16) the page shrank by about 0.78 toward about 540,990 (the middle across, 41% down), so Photos, listed at 663,1619, sat at about 634,1500 during the drag, and only a drop there made a folder. The launcher also takes the page out of the element tree while it holds an icon, so the screen cannot be read then.
+
+Pinky follows the page for you. Give `to` where the target is on the screen you read. When a drag on an Android home screen starts with `hold_ms` 300 or more, Pinky:
+
+1. takes a picture as the finger touches down,
+2. after the hold, moves the finger a tenth of the screen's width toward the first point (120 ms) and rests 250 ms, so the launcher picks the icon up and shrinks the page,
+3. takes another picture and looks for the apps around `to` in it, shrunk by 0.6 to 1 toward the middle of the screen,
+4. lets go where `to` went. The `via` points stay where they are, so a rest at the edge still turns the page.
+
+A drop on the dock, or on a page that did not shrink, stays at `to`. When Pinky cannot see where `to` went (nothing labelled near it, no clear match), it lets go at `to` and the result says so; observe to check where the app landed. The result also says when it moved the drop, and history shows where the finger let go. It adds about 0.6 to 0.8 s over USB (the short move and rest, a screenshot, and about 30 ms to compare), and over Wi-Fi a frame of the mirror when it is open, else a screenshot, which can take seconds. Other launchers were not measured: one that shrinks its page evenly toward the middle is followed the same way, and one that does something else gets the drop at `to`.
+
+If the icons only trade places or the target moves aside, observe and aim again from where they are now.
 
 ```json
 {"ref": 12, "hold_ms": 800, "via": [{"x": 1170, "y": 1300, "pause_ms": 700}], "to": {"x": 187, "y": 702}}

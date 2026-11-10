@@ -5461,6 +5461,24 @@ func (msgs Messages) CompanionAllowHintXiaomi() string {
 	return Catalog.Format(msgs.locale, "companionAllowHintXiaomi", nil)
 }
 
+// CompanionByHandHow says "How to install it by hand"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link to the README's steps for installing Pinky
+// Companion by hand.
+func CompanionByHandHow() string { return In(i18n.Locale()).CompanionByHandHow() }
+
+// CompanionByHandHow says "How to install it by hand"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link to the README's steps for installing Pinky
+// Companion by hand.
+func (msgs Messages) CompanionByHandHow() string {
+	return Catalog.Format(msgs.locale, "companionByHandHow", nil)
+}
+
 // CompanionCardLabel says "Pinky Companion on {name}"
 // in the language the app shows.
 //
@@ -5491,6 +5509,44 @@ func CompanionErrDeclined() string { return In(i18n.Locale()).CompanionErrDeclin
 // the phone declined the install (the phone's own confirmation).
 func (msgs Messages) CompanionErrDeclined() string {
 	return Catalog.Format(msgs.locale, "companionErrDeclined", nil)
+}
+
+// CompanionErrNoAnswer says "Pinky turned on Pinky Companion's accessibility service, but it didn't start ({detail}). Restart the phone, then try …"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: Pinky turned on the app's
+// accessibility service, but the service did not answer, and the phone
+// showed no known reason. detail is what Pinky saw on the phone, in
+// English. Send feedback is the name of Pinky's feedback window.
+func CompanionErrNoAnswer(detail string) string {
+	return In(i18n.Locale()).CompanionErrNoAnswer(detail)
+}
+
+// CompanionErrNoAnswer says "Pinky turned on Pinky Companion's accessibility service, but it didn't start ({detail}). Restart the phone, then try …"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: Pinky turned on the app's
+// accessibility service, but the service did not answer, and the phone
+// showed no known reason. detail is what Pinky saw on the phone, in
+// English. Send feedback is the name of Pinky's feedback window.
+func (msgs Messages) CompanionErrNoAnswer(detail string) string {
+	return Catalog.Format(msgs.locale, "companionErrNoAnswer", map[string]any{"detail": detail})
+}
+
+// CompanionErrNotUnlocked says "The phone hasn't been unlocked since it restarted, and Android starts Pinky Companion only after that. Unlock the pho…"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because the phone has not been unlocked since it started.
+func CompanionErrNotUnlocked() string { return In(i18n.Locale()).CompanionErrNotUnlocked() }
+
+// CompanionErrNotUnlocked says "The phone hasn't been unlocked since it restarted, and Android starts Pinky Companion only after that. Unlock the pho…"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because the phone has not been unlocked since it started.
+func (msgs Messages) CompanionErrNotUnlocked() string {
+	return Catalog.Format(msgs.locale, "companionErrNotUnlocked", nil)
 }
 
 // CompanionErrOffline says "The phone went offline. Connect it again, then try again."
@@ -5546,6 +5602,8 @@ func (msgs Messages) CompanionErrPlayProtect() string {
 //
 // The Pinky Companion card and the checkup: the error when the phone
 // blocked installs over USB, on a phone whose maker Pinky does not know.
+// The links companionShowAPK and companionByHandHow follow it, for
+// installing the APK by hand.
 func CompanionErrRestricted() string { return In(i18n.Locale()).CompanionErrRestricted() }
 
 // CompanionErrRestricted says "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switc…"
@@ -5553,26 +5611,32 @@ func CompanionErrRestricted() string { return In(i18n.Locale()).CompanionErrRest
 //
 // The Pinky Companion card and the checkup: the error when the phone
 // blocked installs over USB, on a phone whose maker Pinky does not know.
+// The links companionShowAPK and companionByHandHow follow it, for
+// installing the APK by hand.
 func (msgs Messages) CompanionErrRestricted() string {
 	return Catalog.Format(msgs.locale, "companionErrRestricted", nil)
 }
 
-// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account), then try…"
+// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may ne…"
 // in the language the app shows.
 //
 // The Pinky Companion card and the checkup, on a Xiaomi phone: the error
 // when the phone blocked installs over USB (the switch is off, or nobody
 // tapped Install in time). Install via USB and Install are Xiaomi's names:
-// use those of its Simplified Chinese settings.
+// use those of its Simplified Chinese settings. Some Xiaomi phones cannot
+// turn the switch on without a SIM card; the links companionShowAPK and
+// companionByHandHow follow, for installing the APK by hand.
 func CompanionErrRestrictedXiaomi() string { return In(i18n.Locale()).CompanionErrRestrictedXiaomi() }
 
-// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account), then try…"
+// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may ne…"
 // in the language of msgs.
 //
 // The Pinky Companion card and the checkup, on a Xiaomi phone: the error
 // when the phone blocked installs over USB (the switch is off, or nobody
 // tapped Install in time). Install via USB and Install are Xiaomi's names:
-// use those of its Simplified Chinese settings.
+// use those of its Simplified Chinese settings. Some Xiaomi phones cannot
+// turn the switch on without a SIM card; the links companionShowAPK and
+// companionByHandHow follow, for installing the APK by hand.
 func (msgs Messages) CompanionErrRestrictedXiaomi() string {
 	return Catalog.Format(msgs.locale, "companionErrRestrictedXiaomi", nil)
 }
@@ -5665,6 +5729,26 @@ func (msgs Messages) CompanionErrTimeout() string {
 	return Catalog.Format(msgs.locale, "companionErrTimeout", nil)
 }
 
+// CompanionErrUIAutomation says "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and …"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because another testing tool holds Android's UI automation,
+// which turns off every accessibility service. Keep the tools' names as
+// they are.
+func CompanionErrUIAutomation() string { return In(i18n.Locale()).CompanionErrUIAutomation() }
+
+// CompanionErrUIAutomation says "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and …"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because another testing tool holds Android's UI automation,
+// which turns off every accessibility service. Keep the tools' names as
+// they are.
+func (msgs Messages) CompanionErrUIAutomation() string {
+	return Catalog.Format(msgs.locale, "companionErrUIAutomation", nil)
+}
+
 // CompanionInstall says "Install"
 // in the language the app shows.
 //
@@ -5743,6 +5827,26 @@ func CompanionInstalling() string { return In(i18n.Locale()).CompanionInstalling
 // while the app installs.
 func (msgs Messages) CompanionInstalling() string {
 	return Catalog.Format(msgs.locale, "companionInstalling", nil)
+}
+
+// CompanionShowAPK says "Show pinky-companion.apk"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link that shows the companion's APK, which comes with
+// Pinky, in Finder or the file manager, to copy to the phone and install
+// there. Keep the file name as it is.
+func CompanionShowAPK() string { return In(i18n.Locale()).CompanionShowAPK() }
+
+// CompanionShowAPK says "Show pinky-companion.apk"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link that shows the companion's APK, which comes with
+// Pinky, in Finder or the file manager, to copy to the phone and install
+// there. Keep the file name as it is.
+func (msgs Messages) CompanionShowAPK() string {
+	return Catalog.Format(msgs.locale, "companionShowAPK", nil)
 }
 
 // CompanionInstallingTitle says "Installing Pinky Companion"
@@ -11991,6 +12095,50 @@ func (msgs Messages) GwStepConnected(phone string, task string) string {
 	return Catalog.Format(msgs.locale, "gwStepConnected", map[string]any{"phone": phone, "task": task})
 }
 
+// GwStepConnectedOwnScreen says "{step}, on the phone's own screen"
+// in the language the app shows.
+//
+// A task's first step when the agent asked to work on the phone's own
+// screen although the person has agents work in the background (the
+// background display has no home screen); step is gwStepConnected or
+// gwStepConnectedReadOnly. Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepConnectedOwnScreen(step string) string {
+	return In(i18n.Locale()).GwStepConnectedOwnScreen(step)
+}
+
+// GwStepConnectedOwnScreen says "{step}, on the phone's own screen"
+// in the language of msgs.
+//
+// A task's first step when the agent asked to work on the phone's own
+// screen although the person has agents work in the background (the
+// background display has no home screen); step is gwStepConnected or
+// gwStepConnectedReadOnly. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepConnectedOwnScreen(step string) string {
+	return Catalog.Format(msgs.locale, "gwStepConnectedOwnScreen", map[string]any{"step": step})
+}
+
+// GwStepConnectedReadOnly says "{step}, read only"
+// in the language the app shows.
+//
+// A task's first step when the agent asked to run the task read-only; step
+// is gwStepConnected. Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepConnectedReadOnly(step string) string {
+	return In(i18n.Locale()).GwStepConnectedReadOnly(step)
+}
+
+// GwStepConnectedReadOnly says "{step}, read only"
+// in the language of msgs.
+//
+// A task's first step when the agent asked to run the task read-only; step
+// is gwStepConnected. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepConnectedReadOnly(step string) string {
+	return Catalog.Format(msgs.locale, "gwStepConnectedReadOnly", map[string]any{"step": step})
+}
+
 // GwStepCopiedFrom says "Copied {count} files from the phone{names}"
 // in the language the app shows.
 //
@@ -16969,6 +17117,26 @@ func (msgs Messages) RemoteCopyCommand() string {
 	return Catalog.Format(msgs.locale, "remoteCopyCommand", nil)
 }
 
+// RemoteCopyTailnetURL says "Copy the tailnet url"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the tailnet URL (remoteTailnetURL). The English has
+// url in lower case; tailnet is Tailscale's word for the person's private
+// network: keep it.
+func RemoteCopyTailnetURL() string { return In(i18n.Locale()).RemoteCopyTailnetURL() }
+
+// RemoteCopyTailnetURL says "Copy the tailnet url"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// copy button next to the tailnet URL (remoteTailnetURL). The English has
+// url in lower case; tailnet is Tailscale's word for the person's private
+// network: keep it.
+func (msgs Messages) RemoteCopyTailnetURL() string {
+	return Catalog.Format(msgs.locale, "remoteCopyTailnetURL", nil)
+}
+
 // RemoteCopyToken says "Copy the agent token"
 // in the language the app shows.
 //
@@ -17149,6 +17317,106 @@ func RemoteShowToken() string { return In(i18n.Locale()).RemoteShowToken() }
 // Show button next to the agent token.
 func (msgs Messages) RemoteShowToken() string {
 	return Catalog.Format(msgs.locale, "remoteShowToken", nil)
+}
+
+// RemoteTailnetCommandLabel says "Command to serve Pinky on your tailnet"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// tailscale serve command under remoteTailnetTitle. tailnet is Tailscale's
+// word for the person's private network: keep it.
+func RemoteTailnetCommandLabel() string { return In(i18n.Locale()).RemoteTailnetCommandLabel() }
+
+// RemoteTailnetCommandLabel says "Command to serve Pinky on your tailnet"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the accessibility label of the
+// tailscale serve command under remoteTailnetTitle. tailnet is Tailscale's
+// word for the person's private network: keep it.
+func (msgs Messages) RemoteTailnetCommandLabel() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetCommandLabel", nil)
+}
+
+// RemoteTailnetHint says "For agents that reach this computer through Tailscale, such as Grok Bot. Run this once on this computer; they then co…"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: under remoteTailnetTitle, above
+// the tailscale serve command, while Tailscale is connected on this
+// computer but does not serve Pinky yet. url is where the agents will
+// connect, as https://macbook.tail1234.ts.net/mcp. Tailscale and Grok Bot
+// are product names: keep them.
+func RemoteTailnetHint(url string) string { return In(i18n.Locale()).RemoteTailnetHint(url) }
+
+// RemoteTailnetHint says "For agents that reach this computer through Tailscale, such as Grok Bot. Run this once on this computer; they then co…"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: under remoteTailnetTitle, above
+// the tailscale serve command, while Tailscale is connected on this
+// computer but does not serve Pinky yet. url is where the agents will
+// connect, as https://macbook.tail1234.ts.net/mcp. Tailscale and Grok Bot
+// are product names: keep them.
+func (msgs Messages) RemoteTailnetHint(url string) string {
+	return Catalog.Format(msgs.locale, "remoteTailnetHint", map[string]any{"url": url})
+}
+
+// RemoteTailnetTitle says "Agents on your tailnet"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the heading of the tailscale serve
+// command, for agents on the person's tailnet, such as Grok Bot. tailnet is
+// Tailscale's word for the person's private network of their own devices:
+// keep it.
+func RemoteTailnetTitle() string { return In(i18n.Locale()).RemoteTailnetTitle() }
+
+// RemoteTailnetTitle says "Agents on your tailnet"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the heading of the tailscale serve
+// command, for agents on the person's tailnet, such as Grok Bot. tailnet is
+// Tailscale's word for the person's private network of their own devices:
+// keep it.
+func (msgs Messages) RemoteTailnetTitle() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetTitle", nil)
+}
+
+// RemoteTailnetURL says "Tailnet URL"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the row of the URL at which
+// Tailscale (tailscale serve) gives Pinky to the person's tailnet, as
+// https://macbook.tail1234.ts.net/mcp. tailnet is Tailscale's word for the
+// person's private network: keep it.
+func RemoteTailnetURL() string { return In(i18n.Locale()).RemoteTailnetURL() }
+
+// RemoteTailnetURL says "Tailnet URL"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the row of the URL at which
+// Tailscale (tailscale serve) gives Pinky to the person's tailnet, as
+// https://macbook.tail1234.ts.net/mcp. tailnet is Tailscale's word for the
+// person's private network: keep it.
+func (msgs Messages) RemoteTailnetURL() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetURL", nil)
+}
+
+// RemoteTailnetURLDesc says "Tailscale serves Pinky here to your devices and to agents on your tailnet, such as Grok Bot. They still need the agen…"
+// in the language the app shows.
+//
+// Settings › Agents › Remote agents: the line under remoteTailnetURL.
+// Tailscale and Grok Bot are product names, tailnet is Tailscale's word for
+// the person's private network: keep them. The agent token is the secret
+// agents send (remoteToken).
+func RemoteTailnetURLDesc() string { return In(i18n.Locale()).RemoteTailnetURLDesc() }
+
+// RemoteTailnetURLDesc says "Tailscale serves Pinky here to your devices and to agents on your tailnet, such as Grok Bot. They still need the agen…"
+// in the language of msgs.
+//
+// Settings › Agents › Remote agents: the line under remoteTailnetURL.
+// Tailscale and Grok Bot are product names, tailnet is Tailscale's word for
+// the person's private network: keep them. The agent token is the secret
+// agents send (remoteToken).
+func (msgs Messages) RemoteTailnetURLDesc() string {
+	return Catalog.Format(msgs.locale, "remoteTailnetURLDesc", nil)
 }
 
 // RemoteTitle says "Remote agents"
@@ -24023,6 +24291,86 @@ func (msgs Messages) UpdateCompanionAuto() string {
 	return Catalog.Format(msgs.locale, "updateCompanionAuto", nil)
 }
 
+// UpdateCompanionByHand says "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the…"
+// in the language the app shows.
+//
+// The companion card when an update is out: Pinky's automatic update failed
+// because the phone refuses installs over USB (Xiaomi's Install via USB is
+// off, or nobody allowed it on the phone in time), so it leaves the update
+// to the person. Update is the card's button (companionUpdate); the links
+// companionShowAPK and companionByHandHow follow.
+func UpdateCompanionByHand() string { return In(i18n.Locale()).UpdateCompanionByHand() }
+
+// UpdateCompanionByHand says "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the…"
+// in the language of msgs.
+//
+// The companion card when an update is out: Pinky's automatic update failed
+// because the phone refuses installs over USB (Xiaomi's Install via USB is
+// off, or nobody allowed it on the phone in time), so it leaves the update
+// to the person. Update is the card's button (companionUpdate); the links
+// companionShowAPK and companionByHandHow follow.
+func (msgs Messages) UpdateCompanionByHand() string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHand", nil)
+}
+
+// UpdateCompanionByHandCard says "{phone} refused to install the new Pinky Companion over USB, so Pinky won't try this version again. Install it on the…"
+// in the language the app shows.
+//
+// A sidebar card, shown once: Pinky tried to update the companion app on a
+// phone by itself (Update automatically), and the phone refused installs
+// over USB (Xiaomi's Install via USB is off, or nobody allowed it on the
+// phone in time). Pinky won't try this companion build again by itself; the
+// links companionShowAPK and companionByHandHow follow, and a close button
+// (updateNewsDismiss) hides the card.
+func UpdateCompanionByHandCard(phone string) string {
+	return In(i18n.Locale()).UpdateCompanionByHandCard(phone)
+}
+
+// UpdateCompanionByHandCard says "{phone} refused to install the new Pinky Companion over USB, so Pinky won't try this version again. Install it on the…"
+// in the language of msgs.
+//
+// A sidebar card, shown once: Pinky tried to update the companion app on a
+// phone by itself (Update automatically), and the phone refused installs
+// over USB (Xiaomi's Install via USB is off, or nobody allowed it on the
+// phone in time). Pinky won't try this companion build again by itself; the
+// links companionShowAPK and companionByHandHow follow, and a close button
+// (updateNewsDismiss) hides the card.
+func (msgs Messages) UpdateCompanionByHandCard(phone string) string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHandCard", map[string]any{"phone": phone})
+}
+
+// UpdateCompanionByHandDismissLabel says "Dismiss the Pinky Companion update"
+// in the language the app shows.
+//
+// The accessibility label of the close button of the sidebar card
+// updateCompanionByHandTitle.
+func UpdateCompanionByHandDismissLabel() string {
+	return In(i18n.Locale()).UpdateCompanionByHandDismissLabel()
+}
+
+// UpdateCompanionByHandDismissLabel says "Dismiss the Pinky Companion update"
+// in the language of msgs.
+//
+// The accessibility label of the close button of the sidebar card
+// updateCompanionByHandTitle.
+func (msgs Messages) UpdateCompanionByHandDismissLabel() string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHandDismissLabel", nil)
+}
+
+// UpdateCompanionByHandTitle says "Update Pinky Companion by hand"
+// in the language the app shows.
+//
+// The title of the sidebar card updateCompanionByHandCard.
+func UpdateCompanionByHandTitle() string { return In(i18n.Locale()).UpdateCompanionByHandTitle() }
+
+// UpdateCompanionByHandTitle says "Update Pinky Companion by hand"
+// in the language of msgs.
+//
+// The title of the sidebar card updateCompanionByHandCard.
+func (msgs Messages) UpdateCompanionByHandTitle() string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHandTitle", nil)
+}
+
 // UpdateCompanionNeedsYou says "The phone asks before apps are installed over USB, so this update needs you."
 // in the language the app shows.
 //
@@ -24610,13 +24958,15 @@ func (msgs Messages) UpdateNewsCompanionUpdated() string {
 // UpdateNewsDismiss says "Dismiss"
 // in the language the app shows.
 //
-// The tooltip of the What's new card's close button.
+// The tooltip of the close button of the sidebar's What's new card, and of
+// its card updateCompanionByHandTitle.
 func UpdateNewsDismiss() string { return In(i18n.Locale()).UpdateNewsDismiss() }
 
 // UpdateNewsDismiss says "Dismiss"
 // in the language of msgs.
 //
-// The tooltip of the What's new card's close button.
+// The tooltip of the close button of the sidebar's What's new card, and of
+// its card updateCompanionByHandTitle.
 func (msgs Messages) UpdateNewsDismiss() string {
 	return Catalog.Format(msgs.locale, "updateNewsDismiss", nil)
 }

@@ -228,7 +228,7 @@ func (a *app) shotView(c *mg.Context, t gateway.TaskView, s gateway.StepView, h 
 			pt.Image(e.bitmap, r, mg.Contain)
 			// Thumbnails are too small for the outline to say anything.
 			if k > 0 && !s.Target.Empty() && h >= 120 {
-				drawOverlay(pt, r, p, s, stepDone, float32(e.w)/k, float32(e.h)/k, true)
+				drawOverlay(pt, r, p, s, stepDone, shotMarks{}, float32(e.w)/k, float32(e.h)/k, true)
 			}
 		})
 	})

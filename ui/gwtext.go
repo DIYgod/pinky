@@ -507,7 +507,7 @@ var (
 	reBlocked   = re(`^Blocked by “(.*?)”: (.*)$`)
 	reOutside   = re(`^Outside the scope: (.*)$`)
 	reFailed    = re(`^Failed: (.*)$`)
-	reConnected = re(`^Connected to (.*) for “(.*)”$`)
+	reConnected = re(`^Connected to (.*) for “(.*)”(, read only)?(, on the phone's own screen)?$`)
 	reFinished  = re(`^Finished: (.*)$`)
 	reWaited    = re(`^Waited for “(.*)”$`)
 	reAskedYou  = re(`^Asked you: (.*)$`)
@@ -587,7 +587,14 @@ func stepText(s string) string {
 		return locales.GwStepFailed(asked(m[1]))
 	}
 	if m := reConnected.FindStringSubmatch(s); m != nil {
-		return locales.GwStepConnected(m[1], m[2])
+		t := locales.GwStepConnected(m[1], m[2])
+		if m[3] != "" {
+			t = locales.GwStepConnectedReadOnly(t)
+		}
+		if m[4] != "" {
+			t = locales.GwStepConnectedOwnScreen(t)
+		}
+		return t
 	}
 	if m := reFinished.FindStringSubmatch(s); m != nil {
 		if f := outcomes[m[1]]; f != nil {

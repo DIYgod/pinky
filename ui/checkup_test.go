@@ -1,7 +1,9 @@
 package ui
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"strings"
 	"testing"
@@ -12,6 +14,7 @@ import (
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
 
@@ -77,6 +80,75 @@ func TestCheckupOfXiaomiPhone(t *testing.T) {
 	tt.Frame()
 	if hasText(tt, "Checkup: Redmi K80") {
 		t.Errorf("the checkup still shows")
+	}
+}
+
+// TestXiaomiThatRefusesUSBInstalls: once a phone refuses an install over
+// USB, as a Xiaomi without a SIM card must, the checkup and the phone's
+// card show the APK to install by hand and link to the README's steps, in
+// the app's language, until the companion is installed.
+func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
+	ta := newTestApp(t, fakeapi.Checkup)
+	const apk = "/Applications/Pinky.app/Contents/Resources/pinky-companion.apk"
+	ta.opt.CompanionAPK = func() (string, int, error) { return apk, 480, nil }
+	var revealed, opened []string
+	ta.reveal = func(p string) { revealed = append(revealed, p) }
+	saved := openURL
+	openURL = func(_ *mg.Context, u string, done func(error)) { opened = append(opened, u); done(nil) }
+	t.Cleanup(func() { openURL = saved })
+	ta.sync()
+	ta.sel = "redmi-k80"
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.frameUntil(t, tt, "the companion card", func() bool { return hasText(tt, "Install Pinky Companion") })
+	if hasText(tt, locales.CompanionShowAPK()) || hasText(tt, locales.CompanionByHandHow()) {
+		t.Errorf("the APK shows before an install failed: %q", tt.Texts())
+	}
+	ta.openCheckup(*ta.device("redmi-k80"))
+	ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf("redmi-k80"); return r != nil && r.have && !r.running })
+	if err := tt.Click("Install"); err != nil {
+		t.Fatal(err)
+	}
+	ta.frameUntil(t, tt, "the install to fail", func() bool { return ta.comp.err["redmi-k80"] != "" })
+	// The person saw it fail: no sidebar card to tell them again.
+	if r := ta.comp.byHand["redmi-k80"]; r != (update.CompanionByHand{Phone: "Redmi K80", Build: 480, Seen: true}) || ta.comp.apk != apk {
+		t.Fatalf("by hand %+v, APK %q", r, ta.comp.apk)
+	}
+	if err := tt.Click(locales.CompanionShowAPK()); err != nil {
+		t.Fatalf("%v: %q", err, tt.Texts())
+	}
+	if len(revealed) != 1 || revealed[0] != apk {
+		t.Errorf("revealed %q", revealed)
+	}
+	if err := tt.Click(locales.CompanionByHandHow()); err != nil {
+		t.Fatal(err)
+	}
+	inLanguage(t, "zh-Hans", tt)
+	tt.Frame()
+	if err := tt.Click(locales.CompanionByHandHow()); err != nil {
+		t.Fatalf("%v: %q", err, tt.Texts())
+	}
+	if len(opened) != 2 || opened[0] != companionByHandDocs || opened[1] != companionByHandDocsZh {
+		t.Errorf("opened %q", opened)
+	}
+	inLanguage(t, "en", tt)
+	if err := tt.Click("Back to the phone"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !hasText(tt, locales.CompanionErrRestrictedXiaomi()) || !hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("the card after the refusal: %q", tt.Texts())
+	}
+	ta.api.SetInstallError("redmi-k80", nil)
+	if err := tt.Click("Install Pinky Companion on Redmi K80"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("the APK shows while Pinky installs: %q", tt.Texts())
+	}
+	ta.frameUntil(t, tt, "the install", func() bool { return ta.comp.installing["redmi-k80"].IsZero() })
+	if _, ok := ta.comp.byHand["redmi-k80"]; ta.comp.err["redmi-k80"] != "" || ok || hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("after the install: %q, %q", ta.comp.err["redmi-k80"], tt.Texts())
 	}
 }
 
@@ -255,24 +327,35 @@ func TestAddAndroidSetupCodes(t *testing.T) {
 
 func TestCompanionErrors(t *testing.T) {
 	restricted := errors.New("adb: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]")
+	// The service's own wait, which the client must not take for the
+	// install's: issue #56, an Android 10 phone told to allow an install
+	// that had finished.
+	noAnswer := &driver.CompanionStartError{Detail: "no answer within 10s; Android lists it as enabled but has not bound it"}
 	for _, c := range []struct {
-		err    error
-		family string
-		want   string
+		err      error
+		family   string
+		timedOut bool
+		want     string
 	}{
-		{errors.New("context deadline exceeded: x"), "", locales.CompanionErrOther("context deadline exceeded: x")},
-		{restricted, "xiaomi", locales.CompanionErrRestrictedXiaomi()},
-		{restricted, "", locales.CompanionErrRestricted()},
-		{restricted, "vivo", locales.CompanionErrRestricted()},
-		{errors.New("adb: Failure [INSTALL_FAILED_ABORTED: User rejected permissions]"), "vivo", locales.CompanionErrDeclined()},
-		{errors.New("adb: Failure [INSTALL_FAILED_VERIFICATION_FAILURE]"), "", locales.CompanionErrPlayProtect()},
+		{errors.New("context deadline exceeded: x"), "", false, locales.CompanionErrOther("context deadline exceeded: x")},
+		{fmt.Errorf("companion did not start within 10s: %w", context.DeadlineExceeded), "", true, locales.CompanionErrTimeout()},
+		{fmt.Errorf("pinging: %w", context.DeadlineExceeded), "", false, locales.CompanionErrOther("pinging: " + context.DeadlineExceeded.Error())},
+		{noAnswer, "", false, locales.CompanionErrNoAnswer(noAnswer.Detail)},
+		{fmt.Errorf("%w (and restoring the setting failed: x)", noAnswer), "xiaomi", false, locales.CompanionErrNoAnswer(noAnswer.Detail)},
+		{&driver.CompanionStartError{Reason: driver.CompanionStartUIAutomation, Detail: "x"}, "", false, locales.CompanionErrUIAutomation()},
+		{&driver.CompanionStartError{Reason: driver.CompanionStartNotUnlocked, Detail: "x"}, "", false, locales.CompanionErrNotUnlocked()},
+		{restricted, "xiaomi", false, locales.CompanionErrRestrictedXiaomi()},
+		{restricted, "", false, locales.CompanionErrRestricted()},
+		{restricted, "vivo", false, locales.CompanionErrRestricted()},
+		{errors.New("adb: Failure [INSTALL_FAILED_ABORTED: User rejected permissions]"), "vivo", false, locales.CompanionErrDeclined()},
+		{errors.New("adb: Failure [INSTALL_FAILED_VERIFICATION_FAILURE]"), "", false, locales.CompanionErrPlayProtect()},
 		{errors.New("adb shell settings: exit status 255: java.lang.SecurityException: Permission denial, must have one of: [android.permission.WRITE_SECURE_SETTINGS]"),
-			"xiaomi", locales.CompanionErrSettingsXiaomi()},
-		{errors.New("Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS"), "oppo", locales.CompanionErrSettingsOppo()},
-		{driver.ErrOffline, "", locales.CompanionErrOffline()},
+			"xiaomi", false, locales.CompanionErrSettingsXiaomi()},
+		{errors.New("Permission denial: writing to settings requires:android.permission.WRITE_SECURE_SETTINGS"), "oppo", false, locales.CompanionErrSettingsOppo()},
+		{driver.ErrOffline, "", false, locales.CompanionErrOffline()},
 	} {
-		if got := companionError(c.err, c.family); got != c.want {
-			t.Errorf("companionError(%v, %q) = %q, want %q", c.err, c.family, got, c.want)
+		if got := companionError(c.err, c.family, c.timedOut); got != c.want {
+			t.Errorf("companionError(%v, %q, %v) = %q, want %q", c.err, c.family, c.timedOut, got, c.want)
 		}
 	}
 }

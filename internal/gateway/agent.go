@@ -142,6 +142,10 @@ type ConnectRequest struct {
 	// ReadOnly runs the task read-only, whatever the agent's scope: the
 	// agent can ask for less than the person gave it, never more.
 	ReadOnly bool
+	// OwnScreen runs the task on the phone's own screen even when the
+	// person has agents work on a background display, which has no home
+	// screen: for work on the home screen itself (useOwnScreen).
+	OwnScreen bool
 }
 
 // ReleaseRequest is phone_release.
@@ -536,6 +540,11 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		if len(req.Apps) > 0 {
 			unknown = g.resolveTaskApps(ctx, l)
 		}
+		if req.OwnScreen && g.useOwnScreen(l) {
+			// The person sees the task change screens, and why.
+			g.addStep(l, connectStep(d.name(), title, req, true))
+			g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
+		}
 		return readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), ro)
 	} else if l != nil {
 		g.endLeaseLocked(l, OutcomeReplaced, "")
@@ -548,16 +557,8 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 
 	unknown := g.resolveTaskApps(ctx, l)
 	g.recordSession(s)
-	args := map[string]any{"task": title}
-	if len(req.Apps) > 0 {
-		args["apps"] = req.Apps
-	}
-	text := fmt.Sprintf("Connected to %s for “%s”", d.name(), title)
-	if req.ReadOnly {
-		args["read_only"] = true
-		text += ", read only"
-	}
-	g.addStep(l, StepView{Tool: "phone_connect", Args: argsJSON(args), Text: text, Status: string(StatusSettled), At: time.Now()})
+	own := req.OwnScreen && g.useOwnScreen(l)
+	g.addStep(l, connectStep(d.name(), title, req, own))
 	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	return readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), req.ReadOnly)
@@ -598,6 +599,26 @@ func setupResultLocked(d *device, first string) *Result {
 		res.Setup = driver.FixAuthorize // as the checkup names it (ConnectionChecks)
 	}
 	return res
+}
+
+// connectStep is the history step of phone_connect. own says the task
+// left the background display the person chose for the phone's own
+// screen, as the agent asked.
+func connectStep(device, title string, req ConnectRequest, own bool) StepView {
+	args := map[string]any{"task": title}
+	if len(req.Apps) > 0 {
+		args["apps"] = req.Apps
+	}
+	text := fmt.Sprintf("Connected to %s for “%s”", device, title)
+	if req.ReadOnly {
+		args["read_only"] = true
+		text += ", read only"
+	}
+	if own {
+		args["own_screen"] = true
+		text += ", on the phone's own screen"
+	}
+	return StepView{Tool: "phone_connect", Args: argsJSON(args), Text: text, Status: string(StatusSettled), At: time.Now()}
 }
 
 // readOnlyNote tells an agent that asked for read-only what that means.
@@ -751,7 +772,7 @@ func (g *Gateway) firstScreen(ctx context.Context, l *lease) *Result {
 	g.mu.Unlock()
 	if onBG {
 		// A background display starts empty, without a home screen.
-		res.Message += " This task runs on a background display of the phone, which starts empty and has no home screen: open apps with phone_launch."
+		res.Message += " This task runs on a background display of the phone, which starts empty and has no home screen: open apps with phone_launch. " + ownScreenHint
 	}
 	switch {
 	case person:

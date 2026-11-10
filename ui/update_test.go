@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	hexenc "encoding/hex"
+	"errors"
 	"fmt"
 	"image/png"
 	"net/http"
@@ -482,6 +483,150 @@ func TestCompanionUpdatesWhenThePhoneIsFree(t *testing.T) {
 	tt.Frame()
 	if !hasText(tt, "Updated on Pixel 9 to 0.1.0 (130)") {
 		t.Errorf("the dialog: %q", tt.Texts())
+	}
+}
+
+// TestCompanionUpdateRefusedOverUSB: when a phone refuses the automatic
+// update over USB, Pinky stops trying that build by itself, the sidebar
+// says so, and the phone's card offers the person's Update and the APK to
+// install by hand.
+func TestCompanionUpdateRefusedOverUSB(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	const apk = `C:\Program Files\Pinky\pinky-companion.apk`
+	ut.opt.CompanionAPK = func() (string, int, error) { return apk, 130, nil }
+	ut.api.SetCompanion("pixel-9", driver.CompanionOutdated)
+	ut.api.SetInstallError("pixel-9", errors.New("android: install pinky-companion.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]"))
+	ut.waitFor(t, "Pixel 9", func() bool { return ut.device("pixel-9") != nil })
+	ut.updateTick(time.Now()) // looks the companion up
+	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionOutdated })
+	ut.updateTick(time.Now())
+	if !ut.companionUpdating("pixel-9") {
+		t.Fatal("no automatic update")
+	}
+	ut.waitFor(t, "the refusal", func() bool { return !ut.companionUpdating("pixel-9") })
+	if r := ut.comp.byHand["pixel-9"]; r != (update.CompanionByHand{Phone: "Pixel 9", Build: 130}) || ut.comp.apk != apk {
+		t.Fatalf("by hand %+v, APK %q", r, ut.comp.apk)
+	}
+	tt := mg.NewTester(ut.view, 1280, 820)
+	tt.Frame()
+	if !hasText(tt, locales.UpdateCompanionByHand()) || !hasText(tt, locales.CompanionShowAPK()) || hasText(tt, locales.UpdateCompanionAuto()) {
+		t.Errorf("the card: %q", tt.Texts())
+	}
+	if !hasText(tt, locales.UpdateCompanionByHandCard("Pixel 9")) {
+		t.Errorf("no sidebar card: %q", tt.Texts())
+	}
+	// Hours later Pinky still leaves it to the person.
+	ut.updateTick(time.Now().Add(7 * time.Hour))
+	if ut.companionUpdating("pixel-9") {
+		t.Error("Pinky tries again by itself")
+	}
+	// The person's Update fails the same way: its error says what to do,
+	// and the line above it goes.
+	if err := tt.Click(locales.CompanionUpdateLabel("Pixel 9")); err != nil {
+		t.Fatal(err)
+	}
+	ut.waitFor(t, "the person's update", func() bool { return ut.comp.installing["pixel-9"].IsZero() })
+	tt.Frame()
+	if !hasText(tt, locales.CompanionErrRestricted()) || hasText(tt, locales.UpdateCompanionByHand()) || !hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("the card after the person's update: %q", tt.Texts())
+	}
+	if hasText(tt, locales.UpdateCompanionByHandCard("Pixel 9")) {
+		t.Errorf("the sidebar tells again what the card just said: %q", tt.Texts())
+	}
+	// The person installs it by hand: once Pinky sees it, the next version
+	// gets its automatic update again.
+	ut.api.SetCompanion("pixel-9", driver.CompanionOn)
+	ut.comp.checked["pixel-9"] = time.Time{}
+	ut.updateTick(time.Now().Add(7 * time.Hour))
+	ut.waitFor(t, "the hand install", func() bool { _, ok := ut.comp.byHand["pixel-9"]; return !ok })
+	if r, ok := ut.u.State().CompanionByHand["pixel-9"]; ok {
+		t.Errorf("update.json keeps %+v", r)
+	}
+}
+
+// TestCompanionRefusedOncePerBuild: Pinky remembers across restarts which
+// companion build a phone refused over USB. It tells the person once, in
+// the sidebar, doesn't try that build again, and tries a newer build once.
+func TestCompanionRefusedOncePerBuild(t *testing.T) {
+	statePath := filepath.Join(t.TempDir(), "update.json")
+	const apk = "/Applications/Pinky.app/Contents/Resources/pinky-companion.apk"
+	start := func(build int) *updateTest {
+		ut := newUpdateTest(t, fakeapi.Companion)
+		ut.u.StatePath = statePath // the same update.json at each start
+		ut.opt.CompanionAPK = func() (string, int, error) { return apk, build, nil }
+		ut.api.SetCompanion("pixel-9", driver.CompanionOutdated)
+		ut.api.SetInstallError("pixel-9", errors.New("android: install pinky-companion.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]"))
+		ut.waitFor(t, "Pixel 9", func() bool { return ut.device("pixel-9") != nil })
+		return ut
+	}
+	// tried runs the minutes it takes to look up the companion and the
+	// APK, and reports whether Pinky tried to update the companion.
+	tried := func(ut *updateTest) bool {
+		for range 4 {
+			ut.updateTick(time.Now())
+			if ut.companionUpdating("pixel-9") {
+				ut.waitFor(t, "the refusal", func() bool { return !ut.companionUpdating("pixel-9") })
+				return true
+			}
+			ut.waitFor(t, "the lookups", func() bool { return !ut.comp.loading["pixel-9"] && !ut.comp.apkReading })
+		}
+		return false
+	}
+	card := locales.UpdateCompanionByHandCard("Pixel 9")
+	shows := func(ut *updateTest) bool {
+		tt := mg.NewTester(ut.view, 1280, 820)
+		tt.Frame()
+		return hasText(tt, card)
+	}
+
+	ut := start(130)
+	if !tried(ut) {
+		t.Fatal("no automatic update")
+	}
+	if r := ut.u.State().CompanionByHand["pixel-9"]; r != (update.CompanionByHand{Phone: "Pixel 9", Build: 130}) {
+		t.Fatalf("update.json has %+v", r)
+	}
+	if !shows(ut) {
+		t.Error("no sidebar card")
+	}
+
+	// Restarted, with the same build: no new try, and the card stays until
+	// the person closes it.
+	ut = start(130)
+	if tried(ut) {
+		t.Error("Pinky tries the refused build again after a restart")
+	}
+	tt := mg.NewTester(ut.view, 1280, 820)
+	tt.Frame()
+	if !hasText(tt, card) || !hasText(tt, locales.CompanionShowAPK()) || !hasText(tt, locales.CompanionByHandHow()) {
+		t.Fatalf("the sidebar after a restart: %q", tt.Texts())
+	}
+	if err := tt.Click(locales.UpdateCompanionByHandDismissLabel()); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if hasText(tt, card) {
+		t.Error("the card stays after Dismiss")
+	}
+	ut = start(130)
+	if tried(ut) || shows(ut) {
+		t.Error("the dismissed build comes back after a restart")
+	}
+
+	// A Pinky update brings a newer build: one try, and its refusal one
+	// card.
+	ut = start(140)
+	if !tried(ut) {
+		t.Fatal("Pinky doesn't try the newer build")
+	}
+	if r := ut.u.State().CompanionByHand["pixel-9"]; r != (update.CompanionByHand{Phone: "Pixel 9", Build: 140}) {
+		t.Errorf("update.json has %+v", r)
+	}
+	if !shows(ut) {
+		t.Error("no sidebar card for the newer build")
+	}
+	if tried(ut) {
+		t.Error("Pinky tries the newer build twice")
 	}
 }
 

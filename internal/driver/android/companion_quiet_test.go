@@ -498,3 +498,48 @@ func TestDevelopmentBuildIsItsOwnApp(t *testing.T) {
 		t.Errorf("state = %q, %v; want missing", st, err)
 	}
 }
+
+// TestUpdateCompanionRefusedOverUSB: a phone that refuses installs over USB
+// (MIUI's Install via USB, which a phone without a SIM card cannot turn
+// on) fails the update with the phone's reason and the build it refused,
+// and keeps its installed build; once the person installs the APK by hand,
+// there is nothing left to update.
+func TestUpdateCompanionRefusedOverUSB(t *testing.T) {
+	release := []byte("release")
+	apk := companiontest.APK(t, companion.Release.Package, "2026.1111.1", 480, release)
+	p := newQuietPhone(t)
+	p.code, p.signer = 400, companion.SignerName(release)
+	p.installErr = "Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]"
+	d, _ := quietDevice(t, p, apk)
+	ctx := context.Background()
+	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionOutdated {
+		t.Fatalf("state = %q, %v; want outdated", st, err)
+	}
+	res, err := d.UpdateCompanion(ctx)
+	if err == nil || !strings.Contains(err.Error(), "INSTALL_FAILED_USER_RESTRICTED") {
+		t.Fatalf("UpdateCompanion = %+v, %v; want the phone's refusal", res, err)
+	}
+	if res.Updated || res.Replaced || res.To != "2026.1111.1 (480)" {
+		t.Errorf("result = %+v", res)
+	}
+	p.mu.Lock()
+	code, installs, uninstalls := p.code, p.installs, p.uninstalls
+	p.mu.Unlock()
+	if code != 400 || installs != 0 || uninstalls != 0 {
+		t.Errorf("build %d after %d installs and %d uninstalls", code, installs, uninstalls)
+	}
+	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionOutdated {
+		t.Errorf("state after the refusal = %q, %v; want outdated", st, err)
+	}
+
+	// The person sends the APK to the phone and installs it there.
+	p.mu.Lock()
+	p.code = 480
+	p.mu.Unlock()
+	if st, err := d.CompanionState(ctx); err != nil || st != driver.CompanionReady {
+		t.Errorf("state after the install by hand = %q, %v; want ready", st, err)
+	}
+	if res, err := d.UpdateCompanion(ctx); err != nil || res.Updated {
+		t.Errorf("UpdateCompanion after the install by hand = %+v, %v; want nothing to do", res, err)
+	}
+}

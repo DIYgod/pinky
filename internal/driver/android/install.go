@@ -267,6 +267,9 @@ func (d *Device) tryCompanion(ctx context.Context) error {
 		d.companionOffLocked("its event stream ended")
 	}
 	if err := d.companionOnLocked(ctx); err != nil {
+		if ctx.Err() == nil {
+			d.cfg.logf("android: %s: setting up the companion: %v", d.info.ID, err)
+		}
 		var cause error = err
 		if f := k.failed; f != nil {
 			cause = f

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -84,6 +85,7 @@ func (u *Updater) State() State {
 	u.loadLocked()
 	s := u.state
 	s.Changes = append([]Change(nil), s.Changes...)
+	s.CompanionByHand = maps.Clone(s.CompanionByHand)
 	return s
 }
 

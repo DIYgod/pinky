@@ -48,7 +48,7 @@ jobs:
         with:
           ref: ${{ env.REF }}
           persist-credentials: false
-          fetch-depth: 0 # the companion's versionCode is the count of commits
+          fetch-depth: 0 # the companion's versionCode counts commits
       - uses: actions/setup-java@v6
         with:
           distribution: temurin

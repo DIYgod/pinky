@@ -10,7 +10,22 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android"
+	"github.com/DIYgod/pinky/internal/driver/android/companion"
 )
+
+// bundledCompanion is the companion APK Pinky installs and its build, 0
+// when the APK's version can't be read.
+func bundledCompanion() (string, int, error) {
+	apk, err := android.FindCompanionAPK()
+	if err != nil {
+		return "", 0, err
+	}
+	_, v, err := companion.APKVersion(apk)
+	if err != nil {
+		return apk, 0, nil
+	}
+	return apk, v.Code, nil
+}
 
 // runCompanion is `pinky companion install [phone]`: it installs or updates
 // the Android companion app, which reads the screen much faster than

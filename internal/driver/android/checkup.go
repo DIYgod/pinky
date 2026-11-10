@@ -89,6 +89,9 @@ func (d *Device) checkCompanion(ctx context.Context) driver.Check {
 		c.Status = driver.CheckPass
 	case driver.CompanionOff:
 		c.Status, c.Fix = driver.CheckFail, driver.FixTurnOnCompanion
+		if f := d.companionFailure(); f != nil {
+			c.Detail += ": " + f.Error()
+		}
 	case driver.CompanionMissing:
 		c.Status, c.Fix = driver.CheckFail, driver.FixInstallCompanion
 	case driver.CompanionOutdated, driver.CompanionPublicKey:
