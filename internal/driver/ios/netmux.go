@@ -2,6 +2,8 @@ package ios
 
 import (
 	"context"
+	"errors"
+	"io/fs"
 	"net"
 	"net/netip"
 	"os"
@@ -9,6 +11,8 @@ import (
 	"runtime"
 	"sort"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/DIYgod/pinky/internal/driver/ios/netmux"
 	goios "github.com/danielpaulus/go-ios/ios"
@@ -135,6 +139,7 @@ func (p *Provider) startMuxLocked() {
 		if base == "" {
 			base = os.TempDir()
 		}
+		removeOldMuxDirs(base)
 		d, err := os.MkdirTemp(base, "pinky-usbmuxd-") // 0700: this user's only
 		if err != nil {
 			m.skipped = true
@@ -151,6 +156,30 @@ func (p *Provider) startMuxLocked() {
 		return
 	}
 	p.serveMuxLocked(upstream, l, "unix://"+path)
+}
+
+// removeOldMuxDirs removes the folders that earlier Pinkys left in base.
+// Nothing tells the provider that Pinky ends, so it cannot remove its own,
+// and every start left one more until the person logged out. A folder is
+// left over when nothing listens at its socket any more; one without a
+// socket may be a Pinky's that is starting right now, unless it is old.
+func removeOldMuxDirs(base string) {
+	dirs, _ := filepath.Glob(filepath.Join(base, "pinky-usbmuxd-*"))
+	for _, dir := range dirs {
+		fi, err := os.Lstat(dir)
+		if err != nil || !fi.IsDir() {
+			continue
+		}
+		c, err := net.DialTimeout("unix", filepath.Join(dir, "usbmuxd"), time.Second)
+		switch {
+		case err == nil:
+			c.Close() // another Pinky's, which runs
+		case errors.Is(err, syscall.ECONNREFUSED):
+			os.RemoveAll(dir)
+		case errors.Is(err, fs.ErrNotExist) && time.Since(fi.ModTime()) > time.Minute:
+			os.RemoveAll(dir)
+		}
+	}
 }
 
 // serveMuxLocked runs the usbmuxd of its own on l, in front of upstream,
