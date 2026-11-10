@@ -209,6 +209,19 @@ func (d *Device) checkTyped(ctx context.Context, text string, appended bool, pri
 		st.Checked = "unreadable"
 		return unread, nil
 	}
+	// The app in front may read as the on-screen keyboard's process (a
+	// keyboard extension, seen with Doubao Input) for a moment while it
+	// goes away, with nothing focused: read again before concluding.
+	for deadline := time.Now().Add(pasteConfirm); field == nil && ferr == nil && time.Now().Before(deadline); {
+		if err := sleepCtx(ctx, 100*time.Millisecond); err != nil {
+			return "", err
+		}
+		field, v, ferr = d.focusedField(ctx)
+	}
+	if ferr != nil {
+		st.Checked = "unreadable"
+		return unread, nil
+	}
 	if field == nil {
 		st.Checked = "unfocused"
 		return "", errUnfocused
