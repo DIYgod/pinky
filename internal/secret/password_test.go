@@ -24,21 +24,22 @@ func TestPasswordVerdict(t *testing.T) {
 		blank   error // what Blank answers
 		wantOK  bool
 		wantErr []error // the error wraps all of these; nil: no error
+		notErr  error   // the error does not wrap this
 		asked   bool    // Blank was called
 	}{
 		{name: "signed in", check: passwordCheck{Me: local}, wantOK: true},
 		{name: "signed in, empty", check: passwordCheck{Empty: true, Me: local}, wantOK: true},
 		{name: "wrong password", check: passwordCheck{Logon: errLogonFailure, Me: local}},
 		{name: "restriction, password typed", check: passwordCheck{Logon: errAccountRestriction, Me: local},
-			wantErr: []error{errAccountRestriction}},
+			wantErr: []error{errAccountRestriction, ErrAccountRestricted}},
 		{name: "disabled, password typed", check: passwordCheck{Logon: errAccountDisabled, Me: local},
-			wantErr: []error{errAccountDisabled}},
+			wantErr: []error{errAccountDisabled}, notErr: ErrAccountRestricted},
 
 		// Nothing typed for a Microsoft account: it has a password.
 		{name: "Microsoft account, empty", check: passwordCheck{Logon: errLogonFailure, Empty: true, DialogIsMe: true, Me: microsoft},
 			wantErr: []error{ErrMicrosoftAccount}},
 		{name: "Microsoft account, empty, restriction", check: passwordCheck{Logon: errAccountRestriction, Empty: true, Me: microsoft},
-			wantErr: []error{ErrMicrosoftAccount}},
+			wantErr: []error{ErrMicrosoftAccount}, notErr: ErrAccountRestricted},
 		{name: "Microsoft account, typed wrong", check: passwordCheck{Logon: errLogonFailure, Me: microsoft}},
 
 		// Issue #41: the dialog's name got the blank-password policy's
@@ -50,11 +51,11 @@ func TestPasswordVerdict(t *testing.T) {
 		{name: "restriction, signed-in account has a password", check: passwordCheck{Logon: errAccountRestriction, Empty: true, Me: local},
 			blank: errLogonFailure, asked: true},
 		{name: "restriction, signed-in account refused", check: passwordCheck{Logon: errAccountRestriction, Empty: true, Me: local},
-			blank: errAccountDisabled, asked: true, wantErr: []error{errAccountRestriction, errAccountDisabled}},
+			blank: errAccountDisabled, asked: true, wantErr: []error{errAccountRestriction, errAccountDisabled, ErrAccountRestricted}},
 		{name: "restriction, not a local account", check: passwordCheck{Logon: errAccountRestriction, Empty: true, Me: domain},
-			wantErr: []error{errAccountRestriction}},
+			wantErr: []error{errAccountRestriction, ErrAccountRestricted}},
 		{name: "restriction, account unknown", check: passwordCheck{Logon: errAccountRestriction, Empty: true},
-			wantErr: []error{errAccountRestriction}},
+			wantErr: []error{errAccountRestriction, ErrAccountRestricted}},
 
 		// A wrong empty password for the signed-in account's own name
 		// needs no second try.
@@ -110,6 +111,9 @@ func TestPasswordVerdict(t *testing.T) {
 				if err != nil && !errors.Is(err, want) {
 					t.Errorf("err = %v, want one that wraps %v", err, want)
 				}
+			}
+			if tt.notErr != nil && errors.Is(err, tt.notErr) {
+				t.Errorf("err = %v, want one that does not wrap %v", err, tt.notErr)
 			}
 			if asked != tt.asked {
 				t.Errorf("Blank called = %v, want %v", asked, tt.asked)

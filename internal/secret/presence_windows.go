@@ -347,6 +347,8 @@ var (
 	procCredUIPromptForWindowsCredentialsW = modcredui.NewProc("CredUIPromptForWindowsCredentialsW")
 	procCredUnPackAuthenticationBufferW    = modcredui.NewProc("CredUnPackAuthenticationBufferW")
 	procCredUIParseUserNameW               = modcredui.NewProc("CredUIParseUserNameW")
+	procCredIsProtectedW                   = modadvapi32.NewProc("CredIsProtectedW")
+	procCredUnprotectW                     = modadvapi32.NewProc("CredUnprotectW")
 	procLogonUserW                         = modadvapi32.NewProc("LogonUserW")
 	modnetapi32                            = windows.NewLazySystemDLL("netapi32.dll")
 	procNetUserModalsGet                   = modnetapi32.NewProc("NetUserModalsGet")
@@ -444,6 +446,14 @@ func checkPassword(buf unsafe.Pointer, size uint32, me *windowsUser) (bool, erro
 		log().Warn("confirm with the password: could not read the dialog's answer", "err", errText(err))
 		return false, fmt.Errorf("secret: read the credential dialog's answer: %w", err)
 	}
+	// The dialog may hand back the password protected (CredProtect), as
+	// "@@D…": even an empty one is then a long string. LogonUserW reads it
+	// either way, but whether it is empty only shows once unprotected.
+	protection, err := unprotect(password)
+	if err != nil {
+		log().Warn("confirm with the password: could not read the dialog's answer", "protected", protection, "err", errText(err))
+		return false, fmt.Errorf("secret: read the credential dialog's answer: %w", err)
+	}
 	// The name comes as DOMAIN\user or user@domain; LogonUser takes the
 	// parts apart.
 	user := make([]uint16, n)
@@ -478,6 +488,7 @@ func checkPassword(buf unsafe.Pointer, size uint32, me *windowsUser) (bool, erro
 	c.Me = me.windowsAccount
 	attrs := []any{
 		"empty", c.Empty,
+		"protected", protection,
 		"dialog_name", windows.UTF16ToString(name),
 		"dialog_domain", windows.UTF16ToString(domain),
 		"user", dialogUser,
@@ -503,6 +514,12 @@ func checkPassword(buf unsafe.Pointer, size uint32, me *windowsUser) (bool, erro
 		return blank
 	}
 	ok, step, err := passwordVerdict(c)
+	if !asked && !c.Empty && errors.Is(c.Logon, errAccountRestriction) {
+		// Not part of the decision, which a typed password never takes
+		// to the account's blank-password check: whether the account has
+		// no password tells what the person should do, for the log.
+		c.Blank()
+	}
 	if asked {
 		attrs = append(attrs, "blank_logon", errText(blank))
 	}
@@ -512,6 +529,49 @@ func checkPassword(buf unsafe.Pointer, size uint32, me *windowsUser) (bool, erro
 	}
 	log().Log(context.Background(), level, "confirm with the password", append([]any{"result", step}, attrs...)...)
 	return ok, err
+}
+
+// credProtectionType is CRED_PROTECTION_TYPE.
+const credUnprotected = 0 // CredUnprotected
+
+// unprotect replaces a password CredProtect protected with the password
+// itself, in place, wiping the copy it makes. protection says what it
+// found, for the log: "no", or the CRED_PROTECTION_TYPE, or why it could
+// not tell.
+func unprotect(password []uint16) (protection string, err error) {
+	if err := procCredIsProtectedW.Find(); err != nil {
+		return "unknown: " + errText(err), nil
+	}
+	kind := new(uint32)
+	if r, _, err := procCredIsProtectedW.Call(uintptr(unsafe.Pointer(&password[0])), uintptr(unsafe.Pointer(kind))); r == 0 {
+		// Not a string it reads as protected: a plain password.
+		return "unknown: " + errText(err), nil
+	}
+	if *kind == credUnprotected {
+		return "no", nil
+	}
+	protection = fmt.Sprintf("type %d", *kind)
+	n := slices.Index(password, 0)
+	if n < 0 {
+		return protection, errors.New("the password has no end")
+	}
+	plain := make([]uint16, len(password))
+	defer clear(plain)
+	// As the process and as the thread: the dialog protected it in this
+	// logon session, as one or the other.
+	for _, asSelf := range []uintptr{0, 1} {
+		size := new(uint32)
+		*size = uint32(len(plain))
+		r, _, e := procCredUnprotectW.Call(asSelf, uintptr(unsafe.Pointer(&password[0])), uintptr(n+1),
+			uintptr(unsafe.Pointer(&plain[0])), uintptr(unsafe.Pointer(size)))
+		if r != 0 {
+			clear(password)
+			copy(password, plain)
+			return protection, nil
+		}
+		err = fmt.Errorf("CredUnprotectW: %w", e)
+	}
+	return protection, err
 }
 
 // logonUser asks Windows whether password signs the account in, with a

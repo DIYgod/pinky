@@ -1444,6 +1444,7 @@
   "unlockBusy": "正在解锁…",
   "unlockCallWhat": "解锁手机",
   "unlockEnd": "。",
+  "unlockErrAccountRestricted": "Windows 拒绝检查你的密码，所以没有解锁 {name}。很可能是你的 Windows 账户没有设置密码：请在 Windows 的「设置 › 账户 › 登录选项」里设置密码或 Windows Hello PIN 码，然后重试。",
   "unlockErrMicrosoftAccount": "要解锁 {name}，请在 Windows 要求输入密码时输入你的 Microsoft 账户密码。你的 Windows 账户是 Microsoft 账户，即使平时用 PIN 码或 Windows Hello 登录，它也有密码。",
   "unlockErrNoPIN": "尚未保存 {name} 的 PIN 码。请在“设置 › 手机”中保存。",
   "unlockErrNoPad": "Pinky 无法进入 {name} 的密码输入界面，因此没有输入任何内容。请重试，或在手机上解锁。",
