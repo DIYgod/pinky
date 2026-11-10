@@ -180,7 +180,7 @@ Agents see one MCP server, `pinky`, with 19 tools. Every action waits for the sc
 | `phone_launch` | `app`: name, bundle id or package; `language?`, `region?` | Result and new screen |
 | `phone_apps` | `query?` | Installed apps inside the agent's scope |
 | `phone_batch` | `steps[]` | One result per step; stops at the first step that is not `settled` |
-| `phone_wait_for` | `text`, `gone?`, `timeout_ms?` (up to 45000) | The screen once the text appears or disappears |
+| `phone_wait_for` | `text` or `any[]` (up to 10 texts), `gone?`, `area?`, `timeout_ms?` (up to 45000) | The screen once one of the texts appears, or once all have disappeared; `area` counts only the text in one part of the screen |
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
 | `phone_app` | `action` (install, uninstall, stop); `paths` or `app` | Installs or updates an app from that local folder (an APK, an IPA or a `.app`), uninstalls an app, or force-quits it |
 | `phone_logs` | `app`, `kind?` (logs or crashes), `since?`, `filter?`, `level?`, `limit?` | One app's own log lines or crash reports ([notes/app-logs.md](notes/app-logs.md)) |

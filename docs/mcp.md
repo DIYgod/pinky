@@ -332,11 +332,13 @@ Steps run in order, each settling first, and the batch stops at the first step t
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
-| `text` | string, required | Matched without case in element labels and new events. In languages that put spaces between words it matches whole words only (`Stop` does not match `Stopwatch`); Chinese, Japanese, Korean and Thai text matches anywhere in a label |
-| `gone` | boolean | Wait for it to disappear |
+| `text` | string | Matched without case in element labels and new events. In languages that put spaces between words it matches whole words only (`Stop` does not match `Stopwatch`); Chinese, Japanese, Korean and Thai text matches anywhere in a label. Required unless `any` is given |
+| `any` | array of strings, ≤ 10 texts with `text` | More texts, matched like `text`, for when several things may come next (`Order placed` or `Payment failed`): the wait ends when the first of them shows |
+| `gone` | boolean | Wait for it to disappear; with `any`, until none of the texts shows |
+| `area` | `{x, y, width, height}` in screen pixels | Count only the text in this part of the screen, for a word that also shows elsewhere (a tab bar, a chat): an element counts when its position, the `@x,y` on its line, is inside. New events have no position and do not count with an `area` |
 | `timeout_ms` | 0–45000 | Default 10000 |
 
-Returns `settled` with `matched: true` or `matched: false` and the screen changes.
+Returns `settled` with `matched: true` or `matched: false` and the screen changes. The message names the text that appeared (the first in the order given, when several show), or for `gone` the one that is still there.
 
 ### phone_files
 
