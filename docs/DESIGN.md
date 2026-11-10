@@ -232,7 +232,7 @@ ocr "Delivery in 25–35 min" @200,300
 | `device_locked` | The screen is locked; the person can unlock from the computer or the phone | Call `phone_handoff` |
 | `device_needs_setup` | The phone is connected but waits for a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode, the passcode iOS asks for before automation); the result names the step | Call `phone_handoff`; it ends once the phone is ready |
 
-Errors: `device_offline`, `lease_held`, `scope_denied` (an app outside the agent's scope or the task's allow-list), `not_found` (the ref is gone), `unsupported` (the backend cannot do this, such as `recents` on iPhone).
+Errors: `device_offline`, `device_paused` (the person paused Pinky's connection to the phone in Pinky), `lease_held`, `scope_denied` (an app outside the agent's scope or the task's allow-list), `not_found` (the ref is gone), `unsupported` (the backend cannot do this, such as `recents` on iPhone).
 
 Any call that could block longer than 45 s returns a pending status with an id instead, and the agent repeats the call with that id: Ask actions, `phone_request_approval`, `phone_handoff`, `phone_wait_for`, and long `phone_type` on iPhone. That stays under the 60 s request timeout common in MCP clients. Progress notifications are sent only when the request carries a `progressToken`.
 

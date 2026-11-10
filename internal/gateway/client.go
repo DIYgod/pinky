@@ -42,11 +42,15 @@ func (g *Gateway) Devices() []DeviceView {
 	var out []DeviceView
 	for _, d := range g.sortedDevicesLocked() {
 		info := d.info
-		if !d.online && info.State == driver.StateOnline {
+		paused := g.paused[d.id]
+		if !d.online && info.State == driver.StateOnline || paused {
 			info.State = driver.StateOffline
 		}
+		if paused {
+			info.Setup, info.Detail = "", "" // nothing to set up while paused
+		}
 		st, line := g.statusLocked(d, open)
-		v := DeviceView{Info: info, Status: st, StatusLine: line}
+		v := DeviceView{Info: info, Status: st, StatusLine: line, Paused: paused, Streaming: g.capturingLocked(d)}
 		if d.online && d.dev != nil {
 			v.Features = featuresOf(d.dev)
 		}
@@ -82,6 +86,9 @@ func featuresOf(dev driver.Device) Features {
 
 func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, string) {
 	l := d.lease
+	if g.paused[d.id] {
+		return DeviceOffline, "Paused"
+	}
 	if !d.online {
 		if d.switching != "" && !waitsForStep(d.info.State) {
 			// Moving to another connection for a task (taskconn.go).

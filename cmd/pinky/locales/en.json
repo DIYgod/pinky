@@ -4214,6 +4214,10 @@
       }
     }
   },
+  "gwOutcomePaused": "paused",
+  "@gwOutcomePaused": {
+    "description": "How a task ended, inside gwStepFinished: the person paused Pinky's connection to the phone. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwRecordingsDetail": "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications.",
   "@gwRecordingsDetail": {
     "description": "The second line of the approval that gives an agent a task's screen recording: what the person agrees to. Screenshots are the ones agents get, with codes covered; blocked apps are the banking, wallet and password-manager apps and those the person blocked. Shown only in other languages; in English the gateway's own words show."
@@ -4427,6 +4431,10 @@
         "example": "USB debugging is off"
       }
     }
+  },
+  "gwStatusPaused": "Paused",
+  "@gwStatusPaused": {
+    "description": "A phone's status line in the sidebar and tiles: the person paused Pinky's connection to it. Shown only in other languages; in English the gateway's own words show."
   },
   "gwStatusPhoneChanged": "Not the same phone",
   "@gwStatusPhoneChanged": {
@@ -6026,6 +6034,14 @@
       }
     }
   },
+  "pausePhoneMenu": "Pause connection",
+  "@pausePhoneMenu": {
+    "description": "A menu item in a phone's ⋯ menu under its mirror and its right-click menus: Pinky stops its screen stream and input connection until the person resumes it. The phone stays in Pinky."
+  },
+  "pausePhoneMenuDesc": "Stops the screen stream and agents until you resume. Plugging it in resumes it too.",
+  "@pausePhoneMenuDesc": {
+    "description": "Under Pause connection in the ⋯ menu under the mirror: what pausing does, and that plugging the phone in by cable resumes it."
+  },
   "phoneAddPhone": "Add phone",
   "@phoneAddPhone": {
     "description": "Primary button on the Phones page before any phone is added: opens Add phone."
@@ -6272,6 +6288,38 @@
   "@phonePageTitle": {
     "description": "The Phones page's title before any phone is added."
   },
+  "phonePauseFailed": "Couldn't change the connection to {name}: {error}",
+  "@phonePauseFailed": {
+    "description": "A notice when pausing or resuming a phone failed. error is in English.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      },
+      "error": {
+        "type": "String",
+        "example": "unknown device"
+      }
+    }
+  },
+  "phonePausedDetail": "Pinky doesn't stream its screen, and agents can't use it until you resume. Plugging it in by cable resumes it too.",
+  "@phonePausedDetail": {
+    "description": "A paused phone's page, under its title: what pausing means, and that plugging the phone in resumes it."
+  },
+  "phonePausedResume": "Resume",
+  "@phonePausedResume": {
+    "description": "The button on a paused phone's page: Pinky connects to the phone again."
+  },
+  "phonePausedTitle": "{phone} is paused",
+  "@phonePausedTitle": {
+    "description": "A paused phone's page, under a phone outline: the person paused Pinky's connection to it.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
   "phonePhoneScreen": "Phone's screen",
   "@phonePhoneScreen": {
     "description": "Choice of the switch under the mirror while an agent works on a hidden second screen: the mirror shows the phone's own screen."
@@ -6371,6 +6419,10 @@
   "phoneShowOnMirror": "Show on the mirror",
   "@phoneShowOnMirror": {
     "description": "The accessibility label of the switch under the mirror between the agent's screen and the phone's."
+  },
+  "phoneStreaming": "streaming its screen",
+  "@phoneStreaming": {
+    "description": "Added to the phone page header's second line, after · , while the phone sends its screen to Pinky (the mirror, a recording, or an iPhone's display stream that iOS shows as screen sharing)."
   },
   "phoneSwitchCoreDeviceTitle": "Moving {phone} back to CoreDevice…",
   "@phoneSwitchCoreDeviceTitle": {
@@ -7017,6 +7069,10 @@
   "replayWatchTooltip": "Step by step, with the screenshots",
   "@replayWatchTooltip": {
     "description": "The tooltip of Watch replay."
+  },
+  "resumePhoneMenu": "Resume connection",
+  "@resumePhoneMenu": {
+    "description": "A menu item in a paused phone's right-click menus: Pinky connects to the phone again."
   },
   "ruleActionAgentRequest": "agent request",
   "@ruleActionAgentRequest": {

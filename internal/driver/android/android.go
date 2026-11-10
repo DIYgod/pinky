@@ -151,6 +151,7 @@ type Provider struct {
 	// forgotten holds the phones the person removed from Pinky, by id,
 	// which the driver no longer connects to by itself (forget.go).
 	forgotten map[string]bool
+	paused    map[string]bool // phones the person paused in Pinky (pause.go)
 
 	wifi *reconnector // nil without Config.ReconnectWiFi
 	// net keeps the phones reached over the network without Wireless

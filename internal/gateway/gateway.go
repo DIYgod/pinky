@@ -124,6 +124,7 @@ type Gateway struct {
 	recordOn   bool                      // record the screen of new tasks
 	background map[string]bool           // the person's choice per phone: agents on a background display, or not
 	removed    map[string]bool           // phones the person removed, kept off the list while listed over the network (remove.go)
+	paused     map[string]bool           // phones the person paused: listed, but not opened (pause.go)
 	known      map[string]bool           // phones that are the person's, which providers may open over Wi-Fi (wifi.go)
 	names      map[string]history.Device // what the history store calls the phones Pinky has seen (wifi.go)
 	chosen     map[string]string         // the connection the person chose per phone, none for Automatic (connection.go)
@@ -158,6 +159,7 @@ func New(o Options) (*Gateway, error) {
 		hubs:       map[string]*hub{},
 		background: map[string]bool{},
 		removed:    map[string]bool{},
+		paused:     map[string]bool{},
 		known:      map[string]bool{},
 		names:      map[string]history.Device{},
 		chosen:     map[string]string{},
@@ -186,6 +188,7 @@ func New(o Options) (*Gateway, error) {
 		}
 		g.loadRemoved()
 		g.loadKnown()
+		g.loadPaused()
 	}
 	g.approvals = approval.New(approval.Options{
 		Timeout:  o.ApprovalTimeout,
@@ -284,6 +287,7 @@ func (g *Gateway) discoverLoop() {
 		g.discover(ctx)
 		g.pollLocks(ctx)
 		cancel()
+		g.pollCapture()
 		g.expireOffline()
 	}
 }
@@ -355,6 +359,13 @@ func (g *Gateway) discover(ctx context.Context) {
 			switch {
 			case d.online:
 				gone = append(gone, d)
+			case g.paused[id]:
+				// Paused: it stays on the list, and plugging it in from
+				// now resumes it (pause.go).
+				d.pauseAway = true
+				if unlisted(d) {
+					left = append(left, id)
+				}
 			case foundLocked(d) && !g.known[id] && d.lease == nil:
 				// Found on Wi-Fi and never used: nothing to keep once it
 				// is gone (wifi.go).
@@ -432,6 +443,7 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		d = newDevice(p, info)
 		g.devices[info.ID] = d
 	}
+	resumed := g.paused[info.ID] && g.pausedListedLocked(d, info)
 	old := d.info
 	if info.Name == "" {
 		// Listed without a name, as an iPhone usbmuxd lost (wifi.go): the
@@ -481,7 +493,7 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 		d.moving = time.Time{}
 		g.wakeLocked(d)
 	}
-	open := info.State == driver.StateOnline && d.dev == nil && !d.opening && !d.removed
+	open := info.State == driver.StateOnline && d.dev == nil && !d.opening && !d.removed && !g.paused[d.id]
 	if open {
 		d.opening, d.openingAt = true, time.Now()
 		if time.Now().Before(d.moving) {
@@ -491,7 +503,7 @@ func (g *Gateway) updateDevice(p driver.Provider, info driver.Info) *device {
 	}
 	offline := info.State != driver.StateOnline && d.online
 	g.mu.Unlock()
-	if !ok || old != info {
+	if !ok || old != info || resumed {
 		g.emit(Event{Kind: EventDevices, DeviceID: info.ID})
 		if waitsForStep(old.State) != waitsForStep(info.State) {
 			g.emit(Event{Kind: EventNeeds, DeviceID: info.ID}) // setupNeedLocked
@@ -526,12 +538,14 @@ func (g *Gateway) open(ctx context.Context, d *device, p driver.Provider) {
 	dev, err := p.Open(ctx, d.id)
 	g.mu.Lock()
 	d.opening = false
-	if err != nil || g.closed || d.removed {
+	// Paused while it opened: what opened closes again (pause.go).
+	paused := g.paused[d.id]
+	if err != nil || g.closed || d.removed || paused {
 		step := false
 		if err != nil {
 			d.openErr = err
 			var se *driver.SetupError
-			if errors.As(err, &se) && se.Setup != "" && !g.closed && !d.removed {
+			if errors.As(err, &se) && se.Setup != "" && !g.closed && !d.removed && !paused {
 				// The phone waits for the person (the passcode before the
 				// helper starts): it needs setup from now, not from the
 				// next listing, so a task's call says so at once.

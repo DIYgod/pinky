@@ -173,6 +173,7 @@ type device struct {
 	updateAsks bool
 	way        string // iPhone: the connection the person chose
 	connecting string // the status line while the fake "opens" it (wifi.go)
+	paused     bool   // the person paused Pinky's connection to it (pause.go)
 }
 
 type task struct {
@@ -422,7 +423,13 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 	if running {
 		v.TaskID = d.task.view.ID
 	}
+	v.Paused = d.paused
+	v.Streaming = d.info.State == driver.StateOnline && !d.paused
 	switch {
+	case d.paused:
+		v.Status, v.StatusLine = gateway.DeviceOffline, "Paused"
+		v.Info.State, v.Info.Setup, v.Info.Detail = driver.StateOffline, "", ""
+		v.Features = gateway.Features{}
 	case d.connecting != "":
 		v.Status, v.StatusLine = gateway.DeviceConnecting, d.connecting
 		v.Info.State = driver.StateOffline

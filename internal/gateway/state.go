@@ -42,8 +42,14 @@ type device struct {
 	switchBack         *time.Timer
 	// closing is closed once the last session's Close returned, so the
 	// next one does not start while it stops.
-	closing      chan struct{}
-	removed      bool // the person removed it (remove.go); a new device takes its place if it comes back
+	closing chan struct{}
+	removed bool // the person removed it (remove.go); a new device takes its place if it comes back
+	// pauseAway is set while the person paused it (pause.go) once it was
+	// seen away from its cable: plugging it in from then on resumes it.
+	pauseAway bool
+	// capturing is what the client last heard of whether the phone sends
+	// its screen to Pinky (pollCapture).
+	capturing    bool
 	offlineSince time.Time
 	offlineWhy   string
 	// openErr is why the last Open failed, nil once it opened: a task
@@ -307,6 +313,7 @@ const (
 	OutcomeDisconnected = "disconnected" // the agent's session closed
 	OutcomeOffline      = "offline"      // the phone did not come back in time
 	OutcomeReplaced     = "replaced"     // the agent started another task on the device
+	OutcomePaused       = "paused"       // the person paused Pinky's connection to the phone (pause.go)
 )
 
 // stateForOutcome maps how a task ended to its card state. An agent that
@@ -316,7 +323,7 @@ func stateForOutcome(o string) TaskState {
 	switch o {
 	case OutcomeDone, OutcomeReplaced, OutcomeDisconnected, OutcomeExpired, "partial":
 		return TaskDone
-	case OutcomeStopped:
+	case OutcomeStopped, OutcomePaused:
 		return TaskStopped
 	}
 	return TaskFailed

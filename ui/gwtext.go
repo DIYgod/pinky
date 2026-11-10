@@ -534,6 +534,7 @@ var outcomes = map[string]func() string{
 	"done": locales.GwOutcomeDone, "failed": locales.GwOutcomeFailed, "partial": locales.GwOutcomePartial,
 	"cancelled": locales.GwOutcomeCancelled, "stopped": locales.GwOutcomeStopped, "expired": locales.GwOutcomeExpired,
 	"disconnected": locales.GwOutcomeDisconnected, "offline": locales.GwOutcomeOffline, "replaced": locales.GwOutcomeReplaced,
+	"paused": locales.GwOutcomePaused,
 }
 
 // stepText says a step's first line as the gateway wrote it.
@@ -950,6 +951,8 @@ func statusLine(d gateway.DeviceView) string {
 	switch s {
 	case "Offline":
 		return locales.GwStatusOffline()
+	case "Paused":
+		return locales.GwStatusPaused()
 	case "Locked":
 		return locales.GwStatusLocked()
 	case "Idle":

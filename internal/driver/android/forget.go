@@ -38,11 +38,13 @@ func (p *Provider) Remember(id string) {
 	p.mu.Unlock()
 }
 
-// forgot reports whether the person removed the phone with this id.
+// forgot reports whether the person removed the phone with this id, or
+// paused it (pause.go): either way the driver does not connect to it by
+// itself.
 func (p *Provider) forgot(id string) bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return id != "" && p.forgotten[id]
+	return id != "" && (p.forgotten[id] || p.paused[id])
 }
 
 // Disconnect implements driver.Forgetter. It drops the phone's connections

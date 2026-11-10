@@ -75,6 +75,16 @@ type DeviceView struct {
 	// Features says what the phone's driver offers, so the client shows
 	// only the controls that work. All false while the phone is offline.
 	Features Features
+	// Paused is set while the person paused Pinky's connection to the
+	// phone (Gateway.PauseDevice): it shows offline, with StatusLine
+	// "Paused", and Pinky does not open it until they resume it or plug
+	// it in again.
+	Paused bool
+	// Streaming is set while the phone sends its screen to Pinky right
+	// now: a mirror or a recording watches it, or the driver keeps
+	// capturing it (an iPhone's display stream, which iOS shows as screen
+	// sharing, stops a while after the last look or input).
+	Streaming bool
 }
 
 // Features are the optional driver capabilities the client has controls for.

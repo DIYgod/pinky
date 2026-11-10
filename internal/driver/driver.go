@@ -1153,6 +1153,27 @@ type Forgetter interface {
 	Disconnect(ctx context.Context, id string) error
 }
 
+// Pauser is a Provider that the gateway tells which phones the person
+// paused in Pinky. The gateway neither opens a paused phone nor keeps its
+// session; the provider, for its part, stops what it does with the phone
+// by itself while listing it: an iPhone's checks over a CoreDevice tunnel
+// and its WebDriverAgent runner waiting for the passcode, an Android
+// phone's reconnects over Wi-Fi. It still lists the phone as it finds it,
+// so the gateway sees it plugged in. The gateway calls SetPaused before
+// the first List for each phone paused earlier.
+type Pauser interface {
+	SetPaused(id string, paused bool)
+}
+
+// CaptureReporter is a Device that says whether it captures the phone's
+// screen right now. On an iPhone that is the display stream, during which
+// iOS tells apps the screen is being shared, keeps the camera and the
+// microphone from them and some banking apps refuse to run; the driver
+// stops it a while after the last view or input.
+type CaptureReporter interface {
+	Capturing() bool
+}
+
 // WiFiFinder is a Provider that also reaches phones over Wi-Fi by itself:
 // iPhones and iPads that usbmuxd lists over the network. Those include
 // phones that are not the person's, such as a family member's iPad that was

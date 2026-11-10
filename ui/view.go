@@ -164,8 +164,8 @@ func (a *app) sidebarPhones(c *mg.Context) {
 			if on {
 				reveal(row, d.Info.ID)
 			}
-			if a.canRemove() {
-				row.ContextMenu(func(m *mg.Menu) { a.removeMenuItem(m, d) })
+			if a.hasPhoneMenu() {
+				row.ContextMenu(func(m *mg.Menu) { a.phoneMenu(m, d) })
 			}
 			row.Label(locales.SidebarPhoneRow(d.Info.Name, statusLine(d))).Children(func() {
 				statusDot(c, d)

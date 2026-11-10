@@ -304,6 +304,12 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 	if l.session.leases[d.id] == l {
 		delete(l.session.leases, d.id)
 	}
+	if outcome == OutcomePaused {
+		if l.session.pausedOn == nil {
+			l.session.pausedOn = map[string]bool{}
+		}
+		l.session.pausedOn[d.id] = true
+	}
 	if outcome == OutcomeStopped {
 		l.session.barred[d.id] = true
 		g.noteStopLocked(l.session, d.id)
@@ -320,11 +326,12 @@ func (g *Gateway) endLeaseLocked(l *lease, outcome, summary string) {
 	if n := len(g.ended); n > 50 {
 		g.ended = append([]*task(nil), g.ended[n-50:]...)
 	}
-	if outcome != OutcomeStopped {
-		// After Stop the gateway leaves the phone alone, reads included.
+	if outcome != OutcomeStopped && outcome != OutcomePaused {
+		// After Stop, or a pause, the gateway leaves the phone alone,
+		// reads included.
 		g.confirmAtEndLocked(d)
 	}
-	g.stopVideoLocked(d, outcome != OutcomeStopped)
+	g.stopVideoLocked(d, outcome != OutcomeStopped && outcome != OutcomePaused)
 	g.closeBackgroundLocked(l)
 	if d.lease == nil {
 		g.switchBackLater(d) // a connection the task moved it to (taskconn.go)

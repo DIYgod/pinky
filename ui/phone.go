@@ -50,6 +50,9 @@ func (a *app) phonesPage(c *mg.Context) {
 		}
 	} else if d := a.device(a.sel); d != nil {
 		name, line = d.Info.Name, connectionLine(*d)
+		if d.Streaming {
+			line += " · " + locales.PhoneStreaming()
+		}
 		if t := a.taskOf(d.Info.ID); a.backgroundTask(*d, t) {
 			line += " · " + locales.PhoneWorksInBackground(agentOrTheAgent(t))
 		}
@@ -80,6 +83,10 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	if a.chk.showing == d.Info.ID {
 		a.checkupPanel(c, d)
+		return
+	}
+	if d.Paused {
+		a.pausedPage(c, d)
 		return
 	}
 	if d.Status == gateway.DeviceConnecting {
@@ -412,8 +419,11 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 				a.setBackground(d, on)
 			}
 		})
-		if a.canRemove() {
+		if a.canPause() || a.canRemove() {
 			mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
+		}
+		a.pauseMenuItem(c, d, func() { open = false })
+		if a.canRemove() {
 			if menuItem(c, locales.RemovePhoneMenu(), p.red).Clicked() {
 				open = false
 				a.askRemove(d)
@@ -516,8 +526,8 @@ func (a *app) phoneTiles(c *mg.Context, cols []mg.Track, width float32) {
 				tile.Background(p.bg2)
 			}
 			hovered := tile.Hovered()
-			if a.canRemove() {
-				tile.ContextMenu(func(m *mg.Menu) { a.removeMenuItem(m, d) })
+			if a.hasPhoneMenu() {
+				tile.ContextMenu(func(m *mg.Menu) { a.phoneMenu(m, d) })
 			}
 			tile.Children(func() {
 				sel := mg.ButtonBase(c).Column().AlignItems(mg.Stretch).Justify(mg.Start).FillWidth().Padding(14).Gap(10).Radius(14).Label(locales.PhoneShow(d.Info.Name))

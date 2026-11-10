@@ -381,7 +381,8 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		Description: "Start a task on a phone: leases the phone to this session and returns its first screen. " +
 			"The task name shows in Pinky, so the person knows what you are doing. The first connection of a new agent waits for the person's approval (approval_pending; repeat with approval_id). " +
 			"Another session's phone returns lease_held. A phone that waits for the person to do a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode) " +
-			"returns device_needs_setup with the step: ask the person with phone_handoff. Call phone_release when done.",
+			"returns device_needs_setup with the step: ask the person with phone_handoff. A phone the person paused in Pinky returns device_paused: " +
+			"ask them to resume it, or use another phone. Call phone_release when done.",
 		InputSchema: schema[connectIn](func(p map[string]*jsonschema.Schema) { enum(p["connection"], "auto", "helper", "coredevice") }),
 		Annotations: &sdk.ToolAnnotations{OpenWorldHint: boolp(false)}},
 		func(ctx context.Context, req *sdk.CallToolRequest, in connectIn) (*sdk.CallToolResult, any, error) {

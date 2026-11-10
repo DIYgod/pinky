@@ -65,7 +65,10 @@ type ErrorCode string
 // Error codes. The first five are DESIGN.md's; invalid_argument covers bad
 // arguments and misused approval ids, internal covers gateway failures.
 const (
-	ErrDeviceOffline   ErrorCode = "device_offline"
+	ErrDeviceOffline ErrorCode = "device_offline"
+	// ErrDevicePaused: the person paused Pinky's connection to the phone
+	// in Pinky (pause.go); it is unusable until they resume it.
+	ErrDevicePaused    ErrorCode = "device_paused"
 	ErrLeaseHeld       ErrorCode = "lease_held"
 	ErrScopeDenied     ErrorCode = "scope_denied"
 	ErrNotFound        ErrorCode = "not_found"
@@ -250,6 +253,7 @@ type Session struct {
 	// Guarded by Gateway.mu.
 	leases    map[string]*lease // by device id
 	barred    map[string]bool   // devices the person stopped this session on
+	pausedOn  map[string]bool   // devices whose lease ended as the person paused them (pause.go)
 	used      []string          // every device it leased
 	closed    bool
 	stopped   bool     // the person pressed Stop all
@@ -328,6 +332,9 @@ func (s *Session) acquire(ref string) (*lease, *Result) {
 		if g.barredLocked(s, d) {
 			return nil, statusResult(StatusStopped, "The person stopped the task on %s and its lease is gone. End the task.", d.name())
 		}
+		if g.paused[d.id] {
+			return nil, pausedResult(d.name())
+		}
 		if l = s.leases[d.id]; l == nil {
 			if res := g.busyElsewhereLocked(s, d, ""); res != nil {
 				return nil, res
@@ -348,6 +355,9 @@ func (s *Session) acquire(ref string) (*lease, *Result) {
 		case 0:
 			if g.stoppedLocked(s) {
 				return nil, statusResult(StatusStopped, "The person pressed Stop and the lease is gone. End the task.")
+			}
+			if d := g.pausedLeaseLocked(s); d != nil {
+				return nil, pausedResult(d.name())
 			}
 			return nil, errResult(ErrInvalidArgument, "No phone is connected in this session; call phone_connect first.")
 		case 1:
@@ -386,6 +396,13 @@ func (g *Gateway) finish(l *lease, r *Result) *Result {
 	g.mu.Unlock()
 	if note != "" {
 		r.Message = joinNote(r.Message, note)
+	}
+	if ended && by == OutcomePaused {
+		ran := r.Status == StatusSettled || r.Status == StatusUncertain
+		r = pausedResult(name)
+		if ran {
+			r.Message += " The last action may have happened before the pause."
+		}
 	}
 	if ended && by == OutcomeStopped {
 		ran := r.Status == StatusSettled || r.Status == StatusUncertain
@@ -431,6 +448,8 @@ func (g *Gateway) deviceListLocked() string {
 		}
 		state := "online"
 		switch {
+		case g.paused[d.id]:
+			state = "paused by the person"
 		case d.online:
 		case waitsForStep(d.info.State):
 			state = "connected, needs setup"
@@ -487,9 +506,11 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	} else {
 		// The phone that is online, or with none, the one that waits for
 		// a step: connecting to it says which step.
-		var online, waiting []*device
+		var online, waiting, paused []*device
 		for _, x := range g.devices {
 			switch {
+			case g.paused[x.id]:
+				paused = append(paused, x)
 			case x.online:
 				online = append(online, x)
 			case foundLocked(x):
@@ -500,6 +521,10 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		}
 		if len(online) == 0 {
 			online = waiting
+		}
+		if len(online) == 0 && len(paused) == 1 {
+			// The only phone is paused: connecting to it says so.
+			online = paused
 		}
 		switch len(online) {
 		case 0:
@@ -512,6 +537,10 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			g.mu.Unlock()
 			return errResult(ErrInvalidArgument, "Several phones are connected: %s. Pass device.", list)
 		}
+	}
+	if g.paused[d.id] {
+		g.mu.Unlock()
+		return pausedResult(d.name())
 	}
 	if s.barred[d.id] || s.stopped {
 		g.mu.Unlock()

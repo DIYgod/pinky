@@ -11289,6 +11289,24 @@ func (msgs Messages) GwFilesList(names string) string {
 	return Catalog.Format(msgs.locale, "gwFilesList", map[string]any{"names": names})
 }
 
+// GwOutcomePaused says "paused"
+// in the language the app shows.
+//
+// How a task ended, inside gwStepFinished: the person paused Pinky's
+// connection to the phone. Shown only in other languages; in English the
+// gateway's own words show.
+func GwOutcomePaused() string { return In(i18n.Locale()).GwOutcomePaused() }
+
+// GwOutcomePaused says "paused"
+// in the language of msgs.
+//
+// How a task ended, inside gwStepFinished: the person paused Pinky's
+// connection to the phone. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwOutcomePaused() string {
+	return Catalog.Format(msgs.locale, "gwOutcomePaused", nil)
+}
+
 // GwRecordingsDetail says "Unlike screenshots, recordings do not cover one-time codes or blocked apps' notifications."
 // in the language the app shows.
 //
@@ -12009,6 +12027,24 @@ func GwStatusOfflineDetail(detail string) string {
 // words show.
 func (msgs Messages) GwStatusOfflineDetail(detail string) string {
 	return Catalog.Format(msgs.locale, "gwStatusOfflineDetail", map[string]any{"detail": detail})
+}
+
+// GwStatusPaused says "Paused"
+// in the language the app shows.
+//
+// A phone's status line in the sidebar and tiles: the person paused Pinky's
+// connection to it. Shown only in other languages; in English the gateway's
+// own words show.
+func GwStatusPaused() string { return In(i18n.Locale()).GwStatusPaused() }
+
+// GwStatusPaused says "Paused"
+// in the language of msgs.
+//
+// A phone's status line in the sidebar and tiles: the person paused Pinky's
+// connection to it. Shown only in other languages; in English the gateway's
+// own words show.
+func (msgs Messages) GwStatusPaused() string {
+	return Catalog.Format(msgs.locale, "gwStatusPaused", nil)
 }
 
 // GwStatusPhoneChanged says "Not the same phone"
@@ -15731,6 +15767,40 @@ func (msgs Messages) PanelWithNote(text string, note string) string {
 	return Catalog.Format(msgs.locale, "panelWithNote", map[string]any{"text": text, "note": note})
 }
 
+// PausePhoneMenu says "Pause connection"
+// in the language the app shows.
+//
+// A menu item in a phone's ⋯ menu under its mirror and its right-click
+// menus: Pinky stops its screen stream and input connection until the
+// person resumes it. The phone stays in Pinky.
+func PausePhoneMenu() string { return In(i18n.Locale()).PausePhoneMenu() }
+
+// PausePhoneMenu says "Pause connection"
+// in the language of msgs.
+//
+// A menu item in a phone's ⋯ menu under its mirror and its right-click
+// menus: Pinky stops its screen stream and input connection until the
+// person resumes it. The phone stays in Pinky.
+func (msgs Messages) PausePhoneMenu() string {
+	return Catalog.Format(msgs.locale, "pausePhoneMenu", nil)
+}
+
+// PausePhoneMenuDesc says "Stops the screen stream and agents until you resume. Plugging it in resumes it too."
+// in the language the app shows.
+//
+// Under Pause connection in the ⋯ menu under the mirror: what pausing
+// does, and that plugging the phone in by cable resumes it.
+func PausePhoneMenuDesc() string { return In(i18n.Locale()).PausePhoneMenuDesc() }
+
+// PausePhoneMenuDesc says "Stops the screen stream and agents until you resume. Plugging it in resumes it too."
+// in the language of msgs.
+//
+// Under Pause connection in the ⋯ menu under the mirror: what pausing
+// does, and that plugging the phone in by cable resumes it.
+func (msgs Messages) PausePhoneMenuDesc() string {
+	return Catalog.Format(msgs.locale, "pausePhoneMenuDesc", nil)
+}
+
 // PhoneAddPhone says "Add phone"
 // in the language the app shows.
 //
@@ -16335,6 +16405,68 @@ func (msgs Messages) PhonePageTitle() string {
 	return Catalog.Format(msgs.locale, "phonePageTitle", nil)
 }
 
+// PhonePauseFailed says "Couldn't change the connection to {name}: {error}"
+// in the language the app shows.
+//
+// A notice when pausing or resuming a phone failed. error is in English.
+func PhonePauseFailed(name string, error string) string {
+	return In(i18n.Locale()).PhonePauseFailed(name, error)
+}
+
+// PhonePauseFailed says "Couldn't change the connection to {name}: {error}"
+// in the language of msgs.
+//
+// A notice when pausing or resuming a phone failed. error is in English.
+func (msgs Messages) PhonePauseFailed(name string, error string) string {
+	return Catalog.Format(msgs.locale, "phonePauseFailed", map[string]any{"name": name, "error": error})
+}
+
+// PhonePausedDetail says "Pinky doesn't stream its screen, and agents can't use it until you resume. Plugging it in by cable resumes it too."
+// in the language the app shows.
+//
+// A paused phone's page, under its title: what pausing means, and that
+// plugging the phone in resumes it.
+func PhonePausedDetail() string { return In(i18n.Locale()).PhonePausedDetail() }
+
+// PhonePausedDetail says "Pinky doesn't stream its screen, and agents can't use it until you resume. Plugging it in by cable resumes it too."
+// in the language of msgs.
+//
+// A paused phone's page, under its title: what pausing means, and that
+// plugging the phone in resumes it.
+func (msgs Messages) PhonePausedDetail() string {
+	return Catalog.Format(msgs.locale, "phonePausedDetail", nil)
+}
+
+// PhonePausedResume says "Resume"
+// in the language the app shows.
+//
+// The button on a paused phone's page: Pinky connects to the phone again.
+func PhonePausedResume() string { return In(i18n.Locale()).PhonePausedResume() }
+
+// PhonePausedResume says "Resume"
+// in the language of msgs.
+//
+// The button on a paused phone's page: Pinky connects to the phone again.
+func (msgs Messages) PhonePausedResume() string {
+	return Catalog.Format(msgs.locale, "phonePausedResume", nil)
+}
+
+// PhonePausedTitle says "{phone} is paused"
+// in the language the app shows.
+//
+// A paused phone's page, under a phone outline: the person paused Pinky's
+// connection to it.
+func PhonePausedTitle(phone string) string { return In(i18n.Locale()).PhonePausedTitle(phone) }
+
+// PhonePausedTitle says "{phone} is paused"
+// in the language of msgs.
+//
+// A paused phone's page, under a phone outline: the person paused Pinky's
+// connection to it.
+func (msgs Messages) PhonePausedTitle(phone string) string {
+	return Catalog.Format(msgs.locale, "phonePausedTitle", map[string]any{"phone": phone})
+}
+
 // PhonePhoneScreen says "Phone's screen"
 // in the language the app shows.
 //
@@ -16559,6 +16691,24 @@ func PhoneShowOnMirror() string { return In(i18n.Locale()).PhoneShowOnMirror() }
 // agent's screen and the phone's.
 func (msgs Messages) PhoneShowOnMirror() string {
 	return Catalog.Format(msgs.locale, "phoneShowOnMirror", nil)
+}
+
+// PhoneStreaming says "streaming its screen"
+// in the language the app shows.
+//
+// Added to the phone page header's second line, after · , while the phone
+// sends its screen to Pinky (the mirror, a recording, or an iPhone's
+// display stream that iOS shows as screen sharing).
+func PhoneStreaming() string { return In(i18n.Locale()).PhoneStreaming() }
+
+// PhoneStreaming says "streaming its screen"
+// in the language of msgs.
+//
+// Added to the phone page header's second line, after · , while the phone
+// sends its screen to Pinky (the mirror, a recording, or an iPhone's
+// display stream that iOS shows as screen sharing).
+func (msgs Messages) PhoneStreaming() string {
+	return Catalog.Format(msgs.locale, "phoneStreaming", nil)
 }
 
 // PhoneSwitchCoreDeviceTitle says "Moving {phone} back to CoreDevice…"
@@ -18407,6 +18557,22 @@ func ReplayWatchTooltip() string { return In(i18n.Locale()).ReplayWatchTooltip()
 // The tooltip of Watch replay.
 func (msgs Messages) ReplayWatchTooltip() string {
 	return Catalog.Format(msgs.locale, "replayWatchTooltip", nil)
+}
+
+// ResumePhoneMenu says "Resume connection"
+// in the language the app shows.
+//
+// A menu item in a paused phone's right-click menus: Pinky connects to the
+// phone again.
+func ResumePhoneMenu() string { return In(i18n.Locale()).ResumePhoneMenu() }
+
+// ResumePhoneMenu says "Resume connection"
+// in the language of msgs.
+//
+// A menu item in a paused phone's right-click menus: Pinky connects to the
+// phone again.
+func (msgs Messages) ResumePhoneMenu() string {
+	return Catalog.Format(msgs.locale, "resumePhoneMenu", nil)
 }
 
 // RuleActionAgentRequest says "agent request"

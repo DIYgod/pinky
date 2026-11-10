@@ -80,6 +80,7 @@ type Provider struct {
 	muxPhones  int                              // phones the last answered List found
 	listFn     func() (goios.DeviceList, error) // for tests: usbmuxd's list
 	openFails  map[string]string                // by UDID: why the last open got no picture (noVideoError.Detail)
+	paused     map[string]bool                  // by UDID: phones the person paused in Pinky (pause.go)
 }
 
 // recheckOffline is how often List asks a phone that is not online again,
@@ -255,6 +256,9 @@ func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 // a phone that stays attached costs little more than a look at its services
 // a minute.
 func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
+	if info, ok := p.pausedInfo(e); ok {
+		return info
+	}
 	id, key := e.Properties.SerialNumber, keyOf(e)
 	p.mu.Lock()
 	k, ok := p.known[id]

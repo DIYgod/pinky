@@ -306,6 +306,9 @@ func (g *Gateway) gate(l *lease, approvalID string, action bool) *Result {
 		// it again (wifi.go).
 	}
 	switch {
+	case l.ended && l.endedBy == OutcomePaused:
+		g.mu.Unlock()
+		return pausedResult(d.name())
 	case l.ended:
 		g.mu.Unlock()
 		return statusResult(StatusStopped, "The lease ended (%s). End the task, or call phone_connect again.", l.endedBy)
@@ -1280,6 +1283,9 @@ func (g *Gateway) afterOpen(l *lease, info approval.Info) *Result {
 	}
 	g.mu.Unlock()
 	switch {
+	case ended && by == OutcomePaused:
+		g.approvals.Withdraw(info.ID, by)
+		return pausedResult(l.dev.name())
 	case ended:
 		g.approvals.Withdraw(info.ID, by)
 		return statusResult(StatusStopped, "The lease ended (%s). Nothing was done.", by)
@@ -1504,6 +1510,9 @@ func (g *Gateway) pendingResult(l *lease, info approval.Info) *Result {
 func (g *Gateway) withdrawnResult(l *lease, out approval.Outcome) *Result {
 	if out.Reason == OutcomeStopped {
 		return statusResult(StatusStopped, "The person pressed Stop; the lease is gone. End the task.")
+	}
+	if out.Reason == OutcomePaused {
+		return pausedResult(l.dev.name())
 	}
 	if out.Reason == reasonTookOver {
 		g.mu.Lock()

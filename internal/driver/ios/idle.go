@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/driver"
 )
 
 // While the display stream runs, iOS tells apps that the screen is being
@@ -148,3 +150,13 @@ func idleSince(now time.Time, idle time.Duration, ts ...time.Time) bool {
 	}
 	return now.Sub(last) >= idle
 }
+
+// Capturing implements driver.CaptureReporter: the display stream runs, so
+// iOS shows the phone's screen as shared (see above).
+func (d *Device) Capturing() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return !d.closed && d.m != nil && !d.m.stopped.Load()
+}
+
+var _ driver.CaptureReporter = (*Device)(nil)
