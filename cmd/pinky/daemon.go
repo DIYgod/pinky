@@ -21,6 +21,7 @@ import (
 	"github.com/DIYgod/pinky/internal/mcp"
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/telemetry"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui"
 )
 
@@ -45,6 +46,12 @@ func runDaemon(args []string) error {
 	if err != nil {
 		return err
 	}
+	// Once the gateway has closed, as the app's settings say then.
+	var restarting bool
+	defer func() {
+		s := loadSettings(filepath.Join(rg.Dirs.Config, "settings.json"), c.Log)
+		stopADBAtQuit(s.StopADBOnQuit, c.Fake, restarting, c.Log)
+	}()
 	defer rg.Close()
 	// Recording, retention, iPhones over Wi-Fi and usage statistics follow
 	// the app's settings, when there are any.
@@ -87,6 +94,7 @@ func runDaemon(args []string) error {
 		go daemonUpdates(ctx, upd, c.Log)
 	}
 	err = rg.Serve(ctx)
+	restarting = update.Restarting(rg.Dirs.Config)
 	c.Log.Info("gateway stopping")
 	return err
 }

@@ -7228,6 +7228,14 @@
       }
     }
   },
+  "settingsAdvancedStopAdb": "Stop adb when Pinky quits",
+  "@settingsAdvancedStopAdb": {
+    "description": "Settings › Advanced: the switch that stops, when Pinky quits, the adb server running the copy of adb that comes with Pinky. adb is Android's own tool name; keep it as is."
+  },
+  "settingsAdvancedStopAdbDesc": "Quitting Pinky also stops the adb it brought for Android phones, unless another app such as Android Studio is using it. An adb you installed yourself keeps running.",
+  "@settingsAdvancedStopAdbDesc": {
+    "description": "Settings › Advanced: the line under Stop adb when Pinky quits. adb and Android Studio are names; keep them as they are."
+  },
   "settingsAdvancedVideo": "Video",
   "@settingsAdvancedVideo": {
     "description": "Settings › Advanced, in Developer mode: the row of the video decoder in use."

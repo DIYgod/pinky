@@ -22,6 +22,7 @@ import (
 	"github.com/DIYgod/pinky/internal/policy"
 	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/internal/secret"
+	"github.com/DIYgod/pinky/internal/update"
 	"github.com/DIYgod/pinky/ui"
 )
 
@@ -87,6 +88,11 @@ func runApp(args []string) error {
 	if err != nil {
 		return failed(err)
 	}
+	// Once the gateway has closed (deferred calls run last to first).
+	var stopADB atomic.Bool
+	stopADB.Store(settings.StopADBOnQuit)
+	var restarting bool
+	defer func() { stopADBAtQuit(stopADB.Load(), c.Fake, restarting, c.Log) }()
 	defer rg.Close()
 	rg.srv.Kind = api.KindApp
 	// Opening Pinky again shows this window (takeOver), once the client
@@ -116,7 +122,7 @@ func runApp(args []string) error {
 	}()
 
 	gatewaySettings(&settings, rg)
-	return ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
+	err = ui.Run(clientAPI(rg, tel, c.Fake), ui.Options{
 		BindShow: func(f func()) { show.Store(&f) },
 		Version:  version,
 		Theme:    *theme,
@@ -126,6 +132,7 @@ func runApp(args []string) error {
 			applySettings(rg, old, s, c.Log)
 			applyTelemetry(tel, s)
 			unlock.on.Store(s.UnlockFromComputer)
+			stopADB.Store(s.StopADBOnQuit)
 			if err := saveSettings(settingsPath, s); err != nil {
 				c.Log.Warn("save settings", "err", err)
 			}
@@ -150,6 +157,8 @@ func runApp(args []string) error {
 			}
 		},
 	})
+	restarting = update.Restarting(dirs.Config)
+	return err
 }
 
 // openLog opens the app's log for appending, starting over once it passes

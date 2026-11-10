@@ -19201,6 +19201,40 @@ func (msgs Messages) SettingsAdvancedRulesOpenFailed(reason string) string {
 	return Catalog.Format(msgs.locale, "settingsAdvancedRulesOpenFailed", map[string]any{"reason": reason})
 }
 
+// SettingsAdvancedStopAdb says "Stop adb when Pinky quits"
+// in the language the app shows.
+//
+// Settings › Advanced: the switch that stops, when Pinky quits, the adb
+// server running the copy of adb that comes with Pinky. adb is Android's
+// own tool name; keep it as is.
+func SettingsAdvancedStopAdb() string { return In(i18n.Locale()).SettingsAdvancedStopAdb() }
+
+// SettingsAdvancedStopAdb says "Stop adb when Pinky quits"
+// in the language of msgs.
+//
+// Settings › Advanced: the switch that stops, when Pinky quits, the adb
+// server running the copy of adb that comes with Pinky. adb is Android's
+// own tool name; keep it as is.
+func (msgs Messages) SettingsAdvancedStopAdb() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedStopAdb", nil)
+}
+
+// SettingsAdvancedStopAdbDesc says "Quitting Pinky also stops the adb it brought for Android phones, unless another app such as Android Studio is using i…"
+// in the language the app shows.
+//
+// Settings › Advanced: the line under Stop adb when Pinky quits. adb and
+// Android Studio are names; keep them as they are.
+func SettingsAdvancedStopAdbDesc() string { return In(i18n.Locale()).SettingsAdvancedStopAdbDesc() }
+
+// SettingsAdvancedStopAdbDesc says "Quitting Pinky also stops the adb it brought for Android phones, unless another app such as Android Studio is using i…"
+// in the language of msgs.
+//
+// Settings › Advanced: the line under Stop adb when Pinky quits. adb and
+// Android Studio are names; keep them as they are.
+func (msgs Messages) SettingsAdvancedStopAdbDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAdvancedStopAdbDesc", nil)
+}
+
 // SettingsAdvancedVideo says "Video"
 // in the language the app shows.
 //

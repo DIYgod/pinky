@@ -777,6 +777,7 @@ func (a *app) settingsAdvanced(c *mg.Context) {
 	settingsTitle(c, locales.SettingsSectionAdvanced(), locales.SettingsAdvancedIntro())
 	mg.Column(c).Label(locales.SettingsSectionAdvanced()).Children(func() {
 		a.languageRow(c)
+		a.toggleRow(c, "stop-adb", locales.SettingsAdvancedStopAdb(), locales.SettingsAdvancedStopAdbDesc(), false, &st.StopADBOnQuit)
 		a.toggleRow(c, "dev", locales.SettingsAdvancedDevMode(), locales.SettingsAdvancedDevModeDesc(), false, &st.DeveloperMode)
 		if st.DeveloperMode {
 			var parts []string
