@@ -2,6 +2,13 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在 iPhone 上按 App id 打开招商银行时，任务现在也会切到 WebDriverAgent 助手，和按名字打开时一样。
+- iPhone 要求输入密码才允许 WebDriverAgent 助手运行时，Pinky 现在会提醒你在手机上输入并等待，不再悄悄留在 CoreDevice。
+- 智能体不能再点按 App 自己画在截图之外的密码键盘，而是把手机交给你，避免误点用掉一次密码机会。
+- Pinky 更新前就连上的智能体，现在会被告知工具已更新，新选项不会再被悄悄忽略。
+
 ## 2026.1110.28 (2026-11-10)
 
 - 在投屏里用鼠标滚轮滚动时，画面现在会平滑滑动，快速滚动后还会像手指滑动一样带惯性，不再一格一格地跳。感谢 @stoicneko 的反馈。

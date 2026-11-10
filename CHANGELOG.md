@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Opening China Merchants Bank on an iPhone by its app id now moves the task to the WebDriverAgent helper, as opening it by name already did.
+- When the iPhone asks for its passcode to allow the WebDriverAgent helper, Pinky now tells you to enter it on the phone and waits for it, instead of quietly staying on CoreDevice.
+- Agents can no longer tap the keys of an app's own passcode keypad that is hidden from screenshots; they hand the phone to you instead, so a stray tap cannot use up a passcode attempt.
+- An agent whose connection to Pinky was opened before Pinky updated is now told its tools changed, so new options are not silently ignored.
+
 ## 2026.1110.28 (2026-11-10)
 
 - Scrolling the phone mirror with a mouse wheel now glides smoothly and flings like a swipe, instead of jumping a notch at a time. Thanks to @stoicneko for the report.
