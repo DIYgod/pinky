@@ -32,12 +32,13 @@ import (
 type App struct {
 	Package string // the application id
 	Socket  string // the abstract socket its service listens on
+	Label   string // its service's label, as dumpsys accessibility shows it
 }
 
 // The companion's builds.
 var (
-	Release = App{Package: "app.pinky.companion", Socket: "pinky_companion"}
-	Dev     = App{Package: "app.pinky.companion.dev", Socket: "pinky_companion_dev"}
+	Release = App{Package: "app.pinky.companion", Socket: "pinky_companion", Label: "Pinky Companion"}
+	Dev     = App{Package: "app.pinky.companion.dev", Socket: "pinky_companion_dev", Label: "Pinky Companion (dev)"}
 )
 
 // ServiceClass is the accessibility service's class, the same in every

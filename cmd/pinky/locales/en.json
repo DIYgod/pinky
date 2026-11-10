@@ -1784,6 +1784,20 @@
   "@companionErrDeclined": {
     "description": "The Pinky Companion card and the checkup: the error when the person or the phone declined the install (the phone's own confirmation)."
   },
+  "companionErrNoAnswer": "Pinky turned on Pinky Companion's accessibility service, but it didn't start ({detail}). Restart the phone, then try again. If it still doesn't start, send feedback: its diagnostics include what the phone showed.",
+  "@companionErrNoAnswer": {
+    "description": "The Pinky Companion card and the checkup: Pinky turned on the app's accessibility service, but the service did not answer, and the phone showed no known reason. detail is what Pinky saw on the phone, in English. Send feedback is the name of Pinky's feedback window.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "no answer within 10s; Android lists it as enabled but has not bound it; its app is not running"
+      }
+    }
+  },
+  "companionErrNotUnlocked": "The phone hasn't been unlocked since it restarted, and Android starts Pinky Companion only after that. Unlock the phone, then try again.",
+  "@companionErrNotUnlocked": {
+    "description": "The Pinky Companion card and the checkup: the app's accessibility service did not start because the phone has not been unlocked since it started."
+  },
   "companionErrOffline": "The phone went offline. Connect it again, then try again.",
   "@companionErrOffline": {
     "description": "The Pinky Companion card: the error when the phone went offline during the install."
@@ -1835,6 +1849,10 @@
   "companionErrTimeout": "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again.",
   "@companionErrTimeout": {
     "description": "The Pinky Companion card: the error when the install did not finish in time. Allow is the button of the phone's install prompt."
+  },
+  "companionErrUIAutomation": "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and Android keeps accessibility services off while it does. Quit that tool or restart the phone, then try again.",
+  "@companionErrUIAutomation": {
+    "description": "The Pinky Companion card and the checkup: the app's accessibility service did not start because another testing tool holds Android's UI automation, which turns off every accessibility service. Keep the tools' names as they are."
   },
   "companionInstall": "Install",
   "@companionInstall": {

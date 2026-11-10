@@ -172,6 +172,9 @@ func (d *Device) companionOnLocked(ctx context.Context) error {
 		if ctx.Err() == nil {
 			k.failed = err
 		}
+		if se := (*driver.CompanionStartError)(nil); errors.As(err, &se) {
+			return err // it says so, with what the phone showed
+		}
 		return fmt.Errorf("its service did not start: %w", err)
 	}
 	info, err := k.client.Ping(ctx)

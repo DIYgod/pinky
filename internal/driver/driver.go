@@ -837,6 +837,34 @@ type CompanionInstaller interface {
 	InstallCompanion(ctx context.Context) error
 }
 
+// CompanionStartError is the error InstallCompanion returns when Pinky
+// turned the companion app's accessibility service on and it did not
+// answer.
+type CompanionStartError struct {
+	// Reason is what kept it off, as a code clients put into words: one of
+	// the CompanionStart* constants, or "" when the phone showed nothing
+	// that explains it.
+	Reason string
+	// Detail says what Pinky saw on the phone, in a sentence, for logs and
+	// for clients without words for Reason.
+	Detail string
+}
+
+func (e *CompanionStartError) Error() string {
+	return "the companion's accessibility service did not come on: " + e.Detail
+}
+
+// Why the companion's service did not come on, in CompanionStartError.Reason.
+const (
+	// CompanionStartUIAutomation: another tool holds Android's UI
+	// automation (uiautomator, uiautomator2, Appium, Maestro), and Android
+	// keeps every accessibility service off until it lets go.
+	CompanionStartUIAutomation = "ui_automation"
+	// CompanionStartNotUnlocked: the phone has not been unlocked since it
+	// started, and Android starts the service only after that.
+	CompanionStartNotUnlocked = "not_unlocked"
+)
+
 // AppManager installs, updates, uninstalls and stops apps for agents
 // (phone_app, docs/notes/apps.md). The gateway asks the person first and
 // refuses Pinky's own apps and system apps itself; a driver only does what

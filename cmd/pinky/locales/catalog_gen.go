@@ -5435,6 +5435,44 @@ func (msgs Messages) CompanionErrDeclined() string {
 	return Catalog.Format(msgs.locale, "companionErrDeclined", nil)
 }
 
+// CompanionErrNoAnswer says "Pinky turned on Pinky Companion's accessibility service, but it didn't start ({detail}). Restart the phone, then try …"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: Pinky turned on the app's
+// accessibility service, but the service did not answer, and the phone
+// showed no known reason. detail is what Pinky saw on the phone, in
+// English. Send feedback is the name of Pinky's feedback window.
+func CompanionErrNoAnswer(detail string) string {
+	return In(i18n.Locale()).CompanionErrNoAnswer(detail)
+}
+
+// CompanionErrNoAnswer says "Pinky turned on Pinky Companion's accessibility service, but it didn't start ({detail}). Restart the phone, then try …"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: Pinky turned on the app's
+// accessibility service, but the service did not answer, and the phone
+// showed no known reason. detail is what Pinky saw on the phone, in
+// English. Send feedback is the name of Pinky's feedback window.
+func (msgs Messages) CompanionErrNoAnswer(detail string) string {
+	return Catalog.Format(msgs.locale, "companionErrNoAnswer", map[string]any{"detail": detail})
+}
+
+// CompanionErrNotUnlocked says "The phone hasn't been unlocked since it restarted, and Android starts Pinky Companion only after that. Unlock the pho…"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because the phone has not been unlocked since it started.
+func CompanionErrNotUnlocked() string { return In(i18n.Locale()).CompanionErrNotUnlocked() }
+
+// CompanionErrNotUnlocked says "The phone hasn't been unlocked since it restarted, and Android starts Pinky Companion only after that. Unlock the pho…"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because the phone has not been unlocked since it started.
+func (msgs Messages) CompanionErrNotUnlocked() string {
+	return Catalog.Format(msgs.locale, "companionErrNotUnlocked", nil)
+}
+
 // CompanionErrOffline says "The phone went offline. Connect it again, then try again."
 // in the language the app shows.
 //
@@ -5605,6 +5643,26 @@ func CompanionErrTimeout() string { return In(i18n.Locale()).CompanionErrTimeout
 // time. Allow is the button of the phone's install prompt.
 func (msgs Messages) CompanionErrTimeout() string {
 	return Catalog.Format(msgs.locale, "companionErrTimeout", nil)
+}
+
+// CompanionErrUIAutomation says "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and …"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because another testing tool holds Android's UI automation,
+// which turns off every accessibility service. Keep the tools' names as
+// they are.
+func CompanionErrUIAutomation() string { return In(i18n.Locale()).CompanionErrUIAutomation() }
+
+// CompanionErrUIAutomation says "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and …"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup: the app's accessibility service
+// did not start because another testing tool holds Android's UI automation,
+// which turns off every accessibility service. Keep the tools' names as
+// they are.
+func (msgs Messages) CompanionErrUIAutomation() string {
+	return Catalog.Format(msgs.locale, "companionErrUIAutomation", nil)
 }
 
 // CompanionInstall says "Install"

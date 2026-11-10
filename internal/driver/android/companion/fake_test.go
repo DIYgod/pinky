@@ -36,8 +36,11 @@ type fakePhone struct {
 	dropAfter int
 	setText   func(req map[string]any) (any, *Error)
 	apkSum    string // sha256 of the installed APK
-	conns     []net.Conn
-	events    chan string
+	// probe is what the phone shows when the client asks why the service
+	// did not answer (probeCmd); "" fails the command.
+	probe  string
+	conns  []net.Conn
+	events chan string
 }
 
 func newFakePhone(t *testing.T) *fakePhone {
@@ -196,6 +199,11 @@ func (p *fakePhone) Shell(_ context.Context, cmd string) (string, error) {
 		return "", fmt.Errorf("exit status 1")
 	case len(f) == 2 && f[0] == "sha256sum":
 		return p.apkSum + "  " + strings.Trim(f[1], "'") + "\n", nil
+	case strings.HasPrefix(cmd, "echo "+probeMark):
+		if p.probe == "" {
+			return "", fmt.Errorf("exit status 1")
+		}
+		return p.probe, nil
 	case len(f) == 3 && f[0] == "dumpsys" && f[1] == "package":
 		if slices.Contains(p.installed, f[2]) {
 			return "Packages:\n  Package [" + f[2] + "] (1a2b3c):\n    versionCode=1 minSdk=29 targetSdk=36\n    versionName=0.1.0\n", nil
