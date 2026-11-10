@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On Linux, logging out and back in no longer lets a second Pinky start on the same history and phones while the first one is still running. Thanks to pseudoyu.
+
 ## 2026.1110.2 (2026-11-10)
 
 - Confirming it's you on Windows now works when your Windows account has no password: leave the password empty and confirm. Thanks to Kutius.
