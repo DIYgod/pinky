@@ -41,7 +41,7 @@ Go modules read a `v2026…` tag as major version 2026, which the module path do
 
 ### FFmpeg
 
-Every package carries Pinky's own FFmpeg, which `scripts/ffmpeg.sh` builds from the FFmpeg 9 source (checked against its SHA-256): a minimal LGPL build of libavutil, libavcodec (the H.264 and HEVC decoders), libswscale and libavformat, with its license and build notes (`FFmpeg-COPYING.LGPLv2.1`, `FFmpeg-BUILD.txt`).
+Every package carries Pinky's own FFmpeg, which `scripts/ffmpeg.sh` builds from the FFmpeg 9 source (checked against its SHA-256): a minimal LGPL build of libavutil, libavcodec (the H.264 and HEVC decoders), libswscale and libavformat, with its license and build notes (`FFmpeg-COPYING.LGPLv2.1`, `FFmpeg-BUILD.txt`). The Windows build also links in Cisco's OpenH264 as FFmpeg's H.264 encoder (Media Foundation's `h264_mf` is the fallback): its 2.7.0 source comes from Cisco's release, is checked against its SHA-256 too, is built in the same container and is recorded in `FFmpeg-BUILD.txt`. Its source is BSD, so the build stays LGPL; Cisco's patent licence goes with Cisco's own binaries and does not cover a build linked into this FFmpeg (see [platform.md](notes/platform.md#ffmpeg-inside-pinkyapp)).
 
 | Package | Where | Decoding |
 | --- | --- | --- |

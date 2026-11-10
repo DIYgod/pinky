@@ -17,8 +17,9 @@
 # - libavcodec: the H.264 and HEVC decoders and parsers, with VideoToolbox
 #   on macOS and D3D11VA on Windows (internal/video decodes the phones'
 #   streams with them; on Linux it decodes in software), and on Windows
-#   the H.264 encoder of Media Foundation (h264_mf), which the iPhone
-#   driver needs to re-encode the phones' pictures (internal/driver/ios);
+#   the H.264 encoders the iPhone driver needs to re-encode the phones'
+#   pictures (internal/driver/ios): Cisco's OpenH264, built from its
+#   source and linked in, and Media Foundation's h264_mf after it;
 # - libavutil and libswscale (hardware frames, pixel conversion);
 # - libavformat with the MP4/MOV muxer and demuxer, the raw H.264/HEVC
 #   demuxers, the file protocol and the Annex B bitstream filters, for
@@ -40,6 +41,17 @@ URL=https://ffmpeg.org/releases/ffmpeg-$VERSION.tar.xz
 NASM_VERSION=3.02
 NASM_SHA256=87336eba53b4acfe917424ab5d500d2b0054d9f5148d35c2273ccf2cfb712f0d
 NASM_URL=https://www.nasm.us/pub/nasm/releasebuilds/$NASM_VERSION/nasm-$NASM_VERSION.tar.xz
+
+# The Windows build carries Cisco's OpenH264 as the H.264 encoder the iPhone
+# driver uses first: it gives each picture back as soon as it is encoded,
+# where Media Foundation's holds a dozen back. Its source is BSD, which an
+# LGPL build can carry (x264's could not); Cisco's patent licence goes with
+# Cisco's own binaries, not with a build made here. It is built, as a static
+# library, in the Windows container, so that the DLLs keep importing nothing
+# but Windows' own libraries.
+OPENH264_VERSION=2.7.0
+OPENH264_SHA256=5178775c8b440073e70920e97d195efff721c0e56d0a78cc82c919e95d54924d
+OPENH264_URL=https://github.com/cisco/openh264/archive/refs/tags/v$OPENH264_VERSION.tar.gz
 
 usage="usage: scripts/ffmpeg.sh <prefix> [arm64|amd64|windows-amd64|linux-amd64]"
 prefix=${1:?$usage}
@@ -99,10 +111,13 @@ case $target in
 windows-amd64 | linux-amd64)
 	if [ -z "${FFMPEG_IN_CONTAINER:-}" ]; then
 		nasm=
+		openh264=
 		case $target in
 		windows-amd64)
 			image=ubuntu:24.04
-			packages="gcc libc6-dev nasm gcc-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev"
+			packages="gcc libc6-dev nasm pkg-config gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64 binutils-mingw-w64-x86-64 mingw-w64-x86-64-dev"
+			openh264=openh264-$OPENH264_VERSION.tar.gz
+			fetch "$OPENH264_URL" "$OPENH264_SHA256" "$(dirname "$prefix")/$openh264"
 			;;
 		linux-amd64)
 			image=ubuntu:20.04
@@ -119,6 +134,7 @@ windows-amd64 | linux-amd64)
 		script=$(cd "$(dirname "$0")" && pwd)/ffmpeg.sh
 		exec docker run --rm --platform linux/amd64 \
 			-e FFMPEG_IN_CONTAINER=1 -e PACKAGES="$packages" -e TARGET="$target" -e NASM="$nasm" \
+			-e OPENH264="$openh264" \
 			-e OUT="/out/$(basename "$prefix")" -e OWNER="$(id -u):$(id -g)" \
 			-v "$script:/ffmpeg.sh:ro" -v "$(dirname "$prefix"):/out" \
 			"$image" sh -c '
@@ -132,6 +148,29 @@ windows-amd64 | linux-amd64)
 					tar -xJf "/out/$NASM" -C /tmp/nasm --strip-components=1
 					(cd /tmp/nasm && ./configure --prefix=/usr/local >/dev/null && make -j"$(nproc)" >/dev/null && make install >/dev/null)
 					echo "Built $(nasm -v)"
+				fi
+				if [ -n "$OPENH264" ]; then
+					mkdir /tmp/openh264
+					tar -xzf "/out/$OPENH264" -C /tmp/openh264 --strip-components=1
+					# x86 assembly is kept (the container has nasm above);
+					# the tag tarball has no GMP headers, so that plugin
+					# and the unit tests are not built either.
+					# Its own Makefile, the mingw-w64 compilers, that assembly,
+					# and a static library installed under a prefix of its own.
+					(cd /tmp/openh264 &&
+						make -j"$(nproc)" OS=mingw_nt ARCH=x86_64 \
+							CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
+							AR=x86_64-w64-mingw32-ar PREFIX=/opt/pinky-openh264 >/dev/null &&
+						make OS=mingw_nt ARCH=x86_64 \
+							CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ \
+							AR=x86_64-w64-mingw32-ar PREFIX=/opt/pinky-openh264 install-static >/dev/null)
+					# OpenH264 is C++, and its .pc names the C++ runtime
+					# (-lstdc++): FFmpeg then links with the C++ compiler,
+					# which the flags below keep that runtime static, so
+					# libstdc++-6.dll stays out of the imports of the
+					# DLLs below.
+					export PKG_CONFIG_PATH=/opt/pinky-openh264/lib/pkgconfig
+					echo "Built OpenH264 from $OPENH264"
 				fi
 				status=0
 				sh /ffmpeg.sh "$OUT" "$TARGET" || status=$?
@@ -176,16 +215,21 @@ windows-amd64)
 	# d3d11.dll at run time, and the compiler's helpers linked in, so that
 	# they import nothing but Windows' own DLLs and one another (checked
 	# below). FFmpeg uses Windows' threads, not winpthreads.
-	# The H.264 encoder is Media Foundation's (h264_mf), which FFmpeg
-	# reaches through mfplat.dll at run time: it is FFmpeg's own code,
-	# under the LGPL, and needs nothing of Windows but mfplat.dll.
+	# The H.264 encoder is Cisco's OpenH264, built in the container above
+	# and linked in from its static library. Media Foundation's (h264_mf)
+	# is the fallback: FFmpeg reaches it through mfplat.dll at run time.
+	# A cross build looks for $cross-pkg-config, which Ubuntu does not
+	# install; --pkg-config names the pkg-config that finds OpenH264.
+	# OpenH264 is C++, so the compiler's C++ runtime goes in with it,
+	# statically, and the DLLs import nothing they did not before.
 	cross=x86_64-w64-mingw32-
 	flags="$flags
 	--enable-cross-compile --target-os=mingw32 --arch=x86_64 --cross-prefix=$cross
+	--pkg-config=pkg-config
 	--enable-d3d11va
 	--enable-hwaccel=h264_d3d11va,h264_d3d11va2,hevc_d3d11va,hevc_d3d11va2
-	--enable-mediafoundation --enable-encoder=h264_mf
-	--extra-ldflags=-static-libgcc"
+	--enable-mediafoundation --enable-libopenh264 --enable-encoder=libopenh264,h264_mf
+	--extra-ldflags=-static-libgcc --extra-ldflags=-static-libstdc++"
 	need_nasm
 	what="Windows x86_64"
 	jobs=$(nproc)
@@ -261,7 +305,7 @@ rm -rf "$stage"
 case $target in
 windows-amd64)
 	# Every DLL may import Windows' own DLLs and FFmpeg's, and nothing else
-	# (no libwinpthread-1.dll, no libgcc_s_seh-1.dll).
+	# (no libwinpthread-1.dll, no libgcc_s_seh-1.dll, no libstdc++-6.dll).
 	imports=$("${cross}objdump" -p "$prefix"/bin/*.dll | sed -n 's/^[[:space:]]*DLL Name: //p' | sort -u)
 	echo "The DLLs import: $(echo "$imports" | tr '\n' ' ')"
 	bad=$(echo "$imports" | grep -v -i -E '^(avcodec|avformat|avutil|swscale)-[0-9]+\.dll$|^(kernel32|user32|gdi32|advapi32|ole32|oleaut32|shell32|shlwapi|bcrypt|msvcrt|ucrtbase|ws2_32|secur32|crypt32|mfplat|d3d11|dxgi)\.dll$|^api-ms-win-' || true)
@@ -295,6 +339,12 @@ cp COPYING.LGPLv2.1 "$prefix/COPYING.LGPLv2.1"
 	echo "FFmpeg $VERSION, built for Pinky under the LGPL 2.1 (see COPYING.LGPLv2.1), for $what."
 	echo "Source: $URL"
 	echo "SHA-256: $SHA256"
+	if [ "$target" = windows-amd64 ]; then
+		echo "It holds OpenH264 $OPENH264_VERSION, the H.264 encoder, linked in from its static library:"
+		echo "  Source: $OPENH264_URL"
+		echo "  SHA-256: $OPENH264_SHA256"
+		echo "  Licence: BSD-2-Clause. Cisco's patent licence covers Cisco's own binaries, not this build."
+	fi
 	echo "Configured with:"
 	echo "$flags" | sed 's/^[[:space:]]*/  /'
 } >"$prefix/BUILD.txt"
