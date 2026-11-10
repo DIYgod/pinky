@@ -543,3 +543,34 @@ func TestWiFiConnectionState(t *testing.T) {
 		t.Fatalf("logs:\n%s", logs.String())
 	}
 }
+
+// A listing that keeps coming and going (a locked iPad, every 10 to 60 s)
+// is logged a few times, then once per listingFlapWindow.
+func TestWiFiListingFlapsQuiet(t *testing.T) {
+	var logs bytes.Buffer
+	now := time.Date(2026, 11, 11, 9, 0, 0, 0, time.UTC)
+	p := &Provider{Log: slog.New(slog.NewTextHandler(&logs, nil)), now: func() time.Time { return now }}
+	lines := func() []string { return strings.Split(strings.TrimSpace(logs.String()), "\n") }
+	changes := func() (n int) {
+		for _, l := range lines() {
+			if strings.Contains(l, `listed over Wi-Fi"`) {
+				n++
+			}
+		}
+		return n
+	}
+	p.wifiConnection("ipad", true)
+	for i := 0; i < 40; i++ { // 20 minutes of a change every 30 s
+		now = now.Add(30 * time.Second)
+		p.wifiConnection("ipad", i%2 == 1)
+	}
+	if n, q := changes(), strings.Count(logs.String(), "keeps changing"); n != listingFlaps || q != 2 {
+		t.Fatalf("%d listing lines, %d quiet notes:\n%s", n, q, logs.String())
+	}
+	// Steady for a while: the next change is logged.
+	now = now.Add(2 * listingFlapWindow)
+	p.wifiConnection("ipad", false)
+	if l := lines(); !strings.Contains(l[len(l)-1], "no longer listed over Wi-Fi") {
+		t.Fatalf("after a steady time:\n%s", logs.String())
+	}
+}

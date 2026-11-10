@@ -45,7 +45,21 @@ type wifiAllowed struct {
 	failedAt time.Time // the last failed try
 	logged   string    // result and detail as last logged
 	seen     bool      // listed over the network at the last List
+
+	// For quieting a listing that keeps coming and going (seenChanged).
+	changes    []time.Time // changes of seen within listingFlapWindow
+	quietUntil time.Time   // changes are not logged until then
+	quieted    int         // changes not logged since the last one logged
 }
+
+// A locked iPad was listed and unlisted over Wi-Fi every 10 to 60 s, two
+// log lines each time. After listingFlaps changes within listingFlapWindow,
+// a phone's listing changes are not logged for listingFlapWindow; the next
+// one logged says how many were not.
+const (
+	listingFlaps      = 4
+	listingFlapWindow = 10 * time.Minute
+)
 
 // allowWiFi turns on Wi-Fi connections, in the background, for the phones
 // List found on a cable that trust this computer (their lockdown values
@@ -141,11 +155,7 @@ func (p *Provider) wifiConnection(id string, seen bool) driver.WiFiConnection {
 	defer p.mu.Unlock()
 	a, known := p.wifi.allowed[id]
 	if known && a.seen != seen {
-		if seen {
-			p.logger().Info("iphone: listed over Wi-Fi", "device", id)
-		} else {
-			p.logger().Info("iphone: no longer listed over Wi-Fi", "device", id)
-		}
+		p.seenChanged(id, &a, seen)
 	}
 	if p.wifi.allowed == nil {
 		p.wifi.allowed = map[string]wifiAllowed{}
@@ -164,6 +174,40 @@ func (p *Provider) wifiConnection(id string, seen bool) driver.WiFiConnection {
 		w.Connections, w.Detail = driver.WiFiConnectionsOn, ""
 	}
 	return w
+}
+
+// seenChanged logs that a phone's listing over Wi-Fi changed to seen,
+// unless it keeps changing. The caller holds p.mu.
+func (p *Provider) seenChanged(id string, a *wifiAllowed, seen bool) {
+	now := p.clock()
+	kept := a.changes[:0]
+	for _, t := range a.changes {
+		if now.Sub(t) < listingFlapWindow {
+			kept = append(kept, t)
+		}
+	}
+	a.changes = append(kept, now)
+	log := p.logger()
+	switch {
+	case now.Before(a.quietUntil):
+		a.quieted++
+		return
+	case len(a.changes) >= listingFlaps:
+		a.quietUntil, a.quieted, a.changes = now.Add(listingFlapWindow), 0, nil
+		log.Info("iphone: listing over Wi-Fi keeps changing; not logged for a while", "device", id,
+			"changes", listingFlaps, "within", listingFlapWindow, "listed", seen)
+		return
+	}
+	args := []any{"device", id}
+	if a.quieted > 0 {
+		args = append(args, "unlogged_changes", a.quieted)
+		a.quieted = 0
+	}
+	if seen {
+		log.Info("iphone: listed over Wi-Fi", args...)
+	} else {
+		log.Info("iphone: no longer listed over Wi-Fi", args...)
+	}
 }
 
 // nonEmptyDetail is a phone's Detail, or "no answer".
