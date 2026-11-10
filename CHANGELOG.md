@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- The guide Pinky installs into your agents (SKILL.md) now updates with Pinky: each time Pinky starts, it replaces an older copy with the current one, so you no longer need to connect the agent again.
+
 ## 2026.1110.24 (2026-11-10)
 
 - When Pinky Companion does not come on, the reason Pinky shows no longer includes the names of your other accessibility apps, so it is safe to paste into a public report.
