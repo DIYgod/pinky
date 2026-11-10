@@ -18,15 +18,18 @@ type twoWayPhone struct {
 	*demo.Provider
 
 	mu        sync.Mutex
-	way       string // the provider's way: "", "coredevice" or "wda"
-	noHelper  bool   // the helper is not installed
-	helperErr error  // opening through the helper fails
-	passcode  bool   // the helper waits for the passcode
+	way       string        // the provider's way: "", "coredevice" or "wda"
+	noHelper  bool          // the helper is not installed
+	helperErr error         // opening through the helper fails
+	passcode  bool          // the helper waits for the passcode
+	slow      time.Duration // how long opening through the helper takes
 	opens     []string
 }
 
 func newTwoWayPhone() (*twoWayPhone, *demo.Device) {
 	dev := demo.NewDevice("iphone", "iPhone 13 mini", driver.IOS)
+	dev.AddApp("com.dbs.sg.dbsmbanking", "digibank")
+	dev.AddApp("cmb.pb", "招商银行")
 	return &twoWayPhone{Provider: demo.NewProvider(driver.IOS, dev)}, dev
 }
 
@@ -54,8 +57,11 @@ func (p *twoWayPhone) Open(ctx context.Context, id string) (driver.Device, error
 	p.mu.Lock()
 	b := p.backendLocked()
 	p.opens = append(p.opens, b)
-	err := p.helperErr
+	err, slow := p.helperErr, p.slow
 	p.mu.Unlock()
+	if b == wayHelper && slow > 0 {
+		time.Sleep(slow)
+	}
 	if b == wayHelper && err != nil {
 		return nil, err
 	}
@@ -112,6 +118,27 @@ func shortSwitchBack(t *testing.T) {
 	old := switchBackAfter
 	switchBackAfter = 50 * time.Millisecond
 	t.Cleanup(func() { switchBackAfter = old })
+}
+
+// launchAllowed launches app, allowing it for the task when the person is
+// asked (the banks are finance apps).
+func launchAllowed(g *Gateway, s *Session, app string) *Result {
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-time.After(2 * time.Millisecond):
+			}
+			if needs := g.Needs(); len(needs) > 0 {
+				g.Decide(needs[0].ID, AllowTask, "")
+				return
+			}
+		}
+	}()
+	return s.Act(context.Background(), Call{}, Action{Tool: "launch", App: app})
 }
 
 func TestTaskConnectionWords(t *testing.T) {
@@ -174,7 +201,7 @@ func TestLaunchMovesToTheHelper(t *testing.T) {
 	if b := backendOf(g); b != wayCoreDevice {
 		t.Fatalf("a task that names no such app moved to %q", b)
 	}
-	res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "招商银行"})
+	res := launchAllowed(g, s, "招商银行")
 	if !strings.Contains(res.Message, "China Merchants Bank refuses to run while the screen is shared") {
 		t.Fatalf("launch: %+v", res)
 	}
@@ -182,7 +209,7 @@ func TestLaunchMovesToTheHelper(t *testing.T) {
 		t.Fatalf("backend %q after launching the bank", b)
 	}
 	// A second launch stays there and says nothing more.
-	res = s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "cmb.pb"})
+	res = launchAllowed(g, s, "cmb.pb")
 	if strings.Contains(res.Message, "moved") {
 		t.Fatalf("launched again: %q", res.Message)
 	}
@@ -192,21 +219,146 @@ func TestLaunchMovesToTheHelper(t *testing.T) {
 	waitUntil(t, "the phone back on CoreDevice", func() bool { return backendOf(g) == wayCoreDevice })
 }
 
-func TestAppListMovesToTheHelper(t *testing.T) {
+func TestAppListMovesNothing(t *testing.T) {
 	p, _ := newTwoWayPhone()
 	g := twoWayGateway(t, p)
 	s := g.OpenSession(agent)
 	defer s.Close()
-	res := s.Connect(context.Background(), ConnectRequest{Task: "DBS balance", Apps: []string{"digibank"}})
-	mustStatus(t, res, StatusSettled)
-	if b := backendOf(g); b != wayHelper || !strings.Contains(res.Message, "DBS digibank") {
-		t.Fatalf("backend %q, message %q", b, res.Message)
+	// The person may still refuse the app: only its launch moves the task.
+	mustStatus(t, s.Connect(context.Background(), ConnectRequest{Task: "DBS balance", Apps: []string{"digibank"}}), StatusSettled)
+	if b := backendOf(g); b != wayCoreDevice {
+		t.Fatalf("backend %q after naming the bank", b)
+	}
+	launchAllowed(g, s, "digibank")
+	if b := backendOf(g); b != wayHelper {
+		t.Fatalf("backend %q after launching the bank", b)
 	}
 	// The agent can ask to go back.
-	res = s.Connect(context.Background(), ConnectRequest{Task: "DBS balance", Connection: "coredevice"})
+	res := s.Connect(context.Background(), ConnectRequest{Task: "DBS balance", Connection: "coredevice"})
 	mustStatus(t, res, StatusSettled)
 	if b := backendOf(g); b != wayCoreDevice {
 		t.Fatalf("backend %q after asking for CoreDevice", b)
+	}
+}
+
+// A launch the person refuses, or one that waits for them, leaves the
+// connection alone; one they allow moves it before it runs.
+func TestRefusedLaunchKeepsConnection(t *testing.T) {
+	p, _ := newTwoWayPhone()
+	g := twoWayGateway(t, p)
+	s, _ := connect(t, g, "Bookkeeping")
+	_, before := p.state()
+	go func() {
+		for len(g.Needs()) == 0 {
+			time.Sleep(2 * time.Millisecond)
+		}
+		g.Decide(g.Needs()[0].ID, Deny, "")
+	}()
+	if res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "cmb.pb"}); res.Status != StatusDenied {
+		t.Fatalf("denied launch: %+v", res)
+	}
+	if _, opens := p.state(); len(opens) != len(before) || backendOf(g) != wayCoreDevice {
+		t.Fatalf("a denied launch reconnected: %v after %v", opens, before)
+	}
+	mustStatus(t, s.Release(context.Background(), ReleaseRequest{}), StatusSettled)
+
+	s, _ = connect(t, g, "Bookkeeping again")
+	res := launchAllowed(g, s, "cmb.pb")
+	if res.Error != "" || !strings.Contains(res.Message, "WebDriverAgent helper") {
+		t.Fatalf("allowed launch: %+v", res)
+	}
+	if b := backendOf(g); b != wayHelper {
+		t.Fatalf("backend %q after an allowed launch", b)
+	}
+}
+
+// Nothing moves while the person is in control or the agent may only
+// watch: a move would cut the person's session for nothing.
+func TestNoMoveWhilePersonHoldsIt(t *testing.T) {
+	p, _ := newTwoWayPhone()
+	g := twoWayGateway(t, p)
+	if err := g.TakeOver("iphone"); err != nil {
+		t.Fatal(err)
+	}
+	s := g.OpenSession(agent)
+	defer s.Close()
+	res := s.Connect(context.Background(), ConnectRequest{Task: "Balances", Connection: "helper"})
+	if !strings.Contains(res.Message, "the person is in control") {
+		t.Fatalf("connect while taken over: %+v", res)
+	}
+	if res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "digibank"}); res.Status != StatusPaused && res.Status != StatusTookOver {
+		t.Fatalf("launch while taken over: %+v", res)
+	}
+	if _, opens := p.state(); len(opens) != 1 || backendOf(g) != wayCoreDevice {
+		t.Fatalf("moved while taken over: %v", opens)
+	}
+	s.Close()
+	if err := g.HandBack("iphone", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	g.SetAgentScope(agent.Name, Scope{Mode: ScopeWatchOnly})
+	w := g.OpenSession(agent)
+	defer w.Close()
+	res = w.Connect(context.Background(), ConnectRequest{Task: "Look", Connection: "helper"})
+	if !strings.Contains(res.Message, "may only watch") {
+		t.Fatalf("connect watch-only: %+v", res)
+	}
+	if res := w.Act(context.Background(), Call{}, Action{Tool: "launch", App: "digibank"}); res.Error != ErrScopeDenied {
+		t.Fatalf("launch watch-only: %+v", res)
+	}
+	if _, opens := p.state(); len(opens) != 1 {
+		t.Fatalf("moved for a watch-only agent: %v", opens)
+	}
+}
+
+// A helper that takes longer than the offline grace to fail does not end
+// the task: it falls back to CoreDevice.
+func TestSwitchOutlastsGrace(t *testing.T) {
+	p, _ := newTwoWayPhone()
+	p.helperErr, p.slow = errors.New("the runner quit"), 400*time.Millisecond
+	g := twoWayGateway(t, p, func(o *Options) { o.ReconnectGrace = 100 * time.Millisecond })
+	s, _ := connect(t, g, "Bookkeeping")
+	res := launchAllowed(g, s, "digibank")
+	if !strings.Contains(res.Message, "stays on CoreDevice") {
+		t.Fatalf("launch: %+v", res)
+	}
+	mustStatus(t, s.Observe(context.Background(), ObserveRequest{}), StatusSettled)
+	if b := backendOf(g); b != wayCoreDevice {
+		t.Fatalf("backend %q", b)
+	}
+}
+
+// A connection the person chooses while a task's move waits is theirs:
+// the task neither undoes it nor puts the provider back on Automatic.
+func TestPersonChoosesDuringSwitch(t *testing.T) {
+	p, _ := newTwoWayPhone()
+	p.helperErr, p.slow = errors.New("the runner quit"), 300*time.Millisecond
+	g := twoWayGateway(t, p)
+	s, _ := connect(t, g, "Bookkeeping")
+	done := make(chan *Result, 1)
+	go func() { done <- launchAllowed(g, s, "digibank") }()
+	waitUntil(t, "the switch", func() bool {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		return g.devices["iphone"].switching != ""
+	})
+	if err := g.SetConnection("iphone", wayCoreDevice); err != nil {
+		t.Fatal(err)
+	}
+	res := <-done
+	if !strings.Contains(res.Message, "keeps their choice") {
+		t.Fatalf("launch: %+v", res)
+	}
+	waitUntil(t, "the phone on CoreDevice", func() bool { return backendOf(g) == wayCoreDevice })
+	if way, _ := p.state(); way != wayCoreDevice {
+		t.Fatalf("provider way %q after the person chose CoreDevice", way)
+	}
+	g.mu.Lock()
+	chosen := g.chosen["iphone"]
+	g.mu.Unlock()
+	if chosen != wayCoreDevice {
+		t.Fatalf("chosen %q", chosen)
 	}
 }
 
@@ -225,7 +377,7 @@ func TestPersonsConnectionIsKept(t *testing.T) {
 	if !strings.Contains(res.Message, "Settings › Phones") {
 		t.Fatalf("connect: %q", res.Message)
 	}
-	s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "digibank"})
+	launchAllowed(g, s, "digibank")
 	if _, opens := p.state(); len(opens) != len(before) || backendOf(g) != wayCoreDevice {
 		t.Fatalf("opens %v after %v", opens, before)
 	}
@@ -236,7 +388,7 @@ func TestHelperMissingOrFailing(t *testing.T) {
 	p.noHelper = true
 	g := twoWayGateway(t, p)
 	s, _ := connect(t, g, "Bookkeeping")
-	res := s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "digibank"})
+	res := launchAllowed(g, s, "digibank")
 	if !strings.Contains(res.Message, "not installed") {
 		t.Fatalf("no helper: %q", res.Message)
 	}
@@ -248,7 +400,7 @@ func TestHelperMissingOrFailing(t *testing.T) {
 	p.mu.Lock()
 	p.noHelper, p.helperErr = false, errors.New("the runner quit")
 	p.mu.Unlock()
-	res = s.Act(context.Background(), Call{}, Action{Tool: "launch", App: "digibank"})
+	res = launchAllowed(g, s, "digibank")
 	if !strings.Contains(res.Message, "stays on CoreDevice") {
 		t.Fatalf("failing helper: %+v", res)
 	}

@@ -79,20 +79,23 @@ func (g *Gateway) SetConnection(deviceID, way string) error {
 	if err != nil {
 		return err
 	}
+	// Under g.mu, so that a task's move (switchTo) cannot give the
+	// provider another way after this one.
+	g.mu.Lock()
 	if err := cc.SetConnection(d.id, way); err != nil {
+		g.mu.Unlock()
 		return err
 	}
 	if g.store != nil {
 		id := d.id
 		g.rec.do(func(ctx context.Context) error { return g.store.SetDeviceConnection(ctx, id, way) })
 	}
-	g.mu.Lock()
 	if way == driver.ConnectionAuto {
 		delete(g.chosen, d.id)
 	} else {
 		g.chosen[d.id] = way
 	}
-	forgetTaskWay(d) // the person's choice beats a task's (taskconn.go)
+	forgetTaskWay(d)                    // the person's choice beats a task's (taskconn.go)
 	d.moving = time.Now().Add(moveWait) // calls wait while it reconnects
 	g.mu.Unlock()
 	g.setOffline(d, "reconnecting the way you chose")

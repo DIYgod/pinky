@@ -629,8 +629,10 @@ func (g *Gateway) expireOffline() {
 	var ls []*lease
 	for _, d := range g.devices {
 		// A lease on a phone that waits for a step waits with it: the
-		// person is setting it up (device_needs_setup).
-		if !d.online && d.lease != nil && !waitsForStep(d.info.State) && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
+		// person is setting it up (device_needs_setup). So does one on a
+		// phone a task moves to another connection (taskconn.go), which
+		// may take as long as the grace and falls back when it fails.
+		if !d.online && d.lease != nil && d.switching == "" && !waitsForStep(d.info.State) && now.Sub(d.offlineSince) > g.opt.ReconnectGrace {
 			ls = append(ls, d.lease)
 		}
 	}
