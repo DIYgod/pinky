@@ -403,7 +403,10 @@ func (a *app) panelAnswered(c *mg.Context, x answer) {
 					detail = locales.PanelAllowedTaskDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
 				case gateway.AllowAlways:
 					title = locales.PanelAlwaysAllowed()
-					detail = locales.PanelAlwaysAllowedDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
+					detail = alwaysAllowedDetail(x.need)
+					if detail == "" {
+						detail = locales.PanelAlwaysAllowedDetail(nonEmpty(ruleName(kind), locales.PanelActionsLikeThis()), nonEmpty(app, locales.PanelThisApp()))
+					}
 				default:
 					ic, col = icX, p.ink2
 					title = locales.PanelDenied()

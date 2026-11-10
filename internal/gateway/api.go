@@ -174,9 +174,11 @@ type NeedView struct {
 	// AlwaysAllow is set when the approval can be answered with
 	// AllowAlways: from then on, Rule (and the rules that asked with it)
 	// no longer asks about such steps in App, until the person takes it
-	// back in Settings. Unset for the agent's own questions, copying
-	// files, opening apps and links, and while every action asks; there
-	// AllowAlways counts as AllowTask.
+	// back in Settings; for changing the phone's settings or reading an
+	// app's logs, for this agent on this phone (Exemption.Agent). Unset for
+	// the agent's own questions, copying files, screen recordings, opening
+	// apps and links, and while every action asks; there AllowAlways
+	// counts as AllowTask.
 	AlwaysAllow bool
 	// AllowTask is set when the approval can be answered with AllowTask:
 	// for the rest of the task, Rule (and the rules that asked with it)
