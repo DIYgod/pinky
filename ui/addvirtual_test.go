@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -49,7 +50,7 @@ func TestAddVirtualPhone(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "Starting…", func() bool { tt.Frame(); return hasText(tt, "Starting…") })
-	if starts, _ := ta.api.VirtualCalls(); !slices.Equal(starts, []string{"ios/5F1E7A2C-SIM-17"}) {
+	if starts := waitStarts(t, ta, 1); !slices.Equal(starts, []string{"ios/5F1E7A2C-SIM-17"}) {
 		t.Fatalf("starts %q", starts)
 	}
 	ta.api.BootVirtual()
@@ -92,14 +93,29 @@ func TestAddVirtualPhone(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "Starting… on its page", func() bool { tt.Frame(); return hasText(tt, "Starting…") })
+	if starts := waitStarts(t, ta, 2); len(starts) != 2 || starts[1] != "ios/5F1E7A2C-SIM-17" {
+		t.Fatalf("starts %q", starts)
+	}
 	ta.api.BootVirtual()
 	ta.waitFor(t, "the phone back", func() bool {
 		d := ta.device("5F1E7A2C-SIM-17")
 		return d != nil && d.Info.State == driver.StateOnline
 	})
-	if starts, _ := ta.api.VirtualCalls(); len(starts) != 2 || starts[1] != "ios/5F1E7A2C-SIM-17" {
-		t.Errorf("starts %q", starts)
-	}
+}
+
+// waitStarts waits until the fake has had n StartVirtual calls and returns
+// them. Start shows Starting… as soon as it is clicked and calls
+// StartVirtual a moment later, off the UI thread, so Starting… alone does
+// not mean the call came: a BootVirtual or FailVirtual before it would act
+// on nothing.
+func waitStarts(t *testing.T, ta *testApp, n int) []string {
+	t.Helper()
+	var starts []string
+	ta.waitFor(t, fmt.Sprintf("StartVirtual call %d", n), func() bool {
+		starts, _ = ta.api.VirtualCalls()
+		return len(starts) >= n
+	})
+	return starts
 }
 
 // TestAddVirtualFails: what failed shows under the phone's row.
@@ -131,6 +147,7 @@ func TestAddVirtualQuitWhileStarting(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "Starting…", func() bool { tt.Frame(); return hasText(tt, "Starting…") })
+	waitStarts(t, ta, 1)
 	const why = "signal: abort trap: detected a hanging thread 'QEMU2 main loop'"
 	ta.api.FailVirtual(why)
 	ta.waitFor(t, "the reason", func() bool {
@@ -147,6 +164,7 @@ func TestAddVirtualQuitWhileStarting(t *testing.T) {
 	if hasText(tt, "Couldn't start") {
 		t.Error("the old reason shows while it starts again")
 	}
+	waitStarts(t, ta, 2)
 	ta.api.BootVirtual()
 	ta.waitFor(t, "the phone", func() bool { d := ta.device("5F1E7A2C-SIM-17"); return d != nil && d.Info.State == driver.StateOnline })
 	if err := ta.api.StopVirtual(t.Context(), driver.IOS, "5F1E7A2C-SIM-17"); err != nil {
@@ -164,6 +182,7 @@ func TestAddVirtualQuitWhileStarting(t *testing.T) {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "Starting… on its page", func() bool { tt.Frame(); return hasText(tt, "Starting…") })
+	waitStarts(t, ta, 3)
 	ta.api.FailVirtual(why)
 	ta.waitFor(t, "the reason on its page", func() bool {
 		tt.Frame()

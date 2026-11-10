@@ -135,8 +135,9 @@ func (a *API) DiskImageMirror() (driver.DiskImageMirror, bool) { return fakeMirr
 
 // DownloadDiskImage pretends to download the developer disk image in a
 // couple of seconds at Speed, then moves iPhones that waited for an image,
-// or whose image Apple refused, on to being prepared; it fails with what
-// SetDownloadError set.
+// or whose image Apple refused, on to being prepared; it fails halfway
+// with what SetDownloadError set, and waits there while HoldDownload holds
+// it.
 func (a *API) DownloadDiskImage(ctx context.Context, progress func(done, total int64)) error {
 	const steps = 8
 	for i := 1; i <= steps; i++ {
@@ -146,13 +147,20 @@ func (a *API) DownloadDiskImage(ctx context.Context, progress func(done, total i
 		case <-time.After(time.Duration(float64(250*time.Millisecond) / a.opt.Speed)):
 		}
 		a.mu.Lock()
-		err := a.dlErr
+		err, hold := a.dlErr, a.dlHold
 		a.mu.Unlock()
 		if err != nil && i == steps/2 {
 			return err
 		}
 		if progress != nil {
 			progress(fakeMirror.Size*int64(i)/steps, fakeMirror.Size)
+		}
+		if hold != nil && i == steps/2 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-hold:
+			}
 		}
 	}
 	a.mu.Lock()
@@ -175,4 +183,20 @@ func (a *API) SetDownloadError(err error) {
 	a.mu.Lock()
 	a.dlErr = err
 	a.mu.Unlock()
+}
+
+// HoldDownload(true) makes DownloadDiskImage wait halfway, after it
+// reported its progress there, until HoldDownload(false), so a test sees
+// the progress however slowly it runs: at Speed 50 a whole download takes
+// 40 ms.
+func (a *API) HoldDownload(hold bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	switch {
+	case hold && a.dlHold == nil:
+		a.dlHold = make(chan struct{})
+	case !hold && a.dlHold != nil:
+		close(a.dlHold)
+		a.dlHold = nil
+	}
 }
