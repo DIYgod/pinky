@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Swipes, taps, drags and pinches on an element now stay clear of the on-screen keyboard instead of landing on its keys. When too little of the element shows above the keyboard, the agent is told to hide the keyboard first.
+- An iPhone left on Automatic with the WebDriverAgent helper installed now switches a task to the helper by itself when the task opens DBS digibank or China Merchants Bank, so those apps run, and goes back to CoreDevice after the task. Agents can also ask for the helper with connection in phone_connect.
+
 ## 2026.1110.20 (2026-11-10)
 
 - Quitting Pinky now also stops the adb it brought for Android phones, so no adb process is left running, unless another app such as Android Studio is using it. An adb you installed yourself keeps running. Turn this off in Settings › Advanced.
