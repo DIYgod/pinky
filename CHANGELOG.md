@@ -2,6 +2,11 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On an iPhone, the on-screen keyboard now comes back after an agent types, for you and for apps that wait for it. When typed text went nowhere because no field had focus, the agent is told so and tries again instead of carrying on.
+- Installing an app from the computer now offers Always allow. It covers one agent on one phone, for builds of the same app signed by the same developer, so your next builds go in without asking. Another app or another signer still asks, and uninstalling asks every time. Take it back in Settings › Safety.
+
 ## 2026.1110.22 (2026-11-10)
 
 - On Linux, when Pinky started by an agent cannot open its window (no display, or missing libraries), Pinky now keeps running in the background as pinky daemon, so the agent stays connected. Thanks to pseudoyu.
