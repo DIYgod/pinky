@@ -4454,6 +4454,26 @@
       }
     }
   },
+  "gwStepConnectedOwnScreen": "{step}, on the phone's own screen",
+  "@gwStepConnectedOwnScreen": {
+    "description": "A task's first step when the agent asked to work on the phone's own screen although the person has agents work in the background (the background display has no home screen); step is gwStepConnected or gwStepConnectedReadOnly. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "step": {
+        "type": "String",
+        "example": "Connected to Pixel 9 for “Tidy the home screen”"
+      }
+    }
+  },
+  "gwStepConnectedReadOnly": "{step}, read only",
+  "@gwStepConnectedReadOnly": {
+    "description": "A task's first step when the agent asked to run the task read-only; step is gwStepConnected. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "step": {
+        "type": "String",
+        "example": "Connected to Pixel 9 for “Check my balance”"
+      }
+    }
+  },
   "gwStepCopiedFrom": "Copied {count} files from the phone{names}",
   "@gwStepCopiedFrom": {
     "description": "A step: the agent copied files from the phone; names is gwFilesList or empty. Shown only in other languages; in English the gateway's own words show.",

@@ -453,3 +453,61 @@ func firstLine(s, has string) string {
 	}
 	return ""
 }
+
+// A task that found itself on a background display, which has no home
+// screen, connects again with own_screen and gets the phone's own screen
+// with its launcher.
+func TestEmulatorOwnScreen(t *testing.T) {
+	id := emulatorID(t)
+	ctx := context.Background()
+	data, err := os.MkdirTemp("/tmp", "pinky-gw-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(data)
+	log := slog.New(slog.NewTextHandler(testWriter{t}, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	g, err := New(Options{Providers: []driver.Provider{&oneDevice{Provider: android.NewProvider(android.Config{}), id: id}},
+		DataDir: data, TrustNewAgents: true, Logger: log, NoScreenshots: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+	for deadline := time.Now().Add(60 * time.Second); !deviceOnline(g, id); time.Sleep(500 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("%s did not come online", id)
+		}
+	}
+	adbShell(t, id, "input", "keyevent", "KEYCODE_WAKEUP")
+	adbShell(t, id, "wm", "dismiss-keyguard")
+	adbShell(t, id, "input", "keyevent", "KEYCODE_HOME")
+	if err := g.SetBackground(id, true); err != nil {
+		t.Fatal(err)
+	}
+	s := g.OpenSession(AgentInfo{Name: "Pinky emulator test"})
+	defer s.Close()
+	const task = "Home screen test"
+	res := s.Connect(ctx, ConnectRequest{Call: Call{Device: id}, Task: task})
+	t.Logf("connect %s%s: %s · %s", res.Status, res.Error, screenOf(res).App.ID, res.Message)
+	if res.IsError() || res.Status != StatusSettled {
+		t.Fatalf("connect: %+v", res)
+	}
+	if d := g.Devices()[0]; !strings.Contains(d.StatusLine, "in the background") {
+		t.Skipf("not on a background display: %q · %s", d.StatusLine, res.Message)
+	}
+	if !strings.Contains(res.Message, "own_screen: true") {
+		t.Fatalf("the connect message does not point at own_screen: %s", res.Message)
+	}
+	res = s.Connect(ctx, ConnectRequest{Call: Call{Device: id}, Task: task, OwnScreen: true})
+	sc := screenOf(res)
+	t.Logf("connect own_screen %s%s: %s · %s", res.Status, res.Error, sc.App.ID, res.Message)
+	if res.IsError() || res.Status != StatusSettled {
+		t.Fatalf("connect with own_screen: %+v", res)
+	}
+	if d := g.Devices()[0]; strings.Contains(d.StatusLine, "in the background") {
+		t.Fatalf("still on the background display: %q", d.StatusLine)
+	}
+	if !strings.Contains(sc.App.ID, "launcher") {
+		t.Fatalf("the launcher is not in front: %q\n%s", sc.App.ID, sc.Render())
+	}
+	t.Logf("home screen:\n%s", sc.Render())
+}

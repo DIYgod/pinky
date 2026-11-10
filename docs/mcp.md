@@ -186,6 +186,7 @@ Leases a phone for a task and returns its first screen.
 | `device` | string | Optional when exactly one phone is online, or the session already holds one, or none is online and exactly one is connected but needs setup |
 | `apps` | string[] | Optional app allow-list for the task (names or ids). Launching another app returns `scope_denied`; typing into one asks the person. Launchers and system UI are always allowed |
 | `read_only` | boolean | Run the task read-only, whatever the agent's scope: anything the person's rules would ask about is refused (`blocked_by_policy`, rule `Read-only`), and typing works only in search fields. Connecting again for the same task never widens it. A new agent's approval card then offers read-only access first |
+| `own_screen` | boolean | Work on the phone's own screen even when the person has Pinky work on a background display (Settings › Phones › Work in the background), which starts empty and has no home screen. Only for work on the home screen itself: moving app icons, folders, widgets. The task stays on the phone's own screen to its end; connecting again for the same task with it moves a task off its background display. If the person used the phone's own screen in the last minute, the task starts `paused` (they are in control until they hand it over); if that screen is locked, `device_locked`. Without background work it changes nothing |
 
 The first connection of an agent the person has not approved yet returns `approval_pending` (rule `New agent`); repeat with `approval_id`. Another session's phone returns `lease_held`. Calling again with the same task keeps the lease; another task name ends the previous task (outcome `replaced`) and starts a new one. After the person pressed Stop, the session cannot connect to that phone again. While the person is in control of the phone (they took over and have not handed back, whichever task was running), the lease starts paused and the result is `paused`: call `phone_handoff`. A phone that is connected but waits for a step (Trust, Allow USB debugging, Developer Mode, …) is leased all the same and returns `device_needs_setup`, without a screen, so `phone_handoff` can ask the person for the step; other calls return `device_needs_setup` until the phone is ready.
 
@@ -272,7 +273,22 @@ Presses with one finger, moves through points while it stays down, and lets go: 
 
 The whole drag (rests and moves) may take up to 30 s, and every point must be on the screen. Moves ease in and out, so the finger stops at each point before it rests or lets go.
 
-To move an app to another home screen page: press its icon with `hold_ms` about 800, rest about 700 ms at a `via` point near the left or right edge (a few pixels in, halfway down), and let go on the new page. Each rest at the edge turns one page; a longer rest turns more (1.2 s turned two pages on an iPhone). To drop into a folder, or onto another app to make one, let go over the middle of its icon, not its label, with the default rest: on an Android launcher a long rest there moves the other icon aside instead. Observe the page you want to drop on first: the screen the drag ends on is not known before it starts.
+To move an app to another home screen page: press its icon with `hold_ms` about 800, rest about 700 ms at a `via` point near the left or right edge (a few pixels in, halfway down), and let go on the new page. Each rest at the edge turns one page; a longer rest turns more (1.2 s turned two pages on an iPhone). Observe the page you want to drop on first: the screen the drag ends on is not known before it starts.
+
+To drop into a folder, or onto another app to make one, let go over its icon where it is during the drag. The picked-up icon keeps where the finger holds it, so press the app at its `ref` and aim from the target's ref point (a home screen ref's point is the middle of the icon and its label together).
+
+Pixel Launcher moves the icons once the drag starts: as soon as it picks an icon up, it shrinks the home screen page toward a point near the middle of the screen, and the dock stays as it was. On a 1080×2400 Pixel emulator (Android 16) the page shrank by about 0.78 toward about 540,990 (the middle across, 41% down), so Photos, listed at 663,1619, sat at about 634,1500 during the drag, and only a drop there made a folder. The launcher also takes the page out of the element tree while it holds an icon, so the screen cannot be read then.
+
+Pinky follows the page for you. Give `to` where the target is on the screen you read. When a drag on an Android home screen starts with `hold_ms` 300 or more, Pinky:
+
+1. takes a picture as the finger touches down,
+2. after the hold, moves the finger a tenth of the screen's width toward the first point (120 ms) and rests 250 ms, so the launcher picks the icon up and shrinks the page,
+3. takes another picture and looks for the apps around `to` in it, shrunk by 0.6 to 1 toward the middle of the screen,
+4. lets go where `to` went. The `via` points stay where they are, so a rest at the edge still turns the page.
+
+A drop on the dock, or on a page that did not shrink, stays at `to`. When Pinky cannot see where `to` went (nothing labelled near it, no clear match), it lets go at `to` and the result says so; observe to check where the app landed. The result also says when it moved the drop, and history shows where the finger let go. It adds about 0.6 to 0.8 s over USB (the short move and rest, a screenshot, and about 30 ms to compare), and over Wi-Fi a frame of the mirror when it is open, else a screenshot, which can take seconds. Other launchers were not measured: one that shrinks its page evenly toward the middle is followed the same way, and one that does something else gets the drop at `to`.
+
+If the icons only trade places or the target moves aside, observe and aim again from where they are now.
 
 ```json
 {"ref": 12, "hold_ms": 800, "via": [{"x": 1170, "y": 1300, "pause_ms": 700}], "to": {"x": 187, "y": 702}}

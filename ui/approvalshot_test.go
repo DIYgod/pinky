@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -418,5 +419,57 @@ func TestDragMarks(t *testing.T) {
 	swipe := marksOf(gateway.NeedView{Point: press, To: drop})
 	if r := swipe.route(); len(r) != 2 || r[0] != press || r[1] != drop {
 		t.Errorf("a swipe's route %v", r)
+	}
+}
+
+// TestMirrorShowsWaitingDrag: while a drag waits for the person, the live
+// mirror shows its route, as the approval card does, and not only the
+// outline of the icon it presses: the main window's card has no
+// screenshot while the mirror shows the phone.
+func TestMirrorShowsWaitingDrag(t *testing.T) {
+	created := time.Now()
+	icon := screen.Rect{X: 314, Y: 1483, W: 205, H: 273}
+	press, drop := screen.Point{X: 416, Y: 1587}, screen.Point{X: 900, Y: 1587}
+	drag := gateway.NeedView{ID: "a1", Kind: gateway.NeedApproval, DeviceID: "pixel-9", TaskID: "t1", Created: created,
+		Target: icon, Point: press, To: drop, Path: []screen.Point{press, drop}}
+	tap := gateway.NeedView{ID: "a2", Kind: gateway.NeedApproval, DeviceID: "pixel-9", TaskID: "t2", Created: created,
+		Target: icon, Point: press}
+	ta := shotApp(t, drag, tap)
+	step := gateway.StepView{Tool: "phone_drag", Text: "Waiting for you: Dragged “Gmail”", Status: "approval_pending",
+		At: created, Target: icon, Point: press}
+	task := &gateway.TaskView{ID: "t1", DeviceID: "pixel-9", State: gateway.TaskWorking, Steps: []gateway.StepView{step}}
+	shown, kind, ok := overlayStep(task)
+	if !ok || kind != stepWait {
+		t.Fatalf("overlay step %+v %v %v", shown, kind, ok)
+	}
+	way := ta.waitingWay(task, shown)
+	if r := way.route(); !way.swipe() || len(r) != 2 || r[0] != press || r[1] != drop {
+		t.Fatalf("way %+v", way)
+	}
+	other := &gateway.TaskView{ID: "t2", DeviceID: "pixel-9", State: gateway.TaskWorking, Steps: []gateway.StepView{step}}
+	if w := ta.waitingWay(other, step); w.swipe() {
+		t.Fatalf("a tap shows a route: %+v", w)
+	}
+
+	// Drawn on a 270 × 600 mirror of a 1080 × 2400 screen, the line
+	// passes halfway between the press and the drop.
+	var with shotMarks
+	tt := mg.NewTester(func(c *mg.Context) {
+		p := pal(c)
+		mg.Box(c).Size(270, 600).Background(hex("#000000")).Draw(func(pt *mg.Painter, r mg.Rect) {
+			drawOverlay(pt, r, p, shown, kind, with, 1080, 2400, false)
+		})
+	}, 270, 600)
+	at := func() color.RGBA {
+		tt.Frame()
+		x, y := (press.X+drop.X)/2/4, press.Y/4
+		return color.RGBAModel.Convert(tt.Image().At(x, y)).(color.RGBA)
+	}
+	if c := at(); c.R+c.G+c.B > 30 {
+		t.Fatalf("something drawn without a way: %v", c)
+	}
+	with = way
+	if c := at(); c.B < 150 || c.R > 160 {
+		t.Fatalf("no route on the mirror: %v", c)
 	}
 }

@@ -11933,6 +11933,50 @@ func (msgs Messages) GwStepConnected(phone string, task string) string {
 	return Catalog.Format(msgs.locale, "gwStepConnected", map[string]any{"phone": phone, "task": task})
 }
 
+// GwStepConnectedOwnScreen says "{step}, on the phone's own screen"
+// in the language the app shows.
+//
+// A task's first step when the agent asked to work on the phone's own
+// screen although the person has agents work in the background (the
+// background display has no home screen); step is gwStepConnected or
+// gwStepConnectedReadOnly. Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepConnectedOwnScreen(step string) string {
+	return In(i18n.Locale()).GwStepConnectedOwnScreen(step)
+}
+
+// GwStepConnectedOwnScreen says "{step}, on the phone's own screen"
+// in the language of msgs.
+//
+// A task's first step when the agent asked to work on the phone's own
+// screen although the person has agents work in the background (the
+// background display has no home screen); step is gwStepConnected or
+// gwStepConnectedReadOnly. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepConnectedOwnScreen(step string) string {
+	return Catalog.Format(msgs.locale, "gwStepConnectedOwnScreen", map[string]any{"step": step})
+}
+
+// GwStepConnectedReadOnly says "{step}, read only"
+// in the language the app shows.
+//
+// A task's first step when the agent asked to run the task read-only; step
+// is gwStepConnected. Shown only in other languages; in English the
+// gateway's own words show.
+func GwStepConnectedReadOnly(step string) string {
+	return In(i18n.Locale()).GwStepConnectedReadOnly(step)
+}
+
+// GwStepConnectedReadOnly says "{step}, read only"
+// in the language of msgs.
+//
+// A task's first step when the agent asked to run the task read-only; step
+// is gwStepConnected. Shown only in other languages; in English the
+// gateway's own words show.
+func (msgs Messages) GwStepConnectedReadOnly(step string) string {
+	return Catalog.Format(msgs.locale, "gwStepConnectedReadOnly", map[string]any{"step": step})
+}
+
 // GwStepCopiedFrom says "Copied {count} files from the phone{names}"
 // in the language the app shows.
 //

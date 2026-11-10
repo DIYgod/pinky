@@ -717,6 +717,8 @@
   "gwStepAskedYou": "確認：{question}",
   "gwStepBlocked": "“{rule}” ルールでブロック：{action}",
   "gwStepConnected": "“{task}” のため {phone} に接続しました",
+  "gwStepConnectedOwnScreen": "{step}（スマホ本体の画面で）",
+  "gwStepConnectedReadOnly": "{step}（読み取り専用）",
   "gwStepCopiedFrom": "スマホから {count} 個のファイルをコピーしました{names}",
   "gwStepCopiedTo": "スマホへ {count} 個のファイルをコピーしました{names}",
   "gwStepFailed": "失敗：{action}",
