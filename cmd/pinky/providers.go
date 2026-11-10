@@ -133,6 +133,9 @@ func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 	if dirs, err := api.DefaultDirs(); err == nil {
 		// Where Pinky looks for Apple's developer disk image before Xcode's.
 		p.DiskImageDir = filepath.Join(dirs.Data, "DeveloperDiskImages")
+		// Where Pinky remembers the helper runners it started, to end one
+		// it left running after a crash.
+		p.RunDir = filepath.Join(dirs.Data, "HelperRuns")
 	}
 	if c := p.CheckHost(); c.Missing != "" {
 		log.Info("iPhones need software this computer lacks", "missing", c.Missing, "detail", c.Detail)

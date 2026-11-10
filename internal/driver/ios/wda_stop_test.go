@@ -245,3 +245,122 @@ func TestPickRunnerAppPath(t *testing.T) {
 		t.Fatalf("path %q", got.Path)
 	}
 }
+
+func TestRunRecords(t *testing.T) {
+	r := runRecords{t.TempDir()}
+	if r.started("U1") != "" {
+		t.Fatal("a record before any run")
+	}
+	old := r.mark("U1", testRunnerApp)
+	if old == "" || r.started("U1") != testRunnerApp {
+		t.Fatalf("mark %q, started %q", old, r.started("U1"))
+	}
+	time.Sleep(time.Millisecond)
+	cur := r.mark("U1", testRunnerApp) // a newer run of the same phone
+	r.unmark("U1", old)                // the older one's stop ends late
+	if r.started("U1") != testRunnerApp {
+		t.Fatal("the older run forgot the newer one's record")
+	}
+	r.unmark("U1", cur)
+	if r.started("U1") != "" {
+		t.Fatal("the record stayed after its run ended")
+	}
+	if (runRecords{}).mark("U1", testRunnerApp) != "" || r.mark("U1", "") != "" {
+		t.Fatal("recorded without a folder or an app")
+	}
+}
+
+// TestRunStopForgetsRecord: the record goes once the runner is gone, and
+// stays while it may still run.
+func TestRunStopForgetsRecord(t *testing.T) {
+	for _, reach := range []bool{true, false} {
+		f := newFakePhone()
+		if !reach {
+			f.refuse = map[string]bool{"tunnel": true, "new-tunnel": true}
+		}
+		usePhone(t, f)
+		ended := false
+		r := &wdaRun{
+			cancel: func() {}, done: make(chan struct{}),
+			entry: goios.DeviceEntry{Address: "tunnel"},
+			base:  goios.DeviceEntry{Properties: goios.DeviceProperties{SerialNumber: "U1"}},
+			app:   wdaRunner{Path: testRunnerApp},
+			ended: func() { ended = true },
+		}
+		close(r.done)
+		r.stop()
+		if ended != reach {
+			t.Fatalf("phone reached %v: ended %v", reach, ended)
+		}
+	}
+}
+
+// TestWDACloseEndsLeftover: a runner an earlier Pinky started and this one
+// took over ends when the device closes; one Pinky did not start is left.
+func TestWDACloseEndsLeftover(t *testing.T) {
+	srv := httptest.NewServer(&fakeWDA{})
+	defer srv.Close()
+
+	f := newFakePhone()
+	usePhone(t, f)
+	ended := false
+	d := &WDADevice{c: newWDAURL(srv.URL, ""), entry: goios.DeviceEntry{Address: "usb"}, leftover: testRunnerApp, leftoverEnded: func() { ended = true }}
+	d.Close()
+	if f.running(300) || f.running(301) || !ended {
+		t.Fatalf("running %v, ended %v", f.running(300), ended)
+	}
+	if !f.running(400) || !f.running(500) {
+		t.Fatal("killed a process outside the runner")
+	}
+
+	f = newFakePhone()
+	usePhone(t, f)
+	d = &WDADevice{c: newWDAURL(srv.URL, ""), entry: goios.DeviceEntry{Address: "usb"}}
+	d.Close()
+	if len(f.opened) != 0 || !f.running(300) {
+		t.Fatal("ended a runner Pinky did not start")
+	}
+}
+
+// TestProviderCloseStopsWaits: closing the provider ends the runners that
+// wait for the passcode before it returns.
+func TestProviderCloseStopsWaits(t *testing.T) {
+	f := newFakePhone()
+	usePhone(t, f)
+	run := &wdaRun{
+		cancel: func() {}, done: make(chan struct{}),
+		entry: goios.DeviceEntry{Address: "tunnel"},
+		app:   wdaRunner{Path: testRunnerApp},
+	}
+	close(run.done)
+	p := &Provider{wdaWaits: map[string]*wdaStart{"U1": {run: run}}}
+	p.Close()
+	if f.running(300) || f.running(301) {
+		t.Fatal("the waiting runner still runs after Close")
+	}
+	if len(p.wdaWaits) != 0 {
+		t.Fatal("Close kept the wait")
+	}
+}
+
+// TestAdoptLeftover: a device that took over WDA ends its runner when an
+// earlier Pinky recorded it, and nothing when none did.
+func TestAdoptLeftover(t *testing.T) {
+	dir := t.TempDir()
+	p := &Provider{RunDir: dir}
+	d := &WDADevice{}
+	p.adoptLeftover(d, "U2")
+	if d.leftover != "" {
+		t.Fatal("adopted a runner nobody recorded")
+	}
+	runRecords{dir}.mark("U1", testRunnerApp)
+	d = &WDADevice{}
+	p.adoptLeftover(d, "U1")
+	if d.leftover != testRunnerApp || d.leftoverEnded == nil {
+		t.Fatalf("leftover %q", d.leftover)
+	}
+	d.leftoverEnded()
+	if (runRecords{dir}).started("U1") != "" {
+		t.Fatal("the record stayed")
+	}
+}

@@ -246,6 +246,13 @@ func (g *Gateway) Close() error {
 	for _, dev := range devs {
 		dev.Close()
 	}
+	// Providers may hold things of their own on the phones (an iPhone's
+	// helper waiting for its passcode).
+	for _, p := range g.opt.Providers {
+		if c, ok := p.(io.Closer); ok {
+			c.Close()
+		}
+	}
 	if g.store != nil {
 		return g.store.Close()
 	}

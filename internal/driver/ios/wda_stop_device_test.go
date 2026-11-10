@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/danielpaulus/go-ios/ios/installationproxy"
 	"github.com/danielpaulus/go-ios/ios/syslog"
 )
 
@@ -131,5 +132,64 @@ func TestWDAStopDevice(t *testing.T) {
 			l.Close()
 		}
 		t.Errorf("the runner outlived the stop: %v", left)
+	}
+}
+
+// TestRunnerProcsProbe lists the phone's processes that look like a test
+// runner (XCTest, WebDriverAgent, a .xctrunner bundle) without starting or
+// stopping anything. PINKY_PSPROBE=1.
+func TestRunnerProcsProbe(t *testing.T) {
+	if os.Getenv("PINKY_PSPROBE") == "" {
+		t.Skip("PINKY_PSPROBE not set")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	l, err := dialLink(ctx, os.Getenv("PINKY_DEVICE"), os.Getenv("PINKY_WIFI") != "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	pc, err := openRunnerProcs(l.entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pc.Close()
+	list, err := pc.ListProcesses()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range list {
+		low := strings.ToLower(p.Path)
+		if strings.Contains(low, "xctest") || strings.Contains(low, "webdriver") || strings.Contains(low, "xctrunner") || strings.Contains(low, "runner.app") {
+			t.Logf("pid %d %s", p.Pid, p.Path)
+		}
+	}
+	t.Logf("%d processes", len(list))
+}
+
+// TestAppByPathProbe names the installed app whose bundle path holds
+// PINKY_APPDIR (a container UUID). PINKY_APPDIR=<uuid>.
+func TestAppByPathProbe(t *testing.T) {
+	dir := os.Getenv("PINKY_APPDIR")
+	if dir == "" {
+		t.Skip("PINKY_APPDIR not set")
+	}
+	e, err := findEntry(os.Getenv("PINKY_DEVICE"), os.Getenv("PINKY_WIFI") != "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := installationproxy.New(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	apps, err := c.BrowseUserApps()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range apps {
+		if p, _ := a["Path"].(string); strings.Contains(p, dir) {
+			t.Logf("%v %v", a["CFBundleIdentifier"], a["CFBundleDisplayName"])
+		}
 	}
 }

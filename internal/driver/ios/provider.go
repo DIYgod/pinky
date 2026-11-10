@@ -40,6 +40,11 @@ type Provider struct {
 	// that usbmuxd, which then carries every connection to an iPhone.
 	WiFiMux bool
 
+	// RunDir is where Pinky remembers the helper runners it started (see
+	// runRecords), so that it ends one it left after a crash; "" for
+	// nowhere.
+	RunDir string
+
 	// Log gets a line for each step Pinky takes to prepare a phone:
 	// mounting the developer disk image, showing the Developer Mode
 	// switch, asking for trust, downloading the image. nil for none.
@@ -400,6 +405,10 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		}
 		if s.run != nil {
 			s.run.logger = p.logger()
+			recs := runRecords{p.RunDir}
+			if body := recs.mark(info.ID, s.run.app.Path); body != "" {
+				s.run.ended = func() { recs.unmark(info.ID, body) }
+			}
 		}
 	}
 	d, err := s.open(ctx, info)
@@ -409,6 +418,9 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		delete(p.wdaHolds, info.ID)
 		p.mu.Unlock()
 		d.log = p.logger()
+		if s.run == nil {
+			p.adoptLeftover(d, info.ID)
+		}
 		return d, nil
 	case errors.Is(err, errAutomation):
 		p.mu.Lock()
@@ -423,6 +435,37 @@ func (p *Provider) openWDA(ctx context.Context, info driver.Info) (driver.Device
 		s.stop()
 	}
 	return nil, err
+}
+
+// adoptLeftover has the device end, on Close, the runner it took over
+// when an earlier Pinky started it (see runRecords).
+func (p *Provider) adoptLeftover(d *WDADevice, id string) {
+	recs := runRecords{p.RunDir}
+	if path := recs.started(id); path != "" {
+		d.leftover = path
+		d.leftoverEnded = func() { recs.unmark(id, "") }
+	}
+}
+
+// Close ends the helper's runners that wait for the passcode, and returns
+// once they are gone from the phones (or after wdaEndTimeout): left there,
+// the request keeps the phone from locking by itself. The gateway closes
+// the provider when Pinky quits, after its devices.
+func (p *Provider) Close() error {
+	p.mu.Lock()
+	waits := p.wdaWaits
+	p.wdaWaits = nil
+	p.mu.Unlock()
+	var wg sync.WaitGroup
+	for _, s := range waits {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			s.stop()
+		}()
+	}
+	wg.Wait()
+	return nil
 }
 
 func (p *Provider) logger() *slog.Logger { return logTo(p.Log) }

@@ -34,6 +34,12 @@ type WDADevice struct {
 	run   *wdaRun           // the test run hosting WDA, when Pinky started it
 	l     *link             // the tunnel the run goes through, from iOS 17.4
 
+	// leftover is the runner app's folder when WDA was already answering
+	// and an earlier Pinky had started it (see runRecords): Close ends
+	// that runner too, then calls leftoverEnded. "" for any other.
+	leftover      string
+	leftoverEnded func()
+
 	scale float64
 	// width and height are the screen's size in pixels when the phone was
 	// opened, in the orientation it had then; size gives it the right way
@@ -1021,6 +1027,10 @@ func (d *WDADevice) Close() error {
 		cancel()
 		if d.run != nil {
 			d.run.stop()
+		} else if d.leftover != "" {
+			if endHelper(d.entry, d.entry, d.leftover, d.log) && d.leftoverEnded != nil {
+				d.leftoverEnded()
+			}
 		}
 		if d.l != nil {
 			d.l.Close()

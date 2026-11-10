@@ -127,6 +127,7 @@ type wdaRun struct {
 	entry, base goios.DeviceEntry
 	app         wdaRunner
 	logger      *slog.Logger // what stop did; nil: nothing
+	ended       func()       // called once stop saw the runner gone; nil: none
 	stopOnce    sync.Once
 
 	mu  sync.Mutex
@@ -206,17 +207,27 @@ func (r *wdaRun) stop() {
 		if r.app.Path == "" {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), wdaEndTimeout)
-		defer cancel()
-		killed, err := endRunner(ctx, r.entry, r.base, r.app.Path)
-		lg := logTo(r.logger)
-		switch {
-		case err != nil:
-			lg.Warn("iphone: could not make sure the helper ended", "device", r.base.Properties.SerialNumber, "killed", killed, "err", err)
-		case killed > 0:
-			lg.Info("iphone: ended the helper left running", "device", r.base.Properties.SerialNumber, "killed", killed)
+		if endHelper(r.entry, r.base, r.app.Path, r.logger) && r.ended != nil {
+			r.ended()
 		}
 	})
+}
+
+// endHelper makes sure the runner from the app at appPath is gone from
+// the phone, for up to wdaEndTimeout, logs what it did to logger, and
+// reports whether the runner is gone.
+func endHelper(entry, base goios.DeviceEntry, appPath string, logger *slog.Logger) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), wdaEndTimeout)
+	defer cancel()
+	killed, err := endRunner(ctx, entry, base, appPath)
+	lg := logTo(logger)
+	switch {
+	case err != nil:
+		lg.Warn("iphone: could not make sure the helper ended", "device", base.Properties.SerialNumber, "killed", killed, "err", err)
+	case killed > 0:
+		lg.Info("iphone: ended the helper left running", "device", base.Properties.SerialNumber, "killed", killed)
+	}
+	return err == nil
 }
 
 // runnerProcs lists and kills processes on a phone (appservice, iOS 17+).
