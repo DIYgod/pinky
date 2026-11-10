@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 退出 Pinky 时，它自带的 adb 也会一并停止，不再留下 adb 进程（Android Studio 等其他应用正在使用时除外）；你自己安装的 adb 不受影响。可在「设置 › 高级」中关闭「退出 Pinky 时停止 adb」。
+
 ## 2026.1110.19 (2026-11-10)
 
 - vivo 手机锁屏先要求指纹时，从电脑解锁现在也能用了：Pinky 会点「使用密码」再输入 PIN 码。
