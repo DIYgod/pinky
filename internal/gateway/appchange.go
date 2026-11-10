@@ -514,8 +514,10 @@ func (g *Gateway) appError(l *lease, err error, what string) *Result {
 	case errors.Is(err, driver.ErrLocked):
 		g.setLocked(l.dev, true)
 		return statusResult(StatusLocked, "The phone is locked. Call phone_handoff so the person can unlock it.")
-	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+	case errors.Is(err, context.Canceled):
 		return errResult(ErrInternal, "The call was cancelled.")
+	case errors.Is(err, context.DeadlineExceeded):
+		return errResult(ErrInternal, "%s: the phone did not answer in time (%v). Check the phone before trying again.", what, err)
 	}
 	return errResult(ErrInternal, "%s: %v", what, err)
 }

@@ -746,8 +746,10 @@ func (g *Gateway) switchError(l *lease, err error) *Result {
 	case errors.Is(err, driver.ErrOffline):
 		g.setOffline(l.dev, "")
 		return errResult(ErrDeviceOffline, "%s is offline.", l.dev.name())
-	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+	case errors.Is(err, context.Canceled):
 		return errResult(ErrInternal, "The call was cancelled.")
+	case errors.Is(err, context.DeadlineExceeded):
+		return errResult(ErrInternal, "The phone did not answer in time (%v). Check the phone before trying again.", err)
 	}
 	return errResult(ErrInternal, "%v", err)
 }
