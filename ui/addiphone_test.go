@@ -413,12 +413,16 @@ func testAddIPhoneDownload(t *testing.T, height int) {
 		}
 	}
 
-	// One that works: the phone is prepared next.
+	// One that works: the phone is prepared next. The fake holds it
+	// halfway until the progress shows: whole, it is over before a click
+	// and a frame are under the race detector.
 	ta.api.SetDownloadError(nil)
+	ta.api.HoldDownload(true)
 	if err := clickInView(tt, "Try again"); err != nil {
 		t.Fatal(err)
 	}
 	ta.waitFor(t, "the progress", func() bool { tt.Frame(); return hasText(tt, "Downloading…") })
+	ta.api.HoldDownload(false)
 	ta.waitFor(t, "the phone being prepared", func() bool { tt.Frame(); return hasText(tt, "Preparing the iPhone…") })
 }
 

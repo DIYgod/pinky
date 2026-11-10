@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"image"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,9 +20,9 @@ import (
 )
 
 // Action is one input: phone_tap, phone_type, phone_swipe, phone_pinch,
-// phone_key or phone_launch, or a step of phone_batch.
+// phone_drag, phone_key or phone_launch, or a step of phone_batch.
 type Action struct {
-	Tool       string // tap, type, swipe, pinch, key or launch
+	Tool       string // tap, type, swipe, pinch, drag, key or launch
 	Ref        int
 	Point      *screen.Point // tap at x,y instead of a ref; a pinch's centre
 	LongPress  bool
@@ -36,8 +37,16 @@ type Action struct {
 	// 0 leaves it (as 1); Rotation turns them by that many degrees,
 	// clockwise when positive.
 	Scale, Rotation float64
-	Key             string
-	App             string
+	// HoldMS, Via and PauseMS shape a drag: the finger rests HoldMS where
+	// it presses (long enough to pick up an app icon), passes through
+	// each of Via, resting at each for its PauseMS, and rests PauseMS at
+	// To before it lets go; nil rests defaultDragPause. DurationMS is how
+	// long each move takes.
+	HoldMS  int
+	Via     []Waypoint
+	PauseMS *int
+	Key     string
+	App     string
 	// Language and Region open the app in another language or region
 	// (phone_launch, switches.go): a BCP 47 language such as "ja" or
 	// "zh-Hans", and a two-letter region such as "JP".
@@ -109,6 +118,10 @@ func (a Action) check() *Result {
 		if res := a.checkPinch(); res != nil {
 			return res
 		}
+	case "drag":
+		if res := a.checkDrag(); res != nil {
+			return res
+		}
 	case "key":
 		if _, ok := agentKeys[a.Key]; !ok {
 			return bad("unknown key %q; use one of %s.", a.Key, strings.Join(KeyNames(), ", "))
@@ -125,6 +138,9 @@ func (a Action) check() *Result {
 	}
 	if a.Tool != "launch" && (a.Language != "" || a.Region != "") {
 		return bad("language and region go with phone_launch only.")
+	}
+	if a.Tool != "drag" && (a.HoldMS != 0 || a.PauseMS != nil || len(a.Via) > 0) {
+		return bad("hold_ms, pause_ms and via go with phone_drag only.")
 	}
 	if a.Settle != nil && (*a.Settle < 0 || *a.Settle > MaxSettle) {
 		return bad("settle_ms must be between 0 and %d.", MaxSettle.Milliseconds())
@@ -155,6 +171,16 @@ func (a Action) digest() string {
 		a.Tool, a.Ref, p(a.Point), a.LongPress, a.Text, a.Append, a.Submit, a.Direction, p(a.From), p(a.To), a.DurationMS, a.Key, a.App)
 	if a.Scale != 0 || a.Rotation != 0 {
 		s += fmt.Sprintf("|scale=%g|rot=%g", a.Scale, a.Rotation)
+	}
+	if a.Tool == "drag" {
+		pause := "-"
+		if a.PauseMS != nil {
+			pause = strconv.Itoa(*a.PauseMS)
+		}
+		s += fmt.Sprintf("|hold=%d|pause=%s|via=", a.HoldMS, pause)
+		for _, w := range a.Via {
+			s += fmt.Sprintf("%d,%d,%d;", w.X, w.Y, w.PauseMS)
+		}
 	}
 	if a.localized() {
 		loc := a.locale()
@@ -206,6 +232,22 @@ func (a Action) args(c Call) string {
 	}
 	if a.Rotation != 0 {
 		m["rotation"] = a.Rotation
+	}
+	if a.HoldMS != 0 {
+		m["hold_ms"] = a.HoldMS
+	}
+	if len(a.Via) > 0 {
+		via := make([]map[string]int, len(a.Via))
+		for i, w := range a.Via {
+			via[i] = map[string]int{"x": w.X, "y": w.Y}
+			if w.PauseMS != 0 {
+				via[i]["pause_ms"] = w.PauseMS
+			}
+		}
+		m["via"] = via
+	}
+	if a.PauseMS != nil {
+		m["pause_ms"] = *a.PauseMS
 	}
 	if a.Key != "" {
 		m["key"] = a.Key
@@ -345,6 +387,8 @@ type prep struct {
 	// pinch is the gesture of a pinch, whose first finger goes from from
 	// to to, around point.
 	pinch *driver.Pinch
+	// drag is the gesture of a drag, which presses from and lets go at to.
+	drag *driver.Drag
 	// launch is the app phone_launch opens, or for a link (url) the app
 	// that opens link.
 	launch driver.App
@@ -562,12 +606,16 @@ func (g *Gateway) evaluate(p *prep, cur *screen.Screen) policy.Verdict {
 }
 
 // fingers returns where a tap, swipe or pinch first touches the screen:
-// one point, or both fingers of a pinch.
+// one point, or both fingers of a pinch. For a drag it is every point the
+// finger presses, rests on or lets go at, since dropping something is as
+// much an action as picking it up.
 func (p *prep) fingers() []screen.Point {
 	switch {
 	case p.pinch != nil:
 		a, b := p.pinch.At(0)
 		return []screen.Point{a, b}
+	case p.drag != nil:
+		return p.drag.Points()
 	case p.input.Op == policy.OpTap && p.hasPt:
 		return []screen.Point{p.point}
 	case p.input.Op == policy.OpSwipe:
@@ -799,6 +847,16 @@ func (g *Gateway) prepare(ctx context.Context, l *lease, a Action, cur *screen.S
 			}
 		}
 		if res := p.preparePinch(a, cur, byRef); res != nil {
+			return p, res
+		}
+	case "drag":
+		p.input.Op = policy.OpSwipe
+		if dev, _ := g.screenOf(d); dev != nil {
+			if _, ok := dev.(driver.Dragger); !ok {
+				return p, errResult(ErrUnsupported, "This phone cannot drag. Nothing was done.")
+			}
+		}
+		if res := p.prepareDrag(a, cur, byRef, inBounds); res != nil {
 			return p, res
 		}
 	case "key":
@@ -1089,10 +1147,14 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 		target = screen.Rect{X: p.point.X - 24, Y: p.point.Y - 24, W: 48, H: 48}
 	}
 	var point, to, point2, to2 screen.Point
+	var path []screen.Point
 	switch {
 	case p.pinch != nil:
 		point, point2 = p.pinch.At(0)
 		to, to2 = p.pinch.At(1)
+	case p.drag != nil:
+		point, to = p.from, p.to
+		path = p.drag.Points()
 	case a.Tool == "swipe":
 		point, to = p.from, p.to
 	case p.hasPt:
@@ -1111,7 +1173,7 @@ func (g *Gateway) ask(ctx context.Context, l *lease, c Call, a Action, p *prep, 
 	info := g.approvals.Open(approval.Request{
 		Kind: approval.KindAction, Binding: g.binding(l, a), Rule: v.Rule, Title: approvalTitle(a, p, v),
 		Detail: detail, App: app, Agent: l.session.agent.Name, TaskID: l.task.id,
-		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Point: point, To: to, Point2: point2, To2: to2, Data: takeSnapshot(cur, p, v),
+		DeviceName: l.dev.name(), Screenshot: shot, Target: target, Point: point, To: to, Point2: point2, To2: to2, Path: path, Data: takeSnapshot(cur, p, v),
 	})
 	if res := g.afterOpen(l, info); res != nil {
 		return info, res
@@ -1796,6 +1858,12 @@ func (g *Gateway) perform(ctx context.Context, dev driver.Device, a Action, p *p
 			return fmt.Errorf("pinching: %w", driver.ErrUnsupported)
 		}
 		return pc.Pinch(ctx, *p.pinch)
+	case "drag":
+		dr, ok := dev.(driver.Dragger)
+		if !ok || p.drag == nil {
+			return fmt.Errorf("dragging: %w", driver.ErrUnsupported)
+		}
+		return dr.Drag(ctx, *p.drag)
 	case "key":
 		return dev.Key(ctx, agentKeys[a.Key])
 	case "launch":
@@ -2491,6 +2559,8 @@ func describe(a Action, p *prep) string {
 		return fmt.Sprintf("Swiped from %d,%d to %d,%d", a.From.X, a.From.Y, a.To.X, a.To.Y)
 	case "pinch":
 		return describePinch(a, label)
+	case "drag":
+		return describeDrag(a, p, label)
 	case "key":
 		return "Pressed " + strings.ReplaceAll(a.Key, "_", " ")
 	case "launch":

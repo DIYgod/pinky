@@ -2,6 +2,15 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1110.5 (2026-11-10)
+
+- Agents can now drag: move app icons to another home screen page or into a folder, reorder lists and move sliders, with the same approvals and rules as a swipe. Thanks to issenzhang.
+
+## 2026.1110.4 (2026-11-10)
+
+- Confirming it's you on Windows with an account that has no password now also works on the computers the previous fix missed, such as ones with long names: leave the password empty. Thanks to Kutius.
+- On Windows, if your account is a Microsoft account you sign in to with a PIN or Windows Hello, Pinky now tells you to type your Microsoft account password when confirming it's you, instead of just failing.
+
 ## 2026.1110.3 (2026-11-10)
 
 - On Linux, logging out and back in no longer lets a second Pinky start on the same history and phones while the first one is still running. Thanks to pseudoyu.

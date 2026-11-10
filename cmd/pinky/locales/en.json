@@ -3134,6 +3134,16 @@
       }
     }
   },
+  "gwAskDrag": "Drag “{label}”?",
+  "@gwAskDrag": {
+    "description": "An approval's title: drag the element with this label, such as an app icon or a slider, to another place. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Maps"
+      }
+    }
+  },
   "gwAskLongPress": "Long-press “{label}”?",
   "@gwAskLongPress": {
     "description": "An approval's title: long-press the element with this label. Shown only in other languages; in English the gateway's own words show.",
@@ -3243,6 +3253,42 @@
       "label": {
         "type": "String",
         "example": "Message"
+      }
+    }
+  },
+  "gwDidDrag": "Dragged “{label}”",
+  "@gwDidDrag": {
+    "description": "A step: the agent dragged the element with this label to another place (phone_drag), such as an app icon to another home screen page. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Maps"
+      }
+    }
+  },
+  "gwDidDragBare": "Dragged",
+  "@gwDidDragBare": {
+    "description": "A step: the agent dragged, without a known element or place, as when the element was gone before the drag ran. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDidDragFromTo": "Dragged from {fromX},{fromY} to {toX},{toY}",
+  "@gwDidDragFromTo": {
+    "description": "A step: the agent dragged something from one point to another, in pixels (phone_drag). Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "fromX": {
+        "type": "String",
+        "example": "540"
+      },
+      "fromY": {
+        "type": "String",
+        "example": "1800"
+      },
+      "toX": {
+        "type": "String",
+        "example": "540"
+      },
+      "toY": {
+        "type": "String",
+        "example": "600"
       }
     }
   },
@@ -3559,6 +3605,42 @@
       "phone": {
         "type": "String",
         "example": "Pixel 9"
+      }
+    }
+  },
+  "gwDoDrag": "drag “{label}”",
+  "@gwDoDrag": {
+    "description": "What a step asked for: drag the element with this label to another place. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Maps"
+      }
+    }
+  },
+  "gwDoDragBare": "drag",
+  "@gwDoDragBare": {
+    "description": "What a step asked for: a drag without a known element or place. Shown only in other languages; in English the gateway's own words show."
+  },
+  "gwDoDragFromTo": "drag from {fromX},{fromY} to {toX},{toY}",
+  "@gwDoDragFromTo": {
+    "description": "What a step asked for: a drag from one point to another, in pixels. Shown only in other languages; in English the gateway's own words show.",
+    "placeholders": {
+      "fromX": {
+        "type": "String",
+        "example": "540"
+      },
+      "fromY": {
+        "type": "String",
+        "example": "1800"
+      },
+      "toX": {
+        "type": "String",
+        "example": "540"
+      },
+      "toY": {
+        "type": "String",
+        "example": "600"
       }
     }
   },
@@ -8459,6 +8541,16 @@
   "unlockEnd": ".",
   "@unlockEnd": {
     "description": "Ends the hints that say how to unlock a phone on it (the unlockOnPhone messages) when nothing follows them: a full stop."
+  },
+  "unlockErrMicrosoftAccount": "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft account, which has a password even if you sign in with a PIN or Windows Hello.",
+  "@unlockErrMicrosoftAccount": {
+    "description": "A notice on Windows when confirming the person failed because they typed nothing, or only wrong passwords (most likely the PIN they sign in with), in Windows' password dialog, and their Windows account is connected to a Microsoft account. name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
   },
   "unlockErrNoPIN": "No PIN is saved for {name}. Save it in Settings › Phones.",
   "@unlockErrNoPIN": {

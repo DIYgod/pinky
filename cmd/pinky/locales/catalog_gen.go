@@ -9343,6 +9343,24 @@ func (msgs Messages) GwAskChange(label string) string {
 	return Catalog.Format(msgs.locale, "gwAskChange", map[string]any{"label": label})
 }
 
+// GwAskDrag says "Drag “{label}”?"
+// in the language the app shows.
+//
+// An approval's title: drag the element with this label, such as an app
+// icon or a slider, to another place. Shown only in other languages; in
+// English the gateway's own words show.
+func GwAskDrag(label string) string { return In(i18n.Locale()).GwAskDrag(label) }
+
+// GwAskDrag says "Drag “{label}”?"
+// in the language of msgs.
+//
+// An approval's title: drag the element with this label, such as an app
+// icon or a slider, to another place. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwAskDrag(label string) string {
+	return Catalog.Format(msgs.locale, "gwAskDrag", map[string]any{"label": label})
+}
+
 // GwAskLongPress says "Long-press “{label}”?"
 // in the language the app shows.
 //
@@ -9519,6 +9537,62 @@ func GwAskTypeInto(label string) string { return In(i18n.Locale()).GwAskTypeInto
 // other languages; in English the gateway's own words show.
 func (msgs Messages) GwAskTypeInto(label string) string {
 	return Catalog.Format(msgs.locale, "gwAskTypeInto", map[string]any{"label": label})
+}
+
+// GwDidDrag says "Dragged “{label}”"
+// in the language the app shows.
+//
+// A step: the agent dragged the element with this label to another place
+// (phone_drag), such as an app icon to another home screen page. Shown only
+// in other languages; in English the gateway's own words show.
+func GwDidDrag(label string) string { return In(i18n.Locale()).GwDidDrag(label) }
+
+// GwDidDrag says "Dragged “{label}”"
+// in the language of msgs.
+//
+// A step: the agent dragged the element with this label to another place
+// (phone_drag), such as an app icon to another home screen page. Shown only
+// in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDidDrag(label string) string {
+	return Catalog.Format(msgs.locale, "gwDidDrag", map[string]any{"label": label})
+}
+
+// GwDidDragBare says "Dragged"
+// in the language the app shows.
+//
+// A step: the agent dragged, without a known element or place, as when the
+// element was gone before the drag ran. Shown only in other languages; in
+// English the gateway's own words show.
+func GwDidDragBare() string { return In(i18n.Locale()).GwDidDragBare() }
+
+// GwDidDragBare says "Dragged"
+// in the language of msgs.
+//
+// A step: the agent dragged, without a known element or place, as when the
+// element was gone before the drag ran. Shown only in other languages; in
+// English the gateway's own words show.
+func (msgs Messages) GwDidDragBare() string {
+	return Catalog.Format(msgs.locale, "gwDidDragBare", nil)
+}
+
+// GwDidDragFromTo says "Dragged from {fromX},{fromY} to {toX},{toY}"
+// in the language the app shows.
+//
+// A step: the agent dragged something from one point to another, in pixels
+// (phone_drag). Shown only in other languages; in English the gateway's own
+// words show.
+func GwDidDragFromTo(fromX string, fromY string, toX string, toY string) string {
+	return In(i18n.Locale()).GwDidDragFromTo(fromX, fromY, toX, toY)
+}
+
+// GwDidDragFromTo says "Dragged from {fromX},{fromY} to {toX},{toY}"
+// in the language of msgs.
+//
+// A step: the agent dragged something from one point to another, in pixels
+// (phone_drag). Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwDidDragFromTo(fromX string, fromY string, toX string, toY string) string {
+	return Catalog.Format(msgs.locale, "gwDidDragFromTo", map[string]any{"fromX": fromX, "fromY": fromY, "toX": toX, "toY": toY})
 }
 
 // GwDidLongPress says "Long-pressed “{label}”"
@@ -10069,6 +10143,56 @@ func GwDoCopyFiles(count string, phone string) string {
 // Shown only in other languages; in English the gateway's own words show.
 func (msgs Messages) GwDoCopyFiles(count string, phone string) string {
 	return Catalog.Format(msgs.locale, "gwDoCopyFiles", map[string]any{"count": count, "phone": phone})
+}
+
+// GwDoDrag says "drag “{label}”"
+// in the language the app shows.
+//
+// What a step asked for: drag the element with this label to another place.
+// Shown only in other languages; in English the gateway's own words show.
+func GwDoDrag(label string) string { return In(i18n.Locale()).GwDoDrag(label) }
+
+// GwDoDrag says "drag “{label}”"
+// in the language of msgs.
+//
+// What a step asked for: drag the element with this label to another place.
+// Shown only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoDrag(label string) string {
+	return Catalog.Format(msgs.locale, "gwDoDrag", map[string]any{"label": label})
+}
+
+// GwDoDragBare says "drag"
+// in the language the app shows.
+//
+// What a step asked for: a drag without a known element or place. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoDragBare() string { return In(i18n.Locale()).GwDoDragBare() }
+
+// GwDoDragBare says "drag"
+// in the language of msgs.
+//
+// What a step asked for: a drag without a known element or place. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoDragBare() string {
+	return Catalog.Format(msgs.locale, "gwDoDragBare", nil)
+}
+
+// GwDoDragFromTo says "drag from {fromX},{fromY} to {toX},{toY}"
+// in the language the app shows.
+//
+// What a step asked for: a drag from one point to another, in pixels. Shown
+// only in other languages; in English the gateway's own words show.
+func GwDoDragFromTo(fromX string, fromY string, toX string, toY string) string {
+	return In(i18n.Locale()).GwDoDragFromTo(fromX, fromY, toX, toY)
+}
+
+// GwDoDragFromTo says "drag from {fromX},{fromY} to {toX},{toY}"
+// in the language of msgs.
+//
+// What a step asked for: a drag from one point to another, in pixels. Shown
+// only in other languages; in English the gateway's own words show.
+func (msgs Messages) GwDoDragFromTo(fromX string, fromY string, toX string, toY string) string {
+	return Catalog.Format(msgs.locale, "gwDoDragFromTo", map[string]any{"fromX": fromX, "fromY": fromY, "toX": toX, "toY": toY})
 }
 
 // GwDoGiveRecording says "give {agent} the screen recording of “{task}”"
@@ -23161,6 +23285,28 @@ func UnlockEnd() string { return In(i18n.Locale()).UnlockEnd() }
 // messages) when nothing follows them: a full stop.
 func (msgs Messages) UnlockEnd() string {
 	return Catalog.Format(msgs.locale, "unlockEnd", nil)
+}
+
+// UnlockErrMicrosoftAccount says "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft …"
+// in the language the app shows.
+//
+// A notice on Windows when confirming the person failed because they typed
+// nothing, or only wrong passwords (most likely the PIN they sign in with),
+// in Windows' password dialog, and their Windows account is connected to a
+// Microsoft account. name is the phone's name.
+func UnlockErrMicrosoftAccount(name string) string {
+	return In(i18n.Locale()).UnlockErrMicrosoftAccount(name)
+}
+
+// UnlockErrMicrosoftAccount says "To unlock {name}, type your Microsoft account password when Windows asks for it. Your Windows account is a Microsoft …"
+// in the language of msgs.
+//
+// A notice on Windows when confirming the person failed because they typed
+// nothing, or only wrong passwords (most likely the PIN they sign in with),
+// in Windows' password dialog, and their Windows account is connected to a
+// Microsoft account. name is the phone's name.
+func (msgs Messages) UnlockErrMicrosoftAccount(name string) string {
+	return Catalog.Format(msgs.locale, "unlockErrMicrosoftAccount", map[string]any{"name": name})
 }
 
 // UnlockErrNoPIN says "No PIN is saved for {name}. Save it in Settings › Phones."

@@ -444,3 +444,14 @@ Settings › Safety › Add app lists, under its field, the connected phones' ap
 Both only where `DeviceView.Features.Pinch` is set (the driver is a `driver.MultiToucher`); elsewhere `InputZoom` is not taken and Option-drag is a plain drag. While fingers are down, `drawFingers` shows them as two white dots, as Simulator does. An approval's screenshot of a pinch draws both fingers' arrows and zooms on both paths (`NeedView.Point2`, `To2`), and history and the step overlay say "Zoomed in on …", "Zoomed out …" or "Turned … with two fingers" (`gwDid*`/`gwDo*` messages). Tests: `TestMirrorPinch`, `TestPinchMarks`, and the `gwtext` cases.
 
 Not tried by hand: a real touchpad on Windows and Linux, and the feel on a real phone (the emulator's and the Simulator's apps followed the touches, see android.md and ios.md).
+
+## Dragging (2026-11-10)
+
+The agent's `phone_drag` (docs/notes/gateway.md, "Dragging") shows in the client in three places:
+
+- **History and the step overlay** (`ui/gwtext.go`): "Dragged “<label>”" is `gwDidDrag`, "Dragged from X,Y to X,Y" `gwDidDragFromTo`, and a bare "Dragged" (no element and no points, as when the element was gone) `gwDidDragBare`; a step waiting for the person or one that failed takes the `gwDoDrag*` forms ("drag …"). `imperative` turns "Dragged " into "drag " for English.
+- **The approval's screenshot** (`ui/approvalshot.go`): `NeedView.Path` holds every point of the drag; `shotMarks.route()` draws one arrow through them all with a ring at each stop, and the zoom takes in the whole route. A drag without stops draws like a swipe.
+- **Tests:** `TestDragMarks` (the route and the zoom), the `gwtext` cases for all three forms in Chinese.
+
+The person's own drags on the mirror are unchanged: they were already played back with their timing (`Touch`).
+

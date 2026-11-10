@@ -50,6 +50,24 @@ func (a *listArea) screen() *screen.Rect {
 	return &screen.Rect{X: a.X, Y: a.Y, W: a.Width, H: a.Height}
 }
 
+// waypoint is a point a drag passes through.
+type waypoint struct {
+	X       int `json:"x"`
+	Y       int `json:"y"`
+	PauseMS int `json:"pause_ms,omitempty" jsonschema:"Rest here this many milliseconds before moving on, 0 to 5000; default 0. About 700 near the screen's left or right edge turns a home screen one page; a longer rest turns more."`
+}
+
+func waypoints(in []waypoint) []gateway.Waypoint {
+	if len(in) == 0 {
+		return nil
+	}
+	out := make([]gateway.Waypoint, len(in))
+	for i, w := range in {
+		out[i] = gateway.Waypoint{Point: screen.Point{X: w.X, Y: w.Y}, PauseMS: w.PauseMS}
+	}
+	return out
+}
+
 type connectIn struct {
 	Device string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Optional when one phone is connected."`
 	Task   string   `json:"task" jsonschema:"One line naming the task, shown to the person, e.g. Reorder last week's lunch."`
@@ -110,6 +128,17 @@ type pinchIn struct {
 	DurationMS int     `json:"duration_ms,omitempty" jsonschema:"How long the pinch takes, 200 to 2000 milliseconds; default 500."`
 }
 
+type dragIn struct {
+	actionArgs
+	Ref        int        `json:"ref,omitempty" jsonschema:"Press the middle of this element: an app icon, a list row's drag handle, a slider's knob."`
+	From       *point     `json:"from,omitempty" jsonschema:"Press this point in screen pixels instead of a ref."`
+	To         *point     `json:"to" jsonschema:"Where the finger lets go, in screen pixels."`
+	Via        []waypoint `json:"via,omitempty" jsonschema:"Up to 8 points to pass through on the way to to, in order, each with its own rest."`
+	HoldMS     int        `json:"hold_ms,omitempty" jsonschema:"Rest this many milliseconds where the finger presses before it moves, 0 to 5000; default 0. About 800 picks up what moves only after a long press: an app icon, a list row without a handle (300 is too short)."`
+	PauseMS    *int       `json:"pause_ms,omitempty" jsonschema:"Rest this many milliseconds at to before letting go, 0 to 5000; default 300, so nothing flings on and a folder or a gap can open under the finger."`
+	DurationMS int        `json:"duration_ms,omitempty" jsonschema:"How long each move from one point to the next takes, 100 to 3000 milliseconds; default 500."`
+}
+
 type keyIn struct {
 	actionArgs
 	Key string `json:"key" jsonschema:"The key to press."`
@@ -128,27 +157,30 @@ type appsIn struct {
 }
 
 type batchStep struct {
-	Tool       string  `json:"tool" jsonschema:"The action: tap, type, swipe, pinch, key or launch."`
-	Ref        int     `json:"ref,omitempty" jsonschema:"As in phone_tap, phone_type, phone_swipe and phone_pinch."`
-	X          *int    `json:"x,omitempty" jsonschema:"As in phone_tap and phone_pinch."`
-	Y          *int    `json:"y,omitempty" jsonschema:"As in phone_tap and phone_pinch."`
-	LongPress  bool    `json:"long_press,omitempty" jsonschema:"As in phone_tap."`
-	Text       string  `json:"text,omitempty" jsonschema:"As in phone_type."`
-	Append     bool    `json:"append,omitempty" jsonschema:"As in phone_type."`
-	Submit     bool    `json:"submit,omitempty" jsonschema:"As in phone_type."`
-	Direction  string  `json:"direction,omitempty" jsonschema:"As in phone_swipe."`
-	From       *point  `json:"from,omitempty" jsonschema:"As in phone_swipe."`
-	To         *point  `json:"to,omitempty" jsonschema:"As in phone_swipe."`
-	DurationMS int     `json:"duration_ms,omitempty" jsonschema:"As in phone_swipe and phone_pinch."`
-	Scale      float64 `json:"scale,omitempty" jsonschema:"As in phone_pinch."`
-	Rotation   float64 `json:"rotation,omitempty" jsonschema:"As in phone_pinch."`
-	Key        string  `json:"key,omitempty" jsonschema:"As in phone_key."`
-	App        string  `json:"app,omitempty" jsonschema:"As in phone_launch."`
-	Language   string  `json:"language,omitempty" jsonschema:"As in phone_launch."`
-	Region     string  `json:"region,omitempty" jsonschema:"As in phone_launch."`
-	Intent     string  `json:"intent,omitempty" jsonschema:"Why this step, shown to the person."`
-	ApprovalID string  `json:"approval_id,omitempty" jsonschema:"From an approval_pending result for this step."`
-	SettleMS   *int    `json:"settle_ms,omitempty" jsonschema:"As in phone_tap."`
+	Tool       string     `json:"tool" jsonschema:"The action: tap, type, swipe, pinch, drag, key or launch."`
+	Ref        int        `json:"ref,omitempty" jsonschema:"As in phone_tap, phone_type, phone_swipe, phone_pinch and phone_drag."`
+	X          *int       `json:"x,omitempty" jsonschema:"As in phone_tap and phone_pinch."`
+	Y          *int       `json:"y,omitempty" jsonschema:"As in phone_tap and phone_pinch."`
+	LongPress  bool       `json:"long_press,omitempty" jsonschema:"As in phone_tap."`
+	Text       string     `json:"text,omitempty" jsonschema:"As in phone_type."`
+	Append     bool       `json:"append,omitempty" jsonschema:"As in phone_type."`
+	Submit     bool       `json:"submit,omitempty" jsonschema:"As in phone_type."`
+	Direction  string     `json:"direction,omitempty" jsonschema:"As in phone_swipe."`
+	From       *point     `json:"from,omitempty" jsonschema:"As in phone_swipe and phone_drag."`
+	To         *point     `json:"to,omitempty" jsonschema:"As in phone_swipe and phone_drag."`
+	DurationMS int        `json:"duration_ms,omitempty" jsonschema:"As in phone_swipe, phone_pinch and phone_drag."`
+	Scale      float64    `json:"scale,omitempty" jsonschema:"As in phone_pinch."`
+	Rotation   float64    `json:"rotation,omitempty" jsonschema:"As in phone_pinch."`
+	Via        []waypoint `json:"via,omitempty" jsonschema:"As in phone_drag."`
+	HoldMS     int        `json:"hold_ms,omitempty" jsonschema:"As in phone_drag."`
+	PauseMS    *int       `json:"pause_ms,omitempty" jsonschema:"As in phone_drag."`
+	Key        string     `json:"key,omitempty" jsonschema:"As in phone_key."`
+	App        string     `json:"app,omitempty" jsonschema:"As in phone_launch."`
+	Language   string     `json:"language,omitempty" jsonschema:"As in phone_launch."`
+	Region     string     `json:"region,omitempty" jsonschema:"As in phone_launch."`
+	Intent     string     `json:"intent,omitempty" jsonschema:"Why this step, shown to the person."`
+	ApprovalID string     `json:"approval_id,omitempty" jsonschema:"From an approval_pending result for this step."`
+	SettleMS   *int       `json:"settle_ms,omitempty" jsonschema:"As in phone_tap."`
 }
 
 type batchIn struct {
@@ -279,7 +311,7 @@ func nonNull(props map[string]*jsonschema.Schema, names ...string) {
 var (
 	directions = []string{"up", "down", "left", "right"}
 	outcomes   = []string{"done", "failed", "partial", "cancelled"}
-	stepTools  = []string{"tap", "type", "swipe", "pinch", "key", "launch", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_key", "phone_launch"}
+	stepTools  = []string{"tap", "type", "swipe", "pinch", "drag", "key", "launch", "phone_tap", "phone_type", "phone_swipe", "phone_pinch", "phone_drag", "phone_key", "phone_launch"}
 )
 
 func patchSwipe(p map[string]*jsonschema.Schema) {
@@ -291,6 +323,17 @@ func patchSwipe(p map[string]*jsonschema.Schema) {
 func patchPinch(p map[string]*jsonschema.Schema) {
 	bounds(p["scale"], gateway.MinPinchScale, gateway.MaxPinchScale)
 	bounds(p["rotation"], -gateway.MaxPinchRotation, gateway.MaxPinchRotation)
+}
+
+// patchDrag bounds phone_drag's rests and waypoints; duration_ms is
+// bounded by the caller, as phone_batch shares it with other tools.
+func patchDrag(p map[string]*jsonschema.Schema) {
+	nonNull(p, "from", "to", "pause_ms", "via")
+	bounds(p["hold_ms"], 0, gateway.MaxDragRestMS)
+	bounds(p["pause_ms"], 0, gateway.MaxDragRestMS)
+	n := gateway.MaxDragVia
+	p["via"].MaxItems = &n
+	bounds(p["via"].Items.Properties["pause_ms"], 0, gateway.MaxDragRestMS)
 }
 
 // patchSettle bounds settle_ms and advertises it as a plain integer.
@@ -399,6 +442,21 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
 		})
 
+	sdk.AddTool(srv, &sdk.Tool{Name: "phone_drag", Title: "Drag",
+		Description: "Drag with one finger to move something: press an element (ref) or a point (from), rest there hold_ms to pick it up, move through the via points (resting at each for its pause_ms) to to, rest pause_ms and let go, without the fling of a swipe. " +
+			"For app icons between home screen pages or into folders, list rows, sliders and map pins; use phone_swipe to scroll. A home screen turns one page while the finger rests about 0.7 s near its left or right edge, and more the longer it rests; to drop into a folder, or onto an app to make one, let go over the middle of its icon. " +
+			"The person's rules judge a drag like a swipe, at every point the finger presses, rests on or lets go at.",
+		InputSchema: schema[dragIn](func(p map[string]*jsonschema.Schema) {
+			patchDrag(p)
+			bounds(p["duration_ms"], gateway.MinDragMoveMS, gateway.MaxDragMoveMS)
+			patchSettle(p)
+		}), Annotations: acting},
+		func(ctx context.Context, req *sdk.CallToolRequest, in dragIn) (*sdk.CallToolResult, any, error) {
+			a := gateway.Action{Tool: "drag", Ref: in.Ref, From: in.From.screen(), To: in.To.screen(), Via: waypoints(in.Via),
+				HoldMS: in.HoldMS, PauseMS: in.PauseMS, DurationMS: in.DurationMS, Settle: settleArg(in.SettleMS)}
+			return render(s.session(req, remote).Act(ctx, in.call(ctx, req), a)), nil, nil
+		})
+
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_key", Title: "Press a key",
 		Description: "Press a navigation or keyboard key. Enter in a chat app sends the message, which asks the person first if they chose to approve messages. Keys a phone lacks (recents on iPhone) return unsupported.",
 		InputSchema: schema[keyIn](func(p map[string]*jsonschema.Schema) { enum(p["key"], gateway.KeyNames()...); patchSettle(p) }),
@@ -426,14 +484,15 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_batch", Title: "Run several steps",
-		Description: "Run up to 50 tap, type, swipe, pinch, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that is not settled (approval_pending, uncertain or an error; a screen that kept moving, settle: timeout, does not stop it). " +
+		Description: "Run up to 50 tap, type, swipe, pinch, drag, key and launch steps in order, each settling before the next; returns one result per step and stops at the first step that is not settled (approval_pending, uncertain or an error; a screen that kept moving, settle: timeout, does not stop it). " +
 			"If a step returns approval_pending, repeat that step alone (with its approval_id), then continue.",
 		InputSchema: schema[batchIn](func(p map[string]*jsonschema.Schema) {
 			item := p["steps"].Items
 			enum(item.Properties["tool"], stepTools...)
 			patchSwipe(item.Properties)
 			patchPinch(item.Properties)
-			bounds(item.Properties["duration_ms"], 80, 2000)
+			patchDrag(item.Properties)
+			bounds(item.Properties["duration_ms"], 80, gateway.MaxDragMoveMS)
 			patchSettle(item.Properties)
 			nonNull(item.Properties, "x", "y")
 			enum(item.Properties["key"], gateway.KeyNames()...)
@@ -445,7 +504,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 			for _, st := range in.Steps {
 				a := gateway.Action{Tool: strings.TrimPrefix(st.Tool, "phone_"), Ref: st.Ref, LongPress: st.LongPress, Text: st.Text,
 					Append: st.Append, Submit: st.Submit, Direction: strings.ToLower(st.Direction), From: st.From.screen(), To: st.To.screen(),
-					DurationMS: st.DurationMS, Scale: st.Scale, Rotation: st.Rotation, Key: st.Key, App: st.App, Language: st.Language, Region: st.Region, Intent: st.Intent, ApprovalID: st.ApprovalID,
+					DurationMS: st.DurationMS, Scale: st.Scale, Rotation: st.Rotation, Via: waypoints(st.Via), HoldMS: st.HoldMS, PauseMS: st.PauseMS, Key: st.Key, App: st.App, Language: st.Language, Region: st.Region, Intent: st.Intent, ApprovalID: st.ApprovalID,
 					Settle: settleArg(st.SettleMS)}
 				if res := pointArg(st.X, st.Y, &a.Point); res != nil {
 					return res, nil, nil

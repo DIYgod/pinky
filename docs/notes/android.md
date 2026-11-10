@@ -535,6 +535,23 @@ Before the change, the same app reproduced the report: with Gboard's Pinyin, `no
 
 Not checked on a real phone: makers' resolvers (MIUI and HyperOS show their own chooser; `resolve-activity` should name it, which is not a candidate, so the link is refused, but not seen), app clones opening links (no clone space on the emulators), and Android 10's `cmd package` output on the Pixel.
 
+## Dragging (`driver.Dragger`, `drag.go`, 2026-11-10)
+
+`phone_drag` (docs/notes/gateway.md, "Dragging") goes through the scrcpy session like a swipe, with one finger (`scrcpy.PointerGenericFinger`): down at the press point, a move every 8 ms (`swipeStep`) along `driver.Drag.Steps`, no events while the finger rests (the launcher and the system see a finger held still), and up at the drop point. Each step keeps to the drag's own clock, and the finger always lifts, also when the call is cancelled. `Device` and `Background` both implement it, so it works on the phone's own screen and on a background display.
+
+**Checked on the pinky-api36 emulator (Android 16, Pixel Launcher)** through a temporary device test that ran `phone_drag` actions through the gateway (not committed):
+
+| What | Result |
+| --- | --- |
+| Main screen: hold 800, rest 800 ms near the right edge, drop | the launcher made a new page and the app landed there |
+| Hold 800, drop over the middle of another app's icon (above its label) with the default 300 ms rest | a folder of the two |
+| The same with an 800 ms rest at the drop | the launcher reordered the icons instead of making a folder |
+| Hold 800, rest 800 ms at the edge, then drop over a folder on that page | the app went into the folder |
+| Background display (Settings › Sound): drag the media volume slider's thumb right, then left | 4 → 15 → 1 |
+| History | "Dragged “Calculator”" and the like; on another language's app, the localised lines |
+
+Two things seen on the way, not about dragging: the gateway updated the companion app in the middle of the session (to 2026.1110.3), after which the screen's tree came back empty until the harness reconnected, so a drag by `ref` was `not_found` and history read "Failed: Dragged" (which is why the bare form now has its own message); and a folder the launcher had just made was missing from the tree for a moment.
+
 ## Android emulators from Add phone (2026-11-09)
 
 The person starts the Android Virtual Devices (AVDs) that Android Studio made from **Add phone › Virtual phone**, and a running emulator is a phone like any other, by its adb serial (`emulator-5554`), with `Info.Virtual` set ("Emulator" where a phone says USB) and `Info.VirtualID` its AVD's name (`avd.go`, `driver.VirtualLauncher` on the provider). Agents have no tool to start or stop one. Pinky creates no AVDs and downloads no system images.

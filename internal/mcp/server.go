@@ -1,4 +1,4 @@
-// Package mcp is Pinky's MCP server: the 19 phone_* tools agents call. It
+// Package mcp is Pinky's MCP server: the 20 phone_* tools agents call. It
 // translates tool calls into gateway sessions and renders results as text
 // in the screen format. One MCP session maps to one gateway Session, so a
 // session that closes ends its leases and withdraws its approvals.

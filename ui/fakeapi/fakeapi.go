@@ -146,6 +146,7 @@ type API struct {
 	restartErr error
 	trusted    []string      // TrustPhone's phones (wifi.go)
 	dlErr      error         // what DownloadDiskImage fails with (iphone.go)
+	dlHold     chan struct{} // closed when held downloads go on (HoldDownload)
 	tn         *fakeTailnet  // Tailscale on this computer (tailnet.go)
 	virt       *virtualState // Simulators and emulators (virtual.go)
 }

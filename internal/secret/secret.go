@@ -7,7 +7,9 @@ package secret
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
+	"sync/atomic"
 )
 
 // Errors.
@@ -15,7 +17,26 @@ var (
 	ErrNotFound    = errors.New("secret: nothing saved")
 	ErrUnsupported = errors.New("secret: no supported keychain on this system")
 	ErrCancelled   = errors.New("secret: the person cancelled")
+	// ErrMicrosoftAccount: Windows asked for the password of an account
+	// connected to a Microsoft account and got none, or only wrong ones.
+	// Such an account always has a password, even when the person signs
+	// in with a PIN or Windows Hello.
+	ErrMicrosoftAccount = errors.New("secret: this Windows account is a Microsoft account, which has a password even when you sign in with a PIN or Windows Hello: type the Microsoft account's password")
 )
+
+var logger atomic.Pointer[slog.Logger]
+
+// SetLogger sends what the system's checks decide to l: which way the
+// person confirmed, and why a check failed. It never logs a secret or a
+// password.
+func SetLogger(l *slog.Logger) { logger.Store(l) }
+
+func log() *slog.Logger {
+	if l := logger.Load(); l != nil {
+		return l
+	}
+	return slog.New(slog.DiscardHandler)
+}
 
 // Store holds secrets by account name.
 type Store interface {

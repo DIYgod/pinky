@@ -38,6 +38,8 @@ var (
 	reSwipe      = re(`^Swiped (\S+)$`)
 	reZoom       = re(`^Zoomed (in|out)(?: on “(.*)”)?$`)
 	reTurn       = re(`^Turned (?:“(.*)” )?with two fingers$`)
+	reDragFrom   = re(`^Dragged from (-?\d+),(-?\d+) to (-?\d+),(-?\d+)$`)
+	reDragLabel  = re(`^Dragged(?: “(.*)”)?$`)
 	rePressed    = re(`^Pressed (.+)$`)
 	reOpenedLink = re(`^Opened “(.*)” in (.+)$`)
 	reOpenedIn   = re(`^Opened (.+) in ([a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)$`)
@@ -67,7 +69,7 @@ var (
 
 // action is a parsed action, which says itself as done or as asked.
 type action struct {
-	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, press, open, openlink, openin, openregion, set, stoplocation, copy, copymany, list, copyfrom, copyto, receive, install, update, uninstall, stop, installfrom, readlogs
+	verb                 string // tap, longpress, type, swipe, swipefrom, zoomin, zoomout, turn, drag, dragfrom, press, open, openlink, openin, openregion, set, stoplocation, copy, copymany, list, copyfrom, copyto, receive, install, update, uninstall, stop, installfrom, readlogs
 	label, text, x, y    string
 	x2, y2, dir, key     string
 	app, files, phone    string
@@ -104,6 +106,12 @@ func parseAction(s string) (action, bool) {
 	}
 	if m := reTurn.FindStringSubmatch(s); m != nil {
 		return action{verb: "turn", label: m[1], into: m[1] != ""}, true
+	}
+	if m := reDragFrom.FindStringSubmatch(s); m != nil {
+		return action{verb: "dragfrom", x: m[1], y: m[2], x2: m[3], y2: m[4]}, true
+	}
+	if m := reDragLabel.FindStringSubmatch(s); m != nil {
+		return action{verb: "drag", label: m[1], into: m[1] != ""}, true
 	}
 	if m := rePressed.FindStringSubmatch(s); m != nil {
 		return action{verb: "press", key: m[1]}, true
@@ -289,6 +297,13 @@ func (a action) done() string {
 			return locales.GwDidTurnOn(a.label)
 		}
 		return locales.GwDidTurn()
+	case "drag":
+		if a.into {
+			return locales.GwDidDrag(a.label)
+		}
+		return locales.GwDidDragBare()
+	case "dragfrom":
+		return locales.GwDidDragFromTo(a.x, a.y, a.x2, a.y2)
 	case "press":
 		return locales.GwDidPress(keyName(a.key))
 	case "open":
@@ -356,6 +371,13 @@ func (a action) ask() string {
 			return locales.GwDoTurnOn(a.label)
 		}
 		return locales.GwDoTurn()
+	case "drag":
+		if a.into {
+			return locales.GwDoDrag(a.label)
+		}
+		return locales.GwDoDragBare()
+	case "dragfrom":
+		return locales.GwDoDragFromTo(a.x, a.y, a.x2, a.y2)
 	case "press":
 		return locales.GwDoPress(keyName(a.key))
 	case "open":
@@ -712,7 +734,7 @@ var (
 	reLinkTitle   = re(`^Open “(.*)” in (.+)\?$`)
 	reOpenTitle   = re(`^Open (.+)\?$`)
 	reChangeTitle = re(`^Change “(.*)”\?$`)
-	reTapTitle    = re(`^(Tap|Long-press|Type into|Swipe) “(.*)”\?$`)
+	reTapTitle    = re(`^(Tap|Long-press|Type into|Swipe|Drag) “(.*)”\?$`)
 	rePressTitle  = re(`^Press (\S+) in “(.*)”\?$`)
 	reAgentTitle  = re(`^Let (.+) use your phones\?$`)
 	reAskedTitle  = re(`^((?:Copy|Install|Update|Uninstall|Stop) .+|Read the logs of .+)\?$`)
@@ -744,6 +766,8 @@ func approvalText(s string) string {
 			return locales.GwAskLongPress(m[2])
 		case "Type into":
 			return locales.GwAskTypeInto(m[2])
+		case "Drag":
+			return locales.GwAskDrag(m[2])
 		}
 		return locales.GwAskSwipe(m[2])
 	}

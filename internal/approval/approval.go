@@ -82,9 +82,11 @@ type Request struct {
 	// Point is where the finger goes down and, for a swipe, To where it
 	// lifts, in Screenshot pixels; both zero when the action has no
 	// position. Point2 and To2 are the second finger's of a pinch, zero
-	// for other actions.
+	// for other actions. Path is every point of a drag, from Point to To;
+	// nil for other actions.
 	Point, To   screen.Point
 	Point2, To2 screen.Point
+	Path        []screen.Point
 	// Timeout overrides the center's timeout; handoffs wait longer.
 	Timeout time.Duration
 	// Data is the gateway's own state, such as what to re-check on approval.
