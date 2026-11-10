@@ -20,10 +20,13 @@ import (
 
 // phone_app (docs/notes/apps.md): install or update an app from files in
 // the phone's folder on the computer, uninstall an app, or stop one. An
-// install or uninstall always asks the person; Allow for this task covers
-// the same app (and, for an install, the same signer) for the rest of the
-// task, and nothing offers Always allow. Pinky's own apps, system apps,
-// finance apps, password managers and blocked apps are refused.
+// install or uninstall asks the person; Allow for this task covers the
+// same app (and, for an install, the same signer) for the rest of the
+// task. An install also offers Always allow, kept for the agent on the
+// phone and for the app id and signer (standingAsk), so that a developer's
+// next builds go in without asking; an uninstall deletes data and asks
+// every time. Pinky's own apps, system apps, finance apps, password
+// managers and blocked apps are refused.
 
 // AppRequest is phone_app.
 type AppRequest struct {
@@ -34,10 +37,10 @@ type AppRequest struct {
 }
 
 // appAsk is the Data of a phone_app approval: Allow for this task lasts
-// (canAllowTask), Always allow is not offered (canAlwaysAllow needs an
-// action snapshot).
+// (canAllowTask), and Always allow is offered when standing is set.
 type appAsk struct {
-	key string // the lease's appGrants key the approval grants
+	key      string       // the lease's appGrants key the approval grants
+	standing *standingAsk // an install's Always allow; nil when none may be kept
 }
 
 // appTarget is what a phone_app call acts on.
@@ -297,14 +300,32 @@ func appDetail(agent, intent string, t appTarget) string {
 	return strings.Join(parts, " · ")
 }
 
-// askApp asks the person, unless they allowed the same for the task. It
-// returns nil once allowed.
+// installStanding is the Always allow an install's approval may keep: for
+// the agent on the phone, the app id and the signer. None when another
+// rule of the person's asks too (it would keep asking), or when the
+// package names no app id or signer.
+func installStanding(l *lease, t appTarget, v policy.Verdict) *standingAsk {
+	if t.op != policy.OpInstall || len(v.Asks) != 1 || v.Asks[0] != policy.RuleInstall ||
+		t.pkg.ID == "" || t.pkg.SignerKey == "" {
+		return nil
+	}
+	return &standingAsk{rule: policy.RuleInstall, agent: l.session.agent.Name, device: l.dev.id, deviceName: l.dev.name(),
+		app: t.app, signer: t.pkg.SignerKey, signerName: t.pkg.Signer}
+}
+
+// askApp asks the person, unless they allowed the same for the task, or
+// always allow the agent to install the app by this signer on the phone.
+// It returns nil once allowed.
 func (g *Gateway) askApp(ctx context.Context, l *lease, req AppRequest, t appTarget, v policy.Verdict, args string) *Result {
 	key := appGrantKey(t)
 	g.mu.Lock()
 	granted := l.appGrants[key]
 	g.mu.Unlock()
 	if granted {
+		return nil
+	}
+	st := installStanding(l, t, v)
+	if st != nil && g.policy.Standing(st.grant()) {
 		return nil
 	}
 	s := l.session
@@ -324,7 +345,7 @@ func (g *Gateway) askApp(ctx context.Context, l *lease, req AppRequest, t appTar
 		title := appTitle(t, l.dev.name())
 		info = g.approvals.Open(approval.Request{Kind: approval.KindAction, Binding: b, Rule: v.Rule, Title: title,
 			Detail: appDetail(s.agent.Name, req.Intent, t), App: t.name, Agent: s.agent.Name, TaskID: l.task.id,
-			DeviceName: l.dev.name(), Data: &appAsk{key: key}})
+			DeviceName: l.dev.name(), Data: &appAsk{key: key, standing: st}})
 		if res := g.afterOpen(l, info); res != nil {
 			return res
 		}

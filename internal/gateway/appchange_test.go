@@ -127,8 +127,8 @@ func TestPhoneAppInstall(t *testing.T) {
 		n.Detail != "Claude Code · app.pinky.testapp · signed by Pinky Test (292579aa) · from “build/app-debug.apk”" {
 		t.Fatalf("approval %+v", n)
 	}
-	if n.AlwaysAllow || !n.AllowTask {
-		t.Fatalf("an install offers Allow for this task and never Always allow: %+v", n)
+	if !n.AlwaysAllow || !n.AllowTask {
+		t.Fatalf("an install offers Allow for this task and Always allow: %+v", n)
 	}
 	if err := g.Decide(n.ID, Deny, ""); err != nil {
 		t.Fatal(err)
@@ -141,7 +141,7 @@ func TestPhoneAppInstall(t *testing.T) {
 	// Allowed for the task: this install and the next update go through.
 	go func() { done <- s.App(ctx, install) }()
 	n = waitNeedKind(t, g, NeedApproval)
-	if err := g.Decide(n.ID, AllowAlways, ""); err != nil { // counts as Allow for this task
+	if err := g.Decide(n.ID, AllowTask, ""); err != nil {
 		t.Fatal(err)
 	}
 	res := <-done
@@ -151,7 +151,7 @@ func TestPhoneAppInstall(t *testing.T) {
 		t.Fatalf("install: %+v", res)
 	}
 	if x := g.policy.Exemptions(); len(x) != 0 {
-		t.Fatalf("an install was kept as Always allow: %+v", x)
+		t.Fatalf("Allow for this task kept an Always allow: %+v", x)
 	}
 	res = s.App(ctx, install)
 	mustStatus(t, res, StatusSettled)

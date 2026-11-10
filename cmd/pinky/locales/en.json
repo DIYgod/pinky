@@ -5268,6 +5268,24 @@
       }
     }
   },
+  "needsAlwaysAllowInstall": "Always allow {agent} to install {app} from this signer on {device}",
+  "@needsAlwaysAllowInstall": {
+    "description": "Item of More options on an approval to install or update an app from the computer: never ask again when this agent installs builds of this app id signed by the same signer on this phone. agent is the agent's name; app is the app's name; device is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
+  },
   "needsAlwaysAllowLogs": "Always allow {agent} to read the logs of {app} on {device}",
   "@needsAlwaysAllowLogs": {
     "description": "Item of More options on an approval to read an app's logs: never ask again when this agent reads this app's logs on this phone. agent is the agent's name; app is the app's name; device is the phone's name.",
@@ -5771,6 +5789,24 @@
       "app": {
         "type": "String",
         "example": "Dinely"
+      }
+    }
+  },
+  "panelAlwaysAllowedInstallDetail": "{agent} no longer asks to install builds of {app} from the same signer on {device}. Another signer or another app still asks. Change it in Settings.",
+  "@panelAlwaysAllowedInstallDetail": {
+    "description": "The floating approval panel's confirmation under Always allowed, after Always allow on an approval to install an app from the computer. agent is the agent's name; app is the app's name; device is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
       }
     }
   },
@@ -6980,6 +7016,16 @@
   "@ruleActionEveryAction": {
     "description": "What the Every action rule covers, inside \"Always allow every action in Dinely\"."
   },
+  "ruleActionInstallOf": "installing {app}",
+  "@ruleActionInstallOf": {
+    "description": "What an Installing from the computer answer covers, inside settingsSafetyAlwaysRemoveAgentItem. app is the app's name.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
   "ruleActionInstallsLinks": "installs and links",
   "@ruleActionInstallsLinks": {
     "description": "What the Installs and links rule covers, inside \"Always allow installs and links in Chrome\"."
@@ -7839,6 +7885,24 @@
       "device": {
         "type": "String",
         "example": "iPhone 13 mini"
+      }
+    }
+  },
+  "settingsSafetyAlwaysAgentOnSigner": "{agent} on {device} · signed by {signer}",
+  "@settingsSafetyAlwaysAgentOnSigner": {
+    "description": "Settings › Safety › Always allowed: the second line of an Installing from the computer answer, which holds for one agent on one phone and for builds by one signer. agent is the agent's name; device is the phone's name; signer names who signed the app.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      },
+      "signer": {
+        "type": "String",
+        "example": "Example Dev (ab12cd34)"
       }
     }
   },

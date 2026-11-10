@@ -13761,6 +13761,28 @@ func (msgs Messages) NeedsAlwaysAllowIn(kind string, app string) string {
 	return Catalog.Format(msgs.locale, "needsAlwaysAllowIn", map[string]any{"kind": kind, "app": app})
 }
 
+// NeedsAlwaysAllowInstall says "Always allow {agent} to install {app} from this signer on {device}"
+// in the language the app shows.
+//
+// Item of More options on an approval to install or update an app from the
+// computer: never ask again when this agent installs builds of this app id
+// signed by the same signer on this phone. agent is the agent's name; app
+// is the app's name; device is the phone's name.
+func NeedsAlwaysAllowInstall(agent string, app string, device string) string {
+	return In(i18n.Locale()).NeedsAlwaysAllowInstall(agent, app, device)
+}
+
+// NeedsAlwaysAllowInstall says "Always allow {agent} to install {app} from this signer on {device}"
+// in the language of msgs.
+//
+// Item of More options on an approval to install or update an app from the
+// computer: never ask again when this agent installs builds of this app id
+// signed by the same signer on this phone. agent is the agent's name; app
+// is the app's name; device is the phone's name.
+func (msgs Messages) NeedsAlwaysAllowInstall(agent string, app string, device string) string {
+	return Catalog.Format(msgs.locale, "needsAlwaysAllowInstall", map[string]any{"agent": agent, "app": app, "device": device})
+}
+
 // NeedsAlwaysAllowLogs says "Always allow {agent} to read the logs of {app} on {device}"
 // in the language the app shows.
 //
@@ -15253,6 +15275,26 @@ func PanelAlwaysAllowedDetail(rule string, app string) string {
 // panelThisApp.
 func (msgs Messages) PanelAlwaysAllowedDetail(rule string, app string) string {
 	return Catalog.Format(msgs.locale, "panelAlwaysAllowedDetail", map[string]any{"rule": rule, "app": app})
+}
+
+// PanelAlwaysAllowedInstallDetail says "{agent} no longer asks to install builds of {app} from the same signer on {device}. Another signer or another app sti…"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Always allowed, after
+// Always allow on an approval to install an app from the computer. agent is
+// the agent's name; app is the app's name; device is the phone's name.
+func PanelAlwaysAllowedInstallDetail(agent string, app string, device string) string {
+	return In(i18n.Locale()).PanelAlwaysAllowedInstallDetail(agent, app, device)
+}
+
+// PanelAlwaysAllowedInstallDetail says "{agent} no longer asks to install builds of {app} from the same signer on {device}. Another signer or another app sti…"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Always allowed, after
+// Always allow on an approval to install an app from the computer. agent is
+// the agent's name; app is the app's name; device is the phone's name.
+func (msgs Messages) PanelAlwaysAllowedInstallDetail(agent string, app string, device string) string {
+	return Catalog.Format(msgs.locale, "panelAlwaysAllowedInstallDetail", map[string]any{"agent": agent, "app": app, "device": device})
 }
 
 // PanelAlwaysAllowedLogsDetail says "{agent} no longer asks to read the logs of {app} on {device}. Change it in Settings."
@@ -18383,6 +18425,22 @@ func (msgs Messages) RuleActionEveryAction() string {
 	return Catalog.Format(msgs.locale, "ruleActionEveryAction", nil)
 }
 
+// RuleActionInstallOf says "installing {app}"
+// in the language the app shows.
+//
+// What an Installing from the computer answer covers, inside
+// settingsSafetyAlwaysRemoveAgentItem. app is the app's name.
+func RuleActionInstallOf(app string) string { return In(i18n.Locale()).RuleActionInstallOf(app) }
+
+// RuleActionInstallOf says "installing {app}"
+// in the language of msgs.
+//
+// What an Installing from the computer answer covers, inside
+// settingsSafetyAlwaysRemoveAgentItem. app is the app's name.
+func (msgs Messages) RuleActionInstallOf(app string) string {
+	return Catalog.Format(msgs.locale, "ruleActionInstallOf", map[string]any{"app": app})
+}
+
 // RuleActionInstallsLinks says "installs and links"
 // in the language the app shows.
 //
@@ -21139,6 +21197,28 @@ func SettingsSafetyAlwaysAgentOn(agent string, device string) string {
 // name; device is the phone's name.
 func (msgs Messages) SettingsSafetyAlwaysAgentOn(agent string, device string) string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysAgentOn", map[string]any{"agent": agent, "device": device})
+}
+
+// SettingsSafetyAlwaysAgentOnSigner says "{agent} on {device} · signed by {signer}"
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: the second line of an Installing
+// from the computer answer, which holds for one agent on one phone and for
+// builds by one signer. agent is the agent's name; device is the phone's
+// name; signer names who signed the app.
+func SettingsSafetyAlwaysAgentOnSigner(agent string, device string, signer string) string {
+	return In(i18n.Locale()).SettingsSafetyAlwaysAgentOnSigner(agent, device, signer)
+}
+
+// SettingsSafetyAlwaysAgentOnSigner says "{agent} on {device} · signed by {signer}"
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: the second line of an Installing
+// from the computer answer, which holds for one agent on one phone and for
+// builds by one signer. agent is the agent's name; device is the phone's
+// name; signer names who signed the app.
+func (msgs Messages) SettingsSafetyAlwaysAgentOnSigner(agent string, device string, signer string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysAgentOnSigner", map[string]any{"agent": agent, "device": device, "signer": signer})
 }
 
 // SettingsSafetyAlwaysEvery says "While agents ask before every action, these ask too."

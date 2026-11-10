@@ -15,10 +15,12 @@ import (
 // back. The gateway keeps them in the rules file.
 
 // The gateway's own approvals whose Always allow holds for one agent on
-// one phone (gateway.Exemption.Agent), and for App logs in one app.
+// one phone (gateway.Exemption.Agent), for App logs in one app, and for
+// installs for one app id by one signer.
 const (
 	rulePhoneSettings = "Phone settings"
 	ruleAppLogs       = "App logs"
+	ruleInstall       = "Installing from the computer"
 )
 
 // alwaysAllowedDetail is the panel's confirmation after Always allow on
@@ -29,6 +31,8 @@ func alwaysAllowedDetail(n gateway.NeedView) string {
 		return locales.PanelAlwaysAllowedSettingsDetail(agentOf(n), n.DeviceName)
 	case ruleAppLogs:
 		return locales.PanelAlwaysAllowedLogsDetail(agentOf(n), nonEmpty(n.App, locales.PanelThisApp()), n.DeviceName)
+	case ruleInstall:
+		return locales.PanelAlwaysAllowedInstallDetail(agentOf(n), nonEmpty(n.App, locales.PanelThisApp()), n.DeviceName)
 	}
 	return ""
 }
@@ -42,9 +46,13 @@ func alwaysRow(x gateway.Exemption) (name, sub, remove string) {
 		return app, "", locales.SettingsSafetyAlwaysRemoveItem(ruleAction(x.Rule), app)
 	}
 	device := nonEmpty(x.DeviceName, x.DeviceID)
-	if x.Rule == ruleAppLogs {
+	switch x.Rule {
+	case ruleAppLogs:
 		return app, locales.SettingsSafetyAlwaysAgentOn(x.Agent, device),
 			locales.SettingsSafetyAlwaysRemoveAgentItem(locales.RuleActionAppLogsOf(app), x.Agent, device)
+	case ruleInstall:
+		return app, locales.SettingsSafetyAlwaysAgentOnSigner(x.Agent, device, nonEmpty(x.SignerName, x.Signer)),
+			locales.SettingsSafetyAlwaysRemoveAgentItem(locales.RuleActionInstallOf(app), x.Agent, device)
 	}
 	return device, x.Agent, locales.SettingsSafetyAlwaysRemoveAgentItem(locales.RuleActionPhoneSettings(), x.Agent, device)
 }
@@ -61,6 +69,8 @@ func alwaysAllowLabel(n gateway.NeedView) string {
 		return locales.NeedsAlwaysAllowSettings(agentOf(n), n.DeviceName)
 	case ruleAppLogs:
 		return locales.NeedsAlwaysAllowLogs(agentOf(n), nonEmpty(n.App, locales.PanelThisApp()), n.DeviceName)
+	case ruleInstall:
+		return locales.NeedsAlwaysAllowInstall(agentOf(n), nonEmpty(n.App, locales.PanelThisApp()), n.DeviceName)
 	}
 	if n.Rule != "" && n.App != "" {
 		return locales.NeedsAlwaysAllowIn(kindNoun(n.Rule), n.App)
@@ -121,7 +131,7 @@ func (a *app) alwaysAllowed(c *mg.Context) {
 			for _, x := range st.list {
 				x := x
 				name, sub, remove := alwaysRow(x)
-				mg.Row(c.Key("always-"+x.Rule+"\x00"+x.AppID+"\x00"+x.AppName+"\x00"+x.Agent+"\x00"+x.DeviceID)).Gap(12).Padding(7, 0).AlignItems(mg.Center).
+				mg.Row(c.Key("always-"+x.Rule+"\x00"+x.AppID+"\x00"+x.AppName+"\x00"+x.Agent+"\x00"+x.DeviceID+"\x00"+x.Signer)).Gap(12).Padding(7, 0).AlignItems(mg.Center).
 					BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
 					if x.DeviceID != "" && x.Rule == rulePhoneSettings {
 						mg.Row(c).Size(28, 28).Radius(8).Center().Background(p.bg3).Children(func() {
@@ -162,7 +172,7 @@ func (a *app) takeBackAlways(k exemptionKeeper, x gateway.Exemption) {
 	st := &a.always
 	kept := st.list[:0:0]
 	for _, y := range st.list {
-		if y.Rule != x.Rule || y.AppID != x.AppID || y.AppName != x.AppName || y.Agent != x.Agent || y.DeviceID != x.DeviceID {
+		if y.Rule != x.Rule || y.AppID != x.AppID || y.AppName != x.AppName || y.Agent != x.Agent || y.DeviceID != x.DeviceID || y.Signer != x.Signer {
 			kept = append(kept, y)
 		}
 	}
