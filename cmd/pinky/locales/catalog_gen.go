@@ -13677,6 +13677,48 @@ func (msgs Messages) NeedsAlwaysAllowIn(kind string, app string) string {
 	return Catalog.Format(msgs.locale, "needsAlwaysAllowIn", map[string]any{"kind": kind, "app": app})
 }
 
+// NeedsAlwaysAllowLogs says "Always allow {agent} to read the logs of {app} on {device}"
+// in the language the app shows.
+//
+// Item of More options on an approval to read an app's logs: never ask
+// again when this agent reads this app's logs on this phone. agent is the
+// agent's name; app is the app's name; device is the phone's name.
+func NeedsAlwaysAllowLogs(agent string, app string, device string) string {
+	return In(i18n.Locale()).NeedsAlwaysAllowLogs(agent, app, device)
+}
+
+// NeedsAlwaysAllowLogs says "Always allow {agent} to read the logs of {app} on {device}"
+// in the language of msgs.
+//
+// Item of More options on an approval to read an app's logs: never ask
+// again when this agent reads this app's logs on this phone. agent is the
+// agent's name; app is the app's name; device is the phone's name.
+func (msgs Messages) NeedsAlwaysAllowLogs(agent string, app string, device string) string {
+	return Catalog.Format(msgs.locale, "needsAlwaysAllowLogs", map[string]any{"agent": agent, "app": app, "device": device})
+}
+
+// NeedsAlwaysAllowSettings says "Always allow {agent} to change settings on {device}"
+// in the language the app shows.
+//
+// Item of More options on an approval to change the phone's settings
+// (rotation, light or dark, location, language): never ask again when this
+// agent changes settings on this phone. agent is the agent's name; device
+// is the phone's name.
+func NeedsAlwaysAllowSettings(agent string, device string) string {
+	return In(i18n.Locale()).NeedsAlwaysAllowSettings(agent, device)
+}
+
+// NeedsAlwaysAllowSettings says "Always allow {agent} to change settings on {device}"
+// in the language of msgs.
+//
+// Item of More options on an approval to change the phone's settings
+// (rotation, light or dark, location, language): never ask again when this
+// agent changes settings on this phone. agent is the agent's name; device
+// is the phone's name.
+func (msgs Messages) NeedsAlwaysAllowSettings(agent string, device string) string {
+	return Catalog.Format(msgs.locale, "needsAlwaysAllowSettings", map[string]any{"agent": agent, "device": device})
+}
+
 // NeedsAndTasksLabel says "Needs you and tasks"
 // in the language the app shows.
 //
@@ -15127,6 +15169,46 @@ func PanelAlwaysAllowedDetail(rule string, app string) string {
 // panelThisApp.
 func (msgs Messages) PanelAlwaysAllowedDetail(rule string, app string) string {
 	return Catalog.Format(msgs.locale, "panelAlwaysAllowedDetail", map[string]any{"rule": rule, "app": app})
+}
+
+// PanelAlwaysAllowedLogsDetail says "{agent} no longer asks to read the logs of {app} on {device}. Change it in Settings."
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Always allowed, after
+// Always allow on an approval to read an app's logs. agent is the agent's
+// name; app is the app's name; device is the phone's name.
+func PanelAlwaysAllowedLogsDetail(agent string, app string, device string) string {
+	return In(i18n.Locale()).PanelAlwaysAllowedLogsDetail(agent, app, device)
+}
+
+// PanelAlwaysAllowedLogsDetail says "{agent} no longer asks to read the logs of {app} on {device}. Change it in Settings."
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Always allowed, after
+// Always allow on an approval to read an app's logs. agent is the agent's
+// name; app is the app's name; device is the phone's name.
+func (msgs Messages) PanelAlwaysAllowedLogsDetail(agent string, app string, device string) string {
+	return Catalog.Format(msgs.locale, "panelAlwaysAllowedLogsDetail", map[string]any{"agent": agent, "app": app, "device": device})
+}
+
+// PanelAlwaysAllowedSettingsDetail says "{agent} no longer asks to change settings on {device}. Pinky still puts them back when each task ends. Change it in S…"
+// in the language the app shows.
+//
+// The floating approval panel's confirmation under Always allowed, after
+// Always allow on an approval to change the phone's settings. agent is the
+// agent's name; device is the phone's name.
+func PanelAlwaysAllowedSettingsDetail(agent string, device string) string {
+	return In(i18n.Locale()).PanelAlwaysAllowedSettingsDetail(agent, device)
+}
+
+// PanelAlwaysAllowedSettingsDetail says "{agent} no longer asks to change settings on {device}. Pinky still puts them back when each task ends. Change it in S…"
+// in the language of msgs.
+//
+// The floating approval panel's confirmation under Always allowed, after
+// Always allow on an approval to change the phone's settings. agent is the
+// agent's name; device is the phone's name.
+func (msgs Messages) PanelAlwaysAllowedSettingsDetail(agent string, device string) string {
+	return Catalog.Format(msgs.locale, "panelAlwaysAllowedSettingsDetail", map[string]any{"agent": agent, "device": device})
 }
 
 // PanelCancel says "Cancel"
@@ -18119,6 +18201,22 @@ func (msgs Messages) RuleActionAgentRequest() string {
 	return Catalog.Format(msgs.locale, "ruleActionAgentRequest", nil)
 }
 
+// RuleActionAppLogsOf says "reading the logs of {app}"
+// in the language the app shows.
+//
+// What an App logs answer covers, inside
+// settingsSafetyAlwaysRemoveAgentItem. app is the app's name.
+func RuleActionAppLogsOf(app string) string { return In(i18n.Locale()).RuleActionAppLogsOf(app) }
+
+// RuleActionAppLogsOf says "reading the logs of {app}"
+// in the language of msgs.
+//
+// What an App logs answer covers, inside
+// settingsSafetyAlwaysRemoveAgentItem. app is the app's name.
+func (msgs Messages) RuleActionAppLogsOf(app string) string {
+	return Catalog.Format(msgs.locale, "ruleActionAppLogsOf", map[string]any{"app": app})
+}
+
 // RuleActionCalls says "calls"
 // in the language the app shows.
 //
@@ -18221,6 +18319,22 @@ func RuleActionPayments() string { return In(i18n.Locale()).RuleActionPayments()
 // What the Payments rule covers, inside "Always allow payments in Dinely".
 func (msgs Messages) RuleActionPayments() string {
 	return Catalog.Format(msgs.locale, "ruleActionPayments", nil)
+}
+
+// RuleActionPhoneSettings says "changing phone settings"
+// in the language the app shows.
+//
+// What the Phone settings rule covers, inside
+// settingsSafetyAlwaysRemoveAgentItem.
+func RuleActionPhoneSettings() string { return In(i18n.Locale()).RuleActionPhoneSettings() }
+
+// RuleActionPhoneSettings says "changing phone settings"
+// in the language of msgs.
+//
+// What the Phone settings rule covers, inside
+// settingsSafetyAlwaysRemoveAgentItem.
+func (msgs Messages) RuleActionPhoneSettings() string {
+	return Catalog.Format(msgs.locale, "ruleActionPhoneSettings", nil)
 }
 
 // RuleActionSettingsChanges says "settings changes"
@@ -20851,6 +20965,26 @@ func (msgs Messages) SettingsSafetyAlways() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAlways", nil)
 }
 
+// SettingsSafetyAlwaysAgentOn says "{agent} on {device}"
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: the second line of an App logs
+// answer, which holds for one agent on one phone. agent is the agent's
+// name; device is the phone's name.
+func SettingsSafetyAlwaysAgentOn(agent string, device string) string {
+	return In(i18n.Locale()).SettingsSafetyAlwaysAgentOn(agent, device)
+}
+
+// SettingsSafetyAlwaysAgentOn says "{agent} on {device}"
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: the second line of an App logs
+// answer, which holds for one agent on one phone. agent is the agent's
+// name; device is the phone's name.
+func (msgs Messages) SettingsSafetyAlwaysAgentOn(agent string, device string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysAgentOn", map[string]any{"agent": agent, "device": device})
+}
+
 // SettingsSafetyAlwaysEvery says "While agents ask before every action, these ask too."
 // in the language the app shows.
 //
@@ -20917,6 +21051,28 @@ func SettingsSafetyAlwaysRemove() string { return In(i18n.Locale()).SettingsSafe
 // again.
 func (msgs Messages) SettingsSafetyAlwaysRemove() string {
 	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysRemove", nil)
+}
+
+// SettingsSafetyAlwaysRemoveAgentItem says "Ask again about {kind} by {agent} on {device}"
+// in the language the app shows.
+//
+// Settings › Safety › Always allowed: the accessibility label of the ×
+// button that takes back an Always allow for one agent on one phone. kind
+// is ruleActionPhoneSettings or ruleActionAppLogsOf; agent is the agent's
+// name; device is the phone's name.
+func SettingsSafetyAlwaysRemoveAgentItem(kind string, agent string, device string) string {
+	return In(i18n.Locale()).SettingsSafetyAlwaysRemoveAgentItem(kind, agent, device)
+}
+
+// SettingsSafetyAlwaysRemoveAgentItem says "Ask again about {kind} by {agent} on {device}"
+// in the language of msgs.
+//
+// Settings › Safety › Always allowed: the accessibility label of the ×
+// button that takes back an Always allow for one agent on one phone. kind
+// is ruleActionPhoneSettings or ruleActionAppLogsOf; agent is the agent's
+// name; device is the phone's name.
+func (msgs Messages) SettingsSafetyAlwaysRemoveAgentItem(kind string, agent string, device string) string {
+	return Catalog.Format(msgs.locale, "settingsSafetyAlwaysRemoveAgentItem", map[string]any{"kind": kind, "agent": agent, "device": device})
 }
 
 // SettingsSafetyAlwaysRemoveItem says "Ask again about {kind} in {app}"

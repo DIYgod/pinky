@@ -224,3 +224,43 @@ func TestGatewayAlwaysAllowNotOffered(t *testing.T) {
 		}
 	}
 }
+
+// Always allow on changing the phone's settings or reading an app's logs
+// is for one agent on one phone: the menu item, the panel's confirmation
+// and Settings › Safety say whom and where.
+func TestAlwaysAllowPerAgentAndPhone(t *testing.T) {
+	settings := gateway.NeedView{Rule: "Phone settings", Agent: "Claude Code", DeviceName: "Pixel 9"}
+	logs := gateway.NeedView{Rule: "App logs", Agent: "Claude Code", DeviceName: "Pixel 9", App: "Crash Test"}
+	for n, want := range map[*gateway.NeedView][2]string{
+		&settings: {"Always allow Claude Code to change settings on Pixel 9",
+			"Claude Code no longer asks to change settings on Pixel 9. Pinky still puts them back when each task ends. Change it in Settings."},
+		&logs: {"Always allow Claude Code to read the logs of Crash Test on Pixel 9",
+			"Claude Code no longer asks to read the logs of Crash Test on Pixel 9. Change it in Settings."},
+	} {
+		if got := alwaysAllowLabel(*n); got != want[0] {
+			t.Errorf("label %q, want %q", got, want[0])
+		}
+		if got := alwaysAllowedDetail(*n); got != want[1] {
+			t.Errorf("detail %q, want %q", got, want[1])
+		}
+	}
+	if got := alwaysAllowedDetail(gateway.NeedView{Rule: "Payments", App: "Dinely"}); got != "" {
+		t.Errorf("payments detail %q", got)
+	}
+
+	for _, c := range []struct {
+		x                 gateway.Exemption
+		name, sub, remove string
+	}{
+		{gateway.Exemption{Rule: "Payments", AppName: "Dinely"}, "Dinely", "", "Ask again about payments in Dinely"},
+		{gateway.Exemption{Rule: "Phone settings", Agent: "Claude Code", DeviceID: "pixel", DeviceName: "Pixel 9"},
+			"Pixel 9", "Claude Code", "Ask again about changing phone settings by Claude Code on Pixel 9"},
+		{gateway.Exemption{Rule: "App logs", AppID: "dev.pinky.crashtest", AppName: "Crash Test", Agent: "Claude Code", DeviceID: "pixel"},
+			"Crash Test", "Claude Code on pixel", "Ask again about reading the logs of Crash Test by Claude Code on pixel"},
+	} {
+		name, sub, remove := alwaysRow(c.x)
+		if name != c.name || sub != c.sub || remove != c.remove {
+			t.Errorf("%+v: %q %q %q", c.x, name, sub, remove)
+		}
+	}
+}

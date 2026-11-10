@@ -14,6 +14,41 @@ import (
 // lists what the person always allows, with a button that takes each
 // back. The gateway keeps them in the rules file.
 
+// The gateway's own approvals whose Always allow holds for one agent on
+// one phone (gateway.Exemption.Agent), and for App logs in one app.
+const (
+	rulePhoneSettings = "Phone settings"
+	ruleAppLogs       = "App logs"
+)
+
+// alwaysAllowedDetail is the panel's confirmation after Always allow on
+// one of those, or "" for the others.
+func alwaysAllowedDetail(n gateway.NeedView) string {
+	switch n.Rule {
+	case rulePhoneSettings:
+		return locales.PanelAlwaysAllowedSettingsDetail(agentOf(n), n.DeviceName)
+	case ruleAppLogs:
+		return locales.PanelAlwaysAllowedLogsDetail(agentOf(n), nonEmpty(n.App, locales.PanelThisApp()), n.DeviceName)
+	}
+	return ""
+}
+
+// alwaysRow is how Settings › Safety › Always allowed shows an answer: the
+// name its icon and first line show, the line under it, and the label of
+// its button that takes it back.
+func alwaysRow(x gateway.Exemption) (name, sub, remove string) {
+	app := nonEmpty(x.AppName, x.AppID)
+	if x.DeviceID == "" {
+		return app, "", locales.SettingsSafetyAlwaysRemoveItem(ruleAction(x.Rule), app)
+	}
+	device := nonEmpty(x.DeviceName, x.DeviceID)
+	if x.Rule == ruleAppLogs {
+		return app, locales.SettingsSafetyAlwaysAgentOn(x.Agent, device),
+			locales.SettingsSafetyAlwaysRemoveAgentItem(locales.RuleActionAppLogsOf(app), x.Agent, device)
+	}
+	return device, x.Agent, locales.SettingsSafetyAlwaysRemoveAgentItem(locales.RuleActionPhoneSettings(), x.Agent, device)
+}
+
 // presetEvery is Settings.Preset for "Ask before every action"
 // (policy.PresetEvery), while which Always allow answers do not apply.
 const presetEvery = 3
@@ -21,6 +56,12 @@ const presetEvery = 3
 // alwaysAllowLabel is the More options item: "Always allow payments in
 // Dinely".
 func alwaysAllowLabel(n gateway.NeedView) string {
+	switch n.Rule {
+	case rulePhoneSettings:
+		return locales.NeedsAlwaysAllowSettings(agentOf(n), n.DeviceName)
+	case ruleAppLogs:
+		return locales.NeedsAlwaysAllowLogs(agentOf(n), nonEmpty(n.App, locales.PanelThisApp()), n.DeviceName)
+	}
 	if n.Rule != "" && n.App != "" {
 		return locales.NeedsAlwaysAllowIn(kindNoun(n.Rule), n.App)
 	}
@@ -79,16 +120,27 @@ func (a *app) alwaysAllowed(c *mg.Context) {
 			}
 			for _, x := range st.list {
 				x := x
-				app := nonEmpty(x.AppName, x.AppID)
-				mg.Row(c.Key("always-"+x.Rule+"\x00"+x.AppID+"\x00"+x.AppName)).Gap(12).Padding(7, 0).AlignItems(mg.Center).
+				name, sub, remove := alwaysRow(x)
+				mg.Row(c.Key("always-"+x.Rule+"\x00"+x.AppID+"\x00"+x.AppName+"\x00"+x.Agent+"\x00"+x.DeviceID)).Gap(12).Padding(7, 0).AlignItems(mg.Center).
 					BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
-					appIcon(c, app, 28, 8, 13, "")
-					mg.Text(c, app).Grow(1).MinWidth(0).SingleLine()
+					if x.DeviceID != "" && x.Rule == rulePhoneSettings {
+						mg.Row(c).Size(28, 28).Radius(8).Center().Background(p.bg3).Children(func() {
+							mg.Icon(c, icSettings).FontSize(15).TextColor(p.ink2)
+						})
+					} else {
+						appIcon(c, name, 28, 8, 13, "")
+					}
+					mg.Column(c).Grow(1).MinWidth(0).Children(func() {
+						mg.Text(c, name).SingleLine()
+						if sub != "" {
+							mg.Text(c, sub).FontSize(12.5).TextColor(p.ink3).SingleLine()
+						}
+					})
 					mg.Text(c, ruleName(x.Rule)).FontSize(13.5).TextColor(p.ink2)
 					// While rules.yaml cannot be used, the gateway would refuse.
 					off := a.fileBroken(rulesYAML)
 					rm := mg.ButtonBase(c).Size(26, 26).Radius(6).Center().Disabled(off).
-						Label(locales.SettingsSafetyAlwaysRemoveItem(ruleAction(x.Rule), app)).Tooltip(locales.SettingsSafetyAlwaysRemove())
+						Label(remove).Tooltip(locales.SettingsSafetyAlwaysRemove())
 					if off {
 						rm.Opacity(0.35)
 					} else if rm.Hovered() {
@@ -110,7 +162,7 @@ func (a *app) takeBackAlways(k exemptionKeeper, x gateway.Exemption) {
 	st := &a.always
 	kept := st.list[:0:0]
 	for _, y := range st.list {
-		if y.Rule != x.Rule || y.AppID != x.AppID || y.AppName != x.AppName {
+		if y.Rule != x.Rule || y.AppID != x.AppID || y.AppName != x.AppName || y.Agent != x.Agent || y.DeviceID != x.DeviceID {
 			kept = append(kept, y)
 		}
 	}

@@ -25,7 +25,7 @@ import (
 // changed it since.
 
 // settingsRule is the rule changing the phone's settings asks under.
-const settingsRule = "Phone settings"
+const settingsRule = policy.RulePhoneSettings
 
 // changeLanguage names an app's own language in a task's change log, and
 // in phone_device's reset.
@@ -350,7 +350,8 @@ func (g *Gateway) askSettings(ctx context.Context, l *lease, req DeviceRequest, 
 			detail = s.agent.Name + " · " + c
 		}
 		info = g.approvals.Open(approval.Request{Kind: approval.KindAction, Binding: b, Rule: settingsRule, Title: title,
-			Detail: detail, Agent: s.agent.Name, TaskID: l.task.id, DeviceName: l.dev.name()})
+			Detail: detail, Agent: s.agent.Name, TaskID: l.task.id, DeviceName: l.dev.name(),
+			Data: &standingAsk{rule: settingsRule, agent: s.agent.Name, device: l.dev.id, deviceName: l.dev.name()}})
 		if res := g.afterOpen(l, info); res != nil {
 			return res
 		}
@@ -391,8 +392,12 @@ func (g *Gateway) askSettings(ctx context.Context, l *lease, req DeviceRequest, 
 // person now: always on a real phone, whose settings are the person's
 // own; on an emulator or a Simulator only when they asked to approve more
 // than payments. Allow for this task, here or for a launch in another
-// language, ends the asking for the task.
+// language, ends the asking for the task; Always allow ends it for the
+// agent on this phone (standing.go).
 func (g *Gateway) settingsAsk(l *lease) bool {
+	if g.standingAllowed(l, settingsRule, screen.App{}) {
+		return false
+	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if settingsGrantedLocked(l) {

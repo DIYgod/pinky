@@ -5242,6 +5242,38 @@
       }
     }
   },
+  "needsAlwaysAllowLogs": "Always allow {agent} to read the logs of {app} on {device}",
+  "@needsAlwaysAllowLogs": {
+    "description": "Item of More options on an approval to read an app's logs: never ask again when this agent reads this app's logs on this phone. agent is the agent's name; app is the app's name; device is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
+  },
+  "needsAlwaysAllowSettings": "Always allow {agent} to change settings on {device}",
+  "@needsAlwaysAllowSettings": {
+    "description": "Item of More options on an approval to change the phone's settings (rotation, light or dark, location, language): never ask again when this agent changes settings on this phone. agent is the agent's name; device is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
+  },
   "needsAndTasksLabel": "Needs you and tasks",
   "@needsAndTasksLabel": {
     "description": "The accessibility label of the Phones page's right-hand column, which holds the Needs you cards and the Tasks."
@@ -5713,6 +5745,38 @@
       "app": {
         "type": "String",
         "example": "Dinely"
+      }
+    }
+  },
+  "panelAlwaysAllowedLogsDetail": "{agent} no longer asks to read the logs of {app} on {device}. Change it in Settings.",
+  "@panelAlwaysAllowedLogsDetail": {
+    "description": "The floating approval panel's confirmation under Always allowed, after Always allow on an approval to read an app's logs. agent is the agent's name; app is the app's name; device is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
+  },
+  "panelAlwaysAllowedSettingsDetail": "{agent} no longer asks to change settings on {device}. Pinky still puts them back when each task ends. Change it in Settings.",
+  "@panelAlwaysAllowedSettingsDetail": {
+    "description": "The floating approval panel's confirmation under Always allowed, after Always allow on an approval to change the phone's settings. agent is the agent's name; device is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
       }
     }
   },
@@ -6848,6 +6912,16 @@
   "@ruleActionAgentRequest": {
     "description": "What the Agent request rule covers, inside \"Always allow agent request in Dinely\": the approvals the agent asks for itself."
   },
+  "ruleActionAppLogsOf": "reading the logs of {app}",
+  "@ruleActionAppLogsOf": {
+    "description": "What an App logs answer covers, inside settingsSafetyAlwaysRemoveAgentItem. app is the app's name.",
+    "placeholders": {
+      "app": {
+        "type": "String",
+        "example": "Dinely"
+      }
+    }
+  },
   "ruleActionCalls": "calls",
   "@ruleActionCalls": {
     "description": "What the Calls rule covers, inside \"Always allow calls in Phone\"."
@@ -6881,6 +6955,10 @@
   "ruleActionPayments": "payments",
   "@ruleActionPayments": {
     "description": "What the Payments rule covers, inside \"Always allow payments in Dinely\"."
+  },
+  "ruleActionPhoneSettings": "changing phone settings",
+  "@ruleActionPhoneSettings": {
+    "description": "What the Phone settings rule covers, inside settingsSafetyAlwaysRemoveAgentItem."
   },
   "ruleActionSettingsChanges": "settings changes",
   "@ruleActionSettingsChanges": {
@@ -7696,6 +7774,20 @@
   "@settingsSafetyAlways": {
     "description": "Settings › Safety: the heading of the steps the person chose Always allow for on approvals, and the accessibility label of that part."
   },
+  "settingsSafetyAlwaysAgentOn": "{agent} on {device}",
+  "@settingsSafetyAlwaysAgentOn": {
+    "description": "Settings › Safety › Always allowed: the second line of an App logs answer, which holds for one agent on one phone. agent is the agent's name; device is the phone's name.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
+  },
   "settingsSafetyAlwaysEvery": "While agents ask before every action, these ask too.",
   "@settingsSafetyAlwaysEvery": {
     "description": "Settings › Safety › Always allowed: a note shown while Ask before every action is chosen, which suspends the Always allow answers."
@@ -7711,6 +7803,24 @@
   "settingsSafetyAlwaysRemove": "Ask again",
   "@settingsSafetyAlwaysRemove": {
     "description": "Settings › Safety › Always allowed: the tooltip of the × button at the end of a row, which takes the Always allow back so the rule asks again."
+  },
+  "settingsSafetyAlwaysRemoveAgentItem": "Ask again about {kind} by {agent} on {device}",
+  "@settingsSafetyAlwaysRemoveAgentItem": {
+    "description": "Settings › Safety › Always allowed: the accessibility label of the × button that takes back an Always allow for one agent on one phone. kind is ruleActionPhoneSettings or ruleActionAppLogsOf; agent is the agent's name; device is the phone's name.",
+    "placeholders": {
+      "kind": {
+        "type": "String",
+        "example": "changing phone settings"
+      },
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "device": {
+        "type": "String",
+        "example": "iPhone 13 mini"
+      }
+    }
   },
   "settingsSafetyAlwaysRemoveItem": "Ask again about {kind} in {app}",
   "@settingsSafetyAlwaysRemoveItem": {

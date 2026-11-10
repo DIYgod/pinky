@@ -33,6 +33,13 @@ type Exemption struct {
 	// name.
 	App     string `yaml:"app,omitempty"`
 	AppName string `yaml:"app_name,omitempty"`
+	// Agent and Device are set on an answer to one of the gateway's own
+	// approvals (RulePhoneSettings, RuleAppLogs; see standing.go): the
+	// agent's name and the phone's id it is for, with DeviceName how
+	// Settings names the phone. The engine never lifts asks with one.
+	Agent      string `yaml:"agent,omitempty"`
+	Device     string `yaml:"device,omitempty"`
+	DeviceName string `yaml:"device_name,omitempty"`
 }
 
 // Rules returns Rule and With.
@@ -77,12 +84,21 @@ func checkExemptions(f *File) error {
 	for i := range f.AlwaysAllow {
 		x := &f.AlwaysAllow[i]
 		x.Rule, x.App, x.AppName = strings.TrimSpace(x.Rule), strings.TrimSpace(x.App), strings.TrimSpace(x.AppName)
+		x.Agent, x.Device, x.DeviceName = strings.TrimSpace(x.Agent), strings.TrimSpace(x.Device), strings.TrimSpace(x.DeviceName)
 		for j := range x.With {
 			x.With[j] = strings.TrimSpace(x.With[j])
+		}
+		if x.Device != "" {
+			if err := checkStanding(*x); err != nil {
+				return err
+			}
+			continue
 		}
 		switch {
 		case x.Rule == "":
 			return fmt.Errorf("always_allow entry %d has no rule", i+1)
+		case x.Agent != "":
+			return fmt.Errorf("always_allow %q names an agent but no device", x.Rule)
 		case x.App == "" && x.AppName == "":
 			return fmt.Errorf("always_allow %q has no app or app_name", x.Rule)
 		}
@@ -136,7 +152,7 @@ func (e *Engine) Exempt(asks []string, app screen.App) (Exemption, error) {
 	}
 	for i := range e.file.AlwaysAllow {
 		y := &e.file.AlwaysAllow[i]
-		if y.Rule != x.Rule || !y.sameApp(x) {
+		if y.standing() || y.Rule != x.Rule || !y.sameApp(x) {
 			continue
 		}
 		changed := false
@@ -164,7 +180,8 @@ func (e *Engine) Exempt(asks []string, app screen.App) (Exemption, error) {
 }
 
 // Unexempt takes back an "Always allow", as Exemptions listed it, and
-// saves the rules file: its rules ask again in its app.
+// saves the rules file: its rules ask again in its app (for an answer
+// that names an agent and a phone, for that agent on that phone).
 func (e *Engine) Unexempt(x Exemption) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
@@ -174,7 +191,7 @@ func (e *Engine) Unexempt(x Exemption) error {
 	kept := e.file.AlwaysAllow[:0:0]
 	found := false
 	for _, y := range e.file.AlwaysAllow {
-		if y.Rule == x.Rule && y.App == x.App && y.AppName == x.AppName {
+		if y.Rule == x.Rule && y.App == x.App && y.AppName == x.AppName && y.Agent == x.Agent && y.Device == x.Device {
 			found = true
 			continue
 		}
@@ -220,7 +237,7 @@ func (e *Engine) liftLocked(v Verdict, app screen.App) Verdict {
 	// another exemption lifted, so their order does not matter.
 	lift := map[string]bool{}
 	for _, x := range e.file.AlwaysAllow {
-		if contains(v.Asks, x.Rule) && x.matches(app) {
+		if !x.standing() && contains(v.Asks, x.Rule) && x.matches(app) {
 			for _, r := range x.Rules() {
 				lift[r] = true
 			}

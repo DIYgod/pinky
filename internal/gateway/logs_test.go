@@ -53,7 +53,7 @@ func TestPhoneLogsAsks(t *testing.T) {
 	done := make(chan *Result, 1)
 	go func() { done <- s.Logs(ctx, LogsRequest{App: "Crash Test"}) }()
 	n := waitNeedKind(t, g, NeedApproval)
-	if n.Rule != policy.RuleAppLogs || n.Title != "Read the logs of Crash Test?" || !n.AllowTask || n.AlwaysAllow {
+	if n.Rule != policy.RuleAppLogs || n.Title != "Read the logs of Crash Test?" || !n.AllowTask || !n.AlwaysAllow {
 		t.Fatalf("approval %+v", n)
 	}
 	if err := g.Decide(n.ID, Deny, ""); err != nil {

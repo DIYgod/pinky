@@ -24,11 +24,21 @@ import (
 // Exemption is one of the person's Always allow answers, as Settings ›
 // Safety lists it: in the app, Rule no longer asks about the steps it asks
 // about, nor do the rules in With about those steps.
+//
+// An answer to changing a phone's settings or reading an app's logs names
+// the agent and the phone it is for (Agent, DeviceID): that agent no
+// longer asks about it on that phone, for App logs in that app only.
 type Exemption struct {
 	Rule    string   // the rule the approval named, such as "Payments"
 	With    []string // rules that asked with it, such as "Commits"
 	AppID   string   // package name or bundle id; empty when the phone gave none
 	AppName string   // the app's name; empty when the phone gave none
+	// Agent, DeviceID and DeviceName are set on an answer about "Phone
+	// settings" or "App logs": the agent's name and the phone's id and
+	// name. Empty on the others, which apply to every agent and phone.
+	Agent      string
+	DeviceID   string
+	DeviceName string
 }
 
 // Exemptions lists the person's Always allow answers, oldest first, after
@@ -38,7 +48,8 @@ func (g *Gateway) Exemptions() []Exemption {
 	xs := g.policy.Exemptions()
 	out := make([]Exemption, len(xs))
 	for i, x := range xs {
-		out[i] = Exemption{Rule: x.Rule, With: append([]string(nil), x.With...), AppID: x.App, AppName: x.AppName}
+		out[i] = Exemption{Rule: x.Rule, With: append([]string(nil), x.With...), AppID: x.App, AppName: x.AppName,
+			Agent: x.Agent, DeviceID: x.Device, DeviceName: x.DeviceName}
 	}
 	return out
 }
@@ -46,17 +57,46 @@ func (g *Gateway) Exemptions() []Exemption {
 // RemoveExemption takes back an Always allow, as Exemptions listed it: its
 // rules ask again in its app.
 func (g *Gateway) RemoveExemption(x Exemption) error {
-	return g.policy.Unexempt(policy.Exemption{Rule: x.Rule, App: x.AppID, AppName: x.AppName})
+	return g.policy.Unexempt(policy.Exemption{Rule: x.Rule, App: x.AppID, AppName: x.AppName, Agent: x.Agent, Device: x.DeviceID})
 }
 
 // canAlwaysAllow reports whether an approval's Always allow can be kept:
 // an action the policy asked about, in an app, not a launch (whose app is
-// not the one the panel names), with a rule an exemption may lift, not
-// while every action asks, and not while rules.yaml has a hand edit that
-// cannot be used.
+// not the one the panel names), with a rule an exemption may lift, or a
+// change of the phone's settings or a read of an app's logs (standingAsk);
+// not while every action asks, and not while rules.yaml has a hand edit
+// that cannot be used.
 func (g *Gateway) canAlwaysAllow(info approval.Info) bool {
+	if st, ok := standingOf(info); ok {
+		return g.policy.CanKeepStanding(st.rule, st.agent, st.device, st.app)
+	}
 	snap, ok := actionSnapshot(info)
 	return ok && g.policy.CanExempt(snap.asks, snap.grantApp)
+}
+
+// standingAsk is the Data of an approval to change a phone's settings or
+// read an app's logs: whom and what its Always allow would be for. It is
+// kept per agent and phone, and for logs per app too, since an agent only
+// reads the logs of the app it names. Copying files and handing over a
+// screen recording have none: those ask every time.
+type standingAsk struct {
+	rule       string // settingsRule or policy.RuleAppLogs
+	agent      string
+	device     string
+	deviceName string
+	app        screen.App // the app whose logs; zero for settings
+}
+
+// standingOf returns an approval's standingAsk.
+func standingOf(info approval.Info) (*standingAsk, bool) {
+	st, ok := info.Data.(*standingAsk)
+	return st, ok && info.Kind == approval.KindAction
+}
+
+// standingAllowed reports whether the person always allows the lease's
+// agent what rule asks about on its phone (in app, for logs).
+func (g *Gateway) standingAllowed(l *lease, rule string, app screen.App) bool {
+	return g.policy.Standing(rule, l.session.agent.Name, l.dev.id, app)
 }
 
 // actionSnapshot returns an approval's action, unless it is a launch.
@@ -70,6 +110,18 @@ func actionSnapshot(info approval.Info) (*snapshot, bool) {
 // error reports, as it does a rules.yaml that cannot be used (the panel
 // may have offered Always allow before it broke).
 func (g *Gateway) alwaysAllow(info approval.Info) error {
+	if st, ok := standingOf(info); ok {
+		x, err := g.policy.KeepStanding(st.rule, st.agent, st.device, st.deviceName, st.app)
+		switch {
+		case errors.Is(err, policy.ErrNotExemptable):
+			return nil
+		case err != nil:
+			g.log.Warn("always allow: save the rules file", "rule", st.rule, "agent", st.agent, "device", st.device, "err", err)
+			return fmt.Errorf("the step is allowed, but Always allow was not saved: %w", err)
+		}
+		g.log.Info("always allow", "rule", x.Rule, "agent", x.Agent, "device", x.Device, "app", appLabel(st.app))
+		return nil
+	}
 	snap, ok := actionSnapshot(info)
 	if !ok {
 		return nil
