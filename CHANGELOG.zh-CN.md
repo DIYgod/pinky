@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 拖动任务录屏的时间轴，现在会直接跳到那一刻并显示对应的画面，暂停时也一样，不会再从头重放。感谢 tarou-jp。
+
 ## 2026.1110.17 (2026-11-10)
 
 - 在 Windows 上，从 Microsoft Store 安装的 Claude、Codex 桌面版里的智能体，现在会连到你已经打开的 Pinky，不会再悄悄另起一个「全部停止」管不到的 Pinky。感谢 stoicneko。
