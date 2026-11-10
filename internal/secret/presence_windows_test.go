@@ -75,11 +75,15 @@ func TestSignedInUser(t *testing.T) {
 	if len(me.computer) == 0 {
 		t.Errorf("no computer names")
 	}
-	if isMe, why := me.named(name, domain); !isMe {
-		t.Errorf("%s\\%s does not name the account (%s)", domain, name, why)
+	if by, why := me.named(name, domain); by != "sid" {
+		t.Errorf("%s\\%s names the account by %q, want by its SID (%s)", domain, name, by, why)
 	}
-	if isMe, _ := me.named("pinky-no-such-user", ""); isMe {
-		t.Errorf("an account that does not exist names the signed-in one")
+	// A computer name Windows does not look up, with the account's name.
+	if by, why := me.named(name, "PINKY-LONG-HOSTNAME-2026"); by != "name" {
+		t.Errorf("an unknown domain with the account's name names it by %q, want by its name (%s)", by, why)
+	}
+	if by, _ := me.named("pinky-no-such-user", ""); by != "" {
+		t.Errorf("an account that does not exist names the signed-in one by %q", by)
 	}
 	if !onRunner() {
 		return
@@ -87,9 +91,6 @@ func TestSignedInUser(t *testing.T) {
 	// The runner's account is a local account with a password.
 	if !me.Local || me.localBy != "account domain" || me.Microsoft || len(me.problems) > 0 {
 		t.Errorf("runner account: %v, want local by its account domain, not Microsoft, no problems", me.attrs())
-	}
-	if err := me.blankLogon(); !errors.Is(err, errLogonFailure) {
-		t.Errorf("an empty password for the runner's account: %v, want %v", errText(err), errLogonFailure)
 	}
 }
 
@@ -244,8 +245,12 @@ func TestBlankPasswordAccount(t *testing.T) {
 	})
 
 	// The runner's account has a password: an empty one is wrong, for
-	// whatever account the dialog names.
-	for _, name := range []string{user, computer[0] + `\` + user, `PINKY-LONG-HOSTNAME-2026\` + user, runner.name, "pinky-no-such-user"} {
+	// whatever account the dialog names. Each is a failed sign-in for the
+	// runner's account, which Windows locks out after 10 in 10 minutes:
+	// these make 4 (the account without a password, the unknown domain
+	// with the runner's name, the runner's name, and the account that does
+	// not exist, which asks about the runner's).
+	for _, name := range []string{user, `PINKY-LONG-HOSTNAME-2026\` + runner.name, runner.name, "pinky-no-such-user"} {
 		if ok, err := check(t, runner, name, ""); ok || err != nil {
 			t.Errorf("as the runner, %q with an empty password: ok %v, err %v; want a wrong password", name, ok, err)
 		}

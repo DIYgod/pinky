@@ -452,6 +452,13 @@ func checkPassword(buf unsafe.Pointer, size uint32, me *windowsUser) (bool, erro
 		uintptr(unsafe.Pointer(&user[0])), n, uintptr(unsafe.Pointer(&userDomain[0])), n); r != 0 {
 		copy(user, name)
 		clear(userDomain)
+		// .\user does not parse; for LogonUser, "." is this computer's
+		// own account database.
+		if name[0] == '.' && name[1] == '\\' {
+			clear(user)
+			copy(user, name[2:])
+			userDomain[0] = '.'
+		}
 	}
 	if userDomain[0] == 0 && domain[0] != 0 {
 		copy(userDomain, domain)
@@ -478,9 +485,9 @@ func checkPassword(buf unsafe.Pointer, size uint32, me *windowsUser) (bool, erro
 		"logon", errText(c.Logon),
 	}
 	if c.Empty && c.Logon != nil {
-		isMe, why := me.named(dialogUser, dialogDomain)
-		c.DialogIsMe = isMe
-		attrs = append(attrs, "dialog_is_me", isMe)
+		by, why := me.named(dialogUser, dialogDomain)
+		c.DialogIsMe = by != ""
+		attrs = append(attrs, "dialog_is_me", by)
 		if why != "" {
 			attrs = append(attrs, "dialog_lookup", why)
 		}
@@ -609,21 +616,29 @@ func (u *windowsUser) microsoft(by string) {
 	}
 }
 
-// named reports whether the account the dialog named resolves to this
-// one, without signing in; why says why not when the lookup failed.
-func (u *windowsUser) named(user, domain string) (bool, string) {
+// named reports whether the dialog named this account, without signing
+// in: by is "sid" when the name resolves to its SID, "name" when the name
+// does not resolve (as with a computer name Windows does not look up) but
+// its user part is this account's name, and "" when the dialog named
+// another account or none. lookup is the lookup's error, for the log.
+func (u *windowsUser) named(user, domain string) (by, lookup string) {
 	if u.sid == nil || user == "" {
-		return false, ""
+		return "", ""
 	}
 	name := user
-	if domain != "" {
+	if domain != "" && domain != "." {
 		name = domain + `\` + user
 	}
 	sid, _, _, err := windows.LookupSID("", name)
-	if err != nil {
-		return false, errText(err)
+	switch {
+	case err == nil && windows.EqualSid(sid, u.sid):
+		return "sid", ""
+	case err == nil:
+		return "", ""
+	case strings.EqualFold(user, u.name):
+		return "name", errText(err)
 	}
-	return windows.EqualSid(sid, u.sid), ""
+	return "", errText(err)
 }
 
 // blankLogon asks Windows whether an empty password signs the account in,
