@@ -896,6 +896,12 @@ func (a *app) companionTick(now time.Time) {
 			a.companionFor(d) // asks in the background; a later tick acts on it
 			continue
 		}
+		// A phone that refused an install over USB would refuse again, or
+		// ask on its screen with nobody there: it waits for the person, or
+		// for a version they installed by hand (companionFor).
+		if a.comp.byHand[id] {
+			continue
+		}
 		if cs := a.comp.state[id]; cs != driver.CompanionOutdated && cs != driver.CompanionPublicKey || !a.phoneFree(d, now) {
 			continue
 		}
@@ -932,6 +938,10 @@ func (a *app) updateCompanion(cu companionUpdater, d gateway.DeviceView, ca *com
 		if ci != nil {
 			cs, serr = ci.CompanionState(ctx, id)
 		}
+		apk := ""
+		if refusedOverUSB(err) {
+			apk = a.findCompanionAPK()
+		}
 		a.post(func() {
 			ca.running = false
 			if serr == nil {
@@ -941,6 +951,11 @@ func (a *app) updateCompanion(cu companionUpdater, d gateway.DeviceView, ca *com
 			case errors.Is(err, driver.ErrNeedsPerson):
 				log.Printf("pinky: companion on %s: %v", name, err)
 				ca.needsYou = true
+			case refusedOverUSB(err):
+				// Trying again in hours would not help: the card offers the
+				// person's Update and the APK to install by hand.
+				log.Printf("pinky: update the companion on %s: %v; leaving it to the person", name, err)
+				a.comp.byHand[id], a.comp.apk = true, apk
 			case err != nil:
 				log.Printf("pinky: update the companion on %s: %v", name, err)
 				ca.failedAt = time.Now()
@@ -970,6 +985,12 @@ func (a *app) companionUpdating(id string) bool {
 
 // companionAutoLine is the outdated companion card's extra line.
 func (a *app) companionAutoLine(id string) string {
+	if a.comp.byHand[id] {
+		if a.comp.err[id] != "" {
+			return "" // the person's Update failed, and its error says what to do
+		}
+		return locales.UpdateCompanionByHand()
+	}
 	if a.opt.Updates == nil || !a.settings.AutoUpdate {
 		return ""
 	}

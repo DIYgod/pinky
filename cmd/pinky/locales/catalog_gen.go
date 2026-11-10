@@ -5379,6 +5379,24 @@ func (msgs Messages) CompanionAllowHintXiaomi() string {
 	return Catalog.Format(msgs.locale, "companionAllowHintXiaomi", nil)
 }
 
+// CompanionByHandHow says "How to install it by hand"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link to the README's steps for installing Pinky
+// Companion by hand.
+func CompanionByHandHow() string { return In(i18n.Locale()).CompanionByHandHow() }
+
+// CompanionByHandHow says "How to install it by hand"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link to the README's steps for installing Pinky
+// Companion by hand.
+func (msgs Messages) CompanionByHandHow() string {
+	return Catalog.Format(msgs.locale, "companionByHandHow", nil)
+}
+
 // CompanionCardLabel says "Pinky Companion on {name}"
 // in the language the app shows.
 //
@@ -5464,6 +5482,8 @@ func (msgs Messages) CompanionErrPlayProtect() string {
 //
 // The Pinky Companion card and the checkup: the error when the phone
 // blocked installs over USB, on a phone whose maker Pinky does not know.
+// The links companionShowAPK and companionByHandHow follow it, for
+// installing the APK by hand.
 func CompanionErrRestricted() string { return In(i18n.Locale()).CompanionErrRestricted() }
 
 // CompanionErrRestricted says "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switc…"
@@ -5471,26 +5491,32 @@ func CompanionErrRestricted() string { return In(i18n.Locale()).CompanionErrRest
 //
 // The Pinky Companion card and the checkup: the error when the phone
 // blocked installs over USB, on a phone whose maker Pinky does not know.
+// The links companionShowAPK and companionByHandHow follow it, for
+// installing the APK by hand.
 func (msgs Messages) CompanionErrRestricted() string {
 	return Catalog.Format(msgs.locale, "companionErrRestricted", nil)
 }
 
-// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account), then try…"
+// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may ne…"
 // in the language the app shows.
 //
 // The Pinky Companion card and the checkup, on a Xiaomi phone: the error
 // when the phone blocked installs over USB (the switch is off, or nobody
 // tapped Install in time). Install via USB and Install are Xiaomi's names:
-// use those of its Simplified Chinese settings.
+// use those of its Simplified Chinese settings. Some Xiaomi phones cannot
+// turn the switch on without a SIM card; the links companionShowAPK and
+// companionByHandHow follow, for installing the APK by hand.
 func CompanionErrRestrictedXiaomi() string { return In(i18n.Locale()).CompanionErrRestrictedXiaomi() }
 
-// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account), then try…"
+// CompanionErrRestrictedXiaomi says "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may ne…"
 // in the language of msgs.
 //
 // The Pinky Companion card and the checkup, on a Xiaomi phone: the error
 // when the phone blocked installs over USB (the switch is off, or nobody
 // tapped Install in time). Install via USB and Install are Xiaomi's names:
-// use those of its Simplified Chinese settings.
+// use those of its Simplified Chinese settings. Some Xiaomi phones cannot
+// turn the switch on without a SIM card; the links companionShowAPK and
+// companionByHandHow follow, for installing the APK by hand.
 func (msgs Messages) CompanionErrRestrictedXiaomi() string {
 	return Catalog.Format(msgs.locale, "companionErrRestrictedXiaomi", nil)
 }
@@ -5661,6 +5687,26 @@ func CompanionInstalling() string { return In(i18n.Locale()).CompanionInstalling
 // while the app installs.
 func (msgs Messages) CompanionInstalling() string {
 	return Catalog.Format(msgs.locale, "companionInstalling", nil)
+}
+
+// CompanionShowAPK says "Show pinky-companion.apk"
+// in the language the app shows.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link that shows the companion's APK, which comes with
+// Pinky, in Finder or the file manager, to copy to the phone and install
+// there. Keep the file name as it is.
+func CompanionShowAPK() string { return In(i18n.Locale()).CompanionShowAPK() }
+
+// CompanionShowAPK says "Show pinky-companion.apk"
+// in the language of msgs.
+//
+// The Pinky Companion card and the checkup, after the phone refused an
+// install over USB: a link that shows the companion's APK, which comes with
+// Pinky, in Finder or the file manager, to copy to the phone and install
+// there. Keep the file name as it is.
+func (msgs Messages) CompanionShowAPK() string {
+	return Catalog.Format(msgs.locale, "companionShowAPK", nil)
 }
 
 // CompanionInstallingTitle says "Installing Pinky Companion"
@@ -23915,6 +23961,28 @@ func UpdateCompanionAuto() string { return In(i18n.Locale()).UpdateCompanionAuto
 // The companion card when an update is out and automatic updates are on.
 func (msgs Messages) UpdateCompanionAuto() string {
 	return Catalog.Format(msgs.locale, "updateCompanionAuto", nil)
+}
+
+// UpdateCompanionByHand says "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the…"
+// in the language the app shows.
+//
+// The companion card when an update is out: Pinky's automatic update failed
+// because the phone refuses installs over USB (Xiaomi's Install via USB is
+// off, or nobody allowed it on the phone in time), so it leaves the update
+// to the person. Update is the card's button (companionUpdate); the links
+// companionShowAPK and companionByHandHow follow.
+func UpdateCompanionByHand() string { return In(i18n.Locale()).UpdateCompanionByHand() }
+
+// UpdateCompanionByHand says "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the…"
+// in the language of msgs.
+//
+// The companion card when an update is out: Pinky's automatic update failed
+// because the phone refuses installs over USB (Xiaomi's Install via USB is
+// off, or nobody allowed it on the phone in time), so it leaves the update
+// to the person. Update is the card's button (companionUpdate); the links
+// companionShowAPK and companionByHandHow follow.
+func (msgs Messages) UpdateCompanionByHand() string {
+	return Catalog.Format(msgs.locale, "updateCompanionByHand", nil)
 }
 
 // UpdateCompanionNeedsYou says "The phone asks before apps are installed over USB, so this update needs you."

@@ -617,6 +617,9 @@ func (a *app) checkAction(c *mg.Context, d gateway.DeviceView, ck driver.Check) 
 				a.installCompanion(d)
 			}
 		})
+		if !busy {
+			a.companionByHand(c, d)
+		}
 	case driver.FixLocalNetwork:
 		if runtime.GOOS == "darwin" {
 			mg.Row(c).Margin(4, 0, 0, 0).Children(func() {

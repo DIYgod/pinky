@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	hexenc "encoding/hex"
+	"errors"
 	"fmt"
 	"image/png"
 	"net/http"
@@ -483,6 +484,54 @@ func TestCompanionUpdatesWhenThePhoneIsFree(t *testing.T) {
 	if !hasText(tt, "Updated on Pixel 9 to 0.1.0 (130)") {
 		t.Errorf("the dialog: %q", tt.Texts())
 	}
+}
+
+// TestCompanionUpdateRefusedOverUSB: when a phone refuses the automatic
+// update over USB, Pinky stops trying by itself, and the card says so and
+// offers the person's Update and the APK to install by hand.
+func TestCompanionUpdateRefusedOverUSB(t *testing.T) {
+	ut := newUpdateTest(t, fakeapi.Companion)
+	const apk = `C:\Program Files\Pinky\pinky-companion.apk`
+	ut.opt.CompanionAPK = func() (string, error) { return apk, nil }
+	ut.api.SetCompanion("pixel-9", driver.CompanionOutdated)
+	ut.api.SetInstallError("pixel-9", errors.New("android: install pinky-companion.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]"))
+	ut.waitFor(t, "Pixel 9", func() bool { return ut.device("pixel-9") != nil })
+	ut.updateTick(time.Now()) // looks the companion up
+	ut.waitFor(t, "the companion's state", func() bool { return ut.comp.state["pixel-9"] == driver.CompanionOutdated })
+	ut.updateTick(time.Now())
+	if !ut.companionUpdating("pixel-9") {
+		t.Fatal("no automatic update")
+	}
+	ut.waitFor(t, "the refusal", func() bool { return !ut.companionUpdating("pixel-9") })
+	if !ut.comp.byHand["pixel-9"] || ut.comp.apk != apk {
+		t.Fatalf("by hand %v, APK %q", ut.comp.byHand["pixel-9"], ut.comp.apk)
+	}
+	tt := mg.NewTester(ut.view, 1280, 820)
+	tt.Frame()
+	if !hasText(tt, locales.UpdateCompanionByHand()) || !hasText(tt, locales.CompanionShowAPK()) || hasText(tt, locales.UpdateCompanionAuto()) {
+		t.Errorf("the card: %q", tt.Texts())
+	}
+	// Hours later Pinky still leaves it to the person.
+	ut.updateTick(time.Now().Add(7 * time.Hour))
+	if ut.companionUpdating("pixel-9") {
+		t.Error("Pinky tries again by itself")
+	}
+	// The person's Update fails the same way: its error says what to do,
+	// and the line above it goes.
+	if err := tt.Click(locales.CompanionUpdateLabel("Pixel 9")); err != nil {
+		t.Fatal(err)
+	}
+	ut.waitFor(t, "the person's update", func() bool { return ut.comp.installing["pixel-9"].IsZero() })
+	tt.Frame()
+	if !hasText(tt, locales.CompanionErrRestricted()) || hasText(tt, locales.UpdateCompanionByHand()) || !hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("the card after the person's update: %q", tt.Texts())
+	}
+	// The person installs it by hand: once Pinky sees it, the next version
+	// gets its automatic update again.
+	ut.api.SetCompanion("pixel-9", driver.CompanionOn)
+	ut.comp.checked["pixel-9"] = time.Time{}
+	ut.updateTick(time.Now().Add(7 * time.Hour))
+	ut.waitFor(t, "the hand install", func() bool { return !ut.comp.byHand["pixel-9"] })
 }
 
 func TestCompanionSignedWithThePublicKeyIsReplaced(t *testing.T) {

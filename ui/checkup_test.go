@@ -80,6 +80,73 @@ func TestCheckupOfXiaomiPhone(t *testing.T) {
 	}
 }
 
+// TestXiaomiThatRefusesUSBInstalls: once a phone refuses an install over
+// USB, as a Xiaomi without a SIM card must, the checkup and the phone's
+// card show the APK to install by hand and link to the README's steps, in
+// the app's language; trying again puts that away until it refuses again.
+func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
+	ta := newTestApp(t, fakeapi.Checkup)
+	const apk = "/Applications/Pinky.app/Contents/Resources/pinky-companion.apk"
+	ta.opt.CompanionAPK = func() (string, error) { return apk, nil }
+	var revealed, opened []string
+	ta.reveal = func(p string) { revealed = append(revealed, p) }
+	saved := openURL
+	openURL = func(_ *mg.Context, u string, done func(error)) { opened = append(opened, u); done(nil) }
+	t.Cleanup(func() { openURL = saved })
+	ta.sync()
+	ta.sel = "redmi-k80"
+	tt := mg.NewTester(ta.view, 1280, 820)
+	ta.frameUntil(t, tt, "the companion card", func() bool { return hasText(tt, "Install Pinky Companion") })
+	if hasText(tt, locales.CompanionShowAPK()) || hasText(tt, locales.CompanionByHandHow()) {
+		t.Errorf("the APK shows before an install failed: %q", tt.Texts())
+	}
+	ta.openCheckup(*ta.device("redmi-k80"))
+	ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf("redmi-k80"); return r != nil && r.have && !r.running })
+	if err := tt.Click("Install"); err != nil {
+		t.Fatal(err)
+	}
+	ta.frameUntil(t, tt, "the install to fail", func() bool { return ta.comp.err["redmi-k80"] != "" })
+	if !ta.comp.byHand["redmi-k80"] || ta.comp.apk != apk {
+		t.Fatalf("by hand %v, APK %q", ta.comp.byHand["redmi-k80"], ta.comp.apk)
+	}
+	if err := tt.Click(locales.CompanionShowAPK()); err != nil {
+		t.Fatalf("%v: %q", err, tt.Texts())
+	}
+	if len(revealed) != 1 || revealed[0] != apk {
+		t.Errorf("revealed %q", revealed)
+	}
+	if err := tt.Click(locales.CompanionByHandHow()); err != nil {
+		t.Fatal(err)
+	}
+	inLanguage(t, "zh-Hans", tt)
+	tt.Frame()
+	if err := tt.Click(locales.CompanionByHandHow()); err != nil {
+		t.Fatalf("%v: %q", err, tt.Texts())
+	}
+	if len(opened) != 2 || opened[0] != companionByHandDocs || opened[1] != companionByHandDocsZh {
+		t.Errorf("opened %q", opened)
+	}
+	inLanguage(t, "en", tt)
+	if err := tt.Click("Back to the phone"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if !hasText(tt, locales.CompanionErrRestrictedXiaomi()) || !hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("the card after the refusal: %q", tt.Texts())
+	}
+	ta.api.SetInstallError("redmi-k80", nil)
+	if err := tt.Click("Install Pinky Companion on Redmi K80"); err != nil {
+		t.Fatal(err)
+	}
+	if ta.comp.byHand["redmi-k80"] {
+		t.Error("trying again keeps the APK out")
+	}
+	ta.frameUntil(t, tt, "the install", func() bool { return ta.comp.installing["redmi-k80"].IsZero() })
+	if ta.comp.err["redmi-k80"] != "" || ta.comp.byHand["redmi-k80"] || hasText(tt, locales.CompanionShowAPK()) {
+		t.Errorf("after the install: %q, %q", ta.comp.err["redmi-k80"], tt.Texts())
+	}
+}
+
 func TestCheckupAllGood(t *testing.T) {
 	ta := newTestApp(t, fakeapi.OnePhone)
 	ta.sync()

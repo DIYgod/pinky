@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo/i18n"
 	mg "github.com/egoist/mygo/ui"
 
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
@@ -30,6 +31,66 @@ type companionState struct {
 	installing map[string]time.Time // installs under way, by when they began
 	err        map[string]string    // why the last install failed
 	later      map[string]bool      // phones whose card the person put off
+	// byHand: phones that refused an install over USB, which Pinky leaves
+	// to the person, with the APK to install by hand (companionByHand).
+	byHand map[string]bool
+	apk    string // the APK, as Options.CompanionAPK found it at the last refusal
+}
+
+// companionByHandDocs is how to install the companion app by hand, in the
+// README, and companionByHandDocsZh in its Chinese version.
+const (
+	companionByHandDocs   = "https://github.com/DIYgod/pinky#install-companion-by-hand"
+	companionByHandDocsZh = "https://github.com/DIYgod/pinky/blob/main/README.zh-CN.md#install-companion-by-hand"
+)
+
+// refusedOverUSB reports whether an install failed because the phone
+// refuses installs over USB, or nobody allowed it on the phone in time:
+// Xiaomi's Install via USB, for one, which some phones cannot turn on.
+func refusedOverUSB(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "INSTALL_FAILED_USER_RESTRICTED")
+}
+
+// findCompanionAPK is the APK to show for an install by hand, "" when
+// there is none; it reads the disk, so it runs off the main thread.
+func (a *app) findCompanionAPK() string {
+	if a.opt.CompanionAPK == nil {
+		return ""
+	}
+	p, err := a.opt.CompanionAPK()
+	if err != nil {
+		return ""
+	}
+	return p
+}
+
+// companionByHand offers a phone that refused an install over USB the
+// way to install the app by hand: the APK on this computer, and the
+// README's steps.
+func (a *app) companionByHand(c *mg.Context, d gateway.DeviceView) {
+	st := &a.comp
+	if !st.byHand[d.Info.ID] {
+		return
+	}
+	mg.Row(c).Gap(16).Wrap().AlignItems(mg.Center).Children(func() {
+		if st.apk != "" {
+			if linkButton(c, locales.CompanionShowAPK()).Tooltip(tildePath(st.apk)).Clicked() {
+				a.reveal(st.apk)
+			}
+		}
+		if linkButton(c, locales.CompanionByHandHow()).Clicked() {
+			openURL(c, companionByHandLink(), func(error) {})
+		}
+	})
+}
+
+// companionByHandLink is the README's steps in the app's language: the
+// Chinese README in Chinese, else the English one.
+func companionByHandLink() string {
+	if _, lang, ok := locales.Catalog.Message(i18n.Locale(), "companionByHandHow"); ok && strings.HasPrefix(lang, "zh") {
+		return companionByHandDocsZh
+	}
+	return companionByHandDocs
 }
 
 // companionEvery is how often the client asks again while a phone's page
@@ -56,6 +117,9 @@ func (a *app) companionFor(d gateway.DeviceView) driver.CompanionState {
 				st.checked[id] = time.Now()
 				if err == nil {
 					st.state[id] = cs
+					if cs == driver.CompanionOn || cs == driver.CompanionOff || cs == driver.CompanionReady {
+						delete(st.byHand, id) // the person installed it; the next version may install over USB
+					}
 				}
 			})
 		}()
@@ -75,6 +139,7 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 	}
 	st.installing[id] = time.Now()
 	delete(st.err, id)
+	delete(st.byHand, id)
 	// One signed with the old public key gets replaced: say so after.
 	replacing := st.state[id] == driver.CompanionPublicKey
 	go func() {
@@ -82,8 +147,15 @@ func (a *app) installCompanion(d gateway.DeviceView) {
 		defer cancel()
 		err := ci.InstallCompanion(ctx, id)
 		cs, serr := ci.CompanionState(ctx, id)
+		byHand, apk := refusedOverUSB(err), ""
+		if byHand {
+			apk = a.findCompanionAPK()
+		}
 		a.post(func() {
 			delete(st.installing, id)
+			if byHand {
+				st.byHand[id], st.apk = true, apk
+			}
 			if serr == nil {
 				st.state[id], st.checked[id] = cs, time.Now()
 			}
@@ -211,6 +283,7 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		if msg := st.err[id]; msg != "" {
 			mg.Text(c, msg).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
 		}
+		a.companionByHand(c, d)
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Margin(4, 0, 0, 0).Children(func() {
 			if button(c, action, btnOpt{kind: btnPrimary}).Label(actionLabel).Clicked() {
 				a.installCompanion(d)
