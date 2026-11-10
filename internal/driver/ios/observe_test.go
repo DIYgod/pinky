@@ -227,6 +227,22 @@ func TestKeyboardFromOCR(t *testing.T) {
 	}
 }
 
+// A keyboard OCR found lies from a little above its top row of keys, where
+// the suggestions bar is, to the bottom of the screen; a frame the tree
+// gave stays.
+func TestNoteOCRKeyboard(t *testing.T) {
+	s := &screen.Screen{Width: 1125, Height: 2436}
+	noteOCRKeyboard(s, 0.66)
+	if want := (screen.Rect{Y: 1461, W: 1125, H: 975}); !s.Keyboard || s.KeyboardFrame != want {
+		t.Fatalf("keyboard %v at %+v, want %+v", s.Keyboard, s.KeyboardFrame, want)
+	}
+	tree := screen.Rect{Y: 1500, W: 1125, H: 936}
+	s = &screen.Screen{Width: 1125, Height: 2436, KeyboardFrame: tree}
+	if noteOCRKeyboard(s, 0.66); s.KeyboardFrame != tree {
+		t.Fatalf("frame %+v, want the tree's %+v", s.KeyboardFrame, tree)
+	}
+}
+
 func TestQuietSince(t *testing.T) {
 	now := time.Now()
 	frames := func(sizes ...int) *media {

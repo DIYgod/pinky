@@ -304,7 +304,7 @@ func (d *Device) observeInspector(ctx context.Context, opt driver.ObserveOptions
 	// walk does not see it; its keys show up in OCR as single letters.
 	kbTop, kb := keyboardFromOCR(lines)
 	if kb {
-		s.Keyboard = true
+		noteOCRKeyboard(s, kbTop)
 		kept := lines[:0:0]
 		for _, l := range lines {
 			if l.Y < kbTop {

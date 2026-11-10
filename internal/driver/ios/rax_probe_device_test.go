@@ -170,7 +170,7 @@ func TestDeviceRAXProbe(t *testing.T) {
 		if els[0].HasFrame && els[0].Frame.W > 0 {
 			scale = float64(si.Width) / els[0].Frame.W
 		}
-		out, _ := raxScreenElements(els, scale, si.Width, si.Height, "app")
+		out, _, _ := raxScreenElements(els, scale, si.Width, si.Height, "app")
 		dumpScreen(w, title, out)
 		return els, out
 	}
@@ -180,7 +180,7 @@ func TestDeviceRAXProbe(t *testing.T) {
 		if t.els[0].HasFrame && t.els[0].Frame.W > 0 {
 			scale = float64(si.Width) / t.els[0].Frame.W
 		}
-		out, _ := raxScreenElements(t.els, scale, si.Width, si.Height, "app")
+		out, _, _ := raxScreenElements(t.els, scale, si.Width, si.Height, "app")
 		return out
 	}
 

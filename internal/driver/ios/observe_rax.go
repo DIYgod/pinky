@@ -267,7 +267,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 			d.overlayEvents(ctx, nil, scale, si.Width, si.Height) // forget the ones gone
 		}
 	}
-	s.Elements, s.Keyboard = raxScreenElements(els, scale, si.Width, si.Height, s.App.ID, covered...)
+	s.Elements, s.Keyboard, s.KeyboardFrame = raxScreenElements(els, scale, si.Width, si.Height, s.App.ID, covered...)
 	// Notifications over the app come first, as they are on top.
 	s.Elements = append(append(notes, s.Elements...), dialog...)
 	if asleepRead(ctx, s, d.ScreenOn) {
@@ -277,7 +277,7 @@ func (d *Device) observeRAX(ctx context.Context, opt driver.ObserveOptions, st *
 	}
 	if opt.OCR && len(lines) > 0 {
 		if top, kb := keyboardFromOCR(lines); kb {
-			s.Keyboard = true
+			noteOCRKeyboard(s, top)
 			kept := lines[:0:0]
 			for _, l := range lines {
 				if l.Y < top {
@@ -513,10 +513,11 @@ func walkDetached(ctx context.Context, rax *raxSession, lim walkLimits, stop *at
 // widgets) cannot be placed and are left out, except those of web content
 // (Web), which a browser lists without a host and with frames in screen
 // points. A process whose elements are mostly single characters is the
-// on-screen keyboard: it only marks the keyboard as shown.
-func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, covered ...screen.Rect) ([]screen.Element, bool) {
+// on-screen keyboard: it only marks the keyboard as shown. The keyboard's
+// frame is the box of its keys, empty when none could be placed.
+func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, covered ...screen.Rect) ([]screen.Element, bool, screen.Rect) {
 	if len(els) == 0 {
-		return nil, false
+		return nil, false, screen.Rect{}
 	}
 	appPID := els[0].Object.PID
 	keyboard := false
@@ -613,7 +614,7 @@ func raxScreenElements(els []raxElement, scale float64, w, h int, appID string, 
 	if tb, ok := tabBar(out, scale, w, h); ok {
 		over = append(over, tb)
 	}
-	return unoccluded(out, over, int(math.Round(minVisiblePoints*scale))), keyboard
+	return unoccluded(out, over, int(math.Round(minVisiblePoints*scale))), keyboard, kb
 }
 
 // An occluder is something drawn over the app's own elements: the keyboard,

@@ -97,7 +97,11 @@ func (p *prep) prepareDrag(a Action, cur *screen.Screen, platform driver.Platfor
 		if res != nil {
 			return res
 		}
-		p.target, from = e, tapPoint(cur, *e, platform)
+		t, res := touchable(cur, e)
+		if res != nil {
+			return res
+		}
+		p.target, from = e, tapPoint(cur, t, platform)
 	} else {
 		from = *a.From
 		p.target = hitTest(cur, from)

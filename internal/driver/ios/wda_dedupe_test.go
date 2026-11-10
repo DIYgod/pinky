@@ -51,7 +51,7 @@ func TestWDARowsAndBars(t *testing.T) {
 			wnode("TabBar", "Tab Bar", 0, 769, w, 83, false,
 				wnode("Button", "Chats", 0, 769, 98, 49, true),
 				wnode("Button", "Me", 295, 769, 98, 49, true))))
-	els, _ := wdaScreenElements(&root, 1, w, h, "com.tencent.xin")
+	els, _, _ := wdaScreenElements(&root, 1, w, h, "com.tencent.xin")
 	var got []string
 	for _, e := range els {
 		got = append(got, fmt.Sprintf("%s %q", e.Role, e.Label))
@@ -68,7 +68,7 @@ func TestWDARowsAndBars(t *testing.T) {
 	root2 := wnode("Application", "WeChat", 0, 0, w, h, false,
 		wnode("Cell", "Erin, Hi, Sunday", 0, 0, w, 140, true),
 		wnode("NavigationBar", "Chats", 0, 47, w, 44, true))
-	els, _ = wdaScreenElements(&root2, 1, w, h, "com.tencent.xin")
+	els, _, _ = wdaScreenElements(&root2, 1, w, h, "com.tencent.xin")
 	if len(els) != 2 || els[0].Bounds != (screen.Rect{X: 0, Y: 91, W: w, H: 49}) {
 		t.Fatalf("peeking row: %+v", els)
 	}
@@ -125,7 +125,7 @@ func TestWDAWebPageKeepsItsElements(t *testing.T) {
 			wnode("Link", "Footer link", 10, 790, 300, 30, true)),
 		wnode("Toolbar", "", 0, 760, w, 92, false,
 			wnode("Button", "Address", 20, 770, 353, 44, true)))
-	els, _ := wdaScreenElements(&root, 1, w, h, "com.apple.mobilesafari")
+	els, _, _ := wdaScreenElements(&root, 1, w, h, "com.apple.mobilesafari")
 	var got []string
 	for _, e := range els {
 		got = append(got, fmt.Sprintf("%s %q", e.Role, e.Label))

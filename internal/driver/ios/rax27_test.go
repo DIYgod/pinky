@@ -81,7 +81,7 @@ func TestRAXFill(t *testing.T) {
 				els[i].Parent = -1
 			}
 		}
-		out, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.mobiletimer")
+		out, _, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.mobiletimer")
 		return out
 	}
 	a, b := toScreen(got), toScreen(append([]raxElement(nil), walked...))
@@ -110,7 +110,7 @@ func TestRAXScreenElementsTabBar(t *testing.T) {
 		el(6, xcButton, axpRoleTab, "Stopwatch", axpRect{182, 733, 101, 54}),
 		el(7, xcButton, axpRoleTab, "Timers", axpRect{263, 733, 87, 54}),
 	}
-	got, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.mobiletimer")
+	got, _, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.mobiletimer")
 	byLabel := map[string]screen.Element{}
 	for _, e := range got {
 		byLabel[e.Label] = e
@@ -152,7 +152,7 @@ func TestRAXScreenElementsKeyboardCovers(t *testing.T) {
 		els = append(els, el(kb, uint64(100+i), xcStaticText, string(l), axpRect{x, y, 37.5, 54}))
 	}
 	els = append(els, el(kb, 200, xcStaticText, "space", axpRect{0, 280, 375, 54}))
-	got, keyboard := raxScreenElements(els, 3, 1125, 2436, "com.apple.Preferences")
+	got, keyboard, _ := raxScreenElements(els, 3, 1125, 2436, "com.apple.Preferences")
 	if !keyboard || len(got) != 1 || got[0].Label != "General" {
 		t.Errorf("keyboard %v, elements %+v; want only the row above the keyboard", keyboard, got)
 	}
