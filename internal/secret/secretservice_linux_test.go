@@ -538,8 +538,11 @@ func TestSecretServiceMissing(t *testing.T) {
 }
 
 func TestSecretServiceNoBus(t *testing.T) {
-	t.Setenv("DBUS_SESSION_BUS_ADDRESS", "")
-	t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
+	// An address nothing listens at. With the variable empty, godbus looks
+	// for /run/user/<uid>/bus by the user's id, whatever XDG_RUNTIME_DIR
+	// says, so on a Linux desktop this test reached the person's own
+	// session bus and their real keyring.
+	t.Setenv("DBUS_SESSION_BUS_ADDRESS", "unix:path="+filepath.Join(t.TempDir(), "bus"))
 	s := newSecretService("app.pinky.desktop.test", "Pinky test")
 	if s.Has("pin:a") {
 		t.Fatal("Has without a session bus")

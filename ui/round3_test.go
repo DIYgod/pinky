@@ -619,21 +619,21 @@ func TestRemoteAgents(t *testing.T) {
 	if tt.Clipboard() != "http://127.0.0.1:7465/mcp" {
 		t.Errorf("copied %q", tt.Clipboard())
 	}
-	if err := tt.Click("Copy the command"); err != nil {
+	if err := clickInView(tt, "Copy the command"); err != nil {
 		t.Fatal(err)
 	}
 	want := `claude mcp add --transport http pinky http://127.0.0.1:7465/mcp --header "Authorization: Bearer tok-5ecret"`
 	if tt.Clipboard() != want {
 		t.Errorf("copied %q, want %q", tt.Clipboard(), want)
 	}
-	if err := tt.Click("Show the agent token"); err != nil {
+	if err := clickInView(tt, "Show the agent token"); err != nil {
 		t.Fatal(err)
 	}
 	if !hasText(tt, "tok-5ecret") {
 		t.Errorf("Show does not show the token: %q", tt.Texts())
 	}
 	// A new address, checked, with a warning when others can reach it.
-	if err := tt.Click("Change the address"); err != nil {
+	if err := clickInView(tt, "Change the address"); err != nil {
 		t.Fatal(err)
 	}
 	ta.remote.addr = "not an address"

@@ -427,8 +427,8 @@ func testAddIPhoneDownload(t *testing.T, height int) {
 }
 
 // clickInView clicks the element labelled s, first scrolling the Add phone
-// card while the element lies below the window or below the card's edge,
-// which clips it to nothing, as a person scrolls the card.
+// card, or the page, while the element lies below the window or below the
+// card's edge, which clips it to nothing, as a person scrolls there.
 func clickInView(tt *mg.Tester, s string) error {
 	for range 8 {
 		r, ok := tt.Find(s)
