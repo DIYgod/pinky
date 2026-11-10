@@ -253,3 +253,15 @@ func TestEnableSaysWhyServiceDidNotStart(t *testing.T) {
 		t.Errorf("Enable without a probe = %v", err)
 	}
 }
+
+// The system's lines leave out those that name the person's other
+// accessibility services (Huawei's SPMN logs the whole setting, GitHub
+// issue #56) and traffic counters.
+func TestProbeCmdLeavesOutOtherServices(t *testing.T) {
+	cmd := probeCmd(App{Package: "app.pinky.companion", Socket: "pinky_companion"})
+	for _, want := range []string{"-e " + settingKey, "-e HwUidTcpMonitor", "-e SettingsShellCmd"} {
+		if !strings.Contains(cmd, want) {
+			t.Errorf("probeCmd lacks %q", want)
+		}
+	}
+}

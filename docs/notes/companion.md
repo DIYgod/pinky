@@ -189,6 +189,12 @@ The client also keeps the driver's English error for each phone whose service di
 
 Not tried, and worth asking the reporter: opening Pinky Companion once from the launcher (it clears `notLaunched`, and some phone makers' managers start only apps the person has opened), then turning it on again.
 
+### Third round
+
+With 2026.1110.21 the reporter's phone answered `Android is still binding it; its app is not running; its socket is not listening`, and the only system lines naming the package were Huawei's `SPMN` settings provider logging the write of `enabled_accessibility_services` (with another app's accessibility service, MikaAccessibilityService of `com.wangzan101.mika`, listed before Pinky's) and `HwUidTcpMonitor` traffic counters for the app's uid. No `am_proc_start`, no `am_kill`, no crash, no `stopped=true`: Android accepted the bind and never logged starting the process, and EMUI logged no reason. Still open: whether EMUI's own start control (which logs elsewhere) holds the start, whether the other accessibility app matters, and whether a reboot or opening the app once from the launcher changes it.
+
+The `SPMN` line published the person's other accessibility service in a public issue. The probe now leaves out every line that mentions `enabled_accessibility_services`, as it did `SettingsShellCmd`, and `HwUidTcpMonitor`.
+
 ## Results
 
 ### Round 3: the two emulators

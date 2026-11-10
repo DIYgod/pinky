@@ -50,9 +50,12 @@ func probeCmd(app App) string {
 		part("bad", "dumpsys activity processes | grep -F "+shellQuote("Bad process "+app.Package+" ")),
 		// The system's lines about the app, not the app's own, nor
 		// bookkeeping that says nothing about why it does not start
-		// (SettingsShellCmd would also name the person's other services).
+		// (SettingsShellCmd, and any line about enabled_accessibility_services
+		// such as Huawei's SPMN, would also name the person's other
+		// services; HwUidTcpMonitor counts traffic).
 		part("system", "logcat -d -b events,system,main -v epoch -t 5000 | grep -F "+shellQuote(app.Package)+
-			" | grep -v -F -e PinkyService -e PinkyServer -e PinkyConn -e SettingsShellCmd -e ProcessStats -e 'artd ' -e am_compact | tail -n 12"),
+			" | grep -v -F -e PinkyService -e PinkyServer -e PinkyConn -e SettingsShellCmd -e "+settingKey+
+			" -e HwUidTcpMonitor -e ProcessStats -e 'artd ' -e am_compact | tail -n 12"),
 		"true",
 	}, "; ")
 }
