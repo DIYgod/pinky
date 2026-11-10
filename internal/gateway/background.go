@@ -268,6 +268,43 @@ func (g *Gateway) leaveForPhone(ctx context.Context, l *lease, why, nothing stri
 	return dev, nil
 }
 
+// ownScreenHint tells an agent on a background display how to reach the
+// home screen, which only the phone's own screen has.
+const ownScreenHint = "For work on the home screen itself (moving app icons, folders, widgets), " +
+	"call phone_connect again with the same task and own_screen: true to work on the phone's own screen."
+
+// useOwnScreen moves a task that would work on a background display to
+// the phone's own screen for the rest of it, as the agent asked
+// (phone_connect own_screen), and reports whether it moved. As when an
+// app refuses the display (leaveForPhone), the person keeps a screen they
+// used in the last minute: the task starts paused until they hand it
+// over, and a locked screen waits for them to unlock it (firstScreen
+// says so). The agent's next result says where the task runs.
+func (g *Gateway) useOwnScreen(l *lease) bool {
+	d := l.dev
+	g.mu.Lock()
+	if !l.bgWanted || l.bgOff || l.ended {
+		g.mu.Unlock()
+		return false
+	}
+	if l.bg != nil {
+		g.leaveBackgroundLocked(l, "")
+	} else {
+		l.bgOff = true
+	}
+	l.bgNote = joinNote(l.bgNote, "As asked, this task works on the phone's own screen, not on a background display.")
+	using := !d.person && time.Since(d.personAt) < personRecent
+	g.mu.Unlock()
+	g.log.Info("task moved to the phone's own screen", "device", d.id, "task", l.task.id)
+	if using {
+		g.takeOver(d, false)
+		g.mu.Lock()
+		l.tookOverSeen = true
+		g.mu.Unlock()
+	}
+	return true
+}
+
 // sameDevice compares two devices without panicking on a type that cannot
 // be compared.
 func sameDevice(a, b driver.Device) (same bool) {

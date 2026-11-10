@@ -1821,7 +1821,7 @@ func launchUnreadMessage(p *prep) string {
 
 // emptyBackgroundMessage explains a background display that shows no app.
 const emptyBackgroundMessage = "The background display shows no app: none was started on it, or Android does not show the one just started there yet. " +
-	"Launch an app with phone_launch, or call phone_observe again in a few seconds."
+	"Launch an app with phone_launch, or call phone_observe again in a few seconds. " + ownScreenHint
 
 // stillIn reports whether s shows app in front, unlocked.
 func stillIn(s *screen.Screen, app screen.App) bool {

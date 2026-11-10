@@ -716,6 +716,8 @@
   "gwStepAskedYou": "询问你：{question}",
   "gwStepBlocked": "被“{rule}”规则拦下：{action}",
   "gwStepConnected": "为“{task}”连接了 {phone}",
+  "gwStepConnectedOwnScreen": "{step}，在手机本身的屏幕上",
+  "gwStepConnectedReadOnly": "{step}，只读",
   "gwStepCopiedFrom": "从手机拷贝了 {count} 个文件{names}",
   "gwStepCopiedTo": "向手机拷贝了 {count} 个文件{names}",
   "gwStepFailed": "失败：{action}",
