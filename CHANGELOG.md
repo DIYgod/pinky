@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1110.29 (2026-11-10)
 
 - Opening China Merchants Bank on an iPhone by its app id now moves the task to the WebDriverAgent helper, as opening it by name already did.
 - When the iPhone asks for its passcode to allow the WebDriverAgent helper, Pinky now tells you to enter it on the phone and waits for it, instead of quietly staying on CoreDevice.
