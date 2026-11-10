@@ -291,9 +291,6 @@ func openFFmpeg(dirs []ffmpegDir) (*ffmpegLib, error) {
 	} else {
 		l.av_log_set_level(avLogError)
 	}
-	if os.Getenv("PINKY_FFMPEG_LOG_VERBOSE") != "" { // TEMPORARY DIAGNOSTIC
-		l.av_log_set_level(40)
-	}
 	l.pixNV12 = l.av_get_pix_fmt("nv12")
 	if l.pixNV12 < 0 {
 		return nil, errors.New("FFmpeg does not know the nv12 pixel format")
