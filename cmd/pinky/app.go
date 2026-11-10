@@ -53,7 +53,7 @@ func runApp(args []string) error {
 	if *verbose {
 		level = slog.LevelDebug
 	}
-	c.Log = slog.New(slog.NewTextHandler(io.MultiWriter(os.Stderr, logFile), &slog.HandlerOptions{Level: level}))
+	c.Log = slog.New(slog.NewTextHandler(logWriter{file: logFile, console: os.Stderr}, &slog.HandlerOptions{Level: level}))
 	secret.SetLogger(c.Log)
 	crashes := captureCrashes(dirs, "app", c.Log)
 	defer crashes.Stop()
@@ -125,6 +125,26 @@ func runApp(args []string) error {
 			}
 		},
 	})
+}
+
+// logWriter writes every line to the log file and to the console. The file
+// comes first, and the console's errors are ignored: on Windows the app is
+// a GUI program, so started without a console (from the Start menu) its
+// standard error is an invalid handle. io.MultiWriter stopped at that
+// first failure and left the file empty, so the person's Send feedback
+// arrived without a log in it.
+type logWriter struct {
+	file    *os.File
+	console io.Writer
+}
+
+// Write puts the line in the file and on the console. Only the file's
+// errors are reported: the console may be gone, and the file is what
+// matters.
+func (w logWriter) Write(p []byte) (int, error) {
+	n, err := w.file.Write(p)
+	_, _ = w.console.Write(p)
+	return n, err
 }
 
 // openLog opens the app's log for appending, starting over once it passes
