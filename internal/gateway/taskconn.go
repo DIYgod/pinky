@@ -18,8 +18,13 @@ import (
 //
 //   - the agent asks for it: phone_connect's connection "helper", or
 //     "coredevice" to go back;
-//   - Pinky asks for it: the task's app list names, or phone_launch opens,
-//     an app known to refuse screen sharing (refusesSharing).
+//   - Pinky asks for it: phone_launch opens an app known to refuse screen
+//     sharing (refusesSharing), once the gate and the rules let the launch
+//     run (execute).
+//
+// A move never starts while the person is in control, the phone is
+// locked, an approval is open or the agent may only watch (mayMove): it
+// would cut the person's session and stream for nothing.
 //
 // The move is the same reconnect as a change in Settings › Phones
 // (SetConnection), but nothing is saved: the phone goes back to the
@@ -81,16 +86,6 @@ func refusesSharing(app string) (string, bool) {
 	return name, ok
 }
 
-// firstRefuser is the first app of list known to refuse screen sharing.
-func firstRefuser(list []string) (string, bool) {
-	for _, a := range list {
-		if name, ok := refusesSharing(a); ok {
-			return name, true
-		}
-	}
-	return "", false
-}
-
 // switchingLine is the status line of a phone moving to another
 // connection for a task. The caller holds g.mu.
 func switchingLine(d *device) string {
@@ -135,6 +130,15 @@ func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) 
 	if !online {
 		return nil, "" // it is away; gate says so
 	}
+	moving := way == wayHelper && backend != wayHelper || way != wayHelper && moved != ""
+	if moving {
+		if why := g.mayMove(l); why != "" {
+			if asked {
+				return nil, fmt.Sprintf("Pinky did not change how %s connects, because %s. Connect again with this connection once that is over.", d.name(), why)
+			}
+			return nil, ""
+		}
+	}
 	switch {
 	case way == wayHelper && backend == wayHelper:
 		return nil, "" // already there, by the person's choice or an earlier task
@@ -168,7 +172,12 @@ func (g *Gateway) useConnection(ctx context.Context, l *lease, way, why string) 
 	}
 	g.mu.Lock()
 	now, there := d.info.Backend, d.online
+	overruled := d.taskWay != wayHelper || g.chosen[d.id] != ""
 	g.mu.Unlock()
+	if overruled {
+		// The person chose a connection in Settings › Phones meanwhile.
+		return nil, fmt.Sprintf("The person changed how %s connects in Settings › Phones meanwhile, so Pinky keeps their choice.", d.name())
+	}
 	if !there || now != wayHelper {
 		// It did not come up on the helper: back to the person's choice.
 		detail := "the helper did not start"
@@ -222,15 +231,23 @@ func wayName(way string) string {
 // person, or switchWait passed. It returns device_needs_setup when the
 // phone waits for the person.
 func (g *Gateway) switchTo(ctx context.Context, d *device, cc driver.ConnectionChooser, way string) *Result {
-	if err := cc.SetConnection(d.id, way); err != nil {
-		g.log.Warn("task connection", "device", d.id, "way", way, "err", err)
-		return nil
-	}
 	target := way
 	if target == "" {
 		target = wayCoreDevice
 	}
 	g.mu.Lock()
+	// The person's choice in Settings › Phones wins, also one made since
+	// the caller looked: Gateway.SetConnection gives it to the provider
+	// under g.mu too, so neither overwrites the other.
+	if g.chosen[d.id] != "" || way == "" && d.taskWay == "" {
+		g.mu.Unlock()
+		return nil
+	}
+	if err := cc.SetConnection(d.id, way); err != nil {
+		g.mu.Unlock()
+		g.log.Warn("task connection", "device", d.id, "way", way, "err", err)
+		return nil
+	}
 	d.taskWay = way
 	if !d.online && d.info.State == driver.StateOffline {
 		// Away: it comes back the new way by itself.
@@ -254,13 +271,46 @@ func (g *Gateway) switchTo(ctx context.Context, d *device, cc driver.ConnectionC
 	defer g.mu.Unlock()
 	for g.waitMovingLocked(ctx, d) {
 	}
+	if d.taskWay != way || g.chosen[d.id] != "" {
+		// The person chose a connection meanwhile: their move is under
+		// way (forgetTaskWay), and its wait is theirs.
+		return nil
+	}
 	d.switching = ""
 	d.moving = time.Time{}
+	if !d.online {
+		// The lease's grace for an offline phone starts now: the switch
+		// does not count (expireOffline).
+		d.offlineSince = time.Now()
+	}
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
 	if waitingLocked(d) {
 		return setupResultLocked(d, fmt.Sprintf("Pinky is moving %s to %s for this task, and the phone waits for a step first. Nothing was done.", d.name(), wayName(target)))
 	}
 	return nil
+}
+
+// mayMove says why a task may not move its phone to another connection
+// now, "" when it may: a move closes the phone's session and stream, so it
+// waits until the person handed the phone back, it is unlocked and no
+// approval is open, and an agent that may only watch never moves it.
+func (g *Gateway) mayMove(l *lease) string {
+	d := l.dev
+	g.mu.Lock()
+	person, locked := d.person, d.locked && l.bg == nil
+	_, busy := g.approvals.Busy(d.id)
+	g.mu.Unlock()
+	switch {
+	case person:
+		return "the person is in control of the phone"
+	case locked:
+		return "the phone is locked"
+	case busy:
+		return "an approval is open on the phone"
+	case g.scopeOf(l.session).Mode == ScopeWatchOnly:
+		return "this agent may only watch"
+	}
+	return ""
 }
 
 // switchBackLater puts a phone a task moved to another connection back on
@@ -312,19 +362,14 @@ func withNote(res *Result, note string) *Result {
 }
 
 // taskConnection moves a new task's phone the way phone_connect asked
-// (way, as TaskConnection reads it), or to the helper when the task's app
-// list names an app that refuses screen sharing. A result it returns is
-// the call's.
-func (g *Gateway) taskConnection(ctx context.Context, l *lease, way string, apps []string) (*Result, string) {
-	why := ""
+// (way, as TaskConnection reads it). A result it returns is the call's.
+// The task's app list moves nothing by itself: the person may still refuse
+// the app, so the launch moves the task once it runs.
+func (g *Gateway) taskConnection(ctx context.Context, l *lease, way string) (*Result, string) {
 	if way == "" {
-		name, ok := firstRefuser(apps)
-		if !ok {
-			return nil, ""
-		}
-		way, why = wayHelper, name
+		return nil, ""
 	}
-	res, note := g.useConnection(ctx, l, way, why)
+	res, note := g.useConnection(ctx, l, way, "")
 	if res != nil {
 		g.mu.Lock()
 		res.Task = l.task.id

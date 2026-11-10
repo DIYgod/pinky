@@ -554,7 +554,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			g.addStep(l, connectStep(d.name(), title, req, true))
 			g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 		}
-		if res, note := g.taskConnection(ctx, l, way, req.Apps); res != nil {
+		if res, note := g.taskConnection(ctx, l, way); res != nil {
 			return res
 		} else {
 			return withNote(readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), ro), note)
@@ -574,7 +574,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	g.addStep(l, connectStep(d.name(), title, req, own))
 	g.emit(Event{Kind: EventTasks, DeviceID: d.id, TaskID: l.task.id})
 	g.emit(Event{Kind: EventDevices, DeviceID: d.id})
-	res, note := g.taskConnection(ctx, l, way, req.Apps)
+	res, note := g.taskConnection(ctx, l, way)
 	if res != nil {
 		return res
 	}

@@ -433,21 +433,7 @@ func personAllowed(v policy.Verdict) bool {
 }
 
 // act is the pipeline for one action on a lease that is already acquired.
-// Opening an app that refuses screen sharing first moves the task to a
-// connection that shares none, where the phone has one (taskconn.go).
 func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
-	if a.Tool != "launch" {
-		return g.actOn(ctx, l, c, a)
-	}
-	if res, note := g.launchConnection(ctx, l, a); res != nil {
-		return res
-	} else {
-		return withNote(g.actOn(ctx, l, c, a), note)
-	}
-}
-
-// actOn is act once the phone is on the task's connection.
-func (g *Gateway) actOn(ctx context.Context, l *lease, c Call, a Action) *Result {
 	if res := g.gate(l, c.ApprovalID, true); res != nil {
 		return res
 	}
@@ -1584,6 +1570,28 @@ func (g *Gateway) preflight(ctx context.Context, l *lease) *Result {
 // before picture is the kept one when it shows cur, and the after picture
 // is taken in the background (see shots.go).
 func (g *Gateway) execute(ctx context.Context, l *lease, c Call, a Action, p *prep, cur *screen.Screen, step int) *Result {
+	if a.Tool != "launch" {
+		return g.executeOn(ctx, l, c, a, p, cur, step)
+	}
+	// Opening an app that refuses screen sharing first moves the task to
+	// a connection that shares none, where the phone has one
+	// (taskconn.go). Only here, once the gate and the rules let the
+	// launch run: a launch that is refused, or waits for the person,
+	// leaves the phone's connection alone.
+	if g.preflight(ctx, l) != nil {
+		return g.executeOn(ctx, l, c, a, p, cur, step) // it records the refusal
+	}
+	start := time.Now()
+	res, note := g.launchConnection(ctx, l, a)
+	if res != nil {
+		g.recordStep(l, step, a, c, p, res, start, "", "", "")
+		return res
+	}
+	return withNote(g.executeOn(ctx, l, c, a, p, cur, step), note)
+}
+
+// executeOn is execute on the connection the task runs on.
+func (g *Gateway) executeOn(ctx context.Context, l *lease, c Call, a Action, p *prep, cur *screen.Screen, step int) *Result {
 	d := l.dev
 	start := time.Now()
 	bshot := g.beforeShot(d, cur)
