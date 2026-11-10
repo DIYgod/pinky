@@ -45,6 +45,7 @@ const (
 	frameDuration = 408 // AVFrame.duration
 	frameBuf      = 184 // AVFrame.buf[8]
 	packetBuf     = 0   // AVPacket.buf
+	packetPTS     = 8   // AVPacket.pts
 	packetData    = 24  // AVPacket.data
 	packetSize    = 32  // AVPacket.size
 	packetFlags   = 40  // AVPacket.flags
@@ -84,10 +85,14 @@ const (
 	avCodecFlagLowDelay = 1 << 19
 )
 
-// h264EncoderNames are the H.264 encoders Pinky looks for, in order:
-// Windows' own Media Foundation encoder first, since it needs nothing but
-// Windows' own libraries, then the ones a full FFmpeg build carries.
-var h264EncoderNames = []string{"h264_mf", "libopenh264", "libx264"}
+// h264EncoderNames are the H.264 encoders Pinky looks for, in order. Cisco's
+// OpenH264 comes first because it gives each picture back as soon as it is
+// encoded; a mirror cannot afford an encoder that holds pictures back.
+// Windows' own Media Foundation encoder is the fallback, since it needs
+// nothing but Windows' own libraries, though it holds a picture back for
+// about twelve more (see encoderOptions). x264 is not here: its licence
+// would make the whole of Pinky GPL.
+var h264EncoderNames = []string{"libopenh264", "h264_mf"}
 
 // AVRational is FFmpeg's rational number.
 type AVRational struct {
@@ -125,7 +130,8 @@ type ffmpegLib struct {
 	avcodec_send_frame           func(unsafe.Pointer, unsafe.Pointer) int32
 	avcodec_receive_packet       func(unsafe.Pointer, unsafe.Pointer) int32
 
-	pixNV12 int32 // AV_PIX_FMT_NV12
+	pixNV12    int32 // AV_PIX_FMT_NV12
+	pixYUV420P int32 // AV_PIX_FMT_YUV420P
 }
 
 var (
@@ -292,6 +298,10 @@ func openFFmpeg(dirs []ffmpegDir) (*ffmpegLib, error) {
 	if l.pixNV12 < 0 {
 		return nil, errors.New("FFmpeg does not know the nv12 pixel format")
 	}
+	l.pixYUV420P = l.av_get_pix_fmt("yuv420p")
+	if l.pixYUV420P < 0 {
+		return nil, errors.New("FFmpeg does not know the yuv420p pixel format")
+	}
 	if err := l.checkLayout(); err != nil {
 		return nil, err
 	}
@@ -389,6 +399,9 @@ func (l *ffmpegLib) checkLayout() error {
 		return errors.New("FFmpeg: av_packet_alloc failed")
 	}
 	defer l.av_packet_free(&p)
+	if getInt64(p, packetPTS) != avNoPTS {
+		return bad("AVPacket")
+	}
 	if r := l.av_new_packet(p, 100); r < 0 {
 		return bad("AVPacket")
 	}

@@ -44,6 +44,15 @@ const (
 	frameRefresh = 10 * time.Second
 )
 
+// packetTimes is what an encoder says about the pictures it just returned:
+// when each of them was taken, oldest first, so that a packet carries the
+// time of its own picture rather than the moment the encoder gave it back.
+// An encoder that hands each picture back as soon as it is encoded need not
+// implement it; the packet is then stamped with the picture just fed.
+type packetTimes interface {
+	packetTimes() []time.Duration
+}
+
 // frameStream is a driver.Stream of H.264 encoded from a frameSource.
 type frameStream struct {
 	src    frameSource
@@ -170,9 +179,20 @@ func (s *frameStream) run(ctx context.Context, first chan<- error) {
 			fail(err)
 			return
 		}
+		// What the encoder gave back may be pictures from before the one
+		// just fed: stamp each packet with the time its own picture was
+		// taken, so that a viewer shows the picture as old as it is instead
+		// of treating it as fresh when the encoder finishes with it.
+		var taken []time.Duration
+		if pt, ok := any(enc).(packetTimes); ok {
+			taken = pt.packetTimes()
+		}
 		lastKey, lastAt = f.key, now
-		for _, e := range out {
+		for i, e := range out {
 			pts := now.Sub(start)
+			if i < len(taken) {
+				pts = taken[i]
+			}
 			if e.keyFrame && len(e.config) > 0 {
 				if !s.send(ctx, driver.Packet{Data: e.config, PTS: pts, Config: true}) {
 					return

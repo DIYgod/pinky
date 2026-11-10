@@ -26,7 +26,26 @@ type h264Encoder struct {
 	pkt    unsafe.Pointer // what the encoder returns
 	w, h   int
 	fps    int
+	pixFmt int32  // the pictures' pixel format: this encoder's own
+	opened bool   // the encoder was opened; a context that was not is not flushed
 	config []byte // SPS and PPS, Annex B, sent with a key frame
+
+	// times are when the pictures of the last encode were taken, in the
+	// order it returned them. The frame stream stamps each packet with its
+	// own picture's time instead of the moment the encoder gave it back.
+	times     []time.Duration
+	lastTicks int64 // the last picture fed, in the encoder's own time base
+	haveLast  bool
+}
+
+// pictureFormat is the pixel format the encoder takes. Windows' own encoder
+// takes NV12, the phone's pictures as they are; Cisco's OpenH264 takes
+// planar YUV 4:2:0 only, so its pictures are converted on the way in.
+func (e *h264Encoder) pictureFormat() int32 {
+	if e.name == "libopenh264" {
+		return e.lib.pixYUV420P
+	}
+	return e.lib.pixNV12
 }
 
 // encoderName is the FFmpeg encoder in use, for the log.
@@ -45,6 +64,18 @@ type encodedFrame struct {
 // asks for a key frame when the screen has not changed for a while, but a
 // viewer can join before that.
 const keyFrameEvery = 2
+
+// h264TimeBase is the encoder's time base, and nanosecondTimeBase is Go's.
+// Microseconds are fine enough to say when a picture was taken to a
+// hundredth of a picture at the stream's rate, and a picture's timestamp
+// goes through the encoder and back out unchanged.
+var (
+	h264TimeBase       = AVRational{Num: 1, Den: 1_000_000}
+	nanosecondTimeBase = AVRational{Num: 1, Den: 1_000_000_000}
+)
+
+// avNoPTS is AV_NOPTS_VALUE, what FFmpeg puts in a timestamp it has none for.
+const avNoPTS int64 = -1 << 63
 
 // newH264Encoder starts a real-time H.264 encoder (Main profile, no
 // B-frames) for pictures of w by h, which must be even.
@@ -67,6 +98,7 @@ func newH264Encoder(w, h, fps, bitRate int) (*h264Encoder, error) {
 		return nil, h264Unsupported(err)
 	}
 	e := &h264Encoder{lib: l, name: name, codec: codec, w: w, h: h, fps: fps}
+	e.pixFmt = e.pictureFormat()
 	if err := e.open(bitRate); err != nil {
 		e.Close()
 		return nil, err
@@ -84,17 +116,17 @@ func (e *h264Encoder) open(bitRate int) error {
 	e.ctx = ctx
 	putInt32(ctx, ctxWidth, int32(e.w))
 	putInt32(ctx, ctxHeight, int32(e.h))
-	putInt32(ctx, ctxPixFmt, l.pixNV12)
-	putRational(ctx, ctxTimeBase, AVRational{Num: 1, Den: int32(e.fps)})
+	putInt32(ctx, ctxPixFmt, e.pixFmt)
+	putRational(ctx, ctxTimeBase, h264TimeBase)
 	putRational(ctx, ctxFramerate, AVRational{Num: int32(e.fps), Den: 1})
 	putInt64(ctx, ctxBitRate, int64(bitRate))
 	putInt32(ctx, ctxGOPSize, int32(e.fps*keyFrameEvery))
 	putInt32(ctx, ctxMaxBFrames, 0)
 	putInt32(ctx, ctxProfile, avProfileH264Main)
 	// Let each picture's duration reach the encoder: encode sets it, and
-	// Windows' H.264 encoder holds its output back otherwise. Low delay
-	// keeps it real time, giving each picture back as soon as it is
-	// encoded rather than batching them for quality.
+	// Windows' H.264 encoder holds every picture back until it is told how
+	// long they last. Low delay asks for real time, giving each picture back
+	// as soon as it is encoded rather than batching them for quality.
 	putInt32(ctx, ctxFlags, avCodecFlagFrameDuration|avCodecFlagLowDelay)
 
 	var opts unsafe.Pointer
@@ -107,6 +139,7 @@ func (e *h264Encoder) open(bitRate int) error {
 	if r := l.avcodec_open2(ctx, e.codec, &opts); r < 0 {
 		return l.averror("open the "+e.name+" encoder at "+fmt.Sprintf("%dx%d", e.w, e.h), r)
 	}
+	e.opened = true
 
 	f := l.av_frame_alloc()
 	if f == nil {
@@ -115,7 +148,7 @@ func (e *h264Encoder) open(bitRate int) error {
 	e.frame = f
 	putInt32(f, frameWidth, int32(e.w))
 	putInt32(f, frameHeight, int32(e.h))
-	putInt32(f, frameFormat, l.pixNV12)
+	putInt32(f, frameFormat, e.pixFmt)
 	if r := l.av_frame_get_buffer(f, 0); r < 0 {
 		return l.averror("allocate a picture", r)
 	}
@@ -133,13 +166,17 @@ func encoderOptions(name string) [][2]string {
 	switch name {
 	case "h264_mf":
 		// CBR keeps the bit rate the caller asked for while the screen
-		// changes and while it is still. The live streaming scenario is
-		// what a phone mirror is: the encoder then gives back each picture
-		// as it is encoded instead of batching them for quality.
+		// changes and while it is still, and the live streaming scenario is
+		// what a phone mirror is. Neither changes how far behind it runs,
+		// though: measured with encoderlag_test.go, it gives each picture
+		// back twelve pictures after it went in, at any bit rate, rate
+		// control mode, scenario or frame rate, with or without the low
+		// delay flag. That is why libopenh264 comes first: this encoder is
+		// only for a computer whose FFmpeg has nothing better.
 		return [][2]string{{"rate_control", "cbr"}, {"scenario", "live_streaming"}}
-	case "libx264":
-		return [][2]string{{"profile", "main"}, {"preset", "veryfast"}, {"tune", "zerolatency"}}
 	case "libopenh264":
+		// Bit rate mode holds the bit rate the caller asked for. The default
+		// frame skipping stays off, so no picture is dropped silently.
 		return [][2]string{{"profile", "main"}, {"rc_mode", "bitrate"}}
 	}
 	return nil
@@ -149,6 +186,15 @@ func encoderOptions(name string) [][2]string {
 // w*h/2 bytes of interleaved Cb and Cr. A forced key frame starts a
 // self-contained picture, for a viewer that joins. It returns what the
 // encoder produced, which is one frame, or none when it held one back.
+//
+// pts is when the picture was taken, counted from the stream's start. A
+// stream of screen pictures is variable rate — a still screen costs no
+// pictures at all, and a screenshot takes a third of a second — so each
+// picture also carries how long it lasted, so that the encoder's rate
+// control works with the real timing instead of a nominal 15 pictures a
+// second. The picture's own timestamp comes back out with its packet, so
+// that the packet says when the picture was taken and not when the encoder
+// finished with it.
 func (e *h264Encoder) encode(y, uv []byte, pts time.Duration, forceKey bool) ([]encodedFrame, error) {
 	if len(y) < e.w*e.h || len(uv) < e.w*e.h/2 {
 		return nil, errors.New("H.264: short picture")
@@ -158,21 +204,61 @@ func (e *h264Encoder) encode(y, uv []byte, pts time.Duration, forceKey bool) ([]
 		return nil, l.averror("write a picture", r)
 	}
 	copyPlane(ptrAt(e.frame, frameData), getInt32(e.frame, frameLinesize), y, e.w, e.h)
-	copyPlane(ptrAt(e.frame, frameData+8), getInt32(e.frame, frameLinesize+4), uv, e.w, e.h/2)
-	putInt64(e.frame, framePTS, l.av_rescale_q(int64(pts),
-		AVRational{Num: 1, Den: 1_000_000_000}, AVRational{Num: 1, Den: int32(e.fps)}))
+	if e.pixFmt == l.pixNV12 {
+		copyPlane(ptrAt(e.frame, frameData+8), getInt32(e.frame, frameLinesize+4), uv, e.w, e.h/2)
+	} else {
+		// Planar 4:2:0: the chroma that comes interleaved is split into a
+		// plane of Cb and a plane of Cr.
+		copyChroma(
+			ptrAt(e.frame, frameData+8), getInt32(e.frame, frameLinesize+4),
+			ptrAt(e.frame, frameData+16), getInt32(e.frame, frameLinesize+8),
+			uv, e.w/2, e.h/2)
+	}
+	ticks := l.av_rescale_q(int64(pts), nanosecondTimeBase, h264TimeBase)
+	putInt64(e.frame, framePTS, ticks)
 	putInt32(e.frame, framePictType, 0) // AV_PICTURE_TYPE_NONE
 	if forceKey {
 		putInt32(e.frame, framePictType, avPictureTypeI)
 	}
-	// One picture's length, in the time base's ticks. The encoder puts it
-	// in the sample it hands Windows, and Windows' encoder holds every
-	// picture back until it is told how long they last.
-	putInt64(e.frame, frameDuration, 1)
+	// How long this picture lasted, in the time base's ticks. The encoder
+	// puts it in the sample it hands Windows, and Windows' encoder holds
+	// every picture back until it is told how long they last.
+	dur := int64(h264TimeBase.Den) / int64(e.fps)
+	if e.haveLast {
+		if gap := ticks - e.lastTicks; gap > 0 && gap < int64(h264TimeBase.Den) {
+			dur = gap
+		}
+	}
+	putInt64(e.frame, frameDuration, dur)
+	e.lastTicks, e.haveLast = ticks, true
+	e.times = e.times[:0]
 	if r := l.avcodec_send_frame(e.ctx, e.frame); r < 0 && r != avErrorEAGAIN {
 		return nil, l.averror("encode", r)
 	}
-	return e.receive()
+	out, err := e.receive()
+	if err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+// packetTimes is when each picture of the last encode was taken, in the
+// order encode returned them. The frame stream stamps every packet with its
+// own picture's time: an encoder that holds pictures back returns them long
+// after they were taken, and a packet stamped with the moment it came out
+// would claim a stale picture is fresh.
+func (e *h264Encoder) packetTimes() []time.Duration { return e.times }
+
+// packetTime is when the picture of the packet just returned was taken. The
+// encoder carries the picture's timestamp from when the picture was fed, so
+// the packet has it even when the encoder held the picture back. A packet
+// without one (a flush) belongs to the last picture fed.
+func (e *h264Encoder) packetTime() time.Duration {
+	ticks := getInt64(e.pkt, packetPTS)
+	if ticks == avNoPTS {
+		ticks = e.lastTicks
+	}
+	return time.Duration(e.lib.av_rescale_q(ticks, h264TimeBase, nanosecondTimeBase))
 }
 
 // receive takes every packet the encoder has, as Annex B.
@@ -188,6 +274,7 @@ func (e *h264Encoder) receive() ([]encodedFrame, error) {
 			return out, l.averror("encode", r)
 		}
 		f := e.packet()
+		e.times = append(e.times, e.packetTime())
 		l.av_packet_unref(e.pkt)
 		out = append(out, f)
 	}
@@ -243,6 +330,23 @@ func copyPlane(dst unsafe.Pointer, stride int32, src []byte, w, h int) {
 	}
 }
 
+// copyChroma copies interleaved Cb and Cr into the two planes of a planar
+// picture, whose rows are strideU and strideV bytes apart.
+func copyChroma(dstU unsafe.Pointer, strideU int32, dstV unsafe.Pointer, strideV int32, src []byte, w, h int) {
+	if dstU == nil || dstV == nil || strideU <= 0 || strideV <= 0 {
+		return
+	}
+	for row := 0; row < h; row++ {
+		u := unsafe.Slice((*byte)(unsafe.Add(dstU, uintptr(row)*uintptr(strideU))), w)
+		v := unsafe.Slice((*byte)(unsafe.Add(dstV, uintptr(row)*uintptr(strideV))), w)
+		s := src[row*2*w : (row+1)*2*w]
+		for col := 0; col < w; col++ {
+			u[col] = s[2*col]
+			v[col] = s[2*col+1]
+		}
+	}
+}
+
 // Close stops the encoder and frees what it holds.
 func (e *h264Encoder) Close() {
 	l := e.lib
@@ -250,10 +354,12 @@ func (e *h264Encoder) Close() {
 		return
 	}
 	if e.ctx != nil {
-		// Flush what the encoder held back, and drop it: the stream is
-		// ending, so no one waits for those pictures.
-		l.avcodec_send_frame(e.ctx, nil)
-		e.receive()
+		if e.opened {
+			// Flush what the encoder held back, and drop it: the stream is
+			// ending, so no one waits for those pictures.
+			l.avcodec_send_frame(e.ctx, nil)
+			e.receive()
+		}
 		l.avcodec_free_context(&e.ctx)
 		e.ctx = nil
 	}
