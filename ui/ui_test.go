@@ -85,7 +85,7 @@ func (ta *testApp) sync() {
 // waitFor syncs until cond holds.
 func (ta *testApp) waitFor(t *testing.T, what string, cond func() bool) {
 	t.Helper()
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 1500; i++ { // long enough for go test -race
 		ta.sync()
 		if cond() {
 			return

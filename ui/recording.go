@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -85,18 +86,44 @@ type recPlayer struct {
 	turn   int    // quarter turns clockwise that put the picture upright
 	state  string // "loading", "playing", "paused", "ended", "failed"
 	err    error
-	pos    time.Duration // where the picture shown is, from the recording's start
+	pos    time.Duration // the clock: where the player is, from the recording's start
+	pic    time.Duration // the shown picture's PTS, which may sit before pos while paused
 	from   time.Duration // where the stream was opened
+	rebase bool          // the stream is a fake's, whose PTS may count from where it opened
 	base   time.Duration // added to the stream's PTS, when they count from where it opened
 	first  bool          // the next picture is the stream's first
+	// A stream opens at the key frame at or before from and sends the
+	// pictures up to from at once. They wait in lead, unshown, so a jump
+	// rewinds neither the picture nor the time; the last of them is the
+	// picture at from, shown once the stream has caught up: when a picture
+	// past from comes, none comes for leadSettle, or the stream ends.
+	lead    *video.Frame
+	leadAt  time.Time
+	settled bool // the picture at from shows
+	still   bool // paused: the stream only fetches the picture at from
+	// catching is set while Open feeds catch-up pictures through OnFrame:
+	// Take only keeps the newest, so each decoded picture is taken there
+	// before the next overwrites it, then advanced on the main thread.
+	catching atomic.Bool
+	// A paused seek may show its lead after a newer Take, when the player
+	// may write into it again, so it keeps the lead in one of copies: the
+	// one the bitmap does not show (shownCopy, or -1).
+	copies    [2]video.YUV
+	shownCopy int
+	scrubbing bool          // the timeline is held: show scrubTo, seek once it lets go
+	scrubTo   time.Duration // the time under the pointer while scrubbing
 }
+
+// leadSettle is how long a stream sends no picture before the one waiting
+// in lead counts as the picture at from.
+const leadSettle = 150 * time.Millisecond
 
 // openRecording starts playing a task's recording from its start.
 func (a *app) openRecording(taskID string, rec gateway.RecordingView) {
 	a.closeRecording()
-	pl := &recPlayer{a: a, task: taskID, rec: rec}
+	pl := &recPlayer{a: a, task: taskID, rec: rec, shownCopy: -1}
 	a.rec.pl = pl
-	pl.play(0)
+	pl.open(0, true)
 }
 
 func (a *app) closeRecording() {
@@ -119,26 +146,60 @@ func (pl *recPlayer) stop() {
 	}
 }
 
-// play opens the recording at from; the picture stays until the first new
-// one, so a jump does not flash.
-func (pl *recPlayer) play(from time.Duration) {
+// open opens the recording at from, to play it on (run) or, paused, to
+// show the picture there and stop. The picture shown stays until the one at
+// from, so a jump does not flash.
+func (pl *recPlayer) open(from time.Duration, run bool) {
 	pl.stop()
 	gen := pl.gen
 	ctx, cancel := context.WithCancel(pl.a.ctx)
 	pl.cancel = cancel
-	pl.from, pl.pos, pl.state, pl.err, pl.first = from, from, "loading", nil, true
+	pl.from, pl.pos, pl.err, pl.first = from, from, nil, true
+	pl.lead, pl.settled, pl.still = nil, false, !run
+	rp, rebase := pl.a.api.(recordingPlayer)
+	// Real files catch up in OnFrame; a fake's stream is taken on paint.
+	pl.catching.Store(!rebase)
+	pl.state = "paused"
+	if run {
+		pl.state = "loading"
+	}
+	// pic stays until advance shows a new one, so a jump does not flash.
 	a, rec := pl.a, pl.rec
 	go func() {
 		var s driver.Stream
 		var err error
-		if rp, ok := a.api.(recordingPlayer); ok {
+		if rebase {
 			s, err = rp.OpenRecording(ctx, rec, from)
 		} else {
 			s, err = recording.Open(ctx, rec.Path, from)
 		}
 		var p *video.Player
 		if err == nil {
-			if p, err = video.NewPlayer(s, video.PlayerOptions{YUV: true}); err != nil {
+			opt := video.PlayerOptions{YUV: true}
+			if !rebase {
+				// Catch-up frames decode faster than paints: Take only keeps
+				// the newest, so take each picture here before the next
+				// overwrites it. ready is closed after p is assigned:
+				// NewPlayer starts decoding before it returns.
+				ready := make(chan struct{})
+				opt.OnFrame = func() {
+					<-ready
+					if !pl.catching.Load() {
+						return
+					}
+					f := p.Take()
+					if f == nil {
+						return
+					}
+					held := cloneRecFrame(f)
+					a.post(func() { pl.feed(gen, p, rebase, held) })
+				}
+				p, err = video.NewPlayer(s, opt)
+				close(ready)
+			} else {
+				p, err = video.NewPlayer(s, opt)
+			}
+			if err != nil {
 				s.Close()
 			}
 		}
@@ -150,33 +211,85 @@ func (pl *recPlayer) play(from time.Duration) {
 				return
 			}
 			if err != nil {
+				pl.catching.Store(false)
 				pl.state, pl.err = "failed", err
 				return
 			}
-			pl.player, pl.state = p, "playing"
+			pl.player, pl.rebase = p, rebase
+			if pl.state == "loading" {
+				pl.state = "playing"
+			}
 			go func() {
 				<-p.Done()
 				a.post(func() {
-					if pl.player != p {
-						return
+					if pl.player == p {
+						pl.ended(p)
 					}
-					pl.player = nil
-					go p.Close()
-					if e := p.Err(); e != nil && !errors.Is(e, io.EOF) && !errors.Is(e, context.Canceled) {
-						pl.state, pl.err = "failed", e
-						return
-					}
-					pl.state, pl.pos = "ended", pl.rec.Length
 				})
 			}()
 		})
 	}()
 }
 
+// feed is the main-thread side of a catch-up picture from OnFrame.
+func (pl *recPlayer) feed(gen int, p *video.Player, rebase bool, f *video.Frame) {
+	if pl.gen != gen || pl.a.rec.pl != pl {
+		return
+	}
+	if pl.player == nil {
+		pl.player, pl.rebase = p, rebase
+		if pl.state == "loading" {
+			pl.state = "playing"
+		}
+	}
+	if pl.player != p || pl.settled {
+		return
+	}
+	pl.advance(f)
+	if pl.settled {
+		pl.catching.Store(false)
+	}
+}
+
+// ended follows the end of the stream p, the one playing.
+func (pl *recPlayer) ended(p *video.Player) {
+	still := pl.still
+	pl.catching.Store(false)
+	if !pl.settled {
+		// Take may still hold the last catch-up picture; a paint often has
+		// not run yet when the stream ends right after those frames.
+		if f := p.Take(); f != nil {
+			pl.advance(f)
+		}
+		if !pl.settled {
+			pl.settle()
+		}
+	}
+	pl.still = false
+	pl.stop()
+	if e := p.Err(); e != nil && !errors.Is(e, io.EOF) && !errors.Is(e, context.Canceled) {
+		pl.state, pl.err = "failed", e
+		return
+	}
+	if !still {
+		pl.state, pl.pos = "ended", pl.rec.Length
+	}
+}
+
+// pause stops at the picture shown; before the picture at from shows, the
+// stream goes on to fetch it.
 func (pl *recPlayer) pause() {
-	if pl.state == "playing" || pl.state == "loading" {
+	if !pl.running() {
+		return
+	}
+	pl.state = "paused"
+	if pl.settled {
 		pl.stop()
-		pl.state = "paused"
+		return
+	}
+	pl.still = true
+	if pl.lead != nil {
+		pl.keep(pl.lead)
 	}
 }
 
@@ -186,11 +299,24 @@ func (pl *recPlayer) resume() {
 	if pl.state == "ended" || from >= pl.rec.Length {
 		from = 0
 	}
-	pl.play(from)
+	pl.open(from, true)
 }
 
+// seek jumps to at, playing on when the recording plays.
 func (pl *recPlayer) seek(at time.Duration) {
-	pl.play(max(0, min(at, pl.rec.Length)))
+	pl.scrubbing = false
+	pl.open(max(0, min(at, pl.rec.Length)), pl.running())
+}
+
+func (pl *recPlayer) running() bool {
+	return pl.state == "playing" || pl.state == "loading"
+}
+
+func (pl *recPlayer) shownPos() time.Duration {
+	if pl.scrubbing {
+		return pl.scrubTo
+	}
+	return pl.pos
 }
 
 // take shows the newest picture, at paint time.
@@ -199,28 +325,141 @@ func (pl *recPlayer) take(pt *mg.Painter) {
 	if p == nil {
 		return
 	}
-	if f := p.Take(); f != nil {
-		pl.bitmap = showPlanes(pl.bitmap, f.YUV)
-		w, h := f.Width, f.Height
-		if f.Turn%2 == 1 {
-			w, h = h, w
-		}
-		if pl.picW > 0 && (w != pl.picW || h != pl.picH) {
-			pl.a.post(func() {}) // the phone turned: lay the player out again
-		}
-		pl.picW, pl.picH, pl.turn = w, h, f.Turn
-		if pl.first {
-			// PTS count from the recording's start, as recording.Open
-			// sends them; a stream counting from where it opened starts
-			// near zero instead, well before from.
-			pl.first, pl.base = false, 0
-			if pl.from > 10*time.Second && f.PTS < pl.from-10*time.Second {
-				pl.base = pl.from - f.PTS
-			}
-		}
-		pl.pos = max(0, min(pl.base+f.PTS, pl.rec.Length))
-	}
 	pt.AnimationFrameRate(60)
+	if pl.settled {
+		if f := p.Take(); f != nil {
+			pl.advance(f)
+		}
+		return
+	}
+	if pl.catching.Load() {
+		// OnFrame is taking catch-up pictures.
+		if pl.lead != nil && time.Since(pl.leadAt) >= leadSettle {
+			pl.settle()
+		}
+		return
+	}
+	for !pl.settled {
+		f := p.Take()
+		if f == nil {
+			if pl.lead != nil && time.Since(pl.leadAt) >= leadSettle {
+				pl.settle()
+			}
+			return
+		}
+		pl.advance(f)
+	}
+}
+
+// advance places f: catch-up frames wait in lead; once past from, a paused
+// seek shows the lead when Take dropped nothing between them (f follows
+// lead's Seq), else f itself.
+func (pl *recPlayer) advance(f *video.Frame) {
+	at := pl.frameAt(f)
+	switch {
+	case pl.settled:
+		pl.show(f, max(pl.pos, at))
+	case at < pl.from:
+		pl.keep(f)
+	case pl.still && at > pl.from && pl.lead != nil && f.Seq == pl.lead.Seq+1:
+		pl.settle()
+	default:
+		pl.lead, pl.settled = nil, true
+		pl.show(f, at)
+		if pl.still {
+			pl.settle()
+		}
+	}
+}
+
+// settle shows the picture at from, and stops there when paused.
+func (pl *recPlayer) settle() {
+	if pl.lead != nil {
+		pl.show(pl.lead, pl.from)
+		pl.lead = nil
+	}
+	pl.settled = true
+	pl.catching.Store(false)
+	if pl.still {
+		pl.still = false
+		pl.stop()
+	}
+}
+
+// cloneRecFrame copies f so it still holds after the player reuses the original.
+func cloneRecFrame(f *video.Frame) *video.Frame {
+	if f == nil {
+		return nil
+	}
+	out := *f
+	if f.YUV == nil {
+		return &out
+	}
+	y := *f.YUV
+	for i, p := range f.YUV.Planes {
+		y.Planes[i] = append([]byte(nil), p...)
+	}
+	out.YUV = &y
+	return &out
+}
+
+// keep holds f as the lead, the newest picture before from.
+func (pl *recPlayer) keep(f *video.Frame) {
+	pl.leadAt = time.Now()
+	if !pl.still {
+		pl.lead = f
+		return
+	}
+	c := &pl.copies[0]
+	if pl.shownCopy == 0 {
+		c = &pl.copies[1]
+	}
+	if c == f.YUV {
+		return
+	}
+	planes := c.Planes
+	*c = *f.YUV
+	for i, p := range f.YUV.Planes {
+		c.Planes[i] = append(planes[i][:0], p...)
+	}
+	kept := *f
+	kept.YUV = c
+	pl.lead = &kept
+}
+
+// frameAt returns where in the recording f is.
+func (pl *recPlayer) frameAt(f *video.Frame) time.Duration {
+	if pl.first {
+		// recording.Open counts PTS from the recording's start; a fake's
+		// stream counting from where it opened starts near zero instead,
+		// well before from.
+		pl.first, pl.base = false, 0
+		if pl.rebase && pl.from > 10*time.Second && f.PTS < pl.from-10*time.Second {
+			pl.base = pl.from - f.PTS
+		}
+	}
+	return max(0, min(pl.base+f.PTS, pl.rec.Length))
+}
+
+// show puts f on screen; at is the clock, which may sit past the picture's
+// PTS while a paused seek holds the last frame before from.
+func (pl *recPlayer) show(f *video.Frame, at time.Duration) {
+	pl.bitmap = showPlanes(pl.bitmap, f.YUV)
+	pl.shownCopy = -1
+	for i := range pl.copies {
+		if f.YUV == &pl.copies[i] {
+			pl.shownCopy = i
+		}
+	}
+	w, h := f.Width, f.Height
+	if f.Turn%2 == 1 {
+		w, h = h, w
+	}
+	if pl.picW > 0 && (w != pl.picW || h != pl.picH) {
+		pl.a.post(func() {}) // the phone turned: lay the player out again
+	}
+	pl.picW, pl.picH, pl.turn = w, h, f.Turn
+	pl.pos, pl.pic = at, max(0, min(pl.base+f.PTS, pl.rec.Length))
 }
 
 // markAt returns the index of the last mark at or before at, or -1.
@@ -238,7 +477,7 @@ func (pl *recPlayer) markAt(at time.Duration) int {
 // shows it, Play and Pause, the time, and a timeline with a mark per step.
 func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 	p := pal(c)
-	if pl.state == "playing" || pl.state == "loading" {
+	if pl.running() {
 		c.After(250 * time.Millisecond) // the time and the current step move on
 	}
 	mg.Row(c).Gap(20).AlignItems(mg.Start).Wrap().Children(func() {
@@ -327,11 +566,11 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 	// Play, the timeline and the time.
 	mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
 		label, icon := locales.RecordingPause(), icPause
-		switch pl.state {
-		case "paused", "failed":
+		if !pl.running() {
 			label, icon = locales.RecordingPlay(), icPlay
-		case "ended":
-			label, icon = locales.RecordingPlayAgain(), icPlay
+			if pl.state == "ended" {
+				label, icon = locales.RecordingPlayAgain(), icPlay
+			}
 		}
 		b := button(c, "", btnOpt{icon: icon, label: label}).Width(34).Padding(0).Tooltip(label)
 		if b.Clicked() {
@@ -342,7 +581,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 			}
 		}
 		a.recordingTimeline(c, t, pl).Grow(1).MinWidth(0)
-		mg.Text(c, clock(pl.pos)+" / "+clock(pl.rec.Length)).FontSize(13).TextColor(p.ink2).Shrink(0)
+		mg.Text(c, clock(pl.shownPos())+" / "+clock(pl.rec.Length)).FontSize(13).TextColor(p.ink2).Shrink(0)
 	})
 }
 
@@ -352,31 +591,28 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 	p := pal(c)
 	length := max(pl.rec.Length, time.Millisecond)
 	bar := mg.Box(c).Height(30).Focusable().Role(mg.RoleSlider).Label(locales.RecordingPosition()).Cursor(mg.CursorPointer)
-	var width float32
-	bar.HandleInput(func(ev mg.InputEvent) bool {
-		switch ev.Kind {
-		case mg.InputPointerDown:
-			if ev.Button == 0 && width > 0 {
-				pl.seek(time.Duration(float64(length) * float64(max(0, min(ev.X/width, 1)))))
-				return true
-			}
-		case mg.InputKeyDown:
-			switch ev.Key {
-			case mg.KeyLeft:
-				pl.seek(pl.pos - 5*time.Second)
-				return true
-			case mg.KeyRight:
-				pl.seek(pl.pos + 5*time.Second)
-				return true
-			}
-		}
-		return false
-	})
+	bar.Range(0, length.Seconds(), pl.shownPos().Seconds())
+	// A press drags the head wherever the pointer goes, past the ends too,
+	// and seeks once it lets go; a press the system takes seeks nowhere.
+	button, pressing := bar.PressedButton()
+	switch w := bar.LayoutBounds().W; {
+	case pressing && button == 0 && w > 0:
+		x, _, _ := bar.PointerPosition()
+		pl.scrubbing, pl.scrubTo = true, recordingAt(x, w, length)
+	case bar.PressCanceled():
+		pl.scrubbing = false
+	case pl.scrubbing && !pressing:
+		pl.seek(pl.scrubTo)
+	}
+	if bar.Shortcut(0, mg.KeyLeft) {
+		pl.seek(pl.pos - 5*time.Second)
+	} else if bar.Shortcut(0, mg.KeyRight) {
+		pl.seek(pl.pos + 5*time.Second)
+	}
 	bar.Draw(func(pt *mg.Painter, r mg.Rect) {
-		width = r.W
 		y := r.Y + r.H/2
 		pt.Fill(mg.Rect{X: r.X, Y: y - 2, W: r.W, H: 4}, p.bg3, 2)
-		done := r.W * float32(float64(pl.pos)/float64(length))
+		done := r.W * float32(float64(pl.shownPos())/float64(length))
 		pt.Fill(mg.Rect{X: r.X, Y: y - 2, W: done, H: 4}, p.accent, 2)
 		for _, mk := range pl.rec.Marks {
 			x := r.X + r.W*float32(float64(mk.At)/float64(length))
@@ -395,6 +631,14 @@ func (a *app) recordingTimeline(c *mg.Context, t gateway.TaskView, pl *recPlayer
 		pt.FillPath(&head, p.accentBtn)
 	})
 	return bar
+}
+
+func recordingAt(x, width float32, length time.Duration) time.Duration {
+	if width <= 0 {
+		return 0
+	}
+	frac := max(0, min(x/width, 1))
+	return time.Duration(float64(length) * float64(frac))
 }
 
 func recordingError(err error) string {
