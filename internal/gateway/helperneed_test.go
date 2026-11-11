@@ -17,7 +17,13 @@ import (
 // with no switches and no second finger, the helper installed (or not).
 func helperPhone(t *testing.T, installed bool) (*demo.Device, *Gateway) {
 	t.Helper()
-	shortSwitchBack(t)
+	return helperPhoneBack(t, installed, 50*time.Millisecond)
+}
+
+// helperPhoneBack is helperPhone with switchBackAfter set to back.
+func helperPhoneBack(t *testing.T, installed bool, back time.Duration) (*demo.Device, *Gateway) {
+	t.Helper()
+	setSwitchBack(t, back)
 	p, dev := newTwoWayPhone()
 	dev.SetVirtual(true) // no Phone settings approval
 	p.bareCore, p.noHelper = true, !installed
@@ -171,7 +177,9 @@ func touches2(dev *demo.Device) int {
 // phone. While the person keeps using the mirror the phone stays on the
 // helper, and goes back once they stop.
 func TestPersonPinchesThroughTheHelper(t *testing.T) {
-	dev, g := helperPhone(t, true)
+	// Long enough that a slow runner (Windows CI) never leaves a gap of
+	// switchBackAfter between two of the person's touches below.
+	dev, g := helperPhoneBack(t, true, 400*time.Millisecond)
 	waitUntil(t, "pinch offered", func() bool { return pinchFeature(g) })
 	p, q := screen.Point{X: 400, Y: 1200}, screen.Point{X: 800, Y: 1200}
 	for _, a := range []driver.TouchAction{driver.TouchDown, driver.TouchMove, driver.TouchUp} {

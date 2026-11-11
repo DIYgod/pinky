@@ -134,9 +134,13 @@ func backendOf(g *Gateway) string {
 	return d.info.Backend
 }
 
-func shortSwitchBack(t *testing.T) {
+func shortSwitchBack(t *testing.T) { setSwitchBack(t, 50*time.Millisecond) }
+
+// setSwitchBack sets switchBackAfter for the test; set it before the
+// gateway starts.
+func setSwitchBack(t *testing.T, d time.Duration) {
 	old := switchBackAfter
-	switchBackAfter = 50 * time.Millisecond
+	switchBackAfter = d
 	t.Cleanup(func() { switchBackAfter = old })
 }
 
