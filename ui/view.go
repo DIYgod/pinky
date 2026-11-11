@@ -106,6 +106,11 @@ func (a *app) sidebar(c *mg.Context) {
 				a.act.load(a)
 			})
 			footRow(c, icSettings, locales.SidebarSettings(), a.page == pageSettings, func() { a.page = pageSettings })
+			// Stop all shows once Pinky lists a phone: before that it has
+			// nothing to stop. Its shortcut works either way.
+			if len(a.devices) == 0 {
+				return
+			}
 			stop := mg.ButtonBase(c).Height(34).Padding(0, 10).Radius(9).Gap(10).AlignItems(mg.Center).Justify(mg.Start).Label(locales.SidebarStopAll())
 			if stop.Hovered() {
 				stop.Background(p.redTint)

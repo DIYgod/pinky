@@ -85,7 +85,10 @@ func (a *app) flyoutHeight() int {
 		h += 26 + 36*min(len(a.needs), 4)
 	}
 	h += 26 + 4 + 36*max(1, len(a.devices))
-	h += 13 + 36*2
+	h += 13 + 36 // Open Pinky
+	if len(a.devices) > 0 {
+		h += 36 // Stop all
+	}
 	return h
 }
 
@@ -183,6 +186,9 @@ func (a *app) flyoutView(c *mg.Context) {
 			a.showMain()
 		}
 		open.Children(func() { mg.Text(c, locales.FlyoutOpenPinky()) })
+		if len(a.devices) == 0 {
+			return // nothing to stop yet, as in the sidebar
+		}
 		stop := flyRow(c).Label(locales.FlyoutStopAll())
 		if stop.Clicked() {
 			a.stopAll()
