@@ -45,12 +45,23 @@
             android:label="@string/phone_launcher"
             android:launchMode="singleTask"
             android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Its settings, opened only from it, in its process. -->
+        <activity
+            android:name=".SettingsActivity"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="false"
+            android:label="@string/phone_settings"
+            android:process=":ui"
+            android:theme="@style/Theme.Pinky.Screen"
+            android:windowSoftInputMode="adjustResize" />
 
         <service
             android:name=".PinkyAccessibilityService"

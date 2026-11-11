@@ -83,12 +83,13 @@ class Overlays(private val service: PinkyAccessibilityService) {
             }
             agent.optBoolean("running") -> {
                 ended = null
-                val line = if (need != null) {
-                    service.getString(R.string.phone_waiting)
-                } else {
-                    lastStep(st) ?: service.getString(R.string.phone_starting)
+                val step = lastStep(st)
+                val line = when {
+                    need != null -> service.getString(R.string.phone_pill_waiting)
+                    step != null -> service.getString(R.string.phone_pill_working, step)
+                    else -> service.getString(R.string.phone_pill_starting)
                 }
-                showPill(service.getString(R.string.phone_working, line), running = true)
+                showPill(line, running = true)
             }
             else -> {
                 val key = agent.optString("task") + agent.optLong("seconds")
@@ -98,10 +99,14 @@ class Overlays(private val service: PinkyAccessibilityService) {
         if (need != null) showCard(need) else hideCard()
     }
 
+    // lastStep is the task's last step as the person reads it in Pinky
+    // (Words.step): an answered approval's step no longer says "Waiting
+    // for you".
     private fun lastStep(st: JSONObject): String? {
-        val steps = st.optJSONObject("task")?.optJSONArray("steps") ?: return null
-        if (steps.length() == 0) return null
-        return steps.getJSONObject(steps.length() - 1).optString("text").ifEmpty { null }
+        val task = st.optJSONObject("task") ?: return null
+        val steps = task.optJSONArray("steps") ?: return null
+        val s = steps.optJSONObject(steps.length() - 1) ?: return null
+        return Words.step(service.resources, s, true, task.optString("state")).text.ifEmpty { null }
     }
 
     // The pill: the task runs, or it just ended.
@@ -131,13 +136,7 @@ class Overlays(private val service: PinkyAccessibilityService) {
     }
 
     private fun showEnded(agent: JSONObject, key: String) {
-        val summary = agent.optString("summary")
-        val text = when (agent.optString("end")) {
-            "stopped" -> service.getString(R.string.phone_ended_stopped)
-            "done" -> service.getString(R.string.phone_ended_done, summary)
-            else -> service.getString(R.string.phone_ended_other, summary)
-        }
-        showPill(text, running = false)
+        showPill(Words.endLine(service.resources, agent), running = false)
         ended = key
         val t = Runnable { hidePill() }
         endTimer = t
@@ -176,7 +175,10 @@ class Overlays(private val service: PinkyAccessibilityService) {
         }
         val buttons = LinearLayout(service)
         root.addView(dot)
-        root.addView(text)
+        // The line gives way, not the button. A window as wide as its content
+        // is measured first at a dialog's width (ViewRootImpl), and a weighted
+        // child that does not fit there asks for a wider try.
+        root.addView(text, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         root.addView(buttons)
         return Window(root, text, buttons)
     }
@@ -221,7 +223,8 @@ class Overlays(private val service: PinkyAccessibilityService) {
                 hideCard()
                 whenGone(shown) {
                     CoreClient.send(CoreClient.cmd("decide", "need" to id, "decision" to decision)) { err ->
-                        main.post { if (err != null && !stopped) showCard(need, err) }
+                        val why = err?.let { service.getString(R.string.phone_err_answer, it.message ?: it.toString()) }
+                        main.post { if (why != null && !stopped) showCard(need, why) }
                     }
                 }
                 Unit

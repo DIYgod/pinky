@@ -19,13 +19,20 @@ object CoreClient {
 
     private val io = Executors.newCachedThreadPool()
 
+    /**
+     * The core said no. code names the reason when the screens know it
+     * (control.go's Code constants: no_device, no_key, no_model, no_task,
+     * busy), else it is empty.
+     */
+    class Refused(val code: String, message: String) : Exception(message)
+
     private fun connect(): LocalSocket {
         val s = LocalSocket()
         s.connect(LocalSocketAddress(BuildConfig.CORE_SOCKET, LocalSocketAddress.Namespace.ABSTRACT))
         return s
     }
 
-    /** Sends one command and returns its reply; throws when the core is not there or says no. */
+    /** Sends one command and returns its reply; throws when the core is not there, or Refused when it says no. */
     fun call(req: JSONObject): JSONObject {
         connect().use { s ->
             val w = OutputStreamWriter(s.outputStream, Charsets.UTF_8)
@@ -35,31 +42,38 @@ object CoreClient {
             val line = BufferedReader(InputStreamReader(s.inputStream, Charsets.UTF_8)).readLine()
                 ?: throw IllegalStateException("the core closed the connection")
             val r = JSONObject(line)
-            if (!r.optBoolean("ok")) throw IllegalStateException(r.optString("error", "the core said no"))
+            if (!r.optBoolean("ok")) throw Refused(r.optString("code"), r.optString("error", "the core said no"))
             return r
         }
     }
 
-    /** Runs call off the main thread; done gets the error message, or null. */
-    fun send(req: JSONObject, done: (String?) -> Unit = {}) {
+    /** Runs call off the main thread; done gets what went wrong, or null. */
+    fun send(req: JSONObject, done: (Exception?) -> Unit = {}) {
         io.execute {
             done(
                 try {
                     call(req)
                     null
                 } catch (e: Exception) {
-                    e.message ?: e.toString()
+                    e
                 },
             )
         }
     }
 
+    /** Runs work on this client's threads, off the main thread. */
+    fun background(work: () -> Unit) {
+        io.execute(work)
+    }
+
     /**
      * Asks this app's accessibility service, over its companion socket, to
      * turn on-phone mode on or off (PinkyAccessibilityService.setOnPhone):
-     * on starts the core. Throws when the service is off.
+     * on starts the core. Returns the service's reply, whose core_error
+     * says why the core did not start, if it failed. Throws when the
+     * service is off.
      */
-    fun setOnPhone(enabled: Boolean) {
+    fun setOnPhone(enabled: Boolean): JSONObject {
         LocalSocket().use { s ->
             s.connect(LocalSocketAddress(BuildConfig.SOCKET_NAME, LocalSocketAddress.Namespace.ABSTRACT))
             val w = OutputStreamWriter(s.outputStream, Charsets.UTF_8)
@@ -72,6 +86,7 @@ object CoreClient {
             if (!r.optBoolean("ok")) {
                 throw IllegalStateException(r.optJSONObject("error")?.optString("message") ?: "the service said no")
             }
+            return r.optJSONObject("result") ?: JSONObject()
         }
     }
 
@@ -84,9 +99,10 @@ object CoreClient {
     /**
      * Follows the state: onState gets each state the core sends, on a
      * background thread, and onDown the reason while the core cannot be
-     * reached (it is retried every second). While the core is not there it
-     * turns on-phone mode on, which starts it once the service is on.
-     * Close the result to stop.
+     * reached (it is retried every second): why the core failed to start
+     * when it did, else what went wrong with the socket. While the core is
+     * not there it turns on-phone mode on, which starts it once the
+     * service is on. Close the result to stop.
      */
     fun subscribe(onState: (JSONObject) -> Unit, onDown: (String) -> Unit): Closeable {
         val sub = Subscription(onState, onDown)
@@ -122,12 +138,12 @@ object CoreClient {
                     }
                 } catch (e: Exception) {
                     if (closed) break
-                    onDown(e.message ?: e.toString())
-                    try {
-                        setOnPhone(true)
+                    val failed = try {
+                        setOnPhone(true).optString("core_error")
                     } catch (_: Exception) {
-                        // The service is off: the screen says so.
+                        "" // The service is off: the screen says so.
                     }
+                    onDown(failed.ifEmpty { e.message ?: e.toString() })
                 } finally {
                     try {
                         socket?.close()
