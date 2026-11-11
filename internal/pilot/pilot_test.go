@@ -521,6 +521,46 @@ func TestLimits(t *testing.T) {
 			t.Fatalf("status: %+v", st)
 		}
 	})
+	t.Run("time during a request", func(t *testing.T) {
+		// The model answers long after the limit: the task ends at the
+		// limit, not with the late answer.
+		h := newHarness(t)
+		h.api.turns = []func(string, *http.Request) any{func(_ string, r *http.Request) any {
+			select {
+			case <-r.Context().Done():
+				return nil
+			case <-time.After(3 * time.Second):
+				return message("tool_use", 100, use("t", finishName, map[string]any{"outcome": "done", "summary": "Done late."}))
+			}
+		}}
+		start := time.Now()
+		st := h.run(t, Config{MaxTime: 300 * time.Millisecond}, "Look around")
+		if took := time.Since(start); st.End != TimeLimit || took > 2*time.Second {
+			t.Fatalf("status %+v after %s", st, took)
+		}
+		if tv := h.task(t); tv.State != gateway.TaskFailed {
+			t.Fatalf("task: %+v", tv)
+		}
+	})
+	t.Run("time after an answer", func(t *testing.T) {
+		h := newHarness(t)
+		h.api.turns = []func(string, *http.Request) any{func(string, *http.Request) any {
+			return message("tool_use", 100, use("t", finishName, map[string]any{"outcome": "done", "summary": "Done late."}))
+		}}
+		// Let the budget expire while reporting usage, after a successful
+		// answer but before acting on it.
+		h.r.opt.Notify = func() {
+			if st, ok := h.r.Status("pixel"); ok && st.Running() && st.Tokens > 0 {
+				time.Sleep(time.Until(st.Started.Add(st.Config.MaxTime)))
+			}
+		}
+		if st := h.run(t, Config{MaxTime: 300 * time.Millisecond}, "Look around"); st.End != TimeLimit || st.Tokens == 0 {
+			t.Fatalf("status: %+v", st)
+		}
+		if tv := h.task(t); tv.State != gateway.TaskFailed {
+			t.Fatalf("task: %+v", tv)
+		}
+	})
 	t.Run("tokens", func(t *testing.T) {
 		// A model whose prices Pinky does not know: a budget of tokens.
 		h := newHarness(t)
