@@ -259,6 +259,10 @@ type Session struct {
 	closed    bool
 	stopped   bool     // the person pressed Stop all
 	successor *Session // the newer session that continued its last lease (resume.go)
+	// shared is set once the session showed two tasks at once: several
+	// conversations of its client may use it, so its calls must name their
+	// phone (shared.go).
+	shared bool
 }
 
 // OpenSession starts a session for an agent connection.
@@ -310,6 +314,9 @@ func (s *Session) end(outcome string, keep bool) {
 		}
 		g.endLeaseLocked(l, outcome, "")
 	}
+	if len(kept) > 0 {
+		g.noteNewerSharedLocked(s)
+	}
 	g.mu.Unlock()
 	gone := g.approvals.WithdrawWhere(func(i approval.Info) bool { return i.Binding.Session == s.id && !kept[i.Binding.Lease] }, "the agent disconnected")
 	g.closePendingSteps(gone, "withdrawn")
@@ -345,12 +352,15 @@ func (s *Session) acquire(ref string) (*lease, *Result) {
 			}
 		}
 	} else {
-		if len(s.leases) == 0 {
+		if g.noteSharedLocked(s) {
+			// The session's one phone may run another conversation's task.
+			return nil, g.sharedResultLocked(s)
+		}
+		ds := g.adoptableLocked(s, "")
+		if len(s.leases) == 0 && len(ds) == 1 {
 			// A newer session of an agent that resumes: the one phone its
 			// older sessions left.
-			if ds := g.adoptableLocked(s); len(ds) == 1 {
-				g.adoptLocked(s, ds[0], "")
-			}
+			g.adoptLocked(s, ds[0], "")
 		}
 		switch len(s.leases) {
 		case 0:
@@ -359,6 +369,13 @@ func (s *Session) acquire(ref string) (*lease, *Result) {
 			}
 			if d := g.pausedLeaseLocked(s); d != nil {
 				return nil, pausedResult(d.name())
+			}
+			if len(ds) > 1 {
+				var names []string
+				for _, d := range ds {
+					names = append(names, fmt.Sprintf("%s (device %q, task “%s”)", d.name(), d.id, d.lease.task.title))
+				}
+				return nil, errResult(ErrInvalidArgument, "Earlier sessions of %s hold %d phones: %s. Pass device.", s.agent.Name, len(names), strings.Join(names, ", "))
 			}
 			return nil, errResult(ErrInvalidArgument, "No phone is connected in this session; call phone_connect first.")
 		case 1:
@@ -497,16 +514,11 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			g.mu.Unlock()
 			return errResult(ErrInvalidArgument, "No phone matches %q. Connected phones: %s.", req.Device, list)
 		}
-	} else if len(s.leases) == 1 {
-		for _, l := range s.leases {
-			d = l.dev
-		}
-	} else if ds := g.adoptableLocked(s); len(s.leases) == 0 && len(ds) == 1 {
-		// The phone an older session of this agent left (resume.go).
-		d = ds[0]
-	} else {
-		// The phone that is online, or with none, the one that waits for
-		// a step: connecting to it says which step.
+	} else if d = g.taskPhoneLocked(s, title); d == nil {
+		// No phone runs this task: the one that is online, or with none,
+		// the one that waits for a step (connecting to it says which
+		// step). The session's phone for another task is no default, as
+		// that task may be another conversation's (shared.go).
 		var online, waiting, paused []*device
 		for _, x := range g.devices {
 			switch {
@@ -535,8 +547,9 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 			d = online[0]
 		default:
 			list := g.deviceListLocked()
+			note := g.otherTasksNoteLocked(s, title)
 			g.mu.Unlock()
-			return errResult(ErrInvalidArgument, "Several phones are connected: %s. Pass device.", list)
+			return errResult(ErrInvalidArgument, "%s", joinNote(fmt.Sprintf("Several phones are connected: %s. Pass device.", list), note))
 		}
 	}
 	if g.paused[d.id] {
@@ -561,6 +574,13 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		return res
 	}
 	g.adoptLocked(s, d, title)
+	if l := d.lease; s.runsOtherTask(l, title) {
+		// Never end another task of this session, or of an earlier one of
+		// its agent, for this one: it may be another conversation's.
+		res := g.otherTaskResultLocked(s, d, l)
+		g.mu.Unlock()
+		return res
+	}
 	if l := d.lease; l != nil && l.session != s && l.session.closed && !l.session.agent.Resume && l.inflight == 0 {
 		// Kept for a local agent's next session (resume.go), which has
 		// not come: it does not keep the phone from anyone else.
@@ -584,6 +604,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		}
 		l.inflight++
 		ro := l.readOnly
+		shared := s.shared
 		g.mu.Unlock()
 		defer s.done(l)
 		var unknown []unknownApp
@@ -598,14 +619,13 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 		if res, note := g.taskConnection(ctx, l, way); res != nil {
 			return res
 		} else {
-			return withNote(readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), ro), note)
+			return sharedNote(withNote(readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), ro), note), shared)
 		}
-	} else if l != nil {
-		g.endLeaseLocked(l, OutcomeReplaced, "")
 	}
 	l := g.newLeaseLocked(s, d, title, req.Apps)
 	l.readOnly, l.task.readOnly = req.ReadOnly, req.ReadOnly
 	l.inflight++
+	shared := g.noteSharedLocked(s)
 	g.mu.Unlock()
 	defer s.done(l)
 
@@ -619,7 +639,7 @@ func (s *Session) Connect(ctx context.Context, req ConnectRequest) *Result {
 	if res != nil {
 		return res
 	}
-	return withNote(readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), req.ReadOnly), note)
+	return sharedNote(withNote(readOnlyNote(withUnknownApps(g.firstScreen(ctx, l), unknown), req.ReadOnly), note), shared)
 }
 
 // waitingLocked reports whether a phone is connected but not open because
@@ -1051,8 +1071,15 @@ func (s *Session) Release(ctx context.Context, req ReleaseRequest) *Result {
 		}
 		ls = append(ls, s.leases[d.id])
 	} else {
+		if g.noteSharedLocked(s) {
+			// Every phone of the session would end another conversation's
+			// task too.
+			res := g.sharedResultLocked(s)
+			g.mu.Unlock()
+			return res
+		}
 		if len(s.leases) == 0 {
-			for _, d := range g.adoptableLocked(s) {
+			for _, d := range g.adoptableLocked(s, "") {
 				g.adoptLocked(s, d, "")
 			}
 		}

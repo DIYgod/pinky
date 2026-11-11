@@ -337,6 +337,7 @@ func TestAlwaysAllowNotOffered(t *testing.T) {
 		// The rest of the task: allowed.
 		mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "type", Ref: input, Text: "two", Submit: true}), StatusSettled)
 		// The next task with the same list asks about the list only.
+		mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
 		mustStatus(t, s.Connect(ctx, ConnectRequest{Task: "Chat again", Apps: []string{"Dinely"}}), StatusSettled)
 		res = s.Act(ctx, Call{}, Action{Tool: "type", Ref: input, Text: "three", Submit: true})
 		mustStatus(t, res, StatusPending)
@@ -346,6 +347,7 @@ func TestAlwaysAllowNotOffered(t *testing.T) {
 		// Without a list, messages in Chatter no longer ask.
 		g.Decide(res.ApprovalID, Deny, "")
 		mustStatus(t, s.Act(ctx, Call{ApprovalID: res.ApprovalID}, Action{Tool: "type", Ref: input, Text: "three", Submit: true}), StatusDenied)
+		mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
 		mustStatus(t, s.Connect(ctx, ConnectRequest{Task: "Chat without a list"}), StatusSettled)
 		mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "type", Ref: input, Text: "four", Submit: true}), StatusSettled)
 		if chat := dev.Chat(); chat[len(chat)-1] != "Me: four" {
