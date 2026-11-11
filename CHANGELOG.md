@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Agents can now ask phone_logs for an app's log lines with kind "logs", as the tool describes it; it was refused before. Thanks @Talaxy009.
+
 ## 2026.1111.16 (2026-11-11)
 
 - When the saved PIN doesn't unlock a phone, its card now offers Try again, which enters the PIN once more after Touch ID or Windows Hello, so you no longer have to pause and resume the phone to unlock it from the computer again. Pinky still never retries by itself. Thanks @demystify0137.
