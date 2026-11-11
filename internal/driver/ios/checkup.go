@@ -270,10 +270,10 @@ func (d *WDADevice) checkHelper(ctx context.Context) driver.Check {
 	case !now.Before(exp):
 		// It runs until it stops; iOS will not start it again.
 		c.Status, c.Fix = driver.CheckWarn, driver.FixInstallHelper
-		c.Detail += "; but its provisioning profile ran out on " + helperDate(exp) + ", so iOS will not start it again: install it again from Xcode"
+		c.Detail += "; but its provisioning profile ran out on " + helperDate(exp) + ", so iOS will not start it again: install it again with pinkyctl helper install on a Mac with Xcode"
 	case exp.Sub(now) <= driver.HelperReminder:
 		c.Status, c.Fix = driver.CheckWarn, driver.FixInstallHelper
-		c.Detail += "; its provisioning profile runs out on " + helperDate(exp) + ": install it again from Xcode before then"
+		c.Detail += "; its provisioning profile runs out on " + helperDate(exp) + ": install it again with pinkyctl helper install on a Mac with Xcode before then"
 	default:
 		c.Detail += "; its provisioning profile runs out on " + helperDate(exp)
 	}
