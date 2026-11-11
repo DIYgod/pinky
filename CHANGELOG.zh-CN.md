@@ -2,6 +2,12 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- Android 手机上的 Pinky Companion 改名了：手机上显示为 Pinky，电脑上的 Pinky 里叫「Android 版 Pinky」。手机会像以前一样更新到新版。
+- MIUI 和 HyperOS 的小米手机会忽略智能体「后台工作」时 Pinky 发出的点按、滑动、拖动和返回，现在这些操作改由 Android 版 Pinky 完成。为此它会向 Android 申请执行手势的权限；做不到时，智能体改在手机本身的屏幕上操作。感谢 @caozhangqing85-cyber 和 @demystify0137。
+- 智能体不能再打开 Android 手机上 Pinky 自己的 App。
+
 ## 2026.1111.19 (2026-11-11)
 
 - 在 macOS 上，Pinky 的 PIN 码和 API 密钥输入框会像其他密码框一样，不让辅助功能工具读到你输入的内容。感谢 @pseudoyu。
