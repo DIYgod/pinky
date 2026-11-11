@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- Xcode 的构建位置设为自定义（Xcode › 设置 › 位置 › 高级…）时，现在也能正常安装 iPhone 辅助应用、准备 iOS 模拟器。感谢 @IOSTimor。
+
 ## 2026.1111.13 (2026-11-11)
 
 - 在装有 Xcode 的 Mac 上，现在可以直接在 Pinky 窗口里给旧款 iPhone 装辅助应用（手机页面、「体检」和「添加手机 › 连接旧款 iPhone」里点「安装辅助应用」），签名快到期时点「重新安装」即可；安装时会显示每一步，需要时提醒你解锁手机，失败时会说明原因。

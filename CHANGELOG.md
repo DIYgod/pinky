@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Installing the iPhone helper and preparing iOS Simulators now work when Xcode is set to a custom build location (Xcode › Settings › Locations › Advanced…). Thanks @IOSTimor.
+
 ## 2026.1111.13 (2026-11-11)
 
 - On a Mac with Xcode, Pinky can now install its helper on an older iPhone from its window (the phone's page, its checkup, and Add phone › Try an older iPhone), and install it again when its signature is about to run out, showing each step, asking you to unlock the phone when needed, and saying why when it fails.
