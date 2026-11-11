@@ -466,24 +466,67 @@ WDA on a simulator listens on every interface of the computer while it runs; sto
 
 ### Installing the WebDriverAgent helper
 
-Once per phone, on a Mac with Xcode:
+Once per phone, on a Mac with Xcode, with the iPhone plugged in (or paired over Wi-Fi), in Terminal:
+
+```sh
+pinkyctl helper install
+```
+
+Without Homebrew's `pinkyctl`: `/Applications/Pinky.app/Contents/MacOS/Pinky helper install`. With several phones, name one by name or UDID (`pinkyctl helper install "Ann's iPhone"`); flags go before it: `--team <team ID>`, `--bundle-id <id>` (WebDriverAgentRunner stays in it), `--local-signing`. With a free Apple ID the phone first asks you to trust the developer: Settings › General › VPN & Device Management, then run the command again. On the phone the helper shows as Pinky Helper with Pinky's icon ("The helper's name and icon").
+
+What it does (`internal/driver/ios/helperinstall.go`, `cmd/pinky/helper.go`):
+
+1. **The phone.** From devicectl's list (`devicectl list devices --json-output`): the physical iOS devices paired with this Mac, the named one or the only one within reach. Developer Mode off stops it with the way to turn it on.
+2. **The team and the bundle id.** It reads the helper already on the phone over usbmuxd (`findRunnerApp`). The team is `--team`, else that helper's (the prefix of its `application-identifier`), else the only team this Mac holds a valid Apple Development certificate for (the certificate's OU, from `security find-identity` and `find-certificate`); with several it asks for `--team`. The bundle id is `--bundle-id`, else that helper's when the team is the same, since iOS replaces an app only with one of its team, else `pinky.<team>.WebDriverAgentRunner`, which Pinky prefers among several runners. So running it again replaces the helper in place.
+3. **The source.** The release Simulators build (`wdaVersion`, "Where WebDriverAgent comes from"), from the archive in Pinky's data folder, checked and downloaded once.
+4. **The build.** `xcodebuild build-for-testing -scheme WebDriverAgentRunner -destination id=<udid> CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=<team> PRODUCT_BUNDLE_IDENTIFIER=<id>`, first with the profiles on this Mac alone. Only when none signs the helper for the phone does it build again with `-allowProvisioningUpdates -allowProvisioningDeviceRegistration`, which may register the phone with the team and make a profile; `--local-signing` stops there instead. The embedded profile must include the phone.
+5. **Name, icon, signature.** It brands the runner app (below) and signs it again with the certificate Xcode signed it with (`codesign --force --sign <its SHA-1> --preserve-metadata=identifier,entitlements,flags,runtime --generate-entitlement-der`), then checks it with `codesign --verify --deep --strict`. The frameworks and the test bundle inside keep Xcode's signatures; branding changes none of them.
+6. **Install and check.** `xcodebuild test-without-building` installs it and starts WDA as Product › Test does, on the phone's loopback only (`TEST_RUNNER_USE_IP`). Once WDA prints `ServerURLHere` it stops the run and says when the signature runs out; it waits up to 4 minutes, as the phone may first ask for its passcode to allow automation.
+
+Xcode's output goes to `<data>/WebDriverAgent/helper-install.log`; a failure names Xcode's errors and, when it recognizes them, what to do: trust the developer, turn on Developer Mode, unlock the phone, enter the passcode for automation, add an Apple ID in Xcode › Settings › Accounts. A helper running for Pinky at the time is replaced, and Pinky starts the new one when it next opens the phone.
+
+From Xcode, as before (the helper then keeps WDA's name, WebDriverAgentRunner-Runner, and Appium's icon or none):
 
 1. Get WebDriverAgent: `git clone https://github.com/appium/WebDriverAgent` (Appium's copy works too).
 2. Open `WebDriverAgent.xcodeproj`. For the WebDriverAgentRunner target, under Signing & Capabilities, pick your team (a free Apple ID works). If Xcode says the bundle identifier is taken, change its prefix (`com.<you>.WebDriverAgentRunner`), keeping WebDriverAgentRunner in it so Pinky finds it.
 3. Pick the iPhone as the destination and run Product › Test once. Xcode installs WebDriverAgentRunner and starts it; with a free Apple ID the phone first asks you to trust the developer in Settings › General › VPN & Device Management. Stop the test once Xcode's log shows `ServerURLHere`.
 
-From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, repeat step 3 (see "When the helper's signature runs out"). The same from a terminal:
+From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, run `pinkyctl helper install` again or repeat step 3 (see "When the helper's signature runs out"). The same from a terminal:
 
 ```sh
 xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
   -destination id=<udid> -allowProvisioningUpdates DEVELOPMENT_TEAM=<team id> test
 ```
 
+### The helper's name and icon
+
+(2026-11-11) The helper used to show on the home screen and in App Library as "WebDriverAgen…" (WebDriverAgentRunner-Runner) with Appium's icon, or with a blank one, as on the owner's iPhone. Xcode makes the app that hosts a UI test, `<target>-Runner.app` with the bundle id `<id>.xctrunner`, from a template of its own (`XCTRunner.app` in the platform's `Developer/Library/Xcode/Agents`): its Info.plist is the template's, with the name and executable `WebDriverAgentRunner-Runner` and no display name, and of WDA's project only the bundle id and the test target's app icon reach it. No build setting names it: `PRODUCT_NAME` would rename the test bundle too.
+
+So Pinky brands the built runner app afterwards (`helperbrand.go`, `brandRunner`):
+
+- **The name.** `CFBundleDisplayName` is "Pinky Helper", with `InfoPlist.strings` in `zh-Hans.lproj` (「Pinky 助手」) and `ja.lproj` (「Pinky ヘルパー」), so a phone in Chinese or Japanese shows its own. 「Pinky 助手」 rather than the app's 「Pinky 辅助应用」: shorter, it fits under the icon; Japanese uses the app's own ヘルパー. All three showed in full on a Simulator's home screen.
+- **The icon.** Pinky's 1024-pixel iOS icon (`assets/icon/pinky-ios-1024.png`, embedded on macOS only), compiled by the Mac's `actool` as Xcode does for an app: `Assets.car` and the PNGs older iOS versions read go into the app, over Appium's, and actool's `CFBundleIcons` and `CFBundleIcons~ipad` into its Info.plist.
+- **What stays.** The bundle id, `CFBundleName` and the executable, so Pinky finds the runner as before (`pickRunnerApp`) and policy still knows it for Pinky's own (`policy.IsPinkyApp`). Helpers installed before keep working as they are.
+- **The mark.** `PinkyHelperBrand` (1) in its Info.plist: a branded build is not branded again, and a later Pinky that changes the name or the icon raises the number.
+- **Order.** The icon files and the translations first, the Info.plist last in one rename, so the app is never half branded.
+- **Signing.** A phone's build is signed again (step 5 above). A Simulator's build is not signed for one (`CODE_SIGNING_ALLOWED=NO`, Apple's template signature of `XCTRunner` stays), and the Simulator runs it as it is.
+
+Simulators get the same name and icon: `SimProvider.brandBuild` brands a build once, before its first run; a failure is logged and the run goes on unbranded.
+
+What ran where:
+
+| What | Where | Result |
+| --- | --- | --- |
+| A branded runner on a Simulator: the home screen, and WDA through `xcodebuild test-without-building` | iPhone 17e Simulator, iOS 26.5, Xcode 27.2 (27B52), 2026-11-11 | Pinky Helper with Pinky's icon, also in Chinese and Japanese; WDA printed `ServerURLHere` and answered `/status` |
+| Building for a phone with the profiles on this Mac, branding and signing again | `generic/platform=iOS`, the owner's team through its wildcard profile, "iOS Team Provisioning Profile: *", 2026-11-11 | The same certificate, team, identifier and entitlements (DER included) as Xcode's; two more sealed files (the translations); `codesign --verify --deep --strict` passes; nothing asked of Apple |
+| Branding with the Mac's actool, the brand mark, finding the branded runner, the phone and team choice, devicectl's list, certificates, hints | Unit tests (`helperbrand_test.go`, `helperinstall_test.go`) | Pass |
+| `pinkyctl helper install` on a phone | Not yet | |
+
 ### When the helper's signature runs out
 
 Built on 2026-11-08 after a user's report. The helper is signed with the person's Apple ID, and the provisioning profile it is signed with runs out: 7 days after Xcode installed it with a free Apple ID, a year with a paid developer account. iOS then no longer starts it, and Pinky used to say only that the helper did not start.
 
-To install it again, plug the iPhone in and repeat step 3 of "Installing the WebDriverAgent helper" (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Xcode signs the helper anew and installs it over the old one; nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
+To install it again, run `pinkyctl helper install` again (see "Installing the WebDriverAgent helper"): it keeps the helper's team and bundle id, signs it anew and installs it over the old one. From Xcode, plug the iPhone in and repeat step 3 (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
 
 What Pinky does (`wda_profile.go`):
 
@@ -492,7 +535,7 @@ What Pinky does (`wda_profile.go`):
 - **The date.** `driver.Info.HelperExpires` (new, additive; zero when unknown) carries it for phones driven through the helper, Automatic below iOS 27 or chosen in Settings › Phones. List reads it while inspecting such a phone, again every 30 minutes while the phone is online, and every minute within the reminder (`driver.HelperReminder`, 48 hours), so a helper installed again while the phone stays plugged in is noticed.
 - **Once it ran out**, List inspects the phone again and lists it as `needs_setup` with `Setup` `install_helper` (`driver.SetupInstallHelper`, new) and a `Detail` that says when it ran out and how to install it again. The gateway then closes the phone, though a runner already running might have gone on until it ended: Pinky stops at the time it announced. A helper chosen in Settings › Phones but not installed now also gets `install_helper`.
 - **A profile Pinky cannot read** changes nothing: the phone works as before, without a reminder. Pinky's log gets each read (`iphone: the helper's provisioning profile`, expires), a change of the date, and a read that failed.
-- **The client.** Two days before, the phone's page shows a reminder above the phone: "The helper on <phone> stops working on <day and time>: install it again from Xcode", with How to install it. Once it ran out, the page of the phone that needs setup says so in the same words, with How to install it in place of the steps of Add phone, and Add phone › iPhone shows it too instead of "stuck, retrying". The checkup's `helper` item warns two days before, notes the day when it is further off, and fails with those words once it ran out (`ui/checkup_iphone.go`).
+- **The client.** Two days before, the phone's page shows a reminder above the phone: "The helper on <phone> stops working on <day and time>: install it again with pinkyctl helper install on a Mac with Xcode", with How to install it. Once it ran out, the page of the phone that needs setup says so in the same words, with How to install it in place of the steps of Add phone, and Add phone › iPhone shows it too instead of "stuck, retrying". The checkup's `helper` item warns two days before, notes the day when it is further off, and fails with those words once it ran out (`ui/checkup_iphone.go`).
 
 What ran where:
 
@@ -580,7 +623,7 @@ Unit-tested with a fake two-way provider (`taskconn_test.go`): asking, launching
 - Mirroring a phone that Pinky drives on iOS 27 can leave its accessibility services stuck, so Pinky reads by OCR alone until the phone restarts (seen once, iOS 27.0.1 and macOS 27.2). Pinky does not notice it yet; a check that tells the person to restart the phone would help.
 - iPhone Mirroring as a way in: macOS 15 or later, iOS 18 or later, the same Apple Account on both, the phone locked nearby, not in the EU; window capture and mouse and keyboard events would need Screen Recording and Accessibility for Pinky. With no tree from the phone while it mirrors (above), it would read the screen by OCR alone, as DESIGN.md's planned Mirroring backend does; not built.
 - `Waker` through the helper; `Unlock` wakes the phone by itself.
-- Installing and re-signing the helper from Pinky (the "Install the Pinky helper" choice in Add phone): a person does it in Xcode for now, and Pinky reminds them before the signature runs out ("When the helper's signature runs out"). go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
+- Installing and re-signing the helper from Pinky's window (the "Install the Pinky helper" choice in Add phone): a person runs `pinkyctl helper install` in Terminal for now, or uses Xcode, and Pinky reminds them before the signature runs out ("When the helper's signature runs out"). go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
 - The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
 
 ## Preparing a phone without Xcode
@@ -716,9 +759,9 @@ Pinky ships no WebDriverAgent and downloads no binary. The first time a Simulato
 - The archive may be at most 16 MB, and so may what it unpacks to. Only regular files and folders are unpacked (no links, which could point out of the folder), and names that would leave the folder are refused.
 - The files must hash to `wdaSourceTree` (`treeHash`: the SHA-256 of one line per file, sorted by path, with its mode, 644 or 755, its SHA-256 and its path), not the archive's bytes, whose compression GitHub may change. A mismatch is `errSourceMismatch`, and nothing is built.
 
-Why this source: Appium's WDA is what Pinky's iPhone helper already is (the person installs it from Xcode), it is open source under a permissive license, and building it from a pinned, hashed source means nothing Pinky did not check runs on the Mac. A Simulator needs no signing (`CODE_SIGNING_ALLOWED=NO`), so the build needs no Apple ID or team.
+Why this source: Appium's WDA is what Pinky's iPhone helper already is (`pinkyctl helper install` builds the same release for a phone), it is open source under a permissive license, and building it from a pinned, hashed source means nothing Pinky did not check runs on the Mac. A Simulator needs no signing (`CODE_SIGNING_ALLOWED=NO`), so the build needs no Apple ID or team.
 
-`xcodebuild build-for-testing -scheme WebDriverAgentRunner -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ARCHS=<the Mac's>`, in a folder of its own, builds it; the Products folder moves to `<data>/WebDriverAgent/builds/<version>-xcode<build>-<arch>` (`16.15.3-xcode27B52-arm64`), and builds for other keys are removed. A new Xcode build, a new WDA release or another CPU builds again. On this Mac (M-series, Xcode 27.2, 27B52) the build took 20 s; the first build after an Xcode update, when Xcode compiles its Simulator modules too, can take minutes, so the build may run 15. The archive (0.6 MB), the build (25 MB) and the last build's log (3.4 MB) are about 30 MB together.
+`xcodebuild build-for-testing -scheme WebDriverAgentRunner -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO ARCHS=<the Mac's>`, in a folder of its own, builds it; the Products folder moves to `<data>/WebDriverAgent/builds/<version>-xcode<build>-<arch>` (`16.15.3-xcode27B52-arm64`), and builds for other keys are removed. A new Xcode build, a new WDA release or another CPU builds again. On this Mac (M-series, Xcode 27.2, 27B52) the build took 20 s; the first build after an Xcode update, when Xcode compiles its Simulator modules too, can take minutes, so the build may run 15. The archive (0.6 MB), the build (25 MB) and the last build's log (3.4 MB) are about 30 MB together. Before a build's first run Pinky gives it the helper's name and icon (`brandBuild`, "The helper's name and icon"), in about half a second.
 
 ### iOS 27 Simulators: nothing better than WDA
 
@@ -757,7 +800,7 @@ PINKY_E2E_AVD=<name> go test -tags e2e -run TestVirtualEmulatorInTheApp -timeout
 # PINKY_E2E_WDA_ARCHIVE=<file> seeds the WebDriverAgent source archive (see below).
 ```
 
-- **The Simulator** (iPhone 17e, iOS 26.5, Xcode 27.2 27B52, Apple silicon, 2026-11-09): pass, several runs. The first start with nothing in the data folder (download, check, build) was online in 44 s; with the archive seeded, 25 to 27 s (build 17 s, WDA answering 6 s after the run started). Start again from the phone's page, with the helper built: online in 10 s, once 22 s after a short offline at 19.5 s while WDA came up. The mirror showed the Simulator's screen, Settings opened through MCP, the task's recording (`.mp4`) was written, and quitting the app ended the xcodebuild run and removed its folder. WDA's runner app (WebDriverAgentRunner) shows on the Simulator's home screen once it ran, as Xcode's test runners do.
+- **The Simulator** (iPhone 17e, iOS 26.5, Xcode 27.2 27B52, Apple silicon, 2026-11-09): pass, several runs. The first start with nothing in the data folder (download, check, build) was online in 44 s; with the archive seeded, 25 to 27 s (build 17 s, WDA answering 6 s after the run started). Start again from the phone's page, with the helper built: online in 10 s, once 22 s after a short offline at 19.5 s while WDA came up. The mirror showed the Simulator's screen, Settings opened through MCP, the task's recording (`.mp4`) was written, and quitting the app ended the xcodebuild run and removed its folder. WDA's runner app (WebDriverAgentRunner) shows on the Simulator's home screen once it ran, as Xcode's test runners do; since 2026-11-11 as Pinky Helper with Pinky's icon.
 - **Little Snitch on this Mac** holds each new unsigned test binary's first connection to github.com until someone answers, so the download timed out there (setup "simulator_helper", tried again after 5 minutes as designed). `PINKY_E2E_WDA_ARCHIVE` puts the archive in the test's data folder first; Pinky still checks its tree hash and builds it. The signed app asks once, like any app.
 - **No Simulator.app.** Xcode 27 has none (see "iOS Simulators"), so the person sees a Simulator in Pinky's mirror only; the first runs logged `opening Simulator.app err="exit status 1"` until Pinky stopped trying.
 - **The emulator** runs against an adb server of the test's own (port 5097, `ADB_USB=0`, `ADB_MDNS=0`, `emulator_helpers_test.go`), so the owner's Android phone on the shared adb server is never asked about itself: Pinky's Android provider asked every device adb listed for its properties, even ones `PINKY_DEVICES` left out. Since it leaves those alone (android.md, `Provider.Limit`), the test's own server only keeps it apart from what runs on the shared one. It gives the emulator a crash folder of its own (`ANDROID_EMU_CRASH_REPORTING_DATABASE`), so a crash leaves no report that would make the next windowed emulator on this Mac wait for an answer, and fails at once with what Add phone shows when the emulator quits while it starts.

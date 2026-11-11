@@ -22,11 +22,12 @@ Copied from the brand work of 2026-11-07 (palette: lemon + watermelon). The desk
 | --- | --- |
 | `icon/Pinky.icns` | macOS app icon, 16 to 1024 px (@1x and @2x), built with `iconutil`; `mygo build` uses it (`macos.icon`). |
 | `icon/pinky-macos-1024.png` | The macOS icon at 1024 px, the PNG `mygo build` turns into the Windows and Linux icons. |
+| `icon/pinky-ios-1024.png` | The iPhone helper's icon: `svg/pinky-icon-1024.svg` at 1024 px, full bleed and opaque (iOS masks the corners). Pinky embeds it on macOS (`assets.IOSIcon`) and compiles it with `actool` into the WebDriverAgent helper it builds, which then shows as Pinky Helper with this icon. |
 | `icon/pinky.ico` | Windows icon: 16, 24, 32, 48, 64, 128, 256 px. The 16 and 32 px frames are the redrawn versions. |
 | `icon/hicolor/` | `<size>/apps/pinky.png` for 16 to 512 px, plus `scalable/apps/pinky.svg`, for Linux icon themes. The 32 px one is the tray icon on Windows and Linux. |
 | `tray/pinkyTemplate.png`, `pinkyTemplate@2x.png`, `pinkyTemplate.svg` | macOS status item image. The `Template` suffix makes AppKit treat it as a template image. |
 
-All PNGs were rendered from the SVGs with headless Chrome on a transparent background.
+All PNGs were rendered from the SVGs with headless Chrome on a transparent background, except `icon/pinky-ios-1024.png`, which has no transparency: iOS fills an icon's transparent pixels with black.
 
 ## Palette
 

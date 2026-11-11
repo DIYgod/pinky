@@ -582,7 +582,7 @@ const (
 	CheckDiskImage     = "disk_image"     // the developer disk image is mounted, and the computer can mount it again after a restart
 	CheckHelper        = "helper"         // the WebDriverAgent helper answers, where Pinky drives the phone through it
 	FixInstallHelper   = "install_helper" // install the WebDriverAgent helper on the phone
-	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again) from Xcode, as it is missing or its profile ran out (Info.HelperExpires)
+	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again) with pinkyctl helper install or Xcode, as it is missing or its profile ran out (Info.HelperExpires)
 )
 
 // HelperReminder is how long before Info.HelperExpires clients remind the

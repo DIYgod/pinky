@@ -675,7 +675,7 @@ func (p *Provider) runner(e goios.DeviceEntry) (string, error) {
 // passcode the phone asks for before the helper can control it.
 const (
 	coreDeviceTooOld = "Connecting without the helper needs iOS 27 or later; this iPhone runs iOS %s. Choose Automatic or WebDriverAgent in Settings > Phones."
-	wdaMissing       = "The WebDriverAgent helper is not installed on this iPhone. Install it once from Xcode (docs/notes/ios.md, \"Installing the WebDriverAgent helper\"), or choose another connection in Settings > Phones."
+	wdaMissing       = "The WebDriverAgent helper is not installed on this iPhone. Install it once with pinkyctl helper install on a Mac with Xcode (docs/notes/ios.md, \"Installing the WebDriverAgent helper\"), or choose another connection in Settings > Phones."
 	automationAsk    = "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone."
 	automationMissed = "The iPhone asked for its passcode to let the WebDriverAgent helper control it. If it still asks, enter the passcode there. Pinky tries again in a few minutes, or at once when you reconnect the iPhone or choose its connection again in Settings > Phones."
 )

@@ -2199,18 +2199,24 @@ func (msgs Messages) AddPhoneOlderHelper() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderHelper", nil)
 }
 
-// AddPhoneOlderHelperDetail says "WebDriverAgent, signed with your Apple ID. With a free Apple ID it needs re-signing every 7 days; a paid developer ac…"
+// AddPhoneOlderHelperDetail says "WebDriverAgent, signed with your Apple ID; on the iPhone it shows as Pinky Helper. With a free Apple ID it needs re-s…"
 // in the language the app shows.
 //
 // Add phone › older iPhone: under "Install the Pinky helper", what the
-// helper is and how long its signature lasts. WebDriverAgent is a name.
+// helper is, its name on the iPhone's home screen, and how long its
+// signature lasts. WebDriverAgent is a name. The home screen name is the
+// one Pinky gives the helper in the iPhone's language: Pinky Helper,
+// 「Pinky 助手」 in Chinese, 「Pinky ヘルパー」 in Japanese.
 func AddPhoneOlderHelperDetail() string { return In(i18n.Locale()).AddPhoneOlderHelperDetail() }
 
-// AddPhoneOlderHelperDetail says "WebDriverAgent, signed with your Apple ID. With a free Apple ID it needs re-signing every 7 days; a paid developer ac…"
+// AddPhoneOlderHelperDetail says "WebDriverAgent, signed with your Apple ID; on the iPhone it shows as Pinky Helper. With a free Apple ID it needs re-s…"
 // in the language of msgs.
 //
 // Add phone › older iPhone: under "Install the Pinky helper", what the
-// helper is and how long its signature lasts. WebDriverAgent is a name.
+// helper is, its name on the iPhone's home screen, and how long its
+// signature lasts. WebDriverAgent is a name. The home screen name is the
+// one Pinky gives the helper in the iPhone's language: Pinky Helper,
+// 「Pinky 助手」 in Chinese, 「Pinky ヘルパー」 in Japanese.
 func (msgs Messages) AddPhoneOlderHelperDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderHelperDetail", nil)
 }
@@ -4819,26 +4825,26 @@ func (msgs Messages) CheckDiskImageTitle() string {
 	return Catalog.Format(msgs.locale, "checkDiskImageTitle", nil)
 }
 
-// CheckHelperExpired says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again from X…"
+// CheckHelperExpired says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again with p…"
 // in the language the app shows.
 //
 // Checkup and the Phone screen, an iPhone's helper (WebDriverAgent): the
 // signature (provisioning profile) made with the person's Apple ID ran out,
-// so the iPhone no longer starts the helper; the button below opens how to
-// install it. phone is the iPhone's name; when is when it ran out, with the
-// time.
+// so the iPhone no longer starts the helper; pinkyctl helper install is a
+// command that stays as it is; the button below opens how to install it.
+// phone is the iPhone's name; when is when it ran out, with the time.
 func CheckHelperExpired(phone string, when time.Time) string {
 	return In(i18n.Locale()).CheckHelperExpired(phone, when)
 }
 
-// CheckHelperExpired says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again from X…"
+// CheckHelperExpired says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again with p…"
 // in the language of msgs.
 //
 // Checkup and the Phone screen, an iPhone's helper (WebDriverAgent): the
 // signature (provisioning profile) made with the person's Apple ID ran out,
-// so the iPhone no longer starts the helper; the button below opens how to
-// install it. phone is the iPhone's name; when is when it ran out, with the
-// time.
+// so the iPhone no longer starts the helper; pinkyctl helper install is a
+// command that stays as it is; the button below opens how to install it.
+// phone is the iPhone's name; when is when it ran out, with the time.
 func (msgs Messages) CheckHelperExpired(phone string, when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperExpired", map[string]any{"phone": phone, "when": when})
 }
@@ -4887,26 +4893,28 @@ func (msgs Messages) CheckHelperPass() string {
 	return Catalog.Format(msgs.locale, "checkHelperPass", nil)
 }
 
-// CheckHelperSoon says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again from Xcode."
+// CheckHelperSoon says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper install on…"
 // in the language the app shows.
 //
 // Checkup and a reminder on the Phone screen, an iPhone's helper
 // (WebDriverAgent): its signature (provisioning profile) runs out within
-// two days, after which the iPhone no longer starts the helper; the button
-// beside it opens how to install it. phone is the iPhone's name; when is
-// when it runs out, with the time.
+// two days, after which the iPhone no longer starts the helper; pinkyctl
+// helper install is a command that stays as it is; the button beside it
+// opens how to install it. phone is the iPhone's name; when is when it runs
+// out, with the time.
 func CheckHelperSoon(phone string, when time.Time) string {
 	return In(i18n.Locale()).CheckHelperSoon(phone, when)
 }
 
-// CheckHelperSoon says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again from Xcode."
+// CheckHelperSoon says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper install on…"
 // in the language of msgs.
 //
 // Checkup and a reminder on the Phone screen, an iPhone's helper
 // (WebDriverAgent): its signature (provisioning profile) runs out within
-// two days, after which the iPhone no longer starts the helper; the button
-// beside it opens how to install it. phone is the iPhone's name; when is
-// when it runs out, with the time.
+// two days, after which the iPhone no longer starts the helper; pinkyctl
+// helper install is a command that stays as it is; the button beside it
+// opens how to install it. phone is the iPhone's name; when is when it runs
+// out, with the time.
 func (msgs Messages) CheckHelperSoon(phone string, when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperSoon", map[string]any{"phone": phone, "when": when})
 }
@@ -7963,22 +7971,22 @@ func (msgs Messages) ConnectionNoAnswer() string {
 	return Catalog.Format(msgs.locale, "connectionNoAnswer", nil)
 }
 
-// ConnectionNotInstalled says "The helper isn't installed on this iPhone. Install it once with Xcode (WebDriverAgent's WebDriverAgentRunner, Product…"
+// ConnectionNotInstalled says "The helper isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in Termin…"
 // in the language the app shows.
 //
 // Settings › Phones, an iPhone's connection choice: why the
-// WebDriverAgent helper cannot be used yet, and how to install it.
-// WebDriverAgent, WebDriverAgentRunner and Product › Test are names in
-// Xcode.
+// WebDriverAgent helper cannot be used yet, and how to install it. pinkyctl
+// helper install is a command typed in Terminal (macOS's app, named as
+// Apple names it in the language) and stays as it is.
 func ConnectionNotInstalled() string { return In(i18n.Locale()).ConnectionNotInstalled() }
 
-// ConnectionNotInstalled says "The helper isn't installed on this iPhone. Install it once with Xcode (WebDriverAgent's WebDriverAgentRunner, Product…"
+// ConnectionNotInstalled says "The helper isn't installed on this iPhone. Install it once on a Mac with Xcode: run pinkyctl helper install in Termin…"
 // in the language of msgs.
 //
 // Settings › Phones, an iPhone's connection choice: why the
-// WebDriverAgent helper cannot be used yet, and how to install it.
-// WebDriverAgent, WebDriverAgentRunner and Product › Test are names in
-// Xcode.
+// WebDriverAgent helper cannot be used yet, and how to install it. pinkyctl
+// helper install is a command typed in Terminal (macOS's app, named as
+// Apple names it in the language) and stays as it is.
 func (msgs Messages) ConnectionNotInstalled() string {
 	return Catalog.Format(msgs.locale, "connectionNotInstalled", nil)
 }

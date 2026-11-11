@@ -64,6 +64,9 @@ type SimProvider struct {
 	build    simBuild             // the WebDriverAgent build for the current Xcode
 	starting map[string]time.Time // by UDID: booted by StartVirtual, until listed as booted
 
+	brandMu sync.Mutex
+	brandOf string // the Products folder brandBuild last looked at
+
 	// For tests.
 	findXcodeFn func() (xcode, error)
 	simctlFn    func(ctx context.Context, args ...string) ([]byte, error)
@@ -550,6 +553,7 @@ func (p *SimProvider) Open(ctx context.Context, id string) (driver.Device, error
 	p.mu.Lock()
 	products := p.build.products
 	p.mu.Unlock()
+	p.brandBuild(ctx, x, products)
 	run, err := startRun(x, products, id, filepath.Join(p.Dir, "runs"))
 	if err != nil {
 		if errors.Is(err, errBuildGone) {
@@ -581,6 +585,33 @@ func (p *SimProvider) Open(ctx context.Context, id string) (driver.Device, error
 	d.appsFn = apps.list
 	p.logger().Info("ios simulator: WebDriverAgent started", "udid", id, "took", time.Since(start).Round(time.Millisecond))
 	return &simPhone{WDADevice: d, run: run}, nil
+}
+
+// brandBuild gives the runner in a build Pinky's name and icon
+// (helperbrand.go), once per build and before a run installs it: builds
+// this Pinky makes, and those an earlier Pinky made without. A runner it
+// could not brand works as well, under WebDriverAgent's name.
+func (p *SimProvider) brandBuild(ctx context.Context, x xcode, products string) {
+	p.brandMu.Lock()
+	defer p.brandMu.Unlock()
+	if products == "" || products == p.brandOf {
+		return
+	}
+	p.brandOf = products
+	app := runnerAppIn(products)
+	if app == "" {
+		return
+	}
+	start := time.Now()
+	changed, err := brandRunner(ctx, x, app)
+	switch {
+	case err != nil && ctx.Err() != nil:
+		p.brandOf = "" // the open gave up; the next one tries again
+	case err != nil:
+		p.logger().Warn("ios simulator: could not give the helper Pinky's name and icon", "err", err)
+	case changed:
+		p.logger().Info("ios simulator: gave the helper Pinky's name and icon", "took", time.Since(start).Round(time.Millisecond))
+	}
 }
 
 // errBuildGone is a build that went from its folder.
