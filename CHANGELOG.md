@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1111.9 (2026-11-11)
 
 - Ask Pinky: type a task at the top of Tasks and Pinky does it on the phone by itself with an AI model you choose (an Anthropic- or OpenAI-compatible API, with your own key kept in the system keychain), under your rules and approvals and within step, time and cost limits.
 
