@@ -1,4 +1,4 @@
-package app.pinky.standalone
+package app.pinky.companion
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
@@ -14,8 +14,6 @@ import android.os.SystemClock
 import android.util.Base64
 import android.view.Display
 import android.view.accessibility.AccessibilityNodeInfo
-import app.pinky.companion.Json
-import app.pinky.companion.RequestError
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.CountDownLatch
@@ -26,7 +24,7 @@ import java.util.concurrent.TimeUnit
  * The commands that act on the phone without adb. Each runs on the
  * connection's thread and replies once Android says it is done.
  */
-class Actions(private val service: StandaloneService) {
+class Actions(private val service: PinkyAccessibilityService) {
 
     private val main = Handler(Looper.getMainLooper())
     private val shots = Executors.newSingleThreadExecutor()

@@ -16,11 +16,12 @@ import (
 	"github.com/DIYgod/pinky/internal/update"
 )
 
-// Pinky Companion is the Android app that reads the screen and types for
-// Pinky. It ships inside Pinky; a phone without it, or with an older one,
-// gets an Install card on its page. Nothing is installed without the
-// person's click, except that with Update automatically on Pinky updates
-// an older companion by itself while the phone is free (companionTick in
+// Pinky for Android (Pinky Companion before November 2026; the package is
+// still app.pinky.companion) is the Android app that reads the screen and
+// types for Pinky. It ships inside Pinky; a phone without it, or with an
+// older one, gets an Install card on its page. Nothing is installed without
+// the person's click, except that with Update automatically on Pinky
+// updates an older one by itself while the phone is free (companionTick in
 // update.go), and replaces one signed with another key. Its accessibility
 // service is on only while an agent works on the phone: the phone's apps
 // can see it then, and banking apps refuse to sign in next to one.

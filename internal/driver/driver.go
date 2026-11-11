@@ -1026,7 +1026,7 @@ func (e *packageError) Is(target error) bool { return target == ErrPackage }
 // WorkWatcher is told whether an agent works on the phone: from the start
 // of a task to its end, except while the person is in control. A driver
 // keeps on, only while one does, what agents need and the phone's apps can
-// see: Android's Pinky Companion, whose accessibility service banking apps
+// see: Pinky for Android, whose accessibility service banking apps
 // refuse to sign in next to. The gateway calls AgentWorking right after it
 // opens the device and whenever the answer changes; it must return at once
 // and do any work in the background.
@@ -1517,7 +1517,7 @@ const (
 	CheckADB          = "adb"           // Android: the adb server answers
 	CheckConnection   = "connection"    // the phone is connected and answers
 	CheckAuthorized   = "authorized"    // the phone allows this computer (USB debugging allowed, trusted)
-	CheckCompanion    = "companion"     // Android: Pinky Companion is installed, current and on
+	CheckCompanion    = "companion"     // Android: Pinky for Android is installed, current and on
 	CheckInput        = "input"         // taps, swipes and keys reach the phone
 	CheckScreen       = "screen"        // screenshots and the live picture
 	CheckBackground   = "background"    // agents can work on a background display
@@ -1531,7 +1531,7 @@ const (
 	FixAuthorize        = "authorize"          // allow this computer on the phone (Allow USB debugging, Trust)
 	FixUSBPermission    = "usb_permission"     // Linux: the computer may not open the phone's USB device (udev rules)
 	FixUSBDriver        = "usb_driver"         // Windows: the phone's USB debugging has no driver
-	FixInstallCompanion = "install_companion"  // install Pinky Companion
+	FixInstallCompanion = "install_companion"  // install Pinky for Android
 	FixUpdateCompanion  = "update_companion"   // update it to the version Pinky carries
 	FixTurnOnCompanion  = "turn_on_companion"  // turn its accessibility service on
 	FixInputPermission  = "input_permission"   // the phone refuses input from the computer (Xiaomi's USB debugging (Security settings), ColorOS's permission monitoring)

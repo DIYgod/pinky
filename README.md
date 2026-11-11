@@ -66,7 +66,7 @@ Open Pinky and choose **Add phone**. A phone that is ready shows up in Pinky's w
 
 1. On the phone, turn on USB debugging: in Settings › About phone, tap **Build number** 7 times, then turn on **USB debugging** in Settings › System › Developer options. Some brands name these menus a little differently.
 2. Plug the phone into the computer. When the phone asks whether to allow USB debugging, tap **Allow**. On Android 11 and later you can pair it over Wi-Fi instead, from **Add phone** ([when it fails](#when-pairing-over-wi-fi-fails)). Android 10 has no Wireless debugging: once it is plugged in, **Use Wi-Fi instead…** moves it to Wi-Fi ([below](#phones)).
-3. Pinky offers to install Pinky Companion, its app for the phone, which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
+3. Pinky offers to install Pinky for Android, its app for the phone (it shows there as Pinky), which makes reading the screen many times faster and lets Pinky type in any language. The phone may ask you to allow the install once.
 
 Each phone has a **Checkup**, in the ··· menu under its mirror, that lists what works and how to fix what doesn't, such as a Xiaomi's USB debugging (Security settings) switch.
 
@@ -77,7 +77,7 @@ Taking the phone out? With Tailscale, Pinky reaches it away from home too ([how]
 <table>
 <tr>
 <td width="50%" valign="top"><img src="assets/readme/add-android.png" width="100%" alt="Add phone › Android with a Xiaomi picked: where to turn on Developer options, and the three USB debugging switches"><br><sub><b>Add phone › Android</b>, with a Xiaomi picked.</sub></td>
-<td width="50%" valign="top"><img src="assets/readme/checkup.png" width="100%" alt="A Redmi's checkup: adb, the connection and debugging pass; Pinky Companion and tapping need fixing, with the steps"><br><sub>A Redmi's <b>Checkup</b>, with two things to fix.</sub></td>
+<td width="50%" valign="top"><img src="assets/readme/checkup.png" width="100%" alt="A Redmi's checkup: adb, the connection and debugging pass; Pinky for Android and tapping need fixing, with the steps"><br><sub>A Redmi's <b>Checkup</b>, with two things to fix.</sub></td>
 </tr>
 </table>
 
@@ -172,7 +172,7 @@ No phone at hand? Start an iOS Simulator or an Android emulator in **Add phone �
 
 ### Phones
 
-- **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Its companion app, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). Its accessibility service is on only while an agent works on the phone, as banking apps refuse to run next to one ([why](#faq)). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked. Text that an app draws without describing it to the accessibility tree, as in mini-programs and other web pages inside super-apps, games and maps, is read from the screen's pixels (OCR) on macOS and Windows, so agents can read it and tap it. Pinky reads a blocked app this way only once you allow it for the task, never a locked phone, and keeps no picture.
+- **Android:** connected over USB or Wi-Fi ([above](#android)). Pinky works over adb and a bundled scrcpy server. Pinky for Android, its app for the phone, which ships with Pinky, reads the screen in about 70 ms instead of 2 s and types any language without the clipboard: the phone's page offers to install it (the phone may ask you to allow it once). Its accessibility service is on only while an agent works on the phone, as banking apps refuse to run next to one ([why](#faq)). On Android 13 and later, agents work on a background display, so the phone's own screen can stay off and locked. Text that an app draws without describing it to the accessibility tree, as in mini-programs and other web pages inside super-apps, games and maps, is read from the screen's pixels (OCR) on macOS and Windows, so agents can read it and tap it. Pinky reads a blocked app this way only once you allow it for the task, never a locked phone, and keeps no picture.
 - **Wi-Fi on Android 10:** Android 10 has no Wireless debugging. Plug the phone in and choose **Use Wi-Fi instead…** in the ⋯ menu under its picture (or in Settings › Phones): Pinky has the phone's adb listen on the network (`adb tcpip`, port 5555), connects to it at its Wi-Fi address and says when you can unplug it. It connects again by itself when the phone is back on the network, also at a new address. While it is on, any computer on the same network can try to connect to the phone: if the phone asks **Allow USB debugging?** when you are not connecting it yourself, tap **Cancel**, and use it only on Wi-Fi you trust. It lasts until the phone restarts; then plug it in once and choose **Use Wi-Fi again**. **Stop the Wi-Fi connection** in the same menu turns it off ([details](docs/away-from-home.md#wi-fi-without-wireless-debugging)).
 - **iPhone:** connected over USB or Wi-Fi ([above](#iphones-and-ipads-over-wi-fi)) and prepared by Pinky ([above](#iphone)); iPads work the same way. What Pinky can do depends on the iOS version and on how Pinky connects, which you can choose for each iPhone in Settings › Phones (Automatic picks by version, as below):
 
@@ -196,7 +196,7 @@ No phone at hand? Start an iOS Simulator or an Android emulator in **Add phone �
 - **App logs:** an agent testing an app can read that app's own log lines and crash reports, to see why it failed. The first time in a task, Pinky asks you (**Allow for this task** covers the rest of it, and **More options › Always allow** stops asking for that agent, phone and app until you take it back in Settings › Safety), unless the app is a development build (a debug build on Android, an app Xcode installed on an iPhone). Agents get only that app's lines, never other apps' or the system's, and never the logs of blocked, banking, wallet or password-manager apps, the phone's own apps or Pinky's. History keeps how many lines were read, not the lines. An iPhone keeps no log history Pinky can read, so there Pinky listens from the agent's first read until the task ends ([details](docs/mcp.md#phone_logs)).
 - **Testing an app:** agents can flip the switches developers test with: turn the screen, switch between light and dark appearance, simulate a location, and open an app in another language and region. These change the phone's settings, so on a real phone you approve them first (**Allow for this task** covers the rest of the task, and **More options › Always allow** stops asking for that agent on that phone until you take it back in Settings › Safety); on emulators and Simulators they go through at once unless you chose to approve more than payments. Pinky puts everything back when the task ends, and leaves alone what you changed yourself meanwhile. Rotation and appearance work on Android and on iPhones with the helper; a simulated location on Android emulators, iOS Simulators and iPhones with the helper; another language on Android 13 and later and on iPhones ([details](docs/mcp.md#phone_device)). You can turn the screen yourself too, with **Rotate** in the ⋯ menu under its picture (on an iPhone or iPad, the WebDriverAgent helper installed: on iOS 27 Pinky moves to it for the turn, and agents' turns and pinches move their task to it too): like a touch on the picture, it pauses an agent working on the phone's screen, but not one working on a background display. Rotation was tried on a Samsung Galaxy A12 (Android 13), a Pixel 9a (Android 17), an iPhone 12 Pro Max (iOS 18), an iPhone Air (iOS 27) and an iPad mini (iPadOS 27); the rest on an Android emulator and an iOS Simulator, not yet on a phone.
 - **Removing a phone:** **Remove this phone…** in the phone's ⋯ menu (also on its page while it is offline, on its tile in All phones, in its right-click menu in the sidebar and in Settings › Phones) takes it off the list and deletes its saved PIN and its settings. Its tasks, screenshots and recordings stay in Activity unless you tick the box to delete them too, and a task running on it stops. A phone on a cable comes back at once, as a new phone, until you unplug it. A phone on Wi-Fi is disconnected and stays off the list, even when adb connects it again by itself; to add it back, pair it again in Add phone or plug it in. An iPhone or iPad on Wi-Fi stays off the list until you plug it in. Pinky does not unpair the phone from your computer: its USB or wireless debugging pairing, or the iPhone's trust, stays for other apps ([details](docs/notes/gateway.md#removing-a-phone)).
-- **Pausing a phone:** **Pause connection** in the phone's ⋯ menu (also in its right-click menu in the sidebar and on its tile in All phones) keeps the phone in Pinky but stops its screen stream and Pinky's connection to it: an iPhone's tunnel and helper, an Android phone's scrcpy and companion connection. A task on it ends, agents are told it is paused, and Pinky does not reconnect it over Wi-Fi. It stays paused when Pinky restarts. Resume it with **Resume** on its page or **Resume connection** in its right-click menu, or plug it in by cable. A phone paused while plugged in stays paused until you unplug it and plug it in again, so pausing a phone that charges does not undo itself. The phone page's header says when the phone is streaming its screen to Pinky; an iPhone stops 30 seconds after you last look at it or use it. All phones shows an iPhone that no task works on with its last picture rather than live, so leaving Pinky there does not keep the iPhone awake or sharing its screen ([details](docs/notes/gateway.md#pausing-a-phone)).
+- **Pausing a phone:** **Pause connection** in the phone's ⋯ menu (also in its right-click menu in the sidebar and on its tile in All phones) keeps the phone in Pinky but stops its screen stream and Pinky's connection to it: an iPhone's tunnel and helper, an Android phone's scrcpy and its connection to Pinky for Android. A task on it ends, agents are told it is paused, and Pinky does not reconnect it over Wi-Fi. It stays paused when Pinky restarts. Resume it with **Resume** on its page or **Resume connection** in its right-click menu, or plug it in by cable. A phone paused while plugged in stays paused until you unplug it and plug it in again, so pausing a phone that charges does not undo itself. The phone page's header says when the phone is streaming its screen to Pinky; an iPhone stops 30 seconds after you last look at it or use it. All phones shows an iPhone that no task works on with its last picture rather than live, so leaving Pinky there does not keep the iPhone awake or sharing its screen ([details](docs/notes/gateway.md#pausing-a-phone)).
 
 ### Phones away from home
 
@@ -219,7 +219,7 @@ A task stops at 100 steps, 20 minutes or US$2, whichever comes first; you can ch
 
 ### Updates
 
-Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free; its accessibility service stays off until the next task. A Pinky Companion signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you; on a phone that asks before installing apps over USB, the phone's page says why and waits for your **Update**, and when a phone refuses them, a card in the sidebar tells you once about each new version, to install by hand ([how](#install-companion-by-hand)). After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md), or its Chinese version, [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md), when Pinky is in Chinese).
+Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky for Android on phones that are free; its accessibility service stays off until the next task. A copy of Pinky for Android signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you; on a phone that asks before installing apps over USB, the phone's page says why and waits for your **Update**, and when a phone refuses them, a card in the sidebar tells you once about each new version, to install by hand ([how](#install-companion-by-hand)). After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md), or its Chinese version, [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md), when Pinky is in Chinese).
 
 - **macOS:** Pinky.app replaces itself after checking the download's checksum, that it is signed by Pinky's developer and that Apple notarized it, and goes back to the old version if the new one does not start. The Homebrew cask's copy updates itself the same way, and `brew upgrade` leaves it alone while it is current. A copy run from the disk image or from a folder you cannot write to says how to update it instead.
 - **Windows:** a Pinky that its installer installed runs the new installer quietly, after checking its checksum, starts the new version and goes back to the old one if that does not start. The portable copy downloads the installer for you.
@@ -276,38 +276,38 @@ Not through Pinky. Screenshots, recordings and history stay on your computer, fo
 <details>
 <summary><b>What does Pinky install on my phone?</b></summary>
 
-On Android, Pinky Companion, when you click Install; Pinky keeps it up to date and turns its accessibility service on only while an agent works ([why](#faq)). On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does. On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from a Mac with Xcode (**Install the helper** in Pinky, or `pinkyctl helper install`, [how](docs/notes/ios.md#installing-the-webdriveragent-helper)) and which shows on the phone as Pinky Helper.
+On Android, Pinky for Android, when you click Install; it shows on the phone as Pinky (Pinky Companion before November 2026). Pinky keeps it up to date and turns its accessibility service on only while an agent works ([why](#faq)). On an iPhone, no app on iOS 27 and later: Pinky mounts Apple's developer disk image, as Xcode does. On iOS 17.4 to 26, the WebDriverAgent helper, which you install once from a Mac with Xcode (**Install the helper** in Pinky, or `pinkyctl helper install`, [how](docs/notes/ios.md#installing-the-webdriveragent-helper)) and which shows on the phone as Pinky Helper.
 
 </details>
 
 <a id="install-companion-by-hand"></a>
 <details>
-<summary><b>How do I install Pinky Companion by hand?</b></summary>
+<summary><b>How do I install Pinky for Android by hand?</b></summary>
 
-When a phone won't let the computer install apps over USB, such as a Xiaomi without a SIM card, which can't turn on Install via USB, you can install Pinky Companion yourself. Its APK, `pinky-companion.apk`, comes with Pinky:
+When a phone won't let the computer install apps over USB, such as a Xiaomi without a SIM card, which can't turn on Install via USB, you can install Pinky for Android yourself. Its APK, `pinky-android.apk`, comes with Pinky:
 
-- **macOS:** inside the app, at `Pinky.app/Contents/Resources/pinky-companion.apk`: in Applications, right-click Pinky and choose **Show Package Contents**.
+- **macOS:** inside the app, at `Pinky.app/Contents/Resources/pinky-android.apk`: in Applications, right-click Pinky and choose **Show Package Contents**.
 - **Windows:** next to `Pinky.exe` in Pinky's folder.
 - **Linux:** next to `pinky` in the folder you unpacked the `.tar.gz` into, or in `/opt/pinky/` if you installed the `.deb`.
 
-When an install over USB fails, **Show pinky-companion.apk** on the phone's page shows you the file. Copy it to the phone, over the cable or through a chat app for example, and open it there; the phone may ask you first to let the app you open it with install apps. Pinky recognizes the copy you installed, as it is the same app with the same signature, and stops offering to install it.
+When an install over USB fails, **Show pinky-android.apk** on the phone's page shows you the file. Copy it to the phone, over the cable or through a chat app for example, and open it there; the phone may ask you first to let the app you open it with install apps. Pinky recognizes the copy you installed, as it is the same app with the same signature, and stops offering to install it.
 
-On a Xiaomi, Redmi or POCO phone, Pinky still needs **USB debugging (Security settings)** in Developer options to tap and type, and to turn on Pinky Companion's accessibility service; restart the phone after you turn it on. Like Install via USB, that switch checks with Xiaomi online and may ask for a SIM card. Without it, Pinky Companion installs but can't come on, and Pinky can't tap or type on the phone.
+On a Xiaomi, Redmi or POCO phone, Pinky still needs **USB debugging (Security settings)** in Developer options to tap and type, and to turn on the accessibility service of Pinky for Android; restart the phone after you turn it on. Like Install via USB, that switch checks with Xiaomi online and may ask for a SIM card. Without it, Pinky for Android installs but can't come on, and Pinky can't tap or type on the phone.
 
-Pinky Companion gets a new version only when its own code changes, not with every Pinky update. With **Update automatically** on, Pinky tries once to install a new version over USB; when the phone refuses, a card in the sidebar tells you, with **Show pinky-companion.apk**, and Pinky doesn't try that version again. Install the new `pinky-companion.apk` the same way. With **Update automatically** off, the phone's page offers the new version when you open it.
+Pinky for Android gets a new version only when its own code changes, not with every Pinky update. With **Update automatically** on, Pinky tries once to install a new version over USB; when the phone refuses, a card in the sidebar tells you, with **Show pinky-android.apk**, and Pinky doesn't try that version again. Install the new `pinky-android.apk` the same way. With **Update automatically** off, the phone's page offers the new version when you open it.
 
 </details>
 
 <details>
-<summary><b>Will banking or other apps notice Pinky Companion?</b></summary>
+<summary><b>Will banking or other apps notice Pinky for Android?</b></summary>
 
-While its accessibility service is on, they can. Malware abuses accessibility services, so many banking apps refuse to sign in while an app from outside an app store has one turned on: in Malaysia (Maybank, CIMB, HSBC and the other members of the Association of Banks in Malaysia, since 2024) and in Singapore (DBS, OCBC and UOB, since 2023) among others. Pinky Companion is such an app, as Pinky installs it over USB. Apps such as WeChat, Douyin and Xiaohongshu can see the service too and watch for automated use; we know of no report that they flagged Pinky Companion, but letting an agent use them may be against their terms.
+While its accessibility service is on, they can. Malware abuses accessibility services, so many banking apps refuse to sign in while an app from outside an app store has one turned on: in Malaysia (Maybank, CIMB, HSBC and the other members of the Association of Banks in Malaysia, since 2024) and in Singapore (DBS, OCBC and UOB, since 2023) among others. Pinky for Android is such an app, as Pinky installs it over USB. Apps such as WeChat, Douyin and Xiaohongshu can see the service too and watch for automated use; we know of no report that they flagged Pinky for Android, but letting an agent use them may be against their terms.
 
 Apps can also see that USB debugging or Wireless debugging is on, which Pinky needs on every Android phone; some apps, banking apps among them, warn you or refuse to run while it is. It stays on for as long as you use the phone with Pinky.
 
 So Pinky turns the service on only while an agent works on the phone: as a task starts, and off again a few seconds after the task ends or you take over the phone, or a minute after the agent's last step. The rest of the time it is off, and those apps work as usual. While an agent works, even on the phone's background display, they see it: to use one of them then, click **Take over** in Pinky first, or end the task.
 
-To keep Pinky from turning the service on at all, uninstall Pinky Companion on the phone (Android's Settings › Apps). Pinky works without it, only more slowly: it reads a screen in about 2 s instead of 70 ms, and types text other than plain English through the phone's clipboard. **Not now** on the phone's page puts away Pinky's offer to install it again.
+To keep Pinky from turning the service on at all, uninstall Pinky for Android on the phone (Android's Settings › Apps › Pinky). Pinky works without it, only more slowly: it reads a screen in about 2 s instead of 70 ms, and types text other than plain English through the phone's clipboard. **Not now** on the phone's page puts away Pinky's offer to install it again.
 
 </details>
 
@@ -334,11 +334,11 @@ Pinky is one Go binary without cgo; MyGo (`go tool mygo build`) packages it for 
 ### macOS
 
 ```sh
-make companion   # optional: the Android companion APK (Android SDK and JDK)
+make companion   # optional: the APK of Pinky for Android (Android SDK and JDK)
 make app         # build/pinky/darwin-<arch>/Pinky.app and pinky-<version>-<arch>.dmg
 ```
 
-`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, with CMake installed (`brew install cmake`) also builds Pinky's own adb (`make adb`) into `Contents/Helpers`, adds the companion APK when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize. `make release` signs with the Developer ID in `RELEASE_SIGN` and notarizes the `.dmg` (`make notarize`: submit, wait, staple), with the notarytool profile in `NOTARY_PROFILE` (`pinky-notary`), which you store once with `xcrun notarytool store-credentials pinky-notary --apple-id <Apple ID> --team-id <team>`. Releases themselves are built, signed and published by a workflow for both kinds of Mac, Windows and Linux; see [docs/RELEASING.md](docs/RELEASING.md).
+`make app` builds a minimal LGPL FFmpeg 9 from source the first time (`make ffmpeg`, about a minute: the H.264 and HEVC decoders with VideoToolbox), puts it in `Pinky.app/Contents/Frameworks`, with CMake installed (`brew install cmake`) also builds Pinky's own adb (`make adb`) into `Contents/Helpers`, adds the APK of Pinky for Android when it is built (`COMPANION_APK=path` picks another), signs the app and makes the `.dmg` from the finished app. Install from the `.dmg` by dragging Pinky to Applications. The app is signed ad hoc unless `macos.signingIdentity` in `cmd/pinky/mygo.json` (or `make app MACOS_SIGN=…`) names a Developer ID; an ad-hoc signed app runs on the Mac that built it, and another Mac's Gatekeeper refuses it. `make app` does not notarize. `make release` signs with the Developer ID in `RELEASE_SIGN` and notarizes the `.dmg` (`make notarize`: submit, wait, staple), with the notarytool profile in `NOTARY_PROFILE` (`pinky-notary`), which you store once with `xcrun notarytool store-credentials pinky-notary --apple-id <Apple ID> --team-id <team>`. Releases themselves are built, signed and published by a workflow for both kinds of Mac, Windows and Linux; see [docs/RELEASING.md](docs/RELEASING.md).
 
 To try your build, open it (`open build/pinky/darwin-arm64/Pinky.app`) and connect your agent to it with Connect in its Settings › Agents, which uses this build's path, or for Claude Code from the checkout:
 
@@ -372,10 +372,10 @@ The window needs GTK 3 and EGL (`libgtk-3-0`, `libegl1`; Mesa draws it in softwa
 
 ```sh
 make check          # build (CGO_ENABLED=0), vet, test
-make app            # Pinky.app with FFmpeg and the companion, and a .dmg (macOS)
+make app            # Pinky.app with FFmpeg and Pinky for Android, and a .dmg (macOS)
 make ffmpeg         # FFmpeg 9 for Pinky.app, in build/ffmpeg
 make adb            # Pinky's own adb for Pinky.app, in build/adb (needs CMake)
-make companion      # the Android companion APK (Android SDK and JDK needed)
+make companion      # the APK of Pinky for Android (Android SDK and JDK needed)
 make e2e            # a binary with MyGo's automation socket, for UI checks
 scripts/smoke.sh    # the fake gateway, pinky devices and a task through pinky mcp
 make dist           # a dry run of a release, in dist/<version>/ (docs/RELEASING.md)
@@ -403,7 +403,7 @@ internal/update/              new versions: the feed, checks, the swap, What's n
 internal/video/, ui/          the desktop client (MyGo native UI, FFmpeg decoding)
 internal/telemetry/           usage statistics, crash reports and feedback
 worker/                       the Cloudflare Worker that receives usage statistics and crash reports
-android/companion/            the Android companion app (Kotlin)
+android/companion/            Pinky for Android, the app for the phone (Kotlin)
 scripts/                      device locks and an MCP call script for checks
 docs/                         design, agent guide, MCP reference and notes
 ```
@@ -416,7 +416,7 @@ docs/                         design, agent guide, MCP reference and notes
 - [Phones away from home](docs/away-from-home.md)
 - [Working on Pinky](docs/WORKING.md)
 - [Usage statistics, crash reports and feedback](docs/TELEMETRY.md)
-- Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [companion](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md), [updates](docs/notes/updates.md), [telemetry](docs/notes/telemetry.md), [app logs](docs/notes/app-logs.md)
+- Notes: [integration](docs/notes/integration.md), [gateway](docs/notes/gateway.md), [Android](docs/notes/android.md), [Pinky for Android](docs/notes/companion.md), [iOS](docs/notes/ios.md), [client](docs/notes/client.md), [updates](docs/notes/updates.md), [telemetry](docs/notes/telemetry.md), [app logs](docs/notes/app-logs.md)
 - [Changelog](CHANGELOG.md)
 
 ## Community

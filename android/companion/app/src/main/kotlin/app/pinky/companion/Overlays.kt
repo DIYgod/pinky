@@ -1,4 +1,4 @@
-package app.pinky.standalone
+package app.pinky.companion
 
 import android.content.Intent
 import android.graphics.Color
@@ -20,7 +20,6 @@ import android.view.WindowManager
 import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.LinearLayout
 import android.widget.TextView
-import app.pinky.companion.R
 import org.json.JSONObject
 import java.io.Closeable
 
@@ -35,7 +34,7 @@ import java.io.Closeable
  * screen; and the views are accessibilityDataSensitive, so on Android 15
  * and later they also drop touches an accessibility service injects.
  */
-class Overlays(private val service: StandaloneService) {
+class Overlays(private val service: PinkyAccessibilityService) {
 
     private val wm = service.getSystemService(WindowManager::class.java)
     private val main = Handler(Looper.getMainLooper())
@@ -85,11 +84,11 @@ class Overlays(private val service: StandaloneService) {
             agent.optBoolean("running") -> {
                 ended = null
                 val line = if (need != null) {
-                    service.getString(R.string.standalone_waiting)
+                    service.getString(R.string.phone_waiting)
                 } else {
-                    lastStep(st) ?: service.getString(R.string.standalone_starting)
+                    lastStep(st) ?: service.getString(R.string.phone_starting)
                 }
-                showPill(service.getString(R.string.standalone_working, line), running = true)
+                showPill(service.getString(R.string.phone_working, line), running = true)
             }
             else -> {
                 val key = agent.optString("task") + agent.optLong("seconds")
@@ -122,21 +121,21 @@ class Overlays(private val service: StandaloneService) {
         w.root.keepScreenOn = running
         w.buttons.removeAllViews()
         if (running) {
-            w.buttons.addView(button(service.getString(R.string.standalone_stop), danger = true) { b ->
+            w.buttons.addView(button(service.getString(R.string.phone_stop), danger = true) { b ->
                 b.isEnabled = false
                 CoreClient.send(CoreClient.cmd("stop")) { err -> main.post { if (err != null) b.isEnabled = true } }
             })
         } else {
-            w.buttons.addView(button(service.getString(R.string.standalone_close)) { hidePill() })
+            w.buttons.addView(button(service.getString(R.string.phone_close)) { hidePill() })
         }
     }
 
     private fun showEnded(agent: JSONObject, key: String) {
         val summary = agent.optString("summary")
         val text = when (agent.optString("end")) {
-            "stopped" -> service.getString(R.string.standalone_ended_stopped)
-            "done" -> service.getString(R.string.standalone_ended_done, summary)
-            else -> service.getString(R.string.standalone_ended_other, summary)
+            "stopped" -> service.getString(R.string.phone_ended_stopped)
+            "done" -> service.getString(R.string.phone_ended_done, summary)
+            else -> service.getString(R.string.phone_ended_other, summary)
         }
         showPill(text, running = false)
         ended = key
@@ -193,14 +192,14 @@ class Overlays(private val service: StandaloneService) {
         }
         w.text.text = need.optString("title")
         val detail = listOf(need.optString("detail"), need.optString("app"), need.optString("rule").let {
-            if (it.isEmpty()) "" else service.getString(R.string.standalone_rule, it)
+            if (it.isEmpty()) "" else service.getString(R.string.phone_rule, it)
         }).filter { it.isNotEmpty() }.joinToString(" · ")
         w.extra?.text = detail
         w.extra?.visibility = if (detail.isEmpty()) View.GONE else View.VISIBLE
         val deadline = need.optLong("deadline_ms")
         if (deadline > 0) {
             val left = ((deadline - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
-            w.deadline?.text = service.getString(R.string.standalone_deadline, left)
+            w.deadline?.text = service.getString(R.string.phone_deadline, left)
             w.deadline?.visibility = View.VISIBLE
         } else {
             w.deadline?.visibility = View.GONE
@@ -229,15 +228,15 @@ class Overlays(private val service: StandaloneService) {
             }
         }
         if (need.optString("kind") == "approval") {
-            w.buttons.addView(button(service.getString(R.string.standalone_deny), danger = true, onClick = decide("deny")))
+            w.buttons.addView(button(service.getString(R.string.phone_deny), danger = true, onClick = decide("deny")))
             if (need.optBoolean("allow_task")) {
-                w.buttons.addView(button(service.getString(R.string.standalone_allow_task), onClick = decide("allow_task")))
+                w.buttons.addView(button(service.getString(R.string.phone_allow_task), onClick = decide("allow_task")))
             }
-            w.buttons.addView(button(service.getString(R.string.standalone_allow_once), primary = true, onClick = decide("allow_once")))
+            w.buttons.addView(button(service.getString(R.string.phone_allow_once), primary = true, onClick = decide("allow_once")))
         } else {
             // A handoff: the person does the step, then hands back.
-            w.buttons.addView(button(service.getString(R.string.standalone_decline), danger = true, onClick = decide("deny")))
-            w.buttons.addView(button(service.getString(R.string.standalone_hand_back), primary = true, onClick = decide("allow_once")))
+            w.buttons.addView(button(service.getString(R.string.phone_decline), danger = true, onClick = decide("deny")))
+            w.buttons.addView(button(service.getString(R.string.phone_hand_back), primary = true, onClick = decide("allow_once")))
         }
     }
 
@@ -278,7 +277,7 @@ class Overlays(private val service: StandaloneService) {
             setPadding(px(18), px(16), px(18), px(12))
         }
         val label = TextView(service).apply {
-            text = service.getString(R.string.standalone_asks)
+            text = service.getString(R.string.phone_asks)
             setTextColor(MUTED)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
         }

@@ -1,6 +1,6 @@
 # Companion protocol
 
-The Android companion app (`android/companion`, package `app.pinky.companion`) serves this protocol from its accessibility service. The Go client is `internal/driver/android/companion`. This page is the reference for both; [companion.md](companion.md) covers the app, the client and test results.
+Pinky's Android app (`android/companion`, package `app.pinky.companion`; Pinky Companion until 2026-11-11) serves this protocol from its accessibility service. The Go client is `internal/driver/android/companion`. This page is the reference for both; [companion.md](companion.md) covers the app, the client and test results.
 
 Protocol version: **1**. Additive changes (new commands, new fields, new event kinds) keep the number; incompatible changes bump it. Clients read `protocol` from `ping`, and `features` for additions they must not assume an older app has: an older app ignores parameters it does not know, so a `set_text` with a `display` would write on the main display there.
 
@@ -12,6 +12,7 @@ Changes since the first version, all additive:
 | 2026-11-07, round 3 | `config` values are kept until the service is turned off, across restarts | none: an older app forgets them when its service restarts; `ping` shows the current values |
 | 2026-11-07, round 3 | `region` on windows; `tree` walks an input method window that covers the screen like a sheet even without `ime` | none: an older app leaves `region` out, and a client that reads it treats its absence as "the bounds" |
 | 2026-11-09 | `set_text` writes through the field's input connection or pastes when the app refuses `ACTION_SET_TEXT` (GitHub issue #31), waits until the field shows the text, reports `method` and `password`, and runs `submit` only when the text landed | `set_text_fallback` (the input connection from Android 13; before, the paste only) |
+| 2026-11-11 | `on_phone` in `ping`; the `on_phone` command; in builds that run tasks on the phone (debug builds for now, [android-app.md](android-app.md)), the commands that act: `gesture`, `global`, `screenshot`, `launch` and `apps` | `gesture`, `global`, `screenshot`, `launch`, `apps`, `own_ui` and `on_phone`, only in those builds |
 
 ## Transport
 
@@ -60,6 +61,7 @@ Every command that reads or writes the screen takes `display`, an Android displa
 | `displays` | Ids of displays that have accessibility windows (always `[0]` before Android 11) |
 | `connections` | Open connections, including this one |
 | `include_not_important`, `idle_disable_ms` | Current `config` values |
+| `on_phone` | Whether on-phone mode is on: Pinky runs tasks on this phone by itself and keeps the service on ([android-app.md](android-app.md#on-phone-mode)). Absent in apps built before 2026-11-11. |
 
 ### `tree`
 
@@ -211,6 +213,19 @@ Changes the service's settings until the service is turned off. The app saves th
 
 The result holds the current values.
 
+### Commands for Pinky on the phone
+
+Only builds that run tasks on the phone serve these ([android-app.md](android-app.md#what-is-in-which-build)); `ping` lists each in `features`. Elsewhere the commands that act give `unknown_command`, and `on_phone` gives `unsupported`. Pinky on a computer does not use them: adb does its touching.
+
+- `gesture`: `strokes`, 1 to Android's limit (20 on current versions), each `{"points": [[x, y], …], "start_ms": 0, "duration_ms": 50}`, all one gesture: a tap is one point for 50 ms, a long press one point for 800 ms, a swipe two points or more. `display` as elsewhere (Android 11+ for displays other than 0). Replies once Android says the gesture is done: `took_ms`. `cancelled` when something interrupted it, such as a touch on the screen.
+- `global`: `action` is `back`, `home`, `recents`, `notifications` or `enter` (the keyboard's action key of the focused field, Android 11+). There is no power or lock action. Result: `took_ms`.
+- `screenshot` (Android 11+): `display`, `format` (`jpeg` or `png`, default `jpeg`), `quality` (1–100, default 80). Result: `width`, `height`, `format`, `capture_ms`, `encode_ms`, `bytes` and `data` (base64). `secure` when an app on the screen forbids screenshots, `busy` when Android kept refusing them as too frequent.
+- `launch`: `package`. Starts the app's launcher activity. Result: `package`, `took_ms`.
+- `apps`: the launchable apps, `apps`: `[{"package", "label", "system"}]`.
+- `on_phone`: `enabled`. Turns on-phone mode on or off. Only the app's own uid may send it; adb gets `forbidden`. Result: `on_phone`.
+
+A `gesture` with a point on Pinky's pill, card or one of its windows, a `launch` of Pinky itself, and an `enter` into a field of Pinky's give `own_ui`, with nothing done.
+
 ## Error codes
 
 | Code | Meaning |
@@ -221,9 +236,13 @@ The result holds the current values.
 | `not_editable` | The target node is not editable |
 | `disabled` | The target node is disabled |
 | `unsupported` | The request cannot work here: append to a password field, a display other than 0 before Android 11, or a display Android keeps from accessibility services |
-| `action_failed` | The app refused `ACTION_SET_TEXT` |
+| `action_failed` | The app refused `ACTION_SET_TEXT`, or Android refused a gesture, a global action or a screenshot |
 | `timeout` | The request took longer than `timeout_ms` |
-| `forbidden` | The peer is not adb, root or the app itself |
+| `forbidden` | The peer is not adb, root or the app itself, or, for `on_phone`, not the app itself |
+| `own_ui` | The action would touch Pinky's own controls or screens; nothing was done |
+| `cancelled` | A gesture was interrupted |
+| `secure` | An app on the screen forbids screenshots |
+| `busy` | Android kept refusing screenshots as too frequent |
 | `internal` | An unexpected exception; the message has its text |
 
 The Go client maps `not_found` to `driver.ErrNotFound` and `unsupported` to `driver.ErrUnsupported`.
@@ -232,5 +251,5 @@ The Go client maps `not_found` to `driver.ErrNotFound` and `unsupported` to `dri
 
 - Pinky turns the service on by adding only its own component, `app.pinky.companion/.PinkyAccessibilityService`, to `enabled_accessibility_services`, and off by removing it again; see [companion.md](companion.md#turning-the-service-on-and-off).
 - When the service connects it binds the socket (retrying for up to 5 seconds if a previous instance still holds the name); when Android unbinds it, the socket closes and every connection ends.
-- After `idle_disable_ms` without any client the service turns itself off, unless `config` set it to 0. The count goes on when Android only rebinds the service, and it is checked again every time it does. This is a backstop for a gateway that crashed or lost the phone while the service was on for a task: while an agent works, Pinky keeps an event subscription open, and it turns the service off itself when the agent stops.
+- After `idle_disable_ms` without any client the service turns itself off, unless `config` set it to 0. The count goes on when Android only rebinds the service, and it is checked again every time it does. This is a backstop for a gateway that crashed or lost the phone while the service was on for a task: while an agent works, Pinky keeps an event subscription open, and it turns the service off itself when the agent stops. Only clients from other uids count: the app's own connections (the core, its screens) neither keep the service on nor count as activity. In on-phone mode the service stays on whatever `idle_disable_ms` says.
 - `uiautomator dump` (and any other UiAutomation client that does not ask to keep services) makes Android unbind every accessibility service for as long as it runs, so the companion restarts with an empty cache around each dump. Do not mix the two.

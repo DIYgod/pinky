@@ -1536,51 +1536,51 @@
   },
   "checkCompanionMissing": "Not installed. With it, Pinky reads the screen in about 70 ms instead of 2 s, and types any language without the clipboard.",
   "@checkCompanionMissing": {
-    "description": "The checkup, Pinky Companion: not installed; an Install button follows."
+    "description": "The checkup, Pinky for Android: not installed; an Install button follows."
   },
-  "checkCompanionNone": "Pinky couldn't tell whether its companion app is installed.",
+  "checkCompanionNone": "Pinky couldn't tell whether it is installed.",
   "@checkCompanionNone": {
-    "description": "The checkup, Pinky Companion: the check failed."
+    "description": "The checkup, Pinky for Android: the check failed."
   },
   "checkCompanionOff": "Installed, but Pinky couldn't turn on its accessibility service.",
   "@checkCompanionOff": {
-    "description": "The checkup, Pinky Companion: its service did not come on the last time Pinky tried; a Turn on button follows."
+    "description": "The checkup, Pinky for Android: its service did not come on the last time Pinky tried; a Turn on button follows."
   },
-  "checkCompanionOffHuawei": "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky Companion, and allow it to run in the background.",
+  "checkCompanionOffHuawei": "If it keeps turning off: search Settings for App launch, turn off Manage automatically for Pinky, and allow it to run in the background.",
   "@checkCompanionOffHuawei": {
-    "description": "The checkup, Pinky Companion, on a HUAWEI or HONOR phone whose app's service is off. App launch and Manage automatically are Huawei's names: use those of its Simplified Chinese settings."
+    "description": "The checkup, Pinky for Android, on a HUAWEI or HONOR phone whose app's service is off. App launch and Manage automatically are Huawei's names: use those of its Simplified Chinese settings. Pinky is the app's name on the phone."
   },
   "checkCompanionOffOppo": "If it keeps turning off: in Developer options, turn on Disable permission monitoring; in the app's battery settings, allow background activity.",
   "@checkCompanionOffOppo": {
-    "description": "The checkup, Pinky Companion, on an OPPO, OnePlus or realme phone whose app's service is off. Use ColorOS's Simplified Chinese names."
+    "description": "The checkup, Pinky for Android, on an OPPO, OnePlus or realme phone whose app's service is off. Use ColorOS's Simplified Chinese names."
   },
-  "checkCompanionOffOther": "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky Companion, tap ⋮ › Allow restricted settings, then turn it on again.",
+  "checkCompanionOffOther": "If it keeps turning off: on Android 13 and later, open Settings › Apps › Pinky, tap ⋮ › Allow restricted settings, then turn it on again.",
   "@checkCompanionOffOther": {
-    "description": "The checkup, Pinky Companion, on other phones whose app's service is off. Allow restricted settings is Android's own name: use that of Android's Simplified Chinese settings."
+    "description": "The checkup, Pinky for Android, on other phones whose app's service is off. Allow restricted settings is Android's own name: use that of Android's Simplified Chinese settings. Pinky is the app's name on the phone."
   },
-  "checkCompanionOffVivo": "If it keeps turning off: in Settings › Battery › Background power consumption management, choose Pinky Companion and don't restrict it, and allow it to start by itself.",
+  "checkCompanionOffVivo": "If it keeps turning off: in Settings › Battery › Background power consumption management, choose Pinky and don't restrict it, and allow it to start by itself.",
   "@checkCompanionOffVivo": {
-    "description": "The checkup, Pinky Companion, on a vivo phone whose app's service is off: vivo turns off the service of apps that are not from its store. The Chinese menu names could not be confirmed, so they are described rather than quoted."
+    "description": "The checkup, Pinky for Android, on a vivo phone whose app's service is off: vivo turns off the service of apps that are not from its store. The Chinese menu names could not be confirmed, so they are described rather than quoted. Pinky is the app's name on the phone."
   },
   "checkCompanionOffXiaomi": "If it keeps turning off: in the app's settings, turn on Autostart and set Battery saver to No restrictions.",
   "@checkCompanionOffXiaomi": {
-    "description": "The checkup, Pinky Companion, on a Xiaomi phone whose app's service is off: Xiaomi's cleaners stop apps, which turns their service off. Autostart and Battery saver are Xiaomi's names: use those of its Simplified Chinese settings."
+    "description": "The checkup, Pinky for Android, on a Xiaomi phone whose app's service is off: Xiaomi's cleaners stop apps, which turns their service off. Autostart and Battery saver are Xiaomi's names: use those of its Simplified Chinese settings."
   },
   "checkCompanionOutdated": "An older version is installed; Pinky carries a newer one.",
   "@checkCompanionOutdated": {
-    "description": "The checkup, Pinky Companion: outdated; an Update button follows."
+    "description": "The checkup, Pinky for Android: outdated; an Update button follows."
   },
   "checkCompanionPass": "Installed. Pinky turns it on only while an agent works on the phone, then reads the screen quickly and types any language.",
   "@checkCompanionPass": {
-    "description": "The checkup, Pinky Companion: passed. Pinky turns the app's accessibility service on only while an agent works on the phone, and off again afterwards."
+    "description": "The checkup, Pinky for Android: passed. Pinky turns the app's accessibility service on only while an agent works on the phone, and off again afterwards."
   },
   "checkCompanionPublicKey": "Installed, but signed with an old key that is public; Pinky carries the version signed with its private key.",
   "@checkCompanionPublicKey": {
-    "description": "The checkup, Pinky Companion: the installed app is signed with the key of the builds until 8 November 2026, which was public, so anyone could make a fake update of it; an Update button follows."
+    "description": "The checkup, Pinky for Android: the installed app is signed with the key of the builds until 8 November 2026, which was public, so anyone could make a fake update of it; an Update button follows."
   },
-  "checkCompanionTitle": "Pinky Companion",
+  "checkCompanionTitle": "Pinky for Android",
   "@checkCompanionTitle": {
-    "description": "The checkup: the item for Pinky's companion app on the phone. Pinky Companion is the app's name: keep it as it is."
+    "description": "The checkup: the item for Pinky's app on Android phones. Pinky for Android is the app's name on the computer (on the phone it is just Pinky): translate it the same way everywhere."
   },
   "checkConnectionAndroidFail": "{name} isn't connected.",
   "@checkConnectionAndroidFail": {
@@ -2032,23 +2032,23 @@
   },
   "companionAllowHint": "If the phone asks, allow the install.",
   "@companionAllowHint": {
-    "description": "The Pinky Companion card: under the progress bar while the app installs, and in small type under the buttons before."
+    "description": "The Pinky for Android card: under the progress bar while the app installs, and in small type under the buttons before."
   },
   "companionAllowHintOppo": "If the phone shows a permission notice, tap Continue installing; some phones ask for your OPPO account.",
   "@companionAllowHintOppo": {
-    "description": "The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme phone, while Pinky installs the app: what to do on the phone. Continue installing is the button of ColorOS's page: use its Simplified Chinese name."
+    "description": "The Pinky for Android card and the checkup, on an OPPO, OnePlus or realme phone, while Pinky installs the app: what to do on the phone. Continue installing is the button of ColorOS's page: use its Simplified Chinese name."
   },
   "companionAllowHintXiaomi": "On the phone, tap Install within 10 seconds; keep it unlocked.",
   "@companionAllowHintXiaomi": {
-    "description": "The Pinky Companion card and the checkup, on a Xiaomi phone, while Pinky installs the app: what to do on the phone. Install is the button of Xiaomi's prompt: use its Simplified Chinese name."
+    "description": "The Pinky for Android card and the checkup, on a Xiaomi phone, while Pinky installs the app: what to do on the phone. Install is the button of Xiaomi's prompt: use its Simplified Chinese name."
   },
   "companionByHandHow": "How to install it by hand",
   "@companionByHandHow": {
-    "description": "The Pinky Companion card and the checkup, after the phone refused an install over USB: a link to the README's steps for installing Pinky Companion by hand."
+    "description": "The Pinky for Android card and the checkup, after the phone refused an install over USB: a link to the README's steps for installing Pinky for Android by hand."
   },
-  "companionCardLabel": "Pinky Companion on {name}",
+  "companionCardLabel": "Pinky for Android on {name}",
   "@companionCardLabel": {
-    "description": "The accessibility label of the Pinky Companion card. name is the phone's name.",
+    "description": "The accessibility label of the Pinky for Android card. name is the phone's name.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2058,11 +2058,11 @@
   },
   "companionErrDeclined": "The install was declined on the phone. Try again, and tap Install when the phone asks.",
   "@companionErrDeclined": {
-    "description": "The Pinky Companion card and the checkup: the error when the person or the phone declined the install (the phone's own confirmation)."
+    "description": "The Pinky for Android card and the checkup: the error when the person or the phone declined the install (the phone's own confirmation)."
   },
-  "companionErrNoAnswer": "Pinky turned on Pinky Companion's accessibility service, but it didn't start ({detail}). Restart the phone, then try again. If it still doesn't start, send feedback: its diagnostics include what the phone showed.",
+  "companionErrNoAnswer": "Pinky turned on the app's accessibility service, but it didn't start ({detail}). Restart the phone, then try again. If it still doesn't start, send feedback: its diagnostics include what the phone showed.",
   "@companionErrNoAnswer": {
-    "description": "The Pinky Companion card and the checkup: Pinky turned on the app's accessibility service, but the service did not answer, and the phone showed no known reason. detail is what Pinky saw on the phone, in English. Send feedback is the name of Pinky's feedback window.",
+    "description": "The Pinky for Android card and the checkup: Pinky turned on the app's accessibility service, but the service did not answer, and the phone showed no known reason. detail is what Pinky saw on the phone, in English. Send feedback is the name of Pinky's feedback window.",
     "placeholders": {
       "detail": {
         "type": "String",
@@ -2070,17 +2070,17 @@
       }
     }
   },
-  "companionErrNotUnlocked": "The phone hasn't been unlocked since it restarted, and Android starts Pinky Companion only after that. Unlock the phone, then try again.",
+  "companionErrNotUnlocked": "The phone hasn't been unlocked since it restarted, and Android starts the app only after that. Unlock the phone, then try again.",
   "@companionErrNotUnlocked": {
-    "description": "The Pinky Companion card and the checkup: the app's accessibility service did not start because the phone has not been unlocked since it started."
+    "description": "The Pinky for Android card and the checkup: the app's accessibility service did not start because the phone has not been unlocked since it started."
   },
   "companionErrOffline": "The phone went offline. Connect it again, then try again.",
   "@companionErrOffline": {
-    "description": "The Pinky Companion card: the error when the phone went offline during the install."
+    "description": "The Pinky for Android card: the error when the phone went offline during the install."
   },
-  "companionErrOther": "Couldn't install Pinky Companion: {detail}",
+  "companionErrOther": "Couldn't install Pinky for Android: {detail}",
   "@companionErrOther": {
-    "description": "The Pinky Companion card: the error when the install failed for another reason. detail is the error, in English.",
+    "description": "The Pinky for Android card: the error when the install failed for another reason. detail is the error, in English.",
     "placeholders": {
       "detail": {
         "type": "String",
@@ -2090,19 +2090,19 @@
   },
   "companionErrPlayProtect": "Google Play Protect stopped the install. On the phone, choose Install anyway, then try again.",
   "@companionErrPlayProtect": {
-    "description": "The Pinky Companion card: the error when Google Play Protect stopped the install. Install anyway is the button of Play Protect's prompt."
+    "description": "The Pinky for Android card: the error when Google Play Protect stopped the install. Install anyway is the button of Play Protect's prompt."
   },
   "companionErrRestricted": "The phone blocked installing apps over USB. If it asked you to confirm, tap Install; if Developer options has a switch such as Install via USB, turn it on. Then try again, or install the APK on the phone by hand.",
   "@companionErrRestricted": {
-    "description": "The Pinky Companion card and the checkup: the error when the phone blocked installs over USB, on a phone whose maker Pinky does not know. The links companionShowAPK and companionByHandHow follow it, for installing the APK by hand."
+    "description": "The Pinky for Android card and the checkup: the error when the phone blocked installs over USB, on a phone whose maker Pinky does not know. The links companionShowAPK and companionByHandHow follow it, for installing the APK by hand."
   },
   "companionErrRestrictedXiaomi": "The phone blocked the install. In Developer options, turn on Install via USB (it needs your Xiaomi account and may need a SIM card), then try again with the phone unlocked, and tap Install on it within 10 seconds. Or install the APK on the phone by hand.",
   "@companionErrRestrictedXiaomi": {
-    "description": "The Pinky Companion card and the checkup, on a Xiaomi phone: the error when the phone blocked installs over USB (the switch is off, or nobody tapped Install in time). Install via USB and Install are Xiaomi's names: use those of its Simplified Chinese settings. Some Xiaomi phones cannot turn the switch on without a SIM card; the links companionShowAPK and companionByHandHow follow, for installing the APK by hand."
+    "description": "The Pinky for Android card and the checkup, on a Xiaomi phone: the error when the phone blocked installs over USB (the switch is off, or nobody tapped Install in time). Install via USB and Install are Xiaomi's names: use those of its Simplified Chinese settings. Some Xiaomi phones cannot turn the switch on without a SIM card; the links companionShowAPK and companionByHandHow follow, for installing the APK by hand."
   },
   "companionErrSettings": "The phone refuses to let the computer turn on the app's accessibility service: {detail}",
   "@companionErrSettings": {
-    "description": "The Pinky Companion card and the checkup: turning on the app's service failed because the phone refuses settings changes from the computer, on a phone whose maker Pinky does not know.",
+    "description": "The Pinky for Android card and the checkup: turning on the app's service failed because the phone refuses settings changes from the computer, on a phone whose maker Pinky does not know.",
     "placeholders": {
       "detail": {
         "type": "String",
@@ -2112,31 +2112,31 @@
   },
   "companionErrSettingsOppo": "The phone refuses to let the computer turn on the app. In Developer options, turn on Disable permission monitoring, restart the phone, then try again.",
   "@companionErrSettingsOppo": {
-    "description": "The Pinky Companion card and the checkup, on an OPPO, OnePlus or realme phone: turning on the app's service failed because permission monitoring is on. Use ColorOS's Simplified Chinese name for the switch."
+    "description": "The Pinky for Android card and the checkup, on an OPPO, OnePlus or realme phone: turning on the app's service failed because permission monitoring is on. Use ColorOS's Simplified Chinese name for the switch."
   },
   "companionErrSettingsXiaomi": "The phone refuses to let the computer turn on the app. In Developer options, turn on USB debugging (Security settings), restart the phone, then try again.",
   "@companionErrSettingsXiaomi": {
-    "description": "The Pinky Companion card and the checkup, on a Xiaomi phone: turning on the app's service failed because USB debugging (Security settings) is off. Use the name of Xiaomi's Simplified Chinese settings."
+    "description": "The Pinky for Android card and the checkup, on a Xiaomi phone: turning on the app's service failed because USB debugging (Security settings) is off. Use the name of Xiaomi's Simplified Chinese settings."
   },
   "companionErrStorage": "The phone is out of space. Free some up, then try again.",
   "@companionErrStorage": {
-    "description": "The Pinky Companion card: the error when the phone has no room for the app."
+    "description": "The Pinky for Android card: the error when the phone has no room for the app."
   },
   "companionErrTimeout": "The install didn't finish. If the phone asked to allow it, tap Allow there, then try again.",
   "@companionErrTimeout": {
-    "description": "The Pinky Companion card: the error when the install did not finish in time. Allow is the button of the phone's install prompt."
+    "description": "The Pinky for Android card: the error when the install did not finish in time. Allow is the button of the phone's install prompt."
   },
   "companionErrUIAutomation": "Another tool is controlling the phone through Android's UI automation (such as uiautomator2, Appium or Maestro), and Android keeps accessibility services off while it does. Quit that tool or restart the phone, then try again.",
   "@companionErrUIAutomation": {
-    "description": "The Pinky Companion card and the checkup: the app's accessibility service did not start because another testing tool holds Android's UI automation, which turns off every accessibility service. Keep the tools' names as they are."
+    "description": "The Pinky for Android card and the checkup: the app's accessibility service did not start because another testing tool holds Android's UI automation, which turns off every accessibility service. Keep the tools' names as they are."
   },
   "companionInstall": "Install",
   "@companionInstall": {
-    "description": "The Pinky Companion card: the button that installs the app on the phone."
+    "description": "The Pinky for Android card: the button that installs the app on the phone."
   },
   "companionInstallBody": "A small Pinky app for {name}. Agents control the phone faster and more steadily with it, and type without using its clipboard. Pinky turns it on only while an agent works.",
   "@companionInstallBody": {
-    "description": "The Pinky Companion card, when the app is not installed: why to install it. Pinky turns its accessibility service on only while an agent works on the phone. name is the phone's name. The card is in a narrow side panel.",
+    "description": "The Pinky for Android card, when the app is not installed: why to install it. Pinky turns its accessibility service on only while an agent works on the phone. name is the phone's name. The card is in a narrow side panel.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2144,9 +2144,9 @@
       }
     }
   },
-  "companionInstallLabel": "Install Pinky Companion on {name}",
+  "companionInstallLabel": "Install Pinky for Android on {name}",
   "@companionInstallLabel": {
-    "description": "The accessibility label of the Install button of the Pinky Companion card. name is the phone's name.",
+    "description": "The accessibility label of the Install button of the Pinky for Android card. name is the phone's name.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2154,57 +2154,57 @@
       }
     }
   },
-  "companionInstallTitle": "Install Pinky Companion",
+  "companionInstallTitle": "Install Pinky for Android",
   "@companionInstallTitle": {
-    "description": "The title of the card on an Android phone's side panel that offers to install Pinky Companion, Pinky's app for the phone."
+    "description": "The title of the card on an Android phone's side panel that offers to install Pinky for Android, Pinky's app for the phone."
   },
   "companionInstalling": "Installing",
   "@companionInstalling": {
-    "description": "The Pinky Companion card: the accessibility label of the progress bar while the app installs."
+    "description": "The Pinky for Android card: the accessibility label of the progress bar while the app installs."
   },
-  "companionShowAPK": "Show pinky-companion.apk",
+  "companionShowAPK": "Show pinky-android.apk",
   "@companionShowAPK": {
-    "description": "The Pinky Companion card and the checkup, after the phone refused an install over USB: a link that shows the companion's APK, which comes with Pinky, in Finder or the file manager, to copy to the phone and install there. Keep the file name as it is."
+    "description": "The Pinky for Android card and the checkup, after the phone refused an install over USB: a link that shows the APK of Pinky for Android, which comes with Pinky, in Finder or the file manager, to copy to the phone and install there. Keep the file name as it is."
   },
-  "companionInstallingTitle": "Installing Pinky Companion",
+  "companionInstallingTitle": "Installing Pinky for Android",
   "@companionInstallingTitle": {
-    "description": "The Pinky Companion card's title while Pinky installs or updates the app."
+    "description": "The Pinky for Android card's title while Pinky installs or updates the app."
   },
-  "companionLineMissing": "Pinky Companion is not installed",
+  "companionLineMissing": "Pinky for Android is not installed",
   "@companionLineMissing": {
-    "description": "Settings › Phones: a phone's line about Pinky Companion when the app is not on the phone."
+    "description": "Settings › Phones: a phone's line about Pinky for Android when the app is not on the phone."
   },
-  "companionLineNoAPK": "This Pinky has no companion app to install",
+  "companionLineNoAPK": "This Pinky doesn't come with Pinky for Android",
   "@companionLineNoAPK": {
-    "description": "Settings › Phones: a phone's line about Pinky Companion when this build of Pinky does not include the app."
+    "description": "Settings › Phones: a phone's line about Pinky for Android when this build of Pinky does not include the app."
   },
-  "companionLineOff": "Pinky couldn't turn on Pinky Companion",
+  "companionLineOff": "Pinky couldn't turn on Pinky for Android",
   "@companionLineOff": {
-    "description": "Settings › Phones: a phone's line about Pinky Companion when its service did not come on the last time Pinky tried."
+    "description": "Settings › Phones: a phone's line about Pinky for Android when its service did not come on the last time Pinky tried."
   },
-  "companionLineOn": "Pinky Companion is on",
+  "companionLineOn": "Pinky for Android is on",
   "@companionLineOn": {
-    "description": "Settings › Phones: a phone's line about Pinky Companion, Pinky's app for the phone, while its accessibility service is on: an agent works on the phone."
+    "description": "Settings › Phones: a phone's line about Pinky for Android, Pinky's app for the phone, while its accessibility service is on: an agent works on the phone."
   },
-  "companionLineOutdated": "Pinky Companion has an update",
+  "companionLineOutdated": "Pinky for Android has an update",
   "@companionLineOutdated": {
-    "description": "Settings › Phones: a phone's line about Pinky Companion when this Pinky comes with a newer version."
+    "description": "Settings › Phones: a phone's line about Pinky for Android when this Pinky comes with a newer version."
   },
-  "companionLinePublicKey": "Pinky Companion has a security update",
+  "companionLinePublicKey": "Pinky for Android has a security update",
   "@companionLinePublicKey": {
-    "description": "Settings › Phones: a phone's line about Pinky Companion when the installed app is signed with the old public key and this Pinky carries the version signed with its private key."
+    "description": "Settings › Phones: a phone's line about Pinky for Android when the installed app is signed with the old public key and this Pinky carries the version signed with its private key."
   },
-  "companionLineReady": "Pinky Companion turns on only while an agent works",
+  "companionLineReady": "Pinky for Android turns on only while an agent works",
   "@companionLineReady": {
-    "description": "Settings › Phones: a phone's line about Pinky Companion, Pinky's app for the phone, when it is installed and ready: Pinky turns its accessibility service on only while an agent works on the phone, so that the phone's apps (banking apps check for such services) see it only then."
+    "description": "Settings › Phones: a phone's line about Pinky for Android, Pinky's app for the phone, when it is installed and ready: Pinky turns its accessibility service on only while an agent works on the phone, so that the phone's apps (banking apps check for such services) see it only then."
   },
   "companionNotNow": "Not now",
   "@companionNotNow": {
-    "description": "The Pinky Companion card: the quiet button that hides the card for this phone."
+    "description": "The Pinky for Android card: the quiet button that hides the card for this phone."
   },
-  "companionOnToast": "Pinky Companion is ready on {name}",
+  "companionOnToast": "Pinky for Android is ready on {name}",
   "@companionOnToast": {
-    "description": "A notice after Pinky installed, updated or turned on Pinky Companion, its app for Android phones, and checked that its service comes on. It is on only while an agent works on the phone. name is the phone's name.",
+    "description": "A notice after Pinky installed, updated or turned on Pinky for Android, its app for Android phones, and checked that its service comes on. It is on only while an agent works on the phone. name is the phone's name.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2212,25 +2212,25 @@
       }
     }
   },
-  "companionPublicKeyBody": "Pinky Companion on this phone is signed with an old key that is public, so anyone could make a fake update of it. The new version is signed with Pinky's private key: once you update, it is safe.",
+  "companionPublicKeyBody": "Pinky for Android on this phone is signed with an old key that is public, so anyone could make a fake update of it. The new version is signed with Pinky's private key: once you update, it is safe.",
   "@companionPublicKeyBody": {
-    "description": "The Pinky Companion card, when the installed app is signed with the key of the builds until 8 November 2026, which was public, and this Pinky carries the version signed with its private key: why to update soon. Shown in place of the usual update text, often on phones where the person has to click Update because the phone asks before installs over USB. Keep it plain, not alarming. The card is in a narrow side panel."
+    "description": "The Pinky for Android card, when the installed app is signed with the key of the builds until 8 November 2026, which was public, and this Pinky carries the version signed with its private key: why to update soon. Shown in place of the usual update text, often on phones where the person has to click Update because the phone asks before installs over USB. Keep it plain, not alarming. The card is in a narrow side panel."
   },
   "companionStillWaiting": "Still waiting for the phone. Look for a prompt on its screen.",
   "@companionStillWaiting": {
-    "description": "The Pinky Companion card: when the install has taken more than 20 seconds, as the phone may be asking to allow it."
+    "description": "The Pinky for Android card: when the install has taken more than 20 seconds, as the phone may be asking to allow it."
   },
   "companionTurnOn": "Turn on",
   "@companionTurnOn": {
-    "description": "The Pinky Companion card: the button that turns the app's service on."
+    "description": "The Pinky for Android card: the button that turns the app's service on."
   },
   "companionTurnOnBody": "Pinky couldn't turn on the app's service the last time it tried, so agents control the phone the slower way. Try again to see why.",
   "@companionTurnOnBody": {
-    "description": "The Pinky Companion card, when the app's service did not come on the last time Pinky tried (some phones refuse settings changes from the computer): why to try again. Turn on, the button, shows the reason if it fails again."
+    "description": "The Pinky for Android card, when the app's service did not come on the last time Pinky tried (some phones refuse settings changes from the computer): why to try again. Turn on, the button, shows the reason if it fails again."
   },
-  "companionTurnOnLabel": "Turn on Pinky Companion on {name}",
+  "companionTurnOnLabel": "Turn on Pinky for Android on {name}",
   "@companionTurnOnLabel": {
-    "description": "The accessibility label of the Turn on button of the Pinky Companion card. name is the phone's name.",
+    "description": "The accessibility label of the Turn on button of the Pinky for Android card. name is the phone's name.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2238,21 +2238,21 @@
       }
     }
   },
-  "companionTurnOnTitle": "Turn on Pinky Companion",
+  "companionTurnOnTitle": "Turn on Pinky for Android",
   "@companionTurnOnTitle": {
-    "description": "The title of the card that offers to turn on Pinky Companion's service when the app is installed but off."
+    "description": "The title of the card that offers to turn on Pinky for Android's service when the app is installed but off."
   },
   "companionUpdate": "Update",
   "@companionUpdate": {
-    "description": "The Pinky Companion card: the button that updates the app on the phone."
+    "description": "The Pinky for Android card: the button that updates the app on the phone."
   },
   "companionUpdateBody": "This Pinky comes with a newer version of its app for the phone. Updating keeps control fast and steady.",
   "@companionUpdateBody": {
-    "description": "The Pinky Companion card, when the phone has an older version: why to update it."
+    "description": "The Pinky for Android card, when the phone has an older version: why to update it."
   },
-  "companionUpdateLabel": "Update Pinky Companion on {name}",
+  "companionUpdateLabel": "Update Pinky for Android on {name}",
   "@companionUpdateLabel": {
-    "description": "The accessibility label of the Update button of the Pinky Companion card. name is the phone's name.",
+    "description": "The accessibility label of the Update button of the Pinky for Android card. name is the phone's name.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -2260,21 +2260,21 @@
       }
     }
   },
-  "companionUpdateTitle": "Update Pinky Companion",
+  "companionUpdateTitle": "Update Pinky for Android",
   "@companionUpdateTitle": {
-    "description": "The title of the card that offers to update Pinky Companion on the phone to the version this Pinky comes with."
+    "description": "The title of the card that offers to update Pinky for Android on the phone to the version this Pinky comes with."
   },
   "companionUpdatingHint": "Agents can use the phone again in a few seconds.",
   "@companionUpdatingHint": {
-    "description": "Under the companion card's progress bar while it updates."
+    "description": "Under the Pinky for Android card's progress bar while it updates."
   },
   "companionUpdatingLabel": "Updating",
   "@companionUpdatingLabel": {
-    "description": "The accessibility label of the companion card's progress bar while it updates."
+    "description": "The accessibility label of the Pinky for Android card's progress bar while it updates."
   },
-  "companionUpdatingTitle": "Updating Pinky Companion",
+  "companionUpdatingTitle": "Updating Pinky for Android",
   "@companionUpdatingTitle": {
-    "description": "The companion card's title while Pinky updates the app by itself."
+    "description": "The Pinky for Android card's title while Pinky updates the app by itself."
   },
   "connectAlsoWorks": "Pinky also works with {names}.",
   "@connectAlsoWorks": {
@@ -3200,7 +3200,7 @@
   "@guideHuaweiDev": {
     "description": "Add phone › Android, step 2 on HUAWEI phones: where Developer options is once it is on. Write it as menu names joined by ›, as the phone shows them in Simplified Chinese."
   },
-  "guideHuaweiNote": "If the phone asks what to use USB for, pick Transfer files. If installing Pinky Companion is blocked, turn off Enhanced protection in Settings › System & updates › Pure mode.",
+  "guideHuaweiNote": "If the phone asks what to use USB for, pick Transfer files. If installing Pinky for Android is blocked, turn off Enhanced protection in Settings › System & updates › Pure mode.",
   "@guideHuaweiNote": {
     "description": "Add phone › Android, step 2 on HUAWEI phones: a note under the switches."
   },
@@ -3248,7 +3248,7 @@
   "@guideOppoSwitchMonitor": {
     "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: ColorOS's switch at the bottom of Developer options. Use the name of ColorOS's Simplified Chinese settings."
   },
-  "guideOppoSwitchMonitorWhy": "Lets Pinky turn on its companion app. It's at the bottom of Developer options; restart the phone after turning it on. On ColorOS and OxygenOS 16 it shows only in English, as Disable system optimization: switch the phone's language to English, turn it on, tap Turn on anyway, and switch back.",
+  "guideOppoSwitchMonitorWhy": "Lets Pinky turn on Pinky for Android. It's at the bottom of Developer options; restart the phone after turning it on. On ColorOS and OxygenOS 16 it shows only in English, as Disable system optimization: switch the phone's language to English, turn it on, tap Turn on anyway, and switch back.",
   "@guideOppoSwitchMonitorWhy": {
     "description": "Add phone › Android, step 2 on OPPO, OnePlus and realme phones: why to turn on Disable permission monitoring, and how to find it on version 16. Disable system optimization and Turn on anyway are the English names the phone shows: keep them in English."
   },
@@ -3376,7 +3376,7 @@
   "@guideXiaomiSwitchInstall": {
     "description": "Add phone › Android, step 2 on Xiaomi phones: Xiaomi's switch that lets the computer install apps. Use the name of Xiaomi's Simplified Chinese settings, without spaces."
   },
-  "guideXiaomiSwitchInstallWhy": "Lets Pinky install its companion app. It needs your Xiaomi account signed in. Each install then asks on the phone: tap Install within 10 seconds.",
+  "guideXiaomiSwitchInstallWhy": "Lets Pinky install Pinky for Android. It needs your Xiaomi account signed in. Each install then asks on the phone: tap Install within 10 seconds.",
   "@guideXiaomiSwitchInstallWhy": {
     "description": "Add phone › Android, step 2 on Xiaomi phones: why to turn on Install via USB, and what it needs."
   },
@@ -3384,7 +3384,7 @@
   "@guideXiaomiSwitchSecurity": {
     "description": "Add phone › Android, step 2 on Xiaomi phones: Xiaomi's switch that lets the computer tap, type and change settings. Use the name of Xiaomi's Simplified Chinese settings, without spaces."
   },
-  "guideXiaomiSwitchSecurityWhy": "Lets Pinky tap, type and turn on its companion app. The phone shows three warnings, each with a 5-second wait. Restart the phone afterwards: it takes effect only then.",
+  "guideXiaomiSwitchSecurityWhy": "Lets Pinky tap, type and turn on Pinky for Android. The phone shows three warnings, each with a 5-second wait. Restart the phone afterwards: it takes effect only then.",
   "@guideXiaomiSwitchSecurityWhy": {
     "description": "Add phone › Android, step 2 on Xiaomi phones: why to turn on USB debugging (Security settings), and what turning it on is like."
   },
@@ -9936,9 +9936,9 @@
       }
     }
   },
-  "updateBusyInstalling": "installing Pinky Companion on {phone}",
+  "updateBusyInstalling": "installing Pinky for Android on {phone}",
   "@updateBusyInstalling": {
-    "description": "What a restart for an update would stop: installing the companion app.",
+    "description": "What a restart for an update would stop: installing Pinky for Android.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -9964,9 +9964,9 @@
       }
     }
   },
-  "updateBusyUpdating": "updating Pinky Companion on {phone}",
+  "updateBusyUpdating": "updating Pinky for Android on {phone}",
   "@updateBusyUpdating": {
-    "description": "What a restart for an update would stop: updating the companion app.",
+    "description": "What a restart for an update would stop: updating Pinky for Android.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -10002,15 +10002,15 @@
   },
   "updateCompanionAuto": "Pinky updates it by itself when the phone is free.",
   "@updateCompanionAuto": {
-    "description": "The companion card when an update is out and automatic updates are on."
+    "description": "The Pinky for Android card when an update is out and automatic updates are on."
   },
   "updateCompanionByHand": "The phone refused to install this update over USB, so Pinky won't try again by itself. Update it here, or install the APK on the phone by hand.",
   "@updateCompanionByHand": {
-    "description": "The companion card when an update is out: Pinky's automatic update failed because the phone refuses installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time), so it leaves the update to the person. Update is the card's button (companionUpdate); the links companionShowAPK and companionByHandHow follow."
+    "description": "The Pinky for Android card when an update is out: Pinky's automatic update failed because the phone refuses installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time), so it leaves the update to the person. Update is the card's button (companionUpdate); the links companionShowAPK and companionByHandHow follow."
   },
-  "updateCompanionByHandCard": "{phone} refused to install the new Pinky Companion over USB, so Pinky won't try this version again. Install it on the phone by hand.",
+  "updateCompanionByHandCard": "{phone} refused to install the new version of Pinky for Android over USB, so Pinky won't try this version again. Install it on the phone by hand.",
   "@updateCompanionByHandCard": {
-    "description": "A sidebar card, shown once: Pinky tried to update the companion app on a phone by itself (Update automatically), and the phone refused installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time). Pinky won't try this companion build again by itself; the links companionShowAPK and companionByHandHow follow, and a close button (updateNewsDismiss) hides the card.",
+    "description": "A sidebar card, shown once: Pinky tried to update Pinky for Android on a phone by itself (Update automatically), and the phone refused installs over USB (Xiaomi's Install via USB is off, or nobody allowed it on the phone in time). Pinky won't try this build of Pinky for Android again by itself; the links companionShowAPK and companionByHandHow follow, and a close button (updateNewsDismiss) hides the card.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -10018,21 +10018,21 @@
       }
     }
   },
-  "updateCompanionByHandDismissLabel": "Dismiss the Pinky Companion update",
+  "updateCompanionByHandDismissLabel": "Dismiss the Pinky for Android update",
   "@updateCompanionByHandDismissLabel": {
     "description": "The accessibility label of the close button of the sidebar card updateCompanionByHandTitle."
   },
-  "updateCompanionByHandTitle": "Update Pinky Companion by hand",
+  "updateCompanionByHandTitle": "Update Pinky for Android by hand",
   "@updateCompanionByHandTitle": {
     "description": "The title of the sidebar card updateCompanionByHandCard."
   },
   "updateCompanionNeedsYou": "The phone asks before apps are installed over USB, so this update needs you.",
   "@updateCompanionNeedsYou": {
-    "description": "The companion card: the phone asks the person before installs, so Pinky cannot update it by itself."
+    "description": "The Pinky for Android card: the phone asks the person before installs, so Pinky cannot update it by itself."
   },
-  "updateCompanionReplacedToast": "Reinstalled Pinky Companion on {phone} with Pinky's private signing key",
+  "updateCompanionReplacedToast": "Reinstalled Pinky for Android on {phone} with Pinky's private signing key",
   "@updateCompanionReplacedToast": {
-    "description": "A toast after Pinky replaced the companion app on a phone by itself: the installed one was signed with another key (the public one of builds until 2026-11-08), so Pinky removed it and installed its own, signed with Pinky's private key.",
+    "description": "A toast after Pinky replaced Pinky for Android on a phone by itself: the installed one was signed with another key (the public one of builds until 2026-11-08), so Pinky removed it and installed its own, signed with Pinky's private key.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -10040,9 +10040,9 @@
       }
     }
   },
-  "updateCompanionToast": "Updated Pinky Companion on {phone}",
+  "updateCompanionToast": "Updated Pinky for Android on {phone}",
   "@updateCompanionToast": {
-    "description": "A toast after Pinky updated the companion app on a phone by itself.",
+    "description": "A toast after Pinky updated Pinky for Android on a phone by itself.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -10242,9 +10242,13 @@
   "@updateNewsCardTitle": {
     "description": "The What's new card's title after Pinky was updated."
   },
+  "updateNewsCompanionHeading": "Pinky for Android",
+  "@updateNewsCompanionHeading": {
+    "description": "What's new: the heading over the lines about Pinky's app on Android phones (updateNewsCompanionLine). Pinky for Android is the app's name on the computer."
+  },
   "updateNewsCompanionLine": "Updated on {phone} to {version}",
   "@updateNewsCompanionLine": {
-    "description": "What's new, under the Pinky Companion heading: the companion app was updated on a phone.",
+    "description": "What's new, under the Pinky for Android heading: Pinky for Android was updated on a phone.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -10258,7 +10262,7 @@
   },
   "updateNewsCompanionReplaced": "Reinstalled on {phone} as {version}, signed with Pinky's private key. The earlier build was signed with a public key, with which anyone could sign an update of it.",
   "@updateNewsCompanionReplaced": {
-    "description": "What's new, under the Pinky Companion heading: Pinky replaced the companion app on a phone with a build signed with its private key, because the installed one was signed with a public key.",
+    "description": "What's new, under the Pinky for Android heading: Pinky replaced Pinky for Android on a phone with a build signed with its private key, because the installed one was signed with a public key.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -10270,9 +10274,9 @@
       }
     }
   },
-  "updateNewsCompanionUpdated": "Pinky Companion was updated",
+  "updateNewsCompanionUpdated": "Pinky for Android was updated",
   "@updateNewsCompanionUpdated": {
-    "description": "The What's new card's title after only the companion app was updated."
+    "description": "The What's new card's title after only Pinky for Android was updated."
   },
   "updateNewsDismiss": "Dismiss",
   "@updateNewsDismiss": {
@@ -10298,7 +10302,7 @@
   },
   "updateNewsOnPhone": "On {phone}",
   "@updateNewsOnPhone": {
-    "description": "The What's new card's second line after the companion app was updated on one phone.",
+    "description": "The What's new card's second line after Pinky for Android was updated on one phone.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -10308,7 +10312,7 @@
   },
   "updateNewsOnPhones": "{count, plural, one {On # phone} other {On # phones}}",
   "@updateNewsOnPhones": {
-    "description": "The What's new card's second line after the companion app was updated on several phones.",
+    "description": "The What's new card's second line after Pinky for Android was updated on several phones.",
     "placeholders": {
       "count": {
         "type": "int",
@@ -10410,9 +10414,9 @@
   },
   "updateSettingsAuto": "Update automatically",
   "@updateSettingsAuto": {
-    "description": "Settings › Advanced › Updates: the switch that lets Pinky update itself and the companion app."
+    "description": "Settings › Advanced › Updates: the switch that lets Pinky update itself and Pinky for Android."
   },
-  "updateSettingsAutoDesc": "Pinky, and Pinky Companion on your Android phones, update when no one is using them.",
+  "updateSettingsAutoDesc": "Pinky, and Pinky for Android on your phones, update when no one is using them.",
   "@updateSettingsAutoDesc": {
     "description": "Under updateSettingsAuto."
   },

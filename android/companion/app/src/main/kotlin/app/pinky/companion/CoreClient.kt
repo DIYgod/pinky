@@ -1,8 +1,7 @@
-package app.pinky.standalone
+package app.pinky.companion
 
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
-import app.pinky.companion.BuildConfig
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.Closeable
@@ -55,6 +54,27 @@ object CoreClient {
         }
     }
 
+    /**
+     * Asks this app's accessibility service, over its companion socket, to
+     * turn on-phone mode on or off (PinkyAccessibilityService.setOnPhone):
+     * on starts the core. Throws when the service is off.
+     */
+    fun setOnPhone(enabled: Boolean) {
+        LocalSocket().use { s ->
+            s.connect(LocalSocketAddress(BuildConfig.SOCKET_NAME, LocalSocketAddress.Namespace.ABSTRACT))
+            val w = OutputStreamWriter(s.outputStream, Charsets.UTF_8)
+            w.write(JSONObject().put("id", 1).put("cmd", "on_phone").put("enabled", enabled).toString())
+            w.write("\n")
+            w.flush()
+            val line = BufferedReader(InputStreamReader(s.inputStream, Charsets.UTF_8)).readLine()
+                ?: throw IllegalStateException("the service closed the connection")
+            val r = JSONObject(line)
+            if (!r.optBoolean("ok")) {
+                throw IllegalStateException(r.optJSONObject("error")?.optString("message") ?: "the service said no")
+            }
+        }
+    }
+
     fun cmd(name: String, vararg fields: Pair<String, Any>): JSONObject {
         val j = JSONObject().put("cmd", name)
         for ((k, v) in fields) j.put(k, v)
@@ -64,7 +84,9 @@ object CoreClient {
     /**
      * Follows the state: onState gets each state the core sends, on a
      * background thread, and onDown the reason while the core cannot be
-     * reached (it is retried every second). Close the result to stop.
+     * reached (it is retried every second). While the core is not there it
+     * turns on-phone mode on, which starts it once the service is on.
+     * Close the result to stop.
      */
     fun subscribe(onState: (JSONObject) -> Unit, onDown: (String) -> Unit): Closeable {
         val sub = Subscription(onState, onDown)
@@ -99,7 +121,13 @@ object CoreClient {
                         onState(st)
                     }
                 } catch (e: Exception) {
-                    if (!closed) onDown(e.message ?: e.toString())
+                    if (closed) break
+                    onDown(e.message ?: e.toString())
+                    try {
+                        setOnPhone(true)
+                    } catch (_: Exception) {
+                        // The service is off: the screen says so.
+                    }
                 } finally {
                     try {
                         socket?.close()

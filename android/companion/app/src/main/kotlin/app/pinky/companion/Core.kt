@@ -1,8 +1,7 @@
-package app.pinky.standalone
+package app.pinky.companion
 
 import android.content.Context
 import android.util.Log
-import app.pinky.companion.BuildConfig
 
 /**
  * Pinky's Go core (internal/standalone/libcore), a shared library in this
@@ -26,7 +25,7 @@ object Core {
         started = true
         val err = try {
             System.loadLibrary("pinkycore")
-            nativeStart(context.filesDir.absolutePath, BuildConfig.SOCKET_NAME, BuildConfig.CORE_SOCKET)
+            nativeStart(context.filesDir.absolutePath, context.packageName, BuildConfig.SOCKET_NAME, BuildConfig.CORE_SOCKET)
         } catch (e: UnsatisfiedLinkError) {
             "the core library is missing: $e"
         }
@@ -40,5 +39,5 @@ object Core {
 
     /** Starts the core; returns an error message, empty when it started. */
     @JvmStatic
-    private external fun nativeStart(dataDir: String, companionSocket: String, coreSocket: String): String
+    private external fun nativeStart(dataDir: String, pkg: String, companionSocket: String, coreSocket: String): String
 }

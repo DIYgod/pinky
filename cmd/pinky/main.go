@@ -103,7 +103,7 @@ Commands:
             gateway when none is running
   devices   list connected phones
   companion install [phone]
-            install or update the Android companion app
+            install or update Pinky for Android, Pinky's app for the phone
   helper install [--team ID] [--bundle-id ID] [--local-signing] [phone]
             build the iPhone helper (WebDriverAgent) with Xcode, as
             "Pinky Helper" with Pinky's icon, and install it on the phone;

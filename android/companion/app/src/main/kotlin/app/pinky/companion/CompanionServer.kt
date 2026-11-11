@@ -37,6 +37,13 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
 
     val connectionCount: Int get() = connections.size
 
+    /**
+     * Open connections from other apps than this one: Pinky on a computer,
+     * through adb (shell or root). This app's own parts on the phone, the
+     * core and its screens, are not counted.
+     */
+    val externalCount: Int get() = connections.count { !it.own }
+
     fun start() {
         running = true
         Thread(::acceptLoop, "pinky-accept").apply {
@@ -64,7 +71,7 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
     fun touch() = IdleClock.touch()
 
     internal fun removed(c: Connection) {
-        if (connections.remove(c)) touch()
+        if (connections.remove(c) && !c.own) touch()
     }
 
     private fun acceptLoop() {
@@ -126,9 +133,9 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
             closeQuietly(s)
             return
         }
-        val c = Connection(s, this)
+        val c = Connection(s, this, uid == Process.myUid())
         connections.add(c)
-        touch()
+        if (!c.own) touch()
         Thread(c::run, "pinky-conn").apply {
             isDaemon = true
             start()
@@ -155,8 +162,12 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
     }
 }
 
-/** One client connection. Requests run one at a time; events may interleave. */
-class Connection(private val socket: LocalSocket, private val server: CompanionServer) {
+/**
+ * One client connection. Requests run one at a time; events may interleave.
+ * own is true for this app's own parts (the core and Pinky's screens), false
+ * for adb.
+ */
+class Connection(private val socket: LocalSocket, private val server: CompanionServer, val own: Boolean) {
     private val out = BufferedOutputStream(socket.outputStream, 64 * 1024)
     private val writeLock = Any()
 
@@ -172,7 +183,7 @@ class Connection(private val socket: LocalSocket, private val server: CompanionS
             while (!closed) {
                 val line = reader.readLine() ?: break
                 if (line.isBlank()) continue
-                server.touch()
+                if (!own) server.touch()
                 val reply = server.handler.handle(line, this)
                 send(reply.line)
                 reply.after?.invoke()

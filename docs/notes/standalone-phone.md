@@ -196,6 +196,8 @@ Everything except the shell process survives a reboot. A force stop undoes step 
 
 Unlike the throwaway program in [What ran here](#what-ran-here), this prototype is kept: `android/standalone`, `internal/standalone` and `internal/driver/android/local`. It follows [the recommended architecture](#android-one-app-the-companion-grown-up) and ran end to end on 2026-11-11: on the Android 17 emulator (API 37, arm64) and on a Xiaomi Mi 10 Pro with LineageOS (Android 17). It does not ship.
 
+The prototype has since become Pinky's Android app ([android-app.md](android-app.md)). What follows records it as it was: `android/standalone` folded into `android/companion`, `scripts/standalone.sh` became `scripts/androidcore.sh`, `policy.StandaloneApp` became `policy.IsPinkyScreen`, and the sockets `@pinky_standalone` and `@pinky_standalone_core` became the companion's own and `@pinky_core`.
+
 ### What was built
 
 - **An app of its own, Pinky Standalone (`app.pinky.standalone`).** Its Gradle project compiles the companion's sources with its own manifest, service and screens, so the shipped companion stays as it is. The companion only gained hooks a subclass can use: an open service class, `extraCommand`, `extraFeatures` and `defaultIdleDisableMs`. A product would grow the companion itself instead.
@@ -658,6 +660,8 @@ Turning Pinky off only stops the agent, so it is not the danger. The danger is t
 ## Recommended architecture
 
 ### Android: one app, the companion grown up
+
+This is being built: [android-app.md](android-app.md).
 
 ```
 ┌──────────────── Pinky for Android (app.pinky.companion) ────────────────┐

@@ -24,7 +24,7 @@ const (
 	RuleInstall = "Installing from the computer"
 	// RuleUninstall asks before every uninstall.
 	RuleUninstall = "Uninstalling apps"
-	// RulePinkyApps refuses to touch Pinky Companion and the iPhone's
+	// RulePinkyApps refuses to touch Pinky for Android and the iPhone's
 	// helper (an XCTest runner, see IsPinkyApp), which give Pinky its access
 	// to the phone.
 	RulePinkyApps = "Pinky's own apps"
@@ -42,24 +42,29 @@ func (op Op) AppChange() bool {
 	return op == OpInstall || op == OpUninstall || op == OpStop
 }
 
-// StandaloneApp is the package of the standalone prototype
-// (android/standalone, docs/notes/standalone-phone.md): Pinky running on
-// the phone itself, whose screen and controls hold the person's approvals
-// and Stop. Its screen is blocked outright (Blocked, Evaluate) and no task
-// can lift that, so an agent can never press its controls.
-const StandaloneApp = "app.pinky.standalone"
+// pinkyScreens are the packages of Pinky's Android app (android/companion,
+// docs/notes/android-app.md), the released app and the development build.
+// Besides serving Pinky on a computer it runs tasks on the phone itself,
+// and its screens and controls hold the person's approvals, Stop and rules.
+// They are blocked outright (Blocked, Evaluate) for every agent, on the
+// phone or from a computer, and no task can lift that, so an agent can
+// never press them.
+var pinkyScreens = []string{"app.pinky.companion", "app.pinky.companion.dev"}
 
-// pinkyApps are Pinky Companion's package names and the standalone
-// prototype's.
-var pinkyApps = []string{"app.pinky.companion", "app.pinky.companion.dev", StandaloneApp}
-
-// IsStandalone reports whether the app is the standalone prototype.
-func IsStandalone(app screen.App) bool {
-	return strings.EqualFold(clonePackage(app.ID), StandaloneApp)
+// IsPinkyScreen reports whether the app is Pinky's Android app, whose
+// screens no agent may open or act on.
+func IsPinkyScreen(app screen.App) bool {
+	id := clonePackage(app.ID)
+	for _, p := range pinkyScreens {
+		if strings.EqualFold(id, p) {
+			return true
+		}
+	}
+	return false
 }
 
-// IsPinkyApp reports whether the app is part of Pinky on the phone: Pinky
-// Companion, or the iPhone's helper. The helper is WebDriverAgent's XCTest
+// IsPinkyApp reports whether the app is part of Pinky on the phone: Pinky's
+// Android app, or the iPhone's helper. The helper is WebDriverAgent's XCTest
 // runner, and every runner counts, whatever its bundle id: Pinky Helper keeps
 // the id it was first installed with, which may be anything ending in
 // .xctrunner (iPhone Use's cc.diygod.iphoneuse.wda.xctrunner, a --bundle-id of
@@ -69,7 +74,7 @@ func IsStandalone(app screen.App) bool {
 // person still can.
 func IsPinkyApp(app screen.App) bool {
 	id := strings.ToLower(clonePackage(app.ID))
-	for _, p := range pinkyApps {
+	for _, p := range pinkyScreens {
 		if id == p {
 			return true
 		}

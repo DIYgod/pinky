@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Whether Pinky's screens for running tasks on the phone itself show:
+         in development builds now, in releases once they are finished. -->
+    <bool name="on_phone_ui">true</bool>
+</resources>

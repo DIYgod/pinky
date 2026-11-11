@@ -64,7 +64,11 @@ class RequestHandler(
                 "events" -> subscribe(id, req, conn)
                 "wait_idle" -> Reply(ok(id, waitIdle(req)))
                 "config" -> Reply(ok(id, service.configure(req)))
-                else -> service.extraCommand(cmd, req)?.let { Reply(ok(id, it)) }
+                "on_phone" -> {
+                    if (!conn.own) throw RequestError("forbidden", "only Pinky on the phone may change its mode")
+                    Reply(ok(id, service.setOnPhone(req.getBoolean("enabled"))))
+                }
+                else -> service.actionCommand(cmd, req)?.let { Reply(ok(id, it)) }
                     ?: throw RequestError("unknown_command", "unknown command: $cmd")
             }
         } catch (e: RequestError) {
@@ -98,6 +102,7 @@ class RequestHandler(
         j.field("connections", connectionCount())
         j.field("include_not_important", service.includeNotImportant)
         j.field("idle_disable_ms", service.idleDisableMs)
+        j.field("on_phone", service.onPhone)
         j.endObject()
         return j.toString()
     }
@@ -114,7 +119,7 @@ class RequestHandler(
         // set_text tries the input connection and ACTION_PASTE when
         // ACTION_SET_TEXT is refused, and says which went in (method).
         f += FEATURE_SET_TEXT_FALLBACK
-        f += service.extraFeatures()
+        f += service.actionFeatures()
         return f
     }
 

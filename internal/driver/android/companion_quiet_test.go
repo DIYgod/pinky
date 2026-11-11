@@ -19,7 +19,7 @@ import (
 	"github.com/DIYgod/pinky/internal/driver/android/companion/companiontest"
 )
 
-// quietPhone plays a phone with Pinky Companion for the driver: its
+// quietPhone plays a phone with Pinky for Android for the driver: its
 // accessibility setting, its package manager, and the app's socket, which
 // answers while the service is listed and drops every connection when it
 // stops being listed, as the service does when it is turned off.
@@ -239,7 +239,7 @@ func quietDevice(t *testing.T, p *quietPhone, apk string) (*Device, func() []str
 	if apk != "" {
 		t.Setenv("PINKY_COMPANION_APK", apk)
 	} else {
-		t.Setenv("PINKY_COMPANION_APK", "/nonexistent/pinky-companion.apk")
+		t.Setenv("PINKY_COMPANION_APK", "/nonexistent/pinky-android.apk")
 	}
 	var logs []string
 	var mu sync.Mutex

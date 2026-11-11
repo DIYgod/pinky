@@ -40,7 +40,7 @@ func TestCheckupOfXiaomiPhone(t *testing.T) {
 	ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf("redmi-k80"); return r != nil && r.have })
 	for _, want := range []string{"Checkup: Redmi K80", "2 items to fix", "System: HyperOS 2.0",
 		"Tapping and typing", locales.CheckInputRefused(), locales.CheckInputXiaomi(), locales.CheckInputXiaomiNote(),
-		"Pinky Companion", locales.CheckCompanionMissing(), "Seeing the screen", "Working in the background", "Wi-Fi"} {
+		"Pinky for Android", locales.CheckCompanionMissing(), "Seeing the screen", "Working in the background", "Wi-Fi"} {
 		if !hasText(tt, want) {
 			t.Errorf("the checkup lacks %q: %q", want, tt.Texts())
 		}
@@ -89,7 +89,7 @@ func TestCheckupOfXiaomiPhone(t *testing.T) {
 // the app's language, until the companion is installed.
 func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
 	ta := newTestApp(t, fakeapi.Checkup)
-	const apk = "/Applications/Pinky.app/Contents/Resources/pinky-companion.apk"
+	const apk = "/Applications/Pinky.app/Contents/Resources/pinky-android.apk"
 	ta.opt.CompanionAPK = func() (string, int, error) { return apk, 480, nil }
 	var revealed, opened []string
 	ta.reveal = func(p string) { revealed = append(revealed, p) }
@@ -99,7 +99,7 @@ func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
 	ta.sync()
 	ta.sel = "redmi-k80"
 	tt := mg.NewTester(ta.view, 1280, 820)
-	ta.frameUntil(t, tt, "the companion card", func() bool { return hasText(tt, "Install Pinky Companion") })
+	ta.frameUntil(t, tt, "the companion card", func() bool { return hasText(tt, "Install Pinky for Android") })
 	if hasText(tt, locales.CompanionShowAPK()) || hasText(tt, locales.CompanionByHandHow()) {
 		t.Errorf("the APK shows before an install failed: %q", tt.Texts())
 	}
@@ -139,7 +139,7 @@ func TestXiaomiThatRefusesUSBInstalls(t *testing.T) {
 		t.Errorf("the card after the refusal: %q", tt.Texts())
 	}
 	ta.api.SetInstallError("redmi-k80", nil)
-	if err := tt.Click("Install Pinky Companion on Redmi K80"); err != nil {
+	if err := tt.Click("Install Pinky for Android on Redmi K80"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Frame()
