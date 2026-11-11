@@ -45,6 +45,11 @@ type Provider struct {
 	// nowhere.
 	RunDir string
 
+	// HelperDir is Pinky's WebDriverAgent folder, where InstallHelper
+	// keeps the helper's source and log; "" when the provider does not
+	// install the helper (helperwindow.go).
+	HelperDir string
+
 	// Log gets a line for each step Pinky takes to prepare a phone:
 	// mounting the developer disk image, showing the Developer Mode
 	// switch, asking for trust, downloading the image. nil for none.
@@ -81,6 +86,7 @@ type Provider struct {
 	listFn     func() (goios.DeviceList, error) // for tests: usbmuxd's list
 	openFails  map[string]string                // by UDID: why the last open got no picture (noVideoError.Detail)
 	paused     map[string]bool                  // by UDID: phones the person paused in Pinky (pause.go)
+	install    helperInstalling                 // installing the helper from the window (helperwindow.go)
 }
 
 // recheckOffline is how often List asks a phone that is not online again,
@@ -257,6 +263,9 @@ func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 // a minute.
 func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 	if info, ok := p.pausedInfo(e); ok {
+		return info
+	}
+	if info, ok := p.installingInfo(e); ok {
 		return info
 	}
 	id, key := e.Properties.SerialNumber, keyOf(e)
@@ -675,7 +684,7 @@ func (p *Provider) runner(e goios.DeviceEntry) (string, error) {
 // passcode the phone asks for before the helper can control it.
 const (
 	coreDeviceTooOld = "Connecting without the helper needs iOS 27 or later; this iPhone runs iOS %s. Choose Automatic or WebDriverAgent in Settings > Phones."
-	wdaMissing       = "The WebDriverAgent helper is not installed on this iPhone. Install it once with pinkyctl helper install on a Mac with Xcode (docs/notes/ios.md, \"Installing the WebDriverAgent helper\"), or choose another connection in Settings > Phones."
+	wdaMissing       = "The WebDriverAgent helper is not installed on this iPhone. Install it once on a Mac with Xcode, with Install the helper in Pinky's window or pinkyctl helper install (docs/notes/ios.md, \"Installing the WebDriverAgent helper\"), or choose another connection in Settings > Phones."
 	automationAsk    = "Enter the passcode on the iPhone: iOS asks for it now and then before the WebDriverAgent helper can control the phone."
 	automationMissed = "The iPhone asked for its passcode to let the WebDriverAgent helper control it. If it still asks, enter the passcode there. Pinky tries again in a few minutes, or at once when you reconnect the iPhone or choose its connection again in Settings > Phones."
 )

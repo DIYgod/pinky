@@ -136,6 +136,9 @@ func newIOSProvider(log *slog.Logger) (driver.Provider, error) {
 		// Where Pinky remembers the helper runners it started, to end one
 		// it left running after a crash.
 		p.RunDir = filepath.Join(dirs.Data, "HelperRuns")
+		// Where the window's Install the helper keeps WebDriverAgent's
+		// source and its log, as pinky helper install does.
+		p.HelperDir = filepath.Join(dirs.Data, "WebDriverAgent")
 	}
 	if c := p.CheckHost(); c.Missing != "" {
 		log.Info("iPhones need software this computer lacks", "missing", c.Missing, "detail", c.Detail)
