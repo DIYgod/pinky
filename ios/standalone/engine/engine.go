@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -53,6 +54,7 @@ var (
 	ErrApproval  = errors.New("blocked: an approval is waiting for the person; nothing was done")
 	ErrLocked    = errors.New("the phone is locked; nothing was done")
 	ErrOwnLaunch = errors.New("blocked: Pinky does not open its own app")
+	ErrStale     = errors.New("stale: another app came to the front since the screen you acted on; nothing was done. Call observe")
 )
 
 // Engine is the prototype's state. Its methods are safe for concurrent use.
@@ -177,8 +179,11 @@ func (e *Engine) Observe(ctx context.Context) (*screen.Screen, error) {
 
 // act runs one input under the guard. The guard runs again right before
 // the input, after a fresh look at the screen when the last one is old, so
-// a switch to Pinky's own app between two actions stops the second.
-func (e *Engine) act(ctx context.Context, name string, f func(Phone) error) error {
+// a switch to Pinky's own app between two actions stops the second. aim,
+// when set, is the app of the screen the input was meant for (appKey): if
+// another app is in front by then, nothing is done (ErrStale), so a tap
+// aimed at Calculator never lands on whatever replaced it.
+func (e *Engine) act(ctx context.Context, name, aim string, f func(Phone) error) error {
 	e.input.Lock()
 	defer e.input.Unlock()
 	if _, err := e.guard(); err != nil {
@@ -188,7 +193,9 @@ func (e *Engine) act(ctx context.Context, name string, f func(Phone) error) erro
 	stale := e.last == nil || time.Since(e.last.CapturedAt) > 2*time.Second
 	e.mu.Unlock()
 	if stale {
-		if _, err := e.Observe(ctx); err != nil {
+		// A launch hits no point on the screen, and the phone refuses it
+		// while locked, so it goes ahead when the screen cannot be read.
+		if _, err := e.Observe(ctx); err != nil && name != "launch" {
 			return err
 		}
 	}
@@ -196,30 +203,63 @@ func (e *Engine) act(ctx context.Context, name string, f func(Phone) error) erro
 	if err != nil {
 		return err
 	}
+	if aim != "" {
+		e.mu.Lock()
+		cur := e.last
+		e.mu.Unlock()
+		if cur == nil || appKey(cur.App) != aim {
+			return ErrStale
+		}
+	}
 	start := time.Now()
 	err = f(p)
 	e.record(name, start, err)
 	return err
 }
 
+// appKey names the app a screen shows: its id, or its name when the
+// driver could not tell the id.
+func appKey(a screen.App) string {
+	if a.ID != "" {
+		return a.ID
+	}
+	return a.Name
+}
+
 // Tap taps a point.
 func (e *Engine) Tap(ctx context.Context, pt screen.Point, long bool) error {
-	return e.act(ctx, "tap", func(p Phone) error { return p.Tap(ctx, pt, driver.TapOptions{LongPress: long}) })
+	return e.tapIn(ctx, "", pt, long)
+}
+
+func (e *Engine) tapIn(ctx context.Context, aim string, pt screen.Point, long bool) error {
+	return e.act(ctx, "tap", aim, func(p Phone) error { return p.Tap(ctx, pt, driver.TapOptions{LongPress: long}) })
 }
 
 // Swipe swipes from one point to another.
 func (e *Engine) Swipe(ctx context.Context, from, to screen.Point, dur time.Duration) error {
-	return e.act(ctx, "swipe", func(p Phone) error { return p.Swipe(ctx, from, to, dur) })
+	return e.swipeIn(ctx, "", from, to, dur)
+}
+
+func (e *Engine) swipeIn(ctx context.Context, aim string, from, to screen.Point, dur time.Duration) error {
+	return e.act(ctx, "swipe", aim, func(p Phone) error { return p.Swipe(ctx, from, to, dur) })
 }
 
 // Type types text into the focused field.
 func (e *Engine) Type(ctx context.Context, text string, opt driver.TypeOptions) error {
-	return e.act(ctx, "type", func(p Phone) error { return p.Type(ctx, text, opt) })
+	return e.typeIn(ctx, "", text, opt)
+}
+
+func (e *Engine) typeIn(ctx context.Context, aim, text string, opt driver.TypeOptions) error {
+	return e.act(ctx, "type", aim, func(p Phone) error { return p.Type(ctx, text, opt) })
 }
 
 // Key presses a key: home, enter, delete.
 func (e *Engine) Key(ctx context.Context, k driver.Key) error {
-	return e.act(ctx, "key", func(p Phone) error { return p.Key(ctx, k) })
+	return e.keyIn(ctx, "", k)
+}
+
+func (e *Engine) keyIn(ctx context.Context, aim string, k driver.Key) error {
+	return e.act(ctx, "key", aim, func(p Phone) error { return p.Key(ctx, k) })
 }
 
 // Launch opens an app by its bundle id.
@@ -227,7 +267,7 @@ func (e *Engine) Launch(ctx context.Context, bundleID string) error {
 	if e.isSelf(bundleID) {
 		return ErrOwnLaunch
 	}
-	return e.act(ctx, "launch", func(p Phone) error { return p.LaunchID(ctx, bundleID) })
+	return e.act(ctx, "launch", "", func(p Phone) error { return p.LaunchID(ctx, bundleID) })
 }
 
 // leave takes Pinky's own UI off the screen before a task or a soak the
@@ -259,6 +299,30 @@ func (e *Engine) leave(ctx context.Context) error {
 		}
 	}
 	return errors.New("Pinky's app did not leave the screen")
+}
+
+// back returns to the app a task works in once the person has answered an
+// approval in Pinky's own app, where the engine never acts: it leaves
+// Pinky's screen and opens that app again. It says where it went, or ""
+// when Pinky's app was not in front, as when the person answered from the
+// notification.
+func (e *Engine) back(ctx context.Context, app string) (string, error) {
+	e.mu.Lock()
+	active := e.uiActive
+	e.mu.Unlock()
+	if !active {
+		return "", nil
+	}
+	if err := e.leave(ctx); err != nil {
+		return "", err
+	}
+	if app == "" || app == "com.apple.springboard" || !strings.Contains(app, ".") {
+		return "the home screen", nil
+	}
+	if err := e.Launch(ctx, app); err != nil {
+		return "", err
+	}
+	return app, nil
 }
 
 // Screenshot is the screen as PNG.
@@ -293,7 +357,11 @@ func (e *Engine) emit(ev Event) {
 		e.events = e.events[len(e.events)-50:]
 	}
 	e.mu.Unlock()
-	e.logf("event %s %s", ev.Kind, ev.ID)
+	if ev.End != "" {
+		e.logf("event %s %s", ev.Kind, ev.End)
+	} else {
+		e.logf("event %s %s", ev.Kind, ev.ID)
+	}
 }
 
 // Events returns the events after seq.
@@ -378,7 +446,10 @@ func (e *Engine) Pending() *Approval {
 
 // StartTask starts the agent on a task. key is the model API key, held in
 // memory for this task only; model "" is the engine's default.
-func (e *Engine) StartTask(ctx context.Context, task, key, model string) error {
+// StartTask starts a task. model and baseURL, when set, replace the
+// configured model and the Messages API's address (an Anthropic-compatible
+// gateway works too).
+func (e *Engine) StartTask(ctx context.Context, task, key, model, baseURL string) error {
 	e.mu.Lock()
 	if e.run != nil && e.run.Status().Running() {
 		e.mu.Unlock()
@@ -398,6 +469,9 @@ func (e *Engine) StartTask(ctx context.Context, task, key, model string) error {
 	cfg.Key = key
 	if model != "" {
 		cfg.Model = model
+	}
+	if baseURL != "" {
+		cfg.BaseURL = baseURL
 	}
 	r := agent.Start(cfg, task, first, &tools{e: e}, func(st agent.Status) {
 		if !st.Running() {
@@ -423,6 +497,7 @@ func (e *Engine) StopTask() {
 	}
 	e.mu.Unlock()
 	if r != nil {
+		e.logf("stop")
 		r.Stop()
 	}
 	e.stopSoak()

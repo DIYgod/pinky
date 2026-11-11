@@ -1,5 +1,6 @@
 import ActivityKit
 import LocalAuthentication
+import os
 import SwiftUI
 #if !NO_TUNNEL
 import NetworkExtension
@@ -27,7 +28,9 @@ final class AppModel: ObservableObject {
         didSet { UserDefaults.standard.set(host.rawValue, forKey: "host") }
     }
     #endif
-    @Published var addr = UserDefaults.standard.string(forKey: "addr") ?? "10.7.0.1:49152" {
+    /// remotepairingd through the reflector. Without a port the app finds
+    /// the one remotepairingd advertises on the loopback interface.
+    @Published var addr = UserDefaults.standard.string(forKey: "addr") ?? "10.7.0.1" {
         didSet { UserDefaults.standard.set(addr, forKey: "addr") }
     }
     @Published var connection = "Off"
@@ -46,16 +49,29 @@ final class AppModel: ObservableObject {
     private let audio = SilentAudio()
     private var poller: Timer?
     private var after = 0
+    /// A status asked for before this time may not end the Live Activity:
+    /// until the engine has taken the task or soak the activity is for, its
+    /// status still shows none running.
+    private var keepActivityUntil = Date.distantPast
     private var watcher: EventWatcher?
     private var active = true
+    private var engineAddr: String?
+    private let syslog = Logger(subsystem: Pinky.app, category: "app")
 
     init() {
         #if !NO_TUNNEL
         NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.vpnChanged() }
         }
-        Task { await loadManager() }
         #endif
+        Task {
+            #if !NO_TUNNEL
+            await loadManager()
+            #endif
+            #if DEBUG
+            await testRun()
+            #endif
+        }
         startPolling()
     }
 
@@ -84,9 +100,15 @@ final class AppModel: ObservableObject {
             try await m.saveToPreferences()
             try await m.loadFromPreferences()
             manager = m
-            try m.connection.startVPNTunnel(options: [
-                "engine": NSNumber(value: host == .tunnel), "addr": addr as NSString,
-            ])
+            let a = await engineAddress()
+            var opts: [String: NSObject] = ["engine": NSNumber(value: host == .tunnel), "addr": a as NSString]
+            #if DEBUG
+            // Test runs may try another tunnel address: -iface 10.7.1.1 -mask 255.255.255.0
+            for k in ["iface", "mask"] {
+                if let v = UserDefaults.standard.string(forKey: k) { opts[k] = v as NSString }
+            }
+            #endif
+            try m.connection.startVPNTunnel(options: opts)
         } catch {
             note("VPN: \(error.localizedDescription)")
         }
@@ -120,9 +142,36 @@ final class AppModel: ObservableObject {
     func disconnect() {}
     #endif
 
+    /// The address the engine dials: addr as set or, with no port in it, at
+    /// the port remotepairingd advertises on the loopback interface.
+    private func engineAddress() async -> String {
+        if addr.contains(":") {
+            engineAddr = addr
+            return addr
+        }
+        let found = await PairingPortFinder.find()
+        found.notes.forEach { note("bonjour: \($0)") }
+        let a = "\(addr):\(found.port ?? 49152)"
+        note("remotepairingd at \(a)\(found.port == nil ? " (fallback)" : "")")
+        engineAddr = a
+        return a
+    }
+
+    private var finding = false
+
     private func startInApp() {
         if PinkyCore.isStarted { return }
-        let out = PinkyCore.start(host: "app", addr: addr)
+        guard let a = engineAddr else {
+            guard !finding else { return }
+            finding = true
+            Task {
+                _ = await engineAddress()
+                finding = false
+                startInApp()
+            }
+            return
+        }
+        let out = PinkyCore.start(host: "app", addr: a)
         if out["ok"] as? Bool != true {
             note("engine: \(out["error"] as? String ?? "?")")
             return
@@ -183,6 +232,7 @@ final class AppModel: ObservableObject {
 
     private func refresh() async {
         guard connected else { return }
+        let asked = Date.now
         let st = await call(["op": "status", "after": after])
         guard let r = st["result"] as? [String: Any] else {
             state = st["error"] as? String ?? state
@@ -206,24 +256,28 @@ final class AppModel: ObservableObject {
                 .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
         }
         let running = (task["task"] != nil && task["end"] == nil) || (!soak.isEmpty && soak["done"] as? Bool != true)
-        if !running { endActivities() }
+        if !running && asked > keepActivityUntil { endActivities() }
     }
 
     func note(_ s: String) {
         let t = Date.now.formatted(date: .omitted, time: .standard)
         log.insert("\(t) \(s)", at: 0)
+        syslog.log("pinky app: \(s, privacy: .public)")
         if log.count > 100 { log.removeLast() }
     }
 
     // MARK: Tasks
 
-    func startTask(_ text: String, key: String, model: String) async {
-        let r = await call(["op": "task_start", "task": text, "api_key": key, "model": model])
-        if r["ok"] as? Bool == true {
-            startActivity(text)
-        } else {
+    func startTask(_ text: String, key: String, model: String, baseURL: String) async {
+        // iOS starts a Live Activity only for the app in front, and the
+        // engine takes Pinky off the screen before its first step.
+        startActivity(text)
+        let r = await call(["op": "task_start", "task": text, "api_key": key, "model": model, "base_url": baseURL])
+        if r["ok"] as? Bool != true {
+            endActivities()
             note("task: \(r["error"] as? String ?? "?")")
         }
+        keepActivityUntil = .now
     }
 
     func stop() async {
@@ -256,9 +310,11 @@ final class AppModel: ObservableObject {
 
     // MARK: Q1 and Q2 tests
 
-    func runProbe() async {
+    /// The probe; x and y, in screenshot pixels, are where it taps 7 when
+    /// it cannot read Calculator's elements.
+    func runProbe(x: Int = 0, y: Int = 0) async {
         probe = "Probing…"
-        let r = await call(["op": "probe", "app": "com.apple.calculator"])
+        let r = await call(["op": "probe", "app": "com.apple.calculator", "x": x, "y": y])
         if let res = r["result"], let d = try? JSONSerialization.data(withJSONObject: res, options: [.prettyPrinted, .sortedKeys]) {
             probe = String(data: d, encoding: .utf8) ?? ""
         } else {
@@ -270,6 +326,7 @@ final class AppModel: ObservableObject {
         let r = await call(["op": "soak_start", "app": "com.apple.calculator", "tap": tap, "every_s": every, "minutes": minutes])
         if r["ok"] as? Bool == true {
             startActivity("Soak test: Calculator, \(minutes) min")
+            keepActivityUntil = .now
         } else {
             note("soak: \(r["error"] as? String ?? "?")")
         }
@@ -280,10 +337,71 @@ final class AppModel: ObservableObject {
         endActivities()
     }
 
+    #if DEBUG
+    /// Runs a Q1, Q2 or Q3 measurement from a Mac, after the person has
+    /// allowed the VPN configuration once, so it needs no taps:
+    ///
+    ///     xcrun devicectl device process launch --terminate-existing --device <udid> \
+    ///       cc.diygod.pinky.standalone -- -pinkyRun soak -host tunnel -soakMinutes 20
+    ///
+    /// Arguments: -pinkyRun probe|soak|task, -host tunnel|app, -audio YES,
+    /// -probeX and -probeY (where the probe taps 7 without elements),
+    /// -soakMinutes, -soakEvery (seconds), -soakTap NO; for a task -task,
+    /// -model and -baseURL, with the key in the launch environment as
+    /// PINKY_MODEL_KEY. It restarts the loopback so the engine runs only
+    /// where -host says. A task's approvals still need the person.
+    private func testRun() async {
+        let d = UserDefaults.standard
+        guard let run = d.string(forKey: "pinkyRun") else { return }
+        note("test run: \(run) in \(host.label)")
+        #if !NO_TUNNEL
+        if manager?.connection.status != .disconnected && manager?.connection.status != .invalid {
+            disconnect()
+            for _ in 0..<40 {
+                if manager?.connection.status == .disconnected { break }
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
+        #endif
+        await connect()
+        var ready = false
+        for _ in 0..<120 {
+            let st = await call(["op": "status"])
+            if (st["result"] as? [String: Any])?["state"] as? String == "ready" {
+                ready = true
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        guard ready else {
+            note("test run: the engine did not get ready")
+            return
+        }
+        if d.bool(forKey: "audio") { backgroundAudio = true }
+        switch run {
+        case "probe":
+            await runProbe(x: d.integer(forKey: "probeX"), y: d.integer(forKey: "probeY"))
+        case "soak":
+            await startSoak(
+                minutes: max(1, d.integer(forKey: "soakMinutes")),
+                every: d.object(forKey: "soakEvery") == nil ? 10 : max(2, d.integer(forKey: "soakEvery")),
+                tap: d.object(forKey: "soakTap") == nil || d.bool(forKey: "soakTap"))
+        case "task":
+            // The key comes in the launch environment, never in a file.
+            let key = ProcessInfo.processInfo.environment["PINKY_MODEL_KEY"] ?? ""
+            await startTask(d.string(forKey: "task") ?? "", key: key,
+                            model: d.string(forKey: "model") ?? "", baseURL: d.string(forKey: "baseURL") ?? "")
+        default:
+            note("test run: unknown \(run)")
+        }
+    }
+    #endif
+
     // MARK: Live Activity
 
     private func startActivity(_ text: String) {
         endActivities()
+        keepActivityUntil = .distantFuture
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             note("Live Activities are off for Pinky")
             return
@@ -292,6 +410,7 @@ final class AppModel: ObservableObject {
             _ = try Activity.request(
                 attributes: PinkyActivityAttributes(task: text),
                 content: ActivityContent(state: .init(started: .now, note: ""), staleDate: nil))
+            note("Live Activity on")
         } catch {
             note("Live Activity: \(error.localizedDescription)")
         }

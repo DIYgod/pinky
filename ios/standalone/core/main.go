@@ -17,8 +17,29 @@ package main
 #include <stdlib.h>
 #include <os/log.h>
 #include <mach/mach.h>
+#include <ifaddrs.h>
+#include <net/if.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 static void pinky_log(const char *s) { os_log(OS_LOG_DEFAULT, "%{public}s", s); }
+
+// pinky_tunnel_index is the index of the interface holding an IPv4 address
+// in 10.7.0.0/16, the tunnel's own (10.7.0.2 in our reflector, 10.7.1.1 or
+// 10.7.0.2 in LocalDevVPN's), or 0. getifaddrs, because the sandbox denies
+// the routing sysctl Go's net.Interfaces reads.
+static unsigned int pinky_tunnel_index(void) {
+	struct ifaddrs *list, *i;
+	unsigned int idx = 0;
+	if (getifaddrs(&list) != 0) return 0;
+	for (i = list; i; i = i->ifa_next) {
+		if (!i->ifa_addr || i->ifa_addr->sa_family != AF_INET) continue;
+		uint32_t a = ntohl(((struct sockaddr_in *)i->ifa_addr)->sin_addr.s_addr);
+		if ((a >> 16) == ((10u << 8) | 7u)) { idx = if_nametoindex(i->ifa_name); break; }
+	}
+	freeifaddrs(list);
+	return idx;
+}
 
 static unsigned long long pinky_footprint(void) {
 	task_vm_info_data_t info;
@@ -50,6 +71,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/ios"
+	"github.com/DIYgod/pinky/internal/screen"
 	"github.com/DIYgod/pinky/ios/standalone/agent"
 	"github.com/DIYgod/pinky/ios/standalone/engine"
 	"github.com/DIYgod/pinky/ios/standalone/rppair"
@@ -62,7 +84,7 @@ type config struct {
 	Pairing   string   `json:"pairing"` // the pairing file, base64
 	UDID      string   `json:"udid"`
 	Addr      string   `json:"addr"`      // remotepairingd through the reflector, "10.7.0.1:49152"
-	Interface string   `json:"interface"` // bind to this interface ("utun4"), or "" for routing
+	Interface string   `json:"interface"` // "tunnel" binds to the tunnel interface; "" routes, then binds if that fails
 	Self      []string `json:"self"`      // Pinky's bundle ids
 	Host      string   `json:"host"`      // "extension" or "app", for the log
 	MemoryMB  int      `json:"memory_mb"` // Go's soft memory limit
@@ -193,43 +215,76 @@ func connectLoop(id rppair.Identity) {
 			continue
 		}
 		wait = time.Second
-		logLine(fmt.Sprintf("pinky connected in %v: %d services", time.Since(start).Round(time.Millisecond), len(d.Services())))
-		eng.SetPhone(d)
+		rax := false
+		for _, s := range d.Services() {
+			rax = rax || strings.HasSuffix(s, ".remoteAXService")
+		}
+		logLine(fmt.Sprintf("pinky connected in %v: %d services, remoteAXService %v", time.Since(start).Round(time.Millisecond), len(d.Services()), rax))
+		eng.SetPhone(&phone{Device: d, ids: map[string]string{"Pinky Local": "cc.diygod.pinky.standalone"}})
 		<-d.Done()
 		eng.SetState("tunnel closed")
 	}
 }
 
-// loopNet holds the tunnel interface's own address: 10.7.1.1 in our
-// reflector, 10.7.0.0 in LocalDevVPN's.
-var loopNet = &net.IPNet{IP: net.IPv4(10, 7, 0, 0), Mask: net.CIDRMask(16, 32)}
+// phone is the device the engine drives. Its reads log why the remote
+// accessibility service failed, which the inspector fallback's own error
+// hides.
+//
+// Over the tunnel alone the driver cannot read the phone's app catalog (the
+// installation proxy it uses comes through usbmuxd), so a read names the app
+// in front by its label only. The wrapper gives it its bundle id back: Pinky
+// Local's own, which the engine's guard needs, and that of the app the
+// engine last launched, learned from the first read after the launch.
+type phone struct {
+	*ios.Device
+	mu       sync.Mutex
+	ids      map[string]string // the label in front -> bundle id
+	launched string            // the app launched last, until a read names it
+}
 
-// bound is the interface index dials bind to, 0 for none. Dials first follow
-// the routes; if that fails they bind to the tunnel interface, in case iOS
-// keeps the extension's own sockets out of its tunnel.
+func (p *phone) LaunchID(ctx context.Context, bundleID string) error {
+	err := p.Device.LaunchID(ctx, bundleID)
+	p.mu.Lock()
+	if err == nil {
+		p.launched = bundleID
+	}
+	p.mu.Unlock()
+	return err
+}
+
+func (p *phone) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
+	s, st, err := p.ObserveWithStats(ctx, opt)
+	if st.RAXError != nil {
+		logLine("pinky observe: remoteAXService failed: " + st.RAXError.Error())
+	}
+	if st.Total > 2*time.Second {
+		logLine(fmt.Sprintf("pinky observe: slow read: walk %v, total %v", st.Walk.Round(time.Millisecond), st.Total.Round(time.Millisecond)))
+	}
+	if err == nil && s.App.ID == "" && s.App.Name != "" {
+		p.mu.Lock()
+		if id, ok := p.ids[s.App.Name]; ok {
+			s.App.ID = id
+		} else if p.launched != "" {
+			p.ids[s.App.Name] = p.launched
+			s.App.ID = p.launched
+			logLine(fmt.Sprintf("pinky observe: %q in front is %s", s.App.Name, p.launched))
+		}
+		p.launched = ""
+		p.mu.Unlock()
+	}
+	return s, err
+}
+
+// bound is the interface index dials bind to, 0 for none. The extension
+// binds to the tunnel interface from the start, since its own sockets skip
+// its tunnel; the app follows the routes and binds only if that fails.
 var bound int
 
 func tunnelInterface() (int, error) {
-	if cfg.Interface != "" {
-		ifi, err := net.InterfaceByName(cfg.Interface)
-		if err != nil {
-			return 0, err
-		}
-		return ifi.Index, nil
+	if i := int(C.pinky_tunnel_index()); i != 0 {
+		return i, nil
 	}
-	ifs, err := net.Interfaces()
-	if err != nil {
-		return 0, err
-	}
-	for _, ifi := range ifs {
-		addrs, _ := ifi.Addrs()
-		for _, a := range addrs {
-			if ipn, ok := a.(*net.IPNet); ok && loopNet.Contains(ipn.IP) {
-				return ifi.Index, nil
-			}
-		}
-	}
-	return 0, errors.New("no interface has an address in " + loopNet.String() + ": is the VPN on?")
+	return 0, errors.New("no interface has an address in 10.7.0.0/16: is the VPN on?")
 }
 
 func dialTCP(ctx context.Context, addr string, ifIndex int) (net.Conn, error) {

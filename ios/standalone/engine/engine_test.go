@@ -27,11 +27,15 @@ type fakePhone struct {
 	display string
 	inputs  []string
 	onHome  func()
+	noTree  bool // reads fail, as when remoteAXService does not answer
 }
 
 func (f *fakePhone) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.noTree {
+		return nil, errors.New("remote accessibility: timed out")
+	}
 	s := &screen.Screen{Width: 1080, Height: 2340, App: screen.App{ID: f.app}, Orientation: "portrait", CapturedAt: time.Now()}
 	switch f.app {
 	case "com.apple.calculator":
@@ -104,7 +108,9 @@ func (f *fakePhone) LaunchID(ctx context.Context, id string) error {
 }
 
 func (f *fakePhone) ScreenshotPNG(ctx context.Context) ([]byte, error) {
-	return []byte("\x89PNG fake"), nil
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return []byte("\x89PNG " + f.app + f.display), nil
 }
 
 func (f *fakePhone) Close() error { return nil }
@@ -171,6 +177,76 @@ func TestGuard(t *testing.T) {
 	}
 }
 
+func TestStale(t *testing.T) {
+	// A tap aimed at Calculator does nothing once another app replaced it,
+	// as when the person approves in Pinky and then goes home.
+	ctx := context.Background()
+	e, f := newTest(t, "com.apple.springboard")
+	if err := e.tapIn(ctx, "com.apple.calculator", screen.Point{X: 10, Y: 1010}, false); !errors.Is(err, ErrStale) {
+		t.Fatalf("tap aimed at Calculator on the home screen: %v", err)
+	}
+	if got := f.taken(); len(got) != 0 {
+		t.Fatalf("inputs reached the phone: %v", got)
+	}
+	f.mu.Lock()
+	f.app = "com.apple.calculator"
+	f.mu.Unlock()
+	e.mu.Lock()
+	e.last = nil
+	e.mu.Unlock()
+	if err := e.tapIn(ctx, "com.apple.calculator", screen.Point{X: 10, Y: 1010}, false); err != nil {
+		t.Fatalf("tap in Calculator: %v", err)
+	}
+	if got := f.taken(); len(got) != 1 {
+		t.Fatalf("inputs = %v, want one tap", got)
+	}
+}
+
+func TestApprovalBack(t *testing.T) {
+	// The person opens Pinky's app to approve. Afterwards the engine leaves
+	// it and opens Calculator again, so the agent can go on.
+	ctx := context.Background()
+	e, f := newTest(t, "com.apple.calculator")
+	tl := &tools{e: e}
+	if r := tl.Call(ctx, "observe", nil); r.IsError {
+		t.Fatal(r.Text)
+	}
+	got := make(chan agent.Result, 1)
+	go func() { got <- tl.Call(ctx, "request_approval", map[string]any{"action": "press ="}) }()
+	waitFor(t, func() bool { return e.Pending() != nil })
+	f.mu.Lock()
+	f.app = self
+	f.mu.Unlock()
+	e.SetUIActive(true)
+	if err := e.Answer(e.Pending().ID, true); err != nil {
+		t.Fatal(err)
+	}
+	r := <-got
+	if r.IsError || !strings.Contains(r.Text, "approved") || !strings.Contains(r.Text, "went back to com.apple.calculator") {
+		t.Fatalf("result: %s", r.Text)
+	}
+	if in := f.taken(); strings.Join(in, ",") != "key home,launch com.apple.calculator" {
+		t.Fatalf("inputs = %v", in)
+	}
+	if r := tl.Call(ctx, "tap", map[string]any{"x": 300, "y": 1010}); r.IsError {
+		t.Fatalf("tap after going back: %s", r.Text)
+	}
+
+	// Answered from the notification, with Pinky's app not in front: the
+	// engine stays where it is.
+	go func() { got <- tl.Call(ctx, "request_approval", map[string]any{"action": "press ="}) }()
+	waitFor(t, func() bool { return e.Pending() != nil })
+	if err := e.Answer(e.Pending().ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if r := <-got; strings.Contains(r.Text, "went back") {
+		t.Fatalf("result: %s", r.Text)
+	}
+	if in := f.taken(); len(in) != 3 {
+		t.Fatalf("inputs = %v", in)
+	}
+}
+
 func TestNoPhone(t *testing.T) {
 	e := New(Config{Self: []string{self}})
 	if err := e.Tap(context.Background(), screen.Point{}, false); !errors.Is(err, ErrNoPhone) {
@@ -191,11 +267,11 @@ func TestNoPhone(t *testing.T) {
 func TestProbe(t *testing.T) {
 	e, f := newTest(t, self)
 	e.SetUIActive(true)
-	out, err := e.Probe(context.Background(), "")
+	out, err := e.Probe(context.Background(), "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if out["foreground"] != "com.apple.calculator" || out["screenshot_bytes"] != 9 {
+	if out["foreground"] != "com.apple.calculator" || out["screenshot_bytes"] != len("\x89PNG com.apple.calculator") {
 		t.Fatalf("probe = %v", out)
 	}
 	changes, _ := out["changes"].([]string)
@@ -205,6 +281,63 @@ func TestProbe(t *testing.T) {
 	want := []string{"key home", "launch com.apple.calculator"}
 	if got := f.taken(); len(got) != 3 || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("inputs = %v", got)
+	}
+}
+
+func TestProbeWithoutTree(t *testing.T) {
+	e, f := newTest(t, "com.apple.springboard")
+	f.noTree = true
+	// Without a point it reads pixels and taps nothing.
+	out, err := e.Probe(context.Background(), "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out["observe_error"] == nil || out["screenshot_bytes"] == 0 || out["tap_ms"] != nil {
+		t.Fatalf("probe = %v", out)
+	}
+	// With one it taps there and compares screenshots.
+	out, err = e.Probe(context.Background(), "", &screen.Point{X: 7*270%1080 + 10, Y: 1000 + 7/4*270 + 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out["pixels_changed"] != true || out["tap_error"] != nil {
+		t.Fatalf("probe = %v", out)
+	}
+	if f.display != "7" {
+		t.Fatalf("display = %q", f.display)
+	}
+}
+
+func TestTapBlindNeedsALaunch(t *testing.T) {
+	e, f := newTest(t, "com.apple.calculator")
+	if err := e.tapBlind(context.Background(), screen.Point{X: 10, Y: 1010}, time.Now().Add(-time.Minute)); err == nil {
+		t.Fatal("tapped long after the launch")
+	}
+	e.SetUIActive(true)
+	if err := e.tapBlind(context.Background(), screen.Point{X: 10, Y: 1010}, time.Now()); !errors.Is(err, ErrOwnUI) {
+		t.Fatalf("tapped over Pinky's UI: %v", err)
+	}
+	if got := f.taken(); len(got) != 0 {
+		t.Fatalf("inputs = %v", got)
+	}
+}
+
+func TestSoakWithoutTree(t *testing.T) {
+	e, f := newTest(t, "com.apple.springboard")
+	f.noTree = true
+	if err := e.StartSoak(SoakConfig{Tap: true, Every: time.Second, Minutes: 1}); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, func() bool { s := e.Soak(); return s != nil && s.Pixels >= 2 })
+	e.StopTask()
+	waitFor(t, func() bool { return e.Soak().Done })
+	if s := e.Soak(); s.OK != 0 {
+		t.Fatalf("soak = %+v", s)
+	}
+	for _, in := range f.taken() {
+		if strings.HasPrefix(in, "tap") {
+			t.Fatalf("the soak tapped without reading the screen: %v", f.taken())
+		}
 	}
 }
 
@@ -411,7 +544,7 @@ func TestStopDuringApproval(t *testing.T) {
 	defer srv.Close()
 	e := New(Config{Self: []string{self}, Settle: time.Millisecond, Agent: agent.Config{BaseURL: srv.URL}})
 	e.SetPhone(&fakePhone{app: "com.apple.springboard"})
-	if err := e.StartTask(context.Background(), "x", "k", ""); err != nil {
+	if err := e.StartTask(context.Background(), "x", "k", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	waitFor(t, func() bool { return e.Pending() != nil })
@@ -450,7 +583,7 @@ func TestBlockedToolResult(t *testing.T) {
 	e := New(Config{Self: []string{self}, Settle: time.Millisecond, Agent: agent.Config{BaseURL: srv.URL}})
 	f := &fakePhone{app: "com.apple.springboard"}
 	e.SetPhone(f)
-	if err := e.StartTask(context.Background(), "x", "k", ""); err != nil {
+	if err := e.StartTask(context.Background(), "x", "k", "", ""); err != nil {
 		t.Fatal(err)
 	}
 	// Pinky's app comes to the front after the task started.

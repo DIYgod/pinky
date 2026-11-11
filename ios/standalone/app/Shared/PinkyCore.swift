@@ -55,6 +55,9 @@ enum PinkyCore {
         if host == "extension" {
             // Network extensions get about 50 MB.
             config["memory_mb"] = 30
+            // The extension's own sockets skip its tunnel and would leave
+            // over Wi-Fi, so the engine binds them to the tunnel interface.
+            config["interface"] = "tunnel"
         }
         let json = String(data: try! JSONSerialization.data(withJSONObject: config), encoding: .utf8)!
         let out = decode(withC(json) { PinkyStart($0) })

@@ -82,6 +82,8 @@ func blocked(err error) agent.Result {
 	switch {
 	case errors.Is(err, ErrOwnUI), errors.Is(err, ErrApproval), errors.Is(err, ErrOwnLaunch):
 		return errResult("blocked", err)
+	case errors.Is(err, ErrStale):
+		return errResult("stale", err)
 	case errors.Is(err, ErrLocked):
 		return errResult("device_locked", errors.New("the phone is locked; end the task with finish"))
 	case errors.Is(err, ErrNoPhone):
@@ -113,7 +115,20 @@ func (t *tools) point(args map[string]any) (screen.Point, error) {
 	return screen.Point{X: x, Y: y}, nil
 }
 
+// Call runs one tool and logs its name, time and outcome; never its
+// arguments or what it read, which may be the person's text.
 func (t *tools) Call(ctx context.Context, name string, args map[string]any) agent.Result {
+	start := time.Now()
+	r := t.call(ctx, name, args)
+	outcome := "ok"
+	if r.IsError {
+		outcome, _, _ = strings.Cut(strings.TrimPrefix(r.Text, "error: "), "\n")
+	}
+	t.e.logf("tool %s %dms %s", name, time.Since(start).Milliseconds(), outcome)
+	return r
+}
+
+func (t *tools) call(ctx context.Context, name string, args map[string]any) agent.Result {
 	e := t.e
 	var err error
 	switch name {
@@ -133,13 +148,13 @@ func (t *tools) Call(ctx context.Context, name string, args map[string]any) agen
 		if p, err = t.point(args); err != nil {
 			return errResult("invalid_argument", err)
 		}
-		err = e.Tap(ctx, p, flag(args, "long"))
+		err = e.tapIn(ctx, t.aim(), p, flag(args, "long"))
 	case "swipe":
 		var from, to screen.Point
 		if from, to, err = t.swipe(args); err != nil {
 			return errResult("invalid_argument", err)
 		}
-		err = e.Swipe(ctx, from, to, 300*time.Millisecond)
+		err = e.swipeIn(ctx, t.aim(), from, to, 300*time.Millisecond)
 	case "type":
 		text, _ := args["text"].(string)
 		if ref, ok := num(args, "ref"); ok && ref != 0 {
@@ -147,12 +162,12 @@ func (t *tools) Call(ctx context.Context, name string, args map[string]any) agen
 			if p, err = t.point(args); err != nil {
 				return errResult("invalid_argument", err)
 			}
-			if err = e.Tap(ctx, p, false); err != nil {
+			if err = e.tapIn(ctx, t.aim(), p, false); err != nil {
 				return blocked(err)
 			}
 			sleep(ctx, 400*time.Millisecond)
 		}
-		err = e.Type(ctx, text, driver.TypeOptions{Append: flag(args, "append"), Submit: flag(args, "submit")})
+		err = e.typeIn(ctx, t.aim(), text, driver.TypeOptions{Append: flag(args, "append"), Submit: flag(args, "submit")})
 	case "key":
 		k, _ := args["key"].(string)
 		switch driver.Key(k) {
@@ -160,7 +175,7 @@ func (t *tools) Call(ctx context.Context, name string, args map[string]any) agen
 		default:
 			return errResult("invalid_argument", fmt.Errorf("unknown key %q", k))
 		}
-		err = e.Key(ctx, driver.Key(k))
+		err = e.keyIn(ctx, t.aim(), driver.Key(k))
 	case "launch":
 		id, _ := args["bundle_id"].(string)
 		if strings.TrimSpace(id) == "" {
@@ -188,6 +203,16 @@ func (t *tools) Call(ctx context.Context, name string, args map[string]any) agen
 			r.Text = "approved: go ahead with exactly this action."
 		default:
 			r.Text = "denied: do not do it. Find another way within the task, or end with finish."
+		}
+		// The person may have answered in Pinky's own app, where nothing
+		// can be done: go back to the app the agent was in.
+		went, err := e.back(ctx, t.aim())
+		switch {
+		case err != nil:
+			r.Text += "\nPinky's own app is in front and the engine could not leave it (" + err.Error() + "). Wait for the person, or end with finish."
+		case went != "":
+			sleep(ctx, time.Second)
+			r.Text += "\nThe person answered in Pinky's app; the engine went back to " + went + ":\n" + t.screen(ctx, false).Text
 		}
 		return r
 	default:
@@ -235,6 +260,15 @@ func (t *tools) swipe(args map[string]any) (from, to screen.Point, err error) {
 
 // screen reads the screen and returns it, or only what changed since the
 // screen the agent saw last.
+// aim is the app of the screen the agent last saw: its input is meant for
+// that app and goes nowhere else.
+func (t *tools) aim() string {
+	if t.prev == nil {
+		return ""
+	}
+	return appKey(t.prev.App)
+}
+
 func (t *tools) screen(ctx context.Context, full bool) agent.Result {
 	s, err := t.e.Observe(ctx)
 	if err != nil {

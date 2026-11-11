@@ -20,8 +20,7 @@ struct PinkyActivityWidget: Widget {
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button(intent: StopIntent()) { Label("Stop", systemImage: "stop.fill") }
-                    .tint(.red)
+                StopButton(note: context.state.note)
             }
             .padding()
         } dynamicIsland: { context in
@@ -30,7 +29,7 @@ struct PinkyActivityWidget: Widget {
                     Label("Pinky", systemImage: "hand.tap.fill").foregroundStyle(.pink)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    Button(intent: StopIntent()) { Label("Stop", systemImage: "stop.fill") }.tint(.red)
+                    StopButton(note: context.state.note)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     Text(context.attributes.task).lineLimit(2).font(.caption)
@@ -43,6 +42,20 @@ struct PinkyActivityWidget: Widget {
             } minimal: {
                 Image(systemName: "hand.tap.fill").foregroundStyle(.pink)
             }
+        }
+    }
+}
+
+/// Stop, or once the task has ended the note that says so, for the few
+/// seconds the activity stays: a Stop that does nothing invites more taps.
+struct StopButton: View {
+    let note: String
+
+    var body: some View {
+        if note.isEmpty {
+            Button(intent: StopIntent()) { Label("Stop", systemImage: "stop.fill") }.tint(.red)
+        } else {
+            Text(note).font(.headline).foregroundStyle(.secondary)
         }
     }
 }

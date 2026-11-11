@@ -4,12 +4,11 @@ struct ContentView: View {
     @EnvironmentObject var m: AppModel
     @State private var taskText = ""
     @State private var apiKey = ""
-    @State private var model = "claude-opus-5-5"
+    @AppStorage("model") private var model = "claude-opus-5-5"
+    @AppStorage("baseURL") private var baseURL = ""
     @State private var soakMinutes = 10
     @State private var soakEvery = 10
     @State private var soakTap = true
-
-    private let models = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"]
 
     var body: some View {
         NavigationStack {
@@ -77,13 +76,14 @@ struct ContentView: View {
     private var task: some View {
         Section {
             TextField("What should Pinky do?", text: $taskText, axis: .vertical)
-            SecureField("Claude API key (kept in memory only)", text: $apiKey)
+            SecureField("API key (kept in memory only)", text: $apiKey)
                 .autocorrectionDisabled().textInputAutocapitalization(.never)
-            Picker("Model", selection: $model) {
-                ForEach(models, id: \.self) { Text($0) }
-            }
+            TextField("Model", text: $model)
+                .autocorrectionDisabled().textInputAutocapitalization(.never)
+            TextField("Messages API address (empty: Anthropic)", text: $baseURL)
+                .autocorrectionDisabled().textInputAutocapitalization(.never).keyboardType(.URL)
             HStack {
-                Button("Start") { Task { await m.startTask(taskText, key: apiKey, model: model) } }
+                Button("Start") { Task { await m.startTask(taskText, key: apiKey, model: model, baseURL: baseURL) } }
                     .disabled(!m.connected || taskText.isEmpty || apiKey.isEmpty)
                 Spacer()
                 Button("Stop", role: .destructive) { Task { await m.stop() } }

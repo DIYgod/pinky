@@ -8,13 +8,15 @@ options:
 settings:
   base:
     DEVELOPMENT_TEAM: 492J8Q67PF
-    CODE_SIGN_STYLE: Automatic
     SWIFT_VERSION: "5.0"
     MARKETING_VERSION: "0.1"
     CURRENT_PROJECT_VERSION: "1"
     TARGETED_DEVICE_FAMILY: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     GENERATE_INFOPLIST_FILE: NO
+    # One binary per part: build.sh signs the bundles, not a split-off
+    # debug dylib, which iOS would refuse to load unsigned.
+    ENABLE_DEBUG_DYLIB: NO
 
 targetTemplates:
   # Links the Go core (build/core/libpinkycore.a).
@@ -62,8 +64,12 @@ targets:
         NSSupportsLiveActivities: true
         UIBackgroundModes: [audio]
         NSFaceIDUsageDescription: Pinky asks for Face ID before it goes ahead with a step you approve.
+        # remotepairingd's advertisement on the loopback interface gives the
+        # port the engine dials (PairingPort.swift).
+        NSLocalNetworkUsageDescription: Pinky looks for this iPhone's own pairing service to control your apps.
+        NSBonjourServices: [_remotepairing._tcp]
     entitlements:
-      path: build/gen/App.entitlements
+      path: build/gen/cc.diygod.pinky.standalone.entitlements
       properties:
         com.apple.developer.networking.networkextension: [packet-tunnel-provider]
     settings:
@@ -86,7 +92,7 @@ targets:
           NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
     entitlements:
-      path: build/gen/Tunnel.entitlements
+      path: build/gen/cc.diygod.pinky.standalone.tunnel.entitlements
       properties:
         com.apple.developer.networking.networkextension: [packet-tunnel-provider]
     settings:
@@ -106,7 +112,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: cc.diygod.pinky.standalone.activity
 
   # Without a tunnel of its own: LocalDevVPN reflects the packets and the
-  # engine runs in the app. Its ids fall under the team's wildcard profile.
+  # engine runs in the app. Its ids fall under the team's wildcard profile,
+  # so it needs no App IDs of its own.
   PinkyStandaloneLite:
     templates: [AppBase]
     dependencies:

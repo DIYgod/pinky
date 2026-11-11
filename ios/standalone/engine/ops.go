@@ -15,7 +15,8 @@ import (
 type Request struct {
 	Op string `json:"op"`
 
-	// observe, input
+	// observe, input; for probe, x,y is where to tap in Calculator when
+	// the elements cannot be read
 	X    int    `json:"x,omitempty"`
 	Y    int    `json:"y,omitempty"`
 	X2   int    `json:"x2,omitempty"`
@@ -29,6 +30,8 @@ type Request struct {
 	Task   string `json:"task,omitempty"`
 	APIKey string `json:"api_key,omitempty"`
 	Model  string `json:"model,omitempty"`
+	// BaseURL is the Messages API's address; "" is Anthropic's.
+	BaseURL string `json:"base_url,omitempty"`
 
 	// approve
 	ID  string `json:"id,omitempty"`
@@ -146,7 +149,7 @@ func (e *Engine) do(ctx context.Context, r Request) (any, error) {
 	case "task_start":
 		ctx, cancel := timed(20 * time.Second)
 		defer cancel()
-		return nil, e.StartTask(ctx, r.Task, r.APIKey, r.Model)
+		return nil, e.StartTask(ctx, r.Task, r.APIKey, r.Model, r.BaseURL)
 	case "task_stop", "stop":
 		e.StopTask()
 		return nil, nil
@@ -155,7 +158,11 @@ func (e *Engine) do(ctx context.Context, r Request) (any, error) {
 	case "probe":
 		ctx, cancel := timed(60 * time.Second)
 		defer cancel()
-		out, err := e.Probe(ctx, r.App)
+		var blind *screen.Point
+		if r.X > 0 || r.Y > 0 {
+			blind = &screen.Point{X: r.X, Y: r.Y}
+		}
+		out, err := e.Probe(ctx, r.App, blind)
 		if err == nil {
 			b, _ := json.Marshal(out)
 			e.logf("probe %s", b)

@@ -80,7 +80,7 @@ func (e *Engine) Heartbeat() string {
 		fmt.Fprintf(&b, " task=%s steps=%d cost=%.3f", map[bool]string{true: "running", false: string(st.End)}[st.Running()], st.Steps, st.Cost)
 	}
 	if e.soak != nil {
-		fmt.Fprintf(&b, " soak=%d/%d", e.soak.ok, e.soak.rounds)
+		fmt.Fprintf(&b, " soak=%d/%d,pixels=%d", e.soak.ok, e.soak.rounds, e.soak.pixels)
 	}
 	names := make([]string, 0, len(e.stats.Ops))
 	for n := range e.stats.Ops {
