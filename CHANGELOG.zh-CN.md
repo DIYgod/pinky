@@ -2,6 +2,11 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- iPhone 上的辅助应用（WebDriverAgent）现在显示为「Pinky 助手」，用的是 Pinky 的图标。
+- 在装有 Xcode 的 Mac 上，运行 `pinkyctl helper install` 一条命令就能构建、签名并安装 iPhone 辅助应用，只连 Wi-Fi 的手机也可以。签名到期后再运行一次即可。
+
 ## 2026.1111.10 (2026-11-11)
 
 - Pinky 换了更安静的新样子：macOS 和 Windows 11 上侧边栏是半透明的，所有界面用同一套字号和间距，「设置」改成分组列表。
