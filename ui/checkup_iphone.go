@@ -110,7 +110,7 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 		return w, true
 	case driver.CheckHelper:
 		w.detail = false
-		now := time.Now()
+		now := timeNow()
 		text, ranOut := helperWords(d, now, a.canInstallHelper())
 		exp := d.Info.HelperExpires
 		switch {
@@ -219,7 +219,7 @@ func setupWords(d gateway.DeviceView, step string, here bool) (title, text, note
 		return locales.ConnectionTitle(), locales.ConnectionChosenNeedsIOS27(d.Info.OSVersion), ""
 	case driver.SetupInstallHelper:
 		// Its signature ran out (Info.HelperExpires), or it is missing.
-		if text, ranOut := helperWords(d, time.Now(), here); ranOut {
+		if text, ranOut := helperWords(d, timeNow(), here); ranOut {
 			return locales.CheckHelperTitle(), text, ""
 		}
 		return locales.CheckHelperTitle(), locales.CheckHelperMissing(), ""
@@ -276,6 +276,13 @@ func needsHelper(d gateway.DeviceView) bool {
 	return d.Info.Platform == driver.IOS && d.Info.State == driver.StateNeedsSetup && d.Info.Setup == driver.SetupInstallHelper
 }
 
+// timeNow is the clock the helper's words are told by: whether an iPhone's
+// helper stops working soon, or has stopped. Tests put their own in its
+// place (testNow in main_test.go), so that these words do not change with
+// the time the tests run at. Other views tell dates by the frame's clock,
+// Context.Now.
+var timeNow = time.Now
+
 // helperWords says when the helper an iPhone is driven through stops
 // working (Info.HelperExpires): within driver.HelperReminder, or that it
 // did, which ranOut reports. "" when it lasts longer or is not known.
@@ -299,17 +306,17 @@ func helperWords(d gateway.DeviceView, now time.Time, here bool) (text string, r
 }
 
 // helperReminder draws the Phone screen's reminder above the mirror that
-// the helper an iPhone is driven through stops working soon, width wide,
-// and returns the room it takes, with its gap: 0 when it shows none. On a
-// Mac with Xcode it installs the helper again (helper.go), and says why
+// the helper an iPhone is driven through stops working soon, width wide
+// and at most room high, and returns its height: 0 when it shows none. On
+// a Mac with Xcode it installs the helper again (helper.go), and says why
 // the last try failed or which teams to choose from; elsewhere it links
 // to how to install it again. Once the helper has stopped, the phone
 // needs setup and says so in its place.
-func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width float32) float32 {
+func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width, room float32) float32 {
 	if d.Info.Platform != driver.IOS || d.Info.HelperExpires.IsZero() {
 		return 0
 	}
-	now := c.Now()
+	now := timeNow()
 	here := a.canInstallHelper()
 	text, _ := helperWords(d, now, here)
 	if text == "" {
@@ -341,32 +348,201 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width float32)
 		}
 		labels, acts = []string{locales.HelperInstallAgain()}, []func(){func() { a.startHelperInstall(id, name, "", nil) }}
 	}
-	height := helperReminderHeight(c, text, labels, width)
-	mg.Row(c).Width(width).Height(height).Shrink(0).Padding(8, 8, 8, 14).Radius(12).Background(p.amberTint).Border(1, p.amberLine).
-		Gap(10).AlignItems(mg.Center).Role(mg.RoleStatus).Label(text).Children(func() {
-		mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot)
-		mg.Text(c, text).FontSize(fsSmall).Grow(1).MinWidth(0)
-		for i, label := range labels {
-			if button(c, label, btnOpt{small: true}).Disabled(here && a.helperBusy()).Clicked() {
+	l := layoutReminder(c, text, labels, width, room)
+	words := func() {
+		// As layoutReminder measured them.
+		t := mg.RichText(c, reminderSpan(text)).Width(l.textW).Shrink(0)
+		if l.lines > 0 {
+			// The checkup has them whole too.
+			t.MaxLines(l.lines).Tooltip(text)
+		}
+	}
+	// The buttons from one to before another.
+	buttons := func(from, to int) {
+		for i := from; i < to; i++ {
+			o := btnOpt{small: true}
+			if l.buttons[i].cut {
+				o.maxW = l.buttons[i].w
+			}
+			b := button(c, labels[i], o).Disabled(here && a.helperBusy())
+			if l.buttons[i].cut {
+				b.Tooltip(labels[i])
+			}
+			if l.scrolls {
+				// The list they scroll in clips what is around them.
+				ringInside(c, b)
+			}
+			if b.Clicked() {
 				acts[i]()
 			}
 		}
+	}
+	// Keyed, a phone's reminder keeps its own state, as how far its teams
+	// have scrolled, apart from another phone's.
+	box := mg.Row(c.Key("helper-reminder-"+id)).Width(width).Height(l.height).Shrink(0).Padding(reminderPadY, reminderPadEnd, reminderPadY, reminderPadX).
+		Radius(rCard).Background(p.amberTint).Border(reminderBorder, p.amberLine).Gap(reminderGap).Role(mg.RoleStatus).Label(text)
+	if !l.below {
+		box.AlignItems(mg.Center).Children(func() {
+			mg.Icon(c, icAlert).FontSize(reminderIcon).TextColor(p.amberDot)
+			words()
+			buttons(0, len(labels))
+		})
+		return l.height
+	}
+	box.AlignItems(mg.Start).Children(func() {
+		// Beside the first line of the words.
+		mg.Icon(c, icAlert).FontSize(reminderIcon).TextColor(p.amberDot).Margin(max(0, (l.lineH-reminderIcon)/2), 0, 0, 0)
+		mg.Column(c).Width(l.textW).Shrink(0).Gap(reminderStack).Children(func() {
+			words()
+			// In the rows layoutReminder counted for the height: a row
+			// that wraps would work them out again by itself.
+			rows := func() {
+				for from := 0; from < len(labels); {
+					to := from + 1
+					for to < len(labels) && l.buttons[to].row == l.buttons[from].row {
+						to++
+					}
+					mg.Row(c).Gap(reminderStack).Children(func() { buttons(from, to) })
+					from = to
+				}
+			}
+			if l.scrolls {
+				// More teams than the window has room for. The list reaches
+				// into the reminder's padding after its buttons, for its
+				// scroll bar, which over their ends would take the presses
+				// there.
+				mg.Scroll(c).Width(l.textW+reminderPadEnd).Height(l.buttonsH).Shrink(0).Margin(0, -reminderPadEnd, 0, 0).Padding(0, reminderPadEnd, 0, 0).
+					ScrollbarStyle(mg.ScrollbarStyle{TrackWidth: reminderPadEnd}).Gap(reminderStack).Children(rows)
+			} else {
+				mg.Column(c).Gap(reminderStack).Children(rows)
+			}
+		})
 	})
-	return height + 14
+	return l.height
 }
 
-// helperReminderHeight works out the reminder's height as its row lays it
-// out: the words wrap in what the width leaves after the padding, the
-// border, the icon, the gaps and the buttons (their labels, padding and
-// border), and the reminder is no shorter than a button.
-func helperReminderHeight(c *mg.Context, text string, labels []string, width float32) float32 {
-	tw := width - (14 + 8 + 2) - 16 - 10
+// The helper reminder's box: the most it is wide, its border, its padding
+// (above and below, after its buttons, before its icon), its icon, the gap
+// between its icon, words and buttons, and that between its words and the
+// buttons under them.
+const (
+	reminderWidth  = 520
+	reminderBorder = 1
+	reminderPadY   = sp2
+	reminderPadEnd = sp2
+	reminderPadX   = 14
+	reminderIcon   = 16
+	reminderGap    = 10
+	reminderStack  = sp2
+	// reminderChrome is what its padding and border take of its height.
+	reminderChrome = 2 * (reminderPadY + reminderBorder)
+)
+
+// reminderInner returns the width a reminder width wide leaves its words
+// and buttons: what is within its border and padding, after its icon.
+func reminderInner(width float32) float32 {
+	return max(width-2*reminderBorder-reminderPadX-reminderPadEnd-reminderIcon-reminderGap, 1)
+}
+
+// reminderSpan is the helper reminder's words as it draws and measures
+// them. A text of their size alone would have lower lines than
+// Context.MeasureText tells, which measures spans over the theme's text.
+func reminderSpan(text string) mg.Span { return mg.Span{Text: text, Size: fsSmall} }
+
+// reminderLayout is how the helper reminder lays out in the width and the
+// height it is given (layoutReminder).
+type reminderLayout struct {
+	below   bool    // the buttons under the words, not beside them
+	textW   float32 // the width the words wrap in
+	lineH   float32 // the height of a line of the words
+	lines   int     // the lines the words are cut to; 0 when they show whole
+	buttons []reminderButton
+	// Under the words: the height the buttons take, and whether they
+	// scroll in it, for want of room.
+	buttonsH float32
+	scrolls  bool
+	height   float32 // the reminder's, with its padding and border
+}
+
+// reminderButton is a button of the helper reminder: its width, whether
+// that cuts its label, and its row of the buttons under the words.
+type reminderButton struct {
+	w   float32
+	cut bool
+	row int
+}
+
+// layoutReminder lays out the helper reminder, width wide, with its words
+// and its buttons' labels: the buttons beside the words, as a window with
+// room shows them, or under the words where that makes the reminder
+// lower, as in a narrow window, where the words beside a button would
+// wrap into a tall column. The reminder is at most room high, which
+// leaves the phone below it its least height, down to a line of its words
+// with its buttons: words that would take more are cut to the lines there
+// is room for, and more rows of buttons than there is room for scroll.
+func layoutReminder(c *mg.Context, text string, labels []string, width, room float32) reminderLayout {
+	span := reminderSpan(text)
+	inner := reminderInner(width)
+	_, lineH := c.MeasureText(0, span)
+	_, wordsH := c.MeasureText(inner, span)
+	l := reminderLayout{textW: inner, lineH: lineH}
+
+	// The buttons, in the rows they take under the words, and what they
+	// leave the words beside them.
+	beside, rows, x := inner, 1, float32(0)
 	for _, label := range labels {
-		lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: 13, Weight: 500})
-		tw -= 10 + lw + 2*10 + 2
+		w := buttonWidth(c, label, true)
+		beside -= reminderGap + w
+		b := reminderButton{w: min(w, inner), cut: w > inner}
+		if x > 0 && x+reminderStack+b.w > inner {
+			rows, x = rows+1, 0
+		}
+		if x > 0 {
+			x += reminderStack
+		}
+		x += b.w
+		b.row = rows - 1
+		l.buttons = append(l.buttons, b)
 	}
-	_, th := c.MeasureText(max(tw, 1), mg.Span{Text: text, Size: 13})
-	return max(th, 28) + 2*8 + 2
+	buttonsH := float32(rows)*smallButtonHeight + float32(rows-1)*reminderStack
+	belowH := wordsH + reminderStack + buttonsH + reminderChrome
+	// Beside the words where that is no higher, and where there is no room
+	// for even a line of the words over a row of buttons.
+	if beside >= 1 {
+		_, besideH := c.MeasureText(beside, span)
+		if max(besideH, smallButtonHeight)+reminderChrome <= belowH || lineH+reminderStack+smallButtonHeight+reminderChrome > room {
+			l.textW = beside
+			l.lines, besideH = cutLines(besideH, lineH, room-reminderChrome)
+			l.height = max(besideH, smallButtonHeight) + reminderChrome
+			return l
+		}
+	}
+	// Under the words, which keep two lines. Rows of buttons that do not
+	// fit under them scroll, in the height of the rows that do and half of
+	// the next, which shows that there are more: of a row at least.
+	l.below, l.buttonsH = true, buttonsH
+	left := room - reminderChrome - reminderStack
+	if most := left - min(wordsH, 2*lineH); rows > 1 && buttonsH > most {
+		const pitch = smallButtonHeight + reminderStack
+		l.buttonsH, l.scrolls = smallButtonHeight, true
+		if whole := int((most - smallButtonHeight/2.0) / pitch); whole > 0 {
+			l.buttonsH = float32(whole)*pitch + smallButtonHeight/2.0
+		}
+	}
+	l.lines, wordsH = cutLines(wordsH, lineH, left-l.buttonsH)
+	l.height = wordsH + reminderStack + l.buttonsH + reminderChrome
+	return l
+}
+
+// cutLines cuts words h high, in lines at most lineH high, to the lines
+// that fit in room, one at least: it returns how many, 0 when they all
+// fit or are one line, and the height they take.
+func cutLines(h, lineH, room float32) (lines int, height float32) {
+	if h <= room || h <= lineH || lineH <= 0 {
+		return 0, h
+	}
+	lines = max(int(room/lineH), 1)
+	return lines, float32(lines) * lineH
 }
 
 // iphoneCheckAction draws what an iPhone's item offers to do, and reports
