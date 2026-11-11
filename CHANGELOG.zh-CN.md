@@ -2,6 +2,11 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在可以用多个团队为 iPhone 辅助应用签名的 Mac 上，在辅助应用即将停止工作的提醒里选择团队时，手机不会再被挤出窗口。
+- 窗口较窄时，这条提醒占的地方更少了：按钮会移到文字下方，手机画面更大。
+
 ## 2026.1112.1 (2026-11-12)
 
 - Android 手机上的 Pinky Companion 改名了：手机上显示为 Pinky，电脑上的 Pinky 里叫「Android 版 Pinky」。手机会像以前一样更新到新版。
