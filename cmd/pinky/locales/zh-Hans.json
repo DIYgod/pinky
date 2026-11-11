@@ -180,7 +180,7 @@
   "askLimitSteps": "{count, plural, other {已达到 # 步的上限。}}",
   "askLimitTime": "{count, plural, other {已达到 # 分钟的上限。}}",
   "askLimitTokens": "{count, plural, other {已达到 # 个 token 的上限。}}",
-  "askMeta": "{model} · 每个任务最多 {limit}",
+  "askTaskLimit": "每个任务最多 {limit}",
   "askMinutes": "{count, plural, other {# 分钟}}",
   "askNoKey": "还没有保存 API 密钥。请在“设置 › 智能体”中添加。",
   "askPhone": "手机",

@@ -180,7 +180,7 @@
   "askLimitSteps": "{count, plural, other {上限の # ステップに達しました。}}",
   "askLimitTime": "{count, plural, other {上限の # 分に達しました。}}",
   "askLimitTokens": "{count, plural, other {上限の # トークンに達しました。}}",
-  "askMeta": "{model} · 1 タスクあたり最大 {limit}",
+  "askTaskLimit": "1 タスクあたり最大 {limit}",
   "askMinutes": "{count, plural, other {# 分}}",
   "askNoKey": "API キーが保存されていません。「設定 › エージェント」で追加してください。",
   "askPhone": "スマホ",

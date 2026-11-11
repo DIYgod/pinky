@@ -3067,20 +3067,20 @@ func (msgs Messages) AskLimitTokens(count int) string {
 	return Catalog.Format(msgs.locale, "askLimitTokens", map[string]any{"count": count})
 }
 
-// AskMeta says "{model} · up to {limit} a task"
+// AskTaskLimit says "Up to {limit} a task"
 // in the language the app shows.
 //
-// Ask Pinky, next to Start: the model that will do the task, and the cost
-// limit of a task (askDollars or askTokens).
-func AskMeta(model string, limit string) string { return In(i18n.Locale()).AskMeta(model, limit) }
+// Ask Pinky, under the model's name next to Start: the cost limit of a task
+// (askDollars or askTokens).
+func AskTaskLimit(limit string) string { return In(i18n.Locale()).AskTaskLimit(limit) }
 
-// AskMeta says "{model} · up to {limit} a task"
+// AskTaskLimit says "Up to {limit} a task"
 // in the language of msgs.
 //
-// Ask Pinky, next to Start: the model that will do the task, and the cost
-// limit of a task (askDollars or askTokens).
-func (msgs Messages) AskMeta(model string, limit string) string {
-	return Catalog.Format(msgs.locale, "askMeta", map[string]any{"model": model, "limit": limit})
+// Ask Pinky, under the model's name next to Start: the cost limit of a task
+// (askDollars or askTokens).
+func (msgs Messages) AskTaskLimit(limit string) string {
+	return Catalog.Format(msgs.locale, "askTaskLimit", map[string]any{"limit": limit})
 }
 
 // AskMinutes says "{count, plural, one {# minute} other {# minutes}}"

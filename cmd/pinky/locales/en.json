@@ -1036,14 +1036,10 @@
       }
     }
   },
-  "askMeta": "{model} · up to {limit} a task",
-  "@askMeta": {
-    "description": "Ask Pinky, next to Start: the model that will do the task, and the cost limit of a task (askDollars or askTokens).",
+  "askTaskLimit": "Up to {limit} a task",
+  "@askTaskLimit": {
+    "description": "Ask Pinky, under the model's name next to Start: the cost limit of a task (askDollars or askTokens).",
     "placeholders": {
-      "model": {
-        "type": "String",
-        "example": "Claude Opus 5.5"
-      },
       "limit": {
         "type": "String",
         "example": "US$2.00"

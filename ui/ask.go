@@ -146,8 +146,7 @@ func (a *app) askBox(c *mg.Context) {
 	st := &a.ask
 	id := d.Info.ID
 	ps, has := a.opt.Pilot.Status(id)
-	mg.Column(c.Key("ask")).Padding(12).Radius(12).Border(1, p.line).Background(p.panel).Gap(10).
-		Label(locales.AskTitle()).Children(func() {
+	card(c, mg.Column(c.Key("ask")).Padding(14)).Gap(sp3).Label(locales.AskTitle()).Children(func() {
 		if has && ps.Running() {
 			a.askRunning(c, ps)
 			return
@@ -176,13 +175,18 @@ func (a *app) askBox(c *mg.Context) {
 			why = locales.PhoneOffline(d.Info.Name)
 		}
 		if why != "" {
-			mg.Text(c, why).FontSize(13).TextColor(p.ink2).Role(mg.RoleStatus)
+			mg.Text(c, why).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2).Role(mg.RoleStatus)
 		}
 		if st.err != "" && st.errFor == id {
-			mg.Text(c, st.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, st.err).FontSize(fsSmall).LineHeight(1.4).TextColor(p.red).Role(mg.RoleStatus)
 		}
-		mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
-			mg.Text(c, locales.AskMeta(modelName(cfg), limitText(cfg))).FontSize(12.5).TextColor(p.ink3).Grow(1).MinWidth(0)
+		// The model and the limit, on a line each, so that they fit beside
+		// Start in the panel's width.
+		mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
+			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+				mg.Text(c, modelName(cfg)).FontSize(fsCaption).FontWeight(fwMedium).TextColor(p.ink2).SingleLine()
+				mg.Text(c, locales.AskTaskLimit(limitText(cfg))).FontSize(fsCaption).TextColor(p.ink3).FontFeatures("tnum")
+			})
 			can := why == "" && strings.TrimSpace(st.draft) != ""
 			start := button(c, locales.AskStart(), btnOpt{kind: btnPrimary, small: true}).Disabled(!can)
 			if can && (start.Clicked() || area.Shortcut(mg.Cmd, mg.KeyEnter)) {
@@ -237,15 +241,17 @@ func (a *app) askStart(id string) {
 func (a *app) askRunning(c *mg.Context, s pilot.Status) {
 	p := pal(c)
 	c.After(time.Second)
-	mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-		dot(c, p.green, true)
-		mg.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
-			mg.Text(c, locales.AskWorking()).FontSize(13.5).FontWeight(600)
-			mg.Text(c, usageText(s, c.Now())).FontSize(12.5).TextColor(p.ink3)
+	mg.Column(c).Gap(2).Children(func() {
+		mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
+			dot(c, p.green, true)
+			mg.Text(c, locales.AskWorking()).FontWeight(fwSemibold).Grow(1).MinWidth(0)
+			if button(c, locales.TasksStop(), btnOpt{small: true, kind: btnRed}).Label(locales.AskStop()).Clicked() {
+				a.stop(s.Device)
+			}
 		})
-		if button(c, locales.TasksStop(), btnOpt{small: true, kind: btnRed}).Label(locales.AskStop()).Clicked() {
-			a.stop(s.Device)
-		}
+		// How far it is, under the words and across the card, so that it
+		// fits on a line in every language.
+		mg.Text(c, usageText(s, c.Now())).FontSize(fsCaption).TextColor(p.ink2).FontFeatures("tnum").Margin(0, 0, 0, 8+sp2)
 	})
 }
 
@@ -259,8 +265,8 @@ func (a *app) askEnded(c *mg.Context, s pilot.Status) {
 		a.ask.rechecked = s.Ended
 		a.forgetKey(s.Config.Provider)
 	}
-	mg.Column(c).Padding(10, 12).Radius(8).Background(p.bg2).Gap(4).Role(mg.RoleStatus).Children(func() {
-		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
+	mg.Column(c).Padding(sp3).Radius(rControl).Background(p.bg2).Gap(sp1).Role(mg.RoleStatus).Children(func() {
+		mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
 			switch s.End {
 			case pilot.Done:
 				mg.Icon(c, icCheck).FontSize(16).TextColor(p.green)
@@ -269,15 +275,15 @@ func (a *app) askEnded(c *mg.Context, s pilot.Status) {
 			default:
 				dot(c, p.amberDot, false)
 			}
-			mg.Text(c, title).FontSize(13.5).FontWeight(600).Grow(1).MinWidth(0)
+			mg.Text(c, title).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 			if quietButton(c, locales.AskDismiss()).Clicked() {
 				a.opt.Pilot.Dismiss(s.Device)
 			}
 		})
 		if reason != "" {
-			mg.Text(c, reason).FontSize(13.5).Selectable()
+			mg.Text(c, reason).FontSize(fsSmall).LineHeight(1.4).Selectable()
 		}
-		mg.Text(c, usageText(s, c.Now())).FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, usageText(s, c.Now())).FontSize(fsCaption).TextColor(p.ink3).FontFeatures("tnum")
 	})
 }
 
@@ -289,10 +295,10 @@ func (a *app) askSetup(c *mg.Context) {
 	if has, _ := a.askKey(cfg.Provider); has && cfg.Model == "" {
 		link = locales.AskSetupModel()
 	}
-	mg.Column(c).Gap(4).Children(func() {
-		mg.Text(c, locales.AskTitle()).FontSize(13.5).FontWeight(600)
-		mg.Text(c, locales.AskSetup()).FontSize(13.5).TextColor(p.ink2)
-		if linkButton(c, link).AlignSelf(mg.Start).Margin(2, 0, 0, 0).Clicked() {
+	mg.Column(c).Gap(sp1).Children(func() {
+		mg.Text(c, locales.AskTitle()).FontSize(fsHeadline).FontWeight(fwSemibold)
+		mg.Text(c, locales.AskSetup()).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
+		if linkButton(c, link).AlignSelf(mg.Start).Margin(sp1, 0, 0, 0).Clicked() {
 			a.openAskSettings()
 		}
 	})
@@ -373,26 +379,18 @@ func (a *app) askSettings(c *mg.Context) {
 	if a.opt.Pilot == nil {
 		return
 	}
-	p := pal(c)
 	st := &a.ask
 	s := &a.settings
 	cfg := s.PilotConfig()
-	col := mg.Column(c.Key("ask-settings")).Gap(8).Label(locales.AskTitle())
+	col := mg.Column(c.Key("ask-settings")).Gap(10).Label(locales.AskTitle())
 	if st.scroll {
 		st.scroll = false
 		col.ScrollIntoView()
 	}
 	col.Children(func() {
-		mg.Column(c).Children(func() {
-			mg.Text(c, locales.AskTitle()).FontSize(15).FontWeight(650)
-			mg.Text(c, locales.SettingsAskIntro()).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
-		})
-		mg.Column(c).Children(func() {
-			settingRow(c, locales.SettingsAskOn(), locales.SettingsAskOnDesc(), false, func() {
-				if toggle(c.Key("ask-on"), &s.AskPinky, locales.SettingsAskOn()).Changed() {
-					a.changed()
-				}
-			})
+		settingsHeading(c, locales.AskTitle(), locales.SettingsAskIntro())
+		group(c).Children(func() {
+			a.toggleRow(c, "ask-on", locales.SettingsAskOn(), locales.SettingsAskOnDesc(), false, &s.AskPinky)
 			settingRow(c, locales.SettingsAskService(), locales.SettingsAskServiceDesc(), false, func() {
 				labels := []string{locales.SettingsAskServiceAnthropic(), locales.SettingsAskServiceOpenAI()}
 				cur := labels[0]
@@ -435,27 +433,27 @@ func (a *app) askKeyRow(c *mg.Context, cfg pilot.Config) {
 		if !known {
 			return
 		}
-		mg.Row(c).Gap(12).AlignItems(mg.Center).Shrink(0).Children(func() {
+		mg.Row(c).Gap(sp2).AlignItems(mg.Center).Shrink(0).Children(func() {
 			if has {
-				mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
+				mg.Row(c).Gap(6).AlignItems(mg.Center).Margin(0, sp1, 0, 0).Children(func() {
 					mg.Icon(c, icLock).FontSize(14).TextColor(p.ink2)
-					mg.Text(c, locales.SettingsAskKeySaved()).FontSize(13.5).TextColor(p.ink2)
+					mg.Text(c, locales.SettingsAskKeySaved()).FontSize(fsSmall).TextColor(p.ink2)
 				})
-				if button(c, locales.SettingsChange(), btnOpt{}).Label(locales.SettingsAskKeyChange()).Clicked() {
+				if button(c, locales.SettingsChange(), btnOpt{small: true}).Label(locales.SettingsAskKeyChange()).Clicked() {
 					st.editing, st.value, st.verr = askEditKey, "", ""
 				}
-				if button(c, locales.SettingsAskKeyRemove(), btnOpt{kind: btnRed}).Label(locales.SettingsAskKeyRemoveLabel()).Clicked() {
+				if button(c, locales.SettingsAskKeyRemove(), btnOpt{small: true, kind: btnRed}).Label(locales.SettingsAskKeyRemoveLabel()).Clicked() {
 					a.removeKey(cfg.Provider)
 				}
 				return
 			}
-			if button(c, locales.SettingsAskKeyAdd(), btnOpt{kind: btnPrimary}).Label(locales.SettingsAskKeyAddLabel()).Clicked() {
+			if button(c, locales.SettingsAskKeyAdd(), btnOpt{small: true, kind: btnPrimary}).Label(locales.SettingsAskKeyAddLabel()).Clicked() {
 				st.editing, st.value, st.verr = askEditKey, "", ""
 			}
 		})
 	})
 	if st.verr != "" && st.editing == "" {
-		mg.Text(c, st.verr).FontSize(13).TextColor(p.red).Role(mg.RoleStatus).Padding(0, 0, 8, 0)
+		mg.Text(c, st.verr).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus).Margin(0, sp4, sp2, sp4)
 	}
 }
 
@@ -588,9 +586,9 @@ func (a *app) askValueRow(c *mg.Context, title, desc, value, changeLabel, editor
 	p := pal(c)
 	st := &a.ask
 	settingRow(c, title, desc, false, func() {
-		mg.Row(c).Gap(12).AlignItems(mg.Center).Shrink(1).MinWidth(0).Children(func() {
-			mg.Text(c, value).FontSize(13.5).TextColor(p.ink2).SingleLine().Shrink(1).MinWidth(0).MaxWidth(260)
-			if button(c, locales.SettingsChange(), btnOpt{}).Label(changeLabel).Clicked() {
+		mg.Row(c).Gap(10).AlignItems(mg.Center).Shrink(1).MinWidth(0).Children(func() {
+			mg.Text(c, value).FontSize(fsSmall).TextColor(p.ink2).SingleLine().Shrink(1).MinWidth(0).MaxWidth(260)
+			if button(c, locales.SettingsChange(), btnOpt{small: true}).Label(changeLabel).Clicked() {
 				st.editing, st.value, st.verr = editor, current, ""
 			}
 		})
@@ -601,23 +599,20 @@ func (a *app) askValueRow(c *mg.Context, title, desc, value, changeLabel, editor
 func (a *app) askEditor(c *mg.Context, title, desc string, password bool, placeholder string, save func(string)) {
 	p := pal(c)
 	st := &a.ask
-	mg.Column(c).Gap(8).Padding(10, 0).BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
-		mg.Column(c).Gap(2).Children(func() {
-			mg.Text(c, title).FontWeight(600)
-			mg.Text(c, desc).FontSize(13.5).TextColor(p.ink2)
-		})
+	groupRow(c, mg.Column(c).Gap(sp3), false).Children(func() {
+		rowWords(c, mg.Column(c), title, desc)
 		in := mg.TextInput(c.Key(fmt.Sprintf("ask-edit-%s-%d", st.editing, st.gen)), &st.value).Label(title).
 			Placeholder(placeholder).AutoFocus().MaxWidth(420)
 		if password {
 			in.Password()
 		}
-		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
+		mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
 			empty := password && strings.TrimSpace(st.value) == ""
-			ok := button(c, locales.SettingsSave(), btnOpt{kind: btnPrimary}).Disabled(st.busy || empty)
+			ok := button(c, locales.SettingsSave(), btnOpt{small: true, kind: btnPrimary}).Disabled(st.busy || empty)
 			if (ok.Clicked() || in.Submitted()) && !st.busy && !empty {
 				save(st.value)
 			}
-			if button(c, locales.SettingsCancel(), btnOpt{}).Clicked() {
+			if button(c, locales.SettingsCancel(), btnOpt{small: true}).Clicked() {
 				st.editing, st.value, st.verr = "", "", ""
 				st.gen++
 			}
@@ -626,7 +621,7 @@ func (a *app) askEditor(c *mg.Context, title, desc string, password bool, placeh
 			}
 		})
 		if st.verr != "" {
-			mg.Text(c, st.verr).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, st.verr).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 		}
 	})
 }

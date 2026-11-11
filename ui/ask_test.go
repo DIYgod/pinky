@@ -173,8 +173,10 @@ func TestAskPinkySetupAndKey(t *testing.T) {
 	// Back on the phone, the box offers to start.
 	ta.page = pagePhones
 	frameUntil(t, ta, tt, "Start")
-	if !hasText(tt, "Claude Opus 5.5 · up to US$2.00 a task") {
-		t.Errorf("no model and limit: %q", tt.Texts())
+	for _, want := range []string{"Claude Opus 5.5", "Up to US$2.00 a task"} {
+		if !hasText(tt, want) {
+			t.Errorf("no %q: %q", want, tt.Texts())
+		}
 	}
 
 	// An OpenAI-compatible service needs a model too.
