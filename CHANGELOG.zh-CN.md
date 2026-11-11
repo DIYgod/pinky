@@ -2,6 +2,13 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 在 macOS 上，Pinky 的 PIN 码和 API 密钥输入框会像其他密码框一样，不让辅助功能工具读到你输入的内容。感谢 @pseudoyu。
+- 在英文版 Windows 上，Pinky 里的中文改用同一种字体显示，数字和英文单词也会在该换行的地方换行。
+- 在 Linux 上，Pinky 窗口里的文字排布和桌面上的其他 App 一致了。
+- 在 macOS 上，自动更新后，原本最小化到程序坞的 Pinky 窗口会重新打开，和 Windows、Linux 上一样。
+
 ## 2026.1111.18 (2026-11-11)
 
 - 「交给 Pinky」现在在 AI 模型还没回复时也会按时长上限停下，不会超时后才完成任务。感谢 @pseudoyu。

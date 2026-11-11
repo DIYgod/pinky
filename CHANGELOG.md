@@ -2,6 +2,13 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On macOS, Pinky's PIN and API key fields now keep what you type hidden from accessibility tools, as password fields should. Thanks @pseudoyu.
+- On Windows set to English, Chinese text in Pinky now shows in one font, and numbers and English words wrap where they should.
+- On Linux, text in Pinky's window is now laid out as in the desktop's other apps.
+- On macOS, after an automatic update Pinky's window comes back when it was minimized to the Dock, as on Windows and Linux.
+
 ## 2026.1111.18 (2026-11-11)
 
 - Ask Pinky now stops at its time limit even while the AI model is still answering, instead of finishing the task late. Thanks @pseudoyu.
