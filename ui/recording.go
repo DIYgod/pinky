@@ -480,7 +480,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 	if pl.running() {
 		c.After(250 * time.Millisecond) // the time and the current step move on
 	}
-	mg.Row(c).Gap(20).AlignItems(mg.Start).Wrap().Children(func() {
+	mg.Row(c).Gap(sp5).AlignItems(mg.Start).Wrap().Children(func() {
 		kind := bezelAndroid
 		for _, d := range a.devices {
 			if d.Info.ID == t.DeviceID {
@@ -522,7 +522,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 					case pl.state == "failed":
 						mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(8).Padding(20).Children(func() {
 							mg.Icon(c, icAlert).FontSize(22).TextColor(hex("#f7a74e"))
-							mg.Text(c, recordingError(pl.err)).FontSize(12.5).TextColor(hex("#d0d0d8")).TextAlign(mg.Center).MaxWidth(220)
+							mg.Text(c, recordingError(pl.err)).FontSize(fsCaption).LineHeight(1.4).TextColor(hex("#d0d0d8")).TextAlign(mg.Center).MaxWidth(220)
 						})
 					case pl.bitmap == nil:
 						mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Children(func() { spinner(c) })
@@ -531,14 +531,14 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 			})
 		mg.Column(c).Basis(220).Grow(1).MinWidth(0).Gap(4).Label(locales.RecordingStepsLabel()).Children(func() {
 			cur := pl.markAt(pl.pos)
-			mg.Text(c, locales.RecordingJumpHeading()).FontSize(12.5).FontWeight(600).TextColor(p.ink3).Margin(0, 0, 4, 0)
+			sectionLabel(c, locales.RecordingJumpHeading()).Margin(0, 0, sp1, 0)
 			for i, mk := range pl.rec.Marks {
 				i, mk := i, mk
 				text := stepText(mk.Text)
 				if mk.Step >= 0 && mk.Step < len(t.Steps) {
 					text, _, _ = stepDisplay(t, mk.Step)
 				}
-				row := mg.ButtonBase(c.Key(i)).Padding(6, 10).Radius(8).Gap(10).AlignItems(mg.Center).Justify(mg.Start).FillWidth().
+				row := mg.ButtonBase(c.Key(i)).Padding(6, 10, 6, rowInset).Radius(rControl).Gap(10).AlignItems(mg.Center).Justify(mg.Start).FillWidth().
 					Label(locales.RecordingJumpTo(clock(mk.At), text)).TextColor(p.ink)
 				switch {
 				case i == cur:
@@ -551,20 +551,20 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 					pl.seek(mk.At)
 				}
 				row.Children(func() {
-					mg.Text(c, clock(mk.At)).FontSize(12.5).TextColor(p.ink3).Width(40).Shrink(0)
-					tx := mg.Text(c, text).FontSize(13.5).SingleLine().Grow(1).MinWidth(0)
+					mg.Text(c, clock(mk.At)).FontSize(fsCaption).TextColor(p.ink3).Width(40).Shrink(0)
+					tx := mg.Text(c, text).FontSize(fsBody).SingleLine().Grow(1).MinWidth(0)
 					if i == cur {
-						tx.FontWeight(600)
+						tx.FontWeight(fwSemibold)
 					}
 				})
 			}
 			if len(pl.rec.Marks) == 0 {
-				mg.Text(c, locales.RecordingNoMarks()).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.RecordingNoMarks()).FontSize(fsSmall).TextColor(p.ink2)
 			}
 		})
 	})
 	// Play, the timeline and the time.
-	mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
+	mg.Row(c).Gap(sp3).AlignItems(mg.Center).Children(func() {
 		label, icon := locales.RecordingPause(), icPause
 		if !pl.running() {
 			label, icon = locales.RecordingPlay(), icPlay
@@ -572,7 +572,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 				label, icon = locales.RecordingPlayAgain(), icPlay
 			}
 		}
-		b := button(c, "", btnOpt{icon: icon, label: label}).Width(34).Padding(0).Tooltip(label)
+		b := button(c, "", btnOpt{kind: btnPrimary, icon: icon, label: label}).Width(34).Padding(0).Tooltip(label)
 		if b.Clicked() {
 			if label == locales.RecordingPause() {
 				pl.pause()
@@ -581,7 +581,7 @@ func (a *app) recordingView(c *mg.Context, t gateway.TaskView, pl *recPlayer) {
 			}
 		}
 		a.recordingTimeline(c, t, pl).Grow(1).MinWidth(0)
-		mg.Text(c, clock(pl.shownPos())+" / "+clock(pl.rec.Length)).FontSize(13).TextColor(p.ink2).Shrink(0)
+		mg.Text(c, clock(pl.shownPos())+" / "+clock(pl.rec.Length)).FontSize(fsSmall).TextColor(p.ink2).Shrink(0)
 	})
 }
 
