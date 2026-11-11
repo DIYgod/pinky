@@ -292,6 +292,8 @@ type app struct {
 	tn        tailnetState   // phones away from this computer's network, through Tailscale
 	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 
+	vit phoneVitalsState // phones' battery and storage (vitals.go)
+
 	awake   func(on bool) // keeps the computer awake while agent tasks run; tests replace it
 	awakeOn bool
 	// awayAwake keeps it awake while a phone is away (tailnet.go); tests

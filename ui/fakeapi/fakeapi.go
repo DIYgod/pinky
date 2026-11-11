@@ -149,6 +149,8 @@ type API struct {
 	dlHold     chan struct{} // closed when held downloads go on (HoldDownload)
 	tn         *fakeTailnet  // Tailscale on this computer (tailnet.go)
 	virt       *virtualState // Simulators and emulators (virtual.go)
+
+	vit *vitalsState // phones' battery and storage (vitals.go)
 }
 
 type device struct {

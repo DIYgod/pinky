@@ -62,6 +62,10 @@ func (a *app) phonesPage(c *mg.Context) {
 			mg.Text(c, name).FontSize(17).FontWeight(650)
 			mg.Text(c, line).FontSize(13).TextColor(p.ink2)
 		})
+		if d := a.device(a.sel); d != nil && a.sel != allPhones {
+			mg.Spacer(c)
+			a.phoneAbout(c, *d)
+		}
 	})
 	mg.Row(c).Grow(1).MinHeight(0).AlignItems(mg.Stretch).Children(func() {
 		if a.sel == allPhones {
@@ -577,10 +581,11 @@ func (a *app) phoneTiles(c *mg.Context, cols []mg.Track, width float32) {
 					mg.Column(c).Gap(2).Children(func() {
 						mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 							statusDot(c, d)
-							name := mg.Text(c, d.Info.Name).FontWeight(650)
+							name := mg.Text(c, d.Info.Name).FontWeight(650).SingleLine()
 							if offline {
 								name.TextColor(p.ink2)
 							}
+							a.tileBattery(c, d)
 						})
 						mg.Text(c, statusLine(d)).FontSize(13).TextColor(p.ink2).SingleLine()
 					})

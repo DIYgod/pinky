@@ -15801,6 +15801,176 @@ func (msgs Messages) PausePhoneMenuDesc() string {
 	return Catalog.Format(msgs.locale, "pausePhoneMenuDesc", nil)
 }
 
+// PhoneAboutBattery says "Battery"
+// in the language the app shows.
+//
+// In the panel the battery button in a phone's page header opens: the label
+// of the battery's row.
+func PhoneAboutBattery() string { return In(i18n.Locale()).PhoneAboutBattery() }
+
+// PhoneAboutBattery says "Battery"
+// in the language of msgs.
+//
+// In the panel the battery button in a phone's page header opens: the label
+// of the battery's row.
+func (msgs Messages) PhoneAboutBattery() string {
+	return Catalog.Format(msgs.locale, "phoneAboutBattery", nil)
+}
+
+// PhoneAboutBatteryLabel says "Battery {percent}%"
+// in the language the app shows.
+//
+// Accessibility label of a phone's battery level, shown in its page header
+// and on its tile in All phones.
+func PhoneAboutBatteryLabel(percent int) string {
+	return In(i18n.Locale()).PhoneAboutBatteryLabel(percent)
+}
+
+// PhoneAboutBatteryLabel says "Battery {percent}%"
+// in the language of msgs.
+//
+// Accessibility label of a phone's battery level, shown in its page header
+// and on its tile in All phones.
+func (msgs Messages) PhoneAboutBatteryLabel(percent int) string {
+	return Catalog.Format(msgs.locale, "phoneAboutBatteryLabel", map[string]any{"percent": percent})
+}
+
+// PhoneAboutButton says "About {phone}"
+// in the language the app shows.
+//
+// Tooltip and accessibility label of the button at the end of a phone's
+// page header, which shows its battery and opens its model, system, battery
+// and storage.
+func PhoneAboutButton(phone string) string { return In(i18n.Locale()).PhoneAboutButton(phone) }
+
+// PhoneAboutButton says "About {phone}"
+// in the language of msgs.
+//
+// Tooltip and accessibility label of the button at the end of a phone's
+// page header, which shows its battery and opens its model, system, battery
+// and storage.
+func (msgs Messages) PhoneAboutButton(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneAboutButton", map[string]any{"phone": phone})
+}
+
+// PhoneAboutCharged says "Fully charged"
+// in the language the app shows.
+//
+// In the panel the battery button opens, after the battery level: the phone
+// is on its charger and full.
+func PhoneAboutCharged() string { return In(i18n.Locale()).PhoneAboutCharged() }
+
+// PhoneAboutCharged says "Fully charged"
+// in the language of msgs.
+//
+// In the panel the battery button opens, after the battery level: the phone
+// is on its charger and full.
+func (msgs Messages) PhoneAboutCharged() string {
+	return Catalog.Format(msgs.locale, "phoneAboutCharged", nil)
+}
+
+// PhoneAboutCharging says "Charging"
+// in the language the app shows.
+//
+// In the panel the battery button opens, after the battery level: the phone
+// is charging.
+func PhoneAboutCharging() string { return In(i18n.Locale()).PhoneAboutCharging() }
+
+// PhoneAboutCharging says "Charging"
+// in the language of msgs.
+//
+// In the panel the battery button opens, after the battery level: the phone
+// is charging.
+func (msgs Messages) PhoneAboutCharging() string {
+	return Catalog.Format(msgs.locale, "phoneAboutCharging", nil)
+}
+
+// PhoneAboutPercent says "{percent}%"
+// in the language the app shows.
+//
+// A phone's battery level, as a percentage: in its page header, on its tile
+// in All phones and in the panel the battery button opens.
+func PhoneAboutPercent(percent int) string { return In(i18n.Locale()).PhoneAboutPercent(percent) }
+
+// PhoneAboutPercent says "{percent}%"
+// in the language of msgs.
+//
+// A phone's battery level, as a percentage: in its page header, on its tile
+// in All phones and in the panel the battery button opens.
+func (msgs Messages) PhoneAboutPercent(percent int) string {
+	return Catalog.Format(msgs.locale, "phoneAboutPercent", map[string]any{"percent": percent})
+}
+
+// PhoneAboutPluggedIn says "Plugged in"
+// in the language the app shows.
+//
+// In the panel the battery button opens, after the battery level: the phone
+// is on a charger but not charging, as when it holds its charge to save the
+// battery.
+func PhoneAboutPluggedIn() string { return In(i18n.Locale()).PhoneAboutPluggedIn() }
+
+// PhoneAboutPluggedIn says "Plugged in"
+// in the language of msgs.
+//
+// In the panel the battery button opens, after the battery level: the phone
+// is on a charger but not charging, as when it holds its charge to save the
+// battery.
+func (msgs Messages) PhoneAboutPluggedIn() string {
+	return Catalog.Format(msgs.locale, "phoneAboutPluggedIn", nil)
+}
+
+// PhoneAboutStorage says "Storage"
+// in the language the app shows.
+//
+// In the panel the battery button in a phone's page header opens: the label
+// of the storage's row.
+func PhoneAboutStorage() string { return In(i18n.Locale()).PhoneAboutStorage() }
+
+// PhoneAboutStorage says "Storage"
+// in the language of msgs.
+//
+// In the panel the battery button in a phone's page header opens: the label
+// of the storage's row.
+func (msgs Messages) PhoneAboutStorage() string {
+	return Catalog.Format(msgs.locale, "phoneAboutStorage", nil)
+}
+
+// PhoneAboutStorageFree says "{free} free of {total}"
+// in the language the app shows.
+//
+// In the panel the battery button opens: how much of the phone's storage is
+// free, above a bar of how much is used.
+func PhoneAboutStorageFree(free string, total string) string {
+	return In(i18n.Locale()).PhoneAboutStorageFree(free, total)
+}
+
+// PhoneAboutStorageFree says "{free} free of {total}"
+// in the language of msgs.
+//
+// In the panel the battery button opens: how much of the phone's storage is
+// free, above a bar of how much is used.
+func (msgs Messages) PhoneAboutStorageFree(free string, total string) string {
+	return Catalog.Format(msgs.locale, "phoneAboutStorageFree", map[string]any{"free": free, "total": total})
+}
+
+// PhoneAboutTemperature says "{degrees} °C"
+// in the language the app shows.
+//
+// In the panel the battery button opens, after the battery level: an
+// Android phone's battery temperature in degrees Celsius.
+func PhoneAboutTemperature(degrees string) string {
+	return In(i18n.Locale()).PhoneAboutTemperature(degrees)
+}
+
+// PhoneAboutTemperature says "{degrees} °C"
+// in the language of msgs.
+//
+// In the panel the battery button opens, after the battery level: an
+// Android phone's battery temperature in degrees Celsius.
+func (msgs Messages) PhoneAboutTemperature(degrees string) string {
+	return Catalog.Format(msgs.locale, "phoneAboutTemperature", map[string]any{"degrees": degrees})
+}
+
 // PhoneAddPhone says "Add phone"
 // in the language the app shows.
 //
