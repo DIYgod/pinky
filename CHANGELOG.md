@@ -2,6 +2,12 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- On a Mac with Xcode, Pinky can now install its helper on an older iPhone from its window (the phone's page, its checkup, and Add phone › Try an older iPhone), and install it again when its signature is about to run out, showing each step, asking you to unlock the phone when needed, and saying why when it fails.
+- An iPhone on iOS 27 that Pinky can't show because an app on it is using the camera or microphone (during a call, for example) now says so on its page and in the sidebar, with what to do, and connects by itself once they're free.
+- Agents can no longer uninstall or stop the Pinky helper on an iPhone, whatever its bundle ID.
+
 ## 2026.1111.12 (2026-11-11)
 
 - You can now turn a phone's screen yourself: Rotate in the ⋯ menu under its picture offers portrait, landscape and the other ways it turns, with the current one marked. On an iPhone or iPad it needs the iPhone helper. Thanks @NaNhkNaN.
