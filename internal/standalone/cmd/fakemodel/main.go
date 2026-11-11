@@ -45,6 +45,7 @@ var (
 	attackX = flag.Int("x", 0, "attack: where to tap, in screen pixels")
 	attackY = flag.Int("y", 0, "attack: where to tap, in screen pixels")
 	attackA = flag.String("app", "Settings", "attack: the app to open first (Calculator on real phones, where a missed tap must change nothing)")
+	selfApp = flag.String("self", "Pinky Standalone", "settings, calc: Pinky's own app, which the script tries to open (Pinky on an iPhone)")
 )
 
 func main() {
@@ -215,7 +216,7 @@ func (s *state) next(last string) (string, map[string]any, string) {
 	case 3:
 		s.seen = append(s.seen, "dark theme off: "+status(last))
 		s.step++
-		return "phone_launch", map[string]any{"app": "Pinky Standalone"}, "Trying to open Pinky itself."
+		return "phone_launch", map[string]any{"app": *selfApp}, "Trying to open Pinky itself."
 	case 4:
 		s.seen = append(s.seen, "open Pinky: "+status(last))
 		s.step++
@@ -338,7 +339,7 @@ func (s *state) calc(last string) (string, map[string]any, string) {
 		return "phone_observe", map[string]any{}, ""
 	case s.step == len(keys)+2:
 		s.seen = append(s.seen, fmt.Sprintf("42 shown: %v", strings.Contains(last, "\"42\"")))
-		return "phone_launch", map[string]any{"app": "Pinky Standalone"}, "Trying to open Pinky itself."
+		return "phone_launch", map[string]any{"app": *selfApp}, "Trying to open Pinky itself."
 	case s.step == len(keys)+3:
 		s.seen = append(s.seen, "open Pinky: "+status(last))
 		return "phone_key", map[string]any{"key": "home"}, ""
