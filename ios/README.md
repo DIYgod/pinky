@@ -28,7 +28,7 @@ ios/build.sh core                    # the Go core only
 PINKY_SIGN=0 ios/build.sh full       # compile check, unsigned
 ```
 
-The app's bundle id is yours to choose (`PINKY_BUNDLE_ID`, an App ID of your team; the default is the maintainer's). The app derives every other name from it.
+The app's bundle id is yours to choose (`PINKY_BUNDLE_ID`, an App ID of your team; the default is the maintainer's). The app derives every other name from it. Choose `pinky.<your team id>`: Pinky on a computer then knows the app as Pinky's too and keeps its agents off the app's screen, as it does for the maintainer's `cc.diygod.pinky` ids.
 
 To run it on a phone:
 
@@ -45,6 +45,7 @@ To run it on a phone:
    - **Full** (own packet tunnel; a paid developer account, since a personal team cannot sign the Network Extension capability). It needs three explicit App IDs and a development profile for each that lists the phone: the app's id and `.tunnel` with the Network Extension capability, and `.activity`. With the App Store Connect CLI, for example:
 
      ```sh
+     asc devices register --name "<the phone's name>" --udid <udid> --platform IOS     # once per phone
      asc bundle-ids create --identifier <id> --name "Pinky"                            # and <id>.tunnel, <id>.activity
      asc bundle-ids capabilities add --bundle <its id> --capability NETWORK_EXTENSIONS # the app and .tunnel
      asc profiles create --name "Pinky Development" --profile-type IOS_APP_DEVELOPMENT \

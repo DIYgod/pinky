@@ -9,13 +9,15 @@ This file holds what the build found, the decisions, what is left, and what the 
 | | What | State |
 | --- | --- | --- |
 | M1 | The investigations below; the prototype renamed Pinky, with the real gateway (rules, approvals, history) on the phone; a task end to end on a real iPhone | Done on the iPhone 13 mini (iOS 27.0.1) with the fake model: a task ran end to end, with desktop Pinky's connection to the iPhone paused (runs 6 and 7 below). A real model was not tried. The helper probe is below too |
-| M2 | Onboarding (on-phone pairing on iOS 27), the app in three languages, desktop installing the app in place of Pinky Helper and the rename everywhere | Not started |
-| M3 | iOS 17.4–26 on Simulators, battery over long runs, polish | Not started |
+| M2 | Onboarding (on-phone pairing on iOS 27), the app in three languages, desktop installing the app in place of Pinky Helper and the rename everywhere | Not started: [the plan](#plan-for-m2-and-m3) |
+| M3 | iOS 17.4–26 on Simulators, battery over long runs, polish | Not started: [the plan](#plan-for-m2-and-m3) |
+
+New here? Read [Pitfalls on a real phone](#pitfalls-on-a-real-phone) and [How M1 was signed](#how-m1-was-signed) before touching the test phone, and [docs/WORKING.md](../WORKING.md) for the rules about the real phones.
 
 ## What M1 built
 
 - **The gateway on the phone.** [onphone](../../ios/onphone) wraps `internal/standalone`'s core, the one Android's app uses: `gateway.New` with Pinky's rules and approvals, SQLite history, and the agent loop of `internal/pilot`, over one device, the iPhone itself through the loopback. Nothing in `internal/standalone` changed.
-- **The guard** sits between the gateway and the driver. It refuses input while Pinky's own app is in front (so an agent can never tap Allow or Stop), hides Pinky from the app list, refuses to launch it, and brings the task's app back after the person answers in Pinky. Pinky's app ids are its own and any id under it (`<id>.lite`, the extensions); `policy.IsStandalone` also matches them, so desktop agents can never reach the app either. It also takes no pictures of the screen: reads use the accessibility tree alone, without OCR, and screenshots are unsupported, since a screenshot with OCR does not fit in the extension's 50 MB (run 5 below).
+- **The guard** sits between the gateway and the driver. It refuses input while Pinky's own app is in front (so an agent can never tap Allow or Stop), hides Pinky from the app list, refuses to launch it, and brings the task's app back after the person answers in Pinky. Pinky's app ids are its own, learned from the app, and any id under it (`<id>.lite`, the extensions). For agents on a computer, `policy.IsStandalone` (`IsPinkyScreen` once main is merged in) blocks the app's screen under the ids it knows: `cc.diygod.pinky` and any id under it, and `pinky.<team id>` alone or with more after a dot, the shape desktop Pinky gives what it builds with the person's team (`helperBundleID`). It leaves out XCTest runners (ids ending `.xctrunner`, Pinky Helper's among them), whose screens hold no approvals; `IsPinkyApp` still counts them, so agents cannot uninstall or stop them. It also takes no pictures of the screen: reads use the accessibility tree alone, without OCR, and screenshots are unsupported, since a screenshot with OCR does not fit in the extension's 50 MB (run 5 below).
 - **One JSON call** for the app's screens (`state`, `wait`, `start`, `decide`, `preset`, `stop`, `dismiss`, `ui`, `history`, `info`). `wait` is a long poll on the state's revision, so the app wakes only when something changed, not on a timer.
 - **The app**: the task and its last steps, approvals (Allow needs Face ID or the passcode) and handoffs, Stop, history with search, and settings for the model, its key and when Pinky asks first. The Live Activity shows the task, "Pinky waits for you" in orange while an approval waits, and Stop.
 - **The model**: bring your own key. Claude through the Anthropic API is the default; any OpenAI-compatible server with a base URL is the other choice. The key is kept per provider in the Keychain (`AfterFirstUnlockThisDeviceOnly`), never shown again, and stays in the core's memory only for the length of a task. Tests use `internal/standalone/cmd/fakemodel`.
@@ -45,6 +47,20 @@ On the iPhone 13 mini (iOS 27.0.1), with the fake model on the Mac (`fakemodel -
 7. **02:22, the same build from a fresh tunnel: 42, and the memory measured.** This time the harness ended the extension by its process id as well as the app, so the launch started the tunnel again, with the heartbeat. The core connected in 296 ms (85 services) and `remoteAXService` in 330 ms. The task ran 35 s and 10 steps and ended done: Calculator showed 42 (run 6 had left a result on its display, and a digit after a result starts a new number), Pinky refused to open itself (`blocked_by_policy`), and the task went home. The extension's footprint was 12 MB once connected, 14 to 16 MB before the first read, 25 MB just after it, 20 to 22 MB through the taps, and 28 MB at most, at the read of the home screen at the end, where Go's heap peaked at 17 MB. That leaves about 22 MB of the 50. Those two reads were also the slow ones: 2.9 s and 2.2 s, most of it walking the tree (1.7 s and 2.0 s).
 
 - **Logging.** The core's and the app's own lines show in the device's syslog relay, as `PinkyTunnel[pid] <Notice>: pinky time=… level=… msg=…` and `Pinky[pid] <Notice>: pinky …`, next to other processes' lines about Pinky (runningboardd, neagent, the kernel's memory lines). The core logs the connection, each task's start and end (provider, model, steps, seconds, and the summary only when Pinky ended the task over an error), and failed or slow reads; never the task's words, the key or the screen. A debug build launched with `-pinkyHeartbeat <seconds>` has the core log its memory that often (the extension's footprint, Go's heap, goroutines), when that launch starts the tunnel.
+
+## Pitfalls on a real phone
+
+What cost time in M1, with the runs above where it showed:
+
+- **50 MB for the extension.** iOS kills the packet tunnel extension past 50 MB and writes no crash report; the kernel's `memorystatus` line in the syslog is the only trace (runs 1 and 5). What went past it: the app list with every key of every app (run 1) and a screenshot with OCR (run 5). A whole task peaks at 28 MB now (run 7). Measure with `-pinkyHeartbeat 1` before the core takes on anything big.
+- **One remote accessibility client per phone.** While desktop Pinky had the iPhone open, `remoteAXService` never answered the core on the phone (runs 2 and 3); with it paused, it answered within half a second (runs 5 and 7). Before a task on the phone, choose Pause connection in the iPhone's menu in desktop Pinky; Resume connection afterwards.
+- **Relaunching the app.** `devicectl device process launch --terminate-existing` ends the tunnel extension too, and the new app, which connects only at launch, finds the VPN on and leaves it (run 4). End the app by its process id. To start the tunnel again, for the heartbeat say (it runs only when that launch starts the tunnel, run 6), end `PinkyTunnel` by its process id as well and launch about 8 s later. [ios/README.md](../../ios/README.md) has the commands.
+- **Calculator keeps its display** between runs (run 6), so a script that checks a result must not count on a clear display.
+- **The phone locks itself** after two minutes. Device tests that open a `Device` (`testDevice`) need it unlocked, and `TestMain` presses Home at the end once one was opened. Tests at the level of the link, such as `TestDeviceShimDesktop`, open no `Device`, send no input and run on a locked phone. A locked phone's Observe answers with the lock screen from lockdown, without walking the tree.
+- **First launches need the owner.** Each new build id asks for notifications, Local Network and adding the VPN configuration, which asks for the passcode. Only the owner answers them.
+- **Tests and the real phones.** Some go-ios tests act on whatever phone usbmuxd offers, the owner's iPad included: run `make check` and any other go-ios tests with `USBMUXD_SOCKET_ADDRESS=127.0.0.1:9`. Deliberate device tests go through `scripts/devlock.sh`, with `PINKY_DEVICE` set to the one phone and a `-run` for one or a few tests, and log counts, never app names or what is on the screen.
+- **Reading the logs.** The runs read the device's syslog relay with a throwaway Go program over go-ios's `ios/syslog`, filtered to Pinky's processes and the kernel's memory lines, and never committed. Keep such a stream outside `devlock`, which would hold the phone for as long as it runs.
+- **Ports change.** The RemotePairing port the phone advertises changes with each phone and reboot, and the tunnel listener remotepairingd opens gets a new port each time. The app reads the first from `_remotepairing._tcp` on `lo0` (49152 is only the fallback) and the core the second from remotepairingd's answer.
 
 ## Pinky Helper inside the app
 
@@ -84,13 +100,45 @@ What the research found. [P] marks a primary source: Apple, or the project's own
 - SideStore refreshes apps on the phone before the 7 days run out, through LocalDevVPN and a pairing file; it takes one of the 3 app slots itself. A computer is needed once, to install SideStore and its pairing file. On iOS 26.4+ that file must be a RemotePairing one.
 - Pinky would need nothing special for them beyond the lite build, an `.ipa` and a bundle id the person's team can register. Not tried.
 
+### How M1 was signed
+
+- **Three App IDs in the maintainer's paid team**: `cc.diygod.pinky.standalone` (the app), `.tunnel` (the packet tunnel) and `.activity` (the Live Activity), registered with the App Store Connect CLI, `asc`, which was already signed in on the Mac. The app and `.tunnel` have the Network Extensions capability. Their entitlements (`packet-tunnel-provider`) are in `ios/app/project.yml`, which XcodeGen writes to `ios/app/build/gen/<target>.entitlements`.
+- **One iOS App Development profile per App ID**, listing the iPhone 13 mini and valid until 2027-11-11, made and installed with the `asc` commands in [ios/README.md](../../ios/README.md). `asc profiles local install` puts a profile where Xcode keeps them, `~/Library/Developer/Xcode/UserData/Provisioning Profiles`.
+- **`ios/build.sh` signs, not Xcode.** Xcode builds with `CODE_SIGNING_ALLOWED=NO`. The script then signs the extensions and the app, each with the newest unexpired profile for `<team>.<its id>` (the team's wildcard profile when there is none) and with that profile's certificate whose private key is in the login keychain. It adds `application-identifier`, `com.apple.developer.team-identifier` and `get-task-allow` to the target's entitlements. So Xcode needs no signed-in account. `PINKY_TEAM` names the team; the default is the maintainer's, whose id stays out of docs, commits and reports.
+- **Another phone**: register it (`asc devices register --name <name> --udid <udid> --platform IOS`), make the three profiles again listing it (a profile keeps the devices it was made with), install them and build again.
+- The helper probe (`cc.diygod.pinky.runnerprobe`) was signed with the team's wildcard profile and registered no App ID.
+
 ## Setup on the phone
 
 - **Pairing on iOS 27, with no computer.** iOS 27 lets the phone pair with a host on the network from Settings › Privacy & Security › Developer Mode › "Pair with …": the app advertises `_remotepairing-pairable-host._tcp` (with a Mac model, "Mac17,7", since iOS treats the host as a computer), the phone connects and runs pair-setup with the roles flipped, and the app shows a 6-digit PIN (StikDebug posts it as a notification, since the person is in Settings) that the person types on the phone. The result is the same RemotePairing identity `rppair pair` makes ([idevice responder.rs](https://github.com/jkcoxson/idevice/blob/master/idevice/src/remote_pairing/responder.rs) [P], StikDebug 3.2.0 [P]). It needs Local Network permission, Wi-Fi, the app alive while the person is in Settings (background audio), and Developer Mode on, whose switch appears only once something started pairing or a Mac paired with the phone. M2.
 - **The developer disk image.** Pinky needs it on the phone too: taps go through the DDI's HID daemon. The test phone's came from a Mac. From 26.4 Xcode installs a Cryptex1 DDI through `cryptexd` with persistence 2, which survives reboots until an update or reset; from 17.0 to 26.3 it is a personalized image (a TSS ticket from Apple, so internet once) that every reboot unmounts. Both can be done from the phone over the loopback (StikDebug, iCTRL); the files come from Xcode or the community mirror (about 100 MB).
 - **iOS 17.4–26 needs a computer once**, to make the RemotePairing file; on-device pairing is iOS 27 only. It must be a RemotePairing file, not a lockdown pair record: from 26.4 the phone refuses lockdown over the loopback (seen by StikDebug, SideStore and iCTRL). Pinky's desktop can make it (`rppair pair`). On those versions Pinky's iPhone app also needs the DDI mounted for the accessibility and display services it uses, which below 26.4 means after every reboot. Not tried: M3.
 
+## Plan for M2 and M3
+
+**M2** makes the app something a person can set up and use:
+
+- **Onboarding on the phone**: pairing on iOS 27 and mounting the developer disk image from the phone ([Setup on the phone](#setup-on-the-phone)), then the VPN, the model and its key, in the app's first screens. Today the pairing comes from a Mac (`rppair pair`) and the DDI from Xcode.
+- **Three languages**, as desktop Pinky: English, Simplified Chinese and Japanese, with the terms `cmd/pinky/locales` already uses (CLAUDE.md, "The app's languages").
+- **The Live Activity with a real task**, an approval among its steps ("Pinky waits for you"), Stop from the activity, and how the activity ends.
+- **Pinky's app as WebDriverAgent's host** in place of Pinky Helper ([Pinky Helper inside the app](#pinky-helper-inside-the-app)): the test mode, WebDriverAgent's xctest and framework in `PlugIns` signed with the app, and desktop Pinky installing Pinky's app where `internal/driver/ios/helperinstall.go` installs the helper now, under `pinky.<team id>` ids, which the policy already takes for Pinky's app. To decide: what the app shows while it hosts WebDriverAgent for the computer, and what happens when the person starts a task on the phone meanwhile (one remote accessibility client per phone, [Pitfalls](#pitfalls-on-a-real-phone)). While Pinky's app is in front, agents on the computer can only press Home or open another app (`policy.Evaluate`).
+- **The rename**: Pinky Helper becomes Pinky, the iPhone app, in desktop Pinky's screens and messages (three languages), both READMEs and the docs. Helpers already installed keep working, and `IsPinkyApp` keeps counting every `.xctrunner`.
+- **The follow-ups below**, most of all desktop Pinky letting go of the phone's accessibility service while idle, the VPN reconnecting, and a retry for a failed read; and the warning before the profile expires ([Signing](#signing)).
+- **With the owner**: a real model, an approval with Face ID, a handoff and Stop during a task on the phone ([Needs the owner](#needs-the-owner)).
+- **Merging main** first: main has `policy.IsPinkyScreen` for Pinky's Android app (released in 2026.1112.1). `IPhoneApp`, `iPhoneTeamApp` and the `.xctrunner` exception move into it, `ios/onphone/guard.go` and its test call it instead of `IsStandalone`, and `TestIPhoneAppBlocked` and `TestXCTestRunnerNotBlocked` join `pinkyscreen_test.go`, without `app.pinky.companion` among the ids that are not blocked: on main it is a Pinky screen.
+
+**M3** widens what it runs on and how long:
+
+- **iOS 17.4–26**: the app's screens on Simulators of those versions (a Simulator runs no packet tunnel, so the loopback and the driver need a phone), and a phone on one of them for the rest: the pairing file from a computer, the DDI after every reboot below 26.4, and WebDriverAgent hosted by the app.
+- **Long runs**: battery and memory over hours, bigger trees (long lists, web pages), a phone that locks during a task, memory pressure in the extension.
+- **Other ways to install**: the lite build on a phone, signed by a free personal team, then SideStore and AltStore.
+- **Polish** of what M2 leaves rough.
+
+**Release notes.** M1 has none: the app is built from source only, and a real model, approvals and Stop on the phone are not verified yet. Its one change to what people get, that agents can no longer open or act on Pinky's iPhone app, rides along with the next release. When the app is ready for people, its notes say what it does and that change too.
+
 ## Follow-ups
+
+- **Agents on a computer know Pinky's app only by its id**: `cc.diygod.pinky…` and `pinky.<team id>…`. A build under any other `PINKY_BUNDLE_ID` is guarded on the phone, where the guard learns the app's id, but agents on a computer could open it. [ios/README.md](../../ios/README.md) asks builders for `pinky.<team id>`; once desktop Pinky builds the app, it uses that shape anyway.
 
 - **The app connects the VPN only at launch.** When the extension dies while the app runs (a memory kill, a crash, or `--terminate-existing` as in run 4), the app shows Turn on and stays there. It could reconnect once by itself and say why the tunnel went down.
 - **One failed read ends a task on the phone.** The gateway turns a failed read into an internal error ("Reading the screen failed", `pipeline.go`), and the agent loop stops on it before the model is asked. On a computer the inspector catches most of these; on the phone a retry, or the fallback in the table above, would have to.
@@ -109,10 +157,12 @@ What the research found. [P] marks a primary source: Apple, or the project's own
 - An approval, a handoff or Stop during a task on the phone: the calculator task needed none. The core's side of an approval is tested on a Mac with a fake phone (`TestApprovalInPinkysApp`); Allow behind Face ID, Stop on the Live Activity and how the activity ends were not tried on the phone.
 - Memory on other screens. The peak, 28 MB, came from reading the home screen, the biggest tree in the run; apps with bigger trees (long lists, web pages) were not tried.
 - Pinky's own app as WebDriverAgent's host (only the probe app was tried), and any host on iOS 17.4–26.
+- Desktop Pinky's iOS driver after `shim.go` on an unlocked phone. On the locked iPhone 13 mini, `TestDeviceShimDesktop` found the icon layout, the names on the home screen and the app list the same as go-ios's own clients read them (101 names, 109 apps), the lock state read, and `remoteAXService` answered. `TestDeviceApps`, `TestDeviceLocked` and `TestDeviceHomeAndObserve` need the phone unlocked and were not run after the change.
 
 ## Needs the owner
 
 - Unlocking the phone and answering the first-launch prompts (notifications, Local Network, adding the VPN configuration) for each new build or bundle id.
+- Unlocking the iPhone 13 mini for about a minute for the three device tests above (Not verified).
 - A real-model run: the owner types the key into Pinky's Settings on the phone.
 - A phone on iOS 17.4–26 to try the helper inside the app (M3).
 - Pause connection for the iPhone in desktop Pinky before a task on the phone, until desktop Pinky lets go of the phone's accessibility service by itself (Follow-ups).
