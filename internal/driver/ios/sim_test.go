@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -530,6 +531,50 @@ func TestBuiltProducts(t *testing.T) {
 	}
 	if builtProducts(dir, buildKey(xcode{Build: "28A1"}, "arm64")) != "" {
 		t.Error("another Xcode's build was taken")
+	}
+}
+
+func TestSimBuildArgs(t *testing.T) {
+	args := simBuildArgs("/s", "/dd", "arm64")
+	want := []string{"build-for-testing", "-project", filepath.Join("/s", "WebDriverAgent.xcodeproj"), "-scheme", "WebDriverAgentRunner",
+		"-destination", "generic/platform=iOS Simulator", "-derivedDataPath", "/dd",
+		"CODE_SIGNING_ALLOWED=NO", "ARCHS=arm64",
+		"SYMROOT=" + filepath.Join("/dd", "Build", "Products"), "OBJROOT=" + filepath.Join("/dd", "Build", "Intermediates.noindex"),
+		"SHARED_PRECOMPS_DIR=" + filepath.Join("/dd", "Build", "Intermediates.noindex", "PrecompiledHeaders")}
+	if !slices.Equal(args, want) {
+		t.Errorf("\n got %q\nwant %q", args, want)
+	}
+}
+
+// TestProductsLookup lays out a build as Xcode makes it with buildLocation's
+// settings, whatever Xcode › Settings › Locations says (DIYgod/pinky#86),
+// and finds its runner app and .xctestrun file where Pinky looks.
+func TestProductsLookup(t *testing.T) {
+	dd := t.TempDir()
+	products := productsIn(dd)
+	if got := buildLocation(dd); !slices.Equal(got, []string{"SYMROOT=" + products, "OBJROOT=" + filepath.Join(dd, "Build", "Intermediates.noindex"),
+		"SHARED_PRECOMPS_DIR=" + filepath.Join(dd, "Build", "Intermediates.noindex", "PrecompiledHeaders")}) {
+		t.Errorf("buildLocation = %q", got)
+	}
+	if runnerAppIn(products) != "" || xctestrun(products) != "" {
+		t.Error("found a build before Xcode made one")
+	}
+	app := filepath.Join(products, "Debug-iphoneos", "WebDriverAgentRunner-Runner.app")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	tr := filepath.Join(products, "WebDriverAgentRunner_iphoneos26.4-arm64.xctestrun")
+	if err := os.WriteFile(tr, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := runnerAppIn(products); got != app {
+		t.Errorf("runnerAppIn = %q, want %q", got, app)
+	}
+	if got := xctestrun(products); got != tr {
+		t.Errorf("xctestrun = %q, want %q", got, tr)
+	}
+	if got := helperTestArgs(products, "UDID", "/run"); got[slices.Index(got, "-xctestrun")+1] != tr {
+		t.Errorf("helperTestArgs = %q", got)
 	}
 }
 

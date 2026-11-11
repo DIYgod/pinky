@@ -193,11 +193,13 @@ func TestHelperArgs(t *testing.T) {
 	args := helperBuildArgs("/s", "/dd", "UDID", "TEAMAAAAA1", "com.me.WebDriverAgentRunner", false)
 	want := []string{"build-for-testing", "-project", filepath.Join("/s", "WebDriverAgent.xcodeproj"), "-scheme", "WebDriverAgentRunner",
 		"-destination", "id=UDID", "-derivedDataPath", "/dd",
-		"CODE_SIGN_STYLE=Automatic", "DEVELOPMENT_TEAM=TEAMAAAAA1", "PRODUCT_BUNDLE_IDENTIFIER=com.me.WebDriverAgentRunner"}
+		"CODE_SIGN_STYLE=Automatic", "DEVELOPMENT_TEAM=TEAMAAAAA1", "PRODUCT_BUNDLE_IDENTIFIER=com.me.WebDriverAgentRunner",
+		"SYMROOT=" + filepath.Join("/dd", "Build", "Products"), "OBJROOT=" + filepath.Join("/dd", "Build", "Intermediates.noindex"),
+		"SHARED_PRECOMPS_DIR=" + filepath.Join("/dd", "Build", "Intermediates.noindex", "PrecompiledHeaders")}
 	if !slices.Equal(args, want) {
 		t.Errorf("local signing:\n got %q\nwant %q", args, want)
 	}
-	if args := helperBuildArgs("/s", "/dd", "UDID", "T", "b", true); !slices.Contains(args, "-allowProvisioningUpdates") || !slices.Contains(args, "-allowProvisioningDeviceRegistration") {
+	if args := helperBuildArgs("/s", "/dd", "UDID", "T", "b", true); !slices.Contains(args, "-allowProvisioningUpdates") || !slices.Contains(args, "-allowProvisioningDeviceRegistration") || !slices.Contains(args, "SYMROOT="+productsIn("/dd")) {
 		t.Errorf("with updates: %q", args)
 	}
 	r := resignArgs("ABC", "/a.app")

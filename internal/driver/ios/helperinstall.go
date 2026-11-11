@@ -210,7 +210,7 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	if err != nil {
 		return xcodeFailed(ctx, "building the helper", err, tail, logPath, o.LocalSigning)
 	}
-	products := filepath.Join(dd, "Build", "Products")
+	products := productsIn(dd)
 	app := runnerAppIn(products)
 	if app == "" || xctestrun(products) == "" {
 		return helperErr("", errors.New("Xcode built WebDriverAgent but made no runner app"), logPath)
@@ -599,8 +599,8 @@ func onlyTeam(teams []devTeam, err error) (string, error) {
 }
 
 // helperBuildArgs builds WDA's runner for the phone, signed for team with
-// bundle id bid. updates lets Xcode ask Apple for a profile and register
-// the phone.
+// bundle id bid, with derived data and products in dd. updates lets Xcode
+// ask Apple for a profile and register the phone.
 func helperBuildArgs(src, dd, udid, team, bid string, updates bool) []string {
 	args := []string{"build-for-testing",
 		"-project", filepath.Join(src, "WebDriverAgent.xcodeproj"),
@@ -610,10 +610,11 @@ func helperBuildArgs(src, dd, udid, team, bid string, updates bool) []string {
 	if updates {
 		args = append(args, "-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration")
 	}
-	return append(args,
+	args = append(args,
 		"CODE_SIGN_STYLE=Automatic",
 		"DEVELOPMENT_TEAM="+team,
 		"PRODUCT_BUNDLE_IDENTIFIER="+bid)
+	return append(args, buildLocation(dd)...)
 }
 
 // helperTestArgs installs the build in products on the phone and runs

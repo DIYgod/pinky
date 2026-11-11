@@ -89,6 +89,26 @@ func builtProducts(dir, key string) string {
 	return p
 }
 
+// productsIn is the Products folder of a build whose derived data is dd,
+// which buildLocation keeps it in.
+func productsIn(dd string) string { return filepath.Join(dd, "Build", "Products") }
+
+// buildLocation are the build settings that keep a build's products and
+// intermediates in its derived data folder dd, where Pinky looks for
+// them. Without them a custom or legacy build location (Xcode › Settings
+// › Locations › Advanced…) moves them out of dd, which -derivedDataPath
+// does not override: next to the project, or to the person's own folder
+// (DIYgod/pinky#86). The .xctestrun file lands in SYMROOT too, and
+// SHARED_PRECOMPS_DIR is the one other setting that follows the location.
+func buildLocation(dd string) []string {
+	objects := filepath.Join(dd, "Build", "Intermediates.noindex")
+	return []string{
+		"SYMROOT=" + productsIn(dd),
+		"OBJROOT=" + objects,
+		"SHARED_PRECOMPS_DIR=" + filepath.Join(objects, "PrecompiledHeaders"),
+	}
+}
+
 // xctestrun returns the .xctestrun file in a Products folder, or "".
 func xctestrun(products string) string {
 	m, _ := filepath.Glob(filepath.Join(products, "*.xctestrun"))
@@ -139,12 +159,7 @@ func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *htt
 		return "", err
 	}
 	tail := &lastLines{max: 64 << 10}
-	cmd := exec.CommandContext(ctx, x.tool("xcodebuild"), "build-for-testing",
-		"-project", filepath.Join(src, "WebDriverAgent.xcodeproj"),
-		"-scheme", "WebDriverAgentRunner",
-		"-destination", "generic/platform=iOS Simulator",
-		"-derivedDataPath", dd,
-		"CODE_SIGNING_ALLOWED=NO", "ARCHS="+arch)
+	cmd := exec.CommandContext(ctx, x.tool("xcodebuild"), simBuildArgs(src, dd, arch)...)
 	cmd.Env = x.env()
 	cmd.Stdout = io.MultiWriter(out, tail)
 	cmd.Stderr = cmd.Stdout
@@ -159,7 +174,7 @@ func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *htt
 		}
 		return "", fmt.Errorf("building WebDriverAgent with Xcode %s failed: %s (%s)", x.Version, xcodeErrors(tail.String()), logPath)
 	}
-	products := filepath.Join(dd, "Build", "Products")
+	products := productsIn(dd)
 	if xctestrun(products) == "" {
 		return "", fmt.Errorf("Xcode built WebDriverAgent but made no .xctestrun file (%s)", logPath)
 	}
@@ -183,6 +198,18 @@ func buildWDA(ctx context.Context, dir string, x xcode, arch string, client *htt
 		}
 	}
 	return final, nil
+}
+
+// simBuildArgs builds WDA's runner in src for the Simulators of the CPU
+// arch, unsigned, with derived data and products in dd.
+func simBuildArgs(src, dd, arch string) []string {
+	return append([]string{"build-for-testing",
+		"-project", filepath.Join(src, "WebDriverAgent.xcodeproj"),
+		"-scheme", "WebDriverAgentRunner",
+		"-destination", "generic/platform=iOS Simulator",
+		"-derivedDataPath", dd,
+		"CODE_SIGNING_ALLOWED=NO", "ARCHS=" + arch},
+		buildLocation(dd)...)
 }
 
 // xcodeErrors picks what Xcode said went wrong from its output: the lines
