@@ -194,7 +194,7 @@ Everything except the shell process survives a reboot. A force stop undoes step 
 
 ## Prototype results (Android)
 
-Unlike the throwaway program in [What ran here](#what-ran-here), this prototype is kept: `android/standalone`, `internal/standalone` and `internal/driver/android/local`. It follows [the recommended architecture](#android-one-app-the-companion-grown-up) and ran end to end on the Android 17 emulator (API 37, arm64) on 2026-11-11. It does not ship, and no real phone has run it yet.
+Unlike the throwaway program in [What ran here](#what-ran-here), this prototype is kept: `android/standalone`, `internal/standalone` and `internal/driver/android/local`. It follows [the recommended architecture](#android-one-app-the-companion-grown-up) and ran end to end on 2026-11-11: on the Android 17 emulator (API 37, arm64) and on a Xiaomi Mi 10 Pro with LineageOS (Android 17). It does not ship.
 
 ### What was built
 
@@ -216,9 +216,9 @@ Unlike the throwaway program in [What ran here](#what-ran-here), this prototype 
   - The task screen (`TaskActivity`, in a process of its own) holds the task, the provider, model and base URL, and the key. The key is never saved. The screen also has "Ask before", Start, Stop, New task and the steps as they happen.
   - The Working pill with Stop, and the card for an approval or a handoff (Deny, Allow for task, Allow once). The service draws both as accessibility overlays above every app, so they need no overlay permission.
 - **Tools for testing, not in the APK:**
-  - `corectl` drives the control socket from adb as the app's uid (`run-as`);
+  - `corectl` drives the control socket from adb as the app's uid (`run-as`), and can start a task with any provider, model and base URL;
   - `localbench` times the service's verbs;
-  - `fakemodel` stands in for the model. It speaks the Anthropic Messages API with scripted runs: `settings`, `loop` and `attack`.
+  - `fakemodel` stands in for the model. It speaks the Anthropic Messages API with scripted runs: `settings`, `loop` and `attack` in Settings, and `calc` and `calcloop` in Calculator, where a missed tap on a real phone changes nothing.
 
 Where it differs from the recommended architecture, and why:
 
@@ -229,23 +229,25 @@ Where it differs from the recommended architecture, and why:
 
 ### Milestone 1: the service acts alone
 
-`localbench` ran on the emulator as the app's uid, over the service's socket only (no adb input), 10 runs of each verb. Times are in ms. "Settled" means the screen stopped changing.
+`localbench` ran as the app's uid, over the service's socket only (no adb input), 10 runs of each verb: on the emulator, and on the Mi 10 Pro in Settings. Times are in ms; where a note has two numbers, the emulator's comes first. "Settled" means the screen stopped changing.
 
-| Verb | p50 | p90 | Notes |
-| --- | --- | --- | --- |
-| Connect and ping | 16.4 | | |
-| Ping | 0.5 | 7.2 | |
-| List apps | 146 | | |
-| Launch Settings | 6.5 | | Settled after 307; Settings' own screen read after 1,432 |
-| Read the tree | 4.3 | 6.5 | 1.5–79.6 across all runs |
-| Screenshot, JPEG q80 | 380 | 484 | Capture 349, encode 25, 137 KB; decoded in Go in 13.8 |
-| Screenshot, PNG | 437 | | 207 KB |
-| Swipe of 300 ms | 307.8 | | 7.8 over the gesture; settled after 820 |
-| Tap (50 ms) | 109 | 175 | 59 over the gesture; settled after 1,034 |
-| Type (`set_text`) | 198 | 477 | |
-| Long press of 800 ms | 872 | | 72 over the gesture |
+| Verb | Emulator p50 | Emulator p90 | Mi p50 | Mi p90 | Notes |
+| --- | --- | --- | --- | --- | --- |
+| Connect and ping | 16.4 | | 12.4 | | |
+| Ping | 0.5 | 7.2 | 1.6 | 8.4 | |
+| List apps | 146 | | 85.4 | | 59 launchable apps on the Mi |
+| Launch Settings | 6.5 | | 31.4 | | Settled after 307 / 1,173; Settings' own screen read after 1,432 / 1,334 |
+| Read the tree | 4.3 | 6.5 | 24.1 | 30.3 | 1.5–79.6 across the emulator's runs |
+| Screenshot, JPEG q80 | 380 | 484 | 475 | 504 | Capture 349 / 371, encode 25 / 86, 137 / 121 KB; decoded in Go in 13.8 / 66.6 |
+| Screenshot, PNG | 437 | | 613 | | 207 / 198 KB |
+| Swipe of 300 ms | 307.8 | | 328.4 | 336.7 | 7.8 / 28.4 over the gesture; settled after 820 / 813 |
+| Tap (50 ms) | 109 | 175 | 55.8 | 59.6 | 59 / 5.8 over the gesture; settled after 1,034 / 866 |
+| Type (`set_text`) | 198 | 477 | 18.8 | 33.0 | |
+| Long press of 800 ms | 872 | | 821.8 | 823.8 | 72 / 21.8 over the gesture |
+| Back | | | 4.5 | 5.8 | Settled after 562 |
+| Home | | | 2.3 | | Settled after 303 |
 
-Every verb answers well within a model's turn. Screenshots cost the most, and the system allows about three a second anyway (see [Seeing](#the-accessibility-tier-an-app-alone)).
+Every verb answers well within a model's turn, on the phone as on the emulator. Screenshots cost the most, and the system allows about three a second anyway (see [Seeing](#the-accessibility-tier-an-app-alone)).
 
 ### Milestone 2: the core drives through the local driver
 
@@ -287,6 +289,32 @@ Found on the way, and worth keeping in the product:
 - **Pinky's own card made every approved step stale.** The card occluded the app's elements under it, so the screen read after the person allowed a step differed from the one the step was asked on. The gateway then refused the step as `stale`. Now the driver leaves Pinky's overlays out of the screen the agent reads and adds their areas to the covered ones (`agentScreen` in `internal/driver/android/local`).
 - **Android itself ignores the service's taps on sensitive views**, as rule 3 of [the safety model](#the-safety-model-on-the-same-phone) expects. With `OwnUI` taken out of a test build, `dispatchGesture` taps on the card and the pill reached nothing. The card does not check `FLAG_IS_ACCESSIBILITY_EVENT` itself and nothing covered it, so the drop is most likely the sensitive views' own filter. So far this is the stock Android 17 emulator only; vendor versions still need checking.
 
+### On a real phone
+
+On 2026-11-11 the prototype ran on a Xiaomi Mi 10 Pro with LineageOS (Android 17), with the owner's OK. It was installed by adb and its own accessibility service was turned on; no other setting changed. The agent and the tests touched only Calculator, the home screen and Settings, where they scrolled and typed into the search field. Afterwards the service was turned off again and the app uninstalled.
+
+**A cloud model.** DeepSeek answered through an OpenAI-compatible gateway on the home network (provider `openai`, with a base URL). The task "Open Calculator and work out 12 × 34" was started over the control socket (`corectl start -provider openai`), because typing on the task screen through adb fights the phone's Chinese keyboard; the task screen's own fields were tested on the emulator. "Ask before" was set to every action, so each step waited for a card.
+
+- The first thing the model met was Android's warning that the library was not aligned to 16 KB pages (below). It asked before closing it: "Dismiss the system compatibility warning dialog".
+- It opened Calculator and sent all seven key taps in one `phone_batch`. Each tap settled in 418–970 ms.
+- It finished with the right answer, 408, after 7 steps and 77K tokens, in 93 s. About 45 s of that was the cards waiting for an answer. The model's turns took 1.9–3.5 s.
+- Two of its steps came back `stale`, from the card bug below.
+
+**The checks of Milestone 3** ran again, with `fakemodel` on the computer (reached through `adb reverse`) and `input tap` for the finger:
+
+| Check | Result |
+| --- | --- |
+| The person answers a card | Allow once, Deny and Allow for task each reached the core within 384–815 ms of the tap, counting the adb command and polling every 250 ms |
+| The agent opens Pinky | `blocked_by_policy` |
+| The agent taps and swipes on the pill's Stop | Both refused as not done, in 1–2 ms; the task went on and finished |
+| The person taps Stop on the pill | The task stopped 661 ms after the tap |
+
+The real phone found three problems, all fixed on the branch:
+
+- **A step whose target lay under the card came back `stale` after Allow once.** Before an approved step acts, the gateway reads the screen again. The card was still up then, so a target under its top edge, such as Calculator's 6 and =, counted as covered, and the gateway refused the step. On the emulator no Settings row it tapped sat under the card. Now the card goes away first and sends the answer once its window is gone, at most 500 ms later. In the same 7 × 6 task with every step allowed once, 6 and = were `stale` before the fix and every step settled after it.
+- **Android 17 showed a dialog warning that `libpinkycore.so` was not aligned to 16 KB pages.** `scripts/standalone.sh` now links with `max-page-size=16384`, which aligns its segments to 16 KB, and the warning is gone. The library's size did not change.
+- **The phone locks about 2 minutes after the last touch, and a locked phone ends the task.** A person reading a card is not touching the screen either. The pill now keeps the screen on while a task runs (`keepScreenOn`). It was in the build of the last task, which was too short to show it.
+
 ### Size, memory and battery
 
 - **`libpinkycore.so`:** 21.1 MB, stripped.
@@ -295,18 +323,23 @@ Found on the way, and worth keeping in the product:
   - The service's process, which holds the Go core: 74 MB PSS idle, then 79–80 MB through the task, flat with no growth. RSS was about 212 MB, most of it shared code. Of the PSS, about 27 MB is the Go heap (counted as "Unknown"), 20 MB the library mapped from the APK, 11 MB native heap and 9 MB Java heap.
   - The task screen's process: 23 MB PSS. Android froze it while it was in the back, as it does with any cached process; the pill and the card are in the service's process and kept working.
 - **CPU:** 6.6 s of the service's process over the 10 minutes, about 1.1% of one core. Steps took 515 ms for a key, 590 ms for a tap, 750 ms for a swipe and 1.1 s for a launch on average, settling included.
-- **One model reply came 35 s late** (96 s in an earlier run). Both times Settings had just opened Network & internet, which makes the emulator's simulated Wi-Fi scan. The steps around it were normal, and the core was not waiting on anything of its own. It is most likely the emulator's network, but a real phone has to show that.
-- **Battery and heat** need a real phone; the emulator's battery is simulated.
+- **The same on the Mi 10 Pro.** The `calcloop` script worked sums in Calculator, tapping keys and reading the screen in turn, with `fakemodel` answering after 5 s. The task stopped at its limit of 100 steps after 567 s.
+  - The service's process: 82–85 MB PSS through the task, and 84 MB before it. Three of the 16 readings were 139–141 MB; the two with a reading after them were back to 82–83 MB 30 s later, and the third came as the task ended. RSS stayed at 214–217 MB.
+  - The task screen's process: 33 MB PSS.
+  - CPU: 28.6 s of the service's process, about 5% of one core. That is more than on the emulator, whose cores are faster.
+- **One model reply came 35 s late on the emulator** (96 s in an earlier run). Both times Settings had just opened Network & internet, which makes the emulator's simulated Wi-Fi scan. On the Mi no reply was late: over 100 turns the longest gap between two was 7 s, of which `fakemodel` took 5. So it was the emulator's network.
+- **Battery:** not measured. The emulator's battery is simulated, and the Mi runs on its charger, which holds it at 54% without charging. Its battery warmed from 30.9 °C to 32.0 °C over the 10 minutes.
 
 ### Not verified yet
 
-- **Real phones.** The Mi 10 Pro (HyperOS, Android 17) and the Pixel (Android 10) are next, with the owner's OK. HyperOS may need extra permissions for overlays or to keep the service alive.
+- **Other phones.** Only the Mi 10 Pro on LineageOS, which is close to stock Android, has run it. Vendor systems such as HyperOS may need extra permissions for overlays or to keep the service alive, and Android's drop of injected touches on sensitive views was only tried on the emulator. The Pixel (Android 10) is next, with the owner's OK.
 - **Android 10 to 13.**
   - `takeScreenshot` needs Android 11, so Android 10 has no screenshots.
   - `accessibilityDataSensitive` needs Android 14. Before it, Pinky's own controls are visible to the service and take its injected touches, so only the gateway and `OwnUI` keep the agent off them.
-- **A cloud model** with the person's own key; only `fakemodel` ran.
+- **Claude through the Anthropic API** with the person's own key. One cloud model ran (DeepSeek, OpenAI-compatible); `fakemodel` speaks the Anthropic API.
 - **Take over.** Not built: the person's touches are not told apart from the agent's.
-- **Battery and heat** over a long task.
+- **Battery and heat** over a long task, on a phone running on its battery.
+- **Keeping the screen on** through a card left unanswered for more than 2 minutes.
 
 ### The shell tier
 
