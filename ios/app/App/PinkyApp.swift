@@ -2,12 +2,13 @@ import SwiftUI
 import UserNotifications
 
 @main
-struct PinkyStandaloneApp: App {
+struct PinkyApp: App {
     @Environment(\.scenePhase) private var phase
     @StateObject private var model = AppModel()
 
     init() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        // Banners for approvals while Pinky works in other apps.
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }
 
     var body: some Scene {

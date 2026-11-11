@@ -29,7 +29,7 @@ import (
 
 	goios "github.com/danielpaulus/go-ios/ios"
 
-	"github.com/DIYgod/pinky/ios/standalone/rppair"
+	"github.com/DIYgod/pinky/ios/rppair"
 )
 
 func main() {

@@ -1,7 +1,7 @@
 // Package rppair speaks RemotePairing to an iPhone over TCP: the protocol
 // remotepairingd serves to network hosts on port 49152, and on the phone's own
 // loopback when a packet tunnel reflects 10.7.0.1 back into the phone (see
-// ios/standalone). It verifies a pairing, asks the phone for a TCP tunnel
+// ios/core). It verifies a pairing, asks the phone for a TCP tunnel
 // listener and opens the TLS-PSK stream that carries the CoreDevice tunnel.
 // Setup creates the pairing in the first place, over lockdown from a computer
 // the phone already trusts.

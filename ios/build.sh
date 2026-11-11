@@ -1,10 +1,10 @@
 #!/bin/sh
-# Builds the standalone prototype (see README.md).
+# Builds Pinky's iPhone app (see README.md).
 #
-#   ios/standalone/build.sh core                 the Go core only (libpinkycore.a)
-#   ios/standalone/build.sh full  [xcodebuild args]   app + packet tunnel + Live Activity
-#   ios/standalone/build.sh lite  [xcodebuild args]   app + Live Activity, no tunnel (use
-#                                                  LocalDevVPN)
+#   ios/build.sh core                    the Go core only (libpinkycore.a)
+#   ios/build.sh full  [xcodebuild args] app + packet tunnel + Live Activity
+#   ios/build.sh lite  [xcodebuild args] app + Live Activity, no tunnel (use
+#                                        LocalDevVPN; for a personal team)
 #
 # Xcode builds unsigned; this script signs each part with the development
 # profile of its App ID, or the team's wildcard profile when it has none, so
@@ -12,13 +12,15 @@
 # Network Extension capability and their profiles (README.md). PINKY_SIGN=0
 # skips signing (a compile check).
 #
-# PINKY_PAIRING=<rppair pair's file> and PINKY_UDID=<udid> put the pairing
-# into the app (build/Pairing.json, never committed). PINKY_TEAM overrides
-# the team.
+# PINKY_BUNDLE_ID sets the app's bundle id (the extensions add .tunnel and
+# .activity; lite adds .lite); it must be an App ID of PINKY_TEAM, which
+# overrides the team. PINKY_PAIRING=<rppair pair's file> and
+# PINKY_UDID=<udid> put the pairing into the app (build/Pairing.json, never
+# committed), which moves it into the Keychain on its first start.
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
-root=$(cd "$here/../.." && pwd)
+root=$(cd "$here/.." && pwd)
 app=$here/app
 out=$app/build
 team=${PINKY_TEAM:-492J8Q67PF}
@@ -31,7 +33,7 @@ sdk=$(xcrun --sdk iphoneos --show-sdk-path)
 cc="$(xcrun --sdk iphoneos -f clang) -isysroot $sdk -arch arm64 -miphoneos-version-min=17.0"
 echo "== Go core"
 (cd "$root" && GOOS=ios GOARCH=arm64 CGO_ENABLED=1 CC="$cc" \
-	go build -buildmode=c-archive -trimpath -ldflags=-s -o "$out/core/libpinkycore.a" ./ios/standalone/core)
+	go build -buildmode=c-archive -trimpath -ldflags=-s -o "$out/core/libpinkycore.a" ./ios/core)
 [ "$what" = core ] && exit 0
 
 if [ -n "${PINKY_PAIRING:-}" ]; then
@@ -84,7 +86,8 @@ identity() {
 }
 
 # sign <app>: signs the extensions, then the app, each with its profile and
-# the entitlements project.yml gives it (build/gen/<bundle id>.entitlements).
+# the entitlements project.yml gives its target (build/gen/<target>.entitlements,
+# the target being the bundle's executable).
 sign() {
 	for target in "$1"/PlugIns/*.appex "$1"; do
 		id=$(plutil -extract CFBundleIdentifier raw -o - "$target/Info.plist")
@@ -96,9 +99,10 @@ sign() {
 			echo "no signing identity for $p" >&2
 			exit 1
 		}
+		exe=$(plutil -extract CFBundleExecutable raw -o - "$target/Info.plist")
 		ent=$out/sign.entitlements
-		if [ -f "$out/gen/$id.entitlements" ]; then
-			cp "$out/gen/$id.entitlements" "$ent"
+		if [ -f "$out/gen/$exe.entitlements" ]; then
+			cp "$out/gen/$exe.entitlements" "$ent"
 		else
 			plutil -create xml1 "$ent"
 		fi
@@ -113,15 +117,17 @@ sign() {
 }
 
 case $what in
-full) scheme=PinkyStandalone ;;
-lite) scheme=PinkyStandaloneLite ;;
+full) scheme=Pinky ;;
+lite) scheme=PinkyLite ;;
 *)
 	echo "usage: $0 core|full|lite [xcodebuild args]" >&2
 	exit 2
 	;;
 esac
 
-xcodebuild -project "$app/PinkyStandalone.xcodeproj" -scheme "$scheme" \
+set -- DEVELOPMENT_TEAM="$team" "$@"
+[ -n "${PINKY_BUNDLE_ID:-}" ] && set -- PINKY_BUNDLE_ID="$PINKY_BUNDLE_ID" "$@"
+xcodebuild -project "$app/Pinky.xcodeproj" -scheme "$scheme" \
 	-configuration Debug -destination generic/platform=iOS -derivedDataPath "$out/dd" \
 	CODE_SIGNING_ALLOWED=NO "$@" build
 bundle=$out/dd/Build/Products/Debug-iphoneos/$scheme.app

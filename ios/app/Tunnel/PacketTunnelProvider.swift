@@ -8,17 +8,16 @@ import os
 /// to 10.7.0.1 reaches the phone itself (at 10.7.0.2, the tunnel's own
 /// address), where remotepairingd answers as it would a computer on the
 /// network. Swapping the two addresses leaves the IP and TCP checksums as
-/// they were. LocalDevVPN does the same.
+/// they were. LocalDevVPN does the same. remotepairingd refuses connections
+/// from ::1, hence the detour.
 ///
-/// remotepairingd refuses connections from ::1, hence the detour.
-///
-/// And it can host the engine: a network extension keeps running while
-/// other apps are in front, which the app does not. The extension's own
-/// sockets skip its tunnel, though: routed, a connection to 10.7.0.1 leaves
-/// over Wi-Fi, so the engine binds its sockets to the tunnel interface.
+/// And it hosts Pinky's core: a network extension keeps running while other
+/// apps are in front, which the app does not. The extension's own sockets
+/// skip its tunnel, though: routed, a connection to 10.7.0.1 leaves over
+/// Wi-Fi, so the core binds its sockets to the tunnel interface.
 final class PacketTunnelProvider: NEPacketTunnelProvider {
     private let log = Logger(subsystem: Pinky.tunnel, category: "tunnel")
-    private var watcher: EventWatcher?
+    private var notifier: Notifier?
 
     override func startTunnel(options: [String: NSObject]?, completionHandler: @escaping (Error?) -> Void) {
         let iface = (options?["iface"] as? String) ?? "10.7.0.2"
@@ -29,7 +28,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         v4.excludedRoutes = [.default()]
         settings.ipv4Settings = v4
         settings.mtu = 1500
-        let engine = (options?["engine"] as? NSNumber)?.boolValue ?? true
+        let core = (options?["core"] as? NSNumber)?.boolValue ?? true
         let addr = (options?["addr"] as? String) ?? "10.7.0.1:49152"
         log.log("pinky tunnel: \(iface, privacy: .public)/\(mask, privacy: .public) to \(addr, privacy: .public)")
         setTunnelNetworkSettings(settings) { [weak self] error in
@@ -39,12 +38,20 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                 return
             }
             self.reflect()
-            if engine {
-                let out = PinkyCore.start(host: "extension", addr: addr)
-                self.log.log("pinky engine start: \(String(describing: out), privacy: .public)")
-                let w = EventWatcher()
-                w.start()
-                self.watcher = w
+            if core {
+                // The pairing comes from the app, which keeps it, with each
+                // start; it is never written here.
+                let out = PinkyCore.start([
+                    "host": "extension", "addr": addr,
+                    "pairing": (options?["pairing"] as? String) ?? "", "udid": (options?["udid"] as? String) ?? "",
+                    // Network extensions get about 50 MB.
+                    "memory_mb": 30,
+                    "interface": "tunnel",
+                ])
+                self.log.log("pinky core start: \(out["ok"] as? Bool == true ? "ok" : (out["error"] as? String ?? "?"), privacy: .public)")
+                let n = Notifier()
+                n.start()
+                self.notifier = n
             }
             completionHandler(nil)
         }
@@ -72,10 +79,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
 
     override func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)?) {
         DispatchQueue.global(qos: .userInitiated).async {
-            guard PinkyCore.isStarted else {
-                completionHandler?(Data(#"{"ok":false,"error":"the engine runs in the app, not in the tunnel"}"#.utf8))
-                return
-            }
             completionHandler?(PinkyCore.call(data: messageData))
         }
     }
