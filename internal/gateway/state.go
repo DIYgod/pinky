@@ -314,7 +314,7 @@ const (
 	OutcomeExpired      = "expired"      // idle too long
 	OutcomeDisconnected = "disconnected" // the agent's session closed
 	OutcomeOffline      = "offline"      // the phone did not come back in time
-	OutcomeReplaced     = "replaced"     // the agent started another task on the device
+	OutcomeReplaced     = "replaced"     // the agent started another task on the device; only in history from before phone_connect refused that (shared.go)
 	OutcomePaused       = "paused"       // the person paused Pinky's connection to the phone (pause.go)
 )
 
