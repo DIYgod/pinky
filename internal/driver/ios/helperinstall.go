@@ -92,8 +92,8 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	if team != "" && !teamID.MatchString(team) {
 		return fmt.Errorf("%q is not a team ID: it has 10 letters and digits (Xcode › Settings › Accounts shows it)", o.Team)
 	}
-	if o.BundleID != "" && !strings.Contains(strings.ToLower(o.BundleID), "webdriveragentrunner") {
-		return errors.New("keep WebDriverAgentRunner in the bundle id: Pinky knows its helper by it")
+	if o.BundleID != "" && !bundleID.MatchString(strings.TrimSuffix(strings.TrimSpace(o.BundleID), ".xctrunner")) {
+		return fmt.Errorf("%q is not a bundle id: letters, digits and hyphens, in parts joined by dots", o.BundleID)
 	}
 	phones, err := listPhones(ctx, x)
 	if err != nil {
@@ -109,7 +109,7 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	}
 
 	// The helper already on the phone: the new one keeps its team and id.
-	runner, rerr := phoneRunner(ph.UDID)
+	runner, rerr := phoneRunner(ctx, x, ph.UDID)
 	switch {
 	case rerr != nil:
 		fmt.Fprintf(out, "Could not look for a helper on the phone (%v); going on.\n", rerr)
@@ -128,8 +128,12 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 		}
 	}
 	bid := helperBundleID(o.BundleID, team, runner)
-	if runner.BundleID != "" && runner.BundleID != bid+".xctrunner" {
+	switch {
+	case runner.BundleID == "":
+	case runner.BundleID != bid+".xctrunner":
 		fmt.Fprintf(out, "The new helper gets its own bundle id, %s.xctrunner; the phone keeps %s until you remove it.\n", bid, runner.BundleID)
+	case runner.AppID == "" && o.BundleID == "":
+		fmt.Fprintf(out, "Replacing it, assuming team %s signed it; if iOS refuses, name its team with --team, or a new --bundle-id to install beside it.\n", team)
 	}
 
 	// The source: Pinky's archive of the release, downloaded once.
@@ -164,10 +168,10 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	}
 	defer logf.Close()
 	fmt.Fprintf(out, "Building WebDriverAgent %s with Xcode %s for team %s, bundle id %s. This takes a minute or two.\n", wdaVersion, x.Version, team, bid)
-	tail, err := xcodeRun(ctx, x, logf, helperBuildArgs(src, dd, ph.UDID, team, bid, false), nil)
+	tail, err := xcodeRun(ctx, x, logf, out, helperBuildArgs(src, dd, ph.UDID, team, bid, false), nil)
 	if err != nil && ctx.Err() == nil && !o.LocalSigning && needsProvisioning(tail) {
 		fmt.Fprintln(out, "No profile on this Mac signs the helper for this phone; letting Xcode get one from Apple (it may register the phone with your team).")
-		tail, err = xcodeRun(ctx, x, logf, helperBuildArgs(src, dd, ph.UDID, team, bid, true), nil)
+		tail, err = xcodeRun(ctx, x, logf, out, helperBuildArgs(src, dd, ph.UDID, team, bid, true), nil)
 	}
 	if err != nil {
 		return xcodeFailed(ctx, "building the helper", err, tail, logPath)
@@ -197,7 +201,7 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	fmt.Fprintf(out, "Installing it on %s and starting it once. Keep the phone unlocked; if it asks for its passcode to allow automation, enter it there.\n", ph.Name)
 	run, cancel := context.WithTimeout(ctx, helperStartTimeout)
 	defer cancel()
-	tail, err = xcodeRun(run, x, logf, helperTestArgs(products, ph.UDID, filepath.Join(tmp, "run")), []string{"TEST_RUNNER_USE_IP=127.0.0.1"})
+	tail, err = xcodeRun(run, x, logf, out, helperTestArgs(products, ph.UDID, filepath.Join(tmp, "run")), []string{"TEST_RUNNER_USE_IP=127.0.0.1"})
 	if err != nil {
 		if errors.Is(err, errHelperUp) {
 			fmt.Fprintf(out, "Installed %q on %s; WebDriverAgent answered and was stopped again.\n", helperDisplayName, ph.Name)
@@ -214,6 +218,9 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 
 // teamID is an Apple developer team's ID.
 var teamID = regexp.MustCompile(`^[A-Z0-9]{10}$`)
+
+// bundleID is an app's bundle id.
+var bundleID = regexp.MustCompile(`^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$`)
 
 func orUnknown(s string) string {
 	if s == "" {
@@ -233,24 +240,82 @@ func appIDTeam(appID string) string {
 
 // helperBundleID is the bundle id to build the helper with: the one asked
 // for, else the phone's helper's when it is the team's (iOS replaces an
-// app only with one of the same team), else one of Pinky's for the team.
+// app only with one of the same team) or its team is unknown, else one of
+// Pinky's for the team.
 func helperBundleID(want, team string, r wdaRunner) string {
 	if want != "" {
 		return strings.TrimSuffix(strings.TrimSpace(want), ".xctrunner")
 	}
-	if r.BundleID != "" && appIDTeam(r.AppID) == team {
+	if r.BundleID != "" && (r.AppID == "" || appIDTeam(r.AppID) == team) {
 		return strings.TrimSuffix(r.BundleID, ".xctrunner")
 	}
 	return "pinky." + strings.ToLower(team) + ".WebDriverAgentRunner"
 }
 
-// phoneRunner is the helper installed on a phone, read over usbmuxd.
-func phoneRunner(udid string) (wdaRunner, error) {
+// phoneRunner is the helper installed on a phone: read over usbmuxd, with
+// its team, or else from devicectl's list of the phone's apps, which
+// reaches a phone over Wi-Fi too but names no team.
+func phoneRunner(ctx context.Context, x xcode, udid string) (wdaRunner, error) {
 	e, err := findEntry(udid, false)
+	if err == nil {
+		return findRunnerApp(e)
+	}
+	r, derr := devicectlRunner(ctx, x, udid)
+	if derr != nil {
+		return wdaRunner{}, fmt.Errorf("%v; devicectl: %v", err, derr)
+	}
+	return r, nil
+}
+
+// devicectlRunner is the helper among a phone's apps as devicectl lists
+// them.
+func devicectlRunner(ctx context.Context, x xcode, udid string) (wdaRunner, error) {
+	f, err := os.CreateTemp("", "pinky-apps-*.json")
 	if err != nil {
 		return wdaRunner{}, err
 	}
-	return findRunnerApp(e)
+	f.Close()
+	defer os.Remove(f.Name())
+	cmd := exec.CommandContext(ctx, x.tool("devicectl"), "device", "info", "apps", "--device", udid, "--quiet", "--json-output", f.Name())
+	cmd.Env = x.env()
+	if b, err := cmd.CombinedOutput(); err != nil {
+		return wdaRunner{}, fmt.Errorf("%v: %s", err, strings.TrimSpace(string(b)))
+	}
+	b, err := os.ReadFile(f.Name())
+	if err != nil {
+		return wdaRunner{}, err
+	}
+	return parseDeviceApps(b)
+}
+
+// parseDeviceApps picks the helper in devicectl's JSON list of a phone's
+// apps as pickRunnerApp does: a test runner built from WebDriverAgent's
+// runner target (its folder is WebDriverAgentRunner-Runner.app, whatever
+// its name on the phone), Pinky's own first.
+func parseDeviceApps(b []byte) (wdaRunner, error) {
+	var doc struct {
+		Result struct {
+			Apps []struct {
+				BundleID string `json:"bundleIdentifier"`
+				Name     string `json:"name"`
+				URL      string `json:"url"`
+			} `json:"apps"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		return wdaRunner{}, fmt.Errorf("reading devicectl's apps: %w", err)
+	}
+	var best wdaRunner
+	for _, a := range doc.Result.Apps {
+		if !strings.HasSuffix(a.BundleID, ".xctrunner") ||
+			!strings.Contains(strings.ToLower(a.BundleID+" "+a.Name+" "+a.URL), "webdriveragentrunner") {
+			continue
+		}
+		if best.BundleID == "" || strings.Contains(strings.ToLower(a.BundleID), "pinky") {
+			best = wdaRunner{BundleID: a.BundleID}
+		}
+	}
+	return best, nil
 }
 
 // helperPhone is a phone as devicectl lists it.
@@ -467,15 +532,22 @@ func helperTestArgs(products, udid, dd string) []string {
 // errHelperUp ends a test run once WDA printed helperMark.
 var errHelperUp = errors.New("WebDriverAgent answered")
 
+// xcodeWaiting is what xcodebuild prints while it waits for a phone to be
+// unlocked, which it does in silence otherwise.
+const xcodeWaiting = "Waiting for the destination to become ready"
+
 // xcodeRun runs xcodebuild with args, its output to log, and returns the
 // output's last lines. A run that prints helperMark is stopped then and
-// returns errHelperUp.
-func xcodeRun(ctx context.Context, x xcode, log io.Writer, args, env []string) (string, error) {
+// returns errHelperUp. When Xcode waits for the phone, out is told once.
+func xcodeRun(ctx context.Context, x xcode, log, out io.Writer, args, env []string) (string, error) {
 	tail := &lastLines{max: 64 << 10}
 	mark := &markWriter{mark: []byte(helperMark), found: make(chan struct{})}
+	waiting := &markWriter{mark: []byte(xcodeWaiting), found: make(chan struct{}), then: func() {
+		fmt.Fprintln(out, "Xcode is waiting for the phone: unlock it and keep it unlocked.")
+	}}
 	cmd := exec.Command(x.tool("xcodebuild"), args...)
 	cmd.Env = append(x.env(), env...)
-	cmd.Stdout = io.MultiWriter(log, tail, mark)
+	cmd.Stdout = io.MultiWriter(log, tail, mark, waiting)
 	cmd.Stderr = cmd.Stdout
 	// Its own process group: a Ctrl-C reaches Pinky, which stops it with
 	// SIGTERM; on SIGINT a test run collects diagnostics for minutes.
@@ -511,6 +583,8 @@ type markWriter struct {
 	carry []byte
 	found chan struct{}
 	seen  bool
+	// then, when set, runs once with the mark, before found closes.
+	then func()
 }
 
 func (w *markWriter) Write(p []byte) (int, error) {
@@ -522,6 +596,9 @@ func (w *markWriter) Write(p []byte) (int, error) {
 	b := append(w.carry, p...)
 	if bytes.Contains(b, w.mark) {
 		w.seen = true
+		if w.then != nil {
+			w.then()
+		}
 		close(w.found)
 		return len(p), nil
 	}
@@ -559,6 +636,8 @@ func needsProvisioning(out string) bool {
 func helperHint(out string) string {
 	l := strings.ToLower(out)
 	switch {
+	case containsAny(l, "mismatchedapplicationidentifierentitlement", "does not match installed application"):
+		return "Another team signed the helper on the phone, and iOS replaces an app only with one of its team. Name that team with --team, or a new --bundle-id to install beside it."
 	case containsAny(l, "explicitly trusted", "untrusted developer", "not trusted", "verify the developer"):
 		return "On the phone, trust your developer certificate in Settings › General › VPN & Device Management, then run this again."
 	case containsAny(l, "developer mode"):
