@@ -72,4 +72,4 @@ xcrun devicectl device process launch --device <udid> \
   <id> -- -pinkyTask "…" -provider anthropic -model <model> -baseURL <url>
 ```
 
-The task starts only at the app's launch. If Pinky is running, end the app first by its process id (`xcrun devicectl device info processes`, then `xcrun devicectl device process terminate --pid <pid>`). `--terminate-existing` ends the tunnel extension too, and the new app finds the VPN still on and does not start it again.
+The task starts only at the app's launch. If Pinky is running, end the app first by its process id (`xcrun devicectl device info processes`, then `xcrun devicectl device process terminate --pid <pid>`). The new app keeps the tunnel that is up, with the options it was started with. To start the tunnel again (for `-pinkyHeartbeat`, say), end the tunnel extension (`PinkyTunnel`) by its process id as well and launch about 8 s later. `--terminate-existing` ends both and launches at once: the new app still finds the VPN on and does not start it, and iOS then gives up on the dead extension.
