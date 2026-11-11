@@ -1174,6 +1174,56 @@ type CaptureReporter interface {
 	Capturing() bool
 }
 
+// VitalsReader is a Device that reads the phone's battery and storage, for
+// the person to see on its page and for agents. Reading must not change
+// anything on the phone the person would notice: it must not turn the
+// screen on, keep it on, stop auto-lock or start capturing the screen
+// (CaptureReporter). The gateway reads rarely and never while the phone is
+// paused.
+type VitalsReader interface {
+	// Vitals reads the parts asked for; a part the phone does not report
+	// stays nil. A virtual phone reports no battery.
+	Vitals(ctx context.Context, parts VitalParts) (Vitals, error)
+}
+
+// VitalParts are the parts of Vitals to read.
+type VitalParts uint8
+
+const (
+	VitalBattery VitalParts = 1 << iota
+	VitalStorage
+)
+
+// Vitals are a phone's battery and storage as it reported them.
+type Vitals struct {
+	Battery *Battery
+	Storage *Storage
+}
+
+// Battery is the phone's battery.
+type Battery struct {
+	Level    int  // percent, 0 to 100
+	Charging bool // charging now
+	// Plugged is true while the phone is on external power, also when it
+	// does not charge because it is full or holds the charge on purpose.
+	Plugged bool
+	Full    bool
+	// TempC is the battery's temperature in degrees Celsius; 0 when the
+	// phone does not report it (iPhones).
+	TempC float64
+}
+
+// Storage is the phone's storage for apps and data, as its own Settings
+// show it.
+type Storage struct {
+	// Total is the capacity in bytes the phone is sold with (128 GB), not
+	// the size of its data partition.
+	Total int64
+	// Free is the space apps may still use in bytes, counting what the
+	// system can clear when it needs room, as Settings counts it.
+	Free int64
+}
+
 // WiFiFinder is a Provider that also reaches phones over Wi-Fi by itself:
 // iPhones and iPads that usbmuxd lists over the network. Those include
 // phones that are not the person's, such as a family member's iPad that was

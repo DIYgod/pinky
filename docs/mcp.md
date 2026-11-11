@@ -468,7 +468,7 @@ The result's message says what it holds ("120 log lines of Example since 14:05:0
 
 ### phone_device
 
-The switches developers flip to test an app: the screen's rotation, light or dark appearance, and a simulated location. Without arguments it reads them; read-only and watch-only agents may only read.
+The switches developers flip to test an app: the screen's rotation, light or dark appearance, and a simulated location. Without arguments it reads them, and the phone itself: its model and system, its battery and its storage. Read-only and watch-only agents may only read.
 
 | Argument | Type | Meaning |
 | --- | --- | --- |
@@ -479,7 +479,7 @@ The switches developers flip to test an app: the screen's rotation, light or dar
 | `intent` | string | One sentence on why, shown on the approval panel |
 | `approval_id` | string | From `approval_pending`: repeat the same call with it |
 
-The result has one line per switch, after the screen's changes: `rotation: landscape (was portrait)`, `appearance: dark`, `location: none`, or `location: unsupported · <why>`. Several switches in one call are read first, so one the phone lacks fails the call before anything changes, then set in the order rotation, appearance, location.
+The result has one line per switch, after the screen's changes: `rotation: landscape (was portrait)`, `appearance: dark`, `location: none`, or `location: unsupported · <why>`. A read starts with the phone: `phone: iPhone 13 mini · iOS 27.0.1`, `battery: 64%, charging` (`plugged in, not charging` when it is on power but holds its charge; Android adds the temperature, `31 °C`), `storage: 87.7 GB free of 128 GB` (free as the phone's Settings count it, the capacity it is sold with). A part the phone does not report is left out: an Android emulator reports no battery, and an iOS Simulator neither battery nor storage. The battery is read at most once a minute and the storage every ten minutes, so a read may give a value up to that old. An iPhone without the helper answers a read with the phone and a message that it has no switches, instead of `unsupported`. Several switches in one call are read first, so one the phone lacks fails the call before anything changes, then set in the order rotation, appearance, location.
 
 - **Asking.** On a real phone a change asks the person (rule `Phone settings`; up to 45 s, then `approval_pending`), with Allow once, Allow for this task, which covers the task's later changes and language launches, and Always allow, which covers them for that agent on that phone in later tasks too, until the person takes it back in Settings › Safety (not while every action asks). The changes are still put back when each task ends. On an emulator or a Simulator it asks only when the person chose to approve more than payments in Settings › Safety. Read-only agents get `scope_denied`, read-only mode `blocked_by_policy` (rule `Read-only`). `reset` never asks.
 - **Putting back.** When the task ends, however it ends (released, stopped, the session gone), Pinky puts back every change, the last made first, as steps after "Finished" in history: "Put the appearance back to light", "Stopped the simulated location". A switch the person changed meanwhile stays as they set it ("Left the appearance as the person set it"), and a phone offline at the end keeps the change ("Could not put …").
