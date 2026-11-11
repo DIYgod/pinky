@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## Unreleased
+
+- Ask Pinky now stops at its time limit even while the AI model is still answering, instead of finishing the task late. Thanks @pseudoyu.
+
 ## 2026.1111.17 (2026-11-11)
 
 - Agents can now ask phone_logs for an app's log lines with kind "logs", as the tool describes it; it was refused before. Thanks @Talaxy009.
