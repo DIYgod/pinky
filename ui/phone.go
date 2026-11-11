@@ -422,7 +422,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 	}
 	b.TextColor(col).Children(func() { mg.Icon(c, icMore).FontSize(18) })
 	mg.PopoverBase(c, b, &open, func(panel mg.Element) {
-		menuPanel(c, panel).Width(290).Margin(sp2, 0, 0, 0)
+		menuPanel(c, panel).Width(300).Margin(sp2, 0, 0, 0)
 		if menuItem(c, locales.PhoneTakeScreenshot(), mg.Color{}).Clicked() {
 			open = false
 			a.saveScreenshot(m, d.Info.Name)
@@ -435,17 +435,14 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 		menuItem(c, locales.PhoneRecordScreen(), p.ink3).Disabled(true).Tooltip(locales.PhoneRecordScreenTooltip())
 		menuItem(c, locales.PhoneRotate(), p.ink3).Disabled(true).Tooltip(locales.PhoneRotateTooltip())
 		mg.Box(c).Height(1).Background(p.line).Margin(6, 4)
-		mg.Row(c).Gap(10).Padding(6, 10).AlignItems(mg.Center).Children(func() {
+		mg.Row(c).Gap(sp3).Padding(sp2, 10).AlignItems(mg.Center).Children(func() {
 			ink := p.ink
 			desc := locales.PhoneBackgroundDesc()
 			if !d.Features.Background {
 				ink = p.ink3
 				desc = locales.PhoneBackgroundUnsupported()
 			}
-			mg.Column(c).Grow(1).Children(func() {
-				mg.Text(c, locales.PhoneWorkInBackground()).FontSize(14).TextColor(ink)
-				mg.Text(c, desc).FontSize(12.5).TextColor(p.ink2)
-			})
+			menuText(c, locales.PhoneWorkInBackground(), desc, ink)
 			on := a.bg.on[id] && d.Features.Background
 			sw := toggle(c.Key("bg-pop-"+id), &on, locales.PhoneWorkInBackground()).Disabled(!d.Features.Background)
 			if sw.Changed() && d.Features.Background {

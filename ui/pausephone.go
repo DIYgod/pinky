@@ -89,18 +89,12 @@ func (a *app) pauseMenuItem(c *mg.Context, d gateway.DeviceView, close func()) {
 		return
 	}
 	p := pal(c)
-	b := mg.ButtonBase(c.Key("pause-"+d.Info.ID)).Label(locales.PausePhoneMenu()).MinHeight(36).Padding(6, 10).Radius(8).Gap(10).
+	b := mg.ButtonBase(c.Key("pause-"+d.Info.ID)).Label(locales.PausePhoneMenu()).MinHeight(36).Padding(sp2, 10).Radius(rSmall).
 		AlignItems(mg.Center).Justify(mg.Start)
 	if b.Hovered() || b.Focused() {
 		b.Background(p.bg3)
 	}
-	b.TextColor(p.ink).Children(func() {
-		mg.Icon(c, icPause).FontSize(15).TextColor(p.ink2)
-		mg.Column(c).Grow(1).MinWidth(0).Children(func() {
-			mg.Text(c, locales.PausePhoneMenu()).FontSize(14)
-			mg.Text(c, locales.PausePhoneMenuDesc()).FontSize(12.5).TextColor(p.ink2)
-		})
-	})
+	b.Children(func() { menuText(c, locales.PausePhoneMenu(), locales.PausePhoneMenuDesc(), p.ink) })
 	if b.Clicked() {
 		close()
 		a.setPaused(d, true)

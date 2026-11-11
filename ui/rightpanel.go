@@ -40,7 +40,6 @@ func (a *app) rightPanel(c *mg.Context) {
 }
 
 func (a *app) taskList(c *mg.Context) {
-	p := pal(c)
 	shown := 0
 	// The selected phone's task first, expanded, then the others' running
 	// tasks, one row each.
@@ -62,17 +61,34 @@ func (a *app) taskList(c *mg.Context) {
 		shown++
 	}
 	if shown == 0 {
-		mg.Column(c).Padding(sp4).Gap(6).Radius(rCard).Border(1, p.line).AlignItems(mg.Center).Children(func() {
-			if a.opt.AgentSetup != nil && a.setup.loaded && !a.agentsConnected() {
-				mg.Text(c, locales.TasksNoAgent()).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
-				if linkButton(c, locales.ConnectTitle()).Clicked() {
-					a.page, a.set.sec = pageSettings, secAgents
-				}
-				return
+		noAgent := a.opt.AgentSetup != nil && a.setup.loaded && !a.agentsConnected()
+		ic, text := icInbox, locales.TasksNone()
+		if noAgent {
+			ic, text = icPlug, locales.TasksNoAgent()
+		}
+		emptyWell(c, ic, text, func() {
+			if noAgent && linkButton(c, locales.ConnectTitle()).Clicked() {
+				a.page, a.set.sec = pageSettings, secAgents
 			}
-			mg.Text(c, locales.TasksNone()).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		})
 	}
+}
+
+// emptyWell is what a list says when it has nothing to list: a soft well
+// on the wings' gray with an icon in a ring, a line or two of words kept
+// narrow enough to break evenly, and what extra shows, such as a link to
+// do something about it.
+func emptyWell(c *mg.Context, ic *mg.SVG, text string, extra func()) {
+	p := pal(c)
+	mg.Column(c).Padding(sp6, sp5).Gap(sp3).Radius(rCard).Background(p.ink.Alpha(0.035)).AlignItems(mg.Center).Children(func() {
+		mg.Box(c).Size(40, 40).Radius(20).Background(p.card).Border(1, p.line).Justify(mg.Center).AlignItems(mg.Center).Children(func() {
+			mg.Icon(c, ic).FontSize(18).TextColor(p.ink3)
+		})
+		mg.Text(c, text).FontSize(fsSmall).LineHeight(1.5).TextColor(p.ink2).TextAlign(mg.Center).MaxWidth(220)
+		if extra != nil {
+			extra()
+		}
+	})
 }
 
 // needCard is the prototype's .ncard, for an approval, a handoff or an

@@ -380,6 +380,17 @@ func menuItem(c *mg.Context, text string, col mg.Color) mg.Element {
 	return b
 }
 
+// menuText is the words of a menu row with a line under its name, as
+// Work in background and Pause connection have: the name at the size of
+// menuItem's, the line smaller and secondary.
+func menuText(c *mg.Context, name, desc string, ink mg.Color) {
+	p := pal(c)
+	mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
+		mg.Text(c, name).FontSize(fsBody).TextColor(ink)
+		mg.Text(c, desc).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink2)
+	})
+}
+
 // spinner is the prototype's .spin: a ring with an accent arc, turning.
 func spinner(c *mg.Context) mg.Element {
 	p := pal(c)
