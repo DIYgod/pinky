@@ -354,8 +354,8 @@ func TestFindCompanionAPK(t *testing.T) {
 		t.Fatalf("$PINKY_COMPANION_APK: %q, %v", p, err)
 	}
 	cands := companionAPKCandidates()
-	if len(cands) != 4 || !strings.HasSuffix(cands[1], "pinky-companion.apk") ||
-		!strings.HasSuffix(cands[2], filepath.Join("..", "Resources", "pinky-companion.apk")) && !strings.Contains(cands[2], "Resources") {
+	if len(cands) != 4 || !strings.HasSuffix(cands[1], "pinky-android.apk") ||
+		!strings.HasSuffix(cands[2], filepath.Join("..", "Resources", "pinky-android.apk")) && !strings.Contains(cands[2], "Resources") {
 		t.Errorf("candidates = %q", cands)
 	}
 }

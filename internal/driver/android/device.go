@@ -59,7 +59,7 @@ type Device struct {
 	tapPoint screen.Point // the last tap, for typing into the field under it
 	tapAt    time.Time
 
-	inputNote   string // for the agent, about the last Type (TakeInputNote)
+	inputNote   string // for the agent, about the last Type or Key (TakeInputNote)
 	emuLocation string // the place last sent to the emulator's console (switches.go)
 
 	appsMu      sync.Mutex

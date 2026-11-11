@@ -132,7 +132,7 @@ func XiaomiCheckup() driver.Checkup {
 
 // errRestricted is the error a Xiaomi phone gives an install over USB while
 // Install via USB is off.
-var errRestricted = errors.New("android: install pinky-companion.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]")
+var errRestricted = errors.New("android: install pinky-android.apk: Failure [INSTALL_FAILED_USER_RESTRICTED: Install canceled by user]")
 
 // Unplug takes a phone offline, as when its cable comes out: like the
 // gateway, without the step it may have waited for.

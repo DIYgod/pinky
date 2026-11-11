@@ -108,7 +108,7 @@ func (g *gate) lastApp() string {
 // app's id is the builder's choice (a free Apple ID cannot use Pinky's
 // own), so it is learned from the app, besides the ids the policy knows.
 func (g *gate) isSelf(id string) bool {
-	return id != "" && (id == g.self || strings.HasPrefix(id, g.self+".") || policy.IsStandalone(screen.App{ID: id}))
+	return id != "" && (id == g.self || strings.HasPrefix(id, g.self+".") || policy.IsPinkyScreen(screen.App{ID: id}))
 }
 
 // check refuses input while Pinky's app is in front.

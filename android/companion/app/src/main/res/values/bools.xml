@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Whether Pinky's screens for running tasks on the phone itself show;
+         development builds turn them on (src/debug). -->
+    <bool name="on_phone_ui">false</bool>
+</resources>

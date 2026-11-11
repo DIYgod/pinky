@@ -2,7 +2,7 @@
 # Builds what a release of Pinky ships, for scripts/release.sh and the
 # release workflow (see docs/RELEASING.md):
 #
-#   scripts/dist.sh companion <out>   the companion APK, <out>/pinky-companion.apk:
+#   scripts/dist.sh companion <out>   the companion APK, <out>/pinky-android.apk:
 #                                     the release build, signed with Pinky's
 #                                     release key, or without the key the
 #                                     development build (never to publish)
@@ -24,7 +24,7 @@
 #
 # The version is cmd/pinky/mygo.json's, which a release writes into a
 # checkout of its tag first (go run ./scripts/release stamp <version>).
-# Every app carries <out>/pinky-companion.apk, so build that first, its
+# Every app carries <out>/pinky-android.apk, so build that first, its
 # own FFmpeg (scripts/ffmpeg.sh): Pinky.app in Contents/Frameworks, the
 # Windows and Linux apps next to their executables, built in a Docker
 # container the first time, and its own adb (scripts/adb.sh): Pinky.app in
@@ -105,7 +105,7 @@ sha256() {
 # FFmpeg into the Windows and Linux apps through their platform folders
 # there; they are staged for the build only.
 unstage() {
-	rm -f "$resources/pinky-companion.apk"
+	rm -f "$resources/pinky-android.apk"
 	rm -rf "$resources/windows-amd64" "$resources/linux-amd64"
 	rmdir "$resources" 2>/dev/null || true
 }
@@ -118,7 +118,7 @@ build() {
 	shift
 	rm -rf "$stage"
 	mkdir -p "$stage"
-	apk=${COMPANION_APK:-$out/pinky-companion.apk}
+	apk=${COMPANION_APK:-$out/pinky-android.apk}
 	if [ -f "$apk" ]; then
 		if [ "$strict" = 1 ]; then
 			# Never ship the development build of the companion.
@@ -128,7 +128,7 @@ build() {
 			esac
 		fi
 		mkdir -p "$resources"
-		cp "$apk" "$resources/pinky-companion.apk"
+		cp "$apk" "$resources/pinky-android.apk"
 	else
 		lacking "no companion APK at $apk (scripts/dist.sh companion): the apps will not offer to install it"
 	fi
@@ -164,8 +164,8 @@ companion() {
 	*"\"package\":\"$pkg\""*"\"version_name\":\"$version\""*) ;;
 	*) die "the APK says $info, not $pkg version $version" ;;
 	esac
-	cp "$apk" "$out/pinky-companion.apk"
-	say "$out/pinky-companion.apk: $info"
+	cp "$apk" "$out/pinky-android.apk"
+	say "$out/pinky-android.apk: $info"
 }
 
 # ffmpeg_for prints the prefix of FFmpeg built for a target: a Mac's

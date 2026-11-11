@@ -814,8 +814,8 @@ func (g *Gateway) screenOfLocked(d *device) (driver.Device, bool) {
 
 // noteWorkLocked tells the phone's driver whether an agent works on it, a
 // task running while the person is not in control, when that changed
-// (driver.WorkWatcher). Android turns Pinky Companion's accessibility
-// service on only while one does.
+// (driver.WorkWatcher). Pinky for Android's accessibility service is on
+// only while one does.
 func (g *Gateway) noteWorkLocked(d *device) {
 	ww, ok := d.dev.(driver.WorkWatcher)
 	if !ok {

@@ -53,7 +53,7 @@ func TestGateLearnsFromReads(t *testing.T) {
 	if got := g.lastApp(); got != "com.example.pinkyfan" {
 		t.Fatalf("last app = %q", got)
 	}
-	if !policy.IsStandalone(screen.App{ID: policy.IPhoneApp}) {
+	if !policy.IsPinkyScreen(screen.App{ID: policy.IPhoneApp}) {
 		t.Fatal("the policy does not hide Pinky's app")
 	}
 

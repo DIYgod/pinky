@@ -1,16 +1,17 @@
-// Package standalone is the core of the standalone Android prototype
-// (android/standalone, docs/notes/standalone-phone.md): Pinky running on the
-// phone it drives, with no computer. It runs inside the prototype's
-// accessibility service process and holds what the desktop app holds:
-// the gateway with its rules, approvals and steps, the MCP server, and Ask
-// Pinky's agent loop (internal/pilot), which drives the phone through the
-// local driver (internal/driver/android/local).
+// Package standalone is Pinky's core on the phone it drives, with no
+// computer (docs/notes/android-app.md, docs/notes/standalone-phone.md). On
+// Android it runs inside the accessibility service of Pinky's app
+// (android/companion) and holds what the desktop app holds: the gateway
+// with its rules, approvals and steps, the MCP server, and Ask Pinky's
+// agent loop (internal/pilot), which drives the phone through the local
+// driver (internal/driver/android/local). It knows nothing of Android
+// itself, so that Pinky on an iPhone can use it too.
 //
-// The prototype's own screens talk to it over a control socket that only
-// the prototype's own uid may open (control.go): they start a task, follow
-// its steps and needs, answer approvals and stop it. The agent has no way
-// to reach that socket: it only has the MCP tools, and the gateway blocks
-// Pinky's own screen (policy.StandaloneApp).
+// The app's own screens talk to it over a control socket that only the
+// app's own uid may open (control.go): they start a task, follow its steps
+// and needs, answer approvals and stop it. The agent has no way to reach
+// that socket: it only has the MCP tools, and the gateway blocks Pinky's
+// own screens (policy.IsPinkyScreen).
 package standalone
 
 import (
@@ -74,7 +75,7 @@ type Core struct {
 
 // Errors of the control commands.
 var (
-	ErrNoDevice = errors.New("standalone: the phone is not ready: turn on Pinky Standalone in Accessibility settings")
+	ErrNoDevice = errors.New("standalone: the phone is not ready: turn on Pinky in Accessibility settings")
 	ErrNoKey    = errors.New("standalone: type the model's API key")
 )
 

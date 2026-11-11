@@ -352,7 +352,7 @@ func TestZipDir(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "sub"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for name, body := range map[string]string{"Pinky.exe": "exe", "sub/pinky-companion.apk": "apk"} {
+	for name, body := range map[string]string{"Pinky.exe": "exe", "sub/pinky-android.apk": "apk"} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -380,7 +380,7 @@ func TestZipDir(t *testing.T) {
 		r.Close()
 		got[f.Name] = string(b)
 	}
-	if len(got) != 3 || got["Pinky.exe"] != "exe" || got["sub/"] != "dir" || got["sub/pinky-companion.apk"] != "apk" {
+	if len(got) != 3 || got["Pinky.exe"] != "exe" || got["sub/"] != "dir" || got["sub/pinky-android.apk"] != "apk" {
 		t.Errorf("zip holds %v", got)
 	}
 }

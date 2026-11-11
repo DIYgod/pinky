@@ -27,8 +27,8 @@ import (
 // footer offers a newer version with its notes, Update now and Later.
 // With Settings › Advanced › Update automatically on, Pinky also installs
 // it by itself once nobody has used Pinky for a while and no agent works
-// (update.Idle), and updates Pinky Companion on Android phones that are
-// free. After an update a card offers What's new: the changelog entries
+// (update.Idle), and updates Pinky for Android on phones that are free.
+// After an update a card offers What's new: the changelog entries
 // newer than the version that ran before, and the companion updates.
 
 // companionUpdater updates a phone's companion app without asking
@@ -673,7 +673,7 @@ func (a *app) news(all bool) (title, line, md string, show bool) {
 	appUpdated := update.IsRelease(st.NotesFrom)
 	if len(st.Changes) > 0 && !all || len(st.Changes) > 0 && appUpdated {
 		var b strings.Builder
-		b.WriteString("### Pinky Companion\n")
+		b.WriteString("### " + locales.UpdateNewsCompanionHeading() + "\n")
 		for _, ch := range st.Changes {
 			line := locales.UpdateNewsCompanionLine(ch.Device, ch.To)
 			if ch.Kind == "companion-replaced" {

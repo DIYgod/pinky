@@ -120,11 +120,11 @@ jobs:
           # The certificate the release is signed with, for the log: the
           # same in every release, or installed Companions cannot update.
           bt=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          "$bt/apksigner" verify --print-certs "$RUNNER_TEMP/companion/pinky-companion.apk" 2>/dev/null | grep -E 'DN|SHA-256' || true
+          "$bt/apksigner" verify --print-certs "$RUNNER_TEMP/companion/pinky-android.apk" 2>/dev/null | grep -E 'DN|SHA-256' || true
       - uses: actions/upload-artifact@v7
         with:
           name: companion
-          path: ${{ runner.temp }}/companion/pinky-companion.apk
+          path: ${{ runner.temp }}/companion/pinky-android.apk
           if-no-files-found: error
           retention-days: 3
 
@@ -163,7 +163,7 @@ jobs:
       - name: Build
         env:
           STRICT: "1"
-          COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
+          COMPANION_APK: ${{ runner.temp }}/companion/pinky-android.apk
           GH_TOKEN: ${{ github.token }} # scripts/adb.sh, when github.com's release downloads fail
         run: |
           go run ./scripts/release stamp "${TAG#v}"
@@ -312,7 +312,7 @@ jobs:
       - name: Build, sign and notarize
         env:
           STRICT: "1"
-          COMPANION_APK: ${{ runner.temp }}/companion/pinky-companion.apk
+          COMPANION_APK: ${{ runner.temp }}/companion/pinky-android.apk
           SIGN: ${{ vars.MACOS_SIGN_IDENTITY }}
           GH_TOKEN: ${{ github.token }} # scripts/adb.sh, when github.com's release downloads fail
         run: |

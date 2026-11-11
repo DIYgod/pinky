@@ -1,12 +1,10 @@
-package app.pinky.standalone
+package app.pinky.companion
 
 import android.graphics.Point
 import android.graphics.Rect
 import android.graphics.Region
 import android.os.Build
 import android.view.accessibility.AccessibilityWindowInfo
-import app.pinky.companion.RequestError
-import app.pinky.companion.TreeDumper
 
 /**
  * Keeps the agent's input off Pinky's own controls: the approval card and
@@ -19,7 +17,7 @@ import app.pinky.companion.TreeDumper
  * are hidden from this service and, on Android 15 and later, drop the
  * touches it injects.
  */
-class OwnUI(private val service: StandaloneService) {
+class OwnUI(private val service: PinkyAccessibilityService) {
 
     // What Overlays shows, in screen pixels of display 0.
     @Volatile

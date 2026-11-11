@@ -4,7 +4,8 @@
     <!-- Only for the debug page's test notification. Never requested at run time. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Lets the service resolve the display name of launchable apps. -->
+    <!-- Lets the service resolve the display name of launchable apps, and
+         Pinky on the phone list and open them. -->
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -27,6 +28,24 @@
             android:exported="true"
             android:launchMode="singleTop"
             android:process=":debug">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Pinky's screen for tasks on the phone itself, in its own
+             process too: the service must see it to keep agents off it.
+             Shown only where on_phone_ui is true (development builds for
+             now). -->
+        <activity
+            android:name=".TaskActivity"
+            android:enabled="@bool/on_phone_ui"
+            android:exported="true"
+            android:label="@string/phone_launcher"
+            android:launchMode="singleTask"
+            android:process=":ui"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -15,13 +15,13 @@ import (
 const crashTest = "dev.pinky.crashtest"
 
 // newLogsGateway runs a gateway on a fake Android phone with the test app
-// Crash Test, a finance app, Pinky Companion and Settings installed.
+// Crash Test, a finance app, Pinky (Pinky for Android) and Settings installed.
 func newLogsGateway(t *testing.T) (*Gateway, *fake.Device) {
 	t.Helper()
 	dev := fake.NewDevice("pixel", "Pixel 9")
 	dev.AddApp(driver.App{ID: crashTest, Name: "Crash Test"})
 	dev.AddApp(driver.App{ID: "com.example.mybank", Name: "My Bank"})
-	dev.AddApp(driver.App{ID: "app.pinky.companion", Name: "Pinky Companion"})
+	dev.AddApp(driver.App{ID: "app.pinky.companion", Name: "Pinky"})
 	dev.AddApp(driver.App{ID: "com.example.notes", Name: "Notes Two"})
 	pol := testPolicy(t)
 	pol.AddApps(policy.CatFinance, policy.CategoryEntries{IDs: []string{"com.example.mybank"}})
@@ -159,7 +159,7 @@ func TestPhoneLogsRefused(t *testing.T) {
 	dev.SetDevBuild(crashTest, true)
 	dev.SetDevBuild("app.pinky.companion", true)
 	s, _ := connect(t, g, "Look around")
-	for app, rule := range map[string]string{"My Bank": "Finance apps", "Settings": policy.RuleAppLogs, "Pinky Companion": policy.RuleAppLogs} {
+	for app, rule := range map[string]string{"My Bank": "Finance apps", "Settings": policy.RuleAppLogs, "Pinky": policy.RulePinkyApps} {
 		res := s.Logs(ctx, LogsRequest{App: app})
 		if res.Status != StatusBlocked || res.Rule != rule || res.Log != "" {
 			t.Errorf("%s: %+v", app, res)

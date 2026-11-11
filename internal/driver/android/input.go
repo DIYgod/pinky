@@ -191,6 +191,7 @@ func (d *Device) Touch(ctx context.Context, a driver.TouchAction, p screen.Point
 // Key implements driver.Device.
 func (d *Device) Key(ctx context.Context, k driver.Key) error {
 	d.used()
+	d.setInputNote("")
 	code, ok := keycodes[k]
 	if !ok {
 		return fmt.Errorf("android: key %q: %w", k, driver.ErrUnsupported)

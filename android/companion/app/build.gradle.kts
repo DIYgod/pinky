@@ -91,6 +91,21 @@ android {
         // The abstract socket the service listens on; Pinky's Go client
         // knows both builds' (internal/driver/android/companion).
         buildConfigField("String", "SOCKET_NAME", "\"pinky_companion\"")
+        // The socket of Pinky's Go core, for Pinky's own screens on the
+        // phone (internal/standalone/control.go). Only this app's uid may
+        // open it.
+        buildConfigField("String", "CORE_SOCKET", "\"pinky_core\"")
+    }
+
+    // Pinky's Go core (libpinkycore.so, internal/standalone/libcore), which
+    // runs tasks on the phone itself: scripts/androidcore.sh builds it into
+    // build/go/jniLibs. Only debug builds carry it for now, and only when
+    // it was built; release builds stay what Pinky on a computer needs
+    // until tasks on the phone are finished (docs/notes/android-app.md).
+    sourceSets {
+        getByName("debug") {
+            jniLibs.srcDirs("build/go/jniLibs")
+        }
     }
 
     signingConfigs {
@@ -115,6 +130,7 @@ android {
             // create.
             applicationIdSuffix = ".dev"
             buildConfigField("String", "SOCKET_NAME", "\"pinky_companion_dev\"")
+            buildConfigField("String", "CORE_SOCKET", "\"pinky_core_dev\"")
         }
         release {
             isMinifyEnabled = true

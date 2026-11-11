@@ -1725,6 +1725,11 @@ func (g *Gateway) executeOn(ctx context.Context, l *lease, c Call, a Action, p *
 		g.recordStep(l, step, a, c, p, res, start, before, "", "")
 		return res
 	}
+	if n, ok := dev.(driver.InputNoter); ok && a.Tool == "key" {
+		// A note an earlier input left, such as the person's typing, is
+		// not this key's; a Type replaces the note itself.
+		n.TakeInputNote()
+	}
 	err := g.perform(actx, dev, a, p)
 	if err != nil && onBG && a.Tool == "launch" && errors.Is(err, driver.ErrUnsupported) {
 		// The app will not run on a background display: the task moves
@@ -1765,9 +1770,9 @@ func (g *Gateway) executeOn(ctx context.Context, l *lease, c Call, a Action, p *
 		g.mu.Unlock()
 	}
 	// What the driver could not make sure of, such as typed text it could
-	// not read back.
+	// not read back or a key the phone may have dropped.
 	var inputNote string
-	if n, ok := dev.(driver.InputNoter); ok && a.Tool == "type" {
+	if n, ok := dev.(driver.InputNoter); ok && (a.Tool == "type" || a.Tool == "key") {
 		inputNote = n.TakeInputNote()
 	}
 	limit := g.opt.SettleMax

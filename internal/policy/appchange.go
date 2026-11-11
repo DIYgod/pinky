@@ -24,7 +24,7 @@ const (
 	RuleInstall = "Installing from the computer"
 	// RuleUninstall asks before every uninstall.
 	RuleUninstall = "Uninstalling apps"
-	// RulePinkyApps refuses to touch Pinky Companion and the iPhone's
+	// RulePinkyApps refuses to touch Pinky for Android and the iPhone's
 	// helper (an XCTest runner, see IsPinkyApp), which give Pinky its access
 	// to the phone.
 	RulePinkyApps = "Pinky's own apps"
@@ -42,21 +42,19 @@ func (op Op) AppChange() bool {
 	return op == OpInstall || op == OpUninstall || op == OpStop
 }
 
-// StandaloneApp is the package of the standalone prototype
-// (android/standalone, docs/notes/standalone-phone.md): Pinky running on
-// the phone itself, whose screen and controls hold the person's approvals
-// and Stop. Its screen is blocked outright (Blocked, Evaluate) and no task
-// can lift that, so an agent can never press its controls.
-const StandaloneApp = "app.pinky.standalone"
+// pinkyScreens are the packages of Pinky's Android app (android/companion,
+// docs/notes/android-app.md), the released app and the development build.
+// Besides serving Pinky on a computer it runs tasks on the phone itself,
+// and its screens and controls hold the person's approvals, Stop and rules.
+// They are blocked outright (Blocked, Evaluate) for every agent, on the
+// phone or from a computer, and no task can lift that, so an agent can
+// never press them.
+var pinkyScreens = []string{"app.pinky.companion", "app.pinky.companion.dev"}
 
-// pinkyApps are Pinky Companion's package names and the standalone
-// prototype's.
-var pinkyApps = []string{"app.pinky.companion", "app.pinky.companion.dev", StandaloneApp}
-
-// IPhoneApp begins the bundle ids of Pinky's iPhone app (ios/), which, like
-// the standalone prototype, holds the person's approvals and Stop on its
-// screen. Its extensions' ids begin with it too, and so do the ids SideStore
-// and AltStore give it (<id>.<their team>).
+// IPhoneApp begins the bundle ids of Pinky's iPhone app (ios/), whose
+// screen holds the person's approvals and Stop as the Android app's do and
+// is blocked the same way (IsPinkyScreen). Its extensions' ids begin with it
+// too, and so do the ids SideStore and AltStore give it (<id>.<their team>).
 const IPhoneApp = "cc.diygod.pinky"
 
 // iPhoneTeamApp reports whether a bundle id, in lower case, has the shape
@@ -79,38 +77,39 @@ func iPhoneTeamApp(id string) bool {
 	return true
 }
 
-// IsStandalone reports whether the app is Pinky running on the phone
-// itself: the standalone prototype on Android, Pinky's iPhone app on iOS.
-// XCTest runners are not, whatever their ids. Pinky Helper built with the
-// person's team is pinky.<team id>.WebDriverAgentRunner.xctrunner, the
-// shape iPhoneTeamApp matches, but its screen holds no approvals or Stop,
-// so agents may act while it is in front; IsPinkyApp still counts it.
-func IsStandalone(app screen.App) bool {
-	id := strings.ToLower(clonePackage(app.ID))
-	if strings.HasSuffix(id, ".xctrunner") {
-		return false
-	}
-	return id == StandaloneApp || id == IPhoneApp || strings.HasPrefix(id, IPhoneApp+".") || iPhoneTeamApp(id)
-}
-
-// IsPinkyApp reports whether the app is part of Pinky on the phone: Pinky
-// Companion, Pinky on the phone itself (IsStandalone), or the iPhone's
-// helper. The helper is WebDriverAgent's XCTest
-// runner, and every runner counts, whatever its bundle id: Pinky Helper keeps
-// the id it was first installed with, which may be anything ending in
-// .xctrunner (iPhone Use's cc.diygod.iphoneuse.wda.xctrunner, a --bundle-id of
-// `pinky helper install`, Xcode's <prefix>.WebDriverAgentRunner.xctrunner),
-// and a phone only runs XCTest runners for development. The cost is that
-// agents cannot uninstall or stop a developer's own UI test runner, which the
-// person still can.
-func IsPinkyApp(app screen.App) bool {
-	id := strings.ToLower(clonePackage(app.ID))
-	for _, p := range pinkyApps {
-		if id == p {
+// IsPinkyScreen reports whether the app is Pinky's own, whose screens no
+// agent may open or act on: Pinky's Android app, or Pinky's iPhone app under
+// the ids it gets (IPhoneApp and the ids under it, iPhoneTeamApp). XCTest
+// runners are not, whatever their ids: Pinky Helper built with the person's
+// team is pinky.<team id>.WebDriverAgentRunner.xctrunner, the shape
+// iPhoneTeamApp matches, but its screen holds no approvals or Stop, so agents
+// may act while it is in front; IsPinkyApp still counts it.
+func IsPinkyScreen(app screen.App) bool {
+	id := clonePackage(app.ID)
+	for _, p := range pinkyScreens {
+		if strings.EqualFold(id, p) {
 			return true
 		}
 	}
-	return strings.HasSuffix(id, ".xctrunner") || IsStandalone(app)
+	id = strings.ToLower(id)
+	if strings.HasSuffix(id, ".xctrunner") {
+		return false
+	}
+	return id == IPhoneApp || strings.HasPrefix(id, IPhoneApp+".") || iPhoneTeamApp(id)
+}
+
+// IsPinkyApp reports whether the app is part of Pinky on the phone: Pinky's
+// Android or iPhone app (IsPinkyScreen), or the iPhone's helper. The helper
+// is WebDriverAgent's XCTest runner, and every runner counts, whatever its
+// bundle id: Pinky Helper keeps the id it was first installed with, which may
+// be anything ending in .xctrunner (iPhone Use's
+// cc.diygod.iphoneuse.wda.xctrunner, a --bundle-id of `pinky helper install`,
+// Xcode's <prefix>.WebDriverAgentRunner.xctrunner), and a phone only runs
+// XCTest runners for development. The cost is that agents cannot uninstall or
+// stop a developer's own UI test runner, which the person still can.
+func IsPinkyApp(app screen.App) bool {
+	id := strings.ToLower(clonePackage(app.ID))
+	return strings.HasSuffix(id, ".xctrunner") || IsPinkyScreen(app)
 }
 
 // appChangeLocked decides an install, uninstall or stop. Unlike the screen
