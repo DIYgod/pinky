@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1111.12 (2026-11-11)
 
 - You can now turn a phone's screen yourself: Rotate in the ⋯ menu under its picture offers portrait, landscape and the other ways it turns, with the current one marked. On an iPhone or iPad it needs the iPhone helper. Thanks @NaNhkNaN.
 - On iOS 27, when the iPhone helper is installed, Pinky moves the phone to it by itself for what only the helper can do, such as turning the screen or a pinch, also an agent's, and goes back to the quicker connection afterwards.
