@@ -173,17 +173,20 @@ func (g *Gateway) noteStopLocked(s *Session, device string) {
 
 // keepLocked keeps the lease of a resuming agent's session that closed for
 // a newer session to continue, and ends it after Options.ResumeGrace
-// (LocalResumeGrace for an agent on this computer) unless one did.
+// (LocalResumeGrace for an agent on this computer) unless one did. A
+// session that continued it and closed in turn keeps it with a grace of
+// its own.
 func (g *Gateway) keepLocked(l *lease) {
+	s := l.session
 	grace := g.opt.ResumeGrace
-	if !l.session.agent.Resume {
+	if !s.agent.Resume {
 		grace = g.opt.LocalResumeGrace
 	}
-	g.log.Info("lease kept for the agent's next session", "device", l.dev.id, "agent", l.session.agent.Name, "grace", grace)
+	g.log.Info("lease kept for the agent's next session", "device", l.dev.id, "agent", s.agent.Name, "grace", grace)
 	time.AfterFunc(grace, func() {
 		g.mu.Lock()
 		defer g.mu.Unlock()
-		if !g.closed && !l.ended && l.session.closed {
+		if !g.closed && !l.ended && l.session == s {
 			g.endLeaseLocked(l, OutcomeDisconnected, "")
 		}
 	})

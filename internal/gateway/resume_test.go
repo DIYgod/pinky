@@ -154,6 +154,33 @@ func TestResumeAfterClose(t *testing.T) {
 	}
 }
 
+// A lease that went from one closed session to the next waits out the
+// grace of the last one to close, not what was left of the first one's.
+func TestResumeGraceStartsAgain(t *testing.T) {
+	ctx := context.Background()
+	const grace = 600 * time.Millisecond
+	local := AgentInfo{Name: "Claude", Client: "claude-ai 1", Reconnect: true}
+	for _, a := range []AgentInfo{grok, local} {
+		g, _ := newTestGateway(t, func(o *Options) { o.ResumeGrace, o.LocalResumeGrace = grace, grace })
+		first := call(t, g, a)
+		mustStatus(t, first.Connect(ctx, ConnectRequest{Task: "Lunch"}), StatusSettled)
+		taskID := g.Devices()[0].TaskID
+		first.Close()
+		time.Sleep(grace * 2 / 3)
+		second := call(t, g, a)
+		mustStatus(t, second.Act(ctx, Call{}, Action{Tool: "key", Key: "home"}), StatusSettled)
+		second.Close()
+		time.Sleep(grace * 2 / 3) // the first session's grace is over, the second's is not
+		third := call(t, g, a)
+		if res := third.Act(ctx, Call{}, Action{Tool: "key", Key: "home"}); res.Status != StatusSettled {
+			t.Fatalf("%s: the task ended with the first session's grace: %+v", a.Name, res)
+		}
+		if d := g.Devices()[0]; d.TaskID != taskID {
+			t.Fatalf("%s: the third session runs task %s, want %s", a.Name, d.TaskID, taskID)
+		}
+	}
+}
+
 // The person's Stop holds for the agent's newer sessions.
 func TestResumeStopHolds(t *testing.T) {
 	ctx := context.Background()
