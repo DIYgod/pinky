@@ -108,6 +108,9 @@ type Options struct {
 	// agents listening at addr (Settings › Agents › Remote agents); nil
 	// leaves that out.
 	RemoteTailnet func(ctx context.Context, addr string) RemoteTailnet
+	// WebMirror shows the phones in a web browser (Settings › Phones ›
+	// Web mirror); nil leaves it out.
+	WebMirror WebMirror
 	// Log writes what the client does to the app's log: the log the
 	// person's feedback carries, and the one whoever fixes a broken live
 	// picture goes on. nil writes nothing, as before.
@@ -143,6 +146,12 @@ type Settings struct {
 	// that cannot start `pinky mcp`; each request needs the agent token.
 	RemoteAgents bool
 	RemoteAddr   string
+	// WebMirror shows the phones' screens in a web browser, on this
+	// computer and through Tailscale; each viewer needs the mirror's token.
+	WebMirror bool
+	// WebMirrorControl lets pages opened with the mirror's control token
+	// use the phone: taps, drags, Back and Home, as on the window mirror.
+	WebMirrorControl bool
 	// UsageStats shares anonymous usage statistics and crash reports
 	// (docs/TELEMETRY.md).
 	UsageStats bool
@@ -337,6 +346,7 @@ type app struct {
 	helper    helperState    // iPhones: installing the helper from the window (helper.go)
 	rec       recState       // task recordings in Activity
 	remote    remoteState    // Settings › Agents › Remote agents
+	webMirror webMirrorState // Settings › Phones › Web mirror
 	setup     setupState     // Settings › Agents › Connect an agent, and the sidebar's card
 	upd       updateState    // new versions of Pinky and the companion app
 	tn        tailnetState   // phones away from this computer's network, through Tailscale

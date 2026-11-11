@@ -33,6 +33,10 @@ type RemoteTailnet struct {
 	// URL is where `tailscale serve` gives the tailnet Pinky's endpoint,
 	// such as "https://macbook.tail1234.ts.net/mcp"; "" when it does not.
 	URL string
+	// ServePort is the HTTPS port for the web mirror's `tailscale serve`
+	// command, one Tailscale does not serve on yet, while URL is ""; ""
+	// when it is not known or none is free.
+	ServePort string
 }
 
 // remoteState is Settings › Agents › Remote agents'.

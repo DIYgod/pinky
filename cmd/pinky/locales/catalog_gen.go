@@ -28219,6 +28219,726 @@ func (msgs Messages) UpdateWhereUnsigned() string {
 	return Catalog.Format(msgs.locale, "updateWhereUnsigned", nil)
 }
 
+// WebMirrorControlDesc says "Taps, swipes, Back and Home from the page, as on Pinky's own mirror: they pause an agent's task."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webMirrorControlToggle, what
+// control from the browser does.
+func WebMirrorControlDesc() string { return In(i18n.Locale()).WebMirrorControlDesc() }
+
+// WebMirrorControlDesc says "Taps, swipes, Back and Home from the page, as on Pinky's own mirror: they pause an agent's task."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webMirrorControlToggle, what
+// control from the browser does.
+func (msgs Messages) WebMirrorControlDesc() string {
+	return Catalog.Format(msgs.locale, "webMirrorControlDesc", nil)
+}
+
+// WebMirrorControlLink says "Control link"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the rows of the links that can also
+// use the phone, on this computer and on the tailnet.
+func WebMirrorControlLink() string { return In(i18n.Locale()).WebMirrorControlLink() }
+
+// WebMirrorControlLink says "Control link"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the rows of the links that can also
+// use the phone, on this computer and on the tailnet.
+func (msgs Messages) WebMirrorControlLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorControlLink", nil)
+}
+
+// WebMirrorControlToggle says "Let the browser use the phone"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the switch that lets pages opened
+// with the control link use the phone.
+func WebMirrorControlToggle() string { return In(i18n.Locale()).WebMirrorControlToggle() }
+
+// WebMirrorControlToggle says "Let the browser use the phone"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the switch that lets pages opened
+// with the control link use the phone.
+func (msgs Messages) WebMirrorControlToggle() string {
+	return Catalog.Format(msgs.locale, "webMirrorControlToggle", nil)
+}
+
+// WebMirrorControlWarning says "Anyone with the control link can use the phone as you can, in any app, blocked apps included: Pinky's rules don't app…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the amber warning while control from
+// the browser is on.
+func WebMirrorControlWarning() string { return In(i18n.Locale()).WebMirrorControlWarning() }
+
+// WebMirrorControlWarning says "Anyone with the control link can use the phone as you can, in any app, blocked apps included: Pinky's rules don't app…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the amber warning while control from
+// the browser is on.
+func (msgs Messages) WebMirrorControlWarning() string {
+	return Catalog.Format(msgs.locale, "webMirrorControlWarning", nil)
+}
+
+// WebMirrorControllers says "{count, plural, one {# can use the phone} other {# can use the phone}}"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: after webMirrorViewers, how many of
+// those browsers can use the phone.
+func WebMirrorControllers(count int) string { return In(i18n.Locale()).WebMirrorControllers(count) }
+
+// WebMirrorControllers says "{count, plural, one {# can use the phone} other {# can use the phone}}"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: after webMirrorViewers, how many of
+// those browsers can use the phone.
+func (msgs Messages) WebMirrorControllers(count int) string {
+	return Catalog.Format(msgs.locale, "webMirrorControllers", map[string]any{"count": count})
+}
+
+// WebMirrorPageBack says "Back"
+// in the language the app shows.
+//
+// The web mirror's page: the button that presses Back on the phone.
+func WebMirrorPageBack() string { return In(i18n.Locale()).WebMirrorPageBack() }
+
+// WebMirrorPageBack says "Back"
+// in the language of msgs.
+//
+// The web mirror's page: the button that presses Back on the phone.
+func (msgs Messages) WebMirrorPageBack() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageBack", nil)
+}
+
+// WebMirrorPageControlOff says "Using the phone from the browser is off. Turn it on in Pinky: Settings › Phones › Web mirror."
+// in the language the app shows.
+//
+// The web mirror's page opened with the control link while control is off
+// in Settings.
+func WebMirrorPageControlOff() string { return In(i18n.Locale()).WebMirrorPageControlOff() }
+
+// WebMirrorPageControlOff says "Using the phone from the browser is off. Turn it on in Pinky: Settings › Phones › Web mirror."
+// in the language of msgs.
+//
+// The web mirror's page opened with the control link while control is off
+// in Settings.
+func (msgs Messages) WebMirrorPageControlOff() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageControlOff", nil)
+}
+
+// WebMirrorPageFullScreen says "Full screen"
+// in the language the app shows.
+//
+// The web mirror's page: the button that shows the page full screen, and
+// its tooltip.
+func WebMirrorPageFullScreen() string { return In(i18n.Locale()).WebMirrorPageFullScreen() }
+
+// WebMirrorPageFullScreen says "Full screen"
+// in the language of msgs.
+//
+// The web mirror's page: the button that shows the page full screen, and
+// its tooltip.
+func (msgs Messages) WebMirrorPageFullScreen() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageFullScreen", nil)
+}
+
+// WebMirrorPageHome says "Home"
+// in the language the app shows.
+//
+// The web mirror's page: the button that goes to the phone's home screen.
+func WebMirrorPageHome() string { return In(i18n.Locale()).WebMirrorPageHome() }
+
+// WebMirrorPageHome says "Home"
+// in the language of msgs.
+//
+// The web mirror's page: the button that goes to the phone's home screen.
+func (msgs Messages) WebMirrorPageHome() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageHome", nil)
+}
+
+// WebMirrorPageInControl says "You're in control: the agent's task is paused. Hand it back in Pinky."
+// in the language the app shows.
+//
+// The web mirror's page, in the bar at the top, while the person's input
+// paused an agent's task.
+func WebMirrorPageInControl() string { return In(i18n.Locale()).WebMirrorPageInControl() }
+
+// WebMirrorPageInControl says "You're in control: the agent's task is paused. Hand it back in Pinky."
+// in the language of msgs.
+//
+// The web mirror's page, in the bar at the top, while the person's input
+// paused an agent's task.
+func (msgs Messages) WebMirrorPageInControl() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageInControl", nil)
+}
+
+// WebMirrorPageTailnetUser says "Using the phone through Tailscale needs a device signed in to your tailnet, not a tagged device or a public link."
+// in the language the app shows.
+//
+// The web mirror's page: the control link was opened through Tailscale
+// without a signed-in user (a tagged device, or Tailscale Funnel). tailnet
+// is Tailscale's word: keep it.
+func WebMirrorPageTailnetUser() string { return In(i18n.Locale()).WebMirrorPageTailnetUser() }
+
+// WebMirrorPageTailnetUser says "Using the phone through Tailscale needs a device signed in to your tailnet, not a tagged device or a public link."
+// in the language of msgs.
+//
+// The web mirror's page: the control link was opened through Tailscale
+// without a signed-in user (a tagged device, or Tailscale Funnel). tailnet
+// is Tailscale's word: keep it.
+func (msgs Messages) WebMirrorPageTailnetUser() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageTailnetUser", nil)
+}
+
+// WebMirrorCopiedLink says "Link copied"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the toast after a Copy button copies
+// a link to the web mirror.
+func WebMirrorCopiedLink() string { return In(i18n.Locale()).WebMirrorCopiedLink() }
+
+// WebMirrorCopiedLink says "Link copied"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the toast after a Copy button copies
+// a link to the web mirror.
+func (msgs Messages) WebMirrorCopiedLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorCopiedLink", nil)
+}
+
+// WebMirrorCopyLink says "Copy the link"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the accessibility label of the Copy
+// button of the link on this computer.
+func WebMirrorCopyLink() string { return In(i18n.Locale()).WebMirrorCopyLink() }
+
+// WebMirrorCopyLink says "Copy the link"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the accessibility label of the Copy
+// button of the link on this computer.
+func (msgs Messages) WebMirrorCopyLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorCopyLink", nil)
+}
+
+// WebMirrorCopyTailnetLink says "Copy the tailnet link"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the accessibility label of the Copy
+// button of the tailnet link. tailnet is Tailscale's word for the person's
+// private network: keep it.
+func WebMirrorCopyTailnetLink() string { return In(i18n.Locale()).WebMirrorCopyTailnetLink() }
+
+// WebMirrorCopyTailnetLink says "Copy the tailnet link"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the accessibility label of the Copy
+// button of the tailnet link. tailnet is Tailscale's word for the person's
+// private network: keep it.
+func (msgs Messages) WebMirrorCopyTailnetLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorCopyTailnetLink", nil)
+}
+
+// WebMirrorFailed says "Couldn't turn on the web mirror: {error}"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: in red under the switch when the
+// mirror could not start, as when another program uses its port. error is
+// the system's own words, in English.
+func WebMirrorFailed(error string) string { return In(i18n.Locale()).WebMirrorFailed(error) }
+
+// WebMirrorFailed says "Couldn't turn on the web mirror: {error}"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: in red under the switch when the
+// mirror could not start, as when another program uses its port. error is
+// the system's own words, in English.
+func (msgs Messages) WebMirrorFailed(error string) string {
+	return Catalog.Format(msgs.locale, "webMirrorFailed", map[string]any{"error": error})
+}
+
+// WebMirrorIntro says "Watch a phone's screen in a web browser, on this computer or on your other devices through Tailscale, and use the pho…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under the heading webMirrorTitle,
+// what the web mirror is. Tailscale is a product name: keep it.
+func WebMirrorIntro() string { return In(i18n.Locale()).WebMirrorIntro() }
+
+// WebMirrorIntro says "Watch a phone's screen in a web browser, on this computer or on your other devices through Tailscale, and use the pho…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under the heading webMirrorTitle,
+// what the web mirror is. Tailscale is a product name: keep it.
+func (msgs Messages) WebMirrorIntro() string {
+	return Catalog.Format(msgs.locale, "webMirrorIntro", nil)
+}
+
+// WebMirrorLink says "On this computer"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the row of the mirror's link on this
+// computer (http://127.0.0.1:7466/).
+func WebMirrorLink() string { return In(i18n.Locale()).WebMirrorLink() }
+
+// WebMirrorLink says "On this computer"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the row of the mirror's link on this
+// computer (http://127.0.0.1:7466/).
+func (msgs Messages) WebMirrorLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorLink", nil)
+}
+
+// WebMirrorLinkDesc says "Open it in Safari, Chrome or Edge."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webMirrorLink: the browsers
+// that can show the phone's video. Product names: keep them.
+func WebMirrorLinkDesc() string { return In(i18n.Locale()).WebMirrorLinkDesc() }
+
+// WebMirrorLinkDesc says "Open it in Safari, Chrome or Edge."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webMirrorLink: the browsers
+// that can show the phone's video. Product names: keep them.
+func (msgs Messages) WebMirrorLinkDesc() string {
+	return Catalog.Format(msgs.locale, "webMirrorLinkDesc", nil)
+}
+
+// WebMirrorNewLink says "Replace the link"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the row with the button that makes a
+// new key for the links, so old links stop working.
+func WebMirrorNewLink() string { return In(i18n.Locale()).WebMirrorNewLink() }
+
+// WebMirrorNewLink says "Replace the link"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the row with the button that makes a
+// new key for the links, so old links stop working.
+func (msgs Messages) WebMirrorNewLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorNewLink", nil)
+}
+
+// WebMirrorNewLinkButton says "New link"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the button on the webMirrorNewLink
+// row.
+func WebMirrorNewLinkButton() string { return In(i18n.Locale()).WebMirrorNewLinkButton() }
+
+// WebMirrorNewLinkButton says "New link"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the button on the webMirrorNewLink
+// row.
+func (msgs Messages) WebMirrorNewLinkButton() string {
+	return Catalog.Format(msgs.locale, "webMirrorNewLinkButton", nil)
+}
+
+// WebMirrorNewLinkDesc says "The old links stop working, and browsers watching with them are cut off."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webMirrorNewLink: what making a
+// new link does.
+func WebMirrorNewLinkDesc() string { return In(i18n.Locale()).WebMirrorNewLinkDesc() }
+
+// WebMirrorNewLinkDesc says "The old links stop working, and browsers watching with them are cut off."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webMirrorNewLink: what making a
+// new link does.
+func (msgs Messages) WebMirrorNewLinkDesc() string {
+	return Catalog.Format(msgs.locale, "webMirrorNewLinkDesc", nil)
+}
+
+// WebMirrorNewLinkDone says "New link made. Copy it again."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the toast after New link.
+func WebMirrorNewLinkDone() string { return In(i18n.Locale()).WebMirrorNewLinkDone() }
+
+// WebMirrorNewLinkDone says "New link made. Copy it again."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the toast after New link.
+func (msgs Messages) WebMirrorNewLinkDone() string {
+	return Catalog.Format(msgs.locale, "webMirrorNewLinkDone", nil)
+}
+
+// WebMirrorNoViewers says "No one is watching"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: next to New link, while no browser
+// shows the mirror.
+func WebMirrorNoViewers() string { return In(i18n.Locale()).WebMirrorNoViewers() }
+
+// WebMirrorNoViewers says "No one is watching"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: next to New link, while no browser
+// shows the mirror.
+func (msgs Messages) WebMirrorNoViewers() string {
+	return Catalog.Format(msgs.locale, "webMirrorNoViewers", nil)
+}
+
+// WebMirrorOpen says "Open"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the button that opens the mirror in
+// the computer's web browser.
+func WebMirrorOpen() string { return In(i18n.Locale()).WebMirrorOpen() }
+
+// WebMirrorOpen says "Open"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the button that opens the mirror in
+// the computer's web browser.
+func (msgs Messages) WebMirrorOpen() string {
+	return Catalog.Format(msgs.locale, "webMirrorOpen", nil)
+}
+
+// WebMirrorPageBadToken says "This link no longer works: its key was replaced. Copy it again in Pinky: Settings › Phones › Web mirror."
+// in the language the app shows.
+//
+// The web mirror's page in a browser: the link's key is wrong, as after New
+// link. Settings › Phones › Web mirror is the place in Pinky; translate
+// it with the app's names.
+func WebMirrorPageBadToken() string { return In(i18n.Locale()).WebMirrorPageBadToken() }
+
+// WebMirrorPageBadToken says "This link no longer works: its key was replaced. Copy it again in Pinky: Settings › Phones › Web mirror."
+// in the language of msgs.
+//
+// The web mirror's page in a browser: the link's key is wrong, as after New
+// link. Settings › Phones › Web mirror is the place in Pinky; translate
+// it with the app's names.
+func (msgs Messages) WebMirrorPageBadToken() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageBadToken", nil)
+}
+
+// WebMirrorPageConnecting says "Connecting to Pinky…"
+// in the language the app shows.
+//
+// The web mirror's page in a browser: while it connects.
+func WebMirrorPageConnecting() string { return In(i18n.Locale()).WebMirrorPageConnecting() }
+
+// WebMirrorPageConnecting says "Connecting to Pinky…"
+// in the language of msgs.
+//
+// The web mirror's page in a browser: while it connects.
+func (msgs Messages) WebMirrorPageConnecting() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageConnecting", nil)
+}
+
+// WebMirrorPageEnded says "The phone's picture stopped. Reconnecting…"
+// in the language the app shows.
+//
+// The web mirror's page in a browser: the phone's video ended, as when the
+// phone was unplugged.
+func WebMirrorPageEnded() string { return In(i18n.Locale()).WebMirrorPageEnded() }
+
+// WebMirrorPageEnded says "The phone's picture stopped. Reconnecting…"
+// in the language of msgs.
+//
+// The web mirror's page in a browser: the phone's video ended, as when the
+// phone was unplugged.
+func (msgs Messages) WebMirrorPageEnded() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageEnded", nil)
+}
+
+// WebMirrorPageInsecure says "Browsers decode video only on secure pages. Open the tailnet link (https://…) that Pinky shows."
+// in the language the app shows.
+//
+// The web mirror's page in a browser opened over plain HTTP from another
+// device, where WebCodecs is not available. tailnet is Tailscale's word:
+// keep it.
+func WebMirrorPageInsecure() string { return In(i18n.Locale()).WebMirrorPageInsecure() }
+
+// WebMirrorPageInsecure says "Browsers decode video only on secure pages. Open the tailnet link (https://…) that Pinky shows."
+// in the language of msgs.
+//
+// The web mirror's page in a browser opened over plain HTTP from another
+// device, where WebCodecs is not available. tailnet is Tailscale's word:
+// keep it.
+func (msgs Messages) WebMirrorPageInsecure() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageInsecure", nil)
+}
+
+// WebMirrorPageNoPhone says "No phone is connected to Pinky. Waiting for one…"
+// in the language the app shows.
+//
+// The web mirror's page in a browser: no phone is online.
+func WebMirrorPageNoPhone() string { return In(i18n.Locale()).WebMirrorPageNoPhone() }
+
+// WebMirrorPageNoPhone says "No phone is connected to Pinky. Waiting for one…"
+// in the language of msgs.
+//
+// The web mirror's page in a browser: no phone is online.
+func (msgs Messages) WebMirrorPageNoPhone() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageNoPhone", nil)
+}
+
+// WebMirrorPageNoToken says "This link has no key. Copy it again in Pinky: Settings › Phones › Web mirror."
+// in the language the app shows.
+//
+// The web mirror's page in a browser: opened without the key after the # of
+// the link.
+func WebMirrorPageNoToken() string { return In(i18n.Locale()).WebMirrorPageNoToken() }
+
+// WebMirrorPageNoToken says "This link has no key. Copy it again in Pinky: Settings › Phones › Web mirror."
+// in the language of msgs.
+//
+// The web mirror's page in a browser: opened without the key after the # of
+// the link.
+func (msgs Messages) WebMirrorPageNoToken() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageNoToken", nil)
+}
+
+// WebMirrorPageNoWebCodecs says "This browser can't decode video for the web mirror. Use a recent Safari, Chrome or Edge."
+// in the language the app shows.
+//
+// The web mirror's page in a browser without WebCodecs.
+func WebMirrorPageNoWebCodecs() string { return In(i18n.Locale()).WebMirrorPageNoWebCodecs() }
+
+// WebMirrorPageNoWebCodecs says "This browser can't decode video for the web mirror. Use a recent Safari, Chrome or Edge."
+// in the language of msgs.
+//
+// The web mirror's page in a browser without WebCodecs.
+func (msgs Messages) WebMirrorPageNoWebCodecs() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageNoWebCodecs", nil)
+}
+
+// WebMirrorPagePhone says "Phone"
+// in the language the app shows.
+//
+// The web mirror's page in a browser: the accessibility label of the list
+// that picks which phone to show.
+func WebMirrorPagePhone() string { return In(i18n.Locale()).WebMirrorPagePhone() }
+
+// WebMirrorPagePhone says "Phone"
+// in the language of msgs.
+//
+// The web mirror's page in a browser: the accessibility label of the list
+// that picks which phone to show.
+func (msgs Messages) WebMirrorPagePhone() string {
+	return Catalog.Format(msgs.locale, "webMirrorPagePhone", nil)
+}
+
+// WebMirrorPageReconnecting says "Lost the connection to Pinky. Reconnecting…"
+// in the language the app shows.
+//
+// The web mirror's page in a browser: the connection dropped.
+func WebMirrorPageReconnecting() string { return In(i18n.Locale()).WebMirrorPageReconnecting() }
+
+// WebMirrorPageReconnecting says "Lost the connection to Pinky. Reconnecting…"
+// in the language of msgs.
+//
+// The web mirror's page in a browser: the connection dropped.
+func (msgs Messages) WebMirrorPageReconnecting() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageReconnecting", nil)
+}
+
+// WebMirrorPageStreamFailed says "Couldn't get the phone's picture: {detail}. Trying again…"
+// in the language the app shows.
+//
+// The web mirror's page in a browser: the phone's video did not open.
+// detail is Pinky's own words, in English.
+func WebMirrorPageStreamFailed(detail string) string {
+	return In(i18n.Locale()).WebMirrorPageStreamFailed(detail)
+}
+
+// WebMirrorPageStreamFailed says "Couldn't get the phone's picture: {detail}. Trying again…"
+// in the language of msgs.
+//
+// The web mirror's page in a browser: the phone's video did not open.
+// detail is Pinky's own words, in English.
+func (msgs Messages) WebMirrorPageStreamFailed(detail string) string {
+	return Catalog.Format(msgs.locale, "webMirrorPageStreamFailed", map[string]any{"detail": detail})
+}
+
+// WebMirrorPageTitle says "Phone screen · Pinky"
+// in the language the app shows.
+//
+// The web mirror's page: the browser tab's title.
+func WebMirrorPageTitle() string { return In(i18n.Locale()).WebMirrorPageTitle() }
+
+// WebMirrorPageTitle says "Phone screen · Pinky"
+// in the language of msgs.
+//
+// The web mirror's page: the browser tab's title.
+func (msgs Messages) WebMirrorPageTitle() string {
+	return Catalog.Format(msgs.locale, "webMirrorPageTitle", nil)
+}
+
+// WebMirrorPageUnsupported says "This browser can't decode the phone's {codec} video. Try Safari, or Chrome or Edge on a Mac or a Windows PC."
+// in the language the app shows.
+//
+// The web mirror's page in a browser that cannot decode the phone's codec.
+// codec is "HEVC (H.265)" or "H.264".
+func WebMirrorPageUnsupported(codec string) string {
+	return In(i18n.Locale()).WebMirrorPageUnsupported(codec)
+}
+
+// WebMirrorPageUnsupported says "This browser can't decode the phone's {codec} video. Try Safari, or Chrome or Edge on a Mac or a Windows PC."
+// in the language of msgs.
+//
+// The web mirror's page in a browser that cannot decode the phone's codec.
+// codec is "HEVC (H.265)" or "H.264".
+func (msgs Messages) WebMirrorPageUnsupported(codec string) string {
+	return Catalog.Format(msgs.locale, "webMirrorPageUnsupported", map[string]any{"codec": codec})
+}
+
+// WebMirrorTailnetCommandLabel says "Command to serve the web mirror on your tailnet"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the accessibility label of the
+// tailscale serve command. tailnet is Tailscale's word: keep it.
+func WebMirrorTailnetCommandLabel() string { return In(i18n.Locale()).WebMirrorTailnetCommandLabel() }
+
+// WebMirrorTailnetCommandLabel says "Command to serve the web mirror on your tailnet"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the accessibility label of the
+// tailscale serve command. tailnet is Tailscale's word: keep it.
+func (msgs Messages) WebMirrorTailnetCommandLabel() string {
+	return Catalog.Format(msgs.locale, "webMirrorTailnetCommandLabel", nil)
+}
+
+// WebMirrorTailnetHint says "Browsers decode video only on HTTPS pages, which Tailscale gives. Run this once on this computer; your devices on Tai…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: above the tailscale serve command,
+// while Tailscale is connected here but does not serve the mirror yet. url
+// is as https://macbook.tail1234.ts.net:8443/. Tailscale is a product name:
+// keep it.
+func WebMirrorTailnetHint(url string) string { return In(i18n.Locale()).WebMirrorTailnetHint(url) }
+
+// WebMirrorTailnetHint says "Browsers decode video only on HTTPS pages, which Tailscale gives. Run this once on this computer; your devices on Tai…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: above the tailscale serve command,
+// while Tailscale is connected here but does not serve the mirror yet. url
+// is as https://macbook.tail1234.ts.net:8443/. Tailscale is a product name:
+// keep it.
+func (msgs Messages) WebMirrorTailnetHint(url string) string {
+	return Catalog.Format(msgs.locale, "webMirrorTailnetHint", map[string]any{"url": url})
+}
+
+// WebMirrorTailnetLink says "On your tailnet"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the row of the mirror's link through
+// Tailscale. tailnet is Tailscale's word: keep it.
+func WebMirrorTailnetLink() string { return In(i18n.Locale()).WebMirrorTailnetLink() }
+
+// WebMirrorTailnetLink says "On your tailnet"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the row of the mirror's link through
+// Tailscale. tailnet is Tailscale's word: keep it.
+func (msgs Messages) WebMirrorTailnetLink() string {
+	return Catalog.Format(msgs.locale, "webMirrorTailnetLink", nil)
+}
+
+// WebMirrorTailnetLinkDesc says "For your devices on Tailscale."
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: under webMirrorTailnetLink.
+func WebMirrorTailnetLinkDesc() string { return In(i18n.Locale()).WebMirrorTailnetLinkDesc() }
+
+// WebMirrorTailnetLinkDesc says "For your devices on Tailscale."
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: under webMirrorTailnetLink.
+func (msgs Messages) WebMirrorTailnetLinkDesc() string {
+	return Catalog.Format(msgs.locale, "webMirrorTailnetLinkDesc", nil)
+}
+
+// WebMirrorTailnetTitle says "Your other devices"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the heading of the tailscale serve
+// command.
+func WebMirrorTailnetTitle() string { return In(i18n.Locale()).WebMirrorTailnetTitle() }
+
+// WebMirrorTailnetTitle says "Your other devices"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the heading of the tailscale serve
+// command.
+func (msgs Messages) WebMirrorTailnetTitle() string {
+	return Catalog.Format(msgs.locale, "webMirrorTailnetTitle", nil)
+}
+
+// WebMirrorTitle says "Web mirror"
+// in the language the app shows.
+//
+// Settings › Phones: the heading of the part that shows phones in a web
+// browser, and its accessibility label.
+func WebMirrorTitle() string { return In(i18n.Locale()).WebMirrorTitle() }
+
+// WebMirrorTitle says "Web mirror"
+// in the language of msgs.
+//
+// Settings › Phones: the heading of the part that shows phones in a web
+// browser, and its accessibility label.
+func (msgs Messages) WebMirrorTitle() string {
+	return Catalog.Format(msgs.locale, "webMirrorTitle", nil)
+}
+
+// WebMirrorToggle says "Show phones in a web browser"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the switch that turns the web mirror
+// on.
+func WebMirrorToggle() string { return In(i18n.Locale()).WebMirrorToggle() }
+
+// WebMirrorToggle says "Show phones in a web browser"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the switch that turns the web mirror
+// on.
+func (msgs Messages) WebMirrorToggle() string {
+	return Catalog.Format(msgs.locale, "webMirrorToggle", nil)
+}
+
+// WebMirrorViewers says "{count, plural, one {# browser is watching} other {# browsers are watching}}"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: next to New link, how many browsers
+// show the mirror now (1 or more).
+func WebMirrorViewers(count int) string { return In(i18n.Locale()).WebMirrorViewers(count) }
+
+// WebMirrorViewers says "{count, plural, one {# browser is watching} other {# browsers are watching}}"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: next to New link, how many browsers
+// show the mirror now (1 or more).
+func (msgs Messages) WebMirrorViewers(count int) string {
+	return Catalog.Format(msgs.locale, "webMirrorViewers", map[string]any{"count": count})
+}
+
+// WebMirrorWarning says "Anyone with the link sees everything on the phone's screen, as Pinky's own mirror does, blocked apps and one-time cod…"
+// in the language the app shows.
+//
+// Settings › Phones › Web mirror: the amber warning while the web
+// mirror is on.
+func WebMirrorWarning() string { return In(i18n.Locale()).WebMirrorWarning() }
+
+// WebMirrorWarning says "Anyone with the link sees everything on the phone's screen, as Pinky's own mirror does, blocked apps and one-time cod…"
+// in the language of msgs.
+//
+// Settings › Phones › Web mirror: the amber warning while the web
+// mirror is on.
+func (msgs Messages) WebMirrorWarning() string {
+	return Catalog.Format(msgs.locale, "webMirrorWarning", nil)
+}
+
 // WiFiAlsoAway says "Stopping it also stops Use away from home."
 // in the language the app shows.
 //
