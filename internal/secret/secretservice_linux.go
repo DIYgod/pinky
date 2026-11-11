@@ -367,6 +367,41 @@ func (s *secretService) Delete(account string) error {
 	return err
 }
 
+// Get implements Getter. Pinky's collection stays locked between reads, so
+// the system asks the person to unlock it when it is locked, and it is
+// locked again afterwards.
+func (s *secretService) Get(ctx context.Context, account string) (string, error) {
+	conn, err := s.bus()
+	if err != nil {
+		return "", err
+	}
+	coll, item, err := s.item(conn, account)
+	if err != nil {
+		return "", err
+	}
+	if err := unlock(ctx, conn, coll); err != nil {
+		return "", err
+	}
+	defer lock(conn, coll)
+	return s.secret(conn, item)
+}
+
+// secret reads an item of an unlocked collection.
+func (s *secretService) secret(conn *dbus.Conn, item dbus.ObjectPath) (string, error) {
+	session, err := openSession(conn)
+	if err != nil {
+		return "", err
+	}
+	defer closeSession(conn, session)
+	var v ssSecret
+	if err := call(conn, item, ssItem+".GetSecret", []any{&v}, session); err != nil {
+		return "", err
+	}
+	secret := string(v.Value)
+	clear(v.Value)
+	return secret, nil
+}
+
 func (s *secretService) Reveal(ctx context.Context, account, reason string) (string, error) {
 	conn, err := s.bus()
 	if err != nil {
@@ -386,16 +421,5 @@ func (s *secretService) Reveal(ctx context.Context, account, reason string) (str
 		return "", err
 	}
 	defer lock(conn, coll)
-	session, err := openSession(conn)
-	if err != nil {
-		return "", err
-	}
-	defer closeSession(conn, session)
-	var v ssSecret
-	if err := call(conn, item, ssItem+".GetSecret", []any{&v}, session); err != nil {
-		return "", err
-	}
-	secret := string(v.Value)
-	clear(v.Value)
-	return secret, nil
+	return s.secret(conn, item)
 }

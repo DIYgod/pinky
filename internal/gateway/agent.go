@@ -35,6 +35,10 @@ type AgentInfo struct {
 	// its task (resume.go). Agents on this computer, whose client may drop
 	// a session and start a new one.
 	Reconnect bool
+	// Trusted marks Pinky's own agent, which the person starts with a task
+	// in Pinky's window: it needs no New agent approval, as the person just
+	// asked for it. Its scope and everything else work as any agent's.
+	Trusted bool
 }
 
 // Status is the outcome of a call, from DESIGN.md's Results table.
@@ -875,7 +879,7 @@ func (s *Session) approveAgent(ctx context.Context, c Call, title string, readOn
 	if g.agentApproved(ctx, s.agent) {
 		return nil
 	}
-	if g.opt.TrustNewAgents {
+	if g.opt.TrustNewAgents || s.agent.Trusted {
 		g.allowAgent(s.agent)
 		return nil
 	}

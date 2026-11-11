@@ -152,6 +152,12 @@ func (s credStore) Delete(account string) error {
 	return nil
 }
 
+// Get implements Getter: it reads the secret without asking for Windows
+// Hello.
+func (s credStore) Get(ctx context.Context, account string) (string, error) {
+	return s.read(account, true)
+}
+
 func (s credStore) Reveal(ctx context.Context, account, reason string) (string, error) {
 	if _, err := s.read(account, false); err != nil {
 		return "", err

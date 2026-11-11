@@ -352,6 +352,15 @@ func (k keychain) Reveal(ctx context.Context, account, reason string) (string, e
 	return k.read(s, account)
 }
 
+// Get implements Getter: it reads the secret without asking for Touch ID.
+func (k keychain) Get(ctx context.Context, account string) (string, error) {
+	s, err := loadSecurity()
+	if err != nil {
+		return "", err
+	}
+	return k.read(s, account)
+}
+
 // find checks that the account has an item, before Reveal asks the person
 // about it. Unlike Has it may ask to unlock the keychain.
 func (k keychain) find(s *security, account string) error {
