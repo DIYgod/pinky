@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1111.15 (2026-11-11)
 
 - An iPhone that uses a private Wi-Fi address and that the Mac's device service lost on Wi-Fi now offers Restart device service…, instead of saying the iPhone is not on the same network. Thanks @poer2023.
 
