@@ -59,17 +59,38 @@ var pinkyApps = []string{"app.pinky.companion", "app.pinky.companion.dev", Stand
 // and AltStore give it (<id>.<their team>).
 const IPhoneApp = "cc.diygod.pinky"
 
-// iPhoneAppTeamPrefix begins the bundle ids desktop Pinky gives the iPhone
-// app when it builds it with the person's own team (pinky.<team>…), since
-// a team cannot sign another team's ids.
-const iPhoneAppTeamPrefix = "pinky."
+// iPhoneTeamApp reports whether a bundle id, in lower case, has the shape
+// desktop Pinky gives the apps it builds with the person's own team, since
+// a team cannot sign another team's ids: "pinky.", the team id (ten letters
+// and digits), then the end or a dot and more. helperBundleID in
+// internal/driver/ios names Pinky Helper so, and the iPhone app is to
+// follow it once desktop Pinky builds it. Other ids that merely begin with
+// "pinky.", Android packages among them, are not Pinky's.
+func iPhoneTeamApp(id string) bool {
+	rest, ok := strings.CutPrefix(id, "pinky.")
+	if !ok || len(rest) < 10 || len(rest) > 10 && rest[10] != '.' {
+		return false
+	}
+	for _, c := range rest[:10] {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') {
+			return false
+		}
+	}
+	return true
+}
 
 // IsStandalone reports whether the app is Pinky running on the phone
 // itself: the standalone prototype on Android, Pinky's iPhone app on iOS.
+// XCTest runners are not, whatever their ids. Pinky Helper built with the
+// person's team is pinky.<team id>.WebDriverAgentRunner.xctrunner, the
+// shape iPhoneTeamApp matches, but its screen holds no approvals or Stop,
+// so agents may act while it is in front; IsPinkyApp still counts it.
 func IsStandalone(app screen.App) bool {
 	id := strings.ToLower(clonePackage(app.ID))
-	return id == StandaloneApp || id == IPhoneApp || strings.HasPrefix(id, IPhoneApp+".") ||
-		strings.HasPrefix(id, iPhoneAppTeamPrefix)
+	if strings.HasSuffix(id, ".xctrunner") {
+		return false
+	}
+	return id == StandaloneApp || id == IPhoneApp || strings.HasPrefix(id, IPhoneApp+".") || iPhoneTeamApp(id)
 }
 
 // IsPinkyApp reports whether the app is part of Pinky on the phone: Pinky
