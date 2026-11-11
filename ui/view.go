@@ -23,6 +23,11 @@ func (a *app) view(c *mg.Context) {
 	if c.Shortcut(mg.Cmd, mg.KeyW) && a.main != nil {
 		a.main.Hide()
 	}
+	// Where the window shows its material, the root draws no background
+	// and the sidebar none of its own: the material is the sidebar's.
+	if c.Vibrancy() {
+		c.Root().Background(mg.Transparent)
+	}
 	mg.Row(c).Fill().AlignItems(mg.Stretch).Children(func() {
 		a.sidebar(c)
 		mg.Column(c).Grow(1).MinWidth(0).Background(p.bg).Children(func() {
@@ -74,8 +79,12 @@ const (
 func (a *app) sidebar(c *mg.Context) {
 	p := pal(c)
 	bar := c.TitleBar()
-	mg.Column(c).Width(sidebarWidth).Shrink(0).Background(p.wing).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
-		Padding(0, sp2, sp3, sp2).Gap(2).Children(func() {
+	side := mg.Column(c).Width(sidebarWidth).Shrink(0).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
+		Padding(0, sp2, sp3, sp2).Gap(2)
+	if !c.Vibrancy() {
+		side.Background(p.wing)
+	}
+	side.Children(func() {
 		// The header: the window controls, then the brand.
 		left := float32(6)
 		if bar.Left > 0 {
@@ -194,13 +203,20 @@ func phoneRow(c *mg.Context, on bool) mg.Element {
 	row := mg.ButtonBase(c).MinHeight(32).Padding(6, 10, 6, rowInset).Radius(rControl).Gap(10).AlignItems(mg.Center).Justify(mg.Start).FillWidth()
 	switch {
 	case on:
-		row.Background(p.sel)
+		row.Background(p.ink.Alpha(wingSelAlpha))
 		selectionMark(c, row)
 	case row.Hovered():
-		row.Background(p.bg3)
+		row.Background(p.ink.Alpha(wingHoverAlpha))
 	}
 	return row
 }
+
+// A sidebar row's fill when selected and when hovered: the ink, faint, so
+// that it reads the same on the wings' gray and on the material.
+const (
+	wingSelAlpha   = 0.08
+	wingHoverAlpha = 0.045
+)
 
 // navInk is the ink of a row of the sidebar with an icon and one line:
 // the secondary ink at rest, the primary when selected or hovered.

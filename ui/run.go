@@ -396,9 +396,12 @@ func (a *app) ready() {
 	a.main = mygo.NewWindow(mygo.WindowOptions{
 		Title: "Pinky", Width: 1280, Height: 820, MinWidth: 960, MinHeight: 620,
 		StateKey: "main", TitleBarStyle: mygo.TitleBarHidden, Hidden: a.opt.Hidden,
-		TrafficLightPosition: &mygo.Point{X: 18, Y: 17},
+		TrafficLightPosition: &mygo.Point{X: 18, Y: 19},
 		BackgroundColor:      "light-dark(#f7f7f8, #212125)",
-		Content:              mg.View(a.view),
+		// The sidebar shows the desktop through, blurred, on macOS and
+		// Windows 11 (Mica); elsewhere it is the wings' gray.
+		Vibrancy: mygo.VibrancySidebar,
+		Content:  mg.View(a.view),
 	})
 	a.postMu.Lock()
 	a.postWin = a.main
