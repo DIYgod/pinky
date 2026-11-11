@@ -9,6 +9,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.text.TextUtils
 import android.util.Log
 import android.util.TypedValue
@@ -16,6 +17,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.pinky.companion.R
@@ -115,6 +117,9 @@ class Overlays(private val service: StandaloneService) {
         w.text.text = text
         if (w.running == running) return
         w.running = running
+        // A locked phone stops the task, and a person waiting on a card
+        // is not touching the screen: keep it on while the task runs.
+        w.root.keepScreenOn = running
         w.buttons.removeAllViews()
         if (running) {
             w.buttons.addView(button(service.getString(R.string.standalone_stop), danger = true) { b ->
@@ -179,7 +184,7 @@ class Overlays(private val service: StandaloneService) {
 
     // The card: an approval, or a handoff.
 
-    private fun showCard(need: JSONObject) {
+    private fun showCard(need: JSONObject, error: String? = null) {
         val id = need.optString("id")
         val w = card ?: newCard().also {
             card = it
@@ -200,18 +205,24 @@ class Overlays(private val service: StandaloneService) {
         } else {
             w.deadline?.visibility = View.GONE
         }
+        if (error != null) {
+            w.deadline?.text = error
+            w.deadline?.visibility = View.VISIBLE
+        }
         if (cardNeed == id) return
         cardNeed = id
         w.buttons.removeAllViews()
         val decide = { decision: String ->
-            { b: TextView ->
+            { _: TextView ->
                 setEnabled(w.buttons, false)
-                CoreClient.send(CoreClient.cmd("decide", "need" to id, "decision" to decision)) { err ->
-                    main.post {
-                        if (err != null) {
-                            setEnabled(w.buttons, true)
-                            w.deadline?.text = err
-                        }
+                // Take the card away before the core hears the answer: an
+                // allowed step reads the screen again at once, and the card
+                // still over its target would make the step stale.
+                val shown = ownOverlays()
+                hideCard()
+                whenGone(shown) {
+                    CoreClient.send(CoreClient.cmd("decide", "need" to id, "decision" to decision)) { err ->
+                        main.post { if (err != null && !stopped) showCard(need, err) }
                     }
                 }
                 Unit
@@ -228,6 +239,29 @@ class Overlays(private val service: StandaloneService) {
             w.buttons.addView(button(service.getString(R.string.standalone_decline), danger = true, onClick = decide("deny")))
             w.buttons.addView(button(service.getString(R.string.standalone_hand_back), primary = true, onClick = decide("allow_once")))
         }
+    }
+
+    // ownOverlays counts Pinky's overlays in the windows the agent's screen
+    // is read from.
+    private fun ownOverlays(): Int = try {
+        service.windows.count {
+            it.type == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY && it.title?.toString() == service.packageName
+        }
+    } catch (e: Exception) {
+        0
+    }
+
+    // whenGone runs then once fewer than shown of Pinky's overlays are
+    // listed, or after half a second.
+    private fun whenGone(shown: Int, then: () -> Unit) {
+        val until = SystemClock.uptimeMillis() + 500
+        val check = object : Runnable {
+            override fun run() {
+                if (shown == 0 || ownOverlays() < shown || SystemClock.uptimeMillis() >= until) then()
+                else main.postDelayed(this, 16)
+            }
+        }
+        check.run()
     }
 
     private fun hideCard() {

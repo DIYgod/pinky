@@ -21,8 +21,10 @@ CC="$NDK/toolchains/llvm/prebuilt/$host/bin/aarch64-linux-android29-clang"
 out=android/standalone/build/go/jniLibs/arm64-v8a
 mkdir -p "$out"
 version=$(git describe --tags --always --dirty 2>/dev/null || echo dev)
+# Android 15 and later warn about libraries not aligned to 16 KB pages.
 CGO_ENABLED=1 GOOS=android GOARCH=arm64 CC="$CC" \
-	go build -trimpath -buildmode=c-shared -ldflags "-s -w -X main.version=$version" \
+	go build -trimpath -buildmode=c-shared \
+	-ldflags "-s -w -X main.version=$version -extldflags=-Wl,-z,max-page-size=16384" \
 	-o "$out/libpinkycore.so" ./internal/standalone/libcore
 rm -f "$out/libpinkycore.h"
 ls -l "$out/libpinkycore.so"
