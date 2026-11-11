@@ -1,6 +1,6 @@
 # Pinky on the phone itself
 
-Researched on 2026-11-11. The question: can Pinky run entirely on a phone, with no computer, and operate that same phone, with the person watching, approving, taking over and stopping it from the phone? This is a feasibility study, not a build. Nothing here ships; one throwaway prototype ran on an emulator and was deleted. A second Android prototype, kept in the repository, then ran end to end: see [Prototype results (Android)](#prototype-results-android).
+Researched on 2026-11-11. The question: can Pinky run entirely on a phone, with no computer, and operate that same phone, with the person watching, approving, taking over and stopping it from the phone? This is a feasibility study, not a build. Nothing here ships; one throwaway prototype ran on an emulator and was deleted. A second Android prototype, kept in the repository, then ran end to end: see [Prototype results (Android)](#prototype-results-android). An iOS prototype, also kept, ran tasks on a real iPhone with no computer at run time: see [Prototype results (iOS)](#prototype-results-ios).
 
 Sources are cited inline. **[P]** marks a primary source (the vendor's documentation, AOSP or Apple's own text, a project's own repository), **[S]** a secondary one (press, forums, other people's write-ups). "Measured here" means it ran in this study.
 
@@ -8,12 +8,12 @@ Sources are cited inline. **[P]** marks a primary source (the vendor's documenta
 
 | | Android | iOS |
 | --- | --- | --- |
-| Verdict | **Feasible with caveats** | **Not feasible** as an App Store app; **feasible with heavy caveats** only outside the App Store (see below) |
-| Seeing | Accessibility tree (the companion already reads it) plus pixels | A screen broadcast the person starts (ReplayKit) shows pixels; no app can read another app's elements |
-| Acting | Accessibility gestures, global actions and `ACTION_SET_TEXT`; more with a shell (Shizuku or Wireless debugging) | No public way to touch another app. Only Apple's own developer services, reached through a loopback VPN and a pairing file, or a hardware mouse |
-| Staying alive | The accessibility service runs at about visible-app priority; force stop and vendor cleaners turn it off | iOS suspends an app that leaves the screen; only an XCTest runner (untested on the phone for long sessions) or keep-alive tricks keep a driver running |
+| Verdict | **Feasible with caveats** | **Not feasible** as an App Store app; **feasible with heavy caveats** only outside the App Store (see below). Sideloaded, a prototype ran tasks on a real iPhone ([Prototype results (iOS)](#prototype-results-ios)) |
+| Seeing | Accessibility tree (the companion already reads it) plus pixels | With public APIs, a screen broadcast the person starts (ReplayKit) shows pixels, and no app can read another app's elements. Sideloaded, Apple's developer services give the element tree and screenshots (measured here) |
+| Acting | Accessibility gestures, global actions and `ACTION_SET_TEXT`; more with a shell (Shizuku or Wireless debugging) | No public way to touch another app. Only Apple's own developer services, reached through a loopback VPN and a pairing file (measured here), or a hardware mouse |
+| Staying alive | The accessibility service runs at about visible-app priority; force stop and vendor cleaners turn it off | iOS suspends an app about 30 s after it leaves the screen (measured here). A packet-tunnel extension kept the driver running for 20 minutes without a break (measured here); hours are untested |
 | Distribution | Not Google Play (its accessibility policy bans autonomous agents since 2026-01-28); sideload or another store, where Play Protect's fraud protection and developer verification add friction | Not the App Store, TestFlight or the EU marketplaces (2.5.1, private APIs); sideload only, re-signed every 7 days or every year |
-| Pinky's Go core | Runs as it is (measured here on Android 17) | Links as a static library (measured here); not run on a device |
+| Pinky's Go core | Runs as it is (measured here on Android 17) | Links as a static library (measured here). Pinky's iOS driver and a small agent loop ran in it on iOS 27.0.1 (measured here); the gateway did not run on the phone |
 
 ## What ran here
 
@@ -27,7 +27,7 @@ Measured on the Android 17 emulator (API 37, arm64), 2026-11-11:
 - After `StopAll`, the next call returned `stopped` ("The person pressed Stop and the lease is gone").
 - The history database, policy files and the MCP server needed no change.
 
-Also measured: the same program links for iOS as a static library (`GOOS=ios GOARCH=arm64 CGO_ENABLED=1 -buildmode=c-archive`, Xcode 27.2's iPhoneOS SDK, minimum iOS 17), 25.7 MB; and `internal/driver/ios` (go-ios and the gVisor tunnel) and `internal/driver/android` (the adb client, scrcpy and the companion client) both compile for `ios/arm64` and `android/arm64`. Nothing ran on an iPhone. No real phone was touched in this study.
+Also measured: the same program links for iOS as a static library (`GOOS=ios GOARCH=arm64 CGO_ENABLED=1 -buildmode=c-archive`, Xcode 27.2's iPhoneOS SDK, minimum iOS 17), 25.7 MB; and `internal/driver/ios` (go-ios and the gVisor tunnel) and `internal/driver/android` (the adb client, scrcpy and the companion client) both compile for `ios/arm64` and `android/arm64`. This program never ran on a real phone; the two prototypes below did.
 
 So the safety model (rules, approvals, Stop all, history) is portable code today. What does not exist on a phone is everything around it: a driver that acts on the same phone without adb or usbmuxd, a UI for approvals that the agent cannot press, and a process that stays alive.
 
@@ -411,6 +411,7 @@ Pinky on a Mac reaches an iPhone's developer services through a CoreDevice tunne
   - It was tested in the foreground only.
   - Its tree reader is tied to iOS 27.0 build 24A437.
   - Its authors say first pairing and DDI preparation still need a computer.
+- This study's prototype lifts the first two: Pinky's own driver read the tree and tapped through these services on build 24A446, with Calculator in front and the engine in the background ([Prototype results (iOS)](#prototype-results-ios)). The pairing still came from a computer, and the DDI was one a computer had mounted.
 - The DDI's HID daemon drops synthetic events "unless a displayservice media stream is active" ([idevice hid.rs](https://github.com/jkcoxson/idevice/blob/master/idevice/src/services/core_device/hid.rs) [P]). So the app must keep streaming its own screen while it taps.
 
 **Pairing without a computer only works from iOS 27**
@@ -428,11 +429,11 @@ Pinky on a Mac reaches an iPhone's developer services through a CoreDevice tunne
 
 What stops it from being a product:
 
-- **Staying alive.** iOS suspends an app soon after it leaves the screen.
-  - StikDebug keeps itself alive while it pairs by playing background audio and using location ([OnDevicePairingService.swift](https://github.com/StikDebug/StikDebug/blob/main/StikDebug/Services/OnDevicePairingService.swift) [P]). Guideline 2.5.4 forbids that in store apps, and iOS can still end it.
-  - Pinky's work happens while other apps are in front, so the driver would have to live in a process iOS keeps running.
-  - One candidate is an XCTest runner, as on a Mac (iCTRL's approach, not checked here for long sessions).
-  - The other is the broadcast extension, which has 50 MB and exists only while the person broadcasts.
+- **Staying alive.** iOS suspends an app soon after it leaves the screen: 25–30 s in the prototype.
+  - StikDebug keeps itself alive while it pairs by playing background audio and using location ([OnDevicePairingService.swift](https://github.com/StikDebug/StikDebug/blob/main/StikDebug/Services/OnDevicePairingService.swift) [P]). Guideline 2.5.4 forbids that in store apps, and iOS can still end it. Silent audio kept the prototype's app running for 15 minutes.
+  - Pinky's work happens while other apps are in front, so the driver has to live in a process iOS keeps running.
+  - The packet-tunnel extension is one, and the loopback needs it anyway. The prototype's driver ran in it for 20 minutes without a break, with less memory and power than in the app ([Q2](#q2-staying-alive-while-another-app-is-in-front)). Hours, a locked phone and memory pressure are untested.
+  - Other candidates: an XCTest runner, as on a Mac (iCTRL's approach, not checked here for long sessions), and the broadcast extension, which has 50 MB and exists only while the person broadcasts.
 - **Distribution.**
   - Guidelines 2.5.1 (public APIs only) and 2.5.2 rule it out of the App Store. Both also apply to notarization for the EU's alternative marketplaces, so AltStore PAL is out too ([guidelines, updated 16 October 2026](https://developer.apple.com/app-store/review/guidelines/) [P]).
   - StikDebug reached the App Store in 2025. It was removed when its developer's account was terminated, around December 2025 ([Ubergizmo](https://www.ubergizmo.com/2025/12/stikdebug-pulled-appstore/) [S]).
@@ -457,6 +458,120 @@ What stops it from being a product:
 - **TrollStore** works up to iOS 17.0, and "17.0.1+ will NEVER be supported" ([opa334/TrollStore](https://github.com/opa334/TrollStore) [P]).
 - **MDM** is for organizations (guideline 5.5) and has no command that injects input or reads other apps. Its only screen command, Request Mirroring, asks for AirPlay ([Apple](https://developer.apple.com/documentation/devicemanagement/commands-and-queries) [P]).
 - App Review would reject an app built on any of the three. A jailbreak tweak or a TrollStore install never goes through it at all.
+
+## Prototype results (iOS)
+
+Measured on 2026-11-11 on an iPhone 13 mini (iPhone14,4) with iOS 27.0.1 (24A446), sideloaded with a development profile, with the owner's OK. The code is kept in [ios/standalone](../../ios/standalone/README.md); it does not ship. At run time no computer took part. A Mac installed the app, made the pairing file once and read the phone's log for the numbers below. The engine acted only on Calculator and the home screen. Afterwards the app was uninstalled and the pairing file deleted.
+
+It answers three questions: can a sideloaded app act on another app (Q1), does it stay alive while that app is in front (Q2), and does a whole task work, with an approval the agent cannot give itself and a Stop (Q3)? All three: yes, with the caveats below.
+
+### What was built
+
+- **A loopback of its own.** A packet-tunnel extension routes 10.7.0.1 and sends each packet back with source and destination swapped, as LocalDevVPN does. A connection to 10.7.0.1 reaches `remotepairingd` on the same phone.
+- **Pairing.** A RemotePairing host identity, paired once from a Mac the phone already trusts (`ios/standalone/cmd/rppair`). The phone shows nothing. The app carries the identity, pair-verifies, opens the TLS-PSK tunnel and gives it to Pinky's own iOS driver. From there the driver works as on a Mac: display stream, HID, `remoteAXService` and screenshots over RSD. The driver gained only an entry point for that (`OpenOverTunnel` and three small helpers in `internal/driver/ios/standalone.go`, built for iOS only); nothing the desktop app uses changed.
+- **The engine.** A Go core, linked as a C library into both the app and the extension; either one can host it. It guards input: never while Pinky's own app is in front, never while an approval waits, never on a locked phone, and it cannot open Pinky. It runs the tests below and a small agent loop on the Messages API, with eight tools (observe, tap, swipe, type, key, launch, wait and request approval). The loop follows Ask Pinky (`internal/pilot` on the builtin-agent branch), but without the gateway: the engine's guard stands in for Pinky's rules.
+- **The app.** SwiftUI screens for the task, the model, the API key (kept in memory only), Start and Stop, and the approval card, whose Approve asks for Face ID or the passcode. A Live Activity offers Stop. Local notifications announce approvals and ended tasks; they carry no buttons and only open the app.
+- **For measuring.** A debug build starts a run from launch arguments, so a test needs no taps once the VPN configuration is allowed. The engine logs a heartbeat every 10 s and each tool call's name, time and outcome, never its arguments.
+
+### Q1: an app acts on another app — yes
+
+The engine ran in the extension. It launched Calculator, read its screen, took a screenshot and tapped a key.
+
+| Step | Measured |
+| --- | --- |
+| Connect: pair-verify, tunnel, RSD | 610–720 ms; 85 services, `remoteAXService` among them |
+| Launch Calculator | call 56–204 ms; Calculator read in front 5.0 s after leaving Pinky's screen |
+| Read the element tree | first 4.8 s (walk 2.4 s), second 2.3 s, then 0.6 s; 23 elements |
+| Screenshot | 360 KB PNG in 841 ms |
+| Tap "7" | 65 ms; the next read showed "7" and "Clear" where "0" and "All Clear" were |
+| Memory | 11–23 MB footprint |
+
+Over the tunnel alone the driver cannot read the app catalog, lockdown values or the lock state, because it takes those through usbmuxd. So a read names the app in front by its label only. The prototype maps the label back to the bundle id of the app it last launched. Apple's `.shim.remote` services reach the same data over RSD; `syslog_relay` and `diagnostics_relay` answered that way here, and `installation_proxy` is listed. Using them is a driver follow-up.
+
+### Q2: staying alive while another app is in front
+
+The phone was unlocked, left on the table with Calculator in front, and not charging. Every 10 seconds the engine read the screen and tapped a key. Auto-lock is one minute on this phone, but the taps kept the screen on, so the screen was on in every run and the battery numbers include it. Three hosts were tried:
+
+- **A:** the engine in the packet-tunnel extension.
+- **B:** the engine in the app, which plays silent audio in the background, as StikDebug does.
+- **C:** the engine in the app, with nothing to keep it alive.
+
+| Run | Length | Rounds ok | Reconnects | Read p50 / p90 | Tap p50 | Memory | Battery |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| A, extension | 20 min | 120 / 120 | 0 | 618 / 651 ms | 61 ms | 15–17 MB | 35 % → 29 %, mean 343 mA |
+| B, app with audio | 15 min | 90 / 90 | 0 | 635 / 669 ms | 62 ms | 17–39 MB | 28 % → 24 %, mean 410 mA |
+| C, app alone | 5 min planned | 2, then suspended | | 627 ms | 61 ms | | |
+
+- **C was suspended 25–30 s after Calculator came to the front.** `runningboardd` logged that the app's assertions would "expire soon", UIKit fired the background task's expiration handler, and 5 s later the app was suspended. Nothing ran again until the app came back to the front.
+- **The engine's power.** With the screen on and nothing running (after C was suspended), the phone drew about 250 mA; locked, 125–140 mA. So the engine added about 90 mA in the extension and 160 mA in the app with audio. Run A used 6 % of the battery in 20 minutes, about 18 % an hour with the screen on.
+- **A and B never reconnected:** one tunnel for the whole run, a heartbeat every 10 s, no gap.
+
+So the extension is the host to build on: the loopback needs it anyway, iOS did not suspend it, and it used less memory and power than the app. Audio works too, but it is the trick guideline 2.5.4 forbids, and the app paid for it with more memory.
+
+Two costs showed up in both:
+
+- **The display stream never stops.** The driver starts the display stream and the HID session together, and taps need it: the DDI's HID daemon drops synthetic events without an active stream. So the phone encodes and sends its own screen the whole time the engine can tap: about 250 KB/s through the loopback, 298 MB in run A's 20 minutes. A product would stop the stream between steps and start it again before a tap.
+- **CPU wakeups.** Once per process, the kernel logged more than 45,000 wakeups in under a minute: 1,298 a second in the extension, 983 a second in the app. That is three times its limit of 45,000 in 300 seconds. It only logged this; nothing was killed.
+
+### Q3: a task from start to end
+
+The model was DeepSeek (`group/deepseek`) through a gateway on the home network that speaks the Messages API, so the loop's Anthropic client needed no change. The key came in the launch environment for these runs and stayed in memory; the app's own key field does the same. Each task started from Pinky's app, as one the person starts would, and the engine first pressed Home to leave it.
+
+| Run | Task | Result | Steps | Taps | Read p50 / p90 | Tap p50 | Tokens | Memory |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| c | Work out 12 × 34, asking before = | 408 on the screen, 13 s after the approval | 10 | 8 | 622 / 1,613 ms | 73 ms | about 27K | 16 MB |
+| d | Press 1 thirty times, 3 s apart | Done in 3 min 56 s | 62 | 31 | 614 / 976 ms | 74 ms | about 148K | 12 MB |
+| g | Press 1 a hundred times, 3 s apart; stopped from the Live Activity | Stopped in the same second | 13 | | 605 ms | 61 ms | about 15K | 13 MB |
+
+- **The approval (c).** After the digits, the model asked "现在按 = 计算 12 × 34，可以吗？" ("Press = now to work out 12 × 34, OK?"), in the task's language. A notification announced it, and the card waited in Pinky's app. While it waited, the engine refused all input. The owner approved with Face ID 2 min 50 s later. The engine left Pinky's screen, opened Calculator again and told the model so; the model pressed = and finished.
+- **What the agent cannot press.** Approve is on a screen of Pinky's own, where the engine never acts, and it needs Face ID or the passcode. Notifications carry no Approve. The engine has no way to open Pinky. Run b met the first wall by accident (below): every launch and tap came back "blocked: Pinky's own app is in front; nothing was done".
+- **Steps.** In run d each tap, with the settle and the read after it, took 1.2–2.3 s; a wait of 3 s took about 3.6 s. The model's turns took the rest.
+- **Stop (g).** The Live Activity came up 3 s before the task started. The owner tapped its Stop 50 s into the task. The intent ran in the app's process, the engine stopped and the task ended as stopped within the same second. The activity went away 5 s later, as set.
+- **Tokens** are the prototype's count of what the gateway reported. It prices a model it does not know at US$1 a million tokens, so its cost figure is the same number; what DeepSeek costs through the gateway was not checked.
+
+Q3 found four problems, all fixed:
+
+- **Pinky stayed in front after the approval (run b).** The owner answered in Pinky's app, so Pinky's screen was in front. The guard then refused every launch and tap, and after 15 steps the model gave up. Now the engine goes home and opens the task's app again after an approval, and says where it went (`Engine.back`). Run c had the fix.
+- **The Live Activity failed in run c** with "Target is not foreground". iOS starts one only while the app is in front, and the engine had already left. Now the app starts it before the task.
+- **The Live Activity came and went (run f).** The app polls the engine's status every second. While the engine was still taking the task, about 3 s, the status showed none running, and the app ended the activity. Now a status asked before the task started cannot end it. Run g had the fix.
+- **The owner tapped Stop three times in run g**, because the activity looked the same for the 5 s before it went away. The widget now shows "Stopped" in place of the button. This one compiled but did not run on the phone.
+
+One limit remains: only the app updates the Live Activity. If a task ends while the app is suspended, the activity stays until the app runs again.
+
+### What broke on the way
+
+- **The loopback addresses.** LocalDevVPN 1.3.0's default, 10.7.1.1/32, gets no answer. A /30 with the phone at 10.7.0.2 and the peer at 10.7.0.1 works ([SideStore #1460](https://github.com/SideStore/SideStore/issues/1460) [S]).
+- **`remotepairingd` refuses connections from `::1`.** That is why the detour through the tunnel is needed.
+- **The port is not fixed.** On this phone it was 49152. Others report 52107, 54833 and 61560, and it changes with each reboot ([Henge #67](https://github.com/Leviidev/Henge/issues/67) [S], [playport #55](https://github.com/playportdev/playport/issues/55) [S]). The app finds it the way StikDebug does since October ([PR #480](https://github.com/StikDebug/StikDebug/pull/480) [P]): `remotepairingd` advertises `_remotepairing._tcp` on `lo0`, and connecting to that service shows the port (`::1%lo0:49152`). The app then dials the port at 10.7.0.1.
+- **The extension's own sockets skip its tunnel.** A connection to 10.7.0.1 from inside the extension left over Wi-Fi. The engine binds its sockets to the tunnel's interface (`IP_BOUND_IF`). It finds that interface through `getifaddrs`, because the sandbox denies the routing sysctl that Go's `net.Interfaces` uses.
+- **`remoteAXService` hung** on every call after a day of use. A restart fixed it. A product needs a way to notice this and a fallback to pixels.
+- **A locked phone.** Launching an app fails with "Locked" once auto-lock has locked the phone. The engine waits for the person to unlock. While it taps, the screen stays awake.
+- **The first read is slow**: 4.8 seconds, against 0.6 seconds later on.
+- **On the Mac, usbmuxd stopped listing the phone after the restart.** That breaks desktop Pinky's USB path, but not this prototype: the Mac reached the phone through a RemotePairing tunnel over Wi-Fi instead.
+- [StikDebug #476](https://github.com/StikDebug/StikDebug/issues/476) [S] reports a broken pipe after the tunnel on iOS 27.0, closed as not planned. It did not happen here.
+
+### Setup, once
+
+1. On a Mac the phone trusts, make the pairing: `rppair pair`. Keep the file private, since it opens a tunnel to the phone from its network.
+2. Build with the pairing inside, sign it with a development profile for three App IDs (the app and the tunnel with the Network Extension capability, plus the Live Activity), and install it. The README has the commands.
+3. On the phone, by hand:
+   - trust the developer once;
+   - open the app and tap Turn on, then allow the VPN configuration with Face ID or the passcode;
+   - allow notifications.
+4. For each task, type the API key and the task, then tap Start.
+
+Developer Mode was already on, the phone had been paired with this Mac before, and the Mac had mounted the DDI. A development profile lasts a year; then the app needs a computer again.
+
+### Not verified yet
+
+- **Claude itself.** The loop speaks the Messages API, but it ran with DeepSeek through a gateway, not with Claude through Anthropic's API.
+- **Hours, not minutes.** The longest run was 20 minutes with the screen on. A locked phone, memory pressure from other apps, Low Power Mode and a reboot were not tried.
+- **Mounting the DDI.** The prototype used the image the Mac had mounted; the iOS 27 cryptex stays mounted until an update. On its own the app would have to mount it, as StikDebug does, which needs the internet once.
+- **Pairing on the phone.** The pairing came from a Mac. iOS 27's pairing in Developer Mode (StikDebug 3.2) was not tried.
+- **An agent that tries to reach Pinky's controls on purpose.** The guard was met only by accident (run b). The guard knows the app in front, not system surfaces: a tap at coordinates could land on a notification banner or the Live Activity. The worst it can do there is open Pinky, where the guard stops it, or press Stop.
+- **The "Stopped" note on the Live Activity**, and a Live Activity on a phone with a Dynamic Island. This iPhone has none.
+- **The lite build**, which relies on LocalDevVPN instead of its own tunnel: it compiled but did not run on the phone.
+- **Other iPhones and iOS versions.** One iPhone 13 mini on iOS 27.0.1 only.
 
 ## The agent loop
 
@@ -571,10 +686,16 @@ Turning Pinky off only stops the agent, so it is not the danger. The danger is t
 5. **A shell tier for people who want more.** With Shizuku or Wireless debugging, the existing Android driver's shell features become available on the phone: `getevent` for Take over, the hidden second screen for background work, and granting the app `WRITE_SECURE_SETTINGS` once, so it can turn its own service on only while an agent works, as Pinky does from the computer today.
 6. **Distributed outside Google Play.** From Pinky's own site and GitHub releases, as the companion APK is today, and possibly other stores. See [Distribution and policy](#distribution-and-policy) and [Setup, once](#setup-once) for what this costs.
 
-### iOS: do not build it now
+### iOS: not as a product; an enthusiast build at most
 
 - An App Store app can only watch and advise. That is not Pinky.
-- The developer-services route works in open code, but it is sideload-only, and Apple has broken its foundation before (iOS 26.4). Keeping it alive in the background is unproven. Pinky's own `internal/driver/ios` is the right base if it is ever built: it already speaks the same services, and it compiles for `ios/arm64`. It would dial the loopback address through LocalDevVPN instead of making its own tunnel. That would be an enthusiast build, not a product.
+- The developer-services route works: the prototype ran tasks on a real iPhone with no computer at run time, and its driver stayed alive in a packet-tunnel extension ([Prototype results (iOS)](#prototype-results-ios)). But it is sideload-only, it needs a computer once to install it (and below iOS 27 to pair), and Apple has broken its foundation before (iOS 26.4).
+- If it is built, its shape is the prototype's:
+  - the Go core in the packet-tunnel extension, which is both the loopback and the process that stays alive, with Pinky's own `internal/driver/ios` over the tunnel;
+  - the gateway, rules, approvals and history from the desktop app, in place of the prototype's small guard;
+  - a SwiftUI app for the task, approvals behind Face ID, Stop all and history, and a Live Activity with Stop.
+
+  That is an enthusiast build for people who already sideload, not a product Pinky can offer everyone.
 - Watch two things: whether Apple accepts the HID-dongle app in App Review, and whether Siri gains third-party in-app actions (rumored for iOS 27.5 or 27.6). Either could change this verdict.
 - Meanwhile, the iPhone can be the remote control for a Pinky that runs on a computer: approvals, Stop all and the task view on the phone. Nothing in this study blocks that, and it needs no private API.
 
@@ -593,7 +714,18 @@ Rough sizes for the Android app above, in weeks of focused work by someone who k
 | **Accessibility tier, total** | **about 9–15** | |
 | Shell tier: Shizuku or Wireless debugging on the phone, `getevent`, the hidden second screen, `WRITE_SECURE_SETTINGS` | 3–4 more | Most of `internal/driver/android` (shell, input, background displays, Take over) |
 
-iOS: no estimate. An enthusiast build on the developer-services route would reuse `internal/driver/ios`, but it needs a prototype on a real iPhone first, to see whether a driver can stay alive while other apps are in front.
+For iOS, the enthusiast build above, starting from the prototype (`ios/standalone`):
+
+| Piece | Weeks | Reuses |
+| --- | --- | --- |
+| The gateway, rules, approvals and history in the extension, and a control channel to the app | 1–2 | The gateway packages; the prototype's core and its control calls |
+| Driver over the loopback: app list, lock state and device values through the `.shim.remote` services, the display stream only around taps, noticing a hung `remoteAXService` and falling back to pixels | 2–3 | `internal/driver/ios` and its `OpenOverTunnel` |
+| Agent loop | 1 | Ask Pinky's loop (`internal/pilot`) and the prototype's tools |
+| Phone UI in SwiftUI: task view, approvals, Stop all, settings for rules and agents, history, Live Activity | 3–5 | The prototype's screens; the client API and its strings |
+| Setup on the phone: pairing in Developer Mode (iOS 27), mounting the DDI, guiding through the VPN configuration and trusting the developer | 2–3 | StikDebug's open code as a reference |
+| **Total** | **about 9–14** | |
+
+Installing and re-signing (SideStore, AltStore or a paid developer account) come on top, and each person does them.
 
 ## Open risks
 
@@ -622,9 +754,10 @@ Ordered by how much each could stop the Android app; iOS last.
    - Key handling: the person's own key in the Keystore, or an account Pinky runs, which is a service Pinky does not have today.
 8. **Prompt injection is closer.** On a computer the agent's screen is the phone; here the phone is also where the agent's controls live. Rules 1 and 2 must hold for every input path, the shell tier included, and any new verb added to the driver must pass the same checks.
 9. **On-device models are not ready.** If people expect Pinky to work offline or privately, the answer for now is no.
-10. **Battery and heat.** A model call per step is cheap for the phone, but the screen stays on and the service works hard. Not measured.
+10. **Battery and heat.** A model call per step is cheap for the phone, but the screen stays on and the service works hard. Not measured on Android. On the iPhone the engine in the extension added about 90 mA to the 250 mA of a phone with its screen on, and run A used 6 % of the battery in 20 minutes. Part of that is the display stream the driver never stops ([Q2](#q2-staying-alive-while-another-app-is-in-front)); how much was not measured.
 11. **iOS.**
     - The developer-services route depends on Apple not closing the loopback VPN and pairing files (it broke them once, in iOS 26.4).
-    - Keeping a driver alive while other apps are in front is unproven.
+    - A packet-tunnel extension kept the driver alive for 20 minutes; hours, a locked phone and memory pressure are unproven. It also woke the CPU three times as often as the kernel's limit, which iOS only logged this time.
+    - `remoteAXService` hung after a day until the phone restarted, so a driver needs to notice that and fall back to pixels.
     - App Review rejects it (2.5.1, 2.5.2), sideloading needs re-signing every 7 days or every year, and StikDebug's developer account was terminated.
     - Only the HID dongle has a chance in App Review, and its outcome is unknown.
