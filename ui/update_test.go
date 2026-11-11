@@ -63,7 +63,21 @@ func (f *fakeInstaller) swapped() []update.StartOptions {
 const (
 	testNotes   = "- Faster mirroring\n- Pinky updates itself"
 	testNotesZh = "- 镜像更快了\n- Pinky 会自己更新"
+	// feedDate is when the feed's release came out.
+	feedDate = "2026-11-07T10:00:00Z"
 )
+
+// feedDay is the day the feed's release came out as the views write it: by
+// the clocks where the test runs, which show the day before or after in
+// time zones far from UTC.
+func feedDay(t *testing.T) string {
+	t.Helper()
+	when, err := time.Parse(time.RFC3339, feedDate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return locales.DayOtherYear(when.Local())
+}
 
 // feed serves latest.json for version and its zip.
 func feed(t *testing.T, version string) (*httptest.Server, []byte) {
@@ -74,8 +88,8 @@ func feed(t *testing.T, version string) (*httptest.Server, []byte) {
 	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/latest.json":
-			fmt.Fprintf(w, `{"version": %q, "tag": "v%s", "date": "2026-11-07T10:00:00Z", "notes": %q, "localized_notes": {"zh-Hans": %q}, "assets": {%q: {"url": %q, "sha256": %q, "size": %d}}}`,
-				version, version, testNotes, testNotesZh, update.Platform(), srv.URL+"/Pinky.zip", hexenc.EncodeToString(h[:]), len(asset))
+			fmt.Fprintf(w, `{"version": %q, "tag": "v%s", "date": %q, "notes": %q, "localized_notes": {"zh-Hans": %q}, "assets": {%q: {"url": %q, "sha256": %q, "size": %d}}}`,
+				version, version, feedDate, testNotes, testNotesZh, update.Platform(), srv.URL+"/Pinky.zip", hexenc.EncodeToString(h[:]), len(asset))
 		case "/Pinky.zip":
 			w.Write(asset)
 		default:
@@ -133,7 +147,7 @@ func TestUpdateCardThenUpdateNow(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Frame()
-	if !hasText(tt, "Faster mirroring") || !hasText(tt, "November 7, 2026") {
+	if !hasText(tt, "Faster mirroring") || !hasText(tt, feedDay(t)) {
 		t.Errorf("the release notes: %q", tt.Texts())
 	}
 	if err := tt.Click("Close"); err != nil {

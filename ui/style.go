@@ -158,15 +158,47 @@ type btnOpt struct {
 	icon  *mg.SVG
 	label string // accessible name for an icon-only button
 	dark  bool   // the dark, translucent buttons over a tile
+	// maxW is the most the button is wide, where it has less room than
+	// its label takes: the label then keeps its start and its end, around
+	// an ellipsis.
+	maxW float32
+}
+
+// A button's sizes: its height and the padding beside its label, for a
+// regular and a small one, and its border (button, buttonWidth).
+const (
+	buttonHeight      = 34
+	buttonPadX        = 14
+	smallButtonHeight = 28
+	smallButtonPadX   = 10
+	buttonBorder      = 1
+)
+
+// buttonSize returns a button's height, the padding beside its label and
+// the size of its label: a small button's when small.
+func buttonSize(small bool) (h, px, fs float32) {
+	if small {
+		return smallButtonHeight, smallButtonPadX, fsSmall
+	}
+	return buttonHeight, buttonPadX, fsBody
+}
+
+// buttonWidth returns how wide button draws a button with the label text
+// and no icon, for what lays out the words beside it.
+func buttonWidth(c *mg.Context, text string, small bool) float32 {
+	_, px, fs := buttonSize(small)
+	w, _ := c.MeasureText(0, mg.Span{Text: text, Size: fs, Weight: fwMedium})
+	return w + 2*(px+buttonBorder)
 }
 
 // button draws the prototype's .btn: 34 high, a border, a quiet hover.
 func button(c *mg.Context, text string, o btnOpt) mg.Element {
 	p := pal(c)
 	b := mg.ButtonBase(c).Gap(7).Justify(mg.Center).AlignItems(mg.Center)
-	h, px, r, fs := float32(34), float32(14), float32(8), float32(14)
+	h, px, fs := buttonSize(o.small)
+	r := float32(8)
 	if o.small {
-		h, px, r, fs = 28, 10, 7, 13
+		r = 7
 	}
 	b.Height(h).Padding(0, px).Radius(r)
 	bg, border, fg := p.panel, p.line2, p.ink
@@ -197,7 +229,7 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 			fg = hex("#ffb4a8")
 		}
 	}
-	b.Background(bg).Border(1, border).TextColor(fg)
+	b.Background(bg).Border(buttonBorder, border).TextColor(fg)
 	if !o.dark && !p.dark {
 		// A push button stands a hair off the page, as the system's do.
 		b.Shadow(0, 1, 1, 0, mg.RGBA(18, 18, 28, 0.04))
@@ -212,10 +244,29 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 			mg.Icon(c, o.icon).FontSize(18)
 		}
 		if text != "" {
-			mg.Text(c, text).FontSize(fs).FontWeight(fwMedium).NoWrap()
+			t := mg.Text(c, text).FontSize(fs).FontWeight(fwMedium)
+			if o.maxW > 0 {
+				t.SingleLine().TruncateMiddle().MinWidth(0)
+			} else {
+				t.NoWrap()
+			}
 		}
 	})
+	if o.maxW > 0 {
+		b.MaxWidth(o.maxW)
+	}
 	return b
+}
+
+// ringInside draws e's focus ring inside its edge rather than around it,
+// for an element in what clips its surroundings, as a list that scrolls,
+// and returns e.
+func ringInside(c *mg.Context, e mg.Element) mg.Element {
+	w := c.Theme().FocusRingWidth
+	if w <= 0 {
+		w = 2 // MyGo's, where the theme sets none
+	}
+	return e.FocusRingOffset(-w)
 }
 
 // linkButton is the prototype's .link: accent text that underlines on hover.
