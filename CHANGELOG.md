@@ -2,6 +2,10 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
+## 2026.1111.7 (2026-11-11)
+
+- The panel that opens from a phone's battery now widens to fit its lines, so the battery and storage no longer break onto two lines in Chinese and Japanese.
+
 ## 2026.1111.6 (2026-11-11)
 
 - A phone's page now shows its battery at the top right. Click it to see the phone's model, system version, battery and free storage. All phones shows each phone's battery too.
