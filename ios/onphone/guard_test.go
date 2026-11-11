@@ -3,6 +3,7 @@ package onphone
 import (
 	"context"
 	"errors"
+	"image"
 	"testing"
 	"time"
 
@@ -84,5 +85,31 @@ func TestGateWaitUI(t *testing.T) {
 	time.AfterFunc(10*time.Millisecond, func() { g.setUI(false) })
 	if !g.waitUI(context.Background(), false, time.Second) {
 		t.Fatal("waitUI missed the change")
+	}
+}
+
+// The phone's reads take no pictures, and screenshots are refused as
+// unsupported, which the gateway reports to the agent as such.
+func TestGuardTakesNoPictures(t *testing.T) {
+	opt := treeOnly(driver.ObserveOptions{OCR: true, OCRAll: true,
+		Frame:      func(context.Context) (image.Image, error) { return nil, nil },
+		MayCapture: func(*screen.Screen) bool { return true }})
+	if opt.OCR || opt.OCRAll || opt.Frame != nil {
+		t.Fatalf("treeOnly kept OCR or the frame: OCR %v, OCRAll %v, Frame %v", opt.OCR, opt.OCRAll, opt.Frame != nil)
+	}
+	// nil would let the driver take its picture at once.
+	if opt.MayCapture == nil || opt.MayCapture(&screen.Screen{App: screen.App{ID: "com.apple.calculator"}}) {
+		t.Fatal("treeOnly allows a picture")
+	}
+	d := &Guard{g: newGate("cc.example.pinky")}
+	if _, err := d.Screenshot(context.Background()); !errors.Is(err, driver.ErrUnsupported) {
+		t.Fatalf("Screenshot: %v, want ErrUnsupported", err)
+	}
+	if _, err := d.ScreenshotPNG(context.Background()); !errors.Is(err, driver.ErrUnsupported) {
+		t.Fatalf("ScreenshotPNG: %v, want ErrUnsupported", err)
+	}
+	var fs driver.FrameShooter = d
+	if img, ok := fs.ScreenshotFromFrame(context.Background(), nil); ok || img != nil {
+		t.Fatal("ScreenshotFromFrame gave a picture")
 	}
 }

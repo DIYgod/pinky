@@ -47,6 +47,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                     // Network extensions get about 50 MB.
                     "memory_mb": 30,
                     "interface": "tunnel",
+                    // Seconds between memory lines in the log, which debug
+                    // runs ask for (-pinkyHeartbeat); 0 for none.
+                    "heartbeat_s": (options?["heartbeat"] as? NSNumber)?.intValue ?? 0,
                 ])
                 self.log.log("pinky core start: \(out["ok"] as? Bool == true ? "ok" : (out["error"] as? String ?? "?"), privacy: .public)")
                 let n = Notifier()

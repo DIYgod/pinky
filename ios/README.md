@@ -64,10 +64,12 @@ To run it on a phone:
 
 The core logs to the unified log with the prefix `pinky` (connection attempts and why they failed, slow or failed screen reads, and with `heartbeat_s` a heartbeat with memory), which a Mac reads with the device's syslog. It never logs a task's text, the model's key or what is on the screen.
 
-A debug build also starts a task from launch arguments once the phone is ready, so a test needs no typing. The key comes in the launch environment and stays in memory; never put it in a file. The `--` keeps devicectl from reading the app's arguments as its own.
+A debug build also starts a task from launch arguments once the phone is ready, so a test needs no typing. The key comes in the launch environment and stays in memory; never put it in a file. The `--` keeps devicectl from reading the app's arguments as its own. `-pinkyHeartbeat 1` has the core log its memory every second.
 
 ```sh
-xcrun devicectl device process launch --terminate-existing --device <udid> \
+xcrun devicectl device process launch --device <udid> \
   --environment-variables '{"PINKY_MODEL_KEY":"…"}' \
   <id> -- -pinkyTask "…" -provider anthropic -model <model> -baseURL <url>
 ```
+
+The task starts only at the app's launch. If Pinky is running, end the app first by its process id (`xcrun devicectl device info processes`, then `xcrun devicectl device process terminate --pid <pid>`). `--terminate-existing` ends the tunnel extension too, and the new app finds the VPN still on and does not start it again.

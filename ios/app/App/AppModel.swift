@@ -101,6 +101,9 @@ final class AppModel: ObservableObject {
             for k in ["iface", "mask"] {
                 if let v = UserDefaults.standard.string(forKey: k) { opts[k] = v as NSString }
             }
+            // ... and have the core log its memory every N seconds: -pinkyHeartbeat 1
+            let beat = UserDefaults.standard.integer(forKey: "pinkyHeartbeat")
+            if beat > 0 { opts["heartbeat"] = NSNumber(value: beat) }
             #endif
             try m.connection.startVPNTunnel(options: opts)
         } catch {

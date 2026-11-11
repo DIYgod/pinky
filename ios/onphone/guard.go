@@ -2,6 +2,8 @@ package onphone
 
 import (
 	"context"
+	"fmt"
+	"image"
 	"log/slog"
 	"strings"
 	"sync"
@@ -143,13 +145,42 @@ func (g *gate) saw(s *screen.Screen, start time.Time) {
 // Guard is the iPhone the core drives: the iOS driver's Device, whose
 // optional interfaces the gateway finds through embedding, with every
 // method that acts on the phone refusing while Pinky's own app is in
-// front. Reads pass through, and log why the accessibility service failed
-// where the fallback's own error would hide it. The core itself leaves
-// Pinky's app and comes back to the task's app through the embedded Device.
+// front. Reads pass through without pictures (treeOnly), and log why the
+// accessibility service failed where the fallback's own error would hide
+// it. The core itself leaves Pinky's app and comes back to the task's app
+// through the embedded Device.
 type Guard struct {
 	*ios.Device
 	g   *gate
 	log *slog.Logger
+}
+
+// The core takes no pictures of the screen. On the iPhone 13 mini a
+// screenshot is a PNG of 5 to 7 MB, which the driver decodes to 11 to 22 MB
+// while Vision loads its text recognition for OCR: far more than the 50 MB
+// iOS gives the tunnel extension, which it killed at the first read that
+// took one (docs/notes/iphone-app.md, "End-to-end run"). So reads use the
+// accessibility tree alone, and screenshots are unsupported: the agent is
+// told the phone cannot take them.
+
+// treeOnly is opt without OCR and with no picture allowed.
+func treeOnly(opt driver.ObserveOptions) driver.ObserveOptions {
+	opt.OCR, opt.OCRAll, opt.Frame = false, false, nil
+	opt.MayCapture = func(*screen.Screen) bool { return false }
+	return opt
+}
+
+// errNoPictures answers screenshots (treeOnly).
+var errNoPictures = fmt.Errorf("Pinky on the iPhone takes no screenshots: they do not fit in the memory iOS gives it: %w", driver.ErrUnsupported)
+
+func (d *Guard) Screenshot(context.Context) (image.Image, error) { return nil, errNoPictures }
+
+func (d *Guard) ScreenshotPNG(context.Context) ([]byte, error) { return nil, errNoPictures }
+
+// ScreenshotFromFrame implements driver.FrameShooter with no picture, so
+// that the gateway asks Screenshot, which says why.
+func (d *Guard) ScreenshotFromFrame(context.Context, func(context.Context) (image.Image, error)) (image.Image, bool) {
+	return nil, false
 }
 
 func (d *Guard) Observe(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, error) {
@@ -162,7 +193,7 @@ const slowRead = 2 * time.Second
 
 func (d *Guard) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions) (*screen.Screen, ios.ObserveStats, error) {
 	start := time.Now()
-	s, st, err := d.Device.ObserveWithStats(ctx, opt)
+	s, st, err := d.Device.ObserveWithStats(ctx, treeOnly(opt))
 	if err == nil && s != nil {
 		d.g.saw(s, start)
 	}
