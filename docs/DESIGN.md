@@ -184,7 +184,7 @@ Agents see one MCP server, `pinky`, with 19 tools. Every action waits for the sc
 | `phone_files` | none | A local folder synced with the phone's `Pinky/` folder (Android only); agents elsewhere upload files into it |
 | `phone_app` | `action` (install, uninstall, stop); `paths` or `app` | Installs or updates an app from that local folder (an APK, an IPA or a `.app`), uninstalls an app, or force-quits it |
 | `phone_logs` | `app`, `kind?` (logs or crashes), `since?`, `filter?`, `level?`, `limit?` | One app's own log lines or crash reports ([notes/app-logs.md](notes/app-logs.md)) |
-| `phone_device` | `rotation?`, `appearance?`, `location?`, `reset?` | The switches developers test with, read or set; Pinky puts them back when the task ends ([notes/device-switches.md](notes/device-switches.md)) |
+| `phone_device` | `rotation?`, `appearance?`, `location?`, `reset?` | The switches developers test with, read or set, and on a read the phone's model, system, battery and storage; Pinky puts them back when the task ends ([notes/device-switches.md](notes/device-switches.md)) |
 | `phone_request_approval` | `summary`, `details?` | The person's answer and note; it grants nothing by itself |
 | `phone_handoff` | `reason` | Returns when the person hands control back, with their note |
 

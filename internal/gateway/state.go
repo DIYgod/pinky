@@ -49,7 +49,9 @@ type device struct {
 	pauseAway bool
 	// capturing is what the client last heard of whether the phone sends
 	// its screen to Pinky (pollCapture).
-	capturing    bool
+	capturing bool
+	vitals    vitalsState // battery and storage, read when asked (vitals.go)
+
 	offlineSince time.Time
 	offlineWhy   string
 	// openErr is why the last Open failed, nil once it opened: a task

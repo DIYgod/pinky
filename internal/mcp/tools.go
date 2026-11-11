@@ -603,7 +603,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 		})
 
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_device", Title: "Phone settings for testing",
-		Description: "Turn the screen, switch light or dark appearance, or simulate a location, as developers do to test an app; without arguments, read them. " +
+		Description: "Turn the screen, switch light or dark appearance, or simulate a location, as developers do to test an app; without arguments, read them, with the phone's model, system, battery and storage. " +
 			"Pinky puts back everything a task changed when it ends, and reset puts it back sooner. These change the phone's settings: on a real phone they always ask the person " +
 			"(rule Phone settings; up to 45 s, then approval_pending with an approval_id to repeat the call with), on emulators and Simulators only when the person chose to approve more. " +
 			"Read-only and watch-only agents may only read. What a phone cannot do returns unsupported with why: location works on Android emulators, iOS Simulators and iPhones with the WebDriverAgent helper, not on Android phones.",

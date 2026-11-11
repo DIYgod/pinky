@@ -109,6 +109,7 @@ type Result struct {
 	Saved      []SavedFile  // files written for the agent on Pinky's computer (save.go)
 	Log        string       // phone_logs: the log lines or crash reports, as text
 	Switches   []SwitchView // phone_device
+	About      *PhoneAbout  // phone_device's read: the phone's model, system, battery and storage
 }
 
 // IsError reports whether the result is an error rather than a status.

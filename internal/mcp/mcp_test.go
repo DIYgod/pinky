@@ -182,7 +182,7 @@ func TestPhoneDevice(t *testing.T) {
 	c := h.connect(t, "claude-code")
 	c.call(t, "phone_connect", map[string]any{"task": "Test dark mode"})
 	text, isErr := c.call(t, "phone_device", nil)
-	if isErr || !strings.Contains(text, "\nrotation: portrait\nappearance: light\nlocation: none") {
+	if isErr || !strings.Contains(text, "\nphone: Pixel 9 · Android 16\nbattery: 82%, 30 °C\nstorage: 41.3 GB free of 128 GB\nrotation: portrait\nappearance: light\nlocation: none") {
 		t.Fatalf("read:\n%s", text)
 	}
 	// A real phone asks first.

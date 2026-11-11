@@ -103,10 +103,18 @@ func (s *Session) Device(ctx context.Context, req DeviceRequest) *Result {
 	}
 	sw, _ := dev.(driver.Switcher)
 	if !changing {
+		about := g.about(ctx, d)
 		if sw == nil {
-			return g.finish(l, errResult(ErrUnsupported, "%s", noSwitches(d.name())))
+			if about == nil {
+				return g.finish(l, errResult(ErrUnsupported, "%s", noSwitches(d.name())))
+			}
+			return g.finish(l, &Result{Status: StatusSettled, About: about, Message: noSwitches(d.name())})
 		}
-		return g.finish(l, g.readSwitches(ctx, l, sw))
+		res := g.readSwitches(ctx, l, sw)
+		if !res.IsError() {
+			res.About = about
+		}
+		return g.finish(l, res)
 	}
 	return g.finish(l, g.setSwitches(ctx, l, req, sw, want, resets))
 }

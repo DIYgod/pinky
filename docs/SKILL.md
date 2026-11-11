@@ -116,7 +116,7 @@ Testing an app on the phone? `phone_logs` reads that app's own log lines and cra
 
 ## Testing an app
 
-`phone_device` flips the switches developers test with: `{ rotation: "landscape" }`, `{ appearance: "dark" }`, `{ location: { latitude: 35.6812, longitude: 139.7671 } }`; with no arguments it reads them. `phone_launch { app: "Settings", language: "ja" }` opens an app in another language (`region: "JP"` for its formats) and restarts it if it runs. These change the person's phone, so on a real phone the person approves them first; on emulators and Simulators they usually go through at once. Pinky puts everything back when you release the phone; `phone_device { reset: ["all"] }` does it sooner. What a phone cannot do returns `unsupported` with why: there is no simulated location on an Android phone, for example.
+`phone_device` flips the switches developers test with: `{ rotation: "landscape" }`, `{ appearance: "dark" }`, `{ location: { latitude: 35.6812, longitude: 139.7671 } }`; with no arguments it reads them, and the phone's model, system, battery and storage. `phone_launch { app: "Settings", language: "ja" }` opens an app in another language (`region: "JP"` for its formats) and restarts it if it runs. These change the person's phone, so on a real phone the person approves them first; on emulators and Simulators they usually go through at once. Pinky puts everything back when you release the phone; `phone_device { reset: ["all"] }` does it sooner. What a phone cannot do returns `unsupported` with why: there is no simulated location on an Android phone, for example.
 
 ## Things you must not do
 
