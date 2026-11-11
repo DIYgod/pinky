@@ -218,12 +218,25 @@ func describePinch(a Action, label string) string {
 // TouchUp lifts both. The person's input pauses the agent. A phone that
 // cannot take two fingers returns driver.ErrUnsupported.
 func (g *Gateway) Touch2(deviceID string, a driver.TouchAction, p, q screen.Point) error {
-	_, dev, err := g.personInput(deviceID)
+	if d, err := g.device(deviceID); err == nil {
+		g.mu.Lock()
+		switching := d.switching != ""
+		g.mu.Unlock()
+		if switching {
+			return nil // lost while the phone moves to the helper (helperneed.go)
+		}
+	}
+	d, dev, err := g.personInput(deviceID)
 	if err != nil {
 		return err
 	}
 	m, ok := dev.(driver.MultiToucher)
 	if !ok {
+		// An iPhone or iPad over CoreDevice moves to the helper, which
+		// has a second finger; this gesture is lost (helperneed.go).
+		if g.personPinchHelper(d, a) {
+			return nil
+		}
 		return fmt.Errorf("pinching: %w", driver.ErrUnsupported)
 	}
 	ctx, cancel := context.WithTimeout(g.ctx, 10*time.Second)

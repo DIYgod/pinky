@@ -39,7 +39,10 @@ type device struct {
 	// the way it is moving to now, and switchBack puts it back after the
 	// task.
 	taskWay, switching string
-	switchBack         *time.Timer
+	// helper: an iPhone or iPad has the WebDriverAgent helper installed,
+	// as checkHelper found when it last came online (helperneed.go).
+	helper     bool
+	switchBack *time.Timer
 	// closing is closed once the last session's Close returned, so the
 	// next one does not start while it stops.
 	closing chan struct{}

@@ -341,6 +341,7 @@ type app struct {
 	tn        tailnetState   // phones away from this computer's network, through Tailscale
 	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
 	ask       askState       // Ask Pinky: the box at the top of Tasks, and its settings (ask.go)
+	rotate    rotateState    // Rotate in ⋯ under the mirror (rotate.go)
 
 	vit phoneVitalsState // phones' battery and storage (vitals.go)
 

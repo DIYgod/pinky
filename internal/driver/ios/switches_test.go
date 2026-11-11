@@ -21,6 +21,7 @@ type switchWDA struct {
 	mu          sync.Mutex
 	orientation string // UIDeviceOrientation…
 	stuck       bool   // the app only runs upright: POST /orientation fails, the device turns
+	stays       bool   // the same on iOS 27: the device stays too
 	style       string
 	lat, lon    *float64
 	locale      string
@@ -48,6 +49,11 @@ func (f *switchWDA) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case "GET /wda/deviceOrientation":
 		fmt.Fprintf(w, `{"value":%q}`, f.orientation)
 	case "POST /orientation":
+		if f.stays {
+			w.WriteHeader(500)
+			fmt.Fprint(w, `{"value":{"error":"unknown error","message":"Unable To Rotate Device"}}`)
+			return
+		}
 		f.orientation = map[string]string{"PORTRAIT": "UIDeviceOrientationPortrait", "LANDSCAPE": "UIDeviceOrientationLandscapeLeft",
 			"UIA_DEVICE_ORIENTATION_LANDSCAPERIGHT":      "UIDeviceOrientationLandscapeRight",
 			"UIA_DEVICE_ORIENTATION_PORTRAIT_UPSIDEDOWN": "UIDeviceOrientationPortraitUpsideDown"}[body["orientation"].(string)]
@@ -138,6 +144,18 @@ func TestWDASwitches(t *testing.T) {
 	if err := d.SetSwitch(ctx, driver.SwitchRotation, "landscape"); err != nil {
 		t.Fatalf("turn with an upright app: %v", err)
 	}
+	// On iOS 27 the device stays as the app in front allows: said in words,
+	// not in WDA's.
+	f.mu.Lock()
+	f.stays = true
+	f.mu.Unlock()
+	if err := d.SetSwitch(ctx, driver.SwitchRotation, "reverse_landscape"); err == nil ||
+		err.Error() != "the app in front does not turn reverse landscape, so the phone stayed landscape" {
+		t.Fatalf("turn where the device stays: %v", err)
+	}
+	f.mu.Lock()
+	f.stays = false
+	f.mu.Unlock()
 	if err := d.SetSwitch(ctx, driver.SwitchRotation, "auto"); !errors.Is(err, driver.ErrUnsupported) {
 		t.Fatalf("auto: %v", err)
 	}

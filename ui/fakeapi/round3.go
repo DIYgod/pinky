@@ -32,7 +32,7 @@ func (a *API) features(d *device) gateway.Features {
 		return gateway.Features{}
 	}
 	android := d.info.Platform == driver.Android
-	return gateway.Features{Unlock: true, Background: android, Files: android, Companion: android, Pinch: true}
+	return gateway.Features{Unlock: true, Background: android, Files: android, Companion: android, Pinch: true, Rotate: true}
 }
 
 // --- pairing ---

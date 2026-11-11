@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -494,4 +495,97 @@ func TestParseLocale(t *testing.T) {
 			t.Errorf("parseLocale(%q, %q) = %+v, %v; want %+v", c.lang, c.region, got, err, c.want)
 		}
 	}
+}
+
+// The person turns the screen from the ⋯ menu under the mirror: nobody is
+// asked, a task on the phone's own screen pauses, a task on a background
+// display goes on, an agent's handoff stays open, and a task that turned
+// the screen earlier leaves it as the person set it.
+func TestPersonSetsSwitch(t *testing.T) {
+	ctx := context.Background()
+	x := newExtraDev("pixel", "Pixel 9")
+	x.SetVirtual(true) // the agent's own change asks nobody under the default preset
+	g := newExtraGateway(t, x)
+	if err := g.Policy().SetPreset(policy.PresetPayments); err != nil {
+		t.Fatal(err)
+	}
+	if !g.Devices()[0].Features.Rotate {
+		t.Fatalf("features %+v", g.Devices()[0].Features)
+	}
+
+	// No task: it turns, and reads back.
+	if err := g.SetDeviceSwitch(ctx, "pixel", driver.SwitchRotation, driver.RotationLandscape); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := g.DeviceSwitch(ctx, "pixel", driver.SwitchRotation); err != nil || got != driver.RotationLandscape {
+		t.Fatalf("rotation %q, %v", got, err)
+	}
+	if st := g.Devices()[0].Status; st == DeviceInControl {
+		t.Fatal("turning an idle phone put the person in control")
+	}
+	for _, bad := range [][2]string{{driver.SwitchRotation, "sideways"}, {driver.SwitchAppearance, "auto"}, {"volume", "1"}} {
+		if err := g.SetDeviceSwitch(ctx, "pixel", bad[0], bad[1]); !errors.Is(err, driver.ErrUnsupported) {
+			t.Errorf("%s=%s: %v", bad[0], bad[1], err)
+		}
+	}
+	if err := g.SetDeviceSwitch(ctx, "nope", driver.SwitchRotation, driver.RotationPortrait); err != ErrUnknownDevice {
+		t.Fatalf("unknown phone: %v", err)
+	}
+
+	// A task on the phone's own screen pauses, and the agent's change is
+	// left as the person set it when the task ends.
+	s, _ := connect(t, g, "Test landscape")
+	mustStatus(t, s.Device(ctx, DeviceRequest{Rotation: "reverse_landscape"}), StatusSettled)
+	if err := g.SetDeviceSwitch(ctx, "pixel", driver.SwitchRotation, driver.RotationUpsideDown); err != nil {
+		t.Fatal(err)
+	}
+	if len(g.Needs()) != 0 {
+		t.Fatalf("the person's turn asked: %+v", g.Needs())
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "key", Key: "back"}), StatusTookOver)
+	if err := g.HandBack("pixel", ""); err != nil {
+		t.Fatal(err)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "key", Key: "back"}), StatusSettled)
+
+	// While the agent hands the phone over, turning it keeps the handoff
+	// open until the person hands back.
+	done := make(chan *Result, 1)
+	go func() { done <- s.Handoff(ctx, HandoffRequest{Reason: "Turn the screen to portrait, please"}) }()
+	if n := waitNeed(t, g); n.Kind != NeedHandoff {
+		t.Fatalf("need %+v", n)
+	}
+	if err := g.SetDeviceSwitch(ctx, "pixel", driver.SwitchRotation, driver.RotationPortrait); err != nil {
+		t.Fatal(err)
+	}
+	if n := g.Needs(); len(n) != 1 || n[0].Kind != NeedHandoff {
+		t.Fatalf("needs after the turn: %+v", n)
+	}
+	if err := g.HandBack("pixel", "turned"); err != nil {
+		t.Fatal(err)
+	}
+	if res := <-done; res.Status != StatusSettled || res.Note != "turned" {
+		t.Fatalf("handoff %+v", res)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "key", Key: "back"}), StatusSettled)
+	release(t, g, s)
+	if got := x.SwitchValue(driver.SwitchRotation); got != driver.RotationPortrait {
+		t.Fatalf("rotation after the task %q, want the person's portrait", got)
+	}
+	if want := "Left the screen's rotation as the person set it"; !strings.Contains(strings.Join(deviceSteps(g, s), "\n"), want) {
+		t.Fatalf("steps %q, want %q", deviceSteps(g, s), want)
+	}
+
+	// A task on a background display goes on.
+	if err := g.SetBackground("pixel", true); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = connect(t, g, "Lunch")
+	if len(x.backgrounds()) == 0 {
+		t.Fatal("no background display")
+	}
+	if err := g.SetDeviceSwitch(ctx, "pixel", driver.SwitchRotation, driver.RotationLandscape); err != nil {
+		t.Fatal(err)
+	}
+	mustStatus(t, s.Act(ctx, Call{}, Action{Tool: "launch", App: "Dinely"}), StatusSettled)
 }

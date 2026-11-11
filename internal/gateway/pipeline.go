@@ -460,6 +460,12 @@ func (g *Gateway) act(ctx context.Context, l *lease, c Call, a Action) *Result {
 		return res
 	}
 	g.settleOwed(ctx, d)
+	if a.Tool == "pinch" {
+		if res := g.pinchHelper(ctx, l); res != nil {
+			d.act.Unlock()
+			return res
+		}
+	}
 	if a.Tool == "launch" {
 		if res := g.launchUnread(ctx, l, c, a); res != nil {
 			d.act.Unlock()
