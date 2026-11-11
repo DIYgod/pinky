@@ -201,6 +201,9 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 	case locked:
 		mg.Text(c, locales.NeedsHandoffLocked(a.unlockElsewhere(n.DeviceID, locales.NeedsThenClickDone()))).
 			FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		if a.canRetryUnlock(n.DeviceID) {
+			a.retryButton(c, n.DeviceID).Margin(8, 0, 0, 0).FillWidth()
+		}
 		if d := a.device(n.DeviceID); d != nil && a.pinMissing(*d) {
 			mg.Column(c).Margin(8, 0, 0, 0).Gap(8).Children(func() { a.pinForm(c, *d, "card") })
 		}

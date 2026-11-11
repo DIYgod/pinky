@@ -726,8 +726,8 @@ func TestLockCardOffersPIN(t *testing.T) {
 
 // TestRefusedPINIsNotRetried keeps Unlock from trying a PIN the phone
 // refused again, which could lock the person out, until the phone is
-// unlocked on it or the PIN changes; a PIN that was never entered may be
-// tried again.
+// unlocked on it or the PIN changes, unless the person clicks Try again;
+// a PIN that was never entered may be tried again.
 func TestRefusedPINIsNotRetried(t *testing.T) {
 	ta := newTestApp(t, fakeapi.OnePhone)
 	ta.waitFor(t, "the phones and the keychain probe", func() bool { return ta.pin.ready && len(ta.devices) > 0 })
@@ -744,9 +744,18 @@ func TestRefusedPINIsNotRetried(t *testing.T) {
 	if label, _ := unlockWords(); hasText(tt, label) {
 		t.Errorf("Unlock offered again after the phone refused the PIN: %q", tt.Texts())
 	}
-	if !hasText(tt, "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone. If its PIN changed, update it in Settings › Phones.") {
+	if !hasText(tt, "The saved PIN didn't unlock it, so Pinky won't try it again by itself. Unlock it on the phone. If you're sure the PIN is right, click Try again; if it changed, update it in Settings › Phones.") {
 		t.Errorf("the card does not say why: %q", tt.Texts())
 	}
+	if !hasText(tt, "Try again") {
+		t.Fatalf("no Try again on the card: %q", tt.Texts())
+	}
+	if err := tt.Click("Try the saved PIN on " + d.Info.Name + " again"); err != nil {
+		t.Fatal(err)
+	}
+	ta.waitFor(t, "Try again to unlock the phone", func() bool {
+		return !ta.pin.unlocking[d.Info.ID] && !ta.pin.wrong[d.Info.ID]
+	})
 	if msg := unlockError(fmt.Errorf("unlock: the passcode pad did not appear: %w", driver.ErrPINNotEntered), "iPhone"); !strings.Contains(msg, "entered nothing") {
 		t.Errorf("a PIN that was never entered: %q", msg)
 	}
