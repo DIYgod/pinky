@@ -227,46 +227,43 @@ func (a *app) rulesSection(c *mg.Context) {
 	}
 	c.After(5 * time.Second)
 	broken := a.fileBroken(rulesYAML)
-	mg.Column(c).Gap(8).Label(locales.SettingsRules()).Children(func() {
-		mg.Row(c).Gap(12).AlignItems(mg.End).Children(func() {
-			mg.Column(c).Grow(1).Children(func() {
-				mg.Text(c, locales.SettingsRules()).FontSize(15).FontWeight(650)
-				mg.Text(c, locales.SettingsRulesIntro()).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
-			})
-			add := button(c, locales.SettingsRulesAdd(), btnOpt{}).Disabled(!st.loaded || st.editing || st.saving || broken)
+	mg.Column(c).Gap(10).Label(locales.SettingsRules()).Children(func() {
+		mg.Row(c).Gap(sp3).AlignItems(mg.End).Children(func() {
+			settingsHeading(c, locales.SettingsRules(), locales.SettingsRulesIntro()).Grow(1).MinWidth(0)
+			add := button(c, locales.SettingsRulesAdd(), btnOpt{small: true, icon: icPlus}).Disabled(!st.loaded || st.editing || st.saving || broken)
 			if add.Clicked() {
 				st.open(len(st.view.File), gateway.RuleView{Decision: "ask"})
 			}
 		})
-		mg.Text(c, locales.SettingsRulesYours()).FontSize(13).FontWeight(600).TextColor(p.ink3).Margin(6, 0, 0, 0)
-		mg.Column(c).Children(func() {
+		subHeading(c, locales.SettingsRulesYours(), "")
+		group(c).Children(func() {
 			if st.loaded && len(st.view.File) == 0 && !st.editing {
-				mg.Text(c, locales.SettingsRulesNone()).FontSize(13.5).TextColor(p.ink3).Padding(7, 0)
+				groupRow(c, mg.Row(c).AlignItems(mg.Center), true).Children(func() {
+					mg.Text(c, locales.SettingsRulesNone()).FontSize(fsSmall).TextColor(p.ink3)
+				})
 			}
+			adding := st.editing && st.edit >= len(st.view.File)
 			for i, r := range st.view.File {
 				if st.editing && st.edit == i {
 					a.ruleForm(c, ed)
 					continue
 				}
-				a.ruleRow(c, ed, i, r)
+				a.ruleRow(c, ed, i, r, i == len(st.view.File)-1 && !adding)
 			}
-			if st.editing && st.edit >= len(st.view.File) {
+			if adding {
 				a.ruleForm(c, ed)
 			}
 		})
 		if st.err != "" {
-			mg.Text(c, st.err).FontSize(13.5).TextColor(p.red)
+			mg.Text(c, st.err).FontSize(fsSmall).TextColor(p.red)
 		}
-		mg.Column(c).Margin(10, 0, 0, 0).Children(func() {
-			mg.Text(c, locales.SettingsRulesBuiltIn()).FontSize(13).FontWeight(600).TextColor(p.ink3)
-			mg.Text(c, locales.SettingsRulesBuiltInDesc()).FontSize(13).TextColor(p.ink3).Margin(2, 0, 0, 0)
-		})
-		mg.Column(c).Children(func() {
-			for _, r := range st.view.BuiltIn {
-				ruleLine(c, "builtin-"+r.Name, ruleName(r.Name), ruleSummary(r), r.Decision, nil)
+		subHeading(c, locales.SettingsRulesBuiltIn(), locales.SettingsRulesBuiltInDesc())
+		group(c).Children(func() {
+			for i, r := range st.view.BuiltIn {
+				ruleLine(c, "builtin-"+r.Name, ruleName(r.Name), ruleSummary(r), r.Decision, i == len(st.view.BuiltIn)-1 && !st.loaded, nil)
 			}
 			if st.loaded {
-				ruleLine(c, "builtin-credentials", locales.SettingsRulesCredentials(), locales.SettingsRulesCredentialsDesc(), "deny", nil)
+				ruleLine(c, "builtin-credentials", locales.SettingsRulesCredentials(), locales.SettingsRulesCredentialsDesc(), "deny", true, nil)
 			}
 		})
 	})
@@ -288,23 +285,25 @@ func (a *app) rulesSection(c *mg.Context) {
 
 // ruleLine is a rule's row: its name, what it matches, what it does, and
 // controls at the end.
-func ruleLine(c *mg.Context, key, name, summary, decision string, controls func()) {
+func ruleLine(c *mg.Context, key, name, summary, decision string, last bool, controls func()) {
 	p := pal(c)
-	mg.Row(c.Key(key)).Gap(12).Padding(8, 0).AlignItems(mg.Center).BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
+	groupRow(c, mg.Row(c.Key(key)).Gap(sp3).AlignItems(mg.Center), last).Children(func() {
 		mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-			mg.Text(c, name).FontWeight(600)
+			mg.Text(c, name).FontWeight(fwMedium)
 			if summary != "" && summary != name {
-				mg.Text(c, summary).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, summary).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 			}
 		})
-		col := p.green
+		// What the rule does, as a chip in its color: allow, ask, block.
+		col, tint := p.green, p.green.Alpha(0.12)
 		switch decision {
 		case "deny":
-			col = p.red
+			col, tint = p.red, p.redTint
 		case "ask":
-			col = p.amber
+			col, tint = p.amber, p.amberTint
 		}
-		mg.Text(c, nameOf(decisions, decision)).FontSize(13).FontWeight(600).TextColor(col).Shrink(0)
+		mg.Text(c, nameOf(decisions, decision)).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(col).
+			Padding(2, sp2).Radius(rSmall).Background(tint).Shrink(0)
 		if controls != nil {
 			controls()
 		}
@@ -328,10 +327,10 @@ func iconButton(c *mg.Context, ic *mg.SVG, label, tip string, disabled bool) mg.
 	return b
 }
 
-func (a *app) ruleRow(c *mg.Context, ed rulesEditor, i int, r gateway.RuleView) {
+func (a *app) ruleRow(c *mg.Context, ed rulesEditor, i int, r gateway.RuleView, last bool) {
 	st := &a.rules
 	busy := st.editing || st.saving || a.fileBroken(rulesYAML)
-	ruleLine(c, "rule-"+r.Name, r.Name, ruleSummary(r), r.Decision, func() {
+	ruleLine(c, "rule-"+r.Name, r.Name, ruleSummary(r), r.Decision, last, func() {
 		mg.Row(c).Gap(2).AlignItems(mg.Center).Shrink(0).Children(func() {
 			change := button(c, locales.SettingsChange(), btnOpt{small: true}).Label(locales.SettingsRulesChangeLabel(r.Name)).Disabled(busy)
 			if change.Clicked() {
@@ -367,10 +366,10 @@ func (a *app) ruleForm(c *mg.Context, ed rulesEditor) {
 	p := pal(c)
 	st := &a.rules
 	f := &st.form
-	mg.Column(c.Key("rule-form")).Gap(10).Padding(14).Margin(6, 0).Radius(10).Border(1, p.line).Background(p.panel).Children(func() {
+	mg.Column(c.Key("rule-form")).Gap(sp3).Padding(sp4).Margin(sp2, sp3).Radius(rCard-2).Border(1, p.line2).Background(p.panel).Children(func() {
 		field := func(label string, body func()) {
-			mg.Column(c).Gap(4).Children(func() {
-				mg.Text(c, label).FontSize(13).FontWeight(600)
+			mg.Column(c).Gap(sp1).Children(func() {
+				mg.Text(c, label).FontSize(fsSmall).FontWeight(fwSemibold)
 				body()
 			})
 		}

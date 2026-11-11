@@ -116,40 +116,42 @@ func (a *app) alwaysAllowed(c *mg.Context) {
 		st.load(a, k)
 	}
 	c.After(5 * time.Second)
-	mg.Column(c).Gap(8).Label(locales.SettingsSafetyAlways()).Children(func() {
-		mg.Column(c).Children(func() {
-			mg.Text(c, locales.SettingsSafetyAlways()).FontSize(15).FontWeight(650)
-			mg.Text(c, locales.SettingsSafetyAlwaysIntro()).FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
-		})
+	mg.Column(c).Gap(10).Label(locales.SettingsSafetyAlways()).Children(func() {
+		settingsHeading(c, locales.SettingsSafetyAlways(), locales.SettingsSafetyAlwaysIntro())
 		if a.settings.Preset == presetEvery && len(st.list) > 0 {
-			mg.Text(c, locales.SettingsSafetyAlwaysEvery()).FontSize(13.5).TextColor(p.amber)
+			mg.Text(c, locales.SettingsSafetyAlwaysEvery()).FontSize(fsSmall).LineHeight(1.4).TextColor(p.amber)
 		}
-		mg.Column(c).Children(func() {
-			if st.loaded && len(st.list) == 0 {
-				mg.Text(c, locales.SettingsSafetyAlwaysNone()).FontSize(13.5).TextColor(p.ink3).Padding(7, 0)
+		if !st.loaded {
+			return
+		}
+		group(c).Children(func() {
+			if len(st.list) == 0 {
+				groupRow(c, mg.Row(c).AlignItems(mg.Center), true).Children(func() {
+					mg.Text(c, locales.SettingsSafetyAlwaysNone()).FontSize(fsSmall).TextColor(p.ink3)
+				})
 			}
-			for _, x := range st.list {
+			for i, x := range st.list {
 				x := x
 				name, sub, remove := alwaysRow(x)
-				mg.Row(c.Key("always-"+x.Rule+"\x00"+x.AppID+"\x00"+x.AppName+"\x00"+x.Agent+"\x00"+x.DeviceID+"\x00"+x.Signer)).Gap(12).Padding(7, 0).AlignItems(mg.Center).
-					BorderWidth(0, 0, 1, 0).BorderColor(p.line).Children(func() {
+				row := mg.Row(c.Key("always-" + x.Rule + "\x00" + x.AppID + "\x00" + x.AppName + "\x00" + x.Agent + "\x00" + x.DeviceID + "\x00" + x.Signer)).Gap(sp3).AlignItems(mg.Center)
+				groupRow(c, row, i == len(st.list)-1).Padding(sp2, sp3, sp2, sp4).Children(func() {
 					if x.DeviceID != "" && x.Rule == rulePhoneSettings {
-						mg.Row(c).Size(28, 28).Radius(8).Center().Background(p.bg3).Children(func() {
+						mg.Row(c).Size(28, 28).Radius(7).Center().Background(p.bg3).Children(func() {
 							mg.Icon(c, icSettings).FontSize(15).TextColor(p.ink2)
 						})
 					} else {
-						appIcon(c, name, 28, 8, 13, "")
+						appIcon(c, name, 28, 7, 13, "")
 					}
 					mg.Column(c).Grow(1).MinWidth(0).Children(func() {
-						mg.Text(c, name).SingleLine()
+						mg.Text(c, name).FontWeight(fwMedium).SingleLine()
 						if sub != "" {
-							mg.Text(c, sub).FontSize(12.5).TextColor(p.ink3).SingleLine()
+							mg.Text(c, sub).FontSize(fsCaption).TextColor(p.ink3).SingleLine()
 						}
 					})
-					mg.Text(c, ruleName(x.Rule)).FontSize(13.5).TextColor(p.ink2)
+					mg.Text(c, ruleName(x.Rule)).FontSize(fsSmall).TextColor(p.ink2)
 					// While rules.yaml cannot be used, the gateway would refuse.
 					off := a.fileBroken(rulesYAML)
-					rm := mg.ButtonBase(c).Size(26, 26).Radius(6).Center().Disabled(off).
+					rm := mg.ButtonBase(c).Size(26, 26).Radius(rSmall).Center().Disabled(off).
 						Label(remove).Tooltip(locales.SettingsSafetyAlwaysRemove())
 					if off {
 						rm.Opacity(0.35)

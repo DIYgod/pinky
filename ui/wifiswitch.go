@@ -183,11 +183,11 @@ func (a *app) phoneWiFiRow(c *mg.Context, d gateway.DeviceView) {
 			}
 		}
 	}
-	mg.Column(c).Gap(4).Padding(6, 0, 0, 0).Children(func() {
-		mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+	groupRow(c, mg.Column(c).Gap(sp1).Justify(mg.Center), false).Children(func() {
+		mg.Row(c).Gap(sp4).AlignItems(mg.Center).Children(func() {
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-				mg.Text(c, locales.WiFiTitle()).FontSize(13.5).FontWeight(600)
-				mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.WiFiTitle()).FontWeight(fwMedium)
+				mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 			})
 			if s.busy[id] {
 				spinner(c)

@@ -126,13 +126,9 @@ func (a *app) remoteAgents(c *mg.Context) {
 	if st.RemoteAddr == "" {
 		st.RemoteAddr = DefaultRemoteAddr
 	}
-	mg.Column(c).Gap(8).Label(locales.RemoteTitle()).Children(func() {
-		mg.Column(c).Children(func() {
-			mg.Text(c, locales.RemoteTitle()).FontSize(15).FontWeight(650)
-			mg.Text(c, locales.RemoteIntro()).
-				FontSize(13.5).TextColor(p.ink2).Margin(2, 0, 0, 0)
-		})
-		mg.Column(c).Children(func() {
+	mg.Column(c).Gap(10).Label(locales.RemoteTitle()).Children(func() {
+		settingsHeading(c, locales.RemoteTitle(), locales.RemoteIntro())
+		group(c).Children(func() {
 			a.toggleRow(c, "remote", locales.RemoteToggle(), "", !st.RemoteAgents, &st.RemoteAgents)
 			if !st.RemoteAgents {
 				return
@@ -166,14 +162,14 @@ func (a *app) remoteAgents(c *mg.Context) {
 				})
 			})
 			if r.err != "" {
-				mg.Text(c, r.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus).Margin(0, 0, 6, 0)
+				mg.Text(c, r.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus).Margin(0, sp4, sp2, sp4)
 			}
 			if others {
-				mg.Row(c).Gap(8).AlignItems(mg.Start).Padding(10, 12).Radius(10).Background(p.amberTint).Border(1, p.amberLine).Margin(0, 0, 6, 0).
+				mg.Row(c).Gap(sp2).AlignItems(mg.Start).Padding(10, sp3).Radius(rControl).Background(p.amberTint).Border(1, p.amberLine).Margin(0, sp4, sp2, sp4).
 					Children(func() {
 						mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber)
 						mg.Text(c, locales.RemoteOthersWarning()).
-							FontSize(13).Grow(1).MinWidth(0)
+							FontSize(fsSmall).LineHeight(1.4).Grow(1).MinWidth(0)
 					})
 			}
 			url := RemoteURL(st.RemoteAddr)
@@ -213,18 +209,11 @@ func (a *app) remoteAgents(c *mg.Context) {
 			if tok != "" && !r.showToken {
 				shownCmd = strings.Replace(cmd, tok, "…", 1)
 			}
-			mg.Column(c).Gap(6).Padding(10, 0).Children(func() {
-				mg.Row(c).Gap(12).AlignItems(mg.Center).Children(func() {
-					mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-						mg.Text(c, "Claude Code").FontWeight(600)
-						mg.Text(c, locales.RemoteRunHint()).FontSize(13.5).TextColor(p.ink2)
-					})
-					if button(c, "", btnOpt{small: true, icon: icCopy, label: locales.RemoteCopyCommand()}).Clicked() {
-						a.copy(c, cmd, locales.RemoteCopiedCommand())
-					}
-				})
-				mg.Text(c, shownCmd).Font("monospace").FontSize(12).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).
-					Selectable().Label(locales.RemoteCommandLabel())
+			serve := tn.Name != "" && tn.URL == "" && serveCommand(st.RemoteAddr) != ""
+			commandRow(c, "Claude Code", locales.RemoteRunHint(), shownCmd, locales.RemoteCommandLabel(), !serve, func() {
+				if button(c, "", btnOpt{small: true, icon: icCopy, label: locales.RemoteCopyCommand()}).Clicked() {
+					a.copy(c, cmd, locales.RemoteCopiedCommand())
+				}
 			})
 			a.remoteTailnetServe(c, tn, st.RemoteAddr)
 		})
@@ -260,7 +249,7 @@ func (a *app) remoteTailnetServe(c *mg.Context, tn RemoteTailnet, addr string) {
 	}
 	if cmd := serveCommand(addr); cmd != "" {
 		a.commandBlock(c, locales.RemoteTailnetTitle(), locales.RemoteTailnetHint("https://"+tn.Name+RemotePath), cmd,
-			locales.RemoteTailnetCommandLabel(), locales.RemoteCopyCommand())
+			locales.RemoteTailnetCommandLabel(), locales.RemoteCopyCommand(), true)
 	}
 }
 

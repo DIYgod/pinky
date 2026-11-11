@@ -830,27 +830,29 @@ func (a *app) settingsUpdates(c *mg.Context) {
 	u := a.opt.Updates
 	if u == nil {
 		if a.opt.Version != "" {
-			mg.Text(c, "Pinky "+a.opt.Version).FontSize(12.5).TextColor(p.ink3)
+			mg.Text(c, "Pinky "+a.opt.Version).FontSize(fsCaption).TextColor(p.ink3)
 		}
 		return
 	}
 	s := &a.upd
-	mg.Column(c).Label(locales.UpdateSettingsTitle()).Children(func() {
-		mg.Text(c, locales.UpdateSettingsTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
-		a.toggleRow(c, "auto-update", locales.UpdateSettingsAuto(),
-			locales.UpdateSettingsAutoDesc(), false, &a.settings.AutoUpdate)
-		settingRow(c, "Pinky "+nonEmpty(a.opt.Version, update.DevVersion), a.updateLine(), false, func() {
-			b := button(c, locales.UpdateCheckNow(), btnOpt{})
-			if s.checking {
-				b.Disabled(true)
-			} else if b.Clicked() {
-				a.checkUpdate(true)
-			}
-		})
-		settingRow(c, locales.UpdateWhatsNew(), locales.UpdateSettingsNewsDesc(), true, func() {
-			if button(c, locales.UpdateShow(), btnOpt{}).Label(locales.UpdateShowLabel()).Clicked() {
-				s.newsOpen, s.newsAll = true, true
-			}
+	mg.Column(c).Gap(10).Label(locales.UpdateSettingsTitle()).Children(func() {
+		settingsHeading(c, locales.UpdateSettingsTitle(), "")
+		group(c).Children(func() {
+			a.toggleRow(c, "auto-update", locales.UpdateSettingsAuto(),
+				locales.UpdateSettingsAutoDesc(), false, &a.settings.AutoUpdate)
+			settingRow(c, "Pinky "+nonEmpty(a.opt.Version, update.DevVersion), a.updateLine(), false, func() {
+				b := button(c, locales.UpdateCheckNow(), btnOpt{})
+				if s.checking {
+					b.Disabled(true)
+				} else if b.Clicked() {
+					a.checkUpdate(true)
+				}
+			})
+			settingRow(c, locales.UpdateWhatsNew(), locales.UpdateSettingsNewsDesc(), true, func() {
+				if button(c, locales.UpdateShow(), btnOpt{}).Label(locales.UpdateShowLabel()).Clicked() {
+					s.newsOpen, s.newsAll = true, true
+				}
+			})
 		})
 	})
 }

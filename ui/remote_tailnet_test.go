@@ -31,7 +31,7 @@ func remoteTailnetApp(t *testing.T) (*testApp, *mg.Tester, func(RemoteTailnet)) 
 	ta.settings.RemoteAgents = true
 	ta.sync()
 	ta.page, ta.set.sec = pageSettings, secAgents
-	tt := mg.NewTester(ta.view, 1280, 820)
+	tt := mg.NewTester(ta.view, 1280, 1000)
 	set := func(v RemoteTailnet) {
 		mu.Lock()
 		tn = v

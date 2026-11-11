@@ -415,13 +415,13 @@ func (a *app) awayRow(c *mg.Context, d gateway.DeviceView) {
 			}
 		}
 	}
-	mg.Column(c).Gap(4).Padding(6, 0, 0, 0).Children(func() {
-		mg.Row(c).Gap(16).AlignItems(mg.Center).Children(func() {
+	groupRow(c, mg.Column(c).Gap(sp1).Justify(mg.Center), false).Children(func() {
+		mg.Row(c).Gap(sp4).AlignItems(mg.Center).Children(func() {
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-				mg.Text(c, locales.AwayTitle()).FontSize(13.5).FontWeight(600)
-				mg.Text(c, desc).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.AwayTitle()).FontWeight(fwMedium)
+				mg.Text(c, desc).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
 				if note != "" {
-					mg.Text(c, note).FontSize(12.5).TextColor(p.ink3)
+					mg.Text(c, note).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink3)
 				}
 			})
 			if s.awayBusy[id] {
@@ -524,13 +524,16 @@ func (a *app) setAwayAwake(on bool) {
 	a.awayAwake(on)
 }
 
-// awayKeepAwakeRow is Settings › Phones' Keep this computer awake for
-// phones away, shown once Tailscale is on this computer.
-func (a *app) awayKeepAwakeRow(c *mg.Context) {
+// awayKeepAwakeShown reports whether Settings › Phones shows Keep this
+// computer awake for phones away: once Tailscale is on this computer.
+func (a *app) awayKeepAwakeShown(c *mg.Context) bool {
 	st, have := a.tailnetStatus(c)
-	if !have || st.State == driver.TailnetNotInstalled {
-		return
-	}
+	return have && st.State != driver.TailnetNotInstalled
+}
+
+// awayKeepAwakeRow is Settings › Phones' Keep this computer awake for
+// phones away, the last row of its group.
+func (a *app) awayKeepAwakeRow(c *mg.Context) {
 	if a.toggleRow(c, "away-awake", locales.AwayKeepAwake(), locales.AwayKeepAwakeDesc(), true, &a.settings.KeepAwakeAway) {
 		a.setAwayAwake(a.settings.KeepAwakeAway && a.anyAway())
 	}

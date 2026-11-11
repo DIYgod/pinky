@@ -85,9 +85,9 @@ func (a *app) privacyTelemetry(c *mg.Context) {
 	}
 	p := pal(c)
 	st := &a.settings
-	mg.Column(c).Gap(8).Label(locales.TelPrivacyGroup()).Children(func() {
-		mg.Text(c, locales.TelPrivacyTitle()).FontSize(15).FontWeight(650).Margin(0, 0, 4, 0)
-		mg.Column(c).Children(func() {
+	mg.Column(c).Gap(10).Label(locales.TelPrivacyGroup()).Children(func() {
+		settingsHeading(c, locales.TelPrivacyTitle(), "")
+		group(c).Children(func() {
 			title := locales.TelShareUsage()
 			if telemetry.DoNotTrack() {
 				settingRow(c, title, locales.TelDoNotTrack(), false, nil)
@@ -103,7 +103,7 @@ func (a *app) privacyTelemetry(c *mg.Context) {
 			})
 		})
 		if !tel.CanSend() {
-			mg.Text(c, locales.TelSendsNothing()).FontSize(12.5).TextColor(p.ink3)
+			mg.Text(c, locales.TelSendsNothing()).FontSize(fsCaption).TextColor(p.ink3)
 		}
 	})
 }
