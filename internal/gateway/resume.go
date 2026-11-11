@@ -37,6 +37,11 @@ import (
 // up before the client closes the old one. Two sessions of one agent that
 // run side by side, as two windows of an app do, never take each other's
 // phones otherwise.
+//
+// Either way, a phone_connect for another task never continues a lease:
+// one client may run several conversations, so the newer session may be
+// another conversation's, and the task it would end may be running
+// (shared.go).
 
 // stopHold is how long a Stop keeps a resuming agent's newer sessions off
 // the phone.
@@ -53,17 +58,22 @@ type resumeStop struct {
 
 // continues reports whether s may continue the work of o on lease l: a
 // newer session of the same agent, both resuming; or, for agents on this
-// computer, o closed, or task the title of l's task (phone_connect's; ""
-// for other calls). The caller holds g.mu.
+// computer, o closed, or task names l's task. task is phone_connect's, or
+// "" for other calls, which name none; a phone_connect for another task
+// never continues l, as it may come from another conversation sharing the
+// client's session (shared.go). The caller holds g.mu.
 func (s *Session) continues(o *Session, l *lease, task string) bool {
 	if o == s || o.agent.Name != s.agent.Name || o.seq >= s.seq {
+		return false
+	}
+	if task != "" && l.task.title != task {
 		return false
 	}
 	switch {
 	case s.agent.Resume && o.agent.Resume:
 		return true
 	case s.agent.Reconnect && o.agent.Reconnect:
-		return o.closed || (task != "" && l.task.title == task)
+		return o.closed || task != ""
 	}
 	return false
 }
@@ -89,14 +99,20 @@ func (g *Gateway) adoptLocked(s *Session, d *device, task string) *lease {
 	leaseID := l.id
 	g.approvals.Rebind(func(i approval.Info) bool { return i.Binding.Lease == leaseID }, s.id)
 	g.log.Info("a newer session continues the lease", "device", d.id, "agent", s.agent.Name, "task", l.task.title)
+	// The conversations that shared the older session share this one.
+	if old.shared {
+		g.markSharedLocked(s)
+	}
+	g.noteSharedLocked(s)
 	return l
 }
 
-// adoptableLocked returns the phones whose leases s may continue.
-func (g *Gateway) adoptableLocked(s *Session) []*device {
+// adoptableLocked returns the phones whose leases s may continue, for
+// task as adoptLocked takes it.
+func (g *Gateway) adoptableLocked(s *Session, task string) []*device {
 	var out []*device
 	for _, d := range g.devices {
-		if l := d.lease; l != nil && !l.ended && l.inflight == 0 && s.continues(l.session, l, "") && !g.barredLocked(s, d) {
+		if l := d.lease; l != nil && !l.ended && l.inflight == 0 && s.continues(l.session, l, task) && !g.barredLocked(s, d) {
 			out = append(out, d)
 		}
 	}

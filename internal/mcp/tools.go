@@ -13,7 +13,7 @@ import (
 )
 
 type actionArgs struct {
-	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Intent     string `json:"intent,omitempty" jsonschema:"One sentence on why you do this, shown to the person on the approval panel and in history."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the same call with the same arguments and this id to keep waiting for the person's answer."`
 	SettleMS   *int   `json:"settle_ms,omitempty" jsonschema:"The most milliseconds (0 to 3000, default 3000) to wait for the screen to stop changing before it is read. Lower it only where results keep saying settle: timeout (games, video, live maps), never to pay, send or confirm. Below about 500 the result always says settle: timeout, and a read cut short may not show what the action did yet: observe before repeating it. The next action still waits out the rest of the 3 s before it reads the screen."`
@@ -55,7 +55,7 @@ func waypoints(in []waypoint) []gateway.Waypoint {
 }
 
 type connectIn struct {
-	Device string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Optional when one phone is connected."`
+	Device string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Optional when one phone is connected, or this session already runs this task on a phone."`
 	Task   string   `json:"task" jsonschema:"One line naming the task, shown to the person, e.g. Reorder last week's lunch."`
 	Apps   []string `json:"apps,omitempty" jsonschema:"Optional: the only apps this task needs, by name or id, as a list of strings: [\"Settings\", \"com.apple.mobilecal\"]. Pinky then refuses to launch other apps and asks the person before typing into them."`
 	// ReadOnly lets an agent ask for less than the person gave it.
@@ -74,7 +74,7 @@ type releaseIn struct {
 }
 
 type observeIn struct {
-	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	WaitMS     int    `json:"wait_ms,omitempty" jsonschema:"Wait up to this many milliseconds (at most 30000) for the screen to change, for example while something loads."`
 	Screenshot bool   `json:"screenshot,omitempty" jsonschema:"Also return a screenshot. Use it only when the element list is not enough. Some clients show you a smaller copy of tool images: to keep the full-resolution picture, use save."`
 	Save       string `json:"save,omitempty" jsonschema:"Save a full-resolution screenshot under this name in the phone's folder on Pinky's computer, for a bug report or a pull request: onboarding-1.png (.png unless you name .jpg; a file of that name is replaced). Returns its path, or over HTTP a one-time download link. The image comes back to you only with screenshot: true."`
@@ -140,7 +140,7 @@ type launchIn struct {
 }
 
 type appsIn struct {
-	Device string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Query  string `json:"query,omitempty" jsonschema:"Only apps whose name or id contains this text."`
 }
 
@@ -172,13 +172,13 @@ type batchStep struct {
 }
 
 type batchIn struct {
-	Device string      `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device string      `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Intent string      `json:"intent,omitempty" jsonschema:"Why, for steps without their own intent."`
 	Steps  []batchStep `json:"steps" jsonschema:"The steps, in order, each an object naming its action in tool and that action's arguments beside it: [{\"tool\":\"tap\",\"ref\":12},{\"tool\":\"type\",\"text\":\"coffee\",\"submit\":true},{\"tool\":\"swipe\",\"direction\":\"up\"}]. The batch stops at the first step that does not settle."`
 }
 
 type waitForIn struct {
-	Device    string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device    string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Text      string   `json:"text,omitempty" jsonschema:"Text to wait for, matched without case in element labels and new toasts or notifications. In languages that put spaces between words it matches whole words only, so Stop does not match Stopwatch. Required unless any is given."`
 	Any       []string `json:"any,omitempty" jsonschema:"Several texts to wait for at once, instead of text or beside it, matched like text, for when one of several things may come next, such as Order placed or Payment failed: the wait ends at the first that shows, and the result names it; with gone, once none of them shows. Up to 10 texts in all, text included."`
 	Gone      bool     `json:"gone,omitempty" jsonschema:"Wait for the text to disappear instead; with any, until none of the texts shows."`
@@ -202,7 +202,7 @@ func (a *area) screen() *screen.Rect {
 }
 
 type filesIn struct {
-	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Action     string   `json:"action,omitempty" jsonschema:"list (default): the files on the phone and on the computer; pull: copy from the phone to the computer; push: copy from the computer to the phone, which asks the person first; upload: send Pinky a file for the computer's folder, when you cannot write there yourself (from another computer), then push it or install it with phone_app."`
 	Paths      []string `json:"paths,omitempty" jsonschema:"Files or folders, relative to the Pinky folder. Default: everything (for push, the files that are new or changed). For upload: the one file's name, such as photo.jpg or Pictures/photo.jpg."`
 	Content    *string  `json:"content,omitempty" jsonschema:"For upload: the file's bytes in base64, up to 10 MB. Over HTTP, leave it out to get a one-time link to send the file to with curl instead, up to 200 MB, which keeps it out of your context: better for anything but small files."`
@@ -212,7 +212,7 @@ type filesIn struct {
 }
 
 type appIn struct {
-	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string   `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Action     string   `json:"action" jsonschema:"install: install an app, or update it keeping its data, from files in the phone's folder on the computer; uninstall: remove an app and its data; stop: force-quit an app."`
 	Paths      []string `json:"paths,omitempty" jsonschema:"For install: the .apk, the split APKs of one app, the .ipa or the .app folder, relative to the phone's folder on the computer, such as [\"app-debug.apk\"]."`
 	App        string   `json:"app,omitempty" jsonschema:"For uninstall and stop: the app's name, package name or bundle id, as phone_apps lists it."`
@@ -221,7 +221,7 @@ type appIn struct {
 }
 
 type logsIn struct {
-	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	App        string `json:"app" jsonschema:"The app whose logs to read: its name, package name or bundle id, as phone_apps lists it."`
 	Kind       string `json:"kind,omitempty" jsonschema:"logs (default): the app's log lines; crashes: its crash reports, with Android's not-responding (ANR) reports and the iPhone's watchdog ends (an app that stopped answering)."`
 	Since      string `json:"since,omitempty" jsonschema:"Where to start: an RFC 3339 time, a time of day such as 14:05, or a duration back such as 10m, 2h or 1d. Default: when the task started."`
@@ -233,7 +233,7 @@ type logsIn struct {
 }
 
 type deviceIn struct {
-	Device     string    `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string    `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Rotation   string    `json:"rotation,omitempty" jsonschema:"Turn the screen: portrait, landscape (turned to the left, the top on the left), upside_down, reverse_landscape, or auto (Android: turn with how the phone is held)."`
 	Appearance string    `json:"appearance,omitempty" jsonschema:"light or dark."`
 	Location   *location `json:"location,omitempty" jsonschema:"Make the phone report this place, until reset or the end of the task."`
@@ -248,14 +248,14 @@ type location struct {
 }
 
 type requestApprovalIn struct {
-	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Summary    string `json:"summary" jsonschema:"The question, as the person will read it, e.g. Order the chicken rice bowl again for $12.80?"`
 	Details    string `json:"details,omitempty" jsonschema:"More context for the person."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the call with this id to keep waiting."`
 }
 
 type handoffIn struct {
-	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone."`
+	Device     string `json:"device,omitempty" jsonschema:"The phone, by device id or name. Required when this session holds more than one phone, or once Pinky says several tasks share it."`
 	Reason     string `json:"reason" jsonschema:"What you need the person to do, e.g. Please sign in to Dinely, or Unlock the phone."`
 	ApprovalID string `json:"approval_id,omitempty" jsonschema:"From an approval_pending result: repeat the call with this id to keep waiting."`
 }
@@ -380,7 +380,7 @@ func (s *Server) addTools(srv *sdk.Server, remote bool) {
 	sdk.AddTool(srv, &sdk.Tool{Name: "phone_connect", Title: "Connect to a phone",
 		Description: "Start a task on a phone: leases the phone to this session and returns its first screen. " +
 			"The task name shows in Pinky, so the person knows what you are doing. The first connection of a new agent waits for the person's approval (approval_pending; repeat with approval_id). " +
-			"Another session's phone returns lease_held. A phone that waits for the person to do a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode) " +
+			"Another session's phone returns lease_held, and so does a phone that runs another task of yours: end that task with phone_release first. A phone that waits for the person to do a step before Pinky can use it (trust this computer, allow USB debugging, Developer Mode) " +
 			"returns device_needs_setup with the step: ask the person with phone_handoff. A phone the person paused in Pinky returns device_paused: " +
 			"ask them to resume it, or use another phone. Call phone_release when done.",
 		InputSchema: schema[connectIn](func(p map[string]*jsonschema.Schema) { enum(p["connection"], "auto", "helper", "coredevice") }),
