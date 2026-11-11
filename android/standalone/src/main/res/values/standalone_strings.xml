@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prototype only, English only: not shipped and not in Pinky's catalogs. -->
+<resources>
+    <string name="standalone_app_name">Pinky Standalone</string>
+    <string name="standalone_service_label">Pinky Standalone</string>
+    <string name="standalone_service_description">Prototype: lets Pinky on this phone read the screen and tap, swipe and type in other apps for a task you give it, while you watch, approve and can stop it. Nothing leaves the phone except what the task sends to the AI model you choose.</string>
+</resources>
