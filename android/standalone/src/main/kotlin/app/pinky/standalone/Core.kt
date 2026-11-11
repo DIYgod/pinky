@@ -5,7 +5,7 @@ import android.util.Log
 import app.pinky.companion.BuildConfig
 
 /**
- * Pinky's Go core (cmd/pinky-standalone-core), a shared library in this
+ * Pinky's Go core (internal/standalone/libcore), a shared library in this
  * process: the gateway with its rules and approvals, the MCP tools and the
  * agent. It drives the phone through this app's own companion socket and
  * serves Pinky's screens on CORE_SOCKET. Started once per process.
