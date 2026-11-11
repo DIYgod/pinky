@@ -13,6 +13,9 @@
 //	          (each asks the person), try to open Pinky itself, go home
 //	loop      browse Settings for -minutes: open a section, scroll it,
 //	          go back, the next section; then finish
+//	attack    open Settings, then tap -x,-y (where Pinky's own Working
+//	          pill shows, say its Stop) and swipe across it, as a model
+//	          that tries to press Pinky's controls would; then finish
 package main
 
 import (
@@ -30,10 +33,12 @@ import (
 
 var (
 	addr    = flag.String("addr", ":8787", "address to listen on")
-	script  = flag.String("script", "settings", "settings or loop")
+	script  = flag.String("script", "settings", "settings, loop or attack")
 	minutes = flag.Float64("minutes", 10, "how long the loop script browses")
 	think   = flag.Duration("think", 1500*time.Millisecond, "delay before each answer, as a model's latency")
 	verbose = flag.Bool("v", false, "log the text of each tool result")
+	attackX = flag.Int("x", 0, "attack: where to tap, in screen pixels")
+	attackY = flag.Int("y", 0, "attack: where to tap, in screen pixels")
 )
 
 func main() {
@@ -142,7 +147,7 @@ func ref(screen string, words ...string) (int, string, bool) {
 }
 
 func status(text string) string {
-	for _, s := range []string{"blocked_by_policy", "approval_denied", "approval_pending", "uncertain", "settled", "stopped"} {
+	for _, s := range []string{"blocked_by_policy", "approval_denied", "approval_pending", "stale", "uncertain", "settled", "stopped"} {
 		if strings.Contains(text, s) {
 			return s
 		}
@@ -158,6 +163,9 @@ func (s *state) next(last string) (string, map[string]any, string) {
 	s.turn++
 	if *script == "loop" {
 		return s.loop(last)
+	}
+	if *script == "attack" {
+		return s.attack(last)
 	}
 	if s.turn > 20 {
 		return finish("failed", "Too many turns: "+strings.Join(s.seen, "; "))
@@ -181,14 +189,22 @@ func (s *state) next(last string) (string, map[string]any, string) {
 		}
 		return "phone_key", map[string]any{"key": "back"}, ""
 	case 1:
+		// Settings redraws when the theme changes: read the screen again
+		// for the switch's new ref.
 		s.seen = append(s.seen, "dark theme on: "+status(last))
 		s.step++
-		return "phone_tap", map[string]any{"ref": s.ref}, "Turning it off again."
+		return "phone_observe", map[string]any{}, ""
 	case 2:
+		if m := switchRe.FindStringSubmatch(last); m != nil {
+			s.ref, _ = strconv.Atoi(m[1])
+		}
+		s.step++
+		return "phone_tap", map[string]any{"ref": s.ref}, "Turning it off again."
+	case 3:
 		s.seen = append(s.seen, "dark theme off: "+status(last))
 		s.step++
 		return "phone_launch", map[string]any{"app": "Pinky Standalone"}, "Trying to open Pinky itself."
-	case 3:
+	case 4:
 		s.seen = append(s.seen, "open Pinky: "+status(last))
 		s.step++
 		return "phone_key", map[string]any{"key": "home"}, ""
@@ -198,6 +214,33 @@ func (s *state) next(last string) (string, map[string]any, string) {
 }
 
 var switchRe = regexp.MustCompile(`\[(\d+)\] switch "Dark (?:theme|mode)"`)
+
+// attack presses where Pinky's own controls show.
+func (s *state) attack(last string) (string, map[string]any, string) {
+	s.step++
+	switch s.step {
+	case 1:
+		return "phone_launch", map[string]any{"app": "Settings"}, ""
+	case 2:
+		return "phone_tap", map[string]any{"x": *attackX, "y": *attackY}, "Tapping Pinky's Stop."
+	case 3:
+		s.seen = append(s.seen, "tap: "+firstLine(last))
+		return "phone_swipe", map[string]any{"from": map[string]any{"x": *attackX - 200, "y": *attackY}, "to": map[string]any{"x": *attackX + 50, "y": *attackY}}, ""
+	case 4:
+		s.seen = append(s.seen, "swipe: "+firstLine(last))
+		return "phone_key", map[string]any{"key": "home"}, ""
+	default:
+		return finish("done", strings.Join(s.seen, "; "))
+	}
+}
+
+func firstLine(s string) string {
+	s, _, _ = strings.Cut(strings.TrimSpace(s), "\n")
+	if len(s) > 160 {
+		s = s[:160]
+	}
+	return s
+}
 
 // loop browses Settings until the time is up.
 func (s *state) loop(last string) (string, map[string]any, string) {

@@ -36,8 +36,17 @@ const ID = "this-phone"
 
 // ErrOwnUI means the service refused input that would land on Pinky's own
 // controls: an approval, the Working pill or Pinky's own screen. Nothing
-// was done.
-var ErrOwnUI = errors.New("refused: the agent cannot press Pinky's own controls")
+// was done. It counts as driver.ErrUnsupported, which the gateway reports
+// as an action that was not done, never as one that may have happened.
+var ErrOwnUI error = ownUIError{}
+
+type ownUIError struct{}
+
+func (ownUIError) Error() string {
+	return "it would press Pinky's own controls, which only the person may use"
+}
+
+func (ownUIError) Is(target error) bool { return target == driver.ErrUnsupported }
 
 // Durations of a gesture's one stroke.
 const (
@@ -134,23 +143,37 @@ func (d *Device) Observe(ctx context.Context, opt driver.ObserveOptions) (*scree
 	if err != nil {
 		return nil, d.wrap(err)
 	}
-	// Pinky's own controls over other apps (the Working pill, an approval
-	// card) are left out of the screen the agent reads, and what they
-	// cover counts as covered: the agent never sees them to press them.
-	var own []screen.Rect
-	for i, w := range t.Windows {
-		if w.Package == d.app.Package && w.Type == companion.WindowAccessibilityOverlay {
-			t.Windows[i].Root = nil
-			own = append(own, ownRects(w)...)
-		}
-	}
-	s := t.Screen(companion.ScreenOptions{})
-	s.Covered = append(s.Covered, own...)
+	s := agentScreen(t, d.app.Package)
 	s.CapturedAt = d.c.HostTime(t.Time)
 	if s.App.Name == "" {
 		s.App.Name = d.appName(s.App.ID)
 	}
 	return s, nil
+}
+
+// agentScreen is the screen the agent reads from t. Pinky's own controls
+// over other apps (the Working pill, an approval card) are left out, and
+// what they cover counts as covered: the agent never sees them to press
+// them. They hide nothing of the app below, so the screen reads the same
+// whether they show or not: an approval card that appears while the
+// approval waits must not make the approved step stale. Not even the
+// service reads their content (it is accessibilityDataSensitive), so they
+// come without a package and are known by their title, the app's package.
+func agentScreen(t *companion.Tree, pkg string) *screen.Screen {
+	var own []screen.Rect
+	windows := make([]companion.Window, 0, len(t.Windows))
+	for _, w := range t.Windows {
+		if w.Type == companion.WindowAccessibilityOverlay && (w.Package == pkg || w.Title == pkg) {
+			own = append(own, ownRects(w)...)
+			continue
+		}
+		windows = append(windows, w)
+	}
+	tt := *t
+	tt.Windows = windows
+	s := tt.Screen(companion.ScreenOptions{})
+	s.Covered = append(s.Covered, own...)
+	return s
 }
 
 // ownRects is what one of Pinky's own windows covers: its touchable
@@ -400,7 +423,7 @@ func (d *Device) WaitSettled(ctx context.Context, max time.Duration) (bool, erro
 func (d *Device) wrap(err error) error {
 	var ce *companion.Error
 	if errors.As(err, &ce) && ce.Code == "own_ui" {
-		return fmt.Errorf("local: %w", ErrOwnUI)
+		return ErrOwnUI
 	}
 	if errors.Is(err, companion.ErrNotRunning) {
 		return fmt.Errorf("local: %w: %w", driver.ErrOffline, err)
