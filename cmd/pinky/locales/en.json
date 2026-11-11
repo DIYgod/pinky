@@ -9760,9 +9760,9 @@
       }
     }
   },
-  "unlockErrWrongPIN": "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again until you unlock the phone yourself or change the PIN in Settings › Phones.",
+  "unlockErrWrongPIN": "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again by itself. If you're sure the PIN is right, click Try again; if it changed, update it in Settings › Phones.",
   "@unlockErrWrongPIN": {
-    "description": "A notice when the phone refused its saved PIN. Pinky stops trying it, as phones lock out, or erase themselves, after repeated wrong PINs. name is the phone's name; Settings › Phones is Pinky's Settings page.",
+    "description": "A notice when the phone refused its saved PIN. Pinky stops trying it by itself, as phones lock out, or erase themselves, after repeated wrong PINs; the person can still try it once more with Try again (unlockTryAgain) on the phone's card. name is the phone's name; Settings › Phones is Pinky's Settings page.",
     "placeholders": {
       "name": {
         "type": "String",
@@ -9842,9 +9842,9 @@
       }
     }
   },
-  "unlockOnPhoneWrongPIN": "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone{end} If its PIN changed, update it in Settings › Phones.",
+  "unlockOnPhoneWrongPIN": "The saved PIN didn't unlock it, so Pinky won't try it again by itself. Unlock it on the phone{end} If you're sure the PIN is right, click Try again; if it changed, update it in Settings › Phones.",
   "@unlockOnPhoneWrongPIN": {
-    "description": "The locked phone's card, after the phone refused its saved PIN: Pinky won't try it again. end as in unlockOnPhone.",
+    "description": "The locked phone's card, after the phone refused its saved PIN: Pinky won't try it again by itself, and the button Try again (unlockTryAgain) below lets the person try it once more. end as in unlockOnPhone.",
     "placeholders": {
       "end": {
         "type": "String",
@@ -9867,6 +9867,20 @@
   "unlockPitchWindows": "Save its PIN and you can unlock it from this computer with Windows Hello when an agent needs it, without picking the phone up.",
   "@unlockPitchWindows": {
     "description": "Windows: the locked phone's card when no PIN is saved for it, above the button Save PIN…. The card is in a narrow side panel."
+  },
+  "unlockTryAgain": "Try again",
+  "@unlockTryAgain": {
+    "description": "A button on a locked phone's card after the phone refused its saved PIN: it enters the saved PIN once more, after Touch ID or Windows Hello. Pinky never tries it again by itself, as phones lock out after repeated wrong PINs."
+  },
+  "unlockTryAgainLabel": "Try the saved PIN on {name} again",
+  "@unlockTryAgainLabel": {
+    "description": "The accessibility label of the button Try again (unlockTryAgain). name is the phone's name.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
   },
   "updateActionLabel": "{action} Pinky {version}",
   "@updateActionLabel": {

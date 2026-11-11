@@ -36,8 +36,9 @@ type pinState struct {
 	unlocking map[string]bool // phones being unlocked
 	later     map[string]bool // phones whose lock card the person put off
 	// wrong holds phones whose saved PIN the phone refused. Pinky does not
-	// try it again until the phone is seen unlocked or the PIN changes:
-	// phones lock out, or erase themselves, after repeated wrong PINs.
+	// try it again by itself until the phone is seen unlocked or the PIN
+	// changes: phones lock out, or erase themselves, after repeated wrong
+	// PINs. The person can still try it once more with Try again.
 	wrong map[string]bool
 }
 
@@ -95,13 +96,23 @@ func (a *app) loadPINs() {
 	}()
 }
 
-// canUnlockHere reports whether the phone can be unlocked from this
-// computer: its driver can, a PIN is saved and the setting is on.
-func (a *app) canUnlockHere(id string) bool {
+// unlockReady reports whether this computer could unlock the phone: its
+// driver can, a PIN is saved and the setting is on.
+func (a *app) unlockReady(id string) bool {
 	d := a.device(id)
 	st := &a.pin
-	return d != nil && d.Features.Unlock && a.settings.UnlockFromComputer && st.ready && st.supported && st.saved[id] && !st.wrong[id]
+	return d != nil && d.Features.Unlock && a.settings.UnlockFromComputer && st.ready && st.supported && st.saved[id]
 }
+
+// canUnlockHere reports whether to offer Unlock: this computer could
+// unlock the phone and the phone has not refused its saved PIN.
+func (a *app) canUnlockHere(id string) bool { return a.unlockReady(id) && !a.pin.wrong[id] }
+
+// canRetryUnlock reports whether to offer Try again: the phone refused its
+// saved PIN, which Pinky enters again only when the person asks. A PIN
+// that was entered right can still be refused, say when the phone asked
+// for a fingerprint first.
+func (a *app) canRetryUnlock(id string) bool { return a.pin.wrong[id] && a.unlockReady(id) }
 
 // unlock enters the phone's saved PIN, after Touch ID, and says in plain
 // words what went wrong.
@@ -118,7 +129,10 @@ func (a *app) unlock(id string) {
 		err := a.api.Unlock(id)
 		a.post(func() {
 			delete(a.pin.unlocking, id)
-			if errors.Is(err, driver.ErrLocked) {
+			switch {
+			case err == nil:
+				delete(a.pin.wrong, id)
+			case errors.Is(err, driver.ErrLocked):
 				a.pin.wrong[id] = true
 			}
 			if msg := unlockError(err, name); msg != "" {
@@ -170,9 +184,28 @@ func (a *app) unlockButton(c *mg.Context, id string) mg.Element {
 	return b
 }
 
+// retryButton is Try again, which enters the saved PIN once more after the
+// phone refused it, after Touch ID like Unlock.
+func (a *app) retryButton(c *mg.Context, id string) mg.Element {
+	name := id
+	if d := a.device(id); d != nil {
+		name = d.Info.Name
+	}
+	label := locales.UnlockTryAgain()
+	busy := a.pin.unlocking[id]
+	if busy {
+		label = locales.UnlockBusy()
+	}
+	b := button(c, label, btnOpt{icon: icTouchID}).Label(locales.UnlockTryAgainLabel(name)).Disabled(busy)
+	if b.Clicked() {
+		a.unlock(id)
+	}
+	return b
+}
+
 // unlockControls are the unlock card's: the Unlock button when the phone
 // can be unlocked from here, the PIN form when only its PIN is missing,
-// else why it cannot.
+// else why it cannot, with Try again when the phone refused its PIN.
 func (a *app) unlockControls(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	if a.canUnlockHere(n.DeviceID) {
@@ -183,6 +216,9 @@ func (a *app) unlockControls(c *mg.Context, n gateway.NeedView) {
 		return
 	}
 	mg.Text(c, a.unlockElsewhere(n.DeviceID, "")).FontSize(fsSmall).TextColor(p.ink2).Margin(10, 0, 0, 0)
+	if a.canRetryUnlock(n.DeviceID) {
+		a.retryButton(c, n.DeviceID).Margin(10, 0, 0, 0).FillWidth()
+	}
 	if d := a.device(n.DeviceID); d != nil && a.pinMissing(*d) {
 		mg.Column(c).Margin(10, 0, 0, 0).Gap(8).Children(func() { a.pinForm(c, *d, "card") })
 	}
@@ -348,6 +384,9 @@ func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
 		})
 		if wrong {
 			mg.Text(c, a.unlockElsewhere(id, "")).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
+			if a.canRetryUnlock(id) {
+				a.retryButton(c, id).Margin(4, 0, 0, 0).FillWidth()
+			}
 			return
 		}
 		if canUnlock {

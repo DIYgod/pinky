@@ -26437,20 +26437,24 @@ func (msgs Messages) UnlockErrUnsupported(name string) string {
 	return Catalog.Format(msgs.locale, "unlockErrUnsupported", map[string]any{"name": name})
 }
 
-// UnlockErrWrongPIN says "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again until you unlock…"
+// UnlockErrWrongPIN says "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again by itself. If yo…"
 // in the language the app shows.
 //
-// A notice when the phone refused its saved PIN. Pinky stops trying it, as
-// phones lock out, or erase themselves, after repeated wrong PINs. name is
-// the phone's name; Settings › Phones is Pinky's Settings page.
+// A notice when the phone refused its saved PIN. Pinky stops trying it by
+// itself, as phones lock out, or erase themselves, after repeated wrong
+// PINs; the person can still try it once more with Try again
+// (unlockTryAgain) on the phone's card. name is the phone's name; Settings
+// › Phones is Pinky's Settings page.
 func UnlockErrWrongPIN(name string) string { return In(i18n.Locale()).UnlockErrWrongPIN(name) }
 
-// UnlockErrWrongPIN says "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again until you unlock…"
+// UnlockErrWrongPIN says "The saved PIN didn't unlock {name}. To keep the phone from locking you out, Pinky won't try it again by itself. If yo…"
 // in the language of msgs.
 //
-// A notice when the phone refused its saved PIN. Pinky stops trying it, as
-// phones lock out, or erase themselves, after repeated wrong PINs. name is
-// the phone's name; Settings › Phones is Pinky's Settings page.
+// A notice when the phone refused its saved PIN. Pinky stops trying it by
+// itself, as phones lock out, or erase themselves, after repeated wrong
+// PINs; the person can still try it once more with Try again
+// (unlockTryAgain) on the phone's card. name is the phone's name; Settings
+// › Phones is Pinky's Settings page.
 func (msgs Messages) UnlockErrWrongPIN(name string) string {
 	return Catalog.Format(msgs.locale, "unlockErrWrongPIN", map[string]any{"name": name})
 }
@@ -26607,18 +26611,20 @@ func (msgs Messages) UnlockOnPhoneSavePIN(end string) string {
 	return Catalog.Format(msgs.locale, "unlockOnPhoneSavePIN", map[string]any{"end": end})
 }
 
-// UnlockOnPhoneWrongPIN says "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone{end} If its PIN changed, update i…"
+// UnlockOnPhoneWrongPIN says "The saved PIN didn't unlock it, so Pinky won't try it again by itself. Unlock it on the phone{end} If you're sure the…"
 // in the language the app shows.
 //
 // The locked phone's card, after the phone refused its saved PIN: Pinky
-// won't try it again. end as in unlockOnPhone.
+// won't try it again by itself, and the button Try again (unlockTryAgain)
+// below lets the person try it once more. end as in unlockOnPhone.
 func UnlockOnPhoneWrongPIN(end string) string { return In(i18n.Locale()).UnlockOnPhoneWrongPIN(end) }
 
-// UnlockOnPhoneWrongPIN says "The saved PIN didn't unlock it, so Pinky won't try it again. Unlock it on the phone{end} If its PIN changed, update i…"
+// UnlockOnPhoneWrongPIN says "The saved PIN didn't unlock it, so Pinky won't try it again by itself. Unlock it on the phone{end} If you're sure the…"
 // in the language of msgs.
 //
 // The locked phone's card, after the phone refused its saved PIN: Pinky
-// won't try it again. end as in unlockOnPhone.
+// won't try it again by itself, and the button Try again (unlockTryAgain)
+// below lets the person try it once more. end as in unlockOnPhone.
 func (msgs Messages) UnlockOnPhoneWrongPIN(end string) string {
 	return Catalog.Format(msgs.locale, "unlockOnPhoneWrongPIN", map[string]any{"end": end})
 }
@@ -26685,6 +26691,42 @@ func UnlockPitchWindows() string { return In(i18n.Locale()).UnlockPitchWindows()
 // button Save PIN…. The card is in a narrow side panel.
 func (msgs Messages) UnlockPitchWindows() string {
 	return Catalog.Format(msgs.locale, "unlockPitchWindows", nil)
+}
+
+// UnlockTryAgain says "Try again"
+// in the language the app shows.
+//
+// A button on a locked phone's card after the phone refused its saved PIN:
+// it enters the saved PIN once more, after Touch ID or Windows Hello. Pinky
+// never tries it again by itself, as phones lock out after repeated wrong
+// PINs.
+func UnlockTryAgain() string { return In(i18n.Locale()).UnlockTryAgain() }
+
+// UnlockTryAgain says "Try again"
+// in the language of msgs.
+//
+// A button on a locked phone's card after the phone refused its saved PIN:
+// it enters the saved PIN once more, after Touch ID or Windows Hello. Pinky
+// never tries it again by itself, as phones lock out after repeated wrong
+// PINs.
+func (msgs Messages) UnlockTryAgain() string {
+	return Catalog.Format(msgs.locale, "unlockTryAgain", nil)
+}
+
+// UnlockTryAgainLabel says "Try the saved PIN on {name} again"
+// in the language the app shows.
+//
+// The accessibility label of the button Try again (unlockTryAgain). name is
+// the phone's name.
+func UnlockTryAgainLabel(name string) string { return In(i18n.Locale()).UnlockTryAgainLabel(name) }
+
+// UnlockTryAgainLabel says "Try the saved PIN on {name} again"
+// in the language of msgs.
+//
+// The accessibility label of the button Try again (unlockTryAgain). name is
+// the phone's name.
+func (msgs Messages) UnlockTryAgainLabel(name string) string {
+	return Catalog.Format(msgs.locale, "unlockTryAgainLabel", map[string]any{"name": name})
 }
 
 // UpdateActionLabel says "{action} Pinky {version}"
