@@ -4,5 +4,5 @@
 <resources>
     <string name="app_name">Pinky</string>
     <string name="service_label">Pinky</string>
-    <string name="service_description">让电脑上的 Pinky 在 Agent 操作这台手机时读取屏幕上的控件并输入文字。Pinky 只在 Agent 在这里工作时通过 USB 调试开启这项服务，任务结束或你接管后几秒钟就关闭；Pinky 断开一分钟后，它也会自己关闭。银行等 App 能看到开着的无障碍服务。在这里关闭只管到下一个任务；如果完全不想让 Pinky 使用它，卸载这个应用即可：没有它 Pinky 照样能用，只是慢一些。</string>
+    <string name="service_description">让电脑上的 Pinky 在 Agent 操作这台手机时读取屏幕上的控件并输入文字；在不接受 USB 调试点按的手机上，也由它来点按和滑动。Pinky 只在 Agent 在这里工作时通过 USB 调试开启这项服务，任务结束或你接管后几秒钟就关闭；Pinky 断开一分钟后，它也会自己关闭。银行等 App 能看到开着的无障碍服务。在这里关闭只管到下一个任务；如果完全不想让 Pinky 使用它，卸载这个应用即可：没有它 Pinky 照样能用，只是慢一些。</string>
 </resources>

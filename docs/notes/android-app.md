@@ -30,13 +30,14 @@ The prototype's own app, `app.pinky.standalone` (`android/standalone`), is gone.
 | | Release (ships) | Debug |
 | --- | --- | --- |
 | Launcher entries | Pinky's debug page only | the debug page and Pinky tasks (`TaskActivity`) |
-| Service capabilities | retrieve windows, as before | also `canPerformGestures` and `canTakeScreenshot` |
-| Commands that act (`gesture`, `global`, `screenshot`, `launch`, `apps`) and `on_phone` | `unknown_command` / `unsupported` | served |
+| Service capabilities | retrieve windows and perform gestures | also `canTakeScreenshot` |
+| `gesture` and `global` | served: Pinky on a computer taps through them on Xiaomi phones' background displays (GitHub issue #48) | served |
+| `screenshot`, `launch`, `apps` and `on_phone` | `unknown_command` / `unsupported` | served |
 | `INTERNET` permission | no | yes (`src/debug/AndroidManifest.xml`) |
 | Go core (`libpinkycore.so`) | no | yes, built by `scripts/androidcore.sh` |
 | Size | 142 KB | 24 MB |
 
-So on-phone mode stays hidden in releases until Milestone 2 makes it complete. A release build asks Android for exactly what Pinky Companion asked for, so the consent dialog the person sees when turning the service on says the same thing, and desktop users get nothing new but the name.
+So on-phone mode stays hidden in releases until Milestone 2 makes it complete. A release build asks Android for what Pinky Companion asked for plus performing gestures, which desktop mode needs on Xiaomi's MIUI and HyperOS: they drop the taps adb sends to a background display, so Pinky on the computer taps, swipes and presses back there through the service instead ([android.md](android.md), GitHub issue #48). Android's consent dialog for the service then also says it can perform gestures, and the service's description says why.
 
 ### On-phone mode
 

@@ -47,6 +47,25 @@ const FeatureDisplays = "displays"
 // once, so its Verified may miss text that lands a moment later.
 const FeatureSetTextFallback = "set_text_fallback"
 
+// FeatureGesture means the app plays gestures (Client.Gesture) on the main
+// display: Android must allow it (canPerformGestures), which Pinky for
+// Android asks for in every build since 2026-11.
+const FeatureGesture = "gesture"
+
+// FeatureGlobal means the app presses back, home, recents, notifications
+// and the keyboard's action key (Client.Global).
+const FeatureGlobal = "global"
+
+// FeatureOwnUI means the app refuses gestures on Pinky's own windows and
+// overlays (error code own_ui), and enter in Pinky's own fields.
+const FeatureOwnUI = "own_ui"
+
+// FeatureDisplayInput means gestures, segments and global back and enter
+// take a display other than 0 (Android 11 and later): Pinky taps and swipes
+// on its background display through the app on phones that drop what adb
+// injects there.
+const FeatureDisplayInput = "display_input"
+
 // How set_text wrote the text (SetTextResult.Method).
 const (
 	MethodSetText         = "set_text"         // ACTION_SET_TEXT

@@ -210,6 +210,9 @@ type deviceProps struct {
 	// AVD is the name of the Android Virtual Device an emulator runs, ""
 	// on a phone.
 	AVD string
+	// XiaomiROM: the phone runs Xiaomi's MIUI or HyperOS, which drop what
+	// adb injects into a background display (displayinput.go).
+	XiaomiROM bool
 }
 
 // List implements driver.Provider. It reads each online device's
@@ -445,6 +448,9 @@ func (p *Provider) deviceProps(ctx context.Context, e adb.DeviceEntry) (devicePr
 		if v, ok := strings.CutPrefix(l, "pinky-boot="); ok && pr.HardwareSerial == "" {
 			pr.HardwareSerial = serial(v)
 		}
+		if v, ok := strings.CutPrefix(l, "pinky-xiaomi="); ok && strings.TrimSpace(v) != "" {
+			pr.XiaomiROM = true
+		}
 		if v, ok := strings.CutPrefix(l, "pinky-aid="); ok {
 			if v = strings.TrimSpace(v); v != "" && v != "null" {
 				pr.AndroidID = v
@@ -494,12 +500,14 @@ func (p *Provider) dropProps(serial string) {
 // propsCommand reads what deviceProps keeps, one line each: the model, the
 // Android version, the SDK level, the name the person gave the phone and
 // ro.serialno; then ro.boot.serialno, an emulator's AVD (the property
-// was ro.kernel.qemu.avd_name before Android 12), whether the phone has
-// finished starting, and the android_id only when the shell may read
-// neither serial property (the settings command takes a moment).
+// was ro.kernel.qemu.avd_name before Android 12), Xiaomi's HyperOS or
+// MIUI version, whether the phone has finished starting, and the
+// android_id only when the shell may read neither serial property (the
+// settings command takes a moment).
 const propsCommand = "getprop ro.product.model; getprop ro.build.version.release; getprop ro.build.version.sdk; " +
 	"settings get global device_name; getprop ro.serialno; echo pinky-boot=$(getprop ro.boot.serialno); " +
 	"echo pinky-avd=$(getprop ro.boot.qemu.avd_name)$(getprop ro.kernel.qemu.avd_name); " +
+	"echo pinky-xiaomi=$(getprop ro.mi.os.version.name)$(getprop ro.miui.ui.version.name); " +
 	"echo pinky-booted=$(getprop sys.boot_completed); " +
 	"[ -n \"$(getprop ro.serialno)$(getprop ro.boot.serialno)\" ] || echo pinky-aid=$(settings get secure android_id)"
 

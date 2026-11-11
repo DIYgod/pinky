@@ -344,16 +344,24 @@ func (c *Client) call(ctx context.Context, cmd string, params map[string]any, ou
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	reused := c.conn != nil
-	err := c.callLocked(ctx, cmd, params, out)
+	err := c.callLocked(ctx, defaultTimeout, cmd, params, out)
 	// A kept connection may have died with an earlier service instance;
 	// try once on a fresh one.
 	if err != nil && retry && reused && errors.Is(err, ErrNotRunning) && ctx.Err() == nil {
-		err = c.callLocked(ctx, cmd, params, out)
+		err = c.callLocked(ctx, defaultTimeout, cmd, params, out)
 	}
 	return err
 }
 
-func (c *Client) callLocked(ctx context.Context, cmd string, params map[string]any, out any) error {
+// callFor is call for a command that may take up to limit, longer than
+// defaultTimeout, such as a long gesture. Never retried.
+func (c *Client) callFor(ctx context.Context, limit time.Duration, cmd string, params map[string]any, out any) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.callLocked(ctx, max(limit, defaultTimeout), cmd, params, out)
+}
+
+func (c *Client) callLocked(ctx context.Context, limit time.Duration, cmd string, params map[string]any, out any) error {
 	if c.conn == nil {
 		if err := c.connectLocked(ctx); err != nil {
 			return err
@@ -374,7 +382,7 @@ func (c *Client) callLocked(ctx context.Context, cmd string, params map[string]a
 	line = append(line, '\n')
 
 	conn, rd := c.conn, c.rd
-	deadline := time.Now().Add(defaultTimeout)
+	deadline := time.Now().Add(limit)
 	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
 		deadline = d
 	}

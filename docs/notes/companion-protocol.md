@@ -13,6 +13,7 @@ Changes since the first version, all additive:
 | 2026-11-07, round 3 | `region` on windows; `tree` walks an input method window that covers the screen like a sheet even without `ime` | none: an older app leaves `region` out, and a client that reads it treats its absence as "the bounds" |
 | 2026-11-09 | `set_text` writes through the field's input connection or pastes when the app refuses `ACTION_SET_TEXT` (GitHub issue #31), waits until the field shows the text, reports `method` and `password`, and runs `submit` only when the text landed | `set_text_fallback` (the input connection from Android 13; before, the paste only) |
 | 2026-11-11 | `on_phone` in `ping`; the `on_phone` command; in builds that run tasks on the phone (debug builds for now, [android-app.md](android-app.md)), the commands that act: `gesture`, `global`, `screenshot`, `launch` and `apps` | `gesture`, `global`, `screenshot`, `launch`, `apps`, `own_ui` and `on_phone`, only in those builds |
+| 2026-11-11, GitHub issue #48 | `gesture` and `global` in every build, for Xiaomi phones that drop adb's input on a background display; `gesture` takes `segments` of one finger that `hold` and `continue` across calls; `global` takes `display` (`back` and `enter`) | `gesture`, `global` and `own_ui` in every build; `display_input` (Android 11+) |
 
 ## Transport
 
@@ -213,18 +214,25 @@ Changes the service's settings until the service is turned off. The app saves th
 
 The result holds the current values.
 
+### Commands that act
+
+`gesture` and `global` are in every build since GitHub issue #48; `ping` lists them in `features`, with `own_ui`. Pinky on a computer uses them only where adb's input does not reach a display: Xiaomi's MIUI and HyperOS drop what adb injects into a background display, so Pinky taps, swipes, drags, pinches and presses back and enter there through the service ([background displays](android-driver.md), `internal/driver/android/displayinput.go`). `display_input` (Android 11+) says the app can do that on displays other than 0.
+
+- `gesture` plays one gesture through `dispatchGesture`; `display` as elsewhere (Android 11+ for displays other than 0). Replies once Android says the gesture is done: `took_ms`. `cancelled` when something interrupted it, such as a touch on that display.
+  - `strokes`, 1 to Android's limit (20 on current versions), each `{"points": [[x, y], …], "start_ms": 0, "duration_ms": 50}`, all one gesture: a tap is one point for 50 ms, a long press one point for 800 ms, a swipe two points or more. Each finger moves along its points at an even speed.
+  - Or `segments` (`display_input`), 1 to 200 legs of one finger that does not lift between them, each `{"points": [[x, y], …], "duration_ms": 300}`, 60 seconds in all: one point rests there, more move along them. `hold: true` leaves the finger down after the last leg, until the next `gesture` on any display that does not continue it, or for 30 seconds. `continue: true` goes on with the finger held on that display, from where it rests; without one the app answers `not_held`. A drag that waits between its legs for Pinky to look again, and a touch held down from the mirror, use these. Android sends nothing for a stroke that continues without moving (it reports one that only puts the finger down as done at once, and cancels one that neither puts it down nor moves it), so the app plays a rest the finger does not lift after as a later start of the next move, and waits out a rest at the end of a `hold` request before it answers.
+- `global`: `action` is `back`, `home`, `recents`, `notifications` or `enter` (the keyboard's action key of the focused field, Android 11+). There is no power or lock action. On a display other than 0 (`display_input`) only `back` and `enter`: Android sends back to the display that has the phone's focus, so `back` answers `not_focused` unless the active window is on that display, and `enter` uses the focused field of that display's windows. Result: `took_ms`.
+
+A `gesture` with a point on Pinky's pill, card or one of its windows, a `launch` of Pinky itself, and an `enter` into a field of Pinky's give `own_ui`, with nothing done.
+
 ### Commands for Pinky on the phone
 
-Only builds that run tasks on the phone serve these ([android-app.md](android-app.md#what-is-in-which-build)); `ping` lists each in `features`. Elsewhere the commands that act give `unknown_command`, and `on_phone` gives `unsupported`. Pinky on a computer does not use them: adb does its touching.
+Only builds that run tasks on the phone serve these ([android-app.md](android-app.md#what-is-in-which-build)); `ping` lists each in `features`. Elsewhere `screenshot`, `launch` and `apps` give `unknown_command`, and `on_phone` gives `unsupported`. Pinky on a computer does not use them.
 
-- `gesture`: `strokes`, 1 to Android's limit (20 on current versions), each `{"points": [[x, y], …], "start_ms": 0, "duration_ms": 50}`, all one gesture: a tap is one point for 50 ms, a long press one point for 800 ms, a swipe two points or more. `display` as elsewhere (Android 11+ for displays other than 0). Replies once Android says the gesture is done: `took_ms`. `cancelled` when something interrupted it, such as a touch on the screen.
-- `global`: `action` is `back`, `home`, `recents`, `notifications` or `enter` (the keyboard's action key of the focused field, Android 11+). There is no power or lock action. Result: `took_ms`.
 - `screenshot` (Android 11+): `display`, `format` (`jpeg` or `png`, default `jpeg`), `quality` (1–100, default 80). Result: `width`, `height`, `format`, `capture_ms`, `encode_ms`, `bytes` and `data` (base64). `secure` when an app on the screen forbids screenshots, `busy` when Android kept refusing them as too frequent.
 - `launch`: `package`. Starts the app's launcher activity. Result: `package`, `took_ms`.
 - `apps`: the launchable apps, `apps`: `[{"package", "label", "system"}]`.
 - `on_phone`: `enabled`. Turns on-phone mode on or off. Only the app's own uid may send it; adb gets `forbidden`. Result: `on_phone`.
-
-A `gesture` with a point on Pinky's pill, card or one of its windows, a `launch` of Pinky itself, and an `enter` into a field of Pinky's give `own_ui`, with nothing done.
 
 ## Error codes
 
@@ -241,6 +249,8 @@ A `gesture` with a point on Pinky's pill, card or one of its windows, a `launch`
 | `forbidden` | The peer is not adb, root or the app itself, or, for `on_phone`, not the app itself |
 | `own_ui` | The action would touch Pinky's own controls or screens; nothing was done |
 | `cancelled` | A gesture was interrupted |
+| `not_focused` | `back` on a display that does not have the phone's focus |
+| `not_held` | `continue` without a finger held on the display |
 | `secure` | An app on the screen forbids screenshots |
 | `busy` | Android kept refusing screenshots as too frequent |
 | `internal` | An unexpected exception; the message has its text |

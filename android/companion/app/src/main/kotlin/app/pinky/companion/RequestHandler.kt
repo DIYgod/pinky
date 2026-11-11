@@ -64,6 +64,12 @@ class RequestHandler(
                 "events" -> subscribe(id, req, conn)
                 "wait_idle" -> Reply(ok(id, waitIdle(req)))
                 "config" -> Reply(ok(id, service.configure(req)))
+                "gesture" -> Reply(ok(id, service.actions.gesture(req)))
+                // Another display's focus is read from its windows, on the
+                // worker like the other commands that read windows.
+                "global" -> Reply(
+                    ok(id, if ((displayParam(req) ?: 0) != 0) onWorker(req) { service.actions.global(req) } else service.actions.global(req)),
+                )
                 "on_phone" -> {
                     if (!conn.own) throw RequestError("forbidden", "only Pinky on the phone may change its mode")
                     Reply(ok(id, service.setOnPhone(req.getBoolean("enabled"))))
@@ -119,6 +125,11 @@ class RequestHandler(
         // set_text tries the input connection and ACTION_PASTE when
         // ACTION_SET_TEXT is refused, and says which went in (method).
         f += FEATURE_SET_TEXT_FALLBACK
+        // gesture and global, which refuse Pinky's own controls (own_ui);
+        // on other displays gesture plays segments and holds a finger
+        // down, and global presses back and enter (display_input).
+        f += listOf(FEATURE_GESTURE, FEATURE_GLOBAL, FEATURE_OWN_UI)
+        if (service.displays.multiDisplay) f += FEATURE_DISPLAY_INPUT
         f += service.actionFeatures()
         return f
     }
@@ -216,6 +227,10 @@ class RequestHandler(
         const val PROTOCOL_VERSION = 1
         const val FEATURE_DISPLAYS = "displays"
         const val FEATURE_SET_TEXT_FALLBACK = "set_text_fallback"
+        const val FEATURE_GESTURE = "gesture"
+        const val FEATURE_GLOBAL = "global"
+        const val FEATURE_OWN_UI = "own_ui"
+        const val FEATURE_DISPLAY_INPUT = "display_input"
         private const val DEFAULT_TIMEOUT_MS = 10_000L
     }
 }

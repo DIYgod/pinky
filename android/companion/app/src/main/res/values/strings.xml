@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Pinky</string>
     <string name="service_label">Pinky</string>
-    <string name="service_description">Lets Pinky on your computer read the controls on the screen and type text while an agent works on this phone. Pinky turns this service on over USB debugging only while an agent works here, and off again a few seconds after the task ends or you take over; it also turns itself off a minute after Pinky disconnects. Banking and other apps can see an accessibility service that is on. Turning it off here lasts until the next task; to keep Pinky from using it at all, uninstall this app: Pinky works without it, only more slowly.</string>
+    <string name="service_description">Lets Pinky on your computer read the controls on the screen and type text while an agent works on this phone, and tap and swipe on phones that ignore taps sent over USB debugging. Pinky turns this service on over USB debugging only while an agent works here, and off again a few seconds after the task ends or you take over; it also turns itself off a minute after Pinky disconnects. Banking and other apps can see an accessibility service that is on. Turning it off here lasts until the next task; to keep Pinky from using it at all, uninstall this app: Pinky works without it, only more slowly.</string>
 
     <string name="title">Pinky</string>
     <string name="intro">Pinky turns this service on through adb only while an agent works on this phone, and off again afterwards. Nothing here needs to be set up by hand.</string>

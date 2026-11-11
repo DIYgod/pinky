@@ -46,7 +46,7 @@ class PinkyAccessibilityService : AccessibilityService() {
 
     /** Where Pinky's own windows are, so that agents cannot touch them. */
     val ownUI = OwnUI(this)
-    private val actions = Actions(this)
+    val actions = Actions(this)
 
     /** Pinky's pill and approval card, while on-phone mode is on. */
     var overlays: Overlays? = null
@@ -146,13 +146,13 @@ class PinkyAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Runs a command that acts on the phone, for Pinky on the phone (and
-     * any client): the result's JSON, or null for an unknown command. It
-     * runs on the connection's thread.
+     * Runs a command that only Pinky on the phone needs: the result's JSON,
+     * or null for an unknown command or a build without on-phone mode. It
+     * runs on the connection's thread. Gestures and global actions are in
+     * every build (RequestHandler): desktop Pinky uses them on background
+     * displays of phones that drop the input adb injects there.
      */
     fun actionCommand(cmd: String, req: JSONObject): String? = if (!onPhoneBuild) null else when (cmd) {
-        "gesture" -> actions.gesture(req)
-        "global" -> actions.global(req)
         "screenshot" -> actions.screenshot(req)
         "launch" -> actions.launch(req)
         "apps" -> actions.apps()
@@ -161,12 +161,12 @@ class PinkyAccessibilityService : AccessibilityService() {
 
     /** The features of actionCommand and the service, for ping's list. */
     fun actionFeatures(): List<String> = if (!onPhoneBuild) emptyList() else
-        listOf("gesture", "global", "screenshot", "launch", "apps", "own_ui", "on_phone")
+        listOf("screenshot", "launch", "apps", "on_phone")
 
     /**
      * Whether this build runs tasks on the phone (on_phone_ui): only then
-     * may it act on the phone, and only then does its service config ask
-     * for gestures and screenshots.
+     * may it take screenshots, launch apps and list them, and only then
+     * does its service config ask for screenshots.
      */
     val onPhoneBuild: Boolean by lazy { resources.getBoolean(R.bool.on_phone_ui) }
 

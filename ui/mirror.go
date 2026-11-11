@@ -29,7 +29,9 @@ import (
 type mirror struct {
 	a       *app
 	id      string
-	agent   bool // the display an agent works on in the background, which takes no input
+	agent   bool   // the display an agent works on in the background, which takes no input
+	task    string // an agent's display: the task it belongs to
+	ownTask string // an agent's display: a task on the phone's own screen (gateway.ErrOwnScreen), not asked for again
 	gen     int
 	cancel  context.CancelFunc
 	player  *video.Player
@@ -188,7 +190,7 @@ func (m *mirror) open() {
 	}
 	m.opening = true
 	m.openedAt, m.firstAt, m.holdDue = time.Now(), time.Time{}, false
-	a := m.a
+	a, task := m.a, m.task
 	go func() {
 		logf("pinky: mirror %s: opening the stream (gen %d, agent %v)", m.id, gen, m.agent)
 		if m.agent {
@@ -235,6 +237,11 @@ func (m *mirror) open() {
 				if errors.Is(err, video.ErrNotFound) {
 					a.videoErr = err
 					m.logFailed(err, time.Time{}) // no retry: the decoder is missing
+					return
+				}
+				if m.agent && errors.Is(err, gateway.ErrOwnScreen) {
+					m.ownTask = task
+					m.logFailed(err, time.Time{}) // no retry during this task (agentMirrorFor)
 					return
 				}
 				m.retryLater()

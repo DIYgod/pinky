@@ -453,6 +453,39 @@ func TestAgentScreenInMirror(t *testing.T) {
 	}
 }
 
+// TestAgentScreenOwnScreen stops asking for the agent's display while the
+// task works on the phone's own screen, where none opens, and asks again
+// for the next task.
+func TestAgentScreenOwnScreen(t *testing.T) {
+	ta := newTestApp(t, fakeapi.Background)
+	ta.waitFor(t, "the task", func() bool { return len(ta.tasks) == 1 && running(ta.tasks[0].State) })
+	tt := mg.NewTester(ta.view, 1280, 820)
+	task := ta.tasks[0].ID
+	am := ta.mirrors["agent:pixel-9"]
+	if am == nil || am.task != task {
+		t.Fatalf("agent mirror %+v", am)
+	}
+	// Tests have no video, which stops every mirror from asking again.
+	ta.videoErr = nil
+	gen := am.gen
+	own := fmt.Errorf("no agent works on a background display of Pixel 9: %w (%w)", gateway.ErrOwnScreen, driver.ErrNotFound)
+	am.state, am.err, am.retry, am.ownTask = "failed", own, time.Now().Add(-time.Second), task
+	tt.Frame()
+	tt.Frame()
+	if am.gen != gen || am.opening {
+		t.Fatal("the mirror asked again for a display the task does not have")
+	}
+	if _, ok := tt.Find("Pixel 9 screen, live"); !ok {
+		t.Errorf("the phone's own screen does not show: %q", tt.Texts())
+	}
+	// The next task may have a display.
+	am.ownTask = "an earlier task"
+	tt.Frame()
+	if am.gen == gen {
+		t.Fatal("the mirror does not ask again for the next task's display")
+	}
+}
+
 // --- recordings and export ---
 
 // TestRecordingButtons offers the recording when the task has one, and
