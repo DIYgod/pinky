@@ -21,8 +21,11 @@ import org.json.JSONObject
  * to one that is not from an app store. While it is connected it serves the
  * companion protocol (see docs/notes/companion-protocol.md); it never
  * changes what the phone does.
+ *
+ * It is open for the standalone prototype (android/standalone), whose
+ * service adds commands that act on the phone; this build adds none.
  */
-class PinkyAccessibilityService : AccessibilityService() {
+open class PinkyAccessibilityService : AccessibilityService() {
 
     val labels = AppLabels(this)
     val displays = Displays(this)
@@ -60,7 +63,7 @@ class PinkyAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        idleDisableMs = prefs.getLong(KEY_IDLE_DISABLE_MS, DEFAULT_IDLE_DISABLE_MS)
+        idleDisableMs = prefs.getLong(KEY_IDLE_DISABLE_MS, defaultIdleDisableMs)
         includeNotImportant =
             serviceInfo.flags and AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS != 0
         val keep = prefs.getBoolean(KEY_INCLUDE_NOT_IMPORTANT, includeNotImportant)
@@ -109,6 +112,19 @@ class PinkyAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
+    /** Turn off after this long without a connection, until config says otherwise. */
+    protected open val defaultIdleDisableMs: Long get() = DEFAULT_IDLE_DISABLE_MS
+
+    /**
+     * Runs a command this build does not know, for a subclass that adds
+     * some: the result's JSON, or null for an unknown command. It runs on
+     * the connection's thread.
+     */
+    open fun extraCommand(cmd: String, req: JSONObject): String? = null
+
+    /** Features a subclass adds to ping's list. */
+    open fun extraFeatures(): List<String> = emptyList()
+
     /**
      * Applies a config request and returns the resulting settings. They are
      * saved until the service is turned off; committed before the reply, so
@@ -151,7 +167,7 @@ class PinkyAccessibilityService : AccessibilityService() {
      * lost.
      */
     private fun listedInSettings(): Boolean = try {
-        val me = ComponentName(this, PinkyAccessibilityService::class.java)
+        val me = ComponentName(this, javaClass)
         val value = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         value.orEmpty().split(':').any { ComponentName.unflattenFromString(it.trim()) == me }
     } catch (e: SecurityException) {
