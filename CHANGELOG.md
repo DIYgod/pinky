@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1112.1 (2026-11-12)
 
 - Pinky Companion, Pinky's app for Android phones, is now called Pinky on the phone and Pinky for Android in Pinky. Phones update to it as before.
 - On Xiaomi phones with MIUI or HyperOS, which ignore the taps, swipes, drags and back that Pinky sends while an agent works in the background, these now go through Pinky for Android instead. It asks Android for permission to perform gestures for this; where it can't, the agent works on the phone's own screen. Thanks @caozhangqing85-cyber and @demystify0137.
