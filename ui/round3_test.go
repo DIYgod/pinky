@@ -796,6 +796,13 @@ func TestPairingStuck(t *testing.T) {
 	set(driver.PairingProgress{}, 0)
 	tt := mg.NewTester(ta.view, 1280, 820)
 	tt.Frame()
+	// The note sits under the QR code, at the bottom of the scrolling card,
+	// and with Linux's taller fonts its buttons are below the fold: scroll
+	// down to them as a person would.
+	toNote := func() {
+		tt.Scroll(640, 400, 0, 2000)
+		tt.Frame()
+	}
 	if hasText(tt, "The phone hasn't shown up on the network yet") {
 		t.Fatal("the note shows at once")
 	}
@@ -832,6 +839,7 @@ func TestPairingStuck(t *testing.T) {
 		openURL = func(_ *mg.Context, u string, done func(error)) { opened = u; done(nil) }
 		t.Cleanup(func() { openURL = saved })
 		tt.Frame()
+		toNote()
 		if err := tt.Click("Open Local Network settings"); err != nil {
 			t.Fatal(err)
 		}
@@ -859,6 +867,7 @@ func TestPairingStuck(t *testing.T) {
 	// The note's button goes to the pairing-code form.
 	set(driver.PairingProgress{}, 31*time.Second)
 	tt.Frame()
+	toNote()
 	if err := tt.Click("Pair with a code instead"); err != nil {
 		t.Fatal(err)
 	}
