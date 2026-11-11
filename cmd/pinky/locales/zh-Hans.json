@@ -999,6 +999,7 @@
   "phoneConnectingTask": "上面的任务会等它连上后继续。",
   "phoneConnectingTitle": "正在连接 {phone}…",
   "phoneHandBack": "交还",
+  "phoneHelperPasscode": "请先在 {phone} 上输入锁屏密码：WebDriverAgent 辅助应用工作之前，iOS 会要求输入。然后再试一次。",
   "phoneKeyBack": "返回",
   "phoneKeyHome": "主屏幕",
   "phoneKeyRecents": "最近任务",

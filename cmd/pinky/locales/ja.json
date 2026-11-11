@@ -999,6 +999,7 @@
   "phoneConnectingTask": "このスマホのタスクは、接続されるまで待機します。",
   "phoneConnectingTitle": "{phone} に接続中…",
   "phoneHandBack": "返す",
+  "phoneHelperPasscode": "{phone} でパスコードを入力してください。WebDriverAgent ヘルパーが動作する前に iOS が求めます。その後、もう一度お試しください。",
   "phoneKeyBack": "戻る",
   "phoneKeyHome": "ホーム",
   "phoneKeyRecents": "最近",

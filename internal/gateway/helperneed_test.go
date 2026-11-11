@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +40,9 @@ func TestDeviceMovesToTheHelper(t *testing.T) {
 	ctx := context.Background()
 	_, g := helperPhone(t, true)
 	s, _ := connect(t, g, "Test the landscape layout")
-	if res := s.Device(ctx, DeviceRequest{}); res.Error != ErrUnsupported || !strings.Contains(res.Message, "a change moves the task to the helper by itself") {
+	// A read says so, settled with the phone's battery and storage or
+	// unsupported without them.
+	if res := s.Device(ctx, DeviceRequest{}); !strings.Contains(res.Message, "a change moves the task to the helper by itself") {
 		t.Fatalf("read over CoreDevice: %+v", res)
 	}
 	if b := backendOf(g); b != wayCoreDevice {
@@ -238,4 +241,63 @@ func TestPersonPinchWhileMoving(t *testing.T) {
 	if n := touches2(dev); n != 0 {
 		t.Fatalf("%d touches reached the phone while it moved", n)
 	}
+}
+
+// A change a read-only task or read-only mode refuses moves nothing: the
+// refusal comes first.
+func TestReadOnlyKeepsCoreDevice(t *testing.T) {
+	ctx := context.Background()
+	_, g := helperPhone(t, true)
+	s := g.OpenSession(agent)
+	t.Cleanup(s.Close)
+	mustStatus(t, s.Connect(ctx, ConnectRequest{Task: "Look around", ReadOnly: true}), StatusSettled)
+	res := s.Device(ctx, DeviceRequest{Rotation: driver.RotationLandscape})
+	if res.Status != StatusBlocked || strings.Contains(res.Message, "moved") {
+		t.Fatalf("read-only task: %+v", res)
+	}
+	if b := backendOf(g); b != wayCoreDevice {
+		t.Fatalf("a read-only task moved the phone to %q", b)
+	}
+	mustStatus(t, s.Release(ctx, ReleaseRequest{}), StatusSettled)
+
+	if err := g.SetReadOnly("iphone", true); err != nil {
+		t.Fatal(err)
+	}
+	s2, _ := connect(t, g, "Test the landscape layout")
+	res = s2.Device(ctx, DeviceRequest{Rotation: driver.RotationLandscape})
+	if res.Status != StatusBlocked || strings.Contains(res.Message, "moved") {
+		t.Fatalf("read-only mode: %+v", res)
+	}
+	if b := backendOf(g); b != wayCoreDevice {
+		t.Fatalf("read-only mode moved the phone to %q", b)
+	}
+}
+
+// The person's Rotate on a phone whose helper asks for the passcode says
+// so in the person's terms, and the phone still goes back to CoreDevice
+// by itself once the passcode is in.
+func TestPersonRotateWaitsForThePasscode(t *testing.T) {
+	ctx := context.Background()
+	shortSwitchBack(t)
+	p, _ := newTwoWayPhone()
+	p.bareCore, p.askOnOpen = true, true
+	g := twoWayGateway(t, p)
+	waitUntil(t, "Rotate offered", func() bool { return rotateFeature(g) })
+	err := g.SetDeviceSwitch(ctx, "iphone", driver.SwitchRotation, driver.RotationLandscape)
+	var se *driver.SetupError
+	if !errors.As(err, &se) || se.Setup != driver.SetupPasscode || !strings.Contains(se.Detail, "Enter the passcode on") ||
+		strings.Contains(err.Error(), "phone_handoff") {
+		t.Fatalf("turn with the passcode asked: %v", err)
+	}
+	// The person enters it: the phone comes up on the helper, then goes
+	// back, with no task to keep it there.
+	p.mu.Lock()
+	p.passcode = false
+	p.mu.Unlock()
+	waitUntil(t, "the phone back on CoreDevice", func() bool {
+		g.mu.Lock()
+		defer g.mu.Unlock()
+		d := g.devices["iphone"]
+		return d.online && d.info.Backend == wayCoreDevice && d.taskWay == ""
+	})
 }

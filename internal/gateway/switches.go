@@ -105,7 +105,10 @@ func (s *Session) Device(ctx context.Context, req DeviceRequest) *Result {
 	note := ""
 	if sw == nil && len(want) > 0 {
 		// An iPhone or iPad over CoreDevice: the helper has the switches
-		// (helperneed.go).
+		// (helperneed.go), once the change may happen at all.
+		if res := g.switchRefusal(l, want, req.args(), time.Now()); res != nil {
+			return g.finish(l, res)
+		}
 		res, n, now := g.helperFor(ctx, l, switchNeed(want))
 		if res != nil {
 			return g.finish(l, res)
@@ -128,6 +131,28 @@ func (s *Session) Device(ctx context.Context, req DeviceRequest) *Result {
 		return g.finish(l, res)
 	}
 	return g.finish(l, withNote(g.setSwitches(ctx, l, req, sw, want, resets), note))
+}
+
+// switchRefusal refuses changing switches to a read-only or watch-only
+// agent, a read-only task and a phone in read-only mode, recording the
+// last two as a step; nil when the change may go on. Device calls it before
+// anything moves the phone to the helper for the change (helperneed.go).
+func (g *Gateway) switchRefusal(l *lease, want []switchSet, args string, start time.Time) *Result {
+	d := l.dev
+	switch g.scopeOf(l.session).Mode {
+	case ScopeReadOnly, ScopeWatchOnly:
+		return errResult(ErrScopeDenied, "This agent may not change the phone's settings: the person gave it %s access. Nothing was done.",
+			strings.ReplaceAll(string(g.scopeOf(l.session).Mode), "_", "-"))
+	}
+	g.mu.Lock()
+	readOnly := l.readOnly
+	g.mu.Unlock()
+	if readOnly || g.policy.ReadOnly(d.id) {
+		res := &Result{Status: StatusBlocked, Rule: policy.RuleReadOnly, Message: "Read-only mode is on, so the phone's settings stay as they are. Nothing was done."}
+		g.recordSwitch(l, args, fmt.Sprintf("Blocked by “%s”: %s", policy.RuleReadOnly, lower(switchSteps(want))), res, start)
+		return res
+	}
+	return nil
 }
 
 // check validates the request and returns the switches to set, in
@@ -211,17 +236,7 @@ func (g *Gateway) setSwitches(ctx context.Context, l *lease, req DeviceRequest, 
 		if sw == nil {
 			return errResult(ErrUnsupported, "%s", noSwitches(d.name()))
 		}
-		switch g.scopeOf(l.session).Mode {
-		case ScopeReadOnly, ScopeWatchOnly:
-			return errResult(ErrScopeDenied, "This agent may not change the phone's settings: the person gave it %s access. Nothing was done.",
-				strings.ReplaceAll(string(g.scopeOf(l.session).Mode), "_", "-"))
-		}
-		g.mu.Lock()
-		readOnly := l.readOnly
-		g.mu.Unlock()
-		if readOnly || g.policy.ReadOnly(d.id) {
-			res := &Result{Status: StatusBlocked, Rule: policy.RuleReadOnly, Message: "Read-only mode is on, so the phone's settings stay as they are. Nothing was done."}
-			g.recordSwitch(l, args, fmt.Sprintf("Blocked by “%s”: %s", policy.RuleReadOnly, lower(switchSteps(want))), res, start)
+		if res := g.switchRefusal(l, want, args, start); res != nil {
 			return res
 		}
 	}

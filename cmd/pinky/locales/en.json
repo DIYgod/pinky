@@ -6434,6 +6434,10 @@
   "@phoneHandBack": {
     "description": "Button that gives the phone back to the agents after the person took over: on the banner above the mirror and on All phones tiles."
   },
+  "phoneHelperPasscode": "Enter the passcode on {phone}: iOS asks for it before the WebDriverAgent helper can work. Then try again.",
+  "@phoneHelperPasscode": {
+    "description": "A toast after the person turned the screen (Rotate in ⋯ under the mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to the WebDriverAgent helper to turn it, and iOS asks on the phone for its passcode before the helper starts. phone is the phone's name. WebDriverAgent is a name."
+  },
   "phoneKeyBack": "Back",
   "@phoneKeyBack": {
     "description": "Android's Back key, a button under the mirror (accessibility label and tooltip)."

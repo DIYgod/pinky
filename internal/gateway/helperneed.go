@@ -127,7 +127,18 @@ func (g *Gateway) personHelper(ctx context.Context, d *device) (driver.Device, e
 	}
 	g.log.Info("person: moving to the helper", "device", d.id)
 	if res := g.switchTo(ctx, d, cc, wayHelper); res != nil {
-		return nil, fmt.Errorf("%s", res.Message)
+		// The phone waits for a step first, the passcode iOS asks before
+		// the helper starts: it goes back on its own after switchBackAfter
+		// like any move for the person, and they are told in their words
+		// (res.Message is the agent's).
+		g.mu.Lock()
+		if d.lease == nil {
+			g.switchBackLater(d)
+		}
+		setup := d.info.Setup
+		g.mu.Unlock()
+		g.log.Info("person: the helper waits for a step", "device", d.id, "setup", setup)
+		return nil, &driver.SetupError{Setup: setup, Detail: personSetupWords(d.name(), setup)}
 	}
 	g.mu.Lock()
 	dev, there := d.dev, d.online && d.info.Backend == wayHelper && d.dev != nil
@@ -208,4 +219,14 @@ func (g *Gateway) personPinchHelper(d *device, a driver.TouchAction) bool {
 		}
 	}()
 	return true
+}
+
+// personSetupWords says to the person what the phone waits for before the
+// helper starts, in English for the log; the client says it in their
+// language (driver.SetupError's Setup).
+func personSetupWords(name, setup string) string {
+	if setup == driver.SetupPasscode {
+		return fmt.Sprintf("Enter the passcode on %s: iOS asks for it before the WebDriverAgent helper can work. Then try again.", name)
+	}
+	return fmt.Sprintf("%s needs a step before the WebDriverAgent helper can work: see its page. Then try again.", name)
 }

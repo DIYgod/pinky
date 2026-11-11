@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -139,13 +140,22 @@ func (a *app) setRotation(d gateway.DeviceView, value string) {
 		ctx, cancel := context.WithTimeout(a.ctx, 90*time.Second)
 		defer cancel()
 		err := sw.SetDeviceSwitch(ctx, id, driver.SwitchRotation, value)
+		var se *driver.SetupError
+		passcode := errors.As(err, &se) && se.Setup == driver.SetupPasscode
 		a.post(func() {
 			s.busy[id]--
 			s.at[id] = time.Now()
 			if err != nil {
 				s.at[id] = time.Time{} // read what it is
 			}
+			if passcode {
+				// Moving to the helper, the phone asks for its passcode.
+				a.toasts = append(a.toasts, locales.PhoneHelperPasscode(d.Info.Name))
+			}
 		})
+		if passcode {
+			return nil // said above, in the person's words
+		}
 		return err
 	})
 }

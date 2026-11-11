@@ -16713,6 +16713,28 @@ func (msgs Messages) PhoneHandBack() string {
 	return Catalog.Format(msgs.locale, "phoneHandBack", nil)
 }
 
+// PhoneHelperPasscode says "Enter the passcode on {phone}: iOS asks for it before the WebDriverAgent helper can work. Then try again."
+// in the language the app shows.
+//
+// A toast after the person turned the screen (Rotate in ⋯ under the
+// mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to the
+// WebDriverAgent helper to turn it, and iOS asks on the phone for its
+// passcode before the helper starts. phone is the phone's name.
+// WebDriverAgent is a name.
+func PhoneHelperPasscode(phone string) string { return In(i18n.Locale()).PhoneHelperPasscode(phone) }
+
+// PhoneHelperPasscode says "Enter the passcode on {phone}: iOS asks for it before the WebDriverAgent helper can work. Then try again."
+// in the language of msgs.
+//
+// A toast after the person turned the screen (Rotate in ⋯ under the
+// mirror) of an iPhone or iPad over CoreDevice: Pinky moved it to the
+// WebDriverAgent helper to turn it, and iOS asks on the phone for its
+// passcode before the helper starts. phone is the phone's name.
+// WebDriverAgent is a name.
+func (msgs Messages) PhoneHelperPasscode(phone string) string {
+	return Catalog.Format(msgs.locale, "phoneHelperPasscode", map[string]any{"phone": phone})
+}
+
 // PhoneKeyBack says "Back"
 // in the language the app shows.
 //
