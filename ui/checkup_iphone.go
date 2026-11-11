@@ -309,7 +309,7 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width float32)
 	mg.Row(c).Width(width).Height(height).Shrink(0).Padding(8, 8, 8, 14).Radius(12).Background(p.amberTint).Border(1, p.amberLine).
 		Gap(10).AlignItems(mg.Center).Role(mg.RoleStatus).Label(text).Children(func() {
 		mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot)
-		mg.Text(c, text).FontSize(13).Grow(1).MinWidth(0)
+		mg.Text(c, text).FontSize(fsSmall).Grow(1).MinWidth(0)
 		if button(c, label, btnOpt{small: true}).Clicked() {
 			openURL(c, helperAgainDocs, func(error) {})
 		}

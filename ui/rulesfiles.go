@@ -140,9 +140,9 @@ func (a *app) fileProblemNotes(c *mg.Context) {
 			Background(p.amberTint).Border(1, p.amberLine).Role(mg.RoleStatus).Label(title).Children(func() {
 			mg.Icon(c, icAlert).FontSize(16).TextColor(p.amber).Margin(1, 0, 0, 0)
 			mg.Column(c).Gap(4).Grow(1).MinWidth(0).Children(func() {
-				mg.Text(c, title).FontWeight(600)
-				mg.Text(c, locales.SettingsFileProblemDesc()).FontSize(13.5).TextColor(p.ink2)
-				mg.Text(c, locales.SettingsFileProblemError(fp.Error)).FontSize(13).Selectable()
+				mg.Text(c, title).FontWeight(fwSemibold)
+				mg.Text(c, locales.SettingsFileProblemDesc()).FontSize(fsSmall).TextColor(p.ink2)
+				mg.Text(c, locales.SettingsFileProblemError(fp.Error)).FontSize(fsSmall).Selectable()
 				mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
 					if button(c, locales.SettingsFileProblemEdit(fp.File), btnOpt{small: true}).Clicked() {
 						a.openRulesFile(fp.File, fp.Path)

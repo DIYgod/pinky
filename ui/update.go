@@ -495,12 +495,12 @@ func (a *app) companionByHandCards(c *mg.Context) {
 		sideCard(c, "companion-by-hand-"+id, title, func() {
 			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, icAndroid).FontSize(15).TextColor(p.accentInk)
-				mg.Text(c, title).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
+				mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 				if cardClose(c, locales.UpdateCompanionByHandDismissLabel()) {
 					a.seenRefusal(id)
 				}
 			})
-			mg.Text(c, locales.UpdateCompanionByHandCard(a.comp.byHand[id].Phone)).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.UpdateCompanionByHandCard(a.comp.byHand[id].Phone)).FontSize(fsSmall).TextColor(p.ink2)
 			a.companionByHandLinks(c)
 		})
 	}
@@ -530,7 +530,7 @@ func (a *app) updateCard(c *mg.Context) {
 		head := func(title string) {
 			mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, icUpdate).FontSize(15).TextColor(p.accentInk)
-				mg.Text(c, title).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
+				mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 			})
 		}
 		switch s.phase {
@@ -542,7 +542,7 @@ func (a *app) updateCard(c *mg.Context) {
 			}
 			mg.Progress(c, frac).FillWidth().Label(locales.UpdateDownloadLabel())
 			mg.Row(c).AlignItems(mg.Center).Children(func() {
-				mg.Text(c, locales.UpdateProgress(mb(s.done), mb(s.total))).FontSize(12).TextColor(p.ink2).Grow(1)
+				mg.Text(c, locales.UpdateProgress(mb(s.done), mb(s.total))).FontSize(fsCaption).TextColor(p.ink2).Grow(1)
 				if quietButton(c, locales.UpdateCancel()).Clicked() && s.cancel != nil {
 					s.cancel()
 				}
@@ -550,7 +550,7 @@ func (a *app) updateCard(c *mg.Context) {
 			c.After(250 * time.Millisecond)
 		case updReady:
 			head(locales.UpdateReady(v))
-			mg.Text(c, locales.UpdateReadyDetail()).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.UpdateReadyDetail()).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.UpdateRestartNow(), btnOpt{kind: btnPrimary, small: true}).Clicked() {
 					a.upd.auto = false
@@ -562,7 +562,7 @@ func (a *app) updateCard(c *mg.Context) {
 			mg.Progress(c, -1).FillWidth().Label(locales.UpdateRestartingLabel())
 		case updFailed:
 			head(locales.UpdateFailedTitle())
-			mg.Text(c, s.err).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, s.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.UpdateTryAgain(), btnOpt{small: true}).Clicked() {
 					s.phase, s.err = updIdle, ""
@@ -593,7 +593,7 @@ func (a *app) updateActions(c *mg.Context) {
 	m := a.opt.Updates.MethodFor(*s.rel)
 	switch m {
 	case update.MethodManager:
-		mg.Text(c, locales.UpdateManagerInstalled(loc.Manager)).FontSize(12.5).TextColor(p.ink2)
+		mg.Text(c, locales.UpdateManagerInstalled(loc.Manager)).FontSize(fsSmall).TextColor(p.ink2)
 		mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 			mg.Text(c, loc.Command).FontSize(12).Font("monospace").Grow(1).MinWidth(0).Selectable()
 			b := mg.ButtonBase(c).Size(24, 24).Radius(6).Center().Label(locales.UpdateCopyCommandLabel()).Tooltip(locales.UpdateCopy())
@@ -612,10 +612,10 @@ func (a *app) updateActions(c *mg.Context) {
 		return
 	case update.MethodDownload:
 		if loc.Problem != "" {
-			mg.Text(c, whereProblem(loc.Problem)).FontSize(12).TextColor(p.ink2)
+			mg.Text(c, whereProblem(loc.Problem)).FontSize(fsCaption).TextColor(p.ink2)
 		}
 		if s.file != "" {
-			mg.Text(c, locales.UpdateDownloadedHint()).FontSize(12).TextColor(p.ink2)
+			mg.Text(c, locales.UpdateDownloadedHint()).FontSize(fsCaption).TextColor(p.ink2)
 		}
 	}
 	label := locales.UpdateNowButton()
@@ -724,13 +724,13 @@ func (a *app) newsCard(c *mg.Context) {
 	sideCard(c, "news", locales.UpdateWhatsNew(), func() {
 		mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icSparkle).FontSize(15).TextColor(p.accentInk)
-			mg.Text(c, card).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
+			mg.Text(c, card).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 			if cardClose(c, locales.UpdateNewsDismissLabel()) {
 				a.dismissNews()
 			}
 		})
 		if line != "" {
-			mg.Text(c, line).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink2)
 		}
 		if linkButton(c, locales.UpdateNewsSee()).AlignSelf(mg.Start).Clicked() {
 			a.upd.newsOpen, a.upd.newsAll = true, false
@@ -750,7 +750,7 @@ func (a *app) updateDialogs(c *mg.Context) {
 	}
 	if s.notesOpen && s.rel != nil {
 		r := s.rel
-		mg.Modal(c.Key("release-notes"), &s.notesOpen, func() {
+		sheet(c.Key("release-notes"), &s.notesOpen, func() {
 			a.notesDialog(c, "Pinky "+r.Version, r.Date, r.NotesIn(i18n.Locale()), func() {
 				if s.phase == updIdle || s.phase == updFailed {
 					if button(c, locales.UpdateNowButton(), btnOpt{kind: btnPrimary}).Clicked() {
@@ -767,7 +767,7 @@ func (a *app) updateDialogs(c *mg.Context) {
 			s.newsOpen = false
 		} else {
 			all := s.newsAll
-			if mg.Modal(c.Key("whats-new"), &s.newsOpen, func() {
+			if sheet(c.Key("whats-new"), &s.newsOpen, func() {
 				a.notesDialog(c, title, time.Time{}, md, nil, func() {
 					s.newsOpen = false
 					if !all {
@@ -794,20 +794,20 @@ func (a *app) updateDialogs(c *mg.Context) {
 
 func (a *app) notesDialog(c *mg.Context, title string, date time.Time, md string, extra func(), done func()) {
 	p := pal(c)
-	mg.Column(c).Width(520).MaxWidth(640).Gap(14).Children(func() {
+	mg.Column(c).Width(520).MaxWidth(640).Gap(sp4).Children(func() {
 		mg.Column(c).Gap(2).Children(func() {
-			mg.Text(c, title).FontSize(18).FontWeight(650).Role(mg.RoleHeading)
+			mg.Text(c, title).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
 			if !date.IsZero() {
-				mg.Text(c, locales.DayOtherYear(date.Local())).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.DayOtherYear(date.Local())).FontSize(fsSmall).TextColor(p.ink2)
 			}
 		})
 		mg.Scroll(c).MaxHeight(420).Children(func() { markdown.View(c, md, nil) })
-		mg.Row(c).Gap(10).Justify(mg.End).AlignItems(mg.Center).Children(func() {
-			if extra != nil {
-				extra()
-			}
+		mg.Row(c).Gap(sp2).Justify(mg.End).AlignItems(mg.Center).Children(func() {
 			if button(c, locales.UpdateClose(), btnOpt{}).Clicked() {
 				done()
+			}
+			if extra != nil {
+				extra()
 			}
 		})
 	})

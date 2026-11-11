@@ -118,7 +118,7 @@ func (a *app) flyoutView(c *mg.Context) {
 		a.flyout.Close()
 	}
 	sec := func(text string) {
-		mg.Text(c, text).FontSize(12).FontWeight(600).TextColor(p.ink3).Padding(6, 10, 4, 10)
+		mg.Text(c, text).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.ink3).Padding(6, 10, 4, 10)
 	}
 	mg.Column(c).Fill().Background(p.panel).Padding(6, 8, 8, 8).Children(func() {
 		if len(a.needs) > 0 {
@@ -149,13 +149,13 @@ func (a *app) flyoutView(c *mg.Context) {
 					if n.Kind == gateway.NeedUnlock {
 						label = locales.FlyoutUnlock()
 					}
-					mg.Text(c, label).FontWeight(500).TextColor(p.accentInk)
+					mg.Text(c, label).FontWeight(fwMedium).TextColor(p.accentInk)
 				})
 			}
 		}
 		sec(locales.FlyoutPhones())
 		if len(a.devices) == 0 {
-			mg.Text(c, locales.FlyoutNoPhones()).FontSize(13).TextColor(p.ink2).Padding(8, 10)
+			mg.Text(c, locales.FlyoutNoPhones()).FontSize(fsSmall).TextColor(p.ink2).Padding(8, 10)
 		}
 		for _, d := range a.devices {
 			d := d
@@ -169,11 +169,11 @@ func (a *app) flyoutView(c *mg.Context) {
 			}
 			row.Label(locales.FlyoutPhoneLabel(d.Info.Name, statusLine(d))).Children(func() {
 				statusDot(c, d)
-				name := mg.Text(c, d.Info.Name).FontWeight(600).Shrink(0)
+				name := mg.Text(c, d.Info.Name).FontWeight(fwSemibold).Shrink(0)
 				if d.Status == gateway.DeviceOffline {
 					name.TextColor(p.ink2)
 				}
-				mg.Text(c, statusLine(d)).FontSize(13).TextColor(p.ink2).Grow(1).MinWidth(0).SingleLine()
+				mg.Text(c, statusLine(d)).FontSize(fsSmall).TextColor(p.ink2).Grow(1).MinWidth(0).SingleLine()
 			})
 		}
 		mg.Spacer(c)
@@ -195,7 +195,7 @@ func (a *app) flyoutView(c *mg.Context) {
 		}
 		stop.Children(func() {
 			mg.Text(c, locales.FlyoutStopAll()).TextColor(p.red).Grow(1)
-			mg.Text(c, shortcutLabel()).FontSize(13).TextColor(p.ink3)
+			mg.Text(c, shortcutLabel()).FontSize(fsSmall).TextColor(p.ink3)
 		})
 	})
 }

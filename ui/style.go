@@ -212,7 +212,7 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 			mg.Icon(c, o.icon).FontSize(18)
 		}
 		if text != "" {
-			mg.Text(c, text).FontSize(fs).FontWeight(500).NoWrap()
+			mg.Text(c, text).FontSize(fs).FontWeight(fwMedium).NoWrap()
 		}
 	})
 	return b
@@ -314,7 +314,7 @@ func appIcon(c *mg.Context, name string, size, radius, font float32, col string)
 	}
 	b := mg.Box(c).Size(size, size).Radius(radius).Background(hex(col)).Center().Shrink(0)
 	b.Children(func() {
-		mg.Text(c, letter).FontSize(font).FontWeight(700).TextColor(hex("#ffffff"))
+		mg.Text(c, letter).FontSize(font).FontWeight(fwBold).TextColor(hex("#ffffff"))
 	})
 	return b
 }
@@ -358,6 +358,20 @@ func groupRow(c *mg.Context, row mg.Element, last bool) mg.Element {
 		})
 	}
 	return row
+}
+
+// sheet is a dialog over the window, as mg.Modal shows one, with the
+// app's corners, padding and shadow.
+func sheet(c *mg.Context, open *bool, fn func()) mg.Element {
+	p := pal(c)
+	w, h := c.Size()
+	return mg.DialogBase(c, open, func(back, panel mg.Element) {
+		back.Background(mg.RGBA(0, 0, 0, 0.32))
+		panel.Padding(sp6).Gap(sp3).Radius(rSheet).Background(p.panel).Border(1, p.line).
+			MaxWidth(w-2*sp6).MaxHeight(h-2*sp6).
+			Shadow(0, 1, 3, 0, p.shadowLo).Shadow(0, 24, 60, 0, mg.RGBA(0, 0, 0, 0.22))
+		fn()
+	})
 }
 
 // menuPanel styles a drawn popover like the prototype's .pop.

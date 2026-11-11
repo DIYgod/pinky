@@ -378,31 +378,31 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 		Label(locales.CompanionCardLabel(d.Info.Name)).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icAndroid).FontSize(16).TextColor(p.ink2)
-			mg.Text(c, title).FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
+			mg.Text(c, title).FontSize(fsHeadline).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 		})
 		if body != "" && !busy {
-			mg.Text(c, body).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			mg.Text(c, body).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
 		}
 		if extra != "" && !busy {
-			mg.Text(c, extra).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, extra).FontSize(fsSmall).TextColor(p.ink2)
 		}
 		if auto {
 			mg.Progress(c, -1).FillWidth().Label(locales.CompanionUpdatingLabel())
-			mg.Text(c, locales.CompanionUpdatingHint()).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, locales.CompanionUpdatingHint()).FontSize(fsSmall).TextColor(p.ink2)
 			c.After(time.Second)
 			return
 		}
 		if busy {
 			mg.Progress(c, -1).FillWidth().Label(locales.CompanionInstalling())
-			mg.Text(c, a.allowHint(id)).FontSize(13.5).FontWeight(600)
+			mg.Text(c, a.allowHint(id)).FontSize(fsBody).FontWeight(fwSemibold)
 			c.After(time.Second)
 			if time.Since(st.installing[id]) > 20*time.Second {
-				mg.Text(c, locales.CompanionStillWaiting()).FontSize(13).TextColor(p.ink2)
+				mg.Text(c, locales.CompanionStillWaiting()).FontSize(fsSmall).TextColor(p.ink2)
 			}
 			return
 		}
 		if msg := st.err[id]; msg != "" {
-			mg.Text(c, msg).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, msg).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 		}
 		a.companionByHand(c, d)
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Margin(4, 0, 0, 0).Children(func() {
@@ -413,7 +413,7 @@ func (a *app) companionCard(c *mg.Context, d gateway.DeviceView) {
 				st.later[id] = true
 			}
 		})
-		mg.Text(c, a.allowHint(id)).FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, a.allowHint(id)).FontSize(fsCaption).TextColor(p.ink3)
 	})
 }
 

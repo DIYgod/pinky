@@ -146,9 +146,9 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 	onWiFi := d != nil && d.Info.Connection == "wifi"
 
 	if d != nil && d.Info.Setup == driver.SetupUpdate {
-		mg.Column(c).Padding(16, 18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(8).Role(mg.RoleStatus).Children(func() {
-			mg.Text(c, locales.AddPhoneIPhoneTooOldTitle(d.Info.Name)).FontSize(15).FontWeight(650)
-			mg.Text(c, locales.AddPhoneIPhoneTooOld(d.Info.OSVersion)).FontSize(13.5).TextColor(p.ink2)
+		mg.Column(c).Padding(sp4, 18).Radius(rCard).Background(p.amberTint).Border(1, p.amberLine).Gap(8).Role(mg.RoleStatus).Children(func() {
+			mg.Text(c, locales.AddPhoneIPhoneTooOldTitle(d.Info.Name)).FontSize(fsHeadline).FontWeight(fwSemibold)
+			mg.Text(c, locales.AddPhoneIPhoneTooOld(d.Info.OSVersion)).FontSize(fsSmall).TextColor(p.ink2)
 		})
 		return
 	}
@@ -204,7 +204,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			}
 		})
 		if cur > iphonePlug && d != nil {
-			mg.Text(c, strings.TrimSpace(locales.AddPhoneFoundIOS(d.Info.Name, d.Info.OSVersion))).FontSize(13).TextColor(p.ink2).Margin(-10, 0, 0, 36)
+			mg.Text(c, strings.TrimSpace(locales.AddPhoneFoundIOS(d.Info.Name, d.Info.OSVersion))).FontSize(fsSmall).TextColor(p.ink2).Margin(-10, 0, 0, 36)
 		}
 		row(iphoneTrust, locales.AddPhoneIPhoneStepTrust(), func() {
 			if d != nil && d.Info.Setup == driver.SetupTrustRecord {
@@ -325,7 +325,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 	if cur == iphoneReady {
 		statusBox(c, func() {
 			dot(c, p.green, false)
-			mg.Text(c, locales.AddPhoneReady(d.Info.Name)).FontWeight(600)
+			mg.Text(c, locales.AddPhoneReady(d.Info.Name)).FontWeight(fwSemibold)
 		})
 		if already {
 			guideNote(c, locales.AddPhoneIPhoneAnother())
@@ -389,7 +389,7 @@ func (a *app) mirrorOffer(c *mg.Context) {
 	}
 	st := &a.add.dl
 	mg.Column(c).Gap(8).Margin(6, 0, 0, 0).Children(func() {
-		mg.Text(c, locales.AddPhoneIPhoneMirrorTitle()).FontSize(13.5).FontWeight(600)
+		mg.Text(c, locales.AddPhoneIPhoneMirrorTitle()).FontSize(fsBody).FontWeight(fwSemibold)
 		guideText(c, locales.AddPhoneIPhoneMirrorDetail(m.Name, m.Image, megabytes(m.Size)))
 		switch {
 		case st.running:

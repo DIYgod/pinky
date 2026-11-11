@@ -390,7 +390,7 @@ func (a *app) ruleForm(c *mg.Context, ed rulesEditor) {
 				}
 			}
 			if f.decision == "allow" {
-				mg.Text(c, locales.SettingsRulesAllowHint()).FontSize(13).TextColor(p.amber)
+				mg.Text(c, locales.SettingsRulesAllowHint()).FontSize(fsSmall).TextColor(p.amber)
 			}
 		})
 		field(locales.SettingsRulesApps(), func() {
@@ -411,9 +411,9 @@ func (a *app) ruleForm(c *mg.Context, ed rulesEditor) {
 		field(locales.SettingsRulesLabels(), func() {
 			mg.TextInput(c.Key("rule-labels"), &f.labels).Label(locales.SettingsRulesLabels()).Placeholder(locales.SettingsRulesLabelsPlaceholder())
 		})
-		mg.Text(c, locales.SettingsRulesHowItMatches()).FontSize(13).TextColor(p.ink3)
+		mg.Text(c, locales.SettingsRulesHowItMatches()).FontSize(fsSmall).TextColor(p.ink3)
 		if st.formErr != "" {
-			mg.Text(c, st.formErr).FontSize(13.5).TextColor(p.red)
+			mg.Text(c, st.formErr).FontSize(fsBody).TextColor(p.red)
 		}
 		mg.Row(c).Gap(8).Justify(mg.End).Children(func() {
 			if button(c, locales.SettingsCancel(), btnOpt{}).Disabled(st.saving).Clicked() {

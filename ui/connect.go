@@ -313,14 +313,14 @@ func (a *app) agentRow(c *mg.Context, st agents.Status, last bool) {
 			}
 		}
 		if msg := s.errs[st.ID]; msg != "" {
-			mg.Text(c, locales.ConnectFailed(msg)).FontSize(13).TextColor(p.red).Role(mg.RoleStatus).Padding(0, 0, 0, 44)
+			mg.Text(c, locales.ConnectFailed(msg)).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus).Padding(0, 0, 0, 44)
 		} else if res, ok := s.done[st.ID]; ok && !(res.Opened != "" && st.State == agents.Connected) {
 			mg.Column(c).Gap(4).Padding(0, 0, 0, 44).Children(func() {
-				mg.Text(c, doneLine(st, res, s.removed[st.ID])).FontSize(13).TextColor(p.ink2).Role(mg.RoleStatus)
+				mg.Text(c, doneLine(st, res, s.removed[st.ID])).FontSize(fsSmall).TextColor(p.ink2).Role(mg.RoleStatus)
 				if len(res.Backups) > 0 {
 					path := res.Backups[len(res.Backups)-1]
 					mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
-						mg.Text(c, locales.ConnectKeptCopy()).FontSize(12.5).TextColor(p.ink3)
+						mg.Text(c, locales.ConnectKeptCopy()).FontSize(fsCaption).TextColor(p.ink3)
 						if linkButton(c, locales.ConnectShowCopy()).Label(locales.ConnectShowCopyLabel(st.Name)).Clicked() {
 							a.reveal(path)
 						}
@@ -476,7 +476,7 @@ func (a *app) agentCard(c *mg.Context) {
 		if st.State == agents.Outdated && (st.Why == agents.WhyMissing || st.Why == agents.WhyCoreutils) && st.Problem == "" {
 			sideCard(c, "agent-card", locales.ConnectCardBroken(st.Name), func() {
 				cardHead(c, locales.ConnectCardBroken(st.Name))
-				mg.Text(c, agentLine(st)).FontSize(12.5).TextColor(p.ink2)
+				mg.Text(c, agentLine(st)).FontSize(fsSmall).TextColor(p.ink2)
 				a.cardButtons(c, st, locales.ConnectFix(), locales.ConnectFixLabel(st.Name))
 			})
 			return
@@ -490,7 +490,7 @@ func (a *app) agentCard(c *mg.Context) {
 		cardHead(c, locales.ConnectTitle())
 		switch len(found) {
 		case 0:
-			mg.Text(c, locales.ConnectCardNone()).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.ConnectCardNone()).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.ConnectCardGet(), btnOpt{kind: btnPrimary, small: true}).Clicked() {
 					a.page, a.set.sec = pageSettings, secAgents
@@ -500,11 +500,11 @@ func (a *app) agentCard(c *mg.Context) {
 				}
 			})
 		case 1:
-			mg.Text(c, locales.ConnectCardFoundOne(found[0].Name)).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.ConnectCardFoundOne(found[0].Name)).FontSize(fsSmall).TextColor(p.ink2)
 			if msg := s.errs[found[0].ID]; msg != "" {
-				mg.Text(c, locales.ConnectFailed(msg)).FontSize(12.5).TextColor(p.red).Role(mg.RoleStatus)
+				mg.Text(c, locales.ConnectFailed(msg)).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			} else if res, ok := s.done[found[0].ID]; ok && res.Opened != "" {
-				mg.Text(c, locales.ConnectDoneOpened(found[0].Name)).FontSize(12.5).TextColor(p.ink2).Role(mg.RoleStatus)
+				mg.Text(c, locales.ConnectDoneOpened(found[0].Name)).FontSize(fsSmall).TextColor(p.ink2).Role(mg.RoleStatus)
 			}
 			a.cardButtons(c, found[0], locales.ConnectConnectLabel(found[0].Name), locales.ConnectConnectLabel(found[0].Name))
 		default:
@@ -512,7 +512,7 @@ func (a *app) agentCard(c *mg.Context) {
 			for i, st := range found {
 				names[i] = st.Name
 			}
-			mg.Text(c, locales.ConnectCardFound(joinAnd(names))).FontSize(12.5).TextColor(p.ink2)
+			mg.Text(c, locales.ConnectCardFound(joinAnd(names))).FontSize(fsSmall).TextColor(p.ink2)
 			mg.Row(c).Gap(10).AlignItems(mg.Center).Children(func() {
 				if button(c, locales.ConnectCardChoose(), btnOpt{kind: btnPrimary, small: true}).Clicked() {
 					a.page, a.set.sec = pageSettings, secAgents
@@ -529,7 +529,7 @@ func cardHead(c *mg.Context, title string) {
 	p := pal(c)
 	mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
 		mg.Icon(c, icPlug).FontSize(15).TextColor(p.accentInk)
-		mg.Text(c, title).FontSize(13.5).FontWeight(650).Grow(1).MinWidth(0)
+		mg.Text(c, title).FontSize(fsBody).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 	})
 }
 

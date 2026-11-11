@@ -130,8 +130,8 @@ func (a *app) checkupPanel(c *mg.Context, d gateway.DeviceView) {
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Shrink(0).Children(func() {
 			mg.Icon(c, icCheckup).FontSize(22).TextColor(p.ink2)
 			mg.Column(c).Grow(1).MinWidth(0).Children(func() {
-				mg.Text(c, locales.CheckupFor(d.Info.Name)).FontSize(19).FontWeight(650).Role(mg.RoleHeading)
-				mg.Text(c, locales.CheckupIntro()).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, locales.CheckupFor(d.Info.Name)).FontSize(fsTitle2).FontWeight(fwSemibold).Role(mg.RoleHeading)
+				mg.Text(c, locales.CheckupIntro()).FontSize(fsSmall).TextColor(p.ink2)
 			})
 		})
 		mg.Row(c).Gap(10).AlignItems(mg.Center).Shrink(0).Children(func() {
@@ -189,17 +189,17 @@ func (a *app) checkupList(c *mg.Context, d gateway.DeviceView, run *checkupRun, 
 			mg.Text(c, locales.CheckupFailed(errText(run.err))).Grow(1).MinWidth(0)
 		case fix > 0:
 			dot(c, p.amberDot, false)
-			mg.Text(c, locales.CheckupToFix(fix)).FontWeight(600).Grow(1).MinWidth(0)
+			mg.Text(c, locales.CheckupToFix(fix)).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 		case d.Info.State != driver.StateOnline:
 			dot(c, p.amberDot, false)
 			mg.Text(c, locales.CheckupWaitOnline()).Grow(1).MinWidth(0)
 		default:
 			dot(c, p.green, false)
-			mg.Text(c, locales.CheckupAllGood()).FontWeight(600).Grow(1).MinWidth(0)
+			mg.Text(c, locales.CheckupAllGood()).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 		}
 	})
 	if v.System != "" {
-		mg.Text(c, locales.CheckupSystem(v.System)).FontSize(12.5).TextColor(p.ink3).Margin(-8, 0, 0, 0)
+		mg.Text(c, locales.CheckupSystem(v.System)).FontSize(fsCaption).TextColor(p.ink3).Margin(-8, 0, 0, 0)
 	}
 	mg.Column(c).Gap(2).Role(mg.RoleList).Label(locales.CheckupFor(d.Info.Name)).Children(func() {
 		for i, ck := range checks {
@@ -207,7 +207,7 @@ func (a *app) checkupList(c *mg.Context, d gateway.DeviceView, run *checkupRun, 
 		}
 	})
 	if d.Info.State != driver.StateOnline && fix > 0 {
-		mg.Text(c, locales.CheckupWaitOnline()).FontSize(13).TextColor(p.ink2)
+		mg.Text(c, locales.CheckupWaitOnline()).FontSize(fsSmall).TextColor(p.ink2)
 	}
 }
 
@@ -267,27 +267,27 @@ func (a *app) checkItem(c *mg.Context, d gateway.DeviceView, v gateway.CheckupVi
 	row.Children(func() {
 		checkMark(c, ck.Status)
 		mg.Column(c).Grow(1).MinWidth(0).Gap(4).Children(func() {
-			mg.Text(c, words.title).FontSize(14.5).FontWeight(600)
+			mg.Text(c, words.title).FontSize(fsBody).FontWeight(fwSemibold)
 			if words.text != "" {
-				t := mg.Text(c, words.text).FontSize(13.5).LineHeight(1.4)
+				t := mg.Text(c, words.text).FontSize(fsBody).LineHeight(1.4)
 				if ck.Status == driver.CheckPass || ck.Status == driver.CheckSkip {
 					t.TextColor(p.ink2)
 				}
 			}
 			for i, step := range words.steps {
 				mg.Row(c.Key(i)).Gap(6).AlignItems(mg.Start).Children(func() {
-					mg.Text(c, "•").FontSize(13.5).TextColor(p.ink3)
-					mg.Text(c, step).FontSize(13.5).LineHeight(1.4).Grow(1).MinWidth(0)
+					mg.Text(c, "•").FontSize(fsSmall).TextColor(p.ink3)
+					mg.Text(c, step).FontSize(fsBody).LineHeight(1.4).Grow(1).MinWidth(0)
 				})
 			}
 			if words.path != "" {
 				menuPath(c, words.path, "")
 			}
 			if words.note != "" {
-				mg.Text(c, words.note).FontSize(12.5).TextColor(p.ink3).LineHeight(1.4)
+				mg.Text(c, words.note).FontSize(fsCaption).TextColor(p.ink3).LineHeight(1.4)
 			}
 			if ck.Detail != "" && (ck.Status == driver.CheckFail || a.settings.DeveloperMode) && words.detail {
-				mg.Text(c, ck.Detail).FontSize(12).TextColor(p.ink3).Selectable()
+				mg.Text(c, ck.Detail).FontSize(fsCaption).TextColor(p.ink3).Selectable()
 			}
 			a.checkAction(c, d, ck)
 		})
@@ -611,7 +611,7 @@ func (a *app) checkAction(c *mg.Context, d gateway.DeviceView, ck driver.Check) 
 		mg.Row(c).Gap(10).AlignItems(mg.Center).Margin(4, 0, 0, 0).Children(func() {
 			if busy {
 				spinner(c)
-				mg.Text(c, a.allowHint(id)).FontSize(13).FontWeight(600).Grow(1).MinWidth(0)
+				mg.Text(c, a.allowHint(id)).FontSize(fsSmall).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 				c.After(time.Second)
 				return
 			}
@@ -650,10 +650,10 @@ func menuPath(c *mg.Context, path, tap string) {
 				b.Background(p.accentTint).Border(1, p.accent)
 			}
 			b.Children(func() {
-				t := mg.Text(c, s).FontSize(12.5).FontWeight(600)
+				t := mg.Text(c, s).FontSize(fsSmall).FontWeight(fwSemibold)
 				if target {
 					t.TextColor(p.accentInk)
-					mg.Text(c, locales.GuideTapTimes()).FontSize(11.5).FontWeight(700).TextColor(p.accentInk)
+					mg.Text(c, locales.GuideTapTimes()).FontSize(fsCaption).FontWeight(fwBold).TextColor(p.accentInk)
 				}
 			})
 		}

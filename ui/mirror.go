@@ -555,20 +555,20 @@ func (a *app) mirrorView(c *mg.Context, m *mirror, d gateway.DeviceView, t *gate
 				if tile {
 					label = locales.MirrorLockedTile()
 				}
-				mg.Text(c, label).FontSize(14).FontWeight(600).NoWrap()
+				mg.Text(c, label).FontSize(fsBody).FontWeight(fwSemibold).NoWrap()
 			})
 		case (m.state == "connecting" || m.state == "playing") && m.bitmap == nil:
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(10).PassThrough().Children(func() {
 				spinner(c)
 				if !tile {
-					mg.Text(c, locales.MirrorConnecting()).FontSize(13).TextColor(hex("#a3a3ad"))
+					mg.Text(c, locales.MirrorConnecting()).FontSize(fsSmall).TextColor(hex("#a3a3ad"))
 				}
 			})
 		case m.state == "failed":
 			mg.Column(c).Absolute().Top(0).Left(0).Right(0).Bottom(0).Center().Gap(8).Padding(20).PassThrough().Children(func() {
 				mg.Icon(c, icAlert).FontSize(22).TextColor(hex("#f7a74e"))
 				if !tile {
-					mg.Text(c, mirrorError(m.err)).FontSize(12.5).TextColor(hex("#d0d0d8")).TextAlign(mg.Center).MaxWidth(240)
+					mg.Text(c, mirrorError(m.err)).FontSize(fsSmall).TextColor(hex("#d0d0d8")).TextAlign(mg.Center).MaxWidth(240)
 				}
 			})
 		}

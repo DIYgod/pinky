@@ -123,11 +123,11 @@ func (a *app) feedbackDialog(c *mg.Context) {
 		return
 	}
 	p := pal(c)
-	mg.Modal(c, &fb.open, func() {
+	sheet(c, &fb.open, func() {
 		mg.Column(c).Width(560).Gap(12).Label(locales.FeedbackTitle()).Children(func() {
-			mg.Text(c, locales.FeedbackTitle()).FontSize(17).FontWeight(650).Role(mg.RoleHeading)
+			mg.Text(c, locales.FeedbackTitle()).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
 			mg.Text(c, locales.FeedbackIntro()).
-				FontSize(13.5).TextColor(p.ink2)
+				FontSize(fsSmall).TextColor(p.ink2)
 			mg.TextInput(c.Key("fb-title"), &fb.title).Label(locales.FeedbackTitleField()).Placeholder(locales.FeedbackTitlePlaceholder())
 			mg.TextArea(c.Key("fb-message"), &fb.message).Label(locales.FeedbackMessageField()).Placeholder(locales.FeedbackMessagePlaceholder()).Lines(5, 10).AutoFocus()
 			cut := false
@@ -138,7 +138,7 @@ func (a *app) feedbackDialog(c *mg.Context) {
 				}
 				mg.Row(c).Gap(8).Padding(0, 0, 0, 26).AlignItems(mg.Center).Children(func() {
 					mg.Text(c, locales.FeedbackRedacted()).
-						FontSize(12.5).TextColor(p.ink3).Grow(1).MinWidth(0)
+						FontSize(fsCaption).TextColor(p.ink3).Grow(1).MinWidth(0)
 					label, aria := locales.FeedbackReview(), locales.FeedbackReviewLabel()
 					if fb.review {
 						label, aria = locales.FeedbackHide(), locales.FeedbackHideLabel()
@@ -161,9 +161,9 @@ func (a *app) feedbackDialog(c *mg.Context) {
 			if cut {
 				note = locales.SentencePair(note, locales.FeedbackCut())
 			}
-			mg.Text(c, note).FontSize(12.5).TextColor(p.ink3)
+			mg.Text(c, note).FontSize(fsCaption).TextColor(p.ink3)
 			if fb.err != "" {
-				mg.Text(c, fb.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+				mg.Text(c, fb.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 			}
 			mg.Row(c).Gap(8).Justify(mg.End).Children(func() {
 				if button(c, locales.FeedbackCopy(), btnOpt{icon: icCopy}).Label(locales.FeedbackCopyLabel()).Tooltip(locales.FeedbackCopyTooltip()).Clicked() {

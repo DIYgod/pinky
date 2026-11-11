@@ -183,9 +183,9 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 	setup := d != nil && d.Status == gateway.DeviceNeedsSetup
 	switch {
 	case setup:
-		mg.Text(c, locales.NeedsHandoffSetup(agent)).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, locales.NeedsHandoffSetup(agent)).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case holding && !locked:
-		mg.Text(c, locales.NeedsHandoffInControl(agent)).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, locales.NeedsHandoffInControl(agent)).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case locked && a.canUnlockHere(n.DeviceID):
 		a.unlockButton(c, n.DeviceID).Margin(12, 0, 0, 0).FillWidth()
 		// Unlocking hands the phone back only when unlocking is all the
@@ -194,19 +194,19 @@ func (a *app) handoffControls(c *mg.Context, n gateway.NeedView) {
 		if n.EndsOnUnlock {
 			how = locales.NeedsHandoffLockedHere(agent)
 		}
-		mg.Text(c, how).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, how).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	case locked:
 		mg.Text(c, locales.NeedsHandoffLocked(a.unlockElsewhere(n.DeviceID, locales.NeedsThenClickDone()))).
-			FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+			FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 		if d := a.device(n.DeviceID); d != nil && a.pinMissing(*d) {
 			mg.Column(c).Margin(8, 0, 0, 0).Gap(8).Children(func() { a.pinForm(c, *d, "card") })
 		}
 	default:
-		mg.Text(c, locales.NeedsHandoffHowTo()).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		mg.Text(c, locales.NeedsHandoffHowTo()).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	}
 	noting := a.noting[n.ID]
 	if noting {
-		mg.Text(c, locales.NeedsNoteFor(agent)).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
+		mg.Text(c, locales.NeedsNoteFor(agent)).FontSize(fsSmall).FontWeight(fwSemibold).Margin(10, 0, 0, 0)
 		note := a.notes[n.ID]
 		mg.TextArea(c.Key("hnote-"+n.ID), &note).Label(locales.NeedsNoteFor(agent)).Placeholder(locales.NeedsHandoffNotePlaceholder()).
 			Lines(2, 4).Margin(6, 0, 0, 0).AutoFocus()
@@ -251,9 +251,9 @@ func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
 	}
 	if _, ok := a.api.(agentScoper); ok {
 		if n.ReadOnly {
-			mg.Text(c, locales.NeedsAgentAskedReadOnly(agentOf(n))).FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+			mg.Text(c, locales.NeedsAgentAskedReadOnly(agentOf(n))).FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 		}
-		mg.Text(c, locales.NeedsLetAgent(agentOf(n))).FontSize(13).FontWeight(600).Margin(12, 0, 6, 0)
+		mg.Text(c, locales.NeedsLetAgent(agentOf(n))).FontSize(fsSmall).FontWeight(fwSemibold).Margin(12, 0, 6, 0)
 		scope = a.scopePicker(c, n.ID, locales.NeedsLetAgent(agentOf(n)), scope)
 	}
 	noApps := scope.Mode == gateway.ScopeApps && len(scope.Apps) == 0
@@ -278,7 +278,7 @@ func (a *app) agentRequestControls(c *mg.Context, n gateway.NeedView) {
 func (a *app) unblockControls(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	mg.Text(c, locales.NeedsUnblockHow(nonEmpty(n.App, locales.PanelThisApp()), ruleName(n.Rule), agentOf(n))).
-		FontSize(13).TextColor(p.ink2).Margin(8, 0, 0, 0)
+		FontSize(fsSmall).TextColor(p.ink2).Margin(8, 0, 0, 0)
 	mg.Grid(c).Columns(2).Gap(8).Margin(12, 0, 0, 0).Children(func() {
 		if button(c, locales.NeedsDeny(), btnOpt{}).Clicked() {
 			a.decide(n, gateway.Deny, "")
@@ -295,7 +295,7 @@ func (a *app) approvalControls(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	noting := a.noting[n.ID]
 	if noting {
-		mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(13).FontWeight(600).Margin(10, 0, 0, 0)
+		mg.Text(c, locales.NeedsNoteFor(agentOf(n))).FontSize(fsSmall).FontWeight(fwSemibold).Margin(10, 0, 0, 0)
 		note, ok := a.notes[n.ID]
 		if !ok {
 			note = ""
@@ -448,7 +448,7 @@ func (a *app) taskCard(c *mg.Context, t gateway.TaskView) {
 			mg.Row(c).Margin(12, 0, 0, 0).Padding(10, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).
 				Gap(10).AlignItems(mg.Center).Children(func() {
 				mg.Column(c).Grow(1).Children(func() {
-					mg.Text(c, locales.TasksDetails()).FontWeight(500)
+					mg.Text(c, locales.TasksDetails()).FontWeight(fwMedium)
 					mg.Text(c, locales.TasksDeveloperModeOn()).FontSize(fsCaption).TextColor(p.ink2)
 				})
 				on := a.details[t.ID]
@@ -506,12 +506,12 @@ func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 						tx := mg.Text(c, text).FontSize(fsSmall).LineHeight(1.45)
 						switch kind {
 						case stepWait:
-							tx.TextColor(p.amber).FontWeight(600)
+							tx.TextColor(p.amber).FontWeight(fwSemibold)
 						case stepNow:
-							tx.FontWeight(600)
+							tx.FontWeight(fwSemibold)
 						case stepYou:
 							if i == len(t.Steps)-1 && running(t.State) {
-								tx.FontWeight(600)
+								tx.FontWeight(fwSemibold)
 							}
 						}
 						if sub != "" {
@@ -565,7 +565,7 @@ func techList(c *mg.Context, t gateway.TaskView) {
 			})
 		}
 		if n == 0 {
-			mg.Text(c, locales.TasksNoToolCalls()).FontSize(13).TextColor(p.ink2)
+			mg.Text(c, locales.TasksNoToolCalls()).FontSize(fsSmall).TextColor(p.ink2)
 		}
 	})
 }

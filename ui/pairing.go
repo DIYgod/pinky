@@ -355,9 +355,9 @@ func (a *app) pairStuck(c *mg.Context) bool {
 	default:
 		title, text = locales.PairingStuckNotSeenTitle(), locales.PairingStuckNotSeen()
 	}
-	mg.Column(c).Padding(16, 18).Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(10).Role(mg.RoleStatus).Children(func() {
-		mg.Text(c, title).FontSize(15).FontWeight(650)
-		mg.Text(c, text).FontSize(13.5).LineHeight(1.45)
+	mg.Column(c).Padding(sp4, 18).Radius(rCard).Background(p.amberTint).Border(1, p.amberLine).Gap(10).Role(mg.RoleStatus).Children(func() {
+		mg.Text(c, title).FontSize(fsHeadline).FontWeight(fwSemibold)
+		mg.Text(c, text).FontSize(fsBody).LineHeight(1.45)
 		mg.Row(c).Gap(10).Wrap().Children(func() {
 			// Allowing Pinky is the fix there; the code goes around it.
 			if settings && button(c, locales.PairingOpenLocalNetwork(), btnOpt{small: true, kind: btnPrimary}).Clicked() {

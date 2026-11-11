@@ -73,8 +73,8 @@ func (a *app) pausedPage(c *mg.Context, d gateway.DeviceView) {
 		mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 			mg.Icon(c, icPause).FontSize(30).TextColor(p.ink3)
 		})
-		mg.Text(c, locales.PhonePausedTitle(d.Info.Name)).FontSize(16).FontWeight(600)
-		mg.Text(c, locales.PhonePausedDetail()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		mg.Text(c, locales.PhonePausedTitle(d.Info.Name)).FontSize(fsTitle3).FontWeight(fwSemibold)
+		mg.Text(c, locales.PhonePausedDetail()).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		if a.canPause() && button(c.Key("resume-"+d.Info.ID), locales.PhonePausedResume(), btnOpt{kind: btnPrimary, icon: icPlay}).Clicked() {
 			a.setPaused(d, false)
 		}

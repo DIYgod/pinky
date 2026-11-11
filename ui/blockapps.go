@@ -193,24 +193,24 @@ func (a *app) addBlockedApp(c *mg.Context) {
 		matches, exact := appMatches(a.notListed(st.list), q)
 		switch {
 		case !st.loaded:
-			mg.Text(c, locales.SettingsSafetyAppsLoading()).FontSize(13).TextColor(p.ink3)
+			mg.Text(c, locales.SettingsSafetyAppsLoading()).FontSize(fsSmall).TextColor(p.ink3)
 			return
 		case len(st.list) == 0:
-			mg.Text(c, locales.SettingsSafetyAppsNoPhone()).FontSize(13).TextColor(p.ink3)
+			mg.Text(c, locales.SettingsSafetyAppsNoPhone()).FontSize(fsSmall).TextColor(p.ink3)
 			return
 		case q != "" && !exact && len(matches) == 0:
 			// Blocking it would match no app on the phones: a typo, or an
 			// app not on them.
-			mg.Text(c, locales.SettingsSafetyAppNoMatch(q)).FontSize(13).TextColor(p.amber).Role(mg.RoleStatus)
+			mg.Text(c, locales.SettingsSafetyAppNoMatch(q)).FontSize(fsSmall).TextColor(p.amber).Role(mg.RoleStatus)
 		}
 		if len(matches) == 0 {
 			return
 		}
 		mg.Column(c).Label(locales.SettingsSafetyAppsOnPhones()).Children(func() {
-			mg.Text(c, locales.SettingsSafetyAppsOnPhones()).FontSize(12.5).FontWeight(600).TextColor(p.ink2).Margin(0, 0, 2, 0)
+			mg.Text(c, locales.SettingsSafetyAppsOnPhones()).FontSize(fsSmall).FontWeight(fwSemibold).TextColor(p.ink2).Margin(0, 0, 2, 0)
 			for i, x := range matches {
 				if i == maxAppChoices {
-					mg.Text(c, locales.SettingsSafetyAppsMore(len(matches)-maxAppChoices)).FontSize(12.5).TextColor(p.ink3).Padding(4, 0)
+					mg.Text(c, locales.SettingsSafetyAppsMore(len(matches)-maxAppChoices)).FontSize(fsCaption).TextColor(p.ink3).Padding(4, 0)
 					break
 				}
 				x := x
@@ -226,7 +226,7 @@ func (a *app) addBlockedApp(c *mg.Context) {
 				row.Children(func() {
 					appIcon(c, name, 24, 7, 12, blockedColor(name))
 					mg.Text(c, name).MinWidth(0).SingleLine()
-					mg.Text(c, x.ID).FontSize(12.5).TextColor(p.ink3).Grow(1).MinWidth(0).SingleLine()
+					mg.Text(c, x.ID).FontSize(fsCaption).TextColor(p.ink3).Grow(1).MinWidth(0).SingleLine()
 				})
 			}
 		})

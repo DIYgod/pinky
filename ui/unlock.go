@@ -178,11 +178,11 @@ func (a *app) unlockControls(c *mg.Context, n gateway.NeedView) {
 	if a.canUnlockHere(n.DeviceID) {
 		a.unlockButton(c, n.DeviceID).Margin(12, 0, 0, 0).FillWidth()
 		_, keep := unlockWords()
-		mg.Text(c, locales.UnlockOrOnPhone()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
-		mg.Text(c, keep).FontSize(12).TextColor(p.ink3).TextAlign(mg.Center).Margin(6, 0, 0, 0)
+		mg.Text(c, locales.UnlockOrOnPhone()).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center).Margin(8, 0, 0, 0)
+		mg.Text(c, keep).FontSize(fsCaption).TextColor(p.ink3).TextAlign(mg.Center).Margin(6, 0, 0, 0)
 		return
 	}
-	mg.Text(c, a.unlockElsewhere(n.DeviceID, "")).FontSize(13).TextColor(p.ink2).Margin(10, 0, 0, 0)
+	mg.Text(c, a.unlockElsewhere(n.DeviceID, "")).FontSize(fsSmall).TextColor(p.ink2).Margin(10, 0, 0, 0)
 	if d := a.device(n.DeviceID); d != nil && a.pinMissing(*d) {
 		mg.Column(c).Margin(10, 0, 0, 0).Gap(8).Children(func() { a.pinForm(c, *d, "card") })
 	}
@@ -230,7 +230,7 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 		return
 	}
 	if !st.supported {
-		mg.Text(c, locales.UnlockNotAvailable()).FontSize(13).TextColor(p.ink2)
+		mg.Text(c, locales.UnlockNotAvailable()).FontSize(fsSmall).TextColor(p.ink2)
 		return
 	}
 	open := st.editing == id && st.where == where
@@ -253,14 +253,14 @@ func (a *app) pinForm(c *mg.Context, d gateway.DeviceView, where string) {
 			}
 		})
 		if st.err != "" {
-			mg.Text(c, st.err).FontSize(13).TextColor(p.red).Role(mg.RoleStatus)
+			mg.Text(c, st.err).FontSize(fsSmall).TextColor(p.red).Role(mg.RoleStatus)
 		}
-		mg.Text(c, keep).FontSize(12.5).TextColor(p.ink3)
+		mg.Text(c, keep).FontSize(fsCaption).TextColor(p.ink3)
 	case st.saved[id]:
 		mg.Row(c).Gap(12).AlignItems(mg.Center).Wrap().Children(func() {
 			mg.Row(c).Gap(6).AlignItems(mg.Center).Children(func() {
 				mg.Icon(c, icLock).FontSize(14).TextColor(p.ink2)
-				mg.Text(c, locales.PinSaved()).FontSize(13.5).TextColor(p.ink2)
+				mg.Text(c, locales.PinSaved()).FontSize(fsSmall).TextColor(p.ink2)
 			})
 			if linkButton(c, locales.PinChange()).Label(locales.PinChangeLabel(name)).Clicked() {
 				st.editing, st.where, st.value, st.err = id, where, "", ""
@@ -344,20 +344,20 @@ func (a *app) lockCard(c *mg.Context, d gateway.DeviceView) {
 		Label(locales.UnlockLocked(d.Info.Name)).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icLock).FontSize(16).TextColor(p.ink2)
-			mg.Text(c, locales.UnlockLocked(d.Info.Name)).FontSize(15).FontWeight(650).Grow(1).MinWidth(0)
+			mg.Text(c, locales.UnlockLocked(d.Info.Name)).FontSize(fsHeadline).FontWeight(fwSemibold).Grow(1).MinWidth(0)
 		})
 		if wrong {
-			mg.Text(c, a.unlockElsewhere(id, "")).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			mg.Text(c, a.unlockElsewhere(id, "")).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
 			return
 		}
 		if canUnlock {
-			mg.Text(c, locales.UnlockFromHere()).FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			mg.Text(c, locales.UnlockFromHere()).FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
 			a.unlockButton(c, id).Margin(4, 0, 0, 0).FillWidth()
-			mg.Text(c, keep).FontSize(12).TextColor(p.ink3)
+			mg.Text(c, keep).FontSize(fsCaption).TextColor(p.ink3)
 			return
 		}
 		mg.Text(c, unlockPitch()).
-			FontSize(13.5).TextColor(p.ink2).LineHeight(1.4)
+			FontSize(fsSmall).TextColor(p.ink2).LineHeight(1.4)
 		mg.Column(c).Gap(8).Margin(4, 0, 0, 0).Children(func() { a.pinForm(c, d, "lock") })
 		if a.pin.editing != id {
 			if quietButton(c, locales.UnlockNotNow()).Label(locales.UnlockNotNowLabel(d.Info.Name)).Clicked() {

@@ -539,7 +539,7 @@ func (a *app) missingShotNote(c *mg.Context, n gateway.NeedView) {
 	p := pal(c)
 	mg.Row(c).Margin(12, 0, 0, 0).Padding(9, 12).Radius(10).Background(trayColor(p)).Gap(8).AlignItems(mg.Center).Children(func() {
 		mg.Icon(c, ic).FontSize(16).TextColor(p.ink3).Shrink(0)
-		mg.Text(c, text).FontSize(13).TextColor(p.ink2).MaxLines(2)
+		mg.Text(c, text).FontSize(fsSmall).TextColor(p.ink2).MaxLines(2)
 	})
 }
 
@@ -564,7 +564,7 @@ func (a *app) shotViewer(c *mg.Context, n gateway.NeedView, w, h float32, fill b
 		mg.Row(c).Gap(12).AlignItems(mg.Start).Children(func() {
 			mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
 				needEyebrow(c, n)
-				mg.Text(c, needTitle(n)).FontSize(15).FontWeight(650).LineHeight(1.3).MaxLines(2).Margin(4, 0, 0, 0)
+				mg.Text(c, needTitle(n)).FontSize(fsHeadline).FontWeight(fwSemibold).LineHeight(1.3).MaxLines(2).Margin(4, 0, 0, 0)
 			})
 			b := mg.ButtonBase(c).Size(28, 28).Radius(8).Center().Label(locales.ShotClose()).Shrink(0)
 			ink := p.ink2
@@ -730,7 +730,7 @@ func (a *app) shotDialog(c *mg.Context) {
 	}
 	open := found
 	w, h := c.Size()
-	mg.Modal(c.Key("shot-"+a.shotOpen), &open, func() {
+	sheet(c.Key("shot-"+a.shotOpen), &open, func() {
 		mg.Column(c).Children(func() {
 			a.shotViewer(c, n, w*0.7, h*0.86-viewerChrome, false, func() { a.shotOpen = "" })
 		})

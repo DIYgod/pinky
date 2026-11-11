@@ -59,11 +59,11 @@ func (a *app) sharedDialog(c *mg.Context) {
 		return
 	}
 	p := pal(c)
-	mg.Modal(c, &a.t.sharedOpen, func() {
+	sheet(c, &a.t.sharedOpen, func() {
 		mg.Column(c).Width(560).Gap(12).Label(locales.TelSharedTitle()).Children(func() {
-			mg.Text(c, locales.TelSharedTitle()).FontSize(17).FontWeight(650).Role(mg.RoleHeading)
+			mg.Text(c, locales.TelSharedTitle()).FontSize(fsTitle3).FontWeight(fwSemibold).Role(mg.RoleHeading)
 			mg.Text(c, locales.TelSharedDesc()).
-				FontSize(13.5).TextColor(p.ink2)
+				FontSize(fsSmall).TextColor(p.ink2)
 			mg.Scroll(c).MaxHeight(320).Padding(10, 12).Radius(8).Background(p.bg2).Border(1, p.line).Children(func() {
 				mg.Text(c, a.t.sharedText).Font("monospace").FontSize(12).Selectable()
 			})
@@ -139,5 +139,5 @@ func (a *app) feedbackLink(c *mg.Context) {
 	if b.Clicked() {
 		a.openFeedback()
 	}
-	b.TextColor(col).Children(func() { mg.Text(c, locales.TelSendFeedbackLink()).FontSize(13.5) })
+	b.TextColor(col).Children(func() { mg.Text(c, locales.TelSendFeedbackLink()).FontSize(fsBody) })
 }

@@ -173,15 +173,15 @@ func (a *app) foundPage(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
 		mg.Icon(c, icWifi).FontSize(28).TextColor(p.accentInk)
-		mg.Text(c, locales.FoundTitle(d.Info.Name)).FontSize(16).FontWeight(600).TextAlign(mg.Center)
+		mg.Text(c, locales.FoundTitle(d.Info.Name)).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center)
 		if line := foundLine(d); line != "" {
-			mg.Text(c, line).FontSize(13).TextColor(p.ink3)
+			mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink3)
 		}
-		mg.Text(c, foundDetail(d)).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		mg.Text(c, foundDetail(d)).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		mg.Box(c).Height(4)
 		a.foundButtons(c, d, false)
-		mg.Text(c, locales.FoundUseNote()).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
-		mg.Text(c, locales.FoundIgnoreNote()).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
+		mg.Text(c, locales.FoundUseNote()).FontSize(fsCaption).TextColor(p.ink3).TextAlign(mg.Center)
+		mg.Text(c, locales.FoundIgnoreNote()).FontSize(fsCaption).TextColor(p.ink3).TextAlign(mg.Center)
 	})
 }
 
@@ -236,15 +236,15 @@ func (a *app) foundBox(c *mg.Context) {
 	mg.Column(c).Padding(14, 16).Radius(12).Background(p.bg2).Gap(10).Label(locales.AddPhoneIPhoneFoundTitle()).Children(func() {
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icWifi).FontSize(16).TextColor(p.accentInk)
-			mg.Text(c, locales.AddPhoneIPhoneFoundTitle()).FontSize(15).FontWeight(650)
+			mg.Text(c, locales.AddPhoneIPhoneFoundTitle()).FontSize(fsHeadline).FontWeight(fwSemibold)
 		})
 		guideText(c, locales.AddPhoneIPhoneFoundDetail())
 		for _, d := range found {
 			mg.Row(c.Key("found-"+d.Info.ID)).Gap(12).AlignItems(mg.Center).Padding(4, 0, 0, 0).Children(func() {
 				mg.Column(c).Grow(1).MinWidth(0).Gap(2).Children(func() {
-					mg.Text(c, d.Info.Name).FontWeight(600)
+					mg.Text(c, d.Info.Name).FontWeight(fwSemibold)
 					if line := foundLine(d); line != "" {
-						mg.Text(c, line).FontSize(13).TextColor(p.ink2)
+						mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink2)
 					}
 				})
 				a.foundButtons(c, d, true)
@@ -264,8 +264,8 @@ func (a *app) changedPage(c *mg.Context, d gateway.DeviceView) {
 	_, can := a.api.(phoneTruster)
 	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
 		mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
-		mg.Text(c, locales.ChangedTitle(d.Info.Name)).FontSize(16).FontWeight(600).TextAlign(mg.Center)
-		mg.Text(c, locales.ChangedDetail(d.Info.Name)).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		mg.Text(c, locales.ChangedTitle(d.Info.Name)).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center)
+		mg.Text(c, locales.ChangedDetail(d.Info.Name)).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		mg.Box(c).Height(4)
 		mg.Row(c).Gap(8).AlignItems(mg.Center).Children(func() {
 			// Not the primary button: leaving it alone is the safe choice.
@@ -278,7 +278,7 @@ func (a *app) changedPage(c *mg.Context, d gateway.DeviceView) {
 				spinner(c)
 			}
 		})
-		mg.Text(c, locales.ChangedTrustNote(d.Info.Name)).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
+		mg.Text(c, locales.ChangedTrustNote(d.Info.Name)).FontSize(fsCaption).TextColor(p.ink3).TextAlign(mg.Center)
 		a.trustDialog(c, d)
 	})
 }
@@ -344,9 +344,9 @@ func (a *app) connectingPage(c *mg.Context, d gateway.DeviceView) {
 		mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 			spinner(c)
 		})
-		mg.Text(c, title).FontSize(16).FontWeight(600).TextAlign(mg.Center)
+		mg.Text(c, title).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center)
 		if d.TaskID != "" {
-			mg.Text(c, locales.PhoneConnectingTask()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+			mg.Text(c, locales.PhoneConnectingTask()).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		}
 	})
 }
@@ -363,8 +363,8 @@ func (a *app) lostPage(c *mg.Context, d gateway.DeviceView) {
 	p := pal(c)
 	mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(440).Role(mg.RoleStatus).Children(func() {
 		mg.Icon(c, icWifiOff).FontSize(28).TextColor(p.amberDot)
-		mg.Text(c, locales.LostTitle(d.Info.Name)).FontSize(16).FontWeight(600).TextAlign(mg.Center)
-		mg.Text(c, locales.LostDetail(d.Info.Name)).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+		mg.Text(c, locales.LostTitle(d.Info.Name)).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center)
+		mg.Text(c, locales.LostDetail(d.Info.Name)).FontSize(fsSmall).TextColor(p.ink2).TextAlign(mg.Center)
 		mg.Box(c).Height(4)
 		a.restartControls(c, d, true)
 	})
@@ -375,7 +375,7 @@ func (a *app) lostPage(c *mg.Context, d gateway.DeviceView) {
 func (a *app) restartControls(c *mg.Context, d gateway.DeviceView, center bool) {
 	p := pal(c)
 	note := func(s string) {
-		t := mg.Text(c, s).FontSize(12.5).TextColor(p.ink3)
+		t := mg.Text(c, s).FontSize(fsCaption).TextColor(p.ink3)
 		if center {
 			t.TextAlign(mg.Center)
 		}
