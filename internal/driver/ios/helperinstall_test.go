@@ -1,6 +1,8 @@
 package ios
 
 import (
+	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -9,10 +11,15 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"math/big"
+	"os"
+	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -27,7 +34,8 @@ func TestHelperBundleID(t *testing.T) {
 		{"asked", "com.x.WebDriverAgentRunner.xctrunner", "ABCDE12345", owned, "com.x.WebDriverAgentRunner"},
 		{"the phone's, same team", "", "ABCDE12345", owned, "com.me.WebDriverAgentRunner"},
 		{"the phone's, other team", "", "ZZZZZ99999", owned, "pinky.zzzzz99999.WebDriverAgentRunner"},
-		{"the phone's, team unknown", "", "ABCDE12345", wdaRunner{BundleID: owned.BundleID}, "pinky.abcde12345.WebDriverAgentRunner"},
+		// devicectl names no team: replace it, as one Mac usually signs with one team.
+		{"the phone's, team unknown", "", "ABCDE12345", wdaRunner{BundleID: "com.me.tool.wda.xctrunner"}, "com.me.tool.wda"},
 		{"none on the phone", "", "ABCDE12345", wdaRunner{}, "pinky.abcde12345.WebDriverAgentRunner"},
 	} {
 		if got := helperBundleID(c.want, c.team, c.r); got != c.bid {
@@ -191,6 +199,54 @@ func TestHelperArgs(t *testing.T) {
 	}
 }
 
+// devicectlApps is `devicectl device info apps --json-output`, cut down:
+// a runner from another tool, named as Xcode names it, and apps that are
+// not runners.
+const devicectlApps = `{"info":{"outcome":"success"},"result":{"apps":[
+ {"bundleIdentifier":"com.example.notes","name":"Notes Plus","url":"file:///private/var/containers/Bundle/Application/A/Notes.app/"},
+ {"bundleIdentifier":"com.example.uitests.xctrunner","name":"MyAppUITests-Runner","url":"file:///private/var/containers/Bundle/Application/B/MyAppUITests-Runner.app/"},
+ {"bundleIdentifier":"cc.example.tool.wda.xctrunner","name":"WebDriverAgentRunner-Runner","url":"file:///private/var/containers/Bundle/Application/C/WebDriverAgentRunner-Runner.app/"}
+]}}`
+
+func TestParseDeviceApps(t *testing.T) {
+	r, err := parseDeviceApps([]byte(devicectlApps))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.BundleID != "cc.example.tool.wda.xctrunner" || r.AppID != "" {
+		t.Errorf("runner = %+v", r)
+	}
+	// A branded one shows as Pinky Helper; its folder still names it, and
+	// Pinky's own wins.
+	branded := strings.Replace(devicectlApps, `]}}`, `,
+ {"bundleIdentifier":"pinky.abcde12345.WebDriverAgentRunner.xctrunner","name":"Pinky Helper","url":"file:///private/var/containers/Bundle/Application/D/WebDriverAgentRunner-Runner.app/"}]}}`, 1)
+	if r, err := parseDeviceApps([]byte(branded)); err != nil || r.BundleID != "pinky.abcde12345.WebDriverAgentRunner.xctrunner" {
+		t.Errorf("branded: %+v, %v", r, err)
+	}
+	if r, err := parseDeviceApps([]byte(`{"result":{"apps":[]}}`)); err != nil || r.BundleID != "" {
+		t.Errorf("no apps: %+v, %v", r, err)
+	}
+	if _, err := parseDeviceApps([]byte(`not json`)); err == nil {
+		t.Error("bad JSON reads")
+	}
+}
+
+func TestBundleIDPattern(t *testing.T) {
+	for id, ok := range map[string]bool{
+		"cc.example.tool.wda":                   true,
+		"pinky.abcde12345.WebDriverAgentRunner": true,
+		"com.my-team.Runner":                    true,
+		"wda":                                   false,
+		"com..me":                               false,
+		"com.me/x":                              false,
+		".com.me":                               false,
+	} {
+		if bundleID.MatchString(id) != ok {
+			t.Errorf("%q: matches %v", id, !ok)
+		}
+	}
+}
+
 func TestHelperHint(t *testing.T) {
 	for out, want := range map[string]string{
 		"Unable to launch com.me.WebDriverAgentRunner.xctrunner because it has an invalid code signature, inadequate entitlements or its profile has not been explicitly trusted by the user.": "VPN & Device Management",
@@ -199,7 +255,8 @@ func TestHelperHint(t *testing.T) {
 		"The device is passcode protected.":                               "Unlock the phone",
 		`error: No Account for Team "ABCDE12345".`:                        "Xcode › Settings › Accounts",
 		`error: No profiles for 'com.me.WebDriverAgentRunner' were found`: "--local-signing",
-		"** BUILD FAILED ** something else":                               "",
+		"Upgrade's application-identifier entitlement string (ZZZZZ99999.com.me.wda.xctrunner) does not match installed application's application-identifier string (ABCDE12345.com.me.wda.xctrunner); rejecting upgrade.": "--team",
+		"** BUILD FAILED ** something else": "",
 	} {
 		got := helperHint(out)
 		if want == "" && got != "" || !strings.Contains(got, want) {
@@ -212,6 +269,61 @@ func TestHelperHint(t *testing.T) {
 	if needsProvisioning("error: Developer Mode disabled") {
 		t.Error("Developer Mode asks for a profile")
 	}
+}
+
+// TestXcodeRun runs a stand-in xcodebuild that waits for the phone, then
+// prints WDA's address and keeps going: the person hears about the wait
+// once, and the run stops at the address.
+func TestXcodeRun(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("a shell script stands in for xcodebuild")
+	}
+	dev := t.TempDir()
+	bin := filepath.Join(dev, "usr", "bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	script := "#!/bin/sh\n" +
+		"echo 'Run Destination Preflight: " + xcodeWaiting + ".'\n" +
+		"echo 'Run Destination Preflight: " + xcodeWaiting + ".'\n" +
+		"echo 'ServerURLHere->http://127.0.0.1:8100<-ServerURLHere'\n" +
+		"exec sleep 60\n"
+	if err := os.WriteFile(filepath.Join(bin, "xcodebuild"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var log, out syncBuffer
+	start := time.Now()
+	tail, err := xcodeRun(context.Background(), xcode{Developer: dev}, &log, &out, nil, nil)
+	if !errors.Is(err, errHelperUp) {
+		t.Fatalf("err = %v, want errHelperUp; tail %q", err, tail)
+	}
+	if d := time.Since(start); d > 20*time.Second {
+		t.Errorf("stopping took %v", d)
+	}
+	if n := strings.Count(out.String(), "unlock it"); n != 1 {
+		t.Errorf("told about the wait %d times: %q", n, out.String())
+	}
+	if !strings.Contains(log.String(), "ServerURLHere") || !strings.Contains(tail, "ServerURLHere") {
+		t.Errorf("log %q, tail %q", log.String(), tail)
+	}
+}
+
+// syncBuffer is a bytes.Buffer safe for xcodeRun's goroutines.
+type syncBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (s *syncBuffer) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.Write(p)
+}
+
+func (s *syncBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.b.String()
 }
 
 func TestMarkWriter(t *testing.T) {
