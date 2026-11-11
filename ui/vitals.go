@@ -127,7 +127,7 @@ func (a *app) phoneAbout(c *mg.Context, d gateway.DeviceView) {
 		}
 	})
 	mg.PopoverBase(c, b, &open, func(panel mg.Element) {
-		menuPanel(c, panel).Width(300).Padding(14, 16, 16, 16).Margin(6, 0, 0, 0).
+		menuPanel(c, panel).MinWidth(300).MaxWidth(420).Padding(14, 16, 16, 16).Margin(6, 0, 0, 0).
 			AttachTo(b, mg.AnchorBottomEnd, mg.AnchorTopEnd)
 		phoneAboutPanel(c, d, v)
 	})
