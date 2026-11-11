@@ -652,13 +652,10 @@ func runSteps(ctx context.Context, d stepper, st statser, steps []string) error 
 			err = pinchStep(ctx, d, arg)
 		case "key":
 			err = d.Key(ctx, driver.Key(arg))
+			printNote(d)
 		case "type":
 			err = d.Type(ctx, arg, driver.TypeOptions{})
-			if n, ok := d.(driver.InputNoter); ok {
-				if note := n.TakeInputNote(); note != "" {
-					fmt.Println("note:", note)
-				}
-			}
+			printNote(d)
 		case "launch":
 			err = d.Launch(ctx, arg)
 		case "sleep":
@@ -915,6 +912,16 @@ func reorder(args []string) []string {
 		}
 	}
 	return append(flags, rest...)
+}
+
+// printNote prints what the driver could not make sure of about the last
+// Type or Key (driver.InputNoter).
+func printNote(d stepper) {
+	if n, ok := d.(driver.InputNoter); ok {
+		if note := n.TakeInputNote(); note != "" {
+			fmt.Println("note:", note)
+		}
+	}
 }
 
 // dragStep drags from X1,Y1 to X2,Y2: a long press to pick up, the move in

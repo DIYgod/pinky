@@ -209,8 +209,9 @@ func (b *Background) pinchVia(ctx context.Context, c *companion.Client, g driver
 
 // keyVia presses back or enter through the companion; other keys, back
 // while another display has the phone's focus and enter where the
-// companion finds no field go through scrcpy, which a phone that drops
-// adb's input may ignore.
+// companion finds no field go through scrcpy. A phone that drops adb's
+// input ignores those, so the agent gets a note that the key may not have
+// arrived (driver.InputNoter).
 func (b *Background) keyVia(ctx context.Context, c *companion.Client, k driver.Key, code int32) error {
 	action := ""
 	switch k {
@@ -220,14 +221,40 @@ func (b *Background) keyVia(ctx context.Context, c *companion.Client, k driver.K
 		action = "enter"
 	}
 	return b.l.input(func() error {
+		var refused error
 		if action != "" {
 			err := c.Global(ctx, b.display, action)
 			var ce *companion.Error
 			if !errors.As(err, &ce) || ce.Code == companion.CodeOwnUI {
 				return inputErr(err) // done, or refused for good, or the connection failed
 			}
+			refused = err
 			b.d.cfg.logf("android: %s: %s on display %d through the companion: %v; sending it through scrcpy", b.d.info.ID, action, b.display, err)
+		}
+		if b.d.dropsDisplayInput() {
+			b.d.setInputNote(droppedKeyNote(k, refused))
 		}
 		return b.l.key(code, 0)
 	})
+}
+
+// Notes for the agent about a key that went through scrcpy to a background
+// display of a phone that drops what adb injects there (driver.InputNoter).
+const (
+	noteBackUnfocused = "Back may not have reached the app: the phone's own screen was used last and has the focus, and this phone drops keys sent to the background display you work on. If the screen did not change, tap the app's own back button."
+	noteEnterNoField  = "Enter may not have reached the app: no text field took it, and this phone drops keys sent to the background display you work on. If the screen did not change, tap the field first, or tap the app's own button."
+	noteKeyDropped    = "The key may not have reached the app: this phone drops keys sent to the background display you work on. If the screen did not change, use what is on the screen instead."
+)
+
+// droppedKeyNote is the note for key k that went through scrcpy on such a
+// phone. refused is the companion's answer for back or enter, nil for a
+// key the companion does not press.
+func droppedKeyNote(k driver.Key, refused error) string {
+	switch {
+	case k == driver.KeyBack && companion.IsCode(refused, companion.CodeNotFocused):
+		return noteBackUnfocused
+	case k == driver.KeyEnter && refused != nil:
+		return noteEnterNoField
+	}
+	return noteKeyDropped
 }

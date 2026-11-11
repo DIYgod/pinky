@@ -588,6 +588,7 @@ func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptio
 
 // Key implements driver.Device.
 func (b *Background) Key(ctx context.Context, k driver.Key) error {
+	b.d.setInputNote("")
 	code, ok := keycodes[k]
 	if !ok {
 		return fmt.Errorf("android: key %q: %w", k, driver.ErrUnsupported)

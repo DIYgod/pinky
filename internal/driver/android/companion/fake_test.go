@@ -36,7 +36,7 @@ type fakePhone struct {
 	dropAfter int
 	setText   func(req map[string]any) (any, *Error)
 	input     func(req map[string]any) *Error // gesture and global; nil answers ok
-	apkSum    string // sha256 of the installed APK
+	apkSum    string                          // sha256 of the installed APK
 	// probe is what the phone shows when the client asks why the service
 	// did not answer (probeCmd); "" fails the command.
 	probe  string

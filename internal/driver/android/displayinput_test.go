@@ -118,3 +118,26 @@ func TestDragSegments(t *testing.T) {
 		})
 	}
 }
+
+// TestDroppedKeyNote: what the agent hears about a key that went through
+// scrcpy on a phone that drops adb's input on a background display.
+func TestDroppedKeyNote(t *testing.T) {
+	code := func(c string) error { return &companion.Error{Code: c, Message: c} }
+	cases := []struct {
+		key     driver.Key
+		refused error
+		want    string
+	}{
+		{driver.KeyBack, code(companion.CodeNotFocused), noteBackUnfocused},
+		{driver.KeyBack, code("action_failed"), noteKeyDropped},
+		{driver.KeyEnter, code("not_found"), noteEnterNoField},
+		{driver.KeyEnter, code("action_failed"), noteEnterNoField},
+		{driver.KeyHome, nil, noteKeyDropped},
+		{driver.KeyDelete, nil, noteKeyDropped},
+	}
+	for _, c := range cases {
+		if got := droppedKeyNote(c.key, c.refused); got != c.want {
+			t.Errorf("droppedKeyNote(%s, %v) = %q, want %q", c.key, c.refused, got, c.want)
+		}
+	}
+}
