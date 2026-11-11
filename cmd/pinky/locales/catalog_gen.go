@@ -2825,6 +2825,478 @@ func (msgs Messages) AppStartLog(path string) string {
 	return Catalog.Format(msgs.locale, "appStartLog", map[string]any{"path": path})
 }
 
+// AskAnotherAgent says "Another agent"
+// in the language the app shows.
+//
+// Ask Pinky: the agent in askBusy when its name is not known.
+func AskAnotherAgent() string { return In(i18n.Locale()).AskAnotherAgent() }
+
+// AskAnotherAgent says "Another agent"
+// in the language of msgs.
+//
+// Ask Pinky: the agent in askBusy when its name is not known.
+func (msgs Messages) AskAnotherAgent() string {
+	return Catalog.Format(msgs.locale, "askAnotherAgent", nil)
+}
+
+// AskBadKey says "The service didn't accept the API key. Check it in Settings › Agents."
+// in the language the app shows.
+//
+// Why Ask Pinky could not start a task.
+func AskBadKey() string { return In(i18n.Locale()).AskBadKey() }
+
+// AskBadKey says "The service didn't accept the API key. Check it in Settings › Agents."
+// in the language of msgs.
+//
+// Why Ask Pinky could not start a task.
+func (msgs Messages) AskBadKey() string {
+	return Catalog.Format(msgs.locale, "askBadKey", nil)
+}
+
+// AskBusy says "{agent} is using {phone} now. Start when its task ends."
+// in the language the app shows.
+//
+// Ask Pinky, above Start, which is off: another agent's task runs on the
+// phone.
+func AskBusy(agent string, phone string) string { return In(i18n.Locale()).AskBusy(agent, phone) }
+
+// AskBusy says "{agent} is using {phone} now. Start when its task ends."
+// in the language of msgs.
+//
+// Ask Pinky, above Start, which is off: another agent's task runs on the
+// phone.
+func (msgs Messages) AskBusy(agent string, phone string) string {
+	return Catalog.Format(msgs.locale, "askBusy", map[string]any{"agent": agent, "phone": phone})
+}
+
+// AskDismiss says "Dismiss"
+// in the language the app shows.
+//
+// Ask Pinky: the button that hides how its last task ended.
+func AskDismiss() string { return In(i18n.Locale()).AskDismiss() }
+
+// AskDismiss says "Dismiss"
+// in the language of msgs.
+//
+// Ask Pinky: the button that hides how its last task ended.
+func (msgs Messages) AskDismiss() string {
+	return Catalog.Format(msgs.locale, "askDismiss", nil)
+}
+
+// AskDollars says "US${amount}"
+// in the language the app shows.
+//
+// An amount of money in US dollars, with two decimals: what a task of Ask
+// Pinky cost, or its limit.
+func AskDollars(amount string) string { return In(i18n.Locale()).AskDollars(amount) }
+
+// AskDollars says "US${amount}"
+// in the language of msgs.
+//
+// An amount of money in US dollars, with two decimals: what a task of Ask
+// Pinky cost, or its limit.
+func (msgs Messages) AskDollars(amount string) string {
+	return Catalog.Format(msgs.locale, "askDollars", map[string]any{"amount": amount})
+}
+
+// AskEndDone says "Done"
+// in the language the app shows.
+//
+// Ask Pinky after a task: it did the task. Its summary follows.
+func AskEndDone() string { return In(i18n.Locale()).AskEndDone() }
+
+// AskEndDone says "Done"
+// in the language of msgs.
+//
+// Ask Pinky after a task: it did the task. Its summary follows.
+func (msgs Messages) AskEndDone() string {
+	return Catalog.Format(msgs.locale, "askEndDone", nil)
+}
+
+// AskEndFailed says "Couldn't finish"
+// in the language the app shows.
+//
+// Ask Pinky after a task: it could not do the task. Why follows.
+func AskEndFailed() string { return In(i18n.Locale()).AskEndFailed() }
+
+// AskEndFailed says "Couldn't finish"
+// in the language of msgs.
+//
+// Ask Pinky after a task: it could not do the task. Why follows.
+func (msgs Messages) AskEndFailed() string {
+	return Catalog.Format(msgs.locale, "askEndFailed", nil)
+}
+
+// AskEndLine says "{title}. {reason}"
+// in the language the app shows.
+//
+// The line Ask Pinky leaves in Activity for a task it ended itself: how it
+// ended (askEndStopped and the like) and why.
+func AskEndLine(title string, reason string) string {
+	return In(i18n.Locale()).AskEndLine(title, reason)
+}
+
+// AskEndLine says "{title}. {reason}"
+// in the language of msgs.
+//
+// The line Ask Pinky leaves in Activity for a task it ended itself: how it
+// ended (askEndStopped and the like) and why.
+func (msgs Messages) AskEndLine(title string, reason string) string {
+	return Catalog.Format(msgs.locale, "askEndLine", map[string]any{"title": title, "reason": reason})
+}
+
+// AskEndNotStarted says "Couldn't start"
+// in the language the app shows.
+//
+// Ask Pinky after a task: it could not start, for want of a working API
+// key. Why follows.
+func AskEndNotStarted() string { return In(i18n.Locale()).AskEndNotStarted() }
+
+// AskEndNotStarted says "Couldn't start"
+// in the language of msgs.
+//
+// Ask Pinky after a task: it could not start, for want of a working API
+// key. Why follows.
+func (msgs Messages) AskEndNotStarted() string {
+	return Catalog.Format(msgs.locale, "askEndNotStarted", nil)
+}
+
+// AskEndStopped says "Stopped"
+// in the language the app shows.
+//
+// Ask Pinky after a task: the person stopped it, or it reached a limit
+// (then why follows).
+func AskEndStopped() string { return In(i18n.Locale()).AskEndStopped() }
+
+// AskEndStopped says "Stopped"
+// in the language of msgs.
+//
+// Ask Pinky after a task: the person stopped it, or it reached a limit
+// (then why follows).
+func (msgs Messages) AskEndStopped() string {
+	return Catalog.Format(msgs.locale, "askEndStopped", nil)
+}
+
+// AskErrStart says "Couldn't start: {detail}"
+// in the language the app shows.
+//
+// Ask Pinky, under the field, in red: Start failed.
+func AskErrStart(detail string) string { return In(i18n.Locale()).AskErrStart(detail) }
+
+// AskErrStart says "Couldn't start: {detail}"
+// in the language of msgs.
+//
+// Ask Pinky, under the field, in red: Start failed.
+func (msgs Messages) AskErrStart(detail string) string {
+	return Catalog.Format(msgs.locale, "askErrStart", map[string]any{"detail": detail})
+}
+
+// AskField says "Task for Pinky"
+// in the language the app shows.
+//
+// Ask Pinky: the accessible name of the field where the person types the
+// task.
+func AskField() string { return In(i18n.Locale()).AskField() }
+
+// AskField says "Task for Pinky"
+// in the language of msgs.
+//
+// Ask Pinky: the accessible name of the field where the person types the
+// task.
+func (msgs Messages) AskField() string {
+	return Catalog.Format(msgs.locale, "askField", nil)
+}
+
+// AskLimitCost says "Reached the limit of {amount}."
+// in the language the app shows.
+//
+// Why Ask Pinky stopped a task: the cost limit of Settings › Agents;
+// amount is askDollars.
+func AskLimitCost(amount string) string { return In(i18n.Locale()).AskLimitCost(amount) }
+
+// AskLimitCost says "Reached the limit of {amount}."
+// in the language of msgs.
+//
+// Why Ask Pinky stopped a task: the cost limit of Settings › Agents;
+// amount is askDollars.
+func (msgs Messages) AskLimitCost(amount string) string {
+	return Catalog.Format(msgs.locale, "askLimitCost", map[string]any{"amount": amount})
+}
+
+// AskLimitSteps says "{count, plural, one {Reached the limit of # step.} other {Reached the limit of # steps.}}"
+// in the language the app shows.
+//
+// Why Ask Pinky stopped a task: the step limit of Settings › Agents.
+func AskLimitSteps(count int) string { return In(i18n.Locale()).AskLimitSteps(count) }
+
+// AskLimitSteps says "{count, plural, one {Reached the limit of # step.} other {Reached the limit of # steps.}}"
+// in the language of msgs.
+//
+// Why Ask Pinky stopped a task: the step limit of Settings › Agents.
+func (msgs Messages) AskLimitSteps(count int) string {
+	return Catalog.Format(msgs.locale, "askLimitSteps", map[string]any{"count": count})
+}
+
+// AskLimitTime says "{count, plural, one {Reached the limit of # minute.} other {Reached the limit of # minutes.}}"
+// in the language the app shows.
+//
+// Why Ask Pinky stopped a task: the time limit of Settings › Agents.
+func AskLimitTime(count int) string { return In(i18n.Locale()).AskLimitTime(count) }
+
+// AskLimitTime says "{count, plural, one {Reached the limit of # minute.} other {Reached the limit of # minutes.}}"
+// in the language of msgs.
+//
+// Why Ask Pinky stopped a task: the time limit of Settings › Agents.
+func (msgs Messages) AskLimitTime(count int) string {
+	return Catalog.Format(msgs.locale, "askLimitTime", map[string]any{"count": count})
+}
+
+// AskLimitTokens says "{count, plural, one {Reached the limit of # token.} other {Reached the limit of # tokens.}}"
+// in the language the app shows.
+//
+// Why Ask Pinky stopped a task: the cost limit, in tokens for a model whose
+// prices Pinky does not know.
+func AskLimitTokens(count int) string { return In(i18n.Locale()).AskLimitTokens(count) }
+
+// AskLimitTokens says "{count, plural, one {Reached the limit of # token.} other {Reached the limit of # tokens.}}"
+// in the language of msgs.
+//
+// Why Ask Pinky stopped a task: the cost limit, in tokens for a model whose
+// prices Pinky does not know.
+func (msgs Messages) AskLimitTokens(count int) string {
+	return Catalog.Format(msgs.locale, "askLimitTokens", map[string]any{"count": count})
+}
+
+// AskMeta says "{model} · up to {limit} a task"
+// in the language the app shows.
+//
+// Ask Pinky, next to Start: the model that will do the task, and the cost
+// limit of a task (askDollars or askTokens).
+func AskMeta(model string, limit string) string { return In(i18n.Locale()).AskMeta(model, limit) }
+
+// AskMeta says "{model} · up to {limit} a task"
+// in the language of msgs.
+//
+// Ask Pinky, next to Start: the model that will do the task, and the cost
+// limit of a task (askDollars or askTokens).
+func (msgs Messages) AskMeta(model string, limit string) string {
+	return Catalog.Format(msgs.locale, "askMeta", map[string]any{"model": model, "limit": limit})
+}
+
+// AskMinutes says "{count, plural, one {# minute} other {# minutes}}"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: a choice of the time limit of a task.
+func AskMinutes(count int) string { return In(i18n.Locale()).AskMinutes(count) }
+
+// AskMinutes says "{count, plural, one {# minute} other {# minutes}}"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: a choice of the time limit of a task.
+func (msgs Messages) AskMinutes(count int) string {
+	return Catalog.Format(msgs.locale, "askMinutes", map[string]any{"count": count})
+}
+
+// AskNoKey says "No API key is saved. Add one in Settings › Agents."
+// in the language the app shows.
+//
+// Why Ask Pinky could not start a task.
+func AskNoKey() string { return In(i18n.Locale()).AskNoKey() }
+
+// AskNoKey says "No API key is saved. Add one in Settings › Agents."
+// in the language of msgs.
+//
+// Why Ask Pinky could not start a task.
+func (msgs Messages) AskNoKey() string {
+	return Catalog.Format(msgs.locale, "askNoKey", nil)
+}
+
+// AskPhone says "Phone"
+// in the language the app shows.
+//
+// Ask Pinky on All phones: the accessible name of the menu that chooses the
+// phone for the task.
+func AskPhone() string { return In(i18n.Locale()).AskPhone() }
+
+// AskPhone says "Phone"
+// in the language of msgs.
+//
+// Ask Pinky on All phones: the accessible name of the menu that chooses the
+// phone for the task.
+func (msgs Messages) AskPhone() string {
+	return Catalog.Format(msgs.locale, "askPhone", nil)
+}
+
+// AskPlaceholder says "What should Pinky do on {phone}?"
+// in the language the app shows.
+//
+// Ask Pinky: the hint in the empty task field.
+func AskPlaceholder(phone string) string { return In(i18n.Locale()).AskPlaceholder(phone) }
+
+// AskPlaceholder says "What should Pinky do on {phone}?"
+// in the language of msgs.
+//
+// Ask Pinky: the hint in the empty task field.
+func (msgs Messages) AskPlaceholder(phone string) string {
+	return Catalog.Format(msgs.locale, "askPlaceholder", map[string]any{"phone": phone})
+}
+
+// AskRefused says "The model declined this task."
+// in the language the app shows.
+//
+// Why Ask Pinky could not finish a task.
+func AskRefused() string { return In(i18n.Locale()).AskRefused() }
+
+// AskRefused says "The model declined this task."
+// in the language of msgs.
+//
+// Why Ask Pinky could not finish a task.
+func (msgs Messages) AskRefused() string {
+	return Catalog.Format(msgs.locale, "askRefused", nil)
+}
+
+// AskSetup says "Pinky can do simple tasks on your phone by itself, with an AI model you choose."
+// in the language the app shows.
+//
+// Ask Pinky before it is set up, under askTitle and above a link to
+// Settings › Agents (askSetupKey or askSetupModel).
+func AskSetup() string { return In(i18n.Locale()).AskSetup() }
+
+// AskSetup says "Pinky can do simple tasks on your phone by itself, with an AI model you choose."
+// in the language of msgs.
+//
+// Ask Pinky before it is set up, under askTitle and above a link to
+// Settings › Agents (askSetupKey or askSetupModel).
+func (msgs Messages) AskSetup() string {
+	return Catalog.Format(msgs.locale, "askSetup", nil)
+}
+
+// AskSetupKey says "Add an API key in Settings › Agents"
+// in the language the app shows.
+//
+// Ask Pinky with no API key saved: the link to its settings.
+func AskSetupKey() string { return In(i18n.Locale()).AskSetupKey() }
+
+// AskSetupKey says "Add an API key in Settings › Agents"
+// in the language of msgs.
+//
+// Ask Pinky with no API key saved: the link to its settings.
+func (msgs Messages) AskSetupKey() string {
+	return Catalog.Format(msgs.locale, "askSetupKey", nil)
+}
+
+// AskSetupModel says "Choose a model in Settings › Agents"
+// in the language the app shows.
+//
+// Ask Pinky with an OpenAI-compatible service and no model chosen: the link
+// to its settings.
+func AskSetupModel() string { return In(i18n.Locale()).AskSetupModel() }
+
+// AskSetupModel says "Choose a model in Settings › Agents"
+// in the language of msgs.
+//
+// Ask Pinky with an OpenAI-compatible service and no model chosen: the link
+// to its settings.
+func (msgs Messages) AskSetupModel() string {
+	return Catalog.Format(msgs.locale, "askSetupModel", nil)
+}
+
+// AskStart says "Start"
+// in the language the app shows.
+//
+// Ask Pinky: the button that starts the task typed in the field.
+func AskStart() string { return In(i18n.Locale()).AskStart() }
+
+// AskStart says "Start"
+// in the language of msgs.
+//
+// Ask Pinky: the button that starts the task typed in the field.
+func (msgs Messages) AskStart() string {
+	return Catalog.Format(msgs.locale, "askStart", nil)
+}
+
+// AskSteps says "{count, plural, one {# step} other {# steps}}"
+// in the language the app shows.
+//
+// Ask Pinky: how many steps (phone actions) a task took; also the choices
+// of the step limit in Settings › Agents.
+func AskSteps(count int) string { return In(i18n.Locale()).AskSteps(count) }
+
+// AskSteps says "{count, plural, one {# step} other {# steps}}"
+// in the language of msgs.
+//
+// Ask Pinky: how many steps (phone actions) a task took; also the choices
+// of the step limit in Settings › Agents.
+func (msgs Messages) AskSteps(count int) string {
+	return Catalog.Format(msgs.locale, "askSteps", map[string]any{"count": count})
+}
+
+// AskStop says "Stop Pinky's task"
+// in the language the app shows.
+//
+// Ask Pinky while its task runs: the accessible name of its Stop button
+// (tasksStop).
+func AskStop() string { return In(i18n.Locale()).AskStop() }
+
+// AskStop says "Stop Pinky's task"
+// in the language of msgs.
+//
+// Ask Pinky while its task runs: the accessible name of its Stop button
+// (tasksStop).
+func (msgs Messages) AskStop() string {
+	return Catalog.Format(msgs.locale, "askStop", nil)
+}
+
+// AskTitle says "Ask Pinky"
+// in the language the app shows.
+//
+// The name of Pinky's own agent, which does a task the person types on a
+// phone by itself: the box at the top of Tasks, and its part of Settings
+// › Agents.
+func AskTitle() string { return In(i18n.Locale()).AskTitle() }
+
+// AskTitle says "Ask Pinky"
+// in the language of msgs.
+//
+// The name of Pinky's own agent, which does a task the person types on a
+// phone by itself: the box at the top of Tasks, and its part of Settings
+// › Agents.
+func (msgs Messages) AskTitle() string {
+	return Catalog.Format(msgs.locale, "askTitle", nil)
+}
+
+// AskTokens says "{count, plural, one {# token} other {# tokens}}"
+// in the language the app shows.
+//
+// Ask Pinky: how many tokens a task used, or its limit, for a model whose
+// prices Pinky does not know.
+func AskTokens(count int) string { return In(i18n.Locale()).AskTokens(count) }
+
+// AskTokens says "{count, plural, one {# token} other {# tokens}}"
+// in the language of msgs.
+//
+// Ask Pinky: how many tokens a task used, or its limit, for a model whose
+// prices Pinky does not know.
+func (msgs Messages) AskTokens(count int) string {
+	return Catalog.Format(msgs.locale, "askTokens", map[string]any{"count": count})
+}
+
+// AskWorking says "Pinky is working on it"
+// in the language the app shows.
+//
+// Ask Pinky while its task runs, above how many steps it took, what it cost
+// and how long it has run.
+func AskWorking() string { return In(i18n.Locale()).AskWorking() }
+
+// AskWorking says "Pinky is working on it"
+// in the language of msgs.
+//
+// Ask Pinky while its task runs, above how many steps it took, what it cost
+// and how long it has run.
+func (msgs Messages) AskWorking() string {
+	return Catalog.Format(msgs.locale, "askWorking", nil)
+}
+
 // AwayBusy says "Setting up…"
 // in the language the app shows.
 //
@@ -20041,18 +20513,660 @@ func (msgs Messages) SettingsAgentsWorking() string {
 	return Catalog.Format(msgs.locale, "settingsAgentsWorking", nil)
 }
 
+// SettingsAskCost says "Cost per task"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the cost limit.
+func SettingsAskCost() string { return In(i18n.Locale()).SettingsAskCost() }
+
+// SettingsAskCost says "Cost per task"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the cost limit.
+func (msgs Messages) SettingsAskCost() string {
+	return Catalog.Format(msgs.locale, "settingsAskCost", nil)
+}
+
+// SettingsAskCostDesc says "Counted from what the service reports, at Anthropic's prices."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky with a Claude model whose prices Pinky
+// knows: the line under settingsAskCost.
+func SettingsAskCostDesc() string { return In(i18n.Locale()).SettingsAskCostDesc() }
+
+// SettingsAskCostDesc says "Counted from what the service reports, at Anthropic's prices."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky with a Claude model whose prices Pinky
+// knows: the line under settingsAskCost.
+func (msgs Messages) SettingsAskCostDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskCostDesc", nil)
+}
+
+// SettingsAskCostDescTokens says "Pinky doesn't know this model's prices, so it counts a million tokens as US$1."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky with a model whose prices Pinky does
+// not know: the line under settingsAskCost.
+func SettingsAskCostDescTokens() string { return In(i18n.Locale()).SettingsAskCostDescTokens() }
+
+// SettingsAskCostDescTokens says "Pinky doesn't know this model's prices, so it counts a million tokens as US$1."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky with a model whose prices Pinky does
+// not know: the line under settingsAskCost.
+func (msgs Messages) SettingsAskCostDescTokens() string {
+	return Catalog.Format(msgs.locale, "settingsAskCostDescTokens", nil)
+}
+
+// SettingsAskIntro says "Give Pinky a task at the top of Tasks and it does it on the phone by itself, with an AI model you choose. Your rules,…"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the line under its title.
+func SettingsAskIntro() string { return In(i18n.Locale()).SettingsAskIntro() }
+
+// SettingsAskIntro says "Give Pinky a task at the top of Tasks and it does it on the phone by itself, with an AI model you choose. Your rules,…"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the line under its title.
+func (msgs Messages) SettingsAskIntro() string {
+	return Catalog.Format(msgs.locale, "settingsAskIntro", nil)
+}
+
+// SettingsAskKey says "API key"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the service's API key.
+func SettingsAskKey() string { return In(i18n.Locale()).SettingsAskKey() }
+
+// SettingsAskKey says "API key"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the service's API key.
+func (msgs Messages) SettingsAskKey() string {
+	return Catalog.Format(msgs.locale, "settingsAskKey", nil)
+}
+
+// SettingsAskKeyAdd says "Add"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the button that opens the field for an
+// API key.
+func SettingsAskKeyAdd() string { return In(i18n.Locale()).SettingsAskKeyAdd() }
+
+// SettingsAskKeyAdd says "Add"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the button that opens the field for an
+// API key.
+func (msgs Messages) SettingsAskKeyAdd() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyAdd", nil)
+}
+
+// SettingsAskKeyAddLabel says "Add an API key"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the accessible name of
+// settingsAskKeyAdd.
+func SettingsAskKeyAddLabel() string { return In(i18n.Locale()).SettingsAskKeyAddLabel() }
+
+// SettingsAskKeyAddLabel says "Add an API key"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the accessible name of
+// settingsAskKeyAdd.
+func (msgs Messages) SettingsAskKeyAddLabel() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyAddLabel", nil)
+}
+
+// SettingsAskKeyChange says "Change the API key"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the accessible name of the Change
+// button (settingsChange) of the API key.
+func SettingsAskKeyChange() string { return In(i18n.Locale()).SettingsAskKeyChange() }
+
+// SettingsAskKeyChange says "Change the API key"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the accessible name of the Change
+// button (settingsChange) of the API key.
+func (msgs Messages) SettingsAskKeyChange() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyChange", nil)
+}
+
+// SettingsAskKeyErrRemove says "Couldn't remove the key: {detail}"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, in red: the keychain did not remove
+// the API key.
+func SettingsAskKeyErrRemove(detail string) string {
+	return In(i18n.Locale()).SettingsAskKeyErrRemove(detail)
+}
+
+// SettingsAskKeyErrRemove says "Couldn't remove the key: {detail}"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, in red: the keychain did not remove
+// the API key.
+func (msgs Messages) SettingsAskKeyErrRemove(detail string) string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyErrRemove", map[string]any{"detail": detail})
+}
+
+// SettingsAskKeyErrSave says "Couldn't save the key: {detail}"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, in red: the keychain did not save the
+// API key.
+func SettingsAskKeyErrSave(detail string) string {
+	return In(i18n.Locale()).SettingsAskKeyErrSave(detail)
+}
+
+// SettingsAskKeyErrSave says "Couldn't save the key: {detail}"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, in red: the keychain did not save the
+// API key.
+func (msgs Messages) SettingsAskKeyErrSave(detail string) string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyErrSave", map[string]any{"detail": detail})
+}
+
+// SettingsAskKeyKeepMac says "Kept in your Mac's Keychain and sent only to the service."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, on a Mac: the line under
+// settingsAskKey.
+func SettingsAskKeyKeepMac() string { return In(i18n.Locale()).SettingsAskKeyKeepMac() }
+
+// SettingsAskKeyKeepMac says "Kept in your Mac's Keychain and sent only to the service."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, on a Mac: the line under
+// settingsAskKey.
+func (msgs Messages) SettingsAskKeyKeepMac() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyKeepMac", nil)
+}
+
+// SettingsAskKeyKeepOther says "Kept in your keyring and sent only to the service."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, on Linux: the line under
+// settingsAskKey.
+func SettingsAskKeyKeepOther() string { return In(i18n.Locale()).SettingsAskKeyKeepOther() }
+
+// SettingsAskKeyKeepOther says "Kept in your keyring and sent only to the service."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, on Linux: the line under
+// settingsAskKey.
+func (msgs Messages) SettingsAskKeyKeepOther() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyKeepOther", nil)
+}
+
+// SettingsAskKeyKeepWindows says "Kept in Windows Credential Manager and sent only to the service."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, on Windows: the line under
+// settingsAskKey.
+func SettingsAskKeyKeepWindows() string { return In(i18n.Locale()).SettingsAskKeyKeepWindows() }
+
+// SettingsAskKeyKeepWindows says "Kept in Windows Credential Manager and sent only to the service."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, on Windows: the line under
+// settingsAskKey.
+func (msgs Messages) SettingsAskKeyKeepWindows() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyKeepWindows", nil)
+}
+
+// SettingsAskKeyPlaceholder says "Paste the API key"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the hint in the empty API key field.
+func SettingsAskKeyPlaceholder() string { return In(i18n.Locale()).SettingsAskKeyPlaceholder() }
+
+// SettingsAskKeyPlaceholder says "Paste the API key"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the hint in the empty API key field.
+func (msgs Messages) SettingsAskKeyPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyPlaceholder", nil)
+}
+
+// SettingsAskKeyRemove says "Remove"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the red button that removes the saved
+// API key.
+func SettingsAskKeyRemove() string { return In(i18n.Locale()).SettingsAskKeyRemove() }
+
+// SettingsAskKeyRemove says "Remove"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the red button that removes the saved
+// API key.
+func (msgs Messages) SettingsAskKeyRemove() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyRemove", nil)
+}
+
+// SettingsAskKeyRemoveLabel says "Remove the API key"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the accessible name of
+// settingsAskKeyRemove.
+func SettingsAskKeyRemoveLabel() string { return In(i18n.Locale()).SettingsAskKeyRemoveLabel() }
+
+// SettingsAskKeyRemoveLabel says "Remove the API key"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the accessible name of
+// settingsAskKeyRemove.
+func (msgs Messages) SettingsAskKeyRemoveLabel() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyRemoveLabel", nil)
+}
+
+// SettingsAskKeyRemovedToast says "API key removed"
+// in the language the app shows.
+//
+// A toast after the API key of Ask Pinky is removed.
+func SettingsAskKeyRemovedToast() string { return In(i18n.Locale()).SettingsAskKeyRemovedToast() }
+
+// SettingsAskKeyRemovedToast says "API key removed"
+// in the language of msgs.
+//
+// A toast after the API key of Ask Pinky is removed.
+func (msgs Messages) SettingsAskKeyRemovedToast() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyRemovedToast", nil)
+}
+
+// SettingsAskKeySaved says "Saved"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: an API key is saved (never shown).
+func SettingsAskKeySaved() string { return In(i18n.Locale()).SettingsAskKeySaved() }
+
+// SettingsAskKeySaved says "Saved"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: an API key is saved (never shown).
+func (msgs Messages) SettingsAskKeySaved() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeySaved", nil)
+}
+
+// SettingsAskKeySavedToast says "API key saved"
+// in the language the app shows.
+//
+// A toast after the API key of Ask Pinky is saved.
+func SettingsAskKeySavedToast() string { return In(i18n.Locale()).SettingsAskKeySavedToast() }
+
+// SettingsAskKeySavedToast says "API key saved"
+// in the language of msgs.
+//
+// A toast after the API key of Ask Pinky is saved.
+func (msgs Messages) SettingsAskKeySavedToast() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeySavedToast", nil)
+}
+
+// SettingsAskKeyUnsupported says "API keys can't be kept safely on this system, so Ask Pinky isn't available."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, under settingsAskKey, on a system
+// without a keychain.
+func SettingsAskKeyUnsupported() string { return In(i18n.Locale()).SettingsAskKeyUnsupported() }
+
+// SettingsAskKeyUnsupported says "API keys can't be kept safely on this system, so Ask Pinky isn't available."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, under settingsAskKey, on a system
+// without a keychain.
+func (msgs Messages) SettingsAskKeyUnsupported() string {
+	return Catalog.Format(msgs.locale, "settingsAskKeyUnsupported", nil)
+}
+
+// SettingsAskModel says "Model"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the model setting.
+func SettingsAskModel() string { return In(i18n.Locale()).SettingsAskModel() }
+
+// SettingsAskModel says "Model"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the model setting.
+func (msgs Messages) SettingsAskModel() string {
+	return Catalog.Format(msgs.locale, "settingsAskModel", nil)
+}
+
+// SettingsAskModelChange says "Change the model"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the accessible name of the Change
+// button (settingsChange) of the model.
+func SettingsAskModelChange() string { return In(i18n.Locale()).SettingsAskModelChange() }
+
+// SettingsAskModelChange says "Change the model"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the accessible name of the Change
+// button (settingsChange) of the model.
+func (msgs Messages) SettingsAskModelChange() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelChange", nil)
+}
+
+// SettingsAskModelClaude says "Opus is the most capable; Sonnet and Haiku cost less."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky with Anthropic's own API: the line
+// under settingsAskModel, above a menu of Claude models.
+func SettingsAskModelClaude() string { return In(i18n.Locale()).SettingsAskModelClaude() }
+
+// SettingsAskModelClaude says "Opus is the most capable; Sonnet and Haiku cost less."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky with Anthropic's own API: the line
+// under settingsAskModel, above a menu of Claude models.
+func (msgs Messages) SettingsAskModelClaude() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelClaude", nil)
+}
+
+// SettingsAskModelDesc says "The model's name as the service gives it. It must read images and use tools."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky with another service: the line under
+// settingsAskModel.
+func SettingsAskModelDesc() string { return In(i18n.Locale()).SettingsAskModelDesc() }
+
+// SettingsAskModelDesc says "The model's name as the service gives it. It must read images and use tools."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky with another service: the line under
+// settingsAskModel.
+func (msgs Messages) SettingsAskModelDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelDesc", nil)
+}
+
+// SettingsAskModelNone says "None"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: no model is chosen.
+func SettingsAskModelNone() string { return In(i18n.Locale()).SettingsAskModelNone() }
+
+// SettingsAskModelNone says "None"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: no model is chosen.
+func (msgs Messages) SettingsAskModelNone() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelNone", nil)
+}
+
+// SettingsAskModelPlaceholder says "Model name"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the hint in the empty model field.
+func SettingsAskModelPlaceholder() string { return In(i18n.Locale()).SettingsAskModelPlaceholder() }
+
+// SettingsAskModelPlaceholder says "Model name"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the hint in the empty model field.
+func (msgs Messages) SettingsAskModelPlaceholder() string {
+	return Catalog.Format(msgs.locale, "settingsAskModelPlaceholder", nil)
+}
+
+// SettingsAskOn says "Show Ask Pinky"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the switch's title.
+func SettingsAskOn() string { return In(i18n.Locale()).SettingsAskOn() }
+
+// SettingsAskOn says "Show Ask Pinky"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the switch's title.
+func (msgs Messages) SettingsAskOn() string {
+	return Catalog.Format(msgs.locale, "settingsAskOn", nil)
+}
+
+// SettingsAskOnDesc says "A box at the top of Tasks to give Pinky a task."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskOn.
+func SettingsAskOnDesc() string { return In(i18n.Locale()).SettingsAskOnDesc() }
+
+// SettingsAskOnDesc says "A box at the top of Tasks to give Pinky a task."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskOn.
+func (msgs Messages) SettingsAskOnDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskOnDesc", nil)
+}
+
+// SettingsAskService says "Service"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the setting that chooses
+// the API the model is reached through.
+func SettingsAskService() string { return In(i18n.Locale()).SettingsAskService() }
+
+// SettingsAskService says "Service"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the setting that chooses
+// the API the model is reached through.
+func (msgs Messages) SettingsAskService() string {
+	return Catalog.Format(msgs.locale, "settingsAskService", nil)
+}
+
+// SettingsAskServiceAnthropic says "Anthropic-compatible API"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: a choice of service: Anthropic's
+// Messages API, or a service that speaks it.
+func SettingsAskServiceAnthropic() string { return In(i18n.Locale()).SettingsAskServiceAnthropic() }
+
+// SettingsAskServiceAnthropic says "Anthropic-compatible API"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: a choice of service: Anthropic's
+// Messages API, or a service that speaks it.
+func (msgs Messages) SettingsAskServiceAnthropic() string {
+	return Catalog.Format(msgs.locale, "settingsAskServiceAnthropic", nil)
+}
+
+// SettingsAskServiceDesc says "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskService.
+func SettingsAskServiceDesc() string { return In(i18n.Locale()).SettingsAskServiceDesc() }
+
+// SettingsAskServiceDesc says "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskService.
+func (msgs Messages) SettingsAskServiceDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskServiceDesc", nil)
+}
+
+// SettingsAskServiceOpenAI says "OpenAI-compatible API"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: a choice of service: OpenAI's Chat
+// Completions API, or a service that speaks it.
+func SettingsAskServiceOpenAI() string { return In(i18n.Locale()).SettingsAskServiceOpenAI() }
+
+// SettingsAskServiceOpenAI says "OpenAI-compatible API"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: a choice of service: OpenAI's Chat
+// Completions API, or a service that speaks it.
+func (msgs Messages) SettingsAskServiceOpenAI() string {
+	return Catalog.Format(msgs.locale, "settingsAskServiceOpenAI", nil)
+}
+
+// SettingsAskSteps says "Steps per task"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the step limit.
+func SettingsAskSteps() string { return In(i18n.Locale()).SettingsAskSteps() }
+
+// SettingsAskSteps says "Steps per task"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the step limit.
+func (msgs Messages) SettingsAskSteps() string {
+	return Catalog.Format(msgs.locale, "settingsAskSteps", nil)
+}
+
+// SettingsAskStepsDesc says "Each action on the phone is a step."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskSteps.
+func SettingsAskStepsDesc() string { return In(i18n.Locale()).SettingsAskStepsDesc() }
+
+// SettingsAskStepsDesc says "Each action on the phone is a step."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskSteps.
+func (msgs Messages) SettingsAskStepsDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskStepsDesc", nil)
+}
+
+// SettingsAskTime says "Time per task"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the time limit.
+func SettingsAskTime() string { return In(i18n.Locale()).SettingsAskTime() }
+
+// SettingsAskTime says "Time per task"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the time limit.
+func (msgs Messages) SettingsAskTime() string {
+	return Catalog.Format(msgs.locale, "settingsAskTime", nil)
+}
+
+// SettingsAskTimeDesc says "Time spent waiting for you doesn't count."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskTime.
+func SettingsAskTimeDesc() string { return In(i18n.Locale()).SettingsAskTimeDesc() }
+
+// SettingsAskTimeDesc says "Time spent waiting for you doesn't count."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the line under settingsAskTime.
+func (msgs Messages) SettingsAskTimeDesc() string {
+	return Catalog.Format(msgs.locale, "settingsAskTimeDesc", nil)
+}
+
+// SettingsAskURL says "API address"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the title of the address of the
+// service's API.
+func SettingsAskURL() string { return In(i18n.Locale()).SettingsAskURL() }
+
+// SettingsAskURL says "API address"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the title of the address of the
+// service's API.
+func (msgs Messages) SettingsAskURL() string {
+	return Catalog.Format(msgs.locale, "settingsAskURL", nil)
+}
+
+// SettingsAskURLChange says "Change the API address"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the accessible name of the Change
+// button (settingsChange) of the API address.
+func SettingsAskURLChange() string { return In(i18n.Locale()).SettingsAskURLChange() }
+
+// SettingsAskURLChange says "Change the API address"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the accessible name of the Change
+// button (settingsChange) of the API address.
+func (msgs Messages) SettingsAskURLChange() string {
+	return Catalog.Format(msgs.locale, "settingsAskURLChange", nil)
+}
+
+// SettingsAskURLDefault says "Default"
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky: the API address is the service's own;
+// also the hint in the empty address field.
+func SettingsAskURLDefault() string { return In(i18n.Locale()).SettingsAskURLDefault() }
+
+// SettingsAskURLDefault says "Default"
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky: the API address is the service's own;
+// also the hint in the empty address field.
+func (msgs Messages) SettingsAskURLDefault() string {
+	return Catalog.Format(msgs.locale, "settingsAskURLDefault", nil)
+}
+
+// SettingsAskURLDescAnthropic says "Leave it for Anthropic's API, or give the address of a service compatible with it."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky with the Anthropic-compatible service:
+// the line under settingsAskURL.
+func SettingsAskURLDescAnthropic() string { return In(i18n.Locale()).SettingsAskURLDescAnthropic() }
+
+// SettingsAskURLDescAnthropic says "Leave it for Anthropic's API, or give the address of a service compatible with it."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky with the Anthropic-compatible service:
+// the line under settingsAskURL.
+func (msgs Messages) SettingsAskURLDescAnthropic() string {
+	return Catalog.Format(msgs.locale, "settingsAskURLDescAnthropic", nil)
+}
+
+// SettingsAskURLDescOpenAI says "The address of the service's OpenAI-compatible API, such as https://…/v1. OpenAI's own by default."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky with the OpenAI-compatible service: the
+// line under settingsAskURL.
+func SettingsAskURLDescOpenAI() string { return In(i18n.Locale()).SettingsAskURLDescOpenAI() }
+
+// SettingsAskURLDescOpenAI says "The address of the service's OpenAI-compatible API, such as https://…/v1. OpenAI's own by default."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky with the OpenAI-compatible service: the
+// line under settingsAskURL.
+func (msgs Messages) SettingsAskURLDescOpenAI() string {
+	return Catalog.Format(msgs.locale, "settingsAskURLDescOpenAI", nil)
+}
+
+// SettingsAskURLErr says "Enter an address that starts with https:// or http://."
+// in the language the app shows.
+//
+// Settings › Agents › Ask Pinky, in red, under the API address field.
+func SettingsAskURLErr() string { return In(i18n.Locale()).SettingsAskURLErr() }
+
+// SettingsAskURLErr says "Enter an address that starts with https:// or http://."
+// in the language of msgs.
+//
+// Settings › Agents › Ask Pinky, in red, under the API address field.
+func (msgs Messages) SettingsAskURLErr() string {
+	return Catalog.Format(msgs.locale, "settingsAskURLErr", nil)
+}
+
 // SettingsCancel says "Cancel"
 // in the language the app shows.
 //
 // Settings: a button that closes without changing anything: the remote
-// agents' address editor, and the alert of Delete all activity.
+// agents' address editor, the editors of Ask Pinky, and the alert of Delete
+// all activity.
 func SettingsCancel() string { return In(i18n.Locale()).SettingsCancel() }
 
 // SettingsCancel says "Cancel"
 // in the language of msgs.
 //
 // Settings: a button that closes without changing anything: the remote
-// agents' address editor, and the alert of Delete all activity.
+// agents' address editor, the editors of Ask Pinky, and the alert of Delete
+// all activity.
 func (msgs Messages) SettingsCancel() string {
 	return Catalog.Format(msgs.locale, "settingsCancel", nil)
 }
@@ -20061,14 +21175,16 @@ func (msgs Messages) SettingsCancel() string {
 // in the language the app shows.
 //
 // Settings: a button that opens an editor: of what an agent may do
-// (Settings › Agents), or of the remote agents' address.
+// (Settings › Agents), of the remote agents' address, or of Ask Pinky's
+// API key, model and address.
 func SettingsChange() string { return In(i18n.Locale()).SettingsChange() }
 
 // SettingsChange says "Change"
 // in the language of msgs.
 //
 // Settings: a button that opens an editor: of what an agent may do
-// (Settings › Agents), or of the remote agents' address.
+// (Settings › Agents), of the remote agents' address, or of Ask Pinky's
+// API key, model and address.
 func (msgs Messages) SettingsChange() string {
 	return Catalog.Format(msgs.locale, "settingsChange", nil)
 }
@@ -22397,14 +23513,16 @@ func (msgs Messages) SettingsSafetyUnlockDescWindows() string {
 // in the language the app shows.
 //
 // Settings: the button that saves what an agent may do (Settings ›
-// Agents), or the remote agents' address.
+// Agents), the remote agents' address, or Ask Pinky's API key, model and
+// address.
 func SettingsSave() string { return In(i18n.Locale()).SettingsSave() }
 
 // SettingsSave says "Save"
 // in the language of msgs.
 //
 // Settings: the button that saves what an agent may do (Settings ›
-// Agents), or the remote agents' address.
+// Agents), the remote agents' address, or Ask Pinky's API key, model and
+// address.
 func (msgs Messages) SettingsSave() string {
 	return Catalog.Format(msgs.locale, "settingsSave", nil)
 }
@@ -24056,15 +25174,15 @@ func (msgs Messages) TasksStepWithShot(step string) string {
 // TasksStop says "Stop"
 // in the language the app shows.
 //
-// Red button that stops the agent's task: on the task card and on the All
-// phones tiles.
+// Red button that stops the agent's task: on the task card, on the All
+// phones tiles, and in Ask Pinky while its task runs.
 func TasksStop() string { return In(i18n.Locale()).TasksStop() }
 
 // TasksStop says "Stop"
 // in the language of msgs.
 //
-// Red button that stops the agent's task: on the task card and on the All
-// phones tiles.
+// Red button that stops the agent's task: on the task card, on the All
+// phones tiles, and in Ask Pinky while its task runs.
 func (msgs Messages) TasksStop() string {
 	return Catalog.Format(msgs.locale, "tasksStop", nil)
 }

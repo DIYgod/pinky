@@ -91,6 +91,17 @@ func (c Config) Normalize() Config {
 	return c
 }
 
+// Priced reports whether Pinky knows the model's prices, so that the
+// cost limit is in dollars; otherwise it is a budget of tokens.
+func (c Config) Priced() bool {
+	_, ok := priceOf(c)
+	return ok
+}
+
+// TokenLimit is the cost limit in tokens, for a model whose prices Pinky
+// does not know: US$1 a million.
+func (c Config) TokenLimit() int64 { return int64(c.MaxCost * tokensPerDollar) }
+
 // End is how a task ended.
 type End string
 
@@ -492,7 +503,7 @@ func (ru *run) limit() End {
 	case time.Since(s.Started)-ru.waited >= s.Config.MaxTime:
 		return TimeLimit
 	case s.Priced && s.Cost >= s.Config.MaxCost,
-		!s.Priced && float64(s.Tokens) >= s.Config.MaxCost*tokensPerDollar:
+		!s.Priced && s.Tokens >= s.Config.TokenLimit():
 		return CostLimit
 	}
 	return Running
@@ -636,7 +647,7 @@ func Describe(s Status) string {
 		if s.Priced {
 			return fmt.Sprintf("Stopped: reached the limit of US$%.2f.", s.Config.MaxCost)
 		}
-		return fmt.Sprintf("Stopped: reached the limit of %d tokens.", int64(s.Config.MaxCost*tokensPerDollar))
+		return fmt.Sprintf("Stopped: reached the limit of %d tokens.", s.Config.TokenLimit())
 	case Refused:
 		return "Couldn't finish: the model declined this task."
 	case BadKey:

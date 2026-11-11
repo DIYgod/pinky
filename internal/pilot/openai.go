@@ -52,8 +52,8 @@ type oaMessage struct {
 }
 
 type oaPart struct {
-	Type     string     `json:"type"`
-	Text     string     `json:"text,omitempty"`
+	Type     string      `json:"type"`
+	Text     string      `json:"text,omitempty"`
 	ImageURL *oaImageURL `json:"image_url,omitempty"`
 }
 

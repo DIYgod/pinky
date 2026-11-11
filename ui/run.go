@@ -19,6 +19,7 @@ import (
 	"github.com/DIYgod/pinky/cmd/pinky/locales"
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/secret"
 	"github.com/DIYgod/pinky/internal/telemetry"
 	"github.com/DIYgod/pinky/internal/update"
@@ -111,6 +112,21 @@ type Options struct {
 	// person's feedback carries, and the one whoever fixes a broken live
 	// picture goes on. nil writes nothing, as before.
 	Log *slog.Logger
+	// Pilot runs Ask Pinky, Pinky's own agent (a *pilot.Runner): the box
+	// at the top of Tasks and its part of Settings › Agents. nil leaves
+	// them out.
+	Pilot Pilot
+}
+
+// Pilot runs Pinky's own agent, one task a phone at a time, as
+// pilot.Runner does. The client calls it on the main thread: each call
+// returns at once.
+type Pilot interface {
+	Start(cfg pilot.Config, device, task string) error
+	Stop(device string)
+	StopAll()
+	Status(device string) (pilot.Status, bool)
+	Dismiss(device string)
 }
 
 // Settings are what the Settings screen changes.
@@ -143,6 +159,36 @@ type Settings struct {
 	// adb that comes with Pinky, unless another program uses it
 	// (adb.Client.StopPinkyADB); not when Pinky quits for an update.
 	StopADBOnQuit bool
+	// AskPinky shows the box at the top of Tasks that gives Pinky's own
+	// agent a task (Options.Pilot).
+	AskPinky bool
+	// PilotProvider is the API Pinky's own agent reaches its model
+	// through, pilot.Anthropic or pilot.OpenAI. Each keeps its own model
+	// and address, so switching back finds them; empty ones are the
+	// defaults (pilot.Config.Normalize). The API keys are in the system's
+	// keychain (secret.ModelKeyAccount), never here.
+	PilotProvider       string
+	PilotAnthropicModel string
+	PilotAnthropicURL   string
+	PilotOpenAIModel    string
+	PilotOpenAIURL      string
+	// The limits of each task: steps, minutes (time spent waiting for the
+	// person aside) and US dollars.
+	PilotMaxSteps   int
+	PilotMaxMinutes int
+	PilotMaxCost    float64
+}
+
+// PilotConfig is the pilot.Config of the settings.
+func (s Settings) PilotConfig() pilot.Config {
+	cfg := pilot.Config{
+		Provider: s.PilotProvider, Model: s.PilotAnthropicModel, BaseURL: s.PilotAnthropicURL,
+		MaxSteps: s.PilotMaxSteps, MaxTime: time.Duration(s.PilotMaxMinutes) * time.Minute, MaxCost: s.PilotMaxCost,
+	}
+	if s.PilotProvider == pilot.OpenAI {
+		cfg.Model, cfg.BaseURL = s.PilotOpenAIModel, s.PilotOpenAIURL
+	}
+	return cfg.Normalize()
 }
 
 // DefaultRemoteAddr is where Pinky serves MCP over HTTP: this computer
@@ -177,6 +223,9 @@ func DefaultSettings() Settings {
 		KeepAwakeAway: true,
 		IOSWiFi:       true,
 		StopADBOnQuit: true,
+		AskPinky:      true,
+		PilotProvider: pilot.Anthropic,
+		PilotMaxSteps: pilot.DefaultMaxSteps, PilotMaxMinutes: int(pilot.DefaultMaxTime / time.Minute), PilotMaxCost: pilot.DefaultMaxCost,
 	}
 }
 
@@ -291,6 +340,7 @@ type app struct {
 	upd       updateState    // new versions of Pinky and the companion app
 	tn        tailnetState   // phones away from this computer's network, through Tailscale
 	phoneWiFi phoneWiFiState // phones without Wireless debugging moved to Wi-Fi (wifiswitch.go)
+	ask       askState       // Ask Pinky: the box at the top of Tasks, and its settings (ask.go)
 
 	vit phoneVitalsState // phones' battery and storage (vitals.go)
 
@@ -886,14 +936,28 @@ func (a *app) handBack(id string) {
 	a.call(id, locales.CallHandBack(), func() error { return a.api.HandBack(id, "") })
 }
 
+// stop stops the task on a phone. Pinky's own agent stops after the
+// gateway's task: a task whose agent just goes away counts as done.
 func (a *app) stop(id string) {
-	a.call(id, locales.CallStop(), func() error { return a.api.Stop(id) })
+	a.call(id, locales.CallStop(), func() error {
+		err := a.api.Stop(id)
+		if a.opt.Pilot != nil {
+			a.opt.Pilot.Stop(id)
+		}
+		return err
+	})
 }
 
 // stopAll is the emergency stop, from the sidebar, the flyout and the
 // global shortcut.
 func (a *app) stopAll() {
-	a.call("", locales.CallStopAll(), a.api.StopAll)
+	a.call("", locales.CallStopAll(), func() error {
+		err := a.api.StopAll()
+		if a.opt.Pilot != nil {
+			a.opt.Pilot.StopAll()
+		}
+		return err
+	})
 }
 
 func (a *app) showMain() {

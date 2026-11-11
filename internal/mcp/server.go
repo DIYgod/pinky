@@ -43,8 +43,8 @@ type Server struct {
 	mu         sync.Mutex
 	sessions   map[*sdk.ServerSession]*gateway.Session
 	builtin    map[*sdk.ServerSession]bool // sessions of Pinky's own agent
-	middleware []sdk.Middleware       // Use's, for the HTTP servers made later
-	uploads    map[string]*uploadLink // upload links by token (upload.go)
+	middleware []sdk.Middleware            // Use's, for the HTTP servers made later
+	uploads    map[string]*uploadLink      // upload links by token (upload.go)
 
 	downloads map[string]*downloadLink // download links by token (download.go)
 }

@@ -209,6 +209,14 @@ An Android phone does not have to be on the computer's network. With [Tailscale]
 
 At home, Tailscale is as fast as Wi-Fi; away, the phone's upload carries the picture, so Pinky streams lighter through Tailscale (1 Mbit/s), and on a weak 4G hotspot each step takes seconds. Details, measurements, data use and what to do when it does not connect: [docs/away-from-home.md](docs/away-from-home.md). An agent can be away from the computer too: [Remote agents](docs/mcp.md#over-http).
 
+### Ask Pinky
+
+No agent of your own? Pinky can do a simple task on one phone by itself. In **Settings › Agents**, under **Ask Pinky**, choose a service and add its API key: Claude through Anthropic's API (or a service compatible with it), or another model through a service compatible with OpenAI's API, with its address and the model's name. The key is kept in the Mac's Keychain, Windows Credential Manager or your keyring, like phones' PINs, and goes only to that service.
+
+Then type the task at the top of **Tasks** on the phone's page, for example "Set an alarm for 7:00", and press **Start** (or ⌘↩, Ctrl+Enter on Windows and Linux); on **All phones**, pick the phone first. Pinky works step by step as the agent **Pinky**, through the same way in as any agent: your rules, approvals, blocked apps, **Take over**, **Stop all** and recordings apply to it, and its tasks show in Activity. It never types passwords or one-time codes; it hands the phone to you instead. **Stop** ends the task at once.
+
+A task stops at 100 steps, 20 minutes or US$2, whichever comes first; you can change these in Settings › Agents, and time spent waiting for you doesn't count. Cost is counted at Anthropic's prices; for a model Pinky has no prices for, a million tokens count as US$1. Ask Pinky remembers nothing between tasks and works on one phone at a time: for anything bigger, connect an agent ([details](docs/notes/builtin-agent.md)).
+
 ### Updates
 
 Pinky looks for a new version at launch and every few hours, and shows a card with what changed, **Update now** and **Later**. With Settings › Advanced › **Update automatically** (on by default) it installs it by itself once no agent is working and nobody has used Pinky for ten minutes, and it updates Pinky Companion on Android phones that are free; its accessibility service stays off until the next task. A Pinky Companion signed with the public key that its builds had until 8 November 2026 is uninstalled and installed again, signed with Pinky's private key, and Pinky tells you; on a phone that asks before installing apps over USB, the phone's page says why and waits for your **Update**, and when a phone refuses them, a card in the sidebar tells you once about each new version, to install by hand ([how](#install-companion-by-hand)). After an update, **What's new** lists the changes since the version you had (from [CHANGELOG.md](CHANGELOG.md), or its Chinese version, [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md), when Pinky is in Chinese).
@@ -229,7 +237,7 @@ Pinky shares anonymous usage statistics (counters such as tasks run, tools calle
 <details>
 <summary><b>Which agents work with Pinky?</b></summary>
 
-Any agent that can use MCP servers: over stdio, by running `pinkyctl mcp`, or over HTTP with an agent token ([how](docs/mcp.md#over-http)). **Settings › Agents** connects Claude Code, Claude Desktop, Codex, Cursor and other agents it finds on your computer in one click. Claude Code is the one that has used real phones end to end so far. Pinky brings no model of its own: your agent does the thinking.
+Any agent that can use MCP servers: over stdio, by running `pinkyctl mcp`, or over HTTP with an agent token ([how](docs/mcp.md#over-http)). **Settings › Agents** connects Claude Code, Claude Desktop, Codex, Cursor and other agents it finds on your computer in one click. Claude Code is the one that has used real phones end to end so far. Your agent does the thinking; for simple tasks without one, [Ask Pinky](#ask-pinky) uses a model with your own API key.
 
 </details>
 
