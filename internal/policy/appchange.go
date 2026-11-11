@@ -41,8 +41,21 @@ func (op Op) AppChange() bool {
 	return op == OpInstall || op == OpUninstall || op == OpStop
 }
 
-// pinkyApps are Pinky Companion's package names.
-var pinkyApps = []string{"app.pinky.companion", "app.pinky.companion.dev"}
+// StandaloneApp is the package of the standalone prototype
+// (android/standalone, docs/notes/standalone-phone.md): Pinky running on
+// the phone itself, whose screen and controls hold the person's approvals
+// and Stop. Its screen is blocked outright (Blocked, Evaluate) and no task
+// can lift that, so an agent can never press its controls.
+const StandaloneApp = "app.pinky.standalone"
+
+// pinkyApps are Pinky Companion's package names and the standalone
+// prototype's.
+var pinkyApps = []string{"app.pinky.companion", "app.pinky.companion.dev", StandaloneApp}
+
+// IsStandalone reports whether the app is the standalone prototype.
+func IsStandalone(app screen.App) bool {
+	return strings.EqualFold(clonePackage(app.ID), StandaloneApp)
+}
 
 // IsPinkyApp reports whether the app is part of Pinky on the phone: Pinky
 // Companion, or a WebDriverAgent runner (<prefix>.WebDriverAgentRunner.xctrunner).
