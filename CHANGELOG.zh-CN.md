@@ -2,6 +2,12 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 现在可以自己旋转手机屏幕了：手机画面下方 ⋯ 菜单里的「旋转」可以选竖屏、横屏等方向，当前方向会标出来。iPhone 和 iPad 需要装好 iPhone 辅助应用。感谢 @NaNhkNaN。
+- 在 iOS 27 上，装好 iPhone 辅助应用后，遇到只有它能做的事（比如旋转屏幕、双指缩放，智能体的操作也算），Pinky 会自动把手机切到辅助应用，做完再切回更快的连接。
+- 装好 iPhone 辅助应用后，在 iOS 27 的 iPhone 或 iPad 画面上双指缩放现在可以用了。第一次缩放会先把手机切到辅助应用，之后的缩放就能正常生效。
+
 ## 2026.1111.11 (2026-11-11)
 
 - iPhone 上的辅助应用（WebDriverAgent）现在显示为「Pinky 助手」，用的是 Pinky 的图标。
