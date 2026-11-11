@@ -36,6 +36,9 @@ func newTestAppTimeout(t *testing.T, s fakeapi.Scenario, timeout time.Duration) 
 
 func newTestAppWith(t *testing.T, opt fakeapi.Options) *testApp {
 	t.Helper()
+	if opt.Now == nil {
+		opt.Now = testNow // the computer's clock, unless the test sets it (clockAt)
+	}
 	api := fakeapi.New(opt)
 	ta := &testApp{api: api}
 	ta.app = newApp(api, Options{NoTray: true, Shortcut: "-"})

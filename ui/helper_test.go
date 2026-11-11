@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -45,10 +46,10 @@ func helperDate() time.Time { return wallTime(2026, time.November, 12, 15, 14) }
 // install it again, and so does its checkup. Days before, neither
 // reminds; the checkup notes the day.
 func TestIPhoneHelperReminder(t *testing.T) {
-	ta, id, opened := helperApp(t)
 	exp := helperDate()
 	now := exp.Add(-30 * time.Hour)
 	clockAt(t, now)
+	ta, id, opened := helperApp(t)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
 	ta.api.SetCheckup(id, driver.Checkup{System: "iOS 18.6", Checks: []driver.Check{
 		{ID: driver.CheckHelper, Status: driver.CheckWarn, Fix: driver.FixInstallHelper, Detail: "WebDriverAgent answers; its provisioning profile runs out soon"},
@@ -122,7 +123,7 @@ func reminderForms(name string, exp time.Time) []reminderForm {
 		text, _, _ := helperErrorWords(err, name)
 		forms = append(forms, reminderForm{what: "failed: " + err.Error(), here: true, run: &helperRun{err: text}, words: text, labels: again})
 	}
-	teams := []driver.HelperTeam{{ID: "ABCDE12345", Name: "Sam Lee (Personal Team)"}, {ID: "FGHIJ67890"}}
+	teams := slices.Clone(helperTeams)
 	for _, n := range []int{2, 9} {
 		for i := len(teams); i < n; i++ {
 			teams = append(teams, driver.HelperTeam{ID: fmt.Sprintf("KLMNO%05d", i), Name: "Shenzhen Example Technology Co., Ltd."})
@@ -178,7 +179,8 @@ func reminderFits(t *testing.T, tt *mg.Tester, what string, w, h float32, d gate
 	}
 	// The buttons, within the reminder's border and padding. Those that
 	// scrolled out of view have no area.
-	inner := mg.Rect{X: box.X + 1 + reminderPadX, Y: box.Y + 1 + reminderPadY, W: box.W - 2 - reminderPadX - reminderPadEnd, H: box.H - 2 - 2*reminderPadY}
+	inner := mg.Rect{X: box.X + reminderBorder + reminderPadX, Y: box.Y + reminderBorder + reminderPadY,
+		W: box.W - 2*reminderBorder - reminderPadX - reminderPadEnd, H: box.H - reminderChrome}
 	for i, label := range f.labels {
 		b, ok := tt.Find(label)
 		switch {
@@ -211,24 +213,29 @@ func wordsCut(tt *mg.Tester, words string) bool {
 
 // widestDate returns the time of a year whose date makes words the widest
 // in the language lang, as this system's fonts draw them: its longest month
-// and day of the week, with its widest digits.
+// and day of the week with its widest digits, then the widest of a few
+// times of that day, as the day and the time add up.
 func widestDate(t *testing.T, lang string, words func(when time.Time) string) time.Time {
 	t.Helper()
 	var widest time.Time
-	var most float32
 	measure := false
 	mt := mg.NewTester(func(c *mg.Context) {
 		if !measure {
 			return
 		}
 		measure = false
-		for day := wallTime(2027, time.January, 1, 12, 0); day.Year() == 2027; day = day.AddDate(0, 0, 1) {
-			for _, clock := range [][2]int{{12, 58}, {20, 8}, {22, 44}} {
-				when := wallTime(2027, day.Month(), day.Day(), clock[0], clock[1])
-				if w, _ := c.MeasureText(0, reminderSpan(words(when))); w > most {
-					most, widest = w, when
-				}
+		var most float32
+		try := func(when time.Time) {
+			if w, _ := c.MeasureText(0, reminderSpan(words(when))); w > most {
+				most, widest = w, when
 			}
+		}
+		for day := wallTime(2027, time.January, 1, 12, 58); day.Year() == 2027; day = day.AddDate(0, 0, 1) {
+			try(day)
+		}
+		day := widest
+		for _, clock := range [][2]int{{10, 44}, {20, 8}} {
+			try(wallTime(2027, day.Month(), day.Day(), clock[0], clock[1]))
 		}
 	}, 200, 100)
 	inLanguage(t, lang, mt)
@@ -250,11 +257,20 @@ func widestDate(t *testing.T, lang string, words func(when time.Time) string) ti
 // the widest of a year, and for a phone with a short name and one with a
 // long name.
 func TestIPhoneHelperReminderLayout(t *testing.T) {
+	clockAt(t, helperDate().Add(-20*time.Hour))
 	ta, id, _ := helperApp(t)
 	ta.selectPhone(id)
 	const longName = "Alexandra-Marie’s Work iPhone 17 Pro Max"
+	sizes := [][2]int{{1280, 820}, {900, 600}}
 	for _, lang := range testLanguages() {
 		inLanguage(t, lang)
+		// A window of each size, drawn again for each form.
+		var windows []*mg.Tester
+		for _, size := range sizes {
+			tt := mg.NewTester(ta.view, size[0], size[1])
+			tt.SetLocale(lang)
+			windows = append(windows, tt)
+		}
 		dates := []time.Time{helperDate(), widestDate(t, lang, func(when time.Time) string { return locales.CheckHelperSoon(longName, when) })}
 		for _, name := range []string{"", longName} {
 			for i, exp := range dates {
@@ -262,26 +278,22 @@ func TestIPhoneHelperReminderLayout(t *testing.T) {
 				ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
 				ta.sync()
 				if name != "" {
-					// As its owner named it.
-					for j := range ta.devices {
-						if ta.devices[j].Info.ID == id {
-							ta.devices[j].Info.Name = name
-						}
-					}
+					ta.device(id).Info.Name = name // as its owner named it
 				}
 				d := ta.iphoneView(t)
 				for _, f := range reminderForms(d.Info.Name, exp) {
-					if !f.dated && i > 0 {
+					switch {
+					case !f.dated && i > 0:
 						continue // the same words whatever the date
+					case name != "" && !strings.Contains(f.words, name):
+						continue // and whatever the phone's name
 					}
 					showReminder(ta, id, f)
-					for _, size := range [][2]int{{1280, 820}, {900, 600}} {
-						tt := mg.NewTester(ta.view, size[0], size[1])
-						tt.SetLocale(lang)
+					for j, tt := range windows {
 						tt.Frame()
 						tt.Frame()
-						what := fmt.Sprintf("%s %v, %s, %q", lang, size, f.what, f.words)
-						box := reminderFits(t, tt, what, float32(size[0]), float32(size[1]), d, f)
+						what := fmt.Sprintf("%s %v, %s, %q", lang, sizes[j], f.what, f.words)
+						box := reminderFits(t, tt, what, float32(sizes[j][0]), float32(sizes[j][1]), d, f)
 						// The words of every day show whole, in the
 						// narrow window too.
 						if f.dated && i == 0 && name == "" && wordsCut(tt, f.words) {
@@ -297,11 +309,13 @@ func TestIPhoneHelperReminderLayout(t *testing.T) {
 // TestIPhoneHelperReminderCut: words that take more room than a small
 // window has above the phone are cut to the lines that fit, and the
 // pointer resting on them shows them whole; the button under them stays
-// in reach. More teams than there is room for scroll under the words.
+// in reach. More teams than there is room for scroll under the words, in
+// a list that cuts no focus ring and whose scroll bar takes no press on a
+// team's end.
 func TestIPhoneHelperReminderCut(t *testing.T) {
-	ta, id := installApp(t)
 	exp := helperDate()
 	clockAt(t, exp.Add(-20*time.Hour))
+	ta, id := installApp(t)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
 	ta.sync()
 	d := ta.iphoneView(t)
@@ -320,7 +334,7 @@ func TestIPhoneHelperReminderCut(t *testing.T) {
 		t.Fatalf("the reminder %v shows all of its words", box)
 	}
 	shown := countText(tt, words)
-	tt.Move(box.X+box.W/2, box.Y+1+reminderPadY+4)
+	tt.Move(box.X+box.W/2, box.Y+reminderBorder+reminderPadY+4)
 	tt.Advance(time.Second)
 	if got := countText(tt, words); got != shown+1 {
 		t.Errorf("the words show %d times with the pointer on them, %d before: no tooltip", got, shown)
@@ -347,74 +361,136 @@ func TestIPhoneHelperReminderCut(t *testing.T) {
 	if b, _ := tt.Find(last); b.H != 0 {
 		t.Fatalf("the last team %v shows without scrolling, in the reminder %v", b, box)
 	}
-	tt.Scroll(first.X+first.W/2, first.Y+first.H/2, 0, 2000)
-	if b, _ := tt.Find(last); b.H < smallButtonHeight-0.5 || !rectWithin(b, box, 0.5) {
-		t.Fatalf("the last team %v after scrolling, in the reminder %v", b, box)
+
+	// The list cuts no focus ring: the first team's, at its top, shows
+	// whole, inside the button.
+	for i := 0; i < 80 && !tt.Focused(f.labels[0]); i++ {
+		tt.Key(0, mg.KeyTab)
 	}
+	// ring reports whether the frame shows the focus ring's color within
+	// three points of x, y, going dx, dy.
+	ring := func(x, y float32, dx, dy int) bool {
+		for i := range 4 {
+			c, want := tt.Image().RGBAAt(int(x)+i*dx, int(y)+i*dy), lightPalette.brand
+			if d := int(c.R) - int(want.R); d > -32 && d < 32 && int(c.G) < int(want.G)+32 && int(c.B) < int(want.B)+32 {
+				return true
+			}
+		}
+		return false
+	}
+	if !tt.Focused(f.labels[0]) || !ring(first.X, first.Y+first.H/2, 1, 0) || !ring(first.X+first.W/2, first.Y, 0, 1) || !ring(first.X+first.W-1, first.Y+first.H/2, -1, 0) {
+		t.Errorf("the first team %v (focused %v) shows no focus ring along its start, its top or its end", first, tt.Focused(f.labels[0]))
+	}
+
+	// Its scroll bar keeps clear of them: a press on the end of a team as
+	// wide as the list chooses the team, with the pointer on the list,
+	// which shows the bar.
+	wide, _ := tt.Find(f.labels[2])
+	if wide.H < smallButtonHeight-0.5 || wide.X+wide.W < box.X+box.W-reminderBorder-reminderPadEnd-0.5 {
+		t.Fatalf("the third team %v is not whole and as wide as the list, in the reminder %v", wide, box)
+	}
+	x, y := wide.X+wide.W-2, wide.Y+wide.H/2
+	tt.Move(x, y)
+	ta.api.HoldHelper(true)
+	tt.ClickAt(x, y)
+	if r := ta.helper.runs[id]; r == nil || !r.running {
+		after, _ := tt.Find(f.labels[2])
+		t.Fatalf("a press on the end of the team %v did not choose it: the team is at %v now", wide, after)
+	}
+	ta.waitFor(t, "the install for the wide team", func() bool {
+		runs := ta.api.HelperRuns()
+		return len(runs) == 2 && runs[1].Team == f.run.teams[2].ID
+	})
+	ta.helper.runs[id].cancel()
+	ta.waitFor(t, "the install to stop", func() bool { return ta.helper.runs[id] == nil })
+	ta.api.HoldHelper(false)
+
+	// Scrolled to its end, the list shows the last team, which installs.
+	showReminder(ta, id, f)
+	tt = mg.NewTester(ta.view, w, h)
+	tt.Frame()
+	tt.Frame()
+	first, _ = tt.Find(f.labels[0])
+	tt.Scroll(first.X+first.W/2, first.Y+first.H/2, 0, 2000)
 	reminderFits(t, tt, f.what+", scrolled", w, h, d, reminderForm{words: f.words, labels: []string{last}})
+	// The keyboard's focus brings a team into view up to the list's edge,
+	// where its ring shows too.
+	for i := 0; i < 80 && !tt.Focused(last); i++ {
+		tt.Key(0, mg.KeyTab)
+	}
+	if b, _ := tt.Find(last); !tt.Focused(last) || b.H < smallButtonHeight-0.5 || !ring(b.X+b.W/2, b.Y+b.H-1, 0, -1) {
+		t.Errorf("the last team %v (focused %v) shows no focus ring along its bottom", b, tt.Focused(last))
+	}
+	// Held, so that the install has not put the phone back by the time
+	// the test ends.
+	ta.api.HoldHelper(true)
 	if err := tt.Click(last); err != nil {
 		t.Fatal(err)
 	}
 	team := f.run.teams[len(f.run.teams)-1].ID
 	ta.waitFor(t, "the install for the last team", func() bool {
 		runs := ta.api.HelperRuns()
-		return len(runs) == 2 && runs[1].Team == team
+		return len(runs) == 3 && runs[2].Team == team
 	})
+	ta.helper.runs[id].cancel()
+	ta.waitFor(t, "the install to stop", func() bool { return ta.helper.runs[id] == nil })
+	ta.api.HoldHelper(false)
 }
 
 // TestLayoutReminder: whatever its words and buttons, the reminder takes
-// no more than the room it is given, down to a line of its words and a row
-// of its buttons, cuts its words no shorter than that room asks, and lays
-// its buttons out within its width: beside the words where that is no
-// taller, under them where it is.
+// no more than the room it is given, down to a line of its words with its
+// buttons, cuts its words no shorter than that room asks, and lays its
+// buttons out within its width: beside the words where that is no higher,
+// under them where it is.
 func TestLayoutReminder(t *testing.T) {
-	const chrome = 2*reminderPadY + 2
 	const eps = 0.01
 	short := "The helper stops working soon."
 	long := strings.TrimSpace(strings.Repeat("Xcode couldn't install the helper while the phone was locked. ", 6))
-	texts := []string{short, long,
-		"iPhone 16 のヘルパーは 11月12日木曜日 15:14 に動作を止めます：Xcode のある Mac で pinkyctl helper install を実行し、再インストールしてください。",
-		"iPhone 16 上的辅助应用将在 11月12日星期四 15:14 停止工作：请在装有 Xcode 的 Mac 上运行 pinkyctl helper install 重新安装。"}
-	one := []string{"How to install it"}
-	teams := []string{"Sam Lee (Personal Team) (ABCDE12345)", "FGHIJ67890", "Shenzhen Example Technology Co., Ltd. (KLMNO12345)", "PQRST12345", "UVWXY12345", "Z"}
-	checked := false
-	check := func(c *mg.Context, text string, labels []string, width, room float32) reminderLayout {
+	texts := []string{short, long}
+	for _, lang := range testLanguages() {
+		texts = append(texts, locales.In(lang).CheckHelperSoon("iPhone 16", helperDate()))
+	}
+	one := []string{locales.CheckHelperHow()}
+	var teams []string
+	for _, team := range append(slices.Clone(helperTeams), driver.HelperTeam{ID: "KLMNO12345", Name: "Shenzhen Example Technology Co., Ltd."},
+		driver.HelperTeam{ID: "PQRST12345"}, driver.HelperTeam{ID: "UVWXY12345"}, driver.HelperTeam{ID: "Z"}) {
+		teams = append(teams, helperTeamLabel(team))
+	}
+	check := func(c *mg.Context, text string, labels []string, width, room float32) {
 		l := layoutReminder(c, text, labels, width, room)
 		what := fmt.Sprintf("%q with %d buttons, %v wide in %v: %+v", text, len(labels), width, room, l)
-		inner := width - (reminderPadX + reminderPadEnd + 2) - reminderIcon - reminderGap
+		inner := reminderInner(width)
 		_, all := c.MeasureText(l.textW, reminderSpan(text))
 		words := all
 		if l.lines > 0 {
 			words = float32(l.lines) * l.lineH
-			if words > all+eps {
-				t.Errorf("%s: cut to more lines than the words have, %v high", what, all)
+			if words >= all {
+				t.Errorf("%s: cut to no fewer lines than the words have, %v high", what, all)
 			}
 		}
-		// What is beside or under the words, and the least of it.
-		var rest, least float32
-		switch {
-		case len(labels) == 0:
-			rest, least = chrome, l.lineH+chrome
-			if words+rest != l.height {
-				t.Errorf("%s: words %v high", what, words)
-			}
-		case !l.below:
-			rest, least = chrome, max(l.lineH, smallButtonHeight)+chrome
-			if got := max(words, smallButtonHeight) + chrome; got < l.height-eps || got > l.height+eps {
+		// What is under the words, and whether the buttons have room
+		// beside them.
+		var rest float32 = reminderChrome
+		beside, fits := inner, true
+		for _, b := range l.buttons {
+			beside -= reminderGap + b.w
+			fits = fits && !b.cut
+		}
+		fits = fits && beside >= 1
+		if !l.below {
+			if got := max(words, smallButtonHeight) + reminderChrome; got < l.height-eps || got > l.height+eps {
 				t.Errorf("%s: words %v high beside the buttons", what, words)
 			}
-			across := l.textW
+			if !fits || l.textW < beside-eps || l.textW > beside+eps {
+				t.Errorf("%s: the buttons leave the words %v beside them", what, beside)
+			}
 			for _, b := range l.buttons {
-				across += reminderGap + b.w
-				if b.cut || b.row != 0 {
-					t.Errorf("%s: a button beside the words is cut, or not in their row", what)
+				if b.row != 0 {
+					t.Errorf("%s: a button beside the words is not in their row", what)
 				}
 			}
-			if across < inner-eps || across > inner+eps {
-				t.Errorf("%s: the words and the buttons take %v of %v", what, across, inner)
-			}
-		default:
-			rest, least = reminderStack+l.buttonsH+chrome, l.lineH+reminderStack+smallButtonHeight+chrome
+		} else {
+			rest += reminderStack + l.buttonsH
 			if got := words + rest; got < l.height-eps || got > l.height+eps {
 				t.Errorf("%s: words %v high over the buttons", what, words)
 			}
@@ -445,20 +521,26 @@ func TestLayoutReminder(t *testing.T) {
 		if len(l.buttons) != len(labels) || l.textW < 1 {
 			t.Errorf("%s: %d buttons", what, len(l.buttons))
 		}
+		// The least it can be: a line of the words beside the buttons, or
+		// over a row of them where they have no room beside the words.
+		least := max(l.lineH, smallButtonHeight) + reminderChrome
+		if !fits {
+			least = l.lineH + reminderStack + smallButtonHeight + reminderChrome
+		}
 		if l.height > max(room, least)+eps {
 			t.Errorf("%s: more than the room, and than the least %v", what, least)
 		}
 		if l.lines > 0 && float32(l.lines+1)*l.lineH+rest <= room {
 			t.Errorf("%s: another line of the words would fit", what)
 		}
-		return l
 	}
+	ran := false
 	mg.NewTester(func(c *mg.Context) {
 		applyTheme(c)
-		if checked {
+		if ran {
 			return
 		}
-		checked = true
+		ran = true
 		for _, text := range texts {
 			for _, labels := range [][]string{nil, one, teams[:2], teams} {
 				for _, width := range []float32{180, 270, 320, 380, 520} {
@@ -469,26 +551,35 @@ func TestLayoutReminder(t *testing.T) {
 			}
 		}
 		// A few words and a button, with room: side by side, as before.
-		if l := check(c, short, one, 520, 1000); l.below || l.lines != 0 {
+		if l := layoutReminder(c, short, one, 520, 1000); l.below || l.lines != 0 {
 			t.Errorf("a few words and a button: %+v", l)
 		}
+		// One line of words is not cut, however little room there is.
+		if l := layoutReminder(c, short, nil, 520, 10); l.lines != 0 {
+			t.Errorf("a few words with no room: %+v", l)
+		}
 		// Many words in a narrow stage: the button under them, all of
-		// them while there is room, cut when there is not.
-		if l := check(c, long, one, 320, 1000); !l.below || l.lines != 0 {
+		// them while there is room, cut when there is not; beside them,
+		// cut, where there is no room for a line of them over the button.
+		if l := layoutReminder(c, long, one, 320, 1000); !l.below || l.lines != 0 {
 			t.Errorf("many words in a narrow stage: %+v", l)
 		}
-		if l := check(c, long, one, 320, 120); !l.below || l.lines == 0 {
+		if l := layoutReminder(c, long, one, 320, 120); !l.below || l.lines == 0 {
 			t.Errorf("many words in a narrow stage with little room: %+v", l)
 		}
-		// More teams than there is room for scroll.
-		if l := check(c, short, teams, 320, 150); !l.below || !l.scrolls {
+		if l := layoutReminder(c, long, one, 320, 64); l.below || l.lines == 0 || l.height > 64 {
+			t.Errorf("many words in a narrow stage with room for a button only: %+v", l)
+		}
+		// More teams than there is room for scroll; a team wider than the
+		// reminder is cut.
+		if l := layoutReminder(c, short, teams, 320, 150); !l.below || !l.scrolls {
 			t.Errorf("many teams with little room: %+v", l)
 		}
-		if l := check(c, short, teams, 320, 1000); !l.below || l.scrolls || !l.buttons[2].cut {
+		if l := layoutReminder(c, short, teams, 320, 1000); !l.below || l.scrolls || !l.buttons[2].cut {
 			t.Errorf("many teams with room: %+v", l)
 		}
 	}, 200, 100)
-	if !checked {
+	if !ran {
 		t.Fatal("the view did not run")
 	}
 }
@@ -497,28 +588,28 @@ func TestLayoutReminder(t *testing.T) {
 // banner takes the reminder's place above the phone; once they hand the
 // phone back, the reminder is back. Neither covers the phone.
 func TestIPhoneHelperReminderGivesWay(t *testing.T) {
-	ta, id, _ := helperApp(t)
 	exp := helperDate()
 	clockAt(t, exp.Add(-20*time.Hour))
+	ta, id, _ := helperApp(t)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
 	ta.sync()
 	d := ta.iphoneView(t)
-	soon := locales.CheckHelperSoon(d.Info.Name, exp.Local())
+	form := reminderForms(d.Info.Name, exp)[0]
+	soon := form.words
 	img := image.NewRGBA(image.Rect(0, 0, 1170, 2532))
 	stillMirror(ta, id, img)
 	ta.selectPhone(id)
 	const w, h = 1280, 820
 	tt := mg.NewTester(ta.view, w, h)
 	tt.Frame()
-	reminderFits := func(what string) {
+	reminderShows := func(what string) {
 		t.Helper()
-		r, ok := tt.Find(soon) // the reminder's box, labeled with its words
-		b := findPhone(t, tt, d.Info.Name)
-		if !ok || b.banner || r.Y < headerHeight+stagePad-0.5 || r.Y+r.H+stageGap > b.fig.Y+0.5 || b.keys.Y+b.keys.H > h-stagePad+0.5 {
-			t.Fatalf("%s: the reminder %v (shown %v), the phone %v, Home %v, Hand back %v", what, r, ok, b.fig, b.keys, b.banner)
+		if findPhone(t, tt, d.Info.Name).banner {
+			t.Fatalf("%s: the banner shows with the reminder: %q", what, tt.Texts())
 		}
+		reminderFits(t, tt, what, w, h, d, form)
 	}
-	reminderFits("before")
+	reminderShows("before")
 
 	ta.takeOver(id)
 	ta.waitFor(t, "the person in control", func() bool { return ta.iphoneView(t).Status == gateway.DeviceInControl })
@@ -534,7 +625,7 @@ func TestIPhoneHelperReminderGivesWay(t *testing.T) {
 	ta.waitFor(t, "the phone handed back", func() bool { return ta.iphoneView(t).Status != gateway.DeviceInControl })
 	tt.Frame()
 	tt.Frame()
-	reminderFits("after Hand back")
+	reminderShows("after Hand back")
 }
 
 // TestIPhoneHelperRanOut: once the helper's signature ran out, the iPhone
@@ -542,9 +633,9 @@ func TestIPhoneHelperReminderGivesWay(t *testing.T) {
 // with how to install it again, not the driver's English or the steps of
 // preparing it.
 func TestIPhoneHelperRanOut(t *testing.T) {
-	ta, id, opened := helperApp(t)
 	exp := helperDate()
 	clockAt(t, exp.Add(3*time.Hour))
+	ta, id, opened := helperApp(t)
 	const detail = "The WebDriverAgent helper's provisioning profile ran out"
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, Detail: detail, HelperExpires: exp})
 	ta.sync()
@@ -613,29 +704,12 @@ func TestIPhoneHelperScreenshots(t *testing.T) {
 		t.Skip("set PINKY_SCREENSHOTS to a folder to write the screenshots")
 	}
 	dark := os.Getenv("PINKY_SCREENSHOTS_DARK") != ""
-	ta, id, _ := helperApp(t)
 	exp := helperDate()
 	clockAt(t, exp.Add(-30*time.Hour))
-	shoot := func(name string, lang string, size ...int) {
+	ta, id, _ := helperApp(t)
+	shoot := func(name, lang string, size ...int) {
 		t.Helper()
-		w, h := 1280, 820
-		if len(size) == 2 {
-			w, h = size[0], size[1]
-		}
-		st := mg.NewTester(ta.view, w, h)
-		inLanguage(t, lang, st)
-		st.SetScale(2)
-		st.SetDark(dark)
-		st.Frame()
-		st.Frame()
-		f, err := os.Create(filepath.Join(dir, name+"-"+lang+".png"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer f.Close()
-		if err := png.Encode(f, st.Image()); err != nil {
-			t.Fatal(err)
-		}
+		shootWindow(t, ta, filepath.Join(dir, name+"-"+lang+".png"), lang, dark, size...)
 	}
 	for _, lang := range testLanguages() {
 		inLanguage(t, lang)
@@ -661,5 +735,29 @@ func TestIPhoneHelperScreenshots(t *testing.T) {
 			Detail: "The WebDriverAgent helper's provisioning profile ran out"})
 		ta.sync()
 		shoot("helper-ran-out", lang)
+	}
+}
+
+// shootWindow draws the client in lang, in a window of the default size or
+// of the size given, at two pixels a point, and writes the picture to file.
+func shootWindow(t *testing.T, ta *testApp, file, lang string, dark bool, size ...int) {
+	t.Helper()
+	w, h := 1280, 820
+	if len(size) == 2 {
+		w, h = size[0], size[1]
+	}
+	st := mg.NewTester(ta.view, w, h)
+	inLanguage(t, lang, st)
+	st.SetScale(2)
+	st.SetDark(dark)
+	st.Frame()
+	st.Frame()
+	f, err := os.Create(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, st.Image()); err != nil {
+		t.Fatal(err)
 	}
 }

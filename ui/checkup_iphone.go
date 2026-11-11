@@ -276,10 +276,11 @@ func needsHelper(d gateway.DeviceView) bool {
 	return d.Info.Platform == driver.IOS && d.Info.State == driver.StateNeedsSetup && d.Info.Setup == driver.SetupInstallHelper
 }
 
-// timeNow is the clock of what the views say about dates: when an
-// iPhone's helper stops working, and whether it has. Tests set it (clockAt
-// in main_test.go), so that the words they check do not change with the
-// time they run at.
+// timeNow is the clock the helper's words are told by: whether an iPhone's
+// helper stops working soon, or has stopped. Tests put their own in its
+// place (testNow in main_test.go), so that these words do not change with
+// the time the tests run at. Other views tell dates by the frame's clock,
+// Context.Now.
 var timeNow = time.Now
 
 // helperWords says when the helper an iPhone is driven through stops
@@ -367,13 +368,19 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width, room fl
 			if l.buttons[i].cut {
 				b.Tooltip(labels[i])
 			}
+			if l.scrolls {
+				// The list they scroll in clips what is around them.
+				ringInside(c, b)
+			}
 			if b.Clicked() {
 				acts[i]()
 			}
 		}
 	}
-	box := mg.Row(c).Width(width).Height(l.height).Shrink(0).Padding(reminderPadY, reminderPadEnd, reminderPadY, reminderPadX).
-		Radius(12).Background(p.amberTint).Border(1, p.amberLine).Gap(reminderGap).Role(mg.RoleStatus).Label(text)
+	// Keyed, a phone's reminder keeps its own state, as how far its teams
+	// have scrolled, apart from another phone's.
+	box := mg.Row(c.Key("helper-reminder-"+id)).Width(width).Height(l.height).Shrink(0).Padding(reminderPadY, reminderPadEnd, reminderPadY, reminderPadX).
+		Radius(rCard).Background(p.amberTint).Border(reminderBorder, p.amberLine).Gap(reminderGap).Role(mg.RoleStatus).Label(text)
 	if !l.below {
 		box.AlignItems(mg.Center).Children(func() {
 			mg.Icon(c, icAlert).FontSize(reminderIcon).TextColor(p.amberDot)
@@ -387,6 +394,8 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width, room fl
 		mg.Icon(c, icAlert).FontSize(reminderIcon).TextColor(p.amberDot).Margin(max(0, (l.lineH-reminderIcon)/2), 0, 0, 0)
 		mg.Column(c).Width(l.textW).Shrink(0).Gap(reminderStack).Children(func() {
 			words()
+			// In the rows layoutReminder counted for the height: a row
+			// that wraps would work them out again by itself.
 			rows := func() {
 				for from := 0; from < len(labels); {
 					to := from + 1
@@ -398,8 +407,12 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width, room fl
 				}
 			}
 			if l.scrolls {
-				// More teams than the window has room for.
-				mg.Scroll(c).Width(l.textW).Height(l.buttonsH).Shrink(0).Gap(reminderStack).Children(rows)
+				// More teams than the window has room for. The list reaches
+				// into the reminder's padding after its buttons, for its
+				// scroll bar, which over their ends would take the presses
+				// there.
+				mg.Scroll(c).Width(l.textW+reminderPadEnd).Height(l.buttonsH).Shrink(0).Margin(0, -reminderPadEnd, 0, 0).Padding(0, reminderPadEnd, 0, 0).
+					ScrollbarStyle(mg.ScrollbarStyle{TrackWidth: reminderPadEnd}).Gap(reminderStack).Children(rows)
 			} else {
 				mg.Column(c).Gap(reminderStack).Children(rows)
 			}
@@ -408,26 +421,28 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width, room fl
 	return l.height
 }
 
-// The helper reminder's box: the most it is wide, its padding (above and
-// below, after its buttons, before its icon), its icon, the gap between
-// its icon, words and buttons, and that between its words and the buttons
-// under them.
+// The helper reminder's box: the most it is wide, its border, its padding
+// (above and below, after its buttons, before its icon), its icon, the gap
+// between its icon, words and buttons, and that between its words and the
+// buttons under them.
 const (
 	reminderWidth  = 520
-	reminderPadY   = 8
-	reminderPadEnd = 8
+	reminderBorder = 1
+	reminderPadY   = sp2
+	reminderPadEnd = sp2
 	reminderPadX   = 14
 	reminderIcon   = 16
 	reminderGap    = 10
-	reminderStack  = 8
+	reminderStack  = sp2
+	// reminderChrome is what its padding and border take of its height.
+	reminderChrome = 2 * (reminderPadY + reminderBorder)
 )
 
-// smallButtonHeight is the height of a small button (button, btnOpt.small),
-// and smallButtonPad what its padding and border add to its label's width.
-const (
-	smallButtonHeight = 28
-	smallButtonPad    = 2*10 + 2
-)
+// reminderInner returns the width a reminder width wide leaves its words
+// and buttons: what is within its border and padding, after its icon.
+func reminderInner(width float32) float32 {
+	return max(width-2*reminderBorder-reminderPadX-reminderPadEnd-reminderIcon-reminderGap, 1)
+}
 
 // reminderSpan is the helper reminder's words as it draws and measures
 // them. A text of their size alone would have lower lines than
@@ -460,31 +475,23 @@ type reminderButton struct {
 // layoutReminder lays out the helper reminder, width wide, with its words
 // and its buttons' labels: the buttons beside the words, as a window with
 // room shows them, or under the words where that makes the reminder
-// shorter, as in a narrow window, where the words beside a button would
+// lower, as in a narrow window, where the words beside a button would
 // wrap into a tall column. The reminder is at most room high, which
-// leaves the phone below it its least height: words that would take more
-// are cut to the lines there is room for, and more rows of buttons than
-// there is room for scroll.
+// leaves the phone below it its least height, down to a line of its words
+// with its buttons: words that would take more are cut to the lines there
+// is room for, and more rows of buttons than there is room for scroll.
 func layoutReminder(c *mg.Context, text string, labels []string, width, room float32) reminderLayout {
-	const chrome = 2*reminderPadY + 2 // the padding and the border, above and below
 	span := reminderSpan(text)
-	// What the padding, the border, the icon and its gap leave of the width.
-	inner := max(width-(reminderPadX+reminderPadEnd+2)-reminderIcon-reminderGap, 1)
+	inner := reminderInner(width)
 	_, lineH := c.MeasureText(0, span)
 	_, wordsH := c.MeasureText(inner, span)
 	l := reminderLayout{textW: inner, lineH: lineH}
-	if len(labels) == 0 {
-		l.lines, wordsH = cutLines(wordsH, lineH, room-chrome)
-		l.height = wordsH + chrome
-		return l
-	}
 
-	// The buttons, in the rows they wrap into under the words, and what
-	// they leave the words beside them.
+	// The buttons, in the rows they take under the words, and what they
+	// leave the words beside them.
 	beside, rows, x := inner, 1, float32(0)
 	for _, label := range labels {
-		lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: fsSmall, Weight: fwMedium})
-		w := lw + smallButtonPad
+		w := buttonWidth(c, label, true)
 		beside -= reminderGap + w
 		b := reminderButton{w: min(w, inner), cut: w > inner}
 		if x > 0 && x+reminderStack+b.w > inner {
@@ -498,44 +505,44 @@ func layoutReminder(c *mg.Context, text string, labels []string, width, room flo
 		l.buttons = append(l.buttons, b)
 	}
 	buttonsH := float32(rows)*smallButtonHeight + float32(rows-1)*reminderStack
-	belowH := wordsH + reminderStack + buttonsH + chrome
+	belowH := wordsH + reminderStack + buttonsH + reminderChrome
+	// Beside the words where that is no higher, and where there is no room
+	// for even a line of the words over a row of buttons.
 	if beside >= 1 {
 		_, besideH := c.MeasureText(beside, span)
-		if max(besideH, smallButtonHeight)+chrome <= belowH {
+		if max(besideH, smallButtonHeight)+reminderChrome <= belowH || lineH+reminderStack+smallButtonHeight+reminderChrome > room {
 			l.textW = beside
-			l.lines, besideH = cutLines(besideH, lineH, room-chrome)
-			l.height = max(besideH, smallButtonHeight) + chrome
+			l.lines, besideH = cutLines(besideH, lineH, room-reminderChrome)
+			l.height = max(besideH, smallButtonHeight) + reminderChrome
 			return l
 		}
 	}
+	// Under the words, which keep two lines. Rows of buttons that do not
+	// fit under them scroll, in the height of the rows that do and half of
+	// the next, which shows that there are more: of a row at least.
 	l.below, l.buttonsH = true, buttonsH
-	if belowH > room {
-		// The words keep two lines. Rows of buttons that do not fit under
-		// them scroll, in the height of the rows that do and half of the
-		// next, which shows that there are more; of a row at least.
-		left := room - chrome - reminderStack
-		if most := left - min(wordsH, 2*lineH); rows > 1 && buttonsH > most {
-			const pitch = smallButtonHeight + reminderStack
-			l.buttonsH, l.scrolls = smallButtonHeight, true
-			if whole := int((most - smallButtonHeight/2) / pitch); whole > 0 {
-				l.buttonsH = float32(whole)*pitch + smallButtonHeight/2
-			}
+	left := room - reminderChrome - reminderStack
+	if most := left - min(wordsH, 2*lineH); rows > 1 && buttonsH > most {
+		const pitch = smallButtonHeight + reminderStack
+		l.buttonsH, l.scrolls = smallButtonHeight, true
+		if whole := int((most - smallButtonHeight/2.0) / pitch); whole > 0 {
+			l.buttonsH = float32(whole)*pitch + smallButtonHeight/2.0
 		}
-		l.lines, wordsH = cutLines(wordsH, lineH, left-l.buttonsH)
 	}
-	l.height = wordsH + reminderStack + l.buttonsH + chrome
+	l.lines, wordsH = cutLines(wordsH, lineH, left-l.buttonsH)
+	l.height = wordsH + reminderStack + l.buttonsH + reminderChrome
 	return l
 }
 
 // cutLines cuts words h high, in lines at most lineH high, to the lines
 // that fit in room, one at least: it returns how many, 0 when they all
-// fit, and the height they take.
+// fit or are one line, and the height they take.
 func cutLines(h, lineH, room float32) (lines int, height float32) {
-	if h <= room || lineH <= 0 {
+	if h <= room || h <= lineH || lineH <= 0 {
 		return 0, h
 	}
 	lines = max(int(room/lineH), 1)
-	return lines, min(float32(lines)*lineH, h)
+	return lines, float32(lines) * lineH
 }
 
 // iphoneCheckAction draws what an iPhone's item offers to do, and reports

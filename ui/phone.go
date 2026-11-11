@@ -424,11 +424,10 @@ func (a *app) controlBanner(c *mg.Context, id string, text controlText, width fl
 // after the padding, the border, the icon, the gaps and Hand back (its
 // label, padding and border), and the banner is no shorter than Hand back.
 func controlBannerHeight(c *mg.Context, spans []mg.Span, label string, width float32) float32 {
-	lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: 14, Weight: 500})
-	tw := width - (bannerPadX + bannerPadY + 2) - 18 - 2*10 - (lw + 2*14 + 2)
+	tw := width - (bannerPadX + bannerPadY + 2) - 18 - 2*10 - buttonWidth(c, label, false)
 	_, th := c.MeasureText(max(tw, 1), spans...)
 	_, line := c.MeasureText(0, spans...)
-	return max(min(th, controlLines*line), 34) + 2*bannerPadY + 2
+	return max(min(th, controlLines*line), buttonHeight) + 2*bannerPadY + 2
 }
 
 // The control banner's padding: bannerPadY above, below and after Hand

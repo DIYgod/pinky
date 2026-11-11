@@ -123,7 +123,7 @@ func (a *API) InstallHelper(ctx context.Context, deviceID, team string, progress
 	}
 	a.mu.Unlock()
 	for _, id := range ids {
-		a.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: time.Now().Add(helperValid)})
+		a.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: a.opt.Now().Add(helperValid)})
 	}
 	return nil
 }

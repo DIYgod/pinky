@@ -3,7 +3,6 @@ package ui
 import (
 	"errors"
 	"fmt"
-	"image/png"
 	"os"
 	"path/filepath"
 	"slices"
@@ -18,6 +17,10 @@ import (
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/ui/fakeapi"
 )
+
+// helperTeams are teams a Mac signs for in the tests: one with a name, and
+// one with its ID alone.
+var helperTeams = []driver.HelperTeam{{ID: "ABCDE12345", Name: "Sam Lee (Personal Team)"}, {ID: "FGHIJ67890"}}
 
 // installApp is helperApp on a Mac with Xcode: Pinky installs the helper
 // from its window.
@@ -40,7 +43,7 @@ func installed(t *testing.T, ta *testApp, id, name string) {
 	}
 	ta.waitFor(t, "the phone online", func() bool {
 		d := ta.iphoneView(t)
-		return d.Info.State == driver.StateOnline && time.Until(d.Info.HelperExpires) > 6*24*time.Hour
+		return d.Info.State == driver.StateOnline && d.Info.HelperExpires.Sub(timeNow()) > 6*24*time.Hour
 	})
 }
 
@@ -141,7 +144,7 @@ func TestIPhoneHelperInstallFails(t *testing.T) {
 // install asks which, and goes on with the one chosen.
 func TestIPhoneHelperInstallTeams(t *testing.T) {
 	ta, id := installApp(t)
-	teams := []driver.HelperTeam{{ID: "ABCDE12345", Name: "Sam Lee (Personal Team)"}, {ID: "FGHIJ67890"}}
+	teams := helperTeams
 	ta.api.SetHelperTeams(teams)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper})
 	ta.sync()
@@ -170,10 +173,9 @@ func TestIPhoneHelperInstallTeams(t *testing.T) {
 // out, the reminder above the phone installs it again; the checkup offers
 // it once, from the helper's item.
 func TestIPhoneHelperInstallAgain(t *testing.T) {
+	exp := helperDate()
+	clockAt(t, exp.Add(-30*time.Hour))
 	ta, id := installApp(t)
-	// By the computer's clock, as the fake dates the helper it installs:
-	// the test checks words, which it makes of the same time as the views.
-	exp := time.Now().Add(30 * time.Hour)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
 	ta.api.SetCheckup(id, driver.Checkup{System: "iOS 18.6", Checks: []driver.Check{
 		{ID: driver.CheckHelper, Status: driver.CheckWarn, Fix: driver.FixInstallHelper, Detail: "WebDriverAgent answers; its provisioning profile runs out soon"},
@@ -214,9 +216,9 @@ func TestIPhoneHelperInstallAgain(t *testing.T) {
 // TestIPhoneHelperRanOutHere: once the helper ran out, the page installs
 // it again, in words that leave out the command.
 func TestIPhoneHelperRanOutHere(t *testing.T) {
+	exp := helperDate()
+	clockAt(t, exp.Add(3*time.Hour))
 	ta, id := installApp(t)
-	// By the computer's clock, as in TestIPhoneHelperInstallAgain.
-	exp := time.Now().Add(-3 * time.Hour)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, HelperExpires: exp})
 	ta.sync()
 	d := ta.iphoneView(t)
@@ -295,24 +297,7 @@ func TestIPhoneHelperInstallScreenshots(t *testing.T) {
 	ta, id := installApp(t)
 	shoot := func(name, lang string, size ...int) {
 		t.Helper()
-		w, h := 1280, 820
-		if len(size) == 2 {
-			w, h = size[0], size[1]
-		}
-		st := mg.NewTester(ta.view, w, h)
-		inLanguage(t, lang, st)
-		st.SetScale(2)
-		st.SetDark(dark)
-		st.Frame()
-		st.Frame()
-		f, err := os.Create(filepath.Join(dir, name+"-"+lang+".png"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer f.Close()
-		if err := png.Encode(f, st.Image()); err != nil {
-			t.Fatal(err)
-		}
+		shootWindow(t, ta, filepath.Join(dir, name+"-"+lang+".png"), lang, dark, size...)
 	}
 	for _, lang := range testLanguages() {
 		inLanguage(t, lang)
@@ -325,7 +310,7 @@ func TestIPhoneHelperInstallScreenshots(t *testing.T) {
 
 		ta.helper.runs = map[string]*helperRun{id: {running: true, step: driver.HelperUnlock, cancel: func() {}}}
 		shoot("helper-installing", lang)
-		ta.helper.runs[id] = &helperRun{teams: []driver.HelperTeam{{ID: "ABCDE12345", Name: "Sam Lee (Personal Team)"}, {ID: "FGHIJ67890"}}}
+		ta.helper.runs[id] = &helperRun{teams: helperTeams}
 		shoot("helper-teams", lang)
 		name := ta.iphoneView(t).Info.Name
 		text, detail, log := helperErrorWords(&driver.HelperInstallError{Fix: driver.HelperFixPasscode,
@@ -345,8 +330,7 @@ func TestIPhoneHelperInstallScreenshots(t *testing.T) {
 		ta.sync()
 		shoot("helper-again", lang)
 		// The reminder asks which team, in the default and the smallest window.
-		ta.helper.runs = map[string]*helperRun{id: {teams: []driver.HelperTeam{{ID: "ABCDE12345", Name: "Sam Lee (Personal Team)"}, {ID: "FGHIJ67890"},
-			{ID: "KLMNO12345", Name: "Shenzhen Example Technology Co., Ltd."}}}}
+		ta.helper.runs = map[string]*helperRun{id: {teams: append(slices.Clone(helperTeams), driver.HelperTeam{ID: "KLMNO12345", Name: "Shenzhen Example Technology Co., Ltd."})}}
 		shoot("helper-again-teams", lang)
 		shoot("helper-again-teams-small", lang, 960, 620)
 		ta.helper.runs = nil
