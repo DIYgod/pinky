@@ -13,9 +13,14 @@
 //	          (each asks the person), try to open Pinky itself, go home
 //	loop      browse Settings for -minutes: open a section, scroll it,
 //	          go back, the next section; then finish
-//	attack    open Settings, then tap -x,-y (where Pinky's own Working
+//	attack    open -app (Settings), then tap -x,-y (where Pinky's own Working
 //	          pill shows, say its Stop) and swipe across it, as a model
 //	          that tries to press Pinky's controls would; then finish
+//	calc      open Calculator, work out 7 × 6 (tapping 7 again if the
+//	          person denies it), try to open Pinky itself, go home; for
+//	          real phones, where Settings must not change
+//	calcloop  work sums in Calculator for -minutes, going home and back
+//	          every 20 turns; then finish
 package main
 
 import (
@@ -33,12 +38,13 @@ import (
 
 var (
 	addr    = flag.String("addr", ":8787", "address to listen on")
-	script  = flag.String("script", "settings", "settings, loop or attack")
+	script  = flag.String("script", "settings", "settings, loop, attack, calc or calcloop")
 	minutes = flag.Float64("minutes", 10, "how long the loop script browses")
 	think   = flag.Duration("think", 1500*time.Millisecond, "delay before each answer, as a model's latency")
 	verbose = flag.Bool("v", false, "log the text of each tool result")
 	attackX = flag.Int("x", 0, "attack: where to tap, in screen pixels")
 	attackY = flag.Int("y", 0, "attack: where to tap, in screen pixels")
+	attackA = flag.String("app", "Settings", "attack: the app to open first (Calculator on real phones, where a missed tap must change nothing)")
 )
 
 func main() {
@@ -167,6 +173,12 @@ func (s *state) next(last string) (string, map[string]any, string) {
 	if *script == "attack" {
 		return s.attack(last)
 	}
+	if *script == "calc" {
+		return s.calc(last)
+	}
+	if *script == "calcloop" {
+		return s.calcloop(last)
+	}
 	if s.turn > 20 {
 		return finish("failed", "Too many turns: "+strings.Join(s.seen, "; "))
 	}
@@ -220,7 +232,7 @@ func (s *state) attack(last string) (string, map[string]any, string) {
 	s.step++
 	switch s.step {
 	case 1:
-		return "phone_launch", map[string]any{"app": "Settings"}, ""
+		return "phone_launch", map[string]any{"app": *attackA}, ""
 	case 2:
 		return "phone_tap", map[string]any{"x": *attackX, "y": *attackY}, "Tapping Pinky's Stop."
 	case 3:
@@ -274,4 +286,84 @@ func (s *state) loop(last string) (string, map[string]any, string) {
 		}
 		return "phone_key", map[string]any{"key": "back"}, ""
 	}
+}
+
+// Calculator's keys, by the labels the agent may read for them.
+var calcKeys = map[string][]string{
+	"×": {"×", "multiply", "times", "乘"}, "+": {"+", "plus", "加"}, "=": {"=", "equals", "等于"},
+	"clear": {"clear", "clr", "delete", "del", "ac", "清除", "删除"},
+}
+
+// key finds a Calculator key whose label is exactly one of its names.
+func key(screen, name string) (int, bool) {
+	names, ok := calcKeys[name]
+	if !ok {
+		names = []string{name}
+	}
+	for _, n := range names {
+		for _, m := range refRe.FindAllStringSubmatch(screen, -1) {
+			if strings.EqualFold(m[2], n) {
+				ref, _ := strconv.Atoi(m[1])
+				return ref, true
+			}
+		}
+	}
+	return 0, false
+}
+
+// calc works out 7 × 6 in Calculator, one key at a time.
+func (s *state) calc(last string) (string, map[string]any, string) {
+	if s.turn > 20 {
+		return finish("failed", "Too many turns: "+strings.Join(s.seen, "; "))
+	}
+	keys := []string{"7", "×", "6", "="}
+	if s.step > 0 && s.step <= len(keys)+1 {
+		st := status(last)
+		s.seen = append(s.seen, fmt.Sprintf("step %d: %s", s.step, st))
+		if st == "approval_denied" && s.step == 2 && !s.launched {
+			s.launched = true // tap 7 again, once
+			s.step--
+		}
+	}
+	s.step++
+	switch {
+	case s.step == 1:
+		return "phone_launch", map[string]any{"app": "Calculator"}, "Opening Calculator."
+	case s.step <= len(keys)+1:
+		k := keys[s.step-2]
+		if n, ok := key(last, k); ok {
+			return "phone_tap", map[string]any{"ref": n}, ""
+		}
+		s.step--
+		return "phone_observe", map[string]any{}, ""
+	case s.step == len(keys)+2:
+		s.seen = append(s.seen, fmt.Sprintf("42 shown: %v", strings.Contains(last, "\"42\"")))
+		return "phone_launch", map[string]any{"app": "Pinky Standalone"}, "Trying to open Pinky itself."
+	case s.step == len(keys)+3:
+		s.seen = append(s.seen, "open Pinky: "+status(last))
+		return "phone_key", map[string]any{"key": "home"}, ""
+	default:
+		return finish("done", strings.Join(s.seen, "; "))
+	}
+}
+
+// calcloop works sums in Calculator until the time is up.
+func (s *state) calcloop(last string) (string, map[string]any, string) {
+	if time.Since(s.started) > time.Duration(*minutes*float64(time.Minute)) {
+		return finish("done", fmt.Sprintf("Worked sums for %.0f minutes in %d turns.", *minutes, s.turn))
+	}
+	s.step++
+	if s.step == 1 || s.step%20 == 0 {
+		return "phone_launch", map[string]any{"app": "Calculator"}, ""
+	}
+	if s.step%20 == 19 {
+		return "phone_key", map[string]any{"key": "home"}, ""
+	}
+	keys := []string{"1", "2", "+", "3", "4", "=", "clear", "5", "×", "6", "=", "clear", "7", "8", "9", "=", "clear"}
+	k := keys[s.section%len(keys)]
+	s.section++
+	if n, ok := key(last, k); ok {
+		return "phone_tap", map[string]any{"ref": n}, ""
+	}
+	return "phone_observe", map[string]any{}, ""
 }

@@ -84,12 +84,13 @@ func main() {
 		fs := flag.NewFlagSet("start", flag.ExitOnError)
 		task := fs.String("task", "", "the task")
 		key := fs.String("key", "fake", "the API key (a fake one for fakemodel)")
+		provider := fs.String("provider", "", "anthropic (the default) or openai")
 		base := fs.String("base-url", "", "the API's address")
 		model := fs.String("model", "", "the model")
 		steps := fs.Int("max-steps", 0, "step limit")
 		mins := fs.Int("max-minutes", 0, "time limit")
 		_ = fs.Parse(args)
-		_, err = call(map[string]any{"cmd": "start", "task": *task, "key": *key, "base_url": *base, "model": *model,
+		_, err = call(map[string]any{"cmd": "start", "task": *task, "key": *key, "provider": *provider, "base_url": *base, "model": *model,
 			"max_steps": *steps, "max_minutes": *mins})
 	case "stop", "dismiss":
 		_, err = call(map[string]any{"cmd": cmd})
