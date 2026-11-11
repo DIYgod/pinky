@@ -606,7 +606,9 @@ func helperBuildArgs(src, dd, udid, team, bid string, updates bool) []string {
 		"-project", filepath.Join(src, "WebDriverAgent.xcodeproj"),
 		"-scheme", "WebDriverAgentRunner",
 		"-destination", "id=" + udid,
-		"-derivedDataPath", dd}
+		"-derivedDataPath", dd,
+		"SYMROOT=" + filepath.Join(dd, "Build", "Products"),
+		"OBJROOT=" + filepath.Join(dd, "Build", "Intermediates.noindex")}
 	if updates {
 		args = append(args, "-allowProvisioningUpdates", "-allowProvisioningDeviceRegistration")
 	}
