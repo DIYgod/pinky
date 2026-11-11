@@ -50,6 +50,9 @@ var (
 	icEyeOff   = icon(`<path d="M10.7 5.1A10.4 10.4 0 0 1 12 5c7 0 10 7 10 7a13.2 13.2 0 0 1-1.7 2.7"/><path d="M14.1 14.2a3 3 0 1 1-4.2-4.2"/><path d="M17.5 17.5A10.4 10.4 0 0 1 12 19c-7 0-10-7-10-7a13.2 13.2 0 0 1 4.6-5.3"/><path d="m2 2 20 20"/>`)
 	icCamera   = icon(`<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>`)
 	icMonitor  = icon(`<rect x="2" y="3" width="20" height="14" rx="2"/><rect x="9.5" y="6" width="5" height="8" rx="1"/><path d="M8 21h8"/><path d="M12 17v4"/>`)
+	icStop     = icon(`<circle cx="12" cy="12" r="9"/><rect x="9" y="9" width="6" height="6" rx="1"/>`)
+	icShield   = icon(`<path d="M12 21.5s7.5-3.6 7.5-9.5V5.5L12 2.5 4.5 5.5V12c0 5.9 7.5 9.5 7.5 9.5z"/>`)
+	icSliders  = icon(`<path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/>`)
 	icPlug     = icon(`<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z"/>`)
 
 	logo = mg.MustParseSVG(assets.Logo)

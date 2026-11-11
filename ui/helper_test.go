@@ -100,7 +100,7 @@ func TestIPhoneHelperReminderLayout(t *testing.T) {
 			if soon.H == 0 || !ok || !okHome {
 				t.Fatalf("%s %v: reminder %v, phone %v %v, Home %v %v: %q", lang, size, soon, phone, ok, home, okHome, tt.Texts())
 			}
-			if soon.Y+soon.H+14 > phone.Y+0.5 || home.Y+home.H > float32(size[1])-16+0.5 {
+			if soon.Y+soon.H+stageGap > phone.Y+0.5 || home.Y+home.H > float32(size[1])-stagePad+0.5 {
 				t.Errorf("%s %v: the reminder %v runs into the phone %v, or Home %v off the window", lang, size, soon, phone, home)
 			}
 		}
@@ -127,7 +127,7 @@ func TestIPhoneHelperReminderGivesWay(t *testing.T) {
 		t.Helper()
 		r, ok := tt.Find(soon) // the reminder's box, labeled with its words
 		b := findPhone(t, tt, d.Info.Name)
-		if !ok || b.banner || r.Y < 58+16-0.5 || r.Y+r.H+14 > b.fig.Y+0.5 || b.keys.Y+b.keys.H > h-16+0.5 {
+		if !ok || b.banner || r.Y < headerHeight+stagePad-0.5 || r.Y+r.H+stageGap > b.fig.Y+0.5 || b.keys.Y+b.keys.H > h-stagePad+0.5 {
 			t.Fatalf("%s: the reminder %v (shown %v), the phone %v, Home %v, Hand back %v", what, r, ok, b.fig, b.keys, b.banner)
 		}
 	}

@@ -150,21 +150,21 @@ func checkBanner(t *testing.T, b phoneBoxes, w, h float32) {
 	if !b.banner {
 		t.Fatal("no banner")
 	}
-	top := min(b.text.Y, b.hand.Y) - 11 // the banner's padding and border
-	bottom := max(b.text.Y+b.text.H, b.hand.Y+b.hand.H) + 11
-	if bottom+14 > b.fig.Y+eps {
+	top := min(b.text.Y, b.hand.Y) - bannerPadY - 1 // the banner's padding and border
+	bottom := max(b.text.Y+b.text.H, b.hand.Y+b.hand.H) + bannerPadY + 1
+	if bottom+stageGap > b.fig.Y+eps {
 		t.Errorf("the banner (down to %.1f) reaches the phone (from %.1f)", bottom, b.fig.Y)
 	}
 	if b.screen.Y < b.fig.Y || b.screen.Y+b.screen.H > b.fig.Y+b.fig.H {
 		t.Errorf("the screen %v is not in the phone %v", b.screen, b.fig)
 	}
-	if top < 58+16-eps || b.keys.Y+b.keys.H > h-16+eps {
+	if top < headerHeight+stagePad-eps || b.keys.Y+b.keys.H > h-stagePad+eps {
 		t.Errorf("the banner from %.1f and the keys down to %.1f overflow the window's %.0f", top, b.keys.Y+b.keys.H, h)
 	}
-	if b.fig.Y+b.fig.H+14 > b.keys.Y+eps {
+	if b.fig.Y+b.fig.H+stageGap > b.keys.Y+eps {
 		t.Errorf("the phone (down to %.1f) reaches the keys (from %.1f)", b.fig.Y+b.fig.H, b.keys.Y)
 	}
-	if b.hand.X+b.hand.W > w-320-16+eps {
+	if b.hand.X+b.hand.W > w-rightPanelWidth-stagePad+eps {
 		t.Errorf("Hand back %v reaches into the right panel of a window %.0f wide", b.hand, w)
 	}
 }
@@ -205,11 +205,11 @@ func TestControlBannerHeight(t *testing.T) {
 				b := findPhone(t, tt, "Pixel 9")
 				checkBanner(t, b, float32(w), 820)
 				// The banner's height, from Hand back in its middle and
-				// the phone 14 below it.
+				// the phone stageGap below it.
 				mid := b.hand.Y + b.hand.H/2
-				bh := 2 * (b.fig.Y - 14 - mid)
+				bh := 2 * (b.fig.Y - stageGap - mid)
 				top := mid - bh/2
-				if b.text.Y < top+11-0.5 || b.text.Y+b.text.H > top+bh-11+0.5 {
+				if b.text.Y < top+bannerPadY+1-0.5 || b.text.Y+b.text.H > top+bh-bannerPadY-1+0.5 {
 					t.Errorf("%s, %d wide: the words %v spill out of the banner %.1f to %.1f", lang, w, b.text, top, top+bh)
 				}
 				if lines := b.text.H / line.H; lines > controlLines+0.5 {

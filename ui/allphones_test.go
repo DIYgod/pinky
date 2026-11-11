@@ -85,7 +85,7 @@ func TestAllPhonesGrid(t *testing.T) {
 	var rs []mg.Rect
 	for _, name := range manyPhones[:3] {
 		r, _ := tt.Find(locales.PhoneShow(name))
-		if !near(r.Y, 83) || !near(r.W, tileMaxWidth-2) {
+		if !near(r.Y, headerHeight+gridTop+1) || !near(r.W, tileMaxWidth-2) {
 			t.Errorf("three phones: %s's tile at %v", name, r)
 		}
 		rs = append(rs, r)

@@ -20,7 +20,7 @@ import (
 func (a *app) phonesPage(c *mg.Context) {
 	p := pal(c)
 	if len(a.devices) == 0 {
-		pageHeader(c, func() { mg.Text(c, locales.PhonePageTitle()).FontSize(17).FontWeight(650) })
+		pageHeader(c, func() { pageTitle(c, locales.PhonePageTitle()) })
 		mg.Column(c).Grow(1).Center().Gap(10).Children(func() {
 			if !a.loaded {
 				spinner(c)
@@ -59,8 +59,8 @@ func (a *app) phonesPage(c *mg.Context) {
 	}
 	pageHeader(c, func() {
 		mg.Row(c).AlignItems(mg.Baseline).Gap(10).Children(func() {
-			mg.Text(c, name).FontSize(17).FontWeight(650)
-			mg.Text(c, line).FontSize(13).TextColor(p.ink2)
+			pageTitle(c, name)
+			mg.Text(c, line).FontSize(fsSmall).TextColor(p.ink2)
 		})
 		if d := a.device(a.sel); d != nil && a.sel != allPhones {
 			mg.Spacer(c)
@@ -71,7 +71,7 @@ func (a *app) phonesPage(c *mg.Context) {
 		if a.sel == allPhones {
 			a.allPhonesGrid(c)
 		} else {
-			mg.Column(c).Grow(1).MinWidth(0).Padding(16).Gap(14).AlignItems(mg.Center).Justify(mg.Center).Children(func() {
+			mg.Column(c).Grow(1).MinWidth(0).Padding(stagePad).Gap(stageGap).AlignItems(mg.Center).Justify(mg.Center).Children(func() {
 				if d := a.device(a.sel); d != nil {
 					a.phoneCenter(c, *d)
 				}
@@ -255,10 +255,10 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 
 	// Size the phone to the room the window gives it.
 	w, h := c.Size()
-	availH := h - 58 - 32 - 14 - 36
-	availW := w - sidebarWidth - rightPanelWidth - 32
+	availH := h - headerHeight - 2*stagePad - stageGap - dockHeight
+	availW := w - sidebarWidth - rightPanelWidth - 2*stagePad
 	if banner != (controlText{}) {
-		availH -= a.controlBanner(c, d.Info.ID, banner, min(460, availW)) + 14
+		availH -= a.controlBanner(c, d.Info.ID, banner, min(460, availW)) + stageGap
 	} else {
 		// A reminder that the helper stops working soon takes the
 		// banner's place, and room (checkup_iphone.go).
@@ -280,9 +280,12 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	// Keyed, the phone and its keys stay themselves as the banner comes
 	// and goes before them: the mirror keeps the keyboard's focus.
 	fig := mg.Box(c.Key("phone-" + d.Info.ID)).Width(sw + 2*bezel).Height(ph).Shrink(0).Radius(radius).Background(p.phone).Padding(bezel)
-	fig = shadow(c, fig)
+	fig.Shadow(0, 2, 6, 0, p.shadowLo).Shadow(0, 18, 44, 0, p.shadowHi)
 	if inControl {
 		fig.Shadow(0, 0, 0, 2, p.ink2)
+	} else {
+		// The phone's metal edge, which keeps a dark phone apart from a dark page.
+		fig.Shadow(0, 0, 0, 1, p.rim)
 	}
 	fig.Label(locales.PhoneScreenLabel(d.Info.Name)).Children(func() {
 		a.mirrorView(c, m, d, shown, inner, false)
@@ -290,7 +293,12 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 
 	// The keys: Back, Home and Recents on Android, Home on iPhone, after
 	// the switch between the agent's screen and the phone's own.
-	mg.Row(c.Key("keys-" + d.Info.ID)).Gap(4).AlignItems(mg.Center).Children(func() {
+	dock := mg.Row(c.Key("keys-"+d.Info.ID)).Height(dockHeight).Padding(sp1).Gap(2).AlignItems(mg.Center).
+		Radius(rCard).Background(p.card).Border(1, p.line)
+	if !p.dark {
+		dock.Shadow(0, 1, 2, 0, p.shadowLo).Shadow(0, 4, 14, 0, mg.RGBA(18, 18, 28, 0.06))
+	}
+	dock.Children(func() {
 		if bgTask && (watching || a.phoneChosen(d.Info.ID, t)) {
 			which := 0
 			if !watching {
@@ -303,10 +311,10 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 					a.bg.phone[d.Info.ID] = t.ID
 				}
 			}
-			mg.Box(c).Size(1, 20).Background(p.line2).Margin(0, 6)
+			dockSeparator(c)
 		}
 		key := func(ic *mg.SVG, label string, k driver.Key) {
-			b := mg.ButtonBase(c).Size(40, 36).Radius(9).Center().Label(label).Tooltip(label)
+			b := mg.ButtonBase(c).Size(dockKey, dockKey-4).Radius(rControl).Center().Label(label).Tooltip(label)
 			col := p.ink2
 			if watching {
 				// Keys act on the phone's own screen, not the agent's.
@@ -329,9 +337,23 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		if d.Info.Platform != driver.IOS {
 			key(icRecents, locales.PhoneKeyRecents(), driver.KeyRecents)
 		}
-		mg.Box(c).Size(1, 20).Background(p.line2).Margin(0, 6)
+		dockSeparator(c)
 		a.moreControls(c, d, m)
 	})
+}
+
+// The stage: the room around the phone, the gap between the banner, the
+// phone and its keys, and the dock of keys under it.
+const (
+	stagePad   = sp5
+	stageGap   = sp4
+	dockKey    = 36 // a key's width; its height is 4 less
+	dockHeight = dockKey - 4 + 2*sp1 + 2
+)
+
+// dockSeparator parts the dock's groups of keys.
+func dockSeparator(c *mg.Context) {
+	mg.Box(c).Size(1, 18).Background(pal(c).line2).Margin(0, sp1)
 }
 
 // controlText is what the "You're in control" banner says: its bold start
@@ -348,11 +370,11 @@ const controlLines = 3
 // to leave it room.
 func (a *app) controlBanner(c *mg.Context, id string, text controlText, width float32) float32 {
 	p := pal(c)
-	spans := []mg.Span{{Text: text.bold, Weight: 650, Color: p.ink}, {Text: text.rest, Color: p.ink2}}
+	spans := []mg.Span{{Text: text.bold, Weight: fwSemibold, Color: p.ink}, {Text: text.rest, Color: p.ink2}}
 	label := locales.PhoneHandBack()
 	height := controlBannerHeight(c, spans, label, width)
 	b := mg.Row(c).Width(width).Height(height).Shrink(0).
-		Padding(10, 10, 10, 16).Radius(12).Background(p.panel).Border(1, p.line2).Gap(10).AlignItems(mg.Center).
+		Padding(bannerPadY, bannerPadY, bannerPadY, bannerPadX).Radius(rCard).Background(p.panel).Border(1, p.line2).Gap(10).AlignItems(mg.Center).
 		Role(mg.RoleStatus)
 	shadow(c, b).Children(func() {
 		mg.Icon(c, icHand).FontSize(18).TextColor(p.ink2)
@@ -370,11 +392,18 @@ func (a *app) controlBanner(c *mg.Context, id string, text controlText, width fl
 // label, padding and border), and the banner is no shorter than Hand back.
 func controlBannerHeight(c *mg.Context, spans []mg.Span, label string, width float32) float32 {
 	lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: 14, Weight: 500})
-	tw := width - (16 + 10 + 2) - 18 - 2*10 - (lw + 2*14 + 2)
+	tw := width - (bannerPadX + bannerPadY + 2) - 18 - 2*10 - (lw + 2*14 + 2)
 	_, th := c.MeasureText(max(tw, 1), spans...)
 	_, line := c.MeasureText(0, spans...)
-	return max(min(th, controlLines*line), 34) + 2*10 + 2
+	return max(min(th, controlLines*line), 34) + 2*bannerPadY + 2
 }
+
+// The control banner's padding: bannerPadY above, below and after Hand
+// back, bannerPadX before the hand.
+const (
+	bannerPadY = 10
+	bannerPadX = sp4
+)
 
 // moreControls is the ⋯ button under the mirror and its popover.
 func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
@@ -382,7 +411,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 	id := d.Info.ID
 	open := a.more[id]
 	a.phoneWiFiOf(c, d) // read before the menu opens, which may offer to move it to Wi-Fi
-	b := mg.ButtonBase(c.Key("more-"+id)).Size(40, 36).Radius(9).Center().Label(locales.PhoneMoreControls()).Tooltip(locales.PhoneMoreControls())
+	b := mg.ButtonBase(c.Key("more-"+id)).Size(dockKey, dockKey-4).Radius(rControl).Center().Label(locales.PhoneMoreControls()).Tooltip(locales.PhoneMoreControls())
 	col := p.ink2
 	if b.Hovered() || open {
 		b.Background(p.bg3)
@@ -393,7 +422,7 @@ func (a *app) moreControls(c *mg.Context, d gateway.DeviceView, m *mirror) {
 	}
 	b.TextColor(col).Children(func() { mg.Icon(c, icMore).FontSize(18) })
 	mg.PopoverBase(c, b, &open, func(panel mg.Element) {
-		menuPanel(c, panel).Width(290).Margin(6, 0, 0, 0)
+		menuPanel(c, panel).Width(290).Margin(sp2, 0, 0, 0)
 		if menuItem(c, locales.PhoneTakeScreenshot(), mg.Color{}).Clicked() {
 			open = false
 			a.saveScreenshot(m, d.Info.Name)
@@ -480,6 +509,7 @@ const (
 	tileMaxWidth   = 232
 	tileGap        = 16
 	gridPad        = 16
+	gridTop        = sp6
 )
 
 // tileColumns returns how many columns the tiles of phones phones take
@@ -507,7 +537,7 @@ func (a *app) allPhonesGrid(c *mg.Context) {
 	for i := range tracks {
 		tracks[i] = mg.Fixed(width)
 	}
-	mg.Scroll(c).Grow(1).MinWidth(0).Padding(24, gridPad, gridPad, gridPad).Label(locales.PhoneAllPhones()).
+	mg.Scroll(c).Grow(1).MinWidth(0).Padding(gridTop, gridPad, gridPad, gridPad).Label(locales.PhoneAllPhones()).
 		Children(func() { a.phoneTiles(c, tracks, width) })
 }
 
@@ -523,19 +553,23 @@ func (a *app) phoneTiles(c *mg.Context, cols []mg.Track, width float32) {
 			offline := d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline
 			// Connected, waiting for a step: not open, so nothing to mirror.
 			setup := !offline && d.Info.State != driver.StateOnline
-			tile := mg.Box(c.Key("tile-"+d.Info.ID)).Radius(14).Border(1, p.line).Background(p.panel)
-			if asks {
-				tile.Border(1, p.amberEdge).Shadow(0, 0, 0, 1, p.amberEdge)
+			tile := card(c, mg.Box(c.Key("tile-"+d.Info.ID)))
+			hovered := tile.Hovered()
+			switch {
+			case asks:
+				// A soft amber halo, not a heavy frame.
+				tile.Border(1, p.amberEdge).Shadow(0, 0, 0, 3, p.amberEdge.Alpha(0.16))
+			case hovered:
+				tile.Border(1, p.line2)
 			}
 			if offline {
-				tile.Background(p.bg2)
+				tile.Background(p.group)
 			}
-			hovered := tile.Hovered()
 			if a.hasPhoneMenu() {
 				tile.ContextMenu(func(m *mg.Menu) { a.phoneMenu(m, d) })
 			}
 			tile.Children(func() {
-				sel := mg.ButtonBase(c).Column().AlignItems(mg.Stretch).Justify(mg.Start).FillWidth().Padding(14).Gap(10).Radius(14).Label(locales.PhoneShow(d.Info.Name))
+				sel := mg.ButtonBase(c).Column().AlignItems(mg.Stretch).Justify(mg.Start).FillWidth().Padding(14).Gap(sp3).Radius(rCard).Label(locales.PhoneShow(d.Info.Name))
 				if sel.Clicked() {
 					a.selectPhone(d.Info.ID)
 				}
@@ -579,15 +613,15 @@ func (a *app) phoneTiles(c *mg.Context, cols []mg.Track, width float32) {
 						})
 					}
 					mg.Column(c).Gap(2).Children(func() {
-						mg.Row(c).Gap(7).AlignItems(mg.Center).Children(func() {
+						mg.Row(c).Gap(sp2).AlignItems(mg.Center).Children(func() {
 							statusDot(c, d)
-							name := mg.Text(c, d.Info.Name).FontWeight(650).SingleLine()
+							name := mg.Text(c, d.Info.Name).FontWeight(fwSemibold).SingleLine()
 							if offline {
 								name.TextColor(p.ink2)
 							}
 							a.tileBattery(c, d)
 						})
-						mg.Text(c, statusLine(d)).FontSize(13).TextColor(p.ink2).SingleLine()
+						mg.Text(c, statusLine(d)).FontSize(fsCaption).TextColor(p.ink2).Padding(0, 0, 0, 16).SingleLine()
 					})
 				})
 				run := t != nil && running(t.State)

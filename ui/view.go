@@ -74,33 +74,34 @@ const (
 func (a *app) sidebar(c *mg.Context) {
 	p := pal(c)
 	bar := c.TitleBar()
-	mg.Column(c).Width(sidebarWidth).Shrink(0).Background(p.bg2).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
-		Padding(0, 8, 12, 8).Gap(2).Children(func() {
+	mg.Column(c).Width(sidebarWidth).Shrink(0).Background(p.wing).BorderWidth(0, 1, 0, 0).BorderColor(p.line).
+		Padding(0, sp2, sp3, sp2).Gap(2).Children(func() {
 		// The header: the window controls, then the brand.
 		left := float32(6)
 		if bar.Left > 0 {
 			left = bar.Left - 8 + 10
 		}
-		mg.Row(c).Height(46).Shrink(0).AlignItems(mg.Center).Gap(8).Padding(0, 6, 0, left).DragWindow().Children(func() {
+		mg.Row(c).Height(headerHeight).Shrink(0).AlignItems(mg.Center).Gap(sp2).Padding(0, 6, 0, left).DragWindow().Children(func() {
 			mg.Image(c, logo).Size(20, 20).Label("Pinky")
-			mg.Text(c, "Pinky").FontSize(14).FontWeight(650).TextColor(p.ink)
+			mg.Text(c, "Pinky").FontSize(fsBody).FontWeight(fwSemibold).TextColor(p.ink)
 		})
-		mg.Text(c, locales.SidebarPhones()).FontSize(12).FontWeight(600).TextColor(p.ink3).Padding(4, 10, 6, 10)
+		mg.Text(c, locales.SidebarPhones()).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.ink3).Padding(sp1, rowInset, 6, rowInset)
 		a.sidebarPhones(c)
-		add := phoneRow(c, a.page == pageAddPhone).MinHeight(36).TextColor(p.ink2)
+		on := a.page == pageAddPhone
+		add := phoneRow(c, on).MinHeight(32)
 		if add.Clicked() {
 			a.page = pageAddPhone
 			a.add.reset(a)
 		}
-		add.Label(locales.SidebarAddPhone()).Children(func() {
+		add.TextColor(navInk(c, add, on)).Label(locales.SidebarAddPhone()).Children(func() {
 			mg.Icon(c, icPlus).FontSize(16)
-			mg.Text(c, locales.SidebarAddPhone()).FontSize(14).FontWeight(500)
+			mg.Text(c, locales.SidebarAddPhone()).FontSize(fsBody)
 		})
 
 		mg.Spacer(c)
 		a.agentCard(c)
 		a.updateCards(c)
-		mg.Column(c).Gap(2).Padding(10, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).Children(func() {
+		mg.Column(c).Gap(2).Padding(sp2, 0, 0, 0).BorderWidth(1, 0, 0, 0).BorderColor(p.line).Children(func() {
 			footRow(c, icHistory, locales.SidebarActivity(), a.page == pageActivity, func() {
 				a.page = pageActivity
 				a.act.load(a)
@@ -111,16 +112,17 @@ func (a *app) sidebar(c *mg.Context) {
 			if len(a.devices) == 0 {
 				return
 			}
-			stop := mg.ButtonBase(c).Height(34).Padding(0, 10).Radius(9).Gap(10).AlignItems(mg.Center).Justify(mg.Start).Label(locales.SidebarStopAll())
+			stop := mg.ButtonBase(c).Height(32).Padding(0, 10, 0, rowInset).Radius(rControl).Gap(10).AlignItems(mg.Center).Justify(mg.Start).Label(locales.SidebarStopAll())
 			if stop.Hovered() {
 				stop.Background(p.redTint)
 			}
 			if stop.Clicked() {
 				a.stopAll()
 			}
-			stop.Children(func() {
-				mg.Text(c, locales.SidebarStopAll()).FontSize(13).TextColor(p.red).Grow(1)
-				mg.Text(c, shortcutLabel()).FontSize(12.5).TextColor(p.red).Opacity(0.8)
+			stop.TextColor(p.red).Children(func() {
+				mg.Icon(c, icStop).FontSize(16)
+				mg.Text(c, locales.SidebarStopAll()).FontSize(fsBody).Grow(1)
+				mg.Text(c, shortcutLabel()).FontSize(fsCaption).TextColor(p.ink3)
 			})
 		})
 	})
@@ -154,9 +156,9 @@ func (a *app) sidebarPhones(c *mg.Context) {
 			if on {
 				reveal(row, allPhones)
 			}
-			row.Label(locales.SidebarAllPhones()).Children(func() {
-				mg.Icon(c, icGrid).FontSize(16).TextColor(p.ink2)
-				mg.Text(c, locales.SidebarAllPhones()).FontSize(14).FontWeight(600)
+			row.MinHeight(32).TextColor(navInk(c, row, on)).Label(locales.SidebarAllPhones()).Children(func() {
+				mg.Icon(c, icGrid).FontSize(16)
+				mg.Text(c, locales.SidebarAllPhones()).FontSize(fsBody)
 			})
 		}
 		for _, d := range a.devices {
@@ -172,24 +174,24 @@ func (a *app) sidebarPhones(c *mg.Context) {
 			if a.hasPhoneMenu() {
 				row.ContextMenu(func(m *mg.Menu) { a.phoneMenu(m, d) })
 			}
-			row.Label(locales.SidebarPhoneRow(d.Info.Name, statusLine(d))).Children(func() {
+			row.MinHeight(44).Label(locales.SidebarPhoneRow(d.Info.Name, statusLine(d))).Children(func() {
 				statusDot(c, d)
-				mg.Column(c).Grow(1).MinWidth(0).Children(func() {
-					name := mg.Text(c, d.Info.Name).FontSize(14).FontWeight(600).SingleLine()
+				mg.Column(c).Grow(1).MinWidth(0).Gap(1).Children(func() {
+					name := mg.Text(c, d.Info.Name).FontSize(fsBody).FontWeight(fwMedium).SingleLine()
 					if d.Status == gateway.DeviceOffline {
 						name.TextColor(p.ink2)
 					}
-					mg.Text(c, statusLine(d)).FontSize(12).TextColor(p.ink2).SingleLine()
+					mg.Text(c, statusLine(d)).FontSize(fsCaption).TextColor(p.ink2).SingleLine()
 				})
 			})
 		}
 	})
 }
 
-// phoneRow is the prototype's .prow.
+// phoneRow is a row of the sidebar: a phone, All phones, Add phone.
 func phoneRow(c *mg.Context, on bool) mg.Element {
 	p := pal(c)
-	row := mg.ButtonBase(c).MinHeight(40).Padding(6, 10).Radius(9).Gap(10).AlignItems(mg.Center).Justify(mg.Start).FillWidth()
+	row := mg.ButtonBase(c).MinHeight(32).Padding(6, 10, 6, rowInset).Radius(rControl).Gap(10).AlignItems(mg.Center).Justify(mg.Start).FillWidth()
 	switch {
 	case on:
 		row.Background(p.sel)
@@ -200,29 +202,25 @@ func phoneRow(c *mg.Context, on bool) mg.Element {
 	return row
 }
 
-// footRow is the prototype's .frow.
-func footRow(c *mg.Context, ic *mg.SVG, text string, on bool, click func()) {
+// navInk is the ink of a row of the sidebar with an icon and one line:
+// the secondary ink at rest, the primary when selected or hovered.
+func navInk(c *mg.Context, row mg.Element, on bool) mg.Color {
 	p := pal(c)
-	row := mg.ButtonBase(c).Height(34).Padding(0, 10).Radius(9).Gap(10).AlignItems(mg.Center).Justify(mg.Start).Label(text)
-	col := p.ink2
-	switch {
-	case on:
-		row.Background(p.sel)
-		selectionMark(c, row)
-		col = p.ink
-	case row.Hovered():
-		row.Background(p.bg3)
-		col = p.ink
+	if on || row.Hovered() {
+		return p.ink
 	}
+	return p.ink2
+}
+
+// footRow is a row at the foot of the sidebar: Activity, Settings.
+func footRow(c *mg.Context, ic *mg.SVG, text string, on bool, click func()) {
+	row := phoneRow(c, on).Height(32).Label(text)
 	if row.Clicked() {
 		click()
 	}
-	row.TextColor(col).Children(func() {
+	row.TextColor(navInk(c, row, on)).Children(func() {
 		mg.Icon(c, ic).FontSize(16)
-		t := mg.Text(c, text).FontSize(14)
-		if on {
-			t.FontWeight(600)
-		}
+		mg.Text(c, text).FontSize(fsBody)
 	})
 }
 
@@ -241,15 +239,21 @@ func statusDot(c *mg.Context, d gateway.DeviceView) mg.Element {
 	return dot(c, p.ink3, false)
 }
 
-// pageHeader is the 58-high header of a page, which drags the window.
+// pageHeader is the header of a page, as high as the sidebar's brand
+// row beside it, which drags the window.
 func pageHeader(c *mg.Context, fn func()) {
 	p := pal(c)
-	pad := float32(24)
+	pad := float32(sp6)
 	if bar := c.TitleBar(); bar.Right > 0 {
-		pad = bar.Right + 12
+		pad = bar.Right + sp3
 	}
-	mg.Row(c).MinHeight(58).Shrink(0).Padding(10, pad, 10, 24).Gap(10).AlignItems(mg.Center).
+	mg.Row(c).MinHeight(headerHeight).Shrink(0).Padding(sp2, pad, sp2, sp6).Gap(10).AlignItems(mg.Center).
 		BorderWidth(0, 0, 1, 0).BorderColor(p.line).DragWindow().Children(fn)
+}
+
+// pageTitle is the title in a page's header.
+func pageTitle(c *mg.Context, text string) mg.Element {
+	return mg.Text(c, text).FontSize(fsTitle3).FontWeight(fwSemibold)
 }
 
 // unlockWords names the platform's way to prove presence and keep the PIN.

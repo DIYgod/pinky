@@ -31,6 +31,11 @@ type palette struct {
 	shadowLo mg.Color // the two layers of the prototype's --shadow
 	shadowHi mg.Color
 	white    mg.Color
+
+	// The surfaces of the layout: the sidebar and the panel on the right
+	// are the wings around the page, the cards sit on them, the groups of
+	// rows sit on a page, and the rim is the phone's metal edge.
+	wing, card, group, rim mg.Color
 }
 
 var lightPalette = palette{
@@ -38,12 +43,13 @@ var lightPalette = palette{
 	line: hex("#ebebef"), line2: hex("#d9d9e0"),
 	ink: hex("#1d1d22"), ink2: hex("#5b5b64"), ink3: hex("#6c6c75"),
 	accent: hex("#5450d6"), accentInk: hex("#4542c4"), accentBtn: hex("#5450d6"), accentTint: hex("#f1f0fd"),
-	amber: hex("#975800"), amberDot: hex("#df8601"), amberTint: hex("#fff6eb"), amberLine: hex("#f6d7b1"), amberEdge: hex("#e79733"),
+	amber: hex("#975800"), amberDot: hex("#df8601"), amberTint: hex("#fff7ed"), amberLine: hex("#f4dcbc"), amberEdge: hex("#e79733"),
 	red: hex("#c32c18"), redTint: hex("#fef0ed"), redLine: hex("#f0c6bd"),
 	green: hex("#2f9e5a"), ovl: hex("#5048e5"), phone: hex("#131317"),
 	brand: hex("#ee4d6c"), lemon: hex("#ffbe1a"),
 	shadowLo: mg.RGBA(18, 18, 28, 0.05), shadowHi: mg.RGBA(18, 18, 28, 0.10),
 	white: hex("#ffffff"),
+	wing:  hex("#f5f5f7"), card: hex("#ffffff"), group: hex("#f7f7f9"), rim: hex("#3a3a41"),
 }
 
 var darkPalette = palette{
@@ -52,15 +58,60 @@ var darkPalette = palette{
 	line: hex("#2e2e34"), line2: hex("#404047"),
 	ink: hex("#ededf2"), ink2: hex("#b3b3bc"), ink3: hex("#a3a3ad"),
 	accent: hex("#9895ff"), accentInk: hex("#b0aeff"), accentBtn: hex("#5b57e0"), accentTint: hex("#262549"),
-	amber: hex("#f7a74e"), amberDot: hex("#f7a74e"), amberTint: hex("#342210"), amberLine: hex("#674520"), amberEdge: hex("#b6762a"),
+	amber: hex("#f7a74e"), amberDot: hex("#f7a74e"), amberTint: hex("#322a23"), amberLine: hex("#5a4530"), amberEdge: hex("#b6762a"),
 	red: hex("#f87a60"), redTint: hex("#3a1e19"), redLine: hex("#723b31"),
 	green: hex("#4cc38a"), ovl: hex("#7a73ff"), phone: hex("#050506"),
 	brand: hex("#ff8a9b"), lemon: hex("#ffbe1a"),
 	shadowLo: mg.RGBA(0, 0, 0, 0.4), shadowHi: mg.RGBA(0, 0, 0, 0.45),
 	white: hex("#ffffff"),
+	wing:  hex("#212125"), card: hex("#29292e"), group: hex("#232327"), rim: hex("#3c3c44"),
 }
 
 func hex(s string) mg.Color { return mg.Hex(s) }
+
+// The type ramp. Every size the client draws text at is one of these,
+// but for the few drawn things that are pictures more than text (a PIN's
+// digits, a pairing code).
+const (
+	fsCaption  = 12 // eyebrows, counts, meta under a name, shortcuts
+	fsSmall    = 13 // descriptions and secondary lines
+	fsBody     = 14 // body text, rows and buttons
+	fsHeadline = 15 // the titles of cards and groups
+	fsTitle3   = 17 // the title of a page's header
+	fsTitle2   = 20 // the title of a page's content and of dialogs
+	fsTitle1   = 26 // the welcome and empty pages
+)
+
+// The weights: text, labels and controls, titles, and the largest titles.
+const (
+	fwRegular  = 400
+	fwMedium   = 500
+	fwSemibold = 600
+	fwBold     = 700
+)
+
+// The spacing scale, on a grid of 4 points.
+const (
+	sp1 = 4
+	sp2 = 8
+	sp3 = 12
+	sp4 = 16
+	sp5 = 20
+	sp6 = 24
+	sp8 = 32
+)
+
+// The radii, by the size of the thing rounded.
+const (
+	rSmall   = 6  // small buttons, chips, thumbnails
+	rControl = 8  // buttons, rows, menu items
+	rCard    = 12 // cards, tiles, popovers, the phone's keys
+	rSheet   = 16 // dialogs
+)
+
+// headerHeight is the height of the sidebar's brand row and of a page's
+// header beside it, which line up.
+const headerHeight = 52
 
 // pal returns the palette of the theme the view builds with.
 func pal(c *mg.Context) *palette {
@@ -123,9 +174,13 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 	switch o.kind {
 	case btnPrimary:
 		bg, border, fg = p.accentBtn, p.accentBtn, p.white
-		if b.Pressed() {
+		switch {
+		case b.Pressed():
 			bg = bg.Mix(mg.RGB(0, 0, 0), 0.12)
+		case hovered:
+			bg = bg.Mix(mg.RGB(255, 255, 255), 0.08)
 		}
+		border = bg
 	case btnRed:
 		fg, border = p.red, p.redLine
 		if hovered {
@@ -143,6 +198,10 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 		}
 	}
 	b.Background(bg).Border(1, border).TextColor(fg)
+	if !o.dark && !p.dark {
+		// A push button stands a hair off the page, as the system's do.
+		b.Shadow(0, 1, 1, 0, mg.RGBA(18, 18, 28, 0.04))
+	}
 	if o.label != "" {
 		b.Label(o.label)
 	} else if text != "" {
@@ -165,7 +224,7 @@ func linkButton(c *mg.Context, text string) mg.Element {
 	b := mg.ButtonBase(c).Label(text)
 	hovered := b.Hovered()
 	b.Children(func() {
-		t := mg.Text(c, text).FontSize(13.5).FontWeight(500).TextColor(p.accentInk)
+		t := mg.Text(c, text).FontSize(fsSmall).FontWeight(fwMedium).TextColor(p.accentInk)
 		if hovered {
 			t.Underline()
 		}
@@ -179,7 +238,7 @@ func quietButton(c *mg.Context, text string) mg.Element {
 	b := mg.ButtonBase(c).Label(text)
 	hovered := b.Hovered()
 	b.Children(func() {
-		t := mg.Text(c, text).FontSize(13.5).FontWeight(500).TextColor(p.ink2)
+		t := mg.Text(c, text).FontSize(fsSmall).FontWeight(fwMedium).TextColor(p.ink2)
 		if hovered {
 			t.TextColor(p.ink).Underline()
 		}
@@ -202,10 +261,10 @@ func hollowDot(c *mg.Context) mg.Element {
 	return mg.Box(c).Size(8, 8).Radius(4).Border(1.5, p.ink3).Shrink(0)
 }
 
-// sectionLabel is the prototype's .sec heading.
+// sectionLabel is the heading of a section of a panel or a list.
 func sectionLabel(c *mg.Context, text string) mg.Element {
 	p := pal(c)
-	return mg.Text(c, text).FontSize(13).FontWeight(600).TextColor(p.ink3).Margin(0, 0, 8, 0)
+	return mg.Text(c, text).FontSize(fsCaption).FontWeight(fwSemibold).TextColor(p.ink3).Margin(0, 0, sp2, 0)
 }
 
 // toggle is the prototype's switch: 36 × 20, the knob sliding across.
@@ -229,15 +288,20 @@ func toggle(c *mg.Context, on *bool, label string) mg.Element {
 	return s
 }
 
-// selectionMark draws the brand's watermelon bar at the start of a
-// selected row.
+// selectionMark draws the brand's watermelon bar inside the start of a
+// selected row, clear of its rounded corners. Rows that carry it start
+// their content rowInset in.
 func selectionMark(c *mg.Context, row mg.Element) {
 	p := pal(c)
 	row.DrawOver(func(pt *mg.Painter, r mg.Rect) {
-		h := min(r.H-16, float32(18))
-		pt.Fill(mg.Rect{X: r.X + 1, Y: r.Y + (r.H-h)/2, W: 3, H: h}, p.brand, 1.5)
+		h := min(r.H-16, float32(16))
+		pt.Fill(mg.Rect{X: r.X + 4, Y: r.Y + (r.H-h)/2, W: 3, H: h}, p.brand, 1.5)
 	})
 }
+
+// rowInset is the padding at the start of a row that can be selected,
+// which leaves the selection mark its room.
+const rowInset = 12
 
 // appIcon is the letter icon of an app in Activity and Settings.
 func appIcon(c *mg.Context, name string, size, radius, font float32, col string) mg.Element {
@@ -255,29 +319,64 @@ func appIcon(c *mg.Context, name string, size, radius, font float32, col string)
 	return b
 }
 
-// shadow adds the prototype's --shadow to an element.
+// shadow lifts an element that floats over the page: a banner, a
+// popover, the phone's keys.
 func shadow(c *mg.Context, e mg.Element) mg.Element {
 	p := pal(c)
 	return e.Shadow(0, 1, 2, 0, p.shadowLo).Shadow(0, 10, 30, 0, p.shadowHi)
 }
 
+// raised lifts a card a little off the panel it sits on.
+func raised(c *mg.Context, e mg.Element) mg.Element {
+	if pal(c).dark {
+		return e
+	}
+	return e.Shadow(0, 1, 2, 0, mg.RGBA(18, 18, 28, 0.04)).Shadow(0, 2, 8, 0, mg.RGBA(18, 18, 28, 0.03))
+}
+
+// card is a card on a wing: the right panel's tasks, a tile.
+func card(c *mg.Context, e mg.Element) mg.Element {
+	p := pal(c)
+	return raised(c, e.Background(p.card).Border(1, p.line).Radius(rCard))
+}
+
+// group is a rounded group of rows on a page, as the system's settings
+// draw theirs. Its rows separate with groupRow.
+func group(c *mg.Context) mg.Element {
+	p := pal(c)
+	return mg.Column(c).Background(p.group).Border(1, p.line).Radius(rCard).Clip()
+}
+
+// groupRow pads a row of a group and draws the line under it, inset from
+// both sides, unless it is the last.
+func groupRow(c *mg.Context, row mg.Element, last bool) mg.Element {
+	p := pal(c)
+	row.Padding(sp3, sp4).MinHeight(48)
+	if !last {
+		row.DrawOver(func(pt *mg.Painter, r mg.Rect) {
+			pt.Fill(mg.Rect{X: r.X + sp4, Y: r.Y + r.H - 1, W: r.W - 2*sp4, H: 1}, p.line, 0)
+		})
+	}
+	return row
+}
+
 // menuPanel styles a drawn popover like the prototype's .pop.
 func menuPanel(c *mg.Context, panel mg.Element) mg.Element {
 	p := pal(c)
-	return shadow(c, panel.Background(p.panel).Border(1, p.line2).Radius(12).Padding(6))
+	return shadow(c, panel.Background(p.panel).Border(1, p.line2).Radius(rCard).Padding(6))
 }
 
 // menuItem is the prototype's .mi row.
 func menuItem(c *mg.Context, text string, col mg.Color) mg.Element {
 	p := pal(c)
-	b := mg.ButtonBase(c).Label(text).MinHeight(36).Padding(6, 10).Radius(8).Gap(10).AlignItems(mg.Center).Justify(mg.Start)
+	b := mg.ButtonBase(c).Label(text).MinHeight(32).Padding(6, 10).Radius(rSmall).Gap(10).AlignItems(mg.Center).Justify(mg.Start)
 	if b.Hovered() || b.Focused() {
 		b.Background(p.bg3)
 	}
 	if col == (mg.Color{}) {
 		col = p.ink
 	}
-	b.Children(func() { mg.Text(c, text).FontSize(14).TextColor(col) })
+	b.Children(func() { mg.Text(c, text).FontSize(fsBody).TextColor(col) })
 	return b
 }
 
