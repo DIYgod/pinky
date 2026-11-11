@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- iPhone 使用私有 Wi-Fi 地址、又被 Mac 的设备服务在 Wi-Fi 上弄丢时，现在会给出「重启设备服务…」，不再误报不在同一网络。感谢 @poer2023。
+
 ## 2026.1111.14 (2026-11-11)
 
 - Xcode 的构建位置设为自定义（Xcode › 设置 › 位置 › 高级…）时，现在也能正常安装 iPhone 辅助应用、准备 iOS 模拟器。感谢 @IOSTimor。
