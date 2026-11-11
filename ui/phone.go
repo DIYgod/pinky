@@ -21,13 +21,13 @@ func (a *app) phonesPage(c *mg.Context) {
 	p := pal(c)
 	if len(a.devices) == 0 {
 		pageHeader(c, func() { pageTitle(c, locales.PhonePageTitle()) })
-		mg.Column(c).Grow(1).Center().Gap(10).Children(func() {
+		mg.Column(c).Grow(1).Center().Gap(sp3).Children(func() {
 			if !a.loaded {
 				spinner(c)
 				return
 			}
-			mg.Text(c, locales.PhoneNoPhones()).FontSize(16).FontWeight(600)
-			if b := button(c, locales.PhoneAddPhone(), btnOpt{kind: btnPrimary}); b.Clicked() {
+			stateTitle(c, locales.PhoneNoPhones())
+			if b := button(c, locales.PhoneAddPhone(), btnOpt{kind: btnPrimary, icon: icPlus}); b.Clicked() {
 				a.page = pageAddPhone
 				a.add.reset(a)
 			}
@@ -99,18 +99,18 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	}
 	if lockedOnWiFi(d) {
 		// Locked on Wi-Fi: Pinky waits until it is unlocked (wifi.go).
-		mg.Column(c).AlignItems(mg.Center).Gap(12).MaxWidth(420).Children(func() {
+		mg.Column(c).AlignItems(mg.Center).Gap(sp2).MaxWidth(420).Children(func() {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 				mg.Icon(c, icLock).FontSize(30).TextColor(p.ink3)
 			})
-			mg.Text(c, locales.PhoneLockedWiFiTitle(d.Info.Name)).FontSize(16).FontWeight(600)
-			mg.Text(c, locales.PhoneLockedWiFiDetail()).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+			stateTitle(c, locales.PhoneLockedWiFiTitle(d.Info.Name))
+			stateDetail(c, locales.PhoneLockedWiFiDetail())
 			a.removeLink(c, d)
 		})
 		return
 	}
 	if d.Status == gateway.DeviceOffline || d.Info.State == driver.StateOffline {
-		mg.Column(c).AlignItems(mg.Center).Gap(12).Children(func() {
+		mg.Column(c).AlignItems(mg.Center).Gap(sp2).Children(func() {
 			ic := icWifiOff
 			if d.Info.Virtual {
 				ic = icMonitor
@@ -118,34 +118,35 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			mg.Box(c).Size(200, 420).Radius(32).Border(2, p.line2).Background(p.bg2).Center().Children(func() {
 				mg.Icon(c, ic).FontSize(30).TextColor(p.ink3)
 			})
-			mg.Text(c, locales.PhoneOffline(d.Info.Name)).FontSize(16).FontWeight(600)
-			mg.Row(c).Gap(4).AlignItems(mg.Baseline).Children(func() {
-				detail := d.Info.Detail
-				switch {
-				case networkOfflineText(d) != "":
-					detail = networkOfflineText(d)
-				case detail == "" && d.Info.Virtual:
-					detail = locales.PhoneVirtualNotRunning()
-				case detail == "":
-					detail = locales.PhoneNotConnected()
-				default:
-					detail += "."
-				}
-				mg.Text(c, detail).FontSize(13.5).TextColor(p.ink2)
-				if !a.canStartVirtual(d) && linkButton(c, locales.PhoneReconnect()).Clicked() {
+			stateTitle(c, locales.PhoneOffline(d.Info.Name))
+			detail := d.Info.Detail
+			switch {
+			case networkOfflineText(d) != "":
+				detail = networkOfflineText(d)
+			case detail == "" && d.Info.Virtual:
+				detail = locales.PhoneVirtualNotRunning()
+			case detail == "":
+				detail = locales.PhoneNotConnected()
+			default:
+				detail += "."
+			}
+			stateDetail(c, detail)
+			if a.canStartVirtual(d) {
+				a.startVirtualButton(c, d)
+			}
+			// Reconnect and Checkup side by side, then Remove, quieter.
+			mg.Row(c).Gap(sp2).Margin(sp1, 0, 0, 0).Children(func() {
+				if !a.canStartVirtual(d) && button(c, locales.PhoneReconnect(), btnOpt{kind: btnPrimary}).Label(locales.PhoneReconnect()).Clicked() {
 					a.page = pageAddPhone
 					a.add.reset(a)
 					if d.Info.Virtual && a.launcher() != nil {
 						a.add.step = "virtual"
 					}
 				}
+				if button(c, locales.PhoneCheckup(), btnOpt{}).Label(locales.PhoneCheckup()).Clicked() {
+					a.openCheckup(d)
+				}
 			})
-			if a.canStartVirtual(d) {
-				a.startVirtualButton(c, d)
-			}
-			if linkButton(c, locales.PhoneCheckup()).Clicked() {
-				a.openCheckup(d)
-			}
 			a.removeLink(c, d)
 		})
 		return
@@ -169,16 +170,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		// Connected, and waiting for a step (gateway.DeviceNeedsSetup),
 		// which the page says as the phone's checkup does.
 		w := a.setupStep(d)
-		mg.Column(c).AlignItems(mg.Center).Gap(10).MaxWidth(420).Children(func() {
+		mg.Column(c).AlignItems(mg.Center).Gap(sp2).MaxWidth(420).Children(func() {
 			mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
-			mg.Text(c, locales.PhoneNeedsSetup(d.Info.Name)).FontSize(16).FontWeight(600)
+			stateTitle(c, locales.PhoneNeedsSetup(d.Info.Name))
 			if w.text != "" {
-				mg.Text(c, w.text).FontSize(13.5).TextColor(p.ink2).TextAlign(mg.Center)
+				stateDetail(c, w.text)
 			}
 			if w.detail && d.Info.Detail != "" && d.Info.Detail != w.text {
 				// What the words leave to the driver: which USB driver
 				// to install, why the disk image did not mount.
-				mg.Text(c, d.Info.Detail).FontSize(12.5).TextColor(p.ink3).TextAlign(mg.Center)
+				mg.Text(c, d.Info.Detail).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink3).TextAlign(mg.Center)
 			}
 			if d.Info.Virtual && d.Info.Setup == driver.SetupPreparing {
 				spinner(c) // the Simulator helper builds: nothing to fix
@@ -705,4 +706,15 @@ func b2f(b bool) float32 {
 		return 1
 	}
 	return 0
+}
+
+// stateTitle and stateDetail are the words of a phone page that shows a
+// state instead of the phone, such as offline or waiting for a step: a
+// title, and a centered line or two under it.
+func stateTitle(c *mg.Context, text string) mg.Element {
+	return mg.Text(c, text).FontSize(fsTitle3).FontWeight(fwSemibold).TextAlign(mg.Center).Margin(sp1, 0, 0, 0)
+}
+
+func stateDetail(c *mg.Context, text string) mg.Element {
+	return mg.Text(c, text).FontSize(fsBody).LineHeight(1.5).TextColor(pal(c).ink2).TextAlign(mg.Center).MaxWidth(380)
 }
