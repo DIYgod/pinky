@@ -118,6 +118,11 @@ func (g *Gateway) statusLocked(d *device, open []approval.Info) (DeviceStatus, s
 			// The computer's device service lost it on Wi-Fi (wifi.go).
 			return DeviceNeedsSetup, "Lost on Wi-Fi"
 		}
+		if d.info.State == driver.StateNeedsSetup && d.info.Setup == driver.SetupMediaInUse {
+			// An app on the iPhone uses the camera or microphone, and iOS
+			// does not mirror it then; it connects once they are free.
+			return DeviceNeedsSetup, "Camera or microphone in use"
+		}
 		if waitsForStep(d.info.State) {
 			// Listed but not opened: the phone is connected and waits for
 			// the person, even while a task waits for it to reconnect.

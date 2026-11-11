@@ -115,15 +115,30 @@ func Open(ctx context.Context, info driver.Info) (*Device, error) {
 
 // open is Open with a logger for what the stream does (nil: none).
 func open(ctx context.Context, info driver.Info, log *slog.Logger) (*Device, error) {
+	d, err := dialDevice(ctx, info, log)
+	if err != nil {
+		return nil, err
+	}
+	if err := d.start(ctx); err != nil {
+		d.l.Close()
+		return nil, err
+	}
+	d.run()
+	return d, nil
+}
+
+// dialDevice opens the tunnel to the phone, for start to start the stream
+// on.
+func dialDevice(ctx context.Context, info driver.Info, log *slog.Logger) (*Device, error) {
 	l, err := dialLink(ctx, info.ID, info.Connection == "wifi")
 	if err != nil {
 		return nil, err
 	}
-	d := &Device{info: info, l: l, log: logTo(log), done: make(chan struct{}), two: twoScreens(info.Model)}
-	if err := d.start(ctx); err != nil {
-		l.Close()
-		return nil, err
-	}
+	return &Device{info: info, l: l, log: logTo(log), done: make(chan struct{}), two: twoScreens(info.Model)}, nil
+}
+
+// run starts what an open device runs beside its stream.
+func (d *Device) run() {
 	go d.idleLoop()
 	go d.orientLoop()
 	// Connect the accessibility service now (the phone answers its first
@@ -143,9 +158,9 @@ func open(ctx context.Context, info driver.Info, log *slog.Logger) (*Device, err
 		d.catalog(c)
 		d.axReady(c)
 	}()
-	return d, nil
 }
 
+// start reads the phone's displays and starts the stream.
 func (d *Device) start(ctx context.Context) error {
 	svc, err := dialCoreDevice(d.l.entry, deviceInfoService)
 	if err != nil {
@@ -162,6 +177,26 @@ func (d *Device) start(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+// retryMedia starts the stream again on a device whose start the phone
+// refused while an app used the camera or microphone (mediaWait).
+func (d *Device) retryMedia(ctx context.Context) error {
+	d.restartMu.Lock()
+	defer d.restartMu.Unlock()
+	d.mu.Lock()
+	closed := d.closed
+	d.mu.Unlock()
+	if closed {
+		return fmt.Errorf("device closed: %w", driver.ErrOffline)
+	}
+	return d.restartMedia(ctx)
+}
+
+// opened runs the device once its stream started (coreSession).
+func (d *Device) opened() driver.Device {
+	d.run()
+	return d
 }
 
 // restartTimeout bounds a stream restart. A restart runs detached from the

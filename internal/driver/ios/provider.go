@@ -61,9 +61,11 @@ type Provider struct {
 	setup       func(ctx context.Context, e goios.DeviceEntry) (bool, error)
 	legacySetup func(ctx context.Context, e goios.DeviceEntry) (bool, error)
 	findRunner  func(e goios.DeviceEntry) (string, error)
-	ways        map[string]string    // by UDID: the connection the person chose (see SetConnection)
-	wdaWaits    map[string]*wdaStart // by UDID: a runner waiting for the passcode (see wdaState)
-	wdaHolds    map[string]wdaHold   // by UDID: no new runner until then
+	ways        map[string]string     // by UDID: the connection the person chose (see SetConnection)
+	wdaWaits    map[string]*wdaStart  // by UDID: a runner waiting for the passcode (see wdaState)
+	wdaHolds    map[string]wdaHold    // by UDID: no new runner until then
+	mediaWaits  map[string]*mediaWait // by UDID: a session waiting for the camera and microphone (mediawait.go)
+	closed      bool                  // Close ran: no new mediaWait
 
 	// The helper's provisioning profile (wda_profile.go): by UDID, the
 	// helper whose profile List reads again, and for tests how it is read.
@@ -73,6 +75,11 @@ type Provider struct {
 	// For tests: how a phone is inspected, and the clock.
 	inspectFn func(ctx context.Context, e goios.DeviceEntry) driver.Info
 	now       func() time.Time
+
+	// For tests: how a CoreDevice session is dialed, and how often a
+	// mediaWait tries the stream (0: mediaRetry).
+	dialFn     func(ctx context.Context, info driver.Info) (coreSession, error)
+	mediaEvery time.Duration
 
 	wifi       wifiState                                               // phones over Wi-Fi (wifi.go)
 	lost       lostState                                               // phones usbmuxd lost on Wi-Fi (lost.go)
@@ -256,12 +263,19 @@ func (p *Provider) entries(list []goios.DeviceEntry) []goios.DeviceEntry {
 	return out
 }
 
-// info returns what is known about the phone behind e. It inspects the
-// phone again only when its entry changed, every recheckOffline while it is
-// not online, or when its developer services went away (recheckOnline), so
-// a phone that stays attached costs little more than a look at its services
-// a minute.
+// info returns what is known about the phone behind e, needing the
+// SetupMediaInUse step while its session waits for the camera and
+// microphone (mediaState).
 func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
+	return p.mediaState(keyOf(e), e.Properties.SerialNumber, p.inspected(ctx, e))
+}
+
+// inspected returns what is known about the phone behind e. It inspects
+// the phone again only when its entry changed, every recheckOffline while
+// it is not online, or when its developer services went away
+// (recheckOnline), so a phone that stays attached costs little more than a
+// look at its services a minute.
+func (p *Provider) inspected(ctx context.Context, e goios.DeviceEntry) driver.Info {
 	if info, ok := p.pausedInfo(e); ok {
 		return info
 	}
@@ -305,7 +319,7 @@ func (p *Provider) info(ctx context.Context, e goios.DeviceEntry) driver.Info {
 }
 
 // forgetExcept drops what List knew about phones that are gone, and stops
-// the helper's runners that waited on them.
+// the helper's runners and the sessions that waited on them.
 func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 	listed := make(map[string]bool, len(entries))
 	for _, e := range entries {
@@ -327,6 +341,11 @@ func (p *Provider) forgetExcept(entries []goios.DeviceEntry) {
 		if !listed[id] {
 			stop = append(stop, s)
 			delete(p.wdaWaits, id)
+		}
+	}
+	for id := range p.mediaWaits {
+		if !listed[id] {
+			p.stopMediaWaitLocked(id)
 		}
 	}
 	for id := range p.openFails {
@@ -462,12 +481,13 @@ func (p *Provider) adoptLeftover(d *WDADevice, id string) {
 
 // Close ends the helper's runners that wait for the passcode, and returns
 // once they are gone from the phones (or after wdaEndTimeout): left there,
-// the request keeps the phone from locking by itself. The gateway closes
+// the request keeps the phone from locking by itself. It closes the
+// sessions that wait for the camera and microphone too. The gateway closes
 // the provider when Pinky quits, after its devices.
 func (p *Provider) Close() error {
 	p.mu.Lock()
-	waits := p.wdaWaits
-	p.wdaWaits = nil
+	waits, media := p.wdaWaits, p.mediaWaits
+	p.wdaWaits, p.mediaWaits, p.closed = nil, nil, true
 	p.mu.Unlock()
 	var wg sync.WaitGroup
 	for _, s := range waits {
@@ -475,6 +495,13 @@ func (p *Provider) Close() error {
 		go func() {
 			defer wg.Done()
 			s.stop()
+		}()
+	}
+	for _, w := range media {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			w.stop()
 		}()
 	}
 	wg.Wait()
@@ -727,6 +754,7 @@ func (p *Provider) SetConnection(id, way string) error {
 	s := p.wdaWaits[id]
 	delete(p.wdaWaits, id)
 	delete(p.wdaHolds, id)
+	p.stopMediaWaitLocked(id)
 	p.mu.Unlock()
 	if s != nil {
 		go s.stop()
@@ -871,13 +899,18 @@ func (p *Provider) Open(ctx context.Context, id string) (driver.Device, error) {
 		}
 	}
 	info := p.info(ctx, entry)
+	if info.State == driver.StateNeedsSetup && info.Setup == driver.SetupMediaInUse {
+		// Its session waits for the camera and microphone (mediaState).
+		return nil, &driver.SetupError{Setup: info.Setup, Detail: info.Detail}
+	}
 	if info.State != driver.StateOnline {
 		return nil, fmt.Errorf("%s is %s: %s", id, info.State, info.Detail)
 	}
 	dev, err := p.openBackend(ctx, info)
 	p.noteOpen(id, err)
 	if err != nil {
-		if info.Backend == backendCoreDevice {
+		var se *driver.SetupError
+		if info.Backend == backendCoreDevice && !errors.As(err, &se) {
 			// Most often the developer services went away since List
 			// looked: the next List looks again, and mounts the image.
 			p.forgetPhone(id)
@@ -898,7 +931,7 @@ func (p *Provider) openBackend(ctx context.Context, info driver.Info) (driver.De
 	case backendAccessibility:
 		return OpenAccessibility(ctx, info)
 	}
-	return open(ctx, info, p.logger())
+	return p.openCoreDevice(ctx, info)
 }
 
 // noteOpen remembers an open that failed for want of a picture, for the
@@ -908,7 +941,9 @@ func (p *Provider) noteOpen(id string, err error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	var nv *noVideoError
-	if !errors.As(err, &nv) {
+	if !errors.As(err, &nv) || mediaInUse(err) {
+		// An app holding the camera or microphone is a step of its own
+		// (mediaWait), not a phone that sends no picture.
 		delete(p.openFails, id)
 		return
 	}

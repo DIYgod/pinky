@@ -176,9 +176,16 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		// Connected, and waiting for a step (gateway.DeviceNeedsSetup),
 		// which the page says as the phone's checkup does.
 		w := a.setupStep(d)
+		// An app on the iPhone holds the camera or microphone: nothing to
+		// set up or fix in Pinky, which connects once it lets go.
+		mediaInUse := d.Info.Setup == driver.SetupMediaInUse && w.title != ""
 		mg.Column(c).AlignItems(mg.Center).Gap(sp2).MaxWidth(420).Children(func() {
 			mg.Icon(c, icAlert).FontSize(28).TextColor(p.amberDot)
-			stateTitle(c, locales.PhoneNeedsSetup(d.Info.Name))
+			if mediaInUse {
+				stateTitle(c, w.title)
+			} else {
+				stateTitle(c, locales.PhoneNeedsSetup(d.Info.Name))
+			}
 			if w.text != "" {
 				stateDetail(c, w.text)
 			}
@@ -198,6 +205,8 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 				}
 			case d.Info.Virtual && d.Info.Setup == driver.SetupPreparing:
 				spinner(c) // the Simulator helper builds: nothing to fix
+			case mediaInUse:
+				guideWaiting(c, w.note)
 			default:
 				if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
 					a.openCheckup(d)
@@ -205,6 +214,8 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 			}
 			switch {
 			case installs:
+			case mediaInUse:
+				// No steps to show: the page says what to do.
 			case d.Info.Virtual:
 				if d.Info.Setup == driver.SetupSimulatorHelper && linkButton(c, locales.CheckSimHelperRetry()).Clicked() {
 					a.startVirtualPhone(d)

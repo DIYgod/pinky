@@ -258,6 +258,12 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 				} else {
 					guideProblem(c, locales.AddPhoneIPhoneStepUnlock(), "")
 				}
+			case driver.SetupMediaInUse:
+				// An app holds the camera or microphone: nothing to set
+				// up, and Pinky connects once it lets go.
+				title, text, note := setupWords(*d, d.Info.Setup)
+				guideProblem(c, title, text)
+				guideWaiting(c, note)
 			case driver.SetupPasscode:
 				// Driven through the helper, which iOS lets control the
 				// phone only once its passcode is entered.

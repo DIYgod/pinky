@@ -674,6 +674,8 @@ func setupResultLocked(d *device, first string) *Result {
 		msg += " Pinky shows the person a card in Needs you asking for it, but iOS stops asking after a while: call phone_handoff now to wait until they entered it (say so in reason); the handoff ends by itself once the phone is ready."
 	case driver.SetupPhoneChanged:
 		msg += " Pinky will not use it until the person trusts it on its page in Pinky or plugs the phone in: tell them, and end the task."
+	case driver.SetupMediaInUse:
+		msg += " The person may be on a call: ask them with phone_handoff to end it or close that app when they can, saying why; the handoff ends by itself once the phone is ready."
 	default:
 		msg += " Ask the person to do it with phone_handoff, saying what to do; the handoff ends by itself once the phone is ready."
 	}

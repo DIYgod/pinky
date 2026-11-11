@@ -4634,6 +4634,10 @@
   "@gwStatusLostOnWiFi": {
     "description": "A phone's status line: the Mac's device service (usbmuxd) stopped listing an iPhone that is on the same Wi-Fi. Shown only in other languages; in English the gateway's own words show."
   },
+  "gwStatusMediaInUse": "Camera or microphone in use",
+  "@gwStatusMediaInUse": {
+    "description": "A phone's status line: iOS does not mirror the iPhone while an app on it uses the camera or microphone (a call, for one); Pinky connects once they are free. Shown only in other languages; in English the gateway's own words show."
+  },
   "gwStatusMovingCable": "Moving to the cable",
   "@gwStatusMovingCable": {
     "description": "A phone's status line while Pinky opens it again over its cable after it was plugged in. Shown only in other languages."
@@ -5541,6 +5545,24 @@
         "example": "DIYgod's iPhone"
       }
     }
+  },
+  "mediaInUseDetail": "An app on {phone} is using the camera or microphone, and iOS does not let Pinky show the screen while it does. End the call or close that app: a green or orange dot at the top of the iPhone's screen shows that one is in use, and Control Center shows which app.",
+  "@mediaInUseDetail": {
+    "description": "The phone's page, the checkup and Add phone › iPhone: what to do while iOS refuses to mirror an iPhone because an app uses its camera or microphone (a call or FaceTime, Camera, Voice Memos, a screen recording with the microphone, dictation, a Mac using it as Continuity Camera). The dot is iOS's recording indicator: green for the camera, orange for the microphone. Control Center is iOS's own name. phone is its name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "mediaInUseNote": "Pinky connects by itself as soon as the camera and microphone are free.",
+  "@mediaInUseNote": {
+    "description": "Under mediaInUseDetail: Pinky keeps trying, and opens the iPhone once no app uses its camera or microphone."
+  },
+  "mediaInUseTitle": "Camera or microphone in use",
+  "@mediaInUseTitle": {
+    "description": "The phone's page, the checkup and Add phone › iPhone: the title of the step where iOS refuses to mirror an iPhone because an app uses its camera or microphone."
   },
   "menuActivity": "Activity",
   "@menuActivity": {

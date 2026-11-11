@@ -70,7 +70,7 @@ const (
 type DeviceView struct {
 	Info       driver.Info
 	Status     DeviceStatus
-	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Needs setup", "Offline"
+	StatusLine string // plain words: "Claude Code · Reorder lunch", "Idle", "Locked", "Needs setup", "Camera or microphone in use", "Offline"
 	TaskID     string // the running task, if any
 	// Features says what the phone's driver offers, so the client shows
 	// only the controls that work. All false while the phone is offline.
