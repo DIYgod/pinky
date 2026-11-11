@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/ios/netmux"
 	goios "github.com/danielpaulus/go-ios/ios"
 )
 
@@ -46,7 +47,7 @@ func newWiFiProvider(list ...goios.DeviceEntry) *wifiProvider {
 		}
 		return driver.Info{ID: id, Platform: driver.IOS, Name: id, Connection: conn, State: driver.StateOnline, Backend: backendCoreDevice}
 	}
-	w.lost.pairFn = func(string) (string, error) { return "", errors.New("no pair record in tests") }
+	w.lost.pairFn = func(string) (netmux.PairInfo, error) { return netmux.PairInfo{}, errors.New("no pair record in tests") }
 	w.wifi.namesFn = func(_ context.Context, e goios.DeviceEntry) (phoneNames, error) {
 		w.mu.Lock()
 		defer w.mu.Unlock()

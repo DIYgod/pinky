@@ -12,6 +12,7 @@ import (
 
 	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/android/mdns"
+	"github.com/DIYgod/pinky/internal/driver/ios/netmux"
 	goios "github.com/danielpaulus/go-ios/ios"
 )
 
@@ -34,10 +35,12 @@ import (
 // notices the state and lets the person restart the service: while it uses
 // phones over Wi-Fi and one the person uses is missing from usbmuxd's list, it
 // looks for _apple-mobdev2._tcp on the network itself (the package mdns, which
-// asks and never answers), matches the instances' Wi-Fi addresses (the name is
-// "<Wi-Fi MAC>@<link-local address>-supportsRP-26") with those in this
-// computer's pair records, and lists a phone seen there for lostAfter in a row
-// with SetupDeviceService. RestartDeviceService restarts usbmuxd through
+// asks and never answers), matches the instances with this computer's pair
+// records as netmux.Match does (by the TXT record's tags, which phones on iOS
+// 26.4 and later give with a private Wi-Fi address in the instance's name,
+// or else by the Wi-Fi address in the name, "<Wi-Fi MAC>@<link-local
+// address>-supportsRP-26"), and lists a phone seen there for lostAfter in a
+// row with SetupDeviceService. RestartDeviceService restarts usbmuxd through
 // macOS's request for an administrator's password, only when the person asks.
 
 const (
@@ -86,7 +89,7 @@ type lostState struct {
 	onNet   time.Time            // when it last saw a missing phone on the network
 	paused  time.Time            // no search until then
 	needed  time.Time            // when a phone was last missing
-	macs    map[string]pairMAC   // by UDID
+	pairs   map[string]pairState // by UDID
 	seen    map[string]time.Time // by UDID: on the network since, while missing from usbmuxd's list
 	names   map[string]driver.Info
 	reports map[string]bool      // logged as lost
@@ -96,16 +99,19 @@ type lostState struct {
 
 	// For tests.
 	browseFn func() (bonjourSource, error)
-	pairFn   func(udid string) (string, error)
+	pairFn   func(udid string) (netmux.PairInfo, error)
 	anyOS    bool
 }
 
-// pairMAC is a phone's Wi-Fi address from its pair record, or when reading
-// it failed.
-type pairMAC struct {
-	mac    string // lower case, "08:87:c7:2a:8a:db"
+// pairState is what a phone's pair record says to match it on the network,
+// or when reading it failed.
+type pairState struct {
+	info   netmux.PairInfo
 	failed time.Time
 }
+
+// ok reports whether the record can match the phone.
+func (s pairState) ok() bool { return s.info.HostID != "" || s.info.WiFiMAC != "" }
 
 // bonjourSource is a search for DNS-SD services: an *mdns.Browser.
 type bonjourSource interface {
@@ -173,11 +179,11 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 	}
 	sort.Strings(missing)
 
-	// The Wi-Fi addresses of the missing phones, from this computer's pair
-	// records (read through usbmuxd; Android phones have none).
+	// What matches the missing phones on the network, from this computer's
+	// pair records (read through usbmuxd; Android phones have none).
 	w.mu.Lock()
-	if w.macs == nil {
-		w.macs = map[string]pairMAC{}
+	if w.pairs == nil {
+		w.pairs = map[string]pairState{}
 		w.seen = map[string]time.Time{}
 		w.reports = map[string]bool{}
 	}
@@ -186,23 +192,24 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 	}
 	var toRead []string
 	for _, id := range missing {
-		m, ok := w.macs[id]
-		if !ok || (m.mac == "" && now.Sub(m.failed) >= pairRetry) {
+		m, ok := w.pairs[id]
+		if !ok || (!m.ok() && now.Sub(m.failed) >= pairRetry) {
 			toRead = append(toRead, id)
 		}
 	}
 	read := w.pairFn
 	w.mu.Unlock()
 	if read == nil {
-		read = pairWiFiMAC
+		read = readPairInfo
 	}
 	for _, id := range toRead {
-		mac, err := read(id)
+		info, err := read(id)
+		info.WiFiMAC = strings.ToLower(info.WiFiMAC)
 		w.mu.Lock()
-		if err != nil || mac == "" {
-			w.macs[id] = pairMAC{failed: now}
+		if s := (pairState{info: info}); err != nil || !s.ok() {
+			w.pairs[id] = pairState{failed: now}
 		} else {
-			w.macs[id] = pairMAC{mac: strings.ToLower(mac)}
+			w.pairs[id] = s
 		}
 		w.mu.Unlock()
 	}
@@ -211,7 +218,7 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 	defer w.mu.Unlock()
 	var wanted []string
 	for _, id := range missing {
-		if w.macs[id].mac != "" {
+		if w.pairs[id].ok() {
 			wanted = append(wanted, id)
 		}
 	}
@@ -243,21 +250,26 @@ func (p *Provider) lostPhones(listed, cabled, netted map[string]bool) []driver.I
 		}
 		p.logger().Info("iphone: looking on the network for phones usbmuxd does not list", "phones", len(wanted))
 	}
+	pairs := map[string]netmux.PairInfo{}
+	for _, id := range wanted {
+		pairs[id] = w.pairs[id].info
+	}
 	onNet := map[string]bool{}
 	for _, s := range w.src.Services() {
-		if mac, _, ok := strings.Cut(s.Instance, "@"); ok {
-			onNet[strings.ToLower(mac)] = true
+		if id := netmux.Match(s, pairs); id != "" {
+			onNet[id] = true
 		}
 	}
 	var out []driver.Info
 	for _, id := range missing {
-		mac := w.macs[id].mac
+		paired := w.pairs[id].ok()
+		mac := w.pairs[id].info.WiFiMAC
 		pulled := w.cabled[id]
 		recent := connOn[id] && !pulled.IsZero() && now.Sub(pulled) < unplugRecent && !w.netted[id].After(pulled)
-		if mac == "" || !onNet[mac] {
+		if !paired || !onNet[id] {
 			delete(w.seen, id)
 			delete(w.reports, id)
-			if mac != "" && recent && now.Sub(pulled) >= notSeenAfter && now.Sub(w.started) >= notSeenSearch {
+			if paired && recent && now.Sub(pulled) >= notSeenAfter && now.Sub(w.started) >= notSeenSearch {
 				if !w.notSeen[id] {
 					w.notSeen[id] = true
 					p.logger().Warn("iphone: not seen on Wi-Fi since its cable was pulled: usbmuxd does not list it, and the network does not show it", "device", id, "wifi_mac", mac, "pulled", pulled)
@@ -325,14 +337,14 @@ const notSeenDetail = "Not seen on Wi-Fi"
 // lostDetail says what is wrong with a phone usbmuxd lost.
 const lostDetail = "This Mac's device service (usbmuxd) lost the iPhone on Wi-Fi: the iPhone is on the network, but the service no longer lists it, and may not for up to an hour. Restarting the service brings it back."
 
-// pairWiFiMAC reads the phone's Wi-Fi address from this computer's pair
-// record, through usbmuxd. It does not contact the phone.
-func pairWiFiMAC(udid string) (string, error) {
+// readPairInfo reads what matches the phone on the network from this
+// computer's pair record, through usbmuxd. It does not contact the phone.
+func readPairInfo(udid string) (netmux.PairInfo, error) {
 	r, err := goios.ReadPairRecord(udid)
 	if err != nil {
-		return "", err
+		return netmux.PairInfo{}, err
 	}
-	return r.WiFiMACAddress, nil
+	return netmux.PairInfo{HostID: r.HostID, WiFiMAC: r.WiFiMACAddress}, nil
 }
 
 // RestartDeviceService implements driver.DeviceServiceRestarter on macOS:
