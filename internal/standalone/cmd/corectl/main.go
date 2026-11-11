@@ -1,10 +1,11 @@
-// Command corectl talks to the standalone prototype's core over its control
-// socket, as Pinky's own screens do, for checks from a shell. The socket
-// takes only the app's own uid, so run it with run-as:
+// Command corectl talks to Pinky's core on an Android phone over its
+// control socket, as Pinky's own screens do, for checks from a shell. The
+// socket takes only the app's own uid, so run it with run-as, which works
+// for the development build (scripts/androidcore.sh) only:
 //
 //	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o corectl ./internal/standalone/cmd/corectl
 //	adb push corectl /data/local/tmp/
-//	adb shell run-as app.pinky.standalone sh -c 'cp /data/local/tmp/corectl . && ./corectl state'
+//	adb shell run-as app.pinky.companion.dev sh -c 'cp /data/local/tmp/corectl . && ./corectl state'
 //
 // Commands:
 //
@@ -29,7 +30,9 @@ import (
 	"time"
 )
 
-const socket = "@pinky_standalone_core"
+// socket is the development build's core socket (CORE_SOCKET in
+// android/companion/app/build.gradle.kts).
+const socket = "@pinky_core_dev"
 
 // The parts of standalone.State it reads. It does not import the core, so
 // it builds as a static binary for the phone's shell.

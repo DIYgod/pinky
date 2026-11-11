@@ -1,6 +1,7 @@
-// Command libcore is the standalone prototype's Go core as a shared library
-// (libpinkycore.so), loaded by its accessibility service (Core.kt) through
-// JNI. scripts/standalone.sh builds it with the Android NDK:
+// Command libcore is Pinky's Go core as a shared library (libpinkycore.so),
+// which the Android app's accessibility service loads through JNI (Core.kt)
+// to run tasks on the phone itself (docs/notes/android-app.md).
+// scripts/androidcore.sh builds it with the Android NDK:
 //
 //	CGO_ENABLED=1 GOOS=android GOARCH=arm64 CC=<ndk clang> \
 //		go build -buildmode=c-shared -o libpinkycore.so ./internal/standalone/libcore
@@ -17,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/DIYgod/pinky/internal/driver"
+	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/driver/android/local"
 	"github.com/DIYgod/pinky/internal/gateway"
 	"github.com/DIYgod/pinky/internal/policy"
@@ -32,8 +34,9 @@ var (
 
 // start starts the core once per process: the local driver on the
 // service's companion socket, the gateway and agent, and the control
-// socket for Pinky's screens.
-func start(dataDir, companionSocket, coreSocket, version string, logw io.Writer) error {
+// socket for Pinky's screens. pkg is the app's package, the released app
+// or the development build.
+func start(dataDir, pkg, companionSocket, coreSocket, version string, logw io.Writer) error {
 	mu.Lock()
 	defer mu.Unlock()
 	if running != nil {
@@ -41,7 +44,10 @@ func start(dataDir, companionSocket, coreSocket, version string, logw io.Writer)
 	}
 	log := slog.New(slog.NewTextHandler(logw, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
-	app := local.Standalone
+	app, ok := companion.AppFor(pkg)
+	if !ok {
+		return fmt.Errorf("not Pinky's app: %s", pkg)
+	}
 	app.Socket = companionSocket
 	ln, err := net.Listen("unix", "@"+coreSocket)
 	if err != nil {

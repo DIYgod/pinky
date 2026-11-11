@@ -1,11 +1,12 @@
 // Package local drives the Android phone Pinky itself runs on, through the
-// standalone prototype's accessibility service (android/standalone) over
-// its local socket: no adb and no computer. Taps, swipes and long presses
-// are gestures the service dispatches, keys are its global actions, text
-// goes in with set_text and pictures come from its screenshots.
+// Android app's accessibility service (android/companion) over its local
+// socket: no adb and no computer. Taps, swipes and long presses are
+// gestures the service dispatches, keys are its global actions, text goes
+// in with set_text and pictures come from its screenshots.
 //
-// It is a feasibility prototype, kept apart from the shipped drivers; see
-// docs/notes/standalone-phone.md, "Prototype results (Android)".
+// Pinky's Go core on the phone (internal/standalone/libcore) uses it; see
+// docs/notes/android-app.md and docs/notes/standalone-phone.md,
+// "Prototype results (Android)".
 package local
 
 import (
@@ -26,10 +27,6 @@ import (
 	"github.com/DIYgod/pinky/internal/driver/android/companion"
 	"github.com/DIYgod/pinky/internal/screen"
 )
-
-// Standalone is the prototype's build of the companion. It is not one of
-// companion.AppFor's builds: Pinky on a computer never drives it.
-var Standalone = companion.App{Package: "app.pinky.standalone", Socket: "pinky_standalone", Label: "Pinky Standalone"}
 
 // ID is the one phone's id: the phone the core runs on.
 const ID = "this-phone"
@@ -73,7 +70,7 @@ func (p *Provider) List(ctx context.Context) ([]driver.Info, error) {
 	if err != nil {
 		return []driver.Info{{
 			ID: ID, Platform: driver.Android, Name: "This phone", Backend: "accessibility",
-			State: driver.StateNeedsSetup, Detail: "Turn on Pinky Standalone in Accessibility settings.",
+			State: driver.StateNeedsSetup, Detail: "Turn on Pinky in Accessibility settings.",
 		}}, nil
 	}
 	return []driver.Info{d.Info()}, nil

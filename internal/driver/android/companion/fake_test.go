@@ -35,7 +35,8 @@ type fakePhone struct {
 	// dropAfter closes a connection after that many requests on it.
 	dropAfter int
 	setText   func(req map[string]any) (any, *Error)
-	apkSum    string // sha256 of the installed APK
+	input     func(req map[string]any) *Error // gesture and global; nil answers ok
+	apkSum    string                          // sha256 of the installed APK
 	// probe is what the phone shows when the client asks why the service
 	// did not answer (probeCmd); "" fails the command.
 	probe  string
@@ -147,6 +148,13 @@ func (p *fakePhone) answer(req map[string]any) (any, *Error) {
 		return map[string]any{"settled": true, "waited_ms": 300}, nil
 	case "config":
 		return map[string]any{}, nil
+	case "gesture", "global":
+		if p.input != nil {
+			if err := p.input(req); err != nil {
+				return nil, err
+			}
+		}
+		return map[string]any{"took_ms": 12}, nil
 	case "events":
 		return map[string]any{"kinds": req["kinds"]}, nil
 	}

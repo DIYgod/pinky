@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Pinky on the phone itself talks to the AI model the person chose.
+         Only builds that run tasks on the phone (on_phone_ui) need it. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

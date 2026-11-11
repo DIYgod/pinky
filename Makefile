@@ -62,16 +62,16 @@ ifeq ($(UNAME),Darwin)
 app: $(FFMPEG)/BUILD.txt $(if $(shell command -v cmake),$(ADB)/BUILD.txt)
 endif
 app:
-	@rm -f cmd/pinky/resources/pinky-companion.apk
+	@rm -f cmd/pinky/resources/pinky-android.apk
 	@if [ -f "$(COMPANION_APK)" ]; then \
 		mkdir -p cmd/pinky/resources && \
-		cp "$(COMPANION_APK)" cmd/pinky/resources/pinky-companion.apk && \
+		cp "$(COMPANION_APK)" cmd/pinky/resources/pinky-android.apk && \
 		echo "adding the companion APK ($(COMPANION_APK))"; \
 	else \
 		echo "no companion APK at $(COMPANION_APK) (make companion); the app will not offer to install it"; \
 	fi
 	MYGO_LDFLAGS="-X main.version=$(VERSION)" go tool mygo build -sign "$(MACOS_SIGN)" -skip-notarize cmd/pinky
-	@rm -f cmd/pinky/resources/pinky-companion.apk
+	@rm -f cmd/pinky/resources/pinky-android.apk
 	@rmdir cmd/pinky/resources 2>/dev/null || true
 ifeq ($(UNAME),Darwin)
 	ADB="$(if $(wildcard $(ADB)/BUILD.txt),$(ADB))" SIGN="$(MACOS_SIGN)" scripts/macapp.sh build/pinky/darwin-$(GOARCH)/Pinky.app $(FFMPEG) build/pinky/darwin-$(GOARCH)/pinky-$(VERSION)-$(GOARCH).dmg

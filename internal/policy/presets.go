@@ -408,7 +408,7 @@ func (e *Engine) setOverridesLocked(o AppOverrides) {
 
 // blockedLocked is Blocked with e.mu held.
 func (e *Engine) blockedLocked(app screen.App) (string, bool) {
-	if IsStandalone(app) {
+	if IsPinkyScreen(app) {
 		return RulePinkyApps, true
 	}
 	cats := e.apps.Categories(app)

@@ -1,4 +1,4 @@
-package app.pinky.standalone
+package app.pinky.companion
 
 import android.app.Activity
 import android.content.Intent
@@ -21,7 +21,6 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
-import app.pinky.companion.R
 import org.json.JSONObject
 import java.io.Closeable
 
@@ -32,7 +31,7 @@ import java.io.Closeable
  * other apps (Overlays).
  *
  * The agent cannot use this screen: the gateway refuses every action
- * while it is in front and hides what it shows (policy.StandaloneApp),
+ * while it is in front and hides what it shows (policy.IsPinkyScreen),
  * OwnUI refuses gestures on it, and its content is
  * accessibilityDataSensitive. Only its root stays visible to the service,
  * which needs it to see that Pinky is in front.
@@ -66,18 +65,18 @@ class TaskActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(px(20), px(24), px(20), px(24))
         }
-        content.addView(text(getString(R.string.standalone_app_name), 24f, bold = true))
+        content.addView(text(getString(R.string.app_name), 24f, bold = true))
         status = text("", 14f).also { content.addView(it) }
         setup = Button(this).apply {
-            text = getString(R.string.standalone_turn_on)
+            text = getString(R.string.phone_turn_on)
             visibility = View.GONE
             setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         }
         content.addView(setup)
 
-        content.addView(label(R.string.standalone_task))
+        content.addView(label(R.string.phone_task))
         task = EditText(this).apply {
-            hint = getString(R.string.standalone_task_hint)
+            hint = getString(R.string.phone_task_hint)
             minLines = 3
             gravity = android.view.Gravity.TOP
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or
@@ -85,20 +84,20 @@ class TaskActivity : Activity() {
         }
         content.addView(task)
 
-        content.addView(label(R.string.standalone_model))
+        content.addView(label(R.string.phone_model))
         provider = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
-        provider.addView(radio(R.string.standalone_anthropic, ID_ANTHROPIC))
-        provider.addView(radio(R.string.standalone_openai, ID_OPENAI))
+        provider.addView(radio(R.string.phone_anthropic, ID_ANTHROPIC))
+        provider.addView(radio(R.string.phone_openai, ID_OPENAI))
         provider.check(if (prefs.getString("provider", "") == "openai") ID_OPENAI else ID_ANTHROPIC)
         content.addView(provider)
-        model = field(R.string.standalone_model_hint, prefs.getString("model", "").orEmpty())
+        model = field(R.string.phone_model_hint, prefs.getString("model", "").orEmpty())
         content.addView(model)
-        baseUrl = field(R.string.standalone_base_url_hint, prefs.getString("base_url", "").orEmpty())
+        baseUrl = field(R.string.phone_base_url_hint, prefs.getString("base_url", "").orEmpty())
         baseUrl.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
         content.addView(baseUrl)
         // The key stays in this screen's memory and the core's until the
         // task ends: never saved, never in the saved state, never autofilled.
-        key = field(R.string.standalone_key_hint, "").apply {
+        key = field(R.string.phone_key_hint, "").apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             typeface = Typeface.DEFAULT
             isSaveEnabled = false
@@ -106,11 +105,11 @@ class TaskActivity : Activity() {
         }
         content.addView(key)
 
-        content.addView(label(R.string.standalone_ask_before))
+        content.addView(label(R.string.phone_ask_before))
         preset = RadioGroup(this)
-        preset.addView(radio(R.string.standalone_preset_payments, 2))
-        preset.addView(radio(R.string.standalone_preset_commits, 1))
-        preset.addView(radio(R.string.standalone_preset_every, 3))
+        preset.addView(radio(R.string.phone_preset_payments, 2))
+        preset.addView(radio(R.string.phone_preset_commits, 1))
+        preset.addView(radio(R.string.phone_preset_every, 3))
         preset.setOnCheckedChangeListener { _, id ->
             if (settingPreset || id == shownPreset) return@setOnCheckedChangeListener
             CoreClient.send(CoreClient.cmd("preset", "preset" to id)) { err -> main.post { showError(err) } }
@@ -119,16 +118,16 @@ class TaskActivity : Activity() {
 
         val row = LinearLayout(this).apply { setPadding(0, px(12), 0, 0) }
         start = Button(this).apply {
-            text = getString(R.string.standalone_start)
+            text = getString(R.string.phone_start)
             setOnClickListener { startTask(this) }
         }
         stop = Button(this).apply {
-            text = getString(R.string.standalone_stop)
+            text = getString(R.string.phone_stop)
             isEnabled = false
             setOnClickListener { CoreClient.send(CoreClient.cmd("stop")) { err -> main.post { showError(err) } } }
         }
         newTask = Button(this).apply {
-            text = getString(R.string.standalone_new_task)
+            text = getString(R.string.phone_new_task)
             isEnabled = false
             setOnClickListener {
                 task.setText("")
@@ -182,8 +181,8 @@ class TaskActivity : Activity() {
     private fun startTask(button: Button) {
         val t = task.text.toString().trim()
         val k = key.text.toString().trim()
-        if (t.isEmpty()) return showError(getString(R.string.standalone_need_task))
-        if (k.isEmpty()) return showError(getString(R.string.standalone_need_key))
+        if (t.isEmpty()) return showError(getString(R.string.phone_need_task))
+        if (k.isEmpty()) return showError(getString(R.string.phone_need_key))
         val p = if (provider.checkedRadioButtonId == ID_OPENAI) "openai" else "anthropic"
         val m = model.text.toString().trim()
         val u = baseUrl.text.toString().trim()
@@ -209,9 +208,9 @@ class TaskActivity : Activity() {
         val device = st.optJSONObject("device")
         val ready = device?.optBoolean("ready") == true
         status.text = if (ready) {
-            getString(R.string.standalone_ready, device?.optString("name").orEmpty())
+            getString(R.string.phone_ready, device?.optString("name").orEmpty())
         } else {
-            getString(R.string.standalone_not_ready)
+            getString(R.string.phone_not_ready)
         }
         setup.visibility = if (ready) View.GONE else View.VISIBLE
 
@@ -235,15 +234,15 @@ class TaskActivity : Activity() {
         agentLine.text = when {
             agent == null -> ""
             running && needs != null && needs.length() > 0 ->
-                getString(R.string.standalone_line_waiting, needs.getJSONObject(0).optString("title"))
+                getString(R.string.phone_line_waiting, needs.getJSONObject(0).optString("title"))
             running -> getString(
-                R.string.standalone_line_running,
+                R.string.phone_line_running,
                 agent.optInt("steps"),
                 agent.optLong("seconds"),
                 agent.optDouble("cost", 0.0),
             )
             else -> getString(
-                R.string.standalone_line_ended,
+                R.string.phone_line_ended,
                 agent.optString("end"),
                 agent.optString("summary"),
                 agent.optInt("steps"),
@@ -272,7 +271,7 @@ class TaskActivity : Activity() {
     }
 
     private fun down(why: String) {
-        status.text = getString(R.string.standalone_core_down, why)
+        status.text = getString(R.string.phone_core_down, why)
         setup.visibility = View.VISIBLE
         start.isEnabled = false
         stop.isEnabled = false

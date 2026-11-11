@@ -122,7 +122,7 @@ type harness struct {
 func newHarness(t *testing.T) *harness {
 	t.Helper()
 	dev := demo.NewDevice("pixel", "Pixel 9", driver.Android)
-	dev.AddApp(policy.StandaloneApp, "Pinky Standalone")
+	dev.AddApp("app.pinky.companion", "Pinky")
 	h := &harness{dev: dev, api: &model{}}
 	srv := httptest.NewServer(h.api)
 	h.url = srv.URL
@@ -248,7 +248,7 @@ func TestTaskThroughTheControlSocket(t *testing.T) {
 			if !strings.HasPrefix(last, "settled") {
 				t.Errorf("after the approval:\n%s", last)
 			}
-			return call("t2", "phone_launch", map[string]any{"app": "Pinky Standalone"})
+			return call("t2", "phone_launch", map[string]any{"app": "Pinky"})
 		},
 		func(last string, _ *http.Request) map[string]any {
 			if !strings.HasPrefix(last, "blocked_by_policy") {

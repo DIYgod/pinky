@@ -9,7 +9,9 @@ import (
 )
 
 // A drag goes through the scrcpy session like a swipe, so it works on the
-// main display and on background displays alike.
+// main display and on background displays alike, except where a
+// background display takes its input through the companion
+// (displayinput.go).
 
 // Drag implements driver.Dragger.
 func (d *Device) Drag(ctx context.Context, g driver.Drag) error {
@@ -38,6 +40,13 @@ func (b *Background) DragReplan(ctx context.Context, g driver.Drag, at int, repl
 	b.d.used()
 	if err := b.ready(ctx); err != nil {
 		return err
+	}
+	c, err := b.inputClient(ctx)
+	if err != nil {
+		return err
+	}
+	if c != nil {
+		return b.dragVia(ctx, c, g, at, replan)
 	}
 	return b.l.input(func() error { return b.l.drag(ctx, g, at, replan) })
 }

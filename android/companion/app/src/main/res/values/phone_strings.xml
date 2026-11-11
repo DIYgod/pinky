@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pinky on the phone itself, from the standalone prototype: English only
+     until its screens are finished (docs/notes/android-app.md). Release
+     builds do not show them yet (on_phone_ui). -->
+<resources>
+    <string name="phone_launcher">Pinky tasks</string>
+    <!-- Overlays: the Working pill and the approval card. -->
+    <string name="phone_working">Working · %1$s</string>
+    <string name="phone_starting">Starting</string>
+    <string name="phone_waiting">Waiting for you</string>
+    <string name="phone_stop">Stop</string>
+    <string name="phone_close">Close</string>
+    <string name="phone_ended_stopped">Stopped</string>
+    <string name="phone_ended_done">Done · %1$s</string>
+    <string name="phone_ended_other">Ended · %1$s</string>
+    <string name="phone_asks">Pinky asks</string>
+    <string name="phone_rule">Rule: %1$s</string>
+    <string name="phone_deadline">No answer in %1$d s denies it</string>
+    <string name="phone_deny">Deny</string>
+    <string name="phone_allow_task">Allow for task</string>
+    <string name="phone_allow_once">Allow once</string>
+    <string name="phone_decline">Decline</string>
+    <string name="phone_hand_back">Done, hand back</string>
+    <!-- Pinky's screen. -->
+    <string name="phone_turn_on">Open Accessibility settings</string>
+    <string name="phone_ready">Ready on %1$s</string>
+    <string name="phone_not_ready">Pinky is off: turn it on in Accessibility settings.</string>
+    <string name="phone_core_down">Pinky\'s core is not running (%1$s). Turn on Pinky in Accessibility settings.</string>
+    <string name="phone_task">Task</string>
+    <string name="phone_task_hint">What should Pinky do on this phone?</string>
+    <string name="phone_model">Model</string>
+    <string name="phone_anthropic">Anthropic</string>
+    <string name="phone_openai">OpenAI-compatible</string>
+    <string name="phone_model_hint">Model (empty: claude-opus-5-5)</string>
+    <string name="phone_base_url_hint">Address (empty: the provider\'s own)</string>
+    <string name="phone_key_hint">API key (kept in memory only)</string>
+    <string name="phone_ask_before">Ask me before</string>
+    <string name="phone_preset_payments">Payments</string>
+    <string name="phone_preset_commits">Payments, messages, commits and settings changes</string>
+    <string name="phone_preset_every">Every action</string>
+    <string name="phone_start">Start</string>
+    <string name="phone_new_task">New task</string>
+    <string name="phone_need_task">Type a task first.</string>
+    <string name="phone_need_key">Type the model\'s API key first.</string>
+    <string name="phone_line_waiting">Waiting for you: %1$s</string>
+    <string name="phone_line_running">Working · %1$d steps · %2$d s · $%3$.2f</string>
+    <string name="phone_line_ended">%1$s: %2$s (%3$d steps · %4$d s · $%5$.2f)</string>
+</resources>

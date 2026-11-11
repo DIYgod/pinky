@@ -44,6 +44,13 @@ func (b *Background) Pinch(ctx context.Context, g driver.Pinch) error {
 	if err := b.ready(ctx); err != nil {
 		return err
 	}
+	c, err := b.inputClient(ctx)
+	if err != nil {
+		return err
+	}
+	if c != nil {
+		return b.pinchVia(ctx, c, g)
+	}
 	return b.l.input(func() error { return b.l.pinch(ctx, g) })
 }
 

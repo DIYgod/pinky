@@ -108,9 +108,9 @@ func companionAPKCandidates() []string {
 		}
 		dir := filepath.Dir(exe)
 		c = append(c,
-			filepath.Join(dir, "pinky-companion.apk"),
+			filepath.Join(dir, "pinky-android.apk"),
 			// Pinky.app/Contents/MacOS/pinky -> Pinky.app/Contents/Resources
-			filepath.Join(dir, "..", "Resources", "pinky-companion.apk"),
+			filepath.Join(dir, "..", "Resources", "pinky-android.apk"),
 		)
 	}
 	if wd, err := os.Getwd(); err == nil {
@@ -120,8 +120,8 @@ func companionAPKCandidates() []string {
 }
 
 // FindCompanionAPK returns the companion APK to install: $PINKY_COMPANION_APK,
-// then pinky-companion.apk next to the executable, then
-// ../Resources/pinky-companion.apk relative to it (a macOS app bundle),
+// then pinky-android.apk next to the executable, then
+// ../Resources/pinky-android.apk relative to it (a macOS app bundle),
 // then the debug build under the working directory
 // (android/companion/app/build/outputs/apk/debug/app-debug.apk).
 func FindCompanionAPK() (string, error) {
