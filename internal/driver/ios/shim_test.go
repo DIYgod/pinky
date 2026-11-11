@@ -34,6 +34,12 @@ func TestBrowseAppInfos(t *testing.T) {
 				if err := codec.Read(&req); err != nil || req["Command"] != "Browse" {
 					return
 				}
+				// Only the keys the app list reads: every key is megabytes.
+				opts, _ := req["ClientOptions"].(map[string]any)
+				attrs, _ := opts["ReturnAttributes"].([]any)
+				if len(attrs) == 0 || attrs[0] != "CFBundleIdentifier" {
+					return
+				}
 				for _, c := range tc.chunks {
 					if codec.Write(c) != nil {
 						return

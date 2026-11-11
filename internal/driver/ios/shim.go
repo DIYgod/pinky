@@ -53,11 +53,24 @@ func (l *link) appInfos() ([]installationproxy.AppInfo, error) {
 	return browseAppInfos(conn.Reader(), conn.Writer())
 }
 
-// browseAppInfos asks an installation proxy for every app and reads its
-// answer, which comes in chunks until one says Complete.
+// appAttributes are the keys of each app the app list reads (readAppInfos,
+// visibleApp, urlSchemes). Without them the proxy sends every key of every
+// app, entitlements included: megabytes on a phone with many apps, and
+// more once decoded, which Pinky's packet-tunnel extension, held to about
+// 50 MB, cannot afford.
+var appAttributes = []any{
+	"CFBundleIdentifier", "CFBundleDisplayName", "CFBundleName", "ApplicationType", "Path",
+	"CFBundleURLTypes", "SBAppTags", "LSApplicationLaunchProhibited",
+}
+
+// browseAppInfos asks an installation proxy for every app, with the keys
+// the app list reads, and reads its answer, which comes in chunks until one
+// says Complete.
 func browseAppInfos(r io.Reader, w io.Writer) ([]installationproxy.AppInfo, error) {
 	codec := goios.NewPlistCodecReadWriter(r, w)
-	req := map[string]any{"Command": "Browse", "ClientOptions": map[string]any{"ShowLaunchProhibitedApps": true}}
+	req := map[string]any{"Command": "Browse", "ClientOptions": map[string]any{
+		"ShowLaunchProhibitedApps": true, "ReturnAttributes": appAttributes,
+	}}
 	if err := codec.Write(req); err != nil {
 		return nil, fmt.Errorf("list apps: %w", err)
 	}
