@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"time"
 
 	"github.com/DIYgod/pinky/internal/api"
+	"github.com/DIYgod/pinky/internal/driver"
 	"github.com/DIYgod/pinky/internal/driver/ios"
 )
 
@@ -42,7 +44,7 @@ func runHelper(args []string) error {
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
-	return ios.InstallHelper(ctx, ios.HelperInstall{
+	err = ios.InstallHelper(ctx, ios.HelperInstall{
 		Dir:          filepath.Join(dirs.Data, "WebDriverAgent"),
 		Phone:        fs.Arg(0),
 		Team:         *team,
@@ -50,4 +52,9 @@ func runHelper(args []string) error {
 		LocalSigning: *local,
 		Out:          os.Stdout,
 	})
+	var teams *driver.HelperTeamsError
+	if errors.As(err, &teams) {
+		return fmt.Errorf("%w\nName one with --team.", err)
+	}
+	return err
 }

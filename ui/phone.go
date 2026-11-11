@@ -89,6 +89,12 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 		a.checkupPanel(c, d)
 		return
 	}
+	if a.helperRunning(d.Info.ID) {
+		// Pinky lets go of the phone while it installs the helper, which
+		// would show it offline meanwhile (helper.go).
+		a.helperInstallingPage(c, d)
+		return
+	}
 	if d.Paused {
 		a.pausedPage(c, d)
 		return
@@ -181,12 +187,24 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 				// to install, why the disk image did not mount.
 				mg.Text(c, d.Info.Detail).FontSize(fsCaption).LineHeight(1.4).TextColor(p.ink3).TextAlign(mg.Center)
 			}
-			if d.Info.Virtual && d.Info.Setup == driver.SetupPreparing {
+			// On a Mac with Xcode, Pinky installs a missing helper from
+			// here (helper.go), and the checkup is a link below.
+			installs := needsHelper(d) && a.helperInstall(c, d.Info.ID, d.Info.Name,
+				helperOpt{again: !d.Info.HelperExpires.IsZero(), center: true, note: true})
+			switch {
+			case installs:
+				if linkButton(c, locales.PhoneCheckup()).Clicked() {
+					a.openCheckup(d)
+				}
+			case d.Info.Virtual && d.Info.Setup == driver.SetupPreparing:
 				spinner(c) // the Simulator helper builds: nothing to fix
-			} else if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
-				a.openCheckup(d)
+			default:
+				if button(c, locales.PhoneCheckupFix(), btnOpt{kind: btnPrimary}).Clicked() {
+					a.openCheckup(d)
+				}
 			}
 			switch {
+			case installs:
 			case d.Info.Virtual:
 				if d.Info.Setup == driver.SetupSimulatorHelper && linkButton(c, locales.CheckSimHelperRetry()).Clicked() {
 					a.startVirtualPhone(d)

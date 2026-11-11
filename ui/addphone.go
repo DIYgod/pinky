@@ -393,10 +393,29 @@ func (a *app) addIPhone(c *mg.Context) {
 		opt("helper", locales.AddPhoneOlderHelper(), locales.AddPhoneOlderHelperDetail())
 		opt("mirror", locales.AddPhoneOlderMirroring(), locales.AddPhoneOlderMirroringDetail())
 	})
-	if s.oldPick != "" {
-		mg.Text(c, locales.AddPhoneOlderNotYet()).FontSize(fsSmall).TextColor(p.ink2)
-	} else {
+	switch s.oldPick {
+	case "":
 		mg.Text(c, locales.AddPhoneOlderUpdate()).FontSize(fsSmall).TextColor(p.ink2).Margin(-6, 0, 0, 0)
+	case "mirror":
+		mg.Text(c, locales.AddPhoneOlderMirrorNotYet()).FontSize(fsSmall).TextColor(p.ink2)
+	default:
+		// The helper, installed from here on a Mac with Xcode: on the
+		// iPhone Pinky found, else on the one Xcode finds; once it is
+		// installed, the steps follow the phone. An install begun before
+		// Pinky found the phone keeps its place.
+		id, name := "", locales.HelperThisIPhone()
+		if d != nil && a.helper.runs[""] == nil {
+			id, name = d.Info.ID, d.Info.Name
+		}
+		done := func() { s.old, s.oldPick = false, "" }
+		if !a.helperInstall(c, id, name, helperOpt{note: true, done: done}) {
+			mg.Text(c, locales.AddPhoneOlderHelperHow()).FontSize(fsSmall).LineHeight(1.4).TextColor(p.ink2)
+			mg.Row(c).Children(func() {
+				if linkButton(c, locales.CheckHelperHow()).Clicked() {
+					openURL(c, helperDocs, func(error) {})
+				}
+			})
+		}
 	}
 }
 

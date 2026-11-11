@@ -334,6 +334,7 @@ type app struct {
 	comp      companionState // the Android companion app, per phone
 	bg        bgState        // background displays, per phone
 	conn      connState      // iPhones: how Pinky connects, per phone
+	helper    helperState    // iPhones: installing the helper from the window (helper.go)
 	rec       recState       // task recordings in Activity
 	remote    remoteState    // Settings › Agents › Remote agents
 	setup     setupState     // Settings › Agents › Connect an agent, and the sidebar's card

@@ -147,6 +147,7 @@ type API struct {
 	trusted    []string      // TrustPhone's phones (wifi.go)
 	dlErr      error         // what DownloadDiskImage fails with (iphone.go)
 	dlHold     chan struct{} // closed when held downloads go on (HoldDownload)
+	hlp        helperFake    // installing the iPhone helper (helper.go)
 	tn         *fakeTailnet  // Tailscale on this computer (tailnet.go)
 	virt       *virtualState // Simulators and emulators (virtual.go)
 

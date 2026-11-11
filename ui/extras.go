@@ -73,6 +73,12 @@ type (
 		CompanionState(ctx context.Context, deviceID string) (driver.CompanionState, error)
 		InstallCompanion(ctx context.Context, deviceID string) error
 	}
+	// helperInstaller installs the iPhone helper from the window, on a Mac
+	// with Xcode (helper.go).
+	helperInstaller interface {
+		CanInstallHelper() bool
+		InstallHelper(ctx context.Context, deviceID, team string, progress func(driver.HelperStep)) error
+	}
 	backgroundSetter interface {
 		SetBackground(deviceID string, on bool) error
 		Background(deviceID string) bool

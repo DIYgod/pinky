@@ -22,6 +22,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/driver"
 )
 
 func TestHelperBundleID(t *testing.T) {
@@ -171,13 +173,18 @@ func TestDevTeams(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Errorf("teams = %v, want %v", got, want)
 	}
-	if _, err := onlyTeam(got, nil); err == nil || !strings.Contains(err.Error(), "TEAMAAAAA1 (Ann Ltd), TEAMBBBBB2 (Bob)") {
+	_, err := onlyTeam(got, nil)
+	var several *driver.HelperTeamsError
+	if !errors.As(err, &several) || len(several.Teams) != 2 || several.Teams[1] != (driver.HelperTeam{ID: "TEAMBBBBB2", Name: "Bob"}) ||
+		!strings.Contains(err.Error(), "TEAMAAAAA1 (Ann Ltd), TEAMBBBBB2 (Bob)") {
 		t.Errorf("two teams: %v", err)
 	}
 	if team, err := onlyTeam(got[:1], nil); team != "TEAMAAAAA1" || err != nil {
 		t.Errorf("one team: %q, %v", team, err)
 	}
-	if _, err := onlyTeam(nil, nil); err == nil || !strings.Contains(err.Error(), "Accounts") {
+	_, err = onlyTeam(nil, nil)
+	var failed *driver.HelperInstallError
+	if !errors.As(err, &failed) || failed.Fix != driver.HelperFixAppleID || !strings.Contains(err.Error(), "Accounts") {
 		t.Errorf("no team: %v", err)
 	}
 }
@@ -247,21 +254,25 @@ func TestBundleIDPattern(t *testing.T) {
 	}
 }
 
-func TestHelperHint(t *testing.T) {
-	for out, want := range map[string]string{
-		"Unable to launch com.me.WebDriverAgentRunner.xctrunner because it has an invalid code signature, inadequate entitlements or its profile has not been explicitly trusted by the user.": "VPN & Device Management",
-		"error: Developer Mode disabled":                                  "Developer Mode",
-		"Timed out while enabling automation mode.":                       "allow automation",
-		"The device is passcode protected.":                               "Unlock the phone",
-		`error: No Account for Team "ABCDE12345".`:                        "Xcode › Settings › Accounts",
-		`error: No profiles for 'com.me.WebDriverAgentRunner' were found`: "--local-signing",
-		"Upgrade's application-identifier entitlement string (ZZZZZ99999.com.me.wda.xctrunner) does not match installed application's application-identifier string (ABCDE12345.com.me.wda.xctrunner); rejecting upgrade.": "--team",
-		"** BUILD FAILED ** something else": "",
+func TestHelperFix(t *testing.T) {
+	for _, c := range []struct{ out, fix, hint string }{
+		{"Unable to launch com.me.WebDriverAgentRunner.xctrunner because it has an invalid code signature, inadequate entitlements or its profile has not been explicitly trusted by the user.", driver.HelperFixTrust, "VPN & Device Management"},
+		{"error: Developer Mode disabled", driver.HelperFixDeveloperMode, "Developer Mode"},
+		{"Timed out while enabling automation mode.", driver.HelperFixPasscode, "allow automation"},
+		{"The device is passcode protected.", driver.HelperFixUnlock, "Unlock the phone"},
+		{`error: No Account for Team "ABCDE12345".`, driver.HelperFixAppleID, "Xcode › Settings › Accounts"},
+		{`error: No profiles for 'com.me.WebDriverAgentRunner' were found`, driver.HelperFixSigning, "--local-signing"},
+		{"Upgrade's application-identifier entitlement string (ZZZZZ99999.com.me.wda.xctrunner) does not match installed application's application-identifier string (ABCDE12345.com.me.wda.xctrunner); rejecting upgrade.", driver.HelperFixOtherTeam, "--team"},
+		{"** BUILD FAILED ** something else", "", ""},
 	} {
-		got := helperHint(out)
-		if want == "" && got != "" || !strings.Contains(got, want) {
-			t.Errorf("%q: %q, want %q", out, got, want)
+		fix := helperFix(c.out)
+		hint := helperHintFor(fix, true)
+		if fix != c.fix || c.hint == "" && hint != "" || !strings.Contains(hint, c.hint) {
+			t.Errorf("%q: %q, %q; want %q, %q", c.out, fix, hint, c.fix, c.hint)
 		}
+	}
+	if h := helperHintFor(driver.HelperFixSigning, false); strings.Contains(h, "--local-signing") {
+		t.Errorf("signing without --local-signing: %q", h)
 	}
 	if !needsProvisioning(`error: No profiles for 'x' were found: Xcode couldn't find any iOS App Development provisioning profiles matching 'x'.`) {
 		t.Error("a missing profile does not ask for one")
@@ -273,7 +284,8 @@ func TestHelperHint(t *testing.T) {
 
 // TestXcodeRun runs a stand-in xcodebuild that waits for the phone, then
 // prints WDA's address and keeps going: the person hears about the wait
-// once, and the run stops at the address.
+// once, the window's progress goes to unlock and back, and the run stops
+// at the address.
 func TestXcodeRun(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("a shell script stands in for xcodebuild")
@@ -285,15 +297,24 @@ func TestXcodeRun(t *testing.T) {
 	}
 	script := "#!/bin/sh\n" +
 		"echo 'Run Destination Preflight: " + xcodeWaiting + ".'\n" +
+		"sleep 0.2\n" +
 		"echo 'Run Destination Preflight: " + xcodeWaiting + ".'\n" +
+		"sleep 0.2\n" +
 		"echo 'ServerURLHere->http://127.0.0.1:8100<-ServerURLHere'\n" +
 		"exec sleep 60\n"
 	if err := os.WriteFile(filepath.Join(bin, "xcodebuild"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	var log, out syncBuffer
+	var mu sync.Mutex
+	var steps []driver.HelperStep
+	r := xcodeRunner{x: xcode{Developer: dev}, log: &log, out: &out, progress: func(s driver.HelperStep) {
+		mu.Lock()
+		defer mu.Unlock()
+		steps = append(steps, s)
+	}}
 	start := time.Now()
-	tail, err := xcodeRun(context.Background(), xcode{Developer: dev}, &log, &out, nil, nil)
+	tail, err := r.run(context.Background(), driver.HelperInstalling, nil, nil)
 	if !errors.Is(err, errHelperUp) {
 		t.Fatalf("err = %v, want errHelperUp; tail %q", err, tail)
 	}
@@ -305,6 +326,27 @@ func TestXcodeRun(t *testing.T) {
 	}
 	if !strings.Contains(log.String(), "ServerURLHere") || !strings.Contains(tail, "ServerURLHere") {
 		t.Errorf("log %q, tail %q", log.String(), tail)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if !slices.Equal(steps, []driver.HelperStep{driver.HelperUnlock, driver.HelperInstalling}) {
+		t.Errorf("steps = %q", steps)
+	}
+}
+
+func TestHelperInstalls(t *testing.T) {
+	h := helperInstalls{dir: t.TempDir()}
+	if r := h.last("U1"); r != (helperRecord{}) {
+		t.Errorf("nothing yet: %+v", r)
+	}
+	exp := time.Date(2027, 10, 8, 0, 0, 0, 0, time.UTC)
+	h.note("U1", helperRecord{Team: "TEAMAAAAA1", BundleID: "cc.me.wda", Expires: exp})
+	h.note("U2", helperRecord{Team: "TEAMBBBBB2", BundleID: "pinky.teambbbbb2.WebDriverAgentRunner"})
+	if r := h.last("U1"); r.Team != "TEAMAAAAA1" || r.BundleID != "cc.me.wda" || !r.Expires.Equal(exp) {
+		t.Errorf("U1 = %+v", r)
+	}
+	if r := (helperInstalls{}).last("U1"); r != (helperRecord{}) {
+		t.Errorf("no folder: %+v", r)
 	}
 }
 

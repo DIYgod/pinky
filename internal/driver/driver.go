@@ -582,12 +582,109 @@ const (
 	CheckDiskImage     = "disk_image"     // the developer disk image is mounted, and the computer can mount it again after a restart
 	CheckHelper        = "helper"         // the WebDriverAgent helper answers, where Pinky drives the phone through it
 	FixInstallHelper   = "install_helper" // install the WebDriverAgent helper on the phone
-	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again) with pinkyctl helper install or Xcode, as it is missing or its profile ran out (Info.HelperExpires)
+	SetupInstallHelper = FixInstallHelper // also a setup step: install the helper (again), from the client on a Mac with Xcode (HelperInstaller) or with pinkyctl helper install, as it is missing or its profile ran out (Info.HelperExpires); also while Pinky installs it
 )
 
 // HelperReminder is how long before Info.HelperExpires clients remind the
 // person to install the WebDriverAgent helper again.
 const HelperReminder = 48 * time.Hour
+
+// HelperInstaller is a Provider that installs the WebDriverAgent helper on
+// an iPhone, as `pinky helper install` does: Xcode builds it, signs it with
+// the person's developer team and installs it. It runs only when the
+// person asks in the client.
+type HelperInstaller interface {
+	// CanInstallHelper reports whether this computer can: a Mac with
+	// Xcode. It is cheap.
+	CanInstallHelper() bool
+	// InstallHelper installs the helper on the phone with this id, "" for
+	// the only one Xcode reaches, signed with team: "" for the team of the
+	// helper on the phone, else of the one installed there last, else the
+	// only one this computer can sign for. progress, when not nil, gets
+	// each step as it begins, from another goroutine. It takes a few
+	// minutes, during which the phone needs setup (SetupInstallHelper) and
+	// is not opened; it is looked at again afterwards. Errors are
+	// *HelperTeamsError, *HelperInstallError or the context's.
+	InstallHelper(ctx context.Context, id, team string, progress func(HelperStep)) error
+}
+
+// HelperStep is where an install of the helper is.
+type HelperStep string
+
+// The steps of HelperInstaller.InstallHelper.
+const (
+	HelperPreparing  HelperStep = "preparing"  // finding the phone and its helper, getting WebDriverAgent's source
+	HelperBuilding   HelperStep = "building"   // Xcode builds and signs it: a minute or two
+	HelperInstalling HelperStep = "installing" // installing it and starting it once; the phone may ask for its passcode
+	HelperUnlock     HelperStep = "unlock"     // Xcode waits for the phone to be unlocked
+)
+
+// HelperTeam is a developer team the computer can sign the helper for.
+type HelperTeam struct {
+	ID   string // such as "ABCDE12345"
+	Name string // the team's or the person's name, "" when unknown
+}
+
+// HelperTeamsError is InstallHelper's error when the computer can sign for
+// several teams and nothing says which: the client asks the person and
+// installs again with the one they choose.
+type HelperTeamsError struct {
+	Teams []HelperTeam
+}
+
+func (e *HelperTeamsError) Error() string {
+	names := make([]string, len(e.Teams))
+	for i, t := range e.Teams {
+		names[i] = t.ID
+		if t.Name != "" {
+			names[i] += " (" + t.Name + ")"
+		}
+	}
+	return "this Mac can sign for several teams; choose one: " + strings.Join(names, ", ")
+}
+
+// HelperInstallError is why InstallHelper failed: a code clients put into
+// words, and the details.
+type HelperInstallError struct {
+	// Fix is what the person can do about it: one of the HelperFix*
+	// constants, or "" when nothing Pinky saw explains it.
+	Fix string
+	// Err is what went wrong, in English, for logs and for clients without
+	// words for Fix.
+	Err error
+	// Hint says what to do on the command line, with its flags; "" when
+	// Err says it.
+	Hint string
+	// Log is the build's log on the computer, "" when there is none yet.
+	Log string
+}
+
+func (e *HelperInstallError) Error() string {
+	s := e.Err.Error()
+	if e.Log != "" {
+		s += " (" + e.Log + ")"
+	}
+	if e.Hint != "" {
+		s += "\n" + e.Hint
+	}
+	return s
+}
+
+func (e *HelperInstallError) Unwrap() error { return e.Err }
+
+// What the person can do about a failed install, in HelperInstallError.Fix.
+const (
+	HelperFixXcode         = "xcode"           // install Xcode (on a Mac)
+	HelperFixPhone         = "phone"           // Xcode does not reach the phone: plug it in, or put it on the Mac's Wi-Fi, and trust the Mac
+	HelperFixDeveloperMode = "developer_mode"  // turn on Developer Mode on the phone
+	HelperFixAppleID       = "apple_id"        // add an Apple ID in Xcode › Settings › Accounts
+	HelperFixOtherTeam     = "other_team"      // another team signed the helper on the phone: choose that team, or delete the helper there first
+	HelperFixSigning       = "signing"         // Xcode found no profile that signs the helper for the phone
+	HelperFixTrust         = "trust_developer" // trust the developer on the phone, in Settings › General › VPN & Device Management
+	HelperFixPasscode      = "passcode"        // the phone asked for its passcode to allow automation, and nobody entered it
+	HelperFixUnlock        = "unlock"          // the phone stayed locked
+	HelperFixDownload      = "download"        // WebDriverAgent's source did not download
+)
 
 // FileInfo is one entry of the phone's Pinky folder.
 type FileInfo struct {

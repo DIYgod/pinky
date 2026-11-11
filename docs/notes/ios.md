@@ -466,7 +466,7 @@ WDA on a simulator listens on every interface of the computer while it runs; sto
 
 ### Installing the WebDriverAgent helper
 
-Once per phone, on a Mac with Xcode, with the iPhone plugged in (or paired over Wi-Fi), in Terminal:
+Once per phone, on a Mac with Xcode, with the iPhone plugged in (or paired over Wi-Fi): **Install the helper** in Pinky's window (below, "From Pinky's window"), or in Terminal:
 
 ```sh
 pinkyctl helper install
@@ -485,13 +485,29 @@ What it does (`internal/driver/ios/helperinstall.go`, `cmd/pinky/helper.go`):
 
 Xcode's output goes to `<data>/WebDriverAgent/helper-install.log`; a failure names Xcode's errors and, when it recognizes them, what to do: trust the developer, turn on Developer Mode, unlock the phone, enter the passcode for automation, add an Apple ID in Xcode › Settings › Accounts. A helper running for Pinky at the time is replaced, and Pinky starts the new one when it next opens the phone.
 
+#### From Pinky's window
+
+(2026-11-11) On a Mac with Xcode, Pinky's window runs the same install (`driver.HelperInstaller`, `Gateway.InstallHelper`, `ui/helper.go`). It offers **Install the helper** (**Install again** once the helper has a signature that runs out):
+
+- on the Phone screen of an iPhone that needs its helper installed, in place of See what's wrong (the checkup becomes a link under it), with a note that Xcode builds it and that the phone must stay unlocked;
+- in the reminder on the phone's page two days before the signature runs out, and in the checkup's helper item (soon or ran out) and its install-helper step;
+- in Add phone › Try an older iPhone › Install the Pinky helper, for the phone Add phone found, or, with none listed yet, the only one Xcode reaches.
+
+While it runs, the button gives way to the step (getting ready, building with Xcode, installing on the phone) and Cancel; when Xcode waits for a locked phone, the step asks in bold to unlock it and keep it unlocked. Where the Mac can sign for several teams and the phone's helper names none, it asks which team, a button each. A failure says why in the person's words, by the fix the driver recognized (Xcode missing, phone out of reach, Developer Mode, no Apple ID in Xcode, another team's helper, no way to sign, the developer not trusted, the passcode for automation, a locked phone, the download), with Xcode's words in small print (the first 400 characters) and **Show the log**, which reveals `helper-install.log`. Done, a toast says so and the phone comes back on the helper.
+
+- **The phone meanwhile.** From the first step the provider lists the phone as needing its helper installed (`installingInfo`) and starts no runner, and the gateway lets go of it at once, so nothing of Pinky's competes with Xcode; the Phone screen shows the install instead of the phone. After, the provider forgets what it knew of the phone and its helper, and the gateway looks for phones again.
+- **One at a time.** Xcode installs on one phone at a time here, so the other buttons wait while one runs. The gateway refuses while an agent holds the phone ("An agent is working on …"). An install may take 20 minutes at most, the passcode included.
+- **Without Xcode or off a Mac** nothing changes: the same places say how to install it by hand and link here.
+
+Unit-tested with fakes: the provider (`helperwindow_test.go`), the gateway (`helper_test.go`) and the window (`ui/helper_install_test.go`: from the Phone screen, a failure with its log, the team choice, Install again in the reminder and the checkup, a signature that ran out, Add phone). Not yet run from the window on a phone.
+
 From Xcode, as before (the helper then keeps WDA's name, WebDriverAgentRunner-Runner, and Appium's icon or none):
 
 1. Get WebDriverAgent: `git clone https://github.com/appium/WebDriverAgent` (Appium's copy works too).
 2. Open `WebDriverAgent.xcodeproj`. For the WebDriverAgentRunner target, under Signing & Capabilities, pick your team (a free Apple ID works). If Xcode says the bundle identifier is taken, change its prefix (`com.<you>.WebDriverAgentRunner`), keeping WebDriverAgentRunner in it so Pinky finds it.
 3. Pick the iPhone as the destination and run Product › Test once. Xcode installs WebDriverAgentRunner and starts it; with a free Apple ID the phone first asks you to trust the developer in Settings › General › VPN & Device Management. Stop the test once Xcode's log shows `ServerURLHere`.
 
-From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, run `pinkyctl helper install` again or repeat step 3 (see "When the helper's signature runs out"). The same from a terminal:
+From then on Pinky starts the helper by itself whenever it opens the phone. With a free Apple ID the signature lasts 7 days, with a paid developer account a year; after that, click Install again in Pinky's window, run `pinkyctl helper install` again or repeat step 3 (see "When the helper's signature runs out"). The same from a terminal:
 
 ```sh
 xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
@@ -526,7 +542,7 @@ What ran where:
 
 Built on 2026-11-08 after a user's report. The helper is signed with the person's Apple ID, and the provisioning profile it is signed with runs out: 7 days after Xcode installed it with a free Apple ID, a year with a paid developer account. iOS then no longer starts it, and Pinky used to say only that the helper did not start.
 
-To install it again, run `pinkyctl helper install` again (see "Installing the WebDriverAgent helper"): it keeps the helper's team and bundle id, signs it anew and installs it over the old one. From Xcode, plug the iPhone in and repeat step 3 (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
+To install it again, on a Mac with Xcode click **Install again** in the reminder on the phone's page or in its checkup, or run `pinkyctl helper install` again (see "Installing the WebDriverAgent helper"): it keeps the helper's team and bundle id, signs it anew and installs it over the old one. From Xcode, plug the iPhone in and repeat step 3 (Product › Test, stopped once `ServerURLHere` shows), or run the `xcodebuild … test` command above. Nothing else changes on the phone. While the phone stays plugged in, Pinky reads the new date within a minute and the reminder goes; a phone that needed setup comes back online within 30 seconds.
 
 What Pinky does (`wda_profile.go`):
 
@@ -638,7 +654,7 @@ Tried on the iPhone Air (iOS 27.3, Automatic, the helper installed, Wi-Fi), 2026
 - Mirroring a phone that Pinky drives on iOS 27 can leave its accessibility services stuck, so Pinky reads by OCR alone until the phone restarts (seen once, iOS 27.0.1 and macOS 27.2). Pinky does not notice it yet; a check that tells the person to restart the phone would help.
 - iPhone Mirroring as a way in: macOS 15 or later, iOS 18 or later, the same Apple Account on both, the phone locked nearby, not in the EU; window capture and mouse and keyboard events would need Screen Recording and Accessibility for Pinky. With no tree from the phone while it mirrors (above), it would read the screen by OCR alone, as DESIGN.md's planned Mirroring backend does; not built.
 - `Waker` through the helper; `Unlock` wakes the phone by itself.
-- Installing and re-signing the helper from Pinky's window (the "Install the Pinky helper" choice in Add phone): a person runs `pinkyctl helper install` in Terminal for now, or uses Xcode, and Pinky reminds them before the signature runs out ("When the helper's signature runs out"). go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible without Xcode.
+- Installing the helper without Xcode, on Windows and Linux: Pinky's window installs it on a Mac with Xcode ("From Pinky's window"); go-ios can sign with a certificate and profile (`ios/signing`), which would make it possible elsewhere.
 - The picture below iOS 27 on Windows and Linux (no encoder Pinky can call without cgo).
 
 ## Preparing a phone without Xcode

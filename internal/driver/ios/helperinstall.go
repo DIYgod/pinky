@@ -22,6 +22,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/DIYgod/pinky/internal/driver"
 )
 
 // Installing the WebDriverAgent helper on a phone: `pinky helper install`.
@@ -39,6 +41,10 @@ import (
 // that signs it. Xcode first signs with what is on this Mac; only when
 // that has no profile for the helper and the phone does it ask Apple for
 // one (-allowProvisioningUpdates), unless LocalSigning says not to.
+//
+// Pinky's window runs it too (Provider.InstallHelper), with Progress and
+// the errors' Fix codes (driver.HelperInstallError) in place of Out's
+// lines and the command line's hints.
 
 // HelperInstall is what InstallHelper installs where.
 type HelperInstall struct {
@@ -58,6 +64,9 @@ type HelperInstall struct {
 	LocalSigning bool
 	// Out gets what InstallHelper does, for the person.
 	Out io.Writer
+	// Progress, when not nil, gets each step as it begins
+	// (driver.HelperInstaller), from another goroutine at times.
+	Progress func(driver.HelperStep)
 	// Client downloads the source; nil for http.DefaultClient.
 	Client *http.Client
 }
@@ -81,12 +90,18 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	if client == nil {
 		client = http.DefaultClient
 	}
+	progress := func(step driver.HelperStep) {
+		if o.Progress != nil {
+			o.Progress(step)
+		}
+	}
+	progress(driver.HelperPreparing)
 	if runtime.GOOS != "darwin" {
-		return errors.New("installing the iPhone helper needs a Mac with Xcode")
+		return helperErr(driver.HelperFixXcode, errors.New("installing the iPhone helper needs a Mac with Xcode"), "")
 	}
 	x, err := findXcode()
 	if err != nil {
-		return fmt.Errorf("installing the iPhone helper needs Xcode: %w", err)
+		return helperErr(driver.HelperFixXcode, fmt.Errorf("installing the iPhone helper needs Xcode: %w", err), "")
 	}
 	team := strings.ToUpper(strings.TrimSpace(o.Team))
 	if team != "" && !teamID.MatchString(team) {
@@ -101,12 +116,13 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	}
 	ph, err := pickPhone(phones, o.Phone)
 	if err != nil {
-		return err
+		return helperErr(driver.HelperFixPhone, err, "")
 	}
 	fmt.Fprintf(out, "Phone: %s (%s, iOS %s)\n", ph.Name, ph.UDID, ph.OS)
 	if ph.DeveloperMode == "disabled" {
-		return fmt.Errorf("Developer Mode is off on %s: turn it on in Settings › Privacy & Security › Developer Mode (the phone restarts), then run this again", ph.Name)
+		return helperErr(driver.HelperFixDeveloperMode, fmt.Errorf("Developer Mode is off on %s", ph.Name), "")
 	}
+	installs := helperInstalls{dir: o.Dir}
 
 	// The helper already on the phone: the new one keeps its team and id.
 	runner, rerr := phoneRunner(ctx, x, ph.UDID)
@@ -121,6 +137,13 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	if team == "" {
 		team = appIDTeam(runner.AppID)
 	}
+	last := installs.last(ph.UDID)
+	if team == "" && last.Team != "" && (runner.BundleID == "" || runner.BundleID == last.BundleID+".xctrunner") {
+		// The phone's helper is the one installed from here last, whose
+		// team devicectl does not tell.
+		team = last.Team
+		fmt.Fprintf(out, "Signing with team %s, as the last time.\n", team)
+	}
 	if team == "" {
 		team, err = onlyTeam(devTeams(ctx))
 		if err != nil {
@@ -128,6 +151,12 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 		}
 	}
 	bid := helperBundleID(o.BundleID, team, runner)
+	if runner.BundleID == "" && o.BundleID == "" && last.BundleID != "" && last.Team == team {
+		// Most likely the helper installed from here last, which the
+		// phone did not show (or which was removed): keep its id, and
+		// the profile that signs it.
+		bid = last.BundleID
+	}
 	switch {
 	case runner.BundleID == "":
 	case runner.BundleID != bid+".xctrunner":
@@ -151,7 +180,10 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 		os.RemoveAll(src)
 		fmt.Fprintf(out, "Downloading WebDriverAgent %s…\n", wdaVersion)
 		if err := downloadSource(ctx, client, archive); err != nil {
-			return err
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return helperErr(driver.HelperFixDownload, err, "")
 		}
 		if err := unpackSource(archive, src); err != nil {
 			os.Remove(archive)
@@ -168,25 +200,31 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 	}
 	defer logf.Close()
 	fmt.Fprintf(out, "Building WebDriverAgent %s with Xcode %s for team %s, bundle id %s. This takes a minute or two.\n", wdaVersion, x.Version, team, bid)
-	tail, err := xcodeRun(ctx, x, logf, out, helperBuildArgs(src, dd, ph.UDID, team, bid, false), nil)
+	xr := xcodeRunner{x: x, log: logf, out: out, progress: o.Progress}
+	progress(driver.HelperBuilding)
+	tail, err := xr.run(ctx, driver.HelperBuilding, helperBuildArgs(src, dd, ph.UDID, team, bid, false), nil)
 	if err != nil && ctx.Err() == nil && !o.LocalSigning && needsProvisioning(tail) {
 		fmt.Fprintln(out, "No profile on this Mac signs the helper for this phone; letting Xcode get one from Apple (it may register the phone with your team).")
-		tail, err = xcodeRun(ctx, x, logf, out, helperBuildArgs(src, dd, ph.UDID, team, bid, true), nil)
+		tail, err = xr.run(ctx, driver.HelperBuilding, helperBuildArgs(src, dd, ph.UDID, team, bid, true), nil)
 	}
 	if err != nil {
-		return xcodeFailed(ctx, "building the helper", err, tail, logPath)
+		return xcodeFailed(ctx, "building the helper", err, tail, logPath, o.LocalSigning)
 	}
 	products := filepath.Join(dd, "Build", "Products")
 	app := runnerAppIn(products)
 	if app == "" || xctestrun(products) == "" {
-		return fmt.Errorf("Xcode built WebDriverAgent but made no runner app (%s)", logPath)
+		return helperErr("", errors.New("Xcode built WebDriverAgent but made no runner app"), logPath)
 	}
 	profile, err := embeddedProfile(app)
 	if err != nil {
 		return fmt.Errorf("reading the profile Xcode signed the helper with: %w", err)
 	}
 	if !profile.runsOn(ph.UDID) {
-		return fmt.Errorf("the profile Xcode signed the helper with, %q, does not include %s; run this without --local-signing, or add the phone to your team in Xcode", profile.Name, ph.Name)
+		e := helperErr(driver.HelperFixSigning, fmt.Errorf("the profile Xcode signed the helper with, %q, does not include %s", profile.Name, ph.Name), logPath)
+		if o.LocalSigning {
+			e.Hint = "Run this without --local-signing, or add the phone to your team in Xcode."
+		}
+		return e
 	}
 
 	// Pinky's name and icon, then the signature again.
@@ -199,21 +237,79 @@ func InstallHelper(ctx context.Context, o HelperInstall) error {
 
 	// Install and start it once, as Product › Test does.
 	fmt.Fprintf(out, "Installing it on %s and starting it once. Keep the phone unlocked; if it asks for its passcode to allow automation, enter it there.\n", ph.Name)
+	progress(driver.HelperInstalling)
 	run, cancel := context.WithTimeout(ctx, helperStartTimeout)
 	defer cancel()
-	tail, err = xcodeRun(run, x, logf, out, helperTestArgs(products, ph.UDID, filepath.Join(tmp, "run")), []string{"TEST_RUNNER_USE_IP=127.0.0.1"})
+	tail, err = xr.run(run, driver.HelperInstalling, helperTestArgs(products, ph.UDID, filepath.Join(tmp, "run")), []string{"TEST_RUNNER_USE_IP=127.0.0.1"})
 	if err != nil {
 		if errors.Is(err, errHelperUp) {
 			fmt.Fprintf(out, "Installed %q on %s; WebDriverAgent answered and was stopped again.\n", helperDisplayName, ph.Name)
 			fmt.Fprintf(out, "Its signature lasts until %s. Pinky starts the helper whenever it opens the phone.\n", helperDate(profile.Expires))
+			installs.note(ph.UDID, helperRecord{Team: team, BundleID: bid, Expires: profile.Expires})
 			return nil
 		}
 		if run.Err() != nil && ctx.Err() == nil {
-			return fmt.Errorf("WebDriverAgent did not answer within %s of starting on %s (%s)%s", helperStartTimeout, ph.Name, logPath, hintText(helperHint(tail)))
+			fix := helperFix(tail)
+			if fix == "" {
+				// It most often waited for the passcode on the phone.
+				fix = driver.HelperFixPasscode
+			}
+			return helperErr(fix, fmt.Errorf("WebDriverAgent did not answer within %s of starting on %s", helperStartTimeout, ph.Name), logPath)
 		}
-		return xcodeFailed(ctx, "installing and starting the helper", err, tail, logPath)
+		return xcodeFailed(ctx, "installing and starting the helper", err, tail, logPath, o.LocalSigning)
 	}
-	return fmt.Errorf("the helper's test ended before WebDriverAgent answered: %s (%s)%s", xcodeErrors(tail), logPath, hintText(helperHint(tail)))
+	return helperErr(helperFix(tail), fmt.Errorf("the helper's test ended before WebDriverAgent answered: %s", xcodeErrors(tail)), logPath)
+}
+
+// helperInstalls remembers, in Pinky's WebDriverAgent folder, the team and
+// bundle id of the helper installed on each phone, as devicectl tells
+// neither of a phone on Wi-Fi.
+type helperInstalls struct{ dir string }
+
+// helperRecord is one phone's helper as installed last.
+type helperRecord struct {
+	Team     string    `json:"team"`
+	BundleID string    `json:"bundle_id"`
+	Expires  time.Time `json:"expires"`
+}
+
+func (h helperInstalls) path() string { return filepath.Join(h.dir, "helper-installs.json") }
+
+func (h helperInstalls) read() map[string]helperRecord {
+	m := map[string]helperRecord{}
+	if h.dir == "" {
+		return m
+	}
+	if b, err := os.ReadFile(h.path()); err == nil {
+		_ = json.Unmarshal(b, &m)
+	}
+	return m
+}
+
+// last is the helper installed on the phone udid last; zero if none.
+func (h helperInstalls) last(udid string) helperRecord { return h.read()[udid] }
+
+// note remembers r as the phone's helper; failing to is no failure.
+func (h helperInstalls) note(udid string, r helperRecord) {
+	if h.dir == "" {
+		return
+	}
+	m := h.read()
+	m[udid] = r
+	b, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return
+	}
+	tmp := h.path() + ".tmp"
+	if os.WriteFile(tmp, b, 0o644) == nil {
+		_ = os.Rename(tmp, h.path())
+	}
+}
+
+// helperErr is a failed install the person can do fix about, with the
+// command line's hint for it.
+func helperErr(fix string, err error, logPath string) *driver.HelperInstallError {
+	return &driver.HelperInstallError{Fix: fix, Err: err, Hint: helperHintFor(fix, false), Log: logPath}
 }
 
 // teamID is an Apple developer team's ID.
@@ -489,15 +585,17 @@ func onlyTeam(teams []devTeam, err error) (string, error) {
 	}
 	switch len(teams) {
 	case 0:
-		return "", errors.New("this Mac has no Apple Development certificate: add your Apple ID in Xcode › Settings › Accounts (a free one works), or name a team with --team")
+		e := helperErr(driver.HelperFixAppleID, errors.New("this Mac has no Apple Development certificate"), "")
+		e.Hint = "Add your Apple ID in Xcode › Settings › Accounts (a free one works), or name a team with --team."
+		return "", e
 	case 1:
 		return teams[0].ID, nil
 	}
-	var names []string
+	e := &driver.HelperTeamsError{}
 	for _, t := range teams {
-		names = append(names, fmt.Sprintf("%s (%s)", t.ID, t.Name))
+		e.Teams = append(e.Teams, driver.HelperTeam{ID: t.ID, Name: t.Name})
 	}
-	return "", fmt.Errorf("this Mac can sign for several teams; name one with --team: %s", strings.Join(names, ", "))
+	return "", e
 }
 
 // helperBuildArgs builds WDA's runner for the phone, signed for team with
@@ -536,18 +634,34 @@ var errHelperUp = errors.New("WebDriverAgent answered")
 // unlocked, which it does in silence otherwise.
 const xcodeWaiting = "Waiting for the destination to become ready"
 
-// xcodeRun runs xcodebuild with args, its output to log, and returns the
-// output's last lines. A run that prints helperMark is stopped then and
-// returns errHelperUp. When Xcode waits for the phone, out is told once.
-func xcodeRun(ctx context.Context, x xcode, log, out io.Writer, args, env []string) (string, error) {
+// xcodeRunner runs xcodebuild for an install: its output goes to log, and
+// out and progress hear when Xcode waits for the phone.
+type xcodeRunner struct {
+	x        xcode
+	log, out io.Writer
+	progress func(driver.HelperStep)
+}
+
+// run runs xcodebuild with args at step, and returns the output's last
+// lines. A run that prints helperMark is stopped then and returns
+// errHelperUp. When Xcode waits for the phone, out is told once, and
+// progress gets HelperUnlock, then step again once Xcode goes on.
+func (r xcodeRunner) run(ctx context.Context, step driver.HelperStep, args, env []string) (string, error) {
 	tail := &lastLines{max: 64 << 10}
 	mark := &markWriter{mark: []byte(helperMark), found: make(chan struct{})}
 	waiting := &markWriter{mark: []byte(xcodeWaiting), found: make(chan struct{}), then: func() {
-		fmt.Fprintln(out, "Xcode is waiting for the phone: unlock it and keep it unlocked.")
+		fmt.Fprintln(r.out, "Xcode is waiting for the phone: unlock it and keep it unlocked.")
+		if r.progress != nil {
+			r.progress(driver.HelperUnlock)
+		}
 	}}
-	cmd := exec.Command(x.tool("xcodebuild"), args...)
-	cmd.Env = append(x.env(), env...)
-	cmd.Stdout = io.MultiWriter(log, tail, mark, waiting)
+	if r.progress != nil {
+		// Once Xcode prints something else, the phone was unlocked.
+		waiting.after = func() { r.progress(step) }
+	}
+	cmd := exec.Command(r.x.tool("xcodebuild"), args...)
+	cmd.Env = append(r.x.env(), env...)
+	cmd.Stdout = io.MultiWriter(r.log, tail, mark, waiting)
 	cmd.Stderr = cmd.Stdout
 	// Its own process group: a Ctrl-C reaches Pinky, which stops it with
 	// SIGTERM; on SIGINT a test run collects diagnostics for minutes.
@@ -585,12 +699,19 @@ type markWriter struct {
 	seen  bool
 	// then, when set, runs once with the mark, before found closes.
 	then func()
+	// after, when set, runs once with the first write after the mark's
+	// that does not repeat it.
+	after func()
 }
 
 func (w *markWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.seen {
+		if w.after != nil && len(bytes.TrimSpace(p)) > 0 && !bytes.Contains(p, w.mark) {
+			w.after()
+			w.after = nil
+		}
 		return len(p), nil
 	}
 	b := append(w.carry, p...)
@@ -608,18 +729,14 @@ func (w *markWriter) Write(p []byte) (int, error) {
 }
 
 // xcodeFailed words a failed xcodebuild for the person.
-func xcodeFailed(ctx context.Context, what string, err error, tail, logPath string) error {
+func xcodeFailed(ctx context.Context, what string, err error, tail, logPath string, local bool) error {
 	if ctx.Err() != nil {
 		return fmt.Errorf("%s: %w", what, ctx.Err())
 	}
-	return fmt.Errorf("%s failed: %s (%s)%s", what, xcodeErrors(tail), logPath, hintText(helperHint(tail)))
-}
-
-func hintText(h string) string {
-	if h == "" {
-		return ""
-	}
-	return "\n" + h
+	fix := helperFix(tail)
+	e := helperErr(fix, fmt.Errorf("%s failed: %s", what, xcodeErrors(tail)), logPath)
+	e.Hint = helperHintFor(fix, local)
+	return e
 }
 
 // needsProvisioning reports whether a build failed for want of a profile
@@ -631,25 +748,54 @@ func needsProvisioning(out string) bool {
 		"no provisioning profile", "provisioning profile doesn't include", "to register the device")
 }
 
-// helperHint says what the person can do about a failure that Xcode's
-// output shows, or "".
-func helperHint(out string) string {
+// helperFix is what the person can do about a failure that Xcode's output
+// shows, as a driver.HelperFix* code, or "".
+func helperFix(out string) string {
 	l := strings.ToLower(out)
 	switch {
 	case containsAny(l, "mismatchedapplicationidentifierentitlement", "does not match installed application"):
-		return "Another team signed the helper on the phone, and iOS replaces an app only with one of its team. Name that team with --team, or a new --bundle-id to install beside it."
+		return driver.HelperFixOtherTeam
 	case containsAny(l, "explicitly trusted", "untrusted developer", "not trusted", "verify the developer"):
-		return "On the phone, trust your developer certificate in Settings › General › VPN & Device Management, then run this again."
+		return driver.HelperFixTrust
 	case containsAny(l, "developer mode"):
-		return "Turn on Developer Mode in Settings › Privacy & Security › Developer Mode (the phone restarts), then run this again."
+		return driver.HelperFixDeveloperMode
 	case containsAny(l, "automation mode", "enable ui automation"):
-		return "Enter the phone's passcode on the phone when it asks to allow automation, then run this again."
+		return driver.HelperFixPasscode
 	case containsAny(l, "is locked", "passcode protected", "device locked", "unlock "):
-		return "Unlock the phone and keep it unlocked until the helper starts, then run this again."
+		return driver.HelperFixUnlock
 	case containsAny(l, "no account for team", "no accounts", "sign in with your apple id", "not signed in"):
-		return "Add your Apple ID in Xcode › Settings › Accounts, or name another team with --team."
+		return driver.HelperFixAppleID
 	case needsProvisioning(out), containsAny(l, "no signing certificate", "provisioning profile"):
-		return "Xcode found no way to sign the helper for this phone. Run this without --local-signing to let Xcode get a profile, or check your team in Xcode › Settings › Accounts."
+		return driver.HelperFixSigning
+	}
+	return ""
+}
+
+// helperHintFor says on the command line what the person can do about a
+// failure, by its fix; local is --local-signing.
+func helperHintFor(fix string, local bool) string {
+	switch fix {
+	case driver.HelperFixXcode:
+		return "Install Xcode from the App Store, open it once, then run this again."
+	case driver.HelperFixDeveloperMode:
+		return "Turn on Developer Mode in Settings › Privacy & Security › Developer Mode (the phone restarts), then run this again."
+	case driver.HelperFixOtherTeam:
+		return "Another team signed the helper on the phone, and iOS replaces an app only with one of its team. Name that team with --team, or a new --bundle-id to install beside it."
+	case driver.HelperFixTrust:
+		return "On the phone, trust your developer certificate in Settings › General › VPN & Device Management, then run this again."
+	case driver.HelperFixPasscode:
+		return "Enter the phone's passcode on the phone when it asks to allow automation, then run this again."
+	case driver.HelperFixUnlock:
+		return "Unlock the phone and keep it unlocked until the helper starts, then run this again."
+	case driver.HelperFixAppleID:
+		return "Add your Apple ID in Xcode › Settings › Accounts, or name another team with --team."
+	case driver.HelperFixSigning:
+		if local {
+			return "Xcode found no way to sign the helper for this phone. Run this without --local-signing to let Xcode get a profile, or check your team in Xcode › Settings › Accounts."
+		}
+		return "Xcode found no way to sign the helper for this phone. Check your team in Xcode › Settings › Accounts, and that the phone is added to it."
+	case driver.HelperFixDownload:
+		return "Check the internet connection, then run this again."
 	}
 	return ""
 }
