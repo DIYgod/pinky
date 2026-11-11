@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1111.10 (2026-11-11)
 
 - Pinky 换了更安静的新样子：macOS 和 Windows 11 上侧边栏是半透明的，所有界面用同一套字号和间距，「设置」改成分组列表。
 - 「活动」里任务的每一步排在一条时间线上，并配有当时的截图。
