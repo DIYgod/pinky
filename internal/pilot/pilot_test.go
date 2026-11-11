@@ -9,13 +9,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/anthropics/anthropic-sdk-go/v2"
 
 	"github.com/DIYgod/pinky/internal/demo"
 	"github.com/DIYgod/pinky/internal/driver"
@@ -669,10 +668,43 @@ func TestFallbacksOnlyWhereSupported(t *testing.T) {
 	for model, want := range map[string]bool{"claude-opus-5-5": true, "claude-opus-5": true, "claude-fable-5-2": true,
 		"claude-sonnet-5-5": false, "claude-haiku-5-5": false, "claude-opus-5-5-20261101": true} {
 		c := newClaude(Config{Provider: Anthropic, Model: model}.Normalize(), testKey, http.DefaultClient, "s", nil)
-		got := len(c.params.Betas) == 2
+		got := len(c.betas) == 2
 		if got != want {
 			t.Errorf("%s: fallbacks %v, want %v", model, got, want)
 		}
+	}
+}
+
+// The model's blocks go back as they came, less null fields; before the
+// last fallback block, only text and the fallback blocks go back.
+func TestEcho(t *testing.T) {
+	var in []json.RawMessage
+	for _, b := range []string{
+		`{"type":"thinking","thinking":"a","signature":"s1"}`,
+		`{"type":"text","text":"first","citations":null}`,
+		`{"type":"tool_use","id":"t1","name":"phone_observe","input":{}}`,
+		`{"type":"fallback","model":"claude-opus-5"}`,
+		`{"type":"thinking","thinking":"b","signature":"s2"}`,
+		`{"type":"tool_use","id":"t2","name":"phone_tap","input":{"ref":3}}`,
+	} {
+		in = append(in, json.RawMessage(b))
+	}
+	var got []string
+	for _, b := range echo(in) {
+		got = append(got, string(b.(json.RawMessage)))
+	}
+	want := []string{
+		`{"text":"first","type":"text"}`,
+		`{"type":"fallback","model":"claude-opus-5"}`,
+		`{"type":"thinking","thinking":"b","signature":"s2"}`,
+		`{"type":"tool_use","id":"t2","name":"phone_tap","input":{"ref":3}}`,
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("echo:\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	// Without a fallback, everything goes back.
+	if n := len(echo(in[:3])); n != 3 {
+		t.Errorf("echo without a fallback kept %d of 3 blocks", n)
 	}
 }
 
@@ -796,7 +828,7 @@ func TestClearOld(t *testing.T) {
 	}
 	c.clearOld()
 	for i, m := range c.history {
-		got := m.OfUser.Content[0].OfToolResult.Content[0].OfText.Text
+		got := m.Content[0].(*anToolResult).Content[0].(anText).Text
 		if (i == 0) != (got == cleared) {
 			t.Fatalf("result %d: %.20q", i, got)
 		}
@@ -851,6 +883,6 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
-func anthropicUser(r result) anthropic.BetaMessageParam {
-	return anthropic.NewBetaUserMessage(anthropic.BetaContentBlockParamUnion{OfToolResult: toolResult(r)})
+func anthropicUser(r result) anMessage {
+	return anMessage{Role: "user", Content: []any{toolResult(r)}}
 }

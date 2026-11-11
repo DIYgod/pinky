@@ -1,17 +1,13 @@
 package pilot
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"strconv"
 	"strings"
-	"time"
 )
 
 // openAI is a conversation over an OpenAI-compatible Chat Completions
@@ -208,10 +204,9 @@ func (o *openAI) send(ctx context.Context, results []result, text string) (*turn
 	return t, nil
 }
 
-// post sends the conversation, trying again after a rate limit or a
-// server's error.
+// post sends the conversation.
 func (o *openAI) post(ctx context.Context) (*oaResponse, error) {
-	body, err := json.Marshal(map[string]any{
+	body, err := marshal(map[string]any{
 		"model":       o.model,
 		"messages":    o.history,
 		"tools":       o.tools,
@@ -220,80 +215,17 @@ func (o *openAI) post(ctx context.Context) (*oaResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	wait := time.Second
-	for try := 0; ; try++ {
-		resp, retry, err := o.postOnce(ctx, body)
-		if err == nil || !retry || try == 2 {
-			return resp, err
-		}
-		var ae *apiError
-		if errors.As(err, &ae) && ae.retryAfter > 0 && ae.retryAfter <= 30*time.Second {
-			wait = ae.retryAfter
-		}
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(wait):
-		}
-		wait *= 3
-	}
-}
-
-func (o *openAI) postOnce(ctx context.Context, body []byte) (*oaResponse, bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, o.url, bytes.NewReader(body))
+	h := http.Header{}
+	h.Set("Authorization", "Bearer "+o.key)
+	data, err := post(ctx, o.hc, o.url, h, body)
 	if err != nil {
-		return nil, false, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+o.key)
-	resp, err := o.hc.Do(req)
-	if err != nil {
-		return nil, ctx.Err() == nil, err
-	}
-	defer resp.Body.Close()
-	data, err := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
-	if err != nil {
-		return nil, true, err
-	}
-	if resp.StatusCode/100 != 2 {
-		ae := &apiError{status: resp.StatusCode, message: errorMessage(data)}
-		if s, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil {
-			ae.retryAfter = time.Duration(s) * time.Second
-		}
-		return nil, resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500, ae
+		return nil, err
 	}
 	var r oaResponse
 	if err := json.Unmarshal(data, &r); err != nil {
-		return nil, false, fmt.Errorf("the API's answer is not JSON: %w", err)
+		return nil, fmt.Errorf("the API's answer is not JSON: %w", err)
 	}
-	return &r, false, nil
-}
-
-// errorMessage is the message of an error's body: error.message, or the
-// start of the body.
-func errorMessage(data []byte) string {
-	var e struct {
-		Error json.RawMessage `json:"error"`
-	}
-	if json.Unmarshal(data, &e) == nil && len(e.Error) > 0 {
-		var m struct {
-			Message string `json:"message"`
-		}
-		if json.Unmarshal(e.Error, &m) == nil && m.Message != "" {
-			return m.Message
-		}
-		var s string
-		if json.Unmarshal(e.Error, &s) == nil && s != "" {
-			return s
-		}
-	}
-	s := strings.TrimSpace(string(data))
-	if r := []rune(s); len(r) > 300 {
-		s = string(r[:300]) + "…"
-	}
-	return s
+	return &r, nil
 }
 
 // dropImages takes the screenshots out of the history.

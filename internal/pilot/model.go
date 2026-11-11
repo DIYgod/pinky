@@ -1,9 +1,15 @@
 package pilot
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -95,6 +101,94 @@ func (e *apiError) Error() string {
 	s := fmt.Sprintf("the API answered %d %s", e.status, http.StatusText(e.status))
 	if e.message != "" {
 		s += ": " + e.message
+	}
+	return s
+}
+
+// post sends a request's body to an API and returns the answer's body,
+// trying twice more after a rate limit, a server's error or a dropped
+// connection.
+func post(ctx context.Context, hc *http.Client, url string, header http.Header, body []byte) ([]byte, error) {
+	wait := time.Second
+	for try := 0; ; try++ {
+		data, retry, err := postOnce(ctx, hc, url, header, body)
+		if err == nil || !retry || try == 2 {
+			return data, err
+		}
+		var ae *apiError
+		if errors.As(err, &ae) && ae.retryAfter > 0 && ae.retryAfter <= 30*time.Second {
+			wait = ae.retryAfter
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(wait):
+		}
+		wait *= 3
+	}
+}
+
+func postOnce(ctx context.Context, hc *http.Client, url string, header http.Header, body []byte) ([]byte, bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return nil, false, err
+	}
+	req.Header = header.Clone()
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := hc.Do(req)
+	if err != nil {
+		return nil, ctx.Err() == nil, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
+	if err != nil {
+		return nil, true, err
+	}
+	if resp.StatusCode/100 != 2 {
+		ae := &apiError{status: resp.StatusCode, message: errorMessage(data)}
+		if s, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil {
+			ae.retryAfter = time.Duration(s) * time.Second
+		}
+		return nil, resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500, ae
+	}
+	return data, false, nil
+}
+
+// marshal is v in JSON, with <, > and & as they are: screens are full of
+// them, and escaped they only cost tokens.
+func marshal(v any) ([]byte, error) {
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(b.Bytes(), []byte("\n")), nil
+}
+
+// errorMessage is the message of an error's body: error.message, or the
+// start of the body.
+func errorMessage(data []byte) string {
+	var e struct {
+		Error json.RawMessage `json:"error"`
+	}
+	if json.Unmarshal(data, &e) == nil && len(e.Error) > 0 {
+		var m struct {
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(e.Error, &m) == nil && m.Message != "" {
+			return m.Message
+		}
+		var s string
+		if json.Unmarshal(e.Error, &s) == nil && s != "" {
+			return s
+		}
+	}
+	s := strings.TrimSpace(string(data))
+	if r := []rune(s); len(r) > 300 {
+		s = string(r[:300]) + "…"
 	}
 	return s
 }
