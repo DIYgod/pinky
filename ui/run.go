@@ -447,6 +447,8 @@ type app struct {
 	quitting  bool
 	focused   bool // the main window has the keyboard
 	shortcut  string
+	keys      string // the keys the desktop bound to the shortcut, where it binds them (Wayland): none when the person declined it
+	keysTold  bool   // the desktop told keys
 	videoErr  error
 	buildSeq  int
 	updating  atomic.Bool
@@ -1214,15 +1216,34 @@ func (a *app) registerShortcut() {
 	if acc == "" {
 		acc = "CmdOrCtrl+Alt+."
 	}
-	if err := mygo.GlobalShortcut.Register(acc, a.stopAll); err != nil {
+	opts := mygo.GlobalShortcutOptions{
+		// What the desktop calls the shortcut where it asks about it and
+		// in its settings.
+		Description: locales.SidebarStopAll(),
+		OnKeys: func(keys string) {
+			a.keys, a.keysTold = keys, true
+			if a.main != nil && !a.main.IsDestroyed() {
+				a.main.Invalidate()
+			}
+			a.invalidate()
+		},
+	}
+	if err := mygo.GlobalShortcut.RegisterWith(acc, opts, a.stopAll); err != nil {
 		log.Printf("pinky: global shortcut %s: %v", acc, err)
 		return
 	}
 	a.shortcut = acc
 }
 
-// shortcutLabel is how the sidebar and the flyout write the shortcut.
-func shortcutLabel() string {
+// shortcutLabel is how the sidebar and the flyout write the shortcut:
+// nothing when there is none, or when the desktop bound no keys to it.
+func (a *app) shortcutLabel() string {
+	if a.shortcut == "" {
+		return ""
+	}
+	if a.keysTold {
+		return a.keys
+	}
 	if runtime.GOOS == "darwin" {
 		return "⌥⌘."
 	}

@@ -138,7 +138,7 @@ func (a *app) sidebar(c *mg.Context) {
 			stop.TextColor(p.red).Children(func() {
 				mg.Icon(c, icStop).FontSize(iconBody)
 				mg.Text(c, locales.SidebarStopAll()).FontSize(fsBody).Grow(1)
-				mg.Text(c, shortcutLabel()).FontSize(fsCaption).TextColor(p.ink3)
+				mg.Text(c, a.shortcutLabel()).FontSize(fsCaption).TextColor(p.ink3)
 			})
 		})
 	})
