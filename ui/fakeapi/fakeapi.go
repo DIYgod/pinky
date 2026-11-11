@@ -447,6 +447,8 @@ func (a *API) deviceView(d *device) gateway.DeviceView {
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Lost on Wi-Fi"
 	case d.info.Setup == driver.SetupPhoneChanged && d.info.State == driver.StateNeedsSetup:
 		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Not the same phone"
+	case d.info.Setup == driver.SetupMediaInUse && d.info.State == driver.StateNeedsSetup:
+		v.Status, v.StatusLine = gateway.DeviceNeedsSetup, "Camera or microphone in use"
 	case d.info.State != driver.StateOnline:
 		// Plugged in, waiting for a step, as the gateway lists such a phone
 		// (statusLocked), also while a task waits for it.

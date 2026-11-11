@@ -206,6 +206,10 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.AddPhoneIPhoneRefusedTitle(), refusedWords(*d.Info.DiskImage), locales.AddPhoneIPhoneRefusedRetry()
 	case driver.SetupUpdate:
 		return locales.AddPhoneIPhoneTooOldTitle(d.Info.Name), locales.AddPhoneIPhoneTooOld(d.Info.OSVersion), ""
+	case driver.SetupMediaInUse:
+		// iOS does not mirror the screen while an app uses the camera or
+		// microphone; Pinky tries again by itself (ios/mediawait.go).
+		return locales.MediaInUseTitle(), locales.MediaInUseDetail(d.Info.Name), locales.MediaInUseNote()
 	case driver.SetupPasscode:
 		// iOS asks now and then before the helper may control the phone.
 		return locales.AddPhoneIPhoneStepPasscode(), locales.AddPhoneIPhoneStepPasscodeDetail(), ""

@@ -961,6 +961,8 @@ func statusLine(d gateway.DeviceView) string {
 		return locales.GwStatusInControl()
 	case "Needs setup":
 		return locales.GwStatusNeedsSetup()
+	case "Camera or microphone in use":
+		return locales.GwStatusMediaInUse()
 	case "Found on Wi-Fi":
 		return locales.GwStatusFoundOnWiFi()
 	case "Not the same phone":

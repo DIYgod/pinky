@@ -12391,6 +12391,26 @@ func (msgs Messages) GwStatusLostOnWiFi() string {
 	return Catalog.Format(msgs.locale, "gwStatusLostOnWiFi", nil)
 }
 
+// GwStatusMediaInUse says "Camera or microphone in use"
+// in the language the app shows.
+//
+// A phone's status line: iOS does not mirror the iPhone while an app on it
+// uses the camera or microphone (a call, for one); Pinky connects once they
+// are free. Shown only in other languages; in English the gateway's own
+// words show.
+func GwStatusMediaInUse() string { return In(i18n.Locale()).GwStatusMediaInUse() }
+
+// GwStatusMediaInUse says "Camera or microphone in use"
+// in the language of msgs.
+//
+// A phone's status line: iOS does not mirror the iPhone while an app on it
+// uses the camera or microphone (a call, for one); Pinky connects once they
+// are free. Shown only in other languages; in English the gateway's own
+// words show.
+func (msgs Messages) GwStatusMediaInUse() string {
+	return Catalog.Format(msgs.locale, "gwStatusMediaInUse", nil)
+}
+
 // GwStatusMovingCable says "Moving to the cable"
 // in the language the app shows.
 //
@@ -13889,6 +13909,64 @@ func LostTitle(phone string) string { return In(i18n.Locale()).LostTitle(phone) 
 // it is on the same Wi-Fi. phone is its name.
 func (msgs Messages) LostTitle(phone string) string {
 	return Catalog.Format(msgs.locale, "lostTitle", map[string]any{"phone": phone})
+}
+
+// MediaInUseDetail says "An app on {phone} is using the camera or microphone, and iOS does not let Pinky show the screen while it does. End th…"
+// in the language the app shows.
+//
+// The phone's page, the checkup and Add phone › iPhone: what to do while
+// iOS refuses to mirror an iPhone because an app uses its camera or
+// microphone (a call or FaceTime, Camera, Voice Memos, a screen recording
+// with the microphone, dictation, a Mac using it as Continuity Camera). The
+// dot is iOS's recording indicator: green for the camera, orange for the
+// microphone. Control Center is iOS's own name. phone is its name.
+func MediaInUseDetail(phone string) string { return In(i18n.Locale()).MediaInUseDetail(phone) }
+
+// MediaInUseDetail says "An app on {phone} is using the camera or microphone, and iOS does not let Pinky show the screen while it does. End th…"
+// in the language of msgs.
+//
+// The phone's page, the checkup and Add phone › iPhone: what to do while
+// iOS refuses to mirror an iPhone because an app uses its camera or
+// microphone (a call or FaceTime, Camera, Voice Memos, a screen recording
+// with the microphone, dictation, a Mac using it as Continuity Camera). The
+// dot is iOS's recording indicator: green for the camera, orange for the
+// microphone. Control Center is iOS's own name. phone is its name.
+func (msgs Messages) MediaInUseDetail(phone string) string {
+	return Catalog.Format(msgs.locale, "mediaInUseDetail", map[string]any{"phone": phone})
+}
+
+// MediaInUseNote says "Pinky connects by itself as soon as the camera and microphone are free."
+// in the language the app shows.
+//
+// Under mediaInUseDetail: Pinky keeps trying, and opens the iPhone once no
+// app uses its camera or microphone.
+func MediaInUseNote() string { return In(i18n.Locale()).MediaInUseNote() }
+
+// MediaInUseNote says "Pinky connects by itself as soon as the camera and microphone are free."
+// in the language of msgs.
+//
+// Under mediaInUseDetail: Pinky keeps trying, and opens the iPhone once no
+// app uses its camera or microphone.
+func (msgs Messages) MediaInUseNote() string {
+	return Catalog.Format(msgs.locale, "mediaInUseNote", nil)
+}
+
+// MediaInUseTitle says "Camera or microphone in use"
+// in the language the app shows.
+//
+// The phone's page, the checkup and Add phone › iPhone: the title of the
+// step where iOS refuses to mirror an iPhone because an app uses its camera
+// or microphone.
+func MediaInUseTitle() string { return In(i18n.Locale()).MediaInUseTitle() }
+
+// MediaInUseTitle says "Camera or microphone in use"
+// in the language of msgs.
+//
+// The phone's page, the checkup and Add phone › iPhone: the title of the
+// step where iOS refuses to mirror an iPhone because an app uses its camera
+// or microphone.
+func (msgs Messages) MediaInUseTitle() string {
+	return Catalog.Format(msgs.locale, "mediaInUseTitle", nil)
 }
 
 // MenuActivity says "Activity"

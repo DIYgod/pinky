@@ -172,6 +172,13 @@ const (
 	// that keeps devices apart, a VPN, asleep). Listed offline: it is not
 	// connected, and no step on the computer brings it back.
 	SetupNotOnWiFi = "not_on_wifi"
+	// SetupMediaInUse: the phone is connected and ready, but iOS refuses
+	// to mirror its screen while an app uses the camera or microphone (a
+	// call or FaceTime, Camera, Voice Memos, a screen recording with the
+	// microphone, dictation, a Mac using it as Continuity Camera). The
+	// person ends the call or closes that app; Pinky connects by itself as
+	// soon as the camera and microphone are free.
+	SetupMediaInUse = "media_in_use"
 )
 
 // Provider discovers and opens the devices of one platform.
