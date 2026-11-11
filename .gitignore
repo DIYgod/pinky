@@ -27,6 +27,10 @@ android/inputtest/.gradle/
 android/inputtest/.kotlin/
 android/inputtest/build/
 android/inputtest/local.properties
+android/standalone/.gradle/
+android/standalone/.kotlin/
+android/standalone/build/
+android/standalone/local.properties
 *.apk
 !internal/apppkg/testdata/*.apk
 *.aab

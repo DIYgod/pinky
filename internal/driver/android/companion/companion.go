@@ -79,6 +79,9 @@ const (
 type Client struct {
 	run Runner
 	app App
+	// local is set for a client on the phone itself (NewLocal), which
+	// dials the abstract socket without adb.
+	local bool
 
 	mu     sync.Mutex // guards the fields below and serializes requests
 	fwd    string     // local address of the adb forward
@@ -104,6 +107,22 @@ func New(r Runner) *Client { return NewFor(r, Release) }
 // NewFor returns a client for one build of the app.
 func NewFor(r Runner, app App) *Client {
 	return &Client{run: r, app: app, subs: map[*Subscription]struct{}{}}
+}
+
+// NewLocal returns a client for a build of the app on the same phone as
+// the caller, such as Pinky's core inside the standalone prototype
+// (android/standalone): it dials the abstract socket directly, without
+// adb. The methods that need adb (Enable, Disable, Install and the like)
+// do not work on it.
+func NewLocal(app App) *Client {
+	return &Client{app: app, local: true, subs: map[*Subscription]struct{}{}}
+}
+
+// Call sends a command the client has no method for, such as the
+// standalone prototype's own, and decodes its result into out (nil
+// discards it).
+func (c *Client) Call(ctx context.Context, cmd string, params map[string]any, out any) error {
+	return c.call(ctx, cmd, params, out, true)
 }
 
 // App returns the build the client talks to.
@@ -408,6 +427,14 @@ func (c *Client) connectLocked(ctx context.Context) error {
 // forward first if needed. adb accepts the TCP connection even when nothing
 // listens on the phone, so a dead service shows up as EOF on first read.
 func (c *Client) dialLocked(ctx context.Context) (net.Conn, error) {
+	if c.local {
+		var d net.Dialer
+		conn, err := d.DialContext(ctx, "unix", "@"+c.app.Socket)
+		if err != nil {
+			return nil, c.connError(ctx, err)
+		}
+		return conn, nil
+	}
 	if c.fwd == "" {
 		addr, err := c.run.Forward(ctx, "localabstract:"+c.app.Socket)
 		if err != nil {

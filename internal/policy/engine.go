@@ -186,6 +186,10 @@ func (e *Engine) Evaluate(in Input) Verdict {
 	if in.Op == OpLaunch {
 		app = in.Launch
 	}
+	if IsStandalone(app) && !(in.Op == OpKey && in.Key == "home") {
+		return Verdict{Decision: Deny, Rule: RulePinkyApps,
+			Reason: "Agents cannot open or act on Pinky's own screen: it holds the person's approvals and Stop."}
+	}
 	cats := e.apps.Categories(app)
 	kinds := detect(in, cats)
 	system := contains(cats, CatSystem)

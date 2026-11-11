@@ -64,7 +64,8 @@ class RequestHandler(
                 "events" -> subscribe(id, req, conn)
                 "wait_idle" -> Reply(ok(id, waitIdle(req)))
                 "config" -> Reply(ok(id, service.configure(req)))
-                else -> throw RequestError("unknown_command", "unknown command: $cmd")
+                else -> service.extraCommand(cmd, req)?.let { Reply(ok(id, it)) }
+                    ?: throw RequestError("unknown_command", "unknown command: $cmd")
             }
         } catch (e: RequestError) {
             Reply(error(id, e.code, e.message ?: e.code))
@@ -113,6 +114,7 @@ class RequestHandler(
         // set_text tries the input connection and ACTION_PASTE when
         // ACTION_SET_TEXT is refused, and says which went in (method).
         f += FEATURE_SET_TEXT_FALLBACK
+        f += service.extraFeatures()
         return f
     }
 
