@@ -86,6 +86,12 @@ func TestPhoneLogsAsks(t *testing.T) {
 	if !strings.Contains(res.Log, "before the task") || strings.Count(res.Log, "\n") != 0 {
 		t.Fatalf("filtered log %q", res.Log)
 	}
+	// kind "logs", as the tool's schema names it (#90).
+	res = s.Logs(ctx, LogsRequest{App: "Crash Test", Kind: " Logs ", Since: "3h", Filter: "before"})
+	mustStatus(t, res, StatusSettled)
+	if !strings.Contains(res.Log, "before the task") {
+		t.Fatalf("kind logs: %+v", res)
+	}
 	dev.AddCrash(crashTest, driver.CrashReport{Time: now.Add(time.Millisecond), Kind: "crash", Process: crashTest, PID: 4321,
 		Summary: "java.lang.IllegalStateException: Crash button", Text: "at dev.pinky.crashtest.Main.onClick(Main.java:42)"})
 	res = s.Logs(ctx, LogsRequest{App: "Crash Test", Kind: "crashes"})
@@ -109,7 +115,7 @@ func TestPhoneLogsAsks(t *testing.T) {
 		}
 	}
 	want := []string{"Waiting for you: Read the logs of Crash Test", "Waiting for you: Read the logs of Crash Test",
-		"Read 2 log lines of Crash Test", "Read 1 log line of Crash Test", "Read 1 crash report of Crash Test"}
+		"Read 2 log lines of Crash Test", "Read 1 log line of Crash Test", "Read 1 log line of Crash Test", "Read 1 crash report of Crash Test"}
 	if strings.Join(texts, "|") != strings.Join(want, "|") {
 		t.Fatalf("steps %q, want %q", texts, want)
 	}

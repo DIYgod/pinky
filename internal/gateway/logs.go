@@ -67,9 +67,9 @@ const (
 func (s *Session) Logs(ctx context.Context, req LogsRequest) *Result {
 	kind := strings.ToLower(strings.TrimSpace(req.Kind))
 	switch kind {
-	case "", "log", "lines":
+	case "", LogsKindLines, "log", "lines":
 		kind = LogsKindLines
-	case "crash", "crashes":
+	case LogsKindCrashes, "crash":
 		kind = LogsKindCrashes
 	default:
 		return errResult(ErrInvalidArgument, "kind must be logs or crashes.")
