@@ -40,3 +40,28 @@ func TestStandaloneBlocked(t *testing.T) {
 		t.Errorf("home on Pinky's screen: %+v", v)
 	}
 }
+
+// Pinky's iPhone app is blocked the same way, under each id it gets: its
+// own builds, desktop Pinky's builds with the person's team, and SideStore's.
+// Other apps whose ids merely start alike are not.
+func TestIPhoneAppBlocked(t *testing.T) {
+	e := Default()
+	for _, id := range []string{"cc.diygod.pinky", "cc.diygod.pinky.standalone", "cc.diygod.pinky.standalone.tunnel",
+		"cc.diygod.pinky.ABCDE12345", "pinky.abcde12345", "pinky.abcde12345.activity", "CC.DIYGOD.PINKY.APP"} {
+		app := screen.App{ID: id, Name: "Pinky"}
+		if rule, blocked := e.Blocked(app); !blocked || rule != RulePinkyApps {
+			t.Errorf("Blocked(%s) = %q, %v", id, rule, blocked)
+		}
+		if v := e.Evaluate(Input{Op: OpTap, App: app, AllowBlocked: true}); v.Decision != Deny || v.Rule != RulePinkyApps {
+			t.Errorf("tap on %s: %+v", id, v)
+		}
+		if v := e.Evaluate(Input{Op: OpUninstall, Launch: app}); v.Decision != Deny || v.Rule != RulePinkyApps {
+			t.Errorf("uninstall %s: %+v", id, v)
+		}
+	}
+	for _, id := range []string{"cc.diygod.pinkyclone", "com.example.pinky", "app.pinky.companion"} {
+		if _, blocked := e.Blocked(screen.App{ID: id}); blocked {
+			t.Errorf("%s is blocked", id)
+		}
+	}
+}

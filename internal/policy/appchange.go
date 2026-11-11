@@ -53,13 +53,28 @@ const StandaloneApp = "app.pinky.standalone"
 // prototype's.
 var pinkyApps = []string{"app.pinky.companion", "app.pinky.companion.dev", StandaloneApp}
 
-// IsStandalone reports whether the app is the standalone prototype.
+// IPhoneApp begins the bundle ids of Pinky's iPhone app (ios/), which, like
+// the standalone prototype, holds the person's approvals and Stop on its
+// screen. Its extensions' ids begin with it too, and so do the ids SideStore
+// and AltStore give it (<id>.<their team>).
+const IPhoneApp = "cc.diygod.pinky"
+
+// iPhoneAppTeamPrefix begins the bundle ids desktop Pinky gives the iPhone
+// app when it builds it with the person's own team (pinky.<team>…), since
+// a team cannot sign another team's ids.
+const iPhoneAppTeamPrefix = "pinky."
+
+// IsStandalone reports whether the app is Pinky running on the phone
+// itself: the standalone prototype on Android, Pinky's iPhone app on iOS.
 func IsStandalone(app screen.App) bool {
-	return strings.EqualFold(clonePackage(app.ID), StandaloneApp)
+	id := strings.ToLower(clonePackage(app.ID))
+	return id == StandaloneApp || id == IPhoneApp || strings.HasPrefix(id, IPhoneApp+".") ||
+		strings.HasPrefix(id, iPhoneAppTeamPrefix)
 }
 
 // IsPinkyApp reports whether the app is part of Pinky on the phone: Pinky
-// Companion, or the iPhone's helper. The helper is WebDriverAgent's XCTest
+// Companion, Pinky on the phone itself (IsStandalone), or the iPhone's
+// helper. The helper is WebDriverAgent's XCTest
 // runner, and every runner counts, whatever its bundle id: Pinky Helper keeps
 // the id it was first installed with, which may be anything ending in
 // .xctrunner (iPhone Use's cc.diygod.iphoneuse.wda.xctrunner, a --bundle-id of
@@ -74,7 +89,7 @@ func IsPinkyApp(app screen.App) bool {
 			return true
 		}
 	}
-	return strings.HasSuffix(id, ".xctrunner")
+	return strings.HasSuffix(id, ".xctrunner") || IsStandalone(app)
 }
 
 // appChangeLocked decides an install, uninstall or stop. Unlike the screen
