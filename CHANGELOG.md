@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1111.4 (2026-11-11)
 
 - A remote agent whose client opens a new session for every call no longer loses its task two minutes after its first call: the wait starts again each time a session closes. Thanks @pseudoyu.
 - Stop all no longer shows before any phone is added.
