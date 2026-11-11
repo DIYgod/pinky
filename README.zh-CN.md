@@ -143,7 +143,7 @@ Pinky 打开手机、或者在有线和 Wi-Fi 之间切换时，会显示「正�
 
 #### iOS 17.4 到 26 的 iPhone
 
-iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自电脑的点按和输入：WebDriverAgent，要在装有 Xcode 的 Mac 上用你自己的 Apple ID 签名并安装一次：插上 iPhone，在「终端」运行 `pinkyctl helper install`，它会构建、签名并装好，手机上显示为「Pinky 助手」，用 Pinky 的图标（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)，也可以直接用 Xcode 装）。用免费 Apple ID 的话，每 7 天要重新安装一次：到期前两天，手机页面和体检会提醒你；到期后，手机会显示为「需要设置」并说明原因（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。目前已经在 Windows 上、用一台 iOS 18.7.11 的 iPhone XS Max 试过（有线和 Wi-Fi）。不装它的话，Pinky 只能显示和读取屏幕（限 Mac）、打开 App，不能点按、滑动或输入。不支持 iOS 17.3 及更早版本。
+iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自电脑的点按和输入：WebDriverAgent，要在装有 Xcode 的 Mac 上用你自己的 Apple ID 签名并安装一次：插上 iPhone，在 Pinky 里它的页面上点「安装辅助应用」（或者在「添加手机 › 连接旧款 iPhone」里点），或者在「终端」运行 `pinkyctl helper install`。两种方式都会构建、签名并装好，手机上显示为「Pinky 助手」，用 Pinky 的图标；在 Pinky 窗口里装时，每一步都会显示出来，Xcode 等手机解锁时也会提醒你（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)，也可以直接用 Xcode 装）。用免费 Apple ID 的话，每 7 天要重新安装一次：到期前两天，手机页面和体检会提醒你，点「重新安装」即可；到期后，手机会显示为「需要设置」并说明原因（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。目前已经在 Windows 上、用一台 iOS 18.7.11 的 iPhone XS Max 试过（有线和 Wi-Fi）。不装它的话，Pinky 只能显示和读取屏幕（限 Mac）、打开 App，不能点按、滑动或输入。不支持 iOS 17.3 及更早版本。
 
 ### 3. 把 Pinky 接入你的 Agent
 
@@ -179,11 +179,11 @@ iOS 27 以下的 iPhone，只能通过手机上的一个辅助应用接收来自
   | iOS | 方式 | 能做什么 | 测试过的设备 |
   | --- | --- | --- | --- |
   | 27 及以上 | Xcode 的 Device Hub 协议；手机上什么都不装 | 除双指缩放外的全部功能。输入文字时会先粘贴，再把你的剪贴板恢复原样 | iPhone 13 mini，iOS 27.0.1 |
-  | 17.4 及以上，装了辅助应用 | WebDriverAgent 辅助应用（手机上显示为「Pinky 助手」），在装有 Xcode 的 Mac 上用 `pinkyctl helper install` 装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）：iOS 17.4 到 26 自动使用，iOS 27 上由你选 | 全部功能，而且手机不共享屏幕，所以拒绝屏幕共享的银行 App 照常能用（测试中有星展银行 digibank 和招商银行）。比 Device Hub 慢：读一次主屏幕约 7 秒（Device Hub 不到 0.5 秒），点一下要 0.5 到 0.8 秒。辅助应用启动前，iOS 偶尔会要求在手机上输入锁屏密码。实时画面在 macOS 和 Windows 上都能用 | iPhone 13 mini，iOS 27.0.1，选了辅助应用；iPhone XS Max，iOS 18.7.11，在 Windows 上试过实时画面（有线和 Wi-Fi），以及辅助应用的点按键和滑动；iOS 18.5 和 26.5 模拟器 |
+  | 17.4 及以上，装了辅助应用 | WebDriverAgent 辅助应用（手机上显示为「Pinky 助手」），在装有 Xcode 的 Mac 上从 Pinky 窗口或用 `pinkyctl helper install` 装一次（[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)）：iOS 17.4 到 26 自动使用，iOS 27 上由你选 | 全部功能，而且手机不共享屏幕，所以拒绝屏幕共享的银行 App 照常能用（测试中有星展银行 digibank 和招商银行）。比 Device Hub 慢：读一次主屏幕约 7 秒（Device Hub 不到 0.5 秒），点一下要 0.5 到 0.8 秒。辅助应用启动前，iOS 偶尔会要求在手机上输入锁屏密码。实时画面在 macOS 和 Windows 上都能用 | iPhone 13 mini，iOS 27.0.1，选了辅助应用；iPhone XS Max，iOS 18.7.11，在 Windows 上试过实时画面（有线和 Wi-Fi），以及辅助应用的点按键和滑动；iOS 18.5 和 26.5 模拟器 |
   | 17.4 到 26，不装辅助应用 | 只用开发者服务；什么都不装 | 看画面（每秒几帧，限 macOS 和 Windows）、读屏幕（位置靠 OCR，限 macOS）、打开 App 和链接。不能点按、滑动、输入或回到主屏幕：没有辅助应用，手机不接受输入 | 同样的服务在 iOS 27.0.1 上测过；还没在 iOS 27 以下的真机上试过 |
   | 17.3 及更早 | | 不支持：17.4 之前的连接需要管理员权限，iOS 16 及更早还需要当前 Xcode 已不再包含的开发者磁盘映像 | |
 
-  辅助应用是 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你重新安装（在装有 Xcode 的 Mac 上运行 `pinkyctl helper install`）；到期后，手机会显示为「需要设置」并说明原因，而不是启动辅助应用失败（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。
+  辅助应用是 Appium 的 WebDriverAgent，用你自己的 Apple ID 签名。用免费 Apple ID 签名可以用 7 天，付费开发者账户可以用一年。Pinky 会在 iPhone 上读取签名的到期时间：到期前两天，手机页面和体检会提醒你重新安装（在装有 Xcode 的 Mac 上点 Pinky 里的「重新安装」，或运行 `pinkyctl helper install`）；到期后，手机会显示为「需要设置」并说明原因，而不是启动辅助应用失败（[怎么重新安装](docs/notes/ios.md#when-the-helpers-signature-runs-out)）。
 - **iPhone 的屏幕共享**：Pinky 串流 iPhone 的画面时，iOS 会告诉各个 App 屏幕正在共享，有些银行 App（比如星展银行 digibank 和招商银行）会拒绝运行或者发出警告。这时 iOS 也不让 App 使用相机和麦克风，所以相机里是黑的，扫不了码。Pinky 只在这些时候串流：手机页面或卡片在 Pinky 里打开着、有 Agent 在操作它，以及之后的 30 秒；过后这些 App 就恢复正常。通过 CoreDevice 连接时，Agent 用不了这些 App。再装上 WebDriverAgent 辅助应用，连接方式保持「自动」（「设置 › 手机」）：任务平时走 CoreDevice，打开星展银行 digibank 或招商银行时，或者 Agent 要求时，Pinky 会把这个任务临时切到不共享屏幕的辅助应用，任务结束后再切回 CoreDevice。也可以让这台 iPhone 的所有任务都通过辅助应用连接。
 - **模拟器**：iOS 模拟器（Mac 上要装 Xcode）和 Android 模拟器（来自 Android Studio）也能当手机用。「添加手机 › 虚拟手机」列出这台电脑上的模拟器：点「启动」启动一台，运行起来后它就作为手机出现，标着「模拟器」；点「关闭」关掉它。Pinky 启动的 Android 模拟器没有声音，这样蓝牙耳机不会被切到麦克风模式。只有你能启动模拟器，Agent 没有这个工具。实时画面、录屏、审批和规则都和真机一样。Pinky 像 Android Studio 那样找 Android SDK（先看 `ANDROID_HOME`，再看 `ANDROID_SDK_ROOT`，最后是 Android Studio 默认的安装位置），找到后 Android 模拟器用起来就像一台插着线的 Android 手机。iOS 模拟器第一次用时，Pinky 会用你的 Xcode 构建 Appium 的 WebDriverAgent：源码来自固定的一个版本，构建前先校验文件，不签名，也不需要 Apple ID。这需要 20 秒到几分钟，构建结果一直沿用到 Xcode 更新。Pinky 不会创建模拟器，也不会下载系统映像：请在 Xcode（Window › Devices and Simulators）或 Android Studio 的 Device Manager 里创建（[详情](docs/notes/ios.md#ios-simulators)）。
 - **锁着的手机**：Pinky 从不让手机一直亮着，只在每一步之前唤醒屏幕。在「设置 › 手机」里保存手机的 PIN 码，就能在电脑上用 Touch ID 解锁。Agent 永远看不到 PIN 码。Android 上，这在 AOSP 风格的锁屏上验证过（Mi 10 Pro 上的 LineageOS，Android 10、16 和 17 模拟器）；小米、三星、OPPO、一加、vivo、荣耀和华为的锁屏只有根据已知信息写的测试覆盖，Pinky 读不准 PIN 码键盘时什么都不会输入（[详情](docs/notes/integration.md#unlocking-other-android-phones)）。
@@ -276,7 +276,7 @@ Pinky 不会传。截图、录屏和记录都存在你的电脑上，默认保�
 <details>
 <summary><b>Pinky 会在手机上装什么？</b></summary>
 
-Android 上，你点「安装」后会装上 Pinky Companion，之后 Pinky 会帮它保持最新，并且只在 Agent 工作时开启它的无障碍服务（[原因](#常见问题)）。iPhone 上，iOS 27 及以上不装任何应用：Pinky 只是像 Xcode 那样挂载 Apple 的开发者磁盘映像。iOS 17.4 到 26 上是 WebDriverAgent 辅助应用，要你在装有 Xcode 的 Mac 上装一次（`pinkyctl helper install`，[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)），手机上显示为「Pinky 助手」。
+Android 上，你点「安装」后会装上 Pinky Companion，之后 Pinky 会帮它保持最新，并且只在 Agent 工作时开启它的无障碍服务（[原因](#常见问题)）。iPhone 上，iOS 27 及以上不装任何应用：Pinky 只是像 Xcode 那样挂载 Apple 的开发者磁盘映像。iOS 17.4 到 26 上是 WebDriverAgent 辅助应用，要你在装有 Xcode 的 Mac 上装一次（在 Pinky 里点「安装辅助应用」，或运行 `pinkyctl helper install`，[怎么装](docs/notes/ios.md#installing-the-webdriveragent-helper)），手机上显示为「Pinky 助手」。
 
 </details>
 

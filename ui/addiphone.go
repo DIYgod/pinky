@@ -289,7 +289,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			case driver.SetupDiskImageRefused:
 				// Apple will not sign the image on this computer: trying
 				// it again cannot help, a newer one can.
-				title, text, note := setupWords(*d, d.Info.Setup)
+				title, text, note := setupWords(*d, d.Info.Setup, a.canInstallHelper())
 				guideProblem(c, title, text)
 				if refusedNeedsXcode(d.Info.DiskImage) {
 					mg.Row(c).Children(func() {
@@ -308,13 +308,19 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			case driver.SetupInstallHelper:
 				// Driven through the helper, which is missing or ran out:
 				// nothing for Pinky to retry (checkup_iphone.go).
-				title, text, _ := setupWords(*d, d.Info.Setup)
-				guideProblem(c, title, text)
-				mg.Row(c).Children(func() {
-					if linkButton(c, locales.CheckHelperHow()).Clicked() {
-						openURL(c, helperLink(*d), func(error) {})
-					}
-				})
+				// On a Mac with Xcode, Pinky installs it from here.
+				title, text, _ := setupWords(*d, d.Info.Setup, a.canInstallHelper())
+				if !a.helperRunning(d.Info.ID) {
+					guideProblem(c, title, text)
+				}
+				again := !d.Info.HelperExpires.IsZero()
+				if !a.helperInstall(c, d.Info.ID, d.Info.Name, helperOpt{again: again, note: true}) {
+					mg.Row(c).Children(func() {
+						if linkButton(c, locales.CheckHelperHow()).Clicked() {
+							openURL(c, helperLink(*d), func(error) {})
+						}
+					})
+				}
 			default:
 				guideProblem(c, locales.AddPhoneIPhoneStuck(), d.Info.Detail)
 				guideNote(c, locales.AddPhoneIPhoneRetrying())

@@ -2221,6 +2221,26 @@ func (msgs Messages) AddPhoneOlderHelperDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderHelperDetail", nil)
 }
 
+// AddPhoneOlderHelperHow says "Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal, with the iPhone connected and unlocked.…"
+// in the language the app shows.
+//
+// Add phone › older iPhone, Install the Pinky helper chosen, where Pinky
+// cannot install it from its window (no Mac, or no Xcode): how to install
+// it. pinkyctl helper install is a command typed in Terminal (macOS's app,
+// named as Apple names it in the language) and stays as it is.
+func AddPhoneOlderHelperHow() string { return In(i18n.Locale()).AddPhoneOlderHelperHow() }
+
+// AddPhoneOlderHelperHow says "Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal, with the iPhone connected and unlocked.…"
+// in the language of msgs.
+//
+// Add phone › older iPhone, Install the Pinky helper chosen, where Pinky
+// cannot install it from its window (no Mac, or no Xcode): how to install
+// it. pinkyctl helper install is a command typed in Terminal (macOS's app,
+// named as Apple names it in the language) and stays as it is.
+func (msgs Messages) AddPhoneOlderHelperHow() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderHelperHow", nil)
+}
+
 // AddPhoneOlderIPhone says "Try an older iPhone"
 // in the language the app shows.
 //
@@ -2235,6 +2255,24 @@ func AddPhoneOlderIPhone() string { return In(i18n.Locale()).AddPhoneOlderIPhone
 // to the ways of connecting an older iPhone.
 func (msgs Messages) AddPhoneOlderIPhone() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderIPhone", nil)
+}
+
+// AddPhoneOlderMirrorNotYet says "Pinky can't connect through iPhone Mirroring yet. Install the Pinky helper instead, or update to iOS 27."
+// in the language the app shows.
+//
+// Add phone › older iPhone, Use iPhone Mirroring chosen: Pinky has no way
+// in through iPhone Mirroring yet. iPhone Mirroring is Apple's name for the
+// feature in the language.
+func AddPhoneOlderMirrorNotYet() string { return In(i18n.Locale()).AddPhoneOlderMirrorNotYet() }
+
+// AddPhoneOlderMirrorNotYet says "Pinky can't connect through iPhone Mirroring yet. Install the Pinky helper instead, or update to iOS 27."
+// in the language of msgs.
+//
+// Add phone › older iPhone, Use iPhone Mirroring chosen: Pinky has no way
+// in through iPhone Mirroring yet. iPhone Mirroring is Apple's name for the
+// feature in the language.
+func (msgs Messages) AddPhoneOlderMirrorNotYet() string {
+	return Catalog.Format(msgs.locale, "addPhoneOlderMirrorNotYet", nil)
 }
 
 // AddPhoneOlderMirroring says "Use iPhone Mirroring (this Mac only)"
@@ -2267,22 +2305,6 @@ func AddPhoneOlderMirroringDetail() string { return In(i18n.Locale()).AddPhoneOl
 // Add phone › older iPhone: under "Use iPhone Mirroring", its drawback.
 func (msgs Messages) AddPhoneOlderMirroringDetail() string {
 	return Catalog.Format(msgs.locale, "addPhoneOlderMirroringDetail", nil)
-}
-
-// AddPhoneOlderNotYet says "This build can't set that up yet: the gateway's iOS backends for older iPhones come in M3."
-// in the language the app shows.
-//
-// Add phone › older iPhone: shown once the person picks a way to connect,
-// as neither works in this build yet. M3 is a milestone of the project.
-func AddPhoneOlderNotYet() string { return In(i18n.Locale()).AddPhoneOlderNotYet() }
-
-// AddPhoneOlderNotYet says "This build can't set that up yet: the gateway's iOS backends for older iPhones come in M3."
-// in the language of msgs.
-//
-// Add phone › older iPhone: shown once the person picks a way to connect,
-// as neither works in this build yet. M3 is a milestone of the project.
-func (msgs Messages) AddPhoneOlderNotYet() string {
-	return Catalog.Format(msgs.locale, "addPhoneOlderNotYet", nil)
 }
 
 // AddPhoneOlderTitle says "This iPhone needs one more step"
@@ -4849,6 +4871,30 @@ func (msgs Messages) CheckHelperExpired(phone string, when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperExpired", map[string]any{"phone": phone, "when": when})
 }
 
+// CheckHelperExpiredHere says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again; signe…"
+// in the language the app shows.
+//
+// Checkup and the Phone screen, on a Mac with Xcode, an iPhone's helper
+// (WebDriverAgent): the signature (provisioning profile) made with the
+// person's Apple ID ran out, so the iPhone no longer starts the helper; the
+// button below, Install again, installs it. phone is the iPhone's name;
+// when is when it ran out, with the time.
+func CheckHelperExpiredHere(phone string, when time.Time) string {
+	return In(i18n.Locale()).CheckHelperExpiredHere(phone, when)
+}
+
+// CheckHelperExpiredHere says "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again; signe…"
+// in the language of msgs.
+//
+// Checkup and the Phone screen, on a Mac with Xcode, an iPhone's helper
+// (WebDriverAgent): the signature (provisioning profile) made with the
+// person's Apple ID ran out, so the iPhone no longer starts the helper; the
+// button below, Install again, installs it. phone is the iPhone's name;
+// when is when it ran out, with the time.
+func (msgs Messages) CheckHelperExpiredHere(phone string, when time.Time) string {
+	return Catalog.Format(msgs.locale, "checkHelperExpiredHere", map[string]any{"phone": phone, "when": when})
+}
+
 // CheckHelperHow says "How to install it"
 // in the language the app shows.
 //
@@ -4917,6 +4963,30 @@ func CheckHelperSoon(phone string, when time.Time) string {
 // out, with the time.
 func (msgs Messages) CheckHelperSoon(phone string, when time.Time) string {
 	return Catalog.Format(msgs.locale, "checkHelperSoon", map[string]any{"phone": phone, "when": when})
+}
+
+// CheckHelperSoonHere says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then."
+// in the language the app shows.
+//
+// Checkup and a reminder on the Phone screen, on a Mac with Xcode, an
+// iPhone's helper (WebDriverAgent): its signature (provisioning profile)
+// runs out within two days, after which the iPhone no longer starts the
+// helper; the button beside it, Install again, installs it. phone is the
+// iPhone's name; when is when it runs out, with the time.
+func CheckHelperSoonHere(phone string, when time.Time) string {
+	return In(i18n.Locale()).CheckHelperSoonHere(phone, when)
+}
+
+// CheckHelperSoonHere says "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then."
+// in the language of msgs.
+//
+// Checkup and a reminder on the Phone screen, on a Mac with Xcode, an
+// iPhone's helper (WebDriverAgent): its signature (provisioning profile)
+// runs out within two days, after which the iPhone no longer starts the
+// helper; the button beside it, Install again, installs it. phone is the
+// iPhone's name; when is when it runs out, with the time.
+func (msgs Messages) CheckHelperSoonHere(phone string, when time.Time) string {
+	return Catalog.Format(msgs.locale, "checkHelperSoonHere", map[string]any{"phone": phone, "when": when})
 }
 
 // CheckHelperTitle says "Pinky helper"
@@ -13677,6 +13747,436 @@ func GwValueUpsideDown() string { return In(i18n.Locale()).GwValueUpsideDown() }
 // English the gateway's own words show.
 func (msgs Messages) GwValueUpsideDown() string {
 	return Catalog.Format(msgs.locale, "gwValueUpsideDown", nil)
+}
+
+// HelperCancel says "Cancel"
+// in the language the app shows.
+//
+// Button that stops installing the iPhone helper while Xcode builds or
+// installs it.
+func HelperCancel() string { return In(i18n.Locale()).HelperCancel() }
+
+// HelperCancel says "Cancel"
+// in the language of msgs.
+//
+// Button that stops installing the iPhone helper while Xcode builds or
+// installs it.
+func (msgs Messages) HelperCancel() string {
+	return Catalog.Format(msgs.locale, "helperCancel", nil)
+}
+
+// HelperChooseTeam says "This Mac can sign the helper for more than one team. Which one should sign it?"
+// in the language the app shows.
+//
+// Installing the iPhone helper: the Mac has signing certificates of several
+// Apple developer teams, and the person picks one with the buttons below.
+func HelperChooseTeam() string { return In(i18n.Locale()).HelperChooseTeam() }
+
+// HelperChooseTeam says "This Mac can sign the helper for more than one team. Which one should sign it?"
+// in the language of msgs.
+//
+// Installing the iPhone helper: the Mac has signing certificates of several
+// Apple developer teams, and the person picks one with the buttons below.
+func (msgs Messages) HelperChooseTeam() string {
+	return Catalog.Format(msgs.locale, "helperChooseTeam", nil)
+}
+
+// HelperErrAppleID says "Xcode has no Apple ID to sign the helper with. Add yours in Xcode › Settings › Accounts (a free one works), then …"
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: Xcode has no Apple account or team
+// to sign with. Xcode › Settings › Accounts stays in English: Xcode has
+// no other language.
+func HelperErrAppleID() string { return In(i18n.Locale()).HelperErrAppleID() }
+
+// HelperErrAppleID says "Xcode has no Apple ID to sign the helper with. Add yours in Xcode › Settings › Accounts (a free one works), then …"
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: Xcode has no Apple account or team
+// to sign with. Xcode › Settings › Accounts stays in English: Xcode has
+// no other language.
+func (msgs Messages) HelperErrAppleID() string {
+	return Catalog.Format(msgs.locale, "helperErrAppleID", nil)
+}
+
+// HelperErrDeveloperMode says "Developer Mode is off on {phone}. Turn it on in Settings › Privacy & Security › Developer Mode (the phone restart…"
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: Developer Mode is off; the path is
+// the iPhone's Settings, named as Apple names them in the language. phone
+// is the iPhone's name, or "the iPhone".
+func HelperErrDeveloperMode(phone string) string {
+	return In(i18n.Locale()).HelperErrDeveloperMode(phone)
+}
+
+// HelperErrDeveloperMode says "Developer Mode is off on {phone}. Turn it on in Settings › Privacy & Security › Developer Mode (the phone restart…"
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: Developer Mode is off; the path is
+// the iPhone's Settings, named as Apple names them in the language. phone
+// is the iPhone's name, or "the iPhone".
+func (msgs Messages) HelperErrDeveloperMode(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrDeveloperMode", map[string]any{"phone": phone})
+}
+
+// HelperErrDownload says "Pinky couldn't download the helper. Check this Mac's internet connection, then try again."
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: downloading its source failed.
+func HelperErrDownload() string { return In(i18n.Locale()).HelperErrDownload() }
+
+// HelperErrDownload says "Pinky couldn't download the helper. Check this Mac's internet connection, then try again."
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: downloading its source failed.
+func (msgs Messages) HelperErrDownload() string {
+	return Catalog.Format(msgs.locale, "helperErrDownload", nil)
+}
+
+// HelperErrInUse says "An agent is working on {phone}. Try again once its task ends."
+// in the language the app shows.
+//
+// Installing the iPhone helper refused: an agent's task holds the phone.
+// phone is the iPhone's name.
+func HelperErrInUse(phone string) string { return In(i18n.Locale()).HelperErrInUse(phone) }
+
+// HelperErrInUse says "An agent is working on {phone}. Try again once its task ends."
+// in the language of msgs.
+//
+// Installing the iPhone helper refused: an agent's task holds the phone.
+// phone is the iPhone's name.
+func (msgs Messages) HelperErrInUse(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrInUse", map[string]any{"phone": phone})
+}
+
+// HelperErrOther says "Installing the helper on {phone} failed."
+// in the language the app shows.
+//
+// Installing the iPhone helper failed for a reason Pinky has no words for;
+// Xcode's own words follow in small print. phone is the iPhone's name, or
+// "the iPhone".
+func HelperErrOther(phone string) string { return In(i18n.Locale()).HelperErrOther(phone) }
+
+// HelperErrOther says "Installing the helper on {phone} failed."
+// in the language of msgs.
+//
+// Installing the iPhone helper failed for a reason Pinky has no words for;
+// Xcode's own words follow in small print. phone is the iPhone's name, or
+// "the iPhone".
+func (msgs Messages) HelperErrOther(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrOther", map[string]any{"phone": phone})
+}
+
+// HelperErrOtherTeam says "Another team signed the helper already on {phone}, and iOS replaces it only with one of that team. Delete Pinky Helpe…"
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: the helper on the phone was signed
+// by a team this Mac cannot sign for. Pinky Helper is the helper's name on
+// the iPhone's home screen in the language (Pinky 助手, Pinky
+// ヘルパー); WebDriverAgentRunner, an older one's, stays as it is.
+// phone is the iPhone's name, or "the iPhone".
+func HelperErrOtherTeam(phone string) string { return In(i18n.Locale()).HelperErrOtherTeam(phone) }
+
+// HelperErrOtherTeam says "Another team signed the helper already on {phone}, and iOS replaces it only with one of that team. Delete Pinky Helpe…"
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: the helper on the phone was signed
+// by a team this Mac cannot sign for. Pinky Helper is the helper's name on
+// the iPhone's home screen in the language (Pinky 助手, Pinky
+// ヘルパー); WebDriverAgentRunner, an older one's, stays as it is.
+// phone is the iPhone's name, or "the iPhone".
+func (msgs Messages) HelperErrOtherTeam(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrOtherTeam", map[string]any{"phone": phone})
+}
+
+// HelperErrPasscode says "Nobody entered the passcode in time when {phone} asked for it to allow automation. Try again, and enter it on the pho…"
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: iOS asked for the phone's passcode
+// before it lets the helper control the phone, and it was not entered in
+// time. phone is the iPhone's name, or "the iPhone".
+func HelperErrPasscode(phone string) string { return In(i18n.Locale()).HelperErrPasscode(phone) }
+
+// HelperErrPasscode says "Nobody entered the passcode in time when {phone} asked for it to allow automation. Try again, and enter it on the pho…"
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: iOS asked for the phone's passcode
+// before it lets the helper control the phone, and it was not entered in
+// time. phone is the iPhone's name, or "the iPhone".
+func (msgs Messages) HelperErrPasscode(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrPasscode", map[string]any{"phone": phone})
+}
+
+// HelperErrPhone says "Xcode can't reach {phone}. Connect it with a cable, or keep it unlocked on the same Wi-Fi as this Mac, then try again."
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: Xcode does not see the phone. phone
+// is the iPhone's name, or "the iPhone".
+func HelperErrPhone(phone string) string { return In(i18n.Locale()).HelperErrPhone(phone) }
+
+// HelperErrPhone says "Xcode can't reach {phone}. Connect it with a cable, or keep it unlocked on the same Wi-Fi as this Mac, then try again."
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: Xcode does not see the phone. phone
+// is the iPhone's name, or "the iPhone".
+func (msgs Messages) HelperErrPhone(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrPhone", map[string]any{"phone": phone})
+}
+
+// HelperErrSigning says "Xcode found no way to sign the helper for {phone}. Check your team in Xcode › Settings › Accounts, then try again."
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: Xcode found no signing certificate
+// or provisioning profile that covers the phone. Xcode › Settings ›
+// Accounts stays in English. phone is the iPhone's name, or "the iPhone".
+func HelperErrSigning(phone string) string { return In(i18n.Locale()).HelperErrSigning(phone) }
+
+// HelperErrSigning says "Xcode found no way to sign the helper for {phone}. Check your team in Xcode › Settings › Accounts, then try again."
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: Xcode found no signing certificate
+// or provisioning profile that covers the phone. Xcode › Settings ›
+// Accounts stays in English. phone is the iPhone's name, or "the iPhone".
+func (msgs Messages) HelperErrSigning(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrSigning", map[string]any{"phone": phone})
+}
+
+// HelperErrTrust says "Your developer certificate isn't trusted on {phone} yet. On the phone, trust it in Settings › General › VPN & Dev…"
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: the phone does not trust the
+// developer who signed the helper yet; the path is the iPhone's Settings,
+// named as Apple names them in the language. phone is the iPhone's name, or
+// "the iPhone".
+func HelperErrTrust(phone string) string { return In(i18n.Locale()).HelperErrTrust(phone) }
+
+// HelperErrTrust says "Your developer certificate isn't trusted on {phone} yet. On the phone, trust it in Settings › General › VPN & Dev…"
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: the phone does not trust the
+// developer who signed the helper yet; the path is the iPhone's Settings,
+// named as Apple names them in the language. phone is the iPhone's name, or
+// "the iPhone".
+func (msgs Messages) HelperErrTrust(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrTrust", map[string]any{"phone": phone})
+}
+
+// HelperErrUnlock says "Xcode couldn't install the helper while {phone} was locked. Unlock it, keep it unlocked, then try again."
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: the phone stayed locked while Xcode
+// waited for it. phone is the iPhone's name, or "the iPhone".
+func HelperErrUnlock(phone string) string { return In(i18n.Locale()).HelperErrUnlock(phone) }
+
+// HelperErrUnlock says "Xcode couldn't install the helper while {phone} was locked. Unlock it, keep it unlocked, then try again."
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: the phone stayed locked while Xcode
+// waited for it. phone is the iPhone's name, or "the iPhone".
+func (msgs Messages) HelperErrUnlock(phone string) string {
+	return Catalog.Format(msgs.locale, "helperErrUnlock", map[string]any{"phone": phone})
+}
+
+// HelperErrXcode says "Installing the helper needs Xcode. Install it from the App Store, open it once, then try again."
+// in the language the app shows.
+//
+// Installing the iPhone helper failed: this Mac has no Xcode.
+func HelperErrXcode() string { return In(i18n.Locale()).HelperErrXcode() }
+
+// HelperErrXcode says "Installing the helper needs Xcode. Install it from the App Store, open it once, then try again."
+// in the language of msgs.
+//
+// Installing the iPhone helper failed: this Mac has no Xcode.
+func (msgs Messages) HelperErrXcode() string {
+	return Catalog.Format(msgs.locale, "helperErrXcode", nil)
+}
+
+// HelperInstall says "Install the helper"
+// in the language the app shows.
+//
+// Button on a Mac with Xcode, in the checkup, on the Phone screen and in
+// Add phone: Pinky builds the Pinky helper (WebDriverAgent) with Xcode and
+// installs it on the iPhone.
+func HelperInstall() string { return In(i18n.Locale()).HelperInstall() }
+
+// HelperInstall says "Install the helper"
+// in the language of msgs.
+//
+// Button on a Mac with Xcode, in the checkup, on the Phone screen and in
+// Add phone: Pinky builds the Pinky helper (WebDriverAgent) with Xcode and
+// installs it on the iPhone.
+func (msgs Messages) HelperInstall() string {
+	return Catalog.Format(msgs.locale, "helperInstall", nil)
+}
+
+// HelperInstallAgain says "Install again"
+// in the language the app shows.
+//
+// Button on a Mac with Xcode: installs an iPhone's helper (WebDriverAgent)
+// again, as its signature runs out soon or ran out.
+func HelperInstallAgain() string { return In(i18n.Locale()).HelperInstallAgain() }
+
+// HelperInstallAgain says "Install again"
+// in the language of msgs.
+//
+// Button on a Mac with Xcode: installs an iPhone's helper (WebDriverAgent)
+// again, as its signature runs out soon or ran out.
+func (msgs Messages) HelperInstallAgain() string {
+	return Catalog.Format(msgs.locale, "helperInstallAgain", nil)
+}
+
+// HelperInstallNote says "Pinky builds the helper with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done."
+// in the language the app shows.
+//
+// Under the button that installs the iPhone helper from Pinky's window:
+// what it does, and what the person keeps in mind meanwhile.
+func HelperInstallNote() string { return In(i18n.Locale()).HelperInstallNote() }
+
+// HelperInstallNote says "Pinky builds the helper with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done."
+// in the language of msgs.
+//
+// Under the button that installs the iPhone helper from Pinky's window:
+// what it does, and what the person keeps in mind meanwhile.
+func (msgs Messages) HelperInstallNote() string {
+	return Catalog.Format(msgs.locale, "helperInstallNote", nil)
+}
+
+// HelperInstalledToast says "The Pinky helper is installed on {phone}."
+// in the language the app shows.
+//
+// Toast once the iPhone helper is installed from Pinky's window. phone is
+// the iPhone's name, or "the iPhone".
+func HelperInstalledToast(phone string) string { return In(i18n.Locale()).HelperInstalledToast(phone) }
+
+// HelperInstalledToast says "The Pinky helper is installed on {phone}."
+// in the language of msgs.
+//
+// Toast once the iPhone helper is installed from Pinky's window. phone is
+// the iPhone's name, or "the iPhone".
+func (msgs Messages) HelperInstalledToast(phone string) string {
+	return Catalog.Format(msgs.locale, "helperInstalledToast", map[string]any{"phone": phone})
+}
+
+// HelperShowLog says "Show the log"
+// in the language the app shows.
+//
+// Link after installing the iPhone helper failed: shows Xcode's log of the
+// install in Finder.
+func HelperShowLog() string { return In(i18n.Locale()).HelperShowLog() }
+
+// HelperShowLog says "Show the log"
+// in the language of msgs.
+//
+// Link after installing the iPhone helper failed: shows Xcode's log of the
+// install in Finder.
+func (msgs Messages) HelperShowLog() string {
+	return Catalog.Format(msgs.locale, "helperShowLog", nil)
+}
+
+// HelperStepBuilding says "Building the helper with Xcode. This takes a minute or two."
+// in the language the app shows.
+//
+// Installing the iPhone helper from Pinky's window: Xcode builds it on this
+// Mac.
+func HelperStepBuilding() string { return In(i18n.Locale()).HelperStepBuilding() }
+
+// HelperStepBuilding says "Building the helper with Xcode. This takes a minute or two."
+// in the language of msgs.
+//
+// Installing the iPhone helper from Pinky's window: Xcode builds it on this
+// Mac.
+func (msgs Messages) HelperStepBuilding() string {
+	return Catalog.Format(msgs.locale, "helperStepBuilding", nil)
+}
+
+// HelperStepInstalling says "Installing the helper on {phone}. If the phone asks for its passcode, enter it there."
+// in the language the app shows.
+//
+// Installing the iPhone helper from Pinky's window: Xcode installs it on
+// the phone and starts it; iOS may ask for the phone's passcode to allow
+// automation, which the person enters on the phone. phone is the iPhone's
+// name, or "the iPhone" when Pinky does not know it yet.
+func HelperStepInstalling(phone string) string { return In(i18n.Locale()).HelperStepInstalling(phone) }
+
+// HelperStepInstalling says "Installing the helper on {phone}. If the phone asks for its passcode, enter it there."
+// in the language of msgs.
+//
+// Installing the iPhone helper from Pinky's window: Xcode installs it on
+// the phone and starts it; iOS may ask for the phone's passcode to allow
+// automation, which the person enters on the phone. phone is the iPhone's
+// name, or "the iPhone" when Pinky does not know it yet.
+func (msgs Messages) HelperStepInstalling(phone string) string {
+	return Catalog.Format(msgs.locale, "helperStepInstalling", map[string]any{"phone": phone})
+}
+
+// HelperStepPreparing says "Getting ready…"
+// in the language the app shows.
+//
+// Installing the iPhone helper from Pinky's window, first step: Pinky finds
+// the iPhone and the team that signs, and downloads the helper the first
+// time.
+func HelperStepPreparing() string { return In(i18n.Locale()).HelperStepPreparing() }
+
+// HelperStepPreparing says "Getting ready…"
+// in the language of msgs.
+//
+// Installing the iPhone helper from Pinky's window, first step: Pinky finds
+// the iPhone and the team that signs, and downloads the helper the first
+// time.
+func (msgs Messages) HelperStepPreparing() string {
+	return Catalog.Format(msgs.locale, "helperStepPreparing", nil)
+}
+
+// HelperStepUnlock says "Unlock {phone} and keep it unlocked: Xcode is waiting for it."
+// in the language the app shows.
+//
+// Installing the iPhone helper from Pinky's window, shown in bold: the
+// phone is locked and Xcode waits for the person to unlock it. phone is the
+// iPhone's name, or "the iPhone".
+func HelperStepUnlock(phone string) string { return In(i18n.Locale()).HelperStepUnlock(phone) }
+
+// HelperStepUnlock says "Unlock {phone} and keep it unlocked: Xcode is waiting for it."
+// in the language of msgs.
+//
+// Installing the iPhone helper from Pinky's window, shown in bold: the
+// phone is locked and Xcode waits for the person to unlock it. phone is the
+// iPhone's name, or "the iPhone".
+func (msgs Messages) HelperStepUnlock(phone string) string {
+	return Catalog.Format(msgs.locale, "helperStepUnlock", map[string]any{"phone": phone})
+}
+
+// HelperTeam says "{name} ({id})"
+// in the language the app shows.
+//
+// Button choosing the Apple developer team that signs the iPhone helper:
+// the team's name and ID, as Xcode lists them.
+func HelperTeam(name string, id string) string { return In(i18n.Locale()).HelperTeam(name, id) }
+
+// HelperTeam says "{name} ({id})"
+// in the language of msgs.
+//
+// Button choosing the Apple developer team that signs the iPhone helper:
+// the team's name and ID, as Xcode lists them.
+func (msgs Messages) HelperTeam(name string, id string) string {
+	return Catalog.Format(msgs.locale, "helperTeam", map[string]any{"name": name, "id": id})
+}
+
+// HelperThisIPhone says "the iPhone"
+// in the language the app shows.
+//
+// Stands for the phone's name in the messages about installing the iPhone
+// helper, when Pinky does not know the phone yet (Add phone); written to
+// read well in their middle.
+func HelperThisIPhone() string { return In(i18n.Locale()).HelperThisIPhone() }
+
+// HelperThisIPhone says "the iPhone"
+// in the language of msgs.
+//
+// Stands for the phone's name in the messages about installing the iPhone
+// helper, when Pinky does not know the phone yet (Add phone); written to
+// read well in their middle.
+func (msgs Messages) HelperThisIPhone() string {
+	return Catalog.Format(msgs.locale, "helperThisIPhone", nil)
 }
 
 // ListMany says "{rest} and {last}"

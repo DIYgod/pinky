@@ -702,9 +702,17 @@
   "@addPhoneOlderHelperDetail": {
     "description": "Add phone › older iPhone: under \"Install the Pinky helper\", what the helper is, its name on the iPhone's home screen, and how long its signature lasts. WebDriverAgent is a name. The home screen name is the one Pinky gives the helper in the iPhone's language: Pinky Helper, 「Pinky 助手」 in Chinese, 「Pinky ヘルパー」 in Japanese."
   },
+  "addPhoneOlderHelperHow": "Install it once on a Mac with Xcode: run pinkyctl helper install in Terminal, with the iPhone connected and unlocked. Pinky finds the iPhone after that.",
+  "@addPhoneOlderHelperHow": {
+    "description": "Add phone › older iPhone, Install the Pinky helper chosen, where Pinky cannot install it from its window (no Mac, or no Xcode): how to install it. pinkyctl helper install is a command typed in Terminal (macOS's app, named as Apple names it in the language) and stays as it is."
+  },
   "addPhoneOlderIPhone": "Try an older iPhone",
   "@addPhoneOlderIPhone": {
     "description": "Add phone › iPhone: the quiet button to the right of Pair that switches to the ways of connecting an older iPhone."
+  },
+  "addPhoneOlderMirrorNotYet": "Pinky can't connect through iPhone Mirroring yet. Install the Pinky helper instead, or update to iOS 27.",
+  "@addPhoneOlderMirrorNotYet": {
+    "description": "Add phone › older iPhone, Use iPhone Mirroring chosen: Pinky has no way in through iPhone Mirroring yet. iPhone Mirroring is Apple's name for the feature in the language."
   },
   "addPhoneOlderMirroring": "Use iPhone Mirroring (this Mac only)",
   "@addPhoneOlderMirroring": {
@@ -713,10 +721,6 @@
   "addPhoneOlderMirroringDetail": "Nothing to install, but Pinky can read the screen only as an image, so it is slower.",
   "@addPhoneOlderMirroringDetail": {
     "description": "Add phone › older iPhone: under \"Use iPhone Mirroring\", its drawback."
-  },
-  "addPhoneOlderNotYet": "This build can't set that up yet: the gateway's iOS backends for older iPhones come in M3.",
-  "@addPhoneOlderNotYet": {
-    "description": "Add phone › older iPhone: shown once the person picks a way to connect, as neither works in this build yet. M3 is a milestone of the project."
   },
   "addPhoneOlderTitle": "This iPhone needs one more step",
   "@addPhoneOlderTitle": {
@@ -1676,6 +1680,20 @@
       }
     }
   },
+  "checkHelperExpiredHere": "The helper on {phone} stopped working on {when, date, ::MMMMEEEEdjmm}: its signature ran out. Install it again; signed with a free Apple ID, it lasts 7 days.",
+  "@checkHelperExpiredHere": {
+    "description": "Checkup and the Phone screen, on a Mac with Xcode, an iPhone's helper (WebDriverAgent): the signature (provisioning profile) made with the person's Apple ID ran out, so the iPhone no longer starts the helper; the button below, Install again, installs it. phone is the iPhone's name; when is when it ran out, with the time.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      },
+      "when": {
+        "type": "DateTime",
+        "example": "Friday, November 13 at 2:05 PM"
+      }
+    }
+  },
   "checkHelperHow": "How to install it",
   "@checkHelperHow": {
     "description": "Checkup, an iPhone's item: the button that opens the instructions for installing the helper."
@@ -1691,6 +1709,20 @@
   "checkHelperSoon": "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again with pinkyctl helper install on a Mac with Xcode.",
   "@checkHelperSoon": {
     "description": "Checkup and a reminder on the Phone screen, an iPhone's helper (WebDriverAgent): its signature (provisioning profile) runs out within two days, after which the iPhone no longer starts the helper; pinkyctl helper install is a command that stays as it is; the button beside it opens how to install it. phone is the iPhone's name; when is when it runs out, with the time.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      },
+      "when": {
+        "type": "DateTime",
+        "example": "Friday, November 13 at 2:05 PM"
+      }
+    }
+  },
+  "checkHelperSoonHere": "The helper on {phone} stops working on {when, date, ::MMMMEEEEdjmm}: install it again before then.",
+  "@checkHelperSoonHere": {
+    "description": "Checkup and a reminder on the Phone screen, on a Mac with Xcode, an iPhone's helper (WebDriverAgent): its signature (provisioning profile) runs out within two days, after which the iPhone no longer starts the helper; the button beside it, Install again, installs it. phone is the iPhone's name; when is when it runs out, with the time.",
     "placeholders": {
       "phone": {
         "type": "String",
@@ -5221,6 +5253,188 @@
   "gwValueUpsideDown": "upside down",
   "@gwValueUpsideDown": {
     "description": "A value of the screen's rotation. Shown only in other languages; in English the gateway's own words show."
+  },
+  "helperCancel": "Cancel",
+  "@helperCancel": {
+    "description": "Button that stops installing the iPhone helper while Xcode builds or installs it."
+  },
+  "helperChooseTeam": "This Mac can sign the helper for more than one team. Which one should sign it?",
+  "@helperChooseTeam": {
+    "description": "Installing the iPhone helper: the Mac has signing certificates of several Apple developer teams, and the person picks one with the buttons below."
+  },
+  "helperErrAppleID": "Xcode has no Apple ID to sign the helper with. Add yours in Xcode › Settings › Accounts (a free one works), then try again.",
+  "@helperErrAppleID": {
+    "description": "Installing the iPhone helper failed: Xcode has no Apple account or team to sign with. Xcode › Settings › Accounts stays in English: Xcode has no other language."
+  },
+  "helperErrDeveloperMode": "Developer Mode is off on {phone}. Turn it on in Settings › Privacy & Security › Developer Mode (the phone restarts), then try again.",
+  "@helperErrDeveloperMode": {
+    "description": "Installing the iPhone helper failed: Developer Mode is off; the path is the iPhone's Settings, named as Apple names them in the language. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrDownload": "Pinky couldn't download the helper. Check this Mac's internet connection, then try again.",
+  "@helperErrDownload": {
+    "description": "Installing the iPhone helper failed: downloading its source failed."
+  },
+  "helperErrInUse": "An agent is working on {phone}. Try again once its task ends.",
+  "@helperErrInUse": {
+    "description": "Installing the iPhone helper refused: an agent's task holds the phone. phone is the iPhone's name.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrOther": "Installing the helper on {phone} failed.",
+  "@helperErrOther": {
+    "description": "Installing the iPhone helper failed for a reason Pinky has no words for; Xcode's own words follow in small print. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrOtherTeam": "Another team signed the helper already on {phone}, and iOS replaces it only with one of that team. Delete Pinky Helper (or WebDriverAgentRunner) from the phone, then try again.",
+  "@helperErrOtherTeam": {
+    "description": "Installing the iPhone helper failed: the helper on the phone was signed by a team this Mac cannot sign for. Pinky Helper is the helper's name on the iPhone's home screen in the language (Pinky 助手, Pinky ヘルパー); WebDriverAgentRunner, an older one's, stays as it is. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrPasscode": "Nobody entered the passcode in time when {phone} asked for it to allow automation. Try again, and enter it on the phone when it asks.",
+  "@helperErrPasscode": {
+    "description": "Installing the iPhone helper failed: iOS asked for the phone's passcode before it lets the helper control the phone, and it was not entered in time. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrPhone": "Xcode can't reach {phone}. Connect it with a cable, or keep it unlocked on the same Wi-Fi as this Mac, then try again.",
+  "@helperErrPhone": {
+    "description": "Installing the iPhone helper failed: Xcode does not see the phone. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrSigning": "Xcode found no way to sign the helper for {phone}. Check your team in Xcode › Settings › Accounts, then try again.",
+  "@helperErrSigning": {
+    "description": "Installing the iPhone helper failed: Xcode found no signing certificate or provisioning profile that covers the phone. Xcode › Settings › Accounts stays in English. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrTrust": "Your developer certificate isn't trusted on {phone} yet. On the phone, trust it in Settings › General › VPN & Device Management, then try again.",
+  "@helperErrTrust": {
+    "description": "Installing the iPhone helper failed: the phone does not trust the developer who signed the helper yet; the path is the iPhone's Settings, named as Apple names them in the language. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrUnlock": "Xcode couldn't install the helper while {phone} was locked. Unlock it, keep it unlocked, then try again.",
+  "@helperErrUnlock": {
+    "description": "Installing the iPhone helper failed: the phone stayed locked while Xcode waited for it. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperErrXcode": "Installing the helper needs Xcode. Install it from the App Store, open it once, then try again.",
+  "@helperErrXcode": {
+    "description": "Installing the iPhone helper failed: this Mac has no Xcode."
+  },
+  "helperInstall": "Install the helper",
+  "@helperInstall": {
+    "description": "Button on a Mac with Xcode, in the checkup, on the Phone screen and in Add phone: Pinky builds the Pinky helper (WebDriverAgent) with Xcode and installs it on the iPhone."
+  },
+  "helperInstallAgain": "Install again",
+  "@helperInstallAgain": {
+    "description": "Button on a Mac with Xcode: installs an iPhone's helper (WebDriverAgent) again, as its signature runs out soon or ran out."
+  },
+  "helperInstallNote": "Pinky builds the helper with Xcode and signs it with your Apple ID. Keep the iPhone unlocked until it is done.",
+  "@helperInstallNote": {
+    "description": "Under the button that installs the iPhone helper from Pinky's window: what it does, and what the person keeps in mind meanwhile."
+  },
+  "helperInstalledToast": "The Pinky helper is installed on {phone}.",
+  "@helperInstalledToast": {
+    "description": "Toast once the iPhone helper is installed from Pinky's window. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperShowLog": "Show the log",
+  "@helperShowLog": {
+    "description": "Link after installing the iPhone helper failed: shows Xcode's log of the install in Finder."
+  },
+  "helperStepBuilding": "Building the helper with Xcode. This takes a minute or two.",
+  "@helperStepBuilding": {
+    "description": "Installing the iPhone helper from Pinky's window: Xcode builds it on this Mac."
+  },
+  "helperStepInstalling": "Installing the helper on {phone}. If the phone asks for its passcode, enter it there.",
+  "@helperStepInstalling": {
+    "description": "Installing the iPhone helper from Pinky's window: Xcode installs it on the phone and starts it; iOS may ask for the phone's passcode to allow automation, which the person enters on the phone. phone is the iPhone's name, or \"the iPhone\" when Pinky does not know it yet.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperStepPreparing": "Getting ready…",
+  "@helperStepPreparing": {
+    "description": "Installing the iPhone helper from Pinky's window, first step: Pinky finds the iPhone and the team that signs, and downloads the helper the first time."
+  },
+  "helperStepUnlock": "Unlock {phone} and keep it unlocked: Xcode is waiting for it.",
+  "@helperStepUnlock": {
+    "description": "Installing the iPhone helper from Pinky's window, shown in bold: the phone is locked and Xcode waits for the person to unlock it. phone is the iPhone's name, or \"the iPhone\".",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "DIYgod's iPhone"
+      }
+    }
+  },
+  "helperTeam": "{name} ({id})",
+  "@helperTeam": {
+    "description": "Button choosing the Apple developer team that signs the iPhone helper: the team's name and ID, as Xcode lists them.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Wenjie Fan"
+      },
+      "id": {
+        "type": "String",
+        "example": "5MBUP9F55A"
+      }
+    }
+  },
+  "helperThisIPhone": "the iPhone",
+  "@helperThisIPhone": {
+    "description": "Stands for the phone's name in the messages about installing the iPhone helper, when Pinky does not know the phone yet (Add phone); written to read well in their middle."
   },
   "listMany": "{rest} and {last}",
   "@listMany": {

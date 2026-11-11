@@ -78,7 +78,7 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 		if ck.Status == driver.CheckSkip {
 			return w, false
 		}
-		w.title, w.text, w.note = setupWords(d, ck.Fix)
+		w.title, w.text, w.note = setupWords(d, ck.Fix, a.canInstallHelper())
 		if w.text == "" {
 			return w, false
 		}
@@ -111,7 +111,7 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 	case driver.CheckHelper:
 		w.detail = false
 		now := time.Now()
-		text, ranOut := helperWords(d, now)
+		text, ranOut := helperWords(d, now, a.canInstallHelper())
 		exp := d.Info.HelperExpires
 		switch {
 		case pass:
@@ -152,8 +152,9 @@ func (a *app) iphoneCheckWords(d gateway.DeviceView, ck driver.Check) (w checkWo
 }
 
 // setupWords says an iPhone's setup step (Info.Setup): a title, what to do
-// and a note.
-func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
+// and a note. here: Pinky installs the helper from the window, so the
+// words about it leave out the command.
+func setupWords(d gateway.DeviceView, step string, here bool) (title, text, note string) {
 	if d.Info.Virtual {
 		switch step {
 		case driver.SetupPreparing:
@@ -214,7 +215,7 @@ func setupWords(d gateway.DeviceView, step string) (title, text, note string) {
 		return locales.ConnectionTitle(), locales.ConnectionChosenNeedsIOS27(d.Info.OSVersion), ""
 	case driver.SetupInstallHelper:
 		// Its signature ran out (Info.HelperExpires), or it is missing.
-		if text, ranOut := helperWords(d, time.Now()); ranOut {
+		if text, ranOut := helperWords(d, time.Now(), here); ranOut {
 			return locales.CheckHelperTitle(), text, ""
 		}
 		return locales.CheckHelperTitle(), locales.CheckHelperMissing(), ""
@@ -274,44 +275,77 @@ func needsHelper(d gateway.DeviceView) bool {
 // helperWords says when the helper an iPhone is driven through stops
 // working (Info.HelperExpires): within driver.HelperReminder, or that it
 // did, which ranOut reports. "" when it lasts longer or is not known.
-func helperWords(d gateway.DeviceView, now time.Time) (text string, ranOut bool) {
+// here: Pinky installs it again from the window (Install again), so the
+// words leave out how.
+func helperWords(d gateway.DeviceView, now time.Time, here bool) (text string, ranOut bool) {
 	exp := d.Info.HelperExpires
 	switch {
 	case exp.IsZero():
 		return "", false
+	case !now.Before(exp) && here:
+		return locales.CheckHelperExpiredHere(d.Info.Name, exp.Local()), true
 	case !now.Before(exp):
 		return locales.CheckHelperExpired(d.Info.Name, exp.Local()), true
-	case exp.Sub(now) <= driver.HelperReminder:
-		return locales.CheckHelperSoon(d.Info.Name, exp.Local()), false
+	case exp.Sub(now) > driver.HelperReminder:
+		return "", false
+	case here:
+		return locales.CheckHelperSoonHere(d.Info.Name, exp.Local()), false
 	}
-	return "", false
+	return locales.CheckHelperSoon(d.Info.Name, exp.Local()), false
 }
 
 // helperReminder draws the Phone screen's reminder above the mirror that
-// the helper an iPhone is driven through stops working soon, with how to
-// install it again, width wide, and returns the room it takes, with its
-// gap: 0 when it shows none. Once the helper has stopped, the phone needs
-// setup and says so in its place.
+// the helper an iPhone is driven through stops working soon, width wide,
+// and returns the room it takes, with its gap: 0 when it shows none. On a
+// Mac with Xcode it installs the helper again (helper.go), and says why
+// the last try failed or which teams to choose from; elsewhere it links
+// to how to install it again. Once the helper has stopped, the phone
+// needs setup and says so in its place.
 func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width float32) float32 {
 	if d.Info.Platform != driver.IOS || d.Info.HelperExpires.IsZero() {
 		return 0
 	}
 	now := c.Now()
-	text, _ := helperWords(d, now)
+	here := a.canInstallHelper()
+	text, _ := helperWords(d, now, here)
 	if text == "" {
 		// Draw it when the time comes.
 		c.After(min(d.Info.HelperExpires.Add(-driver.HelperReminder).Sub(now), time.Hour))
 		return 0
 	}
 	p := pal(c)
-	label := locales.CheckHelperHow()
-	height := helperReminderHeight(c, text, label, width)
+	id, name := d.Info.ID, d.Info.Name
+	r := a.helper.runs[id]
+	// The buttons, and what each does.
+	var labels []string
+	var acts []func()
+	switch {
+	case r != nil && r.running:
+		// Gone in a moment: Pinky lets go of the phone while it installs.
+		text, _ = helperStepWords(r.step, name)
+	case !here:
+		labels, acts = []string{locales.CheckHelperHow()}, []func(){func() { openURL(c, helperAgainDocs, func(error) {}) }}
+	case r != nil && len(r.teams) > 0:
+		text = locales.HelperChooseTeam()
+		for _, t := range r.teams {
+			labels = append(labels, helperTeamLabel(t))
+			acts = append(acts, func() { a.startHelperInstall(id, name, t.ID, nil) })
+		}
+	default:
+		if r != nil && r.err != "" {
+			text = r.err
+		}
+		labels, acts = []string{locales.HelperInstallAgain()}, []func(){func() { a.startHelperInstall(id, name, "", nil) }}
+	}
+	height := helperReminderHeight(c, text, labels, width)
 	mg.Row(c).Width(width).Height(height).Shrink(0).Padding(8, 8, 8, 14).Radius(12).Background(p.amberTint).Border(1, p.amberLine).
 		Gap(10).AlignItems(mg.Center).Role(mg.RoleStatus).Label(text).Children(func() {
 		mg.Icon(c, icAlert).FontSize(16).TextColor(p.amberDot)
 		mg.Text(c, text).FontSize(fsSmall).Grow(1).MinWidth(0)
-		if button(c, label, btnOpt{small: true}).Clicked() {
-			openURL(c, helperAgainDocs, func(error) {})
+		for i, label := range labels {
+			if button(c, label, btnOpt{small: true}).Disabled(here && a.helperBusy()).Clicked() {
+				acts[i]()
+			}
 		}
 	})
 	return height + 14
@@ -319,11 +353,14 @@ func (a *app) helperReminder(c *mg.Context, d gateway.DeviceView, width float32)
 
 // helperReminderHeight works out the reminder's height as its row lays it
 // out: the words wrap in what the width leaves after the padding, the
-// border, the icon, the gaps and the button (its label, padding and
-// border), and the reminder is no shorter than the button.
-func helperReminderHeight(c *mg.Context, text, label string, width float32) float32 {
-	lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: 13, Weight: 500})
-	tw := width - (14 + 8 + 2) - 16 - 2*10 - (lw + 2*10 + 2)
+// border, the icon, the gaps and the buttons (their labels, padding and
+// border), and the reminder is no shorter than a button.
+func helperReminderHeight(c *mg.Context, text string, labels []string, width float32) float32 {
+	tw := width - (14 + 8 + 2) - 16 - 10
+	for _, label := range labels {
+		lw, _ := c.MeasureText(0, mg.Span{Text: label, Size: 13, Weight: 500})
+		tw -= 10 + lw + 2*10 + 2
+	}
 	_, th := c.MeasureText(max(tw, 1), mg.Span{Text: text, Size: 13})
 	return max(th, 28) + 2*8 + 2
 }
@@ -357,8 +394,15 @@ func (a *app) iphoneCheckAction(c *mg.Context, d gateway.DeviceView, ck driver.C
 		})
 		return true
 	case driver.FixInstallHelper:
-		mg.Row(c).Margin(4, 0, 0, 0).Children(func() {
-			if button(c, locales.CheckHelperHow(), btnOpt{small: true}).Clicked() {
+		// On a Mac with Xcode, Pinky installs it from here: from the
+		// helper's item, not again from the input's, which needs it too.
+		if ck.ID == driver.CheckInput && a.canInstallHelper() {
+			return true
+		}
+		mg.Column(c).Margin(4, 0, 0, 0).Children(func() {
+			again := !d.Info.HelperExpires.IsZero()
+			if !a.helperInstall(c, d.Info.ID, d.Info.Name, helperOpt{again: again, small: true}) &&
+				button(c, locales.CheckHelperHow(), btnOpt{small: true}).Clicked() {
 				openURL(c, helperLink(d), func(error) {})
 			}
 		})
