@@ -289,10 +289,11 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	availW := w - sidebarWidth - rightPanelWidth - 2*stagePad
 	if banner != (controlText{}) {
 		availH -= a.controlBanner(c, d.Info.ID, banner, min(460, availW)) + stageGap
-	} else {
+	} else if rh := a.helperReminder(c, d, min(reminderWidth, availW), availH-phoneFloor-stageGap); rh > 0 {
 		// A reminder that the helper stops working soon takes the
-		// banner's place, and room (checkup_iphone.go).
-		availH -= a.helperReminder(c, d, min(520, availW))
+		// banner's place, and room, of which it leaves the phone its
+		// least height (checkup_iphone.go).
+		availH -= rh + stageGap
 	}
 	watching := m.agent
 	shown := t
@@ -302,7 +303,7 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 	aspect := m.aspect(d)
 	const bezel = 9
 	ph := min(availH, (availW-2*bezel)/aspect+2*bezel)
-	ph = max(ph, 240)
+	ph = max(ph, phoneFloor)
 	sw := (ph - 2*bezel) * aspect
 	// The bezel takes the screen's shape, turned with the phone (bezel.go).
 	radius, inner := bezelRadius(bezelOf(d), sw, ph-2*bezel, bezel)
@@ -373,12 +374,14 @@ func (a *app) phoneCenter(c *mg.Context, d gateway.DeviceView) {
 }
 
 // The stage: the room around the phone, the gap between the banner, the
-// phone and its keys, and the dock of keys under it.
+// phone and its keys, the dock of keys under it, and the least height of
+// the phone with its bezel, which a window too small for it cuts.
 const (
 	stagePad   = sp5
 	stageGap   = sp4
 	dockKey    = 36 // a key's width; its height is 4 less
 	dockHeight = dockKey - 4 + 2*sp1 + 2
+	phoneFloor = 240
 )
 
 // dockSeparator parts the dock's groups of keys.

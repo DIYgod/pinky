@@ -171,6 +171,8 @@ func TestIPhoneHelperInstallTeams(t *testing.T) {
 // it once, from the helper's item.
 func TestIPhoneHelperInstallAgain(t *testing.T) {
 	ta, id := installApp(t)
+	// By the computer's clock, as the fake dates the helper it installs:
+	// the test checks words, which it makes of the same time as the views.
 	exp := time.Now().Add(30 * time.Hour)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
 	ta.api.SetCheckup(id, driver.Checkup{System: "iOS 18.6", Checks: []driver.Check{
@@ -213,6 +215,7 @@ func TestIPhoneHelperInstallAgain(t *testing.T) {
 // it again, in words that leave out the command.
 func TestIPhoneHelperRanOutHere(t *testing.T) {
 	ta, id := installApp(t)
+	// By the computer's clock, as in TestIPhoneHelperInstallAgain.
 	exp := time.Now().Add(-3 * time.Hour)
 	ta.api.SetIPhone(id, driver.Info{State: driver.StateNeedsSetup, Setup: driver.SetupInstallHelper, HelperExpires: exp})
 	ta.sync()
@@ -279,7 +282,8 @@ func TestAddOlderIPhoneHelper(t *testing.T) {
 // TestIPhoneHelperInstallScreenshots draws installing the helper from the
 // window into $PINKY_SCREENSHOTS, in each of the client's languages: the
 // page of an iPhone without it, the install under way, a failure, the
-// reminder, the checkup, and Add phone's older iPhone:
+// reminder, the reminder asking which team, the checkup, and Add phone's
+// older iPhone:
 //
 //	PINKY_SCREENSHOTS=dir go test ./ui -run TestIPhoneHelperInstallScreenshots
 func TestIPhoneHelperInstallScreenshots(t *testing.T) {
@@ -289,9 +293,13 @@ func TestIPhoneHelperInstallScreenshots(t *testing.T) {
 	}
 	dark := os.Getenv("PINKY_SCREENSHOTS_DARK") != ""
 	ta, id := installApp(t)
-	shoot := func(name, lang string) {
+	shoot := func(name, lang string, size ...int) {
 		t.Helper()
-		st := mg.NewTester(ta.view, 1280, 820)
+		w, h := 1280, 820
+		if len(size) == 2 {
+			w, h = size[0], size[1]
+		}
+		st := mg.NewTester(ta.view, w, h)
 		inLanguage(t, lang, st)
 		st.SetScale(2)
 		st.SetDark(dark)
@@ -326,7 +334,8 @@ func TestIPhoneHelperInstallScreenshots(t *testing.T) {
 		shoot("helper-failed", lang)
 
 		ta.helper.runs = nil
-		exp := time.Now().Add(30 * time.Hour)
+		exp := helperDate()
+		clockAt(t, exp.Add(-30*time.Hour))
 		ta.api.SetIPhone(id, driver.Info{State: driver.StateOnline, HelperExpires: exp})
 		ta.api.SetCheckup(id, driver.Checkup{System: "iOS 18.6", Checks: []driver.Check{
 			{ID: driver.CheckDeveloperMode, Status: driver.CheckPass},
@@ -335,6 +344,12 @@ func TestIPhoneHelperInstallScreenshots(t *testing.T) {
 		}})
 		ta.sync()
 		shoot("helper-again", lang)
+		// The reminder asks which team, in the default and the smallest window.
+		ta.helper.runs = map[string]*helperRun{id: {teams: []driver.HelperTeam{{ID: "ABCDE12345", Name: "Sam Lee (Personal Team)"}, {ID: "FGHIJ67890"},
+			{ID: "KLMNO12345", Name: "Shenzhen Example Technology Co., Ltd."}}}}
+		shoot("helper-again-teams", lang)
+		shoot("helper-again-teams-small", lang, 960, 620)
+		ta.helper.runs = nil
 		tt := mg.NewTester(ta.view, 1280, 820)
 		ta.openCheckup(ta.iphoneView(t))
 		ta.frameUntil(t, tt, "the checkup", func() bool { r := ta.checkupOf(id); return r != nil && r.have && !r.running })

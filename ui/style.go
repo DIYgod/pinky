@@ -158,6 +158,9 @@ type btnOpt struct {
 	icon  *mg.SVG
 	label string // accessible name for an icon-only button
 	dark  bool   // the dark, translucent buttons over a tile
+	// maxW is the most the button is wide, where it has less room than
+	// its label takes: the label then ends with an ellipsis.
+	maxW float32
 }
 
 // button draws the prototype's .btn: 34 high, a border, a quiet hover.
@@ -212,9 +215,17 @@ func button(c *mg.Context, text string, o btnOpt) mg.Element {
 			mg.Icon(c, o.icon).FontSize(18)
 		}
 		if text != "" {
-			mg.Text(c, text).FontSize(fs).FontWeight(fwMedium).NoWrap()
+			t := mg.Text(c, text).FontSize(fs).FontWeight(fwMedium)
+			if o.maxW > 0 {
+				t.SingleLine().MinWidth(0)
+			} else {
+				t.NoWrap()
+			}
 		}
 	})
+	if o.maxW > 0 {
+		b.MaxWidth(o.maxW)
+	}
 	return b
 }
 

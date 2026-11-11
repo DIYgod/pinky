@@ -4,6 +4,7 @@ import (
 	"os"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/i18n"
@@ -53,4 +54,24 @@ func inLanguage(t testing.TB, tag string, testers ...*mg.Tester) {
 		tt.SetLocale(tag)
 	}
 	t.Cleanup(func() { testLang.Store("en") })
+}
+
+// clockAt has the views tell the time as now for the rest of the test
+// (timeNow): what they say about a date then depends on neither the day
+// nor the hour the test runs at. MyGo's Tester starts its own clock, which
+// Context.Now reads, at the computer's time, and only moves it on.
+func clockAt(t testing.TB, now time.Time) {
+	t.Helper()
+	saved := timeNow
+	timeNow = func() time.Time { return now }
+	t.Cleanup(func() { timeNow = saved })
+}
+
+// wallTime is the time at which the clocks where the test runs show these
+// numbers. The views write dates as those clocks do, so a date written
+// from it reads the same in every time zone, which one written from a
+// time.UTC date or from time.Now does not. Keep the hour out of the small
+// hours, which daylight saving time skips in some places.
+func wallTime(year int, month time.Month, day, hour, min int) time.Time {
+	return time.Date(year, month, day, hour, min, 0, 0, time.Local)
 }

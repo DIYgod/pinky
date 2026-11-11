@@ -89,11 +89,13 @@ func nearPoint(p screen.Point, x, y int) bool {
 // part of its screen takes a click: the top included, which the banner
 // used to cover (its top 7% in the window's default size, more in the
 // smallest), where apps put their back buttons and menus. In each of the
-// client's languages, in the default, smallest, a tall and a wide window.
+// client's languages, in the default and the smallest window, in one
+// smaller still (as the helper reminder's test draws), a tall and a wide
+// one.
 func TestControlBannerAboveTheScreen(t *testing.T) {
 	for _, lang := range testLanguages() {
 		for _, sc := range []fakeapi.Scenario{fakeapi.Takeover, fakeapi.Handoff} {
-			for _, size := range [][2]int{{1280, 820}, {960, 620}, {1100, 1300}, {1900, 820}} {
+			for _, size := range [][2]int{{1280, 820}, {960, 620}, {900, 600}, {1100, 1300}, {1900, 820}} {
 				t.Run(fmt.Sprintf("%s/%s/%dx%d", lang, sc, size[0], size[1]), func(t *testing.T) {
 					inLanguage(t, lang)
 					ta := newTestAppTimeout(t, sc, 10*time.Minute)
