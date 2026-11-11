@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/DIYgod/pinky/internal/gateway"
+	"github.com/DIYgod/pinky/internal/pilot"
 	"github.com/DIYgod/pinky/internal/policy"
 )
 
@@ -25,7 +26,9 @@ import (
 //	{"cmd":"preset","preset":1}                         → {"ok":true}  (policy.Preset)
 //	{"cmd":"stop"} / {"cmd":"dismiss"}                  → {"ok":true}
 //
-// A failed command replies {"ok":false,"error":"..."}.
+// A failed command replies {"ok":false,"error":"...","code":"..."}: the
+// code, when there is one, names an error the screens say in the person's
+// language (the Code constants); the error is for logs.
 
 type request struct {
 	Cmd      string `json:"cmd"`
@@ -39,7 +42,35 @@ type request struct {
 type reply struct {
 	OK    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
+	Code  string `json:"code,omitempty"`
 	State *State `json:"state,omitempty"`
+}
+
+// The codes of errors the screens know.
+const (
+	CodeNoDevice = "no_device" // ErrNoDevice: the service is off
+	CodeNoKey    = "no_key"    // ErrNoKey
+	CodeNoModel  = "no_model"  // an OpenAI-compatible API without a model
+	CodeNoTask   = "no_task"   // an empty task
+	CodeBusy     = "busy"      // a task already runs
+)
+
+// codeOf is the code of a command's error, or "" for one the screens show
+// as it is.
+func codeOf(err error) string {
+	switch {
+	case errors.Is(err, ErrNoDevice):
+		return CodeNoDevice
+	case errors.Is(err, ErrNoKey):
+		return CodeNoKey
+	case errors.Is(err, pilot.ErrNoModel):
+		return CodeNoModel
+	case errors.Is(err, pilot.ErrNoTask):
+		return CodeNoTask
+	case errors.Is(err, pilot.ErrBusy):
+		return CodeBusy
+	}
+	return ""
 }
 
 // Serve answers the control socket until ctx ends. On the phone, ln
@@ -118,7 +149,7 @@ func (c *Core) handle(r request) reply {
 		err = fmt.Errorf("unknown command %q", r.Cmd)
 	}
 	if err != nil {
-		return reply{Error: err.Error()}
+		return reply{Error: err.Error(), Code: codeOf(err)}
 	}
 	return reply{OK: true}
 }

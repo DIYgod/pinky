@@ -263,8 +263,12 @@ func TestTaskThroughTheControlSocket(t *testing.T) {
 		t.Fatalf("state: %+v", st)
 	}
 	if r := ctl.do(map[string]any{"cmd": "start", "task": "Order lunch", "base_url": h.url}); r.OK ||
-		!strings.Contains(r.Error, "API key") {
+		!strings.Contains(r.Error, "API key") || r.Code != CodeNoKey {
 		t.Fatalf("start without a key: %+v", r)
+	}
+	if r := ctl.do(map[string]any{"cmd": "start", "task": "Order lunch", "key": "sk-test", "provider": "openai",
+		"base_url": h.url}); r.OK || r.Code != CodeNoModel {
+		t.Fatalf("start without a model: %+v", r)
 	}
 	sub := h.dial(t)
 	sub.send(map[string]any{"cmd": "subscribe"})
@@ -284,6 +288,11 @@ func TestTaskThroughTheControlSocket(t *testing.T) {
 	st = sub.until("the end", func(s State) bool { return s.Agent != nil && !s.Agent.Running })
 	if st.Agent.End != "done" || st.Agent.Summary != "Ordered." || st.Agent.Steps != 2 || len(st.Needs) != 0 {
 		t.Fatalf("agent: %+v", st.Agent)
+	}
+	// The defaults, and a model whose prices Pinky does not know.
+	if a := st.Agent; a.MaxSteps != pilot.DefaultMaxSteps || a.MaxMinutes != int(pilot.DefaultMaxTime/time.Minute) ||
+		a.MaxCost != pilot.DefaultMaxCost || a.Priced || a.TokenLimit != 2_000_000 {
+		t.Fatalf("limits: %+v", a)
 	}
 	if st.Task == nil || st.Task.Title != "Order lunch" {
 		t.Fatalf("task: %+v", st.Task)
@@ -312,13 +321,20 @@ func TestTaskThroughTheControlSocket(t *testing.T) {
 	}
 	h.api.mu.Unlock()
 	if r := ctl.do(map[string]any{"cmd": "start", "task": "Look around", "key": "sk-test", "base_url": h.url,
-		"model": "fake"}); !r.OK {
+		"model": "claude-sonnet-5-5", "max_steps": 7, "max_minutes": 3, "max_cost": 0.5}); !r.OK {
 		t.Fatalf("start: %+v", r)
 	}
 	<-asked
 	st = sub.until("the second task", func(s State) bool { return s.Task != nil })
 	if st.Task.Title != "Look around" || !st.Agent.Running {
 		t.Fatalf("second task: %+v %+v", st.Task, st.Agent)
+	}
+	if a := st.Agent; a.MaxSteps != 7 || a.MaxMinutes != 3 || a.MaxCost != 0.5 || !a.Priced {
+		t.Fatalf("limits: %+v", a)
+	}
+	if r := ctl.do(map[string]any{"cmd": "start", "task": "Again", "key": "sk-test", "base_url": h.url,
+		"model": "fake"}); r.OK || r.Code != CodeBusy {
+		t.Fatalf("start while a task runs: %+v", r)
 	}
 	if r := ctl.do(map[string]any{"cmd": "stop"}); !r.OK {
 		t.Fatalf("stop: %+v", r)
