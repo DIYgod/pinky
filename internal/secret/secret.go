@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -81,9 +82,17 @@ func Supported(s Store) bool {
 // PINAccount is the account a phone's PIN is saved under.
 func PINAccount(deviceID string) string { return "pin:" + deviceID }
 
+// modelKeyPrefix starts the account of every API key of a model service.
+const modelKeyPrefix = "model-key:"
+
 // ModelKeyAccount is the account the API key of a model service
 // ("anthropic", "openai") is saved under.
-func ModelKeyAccount(service string) string { return "model-key:" + service }
+func ModelKeyAccount(service string) string { return modelKeyPrefix + service }
+
+// ErrNotModelKey is what Get returns for an account that is not a model
+// service's API key: every other secret, a PIN above all, goes through
+// Reveal and the person's confirmation.
+var ErrNotModelKey = errors.New("secret: only model API keys can be read without confirmation")
 
 // Getter is a Store that can return a secret without asking the person to
 // confirm. Only Pinky's API keys are read this way; PINs always go through
@@ -95,8 +104,12 @@ type Getter interface {
 // Get returns a secret without asking the person, where the store can
 // (where the system keeps Pinky's secrets locked, as Linux's Secret Service
 // does, it may still ask to unlock them). It returns ErrNotFound when
-// nothing is saved, and ErrUnsupported for a store that can only Reveal.
+// nothing is saved, ErrUnsupported for a store that can only Reveal, and
+// ErrNotModelKey for an account ModelKeyAccount did not make.
 func Get(ctx context.Context, s Store, account string) (string, error) {
+	if !strings.HasPrefix(account, modelKeyPrefix) {
+		return "", ErrNotModelKey
+	}
 	if g, ok := s.(Getter); ok {
 		return g.Get(ctx, account)
 	}

@@ -44,7 +44,7 @@ type claude struct {
 }
 
 // fallbackModels are the models that take server-side fallbacks.
-var fallbackModels = []string{"claude-opus-5-5", "claude-opus-5", "claude-fable-5-2"}
+var fallbackModels = []string{"claude-opus-5-5", "claude-opus-5", "claude-sonnet-5-5", "claude-fable-5-2", "claude-fable-5-1"}
 
 // The request and the blocks Pinky sends.
 type (

@@ -666,7 +666,7 @@ func TestCustomAnthropicAddress(t *testing.T) {
 
 func TestFallbacksOnlyWhereSupported(t *testing.T) {
 	for model, want := range map[string]bool{"claude-opus-5-5": true, "claude-opus-5": true, "claude-fable-5-2": true,
-		"claude-sonnet-5-5": false, "claude-haiku-5-5": false, "claude-opus-5-5-20261101": true} {
+		"claude-sonnet-5-5": true, "claude-fable-5-1": true, "claude-sonnet-5": false, "claude-haiku-5-5": false, "claude-opus-5-5-20261101": true} {
 		c := newClaude(Config{Provider: Anthropic, Model: model}.Normalize(), testKey, http.DefaultClient, "s", nil)
 		got := len(c.betas) == 2
 		if got != want {
