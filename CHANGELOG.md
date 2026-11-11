@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1112.2 (2026-11-12)
 
 - On a Mac that can sign the iPhone helper for more than one team, choosing a team in the reminder that the helper is about to stop working no longer pushes the phone off the window.
 - That reminder now takes less room in a narrow window: its button moves under the words, and the phone stays larger.
