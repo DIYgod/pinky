@@ -6042,6 +6042,80 @@
   "@pausePhoneMenuDesc": {
     "description": "Under Pause connection in the ⋯ menu under the mirror: what pausing does, and that plugging the phone in by cable resumes it."
   },
+  "phoneAboutBattery": "Battery",
+  "@phoneAboutBattery": {
+    "description": "In the panel the battery button in a phone's page header opens: the label of the battery's row."
+  },
+  "phoneAboutBatteryLabel": "Battery {percent}%",
+  "@phoneAboutBatteryLabel": {
+    "description": "Accessibility label of a phone's battery level, shown in its page header and on its tile in All phones.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "82"
+      }
+    }
+  },
+  "phoneAboutButton": "About {phone}",
+  "@phoneAboutButton": {
+    "description": "Tooltip and accessibility label of the button at the end of a phone's page header, which shows its battery and opens its model, system, battery and storage.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "phoneAboutCharged": "Fully charged",
+  "@phoneAboutCharged": {
+    "description": "In the panel the battery button opens, after the battery level: the phone is on its charger and full."
+  },
+  "phoneAboutCharging": "Charging",
+  "@phoneAboutCharging": {
+    "description": "In the panel the battery button opens, after the battery level: the phone is charging."
+  },
+  "phoneAboutPercent": "{percent}%",
+  "@phoneAboutPercent": {
+    "description": "A phone's battery level, as a percentage: in its page header, on its tile in All phones and in the panel the battery button opens.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "82"
+      }
+    }
+  },
+  "phoneAboutPluggedIn": "Plugged in",
+  "@phoneAboutPluggedIn": {
+    "description": "In the panel the battery button opens, after the battery level: the phone is on a charger but not charging, as when it holds its charge to save the battery."
+  },
+  "phoneAboutStorage": "Storage",
+  "@phoneAboutStorage": {
+    "description": "In the panel the battery button in a phone's page header opens: the label of the storage's row."
+  },
+  "phoneAboutStorageFree": "{free} free of {total}",
+  "@phoneAboutStorageFree": {
+    "description": "In the panel the battery button opens: how much of the phone's storage is free, above a bar of how much is used.",
+    "placeholders": {
+      "free": {
+        "type": "String",
+        "example": "41.3 GB"
+      },
+      "total": {
+        "type": "String",
+        "example": "128 GB"
+      }
+    }
+  },
+  "phoneAboutTemperature": "{degrees} °C",
+  "@phoneAboutTemperature": {
+    "description": "In the panel the battery button opens, after the battery level: an Android phone's battery temperature in degrees Celsius.",
+    "placeholders": {
+      "degrees": {
+        "type": "String",
+        "example": "31"
+      }
+    }
+  },
   "phoneAddPhone": "Add phone",
   "@phoneAddPhone": {
     "description": "Primary button on the Phones page before any phone is added: opens Add phone."
