@@ -1055,3 +1055,23 @@ While an app on the iPhone uses the camera or microphone (a call or FaceTime, Ca
 - Tests: `TestProviderWaitsForCameraAndMicrophone`, `TestMediaWaitEnds` and `TestMediaInUseIsNoMissingPicture` (the provider, with a fake session), `TestMediaInUseStep` (the gateway: no flicker, one open, the checkup, an agent, online once free), `TestIPhoneMediaInUseStep` (the client in English, Chinese and Japanese).
 
 **Not done.** A phone that is already open, whose stream stopped after 30 s without a view or input (`idle.go`) and that an app then took the camera or microphone of, still fails the next view or input with the 9022 error, as before, without the step. Not tried on a phone yet: the error and its code come from the iPhone 15 Plus's log.
+
+## WebDriverAgent builds with custom Xcode locations
+
+2026-11-11, issue [#86](https://github.com/DIYgod/pinky/issues/86).
+
+Xcode's custom build locations can redirect products outside the directory
+passed with `-derivedDataPath`. Both the physical-device helper installer and
+the Simulator builder now pass `SYMROOT=<dd>/Build/Products` and
+`OBJROOT=<dd>/Build/Intermediates.noindex`, using their own temporary derived-data
+directory. The runner, `.xctestrun` lookup and Simulator build cache then use the
+same products directory for any user-selected build location.
+
+`TestHelperArgs` checks these arguments with a temporary path containing spaces.
+Local checks on macOS arm64 with Xcode 26.3 exercised `helperBuildArgs` through
+`-showBuildSettings` with the current custom settings, Unique locations, custom
+relative locations and custom absolute locations. All four resolved to the
+requested temporary directories. An unsigned `generic/platform=iOS`
+`build-for-testing` also produced both the runner app and `.xctestrun` there.
+The full Simulator build was attempted but stopped because this Xcode
+installation lacks `iPhoneSimulator.platform/Developer/usr/lib/lib_TestingInterop.dylib`.

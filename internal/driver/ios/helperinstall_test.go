@@ -190,9 +190,12 @@ func TestDevTeams(t *testing.T) {
 }
 
 func TestHelperArgs(t *testing.T) {
-	args := helperBuildArgs("/s", "/dd", "UDID", "TEAMAAAAA1", "com.me.WebDriverAgentRunner", false)
+	dd := filepath.Join(t.TempDir(), "custom build data")
+	args := helperBuildArgs("/s", dd, "UDID", "TEAMAAAAA1", "com.me.WebDriverAgentRunner", false)
 	want := []string{"build-for-testing", "-project", filepath.Join("/s", "WebDriverAgent.xcodeproj"), "-scheme", "WebDriverAgentRunner",
-		"-destination", "id=UDID", "-derivedDataPath", "/dd",
+		"-destination", "id=UDID", "-derivedDataPath", dd,
+		"SYMROOT=" + filepath.Join(dd, "Build", "Products"),
+		"OBJROOT=" + filepath.Join(dd, "Build", "Intermediates.noindex"),
 		"CODE_SIGN_STYLE=Automatic", "DEVELOPMENT_TEAM=TEAMAAAAA1", "PRODUCT_BUNDLE_IDENTIFIER=com.me.WebDriverAgentRunner"}
 	if !slices.Equal(args, want) {
 		t.Errorf("local signing:\n got %q\nwant %q", args, want)
