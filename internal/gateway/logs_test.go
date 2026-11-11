@@ -320,17 +320,22 @@ func TestLinesResultListening(t *testing.T) {
 func TestParseSince(t *testing.T) {
 	now := time.Date(2026, 11, 9, 15, 4, 5, 0, time.Local)
 	task := now.Add(-time.Hour)
+	// Times that name their own zone, taken from now: a fixed one is after
+	// now where the clocks are far enough ahead of its zone (06:00 UTC in
+	// Sydney), and parseSince refuses a time in the future.
+	utc := now.Add(-9 * time.Hour).UTC()
+	plus8 := now.Add(-time.Hour).In(time.FixedZone("", 8*3600))
 	for in, want := range map[string]time.Time{
-		"":                          task,
-		"10m":                       now.Add(-10 * time.Minute),
-		"-90s":                      now.Add(-90 * time.Second),
-		"2d":                        now.AddDate(0, 0, -2),
-		"14:05":                     time.Date(2026, 11, 9, 14, 5, 0, 0, time.Local),
-		"16:00:30":                  time.Date(2026, 11, 8, 16, 0, 30, 0, time.Local),
-		"2026-11-09 09:30":          time.Date(2026, 11, 9, 9, 30, 0, 0, time.Local),
-		"2026-11-08":                time.Date(2026, 11, 8, 0, 0, 0, 0, time.Local),
-		"2026-11-09T06:00:00Z":      time.Date(2026, 11, 9, 6, 0, 0, 0, time.UTC),
-		"2026-11-09T14:00:00+08:00": time.Date(2026, 11, 9, 14, 0, 0, 0, time.FixedZone("", 8*3600)),
+		"":                         task,
+		"10m":                      now.Add(-10 * time.Minute),
+		"-90s":                     now.Add(-90 * time.Second),
+		"2d":                       now.AddDate(0, 0, -2),
+		"14:05":                    time.Date(2026, 11, 9, 14, 5, 0, 0, time.Local),
+		"16:00:30":                 time.Date(2026, 11, 8, 16, 0, 30, 0, time.Local),
+		"2026-11-09 09:30":         time.Date(2026, 11, 9, 9, 30, 0, 0, time.Local),
+		"2026-11-08":               time.Date(2026, 11, 8, 0, 0, 0, 0, time.Local),
+		utc.Format(time.RFC3339):   utc,
+		plus8.Format(time.RFC3339): plus8,
 	} {
 		got, err := parseSince(in, now, task)
 		if err != nil || !got.Equal(want) {
