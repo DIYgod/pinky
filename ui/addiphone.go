@@ -261,7 +261,7 @@ func (a *app) addIPhoneSteps(c *mg.Context) {
 			case driver.SetupMediaInUse:
 				// An app holds the camera or microphone: nothing to set
 				// up, and Pinky connects once it lets go.
-				title, text, note := setupWords(*d, d.Info.Setup)
+				title, text, note := setupWords(*d, d.Info.Setup, a.canInstallHelper())
 				guideProblem(c, title, text)
 				guideWaiting(c, note)
 			case driver.SetupPasscode:
