@@ -3,6 +3,7 @@ package onphone
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -101,8 +102,11 @@ func (g *gate) lastApp() string {
 	return g.last
 }
 
+// isSelf reports whether id is Pinky's app or one of its extensions. The
+// app's id is the builder's choice (a free Apple ID cannot use Pinky's
+// own), so it is learned from the app, besides the ids the policy knows.
 func (g *gate) isSelf(id string) bool {
-	return id != "" && (id == g.self || policy.IsStandalone(screen.App{ID: id}))
+	return id != "" && (id == g.self || strings.HasPrefix(id, g.self+".") || policy.IsStandalone(screen.App{ID: id}))
 }
 
 // check refuses input while Pinky's app is in front.
@@ -114,18 +118,16 @@ func (g *gate) check() error {
 }
 
 // saw learns from a screen read that started at start. Pinky's app gets
-// its bundle id where the read could not name it, so that the policy
-// hides it; another app in front, read well after Pinky's app said it came
-// to the front, means it left without saying so.
+// the id the policy hides, also where the read could not name it; another
+// app in front, read well after Pinky's app said it came to the front,
+// means it left without saying so.
 func (g *gate) saw(s *screen.Screen, start time.Time) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	id := s.App.ID
 	switch {
-	case g.isSelf(id):
-		return
-	case id == "" && g.ui:
-		s.App.ID = g.self
+	case g.isSelf(id), id == "" && g.ui:
+		s.App.ID = policy.IPhoneApp
 		return
 	case id == "":
 		return

@@ -33,7 +33,7 @@ func TestGateRefusesWhilePinkyIsInFront(t *testing.T) {
 // screen; it names Pinky's app where the driver could not; and another app
 // read well after Pinky's app said it came to the front means it left.
 func TestGateLearnsFromReads(t *testing.T) {
-	g := newGate("cc.diygod.pinky.ABCDE12345")
+	g := newGate("com.example.pinky")
 	read := func(id string, start time.Time) screen.App {
 		s := &screen.Screen{App: screen.App{ID: id}}
 		g.saw(s, start)
@@ -41,15 +41,23 @@ func TestGateLearnsFromReads(t *testing.T) {
 	}
 	read("com.apple.calculator", time.Now())
 	read(springboard, time.Now())
-	read("cc.diygod.pinky.ABCDE12345", time.Now())
-	read("pinky.abcde12345", time.Now())
+	for _, self := range []string{"com.example.pinky", "com.example.pinky.tunnel", "cc.diygod.pinky.standalone",
+		"pinky.abcde12345"} {
+		if app := read(self, time.Now()); app.ID != policy.IPhoneApp {
+			t.Errorf("%s read as %+v", self, app)
+		}
+	}
+	read("com.example.pinkyfan", time.Now())
 	read("", time.Now())
-	if got := g.lastApp(); got != "com.apple.calculator" {
+	if got := g.lastApp(); got != "com.example.pinkyfan" {
 		t.Fatalf("last app = %q", got)
+	}
+	if !policy.IsStandalone(screen.App{ID: policy.IPhoneApp}) {
+		t.Fatal("the policy does not hide Pinky's app")
 	}
 
 	g.setUI(true)
-	if app := read("", time.Now()); app.ID != "cc.diygod.pinky.ABCDE12345" {
+	if app := read("", time.Now()); app.ID != policy.IPhoneApp {
 		t.Fatalf("Pinky's screen unnamed: %+v", app)
 	}
 	// Started before Pinky's app came to the front: the app it found is
