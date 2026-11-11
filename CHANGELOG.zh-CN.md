@@ -2,6 +2,10 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
+## Unreleased
+
+- 「交给 Pinky」：在「任务」顶部写下任务，Pinky 会用你选择的 AI 模型（Anthropic 或 OpenAI 兼容 API，密钥保存在系统钥匙串里）自己在手机上完成，照样遵守你的规则和审批，并有步数、时长和费用上限。
+
 ## 2026.1111.8 (2026-11-11)
 
 - 同一个智能体应用同时开着几个对话时（Claude Cowork 就是这样），一个对话不会再接管或点到另一个对话正在用的手机。
