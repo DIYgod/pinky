@@ -34,7 +34,10 @@ func (a *app) rightPanel(c *mg.Context) {
 		}
 		mg.Column(c).Label(locales.TasksSection()).Children(func() {
 			sectionLabel(c, locales.TasksSection())
-			mg.Column(c).Gap(8).Children(func() { a.taskList(c) })
+			mg.Column(c).Gap(8).Children(func() {
+				a.askBox(c)
+				a.taskList(c)
+			})
 		})
 	})
 }

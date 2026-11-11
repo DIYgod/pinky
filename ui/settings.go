@@ -705,6 +705,7 @@ func (a *app) settingsAgents(c *mg.Context) {
 	if !canList {
 		mg.Text(c, locales.SettingsAgentsUnlisted()).FontSize(fsCaption).TextColor(p.ink3)
 	}
+	a.askSettings(c)
 	a.connectAgents(c)
 	a.remoteAgents(c)
 }

@@ -209,6 +209,14 @@ Android 手机不必和电脑在同一个网络里。电脑和手机都装上 [T
 
 在家时经 Tailscale 和直接走 Wi-Fi 一样快；在外面时，画面靠手机的上行带宽传回来，所以经 Tailscale 时 Pinky 会降低画面码率（1 Mbit/s），信号不好的 4G 热点上每一步都要等几秒。详情、实测数据、流量和连不上时怎么办：[docs/away-from-home.md](docs/away-from-home.md)。Agent 也可以不在这台电脑上：见[远程 Agent](docs/mcp.md#over-http)。
 
+### 交给 Pinky
+
+自己没有 Agent？简单的任务，Pinky 可以自己在一台手机上做完。在「设置 › 智能体」的「交给 Pinky」里选一个服务，填上它的 API 密钥：可以通过 Anthropic 的 API（或兼容它的服务）用 Claude，也可以通过兼容 OpenAI API 的服务用别的模型，这时还要填服务地址和模型名称。密钥和手机的 PIN 码一样，保存在 Mac 的钥匙串、Windows 凭据管理器或你的密钥环里，只发送给这个服务。
+
+然后在手机页面「任务」顶部写下任务，比如「定一个 7:00 的闹钟」，点「开始」（或按 ⌘↩，Windows 和 Linux 上是 Ctrl+Enter）；在「所有手机」里要先选手机。Pinky 会以「Pinky」这个 Agent 的身份一步步操作，和其他 Agent 走同一条路：你的规则、审批、已屏蔽的应用、「接管」、「全部停止」和录屏对它都有效，它的任务也会记在「活动」里。它从不输入密码和一次性验证码，遇到时会把手机交给你。点「停止」会立刻结束任务。
+
+每个任务做到 100 步、20 分钟或 2 美元就会停下，以先到者为准；这些上限可以在「设置 › 智能体」里改，等你操作的时间不算在内。费用按 Anthropic 的价格计算；Pinky 不知道价格的模型，按每百万 token 1 美元计算。「交给 Pinky」不会记住上一个任务，一次只用一台手机：更复杂的事，还是接入一个 Agent（[详情](docs/notes/builtin-agent.md)）。
+
 ### 更新
 
 Pinky 在启动时和之后每隔几小时检查一次新版本，有新版本时会显示一张卡片，写着更新了什么，附「立即更新」和「以后再说」。打开「设置 › 高级 › 自动更新」时（默认打开），它会在没有 Agent 在干活、你也有十分钟没用 Pinky 时自己装好，还会更新空闲的 Android 手机上的 Pinky Companion，更新后它的无障碍服务保持关闭，直到下一个任务。截至 2026 年 11 月 8 日的版本都用公开的密钥签名，遇到这样的 Pinky Companion，Pinky 会卸载它，重新安装用 Pinky 私有密钥签名的版本，并告诉你；如果手机在通过 USB 安装应用前会询问，手机页面会说明原因，等你点「更新」；手机不让通过 USB 安装应用时，每个新版本侧栏都会有一张卡片告诉你一次，由你手动安装（[怎么装](#install-companion-by-hand)）。更新之后，「新功能」会列出自你原来的版本以来的变化（Pinky 显示中文时来自 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md)，否则来自英文的 [CHANGELOG.md](CHANGELOG.md)）。
@@ -229,7 +237,7 @@ Pinky 会发送匿名的使用统计（只有计数，比如跑了几个任务�
 <details>
 <summary><b>哪些 Agent 能用 Pinky？</b></summary>
 
-任何能用 MCP 服务器的 Agent：通过 stdio 运行 `pinkyctl mcp`，或者用智能体令牌通过 HTTP 连接（[怎么连](docs/mcp.md#over-http)）。「设置 › 智能体」能一键接入 Claude Code、Claude Desktop、Codex、Cursor，以及它在你电脑上找到的其他 Agent。目前在真机上完整跑通的是 Claude Code。Pinky 自己不带模型，动脑子的是你的 Agent。
+任何能用 MCP 服务器的 Agent：通过 stdio 运行 `pinkyctl mcp`，或者用智能体令牌通过 HTTP 连接（[怎么连](docs/mcp.md#over-http)）。「设置 › 智能体」能一键接入 Claude Code、Claude Desktop、Codex、Cursor，以及它在你电脑上找到的其他 Agent。目前在真机上完整跑通的是 Claude Code。动脑子的是你的 Agent；没有 Agent 时，简单的任务可以用你自己的 API 密钥[交给 Pinky](#交给-pinky)。
 
 </details>
 

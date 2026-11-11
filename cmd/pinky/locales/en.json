@@ -916,6 +916,220 @@
       }
     }
   },
+  "askAnotherAgent": "Another agent",
+  "@askAnotherAgent": {
+    "description": "Ask Pinky: the agent in askBusy when its name is not known."
+  },
+  "askBadKey": "The service didn't accept the API key. Check it in Settings › Agents.",
+  "@askBadKey": {
+    "description": "Why Ask Pinky could not start a task."
+  },
+  "askBusy": "{agent} is using {phone} now. Start when its task ends.",
+  "@askBusy": {
+    "description": "Ask Pinky, above Start, which is off: another agent's task runs on the phone.",
+    "placeholders": {
+      "agent": {
+        "type": "String",
+        "example": "Claude Code"
+      },
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "askDismiss": "Dismiss",
+  "@askDismiss": {
+    "description": "Ask Pinky: the button that hides how its last task ended."
+  },
+  "askDollars": "US${amount}",
+  "@askDollars": {
+    "description": "An amount of money in US dollars, with two decimals: what a task of Ask Pinky cost, or its limit.",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "2.00"
+      }
+    }
+  },
+  "askEndDone": "Done",
+  "@askEndDone": {
+    "description": "Ask Pinky after a task: it did the task. Its summary follows."
+  },
+  "askEndFailed": "Couldn't finish",
+  "@askEndFailed": {
+    "description": "Ask Pinky after a task: it could not do the task. Why follows."
+  },
+  "askEndLine": "{title}. {reason}",
+  "@askEndLine": {
+    "description": "The line Ask Pinky leaves in Activity for a task it ended itself: how it ended (askEndStopped and the like) and why.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Stopped"
+      },
+      "reason": {
+        "type": "String",
+        "example": "Reached the limit of 100 steps."
+      }
+    }
+  },
+  "askEndNotStarted": "Couldn't start",
+  "@askEndNotStarted": {
+    "description": "Ask Pinky after a task: it could not start, for want of a working API key. Why follows."
+  },
+  "askEndStopped": "Stopped",
+  "@askEndStopped": {
+    "description": "Ask Pinky after a task: the person stopped it, or it reached a limit (then why follows)."
+  },
+  "askErrStart": "Couldn't start: {detail}",
+  "@askErrStart": {
+    "description": "Ask Pinky, under the field, in red: Start failed.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "the phone is busy"
+      }
+    }
+  },
+  "askField": "Task for Pinky",
+  "@askField": {
+    "description": "Ask Pinky: the accessible name of the field where the person types the task."
+  },
+  "askLimitCost": "Reached the limit of {amount}.",
+  "@askLimitCost": {
+    "description": "Why Ask Pinky stopped a task: the cost limit of Settings › Agents; amount is askDollars.",
+    "placeholders": {
+      "amount": {
+        "type": "String",
+        "example": "US$2.00"
+      }
+    }
+  },
+  "askLimitSteps": "{count, plural, one {Reached the limit of # step.} other {Reached the limit of # steps.}}",
+  "@askLimitSteps": {
+    "description": "Why Ask Pinky stopped a task: the step limit of Settings › Agents.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "100"
+      }
+    }
+  },
+  "askLimitTime": "{count, plural, one {Reached the limit of # minute.} other {Reached the limit of # minutes.}}",
+  "@askLimitTime": {
+    "description": "Why Ask Pinky stopped a task: the time limit of Settings › Agents.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "20"
+      }
+    }
+  },
+  "askLimitTokens": "{count, plural, one {Reached the limit of # token.} other {Reached the limit of # tokens.}}",
+  "@askLimitTokens": {
+    "description": "Why Ask Pinky stopped a task: the cost limit, in tokens for a model whose prices Pinky does not know.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2000000"
+      }
+    }
+  },
+  "askMeta": "{model} · up to {limit} a task",
+  "@askMeta": {
+    "description": "Ask Pinky, next to Start: the model that will do the task, and the cost limit of a task (askDollars or askTokens).",
+    "placeholders": {
+      "model": {
+        "type": "String",
+        "example": "Claude Opus 5.5"
+      },
+      "limit": {
+        "type": "String",
+        "example": "US$2.00"
+      }
+    }
+  },
+  "askMinutes": "{count, plural, one {# minute} other {# minutes}}",
+  "@askMinutes": {
+    "description": "Settings › Agents › Ask Pinky: a choice of the time limit of a task.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "20"
+      }
+    }
+  },
+  "askNoKey": "No API key is saved. Add one in Settings › Agents.",
+  "@askNoKey": {
+    "description": "Why Ask Pinky could not start a task."
+  },
+  "askPhone": "Phone",
+  "@askPhone": {
+    "description": "Ask Pinky on All phones: the accessible name of the menu that chooses the phone for the task."
+  },
+  "askPlaceholder": "What should Pinky do on {phone}?",
+  "@askPlaceholder": {
+    "description": "Ask Pinky: the hint in the empty task field.",
+    "placeholders": {
+      "phone": {
+        "type": "String",
+        "example": "Pixel 9"
+      }
+    }
+  },
+  "askRefused": "The model declined this task.",
+  "@askRefused": {
+    "description": "Why Ask Pinky could not finish a task."
+  },
+  "askSetup": "Pinky can do simple tasks on your phone by itself, with an AI model you choose.",
+  "@askSetup": {
+    "description": "Ask Pinky before it is set up, under askTitle and above a link to Settings › Agents (askSetupKey or askSetupModel)."
+  },
+  "askSetupKey": "Add an API key in Settings › Agents",
+  "@askSetupKey": {
+    "description": "Ask Pinky with no API key saved: the link to its settings."
+  },
+  "askSetupModel": "Choose a model in Settings › Agents",
+  "@askSetupModel": {
+    "description": "Ask Pinky with an OpenAI-compatible service and no model chosen: the link to its settings."
+  },
+  "askStart": "Start",
+  "@askStart": {
+    "description": "Ask Pinky: the button that starts the task typed in the field."
+  },
+  "askSteps": "{count, plural, one {# step} other {# steps}}",
+  "@askSteps": {
+    "description": "Ask Pinky: how many steps (phone actions) a task took; also the choices of the step limit in Settings › Agents.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "askStop": "Stop Pinky's task",
+  "@askStop": {
+    "description": "Ask Pinky while its task runs: the accessible name of its Stop button (tasksStop)."
+  },
+  "askTitle": "Ask Pinky",
+  "@askTitle": {
+    "description": "The name of Pinky's own agent, which does a task the person types on a phone by itself: the box at the top of Tasks, and its part of Settings › Agents."
+  },
+  "askTokens": "{count, plural, one {# token} other {# tokens}}",
+  "@askTokens": {
+    "description": "Ask Pinky: how many tokens a task used, or its limit, for a model whose prices Pinky does not know.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1000000"
+      }
+    }
+  },
+  "askWorking": "Pinky is working on it",
+  "@askWorking": {
+    "description": "Ask Pinky while its task runs, above how many steps it took, what it cost and how long it has run."
+  },
   "awayBusy": "Setting up…",
   "@awayBusy": {
     "description": "Under awayTitle while it changes."
@@ -7548,13 +7762,193 @@
   "@settingsAgentsWorking": {
     "description": "Settings › Agents: the state at the end of an agent's row, next to a green dot: one of its tasks is running."
   },
+  "settingsAskCost": "Cost per task",
+  "@settingsAskCost": {
+    "description": "Settings › Agents › Ask Pinky: the title of the cost limit."
+  },
+  "settingsAskCostDesc": "Counted from what the service reports, at Anthropic's prices.",
+  "@settingsAskCostDesc": {
+    "description": "Settings › Agents › Ask Pinky with a Claude model whose prices Pinky knows: the line under settingsAskCost."
+  },
+  "settingsAskCostDescTokens": "Pinky doesn't know this model's prices, so it counts a million tokens as US$1.",
+  "@settingsAskCostDescTokens": {
+    "description": "Settings › Agents › Ask Pinky with a model whose prices Pinky does not know: the line under settingsAskCost."
+  },
+  "settingsAskIntro": "Give Pinky a task at the top of Tasks and it does it on the phone by itself, with an AI model you choose. Your rules, approvals and blocked apps apply as for any agent, and its tasks show in Activity.",
+  "@settingsAskIntro": {
+    "description": "Settings › Agents › Ask Pinky: the line under its title."
+  },
+  "settingsAskKey": "API key",
+  "@settingsAskKey": {
+    "description": "Settings › Agents › Ask Pinky: the title of the service's API key."
+  },
+  "settingsAskKeyAdd": "Add",
+  "@settingsAskKeyAdd": {
+    "description": "Settings › Agents › Ask Pinky: the button that opens the field for an API key."
+  },
+  "settingsAskKeyAddLabel": "Add an API key",
+  "@settingsAskKeyAddLabel": {
+    "description": "Settings › Agents › Ask Pinky: the accessible name of settingsAskKeyAdd."
+  },
+  "settingsAskKeyChange": "Change the API key",
+  "@settingsAskKeyChange": {
+    "description": "Settings › Agents › Ask Pinky: the accessible name of the Change button (settingsChange) of the API key."
+  },
+  "settingsAskKeyErrRemove": "Couldn't remove the key: {detail}",
+  "@settingsAskKeyErrRemove": {
+    "description": "Settings › Agents › Ask Pinky, in red: the keychain did not remove the API key.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "access denied"
+      }
+    }
+  },
+  "settingsAskKeyErrSave": "Couldn't save the key: {detail}",
+  "@settingsAskKeyErrSave": {
+    "description": "Settings › Agents › Ask Pinky, in red: the keychain did not save the API key.",
+    "placeholders": {
+      "detail": {
+        "type": "String",
+        "example": "access denied"
+      }
+    }
+  },
+  "settingsAskKeyKeepMac": "Kept in your Mac's Keychain and sent only to the service.",
+  "@settingsAskKeyKeepMac": {
+    "description": "Settings › Agents › Ask Pinky, on a Mac: the line under settingsAskKey."
+  },
+  "settingsAskKeyKeepOther": "Kept in your keyring and sent only to the service.",
+  "@settingsAskKeyKeepOther": {
+    "description": "Settings › Agents › Ask Pinky, on Linux: the line under settingsAskKey."
+  },
+  "settingsAskKeyKeepWindows": "Kept in Windows Credential Manager and sent only to the service.",
+  "@settingsAskKeyKeepWindows": {
+    "description": "Settings › Agents › Ask Pinky, on Windows: the line under settingsAskKey."
+  },
+  "settingsAskKeyPlaceholder": "Paste the API key",
+  "@settingsAskKeyPlaceholder": {
+    "description": "Settings › Agents › Ask Pinky: the hint in the empty API key field."
+  },
+  "settingsAskKeyRemove": "Remove",
+  "@settingsAskKeyRemove": {
+    "description": "Settings › Agents › Ask Pinky: the red button that removes the saved API key."
+  },
+  "settingsAskKeyRemoveLabel": "Remove the API key",
+  "@settingsAskKeyRemoveLabel": {
+    "description": "Settings › Agents › Ask Pinky: the accessible name of settingsAskKeyRemove."
+  },
+  "settingsAskKeyRemovedToast": "API key removed",
+  "@settingsAskKeyRemovedToast": {
+    "description": "A toast after the API key of Ask Pinky is removed."
+  },
+  "settingsAskKeySaved": "Saved",
+  "@settingsAskKeySaved": {
+    "description": "Settings › Agents › Ask Pinky: an API key is saved (never shown)."
+  },
+  "settingsAskKeySavedToast": "API key saved",
+  "@settingsAskKeySavedToast": {
+    "description": "A toast after the API key of Ask Pinky is saved."
+  },
+  "settingsAskKeyUnsupported": "API keys can't be kept safely on this system, so Ask Pinky isn't available.",
+  "@settingsAskKeyUnsupported": {
+    "description": "Settings › Agents › Ask Pinky, under settingsAskKey, on a system without a keychain."
+  },
+  "settingsAskModel": "Model",
+  "@settingsAskModel": {
+    "description": "Settings › Agents › Ask Pinky: the title of the model setting."
+  },
+  "settingsAskModelChange": "Change the model",
+  "@settingsAskModelChange": {
+    "description": "Settings › Agents › Ask Pinky: the accessible name of the Change button (settingsChange) of the model."
+  },
+  "settingsAskModelClaude": "Opus is the most capable; Sonnet and Haiku cost less.",
+  "@settingsAskModelClaude": {
+    "description": "Settings › Agents › Ask Pinky with Anthropic's own API: the line under settingsAskModel, above a menu of Claude models."
+  },
+  "settingsAskModelDesc": "The model's name as the service gives it. It must read images and use tools.",
+  "@settingsAskModelDesc": {
+    "description": "Settings › Agents › Ask Pinky with another service: the line under settingsAskModel."
+  },
+  "settingsAskModelNone": "None",
+  "@settingsAskModelNone": {
+    "description": "Settings › Agents › Ask Pinky: no model is chosen."
+  },
+  "settingsAskModelPlaceholder": "Model name",
+  "@settingsAskModelPlaceholder": {
+    "description": "Settings › Agents › Ask Pinky: the hint in the empty model field."
+  },
+  "settingsAskOn": "Show Ask Pinky",
+  "@settingsAskOn": {
+    "description": "Settings › Agents › Ask Pinky: the switch's title."
+  },
+  "settingsAskOnDesc": "A box at the top of Tasks to give Pinky a task.",
+  "@settingsAskOnDesc": {
+    "description": "Settings › Agents › Ask Pinky: the line under settingsAskOn."
+  },
+  "settingsAskService": "Service",
+  "@settingsAskService": {
+    "description": "Settings › Agents › Ask Pinky: the title of the setting that chooses the API the model is reached through."
+  },
+  "settingsAskServiceAnthropic": "Anthropic-compatible API",
+  "@settingsAskServiceAnthropic": {
+    "description": "Settings › Agents › Ask Pinky: a choice of service: Anthropic's Messages API, or a service that speaks it."
+  },
+  "settingsAskServiceDesc": "Claude through Anthropic's API, or another model through a service compatible with OpenAI's. Each has its own key.",
+  "@settingsAskServiceDesc": {
+    "description": "Settings › Agents › Ask Pinky: the line under settingsAskService."
+  },
+  "settingsAskServiceOpenAI": "OpenAI-compatible API",
+  "@settingsAskServiceOpenAI": {
+    "description": "Settings › Agents › Ask Pinky: a choice of service: OpenAI's Chat Completions API, or a service that speaks it."
+  },
+  "settingsAskSteps": "Steps per task",
+  "@settingsAskSteps": {
+    "description": "Settings › Agents › Ask Pinky: the title of the step limit."
+  },
+  "settingsAskStepsDesc": "Each action on the phone is a step.",
+  "@settingsAskStepsDesc": {
+    "description": "Settings › Agents › Ask Pinky: the line under settingsAskSteps."
+  },
+  "settingsAskTime": "Time per task",
+  "@settingsAskTime": {
+    "description": "Settings › Agents › Ask Pinky: the title of the time limit."
+  },
+  "settingsAskTimeDesc": "Time spent waiting for you doesn't count.",
+  "@settingsAskTimeDesc": {
+    "description": "Settings › Agents › Ask Pinky: the line under settingsAskTime."
+  },
+  "settingsAskURL": "API address",
+  "@settingsAskURL": {
+    "description": "Settings › Agents › Ask Pinky: the title of the address of the service's API."
+  },
+  "settingsAskURLChange": "Change the API address",
+  "@settingsAskURLChange": {
+    "description": "Settings › Agents › Ask Pinky: the accessible name of the Change button (settingsChange) of the API address."
+  },
+  "settingsAskURLDefault": "Default",
+  "@settingsAskURLDefault": {
+    "description": "Settings › Agents › Ask Pinky: the API address is the service's own; also the hint in the empty address field."
+  },
+  "settingsAskURLDescAnthropic": "Leave it for Anthropic's API, or give the address of a service compatible with it.",
+  "@settingsAskURLDescAnthropic": {
+    "description": "Settings › Agents › Ask Pinky with the Anthropic-compatible service: the line under settingsAskURL."
+  },
+  "settingsAskURLDescOpenAI": "The address of the service's OpenAI-compatible API, such as https://…/v1. OpenAI's own by default.",
+  "@settingsAskURLDescOpenAI": {
+    "description": "Settings › Agents › Ask Pinky with the OpenAI-compatible service: the line under settingsAskURL."
+  },
+  "settingsAskURLErr": "Enter an address that starts with https:// or http://.",
+  "@settingsAskURLErr": {
+    "description": "Settings › Agents › Ask Pinky, in red, under the API address field."
+  },
   "settingsCancel": "Cancel",
   "@settingsCancel": {
-    "description": "Settings: a button that closes without changing anything: the remote agents' address editor, and the alert of Delete all activity."
+    "description": "Settings: a button that closes without changing anything: the remote agents' address editor, the editors of Ask Pinky, and the alert of Delete all activity."
   },
   "settingsChange": "Change",
   "@settingsChange": {
-    "description": "Settings: a button that opens an editor: of what an agent may do (Settings › Agents), or of the remote agents' address."
+    "description": "Settings: a button that opens an editor: of what an agent may do (Settings › Agents), of the remote agents' address, or of Ask Pinky's API key, model and address."
   },
   "settingsClose": "Close",
   "@settingsClose": {
@@ -8302,7 +8696,7 @@
   },
   "settingsSave": "Save",
   "@settingsSave": {
-    "description": "Settings: the button that saves what an agent may do (Settings › Agents), or the remote agents' address."
+    "description": "Settings: the button that saves what an agent may do (Settings › Agents), the remote agents' address, or Ask Pinky's API key, model and address."
   },
   "settingsSectionAdvanced": "Advanced",
   "@settingsSectionAdvanced": {
@@ -8880,7 +9274,7 @@
   },
   "tasksStop": "Stop",
   "@tasksStop": {
-    "description": "Red button that stops the agent's task: on the task card and on the All phones tiles."
+    "description": "Red button that stops the agent's task: on the task card, on the All phones tiles, and in Ask Pinky while its task runs."
   },
   "telClose": "Close",
   "@telClose": {

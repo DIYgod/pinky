@@ -42,8 +42,9 @@ type Server struct {
 
 	mu         sync.Mutex
 	sessions   map[*sdk.ServerSession]*gateway.Session
-	middleware []sdk.Middleware       // Use's, for the HTTP servers made later
-	uploads    map[string]*uploadLink // upload links by token (upload.go)
+	builtin    map[*sdk.ServerSession]bool // sessions of Pinky's own agent
+	middleware []sdk.Middleware            // Use's, for the HTTP servers made later
+	uploads    map[string]*uploadLink      // upload links by token (upload.go)
 
 	downloads map[string]*downloadLink // download links by token (download.go)
 }
@@ -51,7 +52,7 @@ type Server struct {
 // New returns an MCP server for the gateway.
 func New(g *gateway.Gateway, version string) *Server {
 	s := &Server{g: g, version: version, sessions: map[*sdk.ServerSession]*gateway.Session{}, uploads: map[string]*uploadLink{},
-		downloads: map[string]*downloadLink{}}
+		downloads: map[string]*downloadLink{}, builtin: map[*sdk.ServerSession]bool{}}
 	s.srv = s.newSDK(false)
 	return s
 }
@@ -109,11 +110,44 @@ func (s *Server) Serve(ctx context.Context, t sdk.Transport) error {
 	return err
 }
 
+// BuiltinName is the name of Pinky's own agent (internal/pilot). No MCP
+// client gets it (DisplayName).
+const BuiltinName = "Pinky"
+
+// ConnectBuiltin starts an MCP session of Pinky's own agent over the
+// transport, for the agent to connect its client to after it returns. Its
+// gateway session is Trusted and named BuiltinName; it gets the same tools
+// as every agent. The session ends when the client closes it or ctx ends.
+func (s *Server) ConnectBuiltin(ctx context.Context, t sdk.Transport) error {
+	ss, err := s.srv.Connect(ctx, t, nil)
+	if err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.builtin[ss] = true
+	s.mu.Unlock()
+	go func() {
+		done := make(chan struct{})
+		go func() {
+			select {
+			case <-ctx.Done():
+				ss.Close()
+			case <-done:
+			}
+		}()
+		ss.Wait()
+		close(done)
+		s.forget(ss)
+	}()
+	return nil
+}
+
 // forget closes the gateway side of an MCP session that ended.
 func (s *Server) forget(ss *sdk.ServerSession) {
 	s.mu.Lock()
 	gs := s.sessions[ss]
 	delete(s.sessions, ss)
+	delete(s.builtin, ss)
 	if gs != nil {
 		s.forgetUploadsLocked(gs)
 	}
@@ -136,12 +170,17 @@ func (s *Server) session(req *sdk.CallToolRequest, remote bool) *gateway.Session
 		info.Name = DisplayName(ci.Name, ci.Title)
 		info.Client = strings.TrimSpace(ci.Name + " " + ci.Version)
 	}
-	if remote {
+	switch {
+	case s.builtin[req.Session]:
+		// Each task of Pinky's own agent is a session of its own, which
+		// ends with the task: there is nothing to reconnect to.
+		info = gateway.AgentInfo{Name: BuiltinName, Client: strings.TrimSpace("pinky " + s.version), Trusted: true}
+	case remote:
 		// Clients over HTTP may open a session for every call, or leave
 		// the last one open: a newer session continues the older ones'.
 		info.Name += RemoteSuffix
 		info.Resume = true
-	} else {
+	default:
 		// A client on this computer may drop its session and start a new
 		// one, as Claude Desktop does after a call times out: the new one
 		// continues the task the old one left.
@@ -173,7 +212,17 @@ var knownClients = map[string]string{
 const coworkPrefix = "local-agent-mode-"
 
 // DisplayName turns an MCP client name into the name shown to the person.
+// A client that calls itself Pinky is not Pinky's own agent, and is shown
+// as such.
 func DisplayName(name, title string) string {
+	n := displayName(name, title)
+	if strings.EqualFold(n, BuiltinName) {
+		return n + " (external)"
+	}
+	return n
+}
+
+func displayName(name, title string) string {
 	key := strings.ToLower(strings.TrimSpace(name))
 	if n, ok := knownClients[key]; ok {
 		return n
