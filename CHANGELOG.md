@@ -2,7 +2,7 @@
 
 What changed for people in each release of Pinky, newest first. A version is the release's date in Asia/Shanghai and that day's count: 2026.1107.2 is the second release of 7 November 2026. Notes wait under "Unreleased" until the next release takes them; see [docs/RELEASING.md](docs/RELEASING.md).
 
-## Unreleased
+## 2026.1111.19 (2026-11-11)
 
 - On macOS, Pinky's PIN and API key fields now keep what you type hidden from accessibility tools, as password fields should. Thanks @pseudoyu.
 - On Windows set to English, Chinese text in Pinky now shows in one font, and numbers and English words wrap where they should.
