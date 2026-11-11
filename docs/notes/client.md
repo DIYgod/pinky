@@ -283,6 +283,19 @@ The prototype's amber and red sat too close to the brand. In OKLCH, dark mode's 
 
 The trade-off: amber now leans orange and red leans vermilion, so amber and red are closer to each other than in the prototype (hue 65° against 31°, but lightness 0.70 against 0.54 in light mode), still clearly apart, while neither can be mistaken for the logo or the selection mark. Shapes back the hues up: amber is dots, card tints and the tile edge; red is only the text and border of Stop; watermelon is only a thin bar and the focus ring; lemon is only inside the logo. No brand color is used as a fill, so selected rows never look like Needs you cards.
 
+## The look: tokens and parts (2026-11-11)
+
+Every screen is built from the tokens and parts in `ui/style.go`, so the app reads as one. Use them instead of numbers of your own; a size, gap or radius that is not on the scale is a bug.
+
+- **Layout.** A stage and two wings: the page in the middle is the stage (`bg`), the sidebar and the panel on the right are the wings (`wing`, gray), and the cards on the wings are raised (`card`, white in light mode, with `raised`'s two-layer shadow). On a page, settings and lists sit in macOS-style groups (`group` and `groupRow`: rows on one rounded field, divided by a hairline inset from the left). The sidebar shows the window's material where there is one (`c.Vibrancy()`: macOS, and Mica on Windows 11), and the wings' gray elsewhere. The sidebar's brand row and every page's header are `headerHeight` (52) tall, and rows start their text at `rowInset` (12).
+- **Type.** One scale, `fsCaption` 12, `fsSmall` 13, `fsBody` 14, `fsHeadline` 15, `fsTitle3` 17, `fsTitle2` 20, `fsTitle1` 26, and four weights, `fwRegular` to `fwBold`. Body text, rows and buttons are `fsBody`; descriptions `fsSmall` in `ink2`; meta, counts and eyebrows `fsCaption` in `ink3`; card and group titles `fsHeadline` semibold; a page's header `fsTitle3`, its content's title and dialogs' `fsTitle2`. Section labels above a group are `sectionLabel`: caption, semibold, `ink3`, sentence case (no capitals).
+- **Space.** `sp1` 4, `sp2` 8, `sp3` 12, `sp4` 16, `sp5` 20, `sp6` 24, `sp8` 32. There is no `sp7`.
+- **Radii.** `rSmall` 6 for small buttons, chips and thumbnails; `rControl` 8 for buttons, rows and menu items; `rCard` 12 for cards, tiles, popovers and notes; `rSheet` 16 for dialogs.
+- **Color carries meaning, nothing else.** Amber (dots, card tints, the tile edge) is what needs the person; red only Stop and Deny (and errors' text); green allows and works; watermelon (`brand`) only the selection mark and the focus ring; indigo (`accentBtn`) the primary button and links. Removing a phone, the one other destructive action, is a plain button in Settings and red text in the ⋯ menu, and asks first.
+- **Parts.** `button` (34 tall; `btnPrimary`, plain, `small`, with an icon), `linkButton`, `quietButton`; `card`, `raised`, `group`/`groupRow`; `sheet` for every dialog (a 16 radius, 24 padding, a soft shadow and a 0.32 backdrop, with the primary button rightmost); `menuPanel`, `menuItem` and `menuText` for popovers such as the phone's ⋯ menu; `pageHeader`, `pageTitle` and `settingsHeading`; `emptyWell` for an empty list and `stateTitle`/`stateDetail` for a page's empty, error and first-run states; `tileIcon` for Add phone's choices; `appIcon`, `dot`, `hollowDot`, `spinner`, `selectionMark`. Activity's steps hang on a timeline: a rail with each step's picture, or `stepThumb`, a sketch of a screen, where it has none.
+
+`PINKY_SCREENSHOTS_ZH=<dir> PINKY_SCREENSHOTS_DARK=1 go test ./ui -run 'TestChinese.*Screenshots'` draws every screen in both appearances, the quickest way to see a change everywhere.
+
 ## Differences from the prototype
 
 - The phone in the middle grows with the window (the prototype draws it 300 × 632); its bezel radius scales with it.
