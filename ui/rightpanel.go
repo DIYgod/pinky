@@ -503,10 +503,11 @@ func (a *app) stepList(c *mg.Context, t gateway.TaskView, last int) {
 						}
 					})
 					if shot {
-						// Quiet until the row is pointed at: most steps have one.
+						// Hidden until the row is pointed at or focused: most
+						// steps have one, and a camera on each is noise.
 						cam := mg.Icon(c, icCamera).FontSize(13).TextColor(p.ink3).Margin(3, 2, 0, 0).Shrink(0)
-						if !row.Hovered() && !open {
-							cam.Opacity(0.55)
+						if !row.Hovered() && !row.Focused() && !open {
+							cam.Opacity(0)
 						}
 					}
 				})
