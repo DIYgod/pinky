@@ -2,7 +2,7 @@
 
 Pinky 每个版本给用户带来了哪些变化，最新的在最前面。版本号是发布当天的日期（Asia/Shanghai 时区）加上当天的序号：2026.1107.2 是 2026 年 11 月 7 日的第二个版本。还没发布的说明先放在“Unreleased”下面，由下一个版本带走。英文版见 [CHANGELOG.md](CHANGELOG.md)；发布流程见 [docs/RELEASING.md](docs/RELEASING.md)。
 
-## Unreleased
+## 2026.1111.16 (2026-11-11)
 
 - 保存的 PIN 码没能解锁手机时，卡片上现在有「再试一次」：用 Touch ID 或 Windows Hello 确认后再输一次 PIN 码，不用再暂停又恢复手机才能从电脑解锁。Pinky 仍然不会自己重试。感谢 @demystify0137。
 
