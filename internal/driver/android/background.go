@@ -560,7 +560,10 @@ func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptio
 	if err := b.ready(ctx); err != nil {
 		return err
 	}
-	enter := func() error { return b.Key(ctx, driver.KeyEnter) }
+	// Enter keeps the note the typing left, such as a field Pinky could not
+	// read back; only a note that the key itself may not have arrived
+	// replaces it (keyVia).
+	enter := func() error { return b.key(ctx, driver.KeyEnter) }
 	c := b.d.companionClientFor(ctx, forBackground)
 	var refused error
 	if c != nil && b.d.comp.displays() {
@@ -589,6 +592,12 @@ func (b *Background) Type(ctx context.Context, text string, opt driver.TypeOptio
 // Key implements driver.Device.
 func (b *Background) Key(ctx context.Context, k driver.Key) error {
 	b.d.setInputNote("")
+	return b.key(ctx, k)
+}
+
+// key presses k on the display. Unlike Key it keeps the input note, so
+// that Type's enter does not drop what the typing noted.
+func (b *Background) key(ctx context.Context, k driver.Key) error {
 	code, ok := keycodes[k]
 	if !ok {
 		return fmt.Errorf("android: key %q: %w", k, driver.ErrUnsupported)
