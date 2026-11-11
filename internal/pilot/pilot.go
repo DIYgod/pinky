@@ -402,10 +402,16 @@ func (ru *run) work(ctx context.Context) (End, string) {
 		if end := ru.limit(); end != Running {
 			return ru.end(cs, end, "")
 		}
-		t, err := m.send(ctx, results, text)
+		// The model request gets only the task's remaining time.
+		mctx, mcancel := ru.budget(ctx)
+		t, err := m.send(mctx, results, text)
+		mcancel()
 		results, text = nil, ""
 		if t != nil {
 			ru.count(t.usage, cfg)
+		}
+		if end := ru.limit(); ctx.Err() == nil && end == TimeLimit {
+			return ru.end(cs, end, "")
 		}
 		if err != nil {
 			return ru.ended(ctx, cs, redact(err, key))
@@ -507,6 +513,14 @@ func (ru *run) limit() End {
 		return CostLimit
 	}
 	return Running
+}
+
+// budget is ctx cut off when the task's time limit is reached.
+func (ru *run) budget(ctx context.Context) (context.Context, context.CancelFunc) {
+	ru.mu.Lock()
+	left := ru.st.Config.MaxTime - (time.Since(ru.st.Started) - ru.waited)
+	ru.mu.Unlock()
+	return context.WithTimeout(ctx, left)
 }
 
 // tokensPerDollar is the budget of a model whose prices Pinky does not
