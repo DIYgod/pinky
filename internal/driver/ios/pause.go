@@ -32,11 +32,11 @@ func (p *Provider) SetPaused(id string, paused bool) {
 		delete(p.known, id) // inspected again at the next List
 	}
 	p.mu.Unlock()
+	// The gateway tells every provider and logs the pause itself, so this
+	// logs only what pausing stopped here: the id may be an Android phone's.
 	if stop != nil {
+		p.logger().Info("iphone: paused: stopping the helper's runner that waited for the passcode", "device", id)
 		go stop.stop()
-	}
-	if paused {
-		p.logger().Info("iphone: paused", "device", id)
 	}
 }
 
