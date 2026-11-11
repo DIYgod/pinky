@@ -1,6 +1,6 @@
 # Pinky on the phone itself
 
-Researched on 2026-11-11. The question: can Pinky run entirely on a phone, with no computer, and operate that same phone, with the person watching, approving, taking over and stopping it from the phone? This is a feasibility study, not a build. Nothing here ships; one throwaway prototype ran on an emulator and was deleted.
+Researched on 2026-11-11. The question: can Pinky run entirely on a phone, with no computer, and operate that same phone, with the person watching, approving, taking over and stopping it from the phone? This is a feasibility study, not a build. Nothing here ships; one throwaway prototype ran on an emulator and was deleted. A second Android prototype, kept in the repository, then ran end to end: see [Prototype results (Android)](#prototype-results-android).
 
 Sources are cited inline. **[P]** marks a primary source (the vendor's documentation, AOSP or Apple's own text, a project's own repository), **[S]** a secondary one (press, forums, other people's write-ups). "Measured here" means it ran in this study.
 
@@ -191,6 +191,132 @@ In AOSP 17, `appops set <package> PROJECT_MEDIA allow` also makes screen capture
 6. For the shell tier: turn on Developer options and Wireless debugging, on a trusted Wi-Fi network, and pair once.
 
 Everything except the shell process survives a reboot. A force stop undoes step 3.
+
+## Prototype results (Android)
+
+Unlike the throwaway program in [What ran here](#what-ran-here), this prototype is kept: `android/standalone`, `internal/standalone` and `internal/driver/android/local`. It follows [the recommended architecture](#android-one-app-the-companion-grown-up) and ran end to end on the Android 17 emulator (API 37, arm64) on 2026-11-11. It does not ship, and no real phone has run it yet.
+
+### What was built
+
+- **An app of its own, Pinky Standalone (`app.pinky.standalone`).** Its Gradle project compiles the companion's sources with its own manifest, service and screens, so the shipped companion stays as it is. The companion only gained hooks a subclass can use: an open service class, `extraCommand`, `extraFeatures` and `defaultIdleDisableMs`. A product would grow the companion itself instead.
+- **The accessibility service** (`StandaloneService`) extends the companion's. It serves the same protocol on `@pinky_standalone` and adds the verbs that act:
+  - `gesture`: up to 20 strokes through `dispatchGesture`, for taps, long presses, swipes and drags;
+  - `global`: Back, Home, Recents and the shade;
+  - `screenshot`: `takeScreenshot`, sent as a JPEG;
+  - `launch` and `apps`: starting apps by package and listing them.
+
+  It declares `canPerformGestures` and `canTakeScreenshot` and is still not an accessibility tool.
+- **The Go core**, `libpinkycore.so` (`internal/standalone/libcore`), is built with `-buildmode=c-shared` for `android/arm64` with the NDK's clang (`scripts/standalone.sh`). It is loaded over JNI inside the service's process and holds:
+  - the gateway, with the default rules and history in SQLite in the app's files folder;
+  - the MCP server;
+  - Ask Pinky's agent loop (`internal/pilot`), unchanged.
+- **The local driver** (`internal/driver/android/local`) is a `driver.Device` over `companion.NewLocal`, which dials the abstract socket directly instead of through an adb forward. Taps, swipes, long presses and drags are gestures; keys are global actions; typing is `set_text`; apps start by package.
+- **A control socket for Pinky's own screens**, `@pinky_standalone_core` (`internal/standalone/control.go`). It speaks line JSON: state, subscribe, start, decide, preset, stop and dismiss. Only the app's own uid may connect (`SO_PEERCRED`). The agent has only the MCP tools, so it cannot reach it.
+- **The UI, in Kotlin:**
+  - The task screen (`TaskActivity`, in a process of its own) holds the task, the provider, model and base URL, and the key. The key is never saved. The screen also has "Ask before", Start, Stop, New task and the steps as they happen.
+  - The Working pill with Stop, and the card for an approval or a handoff (Deny, Allow for task, Allow once). The service draws both as accessibility overlays above every app, so they need no overlay permission.
+- **Tools for testing, not in the APK:**
+  - `corectl` drives the control socket from adb as the app's uid (`run-as`);
+  - `localbench` times the service's verbs;
+  - `fakemodel` stands in for the model. It speaks the Anthropic Messages API with scripted runs: `settings`, `loop` and `attack`.
+
+Where it differs from the recommended architecture, and why:
+
+- **A separate package**, so the shipped companion and its users stay untouched.
+- **The approval is a card over the current app, not a screen of Pinky's.** A card needs no activity start and stays over every app. The person sees what the agent wants to do next to where it will happen.
+- **No `FLAG_SECURE` on the card yet.** The agent's screenshots show the card, but the agent cannot press it (below).
+- **The key is typed for each task** and held in memory, not in the Keystore.
+
+### Milestone 1: the service acts alone
+
+`localbench` ran on the emulator as the app's uid, over the service's socket only (no adb input), 10 runs of each verb. Times are in ms. "Settled" means the screen stopped changing.
+
+| Verb | p50 | p90 | Notes |
+| --- | --- | --- | --- |
+| Connect and ping | 16.4 | | |
+| Ping | 0.5 | 7.2 | |
+| List apps | 146 | | |
+| Launch Settings | 6.5 | | Settled after 307; Settings' own screen read after 1,432 |
+| Read the tree | 4.3 | 6.5 | 1.5–79.6 across all runs |
+| Screenshot, JPEG q80 | 380 | 484 | Capture 349, encode 25, 137 KB; decoded in Go in 13.8 |
+| Screenshot, PNG | 437 | | 207 KB |
+| Swipe of 300 ms | 307.8 | | 7.8 over the gesture; settled after 820 |
+| Tap (50 ms) | 109 | 175 | 59 over the gesture; settled after 1,034 |
+| Type (`set_text`) | 198 | 477 | |
+| Long press of 800 ms | 872 | | 72 over the gesture |
+
+Every verb answers well within a model's turn. Screenshots cost the most, and the system allows about three a second anyway (see [Seeing](#the-accessibility-tier-an-app-alone)).
+
+### Milestone 2: the core drives through the local driver
+
+With the core inside the service, MCP calls went through the gateway to the local driver and the phone:
+
+- Launch, tap, swipe and type all settled.
+- With "Ask before" on commits, Settings changes waited for approval. Answered over the control socket, Allow once acted once, and Deny returned `approval_denied` with nothing done.
+- Launching Pinky Standalone returned `blocked_by_policy`. The prototype's package is one of Pinky's own apps (`policy.StandaloneApp`): its screen is blocked outright, and no task can lift that.
+- Stop over the control socket ended the task in about 0.1 s.
+
+`internal/standalone/standalone_test.go` runs the same flows on fake phones.
+
+### Milestone 3: end to end on the phone
+
+These were run on the emulator with `fakemodel` on the computer in place of a cloud model, so no API key was needed. A finger was stood in for by `adb shell input tap`. A task was typed on the task screen and started there; the screen moved to the back and the pill showed.
+
+| Check | Result |
+| --- | --- |
+| The model's calls go through the gateway | Each became a step under the usual rules, with history |
+| An approval shows on the card | The card showed over Settings with the step's title. Allow once settled the step (dark theme turned on); Deny returned `approval_denied` with nothing done |
+| The agent waits while the card shows | `internal/pilot` holds the call until the person answers, so the model gets no turn meanwhile (safety rule 2) |
+| The agent opens Pinky | `blocked_by_policy` |
+| The agent taps and swipes on the pill's Stop | Refused and reported as not done; the task kept running |
+| A gesture on the card's Allow once, sent to the service directly (not through the gateway) | Refused by the service (`own_ui`); the approval stayed pending and nothing changed |
+| The same, in a test build without the service's refusal: taps on Allow once, Deny and the pill's Stop | `dispatchGesture` ran, and none of the three buttons reacted: the approval stayed pending and the task kept running. `input tap` at the same points worked |
+| The person taps Stop on the pill | The task stopped in under a second |
+| The agent reads the screen while the card shows | Settings' elements as without the card; the card's and pill's areas count as covered, and their content is absent |
+| The agent reads the screen while the task screen is in front | One element, `list ""`; every action there is refused |
+
+So the agent's input meets three walls, from the top:
+
+1. **The gateway** blocks Pinky's own screen by package, as it does for the companion.
+2. **The service** refuses any gesture with a point on the pill or the card, or on a window of Pinky's own (`OwnUI`), before `dispatchGesture` runs. It refuses Pinky's windows on other displays too. The driver reports `own_ui` as `driver.ErrUnsupported`, so the agent reads "Nothing was done", not `uncertain`.
+3. **Android:** the pill, the card and the task screen are `accessibilityDataSensitive` and `filterTouchesWhenObscured`. Android drops the touches our service injects on them, even when the service's own check is gone.
+
+Found on the way, and worth keeping in the product:
+
+- **`accessibilityDataSensitive` hides Pinky's views from Pinky's own service too.** The card's and pill's windows come back with an empty package and no root. Only the window title is left, so the prototype sets the title to its package and the driver knows its own overlays by that. Only accessibility services can draw accessibility overlays. Another service could copy the title, but all it would gain is that its overlay stops hiding the app below from the agent.
+- **Pinky's own card made every approved step stale.** The card occluded the app's elements under it, so the screen read after the person allowed a step differed from the one the step was asked on. The gateway then refused the step as `stale`. Now the driver leaves Pinky's overlays out of the screen the agent reads and adds their areas to the covered ones (`agentScreen` in `internal/driver/android/local`).
+- **Android itself ignores the service's taps on sensitive views**, as rule 3 of [the safety model](#the-safety-model-on-the-same-phone) expects. With `OwnUI` taken out of a test build, `dispatchGesture` taps on the card and the pill reached nothing. The card does not check `FLAG_IS_ACCESSIBILITY_EVENT` itself and nothing covered it, so the drop is most likely the sensitive views' own filter. So far this is the stock Android 17 emulator only; vendor versions still need checking.
+
+### Size, memory and battery
+
+- **`libpinkycore.so`:** 21.1 MB, stripped.
+- **The debug APK:** 23.9 MB, of which 2.7 MB is not Go.
+- **Memory over a 10-minute task.** The `loop` script browsed Settings for 10 minutes: 98 model turns, 97 steps, every one settled, with `fakemodel` answering after 5 s as a model would. `dumpsys meminfo` every 30 s:
+  - The service's process, which holds the Go core: 74 MB PSS idle, then 79–80 MB through the task, flat with no growth. RSS was about 212 MB, most of it shared code. Of the PSS, about 27 MB is the Go heap (counted as "Unknown"), 20 MB the library mapped from the APK, 11 MB native heap and 9 MB Java heap.
+  - The task screen's process: 23 MB PSS. Android froze it while it was in the back, as it does with any cached process; the pill and the card are in the service's process and kept working.
+- **CPU:** 6.6 s of the service's process over the 10 minutes, about 1.1% of one core. Steps took 515 ms for a key, 590 ms for a tap, 750 ms for a swipe and 1.1 s for a launch on average, settling included.
+- **One model reply came 35 s late** (96 s in an earlier run). Both times Settings had just opened Network & internet, which makes the emulator's simulated Wi-Fi scan. The steps around it were normal, and the core was not waiting on anything of its own. It is most likely the emulator's network, but a real phone has to show that.
+- **Battery and heat** need a real phone; the emulator's battery is simulated.
+
+### Not verified yet
+
+- **Real phones.** The Mi 10 Pro (HyperOS, Android 17) and the Pixel (Android 10) are next, with the owner's OK. HyperOS may need extra permissions for overlays or to keep the service alive.
+- **Android 10 to 13.**
+  - `takeScreenshot` needs Android 11, so Android 10 has no screenshots.
+  - `accessibilityDataSensitive` needs Android 14. Before it, Pinky's own controls are visible to the service and take its injected touches, so only the gateway and `OwnUI` keep the agent off them.
+- **A cloud model** with the person's own key; only `fakemodel` ran.
+- **Take over.** Not built: the person's touches are not told apart from the agent's.
+- **Battery and heat** over a long task.
+
+### The shell tier
+
+Not tried, because it needs a setting changed on the phone: Developer options and Wireless debugging. For this prototype it would take:
+
+1. Pairing once with the phone's own adbd. Pinky's adb client speaks `host:pair` to an adb server, and the phone has none, so the app would need its own pairing and TLS to adbd, as Shizuku and Key Mapper do.
+2. Starting a shell process with `app_process` that serves `internal/driver/android`'s shell features: `getevent` for Take over, `input`, and the hidden second screen.
+3. Having the core use that process for those features and the local driver for the rest.
+
+[Effort](#effort) puts this at 3–4 more weeks.
 
 ## iOS
 
@@ -452,7 +578,7 @@ Ordered by how much each could stop the Android app; iOS last.
    - that the shell's `input tap` arrives with device id −1;
    - that the approval screen is missing from the companion's tree;
    - that a real finger still works.
-   If any fails, rules 1 and 2 in the gateway carry the whole load.
+   If any fails, rules 1 and 2 in the gateway carry the whole load. The Android prototype checked the first and third on the stock Android 17 emulator, and that adb's `input tap` still works ([Prototype results](#prototype-results-android)). The shell's device id, a real finger and the vendors' versions are still open.
 3. **Banking and payment apps.** Some refuse to run while a non-store accessibility service is on, and their screens are secure or sensitive, so Pinky sees black or nothing. Payments, often the reason to want an agent, would mostly be the person's to do. Without the shell tier the service cannot turn itself on per task, so the conflict is constant; with it, some banking apps are reported to refuse to run while Developer options are on (not checked here). Other apps may fight agents too: when ByteDance's Doubao assistant shipped on a ZTE nubia phone, Chinese apps blocked it ([Sixth Tone](https://www.sixthtone.com/news/1019137) [S]).
 4. **Vendors kill the service.** A force stop by a vendor cleaner turns the service off until the person turns it on again. The app must notice and guide, and some phones will still be unreliable.
 5. **Take over without the shell is unproven.** Without `getevent`, Pinky has an outside-touch overlay or guesses from changes the agent did not cause. A miss lets the agent act against the person's hand; a false alarm stops it at random. This needs a prototype too, or Take over needs the shell tier.
