@@ -26,6 +26,11 @@ import (
 // twin there (shim.go): the app catalog, the home screen's names and the
 // lock state. The rest of what goes through lockdown over usbmuxd (vitals,
 // the inspector fallback) fails.
+//
+// The display stream and its HID session start with the first input or
+// view (live), not here: nobody watches the phone's own screen, and a stream
+// started at open runs for streamIdle with nothing to show it to, about
+// 500 KB/s through the same loopback as the first read (2026-11-12).
 func OpenOverTunnel(ctx context.Context, info driver.Info, conn io.ReadWriteCloser, log *slog.Logger) (*Device, error) {
 	stop := context.AfterFunc(ctx, func() { conn.Close() })
 	params, err := tunnelHandshake(conn, requestedMTU)
@@ -55,7 +60,7 @@ func OpenOverTunnel(ctx context.Context, info driver.Info, conn io.ReadWriteClos
 	time.AfterFunc(rsdLinger, l.closeRSD)
 
 	d := &Device{info: info, l: l, log: logTo(log), done: make(chan struct{}), two: twoScreens(info.Model)}
-	if err := d.start(ctx); err != nil {
+	if err := d.readDisplays(ctx); err != nil {
 		l.Close()
 		return nil, err
 	}

@@ -48,8 +48,15 @@ const (
 )
 
 // raxRecheckFailures is how long a phone whose remoteAXService failed is
-// left on the inspector path before Observe tries the service again.
+// left on the inspector path before Observe tries the service again. On the
+// phone itself (tunnelOnly) there is no inspector to be left on: every read
+// tries again.
 const raxRecheckFailures = 30 * time.Second
+
+// tunnelOnly reports whether the device was opened over the tunnel alone
+// (OpenOverTunnel): Pinky runs on the phone itself, with no usbmuxd and so
+// no inspector.
+func (d *Device) tunnelOnly() bool { return d.l != nil && d.l.tunnelOnly }
 
 // raxLimits bound one walk over remoteAXService.
 var raxLimits = walkLimits{MaxElements: 400, Budget: 4 * time.Second}
@@ -74,7 +81,9 @@ func (d *Device) walkLimits() walkLimits {
 
 // raxReady returns the remote accessibility session, connecting on first
 // use. A phone that refused it is asked again only after a while, so every
-// Observe on it does not pay for a failed connection.
+// Observe on it does not pay for a failed connection, except on the phone
+// itself (tunnelOnly), where nothing else can read the screen: there every
+// call asks again, and waits longer for the first answer.
 func (d *Device) raxReady(ctx context.Context) (*raxSession, error) {
 	d.svcMu.Lock()
 	defer d.svcMu.Unlock()
@@ -85,7 +94,8 @@ func (d *Device) raxReady(ctx context.Context) (*raxSession, error) {
 		d.rax.Close()
 		d.rax = nil
 	}
-	if d.raxErr != nil && time.Since(d.raxFailedAt) < raxRecheckFailures {
+	onPhone := d.tunnelOnly()
+	if d.raxErr != nil && !onPhone && time.Since(d.raxFailedAt) < raxRecheckFailures {
 		return nil, d.raxErr
 	}
 	d.mu.Lock()
@@ -94,12 +104,24 @@ func (d *Device) raxReady(ctx context.Context) (*raxSession, error) {
 	if closed {
 		return nil, fmt.Errorf("device closed: %w", driver.ErrOffline)
 	}
-	s, err := dialRAX(ctx, d.l.entry)
+	wait := raxAnswerWait
+	if onPhone {
+		wait = raxAnswerWaitTunnel
+	}
+	start := time.Now()
+	s, err := dialRAX(ctx, d.l.entry, wait)
 	if err != nil {
 		if ctx.Err() == nil {
 			d.raxErr, d.raxFailedAt = err, time.Now()
 		}
+		if onPhone {
+			d.log.Warn("iphone: remoteAXService did not connect", "device", d.info.ID,
+				"after", time.Since(start).Round(time.Millisecond), "err", err)
+		}
 		return nil, err
+	}
+	if onPhone {
+		d.log.Info("iphone: remoteAXService connected", "device", d.info.ID, "in", time.Since(start).Round(time.Millisecond))
 	}
 	d.rax, d.raxErr = s, nil
 	return s, nil

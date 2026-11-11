@@ -167,7 +167,10 @@ func (d *Guard) ObserveWithStats(ctx context.Context, opt driver.ObserveOptions)
 		d.g.saw(s, start)
 	}
 	if d.log != nil {
-		if st.RAXError != nil {
+		switch {
+		case err != nil:
+			d.log.Warn("observe failed", "err", err, "after", time.Since(start).Round(time.Millisecond))
+		case st.RAXError != nil:
 			d.log.Warn("observe: remoteAXService failed", "err", st.RAXError, "source", st.Source)
 		}
 		if st.Total > slowRead {

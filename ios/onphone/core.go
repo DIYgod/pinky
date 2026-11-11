@@ -91,6 +91,7 @@ type Core struct {
 	state   []byte        // the last standalone.State, as JSON
 	reason  string        // the last reason the phone was not ready
 	changed chan struct{} // closed and replaced when state or reason changes
+	started bool          // a task started whose end is not logged yet
 }
 
 // New starts the core, with the phone offline until Connected.
@@ -334,6 +335,12 @@ func (c *Core) start(ctx context.Context, r standalone.StartRequest) reply {
 		}
 		return fail(code, err)
 	}
+	c.log.Info("task started", "provider", cfg.Provider, "model", cfg.Model)
+	// The next publish that finds the task ended logs how, also when it
+	// ended before any publish saw it run.
+	c.mu.Lock()
+	c.started = true
+	c.mu.Unlock()
 	c.poke()
 	return reply{OK: true}
 }
@@ -495,6 +502,7 @@ func (c *Core) publish() bool {
 	if !st.Device.Ready {
 		why = c.prov.why()
 	}
+	running := st.Agent != nil && st.Agent.Running
 	c.mu.Lock()
 	if !bytes.Equal(js, c.state) || why != c.reason {
 		c.rev++
@@ -502,8 +510,26 @@ func (c *Core) publish() bool {
 		close(c.changed)
 		c.changed = make(chan struct{})
 	}
+	ended := c.started && !running && st.Agent != nil
+	if ended {
+		c.started = false
+	}
 	c.mu.Unlock()
-	return (st.Agent != nil && st.Agent.Running) || len(st.Needs) > 0
+	if ended {
+		c.logEnd(*st.Agent)
+	}
+	return running || len(st.Needs) > 0
+}
+
+// logEnd logs how a task ended. Its summary goes to the log only when Pinky
+// ended the task over an error: otherwise it is the model's words, which
+// may tell what was on the screen.
+func (c *Core) logEnd(a standalone.AgentState) {
+	args := []any{"end", a.End, "steps", a.Steps, "seconds", a.Seconds}
+	if a.End == string(pilot.Error) {
+		args = append(args, "error", a.Summary)
+	}
+	c.log.Info("task ended", args...)
 }
 
 func (c *Core) current() view {

@@ -1,6 +1,7 @@
 package onphone
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -201,6 +202,12 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
+	return newHarnessLog(t, quiet)
+}
+
+// newHarnessLog is newHarness with the core logging to log.
+func newHarnessLog(t *testing.T, log *slog.Logger) *harness {
+	t.Helper()
 	dev := demo.NewDevice("iphone", "iPhone", driver.IOS)
 	dev.AddApp(policy.IPhoneApp, "Pinky")
 	h := &harness{dev: dev, api: &model{}}
@@ -213,7 +220,7 @@ func newHarness(t *testing.T) *harness {
 		Gateway: gateway.Options{SettleMax: 200 * time.Millisecond, PollInterval: 5 * time.Millisecond,
 			MaxBlock: 50 * time.Millisecond, DiscoverEvery: 20 * time.Millisecond},
 		Pilot: pilot.Options{HTTPClient: srv.Client()},
-		Log:   quiet,
+		Log:   log,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -386,6 +393,57 @@ func TestStartLeavesPinkysApp(t *testing.T) {
 	h.until(t, "the end", func(s standalone.State) bool { return s.Agent != nil && !s.Agent.Running })
 	if uiAtFirstCall {
 		t.Fatal("the agent started while Pinky's app was in front")
+	}
+}
+
+// lockedBuffer is a log that tests read while the core writes it.
+type lockedBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *lockedBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *lockedBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
+}
+
+// The log says that a task started and how it ended, without the task's
+// words, the key or the model's summary, which may tell what the screen
+// showed.
+func TestTaskLog(t *testing.T) {
+	var log lockedBuffer
+	h := newHarnessLog(t, slog.New(slog.NewTextHandler(&log, nil)))
+	h.api.turns = []func(string, *http.Request) map[string]any{
+		func(string, *http.Request) map[string]any {
+			return call("t1", "finish", map[string]any{"outcome": "done", "summary": "Read the secret plan."})
+		},
+	}
+	if o := h.do(t, map[string]any{"cmd": "start", "task": "Find my secret plan", "key": "sk-test-key",
+		"base_url": h.url, "model": "fake"}); !o.OK {
+		t.Fatalf("start: %+v", o)
+	}
+	h.until(t, "the end", func(s standalone.State) bool { return s.Agent != nil && !s.Agent.Running })
+	deadline := time.Now().Add(5 * time.Second)
+	for !strings.Contains(log.String(), `msg="task ended"`) && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	got := log.String()
+	for _, want := range []string{`msg="task started"`, "model=fake", `msg="task ended"`, "end=done"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("the log lacks %s:\n%s", want, got)
+		}
+	}
+	for _, secret := range []string{"secret", "sk-test-key"} {
+		if strings.Contains(got, secret) {
+			t.Errorf("the log tells %q:\n%s", secret, got)
+		}
 	}
 }
 
