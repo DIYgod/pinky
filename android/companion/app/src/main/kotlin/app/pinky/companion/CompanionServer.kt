@@ -25,9 +25,25 @@ import java.util.concurrent.CopyOnWriteArraySet
  */
 class CompanionServer(private val service: PinkyAccessibilityService) {
 
-    val handler = RequestHandler(service) { pingCount }
+    val handler = RequestHandler(service, this)
     val events: EventHub get() = service.events
     private val connections = CopyOnWriteArraySet<Connection>()
+
+    // Who drives the phone: one connection's claim. Guarded by claimLock,
+    // like shown, the holder the claim events told last.
+    private val claimLock = Any()
+    private var claimer: Connection? = null
+    private var claimTask = ""
+    private var shown: Holder? = null
+
+    /**
+     * Who drives the phone: Pinky on a computer or Pinky on the phone, and
+     * the task it named. implicit is an older desktop Pinky, which does not
+     * claim but holds an event subscription while its agent works.
+     */
+    data class Holder(val by: String, val task: String, val implicit: Boolean) {
+        fun write(j: Json): Json = j.field("by", by).fieldIfNotEmpty("task", task).flag("implicit", implicit)
+    }
 
     @Volatile
     private var running = false
@@ -82,6 +98,86 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
 
     internal fun removed(c: Connection) {
         if (connections.remove(c) && !c.own) touch()
+        synchronized(claimLock) {
+            if (claimer === c) {
+                claimer = null
+                claimTask = ""
+            }
+            announceLocked()
+        }
+    }
+
+    /** Who holds the phone now, or null when it is free. */
+    val holder: Holder?
+        get() = synchronized(claimLock) { holderLocked(null) }
+
+    /**
+     * Gives the phone to c for task and returns null, or returns who holds
+     * it. A claim lasts until it is released or its connection ends. Claims
+     * from this app's own connections take over each other's: the core that
+     * reconnects keeps its claim.
+     */
+    fun claim(c: Connection, task: String): Holder? {
+        synchronized(claimLock) {
+            c.claims = true
+            val mine = claimer === c || (claimer?.own == true && c.own)
+            if (!mine) holderLocked(c)?.let { return it }
+            claimer = c
+            claimTask = task
+            announceLocked()
+            return null
+        }
+    }
+
+    /** Ends c's claim, if it holds one. */
+    fun release(c: Connection) {
+        synchronized(claimLock) {
+            c.claims = true
+            if (claimer === c) {
+                claimer = null
+                claimTask = ""
+            }
+            announceLocked()
+        }
+    }
+
+    /**
+     * Ends a computer's claim for Pinky on the phone (Stop on its pill) and
+     * tells the computer with stopped. False when no computer holds an
+     * explicit claim: an implicit one cannot be stopped from here.
+     */
+    fun stopClaim(): Boolean {
+        synchronized(claimLock) {
+            val c = claimer ?: return false
+            if (c.own) return false
+            claimer = null
+            claimTask = ""
+            announceLocked(stopped = c)
+            return true
+        }
+    }
+
+    /** Called when c subscribed to events, changed its subscription or ended it. */
+    internal fun subscribed(c: Connection) {
+        synchronized(claimLock) { announceLocked(fresh = c) }
+    }
+
+    private fun holderLocked(except: Connection?): Holder? {
+        claimer?.let { if (it !== except) return Holder(if (it.own) BY_PHONE else BY_COMPUTER, claimTask, false) }
+        if (connections.any { it !== except && it.implicitClaim }) return Holder(BY_COMPUTER, "", true)
+        return null
+    }
+
+    // Tells the subscribers of claim events when the holder changed; fresh,
+    // a connection that just subscribed, learns it in any case.
+    private fun announceLocked(fresh: Connection? = null, stopped: Connection? = null) {
+        val now = holderLocked(null)
+        if (now != shown || stopped != null) {
+            shown = now
+            events.claim(now, stopped = stopped?.subscriber)
+        } else {
+            fresh?.subscriber?.let { events.claim(now, only = it) }
+        }
     }
 
     private fun acceptLoop() {
@@ -156,6 +252,10 @@ class CompanionServer(private val service: PinkyAccessibilityService) {
         private const val TAG = "PinkyServer"
         val SOCKET_NAME: String = BuildConfig.SOCKET_NAME
 
+        // Holder.by: who claimed the phone.
+        const val BY_PHONE = "phone"
+        const val BY_COMPUTER = "computer"
+
         // android.os.Process.SHELL_UID and ROOT_UID are hidden APIs.
         private const val SHELL_UID = 2000
         private const val ROOT_UID = 0
@@ -185,7 +285,20 @@ class Connection(private val socket: LocalSocket, private val server: CompanionS
     private var closed = false
 
     @Volatile
-    private var subscriber: EventHub.Subscriber? = null
+    var subscriber: EventHub.Subscriber? = null
+        private set
+
+    /** Set once the connection sends claim: it knows about claims. */
+    @Volatile
+    var claims = false
+
+    /**
+     * An older desktop Pinky does not claim, but holds an event subscription
+     * while its agent works: a subscription from a computer that neither
+     * asked for claim events nor sent claim counts as a claim.
+     */
+    val implicitClaim: Boolean
+        get() = !own && !claims && subscriber?.let { EventHub.KIND_CLAIM !in it.kinds } == true
 
     fun run() {
         try {
@@ -212,8 +325,11 @@ class Connection(private val socket: LocalSocket, private val server: CompanionS
     fun subscribe(kinds: Set<String>, display: Int?): EventHub.Subscriber? {
         val hub = server.events
         subscriber?.let { hub.unsubscribe(it) }
-        subscriber = if (kinds.isEmpty()) null else hub.subscribe(this, kinds, display)
-        return subscriber
+        val s = if (kinds.isEmpty()) null else hub.subscribe(this, kinds, display)
+        subscriber = s
+        // Queued before the reply goes out, the claim event follows it.
+        server.subscribed(this)
+        return s
     }
 
     @Throws(IOException::class)

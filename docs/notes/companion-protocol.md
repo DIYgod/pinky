@@ -14,6 +14,7 @@ Changes since the first version, all additive:
 | 2026-11-09 | `set_text` writes through the field's input connection or pastes when the app refuses `ACTION_SET_TEXT` (GitHub issue #31), waits until the field shows the text, reports `method` and `password`, and runs `submit` only when the text landed | `set_text_fallback` (the input connection from Android 13; before, the paste only) |
 | 2026-11-11 | `on_phone` in `ping`; the `on_phone` command; in builds that run tasks on the phone (debug builds for now, [android-app.md](android-app.md)), the commands that act: `gesture`, `global`, `screenshot`, `launch` and `apps` | `gesture`, `global`, `screenshot`, `launch`, `apps`, `own_ui` and `on_phone`, only in those builds |
 | 2026-11-11, GitHub issue #48 | `gesture` and `global` in every build, for Xiaomi phones that drop adb's input on a background display; `gesture` takes `segments` of one finger that `hold` and `continue` across calls; `global` takes `display` (`back` and `enter`) | `gesture`, `global` and `own_ui` in every build; `display_input` (Android 11+) |
+| 2026-11-12 | `claim`: one client at a time holds the phone, Pinky on a computer or Pinky on the phone, and the others get `busy` with the holder; `claim` events; `claim` in `ping` | `claim`, in every build |
 
 ## Transport
 
@@ -63,6 +64,7 @@ Every command that reads or writes the screen takes `display`, an Android displa
 | `connections` | Open connections, including this one: those over adb, and the app's own (its core and screens) only while on-phone mode is on. Pinky on a computer leaves the service on after a task when this is more than 1. Until 2026-11-12 the app's own always counted, so a core that had run once kept the service on after every task from a computer. |
 | `include_not_important`, `idle_disable_ms` | Current `config` values |
 | `on_phone` | Whether on-phone mode is on: Pinky runs tasks on this phone by itself and keeps the service on ([android-app.md](android-app.md#on-phone-mode)). Absent in apps built before 2026-11-11. |
+| `claim` | Who holds the phone ([`claim`](#claim)): `by`, `task` when the holder named one, and `implicit` when true. Absent while the phone is free, and in apps built before 2026-11-12. |
 
 ### `tree`
 
@@ -169,12 +171,12 @@ Subscribes the connection to events. The reply comes first; events follow on the
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `kinds` | `window`, `toast`, `notification` | Event kinds |
-| `display` | all displays | Only events of this display. Notifications belong to the phone and always pass; so does `dropped`. See [Displays](#displays). |
+| `kinds` | `window`, `toast`, `notification` | Event kinds. `claim` comes only when asked for: a connection from a computer that subscribes without it, and has never sent `claim`, holds an implicit claim ([`claim`](#claim)). |
+| `display` | all displays | Only events of this display. Notifications and claims belong to the phone and always pass; so does `dropped`. See [Displays](#displays). |
 
 The result is `{"kinds": [...], "display": <id, when given>, "time": <ms>}`.
 
-Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display`: the display it came from, or -1 when that is not known. Android 13 and later report it for every event. On Android 11 and 12 the event's window tells, so a window that has only just opened can be -1; on Android 10 only the main display's windows are known. Toast events name no window: their display is the one Android reports, else the display where the app last opened a window, else, for an app that opened none since the service started, the display its windows were on then. Notifications are always -1: they belong to the phone, not to a display. Content changes are folded per display.
+Every event has `event` (the kind), `time` (when it happened on the phone), `package` when known, and `display`: the display it came from, or -1 when that is not known. Android 13 and later report it for every event. On Android 11 and 12 the event's window tells, so a window that has only just opened can be -1; on Android 10 only the main display's windows are known. Toast events name no window: their display is the one Android reports, else the display where the app last opened a window, else, for an app that opened none since the service started, the display its windows were on then. Notifications and claims are always -1: they belong to the phone, not to a display. Content changes are folded per display.
 
 | Kind | When | Extra fields |
 | --- | --- | --- |
@@ -184,6 +186,7 @@ Every event has `event` (the kind), `time` (when it happened on the phone), `pac
 | `toast` | A toast appeared, including toasts SystemUI draws for apps targeting Android 11+ | `text`. SystemUI's toasts (Android 12+) also report the app's name; when the event has several texts, the one equal to the app's name is dropped. |
 | `notification` | A notification was posted or alerted again | `title`, `text` (falls back to the big text, then the ticker), `category` |
 | `dropped` | The connection fell behind and the app dropped events (its queue holds 2048); `display` is -1 | `count` |
+| `claim` | Who holds the phone changed ([`claim`](#claim)), and once right after the reply, with who holds it then | `by`, `task` and `implicit` as in `ping`'s `claim`, all absent while the phone is free; `stopped: true` for the connection whose claim Pinky on the phone just ended |
 
 Notifications can carry personal data. The app forwards what Android reports; filtering (for example of blocked apps) is the gateway's job.
 
@@ -214,6 +217,30 @@ Changes the service's settings until the service is turned off. The app saves th
 
 The result holds the current values.
 
+### `claim`
+
+Who drives the phone: Pinky on a computer or Pinky on the phone, one at a time, so that two agents never act on it at once and the phone can show who is acting ([android-app.md](android-app.md#two-modes-on-one-phone)). Every build since 2026-11-12 serves it (`ping` lists `claim`); an older app answers `unknown_command`.
+
+```json
+{"id":6,"cmd":"claim","by":"computer","task":"Order lunch"}
+```
+
+| Parameter | Meaning |
+| --- | --- |
+| `by` | Who claims: `computer` on a connection over adb, `phone` on one of the app's own (its core). Required; anything else gives `bad_request`. |
+| `task` | What the holder works on, which the phone shows. Optional; the app keeps the first 500 characters. |
+| `release` | `true`: end this connection's claim, if it holds one, instead of claiming. |
+| `stop` | `true`: end a computer's claim instead, for Stop on the phone's pill or task screen. Only the app's own connections may send it; adb gets `forbidden`. |
+
+The result is who holds the phone afterwards, as `ping`'s `claim` gives it, or `{}` while the phone is free. With `stop` it also has `stopped`: whether a claim ended.
+
+- **A claim belongs to its connection.** It lasts until `release` or until the connection closes, so a client that crashes or loses the phone frees it by itself. Pinky on the phone claims on the connection of its event subscription, which lives as long as its work, and desktop Pinky is to do the same. Claiming again on the same connection changes the task. Claims from the app's own connections take over each other's, so the core that reconnects claims again even before the app notices that its old connection ended.
+- **Busy.** While another connection holds the phone, `claim` fails with `busy`, and the error names the holder: `{"code":"busy","message":"Pinky on the phone is using the phone","by":"phone","task":"Browse Settings"}`.
+- **Implicit claims.** A desktop Pinky from before claims never sends `claim`, but it keeps an event subscription while its agent works. So a connection over adb that is subscribed to events without `claim` events, and has never sent `claim`, holds the phone too: `by` is `computer`, with `implicit: true` and no task. The claim ends with that subscription, and the phone cannot stop it: `stop` gives `stopped: false`. A client that knows about claims is never implicit: it asks for `claim` events, or it sends `claim` (a `release` will do).
+- **Stop.** `stop` ends a computer's explicit claim. Every subscriber of `claim` events hears who holds the phone now; the connection whose claim ended hears it with `stopped: true`, and its agent must stop.
+- **Claims are cooperative.** The app checks them only on `claim`: it refuses no other command and no subscription while someone holds the phone. Pinky on the phone claims before it starts a task and keeps the claim until the task ends; Pinky on a computer is to claim before its agent acts and stop the agent on `stopped`.
+- The reply to `claim` and the `claim` event it causes can arrive in either order. The Go client claims on a subscription (`Subscription.Claim`, `Release` and `StopClaim`), whose reader hands it the reply among the events.
+
 ### Commands that act
 
 `gesture` and `global` are in every build since GitHub issue #48; `ping` lists them in `features`, with `own_ui`. Pinky on a computer uses them only where adb's input does not reach a display: Xiaomi's MIUI and HyperOS drop what adb injects into a background display, so Pinky taps, swipes, drags, pinches and presses back and enter there through the service ([background displays](android-driver.md), `internal/driver/android/displayinput.go`). `display_input` (Android 11+) says the app can do that on displays other than 0.
@@ -238,7 +265,7 @@ Only builds that run tasks on the phone serve these ([android-app.md](android-ap
 
 | Code | Meaning |
 | --- | --- |
-| `bad_request` | Malformed JSON, a missing parameter, an unknown event kind or a negative display id |
+| `bad_request` | Malformed JSON, a missing parameter, an unknown event kind, a negative display id, or a `claim` whose `by` is not the connection's |
 | `unknown_command` | No such `cmd` |
 | `not_found` | No node matches the target, the node is gone, or the display does not exist |
 | `not_editable` | The target node is not editable |
@@ -246,16 +273,16 @@ Only builds that run tasks on the phone serve these ([android-app.md](android-ap
 | `unsupported` | The request cannot work here: append to a password field, a display other than 0 before Android 11, or a display Android keeps from accessibility services |
 | `action_failed` | The app refused `ACTION_SET_TEXT`, or Android refused a gesture, a global action or a screenshot |
 | `timeout` | The request took longer than `timeout_ms` |
-| `forbidden` | The peer is not adb, root or the app itself, or, for `on_phone`, not the app itself |
+| `forbidden` | The peer is not adb, root or the app itself, or, for `on_phone` and a `claim` with `stop`, not the app itself |
 | `own_ui` | The action would touch Pinky's own controls or screens; nothing was done |
 | `cancelled` | A gesture was interrupted |
 | `not_focused` | `back` on a display that does not have the phone's focus |
 | `not_held` | `continue` without a finger held on the display |
 | `secure` | An app on the screen forbids screenshots |
-| `busy` | Android kept refusing screenshots as too frequent |
+| `busy` | Android kept refusing screenshots as too frequent, or another connection holds the phone (`claim`; the error names the holder) |
 | `internal` | An unexpected exception; the message has its text |
 
-The Go client maps `not_found` to `driver.ErrNotFound` and `unsupported` to `driver.ErrUnsupported`.
+The Go client maps `not_found` to `driver.ErrNotFound` and `unsupported` to `driver.ErrUnsupported`. `busy` from `claim` is an `*Error` whose `Claim` names the holder.
 
 ## Service lifecycle
 

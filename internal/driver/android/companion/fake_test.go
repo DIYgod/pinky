@@ -42,7 +42,14 @@ type fakePhone struct {
 	probe  string
 	conns  []net.Conn
 	events chan string
+	// claim answers claim; nil gives the claim. An error with code
+	// fakeHangUp closes the connection instead of answering.
+	claim func(req map[string]any) (any, *Error)
 }
+
+// fakeHangUp, as the code of an answer's error, makes the fake phone close
+// the connection without replying.
+const fakeHangUp = "fake_hang_up"
 
 func newFakePhone(t *testing.T) *fakePhone {
 	t.Helper()
@@ -88,6 +95,13 @@ func (p *fakePhone) serve() {
 
 func (p *fakePhone) handle(c net.Conn) {
 	defer c.Close()
+	var wmu sync.Mutex
+	write := func(b []byte) error {
+		wmu.Lock()
+		defer wmu.Unlock()
+		_, err := c.Write(append(b, '\n'))
+		return err
+	}
 	rd := bufio.NewReader(c)
 	n := 0
 	for {
@@ -105,6 +119,9 @@ func (p *fakePhone) handle(c net.Conn) {
 		drop := p.dropAfter
 		p.mu.Unlock()
 		result, perr := p.answer(req)
+		if perr != nil && perr.Code == fakeHangUp {
+			return
+		}
 		resp := map[string]any{"id": req["id"], "ok": perr == nil}
 		if perr != nil {
 			resp["error"] = perr
@@ -112,16 +129,21 @@ func (p *fakePhone) handle(c net.Conn) {
 			resp["result"] = result
 		}
 		b, _ := json.Marshal(resp)
-		if _, err := c.Write(append(b, '\n')); err != nil {
+		if write(b) != nil {
 			return
 		}
 		if req["cmd"] == "events" {
-			for ev := range p.events {
-				if _, err := c.Write([]byte(ev + "\n")); err != nil {
-					return
+			// Events go out while the connection takes more requests,
+			// as the app's do; closing p.events ends the connection.
+			go func() {
+				for ev := range p.events {
+					if write([]byte(ev)) != nil {
+						return
+					}
 				}
-			}
-			return
+				c.Close()
+			}()
+			continue
 		}
 		n++
 		if drop > 0 && n >= drop {
@@ -157,6 +179,14 @@ func (p *fakePhone) answer(req map[string]any) (any, *Error) {
 		return map[string]any{"took_ms": 12}, nil
 	case "events":
 		return map[string]any{"kinds": req["kinds"]}, nil
+	case "claim":
+		p.mu.Lock()
+		claim := p.claim
+		p.mu.Unlock()
+		if claim != nil {
+			return claim(req)
+		}
+		return map[string]any{"by": req["by"], "task": req["task"]}, nil
 	}
 	return nil, &Error{Code: "unknown_command", Message: fmt.Sprint(req["cmd"])}
 }
